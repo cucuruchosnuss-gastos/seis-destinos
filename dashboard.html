@@ -13,7 +13,11 @@
   <header class="header">
     <span class="header__nombre-app">Seis Destinos</span>
     <div class="header__usuario">
-      <span class="header__email" id="header-email"></span>
+      <div class="header__info">
+        <span class="header__info-nombre" id="header-nombre"></span>
+        <span class="header__info-subtitulo" id="header-email"></span>
+      </div>
+      <div class="header__avatar" id="header-avatar"></div>
       <button class="btn btn--secundario" id="btn-logout" style="font-size: 0.875rem; padding: 0.5rem 0.875rem;">
         Salir
       </button>
@@ -52,9 +56,15 @@
     const sesion = await verificarSesion()
     if (!sesion) throw new Error('Sin sesión')
 
-    // Mostrar email del usuario en el header
-    const emailEl = document.getElementById('header-email')
-    if (emailEl) emailEl.textContent = sesion.user.email
+    // Resolver nombre e inicial del usuario
+    const meta      = sesion.user.user_metadata ?? {}
+    const nombre    = meta.nombre_completo || meta.full_name || meta.nombre || ''
+    const email     = sesion.user.email ?? ''
+    const inicial   = (nombre ? nombre : email).charAt(0).toUpperCase()
+
+    document.getElementById('header-avatar').textContent  = inicial
+    document.getElementById('header-nombre').textContent  = nombre || email
+    document.getElementById('header-email').textContent   = nombre ? email : ''
 
     // Renderizar grilla de módulos
     const grilla = document.getElementById('grilla-modulos')

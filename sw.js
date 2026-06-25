@@ -17,7 +17,20 @@ const ARCHIVOS_SHELL = [
 
 self.addEventListener('install', (evento) => {
   evento.waitUntil(
-    caches.open(CACHE_NOMBRE).then((cache) => cache.addAll(ARCHIVOS_SHELL))
+    caches.open(CACHE_NOMBRE).then((cache) =>
+      Promise.all(
+        ARCHIVOS_SHELL.map((url) =>
+          fetch(url).then((respuesta) => {
+            // Solo cachear respuestas 200 — nunca 301, 302 ni errores
+            if (respuesta.status === 200) {
+              return cache.put(url, respuesta)
+            }
+          }).catch(() => {
+            // Si un archivo no se puede obtener, continuar con el resto
+          })
+        )
+      )
+    )
   )
   self.skipWaiting()
 })
