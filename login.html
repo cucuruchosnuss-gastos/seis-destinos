@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingresar — Seis Destinos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5B6CF9">
+</head>
+<body class="pagina-auth">
+
+  <div class="tarjeta-auth">
+    <div class="auth-logo">
+      <div class="auth-logo__nombre">Seis Destinos</div>
+      <div class="auth-logo__subtitulo">Sistema de gestión interno</div>
+    </div>
+
+    <form class="formulario" id="formulario-login" novalidate>
+      <div class="grupo-campo">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="tu@email.com"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="grupo-campo">
+        <label for="contrasena">Contraseña</label>
+        <input
+          type="password"
+          id="contrasena"
+          name="contrasena"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          required
+        >
+      </div>
+
+      <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
+
+      <div class="formulario__acciones">
+        <button type="submit" class="btn btn--primario" id="btn-ingresar">
+          Ingresar
+        </button>
+      </div>
+    </form>
+
+    <p class="formulario__pie">
+      ¿No tenés cuenta?
+      <a href="registro.html">Solicitá acceso</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import { verificarSesion, iniciarSesion } from './js/auth.js'
+
+    // Si ya hay sesión, ir al dashboard directamente
+    await verificarSesion({ redirigirSiNoHay: false, redirigirSiHay: true })
+
+    const formulario  = document.getElementById('formulario-login')
+    const btnIngresar = document.getElementById('btn-ingresar')
+    const alertaError = document.getElementById('alerta-error')
+
+    function mostrarAlertaError(mensaje) {
+      alertaError.textContent = mensaje
+      alertaError.classList.add('alerta--visible')
+    }
+
+    function ocultarAlertaError() {
+      alertaError.classList.remove('alerta--visible')
+    }
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault()
+      ocultarAlertaError()
+
+      const email      = document.getElementById('email').value.trim()
+      const contrasena = document.getElementById('contrasena').value
+
+      if (!email || !contrasena) {
+        mostrarAlertaError('Completá todos los campos.')
+        return
+      }
+
+      btnIngresar.classList.add('btn--cargando')
+      btnIngresar.disabled = true
+
+      try {
+        await iniciarSesion(email, contrasena)
+        window.location.replace('dashboard.html')
+      } catch (error) {
+        mostrarAlertaError(error.message)
+        btnIngresar.classList.remove('btn--cargando')
+        btnIngresar.disabled = false
+      }
+    })
+  </script>
+
+</body>
+</html>

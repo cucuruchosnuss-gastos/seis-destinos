@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seis Destinos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5B6CF9">
+</head>
+<body class="pagina-carga">
+
+  <div class="spinner"></div>
+
+  <script type="module">
+    import { verificarSesion } from './js/auth.js'
+
+    const sesion = await verificarSesion({ redirigirSiNoHay: false })
+
+    if (sesion) {
+      window.location.replace('dashboard.html')
+    } else {
+      window.location.replace('login.html')
+    }
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+    }
+  </script>
+</body>
+</html>

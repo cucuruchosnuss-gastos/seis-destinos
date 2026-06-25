@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitar acceso — Seis Destinos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5B6CF9">
+</head>
+<body class="pagina-auth">
+
+  <div class="tarjeta-auth">
+    <div class="auth-logo">
+      <div class="auth-logo__nombre">Seis Destinos</div>
+      <div class="auth-logo__subtitulo">Solicitud de acceso</div>
+    </div>
+
+    <!-- Formulario de registro -->
+    <form class="formulario" id="formulario-registro" novalidate>
+      <div class="grupo-campo">
+        <label for="nombre">Nombre completo</label>
+        <input
+          type="text"
+          id="nombre"
+          name="nombre"
+          placeholder="Nombre y apellido"
+          autocomplete="name"
+          required
+        >
+      </div>
+
+      <div class="grupo-campo">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="tu@email.com"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="grupo-campo">
+        <label for="contrasena">Contraseña</label>
+        <input
+          type="password"
+          id="contrasena"
+          name="contrasena"
+          placeholder="Mínimo 6 caracteres"
+          autocomplete="new-password"
+          required
+          minlength="6"
+        >
+      </div>
+
+      <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
+
+      <div class="formulario__acciones">
+        <button type="submit" class="btn btn--primario" id="btn-registrar">
+          Enviar solicitud
+        </button>
+      </div>
+    </form>
+
+    <!-- Confirmación (se muestra tras el envío exitoso) -->
+    <div id="confirmacion" style="display: none; text-align: center;">
+      <div style="font-size: 2rem; margin-bottom: 1rem;">✅</div>
+      <h2 style="margin-bottom: 0.5rem;">Solicitud enviada</h2>
+      <p class="texto-suave" style="font-size: 0.9rem; line-height: 1.5;">
+        Tu solicitud fue recibida y quedó pendiente de aprobación.<br>
+        Te avisamos cuando esté lista.
+      </p>
+      <hr class="separador">
+      <a href="login.html" class="btn btn--secundario" style="display: inline-flex; width: auto; margin: 0 auto;">
+        Volver al inicio
+      </a>
+    </div>
+
+    <p class="formulario__pie" id="pie-login">
+      ¿Ya tenés cuenta?
+      <a href="login.html">Ingresá acá</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import { verificarSesion, registrarUsuario } from './js/auth.js'
+
+    // Si ya hay sesión activa, ir al dashboard
+    await verificarSesion({ redirigirSiNoHay: false, redirigirSiHay: true })
+
+    const formulario  = document.getElementById('formulario-registro')
+    const btnRegistrar = document.getElementById('btn-registrar')
+    const alertaError  = document.getElementById('alerta-error')
+    const confirmacion = document.getElementById('confirmacion')
+    const pieLogin     = document.getElementById('pie-login')
+
+    function mostrarAlertaError(mensaje) {
+      alertaError.textContent = mensaje
+      alertaError.classList.add('alerta--visible')
+    }
+
+    function ocultarAlertaError() {
+      alertaError.classList.remove('alerta--visible')
+    }
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault()
+      ocultarAlertaError()
+
+      const nombre     = document.getElementById('nombre').value.trim()
+      const email      = document.getElementById('email').value.trim()
+      const contrasena = document.getElementById('contrasena').value
+
+      if (!nombre || !email || !contrasena) {
+        mostrarAlertaError('Completá todos los campos.')
+        return
+      }
+
+      if (contrasena.length < 6) {
+        mostrarAlertaError('La contraseña debe tener al menos 6 caracteres.')
+        return
+      }
+
+      btnRegistrar.classList.add('btn--cargando')
+      btnRegistrar.disabled = true
+
+      try {
+        await registrarUsuario(nombre, email, contrasena)
+
+        // Mostrar confirmación y ocultar formulario
+        formulario.style.display = 'none'
+        pieLogin.style.display   = 'none'
+        confirmacion.style.display = 'block'
+      } catch (error) {
+        mostrarAlertaError(error.message)
+        btnRegistrar.classList.remove('btn--cargando')
+        btnRegistrar.disabled = false
+      }
+    })
+  </script>
+
+</body>
+</html>

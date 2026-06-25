@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Seis Destinos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5B6CF9">
+</head>
+<body class="pagina-dashboard">
+
+  <header class="header">
+    <span class="header__nombre-app">Seis Destinos</span>
+    <div class="header__usuario">
+      <span class="header__email" id="header-email"></span>
+      <button class="btn btn--secundario" id="btn-logout" style="font-size: 0.875rem; padding: 0.5rem 0.875rem;">
+        Salir
+      </button>
+    </div>
+  </header>
+
+  <main class="dashboard__contenido">
+    <div class="dashboard__titulo">
+      <h1>Módulos</h1>
+    </div>
+
+    <div class="grilla-modulos" id="grilla-modulos">
+      <!-- Los módulos se renderizan desde JS -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { verificarSesion, cerrarSesion } from './js/auth.js'
+
+    const MODULOS = [
+      {
+        nombre: 'Gastos',
+        icono: '💳',
+        url: 'modulos/gastos.html',
+        proximamente: false
+      },
+      {
+        nombre: 'Materia Prima',
+        icono: '📦',
+        url: 'modulos/materia-prima.html',
+        proximamente: true
+      }
+    ]
+
+    // Verificar sesión — redirige a login si no hay una activa
+    const sesion = await verificarSesion()
+    if (!sesion) throw new Error('Sin sesión')
+
+    // Mostrar email del usuario en el header
+    const emailEl = document.getElementById('header-email')
+    if (emailEl) emailEl.textContent = sesion.user.email
+
+    // Renderizar grilla de módulos
+    const grilla = document.getElementById('grilla-modulos')
+
+    grilla.innerHTML = MODULOS.map((modulo) => {
+      if (modulo.proximamente) {
+        return `
+          <div class="tarjeta-modulo tarjeta-modulo--inactiva" title="${modulo.nombre} — próximamente">
+            <span class="tarjeta-modulo__icono">${modulo.icono}</span>
+            <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
+            <span class="badge badge--proximamente">Próximamente</span>
+          </div>
+        `
+      }
+      return `
+        <a href="${modulo.url}" class="tarjeta-modulo">
+          <span class="tarjeta-modulo__icono">${modulo.icono}</span>
+          <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
+        </a>
+      `
+    }).join('')
+
+    // Botón de logout
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      cerrarSesion()
+    })
+  </script>
+
+</body>
+</html>
