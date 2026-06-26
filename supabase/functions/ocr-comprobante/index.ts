@@ -31,7 +31,7 @@ Formato de respuesta (únicamente esto):
 const HEADERS_CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 const MIME_VALIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
