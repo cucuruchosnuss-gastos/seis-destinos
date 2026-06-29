@@ -1260,6 +1260,10 @@
 
     // ── Cargar maestros desde Supabase ────────────────────────────────────
     async function cargarMaestros() {
+      // ── LOG: verificar sesión activa antes de queries ─────────────────────
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('[maestros] sesión activa:', session ? `uid=${session.user.id}` : 'NULL — sin sesión')
+
       const [cats, emps, vehs, provs, projs] = await Promise.all([
         supabase.from('categorias') .select('id, nombre, icon').eq('activo', true).order('nombre'),
         supabase.from('empleados')  .select('id, nombre, unidad_negocio_id').eq('activo', true).order('nombre'),
@@ -1267,6 +1271,13 @@
         supabase.from('proveedores').select('id, razon_social, nombre_fantasia').eq('activo', true).order('razon_social'),
         supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),
       ])
+
+      // ── LOG: resultado crudo de cada tabla ───────────────────────────────
+      console.log('[maestros] categorias  →', 'data:', cats.data,  '| error:', cats.error)
+      console.log('[maestros] empleados   →', 'data:', emps.data,  '| error:', emps.error)
+      console.log('[maestros] vehiculos   →', 'data:', vehs.data,  '| error:', vehs.error)
+      console.log('[maestros] proveedores →', 'data:', provs.data, '| error:', provs.error)
+      console.log('[maestros] proyectos   →', 'data:', projs.data, '| error:', projs.error)
 
       // Detectar errores de RLS u otros — no silenciar
       const errores = [
@@ -1278,8 +1289,7 @@
       ].filter(Boolean)
 
       if (errores.length) {
-        // Muestra el primer error al usuario y loguea todos en consola
-        console.error('[cargarMaestros] errores de Supabase:', errores)
+        console.error('[maestros] errores:', errores)
         throw new Error(`No se pudo cargar la lista de ${errores[0].split(':')[0]}. Verificá los permisos de lectura (RLS) en Supabase.`)
       }
 
@@ -1288,6 +1298,11 @@
       estado.maestros.vehiculos   = vehs.data  ?? []
       estado.maestros.proveedores = provs.data ?? []
       estado.maestros.proyectos   = projs.data ?? []
+
+      console.log('[maestros] cargados → categorias:', estado.maestros.categorias.length,
+        '| empleados:', estado.maestros.empleados.length,
+        '| proveedores:', estado.maestros.proveedores.length,
+        '| proyectos:', estado.maestros.proyectos.length)
     }
 
     // ── Actualizar selects encadenados ────────────────────────────────────
@@ -1314,6 +1329,11 @@
     function renderizarGrillaCategorias() {
       const grilla = document.getElementById('grilla-categorias')
       if (!grilla) return
+      console.log('[grilla-categorias] renderizando', estado.maestros.categorias.length, 'categorías')
+      if (!estado.maestros.categorias.length) {
+        grilla.innerHTML = '<p style="color:var(--color-texto-secundario);font-size:0.875rem;grid-column:1/-1;padding:1rem 0">Sin categorías — revisá la consola para ver el error de carga.</p>'
+        return
+      }
       grilla.innerHTML = estado.maestros.categorias.map(cat => `
         <button type="button" class="btn-categoria ${categoriaSeleccionada === cat.id ? 'btn-categoria--seleccionado' : ''}"
                 data-id="${cat.id}">
