@@ -12,6 +12,8 @@ Campos a extraer:
 - razon_social: nombre o razón social de quien EMITE el comprobante (el vendedor/proveedor, no el comprador)
 - importe: importe TOTAL a pagar como número. Sin símbolos de moneda, sin puntos de miles, con punto decimal (ej: 15400.50)
 - moneda: "ARS" si es en pesos argentinos, "USD" si es en dólares. Por defecto "ARS".
+- receptor: nombre o razón social de quien RECIBE el comprobante (el comprador). Buscalo en los campos "SEÑOR:", "Razón Social Receptor", "Cliente:", "A nombre de:" o similares. Si no figura, usá null.
+- descripcion_item: descripción del producto o servicio comprado. Tomá la primera línea significativa de la sección de detalle o ítems. Si hay varias líneas, unilas con " | ". Si no hay detalle visible, usá null.
 
 Reglas:
 - Si un campo no está visible o no podés determinarlo con certeza, usá null.
@@ -25,7 +27,9 @@ Formato de respuesta (únicamente esto):
   "numero_doc": "..." | null,
   "razon_social": "..." | null,
   "importe": número | null,
-  "moneda": "ARS" | "USD"
+  "moneda": "ARS" | "USD",
+  "receptor": "..." | null,
+  "descripcion_item": "..." | null
 }`
 
 const HEADERS_CORS = {

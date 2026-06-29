@@ -640,6 +640,45 @@
       display: none;
     }
 
+    /* ── Botones de tipo de documento (Paso 2) ─────────────────────────────── */
+
+    .grilla-tipo-doc {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    @media (min-width: 420px) {
+      .grilla-tipo-doc { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .btn-tipo-doc {
+      background: var(--color-fondo);
+      border: 2px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.625rem 0.25rem;
+      font-family: var(--fuente);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      cursor: pointer;
+      text-align: center;
+      line-height: 1.25;
+      transition: border-color var(--transicion), background var(--transicion), color var(--transicion);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-tipo-doc:hover {
+      border-color: var(--color-acento);
+      background: var(--color-acento-suave);
+    }
+
+    .btn-tipo-doc--seleccionado {
+      border-color: var(--color-acento);
+      background: var(--color-acento);
+      color: #fff;
+    }
+
     /* ── Separador con texto ────────────────────────────────────────────────── */
 
     .separador-texto {
@@ -772,17 +811,16 @@
           </div>
 
           <div class="grupo-campo" id="grupo-tipo-doc">
-            <label for="campo-tipo-doc">Tipo de documento</label>
-            <select id="campo-tipo-doc" name="tipo_doc">
-              <option value="">— Seleccioná —</option>
-              <option value="Factura A">Factura A</option>
-              <option value="Factura B">Factura B</option>
-              <option value="Factura C">Factura C</option>
-              <option value="Ticket">Ticket</option>
-              <option value="Remito">Remito</option>
-              <option value="Nota de crédito">Nota de crédito</option>
-              <option value="Otro">Otro</option>
-            </select>
+            <label>Tipo de documento</label>
+            <div class="grilla-tipo-doc" id="grilla-tipo-doc">
+              <button type="button" class="btn-tipo-doc" data-valor="Factura A">Factura A</button>
+              <button type="button" class="btn-tipo-doc" data-valor="Factura B">Factura B</button>
+              <button type="button" class="btn-tipo-doc" data-valor="Factura C">Factura C</button>
+              <button type="button" class="btn-tipo-doc" data-valor="Ticket">Ticket</button>
+              <button type="button" class="btn-tipo-doc" data-valor="Remito">Remito</button>
+              <button type="button" class="btn-tipo-doc" data-valor="Nota de crédito">Nota de crédito</button>
+              <button type="button" class="btn-tipo-doc" data-valor="Otro">Otro</button>
+            </div>
           </div>
 
           <div class="grupo-campo" id="grupo-numero-doc">
@@ -795,10 +833,20 @@
             <input type="text" id="campo-razon-social" name="razon_social" placeholder="Nombre del emisor" required>
           </div>
 
+          <div class="grupo-campo" id="grupo-receptor">
+            <label for="campo-receptor">Receptor / Comprador <span class="etiqueta-opcional">opcional</span></label>
+            <input type="text" id="campo-receptor" name="receptor" placeholder="Nombre del comprador (campo SEÑOR:)">
+          </div>
+
+          <div class="grupo-campo" id="grupo-descripcion-item">
+            <label for="campo-descripcion-item">Descripción del ítem <span class="etiqueta-opcional">opcional</span></label>
+            <input type="text" id="campo-descripcion-item" name="descripcion_item" placeholder="Ej: Caja Cucuruchos x 4 pisos · 2.441 un. x $457">
+          </div>
+
           <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: end;">
             <div class="grupo-campo" id="grupo-importe">
               <label for="campo-importe">Importe total</label>
-              <input type="number" id="campo-importe" name="importe" placeholder="0.00" min="0" step="0.01" required>
+              <input type="text" inputmode="decimal" id="campo-importe" name="importe" placeholder="0,00" required>
             </div>
             <div class="grupo-campo" id="grupo-moneda">
               <label for="campo-moneda">Moneda</label>
@@ -1181,6 +1229,22 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     let categoriaSeleccionada = null
+    let tipDocSeleccionado    = null
+
+    // Convierte "1.349.799,77" → 1349799.77  (formato argentino → número)
+    function parseImporte(str) {
+      if (!str) return null
+      const limpio = String(str).replace(/\./g, '').replace(',', '.')
+      const num    = parseFloat(limpio)
+      return isNaN(num) ? null : num
+    }
+
+    function seleccionarTipoDoc(valor) {
+      tipDocSeleccionado = valor || null
+      document.querySelectorAll('.btn-tipo-doc').forEach(btn => {
+        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
+      })
+    }
 
     // ── Utilidad: poblar un <select> ──────────────────────────────────────
     function poblarSelect(idCampo, items, mapFn, placeholder) {
@@ -1203,6 +1267,22 @@
         supabase.from('proveedores').select('id, razon_social, nombre_fantasia').eq('activo', true).order('razon_social'),
         supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),
       ])
+
+      // Detectar errores de RLS u otros — no silenciar
+      const errores = [
+        cats.error  && `categorias: ${cats.error.message}`,
+        emps.error  && `empleados: ${emps.error.message}`,
+        vehs.error  && `vehiculos: ${vehs.error.message}`,
+        provs.error && `proveedores: ${provs.error.message}`,
+        projs.error && `proyectos: ${projs.error.message}`,
+      ].filter(Boolean)
+
+      if (errores.length) {
+        // Muestra el primer error al usuario y loguea todos en consola
+        console.error('[cargarMaestros] errores de Supabase:', errores)
+        throw new Error(`No se pudo cargar la lista de ${errores[0].split(':')[0]}. Verificá los permisos de lectura (RLS) en Supabase.`)
+      }
+
       estado.maestros.categorias  = cats.data  ?? []
       estado.maestros.empleados   = emps.data  ?? []
       estado.maestros.vehiculos   = vehs.data  ?? []
@@ -1262,10 +1342,11 @@
 
       // Resetear campos de formulario
       ;['campo-fecha','campo-numero-doc','campo-razon-social',
+        'campo-receptor','campo-descripcion-item',
         'campo-importe','campo-lugar','campo-descripcion',
         'campo-kilometraje','campo-observaciones',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
-      document.getElementById('campo-tipo-doc').value = ''
+      seleccionarTipoDoc(null)
       document.getElementById('campo-moneda').value   = 'ARS'
       document.querySelectorAll('.campo-ocr').forEach(el => el.classList.remove('campo-ocr'))
 
@@ -1273,7 +1354,16 @@
       resetearZonaFoto()
 
       // Cargar maestros solo si aún no están cargados
-      if (!estado.maestros.categorias.length) await cargarMaestros()
+      if (!estado.maestros.categorias.length) {
+        try {
+          await cargarMaestros()
+        } catch (err) {
+          console.error('[iniciarWizard] fallo cargarMaestros:', err)
+          mostrarError(err.message || 'Error al cargar los datos. Cerrá y volvé a intentar.')
+          cerrarWizard()
+          return
+        }
+      }
 
       // Poblar selects estáticos
       poblarSelect('campo-proveedor', estado.maestros.proveedores,
@@ -1338,8 +1428,8 @@
           return mostrarError('Completá la fecha del comprobante.'), false
         if (!document.getElementById('campo-razon-social').value.trim())
           return mostrarError('Completá la razón social.'), false
-        const imp = document.getElementById('campo-importe').value
-        if (!imp || Number(imp) <= 0)
+        const imp = parseImporte(document.getElementById('campo-importe').value)
+        if (imp == null || imp <= 0)
           return mostrarError('Ingresá un importe válido mayor a cero.'), false
       }
       if (n === 3) {
@@ -1409,14 +1499,33 @@
     // ── Pre-llenado de paso 2 con datos del OCR ───────────────────────────
     function prellenarPaso2(datos) {
       const mapaCampos = {
-        fecha:        'campo-fecha',
-        tipo_doc:     'campo-tipo-doc',
-        numero_doc:   'campo-numero-doc',
-        razon_social: 'campo-razon-social',
-        importe:      'campo-importe',
-        moneda:       'campo-moneda',
+        fecha:            'campo-fecha',
+        numero_doc:       'campo-numero-doc',
+        razon_social:     'campo-razon-social',
+        receptor:         'campo-receptor',
+        descripcion_item: 'campo-descripcion-item',
+        moneda:           'campo-moneda',
       }
       estado.wizard.camposOcr = new Set()
+
+      // tipo_doc: seleccionar botón en lugar de set en select
+      if (datos.tipo_doc) {
+        seleccionarTipoDoc(datos.tipo_doc)
+        document.getElementById('grupo-tipo-doc')?.classList.add('campo-ocr')
+        estado.wizard.camposOcr.add('tipo_doc')
+      }
+
+      // importe: formatear en estilo argentino
+      if (datos.importe != null) {
+        const fmt = Number(datos.importe).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        const campoImp = document.getElementById('campo-importe')
+        if (campoImp) {
+          campoImp.value = fmt
+          campoImp.closest('.grupo-campo')?.classList.add('campo-ocr')
+          estado.wizard.camposOcr.add('importe')
+        }
+      }
+
       Object.entries(mapaCampos).forEach(([clave, idCampo]) => {
         const valor = datos[clave]
         const campo = document.getElementById(idCampo)
@@ -1448,10 +1557,12 @@
       return {
         fecha,
         periodo:           fecha ? fechaAPeriodo(fecha) : null,
-        tipo_doc:          toStr('campo-tipo-doc'),
+        tipo_doc:          tipDocSeleccionado,
         numero_doc:        toStr('campo-numero-doc'),
         razon_social:      toStr('campo-razon-social'),
-        importe:           toNum('campo-importe'),
+        receptor:          toStr('campo-receptor'),
+        descripcion_item:  toStr('campo-descripcion-item'),
+        importe:           parseImporte(document.getElementById('campo-importe')?.value),
         moneda:            document.getElementById('campo-moneda')?.value || 'ARS',
         categoria_id:      categoriaSeleccionada,
         proveedor_id:      toNum('campo-proveedor'),
@@ -1598,7 +1709,28 @@
     document.getElementById('paso1-sin-foto').addEventListener('click',   () => irAPaso(2))
     document.getElementById('paso1-siguiente').addEventListener('click',  () => irAPaso(2))
 
-    // Paso 2
+    // Paso 2 — botones tipo de documento
+    document.getElementById('grilla-tipo-doc').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-tipo-doc')
+      if (!btn) return
+      // Toggle: click en el ya-seleccionado lo deselecciona
+      const nuevo = btn.dataset.valor === tipDocSeleccionado ? null : btn.dataset.valor
+      seleccionarTipoDoc(nuevo)
+    })
+
+    // Paso 2 — importe: formato argentino en blur / editable en focus
+    const inputImporte = document.getElementById('campo-importe')
+    inputImporte.addEventListener('focus', (e) => {
+      // Quitar separadores de miles para que el usuario pueda editar con comodidad
+      e.target.value = e.target.value.replace(/\./g, '')
+    })
+    inputImporte.addEventListener('blur', (e) => {
+      const num = parseImporte(e.target.value)
+      if (num != null) {
+        e.target.value = num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      }
+    })
+
     document.getElementById('paso2-atras').addEventListener('click',     () => irAPaso(1))
     document.getElementById('paso2-siguiente').addEventListener('click', () => { if (validarPaso(2)) irAPaso(3) })
 
