@@ -12,8 +12,8 @@ Campos a extraer:
 - razon_social: nombre o razón social de quien EMITE el comprobante (el vendedor/proveedor, no el comprador)
 - importe: importe TOTAL a pagar como número. Sin símbolos de moneda, sin puntos de miles, con punto decimal (ej: 15400.50)
 - moneda: "ARS" si es en pesos argentinos, "USD" si es en dólares. Por defecto "ARS".
-- receptor: nombre o razón social de quien RECIBE el comprobante (el comprador). Buscalo en los campos "SEÑOR:", "Razón Social Receptor", "Cliente:", "A nombre de:" o similares. Si no figura, usá null.
-- descripcion_item: descripción del producto o servicio comprado. Tomá la primera línea significativa de la sección de detalle o ítems. Si hay varias líneas, unilas con " | ". Si no hay detalle visible, usá null.
+- receptor: nombre o razón social de quien RECIBE el comprobante (el comprador). Buscalo en los campos "SEÑOR:", "Razón Social Receptor", "Cliente:", "A nombre de:" o similares. IMPORTANTE: el campo puede empezar con un número de cliente seguido del nombre (ej: "1979 PAZ MIRTA"). Devolvé SOLO el nombre, sin el número ni espacios al inicio. Si no figura receptor, usá null.
+- descripcion_item: lista de ítems del detalle del comprobante. Por cada línea de detalle extraé: cantidad, unidad de medida y descripción, y concatenalos en el formato "cantidad unidad_medida descripción" (ej: "50 CAJA Oleo Margarina Ultra Refinado Especial"). Si hay múltiples ítems, unilos con " | " (ej: "50 CAJA Oleo Margarina | 12 UN Manteca"). Si no hay detalle visible, usá null.
 
 Reglas:
 - Si un campo no está visible o no podés determinarlo con certeza, usá null.

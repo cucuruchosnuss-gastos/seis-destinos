@@ -814,12 +814,7 @@
             <label>Tipo de documento</label>
             <div class="grilla-tipo-doc" id="grilla-tipo-doc">
               <button type="button" class="btn-tipo-doc" data-valor="Factura A">Factura A</button>
-              <button type="button" class="btn-tipo-doc" data-valor="Factura B">Factura B</button>
-              <button type="button" class="btn-tipo-doc" data-valor="Factura C">Factura C</button>
-              <button type="button" class="btn-tipo-doc" data-valor="Ticket">Ticket</button>
-              <button type="button" class="btn-tipo-doc" data-valor="Remito">Remito</button>
-              <button type="button" class="btn-tipo-doc" data-valor="Nota de crédito">Nota de crédito</button>
-              <button type="button" class="btn-tipo-doc" data-valor="Otro">Otro</button>
+              <button type="button" class="btn-tipo-doc" data-valor="Factura X">Factura X</button>
             </div>
           </div>
 
@@ -1547,9 +1542,12 @@
       }
 
       Object.entries(mapaCampos).forEach(([clave, idCampo]) => {
-        const valor = datos[clave]
+        let valor = datos[clave]
         const campo = document.getElementById(idCampo)
         if (valor != null && valor !== '' && campo) {
+          // Corrección 2: receptor puede venir "1979 PAZ MIRTA" → eliminar código numérico inicial
+          if (clave === 'receptor') valor = String(valor).replace(/^\d+\s*/, '')
+          if (!valor) return
           campo.value = valor
           campo.closest('.grupo-campo')?.classList.add('campo-ocr')
           estado.wizard.camposOcr.add(clave)
