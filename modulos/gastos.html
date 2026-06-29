@@ -1,4 +1,4 @@
-<!-- v2026-06-29 -->
+<!-- v2026-06-29-redesign -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12,7 +12,6 @@
   <style>
     /* ── Layout base ───────────────────────────────────────────────────────── */
 
-    /* Cada vista ocupa la pantalla completa */
     #vista-lista {
       display: flex;
       flex-direction: column;
@@ -20,7 +19,6 @@
       background: var(--color-superficie);
     }
 
-    /* El wizard flota encima de todo como una hoja modal */
     #vista-wizard {
       position: fixed;
       inset: 0;
@@ -90,11 +88,10 @@
       position: relative;
     }
 
-    /* Línea conectora entre círculos */
     .progreso__item:not(:last-child)::after {
       content: '';
       position: absolute;
-      top: 0.9375rem; /* mitad del círculo */
+      top: 0.9375rem;
       left: calc(50% + 1rem);
       right: calc(-50% + 1rem);
       height: 2px;
@@ -137,7 +134,6 @@
       color: #fff;
     }
 
-    /* Tick para pasos completos */
     .progreso__item--completo .progreso__circulo::after {
       content: '✓';
       font-size: 0.6875rem;
@@ -153,12 +149,46 @@
       line-height: 1.2;
     }
 
-    .progreso__item--activo .progreso__etiqueta {
-      color: var(--color-acento);
+    .progreso__item--activo .progreso__etiqueta  { color: var(--color-acento); }
+    .progreso__item--completo .progreso__etiqueta { color: var(--color-exito); }
+
+    /* ── Breadcrumb ────────────────────────────────────────────────────────── */
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.125rem 0.25rem;
+      padding: 0.5rem 1.25rem;
+      background: var(--color-fondo);
+      border-bottom: 1px solid var(--color-borde);
+      flex-shrink: 0;
+      font-size: 0.8125rem;
     }
 
-    .progreso__item--completo .progreso__etiqueta {
-      color: var(--color-exito);
+    .breadcrumb__item {
+      background: none;
+      border: none;
+      padding: 0.125rem 0.25rem;
+      color: var(--color-acento);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background var(--transicion);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .breadcrumb__item:hover { background: var(--color-acento-suave); }
+
+    .breadcrumb__sep {
+      color: var(--color-texto-suave);
+      font-size: 0.75rem;
+      user-select: none;
     }
 
     /* ── Pasos del wizard ──────────────────────────────────────────────────── */
@@ -170,9 +200,7 @@
       overflow: hidden;
     }
 
-    .paso--activo {
-      display: flex;
-    }
+    .paso--activo { display: flex; }
 
     .paso__contenido {
       flex: 1;
@@ -195,7 +223,7 @@
       line-height: 1.4;
     }
 
-    /* ── Navegación del wizard (fija abajo) ────────────────────────────────── */
+    /* ── Navegación del wizard ─────────────────────────────────────────────── */
 
     .wizard-nav {
       display: flex;
@@ -206,9 +234,7 @@
       flex-shrink: 0;
     }
 
-    .wizard-nav .btn {
-      flex: 1;
-    }
+    .wizard-nav .btn { flex: 1; }
 
     .wizard-nav .btn--secundario {
       flex: 0 0 auto;
@@ -217,7 +243,7 @@
       padding-right: 1.25rem;
     }
 
-    /* ── Zona de foto (Paso 1) ─────────────────────────────────────────────── */
+    /* ── Zona de foto (Paso foto) ──────────────────────────────────────────── */
 
     .zona-foto {
       border: 2px dashed var(--color-borde);
@@ -239,21 +265,9 @@
       background: var(--color-acento-suave);
     }
 
-    .zona-foto__icono {
-      font-size: 2.5rem;
-      line-height: 1;
-    }
-
-    .zona-foto__texto {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--color-texto);
-    }
-
-    .zona-foto__subtexto {
-      font-size: 0.8125rem;
-      color: var(--color-texto-suave);
-    }
+    .zona-foto__icono    { font-size: 2.5rem; line-height: 1; }
+    .zona-foto__texto    { font-size: 0.9375rem; font-weight: 600; color: var(--color-texto); }
+    .zona-foto__subtexto { font-size: 0.8125rem; color: var(--color-texto-suave); }
 
     .zona-foto--con-imagen {
       border-style: solid;
@@ -270,7 +284,6 @@
       display: block;
     }
 
-    /* Estado de carga del OCR */
     .ocr-estado {
       display: flex;
       align-items: center;
@@ -284,7 +297,6 @@
       color: var(--color-acento);
     }
 
-    /* Indicador de campo prellenado por OCR */
     .campo-ocr label::after {
       content: ' · auto';
       font-size: 0.75rem;
@@ -292,7 +304,95 @@
       color: var(--color-exito);
     }
 
-    /* ── Grilla de categorías (Paso 3) ─────────────────────────────────────── */
+    /* ── Tarjetas de destino (empresa / vehículo) ──────────────────────────── */
+
+    .grilla-destino {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .tarjeta-destino {
+      background: var(--color-fondo);
+      border: 2px solid var(--color-borde);
+      border-radius: 16px;
+      padding: 1.25rem 0.75rem 1rem;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.625rem;
+      cursor: pointer;
+      transition: border-color var(--transicion), background var(--transicion), box-shadow var(--transicion);
+      font-family: var(--fuente);
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .tarjeta-destino:hover,
+    .tarjeta-destino:focus-visible {
+      border-color: var(--color-acento);
+      background: #EEF2F7;
+      box-shadow: 0 2px 8px rgba(27,58,140,0.12);
+    }
+
+    .tarjeta-destino.seleccionada {
+      border-color: var(--color-acento);
+      background: #EEF2F7;
+      box-shadow: 0 2px 8px rgba(27,58,140,0.16);
+    }
+
+    .tarjeta-destino__imagen {
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .tarjeta-destino__logo {
+      max-height: 64px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+
+    .tarjeta-destino__circulo {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.5rem;
+    }
+
+    .tarjeta-destino__vehiculo-icono {
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .tarjeta-destino__nombre {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .tarjeta-destino__subtexto {
+      font-size: 0.6875rem;
+      color: var(--color-texto-suave);
+      text-align: center;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Grilla de categorías (paso categoria) ─────────────────────────────── */
 
     .grilla-categorias {
       display: grid;
@@ -309,11 +409,13 @@
       background: var(--color-fondo);
       border: 2px solid var(--color-borde);
       border-radius: 12px;
-      padding: 0.875rem 0.375rem;
+      padding: 1rem 0.375rem;
+      min-height: 140px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.375rem;
+      justify-content: center;
+      gap: 0.5rem;
       cursor: pointer;
       transition: border-color var(--transicion), background var(--transicion);
       font-family: var(--fuente);
@@ -330,11 +432,7 @@
       background: var(--color-acento-suave);
     }
 
-    .btn-categoria__icono {
-      font-size: 1.375rem;
-      line-height: 1;
-    }
-
+    .btn-categoria__icono  { font-size: 2rem; line-height: 1; }
     .btn-categoria__nombre {
       font-size: 0.6875rem;
       font-weight: 600;
@@ -343,7 +441,7 @@
       line-height: 1.2;
     }
 
-    /* ── Resumen final (Paso 5) ─────────────────────────────────────────────── */
+    /* ── Resumen final ──────────────────────────────────────────────────────── */
 
     .resumen-seccion {
       background: var(--color-fondo);
@@ -373,20 +471,10 @@
       font-size: 0.875rem;
     }
 
-    .resumen-fila:last-child {
-      border-bottom: none;
-    }
+    .resumen-fila:last-child { border-bottom: none; }
 
-    .resumen-fila__etiqueta {
-      color: var(--color-texto-suave);
-      flex-shrink: 0;
-    }
-
-    .resumen-fila__valor {
-      font-weight: 600;
-      color: var(--color-texto);
-      text-align: right;
-    }
+    .resumen-fila__etiqueta { color: var(--color-texto-suave); flex-shrink: 0; }
+    .resumen-fila__valor    { font-weight: 600; color: var(--color-texto); text-align: right; }
 
     .resumen-importe {
       font-size: 1.5rem;
@@ -431,9 +519,7 @@
       flex-shrink: 0;
     }
 
-    .lista-filtros select:focus {
-      border-color: var(--color-acento);
-    }
+    .lista-filtros select:focus { border-color: var(--color-acento); }
 
     /* ── Vista lista — cards de gastos ─────────────────────────────────────── */
 
@@ -477,10 +563,7 @@
       flex-shrink: 0;
     }
 
-    .gasto__info {
-      flex: 1;
-      min-width: 0;
-    }
+    .gasto__info   { flex: 1; min-width: 0; }
 
     .gasto__razon-social {
       font-size: 0.9375rem;
@@ -515,7 +598,6 @@
       white-space: nowrap;
     }
 
-    /* Badges de estado */
     .badge-estado {
       display: inline-block;
       padding: 0.1875rem 0.5rem;
@@ -526,22 +608,11 @@
       text-transform: uppercase;
     }
 
-    .badge-estado--registrado {
-      background: rgba(16, 185, 129, 0.10);
-      color: #059669;
-    }
+    .badge-estado--registrado { background: rgba(16,185,129,0.10); color: #059669; }
+    .badge-estado--pendiente  { background: rgba(245,158,11,0.10);  color: #D97706; }
+    .badge-estado--rechazado  { background: rgba(239,68,68,0.10);   color: #DC2626; }
 
-    .badge-estado--pendiente {
-      background: rgba(245, 158, 11, 0.10);
-      color: #D97706;
-    }
-
-    .badge-estado--rechazado {
-      background: rgba(239, 68, 68, 0.10);
-      color: #DC2626;
-    }
-
-    /* ── Botón FAB flotante ─────────────────────────────────────────────────── */
+    /* ── Botón FAB ──────────────────────────────────────────────────────────── */
 
     .btn-fab {
       position: fixed;
@@ -556,7 +627,7 @@
       font-size: 1.625rem;
       line-height: 1;
       cursor: pointer;
-      box-shadow: 0 4px 20px rgba(91, 108, 249, 0.40);
+      box-shadow: 0 4px 20px rgba(27,58,140,0.35);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -567,7 +638,7 @@
 
     .btn-fab:hover {
       transform: scale(1.08);
-      box-shadow: 0 6px 28px rgba(91, 108, 249, 0.50);
+      box-shadow: 0 6px 28px rgba(27,58,140,0.45);
     }
 
     /* ── Spinner inline ─────────────────────────────────────────────────────── */
@@ -582,7 +653,7 @@
       flex-shrink: 0;
     }
 
-    /* ── Campo select estilizado ────────────────────────────────────────────── */
+    /* ── Selects y textareas en formularios ─────────────────────────────────── */
 
     .grupo-campo select {
       width: 100%;
@@ -605,7 +676,7 @@
 
     .grupo-campo select:focus {
       border-color: var(--color-acento);
-      box-shadow: 0 0 0 4px rgba(91, 108, 249, 0.12);
+      box-shadow: 0 0 0 4px rgba(27,58,140,0.10);
     }
 
     .grupo-campo textarea {
@@ -625,10 +696,9 @@
 
     .grupo-campo textarea:focus {
       border-color: var(--color-acento);
-      box-shadow: 0 0 0 4px rgba(91, 108, 249, 0.12);
+      box-shadow: 0 0 0 4px rgba(27,58,140,0.10);
     }
 
-    /* Campo opcional: label con tag */
     .etiqueta-opcional {
       font-size: 0.75rem;
       font-weight: 400;
@@ -636,21 +706,12 @@
       margin-left: 0.375rem;
     }
 
-    /* Campo de kilometraje oculto por defecto */
-    #grupo-kilometraje {
-      display: none;
-    }
-
-    /* ── Botones de tipo de documento (Paso 2) ─────────────────────────────── */
+    /* ── Botones de tipo de documento ───────────────────────────────────────── */
 
     .grilla-tipo-doc {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 0.5rem;
-    }
-
-    @media (min-width: 420px) {
-      .grilla-tipo-doc { grid-template-columns: repeat(4, 1fr); }
     }
 
     .btn-tipo-doc {
@@ -713,21 +774,15 @@
       <div style="width: 4rem;"></div>
     </header>
 
-    <div class="lista-filtros" id="contenedor-filtros">
-      <!-- Filtros renderizados por JS -->
-    </div>
+    <div class="lista-filtros" id="contenedor-filtros"></div>
 
-    <div class="lista-contenido" id="lista-gastos">
-      <!-- Cards de gastos renderizadas por JS -->
-    </div>
+    <div class="lista-contenido" id="lista-gastos"></div>
 
-    <!-- Estado: cargando -->
     <div id="estado-cargando" class="estado-vacio" hidden>
       <div class="spinner"></div>
       <p class="estado-vacio__descripcion">Cargando gastos…</p>
     </div>
 
-    <!-- Estado: sin resultados -->
     <div id="estado-vacio" class="estado-vacio" hidden>
       <div class="estado-vacio__icono">💳</div>
       <div class="estado-vacio__titulo">Sin gastos registrados</div>
@@ -744,14 +799,13 @@
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-wizard" hidden>
 
-    <!-- Header del wizard -->
     <header class="wizard-header">
       <button class="wizard-header__cerrar" id="btn-cancelar-wizard" title="Cancelar">✕</button>
-      <span class="wizard-header__titulo" id="wizard-titulo">Nuevo gasto</span>
+      <span class="wizard-header__titulo">Nuevo gasto</span>
       <div style="width: 2rem;"></div>
     </header>
 
-    <!-- Barra de progreso -->
+    <!-- Barra de progreso: 5 círculos, mapean 7 sub-pasos -->
     <div class="progreso" id="barra-progreso">
       <div class="progreso__item progreso__item--activo" data-paso="1">
         <div class="progreso__circulo">1</div>
@@ -763,11 +817,11 @@
       </div>
       <div class="progreso__item" data-paso="3">
         <div class="progreso__circulo">3</div>
-        <span class="progreso__etiqueta">Tipo</span>
+        <span class="progreso__etiqueta">Destino</span>
       </div>
       <div class="progreso__item" data-paso="4">
         <div class="progreso__circulo">4</div>
-        <span class="progreso__etiqueta">Asign.</span>
+        <span class="progreso__etiqueta">Clasif.</span>
       </div>
       <div class="progreso__item" data-paso="5">
         <div class="progreso__circulo">5</div>
@@ -775,35 +829,40 @@
       </div>
     </div>
 
-    <!-- ── Paso 1: Foto del comprobante ──────────────────────────────────── -->
-    <div class="paso paso--activo" id="paso-1">
+    <!-- Breadcrumb: visible desde sub-paso "vehiculo-destino" en adelante -->
+    <div id="wizard-breadcrumb" class="breadcrumb" hidden></div>
+
+    <!-- ── Sub-paso FOTO ──────────────────────────────────────────────────── -->
+    <div class="paso paso--activo" id="sp-foto">
       <div class="paso__contenido">
         <h2 class="paso__titulo">Foto del comprobante</h2>
-        <p class="paso__subtitulo">Sacá una foto o subí una imagen. El sistema va a leer los datos automáticamente.</p>
+        <p class="paso__subtitulo">Subí una imagen o PDF. El sistema va a leer los datos automáticamente.</p>
 
-        <!-- Zona de carga de foto -->
         <div class="zona-foto" id="zona-foto">
           <span class="zona-foto__icono">📷</span>
-          <span class="zona-foto__texto">Tocar para fotografiar o subir</span>
-          <span class="zona-foto__subtexto">JPG, PNG o WebP · máx. 10 MB</span>
+          <span class="zona-foto__texto">Tocar para subir imagen</span>
+          <span class="zona-foto__subtexto">JPG, PNG, PDF · máx. 10 MB</span>
         </div>
-        <input type="file" id="input-foto" accept="image/jpeg,image/png,image/webp" capture="environment" hidden>
+        <input type="file" id="input-foto" accept="image/*,application/pdf" hidden>
 
-        <!-- Estado del OCR (oculto hasta tener foto) -->
+        <button class="btn btn--secundario" id="btn-cambiar-foto"
+                style="display:none; margin-bottom:1rem; width:100%;">
+          🔄 Cambiar foto
+        </button>
+
         <div id="ocr-estado" hidden></div>
-
       </div>
       <div class="wizard-nav">
-        <button class="btn btn--secundario" id="paso1-sin-foto">Sin foto</button>
-        <button class="btn btn--primario" id="paso1-siguiente" disabled>Siguiente →</button>
+        <button class="btn btn--secundario" id="btn-sin-foto">Sin comprobante</button>
+        <button class="btn btn--primario" id="btn-foto-siguiente" disabled>Siguiente →</button>
       </div>
     </div>
 
-    <!-- ── Paso 2: Datos del comprobante ─────────────────────────────────── -->
-    <div class="paso" id="paso-2">
+    <!-- ── Sub-paso DATOS ─────────────────────────────────────────────────── -->
+    <div class="paso" id="sp-datos">
       <div class="paso__contenido">
         <h2 class="paso__titulo">Datos del comprobante</h2>
-        <p class="paso__subtitulo">Revisá y completá los datos. Los campos marcados con <span style="color:var(--color-exito)">· auto</span> fueron leídos automáticamente.</p>
+        <p class="paso__subtitulo">Revisá y completá los datos. Los campos con <span style="color:var(--color-exito)">· auto</span> fueron leídos automáticamente.</p>
 
         <div class="formulario">
           <div class="grupo-campo" id="grupo-fecha">
@@ -831,7 +890,7 @@
 
           <div class="grupo-campo" id="grupo-receptor">
             <label for="campo-receptor">Receptor / Comprador <span class="etiqueta-opcional">opcional</span></label>
-            <input type="text" id="campo-receptor" name="receptor" placeholder="Nombre del comprador (campo SEÑOR:)">
+            <input type="text" id="campo-receptor" name="receptor" placeholder="Nombre del comprador">
           </div>
 
           <div class="grupo-campo" id="grupo-descripcion-item">
@@ -839,14 +898,14 @@
             <input type="text" id="campo-descripcion-item" name="descripcion_item" placeholder="Ej: Caja Cucuruchos x 4 pisos · 2.441 un. x $457">
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: end;">
+          <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end;">
             <div class="grupo-campo" id="grupo-importe">
               <label for="campo-importe">Importe total</label>
               <input type="text" inputmode="decimal" id="campo-importe" name="importe" placeholder="0,00" required>
             </div>
             <div class="grupo-campo" id="grupo-moneda">
               <label for="campo-moneda">Moneda</label>
-              <select id="campo-moneda" name="moneda" style="width: 5.5rem;">
+              <select id="campo-moneda" name="moneda" style="width:5.5rem;">
                 <option value="ARS">ARS</option>
                 <option value="USD">USD</option>
               </select>
@@ -855,22 +914,73 @@
         </div>
       </div>
       <div class="wizard-nav">
-        <button class="btn btn--secundario" id="paso2-atras">← Atrás</button>
-        <button class="btn btn--primario" id="paso2-siguiente">Siguiente →</button>
+        <button class="btn btn--secundario" id="btn-datos-atras">← Atrás</button>
+        <button class="btn btn--primario" id="btn-datos-siguiente">Siguiente →</button>
       </div>
     </div>
 
-    <!-- ── Paso 3: Clasificación ──────────────────────────────────────────── -->
-    <div class="paso" id="paso-3">
+    <!-- ── Sub-paso DESTINO ───────────────────────────────────────────────── -->
+    <div class="paso" id="sp-destino">
       <div class="paso__contenido">
-        <h2 class="paso__titulo">Clasificación</h2>
-        <p class="paso__subtitulo">¿A qué categoría corresponde este gasto?</p>
+        <h2 class="paso__titulo">¿A dónde va este gasto?</h2>
 
-        <div class="grilla-categorias" id="grilla-categorias">
-          <!-- Renderizado por JS desde tabla categorias -->
+        <!-- Tarjetas renderizadas por JS desde estado.maestros.unidades + tarjeta Vehículos -->
+        <div class="grilla-destino" id="grilla-destino"></div>
+      </div>
+      <div class="wizard-nav">
+        <button class="btn btn--secundario" id="btn-destino-atras">← Atrás</button>
+      </div>
+    </div>
+
+    <!-- ── Sub-paso VEHICULO-DESTINO ─────────────────────────────────────── -->
+    <div class="paso" id="sp-vehiculo-destino">
+      <div class="paso__contenido">
+        <h2 class="paso__titulo">Seleccioná el vehículo</h2>
+
+        <!-- Tarjetas renderizadas por JS -->
+        <div class="grilla-destino" id="grilla-vehiculos"></div>
+
+        <!-- Campo kilometraje: aparece al seleccionar un vehículo -->
+        <div id="grupo-km-vehiculo" class="formulario" style="display:none; margin-top:1.25rem;">
+          <div class="grupo-campo">
+            <label for="campo-kilometraje">Kilometraje <span class="etiqueta-opcional">opcional</span></label>
+            <input type="number" id="campo-kilometraje" name="kilometraje" placeholder="km actuales" min="0">
+          </div>
         </div>
+      </div>
+      <div class="wizard-nav">
+        <button class="btn btn--secundario" id="btn-vehiculo-atras">← Atrás</button>
+        <button class="btn btn--primario" id="btn-vehiculo-continuar" style="display:none;">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- ── Sub-paso CATEGORIA ─────────────────────────────────────────────── -->
+    <div class="paso" id="sp-categoria">
+      <div class="paso__contenido">
+        <h2 class="paso__titulo">¿Qué categoría es?</h2>
+
+        <!-- Grilla renderizada por JS. Tap en categoría auto-avanza a detalles -->
+        <div class="grilla-categorias" id="grilla-categorias"></div>
+      </div>
+      <div class="wizard-nav">
+        <button class="btn btn--secundario" id="btn-categoria-atras">← Atrás</button>
+      </div>
+    </div>
+
+    <!-- ── Sub-paso DETALLES ──────────────────────────────────────────────── -->
+    <div class="paso" id="sp-detalles">
+      <div class="paso__contenido">
+        <h2 class="paso__titulo">Detalles del gasto</h2>
+        <p class="paso__subtitulo">Todos los campos son opcionales excepto Empleado.</p>
 
         <div class="formulario">
+          <div class="grupo-campo">
+            <label for="campo-empleado">Empleado</label>
+            <select id="campo-empleado" name="empleado_id" required>
+              <option value="">— Seleccioná empleado —</option>
+            </select>
+          </div>
+
           <div class="grupo-campo">
             <label for="campo-proveedor">Proveedor <span class="etiqueta-opcional">opcional</span></label>
             <select id="campo-proveedor" name="proveedor_id">
@@ -894,46 +1004,6 @@
             <label for="campo-descripcion">Descripción <span class="etiqueta-opcional">opcional</span></label>
             <input type="text" id="campo-descripcion" name="descripcion" placeholder="Ej: Nafta viaje a planta">
           </div>
-        </div>
-      </div>
-      <div class="wizard-nav">
-        <button class="btn btn--secundario" id="paso3-atras">← Atrás</button>
-        <button class="btn btn--primario" id="paso3-siguiente">Siguiente →</button>
-      </div>
-    </div>
-
-    <!-- ── Paso 4: Asignación ─────────────────────────────────────────────── -->
-    <div class="paso" id="paso-4">
-      <div class="paso__contenido">
-        <h2 class="paso__titulo">Asignación</h2>
-        <p class="paso__subtitulo">¿A quién y a qué unidad se carga este gasto?</p>
-
-        <div class="formulario">
-          <div class="grupo-campo">
-            <label for="campo-unidad">Unidad de negocio</label>
-            <select id="campo-unidad" name="unidad_negocio_id" required>
-              <option value="">— Seleccioná —</option>
-            </select>
-          </div>
-
-          <div class="grupo-campo">
-            <label for="campo-empleado">Empleado</label>
-            <select id="campo-empleado" name="empleado_id" required>
-              <option value="">— Seleccioná unidad primero —</option>
-            </select>
-          </div>
-
-          <div class="grupo-campo">
-            <label for="campo-vehiculo">Vehículo <span class="etiqueta-opcional">opcional</span></label>
-            <select id="campo-vehiculo" name="vehiculo_id">
-              <option value="">— Sin vehículo —</option>
-            </select>
-          </div>
-
-          <div class="grupo-campo" id="grupo-kilometraje">
-            <label for="campo-kilometraje">Kilometraje</label>
-            <input type="number" id="campo-kilometraje" name="kilometraje" placeholder="km actuales" min="0">
-          </div>
 
           <div class="grupo-campo">
             <label for="campo-observaciones">Observaciones <span class="etiqueta-opcional">opcional</span></label>
@@ -942,24 +1012,22 @@
         </div>
       </div>
       <div class="wizard-nav">
-        <button class="btn btn--secundario" id="paso4-atras">← Atrás</button>
-        <button class="btn btn--primario" id="paso4-siguiente">Revisar →</button>
+        <button class="btn btn--secundario" id="btn-detalles-atras">← Atrás</button>
+        <button class="btn btn--primario" id="btn-detalles-siguiente">Siguiente →</button>
       </div>
     </div>
 
-    <!-- ── Paso 5: Resumen y confirmación ────────────────────────────────── -->
-    <div class="paso" id="paso-5">
+    <!-- ── Sub-paso RESUMEN ───────────────────────────────────────────────── -->
+    <div class="paso" id="sp-resumen">
       <div class="paso__contenido">
         <h2 class="paso__titulo">Confirmación</h2>
         <p class="paso__subtitulo">Revisá el resumen antes de guardar.</p>
 
-        <!-- Renderizado por JS al llegar al paso 5 -->
         <div id="resumen-contenido"></div>
-
       </div>
       <div class="wizard-nav">
-        <button class="btn btn--secundario" id="paso5-editar">← Editar</button>
-        <button class="btn btn--primario" id="paso5-guardar">Guardar gasto</button>
+        <button class="btn btn--secundario" id="btn-resumen-editar">← Editar</button>
+        <button class="btn btn--primario" id="btn-resumen-guardar">Guardar gasto</button>
       </div>
     </div>
 
@@ -992,18 +1060,33 @@
         unidad_negocio_id: '',
       },
       wizard: {
-        paso:         1,
+        subpaso:      'foto',
         fotoArchivo:  null,
         fotoUrl:      null,
         camposOcr:    new Set(),
       },
     }
 
+    // Selecciones del wizard — fuera del estado para fácil acceso
+    let categoriaSeleccionada = null
+    let tipDocSeleccionado    = null
+    let unidadSeleccionada    = null  // id de unidades_negocio
+    let vehiculoSeleccionado  = null  // id de vehiculo, o null = sin vehículo
+    let vehiculoFueElegido    = false // true cuando el usuario tapeó un vehículo o "Sin vehículo"
+    let viaVehiculos          = false // true cuando llegó por la tarjeta Vehículos
+
+    // Mapeo: sub-paso → número de círculo en la barra de progreso (1-5)
+    const SUBPASO_A_CIRCULO = {
+      'foto': 1, 'datos': 2,
+      'destino': 3, 'vehiculo-destino': 3,
+      'categoria': 4, 'detalles': 4,
+      'resumen': 5,
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
-    // HELPERS GENERALES
+    // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Provisional — reemplazar cuando exista tabla de roles real
     function obtenerRol(email) {
       if (email === 'facundousabarrena@gmail.com') return 'admin'
       if (email === 'pablousabarrena@gmail.com')   return 'pablo'
@@ -1013,13 +1096,11 @@
     function formatearImporte(importe, moneda = 'ARS') {
       if (importe == null) return '—'
       const num = Number(importe).toLocaleString('es-AR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
       })
       return moneda === 'USD' ? `USD ${num}` : `$ ${num}`
     }
 
-    // "2026-06-20" → "jun-26"  (formato del campo periodo en la tabla)
     function fechaAPeriodo(fechaStr) {
       const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
       const d = new Date(fechaStr + 'T00:00:00')
@@ -1035,14 +1116,42 @@
       })
     }
 
+    // Convierte "1.349.799,77" → 1349799.77
+    function parseImporte(str) {
+      if (!str) return null
+      const limpio = String(str).replace(/\./g, '').replace(',', '.')
+      const num    = parseFloat(limpio)
+      return isNaN(num) ? null : num
+    }
+
+    // Poblar un <select> con items
+    function poblarSelect(idCampo, items, mapFn, placeholder) {
+      const sel = document.getElementById(idCampo)
+      if (!sel) return
+      sel.innerHTML =
+        `<option value="">${placeholder}</option>` +
+        items.map(item => {
+          const { value, label } = mapFn(item)
+          return `<option value="${value}">${label}</option>`
+        }).join('')
+    }
+
+    // Retorna config de logo/color/inicial para una empresa según su nombre
+    function configEmpresa(nombre) {
+      const n = (nombre || '').toLowerCase()
+      if (n.includes('cucuruchos')) return { logo: '../logo-cucuruchos-nuss.png', color: '#C8893A', inicial: 'C' }
+      if (n.includes('dolce'))      return { logo: '../logo-dolce-pasta.png',     color: '#8B4513', inicial: 'D' }
+      if (n.includes('taller'))     return { logo: '../logo-taller.png',          color: '#4A7C59', inicial: 'T' }
+      return { logo: '../logo-heladitos-orly.png', color: '#E8A020', inicial: 'H' }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
-    // INICIALIZACIÓN — SESIÓN Y ROL
+    // INICIALIZACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
     estado.sesion = await verificarSesion()
     estado.rol    = obtenerRol(estado.sesion.user.email)
 
-    // Para rol 'usuario': intentar vincular con un empleado por nombre
     if (estado.rol === 'usuario') {
       const meta   = estado.sesion.user.user_metadata ?? {}
       const nombre = (meta.nombre_completo || meta.nombre || '').trim()
@@ -1057,16 +1166,12 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // VISTA A — FILTROS
+    // VISTA A — FILTROS Y LISTA
     // ═══════════════════════════════════════════════════════════════════════
 
     function renderizarFiltros(unidades = []) {
       const contenedor = document.getElementById('contenedor-filtros')
-
-      // Preseleccionar el mes en curso al arrancar
-      if (!estado.filtros.periodo) {
-        estado.filtros.periodo = generarOpcionesPeriodo()[0]
-      }
+      if (!estado.filtros.periodo) estado.filtros.periodo = generarOpcionesPeriodo()[0]
 
       const periodos = generarOpcionesPeriodo()
       let html = `
@@ -1078,7 +1183,6 @@
         </select>
       `
 
-      // Filtro de unidad solo para admin / pablo
       if ((estado.rol === 'admin' || estado.rol === 'pablo') && unidades.length) {
         html += `
           <select id="filtro-unidad">
@@ -1102,10 +1206,6 @@
       })
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // VISTA A — LISTA DE GASTOS
-    // ═══════════════════════════════════════════════════════════════════════
-
     async function cargarLista() {
       const listaEl    = document.getElementById('lista-gastos')
       const vaciEl     = document.getElementById('estado-vacio')
@@ -1125,14 +1225,10 @@
         `)
         .order('fecha', { ascending: false })
 
-      // Filtro por rol
       if (estado.rol === 'usuario') {
-        // Sin empleado vinculado devuelve lista vacía (no se expone datos ajenos)
         query = query.eq('empleado_id', estado.miEmpleadoId ?? -1)
       }
-      // 'encargado' → pendiente de tabla de roles real
 
-      // Filtros de UI
       if (estado.filtros.periodo)           query = query.eq('periodo', estado.filtros.periodo)
       if (estado.filtros.unidad_negocio_id) query = query.eq('unidad_negocio_id', estado.filtros.unidad_negocio_id)
 
@@ -1182,14 +1278,13 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // NAVEGACIÓN ENTRE VISTAS (stub — el wizard se completa en Bloque 3)
+    // NAVEGACIÓN VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
     function abrirWizard() {
-      console.log('[wizard] abrirWizard llamado')
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-wizard').removeAttribute('hidden')
-      iniciarWizard()   // se define en Bloque 3
+      iniciarWizard()
     }
 
     function cerrarWizard() {
@@ -1199,17 +1294,10 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // EVENT LISTENERS — VISTA A
+    // ARRANQUE INICIAL
     // ═══════════════════════════════════════════════════════════════════════
 
     document.getElementById('btn-nuevo-gasto').addEventListener('click', abrirWizard)
-    document.getElementById('btn-cancelar-wizard').addEventListener('click', () => {
-      if (confirm('¿Cancelar la carga? Se perderán los datos ingresados.')) cerrarWizard()
-    })
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // ARRANQUE
-    // ═══════════════════════════════════════════════════════════════════════
 
     const { data: unidadesInicial } = await supabase
       .from('unidades_negocio')
@@ -1222,61 +1310,27 @@
     cargarLista()
 
     // ═══════════════════════════════════════════════════════════════════════
-    // BLOQUE 3 — WIZARD
+    // WIZARD — MAESTROS
     // ═══════════════════════════════════════════════════════════════════════
 
-    let categoriaSeleccionada = null
-    let tipDocSeleccionado    = null
-
-    // Convierte "1.349.799,77" → 1349799.77  (formato argentino → número)
-    function parseImporte(str) {
-      if (!str) return null
-      const limpio = String(str).replace(/\./g, '').replace(',', '.')
-      const num    = parseFloat(limpio)
-      return isNaN(num) ? null : num
-    }
-
-    function seleccionarTipoDoc(valor) {
-      tipDocSeleccionado = valor || null
-      document.querySelectorAll('.btn-tipo-doc').forEach(btn => {
-        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
-      })
-    }
-
-    // ── Utilidad: poblar un <select> ──────────────────────────────────────
-    function poblarSelect(idCampo, items, mapFn, placeholder) {
-      const sel = document.getElementById(idCampo)
-      if (!sel) return
-      sel.innerHTML =
-        `<option value="">${placeholder}</option>` +
-        items.map(item => {
-          const { value, label } = mapFn(item)
-          return `<option value="${value}">${label}</option>`
-        }).join('')
-    }
-
-    // ── Cargar maestros desde Supabase ────────────────────────────────────
     async function cargarMaestros() {
-      // ── LOG: verificar sesión activa antes de queries ─────────────────────
       const { data: { session } } = await supabase.auth.getSession()
       console.log('[maestros] sesión activa:', session ? `uid=${session.user.id}` : 'NULL — sin sesión')
 
       const [cats, emps, vehs, provs, projs] = await Promise.all([
         supabase.from('categorias') .select('id, nombre, icon').eq('activo', true).order('nombre'),
-        supabase.from('empleados')  .select('id, nombre, unidad_negocio_id').eq('activo', true).order('nombre'),
+        supabase.from('empleados')  .select('id, nombre, unidad_negocio_id, tipo').eq('activo', true).order('nombre'),
         supabase.from('vehiculos')  .select('id, nombre, marca, patente, unidad_negocio_id').eq('activo', true).order('nombre'),
         supabase.from('proveedores').select('id, razon_social, nombre_fantasia').eq('activo', true).order('razon_social'),
         supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),
       ])
 
-      // ── LOG: resultado crudo de cada tabla ───────────────────────────────
       console.log('[maestros] categorias  →', 'data:', cats.data,  '| error:', cats.error)
       console.log('[maestros] empleados   →', 'data:', emps.data,  '| error:', emps.error)
       console.log('[maestros] vehiculos   →', 'data:', vehs.data,  '| error:', vehs.error)
       console.log('[maestros] proveedores →', 'data:', provs.data, '| error:', provs.error)
       console.log('[maestros] proyectos   →', 'data:', projs.data, '| error:', projs.error)
 
-      // Detectar errores de RLS u otros — no silenciar
       const errores = [
         cats.error  && `categorias: ${cats.error.message}`,
         emps.error  && `empleados: ${emps.error.message}`,
@@ -1287,7 +1341,7 @@
 
       if (errores.length) {
         console.error('[maestros] errores:', errores)
-        throw new Error(`No se pudo cargar la lista de ${errores[0].split(':')[0]}. Verificá los permisos de lectura (RLS) en Supabase.`)
+        throw new Error(`No se pudo cargar ${errores[0].split(':')[0]}. Verificá los permisos en Supabase.`)
       }
 
       estado.maestros.categorias  = cats.data  ?? []
@@ -1298,39 +1352,314 @@
 
       console.log('[maestros] cargados → categorias:', estado.maestros.categorias.length,
         '| empleados:', estado.maestros.empleados.length,
-        '| proveedores:', estado.maestros.proveedores.length,
-        '| proyectos:', estado.maestros.proyectos.length)
+        '| vehiculos:', estado.maestros.vehiculos.length)
     }
 
-    // ── Actualizar selects encadenados ────────────────────────────────────
-    function actualizarSelectEmpleado(unidadId) {
-      const filtrados = unidadId
-        ? estado.maestros.empleados.filter(e => String(e.unidad_negocio_id) === String(unidadId))
-        : estado.maestros.empleados
-      poblarSelect('campo-empleado', filtrados,
-        e => ({ value: e.id, label: e.nombre }),
-        unidadId ? '— Seleccioná empleado —' : '— Seleccioná unidad primero —')
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — INICIAR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function iniciarWizard() {
+      // Resetear estado del wizard
+      estado.wizard.subpaso    = 'foto'
+      estado.wizard.fotoArchivo = null
+      estado.wizard.fotoUrl     = null
+      estado.wizard.camposOcr   = new Set()
+      categoriaSeleccionada = null
+      tipDocSeleccionado    = null
+      unidadSeleccionada    = null
+      vehiculoSeleccionado  = null
+      vehiculoFueElegido    = false
+      viaVehiculos          = false
+
+      // Limpiar campos de formulario
+      ;['campo-fecha','campo-numero-doc','campo-razon-social',
+        'campo-receptor','campo-descripcion-item',
+        'campo-importe','campo-lugar','campo-descripcion',
+        'campo-kilometraje','campo-observaciones',
+      ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
+      seleccionarTipoDoc(null)
+      document.getElementById('campo-moneda').value = 'ARS'
+      document.querySelectorAll('.campo-ocr').forEach(el => el.classList.remove('campo-ocr'))
+
+      resetearZonaFoto()
+      document.getElementById('btn-cambiar-foto').style.display = 'none'
+
+      // Cargar maestros si es la primera vez
+      if (!estado.maestros.categorias.length) {
+        try {
+          await cargarMaestros()
+        } catch (err) {
+          console.error('[iniciarWizard] fallo cargarMaestros:', err)
+          mostrarError(err.message || 'Error al cargar los datos. Cerrá y volvé a intentar.')
+          cerrarWizard()
+          return
+        }
+      }
+
+      // Poblar selects estáticos (proveedor, proyecto)
+      poblarSelect('campo-proveedor', estado.maestros.proveedores,
+        p => ({ value: p.id, label: p.nombre_fantasia || p.razon_social }),
+        '— Sin proveedor —')
+      poblarSelect('campo-proyecto', estado.maestros.proyectos,
+        p => ({ value: p.id, label: p.nombre }),
+        '— Sin proyecto —')
+
+      // Renderizar grillas
+      renderizarGrillaDestino()
+      renderizarGrillaCategorias()
+
+      irASubpaso('foto')
     }
 
-    function actualizarSelectVehiculo(unidadId) {
-      const filtrados = unidadId
-        ? estado.maestros.vehiculos.filter(v => String(v.unidad_negocio_id) === String(unidadId))
-        : []
-      poblarSelect('campo-vehiculo', filtrados,
-        v => ({ value: v.id, label: `${v.nombre} (${v.patente})` }),
-        '— Sin vehículo —')
-      document.getElementById('grupo-kilometraje').style.display = 'none'
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — MOTOR DE NAVEGACIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function irASubpaso(id) {
+      document.querySelectorAll('.paso').forEach(el => el.classList.remove('paso--activo'))
+      const el = document.getElementById(`sp-${id}`)
+      if (el) el.classList.add('paso--activo')
+      estado.wizard.subpaso = id
+      actualizarProgreso(SUBPASO_A_CIRCULO[id] ?? 1)
+      actualizarBreadcrumb(id)
+
+      // Lógica de entrada por sub-paso
+      if (id === 'destino') {
+        renderizarGrillaDestino() // re-renderiza con selección actual
+      }
+
+      if (id === 'vehiculo-destino') {
+        const vehiculosAMostrar = viaVehiculos
+          ? estado.maestros.vehiculos
+          : estado.maestros.vehiculos.filter(v => String(v.unidad_negocio_id) === String(unidadSeleccionada))
+        renderizarGrillaVehiculos(vehiculosAMostrar, !viaVehiculos)
+
+        // Restaurar estado si el usuario vuelve atrás
+        const grupoKm    = document.getElementById('grupo-km-vehiculo')
+        const btnCont    = document.getElementById('btn-vehiculo-continuar')
+        if (vehiculoFueElegido && vehiculoSeleccionado !== null) {
+          grupoKm.style.display = 'block'
+          btnCont.style.display = 'flex'
+        } else {
+          grupoKm.style.display = 'none'
+          btnCont.style.display = 'none'
+        }
+      }
+
+      if (id === 'detalles') {
+        poblarSelectEmpleados(unidadSeleccionada)
+      }
+
+      if (id === 'resumen') {
+        renderizarResumen()
+      }
     }
 
-    // ── Grilla de categorías ──────────────────────────────────────────────
+    function actualizarProgreso(circuloActual) {
+      document.querySelectorAll('.progreso__item').forEach(item => {
+        const num     = Number(item.dataset.paso)
+        const circulo = item.querySelector('.progreso__circulo')
+        item.classList.remove('progreso__item--activo', 'progreso__item--completo')
+        if (num === circuloActual) {
+          item.classList.add('progreso__item--activo')
+          circulo.textContent = num
+        } else if (num < circuloActual) {
+          item.classList.add('progreso__item--completo')
+          circulo.textContent = '✓'
+        } else {
+          circulo.textContent = num
+        }
+      })
+    }
+
+    function actualizarBreadcrumb(subpaso) {
+      const bcEl = document.getElementById('wizard-breadcrumb')
+      const visibleEn = ['vehiculo-destino','categoria','detalles','resumen']
+      if (!visibleEn.includes(subpaso)) { bcEl.hidden = true; return }
+
+      bcEl.hidden = false
+      const items = []
+
+      // Segmento empresa
+      let empresaLabel
+      if (unidadSeleccionada) {
+        const u = estado.maestros.unidades.find(x => x.id === unidadSeleccionada)
+        empresaLabel = u?.nombre ?? 'Empresa'
+      } else {
+        empresaLabel = 'Vehículos'
+      }
+      items.push({ label: empresaLabel, subpaso: 'destino' })
+
+      // Segmento vehículo (una vez confirmado)
+      if (['categoria','detalles','resumen'].includes(subpaso)) {
+        let vehLabel
+        if (vehiculoSeleccionado) {
+          const v = estado.maestros.vehiculos.find(x => x.id === vehiculoSeleccionado)
+          vehLabel = v ? v.nombre : '—'
+        } else {
+          vehLabel = 'Sin vehículo'
+        }
+        items.push({ label: vehLabel, subpaso: 'vehiculo-destino' })
+      }
+
+      // Segmento categoría (una vez confirmada)
+      if (['detalles','resumen'].includes(subpaso) && categoriaSeleccionada) {
+        const cat = estado.maestros.categorias.find(c => c.id === categoriaSeleccionada)
+        if (cat) items.push({ label: `${cat.icon} ${cat.nombre}`, subpaso: 'categoria' })
+      }
+
+      bcEl.innerHTML = items.map((item, i) =>
+        (i > 0 ? '<span class="breadcrumb__sep">›</span>' : '') +
+        `<button type="button" class="breadcrumb__item" data-subpaso="${item.subpaso}">${item.label}</button>`
+      ).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — GRILLA DESTINO (empresas + Vehículos)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarGrillaDestino() {
+      const grilla = document.getElementById('grilla-destino')
+      if (!grilla) return
+
+      const tarjetaEmpresa = (id, nombre, seleccionada) => {
+        const c = configEmpresa(nombre)
+        return `
+          <button type="button" class="tarjeta-destino ${seleccionada ? 'seleccionada' : ''}"
+                  data-id="${id}" data-tipo="empresa">
+            <div class="tarjeta-destino__imagen">
+              <img class="tarjeta-destino__logo" src="${c.logo}" alt="${nombre}"
+                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+              <div class="tarjeta-destino__circulo" style="background:${c.color}">${c.inicial}</div>
+            </div>
+            <span class="tarjeta-destino__nombre">${nombre}</span>
+          </button>
+        `
+      }
+
+      const empresasHtml = estado.maestros.unidades.map(u =>
+        tarjetaEmpresa(u.id, u.nombre, !viaVehiculos && u.id === unidadSeleccionada)
+      ).join('')
+
+      const vehiculosHtml = `
+        <button type="button" class="tarjeta-destino ${viaVehiculos ? 'seleccionada' : ''}"
+                data-id="vehiculos" data-tipo="vehiculos">
+          <div class="tarjeta-destino__imagen">
+            <img class="tarjeta-destino__logo" src="../logo-vehiculos.png" alt="Vehículos"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="tarjeta-destino__circulo" style="background:#1B3A8C">V</div>
+          </div>
+          <span class="tarjeta-destino__nombre">Vehículos</span>
+        </button>
+      `
+
+      grilla.innerHTML = empresasHtml + vehiculosHtml
+
+      grilla.querySelectorAll('.tarjeta-destino').forEach(btn => {
+        btn.addEventListener('click', () => seleccionarDestino(btn))
+      })
+    }
+
+    function seleccionarDestino(btn) {
+      // Resetear selección de vehículo al cambiar destino
+      vehiculoSeleccionado = null
+      vehiculoFueElegido   = false
+
+      if (btn.dataset.tipo === 'vehiculos') {
+        viaVehiculos       = true
+        unidadSeleccionada = null
+      } else {
+        viaVehiculos       = false
+        unidadSeleccionada = Number(btn.dataset.id)
+      }
+
+      irASubpaso('vehiculo-destino')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — GRILLA VEHÍCULOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarGrillaVehiculos(vehiculos, conSinVehiculo) {
+      const grilla = document.getElementById('grilla-vehiculos')
+      if (!grilla) return
+
+      let html = ''
+
+      if (conSinVehiculo) {
+        const sinVehSel = vehiculoFueElegido && vehiculoSeleccionado === null
+        html += `
+          <button type="button" class="tarjeta-destino ${sinVehSel ? 'seleccionada' : ''}" data-id="none">
+            <span class="tarjeta-destino__vehiculo-icono">✕</span>
+            <span class="tarjeta-destino__nombre">Sin vehículo</span>
+          </button>
+        `
+      }
+
+      html += vehiculos.map(v => `
+        <button type="button" class="tarjeta-destino ${vehiculoSeleccionado === v.id ? 'seleccionada' : ''}"
+                data-id="${v.id}">
+          <span class="tarjeta-destino__vehiculo-icono">🚗</span>
+          <span class="tarjeta-destino__nombre">${v.nombre}</span>
+          <span class="tarjeta-destino__subtexto">${v.patente}</span>
+        </button>
+      `).join('')
+
+      grilla.innerHTML = html
+
+      grilla.querySelectorAll('.tarjeta-destino').forEach(btn => {
+        btn.addEventListener('click', () => seleccionarVehiculo(btn))
+      })
+    }
+
+    function seleccionarVehiculo(btn) {
+      const id = btn.dataset.id
+
+      if (id === 'none') {
+        vehiculoSeleccionado = null
+        vehiculoFueElegido   = true
+        irASubpaso('categoria')
+        return
+      }
+
+      vehiculoSeleccionado = Number(id)
+      vehiculoFueElegido   = true
+
+      // Si llegó por Vehículos: deducir unidad del vehículo elegido
+      if (viaVehiculos) {
+        const veh = estado.maestros.vehiculos.find(v => v.id === vehiculoSeleccionado)
+        if (veh) unidadSeleccionada = veh.unidad_negocio_id
+      }
+
+      // Resaltar tarjeta seleccionada
+      document.querySelectorAll('#grilla-vehiculos .tarjeta-destino')
+        .forEach(b => b.classList.remove('seleccionada'))
+      btn.classList.add('seleccionada')
+
+      // Mostrar campo km y botón continuar
+      document.getElementById('grupo-km-vehiculo').style.display = 'block'
+      document.getElementById('btn-vehiculo-continuar').style.display = 'flex'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — GRILLA CATEGORÍAS (auto-avanza al tap)
+    // ═══════════════════════════════════════════════════════════════════════
+
     function renderizarGrillaCategorias() {
       const grilla = document.getElementById('grilla-categorias')
       if (!grilla) return
+
       console.log('[grilla-categorias] renderizando', estado.maestros.categorias.length, 'categorías')
+
       if (!estado.maestros.categorias.length) {
-        grilla.innerHTML = '<p style="color:var(--color-texto-secundario);font-size:0.875rem;grid-column:1/-1;padding:1rem 0">Sin categorías — revisá la consola para ver el error de carga.</p>'
+        grilla.innerHTML = `
+          <p style="color:var(--color-texto-suave);font-size:0.875rem;grid-column:1/-1;padding:1rem 0;text-align:center;">
+            No se pudieron cargar las categorías. Verificá tu conexión e intentá de nuevo.
+          </p>`
         return
       }
+
       grilla.innerHTML = estado.maestros.categorias.map(cat => `
         <button type="button" class="btn-categoria ${categoriaSeleccionada === cat.id ? 'btn-categoria--seleccionado' : ''}"
                 data-id="${cat.id}">
@@ -1344,104 +1673,45 @@
           categoriaSeleccionada = Number(btn.dataset.id)
           grilla.querySelectorAll('.btn-categoria').forEach(b => b.classList.remove('btn-categoria--seleccionado'))
           btn.classList.add('btn-categoria--seleccionado')
+          irASubpaso('detalles') // auto-avanza
         })
       })
     }
 
-    // ── Iniciar wizard: resetear estado y cargar datos ────────────────────
-    async function iniciarWizard() {
-      console.log('[wizard] iniciarWizard START — categorias en estado:', estado.maestros.categorias.length)
-      // Resetear estado del wizard
-      estado.wizard.paso        = 1
-      estado.wizard.fotoArchivo = null
-      estado.wizard.fotoUrl     = null
-      estado.wizard.camposOcr   = new Set()
-      categoriaSeleccionada     = null
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — SELECT EMPLEADOS
+    // ═══════════════════════════════════════════════════════════════════════
 
-      // Resetear campos de formulario
-      ;['campo-fecha','campo-numero-doc','campo-razon-social',
-        'campo-receptor','campo-descripcion-item',
-        'campo-importe','campo-lugar','campo-descripcion',
-        'campo-kilometraje','campo-observaciones',
-      ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
-      seleccionarTipoDoc(null)
-      document.getElementById('campo-moneda').value   = 'ARS'
-      document.querySelectorAll('.campo-ocr').forEach(el => el.classList.remove('campo-ocr'))
+    function poblarSelectEmpleados(unidadId) {
+      const todos   = estado.maestros.empleados
+      // Empleados tipo naaloo: filtrar por unidad si está definida
+      const naaloo  = todos.filter(e => e.tipo !== 'admin' && (
+        unidadId ? String(e.unidad_negocio_id) === String(unidadId) : true
+      ))
+      const admins  = todos.filter(e => e.tipo === 'admin')
 
-      // Resetear zona de foto
-      resetearZonaFoto()
+      const sel = document.getElementById('campo-empleado')
+      if (!sel) return
 
-      // Cargar maestros solo si aún no están cargados
-      if (!estado.maestros.categorias.length) {
-        try {
-          await cargarMaestros()
-        } catch (err) {
-          console.error('[iniciarWizard] fallo cargarMaestros:', err)
-          mostrarError(err.message || 'Error al cargar los datos. Cerrá y volvé a intentar.')
-          cerrarWizard()
-          return
-        }
-      }
+      sel.innerHTML =
+        '<option value="">— Seleccioná empleado —</option>' +
+        naaloo.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('') +
+        (admins.length && naaloo.length ? '<option disabled>──────────────</option>' : '') +
+        admins.map(e => `<option value="${e.id}" style="color:#9CA3AF">${e.nombre} (Admin)</option>`).join('')
 
-      // Poblar selects estáticos
-      poblarSelect('campo-proveedor', estado.maestros.proveedores,
-        p => ({ value: p.id, label: p.nombre_fantasia || p.razon_social }),
-        '— Sin proveedor —')
-      poblarSelect('campo-proyecto', estado.maestros.proyectos,
-        p => ({ value: p.id, label: p.nombre }),
-        '— Sin proyecto —')
-      poblarSelect('campo-unidad', estado.maestros.unidades,
-        u => ({ value: u.id, label: u.nombre }),
-        '— Seleccioná —')
-
-      // Pre-seleccionar unidad + empleado propio si está vinculado
-      actualizarSelectEmpleado('')
-      actualizarSelectVehiculo('')
-
+      // Pre-seleccionar empleado propio si está en la lista
       if (estado.miEmpleadoId) {
-        const empPropio = estado.maestros.empleados.find(e => e.id === estado.miEmpleadoId)
-        if (empPropio?.unidad_negocio_id) {
-          document.getElementById('campo-unidad').value = empPropio.unidad_negocio_id
-          actualizarSelectEmpleado(empPropio.unidad_negocio_id)
-          actualizarSelectVehiculo(empPropio.unidad_negocio_id)
-          document.getElementById('campo-empleado').value = estado.miEmpleadoId
-        }
+        const enLista = [...naaloo, ...admins].find(e => e.id === estado.miEmpleadoId)
+        if (enLista) sel.value = estado.miEmpleadoId
       }
-
-      renderizarGrillaCategorias()
-      irAPaso(1)
     }
 
-    // ── Navegación entre pasos ────────────────────────────────────────────
-    function irAPaso(n) {
-      document.querySelectorAll('.paso').forEach(el => el.classList.remove('paso--activo'))
-      const pasoEl = document.getElementById(`paso-${n}`)
-      if (pasoEl) pasoEl.classList.add('paso--activo')
-      estado.wizard.paso = n
-      actualizarProgreso(n)
-      if (n === 5) renderizarResumen()
-    }
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — VALIDACIÓN
+    // ═══════════════════════════════════════════════════════════════════════
 
-    function actualizarProgreso(pasoActual) {
-      document.querySelectorAll('.progreso__item').forEach(item => {
-        const num = Number(item.dataset.paso)
-        const circulo = item.querySelector('.progreso__circulo')
-        item.classList.remove('progreso__item--activo', 'progreso__item--completo')
-        if (num === pasoActual) {
-          item.classList.add('progreso__item--activo')
-          circulo.textContent = num
-        } else if (num < pasoActual) {
-          item.classList.add('progreso__item--completo')
-          circulo.textContent = '✓'
-        } else {
-          circulo.textContent = num
-        }
-      })
-    }
-
-    // ── Validación por paso ───────────────────────────────────────────────
-    function validarPaso(n) {
-      if (n === 2) {
+    function validarSubpaso(id) {
+      if (id === 'datos') {
         if (!document.getElementById('campo-fecha').value)
           return mostrarError('Completá la fecha del comprobante.'), false
         if (!document.getElementById('campo-razon-social').value.trim())
@@ -1450,33 +1720,32 @@
         if (imp == null || imp <= 0)
           return mostrarError('Ingresá un importe válido mayor a cero.'), false
       }
-      if (n === 3) {
-        if (!categoriaSeleccionada)
-          return mostrarError('Seleccioná una categoría.'), false
-      }
-      if (n === 4) {
-        if (!document.getElementById('campo-unidad').value)
-          return mostrarError('Seleccioná la unidad de negocio.'), false
+      if (id === 'detalles') {
         if (!document.getElementById('campo-empleado').value)
           return mostrarError('Seleccioná el empleado.'), false
       }
       return true
     }
 
-    // ── Zona de foto ──────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — FOTO Y OCR
+    // ═══════════════════════════════════════════════════════════════════════
+
     function resetearZonaFoto() {
       const zona = document.getElementById('zona-foto')
       zona.className = 'zona-foto'
       zona.innerHTML = `
         <span class="zona-foto__icono">📷</span>
-        <span class="zona-foto__texto">Tocar para fotografiar o subir</span>
-        <span class="zona-foto__subtexto">JPG, PNG o WebP · máx. 10 MB</span>
+        <span class="zona-foto__texto">Tocar para subir imagen</span>
+        <span class="zona-foto__subtexto">JPG, PNG, PDF · máx. 10 MB</span>
       `
       const ocrEl = document.getElementById('ocr-estado')
       ocrEl.hidden    = true
       ocrEl.innerHTML = ''
-      document.getElementById('paso1-siguiente').disabled = true
+      document.getElementById('btn-foto-siguiente').disabled = true
       document.getElementById('input-foto').value = ''
+      estado.wizard.fotoArchivo = null
+      estado.wizard.fotoUrl     = null
     }
 
     function mostrarEstadoOcr(tipo, texto) {
@@ -1494,7 +1763,6 @@
         : `<span>${texto}</span>`
     }
 
-    // ── Conversión de archivo a base64 ────────────────────────────────────
     function fileABase64(archivo) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader()
@@ -1504,7 +1772,6 @@
       })
     }
 
-    // ── Llamada a la Edge Function OCR ───────────────────────────────────
     async function llamarOCR(archivo) {
       const imagen_base64 = await fileABase64(archivo)
       const { data, error } = await supabase.functions.invoke('ocr-comprobante', {
@@ -1514,7 +1781,13 @@
       return data
     }
 
-    // ── Pre-llenado de paso 2 con datos del OCR ───────────────────────────
+    function seleccionarTipoDoc(valor) {
+      tipDocSeleccionado = valor || null
+      document.querySelectorAll('.btn-tipo-doc').forEach(btn => {
+        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
+      })
+    }
+
     function prellenarPaso2(datos) {
       const mapaCampos = {
         fecha:            'campo-fecha',
@@ -1526,16 +1799,16 @@
       }
       estado.wizard.camposOcr = new Set()
 
-      // tipo_doc: seleccionar botón en lugar de set en select
       if (datos.tipo_doc) {
         seleccionarTipoDoc(datos.tipo_doc)
         document.getElementById('grupo-tipo-doc')?.classList.add('campo-ocr')
         estado.wizard.camposOcr.add('tipo_doc')
       }
 
-      // importe: formatear en estilo argentino
       if (datos.importe != null) {
-        const fmt = Number(datos.importe).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        const fmt = Number(datos.importe).toLocaleString('es-AR', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        })
         const campoImp = document.getElementById('campo-importe')
         if (campoImp) {
           campoImp.value = fmt
@@ -1548,7 +1821,6 @@
         let valor = datos[clave]
         const campo = document.getElementById(idCampo)
         if (valor != null && valor !== '' && campo) {
-          // Corrección 2: receptor puede venir "1979 PAZ MIRTA" → eliminar código numérico inicial
           if (clave === 'receptor') valor = String(valor).replace(/^\d+\s*/, '')
           if (!valor) return
           campo.value = valor
@@ -1558,10 +1830,13 @@
       })
     }
 
-    // ── Subir foto a Supabase Storage ─────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — GUARDAR
+    // ═══════════════════════════════════════════════════════════════════════
+
     async function subirFoto(archivo) {
-      const ext    = archivo.name.split('.').pop() || 'jpg'
-      const path   = `${estado.sesion.user.id}/${Date.now()}.${ext}`
+      const ext  = archivo.name.split('.').pop() || 'jpg'
+      const path = `${estado.sesion.user.id}/${Date.now()}.${ext}`
       const { data, error } = await supabase.storage
         .from('comprobantes')
         .upload(path, archivo, { contentType: archivo.type, upsert: false })
@@ -1570,11 +1845,10 @@
       return publicUrl
     }
 
-    // ── Armar objeto para insertar en la tabla gastos ─────────────────────
     function armarGasto() {
-      const fecha  = document.getElementById('campo-fecha').value
-      const toNum  = id => { const v = document.getElementById(id)?.value; return (v && v !== '') ? Number(v) : null }
-      const toStr  = id => document.getElementById(id)?.value.trim() || null
+      const fecha = document.getElementById('campo-fecha').value
+      const toNum = id => { const v = document.getElementById(id)?.value; return (v && v !== '') ? Number(v) : null }
+      const toStr = id => document.getElementById(id)?.value.trim() || null
       return {
         fecha,
         periodo:           fecha ? fechaAPeriodo(fecha) : null,
@@ -1590,9 +1864,9 @@
         proyecto_id:       toNum('campo-proyecto'),
         lugar_servicio:    toStr('campo-lugar'),
         descripcion:       toStr('campo-descripcion'),
-        unidad_negocio_id: toNum('campo-unidad'),
+        unidad_negocio_id: unidadSeleccionada,
         empleado_id:       toNum('campo-empleado'),
-        vehiculo_id:       toNum('campo-vehiculo'),
+        vehiculo_id:       vehiculoSeleccionado,
         kilometraje:       toNum('campo-kilometraje'),
         observaciones:     toStr('campo-observaciones'),
         foto_url:          estado.wizard.fotoUrl,
@@ -1600,13 +1874,12 @@
       }
     }
 
-    // ── Resumen del paso 5 ────────────────────────────────────────────────
     function renderizarResumen() {
       const g       = armarGasto()
       const catObj  = estado.maestros.categorias .find(c => c.id === categoriaSeleccionada)
       const empObj  = estado.maestros.empleados  .find(e => e.id === g.empleado_id)
-      const unidObj = estado.maestros.unidades   .find(u => u.id === g.unidad_negocio_id)
-      const vehObj  = estado.maestros.vehiculos  .find(v => v.id === g.vehiculo_id)
+      const unidObj = estado.maestros.unidades   .find(u => u.id === unidadSeleccionada)
+      const vehObj  = estado.maestros.vehiculos  .find(v => v.id === vehiculoSeleccionado)
       const provObj = estado.maestros.proveedores.find(p => p.id === g.proveedor_id)
       const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
 
@@ -1619,9 +1892,9 @@
       document.getElementById('resumen-contenido').innerHTML = `
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Comprobante</div>
-          ${fila('Fecha',       formatearFecha(g.fecha))}
-          ${fila('Tipo',        g.tipo_doc)}
-          ${fila('Número',      g.numero_doc)}
+          ${fila('Fecha',        formatearFecha(g.fecha))}
+          ${fila('Tipo',         g.tipo_doc)}
+          ${fila('Número',       g.numero_doc)}
           ${fila('Razón social', g.razon_social)}
           <div class="resumen-fila">
             <span class="resumen-fila__etiqueta">Importe</span>
@@ -1630,20 +1903,20 @@
         </div>
 
         <div class="resumen-seccion">
-          <div class="resumen-seccion__titulo">Clasificación</div>
-          ${fila('Categoría',   catObj  ? `${catObj.icon} ${catObj.nombre}` : null)}
-          ${fila('Proveedor',   provObj ? (provObj.nombre_fantasia || provObj.razon_social) : null)}
-          ${fila('Proyecto',    proyObj?.nombre)}
-          ${fila('Lugar',       g.lugar_servicio)}
-          ${fila('Descripción', g.descripcion)}
+          <div class="resumen-seccion__titulo">Destino y clasificación</div>
+          ${fila('Empresa',      unidObj?.nombre)}
+          ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : (vehiculoFueElegido ? 'Sin vehículo' : null))}
+          ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
+          ${fila('Categoría',    catObj ? `${catObj.icon} ${catObj.nombre}` : null)}
         </div>
 
         <div class="resumen-seccion">
-          <div class="resumen-seccion__titulo">Asignación</div>
-          ${fila('Unidad',       unidObj?.nombre)}
+          <div class="resumen-seccion__titulo">Detalles</div>
           ${fila('Empleado',     empObj?.nombre)}
-          ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : null)}
-          ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
+          ${fila('Proveedor',    provObj ? (provObj.nombre_fantasia || provObj.razon_social) : null)}
+          ${fila('Proyecto',     proyObj?.nombre)}
+          ${fila('Lugar',        g.lugar_servicio)}
+          ${fila('Descripción',  g.descripcion)}
           ${fila('Observaciones', g.observaciones)}
         </div>
 
@@ -1656,19 +1929,16 @@
       `
     }
 
-    // ── Guardar el gasto ──────────────────────────────────────────────────
     async function guardarGasto() {
-      const btn = document.getElementById('paso5-guardar')
+      const btn = document.getElementById('btn-resumen-guardar')
       btn.classList.add('btn--cargando')
       btn.disabled = true
 
       try {
-        // 1. Subir foto si el usuario eligió una y aún no fue subida
         if (estado.wizard.fotoArchivo && !estado.wizard.fotoUrl) {
           estado.wizard.fotoUrl = await subirFoto(estado.wizard.fotoArchivo)
         }
 
-        // 2. Insertar el gasto
         const { error } = await supabase.from('gastos').insert([armarGasto()])
         if (error) throw new Error(error.message)
 
@@ -1683,10 +1953,22 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // EVENT LISTENERS — WIZARD
+    // EVENT LISTENERS
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Paso 1 — foto
+    // ── Header wizard ──────────────────────────────────────────────────────
+    document.getElementById('btn-cancelar-wizard').addEventListener('click', () => {
+      const hayDatos = estado.wizard.subpaso !== 'foto' || estado.wizard.fotoArchivo !== null
+      if (!hayDatos || confirm('¿Salir? Los datos no guardados se perderán.')) cerrarWizard()
+    })
+
+    // ── Breadcrumb (delegación) ────────────────────────────────────────────
+    document.getElementById('wizard-breadcrumb').addEventListener('click', (e) => {
+      const btn = e.target.closest('.breadcrumb__item[data-subpaso]')
+      if (btn) irASubpaso(btn.dataset.subpaso)
+    })
+
+    // ── Sub-paso FOTO ──────────────────────────────────────────────────────
     document.getElementById('zona-foto').addEventListener('click', () => {
       document.getElementById('input-foto').click()
     })
@@ -1700,15 +1982,15 @@
         return
       }
 
-      // Preview inmediato
       const zona = document.getElementById('zona-foto')
       zona.className = 'zona-foto zona-foto--con-imagen'
       zona.innerHTML = `<img src="${URL.createObjectURL(archivo)}" alt="Preview" class="preview-foto">`
       estado.wizard.fotoArchivo = archivo
 
-      // OCR
+      document.getElementById('btn-cambiar-foto').style.display = 'block'
+
       mostrarEstadoOcr('cargando', 'Leyendo comprobante…')
-      document.getElementById('paso1-siguiente').disabled = true
+      document.getElementById('btn-foto-siguiente').disabled = true
 
       try {
         const resultado = await llamarOCR(archivo)
@@ -1724,25 +2006,46 @@
         mostrarEstadoOcr('error', 'Error al procesar la imagen. Continuá completando los datos.')
       }
 
-      document.getElementById('paso1-siguiente').disabled = false
+      document.getElementById('btn-foto-siguiente').disabled = false
     })
 
-    document.getElementById('paso1-sin-foto').addEventListener('click',   () => irAPaso(2))
-    document.getElementById('paso1-siguiente').addEventListener('click',  () => irAPaso(2))
+    document.getElementById('btn-cambiar-foto').addEventListener('click', () => {
+      // Limpiar campos prellenados por OCR
+      const mapaInverso = {
+        fecha: 'campo-fecha', numero_doc: 'campo-numero-doc',
+        razon_social: 'campo-razon-social', receptor: 'campo-receptor',
+        descripcion_item: 'campo-descripcion-item', importe: 'campo-importe', moneda: 'campo-moneda',
+      }
+      if (estado.wizard.camposOcr.has('tipo_doc')) {
+        seleccionarTipoDoc(null)
+        document.getElementById('grupo-tipo-doc')?.classList.remove('campo-ocr')
+      }
+      estado.wizard.camposOcr.forEach(clave => {
+        if (clave === 'tipo_doc') return
+        const id = mapaInverso[clave]
+        if (id) {
+          const el = document.getElementById(id)
+          if (el) { el.value = ''; el.closest('.grupo-campo')?.classList.remove('campo-ocr') }
+        }
+      })
+      estado.wizard.camposOcr = new Set()
+      resetearZonaFoto()
+      document.getElementById('btn-cambiar-foto').style.display = 'none'
+    })
 
-    // Paso 2 — botones tipo de documento
+    document.getElementById('btn-sin-foto').addEventListener('click',    () => irASubpaso('datos'))
+    document.getElementById('btn-foto-siguiente').addEventListener('click', () => irASubpaso('datos'))
+
+    // ── Sub-paso DATOS ─────────────────────────────────────────────────────
     document.getElementById('grilla-tipo-doc').addEventListener('click', (e) => {
       const btn = e.target.closest('.btn-tipo-doc')
       if (!btn) return
-      // Toggle: click en el ya-seleccionado lo deselecciona
       const nuevo = btn.dataset.valor === tipDocSeleccionado ? null : btn.dataset.valor
       seleccionarTipoDoc(nuevo)
     })
 
-    // Paso 2 — importe: formato argentino en blur / editable en focus
     const inputImporte = document.getElementById('campo-importe')
     inputImporte.addEventListener('focus', (e) => {
-      // Quitar separadores de miles para que el usuario pueda editar con comodidad
       e.target.value = e.target.value.replace(/\./g, '')
     })
     inputImporte.addEventListener('blur', (e) => {
@@ -1752,28 +2055,31 @@
       }
     })
 
-    document.getElementById('paso2-atras').addEventListener('click',     () => irAPaso(1))
-    document.getElementById('paso2-siguiente').addEventListener('click', () => { if (validarPaso(2)) irAPaso(3) })
-
-    // Paso 3
-    document.getElementById('paso3-atras').addEventListener('click',     () => irAPaso(2))
-    document.getElementById('paso3-siguiente').addEventListener('click', () => { if (validarPaso(3)) irAPaso(4) })
-
-    // Paso 4 — selects encadenados
-    document.getElementById('campo-unidad').addEventListener('change', (e) => {
-      actualizarSelectEmpleado(e.target.value)
-      actualizarSelectVehiculo(e.target.value)
-    })
-    document.getElementById('campo-vehiculo').addEventListener('change', (e) => {
-      document.getElementById('grupo-kilometraje').style.display = e.target.value ? 'flex' : 'none'
+    document.getElementById('btn-datos-atras').addEventListener('click',    () => irASubpaso('foto'))
+    document.getElementById('btn-datos-siguiente').addEventListener('click', () => {
+      if (validarSubpaso('datos')) irASubpaso('destino')
     })
 
-    document.getElementById('paso4-atras').addEventListener('click',     () => irAPaso(3))
-    document.getElementById('paso4-siguiente').addEventListener('click', () => { if (validarPaso(4)) irAPaso(5) })
+    // ── Sub-paso DESTINO ───────────────────────────────────────────────────
+    document.getElementById('btn-destino-atras').addEventListener('click', () => irASubpaso('datos'))
 
-    // Paso 5
-    document.getElementById('paso5-editar').addEventListener('click',  () => irAPaso(1))
-    document.getElementById('paso5-guardar').addEventListener('click', guardarGasto)
+    // ── Sub-paso VEHICULO-DESTINO ──────────────────────────────────────────
+    document.getElementById('btn-vehiculo-atras').addEventListener('click',     () => irASubpaso('destino'))
+    document.getElementById('btn-vehiculo-continuar').addEventListener('click', () => irASubpaso('categoria'))
+
+    // ── Sub-paso CATEGORIA ─────────────────────────────────────────────────
+    document.getElementById('btn-categoria-atras').addEventListener('click', () => irASubpaso('vehiculo-destino'))
+
+    // ── Sub-paso DETALLES ──────────────────────────────────────────────────
+    document.getElementById('btn-detalles-atras').addEventListener('click',    () => irASubpaso('categoria'))
+    document.getElementById('btn-detalles-siguiente').addEventListener('click', () => {
+      if (validarSubpaso('detalles')) irASubpaso('resumen')
+    })
+
+    // ── Sub-paso RESUMEN ───────────────────────────────────────────────────
+    document.getElementById('btn-resumen-editar').addEventListener('click',  () => irASubpaso('foto'))
+    document.getElementById('btn-resumen-guardar').addEventListener('click', guardarGasto)
+
   </script>
 
 </body>
