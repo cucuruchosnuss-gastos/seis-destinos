@@ -1447,6 +1447,10 @@
         }
       }
 
+      if (id === 'categoria') {
+        renderizarGrillaCategorias()
+      }
+
       if (id === 'detalles') {
         poblarSelectEmpleados(unidadSeleccionada)
       }
@@ -1491,8 +1495,8 @@
       }
       items.push({ label: empresaLabel, subpaso: 'destino' })
 
-      // Segmento vehículo (una vez confirmado)
-      if (['categoria','detalles','resumen'].includes(subpaso)) {
+      // Segmento vehículo (solo si se pasó por el paso vehiculo-destino)
+      if (['categoria','detalles','resumen'].includes(subpaso) && viaVehiculos) {
         let vehLabel
         if (vehiculoSeleccionado) {
           const v = estado.maestros.vehiculos.find(x => x.id === vehiculoSeleccionado)
@@ -1562,19 +1566,18 @@
     }
 
     function seleccionarDestino(btn) {
-      // Resetear selección de vehículo al cambiar destino
       vehiculoSeleccionado = null
       vehiculoFueElegido   = false
 
       if (btn.dataset.tipo === 'vehiculos') {
         viaVehiculos       = true
         unidadSeleccionada = null
+        irASubpaso('vehiculo-destino')
       } else {
         viaVehiculos       = false
         unidadSeleccionada = Number(btn.dataset.id)
+        irASubpaso('categoria')
       }
-
-      irASubpaso('vehiculo-destino')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2068,7 +2071,7 @@
     document.getElementById('btn-vehiculo-continuar').addEventListener('click', () => irASubpaso('categoria'))
 
     // ── Sub-paso CATEGORIA ─────────────────────────────────────────────────
-    document.getElementById('btn-categoria-atras').addEventListener('click', () => irASubpaso('vehiculo-destino'))
+    document.getElementById('btn-categoria-atras').addEventListener('click', () => irASubpaso(viaVehiculos ? 'vehiculo-destino' : 'destino'))
 
     // ── Sub-paso DETALLES ──────────────────────────────────────────────────
     document.getElementById('btn-detalles-atras').addEventListener('click',    () => irASubpaso('categoria'))
