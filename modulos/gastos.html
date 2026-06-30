@@ -1,4 +1,4 @@
-<!-- v2026-06-29-redesign -->
+﻿<!-- v2026-06-29-redesign -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -1280,11 +1280,9 @@
     // ═══════════════════════════════════════════════════════════════════════
     // NAVEGACIÓN VISTAS
     // ═══════════════════════════════════════════════════════════════════════
-
-    function abrirWizard() {
+    async function abrirWizard() {
       document.getElementById('vista-lista').hidden = true
-      document.getElementById('vista-wizard').removeAttribute('hidden')
-      iniciarWizard()
+      await iniciarWizard()
     }
 
     function cerrarWizard() {
@@ -1385,17 +1383,16 @@
       resetearZonaFoto()
       document.getElementById('btn-cambiar-foto').style.display = 'none'
 
-      // Cargar maestros si es la primera vez
-      if (!estado.maestros.categorias.length) {
-        try {
-          await cargarMaestros()
-        } catch (err) {
-          console.error('[iniciarWizard] fallo cargarMaestros:', err)
-          mostrarError(err.message || 'Error al cargar los datos. Cerrá y volvé a intentar.')
-          cerrarWizard()
-          return
-        }
+
+      try {
+        await cargarMaestros()
+      } catch (err) {
+        console.error('[iniciarWizard] fallo cargarMaestros:', err)
+        mostrarError(err.message || 'Error al cargar los datos. Cerrá y volvé a intentar.')
+        cerrarWizard()
+        return
       }
+
 
       // Poblar selects estáticos (proveedor, proyecto)
       poblarSelect('campo-proveedor', estado.maestros.proveedores,
