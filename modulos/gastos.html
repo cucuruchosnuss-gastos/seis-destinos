@@ -1316,22 +1316,31 @@
       const { data: { session } } = await supabase.auth.getSession()
       console.log('[maestros] sesión activa:', session ? `uid=${session.user.id}` : 'NULL — sin sesión')
 
-      const [cats, emps, vehs, provs, projs] = await Promise.all([
-        supabase.from('categorias') .select('id, nombre, icon').eq('activo', true).order('nombre'),
+
+      const { data: cats, error: catsError } = await supabase
+        .from('categorias')
+        .select('id, nombre, icon')
+        .eq('activo', true)
+        .order('nombre')
+      console.log('[DEBUG-CATS] data:', cats)
+      console.log('[DEBUG-CATS] error:', catsError)
+      console.log('[DEBUG-CATS] session:', (await supabase.auth.getSession()).data.session?.user?.email)
+
+      const [emps, vehs, provs, projs] = await Promise.all([
         supabase.from('empleados')  .select('id, nombre, unidad_negocio_id, tipo').eq('activo', true).order('nombre'),
         supabase.from('vehiculos')  .select('id, nombre, marca, patente, unidad_negocio_id').eq('activo', true).order('nombre'),
         supabase.from('proveedores').select('id, razon_social, nombre_fantasia').eq('activo', true).order('razon_social'),
         supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),
       ])
 
-      console.log('[maestros] categorias  →', 'data:', cats.data,  '| error:', cats.error)
+      console.log('[maestros] categorias  ->', 'data:', cats, '| error:', catsError)
       console.log('[maestros] empleados   →', 'data:', emps.data,  '| error:', emps.error)
       console.log('[maestros] vehiculos   →', 'data:', vehs.data,  '| error:', vehs.error)
       console.log('[maestros] proveedores →', 'data:', provs.data, '| error:', provs.error)
       console.log('[maestros] proyectos   →', 'data:', projs.data, '| error:', projs.error)
 
       const errores = [
-        cats.error  && `categorias: ${cats.error.message}`,
+        catsError  && ("categorias: " + catsError.message),
         emps.error  && `empleados: ${emps.error.message}`,
         vehs.error  && `vehiculos: ${vehs.error.message}`,
         provs.error && `proveedores: ${provs.error.message}`,
@@ -1343,7 +1352,7 @@
         throw new Error(`No se pudo cargar ${errores[0].split(':')[0]}. Verificá los permisos en Supabase.`)
       }
 
-      estado.maestros.categorias  = cats.data  ?? []
+      estado.maestros.categorias  = cats ?? []
       estado.maestros.empleados   = emps.data  ?? []
       estado.maestros.vehiculos   = vehs.data  ?? []
       estado.maestros.proveedores = provs.data ?? []
