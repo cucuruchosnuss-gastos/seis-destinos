@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v4'
 const CACHE_NOMBRE = `seis-destinos-${CACHE_VERSION}`
 
 const ARCHIVOS_SHELL = [
