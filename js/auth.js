@@ -37,7 +37,7 @@ export async function cerrarSesion() {
   window.location.replace(RUTA_LOGIN)
 }
 
-export async function registrarUsuario(nombre, email, contrasena) {
+export async function registrarUsuario(nombre, email, contrasena, cuil) {
   const { data, error: errorAuth } = await supabase.auth.signUp({
     email,
     password: contrasena,
@@ -51,6 +51,7 @@ export async function registrarUsuario(nombre, email, contrasena) {
     .insert([{
       nombre,
       email,
+      cuil,
       estado: 'pendiente',
       fecha_solicitud: new Date().toISOString(),
       usuario_id: data.user?.id ?? null

@@ -42,6 +42,17 @@
       </div>
 
       <div class="grupo-campo">
+        <label for="cuil">CUIL</label>
+        <input
+          type="text"
+          id="cuil"
+          name="cuil"
+          placeholder="20-12345678-9"
+          required
+        >
+      </div>
+
+      <div class="grupo-campo">
         <label for="contrasena">Contraseña</label>
         <input
           type="password"
@@ -125,11 +136,19 @@
         return
       }
 
+      const cuilCrudo = document.getElementById('cuil').value
+      const cuilLimpio = cuilCrudo.replace(/\D/g, '')
+
+      if (cuilLimpio.length !== 11) {
+        mostrarAlertaError('Ingresá un CUIL válido de 11 números (con o sin guiones).')
+        return
+      }
+
       btnRegistrar.classList.add('btn--cargando')
       btnRegistrar.disabled = true
 
       try {
-        await registrarUsuario(nombre, email, contrasena)
+        await registrarUsuario(nombre, email, contrasena, cuilLimpio)
 
         // Mostrar confirmación y ocultar formulario
         formulario.style.display = 'none'
