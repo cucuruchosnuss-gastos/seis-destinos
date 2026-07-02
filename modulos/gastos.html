@@ -714,6 +714,12 @@
       gap: 0.5rem;
     }
 
+    .grilla-medio-pago {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
     .btn-tipo-doc {
       background: var(--color-fondo);
       border: 2px solid var(--color-borde);
@@ -911,6 +917,15 @@
               </select>
             </div>
           </div>
+
+          <div class="grupo-campo" id="grupo-medio-pago">
+            <label>Medio de pago</label>
+            <div class="grilla-medio-pago" id="grilla-medio-pago">
+              <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
+              <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia / QR</button>
+              <button type="button" class="btn-tipo-doc" data-valor="cheque">Cheque</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="wizard-nav">
@@ -1066,6 +1081,7 @@
     // Selecciones del wizard — fuera del estado para fácil acceso
     let categoriaSeleccionada = null
     let tipDocSeleccionado    = null
+    let medioPagoSeleccionado = null
     let unidadSeleccionada    = null  // id de unidades_negocio
     let vehiculoSeleccionado  = null  // id de vehiculo, o null = sin vehículo
     let vehiculoFueElegido    = false // true cuando el usuario tapeó un vehículo o "Sin vehículo"
@@ -1096,6 +1112,8 @@
       })
       return moneda === 'USD' ? `USD ${num}` : `$ ${num}`
     }
+
+    const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
 
     function fechaAPeriodo(fechaStr) {
       const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
@@ -1208,7 +1226,7 @@
       let query = supabase
         .from('gastos')
         .select(`
-          id, fecha, periodo, razon_social, importe, moneda, estado,
+          id, fecha, periodo, razon_social, importe, moneda, medio_pago, estado,
           categorias (id, nombre, icon),
           empleados  (id, nombre),
           unidades_negocio (id, nombre)
@@ -1250,7 +1268,7 @@
       const importe     = formatearImporte(g.importe, g.moneda)
       const fecha       = formatearFecha(g.fecha)
       const estadoG     = g.estado             ?? 'registrado'
-      const meta        = [fecha, categoria, empleado].filter(Boolean).join(' · ')
+      const meta        = [fecha, categoria, empleado, MEDIOS_PAGO_LABEL[g.medio_pago]].filter(Boolean).join(' · ')
 
       return `
         <div class="tarjeta-gasto">
@@ -1366,6 +1384,7 @@
       estado.wizard.camposOcr   = new Set()
       categoriaSeleccionada = null
       tipDocSeleccionado    = null
+      medioPagoSeleccionado = null
       unidadSeleccionada    = null
       vehiculoSeleccionado  = null
       vehiculoFueElegido    = false
@@ -1378,6 +1397,7 @@
         'campo-kilometraje','campo-observaciones',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
       seleccionarTipoDoc(null)
+      seleccionarMedioPago(null)
       document.getElementById('campo-moneda').value = 'ARS'
       document.querySelectorAll('.campo-ocr').forEach(el => el.classList.remove('campo-ocr'))
 
@@ -1728,6 +1748,8 @@
         const imp = parseImporte(document.getElementById('campo-importe').value)
         if (imp == null || imp <= 0)
           return mostrarError('Ingresá un importe válido mayor a cero.'), false
+        if (!medioPagoSeleccionado)
+          return mostrarError('Seleccioná el medio de pago.'), false
       }
       if (id === 'detalles') {
         if (!document.getElementById('campo-empleado').value)
@@ -1793,6 +1815,13 @@
     function seleccionarTipoDoc(valor) {
       tipDocSeleccionado = valor || null
       document.querySelectorAll('.btn-tipo-doc').forEach(btn => {
+        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
+      })
+    }
+
+    function seleccionarMedioPago(valor) {
+      medioPagoSeleccionado = valor || null
+      document.querySelectorAll('#grilla-medio-pago .btn-tipo-doc').forEach(btn => {
         btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
       })
     }
@@ -1868,6 +1897,7 @@
         descripcion_item:  toStr('campo-descripcion-item'),
         importe:           parseImporte(document.getElementById('campo-importe')?.value),
         moneda:            document.getElementById('campo-moneda')?.value || 'ARS',
+        medio_pago:        medioPagoSeleccionado,
         categoria_id:      categoriaSeleccionada,
         proveedor_id:      null,
         proyecto_id:       toNum('campo-proyecto'),
@@ -1904,6 +1934,7 @@
           ${fila('Tipo',         g.tipo_doc)}
           ${fila('Número',       g.numero_doc)}
           ${fila('Razón social', g.razon_social)}
+          ${fila('Medio de pago', MEDIOS_PAGO_LABEL[g.medio_pago])}
           <div class="resumen-fila">
             <span class="resumen-fila__etiqueta">Importe</span>
             <span class="resumen-importe">${formatearImporte(g.importe, g.moneda)}</span>
@@ -2049,6 +2080,13 @@
       if (!btn) return
       const nuevo = btn.dataset.valor === tipDocSeleccionado ? null : btn.dataset.valor
       seleccionarTipoDoc(nuevo)
+    })
+
+    document.getElementById('grilla-medio-pago').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-tipo-doc')
+      if (!btn) return
+      const nuevo = btn.dataset.valor === medioPagoSeleccionado ? null : btn.dataset.valor
+      seleccionarMedioPago(nuevo)
     })
 
     const inputImporte = document.getElementById('campo-importe')
