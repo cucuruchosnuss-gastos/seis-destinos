@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v4'
+const CACHE_VERSION = 'v6'
 const CACHE_NOMBRE = `seis-destinos-${CACHE_VERSION}`
 
 const ARCHIVOS_SHELL = [
@@ -12,6 +12,7 @@ const ARCHIVOS_SHELL = [
   '/js/supabase.js',
   '/js/auth.js',
   '/js/utils.js',
+  '/js/version-banner.js',
   '/manifest.json'
 ]
 
