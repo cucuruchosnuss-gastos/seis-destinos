@@ -982,13 +982,6 @@
           </div>
 
           <div class="grupo-campo">
-            <label for="campo-proveedor">Proveedor <span class="etiqueta-opcional">opcional</span></label>
-            <select id="campo-proveedor" name="proveedor_id">
-              <option value="">— Sin proveedor —</option>
-            </select>
-          </div>
-
-          <div class="grupo-campo">
             <label for="campo-proyecto">Proyecto <span class="etiqueta-opcional">opcional</span></label>
             <select id="campo-proyecto" name="proyecto_id">
               <option value="">— Sin proyecto —</option>
@@ -1155,18 +1148,12 @@
     estado.sesion = await verificarSesion()
     estado.rol    = obtenerRol(estado.sesion.user.email)
 
-    if (estado.rol === 'usuario') {
-      const meta   = estado.sesion.user.user_metadata ?? {}
-      const nombre = (meta.nombre_completo || meta.nombre || '').trim()
-      if (nombre) {
-        const { data: emp } = await supabase
-          .from('empleados')
-          .select('id')
-          .ilike('nombre', nombre)
-          .maybeSingle()
-        if (emp) estado.miEmpleadoId = emp.id
-      }
-    }
+    const { data: emp } = await supabase
+      .from('empleados')
+      .select('id')
+      .eq('auth_user_id', estado.sesion.user.id)
+      .maybeSingle()
+    if (emp) estado.miEmpleadoId = emp.id
 
     // ═══════════════════════════════════════════════════════════════════════
     // VISTA A — FILTROS Y LISTA
@@ -1410,10 +1397,7 @@
       }
 
 
-      // Poblar selects estáticos (proveedor, proyecto)
-      poblarSelect('campo-proveedor', estado.maestros.proveedores,
-        p => ({ value: p.id, label: p.nombre_fantasia || p.razon_social }),
-        '— Sin proveedor —')
+      // Poblar selects estáticos (proyecto)
       poblarSelect('campo-proyecto', estado.maestros.proyectos,
         p => ({ value: p.id, label: p.nombre }),
         '— Sin proyecto —')
@@ -1715,10 +1699,19 @@
         (admins.length && naaloo.length ? '<option disabled>──────────────</option>' : '') +
         admins.map(e => `<option value="${e.id}" style="color:#9CA3AF">${e.nombre} (Admin)</option>`).join('')
 
-      // Pre-seleccionar empleado propio si está en la lista
-      if (estado.miEmpleadoId) {
-        const enLista = [...naaloo, ...admins].find(e => e.id === estado.miEmpleadoId)
-        if (enLista) sel.value = estado.miEmpleadoId
+      if (estado.rol === 'usuario') {
+        sel.disabled = true
+        if (estado.miEmpleadoId) {
+          sel.value = estado.miEmpleadoId
+        } else {
+          sel.innerHTML = '<option value="">No se pudo identificar tu usuario — contactá al admin</option>'
+        }
+      } else {
+        sel.disabled = false
+        if (estado.miEmpleadoId) {
+          const enLista = [...naaloo, ...admins].find(e => e.id === estado.miEmpleadoId)
+          if (enLista) sel.value = estado.miEmpleadoId
+        }
       }
     }
 
@@ -1876,7 +1869,7 @@
         importe:           parseImporte(document.getElementById('campo-importe')?.value),
         moneda:            document.getElementById('campo-moneda')?.value || 'ARS',
         categoria_id:      categoriaSeleccionada,
-        proveedor_id:      toNum('campo-proveedor'),
+        proveedor_id:      null,
         proyecto_id:       toNum('campo-proyecto'),
         lugar_servicio:    toStr('campo-lugar'),
         descripcion:       toStr('campo-descripcion'),
@@ -1896,7 +1889,6 @@
       const empObj  = estado.maestros.empleados  .find(e => e.id === g.empleado_id)
       const unidObj = estado.maestros.unidades   .find(u => u.id === unidadSeleccionada)
       const vehObj  = estado.maestros.vehiculos  .find(v => v.id === vehiculoSeleccionado)
-      const provObj = estado.maestros.proveedores.find(p => p.id === g.proveedor_id)
       const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
 
       const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
@@ -1929,7 +1921,6 @@
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Detalles</div>
           ${fila('Empleado',     empObj?.nombre)}
-          ${fila('Proveedor',    provObj ? (provObj.nombre_fantasia || provObj.razon_social) : null)}
           ${fila('Proyecto',     proyObj?.nombre)}
           ${fila('Lugar',        g.lugar_servicio)}
           ${fila('Descripción',  g.descripcion)}
