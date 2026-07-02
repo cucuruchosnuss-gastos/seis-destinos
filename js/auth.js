@@ -1,7 +1,8 @@
 import { supabase } from './supabase.js'
 
-const RUTA_LOGIN = new URL('/login.html', window.location.origin).href
-const RUTA_DASHBOARD = new URL('/dashboard.html', window.location.origin).href
+const RAIZ_SITIO = new URL('..', import.meta.url).href
+const RUTA_LOGIN = new URL('login.html', RAIZ_SITIO).href
+const RUTA_DASHBOARD = new URL('dashboard.html', RAIZ_SITIO).href
 
 // Verifica sesión activa.
 // redirigirSiNoHay: redirige a login si no hay sesión (default: true)

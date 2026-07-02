@@ -38,7 +38,7 @@ const HEADERS_CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const MIME_VALIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const MIME_VALIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
 
 Deno.serve(async (req) => {
   // Preflight CORS
@@ -108,18 +108,10 @@ Deno.serve(async (req) => {
           {
             role: 'user',
             content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: mime_type,
-                  data: imagen_base64,
-                },
-              },
-              {
-                type: 'text',
-                text: PROMPT_OCR,
-              },
+              mime_type === 'application/pdf'
+                ? { type: 'document', source: { type: 'base64', media_type: mime_type, data: imagen_base64 } }
+                : { type: 'image', source: { type: 'base64', media_type: mime_type, data: imagen_base64 } },
+              { type: 'text', text: PROMPT_OCR },
             ],
           },
         ],
