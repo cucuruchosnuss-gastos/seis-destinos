@@ -763,6 +763,8 @@
 </head>
 <body class="pagina-modulo">
 
+  <div id="debug-panel" style="position:fixed; top:0; left:0; right:0; background:#000; color:#0f0; font-family:monospace; font-size:11px; padding:8px; z-index:99999; max-height:180px; overflow-y:auto; white-space:pre-wrap;"></div>
+
   <!-- ═══════════════════════════════════════════════════════════════════════
        VISTA A — LISTA DE GASTOS
   ══════════════════════════════════════════════════════════════════════════ -->
@@ -1039,6 +1041,11 @@
     import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
 
+    function debugLog(msg) {
+      const panel = document.getElementById('debug-panel')
+      if (panel) panel.innerHTML += msg + '<br>'
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // ESTADO GLOBAL
     // ═══════════════════════════════════════════════════════════════════════
@@ -1149,7 +1156,9 @@
     // INICIALIZACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
+    debugLog('1. Script arrancó')
     estado.sesion = await verificarSesion()
+    debugLog('2. Sesión: ' + (estado.sesion ? estado.sesion.user.email : 'NULL'))
     estado.rol    = obtenerRol(estado.sesion.user.email)
 
     if (estado.rol === 'usuario') {
@@ -1281,6 +1290,7 @@
     // NAVEGACIÓN VISTAS
     // ═══════════════════════════════════════════════════════════════════════
     async function abrirWizard() {
+      debugLog('3. abrirWizard() llamado')
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-wizard').removeAttribute('hidden')
       await iniciarWizard()
@@ -1313,6 +1323,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     async function cargarMaestros() {
+      debugLog('5. cargarMaestros() llamado')
       const { data: { session } } = await supabase.auth.getSession()
       console.log('[maestros] sesión activa:', session ? `uid=${session.user.id}` : 'NULL — sin sesión')
 
@@ -1322,6 +1333,7 @@
         .select('id, nombre, icon')
         .eq('activo', true)
         .order('nombre')
+      debugLog('6. categorias -> data.length=' + (cats ? cats.length : 'null') + ' error=' + (catsError ? catsError.message : 'ninguno'))
       console.log('[DEBUG-CATS] data:', cats)
       console.log('[DEBUG-CATS] error:', catsError)
       console.log('[DEBUG-CATS] session:', (await supabase.auth.getSession()).data.session?.user?.email)
@@ -1353,6 +1365,7 @@
       }
 
       estado.maestros.categorias  = cats ?? []
+      debugLog('7. estado.maestros.categorias.length=' + estado.maestros.categorias.length)
       estado.maestros.empleados   = emps.data  ?? []
       estado.maestros.vehiculos   = vehs.data  ?? []
       estado.maestros.proveedores = provs.data ?? []
@@ -1368,6 +1381,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     async function iniciarWizard() {
+      debugLog('4. iniciarWizard() llamado')
       console.log('[DEBUG] iniciarWizard arranco')
       // Resetear estado del wizard
       estado.wizard.subpaso    = 'foto'
