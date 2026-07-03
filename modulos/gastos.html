@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../css/main.css">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#1B3A8C">
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <style>
     /* ── Layout base ───────────────────────────────────────────────────────── */
@@ -1276,6 +1277,7 @@
           </select>
 
           <button type="button" id="btn-borrar-filtros" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
+          <button type="button" id="btn-exportar-excel" class="btn btn--secundario" style="width:auto;">📥 Descargar Excel</button>
         `
       }
 
@@ -1310,6 +1312,41 @@
         renderizarFiltros(estado.maestros.unidades)
         cargarLista()
       })
+      document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel)
+    }
+
+    function exportarExcel() {
+      if (!estado.listaGastos || !estado.listaGastos.length) {
+        mostrarError('No hay gastos para exportar con los filtros actuales.')
+        return
+      }
+
+      const filas = estado.listaGastos.map(g => ({
+        'Fecha':          formatearFecha(g.fecha),
+        'Tipo doc':       g.tipo_doc || '',
+        'Número':         g.numero_doc || '',
+        'Razón social':   g.razon_social || '',
+        'Empresa':        g.unidades_negocio?.nombre || '',
+        'Vehículo':       g.vehiculos ? `${g.vehiculos.nombre} (${g.vehiculos.patente})` : '',
+        'Kilometraje':    g.kilometraje ?? '',
+        'Categoría':      g.categorias?.nombre || '',
+        'Empleado':       g.empleados?.nombre || '',
+        'Proyecto':       g.proyectos?.nombre || '',
+        'Lugar':          g.lugar_servicio || '',
+        'Descripción':    g.descripcion || '',
+        'Observaciones':  g.observaciones || '',
+        'Medio de pago':  MEDIOS_PAGO_LABEL[g.medio_pago] || '',
+        'Moneda':         g.moneda || '',
+        'Importe':        Number(g.importe) || 0,
+        'Estado':         g.estado || '',
+      }))
+
+      const hoja = XLSX.utils.json_to_sheet(filas)
+      const libro = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(libro, hoja, 'Gastos')
+
+      const fechaArchivo = new Date().toISOString().slice(0, 10)
+      XLSX.writeFile(libro, `gastos_${fechaArchivo}.xlsx`)
     }
 
     function renderizarTotalGastos(gastos) {

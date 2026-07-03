@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v26'
+const CACHE_VERSION = 'v27'
 const CACHE_NOMBRE = `seis-destinos-${CACHE_VERSION}`
 
 const ARCHIVOS_SHELL = [
@@ -13,7 +13,8 @@ const ARCHIVOS_SHELL = [
   '/js/auth.js',
   '/js/utils.js',
   '/js/version-banner.js',
-  '/manifest.json'
+  '/manifest.json',
+  'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js'
 ]
 
 self.addEventListener('install', (evento) => {
