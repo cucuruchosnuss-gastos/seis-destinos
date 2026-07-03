@@ -4,16 +4,13 @@ const MESES = [
 ]
 
 export function formatearFecha(fecha) {
-  const d = new Date(fecha)
-  const dia = String(d.getDate()).padStart(2, '0')
-  const mes = String(d.getMonth() + 1).padStart(2, '0')
-  const anio = d.getFullYear()
+  const [anio, mes, dia] = fecha.split('-')
   return `${dia}/${mes}/${anio}`
 }
 
 export function calcularPeriodo(fecha) {
-  const d = new Date(fecha)
-  return `${MESES[d.getMonth()]} ${d.getFullYear()}`
+  const [anio, mes] = fecha.split('-')
+  return `${MESES[Number(mes) - 1]} ${anio}`
 }
 
 let toastTimer = null
