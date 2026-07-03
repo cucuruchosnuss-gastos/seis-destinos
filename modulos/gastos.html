@@ -996,7 +996,7 @@
             </select>
           </div>
 
-          <div class="grupo-campo">
+          <div class="grupo-campo" id="grupo-proyecto">
             <label for="campo-proyecto">Proyecto <span class="etiqueta-opcional">opcional</span></label>
             <select id="campo-proyecto" name="proyecto_id">
               <option value="">— Sin proyecto —</option>
@@ -1504,11 +1504,13 @@
 
       // Segmento empresa
       let empresaLabel
-      if (unidadSeleccionada) {
-        const u = estado.maestros.unidades.find(x => x.id === unidadSeleccionada)
-        empresaLabel = u?.nombre ?? 'Empresa'
-      } else {
+      if (viaVehiculos) {
         empresaLabel = 'Vehículos'
+      } else if (unidadSeleccionada) {
+        const u = estado.maestros.unidades.find(x => x.id === unidadSeleccionada)
+        empresaLabel = u?.nombre ?? '—'
+      } else {
+        empresaLabel = '—'
       }
       items.push({ label: empresaLabel, subpaso: 'destino' })
 
@@ -1732,6 +1734,15 @@
           const enLista = [...naaloo, ...admins].find(e => e.id === estado.miEmpleadoId)
           if (enLista) sel.value = estado.miEmpleadoId
         }
+      }
+
+      const unidadObj = estado.maestros.unidades.find(u => u.id === unidadId)
+      const esTaller = (unidadObj?.nombre || '').trim().toLowerCase() === 'taller'
+      const grupoProyecto = document.getElementById('grupo-proyecto')
+      if (grupoProyecto) grupoProyecto.style.display = esTaller ? 'block' : 'none'
+      if (!esTaller) {
+        const selProyecto = document.getElementById('campo-proyecto')
+        if (selProyecto) selProyecto.value = ''
       }
     }
 
