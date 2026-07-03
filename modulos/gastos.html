@@ -548,6 +548,56 @@
 
     .lista-filtros input[type="date"]:focus { border-color: var(--color-acento); }
 
+    .multiselect {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .multiselect__boton {
+      padding: 0.4375rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 8px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .multiselect__panel {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 30;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      padding: 0.5rem;
+      min-width: 200px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .multiselect__panel:not([hidden]) {
+      display: block;
+    }
+
+    .multiselect__opcion {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.25rem;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .multiselect__opcion:hover {
+      background: var(--color-fondo);
+    }
+
     /* ── Vista lista — cards de gastos ─────────────────────────────────────── */
 
     .lista-contenido:not([hidden]) {
@@ -1106,10 +1156,7 @@
         proyectos:   [],
         unidades:    [],
       },
-      filtros: {
-        periodo:           '',
-        unidad_negocio_id: '',
-      },
+      filtros: {},
       wizard: {
         subpaso:      'foto',
         fotoArchivo:  null,
@@ -1225,56 +1272,87 @@
     // VISTA A — FILTROS Y LISTA
     // ═══════════════════════════════════════════════════════════════════════
 
+    function crearMultiselect({ idBase, opciones, seleccionados, etiquetaTodos, onChange }) {
+      const boton = document.getElementById(idBase + '-boton')
+      const panel = document.getElementById(idBase + '-panel')
+      if (!boton || !panel) return
+
+      function actualizarTexto() {
+        if (!seleccionados.length) {
+          boton.textContent = etiquetaTodos
+        } else if (seleccionados.length === 1) {
+          const op = opciones.find(o => String(o.value) === String(seleccionados[0]))
+          boton.textContent = op ? op.label : etiquetaTodos
+        } else {
+          boton.textContent = seleccionados.length + ' seleccionados'
+        }
+      }
+
+      panel.innerHTML = opciones.map(op => `
+        <label class="multiselect__opcion">
+          <input type="checkbox" value="${op.value}" ${seleccionados.map(String).includes(String(op.value)) ? 'checked' : ''}>
+          <span>${op.label}</span>
+        </label>
+      `).join('')
+
+      panel.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const valor = chk.value
+          if (chk.checked) {
+            if (!seleccionados.map(String).includes(valor)) seleccionados.push(valor)
+          } else {
+            const idx = seleccionados.map(String).indexOf(valor)
+            if (idx !== -1) seleccionados.splice(idx, 1)
+          }
+          actualizarTexto()
+          onChange(seleccionados)
+        })
+      })
+
+      boton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const estabaAbierto = !panel.hidden
+        document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
+        panel.hidden = estabaAbierto
+      })
+
+      actualizarTexto()
+    }
+
     function renderizarFiltros(unidades = []) {
       const contenedor = document.getElementById('contenedor-filtros')
-      // (sin auto-completar el período — si está vacío, queda vacío hasta que el usuario elija uno)
 
-      const periodos = generarOpcionesPeriodo()
       let html = `
-        <select id="filtro-periodo">
-          <option value="">Todos los períodos</option>
-          ${periodos.map(p =>
-            `<option value="${p}" ${estado.filtros.periodo === p ? 'selected' : ''}>${p}</option>`
-          ).join('')}
-        </select>
+        <div class="multiselect" id="ms-periodo">
+          <button type="button" class="multiselect__boton" id="ms-periodo-boton">Todos los períodos</button>
+          <div class="multiselect__panel" id="ms-periodo-panel" hidden></div>
+        </div>
       `
 
       if ((estado.rol === 'admin' || estado.rol === 'pablo') && unidades.length) {
         html += `
-          <select id="filtro-unidad">
-            <option value="">Todas las unidades</option>
-            ${unidades.map(u =>
-              `<option value="${u.id}" ${estado.filtros.unidad_negocio_id === String(u.id) ? 'selected' : ''}>${u.nombre}</option>`
-            ).join('')}
-          </select>
+          <div class="multiselect" id="ms-unidad">
+            <button type="button" class="multiselect__boton" id="ms-unidad-boton">Todas las unidades</button>
+            <div class="multiselect__panel" id="ms-unidad-panel" hidden></div>
+          </div>
 
-          <input type="date" id="filtro-fecha" value="${estado.filtros.fecha || ''}">
+          <input type="date" id="filtro-fecha-desde" value="${estado.filtros.fecha_desde || ''}" title="Desde">
+          <input type="date" id="filtro-fecha-hasta" value="${estado.filtros.fecha_hasta || ''}" title="Hasta">
 
-          <select id="filtro-categoria">
-            <option value="">Todas las categorías</option>
-            ${(() => {
-              const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service']
-              const empresa  = estado.maestros.categorias.filter(c => !NOMBRES_VEHICULO.includes(c.nombre))
-              const vehiculo = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
-              return [...empresa, ...vehiculo].map(c =>
-                `<option value="${c.id}" ${estado.filtros.categoria_id === String(c.id) ? 'selected' : ''}>${c.icon} ${c.nombre}</option>`
-              ).join('')
-            })()}
-          </select>
+          <div class="multiselect" id="ms-categoria">
+            <button type="button" class="multiselect__boton" id="ms-categoria-boton">Todas las categorías</button>
+            <div class="multiselect__panel" id="ms-categoria-panel" hidden></div>
+          </div>
 
-          <select id="filtro-vehiculo">
-            <option value="">Todos los vehículos</option>
-            ${estado.maestros.vehiculos.map(v =>
-              `<option value="${v.id}" ${estado.filtros.vehiculo_id === String(v.id) ? 'selected' : ''}>${v.nombre} (${v.patente})</option>`
-            ).join('')}
-          </select>
+          <div class="multiselect" id="ms-vehiculo">
+            <button type="button" class="multiselect__boton" id="ms-vehiculo-boton">Todos los vehículos</button>
+            <div class="multiselect__panel" id="ms-vehiculo-panel" hidden></div>
+          </div>
 
-          <select id="filtro-medio-pago">
-            <option value="">Todos los medios de pago</option>
-            <option value="efectivo"     ${estado.filtros.medio_pago === 'efectivo'     ? 'selected' : ''}>Efectivo</option>
-            <option value="transferencia" ${estado.filtros.medio_pago === 'transferencia' ? 'selected' : ''}>Transferencia / QR</option>
-            <option value="cheque"       ${estado.filtros.medio_pago === 'cheque'       ? 'selected' : ''}>Cheque</option>
-          </select>
+          <div class="multiselect" id="ms-medio-pago">
+            <button type="button" class="multiselect__boton" id="ms-medio-pago-boton">Todos los medios de pago</button>
+            <div class="multiselect__panel" id="ms-medio-pago-panel" hidden></div>
+          </div>
 
           <button type="button" id="btn-borrar-filtros" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
           <button type="button" id="btn-exportar-excel" class="btn btn--secundario" style="width:auto;">📥 Descargar Excel</button>
@@ -1283,36 +1361,75 @@
 
       contenedor.innerHTML = html
 
-      document.getElementById('filtro-periodo')?.addEventListener('change', (e) => {
-        estado.filtros.periodo = e.target.value
-        cargarLista()
+      estado.filtros.periodos           = estado.filtros.periodos           || []
+      estado.filtros.unidad_negocio_ids = estado.filtros.unidad_negocio_ids || []
+      estado.filtros.categoria_ids      = estado.filtros.categoria_ids      || []
+      estado.filtros.vehiculo_ids       = estado.filtros.vehiculo_ids       || []
+      estado.filtros.medios_pago        = estado.filtros.medios_pago        || []
+
+      crearMultiselect({
+        idBase: 'ms-periodo',
+        opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
+        seleccionados: estado.filtros.periodos,
+        etiquetaTodos: 'Todos los períodos',
+        onChange: () => cargarLista()
       })
-      document.getElementById('filtro-unidad')?.addEventListener('change', (e) => {
-        estado.filtros.unidad_negocio_id = e.target.value
-        cargarLista()
-      })
-      document.getElementById('filtro-fecha')?.addEventListener('change', (e) => {
-        estado.filtros.fecha = e.target.value
-        cargarLista()
-      })
-      document.getElementById('filtro-categoria')?.addEventListener('change', (e) => {
-        estado.filtros.categoria_id = e.target.value
-        cargarLista()
-      })
-      document.getElementById('filtro-vehiculo')?.addEventListener('change', (e) => {
-        estado.filtros.vehiculo_id = e.target.value
-        cargarLista()
-      })
-      document.getElementById('filtro-medio-pago')?.addEventListener('change', (e) => {
-        estado.filtros.medio_pago = e.target.value
-        cargarLista()
-      })
-      document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
-        estado.filtros = {}
-        renderizarFiltros(estado.maestros.unidades)
-        cargarLista()
-      })
-      document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel)
+
+      if ((estado.rol === 'admin' || estado.rol === 'pablo') && unidades.length) {
+        crearMultiselect({
+          idBase: 'ms-unidad',
+          opciones: unidades.map(u => ({ value: u.id, label: u.nombre })),
+          seleccionados: estado.filtros.unidad_negocio_ids,
+          etiquetaTodos: 'Todas las unidades',
+          onChange: () => cargarLista()
+        })
+
+        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service']
+        const catsEmpresa  = estado.maestros.categorias.filter(c => !NOMBRES_VEHICULO.includes(c.nombre))
+        const catsVehiculo = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
+        crearMultiselect({
+          idBase: 'ms-categoria',
+          opciones: [...catsEmpresa, ...catsVehiculo].map(c => ({ value: c.id, label: c.icon + ' ' + c.nombre })),
+          seleccionados: estado.filtros.categoria_ids,
+          etiquetaTodos: 'Todas las categorías',
+          onChange: () => cargarLista()
+        })
+
+        crearMultiselect({
+          idBase: 'ms-vehiculo',
+          opciones: estado.maestros.vehiculos.map(v => ({ value: v.id, label: v.nombre + ' (' + v.patente + ')' })),
+          seleccionados: estado.filtros.vehiculo_ids,
+          etiquetaTodos: 'Todos los vehículos',
+          onChange: () => cargarLista()
+        })
+
+        crearMultiselect({
+          idBase: 'ms-medio-pago',
+          opciones: [
+            { value: 'efectivo', label: 'Efectivo' },
+            { value: 'transferencia', label: 'Transferencia / QR' },
+            { value: 'cheque', label: 'Cheque' },
+          ],
+          seleccionados: estado.filtros.medios_pago,
+          etiquetaTodos: 'Todos los medios de pago',
+          onChange: () => cargarLista()
+        })
+
+        document.getElementById('filtro-fecha-desde')?.addEventListener('change', (e) => {
+          estado.filtros.fecha_desde = e.target.value
+          cargarLista()
+        })
+        document.getElementById('filtro-fecha-hasta')?.addEventListener('change', (e) => {
+          estado.filtros.fecha_hasta = e.target.value
+          cargarLista()
+        })
+        document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
+          estado.filtros = { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], fecha_desde: '', fecha_hasta: '' }
+          renderizarFiltros(estado.maestros.unidades)
+          cargarLista()
+        })
+        document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel)
+      }
     }
 
     function exportarExcel() {
@@ -1398,12 +1515,13 @@
         query = query.eq('empleado_id', estado.miEmpleadoId ?? -1)
       }
 
-      if (estado.filtros.periodo)           query = query.eq('periodo', estado.filtros.periodo)
-      if (estado.filtros.unidad_negocio_id) query = query.eq('unidad_negocio_id', estado.filtros.unidad_negocio_id)
-      if (estado.filtros.fecha)        query = query.eq('fecha', estado.filtros.fecha)
-      if (estado.filtros.categoria_id) query = query.eq('categoria_id', estado.filtros.categoria_id)
-      if (estado.filtros.vehiculo_id)  query = query.eq('vehiculo_id', estado.filtros.vehiculo_id)
-      if (estado.filtros.medio_pago)   query = query.eq('medio_pago', estado.filtros.medio_pago)
+      if (estado.filtros.periodos?.length)           query = query.in('periodo', estado.filtros.periodos)
+      if (estado.filtros.unidad_negocio_ids?.length)  query = query.in('unidad_negocio_id', estado.filtros.unidad_negocio_ids)
+      if (estado.filtros.categoria_ids?.length)       query = query.in('categoria_id', estado.filtros.categoria_ids)
+      if (estado.filtros.vehiculo_ids?.length)        query = query.in('vehiculo_id', estado.filtros.vehiculo_ids)
+      if (estado.filtros.medios_pago?.length)         query = query.in('medio_pago', estado.filtros.medios_pago)
+      if (estado.filtros.fecha_desde)                 query = query.gte('fecha', estado.filtros.fecha_desde)
+      if (estado.filtros.fecha_hasta)                 query = query.lte('fecha', estado.filtros.fecha_hasta)
 
       const { data: gastos, error } = await query
 
@@ -1486,6 +1604,15 @@
 
     document.getElementById('btn-nuevo-gasto').addEventListener('click', abrirWizard)
     document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
+
+    document.addEventListener('click', (e) => {
+      document.querySelectorAll('.multiselect').forEach(ms => {
+        if (!ms.contains(e.target)) {
+          const panel = ms.querySelector('.multiselect__panel')
+          if (panel) panel.hidden = true
+        }
+      })
+    })
 
     const { data: unidadesInicial } = await supabase
       .from('unidades_negocio')
