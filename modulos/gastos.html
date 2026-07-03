@@ -954,18 +954,9 @@
 
         <!-- Tarjetas renderizadas por JS -->
         <div class="grilla-destino" id="grilla-vehiculos"></div>
-
-        <!-- Campo kilometraje: aparece al seleccionar un vehículo -->
-        <div id="grupo-km-vehiculo" class="formulario" style="display:none; margin-top:1.25rem;">
-          <div class="grupo-campo">
-            <label for="campo-kilometraje">Kilometraje <span class="etiqueta-opcional">opcional</span></label>
-            <input type="number" id="campo-kilometraje" name="kilometraje" placeholder="km actuales" min="0">
-          </div>
-        </div>
       </div>
       <div class="wizard-nav">
         <button class="btn btn--secundario" id="btn-vehiculo-atras">← Atrás</button>
-        <button class="btn btn--primario" id="btn-vehiculo-continuar" style="display:none;">Continuar →</button>
       </div>
     </div>
 
@@ -1001,6 +992,11 @@
             <select id="campo-proyecto" name="proyecto_id">
               <option value="">— Sin proyecto —</option>
             </select>
+          </div>
+
+          <div class="grupo-campo" id="grupo-kilometraje-detalle" style="display:none;">
+            <label for="campo-kilometraje">Kilometraje del vehículo</label>
+            <input type="number" id="campo-kilometraje" name="kilometraje" placeholder="Ej: 85000" min="0">
           </div>
 
           <div class="grupo-campo">
@@ -1464,17 +1460,6 @@
           ? estado.maestros.vehiculos
           : estado.maestros.vehiculos.filter(v => String(v.unidad_negocio_id) === String(unidadSeleccionada))
         renderizarGrillaVehiculos(vehiculosAMostrar, !viaVehiculos)
-
-        // Restaurar estado si el usuario vuelve atrás
-        const grupoKm    = document.getElementById('grupo-km-vehiculo')
-        const btnCont    = document.getElementById('btn-vehiculo-continuar')
-        if (vehiculoFueElegido && vehiculoSeleccionado !== null) {
-          grupoKm.style.display = 'block'
-          btnCont.style.display = 'flex'
-        } else {
-          grupoKm.style.display = 'none'
-          btnCont.style.display = 'none'
-        }
       }
 
       if (id === 'categoria') {
@@ -1483,6 +1468,26 @@
 
       if (id === 'detalles') {
         poblarSelectEmpleados(unidadSeleccionada)
+
+        const grupoKmDetalle = document.getElementById('grupo-kilometraje-detalle')
+        if (grupoKmDetalle) grupoKmDetalle.style.display = viaVehiculos ? 'block' : 'none'
+
+        const inputLugar = document.getElementById('campo-lugar')
+        const inputDesc  = document.getElementById('campo-descripcion')
+        const PLACEHOLDERS_VEHICULO = {
+          'Mantenimiento': { lugar: 'Ej: Taller Pérez, Ruta 9 Km 45', descripcion: 'Ej: Cambio de aceite y filtros' },
+          'Repuestos':      { lugar: 'Ej: Repuestos Sur S.A.',        descripcion: 'Ej: Cambio de pastillas de freno' },
+          'Service':        { lugar: 'Ej: Concesionario oficial',     descripcion: 'Ej: Service de los 20.000 km' },
+        }
+        if (viaVehiculos) {
+          const catObj = estado.maestros.categorias.find(c => c.id === categoriaSeleccionada)
+          const ph = PLACEHOLDERS_VEHICULO[catObj?.nombre]
+          if (inputLugar) inputLugar.placeholder = ph?.lugar || 'Lugar donde se realizó'
+          if (inputDesc)  inputDesc.placeholder  = ph?.descripcion || 'Qué se le hizo al vehículo'
+        } else {
+          if (inputLugar) inputLugar.placeholder = 'Ej: YPF Av. Colón'
+          if (inputDesc)  inputDesc.placeholder  = 'Ej: Nafta viaje a planta'
+        }
       }
 
       if (id === 'resumen') {
@@ -1672,9 +1677,7 @@
         .forEach(b => b.classList.remove('seleccionada'))
       btn.classList.add('seleccionada')
 
-      // Mostrar campo km y botón continuar
-      document.getElementById('grupo-km-vehiculo').style.display = 'block'
-      document.getElementById('btn-vehiculo-continuar').style.display = 'flex'
+      irASubpaso('categoria')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1697,7 +1700,7 @@
 
       let categoriasAMostrar
       if (viaVehiculos) {
-        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Servicios']
+        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service']
         categoriasAMostrar = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
       } else {
         const NOMBRES_AL_FONDO = ['Combustible', 'Peaje', 'Viático']
@@ -1787,6 +1790,8 @@
       if (id === 'detalles') {
         if (!document.getElementById('campo-empleado').value)
           return mostrarError('Seleccioná el empleado.'), false
+        if (viaVehiculos && !document.getElementById('campo-kilometraje').value)
+          return mostrarError('Ingresá el kilometraje del vehículo.'), false
       }
       return true
     }
@@ -2018,6 +2023,8 @@
         if (error) throw new Error(error.message)
 
         mostrarExito('¡Gasto guardado correctamente!')
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
         cerrarWizard()
       } catch (err) {
         console.error(err)
@@ -2147,7 +2154,6 @@
 
     // ── Sub-paso VEHICULO-DESTINO ──────────────────────────────────────────
     document.getElementById('btn-vehiculo-atras').addEventListener('click',     () => irASubpaso('destino'))
-    document.getElementById('btn-vehiculo-continuar').addEventListener('click', () => irASubpaso('categoria'))
 
     // ── Sub-paso CATEGORIA ─────────────────────────────────────────────────
     document.getElementById('btn-categoria-atras').addEventListener('click', () => irASubpaso(viaVehiculos ? 'vehiculo-destino' : 'destino'))
