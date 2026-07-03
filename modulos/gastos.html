@@ -805,6 +805,8 @@
       <p class="estado-vacio__descripcion">Tocá el botón + para registrar el primer gasto.</p>
     </div>
 
+    <div id="total-gastos" style="position:sticky; bottom:0; background:var(--color-superficie); border-top:1px solid var(--color-borde); padding:1rem 1.25rem; font-weight:700; font-size:1.125rem;" hidden></div>
+
     <button class="btn-fab" id="btn-nuevo-gasto" title="Nuevo gasto">+</button>
 
   </div><!-- /vista-lista -->
@@ -1226,6 +1228,34 @@
               `<option value="${u.id}" ${estado.filtros.unidad_negocio_id === String(u.id) ? 'selected' : ''}>${u.nombre}</option>`
             ).join('')}
           </select>
+
+          <input type="date" id="filtro-fecha" value="${estado.filtros.fecha || ''}">
+
+          <select id="filtro-categoria">
+            <option value="">Todas las categorías</option>
+            ${(() => {
+              const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service']
+              const empresa  = estado.maestros.categorias.filter(c => !NOMBRES_VEHICULO.includes(c.nombre))
+              const vehiculo = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
+              return [...empresa, ...vehiculo].map(c =>
+                `<option value="${c.id}" ${estado.filtros.categoria_id === String(c.id) ? 'selected' : ''}>${c.icon} ${c.nombre}</option>`
+              ).join('')
+            })()}
+          </select>
+
+          <select id="filtro-vehiculo">
+            <option value="">Todos los vehículos</option>
+            ${estado.maestros.vehiculos.map(v =>
+              `<option value="${v.id}" ${estado.filtros.vehiculo_id === String(v.id) ? 'selected' : ''}>${v.nombre} (${v.patente})</option>`
+            ).join('')}
+          </select>
+
+          <select id="filtro-medio-pago">
+            <option value="">Todos los medios de pago</option>
+            <option value="efectivo"     ${estado.filtros.medio_pago === 'efectivo'     ? 'selected' : ''}>Efectivo</option>
+            <option value="transferencia" ${estado.filtros.medio_pago === 'transferencia' ? 'selected' : ''}>Transferencia / QR</option>
+            <option value="cheque"       ${estado.filtros.medio_pago === 'cheque'       ? 'selected' : ''}>Cheque</option>
+          </select>
         `
       }
 
@@ -1239,6 +1269,40 @@
         estado.filtros.unidad_negocio_id = e.target.value
         cargarLista()
       })
+      document.getElementById('filtro-fecha')?.addEventListener('change', (e) => {
+        estado.filtros.fecha = e.target.value
+        cargarLista()
+      })
+      document.getElementById('filtro-categoria')?.addEventListener('change', (e) => {
+        estado.filtros.categoria_id = e.target.value
+        cargarLista()
+      })
+      document.getElementById('filtro-vehiculo')?.addEventListener('change', (e) => {
+        estado.filtros.vehiculo_id = e.target.value
+        cargarLista()
+      })
+      document.getElementById('filtro-medio-pago')?.addEventListener('change', (e) => {
+        estado.filtros.medio_pago = e.target.value
+        cargarLista()
+      })
+    }
+
+    function renderizarTotalGastos(gastos) {
+      const totalEl = document.getElementById('total-gastos')
+      if (!gastos.length) { totalEl.hidden = true; return }
+
+      const porMoneda = {}
+      gastos.forEach(g => {
+        const moneda = g.moneda || 'ARS'
+        porMoneda[moneda] = (porMoneda[moneda] || 0) + (Number(g.importe) || 0)
+      })
+
+      const partes = Object.entries(porMoneda).map(([moneda, total]) =>
+        formatearImporte(total, moneda)
+      )
+
+      totalEl.textContent = 'Total: ' + partes.join('  ·  ')
+      totalEl.hidden = false
     }
 
     async function cargarLista() {
@@ -1269,6 +1333,10 @@
 
       if (estado.filtros.periodo)           query = query.eq('periodo', estado.filtros.periodo)
       if (estado.filtros.unidad_negocio_id) query = query.eq('unidad_negocio_id', estado.filtros.unidad_negocio_id)
+      if (estado.filtros.fecha)        query = query.eq('fecha', estado.filtros.fecha)
+      if (estado.filtros.categoria_id) query = query.eq('categoria_id', estado.filtros.categoria_id)
+      if (estado.filtros.vehiculo_id)  query = query.eq('vehiculo_id', estado.filtros.vehiculo_id)
+      if (estado.filtros.medio_pago)   query = query.eq('medio_pago', estado.filtros.medio_pago)
 
       const { data: gastos, error } = await query
 
@@ -1285,11 +1353,13 @@
 
       if (!gastos?.length) {
         vaciEl.hidden = false
+        renderizarTotalGastos([])
         return
       }
 
       listaEl.hidden    = false
       listaEl.innerHTML = gastos.map(renderizarCardGasto).join('')
+      renderizarTotalGastos(gastos)
 
       listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
         card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
@@ -1353,6 +1423,14 @@
       .select('id, nombre')
       .eq('activo', true)
       .order('nombre')
+
+    const { data: categoriasInicial } = await supabase
+      .from('categorias').select('id, nombre, icon').eq('activo', true).order('nombre')
+    estado.maestros.categorias = categoriasInicial ?? []
+
+    const { data: vehiculosInicial } = await supabase
+      .from('vehiculos').select('id, nombre, marca, patente').eq('activo', true).order('nombre')
+    estado.maestros.vehiculos = vehiculosInicial ?? []
 
     estado.maestros.unidades = unidadesInicial ?? []
     renderizarFiltros(estado.maestros.unidades)
