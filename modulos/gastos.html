@@ -29,6 +29,16 @@
       overflow: hidden;
     }
 
+    #modal-detalle-gasto:not([hidden]) {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: var(--color-superficie);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     /* ── Header del wizard ─────────────────────────────────────────────────── */
 
     .wizard-header {
@@ -1038,6 +1048,19 @@
   </div><!-- /vista-wizard -->
 
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA C — DETALLE DE UN GASTO
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="modal-detalle-gasto" hidden>
+    <header class="header">
+      <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-gasto">← Volver</button>
+      <span class="header__nombre-app">Detalle del gasto</span>
+      <div style="width:5rem;"></div>
+    </header>
+    <div style="padding: 1rem; overflow-y: auto;" id="detalle-gasto-contenido"></div>
+  </div><!-- /modal-detalle-gasto -->
+
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
@@ -1230,10 +1253,13 @@
       let query = supabase
         .from('gastos')
         .select(`
-          id, fecha, periodo, razon_social, importe, moneda, medio_pago, estado,
+          id, fecha, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
+          medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
           categorias (id, nombre, icon),
           empleados  (id, nombre),
-          unidades_negocio (id, nombre)
+          unidades_negocio (id, nombre),
+          vehiculos  (id, nombre, marca, patente),
+          proyectos  (id, nombre)
         `)
         .order('fecha', { ascending: false })
 
@@ -1245,6 +1271,8 @@
       if (estado.filtros.unidad_negocio_id) query = query.eq('unidad_negocio_id', estado.filtros.unidad_negocio_id)
 
       const { data: gastos, error } = await query
+
+      estado.listaGastos = gastos ?? []
 
       cargandoEl.hidden = true
 
@@ -1262,6 +1290,10 @@
 
       listaEl.hidden    = false
       listaEl.innerHTML = gastos.map(renderizarCardGasto).join('')
+
+      listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
+        card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
+      })
     }
 
     function renderizarCardGasto(g) {
@@ -1276,7 +1308,7 @@
       const meta        = [fecha, categoria, empleado, MEDIOS_PAGO_LABEL[g.medio_pago]].filter(Boolean).join(' · ')
 
       return `
-        <div class="tarjeta-gasto">
+        <div class="tarjeta-gasto" data-id="${g.id}">
           <div class="gasto__icono">
             ${logoEmpresa
               ? `<img src="${logoEmpresa}" alt="${nombreUnidad || 'Vehículos'}" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`
@@ -1314,6 +1346,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     document.getElementById('btn-nuevo-gasto').addEventListener('click', abrirWizard)
+    document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
 
     const { data: unidadesInicial } = await supabase
       .from('unidades_negocio')
@@ -2007,6 +2040,63 @@
                alt="Comprobante" class="resumen-foto">
         </div>` : ''}
       `
+    }
+
+    function mostrarDetalleGasto(id) {
+      const g = estado.listaGastos.find(x => x.id === id)
+      if (!g) return
+
+      const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
+        <div class="resumen-fila">
+          <span class="resumen-fila__etiqueta">${etiqueta}</span>
+          <span class="resumen-fila__valor">${valor}</span>
+        </div>` : ''
+
+      document.getElementById('detalle-gasto-contenido').innerHTML = `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          ${fila('Fecha',        formatearFecha(g.fecha))}
+          ${fila('Tipo',         g.tipo_doc)}
+          ${fila('Número',       g.numero_doc)}
+          ${fila('Razón social', g.razon_social)}
+          ${fila('Medio de pago', MEDIOS_PAGO_LABEL[g.medio_pago])}
+          <div class="resumen-fila">
+            <span class="resumen-fila__etiqueta">Importe</span>
+            <span class="resumen-importe">${formatearImporte(g.importe, g.moneda)}</span>
+          </div>
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Destino y clasificación</div>
+          ${fila('Empresa',     g.unidades_negocio?.nombre)}
+          ${fila('Vehículo',    g.vehiculos ? `${g.vehiculos.nombre} (${g.vehiculos.patente})` : null)}
+          ${fila('Kilometraje', g.kilometraje ? `${g.kilometraje} km` : null)}
+          ${fila('Categoría',   g.categorias ? `${g.categorias.icon} ${g.categorias.nombre}` : null)}
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Detalles</div>
+          ${fila('Empleado',      g.empleados?.nombre)}
+          ${fila('Proyecto',      g.proyectos?.nombre)}
+          ${fila('Lugar',         g.lugar_servicio)}
+          ${fila('Descripción',   g.descripcion)}
+          ${fila('Observaciones', g.observaciones)}
+        </div>
+
+        ${g.foto_url ? `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          <a href="${g.foto_url}" target="_blank" rel="noopener" class="btn btn--secundario" style="display:inline-flex;width:auto;">Ver foto del comprobante →</a>
+        </div>` : ''}
+      `
+
+      document.getElementById('vista-lista').hidden = true
+      document.getElementById('modal-detalle-gasto').removeAttribute('hidden')
+    }
+
+    function cerrarDetalleGasto() {
+      document.getElementById('modal-detalle-gasto').hidden = true
+      document.getElementById('vista-lista').removeAttribute('hidden')
     }
 
     async function guardarGasto() {
