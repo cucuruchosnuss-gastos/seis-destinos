@@ -1879,7 +1879,11 @@
         .from('comprobantes')
         .upload(path, archivo, { contentType: archivo.type, upsert: false })
       if (error) throw new Error(`Error al subir la foto: ${error.message}`)
-      const { data: { publicUrl } } = supabase.storage.from('comprobantes').getPublicUrl(data.path)
+      const { data: signedData, error: errorSigned } = await supabase.storage
+        .from('comprobantes')
+        .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10) // 10 años en segundos
+      if (errorSigned) throw new Error('Error al generar el link del comprobante: ' + errorSigned.message)
+      const publicUrl = signedData.signedUrl
       return publicUrl
     }
 
