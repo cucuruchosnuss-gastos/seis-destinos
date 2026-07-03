@@ -1075,6 +1075,8 @@
     // ESTADO GLOBAL
     // ═══════════════════════════════════════════════════════════════════════
 
+    let cargaListaId = 0
+
     const estado = {
       sesion:       null,
       rol:          'usuario',
@@ -1256,6 +1258,8 @@
             <option value="transferencia" ${estado.filtros.medio_pago === 'transferencia' ? 'selected' : ''}>Transferencia / QR</option>
             <option value="cheque"       ${estado.filtros.medio_pago === 'cheque'       ? 'selected' : ''}>Cheque</option>
           </select>
+
+          <button type="button" id="btn-borrar-filtros" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
         `
       }
 
@@ -1285,11 +1289,20 @@
         estado.filtros.medio_pago = e.target.value
         cargarLista()
       })
+      document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
+        estado.filtros = {}
+        renderizarFiltros(estado.maestros.unidades)
+        cargarLista()
+      })
     }
 
     function renderizarTotalGastos(gastos) {
       const totalEl = document.getElementById('total-gastos')
-      if (!gastos.length) { totalEl.hidden = true; return }
+      if (!gastos.length) {
+        totalEl.textContent = 'Total: $ 0,00'
+        totalEl.hidden = false
+        return
+      }
 
       const porMoneda = {}
       gastos.forEach(g => {
@@ -1306,6 +1319,7 @@
     }
 
     async function cargarLista() {
+      const miCargaId = ++cargaListaId
       const listaEl    = document.getElementById('lista-gastos')
       const vaciEl     = document.getElementById('estado-vacio')
       const cargandoEl = document.getElementById('estado-cargando')
@@ -1339,6 +1353,8 @@
       if (estado.filtros.medio_pago)   query = query.eq('medio_pago', estado.filtros.medio_pago)
 
       const { data: gastos, error } = await query
+
+      if (miCargaId !== cargaListaId) return // una carga más nueva ya está en curso, descartar esta respuesta vieja
 
       estado.listaGastos = gastos ?? []
 
