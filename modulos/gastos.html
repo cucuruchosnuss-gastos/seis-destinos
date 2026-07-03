@@ -1115,6 +1115,14 @@
 
     const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
 
+    const LOGOS_EMPRESA = {
+      'Cucuruchos Nuss': '../logo-cucuruchos-nuss.png',
+      'Dolce Pasta':      '../logo-dolce-pasta.png',
+      'Taller':           '../logo-taller.png',
+      'Mengui':           '../logo-heladitos-orly.png',
+    }
+    const LOGO_VEHICULOS = '../logo-vehiculos.png'
+
     function fechaAPeriodo(fechaStr) {
       const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
       const d = new Date(fechaStr + 'T00:00:00')
@@ -1261,7 +1269,8 @@
     }
 
     function renderizarCardGasto(g) {
-      const icono       = g.categorias?.icon   ?? '💳'
+      const nombreUnidad = g.unidades_negocio?.nombre
+      const logoEmpresa  = nombreUnidad ? (LOGOS_EMPRESA[nombreUnidad] ?? null) : LOGO_VEHICULOS
       const categoria   = g.categorias?.nombre ?? '—'
       const razonSocial = g.razon_social       ?? '(sin razón social)'
       const empleado    = g.empleados?.nombre  ?? ''
@@ -1272,7 +1281,11 @@
 
       return `
         <div class="tarjeta-gasto">
-          <div class="gasto__icono">${icono}</div>
+          <div class="gasto__icono">
+            ${logoEmpresa
+              ? `<img src="${logoEmpresa}" alt="${nombreUnidad || 'Vehículos'}" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`
+              : (g.categorias?.icon ?? '💳')}
+          </div>
           <div class="gasto__info">
             <div class="gasto__razon-social">${razonSocial}</div>
             <div class="gasto__meta">${meta}</div>
