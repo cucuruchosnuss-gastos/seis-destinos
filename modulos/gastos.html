@@ -1695,7 +1695,19 @@
         return
       }
 
-      grilla.innerHTML = estado.maestros.categorias.map(cat => `
+      let categoriasAMostrar
+      if (viaVehiculos) {
+        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Servicios']
+        categoriasAMostrar = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
+      } else {
+        const NOMBRES_AL_FONDO = ['Combustible', 'Peaje', 'Viático']
+        categoriasAMostrar = [
+          ...estado.maestros.categorias.filter(c => !NOMBRES_AL_FONDO.includes(c.nombre)),
+          ...estado.maestros.categorias.filter(c => NOMBRES_AL_FONDO.includes(c.nombre)),
+        ]
+      }
+
+      grilla.innerHTML = categoriasAMostrar.map(cat => `
         <button type="button" class="btn-categoria ${categoriaSeleccionada === cat.id ? 'btn-categoria--seleccionado' : ''}"
                 data-id="${cat.id}">
           <span class="btn-categoria__icono">${cat.icon}</span>
