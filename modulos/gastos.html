@@ -531,6 +531,22 @@
 
     .lista-filtros select:focus { border-color: var(--color-acento); }
 
+    .lista-filtros input[type="date"] {
+      padding: 0.4375rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 8px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .lista-filtros input[type="date"]:focus { border-color: var(--color-acento); }
+
     /* ── Vista lista — cards de gastos ─────────────────────────────────────── */
 
     .lista-contenido {
@@ -1319,7 +1335,9 @@
     }
 
     async function cargarLista() {
+      console.log('[LISTA] cargarLista() iniciada')
       const miCargaId = ++cargaListaId
+      console.log('[LISTA] id=' + miCargaId + ' arrancó con filtros:', JSON.stringify(estado.filtros))
       const listaEl    = document.getElementById('lista-gastos')
       const vaciEl     = document.getElementById('estado-vacio')
       const cargandoEl = document.getElementById('estado-cargando')
@@ -1354,7 +1372,12 @@
 
       const { data: gastos, error } = await query
 
-      if (miCargaId !== cargaListaId) return // una carga más nueva ya está en curso, descartar esta respuesta vieja
+      console.log('[LISTA] id=' + miCargaId + ' resolvió con', gastos?.length ?? 0, 'resultados. cargaListaId global ahora es', cargaListaId)
+
+      if (miCargaId !== cargaListaId) {
+        console.log('[LISTA] id=' + miCargaId + ' DESCARTADA (hay una más nueva en curso)')
+        return
+      }
 
       estado.listaGastos = gastos ?? []
 
@@ -1380,6 +1403,8 @@
       listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
         card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
       })
+
+      console.log('[LISTA] id=' + miCargaId + ' terminó de pintar la pantalla')
     }
 
     function renderizarCardGasto(g) {
