@@ -1225,6 +1225,18 @@
 
     const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
 
+    const OPCIONES_ORDEN = [
+      { value: 'fecha_desc',   label: 'Fecha (más reciente primero)', columna: 'fecha',       ascending: false },
+      { value: 'fecha_asc',    label: 'Fecha (más antigua primero)',  columna: 'fecha',       ascending: true  },
+      { value: 'razon_asc',    label: 'Nombre (A-Z)',                 columna: 'razon_social', ascending: true  },
+      { value: 'razon_desc',   label: 'Nombre (Z-A)',                 columna: 'razon_social', ascending: false },
+      { value: 'importe_desc', label: 'Importe (mayor a menor)',      columna: 'importe',     ascending: false },
+      { value: 'importe_asc',  label: 'Importe (menor a mayor)',      columna: 'importe',     ascending: true  },
+      { value: 'moneda_asc',   label: 'Moneda (A-Z)',                 columna: 'moneda',      ascending: true  },
+      { value: 'empresa_asc',  label: 'Empresa (A-Z)',  columna: 'nombre', ascending: true,  foreignTable: 'unidades_negocio' },
+      { value: 'empresa_desc', label: 'Empresa (Z-A)',  columna: 'nombre', ascending: false, foreignTable: 'unidades_negocio' },
+    ]
+
     const LOGOS_EMPRESA = {
       'Cucuruchos Nuss': '../logo-cucuruchos-nuss.png',
       'Dolce Pasta':      '../logo-dolce-pasta.png',
@@ -1348,6 +1360,50 @@
       actualizarTexto()
     }
 
+    function crearSelectorOrden() {
+      const boton = document.getElementById('ms-orden-boton')
+      const panel = document.getElementById('ms-orden-panel')
+      if (!boton || !panel) return
+
+      if (!estado.filtros.orden) estado.filtros.orden = 'fecha_desc'
+
+      function actualizarBoton() {
+        const actual = OPCIONES_ORDEN.find(o => o.value === estado.filtros.orden)
+        boton.textContent = 'Ordenar: ' + (actual?.label ?? 'Fecha (más reciente primero)')
+        boton.classList.toggle('multiselect__boton--activo', estado.filtros.orden !== 'fecha_desc')
+      }
+
+      panel.innerHTML = OPCIONES_ORDEN.map(op => `
+        <label class="multiselect__opcion">
+          <input type="radio" name="orden" value="${op.value}" ${estado.filtros.orden === op.value ? 'checked' : ''}>
+          <span>${op.label}</span>
+        </label>
+      `).join('')
+
+      panel.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          estado.filtros.orden = radio.value
+          actualizarBoton()
+          panel.hidden = true
+          cargarLista()
+        })
+      })
+
+      boton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const estabaAbierto = !panel.hidden
+        document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
+        if (!estabaAbierto) {
+          const rect = boton.getBoundingClientRect()
+          panel.style.top  = (rect.bottom + 4) + 'px'
+          panel.style.left = rect.left + 'px'
+        }
+        panel.hidden = estabaAbierto
+      })
+
+      actualizarBoton()
+    }
+
     function renderizarFiltros(unidades = []) {
       const contenedor = document.getElementById('contenedor-filtros')
 
@@ -1387,6 +1443,11 @@
           <div class="multiselect" id="ms-medio-pago">
             <button type="button" class="multiselect__boton" id="ms-medio-pago-boton">Todos los medios de pago</button>
             <div class="multiselect__panel" id="ms-medio-pago-panel" hidden></div>
+          </div>
+
+          <div class="multiselect" id="ms-orden">
+            <button type="button" class="multiselect__boton" id="ms-orden-boton">Ordenar</button>
+            <div class="multiselect__panel" id="ms-orden-panel" hidden></div>
           </div>
 
           <button type="button" id="btn-borrar-filtros" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
@@ -1450,6 +1511,8 @@
           onChange: () => cargarLista()
         })
 
+        crearSelectorOrden()
+
         document.getElementById('filtro-fecha-desde')?.addEventListener('change', (e) => {
           estado.filtros.fecha_desde = e.target.value
           e.target.classList.toggle('filtro-activo', !!e.target.value)
@@ -1461,7 +1524,7 @@
           cargarLista()
         })
         document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
-          estado.filtros = { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], fecha_desde: '', fecha_hasta: '' }
+          estado.filtros = { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], fecha_desde: '', fecha_hasta: '', orden: 'fecha_desc' }
           renderizarFiltros(estado.maestros.unidades)
           cargarLista()
         })
@@ -1546,7 +1609,6 @@
           vehiculos  (id, nombre, marca, patente),
           proyectos  (id, nombre)
         `)
-        .order('fecha', { ascending: false })
 
       if (estado.rol === 'usuario') {
         query = query.eq('empleado_id', estado.miEmpleadoId ?? -1)
@@ -1573,6 +1635,13 @@
       if (estado.filtros.medios_pago?.length)         query = query.in('medio_pago', estado.filtros.medios_pago)
       if (estado.filtros.fecha_desde)                 query = query.gte('fecha', estado.filtros.fecha_desde)
       if (estado.filtros.fecha_hasta)                 query = query.lte('fecha', estado.filtros.fecha_hasta)
+
+      const opcionOrden = OPCIONES_ORDEN.find(o => o.value === estado.filtros.orden) || OPCIONES_ORDEN[0]
+      if (opcionOrden.foreignTable) {
+        query = query.order(opcionOrden.columna, { ascending: opcionOrden.ascending, foreignTable: opcionOrden.foreignTable })
+      } else {
+        query = query.order(opcionOrden.columna, { ascending: opcionOrden.ascending })
+      }
 
       const { data: gastos, error } = await query
 
