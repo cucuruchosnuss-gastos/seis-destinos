@@ -511,9 +511,8 @@
       padding: 0.875rem 1.25rem;
       background: var(--color-fondo);
       border-bottom: 1px solid var(--color-borde);
-      overflow-x: auto;
+      flex-wrap: wrap;
       flex-shrink: 0;
-      -webkit-overflow-scrolling: touch;
     }
 
     .lista-filtros select {
@@ -562,7 +561,7 @@
     .multiselect__boton {
       padding: 0.4375rem 0.75rem;
       border: 1.5px solid var(--color-borde);
-      border-radius: 8px;
+      border-radius: 999px;
       font-family: var(--fuente);
       font-size: 0.8125rem;
       background: var(--color-fondo);
@@ -580,7 +579,7 @@
     .lista-filtros .btn--secundario {
       padding: 0.4375rem 0.75rem;
       border: 1.5px solid var(--color-borde);
-      border-radius: 8px;
+      border-radius: 999px;
       font-family: var(--fuente);
       font-size: 0.8125rem;
       font-weight: 600;
@@ -721,13 +720,13 @@
       width: 3.5rem;
       height: 3.5rem;
       border-radius: 50%;
-      background: var(--color-acento);
+      background: linear-gradient(135deg, var(--color-acento-highlight), var(--color-acento));
       color: #fff;
       border: none;
       font-size: 1.625rem;
       line-height: 1;
       cursor: pointer;
-      box-shadow: 0 4px 20px rgba(27,58,140,0.35);
+      box-shadow: 0 8px 20px rgba(26,42,82,0.35);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -874,28 +873,37 @@
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-lista">
 
-    <header class="header">
-      <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">← Volver</a>
-      <span class="header__nombre-app">Gastos</span>
-      <div style="width: 4rem;"></div>
+    <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
+      <div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
+          <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
+        </div>
+        <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto);">Gastos</div>
+      </div>
+      <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
     </header>
 
-    <div class="lista-filtros" id="contenedor-filtros"></div>
+    <div style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem;">
 
-    <div class="lista-contenido" id="lista-gastos"></div>
+      <div id="total-gastos" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:0.75rem; margin:1.25rem 0;" hidden></div>
 
-    <div id="estado-cargando" class="estado-vacio" hidden>
-      <div class="spinner"></div>
-      <p class="estado-vacio__descripcion">Cargando gastos…</p>
+      <div class="lista-filtros" id="contenedor-filtros"></div>
+
+      <div class="lista-contenido" id="lista-gastos"></div>
+
+      <div id="estado-cargando" class="estado-vacio" hidden>
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando gastos…</p>
+      </div>
+
+      <div id="estado-vacio" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">💳</div>
+        <div class="estado-vacio__titulo">Sin gastos registrados</div>
+        <p class="estado-vacio__descripcion">Tocá el botón + para registrar el primer gasto.</p>
+      </div>
+
     </div>
-
-    <div id="estado-vacio" class="estado-vacio" hidden>
-      <div class="estado-vacio__icono">💳</div>
-      <div class="estado-vacio__titulo">Sin gastos registrados</div>
-      <p class="estado-vacio__descripcion">Tocá el botón + para registrar el primer gasto.</p>
-    </div>
-
-    <div id="total-gastos" style="position:sticky; bottom:0; background:var(--color-superficie); border-top:1px solid var(--color-borde); padding:1rem 1.25rem; font-weight:700; font-size:1.125rem;" hidden></div>
 
     <button class="btn-fab" id="btn-nuevo-gasto" title="Nuevo gasto">+</button>
 
@@ -1408,6 +1416,8 @@
       const contenedor = document.getElementById('contenedor-filtros')
 
       let html = `
+        <input type="text" id="filtro-busqueda" placeholder="🔍 Buscar empresa o categoría" value="${estado.filtros.busqueda || ''}" style="flex:1; min-width:180px; padding:0.4375rem 0.875rem; border:1.5px solid var(--color-borde); border-radius:999px; font-family:var(--fuente); font-size:0.8125rem; background:var(--color-fondo); outline:none;">
+
         <div class="multiselect" id="ms-periodo">
           <button type="button" class="multiselect__boton" id="ms-periodo-boton">Todos los períodos</button>
           <div class="multiselect__panel" id="ms-periodo-panel" hidden></div>
@@ -1451,7 +1461,7 @@
           </div>
 
           <button type="button" id="btn-borrar-filtros" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
-          <button type="button" id="btn-exportar-excel" class="btn btn--secundario" style="width:auto;">📥 Descargar Excel</button>
+          <button type="button" id="btn-exportar-excel" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
         `
       }
 
@@ -1469,6 +1479,16 @@
         seleccionados: estado.filtros.periodos,
         etiquetaTodos: 'Todos los períodos',
         onChange: () => cargarLista()
+      })
+
+      let debounceBusqueda
+      document.getElementById('filtro-busqueda')?.addEventListener('input', (e) => {
+        clearTimeout(debounceBusqueda)
+        const valor = e.target.value
+        debounceBusqueda = setTimeout(() => {
+          estado.filtros.busqueda = valor
+          aplicarBusquedaLocal()
+        }, 250)
       })
 
       if ((estado.rol === 'admin' || estado.rol === 'pablo') && unidades.length) {
@@ -1568,11 +1588,7 @@
 
     function renderizarTotalGastos(gastos) {
       const totalEl = document.getElementById('total-gastos')
-      if (!gastos.length) {
-        totalEl.textContent = 'Total: $ 0,00'
-        totalEl.hidden = false
-        return
-      }
+      if (!gastos.length) { totalEl.hidden = true; return }
 
       const porMoneda = {}
       gastos.forEach(g => {
@@ -1580,12 +1596,64 @@
         porMoneda[moneda] = (porMoneda[moneda] || 0) + (Number(g.importe) || 0)
       })
 
-      const partes = Object.entries(porMoneda).map(([moneda, total]) =>
-        formatearImporte(total, moneda)
-      )
+      const monedas = Object.keys(porMoneda)
+      const featured = monedas.includes('ARS') ? 'ARS' : monedas[0]
 
-      totalEl.textContent = 'Total: ' + partes.join('  ·  ')
+      const tarjetaTotal = (moneda, monto, destacada) => `
+        <div style="
+          border-radius:18px;
+          padding:1.125rem 1.25rem;
+          ${destacada
+            ? 'background:linear-gradient(135deg, var(--color-acento), var(--color-acento-hover)); color:#fff; box-shadow:0 8px 24px rgba(26,42,82,0.25);'
+            : 'background:var(--color-fondo); border:1px solid var(--color-borde); box-shadow:0 2px 8px rgba(0,0,0,0.04);'}
+        ">
+          <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:${destacada ? '0.75' : '1'}; color:${destacada ? '#fff' : 'var(--color-texto-suave)'};">
+            Total en ${moneda === 'ARS' ? 'pesos' : moneda}
+          </div>
+          <div style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:${destacada ? '#fff' : 'var(--color-texto)'};">
+            ${formatearImporte(monto, moneda)}
+          </div>
+        </div>`
+
+      const tarjetaRegistros = `
+        <div style="border-radius:18px; padding:1.125rem 1.25rem; background:var(--color-fondo); border:1px solid var(--color-borde); box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+          <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--color-texto-suave);">Registros</div>
+          <div style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:var(--color-texto);">
+            ${gastos.length} <span style="font-size:0.9375rem; font-weight:600; color:var(--color-texto-suave);">gastos</span>
+          </div>
+        </div>`
+
+      totalEl.innerHTML =
+        monedas.map(m => tarjetaTotal(m, porMoneda[m], m === featured)).join('') +
+        tarjetaRegistros
+
       totalEl.hidden = false
+    }
+
+    function aplicarBusquedaLocal() {
+      const termino = (estado.filtros.busqueda || '').trim().toLowerCase()
+      const listaEl = document.getElementById('lista-gastos')
+      const vaciEl  = document.getElementById('estado-vacio')
+
+      const filtrados = !termino
+        ? estado.listaGastos
+        : estado.listaGastos.filter(g =>
+            (g.razon_social || '').toLowerCase().includes(termino) ||
+            (g.categorias?.nombre || '').toLowerCase().includes(termino)
+          )
+
+      if (!filtrados.length) {
+        listaEl.hidden = true
+        vaciEl.hidden  = false
+      } else {
+        vaciEl.hidden     = true
+        listaEl.hidden    = false
+        listaEl.innerHTML = filtrados.map(renderizarCardGasto).join('')
+        listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
+          card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
+        })
+      }
+      renderizarTotalGastos(filtrados)
     }
 
     async function cargarLista() {
@@ -1681,8 +1749,7 @@
       const empleado    = g.empleados?.nombre  ?? ''
       const importe     = formatearImporte(g.importe, g.moneda)
       const fecha       = formatearFecha(g.fecha)
-      const estadoG     = g.estado             ?? 'registrado'
-      const meta        = [fecha, categoria, empleado, MEDIOS_PAGO_LABEL[g.medio_pago]].filter(Boolean).join(' · ')
+      const meta        = [fecha, `<span style="color:var(--color-acento-highlight); font-weight:600;">${categoria}</span>`, empleado, MEDIOS_PAGO_LABEL[g.medio_pago]].filter(Boolean).join(' · ')
 
       return `
         <div class="tarjeta-gasto" data-id="${g.id}">
@@ -1697,7 +1764,10 @@
           </div>
           <div class="gasto__derecha">
             <div class="gasto__importe">${importe}</div>
-            <span class="badge-estado badge-estado--${estadoG}">${estadoG}</span>
+            <div style="display:flex; align-items:center; gap:0.375rem; margin-top:0.25rem; justify-content:flex-end;">
+              <span style="width:6px; height:6px; border-radius:50%; background:var(--color-exito); display:inline-block;"></span>
+              <span style="font-size:0.75rem; color:var(--color-texto-suave);">${g.estado === 'registrado' ? 'Registrado' : g.estado}</span>
+            </div>
           </div>
         </div>
       `
