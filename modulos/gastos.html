@@ -566,9 +566,7 @@
     }
 
     .multiselect__panel {
-      position: absolute;
-      top: calc(100% + 4px);
-      left: 0;
+      position: fixed;
       z-index: 30;
       background: var(--color-superficie);
       border: 1px solid var(--color-borde);
@@ -1313,6 +1311,11 @@
         e.stopPropagation()
         const estabaAbierto = !panel.hidden
         document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
+        if (!estabaAbierto) {
+          const rect = boton.getBoundingClientRect()
+          panel.style.top  = (rect.bottom + 4) + 'px'
+          panel.style.left = rect.left + 'px'
+        }
         panel.hidden = estabaAbierto
       })
 
@@ -1336,8 +1339,14 @@
             <div class="multiselect__panel" id="ms-unidad-panel" hidden></div>
           </div>
 
-          <input type="date" id="filtro-fecha-desde" value="${estado.filtros.fecha_desde || ''}" title="Desde">
-          <input type="date" id="filtro-fecha-hasta" value="${estado.filtros.fecha_hasta || ''}" title="Hasta">
+          <div style="display:flex; align-items:center; gap:0.375rem; flex-shrink:0;">
+            <span style="font-size:0.75rem; color:var(--color-texto-suave); white-space:nowrap;">Desde</span>
+            <input type="date" id="filtro-fecha-desde" value="${estado.filtros.fecha_desde || ''}">
+          </div>
+          <div style="display:flex; align-items:center; gap:0.375rem; flex-shrink:0;">
+            <span style="font-size:0.75rem; color:var(--color-texto-suave); white-space:nowrap;">Hasta</span>
+            <input type="date" id="filtro-fecha-hasta" value="${estado.filtros.fecha_hasta || ''}">
+          </div>
 
           <div class="multiselect" id="ms-categoria">
             <button type="button" class="multiselect__boton" id="ms-categoria-boton">Todas las categorías</button>
