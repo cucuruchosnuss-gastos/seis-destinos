@@ -1413,7 +1413,7 @@
       if ((estado.rol === 'admin' || estado.rol === 'pablo') && unidades.length) {
         crearMultiselect({
           idBase: 'ms-unidad',
-          opciones: unidades.map(u => ({ value: u.id, label: u.nombre })),
+          opciones: [...unidades.map(u => ({ value: u.id, label: u.nombre })), { value: '__vehiculos__', label: '🚚 Vehículos' }],
           seleccionados: estado.filtros.unidad_negocio_ids,
           etiquetaTodos: 'Todas las unidades',
           onChange: () => cargarLista()
@@ -1553,7 +1553,21 @@
       }
 
       if (estado.filtros.periodos?.length)           query = query.in('periodo', estado.filtros.periodos)
-      if (estado.filtros.unidad_negocio_ids?.length)  query = query.in('unidad_negocio_id', estado.filtros.unidad_negocio_ids)
+      if (estado.filtros.unidad_negocio_ids?.length) {
+        const incluyeVehiculos = estado.filtros.unidad_negocio_ids.includes('__vehiculos__')
+        const idsReales = estado.filtros.unidad_negocio_ids.filter(id => id !== '__vehiculos__')
+
+        if (incluyeVehiculos && idsReales.length) {
+          // Empresas seleccionadas Y también "Vehículos": cualquiera de las dos condiciones vale
+          query = query.or(`unidad_negocio_id.in.(${idsReales.join(',')}),vehiculo_id.not.is.null`)
+        } else if (incluyeVehiculos) {
+          // Solo "Vehículos" seleccionado
+          query = query.not('vehiculo_id', 'is', null)
+        } else {
+          // Solo empresas reales seleccionadas, comportamiento de siempre
+          query = query.in('unidad_negocio_id', idsReales)
+        }
+      }
       if (estado.filtros.categoria_ids?.length)       query = query.in('categoria_id', estado.filtros.categoria_ids)
       if (estado.filtros.vehiculo_ids?.length)        query = query.in('vehiculo_id', estado.filtros.vehiculo_ids)
       if (estado.filtros.medios_pago?.length)         query = query.in('medio_pago', estado.filtros.medios_pago)
