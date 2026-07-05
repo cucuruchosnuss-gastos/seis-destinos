@@ -548,6 +548,12 @@
 
     .lista-filtros input[type="date"]:focus { border-color: var(--color-acento); }
 
+    .lista-filtros input[type="date"].filtro-activo {
+      border-color: var(--color-acento);
+      background: var(--color-acento-suave);
+      color: var(--color-acento);
+    }
+
     .multiselect {
       position: relative;
       flex-shrink: 0;
@@ -563,6 +569,25 @@
       color: var(--color-texto);
       cursor: pointer;
       white-space: nowrap;
+    }
+
+    .multiselect__boton--activo {
+      border-color: var(--color-acento);
+      background: var(--color-acento-suave);
+      color: var(--color-acento);
+    }
+
+    .lista-filtros .btn--secundario {
+      padding: 0.4375rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 8px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .multiselect__panel {
@@ -1284,6 +1309,7 @@
         } else {
           boton.textContent = seleccionados.length + ' seleccionados'
         }
+        boton.classList.toggle('multiselect__boton--activo', seleccionados.length > 0)
       }
 
       panel.innerHTML = opciones.map(op => `
@@ -1426,10 +1452,12 @@
 
         document.getElementById('filtro-fecha-desde')?.addEventListener('change', (e) => {
           estado.filtros.fecha_desde = e.target.value
+          e.target.classList.toggle('filtro-activo', !!e.target.value)
           cargarLista()
         })
         document.getElementById('filtro-fecha-hasta')?.addEventListener('change', (e) => {
           estado.filtros.fecha_hasta = e.target.value
+          e.target.classList.toggle('filtro-activo', !!e.target.value)
           cargarLista()
         })
         document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
