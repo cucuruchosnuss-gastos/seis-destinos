@@ -529,6 +529,10 @@
       .grilla-totales {
         grid-template-columns: repeat(2, 1fr) !important;
       }
+
+      .grilla-totales__monto {
+        font-size: 1.125rem !important;
+      }
     }
 
     .lista-filtros select {
@@ -1631,7 +1635,7 @@
           <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:${destacada ? '0.75' : '1'}; color:${destacada ? '#fff' : 'var(--color-texto-suave)'};">
             Total en ${moneda === 'ARS' ? 'pesos' : moneda}
           </div>
-          <div style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:${destacada ? '#fff' : 'var(--color-texto)'};">
+          <div class="grilla-totales__monto" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:${destacada ? '#fff' : 'var(--color-texto)'};">
             ${formatearImporte(monto, moneda)}
           </div>
         </div>`
@@ -1639,7 +1643,7 @@
       const tarjetaRegistros = `
         <div style="border-radius:18px; padding:1.125rem 1.25rem; background:var(--color-fondo); border:1px solid var(--color-borde); box-shadow:0 2px 8px rgba(0,0,0,0.04);">
           <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--color-texto-suave);">Registros</div>
-          <div style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:var(--color-texto);">
+          <div class="grilla-totales__monto" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:var(--color-texto);">
             ${gastos.length} <span style="font-size:0.9375rem; font-weight:600; color:var(--color-texto-suave);">gastos</span>
           </div>
         </div>`
@@ -2596,31 +2600,31 @@
       const selectEmpresa = `
         <select id="edit-unidad">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.unidades.map(u => `<option value="${u.id}" ${g.unidad_negocio_id === u.id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
+          ${estado.maestros.unidades.map(u => `<option value="${u.id}" ${g.unidades_negocio?.id === u.id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
         </select>`
 
       const selectVehiculo = `
         <select id="edit-vehiculo">
           <option value="">— Ninguno —</option>
-          ${estado.maestros.vehiculos.map(v => `<option value="${v.id}" ${g.vehiculo_id === v.id ? 'selected' : ''}>${v.nombre} (${v.patente})</option>`).join('')}
+          ${estado.maestros.vehiculos.map(v => `<option value="${v.id}" ${g.vehiculos?.id === v.id ? 'selected' : ''}>${v.nombre} (${v.patente})</option>`).join('')}
         </select>`
 
       const selectCategoria = `
         <select id="edit-categoria">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${g.categoria_id === c.id ? 'selected' : ''}>${c.icon} ${c.nombre}</option>`).join('')}
+          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${g.categorias?.id === c.id ? 'selected' : ''}>${c.icon} ${c.nombre}</option>`).join('')}
         </select>`
 
       const selectEmpleado = `
         <select id="edit-empleado">
           <option value="">— Ninguno —</option>
-          ${estado.maestros.empleados.map(e => `<option value="${e.id}" ${g.empleado_id === e.id ? 'selected' : ''}>${e.nombre}</option>`).join('')}
+          ${estado.maestros.empleados.map(e => `<option value="${e.id}" ${g.empleados?.id === e.id ? 'selected' : ''}>${e.nombre}</option>`).join('')}
         </select>`
 
       const selectProyecto = `
         <select id="edit-proyecto">
           <option value="">— Ninguno —</option>
-          ${estado.maestros.proyectos.map(p => `<option value="${p.id}" ${g.proyecto_id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
+          ${estado.maestros.proyectos.map(p => `<option value="${p.id}" ${g.proyectos?.id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
         </select>`
 
       const selectMedioPago = `
@@ -2674,6 +2678,24 @@
       document.getElementById('btn-cancelar-edicion').addEventListener('click', () => mostrarDetalleGasto(id))
 
       document.getElementById('btn-guardar-edicion').addEventListener('click', async () => {
+        const empleadoVal  = document.getElementById('edit-empleado').value
+        const categoriaVal = document.getElementById('edit-categoria').value
+        const unidadVal     = document.getElementById('edit-unidad').value
+        const vehiculoVal   = document.getElementById('edit-vehiculo').value
+
+        if (!empleadoVal) {
+          mostrarError('El empleado es obligatorio — no puede quedar en "Ninguno".')
+          return
+        }
+        if (!categoriaVal) {
+          mostrarError('La categoría es obligatoria — no puede quedar en "Ninguna".')
+          return
+        }
+        if (!unidadVal && !vehiculoVal) {
+          mostrarError('Tiene que haber una empresa o un vehículo asignado — no pueden quedar los dos en "Ninguno".')
+          return
+        }
+
         const cambios = {
           fecha:             document.getElementById('edit-fecha').value,
           tipo_doc:          document.getElementById('edit-tipo-doc').value || null,
