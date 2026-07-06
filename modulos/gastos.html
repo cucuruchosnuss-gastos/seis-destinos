@@ -699,7 +699,8 @@
       margin-top: 0.125rem;
       display: flex;
       align-items: center;
-      gap: 0.375rem;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.375rem;
     }
 
     .gasto__derecha {
@@ -1851,6 +1852,14 @@
     const { data: vehiculosInicial } = await supabase
       .from('vehiculos').select('id, nombre, marca, patente').eq('activo', true).order('nombre')
     estado.maestros.vehiculos = vehiculosInicial ?? []
+
+    const { data: empleadosInicial } = await supabase
+      .from('empleados').select('id, nombre').eq('activo', true).order('nombre')
+    estado.maestros.empleados = empleadosInicial ?? []
+
+    const { data: proyectosInicial } = await supabase
+      .from('proyectos').select('id, nombre').eq('activo', true).order('nombre')
+    estado.maestros.proyectos = proyectosInicial ?? []
 
     estado.maestros.unidades = unidadesInicial ?? []
     renderizarFiltros(estado.maestros.unidades)
