@@ -515,6 +515,14 @@
       flex-shrink: 0;
     }
 
+    @media (max-width: 640px) {
+      .lista-filtros {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
     .lista-filtros select {
       padding: 0.4375rem 0.75rem;
       border: 1.5px solid var(--color-borde);
@@ -1679,7 +1687,12 @@
         `)
 
       if (estado.rol === 'usuario') {
-        query = query.eq('empleado_id', estado.miEmpleadoId ?? -1)
+        if (estado.miEmpleadoId) {
+          query = query.eq('empleado_id', estado.miEmpleadoId)
+        } else {
+          // No se pudo identificar el empleado: no debe ver ningún gasto, pero sin romper la consulta
+          query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+        }
       }
 
       if (estado.filtros.periodos?.length)           query = query.in('periodo', estado.filtros.periodos)
