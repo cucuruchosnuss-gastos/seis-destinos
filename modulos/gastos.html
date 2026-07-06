@@ -1171,7 +1171,7 @@
     <header class="header">
       <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-gasto">← Volver</button>
       <span class="header__nombre-app">Detalle del gasto</span>
-      <div style="width:5rem;"></div>
+      <div id="detalle-gasto-header-derecha" style="width:5rem;"></div>
     </header>
     <div style="padding: 1rem; overflow-y: auto;" id="detalle-gasto-contenido"></div>
   </div><!-- /modal-detalle-gasto -->
@@ -1319,6 +1319,11 @@
 
     estado.sesion = await verificarSesion()
     estado.rol    = obtenerRol(estado.sesion.user.email)
+
+    if (estado.rol === 'admin' || estado.rol === 'pablo') {
+      document.getElementById('detalle-gasto-header-derecha').innerHTML =
+        '<button type="button" class="btn btn--icono" id="btn-editar-gasto" title="Editar">✏️ Editar</button>'
+    }
 
     const { data: emp } = await supabase
       .from('empleados')
@@ -1516,7 +1521,7 @@
           onChange: () => cargarLista()
         })
 
-        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service']
+        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service', 'Seguros-Patente']
         const catsEmpresa  = estado.maestros.categorias.filter(c => !NOMBRES_VEHICULO.includes(c.nombre))
         const catsVehiculo = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
         crearMultiselect({
@@ -1815,6 +1820,10 @@
 
     document.getElementById('btn-nuevo-gasto').addEventListener('click', abrirWizard)
     document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
+
+    document.getElementById('btn-editar-gasto')?.addEventListener('click', () => {
+      mostrarFormularioEdicionGasto(estado.gastoDetalleActualId)
+    })
 
     document.addEventListener('click', (e) => {
       document.querySelectorAll('.multiselect').forEach(ms => {
@@ -2218,7 +2227,7 @@
 
       let categoriasAMostrar
       if (viaVehiculos) {
-        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service']
+        const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service', 'Seguros-Patente']
         categoriasAMostrar = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
       } else {
         const NOMBRES_AL_FONDO = ['Combustible', 'Peaje', 'Viático']
@@ -2575,8 +2584,125 @@
         </div>` : ''}
       `
 
+      estado.gastoDetalleActualId = id
       document.getElementById('vista-lista').hidden = true
       document.getElementById('modal-detalle-gasto').removeAttribute('hidden')
+    }
+
+    function mostrarFormularioEdicionGasto(id) {
+      const g = estado.listaGastos.find(x => x.id === id)
+      if (!g) return
+
+      const selectEmpresa = `
+        <select id="edit-unidad">
+          <option value="">— Ninguna —</option>
+          ${estado.maestros.unidades.map(u => `<option value="${u.id}" ${g.unidad_negocio_id === u.id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
+        </select>`
+
+      const selectVehiculo = `
+        <select id="edit-vehiculo">
+          <option value="">— Ninguno —</option>
+          ${estado.maestros.vehiculos.map(v => `<option value="${v.id}" ${g.vehiculo_id === v.id ? 'selected' : ''}>${v.nombre} (${v.patente})</option>`).join('')}
+        </select>`
+
+      const selectCategoria = `
+        <select id="edit-categoria">
+          <option value="">— Ninguna —</option>
+          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${g.categoria_id === c.id ? 'selected' : ''}>${c.icon} ${c.nombre}</option>`).join('')}
+        </select>`
+
+      const selectEmpleado = `
+        <select id="edit-empleado">
+          <option value="">— Ninguno —</option>
+          ${estado.maestros.empleados.map(e => `<option value="${e.id}" ${g.empleado_id === e.id ? 'selected' : ''}>${e.nombre}</option>`).join('')}
+        </select>`
+
+      const selectProyecto = `
+        <select id="edit-proyecto">
+          <option value="">— Ninguno —</option>
+          ${estado.maestros.proyectos.map(p => `<option value="${p.id}" ${g.proyecto_id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
+        </select>`
+
+      const selectMedioPago = `
+        <select id="edit-medio-pago">
+          ${Object.entries(MEDIOS_PAGO_LABEL).map(([valor, label]) => `<option value="${valor}" ${g.medio_pago === valor ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>`
+
+      const campo = (label, html) => `
+        <div class="grupo-campo">
+          <label>${label}</label>
+          ${html}
+        </div>`
+
+      document.getElementById('detalle-gasto-contenido').innerHTML = `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          ${campo('Fecha', `<input type="date" id="edit-fecha" value="${g.fecha}">`)}
+          ${campo('Tipo de documento', `<input type="text" id="edit-tipo-doc" value="${g.tipo_doc || ''}">`)}
+          ${campo('Número', `<input type="text" id="edit-numero-doc" value="${g.numero_doc || ''}">`)}
+          ${campo('Razón social', `<input type="text" id="edit-razon-social" value="${g.razon_social || ''}">`)}
+          ${campo('Medio de pago', selectMedioPago)}
+          <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
+            ${campo('Importe', `<input type="number" step="0.01" id="edit-importe" value="${g.importe}">`)}
+            ${campo('Moneda', `<input type="text" id="edit-moneda" value="${g.moneda || 'ARS'}" style="width:5rem;">`)}
+          </div>
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Destino y clasificación</div>
+          ${campo('Empresa', selectEmpresa)}
+          ${campo('Vehículo', selectVehiculo)}
+          ${campo('Kilometraje', `<input type="number" id="edit-kilometraje" value="${g.kilometraje ?? ''}">`)}
+          ${campo('Categoría', selectCategoria)}
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Detalles</div>
+          ${campo('Empleado', selectEmpleado)}
+          ${campo('Proyecto', selectProyecto)}
+          ${campo('Lugar', `<input type="text" id="edit-lugar" value="${g.lugar_servicio || ''}">`)}
+          ${campo('Descripción', `<input type="text" id="edit-descripcion" value="${g.descripcion || ''}">`)}
+          ${campo('Observaciones', `<textarea id="edit-observaciones">${g.observaciones || ''}</textarea>`)}
+        </div>
+
+        <div style="display:flex; gap:0.75rem; padding:1rem 0;">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-edicion">Cancelar</button>
+          <button type="button" class="btn btn--primario" id="btn-guardar-edicion">Guardar cambios</button>
+        </div>
+      `
+
+      document.getElementById('btn-cancelar-edicion').addEventListener('click', () => mostrarDetalleGasto(id))
+
+      document.getElementById('btn-guardar-edicion').addEventListener('click', async () => {
+        const cambios = {
+          fecha:             document.getElementById('edit-fecha').value,
+          tipo_doc:          document.getElementById('edit-tipo-doc').value || null,
+          numero_doc:        document.getElementById('edit-numero-doc').value || null,
+          razon_social:      document.getElementById('edit-razon-social').value || null,
+          medio_pago:        document.getElementById('edit-medio-pago').value,
+          importe:           Number(document.getElementById('edit-importe').value),
+          moneda:            document.getElementById('edit-moneda').value || 'ARS',
+          unidad_negocio_id: document.getElementById('edit-unidad').value || null,
+          vehiculo_id:       document.getElementById('edit-vehiculo').value || null,
+          kilometraje:       document.getElementById('edit-kilometraje').value ? Number(document.getElementById('edit-kilometraje').value) : null,
+          categoria_id:      document.getElementById('edit-categoria').value || null,
+          empleado_id:       document.getElementById('edit-empleado').value || null,
+          proyecto_id:       document.getElementById('edit-proyecto').value || null,
+          lugar_servicio:    document.getElementById('edit-lugar').value || null,
+          descripcion:       document.getElementById('edit-descripcion').value || null,
+          observaciones:     document.getElementById('edit-observaciones').value || null,
+        }
+
+        const { error } = await supabase.from('gastos').update(cambios).eq('id', id)
+        if (error) {
+          mostrarError('Error al guardar: ' + error.message)
+          return
+        }
+
+        mostrarExito('Gasto actualizado correctamente')
+        cerrarDetalleGasto()
+        cargarLista()
+      })
     }
 
     function cerrarDetalleGasto() {
