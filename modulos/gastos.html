@@ -2925,5 +2925,25 @@
 
   </script>
 
+  <script>
+    function encontrarDesborde() {
+      const anchoPantalla = document.documentElement.clientWidth;
+      const culpables = [];
+      document.querySelectorAll('*').forEach(el => {
+        if (el.scrollWidth > anchoPantalla) {
+          culpables.push(`${el.tagName} .${el.className || el.id || 'sin-clase'} — ancho: ${el.scrollWidth}px (pantalla: ${anchoPantalla}px)`);
+        }
+      });
+
+      const panel = document.createElement('div');
+      panel.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:999999; background:#000; color:#0f0; font-size:11px; font-family:monospace; padding:10px; max-height:50vh; overflow:auto; white-space:pre-wrap;';
+      panel.innerHTML = '<b>DESBORDE DETECTADO (' + culpables.length + ' elementos):</b><br><br>' +
+        (culpables.length ? culpables.join('<br><br>') : 'Ninguno encontrado') +
+        '<br><br><button onclick="this.parentElement.remove()" style="padding:8px 16px; font-size:14px;">Cerrar</button>';
+      document.body.appendChild(panel);
+    }
+    window.addEventListener('load', () => setTimeout(encontrarDesborde, 500));
+  </script>
+
 </body>
 </html>
