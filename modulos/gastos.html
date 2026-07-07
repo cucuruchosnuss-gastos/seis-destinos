@@ -1860,9 +1860,18 @@
       .from('vehiculos').select('id, nombre, marca, patente').eq('activo', true).order('nombre')
     estado.maestros.vehiculos = vehiculosInicial ?? []
 
-    const { data: empleadosInicial } = await supabase
+    console.log('[empleados] Ejecutando consulta a Supabase — tabla: empleados, filtro: activo = true')
+    const { data: empleadosInicial, error: errorEmpleados } = await supabase
       .from('empleados').select('id, nombre').eq('activo', true).order('nombre')
+    console.log('[empleados] Resultado de Supabase — data:', empleadosInicial, '| error:', errorEmpleados)
+    if (errorEmpleados) {
+      console.error('[empleados] Error al cargar — message:', errorEmpleados.message,
+        '| code:', errorEmpleados.code,
+        '| details:', errorEmpleados.details,
+        '| hint:', errorEmpleados.hint)
+    }
     estado.maestros.empleados = empleadosInicial ?? []
+    console.log('[empleados] Cargados en estado.maestros.empleados:', estado.maestros.empleados.length)
 
     const { data: proyectosInicial } = await supabase
       .from('proyectos').select('id, nombre').eq('activo', true).order('nombre')
