@@ -2927,18 +2927,20 @@
 
   <script>
     function encontrarDesborde() {
-      const anchoPantalla = document.documentElement.clientWidth;
+      const anchoPantalla = window.innerWidth;
       const culpables = [];
       document.querySelectorAll('*').forEach(el => {
-        if (el.scrollWidth > anchoPantalla) {
-          culpables.push(`${el.tagName} .${el.className || el.id || 'sin-clase'} — ancho: ${el.scrollWidth}px (pantalla: ${anchoPantalla}px)`);
+        const rect = el.getBoundingClientRect();
+        if (rect.right > anchoPantalla + 1 || rect.left < -1) {
+          culpables.push(`${el.tagName} .${el.className || el.id || 'sin-clase'} — left: ${Math.round(rect.left)}px, right: ${Math.round(rect.right)}px (pantalla: ${anchoPantalla}px)`);
         }
       });
 
       const panel = document.createElement('div');
       panel.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:999999; background:#000; color:#0f0; font-size:11px; font-family:monospace; padding:10px; max-height:50vh; overflow:auto; white-space:pre-wrap;';
-      panel.innerHTML = '<b>DESBORDE DETECTADO (' + culpables.length + ' elementos):</b><br><br>' +
-        (culpables.length ? culpables.join('<br><br>') : 'Ninguno encontrado') +
+      panel.innerHTML = '<b>ELEMENTOS FUERA DE PANTALLA (' + culpables.length + '):</b><br><br>' +
+        (culpables.length ? culpables.join('<br><br>') : 'Ninguno encontrado — revisar document.documentElement.scrollWidth manualmente') +
+        '<br><br>documentElement.scrollWidth: ' + document.documentElement.scrollWidth + 'px vs innerWidth: ' + window.innerWidth + 'px' +
         '<br><br><button onclick="this.parentElement.remove()" style="padding:8px 16px; font-size:14px;">Cerrar</button>';
       document.body.appendChild(panel);
     }
