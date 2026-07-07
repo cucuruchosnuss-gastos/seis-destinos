@@ -2926,6 +2926,28 @@
   </script>
 
   <script>
+    function diagnosticoGridTotales() {
+      const el = document.getElementById('total-gastos');
+      if (!el) return 'ELEMENTO #total-gastos NO ENCONTRADO EN EL DOM';
+
+      const estilos = getComputedStyle(el);
+      let info = `#total-gastos encontrado.<br>`;
+      info += `class actual: "${el.className}"<br>`;
+      info += `grid-template-columns APLICADO (computedStyle): ${estilos.gridTemplateColumns}<br>`;
+      info += `width real del elemento: ${el.getBoundingClientRect().width}px<br>`;
+      info += `<br>--- Cadena de ancestros (padre, abuelo, bisabuelo) ---<br>`;
+
+      let actual = el.parentElement;
+      let nivel = 1;
+      while (actual && nivel <= 5) {
+        info += `Nivel ${nivel} (${actual.tagName}.${actual.className || 'sin-clase'}): width=${actual.getBoundingClientRect().width}px, computed width=${getComputedStyle(actual).width}<br>`;
+        actual = actual.parentElement;
+        nivel++;
+      }
+
+      return info;
+    }
+
     function encontrarDesborde() {
       const anchoPantalla = window.innerWidth;
       const culpables = [];
@@ -2942,7 +2964,9 @@
       const panel = document.createElement('div');
       panel.id = 'panel-desborde';
       panel.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:999999; background:#000; color:#0f0; font-size:11px; font-family:monospace; padding:10px; max-height:50vh; overflow:auto; white-space:pre-wrap;';
-      panel.innerHTML = '<b>ELEMENTOS FUERA DE PANTALLA (' + culpables.length + '):</b><br><br>' +
+      panel.innerHTML = '<b>DIAGNÓSTICO #total-gastos</b><br><br>' +
+        diagnosticoGridTotales() +
+        '<br><br><b>ELEMENTOS FUERA DE PANTALLA (' + culpables.length + '):</b><br><br>' +
         (culpables.length ? culpables.join('<br><br>') : 'Ninguno encontrado') +
         '<br><br>documentElement.scrollWidth: ' + document.documentElement.scrollWidth + 'px vs innerWidth: ' + window.innerWidth + 'px' +
         '<br><br><button onclick="this.parentElement.remove()" style="padding:8px 16px; font-size:14px;">Cerrar</button>';
