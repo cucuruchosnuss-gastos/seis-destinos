@@ -9,10 +9,20 @@
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#1a2a52">
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
   <style>
     body {
       overflow-x: hidden;
+    }
+
+    /* ── Íconos Lucide (reemplazan emojis de categoría) ───────────────────── */
+
+    .lucide {
+      width: 1em;
+      height: 1em;
+      stroke-width: 2.25;
+      vertical-align: -0.15em;
     }
 
     /* ── Layout base ───────────────────────────────────────────────────────── */
@@ -447,7 +457,8 @@
       background: var(--color-acento-suave);
     }
 
-    .btn-categoria__icono  { font-size: 2rem; line-height: 1; }
+    .btn-categoria__icono  { display: flex; color: var(--color-acento); }
+    .btn-categoria__icono svg { width: 1.75rem; height: 1.75rem; }
     .btn-categoria__nombre {
       font-size: 0.6875rem;
       font-weight: 600;
@@ -1356,6 +1367,25 @@
     }
     const LOGO_VEHICULOS = '../logo-vehiculos.png'
 
+    const ICONOS_CATEGORIA = {
+      'Mantenimiento':    'wrench',
+      'Insumos':          'package',
+      'Combustible':      'fuel',
+      'Repuestos':        'cog',
+      'Seguros-Patente':  'shield',
+      'Seguros':          'shield',
+      'Viático':          'refresh-cw',
+      'Viáticos':         'refresh-cw',
+      'Service':          'repeat',
+      'Peaje':            'map-pin',
+      'Otros':            'tag',
+    }
+
+    function iconoCategoriaHtml(nombreCategoria, clase) {
+      const icono = ICONOS_CATEGORIA[nombreCategoria] ?? 'tag'
+      return `<i data-lucide="${icono}" class="${clase || ''}"></i>`
+    }
+
     function fechaAPeriodo(fechaStr) {
       const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
       const d = new Date(fechaStr + 'T00:00:00')
@@ -1613,7 +1643,7 @@
         const catsVehiculo = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
         crearMultiselect({
           idBase: 'ms-categoria',
-          opciones: [...catsEmpresa, ...catsVehiculo].map(c => ({ value: c.id, label: c.icon + ' ' + c.nombre })),
+          opciones: [...catsEmpresa, ...catsVehiculo].map(c => ({ value: c.id, label: c.nombre })),
           seleccionados: estado.filtros.categoria_ids,
           etiquetaTodos: 'Todas las categorías',
           onChange: () => cargarLista()
@@ -1757,6 +1787,7 @@
         vaciEl.hidden     = true
         listaEl.hidden    = false
         listaEl.innerHTML = filtrados.map(renderizarCardGasto).join('')
+        lucide.createIcons()
         listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
           card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
         })
@@ -1847,6 +1878,7 @@
 
       listaEl.hidden    = false
       listaEl.innerHTML = gastos.map(renderizarCardGasto).join('')
+      lucide.createIcons()
       renderizarTotalGastos(gastos)
 
       listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
@@ -1863,7 +1895,7 @@
       const importe      = formatearImporte(g.importe, g.moneda)
       const fecha        = formatearFecha(g.fecha)
 
-      const categoriaChip  = categoria ? `<span class="gasto__categoria-chip">${g.categorias?.icon ?? ''} ${categoria}</span>` : ''
+      const categoriaChip  = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${categoria}</span>` : ''
       const metaSecundaria = [fecha, empleado, MEDIOS_PAGO_LABEL[g.medio_pago]].filter(Boolean).join(' · ')
 
       return `
@@ -1872,7 +1904,7 @@
             <div class="gasto__icono">
               ${logoEmpresa
                 ? `<img src="${logoEmpresa}" alt="${nombreUnidad || 'Vehículos'}" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`
-                : (g.categorias?.icon ?? '💳')}
+                : iconoCategoriaHtml(categoria || 'Otros')}
             </div>
             <div class="gasto__info">
               <div class="gasto__razon-social">${razonSocial}</div>
@@ -2185,13 +2217,14 @@
       // Segmento categoría (una vez confirmada)
       if (['detalles','resumen'].includes(subpaso) && categoriaSeleccionada) {
         const cat = estado.maestros.categorias.find(c => c.id === categoriaSeleccionada)
-        if (cat) items.push({ label: `${cat.icon} ${cat.nombre}`, subpaso: 'categoria' })
+        if (cat) items.push({ label: `${iconoCategoriaHtml(cat.nombre)} ${cat.nombre}`, subpaso: 'categoria' })
       }
 
       bcEl.innerHTML = items.map((item, i) =>
         (i > 0 ? '<span class="breadcrumb__sep">›</span>' : '') +
         `<button type="button" class="breadcrumb__item" data-subpaso="${item.subpaso}">${item.label}</button>`
       ).join('')
+      lucide.createIcons()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2351,10 +2384,11 @@
       grilla.innerHTML = categoriasAMostrar.map(cat => `
         <button type="button" class="btn-categoria ${categoriaSeleccionada === cat.id ? 'btn-categoria--seleccionado' : ''}"
                 data-id="${cat.id}">
-          <span class="btn-categoria__icono">${cat.icon}</span>
+          <span class="btn-categoria__icono">${iconoCategoriaHtml(cat.nombre)}</span>
           <span class="btn-categoria__nombre">${cat.nombre}</span>
         </button>
       `).join('')
+      lucide.createIcons()
 
       grilla.querySelectorAll('.btn-categoria').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -2626,7 +2660,7 @@
           ${fila('Empresa',      unidObj?.nombre)}
           ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : (vehiculoFueElegido ? 'Sin vehículo' : null))}
           ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
-          ${fila('Categoría',    catObj ? `${catObj.icon} ${catObj.nombre}` : null)}
+          ${fila('Categoría',    catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${catObj.nombre}` : null)}
         </div>
 
         <div class="resumen-seccion">
@@ -2645,6 +2679,7 @@
                alt="Comprobante" class="resumen-foto">
         </div>` : ''}
       `
+      lucide.createIcons()
     }
 
     function mostrarDetalleGasto(id) {
@@ -2676,7 +2711,7 @@
           ${fila('Empresa',     g.unidades_negocio?.nombre)}
           ${fila('Vehículo',    g.vehiculos ? `${g.vehiculos.nombre} (${g.vehiculos.patente})` : null)}
           ${fila('Kilometraje', g.kilometraje ? `${g.kilometraje} km` : null)}
-          ${fila('Categoría',   g.categorias ? `${g.categorias.icon} ${g.categorias.nombre}` : null)}
+          ${fila('Categoría',   g.categorias ? `${iconoCategoriaHtml(g.categorias.nombre)} ${g.categorias.nombre}` : null)}
         </div>
 
         <div class="resumen-seccion">
@@ -2694,6 +2729,7 @@
           <a href="${g.foto_url}" target="_blank" rel="noopener" class="btn btn--secundario" style="display:inline-flex;width:auto;">Ver foto del comprobante →</a>
         </div>` : ''}
       `
+      lucide.createIcons()
 
       estado.gastoDetalleActualId = id
       document.getElementById('vista-lista').hidden = true
@@ -2721,7 +2757,7 @@
       const selectCategoria = `
         <select id="edit-categoria">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${g.categorias?.id === c.id ? 'selected' : ''}>${c.icon} ${c.nombre}</option>`).join('')}
+          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${g.categorias?.id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
         </select>`
 
       console.log('[edicion-empleado] Array completo:', estado.maestros.empleados)
@@ -3005,71 +3041,6 @@
     document.getElementById('btn-resumen-editar').addEventListener('click',  () => irASubpaso('foto'))
     document.getElementById('btn-resumen-guardar').addEventListener('click', guardarGasto)
 
-  </script>
-
-  <script>
-    function diagnosticoGridTotales() {
-      const el = document.getElementById('total-gastos');
-      if (!el) return 'ELEMENTO #total-gastos NO ENCONTRADO EN EL DOM';
-
-      const estilos = getComputedStyle(el);
-      let info = `#total-gastos encontrado.<br>`;
-      info += `class actual: "${el.className}"<br>`;
-      info += `grid-template-columns APLICADO (computedStyle): ${estilos.gridTemplateColumns}<br>`;
-      info += `width real del elemento: ${el.getBoundingClientRect().width}px<br>`;
-      info += `<br>--- Cadena de ancestros (padre, abuelo, bisabuelo) ---<br>`;
-
-      let actual = el.parentElement;
-      let nivel = 1;
-      while (actual && nivel <= 5) {
-        info += `Nivel ${nivel} (${actual.tagName}.${actual.className || 'sin-clase'}): width=${actual.getBoundingClientRect().width}px, computed width=${getComputedStyle(actual).width}<br>`;
-        actual = actual.parentElement;
-        nivel++;
-      }
-
-      return info;
-    }
-
-    function encontrarDesborde() {
-      const anchoPantalla = window.innerWidth;
-      const culpables = [];
-      document.querySelectorAll('*').forEach(el => {
-        const rect = el.getBoundingClientRect();
-        if (rect.right > anchoPantalla + 1 || rect.left < -1) {
-          culpables.push(`${el.tagName} .${el.className || el.id || 'sin-clase'} — left: ${Math.round(rect.left)}px, right: ${Math.round(rect.right)}px (pantalla: ${anchoPantalla}px)`);
-        }
-      });
-
-      const contenedor = document.querySelector('.vista-lista__contenedor');
-      const grilla = document.getElementById('total-gastos');
-      const infoExtra = `
-        matchMedia 640px: ${window.matchMedia('(max-width: 640px)').matches}<br>
-        min-width computado en .vista-lista__contenedor: ${contenedor ? getComputedStyle(contenedor).minWidth : 'ELEMENTO NO ENCONTRADO'}<br>
-        grid-template-columns computado en .grilla-totales: ${grilla ? getComputedStyle(grilla).gridTemplateColumns : 'ELEMENTO NO ENCONTRADO'}<br>
-        innerWidth actual: ${window.innerWidth}px
-      `;
-
-      const anterior = document.getElementById('panel-desborde');
-      if (anterior) anterior.remove();
-
-      const panel = document.createElement('div');
-      panel.id = 'panel-desborde';
-      panel.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:999999; background:#000; color:#0f0; font-size:11px; font-family:monospace; padding:10px; max-height:50vh; overflow:auto; white-space:pre-wrap;';
-      panel.innerHTML = '<b>CHEQUEO RÁPIDO</b><br>' + infoExtra +
-        '<br><br><b>DIAGNÓSTICO #total-gastos</b><br><br>' +
-        diagnosticoGridTotales() +
-        '<br><br><b>ELEMENTOS FUERA DE PANTALLA (' + culpables.length + '):</b><br><br>' +
-        (culpables.length ? culpables.join('<br><br>') : 'Ninguno encontrado') +
-        '<br><br>documentElement.scrollWidth: ' + document.documentElement.scrollWidth + 'px vs innerWidth: ' + window.innerWidth + 'px' +
-        '<br><br><button onclick="this.parentElement.remove()" style="padding:8px 16px; font-size:14px;">Cerrar</button>';
-      document.body.appendChild(panel);
-    }
-
-    const botonAnalizar = document.createElement('button');
-    botonAnalizar.textContent = '🔍 Analizar desborde';
-    botonAnalizar.style.cssText = 'position:fixed; bottom:80px; right:16px; z-index:999998; padding:10px 14px; background:#ff0000; color:#fff; border:none; border-radius:8px; font-size:13px;';
-    botonAnalizar.onclick = encontrarDesborde;
-    window.addEventListener('load', () => document.body.appendChild(botonAnalizar));
   </script>
 
 </body>
