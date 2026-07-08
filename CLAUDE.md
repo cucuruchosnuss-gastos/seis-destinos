@@ -20,7 +20,7 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - unidades_negocio: 4 filas (Cucuruchos Nuss, Dolce Pasta, Taller, Mengui)
 - empleados: 33 filas desde Naaloo (fuente de verdad de RRHH). Campos: id, nombre, unidad_negocio_id, rol, cuil, activo
 - vehiculos: 9 filas. Campos: id, nombre, marca, patente, unidad_negocio_id, activo
-- categorias: 9 filas con icon. Campos: id, nombre, icon, activo
+- categorias: 12 filas con icon. Campos: id, nombre, icon, activo. Lista completa: Combustible, Flete-Transportes, Insumos, Inversion, Limpieza, Mantenimiento, Otros, Peaje, Repuestos, Seguros-Patente, Service, Viático
 - proveedores: 5 filas. Campos: id, razon_social, nombre_fantasia, cuit, activo
 - proyectos: 3 filas. Campos: id, nombre, activo
 - solicitudes_acceso: para registro con aprobación. Campos: id, nombre, email, estado, fecha_solicitud, usuario_id
