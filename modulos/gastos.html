@@ -1621,8 +1621,12 @@
     function renderizarFiltros(unidades = []) {
       const contenedor = document.getElementById('contenedor-filtros')
 
+      const placeholderBusqueda = (estado.rol === 'admin' || estado.rol === 'pablo')
+        ? '🔍 Buscar empresa, categoría o empleado'
+        : '🔍 Buscar empresa o categoría'
+
       let html = `
-        <input type="text" id="filtro-busqueda" placeholder="🔍 Buscar empresa o categoría" value="${estado.filtros.busqueda || ''}" style="flex:1; min-width:180px; padding:0.4375rem 0.875rem; border:1.5px solid var(--color-borde); border-radius:999px; font-family:var(--fuente); font-size:0.8125rem; background:var(--color-fondo); outline:none;">
+        <input type="text" id="filtro-busqueda" placeholder="${placeholderBusqueda}" value="${estado.filtros.busqueda || ''}" style="flex:1; min-width:180px; padding:0.4375rem 0.875rem; border:1.5px solid var(--color-borde); border-radius:999px; font-family:var(--fuente); font-size:0.8125rem; background:var(--color-fondo); outline:none;">
 
         <div class="multiselect" id="ms-periodo">
           <button type="button" class="multiselect__boton" id="ms-periodo-boton">Todos los períodos</button>
@@ -1831,11 +1835,14 @@
       const listaEl = document.getElementById('lista-gastos')
       const vaciEl  = document.getElementById('estado-vacio')
 
+      const puedeBuscarPorEmpleado = estado.rol === 'admin' || estado.rol === 'pablo'
+
       const filtrados = !termino
         ? estado.listaGastos
         : estado.listaGastos.filter(g =>
             (g.razon_social || '').toLowerCase().includes(termino) ||
-            (g.categorias?.nombre || '').toLowerCase().includes(termino)
+            (g.categorias?.nombre || '').toLowerCase().includes(termino) ||
+            (puedeBuscarPorEmpleado && (g.empleados?.nombre || '').toLowerCase().includes(termino))
           )
 
       if (!filtrados.length) {
