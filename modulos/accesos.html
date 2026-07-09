@@ -33,9 +33,9 @@
     }
 
     .stat-card--principal {
-      background: linear-gradient(135deg, var(--color-acento), var(--color-acento-hover));
+      background: linear-gradient(135deg, var(--rojo), var(--rojo-oscuro));
       color: #fff;
-      box-shadow: 0 8px 24px rgba(26,42,82,0.25);
+      box-shadow: 0 8px 24px rgba(194,59,59,0.25);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -133,7 +133,7 @@
     }
 
     .tabs-accesos__opcion--activa {
-      background: var(--color-acento);
+      background: var(--rojo);
       color: #fff;
     }
 
@@ -388,6 +388,19 @@
       color: #fff;
     }
 
+    #modal-select-unidad {
+      width: 100%;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      color: var(--color-texto);
+      outline: none;
+      cursor: pointer;
+    }
+
     .fila-modulo {
       display: flex;
       align-items: center;
@@ -535,6 +548,9 @@
       <div class="modal-permisos__seccion-titulo">Módulos habilitados</div>
       <div id="modal-modulos"></div>
 
+      <div class="modal-permisos__seccion-titulo" id="modal-unidad-titulo" hidden>Unidad de negocio</div>
+      <select id="modal-select-unidad" hidden></select>
+
       <div class="modal-permisos__acciones">
         <button type="button" class="btn btn--rechazar" id="btn-modal-rechazar">Rechazar solicitud</button>
         <button type="button" class="btn btn--exito" id="btn-modal-guardar">Aprobar y guardar</button>
@@ -560,9 +576,10 @@
       solicitudes: [],
       empleados:   [],
       empleadoModulos: [],
+      maestros: { unidadesNegocio: [] },
       tabActiva:   'solicitudes',
       filtrosUsuarios: { texto: '', rol: '', modulo: '' },
-      modal: null, // { modo: 'aprobar' | 'editar', solicitud?, empleado, rolElegido, modulosElegidos: Set }
+      modal: null, // { modo: 'aprobar' | 'editar', solicitud?, empleado, esNuevoEmpleado, rolElegido, modulosElegidos: Set, unidadElegida }
     }
 
     const MODULOS_INFO = [
@@ -570,6 +587,14 @@
       { key: 'caja',      label: 'Caja' },
       { key: 'accesos',   label: 'Accesos' },
       { key: 'empleados', label: 'Empleados', proximamente: true },
+    ]
+
+    // Agrupado para el modal de aprobación/edición — Gastos y Caja se
+    // otorgan siempre juntos, así que se muestran como un solo control.
+    const MODULOS_MODAL = [
+      { keys: ['gastos', 'caja'], label: 'Gastos y Caja' },
+      { keys: ['accesos'],        label: 'Accesos' },
+      { keys: ['empleados'],      label: 'Empleados', proximamente: true },
     ]
 
     const ETIQUETAS_ROL = { usuario: 'Usuario', admin: 'Admin' }
@@ -633,15 +658,16 @@
     async function cargarTodo() {
       document.getElementById('estado-cargando').hidden = false
 
-      const [solRes, empRes, modRes] = await Promise.all([
+      const [solRes, empRes, modRes, unidRes] = await Promise.all([
         supabase.from('solicitudes_acceso').select('*').eq('estado', 'pendiente').order('fecha_solicitud', { ascending: false }),
         supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, unidades_negocio (nombre)'),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
+        supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
       ])
 
       document.getElementById('estado-cargando').hidden = true
 
-      if (solRes.error || empRes.error || modRes.error) {
+      if (solRes.error || empRes.error || modRes.error || unidRes.error) {
         mostrarError('No se pudieron cargar los datos de Accesos.')
         return
       }
@@ -649,6 +675,7 @@
       estado.solicitudes     = solRes.data || []
       estado.empleados       = empRes.data || []
       estado.empleadoModulos = modRes.data || []
+      estado.maestros.unidadesNegocio = unidRes.data || []
 
       renderizarStats()
       renderizarSolicitudes()
@@ -728,19 +755,25 @@
             <button type="button" class="btn btn--exito btn-aprobar-solicitud" data-id="${sol.id}">Aprobar</button>
           `
         } else if (match.tipo === 'sin_match') {
-          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--alerta"><i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> No se encontró un empleado con este CUIL</div>`
+          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--alerta"><i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> No se encontró un empleado con este CUIL — se puede crear uno nuevo al aprobar</div>`
+          acciones = `
+            <button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${sol.id}">Rechazar</button>
+            <button type="button" class="btn btn--exito btn-aprobar-solicitud" data-id="${sol.id}">Aprobar</button>
+          `
         } else if (match.tipo === 'inactivo') {
           bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--alerta"><i data-lucide="user-x" style="width:14px;height:14px;"></i> El CUIL corresponde a un empleado marcado como inactivo</div>`
         } else if (match.tipo === 'ya_tiene_acceso') {
           bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--neutro"><i data-lucide="copy" style="width:14px;height:14px;"></i> Solicitud duplicada — este empleado ya tiene acceso</div>`
         }
 
+        const nombreCompleto = [sol.nombre, sol.apellido].filter(Boolean).join(' ')
+
         return `
           <div class="tarjeta-acceso" data-id="${sol.id}">
-            <div class="acceso__avatar" style="background:${colorAvatar(sol.nombre)};">${iniciales(sol.nombre)}</div>
+            <div class="acceso__avatar" style="background:${colorAvatar(nombreCompleto)};">${iniciales(nombreCompleto)}</div>
             <div class="acceso__cuerpo">
               <div class="acceso__fila1">
-                <span class="acceso__nombre">${sol.nombre}</span>
+                <span class="acceso__nombre">${nombreCompleto}</span>
                 ${chipUnidad}
               </div>
               <div class="acceso__email">${sol.email}</div>
@@ -846,19 +879,15 @@
 
     function renderizarModalModulos() {
       const el = document.getElementById('modal-modulos')
-      el.innerHTML = MODULOS_INFO.map(info => {
-        const checked = estado.modal.modulosElegidos.has(info.key)
-        const esAcoplado = info.key === 'gastos' || info.key === 'caja'
-        const parEtiqueta = info.key === 'gastos' ? 'Caja' : 'Gastos'
-        const candado = esAcoplado
-          ? `<span class="fila-modulo__candado">🔒 con ${parEtiqueta}</span>`
-          : (info.proximamente ? `<span class="fila-modulo__candado">Próximamente</span>` : '')
+      el.innerHTML = MODULOS_MODAL.map(info => {
+        const checked = info.keys.every(k => estado.modal.modulosElegidos.has(k))
+        const candado = info.proximamente ? `<span class="fila-modulo__candado">Próximamente</span>` : ''
 
         return `
           <div class="fila-modulo ${info.proximamente ? 'fila-modulo--deshabilitada' : ''}">
             <span class="fila-modulo__nombre">${info.label} ${candado}</span>
             <label class="toggle">
-              <input type="checkbox" data-modulo="${info.key}" ${checked ? 'checked' : ''} ${info.proximamente ? 'disabled' : ''}>
+              <input type="checkbox" data-modulos="${info.keys.join(',')}" ${checked ? 'checked' : ''} ${info.proximamente ? 'disabled' : ''}>
               <span class="toggle__riel"></span>
             </label>
           </div>
@@ -867,42 +896,75 @@
 
       el.querySelectorAll('input[type="checkbox"]').forEach(chk => {
         chk.addEventListener('change', () => {
-          const mod = chk.dataset.modulo
-          if (chk.checked) {
-            estado.modal.modulosElegidos.add(mod)
-            if (mod === 'gastos') estado.modal.modulosElegidos.add('caja')
-            if (mod === 'caja')   estado.modal.modulosElegidos.add('gastos')
-          } else {
-            estado.modal.modulosElegidos.delete(mod)
-            if (mod === 'gastos') estado.modal.modulosElegidos.delete('caja')
-            if (mod === 'caja')   estado.modal.modulosElegidos.delete('gastos')
-          }
+          const keys = chk.dataset.modulos.split(',')
+          keys.forEach(k => {
+            if (chk.checked) estado.modal.modulosElegidos.add(k)
+            else estado.modal.modulosElegidos.delete(k)
+          })
           renderizarModalModulos()
         })
       })
     }
 
+    function renderizarSelectorUnidad() {
+      const titulo = document.getElementById('modal-unidad-titulo')
+      const select = document.getElementById('modal-select-unidad')
+
+      if (!estado.modal.esNuevoEmpleado) {
+        titulo.hidden = true
+        select.hidden = true
+        return
+      }
+
+      titulo.hidden = false
+      select.hidden = false
+      select.innerHTML = `<option value="">Elegí una unidad de negocio…</option>` +
+        estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+      select.value = estado.modal.unidadElegida || ''
+    }
+
+    function actualizarEstadoBotonGuardar() {
+      const btn = document.getElementById('btn-modal-guardar')
+      btn.disabled = !!(estado.modal?.esNuevoEmpleado && !estado.modal.unidadElegida)
+    }
+
+    document.getElementById('modal-select-unidad').addEventListener('change', (e) => {
+      if (!estado.modal) return
+      estado.modal.unidadElegida = e.target.value || null
+      actualizarEstadoBotonGuardar()
+    })
+
     function abrirModalAprobar(solicitudId) {
       const sol = estado.solicitudes.find(s => s.id === solicitudId)
       const match = calcularEstadoMatch(sol)
-      if (match.tipo !== 'match') return
+      if (match.tipo !== 'match' && match.tipo !== 'sin_match') return
+
+      const esNuevoEmpleado = match.tipo === 'sin_match'
+      const nombreMostrar = esNuevoEmpleado
+        ? [sol.nombre, sol.apellido].filter(Boolean).join(' ')
+        : match.empleado.nombre
 
       estado.modal = {
         modo: 'aprobar',
         solicitud: sol,
         empleado: match.empleado,
+        esNuevoEmpleado,
         rolElegido: 'usuario',
         modulosElegidos: new Set(),
+        unidadElegida: null,
       }
 
       document.getElementById('modal-permisos__titulo').textContent = 'Revisar solicitud'
-      document.getElementById('modal-avatar').style.background = colorAvatar(sol.nombre)
-      document.getElementById('modal-avatar').textContent = iniciales(sol.nombre)
-      document.getElementById('modal-nombre').textContent = sol.nombre
+      document.getElementById('modal-avatar').style.background = colorAvatar(nombreMostrar)
+      document.getElementById('modal-avatar').textContent = iniciales(nombreMostrar)
+      document.getElementById('modal-nombre').textContent = nombreMostrar
       document.getElementById('modal-email').textContent = sol.email
 
       renderizarSegmentedRol()
       renderizarModalModulos()
+      renderizarSelectorUnidad()
+      document.getElementById('btn-modal-guardar').classList.remove('btn--cargando')
+      actualizarEstadoBotonGuardar()
 
       document.getElementById('btn-modal-rechazar').hidden = false
       document.getElementById('btn-modal-rechazar').textContent = 'Rechazar solicitud'
@@ -918,8 +980,10 @@
       estado.modal = {
         modo: 'editar',
         empleado: emp,
+        esNuevoEmpleado: false,
         rolElegido: emp.rol_app,
         modulosElegidos: new Set(modulosDeEmpleado(empleadoId)),
+        unidadElegida: null,
       }
 
       document.getElementById('modal-permisos__titulo').textContent = 'Editar permisos'
@@ -930,6 +994,9 @@
 
       renderizarSegmentedRol()
       renderizarModalModulos()
+      renderizarSelectorUnidad()
+      document.getElementById('btn-modal-guardar').classList.remove('btn--cargando')
+      actualizarEstadoBotonGuardar()
 
       document.getElementById('btn-modal-rechazar').hidden = true
       document.getElementById('btn-modal-guardar').textContent = 'Guardar cambios'
@@ -947,6 +1014,8 @@
 
     document.getElementById('btn-modal-guardar').addEventListener('click', async () => {
       if (!estado.modal) return
+      if (estado.modal.esNuevoEmpleado && !estado.modal.unidadElegida) return // salvaguarda, el botón ya viene disabled
+
       const btn = document.getElementById('btn-modal-guardar')
       btn.classList.add('btn--cargando')
       btn.disabled = true
@@ -959,6 +1028,7 @@
             p_solicitud_id: estado.modal.solicitud.id,
             p_rol_asignado: estado.modal.rolElegido,
             p_modulos: modulos,
+            p_unidad_negocio_id: estado.modal.esNuevoEmpleado ? estado.modal.unidadElegida : null,
           })
           if (error) throw error
           mostrarExito('Solicitud aprobada.')
@@ -975,9 +1045,8 @@
         await cargarTodo()
       } catch (err) {
         mostrarError(err.message || 'Ocurrió un error al guardar.')
-      } finally {
         btn.classList.remove('btn--cargando')
-        btn.disabled = false
+        actualizarEstadoBotonGuardar()
       }
     })
 
