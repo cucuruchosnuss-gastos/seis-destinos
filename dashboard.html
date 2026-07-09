@@ -38,6 +38,7 @@
   <script type="module">
     import { verificarSesion, cerrarSesion } from './js/auth.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
+    import { supabase } from './js/supabase.js'
 
     mostrarBannerVersion()
 
@@ -55,12 +56,28 @@
         descripcion: 'Stock y costos de materia prima',
         url: 'modulos/materia-prima.html',
         proximamente: true
+      },
+      {
+        nombre: 'Accesos',
+        icono: 'shield-check',
+        descripcion: 'Aprobación de usuarios y permisos por módulo',
+        url: 'modulos/accesos.html',
+        proximamente: false,
+        soloAdmin: true
       }
     ]
 
     // Verificar sesión — redirige a login si no hay una activa
     const sesion = await verificarSesion()
     if (!sesion) throw new Error('Sin sesión')
+
+    // Accesos es admin-only: chequeamos el rol_app del empleado vinculado
+    const { data: miEmpleado } = await supabase
+      .from('empleados')
+      .select('rol_app')
+      .eq('auth_user_id', sesion.user.id)
+      .maybeSingle()
+    const esAdmin = miEmpleado && ['admin', 'super_admin'].includes(miEmpleado.rol_app)
 
     // Resolver nombre e inicial del usuario
     const meta      = sesion.user.user_metadata ?? {}
@@ -75,7 +92,7 @@
     // Renderizar grilla de módulos
     const grilla = document.getElementById('grilla-modulos')
 
-    grilla.innerHTML = MODULOS.map((modulo) => {
+    grilla.innerHTML = MODULOS.filter(modulo => !modulo.soloAdmin || esAdmin).map((modulo) => {
       if (modulo.proximamente) {
         return `
           <div class="tarjeta-modulo tarjeta-modulo--inactiva" title="${modulo.nombre} — próximamente">

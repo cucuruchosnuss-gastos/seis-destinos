@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accesos — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    body {
+      overflow-x: hidden;
+      --rojo:         #C23B3B;
+      --rojo-suave:   #FBEAEA;
+      --rojo-oscuro:  #9B2E2E;
+    }
+
+    /* ── Stats ─────────────────────────────────────────────────────────────── */
+
+    .accesos-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+    }
+
+    .stat-card {
+      min-width: 0;
+      border-radius: 18px;
+      padding: 1.125rem 1.25rem;
+    }
+
+    .stat-card--principal {
+      background: linear-gradient(135deg, var(--color-acento), var(--color-acento-hover));
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(26,42,82,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .stat-card--secundario {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .stat-card__label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.75;
+    }
+
+    .stat-card--secundario .stat-card__label {
+      opacity: 1;
+      color: var(--color-texto-suave);
+    }
+
+    .stat-card__valor {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-top: 0.25rem;
+    }
+
+    .stat-card--secundario .stat-card__valor {
+      color: var(--color-texto);
+    }
+
+    .stat-card__submetrics {
+      display: none;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .stat-card__submetric {
+      background: #fff;
+      border-radius: 12px;
+      padding: 0.5rem 0.75rem;
+      text-align: center;
+    }
+
+    .stat-card__submetric-label {
+      font-size: 0.5625rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+
+    .stat-card__submetric-valor {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-acento);
+      margin-top: 0.125rem;
+    }
+
+    @media (max-width: 640px) {
+      .stat-card--secundario { display: none; }
+      .stat-card__submetrics { display: flex !important; }
+      .accesos-stats { grid-template-columns: 1fr; }
+    }
+
+    /* ── Tabs ──────────────────────────────────────────────────────────────── */
+
+    .tabs-accesos {
+      display: inline-flex;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.25rem;
+      gap: 0.25rem;
+      margin: 0 0 1rem;
+    }
+
+    .tabs-accesos__opcion {
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      padding: 0.5rem 1rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      transition: background var(--transicion), color var(--transicion);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tabs-accesos__opcion--activa {
+      background: var(--color-acento);
+      color: #fff;
+    }
+
+    /* ── Filtros (Vista 2) ─────────────────────────────────────────────────── */
+
+    .filtros-accesos {
+      display: flex;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    #filtro-nombre-usuarios,
+    .filtros-accesos select {
+      height: 36px;
+      padding: 0 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+    }
+
+    #filtro-nombre-usuarios {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    @media (max-width: 640px) {
+      .filtros-accesos {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 0.375rem;
+      }
+      #filtro-nombre-usuarios,
+      .filtros-accesos select {
+        height: 32px !important;
+        font-size: 0.75rem;
+        padding: 0 0.625rem;
+      }
+      #filtro-nombre-usuarios {
+        min-width: 110px;
+        flex: 0 1 110px;
+      }
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────────────────── */
+
+    .lista-accesos {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .tarjeta-acceso {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .acceso__avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .acceso__cuerpo { flex: 1; min-width: 0; }
+
+    .acceso__fila1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .acceso__nombre {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-texto);
+    }
+
+    .acceso__email {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+    }
+
+    .acceso__chip-unidad {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    .acceso__estado-texto {
+      font-size: 0.8125rem;
+      margin-top: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .acceso__estado-texto--match  { color: #059669; }
+    .acceso__estado-texto--alerta { color: var(--rojo); }
+    .acceso__estado-texto--neutro { color: var(--color-texto-suave); }
+
+    .acceso__acciones {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.625rem;
+      flex-wrap: wrap;
+    }
+
+    .btn--rechazar {
+      background: var(--color-fondo);
+      border: 1.5px solid var(--rojo);
+      color: var(--rojo);
+    }
+
+    .btn--rechazar:hover { background: var(--rojo-suave); }
+
+    /* ── Chips de rol / módulo (Vista 2) ──────────────────────────────────────── */
+
+    .chip-rol {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1875rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+    }
+
+    .chip-rol--usuario     { background: var(--color-superficie); color: var(--color-texto-suave); }
+    .chip-rol--admin       { background: var(--color-acento-suave); color: var(--color-acento); }
+    .chip-rol--super_admin { background: var(--rojo-suave); color: var(--rojo-oscuro); }
+
+    .chip-modulo {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+
+    /* ── Modal compartido (Aprobar / Editar) ──────────────────────────────────── */
+
+    #modal-permisos {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #modal-permisos[hidden] { display: none; }
+
+    #modal-permisos__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    #modal-permisos__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    @media (min-width: 641px) {
+      #modal-permisos { align-items: center; }
+      #modal-permisos__panel {
+        max-width: 420px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
+    .modal-permisos__cerrar {
+      position: absolute;
+      top: 0.875rem;
+      right: 0.875rem;
+    }
+
+    .modal-permisos__usuario {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1rem 0 1.25rem;
+    }
+
+    .modal-permisos__seccion-titulo {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-texto-suave);
+      margin: 1rem 0 0.5rem;
+    }
+
+    .segmented-rol {
+      display: flex;
+      background: var(--color-superficie);
+      border-radius: 10px;
+      padding: 0.25rem;
+      gap: 0.25rem;
+    }
+
+    .segmented-rol__opcion {
+      flex: 1;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      padding: 0.5rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+
+    .segmented-rol__opcion--activa {
+      background: var(--color-acento);
+      color: #fff;
+    }
+
+    .fila-modulo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--color-borde);
+      gap: 0.5rem;
+    }
+
+    .fila-modulo:last-child { border-bottom: none; }
+
+    .fila-modulo__nombre {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .fila-modulo__candado {
+      font-size: 0.6875rem;
+      color: var(--color-texto-suave);
+      font-weight: 400;
+    }
+
+    .fila-modulo--deshabilitada { opacity: 0.45; }
+
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 2.5rem;
+      height: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle__riel {
+      position: absolute;
+      inset: 0;
+      background: var(--color-borde);
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background var(--transicion);
+    }
+
+    .toggle__riel::before {
+      content: '';
+      position: absolute;
+      width: 1.125rem;
+      height: 1.125rem;
+      left: 0.1875rem;
+      top: 0.1875rem;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform var(--transicion);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .toggle input:checked + .toggle__riel { background: var(--color-acento-highlight); }
+    .toggle input:checked + .toggle__riel::before { transform: translateX(1rem); }
+    .toggle input:disabled + .toggle__riel { cursor: not-allowed; opacity: 0.5; }
+
+    .modal-permisos__acciones {
+      display: flex;
+      gap: 0.625rem;
+      margin-top: 1.5rem;
+    }
+
+    .modal-permisos__acciones .btn { flex: 1; }
+  </style>
+</head>
+<body class="pagina-modulo">
+
+  <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
+    <div>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
+        <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
+      </div>
+      <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto); display:flex; align-items:center; gap:0.375rem;">
+        Accesos <span style="color:var(--rojo); font-size:1rem; line-height:1;">●</span>
+      </div>
+    </div>
+    <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
+  </header>
+
+  <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
+
+    <div class="accesos-stats" id="accesos-stats" hidden></div>
+
+    <div class="tabs-accesos" id="tabs-accesos">
+      <button type="button" class="tabs-accesos__opcion tabs-accesos__opcion--activa" data-tab="solicitudes">
+        Solicitudes (<span id="contador-tab-solicitudes">0</span>)
+      </button>
+      <button type="button" class="tabs-accesos__opcion" data-tab="usuarios">Usuarios y roles</button>
+    </div>
+
+    <div id="vista-solicitudes">
+      <div class="lista-accesos" id="lista-solicitudes"></div>
+      <div id="estado-vacio-solicitudes" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">✅</div>
+        <div class="estado-vacio__titulo">No hay solicitudes pendientes</div>
+      </div>
+    </div>
+
+    <div id="vista-usuarios" hidden>
+      <div class="filtros-accesos">
+        <input type="text" id="filtro-nombre-usuarios" placeholder="🔍 Buscar por nombre">
+        <select id="filtro-rol-usuarios"></select>
+        <select id="filtro-modulo-usuarios"></select>
+      </div>
+      <div class="lista-accesos" id="lista-usuarios"></div>
+      <div id="estado-vacio-usuarios" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">👥</div>
+        <div class="estado-vacio__titulo">No se encontraron usuarios</div>
+      </div>
+    </div>
+
+    <div id="estado-cargando" class="estado-vacio">
+      <div class="spinner"></div>
+      <p class="estado-vacio__descripcion">Cargando…</p>
+    </div>
+
+  </div>
+
+  <!-- Modal compartido: Revisar solicitud (aprobar) / Editar permisos -->
+  <div id="modal-permisos" hidden>
+    <div id="modal-permisos__backdrop"></div>
+    <div id="modal-permisos__panel">
+      <button type="button" class="btn btn--icono modal-permisos__cerrar" id="btn-cerrar-modal" title="Cerrar">✕</button>
+      <h2 id="modal-permisos__titulo">Revisar solicitud</h2>
+
+      <div class="modal-permisos__usuario">
+        <div class="acceso__avatar" id="modal-avatar"></div>
+        <div>
+          <div class="acceso__nombre" id="modal-nombre"></div>
+          <div class="acceso__email" id="modal-email"></div>
+        </div>
+      </div>
+
+      <div class="modal-permisos__seccion-titulo">Rol asignado</div>
+      <div class="segmented-rol" id="modal-segmented-rol"></div>
+
+      <div class="modal-permisos__seccion-titulo">Módulos habilitados</div>
+      <div id="modal-modulos"></div>
+
+      <div class="modal-permisos__acciones">
+        <button type="button" class="btn btn--rechazar" id="btn-modal-rechazar">Rechazar solicitud</button>
+        <button type="button" class="btn btn--exito" id="btn-modal-guardar">Aprobar y guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO GLOBAL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion:      null,
+      miEmpleado:  null, // { id, rol_app }
+      solicitudes: [],
+      empleados:   [],
+      empleadoModulos: [],
+      tabActiva:   'solicitudes',
+      filtrosUsuarios: { texto: '', rol: '', modulo: '' },
+      modal: null, // { modo: 'aprobar' | 'editar', solicitud?, empleado, rolElegido, modulosElegidos: Set }
+    }
+
+    const MODULOS_INFO = [
+      { key: 'gastos',    label: 'Gastos' },
+      { key: 'caja',      label: 'Caja' },
+      { key: 'accesos',   label: 'Accesos' },
+      { key: 'empleados', label: 'Empleados', proximamente: true },
+    ]
+
+    const ETIQUETAS_ROL = { usuario: 'Usuario', admin: 'Admin' }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function soloDigitos(s) {
+      return (s || '').replace(/\D/g, '')
+    }
+
+    function formatearCuil(cuil) {
+      const d = soloDigitos(cuil)
+      if (d.length !== 11) return cuil || '—'
+      return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`
+    }
+
+    function iniciales(nombre) {
+      const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean)
+      if (!palabras.length) return '—'
+      if (palabras.length === 1) return palabras[0].slice(0, 2).toUpperCase()
+      return (palabras[0][0] + palabras[1][0]).toUpperCase()
+    }
+
+    const PALETA_AVATAR = ['#9B2E2E', '#7A3B3B', '#8C4A2F', '#6E3B5C', '#4A5568']
+    function colorAvatar(texto) {
+      let hash = 0
+      for (let i = 0; i < (texto || '').length; i++) hash = texto.charCodeAt(i) + ((hash << 5) - hash)
+      return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length]
+    }
+
+    const PALETA_UNIDAD = ['#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC', '#FDE7E7']
+    function colorUnidad(texto) {
+      let hash = 0
+      for (let i = 0; i < (texto || '').length; i++) hash = texto.charCodeAt(i) + ((hash << 5) - hash)
+      return PALETA_UNIDAD[Math.abs(hash) % PALETA_UNIDAD.length]
+    }
+
+    function calcularEstadoMatch(solicitud) {
+      const cuilSolicitud = soloDigitos(solicitud.cuil)
+      const empleado = estado.empleados.find(e => soloDigitos(e.cuil) === cuilSolicitud)
+      if (!empleado) return { tipo: 'sin_match', empleado: null }
+      if (empleado.auth_user_id) return { tipo: 'ya_tiene_acceso', empleado }
+      if (!empleado.activo) return { tipo: 'inactivo', empleado }
+      return { tipo: 'match', empleado }
+    }
+
+    function empleadosConAcceso() {
+      return estado.empleados.filter(e => e.auth_user_id)
+    }
+
+    function modulosDeEmpleado(empleadoId) {
+      return estado.empleadoModulos.filter(m => m.empleado_id === empleadoId).map(m => m.modulo)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGA DE DATOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarTodo() {
+      document.getElementById('estado-cargando').hidden = false
+
+      const [solRes, empRes, modRes] = await Promise.all([
+        supabase.from('solicitudes_acceso').select('*').eq('estado', 'pendiente').order('fecha_solicitud', { ascending: false }),
+        supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, unidades_negocio (nombre)'),
+        supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
+      ])
+
+      document.getElementById('estado-cargando').hidden = true
+
+      if (solRes.error || empRes.error || modRes.error) {
+        mostrarError('No se pudieron cargar los datos de Accesos.')
+        return
+      }
+
+      estado.solicitudes     = solRes.data || []
+      estado.empleados       = empRes.data || []
+      estado.empleadoModulos = modRes.data || []
+
+      renderizarStats()
+      renderizarSolicitudes()
+      renderizarUsuarios()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER — Stats
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarStats() {
+      const pendientes  = estado.solicitudes.length
+      const conAcceso   = empleadosConAcceso()
+      const activos     = conAcceso.length
+      const superAdmins = conAcceso.filter(e => e.rol_app === 'super_admin').length
+
+      document.getElementById('accesos-stats').innerHTML = `
+        <div class="stat-card stat-card--principal">
+          <div>
+            <div class="stat-card__label">Solicitudes pendientes</div>
+            <div class="stat-card__valor">${pendientes}</div>
+          </div>
+          <div class="stat-card__submetrics">
+            <div class="stat-card__submetric">
+              <div class="stat-card__submetric-label">Activos</div>
+              <div class="stat-card__submetric-valor">${activos}</div>
+            </div>
+            <div class="stat-card__submetric">
+              <div class="stat-card__submetric-label">Super admins</div>
+              <div class="stat-card__submetric-valor">${superAdmins}</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card stat-card--secundario">
+          <div class="stat-card__label">Usuarios activos</div>
+          <div class="stat-card__valor">${activos}</div>
+        </div>
+        <div class="stat-card stat-card--secundario">
+          <div class="stat-card__label">Super admins</div>
+          <div class="stat-card__valor">${superAdmins}</div>
+        </div>
+      `
+      document.getElementById('accesos-stats').hidden = false
+      document.getElementById('contador-tab-solicitudes').textContent = pendientes
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER — Vista 1: Solicitudes pendientes
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarSolicitudes() {
+      const cont  = document.getElementById('lista-solicitudes')
+      const vacio = document.getElementById('estado-vacio-solicitudes')
+
+      if (!estado.solicitudes.length) {
+        cont.innerHTML = ''
+        vacio.hidden = false
+        return
+      }
+      vacio.hidden = true
+
+      cont.innerHTML = estado.solicitudes.map(sol => {
+        const match = calcularEstadoMatch(sol)
+        const emp = match.empleado
+        const unidadNombre = emp?.unidades_negocio?.nombre
+        const chipUnidad = unidadNombre
+          ? `<span class="acceso__chip-unidad" style="background:${colorUnidad(unidadNombre)};">${unidadNombre}</span>`
+          : ''
+
+        let bloqueEstado = ''
+        let acciones = `<button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${sol.id}">Rechazar</button>`
+
+        if (match.tipo === 'match') {
+          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--match"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Match encontrado — ${emp.rol || 'sin puesto registrado'}</div>`
+          acciones = `
+            <button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${sol.id}">Rechazar</button>
+            <button type="button" class="btn btn--exito btn-aprobar-solicitud" data-id="${sol.id}">Aprobar</button>
+          `
+        } else if (match.tipo === 'sin_match') {
+          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--alerta"><i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> No se encontró un empleado con este CUIL</div>`
+        } else if (match.tipo === 'inactivo') {
+          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--alerta"><i data-lucide="user-x" style="width:14px;height:14px;"></i> El CUIL corresponde a un empleado marcado como inactivo</div>`
+        } else if (match.tipo === 'ya_tiene_acceso') {
+          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--neutro"><i data-lucide="copy" style="width:14px;height:14px;"></i> Solicitud duplicada — este empleado ya tiene acceso</div>`
+        }
+
+        return `
+          <div class="tarjeta-acceso" data-id="${sol.id}">
+            <div class="acceso__avatar" style="background:${colorAvatar(sol.nombre)};">${iniciales(sol.nombre)}</div>
+            <div class="acceso__cuerpo">
+              <div class="acceso__fila1">
+                <span class="acceso__nombre">${sol.nombre}</span>
+                ${chipUnidad}
+              </div>
+              <div class="acceso__email">${sol.email}</div>
+              ${bloqueEstado}
+              <div class="acceso__acciones">${acciones}</div>
+            </div>
+          </div>
+        `
+      }).join('')
+
+      lucide.createIcons()
+
+      cont.querySelectorAll('.btn-aprobar-solicitud').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalAprobar(btn.dataset.id))
+      })
+      cont.querySelectorAll('.btn-rechazar-solicitud').forEach(btn => {
+        btn.addEventListener('click', () => confirmarRechazo(btn.dataset.id))
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER — Vista 2: Usuarios y roles
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarUsuarios() {
+      const cont  = document.getElementById('lista-usuarios')
+      const vacio = document.getElementById('estado-vacio-usuarios')
+
+      const { texto, rol, modulo } = estado.filtrosUsuarios
+      let lista = empleadosConAcceso()
+
+      if (texto) {
+        const t = texto.toLowerCase()
+        lista = lista.filter(e => (e.nombre || '').toLowerCase().includes(t))
+      }
+      if (rol) lista = lista.filter(e => e.rol_app === rol)
+      if (modulo) lista = lista.filter(e => modulosDeEmpleado(e.id).includes(modulo))
+
+      if (!lista.length) {
+        cont.innerHTML = ''
+        vacio.hidden = false
+        return
+      }
+      vacio.hidden = true
+
+      const esViewerSuperAdmin = estado.miEmpleado.rol_app === 'super_admin'
+
+      cont.innerHTML = lista.map(emp => {
+        const puedeEditar = emp.rol_app !== 'super_admin' && (esViewerSuperAdmin || emp.rol_app === 'usuario')
+        const modulos = modulosDeEmpleado(emp.id)
+        const chipsModulos = modulos.length
+          ? modulos.map(m => {
+              const info = MODULOS_INFO.find(i => i.key === m)
+              return `<span class="chip-modulo">${info ? info.label : m}</span>`
+            }).join('')
+          : `<span class="acceso__estado-texto--neutro" style="font-size:0.75rem;">Sin módulos habilitados</span>`
+
+        const etiquetaRol = emp.rol_app === 'super_admin' ? 'Super admin' : emp.rol_app === 'admin' ? 'Admin' : 'Usuario'
+
+        return `
+          <div class="tarjeta-acceso" data-id="${emp.id}">
+            <div class="acceso__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+            <div class="acceso__cuerpo">
+              <div class="acceso__fila1">
+                <span class="acceso__nombre">${emp.nombre}</span>
+                <span class="chip-rol chip-rol--${emp.rol_app}">${etiquetaRol}</span>
+              </div>
+              <div class="acceso__email">${formatearCuil(emp.cuil)}</div>
+              <div class="acceso__acciones" style="margin-top:0.5rem;">${chipsModulos}</div>
+              ${puedeEditar ? `<div class="acceso__acciones"><button type="button" class="btn btn--secundario btn-editar-usuario" data-id="${emp.id}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Editar</button></div>` : ''}
+            </div>
+          </div>
+        `
+      }).join('')
+
+      cont.querySelectorAll('.btn-editar-usuario').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalEditar(btn.dataset.id))
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL — Aprobar / Editar
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function opcionesRolDisponibles() {
+      return estado.miEmpleado.rol_app === 'super_admin' ? ['usuario', 'admin'] : ['usuario']
+    }
+
+    function renderizarSegmentedRol() {
+      const opciones = opcionesRolDisponibles()
+      const el = document.getElementById('modal-segmented-rol')
+      el.innerHTML = opciones.map(op => `
+        <button type="button" class="segmented-rol__opcion ${op === estado.modal.rolElegido ? 'segmented-rol__opcion--activa' : ''}" data-rol="${op}">${ETIQUETAS_ROL[op]}</button>
+      `).join('')
+
+      el.querySelectorAll('.segmented-rol__opcion').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.modal.rolElegido = btn.dataset.rol
+          renderizarSegmentedRol()
+        })
+      })
+    }
+
+    function renderizarModalModulos() {
+      const el = document.getElementById('modal-modulos')
+      el.innerHTML = MODULOS_INFO.map(info => {
+        const checked = estado.modal.modulosElegidos.has(info.key)
+        const esAcoplado = info.key === 'gastos' || info.key === 'caja'
+        const parEtiqueta = info.key === 'gastos' ? 'Caja' : 'Gastos'
+        const candado = esAcoplado
+          ? `<span class="fila-modulo__candado">🔒 con ${parEtiqueta}</span>`
+          : (info.proximamente ? `<span class="fila-modulo__candado">Próximamente</span>` : '')
+
+        return `
+          <div class="fila-modulo ${info.proximamente ? 'fila-modulo--deshabilitada' : ''}">
+            <span class="fila-modulo__nombre">${info.label} ${candado}</span>
+            <label class="toggle">
+              <input type="checkbox" data-modulo="${info.key}" ${checked ? 'checked' : ''} ${info.proximamente ? 'disabled' : ''}>
+              <span class="toggle__riel"></span>
+            </label>
+          </div>
+        `
+      }).join('')
+
+      el.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const mod = chk.dataset.modulo
+          if (chk.checked) {
+            estado.modal.modulosElegidos.add(mod)
+            if (mod === 'gastos') estado.modal.modulosElegidos.add('caja')
+            if (mod === 'caja')   estado.modal.modulosElegidos.add('gastos')
+          } else {
+            estado.modal.modulosElegidos.delete(mod)
+            if (mod === 'gastos') estado.modal.modulosElegidos.delete('caja')
+            if (mod === 'caja')   estado.modal.modulosElegidos.delete('gastos')
+          }
+          renderizarModalModulos()
+        })
+      })
+    }
+
+    function abrirModalAprobar(solicitudId) {
+      const sol = estado.solicitudes.find(s => s.id === solicitudId)
+      const match = calcularEstadoMatch(sol)
+      if (match.tipo !== 'match') return
+
+      estado.modal = {
+        modo: 'aprobar',
+        solicitud: sol,
+        empleado: match.empleado,
+        rolElegido: 'usuario',
+        modulosElegidos: new Set(),
+      }
+
+      document.getElementById('modal-permisos__titulo').textContent = 'Revisar solicitud'
+      document.getElementById('modal-avatar').style.background = colorAvatar(sol.nombre)
+      document.getElementById('modal-avatar').textContent = iniciales(sol.nombre)
+      document.getElementById('modal-nombre').textContent = sol.nombre
+      document.getElementById('modal-email').textContent = sol.email
+
+      renderizarSegmentedRol()
+      renderizarModalModulos()
+
+      document.getElementById('btn-modal-rechazar').hidden = false
+      document.getElementById('btn-modal-rechazar').textContent = 'Rechazar solicitud'
+      document.getElementById('btn-modal-guardar').textContent = 'Aprobar y guardar'
+
+      document.getElementById('modal-permisos').hidden = false
+    }
+
+    function abrirModalEditar(empleadoId) {
+      const emp = estado.empleados.find(e => e.id === empleadoId)
+      if (!emp || emp.rol_app === 'super_admin') return // salvaguarda — nunca editable desde acá
+
+      estado.modal = {
+        modo: 'editar',
+        empleado: emp,
+        rolElegido: emp.rol_app,
+        modulosElegidos: new Set(modulosDeEmpleado(empleadoId)),
+      }
+
+      document.getElementById('modal-permisos__titulo').textContent = 'Editar permisos'
+      document.getElementById('modal-avatar').style.background = colorAvatar(emp.nombre)
+      document.getElementById('modal-avatar').textContent = iniciales(emp.nombre)
+      document.getElementById('modal-nombre').textContent = emp.nombre
+      document.getElementById('modal-email').textContent = formatearCuil(emp.cuil)
+
+      renderizarSegmentedRol()
+      renderizarModalModulos()
+
+      document.getElementById('btn-modal-rechazar').hidden = true
+      document.getElementById('btn-modal-guardar').textContent = 'Guardar cambios'
+
+      document.getElementById('modal-permisos').hidden = false
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-permisos').hidden = true
+      estado.modal = null
+    }
+
+    document.getElementById('btn-cerrar-modal').addEventListener('click', cerrarModal)
+    document.getElementById('modal-permisos__backdrop').addEventListener('click', cerrarModal)
+
+    document.getElementById('btn-modal-guardar').addEventListener('click', async () => {
+      if (!estado.modal) return
+      const btn = document.getElementById('btn-modal-guardar')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      const modulos = [...estado.modal.modulosElegidos]
+
+      try {
+        if (estado.modal.modo === 'aprobar') {
+          const { error } = await supabase.rpc('aprobar_solicitud_acceso', {
+            p_solicitud_id: estado.modal.solicitud.id,
+            p_rol_asignado: estado.modal.rolElegido,
+            p_modulos: modulos,
+          })
+          if (error) throw error
+          mostrarExito('Solicitud aprobada.')
+        } else {
+          const { error } = await supabase.rpc('actualizar_permisos_empleado', {
+            p_empleado_id: estado.modal.empleado.id,
+            p_nuevo_rol_app: estado.modal.rolElegido,
+            p_modulos: modulos,
+          })
+          if (error) throw error
+          mostrarExito('Permisos actualizados.')
+        }
+        cerrarModal()
+        await cargarTodo()
+      } catch (err) {
+        mostrarError(err.message || 'Ocurrió un error al guardar.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    })
+
+    document.getElementById('btn-modal-rechazar').addEventListener('click', () => {
+      if (!estado.modal || estado.modal.modo !== 'aprobar') return
+      const solicitudId = estado.modal.solicitud.id
+      cerrarModal()
+      confirmarRechazo(solicitudId)
+    })
+
+    async function rechazarSolicitud(solicitudId) {
+      const { error } = await supabase.rpc('rechazar_solicitud_acceso', { p_solicitud_id: solicitudId })
+      if (error) {
+        mostrarError(error.message || 'No se pudo rechazar la solicitud.')
+        return
+      }
+      mostrarExito('Solicitud rechazada.')
+      await cargarTodo()
+    }
+
+    function confirmarRechazo(solicitudId) {
+      if (!window.confirm('¿Rechazar esta solicitud de acceso?')) return
+      rechazarSolicitud(solicitudId)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TABS Y FILTROS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    document.querySelectorAll('.tabs-accesos__opcion').forEach(btn => {
+      btn.addEventListener('click', () => {
+        estado.tabActiva = btn.dataset.tab
+        document.querySelectorAll('.tabs-accesos__opcion').forEach(b => b.classList.toggle('tabs-accesos__opcion--activa', b === btn))
+        document.getElementById('vista-solicitudes').hidden = estado.tabActiva !== 'solicitudes'
+        document.getElementById('vista-usuarios').hidden    = estado.tabActiva !== 'usuarios'
+      })
+    })
+
+    document.getElementById('filtro-nombre-usuarios').addEventListener('input', (e) => {
+      estado.filtrosUsuarios.texto = e.target.value
+      renderizarUsuarios()
+    })
+    document.getElementById('filtro-rol-usuarios').addEventListener('change', (e) => {
+      estado.filtrosUsuarios.rol = e.target.value
+      renderizarUsuarios()
+    })
+    document.getElementById('filtro-modulo-usuarios').addEventListener('change', (e) => {
+      estado.filtrosUsuarios.modulo = e.target.value
+      renderizarUsuarios()
+    })
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+
+      const { data: emp, error } = await supabase
+        .from('empleados')
+        .select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id)
+        .maybeSingle()
+
+      if (error || !emp || !['admin', 'super_admin'].includes(emp.rol_app)) {
+        mostrarError('No tenés permiso para acceder a este módulo.')
+        setTimeout(() => window.location.replace('../dashboard.html'), 1500)
+        return
+      }
+
+      estado.miEmpleado = emp
+
+      document.getElementById('filtro-rol-usuarios').innerHTML = `
+        <option value="">Todos los roles</option>
+        <option value="usuario">Usuario</option>
+        <option value="admin">Admin</option>
+        <option value="super_admin">Super admin</option>
+      `
+      document.getElementById('filtro-modulo-usuarios').innerHTML = `
+        <option value="">Todos los módulos</option>
+        ${MODULOS_INFO.filter(m => !m.proximamente).map(m => `<option value="${m.key}">${m.label}</option>`).join('')}
+      `
+
+      await cargarTodo()
+    }
+
+    init()
+  </script>
+
+</body>
+</html>
