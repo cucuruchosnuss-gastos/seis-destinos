@@ -107,50 +107,75 @@
       .empleados-stats { grid-template-columns: 1fr; }
     }
 
-    /* ── Bloque importar Excel ─────────────────────────────────────────────── */
+    /* ── Toolbar: buscador + importar Excel ───────────────────────────────── */
 
-    .bloque-importar {
+    .empleados-toolbar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
+      gap: 0.625rem;
       flex-wrap: wrap;
-      background: var(--violeta-suave);
-      border: 1px dashed var(--violeta);
-      border-radius: 14px;
-      padding: 0.875rem 1.125rem;
       margin-bottom: 1.25rem;
     }
 
-    .bloque-importar__titulo {
-      font-size: 0.875rem;
-      font-weight: 700;
-      color: var(--violeta-oscuro);
+    .empleados-toolbar__buscar {
+      flex: 1;
+      min-width: 180px;
     }
 
-    .bloque-importar__descripcion {
-      font-size: 0.75rem;
-      color: var(--color-texto-suave);
-      margin-top: 0.125rem;
-    }
-
-    .bloque-importar__acciones {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .bloque-importar select {
+    #filtro-busqueda-empleados {
+      width: 100%;
       height: 38px;
-      padding: 0 0.75rem;
+      padding: 0 0.875rem;
       border: 1.5px solid var(--color-borde);
-      border-radius: 10px;
+      border-radius: 999px;
       font-family: var(--fuente);
       font-size: 0.8125rem;
       background: var(--color-fondo);
       color: var(--color-texto);
       outline: none;
+    }
+
+    #filtro-busqueda-empleados:focus {
+      border-color: var(--violeta);
+    }
+
+    .bloque-importar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: nowrap;
+      background: var(--violeta-suave);
+      border: 1px dashed var(--violeta);
+      border-radius: 12px;
+      padding: 0.375rem 0.625rem 0.375rem 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .bloque-importar__icono {
+      display: flex;
+      align-items: center;
+      color: var(--violeta);
+      flex-shrink: 0;
+      cursor: help;
+    }
+
+    .bloque-importar__icono svg { width: 16px; height: 16px; }
+
+    .bloque-importar select {
+      height: 30px;
+      max-width: 150px;
+      padding: 0 0.5rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.75rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+    }
+
+    @media (max-width: 640px) {
+      .bloque-importar select { max-width: 110px; }
     }
 
     /* ── Grupos y filas ────────────────────────────────────────────────────── */
@@ -437,15 +462,17 @@
 
     <div class="empleados-stats" id="empleados-stats" hidden></div>
 
-    <div class="bloque-importar" id="bloque-importar" hidden>
-      <div class="bloque-importar__texto">
-        <div class="bloque-importar__titulo">📥 Importar Excel de Naaloo</div>
-        <div class="bloque-importar__descripcion">Naaloo entrega un Excel por empresa — elegí cuál es antes de subirlo</div>
+    <div class="empleados-toolbar">
+      <div class="empleados-toolbar__buscar">
+        <input type="text" id="filtro-busqueda-empleados" placeholder="🔍 Buscar empleado…">
       </div>
-      <div class="bloque-importar__acciones">
+      <div class="bloque-importar" id="bloque-importar" hidden>
+        <span class="bloque-importar__icono" title="Naaloo entrega un Excel por empresa — elegí cuál es antes de subirlo">
+          <i data-lucide="upload"></i>
+        </span>
         <select id="select-empresa-import"></select>
         <input type="file" id="input-excel" accept=".xlsx,.xls" hidden>
-        <button type="button" class="btn btn--secundario" id="btn-elegir-excel" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Subir Excel</button>
+        <button type="button" class="btn btn--secundario" id="btn-elegir-excel" style="width:auto; padding:0.375rem 0.75rem; font-size:0.75rem;">Subir Excel</button>
       </div>
     </div>
 
@@ -510,6 +537,7 @@
       maestros:        { unidadesNegocio: [] },
       fichaAbierta:    null,
       modoEdicionFicha: false,
+      filtros:         { busqueda: '' },
     }
 
     const MODULOS_INFO = [
@@ -647,6 +675,15 @@
     // RENDER — Listado agrupado
     // ═══════════════════════════════════════════════════════════════════════
 
+    function ordenarGrupo(lista) {
+      return [...lista].sort((a, b) => {
+        const tieneAccesoA = a.auth_user_id ? 0 : 1
+        const tieneAccesoB = b.auth_user_id ? 0 : 1
+        if (tieneAccesoA !== tieneAccesoB) return tieneAccesoA - tieneAccesoB
+        return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
+      })
+    }
+
     function agruparEmpleados() {
       const porUnidad = new Map()
       estado.maestros.unidadesNegocio.forEach(u => porUnidad.set(u.id, { nombre: u.nombre, lista: [] }))
@@ -666,6 +703,8 @@
       const grupos = [...porUnidad.values()].filter(g => g.lista.length)
       if (sinEmpresaConAcceso.length) grupos.push({ nombre: 'Con acceso a la app, sin empresa asignada', lista: sinEmpresaConAcceso })
       if (sinEmpresaSinAcceso.length) grupos.push({ nombre: 'Sin empresa asignada', lista: sinEmpresaSinAcceso })
+
+      grupos.forEach(g => { g.lista = ordenarGrupo(g.lista) })
       return grupos
     }
 
@@ -695,7 +734,13 @@
 
     function renderizarListado() {
       const cont  = document.getElementById('lista-empleados')
+      const termino = (estado.filtros.busqueda || '').trim().toLowerCase()
+
+      // El filtro solo oculta filas que no matchean — el agrupamiento y el
+      // orden ya calculados en agruparEmpleados() no se tocan.
       const grupos = agruparEmpleados()
+        .map(g => ({ ...g, lista: termino ? g.lista.filter(e => (e.nombre || '').toLowerCase().includes(termino)) : g.lista }))
+        .filter(g => g.lista.length)
 
       if (!grupos.length) {
         cont.innerHTML = ''
@@ -784,6 +829,7 @@
         <div class="ficha-campo"><span>Legajo</span><span>${emp.legajo || '—'}</span></div>
         <div class="ficha-campo"><span>CUIL</span><span>${formatearCuil(emp.cuil)}</span></div>
         <div class="ficha-campo"><span>Domicilio</span><span>${emp.domicilio || '—'}</span></div>
+        <div class="ficha-campo"><span>Teléfono</span><span>${emp.telefono || '—'}</span></div>
         <div class="ficha-campo"><span>Fecha de alta</span><span>${emp.fecha_alta ? formatearFecha(emp.fecha_alta) : '—'}</span></div>
       `
 
@@ -964,6 +1010,21 @@
     })
 
     // ═══════════════════════════════════════════════════════════════════════
+    // BÚSQUEDA LOCAL (mismo patrón que gastos.html: debounce 250ms, filtra
+    // sobre lo ya cargado en memoria, sin volver a consultar Supabase)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let debounceBusquedaEmpleados
+    document.getElementById('filtro-busqueda-empleados').addEventListener('input', (e) => {
+      clearTimeout(debounceBusquedaEmpleados)
+      const valor = e.target.value
+      debounceBusquedaEmpleados = setTimeout(() => {
+        estado.filtros.busqueda = valor
+        renderizarListado()
+      }, 250)
+    })
+
+    // ═══════════════════════════════════════════════════════════════════════
     // INIT
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -985,6 +1046,7 @@
 
       estado.miEmpleado = emp
       document.getElementById('bloque-importar').hidden = false
+      lucide.createIcons()
 
       await cargarTodo()
 
