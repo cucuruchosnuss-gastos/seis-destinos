@@ -682,12 +682,35 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.12);
       padding: 0.5rem;
       min-width: 200px;
-      max-height: 280px;
-      overflow-y: auto;
     }
 
     .multiselect__panel:not([hidden]) {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .multiselect__opciones {
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .multiselect__aplicar {
+      flex-shrink: 0;
+      border: none;
+      border-radius: 6px;
+      background: var(--color-acento);
+      color: #fff;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    .multiselect__panel--simple {
+      max-height: 220px;
+      overflow-y: auto;
     }
 
     .multiselect__opcion {
@@ -1526,6 +1549,8 @@
       const panel = document.getElementById(idBase + '-panel')
       if (!boton || !panel) return
 
+      let borrador = [...seleccionados]
+
       function actualizarTexto() {
         if (!seleccionados.length) {
           boton.textContent = etiquetaTodos
@@ -1538,25 +1563,36 @@
         boton.classList.toggle('multiselect__boton--activo', seleccionados.length > 0)
       }
 
-      panel.innerHTML = opciones.map(op => `
-        <label class="multiselect__opcion">
-          <input type="checkbox" value="${op.value}" ${seleccionados.map(String).includes(String(op.value)) ? 'checked' : ''}>
-          <span>${op.label}</span>
-        </label>
-      `).join('')
+      function renderizarOpciones() {
+        panel.querySelector('.multiselect__opciones').innerHTML = opciones.map(op => `
+          <label class="multiselect__opcion">
+            <input type="checkbox" value="${op.value}" ${borrador.map(String).includes(String(op.value)) ? 'checked' : ''}>
+            <span>${op.label}</span>
+          </label>
+        `).join('')
 
-      panel.querySelectorAll('input[type="checkbox"]').forEach(chk => {
-        chk.addEventListener('change', () => {
-          const valor = chk.value
-          if (chk.checked) {
-            if (!seleccionados.map(String).includes(valor)) seleccionados.push(valor)
-          } else {
-            const idx = seleccionados.map(String).indexOf(valor)
-            if (idx !== -1) seleccionados.splice(idx, 1)
-          }
-          actualizarTexto()
-          onChange(seleccionados)
+        panel.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+          chk.addEventListener('change', () => {
+            const valor = chk.value
+            if (chk.checked) {
+              if (!borrador.map(String).includes(valor)) borrador.push(valor)
+            } else {
+              const idx = borrador.map(String).indexOf(valor)
+              if (idx !== -1) borrador.splice(idx, 1)
+            }
+            // solo actualiza el checkbox en pantalla — sin onChange, sin cerrar el panel
+          })
         })
+      }
+
+      panel.innerHTML = `<div class="multiselect__opciones"></div><button type="button" class="multiselect__aplicar">Aplicar</button>`
+      renderizarOpciones()
+
+      panel.querySelector('.multiselect__aplicar').addEventListener('click', () => {
+        seleccionados.splice(0, seleccionados.length, ...borrador)
+        actualizarTexto()
+        panel.hidden = true
+        onChange(seleccionados)
       })
 
       boton.addEventListener('click', (e) => {
@@ -1564,6 +1600,8 @@
         const estabaAbierto = !panel.hidden
         document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
         if (!estabaAbierto) {
+          borrador = [...seleccionados]
+          renderizarOpciones()
           const rect = boton.getBoundingClientRect()
           panel.style.top  = (rect.bottom + 4) + 'px'
           panel.style.left = rect.left + 'px'
@@ -1667,7 +1705,7 @@
 
           <div class="multiselect" id="ms-orden">
             <button type="button" class="multiselect__boton" id="ms-orden-boton">Ordenar</button>
-            <div class="multiselect__panel" id="ms-orden-panel" hidden></div>
+            <div class="multiselect__panel multiselect__panel--simple" id="ms-orden-panel" hidden></div>
           </div>
 
           <button type="button" id="btn-borrar-filtros" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
