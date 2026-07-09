@@ -488,6 +488,37 @@
       background: var(--color-superficie);
     }
 
+    /* ── Vista lista — selector rápido Hoy/Mes ────────────────────────────── */
+
+    .segmented-rango {
+      display: flex;
+      background: var(--color-superficie);
+      border-radius: 10px;
+      padding: 0.25rem;
+      gap: 0.25rem;
+      margin: 1.25rem 0 0.625rem;
+    }
+
+    .segmented-rango__opcion {
+      flex: 1;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      padding: 0.5rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      cursor: pointer;
+      transition: background var(--transicion), color var(--transicion);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .segmented-rango__opcion--activa {
+      background: var(--color-acento);
+      color: #fff;
+    }
+
     /* ── Vista lista — filtros ──────────────────────────────────────────────── */
 
     .lista-filtros {
@@ -1005,7 +1036,12 @@
 
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem;">
 
-      <div id="total-gastos" class="grilla-totales" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:0.75rem; margin:1.25rem 0;" hidden></div>
+      <div class="segmented-rango" id="segmented-rango-rapido">
+        <button type="button" class="segmented-rango__opcion" data-rango="hoy">Hoy</button>
+        <button type="button" class="segmented-rango__opcion" data-rango="mes">En el mes</button>
+      </div>
+
+      <div id="total-gastos" class="grilla-totales" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:0.75rem; margin:0 0 1.25rem;" hidden></div>
 
       <div class="lista-filtros" id="contenedor-filtros"></div>
 
@@ -1706,7 +1742,7 @@
         document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
           estado.filtros = { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], fecha_desde: '', fecha_hasta: '', orden: 'fecha_desc' }
           renderizarFiltros(estado.maestros.unidades)
-          cargarLista()
+          aplicarRangoRapido('hoy')
         })
         document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel)
       }
@@ -1750,16 +1786,13 @@
       const totalEl = document.getElementById('total-gastos')
       if (!gastos.length) { totalEl.hidden = true; return }
 
-      const porMoneda = {}
-      gastos.forEach(g => {
-        const moneda = g.moneda || 'ARS'
-        porMoneda[moneda] = (porMoneda[moneda] || 0) + (Number(g.importe) || 0)
-      })
+      const totalARS = gastos
+        .filter(g => (g.moneda || 'ARS') === 'ARS')
+        .reduce((acc, g) => acc + (Number(g.importe) || 0), 0)
 
-      const monedas = Object.keys(porMoneda)
-      const featured = monedas.includes('ARS') ? 'ARS' : monedas[0]
+      const tituloTotal = estado.filtros.rangoRapido === 'mes' ? 'Gastos del mes' : 'Gastos de hoy'
 
-      const tarjetaTotal = (moneda, monto, destacada) => `
+      const tarjetaTotal = (titulo, monto, destacada) => `
         <div class="grilla-totales__card" style="
           border-radius:18px;
           padding:1.125rem 1.25rem;
@@ -1768,10 +1801,10 @@
             : 'background:var(--color-fondo); border:1px solid var(--color-borde); box-shadow:0 2px 8px rgba(0,0,0,0.04);'}
         ">
           <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:${destacada ? '0.75' : '1'}; color:${destacada ? '#fff' : 'var(--color-texto-suave)'};">
-            Total en ${moneda === 'ARS' ? 'pesos' : moneda}
+            ${titulo}
           </div>
           <div class="grilla-totales__monto" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:${destacada ? '#fff' : 'var(--color-texto)'};">
-            ${formatearImporte(monto, moneda)}
+            ${formatearImporte(totalARS, 'ARS')}
           </div>
         </div>`
 
@@ -1783,9 +1816,7 @@
           </div>
         </div>`
 
-      totalEl.innerHTML =
-        monedas.map(m => tarjetaTotal(m, porMoneda[m], m === featured)).join('') +
-        tarjetaRegistros
+      totalEl.innerHTML = tarjetaTotal(tituloTotal, totalARS, true) + tarjetaRegistros
 
       totalEl.hidden = false
     }
@@ -1815,6 +1846,31 @@
         })
       }
       renderizarTotalGastos(filtrados)
+    }
+
+    function fechaISO(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+
+    function actualizarSegmentedRango() {
+      document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
+        btn.classList.toggle('segmented-rango__opcion--activa', btn.dataset.rango === estado.filtros.rangoRapido)
+      })
+    }
+
+    function aplicarRangoRapido(rango) {
+      estado.filtros.rangoRapido = rango
+      const hoy = new Date()
+      estado.filtros.fecha_desde = rango === 'mes' ? fechaISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1)) : fechaISO(hoy)
+      estado.filtros.fecha_hasta = fechaISO(hoy)
+
+      const inputDesde = document.getElementById('filtro-fecha-desde')
+      const inputHasta = document.getElementById('filtro-fecha-hasta')
+      if (inputDesde) { inputDesde.value = estado.filtros.fecha_desde; inputDesde.classList.add('filtro-activo') }
+      if (inputHasta) { inputHasta.value = estado.filtros.fecha_hasta; inputHasta.classList.add('filtro-activo') }
+
+      actualizarSegmentedRango()
+      cargarLista()
     }
 
     async function cargarLista() {
@@ -1966,6 +2022,10 @@
     document.getElementById('btn-nuevo-gasto').addEventListener('click', abrirWizard)
     document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
 
+    document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
+      btn.addEventListener('click', () => aplicarRangoRapido(btn.dataset.rango))
+    })
+
     document.getElementById('btn-editar-gasto')?.addEventListener('click', () => {
       mostrarFormularioEdicionGasto(estado.gastoDetalleActualId)
     })
@@ -2012,7 +2072,7 @@
 
     estado.maestros.unidades = unidadesInicial ?? []
     renderizarFiltros(estado.maestros.unidades)
-    cargarLista()
+    aplicarRangoRapido('hoy')
 
     // ═══════════════════════════════════════════════════════════════════════
     // WIZARD — MAESTROS
