@@ -1674,7 +1674,13 @@
         opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
         seleccionados: estado.filtros.periodos,
         etiquetaTodos: 'Todos los períodos',
-        onChange: () => cargarLista()
+        onChange: () => {
+          estado.filtros.rangoRapido = null
+          estado.filtros.fecha_desde = ''
+          estado.filtros.fecha_hasta = ''
+          actualizarSegmentedRango()
+          cargarLista()
+        }
       })
 
       let debounceBusqueda
@@ -1732,11 +1738,15 @@
         document.getElementById('filtro-fecha-desde')?.addEventListener('change', (e) => {
           estado.filtros.fecha_desde = e.target.value
           e.target.classList.toggle('filtro-activo', !!e.target.value)
+          estado.filtros.rangoRapido = null
+          actualizarSegmentedRango()
           cargarLista()
         })
         document.getElementById('filtro-fecha-hasta')?.addEventListener('change', (e) => {
           estado.filtros.fecha_hasta = e.target.value
           e.target.classList.toggle('filtro-activo', !!e.target.value)
+          estado.filtros.rangoRapido = null
+          actualizarSegmentedRango()
           cargarLista()
         })
         document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
