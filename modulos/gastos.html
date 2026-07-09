@@ -2252,6 +2252,13 @@
     estado.maestros.unidades = unidadesInicial ?? []
     activarFiltroFecha('hoy')
 
+    // Deep link desde Caja: gastos.html?gasto=<id> abre el detalle directo.
+    const idGastoURL = new URLSearchParams(location.search).get('gasto')
+    if (idGastoURL) {
+      await cargarLista()
+      mostrarDetalleGasto(idGastoURL)
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // WIZARD — MAESTROS
     // ═══════════════════════════════════════════════════════════════════════

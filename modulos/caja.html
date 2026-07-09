@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caja — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+
+  <style>
+    body {
+      overflow-x: hidden;
+      --amarillo:        #C99A2E;
+      --amarillo-suave:  #FBF3E0;
+      --amarillo-oscuro: #8C6A1A;
+      --bordo:           #7A2E42;
+      --bordo-suave:     #F5E8EC;
+      --bordo-oscuro:    #5C2233;
+    }
+
+    /* ── Toolbar: buscador + filtro empresa + acciones ────────────────────── */
+
+    .caja-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+
+    .caja-toolbar__buscar { flex: 1; min-width: 160px; }
+
+    #filtro-busqueda-caja {
+      width: 100%;
+      height: 38px;
+      padding: 0 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+    }
+
+    #filtro-busqueda-caja:focus { border-color: var(--amarillo); }
+
+    #filtro-empresa-caja {
+      height: 38px;
+      padding: 0 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      max-width: 180px;
+    }
+
+    .caja-toolbar__acciones {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      width: 100%;
+    }
+
+    @media (min-width: 560px) {
+      .caja-toolbar__acciones { width: auto; }
+    }
+
+    .btn--amarillo {
+      background: var(--amarillo);
+      color: #fff;
+      border: 1.5px solid var(--amarillo);
+    }
+    .btn--amarillo:hover { background: var(--amarillo-oscuro); border-color: var(--amarillo-oscuro); }
+
+    .btn--bordo-outline {
+      background: var(--color-fondo);
+      color: var(--bordo);
+      border: 1.5px solid var(--bordo);
+    }
+    .btn--bordo-outline:hover { background: var(--bordo-suave); }
+
+    /* ── Card total de la empresa ──────────────────────────────────────────── */
+
+    .stat-card-caja {
+      background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
+      color: #fff;
+      border-radius: 18px;
+      padding: 1.125rem 1.25rem;
+      box-shadow: 0 8px 24px rgba(140,106,26,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin: 1.25rem 0;
+    }
+
+    .stat-card-caja__label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    .stat-card-caja__montos {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 1rem;
+      margin-top: 0.25rem;
+    }
+
+    .stat-card-caja__monto {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-card-caja__submetrics { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    .stat-card-caja__submetric {
+      background: rgba(255,255,255,0.16);
+      border-radius: 12px;
+      padding: 0.5rem 0.875rem;
+      text-align: center;
+    }
+
+    .stat-card-caja__submetric-label {
+      font-size: 0.5625rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    .stat-card-caja__submetric-valor { font-size: 1.125rem; font-weight: 700; margin-top: 0.125rem; }
+
+    /* Chip para valores negativos sobre fondo ámbar (única excepción de color: bordó) */
+    .valor-negativo-chip {
+      display: inline-flex;
+      background: rgba(255,255,255,0.92);
+      color: var(--bordo);
+      padding: 0.0625rem 0.5rem;
+      border-radius: 8px;
+    }
+
+    /* ── Grupos por unidad de negocio ──────────────────────────────────────── */
+
+    .grupo-personas { margin-bottom: 1.5rem; }
+
+    .grupo-personas__titulo {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.5rem;
+    }
+
+    .grupo-personas__nombre { display: flex; align-items: center; gap: 0.375rem; }
+
+    .grupo-personas__punto {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--amarillo);
+      flex-shrink: 0;
+    }
+
+    .grupo-personas__subtotales { display: flex; gap: 0.5rem; font-weight: 600; color: var(--color-texto); }
+
+    .grupo-personas__subtotal--negativo { color: var(--bordo); }
+
+    .lista-personas {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .tarjeta-persona {
+      position: relative;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: box-shadow var(--transicion), transform var(--transicion);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tarjeta-persona:hover {
+      box-shadow: var(--sombra-suave);
+      transform: translateY(-1px);
+    }
+
+    .persona__avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .persona__info { flex: 1; min-width: 0; }
+
+    .persona__nombre {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-texto);
+    }
+
+    .persona__empresa {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+    }
+
+    .persona__monedas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      margin-top: 0.375rem;
+    }
+
+    .chip-moneda {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1875rem 0.5rem;
+      border-radius: 999px;
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+      font-size: 0.6875rem;
+      font-weight: 700;
+    }
+
+    .chip-moneda--negativo {
+      background: var(--bordo-suave);
+      color: var(--bordo);
+    }
+
+    .persona__saldo {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--color-acento);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .persona__saldo--negativo { color: var(--bordo); }
+
+    /* ── Vista detalle de persona ─────────────────────────────────────────── */
+
+    #vista-detalle-persona:not([hidden]) {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: var(--color-superficie);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .saldos-grilla {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .saldo-card {
+      background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
+      color: #fff;
+      border-radius: 18px;
+      padding: 1.125rem 1.25rem;
+      box-shadow: 0 8px 24px rgba(140,106,26,0.25);
+    }
+
+    .saldo-card__label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    .saldo-card__valor {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-top: 0.25rem;
+    }
+
+    /* ── Movimientos ───────────────────────────────────────────────────────── */
+
+    .lista-movimientos {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .tarjeta-movimiento {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+    }
+
+    .movimiento__cabecera {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .movimiento__info { flex: 1; min-width: 0; }
+
+    .chip-tipo-movimiento {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1875rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    /* Único color de alerta de Caja: bordó, y solo en el ícono de retiro.
+       Ingreso y gasto usan navy/gris neutro — nada de verde ni cian (color
+       de Gastos). */
+    .chip-tipo-movimiento--ingreso,
+    .chip-tipo-movimiento--egreso_gasto {
+      background: var(--color-superficie);
+      color: var(--color-acento);
+    }
+
+    .chip-tipo-movimiento--egreso_retiro {
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
+    }
+
+    .movimiento__fecha {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.375rem;
+    }
+
+    .movimiento__descripcion {
+      font-size: 0.8125rem;
+      color: var(--color-texto);
+      margin-top: 0.25rem;
+    }
+
+    .movimiento__referencia {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.375rem;
+    }
+
+    .movimiento__referencia a { font-weight: 600; }
+
+    .movimiento__monto {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Botones de medio de pago (2 opciones) ────────────────────────────── */
+
+    .grilla-medio-pago-caja {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    .btn-tipo-doc {
+      background: var(--color-fondo);
+      border: 2px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.625rem 0.25rem;
+      font-family: var(--fuente);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      cursor: pointer;
+      text-align: center;
+      line-height: 1.25;
+      transition: border-color var(--transicion), background var(--transicion), color var(--transicion);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-tipo-doc:hover {
+      border-color: var(--amarillo);
+      background: var(--amarillo-suave);
+    }
+
+    .btn-tipo-doc--seleccionado {
+      border-color: var(--amarillo);
+      background: var(--amarillo);
+      color: #fff;
+    }
+
+    /* ── Modal: registrar ingreso / retiro (mismo patrón que modal-ficha) ─── */
+
+    #modal-movimiento {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #modal-movimiento[hidden] { display: none; }
+
+    #modal-movimiento__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    #modal-movimiento__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    @media (min-width: 641px) {
+      #modal-movimiento { align-items: center; }
+      #modal-movimiento__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
+    .modal-movimiento__cerrar {
+      position: absolute;
+      top: 0.875rem;
+      right: 0.875rem;
+    }
+
+    .aviso-retiro-personal {
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
+      border-radius: 10px;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.8125rem;
+      margin: 0.75rem 0;
+    }
+
+    .modal-movimiento__acciones {
+      display: flex;
+      gap: 0.625rem;
+      margin-top: 1.25rem;
+    }
+
+    .modal-movimiento__acciones .btn { flex: 1; }
+  </style>
+</head>
+<body class="pagina-modulo">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA A — LISTADO GENERAL (solo admin/super_admin)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="vista-lista-caja" hidden>
+
+    <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
+      <div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
+          <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
+        </div>
+        <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto); display:flex; align-items:center; gap:0.375rem;">
+          Caja <span style="color:var(--amarillo); font-size:1rem; line-height:1;">●</span>
+        </div>
+      </div>
+      <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
+    </header>
+
+    <div class="vista-lista__contenedor" style="max-width: 960px; margin: 0 auto; padding: 0 1.25rem 3rem;">
+
+      <div id="stat-total-empresa"></div>
+
+      <div class="caja-toolbar">
+        <div class="caja-toolbar__buscar">
+          <input type="text" id="filtro-busqueda-caja" placeholder="🔍 Buscar persona…">
+        </div>
+        <select id="filtro-empresa-caja">
+          <option value="">Todas las empresas</option>
+        </select>
+        <div class="caja-toolbar__acciones">
+          <button type="button" class="btn btn--amarillo" id="btn-nuevo-ingreso" style="width:auto; flex:1;">+ Nuevo ingreso</button>
+          <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto; flex:1;">Retiro personal</button>
+        </div>
+      </div>
+
+      <div id="lista-personas"></div>
+
+      <div id="estado-cargando" class="estado-vacio">
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando…</p>
+      </div>
+
+      <div id="estado-vacio-caja" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">💰</div>
+        <div class="estado-vacio__titulo">No hay personas con caja disponible</div>
+      </div>
+
+    </div>
+
+  </div><!-- /vista-lista-caja -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA B — FICHA DE PERSONA
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="vista-detalle-persona" hidden>
+    <header class="header">
+      <button type="button" class="btn btn--icono" id="btn-volver-ficha">← Volver</button>
+      <span class="header__nombre-app" id="detalle-persona-nombre"></span>
+      <div style="width:2rem;"></div>
+    </header>
+
+    <div style="padding:1.25rem; max-width:720px; margin:0 auto; width:100%;">
+      <div id="detalle-persona-saldos"></div>
+
+      <div id="detalle-persona-acciones" style="display:flex; gap:0.625rem; margin:1.25rem 0 1.5rem;"></div>
+
+      <div class="modal-ficha__seccion-titulo">Movimientos</div>
+
+      <div id="estado-cargando-movimientos" class="estado-vacio" hidden>
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando movimientos…</p>
+      </div>
+
+      <div class="lista-movimientos" id="detalle-persona-movimientos"></div>
+
+      <div id="detalle-persona-vacio" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">📋</div>
+        <div class="estado-vacio__titulo">Sin movimientos registrados</div>
+      </div>
+    </div>
+  </div><!-- /vista-detalle-persona -->
+
+
+  <!-- Modal: Registrar ingreso / retiro -->
+  <div id="modal-movimiento" hidden>
+    <div id="modal-movimiento__backdrop"></div>
+    <div id="modal-movimiento__panel">
+      <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-movimiento" title="Cerrar">✕</button>
+      <h2 id="movimiento-titulo">Registrar ingreso</h2>
+
+      <div id="aviso-retiro-personal" class="aviso-retiro-personal" hidden></div>
+
+      <div class="formulario" style="margin-top:1rem;">
+        <div class="grupo-campo" id="grupo-movimiento-empleado" style="display:none;">
+          <label for="movimiento-empleado">Empleado</label>
+          <select id="movimiento-empleado">
+            <option value="">— Seleccioná empleado —</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end;">
+          <div class="grupo-campo">
+            <label for="movimiento-monto">Monto</label>
+            <input type="text" inputmode="decimal" id="movimiento-monto" placeholder="0,00">
+          </div>
+          <div class="grupo-campo">
+            <label for="movimiento-moneda">Moneda</label>
+            <select id="movimiento-moneda" style="width:5.5rem;">
+              <option value="ARS">ARS</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="movimiento-fecha">Fecha</label>
+          <input type="date" id="movimiento-fecha" name="fecha">
+        </div>
+
+        <div class="grupo-campo">
+          <label>Medio de pago</label>
+          <div class="grilla-medio-pago-caja" id="grilla-medio-pago-caja">
+            <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
+            <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia</button>
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="movimiento-descripcion">Nota <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="movimiento-descripcion" placeholder="Ej: Adelanto de sueldo">
+        </div>
+      </div>
+
+      <div class="modal-movimiento__acciones">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-movimiento">Cancelar</button>
+        <button type="button" class="btn btn--exito" id="btn-guardar-movimiento">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito, formatearFecha } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO GLOBAL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion:          null,
+      miEmpleado:      null, // { id, nombre, rol_app }
+      empleados:       [],   // personas con acceso (solo se carga para admin/super_admin)
+      maestros:        { unidadesNegocio: [] },
+      saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
+                              // para usuario: solo las propias (nunca se piden las de otros)
+      movimientosDelMes: 0,
+      personaAbierta:  null, // id de empleado cuya ficha está abierta
+      origenFicha:     null, // 'listado' (la abrió un admin) | 'directo' (entró un usuario)
+      movimientos:     [],
+      filtros:         { busqueda: '', unidadId: '' },
+      wizardMovimiento: { tipo: null, empleadoId: null },
+    }
+
+    let medioPagoCajaSeleccionado = null
+
+    const TIPO_LABEL = { ingreso: 'Ingreso', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro' }
+    const MEDIO_PAGO_LABEL_CAJA = { efectivo: 'Efectivo', transferencia: 'Transferencia' }
+
+    function esAdmin() {
+      return ['admin', 'super_admin'].includes(estado.miEmpleado?.rol_app)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function iniciales(nombre) {
+      const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean)
+      if (!palabras.length) return '—'
+      if (palabras.length === 1) return palabras[0].slice(0, 2).toUpperCase()
+      return (palabras[0][0] + palabras[1][0]).toUpperCase()
+    }
+
+    const PALETA_AVATAR = ['#C99A2E', '#8C6A1A', '#D9B45C', '#4A5568', '#7A2E42']
+    function colorAvatar(texto) {
+      let hash = 0
+      for (let i = 0; i < (texto || '').length; i++) hash = texto.charCodeAt(i) + ((hash << 5) - hash)
+      return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length]
+    }
+
+    function formatearImporte(importe, moneda = 'ARS') {
+      if (importe == null) return '—'
+      const num = Number(importe).toLocaleString('es-AR', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      })
+      return moneda === 'USD' ? `USD ${num}` : `$ ${num}`
+    }
+
+    // Envuelve el valor en el chip claro cuando es negativo — única excepción
+    // de color permitida (bordó) para textos sobre fondo ámbar.
+    function formatearImporteConAlerta(importe, moneda) {
+      const texto = formatearImporte(importe, moneda)
+      return Number(importe) < 0 ? `<span class="valor-negativo-chip">${texto}</span>` : texto
+    }
+
+    // Convierte "1.349.799,77" → 1349799.77
+    function parseImporte(str) {
+      if (!str) return null
+      const limpio = String(str).replace(/\./g, '').replace(',', '.')
+      const num    = parseFloat(limpio)
+      return isNaN(num) ? null : num
+    }
+
+    function fechaISO(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+
+    function saldosDe(empleadoId) {
+      return estado.saldos.filter(s => s.empleado_id === empleadoId)
+    }
+
+    function nombreEmpresa(unidadId) {
+      return estado.maestros.unidadesNegocio.find(u => u.id === unidadId)?.nombre || null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGA DE DATOS — Listado general (solo admin/super_admin)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarListado() {
+      document.getElementById('estado-cargando').hidden = false
+
+      const [empRes, unidRes] = await Promise.all([
+        supabase.from('empleados').select('id, nombre, unidad_negocio_id').not('auth_user_id', 'is', null).eq('activo', true).order('nombre'),
+        supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
+      ])
+
+      if (empRes.error || unidRes.error) {
+        document.getElementById('estado-cargando').hidden = true
+        mostrarError('No se pudieron cargar las personas.')
+        return
+      }
+      estado.empleados = empRes.data || []
+      estado.maestros.unidadesNegocio = unidRes.data || []
+
+      const ids = estado.empleados.map(e => e.id)
+
+      const [saldosRes, movRes] = await Promise.all([
+        ids.length
+          ? supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').in('empleado_id', ids)
+          : Promise.resolve({ data: [], error: null }),
+        ids.length
+          ? supabase.from('caja_movimientos').select('id', { count: 'exact', head: true }).in('empleado_id', ids).gte('fecha', fechaISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
+          : Promise.resolve({ count: 0, error: null }),
+      ])
+
+      document.getElementById('estado-cargando').hidden = true
+
+      if (saldosRes.error) {
+        mostrarError('No se pudieron cargar los saldos.')
+        return
+      }
+      estado.saldos = saldosRes.data || []
+      estado.movimientosDelMes = movRes.count || 0
+
+      poblarFiltroEmpresa()
+      renderizarStatTotal()
+      renderizarListado()
+    }
+
+    function poblarFiltroEmpresa() {
+      const sel = document.getElementById('filtro-empresa-caja')
+      const valorActual = sel.value
+      sel.innerHTML = '<option value="">Todas las empresas</option>' +
+        estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+      sel.value = valorActual
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER — Card total de la empresa
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarStatTotal() {
+      const cont = document.getElementById('stat-total-empresa')
+
+      const totalesPorMoneda = {}
+      estado.saldos.forEach(s => { totalesPorMoneda[s.moneda] = (totalesPorMoneda[s.moneda] || 0) + Number(s.saldo) })
+      const monedas = Object.keys(totalesPorMoneda)
+      const empleadosConSaldo = new Set(estado.saldos.map(s => s.empleado_id)).size
+
+      const montosHtml = monedas.length
+        ? monedas.map(m => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(totalesPorMoneda[m], m)}</span>`).join('')
+        : `<span class="stat-card-caja__monto">${formatearImporte(0, 'ARS')}</span>`
+
+      cont.innerHTML = `
+        <div class="stat-card-caja">
+          <div>
+            <div class="stat-card-caja__label">Total de la empresa</div>
+            <div class="stat-card-caja__montos">${montosHtml}</div>
+          </div>
+          <div class="stat-card-caja__submetrics">
+            <div class="stat-card-caja__submetric">
+              <div class="stat-card-caja__submetric-label">Con saldo</div>
+              <div class="stat-card-caja__submetric-valor">${empleadosConSaldo}</div>
+            </div>
+            <div class="stat-card-caja__submetric">
+              <div class="stat-card-caja__submetric-label">Mov. del mes</div>
+              <div class="stat-card-caja__submetric-valor">${estado.movimientosDelMes}</div>
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER — Listado agrupado por unidad de negocio
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function agruparPersonas() {
+      const porUnidad = new Map()
+      estado.maestros.unidadesNegocio.forEach(u => porUnidad.set(u.id, { id: u.id, nombre: u.nombre, lista: [] }))
+      const sinEmpresa = []
+
+      estado.empleados.forEach(emp => {
+        if (emp.unidad_negocio_id && porUnidad.has(emp.unidad_negocio_id)) {
+          porUnidad.get(emp.unidad_negocio_id).lista.push(emp)
+        } else {
+          sinEmpresa.push(emp)
+        }
+      })
+
+      const grupos = [...porUnidad.values()].filter(g => g.lista.length)
+      if (sinEmpresa.length) grupos.push({ id: null, nombre: 'Sin empresa asignada', lista: sinEmpresa })
+
+      grupos.forEach(g => g.lista.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })))
+      return grupos
+    }
+
+    function subtotalGrupo(lista) {
+      const totales = {}
+      lista.forEach(emp => {
+        saldosDe(emp.id).forEach(s => { totales[s.moneda] = (totales[s.moneda] || 0) + Number(s.saldo) })
+      })
+      return totales
+    }
+
+    function renderizarTarjetaPersona(emp) {
+      const saldos = saldosDe(emp.id)
+      const principal = saldos.find(s => s.moneda === 'ARS') || saldos[0] || { moneda: 'ARS', saldo: 0 }
+      const negativoPrincipal = Number(principal.saldo) < 0
+      const empresa = nombreEmpresa(emp.unidad_negocio_id)
+
+      const otrasMonedas = saldos.length > 1
+        ? `<div class="persona__monedas">${saldos.map(s => `
+            <span class="chip-moneda ${Number(s.saldo) < 0 ? 'chip-moneda--negativo' : ''}">${s.moneda} ${formatearImporte(s.saldo, s.moneda)}</span>
+          `).join('')}</div>`
+        : ''
+
+      return `
+        <div class="tarjeta-persona" data-id="${emp.id}">
+          <div class="persona__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+          <div class="persona__info">
+            <div class="persona__nombre">${emp.nombre}</div>
+            ${empresa ? `<div class="persona__empresa">${empresa}</div>` : ''}
+            ${otrasMonedas}
+          </div>
+          <div class="persona__saldo ${negativoPrincipal ? 'persona__saldo--negativo' : ''}">${formatearImporte(principal.saldo, principal.moneda)}</div>
+        </div>
+      `
+    }
+
+    function renderizarListado() {
+      const cont = document.getElementById('lista-personas')
+      const termino = (estado.filtros.busqueda || '').trim().toLowerCase()
+      const unidadFiltro = estado.filtros.unidadId
+
+      // El filtro y el buscador solo ocultan filas/grupos — el agrupamiento y
+      // el orden ya calculados en agruparPersonas() no se tocan.
+      let grupos = agruparPersonas()
+      if (unidadFiltro) grupos = grupos.filter(g => g.id === unidadFiltro)
+      grupos = grupos
+        .map(g => ({ ...g, lista: termino ? g.lista.filter(e => (e.nombre || '').toLowerCase().includes(termino)) : g.lista }))
+        .filter(g => g.lista.length)
+
+      if (!grupos.length) {
+        cont.innerHTML = ''
+        document.getElementById('estado-vacio-caja').hidden = false
+        return
+      }
+      document.getElementById('estado-vacio-caja').hidden = true
+
+      cont.innerHTML = grupos.map(g => {
+        const totales = subtotalGrupo(g.lista)
+        const subtotalHtml = Object.entries(totales).map(([moneda, total]) => `
+          <span class="${Number(total) < 0 ? 'grupo-personas__subtotal--negativo' : ''}">${formatearImporte(total, moneda)}</span>
+        `).join('')
+
+        return `
+          <div class="grupo-personas">
+            <div class="grupo-personas__titulo">
+              <span class="grupo-personas__nombre"><span class="grupo-personas__punto"></span>${g.nombre} <span style="font-weight:500;">· ${g.lista.length}</span></span>
+              <span class="grupo-personas__subtotales">${subtotalHtml}</span>
+            </div>
+            <div class="lista-personas">
+              ${g.lista.map(renderizarTarjetaPersona).join('')}
+            </div>
+          </div>
+        `
+      }).join('')
+
+      cont.querySelectorAll('.tarjeta-persona').forEach(el => {
+        el.addEventListener('click', () => abrirDetallePersona(el.dataset.id, 'listado'))
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISTA — Ficha de persona
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirDetallePersona(empleadoId, origen) {
+      const emp = origen === 'listado'
+        ? estado.empleados.find(e => e.id === empleadoId)
+        : estado.miEmpleado
+      if (!emp) return
+
+      estado.personaAbierta = empleadoId
+      estado.origenFicha = origen
+      document.getElementById('detalle-persona-nombre').textContent = emp.nombre
+
+      document.getElementById('vista-lista-caja').hidden = true
+      document.getElementById('vista-detalle-persona').removeAttribute('hidden')
+
+      // Entrada directa (rol 'usuario'): nunca se cargó el listado general —
+      // acá se piden únicamente los saldos propios, no los de nadie más.
+      if (origen === 'directo') {
+        const { data: saldos, error } = await supabase
+          .from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', empleadoId)
+        if (error) mostrarError('No se pudieron cargar los saldos.')
+        estado.saldos = saldos || []
+      }
+
+      renderizarSaldosDetalle(empleadoId)
+      renderizarAccionesDetalle(empleadoId)
+
+      document.getElementById('detalle-persona-movimientos').innerHTML = ''
+      document.getElementById('detalle-persona-vacio').hidden = true
+
+      await cargarMovimientos(empleadoId)
+    }
+
+    function cerrarDetallePersona() {
+      document.getElementById('vista-detalle-persona').hidden = true
+      document.getElementById('vista-lista-caja').removeAttribute('hidden')
+      estado.personaAbierta = null
+    }
+
+    function renderizarSaldosDetalle(empleadoId) {
+      const saldos = saldosDe(empleadoId)
+      const cont = document.getElementById('detalle-persona-saldos')
+      const lista = saldos.length ? saldos : [{ moneda: 'ARS', saldo: 0 }]
+
+      cont.innerHTML = `<div class="saldos-grilla">${lista.map(s => `
+        <div class="saldo-card">
+          <div class="saldo-card__label">Saldo ${s.moneda}</div>
+          <div class="saldo-card__valor">${formatearImporteConAlerta(s.saldo, s.moneda)}</div>
+        </div>
+      `).join('')}</div>`
+    }
+
+    function renderizarAccionesDetalle(empleadoId) {
+      const cont = document.getElementById('detalle-persona-acciones')
+      const botones = []
+      if (esAdmin()) {
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1;">+ Nuevo ingreso</button>`)
+      }
+      botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1;">Retiro personal</button>`)
+      cont.innerHTML = botones.join('')
+
+      document.getElementById('btn-detalle-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId))
+      document.getElementById('btn-detalle-retiro')?.addEventListener('click', () => abrirModalMovimiento('retiro', empleadoId))
+    }
+
+    document.getElementById('btn-volver-ficha').addEventListener('click', () => {
+      if (estado.origenFicha === 'listado') {
+        cerrarDetallePersona()
+      } else {
+        window.location.href = '../dashboard.html'
+      }
+    })
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGA + RENDER — Movimientos
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarMovimientos(empleadoId) {
+      document.getElementById('estado-cargando-movimientos').hidden = false
+
+      const { data, error } = await supabase
+        .from('caja_movimientos')
+        .select(`
+          id, tipo, monto, moneda, medio_pago, descripcion, fecha, gasto_id,
+          gastos ( razon_social, categorias ( nombre ) )
+        `)
+        .eq('empleado_id', empleadoId)
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      document.getElementById('estado-cargando-movimientos').hidden = true
+
+      if (error) {
+        mostrarError('No se pudieron cargar los movimientos.')
+        return
+      }
+      estado.movimientos = data || []
+      renderizarMovimientos()
+    }
+
+    function renderizarFilaMovimiento(m) {
+      const signo = m.tipo === 'ingreso' ? '+' : '−'
+
+      const refGasto = (m.gasto_id && m.gastos)
+        ? `<div class="movimiento__referencia">${m.gastos.razon_social || 'Gasto'}${m.gastos.categorias?.nombre ? ' · ' + m.gastos.categorias.nombre : ''} — <a href="gastos.html?gasto=${m.gasto_id}">Ver gasto →</a></div>`
+        : ''
+
+      return `
+        <div class="tarjeta-movimiento">
+          <div class="movimiento__cabecera">
+            <div class="movimiento__info">
+              <span class="chip-tipo-movimiento chip-tipo-movimiento--${m.tipo}">${TIPO_LABEL[m.tipo] || m.tipo}</span>
+              <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${MEDIO_PAGO_LABEL_CAJA[m.medio_pago] || m.medio_pago}</div>
+              ${m.descripcion ? `<div class="movimiento__descripcion">${m.descripcion}</div>` : ''}
+              ${refGasto}
+            </div>
+            <div class="movimiento__monto">${signo} ${formatearImporte(m.monto, m.moneda)}</div>
+          </div>
+        </div>
+      `
+    }
+
+    function renderizarMovimientos() {
+      const cont = document.getElementById('detalle-persona-movimientos')
+
+      if (!estado.movimientos.length) {
+        cont.innerHTML = ''
+        document.getElementById('detalle-persona-vacio').hidden = false
+        return
+      }
+      document.getElementById('detalle-persona-vacio').hidden = true
+      cont.innerHTML = estado.movimientos.map(renderizarFilaMovimiento).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL — Registrar ingreso / retiro
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function seleccionarMedioPagoCaja(valor) {
+      medioPagoCajaSeleccionado = valor
+      document.querySelectorAll('#grilla-medio-pago-caja .btn-tipo-doc').forEach(btn => {
+        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
+      })
+    }
+
+    document.querySelectorAll('#grilla-medio-pago-caja .btn-tipo-doc').forEach(btn => {
+      btn.addEventListener('click', () => seleccionarMedioPagoCaja(btn.dataset.valor))
+    })
+
+    function abrirModalMovimiento(tipo, empleadoIdPreseleccionado = null) {
+      estado.wizardMovimiento = { tipo, empleadoId: empleadoIdPreseleccionado }
+
+      document.getElementById('movimiento-titulo').textContent =
+        tipo === 'ingreso' ? 'Registrar ingreso' : 'Registrar retiro'
+
+      // .grupo-campo fuerza display:flex en main.css, que le gana a [hidden] —
+      // hay que ocultarlo con style.display, no con la propiedad hidden (mismo
+      // problema que resuelve gastos.html en #grupo-kilometraje-detalle).
+      const grupoEmpleado = document.getElementById('grupo-movimiento-empleado')
+      if (empleadoIdPreseleccionado) {
+        grupoEmpleado.style.display = 'none'
+      } else {
+        grupoEmpleado.style.display = 'flex'
+        document.getElementById('movimiento-empleado').innerHTML =
+          '<option value="">— Seleccioná empleado —</option>' +
+          estado.empleados.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('')
+      }
+
+      const avisoRetiro = document.getElementById('aviso-retiro-personal')
+      if (tipo === 'retiro' && !esAdmin()) {
+        avisoRetiro.textContent = 'Este retiro se descuenta de tu caja personal — no es un gasto de la empresa.'
+        avisoRetiro.hidden = false
+      } else {
+        avisoRetiro.hidden = true
+      }
+
+      document.getElementById('movimiento-monto').value = ''
+      document.getElementById('movimiento-moneda').value = 'ARS'
+      document.getElementById('movimiento-fecha').value = fechaISO(new Date())
+      document.getElementById('movimiento-descripcion').value = ''
+      seleccionarMedioPagoCaja(null)
+
+      document.getElementById('modal-movimiento').hidden = false
+    }
+
+    function cerrarModalMovimiento() {
+      document.getElementById('modal-movimiento').hidden = true
+    }
+
+    async function guardarMovimiento() {
+      const { tipo, empleadoId: preseleccionado } = estado.wizardMovimiento
+      const empleadoId  = preseleccionado || document.getElementById('movimiento-empleado').value
+      const monto       = parseImporte(document.getElementById('movimiento-monto').value)
+      const moneda       = document.getElementById('movimiento-moneda').value
+      const medioPago     = medioPagoCajaSeleccionado
+      const fecha         = document.getElementById('movimiento-fecha').value || null
+      const descripcion   = document.getElementById('movimiento-descripcion').value.trim() || null
+
+      if (!preseleccionado && !empleadoId) { mostrarError('Elegí un empleado.'); return }
+      if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
+      if (!medioPago) { mostrarError('Elegí un medio de pago.'); return }
+
+      const btn = document.getElementById('btn-guardar-movimiento')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        let error
+        if (tipo === 'ingreso') {
+          const params = { p_empleado_id: empleadoId, p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
+          if (fecha) params.p_fecha = fecha
+          // ; a propósito: sin esto, ASI interpreta la línea de abajo como
+          // "fecha(...)" (fecha ya no es undefined tras el if de arriba) y
+          // llama a la RPC con el params viejo, sin p_fecha.
+          ;({ error } = await supabase.rpc('registrar_ingreso_caja', params))
+        } else {
+          const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
+          if (fecha) params.p_fecha = fecha
+          if (preseleccionado && esAdmin() && preseleccionado !== estado.miEmpleado.id) {
+            params.p_empleado_id = preseleccionado
+          }
+          ;({ error } = await supabase.rpc('registrar_retiro_caja', params))
+        }
+        if (error) throw error
+
+        mostrarExito(tipo === 'ingreso' ? 'Ingreso registrado.' : 'Retiro registrado.')
+        cerrarModalMovimiento()
+
+        if (estado.origenFicha === 'directo') {
+          // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
+          const { data: saldos } = await supabase
+            .from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id)
+          estado.saldos = saldos || []
+          renderizarSaldosDetalle(estado.miEmpleado.id)
+          await cargarMovimientos(estado.miEmpleado.id)
+        } else {
+          await cargarListado()
+          if (estado.personaAbierta) {
+            renderizarSaldosDetalle(estado.personaAbierta)
+            await cargarMovimientos(estado.personaAbierta)
+          }
+        }
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo registrar el movimiento.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    document.getElementById('btn-cerrar-movimiento').addEventListener('click', cerrarModalMovimiento)
+    document.getElementById('btn-cancelar-movimiento').addEventListener('click', cerrarModalMovimiento)
+    document.getElementById('modal-movimiento__backdrop').addEventListener('click', cerrarModalMovimiento)
+    document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento)
+
+    document.getElementById('btn-nuevo-ingreso').addEventListener('click', () => abrirModalMovimiento('ingreso', null))
+    document.getElementById('btn-retiro-personal-listado').addEventListener('click', () => abrirModalMovimiento('retiro', estado.miEmpleado.id))
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BÚSQUEDA Y FILTRO (listado general)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let debounceBusquedaCaja
+    document.getElementById('filtro-busqueda-caja').addEventListener('input', (e) => {
+      clearTimeout(debounceBusquedaCaja)
+      const valor = e.target.value
+      debounceBusquedaCaja = setTimeout(() => {
+        estado.filtros.busqueda = valor
+        renderizarListado()
+      }, 250)
+    })
+
+    document.getElementById('filtro-empresa-caja').addEventListener('change', (e) => {
+      estado.filtros.unidadId = e.target.value
+      renderizarListado()
+    })
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+
+      const { data: emp, error } = await supabase
+        .from('empleados')
+        .select('id, nombre, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id)
+        .maybeSingle()
+
+      if (error || !emp) {
+        mostrarError('No tenés permiso para acceder a este módulo.')
+        setTimeout(() => window.location.replace('../dashboard.html'), 1500)
+        return
+      }
+
+      estado.miEmpleado = emp
+
+      if (esAdmin()) {
+        document.getElementById('vista-lista-caja').removeAttribute('hidden')
+        await cargarListado()
+      } else {
+        // Rol 'usuario': entra directo a su propia ficha, sin listado general
+        // ni total de la empresa — nunca ve saldos ni datos de nadie más.
+        await abrirDetallePersona(emp.id, 'directo')
+      }
+    }
+
+    init()
+  </script>
+
+</body>
+</html>
