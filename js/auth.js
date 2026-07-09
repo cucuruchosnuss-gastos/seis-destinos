@@ -38,11 +38,24 @@ export async function cerrarSesion() {
   window.location.replace(RUTA_LOGIN)
 }
 
-export async function registrarUsuario(nombre, email, contrasena, cuil) {
+// Busca en empleados por CUIL normalizado, vía RPC (nunca SELECT directo:
+// la tabla empleados no es legible sin sesión). Devuelve { nombre, rol } o null.
+export async function buscarEmpleadoPorCuil(cuil) {
+  const { data, error } = await supabase.rpc('buscar_empleado_por_cuil', { p_cuil: cuil })
+
+  if (error) throw new Error('No se pudo verificar el CUIL. Probá de nuevo.')
+
+  return data && data.length ? data[0] : null
+}
+
+// Crea la cuenta en Supabase Auth y, con el usuario_id devuelto, la fila en
+// solicitudes_acceso. apellido/fechaNacimiento/telefono solo aplican cuando
+// tuvoMatch es false.
+export async function crearSolicitudAcceso({ nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono }) {
   const { data, error: errorAuth } = await supabase.auth.signUp({
     email,
     password: contrasena,
-    options: { data: { nombre_completo: nombre } }
+    options: { data: { nombre_completo: nombreCompleto } }
   })
 
   if (errorAuth) throw new Error(_traducirError(errorAuth.message))
@@ -51,11 +64,15 @@ export async function registrarUsuario(nombre, email, contrasena, cuil) {
     .from('solicitudes_acceso')
     .insert([{
       nombre,
+      apellido: apellido ?? null,
       email,
       cuil,
       estado: 'pendiente',
       fecha_solicitud: new Date().toISOString(),
-      usuario_id: data.user?.id ?? null
+      usuario_id: data.user?.id ?? null,
+      tuvo_match: tuvoMatch,
+      fecha_nacimiento: fechaNacimiento ?? null,
+      telefono: telefono ?? null
     }])
 
   if (errorSolicitud) console.error('No se pudo registrar la solicitud de acceso:', errorSolicitud.message)

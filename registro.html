@@ -7,6 +7,43 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    .campo-contrasena { position: relative; }
+
+    .campo-contrasena input { padding-right: 2.75rem; }
+
+    .btn-mostrar-contrasena {
+      position: absolute;
+      right: 0.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 0.5rem;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .btn-mostrar-contrasena:hover { color: var(--color-texto); }
+
+    .btn-mostrar-contrasena .lucide { width: 1.125rem; height: 1.125rem; }
+
+    .info-match {
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: var(--radio-input);
+      padding: 0.875rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-match__nombre { font-weight: 700; color: var(--color-texto); }
+
+    .info-match__puesto { font-size: 0.875rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+  </style>
 </head>
 <body class="pagina-auth">
 
@@ -15,71 +52,120 @@
       <img src="logo.png" alt="Seis Destinos" style="max-width: 200px; height: auto; display: block; margin: 0 auto;">
     </div>
 
-    <!-- Formulario de registro -->
-    <form class="formulario" id="formulario-registro" novalidate>
-      <div class="grupo-campo">
-        <label for="nombre">Nombre completo</label>
-        <input
-          type="text"
-          id="nombre"
-          name="nombre"
-          placeholder="Nombre y apellido"
-          autocomplete="name"
-          required
-        >
+    <!-- Paso 1: CUIL -->
+    <div id="paso-cuil">
+      <form class="formulario" id="formulario-cuil" novalidate>
+        <div class="grupo-campo">
+          <label for="cuil">CUIL</label>
+          <input type="text" id="cuil" name="cuil" placeholder="20-12345678-9" autocomplete="off" required>
+        </div>
+
+        <div class="alerta alerta--error" id="alerta-error-cuil" role="alert"></div>
+
+        <div class="formulario__acciones">
+          <button type="submit" class="btn btn--primario" id="btn-buscar-cuil">
+            Buscar en la base
+          </button>
+        </div>
+      </form>
+
+      <p class="formulario__pie">
+        ¿Ya tenés cuenta?
+        <a href="login.html">Ingresá acá</a>
+      </p>
+    </div>
+
+    <!-- Paso 2a: CUIL con match -->
+    <div id="paso-match" hidden>
+      <div class="info-match">
+        <div class="info-match__nombre" id="match-nombre"></div>
+        <div class="info-match__puesto" id="match-puesto"></div>
       </div>
 
-      <div class="grupo-campo">
-        <label for="email">Email</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          placeholder="tu@email.com"
-          autocomplete="email"
-          required
-        >
+      <form class="formulario" id="formulario-match" novalidate>
+        <div class="grupo-campo">
+          <label for="email-match">Email</label>
+          <input type="email" id="email-match" placeholder="tu@email.com" autocomplete="email" required>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="contrasena-match">Contraseña</label>
+          <div class="campo-contrasena">
+            <input type="password" id="contrasena-match" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required minlength="6">
+            <button type="button" class="btn-mostrar-contrasena" data-target="contrasena-match" title="Mostrar contraseña">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="alerta alerta--error" id="alerta-error-match" role="alert"></div>
+
+        <div class="formulario__acciones">
+          <button type="submit" class="btn btn--primario" id="btn-enviar-match">
+            Enviar solicitud
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Paso 2b: CUIL sin match -->
+    <div id="paso-sin-match" hidden>
+      <div class="alerta alerta--error alerta--visible" style="margin-bottom: 1rem;">
+        No encontramos ese CUIL en la base de empleados. Completá tus datos para solicitar acceso.
       </div>
 
-      <div class="grupo-campo">
-        <label for="cuil">CUIL</label>
-        <input
-          type="text"
-          id="cuil"
-          name="cuil"
-          placeholder="20-12345678-9"
-          required
-        >
-      </div>
+      <form class="formulario" id="formulario-sin-match" novalidate>
+        <div class="grupo-campo">
+          <label for="apellido">Apellido</label>
+          <input type="text" id="apellido" autocomplete="family-name" required>
+        </div>
 
-      <div class="grupo-campo">
-        <label for="contrasena">Contraseña</label>
-        <input
-          type="password"
-          id="contrasena"
-          name="contrasena"
-          placeholder="Mínimo 6 caracteres"
-          autocomplete="new-password"
-          required
-          minlength="6"
-        >
-      </div>
+        <div class="grupo-campo">
+          <label for="nombre-sin-match">Nombre</label>
+          <input type="text" id="nombre-sin-match" autocomplete="given-name" required>
+        </div>
 
-      <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
+        <div class="grupo-campo">
+          <label for="email-sin-match">Email</label>
+          <input type="email" id="email-sin-match" placeholder="tu@email.com" autocomplete="email" required>
+        </div>
 
-      <div class="formulario__acciones">
-        <button type="submit" class="btn btn--primario" id="btn-registrar">
-          Enviar solicitud
-        </button>
-      </div>
-    </form>
+        <div class="grupo-campo">
+          <label for="fecha-nacimiento">Fecha de nacimiento</label>
+          <input type="date" id="fecha-nacimiento" autocomplete="bday" required>
+        </div>
 
-    <!-- Confirmación (se muestra tras el envío exitoso) -->
-    <div id="confirmacion" style="display: none; text-align: center;">
+        <div class="grupo-campo">
+          <label for="telefono">Teléfono</label>
+          <input type="tel" id="telefono" placeholder="351 1234567" autocomplete="tel" required>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="contrasena-sin-match">Contraseña</label>
+          <div class="campo-contrasena">
+            <input type="password" id="contrasena-sin-match" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required minlength="6">
+            <button type="button" class="btn-mostrar-contrasena" data-target="contrasena-sin-match" title="Mostrar contraseña">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="alerta alerta--error" id="alerta-error-sin-match" role="alert"></div>
+
+        <div class="formulario__acciones">
+          <button type="submit" class="btn btn--primario" id="btn-enviar-sin-match">
+            Enviar solicitud
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Confirmación (se muestra tras el envío exitoso, en ambos casos) -->
+    <div id="confirmacion" hidden style="text-align: center;">
       <div style="font-size: 2rem; margin-bottom: 1rem;">✅</div>
       <h2 style="margin-bottom: 0.5rem;">Solicitud enviada</h2>
       <p class="texto-suave" style="font-size: 0.9rem; line-height: 1.5;">
-        Tu solicitud fue recibida y quedó pendiente de aprobación.<br>
+        Esperá a que Facundo o Pablo la aprueben.<br>
         Te avisamos cuando esté lista.
       </p>
       <hr class="separador">
@@ -88,14 +174,10 @@
       </a>
     </div>
 
-    <p class="formulario__pie" id="pie-login">
-      ¿Ya tenés cuenta?
-      <a href="login.html">Ingresá acá</a>
-    </p>
   </div>
 
   <script type="module">
-    import { verificarSesion, registrarUsuario } from './js/auth.js'
+    import { verificarSesion, buscarEmpleadoPorCuil, crearSolicitudAcceso } from './js/auth.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
 
     mostrarBannerVersion()
@@ -103,61 +185,146 @@
     // Si ya hay sesión activa, ir al dashboard
     await verificarSesion({ redirigirSiNoHay: false, redirigirSiHay: true })
 
-    const formulario  = document.getElementById('formulario-registro')
-    const btnRegistrar = document.getElementById('btn-registrar')
-    const alertaError  = document.getElementById('alerta-error')
-    const confirmacion = document.getElementById('confirmacion')
-    const pieLogin     = document.getElementById('pie-login')
+    let cuilLimpio = ''
 
-    function mostrarAlertaError(mensaje) {
-      alertaError.textContent = mensaje
-      alertaError.classList.add('alerta--visible')
+    const pasoCuil     = document.getElementById('paso-cuil')
+    const pasoMatch     = document.getElementById('paso-match')
+    const pasoSinMatch  = document.getElementById('paso-sin-match')
+    const confirmacion  = document.getElementById('confirmacion')
+
+    function mostrarAlerta(id, mensaje) {
+      const el = document.getElementById(id)
+      el.textContent = mensaje
+      el.classList.add('alerta--visible')
     }
 
-    function ocultarAlertaError() {
-      alertaError.classList.remove('alerta--visible')
+    function ocultarAlerta(id) {
+      document.getElementById(id).classList.remove('alerta--visible')
     }
 
-    formulario.addEventListener('submit', async (evento) => {
+    // Botón "ojito" — mostrar/ocultar contraseña
+    document.querySelectorAll('.btn-mostrar-contrasena').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target)
+        const estabaOculta = input.type === 'password'
+        input.type = estabaOculta ? 'text' : 'password'
+        btn.innerHTML = `<i data-lucide="${estabaOculta ? 'eye-off' : 'eye'}"></i>`
+        lucide.createIcons()
+      })
+    })
+
+    // Paso 1: buscar CUIL
+    document.getElementById('formulario-cuil').addEventListener('submit', async (evento) => {
       evento.preventDefault()
-      ocultarAlertaError()
-
-      const nombre     = document.getElementById('nombre').value.trim()
-      const email      = document.getElementById('email').value.trim()
-      const contrasena = document.getElementById('contrasena').value
-
-      if (!nombre || !email || !contrasena) {
-        mostrarAlertaError('Completá todos los campos.')
-        return
-      }
-
-      if (contrasena.length < 6) {
-        mostrarAlertaError('La contraseña debe tener al menos 6 caracteres.')
-        return
-      }
+      ocultarAlerta('alerta-error-cuil')
 
       const cuilCrudo = document.getElementById('cuil').value
-      const cuilLimpio = cuilCrudo.replace(/\D/g, '')
+      cuilLimpio = cuilCrudo.replace(/\D/g, '')
 
       if (cuilLimpio.length !== 11) {
-        mostrarAlertaError('Ingresá un CUIL válido de 11 números (con o sin guiones).')
+        mostrarAlerta('alerta-error-cuil', 'Ingresá un CUIL válido de 11 números (con o sin guiones).')
         return
       }
 
-      btnRegistrar.classList.add('btn--cargando')
-      btnRegistrar.disabled = true
+      const btn = document.getElementById('btn-buscar-cuil')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
 
       try {
-        await registrarUsuario(nombre, email, contrasena, cuilLimpio)
+        const empleado = await buscarEmpleadoPorCuil(cuilLimpio)
+        pasoCuil.hidden = true
 
-        // Mostrar confirmación y ocultar formulario
-        formulario.style.display = 'none'
-        pieLogin.style.display   = 'none'
-        confirmacion.style.display = 'block'
+        if (empleado) {
+          document.getElementById('match-nombre').textContent = empleado.nombre
+          document.getElementById('match-puesto').textContent = empleado.rol || 'Sin puesto registrado'
+          pasoMatch.hidden = false
+        } else {
+          pasoSinMatch.hidden = false
+        }
       } catch (error) {
-        mostrarAlertaError(error.message)
-        btnRegistrar.classList.remove('btn--cargando')
-        btnRegistrar.disabled = false
+        mostrarAlerta('alerta-error-cuil', error.message)
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    })
+
+    // Paso 2a: enviar solicitud — CUIL con match
+    document.getElementById('formulario-match').addEventListener('submit', async (evento) => {
+      evento.preventDefault()
+      ocultarAlerta('alerta-error-match')
+
+      const email      = document.getElementById('email-match').value.trim()
+      const contrasena = document.getElementById('contrasena-match').value
+
+      if (!email || contrasena.length < 6) {
+        mostrarAlerta('alerta-error-match', 'Completá el email y una contraseña de al menos 6 caracteres.')
+        return
+      }
+
+      const btn = document.getElementById('btn-enviar-match')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const nombreEmpleado = document.getElementById('match-nombre').textContent
+        await crearSolicitudAcceso({
+          nombreCompleto: nombreEmpleado,
+          nombre: nombreEmpleado,
+          apellido: null,
+          email,
+          contrasena,
+          cuil: cuilLimpio,
+          tuvoMatch: true,
+        })
+        pasoMatch.hidden = true
+        confirmacion.hidden = false
+      } catch (error) {
+        mostrarAlerta('alerta-error-match', error.message)
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    })
+
+    // Paso 2b: enviar solicitud — CUIL sin match
+    document.getElementById('formulario-sin-match').addEventListener('submit', async (evento) => {
+      evento.preventDefault()
+      ocultarAlerta('alerta-error-sin-match')
+
+      const apellido       = document.getElementById('apellido').value.trim()
+      const nombre         = document.getElementById('nombre-sin-match').value.trim()
+      const email          = document.getElementById('email-sin-match').value.trim()
+      const fechaNacimiento = document.getElementById('fecha-nacimiento').value
+      const telefono       = document.getElementById('telefono').value.trim()
+      const contrasena     = document.getElementById('contrasena-sin-match').value
+
+      if (!apellido || !nombre || !email || !fechaNacimiento || !telefono || contrasena.length < 6) {
+        mostrarAlerta('alerta-error-sin-match', 'Completá todos los campos con una contraseña de al menos 6 caracteres.')
+        return
+      }
+
+      const btn = document.getElementById('btn-enviar-sin-match')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        await crearSolicitudAcceso({
+          nombreCompleto: `${nombre} ${apellido}`,
+          nombre,
+          apellido,
+          email,
+          contrasena,
+          cuil: cuilLimpio,
+          tuvoMatch: false,
+          fechaNacimiento,
+          telefono,
+        })
+        pasoSinMatch.hidden = true
+        confirmacion.hidden = false
+      } catch (error) {
+        mostrarAlerta('alerta-error-sin-match', error.message)
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
       }
     })
   </script>

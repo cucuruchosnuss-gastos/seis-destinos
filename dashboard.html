@@ -26,12 +26,18 @@
   </header>
 
   <main class="dashboard__contenido">
-    <div class="dashboard__titulo">
+    <div class="dashboard__titulo" id="dashboard-titulo">
       <h1>Módulos</h1>
     </div>
 
     <div class="grilla-modulos" id="grilla-modulos">
       <!-- Los módulos se renderizan desde JS -->
+    </div>
+
+    <div id="dashboard-pendiente" class="estado-vacio" hidden>
+      <div class="estado-vacio__icono">⏳</div>
+      <div class="estado-vacio__titulo">Tu cuenta está pendiente de aprobación</div>
+      <p class="estado-vacio__descripcion">Un administrador todavía no aprobó tu acceso. Te avisamos cuando esté listo.</p>
     </div>
   </main>
 
@@ -71,14 +77,6 @@
     const sesion = await verificarSesion()
     if (!sesion) throw new Error('Sin sesión')
 
-    // Accesos es admin-only: chequeamos el rol_app del empleado vinculado
-    const { data: miEmpleado } = await supabase
-      .from('empleados')
-      .select('rol_app')
-      .eq('auth_user_id', sesion.user.id)
-      .maybeSingle()
-    const esAdmin = miEmpleado && ['admin', 'super_admin'].includes(miEmpleado.rol_app)
-
     // Resolver nombre e inicial del usuario
     const meta      = sesion.user.user_metadata ?? {}
     const nombre    = meta.nombre_completo || meta.full_name || meta.nombre || ''
@@ -88,6 +86,26 @@
     document.getElementById('header-avatar').textContent  = inicial
     document.getElementById('header-nombre').textContent  = nombre || email
     document.getElementById('header-email').textContent   = nombre ? email : ''
+
+    document.getElementById('btn-logout').addEventListener('click', () => cerrarSesion())
+
+    // Chequeamos si esta cuenta de Auth ya tiene una fila vinculada en empleados.
+    // Si no la tiene (cuenta creada pero solicitud todavía no aprobada), no mostramos
+    // ningún módulo — ni siquiera los que no son admin-only.
+    const { data: miEmpleado } = await supabase
+      .from('empleados')
+      .select('rol_app')
+      .eq('auth_user_id', sesion.user.id)
+      .maybeSingle()
+
+    if (!miEmpleado) {
+      document.getElementById('dashboard-titulo').hidden = true
+      document.getElementById('grilla-modulos').hidden = true
+      document.getElementById('dashboard-pendiente').hidden = false
+      throw new Error('Cuenta sin empleado vinculado — acceso pendiente de aprobación')
+    }
+
+    const esAdmin = ['admin', 'super_admin'].includes(miEmpleado.rol_app)
 
     // Renderizar grilla de módulos
     const grilla = document.getElementById('grilla-modulos')
@@ -121,11 +139,6 @@
       `
     }).join('')
     lucide.createIcons()
-
-    // Botón de logout
-    document.getElementById('btn-logout').addEventListener('click', () => {
-      cerrarSesion()
-    })
   </script>
 
 </body>
