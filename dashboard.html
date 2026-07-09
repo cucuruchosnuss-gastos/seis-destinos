@@ -48,30 +48,43 @@
 
     mostrarBannerVersion()
 
+    // Orden fijo — no depende de datos, siempre se muestran en este orden.
     const MODULOS = [
       {
+        clave: 'gastos',
         nombre: 'Gastos',
         icono: 'credit-card',
-        descripcion: 'Registrá y controlá los gastos de la operación',
+        descripcion: 'Registro y control de gastos',
         url: 'modulos/gastos.html',
-        proximamente: false
+        proximamente: false,
+        color: 'cyan'
       },
       {
-        nombre: 'Materia Prima',
-        icono: 'package',
-        descripcion: 'Stock y costos de materia prima',
-        url: 'modulos/materia-prima.html',
-        proximamente: true
-      },
-      {
+        clave: 'accesos',
         nombre: 'Accesos',
-        icono: 'shield-check',
-        descripcion: 'Aprobación de usuarios y permisos por módulo',
+        icono: 'user-check',
+        descripcion: 'Aprobación de usuarios y permisos',
         url: 'modulos/accesos.html',
         proximamente: false,
-        soloAdmin: true
+        soloAdmin: true,
+        color: 'rojo'
+      },
+      {
+        clave: 'empleados',
+        nombre: 'Empleados',
+        icono: 'users',
+        descripcion: 'Directorio sincronizado desde Naaloo',
+        url: 'modulos/empleados.html',
+        proximamente: false,
+        color: 'violeta'
       }
     ]
+
+    const COLORES_MODULO = {
+      cyan:    { bg: 'var(--color-acento-suave)', fg: 'var(--color-acento-highlight)' },
+      rojo:    { bg: 'var(--rojo-suave)',          fg: 'var(--rojo)' },
+      violeta: { bg: 'var(--violeta-suave)',       fg: 'var(--violeta)' }
+    }
 
     // Verificar sesión — redirige a login si no hay una activa
     const sesion = await verificarSesion()
@@ -107,37 +120,66 @@
 
     const esAdmin = ['admin', 'super_admin'].includes(miEmpleado.rol_app)
 
+    // Solicitudes de acceso pendientes — solo admin/super_admin pueden verlas
+    // (misma policy de solicitudes_acceso que usa accesos.html), se muestran
+    // como badge sobre la tarjeta de Accesos.
+    let pendientes = 0
+    if (esAdmin) {
+      const { count } = await supabase
+        .from('solicitudes_acceso')
+        .select('id', { count: 'exact', head: true })
+        .eq('estado', 'pendiente')
+      pendientes = count || 0
+    }
+
     // Renderizar grilla de módulos
     const grilla = document.getElementById('grilla-modulos')
 
-    grilla.innerHTML = MODULOS.filter(modulo => !modulo.soloAdmin || esAdmin).map((modulo) => {
+    const tarjetas = MODULOS.filter(modulo => !modulo.soloAdmin || esAdmin).map((modulo) => {
+      const colores = COLORES_MODULO[modulo.color]
+      const badge = (modulo.clave === 'accesos' && pendientes > 0)
+        ? `<span class="tarjeta-modulo__badge">${pendientes}</span>`
+        : ''
+
       if (modulo.proximamente) {
         return `
           <div class="tarjeta-modulo tarjeta-modulo--inactiva" title="${modulo.nombre} — próximamente">
-            <span class="tarjeta-modulo__icono-contenedor tarjeta-modulo__icono-contenedor--inactivo">
+            <span class="tarjeta-modulo__icono-contenedor" style="background:${colores.bg}; color:${colores.fg};">
               <i data-lucide="${modulo.icono}"></i>
             </span>
             <span class="tarjeta-modulo__texto">
               <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
               <span class="tarjeta-modulo__descripcion">${modulo.descripcion}</span>
             </span>
-            <span class="badge badge--proximamente">Próximamente</span>
+            <span class="tarjeta-modulo__proximamente">Próximamente</span>
           </div>
         `
       }
       return `
         <a href="${modulo.url}" class="tarjeta-modulo">
-          <span class="tarjeta-modulo__icono-contenedor">
+          <span class="tarjeta-modulo__icono-contenedor" style="background:${colores.bg}; color:${colores.fg};">
             <i data-lucide="${modulo.icono}"></i>
+            ${badge}
           </span>
           <span class="tarjeta-modulo__texto">
             <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
             <span class="tarjeta-modulo__descripcion">${modulo.descripcion}</span>
           </span>
-          <i data-lucide="chevron-right" class="tarjeta-modulo__chevron"></i>
+          <span class="tarjeta-modulo__abrir" style="color:${colores.fg};">Abrir →</span>
         </a>
       `
     }).join('')
+
+    const placeholder = `
+      <div class="tarjeta-modulo tarjeta-modulo--placeholder">
+        <span class="tarjeta-modulo__icono-contenedor">
+          <i data-lucide="plus"></i>
+        </span>
+        <span class="tarjeta-modulo__descripcion">Más módulos en camino</span>
+      </div>
+    `
+
+    grilla.innerHTML = tarjetas + placeholder
     lucide.createIcons()
   </script>
 
