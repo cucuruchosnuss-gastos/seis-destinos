@@ -1581,6 +1581,12 @@
     // VISTA A — FILTROS Y LISTA
     // ═══════════════════════════════════════════════════════════════════════
 
+    const BREAKPOINT_MOBILE_PX = 640 // debe coincidir con @media (max-width: 640px) del CSS
+
+    function etiquetaResponsive(larga, corta) {
+      return window.matchMedia(`(max-width: ${BREAKPOINT_MOBILE_PX}px)`).matches ? corta : larga
+    }
+
     function crearMultiselect({ idBase, opciones, seleccionados, etiquetaTodos, onChange }) {
       const boton = document.getElementById(idBase + '-boton')
       const panel = document.getElementById(idBase + '-panel')
@@ -1768,7 +1774,7 @@
         idBase: 'ms-periodo',
         opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
         seleccionados: estado.filtros.periodos,
-        etiquetaTodos: 'Todos los períodos',
+        etiquetaTodos: etiquetaResponsive('Todos los períodos', 'Período'),
         onChange: () => activarFiltroFecha('periodo')
       })
 
@@ -1787,7 +1793,7 @@
           idBase: 'ms-unidad',
           opciones: [...unidades.map(u => ({ value: u.id, label: u.nombre })), { value: '__vehiculos__', label: '🚚 Vehículos' }],
           seleccionados: estado.filtros.unidad_negocio_ids,
-          etiquetaTodos: 'Todas las unidades',
+          etiquetaTodos: etiquetaResponsive('Todas las unidades', 'Unidad'),
           onChange: () => cargarLista()
         })
 
@@ -1798,7 +1804,7 @@
           idBase: 'ms-categoria',
           opciones: [...catsEmpresa, ...catsVehiculo].map(c => ({ value: c.id, label: c.nombre })),
           seleccionados: estado.filtros.categoria_ids,
-          etiquetaTodos: 'Todas las categorías',
+          etiquetaTodos: etiquetaResponsive('Todas las categorías', 'Categoría'),
           onChange: () => cargarLista()
         })
 
@@ -1806,7 +1812,7 @@
           idBase: 'ms-vehiculo',
           opciones: estado.maestros.vehiculos.map(v => ({ value: v.id, label: v.nombre + ' (' + v.patente + ')' })),
           seleccionados: estado.filtros.vehiculo_ids,
-          etiquetaTodos: 'Todos los vehículos',
+          etiquetaTodos: etiquetaResponsive('Todos los vehículos', 'Vehículo'),
           onChange: () => cargarLista()
         })
 
@@ -1818,7 +1824,7 @@
             { value: 'cheque', label: 'Cheque' },
           ],
           seleccionados: estado.filtros.medios_pago,
-          etiquetaTodos: 'Todos los medios de pago',
+          etiquetaTodos: etiquetaResponsive('Todos los medios de pago', 'Medio de pago'),
           onChange: () => cargarLista()
         })
 
