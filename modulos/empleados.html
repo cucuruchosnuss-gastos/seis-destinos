@@ -7,34 +7,993 @@
   <link rel="stylesheet" href="../css/main.css">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      overflow-x: hidden;
+      --violeta:        #5B4FA3;
+      --violeta-suave:  #EEEBFA;
+      --violeta-oscuro: #423876;
+    }
+
+    /* ── Stats ─────────────────────────────────────────────────────────────── */
+
+    .empleados-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+    }
+
+    .stat-card {
+      min-width: 0;
+      border-radius: 18px;
+      padding: 1.125rem 1.25rem;
+    }
+
+    .stat-card--principal {
+      background: linear-gradient(135deg, var(--violeta), var(--violeta-oscuro));
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(91,79,163,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .stat-card--secundario {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .stat-card__label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.75;
+    }
+
+    .stat-card--secundario .stat-card__label {
+      opacity: 1;
+      color: var(--color-texto-suave);
+    }
+
+    .stat-card__valor {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-top: 0.25rem;
+    }
+
+    .stat-card--secundario .stat-card__valor {
+      color: var(--color-texto);
+    }
+
+    .stat-card__submetrics {
+      display: none;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .stat-card__submetric {
+      background: #fff;
+      border-radius: 12px;
+      padding: 0.5rem 0.75rem;
+      text-align: center;
+    }
+
+    .stat-card__submetric-label {
+      font-size: 0.5625rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+
+    .stat-card__submetric-valor {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-acento);
+      margin-top: 0.125rem;
+    }
+
+    @media (max-width: 640px) {
+      .stat-card--secundario { display: none; }
+      .stat-card__submetrics { display: flex !important; }
+      .empleados-stats { grid-template-columns: 1fr; }
+    }
+
+    /* ── Bloque importar Excel ─────────────────────────────────────────────── */
+
+    .bloque-importar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      background: var(--violeta-suave);
+      border: 1px dashed var(--violeta);
+      border-radius: 14px;
+      padding: 0.875rem 1.125rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .bloque-importar__titulo {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--violeta-oscuro);
+    }
+
+    .bloque-importar__descripcion {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+    }
+
+    .bloque-importar__acciones {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .bloque-importar select {
+      height: 38px;
+      padding: 0 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 10px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+    }
+
+    /* ── Grupos y filas ────────────────────────────────────────────────────── */
+
+    .grupo-empleados { margin-bottom: 1.5rem; }
+
+    .grupo-empleados__titulo {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.5rem;
+    }
+
+    .grupo-empleados__punto {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--violeta);
+      flex-shrink: 0;
+    }
+
+    .grupo-empleados__contador { font-weight: 500; }
+
+    .lista-accesos {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .tarjeta-empleado {
+      position: relative;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: box-shadow var(--transicion);
+    }
+
+    .tarjeta-empleado:hover { box-shadow: var(--sombra-suave); }
+
+    .tarjeta-empleado--incompleta {
+      border: 1.5px dashed var(--violeta);
+    }
+
+    .tarjeta-empleado__alerta {
+      width: 16px;
+      height: 16px;
+      color: var(--violeta);
+      flex-shrink: 0;
+    }
+
+    .acceso__avatar {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .acceso__cuerpo { flex: 1; min-width: 0; }
+
+    .acceso__fila1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .acceso__nombre {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-texto);
+    }
+
+    .acceso__email {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+    }
+
+    .chip-rol {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1875rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+    }
+
+    .chip-rol--usuario     { background: var(--color-superficie); color: var(--color-texto-suave); }
+    .chip-rol--admin       { background: var(--color-acento-suave); color: var(--color-acento); }
+    .chip-rol--super_admin { background: var(--violeta-suave); color: var(--violeta-oscuro); }
+
+    .chip-sin-acceso {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.1875rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+    }
+
+    .chip-modulo {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--violeta-oscuro);
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+
+    /* ── Modal ficha ───────────────────────────────────────────────────────── */
+
+    #modal-ficha {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #modal-ficha[hidden] { display: none; }
+
+    #modal-ficha__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    #modal-ficha__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    @media (min-width: 641px) {
+      #modal-ficha { align-items: center; }
+      #modal-ficha__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
+    .modal-ficha__cerrar {
+      position: absolute;
+      top: 0.875rem;
+      right: 0.875rem;
+    }
+
+    .modal-ficha__usuario {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1rem 0 1.25rem;
+    }
+
+    .modal-ficha__seccion-titulo {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-texto-suave);
+      margin: 1rem 0 0.5rem;
+    }
+
+    .ficha-campo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--color-borde);
+      font-size: 0.875rem;
+      gap: 0.75rem;
+    }
+
+    .ficha-campo:last-child { border-bottom: none; }
+
+    .ficha-campo span:first-child { color: var(--color-texto-suave); }
+    .ficha-campo span:last-child  { color: var(--color-texto); font-weight: 500; text-align: right; }
+
+    .ficha-acceso__caja {
+      background: var(--violeta-suave);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+    }
+
+    .ficha-acceso__fila1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--violeta-oscuro);
+    }
+
+    .ficha-acceso__modulos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      margin-top: 0.625rem;
+    }
+
+    .ficha-sin-modulos, .ficha-sin-acceso {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+    }
+
+    #ficha-datos-laborales .grupo-campo { margin-bottom: 0.75rem; }
+    #ficha-datos-laborales select {
+      width: 100%;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      color: var(--color-texto);
+      outline: none;
+    }
+
+    #ficha-acciones {
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      margin-top: 1.5rem;
+    }
+
+    #ficha-acciones .btn { width: 100%; text-align: center; }
+
+    .modal-ficha__form-acciones {
+      display: flex;
+      gap: 0.625rem;
+      margin-top: 0.5rem;
+    }
+
+    .modal-ficha__form-acciones .btn { flex: 1; }
+  </style>
 </head>
 <body class="pagina-modulo">
 
-  <header class="header">
-    <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">
-      ← Volver
-    </a>
-    <span class="header__nombre-app">Empleados</span>
-    <div style="width: 5rem;"></div><!-- espaciador para centrar el título -->
+  <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
+    <div>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
+        <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
+      </div>
+      <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto); display:flex; align-items:center; gap:0.375rem;">
+        Empleados <span style="color:var(--violeta); font-size:1rem; line-height:1;">●</span>
+      </div>
+    </div>
+    <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
   </header>
 
-  <main class="modulo__contenido">
-    <div class="estado-vacio">
-      <div class="estado-vacio__icono">👥</div>
-      <div class="estado-vacio__titulo">Módulo en construcción</div>
-      <p class="estado-vacio__descripcion">
-        Acá vas a poder ver el directorio de empleados sincronizado desde Naaloo, con sus datos y accesos a la app. Próximamente disponible.
-      </p>
+  <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
+
+    <div class="empleados-stats" id="empleados-stats" hidden></div>
+
+    <div class="bloque-importar" id="bloque-importar" hidden>
+      <div class="bloque-importar__texto">
+        <div class="bloque-importar__titulo">📥 Importar Excel de Naaloo</div>
+        <div class="bloque-importar__descripcion">Naaloo entrega un Excel por empresa — elegí cuál es antes de subirlo</div>
+      </div>
+      <div class="bloque-importar__acciones">
+        <select id="select-empresa-import"></select>
+        <input type="file" id="input-excel" accept=".xlsx,.xls" hidden>
+        <button type="button" class="btn btn--secundario" id="btn-elegir-excel" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Subir Excel</button>
+      </div>
     </div>
-  </main>
+
+    <div id="lista-empleados"></div>
+    <div id="estado-vacio-empleados" class="estado-vacio" hidden>
+      <div class="estado-vacio__icono">👥</div>
+      <div class="estado-vacio__titulo">No hay empleados activos cargados</div>
+    </div>
+
+    <div id="estado-cargando" class="estado-vacio">
+      <div class="spinner"></div>
+      <p class="estado-vacio__descripcion">Cargando…</p>
+    </div>
+
+  </div>
+
+  <!-- Modal: Ficha de empleado -->
+  <div id="modal-ficha" hidden>
+    <div id="modal-ficha__backdrop"></div>
+    <div id="modal-ficha__panel">
+      <button type="button" class="btn btn--icono modal-ficha__cerrar" id="btn-cerrar-ficha" title="Cerrar">✕</button>
+      <h2>Ficha de empleado</h2>
+
+      <div class="modal-ficha__usuario">
+        <div class="acceso__avatar" id="ficha-avatar"></div>
+        <div>
+          <div class="acceso__nombre" id="ficha-nombre"></div>
+          <div class="acceso__email" id="ficha-email"></div>
+        </div>
+      </div>
+
+      <div class="modal-ficha__seccion-titulo">Datos · Naaloo</div>
+      <div id="ficha-datos-naaloo"></div>
+
+      <div class="modal-ficha__seccion-titulo">Datos laborales</div>
+      <div id="ficha-datos-laborales"></div>
+
+      <div class="modal-ficha__seccion-titulo">Acceso a la app</div>
+      <div id="ficha-acceso"></div>
+
+      <div id="ficha-acciones"></div>
+    </div>
+  </div>
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito, formatearFecha } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
     mostrarBannerVersion()
 
-    await verificarSesion()
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO GLOBAL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion:          null,
+      miEmpleado:      null,
+      empleados:       [],
+      empleadoModulos: [],
+      maestros:        { unidadesNegocio: [] },
+      fichaAbierta:    null,
+      modoEdicionFicha: false,
+    }
+
+    const MODULOS_INFO = [
+      { key: 'gastos',    label: 'Gastos' },
+      { key: 'caja',      label: 'Caja' },
+      { key: 'accesos',   label: 'Accesos' },
+      { key: 'empleados', label: 'Empleados' },
+    ]
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function soloDigitos(s) {
+      return (s || '').replace(/\D/g, '')
+    }
+
+    function formatearCuil(cuil) {
+      const d = soloDigitos(cuil)
+      if (d.length !== 11) return cuil || '—'
+      return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`
+    }
+
+    function iniciales(nombre) {
+      const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean)
+      if (!palabras.length) return '—'
+      if (palabras.length === 1) return palabras[0].slice(0, 2).toUpperCase()
+      return (palabras[0][0] + palabras[1][0]).toUpperCase()
+    }
+
+    const PALETA_AVATAR = ['#5B4FA3', '#423876', '#7A6BC7', '#4A5568', '#6E3B5C']
+    function colorAvatar(texto) {
+      let hash = 0
+      for (let i = 0; i < (texto || '').length; i++) hash = texto.charCodeAt(i) + ((hash << 5) - hash)
+      return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length]
+    }
+
+    function modulosDeEmpleado(empleadoId) {
+      return estado.empleadoModulos.filter(m => m.empleado_id === empleadoId).map(m => m.modulo)
+    }
+
+    function limpiarTexto(valor) {
+      if (valor === null || valor === undefined) return null
+      const t = String(valor).trim()
+      return t ? t : null
+    }
+
+    function valorFila(fila, ...claves) {
+      for (const clave of claves) {
+        if (fila[clave] !== undefined && fila[clave] !== null && fila[clave] !== '') return fila[clave]
+      }
+      return null
+    }
+
+    function formatearFechaISO(valor) {
+      if (!valor) return null
+      if (valor instanceof Date && !isNaN(valor)) return valor.toISOString().slice(0, 10)
+      if (typeof valor === 'string') {
+        const m = valor.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+        if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+      }
+      return null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGA DE DATOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarTodo() {
+      document.getElementById('estado-cargando').hidden = false
+
+      const [empRes, modRes, unidRes] = await Promise.all([
+        supabase.from('empleados')
+          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono')
+          .eq('activo', true),
+        supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
+        supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
+      ])
+
+      document.getElementById('estado-cargando').hidden = true
+
+      if (empRes.error || modRes.error || unidRes.error) {
+        mostrarError('No se pudieron cargar los datos de Empleados.')
+        return
+      }
+
+      estado.empleados       = empRes.data || []
+      estado.empleadoModulos = modRes.data || []
+      estado.maestros.unidadesNegocio = unidRes.data || []
+
+      renderizarStats()
+      renderizarListado()
+      if (estado.fichaAbierta) renderizarFicha()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER — Stats
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarStats() {
+      const total     = estado.empleados.length
+      const conAcceso = estado.empleados.filter(e => e.auth_user_id).length
+      const empresas  = new Set(estado.empleados.filter(e => e.unidad_negocio_id).map(e => e.unidad_negocio_id)).size
+
+      document.getElementById('empleados-stats').innerHTML = `
+        <div class="stat-card stat-card--principal">
+          <div>
+            <div class="stat-card__label">Total empleados</div>
+            <div class="stat-card__valor">${total}</div>
+          </div>
+          <div class="stat-card__submetrics">
+            <div class="stat-card__submetric">
+              <div class="stat-card__submetric-label">Con acceso</div>
+              <div class="stat-card__submetric-valor">${conAcceso}</div>
+            </div>
+            <div class="stat-card__submetric">
+              <div class="stat-card__submetric-label">Empresas</div>
+              <div class="stat-card__submetric-valor">${empresas}</div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card stat-card--secundario">
+          <div class="stat-card__label">Con acceso a la app</div>
+          <div class="stat-card__valor">${conAcceso}</div>
+        </div>
+        <div class="stat-card stat-card--secundario">
+          <div class="stat-card__label">Empresas</div>
+          <div class="stat-card__valor">${empresas}</div>
+        </div>
+      `
+      document.getElementById('empleados-stats').hidden = false
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER — Listado agrupado
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function agruparEmpleados() {
+      const porUnidad = new Map()
+      estado.maestros.unidadesNegocio.forEach(u => porUnidad.set(u.id, { nombre: u.nombre, lista: [] }))
+      const sinEmpresaConAcceso = []
+      const sinEmpresaSinAcceso = []
+
+      estado.empleados.forEach(emp => {
+        if (emp.unidad_negocio_id && porUnidad.has(emp.unidad_negocio_id)) {
+          porUnidad.get(emp.unidad_negocio_id).lista.push(emp)
+        } else if (emp.auth_user_id) {
+          sinEmpresaConAcceso.push(emp)
+        } else {
+          sinEmpresaSinAcceso.push(emp)
+        }
+      })
+
+      const grupos = [...porUnidad.values()].filter(g => g.lista.length)
+      if (sinEmpresaConAcceso.length) grupos.push({ nombre: 'Con acceso a la app, sin empresa asignada', lista: sinEmpresaConAcceso })
+      if (sinEmpresaSinAcceso.length) grupos.push({ nombre: 'Sin empresa asignada', lista: sinEmpresaSinAcceso })
+      return grupos
+    }
+
+    function renderizarFilaEmpleado(emp) {
+      const tieneAcceso = !!emp.auth_user_id
+      const incompleto  = emp.origen === 'app_registro' && !emp.rol
+      const etiquetaRol = emp.rol_app === 'super_admin' ? 'Super admin' : emp.rol_app === 'admin' ? 'Admin' : 'Usuario'
+
+      const badgeAcceso = tieneAcceso
+        ? `<span class="chip-rol chip-rol--${emp.rol_app}">${etiquetaRol}</span>`
+        : `<span class="chip-sin-acceso">Sin acceso</span>`
+
+      return `
+        <div class="tarjeta-empleado ${incompleto ? 'tarjeta-empleado--incompleta' : ''}" data-id="${emp.id}">
+          <div class="acceso__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+          <div class="acceso__cuerpo">
+            <div class="acceso__fila1">
+              <span class="acceso__nombre">${emp.nombre}</span>
+              ${badgeAcceso}
+            </div>
+            <div class="acceso__email">${emp.rol || (incompleto ? 'Datos incompletos' : 'Sin puesto registrado')}</div>
+          </div>
+          ${incompleto ? '<i data-lucide="alert-triangle" class="tarjeta-empleado__alerta"></i>' : ''}
+        </div>
+      `
+    }
+
+    function renderizarListado() {
+      const cont  = document.getElementById('lista-empleados')
+      const grupos = agruparEmpleados()
+
+      if (!grupos.length) {
+        cont.innerHTML = ''
+        document.getElementById('estado-vacio-empleados').hidden = false
+        return
+      }
+      document.getElementById('estado-vacio-empleados').hidden = true
+
+      cont.innerHTML = grupos.map(g => `
+        <div class="grupo-empleados">
+          <div class="grupo-empleados__titulo">
+            <span class="grupo-empleados__punto"></span>${g.nombre}
+            <span class="grupo-empleados__contador">· ${g.lista.length}</span>
+          </div>
+          <div class="lista-accesos">
+            ${g.lista.map(renderizarFilaEmpleado).join('')}
+          </div>
+        </div>
+      `).join('')
+
+      lucide.createIcons()
+
+      cont.querySelectorAll('.tarjeta-empleado').forEach(el => {
+        el.addEventListener('click', () => abrirFicha(el.dataset.id))
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL — Ficha de empleado
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function abrirFicha(empleadoId) {
+      const emp = estado.empleados.find(e => e.id === empleadoId)
+      if (!emp) return
+      estado.fichaAbierta = empleadoId
+      estado.modoEdicionFicha = false
+      renderizarFicha()
+      document.getElementById('modal-ficha').hidden = false
+    }
+
+    function renderizarFormularioEdicion(emp) {
+      document.getElementById('ficha-datos-laborales').innerHTML = `
+        <div class="grupo-campo">
+          <label for="edit-rol">Categoría</label>
+          <input type="text" id="edit-rol" value="${emp.rol || ''}" placeholder="Ej: Fuera de convenio · Categoría I">
+        </div>
+        <div class="grupo-campo">
+          <label for="edit-unidad">Unidad de negocio</label>
+          <select id="edit-unidad">
+            <option value="">Elegí una unidad de negocio…</option>
+            ${estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}" ${u.id === emp.unidad_negocio_id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
+          </select>
+        </div>
+        <div class="grupo-campo">
+          <label for="edit-domicilio">Domicilio</label>
+          <input type="text" id="edit-domicilio" value="${emp.domicilio || ''}">
+        </div>
+        <div class="grupo-campo">
+          <label for="edit-telefono">Teléfono</label>
+          <input type="text" id="edit-telefono" value="${emp.telefono || ''}">
+        </div>
+        <div class="modal-ficha__form-acciones">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-edicion">Cancelar</button>
+          <button type="button" class="btn btn--exito" id="btn-guardar-edicion">Guardar</button>
+        </div>
+      `
+      document.getElementById('btn-cancelar-edicion').addEventListener('click', () => {
+        estado.modoEdicionFicha = false
+        renderizarFicha()
+      })
+      document.getElementById('btn-guardar-edicion').addEventListener('click', () => guardarDatosCompletos(emp.id))
+    }
+
+    function renderizarFicha() {
+      const emp = estado.empleados.find(e => e.id === estado.fichaAbierta)
+      if (!emp) return
+
+      document.getElementById('ficha-avatar').style.background = colorAvatar(emp.nombre)
+      document.getElementById('ficha-avatar').textContent = iniciales(emp.nombre)
+      document.getElementById('ficha-nombre').textContent = emp.nombre
+      document.getElementById('ficha-email').textContent = emp.email || '—'
+
+      const unidadNombre = estado.maestros.unidadesNegocio.find(u => u.id === emp.unidad_negocio_id)?.nombre || '—'
+
+      document.getElementById('ficha-datos-naaloo').innerHTML = `
+        <div class="ficha-campo"><span>Legajo</span><span>${emp.legajo || '—'}</span></div>
+        <div class="ficha-campo"><span>CUIL</span><span>${formatearCuil(emp.cuil)}</span></div>
+        <div class="ficha-campo"><span>Domicilio</span><span>${emp.domicilio || '—'}</span></div>
+        <div class="ficha-campo"><span>Fecha de alta</span><span>${emp.fecha_alta ? formatearFecha(emp.fecha_alta) : '—'}</span></div>
+      `
+
+      const incompleto = emp.origen === 'app_registro' && !emp.rol
+
+      if (estado.modoEdicionFicha) {
+        renderizarFormularioEdicion(emp)
+      } else {
+        document.getElementById('ficha-datos-laborales').innerHTML = `
+          <div class="ficha-campo"><span>Categoría</span><span>${emp.rol || '—'}</span></div>
+          <div class="ficha-campo"><span>Unidad de negocio</span><span>${unidadNombre}</span></div>
+        `
+      }
+
+      const modulos = modulosDeEmpleado(emp.id)
+      if (emp.auth_user_id) {
+        const etiquetaRol = emp.rol_app === 'super_admin' ? 'Super admin' : emp.rol_app === 'admin' ? 'Admin' : 'Usuario'
+        const chipsModulos = modulos.length
+          ? modulos.map(m => {
+              const info = MODULOS_INFO.find(i => i.key === m)
+              return `<span class="chip-modulo">${info ? info.label : m}</span>`
+            }).join('')
+          : `<span class="ficha-sin-modulos">Sin módulos habilitados</span>`
+
+        document.getElementById('ficha-acceso').innerHTML = `
+          <div class="ficha-acceso__caja">
+            <div class="ficha-acceso__fila1">
+              <span>Tiene acceso</span>
+              <span class="chip-rol chip-rol--${emp.rol_app}">${etiquetaRol}</span>
+            </div>
+            <div class="ficha-acceso__modulos">${chipsModulos}</div>
+          </div>
+        `
+      } else {
+        document.getElementById('ficha-acceso').innerHTML = `<div class="ficha-sin-acceso">Sin acceso a la app</div>`
+      }
+
+      const acciones = []
+      if (incompleto && !estado.modoEdicionFicha) {
+        acciones.push(`<button type="button" class="btn btn--secundario" id="btn-completar-datos">Completar datos</button>`)
+      }
+      if (emp.auth_user_id) {
+        acciones.push(`<a href="accesos.html" class="btn btn--secundario">Editar permisos de acceso →</a>`)
+      }
+      document.getElementById('ficha-acciones').innerHTML = acciones.join('')
+
+      const btnCompletar = document.getElementById('btn-completar-datos')
+      if (btnCompletar) {
+        btnCompletar.addEventListener('click', () => {
+          estado.modoEdicionFicha = true
+          renderizarFicha()
+        })
+      }
+
+      lucide.createIcons()
+    }
+
+    async function guardarDatosCompletos(empleadoId) {
+      const rol       = document.getElementById('edit-rol').value.trim()
+      const unidadId  = document.getElementById('edit-unidad').value
+      const domicilio = document.getElementById('edit-domicilio').value.trim()
+      const telefono  = document.getElementById('edit-telefono').value.trim()
+
+      if (!rol || !unidadId) {
+        mostrarError('Completá al menos la categoría y la unidad de negocio.')
+        return
+      }
+
+      const btn = document.getElementById('btn-guardar-edicion')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const { error } = await supabase.rpc('completar_datos_empleado', {
+          p_empleado_id: empleadoId,
+          p_rol: rol,
+          p_unidad_negocio_id: unidadId,
+          p_domicilio: domicilio || null,
+          p_telefono: telefono || null,
+        })
+        if (error) throw error
+        mostrarExito('Datos actualizados.')
+        estado.modoEdicionFicha = false
+        await cargarTodo()
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo guardar.')
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    function cerrarFicha() {
+      document.getElementById('modal-ficha').hidden = true
+      estado.fichaAbierta = null
+      estado.modoEdicionFicha = false
+    }
+
+    document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
+    document.getElementById('modal-ficha__backdrop').addEventListener('click', cerrarFicha)
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // IMPORTAR EXCEL DE NAALOO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function manejarArchivoExcel(file) {
+      const unidadId = document.getElementById('select-empresa-import').value
+      if (!unidadId) {
+        mostrarError('Elegí una empresa antes de subir el Excel.')
+        return
+      }
+
+      const btn = document.getElementById('btn-elegir-excel')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const buffer = await file.arrayBuffer()
+        const libro = XLSX.read(buffer, { type: 'array', cellDates: true })
+        const nombreHoja = libro.SheetNames.find(n => n.trim().toLowerCase() === 'colaboradores') || libro.SheetNames[0]
+        const hoja = libro.Sheets[nombreHoja]
+        if (!hoja) throw new Error('No se encontró una hoja con datos en el Excel.')
+
+        // Headers en fila 8 del Excel → índice 7 (0-based) para SheetJS
+        const filas = XLSX.utils.sheet_to_json(hoja, { range: 7, defval: null })
+
+        const filasMapeadas = filas.map(fila => {
+          const apellido = limpiarTexto(valorFila(fila, 'Apellidos', 'Apellido'))
+          const nombrePila = limpiarTexto(valorFila(fila, 'Nombres', 'Nombre'))
+          const nombreCompleto = [apellido, nombrePila].filter(Boolean).join(' ') || limpiarTexto(valorFila(fila, 'Apellidos y Nombres'))
+          const categoria = limpiarTexto(valorFila(fila, 'Categoría', 'Categoria'))
+          const subcategoria = limpiarTexto(valorFila(fila, 'Subcategoría', 'Subcategoria'))
+
+          return {
+            cuil: limpiarTexto(valorFila(fila, 'CUIL', 'Cuil')),
+            nombre: nombreCompleto,
+            email: limpiarTexto(valorFila(fila, 'Dirección de correo', 'Direccion de correo', 'Email')),
+            fecha_nacimiento: formatearFechaISO(valorFila(fila, 'Fecha de nacimiento')),
+            telefono: limpiarTexto(valorFila(fila, 'Teléfonos', 'Telefono', 'Teléfono')),
+            domicilio: limpiarTexto(valorFila(fila, 'Domicilio')),
+            legajo: limpiarTexto(valorFila(fila, 'Legajo')),
+            fecha_alta: formatearFechaISO(valorFila(fila, 'Fecha alta', 'Fecha de alta')),
+            rol: [categoria, subcategoria].filter(Boolean).join(' · ') || null,
+            activo: !valorFila(fila, 'Fecha baja', 'Fecha de baja'),
+          }
+        }).filter(f => f.cuil)
+
+        if (!filasMapeadas.length) throw new Error('No se encontraron filas válidas con CUIL en el Excel.')
+
+        const { data, error } = await supabase.rpc('importar_empleados_naaloo', {
+          p_filas: filasMapeadas,
+          p_unidad_negocio_id: unidadId,
+        })
+        if (error) throw error
+
+        mostrarExito(`${data.altas} altas, ${data.actualizaciones} actualizaciones.`)
+        await cargarTodo()
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo importar el Excel.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    document.getElementById('btn-elegir-excel').addEventListener('click', () => {
+      const unidadId = document.getElementById('select-empresa-import').value
+      if (!unidadId) {
+        mostrarError('Elegí una empresa antes de subir el Excel.')
+        return
+      }
+      document.getElementById('input-excel').click()
+    })
+
+    document.getElementById('input-excel').addEventListener('change', async (e) => {
+      const file = e.target.files[0]
+      if (file) await manejarArchivoExcel(file)
+      e.target.value = ''
+    })
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+
+      const { data: emp, error } = await supabase
+        .from('empleados')
+        .select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id)
+        .maybeSingle()
+
+      if (error || !emp || !['admin', 'super_admin'].includes(emp.rol_app)) {
+        mostrarError('No tenés permiso para acceder a este módulo.')
+        setTimeout(() => window.location.replace('../dashboard.html'), 1500)
+        return
+      }
+
+      estado.miEmpleado = emp
+      document.getElementById('bloque-importar').hidden = false
+
+      await cargarTodo()
+
+      document.getElementById('select-empresa-import').innerHTML =
+        `<option value="">Elegí una empresa…</option>` +
+        estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+    }
+
+    init()
   </script>
 
 </body>
