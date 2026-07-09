@@ -510,6 +510,12 @@
       <div class="modal-ficha__seccion-titulo">Datos laborales</div>
       <div id="ficha-datos-laborales"></div>
 
+      <div class="modal-ficha__seccion-titulo" style="display:flex; align-items:center; justify-content:space-between;">
+        <span>Contacto de emergencia</span>
+        <button type="button" class="btn btn--secundario" id="btn-editar-contacto" style="width:auto; padding:0.25rem 0.625rem; font-size:0.6875rem; text-transform:none; letter-spacing:normal; font-weight:600;" hidden>Editar</button>
+      </div>
+      <div id="ficha-contacto-emergencia"></div>
+
       <div class="modal-ficha__seccion-titulo">Acceso a la app</div>
       <div id="ficha-acceso"></div>
 
@@ -537,6 +543,7 @@
       maestros:        { unidadesNegocio: [] },
       fichaAbierta:    null,
       modoEdicionFicha: false,
+      modoEdicionContacto: false,
       filtros:         { busqueda: '' },
     }
 
@@ -611,7 +618,7 @@
 
       const [empRes, modRes, unidRes] = await Promise.all([
         supabase.from('empleados')
-          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono')
+          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono, contacto_emergencia_nombre, contacto_emergencia_telefono')
           .eq('activo', true),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
@@ -777,6 +784,7 @@
       if (!emp) return
       estado.fichaAbierta = empleadoId
       estado.modoEdicionFicha = false
+      estado.modoEdicionContacto = false
       renderizarFicha()
       document.getElementById('modal-ficha').hidden = false
     }
@@ -814,6 +822,28 @@
       document.getElementById('btn-guardar-edicion').addEventListener('click', () => guardarDatosCompletos(emp.id))
     }
 
+    function renderizarFormularioContacto(emp) {
+      document.getElementById('ficha-contacto-emergencia').innerHTML = `
+        <div class="grupo-campo">
+          <label for="edit-contacto-nombre">Nombre</label>
+          <input type="text" id="edit-contacto-nombre" value="${emp.contacto_emergencia_nombre || ''}">
+        </div>
+        <div class="grupo-campo">
+          <label for="edit-contacto-telefono">Teléfono</label>
+          <input type="text" id="edit-contacto-telefono" value="${emp.contacto_emergencia_telefono || ''}">
+        </div>
+        <div class="modal-ficha__form-acciones">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-contacto">Cancelar</button>
+          <button type="button" class="btn btn--exito" id="btn-guardar-contacto">Guardar</button>
+        </div>
+      `
+      document.getElementById('btn-cancelar-contacto').addEventListener('click', () => {
+        estado.modoEdicionContacto = false
+        renderizarFicha()
+      })
+      document.getElementById('btn-guardar-contacto').addEventListener('click', () => guardarContactoEmergencia(emp.id))
+    }
+
     function renderizarFicha() {
       const emp = estado.empleados.find(e => e.id === estado.fichaAbierta)
       if (!emp) return
@@ -830,6 +860,7 @@
         <div class="ficha-campo"><span>CUIL</span><span>${formatearCuil(emp.cuil)}</span></div>
         <div class="ficha-campo"><span>Domicilio</span><span>${emp.domicilio || '—'}</span></div>
         <div class="ficha-campo"><span>Teléfono</span><span>${emp.telefono || '—'}</span></div>
+        <div class="ficha-campo"><span>Fecha de nacimiento</span><span>${emp.fecha_nacimiento ? formatearFecha(emp.fecha_nacimiento) : '—'}</span></div>
         <div class="ficha-campo"><span>Fecha de alta</span><span>${emp.fecha_alta ? formatearFecha(emp.fecha_alta) : '—'}</span></div>
       `
 
@@ -841,6 +872,16 @@
         document.getElementById('ficha-datos-laborales').innerHTML = `
           <div class="ficha-campo"><span>Categoría</span><span>${emp.rol || '—'}</span></div>
           <div class="ficha-campo"><span>Unidad de negocio</span><span>${unidadNombre}</span></div>
+        `
+      }
+
+      document.getElementById('btn-editar-contacto').hidden = estado.modoEdicionContacto
+      if (estado.modoEdicionContacto) {
+        renderizarFormularioContacto(emp)
+      } else {
+        document.getElementById('ficha-contacto-emergencia').innerHTML = `
+          <div class="ficha-campo"><span>Nombre</span><span>${emp.contacto_emergencia_nombre || '—'}</span></div>
+          <div class="ficha-campo"><span>Teléfono</span><span>${emp.contacto_emergencia_telefono || '—'}</span></div>
         `
       }
 
@@ -921,14 +962,45 @@
       }
     }
 
+    async function guardarContactoEmergencia(empleadoId) {
+      const nombre   = document.getElementById('edit-contacto-nombre').value.trim()
+      const telefono = document.getElementById('edit-contacto-telefono').value.trim()
+
+      const btn = document.getElementById('btn-guardar-contacto')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const { error } = await supabase.rpc('actualizar_contacto_emergencia', {
+          p_empleado_id: empleadoId,
+          p_nombre: nombre || null,
+          p_telefono: telefono || null,
+        })
+        if (error) throw error
+        mostrarExito('Contacto de emergencia actualizado.')
+        estado.modoEdicionContacto = false
+        await cargarTodo()
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo guardar.')
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
     function cerrarFicha() {
       document.getElementById('modal-ficha').hidden = true
       estado.fichaAbierta = null
       estado.modoEdicionFicha = false
+      estado.modoEdicionContacto = false
     }
 
     document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
     document.getElementById('modal-ficha__backdrop').addEventListener('click', cerrarFicha)
+
+    document.getElementById('btn-editar-contacto').addEventListener('click', () => {
+      estado.modoEdicionContacto = true
+      renderizarFicha()
+    })
 
     // ═══════════════════════════════════════════════════════════════════════
     // IMPORTAR EXCEL DE NAALOO
@@ -966,13 +1038,13 @@
             cuil: limpiarTexto(valorFila(fila, 'CUIL', 'Cuil')),
             nombre: nombreCompleto,
             email: limpiarTexto(valorFila(fila, 'Dirección de correo', 'Direccion de correo', 'Email')),
-            fecha_nacimiento: formatearFechaISO(valorFila(fila, 'Fecha de nacimiento')),
+            fecha_nacimiento: formatearFechaISO(valorFila(fila, 'Fecha de nacimiento (dd/mm/yyyy)', 'Fecha de nacimiento')),
             telefono: limpiarTexto(valorFila(fila, 'Teléfonos', 'Telefono', 'Teléfono')),
             domicilio: limpiarTexto(valorFila(fila, 'Domicilio')),
             legajo: limpiarTexto(valorFila(fila, 'Legajo')),
-            fecha_alta: formatearFechaISO(valorFila(fila, 'Fecha alta', 'Fecha de alta')),
+            fecha_alta: formatearFechaISO(valorFila(fila, 'Fecha alta (dd/mm/yyyy)', 'Fecha alta', 'Fecha de alta')),
             rol: [categoria, subcategoria].filter(Boolean).join(' · ') || null,
-            activo: !valorFila(fila, 'Fecha baja', 'Fecha de baja'),
+            activo: !valorFila(fila, 'Fecha baja (dd/mm/yyyy)', 'Fecha baja', 'Fecha de baja'),
           }
         }).filter(f => f.cuil)
 
