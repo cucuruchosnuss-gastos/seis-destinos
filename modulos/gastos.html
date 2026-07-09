@@ -537,6 +537,14 @@
     }
 
     @media (max-width: 640px) {
+      .grilla-totales__card--registros-standalone {
+        display: none;
+      }
+
+      .grilla-totales__mini-registros {
+        display: flex !important;
+      }
+
       .lista-filtros {
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -1868,31 +1876,41 @@
 
       const tituloTotal = estado.filtros.rangoRapido === 'mes' ? 'Gastos del mes' : 'Gastos de hoy'
 
-      const tarjetaTotal = (titulo, monto, destacada) => `
+      const tarjetaTotal = `
         <div class="grilla-totales__card" style="
           border-radius:18px;
           padding:1.125rem 1.25rem;
-          ${destacada
-            ? 'background:linear-gradient(135deg, var(--color-acento), var(--color-acento-hover)); color:#fff; box-shadow:0 8px 24px rgba(26,42,82,0.25);'
-            : 'background:var(--color-fondo); border:1px solid var(--color-borde); box-shadow:0 2px 8px rgba(0,0,0,0.04);'}
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:0.75rem;
+          background:linear-gradient(135deg, var(--color-acento), var(--color-acento-hover));
+          color:#fff;
+          box-shadow:0 8px 24px rgba(26,42,82,0.25);
         ">
-          <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:${destacada ? '0.75' : '1'}; color:${destacada ? '#fff' : 'var(--color-texto-suave)'};">
-            ${titulo}
+          <div>
+            <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; opacity:0.75; color:#fff;">
+              ${tituloTotal}
+            </div>
+            <div class="grilla-totales__monto" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:#fff;">
+              ${formatearImporte(totalARS, 'ARS')}
+            </div>
           </div>
-          <div class="grilla-totales__monto" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:${destacada ? '#fff' : 'var(--color-texto)'};">
-            ${formatearImporte(totalARS, 'ARS')}
+          <div class="grilla-totales__mini-registros" style="display:none; flex-direction:column; align-items:center; justify-content:center; background:#fff; border-radius:12px; padding:0.5rem 0.875rem; flex-shrink:0;">
+            <div style="font-size:0.5625rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--color-texto-suave);">Registros</div>
+            <div style="font-size:1.375rem; font-weight:700; color:var(--color-acento); margin-top:0.125rem;">${gastos.length}</div>
           </div>
         </div>`
 
       const tarjetaRegistros = `
-        <div class="grilla-totales__card" style="border-radius:18px; padding:1.125rem 1.25rem; background:var(--color-fondo); border:1px solid var(--color-borde); box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+        <div class="grilla-totales__card grilla-totales__card--registros-standalone" style="border-radius:18px; padding:1.125rem 1.25rem; background:var(--color-fondo); border:1px solid var(--color-borde); box-shadow:0 2px 8px rgba(0,0,0,0.04);">
           <div style="font-size:0.6875rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--color-texto-suave);">Registros</div>
           <div class="grilla-totales__monto" style="font-size:1.75rem; font-weight:700; letter-spacing:-0.02em; margin-top:0.25rem; color:var(--color-texto);">
             ${gastos.length} <span style="font-size:0.9375rem; font-weight:600; color:var(--color-texto-suave);">gastos</span>
           </div>
         </div>`
 
-      totalEl.innerHTML = tarjetaTotal(tituloTotal, totalARS, true) + tarjetaRegistros
+      totalEl.innerHTML = tarjetaTotal + tarjetaRegistros
 
       totalEl.hidden = false
     }
