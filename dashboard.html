@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body class="pagina-dashboard">
 
@@ -43,13 +44,15 @@
     const MODULOS = [
       {
         nombre: 'Gastos',
-        icono: '💳',
+        icono: 'credit-card',
+        descripcion: 'Registrá y controlá los gastos de la operación',
         url: 'modulos/gastos.html',
         proximamente: false
       },
       {
         nombre: 'Materia Prima',
-        icono: '📦',
+        icono: 'package',
+        descripcion: 'Stock y costos de materia prima',
         url: 'modulos/materia-prima.html',
         proximamente: true
       }
@@ -76,19 +79,31 @@
       if (modulo.proximamente) {
         return `
           <div class="tarjeta-modulo tarjeta-modulo--inactiva" title="${modulo.nombre} — próximamente">
-            <span class="tarjeta-modulo__icono">${modulo.icono}</span>
-            <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
+            <span class="tarjeta-modulo__icono-contenedor tarjeta-modulo__icono-contenedor--inactivo">
+              <i data-lucide="${modulo.icono}"></i>
+            </span>
+            <span class="tarjeta-modulo__texto">
+              <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
+              <span class="tarjeta-modulo__descripcion">${modulo.descripcion}</span>
+            </span>
             <span class="badge badge--proximamente">Próximamente</span>
           </div>
         `
       }
       return `
         <a href="${modulo.url}" class="tarjeta-modulo">
-          <span class="tarjeta-modulo__icono">${modulo.icono}</span>
-          <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
+          <span class="tarjeta-modulo__icono-contenedor">
+            <i data-lucide="${modulo.icono}"></i>
+          </span>
+          <span class="tarjeta-modulo__texto">
+            <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
+            <span class="tarjeta-modulo__descripcion">${modulo.descripcion}</span>
+          </span>
+          <i data-lucide="chevron-right" class="tarjeta-modulo__chevron"></i>
         </a>
       `
     }).join('')
+    lucide.createIcons()
 
     // Botón de logout
     document.getElementById('btn-logout').addEventListener('click', () => {
