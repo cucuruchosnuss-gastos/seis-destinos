@@ -1557,6 +1557,10 @@
       const panel = document.getElementById(idBase + '-panel')
       if (!boton || !panel) return
 
+      const contenedorMultiselect = boton.closest('.multiselect')
+      if (contenedorMultiselect) contenedorMultiselect.dataset.multiselectId = idBase
+      panel.dataset.multiselectId = idBase
+
       let borrador = [...seleccionados]
 
       function actualizarTexto() {
@@ -1610,6 +1614,7 @@
         if (!estabaAbierto) {
           borrador = [...seleccionados]
           renderizarOpciones()
+          document.body.appendChild(panel)
           const rect = boton.getBoundingClientRect()
           panel.style.top  = (rect.bottom + 4) + 'px'
           panel.style.left = rect.left + 'px'
@@ -1666,6 +1671,7 @@
 
     function renderizarFiltros(unidades = []) {
       const contenedor = document.getElementById('contenedor-filtros')
+      document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
 
       const placeholderBusqueda = (estado.rol === 'admin' || estado.rol === 'pablo')
         ? '🔍 Buscar empresa, categoría o empleado'
@@ -2100,10 +2106,13 @@
 
     document.addEventListener('click', (e) => {
       document.querySelectorAll('.multiselect').forEach(ms => {
-        if (!ms.contains(e.target)) {
-          const panel = ms.querySelector('.multiselect__panel')
-          if (panel) panel.hidden = true
-        }
+        const id = ms.dataset.multiselectId
+        const panel = id
+          ? document.querySelector(`.multiselect__panel[data-multiselect-id="${id}"]`)
+          : ms.querySelector('.multiselect__panel')
+        if (!panel) return
+        const clickDentro = ms.contains(e.target) || panel.contains(e.target)
+        if (!clickDentro) panel.hidden = true
       })
     })
 
