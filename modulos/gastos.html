@@ -776,7 +776,8 @@
 
     .gasto__derecha {
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-end;
       gap: 0.375rem;
       flex-shrink: 0;
     }
@@ -1014,6 +1015,9 @@
 
       .tarjeta-gasto {
         min-width: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.1875rem;
       }
 
       .gasto__info {
@@ -1047,16 +1051,21 @@
 
       .gasto__derecha {
         min-width: 0;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
       }
 
       .gasto__importe {
         font-size: 0.9375rem;
-        color: var(--color-acento-highlight) !important;
+        color: var(--color-acento) !important;
       }
 
       .gasto__punto-estado {
         position: static;
-        margin-top: 0.3125rem;
+        display: inline-block;
+        margin-left: 0.375rem;
+        vertical-align: middle;
       }
 
       .multiselect__boton,
@@ -1088,7 +1097,6 @@
       }
 
       .gasto__cabecera {
-        align-items: flex-start;
         gap: 0.375rem;
       }
 
@@ -2119,7 +2127,7 @@
       const fecha        = formatearFecha(g.fecha)
 
       const categoriaChip  = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${categoria}</span>` : ''
-      const metaSecundaria = [fecha, empleado, MEDIOS_PAGO_LABEL[g.medio_pago]].filter(Boolean).join(' · ')
+      const metaSecundaria = [fecha, empleado].filter(Boolean).join(' · ')
 
       return `
         <div class="tarjeta-gasto" data-id="${g.id}">
@@ -2130,16 +2138,15 @@
                 : `<span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${inicialesEmpresa(razonSocial)}</span>`}
             </div>
             <div class="gasto__info">
-              <div class="gasto__razon-social">${razonSocial}</div>
+              <div class="gasto__razon-social">${razonSocial}<span class="gasto__punto-estado" title="${g.estado === 'registrado' ? 'Registrado' : g.estado}"></span></div>
               <div class="gasto__meta">
                 ${categoriaChip}
                 <span class="gasto__meta-secundaria">${metaSecundaria}</span>
               </div>
             </div>
-            <div class="gasto__derecha">
-              <span class="gasto__punto-estado" title="${g.estado === 'registrado' ? 'Registrado' : g.estado}"></span>
-              <div class="gasto__importe">${importe}</div>
-            </div>
+          </div>
+          <div class="gasto__derecha">
+            <div class="gasto__importe">${importe}</div>
           </div>
         </div>
       `
