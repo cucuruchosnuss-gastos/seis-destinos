@@ -1342,7 +1342,17 @@
         proyectos:   [],
         unidades:    [],
       },
-      filtros: {},
+      filtros: {
+        periodos:           [],
+        unidad_negocio_ids: [],
+        categoria_ids:      [],
+        vehiculo_ids:       [],
+        medios_pago:        [],
+        fecha_desde:        '',
+        fecha_hasta:        '',
+        orden:              'fecha_desc',
+        rangoRapido:        null,
+      },
       wizard: {
         subpaso:      'foto',
         fotoArchivo:  null,
@@ -1674,19 +1684,7 @@
         opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
         seleccionados: estado.filtros.periodos,
         etiquetaTodos: 'Todos los períodos',
-        onChange: () => {
-          estado.filtros.rangoRapido = null
-          estado.filtros.fecha_desde = ''
-          estado.filtros.fecha_hasta = ''
-
-          const inputDesde = document.getElementById('filtro-fecha-desde')
-          const inputHasta = document.getElementById('filtro-fecha-hasta')
-          if (inputDesde) { inputDesde.value = ''; inputDesde.classList.remove('filtro-activo') }
-          if (inputHasta) { inputHasta.value = ''; inputHasta.classList.remove('filtro-activo') }
-
-          actualizarSegmentedRango()
-          cargarLista()
-        }
+        onChange: () => activarFiltroFecha('periodo')
       })
 
       let debounceBusqueda
@@ -1742,23 +1740,14 @@
         crearSelectorOrden()
 
         document.getElementById('filtro-fecha-desde')?.addEventListener('change', (e) => {
-          estado.filtros.fecha_desde = e.target.value
-          e.target.classList.toggle('filtro-activo', !!e.target.value)
-          estado.filtros.rangoRapido = null
-          actualizarSegmentedRango()
-          cargarLista()
+          activarFiltroFecha('manual', { fecha_desde: e.target.value })
         })
         document.getElementById('filtro-fecha-hasta')?.addEventListener('change', (e) => {
-          estado.filtros.fecha_hasta = e.target.value
-          e.target.classList.toggle('filtro-activo', !!e.target.value)
-          estado.filtros.rangoRapido = null
-          actualizarSegmentedRango()
-          cargarLista()
+          activarFiltroFecha('manual', { fecha_hasta: e.target.value })
         })
         document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
           estado.filtros = { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], fecha_desde: '', fecha_hasta: '', orden: 'fecha_desc' }
-          renderizarFiltros(estado.maestros.unidades)
-          aplicarRangoRapido('hoy')
+          activarFiltroFecha('hoy')
         })
         document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel)
       }
@@ -1874,17 +1863,27 @@
       })
     }
 
-    function aplicarRangoRapido(rango) {
-      estado.filtros.rangoRapido = rango
+    function activarFiltroFecha(modo, valores = {}) {
+      // modo: 'hoy' | 'mes' | 'periodo' | 'manual'
       const hoy = new Date()
-      estado.filtros.fecha_desde = rango === 'mes' ? fechaISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1)) : fechaISO(hoy)
-      estado.filtros.fecha_hasta = fechaISO(hoy)
 
-      const inputDesde = document.getElementById('filtro-fecha-desde')
-      const inputHasta = document.getElementById('filtro-fecha-hasta')
-      if (inputDesde) { inputDesde.value = estado.filtros.fecha_desde; inputDesde.classList.add('filtro-activo') }
-      if (inputHasta) { inputHasta.value = estado.filtros.fecha_hasta; inputHasta.classList.add('filtro-activo') }
+      if (modo === 'hoy' || modo === 'mes') {
+        estado.filtros.rangoRapido = modo
+        estado.filtros.fecha_desde = modo === 'mes' ? fechaISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1)) : fechaISO(hoy)
+        estado.filtros.fecha_hasta = fechaISO(hoy)
+        estado.filtros.periodos.length = 0
+      } else if (modo === 'periodo') {
+        estado.filtros.rangoRapido = null
+        estado.filtros.fecha_desde = ''
+        estado.filtros.fecha_hasta = ''
+      } else if (modo === 'manual') {
+        estado.filtros.rangoRapido = null
+        if ('fecha_desde' in valores) estado.filtros.fecha_desde = valores.fecha_desde
+        if ('fecha_hasta' in valores) estado.filtros.fecha_hasta = valores.fecha_hasta
+        estado.filtros.periodos.length = 0
+      }
 
+      renderizarFiltros(estado.maestros.unidades)
       actualizarSegmentedRango()
       cargarLista()
     }
@@ -2039,7 +2038,7 @@
     document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
 
     document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
-      btn.addEventListener('click', () => aplicarRangoRapido(btn.dataset.rango))
+      btn.addEventListener('click', () => activarFiltroFecha(btn.dataset.rango))
     })
 
     document.getElementById('btn-editar-gasto')?.addEventListener('click', () => {
@@ -2087,8 +2086,7 @@
     estado.maestros.proyectos = proyectosInicial ?? []
 
     estado.maestros.unidades = unidadesInicial ?? []
-    renderizarFiltros(estado.maestros.unidades)
-    aplicarRangoRapido('hoy')
+    activarFiltroFecha('hoy')
 
     // ═══════════════════════════════════════════════════════════════════════
     // WIZARD — MAESTROS
