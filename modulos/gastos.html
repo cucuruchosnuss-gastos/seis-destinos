@@ -1173,9 +1173,15 @@
         <p class="paso__subtitulo">Revisá y completá los datos. Los campos con <span style="color:var(--color-exito)">· auto</span> fueron leídos automáticamente.</p>
 
         <div class="formulario">
-          <div class="grupo-campo" id="grupo-fecha">
-            <label for="campo-fecha">Fecha</label>
-            <input type="date" id="campo-fecha" name="fecha" required>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <div class="grupo-campo" id="grupo-fecha">
+              <label for="campo-fecha">Fecha de factura</label>
+              <input type="date" id="campo-fecha" name="fecha" required>
+            </div>
+            <div class="grupo-campo" id="grupo-fecha-pago">
+              <label for="campo-fecha-pago">Fecha de pago</label>
+              <input type="date" id="campo-fecha-pago" name="fecha_pago" required>
+            </div>
           </div>
 
           <div class="grupo-campo" id="grupo-tipo-doc">
@@ -1436,8 +1442,8 @@
     const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
 
     const OPCIONES_ORDEN = [
-      { value: 'fecha_desc',   label: 'Fecha (más reciente primero)', columna: 'fecha',       ascending: false },
-      { value: 'fecha_asc',    label: 'Fecha (más antigua primero)',  columna: 'fecha',       ascending: true  },
+      { value: 'fecha_desc',   label: 'Fecha (más reciente primero)', columna: 'fecha_pago',  ascending: false },
+      { value: 'fecha_asc',    label: 'Fecha (más antigua primero)',  columna: 'fecha_pago',  ascending: true  },
       { value: 'razon_asc',    label: 'Nombre (A-Z)',                 columna: 'razon_social', ascending: true  },
       { value: 'razon_desc',   label: 'Nombre (Z-A)',                 columna: 'razon_social', ascending: false },
       { value: 'importe_desc', label: 'Importe (mayor a menor)',      columna: 'importe',     ascending: false },
@@ -1833,7 +1839,8 @@
       }
 
       const filas = estado.listaGastos.map(g => ({
-        'Fecha':          formatearFecha(g.fecha),
+        'Fecha de pago':   formatearFecha(g.fecha_pago),
+        'Fecha de factura': formatearFecha(g.fecha),
         'Tipo doc':       g.tipo_doc || '',
         'Número':         g.numero_doc || '',
         'Razón social':   g.razon_social || '',
@@ -1987,7 +1994,7 @@
       let query = supabase
         .from('gastos')
         .select(`
-          id, fecha, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
+          id, fecha, fecha_pago, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
           medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
           categorias (id, nombre, icon),
           empleados  (id, nombre),
@@ -2024,8 +2031,8 @@
       if (estado.filtros.categoria_ids?.length)       query = query.in('categoria_id', estado.filtros.categoria_ids)
       if (estado.filtros.vehiculo_ids?.length)        query = query.in('vehiculo_id', estado.filtros.vehiculo_ids)
       if (estado.filtros.medios_pago?.length)         query = query.in('medio_pago', estado.filtros.medios_pago)
-      if (estado.filtros.fecha_desde)                 query = query.gte('fecha', estado.filtros.fecha_desde)
-      if (estado.filtros.fecha_hasta)                 query = query.lte('fecha', estado.filtros.fecha_hasta)
+      if (estado.filtros.fecha_desde)                 query = query.gte('fecha_pago', estado.filtros.fecha_desde)
+      if (estado.filtros.fecha_hasta)                 query = query.lte('fecha_pago', estado.filtros.fecha_hasta)
 
       const opcionOrden = OPCIONES_ORDEN.find(o => o.value === estado.filtros.orden) || OPCIONES_ORDEN[0]
       if (opcionOrden.foreignTable) {
@@ -2072,7 +2079,7 @@
       const razonSocial  = g.razon_social       ?? '(sin razón social)'
       const empleado     = g.empleados?.nombre  ?? ''
       const importe      = formatearImporte(g.importe, g.moneda)
-      const fecha        = formatearFecha(g.fecha)
+      const fecha        = formatearFecha(g.fecha_pago)
 
       const categoriaChip  = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${categoria}</span>` : ''
       const metaSecundaria = [fecha, empleado].filter(Boolean).join(' · ')
@@ -2262,6 +2269,7 @@
         'campo-importe','campo-lugar','campo-descripcion',
         'campo-kilometraje','campo-observaciones',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
+      document.getElementById('campo-fecha-pago').value = fechaISO(new Date())
       seleccionarTipoDoc(null)
       seleccionarMedioPago(null)
       document.getElementById('campo-moneda').value = 'ARS'
@@ -2632,7 +2640,9 @@
     function validarSubpaso(id) {
       if (id === 'datos') {
         if (!document.getElementById('campo-fecha').value)
-          return mostrarError('Completá la fecha del comprobante.'), false
+          return mostrarError('Completá la fecha de factura.'), false
+        if (!document.getElementById('campo-fecha-pago').value)
+          return mostrarError('Completá la fecha de pago.'), false
         if (!document.getElementById('campo-razon-social').value.trim())
           return mostrarError('Completá la razón social.'), false
         const imp = parseImporte(document.getElementById('campo-importe').value)
@@ -2780,12 +2790,14 @@
     }
 
     function armarGasto() {
-      const fecha = document.getElementById('campo-fecha').value
+      const fecha     = document.getElementById('campo-fecha').value
+      const fechaPago = document.getElementById('campo-fecha-pago').value
       const toNum = id => { const v = document.getElementById(id)?.value; return (v && v !== '') ? Number(v) : null }
       const toStr = id => document.getElementById(id)?.value.trim() || null
       return {
         fecha,
-        periodo:           fecha ? fechaAPeriodo(fecha) : null,
+        fecha_pago:        fechaPago,
+        periodo:           fechaPago ? fechaAPeriodo(fechaPago) : null,
         tipo_doc:          tipDocSeleccionado,
         numero_doc:        toStr('campo-numero-doc'),
         razon_social:      toStr('campo-razon-social'),
@@ -2826,7 +2838,8 @@
       document.getElementById('resumen-contenido').innerHTML = `
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Comprobante</div>
-          ${fila('Fecha',        formatearFecha(g.fecha))}
+          ${fila('Fecha de pago',    formatearFecha(g.fecha_pago))}
+          ${fila('Fecha de factura', formatearFecha(g.fecha))}
           ${fila('Tipo',         g.tipo_doc)}
           ${fila('Número',       g.numero_doc)}
           ${fila('Razón social', g.razon_social)}
@@ -2877,7 +2890,8 @@
       document.getElementById('detalle-gasto-contenido').innerHTML = `
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Comprobante</div>
-          ${fila('Fecha',        formatearFecha(g.fecha))}
+          ${fila('Fecha de pago',    formatearFecha(g.fecha_pago))}
+          ${fila('Fecha de factura', formatearFecha(g.fecha))}
           ${fila('Tipo',         g.tipo_doc)}
           ${fila('Número',       g.numero_doc)}
           ${fila('Razón social', g.razon_social)}
@@ -2971,7 +2985,8 @@
       document.getElementById('detalle-gasto-contenido').innerHTML = `
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Comprobante</div>
-          ${campo('Fecha', `<input type="date" id="edit-fecha" value="${g.fecha}">`)}
+          ${campo('Fecha de pago', `<input type="date" id="edit-fecha-pago" value="${g.fecha_pago}">`)}
+          ${campo('Fecha de factura', `<input type="date" id="edit-fecha" value="${g.fecha}">`)}
           ${campo('Tipo de documento', `<input type="text" id="edit-tipo-doc" value="${g.tipo_doc || ''}">`)}
           ${campo('Número', `<input type="text" id="edit-numero-doc" value="${g.numero_doc || ''}">`)}
           ${campo('Razón social', `<input type="text" id="edit-razon-social" value="${g.razon_social || ''}">`)}
@@ -3028,8 +3043,12 @@
           return
         }
 
+        const nuevaFechaPago = document.getElementById('edit-fecha-pago').value
+
         const cambios = {
           fecha:             document.getElementById('edit-fecha').value,
+          fecha_pago:        nuevaFechaPago,
+          periodo:           fechaAPeriodo(nuevaFechaPago),
           tipo_doc:          document.getElementById('edit-tipo-doc').value || null,
           numero_doc:        document.getElementById('edit-numero-doc').value || null,
           razon_social:      document.getElementById('edit-razon-social').value || null,
