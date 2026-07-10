@@ -337,6 +337,12 @@
       color: var(--bordo-oscuro);
     }
 
+    .chip-tipo-movimiento--egreso_traspaso,
+    .chip-tipo-movimiento--ingreso_traspaso {
+      background: var(--color-superficie);
+      color: var(--color-acento);
+    }
+
     .movimiento__persona {
       font-size: 0.875rem;
       font-weight: 700;
@@ -485,6 +491,44 @@
     }
 
     .modal-movimiento__acciones .btn { flex: 1; }
+
+    /* ── Modal: traspaso entre medios (mismo patrón que #modal-movimiento) ── */
+
+    #modal-traspaso {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #modal-traspaso[hidden] { display: none; }
+
+    #modal-traspaso__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    #modal-traspaso__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    @media (min-width: 641px) {
+      #modal-traspaso { align-items: center; }
+      #modal-traspaso__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -655,6 +699,49 @@
     </div>
   </div>
 
+  <!-- Modal: Traspaso entre medios (efectivo ⇄ banco), dentro de la propia caja -->
+  <div id="modal-traspaso" hidden>
+    <div id="modal-traspaso__backdrop"></div>
+    <div id="modal-traspaso__panel">
+      <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-traspaso" title="Cerrar">✕</button>
+      <h2>Traspaso entre medios</h2>
+
+      <div class="formulario" style="margin-top:1rem;">
+        <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end;">
+          <div class="grupo-campo">
+            <label for="traspaso-monto">Monto</label>
+            <input type="text" inputmode="decimal" id="traspaso-monto" placeholder="0,00">
+          </div>
+          <div class="grupo-campo">
+            <label for="traspaso-moneda">Moneda</label>
+            <select id="traspaso-moneda" style="width:5.5rem;">
+              <option value="ARS">ARS</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="traspaso-fecha">Fecha</label>
+          <input type="date" id="traspaso-fecha" name="fecha">
+        </div>
+
+        <div class="grupo-campo">
+          <label>Dirección</label>
+          <div class="grilla-medio-pago-caja" id="grilla-direccion-traspaso">
+            <button type="button" class="btn-tipo-doc" data-valor="efectivo_a_banco">Efectivo → Banco</button>
+            <button type="button" class="btn-tipo-doc" data-valor="banco_a_efectivo">Banco → Efectivo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-movimiento__acciones">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-traspaso">Cancelar</button>
+        <button type="button" class="btn btn--exito" id="btn-guardar-traspaso">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { mostrarError, mostrarExito, formatearFecha } from '../js/utils.js'
@@ -783,9 +870,20 @@
         (estado.miEmpleado?.id === empleadoId ? estado.miEmpleado : null)
     }
 
+    // Solo hay dos medios posibles — el "otro" es simplemente el que no es este.
+    function otroMedioPago(medio) {
+      return medio === 'efectivo' ? 'transferencia' : 'efectivo'
+    }
+
     function etiquetaMovimiento(m) {
       if (m.tipo === 'egreso_transferencia') {
         return 'Entregado a ' + (estado.nombresEmpleados[m.contraparte_empleado_id] || '—')
+      }
+      if (m.tipo === 'egreso_traspaso') {
+        return 'Traspaso a ' + MEDIO_PAGO_LABEL_CAJA[otroMedioPago(m.medio_pago)]
+      }
+      if (m.tipo === 'ingreso_traspaso') {
+        return 'Traspaso desde ' + MEDIO_PAGO_LABEL_CAJA[otroMedioPago(m.medio_pago)]
       }
       return TIPO_LABEL[m.tipo] || m.tipo
     }
@@ -1072,10 +1170,19 @@
         botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1;">Añadir ingreso</button>`)
       }
       botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1;">Retiro personal</button>`)
+
+      // Traspaso: mueve plata entre medios DENTRO de la propia caja. Solo
+      // tiene sentido en la ficha propia (la RPC no acepta p_empleado_id,
+      // siempre opera sobre quien la llama) — para cualquier rol_app.
+      if (empleadoId === estado.miEmpleado.id) {
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-traspaso" style="flex:1;">Traspaso</button>`)
+      }
+
       cont.innerHTML = botones.join('')
 
       document.getElementById('btn-detalle-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId))
       document.getElementById('btn-detalle-retiro')?.addEventListener('click', () => abrirModalMovimiento('retiro', empleadoId))
+      document.getElementById('btn-detalle-traspaso')?.addEventListener('click', () => abrirModalTraspaso())
     }
 
     document.getElementById('btn-volver-ficha').addEventListener('click', () => {
@@ -1114,7 +1221,7 @@
     }
 
     function renderizarFilaMovimiento(m, { mostrarPersona = false } = {}) {
-      const esPositivo = m.tipo === 'ingreso' || m.tipo === 'ingreso_externo'
+      const esPositivo = m.tipo === 'ingreso' || m.tipo === 'ingreso_externo' || m.tipo === 'ingreso_traspaso'
       const signo = esPositivo ? '+' : '−'
 
       const personaHtml = mostrarPersona
@@ -1368,6 +1475,87 @@
     document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento)
 
     document.getElementById('btn-retiro-personal-listado').addEventListener('click', () => abrirModalMovimiento('retiro', estado.miEmpleado.id))
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL — Traspaso entre medios (efectivo ⇄ banco)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let direccionTraspasoSeleccionada = null
+
+    function seleccionarDireccionTraspaso(valor) {
+      direccionTraspasoSeleccionada = valor
+      document.querySelectorAll('#grilla-direccion-traspaso .btn-tipo-doc').forEach(btn => {
+        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
+      })
+    }
+
+    document.querySelectorAll('#grilla-direccion-traspaso .btn-tipo-doc').forEach(btn => {
+      btn.addEventListener('click', () => seleccionarDireccionTraspaso(btn.dataset.valor))
+    })
+
+    function abrirModalTraspaso() {
+      document.getElementById('traspaso-monto').value = ''
+      document.getElementById('traspaso-moneda').value = 'ARS'
+      document.getElementById('traspaso-fecha').value = fechaISO(new Date())
+      seleccionarDireccionTraspaso(null)
+      document.getElementById('modal-traspaso').hidden = false
+    }
+
+    function cerrarModalTraspaso() {
+      document.getElementById('modal-traspaso').hidden = true
+    }
+
+    async function guardarTraspaso() {
+      const monto     = parseImporte(document.getElementById('traspaso-monto').value)
+      const moneda     = document.getElementById('traspaso-moneda').value
+      const direccion   = direccionTraspasoSeleccionada
+      const fecha       = document.getElementById('traspaso-fecha').value || null
+
+      if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
+      if (!direccion) { mostrarError('Elegí la dirección del traspaso.'); return }
+
+      const btn = document.getElementById('btn-guardar-traspaso')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const params = { p_monto: monto, p_moneda: moneda, p_direccion: direccion }
+        if (fecha) params.p_fecha = fecha
+        const { error } = await supabase.rpc('registrar_traspaso_medio_caja', params)
+        if (error) throw error
+
+        mostrarExito('Traspaso registrado.')
+        cerrarModalTraspaso()
+
+        if (estado.origenFicha === 'directo') {
+          // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
+          const [saldosRes, saldosMedioRes] = await Promise.all([
+            supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
+            supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
+          ])
+          estado.saldos = saldosRes.data || []
+          estado.saldosPorMedio = saldosMedioRes.data || []
+          renderizarSaldosDetalle(estado.miEmpleado.id)
+          await cargarMovimientos(estado.miEmpleado.id)
+        } else {
+          await cargarListado()
+          if (estado.personaAbierta) {
+            renderizarSaldosDetalle(estado.personaAbierta)
+            await cargarMovimientos(estado.personaAbierta)
+          }
+        }
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo registrar el traspaso.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    document.getElementById('btn-cerrar-traspaso').addEventListener('click', cerrarModalTraspaso)
+    document.getElementById('btn-cancelar-traspaso').addEventListener('click', cerrarModalTraspaso)
+    document.getElementById('modal-traspaso__backdrop').addEventListener('click', cerrarModalTraspaso)
+    document.getElementById('btn-guardar-traspaso').addEventListener('click', guardarTraspaso)
 
     // ═══════════════════════════════════════════════════════════════════════
     // BÚSQUEDA Y FILTRO (listado general)
