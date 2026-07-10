@@ -208,21 +208,8 @@
       gap: 0.5rem;
     }
 
-    .tarjeta-empleado {
-      position: relative;
-      background: var(--color-fondo);
-      border: 1px solid var(--color-borde);
-      border-radius: 12px;
-      padding: 0.875rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      cursor: pointer;
-      transition: box-shadow var(--transicion);
-    }
-
-    .tarjeta-empleado:hover { box-shadow: var(--sombra-suave); }
-
+    /* .tarjeta-empleado--incompleta y __alerta son modificadores propios de
+       Empleados, se aplican junto con .tarjeta-lista. */
     .tarjeta-empleado--incompleta {
       border: 1.5px dashed var(--violeta);
     }
@@ -234,6 +221,17 @@
       flex-shrink: 0;
     }
 
+    /* Ajustes locales sobre la card compartida: texto blanco en el avatar
+       (iniciales), y el título necesita min-width:0 + flex:1 porque acá vive
+       dentro de .acceso__fila1 (flex), no como bloque suelto — sin esto el
+       truncado con ellipsis no funciona (los hijos flex no encogen por
+       debajo de su contenido si no se les fuerza min-width:0). */
+    .tarjeta-lista__avatar { color: #fff; }
+    .tarjeta-lista__titulo { min-width: 0; flex: 1; }
+
+    /* .acceso__avatar/__nombre/__email siguen existiendo tal cual: además de
+       la card las usa el modal de ficha (#ficha-avatar/#ficha-nombre/
+       #ficha-email), que no se toca en esta migración. */
     .acceso__avatar {
       width: 2.5rem;
       height: 2.5rem;
@@ -246,8 +244,6 @@
       color: #fff;
       flex-shrink: 0;
     }
-
-    .acceso__cuerpo { flex: 1; min-width: 0; }
 
     .acceso__fila1 {
       display: flex;
@@ -725,14 +721,14 @@
         : `<span class="chip-sin-acceso">Sin acceso</span>`
 
       return `
-        <div class="tarjeta-empleado ${incompleto ? 'tarjeta-empleado--incompleta' : ''}" data-id="${emp.id}">
-          <div class="acceso__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
-          <div class="acceso__cuerpo">
+        <div class="tarjeta-lista ${incompleto ? 'tarjeta-empleado--incompleta' : ''}" data-id="${emp.id}">
+          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+          <div class="tarjeta-lista__info">
             <div class="acceso__fila1">
-              <span class="acceso__nombre">${emp.nombre}</span>
+              <span class="tarjeta-lista__titulo">${emp.nombre}</span>
               ${badgeAcceso}
             </div>
-            <div class="acceso__email">${emp.rol || (incompleto ? 'Datos incompletos' : 'Sin puesto registrado')}</div>
+            <div class="tarjeta-lista__subtitulo">${emp.rol || (incompleto ? 'Datos incompletos' : 'Sin puesto registrado')}</div>
           </div>
           ${incompleto ? '<i data-lucide="alert-triangle" class="tarjeta-empleado__alerta"></i>' : ''}
         </div>
@@ -770,7 +766,7 @@
 
       lucide.createIcons()
 
-      cont.querySelectorAll('.tarjeta-empleado').forEach(el => {
+      cont.querySelectorAll('.tarjeta-lista').forEach(el => {
         el.addEventListener('click', () => abrirFicha(el.dataset.id))
       })
     }

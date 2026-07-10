@@ -202,51 +202,8 @@
       gap: 0.5rem;
     }
 
-    .tarjeta-persona {
-      position: relative;
-      background: var(--color-fondo);
-      border: 1px solid var(--color-borde);
-      border-radius: 12px;
-      padding: 0.875rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      cursor: pointer;
-      transition: box-shadow var(--transicion), transform var(--transicion);
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .tarjeta-persona:hover {
-      box-shadow: var(--sombra-suave);
-      transform: translateY(-1px);
-    }
-
-    .persona__avatar {
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8125rem;
-      font-weight: 700;
-      color: #fff;
-      flex-shrink: 0;
-    }
-
-    .persona__info { flex: 1; min-width: 0; }
-
-    .persona__nombre {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--color-texto);
-    }
-
-    .persona__empresa {
-      font-size: 0.75rem;
-      color: var(--color-texto-suave);
-      margin-top: 0.125rem;
-    }
+    /* Ajuste local sobre la card compartida: iniciales en blanco. */
+    .tarjeta-lista__avatar { color: #fff; }
 
     .persona__monedas {
       display: flex;
@@ -985,11 +942,11 @@
         : ''
 
       return `
-        <div class="tarjeta-persona" data-id="${emp.id}">
-          <div class="persona__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
-          <div class="persona__info">
-            <div class="persona__nombre">${emp.nombre}</div>
-            ${empresa ? `<div class="persona__empresa">${empresa}</div>` : ''}
+        <div class="tarjeta-lista" data-id="${emp.id}">
+          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+          <div class="tarjeta-lista__info">
+            <div class="tarjeta-lista__titulo">${emp.nombre}</div>
+            ${empresa ? `<div class="tarjeta-lista__subtitulo">${empresa}</div>` : ''}
             ${otrasMonedas}
           </div>
           <div class="persona__saldo ${negativoPrincipal ? 'persona__saldo--negativo' : ''}">${formatearImporte(principal.saldo, principal.moneda)}</div>
@@ -1034,7 +991,7 @@
         `
       }).join('')
 
-      cont.querySelectorAll('.tarjeta-persona').forEach(el => {
+      cont.querySelectorAll('.tarjeta-lista').forEach(el => {
         el.addEventListener('click', () => abrirDetallePersona(el.dataset.id, 'listado'))
       })
     }

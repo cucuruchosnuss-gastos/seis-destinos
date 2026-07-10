@@ -676,20 +676,9 @@
       gap: 0.375rem;
     }
 
-    .tarjeta-gasto {
-      position: relative;
-      background: var(--color-fondo);
-      border: 1px solid var(--color-borde);
-      border-radius: 12px;
-      box-shadow: none;
-      padding: 0.625rem 0.875rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      cursor: pointer;
-      transition: box-shadow var(--transicion), transform var(--transicion);
-      -webkit-tap-highlight-color: transparent;
-    }
+    /* Fondo del avatar antes de que cargue el logo (o cuando se usan
+       iniciales) — no es parte de la receta compartida, es de Gastos. */
+    .tarjeta-lista__avatar { background: var(--color-superficie); }
 
     .gasto__punto-estado {
       position: absolute;
@@ -699,32 +688,6 @@
       height: 6px;
       border-radius: 50%;
       background: var(--color-exito);
-    }
-
-    .tarjeta-gasto:hover {
-      box-shadow: var(--sombra-hover);
-      transform: translateY(-1px);
-    }
-
-    .gasto__cabecera {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .gasto__icono {
-      width: 2.25rem;
-      height: 2.25rem;
-      background: var(--color-superficie);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.125rem;
-      flex-shrink: 0;
-      overflow: hidden;
     }
 
     .gasto__avatar-iniciales {
@@ -737,17 +700,6 @@
       font-size: 0.75rem;
       font-weight: 700;
       color: var(--color-acento);
-    }
-
-    .gasto__info   { flex: 1; min-width: 0; }
-
-    .gasto__razon-social {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--color-texto);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
     .gasto__meta {
@@ -1016,22 +968,8 @@
         min-width: 0;
       }
 
-      .tarjeta-gasto {
+      .tarjeta-lista {
         min-width: 0;
-      }
-
-      .gasto__info {
-        min-width: 0;
-      }
-
-      .gasto__razon-social {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: clip;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
       }
 
       .gasto__meta {
@@ -1109,21 +1047,18 @@
         gap: 0.25rem !important;
       }
 
-      .tarjeta-gasto {
+      .tarjeta-lista {
         padding: 0.4375rem 0.75rem !important;
-      }
-
-      .gasto__icono {
-        width: 2rem;
-        height: 2rem;
-      }
-
-      .gasto__cabecera {
         align-items: flex-start;
         gap: 0.375rem;
       }
 
-      .gasto__razon-social {
+      .tarjeta-lista__avatar {
+        width: 2rem;
+        height: 2rem;
+      }
+
+      .tarjeta-lista__titulo {
         font-size: 0.875rem;
       }
 
@@ -2007,7 +1942,7 @@
         listaEl.hidden    = false
         listaEl.innerHTML = filtrados.map(renderizarCardGasto).join('')
         lucide.createIcons()
-        listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
+        listaEl.querySelectorAll('.tarjeta-lista').forEach(card => {
           card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
         })
       }
@@ -2135,7 +2070,7 @@
       lucide.createIcons()
       renderizarTotalGastos(gastos)
 
-      listaEl.querySelectorAll('.tarjeta-gasto').forEach(card => {
+      listaEl.querySelectorAll('.tarjeta-lista').forEach(card => {
         card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
       })
     }
@@ -2153,24 +2088,22 @@
       const metaSecundaria = [fecha, empleado].filter(Boolean).join(' · ')
 
       return `
-        <div class="tarjeta-gasto" data-id="${g.id}">
-          <div class="gasto__cabecera">
-            <div class="gasto__icono">
-              ${logoEmpresa
-                ? `<img src="${logoEmpresa}" alt="${nombreUnidad || 'Vehículos'}" style="width:100%;height:100%;object-fit:contain;border-radius:10px;">`
-                : `<span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${inicialesEmpresa(razonSocial)}</span>`}
+        <div class="tarjeta-lista" data-id="${g.id}">
+          <div class="tarjeta-lista__avatar">
+            ${logoEmpresa
+              ? `<img src="${logoEmpresa}" alt="${nombreUnidad || 'Vehículos'}" style="width:100%;height:100%;object-fit:contain;">`
+              : `<span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${inicialesEmpresa(razonSocial)}</span>`}
+          </div>
+          <div class="tarjeta-lista__info">
+            <div class="tarjeta-lista__titulo">${razonSocial}<span class="gasto__punto-estado" title="${g.estado === 'registrado' ? 'Registrado' : g.estado}"></span></div>
+            <div class="gasto__meta">
+              ${categoriaChip}
+              <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${metaSecundaria}</span>
             </div>
-            <div class="gasto__info">
-              <div class="gasto__razon-social">${razonSocial}<span class="gasto__punto-estado" title="${g.estado === 'registrado' ? 'Registrado' : g.estado}"></span></div>
-              <div class="gasto__meta">
-                ${categoriaChip}
-                <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${metaSecundaria}</span>
-              </div>
-            </div>
-            <div class="gasto__derecha">
-              <div class="gasto__importe">${importe}</div>
-              <span class="gasto__meta-secundaria gasto__meta-secundaria--derecha">${metaSecundaria}</span>
-            </div>
+          </div>
+          <div class="gasto__derecha">
+            <div class="gasto__importe">${importe}</div>
+            <span class="gasto__meta-secundaria gasto__meta-secundaria--derecha">${metaSecundaria}</span>
           </div>
         </div>
       `
