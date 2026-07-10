@@ -124,6 +124,15 @@
       letter-spacing: -0.02em;
     }
 
+    /* Desglose por medio de pago — texto secundario, sin jerarquía frente al
+       total. Blanco con opacidad reducida (no gris) porque va sobre el mismo
+       fondo degradado ámbar que .stat-card-caja__label / .saldo-card__label. */
+    .stat-card-caja__desglose {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.85);
+      margin-top: 0.25rem;
+    }
+
     .stat-card-caja__submetrics { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
     .stat-card-caja__submetric {
@@ -304,6 +313,12 @@
       font-size: 1.5rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      margin-top: 0.25rem;
+    }
+
+    .saldo-card__desglose {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.85);
       margin-top: 0.25rem;
     }
 
@@ -699,6 +714,7 @@
       maestros:        { unidadesNegocio: [] },
       saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
                               // para usuario: solo las propias (nunca se piden las de otros)
+      saldosPorMedio:  [],   // filas de v_caja_saldos_medio — mismo alcance que saldos
       superAdmins:     [],   // { id, nombre, caja_raiz } — todos los rol_app='super_admin'
       nombresEmpleados: {},  // id -> nombre (todos los activos), para resolver contraparte/
                               // titular sin depender de embeds ambiguos (caja_movimientos
@@ -772,6 +788,25 @@
       return estado.saldos.filter(s => s.empleado_id === empleadoId)
     }
 
+    function saldosPorMedioDe(empleadoId) {
+      return estado.saldosPorMedio.filter(s => s.empleado_id === empleadoId)
+    }
+
+    // Arma "Efectivo: $X · Transferencia: $Y" para UNA moneda puntual, sumando
+    // las filas de v_caja_saldos_medio que correspondan (de toda la empresa o
+    // de una sola persona, según lo que le pase el caller ya filtrado). Si un
+    // medio no tiene fila para esa moneda, directamente no aparece — nada en
+    // cero. Devuelve '' si no hay ninguna fila para esa moneda.
+    function renderizarDesglosePorMedio(filas, moneda) {
+      const porMedio = {}
+      filas.filter(f => f.moneda === moneda).forEach(f => {
+        porMedio[f.medio_pago] = (porMedio[f.medio_pago] || 0) + Number(f.saldo)
+      })
+      const partes = Object.entries(porMedio)
+        .map(([medio, saldo]) => `${MEDIO_PAGO_LABEL_CAJA[medio] || medio}: ${formatearImporte(saldo, moneda)}`)
+      return partes.join(' · ')
+    }
+
     function nombreEmpresa(unidadId) {
       return estado.maestros.unidadesNegocio.find(u => u.id === unidadId)?.nombre || null
     }
@@ -829,9 +864,12 @@
 
       const ids = estado.empleados.map(e => e.id)
 
-      const [saldosRes, movRes] = await Promise.all([
+      const [saldosRes, saldosMedioRes, movRes] = await Promise.all([
         ids.length
           ? supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').in('empleado_id', ids)
+          : Promise.resolve({ data: [], error: null }),
+        ids.length
+          ? supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').in('empleado_id', ids)
           : Promise.resolve({ data: [], error: null }),
         ids.length
           ? supabase.from('caja_movimientos').select('id', { count: 'exact', head: true }).in('empleado_id', ids).gte('fecha', fechaISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
@@ -840,11 +878,12 @@
 
       document.getElementById('estado-cargando').hidden = true
 
-      if (saldosRes.error) {
+      if (saldosRes.error || saldosMedioRes.error) {
         mostrarError('No se pudieron cargar los saldos.')
         return
       }
       estado.saldos = saldosRes.data || []
+      estado.saldosPorMedio = saldosMedioRes.data || []
       estado.movimientosDelMes = movRes.count || 0
 
       poblarFiltroEmpresa()
@@ -876,11 +915,18 @@
         ? monedas.map(m => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(totalesPorMoneda[m], m)}</span>`).join('')
         : `<span class="stat-card-caja__monto">${formatearImporte(0, 'ARS')}</span>`
 
+      const desgloseHtml = monedas
+        .map(m => renderizarDesglosePorMedio(estado.saldosPorMedio, m))
+        .filter(Boolean)
+        .map(linea => `<div class="stat-card-caja__desglose">${linea}</div>`)
+        .join('')
+
       cont.innerHTML = `
         <div class="stat-card-caja">
           <div>
             <div class="stat-card-caja__label">Total de la empresa</div>
             <div class="stat-card-caja__montos">${montosHtml}</div>
+            ${desgloseHtml}
           </div>
           <div class="stat-card-caja__submetrics">
             <div class="stat-card-caja__submetric">
@@ -1017,10 +1063,13 @@
       // Entrada directa (rol 'usuario'): nunca se cargó el listado general —
       // acá se piden únicamente los saldos propios, no los de nadie más.
       if (origen === 'directo') {
-        const { data: saldos, error } = await supabase
-          .from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', empleadoId)
-        if (error) mostrarError('No se pudieron cargar los saldos.')
-        estado.saldos = saldos || []
+        const [saldosRes, saldosMedioRes] = await Promise.all([
+          supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', empleadoId),
+          supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', empleadoId),
+        ])
+        if (saldosRes.error || saldosMedioRes.error) mostrarError('No se pudieron cargar los saldos.')
+        estado.saldos = saldosRes.data || []
+        estado.saldosPorMedio = saldosMedioRes.data || []
       }
 
       renderizarSaldosDetalle(empleadoId)
@@ -1042,13 +1091,17 @@
       const saldos = saldosDe(empleadoId)
       const cont = document.getElementById('detalle-persona-saldos')
       const lista = saldos.length ? saldos : [{ moneda: 'ARS', saldo: 0 }]
+      const porMedio = saldosPorMedioDe(empleadoId)
 
-      cont.innerHTML = `<div class="saldos-grilla">${lista.map(s => `
+      cont.innerHTML = `<div class="saldos-grilla">${lista.map(s => {
+        const desglose = renderizarDesglosePorMedio(porMedio, s.moneda)
+        return `
         <div class="saldo-card">
           <div class="saldo-card__label">Saldo ${s.moneda}</div>
           <div class="saldo-card__valor">${formatearImporteConAlerta(s.saldo, s.moneda)}</div>
+          ${desglose ? `<div class="saldo-card__desglose">${desglose}</div>` : ''}
         </div>
-      `).join('')}</div>`
+      `}).join('')}</div>`
     }
 
     function renderizarAccionesDetalle(empleadoId) {
@@ -1333,9 +1386,12 @@
 
         if (estado.origenFicha === 'directo') {
           // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
-          const { data: saldos } = await supabase
-            .from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id)
-          estado.saldos = saldos || []
+          const [saldosRes, saldosMedioRes] = await Promise.all([
+            supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
+            supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
+          ])
+          estado.saldos = saldosRes.data || []
+          estado.saldosPorMedio = saldosMedioRes.data || []
           renderizarSaldosDetalle(estado.miEmpleado.id)
           await cargarMovimientos(estado.miEmpleado.id)
         } else {
