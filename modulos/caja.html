@@ -472,18 +472,6 @@
       margin: 0.75rem 0;
     }
 
-    /* Texto fijo (no editable) para "¿Quién te dio la plata?" cuando la
-       contraparte ya está determinada — mismo look que un input deshabilitado. */
-    .campo-texto-fijo {
-      padding: 0.6875rem 0.875rem;
-      border: 1.5px solid var(--color-borde);
-      border-radius: var(--radio-input);
-      background: var(--color-superficie);
-      font-family: var(--fuente);
-      font-size: 0.9375rem;
-      color: var(--color-texto);
-    }
-
     .modal-movimiento__acciones {
       display: flex;
       gap: 0.625rem;
@@ -529,6 +517,80 @@
         box-shadow: var(--sombra-hover);
       }
     }
+
+    /* ── Modal: rechazar solicitud (mismo patrón que #modal-movimiento) ───── */
+
+    #modal-rechazo {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #modal-rechazo[hidden] { display: none; }
+
+    #modal-rechazo__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    #modal-rechazo__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    @media (min-width: 641px) {
+      #modal-rechazo { align-items: center; }
+      #modal-rechazo__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
+    /* ── Solicitudes de movimiento pendientes (ficha de una persona) ───────── */
+
+    .tarjeta-solicitud {
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+      margin-bottom: 0.625rem;
+    }
+
+    .tarjeta-solicitud__monto {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+    }
+
+    .tarjeta-solicitud__detalle {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.25rem;
+    }
+
+    .tarjeta-solicitud__espera {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.75rem;
+      font-style: italic;
+    }
+
+    .tarjeta-solicitud__acciones {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .tarjeta-solicitud__acciones .btn { flex: 1; }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -624,6 +686,8 @@
 
       <div id="detalle-persona-acciones" style="display:flex; gap:0.625rem; margin:1.25rem 0 1.5rem;"></div>
 
+      <div id="detalle-persona-solicitudes"></div>
+
       <div class="modal-ficha__seccion-titulo">Movimientos</div>
 
       <div id="estado-cargando-movimientos" class="estado-vacio" hidden>
@@ -652,11 +716,10 @@
 
       <div class="formulario" style="margin-top:1rem;">
         <div class="grupo-campo" id="grupo-contraparte" style="display:none;">
-          <label for="contraparte-select">¿Quién te dio la plata?</label>
+          <label for="contraparte-select" id="label-contraparte">¿Quién te dio la plata?</label>
           <select id="contraparte-select">
             <option value="">— Seleccioná —</option>
           </select>
-          <div id="contraparte-fija" class="campo-texto-fijo" hidden></div>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end;">
@@ -742,6 +805,27 @@
     </div>
   </div>
 
+  <!-- Modal: Rechazar una solicitud de movimiento (motivo obligatorio) -->
+  <div id="modal-rechazo" hidden>
+    <div id="modal-rechazo__backdrop"></div>
+    <div id="modal-rechazo__panel">
+      <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-rechazo" title="Cerrar">✕</button>
+      <h2>Rechazar solicitud</h2>
+
+      <div class="formulario" style="margin-top:1rem;">
+        <div class="grupo-campo">
+          <label for="rechazo-motivo">Motivo</label>
+          <textarea id="rechazo-motivo" placeholder="Explicá por qué la rechazás"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-movimiento__acciones">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-rechazo">Cancelar</button>
+        <button type="button" class="btn btn--bordo-outline" id="btn-confirmar-rechazo">Rechazar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { mostrarError, mostrarExito, formatearFecha } from '../js/utils.js'
@@ -768,9 +852,15 @@
                               // tiene 3 FKs a empleados: empleado_id, contraparte_empleado_id,
                               // creado_por — un embed "empleados(nombre)" sería ambiguo)
       movimientosDelMes: 0,
+      misSolicitudesPendientes: 0, // cantidad de caja_solicitudes_movimiento pendientes
+                              // donde estado.miEmpleado.id es origen o destino — badge
+                              // del listado general (solo admin/super_admin)
       personaAbierta:  null, // id de empleado cuya ficha está abierta
       origenFicha:     null, // 'listado' (la abrió un admin) | 'directo' (entró un usuario)
       movimientos:     [],
+      solicitudesPendientes: [], // solicitudes pendientes DE LA FICHA abierta (donde su
+                              // dueño es origen o destino) — el botón que se muestra por
+                              // fila depende de quién está LOGUEADO, no de la ficha
       filtros:         { busqueda: '' },
       wizardMovimiento: { tipo: null, empleadoId: null },
     }
@@ -936,6 +1026,7 @@
         ids.length
           ? supabase.from('caja_movimientos').select('id', { count: 'exact', head: true }).in('empleado_id', ids).gte('fecha', fechaISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
           : Promise.resolve({ count: 0, error: null }),
+        cargarMisSolicitudesPendientesCount(),
       ])
 
       document.getElementById('estado-cargando').hidden = true
@@ -950,6 +1041,26 @@
 
       renderizarStatTotal()
       renderizarListado()
+    }
+
+    // Cantidad de solicitudes pendientes donde YO (estado.miEmpleado) soy
+    // origen o destino — badge del listado (CAMBIO 6). No depende de qué
+    // ficha esté abierta, siempre es sobre quién está logueado.
+    async function cargarMisSolicitudesPendientesCount() {
+      const miId = estado.miEmpleado.id
+      const { count, error } = await supabase
+        .from('caja_solicitudes_movimiento')
+        .select('id', { count: 'exact', head: true })
+        .eq('estado', 'pendiente')
+        .or(`origen_empleado_id.eq.${miId},destino_empleado_id.eq.${miId}`)
+      estado.misSolicitudesPendientes = error ? 0 : (count || 0)
+    }
+
+    // Refresco liviano del badge para cuando NO hace falta recargar todo el
+    // listado (Rechazar/Cancelar una solicitud — no mueven saldo).
+    async function actualizarBadgePendientesListado() {
+      await cargarMisSolicitudesPendientesCount()
+      renderizarStatTotal()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -989,6 +1100,10 @@
             <div class="stat-card-caja__submetric">
               <div class="stat-card-caja__submetric-label">Mov. del mes</div>
               <div class="stat-card-caja__submetric-valor">${estado.movimientosDelMes}</div>
+            </div>
+            <div class="stat-card-caja__submetric">
+              <div class="stat-card-caja__submetric-label">Pendientes</div>
+              <div class="stat-card-caja__submetric-valor">${estado.misSolicitudesPendientes}</div>
             </div>
           </div>
         </div>
@@ -1128,8 +1243,9 @@
 
       document.getElementById('detalle-persona-movimientos').innerHTML = ''
       document.getElementById('detalle-persona-vacio').hidden = true
+      document.getElementById('detalle-persona-solicitudes').innerHTML = ''
 
-      await cargarMovimientos(empleadoId)
+      await Promise.all([cargarMovimientos(empleadoId), cargarSolicitudesPendientes(empleadoId)])
     }
 
     function cerrarDetallePersona() {
@@ -1159,16 +1275,20 @@
       const cont = document.getElementById('detalle-persona-acciones')
       const botones = []
 
-      // "Añadir ingreso" va siempre, EXCEPTO en la ficha del caja_raiz (Pablo)
-      // vista por otra persona: esa RPC (registrar_ingreso_externo_caja) no
-      // tiene p_empleado_id, solo puede atribuirse al que la llama — si lo
-      // dejáramos abierto, el ingreso quedaría cargado a nombre de quien no
-      // es Pablo. Retiro personal, en cambio, sí soporta actuar por otro.
-      const persona = datosDePersona(empleadoId)
-      const esRaizAjena = !!persona?.caja_raiz && empleadoId !== estado.miEmpleado.id
-      if (!esRaizAjena) {
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1;">Añadir ingreso</button>`)
+      // Ingreso y Egreso: solo en la propia ficha — ya no existe el flujo de
+      // "elegir cualquier empleado desde el listado" (ver abrirModalMovimiento).
+      // Para Pablo (caja_raiz) el botón de ingreso es "Ingreso externo" —
+      // atómico, sin contraparte, sin cambios respecto de antes. Para
+      // cualquier otro es "Añadir ingreso" — crea una solicitud pendiente.
+      if (empleadoId === estado.miEmpleado.id) {
+        const persona = datosDePersona(empleadoId)
+        const esRaiz = !!persona?.caja_raiz
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1;">${esRaiz ? 'Ingreso externo' : 'Añadir ingreso'}</button>`)
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1;">Egreso</button>`)
       }
+
+      // Retiro personal: sin cambios — sigue soportando actuar por otro
+      // (la RPC registrar_retiro_caja sí acepta p_empleado_id).
       botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1;">Retiro personal</button>`)
 
       // Traspaso: mueve plata entre medios DENTRO de la propia caja. Solo
@@ -1181,6 +1301,7 @@
       cont.innerHTML = botones.join('')
 
       document.getElementById('btn-detalle-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId))
+      document.getElementById('btn-detalle-egreso')?.addEventListener('click', () => abrirModalMovimiento('egreso', empleadoId))
       document.getElementById('btn-detalle-retiro')?.addEventListener('click', () => abrirModalMovimiento('retiro', empleadoId))
       document.getElementById('btn-detalle-traspaso')?.addEventListener('click', () => abrirModalTraspaso())
     }
@@ -1269,6 +1390,167 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SOLICITUDES DE MOVIMIENTO PENDIENTES (Ingreso/Egreso a confirmar)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Trae las solicitudes pendientes DE LA FICHA (empleadoId como origen o
+    // destino) — la tabla es simétrica, no guarda si "es un ingreso o un
+    // egreso": eso se interpreta al renderizar, según quién esté logueado.
+    async function cargarSolicitudesPendientes(empleadoId) {
+      const { data, error } = await supabase
+        .from('caja_solicitudes_movimiento')
+        .select('id, origen_empleado_id, destino_empleado_id, monto, moneda, medio_pago, fecha, descripcion, estado, creado_por')
+        .or(`origen_empleado_id.eq.${empleadoId},destino_empleado_id.eq.${empleadoId}`)
+        .eq('estado', 'pendiente')
+        .order('fecha', { ascending: false })
+
+      if (error) { mostrarError('No se pudieron cargar las solicitudes pendientes.'); return }
+      estado.solicitudesPendientes = data || []
+      renderizarSolicitudesPendientes()
+    }
+
+    // Por fila: si YO (estado.miEmpleado.id) soy una de las dos partes y no
+    // soy quien la creó → tengo que responder (Aceptar/Rechazar). Si soy
+    // quien la creó → estoy esperando (Cancelar). Si no soy ninguna de las
+    // dos (la estoy mirando de tercero, con permiso de admin/super_admin) →
+    // solo informativo, sin botones.
+    function renderizarFilaSolicitud(s) {
+      const miId = estado.miEmpleado.id
+      const nombreOrigen  = estado.nombresEmpleados[s.origen_empleado_id]  || '—'
+      const nombreDestino = estado.nombresEmpleados[s.destino_empleado_id] || '—'
+      const importe = formatearImporte(s.monto, s.moneda)
+
+      const soyOrigen  = miId === s.origen_empleado_id
+      const soyDestino = miId === s.destino_empleado_id
+      const soyCreador = miId === s.creado_por
+
+      let acciones = ''
+      if ((soyOrigen || soyDestino) && !soyCreador) {
+        acciones = `
+          <div class="tarjeta-solicitud__acciones">
+            <button type="button" class="btn btn--secundario" data-accion="rechazar" data-id="${s.id}">Rechazar</button>
+            <button type="button" class="btn btn--exito" data-accion="aceptar" data-id="${s.id}">Aceptar</button>
+          </div>`
+      } else if (soyCreador) {
+        const nombreContraparte = soyOrigen ? nombreDestino : nombreOrigen
+        acciones = `
+          <div class="tarjeta-solicitud__espera">Esperando que ${nombreContraparte} la confirme</div>
+          <div class="tarjeta-solicitud__acciones">
+            <button type="button" class="btn btn--secundario" data-accion="cancelar" data-id="${s.id}">Cancelar</button>
+          </div>`
+      }
+
+      return `
+        <div class="tarjeta-solicitud">
+          <div class="tarjeta-solicitud__monto">${importe}</div>
+          <div class="tarjeta-solicitud__detalle">${nombreOrigen} → ${nombreDestino} · ${MEDIO_PAGO_LABEL_CAJA[s.medio_pago] || s.medio_pago} · ${formatearFecha(s.fecha)}</div>
+          ${s.descripcion ? `<div class="tarjeta-solicitud__detalle">${s.descripcion}</div>` : ''}
+          ${acciones}
+        </div>`
+    }
+
+    function renderizarSolicitudesPendientes() {
+      const cont = document.getElementById('detalle-persona-solicitudes')
+
+      if (!estado.solicitudesPendientes.length) {
+        cont.innerHTML = ''
+        return
+      }
+
+      cont.innerHTML = `
+        <div class="modal-ficha__seccion-titulo">Solicitudes pendientes</div>
+        ${estado.solicitudesPendientes.map(renderizarFilaSolicitud).join('')}
+      `
+
+      cont.querySelectorAll('[data-accion="aceptar"]').forEach(btn => {
+        btn.addEventListener('click', () => responderSolicitud(btn.dataset.id, true))
+      })
+      cont.querySelectorAll('[data-accion="rechazar"]').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalRechazo(btn.dataset.id))
+      })
+      cont.querySelectorAll('[data-accion="cancelar"]').forEach(btn => {
+        btn.addEventListener('click', () => cancelarSolicitud(btn.dataset.id))
+      })
+    }
+
+    // Refresco tras Aceptar/Rechazar/Cancelar. cambioSaldo solo es true al
+    // Aceptar — es el único caso en que recién ahí se mueve la plata (mismo
+    // patrón de refresco que guardarMovimiento/guardarTraspaso).
+    async function refrescarTrasResolucionSolicitud(cambioSaldo) {
+      const empleadoId = estado.personaAbierta
+
+      if (cambioSaldo) {
+        if (estado.origenFicha === 'directo') {
+          const [saldosRes, saldosMedioRes] = await Promise.all([
+            supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
+            supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
+          ])
+          estado.saldos = saldosRes.data || []
+          estado.saldosPorMedio = saldosMedioRes.data || []
+          renderizarSaldosDetalle(estado.miEmpleado.id)
+        } else {
+          await cargarListado()
+          if (estado.personaAbierta) renderizarSaldosDetalle(estado.personaAbierta)
+        }
+      } else if (estado.origenFicha === 'listado') {
+        await actualizarBadgePendientesListado()
+      }
+
+      if (empleadoId) {
+        await cargarMovimientos(empleadoId)
+        await cargarSolicitudesPendientes(empleadoId)
+      }
+    }
+
+    async function responderSolicitud(id, aceptar) {
+      const { error } = await supabase.rpc('responder_solicitud_movimiento_caja', {
+        p_solicitud_id: id, p_aceptar: aceptar,
+      })
+      if (error) { mostrarError(error.message || 'No se pudo responder la solicitud.'); return }
+      mostrarExito('Solicitud aceptada.')
+      await refrescarTrasResolucionSolicitud(true)
+    }
+
+    let solicitudARechazarId = null
+
+    function abrirModalRechazo(id) {
+      solicitudARechazarId = id
+      document.getElementById('rechazo-motivo').value = ''
+      document.getElementById('modal-rechazo').hidden = false
+    }
+
+    function cerrarModalRechazo() {
+      document.getElementById('modal-rechazo').hidden = true
+      solicitudARechazarId = null
+    }
+
+    async function confirmarRechazo() {
+      const motivo = document.getElementById('rechazo-motivo').value.trim()
+      if (!motivo) { mostrarError('Ingresá el motivo del rechazo.'); return }
+
+      const { error } = await supabase.rpc('responder_solicitud_movimiento_caja', {
+        p_solicitud_id: solicitudARechazarId, p_aceptar: false, p_motivo_rechazo: motivo,
+      })
+      if (error) { mostrarError(error.message || 'No se pudo rechazar la solicitud.'); return }
+
+      mostrarExito('Solicitud rechazada.')
+      cerrarModalRechazo()
+      await refrescarTrasResolucionSolicitud(false)
+    }
+
+    async function cancelarSolicitud(id) {
+      const { error } = await supabase.rpc('cancelar_solicitud_movimiento_caja', { p_solicitud_id: id })
+      if (error) { mostrarError(error.message || 'No se pudo cancelar la solicitud.'); return }
+      mostrarExito('Solicitud cancelada.')
+      await refrescarTrasResolucionSolicitud(false)
+    }
+
+    document.getElementById('btn-cerrar-rechazo').addEventListener('click', cerrarModalRechazo)
+    document.getElementById('btn-cancelar-rechazo').addEventListener('click', cerrarModalRechazo)
+    document.getElementById('modal-rechazo__backdrop').addEventListener('click', cerrarModalRechazo)
+    document.getElementById('btn-confirmar-rechazo').addEventListener('click', confirmarRechazo)
+
+    // ═══════════════════════════════════════════════════════════════════════
     // VISTA — Retiros personales (exclusiva rol_app === 'super_admin')
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -1327,19 +1609,32 @@
       btn.addEventListener('click', () => seleccionarMedioPagoCaja(btn.dataset.valor))
     })
 
-    // tipo: 'ingreso' | 'retiro'. empleadoId: dueño de la ficha desde donde se
-    // abrió (siempre presente — ya no existe el flujo de "elegir cualquier
-    // empleado" desde el listado).
+    // Arma el <select> de contraparte para Ingreso (subtipo 'propio') y
+    // Egreso — según el rol_app de QUIEN ESTÁ MIRANDO (siempre soy yo mismo,
+    // ya que ambos botones solo se abren desde la propia ficha):
+    // - super_admin: cualquier otro empleado con acceso (la regla "al menos
+    //   un super_admin de los dos lados" ya la cumplo yo mismo).
+    // - admin o usuario: solo los rol_app='super_admin'.
+    function poblarSelectorContraparte() {
+      const contraparteSelect = document.getElementById('contraparte-select')
+      const candidatos = estado.miEmpleado.rol_app === 'super_admin'
+        ? estado.empleados.filter(e => e.id !== estado.miEmpleado.id)
+        : estado.superAdmins.filter(s => s.id !== estado.miEmpleado.id)
+      contraparteSelect.innerHTML = '<option value="">— Seleccioná —</option>' +
+        candidatos.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')
+    }
+
+    // tipo: 'ingreso' | 'egreso' | 'retiro'. empleadoId: dueño de la ficha
+    // desde donde se abrió (siempre presente — ya no existe el flujo de
+    // "elegir cualquier empleado" desde el listado, para ingreso ni egreso).
     function abrirModalMovimiento(tipo, empleadoId) {
       estado.wizardMovimiento = { tipo, empleadoId }
 
       const grupoContraparte  = document.getElementById('grupo-contraparte')
-      const contraparteSelect = document.getElementById('contraparte-select')
-      const contraparteFija   = document.getElementById('contraparte-fija')
+      const labelContraparte  = document.getElementById('label-contraparte')
       const avisoRetiro       = document.getElementById('aviso-retiro-personal')
 
       if (tipo === 'ingreso') {
-        document.getElementById('movimiento-titulo').textContent = 'Añadir ingreso'
         avisoRetiro.hidden = true
 
         const persona = datosDePersona(empleadoId)
@@ -1349,30 +1644,24 @@
         if (esRaiz) {
           // Ingreso externo (solo lo carga el propio caja_raiz sobre su
           // ficha — ver el filtro en renderizarAccionesDetalle): no hay
-          // contraparte, el dinero entra de afuera del sistema.
+          // contraparte, el dinero entra de afuera del sistema, y sigue
+          // siendo atómico — no pasa por el esquema de solicitudes.
+          document.getElementById('movimiento-titulo').textContent = 'Ingreso externo'
           grupoContraparte.style.display = 'none'
-          estado.wizardMovimiento.contraparteFijaId = null
         } else {
+          // Cualquier otro: crea una solicitud pendiente que la contraparte
+          // tiene que aceptar — no mueve saldo todavía.
+          document.getElementById('movimiento-titulo').textContent = 'Añadir ingreso'
           grupoContraparte.style.display = 'flex'
-          if (persona?.rol_app === 'super_admin') {
-            // Es un super_admin sin caja_raiz (Facundo): la contraparte es
-            // fija, quien tiene caja_raiz — se busca en estado.superAdmins,
-            // no se hardcodea el nombre.
-            const raiz = estado.superAdmins.find(s => s.caja_raiz)
-            contraparteFija.textContent = raiz?.nombre || '—'
-            contraparteFija.hidden = false
-            contraparteSelect.hidden = true
-            estado.wizardMovimiento.contraparteFijaId = raiz?.id || null
-          } else {
-            // admin o usuario: selector con todos los super_admin (Pablo y
-            // Facundo), sin filtrar por empresa.
-            contraparteFija.hidden = true
-            contraparteSelect.hidden = false
-            contraparteSelect.innerHTML = '<option value="">— Seleccioná —</option>' +
-              estado.superAdmins.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('')
-            estado.wizardMovimiento.contraparteFijaId = null
-          }
+          labelContraparte.textContent = '¿Quién te dio la plata?'
+          poblarSelectorContraparte()
         }
+      } else if (tipo === 'egreso') {
+        document.getElementById('movimiento-titulo').textContent = 'Registrar egreso'
+        avisoRetiro.hidden = true
+        grupoContraparte.style.display = 'flex'
+        labelContraparte.textContent = '¿A quién le vas a dar la plata?'
+        poblarSelectorContraparte()
       } else {
         grupoContraparte.style.display = 'none'
         document.getElementById('movimiento-titulo').textContent = 'Registrar retiro'
@@ -1398,7 +1687,7 @@
     }
 
     async function guardarMovimiento() {
-      const { tipo, subtipo, empleadoId, contraparteFijaId } = estado.wizardMovimiento
+      const { tipo, subtipo, empleadoId } = estado.wizardMovimiento
       const monto       = parseImporte(document.getElementById('movimiento-monto').value)
       const moneda       = document.getElementById('movimiento-moneda').value
       const medioPago     = medioPagoCajaSeleccionado
@@ -1408,10 +1697,14 @@
       if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
       if (!medioPago) { mostrarError('Elegí un medio de pago.'); return }
 
+      const necesitaContraparte = (tipo === 'ingreso' && subtipo === 'propio') || tipo === 'egreso'
       let contraparteId = null
-      if (tipo === 'ingreso' && subtipo === 'propio') {
-        contraparteId = contraparteFijaId || document.getElementById('contraparte-select').value
-        if (!contraparteId) { mostrarError('Elegí quién te dio la plata.'); return }
+      if (necesitaContraparte) {
+        contraparteId = document.getElementById('contraparte-select').value
+        if (!contraparteId) {
+          mostrarError(tipo === 'egreso' ? 'Elegí a quién le vas a dar la plata.' : 'Elegí quién te dio la plata.')
+          return
+        }
       }
 
       const btn = document.getElementById('btn-guardar-movimiento')
@@ -1419,6 +1712,10 @@
       btn.disabled = true
 
       const esPropio = empleadoId === estado.miEmpleado.id
+      // Los únicos dos casos que TODAVÍA son atómicos (mueven saldo ya
+      // mismo): ingreso externo (Pablo) y retiro. Ingreso propio y egreso
+      // ahora solo crean una solicitud pendiente — ver CAMBIO 4/5.
+      const esAtomico = (tipo === 'ingreso' && subtipo === 'externo') || tipo === 'retiro'
 
       try {
         let error
@@ -1428,38 +1725,54 @@
           // ; a propósito: sin esto, ASI interpreta la línea de abajo como
           // una llamada — ver el comentario largo más abajo, mismo motivo.
           ;({ error } = await supabase.rpc('registrar_ingreso_externo_caja', params))
-        } else if (tipo === 'ingreso') {
-          const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_contraparte_empleado_id: contraparteId, p_descripcion: descripcion }
+          if (error) throw error
+          mostrarExito('Ingreso registrado.')
+        } else if (tipo === 'ingreso' || tipo === 'egreso') {
+          const params = {
+            p_tipo: tipo, p_contraparte_empleado_id: contraparteId,
+            p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion,
+          }
           if (fecha) params.p_fecha = fecha
-          if (!esPropio) params.p_empleado_id = empleadoId
-          ;({ error } = await supabase.rpc('registrar_ingreso_propio_caja', params))
+          ;({ error } = await supabase.rpc('crear_solicitud_movimiento_caja', params))
+          if (error) throw error
+          const nombreContraparte = estado.nombresEmpleados[contraparteId] || '—'
+          mostrarExito(`Solicitud enviada, esperando confirmación de ${nombreContraparte}.`)
         } else {
           const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
           if (fecha) params.p_fecha = fecha
           if (!esPropio) params.p_empleado_id = empleadoId
           ;({ error } = await supabase.rpc('registrar_retiro_caja', params))
+          if (error) throw error
+          mostrarExito('Retiro registrado.')
         }
-        if (error) throw error
 
-        mostrarExito(tipo === 'ingreso' ? 'Ingreso registrado.' : 'Retiro registrado.')
         cerrarModalMovimiento()
 
-        if (estado.origenFicha === 'directo') {
-          // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
-          const [saldosRes, saldosMedioRes] = await Promise.all([
-            supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
-            supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
-          ])
-          estado.saldos = saldosRes.data || []
-          estado.saldosPorMedio = saldosMedioRes.data || []
-          renderizarSaldosDetalle(estado.miEmpleado.id)
-          await cargarMovimientos(estado.miEmpleado.id)
-        } else {
-          await cargarListado()
-          if (estado.personaAbierta) {
-            renderizarSaldosDetalle(estado.personaAbierta)
-            await cargarMovimientos(estado.personaAbierta)
+        if (esAtomico) {
+          // Se movió saldo ya mismo — mismo refresco de siempre.
+          if (estado.origenFicha === 'directo') {
+            // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
+            const [saldosRes, saldosMedioRes] = await Promise.all([
+              supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
+              supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
+            ])
+            estado.saldos = saldosRes.data || []
+            estado.saldosPorMedio = saldosMedioRes.data || []
+            renderizarSaldosDetalle(estado.miEmpleado.id)
+            await cargarMovimientos(estado.miEmpleado.id)
+          } else {
+            await cargarListado()
+            if (estado.personaAbierta) {
+              renderizarSaldosDetalle(estado.personaAbierta)
+              await cargarMovimientos(estado.personaAbierta)
+            }
           }
+        } else {
+          // Ingreso propio / Egreso: solo se creó la solicitud, el saldo
+          // todavía no cambió — alcanza con refrescar las solicitudes
+          // pendientes de la ficha y el badge del listado.
+          await cargarSolicitudesPendientes(empleadoId)
+          if (estado.origenFicha === 'listado') await actualizarBadgePendientesListado()
         }
       } catch (err) {
         mostrarError(err.message || 'No se pudo registrar el movimiento.')
