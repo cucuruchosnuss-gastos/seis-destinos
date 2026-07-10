@@ -1058,12 +1058,24 @@
     })
 
     async function rechazarSolicitud(solicitudId) {
-      const { error } = await supabase.rpc('rechazar_solicitud_acceso', { p_solicitud_id: solicitudId })
-      if (error) {
-        mostrarError(error.message || 'No se pudo rechazar la solicitud.')
+      // Vía Edge Function (no la RPC vieja): además de marcar la solicitud
+      // como rechazada, borra la cuenta de Auth asociada — si no, la persona
+      // no puede volver a registrarse con el mismo email ("ya existe una
+      // cuenta con ese email"), porque rechazar no elimina la cuenta.
+      const { data, error } = await supabase.functions.invoke('rechazar-solicitud-acceso', {
+        body: { solicitud_id: solicitudId },
+      })
+
+      if (error || !data?.ok) {
+        mostrarError(data?.mensaje || 'No se pudo rechazar la solicitud.')
         return
       }
-      mostrarExito('Solicitud rechazada.')
+
+      if (data.cuentaAuthNoEliminada) {
+        mostrarError('La solicitud se rechazó, pero no se pudo borrar la cuenta de acceso asociada. Avisá a soporte.')
+      } else {
+        mostrarExito('Solicitud rechazada.')
+      }
       await cargarTodo()
     }
 

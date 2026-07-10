@@ -35,9 +35,9 @@
     </div>
 
     <div id="dashboard-pendiente" class="estado-vacio" hidden>
-      <div class="estado-vacio__icono">⏳</div>
-      <div class="estado-vacio__titulo">Tu cuenta está pendiente de aprobación</div>
-      <p class="estado-vacio__descripcion">Un administrador todavía no aprobó tu acceso. Te avisamos cuando esté listo.</p>
+      <div class="estado-vacio__icono" id="dashboard-pendiente-icono">⏳</div>
+      <div class="estado-vacio__titulo" id="dashboard-pendiente-titulo">Tu cuenta está pendiente de aprobación</div>
+      <p class="estado-vacio__descripcion" id="dashboard-pendiente-descripcion">Un administrador todavía no aprobó tu acceso. Te avisamos cuando esté listo.</p>
     </div>
   </main>
 
@@ -122,10 +122,43 @@
       .maybeSingle()
 
     if (!miEmpleado) {
+      // Todavía no hay fila en empleados — puede ser: solicitud pendiente,
+      // solicitud rechazada (la cuenta debería haberse borrado al rechazar,
+      // pero por las dudas la UI lo contempla), o caso huérfano (cuenta de
+      // Auth sin ninguna solicitud asociada — no debería pasar más después
+      // del fix de crear-solicitud-acceso, pero tampoco debería colgar
+      // a la persona en un mensaje que no explica nada).
+      const { data: miSolicitud } = await supabase.rpc('obtener_mi_solicitud_acceso')
+      const estadoSolicitud = miSolicitud?.[0]?.estado ?? null
+
+      const MENSAJES_ESTADO = {
+        pendiente: {
+          icono: '⏳',
+          titulo: 'Tu cuenta está pendiente de aprobación',
+          descripcion: 'Un administrador todavía no aprobó tu acceso. Te avisamos cuando esté listo.',
+        },
+        rechazada: {
+          icono: '🚫',
+          titulo: 'Tu solicitud fue rechazada',
+          descripcion: 'Contactá a un administrador si creés que fue un error.',
+        },
+        huerfano: {
+          icono: '⚠️',
+          titulo: 'Hubo un problema con tu registro',
+          descripcion: 'Contactá a un administrador para que revise tu cuenta.',
+        },
+      }
+
+      const mensaje = MENSAJES_ESTADO[estadoSolicitud] || MENSAJES_ESTADO.huerfano
+
+      document.getElementById('dashboard-pendiente-icono').textContent = mensaje.icono
+      document.getElementById('dashboard-pendiente-titulo').textContent = mensaje.titulo
+      document.getElementById('dashboard-pendiente-descripcion').textContent = mensaje.descripcion
+
       document.getElementById('dashboard-titulo').hidden = true
       document.getElementById('grilla-modulos').hidden = true
       document.getElementById('dashboard-pendiente').hidden = false
-      throw new Error('Cuenta sin empleado vinculado — acceso pendiente de aprobación')
+      throw new Error('Cuenta sin empleado vinculado — estado: ' + (estadoSolicitud ?? 'sin solicitud'))
     }
 
     const esAdmin = ['admin', 'super_admin'].includes(miEmpleado.rol_app)

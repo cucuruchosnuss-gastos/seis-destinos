@@ -48,34 +48,28 @@ export async function buscarEmpleadoPorCuil(cuil) {
   return data && data.length ? data[0] : null
 }
 
-// Crea la cuenta en Supabase Auth y, con el usuario_id devuelto, la fila en
-// solicitudes_acceso. apellido/fechaNacimiento/telefono solo aplican cuando
-// tuvoMatch es false.
+// Crea la cuenta en Supabase Auth y la fila en solicitudes_acceso a través
+// de la Edge Function crear-solicitud-acceso (corre con service_role del
+// lado del servidor): si el insert de la solicitud falla, la función revierte
+// la cuenta de Auth recién creada — evita cuentas huérfanas sin solicitud
+// asociada (bug real detectado en producción: el insert fallaba en silencio
+// y la persona quedaba con una cuenta creada pero sin ninguna fila en
+// solicitudes_acceso, viendo "pendiente de aprobación" para siempre).
+// apellido/fechaNacimiento/telefono solo aplican cuando tuvoMatch es false.
 export async function crearSolicitudAcceso({ nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono }) {
-  const { data, error: errorAuth } = await supabase.auth.signUp({
-    email,
-    password: contrasena,
-    options: { data: { nombre_completo: nombreCompleto } }
+  const { data, error } = await supabase.functions.invoke('crear-solicitud-acceso', {
+    body: { nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono },
   })
 
-  if (errorAuth) throw new Error(_traducirError(errorAuth.message))
-
-  const { error: errorSolicitud } = await supabase
-    .from('solicitudes_acceso')
-    .insert([{
-      nombre,
-      apellido: apellido ?? null,
-      email,
-      cuil,
-      estado: 'pendiente',
-      fecha_solicitud: new Date().toISOString(),
-      usuario_id: data.user?.id ?? null,
-      tuvo_match: tuvoMatch,
-      fecha_nacimiento: fechaNacimiento ?? null,
-      telefono: telefono ?? null
-    }])
-
-  if (errorSolicitud) console.error('No se pudo registrar la solicitud de acceso:', errorSolicitud.message)
+  if (error) throw new Error('No se pudo enviar la solicitud. Probá de nuevo.')
+  if (!data?.ok) {
+    // esErrorAuth: el mensaje es texto crudo de Supabase Auth (en inglés) y
+    // hay que traducirlo. Si no, la Edge Function ya devuelve un mensaje en
+    // español listo para mostrar — no pasarlo por el traductor, o se pierde
+    // (el mapa de _traducirError solo conoce esas 5 frases en inglés y cae
+    // al genérico "Ocurrió un error" para cualquier otra cosa).
+    throw new Error(data?.esErrorAuth ? _traducirError(data.mensaje) : (data?.mensaje || 'No se pudo enviar la solicitud.'))
+  }
 
   return data
 }
