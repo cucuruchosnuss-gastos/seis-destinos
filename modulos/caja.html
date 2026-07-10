@@ -343,10 +343,13 @@
     }
 
     /* Único color de alerta de Caja: bordó, y solo en el ícono de retiro.
-       Ingreso y gasto usan navy/gris neutro — nada de verde ni cian (color
-       de Gastos). */
+       Ingreso, ingreso externo, gasto y transferencia usan navy/gris neutro —
+       nada de verde ni cian (color de Gastos): una transferencia entre cajas
+       no es una alerta, es una entrega normal de plata dentro del sistema. */
     .chip-tipo-movimiento--ingreso,
-    .chip-tipo-movimiento--egreso_gasto {
+    .chip-tipo-movimiento--ingreso_externo,
+    .chip-tipo-movimiento--egreso_gasto,
+    .chip-tipo-movimiento--egreso_transferencia {
       background: var(--color-superficie);
       color: var(--color-acento);
     }
@@ -354,6 +357,19 @@
     .chip-tipo-movimiento--egreso_retiro {
       background: var(--bordo-suave);
       color: var(--bordo-oscuro);
+    }
+
+    .movimiento__persona {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.25rem;
+    }
+
+    .movimiento__contraparte {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
     }
 
     .movimiento__fecha {
@@ -472,6 +488,18 @@
       margin: 0.75rem 0;
     }
 
+    /* Texto fijo (no editable) para "¿Quién te dio la plata?" cuando la
+       contraparte ya está determinada — mismo look que un input deshabilitado. */
+    .campo-texto-fijo {
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      background: var(--color-superficie);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      color: var(--color-texto);
+    }
+
     .modal-movimiento__acciones {
       display: flex;
       gap: 0.625rem;
@@ -509,12 +537,13 @@
         <div class="caja-toolbar__buscar">
           <input type="text" id="filtro-busqueda-caja" placeholder="🔍 Buscar persona…">
         </div>
+        <button type="button" class="btn btn--secundario" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
         <select id="filtro-empresa-caja">
           <option value="">Todas las empresas</option>
         </select>
         <div class="caja-toolbar__acciones">
-          <button type="button" class="btn btn--amarillo" id="btn-nuevo-ingreso" style="width:auto; flex:1;">+ Nuevo ingreso</button>
           <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto; flex:1;">Retiro personal</button>
+          <button type="button" class="btn btn--secundario" id="btn-ver-retiros-personales" style="display:none; width:auto; flex:1;">Retiros personales</button>
         </div>
       </div>
 
@@ -533,6 +562,32 @@
     </div>
 
   </div><!-- /vista-lista-caja -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA — RETIROS PERSONALES (exclusiva rol_app === 'super_admin')
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="vista-retiros-personales" hidden>
+    <header class="header">
+      <button type="button" class="btn btn--icono" id="btn-cerrar-retiros-personales">← Volver</button>
+      <span class="header__nombre-app">Retiros personales</span>
+      <div style="width:2rem;"></div>
+    </header>
+
+    <div style="padding:1.25rem; max-width:720px; margin:0 auto; width:100%;">
+      <div id="estado-cargando-retiros" class="estado-vacio">
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando…</p>
+      </div>
+
+      <div class="lista-movimientos" id="lista-retiros-personales"></div>
+
+      <div id="estado-vacio-retiros" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">📋</div>
+        <div class="estado-vacio__titulo">No hay retiros registrados</div>
+      </div>
+    </div>
+  </div><!-- /vista-retiros-personales -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -577,11 +632,12 @@
       <div id="aviso-retiro-personal" class="aviso-retiro-personal" hidden></div>
 
       <div class="formulario" style="margin-top:1rem;">
-        <div class="grupo-campo" id="grupo-movimiento-empleado" style="display:none;">
-          <label for="movimiento-empleado">Empleado</label>
-          <select id="movimiento-empleado">
-            <option value="">— Seleccioná empleado —</option>
+        <div class="grupo-campo" id="grupo-contraparte" style="display:none;">
+          <label for="contraparte-select">¿Quién te dio la plata?</label>
+          <select id="contraparte-select">
+            <option value="">— Seleccioná —</option>
           </select>
+          <div id="contraparte-fija" class="campo-texto-fijo" hidden></div>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end;">
@@ -638,11 +694,16 @@
 
     const estado = {
       sesion:          null,
-      miEmpleado:      null, // { id, nombre, rol_app }
+      miEmpleado:      null, // { id, nombre, rol_app, caja_raiz }
       empleados:       [],   // personas con acceso (solo se carga para admin/super_admin)
       maestros:        { unidadesNegocio: [] },
       saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
                               // para usuario: solo las propias (nunca se piden las de otros)
+      superAdmins:     [],   // { id, nombre, caja_raiz } — todos los rol_app='super_admin'
+      nombresEmpleados: {},  // id -> nombre (todos los activos), para resolver contraparte/
+                              // titular sin depender de embeds ambiguos (caja_movimientos
+                              // tiene 3 FKs a empleados: empleado_id, contraparte_empleado_id,
+                              // creado_por — un embed "empleados(nombre)" sería ambiguo)
       movimientosDelMes: 0,
       personaAbierta:  null, // id de empleado cuya ficha está abierta
       origenFicha:     null, // 'listado' (la abrió un admin) | 'directo' (entró un usuario)
@@ -653,7 +714,9 @@
 
     let medioPagoCajaSeleccionado = null
 
-    const TIPO_LABEL = { ingreso: 'Ingreso', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro' }
+    // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
+    // nombre de la contraparte ("Entregado a X"), ver etiquetaMovimiento().
+    const TIPO_LABEL = { ingreso: 'Ingreso', ingreso_externo: 'Ingreso externo', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro' }
     const MEDIO_PAGO_LABEL_CAJA = { efectivo: 'Efectivo', transferencia: 'Transferencia' }
 
     function esAdmin() {
@@ -713,6 +776,37 @@
       return estado.maestros.unidadesNegocio.find(u => u.id === unidadId)?.nombre || null
     }
 
+    // Devuelve el registro completo (rol_app, caja_raiz) del dueño de una
+    // ficha, sea que esté en el listado (lo abrió un admin) o sea el propio
+    // usuario logueado (entrada directa, nunca está en estado.empleados).
+    function datosDePersona(empleadoId) {
+      return estado.empleados.find(e => e.id === empleadoId) ||
+        (estado.miEmpleado?.id === empleadoId ? estado.miEmpleado : null)
+    }
+
+    function etiquetaMovimiento(m) {
+      if (m.tipo === 'egreso_transferencia') {
+        return 'Entregado a ' + (estado.nombresEmpleados[m.contraparte_empleado_id] || '—')
+      }
+      return TIPO_LABEL[m.tipo] || m.tipo
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGA DE DATOS — comunes a todos los roles
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarSuperAdmins() {
+      const { data, error } = await supabase.from('empleados').select('id, nombre, caja_raiz').eq('rol_app', 'super_admin')
+      if (error) { mostrarError('No se pudieron cargar los super admins.'); return }
+      estado.superAdmins = data || []
+    }
+
+    async function cargarNombresEmpleados() {
+      const { data, error } = await supabase.from('empleados').select('id, nombre').eq('activo', true)
+      if (error) { mostrarError('No se pudieron cargar los nombres de empleados.'); return }
+      estado.nombresEmpleados = Object.fromEntries((data || []).map(e => [e.id, e.nombre]))
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // CARGA DE DATOS — Listado general (solo admin/super_admin)
     // ═══════════════════════════════════════════════════════════════════════
@@ -721,7 +815,7 @@
       document.getElementById('estado-cargando').hidden = false
 
       const [empRes, unidRes] = await Promise.all([
-        supabase.from('empleados').select('id, nombre, unidad_negocio_id').not('auth_user_id', 'is', null).eq('activo', true).order('nombre'),
+        supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz').not('auth_user_id', 'is', null).eq('activo', true).order('nombre'),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
       ])
 
@@ -960,8 +1054,16 @@
     function renderizarAccionesDetalle(empleadoId) {
       const cont = document.getElementById('detalle-persona-acciones')
       const botones = []
-      if (esAdmin()) {
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1;">+ Nuevo ingreso</button>`)
+
+      // "Añadir ingreso" va siempre, EXCEPTO en la ficha del caja_raiz (Pablo)
+      // vista por otra persona: esa RPC (registrar_ingreso_externo_caja) no
+      // tiene p_empleado_id, solo puede atribuirse al que la llama — si lo
+      // dejáramos abierto, el ingreso quedaría cargado a nombre de quien no
+      // es Pablo. Retiro personal, en cambio, sí soporta actuar por otro.
+      const persona = datosDePersona(empleadoId)
+      const esRaizAjena = !!persona?.caja_raiz && empleadoId !== estado.miEmpleado.id
+      if (!esRaizAjena) {
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1;">Añadir ingreso</button>`)
       }
       botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1;">Retiro personal</button>`)
       cont.innerHTML = botones.join('')
@@ -988,7 +1090,7 @@
       const { data, error } = await supabase
         .from('caja_movimientos')
         .select(`
-          id, tipo, monto, moneda, medio_pago, descripcion, fecha, gasto_id,
+          id, tipo, monto, moneda, medio_pago, descripcion, fecha, gasto_id, contraparte_empleado_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .eq('empleado_id', empleadoId)
@@ -1005,8 +1107,17 @@
       renderizarMovimientos()
     }
 
-    function renderizarFilaMovimiento(m) {
-      const signo = m.tipo === 'ingreso' ? '+' : '−'
+    function renderizarFilaMovimiento(m, { mostrarPersona = false } = {}) {
+      const esPositivo = m.tipo === 'ingreso' || m.tipo === 'ingreso_externo'
+      const signo = esPositivo ? '+' : '−'
+
+      const personaHtml = mostrarPersona
+        ? `<div class="movimiento__persona">${estado.nombresEmpleados[m.empleado_id] || '—'}</div>`
+        : ''
+
+      const sublineaContraparte = (m.tipo === 'ingreso' && m.contraparte_empleado_id)
+        ? `<div class="movimiento__contraparte">de ${estado.nombresEmpleados[m.contraparte_empleado_id] || '—'}</div>`
+        : ''
 
       const refGasto = (m.gasto_id && m.gastos)
         ? `<div class="movimiento__referencia">${m.gastos.razon_social || 'Gasto'}${m.gastos.categorias?.nombre ? ' · ' + m.gastos.categorias.nombre : ''} — <a href="gastos.html?gasto=${m.gasto_id}">Ver gasto →</a></div>`
@@ -1016,7 +1127,9 @@
         <div class="tarjeta-movimiento">
           <div class="movimiento__cabecera">
             <div class="movimiento__info">
-              <span class="chip-tipo-movimiento chip-tipo-movimiento--${m.tipo}">${TIPO_LABEL[m.tipo] || m.tipo}</span>
+              ${personaHtml}
+              <span class="chip-tipo-movimiento chip-tipo-movimiento--${m.tipo}">${etiquetaMovimiento(m)}</span>
+              ${sublineaContraparte}
               <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${MEDIO_PAGO_LABEL_CAJA[m.medio_pago] || m.medio_pago}</div>
               ${m.descripcion ? `<div class="movimiento__descripcion">${m.descripcion}</div>` : ''}
               ${refGasto}
@@ -1036,8 +1149,55 @@
         return
       }
       document.getElementById('detalle-persona-vacio').hidden = true
-      cont.innerHTML = estado.movimientos.map(renderizarFilaMovimiento).join('')
+      // OJO: no pasar renderizarFilaMovimiento directo a .map() — Array.map
+      // manda (elemento, índice, array) y el índice pisaría el parámetro
+      // { mostrarPersona } de la función.
+      cont.innerHTML = estado.movimientos.map(m => renderizarFilaMovimiento(m)).join('')
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISTA — Retiros personales (exclusiva rol_app === 'super_admin')
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirRetirosPersonales() {
+      document.getElementById('vista-lista-caja').hidden = true
+      document.getElementById('vista-retiros-personales').removeAttribute('hidden')
+
+      document.getElementById('estado-cargando-retiros').hidden = false
+      document.getElementById('lista-retiros-personales').innerHTML = ''
+      document.getElementById('estado-vacio-retiros').hidden = true
+
+      const { data, error } = await supabase
+        .from('caja_movimientos')
+        .select('id, tipo, monto, moneda, medio_pago, descripcion, fecha, empleado_id')
+        .eq('tipo', 'egreso_retiro')
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      document.getElementById('estado-cargando-retiros').hidden = true
+
+      if (error) {
+        mostrarError('No se pudieron cargar los retiros.')
+        return
+      }
+
+      const retiros = data || []
+      if (!retiros.length) {
+        document.getElementById('estado-vacio-retiros').hidden = false
+        return
+      }
+      document.getElementById('lista-retiros-personales').innerHTML =
+        retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join('')
+    }
+
+    function cerrarRetirosPersonales() {
+      document.getElementById('vista-retiros-personales').hidden = true
+      document.getElementById('vista-lista-caja').removeAttribute('hidden')
+    }
+
+    document.getElementById('btn-ver-retiros-personales').addEventListener('click', abrirRetirosPersonales)
+    document.getElementById('btn-cerrar-retiros-personales').addEventListener('click', cerrarRetirosPersonales)
+    document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
 
     // ═══════════════════════════════════════════════════════════════════════
     // MODAL — Registrar ingreso / retiro
@@ -1054,31 +1214,61 @@
       btn.addEventListener('click', () => seleccionarMedioPagoCaja(btn.dataset.valor))
     })
 
-    function abrirModalMovimiento(tipo, empleadoIdPreseleccionado = null) {
-      estado.wizardMovimiento = { tipo, empleadoId: empleadoIdPreseleccionado }
+    // tipo: 'ingreso' | 'retiro'. empleadoId: dueño de la ficha desde donde se
+    // abrió (siempre presente — ya no existe el flujo de "elegir cualquier
+    // empleado" desde el listado).
+    function abrirModalMovimiento(tipo, empleadoId) {
+      estado.wizardMovimiento = { tipo, empleadoId }
 
-      document.getElementById('movimiento-titulo').textContent =
-        tipo === 'ingreso' ? 'Registrar ingreso' : 'Registrar retiro'
+      const grupoContraparte  = document.getElementById('grupo-contraparte')
+      const contraparteSelect = document.getElementById('contraparte-select')
+      const contraparteFija   = document.getElementById('contraparte-fija')
+      const avisoRetiro       = document.getElementById('aviso-retiro-personal')
 
-      // .grupo-campo fuerza display:flex en main.css, que le gana a [hidden] —
-      // hay que ocultarlo con style.display, no con la propiedad hidden (mismo
-      // problema que resuelve gastos.html en #grupo-kilometraje-detalle).
-      const grupoEmpleado = document.getElementById('grupo-movimiento-empleado')
-      if (empleadoIdPreseleccionado) {
-        grupoEmpleado.style.display = 'none'
-      } else {
-        grupoEmpleado.style.display = 'flex'
-        document.getElementById('movimiento-empleado').innerHTML =
-          '<option value="">— Seleccioná empleado —</option>' +
-          estado.empleados.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('')
-      }
-
-      const avisoRetiro = document.getElementById('aviso-retiro-personal')
-      if (tipo === 'retiro' && !esAdmin()) {
-        avisoRetiro.textContent = 'Este retiro se descuenta de tu caja personal — no es un gasto de la empresa.'
-        avisoRetiro.hidden = false
-      } else {
+      if (tipo === 'ingreso') {
+        document.getElementById('movimiento-titulo').textContent = 'Añadir ingreso'
         avisoRetiro.hidden = true
+
+        const persona = datosDePersona(empleadoId)
+        const esRaiz = !!persona?.caja_raiz
+        estado.wizardMovimiento.subtipo = esRaiz ? 'externo' : 'propio'
+
+        if (esRaiz) {
+          // Ingreso externo (solo lo carga el propio caja_raiz sobre su
+          // ficha — ver el filtro en renderizarAccionesDetalle): no hay
+          // contraparte, el dinero entra de afuera del sistema.
+          grupoContraparte.style.display = 'none'
+          estado.wizardMovimiento.contraparteFijaId = null
+        } else {
+          grupoContraparte.style.display = 'flex'
+          if (persona?.rol_app === 'super_admin') {
+            // Es un super_admin sin caja_raiz (Facundo): la contraparte es
+            // fija, quien tiene caja_raiz — se busca en estado.superAdmins,
+            // no se hardcodea el nombre.
+            const raiz = estado.superAdmins.find(s => s.caja_raiz)
+            contraparteFija.textContent = raiz?.nombre || '—'
+            contraparteFija.hidden = false
+            contraparteSelect.hidden = true
+            estado.wizardMovimiento.contraparteFijaId = raiz?.id || null
+          } else {
+            // admin o usuario: selector con todos los super_admin (Pablo y
+            // Facundo), sin filtrar por empresa.
+            contraparteFija.hidden = true
+            contraparteSelect.hidden = false
+            contraparteSelect.innerHTML = '<option value="">— Seleccioná —</option>' +
+              estado.superAdmins.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('')
+            estado.wizardMovimiento.contraparteFijaId = null
+          }
+        }
+      } else {
+        grupoContraparte.style.display = 'none'
+        document.getElementById('movimiento-titulo').textContent = 'Registrar retiro'
+        if (!esAdmin()) {
+          avisoRetiro.textContent = 'Este retiro se descuenta de tu caja personal — no es un gasto de la empresa.'
+          avisoRetiro.hidden = false
+        } else {
+          avisoRetiro.hidden = true
+        }
       }
 
       document.getElementById('movimiento-monto').value = ''
@@ -1095,37 +1285,45 @@
     }
 
     async function guardarMovimiento() {
-      const { tipo, empleadoId: preseleccionado } = estado.wizardMovimiento
-      const empleadoId  = preseleccionado || document.getElementById('movimiento-empleado').value
+      const { tipo, subtipo, empleadoId, contraparteFijaId } = estado.wizardMovimiento
       const monto       = parseImporte(document.getElementById('movimiento-monto').value)
       const moneda       = document.getElementById('movimiento-moneda').value
       const medioPago     = medioPagoCajaSeleccionado
       const fecha         = document.getElementById('movimiento-fecha').value || null
       const descripcion   = document.getElementById('movimiento-descripcion').value.trim() || null
 
-      if (!preseleccionado && !empleadoId) { mostrarError('Elegí un empleado.'); return }
       if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
       if (!medioPago) { mostrarError('Elegí un medio de pago.'); return }
+
+      let contraparteId = null
+      if (tipo === 'ingreso' && subtipo === 'propio') {
+        contraparteId = contraparteFijaId || document.getElementById('contraparte-select').value
+        if (!contraparteId) { mostrarError('Elegí quién te dio la plata.'); return }
+      }
 
       const btn = document.getElementById('btn-guardar-movimiento')
       btn.classList.add('btn--cargando')
       btn.disabled = true
 
+      const esPropio = empleadoId === estado.miEmpleado.id
+
       try {
         let error
-        if (tipo === 'ingreso') {
-          const params = { p_empleado_id: empleadoId, p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
+        if (tipo === 'ingreso' && subtipo === 'externo') {
+          const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
           if (fecha) params.p_fecha = fecha
           // ; a propósito: sin esto, ASI interpreta la línea de abajo como
-          // "fecha(...)" (fecha ya no es undefined tras el if de arriba) y
-          // llama a la RPC con el params viejo, sin p_fecha.
-          ;({ error } = await supabase.rpc('registrar_ingreso_caja', params))
+          // una llamada — ver el comentario largo más abajo, mismo motivo.
+          ;({ error } = await supabase.rpc('registrar_ingreso_externo_caja', params))
+        } else if (tipo === 'ingreso') {
+          const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_contraparte_empleado_id: contraparteId, p_descripcion: descripcion }
+          if (fecha) params.p_fecha = fecha
+          if (!esPropio) params.p_empleado_id = empleadoId
+          ;({ error } = await supabase.rpc('registrar_ingreso_propio_caja', params))
         } else {
           const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
           if (fecha) params.p_fecha = fecha
-          if (preseleccionado && esAdmin() && preseleccionado !== estado.miEmpleado.id) {
-            params.p_empleado_id = preseleccionado
-          }
+          if (!esPropio) params.p_empleado_id = empleadoId
           ;({ error } = await supabase.rpc('registrar_retiro_caja', params))
         }
         if (error) throw error
@@ -1160,7 +1358,6 @@
     document.getElementById('modal-movimiento__backdrop').addEventListener('click', cerrarModalMovimiento)
     document.getElementById('btn-guardar-movimiento').addEventListener('click', guardarMovimiento)
 
-    document.getElementById('btn-nuevo-ingreso').addEventListener('click', () => abrirModalMovimiento('ingreso', null))
     document.getElementById('btn-retiro-personal-listado').addEventListener('click', () => abrirModalMovimiento('retiro', estado.miEmpleado.id))
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1192,7 +1389,7 @@
 
       const { data: emp, error } = await supabase
         .from('empleados')
-        .select('id, nombre, rol_app')
+        .select('id, nombre, rol_app, caja_raiz')
         .eq('auth_user_id', estado.sesion.user.id)
         .maybeSingle()
 
@@ -1203,6 +1400,15 @@
       }
 
       estado.miEmpleado = emp
+
+      // Comunes a todos los roles: hacen falta tanto en el listado (admin)
+      // como en la ficha propia (usuario) para el modal de "Añadir ingreso".
+      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados()])
+
+      if (emp.rol_app === 'super_admin') {
+        document.getElementById('btn-ver-retiros-personales').style.display = 'inline-flex'
+        document.getElementById('btn-mi-caja').style.display = 'inline-flex'
+      }
 
       if (esAdmin()) {
         document.getElementById('vista-lista-caja').removeAttribute('hidden')
