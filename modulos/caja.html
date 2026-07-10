@@ -46,21 +46,6 @@
 
     #filtro-busqueda-caja:focus { border-color: var(--amarillo); }
 
-    #filtro-empresa-caja {
-      height: 38px;
-      padding: 0 0.75rem;
-      border: 1.5px solid var(--color-borde);
-      border-radius: 999px;
-      font-family: var(--fuente);
-      font-size: 0.8125rem;
-      background: var(--color-fondo);
-      color: var(--color-texto);
-      outline: none;
-      cursor: pointer;
-      flex-shrink: 0;
-      max-width: 180px;
-    }
-
     .caja-toolbar__acciones {
       display: flex;
       gap: 0.5rem;
@@ -85,6 +70,13 @@
       border: 1.5px solid var(--bordo);
     }
     .btn--bordo-outline:hover { background: var(--bordo-suave); }
+
+    .btn--navy-outline {
+      background: var(--color-fondo);
+      color: var(--color-acento);
+      border: 1.5px solid var(--color-acento);
+    }
+    .btn--navy-outline:hover { background: var(--color-superficie); }
 
     /* ── Card total de la empresa ──────────────────────────────────────────── */
 
@@ -124,13 +116,27 @@
       letter-spacing: -0.02em;
     }
 
-    /* Desglose por medio de pago — texto secundario, sin jerarquía frente al
-       total. Blanco con opacidad reducida (no gris) porque va sobre el mismo
-       fondo degradado ámbar que .stat-card-caja__label / .saldo-card__label. */
-    .stat-card-caja__desglose {
-      font-size: 0.75rem;
-      color: rgba(255,255,255,0.85);
-      margin-top: 0.25rem;
+    /* Desglose por medio de pago — un chip por medio, fondo oscuro semi-
+       transparente sobre el degradado ámbar para que se lea con contraste sin
+       salirse del sistema de colores (sin jerarquía frente al total: chips
+       chicos, separados del monto principal). Se usa tanto en la card del
+       listado como en la ficha de persona. */
+    .desglose-medio-pago {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      margin-top: 0.625rem;
+    }
+
+    .desglose-medio-pago__chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.18);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
     }
 
     .stat-card-caja__submetrics { display: flex; gap: 0.5rem; flex-shrink: 0; }
@@ -316,12 +322,6 @@
       margin-top: 0.25rem;
     }
 
-    .saldo-card__desglose {
-      font-size: 0.75rem;
-      color: rgba(255,255,255,0.85);
-      margin-top: 0.25rem;
-    }
-
     /* ── Movimientos ───────────────────────────────────────────────────────── */
 
     .lista-movimientos {
@@ -357,16 +357,22 @@
       letter-spacing: 0.02em;
     }
 
-    /* Único color de alerta de Caja: bordó, y solo en el ícono de retiro.
-       Ingreso, ingreso externo, gasto y transferencia usan navy/gris neutro —
-       nada de verde ni cian (color de Gastos): una transferencia entre cajas
-       no es una alerta, es una entrega normal de plata dentro del sistema. */
+    /* Un color por tipo de movimiento — bordó sigue siendo el único color de
+       alerta (solo retiro), el resto son identificadores neutros, no avisos. */
     .chip-tipo-movimiento--ingreso,
-    .chip-tipo-movimiento--ingreso_externo,
-    .chip-tipo-movimiento--egreso_gasto,
+    .chip-tipo-movimiento--ingreso_externo {
+      background: var(--amarillo-suave);
+      color: var(--amarillo);
+    }
+
+    .chip-tipo-movimiento--egreso_gasto {
+      background: var(--color-acento-suave);
+      color: var(--color-acento-highlight);
+    }
+
     .chip-tipo-movimiento--egreso_transferencia {
-      background: var(--color-superficie);
-      color: var(--color-acento);
+      background: var(--violeta-suave);
+      color: var(--violeta);
     }
 
     .chip-tipo-movimiento--egreso_retiro {
@@ -552,13 +558,10 @@
         <div class="caja-toolbar__buscar">
           <input type="text" id="filtro-busqueda-caja" placeholder="🔍 Buscar persona…">
         </div>
-        <button type="button" class="btn btn--secundario" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
-        <select id="filtro-empresa-caja">
-          <option value="">Todas las empresas</option>
-        </select>
+        <button type="button" class="btn btn--navy-outline" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
         <div class="caja-toolbar__acciones">
           <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto; flex:1;">Retiro personal</button>
-          <button type="button" class="btn btn--secundario" id="btn-ver-retiros-personales" style="display:none; width:auto; flex:1;">Retiros personales</button>
+          <button type="button" class="btn btn--navy-outline" id="btn-ver-retiros-personales" style="display:none; width:auto; flex:1;">Retiros personales</button>
         </div>
       </div>
 
@@ -724,7 +727,7 @@
       personaAbierta:  null, // id de empleado cuya ficha está abierta
       origenFicha:     null, // 'listado' (la abrió un admin) | 'directo' (entró un usuario)
       movimientos:     [],
-      filtros:         { busqueda: '', unidadId: '' },
+      filtros:         { busqueda: '' },
       wizardMovimiento: { tipo: null, empleadoId: null },
     }
 
@@ -802,9 +805,13 @@
       filas.filter(f => f.moneda === moneda).forEach(f => {
         porMedio[f.medio_pago] = (porMedio[f.medio_pago] || 0) + Number(f.saldo)
       })
-      const partes = Object.entries(porMedio)
-        .map(([medio, saldo]) => `${MEDIO_PAGO_LABEL_CAJA[medio] || medio}: ${formatearImporte(saldo, moneda)}`)
-      return partes.join(' · ')
+      const entradas = Object.entries(porMedio)
+      if (!entradas.length) return ''
+
+      const chips = entradas
+        .map(([medio, saldo]) => `<span class="desglose-medio-pago__chip">${MEDIO_PAGO_LABEL_CAJA[medio] || medio}: ${formatearImporte(saldo, moneda)}</span>`)
+        .join('')
+      return `<div class="desglose-medio-pago">${chips}</div>`
     }
 
     function nombreEmpresa(unidadId) {
@@ -886,17 +893,8 @@
       estado.saldosPorMedio = saldosMedioRes.data || []
       estado.movimientosDelMes = movRes.count || 0
 
-      poblarFiltroEmpresa()
       renderizarStatTotal()
       renderizarListado()
-    }
-
-    function poblarFiltroEmpresa() {
-      const sel = document.getElementById('filtro-empresa-caja')
-      const valorActual = sel.value
-      sel.innerHTML = '<option value="">Todas las empresas</option>' +
-        estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
-      sel.value = valorActual
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -915,10 +913,10 @@
         ? monedas.map(m => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(totalesPorMoneda[m], m)}</span>`).join('')
         : `<span class="stat-card-caja__monto">${formatearImporte(0, 'ARS')}</span>`
 
+      // Ya viene envuelto en .desglose-medio-pago (o '' si no hay filas) —
+      // no hace falta un wrapper extra por moneda.
       const desgloseHtml = monedas
         .map(m => renderizarDesglosePorMedio(estado.saldosPorMedio, m))
-        .filter(Boolean)
-        .map(linea => `<div class="stat-card-caja__desglose">${linea}</div>`)
         .join('')
 
       cont.innerHTML = `
@@ -1002,12 +1000,10 @@
     function renderizarListado() {
       const cont = document.getElementById('lista-personas')
       const termino = (estado.filtros.busqueda || '').trim().toLowerCase()
-      const unidadFiltro = estado.filtros.unidadId
 
-      // El filtro y el buscador solo ocultan filas/grupos — el agrupamiento y
-      // el orden ya calculados en agruparPersonas() no se tocan.
+      // El buscador solo oculta filas/grupos — el agrupamiento y el orden ya
+      // calculados en agruparPersonas() no se tocan.
       let grupos = agruparPersonas()
-      if (unidadFiltro) grupos = grupos.filter(g => g.id === unidadFiltro)
       grupos = grupos
         .map(g => ({ ...g, lista: termino ? g.lista.filter(e => (e.nombre || '').toLowerCase().includes(termino)) : g.lista }))
         .filter(g => g.lista.length)
@@ -1099,7 +1095,7 @@
         <div class="saldo-card">
           <div class="saldo-card__label">Saldo ${s.moneda}</div>
           <div class="saldo-card__valor">${formatearImporteConAlerta(s.saldo, s.moneda)}</div>
-          ${desglose ? `<div class="saldo-card__desglose">${desglose}</div>` : ''}
+          ${desglose}
         </div>
       `}).join('')}</div>`
     }
@@ -1428,11 +1424,6 @@
         estado.filtros.busqueda = valor
         renderizarListado()
       }, 250)
-    })
-
-    document.getElementById('filtro-empresa-caja').addEventListener('change', (e) => {
-      estado.filtros.unidadId = e.target.value
-      renderizarListado()
     })
 
     // ═══════════════════════════════════════════════════════════════════════
