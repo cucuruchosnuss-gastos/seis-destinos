@@ -139,6 +139,35 @@
       font-weight: 600;
     }
 
+    /* Cuando el chip es expandible (más de una cuenta en esa combinación
+       medio+moneda) es un <details> — cerrado se ve igual que un chip común;
+       abierto pasa a ocupar todo el ancho para poder listar el resto debajo. */
+    .desglose-medio-pago__chip summary {
+      cursor: pointer;
+      list-style: none;
+    }
+    .desglose-medio-pago__chip summary::-webkit-details-marker { display: none; }
+    .desglose-medio-pago__chip[open] {
+      display: block;
+      width: 100%;
+      border-radius: 12px;
+    }
+
+    .desglose-cuenta__resto {
+      margin-top: 0.375rem;
+      padding-top: 0.375rem;
+      border-top: 1px solid rgba(255,255,255,0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .desglose-cuenta__fila {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      opacity: 0.9;
+    }
+
     .stat-card-caja__submetrics { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
     .stat-card-caja__submetric {
@@ -472,6 +501,16 @@
       margin: 0.75rem 0;
     }
 
+    /* Ya se usaba en la etiqueta "Nota (opcional)" sin estar definida en
+       este archivo (quedaba sin estilo) — la agrego acá, mismo criterio que
+       ya existe en gastos.html, y de paso la reusan las cuentas nuevas. */
+    .etiqueta-opcional {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--color-texto-suave);
+      margin-left: 0.375rem;
+    }
+
     .modal-movimiento__acciones {
       display: flex;
       gap: 0.625rem;
@@ -591,6 +630,106 @@
     }
 
     .tarjeta-solicitud__acciones .btn { flex: 1; }
+
+    /* ── Modal: nueva cuenta (mismo patrón que #modal-movimiento) ─────────── */
+
+    #modal-cuenta-nueva {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #modal-cuenta-nueva[hidden] { display: none; }
+
+    #modal-cuenta-nueva__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    #modal-cuenta-nueva__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    @media (min-width: 641px) {
+      #modal-cuenta-nueva { align-items: center; }
+      #modal-cuenta-nueva__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
+    /* ── Gestión de cuentas propias (ficha propia) ─────────────────────────── */
+
+    .grupo-cuentas { margin-bottom: 1rem; }
+
+    .grupo-cuentas__titulo {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.5rem;
+    }
+
+    .tarjeta-cuenta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .tarjeta-cuenta__nombre {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tarjeta-cuenta__saldo {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+    }
+
+    .tarjeta-cuenta__acciones {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .tarjeta-cuenta__acciones .btn {
+      width: auto;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+    }
+
+    .chip-favorita {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.0625rem 0.5rem;
+      border-radius: 999px;
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+      font-size: 0.6875rem;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -684,9 +823,11 @@
     <div style="padding:1.25rem; max-width:720px; margin:0 auto; width:100%;">
       <div id="detalle-persona-saldos"></div>
 
-      <div id="detalle-persona-acciones" style="display:flex; gap:0.625rem; margin:1.25rem 0 1.5rem;"></div>
+      <div id="detalle-persona-acciones" style="display:flex; flex-wrap:wrap; gap:0.625rem; margin:1.25rem 0 1.5rem;"></div>
 
       <div id="detalle-persona-solicitudes"></div>
+
+      <div id="detalle-persona-cuentas"></div>
 
       <div class="modal-ficha__seccion-titulo">Movimientos</div>
 
@@ -722,31 +863,36 @@
           </select>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end;">
-          <div class="grupo-campo">
-            <label for="movimiento-monto">Monto</label>
-            <input type="text" inputmode="decimal" id="movimiento-monto" placeholder="0,00">
-          </div>
-          <div class="grupo-campo">
-            <label for="movimiento-moneda">Moneda</label>
-            <select id="movimiento-moneda" style="width:5.5rem;">
-              <option value="ARS">ARS</option>
-              <option value="USD">USD</option>
-            </select>
-          </div>
+        <div class="grupo-campo" id="grupo-cuenta-propia" style="display:none;">
+          <label for="cuenta-propia-select">Tu cuenta</label>
+          <select id="cuenta-propia-select">
+            <option value="">— Seleccioná —</option>
+          </select>
+        </div>
+
+        <div class="grupo-campo" id="grupo-cuenta-contraparte" style="display:none;">
+          <label for="cuenta-contraparte-select" id="label-cuenta-contraparte">Cuenta de la contraparte</label>
+          <select id="cuenta-contraparte-select">
+            <option value="">— Seleccioná —</option>
+          </select>
+          <p class="etiqueta-opcional" id="cuenta-contraparte-vacio" hidden></p>
+        </div>
+
+        <div class="grupo-campo" id="grupo-cuenta-unica" style="display:none;">
+          <label for="cuenta-select" id="label-cuenta-unica">Cuenta</label>
+          <select id="cuenta-select">
+            <option value="">— Seleccioná —</option>
+          </select>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="movimiento-monto">Monto</label>
+          <input type="text" inputmode="decimal" id="movimiento-monto" placeholder="0,00">
         </div>
 
         <div class="grupo-campo">
           <label for="movimiento-fecha">Fecha</label>
           <input type="date" id="movimiento-fecha" name="fecha">
-        </div>
-
-        <div class="grupo-campo">
-          <label>Medio de pago</label>
-          <div class="grilla-medio-pago-caja" id="grilla-medio-pago-caja">
-            <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
-            <button type="button" class="btn-tipo-doc" data-valor="transferencia">Banco</button>
-          </div>
         </div>
 
         <div class="grupo-campo">
@@ -767,34 +913,36 @@
     <div id="modal-traspaso__backdrop"></div>
     <div id="modal-traspaso__panel">
       <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-traspaso" title="Cerrar">✕</button>
-      <h2>Traspaso entre medios</h2>
+      <h2>Traspaso entre cuentas</h2>
 
       <div class="formulario" style="margin-top:1rem;">
-        <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:end;">
-          <div class="grupo-campo">
-            <label for="traspaso-monto">Monto</label>
-            <input type="text" inputmode="decimal" id="traspaso-monto" placeholder="0,00">
-          </div>
-          <div class="grupo-campo">
-            <label for="traspaso-moneda">Moneda</label>
-            <select id="traspaso-moneda" style="width:5.5rem;">
-              <option value="ARS">ARS</option>
-              <option value="USD">USD</option>
-            </select>
-          </div>
+        <div class="grupo-campo">
+          <label for="traspaso-cuenta-origen">Desde</label>
+          <select id="traspaso-cuenta-origen">
+            <option value="">— Seleccioná —</option>
+          </select>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="traspaso-cuenta-destino">Hacia</label>
+          <select id="traspaso-cuenta-destino">
+            <option value="">— Seleccioná —</option>
+          </select>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="traspaso-monto">Monto</label>
+          <input type="text" inputmode="decimal" id="traspaso-monto" placeholder="0,00">
+        </div>
+
+        <div class="grupo-campo" id="grupo-traspaso-monto-destino" hidden>
+          <label for="traspaso-monto-destino">Monto que entra</label>
+          <input type="text" inputmode="decimal" id="traspaso-monto-destino" placeholder="0,00">
         </div>
 
         <div class="grupo-campo">
           <label for="traspaso-fecha">Fecha</label>
           <input type="date" id="traspaso-fecha" name="fecha">
-        </div>
-
-        <div class="grupo-campo">
-          <label>Dirección</label>
-          <div class="grilla-medio-pago-caja" id="grilla-direccion-traspaso">
-            <button type="button" class="btn-tipo-doc" data-valor="efectivo_a_banco">Efectivo → Banco</button>
-            <button type="button" class="btn-tipo-doc" data-valor="banco_a_efectivo">Banco → Efectivo</button>
-          </div>
         </div>
       </div>
 
@@ -826,6 +974,51 @@
     </div>
   </div>
 
+  <!-- Modal: Nueva cuenta (CAMBIO 2 — gestión de cuentas propias) -->
+  <div id="modal-cuenta-nueva" hidden>
+    <div id="modal-cuenta-nueva__backdrop"></div>
+    <div id="modal-cuenta-nueva__panel">
+      <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-cuenta-nueva" title="Cerrar">✕</button>
+      <h2>Nueva cuenta</h2>
+
+      <div class="formulario" style="margin-top:1rem;">
+        <div class="grupo-campo">
+          <label for="cuenta-nombre">Nombre</label>
+          <input type="text" id="cuenta-nombre" placeholder="Ej: Caja Chica">
+        </div>
+
+        <div class="grupo-campo">
+          <label>Medio</label>
+          <div class="grilla-medio-pago-caja" id="grilla-medio-cuenta-nueva">
+            <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
+            <button type="button" class="btn-tipo-doc" data-valor="banco">Banco</button>
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="cuenta-moneda">Moneda</label>
+          <select id="cuenta-moneda">
+            <option value="ARS">ARS</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+
+        <div class="grupo-campo" id="grupo-cuenta-favorita">
+          <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;">
+            <input type="checkbox" id="cuenta-favorita" style="width:auto;">
+            Marcar como favorita
+          </label>
+          <p class="etiqueta-opcional" id="cuenta-favorita-nota" hidden></p>
+        </div>
+      </div>
+
+      <div class="modal-movimiento__acciones">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-cuenta-nueva">Cancelar</button>
+        <button type="button" class="btn btn--exito" id="btn-guardar-cuenta-nueva">Crear</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { mostrarError, mostrarExito, formatearFecha } from '../js/utils.js'
@@ -845,7 +1038,14 @@
       maestros:        { unidadesNegocio: [] },
       saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
                               // para usuario: solo las propias (nunca se piden las de otros)
-      saldosPorMedio:  [],   // filas de v_caja_saldos_medio — mismo alcance que saldos
+      cuentasPorId:    {},   // id -> {id, empleado_id, nombre, medio, moneda, favorita, activa,
+                              // created_at} — se completa con TODAS las cuentas que se van
+                              // cargando (propias, de terceros bajo demanda, en bloque para el
+                              // listado). SIN filtrar por activa acá — el filtro se aplica en
+                              // cada lugar que las consume, para que desactivar una cuenta no
+                              // deje una entrada vieja con activa:true colgada en el mapa.
+      saldosPorCuenta: [],   // filas de v_caja_saldos_cuenta { cuenta_id, saldo } del alcance
+                              // actual (una persona puntual, o todas las visibles del listado)
       superAdmins:     [],   // { id, nombre, caja_raiz } — todos los rol_app='super_admin'
       nombresEmpleados: {},  // id -> nombre (todos los activos), para resolver contraparte/
                               // titular sin depender de embeds ambiguos (caja_movimientos
@@ -865,12 +1065,13 @@
       wizardMovimiento: { tipo: null, empleadoId: null },
     }
 
-    let medioPagoCajaSeleccionado = null
-
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
     // nombre de la contraparte ("Entregado a X"), ver etiquetaMovimiento().
     const TIPO_LABEL = { ingreso: 'Ingreso', ingreso_externo: 'Ingreso externo', egreso_gasto: 'Gasto', egreso_retiro: 'Retiro' }
     const MEDIO_PAGO_LABEL_CAJA = { efectivo: 'Efectivo', transferencia: 'Banco' }
+    // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos
+    // a los de medio_pago ('efectivo'/'transferencia') — no son intercambiables.
+    const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
 
     function esAdmin() {
       return ['admin', 'super_admin'].includes(estado.miEmpleado?.rol_app)
@@ -925,26 +1126,63 @@
       return estado.saldos.filter(s => s.empleado_id === empleadoId)
     }
 
-    function saldosPorMedioDe(empleadoId) {
-      return estado.saldosPorMedio.filter(s => s.empleado_id === empleadoId)
-    }
-
-    // Arma "Efectivo: $X · Transferencia: $Y" para UNA moneda puntual, sumando
-    // las filas de v_caja_saldos_medio que correspondan (de toda la empresa o
-    // de una sola persona, según lo que le pase el caller ya filtrado). Si un
-    // medio no tiene fila para esa moneda, directamente no aparece — nada en
-    // cero. Devuelve '' si no hay ninguna fila para esa moneda.
-    function renderizarDesglosePorMedio(filas, moneda) {
+    // Arma el desglose expandible por cuenta para UNA moneda puntual,
+    // agrupado por medio. cuentaIds acota el universo de cuentas a
+    // considerar (las de una persona puntual, o las de todas las visibles
+    // para el total de la empresa). Devuelve '' si no hay ninguna fila.
+    //   - Ficha de una persona (conDueno=false): colapsado muestra la cuenta
+    //     FAVORITA de esa combinación (o la más vieja por created_at si por
+    //     algún motivo no hay ninguna marcada — el modal "Nueva cuenta" ya
+    //     lo previene, pero esto evita que el render se rompa si igual pasa).
+    //     Desplegado: el resto de sus cuentas de esa combinación.
+    //   - Total de la empresa (conDueno=true): colapsado muestra la SUMA
+    //     total de esa combinación (mismo número que se veía antes).
+    //     Desplegado: cada cuenta individual, con el nombre de su dueño
+    //     adelante — acá "favorita" no aplica, es un concepto por persona.
+    function renderizarDesglosePorCuenta(cuentaIds, moneda, { conDueno = false } = {}) {
+      const idsSet = new Set(cuentaIds)
       const porMedio = {}
-      filas.filter(f => f.moneda === moneda).forEach(f => {
-        porMedio[f.medio_pago] = (porMedio[f.medio_pago] || 0) + Number(f.saldo)
-      })
+      estado.saldosPorCuenta
+        .filter(f => idsSet.has(f.cuenta_id))
+        .forEach(f => {
+          const cuenta = estado.cuentasPorId[f.cuenta_id]
+          if (!cuenta || cuenta.moneda !== moneda) return
+          if (!porMedio[cuenta.medio]) porMedio[cuenta.medio] = []
+          porMedio[cuenta.medio].push({ ...cuenta, saldo: Number(f.saldo) })
+        })
+
       const entradas = Object.entries(porMedio)
       if (!entradas.length) return ''
 
-      const chips = entradas
-        .map(([medio, saldo]) => `<span class="desglose-medio-pago__chip">${MEDIO_PAGO_LABEL_CAJA[medio] || medio}: ${formatearImporte(saldo, moneda)}</span>`)
-        .join('')
+      const chips = entradas.map(([medio, cuentas]) => {
+        if (conDueno) {
+          const total = cuentas.reduce((acc, c) => acc + c.saldo, 0)
+          if (cuentas.length === 1) {
+            return `<span class="desglose-medio-pago__chip">${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(total, moneda)}</span>`
+          }
+          const filas = cuentas.map(c => `<div class="desglose-cuenta__fila">${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`).join('')
+          return `
+            <details class="desglose-medio-pago__chip">
+              <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(total, moneda)} ▾</summary>
+              <div class="desglose-cuenta__resto">${filas}</div>
+            </details>`
+        }
+
+        let principal = cuentas.find(c => c.favorita)
+        if (!principal) principal = [...cuentas].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0]
+        const otras = cuentas.filter(c => c.id !== principal.id)
+
+        if (!otras.length) {
+          return `<span class="desglose-medio-pago__chip">${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}</span>`
+        }
+        const filas = otras.map(c => `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`).join('')
+        return `
+          <details class="desglose-medio-pago__chip">
+            <summary>${principal.nombre}: ${formatearImporte(principal.saldo, moneda)} ▾</summary>
+            <div class="desglose-cuenta__resto">${filas}</div>
+          </details>`
+      }).join('')
+
       return `<div class="desglose-medio-pago">${chips}</div>`
     }
 
@@ -995,6 +1233,43 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // CARGA DE DATOS — Cuentas (medio+moneda con nombre propio)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Fetcher genérico — trae TODAS las cuentas (activas e inactivas) de los
+    // empleados pedidos y las vuelca en estado.cuentasPorId. No filtra por
+    // activa acá a propósito, ver el comentario en la definición del estado.
+    async function cargarCuentas(empleadoIds) {
+      if (!empleadoIds.length) return
+      const { data, error } = await supabase
+        .from('cuentas_caja')
+        .select('id, empleado_id, nombre, medio, moneda, favorita, activa, created_at')
+        .in('empleado_id', empleadoIds)
+      if (error) { mostrarError('No se pudieron cargar las cuentas.'); return }
+      ;(data || []).forEach(c => { estado.cuentasPorId[c.id] = c })
+    }
+
+    async function cargarMisCuentas() {
+      await cargarCuentas([estado.miEmpleado.id])
+    }
+
+    // On-demand: cuentas de una persona puntual (contraparte de un
+    // ingreso/egreso, o dueño de un retiro hecho en su nombre).
+    async function cargarCuentasDe(empleadoId) {
+      await cargarCuentas([empleadoId])
+    }
+
+    async function cargarSaldosPorCuenta(cuentaIds) {
+      if (!cuentaIds.length) { estado.saldosPorCuenta = []; return }
+      const { data, error } = await supabase.from('v_caja_saldos_cuenta').select('cuenta_id, saldo').in('cuenta_id', cuentaIds)
+      estado.saldosPorCuenta = error ? [] : (data || [])
+    }
+
+    function cuentasDe(empleadoId) {
+      return Object.values(estado.cuentasPorId).filter(c => c.empleado_id === empleadoId && c.activa)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // CARGA DE DATOS — Listado general (solo admin/super_admin)
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -1016,28 +1291,30 @@
 
       const ids = estado.empleados.map(e => e.id)
 
-      const [saldosRes, saldosMedioRes, movRes] = await Promise.all([
+      const [saldosRes, movRes] = await Promise.all([
         ids.length
           ? supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').in('empleado_id', ids)
-          : Promise.resolve({ data: [], error: null }),
-        ids.length
-          ? supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').in('empleado_id', ids)
           : Promise.resolve({ data: [], error: null }),
         ids.length
           ? supabase.from('caja_movimientos').select('id', { count: 'exact', head: true }).in('empleado_id', ids).gte('fecha', fechaISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
           : Promise.resolve({ count: 0, error: null }),
         cargarMisSolicitudesPendientesCount(),
+        cargarCuentas(ids),
       ])
 
       document.getElementById('estado-cargando').hidden = true
 
-      if (saldosRes.error || saldosMedioRes.error) {
+      if (saldosRes.error) {
         mostrarError('No se pudieron cargar los saldos.')
         return
       }
       estado.saldos = saldosRes.data || []
-      estado.saldosPorMedio = saldosMedioRes.data || []
       estado.movimientosDelMes = movRes.count || 0
+
+      // Las cuentas de todos los visibles ya están en estado.cuentasPorId
+      // (recién cargadas arriba) — ahora sí puedo saber qué cuenta_ids traer.
+      const cuentaIds = ids.flatMap(id => cuentasDe(id).map(c => c.id))
+      await cargarSaldosPorCuenta(cuentaIds)
 
       renderizarStatTotal()
       renderizarListado()
@@ -1081,8 +1358,9 @@
 
       // Ya viene envuelto en .desglose-medio-pago (o '' si no hay filas) —
       // no hace falta un wrapper extra por moneda.
+      const cuentaIdsVisibles = estado.empleados.flatMap(e => cuentasDe(e.id).map(c => c.id))
       const desgloseHtml = monedas
-        .map(m => renderizarDesglosePorMedio(estado.saldosPorMedio, m))
+        .map(m => renderizarDesglosePorCuenta(cuentaIdsVisibles, m, { conDueno: true }))
         .join('')
 
       cont.innerHTML = `
@@ -1228,18 +1506,19 @@
 
       // Entrada directa (rol 'usuario'): nunca se cargó el listado general —
       // acá se piden únicamente los saldos propios, no los de nadie más.
+      // Las cuentas propias ya están cargadas desde init() (cargarMisCuentas).
       if (origen === 'directo') {
-        const [saldosRes, saldosMedioRes] = await Promise.all([
-          supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', empleadoId),
-          supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', empleadoId),
-        ])
-        if (saldosRes.error || saldosMedioRes.error) mostrarError('No se pudieron cargar los saldos.')
-        estado.saldos = saldosRes.data || []
-        estado.saldosPorMedio = saldosMedioRes.data || []
+        const { data, error } = await supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', empleadoId)
+        if (error) mostrarError('No se pudieron cargar los saldos.')
+        estado.saldos = data || []
       }
+
+      const cuentaIds = cuentasDe(empleadoId).map(c => c.id)
+      await cargarSaldosPorCuenta(cuentaIds)
 
       renderizarSaldosDetalle(empleadoId)
       renderizarAccionesDetalle(empleadoId)
+      renderizarSeccionCuentas(empleadoId)
 
       document.getElementById('detalle-persona-movimientos').innerHTML = ''
       document.getElementById('detalle-persona-vacio').hidden = true
@@ -1258,10 +1537,10 @@
       const saldos = saldosDe(empleadoId)
       const cont = document.getElementById('detalle-persona-saldos')
       const lista = saldos.length ? saldos : [{ moneda: 'ARS', saldo: 0 }]
-      const porMedio = saldosPorMedioDe(empleadoId)
+      const cuentaIds = cuentasDe(empleadoId).map(c => c.id)
 
       cont.innerHTML = `<div class="saldos-grilla">${lista.map(s => {
-        const desglose = renderizarDesglosePorMedio(porMedio, s.moneda)
+        const desglose = renderizarDesglosePorCuenta(cuentaIds, s.moneda)
         return `
         <div class="saldo-card">
           <div class="saldo-card__label">Saldo ${s.moneda}</div>
@@ -1283,19 +1562,19 @@
       if (empleadoId === estado.miEmpleado.id) {
         const persona = datosDePersona(empleadoId)
         const esRaiz = !!persona?.caja_raiz
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1;">${esRaiz ? 'Ingreso externo' : 'Añadir ingreso'}</button>`)
-        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1;">Egreso</button>`)
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">${esRaiz ? 'Ingreso externo' : 'Añadir ingreso'}</button>`)
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1 1 45%;">Egreso</button>`)
       }
 
       // Retiro personal: sin cambios — sigue soportando actuar por otro
       // (la RPC registrar_retiro_caja sí acepta p_empleado_id).
-      botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1;">Retiro personal</button>`)
+      botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1 1 45%;">Retiro personal</button>`)
 
       // Traspaso: mueve plata entre medios DENTRO de la propia caja. Solo
       // tiene sentido en la ficha propia (la RPC no acepta p_empleado_id,
       // siempre opera sobre quien la llama) — para cualquier rol_app.
       if (empleadoId === estado.miEmpleado.id) {
-        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-traspaso" style="flex:1;">Traspaso</button>`)
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-traspaso" style="flex:1 1 45%;">Traspaso</button>`)
       }
 
       cont.innerHTML = botones.join('')
@@ -1324,7 +1603,7 @@
       const { data, error } = await supabase
         .from('caja_movimientos')
         .select(`
-          id, tipo, monto, moneda, medio_pago, descripcion, fecha, gasto_id, contraparte_empleado_id,
+          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .eq('empleado_id', empleadoId)
@@ -1357,6 +1636,13 @@
         ? `<div class="movimiento__referencia">${m.gastos.razon_social || 'Gasto'}${m.gastos.categorias?.nombre ? ' · ' + m.gastos.categorias.nombre : ''} — <a href="gastos.html?gasto=${m.gasto_id}">Ver gasto →</a></div>`
         : ''
 
+      // Si el movimiento tiene cuenta_id, mostramos el nombre de la cuenta
+      // en vez de la etiqueta genérica de medio — los movimientos viejos (o
+      // los que vienen de Gastos, que no maneja cuentas) no la tienen y
+      // caen al fallback de siempre.
+      const nombreCuenta = m.cuenta_id ? estado.cuentasPorId[m.cuenta_id]?.nombre : null
+      const etiquetaMedio = nombreCuenta || MEDIO_PAGO_LABEL_CAJA[m.medio_pago] || m.medio_pago
+
       return `
         <div class="tarjeta-movimiento">
           <div class="movimiento__cabecera">
@@ -1364,7 +1650,7 @@
               ${personaHtml}
               <span class="chip-tipo-movimiento chip-tipo-movimiento--${m.tipo}">${etiquetaMovimiento(m)}</span>
               ${sublineaContraparte}
-              <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${MEDIO_PAGO_LABEL_CAJA[m.medio_pago] || m.medio_pago}</div>
+              <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${etiquetaMedio}</div>
               ${m.descripcion ? `<div class="movimiento__descripcion">${m.descripcion}</div>` : ''}
               ${refGasto}
             </div>
@@ -1399,13 +1685,22 @@
     async function cargarSolicitudesPendientes(empleadoId) {
       const { data, error } = await supabase
         .from('caja_solicitudes_movimiento')
-        .select('id, origen_empleado_id, destino_empleado_id, monto, moneda, medio_pago, fecha, descripcion, estado, creado_por')
+        .select('id, origen_empleado_id, destino_empleado_id, monto, moneda, medio_pago, cuenta_origen_id, cuenta_destino_id, fecha, descripcion, estado, creado_por')
         .or(`origen_empleado_id.eq.${empleadoId},destino_empleado_id.eq.${empleadoId}`)
         .eq('estado', 'pendiente')
         .order('fecha', { ascending: false })
 
       if (error) { mostrarError('No se pudieron cargar las solicitudes pendientes.'); return }
       estado.solicitudesPendientes = data || []
+
+      // Para resolver el nombre de cuenta de las dos partes (CAMBIO 8) hace
+      // falta tener sus cuentas cargadas — puede que la contraparte no esté
+      // entre las ya cargadas (ej. un 'usuario' viendo su propia ficha con
+      // una solicitud hacia un super_admin cuyas cuentas nunca se pidieron).
+      const idsAResolver = new Set()
+      estado.solicitudesPendientes.forEach(s => { idsAResolver.add(s.origen_empleado_id); idsAResolver.add(s.destino_empleado_id) })
+      await cargarCuentas([...idsAResolver])
+
       renderizarSolicitudesPendientes()
     }
 
@@ -1440,10 +1735,16 @@
           </div>`
       }
 
+      const nombreCuentaOrigen  = s.cuenta_origen_id  ? estado.cuentasPorId[s.cuenta_origen_id]?.nombre  : null
+      const nombreCuentaDestino = s.cuenta_destino_id ? estado.cuentasPorId[s.cuenta_destino_id]?.nombre : null
+      const detalleCuentas = (nombreCuentaOrigen || nombreCuentaDestino)
+        ? ` (${nombreCuentaOrigen || '—'} → ${nombreCuentaDestino || '—'})`
+        : ''
+
       return `
         <div class="tarjeta-solicitud">
           <div class="tarjeta-solicitud__monto">${importe}</div>
-          <div class="tarjeta-solicitud__detalle">${nombreOrigen} → ${nombreDestino} · ${MEDIO_PAGO_LABEL_CAJA[s.medio_pago] || s.medio_pago} · ${formatearFecha(s.fecha)}</div>
+          <div class="tarjeta-solicitud__detalle">${nombreOrigen} → ${nombreDestino} · ${MEDIO_PAGO_LABEL_CAJA[s.medio_pago] || s.medio_pago}${detalleCuentas} · ${formatearFecha(s.fecha)}</div>
           ${s.descripcion ? `<div class="tarjeta-solicitud__detalle">${s.descripcion}</div>` : ''}
           ${acciones}
         </div>`
@@ -1480,18 +1781,7 @@
       const empleadoId = estado.personaAbierta
 
       if (cambioSaldo) {
-        if (estado.origenFicha === 'directo') {
-          const [saldosRes, saldosMedioRes] = await Promise.all([
-            supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
-            supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
-          ])
-          estado.saldos = saldosRes.data || []
-          estado.saldosPorMedio = saldosMedioRes.data || []
-          renderizarSaldosDetalle(estado.miEmpleado.id)
-        } else {
-          await cargarListado()
-          if (estado.personaAbierta) renderizarSaldosDetalle(estado.personaAbierta)
-        }
+        await refrescarSaldosDeFicha(empleadoId)
       } else if (estado.origenFicha === 'listado') {
         await actualizarBadgePendientesListado()
       }
@@ -1551,6 +1841,165 @@
     document.getElementById('btn-confirmar-rechazo').addEventListener('click', confirmarRechazo)
 
     // ═══════════════════════════════════════════════════════════════════════
+    // GESTIÓN DE CUENTAS PROPIAS (CAMBIO 2)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarFilaCuenta(c) {
+      const fila = estado.saldosPorCuenta.find(s => s.cuenta_id === c.id)
+      const saldo = formatearImporte(fila ? Number(fila.saldo) : 0, c.moneda)
+      const accionesHtml = c.favorita ? '' : `
+        <div class="tarjeta-cuenta__acciones">
+          <button type="button" class="btn btn--secundario" data-accion="favorita-cuenta" data-id="${c.id}">Marcar favorita</button>
+          <button type="button" class="btn btn--secundario" data-accion="desactivar-cuenta" data-id="${c.id}">Desactivar</button>
+        </div>`
+      return `
+        <div class="tarjeta-cuenta">
+          <div>
+            <div class="tarjeta-cuenta__nombre">${c.nombre}${c.favorita ? ' <span class="chip-favorita">★ Favorita</span>' : ''}</div>
+            <div class="tarjeta-cuenta__saldo">${c.moneda} · ${saldo}</div>
+          </div>
+          ${accionesHtml}
+        </div>`
+    }
+
+    function renderizarSeccionCuentas(empleadoId) {
+      const cont = document.getElementById('detalle-persona-cuentas')
+      if (empleadoId !== estado.miEmpleado.id) { cont.innerHTML = ''; return }
+
+      const misCuentas = cuentasDe(empleadoId)
+      const grupos = [
+        { medio: 'efectivo', cuentas: misCuentas.filter(c => c.medio === 'efectivo') },
+        { medio: 'banco',    cuentas: misCuentas.filter(c => c.medio === 'banco') },
+      ]
+
+      cont.innerHTML = `
+        <div class="modal-ficha__seccion-titulo">Mis cuentas</div>
+        ${grupos.map(g => `
+          <div class="grupo-cuentas">
+            <div class="grupo-cuentas__titulo">${MEDIO_CUENTA_LABEL[g.medio]}</div>
+            ${g.cuentas.length ? g.cuentas.map(renderizarFilaCuenta).join('') : '<p class="etiqueta-opcional">Sin cuentas</p>'}
+          </div>
+        `).join('')}
+        <button type="button" class="btn btn--secundario" id="btn-nueva-cuenta" style="margin-top:0.5rem;">+ Nueva cuenta</button>
+      `
+
+      document.getElementById('btn-nueva-cuenta').addEventListener('click', abrirModalCuentaNueva)
+      cont.querySelectorAll('[data-accion="favorita-cuenta"]').forEach(btn => {
+        btn.addEventListener('click', () => marcarCuentaFavorita(btn.dataset.id))
+      })
+      cont.querySelectorAll('[data-accion="desactivar-cuenta"]').forEach(btn => {
+        btn.addEventListener('click', () => desactivarCuenta(btn.dataset.id))
+      })
+    }
+
+    // Recarga cuentas + saldos por cuenta de una persona y vuelve a pintar
+    // tanto la card de saldo (CAMBIO 3) como la sección de cuentas (CAMBIO 2).
+    async function refrescarCuentasYSaldos(empleadoId) {
+      await cargarCuentas([empleadoId])
+      await cargarSaldosPorCuenta(cuentasDe(empleadoId).map(c => c.id))
+      renderizarSaldosDetalle(empleadoId)
+      renderizarSeccionCuentas(empleadoId)
+    }
+
+    async function marcarCuentaFavorita(id) {
+      const { error } = await supabase.rpc('marcar_cuenta_favorita_caja', { p_cuenta_id: id })
+      if (error) { mostrarError(error.message || 'No se pudo marcar la cuenta como favorita.'); return }
+      mostrarExito('Cuenta marcada como favorita.')
+      await refrescarCuentasYSaldos(estado.miEmpleado.id)
+    }
+
+    async function desactivarCuenta(id) {
+      const { error } = await supabase.rpc('desactivar_cuenta_caja', { p_cuenta_id: id })
+      if (error) { mostrarError(error.message || 'No se pudo desactivar la cuenta.'); return }
+      mostrarExito('Cuenta desactivada.')
+      await refrescarCuentasYSaldos(estado.miEmpleado.id)
+    }
+
+    // Es la primera cuenta activa que tendría el usuario para esta
+    // combinación medio+moneda — si es así, va a ser favorita sí o sí.
+    function esPrimeraCuentaDeCombinacion(medio, moneda) {
+      return !cuentasDe(estado.miEmpleado.id).some(c => c.medio === medio && c.moneda === moneda)
+    }
+
+    let medioCuentaNuevaSeleccionado = null
+
+    function seleccionarMedioCuentaNueva(valor) {
+      medioCuentaNuevaSeleccionado = valor
+      document.querySelectorAll('#grilla-medio-cuenta-nueva .btn-tipo-doc').forEach(btn => {
+        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
+      })
+      actualizarFormularioCuentaNueva()
+    }
+
+    document.querySelectorAll('#grilla-medio-cuenta-nueva .btn-tipo-doc').forEach(btn => {
+      btn.addEventListener('click', () => seleccionarMedioCuentaNueva(btn.dataset.valor))
+    })
+    document.getElementById('cuenta-moneda').addEventListener('change', actualizarFormularioCuentaNueva)
+
+    // Si es la primera cuenta de esa combinación no tiene sentido dejar
+    // elegir "no favorita" — no hay ninguna otra con la que competir.
+    function actualizarFormularioCuentaNueva() {
+      const checkboxLabel = document.getElementById('cuenta-favorita').closest('label')
+      const nota = document.getElementById('cuenta-favorita-nota')
+      if (!medioCuentaNuevaSeleccionado) { checkboxLabel.hidden = false; nota.hidden = true; return }
+
+      const moneda = document.getElementById('cuenta-moneda').value
+      if (esPrimeraCuentaDeCombinacion(medioCuentaNuevaSeleccionado, moneda)) {
+        checkboxLabel.hidden = true
+        nota.hidden = false
+        nota.textContent = `Va a ser tu cuenta principal en ${MEDIO_CUENTA_LABEL[medioCuentaNuevaSeleccionado]} ${moneda}.`
+      } else {
+        checkboxLabel.hidden = false
+        nota.hidden = true
+      }
+    }
+
+    function abrirModalCuentaNueva() {
+      document.getElementById('cuenta-nombre').value = ''
+      document.getElementById('cuenta-moneda').value = 'ARS'
+      document.getElementById('cuenta-favorita').checked = false
+      seleccionarMedioCuentaNueva(null)
+      document.getElementById('modal-cuenta-nueva').hidden = false
+    }
+
+    function cerrarModalCuentaNueva() {
+      document.getElementById('modal-cuenta-nueva').hidden = true
+    }
+
+    async function guardarCuentaNueva() {
+      const nombre = document.getElementById('cuenta-nombre').value.trim()
+      const medio  = medioCuentaNuevaSeleccionado
+      const moneda = document.getElementById('cuenta-moneda').value
+
+      if (!nombre) { mostrarError('Ingresá un nombre para la cuenta.'); return }
+      if (!medio) { mostrarError('Elegí el medio.'); return }
+
+      const favorita = esPrimeraCuentaDeCombinacion(medio, moneda) || document.getElementById('cuenta-favorita').checked
+
+      const btn = document.getElementById('btn-guardar-cuenta-nueva')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const { error } = await supabase.rpc('crear_cuenta_caja', { p_nombre: nombre, p_medio: medio, p_moneda: moneda, p_favorita: favorita })
+        if (error) throw error
+        mostrarExito('Cuenta creada.')
+        cerrarModalCuentaNueva()
+        await refrescarCuentasYSaldos(estado.miEmpleado.id)
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo crear la cuenta.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    document.getElementById('btn-cerrar-cuenta-nueva').addEventListener('click', cerrarModalCuentaNueva)
+    document.getElementById('btn-cancelar-cuenta-nueva').addEventListener('click', cerrarModalCuentaNueva)
+    document.getElementById('modal-cuenta-nueva__backdrop').addEventListener('click', cerrarModalCuentaNueva)
+    document.getElementById('btn-guardar-cuenta-nueva').addEventListener('click', guardarCuentaNueva)
+
+    // ═══════════════════════════════════════════════════════════════════════
     // VISTA — Retiros personales (exclusiva rol_app === 'super_admin')
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -1564,7 +2013,7 @@
 
       const { data, error } = await supabase
         .from('caja_movimientos')
-        .select('id, tipo, monto, moneda, medio_pago, descripcion, fecha, empleado_id')
+        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id')
         .eq('tipo', 'egreso_retiro')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
@@ -1595,19 +2044,8 @@
     document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
 
     // ═══════════════════════════════════════════════════════════════════════
-    // MODAL — Registrar ingreso / retiro
+    // MODAL — Registrar ingreso / egreso / retiro
     // ═══════════════════════════════════════════════════════════════════════
-
-    function seleccionarMedioPagoCaja(valor) {
-      medioPagoCajaSeleccionado = valor
-      document.querySelectorAll('#grilla-medio-pago-caja .btn-tipo-doc').forEach(btn => {
-        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
-      })
-    }
-
-    document.querySelectorAll('#grilla-medio-pago-caja .btn-tipo-doc').forEach(btn => {
-      btn.addEventListener('click', () => seleccionarMedioPagoCaja(btn.dataset.valor))
-    })
 
     // Arma el <select> de contraparte para Ingreso (subtipo 'propio') y
     // Egreso — según el rol_app de QUIEN ESTÁ MIRANDO (siempre soy yo mismo,
@@ -1624,15 +2062,79 @@
         candidatos.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')
     }
 
+    function opcionesCuenta(cuentas) {
+      return '<option value="">— Seleccioná —</option>' +
+        cuentas.map(c => `<option value="${c.id}">${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})</option>`).join('')
+    }
+
+    // Retiro (en nombre propio o de otro) e Ingreso externo: un solo selector.
+    function poblarSelectorCuentaUnica(empleadoId) {
+      document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(empleadoId))
+    }
+
+    // Ingreso propio / Egreso: "Tu cuenta" — siempre las propias.
+    function poblarSelectorCuentaPropia() {
+      document.getElementById('cuenta-propia-select').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id))
+    }
+
+    // Ingreso propio / Egreso: "Cuenta de la contraparte" — se repuebla cada
+    // vez que cambia la contraparte elegida o "Tu cuenta", filtrada a las
+    // que coincidan en medio+moneda con la cuenta propia ya elegida. Si no
+    // hay ninguna que matchee, muestra un mensaje en vez de dejarlo vacío.
+    async function actualizarSelectorCuentaContraparte() {
+      const grupo = document.getElementById('grupo-cuenta-contraparte')
+      const sel   = document.getElementById('cuenta-contraparte-select')
+      const vacio = document.getElementById('cuenta-contraparte-vacio')
+      const label = document.getElementById('label-cuenta-contraparte')
+
+      const contraparteId  = document.getElementById('contraparte-select').value
+      const cuentaPropiaId = document.getElementById('cuenta-propia-select').value
+
+      if (!contraparteId || !cuentaPropiaId) {
+        grupo.style.display = 'none'
+        return
+      }
+      grupo.style.display = 'flex'
+
+      const cuentaPropia = estado.cuentasPorId[cuentaPropiaId]
+      await cargarCuentasDe(contraparteId)
+
+      const nombreContraparte = estado.nombresEmpleados[contraparteId] || 'Esta persona'
+      label.textContent = `Cuenta de ${nombreContraparte}`
+
+      const candidatas = cuentasDe(contraparteId).filter(c => c.medio === cuentaPropia.medio && c.moneda === cuentaPropia.moneda)
+
+      if (!candidatas.length) {
+        sel.hidden = true
+        vacio.hidden = false
+        vacio.textContent = `${nombreContraparte} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[cuentaPropia.medio]} en ${cuentaPropia.moneda}.`
+      } else {
+        sel.hidden = false
+        vacio.hidden = true
+        sel.innerHTML = opcionesCuenta(candidatas)
+      }
+    }
+
+    document.getElementById('contraparte-select').addEventListener('change', actualizarSelectorCuentaContraparte)
+    document.getElementById('cuenta-propia-select').addEventListener('change', actualizarSelectorCuentaContraparte)
+
     // tipo: 'ingreso' | 'egreso' | 'retiro'. empleadoId: dueño de la ficha
     // desde donde se abrió (siempre presente — ya no existe el flujo de
     // "elegir cualquier empleado" desde el listado, para ingreso ni egreso).
-    function abrirModalMovimiento(tipo, empleadoId) {
+    async function abrirModalMovimiento(tipo, empleadoId) {
       estado.wizardMovimiento = { tipo, empleadoId }
 
-      const grupoContraparte  = document.getElementById('grupo-contraparte')
-      const labelContraparte  = document.getElementById('label-contraparte')
-      const avisoRetiro       = document.getElementById('aviso-retiro-personal')
+      const grupoContraparte       = document.getElementById('grupo-contraparte')
+      const labelContraparte       = document.getElementById('label-contraparte')
+      const grupoCuentaPropia      = document.getElementById('grupo-cuenta-propia')
+      const grupoCuentaContraparte = document.getElementById('grupo-cuenta-contraparte')
+      const grupoCuentaUnica       = document.getElementById('grupo-cuenta-unica')
+      const labelCuentaUnica       = document.getElementById('label-cuenta-unica')
+      const avisoRetiro            = document.getElementById('aviso-retiro-personal')
+
+      grupoCuentaPropia.style.display = 'none'
+      grupoCuentaContraparte.style.display = 'none'
+      grupoCuentaUnica.style.display = 'none'
 
       if (tipo === 'ingreso') {
         avisoRetiro.hidden = true
@@ -1648,6 +2150,9 @@
           // siendo atómico — no pasa por el esquema de solicitudes.
           document.getElementById('movimiento-titulo').textContent = 'Ingreso externo'
           grupoContraparte.style.display = 'none'
+          grupoCuentaUnica.style.display = 'flex'
+          labelCuentaUnica.textContent = 'Cuenta'
+          poblarSelectorCuentaUnica(empleadoId)
         } else {
           // Cualquier otro: crea una solicitud pendiente que la contraparte
           // tiene que aceptar — no mueve saldo todavía.
@@ -1655,6 +2160,8 @@
           grupoContraparte.style.display = 'flex'
           labelContraparte.textContent = '¿Quién te dio la plata?'
           poblarSelectorContraparte()
+          grupoCuentaPropia.style.display = 'flex'
+          poblarSelectorCuentaPropia()
         }
       } else if (tipo === 'egreso') {
         document.getElementById('movimiento-titulo').textContent = 'Registrar egreso'
@@ -1662,9 +2169,15 @@
         grupoContraparte.style.display = 'flex'
         labelContraparte.textContent = '¿A quién le vas a dar la plata?'
         poblarSelectorContraparte()
+        grupoCuentaPropia.style.display = 'flex'
+        poblarSelectorCuentaPropia()
       } else {
         grupoContraparte.style.display = 'none'
         document.getElementById('movimiento-titulo').textContent = 'Registrar retiro'
+        if (empleadoId !== estado.miEmpleado.id) await cargarCuentasDe(empleadoId)
+        grupoCuentaUnica.style.display = 'flex'
+        labelCuentaUnica.textContent = 'Cuenta'
+        poblarSelectorCuentaUnica(empleadoId)
         if (!esAdmin()) {
           avisoRetiro.textContent = 'Este retiro se descuenta de tu caja personal — no es un gasto de la empresa.'
           avisoRetiro.hidden = false
@@ -1674,10 +2187,8 @@
       }
 
       document.getElementById('movimiento-monto').value = ''
-      document.getElementById('movimiento-moneda').value = 'ARS'
       document.getElementById('movimiento-fecha').value = fechaISO(new Date())
       document.getElementById('movimiento-descripcion').value = ''
-      seleccionarMedioPagoCaja(null)
 
       document.getElementById('modal-movimiento').hidden = false
     }
@@ -1686,25 +2197,48 @@
       document.getElementById('modal-movimiento').hidden = true
     }
 
+    // Refresca saldo total + por medio + por cuenta de una ficha después de
+    // un movimiento que SÍ cambió saldo — mismo patrón "directo vs listado"
+    // de siempre. La usan las 3 acciones atómicas (ingreso externo, retiro,
+    // traspaso) y aceptar una solicitud.
+    async function refrescarSaldosDeFicha(empleadoId) {
+      if (estado.origenFicha === 'directo') {
+        // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
+        const { data, error } = await supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', empleadoId)
+        if (error) mostrarError('No se pudieron cargar los saldos.')
+        estado.saldos = data || []
+        await cargarSaldosPorCuenta(cuentasDe(empleadoId).map(c => c.id))
+      } else {
+        // Ya recarga saldos + TODAS las cuentas/saldosPorCuenta visibles.
+        await cargarListado()
+      }
+      if (estado.personaAbierta) renderizarSaldosDetalle(estado.personaAbierta)
+    }
+
     async function guardarMovimiento() {
       const { tipo, subtipo, empleadoId } = estado.wizardMovimiento
       const monto       = parseImporte(document.getElementById('movimiento-monto').value)
-      const moneda       = document.getElementById('movimiento-moneda').value
-      const medioPago     = medioPagoCajaSeleccionado
       const fecha         = document.getElementById('movimiento-fecha').value || null
       const descripcion   = document.getElementById('movimiento-descripcion').value.trim() || null
 
       if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
-      if (!medioPago) { mostrarError('Elegí un medio de pago.'); return }
 
       const necesitaContraparte = (tipo === 'ingreso' && subtipo === 'propio') || tipo === 'egreso'
-      let contraparteId = null
+      let contraparteId = null, cuentaPropiaId = null, cuentaContraparteId = null, cuentaUnicaId = null
+
       if (necesitaContraparte) {
         contraparteId = document.getElementById('contraparte-select').value
         if (!contraparteId) {
           mostrarError(tipo === 'egreso' ? 'Elegí a quién le vas a dar la plata.' : 'Elegí quién te dio la plata.')
           return
         }
+        cuentaPropiaId = document.getElementById('cuenta-propia-select').value
+        if (!cuentaPropiaId) { mostrarError('Elegí tu cuenta.'); return }
+        cuentaContraparteId = document.getElementById('cuenta-contraparte-select').value
+        if (!cuentaContraparteId) { mostrarError('Elegí la cuenta de la contraparte.'); return }
+      } else {
+        cuentaUnicaId = document.getElementById('cuenta-select').value
+        if (!cuentaUnicaId) { mostrarError('Elegí una cuenta.'); return }
       }
 
       const btn = document.getElementById('btn-guardar-movimiento')
@@ -1720,7 +2254,7 @@
       try {
         let error
         if (tipo === 'ingreso' && subtipo === 'externo') {
-          const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
+          const params = { p_monto: monto, p_cuenta_id: cuentaUnicaId, p_descripcion: descripcion }
           if (fecha) params.p_fecha = fecha
           // ; a propósito: sin esto, ASI interpreta la línea de abajo como
           // una llamada — ver el comentario largo más abajo, mismo motivo.
@@ -1730,7 +2264,8 @@
         } else if (tipo === 'ingreso' || tipo === 'egreso') {
           const params = {
             p_tipo: tipo, p_contraparte_empleado_id: contraparteId,
-            p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion,
+            p_monto: monto, p_cuenta_propia_id: cuentaPropiaId, p_cuenta_contraparte_id: cuentaContraparteId,
+            p_descripcion: descripcion,
           }
           if (fecha) params.p_fecha = fecha
           ;({ error } = await supabase.rpc('crear_solicitud_movimiento_caja', params))
@@ -1738,7 +2273,7 @@
           const nombreContraparte = estado.nombresEmpleados[contraparteId] || '—'
           mostrarExito(`Solicitud enviada, esperando confirmación de ${nombreContraparte}.`)
         } else {
-          const params = { p_monto: monto, p_moneda: moneda, p_medio_pago: medioPago, p_descripcion: descripcion }
+          const params = { p_monto: monto, p_cuenta_id: cuentaUnicaId, p_descripcion: descripcion }
           if (fecha) params.p_fecha = fecha
           if (!esPropio) params.p_empleado_id = empleadoId
           ;({ error } = await supabase.rpc('registrar_retiro_caja', params))
@@ -1749,24 +2284,8 @@
         cerrarModalMovimiento()
 
         if (esAtomico) {
-          // Se movió saldo ya mismo — mismo refresco de siempre.
-          if (estado.origenFicha === 'directo') {
-            // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
-            const [saldosRes, saldosMedioRes] = await Promise.all([
-              supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
-              supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
-            ])
-            estado.saldos = saldosRes.data || []
-            estado.saldosPorMedio = saldosMedioRes.data || []
-            renderizarSaldosDetalle(estado.miEmpleado.id)
-            await cargarMovimientos(estado.miEmpleado.id)
-          } else {
-            await cargarListado()
-            if (estado.personaAbierta) {
-              renderizarSaldosDetalle(estado.personaAbierta)
-              await cargarMovimientos(estado.personaAbierta)
-            }
-          }
+          await refrescarSaldosDeFicha(empleadoId)
+          if (estado.personaAbierta) await cargarMovimientos(estado.personaAbierta)
         } else {
           // Ingreso propio / Egreso: solo se creó la solicitud, el saldo
           // todavía no cambió — alcanza con refrescar las solicitudes
@@ -1790,27 +2309,39 @@
     document.getElementById('btn-retiro-personal-listado').addEventListener('click', () => abrirModalMovimiento('retiro', estado.miEmpleado.id))
 
     // ═══════════════════════════════════════════════════════════════════════
-    // MODAL — Traspaso entre medios (efectivo ⇄ banco)
+    // MODAL — Traspaso entre cuentas propias
     // ═══════════════════════════════════════════════════════════════════════
 
-    let direccionTraspasoSeleccionada = null
-
-    function seleccionarDireccionTraspaso(valor) {
-      direccionTraspasoSeleccionada = valor
-      document.querySelectorAll('#grilla-direccion-traspaso .btn-tipo-doc').forEach(btn => {
-        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
-      })
+    function poblarSelectoresTraspaso() {
+      document.getElementById('traspaso-cuenta-origen').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id))
+      actualizarSelectorDestinoTraspaso()
     }
 
-    document.querySelectorAll('#grilla-direccion-traspaso .btn-tipo-doc').forEach(btn => {
-      btn.addEventListener('click', () => seleccionarDireccionTraspaso(btn.dataset.valor))
-    })
+    // "Hacia" se repuebla cada vez que cambia "Desde" — nunca puede quedar
+    // seleccionada la misma cuenta en los dos lados.
+    function actualizarSelectorDestinoTraspaso() {
+      const origenId = document.getElementById('traspaso-cuenta-origen').value
+      const candidatas = cuentasDe(estado.miEmpleado.id).filter(c => c.id !== origenId)
+      document.getElementById('traspaso-cuenta-destino').innerHTML = opcionesCuenta(candidatas)
+      actualizarCampoMontoDestino()
+    }
+
+    // El campo "Monto que entra" solo tiene sentido si origen y destino
+    // tienen distinta moneda — si es la misma, se manda el mismo valor.
+    function actualizarCampoMontoDestino() {
+      const origen  = estado.cuentasPorId[document.getElementById('traspaso-cuenta-origen').value]
+      const destino = estado.cuentasPorId[document.getElementById('traspaso-cuenta-destino').value]
+      document.getElementById('grupo-traspaso-monto-destino').hidden = !(origen && destino && origen.moneda !== destino.moneda)
+    }
+
+    document.getElementById('traspaso-cuenta-origen').addEventListener('change', actualizarSelectorDestinoTraspaso)
+    document.getElementById('traspaso-cuenta-destino').addEventListener('change', actualizarCampoMontoDestino)
 
     function abrirModalTraspaso() {
       document.getElementById('traspaso-monto').value = ''
-      document.getElementById('traspaso-moneda').value = 'ARS'
+      document.getElementById('traspaso-monto-destino').value = ''
       document.getElementById('traspaso-fecha').value = fechaISO(new Date())
-      seleccionarDireccionTraspaso(null)
+      poblarSelectoresTraspaso()
       document.getElementById('modal-traspaso').hidden = false
     }
 
@@ -1819,44 +2350,41 @@
     }
 
     async function guardarTraspaso() {
-      const monto     = parseImporte(document.getElementById('traspaso-monto').value)
-      const moneda     = document.getElementById('traspaso-moneda').value
-      const direccion   = direccionTraspasoSeleccionada
-      const fecha       = document.getElementById('traspaso-fecha').value || null
+      const cuentaOrigenId  = document.getElementById('traspaso-cuenta-origen').value
+      const cuentaDestinoId = document.getElementById('traspaso-cuenta-destino').value
+      const monto           = parseImporte(document.getElementById('traspaso-monto').value)
+      const fecha            = document.getElementById('traspaso-fecha').value || null
 
+      if (!cuentaOrigenId || !cuentaDestinoId) { mostrarError('Elegí las dos cuentas.'); return }
       if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
-      if (!direccion) { mostrarError('Elegí la dirección del traspaso.'); return }
+
+      const cuentaOrigen  = estado.cuentasPorId[cuentaOrigenId]
+      const cuentaDestino = estado.cuentasPorId[cuentaDestinoId]
+      let montoDestino = monto
+      if (cuentaOrigen.moneda !== cuentaDestino.moneda) {
+        montoDestino = parseImporte(document.getElementById('traspaso-monto-destino').value)
+        if (!montoDestino || montoDestino <= 0) { mostrarError('Ingresá el monto que entra.'); return }
+      }
 
       const btn = document.getElementById('btn-guardar-traspaso')
       btn.classList.add('btn--cargando')
       btn.disabled = true
 
       try {
-        const params = { p_monto: monto, p_moneda: moneda, p_direccion: direccion }
+        const params = {
+          p_cuenta_origen_id: cuentaOrigenId, p_cuenta_destino_id: cuentaDestinoId,
+          p_monto_origen: monto, p_monto_destino: montoDestino,
+        }
         if (fecha) params.p_fecha = fecha
-        const { error } = await supabase.rpc('registrar_traspaso_medio_caja', params)
+        const { error } = await supabase.rpc('registrar_traspaso_cuenta_caja', params)
         if (error) throw error
 
         mostrarExito('Traspaso registrado.')
         cerrarModalTraspaso()
 
-        if (estado.origenFicha === 'directo') {
-          // Rol 'usuario': jamás se dispara la consulta de "todos los empleados".
-          const [saldosRes, saldosMedioRes] = await Promise.all([
-            supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').eq('empleado_id', estado.miEmpleado.id),
-            supabase.from('v_caja_saldos_medio').select('empleado_id, moneda, medio_pago, saldo').eq('empleado_id', estado.miEmpleado.id),
-          ])
-          estado.saldos = saldosRes.data || []
-          estado.saldosPorMedio = saldosMedioRes.data || []
-          renderizarSaldosDetalle(estado.miEmpleado.id)
-          await cargarMovimientos(estado.miEmpleado.id)
-        } else {
-          await cargarListado()
-          if (estado.personaAbierta) {
-            renderizarSaldosDetalle(estado.personaAbierta)
-            await cargarMovimientos(estado.personaAbierta)
-          }
-        }
+        // El traspaso siempre es sobre la propia caja.
+        await refrescarSaldosDeFicha(estado.miEmpleado.id)
+        if (estado.personaAbierta) await cargarMovimientos(estado.personaAbierta)
       } catch (err) {
         mostrarError(err.message || 'No se pudo registrar el traspaso.')
       } finally {
@@ -1908,7 +2436,7 @@
 
       // Comunes a todos los roles: hacen falta tanto en el listado (admin)
       // como en la ficha propia (usuario) para el modal de "Añadir ingreso".
-      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados()])
+      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas()])
 
       if (emp.rol_app === 'super_admin') {
         document.getElementById('btn-ver-retiros-personales').style.display = 'inline-flex'
