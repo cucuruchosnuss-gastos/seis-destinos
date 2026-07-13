@@ -187,6 +187,66 @@
 
     .stat-card-caja__submetric-valor { font-size: 1.125rem; font-weight: 700; margin-top: 0.125rem; }
 
+    /* Variante bordó — total de retiros filtrados en "Retiros socios", mismo
+       tono que el chip "Retiro" del historial. Reutiliza __label/__montos/
+       __monto; sin submétricas ni desglose por cuenta (no aplica acá). */
+    .stat-card-caja--bordo {
+      background: linear-gradient(135deg, var(--bordo), var(--bordo-oscuro));
+      box-shadow: 0 8px 24px rgba(122,46,66,0.25);
+    }
+
+    /* ── Filtros de "Retiros socios" ─────────────────────────────────────── */
+
+    .filtros-retiros {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.625rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filtros-retiros select {
+      padding: 0.4375rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 8px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+      cursor: pointer;
+      flex: 1 1 180px;
+    }
+
+    .filtros-retiros select:focus { border-color: var(--color-acento); }
+
+    .filtros-retiros__fecha {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      flex-shrink: 0;
+    }
+
+    .filtros-retiros__fecha-label {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+    }
+
+    .filtros-retiros__fecha input[type="date"] {
+      padding: 0.4375rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 8px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+      cursor: pointer;
+    }
+
+    .filtros-retiros__fecha input[type="date"]:focus { border-color: var(--color-acento); }
+
     /* Chip para valores negativos sobre fondo ámbar (única excepción de color: bordó) */
     .valor-negativo-chip {
       display: inline-flex;
@@ -763,7 +823,7 @@
         <button type="button" class="btn btn--navy-outline" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
         <div class="caja-toolbar__acciones">
           <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto; flex:1;">Retiro personal</button>
-          <button type="button" class="btn btn--navy-outline" id="btn-ver-retiros-personales" style="display:none; width:auto; flex:1;">Retiros personales</button>
+          <button type="button" class="btn btn--navy-outline" id="btn-ver-retiros-personales" style="display:none; width:auto; flex:1;">Retiros socios</button>
         </div>
       </div>
 
@@ -790,11 +850,25 @@
   <div id="vista-retiros-personales" hidden>
     <header class="header">
       <button type="button" class="btn btn--icono" id="btn-cerrar-retiros-personales">← Volver</button>
-      <span class="header__nombre-app">Retiros personales</span>
+      <span class="header__nombre-app">Retiros socios</span>
       <div style="width:2rem;"></div>
     </header>
 
     <div style="padding:1.25rem; max-width:720px; margin:0 auto; width:100%;">
+      <div class="filtros-retiros">
+        <select id="filtro-retiros-persona"></select>
+        <div class="filtros-retiros__fecha">
+          <span class="filtros-retiros__fecha-label">Desde</span>
+          <input type="date" id="filtro-retiros-desde">
+        </div>
+        <div class="filtros-retiros__fecha">
+          <span class="filtros-retiros__fecha-label">Hasta</span>
+          <input type="date" id="filtro-retiros-hasta">
+        </div>
+      </div>
+
+      <div id="stat-total-retiros"></div>
+
       <div id="estado-cargando-retiros" class="estado-vacio">
         <div class="spinner"></div>
         <p class="estado-vacio__descripcion">Cargando…</p>
@@ -1062,6 +1136,7 @@
                               // dueño es origen o destino) — el botón que se muestra por
                               // fila depende de quién está LOGUEADO, no de la ficha
       filtros:         { busqueda: '' },
+      filtrosRetiros:  { empleado_id: '', fecha_desde: '', fecha_hasta: '' }, // vista "Retiros socios"
       wizardMovimiento: { tipo: null, empleadoId: null },
     }
 
@@ -2003,18 +2078,54 @@
     // VISTA — Retiros personales (exclusiva rol_app === 'super_admin')
     // ═══════════════════════════════════════════════════════════════════════
 
-    async function abrirRetirosPersonales() {
-      document.getElementById('vista-lista-caja').hidden = true
-      document.getElementById('vista-retiros-personales').removeAttribute('hidden')
+    // Mismo origen y orden que agruparPersonas()/poblarSelectorContraparte():
+    // estado.empleados (personas con acceso), alfabético.
+    function poblarSelectorRetirosPersona() {
+      const sel = document.getElementById('filtro-retiros-persona')
+      const personas = [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
+      sel.innerHTML = '<option value="">Todas las personas</option>' +
+        personas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('')
+      sel.value = estado.filtrosRetiros.empleado_id
+    }
 
+    function renderizarTotalRetiros(retiros) {
+      const cont = document.getElementById('stat-total-retiros')
+      if (!retiros.length) {
+        cont.innerHTML = ''
+        return
+      }
+      const totales = {}
+      retiros.forEach(m => { totales[m.moneda] = (totales[m.moneda] || 0) + Number(m.monto) })
+      const montosHtml = Object.entries(totales)
+        .map(([moneda, total]) => `<span class="stat-card-caja__monto">${formatearImporte(total, moneda)}</span>`)
+        .join('')
+      cont.innerHTML = `
+        <div class="stat-card-caja stat-card-caja--bordo">
+          <div>
+            <div class="stat-card-caja__label">Total retirado</div>
+            <div class="stat-card-caja__montos">${montosHtml}</div>
+          </div>
+        </div>
+      `
+    }
+
+    async function cargarRetiros() {
       document.getElementById('estado-cargando-retiros').hidden = false
       document.getElementById('lista-retiros-personales').innerHTML = ''
+      document.getElementById('stat-total-retiros').innerHTML = ''
       document.getElementById('estado-vacio-retiros').hidden = true
 
-      const { data, error } = await supabase
+      let consulta = supabase
         .from('caja_movimientos')
         .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id')
         .eq('tipo', 'egreso_retiro')
+
+      const { empleado_id, fecha_desde, fecha_hasta } = estado.filtrosRetiros
+      if (empleado_id) consulta = consulta.eq('empleado_id', empleado_id)
+      if (fecha_desde) consulta = consulta.gte('fecha', fecha_desde)
+      if (fecha_hasta) consulta = consulta.lte('fecha', fecha_hasta)
+
+      const { data, error } = await consulta
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -2026,12 +2137,24 @@
       }
 
       const retiros = data || []
+      renderizarTotalRetiros(retiros)
       if (!retiros.length) {
         document.getElementById('estado-vacio-retiros').hidden = false
         return
       }
       document.getElementById('lista-retiros-personales').innerHTML =
         retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join('')
+    }
+
+    async function abrirRetirosPersonales() {
+      document.getElementById('vista-lista-caja').hidden = true
+      document.getElementById('vista-retiros-personales').removeAttribute('hidden')
+
+      poblarSelectorRetirosPersona()
+      document.getElementById('filtro-retiros-desde').value = estado.filtrosRetiros.fecha_desde
+      document.getElementById('filtro-retiros-hasta').value = estado.filtrosRetiros.fecha_hasta
+
+      await cargarRetiros()
     }
 
     function cerrarRetirosPersonales() {
@@ -2041,6 +2164,18 @@
 
     document.getElementById('btn-ver-retiros-personales').addEventListener('click', abrirRetirosPersonales)
     document.getElementById('btn-cerrar-retiros-personales').addEventListener('click', cerrarRetirosPersonales)
+    document.getElementById('filtro-retiros-persona').addEventListener('change', (e) => {
+      estado.filtrosRetiros.empleado_id = e.target.value
+      cargarRetiros()
+    })
+    document.getElementById('filtro-retiros-desde').addEventListener('change', (e) => {
+      estado.filtrosRetiros.fecha_desde = e.target.value
+      cargarRetiros()
+    })
+    document.getElementById('filtro-retiros-hasta').addEventListener('change', (e) => {
+      estado.filtrosRetiros.fecha_hasta = e.target.value
+      cargarRetiros()
+    })
     document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
 
     // ═══════════════════════════════════════════════════════════════════════
