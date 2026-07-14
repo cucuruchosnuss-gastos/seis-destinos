@@ -153,6 +153,14 @@
       border-radius: 12px;
     }
 
+    /* La flecha se perdía al lado de importes largos — más separación del
+       número y un poco más grande que el resto del texto del chip. */
+    .desglose-medio-pago__flecha {
+      margin-left: 0.5rem;
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
     .desglose-cuenta__resto {
       margin-top: 0.375rem;
       padding-top: 0.375rem;
@@ -346,12 +354,37 @@
     }
 
     .saldo-card {
+      position: relative;
       background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
       color: #fff;
       border-radius: 18px;
       padding: 1.125rem 1.25rem;
       box-shadow: 0 8px 24px rgba(140,106,26,0.25);
     }
+
+    /* Botón "+" para agregar cuenta — solo en la propia ficha, ver
+       renderizarSaldosDetalle(). Reemplaza al viejo "+ Nueva cuenta" de la
+       sección "Mis cuentas" más abajo (ya no conviven los dos). */
+    .saldo-card__nueva-cuenta {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255,255,255,0.22);
+      color: #fff;
+      font-size: 1.125rem;
+      font-weight: 700;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .saldo-card__nueva-cuenta:hover { background: rgba(255,255,255,0.32); }
 
     .saldo-card__label {
       font-size: 0.6875rem;
@@ -690,6 +723,16 @@
     }
 
     .tarjeta-solicitud__acciones .btn { flex: 1; }
+
+    /* Botón que colapsa/expande la sección — mismo patrón de <summary> sin
+       marcador nativo ya usado en .desglose-medio-pago__chip. */
+    .solicitudes-pendientes__boton {
+      width: 100%;
+      list-style: none;
+    }
+    .solicitudes-pendientes__boton::-webkit-details-marker { display: none; }
+
+    .solicitudes-pendientes__lista { margin-top: 0.75rem; }
 
     /* ── Modal: nueva cuenta (mismo patrón que #modal-movimiento) ─────────── */
 
@@ -1238,7 +1281,7 @@
           const filas = cuentas.map(c => `<div class="desglose-cuenta__fila">${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`).join('')
           return `
             <details class="desglose-medio-pago__chip">
-              <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(total, moneda)} ▾</summary>
+              <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(total, moneda)}<span class="desglose-medio-pago__flecha">▾</span></summary>
               <div class="desglose-cuenta__resto">${filas}</div>
             </details>`
         }
@@ -1253,7 +1296,7 @@
         const filas = otras.map(c => `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`).join('')
         return `
           <details class="desglose-medio-pago__chip">
-            <summary>${principal.nombre}: ${formatearImporte(principal.saldo, moneda)} ▾</summary>
+            <summary>${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}<span class="desglose-medio-pago__flecha">▾</span></summary>
             <div class="desglose-cuenta__resto">${filas}</div>
           </details>`
       }).join('')
@@ -1613,16 +1656,25 @@
       const cont = document.getElementById('detalle-persona-saldos')
       const lista = saldos.length ? saldos : [{ moneda: 'ARS', saldo: 0 }]
       const cuentaIds = cuentasDe(empleadoId).map(c => c.id)
+      const esPropia = empleadoId === estado.miEmpleado.id
 
-      cont.innerHTML = `<div class="saldos-grilla">${lista.map(s => {
+      cont.innerHTML = `<div class="saldos-grilla">${lista.map((s, i) => {
         const desglose = renderizarDesglosePorCuenta(cuentaIds, s.moneda)
+        // Solo en la primera card, para no duplicarlo si hay ARS y USD —
+        // no es un botón "por moneda", es un botón "agregar cuenta" general.
+        const botonNuevaCuenta = (esPropia && i === 0)
+          ? `<button type="button" class="saldo-card__nueva-cuenta" id="btn-saldo-nueva-cuenta" title="Nueva cuenta" aria-label="Nueva cuenta">+</button>`
+          : ''
         return `
         <div class="saldo-card">
+          ${botonNuevaCuenta}
           <div class="saldo-card__label">Saldo ${s.moneda}</div>
           <div class="saldo-card__valor">${formatearImporteConAlerta(s.saldo, s.moneda)}</div>
           ${desglose}
         </div>
       `}).join('')}</div>`
+
+      document.getElementById('btn-saldo-nueva-cuenta')?.addEventListener('click', abrirModalCuentaNueva)
     }
 
     function renderizarAccionesDetalle(empleadoId) {
@@ -1827,15 +1879,20 @@
 
     function renderizarSolicitudesPendientes() {
       const cont = document.getElementById('detalle-persona-solicitudes')
+      const n = estado.solicitudesPendientes.length
 
-      if (!estado.solicitudesPendientes.length) {
-        cont.innerHTML = ''
-        return
-      }
+      const listaHtml = n
+        ? estado.solicitudesPendientes.map(renderizarFilaSolicitud).join('')
+        : '<p class="etiqueta-opcional">No hay solicitudes pendientes.</p>'
 
+      // Siempre visible (nunca se oculta la sección), colapsado por defecto
+      // sin importar si n es 0 — <details>/<summary>, mismo patrón ya usado
+      // en el desglose por cuenta, sin JS de más para el toggle.
       cont.innerHTML = `
-        <div class="modal-ficha__seccion-titulo">Solicitudes pendientes</div>
-        ${estado.solicitudesPendientes.map(renderizarFilaSolicitud).join('')}
+        <details>
+          <summary class="btn btn--bordo-outline solicitudes-pendientes__boton">Movimientos pendientes (${n})</summary>
+          <div class="solicitudes-pendientes__lista">${listaHtml}</div>
+        </details>
       `
 
       cont.querySelectorAll('[data-accion="aceptar"]').forEach(btn => {
@@ -1955,10 +2012,8 @@
             ${g.cuentas.length ? g.cuentas.map(renderizarFilaCuenta).join('') : '<p class="etiqueta-opcional">Sin cuentas</p>'}
           </div>
         `).join('')}
-        <button type="button" class="btn btn--secundario" id="btn-nueva-cuenta" style="margin-top:0.5rem;">+ Nueva cuenta</button>
       `
 
-      document.getElementById('btn-nueva-cuenta').addEventListener('click', abrirModalCuentaNueva)
       cont.querySelectorAll('[data-accion="favorita-cuenta"]').forEach(btn => {
         btn.addEventListener('click', () => marcarCuentaFavorita(btn.dataset.id))
       })
