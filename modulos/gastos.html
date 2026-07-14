@@ -1302,6 +1302,14 @@
             </select>
           </div>
 
+          <div class="grupo-campo" id="grupo-cuenta-gasto" style="display:none;">
+            <label for="campo-cuenta">Cuenta</label>
+            <select id="campo-cuenta">
+              <option value="">— Seleccioná —</option>
+            </select>
+            <p class="etiqueta-opcional" id="campo-cuenta-vacio" hidden></p>
+          </div>
+
           <div class="grupo-campo" id="grupo-proyecto">
             <label for="campo-proyecto">Proyecto <span class="etiqueta-opcional">opcional</span></label>
             <select id="campo-proyecto" name="proyecto_id">
@@ -1384,6 +1392,10 @@
       sesion:       null,
       rol:          'usuario',
       miEmpleadoId: null,
+      cuentasPorId: {}, // id -> {id, empleado_id, nombre, medio, moneda, favorita, activa,
+                         // created_at} — se completa bajo demanda por persona (cargarCuentasDe),
+                         // mismo criterio que caja.html: sin filtrar por activa acá, se filtra
+                         // en cada lugar que las consume.
       maestros: {
         categorias:  [],
         empleados:   [],
@@ -1447,6 +1459,10 @@
     }
 
     const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
+    // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos a los de
+    // gastos.medio_pago ('efectivo'/'transferencia'/'cheque') — no son intercambiables.
+    const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
+    const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco' }
 
     const OPCIONES_ORDEN = [
       { value: 'fecha_desc',   label: 'Fecha (más reciente primero)', columna: 'fecha_pago',  ascending: false },
@@ -2003,6 +2019,7 @@
         .select(`
           id, fecha, fecha_pago, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
           medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
+          cuenta_id,
           categorias (id, nombre, icon),
           empleados  (id, nombre),
           unidades_negocio (id, nombre),
@@ -2340,6 +2357,7 @@
 
       if (id === 'detalles') {
         poblarSelectEmpleados(unidadSeleccionada)
+        actualizarSelectorCuentaGasto()
 
         const grupoKmDetalle = document.getElementById('grupo-kilometraje-detalle')
         if (grupoKmDetalle) grupoKmDetalle.style.display = viaVehiculos ? 'block' : 'none'
@@ -2598,6 +2616,121 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // CARGA DE DATOS — Cuentas (medio+moneda con nombre propio, de Caja)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // On-demand: cuentas de una persona puntual. Mismo criterio que
+    // cargarCuentasDe() de caja.html — trae TODAS (activas e inactivas) y
+    // las vuelca en estado.cuentasPorId; el filtro por activa se aplica en
+    // cuentasDe(), no acá.
+    async function cargarCuentasDe(empleadoId) {
+      if (!empleadoId) return
+      const { data, error } = await supabase
+        .from('cuentas_caja')
+        .select('id, empleado_id, nombre, medio, moneda, favorita, activa, created_at')
+        .eq('empleado_id', empleadoId)
+      if (error) { mostrarError('No se pudieron cargar las cuentas.'); return }
+      ;(data || []).forEach(c => { estado.cuentasPorId[c.id] = c })
+    }
+
+    function cuentasDe(empleadoId) {
+      return Object.values(estado.cuentasPorId).filter(c => c.empleado_id === empleadoId && c.activa)
+    }
+
+    // Selector de cuenta del wizard (sub-paso "Detalles") — depende de
+    // medioPagoSeleccionado (sub-paso "Datos"), #campo-empleado y
+    // #campo-moneda (sub-paso "Datos"). Mismo criterio que
+    // actualizarSelectorCuentaContraparte() de caja.html: si falta una
+    // dependencia, se oculta sin mensaje; si están todas pero no hay
+    // ninguna cuenta que matchee, se oculta el <select> y se muestra un
+    // mensaje claro en vez de dejarlo vacío.
+    async function actualizarSelectorCuentaGasto() {
+      const grupo = document.getElementById('grupo-cuenta-gasto')
+      const sel   = document.getElementById('campo-cuenta')
+      const vacio = document.getElementById('campo-cuenta-vacio')
+
+      if (medioPagoSeleccionado !== 'efectivo' && medioPagoSeleccionado !== 'transferencia') {
+        grupo.style.display = 'none'
+        sel.innerHTML = ''
+        return
+      }
+
+      const empleadoId = document.getElementById('campo-empleado').value
+      if (!empleadoId) {
+        grupo.style.display = 'none'
+        sel.innerHTML = ''
+        return
+      }
+      grupo.style.display = 'flex'
+
+      const moneda = document.getElementById('campo-moneda')?.value || 'ARS'
+      const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medioPagoSeleccionado]
+
+      await cargarCuentasDe(empleadoId)
+      const candidatas = cuentasDe(empleadoId).filter(c => c.medio === medioCuenta && c.moneda === moneda)
+      const nombreEmpleado = estado.maestros.empleados.find(e => e.id === empleadoId)?.nombre || 'Esta persona'
+
+      if (!candidatas.length) {
+        sel.hidden = true
+        vacio.hidden = false
+        vacio.textContent = `${nombreEmpleado} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[medioCuenta]} en ${moneda}.`
+        sel.innerHTML = ''
+      } else {
+        sel.hidden = false
+        vacio.hidden = true
+        poblarSelect('campo-cuenta', candidatas,
+          c => ({ value: c.id, label: `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }),
+          '— Seleccioná —')
+      }
+    }
+
+    // Equivalente para el formulario de edición — mismos criterios, pero
+    // lee de los campos #edit-*. La moneda ahí es un <input> de texto
+    // libre (no un <select>, a diferencia del wizard), se usa tal cual.
+    async function actualizarSelectorCuentaEdicion(preseleccionarId) {
+      const grupo = document.getElementById('grupo-cuenta-edicion')
+      const sel   = document.getElementById('edit-cuenta')
+      const vacio = document.getElementById('edit-cuenta-vacio')
+      if (!grupo || !sel || !vacio) return
+
+      const medioPago = document.getElementById('edit-medio-pago').value
+      if (medioPago !== 'efectivo' && medioPago !== 'transferencia') {
+        grupo.style.display = 'none'
+        sel.innerHTML = ''
+        return
+      }
+
+      const empleadoId = document.getElementById('edit-empleado').value
+      if (!empleadoId) {
+        grupo.style.display = 'none'
+        sel.innerHTML = ''
+        return
+      }
+      grupo.style.display = 'flex'
+
+      const moneda = document.getElementById('edit-moneda').value.trim() || 'ARS'
+      const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medioPago]
+
+      await cargarCuentasDe(empleadoId)
+      const candidatas = cuentasDe(empleadoId).filter(c => c.medio === medioCuenta && c.moneda === moneda)
+      const nombreEmpleado = estado.maestros.empleados.find(e => e.id === empleadoId)?.nombre || 'Esta persona'
+
+      if (!candidatas.length) {
+        sel.hidden = true
+        vacio.hidden = false
+        vacio.textContent = `${nombreEmpleado} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[medioCuenta]} en ${moneda}.`
+        sel.innerHTML = ''
+      } else {
+        sel.hidden = false
+        vacio.hidden = true
+        poblarSelect('edit-cuenta', candidatas,
+          c => ({ value: c.id, label: `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }),
+          '— Seleccioná —')
+        if (preseleccionarId && candidatas.some(c => c.id === preseleccionarId)) sel.value = preseleccionarId
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // WIZARD — SELECT EMPLEADOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -2663,6 +2796,8 @@
           return mostrarError('Seleccioná el empleado.'), false
         if (viaVehiculos && !document.getElementById('campo-kilometraje').value)
           return mostrarError('Ingresá el kilometraje del vehículo.'), false
+        if ((medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') && !document.getElementById('campo-cuenta').value)
+          return mostrarError('Seleccioná la cuenta.'), false
       }
       return true
     }
@@ -2733,6 +2868,7 @@
       document.querySelectorAll('#grilla-medio-pago .btn-tipo-doc').forEach(btn => {
         btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
       })
+      actualizarSelectorCuentaGasto()
     }
 
     function prellenarPaso2(datos) {
@@ -2813,6 +2949,7 @@
         importe:           parseImporte(document.getElementById('campo-importe')?.value),
         moneda:            document.getElementById('campo-moneda')?.value || 'ARS',
         medio_pago:        medioPagoSeleccionado,
+        cuenta_id:         (medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') ? toStr('campo-cuenta') : null,
         categoria_id:      categoriaSeleccionada,
         proveedor_id:      null,
         proyecto_id:       toStr('campo-proyecto'),
@@ -2884,9 +3021,16 @@
       lucide.createIcons()
     }
 
-    function mostrarDetalleGasto(id) {
+    async function mostrarDetalleGasto(id) {
       const g = estado.listaGastos.find(x => x.id === id)
       if (!g) return
+
+      // Puede abrirse sin haber pasado por el wizard/edición de este gasto
+      // en esta sesión — si la cuenta todavía no está en cache, la traemos.
+      if (g.cuenta_id && !estado.cuentasPorId[g.cuenta_id]) {
+        await cargarCuentasDe(g.empleado_id)
+      }
+      const nombreCuenta = g.cuenta_id ? estado.cuentasPorId[g.cuenta_id]?.nombre : null
 
       const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
         <div class="resumen-fila">
@@ -2903,6 +3047,7 @@
           ${fila('Número',       g.numero_doc)}
           ${fila('Razón social', g.razon_social)}
           ${fila('Medio de pago', MEDIOS_PAGO_LABEL[g.medio_pago])}
+          ${fila('Cuenta',        nombreCuenta)}
           <div class="resumen-fila">
             <span class="resumen-fila__etiqueta">Importe</span>
             <span class="resumen-importe">${formatearImporte(g.importe, g.moneda)}</span>
@@ -3015,6 +3160,11 @@
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Detalles</div>
           ${campo('Empleado', selectEmpleado)}
+          <div class="grupo-campo" id="grupo-cuenta-edicion" style="display:none;">
+            <label for="edit-cuenta">Cuenta</label>
+            <select id="edit-cuenta"><option value="">— Seleccioná —</option></select>
+            <p class="etiqueta-opcional" id="edit-cuenta-vacio" hidden></p>
+          </div>
           ${campo('Proyecto', selectProyecto)}
           ${campo('Lugar', `<input type="text" id="edit-lugar" value="${g.lugar_servicio || ''}">`)}
           ${campo('Descripción', `<input type="text" id="edit-descripcion" value="${g.descripcion || ''}">`)}
@@ -3031,11 +3181,18 @@
 
       document.getElementById('btn-cancelar-edicion').addEventListener('click', () => mostrarDetalleGasto(id))
 
+      actualizarSelectorCuentaEdicion(g.cuenta_id)
+      document.getElementById('edit-empleado').addEventListener('change', () => actualizarSelectorCuentaEdicion())
+      document.getElementById('edit-medio-pago').addEventListener('change', () => actualizarSelectorCuentaEdicion())
+      document.getElementById('edit-moneda').addEventListener('change', () => actualizarSelectorCuentaEdicion())
+
       document.getElementById('btn-guardar-edicion').addEventListener('click', async () => {
         const empleadoVal  = document.getElementById('edit-empleado').value
         const categoriaVal = document.getElementById('edit-categoria').value
         const unidadVal     = document.getElementById('edit-unidad').value
         const vehiculoVal   = document.getElementById('edit-vehiculo').value
+        const medioPagoVal  = document.getElementById('edit-medio-pago').value
+        const cuentaVal     = document.getElementById('edit-cuenta').value
 
         if (!empleadoVal) {
           mostrarError('El empleado es obligatorio — no puede quedar en "Ninguno".')
@@ -3049,6 +3206,10 @@
           mostrarError('Tiene que haber una empresa o un vehículo asignado — no pueden quedar los dos en "Ninguno".')
           return
         }
+        if ((medioPagoVal === 'efectivo' || medioPagoVal === 'transferencia') && !cuentaVal) {
+          mostrarError('Seleccioná la cuenta.')
+          return
+        }
 
         const nuevaFechaPago = document.getElementById('edit-fecha-pago').value
 
@@ -3059,7 +3220,8 @@
           tipo_doc:          document.getElementById('edit-tipo-doc').value || null,
           numero_doc:        document.getElementById('edit-numero-doc').value || null,
           razon_social:      document.getElementById('edit-razon-social').value || null,
-          medio_pago:        document.getElementById('edit-medio-pago').value,
+          medio_pago:        medioPagoVal,
+          cuenta_id:         (medioPagoVal === 'efectivo' || medioPagoVal === 'transferencia') ? cuentaVal : null,
           importe:           Number(document.getElementById('edit-importe').value),
           moneda:            document.getElementById('edit-moneda').value || 'ARS',
           unidad_negocio_id: document.getElementById('edit-unidad').value || null,
@@ -3225,6 +3387,8 @@
       }
     })
 
+    document.getElementById('campo-moneda').addEventListener('change', actualizarSelectorCuentaGasto)
+
     document.getElementById('btn-datos-atras').addEventListener('click',    () => irASubpaso('foto'))
     document.getElementById('btn-datos-siguiente').addEventListener('click', () => {
       if (validarSubpaso('datos')) irASubpaso('destino')
@@ -3240,6 +3404,8 @@
     document.getElementById('btn-categoria-atras').addEventListener('click', () => irASubpaso(viaVehiculos ? 'vehiculo-destino' : 'destino'))
 
     // ── Sub-paso DETALLES ──────────────────────────────────────────────────
+    document.getElementById('campo-empleado').addEventListener('change', actualizarSelectorCuentaGasto)
+
     document.getElementById('btn-detalles-atras').addEventListener('click',    () => irASubpaso('categoria'))
     document.getElementById('btn-detalles-siguiente').addEventListener('click', () => {
       if (validarSubpaso('detalles')) irASubpaso('resumen')
