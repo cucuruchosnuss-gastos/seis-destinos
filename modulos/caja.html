@@ -691,6 +691,7 @@
     /* ── Solicitudes de movimiento pendientes (ficha de una persona) ───────── */
 
     .tarjeta-solicitud {
+      background: var(--color-fondo);
       border: 1px solid var(--color-borde);
       border-radius: 12px;
       padding: 0.875rem 1rem;
@@ -790,6 +791,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
+      background: var(--color-fondo);
       border: 1px solid var(--color-borde);
       border-radius: 12px;
       padding: 0.75rem 1rem;
@@ -943,8 +945,6 @@
       <div id="detalle-persona-acciones" style="display:flex; flex-wrap:wrap; gap:0.625rem; margin:1.25rem 0 1.5rem;"></div>
 
       <div id="detalle-persona-solicitudes"></div>
-
-      <div id="detalle-persona-cuentas"></div>
 
       <div class="modal-ficha__seccion-titulo">Movimientos</div>
 
@@ -1257,7 +1257,7 @@
     //     total de esa combinación (mismo número que se veía antes).
     //     Desplegado: cada cuenta individual, con el nombre de su dueño
     //     adelante — acá "favorita" no aplica, es un concepto por persona.
-    function renderizarDesglosePorCuenta(cuentaIds, moneda, { conDueno = false } = {}) {
+    function renderizarDesglosePorCuenta(cuentaIds, moneda, { conDueno = false, gestionable = false } = {}) {
       const idsSet = new Set(cuentaIds)
       const porMedio = {}
       estado.saldosPorCuenta
@@ -1291,9 +1291,17 @@
         const otras = cuentas.filter(c => c.id !== principal.id)
 
         if (!otras.length) {
+          // Única cuenta de esta combinación: por construcción ya es la
+          // favorita (esPrimeraCuentaDeCombinacion la fuerza al crearla), y
+          // renderizarFilaCuenta() no muestra botones sobre una favorita —
+          // no hay nada que gestionar, así que queda igual sin importar
+          // gestionable (envolverla no agregaría ninguna función).
           return `<span class="desglose-medio-pago__chip">${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}</span>`
         }
-        const filas = otras.map(c => `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`).join('')
+        const filas = otras.map(c => gestionable
+          ? renderizarFilaCuenta(c)
+          : `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`
+        ).join('')
         return `
           <details class="desglose-medio-pago__chip">
             <summary>${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}<span class="desglose-medio-pago__flecha">▾</span></summary>
@@ -1636,7 +1644,6 @@
 
       renderizarSaldosDetalle(empleadoId)
       renderizarAccionesDetalle(empleadoId)
-      renderizarSeccionCuentas(empleadoId)
 
       document.getElementById('detalle-persona-movimientos').innerHTML = ''
       document.getElementById('detalle-persona-vacio').hidden = true
@@ -1659,7 +1666,7 @@
       const esPropia = empleadoId === estado.miEmpleado.id
 
       cont.innerHTML = `<div class="saldos-grilla">${lista.map((s, i) => {
-        const desglose = renderizarDesglosePorCuenta(cuentaIds, s.moneda)
+        const desglose = renderizarDesglosePorCuenta(cuentaIds, s.moneda, { gestionable: esPropia })
         // Solo en la primera card, para no duplicarlo si hay ARS y USD —
         // no es un botón "por moneda", es un botón "agregar cuenta" general.
         const botonNuevaCuenta = (esPropia && i === 0)
@@ -1675,6 +1682,15 @@
       `}).join('')}</div>`
 
       document.getElementById('btn-saldo-nueva-cuenta')?.addEventListener('click', abrirModalCuentaNueva)
+
+      if (esPropia) {
+        cont.querySelectorAll('[data-accion="favorita-cuenta"]').forEach(btn => {
+          btn.addEventListener('click', () => marcarCuentaFavorita(btn.dataset.id))
+        })
+        cont.querySelectorAll('[data-accion="desactivar-cuenta"]').forEach(btn => {
+          btn.addEventListener('click', () => desactivarCuenta(btn.dataset.id))
+        })
+      }
     }
 
     function renderizarAccionesDetalle(empleadoId) {
@@ -1994,41 +2010,13 @@
         </div>`
     }
 
-    function renderizarSeccionCuentas(empleadoId) {
-      const cont = document.getElementById('detalle-persona-cuentas')
-      if (empleadoId !== estado.miEmpleado.id) { cont.innerHTML = ''; return }
-
-      const misCuentas = cuentasDe(empleadoId)
-      const grupos = [
-        { medio: 'efectivo', cuentas: misCuentas.filter(c => c.medio === 'efectivo') },
-        { medio: 'banco',    cuentas: misCuentas.filter(c => c.medio === 'banco') },
-      ]
-
-      cont.innerHTML = `
-        <div class="modal-ficha__seccion-titulo">Mis cuentas</div>
-        ${grupos.map(g => `
-          <div class="grupo-cuentas">
-            <div class="grupo-cuentas__titulo">${MEDIO_CUENTA_LABEL[g.medio]}</div>
-            ${g.cuentas.length ? g.cuentas.map(renderizarFilaCuenta).join('') : '<p class="etiqueta-opcional">Sin cuentas</p>'}
-          </div>
-        `).join('')}
-      `
-
-      cont.querySelectorAll('[data-accion="favorita-cuenta"]').forEach(btn => {
-        btn.addEventListener('click', () => marcarCuentaFavorita(btn.dataset.id))
-      })
-      cont.querySelectorAll('[data-accion="desactivar-cuenta"]').forEach(btn => {
-        btn.addEventListener('click', () => desactivarCuenta(btn.dataset.id))
-      })
-    }
-
     // Recarga cuentas + saldos por cuenta de una persona y vuelve a pintar
-    // tanto la card de saldo (CAMBIO 3) como la sección de cuentas (CAMBIO 2).
+    // la card de saldo — la gestión de cuentas (marcar favorita/desactivar)
+    // ahora vive fusionada ahí adentro, ver renderizarDesglosePorCuenta().
     async function refrescarCuentasYSaldos(empleadoId) {
       await cargarCuentas([empleadoId])
       await cargarSaldosPorCuenta(cuentasDe(empleadoId).map(c => c.id))
       renderizarSaldosDetalle(empleadoId)
-      renderizarSeccionCuentas(empleadoId)
     }
 
     async function marcarCuentaFavorita(id) {
