@@ -3,6 +3,7 @@ import { supabase } from './supabase.js'
 const RAIZ_SITIO = new URL('..', import.meta.url).href
 const RUTA_LOGIN = new URL('login.html', RAIZ_SITIO).href
 const RUTA_DASHBOARD = new URL('dashboard.html', RAIZ_SITIO).href
+const RUTA_RESTABLECER_CONTRASENA = new URL('restablecer-contrasena.html', RAIZ_SITIO).href
 
 // Verifica sesión activa.
 // redirigirSiNoHay: redirige a login si no hay sesión (default: true)
@@ -36,6 +37,33 @@ export async function iniciarSesion(email, contrasena) {
 export async function cerrarSesion() {
   await supabase.auth.signOut()
   window.location.replace(RUTA_LOGIN)
+}
+
+// Mecanismo estándar de Supabase: manda un link mágico al mail, sin
+// aprobación manual de nadie — si alguien puede entrar a ese mail para
+// clickear el link, ya demostró ser el dueño de la cuenta. No lanza error
+// nunca (ni si el mail no existe) — la pantalla que llama a esto siempre
+// muestra el mismo mensaje, para no revelar qué mails están registrados.
+export async function pedirRestablecerContrasena(email) {
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: RUTA_RESTABLECER_CONTRASENA })
+}
+
+// Se usa desde restablecer-contrasena.html, una vez que la sesión temporal
+// de recuperación ya quedó establecida (evento PASSWORD_RECOVERY), y también
+// desde el menú de perfil del dashboard (usuario ya logueado cambiando su
+// propia contraseña).
+export async function actualizarContrasena(nuevaContrasena) {
+  const { error } = await supabase.auth.updateUser({ password: nuevaContrasena })
+  if (error) throw new Error(_traducirError(error.message))
+}
+
+// Menú de perfil del dashboard — cambia auth.users.email (la credencial de
+// login), nunca empleados.email (ese viene de Naaloo, se edita desde el
+// módulo Empleados). "Confirm email" está desactivado en el proyecto, así
+// que el cambio aplica al instante, sin mail de confirmación de por medio.
+export async function actualizarEmail(nuevoEmail) {
+  const { error } = await supabase.auth.updateUser({ email: nuevoEmail })
+  if (error) throw new Error(_traducirError(error.message))
 }
 
 // Busca en empleados por CUIL normalizado, vía RPC (nunca SELECT directo:

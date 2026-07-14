@@ -8,6 +8,77 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a2a52">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .menu-perfil { position: relative; }
+
+    .header__avatar { cursor: pointer; }
+
+    .menu-perfil__panel {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      z-index: 30;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      padding: 0.375rem;
+      min-width: 180px;
+    }
+
+    .menu-perfil__opcion {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.5625rem 0.75rem;
+      border-radius: 8px;
+      border: none;
+      background: none;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+
+    .menu-perfil__opcion:hover { background: var(--color-fondo); }
+
+    .modal-perfil {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-perfil[hidden] { display: none; }
+
+    .modal-perfil__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    .modal-perfil__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .modal-perfil__titulo { font-size: 1.125rem; font-weight: 700; margin: 0; }
+
+    @media (min-width: 641px) {
+      .modal-perfil { align-items: center; }
+      .modal-perfil__panel { max-width: 400px; border-radius: 20px; box-shadow: var(--sombra-hover); }
+    }
+  </style>
 </head>
 <body class="pagina-dashboard">
 
@@ -18,12 +89,56 @@
         <span class="header__info-nombre" id="header-nombre"></span>
         <span class="header__info-subtitulo" id="header-email"></span>
       </div>
-      <div class="header__avatar" id="header-avatar"></div>
+      <div class="menu-perfil" id="menu-perfil">
+        <div class="header__avatar" id="header-avatar"></div>
+        <div class="menu-perfil__panel" id="menu-perfil-panel" hidden>
+          <button type="button" class="menu-perfil__opcion" id="btn-cambiar-email">Cambiar email</button>
+          <button type="button" class="menu-perfil__opcion" id="btn-cambiar-contrasena">Cambiar contraseña</button>
+        </div>
+      </div>
       <button class="btn btn--secundario" id="btn-logout" style="font-size: 0.875rem; padding: 0.5rem 0.875rem;">
         Salir
       </button>
     </div>
   </header>
+
+  <div class="modal-perfil" id="modal-email" hidden>
+    <div class="modal-perfil__backdrop"></div>
+    <div class="modal-perfil__panel">
+      <h3 class="modal-perfil__titulo">Cambiar email</h3>
+      <div class="grupo-campo">
+        <label for="campo-email-nuevo">Email</label>
+        <input type="email" id="campo-email-nuevo" autocomplete="email">
+      </div>
+      <div style="display:flex; gap:0.75rem;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-email" style="flex:1;">Cancelar</button>
+        <button type="button" class="btn btn--primario" id="btn-guardar-email" style="flex:1;">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-perfil" id="modal-contrasena" hidden>
+    <div class="modal-perfil__backdrop"></div>
+    <div class="modal-perfil__panel">
+      <h3 class="modal-perfil__titulo">Cambiar contraseña</h3>
+      <div class="grupo-campo">
+        <label for="campo-contrasena-actual">Contraseña actual</label>
+        <input type="password" id="campo-contrasena-actual" autocomplete="current-password">
+      </div>
+      <div class="grupo-campo">
+        <label for="campo-contrasena-nueva">Contraseña nueva</label>
+        <input type="password" id="campo-contrasena-nueva" autocomplete="new-password">
+      </div>
+      <div class="grupo-campo">
+        <label for="campo-contrasena-confirmar">Confirmar contraseña</label>
+        <input type="password" id="campo-contrasena-confirmar" autocomplete="new-password">
+      </div>
+      <div style="display:flex; gap:0.75rem;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-contrasena" style="flex:1;">Cancelar</button>
+        <button type="button" class="btn btn--primario" id="btn-guardar-contrasena" style="flex:1;">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <main class="dashboard__contenido">
     <div class="dashboard__titulo" id="dashboard-titulo">
@@ -39,11 +154,18 @@
       <div class="estado-vacio__titulo" id="dashboard-pendiente-titulo">Tu cuenta está pendiente de aprobación</div>
       <p class="estado-vacio__descripcion" id="dashboard-pendiente-descripcion">Un administrador todavía no aprobó tu acceso. Te avisamos cuando esté listo.</p>
     </div>
+
+    <div id="dashboard-sin-modulos" class="estado-vacio" hidden>
+      <div class="estado-vacio__icono">🔒</div>
+      <div class="estado-vacio__titulo">Todavía no tenés ningún módulo habilitado</div>
+      <p class="estado-vacio__descripcion">Contactá a un administrador para que te dé acceso a alguno.</p>
+    </div>
   </main>
 
   <script type="module">
-    import { verificarSesion, cerrarSesion } from './js/auth.js'
+    import { verificarSesion, cerrarSesion, iniciarSesion, actualizarEmail, actualizarContrasena } from './js/auth.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
+    import { mostrarError, mostrarExito } from './js/utils.js'
     import { supabase } from './js/supabase.js'
 
     mostrarBannerVersion()
@@ -112,12 +234,106 @@
 
     document.getElementById('btn-logout').addEventListener('click', () => cerrarSesion())
 
+    // ── Menú de perfil (cambiar email / cambiar contraseña) ─────────────────
+    // emailActual: valor mostrado y precargado en el modal — se actualiza
+    // en memoria tras un cambio exitoso, para no depender de sesion.user
+    // (que queda desactualizado) ni de un reload de página.
+    let emailActual = email
+
+    const menuPerfil      = document.getElementById('menu-perfil')
+    const menuPerfilPanel = document.getElementById('menu-perfil-panel')
+
+    document.getElementById('header-avatar').addEventListener('click', (e) => {
+      e.stopPropagation()
+      menuPerfilPanel.hidden = !menuPerfilPanel.hidden
+    })
+    document.addEventListener('click', (e) => {
+      if (!menuPerfilPanel.hidden && !menuPerfil.contains(e.target)) menuPerfilPanel.hidden = true
+    })
+
+    function abrirModalEmail() {
+      menuPerfilPanel.hidden = true
+      document.getElementById('campo-email-nuevo').value = emailActual
+      document.getElementById('modal-email').hidden = false
+    }
+    function cerrarModalEmail() { document.getElementById('modal-email').hidden = true }
+
+    document.getElementById('btn-cambiar-email').addEventListener('click', abrirModalEmail)
+    document.getElementById('btn-cancelar-email').addEventListener('click', cerrarModalEmail)
+    document.querySelector('#modal-email .modal-perfil__backdrop').addEventListener('click', cerrarModalEmail)
+
+    document.getElementById('btn-guardar-email').addEventListener('click', async () => {
+      const nuevo = document.getElementById('campo-email-nuevo').value.trim()
+      if (!nuevo) { mostrarError('Ingresá un email.'); return }
+
+      const btn = document.getElementById('btn-guardar-email')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+      try {
+        await actualizarEmail(nuevo)
+        emailActual = nuevo
+        // Si no hay nombre, el header mostraba el email en header-nombre
+        // (ver el armado de arriba); si hay nombre, el email va en el
+        // subtítulo. Reflejamos el cambio en el que corresponda.
+        if (nombre) document.getElementById('header-email').textContent = nuevo
+        else document.getElementById('header-nombre').textContent = nuevo
+        mostrarExito('Tu email fue actualizado.')
+        cerrarModalEmail()
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo actualizar el email.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    })
+
+    function abrirModalContrasena() {
+      menuPerfilPanel.hidden = true
+      document.getElementById('campo-contrasena-actual').value = ''
+      document.getElementById('campo-contrasena-nueva').value = ''
+      document.getElementById('campo-contrasena-confirmar').value = ''
+      document.getElementById('modal-contrasena').hidden = false
+    }
+    function cerrarModalContrasena() { document.getElementById('modal-contrasena').hidden = true }
+
+    document.getElementById('btn-cambiar-contrasena').addEventListener('click', abrirModalContrasena)
+    document.getElementById('btn-cancelar-contrasena').addEventListener('click', cerrarModalContrasena)
+    document.querySelector('#modal-contrasena .modal-perfil__backdrop').addEventListener('click', cerrarModalContrasena)
+
+    document.getElementById('btn-guardar-contrasena').addEventListener('click', async () => {
+      const actual    = document.getElementById('campo-contrasena-actual').value
+      const nueva     = document.getElementById('campo-contrasena-nueva').value
+      const confirmar = document.getElementById('campo-contrasena-confirmar').value
+
+      if (!actual || !nueva || !confirmar) { mostrarError('Completá los tres campos.'); return }
+      if (nueva !== confirmar) { mostrarError('Las contraseñas no coinciden.'); return }
+
+      const btn = document.getElementById('btn-guardar-contrasena')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+      try {
+        // Reautenticación: sin esto, cualquiera con la sesión ya abierta
+        // (celular desbloqueado, sesión robada) podría cambiar la contraseña
+        // sin saber la original y dejar afuera al dueño real. iniciarSesion
+        // ya traduce el error a "Email o contraseña incorrectos." si no matchea.
+        await iniciarSesion(emailActual, actual)
+        await actualizarContrasena(nueva)
+        mostrarExito('Tu contraseña fue actualizada.')
+        cerrarModalContrasena()
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo actualizar la contraseña.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    })
+
     // Chequeamos si esta cuenta de Auth ya tiene una fila vinculada en empleados.
     // Si no la tiene (cuenta creada pero solicitud todavía no aprobada), no mostramos
     // ningún módulo — ni siquiera los que no son admin-only.
     const { data: miEmpleado } = await supabase
       .from('empleados')
-      .select('rol_app')
+      .select('id, rol_app')
       .eq('auth_user_id', sesion.user.id)
       .maybeSingle()
 
@@ -175,10 +391,37 @@
       pendientes = count || 0
     }
 
+    // Módulos habilitados individualmente — solo hace falta consultarlos
+    // para no-admin: un admin/super_admin ve todos los módulos que no son
+    // soloAdmin sin restricción (ver filtro de abajo). 'accesos' sigue
+    // gateado únicamente por rol_app (soloAdmin), no por esta tabla — la
+    // capacidad de aprobar accesos es del rol, no un módulo asignable.
+    let misModulos = []
+    if (!esAdmin) {
+      const { data: modulosData } = await supabase
+        .from('empleado_modulos')
+        .select('modulo')
+        .eq('empleado_id', miEmpleado.id)
+        .eq('habilitado', true)
+      misModulos = (modulosData || []).map(m => m.modulo)
+    }
+
+    const modulosVisibles = MODULOS.filter(modulo => {
+      if (modulo.soloAdmin) return esAdmin
+      return esAdmin || misModulos.includes(modulo.clave)
+    })
+
+    if (!esAdmin && !modulosVisibles.length) {
+      document.getElementById('dashboard-titulo').hidden = true
+      document.getElementById('grilla-modulos').hidden = true
+      document.getElementById('dashboard-sin-modulos').hidden = false
+      throw new Error('Usuario sin ningún módulo habilitado en empleado_modulos')
+    }
+
     // Renderizar grilla de módulos
     const grilla = document.getElementById('grilla-modulos')
 
-    const tarjetas = MODULOS.filter(modulo => !modulo.soloAdmin || esAdmin).map((modulo) => {
+    const tarjetas = modulosVisibles.map((modulo) => {
       const colores = COLORES_MODULO[modulo.color]
       const badge = (modulo.clave === 'accesos' && pendientes > 0)
         ? `<span class="tarjeta-modulo__badge">${pendientes}</span>`

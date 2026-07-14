@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recuperar contraseña — Seis Destinos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+</head>
+<body class="pagina-auth">
+
+  <div class="tarjeta-auth">
+    <div class="auth-logo">
+      <img src="logo.png" alt="Seis Destinos" style="max-width: 200px; height: auto; display: block; margin: 0 auto;">
+    </div>
+
+    <div id="vista-pedir-mail">
+      <p style="font-size:0.875rem; color:var(--color-texto-suave); margin: 0 0 1.25rem; text-align:center;">
+        Ingresá tu email y te mandamos un link para elegir una contraseña nueva.
+      </p>
+
+      <form class="formulario" id="formulario-recuperar" novalidate>
+        <div class="grupo-campo">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="tu@email.com" autocomplete="email" required>
+        </div>
+
+        <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
+
+        <div class="formulario__acciones">
+          <button type="submit" class="btn btn--primario" id="btn-enviar">Enviar link</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="vista-enviado" hidden>
+      <div class="estado-vacio__icono" style="text-align:center; font-size:2.5rem; margin-bottom:0.75rem;">📩</div>
+      <p style="font-size:0.9375rem; color:var(--color-texto); text-align:center; margin:0;">
+        Si ese email tiene una cuenta, te mandamos un link para restablecer la contraseña. Revisá tu correo (y la carpeta de spam).
+      </p>
+    </div>
+
+    <p class="formulario__pie">
+      <a href="login.html">← Volver a ingresar</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import { verificarSesion, pedirRestablecerContrasena } from './js/auth.js'
+    import { mostrarBannerVersion } from './js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // Si ya hay sesión activa, no tiene sentido pedir un reseteo.
+    await verificarSesion({ redirigirSiNoHay: false, redirigirSiHay: true })
+
+    const formulario  = document.getElementById('formulario-recuperar')
+    const btnEnviar    = document.getElementById('btn-enviar')
+    const alertaError  = document.getElementById('alerta-error')
+
+    function mostrarAlertaError(mensaje) {
+      alertaError.textContent = mensaje
+      alertaError.classList.add('alerta--visible')
+    }
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault()
+      alertaError.classList.remove('alerta--visible')
+
+      const email = document.getElementById('email').value.trim()
+      if (!email) {
+        mostrarAlertaError('Ingresá tu email.')
+        return
+      }
+
+      btnEnviar.classList.add('btn--cargando')
+      btnEnviar.disabled = true
+
+      try {
+        await pedirRestablecerContrasena(email)
+      } catch {
+        // Nunca revelamos si el mail existe o no — siempre mostramos el
+        // mismo mensaje de éxito, sea cual sea el resultado real.
+      }
+
+      document.getElementById('vista-pedir-mail').hidden = true
+      document.getElementById('vista-enviado').hidden = false
+    })
+  </script>
+
+</body>
+</html>

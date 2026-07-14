@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elegir nueva contraseña — Seis Destinos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+</head>
+<body class="pagina-auth">
+
+  <div class="tarjeta-auth">
+    <div class="auth-logo">
+      <img src="logo.png" alt="Seis Destinos" style="max-width: 200px; height: auto; display: block; margin: 0 auto;">
+    </div>
+
+    <div id="vista-verificando">
+      <p style="font-size:0.9375rem; color:var(--color-texto-suave); text-align:center;">Verificando el link…</p>
+    </div>
+
+    <div id="vista-link-invalido" hidden>
+      <p style="font-size:0.9375rem; color:var(--color-texto); text-align:center; margin-bottom:1.25rem;">
+        Este link no es válido o ya expiró.
+      </p>
+      <a href="recuperar-contrasena.html" class="btn btn--primario" style="display:flex; justify-content:center;">Pedir un link nuevo</a>
+    </div>
+
+    <div id="vista-formulario" hidden>
+      <p style="font-size:0.875rem; color:var(--color-texto-suave); margin: 0 0 1.25rem; text-align:center;">
+        Elegí tu nueva contraseña.
+      </p>
+
+      <form class="formulario" id="formulario-restablecer" novalidate>
+        <div class="grupo-campo">
+          <label for="contrasena-nueva">Contraseña nueva</label>
+          <input type="password" id="contrasena-nueva" name="contrasena-nueva" placeholder="••••••••" autocomplete="new-password" required>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="contrasena-confirmar">Confirmar contraseña</label>
+          <input type="password" id="contrasena-confirmar" name="contrasena-confirmar" placeholder="••••••••" autocomplete="new-password" required>
+        </div>
+
+        <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
+
+        <div class="formulario__acciones">
+          <button type="submit" class="btn btn--primario" id="btn-guardar">Guardar contraseña</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { actualizarContrasena } from './js/auth.js'
+    import { supabase } from './js/supabase.js'
+    import { mostrarBannerVersion } from './js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    function mostrarVista(id) {
+      ;['vista-verificando', 'vista-link-invalido', 'vista-formulario'].forEach(v => {
+        document.getElementById(v).hidden = v !== id
+      })
+    }
+
+    // El link del mail trae el token de recuperación en la URL — el SDK lo
+    // procesa solo (detectSessionInUrl) y dispara este evento con una sesión
+    // temporal válida SOLO para cambiar la contraseña.
+    let yaResuelto = false
+    supabase.auth.onAuthStateChange((evento) => {
+      if (evento === 'PASSWORD_RECOVERY') {
+        yaResuelto = true
+        mostrarVista('vista-formulario')
+      }
+    })
+
+    // Si a los 5 segundos no llegó el evento, el link es inválido/expirado.
+    setTimeout(() => {
+      if (!yaResuelto) mostrarVista('vista-link-invalido')
+    }, 5000)
+
+    const formulario  = document.getElementById('formulario-restablecer')
+    const btnGuardar   = document.getElementById('btn-guardar')
+    const alertaError  = document.getElementById('alerta-error')
+
+    function mostrarAlertaError(mensaje) {
+      alertaError.textContent = mensaje
+      alertaError.classList.add('alerta--visible')
+    }
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault()
+      alertaError.classList.remove('alerta--visible')
+
+      const nueva     = document.getElementById('contrasena-nueva').value
+      const confirmar = document.getElementById('contrasena-confirmar').value
+
+      if (!nueva || !confirmar) {
+        mostrarAlertaError('Completá los dos campos.')
+        return
+      }
+      if (nueva !== confirmar) {
+        mostrarAlertaError('Las contraseñas no coinciden.')
+        return
+      }
+
+      btnGuardar.classList.add('btn--cargando')
+      btnGuardar.disabled = true
+
+      try {
+        await actualizarContrasena(nueva)
+        window.location.replace('dashboard.html')
+      } catch (error) {
+        mostrarAlertaError(error.message)
+        btnGuardar.classList.remove('btn--cargando')
+        btnGuardar.disabled = false
+      }
+    })
+  </script>
+
+</body>
+</html>
