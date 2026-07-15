@@ -1380,7 +1380,7 @@
     }
 
     // On-demand: cuentas de una persona puntual (contraparte de un
-    // ingreso/egreso, o dueño de un retiro hecho en su nombre).
+    // ingreso/egreso).
     async function cargarCuentasDe(empleadoId) {
       await cargarCuentas([empleadoId])
     }
@@ -1709,9 +1709,12 @@
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1 1 45%;">Egreso</button>`)
       }
 
-      // Retiro personal: sin cambios — sigue soportando actuar por otro
-      // (la RPC registrar_retiro_caja sí acepta p_empleado_id).
-      botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1 1 45%;">Retiro personal</button>`)
+      // Retiro personal: mueve saldo de la propia caja — la RPC
+      // registrar_retiro_caja ya no acepta p_empleado_id, siempre opera
+      // sobre quien llama. Solo tiene sentido en la ficha propia.
+      if (empleadoId === estado.miEmpleado.id) {
+        botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1 1 45%;">Retiro personal</button>`)
+      }
 
       // Traspaso: mueve plata entre medios DENTRO de la propia caja. Solo
       // tiene sentido en la ficha propia (la RPC no acepta p_empleado_id,
@@ -2245,7 +2248,7 @@
         cuentas.map(c => `<option value="${c.id}">${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})</option>`).join('')
     }
 
-    // Retiro (en nombre propio o de otro) e Ingreso externo: un solo selector.
+    // Retiro e Ingreso externo: un solo selector, siempre sobre la propia ficha.
     function poblarSelectorCuentaUnica(empleadoId) {
       document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(empleadoId))
     }
@@ -2352,7 +2355,6 @@
       } else {
         grupoContraparte.style.display = 'none'
         document.getElementById('movimiento-titulo').textContent = 'Registrar retiro'
-        if (empleadoId !== estado.miEmpleado.id) await cargarCuentasDe(empleadoId)
         grupoCuentaUnica.style.display = 'flex'
         labelCuentaUnica.textContent = 'Cuenta'
         poblarSelectorCuentaUnica(empleadoId)
@@ -2423,7 +2425,6 @@
       btn.classList.add('btn--cargando')
       btn.disabled = true
 
-      const esPropio = empleadoId === estado.miEmpleado.id
       // Los únicos dos casos que TODAVÍA son atómicos (mueven saldo ya
       // mismo): ingreso externo (Pablo) y retiro. Ingreso propio y egreso
       // ahora solo crean una solicitud pendiente — ver CAMBIO 4/5.
@@ -2453,7 +2454,6 @@
         } else {
           const params = { p_monto: monto, p_cuenta_id: cuentaUnicaId, p_descripcion: descripcion }
           if (fecha) params.p_fecha = fecha
-          if (!esPropio) params.p_empleado_id = empleadoId
           ;({ error } = await supabase.rpc('registrar_retiro_caja', params))
           if (error) throw error
           mostrarExito('Retiro registrado.')
