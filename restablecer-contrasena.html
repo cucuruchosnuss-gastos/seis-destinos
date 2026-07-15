@@ -7,6 +7,32 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    /* Ícono de mostrar/ocultar contraseña — mismo patrón que registro.html */
+    .campo-contrasena { position: relative; }
+
+    .campo-contrasena input { padding-right: 2.75rem; }
+
+    .btn-mostrar-contrasena {
+      position: absolute;
+      right: 0.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 0.5rem;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .btn-mostrar-contrasena:hover { color: var(--color-texto); }
+
+    .btn-mostrar-contrasena .lucide { width: 1.125rem; height: 1.125rem; }
+  </style>
 </head>
 <body class="pagina-auth">
 
@@ -34,12 +60,22 @@
       <form class="formulario" id="formulario-restablecer" novalidate>
         <div class="grupo-campo">
           <label for="contrasena-nueva">Contraseña nueva</label>
-          <input type="password" id="contrasena-nueva" name="contrasena-nueva" placeholder="••••••••" autocomplete="new-password" required>
+          <div class="campo-contrasena">
+            <input type="password" id="contrasena-nueva" name="contrasena-nueva" placeholder="••••••••" autocomplete="new-password" required>
+            <button type="button" class="btn-mostrar-contrasena" data-target="contrasena-nueva" title="Mostrar contraseña">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
         </div>
 
         <div class="grupo-campo">
           <label for="contrasena-confirmar">Confirmar contraseña</label>
-          <input type="password" id="contrasena-confirmar" name="contrasena-confirmar" placeholder="••••••••" autocomplete="new-password" required>
+          <div class="campo-contrasena">
+            <input type="password" id="contrasena-confirmar" name="contrasena-confirmar" placeholder="••••••••" autocomplete="new-password" required>
+            <button type="button" class="btn-mostrar-contrasena" data-target="contrasena-confirmar" title="Mostrar contraseña">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
         </div>
 
         <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
@@ -52,11 +88,12 @@
   </div>
 
   <script type="module">
-    import { actualizarContrasena } from './js/auth.js'
+    import { actualizarContrasena, marcarSesionRecuperacion, limpiarSesionRecuperacion } from './js/auth.js'
     import { supabase } from './js/supabase.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
 
     mostrarBannerVersion()
+    lucide.createIcons()
 
     function mostrarVista(id) {
       ;['vista-verificando', 'vista-link-invalido', 'vista-formulario'].forEach(v => {
@@ -65,20 +102,45 @@
     }
 
     // El link del mail trae el token de recuperación en la URL — el SDK lo
-    // procesa solo (detectSessionInUrl) y dispara este evento con una sesión
-    // temporal válida SOLO para cambiar la contraseña.
+    // procesa solo (detectSessionInUrl) y establece una sesión de Auth REAL
+    // para esa cuenta (no un ticket de un solo uso). marcarSesionRecuperacion()
+    // deja una bandera que verificarSesion() revisa en cualquier otra página
+    // — si esta pantalla se abandona sin completar el cambio, esa sesión no
+    // puede colarse como un login válido en ningún lado (ver js/auth.js).
     let yaResuelto = false
     supabase.auth.onAuthStateChange((evento) => {
       if (evento === 'PASSWORD_RECOVERY') {
         yaResuelto = true
+        marcarSesionRecuperacion()
         mostrarVista('vista-formulario')
       }
     })
 
-    // Si a los 5 segundos no llegó el evento, el link es inválido/expirado.
+    // Si a los 5 segundos no llegó el evento, el link es inválido/expirado
+    // (o ya fue consumido por un click anterior a este mismo link). Puede
+    // haber quedado una sesión REAL de ese click previo sin completar —
+    // no alcanza con borrar la bandera, hay que cerrar la sesión de verdad
+    // acá (capa extra además de verificarSesion(), por si alguna página
+    // futura se olvida de llamarla antes de confiar en que hay sesión).
     setTimeout(() => {
-      if (!yaResuelto) mostrarVista('vista-link-invalido')
+      if (!yaResuelto) {
+        supabase.auth.signOut().finally(() => {
+          limpiarSesionRecuperacion()
+          mostrarVista('vista-link-invalido')
+        })
+      }
     }, 5000)
+
+    // Ícono de mostrar/ocultar contraseña — mismo patrón que registro.html
+    document.querySelectorAll('.btn-mostrar-contrasena').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target)
+        const estabaOculta = input.type === 'password'
+        input.type = estabaOculta ? 'text' : 'password'
+        btn.innerHTML = `<i data-lucide="${estabaOculta ? 'eye-off' : 'eye'}"></i>`
+        lucide.createIcons()
+      })
+    })
 
     const formulario  = document.getElementById('formulario-restablecer')
     const btnGuardar   = document.getElementById('btn-guardar')
@@ -110,6 +172,10 @@
 
       try {
         await actualizarContrasena(nueva)
+        // Recién acá la sesión de recuperación se "gradúa" a sesión normal
+        // — el cambio de contraseña se completó, no hay nada más que
+        // proteger, es seguro dejarla pasar como cualquier login.
+        limpiarSesionRecuperacion()
         window.location.replace('dashboard.html')
       } catch (error) {
         mostrarAlertaError(error.message)

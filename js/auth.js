@@ -5,10 +5,38 @@ const RUTA_LOGIN = new URL('login.html', RAIZ_SITIO).href
 const RUTA_DASHBOARD = new URL('dashboard.html', RAIZ_SITIO).href
 const RUTA_RESTABLECER_CONTRASENA = new URL('restablecer-contrasena.html', RAIZ_SITIO).href
 
+// El link de "olvidé mi contraseña" no es un ticket de un solo uso: al
+// procesarlo, el SDK establece una sesión de Auth REAL y completa para esa
+// cuenta (evento PASSWORD_RECOVERY) — indistinguible de un login normal a
+// nivel de supabase.auth.getSession(). Si la persona no llega a completar
+// el cambio de contraseña (error, cierra la pestaña, vuelve a tocar el
+// link), esa sesión queda viva y cualquier página que solo chequee "hay
+// sesión → dejar pasar" terminaría logueando a cualquiera que haya podido
+// abrir el mail, sin conocer la contraseña real. Esta bandera en
+// localStorage (no sessionStorage: tiene que verse desde cualquier pestaña
+// o recarga) marca "esta sesión vino de una recuperación sin terminar" —
+// restablecer-contrasena.html la limpia recién cuando el cambio de
+// contraseña se confirma con éxito. verificarSesion() la revisa primero,
+// siempre, así protege automáticamente cualquier página que la llame.
+const BANDERA_RECUPERACION = 'sd_recuperacion_pendiente'
+
+export function marcarSesionRecuperacion() {
+  localStorage.setItem(BANDERA_RECUPERACION, '1')
+}
+
+export function limpiarSesionRecuperacion() {
+  localStorage.removeItem(BANDERA_RECUPERACION)
+}
+
 // Verifica sesión activa.
 // redirigirSiNoHay: redirige a login si no hay sesión (default: true)
 // redirigirSiHay: redirige al dashboard si ya hay sesión (default: false)
 export async function verificarSesion({ redirigirSiNoHay = true, redirigirSiHay = false } = {}) {
+  if (localStorage.getItem(BANDERA_RECUPERACION)) {
+    await supabase.auth.signOut()
+    limpiarSesionRecuperacion()
+  }
+
   const { data: { session }, error } = await supabase.auth.getSession()
 
   if (error) console.error('Error al verificar sesión:', error.message)
@@ -54,6 +82,11 @@ export async function pedirRestablecerContrasena(email) {
 // propia contraseña).
 export async function actualizarContrasena(nuevaContrasena) {
   const { error } = await supabase.auth.updateUser({ password: nuevaContrasena })
+  // TODO diagnóstico temporal (2026-07-15): sacar este console.error o
+  // pasarlo a algo silencioso en cuanto confirmemos la causa real del
+  // "Ocurrió un error" genérico que vio el usuario al restablecer — no
+  // debe quedar logging de errores de contraseña permanente en producción.
+  if (error) console.error('[auth] error crudo de updateUser (password):', error.message)
   if (error) throw new Error(_traducirError(error.message))
 }
 
@@ -108,7 +141,10 @@ function _traducirError(mensaje) {
     'Email not confirmed': 'Confirmá tu email antes de ingresar.',
     'User already registered': 'Ya existe una cuenta con ese email.',
     'Password should be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres.',
-    'Unable to validate email address: invalid format': 'El formato del email no es válido.'
+    'Unable to validate email address: invalid format': 'El formato del email no es válido.',
+    // Hipótesis fundamentada, no confirmada en vivo (ver console.error de
+    // actualizarContrasena) — mensaje real y documentado de Supabase.
+    'New password should be different from the old password.': 'La contraseña nueva tiene que ser distinta a la anterior.',
   }
   return errores[mensaje] ?? 'Ocurrió un error. Intentá de nuevo.'
 }
