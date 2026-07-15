@@ -868,13 +868,34 @@
     .chip-favorita {
       display: inline-flex;
       align-items: center;
-      padding: 0.0625rem 0.5rem;
+      padding: 0.0625rem 0.375rem;
       border-radius: 999px;
       background: var(--amarillo-suave);
       color: var(--amarillo-oscuro);
       font-size: 0.6875rem;
       font-weight: 700;
     }
+
+    /* Desglose gestionable (ficha propia): la cuenta favorita colapsada y
+       las demás cuentas del desplegable comparten el mismo estilo de fila
+       blanca de renderizarFilaCuenta() — nada de chip oscuro acá (ver
+       renderizarDesglosePorCuenta()). El chip oscuro sigue existiendo tal
+       cual para conDueno=true y gestionable=false, sin cambios ahí. */
+    .desglose-cuentas-lista {
+      display: block;
+      width: 100%;
+    }
+
+    summary.tarjeta-cuenta {
+      cursor: pointer;
+      list-style: none;
+    }
+    summary.tarjeta-cuenta::-webkit-details-marker { display: none; }
+
+    /* La flecha no tiene color propio — hereda el blanco del chip oscuro
+       (.desglose-medio-pago__chip{color:#fff}). Sobre la fila blanca de
+       acá sería invisible sin este override. */
+    .tarjeta-cuenta .desglose-medio-pago__flecha { color: var(--color-texto-suave); }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -1350,14 +1371,45 @@
           // Única cuenta de esta combinación: por construcción ya es la
           // favorita (esPrimeraCuentaDeCombinacion la fuerza al crearla), y
           // renderizarFilaCuenta() no muestra botones sobre una favorita —
-          // no hay nada que gestionar, así que queda igual sin importar
-          // gestionable (envolverla no agregaría ninguna función).
+          // no hay nada que gestionar. En gestionable=true igual pasa a
+          // usar el estilo de fila blanca (consistencia visual con el
+          // resto del listado), sin flecha (nada para desplegar) y sin
+          // botones (nada para gestionar).
+          if (gestionable) {
+            return `
+              <div class="tarjeta-cuenta">
+                <div class="tarjeta-cuenta__info">
+                  <span class="tarjeta-cuenta__nombre">${principal.nombre}</span>
+                  <span class="chip-favorita">★</span>
+                  <span class="tarjeta-cuenta__saldo">· ${moneda} ${formatearImporte(principal.saldo, moneda)}</span>
+                </div>
+              </div>`
+          }
           return `<span class="desglose-medio-pago__chip">${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}</span>`
         }
         const filas = otras.map(c => gestionable
           ? renderizarFilaCuenta(c)
           : `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`
         ).join('')
+
+        if (gestionable) {
+          // Mismo estilo de fila blanca para la favorita colapsada (en el
+          // <summary>) y para el resto — nada de chip oscuro acá, y sin
+          // ningún separador entre la primera fila y las demás (pedido
+          // explícito de que se vea como un solo listado, sin salto visual).
+          return `
+            <details class="desglose-cuentas-lista">
+              <summary class="tarjeta-cuenta">
+                <div class="tarjeta-cuenta__info">
+                  <span class="tarjeta-cuenta__nombre">${principal.nombre}</span>
+                  ${principal.favorita ? '<span class="chip-favorita">★</span>' : ''}
+                  <span class="tarjeta-cuenta__saldo">· ${moneda} ${formatearImporte(principal.saldo, moneda)}</span>
+                </div>
+                <span class="desglose-medio-pago__flecha">▾</span>
+              </summary>
+              ${filas}
+            </details>`
+        }
         return `
           <details class="desglose-medio-pago__chip">
             <summary>${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}<span class="desglose-medio-pago__flecha">▾</span></summary>
@@ -2078,7 +2130,7 @@
         <div class="tarjeta-cuenta">
           <div class="tarjeta-cuenta__info">
             <span class="tarjeta-cuenta__nombre">${c.nombre}</span>
-            ${c.favorita ? '<span class="chip-favorita">★ Favorita</span>' : ''}
+            ${c.favorita ? '<span class="chip-favorita">★</span>' : ''}
             <span class="tarjeta-cuenta__saldo">· ${c.moneda} ${saldo}</span>
           </div>
           ${accionesHtml}
