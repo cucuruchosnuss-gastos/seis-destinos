@@ -81,6 +81,7 @@
     /* ── Card total de la empresa ──────────────────────────────────────────── */
 
     .stat-card-caja {
+      position: relative;
       background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
       color: #fff;
       border-radius: 18px;
@@ -347,24 +348,11 @@
       overflow-y: auto;
     }
 
-    .saldos-grilla {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.75rem;
-    }
-
-    .saldo-card {
-      position: relative;
-      background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
-      color: #fff;
-      border-radius: 18px;
-      padding: 1.125rem 1.25rem;
-      box-shadow: 0 8px 24px rgba(140,106,26,0.25);
-    }
-
     /* Botón "+" para agregar cuenta — solo en la propia ficha, ver
-       renderizarSaldosDetalle(). Reemplaza al viejo "+ Nueva cuenta" de la
-       sección "Mis cuentas" más abajo (ya no conviven los dos). */
+       renderizarSaldosDetalle(). Ancla contra .stat-card-caja (que ahora
+       tiene position:relative), ya no contra .saldo-card (eliminada —
+       renderizarSaldosDetalle() pasó a reusar .stat-card-caja, misma
+       estructura que "Total de la empresa"). */
     .saldo-card__nueva-cuenta {
       position: absolute;
       top: 0.75rem;
@@ -385,21 +373,6 @@
     }
 
     .saldo-card__nueva-cuenta:hover { background: rgba(255,255,255,0.32); }
-
-    .saldo-card__label {
-      font-size: 0.6875rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      opacity: 0.8;
-    }
-
-    .saldo-card__valor {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-top: 0.25rem;
-    }
 
     /* ── Movimientos ───────────────────────────────────────────────────────── */
 
@@ -1748,21 +1721,33 @@
       const cuentaIds = cuentasDe(empleadoId).map(c => c.id)
       const esPropia = empleadoId === estado.miEmpleado.id
 
-      cont.innerHTML = `<div class="saldos-grilla">${lista.map((s, i) => {
-        const desglose = renderizarDesglosePorCuenta(cuentaIds, s.moneda, { gestionable: esPropia })
-        // Solo en la primera card, para no duplicarlo si hay ARS y USD —
-        // no es un botón "por moneda", es un botón "agregar cuenta" general.
-        const botonNuevaCuenta = (esPropia && i === 0)
-          ? `<button type="button" class="saldo-card__nueva-cuenta" id="btn-saldo-nueva-cuenta" title="Nueva cuenta" aria-label="Nueva cuenta">+</button>`
-          : ''
-        return `
-        <div class="saldo-card">
+      // Misma estructura que renderizarStatTotal() ("Total de la empresa"):
+      // una sola .stat-card-caja con todas las monedas lado a lado arriba y
+      // el desglose de cada una apilado debajo — antes eran N .saldo-card
+      // angostas en grilla, una por moneda. Label único "Saldo": la moneda
+      // ya se distingue en cada monto por el prefijo de formatearImporte
+      // (USD vs $), no hace falta repetirla en el label.
+      const montosHtml = lista.map(s => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(s.saldo, s.moneda)}</span>`).join('')
+      const desgloseHtml = lista.map(s => renderizarDesglosePorCuenta(cuentaIds, s.moneda, { gestionable: esPropia })).join('')
+      const botonNuevaCuenta = esPropia
+        ? `<button type="button" class="saldo-card__nueva-cuenta" id="btn-saldo-nueva-cuenta" title="Nueva cuenta" aria-label="Nueva cuenta">+</button>`
+        : ''
+
+      // margin-top:0 puntual acá: .stat-card-caja trae margin:1.25rem 0
+      // pensado para el contenedor de "Total de la empresa" (padding-top:0,
+      // delega el espaciado a la card). El contenedor de la ficha tiene
+      // padding parejo en las 4 direcciones — sin este ajuste, el margen de
+      // la card se sumaría al padding y quedaría el doble de aire arriba.
+      cont.innerHTML = `
+        <div class="stat-card-caja" style="margin-top:0;">
           ${botonNuevaCuenta}
-          <div class="saldo-card__label">Saldo ${s.moneda}</div>
-          <div class="saldo-card__valor">${formatearImporteConAlerta(s.saldo, s.moneda)}</div>
-          ${desglose}
+          <div>
+            <div class="stat-card-caja__label">Saldo</div>
+            <div class="stat-card-caja__montos">${montosHtml}</div>
+            ${desgloseHtml}
+          </div>
         </div>
-      `}).join('')}</div>`
+      `
 
       document.getElementById('btn-saldo-nueva-cuenta')?.addEventListener('click', abrirModalCuentaNueva)
 
