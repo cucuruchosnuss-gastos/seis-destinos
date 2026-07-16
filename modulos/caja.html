@@ -1387,7 +1387,6 @@
       filtros:         { busqueda: '' },
       filtrosRetiros:  { empleado_id: '', fecha_desde: '', fecha_hasta: '' }, // vista "Retiros socios"
       filtrosTodosMovimientos: { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] }, // vista "Todos los movimientos"
-      filtrosMovimientosFicha: { periodos: [], tipos: [], cuenta_ids: [] }, // listado "Movimientos" de la ficha abierta
       retiros:         [], // último resultado cargado en "Retiros socios" (para exportar)
       todosMovimientos: [], // último resultado cargado en "Todos los movimientos" (para exportar)
       wizardMovimiento: { tipo: null, empleadoId: null },
@@ -2065,7 +2064,6 @@
 
       estado.personaAbierta = empleadoId
       estado.origenFicha = origen
-      estado.filtrosMovimientosFicha = { periodos: [], tipos: [], cuenta_ids: [] } // fresco por cada ficha que se abre
       document.getElementById('detalle-persona-nombre').textContent = emp.nombre
 
       document.getElementById('vista-lista-caja').hidden = true
@@ -2197,77 +2195,32 @@
     // CARGA + RENDER — Movimientos
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Cuentas de la persona cuya ficha está abierta, para el filtro — SIN
-    // filtrar por activa (a diferencia de cuentasDe()): un movimiento viejo
-    // puede referenciar una cuenta ya desactivada y tiene que seguir siendo
-    // filtrable.
+    // Los filtros de período/tipo/cuenta que tenía este listado se sacaron
+    // — no respondían al toque y no se encontró la causa después de varias
+    // rondas de prueba (ver commits anteriores). Queda solo el botón de
+    // exportar, compacto: al estar solo ya no tiene sentido que pese visual
+    // como una acción principal.
     function renderizarFiltrosMovimientosFicha(empleadoId) {
       const cont = document.getElementById('filtros-detalle-movimientos')
-      // crearMultiselect() mueve el panel abierto a document.body al abrirlo
-      // — sin esto, un panel abierto en una llamada anterior queda huérfano
-      // ahí (mismo id que el nuevo) y document.getElementById() puede
-      // resolver al viejo en vez del que se acaba de crear. Mismo fix que ya
-      // usa gastos.html en renderizarFiltros().
-      document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
       cont.innerHTML = `
-        <div class="multiselect" id="ms-fm-periodo">
-          <button type="button" class="multiselect__boton" id="ms-fm-periodo-boton">Todos los períodos</button>
-          <div class="multiselect__panel" id="ms-fm-periodo-panel" hidden></div>
-        </div>
-        <div class="multiselect" id="ms-fm-tipo">
-          <button type="button" class="multiselect__boton" id="ms-fm-tipo-boton">Todos los tipos</button>
-          <div class="multiselect__panel" id="ms-fm-tipo-panel" hidden></div>
-        </div>
-        <div class="multiselect" id="ms-fm-cuenta">
-          <button type="button" class="multiselect__boton" id="ms-fm-cuenta-boton">Todas las cuentas</button>
-          <div class="multiselect__panel" id="ms-fm-cuenta-panel" hidden></div>
-        </div>
-        <button type="button" id="btn-exportar-movimientos-ficha" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
+        <button type="button" id="btn-exportar-movimientos-ficha" class="btn btn--secundario" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">📥 Descargar Excel</button>
       `
       document.getElementById('btn-exportar-movimientos-ficha').addEventListener('click', () => {
         const nombrePersona = (estado.origenFicha === 'listado' ? estado.empleados.find(e => e.id === empleadoId) : estado.miEmpleado)?.nombre || 'persona'
         exportarMovimientosExcel(estado.movimientos, `movimientos_${nombrePersona.replace(/\s+/g, '_')}`, { incluirPersona: false })
-      })
-
-      crearMultiselect({
-        idBase: 'ms-fm-periodo',
-        opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
-        seleccionados: estado.filtrosMovimientosFicha.periodos,
-        etiquetaTodos: 'Todos los períodos',
-        onChange: () => cargarMovimientos(empleadoId),
-      })
-      crearMultiselect({
-        idBase: 'ms-fm-tipo',
-        opciones: TIPO_MOVIMIENTO_OPCIONES,
-        seleccionados: estado.filtrosMovimientosFicha.tipos,
-        etiquetaTodos: 'Todos los tipos',
-        onChange: () => cargarMovimientos(empleadoId),
-      })
-      crearMultiselect({
-        idBase: 'ms-fm-cuenta',
-        opciones: Object.values(estado.cuentasPorId)
-          .filter(c => c.empleado_id === empleadoId)
-          .map(c => ({ value: c.id, label: c.nombre }))
-          .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })),
-        seleccionados: estado.filtrosMovimientosFicha.cuenta_ids,
-        etiquetaTodos: 'Todas las cuentas',
-        onChange: () => cargarMovimientos(empleadoId),
       })
     }
 
     async function cargarMovimientos(empleadoId) {
       document.getElementById('estado-cargando-movimientos').hidden = false
 
-      let consulta = supabase
+      const { data, error } = await supabase
         .from('caja_movimientos')
         .select(`
           id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .eq('empleado_id', empleadoId)
-      consulta = aplicarFiltrosMovimientos(consulta, estado.filtrosMovimientosFicha)
-
-      const { data, error } = await consulta
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
