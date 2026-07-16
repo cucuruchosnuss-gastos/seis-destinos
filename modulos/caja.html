@@ -1194,6 +1194,16 @@
           <select id="cuenta-moneda">
             <option value="ARS">ARS</option>
             <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="BRL">BRL</option>
+            <option value="PYG">PYG</option>
+            <option value="UYU">UYU</option>
+            <option value="CLP">CLP</option>
+            <option value="BOB">BOB</option>
+            <option value="GBP">GBP</option>
+            <option value="MXN">MXN</option>
+            <option value="COP">COP</option>
+            <option value="PEN">PEN</option>
           </select>
         </div>
 
@@ -1267,7 +1277,14 @@
     // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos
     // a los de medio_pago ('efectivo'/'transferencia') — no son intercambiables.
     const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
-    const NOMBRE_MONEDA = { ARS: 'pesos', USD: 'dólares' }
+    // Catálogo curado — no la lista ISO completa (180+ monedas sería inmanejable
+    // en un <select>; ver las <option> de #cuenta-moneda). Si falta alguna
+    // puntual, se agrega a mano ahí y acá.
+    const NOMBRE_MONEDA = {
+      ARS: 'pesos', USD: 'dólares', EUR: 'euros', BRL: 'reales', PYG: 'guaraníes',
+      UYU: 'pesos uruguayos', CLP: 'pesos chilenos', BOB: 'bolivianos', GBP: 'libras',
+      MXN: 'pesos mexicanos', COP: 'pesos colombianos', PEN: 'soles',
+    }
 
     function esAdmin() {
       return ['admin', 'super_admin'].includes(estado.miEmpleado?.rol_app)
@@ -1296,7 +1313,7 @@
       const num = Number(importe).toLocaleString('es-AR', {
         minimumFractionDigits: 2, maximumFractionDigits: 2,
       })
-      return moneda === 'USD' ? `USD ${num}` : `$ ${num}`
+      return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
     }
 
     // Envuelve el valor en el chip claro cuando es negativo — única excepción

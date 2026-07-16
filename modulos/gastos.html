@@ -1455,7 +1455,7 @@
       const num = Number(importe).toLocaleString('es-AR', {
         minimumFractionDigits: 2, maximumFractionDigits: 2,
       })
-      return moneda === 'USD' ? `USD ${num}` : `$ ${num}`
+      return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
     }
 
     const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
@@ -1558,6 +1558,36 @@
           const { value, label } = mapFn(item)
           return `<option value="${value}">${label}</option>`
         }).join('')
+    }
+
+    // Catálogo de monedas para #campo-moneda/#edit-moneda: la unión de las
+    // que ya se usan en cuentas_caja (de cualquier persona, activa o no),
+    // ARS primero, USD segundo, el resto alfabético.
+    async function cargarMonedasDisponibles() {
+      const { data, error } = await supabase.from('cuentas_caja').select('moneda')
+      const monedas = [...new Set((data || []).map(c => c.moneda))]
+      monedas.sort((a, b) => {
+        if (a === 'ARS' || a === 'USD' || b === 'ARS' || b === 'USD') {
+          const prioridad = m => m === 'ARS' ? 0 : m === 'USD' ? 1 : 2
+          return prioridad(a) - prioridad(b) || a.localeCompare(b)
+        }
+        return a.localeCompare(b)
+      })
+      estado.maestros.monedas = monedas.length ? monedas : ['ARS', 'USD']
+      if (error) console.error('[monedas] Error al cargar cuentas_caja:', error.message)
+    }
+
+    // Puebla un <select> de moneda sin placeholder vacío (siempre tiene que
+    // quedar un valor elegido). Si monedaActual no está en el catálogo (ej.
+    // un gasto viejo con una moneda que ya no usa ninguna cuenta), se agrega
+    // igual como opción extra — así no se pisa en silencio al editar.
+    function poblarSelectMoneda(idCampo, monedaActual) {
+      const sel = document.getElementById(idCampo)
+      if (!sel) return
+      let monedas = estado.maestros.monedas || ['ARS', 'USD']
+      if (monedaActual && !monedas.includes(monedaActual)) monedas = [...monedas, monedaActual]
+      sel.innerHTML = monedas.map(m => `<option value="${m}">${m}</option>`).join('')
+      if (monedaActual) sel.value = monedaActual
     }
 
     // Retorna config de logo/color/inicial para una empresa según su nombre
@@ -2204,6 +2234,10 @@
     estado.maestros.proyectos = proyectosInicial ?? []
 
     estado.maestros.unidades = unidadesInicial ?? []
+
+    await cargarMonedasDisponibles()
+    poblarSelectMoneda('campo-moneda')
+
     activarFiltroFecha('hoy')
 
     // Deep link desde Caja: gastos.html?gasto=<id> abre el detalle directo.
@@ -2685,8 +2719,7 @@
     }
 
     // Equivalente para el formulario de edición — mismos criterios, pero
-    // lee de los campos #edit-*. La moneda ahí es un <input> de texto
-    // libre (no un <select>, a diferencia del wizard), se usa tal cual.
+    // lee de los campos #edit-*.
     async function actualizarSelectorCuentaEdicion(preseleccionarId) {
       const grupo = document.getElementById('grupo-cuenta-edicion')
       const sel   = document.getElementById('edit-cuenta')
@@ -3145,7 +3178,7 @@
           ${campo('Medio de pago', selectMedioPago)}
           <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
             ${campo('Importe', `<input type="number" step="0.01" id="edit-importe" value="${g.importe}">`)}
-            ${campo('Moneda', `<input type="text" id="edit-moneda" value="${g.moneda || 'ARS'}" style="width:5rem;">`)}
+            ${campo('Moneda', `<select id="edit-moneda" style="width:5.5rem;"></select>`)}
           </div>
         </div>
 
@@ -3181,6 +3214,7 @@
 
       document.getElementById('btn-cancelar-edicion').addEventListener('click', () => mostrarDetalleGasto(id))
 
+      poblarSelectMoneda('edit-moneda', g.moneda || 'ARS')
       actualizarSelectorCuentaEdicion(g.cuenta_id)
       document.getElementById('edit-empleado').addEventListener('change', () => actualizarSelectorCuentaEdicion())
       document.getElementById('edit-medio-pago').addEventListener('change', () => actualizarSelectorCuentaEdicion())
