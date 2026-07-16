@@ -256,6 +256,90 @@
 
     .filtros-retiros__fecha input[type="date"]:focus { border-color: var(--color-acento); }
 
+    /* ── Filtros multi-selección — "Todos los movimientos" y ficha ──────────
+       Portado tal cual de gastos.html (crearMultiselect() + este CSS), sin
+       reinventar el componente. ────────────────────────────────────────── */
+
+    .lista-filtros {
+      display: flex;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .multiselect {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .multiselect__boton {
+      padding: 0.4375rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .multiselect__boton--activo {
+      border-color: var(--color-acento);
+      background: var(--color-acento-suave);
+      color: var(--color-acento);
+    }
+
+    .multiselect__panel {
+      position: fixed;
+      z-index: 30;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      padding: 0.5rem;
+      min-width: 200px;
+    }
+
+    .multiselect__panel:not([hidden]) {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .multiselect__opciones {
+      max-height: 220px;
+      overflow-y: auto;
+    }
+
+    .multiselect__aplicar {
+      flex-shrink: 0;
+      border: none;
+      border-radius: 6px;
+      background: var(--color-acento);
+      color: #fff;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+
+    .multiselect__opcion {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.25rem;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .multiselect__opcion:hover {
+      background: var(--color-fondo);
+    }
+
     /* Chip para valores negativos sobre fondo ámbar (única excepción de color: bordó) */
     .valor-negativo-chip {
       display: inline-flex;
@@ -930,6 +1014,7 @@
         <div class="caja-toolbar__acciones">
           <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto; flex:1;">Retiro personal</button>
           <button type="button" class="btn btn--navy-outline" id="btn-ver-retiros-personales" style="display:none; width:auto; flex:1;">Retiros socios</button>
+          <button type="button" class="btn btn--navy-outline" id="btn-ver-todos-movimientos" style="display:none; width:auto; flex:1;">Todos los movimientos</button>
         </div>
       </div>
 
@@ -991,6 +1076,36 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA — TODOS LOS MOVIMIENTOS (exclusiva rol_app === 'super_admin')
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="vista-todos-movimientos" hidden>
+    <header class="header">
+      <button type="button" class="btn btn--icono" id="btn-cerrar-todos-movimientos">← Volver</button>
+      <span class="header__nombre-app">Todos los movimientos</span>
+      <div style="width:2rem;"></div>
+    </header>
+
+    <div style="padding:1.25rem; max-width:960px; margin:0 auto; width:100%;">
+      <div class="lista-filtros" id="filtros-todos-movimientos"></div>
+
+      <div id="stat-total-todos-movimientos"></div>
+
+      <div id="estado-cargando-todos-movimientos" class="estado-vacio">
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando…</p>
+      </div>
+
+      <div class="lista-movimientos" id="lista-todos-movimientos"></div>
+
+      <div id="estado-vacio-todos-movimientos" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">📋</div>
+        <div class="estado-vacio__titulo">No hay movimientos con estos filtros</div>
+      </div>
+    </div>
+  </div><!-- /vista-todos-movimientos -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        VISTA B — FICHA DE PERSONA
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-detalle-persona" hidden>
@@ -1008,6 +1123,8 @@
       <div id="detalle-persona-solicitudes"></div>
 
       <div class="modal-ficha__seccion-titulo">Movimientos</div>
+
+      <div class="lista-filtros" id="filtros-detalle-movimientos"></div>
 
       <div id="estado-cargando-movimientos" class="estado-vacio" hidden>
         <div class="spinner"></div>
@@ -1267,6 +1384,9 @@
                               // fila depende de quién está LOGUEADO, no de la ficha
       filtros:         { busqueda: '' },
       filtrosRetiros:  { empleado_id: '', fecha_desde: '', fecha_hasta: '' }, // vista "Retiros socios"
+      filtrosTodosMovimientos: { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] }, // vista "Todos los movimientos"
+      filtrosMovimientosFicha: { periodos: [], tipos: [], cuenta_ids: [] }, // listado "Movimientos" de la ficha abierta
+      todosMovimientos: [], // último resultado cargado en "Todos los movimientos" (para exportar)
       wizardMovimiento: { tipo: null, empleadoId: null },
     }
 
@@ -1333,6 +1453,142 @@
 
     function fechaISO(d) {
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FILTROS MULTI-SELECCIÓN — "Todos los movimientos" y ficha de persona
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Portado tal cual de gastos.html — mismo componente, sin reinventarlo.
+    function crearMultiselect({ idBase, opciones, seleccionados, etiquetaTodos, onChange }) {
+      const boton = document.getElementById(idBase + '-boton')
+      const panel = document.getElementById(idBase + '-panel')
+      if (!boton || !panel) return
+
+      const contenedorMultiselect = boton.closest('.multiselect')
+      if (contenedorMultiselect) contenedorMultiselect.dataset.multiselectId = idBase
+      panel.dataset.multiselectId = idBase
+
+      let borrador = [...seleccionados]
+
+      function actualizarTexto() {
+        if (!seleccionados.length) {
+          boton.textContent = etiquetaTodos
+        } else if (seleccionados.length === 1) {
+          const op = opciones.find(o => String(o.value) === String(seleccionados[0]))
+          boton.textContent = op ? op.label : etiquetaTodos
+        } else {
+          boton.textContent = seleccionados.length + ' seleccionados'
+        }
+        boton.classList.toggle('multiselect__boton--activo', seleccionados.length > 0)
+      }
+
+      function renderizarOpciones() {
+        panel.querySelector('.multiselect__opciones').innerHTML = opciones.map(op => `
+          <label class="multiselect__opcion">
+            <input type="checkbox" value="${op.value}" ${borrador.map(String).includes(String(op.value)) ? 'checked' : ''}>
+            <span>${op.label}</span>
+          </label>
+        `).join('')
+
+        panel.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+          chk.addEventListener('change', () => {
+            const valor = chk.value
+            if (chk.checked) {
+              if (!borrador.map(String).includes(valor)) borrador.push(valor)
+            } else {
+              const idx = borrador.map(String).indexOf(valor)
+              if (idx !== -1) borrador.splice(idx, 1)
+            }
+            // solo actualiza el checkbox en pantalla — sin onChange, sin cerrar el panel
+          })
+        })
+      }
+
+      panel.innerHTML = `<div class="multiselect__opciones"></div><button type="button" class="multiselect__aplicar">Aplicar</button>`
+      renderizarOpciones()
+
+      panel.querySelector('.multiselect__aplicar').addEventListener('click', () => {
+        seleccionados.splice(0, seleccionados.length, ...borrador)
+        actualizarTexto()
+        panel.hidden = true
+        onChange(seleccionados)
+      })
+
+      boton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const estabaAbierto = !panel.hidden
+        document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
+        if (!estabaAbierto) {
+          borrador = [...seleccionados]
+          renderizarOpciones()
+          document.body.appendChild(panel)
+          const rect = boton.getBoundingClientRect()
+          panel.style.top  = (rect.bottom + 4) + 'px'
+          panel.style.left = rect.left + 'px'
+        }
+        panel.hidden = estabaAbierto
+      })
+
+      actualizarTexto()
+    }
+
+    document.addEventListener('click', (e) => {
+      document.querySelectorAll('.multiselect').forEach(ms => {
+        const id = ms.dataset.multiselectId
+        const panel = id
+          ? document.querySelector(`.multiselect__panel[data-multiselect-id="${id}"]`)
+          : ms.querySelector('.multiselect__panel')
+        if (!panel) return
+        const clickDentro = ms.contains(e.target) || panel.contains(e.target)
+        if (!clickDentro) panel.hidden = true
+      })
+    })
+
+    // caja_movimientos no tiene columna `periodo` (a diferencia de gastos) —
+    // se deriva un rango de fechas por mes a partir del string "mmm-aa".
+    function generarOpcionesPeriodo(n = 13) {
+      const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+      const ahora = new Date()
+      return Array.from({ length: n }, (_, i) => {
+        const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
+        return `${MESES[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`
+      })
+    }
+
+    function periodoARango(periodoStr) {
+      const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+      const [mesStr, anioStr] = periodoStr.split('-')
+      const mesIdx = MESES.indexOf(mesStr)
+      const anio = 2000 + Number(anioStr)
+      return { desde: fechaISO(new Date(anio, mesIdx, 1)), hasta: fechaISO(new Date(anio, mesIdx + 1, 0)) }
+    }
+
+    // Las 7 etiquetas genéricas (no las dinámicas de etiquetaMovimiento(), que
+    // arman "Entregado a X"/"Traspaso a Y" — acá son solo para filtrar por tipo).
+    const TIPO_MOVIMIENTO_OPCIONES = [
+      { value: 'ingreso',              label: 'Ingreso' },
+      { value: 'ingreso_externo',      label: 'Ingreso externo' },
+      { value: 'egreso_gasto',         label: 'Gasto' },
+      { value: 'egreso_retiro',        label: 'Retiro' },
+      { value: 'egreso_transferencia', label: 'Entregado a otro' },
+      { value: 'egreso_traspaso',      label: 'Traspaso saliente' },
+      { value: 'ingreso_traspaso',     label: 'Traspaso entrante' },
+    ]
+
+    // Aplica período (rango de fechas por mes tildado, vía OR de rangos),
+    // tipo y cuenta a una query de caja_movimientos ya iniciada.
+    function aplicarFiltrosMovimientos(consulta, filtros) {
+      if (filtros.periodos?.length) {
+        const condiciones = filtros.periodos.map(p => {
+          const { desde, hasta } = periodoARango(p)
+          return `and(fecha.gte.${desde},fecha.lte.${hasta})`
+        }).join(',')
+        consulta = consulta.or(condiciones)
+      }
+      if (filtros.tipos?.length) consulta = consulta.in('tipo', filtros.tipos)
+      if (filtros.cuenta_ids?.length) consulta = consulta.in('cuenta_id', filtros.cuenta_ids)
+      return consulta
     }
 
     function saldosDe(empleadoId) {
@@ -1773,6 +2029,7 @@
 
       estado.personaAbierta = empleadoId
       estado.origenFicha = origen
+      estado.filtrosMovimientosFicha = { periodos: [], tipos: [], cuenta_ids: [] } // fresco por cada ficha que se abre
       document.getElementById('detalle-persona-nombre').textContent = emp.nombre
 
       document.getElementById('vista-lista-caja').hidden = true
@@ -1797,6 +2054,7 @@
       document.getElementById('detalle-persona-vacio').hidden = true
       document.getElementById('detalle-persona-solicitudes').innerHTML = ''
 
+      renderizarFiltrosMovimientosFicha(empleadoId)
       await Promise.all([cargarMovimientos(empleadoId), cargarSolicitudesPendientes(empleadoId)])
     }
 
@@ -1903,16 +2161,71 @@
     // CARGA + RENDER — Movimientos
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Cuentas de la persona cuya ficha está abierta, para el filtro — SIN
+    // filtrar por activa (a diferencia de cuentasDe()): un movimiento viejo
+    // puede referenciar una cuenta ya desactivada y tiene que seguir siendo
+    // filtrable.
+    function renderizarFiltrosMovimientosFicha(empleadoId) {
+      const cont = document.getElementById('filtros-detalle-movimientos')
+      // crearMultiselect() mueve el panel abierto a document.body al abrirlo
+      // — sin esto, un panel abierto en una llamada anterior queda huérfano
+      // ahí (mismo id que el nuevo) y document.getElementById() puede
+      // resolver al viejo en vez del que se acaba de crear. Mismo fix que ya
+      // usa gastos.html en renderizarFiltros().
+      document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
+      cont.innerHTML = `
+        <div class="multiselect" id="ms-fm-periodo">
+          <button type="button" class="multiselect__boton" id="ms-fm-periodo-boton">Todos los períodos</button>
+          <div class="multiselect__panel" id="ms-fm-periodo-panel" hidden></div>
+        </div>
+        <div class="multiselect" id="ms-fm-tipo">
+          <button type="button" class="multiselect__boton" id="ms-fm-tipo-boton">Todos los tipos</button>
+          <div class="multiselect__panel" id="ms-fm-tipo-panel" hidden></div>
+        </div>
+        <div class="multiselect" id="ms-fm-cuenta">
+          <button type="button" class="multiselect__boton" id="ms-fm-cuenta-boton">Todas las cuentas</button>
+          <div class="multiselect__panel" id="ms-fm-cuenta-panel" hidden></div>
+        </div>
+      `
+      crearMultiselect({
+        idBase: 'ms-fm-periodo',
+        opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
+        seleccionados: estado.filtrosMovimientosFicha.periodos,
+        etiquetaTodos: 'Todos los períodos',
+        onChange: () => cargarMovimientos(empleadoId),
+      })
+      crearMultiselect({
+        idBase: 'ms-fm-tipo',
+        opciones: TIPO_MOVIMIENTO_OPCIONES,
+        seleccionados: estado.filtrosMovimientosFicha.tipos,
+        etiquetaTodos: 'Todos los tipos',
+        onChange: () => cargarMovimientos(empleadoId),
+      })
+      crearMultiselect({
+        idBase: 'ms-fm-cuenta',
+        opciones: Object.values(estado.cuentasPorId)
+          .filter(c => c.empleado_id === empleadoId)
+          .map(c => ({ value: c.id, label: c.nombre }))
+          .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })),
+        seleccionados: estado.filtrosMovimientosFicha.cuenta_ids,
+        etiquetaTodos: 'Todas las cuentas',
+        onChange: () => cargarMovimientos(empleadoId),
+      })
+    }
+
     async function cargarMovimientos(empleadoId) {
       document.getElementById('estado-cargando-movimientos').hidden = false
 
-      const { data, error } = await supabase
+      let consulta = supabase
         .from('caja_movimientos')
         .select(`
           id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id,
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .eq('empleado_id', empleadoId)
+      consulta = aplicarFiltrosMovimientos(consulta, estado.filtrosMovimientosFicha)
+
+      const { data, error } = await consulta
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -2420,6 +2733,160 @@
     document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
 
     // ═══════════════════════════════════════════════════════════════════════
+    // VISTA — Todos los movimientos (exclusiva rol_app === 'super_admin')
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Todas las cuentas de todas las personas visibles (nombre + dueño). Sin
+    // filtrar por activa — un movimiento viejo puede referenciar una cuenta
+    // ya desactivada y tiene que seguir siendo filtrable.
+    function opcionesCuentaTodasPersonas() {
+      return Object.values(estado.cuentasPorId)
+        .filter(c => estado.empleados.some(e => e.id === c.empleado_id))
+        .map(c => ({ value: c.id, label: `${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}` }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }))
+    }
+
+    // Reconstruye el HTML del contenedor en cada llamada (en vez de reusar
+    // markup estático) — igual que renderizarFiltrosMovimientosFicha() y que
+    // renderizarFiltros() de gastos.html. Necesario porque esta función se
+    // vuelve a llamar cada vez que se reabre la pantalla o se borran los
+    // filtros: sobre el mismo DOM estático, crearMultiselect() iría
+    // acumulando un listener de click duplicado por cada llamada.
+    function renderizarFiltrosTodosMovimientos() {
+      const cont = document.getElementById('filtros-todos-movimientos')
+      // Ver el comentario equivalente en renderizarFiltrosMovimientosFicha().
+      document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
+      cont.innerHTML = `
+        <div class="multiselect" id="ms-tm-periodo">
+          <button type="button" class="multiselect__boton" id="ms-tm-periodo-boton">Todos los períodos</button>
+          <div class="multiselect__panel" id="ms-tm-periodo-panel" hidden></div>
+        </div>
+        <div class="multiselect" id="ms-tm-tipo">
+          <button type="button" class="multiselect__boton" id="ms-tm-tipo-boton">Todos los tipos</button>
+          <div class="multiselect__panel" id="ms-tm-tipo-panel" hidden></div>
+        </div>
+        <div class="multiselect" id="ms-tm-cuenta">
+          <button type="button" class="multiselect__boton" id="ms-tm-cuenta-boton">Todas las cuentas</button>
+          <div class="multiselect__panel" id="ms-tm-cuenta-panel" hidden></div>
+        </div>
+        <div class="multiselect" id="ms-tm-persona">
+          <button type="button" class="multiselect__boton" id="ms-tm-persona-boton">Todas las personas</button>
+          <div class="multiselect__panel" id="ms-tm-persona-panel" hidden></div>
+        </div>
+        <button type="button" id="btn-borrar-filtros-tm" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
+      `
+
+      document.getElementById('btn-borrar-filtros-tm').addEventListener('click', () => {
+        estado.filtrosTodosMovimientos = { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] }
+        renderizarFiltrosTodosMovimientos()
+        cargarTodosMovimientos()
+      })
+
+      crearMultiselect({
+        idBase: 'ms-tm-periodo',
+        opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
+        seleccionados: estado.filtrosTodosMovimientos.periodos,
+        etiquetaTodos: 'Todos los períodos',
+        onChange: () => cargarTodosMovimientos(),
+      })
+      crearMultiselect({
+        idBase: 'ms-tm-tipo',
+        opciones: TIPO_MOVIMIENTO_OPCIONES,
+        seleccionados: estado.filtrosTodosMovimientos.tipos,
+        etiquetaTodos: 'Todos los tipos',
+        onChange: () => cargarTodosMovimientos(),
+      })
+      crearMultiselect({
+        idBase: 'ms-tm-cuenta',
+        opciones: opcionesCuentaTodasPersonas(),
+        seleccionados: estado.filtrosTodosMovimientos.cuenta_ids,
+        etiquetaTodos: 'Todas las cuentas',
+        onChange: () => cargarTodosMovimientos(),
+      })
+      crearMultiselect({
+        idBase: 'ms-tm-persona',
+        opciones: [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })).map(p => ({ value: p.id, label: p.nombre })),
+        seleccionados: estado.filtrosTodosMovimientos.empleado_ids,
+        etiquetaTodos: 'Todas las personas',
+        onChange: () => cargarTodosMovimientos(),
+      })
+    }
+
+    // Mismo criterio que renderizarTotalRetiros(): agrupado por moneda,
+    // nunca sumadas entre sí.
+    function renderizarTotalMovimientos(movimientos) {
+      const cont = document.getElementById('stat-total-todos-movimientos')
+      if (!movimientos.length) {
+        cont.innerHTML = ''
+        return
+      }
+      const totales = {}
+      movimientos.forEach(m => { totales[m.moneda] = (totales[m.moneda] || 0) + Number(m.monto) })
+      const montosHtml = Object.entries(totales)
+        .map(([moneda, total]) => `<span class="stat-card-caja__monto">${formatearImporte(total, moneda)}</span>`)
+        .join('')
+      cont.innerHTML = `
+        <div class="stat-card-caja">
+          <div>
+            <div class="stat-card-caja__label">Total filtrado</div>
+            <div class="stat-card-caja__montos">${montosHtml}</div>
+          </div>
+        </div>
+      `
+    }
+
+    async function cargarTodosMovimientos() {
+      document.getElementById('estado-cargando-todos-movimientos').hidden = false
+      document.getElementById('lista-todos-movimientos').innerHTML = ''
+      document.getElementById('stat-total-todos-movimientos').innerHTML = ''
+      document.getElementById('estado-vacio-todos-movimientos').hidden = true
+
+      let consulta = supabase
+        .from('caja_movimientos')
+        .select('id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, empleado_id, contraparte_empleado_id, gasto_id')
+
+      const { empleado_ids } = estado.filtrosTodosMovimientos
+      if (empleado_ids?.length) consulta = consulta.in('empleado_id', empleado_ids)
+      consulta = aplicarFiltrosMovimientos(consulta, estado.filtrosTodosMovimientos)
+
+      const { data, error } = await consulta
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      document.getElementById('estado-cargando-todos-movimientos').hidden = true
+
+      if (error) {
+        mostrarError('No se pudieron cargar los movimientos.')
+        return
+      }
+
+      estado.todosMovimientos = data || []
+      renderizarTotalMovimientos(estado.todosMovimientos)
+      if (!estado.todosMovimientos.length) {
+        document.getElementById('estado-vacio-todos-movimientos').hidden = false
+        return
+      }
+      document.getElementById('lista-todos-movimientos').innerHTML =
+        estado.todosMovimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join('')
+    }
+
+    async function abrirTodosMovimientos() {
+      document.getElementById('vista-lista-caja').hidden = true
+      document.getElementById('vista-todos-movimientos').removeAttribute('hidden')
+
+      renderizarFiltrosTodosMovimientos()
+      await cargarTodosMovimientos()
+    }
+
+    function cerrarTodosMovimientos() {
+      document.getElementById('vista-todos-movimientos').hidden = true
+      document.getElementById('vista-lista-caja').removeAttribute('hidden')
+    }
+
+    document.getElementById('btn-ver-todos-movimientos').addEventListener('click', abrirTodosMovimientos)
+    document.getElementById('btn-cerrar-todos-movimientos').addEventListener('click', cerrarTodosMovimientos)
+
+    // ═══════════════════════════════════════════════════════════════════════
     // MODAL — Registrar ingreso / egreso / retiro
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -2825,6 +3292,7 @@
 
       if (emp.rol_app === 'super_admin') {
         document.getElementById('btn-ver-retiros-personales').style.display = 'inline-flex'
+        document.getElementById('btn-ver-todos-movimientos').style.display = 'inline-flex'
         document.getElementById('btn-mi-caja').style.display = 'inline-flex'
       }
 
