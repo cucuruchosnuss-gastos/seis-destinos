@@ -1369,15 +1369,37 @@
 
       const chips = entradas.map(([medio, cuentas]) => {
         if (conDueno) {
+          // Fila blanca igual que el resto de .tarjeta-cuenta — sin estrella
+          // de favorita ni botones ☆/×, no tiene sentido gestionar la
+          // cuenta de otra persona desde acá. Mismo contenido que ya había
+          // (total del medio colapsado, cada cuenta con su dueño desplegada).
           const total = cuentas.reduce((acc, c) => acc + c.saldo, 0)
           if (cuentas.length === 1) {
-            return `<span class="desglose-medio-pago__chip">${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(total, moneda)}</span>`
+            return `
+              <div class="tarjeta-cuenta">
+                <div class="tarjeta-cuenta__info">
+                  <span class="tarjeta-cuenta__nombre">${MEDIO_CUENTA_LABEL[medio] || medio}</span>
+                  <span class="tarjeta-cuenta__saldo">· ${formatearImporte(total, moneda)}</span>
+                </div>
+              </div>`
           }
-          const filas = cuentas.map(c => `<div class="desglose-cuenta__fila">${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`).join('')
+          const filas = cuentas.map(c => `
+            <div class="tarjeta-cuenta">
+              <div class="tarjeta-cuenta__info">
+                <span class="tarjeta-cuenta__nombre">${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}</span>
+                <span class="tarjeta-cuenta__saldo">· ${formatearImporte(c.saldo, moneda)}</span>
+              </div>
+            </div>`).join('')
           return `
-            <details class="desglose-medio-pago__chip">
-              <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(total, moneda)}<span class="desglose-medio-pago__flecha">▾</span></summary>
-              <div class="desglose-cuenta__resto">${filas}</div>
+            <details class="desglose-cuentas-lista">
+              <summary class="tarjeta-cuenta">
+                <div class="tarjeta-cuenta__info">
+                  <span class="tarjeta-cuenta__nombre">${MEDIO_CUENTA_LABEL[medio] || medio}</span>
+                  <span class="tarjeta-cuenta__saldo">· ${formatearImporte(total, moneda)}</span>
+                </div>
+                <span class="desglose-medio-pago__flecha">▾</span>
+              </summary>
+              ${filas}
             </details>`
         }
 
