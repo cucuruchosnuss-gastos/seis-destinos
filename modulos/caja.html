@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../css/main.css">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#1a2a52">
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <style>
     body {
@@ -1056,6 +1057,7 @@
           <span class="filtros-retiros__fecha-label">Hasta</span>
           <input type="date" id="filtro-retiros-hasta">
         </div>
+        <button type="button" id="btn-exportar-retiros" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
       </div>
 
       <div id="stat-total-retiros"></div>
@@ -1386,6 +1388,7 @@
       filtrosRetiros:  { empleado_id: '', fecha_desde: '', fecha_hasta: '' }, // vista "Retiros socios"
       filtrosTodosMovimientos: { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] }, // vista "Todos los movimientos"
       filtrosMovimientosFicha: { periodos: [], tipos: [], cuenta_ids: [] }, // listado "Movimientos" de la ficha abierta
+      retiros:         [], // último resultado cargado en "Retiros socios" (para exportar)
       todosMovimientos: [], // último resultado cargado en "Todos los movimientos" (para exportar)
       wizardMovimiento: { tipo: null, empleadoId: null },
     }
@@ -1744,6 +1747,39 @@
         return 'Traspaso desde ' + MEDIO_PAGO_LABEL_CAJA[otroMedioPago(m.medio_pago)]
       }
       return TIPO_LABEL[m.tipo] || m.tipo
+    }
+
+    // Mismo patrón que exportarExcel() de gastos.html (XLSX/SheetJS). Exporta
+    // solo lo que está filtrado en pantalla en ese momento — nunca la tabla
+    // completa sin filtrar — porque movimientos ya viene de una consulta que
+    // aplicó los filtros activos (cargarRetiros()/cargarMovimientos()/
+    // cargarTodosMovimientos()).
+    function exportarMovimientosExcel(movimientos, nombreArchivo, { incluirPersona = false } = {}) {
+      if (!movimientos || !movimientos.length) {
+        mostrarError('No hay movimientos para exportar con los filtros actuales.')
+        return
+      }
+
+      const filas = movimientos.map(m => {
+        const nombreCuenta = m.cuenta_id ? estado.cuentasPorId[m.cuenta_id]?.nombre : null
+        const fila = {
+          'Fecha': formatearFecha(m.fecha),
+          'Tipo': etiquetaMovimiento(m),
+          'Cuenta / Medio': nombreCuenta || MEDIO_PAGO_LABEL_CAJA[m.medio_pago] || m.medio_pago,
+          'Moneda': m.moneda,
+          'Importe': Number(m.monto) || 0,
+          'Descripción': m.descripcion || '',
+        }
+        if (incluirPersona) fila['Persona'] = estado.nombresEmpleados[m.empleado_id] || '—'
+        return fila
+      })
+
+      const hoja = XLSX.utils.json_to_sheet(filas)
+      const libro = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(libro, hoja, 'Movimientos')
+
+      const fechaArchivo = new Date().toISOString().slice(0, 10)
+      XLSX.writeFile(libro, `${nombreArchivo}_${fechaArchivo}.xlsx`)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2186,7 +2222,13 @@
           <button type="button" class="multiselect__boton" id="ms-fm-cuenta-boton">Todas las cuentas</button>
           <div class="multiselect__panel" id="ms-fm-cuenta-panel" hidden></div>
         </div>
+        <button type="button" id="btn-exportar-movimientos-ficha" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
       `
+      document.getElementById('btn-exportar-movimientos-ficha').addEventListener('click', () => {
+        const nombrePersona = (estado.origenFicha === 'listado' ? estado.empleados.find(e => e.id === empleadoId) : estado.miEmpleado)?.nombre || 'persona'
+        exportarMovimientosExcel(estado.movimientos, `movimientos_${nombrePersona.replace(/\s+/g, '_')}`, { incluirPersona: false })
+      })
+
       crearMultiselect({
         idBase: 'ms-fm-periodo',
         opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
@@ -2691,6 +2733,7 @@
       }
 
       const retiros = data || []
+      estado.retiros = retiros // para exportarMovimientosExcel() — siempre el último resultado filtrado
       renderizarTotalRetiros(retiros)
       if (!retiros.length) {
         document.getElementById('estado-vacio-retiros').hidden = false
@@ -2729,6 +2772,9 @@
     document.getElementById('filtro-retiros-hasta').addEventListener('change', (e) => {
       estado.filtrosRetiros.fecha_hasta = e.target.value
       cargarRetiros()
+    })
+    document.getElementById('btn-exportar-retiros').addEventListener('click', () => {
+      exportarMovimientosExcel(estado.retiros, 'retiros_socios', { incluirPersona: true })
     })
     document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
 
@@ -2774,12 +2820,16 @@
           <div class="multiselect__panel" id="ms-tm-persona-panel" hidden></div>
         </div>
         <button type="button" id="btn-borrar-filtros-tm" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
+        <button type="button" id="btn-exportar-todos-movimientos" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
       `
 
       document.getElementById('btn-borrar-filtros-tm').addEventListener('click', () => {
         estado.filtrosTodosMovimientos = { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] }
         renderizarFiltrosTodosMovimientos()
         cargarTodosMovimientos()
+      })
+      document.getElementById('btn-exportar-todos-movimientos').addEventListener('click', () => {
+        exportarMovimientosExcel(estado.todosMovimientos, 'todos_los_movimientos', { incluirPersona: true })
       })
 
       crearMultiselect({
