@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuentas corrientes — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      overflow-x: hidden;
+      --turquesa:        #3FBFAE;
+      --turquesa-suave:  #E8FBF7;
+      --turquesa-oscuro: #1E8C7C;
+    }
+
+    /* ── Tabs (mismo patrón que accesos.html) ─────────────────────────────── */
+
+    .tabs-cc {
+      display: inline-flex;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.25rem;
+      gap: 0.25rem;
+      margin: 0.875rem 0 1rem;
+      flex-wrap: wrap;
+    }
+    .tabs-cc__opcion {
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      padding: 0.5rem 1rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+    .tabs-cc__opcion--activa {
+      background: var(--turquesa);
+      color: #fff;
+    }
+
+    /* ── Filtros ───────────────────────────────────────────────────────────── */
+
+    .filtros-cc {
+      display: flex;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .filtros-cc input[type="text"],
+    .filtros-cc input[type="date"],
+    .filtros-cc select {
+      height: 36px;
+      padding: 0 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+    }
+    .filtros-cc input:focus,
+    .filtros-cc select:focus { border-color: var(--turquesa); }
+    .filtros-cc__buscar { flex: 1; min-width: 160px; }
+
+    h3.titulo-seccion-cc {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin: 1.75rem 0 0.75rem;
+    }
+
+    /* ── Tarjeta de proveedor (saldo) ──────────────────────────────────────── */
+
+    .chip-credito {
+      display: inline-block;
+      margin-top: 0.25rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      background: var(--turquesa-suave);
+      color: var(--turquesa-oscuro);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .btn-ver-cuenta {
+      width: auto;
+      padding: 0.5rem 1rem;
+      font-size: 0.8125rem;
+      background: var(--turquesa);
+      color: #fff;
+      border-color: var(--turquesa);
+    }
+    .btn-ver-cuenta:hover { background: var(--turquesa-oscuro); border-color: var(--turquesa-oscuro); }
+
+    /* ── Ficha de proveedor (Pantalla B) ───────────────────────────────────── */
+
+    .grilla-saldos-ficha {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin: 0 0 1.25rem;
+    }
+    .stat-card-cc {
+      border-radius: 18px;
+      padding: 1.125rem 1.25rem;
+      background: linear-gradient(135deg, var(--turquesa), var(--turquesa-oscuro));
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(30,140,124,0.25);
+    }
+    .stat-card-cc__etiqueta {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+    .stat-card-cc__monto {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-top: 0.25rem;
+    }
+    .stat-card-cc__credito {
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.375rem;
+      opacity: 0.9;
+    }
+
+    .fila-movimiento {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.875rem 0;
+      border-bottom: 1px solid var(--color-borde);
+    }
+    .fila-movimiento__tipo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .fila-movimiento__referencia { font-size: 0.9375rem; font-weight: 600; color: var(--color-texto); }
+    .fila-movimiento__fecha { font-size: 0.8125rem; color: var(--color-texto-suave); }
+    .fila-movimiento__monto { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+    .fila-movimiento__monto--deuda { color: var(--color-error); }
+    .fila-movimiento__monto--reduce { color: #1E8C4A; }
+
+    .tarjeta-credito {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      margin-bottom: 0.625rem;
+      background: var(--turquesa-suave);
+    }
+
+    /* ── Modales (mismo patrón bottom-sheet que ya usan caja.html/gastos.html) */
+
+    .modal-cc {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-cc[hidden] { display: none; }
+    .modal-cc__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+    .modal-cc__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+    @media (min-width: 641px) {
+      .modal-cc { align-items: center; }
+      .modal-cc__panel {
+        max-width: 480px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
+    /* Filas FIFO en el modal de pago */
+    .fila-fifo {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--color-borde);
+    }
+    .fila-fifo__info { flex: 1; min-width: 0; }
+    .fila-fifo__numero { font-size: 0.875rem; font-weight: 600; color: var(--color-texto); }
+    .fila-fifo__meta { font-size: 0.75rem; color: var(--color-texto-suave); }
+    .fila-fifo__monto {
+      width: 110px;
+      height: 34px;
+      padding: 0 0.625rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 8px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      text-align: right;
+    }
+    .resumen-aplicacion {
+      margin-top: 0.75rem;
+      padding: 0.75rem 0.875rem;
+      border-radius: 10px;
+      background: var(--color-superficie);
+      font-size: 0.8125rem;
+    }
+    .resumen-aplicacion__excedente {
+      margin-top: 0.375rem;
+      color: var(--turquesa-oscuro);
+      font-weight: 600;
+    }
+    .resumen-aplicacion__error {
+      margin-top: 0.375rem;
+      color: var(--color-error);
+      font-weight: 600;
+    }
+
+    /* Combobox de proveedor (mismo patrón que gastos.html) */
+    .sugerencias-proveedor-cc {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 10;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      box-shadow: var(--sombra-hover);
+      margin-top: 0.25rem;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .sugerencias-proveedor-cc[hidden] { display: none; }
+    .sugerencias-proveedor-cc__item {
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .sugerencias-proveedor-cc__item:hover { background: var(--color-superficie); }
+    .sugerencias-proveedor-cc__vacio {
+      padding: 0.625rem 0.875rem;
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA A — LISTA / TABS
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="vista-lista">
+
+    <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
+      <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
+      <div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
+          <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
+        </div>
+        <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto);">Cuentas corrientes</div>
+      </div>
+    </header>
+
+    <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
+
+      <div class="tabs-cc" id="tabs-cc">
+        <button type="button" class="tabs-cc__opcion tabs-cc__opcion--activa" data-tab="proveedores">Proveedores</button>
+        <button type="button" class="tabs-cc__opcion" data-tab="historial">Historial de facturas</button>
+        <button type="button" class="tabs-cc__opcion" data-tab="pendientes">Pendientes de aceptación (<span id="contador-tab-pendientes">0</span>)</button>
+      </div>
+
+      <!-- ── Tab: Proveedores ─────────────────────────────────────────────── -->
+      <div id="tab-proveedores">
+        <div class="filtros-cc">
+          <div class="filtros-cc__buscar">
+            <input type="text" id="filtro-busqueda-proveedores" placeholder="🔍 Buscar proveedor" style="width:100%;">
+          </div>
+          <select id="filtro-unidad-proveedores"></select>
+        </div>
+
+        <div id="estado-cargando-proveedores" class="estado-vacio" hidden>
+          <div class="spinner"></div>
+          <p class="estado-vacio__descripcion">Cargando proveedores…</p>
+        </div>
+
+        <div class="lista-contenido" id="lista-proveedores"></div>
+
+        <div id="estado-vacio-proveedores" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">🧾</div>
+          <div class="estado-vacio__titulo">Sin saldos pendientes</div>
+          <p class="estado-vacio__descripcion">No hay proveedores con deuda o crédito con los filtros actuales.</p>
+        </div>
+
+        <h3 class="titulo-seccion-cc">Facturas sin proveedor asignado</h3>
+
+        <div class="lista-contenido" id="lista-sin-proveedor"></div>
+
+        <div id="estado-vacio-sin-proveedor" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">✓</div>
+          <div class="estado-vacio__titulo">No hay facturas sin asignar</div>
+        </div>
+      </div>
+
+      <!-- ── Tab: Historial de facturas ───────────────────────────────────── -->
+      <div id="tab-historial" hidden>
+        <div class="segmented-rango" id="segmented-rango-historial">
+          <button type="button" class="segmented-rango__opcion" data-rango="hoy">Hoy</button>
+          <button type="button" class="segmented-rango__opcion" data-rango="mes">En el mes</button>
+        </div>
+
+        <div class="filtros-cc" style="margin-top:0.875rem;">
+          <div class="filtros-cc__buscar">
+            <input type="text" id="filtro-busqueda-historial" placeholder="🔍 Buscar proveedor" style="width:100%;">
+          </div>
+          <select id="filtro-unidad-historial"></select>
+          <input type="date" id="filtro-fecha-desde-historial">
+          <input type="date" id="filtro-fecha-hasta-historial">
+          <button type="button" id="btn-exportar-excel-historial" class="btn btn--secundario" style="width:auto; background:var(--turquesa); color:#fff; border-color:var(--turquesa);">📥 Descargar Excel</button>
+        </div>
+
+        <div id="estado-cargando-historial" class="estado-vacio" hidden>
+          <div class="spinner"></div>
+          <p class="estado-vacio__descripcion">Cargando historial…</p>
+        </div>
+
+        <div class="lista-contenido" id="lista-historial"></div>
+
+        <div id="estado-vacio-historial" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">📄</div>
+          <div class="estado-vacio__titulo">Sin movimientos</div>
+          <p class="estado-vacio__descripcion">No hay movimientos con los filtros actuales.</p>
+        </div>
+      </div>
+
+      <!-- ── Tab: Pendientes de aceptación ────────────────────────────────── -->
+      <div id="tab-pendientes" hidden>
+        <div class="lista-contenido" id="lista-pendientes-aceptacion"></div>
+
+        <div id="estado-vacio-pendientes" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">✓</div>
+          <div class="estado-vacio__titulo">No hay proveedores pendientes de aceptación</div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /vista-lista -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA B — FICHA DE PROVEEDOR
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="vista-ficha" hidden>
+    <header class="header">
+      <button type="button" class="btn btn--icono" id="btn-cerrar-ficha">← Volver</button>
+      <span class="header__nombre-app" id="ficha-titulo"></span>
+      <div style="width:2rem;"></div>
+    </header>
+
+    <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 1.25rem;">
+      <div class="grilla-saldos-ficha" id="ficha-saldos"></div>
+
+      <button type="button" class="btn btn--exito" id="btn-registrar-pago" style="width:auto;">Registrar pago</button>
+
+      <div id="ficha-creditos-seccion" hidden>
+        <h3 class="titulo-seccion-cc">Créditos disponibles</h3>
+        <div id="lista-creditos"></div>
+      </div>
+
+      <h3 class="titulo-seccion-cc">Movimientos</h3>
+
+      <div id="estado-cargando-movimientos" class="estado-vacio" hidden>
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando movimientos…</p>
+      </div>
+
+      <div id="lista-movimientos-ficha"></div>
+
+      <div id="estado-vacio-movimientos" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">📄</div>
+        <div class="estado-vacio__titulo">Sin movimientos todavía</div>
+      </div>
+    </div>
+  </div><!-- /vista-ficha -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — REGISTRAR PAGO
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-pago" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-pago" title="Cerrar">✕</button>
+      <h2>Registrar pago</h2>
+
+      <div class="formulario">
+        <div class="grupo-campo" id="grupo-moneda-pago" style="display:none;">
+          <label for="campo-moneda-pago">Moneda</label>
+          <select id="campo-moneda-pago"></select>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="campo-monto-pago">Monto a pagar</label>
+          <input type="text" id="campo-monto-pago" placeholder="0,00" inputmode="decimal">
+        </div>
+
+        <div class="grupo-campo">
+          <label>Medio de pago</label>
+          <div class="grilla-medio-pago" id="grilla-medio-pago-cc">
+            <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
+            <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia / QR</button>
+            <button type="button" class="btn-tipo-doc" data-valor="cheque">Cheque</button>
+          </div>
+        </div>
+
+        <div class="grupo-campo" id="grupo-cuenta-pago-cc" style="display:none;">
+          <label for="campo-cuenta-pago-cc">Cuenta (Pablo)</label>
+          <select id="campo-cuenta-pago-cc">
+            <option value="">— Seleccioná —</option>
+          </select>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="campo-fecha-pago-cc">Fecha de pago</label>
+          <input type="date" id="campo-fecha-pago-cc">
+        </div>
+
+        <div class="grupo-campo">
+          <label>Facturas a aplicar</label>
+          <div id="lista-fifo"></div>
+          <p class="etiqueta-opcional" id="fifo-vacio" hidden>Ingresá moneda y monto para ver las facturas.</p>
+        </div>
+
+        <div class="resumen-aplicacion" id="resumen-aplicacion" hidden></div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-pago">Cancelar</button>
+        <button type="button" class="btn btn--exito" id="btn-confirmar-pago">Confirmar pago</button>
+      </div>
+    </div>
+  </div><!-- /modal-pago -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — APLICAR CRÉDITO A FACTURA
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-aplicar-credito" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-aplicar-credito" title="Cerrar">✕</button>
+      <h2>Aplicar crédito a una factura</h2>
+      <p id="aplicar-credito-texto" style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;"></p>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-factura-credito">Factura</label>
+          <select id="campo-factura-credito">
+            <option value="">— Seleccioná una factura —</option>
+          </select>
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-monto-credito">Monto a aplicar</label>
+          <input type="text" id="campo-monto-credito" placeholder="0,00" inputmode="decimal">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-aplicar-credito">Cancelar</button>
+        <button type="button" class="btn btn--exito" id="btn-confirmar-aplicar-credito">Aplicar</button>
+      </div>
+    </div>
+  </div><!-- /modal-aplicar-credito -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — ASIGNAR PROVEEDOR A FACTURA PENDIENTE
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-asignar-proveedor" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-asignar-proveedor" title="Cerrar">✕</button>
+      <h2>Asignar proveedor</h2>
+      <p id="asignar-proveedor-texto" style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;"></p>
+
+      <div class="formulario">
+        <div class="grupo-campo" style="position:relative;">
+          <label for="campo-asignar-proveedor-buscar">Proveedor</label>
+          <input type="text" id="campo-asignar-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off">
+          <input type="hidden" id="campo-asignar-proveedor-id">
+          <div class="sugerencias-proveedor-cc" id="sugerencias-asignar-proveedor" hidden></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-asignar-proveedor">Cancelar</button>
+        <button type="button" class="btn btn--exito" id="btn-confirmar-asignar-proveedor">Asignar</button>
+      </div>
+    </div>
+  </div><!-- /modal-asignar-proveedor -->
+
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // Usabarrena Pablo Nicolás — pagador único hoy de todas las cuentas
+    // corrientes de proveedores; el selector de cuenta del modal "Registrar
+    // pago" muestra solo sus cuentas, sin importar quién esté logueado. Si el
+    // día de mañana hay más de un pagador (o cambia), conviene resolverlo con
+    // un flag en empleados (ej. paga_proveedores boolean) — no vale la pena
+    // esa vuelta de tuerca todavía para un solo pagador fijo.
+    const EMPLEADO_ID_PABLO = 'f35ab0e6-4496-4bc2-b507-68dd0e16c4a3'
+
+    const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
+    // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos a
+    // los de medio_pago ('efectivo'/'transferencia'/'cheque') — mismo criterio
+    // que gastos.html.
+    const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
+    const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco' }
+    const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado' }
+    const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      tabActiva: 'proveedores',
+      maestros: { unidades: [], proveedores: [] }, // proveedores: solo activo=true y estado_alta='activo'
+      cuentasPablo: null, // se carga una sola vez, bajo demanda
+      filtros: {
+        proveedores: { busqueda: '', unidadId: '' },
+        historial:   { busqueda: '', unidadId: '', fechaDesde: '', fechaHasta: '', rangoRapido: null },
+      },
+      listaSaldos: [],
+      listaSinProveedor: [],
+      listaHistorial: [],
+      historialCargadoUnaVez: false,
+      ficha: null,        // { proveedorId, unidadId, nombre }
+      fichaSaldos: [],     // filas de v_saldo_proveedor para este proveedor+unidad (todas las monedas)
+      fichaCreditos: [],
+    }
+
+    // Selecciones fuera del estado, mismo criterio que gastos.html
+    let facturaPendienteAAsignar   = null
+    let proveedorAsignarSeleccionado = null
+    let creditoAAplicar            = null
+    let medioPagoSeleccionado      = null
+    let facturasParaPago           = [] // [{id, numero, fecha, saldo, checked, monto}]
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function formatearImporte(importe, moneda = 'ARS') {
+      if (importe == null) return '—'
+      const num = Number(importe).toLocaleString('es-AR', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      })
+      return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
+    }
+
+    function parseImporte(str) {
+      if (str == null || str === '') return null
+      const limpio = String(str).replace(/\./g, '').replace(',', '.')
+      const num = parseFloat(limpio)
+      return isNaN(num) ? null : num
+    }
+
+    // Formatea un número para prellenar un input que después se lee con
+    // parseImporte() (formato es-AR: coma decimal) — nunca usar toFixed(2)
+    // para esto, produce punto decimal que parseImporte() interpreta mal
+    // (lee todo como parte entera).
+    function formatearNumeroEditable(n) {
+      return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+
+    function fechaISO(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    }
+
+    function inicialesEmpresa(nombre) {
+      const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean)
+      if (!palabras.length) return '—'
+      if (palabras.length === 1) return palabras[0].slice(0, 2).toUpperCase()
+      return (palabras[0][0] + palabras[1][0]).toUpperCase()
+    }
+
+    function colorAvatar(nombre) {
+      const texto = nombre || ''
+      let hash = 0
+      for (let i = 0; i < texto.length; i++) hash = texto.charCodeAt(i) + ((hash << 5) - hash)
+      return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length]
+    }
+
+    function poblarSelect(idCampo, items, mapFn, placeholder) {
+      const sel = document.getElementById(idCampo)
+      if (!sel) return
+      sel.innerHTML =
+        `<option value="">${placeholder}</option>` +
+        items.map(item => {
+          const { value, label } = mapFn(item)
+          return `<option value="${value}">${label}</option>`
+        }).join('')
+    }
+
+    function nombreProveedor(id) {
+      return estado.maestros.proveedores.find(p => p.id === id)?.razon_social || '(proveedor)'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+
+      const { data: emp, error } = await supabase
+        .from('empleados')
+        .select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id)
+        .maybeSingle()
+
+      if (error || !emp || !['admin', 'super_admin'].includes(emp.rol_app)) {
+        mostrarError('No tenés permiso para acceder a este módulo.')
+        setTimeout(() => window.location.replace('../dashboard.html'), 1500)
+        return
+      }
+      estado.miEmpleadoId = emp.id
+
+      const [unids, provs] = await Promise.all([
+        supabase.from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre'),
+        supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social'),
+      ])
+      estado.maestros.unidades    = unids.data ?? []
+      estado.maestros.proveedores = provs.data ?? []
+
+      poblarSelect('filtro-unidad-proveedores', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
+      poblarSelect('filtro-unidad-historial', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
+
+      await Promise.all([cargarSaldos(), cargarSinProveedor(), cargarContadorPendientes()])
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TAB: PROVEEDORES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function agruparSaldosPorProveedorUnidad(filas) {
+      const mapa = new Map()
+      filas.forEach(f => {
+        const key = `${f.proveedor_id}__${f.unidad_negocio_id}`
+        if (!mapa.has(key)) mapa.set(key, { proveedor_id: f.proveedor_id, unidad_negocio_id: f.unidad_negocio_id, saldos: [] })
+        mapa.get(key).saldos.push({ moneda: f.moneda, deuda: Number(f.deuda_pendiente) || 0, credito: Number(f.credito_disponible) || 0 })
+      })
+      return [...mapa.values()]
+    }
+
+    async function cargarSaldos() {
+      const cargandoEl = document.getElementById('estado-cargando-proveedores')
+      const vacioEl     = document.getElementById('estado-vacio-proveedores')
+      cargandoEl.hidden = false
+      vacioEl.hidden     = true
+
+      let query = supabase.from('v_saldo_proveedor').select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible')
+      if (estado.filtros.proveedores.unidadId) query = query.eq('unidad_negocio_id', estado.filtros.proveedores.unidadId)
+      const { data, error } = await query
+      cargandoEl.hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('Error al cargar los saldos de proveedores.')
+        return
+      }
+
+      let grupos = agruparSaldosPorProveedorUnidad(data ?? [])
+        .map(g => ({ ...g, proveedor: estado.maestros.proveedores.find(p => p.id === g.proveedor_id) }))
+        .filter(g => g.proveedor) // oculta proveedores no aprobados/inactivos
+        .filter(g => g.saldos.some(s => s.deuda > 0 || s.credito > 0))
+
+      const termino = estado.filtros.proveedores.busqueda.trim().toLowerCase()
+      if (termino) grupos = grupos.filter(g => g.proveedor.razon_social.toLowerCase().includes(termino))
+
+      grupos.sort((a, b) => a.proveedor.razon_social.localeCompare(b.proveedor.razon_social))
+
+      estado.listaSaldos = grupos
+      renderizarListaSaldos()
+    }
+
+    function renderizarListaSaldos() {
+      const listaEl = document.getElementById('lista-proveedores')
+      const vacioEl = document.getElementById('estado-vacio-proveedores')
+
+      if (!estado.listaSaldos.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = estado.listaSaldos.map(g => {
+        const unidadNombre = estado.maestros.unidades.find(u => u.id === g.unidad_negocio_id)?.nombre || ''
+        const lineasDeuda = g.saldos.filter(s => s.deuda > 0)
+          .map(s => `<div class="gasto__importe">${formatearImporte(s.deuda, s.moneda)}</div>`).join('')
+        const chipsCredito = g.saldos.filter(s => s.credito > 0)
+          .map(s => `<span class="chip-credito">Crédito: ${formatearImporte(s.credito, s.moneda)}</span>`).join(' ')
+
+        return `
+          <div class="tarjeta-lista" data-proveedor="${g.proveedor_id}" data-unidad="${g.unidad_negocio_id}">
+            <div class="tarjeta-lista__avatar">
+              <span class="gasto__avatar-iniciales" style="background:${colorAvatar(g.proveedor.razon_social)};">${inicialesEmpresa(g.proveedor.razon_social)}</span>
+            </div>
+            <div class="tarjeta-lista__info">
+              <div class="tarjeta-lista__titulo">${g.proveedor.razon_social}</div>
+              <div class="gasto__meta">
+                <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${unidadNombre}</span>
+              </div>
+              ${chipsCredito ? `<div>${chipsCredito}</div>` : ''}
+            </div>
+            <div class="gasto__derecha">
+              ${lineasDeuda || '<div class="gasto__importe">$ 0,00</div>'}
+              <button type="button" class="btn btn-ver-cuenta" data-proveedor="${g.proveedor_id}" data-unidad="${g.unidad_negocio_id}" data-nombre="${g.proveedor.razon_social}">Ver cuenta corriente</button>
+            </div>
+          </div>
+        `
+      }).join('')
+
+      listaEl.querySelectorAll('.btn-ver-cuenta').forEach(btn => {
+        btn.addEventListener('click', () => abrirFicha(btn.dataset.proveedor, btn.dataset.unidad, btn.dataset.nombre))
+      })
+    }
+
+    async function cargarSinProveedor() {
+      const { data, error } = await supabase
+        .from('facturas_pendientes')
+        .select('id, razon_social, importe, moneda, fecha_factura, unidad_negocio_id')
+        .is('proveedor_id', null)
+        .in('estado', ['pendiente', 'parcial'])
+        .order('fecha_factura', { ascending: false })
+
+      if (error) {
+        console.error(error)
+        mostrarError('Error al cargar las facturas sin proveedor asignado.')
+        return
+      }
+
+      estado.listaSinProveedor = data ?? []
+      renderizarListaSinProveedor()
+    }
+
+    function renderizarListaSinProveedor() {
+      const listaEl = document.getElementById('lista-sin-proveedor')
+      const vacioEl = document.getElementById('estado-vacio-sin-proveedor')
+
+      if (!estado.listaSinProveedor.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = estado.listaSinProveedor.map(f => {
+        const razon = f.razon_social || '(sin razón social)'
+        return `
+          <div class="tarjeta-lista" data-id="${f.id}" style="position:relative;">
+            <div class="tarjeta-lista__avatar">
+              <span class="gasto__avatar-iniciales" style="background:${colorAvatar(razon)};">${inicialesEmpresa(razon)}</span>
+            </div>
+            <div class="tarjeta-lista__info">
+              <div class="tarjeta-lista__titulo">${razon}</div>
+              <div class="gasto__meta">
+                <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${formatearFecha(f.fecha_factura)}</span>
+              </div>
+            </div>
+            <div class="gasto__derecha" style="align-items:flex-end; gap:0.375rem;">
+              <div class="gasto__importe">${formatearImporte(f.importe, f.moneda)}</div>
+              <div style="display:flex; gap:0.5rem;">
+                <button type="button" class="btn btn--secundario btn-anular-sin-proveedor" data-id="${f.id}" style="width:auto; padding:0.375rem 0.75rem; font-size:0.75rem;">Anular</button>
+                <button type="button" class="btn btn--exito btn-asignar-proveedor" data-id="${f.id}" style="width:auto; padding:0.375rem 0.75rem; font-size:0.75rem;">Asignar proveedor</button>
+              </div>
+            </div>
+          </div>
+        `
+      }).join('')
+
+      listaEl.querySelectorAll('.btn-asignar-proveedor').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const f = estado.listaSinProveedor.find(x => x.id === btn.dataset.id)
+          if (f) abrirModalAsignarProveedor(f)
+        })
+      })
+      listaEl.querySelectorAll('.btn-anular-sin-proveedor').forEach(btn => {
+        btn.addEventListener('click', () => anularFacturaSinProveedor(btn.dataset.id))
+      })
+    }
+
+    async function anularFacturaSinProveedor(id) {
+      if (!confirm('¿Seguro que querés anular esta factura?')) return
+      const { error } = await supabase.rpc('anular_factura_pendiente', { factura_id: id })
+      if (error) { mostrarError(error.message || 'No se pudo anular la factura.'); return }
+      mostrarExito('Factura anulada.')
+      cargarSinProveedor()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL: ASIGNAR PROVEEDOR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function filtrarProveedoresAsignar(termino) {
+      const t = termino.trim().toLowerCase()
+      if (!t) return []
+      return estado.maestros.proveedores
+        .filter(p => p.razon_social?.toLowerCase().includes(t) || p.nombre_fantasia?.toLowerCase().includes(t))
+        .slice(0, 8)
+    }
+
+    function renderizarSugerenciasAsignar(lista) {
+      const cont = document.getElementById('sugerencias-asignar-proveedor')
+      if (!lista.length) {
+        cont.innerHTML = `<div class="sugerencias-proveedor-cc__vacio">Sin resultados</div>`
+        cont.hidden = false
+        return
+      }
+      cont.innerHTML = lista.map(p => `
+        <div class="sugerencias-proveedor-cc__item" data-id="${p.id}">
+          ${p.razon_social}${p.nombre_fantasia ? ` <span style="color:var(--color-texto-suave);">(${p.nombre_fantasia})</span>` : ''}
+        </div>
+      `).join('')
+      cont.hidden = false
+    }
+
+    function abrirModalAsignarProveedor(factura) {
+      facturaPendienteAAsignar = factura
+      proveedorAsignarSeleccionado = null
+      document.getElementById('asignar-proveedor-texto').textContent =
+        `${factura.razon_social || '(sin razón social)'} — ${formatearImporte(factura.importe, factura.moneda)}`
+      document.getElementById('campo-asignar-proveedor-buscar').value = ''
+      document.getElementById('campo-asignar-proveedor-id').value = ''
+      document.getElementById('sugerencias-asignar-proveedor').hidden = true
+      document.getElementById('modal-asignar-proveedor').hidden = false
+    }
+
+    function cerrarModalAsignarProveedor() {
+      document.getElementById('modal-asignar-proveedor').hidden = true
+      facturaPendienteAAsignar = null
+      proveedorAsignarSeleccionado = null
+    }
+
+    async function confirmarAsignarProveedor() {
+      if (!facturaPendienteAAsignar) return
+      if (!proveedorAsignarSeleccionado) return mostrarError('Seleccioná un proveedor.')
+
+      const btn = document.getElementById('btn-confirmar-asignar-proveedor')
+      btn.disabled = true
+      const { error } = await supabase.rpc('asignar_proveedor_factura_pendiente', {
+        p_factura_id: facturaPendienteAAsignar.id,
+        p_proveedor_id: proveedorAsignarSeleccionado,
+      })
+      btn.disabled = false
+      if (error) { mostrarError(error.message || 'No se pudo asignar el proveedor.'); return }
+
+      mostrarExito('Proveedor asignado.')
+      cerrarModalAsignarProveedor()
+      cargarSinProveedor()
+      cargarSaldos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TAB: PENDIENTES DE ACEPTACIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarContadorPendientes() {
+      const { data, error } = await supabase.from('proveedores').select('id').eq('estado_alta', 'pendiente_aceptacion')
+      if (error) { console.error(error); return }
+      document.getElementById('contador-tab-pendientes').textContent = (data ?? []).length
+    }
+
+    async function cargarPendientesAceptacion() {
+      const { data, error } = await supabase
+        .from('proveedores')
+        .select('id, razon_social, nombre_fantasia, cuit')
+        .eq('estado_alta', 'pendiente_aceptacion')
+        .order('razon_social')
+
+      if (error) {
+        console.error(error)
+        mostrarError('Error al cargar los proveedores pendientes de aceptación.')
+        return
+      }
+
+      const listaEl = document.getElementById('lista-pendientes-aceptacion')
+      const vacioEl = document.getElementById('estado-vacio-pendientes')
+
+      if (!data?.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = data.map(p => `
+        <div class="tarjeta-lista" data-id="${p.id}">
+          <div class="tarjeta-lista__avatar">
+            <span class="gasto__avatar-iniciales" style="background:${colorAvatar(p.razon_social)};">${inicialesEmpresa(p.razon_social)}</span>
+          </div>
+          <div class="tarjeta-lista__info">
+            <div class="tarjeta-lista__titulo">${p.razon_social}</div>
+            <div class="gasto__meta">
+              ${p.cuit ? `<span class="gasto__meta-secundaria gasto__meta-secundaria--chip">CUIT ${p.cuit}</span>` : ''}
+              ${p.nombre_fantasia ? `<span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${p.nombre_fantasia}</span>` : ''}
+            </div>
+          </div>
+          <div class="gasto__derecha" style="gap:0.5rem;">
+            <button type="button" class="btn btn--rechazar btn-rechazar-proveedor" data-id="${p.id}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Rechazar</button>
+            <button type="button" class="btn btn--exito btn-aprobar-proveedor" data-id="${p.id}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Aprobar</button>
+          </div>
+        </div>
+      `).join('')
+
+      listaEl.querySelectorAll('.btn-aprobar-proveedor').forEach(btn => {
+        btn.addEventListener('click', () => aprobarProveedor(btn.dataset.id))
+      })
+      listaEl.querySelectorAll('.btn-rechazar-proveedor').forEach(btn => {
+        btn.addEventListener('click', () => rechazarProveedor(btn.dataset.id))
+      })
+    }
+
+    async function aprobarProveedor(id) {
+      const { error } = await supabase.rpc('aprobar_proveedor', { p_proveedor_id: id })
+      if (error) { mostrarError(error.message || 'No se pudo aprobar el proveedor.'); return }
+      mostrarExito('Proveedor aprobado.')
+      cargarPendientesAceptacion()
+      cargarContadorPendientes()
+      // El proveedor recién aprobado ahora debería aparecer en los maestros —
+      // se recarga para que esté disponible en los buscadores sin recargar la página.
+      const { data } = await supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
+      estado.maestros.proveedores = data ?? []
+    }
+
+    async function rechazarProveedor(id) {
+      if (!confirm('¿Seguro que querés rechazar este proveedor?')) return
+      const { error } = await supabase.rpc('rechazar_proveedor', { p_proveedor_id: id })
+      if (error) { mostrarError(error.message || 'No se pudo rechazar el proveedor.'); return }
+      mostrarExito('Proveedor rechazado.')
+      cargarPendientesAceptacion()
+      cargarContadorPendientes()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TAB: HISTORIAL DE FACTURAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function actualizarSegmentedRangoHistorial() {
+      document.querySelectorAll('#segmented-rango-historial .segmented-rango__opcion').forEach(btn => {
+        btn.classList.toggle('segmented-rango__opcion--activa', btn.dataset.rango === estado.filtros.historial.rangoRapido)
+      })
+    }
+
+    async function cargarHistorial() {
+      const cargandoEl = document.getElementById('estado-cargando-historial')
+      const vacioEl     = document.getElementById('estado-vacio-historial')
+      cargandoEl.hidden = false
+      vacioEl.hidden     = true
+
+      let query = supabase.from('v_cuenta_corriente_movimientos')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia')
+        .order('fecha', { ascending: false })
+
+      const f = estado.filtros.historial
+      if (f.unidadId)    query = query.eq('unidad_negocio_id', f.unidadId)
+      if (f.fechaDesde)  query = query.gte('fecha', f.fechaDesde)
+      if (f.fechaHasta)  query = query.lte('fecha', f.fechaHasta)
+
+      const { data, error } = await query
+      cargandoEl.hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('Error al cargar el historial.')
+        return
+      }
+
+      let filas = (data ?? []).map(m => ({ ...m, proveedorNombre: nombreProveedor(m.proveedor_id) }))
+      if (f.busqueda) {
+        const t = f.busqueda.trim().toLowerCase()
+        filas = filas.filter(m => m.proveedorNombre.toLowerCase().includes(t))
+      }
+
+      estado.listaHistorial = filas
+      renderizarListaHistorial()
+    }
+
+    function renderizarListaHistorial() {
+      const listaEl = document.getElementById('lista-historial')
+      const vacioEl = document.getElementById('estado-vacio-historial')
+
+      if (!estado.listaHistorial.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = estado.listaHistorial.map(m => {
+        const monto = Number(m.monto) || 0
+        const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
+        const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
+        return `
+          <div class="fila-movimiento">
+            <div>
+              <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
+              <div class="fila-movimiento__referencia">${m.proveedorNombre}${m.referencia ? ` — ${m.referencia}` : ''}</div>
+              <div class="fila-movimiento__fecha">${unidadNombre} · ${formatearFecha(m.fecha)}</div>
+            </div>
+            <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
+          </div>
+        `
+      }).join('')
+    }
+
+    function exportarExcelHistorial() {
+      if (!estado.listaHistorial.length) {
+        mostrarError('No hay movimientos para exportar con los filtros actuales.')
+        return
+      }
+      const filas = estado.listaHistorial.map(m => ({
+        'Proveedor':  m.proveedorNombre,
+        'Unidad':     estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || '',
+        'Fecha':      formatearFecha(m.fecha),
+        'Tipo':       TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo,
+        'Referencia': m.referencia || '',
+        'Monto':      Number(m.monto) || 0,
+        'Moneda':     m.moneda || '',
+      }))
+      const hoja = XLSX.utils.json_to_sheet(filas)
+      const libro = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(libro, hoja, 'Historial')
+      const fechaArchivo = new Date().toISOString().slice(0, 10)
+      XLSX.writeFile(libro, `cuentas_corrientes_${fechaArchivo}.xlsx`)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FICHA DE PROVEEDOR (Pantalla B)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirFicha(proveedorId, unidadId, nombre) {
+      estado.ficha = { proveedorId, unidadId, nombre }
+      document.getElementById('ficha-titulo').textContent = nombre
+      document.getElementById('vista-lista').hidden = true
+      document.getElementById('vista-ficha').removeAttribute('hidden')
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+    }
+
+    function cerrarFicha() {
+      document.getElementById('vista-ficha').hidden = true
+      document.getElementById('vista-lista').removeAttribute('hidden')
+      estado.ficha = null
+    }
+
+    async function cargarFichaSaldos() {
+      const { data, error } = await supabase.from('v_saldo_proveedor')
+        .select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible')
+        .eq('proveedor_id', estado.ficha.proveedorId)
+        .eq('unidad_negocio_id', estado.ficha.unidadId)
+
+      if (error) { console.error(error); mostrarError('Error al cargar el saldo.'); return }
+
+      estado.fichaSaldos = data ?? []
+      const cont = document.getElementById('ficha-saldos')
+      if (!estado.fichaSaldos.length) {
+        cont.innerHTML = `<div class="stat-card-cc"><div class="stat-card-cc__etiqueta">Saldo</div><div class="stat-card-cc__monto">$ 0,00</div></div>`
+        return
+      }
+      cont.innerHTML = estado.fichaSaldos.map(s => `
+        <div class="stat-card-cc">
+          <div class="stat-card-cc__etiqueta">Deuda ${s.moneda}</div>
+          <div class="stat-card-cc__monto">${formatearImporte(s.deuda_pendiente, s.moneda)}</div>
+          ${Number(s.credito_disponible) > 0 ? `<div class="stat-card-cc__credito">Crédito disponible: ${formatearImporte(s.credito_disponible, s.moneda)}</div>` : ''}
+        </div>
+      `).join('')
+    }
+
+    async function cargarFichaMovimientos() {
+      const cargandoEl = document.getElementById('estado-cargando-movimientos')
+      const vacioEl     = document.getElementById('estado-vacio-movimientos')
+      cargandoEl.hidden = false
+      vacioEl.hidden     = true
+
+      const { data, error } = await supabase.from('v_cuenta_corriente_movimientos')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia')
+        .eq('proveedor_id', estado.ficha.proveedorId)
+        .eq('unidad_negocio_id', estado.ficha.unidadId)
+        .order('fecha', { ascending: false })
+
+      cargandoEl.hidden = true
+
+      if (error) { console.error(error); mostrarError('Error al cargar los movimientos.'); return }
+
+      const listaEl = document.getElementById('lista-movimientos-ficha')
+      if (!data?.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = data.map(m => {
+        const monto = Number(m.monto) || 0
+        const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
+        return `
+          <div class="fila-movimiento">
+            <div>
+              <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
+              <div class="fila-movimiento__referencia">${m.referencia || '—'}</div>
+              <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}</div>
+            </div>
+            <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
+          </div>
+        `
+      }).join('')
+    }
+
+    async function cargarFichaCreditos() {
+      const { data, error } = await supabase.from('creditos_proveedor')
+        .select('id, proveedor_id, unidad_negocio_id, moneda, monto_original, monto_disponible, estado')
+        .eq('proveedor_id', estado.ficha.proveedorId)
+        .eq('unidad_negocio_id', estado.ficha.unidadId)
+        .eq('estado', 'disponible')
+
+      if (error) { console.error(error); return }
+
+      estado.fichaCreditos = data ?? []
+      const seccion = document.getElementById('ficha-creditos-seccion')
+      const listaEl = document.getElementById('lista-creditos')
+
+      if (!estado.fichaCreditos.length) {
+        seccion.hidden = true
+        return
+      }
+      seccion.hidden = false
+      listaEl.innerHTML = estado.fichaCreditos.map(c => `
+        <div class="tarjeta-credito" data-id="${c.id}">
+          <div>
+            <div style="font-weight:700; color:var(--turquesa-oscuro);">${formatearImporte(c.monto_disponible, c.moneda)}</div>
+            <div style="font-size:0.75rem; color:var(--color-texto-suave);">de ${formatearImporte(c.monto_original, c.moneda)} original</div>
+          </div>
+          <button type="button" class="btn btn--exito btn-aplicar-credito" data-id="${c.id}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Aplicar a una factura</button>
+        </div>
+      `).join('')
+
+      listaEl.querySelectorAll('.btn-aplicar-credito').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const c = estado.fichaCreditos.find(x => x.id === btn.dataset.id)
+          if (c) abrirModalAplicarCredito(c)
+        })
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL: APLICAR CRÉDITO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirModalAplicarCredito(credito) {
+      creditoAAplicar = credito
+      document.getElementById('aplicar-credito-texto').textContent =
+        `Crédito disponible: ${formatearImporte(credito.monto_disponible, credito.moneda)}`
+      document.getElementById('campo-monto-credito').value = ''
+
+      const { data, error } = await supabase.from('facturas_pendientes')
+        .select('id, numero_comprobante, fecha_factura, saldo_pendiente')
+        .eq('proveedor_id', estado.ficha.proveedorId)
+        .eq('unidad_negocio_id', estado.ficha.unidadId)
+        .eq('moneda', credito.moneda)
+        .in('estado', ['pendiente', 'parcial'])
+        .order('fecha_factura', { ascending: true })
+
+      if (error) { console.error(error); mostrarError('Error al cargar las facturas.'); return }
+
+      poblarSelect('campo-factura-credito', data ?? [],
+        f => ({ value: f.id, label: `${formatearFecha(f.fecha_factura)} — ${f.numero_comprobante || '(sin número)'} — saldo ${formatearImporte(f.saldo_pendiente, credito.moneda)}` }),
+        '— Seleccioná una factura —')
+
+      document.getElementById('modal-aplicar-credito').hidden = false
+    }
+
+    function cerrarModalAplicarCredito() {
+      document.getElementById('modal-aplicar-credito').hidden = true
+      creditoAAplicar = null
+    }
+
+    async function confirmarAplicarCredito() {
+      if (!creditoAAplicar) return
+      const facturaId = document.getElementById('campo-factura-credito').value
+      const monto = parseImporte(document.getElementById('campo-monto-credito').value)
+      if (!facturaId) return mostrarError('Seleccioná una factura.')
+      if (monto == null || monto <= 0) return mostrarError('Ingresá un monto válido.')
+
+      const btn = document.getElementById('btn-confirmar-aplicar-credito')
+      btn.disabled = true
+      const { error } = await supabase.rpc('aplicar_credito_a_factura', {
+        p_credito_id: creditoAAplicar.id,
+        p_factura_pendiente_id: facturaId,
+        p_monto: monto,
+      })
+      btn.disabled = false
+      if (error) { mostrarError(error.message || 'No se pudo aplicar el crédito.'); return }
+
+      mostrarExito('Crédito aplicado.')
+      cerrarModalAplicarCredito()
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL: REGISTRAR PAGO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarCuentasPablo() {
+      if (estado.cuentasPablo) return
+      const { data, error } = await supabase.from('cuentas_caja')
+        .select('id, nombre, medio, moneda, activa')
+        .eq('empleado_id', EMPLEADO_ID_PABLO)
+        .eq('activa', true)
+      if (error) { console.error(error); estado.cuentasPablo = []; return }
+      estado.cuentasPablo = data ?? []
+    }
+
+    function seleccionarMedioPagoCC(valor) {
+      medioPagoSeleccionado = valor || null
+      document.querySelectorAll('#grilla-medio-pago-cc .btn-tipo-doc').forEach(btn => {
+        btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
+      })
+      actualizarSelectorCuentaPago()
+    }
+
+    function actualizarSelectorCuentaPago() {
+      const grupo = document.getElementById('grupo-cuenta-pago-cc')
+      if (medioPagoSeleccionado !== 'efectivo' && medioPagoSeleccionado !== 'transferencia') {
+        grupo.style.display = 'none'
+        return
+      }
+      const moneda = document.getElementById('campo-moneda-pago').value
+      const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medioPagoSeleccionado]
+      const candidatas = (estado.cuentasPablo || []).filter(c => c.medio === medioCuenta && c.moneda === moneda)
+      grupo.style.display = 'flex'
+      poblarSelect('campo-cuenta-pago-cc', candidatas,
+        c => ({ value: c.id, label: `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }),
+        '— Seleccioná —')
+    }
+
+    async function abrirModalPago() {
+      await cargarCuentasPablo()
+
+      const monedasConDeuda = estado.fichaSaldos.filter(s => Number(s.deuda_pendiente) > 0)
+      const grupoMoneda = document.getElementById('grupo-moneda-pago')
+      if (monedasConDeuda.length > 1) {
+        grupoMoneda.style.display = 'block'
+        poblarSelect('campo-moneda-pago', monedasConDeuda, s => ({ value: s.moneda, label: s.moneda }), '')
+      } else {
+        grupoMoneda.style.display = 'none'
+        document.getElementById('campo-moneda-pago').innerHTML =
+          `<option value="${monedasConDeuda[0]?.moneda || 'ARS'}">${monedasConDeuda[0]?.moneda || 'ARS'}</option>`
+      }
+
+      document.getElementById('campo-monto-pago').value = ''
+      document.getElementById('campo-fecha-pago-cc').value = fechaISO(new Date())
+      seleccionarMedioPagoCC(null)
+      facturasParaPago = []
+      renderizarFilasFifo()
+
+      document.getElementById('modal-pago').hidden = false
+    }
+
+    function cerrarModalPago() {
+      document.getElementById('modal-pago').hidden = true
+      facturasParaPago = []
+    }
+
+    let debounceFifo = null
+    function programarActualizarSugerenciasPago() {
+      clearTimeout(debounceFifo)
+      debounceFifo = setTimeout(actualizarSugerenciasPago, 400)
+    }
+
+    // Trae TODAS las facturas abiertas del proveedor+unidad+moneda (para poder
+    // tildar manualmente cualquiera, no solo las sugeridas) y las cruza con lo
+    // que devuelve sugerir_facturas_fifo() para pre-tildar/pre-completar monto.
+    //
+    // NOTA: no vi el cuerpo de sugerir_facturas_fifo() — asumo que devuelve
+    // filas con algo como factura_pendiente_id/monto_aplicado; el mapeo de
+    // abajo prueba varios nombres de campo posibles por las dudas. Si en el
+    // ambiente real el nombre de columna es otro, esto no va a pre-tildar
+    // nada (pero tampoco rompe: el usuario puede tildar a mano igual).
+    async function actualizarSugerenciasPago() {
+      const moneda = document.getElementById('campo-moneda-pago').value
+      const monto  = parseImporte(document.getElementById('campo-monto-pago').value)
+
+      if (!moneda || monto == null || monto <= 0) {
+        facturasParaPago = []
+        renderizarFilasFifo()
+        return
+      }
+
+      const { data: abiertas, error: errorAbiertas } = await supabase.from('facturas_pendientes')
+        .select('id, numero_comprobante, fecha_factura, saldo_pendiente')
+        .eq('proveedor_id', estado.ficha.proveedorId)
+        .eq('unidad_negocio_id', estado.ficha.unidadId)
+        .eq('moneda', moneda)
+        .in('estado', ['pendiente', 'parcial'])
+        .order('fecha_factura', { ascending: true })
+
+      if (errorAbiertas) console.error(errorAbiertas)
+
+      const { data: sugeridas, error: errorSugeridas } = await supabase.rpc('sugerir_facturas_fifo', {
+        p_proveedor_id: estado.ficha.proveedorId,
+        p_unidad_negocio_id: estado.ficha.unidadId,
+        p_moneda: moneda,
+        p_monto: monto,
+      })
+      if (errorSugeridas) console.error(errorSugeridas)
+
+      const sugeridasPorId = new Map()
+      ;(sugeridas || []).forEach(s => {
+        const id = s.factura_pendiente_id ?? s.factura_id ?? s.id
+        const montoSugerido = s.monto_aplicado ?? s.monto_sugerido ?? s.monto_a_aplicar ?? s.monto
+        if (id != null) sugeridasPorId.set(id, Number(montoSugerido) || 0)
+      })
+
+      facturasParaPago = (abiertas || []).map(f => ({
+        id: f.id,
+        numero: f.numero_comprobante || '(sin número)',
+        fecha: f.fecha_factura,
+        saldo: Number(f.saldo_pendiente) || 0,
+        checked: sugeridasPorId.has(f.id),
+        monto: sugeridasPorId.has(f.id) ? sugeridasPorId.get(f.id) : 0,
+      }))
+
+      renderizarFilasFifo()
+    }
+
+    function renderizarFilasFifo() {
+      const cont = document.getElementById('lista-fifo')
+      const vacioEl = document.getElementById('fifo-vacio')
+
+      if (!facturasParaPago.length) {
+        cont.innerHTML = ''
+        vacioEl.hidden = false
+        document.getElementById('resumen-aplicacion').hidden = true
+        return
+      }
+      vacioEl.hidden = true
+
+      cont.innerHTML = facturasParaPago.map((f, i) => `
+        <div class="fila-fifo">
+          <input type="checkbox" data-index="${i}" class="check-fifo" ${f.checked ? 'checked' : ''}>
+          <div class="fila-fifo__info">
+            <div class="fila-fifo__numero">${f.numero}</div>
+            <div class="fila-fifo__meta">${formatearFecha(f.fecha)} · saldo ${formatearImporte(f.saldo)}</div>
+          </div>
+          <input type="text" class="fila-fifo__monto monto-fifo" data-index="${i}" value="${f.monto ? formatearNumeroEditable(f.monto) : ''}" placeholder="0,00" inputmode="decimal">
+        </div>
+      `).join('')
+
+      cont.querySelectorAll('.check-fifo').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          const i = Number(e.target.dataset.index)
+          facturasParaPago[i].checked = e.target.checked
+          if (e.target.checked && !facturasParaPago[i].monto) {
+            facturasParaPago[i].monto = facturasParaPago[i].saldo
+            cont.querySelector(`.monto-fifo[data-index="${i}"]`).value = formatearNumeroEditable(facturasParaPago[i].monto)
+          }
+          actualizarResumenAplicacion()
+        })
+      })
+      cont.querySelectorAll('.monto-fifo').forEach(inp => {
+        inp.addEventListener('input', (e) => {
+          const i = Number(e.target.dataset.index)
+          facturasParaPago[i].monto = parseImporte(e.target.value) || 0
+          actualizarResumenAplicacion()
+        })
+      })
+
+      actualizarResumenAplicacion()
+    }
+
+    function actualizarResumenAplicacion() {
+      const resumenEl = document.getElementById('resumen-aplicacion')
+      const monto = parseImporte(document.getElementById('campo-monto-pago').value)
+      if (monto == null || monto <= 0) { resumenEl.hidden = true; return }
+
+      const sumaAplicada = facturasParaPago.filter(f => f.checked).reduce((acc, f) => acc + (f.monto || 0), 0)
+      const excedente = monto - sumaAplicada
+
+      let html = `Aplicado: <strong>${formatearImporte(sumaAplicada)}</strong> de <strong>${formatearImporte(monto)}</strong>`
+      if (excedente > 0.009) {
+        html += `<div class="resumen-aplicacion__excedente">${formatearImporte(excedente)} va a quedar como saldo a favor.</div>`
+      } else if (excedente < -0.009) {
+        html += `<div class="resumen-aplicacion__error">Lo aplicado supera el monto a pagar — ajustá los montos.</div>`
+      }
+      resumenEl.innerHTML = html
+      resumenEl.hidden = false
+    }
+
+    async function confirmarPago() {
+      const moneda = document.getElementById('campo-moneda-pago').value
+      const monto = parseImporte(document.getElementById('campo-monto-pago').value)
+      if (!moneda) return mostrarError('Seleccioná la moneda.')
+      if (monto == null || monto <= 0) return mostrarError('Ingresá un monto válido.')
+      if (!medioPagoSeleccionado) return mostrarError('Seleccioná el medio de pago.')
+
+      const fecha = document.getElementById('campo-fecha-pago-cc').value
+      if (!fecha) return mostrarError('Completá la fecha de pago.')
+
+      const requiereCuenta = medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia'
+      const cuentaId = requiereCuenta ? (document.getElementById('campo-cuenta-pago-cc').value || null) : null
+      if (requiereCuenta && !cuentaId) return mostrarError('Seleccioná la cuenta.')
+
+      const aplicaciones = facturasParaPago
+        .filter(f => f.checked && f.monto > 0)
+        .map(f => ({ factura_pendiente_id: f.id, monto: f.monto }))
+
+      const sumaAplicada = aplicaciones.reduce((acc, a) => acc + a.monto, 0)
+      if (sumaAplicada > monto + 0.01) return mostrarError('La suma aplicada no puede superar el monto a pagar.')
+
+      const btn = document.getElementById('btn-confirmar-pago')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const { error } = await supabase.rpc('registrar_pago_proveedor', {
+          p_proveedor_id: estado.ficha.proveedorId,
+          p_unidad_negocio_id: estado.ficha.unidadId,
+          p_moneda: moneda,
+          p_monto: monto,
+          p_medio_pago: medioPagoSeleccionado,
+          p_cuenta_id: cuentaId,
+          p_empleado_id: estado.miEmpleadoId,
+          p_fecha_pago: fecha,
+          p_aplicaciones: aplicaciones,
+        })
+        if (error) throw new Error(error.message)
+
+        mostrarExito('¡Pago registrado!')
+        cerrarModalPago()
+        await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+        cargarSaldos()
+      } catch (err) {
+        console.error(err)
+        mostrarError(`Error al registrar el pago: ${err.message}`)
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENTOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    document.querySelectorAll('.tabs-cc__opcion').forEach(btn => {
+      btn.addEventListener('click', () => {
+        estado.tabActiva = btn.dataset.tab
+        document.querySelectorAll('.tabs-cc__opcion').forEach(b => b.classList.toggle('tabs-cc__opcion--activa', b === btn))
+        document.getElementById('tab-proveedores').hidden = estado.tabActiva !== 'proveedores'
+        document.getElementById('tab-historial').hidden   = estado.tabActiva !== 'historial'
+        document.getElementById('tab-pendientes').hidden  = estado.tabActiva !== 'pendientes'
+
+        if (estado.tabActiva === 'historial' && !estado.historialCargadoUnaVez) {
+          estado.historialCargadoUnaVez = true
+          cargarHistorial()
+        }
+        if (estado.tabActiva === 'pendientes') cargarPendientesAceptacion()
+      })
+    })
+
+    // ── Filtros: Proveedores ──────────────────────────────────────────────
+    let debounceBusquedaProv = null
+    document.getElementById('filtro-busqueda-proveedores').addEventListener('input', (e) => {
+      estado.filtros.proveedores.busqueda = e.target.value
+      clearTimeout(debounceBusquedaProv)
+      debounceBusquedaProv = setTimeout(cargarSaldos, 300)
+    })
+    document.getElementById('filtro-unidad-proveedores').addEventListener('change', (e) => {
+      estado.filtros.proveedores.unidadId = e.target.value
+      cargarSaldos()
+    })
+
+    // ── Filtros: Historial ────────────────────────────────────────────────
+    let debounceBusquedaHist = null
+    document.getElementById('filtro-busqueda-historial').addEventListener('input', (e) => {
+      estado.filtros.historial.busqueda = e.target.value
+      clearTimeout(debounceBusquedaHist)
+      debounceBusquedaHist = setTimeout(cargarHistorial, 300)
+    })
+    document.getElementById('filtro-unidad-historial').addEventListener('change', (e) => {
+      estado.filtros.historial.unidadId = e.target.value
+      cargarHistorial()
+    })
+    document.getElementById('filtro-fecha-desde-historial').addEventListener('change', (e) => {
+      estado.filtros.historial.fechaDesde = e.target.value
+      estado.filtros.historial.rangoRapido = null
+      actualizarSegmentedRangoHistorial()
+      cargarHistorial()
+    })
+    document.getElementById('filtro-fecha-hasta-historial').addEventListener('change', (e) => {
+      estado.filtros.historial.fechaHasta = e.target.value
+      estado.filtros.historial.rangoRapido = null
+      actualizarSegmentedRangoHistorial()
+      cargarHistorial()
+    })
+    document.querySelectorAll('#segmented-rango-historial .segmented-rango__opcion').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rango = btn.dataset.rango
+        estado.filtros.historial.rangoRapido = rango
+        const hoy = new Date()
+        if (rango === 'hoy') {
+          estado.filtros.historial.fechaDesde = fechaISO(hoy)
+          estado.filtros.historial.fechaHasta = fechaISO(hoy)
+        } else if (rango === 'mes') {
+          estado.filtros.historial.fechaDesde = fechaISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1))
+          estado.filtros.historial.fechaHasta = fechaISO(hoy)
+        }
+        document.getElementById('filtro-fecha-desde-historial').value = estado.filtros.historial.fechaDesde
+        document.getElementById('filtro-fecha-hasta-historial').value = estado.filtros.historial.fechaHasta
+        actualizarSegmentedRangoHistorial()
+        cargarHistorial()
+      })
+    })
+    document.getElementById('btn-exportar-excel-historial').addEventListener('click', exportarExcelHistorial)
+
+    // ── Modal: Asignar proveedor ──────────────────────────────────────────
+    document.getElementById('campo-asignar-proveedor-buscar').addEventListener('input', (e) => {
+      proveedorAsignarSeleccionado = null
+      document.getElementById('campo-asignar-proveedor-id').value = ''
+      renderizarSugerenciasAsignar(filtrarProveedoresAsignar(e.target.value))
+    })
+    document.getElementById('sugerencias-asignar-proveedor').addEventListener('click', (e) => {
+      const item = e.target.closest('.sugerencias-proveedor-cc__item')
+      if (!item || !item.dataset.id) return
+      const p = estado.maestros.proveedores.find(x => x.id === item.dataset.id)
+      if (!p) return
+      proveedorAsignarSeleccionado = p.id
+      document.getElementById('campo-asignar-proveedor-id').value = p.id
+      document.getElementById('campo-asignar-proveedor-buscar').value = p.razon_social
+      document.getElementById('sugerencias-asignar-proveedor').hidden = true
+    })
+    document.addEventListener('click', (e) => {
+      const grupo = document.getElementById('campo-asignar-proveedor-buscar')?.closest('.grupo-campo')
+      const sugerencias = document.getElementById('sugerencias-asignar-proveedor')
+      if (grupo && sugerencias && !grupo.contains(e.target)) sugerencias.hidden = true
+    })
+    document.getElementById('btn-cerrar-asignar-proveedor').addEventListener('click', cerrarModalAsignarProveedor)
+    document.getElementById('btn-cancelar-asignar-proveedor').addEventListener('click', cerrarModalAsignarProveedor)
+    document.querySelector('#modal-asignar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalAsignarProveedor)
+    document.getElementById('btn-confirmar-asignar-proveedor').addEventListener('click', confirmarAsignarProveedor)
+
+    // ── Ficha ──────────────────────────────────────────────────────────────
+    document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
+    document.getElementById('btn-registrar-pago').addEventListener('click', abrirModalPago)
+
+    // ── Modal: Registrar pago ─────────────────────────────────────────────
+    document.getElementById('campo-moneda-pago').addEventListener('change', () => {
+      actualizarSelectorCuentaPago()
+      programarActualizarSugerenciasPago()
+    })
+    document.getElementById('campo-monto-pago').addEventListener('input', programarActualizarSugerenciasPago)
+    document.getElementById('grilla-medio-pago-cc').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-tipo-doc')
+      if (!btn) return
+      seleccionarMedioPagoCC(btn.dataset.valor === medioPagoSeleccionado ? null : btn.dataset.valor)
+    })
+    document.getElementById('btn-cerrar-pago').addEventListener('click', cerrarModalPago)
+    document.getElementById('btn-cancelar-pago').addEventListener('click', cerrarModalPago)
+    document.querySelector('#modal-pago .modal-cc__backdrop').addEventListener('click', cerrarModalPago)
+    document.getElementById('btn-confirmar-pago').addEventListener('click', confirmarPago)
+
+    // ── Modal: Aplicar crédito ────────────────────────────────────────────
+    document.getElementById('campo-factura-credito').addEventListener('change', (e) => {
+      if (!creditoAAplicar || !e.target.value) return
+      // Prefill: lo que alcance primero, el saldo de la factura o el crédito disponible.
+      const opcionTexto = e.target.selectedOptions[0]?.textContent || ''
+      const match = opcionTexto.match(/saldo\s+[^\d]*([\d.,]+)/)
+      let saldoFactura = null
+      if (match) saldoFactura = parseImporte(match[1])
+      const sugerido = saldoFactura != null
+        ? Math.min(saldoFactura, Number(creditoAAplicar.monto_disponible))
+        : Number(creditoAAplicar.monto_disponible)
+      document.getElementById('campo-monto-credito').value = formatearNumeroEditable(sugerido)
+    })
+    document.getElementById('btn-cerrar-aplicar-credito').addEventListener('click', cerrarModalAplicarCredito)
+    document.getElementById('btn-cancelar-aplicar-credito').addEventListener('click', cerrarModalAplicarCredito)
+    document.querySelector('#modal-aplicar-credito .modal-cc__backdrop').addEventListener('click', cerrarModalAplicarCredito)
+    document.getElementById('btn-confirmar-aplicar-credito').addEventListener('click', confirmarAplicarCredito)
+
+    init()
+  </script>
+
+</body>
+</html>
