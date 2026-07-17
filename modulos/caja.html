@@ -961,11 +961,10 @@
       font-weight: 700;
     }
 
-    /* Desglose gestionable (ficha propia): la cuenta favorita colapsada y
-       las demás cuentas del desplegable comparten el mismo estilo de fila
-       blanca de renderizarFilaCuenta() — nada de chip oscuro acá (ver
-       renderizarDesglosePorCuenta()). El chip oscuro sigue existiendo tal
-       cual para conDueno=true y gestionable=false, sin cambios ahí. */
+    /* Desglose gestionable (ficha propia) y conDueno (Total de la empresa)
+       comparten el mismo estilo de fila blanca de renderizarFilaCuenta().
+       El chip oscuro solo sigue existiendo para gestionable=false (viendo
+       la ficha de otra persona) — ver renderizarDesglosePorCuenta(). */
     .desglose-cuentas-lista {
       display: block;
       width: 100%;
@@ -981,6 +980,55 @@
        (.desglose-medio-pago__chip{color:#fff}). Sobre la fila blanca de
        acá sería invisible sin este override. */
     .tarjeta-cuenta .desglose-medio-pago__flecha { color: var(--color-texto-suave); }
+
+    /* Línea chica extra debajo de "Banco", con la cuenta favorita ARS de
+       ese medio — exclusiva de Banco, Efectivo no la tiene. Siempre queda
+       sobre el degradado ámbar de .stat-card-caja (nunca dentro de la fila
+       blanca), por eso hereda el color:#fff de ahí en vez de un gris. */
+    .desglose-favorita-banco {
+      font-size: 0.75rem;
+      font-weight: 600;
+      opacity: 0.85;
+      padding: 0.125rem 0.625rem 0;
+    }
+
+    /* ── Modal: renombrar cuenta (mismo patrón que #modal-desactivar-cuenta) */
+
+    #modal-renombrar-cuenta {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #modal-renombrar-cuenta[hidden] { display: none; }
+
+    #modal-renombrar-cuenta__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+
+    #modal-renombrar-cuenta__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    @media (min-width: 641px) {
+      #modal-renombrar-cuenta { align-items: center; }
+      #modal-renombrar-cuenta__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -1262,6 +1310,25 @@
       <div class="modal-movimiento__acciones">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-desactivar-cuenta">Cancelar</button>
         <button type="button" class="btn btn--bordo-outline" id="btn-confirmar-desactivar-cuenta">Desactivar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: renombrar una cuenta (mismo patrón que #modal-desactivar-cuenta) -->
+  <div id="modal-renombrar-cuenta" hidden>
+    <div id="modal-renombrar-cuenta__backdrop"></div>
+    <div id="modal-renombrar-cuenta__panel">
+      <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-renombrar-cuenta" title="Cerrar">✕</button>
+      <h2>Renombrar cuenta</h2>
+
+      <div class="grupo-campo" style="margin-top:1rem;">
+        <label for="renombrar-cuenta-nombre">Nombre nuevo</label>
+        <input type="text" id="renombrar-cuenta-nombre" placeholder="Ej: Caja Chica">
+      </div>
+
+      <div class="modal-movimiento__acciones">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-renombrar-cuenta">Cancelar</button>
+        <button type="button" class="btn btn--primario" id="btn-guardar-renombrar-cuenta">Guardar</button>
       </div>
     </div>
   </div>
@@ -1597,122 +1664,103 @@
       return estado.saldos.filter(s => s.empleado_id === empleadoId)
     }
 
-    // Arma el desglose expandible por cuenta para UNA moneda puntual,
-    // agrupado por medio. cuentaIds acota el universo de cuentas a
-    // considerar (las de una persona puntual, o las de todas las visibles
-    // para el total de la empresa). Devuelve '' si no hay ninguna fila.
-    //   - Ficha de una persona (conDueno=false): colapsado muestra la cuenta
-    //     FAVORITA de esa combinación (o la más vieja por created_at si por
-    //     algún motivo no hay ninguna marcada — el modal "Nueva cuenta" ya
-    //     lo previene, pero esto evita que el render se rompa si igual pasa).
-    //     Desplegado: el resto de sus cuentas de esa combinación.
-    //   - Total de la empresa (conDueno=true): colapsado muestra la SUMA
-    //     total de esa combinación (mismo número que se veía antes).
-    //     Desplegado: cada cuenta individual, con el nombre de su dueño
-    //     adelante — acá "favorita" no aplica, es un concepto por persona.
-    function renderizarDesglosePorCuenta(cuentaIds, moneda, { conDueno = false, gestionable = false } = {}) {
-      const idsSet = new Set(cuentaIds)
-      const porMedio = {}
-      estado.saldosPorCuenta
-        .filter(f => idsSet.has(f.cuenta_id))
-        .forEach(f => {
-          const cuenta = estado.cuentasPorId[f.cuenta_id]
-          if (!cuenta || cuenta.moneda !== moneda) return
-          if (!porMedio[cuenta.medio]) porMedio[cuenta.medio] = []
-          porMedio[cuenta.medio].push({ ...cuenta, saldo: Number(f.saldo) })
-        })
+    // Saldo real de una cuenta puntual — 0 si todavía no tiene ninguna fila
+    // en estado.saldosPorCuenta (cuenta nueva sin movimientos). Antes el
+    // desglose se armaba iterando directamente estado.saldosPorCuenta, así
+    // que una cuenta en $0 no aparecía en ningún lado; ahora se itera sobre
+    // las cuentas reales (cuentaIds) y el saldo se busca acá aparte.
+    function saldoDeCuenta(cuentaId) {
+      const fila = estado.saldosPorCuenta.find(s => s.cuenta_id === cuentaId)
+      return fila ? Number(fila.saldo) : 0
+    }
 
-      const entradas = Object.entries(porMedio)
-      if (!entradas.length) return ''
+    const MEDIOS_DESGLOSE = ['efectivo', 'banco'] // orden fijo de visualización
 
-      const chips = entradas.map(([medio, cuentas]) => {
+    // Arma el desglose por CUENTA agrupado por medio (Efectivo / Banco) —
+    // ya no por medio+moneda. cuentaIds acota el universo de cuentas reales
+    // a considerar (las de una persona puntual, o las de todas las visibles
+    // para el total de la empresa) — se mapean contra estado.cuentasPorId,
+    // no se filtra estado.saldosPorCuenta, para que una cuenta en $0 sin
+    // movimientos todavía aparezca. Devuelve '' si no hay ninguna cuenta.
+    //   - Cada medio es UNA fila colapsada = la SUMA de sus cuentas en ARS
+    //     únicamente (ninguna otra moneda se suma nunca) + flecha. Al
+    //     desplegar: TODAS las cuentas de ese medio, de cualquier moneda,
+    //     cada una individual (incluidas las ARS, para ver el detalle de
+    //     la suma). La flecha se muestra siempre que haya al menos 1
+    //     cuenta — si se ocultara con una sola cuenta, alguien con una
+    //     única cuenta de Efectivo en USD vería "Efectivo: $0,00" (la suma
+    //     ARS) sin ninguna forma de desplegar y encontrar su saldo real.
+    //   - Banco además suma, debajo, una línea chica aparte con la cuenta
+    //     favorita ARS de ese medio (nombre + saldo) — exclusivo de Banco.
+    //     Favorita está escopeada por combinación medio+moneda (puede haber
+    //     favorita-Banco-ARS y favorita-Banco-USD a la vez); acá se usa
+    //     puntualmente la de ARS, coherente con que ARS es la moneda
+    //     "principal" en todo este esquema. No aplica en conDueno (favorita
+    //     es un concepto por persona, no de la empresa).
+    //   - conDueno=true ("Total de la empresa"): fila blanca sin favorita
+    //     ni acciones, cada cuenta desplegada con el nombre de su dueño
+    //     adelante (vía renderizarFilaCuenta(c, {mostrarDueño:true})).
+    //   - gestionable=true (ficha propia): fila blanca con ☆/×/✏️ en cada
+    //     cuenta (vía renderizarFilaCuenta(c, {gestionable:true})).
+    //   - gestionable=false (viendo la ficha de otra persona): chip oscuro,
+    //     sin ninguna acción — mismo estilo que ya tenía antes de este
+    //     cambio, CAMBIO 2 lo dejó afuera a propósito.
+    function renderizarDesglosePorCuenta(cuentaIds, { conDueno = false, gestionable = false } = {}) {
+      const cuentas = cuentaIds.map(id => estado.cuentasPorId[id]).filter(Boolean)
+      if (!cuentas.length) return ''
+
+      const chips = MEDIOS_DESGLOSE.map(medio => {
+        const cuentasDelMedio = cuentas.filter(c => c.medio === medio)
+        if (!cuentasDelMedio.length) return ''
+
+        const sumaARS = cuentasDelMedio
+          .filter(c => c.moneda === 'ARS')
+          .reduce((acc, c) => acc + saldoDeCuenta(c.id), 0)
+
+        const favoritaARS = (medio === 'banco' && !conDueno)
+          ? cuentasDelMedio.find(c => c.moneda === 'ARS' && c.favorita)
+          : null
+        const lineaFavoritaHtml = favoritaARS
+          ? `<div class="desglose-favorita-banco">★ ${favoritaARS.nombre}: ${formatearImporte(saldoDeCuenta(favoritaARS.id), 'ARS')}</div>`
+          : ''
+
+        const resumenHtml = `
+          <div class="tarjeta-cuenta__info">
+            <span class="tarjeta-cuenta__nombre">${MEDIO_CUENTA_LABEL[medio] || medio}</span>
+            <span class="tarjeta-cuenta__saldo">· ${formatearImporte(sumaARS, 'ARS')}</span>
+          </div>
+          <span class="desglose-medio-pago__flecha">▾</span>`
+
         if (conDueno) {
-          // Fila blanca igual que el resto de .tarjeta-cuenta — sin estrella
-          // de favorita ni botones ☆/×, no tiene sentido gestionar la
-          // cuenta de otra persona desde acá. Mismo contenido que ya había
-          // (total del medio colapsado, cada cuenta con su dueño desplegada).
-          const total = cuentas.reduce((acc, c) => acc + c.saldo, 0)
-          if (cuentas.length === 1) {
-            return `
-              <div class="tarjeta-cuenta">
-                <div class="tarjeta-cuenta__info">
-                  <span class="tarjeta-cuenta__nombre">${MEDIO_CUENTA_LABEL[medio] || medio}</span>
-                  <span class="tarjeta-cuenta__saldo">· ${formatearImporte(total, moneda)}</span>
-                </div>
-              </div>`
-          }
-          const filas = cuentas.map(c => `
-            <div class="tarjeta-cuenta">
-              <div class="tarjeta-cuenta__info">
-                <span class="tarjeta-cuenta__nombre">${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}</span>
-                <span class="tarjeta-cuenta__saldo">· ${formatearImporte(c.saldo, moneda)}</span>
-              </div>
-            </div>`).join('')
+          const filas = cuentasDelMedio.map(c => renderizarFilaCuenta(c, { mostrarDueño: true })).join('')
           return `
             <details class="desglose-cuentas-lista">
-              <summary class="tarjeta-cuenta">
-                <div class="tarjeta-cuenta__info">
-                  <span class="tarjeta-cuenta__nombre">${MEDIO_CUENTA_LABEL[medio] || medio}</span>
-                  <span class="tarjeta-cuenta__saldo">· ${formatearImporte(total, moneda)}</span>
-                </div>
-                <span class="desglose-medio-pago__flecha">▾</span>
-              </summary>
+              <summary class="tarjeta-cuenta">${resumenHtml}</summary>
               ${filas}
             </details>`
         }
-
-        let principal = cuentas.find(c => c.favorita)
-        if (!principal) principal = [...cuentas].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0]
-        const otras = cuentas.filter(c => c.id !== principal.id)
-
-        if (!otras.length) {
-          // Única cuenta de esta combinación: por construcción ya es la
-          // favorita (esPrimeraCuentaDeCombinacion la fuerza al crearla), y
-          // renderizarFilaCuenta() no muestra botones sobre una favorita —
-          // no hay nada que gestionar. En gestionable=true igual pasa a
-          // usar el estilo de fila blanca (consistencia visual con el
-          // resto del listado), sin flecha (nada para desplegar) y sin
-          // botones (nada para gestionar).
-          if (gestionable) {
-            return `
-              <div class="tarjeta-cuenta">
-                <div class="tarjeta-cuenta__info">
-                  <span class="tarjeta-cuenta__nombre">${principal.nombre}</span>
-                  <span class="chip-favorita">★</span>
-                  <span class="tarjeta-cuenta__saldo">· ${formatearImporte(principal.saldo, moneda)}</span>
-                </div>
-              </div>`
-          }
-          return `<span class="desglose-medio-pago__chip">${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}</span>`
-        }
-        const filas = otras.map(c => gestionable
-          ? renderizarFilaCuenta(c)
-          : `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(c.saldo, moneda)}</div>`
-        ).join('')
 
         if (gestionable) {
-          // Mismo estilo de fila blanca para la favorita colapsada (en el
-          // <summary>) y para el resto — nada de chip oscuro acá, y sin
-          // ningún separador entre la primera fila y las demás (pedido
-          // explícito de que se vea como un solo listado, sin salto visual).
+          const filas = cuentasDelMedio.map(c => renderizarFilaCuenta(c, { gestionable: true })).join('')
           return `
             <details class="desglose-cuentas-lista">
-              <summary class="tarjeta-cuenta">
-                <div class="tarjeta-cuenta__info">
-                  <span class="tarjeta-cuenta__nombre">${principal.nombre}</span>
-                  ${principal.favorita ? '<span class="chip-favorita">★</span>' : ''}
-                  <span class="tarjeta-cuenta__saldo">· ${formatearImporte(principal.saldo, moneda)}</span>
-                </div>
-                <span class="desglose-medio-pago__flecha">▾</span>
-              </summary>
+              <summary class="tarjeta-cuenta">${resumenHtml}</summary>
               ${filas}
-            </details>`
+            </details>
+            ${lineaFavoritaHtml}`
         }
+
+        // gestionable=false: chip oscuro, sin ninguna acción — mismo estilo
+        // que ya tenía antes de este cambio.
+        const filas = cuentasDelMedio
+          .map(c => `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(saldoDeCuenta(c.id), c.moneda)}</div>`)
+          .join('')
         return `
           <details class="desglose-medio-pago__chip">
-            <summary>${principal.nombre}: ${formatearImporte(principal.saldo, moneda)}<span class="desglose-medio-pago__flecha">▾</span></summary>
+            <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(sumaARS, 'ARS')}<span class="desglose-medio-pago__flecha">▾</span></summary>
             <div class="desglose-cuenta__resto">${filas}</div>
-          </details>`
+          </details>
+          ${lineaFavoritaHtml}`
       }).join('')
 
       return `<div class="desglose-medio-pago">${chips}</div>`
@@ -1921,12 +1969,10 @@
         ? monedas.map(m => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(totalesPorMoneda[m], m)}</span>`).join('')
         : `<span class="stat-card-caja__monto">${formatearImporte(0, 'ARS')}</span>`
 
-      // Ya viene envuelto en .desglose-medio-pago (o '' si no hay filas) —
-      // no hace falta un wrapper extra por moneda.
+      // Ya viene envuelto en .desglose-medio-pago (o '' si no hay cuentas) —
+      // una sola llamada, ya no una por moneda (ver renderizarDesglosePorCuenta()).
       const cuentaIdsVisibles = estado.empleados.flatMap(e => cuentasDe(e.id).map(c => c.id))
-      const desgloseHtml = monedas
-        .map(m => renderizarDesglosePorCuenta(cuentaIdsVisibles, m, { conDueno: true }))
-        .join('')
+      const desgloseHtml = renderizarDesglosePorCuenta(cuentaIdsVisibles, { conDueno: true })
 
       cont.innerHTML = `
         <div class="stat-card-caja">
@@ -2112,7 +2158,7 @@
       // ya se distingue en cada monto por el prefijo de formatearImporte
       // (USD vs $), no hace falta repetirla en el label.
       const montosHtml = lista.map(s => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(s.saldo, s.moneda)}</span>`).join('')
-      const desgloseHtml = lista.map(s => renderizarDesglosePorCuenta(cuentaIds, s.moneda, { gestionable: esPropia })).join('')
+      const desgloseHtml = renderizarDesglosePorCuenta(cuentaIds, { gestionable: esPropia })
       const botonNuevaCuenta = esPropia
         ? `<button type="button" class="saldo-card__nueva-cuenta" id="btn-saldo-nueva-cuenta" title="Nueva cuenta" aria-label="Nueva cuenta">+</button>`
         : ''
@@ -2141,6 +2187,9 @@
         })
         cont.querySelectorAll('[data-accion="desactivar-cuenta"]').forEach(btn => {
           btn.addEventListener('click', () => abrirModalDesactivarCuenta(btn.dataset.id))
+        })
+        cont.querySelectorAll('[data-accion="renombrar-cuenta"]').forEach(btn => {
+          btn.addEventListener('click', () => abrirModalRenombrarCuenta(btn.dataset.id))
         })
       }
     }
@@ -2463,21 +2512,28 @@
     // GESTIÓN DE CUENTAS PROPIAS (CAMBIO 2)
     // ═══════════════════════════════════════════════════════════════════════
 
-    function renderizarFilaCuenta(c) {
-      const fila = estado.saldosPorCuenta.find(s => s.cuenta_id === c.id)
-      const saldo = formatearImporte(fila ? Number(fila.saldo) : 0, c.moneda)
+    // mostrarDueño: para conDueno, antepone "Dueño — nombre" en vez de solo
+    // el nombre de la cuenta. gestionable: muestra las acciones (☆/×/✏️) —
+    // nunca fuera de la ficha propia, ni en conDueno ni viendo la ficha de
+    // otra persona.
+    function renderizarFilaCuenta(c, { mostrarDueño = false, gestionable = false } = {}) {
+      const saldo = formatearImporte(saldoDeCuenta(c.id), c.moneda)
+      const nombre = mostrarDueño ? `${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}` : c.nombre
       // Botones-ícono chicos en vez de texto completo — mismo criterio de
       // caracteres simples que ya usa el "▾" del desglose (sin Lucide acá
-      // a propósito). Solo en cuentas no favoritas, como ya era el caso.
-      const accionesHtml = c.favorita ? '' : `
+      // a propósito). ☆/× solo en cuentas no favoritas, ✏️ en todas.
+      const accionesHtml = gestionable ? `
         <div class="tarjeta-cuenta__acciones">
-          <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="favorita-cuenta" data-id="${c.id}" aria-label="Marcar como favorita" title="Marcar como favorita">☆</button>
-          <button type="button" class="tarjeta-cuenta__boton-icono tarjeta-cuenta__boton-icono--peligro" data-accion="desactivar-cuenta" data-id="${c.id}" aria-label="Desactivar cuenta" title="Desactivar cuenta">×</button>
-        </div>`
+          ${c.favorita ? '' : `
+            <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="favorita-cuenta" data-id="${c.id}" aria-label="Marcar como favorita" title="Marcar como favorita">☆</button>
+            <button type="button" class="tarjeta-cuenta__boton-icono tarjeta-cuenta__boton-icono--peligro" data-accion="desactivar-cuenta" data-id="${c.id}" aria-label="Desactivar cuenta" title="Desactivar cuenta">×</button>
+          `}
+          <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="renombrar-cuenta" data-id="${c.id}" aria-label="Renombrar cuenta" title="Renombrar cuenta">✏️</button>
+        </div>` : ''
       return `
         <div class="tarjeta-cuenta">
           <div class="tarjeta-cuenta__info">
-            <span class="tarjeta-cuenta__nombre">${c.nombre}</span>
+            <span class="tarjeta-cuenta__nombre">${nombre}</span>
             ${c.favorita ? '<span class="chip-favorita">★</span>' : ''}
             <span class="tarjeta-cuenta__saldo">· ${saldo}</span>
           </div>
@@ -2486,8 +2542,8 @@
     }
 
     // Recarga cuentas + saldos por cuenta de una persona y vuelve a pintar
-    // la card de saldo — la gestión de cuentas (marcar favorita/desactivar)
-    // ahora vive fusionada ahí adentro, ver renderizarDesglosePorCuenta().
+    // la card de saldo — la gestión de cuentas (marcar favorita/desactivar/
+    // renombrar) ahora vive fusionada ahí adentro, ver renderizarDesglosePorCuenta().
     async function refrescarCuentasYSaldos(empleadoId) {
       await cargarCuentas([empleadoId])
       await cargarSaldosPorCuenta(cuentasDe(empleadoId).map(c => c.id))
@@ -2538,6 +2594,50 @@
     document.getElementById('btn-cancelar-desactivar-cuenta').addEventListener('click', cerrarModalDesactivarCuenta)
     document.getElementById('modal-desactivar-cuenta__backdrop').addEventListener('click', cerrarModalDesactivarCuenta)
     document.getElementById('btn-confirmar-desactivar-cuenta').addEventListener('click', confirmarDesactivarCuenta)
+
+    // renombrar_cuenta_caja SOLO cambia el nombre, nunca medio ni moneda —
+    // mismo patrón de modal bottom-sheet que #modal-desactivar-cuenta.
+    let cuentaARenombrarId = null
+
+    function abrirModalRenombrarCuenta(id) {
+      cuentaARenombrarId = id
+      document.getElementById('renombrar-cuenta-nombre').value = estado.cuentasPorId[id]?.nombre || ''
+      document.getElementById('modal-renombrar-cuenta').hidden = false
+    }
+
+    function cerrarModalRenombrarCuenta() {
+      document.getElementById('modal-renombrar-cuenta').hidden = true
+      cuentaARenombrarId = null
+    }
+
+    async function confirmarRenombrarCuenta() {
+      if (!cuentaARenombrarId) return
+      const nuevoNombre = document.getElementById('renombrar-cuenta-nombre').value.trim()
+      if (!nuevoNombre) { mostrarError('Ingresá un nombre.'); return }
+
+      const id = cuentaARenombrarId
+      const btn = document.getElementById('btn-guardar-renombrar-cuenta')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        const { error } = await supabase.rpc('renombrar_cuenta_caja', { p_cuenta_id: id, p_nuevo_nombre: nuevoNombre })
+        if (error) throw error
+        mostrarExito('Cuenta renombrada.')
+        cerrarModalRenombrarCuenta()
+        await refrescarCuentasYSaldos(estado.miEmpleado.id)
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo renombrar la cuenta.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    document.getElementById('btn-cerrar-renombrar-cuenta').addEventListener('click', cerrarModalRenombrarCuenta)
+    document.getElementById('btn-cancelar-renombrar-cuenta').addEventListener('click', cerrarModalRenombrarCuenta)
+    document.getElementById('modal-renombrar-cuenta__backdrop').addEventListener('click', cerrarModalRenombrarCuenta)
+    document.getElementById('btn-guardar-renombrar-cuenta').addEventListener('click', confirmarRenombrarCuenta)
 
     // Es la primera cuenta activa que tendría el usuario para esta
     // combinación medio+moneda — si es así, va a ser favorita sí o sí.
@@ -2908,19 +3008,31 @@
         candidatos.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')
     }
 
-    function opcionesCuenta(cuentas) {
+    // favoritaId es opcional — si se pasa, esa cuenta arranca preseleccionada
+    // en vez de "— Seleccioná —" (ver favoritaEfectivoARS()).
+    function opcionesCuenta(cuentas, favoritaId) {
       return '<option value="">— Seleccioná —</option>' +
-        cuentas.map(c => `<option value="${c.id}">${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})</option>`).join('')
+        cuentas.map(c => `<option value="${c.id}" ${c.id === favoritaId ? 'selected' : ''}>${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})</option>`).join('')
+    }
+
+    // La cuenta que se preselecciona por defecto en los selectores "propios"
+    // de los modales de Ingreso/Egreso/Retiro/Traspaso. Favorita está
+    // escopeada por combinación medio+moneda (puede haber favorita-Efectivo-
+    // ARS y favorita-Efectivo-USD a la vez) — acá se usa puntualmente la de
+    // Efectivo+ARS, la combinación más habitual. Si no existe, no preselecciona
+    // nada (queda "— Seleccioná —", como siempre).
+    function favoritaEfectivoARS(empleadoId) {
+      return cuentasDe(empleadoId).find(c => c.medio === 'efectivo' && c.moneda === 'ARS' && c.favorita)?.id || null
     }
 
     // Retiro e Ingreso externo: un solo selector, siempre sobre la propia ficha.
     function poblarSelectorCuentaUnica(empleadoId) {
-      document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(empleadoId))
+      document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(empleadoId), favoritaEfectivoARS(empleadoId))
     }
 
     // Ingreso propio / Egreso: "Tu cuenta" — siempre las propias.
     function poblarSelectorCuentaPropia() {
-      document.getElementById('cuenta-propia-select').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id))
+      document.getElementById('cuenta-propia-select').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id), favoritaEfectivoARS(estado.miEmpleado.id))
     }
 
     // Ingreso propio / Egreso: "Cuenta de la contraparte" — se repuebla cada
@@ -3156,7 +3268,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function poblarSelectoresTraspaso() {
-      document.getElementById('traspaso-cuenta-origen').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id))
+      document.getElementById('traspaso-cuenta-origen').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id), favoritaEfectivoARS(estado.miEmpleado.id))
       actualizarSelectorDestinoTraspaso()
     }
 
