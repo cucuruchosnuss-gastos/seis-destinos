@@ -10,6 +10,7 @@ Campos a extraer:
 - tipo_doc: tipo de comprobante. Debe ser exactamente uno de: "Factura A", "Factura B", "Factura C", "Ticket", "Remito", "Nota de crédito", "Otro"
 - numero_doc: número del comprobante incluyendo el punto de venta (ej: "0001-00012345")
 - razon_social: nombre o razón social de quien EMITE el comprobante (el vendedor/proveedor, no el comprador)
+- cuit: CUIT de quien EMITE el comprobante (el vendedor/proveedor), solo dígitos sin guiones (ej: "30123456789"). Si no está visible o no es legible, usá null.
 - importe: importe TOTAL a pagar como número. Sin símbolos de moneda, sin puntos de miles, con punto decimal (ej: 15400.50)
 - moneda: "ARS" si es en pesos argentinos, "USD" si es en dólares. Por defecto "ARS".
 - receptor: nombre o razón social de quien RECIBE el comprobante (el comprador). Buscalo en los campos "SEÑOR:", "Razón Social Receptor", "Cliente:", "A nombre de:" o similares. IMPORTANTE: el campo puede empezar con un número de cliente seguido del nombre (ej: "1979 PAZ MIRTA"). Devolvé SOLO el nombre, sin el número ni espacios al inicio. Si no figura receptor, usá null.
@@ -26,6 +27,7 @@ Formato de respuesta (únicamente esto):
   "tipo_doc": "..." | null,
   "numero_doc": "..." | null,
   "razon_social": "..." | null,
+  "cuit": "..." | null,
   "importe": número | null,
   "moneda": "ARS" | "USD",
   "receptor": "..." | null,

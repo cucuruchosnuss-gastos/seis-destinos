@@ -16,6 +16,9 @@
       overflow-x: hidden;
       --amarillo:        #C99A2E;
       --amarillo-hover:  #B3862A;
+      --turquesa:        #3FBFAE;
+      --turquesa-suave:  #E8FBF7;
+      --turquesa-oscuro: #1E8C7C;
     }
 
     /* Botón "Enviar a pendiente de pago" — grande y amarillo a propósito,
@@ -29,38 +32,16 @@
     }
     .btn-pendiente:hover { background: var(--amarillo-hover); }
 
-    /* ── Facturas pendientes ──────────────────────────────────────────────── */
-
-    /* Botón "✕ Anular" — chico, esquina de la tarjeta (misma posición que ya
-       usa .gasto__punto-estado ahí, position:absolute sobre .tarjeta-lista
-       relativa). Visible siempre; el backend valida quién puede ejecutarlo
-       con éxito. */
-    .btn-anular-factura {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.625rem;
-      width: 22px;
-      height: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      border: 1px solid rgba(239,68,68,0.3);
-      border-radius: 50%;
-      background: rgba(239,68,68,0.08);
-      color: var(--color-error);
-      font-size: 0.75rem;
-      line-height: 1;
-      cursor: pointer;
-    }
-    .btn-anular-factura:hover { background: rgba(239,68,68,0.16); }
-
-    /* Botón "Pagar" — al lado del importe, dentro de .gasto__derecha. */
-    .btn-pagar-factura {
+    /* Botón "Ver cuentas corrientes" — con fondo, no un link plano, para que
+       se note que lleva a otro módulo (mismo criterio de acento local que
+       Empleados/Accesos). */
+    .btn-cuentas-corrientes {
       width: auto;
-      padding: 0.5rem 1rem;
-      font-size: 0.8125rem;
+      background: var(--turquesa-suave);
+      border: 1.5px solid var(--turquesa);
+      color: var(--turquesa-oscuro);
     }
+    .btn-cuentas-corrientes:hover { background: #D6F5EE; }
 
     /* ── Selector de proveedor (buscador tipo combobox) en sp-detalles,
        solo para el flujo "pendiente" ─────────────────────────────────── */
@@ -104,38 +85,19 @@
     }
     .btn-link-proveedor:hover { text-decoration: underline; }
 
-    /* ── Modal: pagar una factura pendiente (mismo patrón bottom-sheet que
-       ya usa caja.html en #modal-desactivar-cuenta) ───────────────────── */
-
-    #modal-pagar-factura {
-      position: fixed;
-      inset: 0;
-      z-index: 60;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
+    /* Señal chica cuando el proveedor se autoseleccionó por matching de
+       CUIT/razón social del OCR — nunca silencioso, ver
+       intentarMatchAutomaticoProveedor(). */
+    .proveedor-auto-match {
+      display: block;
+      margin-top: 0.375rem;
+      font-size: 0.8125rem;
+      color: var(--turquesa-oscuro);
+      font-weight: 600;
     }
 
-    #modal-pagar-factura[hidden] { display: none; }
-
-    #modal-pagar-factura__backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(17,17,17,0.45);
-    }
-
-    #modal-pagar-factura__panel {
-      position: relative;
-      background: var(--color-fondo);
-      width: 100%;
-      max-height: 92dvh;
-      overflow-y: auto;
-      border-radius: 20px 20px 0 0;
-      padding: 1.25rem 1.25rem 1.5rem;
-    }
-
-    /* Modal: cargar proveedor nuevo — mismo patrón bottom-sheet que
-       #modal-pagar-factura, arriba. */
+    /* Modal: cargar proveedor nuevo — mismo patrón bottom-sheet que ya usa
+       caja.html en #modal-desactivar-cuenta. */
     #modal-proveedor-nuevo {
       position: fixed;
       inset: 0;
@@ -162,15 +124,6 @@
     @media (min-width: 641px) {
       #modal-proveedor-nuevo { align-items: center; }
       #modal-proveedor-nuevo__panel {
-        max-width: 440px;
-        border-radius: 20px;
-        box-shadow: var(--sombra-hover);
-      }
-    }
-
-    @media (min-width: 641px) {
-      #modal-pagar-factura { align-items: center; }
-      #modal-pagar-factura__panel {
         max-width: 440px;
         border-radius: 20px;
         box-shadow: var(--sombra-hover);
@@ -1242,7 +1195,7 @@
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem;">
 
       <div style="display:flex; justify-content:flex-end; margin:0.875rem 0 0;">
-        <button type="button" class="btn btn--secundario" id="btn-ver-facturas-pendientes" style="width:auto;">🧾 Facturas pendientes</button>
+        <a href="cuentas-corrientes.html" class="btn btn-cuentas-corrientes">🧾 Ver cuentas corrientes</a>
       </div>
 
       <div class="segmented-rango" id="segmented-rango-rapido">
@@ -1272,32 +1225,6 @@
     <button class="btn-fab" id="btn-nuevo-gasto" title="Nuevo gasto">+</button>
 
   </div><!-- /vista-lista -->
-
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       VISTA — FACTURAS PENDIENTES
-  ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="vista-facturas-pendientes" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-cerrar-facturas-pendientes">← Volver</button>
-      <span class="header__nombre-app">Facturas pendientes</span>
-      <div style="width:2rem;"></div>
-    </header>
-
-    <div style="padding:1.25rem; max-width:1120px; margin:0 auto; width:100%;">
-      <div id="estado-cargando-facturas" class="estado-vacio">
-        <div class="spinner"></div>
-        <p class="estado-vacio__descripcion">Cargando…</p>
-      </div>
-
-      <div class="lista-contenido" id="lista-facturas-pendientes"></div>
-
-      <div id="estado-vacio-facturas" class="estado-vacio" hidden>
-        <div class="estado-vacio__icono">🧾</div>
-        <div class="estado-vacio__titulo">No hay facturas pendientes</div>
-      </div>
-    </div>
-  </div><!-- /vista-facturas-pendientes -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -1525,6 +1452,7 @@
             <input type="text" id="campo-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off">
             <input type="hidden" id="campo-proveedor-id">
             <div class="sugerencias-proveedor" id="sugerencias-proveedor" hidden></div>
+            <span class="proveedor-auto-match" id="proveedor-auto-match" hidden>✓ encontrado automáticamente</span>
             <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
           </div>
 
@@ -1574,45 +1502,6 @@
     <div style="padding: 1rem; overflow-y: auto;" id="detalle-gasto-contenido"></div>
   </div><!-- /modal-detalle-gasto -->
 
-  <!-- Modal: pagar una factura pendiente (mismo patrón bottom-sheet que ya
-       usa caja.html en #modal-desactivar-cuenta) -->
-  <div id="modal-pagar-factura" hidden>
-    <div id="modal-pagar-factura__backdrop"></div>
-    <div id="modal-pagar-factura__panel">
-      <button type="button" class="btn btn--icono modal-pagar-factura__cerrar" id="btn-cerrar-pagar-factura" title="Cerrar">✕</button>
-      <h2>Pagar factura</h2>
-      <p id="pagar-factura-texto" style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;"></p>
-
-      <div class="formulario">
-        <div class="grupo-campo">
-          <label>Medio de pago</label>
-          <div class="grilla-medio-pago" id="grilla-medio-pago-factura">
-            <button type="button" class="btn-tipo-doc" data-valor="efectivo">Efectivo</button>
-            <button type="button" class="btn-tipo-doc" data-valor="transferencia">Transferencia / QR</button>
-            <button type="button" class="btn-tipo-doc" data-valor="cheque">Cheque</button>
-          </div>
-        </div>
-
-        <div class="grupo-campo">
-          <label for="campo-fecha-pago-factura">Fecha de pago</label>
-          <input type="date" id="campo-fecha-pago-factura">
-        </div>
-
-        <div class="grupo-campo" id="grupo-cuenta-pago-factura" style="display:none;">
-          <label for="campo-cuenta-pago-factura">Cuenta <span class="etiqueta-opcional">opcional</span></label>
-          <select id="campo-cuenta-pago-factura">
-            <option value="">— Sin cuenta —</option>
-          </select>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
-        <button type="button" class="btn btn--secundario" id="btn-cancelar-pagar-factura">Cancelar</button>
-        <button type="button" class="btn btn--exito" id="btn-confirmar-pagar-factura">Confirmar pago</button>
-      </div>
-    </div>
-  </div><!-- /modal-pagar-factura -->
-
   <!-- Modal: cargar un proveedor nuevo desde el wizard de "pendiente" cuando
        no aparece en el buscador. Llama a crear_proveedor_pendiente(); el
        proveedor queda oculto en el resto de la app hasta que un admin lo
@@ -1620,7 +1509,7 @@
   <div id="modal-proveedor-nuevo" hidden>
     <div id="modal-proveedor-nuevo__backdrop"></div>
     <div id="modal-proveedor-nuevo__panel">
-      <button type="button" class="btn btn--icono modal-pagar-factura__cerrar" id="btn-cerrar-proveedor-nuevo" title="Cerrar">✕</button>
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-proveedor-nuevo" title="Cerrar">✕</button>
       <h2>Cargar proveedor nuevo</h2>
       <p style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;">
         Queda pendiente de aprobación — un administrador lo revisa desde Cuentas Corrientes.
@@ -1667,8 +1556,6 @@
       sesion:       null,
       rol:          'usuario',
       miEmpleadoId: null,
-      miRolApp:     null, // empleados.rol_app real — solo para gatear "Pagar" en Facturas pendientes,
-                           // no reemplaza estado.rol (obtenerRol(), mecanismo ya existente sin tocar)
       cuentasPorId: {}, // id -> {id, empleado_id, nombre, medio, moneda, favorita, activa,
                          // created_at} — se completa bajo demanda por persona (cargarCuentasDe),
                          // mismo criterio que caja.html: sin filtrar por activa acá, se filtra
@@ -1698,6 +1585,9 @@
         fotoUrl:      null,
         camposOcr:    new Set(),
         esPendiente:  false, // true si se tocó "Enviar a pendiente de pago" en vez de "Siguiente" en Datos
+        cuitOcr:      null,  // CUIT del emisor que extrajo el OCR — no hay campo visible, se usa
+                              // solo para el matching automático de proveedor y el prellenado del
+                              // modal "Cargar proveedor nuevo"
       },
     }
 
@@ -1710,11 +1600,6 @@
     let vehiculoFueElegido    = false // true cuando el usuario tapeó un vehículo o "Sin vehículo"
     let viaVehiculos          = false // true cuando llegó por la tarjeta Vehículos
     let proveedorSeleccionado = null  // id de proveedores, solo se usa en el flujo "pendiente"
-
-    // Modal "Pagar factura" — fuera del estado, mismo criterio que las
-    // selecciones del wizard de arriba.
-    let facturaAPagar             = null // factura completa (necesito empleado_id para las cuentas)
-    let medioPagoFacturaSeleccionado = null
 
     // Mapeo: sub-paso → número de círculo en la barra de progreso (1-5)
     const SUBPASO_A_CIRCULO = {
@@ -1897,12 +1782,11 @@
 
     const { data: emp } = await supabase
       .from('empleados')
-      .select('id, rol_app')
+      .select('id')
       .eq('auth_user_id', estado.sesion.user.id)
       .maybeSingle()
     if (emp) {
       estado.miEmpleadoId = emp.id
-      estado.miRolApp     = emp.rol_app
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2448,201 +2332,6 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // FACTURAS PENDIENTES
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function puedePagarFacturas() {
-      return estado.miRolApp === 'admin' || estado.miRolApp === 'super_admin'
-    }
-
-    // Sin filtro por empleado_id acá a propósito — la visibilidad la
-    // resuelve RLS del lado del servidor (usuario común ve solo las suyas,
-    // admin/super_admin ven todas), no hace falta duplicarlo en el cliente.
-    async function cargarFacturasPendientes() {
-      const listaEl    = document.getElementById('lista-facturas-pendientes')
-      const vaciEl     = document.getElementById('estado-vacio-facturas')
-      const cargandoEl = document.getElementById('estado-cargando-facturas')
-
-      listaEl.innerHTML = ''
-      vaciEl.hidden     = true
-      cargandoEl.hidden = false
-
-      const { data: facturas, error } = await supabase
-        .from('facturas_pendientes')
-        .select(`
-          id, razon_social, tipo_documento, numero_comprobante, importe, moneda,
-          empleado_id, fecha_factura, lugar, observaciones, comprobante_url,
-          unidad_negocio_id, vehiculo_id, kilometraje, proyecto_id, proveedor_id,
-          categorias (id, nombre, icon),
-          empleados  (id, nombre)
-        `)
-        .eq('estado', 'pendiente')
-        .order('fecha_factura', { ascending: false })
-
-      cargandoEl.hidden = true
-
-      if (error) {
-        console.error(error)
-        mostrarError('Error al cargar las facturas pendientes.')
-        vaciEl.hidden = false
-        return
-      }
-
-      estado.listaFacturasPendientes = facturas ?? []
-
-      if (!facturas?.length) {
-        vaciEl.hidden = false
-        return
-      }
-
-      listaEl.innerHTML = facturas.map(renderizarCardFacturaPendiente).join('')
-      lucide.createIcons()
-
-      listaEl.querySelectorAll('.btn-anular-factura').forEach(btn => {
-        btn.addEventListener('click', (e) => { e.stopPropagation(); anularFactura(btn.dataset.id) })
-      })
-      listaEl.querySelectorAll('.btn-pagar-factura').forEach(btn => {
-        btn.addEventListener('click', (e) => { e.stopPropagation(); abrirModalPagarFactura(btn.dataset.id) })
-      })
-    }
-
-    function renderizarCardFacturaPendiente(f) {
-      const categoria   = f.categorias?.nombre ?? null
-      const razonSocial = f.razon_social ?? '(sin razón social)'
-      const importe     = formatearImporte(f.importe, f.moneda)
-      const fecha       = formatearFecha(f.fecha_factura)
-
-      const categoriaChip = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${categoria}</span>` : ''
-      // Facturas con proveedor vinculado se pagan desde Cuentas Corrientes
-      // (registrar_pago_proveedor deja rastro en aplicaciones_pago/saldo
-      // pendiente; esta pagar_factura_pendiente vieja no). El botón acá
-      // queda solo para el caso residual sin proveedor.
-      const botonPagar    = (puedePagarFacturas() && f.proveedor_id == null)
-        ? `<button type="button" class="btn btn--exito btn-pagar-factura" data-id="${f.id}">Pagar</button>`
-        : ''
-
-      return `
-        <div class="tarjeta-lista" data-id="${f.id}" style="position:relative;">
-          <button type="button" class="btn-anular-factura" data-id="${f.id}" title="Anular" aria-label="Anular">✕</button>
-          <div class="tarjeta-lista__avatar">
-            <span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${inicialesEmpresa(razonSocial)}</span>
-          </div>
-          <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${razonSocial}</div>
-            <div class="gasto__meta">
-              ${categoriaChip}
-              <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${fecha}</span>
-            </div>
-          </div>
-          <div class="gasto__derecha">
-            <div class="gasto__importe">${importe}</div>
-            ${botonPagar}
-          </div>
-        </div>
-      `
-    }
-
-    async function anularFactura(id) {
-      if (!confirm('¿Seguro que querés anular esta factura?')) return
-      const { error } = await supabase.rpc('anular_factura_pendiente', { factura_id: id })
-      if (error) { mostrarError(error.message || 'No se pudo anular la factura.'); return }
-      mostrarExito('Factura anulada.')
-      cargarFacturasPendientes()
-    }
-
-    // El medio de pago define si tiene sentido mostrar "Cuenta" (mismo
-    // criterio que actualizarSelectorCuentaGasto() del wizard) — acá la
-    // cuenta es opcional, así que no bloquea el guardado si queda vacía.
-    async function actualizarSelectorCuentaFactura() {
-      const grupo = document.getElementById('grupo-cuenta-pago-factura')
-      const sel   = document.getElementById('campo-cuenta-pago-factura')
-
-      if (medioPagoFacturaSeleccionado !== 'efectivo' && medioPagoFacturaSeleccionado !== 'transferencia') {
-        grupo.style.display = 'none'
-        return
-      }
-      if (!facturaAPagar?.empleado_id) {
-        grupo.style.display = 'none'
-        return
-      }
-
-      await cargarCuentasDe(facturaAPagar.empleado_id)
-      const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medioPagoFacturaSeleccionado]
-      const candidatas  = cuentasDe(facturaAPagar.empleado_id).filter(c => c.medio === medioCuenta)
-
-      grupo.style.display = 'flex'
-      poblarSelect('campo-cuenta-pago-factura', candidatas,
-        c => ({ value: c.id, label: `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }),
-        '— Sin cuenta —')
-    }
-
-    function abrirModalPagarFactura(id) {
-      const f = estado.listaFacturasPendientes.find(x => x.id === id)
-      if (!f) return
-
-      facturaAPagar = f
-      medioPagoFacturaSeleccionado = null
-
-      document.getElementById('pagar-factura-texto').textContent =
-        `${f.razon_social || '(sin razón social)'} — ${formatearImporte(f.importe, f.moneda)}`
-      document.getElementById('campo-fecha-pago-factura').value = fechaISO(new Date())
-      document.querySelectorAll('#grilla-medio-pago-factura .btn-tipo-doc').forEach(btn => {
-        btn.classList.remove('btn-tipo-doc--seleccionado')
-      })
-      document.getElementById('grupo-cuenta-pago-factura').style.display = 'none'
-
-      document.getElementById('modal-pagar-factura').hidden = false
-    }
-
-    function cerrarModalPagarFactura() {
-      document.getElementById('modal-pagar-factura').hidden = true
-      facturaAPagar = null
-      medioPagoFacturaSeleccionado = null
-    }
-
-    async function confirmarPagarFactura() {
-      if (!facturaAPagar) return
-      if (!medioPagoFacturaSeleccionado) { mostrarError('Seleccioná el medio de pago.'); return }
-      const fechaPago = document.getElementById('campo-fecha-pago-factura').value
-      if (!fechaPago) { mostrarError('Completá la fecha de pago.'); return }
-
-      const btn = document.getElementById('btn-confirmar-pagar-factura')
-      btn.classList.add('btn--cargando')
-      btn.disabled = true
-
-      try {
-        const { error } = await supabase.rpc('pagar_factura_pendiente', {
-          factura_id:   facturaAPagar.id,
-          p_medio_pago: medioPagoFacturaSeleccionado,
-          p_fecha_pago: fechaPago,
-          p_cuenta_id:  document.getElementById('campo-cuenta-pago-factura').value || null,
-        })
-        if (error) throw new Error(error.message)
-
-        mostrarExito('¡Factura pagada!')
-        cerrarModalPagarFactura()
-        cargarFacturasPendientes()
-      } catch (err) {
-        console.error(err)
-        mostrarError(`Error al pagar: ${err.message}`)
-      } finally {
-        btn.classList.remove('btn--cargando')
-        btn.disabled = false
-      }
-    }
-
-    function abrirFacturasPendientes() {
-      document.getElementById('vista-lista').hidden = true
-      document.getElementById('vista-facturas-pendientes').removeAttribute('hidden')
-      cargarFacturasPendientes()
-    }
-
-    function cerrarFacturasPendientes() {
-      document.getElementById('vista-facturas-pendientes').hidden = true
-      document.getElementById('vista-lista').removeAttribute('hidden')
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
     // NAVEGACIÓN VISTAS
     // ═══════════════════════════════════════════════════════════════════════
     async function abrirWizard() {
@@ -2663,25 +2352,6 @@
 
     document.getElementById('btn-nuevo-gasto').addEventListener('click', abrirWizard)
     document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
-
-    // ── Facturas pendientes ────────────────────────────────────────────────
-    document.getElementById('btn-ver-facturas-pendientes').addEventListener('click', abrirFacturasPendientes)
-    document.getElementById('btn-cerrar-facturas-pendientes').addEventListener('click', cerrarFacturasPendientes)
-
-    document.getElementById('grilla-medio-pago-factura').addEventListener('click', (e) => {
-      const btn = e.target.closest('.btn-tipo-doc')
-      if (!btn) return
-      medioPagoFacturaSeleccionado = btn.dataset.valor
-      document.querySelectorAll('#grilla-medio-pago-factura .btn-tipo-doc').forEach(b => {
-        b.classList.toggle('btn-tipo-doc--seleccionado', b === btn)
-      })
-      actualizarSelectorCuentaFactura()
-    })
-
-    document.getElementById('btn-cerrar-pagar-factura').addEventListener('click', cerrarModalPagarFactura)
-    document.getElementById('btn-cancelar-pagar-factura').addEventListener('click', cerrarModalPagarFactura)
-    document.getElementById('modal-pagar-factura__backdrop').addEventListener('click', cerrarModalPagarFactura)
-    document.getElementById('btn-confirmar-pagar-factura').addEventListener('click', confirmarPagarFactura)
 
     document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
       btn.addEventListener('click', () => activarFiltroFecha(btn.dataset.rango))
@@ -2769,7 +2439,7 @@
       const [emps, vehs, provs, projs] = await Promise.all([
         supabase.from('empleados')  .select('id, nombre, unidad_negocio_id, tipo').eq('activo', true).order('nombre'),
         supabase.from('vehiculos')  .select('id, nombre, marca, patente, unidad_negocio_id').eq('activo', true).order('nombre'),
-        supabase.from('proveedores').select('id, razon_social, nombre_fantasia').eq('activo', true).eq('estado_alta', 'activo').order('razon_social'),
+        supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social'),
         supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),
       ])
 
@@ -2815,6 +2485,7 @@
       estado.wizard.fotoUrl     = null
       estado.wizard.camposOcr   = new Set()
       estado.wizard.esPendiente = false
+      estado.wizard.cuitOcr     = null
       categoriaSeleccionada = null
       tipDocSeleccionado    = null
       medioPagoSeleccionado = null
@@ -2911,6 +2582,7 @@
         // pisa la selección previa.
         const grupoProveedor = document.getElementById('grupo-proveedor')
         if (grupoProveedor) grupoProveedor.style.display = estado.wizard.esPendiente ? 'block' : 'none'
+        if (estado.wizard.esPendiente) intentarMatchAutomaticoProveedor()
 
         const inputLugar = document.getElementById('campo-lugar')
         const inputDesc  = document.getElementById('campo-descripcion')
@@ -3433,6 +3105,9 @@
         moneda:           'campo-moneda',
       }
       estado.wizard.camposOcr = new Set()
+      // Sin campo visible en el form — se usa en intentarMatchAutomaticoProveedor()
+      // y para prellenar el modal "Cargar proveedor nuevo".
+      estado.wizard.cuitOcr = datos.cuit || null
 
       if (datos.tipo_doc) {
         seleccionarTipoDoc(datos.tipo_doc)
@@ -3544,13 +3219,53 @@
 
     // Autocompleta razón social al elegir — queda editable, es una "foto"
     // de lo que dice el comprobante físico por si no coincide exacto con
-    // el nombre registrado del proveedor.
+    // el nombre registrado del proveedor. Oculta la señal de "encontrado
+    // automáticamente" por default — la vuelve a mostrar
+    // intentarMatchAutomaticoProveedor() cuando corresponde.
     function seleccionarProveedor(p) {
       proveedorSeleccionado = p.id
       document.getElementById('campo-proveedor-id').value = p.id
       document.getElementById('campo-proveedor-buscar').value = p.razon_social
       document.getElementById('sugerencias-proveedor').hidden = true
       document.getElementById('campo-razon-social').value = p.razon_social
+      document.getElementById('proveedor-auto-match').hidden = true
+    }
+
+    function normalizarCuit(v) {
+      return (v || '').replace(/\D/g, '')
+    }
+    function normalizarRazonSocial(v) {
+      return (v || '').trim().toUpperCase().replace(/\s+/g, ' ')
+    }
+
+    // Se llama al entrar a "Detalles" en el flujo "pendiente". No pisa una
+    // selección que ya hizo el usuario a mano. Primero intenta por CUIT
+    // (match único), después por razón social normalizada (match único y
+    // exacto) — con 0 o más de un resultado, no autoselecciona.
+    function intentarMatchAutomaticoProveedor() {
+      const indicador = document.getElementById('proveedor-auto-match')
+      if (proveedorSeleccionado != null) return
+
+      let match = null
+      const cuitOcr = normalizarCuit(estado.wizard.cuitOcr)
+      if (cuitOcr) {
+        const candidatos = estado.maestros.proveedores.filter(p => normalizarCuit(p.cuit) === cuitOcr)
+        if (candidatos.length === 1) match = candidatos[0]
+      }
+      if (!match) {
+        const razonOcr = normalizarRazonSocial(document.getElementById('campo-razon-social')?.value)
+        if (razonOcr) {
+          const candidatos = estado.maestros.proveedores.filter(p => normalizarRazonSocial(p.razon_social) === razonOcr)
+          if (candidatos.length === 1) match = candidatos[0]
+        }
+      }
+
+      if (match) {
+        seleccionarProveedor(match)
+        indicador.hidden = false
+      } else {
+        indicador.hidden = true
+      }
     }
 
     function cerrarModalProveedorNuevo() {
@@ -4140,6 +3855,7 @@
     document.getElementById('campo-proveedor-buscar').addEventListener('input', (e) => {
       proveedorSeleccionado = null
       document.getElementById('campo-proveedor-id').value = ''
+      document.getElementById('proveedor-auto-match').hidden = true
       renderizarSugerenciasProveedor(filtrarProveedores(e.target.value))
     })
     document.getElementById('sugerencias-proveedor').addEventListener('click', (e) => {
@@ -4155,9 +3871,12 @@
     })
 
     // Modal "Cargar proveedor nuevo"
+    // Prellena con lo que ya extrajo el OCR (razón social + CUIT) — el
+    // usuario revisa y aprieta "Guardar", no se crea solo. Nombre de
+    // fantasía queda vacío (las facturas no suelen traerlo).
     document.getElementById('btn-proveedor-nuevo').addEventListener('click', () => {
-      document.getElementById('campo-nuevo-prov-razon').value    = document.getElementById('campo-proveedor-buscar').value.trim()
-      document.getElementById('campo-nuevo-prov-cuit').value     = ''
+      document.getElementById('campo-nuevo-prov-razon').value    = document.getElementById('campo-razon-social').value.trim()
+      document.getElementById('campo-nuevo-prov-cuit').value     = estado.wizard.cuitOcr || ''
       document.getElementById('campo-nuevo-prov-fantasia').value = ''
       document.getElementById('modal-proveedor-nuevo').hidden = false
     })
