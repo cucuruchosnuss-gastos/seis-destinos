@@ -14,7 +14,20 @@
   <style>
     body {
       overflow-x: hidden;
+      --amarillo:        #C99A2E;
+      --amarillo-hover:  #B3862A;
     }
+
+    /* Botón "Enviar a pendiente de pago" — grande y amarillo a propósito,
+       para que se distinga de las 3 opciones normales de medio de pago que
+       tiene debajo (bifurca el guardado, no es un medio de pago más). */
+    .btn-pendiente {
+      width: 100%;
+      background: var(--amarillo);
+      color: #fff;
+      margin-bottom: 0.875rem;
+    }
+    .btn-pendiente:hover { background: var(--amarillo-hover); }
 
     /* ── Íconos Lucide (reemplazan emojis de categoría) ───────────────────── */
 
@@ -1233,6 +1246,8 @@
             </div>
           </div>
 
+          <button type="button" class="btn btn-pendiente" id="btn-enviar-pendiente">Enviar a pendiente de pago (cuenta corriente)</button>
+
           <div class="grupo-campo" id="grupo-medio-pago">
             <label>Medio de pago</label>
             <div class="grilla-medio-pago" id="grilla-medio-pago">
@@ -1327,7 +1342,7 @@
             <input type="text" id="campo-lugar" name="lugar_servicio" placeholder="Ej: YPF Av. Colón">
           </div>
 
-          <div class="grupo-campo">
+          <div class="grupo-campo" id="grupo-descripcion">
             <label for="campo-descripcion">Descripción <span class="etiqueta-opcional">opcional</span></label>
             <input type="text" id="campo-descripcion" name="descripcion" placeholder="Ej: Nafta viaje a planta">
           </div>
@@ -1420,6 +1435,7 @@
         fotoArchivo:  null,
         fotoUrl:      null,
         camposOcr:    new Set(),
+        esPendiente:  false, // true si se tocó "Enviar a pendiente de pago" en vez de "Siguiente" en Datos
       },
     }
 
@@ -2313,6 +2329,7 @@
       estado.wizard.fotoArchivo = null
       estado.wizard.fotoUrl     = null
       estado.wizard.camposOcr   = new Set()
+      estado.wizard.esPendiente = false
       categoriaSeleccionada = null
       tipDocSeleccionado    = null
       medioPagoSeleccionado = null
@@ -2396,6 +2413,12 @@
         const grupoKmDetalle = document.getElementById('grupo-kilometraje-detalle')
         if (grupoKmDetalle) grupoKmDetalle.style.display = viaVehiculos ? 'block' : 'none'
 
+        // facturas_pendientes no tiene columna "descripción" (solo
+        // "observaciones") — se oculta para no mostrar un campo que en este
+        // flujo no se va a guardar.
+        const grupoDescripcion = document.getElementById('grupo-descripcion')
+        if (grupoDescripcion) grupoDescripcion.style.display = estado.wizard.esPendiente ? 'none' : 'block'
+
         const inputLugar = document.getElementById('campo-lugar')
         const inputDesc  = document.getElementById('campo-descripcion')
         const PLACEHOLDERS_VEHICULO = {
@@ -2415,7 +2438,8 @@
       }
 
       if (id === 'resumen') {
-        renderizarResumen()
+        if (estado.wizard.esPendiente) renderizarResumenPendiente()
+        else renderizarResumen()
       }
     }
 
@@ -2998,6 +3022,34 @@
       }
     }
 
+    // Mapeo análogo a armarGasto() pero hacia las columnas reales de
+    // facturas_pendientes — sin medio de pago, fecha de pago ni cuenta (se
+    // definen recién al pagarla, ver pagar_factura_pendiente()), y sin los
+    // campos que esa tabla no tiene (receptor, descripción del ítem,
+    // descripción — solo "observaciones").
+    function armarFacturaPendiente() {
+      const toNum = id => { const v = document.getElementById(id)?.value; return (v && v !== '') ? Number(v) : null }
+      const toStr = id => document.getElementById(id)?.value.trim() || null
+      return {
+        unidad_negocio_id:  unidadSeleccionada,
+        categoria_id:       categoriaSeleccionada,
+        razon_social:       toStr('campo-razon-social'),
+        tipo_documento:     tipDocSeleccionado,
+        numero_comprobante: toStr('campo-numero-doc'),
+        importe:            parseImporte(document.getElementById('campo-importe')?.value),
+        moneda:             document.getElementById('campo-moneda')?.value || 'ARS',
+        empleado_id:        toStr('campo-empleado'),
+        fecha_factura:      document.getElementById('campo-fecha').value,
+        proyecto_id:        toStr('campo-proyecto'),
+        vehiculo_id:        vehiculoSeleccionado,
+        kilometraje:        toNum('campo-kilometraje'),
+        lugar:              toStr('campo-lugar'),
+        observaciones:      toStr('campo-observaciones'),
+        comprobante_url:    estado.wizard.fotoUrl,
+        estado:             'pendiente',
+      }
+    }
+
     function renderizarResumen() {
       const g       = armarGasto()
       const catObj  = estado.maestros.categorias .find(c => c.id === categoriaSeleccionada)
@@ -3041,6 +3093,63 @@
           ${fila('Proyecto',     proyObj?.nombre)}
           ${fila('Lugar',        g.lugar_servicio)}
           ${fila('Descripción',  g.descripcion)}
+          ${fila('Observaciones', g.observaciones)}
+        </div>
+
+        ${estado.wizard.fotoArchivo ? `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Foto del comprobante</div>
+          <img src="${URL.createObjectURL(estado.wizard.fotoArchivo)}"
+               alt="Comprobante" class="resumen-foto">
+        </div>` : ''}
+      `
+      lucide.createIcons()
+    }
+
+    // Misma estructura visual que renderizarResumen(), recortada a lo que
+    // realmente se va a guardar en facturas_pendientes — sin Fecha de pago
+    // ni Medio de pago (no existen en ese flujo) ni Descripción (esa tabla
+    // no tiene esa columna, ver armarFacturaPendiente()).
+    function renderizarResumenPendiente() {
+      const g       = armarFacturaPendiente()
+      const catObj  = estado.maestros.categorias .find(c => c.id === g.categoria_id)
+      const empObj  = estado.maestros.empleados  .find(e => e.id === g.empleado_id)
+      const unidObj = estado.maestros.unidades   .find(u => u.id === g.unidad_negocio_id)
+      const vehObj  = estado.maestros.vehiculos  .find(v => v.id === g.vehiculo_id)
+      const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
+
+      const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
+        <div class="resumen-fila">
+          <span class="resumen-fila__etiqueta">${etiqueta}</span>
+          <span class="resumen-fila__valor">${valor}</span>
+        </div>` : ''
+
+      document.getElementById('resumen-contenido').innerHTML = `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          ${fila('Fecha de factura', formatearFecha(g.fecha_factura))}
+          ${fila('Tipo',         g.tipo_documento)}
+          ${fila('Número',       g.numero_comprobante)}
+          ${fila('Razón social', g.razon_social)}
+          <div class="resumen-fila resumen-fila--importe">
+            <span class="resumen-fila__etiqueta">Importe</span>
+            <span class="resumen-importe">${formatearImporte(g.importe, g.moneda)}</span>
+          </div>
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Destino y clasificación</div>
+          ${fila('Empresa',      unidObj?.nombre)}
+          ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : (vehiculoFueElegido ? 'Sin vehículo' : null))}
+          ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
+          ${fila('Categoría',    catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${catObj.nombre}` : null)}
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Detalles</div>
+          ${fila('Empleado',     empObj?.nombre)}
+          ${fila('Proyecto',     proyObj?.nombre)}
+          ${fila('Lugar',        g.lugar)}
           ${fila('Observaciones', g.observaciones)}
         </div>
 
@@ -3311,6 +3420,31 @@
       }
     }
 
+    async function guardarFacturaPendiente() {
+      const btn = document.getElementById('btn-resumen-guardar')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      try {
+        if (estado.wizard.fotoArchivo && !estado.wizard.fotoUrl) {
+          estado.wizard.fotoUrl = await subirFoto(estado.wizard.fotoArchivo)
+        }
+
+        const { error } = await supabase.from('facturas_pendientes').insert([armarFacturaPendiente()])
+        if (error) throw new Error(error.message)
+
+        mostrarExito('¡Factura enviada a pendiente de pago!')
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+        cerrarWizard()
+      } catch (err) {
+        console.error(err)
+        mostrarError(`Error al guardar: ${err.message}`)
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // EVENT LISTENERS
     // ═══════════════════════════════════════════════════════════════════════
@@ -3425,7 +3559,26 @@
 
     document.getElementById('btn-datos-atras').addEventListener('click',    () => irASubpaso('foto'))
     document.getElementById('btn-datos-siguiente').addEventListener('click', () => {
+      estado.wizard.esPendiente = false
       if (validarSubpaso('datos')) irASubpaso('destino')
+    })
+
+    // "Enviar a pendiente de pago": bifurca el guardado hacia
+    // facturas_pendientes en vez de gastos — no tiene medio de pago (se
+    // define recién al pagarla, ver pagar_factura_pendiente()) ni fecha de
+    // pago (no hay pago todavía), así que valida los mismos campos de
+    // "Datos" salvo esos dos.
+    document.getElementById('btn-enviar-pendiente').addEventListener('click', () => {
+      if (!document.getElementById('campo-fecha').value)
+        return mostrarError('Completá la fecha de factura.')
+      if (!document.getElementById('campo-razon-social').value.trim())
+        return mostrarError('Completá la razón social.')
+      const imp = parseImporte(document.getElementById('campo-importe').value)
+      if (imp == null || imp <= 0)
+        return mostrarError('Ingresá un importe válido mayor a cero.')
+
+      estado.wizard.esPendiente = true
+      irASubpaso('destino')
     })
 
     // ── Sub-paso DESTINO ───────────────────────────────────────────────────
@@ -3447,7 +3600,10 @@
 
     // ── Sub-paso RESUMEN ───────────────────────────────────────────────────
     document.getElementById('btn-resumen-editar').addEventListener('click',  () => irASubpaso('foto'))
-    document.getElementById('btn-resumen-guardar').addEventListener('click', guardarGasto)
+    document.getElementById('btn-resumen-guardar').addEventListener('click', () => {
+      if (estado.wizard.esPendiente) guardarFacturaPendiente()
+      else guardarGasto()
+    })
 
   </script>
 
