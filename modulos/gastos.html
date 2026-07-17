@@ -62,6 +62,48 @@
       font-size: 0.8125rem;
     }
 
+    /* ── Selector de proveedor (buscador tipo combobox) en sp-detalles,
+       solo para el flujo "pendiente" ─────────────────────────────────── */
+
+    .sugerencias-proveedor {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      z-index: 10;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      box-shadow: var(--sombra-hover);
+      margin-top: 0.25rem;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .sugerencias-proveedor[hidden] { display: none; }
+    .sugerencias-proveedor__item {
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .sugerencias-proveedor__item:hover { background: var(--color-superficie); }
+    .sugerencias-proveedor__vacio {
+      padding: 0.625rem 0.875rem;
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+    }
+    .btn-link-proveedor {
+      display: inline-block;
+      margin-top: 0.5rem;
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--color-acento-highlight);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-link-proveedor:hover { text-decoration: underline; }
+
     /* ── Modal: pagar una factura pendiente (mismo patrón bottom-sheet que
        ya usa caja.html en #modal-desactivar-cuenta) ───────────────────── */
 
@@ -90,6 +132,40 @@
       overflow-y: auto;
       border-radius: 20px 20px 0 0;
       padding: 1.25rem 1.25rem 1.5rem;
+    }
+
+    /* Modal: cargar proveedor nuevo — mismo patrón bottom-sheet que
+       #modal-pagar-factura, arriba. */
+    #modal-proveedor-nuevo {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #modal-proveedor-nuevo[hidden] { display: none; }
+    #modal-proveedor-nuevo__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+    #modal-proveedor-nuevo__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+    @media (min-width: 641px) {
+      #modal-proveedor-nuevo { align-items: center; }
+      #modal-proveedor-nuevo__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
     }
 
     @media (min-width: 641px) {
@@ -1444,6 +1520,14 @@
             <input type="text" id="campo-lugar" name="lugar_servicio" placeholder="Ej: YPF Av. Colón">
           </div>
 
+          <div class="grupo-campo" id="grupo-proveedor" style="display:none; position:relative;">
+            <label for="campo-proveedor-buscar">Proveedor</label>
+            <input type="text" id="campo-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off">
+            <input type="hidden" id="campo-proveedor-id">
+            <div class="sugerencias-proveedor" id="sugerencias-proveedor" hidden></div>
+            <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
+          </div>
+
           <div class="grupo-campo" id="grupo-descripcion">
             <label for="campo-descripcion">Descripción <span class="etiqueta-opcional">opcional</span></label>
             <input type="text" id="campo-descripcion" name="descripcion" placeholder="Ej: Nafta viaje a planta">
@@ -1529,6 +1613,41 @@
     </div>
   </div><!-- /modal-pagar-factura -->
 
+  <!-- Modal: cargar un proveedor nuevo desde el wizard de "pendiente" cuando
+       no aparece en el buscador. Llama a crear_proveedor_pendiente(); el
+       proveedor queda oculto en el resto de la app hasta que un admin lo
+       apruebe desde Cuentas Corrientes. -->
+  <div id="modal-proveedor-nuevo" hidden>
+    <div id="modal-proveedor-nuevo__backdrop"></div>
+    <div id="modal-proveedor-nuevo__panel">
+      <button type="button" class="btn btn--icono modal-pagar-factura__cerrar" id="btn-cerrar-proveedor-nuevo" title="Cerrar">✕</button>
+      <h2>Cargar proveedor nuevo</h2>
+      <p style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;">
+        Queda pendiente de aprobación — un administrador lo revisa desde Cuentas Corrientes.
+      </p>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-nuevo-prov-razon">Razón social</label>
+          <input type="text" id="campo-nuevo-prov-razon" placeholder="Nombre del proveedor">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-nuevo-prov-cuit">CUIT <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-nuevo-prov-cuit" placeholder="30-12345678-9">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-nuevo-prov-fantasia">Nombre de fantasía <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-nuevo-prov-fantasia" placeholder="Nombre comercial">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-proveedor-nuevo">Cancelar</button>
+        <button type="button" class="btn btn--primario" id="btn-guardar-proveedor-nuevo">Guardar</button>
+      </div>
+    </div>
+  </div><!-- /modal-proveedor-nuevo -->
+
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
@@ -1590,6 +1709,7 @@
     let vehiculoSeleccionado  = null  // id de vehiculo, o null = sin vehículo
     let vehiculoFueElegido    = false // true cuando el usuario tapeó un vehículo o "Sin vehículo"
     let viaVehiculos          = false // true cuando llegó por la tarjeta Vehículos
+    let proveedorSeleccionado = null  // id de proveedores, solo se usa en el flujo "pendiente"
 
     // Modal "Pagar factura" — fuera del estado, mismo criterio que las
     // selecciones del wizard de arriba.
@@ -2352,7 +2472,7 @@
         .select(`
           id, razon_social, tipo_documento, numero_comprobante, importe, moneda,
           empleado_id, fecha_factura, lugar, observaciones, comprobante_url,
-          unidad_negocio_id, vehiculo_id, kilometraje, proyecto_id,
+          unidad_negocio_id, vehiculo_id, kilometraje, proyecto_id, proveedor_id,
           categorias (id, nombre, icon),
           empleados  (id, nombre)
         `)
@@ -2393,7 +2513,11 @@
       const fecha       = formatearFecha(f.fecha_factura)
 
       const categoriaChip = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${categoria}</span>` : ''
-      const botonPagar    = puedePagarFacturas()
+      // Facturas con proveedor vinculado se pagan desde Cuentas Corrientes
+      // (registrar_pago_proveedor deja rastro en aplicaciones_pago/saldo
+      // pendiente; esta pagar_factura_pendiente vieja no). El botón acá
+      // queda solo para el caso residual sin proveedor.
+      const botonPagar    = (puedePagarFacturas() && f.proveedor_id == null)
         ? `<button type="button" class="btn btn--exito btn-pagar-factura" data-id="${f.id}">Pagar</button>`
         : ''
 
@@ -2645,7 +2769,7 @@
       const [emps, vehs, provs, projs] = await Promise.all([
         supabase.from('empleados')  .select('id, nombre, unidad_negocio_id, tipo').eq('activo', true).order('nombre'),
         supabase.from('vehiculos')  .select('id, nombre, marca, patente, unidad_negocio_id').eq('activo', true).order('nombre'),
-        supabase.from('proveedores').select('id, razon_social, nombre_fantasia').eq('activo', true).order('razon_social'),
+        supabase.from('proveedores').select('id, razon_social, nombre_fantasia').eq('activo', true).eq('estado_alta', 'activo').order('razon_social'),
         supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),
       ])
 
@@ -2698,12 +2822,14 @@
       vehiculoSeleccionado  = null
       vehiculoFueElegido    = false
       viaVehiculos          = false
+      proveedorSeleccionado = null
 
       // Limpiar campos de formulario
       ;['campo-fecha','campo-numero-doc','campo-razon-social',
         'campo-receptor','campo-descripcion-item',
         'campo-importe','campo-lugar','campo-descripcion',
         'campo-kilometraje','campo-observaciones',
+        'campo-proveedor-buscar','campo-proveedor-id',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
       document.getElementById('campo-fecha-pago').value = fechaISO(new Date())
       seleccionarTipoDoc(null)
@@ -2779,6 +2905,12 @@
         // flujo no se va a guardar.
         const grupoDescripcion = document.getElementById('grupo-descripcion')
         if (grupoDescripcion) grupoDescripcion.style.display = estado.wizard.esPendiente ? 'none' : 'block'
+
+        // Proveedor — solo tiene sentido en el flujo "pendiente" (ver
+        // armarFacturaPendiente()). Al volver a este paso ya elegido, no se
+        // pisa la selección previa.
+        const grupoProveedor = document.getElementById('grupo-proveedor')
+        if (grupoProveedor) grupoProveedor.style.display = estado.wizard.esPendiente ? 'block' : 'none'
 
         const inputLugar = document.getElementById('campo-lugar')
         const inputDesc  = document.getElementById('campo-descripcion')
@@ -3216,6 +3348,8 @@
           return mostrarError('Ingresá el kilometraje del vehículo.'), false
         if ((medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') && !document.getElementById('campo-cuenta').value)
           return mostrarError('Seleccioná la cuenta.'), false
+        if (estado.wizard.esPendiente && !document.getElementById('campo-proveedor-id').value)
+          return mostrarError('Seleccioná el proveedor.'), false
       }
       return true
     }
@@ -3383,6 +3517,46 @@
       }
     }
 
+    // ── Buscador de proveedor (sp-detalles, flujo "pendiente") ─────────────
+
+    function filtrarProveedores(termino) {
+      const t = termino.trim().toLowerCase()
+      if (!t) return []
+      return estado.maestros.proveedores
+        .filter(p => p.razon_social?.toLowerCase().includes(t) || p.nombre_fantasia?.toLowerCase().includes(t))
+        .slice(0, 8)
+    }
+
+    function renderizarSugerenciasProveedor(lista) {
+      const cont = document.getElementById('sugerencias-proveedor')
+      if (!lista.length) {
+        cont.innerHTML = `<div class="sugerencias-proveedor__vacio">Sin resultados</div>`
+        cont.hidden = false
+        return
+      }
+      cont.innerHTML = lista.map(p => `
+        <div class="sugerencias-proveedor__item" data-id="${p.id}">
+          ${p.razon_social}${p.nombre_fantasia ? ` <span style="color:var(--color-texto-suave);">(${p.nombre_fantasia})</span>` : ''}
+        </div>
+      `).join('')
+      cont.hidden = false
+    }
+
+    // Autocompleta razón social al elegir — queda editable, es una "foto"
+    // de lo que dice el comprobante físico por si no coincide exacto con
+    // el nombre registrado del proveedor.
+    function seleccionarProveedor(p) {
+      proveedorSeleccionado = p.id
+      document.getElementById('campo-proveedor-id').value = p.id
+      document.getElementById('campo-proveedor-buscar').value = p.razon_social
+      document.getElementById('sugerencias-proveedor').hidden = true
+      document.getElementById('campo-razon-social').value = p.razon_social
+    }
+
+    function cerrarModalProveedorNuevo() {
+      document.getElementById('modal-proveedor-nuevo').hidden = true
+    }
+
     // Mapeo análogo a armarGasto() pero hacia las columnas reales de
     // facturas_pendientes — sin medio de pago, fecha de pago ni cuenta (se
     // definen recién al pagarla, ver pagar_factura_pendiente()), y sin los
@@ -3400,6 +3574,7 @@
         importe:            parseImporte(document.getElementById('campo-importe')?.value),
         moneda:             document.getElementById('campo-moneda')?.value || 'ARS',
         empleado_id:        toStr('campo-empleado'),
+        proveedor_id:       toStr('campo-proveedor-id'),
         fecha_factura:      document.getElementById('campo-fecha').value,
         proyecto_id:        toStr('campo-proyecto'),
         vehiculo_id:        vehiculoSeleccionado,
@@ -3478,6 +3653,7 @@
       const unidObj = estado.maestros.unidades   .find(u => u.id === g.unidad_negocio_id)
       const vehObj  = estado.maestros.vehiculos  .find(v => v.id === g.vehiculo_id)
       const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
+      const provObj = estado.maestros.proveedores.find(p => p.id === g.proveedor_id)
 
       const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
         <div class="resumen-fila">
@@ -3491,6 +3667,7 @@
           ${fila('Fecha de factura', formatearFecha(g.fecha_factura))}
           ${fila('Tipo',         g.tipo_documento)}
           ${fila('Número',       g.numero_comprobante)}
+          ${fila('Proveedor',    provObj?.razon_social)}
           ${fila('Razón social', g.razon_social)}
           <div class="resumen-fila resumen-fila--importe">
             <span class="resumen-fila__etiqueta">Importe</span>
@@ -3957,6 +4134,60 @@
     document.getElementById('btn-detalles-atras').addEventListener('click',    () => irASubpaso('categoria'))
     document.getElementById('btn-detalles-siguiente').addEventListener('click', () => {
       if (validarSubpaso('detalles')) irASubpaso('resumen')
+    })
+
+    // Buscador de proveedor — solo visible en el flujo "pendiente".
+    document.getElementById('campo-proveedor-buscar').addEventListener('input', (e) => {
+      proveedorSeleccionado = null
+      document.getElementById('campo-proveedor-id').value = ''
+      renderizarSugerenciasProveedor(filtrarProveedores(e.target.value))
+    })
+    document.getElementById('sugerencias-proveedor').addEventListener('click', (e) => {
+      const item = e.target.closest('.sugerencias-proveedor__item')
+      if (!item || !item.dataset.id) return
+      const p = estado.maestros.proveedores.find(x => x.id === item.dataset.id)
+      if (p) seleccionarProveedor(p)
+    })
+    document.addEventListener('click', (e) => {
+      const grupo = document.getElementById('grupo-proveedor')
+      const sugerencias = document.getElementById('sugerencias-proveedor')
+      if (grupo && !grupo.contains(e.target)) sugerencias.hidden = true
+    })
+
+    // Modal "Cargar proveedor nuevo"
+    document.getElementById('btn-proveedor-nuevo').addEventListener('click', () => {
+      document.getElementById('campo-nuevo-prov-razon').value    = document.getElementById('campo-proveedor-buscar').value.trim()
+      document.getElementById('campo-nuevo-prov-cuit').value     = ''
+      document.getElementById('campo-nuevo-prov-fantasia').value = ''
+      document.getElementById('modal-proveedor-nuevo').hidden = false
+    })
+    document.getElementById('btn-cerrar-proveedor-nuevo').addEventListener('click', cerrarModalProveedorNuevo)
+    document.getElementById('btn-cancelar-proveedor-nuevo').addEventListener('click', cerrarModalProveedorNuevo)
+    document.getElementById('modal-proveedor-nuevo__backdrop').addEventListener('click', cerrarModalProveedorNuevo)
+
+    document.getElementById('btn-guardar-proveedor-nuevo').addEventListener('click', async () => {
+      const razon = document.getElementById('campo-nuevo-prov-razon').value.trim()
+      if (!razon) return mostrarError('Completá la razón social.')
+      const cuit     = document.getElementById('campo-nuevo-prov-cuit').value.trim() || null
+      const fantasia = document.getElementById('campo-nuevo-prov-fantasia').value.trim() || null
+
+      const btn = document.getElementById('btn-guardar-proveedor-nuevo')
+      btn.disabled = true
+      const { data, error } = await supabase.rpc('crear_proveedor_pendiente', {
+        p_razon_social: razon, p_cuit: cuit, p_nombre_fantasia: fantasia,
+      })
+      btn.disabled = false
+      if (error) { mostrarError(error.message || 'No se pudo crear el proveedor.'); return }
+
+      // El proveedor nuevo se agrega local a los maestros (queda oculto en
+      // el resto de la app hasta que un admin lo apruebe desde Cuentas
+      // Corrientes) y se autoselecciona para esta factura.
+      const nuevoId = typeof data === 'string' ? data : data?.id
+      const nuevoProveedor = { id: nuevoId, razon_social: razon, nombre_fantasia: fantasia }
+      estado.maestros.proveedores.push(nuevoProveedor)
+      seleccionarProveedor(nuevoProveedor)
+      cerrarModalProveedorNuevo()
+      mostrarExito('Proveedor cargado — queda pendiente de aprobación.')
     })
 
     // ── Sub-paso RESUMEN ───────────────────────────────────────────────────
