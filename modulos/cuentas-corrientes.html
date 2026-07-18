@@ -17,6 +17,76 @@
       --turquesa-oscuro: #1E8C7C;
     }
 
+    /* ── Header nuevo, específico de este módulo por ahora — tarjeta blanca
+       redondeada. Pantalla 1/3 usan .cc-header (logo+marca a la izquierda,
+       Volver a la derecha); Pantalla 2 (ficha) usa .cc-header-ficha, un
+       header propio y más simple calcado del mockup: Volver a la izquierda,
+       nombre del proveedor en negrita a la derecha — sin logo ni "Cuentas
+       corrientes", orden invertido a propósito respecto al de arriba. ──── */
+
+    .cc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0 1.25rem;
+    }
+    .cc-header__logo-fila {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .cc-header__logo { width: 20px; height: 20px; object-fit: contain; }
+    .cc-header__marca-texto {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--color-texto-suave);
+      text-transform: uppercase;
+    }
+    .cc-header__titulo {
+      font-size: 1.375rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-texto);
+      margin-top: 0.125rem;
+    }
+    .cc-header__volver {
+      padding: 0.5rem 0.875rem;
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .cc-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
+
+    .cc-header-ficha {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0 1.25rem;
+      gap: 0.75rem;
+    }
+    .cc-header-ficha__nombre {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-texto);
+      text-align: right;
+    }
+
     /* ── Tabs (mismo patrón que accesos.html) ─────────────────────────────── */
 
     .tabs-cc {
@@ -44,6 +114,65 @@
       background: var(--turquesa);
       color: #fff;
     }
+
+    .chip-contador {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.375rem;
+      border-radius: 999px;
+      background: var(--color-borde);
+      color: var(--color-texto-suave);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      margin-left: 0.375rem;
+    }
+    .chip-contador--activo { background: var(--turquesa); color: #fff; }
+
+    /* ── Tarjetas de resumen (Pantalla 1) ──────────────────────────────────── */
+
+    .grilla-resumen-cc {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      margin: 0 0 1.25rem;
+    }
+    .resumen-cc-card {
+      border-radius: 16px;
+      padding: 1.125rem 1.25rem;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+    }
+    .resumen-cc-card--navy {
+      background: var(--color-acento);
+      border-color: var(--color-acento);
+    }
+    .resumen-cc-card__etiqueta {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .resumen-cc-card--navy .resumen-cc-card__etiqueta { color: rgba(255,255,255,0.7); }
+    .resumen-cc-card__monto {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-top: 0.375rem;
+      color: var(--color-texto);
+    }
+    .resumen-cc-card--navy .resumen-cc-card__monto { color: #fff; }
+    .resumen-cc-card__monto--favor { color: #1E8C4A; }
+    .resumen-cc-card__monto--secundaria {
+      font-size: 1rem;
+      margin-top: 0.25rem;
+    }
+    .cc-centavos { color: var(--color-texto-suave); font-weight: 600; }
+    .resumen-cc-card--navy .cc-centavos { color: rgba(255,255,255,0.65); }
+    .resumen-cc-card__monto--favor .cc-centavos { color: rgba(30,140,74,0.55); }
 
     /* ── Filtros ───────────────────────────────────────────────────────────── */
 
@@ -104,7 +233,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     .segmented-rango__opcion--activa {
-      background: var(--color-acento);
+      background: var(--turquesa);
       color: #fff;
     }
 
@@ -140,16 +269,25 @@
 
     /* ── Tarjeta de proveedor (saldo) ──────────────────────────────────────── */
 
-    .chip-credito {
-      display: inline-block;
-      margin-top: 0.25rem;
-      padding: 0.125rem 0.5rem;
-      border-radius: 999px;
-      background: var(--turquesa-suave);
-      color: var(--turquesa-oscuro);
-      font-size: 0.75rem;
-      font-weight: 600;
+    .proveedor-cc__derecha { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+    .proveedor-cc__saldo + .proveedor-cc__saldo { margin-top: -0.125rem; }
+    .proveedor-cc__etiqueta {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      text-align: right;
     }
+    .proveedor-cc__etiqueta--favor { color: #1E8C4A; }
+    .proveedor-cc__monto {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-top: 0.125rem;
+      text-align: right;
+    }
+    .proveedor-cc__monto--favor { color: #1E8C4A; }
 
     .btn-ver-cuenta {
       width: auto;
@@ -160,6 +298,12 @@
       border-color: var(--turquesa);
     }
     .btn-ver-cuenta:hover { background: var(--turquesa-oscuro); border-color: var(--turquesa-oscuro); }
+
+    /* Botones de confirmación de los 3 modales — turquesa en vez del verde
+       genérico (.btn--exito), para combinar con la paleta del módulo. */
+    .btn-cc-turquesa { background-color: var(--turquesa); color: #fff; }
+    .btn-cc-turquesa:hover:not(:disabled) { background-color: var(--turquesa-oscuro); }
+    .btn-cc-turquesa:disabled { opacity: 0.55; cursor: not-allowed; }
 
     /* Íconos chicos ver/editar/eliminar — reusados en "Facturas sin
        proveedor asignado" y en las filas tipo "factura" del historial de
@@ -208,41 +352,55 @@
 
     /* ── Ficha de proveedor (Pantalla B) ───────────────────────────────────── */
 
-    .grilla-saldos-ficha {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.75rem;
-      margin: 0 0 1.25rem;
+    .banner-ficha-cc {
+      border-radius: 20px;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, var(--turquesa), var(--turquesa-oscuro));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 0.875rem;
     }
-    .stat-card-cc {
-      border-radius: 14px;
-      padding: 1rem 1.125rem;
-      background: var(--color-fondo);
-      border: 1.5px solid var(--color-borde);
-    }
-    .stat-card-cc__etiqueta {
-      font-size: 0.6875rem;
+    .banner-ficha-cc__etiqueta {
+      font-size: 0.75rem;
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: var(--color-texto-suave);
+      color: rgba(255,255,255,0.8);
     }
-    .stat-card-cc__monto {
-      font-size: 1.375rem;
+    .banner-ficha-cc__monto {
+      font-size: 1.875rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      color: #fff;
       margin-top: 0.25rem;
-      color: var(--color-texto);
     }
-    .stat-card-cc__monto + .stat-card-cc__monto {
-      font-size: 1.0625rem;
-      margin-top: 0.375rem;
+    .banner-ficha-cc__acciones { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+    .banner-ficha-cc__btn {
+      border: none;
+      border-radius: 999px;
+      padding: 0.625rem 1.125rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
     }
-    /* Saldo a favor — nunca rojo/negativo, el monto siempre positivo con la
-       etiqueta indicando qué significa. */
-    .stat-card-cc__monto--favor {
-      color: #1E8C4A;
+    .banner-ficha-cc__btn--primario { background: #fff; color: var(--turquesa-oscuro); }
+    .banner-ficha-cc__btn--primario:hover { background: #F0FDFB; }
+    .banner-ficha-cc__btn--secundario { background: rgba(255,255,255,0.22); color: #fff; }
+    .banner-ficha-cc__btn--secundario:hover { background: rgba(255,255,255,0.32); }
+
+    /* Banner secundario — para una segunda moneda con saldo; sin botones,
+       los botones del banner principal ya cubren el flujo (el modal de pago
+       deja elegir moneda cuando hay más de una con deuda). */
+    .banner-ficha-cc--secundaria {
+      padding: 0.875rem 1.25rem;
+      margin-bottom: 0.875rem;
     }
+    .banner-ficha-cc--secundaria .banner-ficha-cc__monto { font-size: 1.25rem; }
 
     /* .fila-movimiento se combina con la clase global .tarjeta-lista (fondo,
        borde, border-radius, padding — css/main.css) en vez de reinventar el
@@ -268,17 +426,45 @@
       color: var(--color-texto-suave);
     }
     .fila-movimiento__referencia { font-size: 0.9375rem; font-weight: 600; color: var(--color-texto); }
-    .fila-movimiento__fecha { font-size: 0.8125rem; color: var(--color-texto-suave); }
+    .fila-movimiento__fecha { font-size: 0.8125rem; color: var(--color-acento-highlight); }
     .fila-movimiento__monto { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+    .fila-movimiento__saldo { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.1875rem; white-space: nowrap; }
+
+    /* Punto de color a la izquierda de cada fila de movimiento (ficha) —
+       verde pago, navy factura, violeta crédito aplicado. */
+    .punto-tipo-mov {
+      flex-shrink: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .punto-tipo-mov--pago              { background: #1E8C4A; }
+    .punto-tipo-mov--factura           { background: var(--color-acento); }
+    .punto-tipo-mov--credito_aplicado  { background: var(--violeta); }
+
+    /* Chip de tipo — historial de facturas (Pantalla 3), no lleva punto. */
+    .chip-tipo-mov {
+      display: inline-block;
+      padding: 0.1875rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+    .chip-tipo-mov--pago              { background: var(--color-acento-suave); color: var(--color-acento-highlight); }
+    .chip-tipo-mov--factura           { background: var(--rojo-suave); color: var(--rojo); }
+    .chip-tipo-mov--credito_aplicado  { background: var(--violeta-suave); color: var(--violeta-oscuro); }
 
     /* Historial de facturas — misma tarjeta, letra más chica para que
        entren más filas sin scrollear tanto. La ficha de proveedor
        (#lista-movimientos-ficha) no se toca, sigue con el tamaño de arriba. */
-    #lista-historial .fila-movimiento__tipo { font-size: 0.625rem; }
+    #lista-historial .chip-tipo-mov { font-size: 0.625rem; }
     #lista-historial .fila-movimiento__referencia { font-size: 0.8125rem; }
     #lista-historial .fila-movimiento__fecha { font-size: 0.75rem; }
     #lista-historial .fila-movimiento__monto { font-size: 0.875rem; }
-    .fila-movimiento__monto--deuda { color: var(--color-error); }
+    .fila-movimiento__monto--deuda { color: var(--color-texto); }
     .fila-movimiento__monto--reduce { color: #1E8C4A; }
 
 
@@ -403,23 +589,38 @@
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-lista">
 
-    <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
-      <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
-      <div>
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
-          <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
-        </div>
-        <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto);">Cuentas corrientes</div>
-      </div>
-    </header>
-
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
+
+      <header class="cc-header">
+        <div>
+          <div class="cc-header__logo-fila">
+            <img src="../logo.png" alt="" class="cc-header__logo">
+            <span class="cc-header__marca-texto">Seis Destinos</span>
+          </div>
+          <div class="cc-header__titulo">Cuentas corrientes</div>
+        </div>
+        <a href="../dashboard.html" class="cc-header__volver" title="Volver al dashboard">‹ Volver</a>
+      </header>
+
+      <div class="grilla-resumen-cc">
+        <div class="resumen-cc-card resumen-cc-card--navy">
+          <div class="resumen-cc-card__etiqueta">Saldo total a pagar</div>
+          <div id="resumen-cc-deuda"></div>
+        </div>
+        <div class="resumen-cc-card">
+          <div class="resumen-cc-card__etiqueta">Crédito a favor</div>
+          <div id="resumen-cc-credito"></div>
+        </div>
+        <div class="resumen-cc-card">
+          <div class="resumen-cc-card__etiqueta">Proveedores</div>
+          <div class="resumen-cc-card__monto" id="resumen-cc-proveedores">0 activos</div>
+        </div>
+      </div>
 
       <div class="tabs-cc" id="tabs-cc">
         <button type="button" class="tabs-cc__opcion tabs-cc__opcion--activa" data-tab="proveedores">Proveedores</button>
         <button type="button" class="tabs-cc__opcion" data-tab="historial">Historial de facturas</button>
-        <button type="button" class="tabs-cc__opcion" data-tab="pendientes">Pendientes de aceptación (<span id="contador-tab-pendientes">0</span>)</button>
+        <button type="button" class="tabs-cc__opcion" data-tab="pendientes">Pendientes de aceptación<span class="chip-contador" id="contador-tab-pendientes">0</span></button>
       </div>
 
       <!-- ── Tab: Proveedores ─────────────────────────────────────────────── -->
@@ -502,21 +703,18 @@
        VISTA B — FICHA DE PROVEEDOR
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-ficha" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-cerrar-ficha">← Volver</button>
-      <span class="header__nombre-app" id="ficha-titulo"></span>
-      <div style="width:2rem;"></div>
-    </header>
-
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 1.25rem;">
-      <div class="grilla-saldos-ficha" id="ficha-saldos"></div>
+      <header class="cc-header-ficha">
+        <button type="button" class="cc-header__volver" id="btn-cerrar-ficha">‹ Volver</button>
+        <span class="cc-header-ficha__nombre" id="ficha-titulo"></span>
+      </header>
 
-      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.875rem;">
-        <button type="button" class="btn btn--exito" id="btn-registrar-pago" style="width:auto;">Registrar pago</button>
-        <button type="button" class="btn btn--exito" id="btn-aplicar-credito-ficha" style="width:auto;" hidden>Aplicar crédito a una factura</button>
-      </div>
+      <div id="ficha-banner"></div>
 
-      <h3 class="titulo-seccion-cc">Movimientos</h3>
+      <h3 class="titulo-seccion-cc" style="display:flex; align-items:baseline; justify-content:space-between;">
+        <span>Movimientos</span>
+        <span style="font-size:0.8125rem; font-weight:600; color:var(--color-texto-suave);" id="contador-movimientos-ficha"></span>
+      </h3>
 
       <div id="estado-cargando-movimientos" class="estado-vacio" hidden>
         <div class="spinner"></div>
@@ -584,7 +782,7 @@
 
       <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-pago">Cancelar</button>
-        <button type="button" class="btn btn--exito" id="btn-confirmar-pago">Confirmar pago</button>
+        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-pago">Confirmar pago</button>
       </div>
     </div>
   </div><!-- /modal-pago -->
@@ -624,7 +822,7 @@
 
         <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
           <button type="button" class="btn btn--secundario" id="btn-cancelar-aplicar-credito">Cancelar</button>
-          <button type="button" class="btn btn--exito" id="btn-confirmar-aplicar-credito">Aplicar</button>
+          <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-aplicar-credito">Aplicar</button>
         </div>
       </div>
     </div>
@@ -651,7 +849,7 @@
 
       <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-asignar-proveedor">Cancelar</button>
-        <button type="button" class="btn btn--exito" id="btn-confirmar-asignar-proveedor">Asignar</button>
+        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-asignar-proveedor">Asignar</button>
       </div>
     </div>
   </div><!-- /modal-asignar-proveedor -->
@@ -718,6 +916,17 @@
         minimumFractionDigits: 2, maximumFractionDigits: 2,
       })
       return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
+    }
+
+    // Igual que formatearImporte() pero con los centavos envueltos en un
+    // <span> aparte para pintarlos en un tono más claro — solo para las 3
+    // tarjetas de resumen de Pantalla 1.
+    function formatearImporteCentavosSuaves(importe, moneda = 'ARS') {
+      const [entero, centavos] = Number(importe || 0).toLocaleString('es-AR', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      }).split(',')
+      const simbolo = moneda === 'ARS' ? '$' : moneda
+      return `${simbolo} ${entero}<span class="cc-centavos">,${centavos}</span>`
     }
 
     function parseImporte(str) {
@@ -859,6 +1068,7 @@
 
       estado.listaSaldos = grupos
       renderizarListaSaldos()
+      renderizarResumenCC()
     }
 
     function renderizarListaSaldos() {
@@ -874,26 +1084,41 @@
 
       listaEl.innerHTML = estado.listaSaldos.map(g => {
         const unidadNombre = estado.maestros.unidades.find(u => u.id === g.unidad_negocio_id)?.nombre || ''
-        const lineasDeuda = g.saldos.filter(s => s.deuda > 0)
-          .map(s => `<div class="gasto__importe">${formatearImporte(s.deuda, s.moneda)}</div>`).join('')
-        const chipsCredito = g.saldos.filter(s => s.credito > 0)
-          .map(s => `<span class="chip-credito">Crédito: ${formatearImporte(s.credito, s.moneda)}</span>`).join(' ')
+        const saldosVisibles = g.saldos.filter(s => s.deuda > 0 || s.credito > 0)
+        const multiMoneda = saldosVisibles.length > 1
+
+        // Mismo criterio de prioridad-a-la-deuda que la ficha (Cambio E/D):
+        // por moneda, "DEBE" y "CRÉDITO A FAVOR" son mutuamente excluyentes.
+        const saldosHtml = saldosVisibles.map(s => {
+          const sufijoMoneda = multiMoneda ? ` · ${s.moneda}` : ''
+          if (s.deuda > 0) {
+            return `
+              <div class="proveedor-cc__saldo">
+                <div class="proveedor-cc__etiqueta">Debe${sufijoMoneda}</div>
+                <div class="proveedor-cc__monto">${formatearImporte(s.deuda, s.moneda)}</div>
+              </div>`
+          }
+          return `
+            <div class="proveedor-cc__saldo">
+              <div class="proveedor-cc__etiqueta proveedor-cc__etiqueta--favor">Crédito a favor${sufijoMoneda}</div>
+              <div class="proveedor-cc__monto proveedor-cc__monto--favor">${formatearImporte(s.credito, s.moneda)}</div>
+            </div>`
+        }).join('') || `
+          <div class="proveedor-cc__saldo">
+            <div class="proveedor-cc__etiqueta">Debe</div>
+            <div class="proveedor-cc__monto">$ 0,00</div>
+          </div>`
 
         return `
           <div class="tarjeta-lista" data-proveedor="${g.proveedor_id}" data-unidad="${g.unidad_negocio_id}">
-            <div class="tarjeta-lista__avatar">
-              <span class="gasto__avatar-iniciales" style="background:${colorAvatar(g.proveedor.razon_social)};">${inicialesEmpresa(g.proveedor.razon_social)}</span>
-            </div>
+            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(g.proveedor.razon_social)};">${inicialesEmpresa(g.proveedor.razon_social)}</div>
             <div class="tarjeta-lista__info">
               <div class="tarjeta-lista__titulo">${g.proveedor.razon_social}</div>
-              <div class="gasto__meta">
-                <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${unidadNombre}</span>
-              </div>
-              ${chipsCredito ? `<div>${chipsCredito}</div>` : ''}
+              <div class="tarjeta-lista__subtitulo">${unidadNombre}</div>
             </div>
-            <div class="gasto__derecha">
-              ${lineasDeuda || '<div class="gasto__importe">$ 0,00</div>'}
-              <button type="button" class="btn btn-ver-cuenta" data-proveedor="${g.proveedor_id}" data-unidad="${g.unidad_negocio_id}" data-nombre="${g.proveedor.razon_social}">Ver cuenta corriente</button>
+            <div class="proveedor-cc__derecha">
+              ${saldosHtml}
+              <button type="button" class="btn btn-ver-cuenta" data-proveedor="${g.proveedor_id}" data-unidad="${g.unidad_negocio_id}" data-nombre="${g.proveedor.razon_social}">Ver cuenta</button>
             </div>
           </div>
         `
@@ -902,6 +1127,41 @@
       listaEl.querySelectorAll('.btn-ver-cuenta').forEach(btn => {
         btn.addEventListener('click', () => abrirFicha(btn.dataset.proveedor, btn.dataset.unidad, btn.dataset.nombre))
       })
+    }
+
+    // 3 tarjetas de resumen arriba de Pantalla 1 — calculadas sobre
+    // estado.listaSaldos, es decir, ya respetan los filtros de unidad y
+    // búsqueda actuales (mismo alcance que la lista de abajo). Si hay más de
+    // una moneda con datos reales, no se suman entre sí: la primera (ARS si
+    // está presente) se muestra grande, y cualquier otra moneda como línea
+    // secundaria más chica debajo — mismo patrón que ya usa la ficha.
+    function renderizarResumenCC() {
+      const porMoneda = {}
+      estado.listaSaldos.forEach(g => {
+        g.saldos.forEach(s => {
+          if (!porMoneda[s.moneda]) porMoneda[s.moneda] = { deuda: 0, credito: 0 }
+          porMoneda[s.moneda].deuda   += s.deuda
+          porMoneda[s.moneda].credito += s.credito
+        })
+      })
+      const monedas = Object.keys(porMoneda).sort((a, b) => (a === 'ARS' ? -1 : b === 'ARS' ? 1 : a.localeCompare(b)))
+
+      const contDeuda   = document.getElementById('resumen-cc-deuda')
+      const contCredito = document.getElementById('resumen-cc-credito')
+
+      if (!monedas.length) {
+        contDeuda.innerHTML   = `<div class="resumen-cc-card__monto">${formatearImporteCentavosSuaves(0)}</div>`
+        contCredito.innerHTML = `<div class="resumen-cc-card__monto resumen-cc-card__monto--favor">${formatearImporteCentavosSuaves(0)}</div>`
+      } else {
+        contDeuda.innerHTML = monedas.map((m, i) => `
+          <div class="resumen-cc-card__monto${i > 0 ? ' resumen-cc-card__monto--secundaria' : ''}">${formatearImporteCentavosSuaves(porMoneda[m].deuda, m)}</div>
+        `).join('')
+        contCredito.innerHTML = monedas.map((m, i) => `
+          <div class="resumen-cc-card__monto resumen-cc-card__monto--favor${i > 0 ? ' resumen-cc-card__monto--secundaria' : ''}">${formatearImporteCentavosSuaves(porMoneda[m].credito, m)}</div>
+        `).join('')
+      }
+
+      document.getElementById('resumen-cc-proveedores').textContent = `${estado.listaSaldos.length} activos`
     }
 
     async function cargarSinProveedor() {
@@ -938,9 +1198,7 @@
         return `
           <div class="tarjeta-lista" data-id="${f.id}" style="position:relative;">
             <button type="button" class="btn-icono-eliminar" data-id="${f.id}" title="Eliminar" aria-label="Eliminar">✕</button>
-            <div class="tarjeta-lista__avatar">
-              <span class="gasto__avatar-iniciales" style="background:${colorAvatar(razon)};">${inicialesEmpresa(razon)}</span>
-            </div>
+            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(razon)};">${inicialesEmpresa(razon)}</div>
             <div class="tarjeta-lista__info">
               <div class="tarjeta-lista__titulo">${razon}</div>
               <div class="gasto__meta">
@@ -1055,7 +1313,10 @@
     async function cargarContadorPendientes() {
       const { data, error } = await supabase.from('proveedores').select('id').eq('estado_alta', 'pendiente_aceptacion')
       if (error) { console.error(error); return }
-      document.getElementById('contador-tab-pendientes').textContent = (data ?? []).length
+      const n = (data ?? []).length
+      const chip = document.getElementById('contador-tab-pendientes')
+      chip.textContent = n
+      chip.classList.toggle('chip-contador--activo', n > 0)
     }
 
     async function cargarPendientesAceptacion() {
@@ -1083,9 +1344,7 @@
 
       listaEl.innerHTML = data.map(p => `
         <div class="tarjeta-lista" data-id="${p.id}">
-          <div class="tarjeta-lista__avatar">
-            <span class="gasto__avatar-iniciales" style="background:${colorAvatar(p.razon_social)};">${inicialesEmpresa(p.razon_social)}</span>
-          </div>
+          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(p.razon_social)};">${inicialesEmpresa(p.razon_social)}</div>
           <div class="tarjeta-lista__info">
             <div class="tarjeta-lista__titulo">${p.razon_social}</div>
             <div class="gasto__meta">
@@ -1194,8 +1453,8 @@
         const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
         return `
           <div class="tarjeta-lista fila-movimiento">
-            <div>
-              <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
+            <div style="flex:1; min-width:0;">
+              <span class="chip-tipo-mov chip-tipo-mov--${m.tipo}">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</span>
               <div class="fila-movimiento__referencia">${m.proveedorNombre}${m.referencia ? ` — ${m.referencia}` : ''}</div>
               <div class="fila-movimiento__fecha">${unidadNombre} · ${formatearFecha(m.fecha)}</div>
             </div>
@@ -1236,6 +1495,7 @@
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-ficha').removeAttribute('hidden')
       await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+      renderizarFichaBanner()
     }
 
     function cerrarFicha() {
@@ -1253,33 +1513,54 @@
       if (error) { console.error(error); mostrarError('Error al cargar el saldo.'); return }
 
       estado.fichaSaldos = data ?? []
+    }
 
-      // Un solo indicador por moneda, con prioridad a la deuda: "A pagar" si
-      // deuda_pendiente > 0 (aunque también haya crédito en esa misma
-      // moneda al mismo tiempo — caso raro de una factura nueva recién
-      // cargada antes de aplicar un crédito viejo, nunca se muestran las
-      // dos líneas juntas); si no hay deuda pero sí crédito, "Saldo a
-      // favor" (verde). Si ambos son 0, esa moneda no se muestra.
+    // Banner de saldo de la ficha (Pantalla 2) — se llama después de que
+    // cargarFichaSaldos() y cargarFichaCreditos() terminaron, porque necesita
+    // datos de ambas (los botones "Registrar pago"/"Aplicar crédito" ahora
+    // viven dentro del banner). Mismo criterio de prioridad-a-la-deuda que
+    // ya teníamos: si hay deuda>0 se muestra "A PAGAR" (aunque también haya
+    // crédito en la misma moneda); si no, y hay crédito, "SALDO A FAVOR". Si
+    // hay más de una moneda con saldo, la primera es el banner grande con
+    // los botones, el resto son banners secundarios más chicos sin botones.
+    function renderizarFichaBanner() {
+      const cont = document.getElementById('ficha-banner')
       const monedasConSaldo = estado.fichaSaldos.filter(s => (Number(s.deuda_pendiente) || 0) > 0 || (Number(s.credito_disponible) || 0) > 0)
+      const acciones = `
+        <div class="banner-ficha-cc__acciones">
+          <button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--primario" id="btn-registrar-pago">Registrar pago</button>
+          <button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${estado.fichaCreditos.length ? '' : 'hidden'}>Aplicar crédito</button>
+        </div>`
 
-      const cont = document.getElementById('ficha-saldos')
       if (!monedasConSaldo.length) {
-        cont.innerHTML = `<div class="stat-card-cc"><div class="stat-card-cc__etiqueta">Saldo</div><div class="stat-card-cc__monto">$ 0,00</div></div>`
-        return
+        cont.innerHTML = `
+          <div class="banner-ficha-cc">
+            <div>
+              <div class="banner-ficha-cc__etiqueta">Saldo</div>
+              <div class="banner-ficha-cc__monto">$ 0,00</div>
+            </div>
+            ${acciones}
+          </div>`
+      } else {
+        cont.innerHTML = monedasConSaldo.map((s, i) => {
+          const deuda   = Number(s.deuda_pendiente) || 0
+          const credito = Number(s.credito_disponible) || 0
+          const esFavor = deuda === 0 && credito > 0
+          const etiqueta = esFavor ? `Saldo a favor · ${s.moneda}` : `A pagar · ${s.moneda}`
+          const monto = esFavor ? credito : deuda
+          return `
+            <div class="banner-ficha-cc${i > 0 ? ' banner-ficha-cc--secundaria' : ''}">
+              <div>
+                <div class="banner-ficha-cc__etiqueta">${etiqueta}</div>
+                <div class="banner-ficha-cc__monto">${formatearImporte(monto, s.moneda)}</div>
+              </div>
+              ${i === 0 ? acciones : ''}
+            </div>`
+        }).join('')
       }
-      cont.innerHTML = monedasConSaldo.map(s => {
-        const deuda   = Number(s.deuda_pendiente) || 0
-        const credito = Number(s.credito_disponible) || 0
-        const linea = deuda > 0
-          ? `<div class="stat-card-cc__monto">A pagar ${formatearImporte(deuda, s.moneda)}</div>`
-          : `<div class="stat-card-cc__monto stat-card-cc__monto--favor">Saldo a favor ${formatearImporte(credito, s.moneda)}</div>`
-        return `
-          <div class="stat-card-cc">
-            <div class="stat-card-cc__etiqueta">${s.moneda}</div>
-            ${linea}
-          </div>
-        `
-      }).join('')
+
+      document.getElementById('btn-registrar-pago')?.addEventListener('click', abrirModalPago)
+      document.getElementById('btn-aplicar-credito-ficha')?.addEventListener('click', abrirModalAplicarCreditoDesdeFicha)
     }
 
     async function cargarFichaMovimientos() {
@@ -1289,7 +1570,7 @@
       vacioEl.hidden     = true
 
       const { data, error } = await supabase.from('v_cuenta_corriente_movimientos')
-        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado')
         .eq('proveedor_id', estado.ficha.proveedorId)
         .eq('unidad_negocio_id', estado.ficha.unidadId)
         .order('fecha', { ascending: false })
@@ -1311,6 +1592,7 @@
       cargandoEl.hidden = true
 
       const listaEl = document.getElementById('lista-movimientos-ficha')
+      document.getElementById('contador-movimientos-ficha').textContent = data?.length ? `${data.length} registro${data.length === 1 ? '' : 's'}` : ''
       if (!data?.length) {
         listaEl.innerHTML = ''
         vacioEl.hidden = false
@@ -1329,15 +1611,21 @@
             <a href="gastos.html?factura=${m.factura_pendiente_id}" class="btn-icono-accion" title="Editar">✏️</a>
             ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${m.factura_pendiente_id}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
           </div>` : ''
+        const saldoAcum = Number(m.saldo_acumulado) || 0
+        const lineaSaldo = saldoAcum !== 0
+          ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${formatearImporte(Math.abs(saldoAcum), m.moneda)}</div>`
+          : ''
         return `
           <div class="tarjeta-lista fila-movimiento">
-            <div>
+            <span class="punto-tipo-mov punto-tipo-mov--${m.tipo}"></span>
+            <div style="flex:1; min-width:0;">
               <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
               <div class="fila-movimiento__referencia">${m.referencia || '—'}</div>
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
               <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
+              ${lineaSaldo}
               ${iconos}
             </div>
           </div>
@@ -1348,6 +1636,7 @@
         btn.addEventListener('click', async () => {
           if (await eliminarFactura(btn.dataset.id)) {
             await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+            renderizarFichaBanner()
             cargarSaldos()
           }
         })
@@ -1364,7 +1653,6 @@
       if (error) { console.error(error); return }
 
       estado.fichaCreditos = data ?? []
-      document.getElementById('btn-aplicar-credito-ficha').hidden = !estado.fichaCreditos.length
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1450,6 +1738,7 @@
       mostrarExito('Crédito aplicado.')
       cerrarModalAplicarCredito()
       await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+      renderizarFichaBanner()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1691,6 +1980,7 @@
         mostrarExito('¡Pago registrado!')
         cerrarModalPago()
         await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+        renderizarFichaBanner()
         cargarSaldos()
       } catch (err) {
         console.error(err)
@@ -1803,9 +2093,10 @@
     document.getElementById('btn-confirmar-asignar-proveedor').addEventListener('click', confirmarAsignarProveedor)
 
     // ── Ficha ──────────────────────────────────────────────────────────────
+    // btn-registrar-pago / btn-aplicar-credito-ficha ya no son estáticos —
+    // viven dentro del banner (#ficha-banner) y se generan en cada
+    // renderizarFichaBanner(), que ya les adjunta su propio listener.
     document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
-    document.getElementById('btn-registrar-pago').addEventListener('click', abrirModalPago)
-    document.getElementById('btn-aplicar-credito-ficha').addEventListener('click', abrirModalAplicarCreditoDesdeFicha)
 
     // ── Modal: Registrar pago ─────────────────────────────────────────────
     document.getElementById('campo-moneda-pago').addEventListener('change', () => {
