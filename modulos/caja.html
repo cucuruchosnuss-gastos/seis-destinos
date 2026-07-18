@@ -1520,6 +1520,30 @@
       return isNaN(num) ? null : num
     }
 
+    // Separador de miles en vivo, mientras se escribe — mantiene el cursor a
+    // la misma distancia del final del texto (no del principio), para que no
+    // salte cuando se agrega o saca un punto de miles por un dígito tipeado
+    // en el medio del número.
+    function formatearImporteEnVivo(input) {
+      input.addEventListener('input', (e) => {
+        const desdeElFinal = e.target.value.length - e.target.selectionStart
+        let valor = e.target.value.replace(/[^\d,]/g, '')
+        // Si hay más de una coma, conserva la primera como separador
+        // decimal y descarta las siguientes — sin esto, split(',') tira
+        // en silencio todo lo que venga después de la segunda coma.
+        const primeraComa = valor.indexOf(',')
+        if (primeraComa !== -1) valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '')
+        let [entero, decimal] = valor.split(',')
+        entero = (entero || '').replace(/^0+(?=\d)/, '')
+        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+        let nuevoValor = entero
+        if (decimal !== undefined) nuevoValor += ',' + decimal.slice(0, 2)
+        e.target.value = nuevoValor
+        const nuevaPosicion = Math.max(0, nuevoValor.length - desdeElFinal)
+        e.target.setSelectionRange(nuevaPosicion, nuevaPosicion)
+      })
+    }
+
     function fechaISO(d) {
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
     }
@@ -2296,7 +2320,7 @@
         : ''
 
       const refGasto = (m.gasto_id && m.gastos)
-        ? `<div class="movimiento__referencia">${m.gastos.razon_social || 'Gasto'}${m.gastos.categorias?.nombre ? ' · ' + m.gastos.categorias.nombre : ''} — <a href="gastos.html?gasto=${m.gasto_id}">Ver gasto →</a></div>`
+        ? `<div class="movimiento__referencia">${m.gastos.razon_social || 'Gasto'}${m.gastos.categorias?.nombre ? ' · ' + m.gastos.categorias.nombre : ''} — <a href="gastos.html?gasto=${m.gasto_id}&volver=${encodeURIComponent(location.href)}">Ver gasto →</a></div>`
         : ''
 
       // Si el movimiento tiene cuenta_id, mostramos el nombre de la cuenta
@@ -3421,6 +3445,10 @@
         await abrirDetallePersona(emp.id, 'directo')
       }
     }
+
+    formatearImporteEnVivo(document.getElementById('movimiento-monto'))
+    formatearImporteEnVivo(document.getElementById('traspaso-monto'))
+    formatearImporteEnVivo(document.getElementById('traspaso-monto-destino'))
 
     init()
   </script>

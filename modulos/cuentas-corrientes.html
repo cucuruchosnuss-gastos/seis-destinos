@@ -944,17 +944,27 @@
       return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     }
 
-    // Defensa en profundidad (no la causa del bug del punto 1, que ya está
-    // corregida aparte) — mismo patrón que campo-importe de gastos.html:
-    // foco saca los puntos de miles para editar cómodo, blur reformatea.
-    // Así el texto mostrado nunca se re-parsea a mitad de tipeo.
-    function aplicarFocusBlurImporte(input) {
-      input.addEventListener('focus', (e) => {
-        e.target.value = e.target.value.replace(/\./g, '')
-      })
-      input.addEventListener('blur', (e) => {
-        const num = parseImporte(e.target.value)
-        if (num != null) e.target.value = formatearNumeroEditable(num)
+    // Separador de miles en vivo, mientras se escribe — mantiene el cursor a
+    // la misma distancia del final del texto (no del principio), para que no
+    // salte cuando se agrega o saca un punto de miles por un dígito tipeado
+    // en el medio del número.
+    function formatearImporteEnVivo(input) {
+      input.addEventListener('input', (e) => {
+        const desdeElFinal = e.target.value.length - e.target.selectionStart
+        let valor = e.target.value.replace(/[^\d,]/g, '')
+        // Si hay más de una coma, conserva la primera como separador
+        // decimal y descarta las siguientes — sin esto, split(',') tira
+        // en silencio todo lo que venga después de la segunda coma.
+        const primeraComa = valor.indexOf(',')
+        if (primeraComa !== -1) valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '')
+        let [entero, decimal] = valor.split(',')
+        entero = (entero || '').replace(/^0+(?=\d)/, '')
+        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+        let nuevoValor = entero
+        if (decimal !== undefined) nuevoValor += ',' + decimal.slice(0, 2)
+        e.target.value = nuevoValor
+        const nuevaPosicion = Math.max(0, nuevoValor.length - desdeElFinal)
+        e.target.setSelectionRange(nuevaPosicion, nuevaPosicion)
       })
     }
 
@@ -1023,6 +1033,17 @@
       poblarSelect('filtro-unidad-historial', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
 
       await Promise.all([cargarSaldos(), cargarSinProveedor(), cargarContadorPendientes()])
+
+      // Deep link: cuentas-corrientes.html?proveedor=<id>&unidad=<unidad_id>
+      // abre la ficha directo — necesario para que "volver" desde gastos.html
+      // pueda apuntar a una ficha puntual, no solo a esta pantalla.
+      const params = new URLSearchParams(location.search)
+      const proveedorURL = params.get('proveedor')
+      const unidadURL = params.get('unidad')
+      if (proveedorURL && unidadURL) {
+        const prov = estado.maestros.proveedores.find(p => p.id === proveedorURL)
+        if (prov) await abrirFicha(proveedorURL, unidadURL, prov.razon_social)
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1208,8 +1229,8 @@
             <div class="gasto__derecha" style="align-items:flex-end; gap:0.375rem;">
               <div class="gasto__importe">${formatearImporte(f.importe, f.moneda)}</div>
               <div style="display:flex; gap:0.5rem; align-items:center;">
-                <a href="gastos.html?factura=${f.id}" class="btn-icono-accion" title="Ver">👁</a>
-                <a href="gastos.html?factura=${f.id}" class="btn-icono-accion" title="Editar">✏️</a>
+                <a href="gastos.html?factura=${f.id}&volver=${encodeURIComponent('cuentas-corrientes.html')}" class="btn-icono-accion" title="Ver">👁</a>
+                <a href="gastos.html?factura=${f.id}&volver=${encodeURIComponent('cuentas-corrientes.html')}" class="btn-icono-accion" title="Editar">✏️</a>
                 <button type="button" class="btn btn--exito btn-asignar-proveedor" data-id="${f.id}" style="width:auto; padding:0.375rem 0.75rem; font-size:0.75rem;">Asignar proveedor</button>
               </div>
             </div>
@@ -1494,6 +1515,10 @@
       document.getElementById('ficha-titulo').textContent = nombre
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-ficha').removeAttribute('hidden')
+      // Deja la URL deep-linkeable (?proveedor=&unidad=) mientras la ficha
+      // está abierta — de ahí toman location.href los links "Ver"/"Editar"
+      // hacia gastos.html para poder volver a esta ficha puntual.
+      history.pushState(null, '', `?proveedor=${proveedorId}&unidad=${unidadId}`)
       await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
       renderizarFichaBanner()
     }
@@ -1502,6 +1527,7 @@
       document.getElementById('vista-ficha').hidden = true
       document.getElementById('vista-lista').removeAttribute('hidden')
       estado.ficha = null
+      history.replaceState(null, '', location.pathname)
     }
 
     async function cargarFichaSaldos() {
@@ -1605,10 +1631,11 @@
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const esFactura = m.tipo === 'factura' && m.factura_pendiente_id
         const puedeEliminar = esFactura && ['pendiente', 'parcial'].includes(estadoPorFactura[m.factura_pendiente_id])
+        const volverFicha = encodeURIComponent(location.href)
         const iconos = esFactura ? `
           <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
-            <a href="gastos.html?factura=${m.factura_pendiente_id}" class="btn-icono-accion" title="Ver">👁</a>
-            <a href="gastos.html?factura=${m.factura_pendiente_id}" class="btn-icono-accion" title="Editar">✏️</a>
+            <a href="gastos.html?factura=${m.factura_pendiente_id}&volver=${volverFicha}" class="btn-icono-accion" title="Ver">👁</a>
+            <a href="gastos.html?factura=${m.factura_pendiente_id}&volver=${volverFicha}" class="btn-icono-accion" title="Editar">✏️</a>
             ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${m.factura_pendiente_id}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
           </div>` : ''
         const saldoAcum = Number(m.saldo_acumulado) || 0
@@ -1905,7 +1932,7 @@
           facturasParaPago[i].monto = parseImporte(e.target.value) || 0
           actualizarResumenAplicacion()
         })
-        aplicarFocusBlurImporte(inp)
+        formatearImporteEnVivo(inp)
       })
 
       actualizarResumenAplicacion()
@@ -2104,7 +2131,7 @@
       programarActualizarSugerenciasPago()
     })
     document.getElementById('campo-monto-pago').addEventListener('input', programarActualizarSugerenciasPago)
-    aplicarFocusBlurImporte(document.getElementById('campo-monto-pago'))
+    formatearImporteEnVivo(document.getElementById('campo-monto-pago'))
     document.getElementById('grilla-medio-pago-cc').addEventListener('click', (e) => {
       const btn = e.target.closest('.btn-tipo-doc')
       if (!btn) return
@@ -2128,7 +2155,7 @@
         : Number(creditoAAplicar.monto_disponible)
       document.getElementById('campo-monto-credito').value = formatearNumeroEditable(sugerido)
     })
-    aplicarFocusBlurImporte(document.getElementById('campo-monto-credito'))
+    formatearImporteEnVivo(document.getElementById('campo-monto-credito'))
     document.getElementById('btn-cerrar-aplicar-credito').addEventListener('click', cerrarModalAplicarCredito)
     document.getElementById('btn-cancelar-aplicar-credito').addEventListener('click', cerrarModalAplicarCredito)
     document.querySelector('#modal-aplicar-credito .modal-cc__backdrop').addEventListener('click', cerrarModalAplicarCredito)
