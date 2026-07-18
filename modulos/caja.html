@@ -32,6 +32,41 @@
 
     .caja-toolbar__buscar { flex: 1; min-width: 160px; }
 
+    /* ── Pestañas (mismo patrón .tabs-cc de cuentas-corrientes.html) ──────── */
+
+    .tabs-cc {
+      display: inline-flex;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.25rem;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .tabs-cc__opcion {
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      padding: 0.5rem 1rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+    .tabs-cc__opcion--activa {
+      background: var(--amarillo);
+      color: #fff;
+    }
+
+    .fila-tabs-caja {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+
     #filtro-busqueda-caja {
       width: 100%;
       height: 38px;
@@ -1055,104 +1090,89 @@
 
       <div id="stat-total-empresa"></div>
 
-      <div class="caja-toolbar">
-        <div class="caja-toolbar__buscar">
-          <input type="text" id="filtro-busqueda-caja" placeholder="🔍 Buscar persona…">
+      <div class="fila-tabs-caja">
+        <div class="tabs-cc" id="tabs-caja">
+          <button type="button" class="tabs-cc__opcion tabs-cc__opcion--activa" data-tab="caja">Caja</button>
+          <button type="button" class="tabs-cc__opcion" data-tab="retiros" id="tab-btn-retiros" style="display:none;">Retiros socios</button>
+          <button type="button" class="tabs-cc__opcion" data-tab="todos-movimientos" id="tab-btn-todos-movimientos" style="display:none;">Todos los movimientos</button>
         </div>
         <button type="button" class="btn btn--navy-outline" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
-        <div class="caja-toolbar__acciones">
-          <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto; flex:1;">Retiro personal</button>
-          <button type="button" class="btn btn--navy-outline" id="btn-ver-retiros-personales" style="display:none; width:auto; flex:1;">Retiros socios</button>
-          <button type="button" class="btn btn--navy-outline" id="btn-ver-todos-movimientos" style="display:none; width:auto; flex:1;">Todos los movimientos</button>
+        <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto;">Retiro personal</button>
+      </div>
+
+      <!-- ── Pestaña: Caja ──────────────────────────────────────────────── -->
+      <div id="tab-caja">
+        <div class="caja-toolbar">
+          <div class="caja-toolbar__buscar">
+            <input type="text" id="filtro-busqueda-caja" placeholder="🔍 Buscar persona…">
+          </div>
+        </div>
+
+        <div id="lista-personas"></div>
+
+        <div id="estado-cargando" class="estado-vacio">
+          <div class="spinner"></div>
+          <p class="estado-vacio__descripcion">Cargando…</p>
+        </div>
+
+        <div id="estado-vacio-caja" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">💰</div>
+          <div class="estado-vacio__titulo">No hay personas con caja disponible</div>
         </div>
       </div>
 
-      <div id="lista-personas"></div>
+      <!-- ── Pestaña: Retiros socios (exclusiva super_admin) ──────────────── -->
+      <div id="tab-retiros" hidden>
+        <div class="filtros-retiros">
+          <select id="filtro-retiros-persona"></select>
+          <div class="filtros-retiros__fecha">
+            <span class="filtros-retiros__fecha-label">Desde</span>
+            <input type="date" id="filtro-retiros-desde">
+          </div>
+          <div class="filtros-retiros__fecha">
+            <span class="filtros-retiros__fecha-label">Hasta</span>
+            <input type="date" id="filtro-retiros-hasta">
+          </div>
+          <button type="button" id="btn-exportar-retiros" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
+        </div>
 
-      <div id="estado-cargando" class="estado-vacio">
-        <div class="spinner"></div>
-        <p class="estado-vacio__descripcion">Cargando…</p>
+        <div id="stat-total-retiros"></div>
+
+        <div id="estado-cargando-retiros" class="estado-vacio">
+          <div class="spinner"></div>
+          <p class="estado-vacio__descripcion">Cargando…</p>
+        </div>
+
+        <div class="lista-movimientos" id="lista-retiros-personales"></div>
+
+        <div id="estado-vacio-retiros" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">📋</div>
+          <div class="estado-vacio__titulo">No hay retiros registrados</div>
+        </div>
       </div>
 
-      <div id="estado-vacio-caja" class="estado-vacio" hidden>
-        <div class="estado-vacio__icono">💰</div>
-        <div class="estado-vacio__titulo">No hay personas con caja disponible</div>
+      <!-- ── Pestaña: Todos los movimientos (exclusiva super_admin) ───────── -->
+      <div id="tab-todos-movimientos" hidden>
+        <div class="lista-filtros" id="filtros-todos-movimientos"></div>
+
+        <div id="stat-total-todos-movimientos"></div>
+
+        <div id="estado-cargando-todos-movimientos" class="estado-vacio">
+          <div class="spinner"></div>
+          <p class="estado-vacio__descripcion">Cargando…</p>
+        </div>
+
+        <div class="lista-movimientos" id="lista-todos-movimientos"></div>
+
+        <div id="estado-vacio-todos-movimientos" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">📋</div>
+          <div class="estado-vacio__titulo">No hay movimientos con estos filtros</div>
+        </div>
       </div>
 
     </div>
 
   </div><!-- /vista-lista-caja -->
-
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       VISTA — RETIROS PERSONALES (exclusiva rol_app === 'super_admin')
-  ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="vista-retiros-personales" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-cerrar-retiros-personales">← Volver</button>
-      <span class="header__nombre-app">Retiros socios</span>
-      <div style="width:2rem;"></div>
-    </header>
-
-    <div style="padding:1.25rem; max-width:1120px; margin:0 auto; width:100%;">
-      <div class="filtros-retiros">
-        <select id="filtro-retiros-persona"></select>
-        <div class="filtros-retiros__fecha">
-          <span class="filtros-retiros__fecha-label">Desde</span>
-          <input type="date" id="filtro-retiros-desde">
-        </div>
-        <div class="filtros-retiros__fecha">
-          <span class="filtros-retiros__fecha-label">Hasta</span>
-          <input type="date" id="filtro-retiros-hasta">
-        </div>
-        <button type="button" id="btn-exportar-retiros" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
-      </div>
-
-      <div id="stat-total-retiros"></div>
-
-      <div id="estado-cargando-retiros" class="estado-vacio">
-        <div class="spinner"></div>
-        <p class="estado-vacio__descripcion">Cargando…</p>
-      </div>
-
-      <div class="lista-movimientos" id="lista-retiros-personales"></div>
-
-      <div id="estado-vacio-retiros" class="estado-vacio" hidden>
-        <div class="estado-vacio__icono">📋</div>
-        <div class="estado-vacio__titulo">No hay retiros registrados</div>
-      </div>
-    </div>
-  </div><!-- /vista-retiros-personales -->
-
-
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       VISTA — TODOS LOS MOVIMIENTOS (exclusiva rol_app === 'super_admin')
-  ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="vista-todos-movimientos" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-cerrar-todos-movimientos">← Volver</button>
-      <span class="header__nombre-app">Todos los movimientos</span>
-      <div style="width:2rem;"></div>
-    </header>
-
-    <div style="padding:1.25rem; max-width:1120px; margin:0 auto; width:100%;">
-      <div class="lista-filtros" id="filtros-todos-movimientos"></div>
-
-      <div id="stat-total-todos-movimientos"></div>
-
-      <div id="estado-cargando-todos-movimientos" class="estado-vacio">
-        <div class="spinner"></div>
-        <p class="estado-vacio__descripcion">Cargando…</p>
-      </div>
-
-      <div class="lista-movimientos" id="lista-todos-movimientos"></div>
-
-      <div id="estado-vacio-todos-movimientos" class="estado-vacio" hidden>
-        <div class="estado-vacio__icono">📋</div>
-        <div class="estado-vacio__titulo">No hay movimientos con estos filtros</div>
-      </div>
-    </div>
-  </div><!-- /vista-todos-movimientos -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -1452,11 +1472,19 @@
                               // dueño es origen o destino) — el botón que se muestra por
                               // fila depende de quién está LOGUEADO, no de la ficha
       filtros:         { busqueda: '' },
-      filtrosRetiros:  { empleado_id: '', fecha_desde: '', fecha_hasta: '' }, // vista "Retiros socios"
-      filtrosTodosMovimientos: { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] }, // vista "Todos los movimientos"
+      filtrosRetiros:  { empleado_id: '', fecha_desde: '', fecha_hasta: '' }, // pestaña "Retiros socios"
+      filtrosTodosMovimientos: { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] }, // pestaña "Todos los movimientos"
       retiros:         [], // último resultado cargado en "Retiros socios" (para exportar)
       todosMovimientos: [], // último resultado cargado en "Todos los movimientos" (para exportar)
       wizardMovimiento: { tipo: null, empleadoId: null },
+      tabActivaCaja:   'caja', // 'caja' | 'retiros' | 'todos-movimientos'
+      // Antes eran vistas separadas que cargaban al abrirse (perezosas por
+      // ser pantallas aparte); fusionadas en pestañas dentro de la misma
+      // vista, cambiar de pestaña ya no dispara una carga por sí solo — hace
+      // falta este flag explícito para no repetir la consulta cada vez que
+      // se vuelve a esa pestaña.
+      retirosCargadoUnaVez: false,
+      todosMovimientosCargadoUnaVez: false,
     }
 
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
@@ -2820,10 +2848,10 @@
         retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join('')
     }
 
-    async function abrirRetirosPersonales() {
-      document.getElementById('vista-lista-caja').hidden = true
-      document.getElementById('vista-retiros-personales').removeAttribute('hidden')
-
+    // Se llama una sola vez, la primera vez que se entra a la pestaña
+    // "Retiros socios" (ver cambiarTabCaja) — antes era el abrir de una
+    // vista aparte, ahora es la carga perezosa de esa pestaña.
+    async function cargarPestanaRetiros() {
       poblarSelectorRetirosPersona()
       document.getElementById('filtro-retiros-desde').value = estado.filtrosRetiros.fecha_desde
       document.getElementById('filtro-retiros-hasta').value = estado.filtrosRetiros.fecha_hasta
@@ -2831,13 +2859,6 @@
       await cargarRetiros()
     }
 
-    function cerrarRetirosPersonales() {
-      document.getElementById('vista-retiros-personales').hidden = true
-      document.getElementById('vista-lista-caja').removeAttribute('hidden')
-    }
-
-    document.getElementById('btn-ver-retiros-personales').addEventListener('click', abrirRetirosPersonales)
-    document.getElementById('btn-cerrar-retiros-personales').addEventListener('click', cerrarRetirosPersonales)
     document.getElementById('filtro-retiros-persona').addEventListener('change', (e) => {
       estado.filtrosRetiros.empleado_id = e.target.value
       cargarRetiros()
@@ -2997,21 +3018,36 @@
         estado.todosMovimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join('')
     }
 
-    async function abrirTodosMovimientos() {
-      document.getElementById('vista-lista-caja').hidden = true
-      document.getElementById('vista-todos-movimientos').removeAttribute('hidden')
-
+    // Carga perezosa de la pestaña "Todos los movimientos" — ver cambiarTabCaja.
+    async function cargarPestanaTodosMovimientos() {
       renderizarFiltrosTodosMovimientos()
       await cargarTodosMovimientos()
     }
 
-    function cerrarTodosMovimientos() {
-      document.getElementById('vista-todos-movimientos').hidden = true
-      document.getElementById('vista-lista-caja').removeAttribute('hidden')
+    // ═══════════════════════════════════════════════════════════════════════
+    // PESTAÑAS — Caja / Retiros socios / Todos los movimientos
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function cambiarTabCaja(tab) {
+      estado.tabActivaCaja = tab
+      document.querySelectorAll('#tabs-caja .tabs-cc__opcion').forEach(b => b.classList.toggle('tabs-cc__opcion--activa', b.dataset.tab === tab))
+      document.getElementById('tab-caja').hidden = tab !== 'caja'
+      document.getElementById('tab-retiros').hidden = tab !== 'retiros'
+      document.getElementById('tab-todos-movimientos').hidden = tab !== 'todos-movimientos'
+
+      if (tab === 'retiros' && !estado.retirosCargadoUnaVez) {
+        estado.retirosCargadoUnaVez = true
+        cargarPestanaRetiros()
+      }
+      if (tab === 'todos-movimientos' && !estado.todosMovimientosCargadoUnaVez) {
+        estado.todosMovimientosCargadoUnaVez = true
+        cargarPestanaTodosMovimientos()
+      }
     }
 
-    document.getElementById('btn-ver-todos-movimientos').addEventListener('click', abrirTodosMovimientos)
-    document.getElementById('btn-cerrar-todos-movimientos').addEventListener('click', cerrarTodosMovimientos)
+    document.querySelectorAll('#tabs-caja .tabs-cc__opcion').forEach(btn => {
+      btn.addEventListener('click', () => cambiarTabCaja(btn.dataset.tab))
+    })
 
     // ═══════════════════════════════════════════════════════════════════════
     // MODAL — Registrar ingreso / egreso / retiro
@@ -3431,8 +3467,8 @@
       await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas()])
 
       if (emp.rol_app === 'super_admin') {
-        document.getElementById('btn-ver-retiros-personales').style.display = 'inline-flex'
-        document.getElementById('btn-ver-todos-movimientos').style.display = 'inline-flex'
+        document.getElementById('tab-btn-retiros').style.display = ''
+        document.getElementById('tab-btn-todos-movimientos').style.display = ''
         document.getElementById('btn-mi-caja').style.display = 'inline-flex'
       }
 
