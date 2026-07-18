@@ -244,13 +244,21 @@
       color: #1E8C4A;
     }
 
-    .fila-movimiento {
-      display: flex;
-      align-items: center;
+    /* .fila-movimiento se combina con la clase global .tarjeta-lista (fondo,
+       borde, border-radius, padding — css/main.css) en vez de reinventar el
+       estilo de tarjeta; acá solo lo que .tarjeta-lista no cubre. No es
+       clickeable como el resto de los usos de .tarjeta-lista en la app. */
+    .tarjeta-lista.fila-movimiento {
       justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.875rem 0;
-      border-bottom: 1px solid var(--color-borde);
+      cursor: default;
+    }
+    /* .lista-contenido no estaba definida en ningún lado alcanzable desde
+       este archivo — las tarjetas quedaban pegadas sin separación. Mismo
+       patrón que ya usa gastos.html. */
+    .lista-contenido {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
     .fila-movimiento__tipo {
       font-size: 0.6875rem;
@@ -262,20 +270,17 @@
     .fila-movimiento__referencia { font-size: 0.9375rem; font-weight: 600; color: var(--color-texto); }
     .fila-movimiento__fecha { font-size: 0.8125rem; color: var(--color-texto-suave); }
     .fila-movimiento__monto { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+
+    /* Historial de facturas — misma tarjeta, letra más chica para que
+       entren más filas sin scrollear tanto. La ficha de proveedor
+       (#lista-movimientos-ficha) no se toca, sigue con el tamaño de arriba. */
+    #lista-historial .fila-movimiento__tipo { font-size: 0.625rem; }
+    #lista-historial .fila-movimiento__referencia { font-size: 0.8125rem; }
+    #lista-historial .fila-movimiento__fecha { font-size: 0.75rem; }
+    #lista-historial .fila-movimiento__monto { font-size: 0.875rem; }
     .fila-movimiento__monto--deuda { color: var(--color-error); }
     .fila-movimiento__monto--reduce { color: #1E8C4A; }
 
-    .tarjeta-credito {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.875rem 1rem;
-      border: 1px solid var(--color-borde);
-      border-radius: 12px;
-      margin-bottom: 0.625rem;
-      background: var(--turquesa-suave);
-    }
 
     /* ── Modales (mismo patrón bottom-sheet que ya usan caja.html/gastos.html) */
 
@@ -506,11 +511,9 @@
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 1.25rem;">
       <div class="grilla-saldos-ficha" id="ficha-saldos"></div>
 
-      <button type="button" class="btn btn--exito" id="btn-registrar-pago" style="width:auto;">Registrar pago</button>
-
-      <div id="ficha-creditos-seccion" hidden>
-        <h3 class="titulo-seccion-cc">Créditos disponibles</h3>
-        <div id="lista-creditos"></div>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.875rem;">
+        <button type="button" class="btn btn--exito" id="btn-registrar-pago" style="width:auto;">Registrar pago</button>
+        <button type="button" class="btn btn--exito" id="btn-aplicar-credito-ficha" style="width:auto;" hidden>Aplicar crédito a una factura</button>
       </div>
 
       <h3 class="titulo-seccion-cc">Movimientos</h3>
@@ -520,7 +523,7 @@
         <p class="estado-vacio__descripcion">Cargando movimientos…</p>
       </div>
 
-      <div id="lista-movimientos-ficha"></div>
+      <div class="lista-contenido" id="lista-movimientos-ficha"></div>
 
       <div id="estado-vacio-movimientos" class="estado-vacio" hidden>
         <div class="estado-vacio__icono">📄</div>
@@ -594,24 +597,35 @@
     <div class="modal-cc__panel">
       <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-aplicar-credito" title="Cerrar">✕</button>
       <h2>Aplicar crédito a una factura</h2>
-      <p id="aplicar-credito-texto" style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;"></p>
 
-      <div class="formulario">
-        <div class="grupo-campo">
-          <label for="campo-factura-credito">Factura</label>
-          <select id="campo-factura-credito">
-            <option value="">— Seleccioná una factura —</option>
-          </select>
-        </div>
-        <div class="grupo-campo">
-          <label for="campo-monto-credito">Monto a aplicar</label>
-          <input type="text" id="campo-monto-credito" placeholder="0,00" inputmode="decimal">
-        </div>
+      <!-- Paso 1 — solo aparece si hay más de un crédito disponible; con
+           uno solo se salta directo al paso 2. -->
+      <div id="aplicar-credito-paso-elegir" hidden>
+        <p style="margin:0.25rem 0 0.75rem; color:var(--color-texto-suave); font-size:0.875rem;">Elegí qué crédito aplicar:</p>
+        <div id="lista-creditos-para-elegir"></div>
       </div>
 
-      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
-        <button type="button" class="btn btn--secundario" id="btn-cancelar-aplicar-credito">Cancelar</button>
-        <button type="button" class="btn btn--exito" id="btn-confirmar-aplicar-credito">Aplicar</button>
+      <!-- Paso 2 — factura + monto (mismo formulario de siempre). -->
+      <div id="aplicar-credito-paso-factura" hidden>
+        <p id="aplicar-credito-texto" style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;"></p>
+
+        <div class="formulario">
+          <div class="grupo-campo">
+            <label for="campo-factura-credito">Factura</label>
+            <select id="campo-factura-credito">
+              <option value="">— Seleccioná una factura —</option>
+            </select>
+          </div>
+          <div class="grupo-campo">
+            <label for="campo-monto-credito">Monto a aplicar</label>
+            <input type="text" id="campo-monto-credito" placeholder="0,00" inputmode="decimal">
+          </div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-aplicar-credito">Cancelar</button>
+          <button type="button" class="btn btn--exito" id="btn-confirmar-aplicar-credito">Aplicar</button>
+        </div>
       </div>
     </div>
   </div><!-- /modal-aplicar-credito -->
@@ -1179,7 +1193,7 @@
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
         return `
-          <div class="fila-movimiento">
+          <div class="tarjeta-lista fila-movimiento">
             <div>
               <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
               <div class="fila-movimiento__referencia">${m.proveedorNombre}${m.referencia ? ` — ${m.referencia}` : ''}</div>
@@ -1239,26 +1253,30 @@
       if (error) { console.error(error); mostrarError('Error al cargar el saldo.'); return }
 
       estado.fichaSaldos = data ?? []
+
+      // Un solo indicador por moneda, con prioridad a la deuda: "A pagar" si
+      // deuda_pendiente > 0 (aunque también haya crédito en esa misma
+      // moneda al mismo tiempo — caso raro de una factura nueva recién
+      // cargada antes de aplicar un crédito viejo, nunca se muestran las
+      // dos líneas juntas); si no hay deuda pero sí crédito, "Saldo a
+      // favor" (verde). Si ambos son 0, esa moneda no se muestra.
+      const monedasConSaldo = estado.fichaSaldos.filter(s => (Number(s.deuda_pendiente) || 0) > 0 || (Number(s.credito_disponible) || 0) > 0)
+
       const cont = document.getElementById('ficha-saldos')
-      if (!estado.fichaSaldos.length) {
+      if (!monedasConSaldo.length) {
         cont.innerHTML = `<div class="stat-card-cc"><div class="stat-card-cc__etiqueta">Saldo</div><div class="stat-card-cc__monto">$ 0,00</div></div>`
         return
       }
-      // Un solo indicador por moneda: "A pagar" si hay deuda, "Saldo a
-      // favor" (verde) si en cambio hay crédito. El monto siempre positivo,
-      // nunca en rojo. Si por algún motivo una moneda tiene las dos cosas a
-      // la vez, se muestran las dos líneas en la misma tarjeta.
-      cont.innerHTML = estado.fichaSaldos.map(s => {
+      cont.innerHTML = monedasConSaldo.map(s => {
         const deuda   = Number(s.deuda_pendiente) || 0
         const credito = Number(s.credito_disponible) || 0
-        const lineas = []
-        if (deuda > 0)   lineas.push(`<div class="stat-card-cc__monto">A pagar ${formatearImporte(deuda, s.moneda)}</div>`)
-        if (credito > 0) lineas.push(`<div class="stat-card-cc__monto stat-card-cc__monto--favor">Saldo a favor ${formatearImporte(credito, s.moneda)}</div>`)
-        if (!lineas.length) lineas.push(`<div class="stat-card-cc__monto">${formatearImporte(0, s.moneda)}</div>`)
+        const linea = deuda > 0
+          ? `<div class="stat-card-cc__monto">A pagar ${formatearImporte(deuda, s.moneda)}</div>`
+          : `<div class="stat-card-cc__monto stat-card-cc__monto--favor">Saldo a favor ${formatearImporte(credito, s.moneda)}</div>`
         return `
           <div class="stat-card-cc">
             <div class="stat-card-cc__etiqueta">${s.moneda}</div>
-            ${lineas.join('')}
+            ${linea}
           </div>
         `
       }).join('')
@@ -1312,7 +1330,7 @@
             ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${m.factura_pendiente_id}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
           </div>` : ''
         return `
-          <div class="fila-movimiento">
+          <div class="tarjeta-lista fila-movimiento">
             <div>
               <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
               <div class="fila-movimiento__referencia">${m.referencia || '—'}</div>
@@ -1346,37 +1364,43 @@
       if (error) { console.error(error); return }
 
       estado.fichaCreditos = data ?? []
-      const seccion = document.getElementById('ficha-creditos-seccion')
-      const listaEl = document.getElementById('lista-creditos')
-
-      if (!estado.fichaCreditos.length) {
-        seccion.hidden = true
-        return
-      }
-      seccion.hidden = false
-      listaEl.innerHTML = estado.fichaCreditos.map(c => `
-        <div class="tarjeta-credito" data-id="${c.id}">
-          <div>
-            <div style="font-weight:700; color:var(--turquesa-oscuro);">${formatearImporte(c.monto_disponible, c.moneda)}</div>
-            <div style="font-size:0.75rem; color:var(--color-texto-suave);">de ${formatearImporte(c.monto_original, c.moneda)} original</div>
-          </div>
-          <button type="button" class="btn btn--exito btn-aplicar-credito" data-id="${c.id}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Aplicar a una factura</button>
-        </div>
-      `).join('')
-
-      listaEl.querySelectorAll('.btn-aplicar-credito').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const c = estado.fichaCreditos.find(x => x.id === btn.dataset.id)
-          if (c) abrirModalAplicarCredito(c)
-        })
-      })
+      document.getElementById('btn-aplicar-credito-ficha').hidden = !estado.fichaCreditos.length
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // MODAL: APLICAR CRÉDITO
     // ═══════════════════════════════════════════════════════════════════════
 
-    async function abrirModalAplicarCredito(credito) {
+    // Entrada única (botón "Aplicar crédito a una factura" en la ficha). Con
+    // un solo crédito disponible salta directo al paso de elegir factura;
+    // con más de uno, primero hay que elegir cuál — nunca se aplica solo.
+    function abrirModalAplicarCreditoDesdeFicha() {
+      if (estado.fichaCreditos.length === 1) {
+        seleccionarCreditoParaAplicar(estado.fichaCreditos[0])
+        return
+      }
+
+      document.getElementById('lista-creditos-para-elegir').innerHTML = estado.fichaCreditos.map(c => `
+        <div class="tarjeta-lista btn-elegir-credito" data-id="${c.id}" style="margin-bottom:0.5rem;">
+          <div class="tarjeta-lista__info">
+            <div class="tarjeta-lista__titulo">${formatearImporte(c.monto_disponible, c.moneda)}</div>
+            <div class="tarjeta-lista__subtitulo">de ${formatearImporte(c.monto_original, c.moneda)} original</div>
+          </div>
+        </div>
+      `).join('')
+      document.querySelectorAll('.btn-elegir-credito').forEach(el => {
+        el.addEventListener('click', () => {
+          const c = estado.fichaCreditos.find(x => x.id === el.dataset.id)
+          if (c) seleccionarCreditoParaAplicar(c)
+        })
+      })
+
+      document.getElementById('aplicar-credito-paso-elegir').hidden = false
+      document.getElementById('aplicar-credito-paso-factura').hidden = true
+      document.getElementById('modal-aplicar-credito').hidden = false
+    }
+
+    async function seleccionarCreditoParaAplicar(credito) {
       creditoAAplicar = credito
       document.getElementById('aplicar-credito-texto').textContent =
         `Crédito disponible: ${formatearImporte(credito.monto_disponible, credito.moneda)}`
@@ -1396,6 +1420,8 @@
         f => ({ value: f.id, label: `${formatearFecha(f.fecha_factura)} — ${f.numero_comprobante || '(sin número)'} — saldo ${formatearImporte(f.saldo_pendiente, credito.moneda)}` }),
         '— Seleccioná una factura —')
 
+      document.getElementById('aplicar-credito-paso-elegir').hidden = true
+      document.getElementById('aplicar-credito-paso-factura').hidden = false
       document.getElementById('modal-aplicar-credito').hidden = false
     }
 
@@ -1779,6 +1805,7 @@
     // ── Ficha ──────────────────────────────────────────────────────────────
     document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
     document.getElementById('btn-registrar-pago').addEventListener('click', abrirModalPago)
+    document.getElementById('btn-aplicar-credito-ficha').addEventListener('click', abrirModalAplicarCreditoDesdeFicha)
 
     // ── Modal: Registrar pago ─────────────────────────────────────────────
     document.getElementById('campo-moneda-pago').addEventListener('change', () => {
