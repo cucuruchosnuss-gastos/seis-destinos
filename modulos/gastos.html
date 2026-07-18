@@ -19,18 +19,28 @@
       --turquesa:        #3FBFAE;
       --turquesa-suave:  #E8FBF7;
       --turquesa-oscuro: #1E8C7C;
+      /* Navy medio del gradiente del logo/FAB — --color-acento global ya
+         es el navy oscuro (#1a2a52), este es solo el otro extremo. */
+      --navy-medio:      #35508f;
+      /* Texto del botón "Enviar a pendiente" — --color-acento-highlight
+         (cian, ya usado en los chips de categoría) es demasiado claro
+         para texto sobre --color-acento-suave, hace falta un tono más
+         oscuro de la misma familia (no confundir con --turquesa-oscuro,
+         que es el color propio de Cuentas Corrientes). */
+      --celeste-oscuro:  #147a8a;
     }
 
-    /* Botón "Enviar a pendiente de pago" — grande y amarillo a propósito,
+    /* Botón "Enviar a pendiente de pago" — grande y celeste a propósito,
        para que se distinga de las 3 opciones normales de medio de pago que
        tiene debajo (bifurca el guardado, no es un medio de pago más). */
     .btn-pendiente {
       width: 100%;
-      background: var(--amarillo);
-      color: #fff;
+      background: var(--color-acento-suave);
+      border: 1.5px solid var(--color-acento-highlight);
+      color: var(--celeste-oscuro);
       margin-bottom: 0.875rem;
     }
-    .btn-pendiente:hover { background: var(--amarillo-hover); }
+    .btn-pendiente:hover { background: #CFF6FB; }
 
     /* Botón "Ver cuentas corrientes" — con fondo, no un link plano, para que
        se note que lleva a otro módulo (mismo criterio de acento local que
@@ -149,6 +159,54 @@
       stroke-width: 2.25;
       vertical-align: -0.15em;
     }
+
+    /* ── Header (Pantalla 1) — mismo patrón que .caja-header/.cc-header:
+       tarjeta blanca redondeada con sombra, en vez de la barra sticky con
+       blur. Volver es el primer hijo (izquierda), igual que ya estaba acá
+       y que en .caja-header — no es el orden espejado de .cc-header. ──── */
+
+    .gastos-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0 1.25rem;
+    }
+    .gastos-header__volver {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0.875rem;
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .gastos-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
+    .gastos-header__marca { display: flex; align-items: center; gap: 0.625rem; }
+    .gastos-header__logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--navy-medio), var(--color-acento));
+      flex-shrink: 0;
+    }
+    .gastos-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; }
+    .gastos-header__marca-texto {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--color-texto-suave);
+      text-transform: uppercase;
+    }
+    .gastos-header__titulo { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; color: var(--color-texto); }
 
     /* ── Layout base ───────────────────────────────────────────────────────── */
 
@@ -901,7 +959,7 @@
       width: 3.5rem;
       height: 3.5rem;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--color-acento-highlight), var(--color-acento));
+      background: linear-gradient(135deg, var(--navy-medio), var(--color-acento));
       color: #fff;
       border: none;
       font-size: 1.625rem;
@@ -1193,18 +1251,18 @@
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-lista">
 
-    <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
-      <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
-      <div>
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
-          <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
-        </div>
-        <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto);">Gastos</div>
-      </div>
-    </header>
-
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem;">
+
+      <header class="gastos-header">
+        <a href="../dashboard.html" class="gastos-header__volver" title="Volver al dashboard">‹ Volver</a>
+        <div class="gastos-header__marca">
+          <div class="gastos-header__logo"></div>
+          <div class="gastos-header__marca-col">
+            <span class="gastos-header__marca-texto">Seis Destinos</span>
+            <span class="gastos-header__titulo">Gastos</span>
+          </div>
+        </div>
+      </header>
 
       <div style="display:flex; justify-content:flex-end; margin:0.875rem 0 0;">
         <a href="cuentas-corrientes.html" class="btn btn-cuentas-corrientes">🧾 Ver cuentas corrientes</a>
@@ -1701,6 +1759,7 @@
       'Impuestos inmobiliarios':  'building',
       'Alquiler':                 'key',
       'Servicios':                'zap',
+      'Pago a Cta. Cte. Proveedor': 'receipt',
     }
 
     function iconoCategoriaHtml(nombreCategoria, clase) {
