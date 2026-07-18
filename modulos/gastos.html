@@ -72,28 +72,39 @@
       font-size: 0.8125rem;
       color: var(--color-texto-suave);
     }
+    /* Botón real y el indicador de match son mutuamente excluyentes (los
+       controla actualizarBotonesProveedor... ver seleccionarProveedor()/
+       intentarMatchAutomaticoProveedor()) — mismo tamaño, apilados. */
     .btn-link-proveedor {
-      display: inline-block;
+      display: block;
+      width: 100%;
       margin-top: 0.5rem;
-      background: none;
-      border: none;
-      padding: 0;
+      padding: 0.625rem 0.875rem;
+      border-radius: 10px;
+      background: var(--color-fondo);
+      border: 1.5px solid var(--color-acento-highlight);
       color: var(--color-acento-highlight);
       font-size: 0.8125rem;
       font-weight: 600;
+      text-align: center;
       cursor: pointer;
     }
-    .btn-link-proveedor:hover { text-decoration: underline; }
+    .btn-link-proveedor:hover { background: var(--color-acento-suave); }
 
-    /* Señal chica cuando el proveedor se autoseleccionó por matching de
+    /* Señal cuando el proveedor se autoseleccionó por matching de
        CUIT/razón social del OCR — nunca silencioso, ver
        intentarMatchAutomaticoProveedor(). */
     .proveedor-auto-match {
       display: block;
-      margin-top: 0.375rem;
-      font-size: 0.8125rem;
+      margin-top: 0.5rem;
+      padding: 0.625rem 0.875rem;
+      border-radius: 10px;
+      background: var(--turquesa-suave);
+      border: 1.5px solid var(--turquesa);
       color: var(--turquesa-oscuro);
+      font-size: 0.8125rem;
       font-weight: 600;
+      text-align: center;
     }
 
     /* Modal: cargar proveedor nuevo — mismo patrón bottom-sheet que ya usa
@@ -166,7 +177,8 @@
       overflow: hidden;
     }
 
-    #modal-detalle-gasto:not([hidden]) {
+    #modal-detalle-gasto:not([hidden]),
+    #modal-detalle-factura:not([hidden]) {
       position: fixed;
       inset: 0;
       z-index: 60;
@@ -1502,6 +1514,18 @@
     <div style="padding: 1rem; overflow-y: auto;" id="detalle-gasto-contenido"></div>
   </div><!-- /modal-detalle-gasto -->
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA D — DETALLE DE UNA FACTURA PENDIENTE (?factura=<id>)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="modal-detalle-factura" hidden>
+    <header class="header">
+      <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-factura">← Volver</button>
+      <span class="header__nombre-app">Detalle de la factura</span>
+      <div id="detalle-factura-header-derecha" style="width:5rem;"></div>
+    </header>
+    <div style="padding: 1rem; overflow-y: auto;" id="detalle-factura-contenido"></div>
+  </div><!-- /modal-detalle-factura -->
+
   <!-- Modal: cargar un proveedor nuevo desde el wizard de "pendiente" cuando
        no aparece en el buscador. Llama a crear_proveedor_pendiente(); el
        proveedor queda oculto en el resto de la app hasta que un admin lo
@@ -1556,6 +1580,8 @@
       sesion:       null,
       rol:          'usuario',
       miEmpleadoId: null,
+      miRolApp:     null, // empleados.rol_app real — gatea el botón "Editar" del detalle
+                           // de factura pendiente (?factura=<id>), no reemplaza estado.rol
       cuentasPorId: {}, // id -> {id, empleado_id, nombre, medio, moneda, favorita, activa,
                          // created_at} — se completa bajo demanda por persona (cargarCuentasDe),
                          // mismo criterio que caja.html: sin filtrar por activa acá, se filtra
@@ -1600,6 +1626,10 @@
     let vehiculoFueElegido    = false // true cuando el usuario tapeó un vehículo o "Sin vehículo"
     let viaVehiculos          = false // true cuando llegó por la tarjeta Vehículos
     let proveedorSeleccionado = null  // id de proveedores, solo se usa en el flujo "pendiente"
+    // El modal "Cargar proveedor nuevo" (#modal-proveedor-nuevo) se reusa
+    // entre el wizard y el formulario de edición de factura — esta bandera
+    // le dice a su botón "Guardar" a qué combobox devolver el resultado.
+    let contextoProveedorNuevo = 'wizard' // 'wizard' | 'edicion'
 
     // Mapeo: sub-paso → número de círculo en la barra de progreso (1-5)
     const SUBPASO_A_CIRCULO = {
@@ -1782,11 +1812,12 @@
 
     const { data: emp } = await supabase
       .from('empleados')
-      .select('id')
+      .select('id, rol_app')
       .eq('auth_user_id', estado.sesion.user.id)
       .maybeSingle()
     if (emp) {
       estado.miEmpleadoId = emp.id
+      estado.miRolApp     = emp.rol_app
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2352,6 +2383,7 @@
 
     document.getElementById('btn-nuevo-gasto').addEventListener('click', abrirWizard)
     document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
+    document.getElementById('btn-cerrar-detalle-factura').addEventListener('click', cerrarDetalleFactura)
 
     document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
       btn.addEventListener('click', () => activarFiltroFecha(btn.dataset.rango))
@@ -2404,6 +2436,13 @@
       .from('proyectos').select('id, nombre').eq('activo', true).order('nombre')
     estado.maestros.proyectos = proyectosInicial ?? []
 
+    // Necesario a nivel de página (no solo dentro del wizard) para que el
+    // combobox de proveedor del formulario de edición de factura funcione
+    // al entrar directo por ?factura=<id>, sin pasar por el wizard.
+    const { data: proveedoresInicial } = await supabase
+      .from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
+    estado.maestros.proveedores = proveedoresInicial ?? []
+
     estado.maestros.unidades = unidadesInicial ?? []
 
     await cargarMonedasDisponibles()
@@ -2416,6 +2455,14 @@
     if (idGastoURL) {
       await cargarLista()
       mostrarDetalleGasto(idGastoURL)
+    }
+
+    // Deep link desde Cuentas Corrientes: gastos.html?factura=<id> abre el
+    // detalle de la factura pendiente directo. No depende de cargarLista()
+    // (esa lista es de gastos, no de facturas_pendientes).
+    const idFacturaURL = new URLSearchParams(location.search).get('factura')
+    if (idFacturaURL) {
+      mostrarDetalleFactura(idFacturaURL)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2503,6 +2550,7 @@
         'campo-proveedor-buscar','campo-proveedor-id',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
       document.getElementById('proveedor-auto-match').hidden = true
+      document.getElementById('btn-proveedor-nuevo').hidden = false
       document.getElementById('campo-fecha-pago').value = fechaISO(new Date())
       seleccionarTipoDoc(null)
       seleccionarMedioPago(null)
@@ -3203,8 +3251,11 @@
         .slice(0, 8)
     }
 
-    function renderizarSugerenciasProveedor(lista) {
-      const cont = document.getElementById('sugerencias-proveedor')
+    // Genérico — lo usan tanto el buscador de proveedor del wizard como el
+    // del formulario de edición de factura (mostrarFormularioEdicionFactura),
+    // cada uno con su propio contenedor y callback de selección.
+    function renderizarSugerenciasProveedorEn(contenedorId, lista, onSeleccionar) {
+      const cont = document.getElementById(contenedorId)
       if (!lista.length) {
         cont.innerHTML = `<div class="sugerencias-proveedor__vacio">Sin resultados</div>`
         cont.hidden = false
@@ -3216,6 +3267,18 @@
         </div>
       `).join('')
       cont.hidden = false
+      // Se reasigna en cada render (no addEventListener) para no acumular
+      // handlers duplicados a medida que el usuario tipea.
+      cont.onclick = (e) => {
+        const item = e.target.closest('.sugerencias-proveedor__item')
+        if (!item || !item.dataset.id) return
+        const p = estado.maestros.proveedores.find(x => x.id === item.dataset.id)
+        if (p) onSeleccionar(p)
+      }
+    }
+
+    function renderizarSugerenciasProveedor(lista) {
+      renderizarSugerenciasProveedorEn('sugerencias-proveedor', lista, seleccionarProveedor)
     }
 
     // Autocompleta razón social al elegir — queda editable, es una "foto"
@@ -3230,6 +3293,7 @@
       document.getElementById('sugerencias-proveedor').hidden = true
       document.getElementById('campo-razon-social').value = p.razon_social
       document.getElementById('proveedor-auto-match').hidden = true
+      document.getElementById('btn-proveedor-nuevo').hidden = true
     }
 
     function normalizarCuit(v) {
@@ -3261,11 +3325,23 @@
         }
       }
 
+      // Diagnóstico temporal — bug reportado en real (falso positivo con un
+      // proveedor sin ningún parecido) que no se pudo reproducir en el mock.
+      // Dejar hasta confirmar la causa con un repro real.
+      console.log('[match-proveedor]', {
+        cuitOcrCrudo: estado.wizard.cuitOcr,
+        cuitOcrNormalizado: cuitOcr,
+        razonSocialCampo: document.getElementById('campo-razon-social')?.value,
+        matchEncontrado: match ? { id: match.id, razon_social: match.razon_social, cuit: match.cuit } : null,
+      })
+
       if (match) {
         seleccionarProveedor(match)
         indicador.hidden = false
+        document.getElementById('btn-proveedor-nuevo').hidden = true
       } else {
         indicador.hidden = true
+        document.getElementById('btn-proveedor-nuevo').hidden = false
       }
     }
 
@@ -3649,6 +3725,214 @@
       document.getElementById('vista-lista').removeAttribute('hidden')
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // DETALLE / EDICIÓN DE FACTURA PENDIENTE (?factura=<id>, deep-link desde
+    // Cuentas Corrientes) — no depende de ninguna lista precargada porque la
+    // pantalla de lista de facturas pendientes ya no existe en este archivo
+    // desde Cambio B; se trae siempre por id directo.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function mostrarDetalleFactura(id) {
+      const { data: f, error } = await supabase
+        .from('facturas_pendientes')
+        .select(`
+          id, razon_social, tipo_documento, numero_comprobante, importe, moneda,
+          fecha_factura, lugar, observaciones, comprobante_url, estado, saldo_pendiente,
+          proveedor_id,
+          proveedores (id, razon_social),
+          categorias (id, nombre, icon),
+          unidades_negocio (id, nombre)
+        `)
+        .eq('id', id)
+        .maybeSingle()
+
+      if (error || !f) {
+        mostrarError('No se pudo cargar la factura.')
+        return
+      }
+
+      estado.facturaDetalleActual = f
+
+      const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
+        <div class="resumen-fila">
+          <span class="resumen-fila__etiqueta">${etiqueta}</span>
+          <span class="resumen-fila__valor">${valor}</span>
+        </div>` : ''
+
+      document.getElementById('detalle-factura-contenido').innerHTML = `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          ${fila('Proveedor',        f.proveedores?.razon_social)}
+          ${fila('Razón social',     f.razon_social)}
+          ${fila('Fecha de factura', formatearFecha(f.fecha_factura))}
+          ${fila('Tipo',             f.tipo_documento)}
+          ${fila('Número',           f.numero_comprobante)}
+          <div class="resumen-fila resumen-fila--importe">
+            <span class="resumen-fila__etiqueta">Importe</span>
+            <span class="resumen-importe">${formatearImporte(f.importe, f.moneda)}</span>
+          </div>
+          ${fila('Saldo pendiente', f.saldo_pendiente != null ? formatearImporte(f.saldo_pendiente, f.moneda) : null)}
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Destino y clasificación</div>
+          ${fila('Empresa',   f.unidades_negocio?.nombre)}
+          ${fila('Categoría', f.categorias ? `${iconoCategoriaHtml(f.categorias.nombre)} ${f.categorias.nombre}` : null)}
+          ${fila('Estado',    f.estado)}
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Detalles</div>
+          ${fila('Lugar',         f.lugar)}
+          ${fila('Observaciones', f.observaciones)}
+        </div>
+
+        ${f.comprobante_url ? `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          <a href="${f.comprobante_url}" target="_blank" rel="noopener" class="btn btn--secundario" style="display:inline-flex;width:auto;">Ver foto del comprobante →</a>
+        </div>` : ''}
+      `
+      lucide.createIcons()
+
+      const puedeEditar = f.estado === 'pendiente' && (estado.miRolApp === 'admin' || estado.miRolApp === 'super_admin')
+      const derecha = document.getElementById('detalle-factura-header-derecha')
+      derecha.innerHTML = puedeEditar
+        ? '<button type="button" class="btn btn--icono" id="btn-editar-factura" title="Editar">✏️ Editar</button>'
+        : ''
+      if (puedeEditar) {
+        document.getElementById('btn-editar-factura').addEventListener('click', () => mostrarFormularioEdicionFactura(id))
+      }
+
+      document.getElementById('vista-lista').hidden = true
+      document.getElementById('modal-detalle-factura').removeAttribute('hidden')
+    }
+
+    function cerrarDetalleFactura() {
+      document.getElementById('modal-detalle-factura').hidden = true
+      document.getElementById('vista-lista').removeAttribute('hidden')
+    }
+
+    // Igual que seleccionarProveedor() del wizard pero apunta a los campos
+    // propios del formulario de edición — no toca proveedorSeleccionado ni
+    // el indicador de auto-match, que son conceptos del wizard.
+    function seleccionarProveedorEdicion(p) {
+      document.getElementById('campo-edit-proveedor-id').value = p.id
+      document.getElementById('campo-edit-proveedor-buscar').value = p.razon_social
+      document.getElementById('sugerencias-edit-proveedor').hidden = true
+    }
+
+    // Mismos campos que mostrarFormularioEdicionGasto(), adaptados a las
+    // columnas reales de facturas_pendientes y a lo que acepta
+    // editar_factura_pendiente() — sin medio de pago/cuenta/fecha de pago
+    // (no existen en esta tabla) y sin vehículo/kilometraje/proyecto/tipo de
+    // documento (el RPC no los recibe, no son editables acá).
+    function mostrarFormularioEdicionFactura(id) {
+      const f = estado.facturaDetalleActual
+      if (!f || f.id !== id) return
+
+      const selectUnidad = `
+        <select id="edit-factura-unidad">
+          <option value="">— Ninguna —</option>
+          ${estado.maestros.unidades.map(u => `<option value="${u.id}" ${f.unidades_negocio?.id === u.id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
+        </select>`
+
+      const selectCategoria = `
+        <select id="edit-factura-categoria">
+          <option value="">— Ninguna —</option>
+          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${f.categorias?.id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+        </select>`
+
+      const campo = (label, html) => `
+        <div class="grupo-campo">
+          <label>${label}</label>
+          ${html}
+        </div>`
+
+      document.getElementById('detalle-factura-contenido').innerHTML = `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          <div class="grupo-campo" id="grupo-edit-proveedor" style="position:relative;">
+            <label for="campo-edit-proveedor-buscar">Proveedor</label>
+            <input type="text" id="campo-edit-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off" value="${f.proveedores?.razon_social || ''}">
+            <input type="hidden" id="campo-edit-proveedor-id" value="${f.proveedor_id || ''}">
+            <div class="sugerencias-proveedor" id="sugerencias-edit-proveedor" hidden></div>
+            <button type="button" class="btn-link-proveedor" id="btn-edit-proveedor-nuevo">+ Cargar proveedor nuevo</button>
+          </div>
+          ${campo('Razón social', `<input type="text" id="edit-factura-razon-social" value="${f.razon_social || ''}">`)}
+          ${campo('Fecha de factura', `<input type="date" id="edit-factura-fecha" value="${f.fecha_factura}">`)}
+          ${campo('Número de comprobante', `<input type="text" id="edit-factura-numero" value="${f.numero_comprobante || ''}">`)}
+          <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
+            ${campo('Importe', `<input type="number" step="0.01" id="edit-factura-importe" value="${f.importe}">`)}
+            ${campo('Moneda', `<select id="edit-factura-moneda" style="width:5.5rem;"></select>`)}
+          </div>
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Destino y clasificación</div>
+          ${campo('Empresa', selectUnidad)}
+          ${campo('Categoría', selectCategoria)}
+        </div>
+
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Detalles</div>
+          ${campo('Lugar', `<input type="text" id="edit-factura-lugar" value="${f.lugar || ''}">`)}
+          ${campo('Observaciones', `<textarea id="edit-factura-observaciones">${f.observaciones || ''}</textarea>`)}
+        </div>
+
+        <div style="display:flex; gap:0.75rem; padding:1rem 0;">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-edicion-factura">Cancelar</button>
+          <button type="button" class="btn btn--primario" id="btn-guardar-edicion-factura">Guardar cambios</button>
+        </div>
+      `
+
+      poblarSelectMoneda('edit-factura-moneda', f.moneda || 'ARS')
+
+      document.getElementById('btn-cancelar-edicion-factura').addEventListener('click', () => mostrarDetalleFactura(id))
+
+      document.getElementById('campo-edit-proveedor-buscar').addEventListener('input', (e) => {
+        document.getElementById('campo-edit-proveedor-id').value = ''
+        renderizarSugerenciasProveedorEn('sugerencias-edit-proveedor', filtrarProveedores(e.target.value), seleccionarProveedorEdicion)
+      })
+      document.getElementById('btn-edit-proveedor-nuevo').addEventListener('click', () => {
+        contextoProveedorNuevo = 'edicion'
+        document.getElementById('campo-nuevo-prov-razon').value    = document.getElementById('edit-factura-razon-social').value.trim()
+        document.getElementById('campo-nuevo-prov-cuit').value     = ''
+        document.getElementById('campo-nuevo-prov-fantasia').value = ''
+        document.getElementById('modal-proveedor-nuevo').hidden = false
+      })
+
+      document.getElementById('btn-guardar-edicion-factura').addEventListener('click', async () => {
+        const razonSocial = document.getElementById('edit-factura-razon-social').value.trim()
+        if (!razonSocial) { mostrarError('Completá la razón social.'); return }
+        const importe = Number(document.getElementById('edit-factura-importe').value)
+        if (!importe || importe <= 0) { mostrarError('Ingresá un importe válido.'); return }
+        const fechaFactura = document.getElementById('edit-factura-fecha').value
+        if (!fechaFactura) { mostrarError('Completá la fecha de factura.'); return }
+
+        const btn = document.getElementById('btn-guardar-edicion-factura')
+        btn.disabled = true
+        const { error } = await supabase.rpc('editar_factura_pendiente', {
+          p_factura_id:          id,
+          p_proveedor_id:        document.getElementById('campo-edit-proveedor-id').value || null,
+          p_razon_social:        razonSocial,
+          p_importe:             importe,
+          p_moneda:              document.getElementById('edit-factura-moneda').value || 'ARS',
+          p_fecha_factura:       fechaFactura,
+          p_numero_comprobante:  document.getElementById('edit-factura-numero').value.trim() || null,
+          p_categoria_id:        document.getElementById('edit-factura-categoria').value || null,
+          p_unidad_negocio_id:   document.getElementById('edit-factura-unidad').value || null,
+          p_lugar:               document.getElementById('edit-factura-lugar').value.trim() || null,
+          p_observaciones:       document.getElementById('edit-factura-observaciones').value.trim() || null,
+        })
+        btn.disabled = false
+        if (error) { mostrarError('Error al guardar: ' + error.message); return }
+
+        mostrarExito('Factura actualizada correctamente')
+        mostrarDetalleFactura(id)
+      })
+    }
+
     async function guardarGasto() {
       const btn = document.getElementById('btn-resumen-guardar')
       btn.classList.add('btn--cargando')
@@ -3857,18 +4141,17 @@
       proveedorSeleccionado = null
       document.getElementById('campo-proveedor-id').value = ''
       document.getElementById('proveedor-auto-match').hidden = true
+      document.getElementById('btn-proveedor-nuevo').hidden = false
       renderizarSugerenciasProveedor(filtrarProveedores(e.target.value))
-    })
-    document.getElementById('sugerencias-proveedor').addEventListener('click', (e) => {
-      const item = e.target.closest('.sugerencias-proveedor__item')
-      if (!item || !item.dataset.id) return
-      const p = estado.maestros.proveedores.find(x => x.id === item.dataset.id)
-      if (p) seleccionarProveedor(p)
     })
     document.addEventListener('click', (e) => {
       const grupo = document.getElementById('grupo-proveedor')
       const sugerencias = document.getElementById('sugerencias-proveedor')
       if (grupo && !grupo.contains(e.target)) sugerencias.hidden = true
+
+      const grupoEdit = document.getElementById('grupo-edit-proveedor')
+      const sugerenciasEdit = document.getElementById('sugerencias-edit-proveedor')
+      if (grupoEdit && sugerenciasEdit && !grupoEdit.contains(e.target)) sugerenciasEdit.hidden = true
     })
 
     // Modal "Cargar proveedor nuevo"
@@ -3876,6 +4159,7 @@
     // usuario revisa y aprieta "Guardar", no se crea solo. Nombre de
     // fantasía queda vacío (las facturas no suelen traerlo).
     document.getElementById('btn-proveedor-nuevo').addEventListener('click', () => {
+      contextoProveedorNuevo = 'wizard'
       document.getElementById('campo-nuevo-prov-razon').value    = document.getElementById('campo-razon-social').value.trim()
       document.getElementById('campo-nuevo-prov-cuit').value     = estado.wizard.cuitOcr || ''
       document.getElementById('campo-nuevo-prov-fantasia').value = ''
@@ -3901,11 +4185,14 @@
 
       // El proveedor nuevo se agrega local a los maestros (queda oculto en
       // el resto de la app hasta que un admin lo apruebe desde Cuentas
-      // Corrientes) y se autoselecciona para esta factura.
+      // Corrientes) y se autoselecciona para esta factura. El modal se
+      // reusa desde el wizard y desde el formulario de edición — cada uno
+      // devuelve el resultado a su propio combobox.
       const nuevoId = typeof data === 'string' ? data : data?.id
       const nuevoProveedor = { id: nuevoId, razon_social: razon, nombre_fantasia: fantasia }
       estado.maestros.proveedores.push(nuevoProveedor)
-      seleccionarProveedor(nuevoProveedor)
+      if (contextoProveedorNuevo === 'edicion') seleccionarProveedorEdicion(nuevoProveedor)
+      else seleccionarProveedor(nuevoProveedor)
       cerrarModalProveedorNuevo()
       mostrarExito('Proveedor cargado — queda pendiente de aprobación.')
     })
