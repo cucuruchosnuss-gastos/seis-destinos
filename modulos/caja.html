@@ -32,6 +32,84 @@
 
     .caja-toolbar__buscar { flex: 1; min-width: 160px; }
 
+    /* ── Header nuevo, mismo estilo visual que cc-header de Cuentas
+       Corrientes (tarjeta blanca redondeada) pero con el orden de los hijos
+       invertido: acá "‹ Volver" va primero/izquierda y el bloque de marca
+       segundo/derecha — mismo criterio ya unificado en Gastos/Empleados/
+       Accesos, no el de Cuentas Corrientes tal cual. Logo: cuadrado con el
+       gradiente ámbar literal del mockup (no el logo.png real). ────────── */
+
+    .caja-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0 1.25rem;
+    }
+    .caja-header__volver {
+      padding: 0.5rem 0.875rem;
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .caja-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
+    .caja-header__marca { display: flex; align-items: center; gap: 0.625rem; }
+    .caja-header__logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #d4a52a, #8a6508);
+      flex-shrink: 0;
+    }
+    .caja-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; }
+    .caja-header__marca-texto {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--color-texto-suave);
+      text-transform: uppercase;
+    }
+    .caja-header__titulo { font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; color: var(--color-texto); }
+
+    /* Header de la ficha de persona — mismo patrón que .cc-header-ficha de
+       Cuentas Corrientes (Volver izquierda, ya está bien ahí), con avatar
+       ámbar-suave + nombre a la derecha. */
+    .caja-header-ficha {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0 1.25rem;
+      gap: 0.75rem;
+    }
+    .caja-header-ficha__persona { display: flex; align-items: center; gap: 0.75rem; }
+    .caja-header-ficha__avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.8125rem;
+      flex-shrink: 0;
+    }
+    .caja-header-ficha__nombre { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.01em; color: var(--color-texto); }
+
     /* ── Pestañas (mismo patrón .tabs-cc de cuentas-corrientes.html) ──────── */
 
     .tabs-cc {
@@ -59,6 +137,16 @@
       color: #fff;
     }
 
+    /* .modal-ficha__seccion-titulo (título "Movimientos" de la ficha) nunca
+       estuvo definida en este archivo ni en main.css — quedaba sin estilo.
+       Mismo criterio que .titulo-seccion-cc de cuentas-corrientes.html. */
+    .titulo-seccion-caja {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin: 1.75rem 0 0.75rem;
+    }
+
     .fila-tabs-caja {
       display: flex;
       align-items: center;
@@ -66,6 +154,19 @@
       flex-wrap: wrap;
       margin-bottom: 1.25rem;
     }
+
+    /* "Borrar filtros" — link discreto en vez de botón con fondo. */
+    .btn-enlace-discreto {
+      background: none;
+      border: none;
+      color: var(--color-texto-suave);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0.4375rem 0.5rem;
+    }
+    .btn-enlace-discreto:hover { color: var(--bordo); }
 
     #filtro-busqueda-caja {
       width: 100%;
@@ -94,11 +195,12 @@
     }
 
     .btn--amarillo {
-      background: var(--amarillo);
+      background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
       color: #fff;
-      border: 1.5px solid var(--amarillo);
+      border: 1.5px solid transparent;
+      box-shadow: 0 8px 20px -10px rgba(140,106,26,0.55);
     }
-    .btn--amarillo:hover { background: var(--amarillo-oscuro); border-color: var(--amarillo-oscuro); }
+    .btn--amarillo:hover { filter: brightness(1.06); }
 
     .btn--bordo-outline {
       background: var(--color-fondo);
@@ -116,13 +218,19 @@
 
     /* ── Card total de la empresa ──────────────────────────────────────────── */
 
+    /* Fondo blanco (antes degradado ámbar con texto blanco) — mismo cambio
+       visual que ya se hizo en Cuentas Corrientes. Como consecuencia, ya no
+       hace falta el "chip claro sobre fondo ámbar" que usaba
+       formatearImporteConAlerta() para que un negativo se leyera con
+       contraste: con fondo blanco el color directo ya tiene contraste. */
     .stat-card-caja {
       position: relative;
-      background: linear-gradient(135deg, var(--amarillo), var(--amarillo-oscuro));
-      color: #fff;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      border: 1px solid var(--color-borde);
       border-radius: 18px;
       padding: 1.125rem 1.25rem;
-      box-shadow: 0 8px 24px rgba(140,106,26,0.25);
+      box-shadow: var(--sombra-suave);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -136,13 +244,13 @@
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      opacity: 0.8;
+      color: var(--color-texto-suave);
     }
 
     .stat-card-caja__montos {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
+      align-items: baseline;
       gap: 0.5rem 1rem;
       margin-top: 0.25rem;
     }
@@ -151,29 +259,40 @@
       font-size: 1.5rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      color: var(--amarillo-oscuro);
     }
 
-    /* Desglose por medio de pago — un chip por medio, fondo oscuro semi-
-       transparente sobre el degradado ámbar para que se lea con contraste sin
-       salirse del sistema de colores (sin jerarquía frente al total: chips
-       chicos, separados del monto principal). Se usa tanto en la card del
+    /* Centavos en tono más claro — mismo patrón que .cc-centavos de
+       Cuentas Corrientes. */
+    .stat-card-caja__centavos { color: var(--color-texto-suave); font-weight: 600; }
+
+    .stat-card-caja__chips { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.5rem; }
+
+    /* Desglose por medio de pago — antes chip oscuro semitransparente sobre
+       el degradado ámbar; con fondo blanco pasa a fila clara. Monto
+       coloreado por signo (var(--bordo)/var(--color-exito), ver
+       renderizarDesglosePorCuenta()) — mismo criterio ya usado en el resto
+       de la app, sin inventar un color nuevo. Se usa tanto en la card del
        listado como en la ficha de persona. */
     .desglose-medio-pago {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.375rem;
-      margin-top: 0.625rem;
+      gap: 0.625rem;
+      margin-top: 0.75rem;
+      width: 100%;
     }
 
     .desglose-medio-pago__chip {
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      padding: 0.25rem 0.625rem;
-      border-radius: 999px;
-      background: rgba(0,0,0,0.18);
-      color: #fff;
-      font-size: 0.95rem;
-      font-weight: 600;
+      justify-content: space-between;
+      flex: 1 1 200px;
+      padding: 0.75rem 0.9375rem;
+      border-radius: 13px;
+      background: var(--color-superficie);
+      color: var(--color-texto);
+      font-size: 0.875rem;
+      font-weight: 650;
     }
 
     /* Cuando el chip es expandible (más de una cuenta en esa combinación
@@ -182,41 +301,45 @@
     .desglose-medio-pago__chip summary {
       cursor: pointer;
       list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
     }
     .desglose-medio-pago__chip summary::-webkit-details-marker { display: none; }
     .desglose-medio-pago__chip[open] {
       display: block;
-      width: 100%;
+      flex: 1 1 100%;
       border-radius: 12px;
     }
 
-    /* La flecha se perdía al lado de importes largos — más separación del
-       número y un poco más grande que el resto del texto del chip. */
     .desglose-medio-pago__flecha {
-      margin-left: 0.5rem;
+      margin-left: 0.625rem;
       font-size: 1.125rem;
       font-weight: 700;
+      color: var(--color-texto-suave);
+      flex-shrink: 0;
     }
 
     .desglose-cuenta__resto {
-      margin-top: 0.375rem;
-      padding-top: 0.375rem;
-      border-top: 1px solid rgba(255,255,255,0.25);
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--color-borde);
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.375rem;
     }
 
     .desglose-cuenta__fila {
       font-size: 0.8125rem;
       font-weight: 500;
-      opacity: 0.9;
+      color: var(--color-texto-suave);
     }
 
     .stat-card-caja__submetrics { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
     .stat-card-caja__submetric {
-      background: rgba(255,255,255,0.16);
+      background: var(--color-superficie);
       border-radius: 12px;
       padding: 0.5rem 0.875rem;
       text-align: center;
@@ -227,18 +350,18 @@
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      opacity: 0.85;
+      color: var(--color-texto-suave);
     }
 
-    .stat-card-caja__submetric-valor { font-size: 1.125rem; font-weight: 700; margin-top: 0.125rem; }
+    .stat-card-caja__submetric-valor { font-size: 1.125rem; font-weight: 700; margin-top: 0.125rem; color: var(--color-texto); }
 
     /* Variante bordó — total de retiros filtrados en "Retiros socios", mismo
-       tono que el chip "Retiro" del historial. Reutiliza __label/__montos/
-       __monto; sin submétricas ni desglose por cuenta (no aplica acá). */
-    .stat-card-caja--bordo {
-      background: linear-gradient(135deg, var(--bordo), var(--bordo-oscuro));
-      box-shadow: 0 8px 24px rgba(122,46,66,0.25);
-    }
+       tono que el chip "Retiro" del historial. No se uniforma a ámbar a
+       propósito (distinción de color deliberada, ya existía): con fondo
+       blanco la distinción pasa a ser el texto del monto + un acento en el
+       borde izquierdo, en vez de todo el fondo degradado. */
+    .stat-card-caja--bordo { border-left: 3px solid var(--bordo); }
+    .stat-card-caja--bordo .stat-card-caja__monto { color: var(--bordo); }
 
     /* ── Filtros de "Retiros socios" ─────────────────────────────────────── */
 
@@ -322,9 +445,9 @@
     }
 
     .multiselect__boton--activo {
-      border-color: var(--color-acento);
-      background: var(--color-acento-suave);
-      color: var(--color-acento);
+      border-color: var(--amarillo);
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
     }
 
     .multiselect__panel {
@@ -376,15 +499,6 @@
       background: var(--color-fondo);
     }
 
-    /* Chip para valores negativos sobre fondo ámbar (única excepción de color: bordó) */
-    .valor-negativo-chip {
-      display: inline-flex;
-      background: rgba(255,255,255,0.92);
-      color: var(--bordo);
-      padding: 0.0625rem 0.5rem;
-      border-radius: 8px;
-    }
-
     /* ── Grupos por unidad de negocio ──────────────────────────────────────── */
 
     .grupo-personas { margin-bottom: 1.5rem; }
@@ -420,8 +534,9 @@
       gap: 0.5rem;
     }
 
-    /* Ajuste local sobre la card compartida: iniciales en blanco. */
-    .tarjeta-lista__avatar { color: #fff; }
+    /* Ajuste local sobre la card compartida: avatar uniforme ámbar-suave
+       (antes un color distinto por persona, colorAvatar() — eliminada). */
+    .tarjeta-lista__avatar { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
 
     .persona__monedas {
       display: flex;
@@ -480,9 +595,9 @@
       width: 1.75rem;
       height: 1.75rem;
       border-radius: 8px;
-      border: none;
-      background: rgba(255,255,255,0.22);
-      color: #fff;
+      border: 1px solid var(--color-borde);
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
       font-size: 1.125rem;
       font-weight: 700;
       line-height: 1;
@@ -492,7 +607,7 @@
       cursor: pointer;
     }
 
-    .saldo-card__nueva-cuenta:hover { background: rgba(255,255,255,0.32); }
+    .saldo-card__nueva-cuenta:hover { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border-color: var(--amarillo); }
 
     /* ── Movimientos ───────────────────────────────────────────────────────── */
 
@@ -521,12 +636,12 @@
     .chip-tipo-movimiento {
       display: inline-flex;
       align-items: center;
-      padding: 0.1875rem 0.625rem;
-      border-radius: 999px;
-      font-size: 0.6875rem;
+      padding: 0.25rem 0.5625rem;
+      border-radius: 7px;
+      font-size: 0.65625rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.04em;
     }
 
     /* Un color por tipo de movimiento — bordó sigue siendo el único color de
@@ -1011,19 +1126,12 @@
     }
     summary.tarjeta-cuenta::-webkit-details-marker { display: none; }
 
-    /* La flecha no tiene color propio — hereda el blanco del chip oscuro
-       (.desglose-medio-pago__chip{color:#fff}). Sobre la fila blanca de
-       acá sería invisible sin este override. */
-    .tarjeta-cuenta .desglose-medio-pago__flecha { color: var(--color-texto-suave); }
-
     /* Línea chica extra debajo de "Banco", con la cuenta favorita ARS de
-       ese medio — exclusiva de Banco, Efectivo no la tiene. Siempre queda
-       sobre el degradado ámbar de .stat-card-caja (nunca dentro de la fila
-       blanca), por eso hereda el color:#fff de ahí en vez de un gris. */
+       ese medio — exclusiva de Banco, Efectivo no la tiene. */
     .desglose-favorita-banco {
       font-size: 0.75rem;
       font-weight: 600;
-      opacity: 0.85;
+      color: var(--color-texto-suave);
       padding: 0.125rem 0.625rem 0;
     }
 
@@ -1064,6 +1172,14 @@
         box-shadow: var(--sombra-hover);
       }
     }
+
+    /* ── Utilidades de color por signo ─────────────────────────────────────
+       Declaradas al final a propósito: se combinan con clases como
+       .tarjeta-cuenta__saldo que ya traen su propio color con la misma
+       especificidad (una sola clase) — si quedaran antes en la hoja,
+       perderían el empate de cascada y el color por signo no se vería. */
+    .color-negativo { color: var(--bordo); }
+    .color-positivo { color: var(--color-exito); }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -1073,20 +1189,18 @@
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-lista-caja" hidden>
 
-    <header style="position:sticky; top:0; z-index:20; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(255,255,255,0.72); border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; padding:0.875rem 1.25rem;">
-      <a href="../dashboard.html" class="btn btn--icono" title="Volver al dashboard">‹ Volver</a>
-      <div>
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <img src="../logo.png" alt="" style="width:20px; height:20px; object-fit:contain;">
-          <span style="font-size:0.6875rem; font-weight:700; letter-spacing:0.08em; color:var(--color-texto-suave); text-transform:uppercase;">Seis Destinos</span>
-        </div>
-        <div style="font-size:1.375rem; font-weight:700; letter-spacing:-0.02em; color:var(--color-texto); display:flex; align-items:center; gap:0.375rem;">
-          Caja <span style="color:var(--amarillo); font-size:1rem; line-height:1;">●</span>
-        </div>
-      </div>
-    </header>
-
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
+
+      <header class="caja-header">
+        <a href="../dashboard.html" class="caja-header__volver" title="Volver al dashboard">‹ Volver</a>
+        <div class="caja-header__marca">
+          <div class="caja-header__logo"></div>
+          <div class="caja-header__marca-col">
+            <span class="caja-header__marca-texto">Seis Destinos</span>
+            <span class="caja-header__titulo">Caja <span style="color:var(--amarillo); font-size:0.875rem; line-height:1;">●</span></span>
+          </div>
+        </div>
+      </header>
 
       <div id="stat-total-empresa"></div>
 
@@ -1133,7 +1247,7 @@
             <span class="filtros-retiros__fecha-label">Hasta</span>
             <input type="date" id="filtro-retiros-hasta">
           </div>
-          <button type="button" id="btn-exportar-retiros" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
+          <button type="button" id="btn-exportar-retiros" class="btn btn--amarillo" style="width:auto;">📥 Descargar Excel</button>
         </div>
 
         <div id="stat-total-retiros"></div>
@@ -1179,20 +1293,22 @@
        VISTA B — FICHA DE PERSONA
   ══════════════════════════════════════════════════════════════════════════ -->
   <div id="vista-detalle-persona" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-volver-ficha">← Volver</button>
-      <span class="header__nombre-app" id="detalle-persona-nombre"></span>
-      <div style="width:2rem;"></div>
-    </header>
-
     <div style="padding:1.25rem; max-width:1120px; margin:0 auto; width:100%;">
+      <header class="caja-header-ficha">
+        <button type="button" class="caja-header__volver" id="btn-volver-ficha">‹ Volver</button>
+        <div class="caja-header-ficha__persona">
+          <div class="caja-header-ficha__avatar" id="detalle-persona-avatar"></div>
+          <span class="caja-header-ficha__nombre" id="detalle-persona-nombre"></span>
+        </div>
+      </header>
+
       <div id="detalle-persona-saldos"></div>
 
       <div id="detalle-persona-acciones" style="display:flex; flex-wrap:wrap; gap:0.625rem; margin:1.25rem 0 1.5rem;"></div>
 
       <div id="detalle-persona-solicitudes"></div>
 
-      <div class="modal-ficha__seccion-titulo">Movimientos</div>
+      <div class="titulo-seccion-caja">Movimientos</div>
 
       <div class="lista-filtros" id="filtros-detalle-movimientos"></div>
 
@@ -1268,7 +1384,7 @@
 
       <div class="modal-movimiento__acciones">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-movimiento">Cancelar</button>
-        <button type="button" class="btn btn--exito" id="btn-guardar-movimiento">Guardar</button>
+        <button type="button" class="btn btn--amarillo" id="btn-guardar-movimiento">Guardar</button>
       </div>
     </div>
   </div>
@@ -1313,7 +1429,7 @@
 
       <div class="modal-movimiento__acciones">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-traspaso">Cancelar</button>
-        <button type="button" class="btn btn--exito" id="btn-guardar-traspaso">Guardar</button>
+        <button type="button" class="btn btn--amarillo" id="btn-guardar-traspaso">Guardar</button>
       </div>
     </div>
   </div>
@@ -1348,7 +1464,7 @@
 
       <div class="modal-movimiento__acciones">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-renombrar-cuenta">Cancelar</button>
-        <button type="button" class="btn btn--primario" id="btn-guardar-renombrar-cuenta">Guardar</button>
+        <button type="button" class="btn btn--amarillo" id="btn-guardar-renombrar-cuenta">Guardar</button>
       </div>
     </div>
   </div>
@@ -1424,7 +1540,7 @@
 
       <div class="modal-movimiento__acciones">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-cuenta-nueva">Cancelar</button>
-        <button type="button" class="btn btn--exito" id="btn-guardar-cuenta-nueva">Crear</button>
+        <button type="button" class="btn btn--amarillo" id="btn-guardar-cuenta-nueva">Crear</button>
       </div>
     </div>
   </div>
@@ -1518,13 +1634,6 @@
       return (palabras[0][0] + palabras[1][0]).toUpperCase()
     }
 
-    const PALETA_AVATAR = ['#C99A2E', '#8C6A1A', '#D9B45C', '#4A5568', '#7A2E42']
-    function colorAvatar(texto) {
-      let hash = 0
-      for (let i = 0; i < (texto || '').length; i++) hash = texto.charCodeAt(i) + ((hash << 5) - hash)
-      return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length]
-    }
-
     function formatearImporte(importe, moneda = 'ARS') {
       if (importe == null) return '—'
       const num = Number(importe).toLocaleString('es-AR', {
@@ -1533,11 +1642,16 @@
       return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
     }
 
-    // Envuelve el valor en el chip claro cuando es negativo — única excepción
-    // de color permitida (bordó) para textos sobre fondo ámbar.
-    function formatearImporteConAlerta(importe, moneda) {
-      const texto = formatearImporte(importe, moneda)
-      return Number(importe) < 0 ? `<span class="valor-negativo-chip">${texto}</span>` : texto
+    // Igual que formatearImporte() pero con los centavos envueltos en un
+    // <span> aparte para pintarlos en un tono más claro — mismo patrón que
+    // .cc-centavos de cuentas-corrientes.html. Solo para "Total de la
+    // empresa".
+    function formatearImporteCentavosSuaves(importe, moneda = 'ARS') {
+      const [entero, centavos] = Number(importe || 0).toLocaleString('es-AR', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      }).split(',')
+      const simbolo = moneda === 'ARS' ? '$' : moneda
+      return `${simbolo} ${entero}<span class="stat-card-caja__centavos">,${centavos}</span>`
     }
 
     // Convierte "1.349.799,77" → 1349799.77
@@ -1754,9 +1868,9 @@
     //     adelante (vía renderizarFilaCuenta(c, {mostrarDueño:true})).
     //   - gestionable=true (ficha propia): fila blanca con ☆/×/✏️ en cada
     //     cuenta (vía renderizarFilaCuenta(c, {gestionable:true})).
-    //   - gestionable=false (viendo la ficha de otra persona): chip oscuro,
-    //     sin ninguna acción — mismo estilo que ya tenía antes de este
-    //     cambio, CAMBIO 2 lo dejó afuera a propósito.
+    //   - gestionable=false (viendo la ficha de otra persona): fila clara
+    //     sin acciones (antes era un chip oscuro sobre fondo ámbar — ver
+    //     rediseño visual de Caja), CAMBIO 2 lo dejó afuera a propósito.
     function renderizarDesglosePorCuenta(cuentaIds, { conDueno = false, gestionable = false } = {}) {
       const cuentas = cuentaIds.map(id => estado.cuentasPorId[id]).filter(Boolean)
       if (!cuentas.length) return ''
@@ -1776,10 +1890,14 @@
           ? `<div class="desglose-favorita-banco">★ ${favoritaARS.nombre}: ${formatearImporte(saldoDeCuenta(favoritaARS.id), 'ARS')}</div>`
           : ''
 
+        // Color por signo — mismo criterio que el saldo de la ficha
+        // (var(--bordo)/var(--color-exito), sin inventar un color nuevo).
+        const claseSigno = sumaARS < 0 ? 'color-negativo' : sumaARS > 0 ? 'color-positivo' : ''
+
         const resumenHtml = `
           <div class="tarjeta-cuenta__info">
             <span class="tarjeta-cuenta__nombre">${MEDIO_CUENTA_LABEL[medio] || medio}</span>
-            <span class="tarjeta-cuenta__saldo">· ${formatearImporte(sumaARS, 'ARS')}</span>
+            <span class="tarjeta-cuenta__saldo ${claseSigno}">· ${formatearImporte(sumaARS, 'ARS')}</span>
           </div>
           <span class="desglose-medio-pago__flecha">▾</span>`
 
@@ -1802,14 +1920,14 @@
             ${lineaFavoritaHtml}`
         }
 
-        // gestionable=false: chip oscuro, sin ninguna acción — mismo estilo
-        // que ya tenía antes de este cambio.
+        // gestionable=false: fila clara, sin ninguna acción — viendo la
+        // ficha de otra persona (no la propia).
         const filas = cuentasDelMedio
           .map(c => `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(saldoDeCuenta(c.id), c.moneda)}</div>`)
           .join('')
         return `
           <details class="desglose-medio-pago__chip">
-            <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: ${formatearImporte(sumaARS, 'ARS')}<span class="desglose-medio-pago__flecha">▾</span></summary>
+            <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: <span class="${claseSigno}">${formatearImporte(sumaARS, 'ARS')}</span><span class="desglose-medio-pago__flecha">▾</span></summary>
             <div class="desglose-cuenta__resto">${filas}</div>
           </details>
           ${lineaFavoritaHtml}`
@@ -2014,12 +2132,18 @@
 
       const totalesPorMoneda = {}
       estado.saldos.forEach(s => { totalesPorMoneda[s.moneda] = (totalesPorMoneda[s.moneda] || 0) + Number(s.saldo) })
-      const monedas = Object.keys(totalesPorMoneda)
+      // ARS (o la única moneda si no hay ARS) como número grande con
+      // centavos suaves; el resto de las monedas como chips ámbar-suave
+      // debajo — mismo patrón ya usado en Cuentas Corrientes, sin sumar
+      // monedas distintas entre sí.
+      const monedas = Object.keys(totalesPorMoneda).sort((a, b) => (a === 'ARS' ? -1 : b === 'ARS' ? 1 : a.localeCompare(b)))
       const empleadosConSaldo = new Set(estado.saldos.map(s => s.empleado_id)).size
 
-      const montosHtml = monedas.length
-        ? monedas.map(m => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(totalesPorMoneda[m], m)}</span>`).join('')
-        : `<span class="stat-card-caja__monto">${formatearImporte(0, 'ARS')}</span>`
+      const principal = monedas[0]
+      const montoPrincipalHtml = `<span class="stat-card-caja__monto">${formatearImporteCentavosSuaves(principal ? totalesPorMoneda[principal] : 0, principal || 'ARS')}</span>`
+      const chipsExtra = monedas.slice(1)
+        .map(m => `<span class="chip-moneda ${totalesPorMoneda[m] < 0 ? 'chip-moneda--negativo' : ''}">${formatearImporte(totalesPorMoneda[m], m)}</span>`)
+        .join('')
 
       // Ya viene envuelto en .desglose-medio-pago (o '' si no hay cuentas) —
       // una sola llamada, ya no una por moneda (ver renderizarDesglosePorCuenta()).
@@ -2030,7 +2154,8 @@
         <div class="stat-card-caja">
           <div>
             <div class="stat-card-caja__label">Total de la empresa</div>
-            <div class="stat-card-caja__montos">${montosHtml}</div>
+            <div class="stat-card-caja__montos">${montoPrincipalHtml}</div>
+            ${chipsExtra ? `<div class="stat-card-caja__chips">${chipsExtra}</div>` : ''}
             ${desgloseHtml}
           </div>
           <div class="stat-card-caja__submetrics">
@@ -2097,7 +2222,7 @@
 
       return `
         <div class="tarjeta-lista" data-id="${emp.id}">
-          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+          <div class="tarjeta-lista__avatar">${iniciales(emp.nombre)}</div>
           <div class="tarjeta-lista__info">
             <div class="tarjeta-lista__titulo">${emp.nombre}</div>
             ${empresa ? `<div class="tarjeta-lista__subtitulo">${empresa}</div>` : ''}
@@ -2163,6 +2288,7 @@
       estado.personaAbierta = empleadoId
       estado.origenFicha = origen
       document.getElementById('detalle-persona-nombre').textContent = emp.nombre
+      document.getElementById('detalle-persona-avatar').textContent = iniciales(emp.nombre)
 
       document.getElementById('vista-lista-caja').hidden = true
       document.getElementById('vista-detalle-persona').removeAttribute('hidden')
@@ -2209,7 +2335,10 @@
       // angostas en grilla, una por moneda. Label único "Saldo": la moneda
       // ya se distingue en cada monto por el prefijo de formatearImporte
       // (USD vs $), no hace falta repetirla en el label.
-      const montosHtml = lista.map(s => `<span class="stat-card-caja__monto">${formatearImporteConAlerta(s.saldo, s.moneda)}</span>`).join('')
+      const montosHtml = lista.map(s => {
+        const clase = Number(s.saldo) < 0 ? 'color-negativo' : Number(s.saldo) > 0 ? 'color-positivo' : ''
+        return `<span class="stat-card-caja__monto ${clase}">${formatearImporte(s.saldo, s.moneda)}</span>`
+      }).join('')
       const desgloseHtml = renderizarDesglosePorCuenta(cuentaIds, { gestionable: esPropia })
       const botonNuevaCuenta = esPropia
         ? `<button type="button" class="saldo-card__nueva-cuenta" id="btn-saldo-nueva-cuenta" title="Nueva cuenta" aria-label="Nueva cuenta">+</button>`
@@ -2917,8 +3046,9 @@
           <button type="button" class="multiselect__boton" id="ms-tm-persona-boton">Todas las personas</button>
           <div class="multiselect__panel" id="ms-tm-persona-panel" hidden></div>
         </div>
-        <button type="button" id="btn-borrar-filtros-tm" class="btn btn--secundario" style="width:auto;">Borrar filtros</button>
-        <button type="button" id="btn-exportar-todos-movimientos" class="btn btn--secundario" style="width:auto; background:var(--color-acento); color:#fff; border-color:var(--color-acento);">📥 Descargar Excel</button>
+        <button type="button" id="btn-borrar-filtros-tm" class="btn-enlace-discreto">Borrar filtros</button>
+        <div style="flex:1;"></div>
+        <button type="button" id="btn-exportar-todos-movimientos" class="btn btn--amarillo" style="width:auto;">📥 Descargar Excel</button>
       `
 
       document.getElementById('btn-borrar-filtros-tm').addEventListener('click', () => {
