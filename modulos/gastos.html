@@ -2504,7 +2504,7 @@
 
     console.log('[empleados] Ejecutando consulta a Supabase — tabla: empleados, filtro: activo = true')
     const { data: empleadosInicial, error: errorEmpleados } = await supabase
-      .from('empleados').select('id, nombre').eq('activo', true).order('nombre')
+      .from('v_empleados_publico').select('id, nombre').eq('activo', true).order('nombre')
     console.log('[empleados] Resultado de Supabase — data:', empleadosInicial, '| error:', errorEmpleados)
     if (errorEmpleados) {
       console.error('[empleados] Error al cargar — message:', errorEmpleados.message,
@@ -2567,7 +2567,7 @@
       console.log('[DEBUG-CATS] session:', (await supabase.auth.getSession()).data.session?.user?.email)
 
       const [emps, vehs, provs, projs] = await Promise.all([
-        supabase.from('empleados')  .select('id, nombre, unidad_negocio_id, tipo').eq('activo', true).order('nombre'),
+        supabase.from('v_empleados_publico').select('id, nombre, unidad_negocio_id, tipo').eq('activo', true).order('nombre'),
         supabase.from('vehiculos')  .select('id, nombre, marca, patente, unidad_negocio_id').eq('activo', true).order('nombre'),
         supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social'),
         supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),

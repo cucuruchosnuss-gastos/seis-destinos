@@ -2015,13 +2015,13 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     async function cargarSuperAdmins() {
-      const { data, error } = await supabase.from('empleados').select('id, nombre, caja_raiz').eq('rol_app', 'super_admin')
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, caja_raiz').eq('rol_app', 'super_admin')
       if (error) { mostrarError('No se pudieron cargar los super admins.'); return }
       estado.superAdmins = data || []
     }
 
     async function cargarNombresEmpleados() {
-      const { data, error } = await supabase.from('empleados').select('id, nombre').eq('activo', true)
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre').eq('activo', true)
       if (error) { mostrarError('No se pudieron cargar los nombres de empleados.'); return }
       estado.nombresEmpleados = Object.fromEntries((data || []).map(e => [e.id, e.nombre]))
     }
