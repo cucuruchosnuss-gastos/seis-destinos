@@ -582,22 +582,36 @@
       modal: null, // { modo: 'aprobar' | 'editar', solicitud?, empleado, esNuevoEmpleado, rolElegido, modulosElegidos: Set, unidadElegida }
     }
 
-    const MODULOS_INFO = [
-      { key: 'gastos',    label: 'Gastos' },
-      { key: 'caja',      label: 'Caja' },
-      { key: 'accesos',   label: 'Accesos' },
-      { key: 'empleados', label: 'Empleados' },
-      { key: 'cuentas-corrientes', label: 'Cuentas corrientes' },
-    ]
+    // Se cargan desde la tabla `modulos` (fetch al principio de init(),
+    // ver construirListasModulos()) — ya no están hardcodeados, agregar
+    // un módulo nuevo no requiere tocar este archivo.
+    let MODULOS_INFO = []
+    let MODULOS_MODAL = []
 
-    // Agrupado para el modal de aprobación/edición — Gastos y Caja se
-    // otorgan siempre juntos, así que se muestran como un solo control.
-    const MODULOS_MODAL = [
-      { keys: ['gastos', 'caja'], label: 'Gastos y Caja' },
-      { keys: ['accesos'],        label: 'Accesos' },
-      { keys: ['empleados'],      label: 'Empleados' },
-      { keys: ['cuentas-corrientes'], label: 'Cuentas corrientes' },
-    ]
+    // `filas` = SELECT * FROM modulos WHERE activo = true ORDER BY orden.
+    // MODULOS_INFO: una entrada por fila, sin agrupar.
+    // MODULOS_MODAL: las filas con el mismo grupo_clave (no nulo) se
+    // combinan en un solo control ({keys: [...], label: grupo_label});
+    // las de grupo_clave null quedan como entrada individual.
+    function construirListasModulos(filas) {
+      MODULOS_INFO = filas.map(f => ({ key: f.clave, label: f.nombre_visible }))
+
+      const grupos = new Map()
+      MODULOS_MODAL = []
+      filas.forEach(f => {
+        if (f.grupo_clave) {
+          let entrada = grupos.get(f.grupo_clave)
+          if (!entrada) {
+            entrada = { keys: [], label: f.grupo_label }
+            grupos.set(f.grupo_clave, entrada)
+            MODULOS_MODAL.push(entrada)
+          }
+          entrada.keys.push(f.clave)
+        } else {
+          MODULOS_MODAL.push({ keys: [f.clave], label: f.nombre_visible })
+        }
+      })
+    }
 
     const ETIQUETAS_ROL = { usuario: 'Usuario', admin: 'Admin' }
 
@@ -1133,6 +1147,18 @@
       }
 
       estado.miEmpleado = emp
+
+      const { data: modulosData, error: errorModulos } = await supabase
+        .from('modulos')
+        .select('*')
+        .eq('activo', true)
+        .order('orden')
+
+      if (errorModulos) {
+        mostrarError('No se pudieron cargar los módulos.')
+        return
+      }
+      construirListasModulos(modulosData || [])
 
       document.getElementById('filtro-rol-usuarios').innerHTML = `
         <option value="">Todos los roles</option>
