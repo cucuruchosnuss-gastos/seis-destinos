@@ -835,10 +835,10 @@
       }
       vacio.hidden = true
 
-      const esViewerSuperAdmin = estado.miEmpleado.rol_app === 'super_admin'
-
+      // El viewer siempre es super_admin acá (init() ya lo exige) — la única
+      // restricción real que queda es no poder editar a otro super_admin.
       cont.innerHTML = lista.map(emp => {
-        const puedeEditar = emp.rol_app !== 'super_admin' && (esViewerSuperAdmin || emp.rol_app === 'usuario')
+        const puedeEditar = emp.rol_app !== 'super_admin'
         const modulos = modulosDeEmpleado(emp.id)
         const chipsModulos = modulos.length
           ? modulos.map(m => {
@@ -874,8 +874,10 @@
     // MODAL — Aprobar / Editar
     // ═══════════════════════════════════════════════════════════════════════
 
+    // El viewer siempre es super_admin acá (init() ya lo exige), así que
+    // siempre puede asignar ambos roles.
     function opcionesRolDisponibles() {
-      return estado.miEmpleado.rol_app === 'super_admin' ? ['usuario', 'admin'] : ['usuario']
+      return ['usuario', 'admin']
     }
 
     function renderizarSegmentedRol() {
@@ -1140,7 +1142,7 @@
         .eq('auth_user_id', estado.sesion.user.id)
         .maybeSingle()
 
-      if (error || !emp || !['admin', 'super_admin'].includes(emp.rol_app)) {
+      if (error || !emp || emp.rol_app !== 'super_admin') {
         mostrarError('No tenés permiso para acceder a este módulo.')
         setTimeout(() => window.location.replace('../dashboard.html'), 1500)
         return

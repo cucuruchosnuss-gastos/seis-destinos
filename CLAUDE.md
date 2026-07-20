@@ -71,9 +71,9 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - `v_cuenta_corriente_movimientos` (proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado) — `saldo_acumulado` es un `SUM() OVER (PARTITION BY ... ORDER BY fecha)`, saldo corrido cronológico, no depende de qué filtro de fecha esté aplicado en pantalla.
 - `v_stock_insumos` (insumo_id, insumo_nombre, unidad_medida, unidad_negocio_id, cantidad_total)
 
-### RPCs (verificadas contra information_schema — 32 en total, todas SECURITY DEFINER, re-verifican rol_app server-side salvo que se indique lo contrario)
+### RPCs (verificadas contra information_schema — 31 en total, todas SECURITY DEFINER, re-verifican rol_app server-side salvo que se indique lo contrario. Eran 32 en la auditoría del 18/07/2026; se eliminó `rechazar_solicitud_acceso` — versión vieja que no borraba la cuenta de Auth huérfana al rechazar, reemplazada por la Edge Function `rechazar-solicitud-acceso`)
 
-**Accesos / Registro**: `aprobar_solicitud_acceso`, `rechazar_solicitud_acceso`, `actualizar_permisos_empleado`, `obtener_mi_solicitud_acceso`, `buscar_empleado_por_cuil`
+**Accesos / Registro**: `aprobar_solicitud_acceso`, `actualizar_permisos_empleado`, `obtener_mi_solicitud_acceso`, `buscar_empleado_por_cuil` (el rechazo de una solicitud NO es una RPC — es la Edge Function `rechazar-solicitud-acceso`, ver sección Login y roles)
 
 **Empleados**: `completar_datos_empleado`, `importar_empleados_naaloo` (regla: `unidad_negocio_id` se asigna solo en el alta/INSERT, nunca se pisa en una reimportación — para no revertir correcciones manuales, ej. Taller viene agrupado con Cucuruchos Nuss en el Excel de Naaloo), `actualizar_contacto_emergencia`
 
@@ -91,8 +91,9 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 ## Login y roles
 - Supabase Auth (email + contraseña)
 - Auto-registro (`registro.html`): busca CUIL con `buscar_empleado_por_cuil`; si matchea, pre-completa datos; si no, completa a mano. Crea la cuenta de Auth y una fila en `solicitudes_acceso` pendiente — todo vía Edge Function `crear-solicitud-acceso` (service role, atómico con rollback), nunca insert directo desde el cliente.
-- Aprobación manual desde `modulos/accesos.html`: admin/super_admin revisa, asigna rol y módulos, aprueba.
-- Roles (`empleados.rol_app`): `super_admin` (todo, incluida asignación de `admin`; se asigna solo por SQL directo, nunca desde ninguna UI), `admin` (aprueba accesos, asigna `usuario`), `usuario` (carga)
+- Rechazo de una solicitud: Edge Function `rechazar-solicitud-acceso` (no es una RPC de Postgres) — además de marcar la solicitud como rechazada, borra la cuenta de Auth huérfana asociada para que la persona pueda volver a registrarse con el mismo email. Reemplazó a una RPC vieja del mismo nombre (con guión bajo) que no hacía ese borrado — esa RPC ya no existe, fue eliminada con `DROP FUNCTION`.
+- Aprobación de solicitudes y edición de permisos/roles de otros usuarios: **exclusivo de `super_admin`** — `admin` ya no tiene esta capacidad (cambio de regla de negocio). `modulos/accesos.html` es ahora soloSuperAdmin.
+- Roles (`empleados.rol_app`): `super_admin` (todo, incluida asignación de `admin`, aprobación de accesos y edición de permisos; `admin` se asigna solo por SQL directo, nunca desde ninguna UI), `admin` (hoy solo tiene la visibilidad ampliada de datos que ya tenía en otros módulos, ej. `esVistaCompleta()` en Gastos — ya no gestiona accesos), `usuario` (carga)
 - `caja_raiz` es un flag aparte de `rol_app` — hoy solo Pablo Usabarrena lo tiene, es quien puede registrar ingresos externos a Caja.
 - Tablets de fábrica: cuenta genérica + PIN de turno por encargado (a implementar)
 

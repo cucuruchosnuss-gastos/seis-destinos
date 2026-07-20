@@ -34,14 +34,14 @@ Deno.serve(async (req) => {
   }
 
   // Mismo chequeo de permiso que ya hacen accesos.html / las RPCs existentes:
-  // solo admin/super_admin pueden rechazar solicitudes.
+  // solo super_admin puede rechazar solicitudes (admin ya no gestiona accesos).
   const { data: miEmpleado, error: errorEmpleado } = await supabaseComoLlamante
     .from('empleados')
     .select('rol_app')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (errorEmpleado || !miEmpleado || !['admin', 'super_admin'].includes(miEmpleado.rol_app)) {
+  if (errorEmpleado || !miEmpleado || miEmpleado.rol_app !== 'super_admin') {
     return json({ ok: false, mensaje: 'No tenés permiso para rechazar solicitudes.' }, 403)
   }
 

@@ -202,7 +202,7 @@
         descripcion: 'Aprobación de usuarios y permisos',
         url: 'modulos/accesos.html',
         proximamente: false,
-        soloAdmin: true,
+        soloSuperAdmin: true,
         color: 'rojo'
       },
       {
@@ -392,13 +392,14 @@
       throw new Error('Cuenta sin empleado vinculado — estado: ' + (estadoSolicitud ?? 'sin solicitud'))
     }
 
-    const esAdmin = ['admin', 'super_admin'].includes(miEmpleado.rol_app)
+    const esAdmin      = ['admin', 'super_admin'].includes(miEmpleado.rol_app)
+    const esSuperAdmin  = miEmpleado.rol_app === 'super_admin'
 
-    // Solicitudes de acceso pendientes — solo admin/super_admin pueden verlas
-    // (misma policy de solicitudes_acceso que usa accesos.html), se muestran
-    // como badge sobre la tarjeta de Accesos.
+    // Solicitudes de acceso pendientes — solo super_admin puede verlas y
+    // resolverlas (admin ya no gestiona accesos), se muestran como badge
+    // sobre la tarjeta de Accesos.
     let pendientes = 0
-    if (esAdmin) {
+    if (esSuperAdmin) {
       const { count } = await supabase
         .from('solicitudes_acceso')
         .select('id', { count: 'exact', head: true })
@@ -408,9 +409,10 @@
 
     // Módulos habilitados individualmente — solo hace falta consultarlos
     // para no-admin: un admin/super_admin ve todos los módulos que no son
-    // soloAdmin sin restricción (ver filtro de abajo). 'accesos' sigue
-    // gateado únicamente por rol_app (soloAdmin), no por esta tabla — la
-    // capacidad de aprobar accesos es del rol, no un módulo asignable.
+    // soloAdmin/soloSuperAdmin sin restricción (ver filtro de abajo).
+    // 'accesos' sigue gateado únicamente por rol_app (soloSuperAdmin), no
+    // por esta tabla — la capacidad de aprobar accesos es del rol, no un
+    // módulo asignable.
     let misModulos = []
     if (!esAdmin) {
       const { data: modulosData } = await supabase
@@ -422,6 +424,7 @@
     }
 
     const modulosVisibles = MODULOS.filter(modulo => {
+      if (modulo.soloSuperAdmin) return esSuperAdmin
       if (modulo.soloAdmin) return esAdmin
       return esAdmin || misModulos.includes(modulo.clave)
     })
