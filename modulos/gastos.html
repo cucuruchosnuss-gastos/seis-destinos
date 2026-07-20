@@ -1636,10 +1636,10 @@
 
     const estado = {
       sesion:       null,
-      rol:          'usuario',
       miEmpleadoId: null,
-      miRolApp:     null, // empleados.rol_app real — gatea el botón "Editar" del detalle
-                           // de factura pendiente (?factura=<id>), no reemplaza estado.rol
+      miRolApp:     null, // empleados.rol_app real — gatea la vista completa/reducida de
+                           // filtros y datos (ver esVistaCompleta()) y el botón "Editar"
+                           // del detalle de factura pendiente (?factura=<id>).
       cuentasPorId: {}, // id -> {id, empleado_id, nombre, medio, moneda, favorita, activa,
                          // created_at} — se completa bajo demanda por persona (cargarCuentasDe),
                          // mismo criterio que caja.html: sin filtrar por activa acá, se filtra
@@ -1701,10 +1701,12 @@
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
 
-    function obtenerRol(email) {
-      if (email === 'facundousabarrena@gmail.com') return 'admin'
-      if (email === 'pablousabarrena@gmail.com')   return 'pablo'
-      return 'usuario'
+    // Vista completa (todos los filtros, todos los gastos de la empresa) vs.
+    // vista reducida (solo lo propio) — antes decidido por una lista de 2
+    // emails hardcodeados (obtenerRol()), ahora por el rol_app real. Falla
+    // cerrado: null/cualquier otro valor cae en la vista reducida.
+    function esVistaCompleta() {
+      return estado.miRolApp === 'admin' || estado.miRolApp === 'super_admin'
     }
 
     function formatearImporte(importe, moneda = 'ARS') {
@@ -1886,12 +1888,6 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     estado.sesion = await verificarSesion()
-    estado.rol    = obtenerRol(estado.sesion.user.email)
-
-    if (estado.rol === 'admin' || estado.rol === 'pablo') {
-      document.getElementById('detalle-gasto-header-derecha').innerHTML =
-        '<button type="button" class="btn btn--icono" id="btn-editar-gasto" title="Editar">✏️ Editar</button>'
-    }
 
     const { data: emp } = await supabase
       .from('empleados')
@@ -1901,6 +1897,11 @@
     if (emp) {
       estado.miEmpleadoId = emp.id
       estado.miRolApp     = emp.rol_app
+    }
+
+    if (esVistaCompleta()) {
+      document.getElementById('detalle-gasto-header-derecha').innerHTML =
+        '<button type="button" class="btn btn--icono" id="btn-editar-gasto" title="Editar">✏️ Editar</button>'
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2034,7 +2035,7 @@
       const contenedor = document.getElementById('contenedor-filtros')
       document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
 
-      const placeholderBusqueda = (estado.rol === 'admin' || estado.rol === 'pablo')
+      const placeholderBusqueda = esVistaCompleta()
         ? '🔍 Buscar empresa, categoría o empleado'
         : '🔍 Buscar empresa o categoría'
 
@@ -2047,7 +2048,7 @@
         </div>
       `
 
-      if ((estado.rol === 'admin' || estado.rol === 'pablo') && unidades.length) {
+      if (esVistaCompleta() && unidades.length) {
         html += `
           <div class="multiselect" id="ms-unidad">
             <button type="button" class="multiselect__boton" id="ms-unidad-boton">Todas las unidades</button>
@@ -2114,7 +2115,7 @@
         }, 250)
       })
 
-      if ((estado.rol === 'admin' || estado.rol === 'pablo') && unidades.length) {
+      if (esVistaCompleta() && unidades.length) {
         crearMultiselect({
           idBase: 'ms-unidad',
           opciones: [...unidades.map(u => ({ value: u.id, label: u.nombre })), { value: '__vehiculos__', label: '🚚 Vehículos' }],
@@ -2259,7 +2260,7 @@
       const listaEl = document.getElementById('lista-gastos')
       const vaciEl  = document.getElementById('estado-vacio')
 
-      const puedeBuscarPorEmpleado = estado.rol === 'admin' || estado.rol === 'pablo'
+      const puedeBuscarPorEmpleado = esVistaCompleta()
 
       const filtrados = !termino
         ? estado.listaGastos
@@ -2342,7 +2343,7 @@
           proyectos  (id, nombre)
         `)
 
-      if (estado.rol === 'usuario') {
+      if (!esVistaCompleta()) {
         if (estado.miEmpleadoId) {
           query = query.eq('empleado_id', estado.miEmpleadoId)
         } else {
@@ -3102,7 +3103,7 @@
         (admins.length && naaloo.length ? '<option disabled>──────────────</option>' : '') +
         admins.map(e => `<option value="${e.id}" style="color:#9CA3AF">${e.nombre} (Admin)</option>`).join('')
 
-      if (estado.rol === 'usuario') {
+      if (!esVistaCompleta()) {
         sel.disabled = true
         if (estado.miEmpleadoId) {
           sel.value = estado.miEmpleadoId
