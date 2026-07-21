@@ -455,7 +455,6 @@
     .punto-tipo-mov--pago              { background: #1E8C4A; }
     .punto-tipo-mov--factura           { background: var(--color-acento); }
     .punto-tipo-mov--credito_aplicado  { background: var(--violeta); }
-    .punto-tipo-mov--credito_generado  { background: var(--amarillo); }
     .punto-tipo-mov--interes           { background: var(--bordo); }
 
     /* Chip de tipo — historial de facturas (Pantalla 3), no lleva punto. */
@@ -472,7 +471,6 @@
     .chip-tipo-mov--pago              { background: var(--color-acento-suave); color: var(--color-acento-highlight); }
     .chip-tipo-mov--factura           { background: var(--rojo-suave); color: var(--rojo); }
     .chip-tipo-mov--credito_aplicado  { background: var(--violeta-suave); color: var(--violeta-oscuro); }
-    .chip-tipo-mov--credito_generado  { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
     .chip-tipo-mov--interes           { background: var(--bordo-suave); color: var(--bordo-oscuro); }
 
     /* Historial de facturas — misma tarjeta, letra más chica para que
@@ -611,8 +609,8 @@
       font-size: 0.875rem;
       color: var(--color-texto);
     }
-    /* Mismo criterio de color que .punto-tipo-mov--credito_generado — es
-       el mismo concepto (sobrepago que quedó como crédito a favor). */
+    /* Ámbar — mismo criterio de color usado para crédito a favor en otras
+       partes del módulo (sobrepago que quedó como crédito a favor). */
     .detalle-pago-credito {
       margin-top: 0.75rem;
       padding: 0.75rem 0.875rem;
@@ -959,7 +957,7 @@
     // que gastos.html.
     const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
     const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco' }
-    const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado', credito_generado: 'Crédito generado', interes: 'Interés' }
+    const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado', interes: 'Interés' }
     const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']
 
     const estado = {
@@ -1593,7 +1591,7 @@
       vacioEl.hidden     = true
 
       let query = supabase.from('v_cuenta_corriente_movimientos')
-        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, monto_informativo, factura_pendiente_id, gasto_id, credito_id, referencia')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia')
         .order('fecha', { ascending: false })
 
       const f = estado.filtros.historial
@@ -1632,11 +1630,10 @@
       vacioEl.hidden = true
 
       listaEl.innerHTML = estado.listaHistorial.map(m => {
-        const esCreditoGenerado = m.tipo === 'credito_generado'
-        const monto = esCreditoGenerado ? (Number(m.monto_informativo) || 0) : (Number(m.monto) || 0)
+        const monto = Number(m.monto) || 0
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
-        const referencia = m.referencia || (esCreditoGenerado ? 'Generado por sobrepago' : '')
+        const referencia = m.referencia || ''
         return `
           <div class="tarjeta-lista fila-movimiento">
             <div style="flex:1; min-width:0;">
@@ -1761,7 +1758,7 @@
       vacioEl.hidden     = true
 
       const { data, error } = await supabase.from('v_cuenta_corriente_movimientos')
-        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, monto_informativo, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado')
         .eq('proveedor_id', estado.ficha.proveedorId)
         .eq('unidad_negocio_id', estado.ficha.unidadId)
         .order('fecha', { ascending: false })
@@ -1792,10 +1789,7 @@
       vacioEl.hidden = true
 
       listaEl.innerHTML = data.map(m => {
-        // credito_generado deja `monto` en 0 a propósito (no afecta el saldo
-        // corrido) — el importe real de esa fila viene en monto_informativo.
-        const esCreditoGenerado = m.tipo === 'credito_generado'
-        const monto = esCreditoGenerado ? (Number(m.monto_informativo) || 0) : (Number(m.monto) || 0)
+        const monto = Number(m.monto) || 0
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const esFactura = m.tipo === 'factura' && m.factura_pendiente_id
         const esPago = m.tipo === 'pago' && m.gasto_id
@@ -1814,7 +1808,7 @@
         const lineaSaldo = saldoAcum !== 0
           ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${formatearImporte(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
-        const referencia = m.referencia || (esCreditoGenerado ? 'Generado por sobrepago' : '—')
+        const referencia = m.referencia || '—'
         return `
           <div class="tarjeta-lista fila-movimiento">
             <span class="punto-tipo-mov punto-tipo-mov--${m.tipo}"></span>
