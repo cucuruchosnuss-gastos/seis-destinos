@@ -762,6 +762,7 @@
             <input type="text" id="filtro-busqueda-proveedores" placeholder="🔍 Buscar proveedor" style="width:100%;">
           </div>
           <select id="filtro-unidad-proveedores"></select>
+          <button type="button" class="btn btn--secundario" id="btn-agregar-proveedor" style="width:auto;">+ Agregar proveedor</button>
         </div>
 
         <div id="estado-cargando-proveedores" class="estado-vacio" hidden>
@@ -1004,6 +1005,42 @@
       </div>
     </div>
   </div><!-- /modal-asignar-proveedor -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — AGREGAR PROVEEDOR (queda activo directo, sin aprobación —
+       a diferencia del "Cargar proveedor nuevo" de gastos.html)
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-agregar-proveedor" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-agregar-proveedor" title="Cerrar">✕</button>
+      <h2>Agregar proveedor</h2>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-agregar-prov-razon">Razón social</label>
+          <input type="text" id="campo-agregar-prov-razon" placeholder="Nombre del proveedor">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-agregar-prov-cuit">CUIT</label>
+          <input type="text" id="campo-agregar-prov-cuit" placeholder="30-12345678-9">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-agregar-prov-fantasia">Nombre de fantasía <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-agregar-prov-fantasia" placeholder="Nombre comercial">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-agregar-prov-direccion">Dirección <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-agregar-prov-direccion" placeholder="Dirección">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-agregar-proveedor">Cancelar</button>
+        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-agregar-proveedor">Confirmar</button>
+      </div>
+    </div>
+  </div><!-- /modal-agregar-proveedor -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — DETALLE DEL PAGO
@@ -1653,6 +1690,52 @@
       // La pestaña Proveedores ya se había renderizado con los maestros
       // viejos (sin este proveedor) — hay que re-renderizarla con los datos
       // frescos, no solo refrescar la lista de pendientes.
+      cargarSaldos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL: AGREGAR PROVEEDOR (activo directo, soloAdmin — sin aprobación)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function abrirModalAgregarProveedor() {
+      document.getElementById('campo-agregar-prov-razon').value      = ''
+      document.getElementById('campo-agregar-prov-cuit').value       = ''
+      document.getElementById('campo-agregar-prov-fantasia').value   = ''
+      document.getElementById('campo-agregar-prov-direccion').value  = ''
+      document.getElementById('modal-agregar-proveedor').hidden = false
+    }
+
+    function cerrarModalAgregarProveedor() {
+      document.getElementById('modal-agregar-proveedor').hidden = true
+    }
+
+    async function confirmarAgregarProveedor() {
+      const razon = document.getElementById('campo-agregar-prov-razon').value.trim()
+      if (!razon) return mostrarError('Completá la razón social.')
+      const cuit = document.getElementById('campo-agregar-prov-cuit').value.trim()
+      if (!cuit) return mostrarError('Completá el CUIT.')
+      const fantasia  = document.getElementById('campo-agregar-prov-fantasia').value.trim() || null
+      const direccion = document.getElementById('campo-agregar-prov-direccion').value.trim() || null
+
+      const btn = document.getElementById('btn-confirmar-agregar-proveedor')
+      btn.disabled = true
+      const { error } = await supabase.rpc('crear_proveedor_activo', {
+        p_razon_social:   razon,
+        p_cuit:           cuit,
+        p_nombre_fantasia: fantasia,
+        p_direccion:      direccion,
+      })
+      btn.disabled = false
+      if (error) { mostrarError(error.message || 'No se pudo crear el proveedor.'); return }
+
+      mostrarExito('Proveedor creado.')
+      cerrarModalAgregarProveedor()
+      // Mismo refresh que aprobarProveedor() — recarga los maestros y
+      // re-renderiza la pestaña Proveedores. El proveedor nuevo no va a
+      // aparecer en la lista hasta que tenga alguna factura (esa lista
+      // solo muestra saldo>0), es el comportamiento esperado.
+      const { data } = await supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
+      estado.maestros.proveedores = data ?? []
       cargarSaldos()
     }
 
@@ -2518,6 +2601,13 @@
     document.getElementById('btn-cancelar-asignar-proveedor').addEventListener('click', cerrarModalAsignarProveedor)
     document.querySelector('#modal-asignar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalAsignarProveedor)
     document.getElementById('btn-confirmar-asignar-proveedor').addEventListener('click', confirmarAsignarProveedor)
+
+    // ── Modal: Agregar proveedor ──────────────────────────────────────────
+    document.getElementById('btn-agregar-proveedor').addEventListener('click', abrirModalAgregarProveedor)
+    document.getElementById('btn-cerrar-agregar-proveedor').addEventListener('click', cerrarModalAgregarProveedor)
+    document.getElementById('btn-cancelar-agregar-proveedor').addEventListener('click', cerrarModalAgregarProveedor)
+    document.querySelector('#modal-agregar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalAgregarProveedor)
+    document.getElementById('btn-confirmar-agregar-proveedor').addEventListener('click', confirmarAgregarProveedor)
 
     document.getElementById('btn-cerrar-detalle-pago').addEventListener('click', cerrarModalDetallePago)
     document.querySelector('#modal-detalle-pago .modal-cc__backdrop').addEventListener('click', cerrarModalDetallePago)
