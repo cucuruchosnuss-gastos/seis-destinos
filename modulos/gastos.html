@@ -1692,6 +1692,10 @@
     let vehiculoFueElegido    = false // true cuando el usuario tapeó un vehículo o "Sin vehículo"
     let viaVehiculos          = false // true cuando llegó por la tarjeta Vehículos
     let proveedorSeleccionado = null  // id de proveedores, solo se usa en el flujo "pendiente"
+    // true cuando proveedorSeleccionado lo puso intentarMatchAutomaticoProveedor(),
+    // no el usuario a mano — determina si hay que invalidarlo al subir una
+    // foto nueva (ver limpiarMatchProveedor() y el handler de input-foto).
+    let proveedorSeleccionadoEsAuto = false
     // El modal "Cargar proveedor nuevo" (#modal-proveedor-nuevo) se reusa
     // entre el wizard y el formulario de edición de factura — esta bandera
     // le dice a su botón "Guardar" a qué combobox devolver el resultado.
@@ -3378,14 +3382,26 @@
     // el nombre registrado del proveedor. Oculta la señal de "encontrado
     // automáticamente" por default — la vuelve a mostrar
     // intentarMatchAutomaticoProveedor() cuando corresponde.
-    function seleccionarProveedor(p) {
+    function seleccionarProveedor(p, esAuto = false) {
       proveedorSeleccionado = p.id
+      proveedorSeleccionadoEsAuto = esAuto
       document.getElementById('campo-proveedor-id').value = p.id
       document.getElementById('campo-proveedor-buscar').value = p.razon_social
       document.getElementById('sugerencias-proveedor').hidden = true
       document.getElementById('campo-razon-social').value = p.razon_social
       document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = true
+    }
+
+    // Vuelve al estado "sin proveedor elegido" — mismo bloque que antes
+    // estaba duplicado en el input manual de búsqueda, en el else de
+    // intentarMatchAutomaticoProveedor() y en iniciarWizard().
+    function limpiarMatchProveedor() {
+      proveedorSeleccionado = null
+      proveedorSeleccionadoEsAuto = false
+      document.getElementById('campo-proveedor-id').value = ''
+      document.getElementById('proveedor-auto-match').hidden = true
+      document.getElementById('btn-proveedor-nuevo').hidden = false
     }
 
     function normalizarCuit(v) {
@@ -3417,23 +3433,12 @@
         }
       }
 
-      // Diagnóstico temporal — bug reportado en real (falso positivo con un
-      // proveedor sin ningún parecido) que no se pudo reproducir en el mock.
-      // Dejar hasta confirmar la causa con un repro real.
-      console.log('[match-proveedor]', {
-        cuitOcrCrudo: estado.wizard.cuitOcr,
-        cuitOcrNormalizado: cuitOcr,
-        razonSocialCampo: document.getElementById('campo-razon-social')?.value,
-        matchEncontrado: match ? { id: match.id, razon_social: match.razon_social, cuit: match.cuit } : null,
-      })
-
       if (match) {
-        seleccionarProveedor(match)
+        seleccionarProveedor(match, true)
         indicador.hidden = false
         document.getElementById('btn-proveedor-nuevo').hidden = true
       } else {
-        indicador.hidden = true
-        document.getElementById('btn-proveedor-nuevo').hidden = false
+        limpiarMatchProveedor()
       }
     }
 
@@ -4301,6 +4306,13 @@
       zona.className = 'zona-foto zona-foto--con-imagen'
       zona.innerHTML = `<img src="${URL.createObjectURL(archivo)}" alt="Preview" class="preview-foto">`
       estado.wizard.fotoArchivo = archivo
+
+      // Foto nueva sobre un match automático anterior (ej. volvió atrás
+      // desde "Detalles" y cargó otro comprobante) — invalida el match
+      // viejo para que intentarMatchAutomaticoProveedor() se reevalúe con
+      // los datos de esta foto la próxima vez que llegue a "Detalles". Una
+      // selección manual del usuario, en cambio, no se toca acá.
+      if (proveedorSeleccionadoEsAuto) limpiarMatchProveedor()
 
       document.getElementById('btn-cambiar-foto').style.display = 'block'
 
