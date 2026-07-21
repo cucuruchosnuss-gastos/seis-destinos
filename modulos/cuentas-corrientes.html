@@ -281,6 +281,70 @@
       color: #fff;
     }
 
+    /* Selector de Tipo (filtro de Movimientos en la ficha) — mismo botón
+       .btn-tipo-doc de arriba, pero en turquesa (no cian) porque es un
+       componente nuevo sin el bug de color heredado del de medio de pago. */
+    .grilla-tipo-mov {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+    .grilla-tipo-mov .btn-tipo-doc:hover {
+      border-color: var(--turquesa);
+      background: var(--turquesa-suave);
+    }
+    .grilla-tipo-mov .btn-tipo-doc--seleccionado {
+      border-color: var(--turquesa);
+      background: var(--turquesa);
+      color: #fff;
+    }
+
+    /* ── Selector "Ordenar" (Movimientos de la ficha) — patrón .multiselect
+       de gastos.html, portado tal cual pero en turquesa. ────────────────── */
+    .multiselect { position: relative; flex-shrink: 0; }
+    .multiselect__boton {
+      padding: 0.4375rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .multiselect__boton--activo {
+      border-color: var(--turquesa);
+      background: var(--turquesa-suave);
+      color: var(--turquesa-oscuro);
+    }
+    .multiselect__panel {
+      position: fixed;
+      z-index: 30;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      padding: 0.5rem;
+      min-width: 200px;
+    }
+    .multiselect__panel:not([hidden]) {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .multiselect__panel--simple { max-height: 220px; overflow-y: auto; }
+    .multiselect__opcion {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.25rem;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .multiselect__opcion:hover { background: var(--color-fondo); }
+
     /* ── Tarjeta de proveedor (saldo) ──────────────────────────────────────── */
 
     .proveedor-cc__derecha { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
@@ -784,6 +848,25 @@
         <span style="font-size:0.8125rem; font-weight:600; color:var(--color-texto-suave);" id="contador-movimientos-ficha"></span>
       </h3>
 
+      <div class="segmented-rango" id="segmented-rango-ficha">
+        <button type="button" class="segmented-rango__opcion" data-rango="hoy">Hoy</button>
+        <button type="button" class="segmented-rango__opcion" data-rango="mes">En el mes</button>
+      </div>
+
+      <div class="filtros-cc" style="margin-top:0.875rem;">
+        <input type="date" id="filtro-fecha-desde-ficha">
+        <input type="date" id="filtro-fecha-hasta-ficha">
+        <div class="grilla-tipo-mov" id="grilla-tipo-mov-ficha">
+          <button type="button" class="btn-tipo-doc btn-tipo-doc--seleccionado" data-tipo="todos">Todos</button>
+          <button type="button" class="btn-tipo-doc" data-tipo="factura">Facturas</button>
+          <button type="button" class="btn-tipo-doc" data-tipo="pago">Pagos</button>
+        </div>
+        <div class="multiselect" id="ms-orden-ficha">
+          <button type="button" class="multiselect__boton" id="ms-orden-ficha-boton">Ordenar</button>
+          <div class="multiselect__panel multiselect__panel--simple" id="ms-orden-ficha-panel" hidden></div>
+        </div>
+      </div>
+
       <div id="estado-cargando-movimientos" class="estado-vacio" hidden>
         <div class="spinner"></div>
         <p class="estado-vacio__descripcion">Cargando movimientos…</p>
@@ -959,6 +1042,14 @@
     const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco' }
     const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado', interes: 'Interés' }
     const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']
+
+    // Selector "Ordenar" de Movimientos (ficha) — se aplica del lado del
+    // cliente sobre los datos ya cargados, sin refetch.
+    const OPCIONES_ORDEN_MOVIMIENTOS = [
+      { value: 'fecha_desc', label: 'Fecha (más reciente primero)' },
+      { value: 'fecha_asc',  label: 'Fecha (más antigua primero)' },
+      { value: 'monto_desc', label: 'Monto (mayor primero)' },
+    ]
 
     const estado = {
       sesion: null,
@@ -1591,8 +1682,9 @@
       vacioEl.hidden     = true
 
       let query = supabase.from('v_cuenta_corriente_movimientos')
-        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, orden_desempate')
         .order('fecha', { ascending: false })
+        .order('orden_desempate', { ascending: false })
 
       const f = estado.filtros.historial
       if (f.unidadId)    query = query.eq('unidad_negocio_id', f.unidadId)
@@ -1673,7 +1765,13 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     async function abrirFicha(proveedorId, unidadId, nombre) {
-      estado.ficha = { proveedorId, unidadId, nombre }
+      estado.ficha = {
+        proveedorId, unidadId, nombre,
+        filtros: { rangoRapido: null, fechaDesde: '', fechaHasta: '', tipo: 'todos', orden: 'fecha_desc' },
+        movimientosRaw: [],
+        estadoPorFactura: {},
+      }
+      resetearFiltrosFicha()
       document.getElementById('ficha-titulo').textContent = nombre
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-ficha').removeAttribute('hidden')
@@ -1757,11 +1855,18 @@
       cargandoEl.hidden = false
       vacioEl.hidden     = true
 
-      const { data, error } = await supabase.from('v_cuenta_corriente_movimientos')
-        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado')
+      let query = supabase.from('v_cuenta_corriente_movimientos')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado, orden_desempate')
         .eq('proveedor_id', estado.ficha.proveedorId)
         .eq('unidad_negocio_id', estado.ficha.unidadId)
+
+      const f = estado.ficha.filtros
+      if (f.fechaDesde) query = query.gte('fecha', f.fechaDesde)
+      if (f.fechaHasta) query = query.lte('fecha', f.fechaHasta)
+
+      const { data, error } = await query
         .order('fecha', { ascending: false })
+        .order('orden_desempate', { ascending: false })
 
       if (error) { console.error(error); cargandoEl.hidden = true; mostrarError('Error al cargar los movimientos.'); return }
 
@@ -1779,16 +1884,38 @@
 
       cargandoEl.hidden = true
 
+      estado.ficha.movimientosRaw   = data ?? []
+      estado.ficha.estadoPorFactura = estadoPorFactura
+      renderizarFichaMovimientos()
+    }
+
+    // Filtro de Tipo y Ordenar se aplican acá, del lado del cliente sobre
+    // estado.ficha.movimientosRaw — sin refetch. Solo el rango de fechas
+    // (Hoy/En el mes/desde-hasta) dispara un cargarFichaMovimientos() nuevo,
+    // porque cambia la consulta.
+    function renderizarFichaMovimientos() {
       const listaEl = document.getElementById('lista-movimientos-ficha')
-      document.getElementById('contador-movimientos-ficha').textContent = data?.length ? `${data.length} registro${data.length === 1 ? '' : 's'}` : ''
-      if (!data?.length) {
+      const vacioEl = document.getElementById('estado-vacio-movimientos')
+      const estadoPorFactura = estado.ficha.estadoPorFactura
+      const f = estado.ficha.filtros
+
+      let filas = estado.ficha.movimientosRaw
+      if (f.tipo === 'factura')    filas = filas.filter(m => ['factura', 'interes'].includes(m.tipo))
+      else if (f.tipo === 'pago')  filas = filas.filter(m => ['pago', 'credito_aplicado'].includes(m.tipo))
+
+      filas = [...filas]
+      if (f.orden === 'fecha_asc')       filas.reverse()
+      else if (f.orden === 'monto_desc') filas.sort((a, b) => Math.abs(Number(b.monto) || 0) - Math.abs(Number(a.monto) || 0))
+
+      document.getElementById('contador-movimientos-ficha').textContent = filas.length ? `${filas.length} registro${filas.length === 1 ? '' : 's'}` : ''
+      if (!filas.length) {
         listaEl.innerHTML = ''
         vacioEl.hidden = false
         return
       }
       vacioEl.hidden = true
 
-      listaEl.innerHTML = data.map(m => {
+      listaEl.innerHTML = filas.map(m => {
         const monto = Number(m.monto) || 0
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const esFactura = m.tipo === 'factura' && m.factura_pendiente_id
@@ -1839,6 +1966,68 @@
           }
         })
       })
+    }
+
+    function actualizarSegmentedRangoFicha() {
+      document.querySelectorAll('#segmented-rango-ficha .segmented-rango__opcion').forEach(btn => {
+        btn.classList.toggle('segmented-rango__opcion--activa', btn.dataset.rango === estado.ficha?.filtros?.rangoRapido)
+      })
+    }
+
+    function actualizarSelectorOrdenFicha() {
+      const boton = document.getElementById('ms-orden-ficha-boton')
+      const panel = document.getElementById('ms-orden-ficha-panel')
+      const orden = estado.ficha?.filtros?.orden || 'fecha_desc'
+      const actual = OPCIONES_ORDEN_MOVIMIENTOS.find(o => o.value === orden)
+      boton.textContent = 'Ordenar: ' + (actual?.label ?? 'Fecha (más reciente primero)')
+      boton.classList.toggle('multiselect__boton--activo', orden !== 'fecha_desc')
+      panel.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = r.value === orden })
+    }
+
+    function crearSelectorOrdenFicha() {
+      const boton = document.getElementById('ms-orden-ficha-boton')
+      const panel = document.getElementById('ms-orden-ficha-panel')
+
+      panel.innerHTML = OPCIONES_ORDEN_MOVIMIENTOS.map(op => `
+        <label class="multiselect__opcion">
+          <input type="radio" name="orden-ficha" value="${op.value}">
+          <span>${op.label}</span>
+        </label>
+      `).join('')
+
+      panel.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          estado.ficha.filtros.orden = radio.value
+          actualizarSelectorOrdenFicha()
+          panel.hidden = true
+          renderizarFichaMovimientos()
+        })
+      })
+
+      boton.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const estabaAbierto = !panel.hidden
+        document.querySelectorAll('.multiselect__panel').forEach(p => p.hidden = true)
+        if (!estabaAbierto) {
+          document.body.appendChild(panel)
+          const rect = boton.getBoundingClientRect()
+          panel.style.top  = (rect.bottom + 4) + 'px'
+          panel.style.left = rect.left + 'px'
+        }
+        panel.hidden = estabaAbierto
+      })
+
+      actualizarSelectorOrdenFicha()
+    }
+
+    function resetearFiltrosFicha() {
+      document.getElementById('filtro-fecha-desde-ficha').value = ''
+      document.getElementById('filtro-fecha-hasta-ficha').value = ''
+      document.querySelectorAll('#grilla-tipo-mov-ficha .btn-tipo-doc').forEach(b => {
+        b.classList.toggle('btn-tipo-doc--seleccionado', b.dataset.tipo === 'todos')
+      })
+      actualizarSegmentedRangoFicha()
+      actualizarSelectorOrdenFicha()
     }
 
     async function cargarFichaCreditos() {
@@ -2263,6 +2452,46 @@
       })
     })
     document.getElementById('btn-exportar-excel-historial').addEventListener('click', exportarExcelHistorial)
+
+    // ── Filtros: Movimientos (ficha) ────────────────────────────────────────
+    document.getElementById('filtro-fecha-desde-ficha').addEventListener('change', (e) => {
+      estado.ficha.filtros.fechaDesde = e.target.value
+      estado.ficha.filtros.rangoRapido = null
+      actualizarSegmentedRangoFicha()
+      cargarFichaMovimientos()
+    })
+    document.getElementById('filtro-fecha-hasta-ficha').addEventListener('change', (e) => {
+      estado.ficha.filtros.fechaHasta = e.target.value
+      estado.ficha.filtros.rangoRapido = null
+      actualizarSegmentedRangoFicha()
+      cargarFichaMovimientos()
+    })
+    document.querySelectorAll('#segmented-rango-ficha .segmented-rango__opcion').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const rango = btn.dataset.rango
+        estado.ficha.filtros.rangoRapido = rango
+        const hoy = new Date()
+        if (rango === 'hoy') {
+          estado.ficha.filtros.fechaDesde = fechaISO(hoy)
+          estado.ficha.filtros.fechaHasta = fechaISO(hoy)
+        } else if (rango === 'mes') {
+          estado.ficha.filtros.fechaDesde = fechaISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1))
+          estado.ficha.filtros.fechaHasta = fechaISO(hoy)
+        }
+        document.getElementById('filtro-fecha-desde-ficha').value = estado.ficha.filtros.fechaDesde
+        document.getElementById('filtro-fecha-hasta-ficha').value = estado.ficha.filtros.fechaHasta
+        actualizarSegmentedRangoFicha()
+        cargarFichaMovimientos()
+      })
+    })
+    document.getElementById('grilla-tipo-mov-ficha').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-tipo-doc')
+      if (!btn) return
+      estado.ficha.filtros.tipo = btn.dataset.tipo
+      document.querySelectorAll('#grilla-tipo-mov-ficha .btn-tipo-doc').forEach(b => b.classList.toggle('btn-tipo-doc--seleccionado', b === btn))
+      renderizarFichaMovimientos()
+    })
+    crearSelectorOrdenFicha()
 
     // ── Modal: Asignar proveedor ──────────────────────────────────────────
     document.getElementById('campo-asignar-proveedor-buscar').addEventListener('input', (e) => {
