@@ -18,11 +18,9 @@
     }
 
     /* ── Header nuevo, específico de este módulo por ahora — tarjeta blanca
-       redondeada. Pantalla 1/3 usan .cc-header (logo+marca a la izquierda,
-       Volver a la derecha); Pantalla 2 (ficha) usa .cc-header-ficha, un
-       header propio y más simple calcado del mockup: Volver a la izquierda,
-       nombre del proveedor en negrita a la derecha — sin logo ni "Cuentas
-       corrientes", orden invertido a propósito respecto al de arriba. ──── */
+       redondeada. Mismo patrón en Pantalla 1/3 (.cc-header) y Pantalla 2/
+       ficha (.cc-header-ficha): Volver siempre a la izquierda, mismo
+       criterio que el resto de la app (Caja es la referencia). ──── */
 
     .cc-header {
       display: flex;
@@ -34,12 +32,15 @@
       padding: 0.875rem 1.25rem;
       margin: 1.25rem 0 1.25rem;
     }
-    .cc-header__logo-fila {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    .cc-header__marca { display: flex; align-items: center; gap: 0.625rem; }
+    .cc-header__logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--turquesa), var(--turquesa-oscuro));
+      flex-shrink: 0;
     }
-    .cc-header__logo { width: 20px; height: 20px; object-fit: contain; }
+    .cc-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; }
     .cc-header__marca-texto {
       font-size: 0.6875rem;
       font-weight: 700;
@@ -48,11 +49,10 @@
       text-transform: uppercase;
     }
     .cc-header__titulo {
-      font-size: 1.375rem;
+      font-size: 1.125rem;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
       color: var(--color-texto);
-      margin-top: 0.125rem;
     }
     .cc-header__volver {
       padding: 0.5rem 0.875rem;
@@ -455,6 +455,8 @@
     .punto-tipo-mov--pago              { background: #1E8C4A; }
     .punto-tipo-mov--factura           { background: var(--color-acento); }
     .punto-tipo-mov--credito_aplicado  { background: var(--violeta); }
+    .punto-tipo-mov--credito_generado  { background: var(--amarillo); }
+    .punto-tipo-mov--interes           { background: var(--bordo); }
 
     /* Chip de tipo — historial de facturas (Pantalla 3), no lleva punto. */
     .chip-tipo-mov {
@@ -470,6 +472,8 @@
     .chip-tipo-mov--pago              { background: var(--color-acento-suave); color: var(--color-acento-highlight); }
     .chip-tipo-mov--factura           { background: var(--rojo-suave); color: var(--rojo); }
     .chip-tipo-mov--credito_aplicado  { background: var(--violeta-suave); color: var(--violeta-oscuro); }
+    .chip-tipo-mov--credito_generado  { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+    .chip-tipo-mov--interes           { background: var(--bordo-suave); color: var(--bordo-oscuro); }
 
     /* Historial de facturas — misma tarjeta, letra más chica para que
        entren más filas sin scrollear tanto. La ficha de proveedor
@@ -567,6 +571,58 @@
       font-weight: 600;
     }
 
+    /* Modal — Detalle del pago */
+    .detalle-pago-hero {
+      text-align: center;
+      padding: 0.5rem 0 1rem;
+      border-bottom: 1px solid var(--color-borde);
+      margin-bottom: 0.75rem;
+    }
+    .detalle-pago-hero__monto {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--color-texto);
+      letter-spacing: -0.02em;
+    }
+    .detalle-pago-hero__meta {
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+    }
+    .detalle-pago-seccion-titulo {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-texto-suave);
+      margin: 0.75rem 0 0.5rem;
+    }
+    .fila-pago-aplicacion {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--color-borde);
+    }
+    .fila-pago-aplicacion__monto {
+      flex-shrink: 0;
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--color-texto);
+    }
+    /* Mismo criterio de color que .punto-tipo-mov--credito_generado — es
+       el mismo concepto (sobrepago que quedó como crédito a favor). */
+    .detalle-pago-credito {
+      margin-top: 0.75rem;
+      padding: 0.75rem 0.875rem;
+      border-radius: 10px;
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+      font-size: 0.8125rem;
+    }
+    .detalle-pago-credito div + div { margin-top: 0.25rem; }
+
     /* Combobox de proveedor (mismo patrón que gastos.html) */
     .sugerencias-proveedor-cc {
       position: absolute;
@@ -606,14 +662,14 @@
     <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
 
       <header class="cc-header">
-        <div>
-          <div class="cc-header__logo-fila">
-            <img src="../logo.png" alt="" class="cc-header__logo">
-            <span class="cc-header__marca-texto">Seis Destinos</span>
-          </div>
-          <div class="cc-header__titulo">Cuentas corrientes</div>
-        </div>
         <a href="../dashboard.html" class="cc-header__volver" title="Volver al dashboard">‹ Volver</a>
+        <div class="cc-header__marca">
+          <div class="cc-header__logo"></div>
+          <div class="cc-header__marca-col">
+            <span class="cc-header__marca-texto">Seis Destinos</span>
+            <span class="cc-header__titulo">Cuentas corrientes <span style="color:var(--turquesa); font-size:0.875rem; line-height:1;">●</span></span>
+          </div>
+        </div>
       </header>
 
       <div class="grilla-resumen-cc">
@@ -868,6 +924,18 @@
     </div>
   </div><!-- /modal-asignar-proveedor -->
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — DETALLE DEL PAGO
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-detalle-pago" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-detalle-pago" title="Cerrar">✕</button>
+      <h2>Detalle del pago</h2>
+      <div id="detalle-pago-contenido"></div>
+    </div>
+  </div><!-- /modal-detalle-pago -->
+
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
@@ -891,7 +959,7 @@
     // que gastos.html.
     const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
     const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco' }
-    const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado' }
+    const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado', credito_generado: 'Crédito generado', interes: 'Interés' }
     const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']
 
     const estado = {
@@ -1322,6 +1390,87 @@
       proveedorAsignarSeleccionado = null
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL: DETALLE DEL PAGO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // gastoId identifica el pago completo (una fila de `gastos`) — una fila
+    // "PAGO" del historial es una sola aplicación (aplicaciones_pago), pero
+    // este modal muestra TODAS las aplicaciones de ese mismo gasto_id, más
+    // el estado actual (no una foto del día del pago) de cualquier crédito
+    // que haya generado por sobrepago.
+    async function abrirModalDetallePago(gastoId) {
+      const cont = document.getElementById('detalle-pago-contenido')
+      cont.innerHTML = '<p style="color:var(--color-texto-suave); font-size:0.875rem; padding:1rem 0;">Cargando…</p>'
+      document.getElementById('modal-detalle-pago').removeAttribute('hidden')
+
+      const [gastoRes, aplicacionesRes, creditosRes] = await Promise.all([
+        supabase.from('gastos').select('fecha_pago, medio_pago, importe, moneda').eq('id', gastoId).maybeSingle(),
+        supabase.from('aplicaciones_pago')
+          .select('monto_aplicado, facturas_pendientes(numero_comprobante, razon_social, fecha_factura, categorias(nombre))')
+          .eq('gasto_id', gastoId),
+        supabase.from('creditos_proveedor')
+          .select('id, monto_original, monto_disponible, moneda, aplicaciones_credito(monto_aplicado, facturas_pendientes(numero_comprobante))')
+          .eq('origen_gasto_id', gastoId),
+      ])
+
+      if (gastoRes.error || aplicacionesRes.error || creditosRes.error) {
+        cont.innerHTML = '<p style="color:var(--color-error); font-size:0.875rem; padding:1rem 0;">Error al cargar el detalle del pago.</p>'
+        return
+      }
+
+      const gasto = gastoRes.data
+      // supabase-js no ordena confiablemente por columna de una tabla
+      // relacionada (facturas_pendientes.fecha_factura) — se ordena acá.
+      const aplicaciones = (aplicacionesRes.data ?? []).slice()
+        .sort((a, b) => (a.facturas_pendientes?.fecha_factura || '').localeCompare(b.facturas_pendientes?.fecha_factura || ''))
+      const creditos = creditosRes.data ?? []
+
+      const filasFacturas = aplicaciones.map(a => {
+        const fp = a.facturas_pendientes
+        const categoria = fp?.categorias?.nombre ? ` · ${fp.categorias.nombre}` : ''
+        return `
+          <div class="fila-pago-aplicacion">
+            <div class="fila-fifo__info">
+              <div class="fila-fifo__numero">Factura ${fp?.numero_comprobante || '—'}</div>
+              <div class="fila-fifo__meta">${fp?.razon_social || ''}${categoria}</div>
+            </div>
+            <div class="fila-pago-aplicacion__monto">${formatearImporte(a.monto_aplicado, gasto?.moneda)}</div>
+          </div>
+        `
+      }).join('')
+
+      // Un crédito puede tener más de una aplicación (repartido en varias
+      // facturas futuras) — se listan todas, no solo la primera.
+      const bloquesCredito = creditos.map(c => {
+        const aplicacionesCredito = c.aplicaciones_credito ?? []
+        if (!aplicacionesCredito.length) {
+          return `<div>Sobrante: ${formatearImporte(c.monto_original, c.moneda)} — sigue como crédito a favor, sin aplicar todavía.</div>`
+        }
+        const lineas = aplicacionesCredito.map(ac =>
+          `<div>${formatearImporte(ac.monto_aplicado, c.moneda)} se aplicó a la Factura ${ac.facturas_pendientes?.numero_comprobante || '—'}</div>`
+        ).join('')
+        const restante = Number(c.monto_disponible) > 0
+          ? `<div>${formatearImporte(c.monto_disponible, c.moneda)} sigue disponible como crédito a favor.</div>`
+          : ''
+        return lineas + restante
+      }).join('')
+
+      cont.innerHTML = `
+        <div class="detalle-pago-hero">
+          <div class="detalle-pago-hero__monto">${formatearImporte(gasto?.importe, gasto?.moneda)}</div>
+          <div class="detalle-pago-hero__meta">${formatearFecha(gasto?.fecha_pago)} · ${MEDIOS_PAGO_LABEL[gasto?.medio_pago] || gasto?.medio_pago || ''}</div>
+        </div>
+        <div class="detalle-pago-seccion-titulo">Facturas cubiertas</div>
+        ${filasFacturas || '<p style="color:var(--color-texto-suave); font-size:0.8125rem;">Sin facturas asociadas.</p>'}
+        ${bloquesCredito ? `<div class="detalle-pago-credito">${bloquesCredito}</div>` : ''}
+      `
+    }
+
+    function cerrarModalDetallePago() {
+      document.getElementById('modal-detalle-pago').hidden = true
+    }
+
     async function confirmarAsignarProveedor() {
       if (!facturaPendienteAAsignar) return
       if (!proveedorAsignarSeleccionado) return mostrarError('Seleccioná un proveedor.')
@@ -1444,7 +1593,7 @@
       vacioEl.hidden     = true
 
       let query = supabase.from('v_cuenta_corriente_movimientos')
-        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, monto_informativo, factura_pendiente_id, gasto_id, credito_id, referencia')
         .order('fecha', { ascending: false })
 
       const f = estado.filtros.historial
@@ -1483,14 +1632,16 @@
       vacioEl.hidden = true
 
       listaEl.innerHTML = estado.listaHistorial.map(m => {
-        const monto = Number(m.monto) || 0
+        const esCreditoGenerado = m.tipo === 'credito_generado'
+        const monto = esCreditoGenerado ? (Number(m.monto_informativo) || 0) : (Number(m.monto) || 0)
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
+        const referencia = m.referencia || (esCreditoGenerado ? 'Generado por sobrepago' : '')
         return `
           <div class="tarjeta-lista fila-movimiento">
             <div style="flex:1; min-width:0;">
               <span class="chip-tipo-mov chip-tipo-mov--${m.tipo}">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</span>
-              <div class="fila-movimiento__referencia">${m.proveedorNombre}${m.referencia ? ` — ${m.referencia}` : ''}</div>
+              <div class="fila-movimiento__referencia">${m.proveedorNombre}${referencia ? ` — ${referencia}` : ''}</div>
               <div class="fila-movimiento__fecha">${unidadNombre} · ${formatearFecha(m.fecha)}</div>
             </div>
             <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
@@ -1610,7 +1761,7 @@
       vacioEl.hidden     = true
 
       const { data, error } = await supabase.from('v_cuenta_corriente_movimientos')
-        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado')
+        .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, monto_informativo, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado')
         .eq('proveedor_id', estado.ficha.proveedorId)
         .eq('unidad_negocio_id', estado.ficha.unidadId)
         .order('fecha', { ascending: false })
@@ -1641,9 +1792,13 @@
       vacioEl.hidden = true
 
       listaEl.innerHTML = data.map(m => {
-        const monto = Number(m.monto) || 0
+        // credito_generado deja `monto` en 0 a propósito (no afecta el saldo
+        // corrido) — el importe real de esa fila viene en monto_informativo.
+        const esCreditoGenerado = m.tipo === 'credito_generado'
+        const monto = esCreditoGenerado ? (Number(m.monto_informativo) || 0) : (Number(m.monto) || 0)
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const esFactura = m.tipo === 'factura' && m.factura_pendiente_id
+        const esPago = m.tipo === 'pago' && m.gasto_id
         const puedeEliminar = esFactura && ['pendiente', 'parcial'].includes(estadoPorFactura[m.factura_pendiente_id])
         const volverFicha = encodeURIComponent(location.href)
         const iconos = esFactura ? `
@@ -1651,17 +1806,21 @@
             <a href="gastos.html?factura=${m.factura_pendiente_id}&volver=${volverFicha}" class="btn-icono-accion" title="Ver">👁</a>
             <a href="gastos.html?factura=${m.factura_pendiente_id}&volver=${volverFicha}" class="btn-icono-accion" title="Editar">✏️</a>
             ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${m.factura_pendiente_id}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
+          </div>` : esPago ? `
+          <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
+            <button type="button" class="btn-icono-accion btn-detalle-pago" data-gasto-id="${m.gasto_id}" title="Detalle del pago">📋</button>
           </div>` : ''
         const saldoAcum = Number(m.saldo_acumulado) || 0
         const lineaSaldo = saldoAcum !== 0
           ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${formatearImporte(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
+        const referencia = m.referencia || (esCreditoGenerado ? 'Generado por sobrepago' : '—')
         return `
           <div class="tarjeta-lista fila-movimiento">
             <span class="punto-tipo-mov punto-tipo-mov--${m.tipo}"></span>
             <div style="flex:1; min-width:0;">
               <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
-              <div class="fila-movimiento__referencia">${m.referencia || '—'}</div>
+              <div class="fila-movimiento__referencia">${referencia}</div>
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
@@ -1672,6 +1831,10 @@
           </div>
         `
       }).join('')
+
+      listaEl.querySelectorAll('.btn-detalle-pago').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalDetallePago(btn.dataset.gastoId))
+      })
 
       listaEl.querySelectorAll('.btn-icono-eliminar--inline').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -2132,6 +2295,9 @@
     document.getElementById('btn-cancelar-asignar-proveedor').addEventListener('click', cerrarModalAsignarProveedor)
     document.querySelector('#modal-asignar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalAsignarProveedor)
     document.getElementById('btn-confirmar-asignar-proveedor').addEventListener('click', confirmarAsignarProveedor)
+
+    document.getElementById('btn-cerrar-detalle-pago').addEventListener('click', cerrarModalDetallePago)
+    document.querySelector('#modal-detalle-pago .modal-cc__backdrop').addEventListener('click', cerrarModalDetallePago)
 
     // ── Ficha ──────────────────────────────────────────────────────────────
     // btn-registrar-pago / btn-aplicar-credito-ficha ya no son estáticos —

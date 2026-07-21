@@ -3867,6 +3867,8 @@
             <span class="resumen-importe">${formatearImporte(f.importe, f.moneda)}</span>
           </div>
           ${fila('Saldo pendiente', f.saldo_pendiente != null ? formatearImporte(f.saldo_pendiente, f.moneda) : null)}
+          ${['pendiente', 'parcial'].includes(f.estado) && (estado.miRolApp === 'admin' || estado.miRolApp === 'super_admin') ? `
+          <button type="button" class="btn btn--secundario" id="btn-agregar-interes" style="width:auto; margin-top:0.75rem;">+ Agregar interés</button>` : ''}
         </div>
 
         <div class="resumen-seccion">
@@ -3898,6 +3900,8 @@
       if (puedeEditar) {
         document.getElementById('btn-editar-factura').addEventListener('click', () => mostrarFormularioEdicionFactura(id))
       }
+
+      document.getElementById('btn-agregar-interes')?.addEventListener('click', () => mostrarFormularioInteres(id))
 
       document.getElementById('vista-lista').hidden = true
       document.getElementById('modal-detalle-factura').removeAttribute('hidden')
@@ -4025,6 +4029,181 @@
         if (error) { mostrarError('Error al guardar: ' + error.message); return }
 
         mostrarExito('Factura actualizada correctamente')
+        mostrarDetalleFactura(id)
+      })
+    }
+
+    function diasEntre(fechaDesde, fechaHasta) {
+      if (!fechaDesde || !fechaHasta) return null
+      const ms = new Date(fechaHasta + 'T00:00:00') - new Date(fechaDesde + 'T00:00:00')
+      return Math.round(ms / 86400000)
+    }
+
+    // Interés simple, no compuesto — la base de cálculo (importe original o
+    // saldo_pendiente actual) la elige quien carga el interés, ver selector
+    // "Base del cálculo" más abajo. Si se elige saldo_pendiente y se carga
+    // interés más de una vez sobre la misma factura, el segundo cálculo va
+    // a tener el primer interés adentro del saldo_pendiente — limitación
+    // conocida, no un bug de esta función.
+    function mostrarFormularioInteres(id) {
+      const f = estado.facturaDetalleActual
+      if (!f || f.id !== id) return
+
+      const fechaFactura = f.fecha_factura
+
+      document.getElementById('detalle-factura-contenido').innerHTML = `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Agregar interés</div>
+
+          <div class="grilla-tipo-doc" id="grilla-modo-interes">
+            <button type="button" class="btn-tipo-doc btn-tipo-doc--seleccionado" data-modo="monto">Monto exacto</button>
+            <button type="button" class="btn-tipo-doc" data-modo="tasa">Calcular por porcentaje</button>
+          </div>
+
+          <div class="grupo-campo" style="margin-top:1rem;">
+            <label>Base del cálculo</label>
+            <div class="grilla-tipo-doc" id="grilla-base-interes">
+              <button type="button" class="btn-tipo-doc" data-base="importe">Monto total de la factura (${formatearImporte(f.importe, f.moneda)})</button>
+              <button type="button" class="btn-tipo-doc btn-tipo-doc--seleccionado" data-base="saldo_pendiente">Saldo pendiente actual (${formatearImporte(f.saldo_pendiente, f.moneda)})</button>
+            </div>
+          </div>
+
+          <div id="interes-modo-monto" style="margin-top:1rem;">
+            <div class="grupo-campo">
+              <label for="campo-interes-monto">Monto</label>
+              <input type="text" id="campo-interes-monto" placeholder="0,00" inputmode="decimal">
+            </div>
+            <div id="interes-tasa-info" style="font-size:0.8125rem; color:var(--color-texto-suave); margin:-0.5rem 0 1rem;"></div>
+          </div>
+
+          <div id="interes-modo-tasa" style="margin-top:1rem;" hidden>
+            <div class="grupo-campo">
+              <label for="campo-interes-tasa">Tasa (%)</label>
+              <input type="text" id="campo-interes-tasa" placeholder="0,00" inputmode="decimal">
+            </div>
+            <div class="grilla-tipo-doc" id="grilla-periodo-interes">
+              <button type="button" class="btn-tipo-doc btn-tipo-doc--seleccionado" data-periodo="mensual">Mensual</button>
+              <button type="button" class="btn-tipo-doc" data-periodo="anual">Anual</button>
+            </div>
+            <div class="grupo-campo" style="margin-top:0.75rem;">
+              <label for="campo-interes-fecha">Fecha de cálculo</label>
+              <input type="date" id="campo-interes-fecha">
+            </div>
+            <div id="interes-monto-calculado" style="font-size:0.9375rem; font-weight:700; color:var(--color-texto); margin-top:0.75rem;"></div>
+          </div>
+
+          <div class="grupo-campo" style="margin-top:1rem;">
+            <label for="campo-interes-observaciones">Observaciones <span class="etiqueta-opcional">opcional</span></label>
+            <textarea id="campo-interes-observaciones"></textarea>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; padding:1rem 0;">
+          <button type="button" class="btn btn--secundario" id="btn-cancelar-interes">Cancelar</button>
+          <button type="button" class="btn btn--primario" id="btn-confirmar-interes">Agregar interés</button>
+        </div>
+      `
+
+      formatearImporteEnVivo(document.getElementById('campo-interes-monto'))
+      formatearImporteEnVivo(document.getElementById('campo-interes-tasa'))
+      document.getElementById('campo-interes-fecha').value = new Date().toISOString().slice(0, 10)
+
+      let modo = 'monto'
+      let periodo = 'mensual'
+      let baseElegida = 'saldo_pendiente'
+      let montoCalculadoModoB = null
+
+      function obtenerBase() {
+        return baseElegida === 'importe'
+          ? (Number(f.importe) || 0)
+          : (Number(f.saldo_pendiente ?? f.importe) || 0)
+      }
+
+      function actualizarInfoModoA() {
+        const info = document.getElementById('interes-tasa-info')
+        const monto = parseImporte(document.getElementById('campo-interes-monto').value)
+        const dias = diasEntre(fechaFactura, new Date().toISOString().slice(0, 10))
+        const base = obtenerBase()
+        if (!monto || monto <= 0 || !dias || dias <= 0 || base <= 0) { info.textContent = ''; return }
+        const tasaAnual = (monto / base) / (dias / 365) * 100
+        info.textContent = `≈ ${tasaAnual.toFixed(2)}% anual`
+      }
+
+      function actualizarMontoModoB() {
+        const el = document.getElementById('interes-monto-calculado')
+        const tasa = parseImporte(document.getElementById('campo-interes-tasa').value)
+        const fechaCalculo = document.getElementById('campo-interes-fecha').value
+        const dias = diasEntre(fechaFactura, fechaCalculo)
+        const base = obtenerBase()
+        if (!tasa || tasa <= 0 || !dias || dias <= 0 || base <= 0) { el.textContent = ''; montoCalculadoModoB = null; return }
+        const divisor = periodo === 'mensual' ? 30 : 365
+        montoCalculadoModoB = base * (tasa / 100) * (dias / divisor)
+        el.textContent = `Monto calculado: ${formatearImporte(montoCalculadoModoB, f.moneda)}`
+      }
+
+      document.getElementById('campo-interes-monto').addEventListener('input', actualizarInfoModoA)
+      document.getElementById('campo-interes-tasa').addEventListener('input', actualizarMontoModoB)
+      document.getElementById('campo-interes-fecha').addEventListener('input', actualizarMontoModoB)
+
+      document.getElementById('grilla-modo-interes').addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-tipo-doc')
+        if (!btn) return
+        modo = btn.dataset.modo
+        document.querySelectorAll('#grilla-modo-interes .btn-tipo-doc').forEach(b => b.classList.toggle('btn-tipo-doc--seleccionado', b === btn))
+        document.getElementById('interes-modo-monto').hidden = modo !== 'monto'
+        document.getElementById('interes-modo-tasa').hidden = modo !== 'tasa'
+      })
+
+      document.getElementById('grilla-periodo-interes').addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-tipo-doc')
+        if (!btn) return
+        periodo = btn.dataset.periodo
+        document.querySelectorAll('#grilla-periodo-interes .btn-tipo-doc').forEach(b => b.classList.toggle('btn-tipo-doc--seleccionado', b === btn))
+        actualizarMontoModoB()
+      })
+
+      document.getElementById('grilla-base-interes').addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-tipo-doc')
+        if (!btn) return
+        baseElegida = btn.dataset.base
+        document.querySelectorAll('#grilla-base-interes .btn-tipo-doc').forEach(b => b.classList.toggle('btn-tipo-doc--seleccionado', b === btn))
+        if (modo === 'monto') actualizarInfoModoA()
+        else actualizarMontoModoB()
+      })
+
+      document.getElementById('btn-cancelar-interes').addEventListener('click', () => mostrarDetalleFactura(id))
+
+      document.getElementById('btn-confirmar-interes').addEventListener('click', async () => {
+        const observaciones = document.getElementById('campo-interes-observaciones').value.trim() || null
+        const btn = document.getElementById('btn-confirmar-interes')
+
+        let monto, pTasa, pPeriodo, pDias
+        if (modo === 'monto') {
+          monto = parseImporte(document.getElementById('campo-interes-monto').value)
+          if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
+          pTasa = null; pPeriodo = null; pDias = null
+        } else {
+          if (!montoCalculadoModoB || montoCalculadoModoB <= 0) { mostrarError('Completá tasa y fecha de cálculo para un monto válido.'); return }
+          monto = montoCalculadoModoB
+          pTasa = parseImporte(document.getElementById('campo-interes-tasa').value)
+          pPeriodo = periodo
+          pDias = diasEntre(fechaFactura, document.getElementById('campo-interes-fecha').value)
+        }
+
+        btn.disabled = true
+        const { error } = await supabase.rpc('agregar_interes_factura', {
+          p_factura_id:          id,
+          p_monto:               monto,
+          p_observaciones:       observaciones,
+          p_base_calculo:        baseElegida,
+          p_tasa_pct:            pTasa,
+          p_tasa_periodo:        pPeriodo,
+          p_dias_transcurridos:  pDias,
+        })
+        btn.disabled = false
+        if (error) { mostrarError('Error al agregar el interés: ' + error.message); return }
+
+        mostrarExito('Interés agregado correctamente')
         mostrarDetalleFactura(id)
       })
     }
