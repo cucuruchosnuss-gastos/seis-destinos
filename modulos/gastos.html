@@ -153,6 +153,39 @@
       }
     }
 
+    /* Modal: anular gasto — mismo patrón bottom-sheet que #modal-proveedor-nuevo. */
+    #modal-anular-gasto {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #modal-anular-gasto[hidden] { display: none; }
+    #modal-anular-gasto__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+    #modal-anular-gasto__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+    @media (min-width: 641px) {
+      #modal-anular-gasto { align-items: center; }
+      #modal-anular-gasto__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
     /* ── Íconos Lucide (reemplazan emojis de categoría) ───────────────────── */
 
     .lucide {
@@ -892,6 +925,11 @@
       background: var(--color-exito);
     }
 
+    /* Gasto anulado — tarjeta atenuada, importe tachado, badge en vez del
+       punto de estado (ver renderizarCardGasto()). */
+    .tarjeta-lista--anulado { opacity: 0.55; }
+    .gasto__importe--anulado { text-decoration: line-through; }
+
     .gasto__avatar-iniciales {
       width: 100%;
       height: 100%;
@@ -959,6 +997,14 @@
     .badge-estado--registrado { background: rgba(16,185,129,0.10); color: #059669; }
     .badge-estado--pendiente  { background: rgba(245,158,11,0.10);  color: #D97706; }
     .badge-estado--rechazado  { background: rgba(239,68,68,0.10);   color: #DC2626; }
+    .badge-estado--anulado    { background: rgba(239,68,68,0.10);   color: #DC2626; }
+
+    /* Botón "Anular gasto" — variante roja de .btn--icono, local a este
+       archivo (mismo criterio que --peligro en la tarjeta de cuenta de
+       caja.html, pero con el rojo genérico --color-error, no un acento de
+       módulo). */
+    .btn--icono--peligro { color: var(--color-error); }
+    .btn--icono--peligro:hover { background: rgba(239,68,68,0.10); color: var(--color-error); }
 
     /* ── Botón FAB ──────────────────────────────────────────────────────────── */
 
@@ -1583,7 +1629,7 @@
     <header class="header">
       <button type="button" class="btn btn--icono" id="btn-cerrar-detalle-gasto">← Volver</button>
       <span class="header__nombre-app">Detalle del gasto</span>
-      <div id="detalle-gasto-header-derecha" style="width:5rem;"></div>
+      <div id="detalle-gasto-header-derecha" style="display:flex; gap:0.25rem; justify-content:flex-end; min-width:5rem;"></div>
     </header>
     <div style="padding: 1rem; overflow-y: auto;" id="detalle-gasto-contenido"></div>
   </div><!-- /modal-detalle-gasto -->
@@ -1634,6 +1680,29 @@
       </div>
     </div>
   </div><!-- /modal-proveedor-nuevo -->
+
+  <div id="modal-anular-gasto" hidden>
+    <div id="modal-anular-gasto__backdrop"></div>
+    <div id="modal-anular-gasto__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-anular-gasto" title="Cerrar">✕</button>
+      <h2>Anular gasto</h2>
+      <p style="margin:0.25rem 0 1rem; color:var(--color-texto-suave); font-size:0.875rem;">
+        Revierte automáticamente lo que corresponda en cuenta corriente. Esta acción no se puede deshacer.
+      </p>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-anular-motivo">Motivo</label>
+          <textarea id="campo-anular-motivo" placeholder="Explicá por qué se anula este gasto"></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-anular-gasto">Cancelar</button>
+        <button type="button" class="btn btn--peligro" id="btn-confirmar-anular-gasto" disabled>Confirmar</button>
+      </div>
+    </div>
+  </div><!-- /modal-anular-gasto -->
 
 
   <script type="module">
@@ -1708,6 +1777,7 @@
     // entre el wizard y el formulario de edición de factura — esta bandera
     // le dice a su botón "Guardar" a qué combobox devolver el resultado.
     let contextoProveedorNuevo = 'wizard' // 'wizard' | 'edicion'
+    let gastoAAnularId = null // gasto que el modal #modal-anular-gasto va a anular al confirmar
 
     // Mapeo: sub-paso → número de círculo en la barra de progreso (1-5)
     const SUBPASO_A_CIRCULO = {
@@ -1919,10 +1989,9 @@
       estado.miRolApp     = emp.rol_app
     }
 
-    if (esVistaCompleta()) {
-      document.getElementById('detalle-gasto-header-derecha').innerHTML =
-        '<button type="button" class="btn btn--icono" id="btn-editar-gasto" title="Editar">✏️ Editar</button>'
-    }
+    // Los botones de detalle-gasto-header-derecha (Editar/Anular) se generan
+    // por gasto dentro de mostrarDetalleGasto() — cada uno tiene su propio
+    // gate (ver ese comentario), no algo fijo para toda la sesión.
 
     // ═══════════════════════════════════════════════════════════════════════
     // VISTA A — FILTROS Y LISTA
@@ -2230,8 +2299,10 @@
       const totalEl = document.getElementById('total-gastos')
       if (!gastos.length) { totalEl.hidden = true; return }
 
+      // Anulado: la plata se devolvió, no cuenta en el total (sí se sigue
+      // contando en "Registros" de abajo — el registro existe igual).
       const totalARS = gastos
-        .filter(g => (g.moneda || 'ARS') === 'ARS')
+        .filter(g => (g.moneda || 'ARS') === 'ARS' && g.estado !== 'anulado')
         .reduce((acc, g) => acc + (Number(g.importe) || 0), 0)
 
       const tituloTotal = estado.filtros.rangoRapido === 'mes' ? 'Gastos del mes' : 'Gastos de hoy'
@@ -2355,7 +2426,7 @@
         .select(`
           id, fecha, fecha_pago, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
           medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
-          cuenta_id,
+          cuenta_id, anulado_por, anulado_en, motivo_anulacion,
           categorias (id, nombre, icon),
           empleados  (id, nombre),
           unidades_negocio (id, nombre),
@@ -2444,22 +2515,27 @@
       const categoriaChip  = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${categoria}</span>` : ''
       const metaSecundaria = [fecha, empleado].filter(Boolean).join(' · ')
 
+      const esAnulado = g.estado === 'anulado'
+      const puntoOBadge = esAnulado
+        ? `<span class="badge-estado badge-estado--anulado">Anulado</span>`
+        : `<span class="gasto__punto-estado" title="${g.estado === 'registrado' ? 'Registrado' : g.estado}"></span>`
+
       return `
-        <div class="tarjeta-lista" data-id="${g.id}">
+        <div class="tarjeta-lista${esAnulado ? ' tarjeta-lista--anulado' : ''}" data-id="${g.id}">
           <div class="tarjeta-lista__avatar">
             ${logoEmpresa
               ? `<img src="${logoEmpresa}" alt="${nombreUnidad || 'Vehículos'}" style="width:100%;height:100%;object-fit:contain;">`
               : `<span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${inicialesEmpresa(razonSocial)}</span>`}
           </div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${razonSocial}<span class="gasto__punto-estado" title="${g.estado === 'registrado' ? 'Registrado' : g.estado}"></span></div>
+            <div class="tarjeta-lista__titulo">${razonSocial}${puntoOBadge}</div>
             <div class="gasto__meta">
               ${categoriaChip}
               <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${metaSecundaria}</span>
             </div>
           </div>
           <div class="gasto__derecha">
-            <div class="gasto__importe">${importe}</div>
+            <div class="gasto__importe${esAnulado ? ' gasto__importe--anulado' : ''}">${importe}</div>
             <span class="gasto__meta-secundaria gasto__meta-secundaria--derecha">${metaSecundaria}</span>
           </div>
         </div>
@@ -2491,10 +2567,6 @@
 
     document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
       btn.addEventListener('click', () => activarFiltroFecha(btn.dataset.rango))
-    })
-
-    document.getElementById('btn-editar-gasto')?.addEventListener('click', () => {
-      mostrarFormularioEdicionGasto(estado.gastoDetalleActualId)
     })
 
     document.addEventListener('click', (e) => {
@@ -3629,7 +3701,23 @@
           <span class="resumen-fila__valor">${valor}</span>
         </div>` : ''
 
+      const esAnulado = g.estado === 'anulado'
+      const nombreAnuladoPor = g.anulado_por
+        ? (estado.maestros.empleados.find(e => e.id === g.anulado_por)?.nombre ?? '—')
+        : null
+      const fechaHoraAnulacion = g.anulado_en
+        ? new Date(g.anulado_en).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : null
+
       document.getElementById('detalle-gasto-contenido').innerHTML = `
+        ${esAnulado ? `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Anulado</div>
+          ${fila('Motivo',       g.motivo_anulacion)}
+          ${fila('Anulado por',  nombreAnuladoPor)}
+          ${fila('Anulado el',   fechaHoraAnulacion)}
+        </div>` : ''}
+
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Comprobante</div>
           ${fila('Fecha de pago',    formatearFecha(g.fecha_pago))}
@@ -3669,6 +3757,26 @@
         </div>` : ''}
       `
       lucide.createIcons()
+
+      // Editar y Anular son dos gates independientes — no se agrupan:
+      // Editar sigue siendo exclusivo de admin/super_admin (sin ampliar a
+      // "dueño", eso nunca se pidió), Anular es del dueño del gasto O de un
+      // admin. Los dos exigen estado === 'registrado'. Se recalculan acá
+      // porque dependen del gasto puntual, no de la sesión en general.
+      const puedeEditar = esVistaCompleta() && g.estado === 'registrado'
+      const puedeAnular = g.estado === 'registrado' && (g.empleados?.id === estado.miEmpleadoId || esVistaCompleta())
+
+      document.getElementById('detalle-gasto-header-derecha').innerHTML = [
+        puedeEditar ? '<button type="button" class="btn btn--icono" id="btn-editar-gasto" title="Editar">✏️ Editar</button>' : '',
+        puedeAnular ? '<button type="button" class="btn btn--icono btn--icono--peligro" id="btn-anular-gasto" title="Anular">🚫 Anular</button>' : '',
+      ].join('')
+
+      document.getElementById('btn-editar-gasto')?.addEventListener('click', () => {
+        mostrarFormularioEdicionGasto(estado.gastoDetalleActualId)
+      })
+      document.getElementById('btn-anular-gasto')?.addEventListener('click', () => {
+        abrirModalAnularGasto(estado.gastoDetalleActualId)
+      })
 
       estado.gastoDetalleActualId = id
       document.getElementById('vista-lista').hidden = true
@@ -3871,6 +3979,17 @@
       if (volverOrigenSiCorresponde()) return
       document.getElementById('modal-detalle-gasto').hidden = true
       document.getElementById('vista-lista').removeAttribute('hidden')
+    }
+
+    function abrirModalAnularGasto(id) {
+      gastoAAnularId = id
+      document.getElementById('campo-anular-motivo').value = ''
+      document.getElementById('btn-confirmar-anular-gasto').disabled = true
+      document.getElementById('modal-anular-gasto').hidden = false
+    }
+
+    function cerrarModalAnularGasto() {
+      document.getElementById('modal-anular-gasto').hidden = true
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4551,6 +4670,32 @@
     document.getElementById('btn-resumen-guardar').addEventListener('click', () => {
       if (estado.wizard.esPendiente) guardarFacturaPendiente()
       else guardarGasto()
+    })
+
+    // Modal "Anular gasto" — Confirmar arranca deshabilitado, se habilita
+    // recién con texto en Motivo.
+    document.getElementById('btn-cerrar-anular-gasto').addEventListener('click', cerrarModalAnularGasto)
+    document.getElementById('btn-cancelar-anular-gasto').addEventListener('click', cerrarModalAnularGasto)
+    document.getElementById('modal-anular-gasto__backdrop').addEventListener('click', cerrarModalAnularGasto)
+
+    document.getElementById('campo-anular-motivo').addEventListener('input', (e) => {
+      document.getElementById('btn-confirmar-anular-gasto').disabled = !e.target.value.trim()
+    })
+
+    document.getElementById('btn-confirmar-anular-gasto').addEventListener('click', async () => {
+      const motivo = document.getElementById('campo-anular-motivo').value.trim()
+      if (!motivo) return // el botón ya debería estar deshabilitado, doble resguardo
+
+      const btn = document.getElementById('btn-confirmar-anular-gasto')
+      btn.disabled = true
+      const { error } = await supabase.rpc('anular_gasto', { p_gasto_id: gastoAAnularId, p_motivo: motivo })
+      btn.disabled = false
+      if (error) { mostrarError(error.message); return }
+
+      cerrarModalAnularGasto()
+      mostrarExito('Gasto anulado correctamente')
+      await cargarLista()
+      mostrarDetalleGasto(gastoAAnularId)
     })
 
   </script>
