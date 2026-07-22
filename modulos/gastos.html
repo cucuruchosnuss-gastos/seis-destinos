@@ -1527,13 +1527,19 @@
             <input type="text" id="campo-lugar" name="lugar_servicio" placeholder="Ej: YPF Av. Colón">
           </div>
 
-          <div class="grupo-campo" id="grupo-proveedor" style="display:none; position:relative;">
-            <label for="campo-proveedor-buscar">Proveedor</label>
+          <div class="grupo-campo" id="grupo-proveedor" style="position:relative;">
+            <label for="campo-proveedor-buscar">Proveedor <span class="etiqueta-opcional">opcional</span></label>
             <input type="text" id="campo-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off">
             <input type="hidden" id="campo-proveedor-id">
             <div class="sugerencias-proveedor" id="sugerencias-proveedor" hidden></div>
             <span class="proveedor-auto-match" id="proveedor-auto-match" hidden>✓ encontrado automáticamente</span>
             <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
+            <div class="grupo-campo" id="grupo-cta-corriente-directo" hidden style="margin-top:0.5rem;">
+              <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;">
+                <input type="checkbox" id="campo-registrar-cta-corriente" checked style="width:auto;">
+                Registrar también en la cuenta corriente de este proveedor
+              </label>
+            </div>
           </div>
 
           <div class="grupo-campo" id="grupo-descripcion">
@@ -1693,7 +1699,7 @@
     let vehiculoSeleccionado  = null  // id de vehiculo, o null = sin vehículo
     let vehiculoFueElegido    = false // true cuando el usuario tapeó un vehículo o "Sin vehículo"
     let viaVehiculos          = false // true cuando llegó por la tarjeta Vehículos
-    let proveedorSeleccionado = null  // id de proveedores, solo se usa en el flujo "pendiente"
+    let proveedorSeleccionado = null  // id de proveedores — se usa en los dos flujos (normal y "pendiente")
     // true cuando proveedorSeleccionado lo puso intentarMatchAutomaticoProveedor(),
     // no el usuario a mano — determina si hay que invalidarlo al subir una
     // foto nueva (ver limpiarMatchProveedor() y el handler de input-foto).
@@ -2638,7 +2644,7 @@
       vehiculoSeleccionado  = null
       vehiculoFueElegido    = false
       viaVehiculos          = false
-      proveedorSeleccionado = null
+      limpiarMatchProveedor()
 
       // Limpiar campos de formulario
       ;['campo-fecha','campo-numero-doc','campo-razon-social',
@@ -2647,8 +2653,6 @@
         'campo-kilometraje','campo-observaciones',
         'campo-proveedor-buscar','campo-proveedor-id',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
-      document.getElementById('proveedor-auto-match').hidden = true
-      document.getElementById('btn-proveedor-nuevo').hidden = false
       document.getElementById('campo-fecha-pago').value = fechaISO(new Date())
       seleccionarTipoDoc(null)
       seleccionarMedioPago(null)
@@ -2724,12 +2728,10 @@
         const grupoDescripcion = document.getElementById('grupo-descripcion')
         if (grupoDescripcion) grupoDescripcion.style.display = estado.wizard.esPendiente ? 'none' : 'block'
 
-        // Proveedor — solo tiene sentido en el flujo "pendiente" (ver
+        // Proveedor — opcional en los dos flujos (ver armarGasto() y
         // armarFacturaPendiente()). Al volver a este paso ya elegido, no se
         // pisa la selección previa.
-        const grupoProveedor = document.getElementById('grupo-proveedor')
-        if (grupoProveedor) grupoProveedor.style.display = estado.wizard.esPendiente ? 'block' : 'none'
-        if (estado.wizard.esPendiente) intentarMatchAutomaticoProveedor()
+        intentarMatchAutomaticoProveedor()
 
         const inputLugar = document.getElementById('campo-lugar')
         const inputDesc  = document.getElementById('campo-descripcion')
@@ -3325,7 +3327,7 @@
         medio_pago:        medioPagoSeleccionado,
         cuenta_id:         (medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') ? toStr('campo-cuenta') : null,
         categoria_id:      categoriaSeleccionada,
-        proveedor_id:      null,
+        proveedor_id:      toStr('campo-proveedor-id'),
         proyecto_id:       toStr('campo-proyecto'),
         lugar_servicio:    toStr('campo-lugar'),
         descripcion:       toStr('campo-descripcion'),
@@ -3384,7 +3386,11 @@
     // el nombre registrado del proveedor. Oculta la señal de "encontrado
     // automáticamente" por default — la vuelve a mostrar
     // intentarMatchAutomaticoProveedor() cuando corresponde.
-    function seleccionarProveedor(p, esAuto = false) {
+    // Async por el chequeo de cuenta corriente de abajo — se llama sin
+    // await en todos lados (auto-match, click de sugerencia, alta de
+    // proveedor nuevo), así que el checkbox aparece un instante después,
+    // igual que ya pasa con el resultado del OCR.
+    async function seleccionarProveedor(p, esAuto = false) {
       proveedorSeleccionado = p.id
       proveedorSeleccionadoEsAuto = esAuto
       document.getElementById('campo-proveedor-id').value = p.id
@@ -3393,17 +3399,31 @@
       document.getElementById('campo-razon-social').value = p.razon_social
       document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = true
+
+      // El checkbox de "registrar en cuenta corriente" solo tiene sentido
+      // en el flujo normal — en "pendiente" ya se registra solo vía
+      // facturas_pendientes (ver armarFacturaPendiente()).
+      const grupoCta = document.getElementById('grupo-cta-corriente-directo')
+      if (estado.wizard.esPendiente) {
+        grupoCta.hidden = true
+        return
+      }
+      const { data: tieneCta } = await supabase.rpc('tiene_cuenta_corriente_activa', { p_proveedor_id: p.id })
+      grupoCta.hidden = !tieneCta
     }
 
-    // Vuelve al estado "sin proveedor elegido" — mismo bloque que antes
-    // estaba duplicado en el input manual de búsqueda, en el else de
-    // intentarMatchAutomaticoProveedor() y en iniciarWizard().
+    // Vuelve al estado "sin proveedor elegido" — un solo bloque, lo llaman
+    // el input manual de búsqueda, el else de
+    // intentarMatchAutomaticoProveedor(), iniciarWizard() y el handler de
+    // foto nueva (ver limpiarMatchProveedor() más abajo en input-foto).
     function limpiarMatchProveedor() {
       proveedorSeleccionado = null
       proveedorSeleccionadoEsAuto = false
       document.getElementById('campo-proveedor-id').value = ''
       document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = false
+      document.getElementById('grupo-cta-corriente-directo').hidden = true
+      document.getElementById('campo-registrar-cta-corriente').checked = true
     }
 
     function normalizarCuit(v) {
@@ -3814,7 +3834,24 @@
           return
         }
 
-        mostrarExito('Gasto actualizado correctamente')
+        // El gasto ya quedó actualizado acá — esto solo sincroniza el
+        // espejo en cuenta corriente, si es que existe uno para este gasto
+        // (la función decide sola; si nunca se registró ahí, no hace nada).
+        const { error: errorSync } = await supabase.rpc('sincronizar_pago_directo_proveedor', {
+          p_gasto_id:           id,
+          p_importe:            cambios.importe,
+          p_moneda:             cambios.moneda,
+          p_fecha:              cambios.fecha,
+          p_categoria_id:       cambios.categoria_id,
+          p_numero_comprobante: cambios.numero_doc,
+          p_razon_social:       cambios.razon_social,
+        })
+
+        if (errorSync) {
+          mostrarError(`Gasto actualizado, pero no se pudo sincronizar la cuenta corriente: ${errorSync.message}`)
+        } else {
+          mostrarExito('Gasto actualizado correctamente')
+        }
         cerrarDetalleGasto()
         cargarLista()
       })
@@ -4236,10 +4273,34 @@
           estado.wizard.fotoUrl = await subirFoto(estado.wizard.fotoArchivo)
         }
 
-        const { error } = await supabase.from('gastos').insert([armarGasto()])
+        const datosGasto = armarGasto()
+        const { data: gastoInsertado, error } = await supabase.from('gastos').insert([datosGasto]).select('id').single()
         if (error) throw new Error(error.message)
 
-        mostrarExito('¡Gasto guardado correctamente!')
+        // El gasto ya quedó guardado acá — lo que sigue es un espejo
+        // opcional en cuenta corriente. Si falla, no es un error de guardado
+        // real: se avisa aparte, sin el catch genérico de abajo.
+        const grupoCta = document.getElementById('grupo-cta-corriente-directo')
+        if (datosGasto.proveedor_id && !grupoCta.hidden && document.getElementById('campo-registrar-cta-corriente').checked) {
+          const { error: errorCta } = await supabase.rpc('registrar_pago_directo_proveedor', {
+            p_gasto_id:           gastoInsertado.id,
+            p_proveedor_id:       datosGasto.proveedor_id,
+            p_unidad_negocio_id:  datosGasto.unidad_negocio_id,
+            p_moneda:             datosGasto.moneda,
+            p_monto:              datosGasto.importe,
+            p_fecha:              datosGasto.fecha,
+            p_categoria_id:       datosGasto.categoria_id,
+            p_numero_comprobante: datosGasto.numero_doc,
+          })
+          if (errorCta) {
+            mostrarError(`El gasto se guardó, pero no se pudo registrar en cuenta corriente: ${errorCta.message}`)
+          } else {
+            mostrarExito('¡Gasto guardado y registrado en cuenta corriente!')
+          }
+        } else {
+          mostrarExito('¡Gasto guardado correctamente!')
+        }
+
         btn.classList.remove('btn--cargando')
         btn.disabled = false
         cerrarWizard()
@@ -4427,12 +4488,9 @@
       if (validarSubpaso('detalles')) irASubpaso('resumen')
     })
 
-    // Buscador de proveedor — solo visible en el flujo "pendiente".
+    // Buscador de proveedor — visible en los dos flujos.
     document.getElementById('campo-proveedor-buscar').addEventListener('input', (e) => {
-      proveedorSeleccionado = null
-      document.getElementById('campo-proveedor-id').value = ''
-      document.getElementById('proveedor-auto-match').hidden = true
-      document.getElementById('btn-proveedor-nuevo').hidden = false
+      limpiarMatchProveedor()
       renderizarSugerenciasProveedor(filtrarProveedores(e.target.value))
     })
     document.addEventListener('click', (e) => {
