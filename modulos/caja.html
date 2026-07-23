@@ -1093,6 +1093,22 @@
       white-space: nowrap;
     }
 
+    /* CAMBIO 4 — logo de unidad + nombre de respaldo en cuentas con
+       unidad_negocio_id asignado (cuentas personales no lo tienen, no
+       muestran nada de esto). Cuadrado sutil, no circular — mismo criterio
+       que .caja-header__logo pero bastante más chico. */
+    .tarjeta-cuenta__logo-unidad {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .tarjeta-cuenta__unidad {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+    }
+
     .tarjeta-cuenta__acciones {
       display: flex;
       gap: 0.25rem;
@@ -1749,6 +1765,14 @@
     // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos
     // a los de medio_pago ('efectivo'/'transferencia') — no son intercambiables.
     const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
+    // Mismo objeto (mismas rutas reales) que gastos.html:1828 — CAMBIO 4:
+    // logo de unidad de negocio en filas de cuenta gestionables.
+    const LOGOS_EMPRESA = {
+      'Cucuruchos Nuss': '../logo-cucuruchos-nuss.png',
+      'Dolce Pasta':      '../logo-dolce-pasta.png',
+      'Taller':           '../logo-taller.png',
+      'Mengui':           '../logo-heladitos-orly.png',
+    }
     // Catálogo curado — no la lista ISO completa (180+ monedas sería inmanejable
     // en un <select>; ver las <option> de #cuenta-moneda). Si falta alguna
     // puntual, se agrega a mano ahí y acá.
@@ -2215,7 +2239,7 @@
       if (!empleadoIds.length) return
       const { data, error } = await supabase
         .from('cuentas_caja')
-        .select('id, empleado_id, nombre, medio, moneda, favorita, activa, created_at, cbu, numero_cuenta, alias')
+        .select('id, empleado_id, nombre, medio, moneda, favorita, activa, created_at, cbu, numero_cuenta, alias, unidad_negocio_id')
         .in('empleado_id', empleadoIds)
       if (error) { mostrarError('No se pudieron cargar las cuentas.'); return }
       ;(data || []).forEach(c => { estado.cuentasPorId[c.id] = c })
@@ -3220,10 +3244,33 @@
           <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="renombrar-cuenta" data-id="${c.id}" aria-label="Renombrar cuenta" title="Renombrar cuenta">✏️</button>
           <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="editar-bancarios-cuenta" data-id="${c.id}" aria-label="Editar datos bancarios" title="Editar datos bancarios">🏦</button>
         </div>` : ''
+
+      // CAMBIO 4 — logo de unidad + ícono de medio + nombre de respaldo.
+      // Solo en filas gestionables (ficha propia/Empresa) y solo si la
+      // cuenta tiene unidad_negocio_id — las personales no muestran nada
+      // de esto, quedan exactamente igual que antes. 💵/💳 en vez de 🏦
+      // para el ícono de medio: 🏦 ya está en uso arriba como acción de
+      // "Editar datos bancarios", reusarlo acá confundiría dos cosas
+      // distintas en la misma fila.
+      let unidadHtml = ''
+      if (gestionable && c.unidad_negocio_id) {
+        const nombreUnidad = estado.maestros.unidadesNegocio.find(u => u.id === c.unidad_negocio_id)?.nombre
+        if (nombreUnidad) {
+          const logo = LOGOS_EMPRESA[nombreUnidad]
+          const iconoMedio = c.medio === 'banco' ? '💳' : '💵'
+          unidadHtml = `
+            ${logo ? `<img src="${logo}" alt="${nombreUnidad}" class="tarjeta-cuenta__logo-unidad">` : ''}
+            <span title="${MEDIO_CUENTA_LABEL[c.medio]}">${iconoMedio}</span>
+            <span class="tarjeta-cuenta__unidad">(${nombreUnidad})</span>
+          `
+        }
+      }
+
       return `
         <div class="tarjeta-cuenta">
           <div class="tarjeta-cuenta__info">
             <span class="tarjeta-cuenta__nombre">${nombre}</span>
+            ${unidadHtml}
             ${c.favorita ? '<span class="chip-favorita">★</span>' : ''}
             <span class="tarjeta-cuenta__saldo">· ${saldo}</span>
           </div>
