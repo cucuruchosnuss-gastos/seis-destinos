@@ -1192,6 +1192,41 @@
       }
     }
 
+    /* Modales: datos bancarios (lectura) y editar bancarios (CAMBIO 6/7) —
+       mismo patrón bottom-sheet que #modal-renombrar-cuenta, agrupados
+       porque son dos usos del mismo tipo de modal chico. */
+    #modal-datos-bancarios, #modal-editar-bancarios {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #modal-datos-bancarios[hidden], #modal-editar-bancarios[hidden] { display: none; }
+    #modal-datos-bancarios__backdrop, #modal-editar-bancarios__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+    }
+    #modal-datos-bancarios__panel, #modal-editar-bancarios__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem 1.25rem 1.5rem;
+    }
+    @media (min-width: 641px) {
+      #modal-datos-bancarios, #modal-editar-bancarios { align-items: center; }
+      #modal-datos-bancarios__panel, #modal-editar-bancarios__panel {
+        max-width: 440px;
+        border-radius: 20px;
+        box-shadow: var(--sombra-hover);
+      }
+    }
+
     /* ── Utilidades de color por signo ─────────────────────────────────────
        Declaradas al final a propósito: se combinan con clases como
        .tarjeta-cuenta__saldo que ya traen su propio color con la misma
@@ -1231,6 +1266,7 @@
         </div>
         <button type="button" class="btn btn--navy-outline" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
         <button type="button" class="btn btn--navy-outline" id="btn-empresa-atajo" style="display:none; width:auto;">Empresa</button>
+        <button type="button" class="btn btn--navy-outline" id="btn-directorio-atajo" style="display:none; width:auto;">📇 Directorio</button>
         <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto;">Retiro personal</button>
       </div>
 
@@ -1346,6 +1382,67 @@
     </div>
   </div><!-- /vista-detalle-persona -->
 
+  <!-- CAMBIO 6 — Directorio de datos bancarios públicos. Sin saldos en
+       ningún punto de esta vista, a propósito. -->
+  <div id="vista-directorio-caja" hidden>
+    <div style="padding:1.25rem; max-width:1120px; margin:0 auto; width:100%;">
+      <header class="caja-header-ficha">
+        <button type="button" class="caja-header__volver" id="btn-directorio-atras">‹ Volver</button>
+        <div class="caja-header-ficha__persona">
+          <span class="caja-header-ficha__nombre" id="directorio-titulo">Directorio</span>
+        </div>
+      </header>
+
+      <div id="directorio-contenido"></div>
+    </div>
+  </div><!-- /vista-directorio-caja -->
+
+  <!-- Modal: datos bancarios de una cuenta (solo lectura, CAMBIO 6) -->
+  <div id="modal-datos-bancarios" hidden>
+    <div id="modal-datos-bancarios__backdrop"></div>
+    <div id="modal-datos-bancarios__panel">
+      <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-datos-bancarios" title="Cerrar">✕</button>
+      <h2 id="datos-bancarios-titulo">Datos bancarios</h2>
+      <div style="margin-top:1rem; display:flex; flex-direction:column; gap:0.75rem;">
+        <div style="display:flex; justify-content:space-between; gap:0.75rem;"><span style="color:var(--color-texto-suave); font-size:0.875rem;">CBU</span><span id="datos-bancarios-cbu" style="font-weight:600; text-align:right;"></span></div>
+        <div style="display:flex; justify-content:space-between; gap:0.75rem;"><span style="color:var(--color-texto-suave); font-size:0.875rem;">Alias</span><span id="datos-bancarios-alias" style="font-weight:600; text-align:right;"></span></div>
+        <div style="display:flex; justify-content:space-between; gap:0.75rem;"><span style="color:var(--color-texto-suave); font-size:0.875rem;">Número de cuenta</span><span id="datos-bancarios-numero" style="font-weight:600; text-align:right;"></span></div>
+      </div>
+      <div class="modal-movimiento__acciones">
+        <button type="button" class="btn btn--secundario" id="btn-ok-datos-bancarios">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: editar datos bancarios de una cuenta (CAMBIO 7) — mismo patrón
+       que #modal-renombrar-cuenta, con 3 campos en vez de 1. -->
+  <div id="modal-editar-bancarios" hidden>
+    <div id="modal-editar-bancarios__backdrop"></div>
+    <div id="modal-editar-bancarios__panel">
+      <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-editar-bancarios" title="Cerrar">✕</button>
+      <h2>Editar datos bancarios</h2>
+
+      <div class="formulario" style="margin-top:1rem;">
+        <div class="grupo-campo">
+          <label for="editar-bancarios-cbu">CBU</label>
+          <input type="text" id="editar-bancarios-cbu" placeholder="Ej: 0000003100000000000000">
+        </div>
+        <div class="grupo-campo">
+          <label for="editar-bancarios-alias">Alias</label>
+          <input type="text" id="editar-bancarios-alias" placeholder="Ej: nuss.cucuruchos.banco">
+        </div>
+        <div class="grupo-campo">
+          <label for="editar-bancarios-numero">Número de cuenta</label>
+          <input type="text" id="editar-bancarios-numero" placeholder="Ej: 000-000000/0">
+        </div>
+      </div>
+
+      <div class="modal-movimiento__acciones">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-editar-bancarios">Cancelar</button>
+        <button type="button" class="btn btn--amarillo" id="btn-guardar-editar-bancarios">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: Registrar ingreso / retiro -->
   <div id="modal-movimiento" hidden>
@@ -1589,6 +1686,9 @@
       miEmpleado:      null, // { id, nombre, rol_app, caja_raiz }
       empleados:       [],   // personas con acceso (solo se carga para admin/super_admin)
       idEmpresa:       null, // id del empleado ficticio tipo='empresa' — ver cargarEmpresa()
+      tieneModuloCaja: false, // empleado_modulos modulo='caja' habilitado=true — gate del Directorio (CAMBIO 6)
+      origenDirectorio: null, // 'listado' | 'ficha-propia' — a dónde vuelve btn-directorio-atras al cerrar del todo
+      directorioPersonaAbierta: null, // empleado_id cuyas cuentas se están mostrando en el Directorio, o null = lista de personas
       maestros:        { unidadesNegocio: [] },
       saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
                               // para usuario: solo las propias (nunca se piden las de otros)
@@ -2082,6 +2182,20 @@
       }
     }
 
+    // Gate del Directorio (CAMBIO 6) — deliberadamente más abierto que el
+    // resto del módulo: cualquiera con el módulo Caja habilitado, sin
+    // depender de ninguna tarea puntual.
+    async function cargarModuloCaja() {
+      const { data } = await supabase
+        .from('empleado_modulos')
+        .select('habilitado')
+        .eq('empleado_id', estado.miEmpleado.id)
+        .eq('modulo', 'caja')
+        .eq('habilitado', true)
+        .maybeSingle()
+      estado.tieneModuloCaja = !!data
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // CARGA DE DATOS — Cuentas (medio+moneda con nombre propio)
     // ═══════════════════════════════════════════════════════════════════════
@@ -2093,7 +2207,7 @@
       if (!empleadoIds.length) return
       const { data, error } = await supabase
         .from('cuentas_caja')
-        .select('id, empleado_id, nombre, medio, moneda, favorita, activa, created_at')
+        .select('id, empleado_id, nombre, medio, moneda, favorita, activa, created_at, cbu, numero_cuenta, alias')
         .in('empleado_id', empleadoIds)
       if (error) { mostrarError('No se pudieron cargar las cuentas.'); return }
       ;(data || []).forEach(c => { estado.cuentasPorId[c.id] = c })
@@ -2128,6 +2242,20 @@
       estado.maestros.unidadesNegocio = data || []
     }
 
+    // Extraída de cargarListado() — el Directorio (CAMBIO 6) también
+    // necesita esta misma lista completa de personas, pero corre para
+    // cualquiera con el módulo Caja habilitado, no solo ver_listado, así
+    // que no puede depender de que cargarListado() ya haya corrido.
+    // Reemplazo completo de estado.empleados — Empresa nunca viene en este
+    // resultado (queda afuera por auth_user_id/activo), hay que reinsertarla.
+    async function cargarPersonasConAcceso() {
+      const { data, error } = await supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz').not('auth_user_id', 'is', null).eq('activo', true).order('nombre')
+      if (error) { mostrarError('No se pudieron cargar las personas.'); return false }
+      estado.empleados = data || []
+      asegurarEmpresaEnEmpleados()
+      return true
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // CARGA DE DATOS — Listado general (solo admin/super_admin)
     // ═══════════════════════════════════════════════════════════════════════
@@ -2135,17 +2263,8 @@
     async function cargarListado() {
       document.getElementById('estado-cargando').hidden = false
 
-      const empRes = await supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz').not('auth_user_id', 'is', null).eq('activo', true).order('nombre')
-
-      if (empRes.error) {
-        document.getElementById('estado-cargando').hidden = true
-        mostrarError('No se pudieron cargar las personas.')
-        return
-      }
-      // Reemplazo completo — Empresa nunca viene en este resultado (queda
-      // afuera por auth_user_id/activo), hay que reinsertarla.
-      estado.empleados = empRes.data || []
-      asegurarEmpresaEnEmpleados()
+      const ok = await cargarPersonasConAcceso()
+      if (!ok) { document.getElementById('estado-cargando').hidden = true; return }
 
       const ids = estado.empleados.map(e => e.id)
 
@@ -2406,6 +2525,163 @@
       estado.personaAbierta = null
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // DIRECTORIO (CAMBIO 6) — nombre/medio/moneda/CBU/alias/número, nunca
+    // saldo. origen: 'listado' | 'ficha-propia', para saber a qué vista
+    // volver al cerrar del todo (no solo un nivel).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function abrirDirectorio(origen) {
+      estado.origenDirectorio = origen
+      estado.directorioPersonaAbierta = null
+      document.getElementById('vista-lista-caja').hidden = true
+      document.getElementById('vista-detalle-persona').hidden = true
+      document.getElementById('vista-directorio-caja').removeAttribute('hidden')
+      renderizarDirectorio()
+    }
+
+    function cerrarDirectorio() {
+      document.getElementById('vista-directorio-caja').hidden = true
+      if (estado.origenDirectorio === 'listado') {
+        document.getElementById('vista-lista-caja').removeAttribute('hidden')
+      } else {
+        document.getElementById('vista-detalle-persona').removeAttribute('hidden')
+      }
+      estado.origenDirectorio = null
+    }
+
+    async function renderizarDirectorio() {
+      if (estado.directorioPersonaAbierta) {
+        await renderizarCuentasDirectorio(estado.directorioPersonaAbierta)
+      } else {
+        await renderizarListaDirectorio()
+      }
+    }
+
+    // Reusa estado.empleados si el listado general ya corrió (ya trae a
+    // Empresa insertada) — si no, lo carga acá aparte, porque el Directorio
+    // corre para cualquiera con el módulo Caja, no solo ver_listado.
+    async function renderizarListaDirectorio() {
+      document.getElementById('directorio-titulo').textContent = 'Directorio'
+      if (!estado.empleados.some(e => e.id !== estado.idEmpresa)) {
+        await cargarPersonasConAcceso()
+      }
+      const cont = document.getElementById('directorio-contenido')
+      const personas = [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
+      cont.innerHTML = personas.map(p => `
+        <div class="tarjeta-lista" data-id="${p.id}" style="margin-bottom:0.625rem;">
+          <div class="tarjeta-lista__avatar">${iniciales(p.nombre)}</div>
+          <div class="tarjeta-lista__info">
+            <div class="tarjeta-lista__titulo">${p.nombre}</div>
+          </div>
+        </div>
+      `).join('')
+      cont.querySelectorAll('.tarjeta-lista').forEach(card => {
+        card.addEventListener('click', () => {
+          estado.directorioPersonaAbierta = card.dataset.id
+          renderizarDirectorio()
+        })
+      })
+    }
+
+    // Nombre + medio + moneda únicamente — nunca saldo, ni siquiera para
+    // quien tendría permiso de verlo en otro punto del módulo.
+    async function renderizarCuentasDirectorio(empleadoId) {
+      const persona = estado.empleados.find(e => e.id === empleadoId)
+      document.getElementById('directorio-titulo').textContent = persona?.nombre || 'Cuentas'
+
+      if (!cuentasDe(empleadoId).length) await cargarCuentasDe(empleadoId)
+
+      const cont = document.getElementById('directorio-contenido')
+      const cuentas = cuentasDe(empleadoId)
+      if (!cuentas.length) {
+        cont.innerHTML = `<div class="estado-vacio"><div class="estado-vacio__titulo">Sin cuentas activas</div></div>`
+        return
+      }
+      cont.innerHTML = cuentas.map(c => `
+        <div class="tarjeta-lista" data-id="${c.id}" style="margin-bottom:0.625rem;">
+          <div class="tarjeta-lista__info">
+            <div class="tarjeta-lista__titulo">${c.nombre}</div>
+            <div class="tarjeta-lista__subtitulo">${MEDIO_CUENTA_LABEL[c.medio]} · ${c.moneda}</div>
+          </div>
+        </div>
+      `).join('')
+      cont.querySelectorAll('.tarjeta-lista').forEach(card => {
+        card.addEventListener('click', () => abrirModalDatosBancarios(card.dataset.id))
+      })
+    }
+
+    function abrirModalDatosBancarios(id) {
+      const c = estado.cuentasPorId[id]
+      document.getElementById('datos-bancarios-titulo').textContent = c?.nombre || 'Datos bancarios'
+      document.getElementById('datos-bancarios-cbu').textContent = c?.cbu || 'No cargado'
+      document.getElementById('datos-bancarios-alias').textContent = c?.alias || 'No cargado'
+      document.getElementById('datos-bancarios-numero').textContent = c?.numero_cuenta || 'No cargado'
+      document.getElementById('modal-datos-bancarios').hidden = false
+    }
+
+    function cerrarModalDatosBancarios() {
+      document.getElementById('modal-datos-bancarios').hidden = true
+    }
+
+    document.getElementById('btn-directorio-atras').addEventListener('click', () => {
+      if (estado.directorioPersonaAbierta) {
+        estado.directorioPersonaAbierta = null
+        renderizarDirectorio()
+      } else {
+        cerrarDirectorio()
+      }
+    })
+    document.getElementById('btn-cerrar-datos-bancarios').addEventListener('click', cerrarModalDatosBancarios)
+    document.getElementById('btn-ok-datos-bancarios').addEventListener('click', cerrarModalDatosBancarios)
+    document.getElementById('modal-datos-bancarios__backdrop').addEventListener('click', cerrarModalDatosBancarios)
+
+    // ── Modal: editar datos bancarios (CAMBIO 7) ────────────────────────────
+    let cuentaAEditarBancariosId = null
+
+    function abrirModalEditarBancarios(id) {
+      cuentaAEditarBancariosId = id
+      const c = estado.cuentasPorId[id]
+      document.getElementById('editar-bancarios-cbu').value = c?.cbu || ''
+      document.getElementById('editar-bancarios-alias').value = c?.alias || ''
+      document.getElementById('editar-bancarios-numero').value = c?.numero_cuenta || ''
+      document.getElementById('modal-editar-bancarios').hidden = false
+    }
+
+    function cerrarModalEditarBancarios() {
+      document.getElementById('modal-editar-bancarios').hidden = true
+      cuentaAEditarBancariosId = null
+    }
+
+    async function confirmarEditarBancarios() {
+      if (!cuentaAEditarBancariosId) return
+      const id = cuentaAEditarBancariosId
+      const cbu = document.getElementById('editar-bancarios-cbu').value.trim() || null
+      const alias = document.getElementById('editar-bancarios-alias').value.trim() || null
+      const numero = document.getElementById('editar-bancarios-numero').value.trim() || null
+
+      const btn = document.getElementById('btn-guardar-editar-bancarios')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('editar_datos_publicos_cuenta_caja', { p_cuenta_id: id, p_cbu: cbu, p_numero_cuenta: numero, p_alias: alias })
+        if (error) throw error
+        mostrarExito('Datos bancarios actualizados.')
+        cerrarModalEditarBancarios()
+        await refrescarCuentasYSaldos(estado.personaAbierta)
+      } catch (err) {
+        mostrarError(err.message || 'No se pudieron actualizar los datos bancarios.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    document.getElementById('btn-cerrar-editar-bancarios').addEventListener('click', cerrarModalEditarBancarios)
+    document.getElementById('btn-cancelar-editar-bancarios').addEventListener('click', cerrarModalEditarBancarios)
+    document.getElementById('modal-editar-bancarios__backdrop').addEventListener('click', cerrarModalEditarBancarios)
+    document.getElementById('btn-guardar-editar-bancarios').addEventListener('click', confirmarEditarBancarios)
+
     function renderizarSaldosDetalle(empleadoId) {
       const saldos = saldosDe(empleadoId)
       const cont = document.getElementById('detalle-persona-saldos')
@@ -2460,6 +2736,9 @@
         cont.querySelectorAll('[data-accion="renombrar-cuenta"]').forEach(btn => {
           btn.addEventListener('click', () => abrirModalRenombrarCuenta(btn.dataset.id))
         })
+        cont.querySelectorAll('[data-accion="editar-bancarios-cuenta"]').forEach(btn => {
+          btn.addEventListener('click', () => abrirModalEditarBancarios(btn.dataset.id))
+        })
       }
     }
 
@@ -2501,6 +2780,13 @@
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-empresa-atajo" style="flex:1 1 45%;">Empresa</button>`)
       }
 
+      // Atajo al Directorio — misma lógica de doble ubicación que Empresa:
+      // solo acá cuando el origen fue 'directo' (ver btn-directorio-atajo
+      // en .fila-tabs-caja para quien vino del listado).
+      if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.tieneModuloCaja) {
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-directorio-atajo" style="flex:1 1 45%;">📇 Directorio</button>`)
+      }
+
       cont.innerHTML = botones.join('')
 
       document.getElementById('btn-detalle-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId))
@@ -2508,6 +2794,7 @@
       document.getElementById('btn-detalle-retiro')?.addEventListener('click', () => abrirModalMovimiento('retiro', empleadoId))
       document.getElementById('btn-detalle-traspaso')?.addEventListener('click', () => abrirModalTraspaso())
       document.getElementById('btn-detalle-empresa-atajo')?.addEventListener('click', () => abrirDetallePersona(estado.idEmpresa, 'listado'))
+      document.getElementById('btn-detalle-directorio-atajo')?.addEventListener('click', () => abrirDirectorio('ficha-propia'))
     }
 
     document.getElementById('btn-volver-ficha').addEventListener('click', () => {
@@ -2799,7 +3086,7 @@
       const nombre = mostrarDueño ? `${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}` : c.nombre
       // Botones-ícono chicos en vez de texto completo — mismo criterio de
       // caracteres simples que ya usa el "▾" del desglose (sin Lucide acá
-      // a propósito). ☆/× solo en cuentas no favoritas, ✏️ en todas.
+      // a propósito). ☆/× solo en cuentas no favoritas, ✏️/🏦 en todas.
       const accionesHtml = gestionable ? `
         <div class="tarjeta-cuenta__acciones">
           ${c.favorita ? '' : `
@@ -2807,6 +3094,7 @@
             <button type="button" class="tarjeta-cuenta__boton-icono tarjeta-cuenta__boton-icono--peligro" data-accion="desactivar-cuenta" data-id="${c.id}" aria-label="Desactivar cuenta" title="Desactivar cuenta">×</button>
           `}
           <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="renombrar-cuenta" data-id="${c.id}" aria-label="Renombrar cuenta" title="Renombrar cuenta">✏️</button>
+          <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="editar-bancarios-cuenta" data-id="${c.id}" aria-label="Editar datos bancarios" title="Editar datos bancarios">🏦</button>
         </div>` : ''
       return `
         <div class="tarjeta-cuenta">
@@ -3130,6 +3418,7 @@
     })
     document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
     document.getElementById('btn-empresa-atajo').addEventListener('click', () => abrirDetallePersona(estado.idEmpresa, 'listado'))
+    document.getElementById('btn-directorio-atajo').addEventListener('click', () => abrirDirectorio('listado'))
 
     // ═══════════════════════════════════════════════════════════════════════
     // VISTA — Todos los movimientos (exclusiva rol_app === 'super_admin')
@@ -3755,6 +4044,14 @@
       // quien entra directo a su propia ficha sin pasar por el listado).
       if (estado.idEmpresa && tieneTarea('ingreso_externo')) {
         document.getElementById('btn-empresa-atajo').style.display = 'inline-flex'
+      }
+
+      // Directorio (CAMBIO 6) — gate deliberadamente más abierto que el
+      // resto del módulo: el módulo Caja habilitado alcanza, sin tarea
+      // puntual. Mismo criterio de doble ubicación que Empresa.
+      await cargarModuloCaja()
+      if (estado.tieneModuloCaja) {
+        document.getElementById('btn-directorio-atajo').style.display = 'inline-flex'
       }
 
       // Los dos tabs son gates independientes ahora (antes viajaban juntos
