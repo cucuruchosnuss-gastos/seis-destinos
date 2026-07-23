@@ -3315,11 +3315,18 @@
     // - super_admin: cualquier otro empleado con acceso (la regla "al menos
     //   un super_admin de los dos lados" ya la cumplo yo mismo).
     // - admin o usuario: solo los rol_app='super_admin'.
+    // Empresa puede ser contraparte para cualquier rol (CAMBIO 4) — para
+    // super_admin ya viene incluida sola (vive en estado.empleados desde
+    // asegurarEmpresaEnEmpleados()); para cualquier otro rol hay que
+    // sumarla aparte, no está en estado.superAdmins porque no lo es.
     function poblarSelectorContraparte() {
       const contraparteSelect = document.getElementById('contraparte-select')
-      const candidatos = estado.miEmpleado.rol_app === 'super_admin'
+      let candidatos = estado.miEmpleado.rol_app === 'super_admin'
         ? estado.empleados.filter(e => e.id !== estado.miEmpleado.id)
         : estado.superAdmins.filter(s => s.id !== estado.miEmpleado.id)
+      if (estado.idEmpresa && !candidatos.some(c => c.id === estado.idEmpresa)) {
+        candidatos = [...candidatos, { id: estado.idEmpresa, nombre: estado.nombresEmpleados[estado.idEmpresa] }]
+      }
       contraparteSelect.innerHTML = '<option value="">— Seleccioná —</option>' +
         candidatos.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')
     }
@@ -3426,7 +3433,14 @@
           grupoContraparte.style.display = 'none'
           grupoCuentaUnica.style.display = 'flex'
           labelCuentaUnica.textContent = 'Cuenta'
-          poblarSelectorCuentaUnica(empleadoId)
+          // Además de las propias, incluye las de Empresa (CAMBIO 5) — el
+          // RPC ya fue reescrito para atribuir el movimiento al dueño real
+          // de la cuenta elegida, no a quien llama.
+          if (estado.idEmpresa) await cargarCuentasDe(estado.idEmpresa)
+          const cuentasDisponibles = estado.idEmpresa
+            ? [...cuentasDe(empleadoId), ...cuentasDe(estado.idEmpresa)]
+            : cuentasDe(empleadoId)
+          document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDisponibles, favoritaEfectivoARS(empleadoId))
         } else {
           // Cualquier otro: crea una solicitud pendiente que la contraparte
           // tiene que aceptar — no mueve saldo todavía.
