@@ -1620,6 +1620,9 @@
       // se vuelve a esa pestaña.
       retirosCargadoUnaVez: false,
       todosMovimientosCargadoUnaVez: false,
+      misTareasCaja:   new Set(), // tareas granulares habilitadas en empleado_tareas
+                              // (modulo='caja', habilitado=true) para este empleado —
+                              // ver tieneTarea()
     }
 
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
@@ -1638,8 +1641,12 @@
       MXN: 'pesos mexicanos', COP: 'pesos colombianos', PEN: 'soles',
     }
 
-    function esAdmin() {
-      return ['admin', 'super_admin'].includes(estado.miEmpleado?.rol_app)
+    // Migración del sistema de permisos: rol_app ya no gatea directamente
+    // nada acá (salvo el bypass de super_admin, que sigue viendo todo) — lo
+    // granular vive en empleado_tareas (modulo='caja'), cargado en init() a
+    // estado.misTareasCaja.
+    function tieneTarea(tarea) {
+      return estado.miEmpleado?.rol_app === 'super_admin' || estado.misTareasCaja.has(tarea)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1957,14 +1964,6 @@
 
     function nombreEmpresa(unidadId) {
       return estado.maestros.unidadesNegocio.find(u => u.id === unidadId)?.nombre || null
-    }
-
-    // Devuelve el registro completo (rol_app, caja_raiz) del dueño de una
-    // ficha, sea que esté en el listado (lo abrió un admin) o sea el propio
-    // usuario logueado (entrada directa, nunca está en estado.empleados).
-    function datosDePersona(empleadoId) {
-      return estado.empleados.find(e => e.id === empleadoId) ||
-        (estado.miEmpleado?.id === empleadoId ? estado.miEmpleado : null)
     }
 
     // Solo hay dos medios posibles — el "otro" es simplemente el que no es este.
@@ -2404,12 +2403,11 @@
 
       // Ingreso y Egreso: solo en la propia ficha — ya no existe el flujo de
       // "elegir cualquier empleado desde el listado" (ver abrirModalMovimiento).
-      // Para Pablo (caja_raiz) el botón de ingreso es "Ingreso externo" —
-      // atómico, sin contraparte, sin cambios respecto de antes. Para
-      // cualquier otro es "Añadir ingreso" — crea una solicitud pendiente.
+      // Quien tenga la tarea 'ingreso_externo' ve el botón de ingreso como
+      // "Ingreso externo" — atómico, sin contraparte. Para cualquier otro es
+      // "Añadir ingreso" — crea una solicitud pendiente.
       if (empleadoId === estado.miEmpleado.id) {
-        const persona = datosDePersona(empleadoId)
-        const esRaiz = !!persona?.caja_raiz
+        const esRaiz = tieneTarea('ingreso_externo')
         botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">${esRaiz ? 'Ingreso externo' : 'Añadir ingreso'}</button>`)
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1 1 45%;">Egreso</button>`)
       }
@@ -3310,15 +3308,15 @@
       if (tipo === 'ingreso') {
         avisoRetiro.hidden = true
 
-        const persona = datosDePersona(empleadoId)
-        const esRaiz = !!persona?.caja_raiz
+        const esRaiz = tieneTarea('ingreso_externo')
         estado.wizardMovimiento.subtipo = esRaiz ? 'externo' : 'propio'
 
         if (esRaiz) {
-          // Ingreso externo (solo lo carga el propio caja_raiz sobre su
-          // ficha — ver el filtro en renderizarAccionesDetalle): no hay
-          // contraparte, el dinero entra de afuera del sistema, y sigue
-          // siendo atómico — no pasa por el esquema de solicitudes.
+          // Ingreso externo (solo lo carga quien tiene la tarea
+          // 'ingreso_externo' sobre su propia ficha — ver el filtro en
+          // renderizarAccionesDetalle): no hay contraparte, el dinero entra
+          // de afuera del sistema, y sigue siendo atómico — no pasa por el
+          // esquema de solicitudes.
           document.getElementById('movimiento-titulo').textContent = 'Ingreso externo'
           grupoContraparte.style.display = 'none'
           grupoCuentaUnica.style.display = 'flex'
@@ -3348,7 +3346,7 @@
         grupoCuentaUnica.style.display = 'flex'
         labelCuentaUnica.textContent = 'Cuenta'
         poblarSelectorCuentaUnica(empleadoId)
-        if (!esAdmin()) {
+        if (!tieneTarea('ver_listado')) {
           avisoRetiro.textContent = 'Este retiro se descuenta de tu caja personal — no es un gasto de la empresa.'
           avisoRetiro.hidden = false
         } else {
@@ -3615,20 +3613,37 @@
 
       estado.miEmpleado = emp
 
+      // Tareas granulares del módulo (reemplaza el chequeo de rol_app salvo
+      // el bypass de super_admin — ver tieneTarea()).
+      const { data: tareas } = await supabase
+        .from('empleado_tareas')
+        .select('tarea')
+        .eq('empleado_id', emp.id)
+        .eq('modulo', 'caja')
+        .eq('habilitado', true)
+      estado.misTareasCaja = new Set((tareas ?? []).map(t => t.tarea))
+
       // Comunes a todos los roles: hacen falta tanto en el listado (admin)
       // como en la ficha propia (usuario) para el modal de "Añadir ingreso".
       await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas()])
 
-      if (emp.rol_app === 'super_admin') {
-        document.getElementById('tab-btn-retiros').style.display = ''
-        document.getElementById('tab-btn-todos-movimientos').style.display = ''
+      // Los dos tabs son gates independientes ahora (antes viajaban juntos
+      // bajo un solo chequeo de super_admin). btn-mi-caja/tabs-cc--multi no
+      // tienen tarea propia asignada — se muestran si hay al menos un tab
+      // extra visible, mismo criterio que el "3 pestañas vs. solo Caja" de
+      // antes, pero sin asumir que ambos tabs siempre viajan juntos.
+      if (tieneTarea('retiros_todos') || tieneTarea('movimientos_todos')) {
         document.getElementById('btn-mi-caja').style.display = 'inline-flex'
-        // Solo visual: le permite al CSS mobile distinguir "3 pestañas" de
-        // "solo Caja" sin duplicar el gating de rol (ver @media 640px).
         document.getElementById('tabs-caja').classList.add('tabs-cc--multi')
       }
+      if (tieneTarea('retiros_todos')) {
+        document.getElementById('tab-btn-retiros').style.display = ''
+      }
+      if (tieneTarea('movimientos_todos')) {
+        document.getElementById('tab-btn-todos-movimientos').style.display = ''
+      }
 
-      if (esAdmin()) {
+      if (tieneTarea('ver_listado')) {
         document.getElementById('vista-lista-caja').removeAttribute('hidden')
         await cargarListado()
       } else {
