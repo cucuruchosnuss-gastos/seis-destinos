@@ -1649,6 +1649,14 @@
       return estado.miEmpleado?.rol_app === 'super_admin' || estado.misTareasCaja.has(tarea)
     }
 
+    // Sin bypass de super_admin — 'ingreso_externo' es la única tarea de
+    // Caja que se otorga por persona puntual, no por rol (ver los 2 usos en
+    // renderizarAccionesDetalle/abrirModalMovimiento). El resto de las
+    // tareas de este archivo sigue usando tieneTarea() con bypass normal.
+    function tieneTareaExplicita(tarea) {
+      return estado.misTareasCaja.has(tarea)
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
@@ -2407,7 +2415,7 @@
       // "Ingreso externo" — atómico, sin contraparte. Para cualquier otro es
       // "Añadir ingreso" — crea una solicitud pendiente.
       if (empleadoId === estado.miEmpleado.id) {
-        const esRaiz = tieneTarea('ingreso_externo')
+        const esRaiz = tieneTareaExplicita('ingreso_externo')
         botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">${esRaiz ? 'Ingreso externo' : 'Añadir ingreso'}</button>`)
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1 1 45%;">Egreso</button>`)
       }
@@ -3308,7 +3316,7 @@
       if (tipo === 'ingreso') {
         avisoRetiro.hidden = true
 
-        const esRaiz = tieneTarea('ingreso_externo')
+        const esRaiz = tieneTareaExplicita('ingreso_externo')
         estado.wizardMovimiento.subtipo = esRaiz ? 'externo' : 'propio'
 
         if (esRaiz) {
