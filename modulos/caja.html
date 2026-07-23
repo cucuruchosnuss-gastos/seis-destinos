@@ -1230,6 +1230,7 @@
           <button type="button" class="tabs-cc__opcion" data-tab="todos-movimientos" id="tab-btn-todos-movimientos" style="display:none;">Todos los movimientos</button>
         </div>
         <button type="button" class="btn btn--navy-outline" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
+        <button type="button" class="btn btn--navy-outline" id="btn-empresa-atajo" style="display:none; width:auto;">Empresa</button>
         <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto;">Retiro personal</button>
       </div>
 
@@ -1548,6 +1549,13 @@
           </select>
         </div>
 
+        <div class="grupo-campo" id="grupo-cuenta-unidad-negocio" hidden>
+          <label for="cuenta-unidad-negocio">Unidad de negocio</label>
+          <select id="cuenta-unidad-negocio">
+            <option value="">— Sin asignar —</option>
+          </select>
+        </div>
+
         <div class="grupo-campo" id="grupo-cuenta-favorita">
           <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;">
             <input type="checkbox" id="cuenta-favorita" style="width:auto;">
@@ -1580,6 +1588,7 @@
       sesion:          null,
       miEmpleado:      null, // { id, nombre, rol_app, caja_raiz }
       empleados:       [],   // personas con acceso (solo se carga para admin/super_admin)
+      idEmpresa:       null, // id del empleado ficticio tipo='empresa' — ver cargarEmpresa()
       maestros:        { unidadesNegocio: [] },
       saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
                               // para usuario: solo las propias (nunca se piden las de otros)
@@ -2035,10 +2044,42 @@
       estado.superAdmins = data || []
     }
 
+    // activo=true a propósito: no queremos que ex-empleados reales
+    // atiborren nombres/selectores. Empresa es la única excepción — queda
+    // activo=false pero necesita resolverse igual en todos lados que usan
+    // este diccionario (movimientos, contraparte, solicitudes, excel) — ver
+    // cargarEmpresa(), que inyecta su nombre acá aparte.
     async function cargarNombresEmpleados() {
       const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre').eq('activo', true)
       if (error) { mostrarError('No se pudieron cargar los nombres de empleados.'); return }
       estado.nombresEmpleados = Object.fromEntries((data || []).map(e => [e.id, e.nombre]))
+    }
+
+    // Empresa es un empleado ficticio (tipo='empresa', activo=false,
+    // auth_user_id=null) — excluido a propósito del listado general y de
+    // cargarNombresEmpleados() por esos mismos filtros. Se resuelve acá
+    // aparte para poder mostrar su ficha (CAMBIO 1) y que su nombre
+    // aparezca donde corresponda (contraparte, movimientos). Se llama
+    // DESPUÉS del Promise.all de init() a propósito — si corriera en
+    // paralelo con cargarNombresEmpleados(), la asignación completa que esa
+    // función hace a estado.nombresEmpleados podría pisar el nombre que
+    // esta inyecta acá, según el orden real en que resuelvan las promesas.
+    async function cargarEmpresa() {
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre').eq('tipo', 'empresa').maybeSingle()
+      if (error || !data) { estado.idEmpresa = null; return }
+      estado.idEmpresa = data.id
+      estado.nombresEmpleados[data.id] = data.nombre
+      asegurarEmpresaEnEmpleados()
+    }
+
+    // estado.empleados se reemplaza por completo en cargarListado() (solo
+    // corre para quien tiene ver_listado) — Empresa nunca entra ahí por el
+    // .not('auth_user_id', 'is', null) de esa consulta, así que hay que
+    // volver a insertarla después de cada reemplazo, no solo una vez.
+    function asegurarEmpresaEnEmpleados() {
+      if (estado.idEmpresa && !estado.empleados.some(e => e.id === estado.idEmpresa)) {
+        estado.empleados.push({ id: estado.idEmpresa, nombre: estado.nombresEmpleados[estado.idEmpresa] })
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2078,6 +2119,15 @@
       return Object.values(estado.cuentasPorId).filter(c => c.empleado_id === empleadoId && c.activa)
     }
 
+    // Antes solo se cargaba dentro de cargarListado() (ver_listado) — el
+    // selector de unidad de negocio del modal "Nueva cuenta" (CAMBIO 2) la
+    // necesita para cualquier rol, así que pasa a ser común a todos.
+    async function cargarUnidadesNegocio() {
+      const { data, error } = await supabase.from('unidades_negocio').select('id, nombre').order('nombre')
+      if (error) { mostrarError('No se pudieron cargar las unidades de negocio.'); return }
+      estado.maestros.unidadesNegocio = data || []
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // CARGA DE DATOS — Listado general (solo admin/super_admin)
     // ═══════════════════════════════════════════════════════════════════════
@@ -2085,18 +2135,17 @@
     async function cargarListado() {
       document.getElementById('estado-cargando').hidden = false
 
-      const [empRes, unidRes] = await Promise.all([
-        supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz').not('auth_user_id', 'is', null).eq('activo', true).order('nombre'),
-        supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
-      ])
+      const empRes = await supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz').not('auth_user_id', 'is', null).eq('activo', true).order('nombre')
 
-      if (empRes.error || unidRes.error) {
+      if (empRes.error) {
         document.getElementById('estado-cargando').hidden = true
         mostrarError('No se pudieron cargar las personas.')
         return
       }
+      // Reemplazo completo — Empresa nunca viene en este resultado (queda
+      // afuera por auth_user_id/activo), hay que reinsertarla.
       estado.empleados = empRes.data || []
-      estado.maestros.unidadesNegocio = unidRes.data || []
+      asegurarEmpresaEnEmpleados()
 
       const ids = estado.empleados.map(e => e.id)
 
@@ -2212,6 +2261,11 @@
       const sinEmpresa = []
 
       estado.empleados.forEach(emp => {
+        // Empresa vive en estado.empleados para que abrirDetallePersona()/
+        // poblarSelectorContraparte() la encuentren, pero el listado general
+        // sigue sin mostrarla — se llega a su ficha solo por el atajo
+        // dedicado (ver CAMBIO 1).
+        if (emp.id === estado.idEmpresa) return
         if (emp.unidad_negocio_id && porUnidad.has(emp.unidad_negocio_id)) {
           porUnidad.get(emp.unidad_negocio_id).lista.push(emp)
         } else {
@@ -2358,6 +2412,10 @@
       const lista = saldos.length ? saldos : [{ moneda: 'ARS', saldo: 0 }]
       const cuentaIds = cuentasDe(empleadoId).map(c => c.id)
       const esPropia = empleadoId === estado.miEmpleado.id
+      // Empresa es gestionable para un super_admin (CAMBIO 3/7) — el resto
+      // de las acciones de la ficha (ingreso/egreso/retiro/traspaso) siguen
+      // atadas estrictamente a esPropia, sin cambios ahí.
+      const puedeGestionar = esPropia || (empleadoId === estado.idEmpresa && estado.miEmpleado.rol_app === 'super_admin')
 
       // Misma estructura que renderizarStatTotal() ("Total de la empresa"):
       // una sola .stat-card-caja con todas las monedas lado a lado arriba y
@@ -2369,8 +2427,8 @@
         const clase = Number(s.saldo) < 0 ? 'color-negativo' : Number(s.saldo) > 0 ? 'color-positivo' : ''
         return `<span class="stat-card-caja__monto ${clase}">${formatearImporte(s.saldo, s.moneda)}</span>`
       }).join('')
-      const desgloseHtml = renderizarDesglosePorCuenta(cuentaIds, { gestionable: esPropia })
-      const botonNuevaCuenta = esPropia
+      const desgloseHtml = renderizarDesglosePorCuenta(cuentaIds, { gestionable: puedeGestionar })
+      const botonNuevaCuenta = puedeGestionar
         ? `<button type="button" class="saldo-card__nueva-cuenta" id="btn-saldo-nueva-cuenta" title="Nueva cuenta" aria-label="Nueva cuenta">+</button>`
         : ''
 
@@ -2392,7 +2450,7 @@
 
       document.getElementById('btn-saldo-nueva-cuenta')?.addEventListener('click', abrirModalCuentaNueva)
 
-      if (esPropia) {
+      if (puedeGestionar) {
         cont.querySelectorAll('[data-accion="favorita-cuenta"]').forEach(btn => {
           btn.addEventListener('click', () => marcarCuentaFavorita(btn.dataset.id))
         })
@@ -2434,12 +2492,22 @@
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-traspaso" style="flex:1 1 45%;">Traspaso</button>`)
       }
 
+      // Atajo a Empresa — segunda ubicación (ver también btn-empresa-atajo
+      // en .fila-tabs-caja): quien tiene 'ingreso_externo' pero no
+      // ver_listado entra directo a su propia ficha y nunca ve esa otra
+      // barra. Solo acá cuando el origen fue 'directo', para no duplicar el
+      // botón cuando ya está visible arriba (quien vino del listado).
+      if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.idEmpresa && tieneTarea('ingreso_externo')) {
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-empresa-atajo" style="flex:1 1 45%;">Empresa</button>`)
+      }
+
       cont.innerHTML = botones.join('')
 
       document.getElementById('btn-detalle-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId))
       document.getElementById('btn-detalle-egreso')?.addEventListener('click', () => abrirModalMovimiento('egreso', empleadoId))
       document.getElementById('btn-detalle-retiro')?.addEventListener('click', () => abrirModalMovimiento('retiro', empleadoId))
       document.getElementById('btn-detalle-traspaso')?.addEventListener('click', () => abrirModalTraspaso())
+      document.getElementById('btn-detalle-empresa-atajo')?.addEventListener('click', () => abrirDetallePersona(estado.idEmpresa, 'listado'))
     }
 
     document.getElementById('btn-volver-ficha').addEventListener('click', () => {
@@ -2764,14 +2832,17 @@
       const { error } = await supabase.rpc('marcar_cuenta_favorita_caja', { p_cuenta_id: id })
       if (error) { mostrarError(error.message || 'No se pudo marcar la cuenta como favorita.'); return }
       mostrarExito('Cuenta marcada como favorita.')
-      await refrescarCuentasYSaldos(estado.miEmpleado.id)
+      // estado.personaAbierta, no estado.miEmpleado.id — si un super_admin
+      // está gestionando una cuenta de Empresa (CAMBIO 3), hay que refrescar
+      // la ficha de Empresa, no la propia.
+      await refrescarCuentasYSaldos(estado.personaAbierta)
     }
 
     async function desactivarCuenta(id) {
       const { error } = await supabase.rpc('desactivar_cuenta_caja', { p_cuenta_id: id })
       if (error) { mostrarError(error.message || 'No se pudo desactivar la cuenta.'); return }
       mostrarExito('Cuenta desactivada.')
-      await refrescarCuentasYSaldos(estado.miEmpleado.id)
+      await refrescarCuentasYSaldos(estado.personaAbierta)
     }
 
     // El × de la fila ya no desactiva directo — abre esta confirmación
@@ -2835,7 +2906,7 @@
         if (error) throw error
         mostrarExito('Cuenta renombrada.')
         cerrarModalRenombrarCuenta()
-        await refrescarCuentasYSaldos(estado.miEmpleado.id)
+        await refrescarCuentasYSaldos(estado.personaAbierta)
       } catch (err) {
         mostrarError(err.message || 'No se pudo renombrar la cuenta.')
       } finally {
@@ -2851,8 +2922,12 @@
 
     // Es la primera cuenta activa que tendría el usuario para esta
     // combinación medio+moneda — si es así, va a ser favorita sí o sí.
+    // estado.personaAbierta, no estado.miEmpleado.id — al crear una cuenta
+    // para Empresa (CAMBIO 3), "primera cuenta" tiene que evaluarse contra
+    // las cuentas de Empresa, no las del super_admin que la está creando.
+    // Para la ficha propia da lo mismo, ahí personaAbierta === miEmpleado.id.
     function esPrimeraCuentaDeCombinacion(medio, moneda) {
-      return !cuentasDe(estado.miEmpleado.id).some(c => c.medio === medio && c.moneda === moneda)
+      return !cuentasDe(estado.personaAbierta).some(c => c.medio === medio && c.moneda === moneda)
     }
 
     let medioCuentaNuevaSeleccionado = null
@@ -2893,6 +2968,18 @@
       document.getElementById('cuenta-moneda').value = 'ARS'
       document.getElementById('cuenta-favorita').checked = false
       seleccionarMedioCuentaNueva(null)
+
+      // Selector de unidad de negocio: solo para una cuenta de Empresa —
+      // la diferencia es de qué ficha salió el "+", no del rol de quien lo
+      // apretó (ver CAMBIO 2).
+      const esParaEmpresa = estado.personaAbierta === estado.idEmpresa
+      const grupoUnidad = document.getElementById('grupo-cuenta-unidad-negocio')
+      grupoUnidad.hidden = !esParaEmpresa
+      if (esParaEmpresa) {
+        document.getElementById('cuenta-unidad-negocio').innerHTML = '<option value="">— Sin asignar —</option>' +
+          estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+      }
+
       document.getElementById('modal-cuenta-nueva').hidden = false
     }
 
@@ -2910,16 +2997,25 @@
 
       const favorita = esPrimeraCuentaDeCombinacion(medio, moneda) || document.getElementById('cuenta-favorita').checked
 
+      const params = { p_nombre: nombre, p_medio: medio, p_moneda: moneda, p_favorita: favorita }
+      // Solo cuando el modal se abrió desde la ficha de Empresa (CAMBIO 3) —
+      // en cualquier otro caso no se manda p_empleado_id, mismo comportamiento
+      // que hoy (la cuenta queda del que llama).
+      if (estado.personaAbierta === estado.idEmpresa) {
+        params.p_empleado_id = estado.idEmpresa
+        params.p_unidad_negocio_id = document.getElementById('cuenta-unidad-negocio').value || null
+      }
+
       const btn = document.getElementById('btn-guardar-cuenta-nueva')
       btn.classList.add('btn--cargando')
       btn.disabled = true
 
       try {
-        const { error } = await supabase.rpc('crear_cuenta_caja', { p_nombre: nombre, p_medio: medio, p_moneda: moneda, p_favorita: favorita })
+        const { error } = await supabase.rpc('crear_cuenta_caja', params)
         if (error) throw error
         mostrarExito('Cuenta creada.')
         cerrarModalCuentaNueva()
-        await refrescarCuentasYSaldos(estado.miEmpleado.id)
+        await refrescarCuentasYSaldos(estado.personaAbierta)
       } catch (err) {
         mostrarError(err.message || 'No se pudo crear la cuenta.')
       } finally {
@@ -3033,6 +3129,7 @@
       exportarMovimientosExcel(estado.retiros, 'retiros_socios', { incluirPersona: true })
     })
     document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
+    document.getElementById('btn-empresa-atajo').addEventListener('click', () => abrirDetallePersona(estado.idEmpresa, 'listado'))
 
     // ═══════════════════════════════════════════════════════════════════════
     // VISTA — Todos los movimientos (exclusiva rol_app === 'super_admin')
@@ -3633,7 +3730,18 @@
 
       // Comunes a todos los roles: hacen falta tanto en el listado (admin)
       // como en la ficha propia (usuario) para el modal de "Añadir ingreso".
-      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas()])
+      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas(), cargarUnidadesNegocio()])
+
+      // Secuencial y después del Promise.all de arriba a propósito — ver el
+      // comentario en cargarEmpresa() sobre la carrera con cargarNombresEmpleados().
+      await cargarEmpresa()
+
+      // Atajo a la ficha de Empresa — mismo criterio en los dos lugares
+      // donde puede aparecer (acá, y en renderizarAccionesDetalle() para
+      // quien entra directo a su propia ficha sin pasar por el listado).
+      if (estado.idEmpresa && tieneTarea('ingreso_externo')) {
+        document.getElementById('btn-empresa-atajo').style.display = 'inline-flex'
+      }
 
       // Los dos tabs son gates independientes ahora (antes viajaban juntos
       // bajo un solo chequeo de super_admin). btn-mi-caja/tabs-cc--multi no
