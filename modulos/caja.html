@@ -1696,6 +1696,7 @@
       tieneModuloCaja: false, // empleado_modulos modulo='caja' habilitado=true — gate del Directorio (CAMBIO 6)
       origenDirectorio: null, // 'listado' | 'ficha-propia' — a dónde vuelve btn-directorio-atras al cerrar del todo
       directorioPersonaAbierta: null, // empleado_id cuyas cuentas se están mostrando en el Directorio, o null = lista de personas
+      filtrosFichaEmpresa: { periodos: [], tipos: [], cuenta_ids: [] }, // ficha de Empresa (CAMBIO 2) — sin empleado_ids, el dueño ya está implícito
       maestros:        { unidadesNegocio: [] },
       saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
                               // para usuario: solo las propias (nunca se piden las de otros)
@@ -2522,8 +2523,15 @@
       document.getElementById('detalle-persona-vacio').hidden = true
       document.getElementById('detalle-persona-solicitudes').innerHTML = ''
 
-      renderizarFiltrosMovimientosFicha(empleadoId)
-      await Promise.all([cargarMovimientos(empleadoId), cargarSolicitudesPendientes(empleadoId)])
+      // Ficha de Empresa: filtros propios (CAMBIO 2), no la versión
+      // reducida de siempre.
+      if (empleadoId === estado.idEmpresa) {
+        renderizarFiltrosFichaEmpresa()
+        await Promise.all([cargarMovimientosFichaEmpresa(), cargarSolicitudesPendientes(empleadoId)])
+      } else {
+        renderizarFiltrosMovimientosFicha(empleadoId)
+        await Promise.all([cargarMovimientos(empleadoId), cargarSolicitudesPendientes(empleadoId)])
+      }
     }
 
     function cerrarDetallePersona() {
@@ -2753,14 +2761,22 @@
       const cont = document.getElementById('detalle-persona-acciones')
       const botones = []
 
-      // Ingreso y Egreso: solo en la propia ficha — ya no existe el flujo de
-      // "elegir cualquier empleado desde el listado" (ver abrirModalMovimiento).
-      // Quien tenga la tarea 'ingreso_externo' ve el botón de ingreso como
-      // "Ingreso externo" — atómico, sin contraparte. Para cualquier otro es
-      // "Añadir ingreso" — crea una solicitud pendiente.
+      // Ingreso: en tu propia ficha SIEMPRE es "Añadir ingreso" (solicitud
+      // pendiente) — ya no existe el flujo de "elegir cualquier empleado
+      // desde el listado" (ver abrirModalMovimiento). El atómico "Ingreso
+      // externo" se movió a la ficha de Empresa (única con sentido real: la
+      // solicitud pendiente opera sobre "quien llama", y Empresa no tiene
+      // sesión propia) — solo visible ahí, y solo con la tarea
+      // 'ingreso_externo'. En cualquier otra ficha ajena no aparece ninguno
+      // de los dos.
       if (empleadoId === estado.miEmpleado.id) {
-        const esRaiz = tieneTareaExplicita('ingreso_externo')
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">${esRaiz ? 'Ingreso externo' : 'Añadir ingreso'}</button>`)
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">Añadir ingreso</button>`)
+      } else if (empleadoId === estado.idEmpresa && tieneTareaExplicita('ingreso_externo')) {
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">Ingreso externo</button>`)
+      }
+
+      // Egreso: sin cambios, solo en la propia ficha.
+      if (empleadoId === estado.miEmpleado.id) {
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1 1 45%;">Egreso</button>`)
       }
 
@@ -2842,6 +2858,107 @@
           gastos ( razon_social, categorias ( nombre ) )
         `)
         .eq('empleado_id', empleadoId)
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      document.getElementById('estado-cargando-movimientos').hidden = true
+
+      if (error) {
+        mostrarError('No se pudieron cargar los movimientos.')
+        return
+      }
+      estado.movimientos = data || []
+      renderizarMovimientos()
+    }
+
+    // Copia estructural fresca de renderizarFiltrosTodosMovimientos() (que
+    // sí funciona) — NO reutiliza renderizarFiltrosMovimientosFicha() de
+    // arriba, que es justo la versión reducida por el bug nunca resuelto.
+    // Ids propios (ms-fe-*) para no chocar con ms-tm-* de "Todos los
+    // movimientos", que convive en la misma página. Sin filtro de persona:
+    // el dueño (Empresa) ya está implícito.
+    function renderizarFiltrosFichaEmpresa() {
+      const cont = document.getElementById('filtros-detalle-movimientos')
+      // Mismo cuidado que renderizarFiltrosTodosMovimientos(): los paneles
+      // se reparentan a <body> al abrirse (ver crearMultiselect()) — sin
+      // esto, un panel abierto en un render anterior queda huérfano.
+      document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
+      cont.innerHTML = `
+        <div class="multiselect" id="ms-fe-periodo">
+          <button type="button" class="multiselect__boton" id="ms-fe-periodo-boton">Todos los períodos</button>
+          <div class="multiselect__panel" id="ms-fe-periodo-panel" hidden></div>
+        </div>
+        <div class="multiselect" id="ms-fe-tipo">
+          <button type="button" class="multiselect__boton" id="ms-fe-tipo-boton">Todos los tipos</button>
+          <div class="multiselect__panel" id="ms-fe-tipo-panel" hidden></div>
+        </div>
+        <div class="multiselect" id="ms-fe-cuenta">
+          <button type="button" class="multiselect__boton" id="ms-fe-cuenta-boton">Todas las cuentas</button>
+          <div class="multiselect__panel" id="ms-fe-cuenta-panel" hidden></div>
+        </div>
+        <button type="button" id="btn-borrar-filtros-fe" class="btn-enlace-discreto">Borrar filtros</button>
+        <div style="flex:1;"></div>
+        <button type="button" id="btn-exportar-movimientos-ficha" class="btn btn--amarillo" style="width:auto;">📥 Descargar Excel</button>
+      `
+
+      document.getElementById('btn-borrar-filtros-fe').addEventListener('click', () => {
+        estado.filtrosFichaEmpresa = { periodos: [], tipos: [], cuenta_ids: [] }
+        renderizarFiltrosFichaEmpresa()
+        cargarMovimientosFichaEmpresa()
+      })
+      document.getElementById('btn-exportar-movimientos-ficha').addEventListener('click', () => {
+        exportarMovimientosExcel(estado.movimientos, 'movimientos_Empresa', { incluirPersona: false })
+      })
+
+      crearMultiselect({
+        idBase: 'ms-fe-periodo',
+        opciones: generarOpcionesPeriodo().map(p => ({ value: p, label: p })),
+        seleccionados: estado.filtrosFichaEmpresa.periodos,
+        etiquetaTodos: 'Todos los períodos',
+        onChange: () => cargarMovimientosFichaEmpresa(),
+      })
+      crearMultiselect({
+        idBase: 'ms-fe-tipo',
+        opciones: TIPO_MOVIMIENTO_OPCIONES,
+        seleccionados: estado.filtrosFichaEmpresa.tipos,
+        etiquetaTodos: 'Todos los tipos',
+        onChange: () => cargarMovimientosFichaEmpresa(),
+      })
+      crearMultiselect({
+        idBase: 'ms-fe-cuenta',
+        opciones: cuentasDe(estado.idEmpresa).map(c => ({ value: c.id, label: c.nombre })),
+        seleccionados: estado.filtrosFichaEmpresa.cuenta_ids,
+        etiquetaTodos: 'Todas las cuentas',
+        onChange: () => cargarMovimientosFichaEmpresa(),
+      })
+    }
+
+    // cuenta_id IN cuentas de Empresa como filtro base — no empleado_id —
+    // mismo criterio que ya usa renderizarSaldosDetalle() para el desglose
+    // de saldos de esta misma ficha.
+    async function cargarMovimientosFichaEmpresa() {
+      document.getElementById('estado-cargando-movimientos').hidden = false
+      document.getElementById('detalle-persona-movimientos').innerHTML = ''
+      document.getElementById('detalle-persona-vacio').hidden = true
+
+      const cuentaIds = cuentasDe(estado.idEmpresa).map(c => c.id)
+      if (!cuentaIds.length) {
+        document.getElementById('estado-cargando-movimientos').hidden = true
+        estado.movimientos = []
+        renderizarMovimientos()
+        return
+      }
+
+      let consulta = supabase
+        .from('caja_movimientos')
+        .select(`
+          id, tipo, monto, moneda, medio_pago, cuenta_id, descripcion, fecha, gasto_id, contraparte_empleado_id,
+          gastos ( razon_social, categorias ( nombre ) )
+        `)
+        .in('cuenta_id', cuentaIds)
+      consulta = aplicarFiltrosMovimientos(consulta, estado.filtrosFichaEmpresa)
+
+      const { data, error } = await consulta
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -3716,27 +3833,21 @@
       if (tipo === 'ingreso') {
         avisoRetiro.hidden = true
 
-        const esRaiz = tieneTareaExplicita('ingreso_externo')
-        estado.wizardMovimiento.subtipo = esRaiz ? 'externo' : 'propio'
+        const esIngresoEmpresa = empleadoId === estado.idEmpresa && tieneTareaExplicita('ingreso_externo')
+        estado.wizardMovimiento.subtipo = esIngresoEmpresa ? 'externo' : 'propio'
 
-        if (esRaiz) {
-          // Ingreso externo (solo lo carga quien tiene la tarea
-          // 'ingreso_externo' sobre su propia ficha — ver el filtro en
-          // renderizarAccionesDetalle): no hay contraparte, el dinero entra
-          // de afuera del sistema, y sigue siendo atómico — no pasa por el
-          // esquema de solicitudes.
+        if (esIngresoEmpresa) {
+          // Ingreso externo — se movió a la ficha de Empresa (CAMBIO 1),
+          // única con sentido real: no hay contraparte, el dinero entra de
+          // afuera del sistema, y sigue siendo atómico — no pasa por el
+          // esquema de solicitudes. empleadoId ya es siempre estado.idEmpresa
+          // acá, sin merge con cuentas propias (ver CAMBIO 5 original).
           document.getElementById('movimiento-titulo').textContent = 'Ingreso externo'
           grupoContraparte.style.display = 'none'
           grupoCuentaUnica.style.display = 'flex'
           labelCuentaUnica.textContent = 'Cuenta'
-          // Además de las propias, incluye las de Empresa (CAMBIO 5) — el
-          // RPC ya fue reescrito para atribuir el movimiento al dueño real
-          // de la cuenta elegida, no a quien llama.
-          if (estado.idEmpresa) await cargarCuentasDe(estado.idEmpresa)
-          const cuentasDisponibles = estado.idEmpresa
-            ? [...cuentasDe(empleadoId), ...cuentasDe(estado.idEmpresa)]
-            : cuentasDe(empleadoId)
-          document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDisponibles, favoritaEfectivoARS(empleadoId))
+          await cargarCuentasDe(estado.idEmpresa)
+          document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(estado.idEmpresa), favoritaEfectivoARS(estado.idEmpresa))
         } else {
           // Cualquier otro: crea una solicitud pendiente que la contraparte
           // tiene que aceptar — no mueve saldo todavía.
