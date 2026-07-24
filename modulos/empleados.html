@@ -458,7 +458,7 @@
 
     <div class="empleados-stats" id="empleados-stats" hidden></div>
 
-    <div class="empleados-toolbar">
+    <div class="empleados-toolbar" id="empleados-toolbar">
       <div class="empleados-toolbar__buscar">
         <input type="text" id="filtro-busqueda-empleados" placeholder="🔍 Buscar empleado…">
       </div>
@@ -541,6 +541,7 @@
       modoEdicionFicha: false,
       modoEdicionContacto: false,
       filtros:         { busqueda: '' },
+      misTareasEmpleados: new Set(), // tareas granulares en empleado_tareas (modulo='empleados')
     }
 
     const MODULOS_INFO = [
@@ -580,6 +581,15 @@
 
     function modulosDeEmpleado(empleadoId) {
       return estado.empleadoModulos.filter(m => m.empleado_id === empleadoId).map(m => m.modulo)
+    }
+
+    // Tareas granulares (empleado_tareas) — mismo patrón que caja.html:
+    // super_admin tiene bypass total, el resto depende de lo cargado en
+    // estado.misTareasEmpleados (modulo='empleados', ver init()). El alcance
+    // real de 'ver_editar' (todas las unidades vs. un subconjunto) ya lo
+    // aplica la RLS al traer los datos — acá solo importa el booleano.
+    function tieneTarea(modulo, tarea) {
+      return estado.miEmpleado?.rol_app === 'super_admin' || estado.misTareasEmpleados.has(tarea)
     }
 
     function limpiarTexto(valor) {
@@ -793,7 +803,7 @@
         </div>
         <div class="grupo-campo">
           <label for="edit-unidad">Unidad de negocio</label>
-          <select id="edit-unidad">
+          <select id="edit-unidad" ${tieneTarea('empleados', 'reasignar_unidad') ? '' : 'disabled title="Solo quien tiene permiso para reasignar unidad puede cambiar este campo"'}>
             <option value="">Elegí una unidad de negocio…</option>
             ${estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}" ${u.id === emp.unidad_negocio_id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
           </select>
@@ -871,7 +881,7 @@
         `
       }
 
-      document.getElementById('btn-editar-contacto').hidden = estado.modoEdicionContacto
+      document.getElementById('btn-editar-contacto').hidden = estado.modoEdicionContacto || !tieneTarea('empleados', 'ver_editar')
       if (estado.modoEdicionContacto) {
         renderizarFormularioContacto(emp)
       } else {
@@ -905,7 +915,7 @@
       }
 
       const acciones = []
-      if (incompleto && !estado.modoEdicionFicha) {
+      if (incompleto && !estado.modoEdicionFicha && tieneTarea('empleados', 'ver_editar')) {
         acciones.push(`<button type="button" class="btn btn--secundario" id="btn-completar-datos">Completar datos</button>`)
       }
       if (emp.auth_user_id) {
@@ -1113,14 +1123,35 @@
       }
 
       estado.miEmpleado = emp
-      document.getElementById('bloque-importar').hidden = false
+
+      // Tareas granulares del módulo (ver tieneTarea() más arriba).
+      const { data: tareas } = await supabase
+        .from('empleado_tareas')
+        .select('tarea')
+        .eq('empleado_id', emp.id)
+        .eq('modulo', 'empleados')
+        .eq('habilitado', true)
+      estado.misTareasEmpleados = new Set((tareas ?? []).map(t => t.tarea))
+
       lucide.createIcons()
 
       await cargarTodo()
 
-      document.getElementById('select-empresa-import').innerHTML =
-        `<option value="">Elegí una empresa…</option>` +
-        estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+      // Sin 'ver_editar' la consulta de cargarTodo() ya vuelve acotada por
+      // RLS (en la práctica, solo la propia fila) — acá solo ocultamos el
+      // chrome de directorio (búsqueda + stats agregados) que no tiene
+      // sentido para quien ve una sola persona.
+      if (tieneTarea('empleados', 'ver_editar')) {
+        if (tieneTarea('empleados', 'importar_naaloo')) {
+          document.getElementById('bloque-importar').hidden = false
+          document.getElementById('select-empresa-import').innerHTML =
+            `<option value="">Elegí una empresa…</option>` +
+            estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+        }
+      } else {
+        document.getElementById('empleados-stats').hidden = true
+        document.getElementById('empleados-toolbar').hidden = true
+      }
     }
 
     init()
