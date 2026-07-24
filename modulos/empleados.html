@@ -18,6 +18,12 @@
       --violeta-oscuro: #5B45AD;
     }
 
+    /* Cualquier regla de autor con display (.empleados-toolbar/-stats,
+       .bloque-importar acá; .btn en main.css) le gana al [hidden] del
+       user-agent — bug conocido del proyecto (ver CLAUDE.md). Esta regla
+       restaura la semántica de hidden para todo el archivo. */
+    [hidden] { display: none !important; }
+
     /* ── Stats ─────────────────────────────────────────────────────────────── */
 
     .empleados-stats {
@@ -459,7 +465,7 @@
     <div class="empleados-stats" id="empleados-stats" hidden></div>
 
     <div class="empleados-toolbar" id="empleados-toolbar">
-      <div class="empleados-toolbar__buscar">
+      <div class="empleados-toolbar__buscar" id="empleados-toolbar-buscar">
         <input type="text" id="filtro-busqueda-empleados" placeholder="🔍 Buscar empleado…">
       </div>
       <div class="bloque-importar" id="bloque-importar" hidden>
@@ -1137,20 +1143,33 @@
 
       await cargarTodo()
 
+      // Las 3 tareas del módulo son independientes entre sí — dos gates
+      // separados a propósito, ninguno anidado en el otro.
+
+      // 'importar_naaloo': el bloque de importación se muestra solo con
+      // esta tarea, tenga o no ver_editar (el RPC del servidor ya lo
+      // permite así).
+      if (tieneTarea('empleados', 'importar_naaloo')) {
+        document.getElementById('bloque-importar').hidden = false
+        document.getElementById('select-empresa-import').innerHTML =
+          `<option value="">Elegí una empresa…</option>` +
+          estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+      }
+
       // Sin 'ver_editar' la consulta de cargarTodo() ya vuelve acotada por
       // RLS (en la práctica, solo la propia fila) — acá solo ocultamos el
       // chrome de directorio (búsqueda + stats agregados) que no tiene
-      // sentido para quien ve una sola persona.
-      if (tieneTarea('empleados', 'ver_editar')) {
-        if (tieneTarea('empleados', 'importar_naaloo')) {
-          document.getElementById('bloque-importar').hidden = false
-          document.getElementById('select-empresa-import').innerHTML =
-            `<option value="">Elegí una empresa…</option>` +
-            estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
-        }
-      } else {
+      // sentido para quien ve una sola persona. Ojo: se oculta la búsqueda
+      // puntual, NO #empleados-toolbar entero — bloque-importar vive dentro
+      // del toolbar y tiene que poder quedar visible con solo
+      // importar_naaloo. El contenedor completo solo se oculta cuando no
+      // queda nada visible adentro.
+      if (!tieneTarea('empleados', 'ver_editar')) {
         document.getElementById('empleados-stats').hidden = true
-        document.getElementById('empleados-toolbar').hidden = true
+        document.getElementById('empleados-toolbar-buscar').hidden = true
+        if (!tieneTarea('empleados', 'importar_naaloo')) {
+          document.getElementById('empleados-toolbar').hidden = true
+        }
       }
     }
 
