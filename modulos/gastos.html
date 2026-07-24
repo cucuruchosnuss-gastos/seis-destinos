@@ -30,6 +30,15 @@
       --celeste-oscuro:  #147a8a;
     }
 
+    /* Cualquier regla de autor con display le gana al [hidden] del
+       user-agent — bug conocido del proyecto (ver CLAUDE.md). Este archivo
+       ya tenía arreglos caso por caso (:not([hidden]) y [hidden] puntuales,
+       que quedan como están); esta regla cubre el resto (ej. .btn de
+       main.css). Verificado: ningún elemento del archivo depende de verse
+       con el atributo hidden puesto (los pasos del wizard se togglean solo
+       por clase). */
+    [hidden] { display: none !important; }
+
     /* Botón "Enviar a pendiente de pago" — grande y celeste a propósito,
        para que se distinga de las 3 opciones normales de medio de pago que
        tiene debajo (bifurca el guardado, no es un medio de pago más). */
@@ -1722,9 +1731,11 @@
     const estado = {
       sesion:       null,
       miEmpleadoId: null,
-      miRolApp:     null, // empleados.rol_app real — gatea la vista completa/reducida de
-                           // filtros y datos (ver esVistaCompleta()) y el botón "Editar"
-                           // del detalle de factura pendiente (?factura=<id>).
+      miRolApp:     null, // empleados.rol_app real — hoy solo alimenta el bypass de
+                           // super_admin dentro de tieneTarea(); los permisos reales
+                           // viven en misTareas.
+      misTareas:    new Set(), // claves 'modulo:tarea' de empleado_tareas (modulos
+                                // 'gastos' y 'facturas_pendientes') — ver tieneTarea()
       cuentasPorId: {}, // id -> {id, empleado_id, nombre, medio, moneda, favorita, activa,
                          // created_at} — se completa bajo demanda por persona (cargarCuentasDe),
                          // mismo criterio que caja.html: sin filtrar por activa acá, se filtra
@@ -1791,12 +1802,15 @@
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Vista completa (todos los filtros, todos los gastos de la empresa) vs.
-    // vista reducida (solo lo propio) — antes decidido por una lista de 2
-    // emails hardcodeados (obtenerRol()), ahora por el rol_app real. Falla
-    // cerrado: null/cualquier otro valor cae en la vista reducida.
-    function esVistaCompleta() {
-      return estado.miRolApp === 'admin' || estado.miRolApp === 'super_admin'
+    // Tareas granulares (empleado_tareas) — mismo patrón que caja.html y
+    // empleados.html, pero este archivo consume tareas de DOS módulos
+    // lógicos ('gastos' y 'facturas_pendientes'), por eso la clave del Set
+    // es 'modulo:tarea'. super_admin tiene bypass total; falla cerrado:
+    // sin fila habilitada cae en la vista reducida. Reemplaza a la vieja
+    // esVistaCompleta() (admin/super_admin), que agrupaba permisos que
+    // ahora se reparten en 3 tareas distintas.
+    function tieneTarea(modulo, tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
     }
 
     function formatearImporte(importe, moneda = 'ARS') {
@@ -1987,6 +2001,16 @@
     if (emp) {
       estado.miEmpleadoId = emp.id
       estado.miRolApp     = emp.rol_app
+
+      // Tareas granulares de los dos módulos lógicos que usa este archivo
+      // (ver tieneTarea()).
+      const { data: tareas } = await supabase
+        .from('empleado_tareas')
+        .select('modulo, tarea')
+        .eq('empleado_id', emp.id)
+        .in('modulo', ['gastos', 'facturas_pendientes'])
+        .eq('habilitado', true)
+      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
     }
 
     // Los botones de detalle-gasto-header-derecha (Editar/Anular) se generan
@@ -2124,7 +2148,7 @@
       const contenedor = document.getElementById('contenedor-filtros')
       document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
 
-      const placeholderBusqueda = esVistaCompleta()
+      const placeholderBusqueda = tieneTarea('gastos', 'ver_exportar')
         ? '🔍 Buscar empresa, categoría o empleado'
         : '🔍 Buscar empresa o categoría'
 
@@ -2137,7 +2161,7 @@
         </div>
       `
 
-      if (esVistaCompleta() && unidades.length) {
+      if (tieneTarea('gastos', 'ver_exportar') && unidades.length) {
         html += `
           <div class="multiselect" id="ms-unidad">
             <button type="button" class="multiselect__boton" id="ms-unidad-boton">Todas las unidades</button>
@@ -2204,7 +2228,7 @@
         }, 250)
       })
 
-      if (esVistaCompleta() && unidades.length) {
+      if (tieneTarea('gastos', 'ver_exportar') && unidades.length) {
         crearMultiselect({
           idBase: 'ms-unidad',
           opciones: [...unidades.map(u => ({ value: u.id, label: u.nombre })), { value: '__vehiculos__', label: '🚚 Vehículos' }],
@@ -2351,7 +2375,7 @@
       const listaEl = document.getElementById('lista-gastos')
       const vaciEl  = document.getElementById('estado-vacio')
 
-      const puedeBuscarPorEmpleado = esVistaCompleta()
+      const puedeBuscarPorEmpleado = tieneTarea('gastos', 'ver_exportar')
 
       const filtrados = !termino
         ? estado.listaGastos
@@ -2434,7 +2458,7 @@
           proyectos  (id, nombre)
         `)
 
-      if (!esVistaCompleta()) {
+      if (!tieneTarea('gastos', 'ver_exportar')) {
         if (estado.miEmpleadoId) {
           query = query.eq('empleado_id', estado.miEmpleadoId)
         } else {
@@ -3191,7 +3215,10 @@
         (admins.length && naaloo.length ? '<option disabled>──────────────</option>' : '') +
         admins.map(e => `<option value="${e.id}" style="color:#9CA3AF">${e.nombre} (Admin)</option>`).join('')
 
-      if (!esVistaCompleta()) {
+      // Decisión de Facu (24/07/2026): cargar un gasto a nombre de otra
+      // persona va con 'ver_exportar', coherente con el resto de la
+      // familia "vista completa" — no con 'editar_anular'.
+      if (!tieneTarea('gastos', 'ver_exportar')) {
         sel.disabled = true
         if (estado.miEmpleadoId) {
           sel.value = estado.miEmpleadoId
@@ -3759,12 +3786,13 @@
       lucide.createIcons()
 
       // Editar y Anular son dos gates independientes — no se agrupan:
-      // Editar sigue siendo exclusivo de admin/super_admin (sin ampliar a
-      // "dueño", eso nunca se pidió), Anular es del dueño del gasto O de un
-      // admin. Los dos exigen estado === 'registrado'. Se recalculan acá
+      // Editar exige la tarea 'editar_anular' (sin ampliar a "dueño", eso
+      // nunca se pidió), Anular es del dueño del gasto O de quien tiene
+      // 'editar_anular' (anular lo propio es baseline de todos, sin
+      // tarea). Los dos exigen estado === 'registrado'. Se recalculan acá
       // porque dependen del gasto puntual, no de la sesión en general.
-      const puedeEditar = esVistaCompleta() && g.estado === 'registrado'
-      const puedeAnular = g.estado === 'registrado' && (g.empleados?.id === estado.miEmpleadoId || esVistaCompleta())
+      const puedeEditar = tieneTarea('gastos', 'editar_anular') && g.estado === 'registrado'
+      const puedeAnular = g.estado === 'registrado' && (g.empleados?.id === estado.miEmpleadoId || tieneTarea('gastos', 'editar_anular'))
 
       document.getElementById('detalle-gasto-header-derecha').innerHTML = [
         puedeEditar ? '<button type="button" class="btn btn--icono" id="btn-editar-gasto" title="Editar">✏️ Editar</button>' : '',
@@ -4039,7 +4067,7 @@
             <span class="resumen-importe">${formatearImporte(f.importe, f.moneda)}</span>
           </div>
           ${fila('Saldo pendiente', f.saldo_pendiente != null ? formatearImporte(f.saldo_pendiente, f.moneda) : null)}
-          ${['pendiente', 'parcial'].includes(f.estado) && (estado.miRolApp === 'admin' || estado.miRolApp === 'super_admin') ? `
+          ${['pendiente', 'parcial'].includes(f.estado) && tieneTarea('facturas_pendientes', 'editar_interes') ? `
           <button type="button" class="btn btn--secundario" id="btn-agregar-interes" style="width:auto; margin-top:0.75rem;">+ Agregar interés</button>` : ''}
         </div>
 
@@ -4064,7 +4092,9 @@
       `
       lucide.createIcons()
 
-      const puedeEditar = f.estado === 'pendiente' && (estado.miRolApp === 'admin' || estado.miRolApp === 'super_admin')
+      // Tarea compartida con el módulo Cuentas Corrientes — mismo permiso
+      // gatea "editar factura" y "+ Agregar interés" (arriba).
+      const puedeEditar = f.estado === 'pendiente' && tieneTarea('facturas_pendientes', 'editar_interes')
       const derecha = document.getElementById('detalle-factura-header-derecha')
       derecha.innerHTML = puedeEditar
         ? '<button type="button" class="btn btn--icono" id="btn-editar-factura" title="Editar">✏️ Editar</button>'
