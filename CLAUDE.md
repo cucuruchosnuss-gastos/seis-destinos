@@ -61,7 +61,9 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - Todas con RLS, sin políticas de escritura — toda escritura pasa por las RPCs `SECURITY DEFINER` de abajo. (La descripción vieja "SELECT solo para admin/super_admin" es pre-migración de permisos; hoy los gates van por tareas — re-verificar el detalle de las policies en la próxima auditoría.)
 
 **Caja**
-- `cuentas_caja`: id, empleado_id, nombre, medio, moneda, favorita, activa, created_at
+- `cuentas_caja`: id, empleado_id, nombre, medio, moneda, favorita, activa, created_at, unidad_negocio_id, cbu, numero_cuenta, alias
+  - `unidad_negocio_id` (uuid, nullable, FK a `unidades_negocio`): agregada en la sesión de Cuenta de Empresa.
+  - `cbu` / `numero_cuenta` / `alias` (text): datos bancarios públicos, editables vía `editar_datos_publicos_cuenta_caja`.
 - `caja_movimientos`: id, empleado_id, tipo, monto, moneda, medio_pago, gasto_id, fecha, descripcion, creado_por, created_at, contraparte_empleado_id, cuenta_id
 - `caja_solicitudes_movimiento`: id, origen_empleado_id, destino_empleado_id, monto, moneda, medio_pago, fecha, descripcion, estado, creado_por, motivo_rechazo, respondido_por, respondido_en, created_at, cuenta_origen_id, cuenta_destino_id
   - Regla de negocio: transferencias entre personas requieren que al menos una de las dos partes sea `super_admin`. EXCEPCIÓN: las que involucran a la Cuenta de Empresa no exigen super_admin de contraparte, y cualquier super_admin puede aceptarlas en su nombre (auto-aceptación permitida) — ver sección Sistema de permisos.
@@ -165,7 +167,7 @@ Para módulos NUEVOS (ej. Materia Prima): definir sus tareas con Facu, agregarla
 
 ### Existentes
 1. **Gastos** (`modulos/gastos.html`): wizard de carga con OCR (incluye CUIT), vínculo a vehículo y/o unidad de negocio, selector de proveedor con matching automático por CUIT/razón social normalizada, envío a "pendiente de pago" (ver Cuentas Corrientes)
-2. **Caja** (`modulos/caja.html`): cuentas de efectivo/banco por persona, ingresos/egresos/traspasos/retiros, transferencias entre personas (requieren al menos un `super_admin` en la operación), vista "Retiros socios" y "Todos los movimientos" (solo `super_admin`)
+2. **Caja** (`modulos/caja.html`): cuentas de efectivo/banco por persona, ingresos/egresos/traspasos/retiros, transferencias entre personas (requieren al menos un `super_admin` en la operación — ver excepción de la Cuenta de Empresa en la sección Sistema de permisos), vista "Retiros socios" (gateada por la tarea `caja:retiros_todos`) y "Todos los movimientos" (gateada por `caja:movimientos_todos`)
 3. **Cuentas Corrientes** (`modulos/cuentas-corrientes.html`): saldo por proveedor (deuda o crédito, nunca ambos mostrados a la vez — prioridad a la deuda), historial de facturas, registro de pagos con sugerencia FIFO editable, aplicación manual de créditos a favor, aprobación de proveedores nuevos, ver/editar/eliminar una factura (eliminar = `anular_factura_pendiente`, nunca un DELETE real)
 4. **Accesos** (`modulos/accesos.html`, soloSuperAdmin): aprobación de solicitudes de registro y gestión de módulos + tareas granulares por usuario
 5. **Empleados** (`modulos/empleados.html`): directorio agrupado por unidad de negocio, ficha con datos de Naaloo, importación de Excel de Naaloo
