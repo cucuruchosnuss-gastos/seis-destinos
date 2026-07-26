@@ -15,7 +15,7 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 ## Base de datos central (nuss-central)
 - URL: https://xtorxouhzuizdvawqakb.supabase.co
 - Publishable key: sb_publishable_G8GZe2uAvb6VdJ1S4DD8nA_CC7iugYw
-- RLS activado en las 20 tablas de `public` (verificado). Ver sección Seguridad más abajo por lo que todavía falta afinar.
+- RLS activado en las tablas de `public` (verificado el 18/07/2026 sobre las 20 que existían entonces; desde esa auditoría se agregaron al menos `empleado_tareas` y `modulos` — son 22+, y el RLS de las nuevas no se re-verificó contra information_schema). Ver sección Seguridad más abajo por lo que todavía falta afinar.
 
 ### Tablas (verificado contra information_schema el 18/07/2026 — no confiar en versiones anteriores de este documento si contradicen esto)
 
@@ -38,7 +38,11 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
   - `origen`: `naaloo` (importado desde Excel) / `app_registro` (creado por auto-registro sin match de CUIL).
   - `caja_raiz` (boolean): marca a la única persona habilitada para registrar ingresos externos a Caja (hoy Pablo Usabarrena) — usado por `registrar_ingreso_externo_caja`.
   - `contacto_emergencia_*`: carga manual únicamente, Naaloo no lo trae.
-- `empleado_modulos`: id, empleado_id, modulo, habilitado, otorgado_por, otorgado_en. Pendiente conocido: el dashboard todavía filtra el tile de cada módulo por `rol_app` (soloAdmin), no consulta esta tabla.
+- `empleado_modulos`: id, empleado_id, modulo, habilitado, otorgado_por, otorgado_en. El dashboard SÍ la consulta para los no-admin (dashboard.html ~línea 419) y filtra los tiles con `esAdmin || misModulos.includes(modulo.clave)`; admin/super_admin ven todos los módulos que no son soloAdmin/soloSuperAdmin sin pasar por esta tabla.
+- `empleado_tareas`: id, empleado_id, modulo, tarea, habilitado, alcance (jsonb), más columnas de auditoría. Sistema de permisos granulares: el toggle de `empleado_modulos` decide si la persona VE el módulo; `empleado_tareas` decide qué puede HACER adentro. Las tareas son independientes entre sí.
+  - `alcance` (jsonb): limita una tarea a unidades de negocio concretas — `{"todas": true}` o `{"unidades": [uuid, ...]}`.
+  - Hoy la ÚNICA tarea con alcance es `empleados:ver_editar`. En accesos.html eso está hardcodeado en la constante `CLAVE_VER_EDITAR`, no como lista — si en el futuro otra tarea necesita alcance, hay que generalizar esa constante a un conjunto, no alcanza con agregarla al catálogo.
+  - El catálogo de tareas está hardcodeado en `CATALOGO_TAREAS` dentro de accesos.html (decisión explícita: no se lee de la base).
 - Convención de nombres (ya existente, explícita porque confunde): `modulos.clave` / `empleado_modulos.modulo` / `MODULOS[].clave` de dashboard.html usan GUIÓN MEDIO (`'cuentas-corrientes'`, `'materia-prima'`); `empleado_tareas.modulo` usa GUIÓN BAJO (`'cuentas_corrientes'`). Son namespaces distintos, no mezclar.
 - `solicitudes_acceso`: id, nombre, apellido, email, cuil, estado, fecha_solicitud, usuario_id, fecha_nacimiento, telefono, tuvo_match
 
@@ -146,7 +150,7 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - Rediseño en curso: se está adoptando un lenguaje visual más redondeado/con tarjetas (headers en tarjeta blanca propia, banners con gradiente, chips de color) módulo por módulo, vía mockups de Claude Design revisados antes de implementar. Cuentas Corrientes y Caja ya lo tienen, e Insumos (materia-prima) nació directamente con este lenguaje; Gastos/Empleados/Accesos quedan con el estilo anterior hasta que se rediseñen (decisión: Empleados y Accesos NO se van a rediseñar, están bien como están y son los menos usados).
 
 ## Seguridad
-- RLS activado en las 20 tablas de `public` (verificado).
+- RLS activado en las tablas de `public` (verificado el 18/07/2026 sobre las 20 de entonces; `empleado_tareas` y `modulos` se agregaron después y su RLS no se re-verificó — confirmar en la próxima auditoría).
 - Pendiente, sin urgencia (que ningún admin lo olvide): `empleados` y `cuentas_caja` se pueden leer completos (incluido CUIL, teléfono, fecha de nacimiento, domicilio en el caso de `empleados`) por cualquier usuario logueado, no solo por un admin. Requiere crear una vista angosta (`v_empleados_publico` con solo los campos no sensibles) para los selectores que hoy dependen de esto (ej. selector de empleado en el wizard de Gastos) antes de poder cerrar el acceso a la tabla completa.
 - CORS de las Edge Functions usa `Access-Control-Allow-Origin: '*'` (default del scaffolding de Supabase) — no es una puerta abierta real porque cada función valida el token de sesión igual, pero si se quiere cerrar del todo, cambiar a `https://cucuruchosnuss-gastos.github.io` en las 4 funciones (`ocr-comprobante`, `ocr-materia-prima`, `crear-solicitud-acceso`, `rechazar-solicitud-acceso`).
 
