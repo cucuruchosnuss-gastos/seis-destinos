@@ -8,7 +8,8 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - Multi-archivo: un HTML por módulo, CSS compartido (`css/main.css`), sin JS compartido entre módulos — cada archivo duplica localmente sus propios helpers (parseImporte, formatearImporte, colorAvatar, etc.), es el patrón establecido, no crear un JS común
 - Sin frameworks: HTML, CSS y JS vanilla
 - Backend: Supabase (PostgreSQL administrado, región São Paulo)
-- OCR de comprobantes: Edge Function `ocr-comprobante`, llama a la API de Anthropic (modelo claude-sonnet) en tiempo real. Extrae razon_social, cuit, y demás campos del comprobante — ver detalle en el propio archivo de la función antes de asumir qué campos devuelve.
+- OCR de comprobantes: Edge Function `ocr-comprobante`, llama a la API de Anthropic (modelo claude-sonnet) en tiempo real. Extrae razon_social, cuit, y demás campos del comprobante — ver detalle en el propio archivo de la función antes de asumir qué campos devuelve. Es la de GASTOS y no se toca.
+- OCR de remitos/facturas de materia prima: Edge Function `ocr-materia-prima`, SEPARADA de `ocr-comprobante`. Devuelve encabezado + array `items` con descripcion, marca, unidad_medida, cantidad_bultos, contenido_por_bulto, cantidad_total. NO devuelve lotes ni importes, a propósito.
 - Hosting: GitHub Pages (repo: https://github.com/cucuruchosnuss-gastos/seis-destinos)
 
 ## Base de datos central (nuss-central)
@@ -38,6 +39,7 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
   - `caja_raiz` (boolean): marca a la única persona habilitada para registrar ingresos externos a Caja (hoy Pablo Usabarrena) — usado por `registrar_ingreso_externo_caja`.
   - `contacto_emergencia_*`: carga manual únicamente, Naaloo no lo trae.
 - `empleado_modulos`: id, empleado_id, modulo, habilitado, otorgado_por, otorgado_en. Pendiente conocido: el dashboard todavía filtra el tile de cada módulo por `rol_app` (soloAdmin), no consulta esta tabla.
+- Convención de nombres (ya existente, explícita porque confunde): `modulos.clave` / `empleado_modulos.modulo` / `MODULOS[].clave` de dashboard.html usan GUIÓN MEDIO (`'cuentas-corrientes'`, `'materia-prima'`); `empleado_tareas.modulo` usa GUIÓN BAJO (`'cuentas_corrientes'`). Son namespaces distintos, no mezclar.
 - `solicitudes_acceso`: id, nombre, apellido, email, cuil, estado, fecha_solicitud, usuario_id, fecha_nacimiento, telefono, tuvo_match
 
 **Gastos**
@@ -60,16 +62,32 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - `caja_solicitudes_movimiento`: id, origen_empleado_id, destino_empleado_id, monto, moneda, medio_pago, fecha, descripcion, estado, creado_por, motivo_rechazo, respondido_por, respondido_en, created_at, cuenta_origen_id, cuenta_destino_id
   - Regla de negocio: transferencias entre personas requieren que al menos una de las dos partes sea `super_admin`.
 
-**Materia Prima** (esquema creado y con RLS, implementación de UI todavía pendiente — no es "planificado" a secas, ya tiene base de datos real)
-- `insumos`: id, nombre, unidad_medida, unidad_negocio_id, activo, created_at
-- `materia_prima_ingresos`: id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, empleado_id, created_at
-- `materia_prima_items`: id, ingreso_id, insumo_id, cantidad, unidad_medida, created_at
+**Materia Prima / Insumos** (esquema completo con RLS. Módulo de INGRESO construido en etapa 1: solo listado de ingresos, lectura. El stock y la administración del catálogo se mudan a un módulo aparte, todavía no construido.)
+- `insumos`: id, nombre, marca, unidad_medida, tipo, activo, estado_alta, created_at. CATÁLOGO ÚNICO COMPARTIDO por las 4 unidades de negocio — NO tiene unidad_negocio_id (se eliminó a propósito).
+  - `tipo`: `'materia_prima'` (exige lote) | `'insumo'` (no lleva lote). Materia prima es lo que entra a la receta (harina, azúcar, colorante, grasa, lecitina, fécula, cacao, esencias, bicarbonato); insumo es lo auxiliar (cajas, bolsas, limpieza, repuestos).
+  - `estado_alta`: `'activo'` | `'pendiente_revision'`. Los productos creados al vuelo durante una carga entran como `'pendiente_revision'`.
+  - Índice único: `(lower(nombre), lower(coalesce(marca,'')))`.
+  - Los insumos NO se borran nunca (romperían la trazabilidad histórica): se desactivan con `activo=false`.
+- `materia_prima_ingresos`: id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, empleado_id, created_at.
+  - `tipo_doc`: `'remito'` | `'factura_a'` | `'factura_x'` | `'sin_comprobante'`
+  - `remito_vinculado_id`: autorreferencia. Cuando una factura corresponde a un remito ya cargado, apunta a ese remito y NO vuelve a sumar stock (evita duplicar cantidades cuando llegan los dos documentos por la misma mercadería).
+- `materia_prima_items`: id, ingreso_id, insumo_id, cantidad, lote, lote_ilegible, ficha_tecnica_url, foto_lote_url, cantidad_bultos, contenido_por_bulto, created_at. NO tiene unidad_medida (se eliminó: la unidad vive solo en el catálogo, para no sumar kg con bolsas).
+  - `cantidad` siempre está en la unidad base del catálogo.
+  - `cantidad_bultos` / `contenido_por_bulto`: presentación opcional ("200 bolsas × 25 kg"). CHECK `chk_presentacion_coherente`: si están cargados, `cantidad` debe ser igual a `cantidad_bultos * contenido_por_bulto`.
+  - `lote`: se tipea SIEMPRE a mano, nunca sale del OCR (los lotes no vienen en el remito, están en la etiqueta del envase).
+  - `lote_ilegible`: para etiquetas rotas o borrosas. CHECK `chk_lote_ilegible_sin_lote`: no puede estar en true y tener lote a la vez.
+  - `ficha_tecnica_url` y `foto_lote_url` son adjuntos SEPARADOS y opcionales.
+- Trigger `trg_validar_item_materia_prima` → `fn_validar_item_materia_prima()` (SECURITY DEFINER): si el insumo es `tipo='materia_prima'`, exige lote cargado o `lote_ilegible=true`. Se valida solo al insertar/actualizar el ítem: si después alguien cambia el tipo de un insumo del catálogo, los ítems viejos no se re-validan.
+- Vistas (ambas con `security_invoker=true`):
+  - `v_stock_insumos` (insumo_id, insumo_nombre, marca, unidad_medida, unidad_negocio_id, cantidad_total) — excluye ingresos con `remito_vinculado_id` no nulo para no duplicar.
+  - `v_stock_insumos_presentacion` — lo mismo + contenido_por_bulto, bultos.
+- Decisión de diseño explícita: el módulo de Materia Prima NO captura precios, importes, IVA ni moneda, y NO toca gastos ni caja. Solo cantidades. Está excluido deliberadamente en esta etapa.
 
 ### Vistas
 - `v_caja_saldos` (empleado_id, moneda, saldo), `v_caja_saldos_cuenta` (cuenta_id, saldo), `v_caja_saldos_medio` (empleado_id, moneda, medio_pago, saldo)
 - `v_saldo_proveedor` (proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible) — hace `FULL OUTER JOIN` entre facturas pendientes y créditos disponibles, para que un proveedor con solo crédito (sin deuda) también aparezca.
 - `v_cuenta_corriente_movimientos` (proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado) — `saldo_acumulado` es un `SUM() OVER (PARTITION BY ... ORDER BY fecha)`, saldo corrido cronológico, no depende de qué filtro de fecha esté aplicado en pantalla.
-- `v_stock_insumos` (insumo_id, insumo_nombre, unidad_medida, unidad_negocio_id, cantidad_total)
+- `v_stock_insumos` y `v_stock_insumos_presentacion` — ver detalle en la sección **Materia Prima / Insumos** de arriba (ambas con `security_invoker=true`, excluyen ingresos con `remito_vinculado_id` no nulo).
 
 ### RPCs (verificadas contra information_schema — 31 en total, todas SECURITY DEFINER, re-verifican rol_app server-side salvo que se indique lo contrario. Eran 32 en la auditoría del 18/07/2026; se eliminó `rechazar_solicitud_acceso` — versión vieja que no borraba la cuenta de Auth huérfana al rechazar, reemplazada por la Edge Function `rechazar-solicitud-acceso`)
 
@@ -105,9 +123,10 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 3. **Cuentas Corrientes** (`modulos/cuentas-corrientes.html`, soloAdmin): saldo por proveedor (deuda o crédito, nunca ambos mostrados a la vez — prioridad a la deuda), historial de facturas, registro de pagos con sugerencia FIFO editable, aplicación manual de créditos a favor, aprobación de proveedores nuevos, ver/editar/eliminar una factura (eliminar = `anular_factura_pendiente`, nunca un DELETE real)
 4. **Accesos** (`modulos/accesos.html`, soloAdmin): aprobación de solicitudes de registro y gestión de roles/módulos por usuario
 5. **Empleados** (`modulos/empleados.html`, soloAdmin): directorio agrupado por unidad de negocio, ficha con datos de Naaloo, importación de Excel de Naaloo
+6. **Insumos — Materia Prima** (`modulos/materia-prima.html`, tile "Insumos", clave `materia-prima`): etapa 1 construida — pantallas de LECTURA únicamente (listado de ingresos con detalle en modal, catálogo solo lectura, stock por unidad con desglose por presentación). Sin precios ni importes por decisión de diseño (ver sección de tablas).
 
 ### Planificados
-1. **Materia Prima**: esquema de base de datos ya creado (`insumos`, `materia_prima_ingresos`, `materia_prima_items`, con RLS), falta construir la UI del módulo
+1. **Materia Prima — etapas siguientes**: etapa 2 = wizard de carga de ingresos (con OCR vía `ocr-materia-prima`); etapa 3 = alta/edición del catálogo de insumos. El stock y la administración del catálogo se mudan a un módulo aparte, todavía no construido.
 2. Producción (futuro)
 3. Salamasa (futuro)
 4. Mantenimiento de máquinas (futuro)
@@ -123,12 +142,13 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
   - Empleados: `--violeta` (#6E56CF / suave #F1EDFC / oscuro #5B45AD)
   - Caja: `--amarillo` (#C99A2E / suave #FBF3E0 / oscuro #8C6A1A)
   - Cuentas Corrientes: `--turquesa` (#3FBFAE / suave #E8FBF7 / oscuro #1E8C7C)
-- Rediseño en curso: se está adoptando un lenguaje visual más redondeado/con tarjetas (headers en tarjeta blanca propia, banners con gradiente, chips de color) módulo por módulo, vía mockups de Claude Design revisados antes de implementar. Cuentas Corrientes y Caja ya lo tienen; Gastos/Empleados/Accesos quedan con el estilo anterior hasta que se rediseñen (decisión: Empleados y Accesos NO se van a rediseñar, están bien como están y son los menos usados).
+  - Insumos (Materia Prima): `--marron` (#A8601F / suave #F7EDE1 / oscuro #7A4315) — definidas en el `:root` de `css/main.css` (mismo precedente que `--rojo`/`--violeta`/`--amarillo`; `--turquesa` es la excepción, vive local en dashboard.html y cuentas-corrientes.html)
+- Rediseño en curso: se está adoptando un lenguaje visual más redondeado/con tarjetas (headers en tarjeta blanca propia, banners con gradiente, chips de color) módulo por módulo, vía mockups de Claude Design revisados antes de implementar. Cuentas Corrientes y Caja ya lo tienen, e Insumos (materia-prima) nació directamente con este lenguaje; Gastos/Empleados/Accesos quedan con el estilo anterior hasta que se rediseñen (decisión: Empleados y Accesos NO se van a rediseñar, están bien como están y son los menos usados).
 
 ## Seguridad
 - RLS activado en las 20 tablas de `public` (verificado).
 - Pendiente, sin urgencia (que ningún admin lo olvide): `empleados` y `cuentas_caja` se pueden leer completos (incluido CUIL, teléfono, fecha de nacimiento, domicilio en el caso de `empleados`) por cualquier usuario logueado, no solo por un admin. Requiere crear una vista angosta (`v_empleados_publico` con solo los campos no sensibles) para los selectores que hoy dependen de esto (ej. selector de empleado en el wizard de Gastos) antes de poder cerrar el acceso a la tabla completa.
-- CORS de las Edge Functions usa `Access-Control-Allow-Origin: '*'` (default del scaffolding de Supabase) — no es una puerta abierta real porque cada función valida el token de sesión igual, pero si se quiere cerrar del todo, cambiar a `https://cucuruchosnuss-gastos.github.io` en las 3 funciones.
+- CORS de las Edge Functions usa `Access-Control-Allow-Origin: '*'` (default del scaffolding de Supabase) — no es una puerta abierta real porque cada función valida el token de sesión igual, pero si se quiere cerrar del todo, cambiar a `https://cucuruchosnuss-gastos.github.io` en las 4 funciones (`ocr-comprobante`, `ocr-materia-prima`, `crear-solicitud-acceso`, `rechazar-solicitud-acceso`).
 
 ## Aprendizajes clave (bugs recurrentes ya resueltos — no repetirlos)
 - **`hidden` de HTML puede quedar pisado por una regla CSS con más especificidad** (ej. `#vista-lista { display: flex }` sin `:not([hidden])`) — pasó una vez, causó que dos pantallas se vieran superpuestas. Auditar todo el archivo por el mismo patrón, no parchear un solo caso.
