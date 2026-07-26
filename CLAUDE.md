@@ -32,17 +32,17 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 
 **Empleados / Accesos**
 - `empleados`: id, nombre, unidad_negocio_id, rol, cuil, activo, created_at, tipo, auth_user_id, rol_app, origen, fecha_nacimiento, telefono, email, domicilio, legajo, fecha_alta, contacto_emergencia_nombre, contacto_emergencia_telefono, caja_raiz
-  - `rol_app`: permiso dentro de la app (`super_admin` / `admin` / `usuario`). No confundir con `rol`.
+  - `rol_app`: permiso dentro de la app — solo `super_admin` / `usuario` (el valor `admin` ya no existe, ver sección Sistema de permisos). No confundir con `rol`.
   - `rol`: puesto de RRHH (viene de Naaloo — Categoría + Subcategoría concatenadas, ej "Fuera de convenio · Categoría I").
-  - `tipo`: `naaloo` / `admin` — bucket usado por el selector de empleados de Gastos, no tocar sin revisar ese uso.
+  - `tipo`: `naaloo` / `admin` / `empresa` — bucket usado por el selector de empleados de Gastos, no tocar sin revisar ese uso. `'empresa'` identifica al empleado ficticio de la Cuenta de Empresa (activo=false, sin auth_user_id, unidad_negocio_id null — ver sección Sistema de permisos).
   - `origen`: `naaloo` (importado desde Excel) / `app_registro` (creado por auto-registro sin match de CUIL).
-  - `caja_raiz` (boolean): marca a la única persona habilitada para registrar ingresos externos a Caja (hoy Pablo Usabarrena) — usado por `registrar_ingreso_externo_caja`.
+  - `caja_raiz` (boolean): LEGADO — columna sin uso desde la migración de permisos de julio 2026; el control de ingresos externos pasó a la tarea `caja:ingreso_externo`. Ningún código la lee (queda mencionada en algún select sin efecto); pendiente de drop en la limpieza final.
   - `contacto_emergencia_*`: carga manual únicamente, Naaloo no lo trae.
-- `empleado_modulos`: id, empleado_id, modulo, habilitado, otorgado_por, otorgado_en. El dashboard SÍ la consulta para los no-admin (dashboard.html ~línea 419) y filtra los tiles con `esAdmin || misModulos.includes(modulo.clave)`; admin/super_admin ven todos los módulos que no son soloAdmin/soloSuperAdmin sin pasar por esta tabla.
+- `empleado_modulos`: id, empleado_id, modulo, habilitado, otorgado_por, otorgado_en. El dashboard SÍ la consulta (dashboard.html ~línea 419) y filtra los tiles con `esAdmin || misModulos.includes(modulo.clave)` — la variable del código se sigue llamando `esAdmin`, pero con el rol `admin` muerto equivale a super_admin; los super_admin ven todos los módulos sin pasar por esta tabla.
 - `empleado_tareas`: id, empleado_id, modulo, tarea, habilitado, alcance (jsonb), más columnas de auditoría. Sistema de permisos granulares: el toggle de `empleado_modulos` decide si la persona VE el módulo; `empleado_tareas` decide qué puede HACER adentro. Las tareas son independientes entre sí.
   - `alcance` (jsonb): limita una tarea a unidades de negocio concretas — `{"todas": true}` o `{"unidades": [uuid, ...]}`.
   - Hoy la ÚNICA tarea con alcance es `empleados:ver_editar`. En accesos.html eso está hardcodeado en la constante `CLAVE_VER_EDITAR`, no como lista — si en el futuro otra tarea necesita alcance, hay que generalizar esa constante a un conjunto, no alcanza con agregarla al catálogo.
-  - El catálogo de tareas está hardcodeado en `CATALOGO_TAREAS` dentro de accesos.html (decisión explícita: no se lee de la base).
+  - El catálogo válido lo define el CHECK constraint `chk_tarea_valida` (17 tareas — lista completa con labels en la sección Sistema de permisos); en el frontend está hardcodeado en `CATALOGO_TAREAS` dentro de accesos.html (decisión explícita: no se lee de la base). Los dos tienen que mantenerse en sincronía a mano.
 - Convención de nombres (ya existente, explícita porque confunde): `modulos.clave` / `empleado_modulos.modulo` / `MODULOS[].clave` de dashboard.html usan GUIÓN MEDIO (`'cuentas-corrientes'`, `'materia-prima'`); `empleado_tareas.modulo` usa GUIÓN BAJO (`'cuentas_corrientes'`). Son namespaces distintos, no mezclar.
 - `solicitudes_acceso`: id, nombre, apellido, email, cuil, estado, fecha_solicitud, usuario_id, fecha_nacimiento, telefono, tuvo_match
 
@@ -58,13 +58,13 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - `aplicaciones_pago`: id, gasto_id, factura_pendiente_id, monto_aplicado, created_at — un pago (una fila de `gastos`) puede repartirse entre varias facturas.
 - `creditos_proveedor`: id, proveedor_id, unidad_negocio_id, moneda, monto_original, monto_disponible, origen_gasto_id, estado (`'disponible'`/`'agotado'`), created_at — saldo a favor por sobrepago.
 - `aplicaciones_credito`: id, credito_id, factura_pendiente_id, monto_aplicado, created_at — un crédito puede aplicarse a más de una factura futura.
-- Todas con RLS: solo `SELECT` para `admin`/`super_admin`, sin políticas de escritura — toda escritura pasa por las RPCs `SECURITY DEFINER` de abajo.
+- Todas con RLS, sin políticas de escritura — toda escritura pasa por las RPCs `SECURITY DEFINER` de abajo. (La descripción vieja "SELECT solo para admin/super_admin" es pre-migración de permisos; hoy los gates van por tareas — re-verificar el detalle de las policies en la próxima auditoría.)
 
 **Caja**
 - `cuentas_caja`: id, empleado_id, nombre, medio, moneda, favorita, activa, created_at
 - `caja_movimientos`: id, empleado_id, tipo, monto, moneda, medio_pago, gasto_id, fecha, descripcion, creado_por, created_at, contraparte_empleado_id, cuenta_id
 - `caja_solicitudes_movimiento`: id, origen_empleado_id, destino_empleado_id, monto, moneda, medio_pago, fecha, descripcion, estado, creado_por, motivo_rechazo, respondido_por, respondido_en, created_at, cuenta_origen_id, cuenta_destino_id
-  - Regla de negocio: transferencias entre personas requieren que al menos una de las dos partes sea `super_admin`.
+  - Regla de negocio: transferencias entre personas requieren que al menos una de las dos partes sea `super_admin`. EXCEPCIÓN: las que involucran a la Cuenta de Empresa no exigen super_admin de contraparte, y cualquier super_admin puede aceptarlas en su nombre (auto-aceptación permitida) — ver sección Sistema de permisos.
 
 **Materia Prima / Insumos** (esquema completo con RLS. Módulo de INGRESO construido en etapa 1: solo listado de ingresos, lectura. El stock y la administración del catálogo se mudan a un módulo aparte, todavía no construido.)
 - `insumos`: id, nombre, marca, unidad_medida, tipo, activo, estado_alta, created_at. CATÁLOGO ÚNICO COMPARTIDO por las 4 unidades de negocio — NO tiene unidad_negocio_id (se eliminó a propósito).
@@ -93,9 +93,11 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - `v_cuenta_corriente_movimientos` (proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado) — `saldo_acumulado` es un `SUM() OVER (PARTITION BY ... ORDER BY fecha)`, saldo corrido cronológico, no depende de qué filtro de fecha esté aplicado en pantalla.
 - `v_stock_insumos` y `v_stock_insumos_presentacion` — ver detalle en la sección **Materia Prima / Insumos** de arriba (ambas con `security_invoker=true`, excluyen ingresos con `remito_vinculado_id` no nulo).
 
-### RPCs (verificadas contra information_schema — 31 en total, todas SECURITY DEFINER, re-verifican rol_app server-side salvo que se indique lo contrario. Eran 32 en la auditoría del 18/07/2026; se eliminó `rechazar_solicitud_acceso` — versión vieja que no borraba la cuenta de Auth huérfana al rechazar, reemplazada por la Edge Function `rechazar-solicitud-acceso`)
+### RPCs (todas SECURITY DEFINER; desde la migración de permisos de julio 2026 re-verifican permisos server-side con `tiene_tarea()`/`tiene_tarea_alcance()` — NUNCA gatear por rol_app, salvo el bypass de super_admin que ya viene dentro de esos helpers. El conteo "31" era de la auditoría del 18/07/2026: después se agregaron al menos `tiene_tarea` y `tiene_tarea_alcance` y cambiaron firmas — re-verificar contra information_schema en la próxima auditoría. De esa auditoría vieja: se eliminó `rechazar_solicitud_acceso`, versión vieja que no borraba la cuenta de Auth huérfana al rechazar, reemplazada por la Edge Function `rechazar-solicitud-acceso`)
 
-**Accesos / Registro**: `aprobar_solicitud_acceso`, `actualizar_permisos_empleado`, `obtener_mi_solicitud_acceso`, `buscar_empleado_por_cuil` (el rechazo de una solicitud NO es una RPC — es la Edge Function `rechazar-solicitud-acceso`, ver sección Login y roles)
+**Permisos**: `tiene_tarea(modulo, tarea)` y `tiene_tarea_alcance(modulo, tarea, unidad_negocio_id)` — los helpers estándar que usan todas las RPCs y policies RLS, con bypass de super_admin incorporado (ver sección Sistema de permisos).
+
+**Accesos / Registro**: `aprobar_solicitud_acceso(p_solicitud_id uuid, p_modulos text[], p_tareas jsonb, p_unidad_negocio_id uuid)` y `actualizar_permisos_empleado(p_empleado_id uuid, p_modulos text[], p_tareas jsonb)` — firmas nuevas SIN parámetro de rol; `p_tareas` con semántica de REEMPLAZO TOTAL (ver sección Sistema de permisos) —, `obtener_mi_solicitud_acceso`, `buscar_empleado_por_cuil` (el rechazo de una solicitud NO es una RPC — es la Edge Function `rechazar-solicitud-acceso`, ver sección Login y roles)
 
 **Empleados**: `completar_datos_empleado`, `importar_empleados_naaloo` (regla: `unidad_negocio_id` se asigna solo en el alta/INSERT, nunca se pisa en una reimportación — para no revertir correcciones manuales, ej. Taller viene agrupado con Cucuruchos Nuss en el Excel de Naaloo), `actualizar_contacto_emergencia`
 
@@ -103,7 +105,7 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 
 **Cuentas Corrientes**: `crear_proveedor_pendiente`, `aprobar_proveedor`, `rechazar_proveedor`, `asignar_proveedor_factura_pendiente` (para facturas legado sin proveedor), `sugerir_facturas_fifo` (devuelve `factura_pendiente_id, fecha_factura, numero_comprobante, saldo_pendiente, monto_a_aplicar` — nombres exactos, no adivinar variantes), `registrar_pago_proveedor` (recibe `p_aplicaciones jsonb` como array de `{factura_pendiente_id, monto_aplicado}` — la clave es literalmente `monto_aplicado`, no `monto`; si la suma aplicada es menor al monto pagado, el resto se registra como crédito automáticamente; la categoría del gasto resultante es la categoría real si todas las facturas del pago comparten la misma, o la categoría genérica "Pago a Cta. Cte. Proveedor" si son mixtas), `aplicar_credito_a_factura` (siempre manual, nunca automático — decisión de diseño explícita)
 
-**Caja**: `crear_cuenta_caja`, `desactivar_cuenta_caja`, `renombrar_cuenta_caja`, `marcar_cuenta_favorita_caja`, `registrar_ingreso_propio_caja`, `registrar_ingreso_externo_caja` (solo para quien tiene `caja_raiz=true`), `registrar_retiro_caja`, `registrar_traspaso_cuenta_caja`, `crear_solicitud_movimiento_caja`, `responder_solicitud_movimiento_caja`, `cancelar_solicitud_movimiento_caja`, `fn_sincronizar_caja_gasto` (trigger — descuenta Caja automáticamente al insertar un `gasto`; con `medio_pago='cheque'` y `cuenta_id=null` no descuenta nada, es comportamiento esperado, no hay circuito de cheques todavía)
+**Caja**: `crear_cuenta_caja`, `desactivar_cuenta_caja`, `renombrar_cuenta_caja`, `marcar_cuenta_favorita_caja`, `registrar_ingreso_propio_caja`, `registrar_ingreso_externo_caja` (gateada por la tarea `caja:ingreso_externo` con bypass de super_admin — ya NO usa `caja_raiz`; los ingresos van a las cuentas de la Cuenta de Empresa), `registrar_retiro_caja`, `registrar_traspaso_cuenta_caja`, `crear_solicitud_movimiento_caja`, `responder_solicitud_movimiento_caja`, `cancelar_solicitud_movimiento_caja`, `fn_sincronizar_caja_gasto` (trigger — descuenta Caja automáticamente al insertar un `gasto`; con `medio_pago='cheque'` y `cuenta_id=null` no descuenta nada, es comportamiento esperado, no hay circuito de cheques todavía)
 
 ## Base vieja (solo lectura, referencia)
 - Proyecto: oxcypiztfoxxxhtuqmrd
@@ -114,19 +116,59 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - Supabase Auth (email + contraseña)
 - Auto-registro (`registro.html`): busca CUIL con `buscar_empleado_por_cuil`; si matchea, pre-completa datos; si no, completa a mano. Crea la cuenta de Auth y una fila en `solicitudes_acceso` pendiente — todo vía Edge Function `crear-solicitud-acceso` (service role, atómico con rollback), nunca insert directo desde el cliente.
 - Rechazo de una solicitud: Edge Function `rechazar-solicitud-acceso` (no es una RPC de Postgres) — además de marcar la solicitud como rechazada, borra la cuenta de Auth huérfana asociada para que la persona pueda volver a registrarse con el mismo email. Reemplazó a una RPC vieja del mismo nombre (con guión bajo) que no hacía ese borrado — esa RPC ya no existe, fue eliminada con `DROP FUNCTION`.
-- Aprobación de solicitudes y edición de permisos/roles de otros usuarios: **exclusivo de `super_admin`** — `admin` ya no tiene esta capacidad (cambio de regla de negocio). `modulos/accesos.html` es ahora soloSuperAdmin.
-- Roles (`empleados.rol_app`): `super_admin` (todo, incluida asignación de `admin`, aprobación de accesos y edición de permisos; `admin` se asigna solo por SQL directo, nunca desde ninguna UI), `admin` (hoy solo tiene la visibilidad ampliada de datos que ya tenía en otros módulos, ej. `esVistaCompleta()` en Gastos — ya no gestiona accesos), `usuario` (carga)
-- `caja_raiz` es un flag aparte de `rol_app` — hoy solo Pablo Usabarrena lo tiene, es quien puede registrar ingresos externos a Caja.
+- Aprobación de solicitudes y edición de permisos/roles de otros usuarios: **exclusivo de `super_admin`**. `modulos/accesos.html` es soloSuperAdmin.
+- Roles (`empleados.rol_app`): solo DOS valores — `super_admin` (control total, bypass automático de todos los chequeos; se asigna solo por SQL directo, nunca desde ninguna UI) y `usuario` (lo que puede hacer lo definen sus tareas en `empleado_tareas`). El rol `admin` YA NO EXISTE — ver sección Sistema de permisos.
 - Tablets de fábrica: cuenta genérica + PIN de turno por encargado (a implementar)
+
+## Sistema de permisos (migrado — julio 2026)
+
+REGLA CENTRAL: el rol `admin` YA NO EXISTE. Solo hay dos valores de `empleados.rol_app`: `super_admin` (control total, bypass automático de todos los chequeos) y `usuario`. NUNCA escribir código nuevo que chequee `rol_app IN ('admin', ...)` — ese patrón está muerto.
+
+Los permisos finos son TAREAS granulares en la tabla `empleado_tareas` (empleado_id + modulo + tarea + habilitado + alcance jsonb). El catálogo válido lo define el CHECK constraint `chk_tarea_valida` — 17 tareas hoy, listadas abajo. Todas las tareas son independientes entre sí — no hay jerarquías.
+
+Catálogo completo de tareas (claves exactas `modulo:tarea` — no inventar claves nuevas ni duplicar una existente con otro nombre; labels según `CATALOGO_TAREAS` de accesos.html):
+- `gastos:ver_exportar` — Ver todos los gastos de la empresa + exportar Excel (incluye cargar gastos a nombre de otro)
+- `gastos:editar_anular` — Editar y anular cualquier gasto
+- `caja:ver_listado` — Ver el listado completo de cajas de la empresa
+- `caja:retiros_todos` — Ver los retiros personales de todos
+- `caja:movimientos_todos` — Ver todos los movimientos de todas las cuentas
+- `caja:ingreso_externo` — Cargar ingresos externos (cuenta Empresa)
+- `empleados:ver_editar` — Ver y editar empleados (la ÚNICA tarea con alcance por unidad)
+- `empleados:importar_naaloo` — Importar/actualizar empleados desde Naaloo
+- `empleados:reasignar_unidad` — Reasignar empleados entre unidades de negocio
+- `cuentas_corrientes:ver_todo` — Ver proveedores, saldos y facturas de toda la empresa
+- `cuentas_corrientes:alta_proveedor` — Dar de alta proveedores directamente
+- `cuentas_corrientes:aprobar_rechazar_proveedor` — Aprobar/rechazar proveedores pendientes
+- `cuentas_corrientes:registrar_pago` — Registrar pagos a proveedores
+- `cuentas_corrientes:aplicar_credito` — Aplicar créditos a favor a facturas
+- `cuentas_corrientes:anular_factura` — Anular facturas pendientes
+- `cuentas_corrientes:asignar_proveedor_legado` — Asignar proveedor a facturas sin vincular
+- `facturas_pendientes:editar_interes` — Editar facturas pendientes y agregar intereses (válida desde Gastos y desde Cuentas Corrientes)
+
+Chequeo server-side (SIEMPRE en RPCs SECURITY DEFINER y policies RLS):
+- `tiene_tarea(modulo, tarea)` — el estándar, con bypass de super_admin
+- `tiene_tarea_alcance(modulo, tarea, unidad_negocio_id)` — para tareas con alcance por unidad (hoy solo `empleados:ver_editar`; alcance = `{"todas": true}` o `{"unidades": ["uuid", ...]}`)
+
+Chequeo frontend (patrón en los 5 módulos migrados, copiar de gastos.html): al init se consulta `empleado_tareas` filtrando por módulo(s), se guarda un Set con claves `'modulo:tarea'`, y un helper `tieneTarea(modulo, tarea)` devuelve true si `rol_app === 'super_admin'` o el Set contiene la clave. El frontend solo oculta UI — la barrera real es siempre server-side.
+
+Gestión: pantalla de Accesos (solo super_admin) con checkboxes por tarea. RPCs con firma nueva (SIN parámetro de rol):
+- `actualizar_permisos_empleado(p_empleado_id uuid, p_modulos text[], p_tareas jsonb)`
+- `aprobar_solicitud_acceso(p_solicitud_id uuid, p_modulos text[], p_tareas jsonb, p_unidad_negocio_id uuid)`
+
+`p_tareas`: `[{"modulo":"...","tarea":"...","alcance":null|{...}}, ...]` con semántica de REEMPLAZO TOTAL (lo no incluido se apaga).
+
+Cuenta de Empresa (Caja): empleado ficticio identificado por `tipo='empresa'` (activo=false, sin auth_user_id, unidad_negocio_id null). Sus `cuentas_caja` se gestionan por super_admin; los ingresos externos van a sus cuentas vía la tarea `caja:ingreso_externo` (CON bypass de super_admin). Las transferencias que involucran a Empresa no exigen super_admin de contraparte, y cualquier super_admin puede aceptarlas en su nombre (auto-aceptación permitida).
+
+Para módulos NUEVOS (ej. Materia Prima): definir sus tareas con Facu, agregarlas al CHECK constraint `chk_tarea_valida` (DROP + ADD, no se puede alterar in-place), al catálogo hardcodeado `CATALOGO_TAREAS` de accesos.html, y gatear RPCs/RLS con `tiene_tarea()` — nunca con `rol_app`.
 
 ## Módulos
 
 ### Existentes
 1. **Gastos** (`modulos/gastos.html`): wizard de carga con OCR (incluye CUIT), vínculo a vehículo y/o unidad de negocio, selector de proveedor con matching automático por CUIT/razón social normalizada, envío a "pendiente de pago" (ver Cuentas Corrientes)
 2. **Caja** (`modulos/caja.html`): cuentas de efectivo/banco por persona, ingresos/egresos/traspasos/retiros, transferencias entre personas (requieren al menos un `super_admin` en la operación), vista "Retiros socios" y "Todos los movimientos" (solo `super_admin`)
-3. **Cuentas Corrientes** (`modulos/cuentas-corrientes.html`, soloAdmin): saldo por proveedor (deuda o crédito, nunca ambos mostrados a la vez — prioridad a la deuda), historial de facturas, registro de pagos con sugerencia FIFO editable, aplicación manual de créditos a favor, aprobación de proveedores nuevos, ver/editar/eliminar una factura (eliminar = `anular_factura_pendiente`, nunca un DELETE real)
-4. **Accesos** (`modulos/accesos.html`, soloAdmin): aprobación de solicitudes de registro y gestión de roles/módulos por usuario
-5. **Empleados** (`modulos/empleados.html`, soloAdmin): directorio agrupado por unidad de negocio, ficha con datos de Naaloo, importación de Excel de Naaloo
+3. **Cuentas Corrientes** (`modulos/cuentas-corrientes.html`): saldo por proveedor (deuda o crédito, nunca ambos mostrados a la vez — prioridad a la deuda), historial de facturas, registro de pagos con sugerencia FIFO editable, aplicación manual de créditos a favor, aprobación de proveedores nuevos, ver/editar/eliminar una factura (eliminar = `anular_factura_pendiente`, nunca un DELETE real)
+4. **Accesos** (`modulos/accesos.html`, soloSuperAdmin): aprobación de solicitudes de registro y gestión de módulos + tareas granulares por usuario
+5. **Empleados** (`modulos/empleados.html`): directorio agrupado por unidad de negocio, ficha con datos de Naaloo, importación de Excel de Naaloo
 6. **Insumos — Materia Prima** (`modulos/materia-prima.html`, tile "Insumos", clave `materia-prima`): etapa 1 construida — pantallas de LECTURA únicamente (listado de ingresos con detalle en modal, catálogo solo lectura, stock por unidad con desglose por presentación). Sin precios ni importes por decisión de diseño (ver sección de tablas).
 
 ### Planificados
@@ -158,6 +200,8 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - **`hidden` de HTML puede quedar pisado por una regla CSS con más especificidad** (ej. `#vista-lista { display: flex }` sin `:not([hidden])`) — pasó una vez, causó que dos pantallas se vieran superpuestas. Auditar todo el archivo por el mismo patrón, no parchear un solo caso.
 - **Formato de número argentino (punto de miles, coma decimal) vs. el formato con punto decimal que usa `toFixed()`/JS nativo** — mismo bug apareció dos veces en dos lugares distintos del código (un valor formateado se re-parseaba mal, terminaba en `NaN`/`null`). Regla: el número canónico vive como valor JS plano, se formatea solo para mostrar, nunca se re-parsea un string ya formateado como si fuera la fuente de verdad.
 - **Nombres de columnas/parámetros de un RPC: nunca adivinar variantes.** Cuando no se tiene el cuerpo real de la función a mano, preguntar o verificar antes de escribir código defensivo con múltiples nombres posibles — cuesta más tiempo debuggear después que preguntar antes.
+- **`CREATE OR REPLACE FUNCTION` con firma distinta NO reemplaza — crea una sobrecarga duplicada** que rompe las llamadas por ambigüedad (costó un bug de producción). Si cambia la firma: `DROP FUNCTION` primero, después `CREATE`.
+- **Toda FK nueva hacia `empleados` desde una tabla que ya tiene otra FK a empleados rompe los embeds de PostgREST por ambigüedad** — `gastos.anulado_por` se dejó SIN FK a propósito por esto.
 - Verificación de cada commit: bajar el `.patch` real de GitHub y leerlo, nunca confiar en el resumen que da Claude Code de lo que hizo.
 
 ## Cómo trabajar
@@ -169,5 +213,5 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - No tocar lo que funciona
 - Cualquier herramienta/conector de Supabase (lectura o escritura) requiere aprobación manual de Facu en el momento — ninguna sesión de Claude ejecuta nada contra la base en vivo por su cuenta, ni siquiera un SELECT informativo.
 - SQL de escritura (DDL, RPCs, ALTER, políticas RLS): lo corre Facu a mano en el SQL Editor, con guards `IF NOT EXISTS`/`CREATE OR REPLACE`.
-- RPCs: convención `p_` en los parámetros, siempre `SECURITY DEFINER`, siempre re-verifican `rol_app` server-side (nunca confiar en que el frontend ya validó el rol)
+- RPCs: convención `p_` en los parámetros, siempre `SECURITY DEFINER`, siempre re-verifican permisos server-side con `tiene_tarea()`/`tiene_tarea_alcance()` (nunca confiar en que el frontend ya validó; nunca gatear por `rol_app` — ver sección Sistema de permisos)
 - Nunca exponer claves secretas en el código ni en commits — los secretos de las Edge Functions se leen con `Deno.env.get(...)`
