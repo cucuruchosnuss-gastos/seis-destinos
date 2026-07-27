@@ -1227,6 +1227,50 @@
       justify-content: center;
     }
     #modal-datos-bancarios[hidden], #modal-editar-bancarios[hidden] { display: none; }
+
+    /* Copiar / compartir datos bancarios (modal de solo lectura) */
+    .fila-dato-bancario {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .fila-dato-bancario__label { color: var(--color-texto-suave); font-size: 0.875rem; flex-shrink: 0; }
+    .fila-dato-bancario__derecha {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+      justify-content: flex-end;
+    }
+    .fila-dato-bancario__valor {
+      font-weight: 600;
+      text-align: right;
+      word-break: break-all;
+      min-width: 0;
+    }
+    .fila-dato-bancario__valor--vacio { font-weight: 500; color: var(--color-texto-suave); }
+    .btn-copiar-dato {
+      flex-shrink: 0;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 999px;
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-copiar-dato:hover { background: var(--amarillo-suave); color: var(--amarillo-oscuro); border-color: var(--amarillo); }
+    /* .btn de css/main.css trae display:inline-flex, que le gana al [hidden]
+       del user-agent (bug recurrente documentado en CLAUDE.md). caja.html no
+       tiene la regla global [hidden]{display:none!important} que sí tiene
+       cuentas-corrientes.html, así que este botón necesita su propia guarda. */
+    #btn-compartir-datos-bancarios[hidden] { display: none; }
     #modal-datos-bancarios__backdrop, #modal-editar-bancarios__backdrop {
       position: absolute;
       inset: 0;
@@ -1426,13 +1470,13 @@
     <div id="modal-datos-bancarios__panel">
       <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-datos-bancarios" title="Cerrar">✕</button>
       <h2 id="datos-bancarios-titulo">Datos bancarios</h2>
-      <div style="margin-top:1rem; display:flex; flex-direction:column; gap:0.75rem;">
-        <div style="display:flex; justify-content:space-between; gap:0.75rem;"><span style="color:var(--color-texto-suave); font-size:0.875rem;">CBU</span><span id="datos-bancarios-cbu" style="font-weight:600; text-align:right;"></span></div>
-        <div style="display:flex; justify-content:space-between; gap:0.75rem;"><span style="color:var(--color-texto-suave); font-size:0.875rem;">Alias</span><span id="datos-bancarios-alias" style="font-weight:600; text-align:right;"></span></div>
-        <div style="display:flex; justify-content:space-between; gap:0.75rem;"><span style="color:var(--color-texto-suave); font-size:0.875rem;">Número de cuenta</span><span id="datos-bancarios-numero" style="font-weight:600; text-align:right;"></span></div>
-      </div>
+      <!-- Las 3 filas se arman desde JS (ver abrirModalDatosBancarios): así el
+           botón "Copiar" de un campo sin cargar directamente no se renderiza,
+           en vez de existir escondido. -->
+      <div id="datos-bancarios-campos" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.75rem;"></div>
       <div class="modal-movimiento__acciones">
         <button type="button" class="btn btn--secundario" id="btn-ok-datos-bancarios">Cerrar</button>
+        <button type="button" class="btn btn--amarillo" id="btn-compartir-datos-bancarios">↗ Compartir</button>
       </div>
     </div>
   </div>
@@ -2650,17 +2694,125 @@
       })
     }
 
+    // Los 3 datos públicos de una cuenta, en el orden en que se muestran y se
+    // comparten. Una sola lista para el render, el copiado y el texto a
+    // compartir — así no se desincronizan los labels.
+    const CAMPOS_BANCARIOS = [
+      { clave: 'cbu',           label: 'CBU' },
+      { clave: 'alias',         label: 'Alias' },
+      { clave: 'numero_cuenta', label: 'Número de cuenta' },
+    ]
+
+    // Cuenta abierta en el modal de solo lectura — la necesita "Compartir",
+    // que se dispara después del render.
+    let cuentaBancariaAbierta = null
+
+    function hayDatosBancarios(c) {
+      return CAMPOS_BANCARIOS.some(campo => (c?.[campo.clave] || '').trim())
+    }
+
+    async function copiarAlPortapapeles(texto) {
+      try {
+        await navigator.clipboard.writeText(texto)
+        return true
+      } catch (err) {
+        // Navegador viejo, contexto no seguro o permiso denegado.
+        console.error('No se pudo copiar al portapapeles:', err)
+        return false
+      }
+    }
+
+    // Encabezado con la cuenta y su dueño + una línea por campo CARGADO.
+    // Nunca se incluye una línea de un campo vacío.
+    function textoCompartirBancarios(c) {
+      const duenio = estado.nombresEmpleados[c.empleado_id]
+        || (c.empleado_id === estado.idEmpresa ? 'Empresa' : '')
+      const encabezado = duenio ? `${c.nombre} (${duenio})` : c.nombre
+      const lineas = CAMPOS_BANCARIOS
+        .filter(campo => (c[campo.clave] || '').trim())
+        .map(campo => `${campo.label}: ${c[campo.clave].trim()}`)
+      return [encabezado, ...lineas].join('\n')
+    }
+
+    async function compartirDatosBancarios() {
+      const c = cuentaBancariaAbierta
+      if (!c || !hayDatosBancarios(c)) return
+      const texto = textoCompartirBancarios(c)
+
+      if (navigator.share) {
+        try {
+          await navigator.share({ text: texto })
+          return
+        } catch (err) {
+          // Abrió el menú de compartir y lo cerró: no falló nada, no
+          // corresponde ningún aviso.
+          if (err?.name === 'AbortError') return
+          // Cualquier otro error (share roto en este navegador, permisos,
+          // etc.) cae al fallback de copiar: que igual se lleve los datos.
+          console.error('navigator.share falló, se copia al portapapeles:', err)
+        }
+      }
+
+      if (await copiarAlPortapapeles(texto)) {
+        mostrarExito('Datos copiados — pegalos donde quieras compartirlos')
+      } else {
+        mostrarError('No se pudo compartir ni copiar. Copiá los datos a mano.')
+      }
+    }
+
     function abrirModalDatosBancarios(id) {
       const c = estado.cuentasPorId[id]
+      cuentaBancariaAbierta = c || null
       document.getElementById('datos-bancarios-titulo').textContent = c?.nombre || 'Datos bancarios'
-      document.getElementById('datos-bancarios-cbu').textContent = c?.cbu || 'No cargado'
-      document.getElementById('datos-bancarios-alias').textContent = c?.alias || 'No cargado'
-      document.getElementById('datos-bancarios-numero').textContent = c?.numero_cuenta || 'No cargado'
+
+      // Render por DOM (no innerHTML): los valores los tipea una persona, así
+      // que van por textContent y no hay que escaparlos a mano.
+      const cont = document.getElementById('datos-bancarios-campos')
+      cont.innerHTML = ''
+      CAMPOS_BANCARIOS.forEach(campo => {
+        const valor = (c?.[campo.clave] || '').trim()
+
+        const fila = document.createElement('div')
+        fila.className = 'fila-dato-bancario'
+
+        const label = document.createElement('span')
+        label.className = 'fila-dato-bancario__label'
+        label.textContent = campo.label
+
+        const derecha = document.createElement('div')
+        derecha.className = 'fila-dato-bancario__derecha'
+
+        const spanValor = document.createElement('span')
+        spanValor.className = 'fila-dato-bancario__valor' + (valor ? '' : ' fila-dato-bancario__valor--vacio')
+        spanValor.textContent = valor || 'No cargado'
+        derecha.appendChild(spanValor)
+
+        // Campo sin cargar: no hay nada que copiar, el botón ni se crea.
+        if (valor) {
+          const btn = document.createElement('button')
+          btn.type = 'button'
+          btn.className = 'btn-copiar-dato'
+          btn.textContent = 'Copiar'
+          btn.title = `Copiar ${campo.label}`
+          btn.addEventListener('click', async () => {
+            if (await copiarAlPortapapeles(valor)) mostrarExito(`${campo.label} copiado`)
+            else mostrarError('No se pudo copiar. Copialo a mano.')
+          })
+          derecha.appendChild(btn)
+        }
+
+        fila.append(label, derecha)
+        cont.appendChild(fila)
+      })
+
+      // Sin ningún dato cargado no hay nada que compartir.
+      document.getElementById('btn-compartir-datos-bancarios').hidden = !hayDatosBancarios(c)
       document.getElementById('modal-datos-bancarios').hidden = false
     }
 
     function cerrarModalDatosBancarios() {
       document.getElementById('modal-datos-bancarios').hidden = true
+      cuentaBancariaAbierta = null
     }
 
     document.getElementById('btn-directorio-atras').addEventListener('click', () => {
@@ -2673,6 +2825,7 @@
     })
     document.getElementById('btn-cerrar-datos-bancarios').addEventListener('click', cerrarModalDatosBancarios)
     document.getElementById('btn-ok-datos-bancarios').addEventListener('click', cerrarModalDatosBancarios)
+    document.getElementById('btn-compartir-datos-bancarios').addEventListener('click', compartirDatosBancarios)
     document.getElementById('modal-datos-bancarios__backdrop').addEventListener('click', cerrarModalDatosBancarios)
 
     // ── Modal: editar datos bancarios (CAMBIO 7) ────────────────────────────
