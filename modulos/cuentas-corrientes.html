@@ -536,6 +536,25 @@
     .chip-tipo-mov--credito_aplicado  { background: var(--violeta-suave); color: var(--violeta-oscuro); }
     .chip-tipo-mov--interes           { background: var(--bordo-suave); color: var(--bordo-oscuro); }
 
+    /* Estado de cobro de la factura (pendiente/parcial/pagada) — va al lado
+       de la referencia, en las dos pantallas (ficha e historial). El verde es
+       el mismo #1E8C4A de .punto-tipo-mov--pago. */
+    .badge-estado-factura {
+      display: inline-block;
+      padding: 0.125rem 0.4375rem;
+      border-radius: 999px;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-left: 0.375rem;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .badge-estado-factura--pendiente { background: var(--rojo-suave);     color: var(--rojo); }
+    .badge-estado-factura--parcial   { background: var(--amarillo-suave); color: var(--amarillo); }
+    .badge-estado-factura--pagada    { background: rgba(30,140,74,0.12);  color: #1E8C4A; }
+
     /* Historial de facturas — misma tarjeta, letra más chica para que
        entren más filas sin scrollear tanto. La ficha de proveedor
        (#lista-movimientos-ficha) no se toca, sigue con el tamaño de arriba. */
@@ -1077,6 +1096,9 @@
     const MEDIO_CUENTA_LABEL = { efectivo: 'Efectivo', banco: 'Banco' }
     const MEDIO_PAGO_A_MEDIO_CUENTA = { efectivo: 'efectivo', transferencia: 'banco' }
     const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado', interes: 'Interés' }
+    // Estados de facturas_pendientes que llevan badge. 'anulada' no está a
+    // propósito: esas facturas no aparecen en v_cuenta_corriente_movimientos.
+    const ESTADO_FACTURA_LABEL = { pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada' }
     const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']
 
     // Selector "Ordenar" de Movimientos (ficha) — se aplica del lado del
@@ -1103,6 +1125,10 @@
       listaSaldos: [],
       listaSinProveedor: [],
       listaHistorial: [],
+      // Mapa factura_pendiente_id -> estado, propio del Historial. Separado
+      // del de la ficha (estado.ficha.estadoPorFactura): son dos pantallas
+      // con ciclos de vida distintos.
+      estadoPorFacturaHistorial: {},
       historialCargadoUnaVez: false,
       ficha: null,        // { proveedorId, unidadId, nombre }
       fichaSaldos: [],     // filas de v_saldo_proveedor para este proveedor+unidad (todas las monedas)
@@ -1218,6 +1244,32 @@
 
     function nombreProveedor(id) {
       return estado.maestros.proveedores.find(p => p.id === id)?.razon_social || '(proveedor)'
+    }
+
+    // Badge de estado de cobro — compartido por la ficha y el historial, para
+    // no duplicar labels ni colores. Devuelve '' si no hay estado conocido
+    // (factura sin entrada en el mapa, o estado inesperado): sin dato no se
+    // inventa un cartel.
+    function badgeEstadoFactura(estadoFactura) {
+      const label = ESTADO_FACTURA_LABEL[estadoFactura]
+      if (!label) return ''
+      return `<span class="badge-estado-factura badge-estado-factura--${estadoFactura}">${label}</span>`
+    }
+
+    // Los ids se mandan en un GET (.in(...) va en la query string), así que
+    // una lista larga rompe el límite de largo de URL de PostgREST. El
+    // historial no tiene filtro de fecha por defecto y puede traer cientos de
+    // facturas — por eso se consulta en lotes.
+    async function cargarEstadosDeFacturas(ids) {
+      const TAMANO_LOTE = 150
+      const mapa = {}
+      for (let i = 0; i < ids.length; i += TAMANO_LOTE) {
+        const lote = ids.slice(i, i + TAMANO_LOTE)
+        const { data, error } = await supabase.from('facturas_pendientes').select('id, estado').in('id', lote)
+        if (error) { console.error(error); continue }
+        ;(data ?? []).forEach(f => { mapa[f.id] = f.estado })
+      }
+      return mapa
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1825,9 +1877,9 @@
       if (f.fechaHasta)  query = query.lte('fecha', f.fechaHasta)
 
       const { data, error } = await query
-      cargandoEl.hidden = true
 
       if (error) {
+        cargandoEl.hidden = true
         console.error(error)
         mostrarError('Error al cargar el historial.')
         return
@@ -1839,6 +1891,14 @@
         filas = filas.filter(m => m.proveedorNombre.toLowerCase().includes(t))
       }
 
+      // v_cuenta_corriente_movimientos no trae el estado de la factura — se
+      // consulta aparte para el badge de cobro, una vez para todas las filas
+      // (ver cargarEstadosDeFacturas). Se juntan los ids DESPUÉS del filtro de
+      // búsqueda: no tiene sentido pedir estados de filas que no se muestran.
+      const idsFactura = [...new Set(filas.filter(m => m.tipo === 'factura' && m.factura_pendiente_id).map(m => m.factura_pendiente_id))]
+      estado.estadoPorFacturaHistorial = idsFactura.length ? await cargarEstadosDeFacturas(idsFactura) : {}
+
+      cargandoEl.hidden = true
       estado.listaHistorial = filas
       renderizarListaHistorial()
     }
@@ -1859,11 +1919,14 @@
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
         const referencia = m.referencia || ''
+        const badgeEstado = m.tipo === 'factura'
+          ? badgeEstadoFactura(estado.estadoPorFacturaHistorial[m.factura_pendiente_id])
+          : ''
         return `
           <div class="tarjeta-lista fila-movimiento">
             <div style="flex:1; min-width:0;">
               <span class="chip-tipo-mov chip-tipo-mov--${m.tipo}">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</span>
-              <div class="fila-movimiento__referencia">${m.proveedorNombre}${referencia ? ` — ${referencia}` : ''}</div>
+              <div class="fila-movimiento__referencia">${m.proveedorNombre}${referencia ? ` — ${referencia}` : ''}${badgeEstado}</div>
               <div class="fila-movimiento__fecha">${unidadNombre} · ${formatearFecha(m.fecha)}</div>
             </div>
             <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
@@ -2073,12 +2136,15 @@
           ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${formatearImporte(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
         const referencia = m.referencia || '—'
+        const badgeEstado = m.tipo === 'factura'
+          ? badgeEstadoFactura(estadoPorFactura[m.factura_pendiente_id])
+          : ''
         return `
           <div class="tarjeta-lista fila-movimiento">
             <span class="punto-tipo-mov punto-tipo-mov--${m.tipo}"></span>
             <div style="flex:1; min-width:0;">
               <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
-              <div class="fila-movimiento__referencia">${referencia}</div>
+              <div class="fila-movimiento__referencia">${referencia}${badgeEstado}</div>
               <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
