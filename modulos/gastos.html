@@ -1740,6 +1740,11 @@
                          // created_at} — se completa bajo demanda por persona (cargarCuentasDe),
                          // mismo criterio que caja.html: sin filtrar por activa acá, se filtra
                          // en cada lugar que las consume.
+      // Empleado ficticio de la Cuenta de Empresa (tipo='empresa'). Se resuelve
+      // una sola vez y solo para quien tiene la tarea 'gastos_empresa' — ver
+      // resolverEmpresa(). null = todavía no se resolvió o no existe.
+      idEmpresa:     null,
+      nombreEmpresa: null,
       maestros: {
         categorias:  [],
         empleados:   [],
@@ -3105,6 +3110,77 @@
       return Object.values(estado.cuentasPorId).filter(c => c.empleado_id === empleadoId && c.activa)
     }
 
+    // Una cuenta puntual por su id, sin asumir de quién es. Necesario para el
+    // detalle de un gasto: la cuenta puede no pertenecer a la persona del
+    // gasto (ej. pagado con una cuenta de Empresa), y en ese caso buscarla por
+    // empleado_id no la encuentra nunca.
+    async function cargarCuentaPorId(cuentaId) {
+      if (!cuentaId || estado.cuentasPorId[cuentaId]) return
+      const { data, error } = await supabase
+        .from('cuentas_caja')
+        .select('id, empleado_id, nombre, medio, moneda, favorita, activa, created_at')
+        .eq('id', cuentaId)
+        .maybeSingle()
+      if (error || !data) return
+      estado.cuentasPorId[data.id] = data
+    }
+
+    // ── Cuentas de Empresa ──────────────────────────────────────────────────
+    // El empleado ficticio tiene activo=false, así que NO viene en
+    // estado.maestros.empleados (esas consultas filtran por activo=true):
+    // hay que resolverlo aparte. Se identifica por tipo='empresa', nunca por
+    // un id fijo. Mismo patrón que cargarEmpresa() de caja.html.
+    async function resolverEmpresa() {
+      if (estado.idEmpresa) return estado.idEmpresa
+      const { data, error } = await supabase
+        .from('v_empleados_publico')
+        .select('id, nombre')
+        .eq('tipo', 'empresa')
+        .maybeSingle()
+      if (error || !data) return null
+      estado.idEmpresa     = data.id
+      estado.nombreEmpresa = data.nombre || 'Empresa'
+      return estado.idEmpresa
+    }
+
+    function puedeUsarCuentasEmpresa() {
+      return tieneTarea('gastos', 'gastos_empresa')
+    }
+
+    // Candidatas del selector de cuenta, para el wizard y para la edición.
+    // Devuelve [{ value, label }] listo para poblarSelect().
+    //
+    // Reglas:
+    // - Siempre las cuentas propias del empleado del gasto, como siempre.
+    // - Además las de Empresa, SOLO con la tarea 'gastos_empresa' (super_admin
+    //   entra por el bypass de tieneTarea). Sin la tarea, la lista sale
+    //   idéntica a la de antes de esta funcionalidad.
+    // - Las de Empresa aparecen sin importar qué empleado esté seleccionado:
+    //   son de la empresa, no de una persona. Cargar un gasto a nombre de otro
+    //   pagado con plata de la empresa es un caso válido.
+    // - Mismos filtros de medio/moneda/activa para unas y otras.
+    // - Las de Empresa van al final y llevan el dueño en la etiqueta, para que
+    //   no se confundan con una cuenta personal.
+    async function opcionesCuentaParaGasto(empleadoId, medioCuenta, moneda) {
+      const matchea = c => c.medio === medioCuenta && c.moneda === moneda
+      const etiquetaBase = c => `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})`
+
+      await cargarCuentasDe(empleadoId)
+      const propias = cuentasDe(empleadoId).filter(matchea)
+        .map(c => ({ value: c.id, label: etiquetaBase(c) }))
+
+      if (!puedeUsarCuentasEmpresa()) return propias
+
+      const idEmpresa = await resolverEmpresa()
+      if (!idEmpresa || idEmpresa === empleadoId) return propias
+
+      await cargarCuentasDe(idEmpresa)
+      const deEmpresa = cuentasDe(idEmpresa).filter(matchea)
+        .map(c => ({ value: c.id, label: `${c.nombre} — ${estado.nombreEmpresa} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }))
+
+      return [...propias, ...deEmpresa]
+    }
+
     // Selector de cuenta del wizard (sub-paso "Detalles") — depende de
     // medioPagoSeleccionado (sub-paso "Datos"), #campo-empleado y
     // #campo-moneda (sub-paso "Datos"). Mismo criterio que
@@ -3134,22 +3210,29 @@
       const moneda = document.getElementById('campo-moneda')?.value || 'ARS'
       const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medioPagoSeleccionado]
 
-      await cargarCuentasDe(empleadoId)
-      const candidatas = cuentasDe(empleadoId).filter(c => c.medio === medioCuenta && c.moneda === moneda)
-      const nombreEmpleado = estado.maestros.empleados.find(e => e.id === empleadoId)?.nombre || 'Esta persona'
+      const opciones = await opcionesCuentaParaGasto(empleadoId, medioCuenta, moneda)
 
-      if (!candidatas.length) {
+      if (!opciones.length) {
         sel.hidden = true
         vacio.hidden = false
-        vacio.textContent = `${nombreEmpleado} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[medioCuenta]} en ${moneda}.`
+        vacio.textContent = mensajeSinCuentas(empleadoId, medioCuenta, moneda)
         sel.innerHTML = ''
       } else {
         sel.hidden = false
         vacio.hidden = true
-        poblarSelect('campo-cuenta', candidatas,
-          c => ({ value: c.id, label: `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }),
-          '— Seleccioná —')
+        poblarSelect('campo-cuenta', opciones, o => o, '— Seleccioná —')
       }
+    }
+
+    // El mensaje de "no hay cuentas" tiene que contemplar que, con la tarea
+    // 'gastos_empresa', la lista incluía también las cuentas de Empresa:
+    // decir solo "esta persona no tiene cuenta" sería engañoso.
+    function mensajeSinCuentas(empleadoId, medioCuenta, moneda) {
+      const nombreEmpleado = estado.maestros.empleados.find(e => e.id === empleadoId)?.nombre || 'Esta persona'
+      const base = `${nombreEmpleado} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[medioCuenta]} en ${moneda}`
+      return puedeUsarCuentasEmpresa()
+        ? `${base}, y tampoco hay una cuenta de ${estado.nombreEmpresa || 'Empresa'} que coincida.`
+        : `${base}.`
     }
 
     // Equivalente para el formulario de edición — mismos criterios, pero
@@ -3178,22 +3261,18 @@
       const moneda = document.getElementById('edit-moneda').value.trim() || 'ARS'
       const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medioPago]
 
-      await cargarCuentasDe(empleadoId)
-      const candidatas = cuentasDe(empleadoId).filter(c => c.medio === medioCuenta && c.moneda === moneda)
-      const nombreEmpleado = estado.maestros.empleados.find(e => e.id === empleadoId)?.nombre || 'Esta persona'
+      const opciones = await opcionesCuentaParaGasto(empleadoId, medioCuenta, moneda)
 
-      if (!candidatas.length) {
+      if (!opciones.length) {
         sel.hidden = true
         vacio.hidden = false
-        vacio.textContent = `${nombreEmpleado} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[medioCuenta]} en ${moneda}.`
+        vacio.textContent = mensajeSinCuentas(empleadoId, medioCuenta, moneda)
         sel.innerHTML = ''
       } else {
         sel.hidden = false
         vacio.hidden = true
-        poblarSelect('edit-cuenta', candidatas,
-          c => ({ value: c.id, label: `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }),
-          '— Seleccioná —')
-        if (preseleccionarId && candidatas.some(c => c.id === preseleccionarId)) sel.value = preseleccionarId
+        poblarSelect('edit-cuenta', opciones, o => o, '— Seleccioná —')
+        if (preseleccionarId && opciones.some(o => o.value === preseleccionarId)) sel.value = preseleccionarId
       }
     }
 
@@ -3717,10 +3796,26 @@
 
       // Puede abrirse sin haber pasado por el wizard/edición de este gasto
       // en esta sesión — si la cuenta todavía no está en cache, la traemos.
-      if (g.cuenta_id && !estado.cuentasPorId[g.cuenta_id]) {
-        await cargarCuentasDe(g.empleado_id)
+      // Se busca por el id de la cuenta y no por g.empleado_id: la cuenta
+      // puede ser de Empresa y no de la persona del gasto.
+      let nombreCuenta = null
+      if (g.cuenta_id) {
+        await cargarCuentaPorId(g.cuenta_id)
+        const cta = estado.cuentasPorId[g.cuenta_id]
+        if (cta) {
+          nombreCuenta = cta.nombre
+          // Si la cuenta no es de la persona del gasto, se aclara de quién es
+          // — mismo criterio que el selector, para no leerla como personal.
+          if (cta.empleado_id !== g.empleado_id) {
+            let duenio = estado.maestros.empleados.find(e => e.id === cta.empleado_id)?.nombre
+            if (!duenio) {
+              const idEmpresa = await resolverEmpresa()
+              if (idEmpresa === cta.empleado_id) duenio = estado.nombreEmpresa
+            }
+            if (duenio) nombreCuenta = `${cta.nombre} — ${duenio}`
+          }
+        }
       }
-      const nombreCuenta = g.cuenta_id ? estado.cuentasPorId[g.cuenta_id]?.nombre : null
 
       const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
         <div class="resumen-fila">
