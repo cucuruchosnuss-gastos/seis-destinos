@@ -36,13 +36,13 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
   - `rol`: puesto de RRHH (viene de Naaloo — Categoría + Subcategoría concatenadas, ej "Fuera de convenio · Categoría I").
   - `tipo`: `naaloo` / `admin` / `empresa` — bucket usado por el selector de empleados de Gastos, no tocar sin revisar ese uso. `'empresa'` identifica al empleado ficticio de la Cuenta de Empresa (activo=false, sin auth_user_id, unidad_negocio_id null — ver sección Sistema de permisos).
   - `origen`: `naaloo` (importado desde Excel) / `app_registro` (creado por auto-registro sin match de CUIL).
-  - `caja_raiz` (boolean): LEGADO — YA NO CONTROLA NADA desde la migración de permisos de julio 2026; el control de ingresos externos pasó a la tarea `caja:ingreso_externo`. La columna todavía existe y caja.html la sigue leyendo (~líneas 1709, 1727, 2174, 2284, 4177: comentarios y selects sin efecto) — código muerto, pendiente conocido de limpieza (no urgente). Pendiente de drop en la limpieza final.
+  - `caja_raiz` (boolean): LEGADO — YA NO CONTROLA NADA desde la migración de permisos de julio 2026; el control de ingresos externos pasó a las tareas `caja:ingreso_externo_propio` y `caja:ingreso_externo_empresa`. La columna todavía existe y caja.html la sigue leyendo (~líneas 1709, 1727, 2174, 2284, 4177: comentarios y selects sin efecto) — código muerto, pendiente conocido de limpieza (no urgente). Pendiente de drop en la limpieza final.
   - `contacto_emergencia_*`: carga manual únicamente, Naaloo no lo trae.
 - `empleado_modulos`: id, empleado_id, modulo, habilitado, otorgado_por, otorgado_en. El dashboard SÍ la consulta (dashboard.html ~línea 419) y filtra los tiles con `esAdmin || misModulos.includes(modulo.clave)` — la variable del código se sigue llamando `esAdmin`, pero con el rol `admin` muerto equivale a super_admin; los super_admin ven todos los módulos sin pasar por esta tabla.
 - `empleado_tareas`: id, empleado_id, modulo, tarea, habilitado, alcance (jsonb), más columnas de auditoría. Sistema de permisos granulares: el toggle de `empleado_modulos` decide si la persona VE el módulo; `empleado_tareas` decide qué puede HACER adentro. Las tareas son independientes entre sí.
   - `alcance` (jsonb): limita una tarea a unidades de negocio concretas — `{"todas": true}` o `{"unidades": [uuid, ...]}`.
   - Hoy la ÚNICA tarea con alcance es `empleados:ver_editar`. En accesos.html eso está hardcodeado en la constante `CLAVE_VER_EDITAR`, no como lista — si en el futuro otra tarea necesita alcance, hay que generalizar esa constante a un conjunto, no alcanza con agregarla al catálogo.
-  - El catálogo válido lo define el CHECK constraint `chk_tarea_valida` (17 tareas — lista completa con labels en la sección Sistema de permisos); en el frontend está hardcodeado en `CATALOGO_TAREAS` dentro de accesos.html (decisión explícita: no se lee de la base). Los dos tienen que mantenerse en sincronía a mano.
+  - El catálogo válido lo define el CHECK constraint `chk_tarea_valida` (23 tareas — lista completa con labels en la sección Sistema de permisos); en el frontend está hardcodeado en `CATALOGO_TAREAS` dentro de accesos.html (decisión explícita: no se lee de la base). Los dos tienen que mantenerse en sincronía a mano — y hoy NO lo están: faltan las 4 de `materia_prima` en accesos.html, ver la brecha vigente en esa sección.
 - Convención de nombres (ya existente, explícita porque confunde): `modulos.clave` / `empleado_modulos.modulo` / `MODULOS[].clave` de dashboard.html usan GUIÓN MEDIO (`'cuentas-corrientes'`, `'materia-prima'`); `empleado_tareas.modulo` usa GUIÓN BAJO (`'cuentas_corrientes'`). Son namespaces distintos, no mezclar.
 - `solicitudes_acceso`: id, nombre, apellido, email, cuil, estado, fecha_solicitud, usuario_id, fecha_nacimiento, telefono, tuvo_match
 
@@ -97,7 +97,7 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 
 ### RPCs (todas SECURITY DEFINER; desde la migración de permisos de julio 2026 re-verifican permisos server-side con `tiene_tarea()`/`tiene_tarea_alcance()` — NUNCA gatear por rol_app, salvo el bypass de super_admin que ya viene dentro de esos helpers. El conteo "31" era de la auditoría del 18/07/2026: después se agregaron al menos `tiene_tarea` y `tiene_tarea_alcance` y cambiaron firmas — re-verificar contra information_schema en la próxima auditoría. De esa auditoría vieja: se eliminó `rechazar_solicitud_acceso`, versión vieja que no borraba la cuenta de Auth huérfana al rechazar, reemplazada por la Edge Function `rechazar-solicitud-acceso`)
 
-**Permisos**: `tiene_tarea(modulo, tarea)` y `tiene_tarea_alcance(modulo, tarea, unidad_negocio_id)` — los helpers estándar que usan todas las RPCs y policies RLS, con bypass de super_admin incorporado (ver sección Sistema de permisos).
+**Permisos**: `tiene_tarea(modulo, tarea)` y `tiene_tarea_alcance(modulo, tarea, unidad_negocio_id)` — los helpers estándar que usan todas las RPCs y policies RLS, con bypass de super_admin incorporado. `tiene_tarea_explicita(modulo, tarea)` — misma idea pero SIN bypass, para operaciones que no deben heredarse por rol (hoy las dos de ingreso externo de Caja). Ver sección Sistema de permisos.
 
 **Accesos / Registro**: `aprobar_solicitud_acceso(p_solicitud_id uuid, p_modulos text[], p_tareas jsonb, p_unidad_negocio_id uuid)` y `actualizar_permisos_empleado(p_empleado_id uuid, p_modulos text[], p_tareas jsonb)` — firmas nuevas SIN parámetro de rol; `p_tareas` con semántica de REEMPLAZO TOTAL (ver sección Sistema de permisos) —, `obtener_mi_solicitud_acceso`, `buscar_empleado_por_cuil` (el rechazo de una solicitud NO es una RPC — es la Edge Function `rechazar-solicitud-acceso`, ver sección Login y roles)
 
@@ -107,7 +107,7 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 
 **Cuentas Corrientes**: `crear_proveedor_pendiente`, `aprobar_proveedor`, `rechazar_proveedor`, `asignar_proveedor_factura_pendiente` (para facturas legado sin proveedor), `sugerir_facturas_fifo` (devuelve `factura_pendiente_id, fecha_factura, numero_comprobante, saldo_pendiente, monto_a_aplicar` — nombres exactos, no adivinar variantes), `registrar_pago_proveedor` (recibe `p_aplicaciones jsonb` como array de `{factura_pendiente_id, monto_aplicado}` — la clave es literalmente `monto_aplicado`, no `monto`; si la suma aplicada es menor al monto pagado, el resto se registra como crédito automáticamente; la categoría del gasto resultante es la categoría real si todas las facturas del pago comparten la misma, o la categoría genérica "Pago a Cta. Cte. Proveedor" si son mixtas), `aplicar_credito_a_factura` (siempre manual, nunca automático — decisión de diseño explícita)
 
-**Caja**: `crear_cuenta_caja`, `desactivar_cuenta_caja`, `renombrar_cuenta_caja`, `marcar_cuenta_favorita_caja`, `registrar_ingreso_propio_caja`, `registrar_ingreso_externo_caja` (migró a `tiene_tarea('caja','ingreso_externo')` con bypass de super_admin — verificado contra la definición real de la función en la base; ya NO usa `caja_raiz`; los ingresos van a las cuentas de la Cuenta de Empresa), `registrar_retiro_caja`, `registrar_traspaso_cuenta_caja`, `crear_solicitud_movimiento_caja`, `responder_solicitud_movimiento_caja`, `cancelar_solicitud_movimiento_caja`, `fn_sincronizar_caja_gasto` (trigger — descuenta Caja automáticamente al insertar un `gasto`; con `medio_pago='cheque'` y `cuenta_id=null` no descuenta nada, es comportamiento esperado, no hay circuito de cheques todavía)
+**Caja**: `crear_cuenta_caja`, `desactivar_cuenta_caja`, `renombrar_cuenta_caja`, `marcar_cuenta_favorita_caja`, `registrar_ingreso_propio_caja`, `registrar_ingreso_externo_caja` (exige con `tiene_tarea_explicita` —SIN bypass de super_admin— la tarea que corresponda según el DUEÑO de la cuenta elegida: `caja:ingreso_externo_propio` si es de quien llama, `caja:ingreso_externo_empresa` si es de la Cuenta de Empresa. Ya NO usa `caja_raiz` ni la tarea vieja `ingreso_externo`), `registrar_retiro_caja`, `registrar_traspaso_cuenta_caja`, `crear_solicitud_movimiento_caja`, `responder_solicitud_movimiento_caja`, `cancelar_solicitud_movimiento_caja`, `fn_sincronizar_caja_gasto` (trigger — descuenta Caja automáticamente al insertar un `gasto`; con `medio_pago='cheque'` y `cuenta_id=null` no descuenta nada, es comportamiento esperado, no hay circuito de cheques todavía)
 
 ## Base vieja (solo lectura, referencia)
 - Proyecto: oxcypiztfoxxxhtuqmrd
@@ -126,15 +126,17 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 
 REGLA CENTRAL: el rol `admin` YA NO EXISTE. Solo hay dos valores de `empleados.rol_app`: `super_admin` (control total, bypass automático de todos los chequeos) y `usuario`. NUNCA escribir código nuevo que chequee `rol_app IN ('admin', ...)` — ese patrón está muerto.
 
-Los permisos finos son TAREAS granulares en la tabla `empleado_tareas` (empleado_id + modulo + tarea + habilitado + alcance jsonb). El catálogo válido lo define el CHECK constraint `chk_tarea_valida` — 17 tareas hoy, listadas abajo. Todas las tareas son independientes entre sí — no hay jerarquías.
+Los permisos finos son TAREAS granulares en la tabla `empleado_tareas` (empleado_id + modulo + tarea + habilitado + alcance jsonb). El catálogo válido lo define el CHECK constraint `chk_tarea_valida` — 23 tareas hoy, listadas abajo. Todas las tareas son independientes entre sí — no hay jerarquías.
 
-Catálogo completo de tareas (claves exactas `modulo:tarea` — no inventar claves nuevas ni duplicar una existente con otro nombre; labels según `CATALOGO_TAREAS` de accesos.html):
+Catálogo completo de tareas (verificado contra `pg_get_constraintdef` del CHECK real, no reconstruido — claves exactas `modulo:tarea`, no inventar claves nuevas ni duplicar una existente con otro nombre; labels según `CATALOGO_TAREAS` de accesos.html):
 - `gastos:ver_exportar` — Ver todos los gastos de la empresa + exportar Excel (incluye cargar gastos a nombre de otro)
 - `gastos:editar_anular` — Editar y anular cualquier gasto
+- `gastos:gastos_empresa` — Cargar gastos contra las cuentas de la Empresa (CON bypass)
 - `caja:ver_listado` — Ver el listado completo de cajas de la empresa
 - `caja:retiros_todos` — Ver los retiros personales de todos
 - `caja:movimientos_todos` — Ver todos los movimientos de todas las cuentas
-- `caja:ingreso_externo` — Cargar ingresos externos (cuenta Empresa)
+- `caja:ingreso_externo_propio` — Cargar ingresos externos en su propia caja (SIN bypass de super_admin — ver la nota de abajo)
+- `caja:ingreso_externo_empresa` — Cargar ingresos en las cuentas de la Empresa (SIN bypass de super_admin — ver la nota de abajo)
 - `empleados:ver_editar` — Ver y editar empleados (la ÚNICA tarea con alcance por unidad)
 - `empleados:importar_naaloo` — Importar/actualizar empleados desde Naaloo
 - `empleados:reasignar_unidad` — Reasignar empleados entre unidades de negocio
@@ -146,10 +148,17 @@ Catálogo completo de tareas (claves exactas `modulo:tarea` — no inventar clav
 - `cuentas_corrientes:anular_factura` — Anular facturas pendientes
 - `cuentas_corrientes:asignar_proveedor_legado` — Asignar proveedor a facturas sin vincular
 - `facturas_pendientes:editar_interes` — Editar facturas pendientes y agregar intereses (válida desde Gastos y desde Cuentas Corrientes)
+- `materia_prima:cargar` — definida en el chat de Materia Prima; descripción TENTATIVA: cargar ingresos de materia prima — confirmar semántica exacta en ese chat
+- `materia_prima:ver_todo` — ídem, TENTATIVA: ver ingresos de todas las unidades
+- `materia_prima:gestionar_catalogo` — ídem, TENTATIVA: administrar el catálogo de insumos
+- `materia_prima:editar_anular` — ídem, TENTATIVA: editar/anular ingresos
+
+BRECHA VIGENTE (no es un bug, es un pendiente conocido): las 4 tareas de `materia_prima` existen en el CHECK pero **todavía NO están en el `CATALOGO_TAREAS` de accesos.html**, así que no se pueden otorgar desde la pantalla de Accesos — solo por SQL directo. Queda así hasta que el chat de Materia Prima las sume (o se decida sumarlas desde otro lado). Ojo con la consecuencia del diseño de esa pantalla: el modal de permisos precarga TODAS las filas de la persona y el payload reenvía el Set completo, así que una tarea otorgada por SQL que no está en el catálogo se preserva al guardar aunque no tenga checkbox. NO agregar un filtro del payload contra el catálogo: revocaría en silencio esas 4 tareas cada vez que se editen los permisos de esa persona.
 
 Chequeo server-side (SIEMPRE en RPCs SECURITY DEFINER y policies RLS):
-- `tiene_tarea(modulo, tarea)` — el estándar, con bypass de super_admin
-- `tiene_tarea_alcance(modulo, tarea, unidad_negocio_id)` — para tareas con alcance por unidad (hoy solo `empleados:ver_editar`; alcance = `{"todas": true}` o `{"unidades": ["uuid", ...]}`)
+- `tiene_tarea(modulo, tarea)` — el estándar, CON bypass de super_admin
+- `tiene_tarea_alcance(modulo, tarea, unidad_negocio_id)` — para tareas con alcance por unidad (hoy solo `empleados:ver_editar`; alcance = `{"todas": true}` o `{"unidades": ["uuid", ...]}`). También con bypass.
+- `tiene_tarea_explicita(modulo, tarea)` — variante SIN bypass: exige la fila otorgada aunque quien llame sea super_admin. Se usa hoy en `caja:ingreso_externo_propio` y `caja:ingreso_externo_empresa` (mover plata "de la nada" a una caja es la operación más sensible del sistema, así que no se hereda por rol). El resto de las tareas usa `tiene_tarea()`. El frontend replica esta distinción: caja.html tiene `tieneTarea()` y `tieneTareaExplicita()` — ojo que ahí la firma es de UN solo argumento, el módulo va implícito.
 
 Chequeo frontend (patrón en los 5 módulos migrados, copiar de gastos.html): al init se consulta `empleado_tareas` filtrando por módulo(s), se guarda un Set con claves `'modulo:tarea'`, y un helper `tieneTarea(modulo, tarea)` devuelve true si `rol_app === 'super_admin'` o el Set contiene la clave. El frontend solo oculta UI — la barrera real es siempre server-side.
 
@@ -159,9 +168,11 @@ Gestión: pantalla de Accesos (solo super_admin) con checkboxes por tarea. RPCs 
 
 `p_tareas`: `[{"modulo":"...","tarea":"...","alcance":null|{...}}, ...]` con semántica de REEMPLAZO TOTAL (lo no incluido se apaga).
 
-Cuenta de Empresa (Caja): empleado ficticio identificado por `tipo='empresa'` (activo=false, sin auth_user_id, unidad_negocio_id null). Sus `cuentas_caja` se gestionan por super_admin; los ingresos externos van a sus cuentas vía la tarea `caja:ingreso_externo` (CON bypass de super_admin). Las transferencias que involucran a Empresa no exigen super_admin de contraparte, y cualquier super_admin puede aceptarlas en su nombre (auto-aceptación permitida).
+Cuenta de Empresa (Caja): empleado ficticio identificado por `tipo='empresa'` (activo=false, sin auth_user_id, unidad_negocio_id null). Sus `cuentas_caja` se gestionan por super_admin; los ingresos externos van a sus cuentas vía la tarea `caja:ingreso_externo_empresa`, SIN bypass de super_admin (la variante para la caja propia es `caja:ingreso_externo_propio`). El ATAJO de navegación a la ficha de Empresa en caja.html es la excepción deliberada: usa `tieneTarea('ingreso_externo_empresa')` CON bypass, porque solo navega — la barrera real es el botón de adentro y la RPC. Consecuencia conocida y aceptada: un super_admin sin la fila explícita ve el atajo y no ve el botón de ingreso. Las transferencias que involucran a Empresa no exigen super_admin de contraparte, y cualquier super_admin puede aceptarlas en su nombre (auto-aceptación permitida).
 
-Para módulos NUEVOS (ej. Materia Prima): definir sus tareas con Facu, agregarlas al CHECK constraint `chk_tarea_valida` (DROP + ADD, no se puede alterar in-place), al catálogo hardcodeado `CATALOGO_TAREAS` de accesos.html, y gatear RPCs/RLS con `tiene_tarea()` — nunca con `rol_app`.
+Formato del CHECK `chk_tarea_valida`: hoy valida con `(modulo || ':' || tarea) = any(array[...])` — ya NO es la cadena de OR anidados de la versión original. Para cambiarlo hay que hacer DROP + ADD con el array completo de las 23 (no se puede alterar in-place).
+
+Para módulos NUEVOS (ej. Materia Prima): definir sus tareas con Facu, agregarlas al CHECK constraint `chk_tarea_valida` (DROP + ADD con el array completo), al catálogo hardcodeado `CATALOGO_TAREAS` de accesos.html, y gatear RPCs/RLS con `tiene_tarea()` — o con `tiene_tarea_explicita()` si la operación no debe heredarse por rol — nunca con `rol_app`.
 
 ## Módulos
 
@@ -215,5 +226,5 @@ Para módulos NUEVOS (ej. Materia Prima): definir sus tareas con Facu, agregarla
 - No tocar lo que funciona
 - Cualquier herramienta/conector de Supabase (lectura o escritura) requiere aprobación manual de Facu en el momento — ninguna sesión de Claude ejecuta nada contra la base en vivo por su cuenta, ni siquiera un SELECT informativo.
 - SQL de escritura (DDL, RPCs, ALTER, políticas RLS): lo corre Facu a mano en el SQL Editor, con guards `IF NOT EXISTS`/`CREATE OR REPLACE`.
-- RPCs: convención `p_` en los parámetros, siempre `SECURITY DEFINER`, siempre re-verifican permisos server-side con `tiene_tarea()`/`tiene_tarea_alcance()` (nunca confiar en que el frontend ya validó; nunca gatear por `rol_app` — ver sección Sistema de permisos)
+- RPCs: convención `p_` en los parámetros, siempre `SECURITY DEFINER`, siempre re-verifican permisos server-side con `tiene_tarea()`/`tiene_tarea_alcance()`/`tiene_tarea_explicita()` (nunca confiar en que el frontend ya validó; nunca gatear por `rol_app` — ver sección Sistema de permisos)
 - Nunca exponer claves secretas en el código ni en commits — los secretos de las Edge Functions se leen con `Deno.env.get(...)`
