@@ -1529,7 +1529,7 @@
         </div>
 
         <div class="grupo-campo" id="grupo-cuenta-propia" style="display:none;">
-          <label for="cuenta-propia-select">Tu cuenta</label>
+          <label for="cuenta-propia-select" id="label-cuenta-propia">Tu cuenta</label>
           <select id="cuenta-propia-select">
             <option value="">— Seleccioná —</option>
           </select>
@@ -1578,7 +1578,7 @@
     <div id="modal-traspaso__backdrop"></div>
     <div id="modal-traspaso__panel">
       <button type="button" class="btn btn--icono modal-movimiento__cerrar" id="btn-cerrar-traspaso" title="Cerrar">✕</button>
-      <h2>Traspaso entre cuentas</h2>
+      <h2 id="traspaso-titulo">Traspaso entre cuentas</h2>
 
       <div class="formulario" style="margin-top:1rem;">
         <div class="grupo-campo">
@@ -1847,6 +1847,28 @@
     // administran las cuentas de Empresa.
     function tieneTareaExplicita(tarea) {
       return estado.misTareasCaja.has(tarea)
+    }
+
+    // ── Solicitudes que involucran a Empresa ────────────────────────────────
+    // Espejo de la regla de responder_solicitud_movimiento_caja. Se usa en DOS
+    // lugares que tienen que decir lo mismo: qué botones muestra cada fila
+    // (renderizarFilaSolicitud) y cuáles se cuentan en el badge de pendientes
+    // (cargarMisSolicitudesPendientesCount). Si divergen, vuelve a aparecer el
+    // caso de una solicitud que nadie ve y queda colgada para siempre.
+    //
+    // El guard de idEmpresa no es decorativo: sin él, con idEmpresa sin
+    // resolver (null) la comparación daría true para cualquier solicitud.
+    function involucraAEmpresa(s) {
+      return !!estado.idEmpresa &&
+        (s.origen_empleado_id === estado.idEmpresa || s.destino_empleado_id === estado.idEmpresa)
+    }
+
+    // Responder una solicitud con Empresa es de cualquier super_admin, sea o no
+    // el creador (si se aplicara la regla de "no podés responder la tuya", una
+    // solicitud creada por el único super_admin disponible quedaría pendiente
+    // para siempre).
+    function puedoResponderSolicitudesDeEmpresa() {
+      return !!estado.idEmpresa && estado.miEmpleado?.rol_app === 'super_admin'
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2385,11 +2407,20 @@
     // ficha esté abierta, siempre es sobre quién está logueado.
     async function cargarMisSolicitudesPendientesCount() {
       const miId = estado.miEmpleado.id
+      // Las solicitudes donde soy parte, MÁS las que involucran a Empresa si
+      // puedo responderlas — mismo criterio que los botones Aceptar/Rechazar
+      // de cada fila (ver puedoResponderSolicitudesDeEmpresa). Sin esto, una
+      // solicitud "Empresa → alguien" creada por esa persona no le aparece en
+      // el badge a ningún super_admin y queda colgada sin que nadie se entere.
+      const condiciones = [`origen_empleado_id.eq.${miId}`, `destino_empleado_id.eq.${miId}`]
+      if (puedoResponderSolicitudesDeEmpresa()) {
+        condiciones.push(`origen_empleado_id.eq.${estado.idEmpresa}`, `destino_empleado_id.eq.${estado.idEmpresa}`)
+      }
       const { count, error } = await supabase
         .from('caja_solicitudes_movimiento')
         .select('id', { count: 'exact', head: true })
         .eq('estado', 'pendiente')
-        .or(`origen_empleado_id.eq.${miId},destino_empleado_id.eq.${miId}`)
+        .or(condiciones.join(','))
       estado.misSolicitudesPendientes = error ? 0 : (count || 0)
     }
 
@@ -2968,8 +2999,12 @@
         botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso-externo" style="flex:1 1 45%;">Ingreso externo</button>`)
       }
 
-      // Egreso: sin cambios, solo en la propia ficha.
+      // Egreso: en la propia ficha para cualquiera; en la de Empresa con la
+      // tarea (ahí "mi lado" del movimiento pasa a ser Empresa — ver el
+      // empleadoPropioId de abrirModalMovimiento).
       if (empleadoId === estado.miEmpleado.id) {
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1 1 45%;">Egreso</button>`)
+      } else if (empleadoId === estado.idEmpresa && tieneTareaExplicita('egreso_empresa')) {
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-egreso" style="flex:1 1 45%;">Egreso</button>`)
       }
 
@@ -2980,28 +3015,34 @@
         botones.push(`<button type="button" class="btn btn--bordo-outline" id="btn-detalle-retiro" style="flex:1 1 45%;">Retiro personal</button>`)
       }
 
-      // Traspaso: mueve plata entre medios DENTRO de la propia caja. Solo
-      // tiene sentido en la ficha propia (la RPC no acepta p_empleado_id,
-      // siempre opera sobre quien la llama) — para cualquier rol_app.
+      // Traspaso: mueve plata entre cuentas de UNA misma caja. En la propia
+      // para cualquier rol_app; en la de Empresa con la tarea (la RPC ahora
+      // acepta p_empleado_id, así que puede operar sobre una caja ajena).
       if (empleadoId === estado.miEmpleado.id) {
+        botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-traspaso" style="flex:1 1 45%;">Traspaso</button>`)
+      } else if (empleadoId === estado.idEmpresa && tieneTareaExplicita('traspaso_empresa')) {
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-traspaso" style="flex:1 1 45%;">Traspaso</button>`)
       }
 
-      // Atajo a Empresa — segunda ubicación (ver también btn-empresa-atajo
-      // en .fila-tabs-caja): quien tiene 'ingreso_externo_empresa' pero no
-      // ver_listado entra directo a su propia ficha y nunca ve esa otra
-      // barra. Solo acá cuando el origen fue 'directo', para no duplicar el
-      // botón cuando ya está visible arriba (quien vino del listado).
-      // Con bypass a propósito (tieneTarea, no la variante explícita): esto
-      // solo navega — ver el comentario de tieneTareaExplicita().
-      if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.idEmpresa && tieneTarea('ingreso_externo_empresa')) {
+      // Atajo a Empresa — segunda ubicación (ver también btn-empresa-atajo en
+      // .fila-tabs-caja): quien no tiene ver_listado entra directo a su propia
+      // ficha y nunca ve esa otra barra. Solo en la ficha propia y con origen
+      // 'directo', para no ofrecer "ir a Empresa" desde la ficha de Empresa.
+      // Gate SIN bypass ('ver_empresa'): la ficha de Empresa es la puerta de
+      // entrada a operaciones sobre su plata, así que verla ya es un permiso
+      // propio y no se hereda por rol.
+      if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.idEmpresa && tieneTareaExplicita('ver_empresa')) {
         botones.push(`<button type="button" class="btn btn--amarillo-outline" id="btn-detalle-empresa-atajo" style="flex:1 1 45%;">Empresa</button>`)
       }
 
-      // Atajo al Directorio — misma lógica de doble ubicación que Empresa:
-      // solo acá cuando el origen fue 'directo' (ver btn-directorio-atajo
-      // en .fila-tabs-caja para quien vino del listado).
-      if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.tieneModuloCaja) {
+      // Atajo al Directorio — para cualquiera con el módulo Caja habilitado, en
+      // TODAS las fichas (propia, ajena o de Empresa). No hay riesgo de
+      // duplicar el botón de .fila-tabs-caja: esa barra vive dentro de
+      // #vista-lista-caja, que abrirDetallePersona() esconde mientras hay una
+      // ficha abierta (el comentario anterior, que decía lo contrario, era
+      // incorrecto y dejaba el Directorio invisible para quien venía del
+      // listado o miraba una ficha ajena).
+      if (estado.tieneModuloCaja) {
         botones.push(`<button type="button" class="btn btn--navy-outline" id="btn-detalle-directorio-atajo" style="flex:1 1 45%;">📇 Directorio</button>`)
       }
 
@@ -3015,7 +3056,7 @@
       document.getElementById('btn-detalle-ingreso-externo')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId, 'externo'))
       document.getElementById('btn-detalle-egreso')?.addEventListener('click', () => abrirModalMovimiento('egreso', empleadoId))
       document.getElementById('btn-detalle-retiro')?.addEventListener('click', () => abrirModalMovimiento('retiro', empleadoId))
-      document.getElementById('btn-detalle-traspaso')?.addEventListener('click', () => abrirModalTraspaso())
+      document.getElementById('btn-detalle-traspaso')?.addEventListener('click', () => abrirModalTraspaso(empleadoId))
       document.getElementById('btn-detalle-empresa-atajo')?.addEventListener('click', () => abrirDetallePersona(estado.idEmpresa, 'listado'))
       document.getElementById('btn-detalle-directorio-atajo')?.addEventListener('click', () => abrirDirectorio('ficha-propia'))
     }
@@ -3279,15 +3320,8 @@
       const soyDestino = miId === s.destino_empleado_id
       const soyCreador = miId === s.creado_por
 
-      // El guard de idEmpresa no es decorativo: sin él, con idEmpresa sin
-      // resolver (null/undefined) la comparación daría true para cualquier
-      // solicitud y todas parecerían involucrar a Empresa.
-      const involucraEmpresa = !!estado.idEmpresa &&
-        (s.origen_empleado_id === estado.idEmpresa || s.destino_empleado_id === estado.idEmpresa)
-      const soySuperAdmin = estado.miEmpleado?.rol_app === 'super_admin'
-
-      const puedeResponder = involucraEmpresa
-        ? soySuperAdmin
+      const puedeResponder = involucraAEmpresa(s)
+        ? puedoResponderSolicitudesDeEmpresa()
         : (soyOrigen || soyDestino) && !soyCreador
 
       let acciones = ''
@@ -3989,15 +4023,33 @@
     // super_admin ya viene incluida sola (vive en estado.empleados desde
     // asegurarEmpresaEnEmpleados()); para cualquier otro rol hay que
     // sumarla aparte, no está en estado.superAdmins porque no lo es.
-    function poblarSelectorContraparte() {
-      const contraparteSelect = document.getElementById('contraparte-select')
-      let candidatos = estado.miEmpleado.rol_app === 'super_admin'
-        ? estado.empleados.filter(e => e.id !== estado.miEmpleado.id)
-        : estado.superAdmins.filter(s => s.id !== estado.miEmpleado.id)
-      if (estado.idEmpresa && !candidatos.some(c => c.id === estado.idEmpresa)) {
+    // empleadoPropioId = de quién es "mi lado" del movimiento: normalmente yo,
+    // pero en el egreso desde la ficha de Empresa es Empresa. Con Empresa de un
+    // lado NO aplica la regla de "al menos un super_admin entre las dos partes"
+    // (ver CLAUDE.md), así que la contraparte puede ser cualquier persona con
+    // acceso.
+    async function poblarSelectorContraparte(empleadoPropioId) {
+      const desdeEmpresa = !!estado.idEmpresa && empleadoPropioId === estado.idEmpresa
+
+      // estado.empleados solo se llena completo en cargarListado(), que corre
+      // únicamente para quien tiene ver_listado. Sin esto, alguien con
+      // egreso_empresa pero sin ver_listado vería el selector vacío.
+      if (desdeEmpresa && !estado.empleados.some(e => e.id !== estado.idEmpresa)) {
+        await cargarPersonasConAcceso()
+      }
+
+      let candidatos = desdeEmpresa
+        ? estado.empleados.filter(e => e.id !== estado.idEmpresa)
+        : (estado.miEmpleado.rol_app === 'super_admin'
+            ? estado.empleados.filter(e => e.id !== estado.miEmpleado.id)
+            : estado.superAdmins.filter(s => s.id !== estado.miEmpleado.id))
+
+      // Empresa como contraparte solo cuando NO es ya mi lado.
+      if (!desdeEmpresa && estado.idEmpresa && !candidatos.some(c => c.id === estado.idEmpresa)) {
         candidatos = [...candidatos, { id: estado.idEmpresa, nombre: estado.nombresEmpleados[estado.idEmpresa] }]
       }
-      contraparteSelect.innerHTML = '<option value="">— Seleccioná —</option>' +
+
+      document.getElementById('contraparte-select').innerHTML = '<option value="">— Seleccioná —</option>' +
         candidatos.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')
     }
 
@@ -4023,9 +4075,16 @@
       document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(empleadoId), favoritaEfectivoARS(empleadoId))
     }
 
-    // Ingreso propio / Egreso: "Tu cuenta" — siempre las propias.
-    function poblarSelectorCuentaPropia() {
-      document.getElementById('cuenta-propia-select').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id), favoritaEfectivoARS(estado.miEmpleado.id))
+    // Ingreso propio / Egreso: el lado "mío" del movimiento. Normalmente son mis
+    // cuentas; en el egreso desde la ficha de Empresa, las de Empresa.
+    async function poblarSelectorCuentaPropia(empleadoPropioId) {
+      await cargarCuentasDe(empleadoPropioId)
+      document.getElementById('cuenta-propia-select').innerHTML =
+        opcionesCuenta(cuentasDe(empleadoPropioId), favoritaEfectivoARS(empleadoPropioId))
+      document.getElementById('label-cuenta-propia').textContent =
+        (estado.idEmpresa && empleadoPropioId === estado.idEmpresa)
+          ? `Cuenta de ${estado.nombresEmpleados[estado.idEmpresa] || 'Empresa'}`
+          : 'Tu cuenta'
     }
 
     // Ingreso propio / Egreso: "Cuenta de la contraparte" — se repuebla cada
@@ -4079,8 +4138,14 @@
     // saber cuál se pidió. El permiso no se re-chequea acá a propósito — se
     // controla en si el botón se renderiza (ver renderizarAccionesDetalle) y,
     // sobre todo, server-side en la RPC, que es la barrera real.
+    //
+    // "Mi lado" del movimiento (empleadoPropioId) es el dueño de la ficha
+    // abierta, no siempre el usuario logueado: en la ficha de Empresa, el
+    // egreso sale de Empresa. Se guarda explícito en el wizard en vez de leer
+    // estado.miEmpleado desde cada selector — que era la suposición que había
+    // que romper para soportar esto.
     async function abrirModalMovimiento(tipo, empleadoId, subtipo = 'propio') {
-      estado.wizardMovimiento = { tipo, empleadoId, subtipo }
+      estado.wizardMovimiento = { tipo, empleadoId, subtipo, empleadoPropioId: empleadoId }
 
       const grupoContraparte       = document.getElementById('grupo-contraparte')
       const labelContraparte       = document.getElementById('label-contraparte')
@@ -4115,18 +4180,23 @@
           document.getElementById('movimiento-titulo').textContent = 'Añadir ingreso'
           grupoContraparte.style.display = 'flex'
           labelContraparte.textContent = '¿Quién te dio la plata?'
-          poblarSelectorContraparte()
+          await poblarSelectorContraparte(empleadoId)
           grupoCuentaPropia.style.display = 'flex'
-          poblarSelectorCuentaPropia()
+          await poblarSelectorCuentaPropia(empleadoId)
         }
       } else if (tipo === 'egreso') {
-        document.getElementById('movimiento-titulo').textContent = 'Registrar egreso'
+        const desdeEmpresa = !!estado.idEmpresa && empleadoId === estado.idEmpresa
+        document.getElementById('movimiento-titulo').textContent = desdeEmpresa
+          ? `Egreso de ${estado.nombresEmpleados[estado.idEmpresa] || 'Empresa'}`
+          : 'Registrar egreso'
         avisoRetiro.hidden = true
         grupoContraparte.style.display = 'flex'
-        labelContraparte.textContent = '¿A quién le vas a dar la plata?'
-        poblarSelectorContraparte()
+        labelContraparte.textContent = desdeEmpresa
+          ? '¿A quién se le da la plata?'
+          : '¿A quién le vas a dar la plata?'
+        await poblarSelectorContraparte(empleadoId)
         grupoCuentaPropia.style.display = 'flex'
-        poblarSelectorCuentaPropia()
+        await poblarSelectorCuentaPropia(empleadoId)
       } else {
         grupoContraparte.style.display = 'none'
         document.getElementById('movimiento-titulo').textContent = 'Registrar retiro'
@@ -4171,7 +4241,7 @@
     }
 
     async function guardarMovimiento() {
-      const { tipo, subtipo, empleadoId } = estado.wizardMovimiento
+      const { tipo, subtipo, empleadoId, empleadoPropioId } = estado.wizardMovimiento
       const monto       = parseImporte(document.getElementById('movimiento-monto').value)
       const fecha         = document.getElementById('movimiento-fecha').value || null
       const descripcion   = document.getElementById('movimiento-descripcion').value.trim() || null
@@ -4200,10 +4270,13 @@
       btn.classList.add('btn--cargando')
       btn.disabled = true
 
-      // Los únicos dos casos que TODAVÍA son atómicos (mueven saldo ya
-      // mismo): ingreso externo (Pablo) y retiro. Ingreso propio y egreso
-      // ahora solo crean una solicitud pendiente — ver CAMBIO 4/5.
-      const esAtomico = (tipo === 'ingreso' && subtipo === 'externo') || tipo === 'retiro'
+      // Ingreso externo y retiro mueven saldo ya mismo, siempre. El ingreso
+      // propio y el egreso normalmente crean una solicitud pendiente, PERO
+      // crear_solicitud_movimiento_caja puede auto-aceptarla (super_admin con
+      // Empresa de por medio) — en ese caso la plata se movió y hay que
+      // refrescar saldos. Por eso este flag arranca acá y se corrige más abajo
+      // con lo que devuelve la RPC: no se puede saber de antemano.
+      let esAtomico = (tipo === 'ingreso' && subtipo === 'externo') || tipo === 'retiro'
 
       try {
         let error
@@ -4222,10 +4295,27 @@
             p_descripcion: descripcion,
           }
           if (fecha) params.p_fecha = fecha
-          ;({ error } = await supabase.rpc('crear_solicitud_movimiento_caja', params))
+          // Solo se manda cuando "mi lado" NO soy yo (egreso desde la ficha de
+          // Empresa). En el flujo de siempre la llamada queda idéntica a antes.
+          if (empleadoPropioId && empleadoPropioId !== estado.miEmpleado.id) {
+            params.p_empleado_propio_id = empleadoPropioId
+          }
+          let resultado
+          ;({ data: resultado, error } = await supabase.rpc('crear_solicitud_movimiento_caja', params))
           if (error) throw error
+
+          // La RPC devuelve TEXT con el estado: 'aceptada' (se aplicó al toque)
+          // o 'pendiente'. Quien decide es el servidor — el frontend solo
+          // informa y refresca en consecuencia. Antes se asumía siempre
+          // "pendiente": el mensaje mentía y los saldos quedaban sin refrescar
+          // cuando la solicitud se auto-aceptaba.
           const nombreContraparte = estado.nombresEmpleados[contraparteId] || '—'
-          mostrarExito(`Solicitud enviada, esperando confirmación de ${nombreContraparte}.`)
+          if (resultado === 'aceptada') {
+            esAtomico = true
+            mostrarExito(`Movimiento registrado con ${nombreContraparte}.`)
+          } else {
+            mostrarExito(`Solicitud enviada, esperando confirmación de ${nombreContraparte}.`)
+          }
         } else {
           const params = { p_monto: monto, p_cuenta_id: cuentaUnicaId, p_descripcion: descripcion }
           if (fecha) params.p_fecha = fecha
@@ -4265,8 +4355,14 @@
     // MODAL — Traspaso entre cuentas propias
     // ═══════════════════════════════════════════════════════════════════════
 
+    // De qué caja es el traspaso: la propia, o la de Empresa si se abrió desde
+    // su ficha. Los dos selectores muestran cuentas de ESE dueño, nunca una
+    // mezcla — un traspaso mueve plata dentro de una misma caja.
+    let traspasoEmpleadoId = null
+
     function poblarSelectoresTraspaso() {
-      document.getElementById('traspaso-cuenta-origen').innerHTML = opcionesCuenta(cuentasDe(estado.miEmpleado.id), favoritaEfectivoARS(estado.miEmpleado.id))
+      document.getElementById('traspaso-cuenta-origen').innerHTML =
+        opcionesCuenta(cuentasDe(traspasoEmpleadoId), favoritaEfectivoARS(traspasoEmpleadoId))
       actualizarSelectorDestinoTraspaso()
     }
 
@@ -4274,7 +4370,7 @@
     // seleccionada la misma cuenta en los dos lados.
     function actualizarSelectorDestinoTraspaso() {
       const origenId = document.getElementById('traspaso-cuenta-origen').value
-      const candidatas = cuentasDe(estado.miEmpleado.id).filter(c => c.id !== origenId)
+      const candidatas = cuentasDe(traspasoEmpleadoId).filter(c => c.id !== origenId)
       document.getElementById('traspaso-cuenta-destino').innerHTML = opcionesCuenta(candidatas)
       actualizarCampoMontoDestino()
     }
@@ -4303,10 +4399,16 @@
     document.getElementById('traspaso-cuenta-origen').addEventListener('change', actualizarSelectorDestinoTraspaso)
     document.getElementById('traspaso-cuenta-destino').addEventListener('change', actualizarCampoMontoDestino)
 
-    function abrirModalTraspaso() {
+    async function abrirModalTraspaso(empleadoId = estado.miEmpleado.id) {
+      traspasoEmpleadoId = empleadoId
+      const esEmpresa = !!estado.idEmpresa && empleadoId === estado.idEmpresa
+      document.getElementById('traspaso-titulo').textContent = esEmpresa
+        ? `Traspaso entre cuentas de ${estado.nombresEmpleados[estado.idEmpresa] || 'Empresa'}`
+        : 'Traspaso entre cuentas'
       document.getElementById('traspaso-monto').value = ''
       document.getElementById('traspaso-monto-destino').value = ''
       document.getElementById('traspaso-fecha').value = fechaISO(new Date())
+      await cargarCuentasDe(empleadoId)
       poblarSelectoresTraspaso()
       document.getElementById('modal-traspaso').hidden = false
     }
@@ -4342,14 +4444,20 @@
           p_monto_origen: monto, p_monto_destino: montoDestino,
         }
         if (fecha) params.p_fecha = fecha
+        // Igual que en el egreso: solo se manda cuando la caja no es la mía, así
+        // el traspaso propio de siempre llama exactamente como antes.
+        if (traspasoEmpleadoId && traspasoEmpleadoId !== estado.miEmpleado.id) {
+          params.p_empleado_id = traspasoEmpleadoId
+        }
         const { error } = await supabase.rpc('registrar_traspaso_cuenta_caja', params)
         if (error) throw error
 
         mostrarExito('Traspaso registrado.')
         cerrarModalTraspaso()
 
-        // El traspaso siempre es sobre la propia caja.
-        await refrescarSaldosDeFicha(estado.miEmpleado.id)
+        // El traspaso es sobre la caja de traspasoEmpleadoId (la propia, o la
+        // de Empresa si se abrió desde su ficha).
+        await refrescarSaldosDeFicha(traspasoEmpleadoId)
         if (estado.personaAbierta) await cargarMovimientos(estado.personaAbierta)
       } catch (err) {
         mostrarError(err.message || 'No se pudo registrar el traspaso.')
@@ -4418,11 +4526,11 @@
       // comentario en cargarEmpresa() sobre la carrera con cargarNombresEmpleados().
       await cargarEmpresa()
 
-      // Atajo a la ficha de Empresa — mismo criterio en los dos lugares
-      // donde puede aparecer (acá, y en renderizarAccionesDetalle() para
-      // quien entra directo a su propia ficha sin pasar por el listado).
-      // Con bypass a propósito: solo navega (ver tieneTareaExplicita()).
-      if (estado.idEmpresa && tieneTarea('ingreso_externo_empresa')) {
+      // Atajo a la ficha de Empresa — mismo criterio en los dos lugares donde
+      // puede aparecer (acá, y en renderizarAccionesDetalle() para quien entra
+      // directo a su propia ficha sin pasar por el listado). Gate SIN bypass:
+      // ver la ficha de Empresa es un permiso propio ('ver_empresa').
+      if (estado.idEmpresa && tieneTareaExplicita('ver_empresa')) {
         document.getElementById('btn-empresa-atajo').style.display = 'inline-flex'
       }
 
