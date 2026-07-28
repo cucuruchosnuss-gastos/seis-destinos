@@ -1834,10 +1834,17 @@
       return estado.miEmpleado?.rol_app === 'super_admin' || estado.misTareasCaja.has(tarea)
     }
 
-    // Sin bypass de super_admin — 'ingreso_externo' es la única tarea de
-    // Caja que se otorga por persona puntual, no por rol (ver los 2 usos en
+    // Sin bypass de super_admin — las dos tareas de ingreso atómico
+    // ('ingreso_externo_propio' e 'ingreso_externo_empresa') se otorgan por
+    // persona puntual, no por rol (ver los usos en
     // renderizarAccionesDetalle/abrirModalMovimiento). El resto de las
     // tareas de este archivo sigue usando tieneTarea() con bypass normal.
+    //
+    // El ATAJO a la ficha de Empresa es la excepción deliberada: usa
+    // tieneTarea() con bypass, porque solo navega — la barrera real es el
+    // botón de adentro (explícito) y la RPC. Sin bypass, un super_admin sin
+    // fila explícita perdería el acceso rápido a la ficha donde justamente se
+    // administran las cuentas de Empresa.
     function tieneTareaExplicita(tarea) {
       return estado.misTareasCaja.has(tarea)
     }
@@ -2938,17 +2945,20 @@
       const cont = document.getElementById('detalle-persona-acciones')
       const botones = []
 
-      // Ingreso: en tu propia ficha SIEMPRE es "Añadir ingreso" (solicitud
-      // pendiente) — ya no existe el flujo de "elegir cualquier empleado
-      // desde el listado" (ver abrirModalMovimiento). El atómico "Ingreso
-      // externo" se movió a la ficha de Empresa (única con sentido real: la
-      // solicitud pendiente opera sobre "quien llama", y Empresa no tiene
-      // sesión propia) — solo visible ahí, y solo con la tarea
-      // 'ingreso_externo'. En cualquier otra ficha ajena no aparece ninguno
-      // de los dos.
+      // Ingreso: el atómico ("Ingreso externo", plata que entra de afuera del
+      // sistema) depende de una tarea distinta según de quién sea la caja —
+      // 'ingreso_externo_propio' en la tuya, 'ingreso_externo_empresa' en la
+      // de Empresa. Sin la tarea que corresponda, en tu propia ficha queda el
+      // flujo de solicitud pendiente ("Añadir ingreso"), que es el baseline de
+      // todos; en la de Empresa no aparece ningún botón (la solicitud
+      // pendiente opera sobre "quien llama" y Empresa no tiene sesión propia).
+      // En cualquier otra ficha ajena tampoco aparece ninguno de los dos.
+      // El gate del modal (ver abrirModalMovimiento) usa exactamente el mismo
+      // criterio: si se cambia acá, hay que cambiarlo allá.
       if (empleadoId === estado.miEmpleado.id) {
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">Añadir ingreso</button>`)
-      } else if (empleadoId === estado.idEmpresa && tieneTareaExplicita('ingreso_externo')) {
+        const etiqueta = tieneTareaExplicita('ingreso_externo_propio') ? 'Ingreso externo' : 'Añadir ingreso'
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">${etiqueta}</button>`)
+      } else if (empleadoId === estado.idEmpresa && tieneTareaExplicita('ingreso_externo_empresa')) {
         botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">Ingreso externo</button>`)
       }
 
@@ -2972,11 +2982,13 @@
       }
 
       // Atajo a Empresa — segunda ubicación (ver también btn-empresa-atajo
-      // en .fila-tabs-caja): quien tiene 'ingreso_externo' pero no
+      // en .fila-tabs-caja): quien tiene 'ingreso_externo_empresa' pero no
       // ver_listado entra directo a su propia ficha y nunca ve esa otra
       // barra. Solo acá cuando el origen fue 'directo', para no duplicar el
       // botón cuando ya está visible arriba (quien vino del listado).
-      if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.idEmpresa && tieneTarea('ingreso_externo')) {
+      // Con bypass a propósito (tieneTarea, no la variante explícita): esto
+      // solo navega — ver el comentario de tieneTareaExplicita().
+      if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.idEmpresa && tieneTarea('ingreso_externo_empresa')) {
         botones.push(`<button type="button" class="btn btn--amarillo-outline" id="btn-detalle-empresa-atajo" style="flex:1 1 45%;">Empresa</button>`)
       }
 
@@ -4033,21 +4045,26 @@
       if (tipo === 'ingreso') {
         avisoRetiro.hidden = true
 
-        const esIngresoEmpresa = empleadoId === estado.idEmpresa && tieneTareaExplicita('ingreso_externo')
-        estado.wizardMovimiento.subtipo = esIngresoEmpresa ? 'externo' : 'propio'
+        // Mismo criterio que el botón que abre este modal (ver
+        // renderizarAccionesDetalle): el ingreso atómico depende de una tarea
+        // distinta según de quién sea la caja. Las dos son sin bypass.
+        const esIngresoAtomico =
+          (empleadoId === estado.idEmpresa      && tieneTareaExplicita('ingreso_externo_empresa')) ||
+          (empleadoId === estado.miEmpleado.id  && tieneTareaExplicita('ingreso_externo_propio'))
+        estado.wizardMovimiento.subtipo = esIngresoAtomico ? 'externo' : 'propio'
 
-        if (esIngresoEmpresa) {
-          // Ingreso externo — se movió a la ficha de Empresa (CAMBIO 1),
-          // única con sentido real: no hay contraparte, el dinero entra de
-          // afuera del sistema, y sigue siendo atómico — no pasa por el
-          // esquema de solicitudes. empleadoId ya es siempre estado.idEmpresa
-          // acá, sin merge con cuentas propias (ver CAMBIO 5 original).
+        if (esIngresoAtomico) {
+          // Ingreso externo: no hay contraparte, el dinero entra de afuera del
+          // sistema y es atómico — no pasa por el esquema de solicitudes. El
+          // selector es siempre de UN solo dueño (el de esta ficha), nunca un
+          // merge entre cuentas propias y de Empresa. La RPC re-valida
+          // server-side qué tarea corresponde según el dueño de la cuenta.
           document.getElementById('movimiento-titulo').textContent = 'Ingreso externo'
           grupoContraparte.style.display = 'none'
           grupoCuentaUnica.style.display = 'flex'
           labelCuentaUnica.textContent = 'Cuenta'
-          await cargarCuentasDe(estado.idEmpresa)
-          document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(estado.idEmpresa), favoritaEfectivoARS(estado.idEmpresa))
+          await cargarCuentasDe(empleadoId)
+          poblarSelectorCuentaUnica(empleadoId)
         } else {
           // Cualquier otro: crea una solicitud pendiente que la contraparte
           // tiene que aceptar — no mueve saldo todavía.
@@ -4360,7 +4377,8 @@
       // Atajo a la ficha de Empresa — mismo criterio en los dos lugares
       // donde puede aparecer (acá, y en renderizarAccionesDetalle() para
       // quien entra directo a su propia ficha sin pasar por el listado).
-      if (estado.idEmpresa && tieneTarea('ingreso_externo')) {
+      // Con bypass a propósito: solo navega (ver tieneTareaExplicita()).
+      if (estado.idEmpresa && tieneTarea('ingreso_externo_empresa')) {
         document.getElementById('btn-empresa-atajo').style.display = 'inline-flex'
       }
 
