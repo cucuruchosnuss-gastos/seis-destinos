@@ -2945,21 +2945,27 @@
       const cont = document.getElementById('detalle-persona-acciones')
       const botones = []
 
-      // Ingreso: el atómico ("Ingreso externo", plata que entra de afuera del
-      // sistema) depende de una tarea distinta según de quién sea la caja —
-      // 'ingreso_externo_propio' en la tuya, 'ingreso_externo_empresa' en la
-      // de Empresa. Sin la tarea que corresponda, en tu propia ficha queda el
-      // flujo de solicitud pendiente ("Añadir ingreso"), que es el baseline de
-      // todos; en la de Empresa no aparece ningún botón (la solicitud
-      // pendiente opera sobre "quien llama" y Empresa no tiene sesión propia).
-      // En cualquier otra ficha ajena tampoco aparece ninguno de los dos.
-      // El gate del modal (ver abrirModalMovimiento) usa exactamente el mismo
-      // criterio: si se cambia acá, hay que cambiarlo allá.
+      // Ingreso: son DOS operaciones distintas que conviven, no una que cambia
+      // de nombre.
+      //   - "Añadir ingreso" (solicitud): recibir plata de otra persona o de
+      //     Empresa, con confirmación de la otra parte. Lo necesita cualquiera,
+      //     siempre, tenga o no tareas — es el baseline.
+      //   - "Ingreso externo" (atómico): plata que entra de afuera del sistema
+      //     (una cobranza), sin contraparte ni confirmación. Solo con la tarea.
+      // La tarea del atómico depende de de quién es la caja:
+      // 'ingreso_externo_propio' en la tuya, 'ingreso_externo_empresa' en la de
+      // Empresa. En la ficha de Empresa NO va el de solicitud: ese flujo opera
+      // sobre "quien llama" y Empresa no tiene sesión propia. En una ficha
+      // ajena no va ninguno de los dos.
+      // El modal NO deduce cuál de los dos flujos abrir — se lo dice el botón
+      // que se tocó (ver el subtipo en los listeners de abajo).
       if (empleadoId === estado.miEmpleado.id) {
-        const etiqueta = tieneTareaExplicita('ingreso_externo_propio') ? 'Ingreso externo' : 'Añadir ingreso'
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">${etiqueta}</button>`)
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">Añadir ingreso</button>`)
+        if (tieneTareaExplicita('ingreso_externo_propio')) {
+          botones.push(`<button type="button" class="btn btn--amarillo-outline" id="btn-detalle-ingreso-externo" style="flex:1 1 45%;">Ingreso externo</button>`)
+        }
       } else if (empleadoId === estado.idEmpresa && tieneTareaExplicita('ingreso_externo_empresa')) {
-        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso" style="flex:1 1 45%;">Ingreso externo</button>`)
+        botones.push(`<button type="button" class="btn btn--amarillo" id="btn-detalle-ingreso-externo" style="flex:1 1 45%;">Ingreso externo</button>`)
       }
 
       // Egreso: sin cambios, solo en la propia ficha.
@@ -3001,7 +3007,12 @@
 
       cont.innerHTML = botones.join('')
 
-      document.getElementById('btn-detalle-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId))
+      // El subtipo lo decide el botón, no la ficha: en la ficha propia los dos
+      // flujos son posibles a la vez. 'btn-detalle-ingreso-externo' es el mismo
+      // id en la ficha propia y en la de Empresa — nunca coexisten en el DOM
+      // (se renderiza una ficha a la vez) y el empleadoId sale del closure.
+      document.getElementById('btn-detalle-ingreso')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId, 'propio'))
+      document.getElementById('btn-detalle-ingreso-externo')?.addEventListener('click', () => abrirModalMovimiento('ingreso', empleadoId, 'externo'))
       document.getElementById('btn-detalle-egreso')?.addEventListener('click', () => abrirModalMovimiento('egreso', empleadoId))
       document.getElementById('btn-detalle-retiro')?.addEventListener('click', () => abrirModalMovimiento('retiro', empleadoId))
       document.getElementById('btn-detalle-traspaso')?.addEventListener('click', () => abrirModalTraspaso())
@@ -4027,8 +4038,15 @@
     // tipo: 'ingreso' | 'egreso' | 'retiro'. empleadoId: dueño de la ficha
     // desde donde se abrió (siempre presente — ya no existe el flujo de
     // "elegir cualquier empleado" desde el listado, para ingreso ni egreso).
-    async function abrirModalMovimiento(tipo, empleadoId) {
-      estado.wizardMovimiento = { tipo, empleadoId }
+    // subtipo: solo aplica a tipo='ingreso' — 'propio' (solicitud pendiente,
+    // con contraparte) o 'externo' (atómico, plata de afuera del sistema). Lo
+    // decide EL BOTÓN que abrió el modal, nunca se deduce de la ficha: en la
+    // ficha propia los dos flujos conviven, así que la ficha no alcanza para
+    // saber cuál se pidió. El permiso no se re-chequea acá a propósito — se
+    // controla en si el botón se renderiza (ver renderizarAccionesDetalle) y,
+    // sobre todo, server-side en la RPC, que es la barrera real.
+    async function abrirModalMovimiento(tipo, empleadoId, subtipo = 'propio') {
+      estado.wizardMovimiento = { tipo, empleadoId, subtipo }
 
       const grupoContraparte       = document.getElementById('grupo-contraparte')
       const labelContraparte       = document.getElementById('label-contraparte')
@@ -4045,15 +4063,7 @@
       if (tipo === 'ingreso') {
         avisoRetiro.hidden = true
 
-        // Mismo criterio que el botón que abre este modal (ver
-        // renderizarAccionesDetalle): el ingreso atómico depende de una tarea
-        // distinta según de quién sea la caja. Las dos son sin bypass.
-        const esIngresoAtomico =
-          (empleadoId === estado.idEmpresa      && tieneTareaExplicita('ingreso_externo_empresa')) ||
-          (empleadoId === estado.miEmpleado.id  && tieneTareaExplicita('ingreso_externo_propio'))
-        estado.wizardMovimiento.subtipo = esIngresoAtomico ? 'externo' : 'propio'
-
-        if (esIngresoAtomico) {
+        if (subtipo === 'externo') {
           // Ingreso externo: no hay contraparte, el dinero entra de afuera del
           // sistema y es atómico — no pasa por el esquema de solicitudes. El
           // selector es siempre de UN solo dueño (el de esta ficha), nunca un
