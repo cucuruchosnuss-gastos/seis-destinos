@@ -3256,11 +3256,19 @@
       renderizarSolicitudesPendientes()
     }
 
-    // Por fila: si YO (estado.miEmpleado.id) soy una de las dos partes y no
-    // soy quien la creó → tengo que responder (Aceptar/Rechazar). Si soy
-    // quien la creó → estoy esperando (Cancelar). Si no soy ninguna de las
-    // dos (la estoy mirando de tercero, con permiso de admin/super_admin) →
-    // solo informativo, sin botones.
+    // Por fila, espejo EXACTO de la regla de responder_solicitud_movimiento_caja
+    // (si divergen, la UI ofrece botones que el servidor rechaza, o esconde
+    // acciones que sí estaban permitidas — que es el bug que esto arregló):
+    //   - Si la solicitud involucra a Empresa (origen o destino), responderla es
+    //     de cualquier super_admin, SEA O NO el creador. Lo de "no podés
+    //     responder tu propia solicitud" no aplica a propósito: si aplicara, una
+    //     solicitud creada por el único super_admin disponible quedaría
+    //     pendiente para siempre.
+    //   - Si NO involucra a Empresa, hay que ser parte (origen o destino) y no
+    //     ser el creador, como siempre.
+    // Quien no puede responder pero la creó, sigue viendo "Esperando…" +
+    // Cancelar. Un tercero que no es ninguna de las dos cosas la ve informativa,
+    // sin botones.
     function renderizarFilaSolicitud(s) {
       const miId = estado.miEmpleado.id
       const nombreOrigen  = estado.nombresEmpleados[s.origen_empleado_id]  || '—'
@@ -3271,11 +3279,37 @@
       const soyDestino = miId === s.destino_empleado_id
       const soyCreador = miId === s.creado_por
 
+      // El guard de idEmpresa no es decorativo: sin él, con idEmpresa sin
+      // resolver (null/undefined) la comparación daría true para cualquier
+      // solicitud y todas parecerían involucrar a Empresa.
+      const involucraEmpresa = !!estado.idEmpresa &&
+        (s.origen_empleado_id === estado.idEmpresa || s.destino_empleado_id === estado.idEmpresa)
+      const soySuperAdmin = estado.miEmpleado?.rol_app === 'super_admin'
+
+      const puedeResponder = involucraEmpresa
+        ? soySuperAdmin
+        : (soyOrigen || soyDestino) && !soyCreador
+
       let acciones = ''
-      if ((soyOrigen || soyDestino) && !soyCreador) {
+      if (puedeResponder) {
+        // Para el creador el "no" correcto es Cancelar (retractarse), no
+        // Rechazar: rechazar la propia solicitud lo grabaría a él mismo en
+        // respondido_por con un motivo_rechazo explicando por qué declina algo
+        // que él pidió. Dos acciones por caso, nunca dos botones que signifiquen
+        // lo mismo.
+        const botonNegativo = soyCreador
+          ? `<button type="button" class="btn btn--secundario" data-accion="cancelar" data-id="${s.id}">Cancelar</button>`
+          : `<button type="button" class="btn btn--secundario" data-accion="rechazar" data-id="${s.id}">Rechazar</button>`
+        // Aceptar la propia solicitud desconcierta si no se explica, y acá hay
+        // plata de por medio. Va en el mismo lugar que el cartel de espera, para
+        // no sumar una fila más a la tarjeta.
+        const nota = soyCreador
+          ? `<div class="tarjeta-solicitud__espera">La creaste vos — como involucra a Empresa, podés confirmarla</div>`
+          : ''
         acciones = `
+          ${nota}
           <div class="tarjeta-solicitud__acciones">
-            <button type="button" class="btn btn--secundario" data-accion="rechazar" data-id="${s.id}">Rechazar</button>
+            ${botonNegativo}
             <button type="button" class="btn btn--exito" data-accion="aceptar" data-id="${s.id}">Aceptar</button>
           </div>`
       } else if (soyCreador) {
