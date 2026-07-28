@@ -649,10 +649,16 @@
         tareas: [
           { modulo: 'gastos', tarea: 'ver_exportar',      label: 'Ver todos los gastos de la empresa + exportar Excel (incluye cargar gastos a nombre de otro)' },
           { modulo: 'gastos', tarea: 'editar_anular',     label: 'Editar y anular cualquier gasto' },
+          { modulo: 'gastos', tarea: 'gastos_empresa',    label: 'Cargar gastos contra las cuentas de la Empresa' },
           { modulo: 'caja',   tarea: 'ver_listado',       label: 'Ver el listado completo de cajas de la empresa' },
           { modulo: 'caja',   tarea: 'retiros_todos',     label: 'Ver los retiros personales de todos' },
           { modulo: 'caja',   tarea: 'movimientos_todos', label: 'Ver todos los movimientos de todas las cuentas' },
-          { modulo: 'caja',   tarea: 'ingreso_externo',   label: 'Cargar ingresos externos (cuenta Empresa)' },
+          // La vieja 'ingreso_externo' se partió en dos: el permiso ahora
+          // depende de en qué caja entra la plata. Las dos se chequean
+          // server-side SIN bypass de super_admin (tiene_tarea_explicita),
+          // así que un super_admin también necesita la fila otorgada.
+          { modulo: 'caja',   tarea: 'ingreso_externo_propio',  label: 'Cargar ingresos externos en su propia caja' },
+          { modulo: 'caja',   tarea: 'ingreso_externo_empresa', label: 'Cargar ingresos en las cuentas de la Empresa' },
         ],
       },
       {
