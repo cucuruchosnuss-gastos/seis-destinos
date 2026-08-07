@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
     tuvoMatch?: boolean
     fechaNacimiento?: string | null
     telefono?: string | null
+    captchaToken?: string
   }
   try {
     body = await req.json()
@@ -36,13 +37,51 @@ Deno.serve(async (req) => {
     return json({ ok: false, mensaje: 'El cuerpo del request no es JSON válido' }, 400)
   }
 
-  const { nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono } = body
+  const { nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono, captchaToken } = body
 
   if (!nombreCompleto || !nombre || !email || !contrasena || !cuil) {
     return json({ ok: false, mensaje: 'Faltan campos requeridos.' }, 400)
   }
   if (contrasena.length < 6) {
     return json({ ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres.' }, 400)
+  }
+
+  // ── Verificación del CAPTCHA (Cloudflare Turnstile) ────────────────────────
+  // Esta función crea la cuenta con auth.admin.createUser() y SERVICE_ROLE, que
+  // NO pasa por el CAPTCHA que Supabase valida en los endpoints públicos de
+  // Auth. Si no se verifica el token acá, este endpoint queda como la única
+  // puerta de la app sin protección — y es justo la que crea usuarios.
+  //
+  // Falla CERRADA en todos los casos: sin secret, sin token o con token
+  // inválido, no se crea nada.
+  const secretTurnstile = Deno.env.get('TURNSTILE_SECRET_KEY')
+  if (!secretTurnstile) {
+    // Antes que crear cuentas sin verificar, se corta: un endpoint público de
+    // alta sin CAPTCHA es peor que un registro caído.
+    console.error('CRÍTICO: TURNSTILE_SECRET_KEY no está configurada — se rechaza la solicitud en vez de crear la cuenta sin verificar.')
+    return json({ ok: false, mensaje: 'Error de configuración del servidor.' }, 500)
+  }
+
+  if (!captchaToken) {
+    return json({ ok: false, mensaje: 'Falta la verificación de seguridad.' }, 400)
+  }
+
+  let verificacion: { success?: boolean; 'error-codes'?: string[] }
+  try {
+    const respuestaTurnstile = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret: secretTurnstile, response: captchaToken }),
+    })
+    verificacion = await respuestaTurnstile.json()
+  } catch (err) {
+    console.error('Error de red al verificar el CAPTCHA con Cloudflare:', err)
+    return json({ ok: false, mensaje: 'No se pudo verificar la seguridad. Probá de nuevo.' }, 502)
+  }
+
+  if (!verificacion?.success) {
+    console.error('CAPTCHA rechazado por Cloudflare:', JSON.stringify(verificacion?.['error-codes'] ?? verificacion))
+    return json({ ok: false, mensaje: 'La verificación de seguridad falló. Recargá la página e intentá de nuevo.' }, 400)
   }
 
   const supabaseAdmin = createClient(

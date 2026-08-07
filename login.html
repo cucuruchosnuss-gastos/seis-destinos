@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a2a52">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body class="pagina-auth">
 
@@ -65,6 +66,8 @@
         </p>
       </div>
 
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAAEJjFW7fQjfhZCTy" data-callback="onTurnstileOk"></div>
+
       <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
 
       <div class="formulario__acciones">
@@ -120,6 +123,11 @@
       alertaError.classList.remove('alerta--visible')
     }
 
+    // Turnstile busca el data-callback por nombre en el objeto global, y este
+    // script es un módulo (sus funciones NO quedan en window). Sin esta
+    // asignación explícita, el callback no se dispara nunca.
+    window.onTurnstileOk = () => ocultarAlertaError()
+
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault()
       ocultarAlertaError()
@@ -132,14 +140,25 @@
         return
       }
 
+      // El ?. cubre que el script de Cloudflare no haya cargado (red lenta,
+      // bloqueador): sin token no se envía nada.
+      const captchaToken = window.turnstile?.getResponse() ?? ''
+      if (!captchaToken) {
+        mostrarAlertaError('Esperá a que termine la verificación de seguridad.')
+        return
+      }
+
       btnIngresar.classList.add('btn--cargando')
       btnIngresar.disabled = true
 
       try {
-        await iniciarSesion(email, contrasena)
+        await iniciarSesion(email, contrasena, captchaToken)
         window.location.replace('dashboard.html')
       } catch (error) {
         mostrarAlertaError(error.message)
+        // El token es de un solo uso: sin reset, el segundo intento manda un
+        // token ya consumido y falla siempre, aunque la contraseña sea correcta.
+        window.turnstile?.reset()
         btnIngresar.classList.remove('btn--cargando')
         btnIngresar.disabled = false
       }

@@ -54,8 +54,15 @@ export async function verificarSesion({ redirigirSiNoHay = true, redirigirSiHay 
   return session
 }
 
-export async function iniciarSesion(email, contrasena) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: contrasena })
+// captchaToken: token de Cloudflare Turnstile (ver login.html). Supabase lo
+// valida server-side contra Cloudflare cuando "Enable Captcha protection" está
+// activo en Attack Protection; si está apagado, lo ignora sin error.
+export async function iniciarSesion(email, contrasena, captchaToken) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password: contrasena,
+    options: { captchaToken },
+  })
 
   if (error) throw new Error(_traducirError(error.message))
 
@@ -69,11 +76,31 @@ export async function cerrarSesion() {
 
 // Mecanismo estándar de Supabase: manda un link mágico al mail, sin
 // aprobación manual de nadie — si alguien puede entrar a ese mail para
-// clickear el link, ya demostró ser el dueño de la cuenta. No lanza error
-// nunca (ni si el mail no existe) — la pantalla que llama a esto siempre
-// muestra el mismo mensaje, para no revelar qué mails están registrados.
-export async function pedirRestablecerContrasena(email) {
-  await supabase.auth.resetPasswordForEmail(email, { redirectTo: RUTA_RESTABLECER_CONTRASENA })
+// clickear el link, ya demostró ser el dueño de la cuenta.
+//
+// Lanza SOLO si falló el CAPTCHA. Cualquier otro error se traga a propósito
+// (incluido "ese mail no existe"): la pantalla muestra siempre el mismo
+// mensaje de éxito, para no revelar qué mails están registrados. La decisión
+// vive acá y no en la pantalla justamente para que no se pueda filtrar por
+// descuido al tocar el HTML — si esta función no lanza, no hay nada que
+// mostrar.
+export async function pedirRestablecerContrasena(email, captchaToken) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: RUTA_RESTABLECER_CONTRASENA,
+    captchaToken,
+  })
+
+  if (!error) return
+
+  if (_esErrorDeCaptcha(error.message)) {
+    throw new Error('La verificación de seguridad falló. Recargá la página e intentá de nuevo.')
+  }
+
+  // No se le muestra al usuario (ver arriba), pero queda rastro en la consola.
+  // Importa sobre todo si Supabase cambia el texto de su error de CAPTCHA: en
+  // ese caso _esErrorDeCaptcha() dejaría de matchear y el fallo volvería a ser
+  // invisible — este log es la única pista de que eso pasó.
+  console.error('[auth] resetPasswordForEmail falló y no se detectó como CAPTCHA (no se muestra al usuario):', error.message)
 }
 
 // Se usa desde restablecer-contrasena.html, una vez que la sesión temporal
@@ -117,9 +144,12 @@ export async function buscarEmpleadoPorCuil(cuil) {
 // y la persona quedaba con una cuenta creada pero sin ninguna fila en
 // solicitudes_acceso, viendo "pendiente de aprobación" para siempre).
 // apellido/fechaNacimiento/telefono solo aplican cuando tuvoMatch es false.
-export async function crearSolicitudAcceso({ nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono }) {
+// captchaToken: lo valida la propia Edge Function contra Cloudflare — no pasa
+// por el CAPTCHA de Supabase, porque adentro usa service_role (ver el
+// comentario en index.ts).
+export async function crearSolicitudAcceso({ nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono, captchaToken }) {
   const { data, error } = await supabase.functions.invoke('crear-solicitud-acceso', {
-    body: { nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono },
+    body: { nombreCompleto, nombre, apellido, email, contrasena, cuil, tuvoMatch, fechaNacimiento, telefono, captchaToken },
   })
 
   if (error) throw new Error('No se pudo enviar la solicitud. Probá de nuevo.')
@@ -133,6 +163,14 @@ export async function crearSolicitudAcceso({ nombreCompleto, nombre, apellido, e
   }
 
   return data
+}
+
+// Supabase no expone un código de error para el rechazo de CAPTCHA, solo el
+// texto (algo como "captcha protection: request disallowed (...)"). Matchear
+// sobre el mensaje es frágil por definición — por eso el único lugar que lo
+// usa loguea a consola cuando NO matchea (ver pedirRestablecerContrasena).
+function _esErrorDeCaptcha(mensaje) {
+  return /captcha/i.test(mensaje || '')
 }
 
 function _traducirError(mensaje) {

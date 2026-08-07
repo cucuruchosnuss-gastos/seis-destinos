@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1a2a52">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body class="pagina-auth">
 
@@ -25,6 +26,8 @@
           <label for="email">Email</label>
           <input type="email" id="email" name="email" placeholder="tu@email.com" autocomplete="email" required>
         </div>
+
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAEJjFW7fQjfhZCTy" data-callback="onTurnstileOk"></div>
 
         <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
 
@@ -64,6 +67,9 @@
       alertaError.classList.add('alerta--visible')
     }
 
+    // Ver el comentario equivalente en login.html: módulo != scope global.
+    window.onTurnstileOk = () => alertaError.classList.remove('alerta--visible')
+
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault()
       alertaError.classList.remove('alerta--visible')
@@ -74,14 +80,28 @@
         return
       }
 
+      const captchaToken = window.turnstile?.getResponse() ?? ''
+      if (!captchaToken) {
+        mostrarAlertaError('Esperá a que termine la verificación de seguridad.')
+        return
+      }
+
       btnEnviar.classList.add('btn--cargando')
       btnEnviar.disabled = true
 
       try {
-        await pedirRestablecerContrasena(email)
-      } catch {
-        // Nunca revelamos si el mail existe o no — siempre mostramos el
-        // mismo mensaje de éxito, sea cual sea el resultado real.
+        await pedirRestablecerContrasena(email, captchaToken)
+      } catch (error) {
+        // Acá SOLO se llega si falló el CAPTCHA: pedirRestablecerContrasena()
+        // se traga cualquier otro error a propósito, para no revelar si el mail
+        // existe. Antes este catch estaba vacío y caía igual en la pantalla de
+        // éxito — con CAPTCHA eso habría significado decir "te mandamos el
+        // link" sin haberlo mandado.
+        mostrarAlertaError(error.message)
+        window.turnstile?.reset()
+        btnEnviar.classList.remove('btn--cargando')
+        btnEnviar.disabled = false
+        return
       }
 
       document.getElementById('vista-pedir-mail').hidden = true
