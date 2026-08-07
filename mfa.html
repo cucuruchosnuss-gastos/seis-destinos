@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación en dos pasos — Seis Destinos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <style>
+    /* Códigos de 6 dígitos: separados y grandes, se tipean mirando el celular
+       con la otra mano. El monoespaciado evita que el ancho baile al escribir. */
+    #codigo {
+      text-align: center;
+      font-size: 1.5rem;
+      letter-spacing: 0.4em;
+      font-variant-numeric: tabular-nums;
+      padding-left: 0.4em; /* compensa el letter-spacing del último dígito */
+    }
+  </style>
+</head>
+<body class="pagina-auth">
+
+  <div class="tarjeta-auth">
+    <div class="auth-logo">
+      <img src="logo.png" alt="Seis Destinos" style="max-width: 200px; height: auto; display: block; margin: 0 auto;">
+    </div>
+
+    <div id="vista-verificando">
+      <p style="font-size:0.875rem; color:var(--color-texto-suave); text-align:center; margin:0;">
+        Verificando…
+      </p>
+    </div>
+
+    <div id="vista-codigo" hidden>
+      <p style="font-size:0.875rem; color:var(--color-texto-suave); margin: 0 0 1.25rem; text-align:center;">
+        Abrí tu app de autenticación e ingresá el código de 6 dígitos.
+      </p>
+
+      <form class="formulario" id="formulario-mfa" novalidate>
+        <div class="grupo-campo">
+          <label for="codigo">Código</label>
+          <input
+            type="text"
+            id="codigo"
+            name="codigo"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            placeholder="000000"
+            autofocus
+            required
+          >
+        </div>
+
+        <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
+
+        <div class="formulario__acciones">
+          <button type="submit" class="btn btn--primario" id="btn-verificar">Verificar</button>
+        </div>
+      </form>
+    </div>
+
+    <p class="formulario__pie">
+      <a href="#" id="link-salir">Salir</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import { verificarSesion, cerrarSesion, listarFactoresMfa, verificarCodigoMfa } from './js/auth.js'
+    import { mostrarBannerVersion } from './js/version-banner.js'
+    import { supabase } from './js/supabase.js'
+
+    mostrarBannerVersion()
+
+    // Botón de salida: se engancha PRIMERO, antes de cualquier await, para que
+    // funcione aunque algo más abajo falle. Es la salida de emergencia de
+    // alguien que quedó trabado en esta pantalla — no puede depender de que el
+    // resto del script haya llegado a terminar.
+    document.getElementById('link-salir').addEventListener('click', (evento) => {
+      evento.preventDefault()
+      cerrarSesion()
+    })
+
+    // verificarSesion() detecta que estamos en mfa.html y NO vuelve a
+    // redirigir acá (ver el chequeo de AAL en js/auth.js) — pero sí manda a
+    // login si no hay sesión, que es lo que hace falta.
+    const formulario   = document.getElementById('formulario-mfa')
+    const campoCodigo  = document.getElementById('codigo')
+    const btnVerificar = document.getElementById('btn-verificar')
+    const alertaError  = document.getElementById('alerta-error')
+
+    function mostrarVista(id) {
+      ;['vista-verificando', 'vista-codigo'].forEach(v => {
+        document.getElementById(v).hidden = v !== id
+      })
+    }
+
+    function mostrarAlertaError(mensaje) {
+      alertaError.textContent = mensaje
+      alertaError.classList.add('alerta--visible')
+    }
+
+    const sesion = await verificarSesion()
+    if (!sesion) throw new Error('Sin sesión')
+
+    // Si la sesión YA pasó el segundo factor, esta pantalla no tiene nada que
+    // pedir. Pasa cuando alguien entra a la URL a mano o vuelve con el botón
+    // de atrás del navegador.
+    const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (nivel?.currentLevel === 'aal2') {
+      window.location.replace('dashboard.html')
+      throw new Error('La sesión ya está en aal2')
+    }
+
+    let factores = []
+    try {
+      factores = await listarFactoresMfa()
+    } catch (error) {
+      // Sin poder leer los factores no hay forma de armar el desafío. Se
+      // muestra el error en la pantalla en vez de mandar al dashboard: si el
+      // usuario tiene MFA activo, verificarSesion() lo devolvería acá y
+      // quedaría rebotando entre las dos páginas.
+      mostrarVista('vista-codigo')
+      document.getElementById('formulario-mfa').hidden = true
+      mostrarAlertaError(error.message)
+      throw error
+    }
+
+    // Sin ningún factor verificado no hay segundo paso que dar.
+    if (!factores.length) {
+      window.location.replace('dashboard.html')
+      throw new Error('El usuario no tiene factores verificados')
+    }
+
+    const factorId = factores[0].id
+
+    mostrarVista('vista-codigo')
+    campoCodigo.focus()
+
+    // Los autenticadores dan solo dígitos: filtrar acá evita que un espacio
+    // pegado desde el portapapeles haga fallar la verificación sin que se vea
+    // por qué.
+    campoCodigo.addEventListener('input', () => {
+      campoCodigo.value = campoCodigo.value.replace(/\D/g, '')
+    })
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault()
+      alertaError.classList.remove('alerta--visible')
+
+      const codigo = campoCodigo.value.trim()
+      if (codigo.length !== 6) {
+        mostrarAlertaError('Ingresá los 6 dígitos del código.')
+        return
+      }
+
+      btnVerificar.classList.add('btn--cargando')
+      btnVerificar.disabled = true
+
+      try {
+        await verificarCodigoMfa(factorId, codigo)
+        window.location.replace('dashboard.html')
+      } catch (error) {
+        // NO se cierra la sesión: lo más probable es que haya tipeado mal o
+        // que el código se le haya vencido mientras lo copiaba. Se limpia el
+        // campo y se deja reintentar.
+        mostrarAlertaError(error.message)
+        campoCodigo.value = ''
+        campoCodigo.focus()
+        btnVerificar.classList.remove('btn--cargando')
+        btnVerificar.disabled = false
+      }
+    })
+  </script>
+
+</body>
+</html>

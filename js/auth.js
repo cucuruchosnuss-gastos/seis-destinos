@@ -4,6 +4,7 @@ const RAIZ_SITIO = new URL('..', import.meta.url).href
 const RUTA_LOGIN = new URL('login.html', RAIZ_SITIO).href
 const RUTA_DASHBOARD = new URL('dashboard.html', RAIZ_SITIO).href
 const RUTA_RESTABLECER_CONTRASENA = new URL('restablecer-contrasena.html', RAIZ_SITIO).href
+const RUTA_MFA = new URL('mfa.html', RAIZ_SITIO).href
 
 // El link de "olvidé mi contraseña" no es un ticket de un solo uso: al
 // procesarlo, el SDK establece una sesión de Auth REAL y completa para esa
@@ -41,6 +42,42 @@ export async function verificarSesion({ redirigirSiNoHay = true, redirigirSiHay 
 
   if (error) console.error('Error al verificar sesión:', error.message)
 
+  // ── Segundo factor (MFA/TOTP) ────────────────────────────────────────────
+  // Mismo criterio que BANDERA_RECUPERACION: el chequeo vive acá, y no en
+  // cada pantalla, para que proteja automáticamente a las 11 páginas que
+  // llaman a verificarSesion() —incluidos los 6 módulos— sin que ninguna
+  // tenga que acordarse de hacerlo.
+  //
+  // Corre SOLO si hay sesión. index.html, login.html, registro.html y
+  // recuperar-contrasena.html llaman con redirigirSiNoHay:false, y sin JWT no
+  // hay nivel que consultar: sin este guard, un visitante anónimo entrando a
+  // la home terminaría en mfa.html (que tampoco tiene sesión) y quedaría
+  // rebotando.
+  //
+  // Va ANTES de los dos returns de abajo a propósito. Si fuera después, una
+  // sesión con el factor pendiente que abre login.html saltaría primero al
+  // dashboard por redirigirSiHay y recién de ahí a mfa.html — dos saltos y un
+  // parpadeo del dashboard que no debería llegar a verse.
+  if (session && !_estoyEnPantallaMfa()) {
+    const { data: nivel, error: errorNivel } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+
+    // Falla CERRADA. Un error acá no significa "seguí de largo": significa
+    // "no sé si esta sesión completó su segundo factor", y ante esa duda no
+    // se deja pasar. Es el mismo criterio que la Edge Function de registro
+    // aplica cuando falta el secret del CAPTCHA.
+    const faltaSegundoFactor = !!errorNivel ||
+      (nivel?.nextLevel === 'aal2' && nivel.nextLevel !== nivel.currentLevel)
+
+    if (faltaSegundoFactor) {
+      if (errorNivel) {
+        console.error('[auth] no se pudo determinar el AAL, se exige el segundo factor:', errorNivel.message)
+      }
+      window.location.replace(RUTA_MFA)
+      return null
+    }
+  }
+
   if (!session && redirigirSiNoHay) {
     window.location.replace(RUTA_LOGIN)
     return null
@@ -72,6 +109,100 @@ export async function iniciarSesion(email, contrasena, captchaToken) {
 export async function cerrarSesion() {
   await supabase.auth.signOut()
   window.location.replace(RUTA_LOGIN)
+}
+
+// ── Verificación en dos pasos (MFA / TOTP) ───────────────────────────────────
+// TOTP viene habilitado por defecto en todos los proyectos de Supabase y no
+// tiene costo. NO existen códigos de recuperación: el único respaldo posible
+// es dar de alta un segundo dispositivo (máximo 10 factores por usuario). Eso
+// condiciona toda la UI de alta — ver el aviso de dashboard.html.
+
+// Devuelve solo los factores TOTP ya verificados. Los 'unverified' son altas
+// a medio hacer, no sirven para entrar y no se muestran como si sirvieran.
+export async function listarFactoresMfa() {
+  const { data, error } = await supabase.auth.mfa.listFactors()
+
+  if (error) throw new Error(_traducirErrorMfa(error))
+
+  return (data?.totp ?? []).filter(factor => factor.status === 'verified')
+}
+
+// Devuelve { factorId, qrCode, secret }. El qrCode ya viene como SVG listo
+// para meter en el src de un <img>; el secret es para tipear a mano cuando no
+// se puede escanear.
+export async function iniciarAltaMfa(nombreAmigable) {
+  await _darDeBajaFactoresSinVerificar()
+
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    friendlyName: nombreAmigable,
+  })
+
+  if (error) throw new Error(_traducirErrorMfa(error))
+
+  return { factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret }
+}
+
+// Sirve para las dos cosas: completar un alta recién empezada y responder el
+// desafío al entrar. Es la misma operación para Supabase.
+export async function verificarCodigoMfa(factorId, codigo) {
+  // El desafío se crea acá, en el momento de verificar, y no al abrir la
+  // pantalla: tiene su propia ventana de expiración, y armarlo antes
+  // significaría que venza mientras la persona busca el celular — devolviendo
+  // mfa_challenge_expired sobre un código recién tipeado y correcto.
+  const { data: desafio, error: errorDesafio } = await supabase.auth.mfa.challenge({ factorId })
+
+  if (errorDesafio) throw new Error(_traducirErrorMfa(errorDesafio))
+
+  const { error: errorVerificacion } = await supabase.auth.mfa.verify({
+    factorId,
+    challengeId: desafio.id,
+    code: codigo,
+  })
+
+  if (errorVerificacion) throw new Error(_traducirErrorMfa(errorVerificacion))
+}
+
+export async function darDeBajaMfa(factorId) {
+  const { error } = await supabase.auth.mfa.unenroll({ factorId })
+
+  if (error) throw new Error(_traducirErrorMfa(error))
+
+  // La baja NO degrada el JWT de aal2 a aal1 hasta el próximo refresco
+  // automático. Sin este refresco explícito la sesión seguiría afirmando que
+  // pasó un segundo factor que ya no existe.
+  await supabase.auth.refreshSession()
+}
+
+// enroll() crea la fila del factor en estado 'unverified' apenas se la llama,
+// antes de que la persona llegue a escanear nada. Si abandona ahí (cierra la
+// pestaña, no encuentra el celular, se arrepiente), esa fila queda colgada
+// para siempre — y al reintentar con el mismo nombre Supabase responde
+// mfa_factor_name_conflict, un error que no le dice nada al usuario sobre un
+// factor que él nunca supo que existía.
+//
+// Se dan de baja ÚNICAMENTE los 'unverified'. Un factor 'verified' no se toca
+// jamás desde acá: es el que la persona tiene configurado y andando, y
+// borrarlo la dejaría afuera de su propia cuenta sin forma de volver a entrar.
+async function _darDeBajaFactoresSinVerificar() {
+  const { data } = await supabase.auth.mfa.listFactors()
+  const colgados = (data?.totp ?? []).filter(factor => factor.status === 'unverified')
+
+  for (const factor of colgados) {
+    const { error } = await supabase.auth.mfa.unenroll({ factorId: factor.id })
+    // No se corta el alta por esto: el enroll de abajo puede funcionar igual
+    // (si el nombre nuevo es distinto) y, si no, el error real se ve solo.
+    if (error) {
+      console.error('[auth] no se pudo limpiar el factor sin verificar', factor.id, '—', error.message)
+    }
+  }
+}
+
+// Comparación por pathname y no por href: la URL real puede traer query o
+// hash (el #access_token que agrega Supabase, por ejemplo), y comparar el
+// string completo fallaría con cualquiera de los dos.
+function _estoyEnPantallaMfa() {
+  return window.location.pathname === new URL(RUTA_MFA).pathname
 }
 
 // Mecanismo estándar de Supabase: manda un link mágico al mail, sin
@@ -107,8 +238,23 @@ export async function pedirRestablecerContrasena(email, captchaToken) {
 // de recuperación ya quedó establecida (evento PASSWORD_RECOVERY), y también
 // desde el menú de perfil del dashboard (usuario ya logueado cambiando su
 // propia contraseña).
-export async function actualizarContrasena(nuevaContrasena) {
-  const { error } = await supabase.auth.updateUser({ password: nuevaContrasena })
+//
+// contrasenaActual es OPCIONAL y activa la reautenticación server-side de
+// Supabase (current_password): valida la contraseña vieja SIN crear una
+// sesión nueva. Eso importa por dos motivos distintos. Uno, el modal del
+// dashboard antes hacía signInWithPassword para reautenticar, y desde que hay
+// CAPTCHA esa llamada exige un token que el modal no tiene. Dos, con MFA
+// activo ese login extra devolvía una sesión en aal1, degradando la sesión
+// que ya había pasado el segundo factor.
+//
+// restablecer-contrasena.html NO la pasa, y está bien: ahí la persona
+// justamente no se acuerda de su contraseña, y la prueba de identidad es
+// haber podido abrir el link del mail.
+export async function actualizarContrasena(nuevaContrasena, contrasenaActual) {
+  const cambios = { password: nuevaContrasena }
+  if (contrasenaActual) cambios.current_password = contrasenaActual
+
+  const { error } = await supabase.auth.updateUser(cambios)
   // TODO diagnóstico temporal (2026-07-15): sacar este console.error o
   // pasarlo a algo silencioso en cuanto confirmemos la causa real del
   // "Ocurrió un error" genérico que vio el usuario al restablecer — no
@@ -171,6 +317,48 @@ export async function crearSolicitudAcceso({ nombreCompleto, nombre, apellido, e
 // usa loguea a consola cuando NO matchea (ver pedirRestablecerContrasena).
 function _esErrorDeCaptcha(mensaje) {
   return /captcha/i.test(mensaje || '')
+}
+
+// A diferencia de _traducirError —que matchea el TEXTO del mensaje, en inglés
+// y sin ninguna garantía de estabilidad— esto matchea el CÓDIGO de error, que
+// Supabase documenta como parte de su contrato público.
+//
+// Si el código no viene (versiones viejas del SDK no lo poblaban) cae al
+// genérico a propósito: es preferible un "Ocurrió un error" a un mensaje
+// concreto pero equivocado.
+const ERRORES_MFA = {
+  mfa_verification_failed:
+    'El código no es correcto. Fijate que sea el que muestra la app en este momento y probá de nuevo.',
+  mfa_challenge_expired:
+    'El código venció. Mirá el que muestra la app ahora y volvé a intentar.',
+  mfa_factor_name_conflict:
+    'Ya tenés un dispositivo con ese nombre. Poné otro para poder distinguirlos.',
+  // Este va a pasar en celular y sin la explicación es incomprensible: el alta
+  // tiene que empezar y terminar en la misma IP, y pasar de WiFi a datos
+  // móviles en el medio la cambia.
+  mfa_ip_address_mismatch:
+    'La configuración tiene que empezar y terminar en la misma red. Si pasaste de WiFi a datos móviles (o al revés) mientras la hacías, volvé a la red original y empezá de nuevo.',
+  mfa_factor_not_found:
+    'Ese dispositivo ya no está dado de alta.',
+  mfa_totp_enroll_not_enabled:
+    'La verificación en dos pasos está desactivada en el sistema. Avisale a un administrador.',
+  mfa_totp_verify_not_enabled:
+    'La verificación en dos pasos está desactivada en el sistema. Avisale a un administrador.',
+  insufficient_aal:
+    'Necesitás verificar tu segundo factor antes de hacer esto.',
+  over_request_rate_limit:
+    'Demasiados intentos seguidos. Esperá unos minutos y volvé a probar.',
+}
+
+function _traducirErrorMfa(error) {
+  const traduccion = ERRORES_MFA[error?.code]
+  if (traduccion) return traduccion
+
+  // Mismo razonamiento que el console.error de pedirRestablecerContrasena:
+  // si Supabase agrega un código que no está en el mapa, este log es la única
+  // pista de que el usuario está viendo el genérico en lugar de algo útil.
+  console.error('[auth] error de MFA sin traducción — code:', error?.code, '| message:', error?.message)
+  return 'Ocurrió un error. Intentá de nuevo.'
 }
 
 function _traducirError(mensaje) {

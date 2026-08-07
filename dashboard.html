@@ -79,6 +79,36 @@
 
     .modal-perfil__titulo { font-size: 1.125rem; font-weight: 700; margin: 0; }
 
+    /* El display va en una clase y NO inline: un style="display:flex" en el
+       mismo elemento que lleva el atributo hidden le gana al [hidden] del
+       navegador y la sección se ve igual estando oculta. Ya nos pasó una vez
+       en este proyecto con dos pantallas superpuestas. */
+    .mfa-seccion { display: flex; flex-direction: column; gap: 1rem; }
+    .mfa-seccion[hidden] { display: none; }
+
+    .mfa-aviso {
+      background: #FDF3E3;
+      border: 1px solid #E8C98A;
+      border-radius: 10px;
+      padding: 0.75rem 0.875rem;
+    }
+
+    .mfa-aviso strong { display: block; font-size: 0.875rem; margin-bottom: 0.25rem; }
+    .mfa-aviso p { font-size: 0.8125rem; line-height: 1.45; margin: 0; }
+
+    .mfa-factor {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.625rem 0.75rem;
+    }
+
+    .mfa-factor__nombre { font-size: 0.9375rem; font-weight: 600; }
+    .mfa-factor__detalle { font-size: 0.8125rem; color: var(--color-texto-suave); }
+
     @media (min-width: 641px) {
       .modal-perfil { align-items: center; }
       .modal-perfil__panel { max-width: 400px; border-radius: 20px; box-shadow: var(--sombra-hover); }
@@ -99,6 +129,7 @@
         <div class="menu-perfil__panel" id="menu-perfil-panel" hidden>
           <button type="button" class="menu-perfil__opcion" id="btn-cambiar-email">Cambiar email</button>
           <button type="button" class="menu-perfil__opcion" id="btn-cambiar-contrasena">Cambiar contraseña</button>
+          <button type="button" class="menu-perfil__opcion" id="btn-mfa">Verificación en dos pasos</button>
         </div>
       </div>
       <button class="btn btn--secundario" id="btn-logout" style="font-size: 0.875rem; padding: 0.5rem 0.875rem;">
@@ -145,6 +176,80 @@
     </div>
   </div>
 
+  <div class="modal-perfil" id="modal-mfa" hidden>
+    <div class="modal-perfil__backdrop"></div>
+    <div class="modal-perfil__panel">
+      <h3 class="modal-perfil__titulo">Verificación en dos pasos</h3>
+
+      <p id="mfa-cargando" style="font-size:0.875rem; color:var(--color-texto-suave); margin:0;">Cargando…</p>
+
+      <!-- (b) Ya tiene al menos un dispositivo verificado -->
+      <div id="mfa-activo" class="mfa-seccion" hidden>
+        <p style="font-size:0.875rem; color:var(--color-texto-suave); margin:0;">
+          Tu cuenta pide un código además de la contraseña.
+        </p>
+        <div id="mfa-lista-factores" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+        <button type="button" class="btn btn--secundario" id="btn-mfa-agregar">Agregar otro dispositivo</button>
+      </div>
+
+      <!-- (a) Sin dispositivos: aviso + nombre + activar -->
+      <div id="mfa-inactivo" class="mfa-seccion" hidden>
+        <p style="font-size:0.875rem; color:var(--color-texto-suave); margin:0;">
+          Además de tu contraseña, vas a necesitar un código que genera una app en tu celular
+          (Google Authenticator, Authy, o la que uses).
+        </p>
+
+        <div class="mfa-aviso">
+          <strong>Antes de activar, leé esto</strong>
+          <p>
+            Guardá el código de texto en un lugar seguro y escaneá el QR en un segundo dispositivo.
+            Si perdés el único dispositivo, no vas a poder entrar.
+          </p>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="mfa-nombre">Nombre del dispositivo</label>
+          <input type="text" id="mfa-nombre" maxlength="40" placeholder="Celular">
+        </div>
+
+        <button type="button" class="btn btn--primario" id="btn-mfa-activar">Activar</button>
+      </div>
+
+      <!-- Paso 2 del alta: QR + secreto + código -->
+      <div id="mfa-alta" class="mfa-seccion" hidden>
+        <div class="mfa-aviso">
+          <strong>Guardá el código de texto ahora</strong>
+          <p>
+            Es lo único que te va a permitir configurar otro dispositivo más adelante.
+            No se vuelve a mostrar.
+          </p>
+        </div>
+
+        <img id="mfa-qr" alt="Código QR para escanear con la app de autenticación"
+             style="width:200px; height:200px; align-self:center; background:#fff; border-radius:12px; padding:0.5rem;">
+
+        <div class="grupo-campo">
+          <label for="mfa-secreto">Código de texto</label>
+          <input type="text" id="mfa-secreto" readonly
+                 style="font-family:ui-monospace, monospace; font-size:0.9375rem; letter-spacing:0.05em;">
+        </div>
+
+        <div class="grupo-campo">
+          <label for="mfa-codigo">Código de 6 dígitos que muestra la app</label>
+          <input type="text" id="mfa-codigo" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="6" placeholder="000000"
+                 style="text-align:center; font-size:1.25rem; letter-spacing:0.4em; padding-left:0.4em;">
+        </div>
+
+        <button type="button" class="btn btn--primario" id="btn-mfa-verificar">Verificar y activar</button>
+      </div>
+
+      <div class="alerta alerta--error" id="mfa-error" role="alert"></div>
+
+      <button type="button" class="btn btn--secundario" id="btn-mfa-cerrar">Cerrar</button>
+    </div>
+  </div>
+
   <main class="dashboard__contenido">
     <div class="dashboard__titulo" id="dashboard-titulo">
       <h1>Módulos</h1>
@@ -168,7 +273,10 @@
   </main>
 
   <script type="module">
-    import { verificarSesion, cerrarSesion, iniciarSesion, actualizarEmail, actualizarContrasena } from './js/auth.js'
+    import {
+      verificarSesion, cerrarSesion, actualizarEmail, actualizarContrasena,
+      listarFactoresMfa, iniciarAltaMfa, verificarCodigoMfa
+    } from './js/auth.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
     import { mostrarError, mostrarExito } from './js/utils.js'
     import { supabase } from './js/supabase.js'
@@ -339,14 +447,179 @@
       try {
         // Reautenticación: sin esto, cualquiera con la sesión ya abierta
         // (celular desbloqueado, sesión robada) podría cambiar la contraseña
-        // sin saber la original y dejar afuera al dueño real. iniciarSesion
-        // ya traduce el error a "Email o contraseña incorrectos." si no matchea.
-        await iniciarSesion(emailActual, actual)
-        await actualizarContrasena(nueva)
+        // sin saber la original y dejar afuera al dueño real.
+        //
+        // Antes acá había un iniciarSesion() con la contraseña actual, que
+        // quedó roto por dos motivos acumulados: desde el CAPTCHA exige un
+        // token que este modal no tiene, y con MFA activo creaba una sesión
+        // nueva en aal1, degradando la sesión que ya había pasado el segundo
+        // factor. current_password valida server-side sin crear sesión.
+        await actualizarContrasena(nueva, actual)
         mostrarExito('Tu contraseña fue actualizada.')
         cerrarModalContrasena()
       } catch (err) {
         mostrarError(err.message || 'No se pudo actualizar la contraseña.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    })
+
+    // ── Verificación en dos pasos (MFA / TOTP) ──────────────────────────────
+    // No existen códigos de recuperación en Supabase: el único respaldo si se
+    // pierde el dispositivo es tener un segundo factor dado de alta. Por eso
+    // el aviso del modal es tan explícito y por eso no hay botón de desactivar.
+    const modalMfa   = document.getElementById('modal-mfa')
+    const mfaError   = document.getElementById('mfa-error')
+    const SECCIONES_MFA = ['mfa-activo', 'mfa-inactivo', 'mfa-alta']
+
+    let factoresMfa  = []   // los verificados que ya tiene la persona
+    let factorEnAlta = null // el factorId del alta en curso, si hay una
+
+    function mostrarSeccionMfa(id) {
+      document.getElementById('mfa-cargando').hidden = true
+      SECCIONES_MFA.forEach(seccion => {
+        document.getElementById(seccion).hidden = seccion !== id
+      })
+    }
+
+    function mostrarErrorMfa(mensaje) {
+      mfaError.textContent = mensaje
+      mfaError.classList.add('alerta--visible')
+    }
+
+    function limpiarErrorMfa() {
+      mfaError.classList.remove('alerta--visible')
+    }
+
+    function formatearFechaMfa(iso) {
+      const fecha = new Date(iso)
+      if (isNaN(fecha.getTime())) return null
+      return fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    }
+
+    function renderFactoresMfa() {
+      const lista = document.getElementById('mfa-lista-factores')
+      lista.innerHTML = ''
+
+      factoresMfa.forEach(factor => {
+        const fila = document.createElement('div')
+        fila.className = 'mfa-factor'
+
+        const nombre = document.createElement('span')
+        nombre.className = 'mfa-factor__nombre'
+        nombre.textContent = factor.friendly_name || 'Dispositivo sin nombre'
+        fila.appendChild(nombre)
+
+        // created_at NO está documentado en la respuesta de listFactors(): la
+        // columna existe en auth.mfa_factors, pero eso no garantiza que la API
+        // la devuelva. Si no viene, se muestra solo el nombre — no se busca la
+        // fecha por ningún otro lado.
+        const fecha = factor.created_at ? formatearFechaMfa(factor.created_at) : null
+        if (fecha) {
+          const detalle = document.createElement('span')
+          detalle.className = 'mfa-factor__detalle'
+          detalle.textContent = `Activado el ${fecha}`
+          fila.appendChild(detalle)
+        }
+
+        lista.appendChild(fila)
+      })
+
+      mostrarSeccionMfa('mfa-activo')
+    }
+
+    // Precarga un nombre que no choque con los que ya existen: dos factores del
+    // mismo usuario no pueden llamarse igual (mfa_factor_name_conflict), y el
+    // segundo dispositivo es justo el caso donde eso pasaría. Editable igual:
+    // la persona sabe mejor que nosotros si es un celular, una tablet o la compu.
+    function prepararAltaMfa() {
+      const usados = new Set(factoresMfa.map(f => (f.friendly_name || '').trim().toLowerCase()))
+
+      let sugerido = 'Celular'
+      let numero = 2
+      while (usados.has(sugerido.toLowerCase())) sugerido = `Celular ${numero++}`
+
+      document.getElementById('mfa-nombre').value = sugerido
+      mostrarSeccionMfa('mfa-inactivo')
+    }
+
+    async function abrirModalMfa() {
+      menuPerfilPanel.hidden = true
+      limpiarErrorMfa()
+      factorEnAlta = null
+
+      SECCIONES_MFA.forEach(seccion => { document.getElementById(seccion).hidden = true })
+      document.getElementById('mfa-cargando').hidden = false
+      modalMfa.hidden = false
+
+      try {
+        factoresMfa = await listarFactoresMfa()
+        if (factoresMfa.length) renderFactoresMfa()
+        else prepararAltaMfa()
+      } catch (error) {
+        document.getElementById('mfa-cargando').hidden = true
+        mostrarErrorMfa(error.message)
+      }
+    }
+
+    function cerrarModalMfa() { modalMfa.hidden = true }
+
+    document.getElementById('btn-mfa').addEventListener('click', abrirModalMfa)
+    document.getElementById('btn-mfa-cerrar').addEventListener('click', cerrarModalMfa)
+    document.querySelector('#modal-mfa .modal-perfil__backdrop').addEventListener('click', cerrarModalMfa)
+    document.getElementById('btn-mfa-agregar').addEventListener('click', () => {
+      limpiarErrorMfa()
+      prepararAltaMfa()
+    })
+
+    document.getElementById('mfa-codigo').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '')
+    })
+
+    document.getElementById('btn-mfa-activar').addEventListener('click', async () => {
+      limpiarErrorMfa()
+
+      const nombre = document.getElementById('mfa-nombre').value.trim()
+      if (!nombre) { mostrarErrorMfa('Poné un nombre para el dispositivo.'); return }
+
+      const btn = document.getElementById('btn-mfa-activar')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+      try {
+        const { factorId, qrCode, secret } = await iniciarAltaMfa(nombre)
+        factorEnAlta = factorId
+        document.getElementById('mfa-qr').src = qrCode
+        document.getElementById('mfa-secreto').value = secret
+        document.getElementById('mfa-codigo').value = ''
+        mostrarSeccionMfa('mfa-alta')
+      } catch (error) {
+        mostrarErrorMfa(error.message)
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    })
+
+    document.getElementById('btn-mfa-verificar').addEventListener('click', async () => {
+      limpiarErrorMfa()
+
+      const codigo = document.getElementById('mfa-codigo').value.trim()
+      if (codigo.length !== 6) { mostrarErrorMfa('Ingresá los 6 dígitos del código.'); return }
+
+      const btn = document.getElementById('btn-mfa-verificar')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+      try {
+        await verificarCodigoMfa(factorEnAlta, codigo)
+        cerrarModalMfa()
+        // Verificar un factor cierra todas las demás sesiones del usuario. Si
+        // no se avisa, la persona se entera sola cuando la app le pide entrar
+        // de nuevo en otro dispositivo y no entiende por qué.
+        mostrarExito('Listo. La verificación en dos pasos quedó activa y se cerraron tus sesiones en otros dispositivos.')
+      } catch (error) {
+        mostrarErrorMfa(error.message)
+        document.getElementById('mfa-codigo').value = ''
       } finally {
         btn.classList.remove('btn--cargando')
         btn.disabled = false
