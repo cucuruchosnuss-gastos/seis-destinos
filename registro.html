@@ -14,27 +14,8 @@
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit" async defer></script>
 
   <style>
-    .campo-contrasena { position: relative; }
-
-    .campo-contrasena input { padding-right: 2.75rem; }
-
-    .btn-mostrar-contrasena {
-      position: absolute;
-      right: 0.25rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      padding: 0.5rem;
-      color: var(--color-texto-suave);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-    }
-
-    .btn-mostrar-contrasena:hover { color: var(--color-texto); }
-
-    .btn-mostrar-contrasena .lucide { width: 1.125rem; height: 1.125rem; }
+    /* .campo-contrasena y .btn-mostrar-contrasena viven ahora en css/main.css:
+       estaban duplicadas acá y en restablecer-contrasena.html. */
 
     .info-match {
       background: rgba(16,185,129,0.08);
@@ -95,11 +76,12 @@
         <div class="grupo-campo">
           <label for="contrasena-match">Contraseña</label>
           <div class="campo-contrasena">
-            <input type="password" id="contrasena-match" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required minlength="6">
+            <input type="password" id="contrasena-match" placeholder="Mínimo 10 caracteres" autocomplete="new-password" required minlength="10">
             <button type="button" class="btn-mostrar-contrasena" data-target="contrasena-match" title="Mostrar contraseña">
               <i data-lucide="eye"></i>
             </button>
           </div>
+          <div id="requisitos-match"></div>
         </div>
 
         <div id="turnstile-match"></div>
@@ -149,11 +131,12 @@
         <div class="grupo-campo">
           <label for="contrasena-sin-match">Contraseña</label>
           <div class="campo-contrasena">
-            <input type="password" id="contrasena-sin-match" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required minlength="6">
+            <input type="password" id="contrasena-sin-match" placeholder="Mínimo 10 caracteres" autocomplete="new-password" required minlength="10">
             <button type="button" class="btn-mostrar-contrasena" data-target="contrasena-sin-match" title="Mostrar contraseña">
               <i data-lucide="eye"></i>
             </button>
           </div>
+          <div id="requisitos-sin-match"></div>
         </div>
 
         <div id="turnstile-sin-match"></div>
@@ -187,6 +170,7 @@
   <script type="module">
     import { verificarSesion, buscarEmpleadoPorCuil, crearSolicitudAcceso } from './js/auth.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
+    import { validarContrasena, renderizarRequisitos } from './js/utils.js'
 
     mostrarBannerVersion()
     lucide.createIcons()
@@ -240,6 +224,33 @@
       if (widgetId === null) return ''
       return window.turnstile?.getResponse(widgetId) ?? ''
     }
+
+    // ── Requisitos de la contraseña ─────────────────────────────────────────
+    // Un par (campo, botón) por formulario. El gate es solo por requisitos: acá
+    // no hay campo de confirmación, así que no hay coincidencia que chequear.
+    const FORMULARIOS_CONTRASENA = [
+      { campo: 'contrasena-match',     requisitos: 'requisitos-match',     boton: 'btn-enviar-match' },
+      { campo: 'contrasena-sin-match', requisitos: 'requisitos-sin-match', boton: 'btn-enviar-sin-match' },
+    ]
+
+    function actualizarRequisitos(config) {
+      const campo = document.getElementById(config.campo)
+      const boton = document.getElementById(config.boton)
+      const resultado = validarContrasena(campo.value)
+
+      renderizarRequisitos(document.getElementById(config.requisitos), resultado)
+      boton.disabled = !resultado.todoOk
+      return resultado.todoOk
+    }
+
+    // El disabled se aplica desde acá y NO como atributo en el HTML: si este
+    // script fallara, los botones quedan habilitados como antes en vez de
+    // dejar el registro inutilizable.
+    FORMULARIOS_CONTRASENA.forEach(config => {
+      actualizarRequisitos(config)
+      document.getElementById(config.campo)
+        .addEventListener('input', () => actualizarRequisitos(config))
+    })
 
     // Botón "ojito" — mostrar/ocultar contraseña
     document.querySelectorAll('.btn-mostrar-contrasena').forEach(btn => {
@@ -298,8 +309,8 @@
       const email      = document.getElementById('email-match').value.trim()
       const contrasena = document.getElementById('contrasena-match').value
 
-      if (!email || contrasena.length < 6) {
-        mostrarAlerta('alerta-error-match', 'Completá el email y una contraseña de al menos 6 caracteres.')
+      if (!email || !validarContrasena(contrasena).todoOk) {
+        mostrarAlerta('alerta-error-match', 'Completá el email y una contraseña que cumpla todos los requisitos.')
         return
       }
 
@@ -332,7 +343,9 @@
         // Token de un solo uso: sin reset, el reintento manda uno ya consumido.
         window.turnstile?.reset(widgetMatch)
         btn.classList.remove('btn--cargando')
-        btn.disabled = false
+        // Revalidar en vez de habilitar a ciegas: si el error fue justamente
+        // por la contraseña, el botón no tiene que volver a quedar activo.
+        actualizarRequisitos(FORMULARIOS_CONTRASENA[0])
       }
     })
 
@@ -348,8 +361,8 @@
       const telefono       = document.getElementById('telefono').value.trim()
       const contrasena     = document.getElementById('contrasena-sin-match').value
 
-      if (!apellido || !nombre || !email || !fechaNacimiento || !telefono || contrasena.length < 6) {
-        mostrarAlerta('alerta-error-sin-match', 'Completá todos los campos con una contraseña de al menos 6 caracteres.')
+      if (!apellido || !nombre || !email || !fechaNacimiento || !telefono || !validarContrasena(contrasena).todoOk) {
+        mostrarAlerta('alerta-error-sin-match', 'Completá todos los campos con una contraseña que cumpla todos los requisitos.')
         return
       }
 
@@ -382,7 +395,7 @@
         mostrarAlerta('alerta-error-sin-match', error.message)
         window.turnstile?.reset(widgetSinMatch)
         btn.classList.remove('btn--cargando')
-        btn.disabled = false
+        actualizarRequisitos(FORMULARIOS_CONTRASENA[1])
       }
     })
   </script>

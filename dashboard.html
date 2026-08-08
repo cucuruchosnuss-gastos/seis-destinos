@@ -159,15 +159,32 @@
       <h3 class="modal-perfil__titulo">Cambiar contraseña</h3>
       <div class="grupo-campo">
         <label for="campo-contrasena-actual">Contraseña actual</label>
-        <input type="password" id="campo-contrasena-actual" autocomplete="current-password">
+        <div class="campo-contrasena">
+          <input type="password" id="campo-contrasena-actual" autocomplete="current-password">
+          <button type="button" class="btn-mostrar-contrasena" data-target="campo-contrasena-actual" title="Mostrar contraseña">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
       </div>
       <div class="grupo-campo">
         <label for="campo-contrasena-nueva">Contraseña nueva</label>
-        <input type="password" id="campo-contrasena-nueva" autocomplete="new-password">
+        <div class="campo-contrasena">
+          <input type="password" id="campo-contrasena-nueva" autocomplete="new-password">
+          <button type="button" class="btn-mostrar-contrasena" data-target="campo-contrasena-nueva" title="Mostrar contraseña">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
+        <div id="requisitos-contrasena"></div>
       </div>
       <div class="grupo-campo">
         <label for="campo-contrasena-confirmar">Confirmar contraseña</label>
-        <input type="password" id="campo-contrasena-confirmar" autocomplete="new-password">
+        <div class="campo-contrasena">
+          <input type="password" id="campo-contrasena-confirmar" autocomplete="new-password">
+          <button type="button" class="btn-mostrar-contrasena" data-target="campo-contrasena-confirmar" title="Mostrar contraseña">
+            <i data-lucide="eye"></i>
+          </button>
+        </div>
+        <div id="requisitos-coincidencia"></div>
       </div>
       <div style="display:flex; gap:0.75rem;">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-contrasena" style="flex:1;">Cancelar</button>
@@ -278,7 +295,10 @@
       listarFactoresMfa, iniciarAltaMfa, verificarCodigoMfa
     } from './js/auth.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
-    import { mostrarError, mostrarExito } from './js/utils.js'
+    import {
+      mostrarError, mostrarExito,
+      validarContrasena, renderizarRequisitos, renderizarCoincidencia
+    } from './js/utils.js'
     import { supabase } from './js/supabase.js'
 
     mostrarBannerVersion()
@@ -420,11 +440,54 @@
       }
     })
 
+    // ── Requisitos de la contraseña ─────────────────────────────────────────
+    const campoActual    = document.getElementById('campo-contrasena-actual')
+    const campoNueva     = document.getElementById('campo-contrasena-nueva')
+    const campoConfirmar = document.getElementById('campo-contrasena-confirmar')
+
+    function actualizarRequisitosContrasena() {
+      const resultado = validarContrasena(campoNueva.value)
+      // Dos campos vacíos "coinciden" literalmente, pero poner el tilde ahí
+      // sería mentir: se exige que la nueva ya sea válida.
+      const coinciden = resultado.todoOk && campoNueva.value === campoConfirmar.value
+
+      renderizarRequisitos(document.getElementById('requisitos-contrasena'), resultado)
+      renderizarCoincidencia(document.getElementById('requisitos-coincidencia'), coinciden)
+
+      // La contraseña actual también entra en el gate: sin ella la
+      // reautenticación de current_password no puede hacerse.
+      document.getElementById('btn-guardar-contrasena').disabled =
+        !(resultado.todoOk && coinciden && campoActual.value.length > 0)
+    }
+
+    ;[campoActual, campoNueva, campoConfirmar].forEach(campo => {
+      campo.addEventListener('input', actualizarRequisitosContrasena)
+    })
+
+    // Botón "ojito" — mismo patrón que registro.html y restablecer-contrasena.html
+    document.querySelectorAll('.btn-mostrar-contrasena').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target)
+        const estabaOculta = input.type === 'password'
+        input.type = estabaOculta ? 'text' : 'password'
+        btn.innerHTML = `<i data-lucide="${estabaOculta ? 'eye-off' : 'eye'}"></i>`
+        lucide.createIcons()
+      })
+    })
+
+    // Se pintan acá y no solo al final del script: más abajo hay dos `throw`
+    // (cuenta sin empleado vinculado, usuario sin módulos) que cortarían antes
+    // del createIcons() del final y dejarían los tres ojitos en blanco.
+    lucide.createIcons()
+
     function abrirModalContrasena() {
       menuPerfilPanel.hidden = true
-      document.getElementById('campo-contrasena-actual').value = ''
-      document.getElementById('campo-contrasena-nueva').value = ''
-      document.getElementById('campo-contrasena-confirmar').value = ''
+      campoActual.value = ''
+      campoNueva.value = ''
+      campoConfirmar.value = ''
+      // Después de limpiar hay que repintar: si no, quedarían los tildes en
+      // verde de la vez anterior sobre campos vacíos.
+      actualizarRequisitosContrasena()
       document.getElementById('modal-contrasena').hidden = false
     }
     function cerrarModalContrasena() { document.getElementById('modal-contrasena').hidden = true }
@@ -434,12 +497,14 @@
     document.querySelector('#modal-contrasena .modal-perfil__backdrop').addEventListener('click', cerrarModalContrasena)
 
     document.getElementById('btn-guardar-contrasena').addEventListener('click', async () => {
-      const actual    = document.getElementById('campo-contrasena-actual').value
-      const nueva     = document.getElementById('campo-contrasena-nueva').value
-      const confirmar = document.getElementById('campo-contrasena-confirmar').value
+      const actual    = campoActual.value
+      const nueva     = campoNueva.value
+      const confirmar = campoConfirmar.value
 
+      // Salvaguardas: el botón ya viene disabled si algo de esto falla.
       if (!actual || !nueva || !confirmar) { mostrarError('Completá los tres campos.'); return }
       if (nueva !== confirmar) { mostrarError('Las contraseñas no coinciden.'); return }
+      if (!validarContrasena(nueva).todoOk) { mostrarError('La contraseña nueva no cumple todos los requisitos.'); return }
 
       const btn = document.getElementById('btn-guardar-contrasena')
       btn.classList.add('btn--cargando')
@@ -461,7 +526,9 @@
         mostrarError(err.message || 'No se pudo actualizar la contraseña.')
       } finally {
         btn.classList.remove('btn--cargando')
-        btn.disabled = false
+        // Revalidar en vez de habilitar a ciegas: si el error vino por la
+        // contraseña, el botón no tiene que volver a quedar activo.
+        actualizarRequisitosContrasena()
       }
     })
 

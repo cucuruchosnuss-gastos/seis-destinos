@@ -9,30 +9,6 @@
   <meta name="theme-color" content="#1a2a52">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
-  <style>
-    /* Ícono de mostrar/ocultar contraseña — mismo patrón que registro.html */
-    .campo-contrasena { position: relative; }
-
-    .campo-contrasena input { padding-right: 2.75rem; }
-
-    .btn-mostrar-contrasena {
-      position: absolute;
-      right: 0.25rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      padding: 0.5rem;
-      color: var(--color-texto-suave);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-    }
-
-    .btn-mostrar-contrasena:hover { color: var(--color-texto); }
-
-    .btn-mostrar-contrasena .lucide { width: 1.125rem; height: 1.125rem; }
-  </style>
 </head>
 <body class="pagina-auth">
 
@@ -66,6 +42,7 @@
               <i data-lucide="eye"></i>
             </button>
           </div>
+          <div id="requisitos-contrasena"></div>
         </div>
 
         <div class="grupo-campo">
@@ -76,6 +53,7 @@
               <i data-lucide="eye"></i>
             </button>
           </div>
+          <div id="requisitos-coincidencia"></div>
         </div>
 
         <div class="alerta alerta--error" id="alerta-error" role="alert"></div>
@@ -91,6 +69,7 @@
     import { actualizarContrasena, marcarSesionRecuperacion, limpiarSesionRecuperacion } from './js/auth.js'
     import { supabase } from './js/supabase.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
+    import { validarContrasena, renderizarRequisitos, renderizarCoincidencia } from './js/utils.js'
 
     mostrarBannerVersion()
     lucide.createIcons()
@@ -146,6 +125,29 @@
     const btnGuardar   = document.getElementById('btn-guardar')
     const alertaError  = document.getElementById('alerta-error')
 
+    // ── Requisitos de la contraseña ─────────────────────────────────────────
+    const campoNueva     = document.getElementById('contrasena-nueva')
+    const campoConfirmar = document.getElementById('contrasena-confirmar')
+
+    function actualizarRequisitos() {
+      const resultado = validarContrasena(campoNueva.value)
+      // Dos campos vacíos "coinciden" en sentido literal, pero mostrar el tilde
+      // ahí sería mentir: se exige que la nueva ya sea válida.
+      const coinciden = resultado.todoOk && campoNueva.value === campoConfirmar.value
+
+      renderizarRequisitos(document.getElementById('requisitos-contrasena'), resultado)
+      renderizarCoincidencia(document.getElementById('requisitos-coincidencia'), coinciden)
+
+      btnGuardar.disabled = !(resultado.todoOk && coinciden)
+    }
+
+    // El disabled se aplica desde JS y no como atributo del HTML: si este
+    // script fallara, el botón queda habilitado como antes en vez de dejar la
+    // pantalla inutilizable.
+    actualizarRequisitos()
+    campoNueva.addEventListener('input', actualizarRequisitos)
+    campoConfirmar.addEventListener('input', actualizarRequisitos)
+
     function mostrarAlertaError(mensaje) {
       alertaError.textContent = mensaje
       alertaError.classList.add('alerta--visible')
@@ -180,7 +182,9 @@
       } catch (error) {
         mostrarAlertaError(error.message)
         btnGuardar.classList.remove('btn--cargando')
-        btnGuardar.disabled = false
+        // Revalidar en vez de habilitar a ciegas: si el error vino por la
+        // contraseña, el botón no tiene que volver a quedar activo.
+        actualizarRequisitos()
       }
     })
   </script>

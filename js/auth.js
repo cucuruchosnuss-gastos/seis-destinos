@@ -255,11 +255,6 @@ export async function actualizarContrasena(nuevaContrasena, contrasenaActual) {
   if (contrasenaActual) cambios.current_password = contrasenaActual
 
   const { error } = await supabase.auth.updateUser(cambios)
-  // TODO diagnóstico temporal (2026-07-15): sacar este console.error o
-  // pasarlo a algo silencioso en cuanto confirmemos la causa real del
-  // "Ocurrió un error" genérico que vio el usuario al restablecer — no
-  // debe quedar logging de errores de contraseña permanente en producción.
-  if (error) console.error('[auth] error crudo de updateUser (password):', error.message)
   if (error) throw new Error(_traducirError(error.message))
 }
 
@@ -366,11 +361,21 @@ function _traducirError(mensaje) {
     'Invalid login credentials': 'Email o contraseña incorrectos.',
     'Email not confirmed': 'Confirmá tu email antes de ingresar.',
     'User already registered': 'Ya existe una cuenta con ese email.',
-    'Password should be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres.',
     'Unable to validate email address: invalid format': 'El formato del email no es válido.',
-    // Hipótesis fundamentada, no confirmada en vivo (ver console.error de
-    // actualizarContrasena) — mensaje real y documentado de Supabase.
+    // Confirmado en los logs de Auth del 08/08/2026: error_code 'same_password',
+    // mensaje "422: New password should be different from the old password."
     'New password should be different from the old password.': 'La contraseña nueva tiene que ser distinta a la anterior.',
   }
-  return errores[mensaje] ?? 'Ocurrió un error. Intentá de nuevo.'
+
+  if (errores[mensaje]) return errores[mensaje]
+
+  // El largo mínimo NO se hardcodea: Supabase lo incluye en su propio mensaje
+  // ("Password should be at least 10 characters"), así que se lee de ahí. La
+  // versión anterior tenía una clave fija con el número 6 adentro; al subir el
+  // mínimo a 10 en el panel esa clave dejó de matchear y el error caía en el
+  // genérico "Ocurrió un error", justo cuando más falta hacía saber el motivo.
+  const largoMinimo = mensaje?.match(/Password should be at least (\d+) characters/)
+  if (largoMinimo) return `La contraseña debe tener al menos ${largoMinimo[1]} caracteres.`
+
+  return 'Ocurrió un error. Intentá de nuevo.'
 }
