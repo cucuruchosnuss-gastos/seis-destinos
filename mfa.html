@@ -61,6 +61,18 @@
       </form>
     </div>
 
+    <!-- Callejón sin salida: hay sesión, pero no hay ningún factor que
+         verificar. Antes esto redirigía al dashboard, y como el dashboard
+         devuelve acá a quien no pueda demostrar su AAL, las dos páginas se
+         rebotaban entre sí sin fin. La salida tiene que ser manual. -->
+    <div id="vista-sin-factores" hidden style="text-align:center;">
+      <div style="font-size:2.5rem; margin-bottom:0.75rem;">⚠️</div>
+      <p id="mensaje-sin-factores" style="font-size:0.9375rem; color:var(--color-texto); margin:0 0 1.25rem;">
+        No pudimos verificar tu sesión. Cerrá sesión y volvé a entrar.
+      </p>
+      <button type="button" class="btn btn--primario" id="btn-salir-sin-factores">Cerrar sesión</button>
+    </div>
+
     <p class="formulario__pie">
       <a href="#" id="link-salir">Salir</a>
     </p>
@@ -82,16 +94,15 @@
       cerrarSesion()
     })
 
-    // verificarSesion() detecta que estamos en mfa.html y NO vuelve a
-    // redirigir acá (ver el chequeo de AAL en js/auth.js) — pero sí manda a
-    // login si no hay sesión, que es lo que hace falta.
+    document.getElementById('btn-salir-sin-factores').addEventListener('click', () => cerrarSesion())
+
     const formulario   = document.getElementById('formulario-mfa')
     const campoCodigo  = document.getElementById('codigo')
     const btnVerificar = document.getElementById('btn-verificar')
     const alertaError  = document.getElementById('alerta-error')
 
     function mostrarVista(id) {
-      ;['vista-verificando', 'vista-codigo'].forEach(v => {
+      ;['vista-verificando', 'vista-codigo', 'vista-sin-factores'].forEach(v => {
         document.getElementById(v).hidden = v !== id
       })
     }
@@ -101,6 +112,17 @@
       alertaError.classList.add('alerta--visible')
     }
 
+    // Deja la pantalla en el callejón sin salida, con el botón de cerrar
+    // sesión como única acción. NUNCA redirige: es justo el caso donde
+    // redirigir genera el rebote contra el dashboard.
+    function mostrarSinFactores(mensaje) {
+      if (mensaje) document.getElementById('mensaje-sin-factores').textContent = mensaje
+      mostrarVista('vista-sin-factores')
+    }
+
+    // verificarSesion() detecta que estamos en mfa.html y NO vuelve a
+    // redirigir acá (ver el chequeo de AAL en js/auth.js) — pero sí manda a
+    // login si no hay sesión, que es lo que hace falta.
     const sesion = await verificarSesion()
     if (!sesion) throw new Error('Sin sesión')
 
@@ -117,19 +139,23 @@
     try {
       factores = await listarFactoresMfa()
     } catch (error) {
-      // Sin poder leer los factores no hay forma de armar el desafío. Se
-      // muestra el error en la pantalla en vez de mandar al dashboard: si el
-      // usuario tiene MFA activo, verificarSesion() lo devolvería acá y
-      // quedaría rebotando entre las dos páginas.
-      mostrarVista('vista-codigo')
-      document.getElementById('formulario-mfa').hidden = true
-      mostrarAlertaError(error.message)
+      // Sin poder leer los factores tampoco hay desafío posible. Mismo
+      // callejón sin salida, pero mostrando el motivo concreto.
+      mostrarSinFactores(error.message)
       throw error
     }
 
-    // Sin ningún factor verificado no hay segundo paso que dar.
+    // Sin ningún factor verificado no hay segundo paso que dar, y acá NO se
+    // redirige al dashboard: el dashboard devuelve a esta pantalla a quien no
+    // pueda demostrar su AAL, así que redirigir armaba un rebote infinito
+    // entre las dos páginas del que no se salía por la UI. Se corta con un
+    // mensaje y el botón de cerrar sesión.
+    //
+    // El caso de arriba (currentLevel === 'aal2') SÍ sigue redirigiendo, y es
+    // la diferencia importante: ahí la sesión está verificada y el dashboard
+    // la va a dejar pasar, así que no hay rebote posible.
     if (!factores.length) {
-      window.location.replace('dashboard.html')
+      mostrarSinFactores()
       throw new Error('El usuario no tiene factores verificados')
     }
 
