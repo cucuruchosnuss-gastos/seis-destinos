@@ -923,6 +923,13 @@
       // restricción real que queda es no poder editar a otro super_admin.
       cont.innerHTML = lista.map(emp => {
         const puedeEditar = emp.rol_app !== 'super_admin'
+
+        // Condición APARTE de puedeEditar, a propósito: el rescate de MFA sí
+        // tiene que estar disponible sobre un super_admin — es justamente el
+        // caso principal, los super_admin se rescatan entre ellos. Lo único
+        // que se excluye es la tarjeta propia (para eso está el menú de
+        // perfil, y así nadie se saca el MFA creyendo que se lo saca a otro).
+        const puedeQuitarMfa = emp.id !== estado.miEmpleado?.id
         const modulos = modulosDeEmpleado(emp.id)
         const chipsModulos = modulos.length
           ? modulos.map(m => {
@@ -946,7 +953,12 @@
               </div>
               <div class="acceso__email">${formatearCuil(emp.cuil)}</div>
               <div class="acceso__acciones" style="margin-top:0.5rem;">${chipsModulos}</div>
-              ${puedeEditar ? `<div class="acceso__acciones"><button type="button" class="btn btn--secundario btn-editar-usuario" data-id="${emp.id}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Editar</button></div>` : ''}
+              ${(puedeEditar || puedeQuitarMfa) ? `
+                <div class="acceso__acciones">
+                  ${puedeEditar ? `<button type="button" class="btn btn--secundario btn-editar-usuario" data-id="${emp.id}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Editar</button>` : ''}
+                  ${puedeQuitarMfa ? `<button type="button" class="btn btn--rechazar btn-quitar-mfa" data-id="${emp.id}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Quitar verificación en dos pasos</button>` : ''}
+                </div>
+              ` : ''}
             </div>
           </div>
         `
@@ -955,6 +967,47 @@
       cont.querySelectorAll('.btn-editar-usuario').forEach(btn => {
         btn.addEventListener('click', () => abrirModalEditar(btn.dataset.id))
       })
+      cont.querySelectorAll('.btn-quitar-mfa').forEach(btn => {
+        btn.addEventListener('click', () => confirmarQuitarMfa(btn.dataset.id))
+      })
+    }
+
+    // Rescate de alguien que perdió su dispositivo. Supabase no tiene códigos
+    // de recuperación, así que sin esto la única salida sería tocar la base a
+    // mano. Vía Edge Function: listar y borrar factores de OTRA persona exige
+    // service_role, no se puede hacer desde el navegador.
+    async function quitarMfa(empleadoId) {
+      const { data, error } = await supabase.functions.invoke('quitar-mfa-empleado', {
+        body: { empleado_id: empleadoId },
+      })
+
+      if (error || !data?.ok) {
+        mostrarError(data?.mensaje || 'No se pudo quitar la verificación en dos pasos.')
+        return
+      }
+
+      if (data.factoresBorrados === 0) {
+        mostrarError('Esa persona no tenía la verificación en dos pasos activa — no había nada que quitar.')
+      } else {
+        mostrarExito('Listo. Esa persona ya puede entrar solo con su contraseña y volver a configurar la verificación.')
+      }
+      await cargarTodo()
+    }
+
+    function confirmarQuitarMfa(empleadoId) {
+      // El nombre se busca acá y no viaja en un data-attribute: meterlo en un
+      // atributo HTML sin escapar rompería la tarjeta ante una comilla.
+      const emp = estado.empleados.find(e => e.id === empleadoId)
+      if (!emp) return
+
+      const mensaje =
+        `¿Quitarle la verificación en dos pasos a ${emp.nombre}?\n\n` +
+        `• Va a perder la verificación en dos pasos de todos sus dispositivos.\n` +
+        `• Se le van a cerrar todas las sesiones abiertas.\n` +
+        `• Va a tener que configurarla de nuevo desde su menú de perfil.\n\n` +
+        `Hacelo solo si esa persona te lo pidió porque no puede entrar.`
+      if (!window.confirm(mensaje)) return
+      quitarMfa(empleadoId)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
