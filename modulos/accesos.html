@@ -409,6 +409,20 @@
       border-radius: 8px;
     }
 
+    /* Misma geometría que .sub-alcance para que se lea como parte del mismo
+       sistema, pero en colores de advertencia: no es una opción más, es algo
+       que falta. */
+    .sub-dependencia {
+      margin: 0.125rem 0 0.375rem 1.5rem;
+      padding: 0.5rem 0.75rem;
+      background: #FDF3E3;
+      border: 1px solid #E8C98A;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      color: var(--color-texto);
+    }
+
     #modal-select-unidad {
       width: 100%;
       padding: 0.6875rem 0.875rem;
@@ -679,7 +693,11 @@
       {
         grupo: 'Cuentas Corrientes',
         tareas: [
-          { modulo: 'cuentas_corrientes', tarea: 'ver_todo',                  label: 'Ver proveedores, saldos y facturas de toda la empresa' },
+          // `requiere`: dependencia dura entre tareas, validada también
+          // server-side por actualizar_permisos_empleado. Es data-driven a
+          // propósito (mismo precedente que `conAlcance`): una dependencia
+          // nueva se declara acá, no con otro if suelto.
+          { modulo: 'cuentas_corrientes', tarea: 'ver_todo',                  label: 'Ver proveedores, saldos y facturas de toda la empresa', requiere: 'gastos:ver_exportar' },
           { modulo: 'cuentas_corrientes', tarea: 'alta_proveedor',            label: 'Dar de alta proveedores directamente' },
           { modulo: 'cuentas_corrientes', tarea: 'aprobar_rechazar_proveedor', label: 'Aprobar/rechazar proveedores pendientes' },
           { modulo: 'cuentas_corrientes', tarea: 'registrar_pago',            label: 'Registrar pagos a proveedores' },
@@ -698,6 +716,39 @@
     ]
 
     const CLAVE_VER_EDITAR = 'empleados:ver_editar' // la única tarea con alcance
+
+    // Etiqueta de una tarea del catálogo, por clave 'modulo:tarea'.
+    function labelDeTarea(clave) {
+      for (const grupo of CATALOGO_TAREAS) {
+        const t = grupo.tareas.find(t => `${t.modulo}:${t.tarea}` === clave)
+        if (t) return t.label
+      }
+      return clave
+    }
+
+    // Recorre las dependencias declaradas con `requiere` en el catálogo y
+    // devuelve el mensaje de la primera que falte, o null si está todo bien.
+    //
+    // OJO — solo LEE del Set con .has(). No lo filtra ni lo reconstruye: las
+    // tareas otorgadas por SQL que no están en CATALOGO_TAREAS (hoy las cuatro
+    // de materia_prima) no participan de esta regla y tienen que seguir
+    // pasando intactas al payload. Ver el comentario de armarTareasPayload.
+    function mensajeDeDependenciaFaltante() {
+      const elegidas = estado.modal.tareasElegidas
+
+      for (const grupo of CATALOGO_TAREAS) {
+        for (const t of grupo.tareas) {
+          if (!t.requiere) continue
+          const clave = `${t.modulo}:${t.tarea}`
+          if (elegidas.has(clave) && !elegidas.has(t.requiere)) {
+            return `"${t.label}" necesita además "${labelDeTarea(t.requiere)}". `
+              + 'Sin esa tarea, los pagos a proveedor quedan filtrados por la seguridad de la base y '
+              + 'los saldos de cuenta corriente se muestran INCOMPLETOS, sin ningún error a la vista.'
+          }
+        }
+      }
+      return null
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // HELPERS
@@ -1045,12 +1096,24 @@
                 </div>`
             }
 
+            // Aviso de dependencia faltante, mismo patrón contextual que el
+            // sub-bloque de alcance: aparece debajo de la tarea que la exige,
+            // apenas se la tilda, para no enterarse recién al apretar Guardar.
+            let subDependencia = ''
+            if (t.requiere && marcada && !estado.modal.tareasElegidas.has(t.requiere)) {
+              subDependencia = `
+                <div class="sub-dependencia">
+                  Falta tildar <strong>"${labelDeTarea(t.requiere)}"</strong>.
+                  Sin esa tarea los saldos de cuenta corriente se calculan incompletos, sin ningún aviso.
+                </div>`
+            }
+
             return `
               <label class="fila-tarea">
                 <input type="checkbox" data-tarea="${clave}" ${marcada ? 'checked' : ''}>
                 <span>${t.label}</span>
               </label>
-              ${subAlcance}`
+              ${subAlcance}${subDependencia}`
           }).join('')}
         </div>
       `).join('')
@@ -1259,6 +1322,16 @@
           && !estado.modal.alcanceTodas
           && !estado.modal.alcanceUnidades.size) {
         mostrarError('"Ver y editar empleados" necesita un alcance: marcá "Todas las unidades de negocio" o elegí al menos una unidad.')
+        return
+      }
+
+      // Dependencias duras entre tareas (campo `requiere` del catálogo). El
+      // servidor también las valida en actualizar_permisos_empleado, así que
+      // esto es UI: evita el viaje de ida y vuelta y explica el motivo, que es
+      // lo que un error crudo de la RPC no haría.
+      const faltaDependencia = mensajeDeDependenciaFaltante()
+      if (faltaDependencia) {
+        mostrarError(faltaDependencia)
         return
       }
 
