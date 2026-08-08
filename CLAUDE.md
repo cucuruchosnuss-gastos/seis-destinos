@@ -6,6 +6,14 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 ## Arquitectura
 - PWA (Progressive Web App): instalable en celular y funciona en navegador de escritorio
 - Multi-archivo: un HTML por módulo, CSS compartido (`css/main.css`), sin JS compartido entre módulos — cada archivo duplica localmente sus propios helpers (parseImporte, formatearImporte, colorAvatar, etc.), es el patrón establecido, no crear un JS común
+- **Contraseñas — excepción consciente a la regla de arriba.** El mínimo del servidor es **10 caracteres** (configurado en el panel; NO está configurado "required characters"). Los helpers viven compartidos en `js/utils.js` porque la regla de duplicar aplica a los 6 módulos, y estas pantallas de auth ya comparten `auth.js` y `utils.js`: `LARGO_MINIMO_CONTRASENA` (10), `validarContrasena(texto)` → `{ largo, mayuscula, minuscula, numero, simbolo, todoOk }`, `renderizarRequisitos(contenedor, resultado)` y `renderizarCoincidencia(contenedor, coinciden)`.
+  - Usa clases Unicode (`\p{Lu}`, `\p{Ll}`, `\p{N}`) y NO rangos ASCII: con `/[A-Z]/` una contraseña que arranca con "Ángel" no contaría la mayúscula. "Símbolo" se define como `[^\p{L}\p{N}]` — complementario exacto de las otras categorías, así ningún carácter queda sin clasificar ni cuenta dos veces. El espacio cuenta como símbolo (a propósito: habilita passphrases).
+  - El cliente queda MÁS ESTRICTO que el servidor, que solo exige largo. Es el lado seguro para equivocarse: nadie pasa los cinco requisitos y aun así se come un rechazo en inglés. Si algún día se configura "required characters" en el panel, revisar que no pida algo que el cliente no exige.
+  - Se usan en los CUATRO lugares donde se ELIGE una contraseña nueva: el modal de dashboard.html, los dos formularios de registro.html y restablecer-contrasena.html. En login.html NO — ahí se escribe una que ya existe. registro.html no tiene campo de confirmación, así que ahí van solo los cinco requisitos, sin el de coincidencia.
+  - La validación no es solo visual: el botón queda `disabled` hasta que se cumpla todo. El `disabled` se aplica DESDE JS y no como atributo del HTML, para que si el script fallara los botones queden habilitados como antes en vez de dejar el formulario inutilizable. Y los `catch`/`finally` revalidan en lugar de habilitar a ciegas.
+  - Accesibilidad: el estado de cada requisito NO se comunica solo con color — el ✓ / ○ va como TEXTO dentro del span, así lo lee un lector de pantalla. Sin `aria-live` a propósito: se dispararía en cada tecla.
+  - CSS unificado en `css/main.css`: `.campo-contrasena`, `.btn-mostrar-contrasena` (el "ojito", con íconos Lucide) y `.requisitos-contrasena` / `.requisito` / `.requisito--ok`. Antes había TRES implementaciones distintas del ojito — copias locales en registro.html y restablecer-contrasena.html, más una versión con emoji y colores hardcodeados en login.html. Toda pantalla de contraseña necesita el `<script>` de Lucide cargado.
+  - En `_traducirError` de `js/auth.js`, el mensaje de largo mínimo NO tiene el número hardcodeado: se lee del propio mensaje de Supabase con `/Password should be at least (\d+) characters/`. La versión anterior tenía una clave fija con el 6 adentro; al subir el mínimo a 10 esa clave dejó de matchear y el error caía en el genérico "Ocurrió un error", justo cuando más falta hacía saber el motivo.
 - Sin frameworks: HTML, CSS y JS vanilla
 - Backend: Supabase (PostgreSQL administrado, región São Paulo)
 - OCR de comprobantes: Edge Function `ocr-comprobante`, llama a la API de Anthropic (modelo claude-sonnet) en tiempo real. Extrae razon_social, cuit, y demás campos del comprobante — ver detalle en el propio archivo de la función antes de asumir qué campos devuelve. Es la de GASTOS y no se toca.
@@ -39,9 +47,10 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
   - `caja_raiz` (boolean): LEGADO — YA NO CONTROLA NADA desde la migración de permisos de julio 2026; el control de ingresos externos pasó a las tareas `caja:ingreso_externo_propio` y `caja:ingreso_externo_empresa`. La columna todavía existe y caja.html la sigue leyendo (~líneas 1709, 1727, 2174, 2284, 4177: comentarios y selects sin efecto) — código muerto, pendiente conocido de limpieza (no urgente). Pendiente de drop en la limpieza final.
   - `contacto_emergencia_*`: carga manual únicamente, Naaloo no lo trae.
 - `empleado_modulos`: id, empleado_id, modulo, habilitado, otorgado_por, otorgado_en. El dashboard SÍ la consulta (dashboard.html ~línea 419) y filtra los tiles con `esAdmin || misModulos.includes(modulo.clave)` — la variable del código se sigue llamando `esAdmin`, pero con el rol `admin` muerto equivale a super_admin; los super_admin ven todos los módulos sin pasar por esta tabla.
-- `empleado_tareas`: id, empleado_id, modulo, tarea, habilitado, alcance (jsonb), más columnas de auditoría. Sistema de permisos granulares: el toggle de `empleado_modulos` decide si la persona VE el módulo; `empleado_tareas` decide qué puede HACER adentro. Las tareas son independientes entre sí.
+- `empleado_tareas`: id, empleado_id, modulo, tarea, habilitado, alcance (jsonb), más columnas de auditoría. Sistema de permisos granulares: el toggle de `empleado_modulos` decide si la persona VE el módulo; `empleado_tareas` decide qué puede HACER adentro. Las tareas son independientes entre sí, con UNA excepción forzada por servidor y UI: `cuentas_corrientes:ver_todo` requiere `gastos:ver_exportar` (ver la regla de otorgamiento en Sistema de permisos).
   - `alcance` (jsonb): limita una tarea a unidades de negocio concretas — `{"todas": true}` o `{"unidades": [uuid, ...]}`.
   - Hoy la ÚNICA tarea con alcance es `empleados:ver_editar`. En accesos.html eso está hardcodeado en la constante `CLAVE_VER_EDITAR`, no como lista — si en el futuro otra tarea necesita alcance, hay que generalizar esa constante a un conjunto, no alcanza con agregarla al catálogo.
+    - **`CLAVE_VER_EDITAR` dejó de ser un detalle de UI: hoy está acoplada con el RLS.** La policy de `empleados` ("leer propia o con tarea de alcance") resuelve el acceso con `tiene_tarea_alcance('empleados','ver_editar', unidad_negocio_id)`, así que esa misma tarea gobierna quién puede leer la tabla. Consecuencia: generalizar la constante para una tarea nueva con alcance obliga a revisar **también la policy**, no solo la pantalla.
   - El catálogo válido lo define el CHECK constraint `chk_tarea_valida` (26 tareas — lista completa con labels en la sección Sistema de permisos); en el frontend está hardcodeado en `CATALOGO_TAREAS` dentro de accesos.html (decisión explícita: no se lee de la base). Los dos tienen que mantenerse en sincronía a mano — y hoy NO lo están: faltan las 4 de `materia_prima` en accesos.html, ver la brecha vigente en esa sección.
 - Convención de nombres (ya existente, explícita porque confunde): `modulos.clave` / `empleado_modulos.modulo` / `MODULOS[].clave` de dashboard.html usan GUIÓN MEDIO (`'cuentas-corrientes'`, `'materia-prima'`); `empleado_tareas.modulo` usa GUIÓN BAJO (`'cuentas_corrientes'`). Son namespaces distintos, no mezclar.
 - `solicitudes_acceso`: id, nombre, apellido, email, cuil, estado, fecha_solicitud, usuario_id, fecha_nacimiento, telefono, tuvo_match
@@ -97,6 +106,13 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 
 ### RPCs (todas SECURITY DEFINER; desde la migración de permisos de julio 2026 re-verifican permisos server-side con `tiene_tarea()`/`tiene_tarea_alcance()` — NUNCA gatear por rol_app, salvo el bypass de super_admin que ya viene dentro de esos helpers. El conteo "31" era de la auditoría del 18/07/2026: después se agregaron al menos `tiene_tarea` y `tiene_tarea_alcance` y cambiaron firmas — re-verificar contra information_schema en la próxima auditoría. De esa auditoría vieja: se eliminó `rechazar_solicitud_acceso`, versión vieja que no borraba la cuenta de Auth huérfana al rechazar, reemplazada por la Edge Function `rechazar-solicitud-acceso`)
 
+**MFA**: `listar_factores_mfa(p_auth_user_id uuid)` → devuelve `id`, `friendly_name`, `status` de `auth.mfa_factors` para ese usuario. Existe porque NO hay forma de leer los factores de otra persona desde el SDK:
+- `admin.mfa.listFactors()` está documentada de forma contradictoria (el ejemplo JS no lleva argumentos pero la descripción dice "for a user") y su parámetro no está documentado en ningún lado. No adivinarlo.
+- El objeto `user` documentado NO tiene campo `factors`, así que `admin.getUserById()` tampoco sirve.
+- Un `.from('mfa_factors')` con service_role NO funciona: verificado contra `pg_class.relacl`, la ACL de `auth.mfa_factors` es solo `supabase_auth_admin`, `postgres` y `dashboard_user` — `service_role` tiene CERO privilegios. Y PostgREST no expone el esquema `auth`.
+- OJO con la trampa: `service_role` tiene `rolbypassrls = true`, pero BYPASSRLS saltea las POLICIES, no otorga PRIVILEGIOS. Sin GRANT no puede leer igual.
+Es `SECURITY DEFINER` con `search_path = ''` y su EXECUTE está revocado de `public`/`anon`/`authenticated` y otorgado SOLO a `service_role`: la llama únicamente la Edge Function, nunca el navegador.
+
 **Permisos**: `tiene_tarea(modulo, tarea)` y `tiene_tarea_alcance(modulo, tarea, unidad_negocio_id)` — los helpers estándar que usan todas las RPCs y policies RLS, con bypass de super_admin incorporado. `tiene_tarea_explicita(modulo, tarea)` — misma idea pero SIN bypass, para operaciones que no deben heredarse por rol (hoy las dos de ingreso externo de Caja). Ver sección Sistema de permisos.
 
 **Accesos / Registro**: `aprobar_solicitud_acceso(p_solicitud_id uuid, p_modulos text[], p_tareas jsonb, p_unidad_negocio_id uuid)` y `actualizar_permisos_empleado(p_empleado_id uuid, p_modulos text[], p_tareas jsonb)` — firmas nuevas SIN parámetro de rol; `p_tareas` con semántica de REEMPLAZO TOTAL (ver sección Sistema de permisos) —, `obtener_mi_solicitud_acceso`, `buscar_empleado_por_cuil` (el rechazo de una solicitud NO es una RPC — es la Edge Function `rechazar-solicitud-acceso`, ver sección Login y roles)
@@ -120,13 +136,72 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - Rechazo de una solicitud: Edge Function `rechazar-solicitud-acceso` (no es una RPC de Postgres) — además de marcar la solicitud como rechazada, borra la cuenta de Auth huérfana asociada para que la persona pueda volver a registrarse con el mismo email. Reemplazó a una RPC vieja del mismo nombre (con guión bajo) que no hacía ese borrado — esa RPC ya no existe, fue eliminada con `DROP FUNCTION`.
 - Aprobación de solicitudes y edición de permisos/roles de otros usuarios: **exclusivo de `super_admin`**. `modulos/accesos.html` es soloSuperAdmin.
 - Roles (`empleados.rol_app`): solo DOS valores — `super_admin` (control total, bypass automático de todos los chequeos; se asigna solo por SQL directo, nunca desde ninguna UI) y `usuario` (lo que puede hacer lo definen sus tareas en `empleado_tareas`). El rol `admin` YA NO EXISTE — ver sección Sistema de permisos.
+- Rescate de MFA: Edge Function `quitar-mfa-empleado`. Un super_admin le da de baja TODOS los factores TOTP a otra persona que perdió su dispositivo. Sin esto la única salida sería tocar la base a mano, porque Supabase no tiene códigos de recuperación. Recibe `empleado_id` (NO el auth_user_id). Valida, en orden: sesión válida → `rol_app = 'super_admin'` → **sesión en aal2** → body con `empleado_id` → esa persona tiene `auth_user_id` → no es uno mismo. Borra todos los factores (un factor vivo la sigue trabando); un borrado parcial devuelve error, no éxito.
+  - Rescatar a OTRO super_admin está permitido a propósito: es el caso de uso principal, los super_admin se rescatan entre ellos.
+  - **PRECONDICIÓN OPERATIVA, no es un bug**: exigir aal2 significa que un super_admin SIN MFA propio no puede rescatar a nadie (su sesión es aal1 y la función lo rechaza). Sumado a que no se permite el auto-rescate, hacen falta **DOS super_admin con MFA activo** para que este circuito sirva. Si solo una persona tiene MFA y pierde el dispositivo, no hay rescate posible desde la app. Es la decisión de seguridad correcta: sin el requisito de aal2, una sesión robada podría desactivarle el MFA a todo el equipo.
+  - El claim `aal` se lee decodificando el payload del token DESPUÉS de que `getUser()` lo validó contra el servidor de Auth. Eso es seguro y el archivo lleva un comentario largo explicando por qué, para que nadie lo "arregle" mal: la verificación fuerte ya ocurrió en `getUser()`; decodificar después un token ya probado no es confiar en un token sin verificar. Quitar el `getUser()` y dejar solo el decode SÍ sería un agujero grave. Si el claim no viene, se asume aal1 y se rechaza — la doc dice "JWTs without an `aal` claim are at the `aal1` level".
+  - El botón está en `modulos/accesos.html`, en la tarjeta de cada persona de "Usuarios y roles". Su condición es INDEPENDIENTE de `puedeEditar` (que sigue gateando solo a "Editar", porque un super_admin no edita permisos de otro). Si colgara de `puedeEditar` sería imposible rescatar a un super_admin, que es justamente el caso principal. Lo único que se excluye es la tarjeta propia.
 - Tablets de fábrica: cuenta genérica + PIN de turno por encargado (a implementar)
+
+## Verificación en dos pasos (MFA / TOTP) — agosto 2026
+
+MFA es OPCIONAL por usuario: quien no lo activa entra como siempre. TOTP es gratis y viene habilitado por defecto en todos los proyectos de Supabase.
+
+**NO EXISTEN CÓDIGOS DE RECUPERACIÓN.** La referencia de Auth MFA lo dice textual: "Recovery codes are not supported". El único respaldo posible es dar de alta un segundo dispositivo (máximo 10 factores por usuario). Todo el diseño de la UI y la existencia de la Edge Function de rescate salen de acá — no buscar una API de recovery codes, no la hay.
+
+Otras dos consecuencias del diseño de Supabase, ambas visibles para el usuario:
+- Verificar un factor CIERRA todas las demás sesiones de esa persona.
+- Dar de baja un factor NO degrada el JWT de aal2 a aal1 hasta el próximo refresco automático; hace falta `refreshSession()` explícito.
+
+### Chequeo de nivel (AAL) — `js/auth.js`, dentro de `verificarSesion()`
+
+Va después del `getSession()` y ANTES de los dos returns de redirección. Vive ahí, y no en cada pantalla, para que proteja automáticamente a las 11 páginas que llaman a `verificarSesion()` — incluidos los 6 módulos — sin que ninguna tenga que acordarse.
+
+- Condición para exigir el segundo factor: `nextLevel === 'aal2' && nextLevel !== currentLevel`
+- **Falla CERRADA**: si `getAuthenticatorAssuranceLevel()` devuelve error, se exige el factor igual. No saber el nivel no es "seguí de largo".
+- Corre SOLO si hay sesión. index.html, login.html, registro.html y recuperar-contrasena.html llaman con `redirigirSiNoHay:false`; sin este guard un visitante anónimo entrando a la home terminaría rebotando contra mfa.html.
+- No redirige si ya estamos en mfa.html (se compara por `pathname`, no por string suelto, para que funcione igual en GitHub Pages que en local).
+- Va ANTES de los returns a propósito: si fuera después, una sesión con el factor pendiente que abre login.html saltaría primero al dashboard por `redirigirSiHay` y recién de ahí a mfa.html.
+
+`restablecer-contrasena.html` NO llama a `verificarSesion()` (maneja su propia sesión de recuperación), así que el reseteo de contraseña no queda bloqueado. Termina redirigiendo a dashboard.html, donde el chequeo sí corre.
+
+### Funciones de MFA en `js/auth.js`
+
+- `listarFactoresMfa()` → solo los factores TOTP con `status === 'verified'`.
+- `iniciarAltaMfa(nombreAmigable)` → `{ factorId, qrCode, secret }`. El `qrCode` viene en SVG, va directo al `src` de un `<img>`. Antes de crear el factor nuevo da de baja los `unverified` colgados: `enroll()` crea la fila apenas se lo llama, y si la persona abandona el modal esa fila queda para siempre haciendo chocar el reintento con `mfa_factor_name_conflict`. NUNCA toca un factor `verified`.
+- `verificarCodigoMfa(factorId, codigo)` → `challenge()` + `verify()`. Sirve tanto para completar el alta como para el desafío al entrar. El challenge se crea al verificar y no al abrir la pantalla: tiene expiración propia.
+- `darDeBajaMfa(factorId)` → `unenroll()` + `refreshSession()`.
+
+**Los errores de MFA se traducen por `error.code`, no por el texto del mensaje** (`_traducirErrorMfa`). Los códigos son contrato público documentado de Supabase; el texto no. Si el código no viene, cae al genérico y loguea a consola. Dos códigos que importan por UX y no solo por traducción:
+- `mfa_ip_address_mismatch`: el alta tiene que empezar y terminar en la misma IP. En celular, pasar de WiFi a datos móviles en el medio la rompe. El mensaje traducido lo explica con esas palabras.
+- `mfa_factor_name_conflict`: dos factores del mismo usuario no pueden tener el mismo nombre. Por eso el alta pide un nombre de dispositivo editable.
+
+### `mfa.html` — pantalla del desafío al entrar
+
+Misma estructura visual que login (`.pagina-auth` + `.tarjeta-auth`). Sin CAPTCHA: el usuario ya pasó el login. Tres salidas posibles:
+- Sesión ya en `aal2` → al dashboard (alguien entró a la URL a mano).
+- Hay factores verificados → pide el código de 6 dígitos.
+- NO hay factores verificados → mensaje sin salida + botón de cerrar sesión. **NO redirige.** Ver el aprendizaje sobre bucles de redirección.
+
+Un código mal tipeado NO cierra la sesión: se limpia el campo y se reintenta.
+
+### Alta desde `dashboard.html` (menú de perfil → "Verificación en dos pasos")
+
+Modal con dos estados: sin factor (aviso + nombre de dispositivo + Activar → QR + secreto + código) y con factor (lista + "Agregar otro dispositivo"). NO hay botón de desactivar.
+
+El aviso previo al alta es obligatorio y explícito porque no hay recovery codes: "Guardá el código de texto en un lugar seguro y escaneá el QR en un segundo dispositivo. Si perdés el único dispositivo, no vas a poder entrar."
+
+PENDIENTE DE CONFIRMAR: no está documentado si `listFactors()` devuelve `created_at`. La columna existe en `auth.mfa_factors`, pero la API puede no devolverla. El código muestra la fecha si viene y solo el nombre si no.
+
+### Pendiente operativo
+
+- **Configurarle MFA al segundo super_admin.** Sin eso, el circuito de rescate de `quitar-mfa-empleado` queda escrito y desplegado pero inutilizable (ver la precondición en Login y roles).
 
 ## Sistema de permisos (migrado — julio 2026)
 
 REGLA CENTRAL: el rol `admin` YA NO EXISTE. Solo hay dos valores de `empleados.rol_app`: `super_admin` (control total, bypass automático de todos los chequeos) y `usuario`. NUNCA escribir código nuevo que chequee `rol_app IN ('admin', ...)` — ese patrón está muerto.
 
-Los permisos finos son TAREAS granulares en la tabla `empleado_tareas` (empleado_id + modulo + tarea + habilitado + alcance jsonb). El catálogo válido lo define el CHECK constraint `chk_tarea_valida` — 26 tareas hoy, listadas abajo. Todas las tareas son independientes entre sí — no hay jerarquías.
+Los permisos finos son TAREAS granulares en la tabla `empleado_tareas` (empleado_id + modulo + tarea + habilitado + alcance jsonb). El catálogo válido lo define el CHECK constraint `chk_tarea_valida` — 26 tareas hoy, listadas abajo. Las tareas son independientes entre sí y no hay jerarquías, **con UNA excepción forzada por servidor y UI: `cuentas_corrientes:ver_todo` requiere `gastos:ver_exportar`** (ver "Regla de otorgamiento" más abajo).
 
 Catálogo completo de tareas (verificado contra `pg_get_constraintdef` del CHECK real, no reconstruido — claves exactas `modulo:tarea`, no inventar claves nuevas ni duplicar una existente con otro nombre; labels según `CATALOGO_TAREAS` de accesos.html):
 - `gastos:ver_exportar` — Ver todos los gastos de la empresa + exportar Excel (incluye cargar gastos a nombre de otro)
@@ -164,6 +239,16 @@ Chequeo server-side (SIEMPRE en RPCs SECURITY DEFINER y policies RLS):
 - `tiene_tarea_explicita(modulo, tarea)` — variante SIN bypass: exige la fila otorgada aunque quien llame sea super_admin. Se usa hoy en las CINCO tareas de Caja que tocan plata de Empresa o meten plata "de la nada": `ingreso_externo_propio`, `ingreso_externo_empresa`, `ver_empresa`, `egreso_empresa` y `traspaso_empresa`. El criterio: esas operaciones no se heredan por rol — ser super_admin no alcanza, hace falta la fila otorgada. El resto de las tareas usa `tiene_tarea()`. El frontend replica esta distinción: caja.html tiene `tieneTarea()` y `tieneTareaExplicita()` — ojo que ahí la firma es de UN solo argumento, el módulo va implícito.
 
 Chequeo frontend (patrón en los 5 módulos migrados, copiar de gastos.html): al init se consulta `empleado_tareas` filtrando por módulo(s), se guarda un Set con claves `'modulo:tarea'`, y un helper `tieneTarea(modulo, tarea)` devuelve true si `rol_app === 'super_admin'` o el Set contiene la clave. El frontend solo oculta UI — la barrera real es siempre server-side.
+
+### Regla de otorgamiento — `cuentas_corrientes:ver_todo` requiere `gastos:ver_exportar`
+
+**Es una REGLA FORZADA, no una recomendación.** El servidor la valida en `actualizar_permisos_empleado` (y `aprobar_solicitud_acceso` la hereda porque la invoca internamente), y la UI del modal de Accesos la refleja desde el commit `e9accc2`.
+
+Motivo: la vista `v_cuenta_corriente_movimientos` hace un UNION de cinco tablas y una de ellas es `gastos` — los pagos a proveedor son filas de `gastos`. Sin `gastos:ver_exportar`, el RLS filtra esas filas y la persona ve el listado SIN los pagos, con el `saldo_acumulado` calculado sobre datos incompletos.
+
+Esto NO es "queda a medias": son números que parecen correctos y están mal, sin ningún error a la vista y sin nada que le avise a la persona que le falta información. Es el peor modo de falla posible para un módulo de plata.
+
+En la UI la dependencia se declara con el campo `requiere` en `CATALOGO_TAREAS` (mismo precedente que `conAlcance`), así que una dependencia nueva es una línea del catálogo y no otro `if`. Se BLOQUEA el guardado y NO se auto-tilda la tarea faltante: `gastos:ver_exportar` incluye "cargar gastos a nombre de otro", y auto-otorgarla sería una escalada silenciosa de privilegios en la única pantalla donde se reparten permisos.
 
 Gestión: pantalla de Accesos (solo super_admin) con checkboxes por tarea. RPCs con firma nueva (SIN parámetro de rol):
 - `actualizar_permisos_empleado(p_empleado_id uuid, p_modulos text[], p_tareas jsonb)`
@@ -213,8 +298,18 @@ Para módulos NUEVOS (ej. Materia Prima): definir sus tareas con Facu, agregarla
 
 ## Seguridad
 - RLS activado en las tablas de `public` (verificado el 18/07/2026 sobre las 20 de entonces; `empleado_tareas` y `modulos` se agregaron después y su RLS no se re-verificó — confirmar en la próxima auditoría).
-- Pendiente, sin urgencia (que ningún admin lo olvide): `empleados` y `cuentas_caja` se pueden leer completos (incluido CUIL, teléfono, fecha de nacimiento, domicilio en el caso de `empleados`) por cualquier usuario logueado, no solo por un admin. Requiere crear una vista angosta (`v_empleados_publico` con solo los campos no sensibles) para los selectores que hoy dependen de esto (ej. selector de empleado en el wizard de Gastos) antes de poder cerrar el acceso a la tabla completa.
-- CORS de las Edge Functions usa `Access-Control-Allow-Origin: '*'` (default del scaffolding de Supabase) — no es una puerta abierta real porque cada función valida el token de sesión igual, pero si se quiere cerrar del todo, cambiar a `https://cucuruchosnuss-gastos.github.io` en las 4 funciones (`ocr-comprobante`, `ocr-materia-prima`, `crear-solicitud-acceso`, `rechazar-solicitud-acceso`).
+- `empleados`: **CERRADO** (el pendiente viejo de "se lee completo por cualquier logueado" ya no aplica). La policy vigente se llama "leer propia o con tarea de alcance" y su `qual` es:
+  ```
+  (auth_user_id = auth.uid())
+  OR tiene_tarea_alcance('empleados', 'ver_editar', unidad_negocio_id)
+  ```
+  El acceso migró del chequeo por rol al sistema de tareas granulares, con alcance por unidad de negocio. Un usuario común solo lee SU PROPIA fila; el CUIL, el teléfono, el domicilio y la fecha de nacimiento de los demás dejaron de ser legibles. Los super_admin siguen viendo todo, pero no por un chequeo de rol en la policy: `tiene_tarea_alcance` es SECURITY DEFINER y lleva la excepción de super_admin adentro (`e.rol_app = 'super_admin' or exists(...)`).
+- `cuentas_caja`: **SIGUE ABIERTA, Y ES A PROPÓSITO. No es un pendiente.** Cualquier empleado logueado ve el nombre, el medio y la moneda de las cuentas de cualquier otro, y hace falta para dos cosas concretas: elegir la cuenta destino en las transferencias entre personas (caja.html) y el selector de contraparte del wizard de Gastos. Es segura porque `cuentas_caja` NO tiene columna de saldo: la plata vive en las vistas `v_caja_saldos*`, que sí respetan el RLS de `caja_movimientos` gracias a `security_invoker`. O sea: se ve QUE la cuenta existe, no CUÁNTO tiene. Si alguna vez se le agrega una columna sensible, esta decisión hay que revisarla — hoy es segura por la forma de la tabla, no por una restricción de acceso.
+- **`REVOKE` a `anon` sobre todo el esquema `public`**, más `ALTER DEFAULT PRIVILEGES` para que las tablas futuras nazcan sin permisos para `anon`. Verificado en su momento con una consulta a `information_schema.role_table_grants`, que devolvió CERO filas para `anon`. Los DEFAULT PRIVILEGES no son opcionales: sin ellos el revoke se degrada solo, porque cubre lo que existía ese día y no lo que se cree después. CONSECUENCIA A TENER PRESENTE: cualquier funcionalidad futura que necesite leer algo sin sesión (una pantalla pública, un healthcheck) va a fallar con permission denied, y el motivo no va a ser obvio.
+- **Todas las vistas llevan `security_invoker=true`** para que respeten el RLS de quien consulta y no el del dueño de la vista. Verificado: las 8 vistas del proyecto lo tienen, con UNA excepción deliberada. REGLA: toda vista nueva se crea con `security_invoker=true`. Sin eso, una vista sobre una tabla con RLS es un agujero: corre como su dueño.
+  - EXCEPCIÓN JUSTIFICADA — `v_empleados_publico` NO lo tiene, y es a propósito. Si respetara el RLS de `empleados`, un usuario común solo se vería a sí mismo y los selectores de empleados de Gastos y Caja le quedarían vacíos — que es exactamente el problema que esa vista vino a resolver. Es segura por dos motivos: sus columnas son solo `id`, `nombre`, `unidad_negocio_id`, `tipo`, `activo`, `rol_app`, `caja_raiz` (NADA de CUIL, teléfono, domicilio, fecha de nacimiento ni email); y el `REVOKE` a `anon` también le aplicó, así que no es legible sin sesión. Si alguna vez se le agrega una columna, revisar esta lista antes: es la única vista del proyecto donde una columna nueva se expone salteando el RLS.
+- **`mi_rol_app()` está HUÉRFANA.** Se creó para resolver el chequeo por afuera de las policies y evitar la recursión (ver Aprendizajes clave), pero tras la migración de la policy de `empleados` a `tiene_tarea_alcance()` no le quedó ningún uso: verificado contra `pg_policies` (cero usos), `pg_proc` (ninguna función la invoca) y el repo completo (el frontend tampoco). Pendiente de `DROP` en la limpieza final. **NO usarla en código nuevo** — para policies nuevas, usar `tiene_tarea()` / `tiene_tarea_alcance()` / `tiene_tarea_explicita()`.
+- CORS de las Edge Functions usa `Access-Control-Allow-Origin: '*'` (default del scaffolding de Supabase) — no es una puerta abierta real porque cada función valida el token de sesión igual, pero si se quiere cerrar del todo, cambiar a `https://cucuruchosnuss-gastos.github.io` en las 5 funciones (`ocr-comprobante`, `ocr-materia-prima`, `crear-solicitud-acceso`, `rechazar-solicitud-acceso`, `quitar-mfa-empleado`).
 
 ## Aprendizajes clave (bugs recurrentes ya resueltos — no repetirlos)
 - **`hidden` de HTML puede quedar pisado por una regla CSS con más especificidad** (ej. `#vista-lista { display: flex }` sin `:not([hidden])`) — pasó una vez, causó que dos pantallas se vieran superpuestas. Auditar todo el archivo por el mismo patrón, no parchear un solo caso.
@@ -222,6 +317,9 @@ Para módulos NUEVOS (ej. Materia Prima): definir sus tareas con Facu, agregarla
 - **Nombres de columnas/parámetros de un RPC: nunca adivinar variantes.** Cuando no se tiene el cuerpo real de la función a mano, preguntar o verificar antes de escribir código defensivo con múltiples nombres posibles — cuesta más tiempo debuggear después que preguntar antes.
 - **`CREATE OR REPLACE FUNCTION` con firma distinta NO reemplaza — crea una sobrecarga duplicada** que rompe las llamadas por ambigüedad (costó un bug de producción). Si cambia la firma: `DROP FUNCTION` primero, después `CREATE`.
 - **Toda FK nueva hacia `empleados` desde una tabla que ya tiene otra FK a empleados rompe los embeds de PostgREST por ambigüedad** — `gastos.anulado_por` se dejó SIN FK a propósito por esto.
+- **Una FK hacia `auth.users` SIN cláusula `ON DELETE` rompe cualquier borrado de usuario.** Sin `ON DELETE`, Postgres usa `NO ACTION`: mientras alguna fila referencie al usuario, `auth.admin.deleteUser()` falla con `SQLSTATE 23503 (violates foreign key constraint)`. Caso real: `rechazar-solicitud-acceso` marcaba la solicitud como 'rechazada' dejando `usuario_id` apuntando a la cuenta, y acto seguido intentaba borrar esa misma cuenta. **Falló el 100% de las veces desde que existe** — nunca borró un solo usuario, y la consecuencia era exactamente lo que esa función vino a evitar: la persona no podía volver a registrarse con su email. Era invisible porque la función atrapaba el error y devolvía HTTP 200 con `cuentaAuthNoEliminada: true` en el body, así que el status no delataba nada. Se arregló por dos lados a la vez: la FK pasó a `ON DELETE SET NULL`, y la función además pone `usuario_id: null` en el mismo UPDATE que marca el estado. REGLA: toda FK nueva hacia `auth.users` lleva `ON DELETE SET NULL` o `ON DELETE CASCADE` explícito. Nunca se deja el default.
+- **Una política RLS sobre una tabla NO puede consultar esa misma tabla: es recursión, Postgres la rechaza y la tabla queda inaccesible para TODOS.** Caso real: la política original de `empleados` hacía un `EXISTS (SELECT ... FROM empleados ...)` dentro de una política SOBRE `empleados`. Resultado: nadie podía entrar a la app, ni siquiera los super_admin. Y el síntoma no delataba la causa — el dashboard mostraba su cartel genérico "Hubo un problema con tu registro", que es el mismo mensaje del caso "cuenta de Auth sin fila en empleados". REGLA: dentro de una policy RLS nunca consultar directo la tabla que esa policy protege. El chequeo se resuelve por afuera, con una función **SECURITY DEFINER** — `tiene_tarea()`, `tiene_tarea_alcance()`, `tiene_tarea_explicita()`. Lo que corta la recursión es el SECURITY DEFINER (la función corre con los permisos de su dueño y no re-dispara la policy), no una función puntual: cualquier helper nuevo que se escriba para usar dentro de una policy tiene que serlo también.
+- **Dos páginas que se redirigen entre sí generan un bucle infinito del que no se sale por la UI.** Caso real: `dashboard.html` manda a `mfa.html` cuando no puede determinar el AAL (falla cerrada), y `mfa.html` mandaba al dashboard cuando la persona no tenía ningún factor verificado. Con las dos reglas juntas, cualquier error al leer el nivel dejaba a TODOS los usuarios rebotando entre las dos pantallas. REGLA: cuando la página A redirige a B bajo la condición X, y B redirige a A bajo la condición Y, verificar que X e Y no puedan ser verdaderas a la vez. Si pueden, uno de los dos lados tiene que cortar con un mensaje y una acción manual en vez de redirigir. Cómo quedó en mfa.html: sin factores → mensaje + botón de cerrar sesión, sin redirección; pero con la sesión ya en aal2 SÍ sigue redirigiendo al dashboard, porque ahí el dashboard la deja pasar y no hay rebote posible. La diferencia es entre "ya estás verificado" y "no hay nada que verificar".
 - Verificación de cada commit: bajar el `.patch` real de GitHub y leerlo, nunca confiar en el resumen que da Claude Code de lo que hizo.
 
 ## Cómo trabajar
@@ -250,6 +348,12 @@ Cuando el trabajo de un módulo necesita tareas nuevas, cambios de permisos o ca
 Ninguna tarea se considera terminada hasta que CLAUDE.md refleje sus cambios.
 
 Si el chat que hizo el trabajo no puede editarlo (por la regla de arriba), tiene que **generar el prompt de actualización de doc y entregárselo a Facu como parte del cierre**. No es opcional ni "algo para después": una tarea sin la doc actualizada está incompleta.
+
+### REGLA DE ORO — Verificar antes de asumir
+
+Antes de documentar, modificar o dar por conocido cualquier objeto de la base (policies, funciones, vistas, constraints), **verificar su estado real primero** — aunque lo haya hecho uno mismo y aunque haya sido hace poco.
+
+El modelo de "un chat por tema" hace que ningún chat vea lo que hicieron los otros. Con el MCP de Supabase en modo lectura verificar cuesta treinta segundos; asumir costó, en este proyecto, estar a punto de documentar una policy que ya no existía: el chat de seguridad había diseñado la de `empleados` como "fila propia o admin/super_admin" con `mi_rol_app()`, y mientras trabajaba fue reescrita desde otro chat para usar `tiene_tarea_alcance()`. No se rompió nada y la policy nueva es mejor, pero se estuvo a un paso de escribir documentación falsa — y podría haber salido al revés, con un chat pisando el cambio del otro.
 
 ### Resto
 - Responder SIEMPRE en español
