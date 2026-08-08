@@ -83,10 +83,24 @@ Deno.serve(async (req) => {
     return json({ ok: false, mensaje: `Esta solicitud ya fue resuelta (estado: ${solicitud.estado}).` }, 409)
   }
 
-  // ── Marcar como rechazada ────────────────────────────────────────────────────
+  // El id se guarda ANTES del update porque el propio update lo borra de la
+  // fila, y abajo hace falta para el deleteUser.
+  const usuarioIdABorrar = solicitud.usuario_id
+
+  // ── Marcar como rechazada y soltar la referencia al usuario ─────────────────
+  // usuario_id se pone en null en la MISMA operación, y no es cosmético: la FK
+  // solicitudes_acceso_usuario_id_fkey apunta a auth.users, y mientras esta
+  // fila siguiera referenciando la cuenta, el deleteUser de más abajo fallaba
+  // siempre con "violates foreign key constraint (SQLSTATE 23503)". La cuenta
+  // quedaba viva y la persona no podía volver a registrarse con el mismo mail
+  // — justo lo que esta función existe para evitar.
+  //
+  // La FK ya tiene ON DELETE SET NULL, así que hoy el borrado funcionaría
+  // igual. Esto se mantiene como defensa en profundidad: no depender de que
+  // nadie recree la constraint sin esa cláusula.
   const { error: errorUpdate } = await supabaseAdmin
     .from('solicitudes_acceso')
-    .update({ estado: 'rechazada' })
+    .update({ estado: 'rechazada', usuario_id: null })
     .eq('id', solicitudId)
 
   if (errorUpdate) {
@@ -97,10 +111,10 @@ Deno.serve(async (req) => {
   // ── Borrar la cuenta de Auth asociada, para que la persona pueda volver a
   //    registrarse desde cero con el mismo email ────────────────────────────
   let cuentaAuthNoEliminada = false
-  if (solicitud.usuario_id) {
-    const { error: errorDelete } = await supabaseAdmin.auth.admin.deleteUser(solicitud.usuario_id)
+  if (usuarioIdABorrar) {
+    const { error: errorDelete } = await supabaseAdmin.auth.admin.deleteUser(usuarioIdABorrar)
     if (errorDelete) {
-      console.error('La solicitud se rechazó pero no se pudo borrar la cuenta de Auth', solicitud.usuario_id, '—', errorDelete.message)
+      console.error('La solicitud se rechazó pero no se pudo borrar la cuenta de Auth', usuarioIdABorrar, '—', errorDelete.message)
       cuentaAuthNoEliminada = true
     }
   }
