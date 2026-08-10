@@ -222,6 +222,33 @@
     .filtros-cc select:focus { border-color: var(--turquesa); }
     .filtros-cc__buscar { flex: 1; min-width: 160px; }
 
+    /* Botón de acción dentro de una barra .filtros-cc. Existe por dos
+       motivos concretos: los .btn de main.css miden ~42px y usan radio 8px,
+       así que al lado de los inputs de la barra (36px, píldora) quedaban
+       desparejos; y .btn--secundario pinta el fondo con
+       var(--color-superficie), que es EXACTAMENTE el fondo de
+       .pagina-modulo — de ahí que se vieran "sin fondo". Borde y no relleno
+       para no competir entre sí ni con las píldoras blancas de al lado. */
+    .btn-filtro-cc {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      padding: 0 1rem;
+      border: 1.5px solid var(--turquesa);
+      border-radius: 999px;
+      background: var(--color-fondo);
+      color: var(--turquesa-oscuro);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color 0.18s ease, color 0.18s ease;
+    }
+    .btn-filtro-cc:hover { background: var(--turquesa); color: #fff; }
+
     h3.titulo-seccion-cc {
       font-size: 0.875rem;
       font-weight: 700;
@@ -375,6 +402,23 @@
       border-color: var(--turquesa);
     }
     .btn-ver-cuenta:hover { background: var(--turquesa-oscuro); border-color: var(--turquesa-oscuro); }
+
+    /* Padrón completo (Pantalla C). La tarjeta entera abre la ficha, por eso
+       el cursor; el ✏️ vive adentro y frena la propagación. */
+    .tarjeta-padron { cursor: pointer; }
+    .padron-cabecera {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin: 0 0 0.75rem;
+    }
+    .padron-cabecera__contador {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+    }
 
     /* Botones de confirmación de los 3 modales — turquesa en vez del verde
        genérico (.btn--exito), para combinar con la paleta del módulo. */
@@ -622,16 +666,21 @@
        proyecto con dos pantallas superpuestas. */
     .grupo-importar-excel[hidden] { display: none; }
 
+    /* Mismo alto que .btn-filtro-cc para que no quede flotando en la barra,
+       pero neutro (borde gris, sin turquesa): es ayuda, no una acción. */
     .btn-ayuda-excel {
       flex-shrink: 0;
-      width: 1.625rem;
-      height: 1.625rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       border: 1.5px solid var(--color-borde);
       background: var(--color-fondo);
       color: var(--color-texto-suave);
       font-family: var(--fuente);
-      font-size: 0.8125rem;
+      font-size: 0.875rem;
       font-weight: 700;
       line-height: 1;
       cursor: pointer;
@@ -912,12 +961,13 @@
             <input type="text" id="filtro-busqueda-proveedores" placeholder="🔍 Buscar proveedor" style="width:100%;">
           </div>
           <select id="filtro-unidad-proveedores"></select>
-          <button type="button" class="btn btn--secundario" id="btn-agregar-proveedor" style="width:auto;">+ Agregar proveedor</button>
+          <button type="button" class="btn-filtro-cc" id="btn-agregar-proveedor">+ Agregar proveedor</button>
           <div class="grupo-importar-excel" id="grupo-importar-excel">
-            <button type="button" class="btn btn--secundario" id="btn-cargar-excel-proveedores" style="width:auto;">Cargar Excel proveedores</button>
+            <button type="button" class="btn-filtro-cc" id="btn-cargar-excel-proveedores">Cargar Excel proveedores</button>
             <button type="button" class="btn-ayuda-excel" id="btn-ayuda-excel-proveedores" title="Ver el formato esperado" aria-label="Ver el formato esperado del Excel">?</button>
             <input type="file" id="input-excel-proveedores" accept=".xlsx,.xls" hidden>
           </div>
+          <button type="button" class="btn-filtro-cc" id="btn-ver-padron">Ver todos los proveedores</button>
         </div>
 
         <div id="estado-cargando-proveedores" class="estado-vacio" hidden>
@@ -1036,6 +1086,48 @@
       </div>
     </div>
   </div><!-- /vista-ficha -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       VISTA C — PADRÓN COMPLETO DE PROVEEDORES
+
+       Drill-down desde la pestaña Proveedores, mismo criterio que la ficha
+       (una vista aparte, no una pestaña más). A diferencia de la lista de
+       saldos, acá NO se filtra por saldo ni por unidad: es el padrón entero
+       de proveedores activos y aprobados, incluidos los que están en $0 y
+       los que nunca tuvieron un movimiento.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div id="vista-padron" hidden>
+    <div class="vista-lista__contenedor" style="max-width: 1120px; margin: 0 auto; padding: 0 1.25rem 3rem;">
+      <header class="cc-header-ficha">
+        <button type="button" class="cc-header__volver" id="btn-cerrar-padron">‹ Volver</button>
+        <span class="cc-header-ficha__nombre">Todos los proveedores</span>
+      </header>
+
+      <div class="filtros-cc">
+        <div class="filtros-cc__buscar">
+          <input type="text" id="filtro-busqueda-padron" placeholder="🔍 Buscar por razón social o CUIT" style="width:100%;">
+        </div>
+      </div>
+
+      <div class="padron-cabecera">
+        <h3 class="titulo-seccion-cc" style="margin:0;">Padrón</h3>
+        <span class="padron-cabecera__contador" id="contador-padron"></span>
+      </div>
+
+      <div id="estado-cargando-padron" class="estado-vacio" hidden>
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando proveedores…</p>
+      </div>
+
+      <div class="lista-contenido" id="lista-padron"></div>
+
+      <div id="estado-vacio-padron" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">🔍</div>
+        <div class="estado-vacio__titulo">Sin resultados</div>
+        <p class="estado-vacio__descripcion">Ningún proveedor coincide con la búsqueda.</p>
+      </div>
+    </div>
+  </div><!-- /vista-padron -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — REGISTRAR PAGO
@@ -1198,6 +1290,76 @@
   </div><!-- /modal-agregar-proveedor -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — EDITAR PROVEEDOR (desde el padrón)
+
+       Mismos campos que el alta, pero el CUIT acá NO es obligatorio: hay
+       proveedores importados por Excel sin CUIT que igual tienen que poder
+       editarse. El RPC editar_proveedor valida que no quede duplicado con
+       otro proveedor; ese error se muestra tal cual viene del servidor.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-editar-proveedor" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-editar-proveedor" title="Cerrar">✕</button>
+      <h2>Editar proveedor</h2>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-editar-prov-razon">Razón social</label>
+          <input type="text" id="campo-editar-prov-razon" placeholder="Nombre del proveedor">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-editar-prov-cuit">CUIT <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-editar-prov-cuit" placeholder="30-12345678-9">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-editar-prov-fantasia">Nombre de fantasía <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-editar-prov-fantasia" placeholder="Nombre comercial">
+        </div>
+        <div class="grupo-campo">
+          <label for="campo-editar-prov-direccion">Dirección <span class="etiqueta-opcional">opcional</span></label>
+          <input type="text" id="campo-editar-prov-direccion" placeholder="Dirección">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-editar-proveedor">Cancelar</button>
+        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-editar-proveedor">Guardar</button>
+      </div>
+    </div>
+  </div><!-- /modal-editar-proveedor -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — ELEGIR UNIDAD DE NEGOCIO
+
+       La cuenta corriente se lleva por proveedor + unidad, pero el padrón es
+       por proveedor. Cuando el proveedor tiene movimientos en más de una
+       unidad hay que preguntar cuál abrir; con una sola no se pregunta nada.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-elegir-unidad" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-elegir-unidad" title="Cerrar">✕</button>
+      <h2>Elegí la unidad</h2>
+      <p class="estado-vacio__descripcion" style="margin:0 0 0.875rem;">
+        Este proveedor tiene movimientos en más de una unidad de negocio, y la cuenta corriente se lleva por separado en cada una.
+      </p>
+
+      <div class="formulario">
+        <div class="grupo-campo">
+          <label for="campo-elegir-unidad">Unidad de negocio</label>
+          <select id="campo-elegir-unidad"></select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-elegir-unidad">Cancelar</button>
+        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-elegir-unidad">Ver cuenta</button>
+      </div>
+    </div>
+  </div><!-- /modal-elegir-unidad -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — AYUDA: FORMATO DEL EXCEL DE PROVEEDORES
   ══════════════════════════════════════════════════════════════════════════ -->
   <div class="modal-cc" id="modal-ayuda-excel" hidden>
@@ -1330,7 +1492,12 @@
       filtros: {
         proveedores: { busqueda: '', unidadId: '' },
         historial:   { busqueda: '', unidadId: '', fechaDesde: '', fechaHasta: '', rangoRapido: null },
+        padron:      { busqueda: '' },
       },
+      // Saldos del padrón: Map proveedor_id -> Map moneda -> {deuda, credito},
+      // agregados entre TODAS las unidades (el padrón es por proveedor, la
+      // lista de saldos de la pestaña es por proveedor+unidad).
+      padronSaldos: new Map(),
       listaSaldos: [],
       listaSinProveedor: [],
       listaHistorial: [],
@@ -1350,6 +1517,13 @@
     let creditoAAplicar            = null
     let medioPagoSeleccionado      = null
     let facturasParaPago           = [] // [{id, numero, fecha, saldo, checked, monto}]
+    let proveedorAEditar           = null
+    // Desde qué pantalla se abrió la ficha, para que "‹ Volver" devuelva a
+    // esa misma y no siempre a la pestaña Proveedores (mismo criterio que el
+    // ?volver= entre Gastos y Cuentas Corrientes). Lo setea abrirFicha().
+    let fichaOrigen                = 'lista'
+    let unidadesParaElegir         = []  // [{id, nombre}] del modal de unidad
+    let proveedorParaElegirUnidad  = null
 
     // ═══════════════════════════════════════════════════════════════════════
     // HELPERS
@@ -1362,6 +1536,17 @@
     // re-valida igual — esto es solo UI.
     function tieneTarea(modulo, tarea) {
       return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
+    }
+
+    // El padrón de proveedores activos y aprobados. Vive en un helper porque
+    // lo cargan tres lugares (init, alta y edición) y la lista de columnas
+    // tiene que ser la misma en los tres — con `direccion`, que la usa el
+    // padrón completo (Pantalla C).
+    async function recargarProveedoresMaestros() {
+      const { data } = await supabase.from('proveedores')
+        .select('id, razon_social, nombre_fantasia, cuit, direccion')
+        .eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
+      estado.maestros.proveedores = data ?? []
     }
 
     function formatearImporte(importe, moneda = 'ARS') {
@@ -1513,12 +1698,11 @@
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
 
-      const [unids, provs] = await Promise.all([
+      const [unids] = await Promise.all([
         supabase.from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre'),
-        supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social'),
+        recargarProveedoresMaestros(),
       ])
-      estado.maestros.unidades    = unids.data ?? []
-      estado.maestros.proveedores = provs.data ?? []
+      estado.maestros.unidades = unids.data ?? []
 
       poblarSelect('filtro-unidad-proveedores', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
       poblarSelect('filtro-unidad-historial', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
@@ -1533,6 +1717,9 @@
         document.getElementById('filtros-proveedores-buscar').hidden = true
         document.getElementById('filtro-unidad-proveedores').hidden = true
         document.getElementById('lista-proveedores').hidden = true
+        // El padrón muestra el saldo de cada proveedor de toda la empresa —
+        // exactamente lo que gobierna ver_todo.
+        document.getElementById('btn-ver-padron').hidden = true
       }
       if (!tieneTarea('cuentas_corrientes', 'alta_proveedor')) {
         document.getElementById('btn-agregar-proveedor').hidden = true
@@ -2047,10 +2234,259 @@
       cerrarModalAgregarProveedor()
       // Mismo refresh que aprobarProveedor() — recarga los maestros y
       // re-renderiza la pestaña Proveedores. El proveedor nuevo no va a
-      // aparecer en la lista hasta que tenga alguna factura (esa lista
-      // solo muestra saldo>0), es el comportamiento esperado.
-      const { data } = await supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
-      estado.maestros.proveedores = data ?? []
+      // aparecer en ESTA lista hasta que tenga alguna factura (solo muestra
+      // saldo>0), es el comportamiento esperado; para verlo igual está
+      // "Ver todos los proveedores", que muestra el padrón completo.
+      await recargarProveedoresMaestros()
+      cargarSaldos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PADRÓN COMPLETO DE PROVEEDORES (Pantalla C)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirPadron() {
+      document.getElementById('vista-lista').hidden = true
+      document.getElementById('vista-padron').removeAttribute('hidden')
+      await cargarPadronSaldos()
+    }
+
+    function cerrarPadron() {
+      document.getElementById('vista-padron').hidden = true
+      document.getElementById('vista-lista').removeAttribute('hidden')
+    }
+
+    // Los saldos de v_saldo_proveedor SIN filtrar por unidad, agregados por
+    // proveedor y moneda. La lista de la pestaña filtra por saldo distinto de
+    // cero; acá no se filtra nada: el padrón tiene que mostrar también a los
+    // que están en $0 y a los que nunca tuvieron un movimiento.
+    async function cargarPadronSaldos() {
+      const cargandoEl = document.getElementById('estado-cargando-padron')
+      cargandoEl.hidden = false
+
+      const { data, error } = await supabase.from('v_saldo_proveedor')
+        .select('proveedor_id, moneda, deuda_pendiente, credito_disponible')
+      cargandoEl.hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('Error al cargar los saldos de proveedores.')
+        return
+      }
+
+      const porProveedor = new Map()
+      ;(data ?? []).forEach(f => {
+        if (!porProveedor.has(f.proveedor_id)) porProveedor.set(f.proveedor_id, new Map())
+        const porMoneda = porProveedor.get(f.proveedor_id)
+        const acum = porMoneda.get(f.moneda) || { deuda: 0, credito: 0 }
+        acum.deuda   += Number(f.deuda_pendiente)   || 0
+        acum.credito += Number(f.credito_disponible) || 0
+        porMoneda.set(f.moneda, acum)
+      })
+      estado.padronSaldos = porProveedor
+      renderizarPadron()
+    }
+
+    function filtrarPadron() {
+      const termino = estado.filtros.padron.busqueda.trim().toLowerCase()
+      if (!termino) return estado.maestros.proveedores
+      // El CUIT se compara solo por dígitos, en los dos lados: así "30-123"
+      // matchea contra "30123456789" sin depender de cómo esté guardado.
+      const digitos = termino.replace(/\D/g, '')
+      return estado.maestros.proveedores.filter(p => {
+        if (p.razon_social.toLowerCase().includes(termino)) return true
+        if (digitos && p.cuit && String(p.cuit).replace(/\D/g, '').includes(digitos)) return true
+        return false
+      })
+    }
+
+    function renderizarPadron() {
+      const listaEl = document.getElementById('lista-padron')
+      const vacioEl = document.getElementById('estado-vacio-padron')
+      const provs   = filtrarPadron()
+      const total   = estado.maestros.proveedores.length
+
+      document.getElementById('contador-padron').textContent =
+        provs.length === total
+          ? `${total} ${total === 1 ? 'proveedor' : 'proveedores'}`
+          : `${provs.length} de ${total}`
+
+      if (!provs.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        return
+      }
+      vacioEl.hidden = true
+
+      const puedeEditar = tieneTarea('cuentas_corrientes', 'alta_proveedor')
+
+      listaEl.innerHTML = provs.map(p => {
+        const subtitulo = [p.cuit || 'Sin CUIT', p.direccion].filter(Boolean).join(' · ')
+
+        // Neto por moneda entre todas las unidades. Mismo criterio de
+        // prioridad-a-la-deuda del resto del módulo, pero acá aplicado sobre
+        // el neto: un proveedor puede deber en una unidad y tener crédito en
+        // otra, y el padrón muestra una sola cifra por moneda.
+        const lineas = [...(estado.padronSaldos.get(p.id)?.entries() ?? [])]
+          .map(([moneda, s]) => ({ moneda, neto: s.deuda - s.credito }))
+          .filter(l => Math.abs(l.neto) >= 0.005)
+        const multiMoneda = lineas.length > 1
+
+        const saldoHtml = lineas.length
+          ? lineas.map(l => {
+              const sufijo = multiMoneda ? ` · ${l.moneda}` : ''
+              if (l.neto > 0) {
+                return `
+                  <div class="proveedor-cc__saldo">
+                    <div class="proveedor-cc__etiqueta">Debe${sufijo}</div>
+                    <div class="proveedor-cc__monto">${formatearImporte(l.neto, l.moneda)}</div>
+                  </div>`
+              }
+              return `
+                <div class="proveedor-cc__saldo">
+                  <div class="proveedor-cc__etiqueta proveedor-cc__etiqueta--favor">Crédito a favor${sufijo}</div>
+                  <div class="proveedor-cc__monto proveedor-cc__monto--favor">${formatearImporte(-l.neto, l.moneda)}</div>
+                </div>`
+            }).join('')
+          : `
+            <div class="proveedor-cc__saldo">
+              <div class="proveedor-cc__etiqueta">Saldo</div>
+              <div class="proveedor-cc__monto">$ 0,00</div>
+            </div>`
+
+        return `
+          <div class="tarjeta-lista tarjeta-padron" data-id="${p.id}">
+            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(p.razon_social)};">${inicialesEmpresa(p.razon_social)}</div>
+            <div class="tarjeta-lista__info">
+              <div class="tarjeta-lista__titulo">${p.razon_social}</div>
+              <div class="tarjeta-lista__subtitulo">${subtitulo}</div>
+            </div>
+            <div class="proveedor-cc__derecha">
+              ${saldoHtml}
+              ${puedeEditar ? `<button type="button" class="btn-icono-accion btn-editar-padron" data-id="${p.id}" title="Editar" aria-label="Editar proveedor">✏️</button>` : ''}
+            </div>
+          </div>
+        `
+      }).join('')
+
+      // El ✏️ está DENTRO de la tarjeta, que también es clickeable: sin el
+      // stopPropagation, tocar el lápiz abriría además la ficha detrás.
+      listaEl.querySelectorAll('.btn-editar-padron').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const prov = estado.maestros.proveedores.find(x => x.id === btn.dataset.id)
+          if (prov) abrirModalEditarProveedor(prov)
+        })
+      })
+      listaEl.querySelectorAll('.tarjeta-padron').forEach(card => {
+        card.addEventListener('click', () => {
+          const prov = estado.maestros.proveedores.find(x => x.id === card.dataset.id)
+          if (prov) abrirFichaDesdePadron(prov)
+        })
+      })
+    }
+
+    // La ficha es por proveedor + unidad, pero el padrón es por proveedor.
+    // Las unidades salen de facturas_pendientes en CUALQUIER estado, no de
+    // v_saldo_proveedor: un proveedor con todo pagado puede no tener fila ahí
+    // y sí tener historial para mostrar.
+    async function abrirFichaDesdePadron(prov) {
+      const { data, error } = await supabase.from('facturas_pendientes')
+        .select('unidad_negocio_id')
+        .eq('proveedor_id', prov.id)
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudieron cargar las unidades del proveedor.')
+        return
+      }
+
+      const ids = [...new Set((data ?? []).map(f => f.unidad_negocio_id).filter(Boolean))]
+
+      if (!ids.length) {
+        mostrarError('Este proveedor todavía no tiene movimientos en cuenta corriente.')
+        return
+      }
+      if (ids.length === 1) {
+        await abrirFicha(prov.id, ids[0], prov.razon_social, 'padron')
+        return
+      }
+      abrirModalElegirUnidad(prov, ids)
+    }
+
+    function abrirModalElegirUnidad(prov, idsUnidad) {
+      proveedorParaElegirUnidad = prov
+      unidadesParaElegir = idsUnidad
+        .map(id => estado.maestros.unidades.find(u => u.id === id))
+        .filter(Boolean)
+
+      const select = document.getElementById('campo-elegir-unidad')
+      select.innerHTML = unidadesParaElegir
+        .map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+      document.getElementById('modal-elegir-unidad').removeAttribute('hidden')
+    }
+
+    function cerrarModalElegirUnidad() {
+      document.getElementById('modal-elegir-unidad').hidden = true
+      proveedorParaElegirUnidad = null
+      unidadesParaElegir = []
+    }
+
+    async function confirmarElegirUnidad() {
+      const unidadId = document.getElementById('campo-elegir-unidad').value
+      const prov = proveedorParaElegirUnidad
+      if (!unidadId || !prov) return
+      cerrarModalElegirUnidad()
+      await abrirFicha(prov.id, unidadId, prov.razon_social, 'padron')
+    }
+
+    // ── Modal: editar proveedor ───────────────────────────────────────────
+
+    function abrirModalEditarProveedor(prov) {
+      proveedorAEditar = prov
+      document.getElementById('campo-editar-prov-razon').value     = prov.razon_social || ''
+      document.getElementById('campo-editar-prov-cuit').value      = prov.cuit || ''
+      document.getElementById('campo-editar-prov-fantasia').value  = prov.nombre_fantasia || ''
+      document.getElementById('campo-editar-prov-direccion').value = prov.direccion || ''
+      document.getElementById('modal-editar-proveedor').removeAttribute('hidden')
+    }
+
+    function cerrarModalEditarProveedor() {
+      document.getElementById('modal-editar-proveedor').hidden = true
+      proveedorAEditar = null
+    }
+
+    async function confirmarEditarProveedor() {
+      if (!proveedorAEditar) return
+      const razon = document.getElementById('campo-editar-prov-razon').value.trim()
+      if (!razon) return mostrarError('Completá la razón social.')
+      // El CUIT no se exige acá a propósito: los proveedores importados por
+      // Excel pueden no tenerlo y tienen que poder editarse igual.
+      const cuit      = document.getElementById('campo-editar-prov-cuit').value.trim() || null
+      const fantasia  = document.getElementById('campo-editar-prov-fantasia').value.trim() || null
+      const direccion = document.getElementById('campo-editar-prov-direccion').value.trim() || null
+
+      const btn = document.getElementById('btn-confirmar-editar-proveedor')
+      btn.disabled = true
+      const { error } = await supabase.rpc('editar_proveedor', {
+        p_proveedor_id:    proveedorAEditar.id,
+        p_razon_social:    razon,
+        p_cuit:            cuit,
+        p_nombre_fantasia: fantasia,
+        p_direccion:       direccion,
+      })
+      btn.disabled = false
+      // El mensaje del servidor va tal cual: el caso típico es el CUIT ya
+      // usado por otro proveedor, y ahí el texto del RPC dice más que uno
+      // genérico.
+      if (error) { mostrarError(error.message || 'No se pudo guardar el proveedor.'); return }
+
+      mostrarExito('Proveedor actualizado.')
+      cerrarModalEditarProveedor()
+      await recargarProveedoresMaestros()
+      renderizarPadron()
+      // La razón social también se muestra en la lista de saldos de la
+      // pestaña, que quedó detrás del padrón.
       cargarSaldos()
     }
 
@@ -2407,7 +2843,11 @@
     // FICHA DE PROVEEDOR (Pantalla B)
     // ═══════════════════════════════════════════════════════════════════════
 
-    async function abrirFicha(proveedorId, unidadId, nombre) {
+    // `origen` ('lista' | 'padron') decide a dónde vuelve el "‹ Volver" de la
+    // ficha. Va como parámetro con default y no como variable suelta para que
+    // un call site nuevo no herede en silencio el origen del anterior.
+    async function abrirFicha(proveedorId, unidadId, nombre, origen = 'lista') {
+      fichaOrigen = origen
       estado.ficha = {
         proveedorId, unidadId, nombre,
         filtros: { rangoRapido: null, fechaDesde: '', fechaHasta: '', tipo: 'todos', orden: 'fecha_desc' },
@@ -2417,6 +2857,7 @@
       resetearFiltrosFicha()
       document.getElementById('ficha-titulo').textContent = nombre
       document.getElementById('vista-lista').hidden = true
+      document.getElementById('vista-padron').hidden = true
       document.getElementById('vista-ficha').removeAttribute('hidden')
       // Deja la URL deep-linkeable (?proveedor=&unidad=) mientras la ficha
       // está abierta — de ahí toman location.href los links "Ver"/"Editar"
@@ -2428,7 +2869,9 @@
 
     function cerrarFicha() {
       document.getElementById('vista-ficha').hidden = true
-      document.getElementById('vista-lista').removeAttribute('hidden')
+      // Vuelve a la pantalla de la que se salió, no siempre a la pestaña.
+      const destino = fichaOrigen === 'padron' ? 'vista-padron' : 'vista-lista'
+      document.getElementById(destino).removeAttribute('hidden')
       estado.ficha = null
       history.replaceState(null, '', location.pathname)
     }
@@ -3175,6 +3618,25 @@
     document.getElementById('btn-cancelar-agregar-proveedor').addEventListener('click', cerrarModalAgregarProveedor)
     document.querySelector('#modal-agregar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalAgregarProveedor)
     document.getElementById('btn-confirmar-agregar-proveedor').addEventListener('click', confirmarAgregarProveedor)
+
+    // ── Padrón completo de proveedores (Pantalla C) ───────────────────────
+    document.getElementById('btn-ver-padron').addEventListener('click', abrirPadron)
+    document.getElementById('btn-cerrar-padron').addEventListener('click', cerrarPadron)
+    document.getElementById('filtro-busqueda-padron').addEventListener('input', (e) => {
+      estado.filtros.padron.busqueda = e.target.value
+      // Filtra sobre los maestros ya cargados, sin refetch.
+      renderizarPadron()
+    })
+
+    document.getElementById('btn-cerrar-editar-proveedor').addEventListener('click', cerrarModalEditarProveedor)
+    document.getElementById('btn-cancelar-editar-proveedor').addEventListener('click', cerrarModalEditarProveedor)
+    document.querySelector('#modal-editar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalEditarProveedor)
+    document.getElementById('btn-confirmar-editar-proveedor').addEventListener('click', confirmarEditarProveedor)
+
+    document.getElementById('btn-cerrar-elegir-unidad').addEventListener('click', cerrarModalElegirUnidad)
+    document.getElementById('btn-cancelar-elegir-unidad').addEventListener('click', cerrarModalElegirUnidad)
+    document.querySelector('#modal-elegir-unidad .modal-cc__backdrop').addEventListener('click', cerrarModalElegirUnidad)
+    document.getElementById('btn-confirmar-elegir-unidad').addEventListener('click', confirmarElegirUnidad)
 
     // ── Importar proveedores desde Excel ──────────────────────────────────
     document.getElementById('btn-ayuda-excel-proveedores').addEventListener('click', abrirModalAyudaExcel)
