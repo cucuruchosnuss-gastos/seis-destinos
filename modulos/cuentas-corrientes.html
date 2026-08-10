@@ -603,6 +603,138 @@
       #modal-pago .modal-cc__panel {
         max-width: 680px;
       }
+      /* Mismo motivo: la vista previa muestra una tabla de 4 columnas. */
+      #modal-preview-excel .modal-cc__panel {
+        max-width: 680px;
+      }
+    }
+
+    /* ── Importación de proveedores desde Excel ────────────────────────── */
+
+    .grupo-importar-excel {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    /* Sin esto, el `hidden` del gate por tarea no oculta nada: un display de
+       autor le gana al [hidden] de la hoja del navegador. Ya nos pasó en este
+       proyecto con dos pantallas superpuestas. */
+    .grupo-importar-excel[hidden] { display: none; }
+
+    .btn-ayuda-excel {
+      flex-shrink: 0;
+      width: 1.625rem;
+      height: 1.625rem;
+      border-radius: 50%;
+      border: 1.5px solid var(--color-borde);
+      background: var(--color-fondo);
+      color: var(--color-texto-suave);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .btn-ayuda-excel:hover {
+      color: var(--turquesa-oscuro);
+      border-color: var(--turquesa);
+    }
+
+    /* El panel del modal ya scrollea vertical; esto es para que una dirección
+       larga no ensanche el modal y saque la página de eje. */
+    .tabla-excel-scroll {
+      overflow-x: auto;
+    }
+
+    .tabla-excel {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+
+    .tabla-excel th,
+    .tabla-excel td {
+      text-align: left;
+      padding: 0.4375rem 0.625rem;
+      border-bottom: 1px solid var(--color-borde);
+      white-space: nowrap;
+    }
+
+    .tabla-excel th {
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--color-texto-suave);
+      position: sticky;
+      top: 0;
+      background: var(--color-fondo);
+    }
+
+    .tabla-excel .celda-vacia {
+      color: var(--color-texto-suave);
+      font-style: italic;
+    }
+
+    .nota-excel {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      line-height: 1.45;
+      margin: 0.75rem 0 0;
+    }
+
+    .preview-contador {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin: 0 0 0.75rem;
+    }
+
+    .preview-contador__ignoradas {
+      font-weight: 400;
+      color: var(--color-texto-suave);
+    }
+
+    /* Con su guard: sin él, el display de autor le gana al [hidden] y los dos
+       bloques de acciones se verían a la vez. */
+    .preview-acciones {
+      display: flex;
+      gap: 0.75rem;
+      padding: 1rem 0 0;
+    }
+    .preview-acciones[hidden] { display: none; }
+
+    .preview-errores__titulo {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-error);
+      margin: 1rem 0 0.5rem;
+    }
+
+    .preview-errores__lista {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+
+    .preview-errores__lista li {
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      padding: 0.4375rem 0.625rem;
+      background: #FDECEC;
+      border: 1px solid #F3C6C6;
+      border-radius: 8px;
+    }
+
+    .preview-errores__fila {
+      font-weight: 700;
     }
 
     /* Filas FIFO en el modal de pago */
@@ -781,6 +913,11 @@
           </div>
           <select id="filtro-unidad-proveedores"></select>
           <button type="button" class="btn btn--secundario" id="btn-agregar-proveedor" style="width:auto;">+ Agregar proveedor</button>
+          <div class="grupo-importar-excel" id="grupo-importar-excel">
+            <button type="button" class="btn btn--secundario" id="btn-cargar-excel-proveedores" style="width:auto;">Cargar Excel proveedores</button>
+            <button type="button" class="btn-ayuda-excel" id="btn-ayuda-excel-proveedores" title="Ver el formato esperado" aria-label="Ver el formato esperado del Excel">?</button>
+            <input type="file" id="input-excel-proveedores" accept=".xlsx,.xls" hidden>
+          </div>
         </div>
 
         <div id="estado-cargando-proveedores" class="estado-vacio" hidden>
@@ -1061,6 +1198,78 @@
   </div><!-- /modal-agregar-proveedor -->
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — AYUDA: FORMATO DEL EXCEL DE PROVEEDORES
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-ayuda-excel" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-ayuda-excel" title="Cerrar">✕</button>
+      <h2>Formato del Excel</h2>
+
+      <div class="tabla-excel-scroll">
+        <table class="tabla-excel">
+          <thead>
+            <tr><th>NOMBRE</th><th>CUIT</th><th>DIRECCIÓN</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Distribuidora del Sur SA</td><td>30532121032</td><td>Av. Colón 1234, Córdoba</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="nota-excel">
+        CUIT y Dirección son opcionales. La primera fila del Excel debe tener los encabezados.
+      </p>
+
+      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
+        <button type="button" class="btn btn-cc-turquesa" id="btn-entendido-ayuda-excel">Entendido</button>
+      </div>
+    </div>
+  </div><!-- /modal-ayuda-excel -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — VISTA PREVIA DE LA IMPORTACIÓN
+       Paso obligatorio: nada toca la base hasta que se confirma acá.
+  ══════════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-cc" id="modal-preview-excel" hidden>
+    <div class="modal-cc__backdrop"></div>
+    <div class="modal-cc__panel">
+      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-preview-excel" title="Cerrar">✕</button>
+      <h2>Vista previa de la importación</h2>
+
+      <p class="preview-contador" id="preview-contador"></p>
+
+      <div class="tabla-excel-scroll" id="preview-tabla-contenedor">
+        <table class="tabla-excel" id="tabla-preview-excel">
+          <thead>
+            <tr><th>Fila</th><th>NOMBRE</th><th>CUIT</th><th>DIRECCIÓN</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <!-- Resultado con errores. Va acá adentro y no en un toast: el toast es
+           una píldora de una línea (white-space: nowrap) que se esconde a los
+           3,5 segundos, y esta lista hay que poder leerla con calma. -->
+      <div id="preview-errores" hidden>
+        <p class="preview-errores__titulo" id="preview-errores-titulo"></p>
+        <ul class="preview-errores__lista" id="preview-errores-lista"></ul>
+      </div>
+
+      <div class="preview-acciones" id="preview-acciones">
+        <button type="button" class="btn btn--secundario" id="btn-cancelar-preview-excel">Cancelar</button>
+        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-preview-excel">Confirmar carga</button>
+      </div>
+
+      <!-- Después de correr, "Confirmar" desaparece: volver a apretarlo
+           crearía los proveedores de nuevo. -->
+      <div class="preview-acciones" id="preview-acciones-fin" hidden>
+        <button type="button" class="btn btn-cc-turquesa" id="btn-cerrar-resultado-excel">Cerrar</button>
+      </div>
+    </div>
+  </div><!-- /modal-preview-excel -->
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — DETALLE DEL PAGO
   ══════════════════════════════════════════════════════════════════════════ -->
   <div class="modal-cc" id="modal-detalle-pago" hidden>
@@ -1327,6 +1536,10 @@
       }
       if (!tieneTarea('cuentas_corrientes', 'alta_proveedor')) {
         document.getElementById('btn-agregar-proveedor').hidden = true
+        // La importación masiva crea proveedores igual que el alta de a uno:
+        // misma tarea. Sería raro que alguien sin permiso para dar de alta a
+        // uno pudiera dar de alta cincuenta.
+        document.getElementById('grupo-importar-excel').hidden = true
       }
       if (!tieneTarea('cuentas_corrientes', 'aprobar_rechazar_proveedor')) {
         document.querySelector('.tabs-cc__opcion[data-tab="pendientes"]').hidden = true
@@ -1839,6 +2052,240 @@
       const { data } = await supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit').eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
       estado.maestros.proveedores = data ?? []
       cargarSaldos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // IMPORTAR PROVEEDORES DESDE EXCEL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Copias locales de los helpers de empleados.html — convención del
+    // proyecto: cada archivo duplica los suyos, no hay JS común entre módulos.
+    function limpiarTexto(valor) {
+      if (valor === null || valor === undefined) return null
+      const t = String(valor).trim()
+      return t ? t : null
+    }
+
+    function valorFila(fila, ...claves) {
+      for (const clave of claves) {
+        if (fila[clave] !== undefined && fila[clave] !== null && fila[clave] !== '') return fila[clave]
+      }
+      return null
+    }
+
+    // El CUIT viene como NÚMERO desde Excel (30532121032, sin guiones). Es
+    // menor a MAX_SAFE_INTEGER, así que no hay pérdida de precisión, y JS solo
+    // usa notación científica desde 1e21 — String() alcanza. El Math.trunc
+    // cubre que una celda con formato raro llegue como 30532121032.0, porque
+    // ahí el .replace de abajo se comería el punto y quedaría un CUIT con un
+    // dígito de más. Se aceptan también strings con guiones por si alguna fila
+    // fue tipeada a mano.
+    function cuitDesdeCelda(valor) {
+      if (valor === null || valor === undefined || valor === '') return null
+      const texto = typeof valor === 'number' ? String(Math.trunc(valor)) : String(valor)
+      const soloDigitos = texto.replace(/\D/g, '')
+      return soloDigitos || null
+    }
+
+    // Lo que quedó parseado y espera confirmación. Nada de esto toca la base
+    // hasta que se aprieta "Confirmar carga".
+    let importacionPendiente = null
+
+    // Devuelve { filas, ignoradas }. Cada fila lleva su numeroFilaExcel real:
+    // se usa para reportar errores, y NO se deriva del índice del array — ver
+    // el comentario en confirmarImportacionProveedores.
+    async function parsearExcelProveedores(file) {
+      const buffer = await file.arrayBuffer()
+      const libro = XLSX.read(buffer, { type: 'array' })
+
+      // La primera hoja, sin buscar por nombre: 'Hoja1' es el default de Excel
+      // en español y cambia con que alguien renombre la pestaña.
+      const hoja = libro.Sheets[libro.SheetNames[0]]
+      if (!hoja) throw new Error('El archivo no tiene ninguna hoja con datos.')
+
+      // Encabezados en la fila 1 → sin `range`, a diferencia de la importación
+      // de Naaloo en empleados.html, que arranca en la 8.
+      const filasCrudas = XLSX.utils.sheet_to_json(hoja, { defval: null })
+
+      const filas = []
+      let ignoradas = 0
+
+      filasCrudas.forEach((cruda, indice) => {
+        const razonSocial = limpiarTexto(valorFila(cruda, 'NOMBRE', 'Nombre', 'nombre', 'Razón social', 'Razon social', 'RAZÓN SOCIAL', 'RAZON SOCIAL'))
+
+        // Sin nombre no hay proveedor que crear. Se cuentan para avisarlo en la
+        // vista previa: descartar filas en silencio es lo que después aparece
+        // como "faltan proveedores".
+        if (!razonSocial) { ignoradas++; return }
+
+        // __rowNum__ lo agrega SheetJS: índice 0-based de la fila en la hoja.
+        // Con los encabezados en la fila 1, el número de Excel es +1. El
+        // fallback por índice es solo por si una versión futura dejara de
+        // exponerlo.
+        const numeroFilaExcel = typeof cruda.__rowNum__ === 'number'
+          ? cruda.__rowNum__ + 1
+          : indice + 2
+
+        filas.push({
+          numeroFilaExcel,
+          razon_social: razonSocial,
+          cuit: cuitDesdeCelda(valorFila(cruda, 'CUIT', 'Cuit', 'cuit')),
+          direccion: limpiarTexto(valorFila(cruda, 'DIRECCIÓN', 'DIRECCION', 'Dirección', 'Direccion', 'direccion')),
+        })
+      })
+
+      return { filas, ignoradas }
+    }
+
+    function abrirModalAyudaExcel()  { document.getElementById('modal-ayuda-excel').hidden = false }
+    function cerrarModalAyudaExcel() { document.getElementById('modal-ayuda-excel').hidden = true }
+
+    function cerrarModalPreviewExcel() {
+      document.getElementById('modal-preview-excel').hidden = true
+      importacionPendiente = null
+      // Se vuelve al estado inicial: si no, la próxima importación abriría el
+      // modal con los errores de la anterior todavía puestos.
+      document.getElementById('preview-errores').hidden = true
+      document.getElementById('preview-tabla-contenedor').hidden = false
+      document.getElementById('preview-acciones').hidden = false
+      document.getElementById('preview-acciones-fin').hidden = true
+    }
+
+    function renderizarPreviewImportacion() {
+      const { filas, ignoradas } = importacionPendiente
+
+      const contador = document.getElementById('preview-contador')
+      contador.textContent = `Se van a cargar ${filas.length} ${filas.length === 1 ? 'proveedor' : 'proveedores'}`
+      if (ignoradas) {
+        const nota = document.createElement('span')
+        nota.className = 'preview-contador__ignoradas'
+        nota.textContent = ` · ${ignoradas} ${ignoradas === 1 ? 'fila ignorada' : 'filas ignoradas'} (sin nombre)`
+        contador.appendChild(nota)
+      }
+
+      const cuerpo = document.querySelector('#tabla-preview-excel tbody')
+      cuerpo.replaceChildren(...filas.map(f => {
+        const tr = document.createElement('tr')
+        const celdas = [
+          { texto: String(f.numeroFilaExcel), vacia: false },
+          { texto: f.razon_social,            vacia: false },
+          { texto: f.cuit      ?? '—',        vacia: !f.cuit },
+          { texto: f.direccion ?? '—',        vacia: !f.direccion },
+        ]
+        celdas.forEach(c => {
+          const td = document.createElement('td')
+          // textContent y no innerHTML: el contenido sale de un archivo que
+          // sube el usuario.
+          td.textContent = c.texto
+          if (c.vacia) td.className = 'celda-vacia'
+          tr.appendChild(td)
+        })
+        return tr
+      }))
+
+      document.getElementById('modal-preview-excel').hidden = false
+    }
+
+    async function manejarArchivoExcelProveedores(file) {
+      const btn = document.getElementById('btn-cargar-excel-proveedores')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+      try {
+        const { filas, ignoradas } = await parsearExcelProveedores(file)
+        if (!filas.length) {
+          throw new Error('No se encontró ninguna fila con nombre de proveedor. Revisá que la primera fila tenga los encabezados.')
+        }
+        importacionPendiente = { filas, ignoradas }
+        renderizarPreviewImportacion()
+      } catch (err) {
+        mostrarError(err.message || 'No se pudo leer el Excel.')
+      } finally {
+        btn.classList.remove('btn--cargando')
+        btn.disabled = false
+      }
+    }
+
+    async function confirmarImportacionProveedores() {
+      if (!importacionPendiente) return
+      const { filas } = importacionPendiente
+
+      const btn = document.getElementById('btn-confirmar-preview-excel')
+      btn.classList.add('btn--cargando')
+      btn.disabled = true
+
+      // numeroFilaExcel es solo nuestro, el RPC no lo espera.
+      const payload = filas.map(({ razon_social, cuit, direccion }) => ({ razon_social, cuit, direccion }))
+
+      const { data, error } = await supabase.rpc('importar_proveedores_excel', { p_filas: payload })
+
+      btn.classList.remove('btn--cargando')
+      btn.disabled = false
+
+      if (error) { mostrarError(error.message || 'No se pudo importar el Excel.'); return }
+
+      const creados = data?.creados ?? 0
+      const errores = data?.errores ?? []
+
+      if (creados > 0) mostrarExito(`${creados} ${creados === 1 ? 'proveedor creado' : 'proveedores creados'}.`)
+
+      if (errores.length) {
+        // El modal NO se cierra: la lista de errores es lo que la persona tiene
+        // que leer para arreglar el Excel. Y "Confirmar carga" se reemplaza por
+        // "Cerrar", porque volver a apretarlo crearía todo de nuevo.
+        mostrarErroresImportacion(errores, filas, creados)
+      } else {
+        if (creados === 0) mostrarError('No se creó ningún proveedor.')
+        cerrarModalPreviewExcel()
+      }
+
+      if (creados > 0) {
+        // Mismo refresh que confirmarAgregarProveedor(). Ojo: los proveedores
+        // nuevos no aparecen en la lista hasta que tengan alguna factura — esa
+        // lista solo muestra saldo > 0. Es el comportamiento esperado.
+        const { data: prov } = await supabase.from('proveedores')
+          .select('id, razon_social, nombre_fantasia, cuit')
+          .eq('activo', true).eq('estado_alta', 'activo').order('razon_social')
+        estado.maestros.proveedores = prov ?? []
+        cargarSaldos()
+      }
+    }
+
+    // El `fila` que devuelve el RPC es el índice 1-BASED dentro de p_filas, NO
+    // el número de fila del Excel. No se usa para ubicar el renglón: en cuanto
+    // hay filas ignoradas el offset se corre y mandaría a la persona a mirar
+    // el renglón equivocado, en silencio. Se ubica por razon_social contra el
+    // array parseado, que sí tiene el número real.
+    //
+    // Las coincidencias se consumen de a una para que dos filas con el mismo
+    // nombre no reporten las dos el mismo número.
+    function mostrarErroresImportacion(errores, filas, creados) {
+      const disponibles = [...filas]
+
+      const lista = document.getElementById('preview-errores-lista')
+      lista.replaceChildren(...errores.map(err => {
+        const i = disponibles.findIndex(f => f.razon_social === err.razon_social)
+        const numero = i >= 0 ? disponibles.splice(i, 1)[0].numeroFilaExcel : null
+
+        const li = document.createElement('li')
+        const ubicacion = document.createElement('span')
+        ubicacion.className = 'preview-errores__fila'
+        ubicacion.textContent = numero ? `Fila ${numero}` : 'Fila desconocida'
+        li.appendChild(ubicacion)
+        // textContent en todo: sale de un archivo que sube el usuario.
+        li.appendChild(document.createTextNode(
+          ` — ${err.razon_social ?? 'sin nombre'}: ${err.motivo ?? 'error desconocido'}`
+        ))
+        return li
+      }))
+
+      document.getElementById('preview-errores-titulo').textContent =
+        `${creados} ${creados === 1 ? 'proveedor creado' : 'proveedores creados'} · `
+        + `${errores.length} ${errores.length === 1 ? 'fila falló' : 'filas fallaron'}`
+
+      document.getElementById('preview-tabla-contenedor').hidden = true
+      document.getElementById('preview-errores').hidden = false
+      document.getElementById('preview-acciones').hidden = true
+      document.getElementById('preview-acciones-fin').hidden = false
     }
 
     async function rechazarProveedor(id) {
@@ -2728,6 +3175,28 @@
     document.getElementById('btn-cancelar-agregar-proveedor').addEventListener('click', cerrarModalAgregarProveedor)
     document.querySelector('#modal-agregar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalAgregarProveedor)
     document.getElementById('btn-confirmar-agregar-proveedor').addEventListener('click', confirmarAgregarProveedor)
+
+    // ── Importar proveedores desde Excel ──────────────────────────────────
+    document.getElementById('btn-ayuda-excel-proveedores').addEventListener('click', abrirModalAyudaExcel)
+    document.getElementById('btn-cerrar-ayuda-excel').addEventListener('click', cerrarModalAyudaExcel)
+    document.getElementById('btn-entendido-ayuda-excel').addEventListener('click', cerrarModalAyudaExcel)
+    document.querySelector('#modal-ayuda-excel .modal-cc__backdrop').addEventListener('click', cerrarModalAyudaExcel)
+
+    document.getElementById('btn-cargar-excel-proveedores').addEventListener('click', () => {
+      document.getElementById('input-excel-proveedores').click()
+    })
+    document.getElementById('input-excel-proveedores').addEventListener('change', async (e) => {
+      const file = e.target.files[0]
+      if (file) await manejarArchivoExcelProveedores(file)
+      // Se limpia para que volver a elegir el MISMO archivo dispare el change.
+      e.target.value = ''
+    })
+
+    document.getElementById('btn-cerrar-preview-excel').addEventListener('click', cerrarModalPreviewExcel)
+    document.getElementById('btn-cancelar-preview-excel').addEventListener('click', cerrarModalPreviewExcel)
+    document.querySelector('#modal-preview-excel .modal-cc__backdrop').addEventListener('click', cerrarModalPreviewExcel)
+    document.getElementById('btn-confirmar-preview-excel').addEventListener('click', confirmarImportacionProveedores)
+    document.getElementById('btn-cerrar-resultado-excel').addEventListener('click', cerrarModalPreviewExcel)
 
     document.getElementById('btn-cerrar-detalle-pago').addEventListener('click', cerrarModalDetallePago)
     document.querySelector('#modal-detalle-pago .modal-cc__backdrop').addEventListener('click', cerrarModalDetallePago)
