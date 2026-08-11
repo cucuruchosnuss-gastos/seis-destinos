@@ -1675,6 +1675,22 @@
       return true
     }
 
+    // Con "Remitos sin factura" el orden se INVIERTE: más viejos primero. El
+    // listado va por defecto de más reciente a más antiguo, y con ese filtro
+    // eso deja abajo justo lo que interesa — los que llevan más tiempo
+    // esperando la factura. Los otros dos filtros conservan el orden de
+    // siempre.
+    //
+    // Devuelve una copia: sin filtros aplicados, `filas` es la MISMA referencia
+    // que estado.entregas y un sort in place le cambiaría el orden al resto de
+    // la pantalla.
+    function ordenarEntregasParaFiltro(filas, vinculo) {
+      if (vinculo !== 'sin_factura') return filas
+      return [...filas].sort((a, b) =>
+        String(a.base.fecha || '').localeCompare(String(b.base.fecha || '')) ||
+        String(a.base.created_at || '').localeCompare(String(b.base.created_at || '')))
+    }
+
     // Nombre de quien editó un ingreso. Se resuelve contra el cache de
     // v_empleados_publico, NUNCA con un embed de PostgREST: `editado_por` está
     // sin FK a `empleados` a propósito, y un embed fallaría por ambigüedad.
@@ -1906,6 +1922,8 @@
       if (vinculo)  filas = filas.filter(e => entregaPasaVinculo(e, vinculo))
       const termino = busqueda.trim().toLowerCase()
       if (termino) filas = filas.filter(e => entregaCoincide(e, termino))
+
+      filas = ordenarEntregasParaFiltro(filas, vinculo)
 
       if (!filas.length) {
         const msg = VACIO_POR_VINCULO[vinculo] ?? VACIO_POR_VINCULO['']
