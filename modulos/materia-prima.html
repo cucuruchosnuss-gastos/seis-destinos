@@ -387,6 +387,12 @@
       white-space: nowrap;
     }
     .comprobante-mp__fecha { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+    .comprobante-mp__edicion {
+      font-size: 0.71875rem;
+      color: #a3abbd;
+      font-style: italic;
+      margin-top: 0.1875rem;
+    }
     .comprobante-mp__foto {
       flex-shrink: 0;
       font-size: 0.8125rem;
@@ -1475,6 +1481,10 @@
       // abrir el wizard, no al entrar al módulo.
       catalogoInsumos: [],
       proveedores: [],
+      // Solo id y nombre, para resolver `editado_por`. Se carga bajo demanda:
+      // ver asegurarEmpleados().
+      empleados: [],
+      empleadosCargados: false,
       wizard: null,
     }
 
@@ -1561,6 +1571,35 @@
 
     function nombreUnidad(id) {
       return estado.unidades.find(u => u.id === id)?.nombre || ''
+    }
+
+    // formatearFecha() de utils.js parte el string por "-" y sirve solo para un
+    // `date`: con un timestamptz devolvería "12T14:30:00+00:00/08/2026". Este
+    // helper es local, como manda la convención del proyecto.
+    function formatearFechaHora(iso) {
+      if (!iso) return ''
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return ''
+      // hour12:false explícito — es-AR resuelve a 12 horas y devolvería
+      // "02:30 p. m." en vez de "14:30".
+      return d.toLocaleString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).replace(',', '')
+    }
+
+    // Nombre de quien editó un ingreso. Se resuelve contra el cache de
+    // v_empleados_publico, NUNCA con un embed de PostgREST: `editado_por` está
+    // sin FK a `empleados` a propósito, y un embed fallaría por ambigüedad.
+    //
+    // Si el empleado no aparece (dado de baja, y la vista se filtra por
+    // activo=true), se devuelve null y la línea muestra la fecha SIN nombre:
+    // una baja no puede hacer desaparecer un dato de auditoría.
+    function textoEdicion(ingreso) {
+      if (!ingreso?.editado_en) return ''
+      const cuando = formatearFechaHora(ingreso.editado_en)
+      const quien = estado.empleados.find(e => e.id === ingreso.editado_por)?.nombre
+      return quien ? `Editado por ${quien} el ${cuando}` : `Editado el ${cuando}`
     }
 
     function chipTipoDoc(tipo) {
@@ -1658,7 +1697,7 @@
 
       const { data, error } = await supabase
         .from('materia_prima_ingresos')
-        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, created_at, materia_prima_items(count)')
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(count)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -1807,10 +1846,33 @@
 
     // ── Detalle del ingreso (modal) ─────────────────────────────────────────
 
+    // v_empleados_publico y NO `empleados`: la tabla tiene el RLS cerrado (un
+    // usuario común solo lee su propia fila), así que el nombre de quien editó
+    // sería invisible justo para casi todos. La vista existe para esto y ya la
+    // usan los selectores de Gastos y Caja con el mismo criterio.
+    //
+    // Bajo demanda y una sola vez: hoy `editado_en` está siempre en null
+    // porque todavía no hay pantalla de edición, así que en la práctica esta
+    // consulta no se ejecuta nunca. No tiene sentido cargar la lista completa
+    // al entrar al módulo para un campo que nadie escribe todavía.
+    async function asegurarEmpleados() {
+      if (estado.empleadosCargados) return
+      const { data, error } = await supabase
+        .from('v_empleados_publico')
+        .select('id, nombre')
+        .eq('activo', true)
+      if (error) { console.error(error); return }  // sin nombres, se muestra solo la fecha
+      estado.empleados = data ?? []
+      estado.empleadosCargados = true
+    }
+
     async function abrirDetalleIngreso(entregaId) {
       const entrega = estado.entregas.find(e => e.base.id === entregaId)
       if (!entrega) return
       const ingreso = entrega.base
+
+      // Solo si hay algo que resolver.
+      if (entrega.comprobantes.some(c => c.editado_por)) await asegurarEmpleados()
 
       document.getElementById('detalle-titulo').textContent = ingreso.razon_social || '(sin proveedor)'
       // Los chips de tipo se movieron a la sección "Comprobantes": acá quedan
@@ -1824,17 +1886,25 @@
           : '',
       ].filter(Boolean).join('<br>')
 
-      document.getElementById('detalle-comprobantes').innerHTML = entrega.comprobantes.map(c => `
+      // La edición va POR COMPROBANTE y no una vez para toda la entrega:
+      // editado_por/editado_en son de cada fila, y una entrega puede tener el
+      // remito y la factura editados por personas distintas. Ponerlo arriba
+      // perdería uno de los dos.
+      document.getElementById('detalle-comprobantes').innerHTML = entrega.comprobantes.map(c => {
+        const edicion = textoEdicion(c)
+        return `
         <div class="comprobante-mp">
           <div class="comprobante-mp__info">
             ${chipTipoDoc(c.tipo_doc)}
             <div class="comprobante-mp__numero">${c.numero_doc || 'Sin número'}</div>
             <div class="comprobante-mp__fecha">${formatearFecha(c.fecha)}</div>
+            ${edicion ? `<div class="comprobante-mp__edicion">${esc(edicion)}</div>` : ''}
           </div>
           ${c.foto_url
             ? `<a href="${c.foto_url}" target="_blank" rel="noopener" class="comprobante-mp__foto">Ver foto →</a>`
             : '<span class="comprobante-mp__sin-foto">Sin foto</span>'}
-        </div>`).join('')
+        </div>`
+      }).join('')
 
       document.getElementById('detalle-items').innerHTML = ''
       document.getElementById('detalle-cargando').hidden = false
@@ -2303,66 +2373,53 @@
     // 2B se muestra o se saltea, y qué tarjetas se listan adentro. Se invalida
     // al cambiar de unidad.
     //
-    // Los remitos ya vinculados a otra factura quedan fuera: si no, la misma
-    // mercadería podría contarse dos veces.
+    // TODO el filtrado lo hace la RPC del lado del servidor: que sean remitos,
+    // que sean de esa unidad, que no estén ya vinculados a otra factura, el
+    // orden y el tope de 3. Acá NO se replica nada de eso — si la regla cambia,
+    // cambia en un solo lugar. Los ítems vienen en el jsonb, sin consulta
+    // aparte.
+    //
+    // OJO: `remitos_vinculables` es SECURITY DEFINER y devuelve remitos que la
+    // persona NO ve en el listado general — el de depósito carga el remito y el
+    // de administración la factura, así que hace falta ver el ajeno para poder
+    // vincularlo. Es intencional y está acotado a este selector: su resultado
+    // no se usa para nada más.
     async function asegurarRemitosVinculables() {
       const w = estado.wizard
       if (w.remitosVinculables) return w.remitosVinculables
 
-      const [resRemitos, resVinculados] = await Promise.all([
-        supabase.from('materia_prima_ingresos')
-          .select('id, fecha, razon_social, numero_doc')
-          .eq('tipo_doc', 'remito')
-          .eq('unidad_negocio_id', w.encabezado.unidadId)
-          .order('fecha', { ascending: false })
-          .limit(20),
-        supabase.from('materia_prima_ingresos')
-          .select('remito_vinculado_id')
-          .not('remito_vinculado_id', 'is', null),
-      ])
+      const { data, error } = await supabase.rpc('remitos_vinculables', {
+        p_unidad_negocio_id: w.encabezado.unidadId,
+      })
 
-      if (resRemitos.error || resVinculados.error) {
-        console.error(resRemitos.error || resVinculados.error)
+      if (error) {
+        console.error(error)
         mostrarError('Error al cargar los remitos. Podés seguir sin vincular.')
         // Falla como "no hay remitos": el paso se saltea y la carga sigue.
-        w.remitosVinculables = { remitos: [], itemsPorRemito: {} }
+        w.remitosVinculables = []
         w.hayRemitosVinculables = false
         return w.remitosVinculables
       }
 
-      const usados = new Set((resVinculados.data ?? []).map(v => v.remito_vinculado_id))
-      // Se piden 20 y se filtra acá porque cuántos están vinculados no se sabe
-      // de antemano; los 3 que quedan son los últimos 3 libres de verdad.
-      const libres = (resRemitos.data ?? []).filter(r => !usados.has(r.id)).slice(0, 3)
-
-      const itemsPorRemito = {}
-      if (libres.length) {
-        const { data: items } = await supabase
-          .from('materia_prima_items')
-          .select('ingreso_id, cantidad, insumos(nombre, unidad_medida)')
-          .in('ingreso_id', libres.map(r => r.id))
-        ;(items ?? []).forEach(it => {
-          ;(itemsPorRemito[it.ingreso_id] ??= []).push(it)
-        })
-      }
-
-      w.remitosVinculables = { remitos: libres, itemsPorRemito }
-      w.hayRemitosVinculables = libres.length > 0
+      w.remitosVinculables = data ?? []
+      w.hayRemitosVinculables = w.remitosVinculables.length > 0
       return w.remitosVinculables
     }
 
     function renderizarRemitosCacheados() {
-      const cache = estado.wizard.remitosVinculables
-      if (!cache) return
+      const remitos = estado.wizard.remitosVinculables
+      if (!remitos) return
       document.getElementById('wz-cargando-remitos').hidden = true
-      document.getElementById('wz-sin-remitos').hidden = cache.remitos.length > 0
-      renderizarRemitos(cache.remitos, cache.itemsPorRemito)
+      document.getElementById('wz-sin-remitos').hidden = remitos.length > 0
+      renderizarRemitos(remitos)
     }
 
-    function renderizarRemitos(remitos, itemsPorRemito) {
+    function renderizarRemitos(remitos) {
       const cont = document.getElementById('wz-lista-remitos')
       cont.innerHTML = remitos.map(r => {
-        const items = itemsPorRemito[r.id] ?? []
+        // `items` es el jsonb que devuelve la RPC: [{nombre, marca, cantidad,
+        // unidad}]. Nada de insumos(...) embebido.
+        const items = Array.isArray(r.items) ? r.items : []
         const sel = estado.wizard.remitoVinculadoId === r.id
         const meta = [formatearFecha(r.fecha), r.numero_doc].filter(Boolean).join(' · ')
         return `
@@ -2376,8 +2433,8 @@
             </div>
             ${items.length ? `<div class="wz-remito__items">${items.map(it => `
               <div class="wz-remito__item">
-                <span>${esc(it.insumos?.nombre || '(producto)')}</span>
-                <span>${esc(formatearCantidad(it.cantidad, it.insumos?.unidad_medida))}</span>
+                <span>${esc([it.nombre || '(producto)', it.marca].filter(Boolean).join(' · '))}</span>
+                <span>${esc(formatearCantidad(it.cantidad, it.unidad))}</span>
               </div>`).join('')}</div>` : ''}
           </button>`
       }).join('')
@@ -2387,7 +2444,7 @@
           const id = btn.dataset.id
           // Volver a tocar el mismo lo deselecciona.
           estado.wizard.remitoVinculadoId = estado.wizard.remitoVinculadoId === id ? null : id
-          renderizarRemitos(remitos, itemsPorRemito)
+          renderizarRemitos(remitos)
           renderizarSiNoVinculo()
         })
       })
