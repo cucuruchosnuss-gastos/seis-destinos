@@ -334,6 +334,78 @@
       white-space: nowrap;
     }
 
+    /* ── Entrega fusionada: remito + factura vinculada ────────────────────── */
+
+    /* Anomalía: más de dos comprobantes en una entrega significa que dos
+       facturas apuntan al mismo remito, o sea mercadería posiblemente
+       facturada dos veces. Tiene que saltar a la vista en el listado. */
+    .chip-revisar {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      background: rgba(239,68,68,0.12);
+      color: #B91C1C;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* La factura apunta a un remito que el RLS no deja ver. Sin este aviso
+       parece una carga incompleta a la que le falta la mercadería. */
+    .ingreso__nota {
+      font-size: 0.71875rem;
+      color: var(--color-texto-suave);
+      font-style: italic;
+      margin-top: 0.25rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .comprobante-mp {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--color-borde);
+      min-width: 0;
+    }
+    .comprobante-mp:last-child { border-bottom: none; }
+    .comprobante-mp__info { min-width: 0; }
+    .comprobante-mp__numero {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      margin-top: 0.25rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .comprobante-mp__fecha { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+    .comprobante-mp__foto {
+      flex-shrink: 0;
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--marron-oscuro);
+      text-decoration: none;
+      white-space: nowrap;
+      border: 1px solid var(--marron);
+      border-radius: 999px;
+      padding: 0.375rem 0.75rem;
+    }
+    .comprobante-mp__foto:hover { background: var(--marron-suave); text-decoration: none; }
+    .comprobante-mp__sin-foto {
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      color: #a3abbd;
+      white-space: nowrap;
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════
        WIZARD DE CARGA (etapa 2)
 
@@ -1331,9 +1403,11 @@
 
       <div id="detalle-items"></div>
 
-      <div id="detalle-foto" style="margin-top: 1.125rem;" hidden>
-        <a id="detalle-foto-link" href="#" target="_blank" rel="noopener" class="btn btn--secundario" style="display:inline-flex; width:auto;">Ver foto del comprobante →</a>
-      </div>
+      <!-- Una entrega puede tener dos comprobantes (el remito y la factura que
+           lo vincula). Cada uno con su propia foto: el remito es el respaldo de
+           la mercadería y la factura el respaldo fiscal. -->
+      <div class="detalle-ingreso__seccion">Comprobantes</div>
+      <div id="detalle-comprobantes"></div>
     </div>
   </div><!-- /modal-ingreso -->
 
@@ -1392,7 +1466,8 @@
       sesion: null,
       miEmpleadoId: null,
       unidades: [],
-      listaIngresos: [],        // todas las filas (sin filtrar) — los filtros se aplican al renderizar
+      listaIngresos: [],        // filas crudas de la base, sin fusionar
+      entregas: [],             // lo que se muestra: filas ya fusionadas (ver fusionarEntregas)
       filtros: {
         ingresos: { busqueda: '', unidadId: '' },  // '' = Todas
       },
@@ -1583,7 +1658,7 @@
 
       const { data, error } = await supabase
         .from('materia_prima_ingresos')
-        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, created_at, materia_prima_items(count)')
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, created_at, materia_prima_items(count)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -1599,35 +1674,95 @@
         ...i,
         cantidadItems: i.materia_prima_items?.[0]?.count ?? 0,
       }))
+      estado.entregas = fusionarEntregas(estado.listaIngresos)
 
       renderizarBannerIngresos()
       renderizarListaIngresos()
     }
 
+    // Una ENTREGA es una llegada física de mercadería. Puede estar respaldada
+    // por un comprobante o por dos (el remito, y la factura que lo vincula):
+    // en la base son dos filas, pero en pantalla es una sola cosa.
+    //
+    // La base es siempre el REMITO: es el que trae los ítems y el que
+    // representa la entrada de mercadería. La factura vinculada tiene 0 ítems
+    // a propósito, para no sumar la cantidad dos veces.
+    function fusionarEntregas(filas) {
+      const porId = new Map(filas.map(f => [f.id, f]))
+      const consumidos = new Set()
+      const entregas = new Map()   // id del remito -> entrega
+
+      // Primera pasada, solo las vinculadas: así el remito queda siempre como
+      // base, sin importar en qué orden vinieron las filas.
+      filas.forEach(f => {
+        if (!f.remito_vinculado_id) return
+        const remito = porId.get(f.remito_vinculado_id)
+        // Si el remito no está entre los datos cargados (el RLS puede
+        // ocultarlo), la factura NO se fusiona: se resuelve como suelta en la
+        // segunda pasada. Nunca se asume que el remito está.
+        if (!remito) return
+
+        const entrega = entregas.get(remito.id)
+          ?? { base: remito, comprobantes: [remito], huerfana: false }
+        entrega.comprobantes.push(f)
+        entregas.set(remito.id, entrega)
+        consumidos.add(f.id)
+        consumidos.add(remito.id)
+      })
+
+      // Segunda pasada: todo lo que no quedó fusionado es una entrega de un
+      // solo comprobante.
+      filas.forEach(f => {
+        if (consumidos.has(f.id)) return
+        entregas.set(f.id, {
+          base: f,
+          comprobantes: [f],
+          // Apunta a un remito que no está en los datos: hay que decirlo en la
+          // fila, si no parece una carga a la que le falta la mercadería.
+          huerfana: !!f.remito_vinculado_id,
+        })
+      })
+
+      // Se reordena DESPUÉS de fusionar: la entrega muestra la fecha del
+      // remito, así que conservar la posición original dejaría una fila con
+      // fecha vieja en el lugar donde estaba la factura, más nueva.
+      return [...entregas.values()]
+        .map(e => ({ ...e, cantidadItems: e.base.cantidadItems }))
+        .sort((a, b) =>
+          String(b.base.fecha || '').localeCompare(String(a.base.fecha || '')) ||
+          String(b.base.created_at || '').localeCompare(String(a.base.created_at || '')))
+    }
+
+    function entregaCoincide(entrega, termino) {
+      const b = entrega.base
+      if ((b.razon_social || '').toLowerCase().includes(termino)) return true
+      if ((b.nombre_fantasia || '').toLowerCase().includes(termino)) return true
+      // Por el número de CUALQUIERA de los comprobantes: si la entrega tiene
+      // remito y factura, buscar por el número de la factura tiene que
+      // encontrarla igual, aunque la fila muestre los datos del remito.
+      return entrega.comprobantes.some(c => (c.numero_doc || '').toLowerCase().includes(termino))
+    }
+
     function renderizarBannerIngresos() {
-      // Stats del mes calendario actual, sobre la lista completa (sin filtros)
+      // Stats del mes calendario actual, sobre la lista completa (sin filtros).
+      // Cuenta ENTREGAS y no filas: una entrega con remito + factura son dos
+      // filas en la base, pero una sola llegada de mercadería.
       const hoy = new Date()
       const prefijoMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
-      const delMes = estado.listaIngresos.filter(i => (i.fecha || '').startsWith(prefijoMes))
+      const delMes = estado.entregas.filter(e => (e.base.fecha || '').startsWith(prefijoMes))
       document.getElementById('banner-ingresos-mes').textContent = delMes.length
-      document.getElementById('banner-items-mes').textContent = delMes.reduce((acc, i) => acc + i.cantidadItems, 0)
+      document.getElementById('banner-items-mes').textContent = delMes.reduce((acc, e) => acc + e.cantidadItems, 0)
     }
 
     function renderizarListaIngresos() {
       const listaEl = document.getElementById('lista-ingresos')
       const vacioEl = document.getElementById('estado-vacio-ingresos')
 
-      let filas = estado.listaIngresos
+      let filas = estado.entregas
       const { busqueda, unidadId } = estado.filtros.ingresos
-      if (unidadId) filas = filas.filter(i => i.unidad_negocio_id === unidadId)
+      if (unidadId) filas = filas.filter(e => e.base.unidad_negocio_id === unidadId)
       const termino = busqueda.trim().toLowerCase()
-      if (termino) {
-        filas = filas.filter(i =>
-          (i.razon_social || '').toLowerCase().includes(termino) ||
-          (i.nombre_fantasia || '').toLowerCase().includes(termino) ||
-          (i.numero_doc || '').toLowerCase().includes(termino)
-        )
-      }
+      if (termino) filas = filas.filter(e => entregaCoincide(e, termino))
 
       if (!filas.length) {
         listaEl.innerHTML = ''
@@ -1636,22 +1771,29 @@
       }
       vacioEl.hidden = true
 
-      listaEl.innerHTML = filas.map(i => `
-        <div class="tarjeta-lista" data-ingreso="${i.id}">
-          <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${inicialesEmpresa(i.razon_social)}</div>
+      listaEl.innerHTML = filas.map(e => {
+        const b = e.base
+        // Un remito solo puede estar vinculado a UNA factura. Si hay más de dos
+        // comprobantes, esa mercadería podría estar facturada dos veces.
+        const anomalia = e.comprobantes.length > 2
+        return `
+        <div class="tarjeta-lista" data-ingreso="${b.id}">
+          <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${inicialesEmpresa(b.razon_social)}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${i.razon_social || '(sin proveedor)'}</div>
+            <div class="tarjeta-lista__titulo">${b.razon_social || '(sin proveedor)'}</div>
             <div class="ingreso__meta">
-              ${chipTipoDoc(i.tipo_doc)}
-              <span class="ingreso__fecha">${formatearFecha(i.fecha)} · ${nombreUnidad(i.unidad_negocio_id)}</span>
+              ${e.comprobantes.map(c => chipTipoDoc(c.tipo_doc)).join('')}
+              ${anomalia ? '<span class="chip-revisar" title="Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.">⚠ Revisar</span>' : ''}
+              <span class="ingreso__fecha">${formatearFecha(b.fecha)} · ${nombreUnidad(b.unidad_negocio_id)}</span>
             </div>
+            ${e.huerfana ? '<div class="ingreso__nota">Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</div>' : ''}
           </div>
           <div class="ingreso__derecha">
-            <div class="ingreso__items-num">${i.cantidadItems}</div>
-            <div class="ingreso__items-label">${i.cantidadItems === 1 ? 'ítem' : 'ítems'}</div>
+            <div class="ingreso__items-num">${e.cantidadItems}</div>
+            <div class="ingreso__items-label">${e.cantidadItems === 1 ? 'ítem' : 'ítems'}</div>
           </div>
-        </div>
-      `).join('')
+        </div>`
+      }).join('')
 
       listaEl.querySelectorAll('.tarjeta-lista').forEach(card => {
         card.addEventListener('click', () => abrirDetalleIngreso(card.dataset.ingreso))
@@ -1665,34 +1807,45 @@
 
     // ── Detalle del ingreso (modal) ─────────────────────────────────────────
 
-    async function abrirDetalleIngreso(ingresoId) {
-      const ingreso = estado.listaIngresos.find(i => i.id === ingresoId)
-      if (!ingreso) return
+    async function abrirDetalleIngreso(entregaId) {
+      const entrega = estado.entregas.find(e => e.base.id === entregaId)
+      if (!entrega) return
+      const ingreso = entrega.base
 
-      const tipoDoc = TIPOS_DOC[ingreso.tipo_doc]?.label || ingreso.tipo_doc || '—'
       document.getElementById('detalle-titulo').textContent = ingreso.razon_social || '(sin proveedor)'
+      // Los chips de tipo se movieron a la sección "Comprobantes": acá quedan
+      // solo los datos comunes a toda la entrega.
       document.getElementById('detalle-meta').innerHTML = [
-        `${chipTipoDoc(ingreso.tipo_doc)}${ingreso.numero_doc ? ` ${ingreso.numero_doc}` : ''}`,
         `${formatearFecha(ingreso.fecha)} · ${nombreUnidad(ingreso.unidad_negocio_id)}`,
         ingreso.nombre_fantasia ? `Fantasía: ${ingreso.nombre_fantasia}` : '',
+        entrega.huerfana ? '<em>Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</em>' : '',
+        entrega.comprobantes.length > 2
+          ? '<strong style="color:#B91C1C;">⚠ Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.</strong>'
+          : '',
       ].filter(Boolean).join('<br>')
 
-      const fotoEl = document.getElementById('detalle-foto')
-      if (ingreso.foto_url) {
-        document.getElementById('detalle-foto-link').href = ingreso.foto_url
-        fotoEl.hidden = false
-      } else {
-        fotoEl.hidden = true
-      }
+      document.getElementById('detalle-comprobantes').innerHTML = entrega.comprobantes.map(c => `
+        <div class="comprobante-mp">
+          <div class="comprobante-mp__info">
+            ${chipTipoDoc(c.tipo_doc)}
+            <div class="comprobante-mp__numero">${c.numero_doc || 'Sin número'}</div>
+            <div class="comprobante-mp__fecha">${formatearFecha(c.fecha)}</div>
+          </div>
+          ${c.foto_url
+            ? `<a href="${c.foto_url}" target="_blank" rel="noopener" class="comprobante-mp__foto">Ver foto →</a>`
+            : '<span class="comprobante-mp__sin-foto">Sin foto</span>'}
+        </div>`).join('')
 
       document.getElementById('detalle-items').innerHTML = ''
       document.getElementById('detalle-cargando').hidden = false
       document.getElementById('modal-ingreso').hidden = false
 
+      // Los ítems se consultan por el id de la BASE: en una entrega fusionada
+      // es el remito el que los tiene, la factura vinculada siempre tiene 0.
       const { data: items, error } = await supabase
         .from('materia_prima_items')
         .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, insumos(nombre, marca, unidad_medida, tipo)')
-        .eq('ingreso_id', ingresoId)
+        .eq('ingreso_id', ingreso.id)
         .order('created_at')
 
       document.getElementById('detalle-cargando').hidden = true
