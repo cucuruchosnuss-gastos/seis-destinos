@@ -80,12 +80,16 @@
 
     /* ── Banner resumen — gradiente marrón del boceto ─────────────────────── */
 
+    /* Tarjeta blanca con acento marrón, no un bloque de color completo: el
+       gradiente lleno pesaba demasiado para lo que es, un contador. */
     .banner-mp {
-      background: linear-gradient(135deg, var(--marron) 0%, var(--marron-oscuro) 100%);
-      border-radius: 22px;
-      padding: 1.25rem;
-      color: #fff;
-      box-shadow: 0 14px 34px -14px rgba(122, 67, 21, 0.6);
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-left: 4px solid var(--marron);
+      border-radius: 18px;
+      padding: 1rem 1.25rem;
+      color: var(--color-texto);
+      box-shadow: var(--sombra-suave);
       margin-bottom: 0.875rem;
       min-width: 0;
     }
@@ -93,31 +97,61 @@
       font-size: 0.6875rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.65);
+      color: var(--color-texto-suave);
       font-weight: 600;
     }
     .banner-mp__numero {
-      font-size: 2.125rem;
+      font-size: 1.75rem;
       font-weight: 700;
       letter-spacing: -0.02em;
-      margin-top: 0.25rem;
+      margin-top: 0.125rem;
+      color: var(--marron-oscuro);
     }
     .banner-mp__stats {
       display: flex;
       gap: 1.375rem;
-      margin-top: 1rem;
-      padding-top: 0.875rem;
-      border-top: 1px solid rgba(255,255,255,0.16);
+      margin-top: 0.75rem;
+      padding-top: 0.625rem;
+      border-top: 1px solid var(--color-borde);
       min-width: 0;
     }
     .banner-mp__stat-etiqueta {
       font-size: 0.625rem;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.6);
+      color: var(--color-texto-suave);
       font-weight: 600;
     }
     .banner-mp__stat-valor { font-size: 1rem; font-weight: 700; margin-top: 0.125rem; }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       CRITERIO DE COLOR DEL MÓDULO
+
+       Lo seleccionable va OUTLINE: fondo blanco, borde y texto marrón. El
+       marrón LLENO queda reservado para UN solo elemento por pantalla, el
+       botón primario de avanzar/confirmar.
+
+       Esta regla agrupa TODOS los estados seleccionados del módulo — chips,
+       toggles, sí/no, las opciones del paso 1 y la tarjeta de remito — para
+       que el criterio viva en un solo lugar y no haya que perseguirlo botón
+       por botón. Va acá arriba y las reglas de cada componente más abajo NO
+       vuelven a pintar el fondo.
+
+       Quedan llenos a propósito, porque ninguno es un bloque grande:
+       .btn-mp-primario, el logo del header, la barra de progreso, el ✓ del
+       remito elegido y el badge NUEVO (ahí el contraste es el punto).
+    ══════════════════════════════════════════════════════════════════════ */
+    .chip-unidad--activa,
+    .wz-toggle button.wz-toggle--sel,
+    .wz-si-no button.wz-toggle--sel,
+    .wz-opcion--principal,
+    .wz-remito--sel {
+      background: var(--color-fondo);
+      border-color: var(--marron);
+      color: var(--marron-oscuro);
+      /* Engrosa el borde sin mover el layout (no cambia el box model). */
+      box-shadow: inset 0 0 0 1px var(--marron);
+    }
 
     /* ── Filtros: buscador + chips de unidad ──────────────────────────────── */
 
@@ -157,12 +191,8 @@
       cursor: pointer;
       flex-shrink: 0;
     }
-    .chip-unidad--activa {
-      background: var(--marron);
-      color: #fff;
-      border-color: var(--marron);
-      font-weight: 650;
-    }
+    /* El color lo pone la regla agrupada de arriba; acá solo el peso. */
+    .chip-unidad--activa { font-weight: 650; }
 
     .lista-contenido {
       display: flex;
@@ -427,13 +457,23 @@
 
     /* ── Paso 1 — elegir comprobante ─────────────────────────────────────── */
 
-    .wz-opciones { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.25rem; min-width: 0; }
+    /* Ancho acotado en desktop: estirados a los 1120px del contenedor se ven
+       como dos barras enormes. */
+    .wz-opciones {
+      display: flex;
+      flex-direction: column;
+      gap: 0.625rem;
+      margin-top: 1.25rem;
+      min-width: 0;
+      max-width: 420px;
+    }
     .wz-opcion {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      border-radius: 20px;
-      padding: 1.5rem 1.25rem;
+      gap: 0.875rem;
+      border-radius: 16px;
+      /* ~76px de alto: una fila cómoda de tocar, no un bloque. */
+      padding: 0.875rem 1rem;
       cursor: pointer;
       font-family: var(--fuente);
       text-align: left;
@@ -442,33 +482,26 @@
       background: var(--color-fondo);
       box-shadow: 0 4px 14px -8px rgba(26,42,82,0.3);
     }
-    .wz-opcion--principal {
-      background: linear-gradient(135deg, var(--marron), var(--marron-oscuro));
-      border-color: transparent;
-      box-shadow: 0 16px 34px -14px rgba(122,67,21,0.7);
-    }
     .wz-opcion__icono {
-      width: 54px;
-      height: 54px;
-      border-radius: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 13px;
       background: var(--marron-suave);
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      font-size: 1.5rem;
+      font-size: 1.25rem;
     }
-    .wz-opcion--principal .wz-opcion__icono { background: rgba(255,255,255,0.18); }
     .wz-opcion__texto { min-width: 0; }
     .wz-opcion__titulo {
-      font-size: 1.125rem;
+      font-size: 1rem;
       font-weight: 700;
       letter-spacing: -0.01em;
       color: var(--color-texto);
     }
-    .wz-opcion__sub { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.1875rem; }
-    .wz-opcion--principal .wz-opcion__titulo { color: #fff; }
-    .wz-opcion--principal .wz-opcion__sub { color: rgba(255,255,255,0.75); }
+    .wz-opcion--principal .wz-opcion__titulo { color: var(--marron-oscuro); }
+    .wz-opcion__sub { font-size: 0.78125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
 
     .wz-separador {
       display: flex;
@@ -625,11 +658,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .wz-toggle button.wz-toggle--sel {
-      background: var(--marron);
-      border-color: var(--marron);
-      color: #fff;
-    }
+    /* El color del estado seleccionado lo pone la regla agrupada de arriba. */
 
     /* ── Paso 2B — vínculo con remito ────────────────────────────────────── */
 
@@ -647,11 +676,7 @@
       color: var(--color-texto);
       cursor: pointer;
     }
-    .wz-si-no button.wz-toggle--sel {
-      background: var(--marron);
-      border-color: var(--marron);
-      color: #fff;
-    }
+    /* idem: el seleccionado lo pinta la regla agrupada de arriba. */
 
     .wz-seccion {
       font-size: 0.71875rem;
@@ -675,7 +700,7 @@
       font-family: var(--fuente);
       min-width: 0;
     }
-    .wz-remito--sel { border-color: var(--marron); background: var(--marron-suave); }
+    /* .wz-remito--sel: lo pinta la regla agrupada de arriba. */
     .wz-remito__fila { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
     .wz-remito__check {
       width: 22px;
@@ -842,7 +867,9 @@
       font-family: var(--fuente);
       font-size: 0.9375rem;
       font-weight: 650;
-      text-align: right;
+      /* A la izquierda: pegado a la derecha quedaba contra el selector de
+         unidad y el numero se leia mal. */
+      text-align: left;
       background: var(--color-fondo);
       color: var(--color-texto);
       outline: none;
@@ -1190,6 +1217,8 @@
           <div class="wz-aviso wz-aviso--neutro" id="wz-aviso-sin-proveedor" hidden style="margin-top:0.5rem;">
             Sin proveedor el ingreso va a quedar más difícil de encontrar después. Si lo sabés, cargalo.
           </div>
+          <!-- Resultado del matcheo contra la tabla `proveedores`. -->
+          <div class="wz-aviso" id="wz-proveedor-detectado" hidden style="margin-top:0.5rem;"></div>
         </div>
 
         <div class="wz-campo" id="wz-campo-nombre-fantasia">
@@ -1337,6 +1366,18 @@
 
     const UNIDADES_MEDIDA = ['kg', 'l', 'un']
 
+    // FUENTE ÚNICA de los campos de texto del encabezado. La usan los TRES
+    // caminos que los tocan: prellenar desde el OCR, leer del formulario y
+    // limpiar al reemplazar la foto. Antes esta lista vivía suelta adentro de
+    // prellenarDesdeOcr y el camino de limpieza no la conocía — de ahí salía
+    // el bug de datos viejos sobreviviendo a una lectura nueva.
+    const CAMPOS_ENCABEZADO = [
+      { ocr: 'numero_doc',      input: 'campo-numero-doc',      clave: 'numeroDoc',      cont: 'wz-campo-numero-doc' },
+      { ocr: 'razon_social',    input: 'campo-razon-social',    clave: 'razonSocial',    cont: 'wz-campo-razon-social' },
+      { ocr: 'nombre_fantasia', input: 'campo-nombre-fantasia', clave: 'nombreFantasia', cont: 'wz-campo-nombre-fantasia' },
+      { ocr: 'fecha',           input: 'campo-fecha',           clave: 'fecha',          cont: 'wz-campo-fecha' },
+    ]
+
     // Los 4 segmentos de la barra de progreso. El paso 2B ('vinculo') no tiene
     // segmento propio: cae dentro de "Datos", como en el boceto.
     const PASOS_WIZARD = [
@@ -1358,6 +1399,7 @@
       // Catálogo completo de insumos, para el matching del paso 3. Se carga al
       // abrir el wizard, no al entrar al módulo.
       catalogoInsumos: [],
+      proveedores: [],
       wizard: null,
     }
 
@@ -1370,14 +1412,58 @@
           tipoDoc: null, numeroDoc: '', razonSocial: '',
           nombreFantasia: '', fecha: '', unidadId: '',
         },
+        // Proveedor: cuitOcr es el que leyó la Edge Function (dato crudo del
+        // papel), proveedorId el de la tabla si matcheó, y proveedorMatch la
+        // fila completa para mostrarla. Sin match, los tres quedan como están
+        // y al confirmar se crea el proveedor como pendiente.
+        cuitOcr: null,
+        proveedorId: null,
+        proveedorMatch: null,
         vinculaRemito: null,      // null = sin responder, true/false
         remitoVinculadoId: null,
+        // Cache del paso 2B: null = todavía no se consultó. Decide si el paso
+        // se muestra o se saltea, en los dos sentidos de la navegación.
+        remitosVinculables: null,
+        hayRemitosVinculables: false,
         itemsOcr: [],             // crudo de la Edge Function, sin matchear
         items: [],
         itemsInicializados: false, // para no pisar lo editado al volver al paso 3
         itemAbierto: null,        // uid del ítem expandido (acordeón)
         guardando: false,
       }
+    }
+
+    // Vuelve el wizard al estado de "todavía no se leyó ningún comprobante",
+    // arrastrando SOLO lo que es una decisión del usuario y no un derivado de
+    // la lectura — hoy, la unidad de negocio.
+    //
+    // Se reconstruye desde wizardVacio() en vez de ir apagando campos a mano:
+    // así un campo que se agregue más adelante queda cubierto sin que nadie
+    // tenga que acordarse de sumarlo acá. El bug que esto arregla era
+    // exactamente eso — al reemplazar la foto solo se limpiaba `foto`, y los
+    // ítems, el encabezado y el vínculo con el remito sobrevivían a la
+    // lectura nueva.
+    function reiniciarLecturaWizard() {
+      const previo = estado.wizard
+      estado.wizard = wizardVacio()
+      estado.wizard.paso = previo.paso
+      estado.wizard.encabezado.unidadId = previo.encabezado.unidadId
+      limpiarFormularioDatos()
+    }
+
+    // La contraparte en el DOM: los inputs son la segunda fuente de verdad y
+    // prellenarDesdeOcr solo pisa los campos que la lectura trajo, así que sin
+    // esto un dato de la foto anterior queda a la vista.
+    function limpiarFormularioDatos() {
+      CAMPOS_ENCABEZADO.forEach(c => {
+        document.getElementById(c.input).value = ''
+        document.getElementById(c.cont).classList.remove('wz-campo--ocr')
+      })
+      document.getElementById('wz-campo-tipo-doc').classList.remove('wz-campo--ocr')
+      seleccionarTipoDocWz(null)
+      document.getElementById('wz-datos-subtitulo').textContent = 'Completá los datos del comprobante.'
+      renderizarProveedorDetectado()
+      actualizarAvisoSinProveedor()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1670,7 +1756,7 @@
       resetearPaso1()
       irAPasoWz('comprobante')
 
-      await cargarCatalogoInsumos()
+      await Promise.all([cargarCatalogoInsumos(), cargarProveedores()])
     }
 
     function cerrarWizard() {
@@ -1685,10 +1771,14 @@
     function volverAtrasWizard() {
       const w = estado.wizard
       if (!w) return
+      // Tiene que usar el MISMO criterio que la ida: si no había remitos para
+      // vincular, el paso 2B no se mostró, y volver ahí dejaría al usuario en
+      // una pantalla vacía sin salida.
+      const hayVinculo = esFactura(w.encabezado.tipoDoc) && w.hayRemitosVinculables
       const previo = {
         datos:      'comprobante',
         vinculo:    'datos',
-        items:      esFactura(w.encabezado.tipoDoc) ? 'vinculo' : 'datos',
+        items:      hayVinculo ? 'vinculo' : 'datos',
         confirmar:  w.remitoVinculadoId ? 'vinculo' : 'items',
       }[w.paso]
 
@@ -1756,6 +1846,9 @@
 
     function tomarArchivoComprobante(archivo) {
       if (!archivo) return
+      // Elegir un archivo es empezar una lectura nueva: todo lo derivado de la
+      // anterior se descarta acá, no solo en "Repetir".
+      reiniciarLecturaWizard()
       estado.wizard.foto.archivo = archivo
 
       const caja = document.getElementById('wz-preview-caja')
@@ -1899,19 +1992,13 @@
         w.camposOcr.add('tipo_doc')
       }
 
-      const mapa = [
-        ['numero_doc',      'campo-numero-doc',      'numeroDoc',      'wz-campo-numero-doc'],
-        ['razon_social',    'campo-razon-social',    'razonSocial',    'wz-campo-razon-social'],
-        ['nombre_fantasia', 'campo-nombre-fantasia', 'nombreFantasia', 'wz-campo-nombre-fantasia'],
-        ['fecha',           'campo-fecha',           'fecha',          'wz-campo-fecha'],
-      ]
-      mapa.forEach(([claveOcr, idCampo, claveEstado, idCont]) => {
-        const valor = datos[claveOcr]
+      CAMPOS_ENCABEZADO.forEach(c => {
+        const valor = datos[c.ocr]
         if (valor == null || valor === '') return
-        document.getElementById(idCampo).value = valor
-        w.encabezado[claveEstado] = String(valor)
-        w.camposOcr.add(claveOcr)
-        marcarCampoOcr(idCont, true)
+        document.getElementById(c.input).value = valor
+        w.encabezado[c.clave] = String(valor)
+        w.camposOcr.add(c.ocr)
+        marcarCampoOcr(c.cont, true)
       })
       marcarCampoOcr('wz-campo-tipo-doc', w.camposOcr.has('tipo_doc'))
 
@@ -1920,18 +2007,77 @@
         : 'No se leyó ningún dato. Completalos a mano.'
       document.getElementById('wz-datos-subtitulo').textContent = sub
 
+      // El CUIT no se guarda en materia_prima_ingresos (la tabla no lo tiene),
+      // pero es la clave de matching CONFIABLE contra proveedores y se muestra
+      // cuando hay que dar de alta uno nuevo.
+      w.cuitOcr = datos.cuit || null
+      intentarMatchProveedor()
+
       // Los ítems del OCR se convierten recién al entrar al paso 3, cuando el
       // catálogo ya está cargado. Acá solo se guardan crudos.
       w.itemsOcr = Array.isArray(datos.items) ? datos.items : []
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — MATCHEO DE PROVEEDOR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function normalizarCuit(v) { return String(v ?? '').replace(/\D/g, '') }
+    function normalizarRazonSocial(v) { return String(v ?? '').trim().toUpperCase().replace(/\s+/g, ' ') }
+
+    // Mismo criterio que gastos.html: primero por CUIT (match confiable),
+    // después por razón social normalizada. En los dos casos hace falta UN
+    // solo candidato — con cero o con varios no se autoselecciona nada.
+    function intentarMatchProveedor() {
+      const w = estado.wizard
+      w.proveedorId = null
+      w.proveedorMatch = null
+
+      const cuit = normalizarCuit(w.cuitOcr)
+      if (cuit) {
+        const cands = estado.proveedores.filter(p => normalizarCuit(p.cuit) === cuit)
+        if (cands.length === 1) { w.proveedorMatch = cands[0]; w.proveedorId = cands[0].id }
+      }
+      if (!w.proveedorMatch) {
+        const razon = normalizarRazonSocial(document.getElementById('campo-razon-social').value)
+        if (razon) {
+          const cands = estado.proveedores.filter(p => normalizarRazonSocial(p.razon_social) === razon)
+          if (cands.length === 1) { w.proveedorMatch = cands[0]; w.proveedorId = cands[0].id }
+        }
+      }
+      renderizarProveedorDetectado()
+    }
+
+    function renderizarProveedorDetectado() {
+      const cont = document.getElementById('wz-proveedor-detectado')
+      const w = estado.wizard
+      if (!w) { cont.hidden = true; return }
+
+      const razon = document.getElementById('campo-razon-social').value.trim()
+      if (!razon && !w.cuitOcr) { cont.hidden = true; return }
+
+      if (w.proveedorMatch) {
+        cont.className = 'wz-aviso'
+        cont.innerHTML = `✓ Proveedor identificado: <strong>${esc(w.proveedorMatch.razon_social)}</strong>`
+      } else {
+        // El CUIT leído se muestra SIEMPRE que haya uno: un proveedor creado
+        // con un CUIT mal leído después hay que corregirlo a mano desde
+        // Cuentas Corrientes, así que conviene verlo antes de confirmar.
+        const cuit = w.cuitOcr ? ` · CUIT leído: <strong>${esc(w.cuitOcr)}</strong>` : ' · sin CUIT'
+        cont.className = 'wz-aviso wz-aviso--neutro'
+        cont.innerHTML = `(proveedor nuevo) Se va a dar de alta y queda pendiente de aprobación en Cuentas Corrientes${cuit}`
+      }
+      cont.hidden = false
+    }
+
     function leerEncabezadoDelForm() {
       const e = estado.wizard.encabezado
-      e.numeroDoc      = document.getElementById('campo-numero-doc').value.trim()
-      e.razonSocial    = document.getElementById('campo-razon-social').value.trim()
-      e.nombreFantasia = document.getElementById('campo-nombre-fantasia').value.trim()
-      e.fecha          = document.getElementById('campo-fecha').value
-      e.unidadId       = document.getElementById('campo-unidad-negocio').value
+      CAMPOS_ENCABEZADO.forEach(c => {
+        const valor = document.getElementById(c.input).value
+        // La fecha viene de un <input type="date">: no se recorta ni se toca.
+        e[c.clave] = c.clave === 'fecha' ? valor : valor.trim()
+      })
+      e.unidadId = document.getElementById('campo-unidad-negocio').value
     }
 
     // Se exige solo lo que la base exige: fecha, tipo_doc y unidad_negocio_id
@@ -1939,15 +2085,25 @@
     // nombre_fantasia y foto_url son nullable — pedir la razón social rompería
     // el flujo "sin comprobante", que arranca justamente cuando llegó
     // mercadería sin papel y sin datos claros.
-    function continuarDesdeDatos() {
+    async function continuarDesdeDatos() {
       leerEncabezadoDelForm()
-      const e = estado.wizard.encabezado
+      const w = estado.wizard
+      const e = w.encabezado
 
       if (!e.tipoDoc)  return mostrarError('Elegí el tipo de documento.')
       if (!e.fecha)    return mostrarError('Completá la fecha del comprobante.')
       if (!e.unidadId) return mostrarError('Elegí la unidad de negocio.')
 
-      irAPasoWz(esFactura(e.tipoDoc) ? 'vinculo' : 'items')
+      if (!esFactura(e.tipoDoc)) { irAPasoWz('items'); return }
+
+      // El paso 2B solo tiene sentido si hay algo para elegir: se consulta
+      // ANTES de mostrarlo y, si no hay remitos sin vincular, se saltea.
+      const btn = document.getElementById('btn-datos-continuar')
+      btn.disabled = true
+      await asegurarRemitosVinculables()
+      btn.disabled = false
+
+      irAPasoWz(w.hayRemitosVinculables ? 'vinculo' : 'items')
     }
 
     // Aviso suave, sin bloquear: solo aparece cuando el campo quedó vacío.
@@ -1966,6 +2122,7 @@
       document.getElementById('wz-remitos-titulo').textContent =
         `Últimos remitos de ${nombreUnidad(w.encabezado.unidadId) || 'la unidad'}`
       renderizarSiNoVinculo()
+      if (w.vinculaRemito === true) renderizarRemitosCacheados()
     }
 
     function renderizarSiNoVinculo() {
@@ -1980,21 +2137,24 @@
         w.vinculaRemito == null || (w.vinculaRemito === true && !w.remitoVinculadoId)
     }
 
-    async function elegirVinculaRemito(valor) {
+    function elegirVinculaRemito(valor) {
       const w = estado.wizard
       w.vinculaRemito = valor
       if (!valor) w.remitoVinculadoId = null
       renderizarSiNoVinculo()
-      if (valor) await cargarRemitosVinculables()
+      if (valor) renderizarRemitosCacheados()
     }
 
+    // Consulta los remitos vinculables UNA vez por unidad de negocio y deja el
+    // resultado en el estado. De ese resultado dependen dos cosas: si el paso
+    // 2B se muestra o se saltea, y qué tarjetas se listan adentro. Se invalida
+    // al cambiar de unidad.
+    //
     // Los remitos ya vinculados a otra factura quedan fuera: si no, la misma
     // mercadería podría contarse dos veces.
-    async function cargarRemitosVinculables() {
+    async function asegurarRemitosVinculables() {
       const w = estado.wizard
-      const cargandoEl = document.getElementById('wz-cargando-remitos')
-      cargandoEl.hidden = false
-      document.getElementById('wz-sin-remitos').hidden = true
+      if (w.remitosVinculables) return w.remitosVinculables
 
       const [resRemitos, resVinculados] = await Promise.all([
         supabase.from('materia_prima_ingresos')
@@ -2009,10 +2169,12 @@
       ])
 
       if (resRemitos.error || resVinculados.error) {
-        cargandoEl.hidden = true
         console.error(resRemitos.error || resVinculados.error)
-        mostrarError('Error al cargar los remitos.')
-        return
+        mostrarError('Error al cargar los remitos. Podés seguir sin vincular.')
+        // Falla como "no hay remitos": el paso se saltea y la carga sigue.
+        w.remitosVinculables = { remitos: [], itemsPorRemito: {} }
+        w.hayRemitosVinculables = false
+        return w.remitosVinculables
       }
 
       const usados = new Set((resVinculados.data ?? []).map(v => v.remito_vinculado_id))
@@ -2020,7 +2182,7 @@
       // de antemano; los 3 que quedan son los últimos 3 libres de verdad.
       const libres = (resRemitos.data ?? []).filter(r => !usados.has(r.id)).slice(0, 3)
 
-      let itemsPorRemito = {}
+      const itemsPorRemito = {}
       if (libres.length) {
         const { data: items } = await supabase
           .from('materia_prima_items')
@@ -2031,9 +2193,17 @@
         })
       }
 
-      cargandoEl.hidden = true
-      document.getElementById('wz-sin-remitos').hidden = libres.length > 0
-      renderizarRemitos(libres, itemsPorRemito)
+      w.remitosVinculables = { remitos: libres, itemsPorRemito }
+      w.hayRemitosVinculables = libres.length > 0
+      return w.remitosVinculables
+    }
+
+    function renderizarRemitosCacheados() {
+      const cache = estado.wizard.remitosVinculables
+      if (!cache) return
+      document.getElementById('wz-cargando-remitos').hidden = true
+      document.getElementById('wz-sin-remitos').hidden = cache.remitos.length > 0
+      renderizarRemitos(cache.remitos, cache.itemsPorRemito)
     }
 
     function renderizarRemitos(remitos, itemsPorRemito) {
@@ -2090,6 +2260,20 @@
         .select('id, nombre, marca, unidad_medida, tipo')
       if (error) { console.error(error); mostrarError('Error al cargar el catálogo de insumos.'); return }
       estado.catalogoInsumos = data ?? []
+    }
+
+    // SIN filtrar por estado_alta, a diferencia de gastos.html y
+    // cuentas-corrientes.html, que solo traen los 'activo'. Acá se usa para
+    // MATCHEAR: si un proveedor que ya está 'pendiente_aceptacion' no
+    // matcheara, se volvería a llamar crear_proveedor_pendiente con el mismo
+    // CUIT y chocaría contra el índice único parcial de esa columna. Mismo
+    // criterio que el catálogo de insumos de arriba.
+    async function cargarProveedores() {
+      const { data, error } = await supabase
+        .from('proveedores')
+        .select('id, razon_social, nombre_fantasia, cuit')
+      if (error) { console.error(error); mostrarError('Error al cargar los proveedores.'); return }
+      estado.proveedores = data ?? []
     }
 
     function buscarEnCatalogo(nombre, marca) {
@@ -2215,12 +2399,14 @@
              ${selectorUnidad}
            </div>
            <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(textoCantidad(item))}</span></div>
-           <button type="button" class="btn-item-secundario" data-accion="modo-directo">Cargar cantidad directa</button>`
+           <button type="button" class="btn-item-secundario" data-accion="modo-directo">Cargar una cantidad única</button>
+           <div class="item-mp__hint">ⓘ Si el remito informa un solo total, sin desglosar por bulto.</div>`
         : `<div class="cantidad-fila">
              <input type="number" inputmode="decimal" step="any" min="0" data-campo="cantidad" value="${item.cantidad ?? ''}" placeholder="0">
              ${selectorUnidad}
            </div>
-           <button type="button" class="btn-item-secundario" data-accion="modo-desglose">Desglosar en bultos × contenido</button>`
+           <button type="button" class="btn-item-secundario" data-accion="modo-desglose">Vino en bultos (ej: 200 bolsas de 25 kg)</button>
+           <div class="item-mp__hint">ⓘ Cargás cuántos bultos y cuánto trae cada uno; el total se calcula solo.</div>`
 
       // Nombre y marca editables solo si el insumo se va a crear. Si matcheó
       // contra el catálogo, se muestra el nombre del catálogo tal cual.
@@ -2229,7 +2415,11 @@
              <div class="item-mp__bloque-label">Producto</div>
              <input class="item-mp__texto-input" data-campo="nombre" value="${esc(item.nombre)}" placeholder="Nombre del producto">
              <input class="item-mp__texto-input" data-campo="marca" value="${esc(item.marca)}" placeholder="Marca (opcional)" style="margin-top:0.5rem;">
-             <div class="item-mp__hint">ⓘ Se va a crear en el catálogo como materia prima, pendiente de revisar.</div>
+             <div class="wz-toggle" style="margin-top:0.5rem;">
+               <button type="button" data-accion="tipo-materia-prima" class="${item.tipo === 'materia_prima' ? 'wz-toggle--sel' : ''}">Materia prima<br><small style="font-weight:500;">lleva lote</small></button>
+               <button type="button" data-accion="tipo-insumo" class="${item.tipo === 'insumo' ? 'wz-toggle--sel' : ''}">Insumo<br><small style="font-weight:500;">no lleva lote</small></button>
+             </div>
+             <div class="item-mp__hint">ⓘ Se va a crear en el catálogo, pendiente de revisar.</div>
            </div>`
         : ''
 
@@ -2335,6 +2525,16 @@
             if (accion === 'modo-directo') {
               item.modoDesglose = false
               item.bultos = null; item.contenido = null
+              renderizarItems()
+            }
+            // Solo para ítems NUEVO: define el tipo del insumo que se va a
+            // crear, y con él si la tarjeta pide lote o no. El estado_alta
+            // sigue siendo 'pendiente_revision' en los dos casos.
+            if (accion === 'tipo-materia-prima' || accion === 'tipo-insumo') {
+              item.tipo = accion === 'tipo-insumo' ? 'insumo' : 'materia_prima'
+              // Un insumo no lleva lote: se limpia lo que hubiera quedado
+              // cargado antes de cambiar el tipo.
+              if (item.tipo === 'insumo') { item.lote = ''; item.loteIlegible = false }
               renderizarItems()
             }
             if (accion === 'lote-ilegible') {
@@ -2523,8 +2723,9 @@
             nombre: String(i.nombre).trim(),
             marca: String(i.marca || '').trim() || null,
             unidad_medida: i.unidadMedida,
-            // La RLS solo acepta esta combinación en el insert.
-            tipo: 'materia_prima',
+            // El tipo lo elige la persona en la tarjeta del ítem. La RLS
+            // acepta cualquiera mientras estado_alta sea 'pendiente_revision'.
+            tipo: i.tipo,
             estado_alta: 'pendiente_revision',
             activo: true,
           })
@@ -2541,6 +2742,34 @@
       const mapa = new Map()
       ;(data ?? []).forEach(row => mapa.set(claveInsumo(row.nombre, row.marca), row.id))
       return mapa
+    }
+
+    // Da de alta el proveedor cuando el matcheo no encontró ninguno. Queda
+    // 'pendiente_aceptacion' y se aprueba desde Cuentas Corrientes, igual que
+    // los que se crean desde el wizard de Gastos.
+    //
+    // NO propaga el error a propósito: si el alta falla (el caso típico es un
+    // CUIT ya usado por otro proveedor), el ingreso se guarda igual con
+    // proveedor_id en null. Perder la carga entera de mercadería por no poder
+    // dar de alta un proveedor sería mucho peor que quedar sin vincular.
+    async function crearProveedorSiHaceFalta() {
+      const w = estado.wizard
+      if (w.proveedorId) return { id: w.proveedorId, aviso: null }
+      if (!w.encabezado.razonSocial) return { id: null, aviso: null }
+
+      const { data, error } = await supabase.rpc('crear_proveedor_pendiente', {
+        p_razon_social: w.encabezado.razonSocial,
+        p_cuit: w.cuitOcr || null,
+        p_nombre_fantasia: w.encabezado.nombreFantasia || null,
+      })
+      if (error) {
+        console.error(error)
+        return { id: null, aviso: `El ingreso se guardó, pero el proveedor no se pudo dar de alta: ${error.message}` }
+      }
+      // La RPC devuelve el uuid suelto o un objeto — misma defensa que
+      // gastos.html, que es el otro archivo que la llama.
+      const id = typeof data === 'string' ? data : data?.id
+      return { id: id ?? null, aviso: null }
     }
 
     function filaItemParaBase(item, ingresoId) {
@@ -2590,7 +2819,12 @@
           item.insumoId = id
         })
 
-        // 2. El ingreso.
+        // 2. El proveedor, si no matcheó contra ninguno existente.
+        const { id: proveedorId, aviso: avisoProveedor } = await crearProveedorSiHaceFalta()
+
+        // 3. El ingreso. razon_social se guarda ADEMÁS del proveedor_id: es el
+        // dato histórico de lo que decía el comprobante, que puede no coincidir
+        // exactamente con el nombre del proveedor en la tabla.
         const e = w.encabezado
         const { data: ingreso, error: errorIngreso } = await supabase
           .from('materia_prima_ingresos')
@@ -2602,6 +2836,7 @@
             // listado lo trate como "no se sabe" y no como un nombre en blanco.
             razon_social: e.razonSocial || null,
             nombre_fantasia: e.nombreFantasia || null,
+            proveedor_id: proveedorId,
             unidad_negocio_id: e.unidadId,
             foto_url: w.foto.url,
             remito_vinculado_id: w.remitoVinculadoId,
@@ -2612,7 +2847,7 @@
         if (errorIngreso) throw new Error(`No se pudo guardar el ingreso: ${errorIngreso.message}`)
         ingresoId = ingreso.id
 
-        // 3. Los ítems, en UN solo insert: un array es una sola sentencia, así
+        // 4. Los ítems, en UN solo insert: un array es una sola sentencia, así
         // que entran todos o no entra ninguno.
         if (!w.remitoVinculadoId && w.items.length) {
           const filas = w.items.map(item => filaItemParaBase(item, ingresoId))
@@ -2620,6 +2855,9 @@
           if (errorItems) throw new Error(`No se pudieron guardar los ítems: ${errorItems.message}`)
         }
 
+        // El alta del proveedor no frena nada, pero si falló hay que decirlo:
+        // el ingreso queda sin vincular y alguien lo va a tener que corregir.
+        if (avisoProveedor) mostrarError(avisoProveedor)
         mostrarExito('Ingreso cargado.')
         cerrarWizard()
         await cargarIngresos()
@@ -2668,11 +2906,15 @@
         ev.target.value = ''
       })
     })
+    // Los TRES puntos de entrada de una lectura reinician el estado derivado.
+    // No alcanza con limpiar `foto`: los ítems, el encabezado, las marcas de
+    // OCR y el vínculo con el remito son todos derivados de la lectura.
     document.getElementById('btn-repetir-foto').addEventListener('click', () => {
-      estado.wizard.foto = { archivo: null, url: null }
+      reiniciarLecturaWizard()
       resetearPaso1()
     })
     document.getElementById('btn-sin-comprobante').addEventListener('click', () => {
+      reiniciarLecturaWizard()
       estado.wizard.encabezado.tipoDoc = 'sin_comprobante'
       document.getElementById('wz-campo-tipo-doc').hidden = true
       document.getElementById('wz-datos-subtitulo').textContent = 'Cargá los datos del comprobante a mano.'
@@ -2688,6 +2930,14 @@
       if (!estado.wizard) return
       estado.wizard.remitoVinculadoId = null
       estado.wizard.vinculaRemito = null
+      // El cache es POR UNIDAD: si no se invalida, el paso 2B ofrecería los
+      // remitos de la unidad anterior.
+      estado.wizard.remitosVinculables = null
+      estado.wizard.hayRemitosVinculables = false
+    })
+    // Re-matchea si se corrige la razón social a mano.
+    document.getElementById('campo-razon-social').addEventListener('change', () => {
+      if (estado.wizard) intentarMatchProveedor()
     })
 
     document.querySelectorAll('#wz-si-no-vinculo button').forEach(btn => {
