@@ -1591,7 +1591,7 @@
             <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
             <div class="grupo-campo" id="grupo-cta-corriente-directo" hidden style="margin-top:0.5rem;">
               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;">
-                <input type="checkbox" id="campo-registrar-cta-corriente" checked style="width:auto;">
+                <input type="checkbox" id="campo-registrar-cta-corriente" style="width:auto;">
                 Registrar también en la cuenta corriente de este proveedor
               </label>
             </div>
@@ -2833,6 +2833,10 @@
         // armarFacturaPendiente()). Al volver a este paso ya elegido, no se
         // pisa la selección previa.
         intentarMatchAutomaticoProveedor()
+        // Después del match: intentarMatchAutomaticoProveedor() no toca nada
+        // si el proveedor ya estaba elegido, y para entonces esPendiente
+        // puede haber cambiado (se define al salir de "Datos").
+        actualizarVisibilidadCtaCorriente()
 
         const inputLugar = document.getElementById('campo-lugar')
         const inputDesc  = document.getElementById('campo-descripcion')
@@ -3559,16 +3563,37 @@
       renderizarSugerenciasProveedorEn('sugerencias-proveedor', lista, seleccionarProveedor)
     }
 
+    // Única fuente de verdad de la visibilidad del checkbox "registrar en
+    // cuenta corriente": hay proveedor elegido Y estamos en el flujo normal
+    // (en "pendiente" el registro ya sale solo por facturas_pendientes, ver
+    // armarFacturaPendiente()).
+    //
+    // Antes esto dependía además de tiene_cuenta_corriente_activa(), y ese
+    // era el bug: esa RPC devuelve true solo si el proveedor YA tiene
+    // facturas o créditos, que es justamente lo que este checkbox crea. Un
+    // proveedor nuevo no podía recibir su primer movimiento por esta vía
+    // nunca, y sin ningún aviso — el gasto se guardaba bien, con su
+    // proveedor_id, pero no aparecía en la cuenta corriente porque la vista
+    // v_cuenta_corriente_movimientos exige una fila en aplicaciones_pago.
+    //
+    // Se llama desde seleccionarProveedor() y también al entrar a
+    // "Detalles": esPendiente se define recién al salir de "Datos", y
+    // intentarMatchAutomaticoProveedor() corta en seco si ya hay proveedor
+    // elegido, así que sin esta segunda llamada el checkbox quedaba visible
+    // en el flujo "pendiente" al volver atrás y cambiar de rama.
+    function actualizarVisibilidadCtaCorriente() {
+      const grupoCta = document.getElementById('grupo-cta-corriente-directo')
+      if (!grupoCta) return
+      const hayProveedor = !!document.getElementById('campo-proveedor-id').value
+      grupoCta.hidden = estado.wizard.esPendiente || !hayProveedor
+    }
+
     // Autocompleta razón social al elegir — queda editable, es una "foto"
     // de lo que dice el comprobante físico por si no coincide exacto con
     // el nombre registrado del proveedor. Oculta la señal de "encontrado
     // automáticamente" por default — la vuelve a mostrar
     // intentarMatchAutomaticoProveedor() cuando corresponde.
-    // Async por el chequeo de cuenta corriente de abajo — se llama sin
-    // await en todos lados (auto-match, click de sugerencia, alta de
-    // proveedor nuevo), así que el checkbox aparece un instante después,
-    // igual que ya pasa con el resultado del OCR.
-    async function seleccionarProveedor(p, esAuto = false) {
+    function seleccionarProveedor(p, esAuto = false) {
       proveedorSeleccionado = p.id
       proveedorSeleccionadoEsAuto = esAuto
       document.getElementById('campo-proveedor-id').value = p.id
@@ -3577,17 +3602,7 @@
       document.getElementById('campo-razon-social').value = p.razon_social
       document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = true
-
-      // El checkbox de "registrar en cuenta corriente" solo tiene sentido
-      // en el flujo normal — en "pendiente" ya se registra solo vía
-      // facturas_pendientes (ver armarFacturaPendiente()).
-      const grupoCta = document.getElementById('grupo-cta-corriente-directo')
-      if (estado.wizard.esPendiente) {
-        grupoCta.hidden = true
-        return
-      }
-      const { data: tieneCta } = await supabase.rpc('tiene_cuenta_corriente_activa', { p_proveedor_id: p.id })
-      grupoCta.hidden = !tieneCta
+      actualizarVisibilidadCtaCorriente()
     }
 
     // Vuelve al estado "sin proveedor elegido" — un solo bloque, lo llaman
@@ -3601,7 +3616,11 @@
       document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = false
       document.getElementById('grupo-cta-corriente-directo').hidden = true
-      document.getElementById('campo-registrar-cta-corriente').checked = true
+      // Opt-in explícito: el default es DESMARCADO. Va acá además del HTML
+      // porque esta función corre en cada tecla del buscador de proveedor —
+      // si acá quedara en true, re-marcaría el checkbox y el default del
+      // HTML no serviría de nada.
+      document.getElementById('campo-registrar-cta-corriente').checked = false
     }
 
     function normalizarCuit(v) {
