@@ -1199,17 +1199,31 @@
     // exactamente dos claves: {"todas": true} O {"unidades": [uuid, ...]}.
     // Nunca las dos juntas.
     //
-    // Una clave que NO está en el catálogo (otorgada por SQL directo) cae en
-    // `def = null` y sale con alcance null, sin romperse: es el passthrough de
-    // siempre. El Set NO se filtra contra el catálogo — hacerlo revocaría en
-    // silencio esas tareas en cada guardado.
+    // PASSTHROUGH — una clave que NO está en el catálogo (otorgada por SQL
+    // directo, porque entró al CHECK antes que acá) atraviesa el guardado
+    // conservando el permiso Y SU ALCANCE. El Set no se filtra contra el
+    // catálogo: hacerlo revocaría esas tareas en silencio en cada guardado.
+    //
+    // Preservar el alcance importa tanto como preservar el permiso: la RPC
+    // pisa la columna con lo que le llegue, así que mandar null borraría un
+    // alcance que esta pantalla ni siquiera sabe dibujar. El prefill ya lo
+    // carga al Map sin filtrar por catálogo; acá se devuelve tal cual vino.
+    //
+    // Quién manda según el caso:
+    //   - en catálogo  → decide `conAlcance` (una tarea sin alcance va null
+    //                    aunque el Map tenga algo viejo)
+    //   - fuera        → decide si el Map trae algo (lo que había en la base)
     function armarTareasPayload() {
       return [...estado.modal.tareasElegidas].map(clave => {
         const [modulo, tarea] = clave.split(':')
         const def = tareaDeCatalogo(clave)
+        const a = estado.modal.alcances.get(clave)
+        const llevaAlcance = def ? !!def.conAlcance : !!a
+
         let alcance = null
-        if (def?.conAlcance) {
-          const a = estado.modal.alcances.get(clave)
+        if (llevaAlcance) {
+          // Forma del contrato con tiene_tarea_alcance(): {"todas": true} O
+          // {"unidades": [...]}, nunca las dos.
           alcance = a?.todas ? { todas: true } : { unidades: [...(a?.unidades ?? [])] }
         }
         return { modulo, tarea, alcance }
