@@ -303,6 +303,747 @@
       flex-shrink: 0;
       white-space: nowrap;
     }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       WIZARD DE CARGA (etapa 2)
+
+       Chrome común a los 5 pasos, según el boceto: encabezado, barra de
+       progreso de 4 segmentos, contenido, y una barra inferior PEGAJOSA con
+       el botón primario — el uso real es en el celular al lado del camión,
+       así que avanzar tiene que estar siempre al alcance del pulgar.
+    ══════════════════════════════════════════════════════════════════════ */
+
+    .wz-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0 0.875rem;
+    }
+    .wz-header__titulo {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .wz-progreso {
+      display: flex;
+      gap: 0.4375rem;
+      margin-bottom: 1rem;
+      min-width: 0;
+    }
+    .wz-progreso__paso { flex: 1; min-width: 0; }
+    .wz-progreso__barra {
+      height: 4px;
+      border-radius: 20px;
+      background: rgba(26,42,82,0.12);
+    }
+    .wz-progreso__paso--hecho .wz-progreso__barra,
+    .wz-progreso__paso--activo .wz-progreso__barra { background: var(--marron); }
+    .wz-progreso__label {
+      text-align: center;
+      font-size: 0.65625rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #a3abbd;
+      margin-top: 0.4375rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .wz-progreso__paso--activo .wz-progreso__label { color: var(--marron-oscuro); }
+
+    .wz-paso { display: none; min-width: 0; }
+    .wz-paso--activo { display: block; }
+
+    .wz-titulo {
+      font-size: 1.3125rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--color-texto);
+    }
+    .wz-subtitulo {
+      font-size: 0.875rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.25rem;
+      line-height: 1.45;
+    }
+
+    /* Barra inferior. Sticky y no fixed: así queda dentro del flujo del
+       contenedor y no tapa el final del contenido en desktop. */
+    .wz-nav {
+      position: sticky;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.875rem 0 1rem;
+      margin-top: 1.25rem;
+      background: linear-gradient(to bottom, rgba(238,241,246,0) 0%, var(--color-superficie) 22%);
+      min-width: 0;
+    }
+
+    .btn-mp-primario {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5625rem;
+      min-width: 0;
+      background: linear-gradient(135deg, var(--marron), var(--marron-oscuro));
+      color: #fff;
+      border: none;
+      border-radius: 17px;
+      padding: 1.0625rem;
+      font-family: var(--fuente);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 14px 30px -12px rgba(122,67,21,0.7);
+    }
+    .btn-mp-primario:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+    .btn-mp-texto {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--color-texto-suave);
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0.625rem;
+      cursor: pointer;
+    }
+
+    /* ── Paso 1 — elegir comprobante ─────────────────────────────────────── */
+
+    .wz-opciones { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.25rem; min-width: 0; }
+    .wz-opcion {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-radius: 20px;
+      padding: 1.5rem 1.25rem;
+      cursor: pointer;
+      font-family: var(--fuente);
+      text-align: left;
+      min-width: 0;
+      border: 1px solid var(--color-borde);
+      background: var(--color-fondo);
+      box-shadow: 0 4px 14px -8px rgba(26,42,82,0.3);
+    }
+    .wz-opcion--principal {
+      background: linear-gradient(135deg, var(--marron), var(--marron-oscuro));
+      border-color: transparent;
+      box-shadow: 0 16px 34px -14px rgba(122,67,21,0.7);
+    }
+    .wz-opcion__icono {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: var(--marron-suave);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.5rem;
+    }
+    .wz-opcion--principal .wz-opcion__icono { background: rgba(255,255,255,0.18); }
+    .wz-opcion__texto { min-width: 0; }
+    .wz-opcion__titulo {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-texto);
+    }
+    .wz-opcion__sub { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.1875rem; }
+    .wz-opcion--principal .wz-opcion__titulo { color: #fff; }
+    .wz-opcion--principal .wz-opcion__sub { color: rgba(255,255,255,0.75); }
+
+    .wz-separador {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.375rem 0 0.875rem;
+      min-width: 0;
+    }
+    .wz-separador::before, .wz-separador::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(26,42,82,0.1);
+    }
+    .wz-separador span { font-size: 0.75rem; color: #a3abbd; font-weight: 600; }
+
+    .wz-opcion-discreta {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5625rem;
+      min-width: 0;
+      background: none;
+      border: 1px dashed rgba(26,42,82,0.25);
+      border-radius: 15px;
+      padding: 0.875rem;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+
+    .wz-preview {
+      border-radius: 20px;
+      overflow: hidden;
+      background: #0f1220;
+      min-height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-width: 0;
+    }
+    .wz-preview img { max-width: 100%; max-height: 380px; display: block; }
+    .wz-preview__pdf { color: rgba(255,255,255,0.85); font-size: 0.9375rem; font-weight: 600; padding: 2rem; text-align: center; }
+    .wz-preview__repetir {
+      position: absolute;
+      right: 0.75rem;
+      top: 0.75rem;
+      background: rgba(255,255,255,0.92);
+      border: none;
+      border-radius: 11px;
+      padding: 0.5625rem 0.8125rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+
+    .wz-aviso {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5625rem;
+      background: var(--marron-suave);
+      border: 1px solid rgba(168,96,31,0.3);
+      border-radius: 14px;
+      padding: 0.8125rem 0.9375rem;
+      margin-top: 0.75rem;
+      font-size: 0.84375rem;
+      font-weight: 600;
+      color: var(--marron-oscuro);
+      line-height: 1.35;
+      min-width: 0;
+    }
+    .wz-aviso--error {
+      background: rgba(239,68,68,0.08);
+      border-color: rgba(239,68,68,0.25);
+      color: #B91C1C;
+    }
+    .wz-aviso--neutro {
+      background: var(--color-fondo);
+      border-color: var(--color-borde);
+      color: var(--color-texto-suave);
+      font-weight: 500;
+    }
+
+    /* ── Paso 2 — datos ──────────────────────────────────────────────────── */
+
+    .wz-campo { margin-top: 1.125rem; min-width: 0; }
+    .wz-campo__label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.4375rem;
+    }
+    .wz-campo input, .wz-campo select {
+      width: 100%;
+      height: 48px;
+      padding: 0 0.9375rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+      min-width: 0;
+    }
+    .wz-campo input:focus, .wz-campo select:focus { border-color: var(--marron); }
+    .wz-campo__hint { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.375rem; }
+
+    /* Marcador de campo leído por OCR. Se pone/saca agregando .wz-campo--ocr
+       al contenedor; el texto va por ::after para no ensuciar el HTML. */
+    .wz-campo--ocr .wz-campo__ocr { display: flex; }
+    .wz-campo__ocr {
+      display: none;
+      align-items: center;
+      min-width: 0;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 650;
+      color: var(--color-exito);
+      margin-top: 0.375rem;
+    }
+    .wz-campo__ocr::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-exito);
+      flex-shrink: 0;
+    }
+
+    .wz-toggle { display: flex; gap: 0.5rem; min-width: 0; }
+    .wz-toggle button {
+      flex: 1;
+      min-width: 0;
+      height: 48px;
+      padding: 0 0.5rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .wz-toggle button.wz-toggle--sel {
+      background: var(--marron);
+      border-color: var(--marron);
+      color: #fff;
+    }
+
+    /* ── Paso 2B — vínculo con remito ────────────────────────────────────── */
+
+    .wz-si-no { display: flex; gap: 0.75rem; margin-top: 1rem; min-width: 0; }
+    .wz-si-no button {
+      flex: 1;
+      min-width: 0;
+      height: 52px;
+      border: 1px solid var(--color-borde);
+      border-radius: 15px;
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+    .wz-si-no button.wz-toggle--sel {
+      background: var(--marron);
+      border-color: var(--marron);
+      color: #fff;
+    }
+
+    .wz-seccion {
+      font-size: 0.71875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin: 1.375rem 0 0.625rem;
+    }
+
+    .wz-remito {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: var(--color-fondo);
+      border: 1.5px solid var(--color-borde);
+      border-radius: 18px;
+      padding: 0.9375rem;
+      margin-bottom: 0.625rem;
+      cursor: pointer;
+      font-family: var(--fuente);
+      min-width: 0;
+    }
+    .wz-remito--sel { border-color: var(--marron); background: var(--marron-suave); }
+    .wz-remito__fila { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+    .wz-remito__check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--color-borde);
+      background: var(--color-fondo);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: #fff;
+      font-weight: 700;
+    }
+    .wz-remito--sel .wz-remito__check { background: var(--marron); border-color: var(--marron); }
+    .wz-remito__prov {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .wz-remito__meta { font-size: 0.78125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+    .wz-remito__items {
+      margin-top: 0.75rem;
+      padding-top: 0.625rem;
+      border-top: 1px solid var(--color-borde);
+      min-width: 0;
+    }
+    .wz-remito__item {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      padding: 0.1875rem 0;
+      min-width: 0;
+    }
+    .wz-remito__item span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wz-remito__item span:last-child { font-weight: 650; color: var(--color-texto); flex-shrink: 0; }
+
+    /* ── Paso 3 — ítems (acordeón) ───────────────────────────────────────── */
+
+    .wz-items-cabecera {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .wz-items-contador { font-size: 0.8125rem; font-weight: 650; color: var(--color-texto-suave); white-space: nowrap; }
+
+    .item-mp {
+      background: var(--color-fondo);
+      border: 1.5px solid var(--color-borde);
+      border-radius: 18px;
+      margin-bottom: 0.625rem;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .item-mp--abierto { border-color: var(--marron); }
+    .item-mp--error { border-color: var(--color-error); }
+
+    .item-mp__cabecera {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.875rem;
+      cursor: pointer;
+      min-width: 0;
+    }
+    .item-mp__info { flex: 1; min-width: 0; }
+    .item-mp__nombre-fila { display: flex; align-items: center; gap: 0.4375rem; min-width: 0; }
+    .item-mp__nombre {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .item-mp__marca { font-size: 0.78125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+    .item-mp__derecha { text-align: right; flex-shrink: 0; }
+    .item-mp__cantidad { font-size: 0.9375rem; font-weight: 700; color: var(--color-texto); white-space: nowrap; }
+    .item-mp__cuerpo { padding: 0 0.875rem 0.875rem; min-width: 0; }
+
+    .badge-nuevo {
+      font-size: 0.625rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      border-radius: 5px;
+      padding: 0.125rem 0.375rem;
+      background: var(--marron);
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .badge-oblig {
+      font-size: 0.625rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      border-radius: 5px;
+      padding: 0.125rem 0.375rem;
+      background: rgba(239,68,68,0.12);
+      color: #B91C1C;
+      flex-shrink: 0;
+    }
+    .chip-tipo-insumo {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      margin-top: 0.375rem;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+    }
+    .chip-tipo-insumo--mp { background: var(--marron-suave); color: var(--marron-oscuro); }
+
+    .btn-item-borrar {
+      background: none;
+      border: none;
+      color: #a3abbd;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 0.25rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .btn-item-borrar:hover { color: var(--color-error); }
+
+    .item-mp__bloque {
+      background: var(--color-superficie);
+      border-radius: 14px;
+      padding: 0.8125rem;
+      margin-top: 0.625rem;
+      min-width: 0;
+    }
+    .item-mp__bloque-label {
+      font-size: 0.71875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4375rem;
+      min-width: 0;
+    }
+
+    .cantidad-fila { display: flex; align-items: center; gap: 0.4375rem; min-width: 0; flex-wrap: wrap; }
+    .cantidad-fila input {
+      flex: 1;
+      min-width: 60px;
+      height: 44px;
+      padding: 0 0.625rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 11px;
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      font-weight: 650;
+      text-align: right;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+    }
+    .cantidad-fila input:focus { border-color: var(--marron); }
+    .cantidad-fila__unidad {
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cantidad-fila select {
+      height: 44px;
+      padding: 0 0.4375rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 11px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+      flex-shrink: 0;
+    }
+    .cantidad-fila__x { font-size: 0.9375rem; color: #a3abbd; flex-shrink: 0; }
+
+    .cantidad-total {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 0.625rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--color-borde);
+      font-size: 0.875rem;
+      min-width: 0;
+    }
+    .cantidad-total span:first-child { color: var(--color-texto-suave); font-weight: 600; }
+    .cantidad-total span:last-child { font-weight: 700; color: var(--color-texto); }
+
+    .btn-item-secundario {
+      width: 100%;
+      margin-top: 0.5625rem;
+      background: none;
+      border: 1px solid var(--color-borde);
+      border-radius: 11px;
+      padding: 0.5625rem;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+    .btn-item-secundario:hover { border-color: var(--marron); color: var(--marron-oscuro); }
+    .btn-item-secundario--activo {
+      background: var(--marron-suave);
+      border-color: var(--marron);
+      color: var(--marron-oscuro);
+    }
+
+    .item-mp__texto-input {
+      width: 100%;
+      height: 44px;
+      padding: 0 0.75rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 11px;
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+      min-width: 0;
+    }
+    .item-mp__texto-input:focus { border-color: var(--marron); }
+    .item-mp__texto-input:disabled { background: var(--color-superficie); color: #a3abbd; }
+
+    .item-mp__hint {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      color: #a3abbd;
+      margin-top: 0.4375rem;
+      min-width: 0;
+    }
+
+    .adjuntos-fila { display: flex; gap: 0.5rem; min-width: 0; }
+    .btn-adjunto {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3125rem;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.75rem 0.5rem;
+      font-family: var(--fuente);
+      font-size: 0.71875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-adjunto:hover { border-color: var(--marron); }
+    .btn-adjunto--cargado { background: var(--marron-suave); border-color: var(--marron); color: var(--marron-oscuro); }
+    .btn-adjunto__icono { font-size: 1.125rem; line-height: 1; }
+    .btn-adjunto__texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+    .item-mp__error {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4375rem;
+      background: rgba(239,68,68,0.08);
+      border-radius: 11px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.625rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #B91C1C;
+      line-height: 1.35;
+      min-width: 0;
+    }
+
+    .btn-agregar-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-width: 0;
+      background: none;
+      border: 1px dashed rgba(168,96,31,0.5);
+      border-radius: 15px;
+      padding: 0.875rem;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--marron-oscuro);
+      cursor: pointer;
+      margin-top: 0.375rem;
+    }
+
+    /* ── Paso 4 — confirmación ───────────────────────────────────────────── */
+
+    .wz-resumen {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 18px;
+      padding: 0.375rem 1rem;
+      margin-top: 1.125rem;
+      min-width: 0;
+    }
+    .wz-resumen__fila {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.875rem;
+      padding: 0.6875rem 0;
+      border-bottom: 1px solid var(--color-borde);
+      font-size: 0.875rem;
+      min-width: 0;
+    }
+    .wz-resumen__fila:last-child { border-bottom: none; }
+    .wz-resumen__k { color: var(--color-texto-suave); font-weight: 600; flex-shrink: 0; }
+    .wz-resumen__v {
+      font-weight: 650;
+      color: var(--color-texto);
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .wz-conf-item {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 0.75rem 0.875rem;
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+    .wz-conf-item__fila {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .wz-conf-item__lote {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      padding-top: 0.4375rem;
+      border-top: 1px solid var(--color-borde);
+      font-size: 0.78125rem;
+      min-width: 0;
+    }
+    .wz-conf-item__lote span:first-child { color: var(--color-texto-suave); font-weight: 600; }
+    .wz-conf-item__lote span:last-child { font-weight: 700; color: var(--color-texto); }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -334,6 +1075,10 @@
         </div>
       </div>
 
+      <button type="button" class="btn-mp-primario" id="btn-abrir-wizard" style="margin-bottom:0.875rem;">
+        <span style="font-size:1.125rem; line-height:1;">＋</span> Cargar ingreso
+      </button>
+
       <div class="buscador-mp">
         <input type="text" id="filtro-busqueda-ingresos" placeholder="🔍 Buscar proveedor o número de documento">
       </div>
@@ -352,6 +1097,187 @@
         <p class="estado-vacio__descripcion">No hay ingresos de mercadería con los filtros actuales.</p>
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         WIZARD DE CARGA (etapa 2)
+
+         Drill-down por `hidden`, mismo criterio que el resto del módulo. El
+         encabezado, la barra de progreso y la barra inferior son comunes a
+         los 5 pasos; solo cambia el `.wz-paso` activo.
+    ════════════════════════════════════════════════════════════════════ -->
+    <div id="pantalla-wizard" hidden>
+
+      <div class="wz-header">
+        <button type="button" class="mp-header__volver" id="btn-wizard-volver">‹ Volver</button>
+        <span class="wz-header__titulo">Nuevo ingreso</span>
+      </div>
+
+      <div class="wz-progreso" id="wz-progreso"></div>
+
+      <!-- ── Paso 1 — El comprobante ────────────────────────────────────── -->
+      <div class="wz-paso wz-paso--activo" id="wz-paso-comprobante">
+        <div class="wz-titulo">El comprobante</div>
+        <div class="wz-subtitulo">Sacale una foto al remito o a la factura. Los datos se leen solos.</div>
+
+        <!-- Estado A: elegir origen -->
+        <div id="wz-elegir-comprobante">
+          <div class="wz-opciones">
+            <button type="button" class="wz-opcion wz-opcion--principal" id="btn-sacar-foto">
+              <span class="wz-opcion__icono">📷</span>
+              <span class="wz-opcion__texto">
+                <span class="wz-opcion__titulo">Sacar foto ahora</span>
+                <span class="wz-opcion__sub">Abre la cámara</span>
+              </span>
+            </button>
+            <button type="button" class="wz-opcion" id="btn-elegir-galeria">
+              <span class="wz-opcion__icono">🖼️</span>
+              <span class="wz-opcion__texto">
+                <span class="wz-opcion__titulo">Elegir de galería</span>
+                <span class="wz-opcion__sub">Imagen o PDF ya guardado</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="wz-separador"><span>o</span></div>
+
+          <button type="button" class="wz-opcion-discreta" id="btn-sin-comprobante">
+            📄 Sin comprobante — cargar a mano
+          </button>
+        </div>
+
+        <!-- Estado B: foto elegida -->
+        <div id="wz-preview-comprobante" hidden>
+          <div class="wz-preview" id="wz-preview-caja">
+            <button type="button" class="wz-preview__repetir" id="btn-repetir-foto">↻ Repetir</button>
+          </div>
+          <div class="wz-aviso">☀️ Se van a leer proveedor, número, fecha e ítems.</div>
+          <div class="wz-aviso wz-aviso--error" id="wz-error-ocr" hidden></div>
+        </div>
+
+        <!-- capture fuerza la cámara trasera; el de galería no lo lleva y
+             además acepta PDF, que es lo que ya está guardado en el celu. -->
+        <input type="file" id="input-foto-camara" accept="image/*" capture="environment" hidden>
+        <input type="file" id="input-foto-galeria" accept="image/*,application/pdf" hidden>
+
+        <div class="wz-nav" id="wz-nav-comprobante" hidden>
+          <button type="button" class="btn-mp-primario" id="btn-leer-ocr">Continuar — leer con IA</button>
+        </div>
+      </div>
+
+      <!-- ── Paso 2 — Datos del comprobante ─────────────────────────────── -->
+      <div class="wz-paso" id="wz-paso-datos">
+        <div class="wz-titulo">Datos del comprobante</div>
+        <div class="wz-subtitulo" id="wz-datos-subtitulo">Completá los datos del comprobante.</div>
+
+        <div class="wz-campo" id="wz-campo-tipo-doc">
+          <div class="wz-campo__label">Tipo de documento</div>
+          <div class="wz-toggle" id="wz-toggle-tipo-doc"></div>
+          <div class="wz-campo__ocr">leído de la foto</div>
+        </div>
+
+        <div class="wz-campo" id="wz-campo-numero-doc">
+          <div class="wz-campo__label">Número de documento</div>
+          <input type="text" id="campo-numero-doc" placeholder="0003-00089780">
+          <div class="wz-campo__ocr">leído de la foto</div>
+        </div>
+
+        <div class="wz-campo" id="wz-campo-razon-social">
+          <div class="wz-campo__label">Razón social</div>
+          <input type="text" id="campo-razon-social" placeholder="Nombre del proveedor">
+          <div class="wz-campo__ocr">leído de la foto</div>
+        </div>
+
+        <div class="wz-campo" id="wz-campo-nombre-fantasia">
+          <div class="wz-campo__label">Nombre de fantasía</div>
+          <input type="text" id="campo-nombre-fantasia" placeholder="Nombre comercial">
+          <div class="wz-campo__ocr">leído de la foto</div>
+        </div>
+
+        <div class="wz-campo" id="wz-campo-fecha">
+          <div class="wz-campo__label">Fecha</div>
+          <input type="date" id="campo-fecha">
+          <div class="wz-campo__ocr">leído de la foto</div>
+        </div>
+
+        <div class="wz-campo" id="wz-campo-unidad">
+          <div class="wz-campo__label">Unidad de negocio</div>
+          <select id="campo-unidad-negocio"></select>
+          <div class="wz-campo__hint">Cambiala si la mercadería va a otra empresa.</div>
+        </div>
+
+        <div class="wz-nav">
+          <button type="button" class="btn-mp-primario" id="btn-datos-continuar">Continuar</button>
+        </div>
+      </div>
+
+      <!-- ── Paso 2B — Vínculo con remito ───────────────────────────────── -->
+      <div class="wz-paso" id="wz-paso-vinculo">
+        <div class="wz-subtitulo" id="wz-vinculo-tipo" style="margin:0; font-weight:700; color:var(--marron-oscuro);"></div>
+        <div class="wz-titulo">¿Corresponde a un remito ya cargado?</div>
+        <div class="wz-subtitulo">Vinculalos para que la mercadería no se cuente dos veces.</div>
+
+        <div class="wz-si-no" id="wz-si-no-vinculo">
+          <button type="button" data-valor="si">Sí</button>
+          <button type="button" data-valor="no">No</button>
+        </div>
+
+        <div id="wz-lista-remitos-cont" hidden>
+          <div class="wz-seccion" id="wz-remitos-titulo">Últimos remitos</div>
+          <div id="wz-cargando-remitos" class="estado-vacio" hidden>
+            <div class="spinner"></div>
+          </div>
+          <div id="wz-lista-remitos"></div>
+          <div class="wz-aviso wz-aviso--neutro" id="wz-sin-remitos" hidden>
+            No hay remitos sin vincular en esta unidad de negocio.
+          </div>
+        </div>
+
+        <div class="wz-nav">
+          <button type="button" class="btn-mp-primario" id="btn-vinculo-continuar" disabled>Continuar</button>
+        </div>
+      </div>
+
+      <!-- ── Paso 3 — Ítems ─────────────────────────────────────────────── -->
+      <div class="wz-paso" id="wz-paso-items">
+        <div class="wz-items-cabecera">
+          <div class="wz-titulo">Ítems</div>
+          <div class="wz-items-contador" id="wz-items-contador"></div>
+        </div>
+        <div class="wz-subtitulo">Revisá cada producto y cargá el lote.</div>
+
+        <div class="wz-aviso wz-aviso--neutro" style="margin-top:0.875rem;">
+          Revisá que estén todos los productos del remito. Si falta alguno, agregalo con el botón de abajo.
+        </div>
+
+        <div id="wz-lista-items" style="margin-top:0.875rem;"></div>
+
+        <button type="button" class="btn-agregar-item" id="btn-agregar-item">
+          ＋ Agregar ítem a mano
+        </button>
+
+        <div class="wz-nav">
+          <button type="button" class="btn-mp-primario" id="btn-items-continuar">Continuar</button>
+        </div>
+      </div>
+
+      <!-- ── Paso 4 — Confirmación ──────────────────────────────────────── -->
+      <div class="wz-paso" id="wz-paso-confirmar">
+        <div class="wz-titulo">Confirmá el ingreso</div>
+
+        <div class="wz-resumen" id="wz-resumen"></div>
+
+        <div class="wz-seccion" id="wz-detalle-titulo">Detalle</div>
+        <div id="wz-detalle-items"></div>
+
+        <div class="wz-aviso wz-aviso--error" id="wz-error-guardado" hidden></div>
+
+        <div class="wz-nav">
+          <button type="button" class="btn-mp-primario" id="btn-confirmar-ingreso">Confirmar ingreso</button>
+          <button type="button" class="btn-mp-texto" id="btn-volver-corregir">Volver a corregir</button>
+        </div>
+      </div>
+
+    </div><!-- /pantalla-wizard -->
 
   </div><!-- /contenedor-mp -->
 
@@ -379,7 +1305,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -392,6 +1318,30 @@
       sin_comprobante: { label: 'Sin comprobante', bg: 'rgba(168,184,216,0.18)',     fg: '#55617d' },
     }
 
+    // La Edge Function devuelve el tipo con el label humano ('Factura A'), NO
+    // con la clave de la base ('factura_a'). Este mapa se DERIVA de TIPOS_DOC
+    // en vez de escribirse a mano para que haya UNA sola fuente de verdad de
+    // esa correspondencia: si algún día cambia un label, el mapa lo sigue solo.
+    const TIPO_DOC_DESDE_OCR = Object.fromEntries(
+      Object.entries(TIPOS_DOC).map(([clave, t]) => [t.label, clave])
+    )
+
+    // Los tres que se pueden elegir a mano en el paso 2. 'sin_comprobante' no
+    // está: no se elige, lo pone el camino "cargar a mano".
+    const TIPOS_DOC_ELEGIBLES = ['remito', 'factura_a', 'factura_x']
+
+    const UNIDADES_MEDIDA = ['kg', 'l', 'un']
+
+    // Los 4 segmentos de la barra de progreso. El paso 2B ('vinculo') no tiene
+    // segmento propio: cae dentro de "Datos", como en el boceto.
+    const PASOS_WIZARD = [
+      { id: 'comprobante', label: 'COMPROBANTE' },
+      { id: 'datos',       label: 'DATOS' },
+      { id: 'items',       label: 'ÍTEMS' },
+      { id: 'confirmar',   label: 'CONFIRMAR' },
+    ]
+    const PASO_A_INDICE = { comprobante: 0, datos: 1, vinculo: 1, items: 2, confirmar: 3 }
+
     const estado = {
       sesion: null,
       miEmpleadoId: null,
@@ -400,6 +1350,29 @@
       filtros: {
         ingresos: { busqueda: '', unidadId: '' },  // '' = Todas
       },
+      // Catálogo completo de insumos, para el matching del paso 3. Se carga al
+      // abrir el wizard, no al entrar al módulo.
+      catalogoInsumos: [],
+      wizard: null,
+    }
+
+    function wizardVacio() {
+      return {
+        paso: 'comprobante',
+        foto: { archivo: null, url: null },
+        camposOcr: new Set(),
+        encabezado: {
+          tipoDoc: null, numeroDoc: '', razonSocial: '',
+          nombreFantasia: '', fecha: '', unidadId: '',
+        },
+        vinculaRemito: null,      // null = sin responder, true/false
+        remitoVinculadoId: null,
+        itemsOcr: [],             // crudo de la Edge Function, sin matchear
+        items: [],
+        itemsInicializados: false, // para no pisar lo editado al volver al paso 3
+        itemAbierto: null,        // uid del ítem expandido (acordeón)
+        guardando: false,
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -427,6 +1400,36 @@
     function chipTipoDoc(tipo) {
       const t = TIPOS_DOC[tipo] || { label: tipo || '—', bg: 'var(--color-superficie)', fg: 'var(--color-texto-suave)' }
       return `<span class="chip-tipo-doc-mp" style="background:${t.bg}; color:${t.fg};">${t.label}</span>`
+    }
+
+    // Los nombres de producto salen del OCR y del teclado, y en el wizard van
+    // adentro de atributos (value="..."). Una comilla en "Caja 40x30\"" rompería
+    // el markup, así que se escapan. El listado de la etapa 1 no lo necesita
+    // porque ahí todo va como texto, nunca como atributo.
+    function esc(valor) {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
+    // Clave de matching contra el catálogo. Colapsa los espacios internos, que
+    // el índice único de la base (lower(nombre), lower(coalesce(marca,''))) NO
+    // colapsa: de los dos errores posibles, encontrar de más es el seguro —
+    // reusa un insumo existente en vez de chocar contra el índice al crearlo.
+    function claveInsumo(nombre, marca) {
+      const norm = (v) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
+      return `${norm(nombre)}|${norm(marca)}`
+    }
+
+    let contadorUid = 0
+    function nuevoUid() { return `it${++contadorUid}` }
+
+    // Los inputs de cantidad son type="number", así que su .value ya viene con
+    // punto decimal — nunca se re-parsea un string formateado en es-AR.
+    function numeroDesdeInput(valor) {
+      if (valor === '' || valor == null) return null
+      const n = Number(valor)
+      return Number.isFinite(n) ? n : null
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -644,6 +1647,1042 @@
     }
     document.getElementById('btn-cerrar-detalle').addEventListener('click', cerrarDetalleIngreso)
     document.querySelector('#modal-ingreso .modal-mp__backdrop').addEventListener('click', cerrarDetalleIngreso)
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — NAVEGACIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirWizard() {
+      estado.wizard = wizardVacio()
+      // Una sola unidad: se preselecciona, no tiene sentido preguntar.
+      if (estado.unidades.length === 1) estado.wizard.encabezado.unidadId = estado.unidades[0].id
+
+      document.getElementById('pantalla-ingresos').hidden = true
+      document.getElementById('pantalla-wizard').removeAttribute('hidden')
+
+      renderizarTogglesTipoDoc()
+      poblarSelectUnidades()
+      resetearPaso1()
+      irAPasoWz('comprobante')
+
+      await cargarCatalogoInsumos()
+    }
+
+    function cerrarWizard() {
+      document.getElementById('pantalla-wizard').hidden = true
+      document.getElementById('pantalla-ingresos').removeAttribute('hidden')
+      estado.wizard = null
+    }
+
+    // El "‹ Volver" del encabezado: retrocede un paso, y desde el primero sale
+    // del wizard. Con datos cargados pide confirmación, para no perder de un
+    // toque accidental una carga hecha al lado del camión.
+    function volverAtrasWizard() {
+      const w = estado.wizard
+      if (!w) return
+      const previo = {
+        datos:      'comprobante',
+        vinculo:    'datos',
+        items:      esFactura(w.encabezado.tipoDoc) ? 'vinculo' : 'datos',
+        confirmar:  w.remitoVinculadoId ? 'vinculo' : 'items',
+      }[w.paso]
+
+      if (!previo) {
+        const hayAlgo = w.foto.archivo || w.items.length || w.encabezado.razonSocial
+        if (hayAlgo && !confirm('¿Salir de la carga? Se pierde lo cargado hasta acá.')) return
+        cerrarWizard()
+        return
+      }
+      irAPasoWz(previo)
+    }
+
+    function irAPasoWz(id) {
+      estado.wizard.paso = id
+      document.querySelectorAll('.wz-paso').forEach(el => el.classList.remove('wz-paso--activo'))
+      document.getElementById(`wz-paso-${id}`).classList.add('wz-paso--activo')
+      renderizarProgresoWz()
+      window.scrollTo({ top: 0, behavior: 'auto' })
+
+      // Volver al paso 1 deshace el camino "sin comprobante": si no, el campo
+      // de tipo seguiría oculto y el tipoDoc quedaría pegado en
+      // 'sin_comprobante' aunque después se saque una foto.
+      if (id === 'comprobante') {
+        document.getElementById('wz-campo-tipo-doc').hidden = false
+        if (estado.wizard.encabezado.tipoDoc === 'sin_comprobante') {
+          estado.wizard.encabezado.tipoDoc = null
+          seleccionarTipoDocWz(null)
+        }
+      }
+
+      if (id === 'vinculo')   entrarAPasoVinculo()
+      if (id === 'items')     entrarAPasoItems()
+      if (id === 'confirmar') renderizarConfirmacion()
+    }
+
+    function renderizarProgresoWz() {
+      const actual = PASO_A_INDICE[estado.wizard.paso] ?? 0
+      document.getElementById('wz-progreso').innerHTML = PASOS_WIZARD.map((p, i) => {
+        const clase = i < actual ? 'wz-progreso__paso--hecho'
+                    : i === actual ? 'wz-progreso__paso--activo' : ''
+        return `<div class="wz-progreso__paso ${clase}">
+                  <div class="wz-progreso__barra"></div>
+                  <div class="wz-progreso__label">${p.label}</div>
+                </div>`
+      }).join('')
+    }
+
+    function esFactura(tipoDoc) {
+      return tipoDoc === 'factura_a' || tipoDoc === 'factura_x'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — PASO 1: COMPROBANTE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function resetearPaso1() {
+      document.getElementById('wz-elegir-comprobante').hidden = false
+      document.getElementById('wz-preview-comprobante').hidden = true
+      document.getElementById('wz-nav-comprobante').hidden = true
+      document.getElementById('wz-error-ocr').hidden = true
+      document.getElementById('input-foto-camara').value = ''
+      document.getElementById('input-foto-galeria').value = ''
+    }
+
+    function tomarArchivoComprobante(archivo) {
+      if (!archivo) return
+      estado.wizard.foto.archivo = archivo
+
+      const caja = document.getElementById('wz-preview-caja')
+      // Se conserva el botón "Repetir", que vive dentro de la caja.
+      caja.querySelectorAll('img, .wz-preview__pdf').forEach(el => el.remove())
+
+      if (archivo.type === 'application/pdf') {
+        const div = document.createElement('div')
+        div.className = 'wz-preview__pdf'
+        div.textContent = `📄 ${archivo.name}`
+        caja.appendChild(div)
+      } else {
+        const img = document.createElement('img')
+        img.alt = 'Comprobante'
+        img.src = URL.createObjectURL(archivo)
+        // Se libera al cargar: el blob ya no hace falta después de pintarlo.
+        img.onload = () => URL.revokeObjectURL(img.src)
+        caja.appendChild(img)
+      }
+
+      document.getElementById('wz-elegir-comprobante').hidden = true
+      document.getElementById('wz-preview-comprobante').hidden = false
+      document.getElementById('wz-nav-comprobante').hidden = false
+      document.getElementById('wz-error-ocr').hidden = true
+    }
+
+    function fileABase64(archivo) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload  = () => resolve(reader.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(archivo)
+      })
+    }
+
+    // El uid va PRIMERO en la ruta a propósito: es el patrón de RLS de Storage
+    // (foldername[1] = auth.uid()) que ya usa gastos.html. El 'mp/' va después
+    // para separar lo de este módulo sin romper esa policy. El sufijo random
+    // evita que dos adjuntos subidos en el mismo milisegundo se pisen.
+    async function subirArchivoMp(archivo) {
+      const ext  = (archivo.name.split('.').pop() || 'jpg').toLowerCase()
+      const azar = Math.random().toString(36).slice(2, 8)
+      const path = `${estado.sesion.user.id}/mp/${Date.now()}-${azar}.${ext}`
+
+      const { data, error } = await supabase.storage
+        .from('comprobantes')
+        .upload(path, archivo, { contentType: archivo.type, upsert: false })
+      if (error) throw new Error(`No se pudo subir el archivo: ${error.message}`)
+
+      const { data: firmada, error: errorFirma } = await supabase.storage
+        .from('comprobantes')
+        .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10) // 10 años
+      if (errorFirma) throw new Error(`No se pudo generar el link: ${errorFirma.message}`)
+      return firmada.signedUrl
+    }
+
+    function avisoOcr(texto) {
+      const el = document.getElementById('wz-error-ocr')
+      el.textContent = texto
+      el.hidden = !texto
+    }
+
+    async function leerConIA() {
+      const w = estado.wizard
+      const btn = document.getElementById('btn-leer-ocr')
+      btn.disabled = true
+      btn.textContent = 'Leyendo…'
+      avisoOcr('')
+
+      // La subida y la lectura fallan por separado y ninguna de las dos frena
+      // la carga: al lado del camión, quedarse sin poder cargar es peor que
+      // cargar a mano.
+      try {
+        w.foto.url = await subirArchivoMp(w.foto.archivo)
+      } catch (e) {
+        console.error(e)
+        avisoOcr('No se pudo guardar la foto. Podés seguir cargando los datos a mano.')
+      }
+
+      try {
+        const imagen_base64 = await fileABase64(w.foto.archivo)
+        const { data, error } = await supabase.functions.invoke('ocr-materia-prima', {
+          body: { imagen_base64, mime_type: w.foto.archivo.type },
+        })
+        // La función devuelve los errores con HTTP 200 y ok:false, así que
+        // `error` viene en null: hay que mirar data.ok además de error.
+        if (error) throw new Error(error.message)
+        if (!data?.ok) throw new Error(data?.mensaje || 'No se pudo leer el comprobante')
+        prellenarDesdeOcr(data.datos || {})
+      } catch (e) {
+        console.error(e)
+        avisoOcr(`${e.message}. Completá los datos a mano.`)
+      }
+
+      btn.disabled = false
+      btn.textContent = 'Continuar — leer con IA'
+      irAPasoWz('datos')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — PASO 2: DATOS DEL COMPROBANTE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarTogglesTipoDoc() {
+      const cont = document.getElementById('wz-toggle-tipo-doc')
+      cont.innerHTML = TIPOS_DOC_ELEGIBLES.map(clave => `
+        <button type="button" data-valor="${clave}">${TIPOS_DOC[clave].label}</button>
+      `).join('')
+      cont.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => seleccionarTipoDocWz(btn.dataset.valor))
+      })
+    }
+
+    function seleccionarTipoDocWz(valor) {
+      estado.wizard.encabezado.tipoDoc = valor
+      document.querySelectorAll('#wz-toggle-tipo-doc button').forEach(btn => {
+        btn.classList.toggle('wz-toggle--sel', btn.dataset.valor === valor)
+      })
+    }
+
+    function poblarSelectUnidades() {
+      const sel = document.getElementById('campo-unidad-negocio')
+      sel.innerHTML = `<option value="">Elegí una unidad</option>` +
+        estado.unidades.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+      sel.value = estado.wizard.encabezado.unidadId || ''
+    }
+
+    function marcarCampoOcr(idContenedor, esOcr) {
+      document.getElementById(idContenedor).classList.toggle('wz-campo--ocr', !!esOcr)
+    }
+
+    function prellenarDesdeOcr(datos) {
+      const w = estado.wizard
+      w.camposOcr = new Set()
+
+      // 'Factura A' (lo que devuelve la Edge Function) → 'factura_a' (lo que
+      // guarda la base). Ver TIPO_DOC_DESDE_OCR.
+      const tipoDb = TIPO_DOC_DESDE_OCR[datos.tipo_doc]
+      if (tipoDb && TIPOS_DOC_ELEGIBLES.includes(tipoDb)) {
+        seleccionarTipoDocWz(tipoDb)
+        w.camposOcr.add('tipo_doc')
+      }
+
+      const mapa = [
+        ['numero_doc',      'campo-numero-doc',      'numeroDoc',      'wz-campo-numero-doc'],
+        ['razon_social',    'campo-razon-social',    'razonSocial',    'wz-campo-razon-social'],
+        ['nombre_fantasia', 'campo-nombre-fantasia', 'nombreFantasia', 'wz-campo-nombre-fantasia'],
+        ['fecha',           'campo-fecha',           'fecha',          'wz-campo-fecha'],
+      ]
+      mapa.forEach(([claveOcr, idCampo, claveEstado, idCont]) => {
+        const valor = datos[claveOcr]
+        if (valor == null || valor === '') return
+        document.getElementById(idCampo).value = valor
+        w.encabezado[claveEstado] = String(valor)
+        w.camposOcr.add(claveOcr)
+        marcarCampoOcr(idCont, true)
+      })
+      marcarCampoOcr('wz-campo-tipo-doc', w.camposOcr.has('tipo_doc'))
+
+      const sub = w.camposOcr.size
+        ? 'Los campos marcados se leyeron de la foto. Revisalos.'
+        : 'No se leyó ningún dato. Completalos a mano.'
+      document.getElementById('wz-datos-subtitulo').textContent = sub
+
+      // Los ítems del OCR se convierten recién al entrar al paso 3, cuando el
+      // catálogo ya está cargado. Acá solo se guardan crudos.
+      w.itemsOcr = Array.isArray(datos.items) ? datos.items : []
+    }
+
+    function leerEncabezadoDelForm() {
+      const e = estado.wizard.encabezado
+      e.numeroDoc      = document.getElementById('campo-numero-doc').value.trim()
+      e.razonSocial    = document.getElementById('campo-razon-social').value.trim()
+      e.nombreFantasia = document.getElementById('campo-nombre-fantasia').value.trim()
+      e.fecha          = document.getElementById('campo-fecha').value
+      e.unidadId       = document.getElementById('campo-unidad-negocio').value
+    }
+
+    function continuarDesdeDatos() {
+      leerEncabezadoDelForm()
+      const e = estado.wizard.encabezado
+
+      if (!e.tipoDoc)     return mostrarError('Elegí el tipo de documento.')
+      if (!e.razonSocial) return mostrarError('Completá la razón social del proveedor.')
+      if (!e.fecha)       return mostrarError('Completá la fecha del comprobante.')
+      if (!e.unidadId)    return mostrarError('Elegí la unidad de negocio.')
+
+      irAPasoWz(esFactura(e.tipoDoc) ? 'vinculo' : 'items')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — PASO 2B: VÍNCULO CON REMITO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function entrarAPasoVinculo() {
+      const w = estado.wizard
+      document.getElementById('wz-vinculo-tipo').textContent = TIPOS_DOC[w.encabezado.tipoDoc]?.label || ''
+      document.getElementById('wz-remitos-titulo').textContent =
+        `Últimos remitos de ${nombreUnidad(w.encabezado.unidadId) || 'la unidad'}`
+      renderizarSiNoVinculo()
+    }
+
+    function renderizarSiNoVinculo() {
+      const w = estado.wizard
+      document.querySelectorAll('#wz-si-no-vinculo button').forEach(btn => {
+        const valor = btn.dataset.valor === 'si'
+        btn.classList.toggle('wz-toggle--sel', w.vinculaRemito === valor)
+      })
+      document.getElementById('wz-lista-remitos-cont').hidden = w.vinculaRemito !== true
+      // Con "Sí" hay que elegir un remito antes de seguir; con "No" alcanza.
+      document.getElementById('btn-vinculo-continuar').disabled =
+        w.vinculaRemito == null || (w.vinculaRemito === true && !w.remitoVinculadoId)
+    }
+
+    async function elegirVinculaRemito(valor) {
+      const w = estado.wizard
+      w.vinculaRemito = valor
+      if (!valor) w.remitoVinculadoId = null
+      renderizarSiNoVinculo()
+      if (valor) await cargarRemitosVinculables()
+    }
+
+    // Los remitos ya vinculados a otra factura quedan fuera: si no, la misma
+    // mercadería podría contarse dos veces.
+    async function cargarRemitosVinculables() {
+      const w = estado.wizard
+      const cargandoEl = document.getElementById('wz-cargando-remitos')
+      cargandoEl.hidden = false
+      document.getElementById('wz-sin-remitos').hidden = true
+
+      const [resRemitos, resVinculados] = await Promise.all([
+        supabase.from('materia_prima_ingresos')
+          .select('id, fecha, razon_social, numero_doc')
+          .eq('tipo_doc', 'remito')
+          .eq('unidad_negocio_id', w.encabezado.unidadId)
+          .order('fecha', { ascending: false })
+          .limit(20),
+        supabase.from('materia_prima_ingresos')
+          .select('remito_vinculado_id')
+          .not('remito_vinculado_id', 'is', null),
+      ])
+
+      if (resRemitos.error || resVinculados.error) {
+        cargandoEl.hidden = true
+        console.error(resRemitos.error || resVinculados.error)
+        mostrarError('Error al cargar los remitos.')
+        return
+      }
+
+      const usados = new Set((resVinculados.data ?? []).map(v => v.remito_vinculado_id))
+      // Se piden 20 y se filtra acá porque cuántos están vinculados no se sabe
+      // de antemano; los 3 que quedan son los últimos 3 libres de verdad.
+      const libres = (resRemitos.data ?? []).filter(r => !usados.has(r.id)).slice(0, 3)
+
+      let itemsPorRemito = {}
+      if (libres.length) {
+        const { data: items } = await supabase
+          .from('materia_prima_items')
+          .select('ingreso_id, cantidad, insumos(nombre, unidad_medida)')
+          .in('ingreso_id', libres.map(r => r.id))
+        ;(items ?? []).forEach(it => {
+          ;(itemsPorRemito[it.ingreso_id] ??= []).push(it)
+        })
+      }
+
+      cargandoEl.hidden = true
+      document.getElementById('wz-sin-remitos').hidden = libres.length > 0
+      renderizarRemitos(libres, itemsPorRemito)
+    }
+
+    function renderizarRemitos(remitos, itemsPorRemito) {
+      const cont = document.getElementById('wz-lista-remitos')
+      cont.innerHTML = remitos.map(r => {
+        const items = itemsPorRemito[r.id] ?? []
+        const sel = estado.wizard.remitoVinculadoId === r.id
+        const meta = [formatearFecha(r.fecha), r.numero_doc].filter(Boolean).join(' · ')
+        return `
+          <button type="button" class="wz-remito ${sel ? 'wz-remito--sel' : ''}" data-id="${esc(r.id)}">
+            <div class="wz-remito__fila">
+              <span class="wz-remito__check">${sel ? '✓' : ''}</span>
+              <span style="flex:1; min-width:0;">
+                <span class="wz-remito__prov" style="display:block;">${esc(r.razon_social || '(sin proveedor)')}</span>
+                <span class="wz-remito__meta" style="display:block;">${esc(meta)}</span>
+              </span>
+            </div>
+            ${items.length ? `<div class="wz-remito__items">${items.map(it => `
+              <div class="wz-remito__item">
+                <span>${esc(it.insumos?.nombre || '(producto)')}</span>
+                <span>${esc(formatearCantidad(it.cantidad, it.insumos?.unidad_medida))}</span>
+              </div>`).join('')}</div>` : ''}
+          </button>`
+      }).join('')
+
+      cont.querySelectorAll('.wz-remito').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id
+          // Volver a tocar el mismo lo deselecciona.
+          estado.wizard.remitoVinculadoId = estado.wizard.remitoVinculadoId === id ? null : id
+          renderizarRemitos(remitos, itemsPorRemito)
+          renderizarSiNoVinculo()
+        })
+      })
+    }
+
+    function continuarDesdeVinculo() {
+      const w = estado.wizard
+      // Con remito vinculado la factura NO carga ítems: la mercadería ya la
+      // sumó el remito. Saltea el paso 3 y va derecho a confirmar.
+      irAPasoWz(w.remitoVinculadoId ? 'confirmar' : 'items')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — PASO 3: ÍTEMS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarCatalogoInsumos() {
+      // SIN filtrar por activo ni estado_alta: si un insumo inactivo no
+      // matcheara, se intentaría crear de nuevo y chocaría contra el índice
+      // único (lower(nombre), lower(coalesce(marca,''))).
+      const { data, error } = await supabase
+        .from('insumos')
+        .select('id, nombre, marca, unidad_medida, tipo')
+      if (error) { console.error(error); mostrarError('Error al cargar el catálogo de insumos.'); return }
+      estado.catalogoInsumos = data ?? []
+    }
+
+    function buscarEnCatalogo(nombre, marca) {
+      const clave = claveInsumo(nombre, marca)
+      return estado.catalogoInsumos.find(i => claveInsumo(i.nombre, i.marca) === clave) || null
+    }
+
+    function itemDesdeOcr(crudo) {
+      const match = buscarEnCatalogo(crudo.descripcion, crudo.marca)
+      const bultos    = numeroDesdeInput(crudo.cantidad_bultos)
+      const contenido = numeroDesdeInput(crudo.contenido_por_bulto)
+      return {
+        uid: nuevoUid(),
+        insumoId: match?.id ?? null,
+        esNuevo: !match,
+        nombre: crudo.descripcion || '',
+        marca: crudo.marca || '',
+        // Un insumo nuevo se crea siempre como materia_prima (decisión del
+        // módulo), así que siempre va a exigir lote.
+        tipo: match?.tipo ?? 'materia_prima',
+        unidadMedida: match?.unidad_medida ?? crudo.unidad_medida ?? 'kg',
+        modoDesglose: bultos != null && contenido != null,
+        bultos, contenido,
+        cantidad: numeroDesdeInput(crudo.cantidad_total),
+        lote: '', loteIlegible: false,
+        fichaTecnicaUrl: null, fotoLoteUrl: null,
+        nombreFicha: '', nombreFotoLote: '',
+        error: null,
+      }
+    }
+
+    function itemVacio() {
+      return {
+        uid: nuevoUid(), insumoId: null, esNuevo: true,
+        nombre: '', marca: '', tipo: 'materia_prima', unidadMedida: 'kg',
+        modoDesglose: false, bultos: null, contenido: null, cantidad: null,
+        lote: '', loteIlegible: false,
+        fichaTecnicaUrl: null, fotoLoteUrl: null,
+        nombreFicha: '', nombreFotoLote: '',
+        error: null,
+      }
+    }
+
+    function entrarAPasoItems() {
+      const w = estado.wizard
+      // Solo la primera vez: si se vuelve al paso 3, no se pisa lo editado.
+      if (!w.itemsInicializados) {
+        w.items = (w.itemsOcr ?? []).map(itemDesdeOcr)
+        w.itemsInicializados = true
+        w.itemAbierto = w.items[0]?.uid ?? null
+      }
+      renderizarItems()
+    }
+
+    function renderizarItems() {
+      const w = estado.wizard
+      const cont = document.getElementById('wz-lista-items')
+      const abiertoIdx = w.items.findIndex(i => i.uid === w.itemAbierto)
+
+      document.getElementById('wz-items-contador').textContent = w.items.length
+        ? `${abiertoIdx >= 0 ? abiertoIdx + 1 : '—'} de ${w.items.length}`
+        : 'Sin ítems'
+
+      cont.innerHTML = w.items.map(item =>
+        item.uid === w.itemAbierto ? htmlItemAbierto(item) : htmlItemCerrado(item)
+      ).join('')
+
+      cablearItems()
+    }
+
+    function chipTipoInsumo(item) {
+      return item.tipo === 'materia_prima'
+        ? '<span class="chip-tipo-insumo chip-tipo-insumo--mp">Materia prima</span>'
+        : '<span class="chip-tipo-insumo">Insumo</span>'
+    }
+
+    function textoCantidad(item) {
+      if (item.cantidad == null) return '—'
+      return formatearCantidad(item.cantidad, item.unidadMedida)
+    }
+
+    function htmlItemCerrado(item) {
+      const sub = [item.marca, item.tipo === 'materia_prima' ? 'Materia prima' : 'Insumo']
+        .filter(Boolean).join(' · ')
+      const chipLote = item.tipo !== 'materia_prima' ? ''
+        : item.loteIlegible ? '<span class="chip-lote chip-lote--ilegible">Ilegible</span>'
+        : item.lote ? `<span class="chip-lote">${esc(item.lote)}</span>`
+        : '<span class="chip-lote chip-lote--ilegible">Sin lote</span>'
+      return `
+        <div class="item-mp ${item.error ? 'item-mp--error' : ''}" data-uid="${item.uid}">
+          <div class="item-mp__cabecera" data-accion="abrir">
+            <div class="item-mp__info">
+              <div class="item-mp__nombre-fila">
+                <span class="item-mp__nombre">${esc(item.nombre || '(sin nombre)')}</span>
+                ${item.esNuevo ? '<span class="badge-nuevo">NUEVO</span>' : ''}
+              </div>
+              ${sub ? `<div class="item-mp__marca">${esc(sub)}</div>` : ''}
+            </div>
+            <div class="item-mp__derecha">
+              <div class="item-mp__cantidad">${esc(textoCantidad(item))}</div>
+              ${chipLote ? `<div style="margin-top:0.3125rem;">${chipLote}</div>` : ''}
+            </div>
+          </div>
+        </div>`
+    }
+
+    function htmlItemAbierto(item) {
+      const u = esc(item.unidadMedida)
+
+      // La unidad de medida vive en el catálogo, compartido por las 4
+      // empresas: solo se puede elegir cuando el insumo se va a CREAR.
+      const selectorUnidad = item.esNuevo
+        ? `<select data-campo="unidadMedida">${UNIDADES_MEDIDA.map(um =>
+            `<option value="${um}" ${um === item.unidadMedida ? 'selected' : ''}>${um}</option>`).join('')}</select>`
+        : `<span class="cantidad-fila__unidad">${u}</span>`
+
+      const cantidadHtml = item.modoDesglose
+        ? `<div class="cantidad-fila">
+             <input type="number" inputmode="decimal" step="any" min="0" data-campo="bultos" value="${item.bultos ?? ''}" placeholder="0">
+             <span class="cantidad-fila__unidad">bultos</span>
+             <span class="cantidad-fila__x">×</span>
+             <input type="number" inputmode="decimal" step="any" min="0" data-campo="contenido" value="${item.contenido ?? ''}" placeholder="0">
+             ${selectorUnidad}
+           </div>
+           <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(textoCantidad(item))}</span></div>
+           <button type="button" class="btn-item-secundario" data-accion="modo-directo">Cargar cantidad directa</button>`
+        : `<div class="cantidad-fila">
+             <input type="number" inputmode="decimal" step="any" min="0" data-campo="cantidad" value="${item.cantidad ?? ''}" placeholder="0">
+             ${selectorUnidad}
+           </div>
+           <button type="button" class="btn-item-secundario" data-accion="modo-desglose">Desglosar en bultos × contenido</button>`
+
+      // Nombre y marca editables solo si el insumo se va a crear. Si matcheó
+      // contra el catálogo, se muestra el nombre del catálogo tal cual.
+      const identidadHtml = item.esNuevo
+        ? `<div class="item-mp__bloque">
+             <div class="item-mp__bloque-label">Producto</div>
+             <input class="item-mp__texto-input" data-campo="nombre" value="${esc(item.nombre)}" placeholder="Nombre del producto">
+             <input class="item-mp__texto-input" data-campo="marca" value="${esc(item.marca)}" placeholder="Marca (opcional)" style="margin-top:0.5rem;">
+             <div class="item-mp__hint">ⓘ Se va a crear en el catálogo como materia prima, pendiente de revisar.</div>
+           </div>`
+        : ''
+
+      const loteHtml = item.tipo === 'materia_prima'
+        ? `<div class="item-mp__bloque">
+             <div class="item-mp__bloque-label">Lote <span class="badge-oblig">OBLIGATORIO</span></div>
+             <input class="item-mp__texto-input" data-campo="lote" value="${esc(item.lote)}"
+                    placeholder="Ej: L-2408-C14" ${item.loteIlegible ? 'disabled' : ''}>
+             <div class="item-mp__hint">ⓘ Copialo de la etiqueta del envase.</div>
+             <button type="button" class="btn-item-secundario ${item.loteIlegible ? 'btn-item-secundario--activo' : ''}" data-accion="lote-ilegible">
+               ${item.loteIlegible ? '✓ Lote ilegible / sin etiqueta' : 'Lote ilegible / sin etiqueta'}
+             </button>
+           </div>`
+        : `<div class="item-mp__hint" style="margin-top:0.75rem;">ⓘ Este producto no lleva lote.</div>`
+
+      return `
+        <div class="item-mp item-mp--abierto ${item.error ? 'item-mp--error' : ''}" data-uid="${item.uid}">
+          <div class="item-mp__cabecera" data-accion="cerrar">
+            <div class="item-mp__info">
+              <div class="item-mp__nombre-fila">
+                <span class="item-mp__nombre">${esc(item.nombre || '(sin nombre)')}</span>
+                ${item.esNuevo ? '<span class="badge-nuevo">NUEVO</span>' : ''}
+              </div>
+              ${item.marca ? `<div class="item-mp__marca">${esc(item.marca)}</div>` : ''}
+              ${chipTipoInsumo(item)}
+            </div>
+            <button type="button" class="btn-item-borrar" data-accion="borrar" title="Quitar ítem" aria-label="Quitar ítem">🗑</button>
+          </div>
+
+          <div class="item-mp__cuerpo">
+            ${identidadHtml}
+
+            <div class="item-mp__bloque">
+              <div class="item-mp__bloque-label">Cantidad</div>
+              ${cantidadHtml}
+            </div>
+
+            ${loteHtml}
+
+            <div class="item-mp__bloque">
+              <div class="item-mp__bloque-label">Adjuntos <span style="font-weight:500; text-transform:none; letter-spacing:0;">opcionales</span></div>
+              <div class="adjuntos-fila">
+                <button type="button" class="btn-adjunto ${item.fichaTecnicaUrl ? 'btn-adjunto--cargado' : ''}" data-accion="adjuntar-ficha">
+                  <span class="btn-adjunto__icono">📄</span>
+                  <span class="btn-adjunto__texto">${item.fichaTecnicaUrl ? esc(item.nombreFicha || 'Cargada') : 'Ficha técnica'}</span>
+                </button>
+                <button type="button" class="btn-adjunto ${item.fotoLoteUrl ? 'btn-adjunto--cargado' : ''}" data-accion="adjuntar-lote">
+                  <span class="btn-adjunto__icono">📷</span>
+                  <span class="btn-adjunto__texto">${item.fotoLoteUrl ? esc(item.nombreFotoLote || 'Cargada') : 'Foto etiqueta / lote'}</span>
+                </button>
+              </div>
+              <input type="file" accept="image/*,application/pdf" data-input="ficha" hidden>
+              <input type="file" accept="image/*" data-input="lote" hidden>
+            </div>
+
+            ${item.error ? `<div class="item-mp__error">⚠ ${esc(item.error)}</div>` : ''}
+          </div>
+        </div>`
+    }
+
+    function itemPorUid(uid) {
+      return estado.wizard.items.find(i => i.uid === uid) || null
+    }
+
+    // Recalcula el total del modo desglosado sin re-renderizar: si re-dibujara
+    // la tarjeta en cada tecla, el input perdería el foco.
+    function actualizarTotalEnVivo(tarjeta, item) {
+      if (!item.modoDesglose) return
+      item.cantidad = (item.bultos != null && item.contenido != null)
+        ? item.bultos * item.contenido
+        : null
+      const nodo = tarjeta.querySelector('[data-rol="total"]')
+      if (nodo) nodo.textContent = textoCantidad(item)
+    }
+
+    function cablearItems() {
+      const cont = document.getElementById('wz-lista-items')
+
+      cont.querySelectorAll('.item-mp').forEach(tarjeta => {
+        const item = itemPorUid(tarjeta.dataset.uid)
+        if (!item) return
+
+        // ── Acciones (re-renderizan) ──────────────────────────────────────
+        tarjeta.querySelectorAll('[data-accion]').forEach(el => {
+          el.addEventListener('click', (ev) => {
+            const accion = el.dataset.accion
+            if (accion === 'abrir' || accion === 'cerrar' || accion === 'borrar') ev.stopPropagation()
+
+            if (accion === 'abrir')  { estado.wizard.itemAbierto = item.uid; renderizarItems() }
+            if (accion === 'cerrar') { estado.wizard.itemAbierto = null; renderizarItems() }
+            if (accion === 'borrar') {
+              estado.wizard.items = estado.wizard.items.filter(i => i.uid !== item.uid)
+              if (estado.wizard.itemAbierto === item.uid) estado.wizard.itemAbierto = null
+              renderizarItems()
+            }
+            if (accion === 'modo-desglose') {
+              item.modoDesglose = true
+              // Se arranca de cero: adivinar un desglose desde el total sería
+              // inventar un dato que el papel no dice.
+              item.bultos = null; item.contenido = null; item.cantidad = null
+              renderizarItems()
+            }
+            if (accion === 'modo-directo') {
+              item.modoDesglose = false
+              item.bultos = null; item.contenido = null
+              renderizarItems()
+            }
+            if (accion === 'lote-ilegible') {
+              item.loteIlegible = !item.loteIlegible
+              // El CHECK chk_lote_ilegible_sin_lote prohíbe tener los dos.
+              if (item.loteIlegible) item.lote = ''
+              renderizarItems()
+            }
+            if (accion === 'adjuntar-ficha') tarjeta.querySelector('[data-input="ficha"]').click()
+            if (accion === 'adjuntar-lote')  tarjeta.querySelector('[data-input="lote"]').click()
+          })
+        })
+
+        // ── Campos de texto y número (NO re-renderizan) ───────────────────
+        tarjeta.querySelectorAll('[data-campo]').forEach(el => {
+          el.addEventListener('input', () => {
+            const campo = el.dataset.campo
+            if (campo === 'bultos' || campo === 'contenido' || campo === 'cantidad') {
+              item[campo] = numeroDesdeInput(el.value)
+              actualizarTotalEnVivo(tarjeta, item)
+            } else {
+              item[campo] = el.value
+            }
+          })
+          // Al terminar de escribir el nombre o la marca de un ítem NUEVO se
+          // reintenta el match: puede que ahora sí exista en el catálogo.
+          if (el.dataset.campo === 'nombre' || el.dataset.campo === 'marca') {
+            el.addEventListener('change', () => {
+              if (!item.esNuevo) return
+              const match = buscarEnCatalogo(item.nombre, item.marca)
+              if (!match) return
+              item.insumoId = match.id
+              item.esNuevo = false
+              item.tipo = match.tipo
+              item.unidadMedida = match.unidad_medida
+              // Se adopta el nombre del catálogo: es el que se va a mostrar
+              // de acá en adelante y el que ya usan los ingresos anteriores.
+              item.nombre = match.nombre
+              item.marca  = match.marca || ''
+              renderizarItems()
+            })
+          }
+          if (el.dataset.campo === 'unidadMedida') {
+            el.addEventListener('change', () => { item.unidadMedida = el.value; renderizarItems() })
+          }
+        })
+
+        // ── Adjuntos ──────────────────────────────────────────────────────
+        tarjeta.querySelectorAll('[data-input]').forEach(input => {
+          input.addEventListener('change', async () => {
+            const archivo = input.files[0]
+            input.value = ''
+            if (!archivo) return
+            const esFicha = input.dataset.input === 'ficha'
+            try {
+              const url = await subirArchivoMp(archivo)
+              if (esFicha) { item.fichaTecnicaUrl = url; item.nombreFicha = archivo.name }
+              else         { item.fotoLoteUrl = url;    item.nombreFotoLote = archivo.name }
+              renderizarItems()
+            } catch (e) {
+              console.error(e)
+              mostrarError(e.message)
+            }
+          })
+        })
+      })
+    }
+
+    function agregarItemManual() {
+      const item = itemVacio()
+      estado.wizard.items.push(item)
+      estado.wizard.itemAbierto = item.uid
+      renderizarItems()
+    }
+
+    // Las tres validaciones son las mismas que hace la base — se chequean acá
+    // para poder señalar la tarjeta concreta en vez de mostrar el error crudo
+    // de un trigger.
+    function validarItems() {
+      const w = estado.wizard
+      let primeroConError = null
+
+      w.items.forEach(item => {
+        item.error = null
+        if (!String(item.nombre || '').trim()) {
+          item.error = 'Falta el nombre del producto.'
+        } else if (item.cantidad == null || !(item.cantidad > 0)) {
+          item.error = 'La cantidad tiene que ser mayor a cero.'
+        } else if (item.tipo === 'materia_prima' && !item.loteIlegible && !String(item.lote || '').trim()) {
+          item.error = 'Cargá el lote o marcalo como ilegible.'
+        }
+        if (item.error && !primeroConError) primeroConError = item.uid
+      })
+
+      if (primeroConError) {
+        w.itemAbierto = primeroConError
+        renderizarItems()
+        mostrarError('Revisá los ítems marcados en rojo.')
+        return false
+      }
+      return true
+    }
+
+    function continuarDesdeItems() {
+      const w = estado.wizard
+      if (!w.items.length) return mostrarError('Agregá al menos un ítem.')
+      if (!validarItems()) return
+      irAPasoWz('confirmar')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — PASO 4: CONFIRMACIÓN Y GUARDADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function renderizarConfirmacion() {
+      const w = estado.wizard
+      const e = w.encabezado
+
+      const filas = [
+        ['Tipo',      TIPOS_DOC[e.tipoDoc]?.label || '—'],
+        ['Número',    e.numeroDoc || '—'],
+        ['Proveedor', e.razonSocial || '—'],
+        ['Fecha',     e.fecha ? formatearFecha(e.fecha) : '—'],
+        ['Unidad',    nombreUnidad(e.unidadId) || '—'],
+      ]
+      if (w.remitoVinculadoId) {
+        filas.push(['Vinculado a', 'Un remito ya cargado'])
+      } else {
+        filas.push(['Ítems', String(w.items.length)])
+      }
+
+      document.getElementById('wz-resumen').innerHTML = filas.map(([k, v]) => `
+        <div class="wz-resumen__fila">
+          <span class="wz-resumen__k">${esc(k)}</span>
+          <span class="wz-resumen__v">${esc(v)}</span>
+        </div>`).join('')
+
+      const detalleTitulo = document.getElementById('wz-detalle-titulo')
+      const detalle = document.getElementById('wz-detalle-items')
+
+      if (w.remitoVinculadoId) {
+        detalleTitulo.hidden = true
+        detalle.innerHTML = `
+          <div class="wz-aviso wz-aviso--neutro">
+            Esta factura queda vinculada al remito, así que no vuelve a sumar mercadería. Las cantidades ya las cargó el remito.
+          </div>`
+        return
+      }
+
+      detalleTitulo.hidden = false
+      detalle.innerHTML = w.items.map(item => {
+        const lote = item.tipo !== 'materia_prima' ? 'No lleva'
+          : item.loteIlegible ? 'Ilegible' : (item.lote || '—')
+        return `
+          <div class="wz-conf-item">
+            <div class="wz-conf-item__fila">
+              <div style="min-width:0;">
+                <div class="item-mp__nombre-fila">
+                  <span class="item-mp__nombre">${esc(item.nombre)}</span>
+                  ${item.esNuevo ? '<span class="badge-nuevo">NUEVO</span>' : ''}
+                </div>
+                ${item.marca ? `<div class="item-mp__marca">${esc(item.marca)}</div>` : ''}
+              </div>
+              <span class="item-mp__cantidad">${esc(textoCantidad(item))}</span>
+            </div>
+            <div class="wz-conf-item__lote"><span>Lote</span><span>${esc(lote)}</span></div>
+          </div>`
+      }).join('')
+    }
+
+    function avisoGuardado(texto) {
+      const el = document.getElementById('wz-error-guardado')
+      el.textContent = texto
+      el.hidden = !texto
+    }
+
+    // Crea los insumos con badge NUEVO y devuelve un Map clave -> id. Dedupe
+    // por clave normalizada: dos renglones del mismo remito que sean el mismo
+    // producto se crean UNA sola vez (el índice único los rechazaría).
+    async function crearInsumosNuevos(items) {
+      const porClave = new Map()
+      items.filter(i => i.esNuevo).forEach(i => {
+        const clave = claveInsumo(i.nombre, i.marca)
+        if (!porClave.has(clave)) {
+          porClave.set(clave, {
+            nombre: String(i.nombre).trim(),
+            marca: String(i.marca || '').trim() || null,
+            unidad_medida: i.unidadMedida,
+            // La RLS solo acepta esta combinación en el insert.
+            tipo: 'materia_prima',
+            estado_alta: 'pendiente_revision',
+            activo: true,
+          })
+        }
+      })
+      if (!porClave.size) return new Map()
+
+      const { data, error } = await supabase
+        .from('insumos')
+        .insert([...porClave.values()])
+        .select('id, nombre, marca')
+      if (error) throw new Error(`No se pudieron crear los productos nuevos: ${error.message}`)
+
+      const mapa = new Map()
+      ;(data ?? []).forEach(row => mapa.set(claveInsumo(row.nombre, row.marca), row.id))
+      return mapa
+    }
+
+    function filaItemParaBase(item, ingresoId) {
+      // chk_presentacion_coherente: si el desglose no da exactamente el total,
+      // se mandan los dos en null y queda solo la cantidad. Es la misma regla
+      // que ya aplica la Edge Function sobre lo que lee.
+      let bultos = item.modoDesglose ? item.bultos : null
+      let contenido = item.modoDesglose ? item.contenido : null
+      if (bultos == null || contenido == null || Math.abs(bultos * contenido - item.cantidad) > 0.01) {
+        bultos = null
+        contenido = null
+      }
+      return {
+        ingreso_id: ingresoId,
+        insumo_id: item.insumoId,
+        cantidad: item.cantidad,
+        lote: item.loteIlegible ? null : (String(item.lote || '').trim() || null),
+        lote_ilegible: !!item.loteIlegible,
+        ficha_tecnica_url: item.fichaTecnicaUrl,
+        foto_lote_url: item.fotoLoteUrl,
+        cantidad_bultos: bultos,
+        contenido_por_bulto: contenido,
+      }
+    }
+
+    async function confirmarIngreso() {
+      const w = estado.wizard
+      if (w.guardando) return
+
+      // Con remito vinculado no hay ítems que validar: la factura no suma.
+      if (!w.remitoVinculadoId && !validarItems()) { irAPasoWz('items'); return }
+
+      const btn = document.getElementById('btn-confirmar-ingreso')
+      w.guardando = true
+      btn.disabled = true
+      btn.textContent = 'Guardando…'
+      avisoGuardado('')
+
+      let ingresoId = null
+      try {
+        // 1. Insumos nuevos (necesarios para tener insumo_id en los ítems).
+        const idsNuevos = await crearInsumosNuevos(w.items)
+        w.items.forEach(item => {
+          if (!item.esNuevo) return
+          const id = idsNuevos.get(claveInsumo(item.nombre, item.marca))
+          if (!id) throw new Error(`No se pudo crear el producto "${item.nombre}".`)
+          item.insumoId = id
+        })
+
+        // 2. El ingreso.
+        const e = w.encabezado
+        const { data: ingreso, error: errorIngreso } = await supabase
+          .from('materia_prima_ingresos')
+          .insert({
+            fecha: e.fecha,
+            tipo_doc: e.tipoDoc,
+            numero_doc: e.numeroDoc || null,
+            razon_social: e.razonSocial,
+            nombre_fantasia: e.nombreFantasia || null,
+            unidad_negocio_id: e.unidadId,
+            foto_url: w.foto.url,
+            remito_vinculado_id: w.remitoVinculadoId,
+            empleado_id: estado.miEmpleadoId,
+          })
+          .select('id')
+          .single()
+        if (errorIngreso) throw new Error(`No se pudo guardar el ingreso: ${errorIngreso.message}`)
+        ingresoId = ingreso.id
+
+        // 3. Los ítems, en UN solo insert: un array es una sola sentencia, así
+        // que entran todos o no entra ninguno.
+        if (!w.remitoVinculadoId && w.items.length) {
+          const filas = w.items.map(item => filaItemParaBase(item, ingresoId))
+          const { error: errorItems } = await supabase.from('materia_prima_items').insert(filas)
+          if (errorItems) throw new Error(`No se pudieron guardar los ítems: ${errorItems.message}`)
+        }
+
+        mostrarExito('Ingreso cargado.')
+        cerrarWizard()
+        await cargarIngresos()
+
+      } catch (e) {
+        console.error(e)
+
+        // Si el ingreso ya se creó pero los ítems fallaron, se borra: un
+        // ingreso sin ítems contaría en el listado como una carga real. Los
+        // insumos nuevos NO se revierten a propósito — son entradas de
+        // catálogo en pendiente_revision, inofensivas, y borrarlas podría
+        // romperle una carga simultánea a otra persona.
+        let extra = ''
+        if (ingresoId) {
+          const { error: errorBorrado } = await supabase
+            .from('materia_prima_ingresos').delete().eq('id', ingresoId)
+          extra = errorBorrado
+            ? ` El ingreso quedó cargado SIN ítems (id ${ingresoId}) y hay que borrarlo a mano.`
+            : ' No se guardó nada del ingreso, podés reintentar.'
+        }
+        avisoGuardado(`${e.message}${extra}`)
+      }
+
+      w.guardando = false
+      btn.disabled = false
+      btn.textContent = 'Confirmar ingreso'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — LISTENERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    document.getElementById('btn-abrir-wizard').addEventListener('click', abrirWizard)
+    document.getElementById('btn-wizard-volver').addEventListener('click', volverAtrasWizard)
+
+    document.getElementById('btn-sacar-foto').addEventListener('click', () => {
+      document.getElementById('input-foto-camara').click()
+    })
+    document.getElementById('btn-elegir-galeria').addEventListener('click', () => {
+      document.getElementById('input-foto-galeria').click()
+    })
+    ;['input-foto-camara', 'input-foto-galeria'].forEach(id => {
+      document.getElementById(id).addEventListener('change', (ev) => {
+        tomarArchivoComprobante(ev.target.files[0])
+        // Se limpia para que volver a elegir el MISMO archivo dispare el change.
+        ev.target.value = ''
+      })
+    })
+    document.getElementById('btn-repetir-foto').addEventListener('click', () => {
+      estado.wizard.foto = { archivo: null, url: null }
+      resetearPaso1()
+    })
+    document.getElementById('btn-sin-comprobante').addEventListener('click', () => {
+      estado.wizard.encabezado.tipoDoc = 'sin_comprobante'
+      document.getElementById('wz-campo-tipo-doc').hidden = true
+      document.getElementById('wz-datos-subtitulo').textContent = 'Cargá los datos del comprobante a mano.'
+      irAPasoWz('datos')
+    })
+    document.getElementById('btn-leer-ocr').addEventListener('click', leerConIA)
+
+    document.getElementById('btn-datos-continuar').addEventListener('click', continuarDesdeDatos)
+    // Cambiar de unidad invalida el remito ya elegido: los remitos que se
+    // ofrecen son los de una unidad concreta.
+    document.getElementById('campo-unidad-negocio').addEventListener('change', () => {
+      if (!estado.wizard) return
+      estado.wizard.remitoVinculadoId = null
+      estado.wizard.vinculaRemito = null
+    })
+
+    document.querySelectorAll('#wz-si-no-vinculo button').forEach(btn => {
+      btn.addEventListener('click', () => elegirVinculaRemito(btn.dataset.valor === 'si'))
+    })
+    document.getElementById('btn-vinculo-continuar').addEventListener('click', continuarDesdeVinculo)
+
+    document.getElementById('btn-agregar-item').addEventListener('click', agregarItemManual)
+    document.getElementById('btn-items-continuar').addEventListener('click', continuarDesdeItems)
+
+    document.getElementById('btn-confirmar-ingreso').addEventListener('click', confirmarIngreso)
+    document.getElementById('btn-volver-corregir').addEventListener('click', () => {
+      irAPasoWz(estado.wizard.remitoVinculadoId ? 'vinculo' : 'items')
+    })
 
     init()
   </script>
