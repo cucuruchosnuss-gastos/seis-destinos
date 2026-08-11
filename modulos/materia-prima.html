@@ -1185,6 +1185,11 @@
           <div class="wz-campo__label">Razón social</div>
           <input type="text" id="campo-razon-social" placeholder="Nombre del proveedor">
           <div class="wz-campo__ocr">leído de la foto</div>
+          <!-- Aviso suave: la columna es nullable y el flujo "sin comprobante"
+               justamente arranca sin saber el proveedor. No bloquea. -->
+          <div class="wz-aviso wz-aviso--neutro" id="wz-aviso-sin-proveedor" hidden style="margin-top:0.5rem;">
+            Sin proveedor el ingreso va a quedar más difícil de encontrar después. Si lo sabés, cargalo.
+          </div>
         </div>
 
         <div class="wz-campo" id="wz-campo-nombre-fantasia">
@@ -1714,6 +1719,7 @@
         }
       }
 
+      if (id === 'datos')     actualizarAvisoSinProveedor()
       if (id === 'vinculo')   entrarAPasoVinculo()
       if (id === 'items')     entrarAPasoItems()
       if (id === 'confirmar') renderizarConfirmacion()
@@ -1928,16 +1934,26 @@
       e.unidadId       = document.getElementById('campo-unidad-negocio').value
     }
 
+    // Se exige solo lo que la base exige: fecha, tipo_doc y unidad_negocio_id
+    // son NOT NULL (empleado_id lo pone el código). razon_social, numero_doc,
+    // nombre_fantasia y foto_url son nullable — pedir la razón social rompería
+    // el flujo "sin comprobante", que arranca justamente cuando llegó
+    // mercadería sin papel y sin datos claros.
     function continuarDesdeDatos() {
       leerEncabezadoDelForm()
       const e = estado.wizard.encabezado
 
-      if (!e.tipoDoc)     return mostrarError('Elegí el tipo de documento.')
-      if (!e.razonSocial) return mostrarError('Completá la razón social del proveedor.')
-      if (!e.fecha)       return mostrarError('Completá la fecha del comprobante.')
-      if (!e.unidadId)    return mostrarError('Elegí la unidad de negocio.')
+      if (!e.tipoDoc)  return mostrarError('Elegí el tipo de documento.')
+      if (!e.fecha)    return mostrarError('Completá la fecha del comprobante.')
+      if (!e.unidadId) return mostrarError('Elegí la unidad de negocio.')
 
       irAPasoWz(esFactura(e.tipoDoc) ? 'vinculo' : 'items')
+    }
+
+    // Aviso suave, sin bloquear: solo aparece cuando el campo quedó vacío.
+    function actualizarAvisoSinProveedor() {
+      const vacio = !document.getElementById('campo-razon-social').value.trim()
+      document.getElementById('wz-aviso-sin-proveedor').hidden = !vacio
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2582,7 +2598,9 @@
             fecha: e.fecha,
             tipo_doc: e.tipoDoc,
             numero_doc: e.numeroDoc || null,
-            razon_social: e.razonSocial,
+            // Nullable: sin proveedor va null y no cadena vacía, para que el
+            // listado lo trate como "no se sabe" y no como un nombre en blanco.
+            razon_social: e.razonSocial || null,
             nombre_fantasia: e.nombreFantasia || null,
             unidad_negocio_id: e.unidadId,
             foto_url: w.foto.url,
@@ -2663,6 +2681,7 @@
     document.getElementById('btn-leer-ocr').addEventListener('click', leerConIA)
 
     document.getElementById('btn-datos-continuar').addEventListener('click', continuarDesdeDatos)
+    document.getElementById('campo-razon-social').addEventListener('input', actualizarAvisoSinProveedor)
     // Cambiar de unidad invalida el remito ya elegido: los remitos que se
     // ofrecen son los de una unidad concreta.
     document.getElementById('campo-unidad-negocio').addEventListener('change', () => {
