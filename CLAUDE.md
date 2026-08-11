@@ -85,15 +85,18 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
 - `caja_solicitudes_movimiento`: id, origen_empleado_id, destino_empleado_id, monto, moneda, medio_pago, fecha, descripcion, estado, creado_por, motivo_rechazo, respondido_por, respondido_en, created_at, cuenta_origen_id, cuenta_destino_id
   - Regla de negocio: transferencias entre personas requieren que al menos una de las dos partes sea `super_admin`. EXCEPCIÓN: las que involucran a la Cuenta de Empresa no exigen super_admin de contraparte, y cualquier super_admin puede aceptarlas en su nombre (auto-aceptación permitida) — ver sección Sistema de permisos.
 
-**Materia Prima / Insumos** (esquema completo con RLS. Módulo de INGRESO construido en etapa 1: solo listado de ingresos, lectura. El stock y la administración del catálogo se mudan a un módulo aparte, todavía no construido.)
+**Materia Prima / Insumos** (esquema completo con RLS. El módulo de INGRESO tiene el listado y el **wizard de carga completo** — ver el detalle funcional en la sección Módulos. El stock y la administración del catálogo se mudan a un módulo aparte, todavía no construido.)
 - `insumos`: id, nombre, marca, unidad_medida, tipo, activo, estado_alta, created_at. CATÁLOGO ÚNICO COMPARTIDO por las 4 unidades de negocio — NO tiene unidad_negocio_id (se eliminó a propósito).
   - `tipo`: `'materia_prima'` (exige lote) | `'insumo'` (no lleva lote). Materia prima es lo que entra a la receta (harina, azúcar, colorante, grasa, lecitina, fécula, cacao, esencias, bicarbonato); insumo es lo auxiliar (cajas, bolsas, limpieza, repuestos).
   - `estado_alta`: `'activo'` | `'pendiente_revision'`. Los productos creados al vuelo durante una carga entran como `'pendiente_revision'`.
+    - **La policy de INSERT acepta CUALQUIER `tipo` mientras `estado_alta` sea `'pendiente_revision'`.** (Una versión anterior de este documento decía que forzaba `tipo='materia_prima'` — ya no es así.) El control real no es imponer el tipo, sino que **todo producto creado al vuelo quede marcado para revisar**: quien carga elige si es materia prima o insumo en la tarjeta del ítem, y alguien lo confirma después. Forzar el tipo obligaba a marcar "lote ilegible" en cosas que no llevan lote, como una caja de cartón.
   - Índice único: `(lower(nombre), lower(coalesce(marca,'')))`.
   - Los insumos NO se borran nunca (romperían la trazabilidad histórica): se desactivan con `activo=false`.
-- `materia_prima_ingresos`: id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, empleado_id, created_at.
+- `materia_prima_ingresos`: id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, proveedor_id, unidad_negocio_id, foto_url, remito_vinculado_id, empleado_id, editado_por, editado_en, created_at.
   - `tipo_doc`: `'remito'` | `'factura_a'` | `'factura_x'` | `'sin_comprobante'`
   - `remito_vinculado_id`: autorreferencia. Cuando una factura corresponde a un remito ya cargado, apunta a ese remito y NO vuelve a sumar stock (evita duplicar cantidades cuando llegan los dos documentos por la misma mercadería).
+  - `proveedor_id` (uuid, nullable, FK a `proveedores`): vínculo con el catálogo de proveedores. **`razon_social` se sigue guardando además**, como texto histórico de lo que decía el comprobante — puede no coincidir exactamente con el nombre del proveedor en la tabla, y esa diferencia es dato, no ruido.
+  - `editado_por` (uuid) y `editado_en` (timestamptz): auditoría de edición, las completa el trigger `trg_marcar_edicion_ingreso`. **`editado_por` va SIN FK a `empleados` a propósito**: la tabla ya tiene `empleado_id` con FK y una segunda rompería los embeds de PostgREST por ambigüedad (mismo criterio que `gastos.anulado_por`). El nombre se resuelve contra `v_empleados_publico`, NUNCA con un embed.
 - `materia_prima_items`: id, ingreso_id, insumo_id, cantidad, lote, lote_ilegible, ficha_tecnica_url, foto_lote_url, cantidad_bultos, contenido_por_bulto, created_at. NO tiene unidad_medida (se eliminó: la unidad vive solo en el catálogo, para no sumar kg con bolsas).
   - `cantidad` siempre está en la unidad base del catálogo.
   - `cantidad_bultos` / `contenido_por_bulto`: presentación opcional ("200 bolsas × 25 kg"). CHECK `chk_presentacion_coherente`: si están cargados, `cantidad` debe ser igual a `cantidad_bultos * contenido_por_bulto`.
@@ -101,10 +104,18 @@ Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos cen
   - `lote_ilegible`: para etiquetas rotas o borrosas. CHECK `chk_lote_ilegible_sin_lote`: no puede estar en true y tener lote a la vez.
   - `ficha_tecnica_url` y `foto_lote_url` son adjuntos SEPARADOS y opcionales.
 - Trigger `trg_validar_item_materia_prima` → `fn_validar_item_materia_prima()` (SECURITY DEFINER): si el insumo es `tipo='materia_prima'`, exige lote cargado o `lote_ilegible=true`. Se valida solo al insertar/actualizar el ítem: si después alguien cambia el tipo de un insumo del catálogo, los ítems viejos no se re-validan.
+- Trigger `trg_marcar_edicion_ingreso` → `fn_marcar_edicion_ingreso()`: BEFORE UPDATE sobre `materia_prima_ingresos`, completa `editado_por` y `editado_en`. No lo escribe el frontend.
+- **Visibilidad de los ingresos (cambió — la versión anterior de este documento decía que se veía todo lo de la unidad):** con `materia_prima:cargar` la persona ve SOLO los ingresos que cargó ella; con `materia_prima:ver_todo` ve los de todas las personas, en las unidades de su alcance.
+- Funciones propias del módulo:
+  - `mi_empleado_id()` — SECURITY DEFINER. Devuelve el `empleado_id` del usuario actual sin chocar con el RLS de `empleados`, que solo deja leer la fila propia. La usan las policies del módulo.
+  - `remitos_vinculables(p_unidad_negocio_id)` — SECURITY DEFINER. Devuelve los 3 últimos remitos SIN vincular de esa unidad, con sus ítems en un `jsonb` (`[{nombre, marca, cantidad, unidad}]`), a quien tenga `materia_prima:cargar` ahí. **Existe porque el listado muestra solo lo propio pero el vínculo remito↔factura necesita ver los remitos de los compañeros**: el de depósito carga el remito y el de administración la factura. Devuelve a propósito filas que la persona NO ve en el listado general — por eso su **uso está acotado al paso del vínculo del wizard y no debe usarse para nada más**. Todo el filtrado (que sean remitos, de esa unidad, sin vincular, el orden y el tope de 3) vive del lado del servidor: el frontend no lo replica.
 - Vistas (ambas con `security_invoker=true`):
   - `v_stock_insumos` (insumo_id, insumo_nombre, marca, unidad_medida, unidad_negocio_id, cantidad_total) — excluye ingresos con `remito_vinculado_id` no nulo para no duplicar.
   - `v_stock_insumos_presentacion` — lo mismo + contenido_por_bulto, bultos.
 - Decisión de diseño explícita: el módulo de Materia Prima NO captura precios, importes, IVA ni moneda, y NO toca gastos ni caja. Solo cantidades. Está excluido deliberadamente en esta etapa.
+- Pendientes conocidos del módulo:
+  - **Fotos huérfanas en Storage**: si alguien reemplaza la foto a mitad del wizard, la anterior ya se subió y queda en el bucket. Limpieza pendiente, no urgente — borrar de Storage es destructivo y se decidió no hacerlo automático.
+  - **No existe pantalla de edición de un ingreso**, así que `editado_en` está siempre en null por ahora. La columna y el trigger están listos para cuando se agregue.
 
 ### Vistas
 - `v_caja_saldos` (empleado_id, moneda, saldo), `v_caja_saldos_cuenta` (cuenta_id, saldo), `v_caja_saldos_medio` (empleado_id, moneda, medio_pago, saldo)
@@ -306,10 +317,14 @@ PENDIENTE de Materia Prima: las 4 tareas ya se pueden otorgar desde Accesos, per
    - Gates de permiso de estas pantallas: "Ver todos los proveedores" con `cuentas_corrientes:ver_todo` (muestra saldos de toda la empresa); editar un proveedor con `cuentas_corrientes:alta_proveedor`, la misma tarea que crear uno.
 4. **Accesos** (`modulos/accesos.html`, soloSuperAdmin): aprobación de solicitudes de registro y gestión de módulos + tareas granulares por usuario
 5. **Empleados** (`modulos/empleados.html`): directorio agrupado por unidad de negocio, ficha con datos de Naaloo, importación de Excel de Naaloo
-6. **Ingreso — Insumos / Materia Prima** (`modulos/materia-prima.html`, tile "Ingreso", clave `materia-prima`): etapa 1 construida — SOLO el listado de ingresos de mercadería, lectura, con detalle en modal (ítems, lotes, foto del comprobante). El catálogo y el stock se mudan a un módulo aparte todavía no construido — este módulo no los muestra. Sin precios ni importes por decisión de diseño (ver sección de tablas).
+6. **Ingreso — Insumos / Materia Prima** (`modulos/materia-prima.html`, tile "Ingreso", clave `materia-prima`): listado de ingresos con detalle en modal, y **wizard de carga completo**. El catálogo y el stock se mudan a un módulo aparte todavía no construido — este módulo no los muestra. Sin precios ni importes por decisión de diseño (ver sección de tablas).
+   - **Wizard, 4 pasos**: comprobante (foto → OCR vía `ocr-materia-prima`, o "sin comprobante") → encabezado → vínculo con remito, solo si es factura → ítems → confirmación. El paso del vínculo **se saltea solo** cuando no hay remitos vinculables, para no preguntar algo que no tiene respuesta posible.
+   - **Ítems**: los que devuelve el OCR se matchean contra el catálogo por nombre + marca normalizados (minúsculas, espacios colapsados). Los que no matchean se crean al vuelo con badge NUEVO y selector de tipo, siempre en `pendiente_revision`. El lote se tipea a mano y es obligatorio solo para `tipo='materia_prima'`.
+   - **Proveedores**: se matchean por CUIT y, si no, por razón social normalizada — mismo criterio que gastos.html. Si no existe, se crea con `crear_proveedor_pendiente` y queda para aprobar en Cuentas Corrientes. **OJO: NO confundir con `crear_proveedor_activo`**, que es la de cuentas-corrientes.html y da de alta directo. Si el alta falla, el ingreso se guarda igual con `proveedor_id` en null y se avisa: perder la carga de mercadería por no poder dar de alta un proveedor sería peor.
+   - **El listado FUSIONA en una sola fila el remito y la factura vinculada a él**: son dos comprobantes de la misma entrega, y la base son los datos del remito (es el que trae los ítems). Los dos chips de tipo van juntos y el modal lista ambos comprobantes, cada uno con su foto. Casos borde cubiertos: la factura queda sola y avisada cuando el RLS oculta su remito, y si más de una factura apuntara al mismo remito aparece un chip de alerta — esa mercadería podría estar facturada dos veces.
 
 ### Planificados
-1. **Materia Prima — etapas siguientes**: etapa 2 = wizard de carga de ingresos (con OCR vía `ocr-materia-prima`); etapa 3 = alta/edición del catálogo de insumos. El stock y la administración del catálogo se mudan a un módulo aparte, todavía no construido.
+1. **Materia Prima — lo que falta**: la pantalla de edición de un ingreso (la columna `editado_en` y su trigger ya existen, esperándola), el gateo de UI por tareas dentro del módulo, y el alta/edición del catálogo de insumos. El stock y la administración del catálogo se mudan a un módulo aparte, todavía no construido.
 2. Producción (futuro)
 3. Salamasa (futuro)
 4. Mantenimiento de máquinas (futuro)
