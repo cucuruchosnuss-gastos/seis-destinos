@@ -617,7 +617,8 @@
       modal: null, // { modo: 'aprobar' | 'editar', solicitud?, empleado, esNuevoEmpleado,
                    //   modulosElegidos: Set<clave>, unidadElegida,
                    //   tareasElegidas: Set<'modulo:tarea'>,
-                   //   alcanceTodas: bool, alcanceUnidades: Set<uuid> (solo empleados:ver_editar) }
+                   //   alcances: Map<'modulo:tarea', { todas: bool, unidades: Set<uuid> }>
+                   //     — una entrada por cada tarea `conAlcance` del catálogo }
     }
 
     // Se cargan desde la tabla `modulos` (fetch al principio de init(),
@@ -707,6 +708,19 @@
         ],
       },
       {
+        grupo: 'Insumos / Materia Prima',
+        // OJO con los guiones: acá el módulo es 'materia_prima' con guión BAJO,
+        // que es lo que guarda empleado_tareas.modulo. La clave del módulo en
+        // `modulos` / empleado_modulos es 'materia-prima' con guión MEDIO. Son
+        // namespaces distintos (ver CLAUDE.md), no mezclarlos.
+        tareas: [
+          { modulo: 'materia_prima', tarea: 'cargar',              label: 'Registrar ingresos de materia prima (y ver los propios)', conAlcance: true },
+          { modulo: 'materia_prima', tarea: 'ver_todo',            label: 'Ver los ingresos de todas las personas',                  conAlcance: true },
+          { modulo: 'materia_prima', tarea: 'gestionar_catalogo',  label: 'Dar de alta y editar insumos del catálogo' },
+          { modulo: 'materia_prima', tarea: 'editar_anular',       label: 'Corregir o anular ingresos ya cargados',                  conAlcance: true },
+        ],
+      },
+      {
         grupo: 'Facturas pendientes',
         nota: 'válida desde Gastos y desde Cuentas Corrientes',
         tareas: [
@@ -715,15 +729,41 @@
       },
     ]
 
-    const CLAVE_VER_EDITAR = 'empleados:ver_editar' // la única tarea con alcance
-
-    // Etiqueta de una tarea del catálogo, por clave 'modulo:tarea'.
-    function labelDeTarea(clave) {
+    // Entrada del catálogo por clave 'modulo:tarea', o null si la clave no está
+    // en el catálogo. Devolver null es parte del contrato: una tarea otorgada
+    // por SQL que todavía no está acá tiene que poder atravesar el guardado sin
+    // alcance y sin romperse (ver el passthrough en armarTareasPayload).
+    function tareaDeCatalogo(clave) {
       for (const grupo of CATALOGO_TAREAS) {
         const t = grupo.tareas.find(t => `${t.modulo}:${t.tarea}` === clave)
-        if (t) return t.label
+        if (t) return t
       }
-      return clave
+      return null
+    }
+
+    function labelDeTarea(clave) {
+      return tareaDeCatalogo(clave)?.label ?? clave
+    }
+
+    // Todas las tareas del catálogo marcadas con `conAlcance`. Antes esto era
+    // la constante CLAVE_VER_EDITAR, con UNA clave hardcodeada: el render ya
+    // miraba `t.conAlcance`, pero el estado, el prefill, la validación y el
+    // payload seguían atados a esa única clave. Agregar una segunda tarea con
+    // alcance dibujaba el sub-bloque y no guardaba nada.
+    function tareasConAlcance() {
+      return CATALOGO_TAREAS.flatMap(g => g.tareas.filter(t => t.conAlcance))
+    }
+
+    // Alcance de UNA tarea dentro del modal, creando la entrada vacía la
+    // primera vez. Arranca sin nada a propósito: tildar una tarea con alcance
+    // obliga a elegirlo de forma explícita, nunca hereda "todas" por defecto.
+    function alcanceDe(clave) {
+      let a = estado.modal.alcances.get(clave)
+      if (!a) {
+        a = { todas: false, unidades: new Set() }
+        estado.modal.alcances.set(clave, a)
+      }
+      return a
     }
 
     // Recorre las dependencias declaradas con `requiere` en el catálogo y
@@ -1077,19 +1117,25 @@
             const clave = `${t.modulo}:${t.tarea}`
             const marcada = estado.modal.tareasElegidas.has(clave)
 
-            // Sub-bloque de alcance, solo para empleados/ver_editar y solo
-            // con la tarea tildada: "todas" O lista de unidades puntuales.
+            // Sub-bloque de alcance: uno por CADA tarea `conAlcance` tildada,
+            // cada uno con su propio estado. "todas" O lista de unidades.
+            //
+            // Los checkboxes se identifican por data attribute y no por id
+            // porque la clave lleva dos puntos ('empleados:ver_editar') y en un
+            // selector de id habría que escaparlos — `:` es sintaxis de
+            // pseudo-selector.
             let subAlcance = ''
             if (t.conAlcance && marcada) {
+              const a = alcanceDe(clave)
               subAlcance = `
                 <div class="sub-alcance">
                   <label class="fila-tarea">
-                    <input type="checkbox" id="chk-alcance-todas" ${estado.modal.alcanceTodas ? 'checked' : ''}>
+                    <input type="checkbox" data-alcance-todas="${clave}" ${a.todas ? 'checked' : ''}>
                     <span>Todas las unidades de negocio</span>
                   </label>
-                  ${estado.modal.alcanceTodas ? '' : estado.maestros.unidadesNegocio.map(u => `
+                  ${a.todas ? '' : estado.maestros.unidadesNegocio.map(u => `
                     <label class="fila-tarea">
-                      <input type="checkbox" data-alcance-unidad="${u.id}" ${estado.modal.alcanceUnidades.has(u.id) ? 'checked' : ''}>
+                      <input type="checkbox" data-alcance-clave="${clave}" data-alcance-unidad="${u.id}" ${a.unidades.has(u.id) ? 'checked' : ''}>
                       <span>${u.nombre}</span>
                     </label>
                   `).join('')}
@@ -1125,28 +1171,64 @@
           renderizarModalTareas()
         })
       })
-      el.querySelector('#chk-alcance-todas')?.addEventListener('change', (e) => {
-        estado.modal.alcanceTodas = e.target.checked
-        renderizarModalTareas()
+      // querySelectorAll y no querySelector: hay un checkbox "todas" por cada
+      // tarea con alcance tildada. Con el querySelector singular de antes, solo
+      // el primer bloque quedaba cableado.
+      el.querySelectorAll('input[data-alcance-todas]').forEach(chk => {
+        chk.addEventListener('change', () => {
+          alcanceDe(chk.dataset.alcanceTodas).todas = chk.checked
+          renderizarModalTareas()
+        })
       })
       el.querySelectorAll('input[data-alcance-unidad]').forEach(chk => {
         chk.addEventListener('change', () => {
-          if (chk.checked) estado.modal.alcanceUnidades.add(chk.dataset.alcanceUnidad)
-          else estado.modal.alcanceUnidades.delete(chk.dataset.alcanceUnidad)
+          // La unidad se guarda en el alcance de SU tarea: sin data-alcance-clave
+          // los checkboxes de los distintos bloques escribían todos en el mismo
+          // Set.
+          const a = alcanceDe(chk.dataset.alcanceClave)
+          if (chk.checked) a.unidades.add(chk.dataset.alcanceUnidad)
+          else a.unidades.delete(chk.dataset.alcanceUnidad)
         })
       })
     }
 
-    // Array p_tareas para las RPCs: alcance solo para empleados/ver_editar,
-    // null para el resto.
+    // Array p_tareas para las RPCs. El alcance sale del catálogo (`conAlcance`)
+    // y no de una clave hardcodeada; las tareas sin alcance van con null.
+    //
+    // La forma del jsonb es contrato con tiene_tarea_alcance(), que lee
+    // exactamente dos claves: {"todas": true} O {"unidades": [uuid, ...]}.
+    // Nunca las dos juntas.
+    //
+    // Una clave que NO está en el catálogo (otorgada por SQL directo) cae en
+    // `def = null` y sale con alcance null, sin romperse: es el passthrough de
+    // siempre. El Set NO se filtra contra el catálogo — hacerlo revocaría en
+    // silencio esas tareas en cada guardado.
     function armarTareasPayload() {
       return [...estado.modal.tareasElegidas].map(clave => {
         const [modulo, tarea] = clave.split(':')
-        const alcance = clave === CLAVE_VER_EDITAR
-          ? (estado.modal.alcanceTodas ? { todas: true } : { unidades: [...estado.modal.alcanceUnidades] })
-          : null
+        const def = tareaDeCatalogo(clave)
+        let alcance = null
+        if (def?.conAlcance) {
+          const a = estado.modal.alcances.get(clave)
+          alcance = a?.todas ? { todas: true } : { unidades: [...(a?.unidades ?? [])] }
+        }
         return { modulo, tarea, alcance }
       })
+    }
+
+    // Recorre las tareas `conAlcance` tildadas y devuelve el mensaje de la
+    // primera que no tenga alcance elegido, nombrándola. Mismo patrón que
+    // mensajeDeDependenciaFaltante().
+    function mensajeDeAlcanceFaltante() {
+      for (const t of tareasConAlcance()) {
+        const clave = `${t.modulo}:${t.tarea}`
+        if (!estado.modal.tareasElegidas.has(clave)) continue
+        const a = estado.modal.alcances.get(clave)
+        if (!a || (!a.todas && !a.unidades.size)) {
+          return `"${t.label}" necesita un alcance: marcá "Todas las unidades de negocio" o elegí al menos una unidad.`
+        }
+      }
+      return null
     }
 
     function renderizarModalModulos() {
@@ -1224,10 +1306,9 @@
         modulosElegidos: new Set(),
         unidadElegida: null,
         tareasElegidas: new Set(),
-        // Arranca sin alcance a propósito: si se tilda ver_editar hay que
-        // elegir el alcance de forma explícita, no heredar "todas" por defecto.
-        alcanceTodas: false,
-        alcanceUnidades: new Set(),
+        // Vacío: una solicitud nueva no tiene alcances previos. Cada tarea
+        // con alcance que se tilde crea el suyo al vuelo (ver alcanceDe).
+        alcances: new Map(),
       }
 
       document.getElementById('modal-permisos__titulo').textContent = 'Revisar solicitud'
@@ -1268,13 +1349,19 @@
       }
 
       const tareasElegidas = new Set((tareasData ?? []).map(t => `${t.modulo}:${t.tarea}`))
-      let alcanceTodas = false
-      const alcanceUnidades = new Set()
-      const verEditar = (tareasData ?? []).find(t => `${t.modulo}:${t.tarea}` === CLAVE_VER_EDITAR)
-      if (verEditar?.alcance) {
-        alcanceTodas = verEditar.alcance.todas === true
-        ;(verEditar.alcance.unidades ?? []).forEach(u => alcanceUnidades.add(u))
-      }
+
+      // TODAS las filas que traigan alcance, no solo la de ver_editar. Se lee
+      // lo que hay en la base sin filtrar contra el catálogo: si una tarea
+      // tiene alcance guardado, se precarga aunque todavía no esté acá, para
+      // que el round-trip no lo pierda.
+      const alcances = new Map()
+      ;(tareasData ?? []).forEach(t => {
+        if (!t.alcance) return
+        alcances.set(`${t.modulo}:${t.tarea}`, {
+          todas: t.alcance.todas === true,
+          unidades: new Set(t.alcance.unidades ?? []),
+        })
+      })
 
       estado.modal = {
         modo: 'editar',
@@ -1283,8 +1370,7 @@
         modulosElegidos: new Set(modulosDeEmpleado(empleadoId)),
         unidadElegida: null,
         tareasElegidas,
-        alcanceTodas,
-        alcanceUnidades,
+        alcances,
       }
 
       document.getElementById('modal-permisos__titulo').textContent = 'Editar permisos'
@@ -1317,11 +1403,12 @@
       if (!estado.modal) return
       if (estado.modal.esNuevoEmpleado && !estado.modal.unidadElegida) return // salvaguarda, el botón ya viene disabled
 
-      // ver_editar tildada exige alcance: "todas" o al menos una unidad.
-      if (estado.modal.tareasElegidas.has(CLAVE_VER_EDITAR)
-          && !estado.modal.alcanceTodas
-          && !estado.modal.alcanceUnidades.size) {
-        mostrarError('"Ver y editar empleados" necesita un alcance: marcá "Todas las unidades de negocio" o elegí al menos una unidad.')
+      // Toda tarea con alcance tildada exige uno: "todas" o al menos una
+      // unidad. El mensaje nombra cuál falta — con varias tareas con alcance,
+      // "elegí un alcance" a secas no diría de cuál.
+      const faltaAlcance = mensajeDeAlcanceFaltante()
+      if (faltaAlcance) {
+        mostrarError(faltaAlcance)
         return
       }
 
