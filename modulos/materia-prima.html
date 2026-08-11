@@ -353,6 +353,21 @@
       flex-shrink: 0;
     }
 
+    /* Antigüedad de un remito sin facturar. Solo aparece con ese filtro
+       activo; en ámbar pasados los DIAS_REMITO_VIEJO. */
+    .chip-antiguedad {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 700;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chip-antiguedad--vieja { background: #FEF3C7; color: #92400E; }
+
     /* La factura apunta a un remito que el RLS no deja ver. Sin este aviso
        parece una carga incompleta a la que le falta la mercadería. */
     .ingreso__nota {
@@ -1188,6 +1203,7 @@
         <input type="text" id="filtro-busqueda-ingresos" placeholder="🔍 Buscar proveedor o número de documento">
       </div>
       <div class="chips-unidad" id="chips-unidad-ingresos"></div>
+      <div class="chips-unidad" id="chips-vinculo-ingresos"></div>
 
       <div id="estado-cargando-ingresos" class="estado-vacio" hidden>
         <div class="spinner"></div>
@@ -1198,8 +1214,8 @@
 
       <div id="estado-vacio-ingresos" class="estado-vacio" hidden>
         <div class="estado-vacio__icono">📦</div>
-        <div class="estado-vacio__titulo">Sin ingresos</div>
-        <p class="estado-vacio__descripcion">No hay ingresos de mercadería con los filtros actuales.</p>
+        <div class="estado-vacio__titulo" id="vacio-ingresos-titulo">Sin ingresos</div>
+        <p class="estado-vacio__descripcion" id="vacio-ingresos-desc">No hay ingresos de mercadería con los filtros actuales.</p>
       </div>
     </div>
 
@@ -1446,6 +1462,34 @@
 
     const UNIDADES_MEDIDA = ['kg', 'l', 'un']
 
+    // PARÁMETRO DE NEGOCIO — a partir de cuántos días un remito sin factura se
+    // marca como viejo en el listado (chip en ámbar).
+    //
+    // De dónde salió (Facu): 45 días es lo MÁS tarde que puede llegar una
+    // factura después de la mercadería. Hasta ahí, un remito sin facturar es
+    // normal y no hay nada que reclamar; pasado ese plazo sí conviene mirarlo.
+    // O sea que el umbral no es una preferencia visual: es el límite real del
+    // circuito con los proveedores. Cambiarlo acá alcanza, no está repetido en
+    // ningún otro lado.
+    const DIAS_REMITO_VIEJO = 45
+
+    // Filtro por vínculo remito ↔ factura. Se resuelve sobre estado.entregas,
+    // que ya tiene la fusión hecha: no hace falta consultar nada.
+    const FILTROS_VINCULO = [
+      { id: '',             label: 'Todos' },
+      { id: 'sin_factura',  label: 'Remitos sin factura' },
+      { id: 'con_factura',  label: 'Con factura vinculada' },
+    ]
+
+    // Mensaje del estado vacío según el filtro activo: con un filtro puesto, el
+    // genérico "no hay ingresos" hace dudar de si el problema son los datos o
+    // el filtro.
+    const VACIO_POR_VINCULO = {
+      '':            { titulo: 'Sin ingresos',            desc: 'No hay ingresos de mercadería con los filtros actuales.' },
+      sin_factura:   { titulo: 'Sin remitos pendientes',  desc: 'No hay remitos sin factura con los filtros actuales.' },
+      con_factura:   { titulo: 'Sin entregas vinculadas', desc: 'No hay entregas con factura vinculada con los filtros actuales.' },
+    }
+
     // FUENTE ÚNICA de los campos de texto del encabezado. La usan los TRES
     // caminos que los tocan: prellenar desde el OCR, leer del formulario y
     // limpiar al reemplazar la foto. Antes esta lista vivía suelta adentro de
@@ -1475,7 +1519,7 @@
       listaIngresos: [],        // filas crudas de la base, sin fusionar
       entregas: [],             // lo que se muestra: filas ya fusionadas (ver fusionarEntregas)
       filtros: {
-        ingresos: { busqueda: '', unidadId: '' },  // '' = Todas
+        ingresos: { busqueda: '', unidadId: '', vinculo: '' },  // '' = Todas / Todos
       },
       // Catálogo completo de insumos, para el matching del paso 3. Se carga al
       // abrir el wizard, no al entrar al módulo.
@@ -1588,6 +1632,49 @@
       }).replace(',', '')
     }
 
+    // Días enteros desde una fecha `YYYY-MM-DD` hasta hoy.
+    //
+    // El string se parte a mano en vez de usar new Date('2026-08-01'): ese
+    // formato se parsea como UTC medianoche, que en Argentina (UTC−3) cae a las
+    // 21:00 del día ANTERIOR y corre la cuenta en uno. Construyendo con
+    // (año, mes, día) la fecha es local y el día es el que dice el string.
+    //
+    // Las dos puntas se normalizan a medianoche para comparar días de
+    // calendario: si no, "ayer" cambiaría según la hora a la que se mire. El
+    // redondeo cubre los días de 23 o 25 horas por cambio de huso.
+    function diasDesde(fechaIso) {
+      if (!fechaIso) return null
+      const [anio, mes, dia] = String(fechaIso).split('-').map(Number)
+      if (!anio || !mes || !dia) return null
+      const desde = new Date(anio, mes - 1, dia)
+      const hoy = new Date()
+      hoy.setHours(0, 0, 0, 0)
+      return Math.round((hoy - desde) / 86400000)
+    }
+
+    function textoAntiguedad(fechaIso) {
+      const dias = diasDesde(fechaIso)
+      // Negativo = fecha futura (un remito mal cargado): no se muestra nada en
+      // vez de "hace -3 días".
+      if (dias == null || dias < 0) return ''
+      if (dias === 0) return 'hoy'
+      if (dias === 1) return 'ayer'
+      return `hace ${dias} días`
+    }
+
+    // Filtro por vínculo, sobre una entrega ya fusionada.
+    function entregaPasaVinculo(entrega, filtro) {
+      if (!filtro) return true
+      if (filtro === 'con_factura') return entrega.comprobantes.length > 1
+      if (filtro === 'sin_factura') {
+        // "Ninguna factura en el array" y no "un solo comprobante": hoy dan lo
+        // mismo, pero esto dice lo que la condición significa.
+        return entrega.base.tipo_doc === 'remito'
+          && !entrega.comprobantes.some(c => esFactura(c.tipo_doc))
+      }
+      return true
+    }
+
     // Nombre de quien editó un ingreso. Se resuelve contra el cache de
     // v_empleados_publico, NUNCA con un embed de PostgREST: `editado_por` está
     // sin FK a `empleados` a propósito, y un embed fallaría por ambigüedad.
@@ -1668,6 +1755,7 @@
       estado.unidades = unids ?? []
 
       renderizarChipsUnidadIngresos()
+      renderizarChipsVinculoIngresos()
 
       await cargarIngresos()
     }
@@ -1686,6 +1774,20 @@
         btn.addEventListener('click', () => {
           estado.filtros.ingresos.unidadId = btn.dataset.unidad
           renderizarChipsUnidadIngresos()
+          renderizarListaIngresos()
+        })
+      })
+    }
+
+    function renderizarChipsVinculoIngresos() {
+      const cont = document.getElementById('chips-vinculo-ingresos')
+      cont.innerHTML = FILTROS_VINCULO.map(f => `
+        <button type="button" class="chip-unidad ${estado.filtros.ingresos.vinculo === f.id ? 'chip-unidad--activa' : ''}" data-vinculo="${f.id}">${f.label}</button>
+      `).join('')
+      cont.querySelectorAll('.chip-unidad').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.filtros.ingresos.vinculo = btn.dataset.vinculo
+          renderizarChipsVinculoIngresos()
           renderizarListaIngresos()
         })
       })
@@ -1797,24 +1899,47 @@
       const listaEl = document.getElementById('lista-ingresos')
       const vacioEl = document.getElementById('estado-vacio-ingresos')
 
+      // Los tres filtros se encadenan, no se reemplazan.
       let filas = estado.entregas
-      const { busqueda, unidadId } = estado.filtros.ingresos
+      const { busqueda, unidadId, vinculo } = estado.filtros.ingresos
       if (unidadId) filas = filas.filter(e => e.base.unidad_negocio_id === unidadId)
+      if (vinculo)  filas = filas.filter(e => entregaPasaVinculo(e, vinculo))
       const termino = busqueda.trim().toLowerCase()
       if (termino) filas = filas.filter(e => entregaCoincide(e, termino))
 
       if (!filas.length) {
+        const msg = VACIO_POR_VINCULO[vinculo] ?? VACIO_POR_VINCULO['']
+        document.getElementById('vacio-ingresos-titulo').textContent = msg.titulo
+        document.getElementById('vacio-ingresos-desc').textContent = msg.desc
         listaEl.innerHTML = ''
         vacioEl.hidden = false
         return
       }
       vacioEl.hidden = true
 
+      // La antigüedad solo aparece con "Remitos sin factura": es el único
+      // contexto donde importa. Un remito recién cargado no dice nada; uno de
+      // hace meses sin facturar sí.
+      const mostrarAntiguedad = vinculo === 'sin_factura'
+
       listaEl.innerHTML = filas.map(e => {
         const b = e.base
         // Un remito solo puede estar vinculado a UNA factura. Si hay más de dos
         // comprobantes, esa mercadería podría estar facturada dos veces.
         const anomalia = e.comprobantes.length > 2
+
+        // Pasados los 45 días (DIAS_REMITO_VIEJO) la factura ya tendría que
+        // haber llegado, así que el chip pasa a ámbar.
+        let chipAntiguedad = ''
+        if (mostrarAntiguedad) {
+          const texto = textoAntiguedad(b.fecha)
+          const dias = diasDesde(b.fecha)
+          if (texto) {
+            const vieja = dias != null && dias >= DIAS_REMITO_VIEJO
+            chipAntiguedad = `<span class="chip-antiguedad ${vieja ? 'chip-antiguedad--vieja' : ''}"${vieja ? ` title="Pasaron más de ${DIAS_REMITO_VIEJO} días: la factura ya tendría que haber llegado."` : ''}>${texto}</span>`
+          }
+        }
+
         return `
         <div class="tarjeta-lista" data-ingreso="${b.id}">
           <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${inicialesEmpresa(b.razon_social)}</div>
@@ -1823,6 +1948,7 @@
             <div class="ingreso__meta">
               ${e.comprobantes.map(c => chipTipoDoc(c.tipo_doc)).join('')}
               ${anomalia ? '<span class="chip-revisar" title="Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.">⚠ Revisar</span>' : ''}
+              ${chipAntiguedad}
               <span class="ingreso__fecha">${formatearFecha(b.fecha)} · ${nombreUnidad(b.unidad_negocio_id)}</span>
             </div>
             ${e.huerfana ? '<div class="ingreso__nota">Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</div>' : ''}
