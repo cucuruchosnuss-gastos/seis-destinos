@@ -1639,7 +1639,7 @@
             <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
             <div class="grupo-campo" id="grupo-cta-corriente-directo" hidden style="margin-top:0.5rem;">
               <label style="display:flex; align-items:center; gap:0.5rem; font-weight:400;">
-                <input type="checkbox" id="campo-registrar-cta-corriente" style="width:auto;">
+                <input type="checkbox" id="campo-registrar-cta-corriente" checked style="width:auto;">
                 Registrar también en la cuenta corriente de este proveedor
               </label>
             </div>
@@ -3724,11 +3724,16 @@
       document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = false
       document.getElementById('grupo-cta-corriente-directo').hidden = true
-      // Opt-in explícito: el default es DESMARCADO. Va acá además del HTML
-      // porque esta función corre en cada tecla del buscador de proveedor —
-      // si acá quedara en true, re-marcaría el checkbox y el default del
-      // HTML no serviría de nada.
-      document.getElementById('campo-registrar-cta-corriente').checked = false
+      // TEMPORAL: marcado por default. El registro en cuenta corriente va a
+      // dejar de ser opcional (el checkbox se elimina), pero ese cambio está
+      // esperando que registrar_pago_directo_proveedor() acepte gastos
+      // cargados a nombre de otra persona. Mientras tanto, marcado por
+      // default se acerca más al criterio definitivo que desmarcado: si
+      // depende de que alguien se acuerde de tildarlo, no se tilda.
+      // Va acá además del HTML porque esta función corre en cada tecla del
+      // buscador de proveedor — si acá quedara en false, destildaría el
+      // checkbox y el default del HTML no serviría de nada.
+      document.getElementById('campo-registrar-cta-corriente').checked = true
       actualizarIndicadorProveedor()
     }
 
