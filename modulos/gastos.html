@@ -80,6 +80,16 @@
       overflow-y: auto;
     }
     .sugerencias-proveedor[hidden] { display: none; }
+    /* Se abre hacia arriba cuando abajo no entra — la pone
+       ubicarPanelSugerencias(). En el celular el teclado tapa la mitad
+       inferior justo cuando el campo tiene foco, que es el unico momento
+       en que este panel existe. */
+    .sugerencias-proveedor--arriba {
+      top: auto;
+      bottom: 100%;
+      margin-top: 0;
+      margin-bottom: 0.25rem;
+    }
     .sugerencias-proveedor__item {
       padding: 0.625rem 0.875rem;
       font-size: 0.875rem;
@@ -127,6 +137,39 @@
       text-align: center;
     }
     .proveedor-auto-match[hidden] { display: none; }
+
+    /* Vinculo con el padron, en el campo "Razon social / Proveedor". Se
+       mantiene aunque se siga escribiendo (a diferencia del buscador de
+       Detalles, donde tipear lo suelta): el sentido de tener dos campos es
+       que el texto del papel pueda diferir del nombre registrado. La ✕
+       existe para soltarlo a proposito. */
+    .proveedor-vinculado {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      background: var(--turquesa-suave);
+      border: 1.5px solid var(--turquesa);
+      color: var(--turquesa-oscuro);
+      font-size: 0.8125rem;
+    }
+    .proveedor-vinculado[hidden] { display: none; }
+    .proveedor-vinculado strong { flex: 1; font-weight: 600; }
+    .proveedor-vinculado button {
+      flex: none;
+      width: 1.75rem;
+      height: 1.75rem;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--turquesa-oscuro);
+      font-size: 0.875rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .proveedor-vinculado button:hover { background: var(--turquesa); color: var(--color-fondo); }
 
     /* Modal: cargar proveedor nuevo — mismo patrón bottom-sheet que ya usa
        caja.html en #modal-desactivar-cuenta. */
@@ -1457,9 +1500,14 @@
             <input type="text" id="campo-numero-doc" name="numero_doc" placeholder="0001-00012345">
           </div>
 
-          <div class="grupo-campo" id="grupo-razon-social">
+          <div class="grupo-campo" id="grupo-razon-social" style="position:relative;">
             <label for="campo-razon-social">Razón social / Proveedor</label>
-            <input type="text" id="campo-razon-social" name="razon_social" placeholder="Nombre del emisor" required>
+            <input type="text" id="campo-razon-social" name="razon_social" placeholder="Nombre del emisor" autocomplete="off" required>
+            <div class="sugerencias-proveedor" id="sugerencias-razon-social" hidden></div>
+            <div class="proveedor-vinculado" id="proveedor-vinculado" hidden>
+              Proveedor: <strong id="proveedor-vinculado-nombre"></strong>
+              <button type="button" id="btn-soltar-proveedor" title="Quitar el vínculo con el proveedor">✕</button>
+            </div>
           </div>
 
           <div class="grupo-campo" id="grupo-receptor">
@@ -2746,6 +2794,8 @@
       vehiculoFueElegido    = false
       viaVehiculos          = false
       limpiarMatchProveedor()
+      document.getElementById('sugerencias-razon-social').hidden = true
+      document.getElementById('sugerencias-proveedor').hidden = true
 
       // Limpiar campos de formulario
       ;['campo-fecha','campo-numero-doc','campo-razon-social',
@@ -3525,12 +3575,41 @@
 
     // ── Buscador de proveedor (sp-detalles, flujo "pendiente") ─────────────
 
+    // Sin acentos y en minúsculas. El acento no distingue dos proveedores
+    // distintos — es la misma empresa escrita de dos formas, y los
+    // comprobantes vienen muy seguido en mayúsculas sin tildes ("LACTEOS
+    // DEL SUR" contra "Lácteos del Sur" en el padrón). Sin esto la persona
+    // no encuentra al proveedor, asume que no existe y crea un duplicado.
+    function normalizarBusqueda(v) {
+      return (v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    }
+
     function filtrarProveedores(termino) {
-      const t = termino.trim().toLowerCase()
+      const t = normalizarBusqueda(termino).trim()
       if (!t) return []
       return estado.maestros.proveedores
-        .filter(p => p.razon_social?.toLowerCase().includes(t) || p.nombre_fantasia?.toLowerCase().includes(t))
+        .filter(p => normalizarBusqueda(p.razon_social).includes(t) || normalizarBusqueda(p.nombre_fantasia).includes(t))
         .slice(0, 8)
+    }
+
+    // Abre el panel hacia arriba si abajo no entra. Se llama con el panel YA
+    // renderizado, así decide con el alto real (una sugerencia no ocupa lo
+    // mismo que ocho) en vez de con una constante.
+    //
+    // Mide contra visualViewport y NO contra innerHeight: en el celular
+    // innerHeight no se achica cuando se abre el teclado, así que un panel
+    // tapado por el teclado seguiría midiendo "entra perfecto" y el flip no
+    // dispararía nunca — que es justamente el caso que esto viene a cubrir.
+    //
+    // Si tampoco entra arriba se queda abajo: recortado es mejor que fuera
+    // de la pantalla.
+    function ubicarPanelSugerencias(cont) {
+      cont.classList.remove('sugerencias-proveedor--arriba')
+      const alto  = window.visualViewport?.height ?? window.innerHeight
+      const panel = cont.getBoundingClientRect()
+      if (panel.bottom <= alto) return
+      const ancla = cont.parentElement?.getBoundingClientRect()
+      if (ancla && ancla.top - panel.height >= 0) cont.classList.add('sugerencias-proveedor--arriba')
     }
 
     // Genérico — lo usan tanto el buscador de proveedor del wizard como el
@@ -3541,6 +3620,7 @@
       if (!lista.length) {
         cont.innerHTML = `<div class="sugerencias-proveedor__vacio">Sin resultados</div>`
         cont.hidden = false
+        ubicarPanelSugerencias(cont)
         return
       }
       cont.innerHTML = lista.map(p => `
@@ -3549,6 +3629,9 @@
         </div>
       `).join('')
       cont.hidden = false
+      // Después de mostrarlo, con el alto ya real. Se recalcula en cada
+      // render porque el campo se mueve mientras se escribe.
+      ubicarPanelSugerencias(cont)
       // Se reasigna en cada render (no addEventListener) para no acumular
       // handlers duplicados a medida que el usuario tipea.
       cont.onclick = (e) => {
@@ -3561,6 +3644,30 @@
 
     function renderizarSugerenciasProveedor(lista) {
       renderizarSugerenciasProveedorEn('sugerencias-proveedor', lista, seleccionarProveedor)
+    }
+
+    // Buscador del campo "Razón social / Proveedor" (sp-datos). Mismo motor
+    // que el de Detalles, otro contenedor. Existe porque ahí es donde la
+    // gente escribe el nombre del proveedor —el label lo promete— y no
+    // encontrar nada era lo que terminaba creando duplicados.
+    function renderizarSugerenciasRazonSocial(lista) {
+      renderizarSugerenciasProveedorEn('sugerencias-razon-social', lista, (p) => {
+        seleccionarProveedor(p)
+        document.getElementById('sugerencias-razon-social').hidden = true
+      })
+    }
+
+    // Muestra con qué proveedor del padrón quedó vinculado el gasto. Vive en
+    // el campo de razón social, que a diferencia del buscador de Detalles NO
+    // suelta el vínculo al seguir escribiendo: el texto del papel puede
+    // diferir del nombre registrado, y ese es justamente el motivo de que
+    // sean dos campos. La ✕ es la única forma de soltarlo, y es a propósito.
+    function actualizarIndicadorProveedor() {
+      const cartel = document.getElementById('proveedor-vinculado')
+      if (!cartel) return
+      const p = estado.maestros.proveedores.find(x => x.id === proveedorSeleccionado)
+      cartel.hidden = !p
+      if (p) document.getElementById('proveedor-vinculado-nombre').textContent = p.razon_social
     }
 
     // Única fuente de verdad de la visibilidad del checkbox "registrar en
@@ -3603,6 +3710,7 @@
       document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = true
       actualizarVisibilidadCtaCorriente()
+      actualizarIndicadorProveedor()
     }
 
     // Vuelve al estado "sin proveedor elegido" — un solo bloque, lo llaman
@@ -3621,13 +3729,20 @@
       // si acá quedara en true, re-marcaría el checkbox y el default del
       // HTML no serviría de nada.
       document.getElementById('campo-registrar-cta-corriente').checked = false
+      actualizarIndicadorProveedor()
     }
 
     function normalizarCuit(v) {
       return (v || '').replace(/\D/g, '')
     }
+    // Sin acentos, por el mismo motivo que normalizarBusqueda(): el
+    // comprobante suele venir en mayúsculas sin tildes y el padrón no. Sin
+    // esto el match automático fallaba y caía en el mismo modo de falla que
+    // el buscador — vínculo ausente, duplicado creado. El riesgo de falso
+    // positivo es despreciable: harían falta dos proveedores reales que se
+    // diferencien solo por una tilde.
     function normalizarRazonSocial(v) {
-      return (v || '').trim().toUpperCase().replace(/\s+/g, ' ')
+      return normalizarBusqueda(v).trim().toUpperCase().replace(/\s+/g, ' ')
     }
 
     // Se llama al entrar a "Detalles" en el flujo "pendiente". No pisa una
@@ -4756,10 +4871,28 @@
       limpiarMatchProveedor()
       renderizarSugerenciasProveedor(filtrarProveedores(e.target.value))
     })
+    // Buscador del campo "Razón social / Proveedor" (sp-datos). A diferencia
+    // del de arriba NO llama a limpiarMatchProveedor(): seguir escribiendo
+    // acá no suelta el vínculo con el padrón, porque el texto del papel
+    // puede diferir del nombre registrado. Para soltarlo está la ✕.
+    document.getElementById('campo-razon-social').addEventListener('input', (e) => {
+      renderizarSugerenciasRazonSocial(filtrarProveedores(e.target.value))
+    })
+
+    document.getElementById('btn-soltar-proveedor').addEventListener('click', () => {
+      limpiarMatchProveedor()
+      document.getElementById('campo-proveedor-buscar').value = ''
+      document.getElementById('sugerencias-razon-social').hidden = true
+    })
+
     document.addEventListener('click', (e) => {
       const grupo = document.getElementById('grupo-proveedor')
       const sugerencias = document.getElementById('sugerencias-proveedor')
       if (grupo && !grupo.contains(e.target)) sugerencias.hidden = true
+
+      const grupoRazon = document.getElementById('grupo-razon-social')
+      const sugerenciasRazon = document.getElementById('sugerencias-razon-social')
+      if (grupoRazon && sugerenciasRazon && !grupoRazon.contains(e.target)) sugerenciasRazon.hidden = true
 
       const grupoEdit = document.getElementById('grupo-edit-proveedor')
       const sugerenciasEdit = document.getElementById('sugerencias-edit-proveedor')
