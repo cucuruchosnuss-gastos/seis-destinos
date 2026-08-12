@@ -513,6 +513,26 @@
     .banner-ficha-cc__btn--primario:hover { background: #F0FDFB; }
     .banner-ficha-cc__btn--secundario { background: rgba(255,255,255,0.22); color: #fff; }
     .banner-ficha-cc__btn--secundario:hover { background: rgba(255,255,255,0.32); }
+    .banner-ficha-cc__btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+    .banner-ficha-cc__btn[disabled]:hover { background: #fff; }
+    .banner-ficha-cc__btn--secundario[disabled]:hover { background: rgba(255,255,255,0.22); }
+
+    /* Solo en modo "Todas las unidades": el nombre de la empresa va ARRIBA y
+       más grande que la etiqueta de moneda. Mirando consolidado, lo que hay
+       que distinguir de un vistazo es de qué empresa es cada saldo — puede
+       haber dos líneas "A pagar · ARS" y lo único que las diferencia es
+       esto. En modo unidad puntual no se muestra: sería redundante. */
+    .banner-ficha-cc__unidad {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.125rem;
+    }
+    .banner-ficha-cc__ayuda {
+      flex-basis: 100%;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.85);
+    }
 
     /* Banner secundario — para una segunda moneda con saldo; sin botones,
        los botones del banner principal ya cubren el flujo (el modal de pago
@@ -1060,6 +1080,7 @@
       </div>
 
       <div class="filtros-cc" style="margin-top:0.875rem;">
+        <select id="filtro-unidad-ficha"></select>
         <input type="date" id="filtro-fecha-desde-ficha">
         <input type="date" id="filtro-fecha-hasta-ficha">
         <div class="grilla-tipo-mov" id="grilla-tipo-mov-ficha">
@@ -1336,29 +1357,6 @@
        por proveedor. Cuando el proveedor tiene movimientos en más de una
        unidad hay que preguntar cuál abrir; con una sola no se pregunta nada.
   ══════════════════════════════════════════════════════════════════════════ -->
-  <div class="modal-cc" id="modal-elegir-unidad" hidden>
-    <div class="modal-cc__backdrop"></div>
-    <div class="modal-cc__panel">
-      <button type="button" class="btn btn--icono modal-cerrar-icono" id="btn-cerrar-elegir-unidad" title="Cerrar">✕</button>
-      <h2>Elegí la unidad</h2>
-      <p class="estado-vacio__descripcion" style="margin:0 0 0.875rem;">
-        Este proveedor tiene movimientos en más de una unidad de negocio, y la cuenta corriente se lleva por separado en cada una.
-      </p>
-
-      <div class="formulario">
-        <div class="grupo-campo">
-          <label for="campo-elegir-unidad">Unidad de negocio</label>
-          <select id="campo-elegir-unidad"></select>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
-        <button type="button" class="btn btn--secundario" id="btn-cancelar-elegir-unidad">Cancelar</button>
-        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-elegir-unidad">Ver cuenta</button>
-      </div>
-    </div>
-  </div><!-- /modal-elegir-unidad -->
-
   <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — AYUDA: FORMATO DEL EXCEL DE PROVEEDORES
   ══════════════════════════════════════════════════════════════════════════ -->
@@ -1522,8 +1520,6 @@
     // esa misma y no siempre a la pestaña Proveedores (mismo criterio que el
     // ?volver= entre Gastos y Cuentas Corrientes). Lo setea abrirFicha().
     let fichaOrigen                = 'lista'
-    let unidadesParaElegir         = []  // [{id, nombre}] del modal de unidad
-    let proveedorParaElegirUnidad  = null
 
     // ═══════════════════════════════════════════════════════════════════════
     // HELPERS
@@ -1743,7 +1739,9 @@
       const params = new URLSearchParams(location.search)
       const proveedorURL = params.get('proveedor')
       const unidadURL = params.get('unidad')
-      if (proveedorURL && unidadURL) {
+      // Sin &unidad= abre en "todas las unidades" — antes esta guarda exigía
+      // las dos y un ?proveedor= solo no hacía nada.
+      if (proveedorURL) {
         const prov = estado.maestros.proveedores.find(p => p.id === proveedorURL)
         if (prov) await abrirFicha(proveedorURL, unidadURL, prov.razon_social)
       }
@@ -2386,58 +2384,37 @@
       })
     }
 
-    // La ficha es por proveedor + unidad, pero el padrón es por proveedor.
-    // Las unidades salen de facturas_pendientes en CUALQUIER estado, no de
-    // v_saldo_proveedor: un proveedor con todo pagado puede no tener fila ahí
-    // y sí tener historial para mostrar.
-    async function abrirFichaDesdePadron(prov) {
+    // En qué unidades tiene historial este proveedor. Sale de
+    // facturas_pendientes en CUALQUIER estado, y NO de los movimientos ni de
+    // v_saldo_proveedor, a propósito: los movimientos vienen filtrados por
+    // fecha (poner "Hoy" borraría unidades del selector) y v_saldo_proveedor
+    // solo trae saldos distintos de cero (una unidad con todo pagado
+    // desaparecería). Las dos serían pérdidas silenciosas de opciones.
+    // Devuelve null si la consulta falla, para poder distinguirlo de "no
+    // tiene ninguna".
+    async function unidadesDelProveedor(proveedorId) {
       const { data, error } = await supabase.from('facturas_pendientes')
         .select('unidad_negocio_id')
-        .eq('proveedor_id', prov.id)
+        .eq('proveedor_id', proveedorId)
+      if (error) { console.error(error); return null }
+      return [...new Set((data ?? []).map(f => f.unidad_negocio_id).filter(Boolean))]
+    }
 
-      if (error) {
-        console.error(error)
+    // El padrón es por proveedor y la ficha admite "todas las unidades", así
+    // que ya no hay que elegir unidad para entrar. Lo único que se sigue
+    // chequeando acá es que tenga alguna: una ficha sin ninguna unidad sería
+    // un cascarón vacío.
+    async function abrirFichaDesdePadron(prov) {
+      const ids = await unidadesDelProveedor(prov.id)
+      if (ids === null) {
         mostrarError('No se pudieron cargar las unidades del proveedor.')
         return
       }
-
-      const ids = [...new Set((data ?? []).map(f => f.unidad_negocio_id).filter(Boolean))]
-
       if (!ids.length) {
         mostrarError('Este proveedor todavía no tiene movimientos en cuenta corriente.')
         return
       }
-      if (ids.length === 1) {
-        await abrirFicha(prov.id, ids[0], prov.razon_social, 'padron')
-        return
-      }
-      abrirModalElegirUnidad(prov, ids)
-    }
-
-    function abrirModalElegirUnidad(prov, idsUnidad) {
-      proveedorParaElegirUnidad = prov
-      unidadesParaElegir = idsUnidad
-        .map(id => estado.maestros.unidades.find(u => u.id === id))
-        .filter(Boolean)
-
-      const select = document.getElementById('campo-elegir-unidad')
-      select.innerHTML = unidadesParaElegir
-        .map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
-      document.getElementById('modal-elegir-unidad').removeAttribute('hidden')
-    }
-
-    function cerrarModalElegirUnidad() {
-      document.getElementById('modal-elegir-unidad').hidden = true
-      proveedorParaElegirUnidad = null
-      unidadesParaElegir = []
-    }
-
-    async function confirmarElegirUnidad() {
-      const unidadId = document.getElementById('campo-elegir-unidad').value
-      const prov = proveedorParaElegirUnidad
-      if (!unidadId || !prov) return
-      cerrarModalElegirUnidad()
-      await abrirFicha(prov.id, unidadId, prov.razon_social, 'padron')
+      await abrirFicha(prov.id, null, prov.razon_social, 'padron', ids)
     }
 
     // ── Modal: editar proveedor ───────────────────────────────────────────
@@ -2846,10 +2823,20 @@
     // `origen` ('lista' | 'padron') decide a dónde vuelve el "‹ Volver" de la
     // ficha. Va como parámetro con default y no como variable suelta para que
     // un call site nuevo no herede en silencio el origen del anterior.
-    async function abrirFicha(proveedorId, unidadId, nombre, origen = 'lista') {
+    // `unidadId` en null significa "todas las unidades": se MIRA todo junto,
+    // pero no se puede OPERAR sobre todo junto (ver renderizarFichaBanner).
+    // La cuenta corriente se sigue llevando separada por unidad — la plata de
+    // un pago sale de una empresa concreta, y consolidarla haría que una
+    // termine pagando deuda de otra.
+    //
+    // `unidadesConocidas` lo pasa el padrón, que ya consultó las unidades
+    // para decidir si abrir; los demás call sites no las tienen y se
+    // consultan acá.
+    async function abrirFicha(proveedorId, unidadId, nombre, origen = 'lista', unidadesConocidas = null) {
       fichaOrigen = origen
       estado.ficha = {
-        proveedorId, unidadId, nombre,
+        proveedorId, unidadId: unidadId || null, nombre,
+        unidades: [],
         filtros: { rangoRapido: null, fechaDesde: '', fechaHasta: '', tipo: 'todos', orden: 'fecha_desc' },
         movimientosRaw: [],
         estadoPorFactura: {},
@@ -2859,12 +2846,42 @@
       document.getElementById('vista-lista').hidden = true
       document.getElementById('vista-padron').hidden = true
       document.getElementById('vista-ficha').removeAttribute('hidden')
-      // Deja la URL deep-linkeable (?proveedor=&unidad=) mientras la ficha
-      // está abierta — de ahí toman location.href los links "Ver"/"Editar"
-      // hacia gastos.html para poder volver a esta ficha puntual.
-      history.pushState(null, '', `?proveedor=${proveedorId}&unidad=${unidadId}`)
+      sincronizarUrlFicha(true)
+
+      const ids = unidadesConocidas ?? (await unidadesDelProveedor(proveedorId)) ?? []
+      estado.ficha.unidades = ids
+        .map(id => estado.maestros.unidades.find(u => u.id === id))
+        .filter(Boolean)
+      renderizarSelectorUnidadFicha()
+
       await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
       renderizarFichaBanner()
+    }
+
+    // Deja la URL deep-linkeable mientras la ficha está abierta — de ahí toma
+    // location.href cada fila de movimiento para armar su `volver=` hacia
+    // gastos.html. Por eso se re-sincroniza al cambiar de unidad y no solo al
+    // abrir: si no, volver desde una factura te dejaría en una vista distinta
+    // de la que estabas mirando. Sin unidad, se omite el parámetro.
+    //
+    // Al abrir empuja (como siempre); al cambiar de unidad reemplaza, para no
+    // llenar el historial con una entrada por cada vez que se toca el filtro.
+    function sincronizarUrlFicha(esApertura = false) {
+      const { proveedorId, unidadId } = estado.ficha
+      const qs = `?proveedor=${proveedorId}` + (unidadId ? `&unidad=${unidadId}` : '')
+      if (esApertura) history.pushState(null, '', qs)
+      else history.replaceState(null, '', qs)
+    }
+
+    function renderizarSelectorUnidadFicha() {
+      const sel = document.getElementById('filtro-unidad-ficha')
+      sel.innerHTML = `<option value="">Todas las unidades</option>` +
+        estado.ficha.unidades.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+      sel.value = estado.ficha.unidadId || ''
+    }
+
+    function nombreUnidad(id) {
+      return estado.maestros.unidades.find(u => u.id === id)?.nombre || '—'
     }
 
     function cerrarFicha() {
@@ -2877,11 +2894,14 @@
     }
 
     async function cargarFichaSaldos() {
-      const { data, error } = await supabase.from('v_saldo_proveedor')
+      let query = supabase.from('v_saldo_proveedor')
         .select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible')
         .eq('proveedor_id', estado.ficha.proveedorId)
-        .eq('unidad_negocio_id', estado.ficha.unidadId)
+      // Sin unidad la vista ya devuelve una fila por unidad + moneda, así que
+      // el desglose del banner sale solo: no hay nada que sumar.
+      if (estado.ficha.unidadId) query = query.eq('unidad_negocio_id', estado.ficha.unidadId)
 
+      const { data, error } = await query
       if (error) { console.error(error); mostrarError('Error al cargar el saldo.'); return }
 
       estado.fichaSaldos = data ?? []
@@ -2900,11 +2920,17 @@
       const monedasConSaldo = estado.fichaSaldos.filter(s => (Number(s.deuda_pendiente) || 0) > 0 || (Number(s.credito_disponible) || 0) > 0)
       // Cada botón depende de su tarea; "Aplicar crédito" además mantiene
       // la condición de siempre (solo si hay créditos disponibles).
+      // En "todas las unidades" los botones se DESHABILITAN, no se esconden:
+      // que se vea que existen y por qué no están disponibles. Un pago sale
+      // de una empresa concreta, así que no se puede registrar sin saber cuál.
+      const todas = !estado.ficha.unidadId
+      const dis = todas ? 'disabled' : ''
       const acciones = `
         <div class="banner-ficha-cc__acciones">
-          ${tieneTarea('cuentas_corrientes', 'registrar_pago') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--primario" id="btn-registrar-pago">Registrar pago</button>` : ''}
-          ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${estado.fichaCreditos.length ? '' : 'hidden'}>Aplicar crédito</button>` : ''}
-        </div>`
+          ${tieneTarea('cuentas_corrientes', 'registrar_pago') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--primario" id="btn-registrar-pago" ${dis}>Registrar pago</button>` : ''}
+          ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${estado.fichaCreditos.length ? '' : 'hidden'} ${dis}>Aplicar crédito</button>` : ''}
+        </div>
+        ${todas ? `<div class="banner-ficha-cc__ayuda">Elegí una unidad de negocio para registrar un pago</div>` : ''}`
 
       if (!monedasConSaldo.length) {
         cont.innerHTML = `
@@ -2925,6 +2951,7 @@
           return `
             <div class="banner-ficha-cc${i > 0 ? ' banner-ficha-cc--secundaria' : ''}">
               <div>
+                ${todas ? `<div class="banner-ficha-cc__unidad">${nombreUnidad(s.unidad_negocio_id)}</div>` : ''}
                 <div class="banner-ficha-cc__etiqueta">${etiqueta}</div>
                 <div class="banner-ficha-cc__monto">${formatearImporte(monto, s.moneda)}</div>
               </div>
@@ -2946,7 +2973,7 @@
       let query = supabase.from('v_cuenta_corriente_movimientos')
         .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado, orden_desempate')
         .eq('proveedor_id', estado.ficha.proveedorId)
-        .eq('unidad_negocio_id', estado.ficha.unidadId)
+      if (estado.ficha.unidadId) query = query.eq('unidad_negocio_id', estado.ficha.unidadId)
 
       const f = estado.ficha.filtros
       if (f.fechaDesde) query = query.gte('fecha', f.fechaDesde)
@@ -2986,6 +3013,7 @@
       const vacioEl = document.getElementById('estado-vacio-movimientos')
       const estadoPorFactura = estado.ficha.estadoPorFactura
       const f = estado.ficha.filtros
+      const todas = !estado.ficha.unidadId
 
       let filas = estado.ficha.movimientosRaw
       if (f.tipo === 'factura')    filas = filas.filter(m => ['factura', 'interes'].includes(m.tipo))
@@ -3021,8 +3049,13 @@
           <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
             <button type="button" class="btn-icono-accion btn-detalle-pago" data-gasto-id="${m.gasto_id}" title="Detalle del pago">📋</button>
           </div>` : ''
+        // El saldo corrido NO se muestra con las unidades mezcladas.
+        // saldo_acumulado sale de la vista particionado por proveedor +
+        // unidad + moneda, así que cada fila trae el corrido de SU unidad;
+        // intercaladas dan una secuencia que no cierra con nada. Serían
+        // números correctos en un contexto que los hace parecer un error.
         const saldoAcum = Number(m.saldo_acumulado) || 0
-        const lineaSaldo = saldoAcum !== 0
+        const lineaSaldo = (!todas && saldoAcum !== 0)
           ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${formatearImporte(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
         const referencia = m.referencia || '—'
@@ -3035,7 +3068,7 @@
             <div style="flex:1; min-width:0;">
               <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
               <div class="fila-movimiento__referencia">${referencia}${badgeEstado}</div>
-              <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}</div>
+              <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas ? ` · ${nombreUnidad(m.unidad_negocio_id)}` : ''}</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
               <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
@@ -3124,12 +3157,13 @@
     }
 
     async function cargarFichaCreditos() {
-      const { data, error } = await supabase.from('creditos_proveedor')
+      let query = supabase.from('creditos_proveedor')
         .select('id, proveedor_id, unidad_negocio_id, moneda, monto_original, monto_disponible, estado')
         .eq('proveedor_id', estado.ficha.proveedorId)
-        .eq('unidad_negocio_id', estado.ficha.unidadId)
         .eq('estado', 'disponible')
+      if (estado.ficha.unidadId) query = query.eq('unidad_negocio_id', estado.ficha.unidadId)
 
+      const { data, error } = await query
       if (error) { console.error(error); return }
 
       estado.fichaCreditos = data ?? []
@@ -3143,6 +3177,14 @@
     // un solo crédito disponible salta directo al paso de elegir factura;
     // con más de uno, primero hay que elegir cuál — nunca se aplica solo.
     function abrirModalAplicarCreditoDesdeFicha() {
+      // Guarda de fondo: el botón ya viene disabled en "todas las unidades",
+      // pero estado.ficha.unidadId viaja hasta el p_unidad_negocio_id de las
+      // RPCs. Si alguna vez el botón se habilitara por error, esto evita
+      // registrar la operación con unidad nula.
+      if (!estado.ficha?.unidadId) {
+        mostrarError('Elegí una unidad de negocio para aplicar un crédito.')
+        return
+      }
       if (estado.fichaCreditos.length === 1) {
         seleccionarCreditoParaAplicar(estado.fichaCreditos[0])
         return
@@ -3259,6 +3301,12 @@
     }
 
     async function abrirModalPago() {
+      // Misma guarda de fondo que abrirModalAplicarCreditoDesdeFicha(): la
+      // unidad llega hasta p_unidad_negocio_id de registrar_pago_proveedor.
+      if (!estado.ficha?.unidadId) {
+        mostrarError('Elegí una unidad de negocio para registrar un pago.')
+        return
+      }
       await cargarCuentasPablo()
 
       const monedasConDeuda = estado.fichaSaldos.filter(s => Number(s.deuda_pendiente) > 0)
@@ -3633,10 +3681,16 @@
     document.querySelector('#modal-editar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalEditarProveedor)
     document.getElementById('btn-confirmar-editar-proveedor').addEventListener('click', confirmarEditarProveedor)
 
-    document.getElementById('btn-cerrar-elegir-unidad').addEventListener('click', cerrarModalElegirUnidad)
-    document.getElementById('btn-cancelar-elegir-unidad').addEventListener('click', cerrarModalElegirUnidad)
-    document.querySelector('#modal-elegir-unidad .modal-cc__backdrop').addEventListener('click', cerrarModalElegirUnidad)
-    document.getElementById('btn-confirmar-elegir-unidad').addEventListener('click', confirmarElegirUnidad)
+    // Filtro de unidad de la ficha. Recarga las tres consultas porque las
+    // tres cambian con la unidad, y re-sincroniza la URL para que el
+    // `volver=` de los links a gastos.html apunte a lo que se está mirando.
+    document.getElementById('filtro-unidad-ficha').addEventListener('change', async (e) => {
+      if (!estado.ficha) return
+      estado.ficha.unidadId = e.target.value || null
+      sincronizarUrlFicha()
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+      renderizarFichaBanner()
+    })
 
     // ── Importar proveedores desde Excel ──────────────────────────────────
     document.getElementById('btn-ayuda-excel-proveedores').addEventListener('click', abrirModalAyudaExcel)
