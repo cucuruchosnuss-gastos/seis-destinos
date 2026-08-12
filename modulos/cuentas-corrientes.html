@@ -1180,10 +1180,11 @@
         </div>
 
         <div class="grupo-campo" id="grupo-cuenta-pago-cc" style="display:none;">
-          <label for="campo-cuenta-pago-cc">Cuenta (Pablo)</label>
+          <label for="campo-cuenta-pago-cc">Cuenta</label>
           <select id="campo-cuenta-pago-cc">
             <option value="">— Seleccioná —</option>
           </select>
+          <p class="etiqueta-opcional" id="aviso-sin-cuentas-pago" hidden></p>
         </div>
 
         <div class="grupo-campo">
@@ -1450,14 +1451,6 @@
 
     mostrarBannerVersion()
 
-    // Usabarrena Pablo Nicolás — pagador único hoy de todas las cuentas
-    // corrientes de proveedores; el selector de cuenta del modal "Registrar
-    // pago" muestra solo sus cuentas, sin importar quién esté logueado. Si el
-    // día de mañana hay más de un pagador (o cambia), conviene resolverlo con
-    // un flag en empleados (ej. paga_proveedores boolean) — no vale la pena
-    // esa vuelta de tuerca todavía para un solo pagador fijo.
-    const EMPLEADO_ID_PABLO = 'f35ab0e6-4496-4bc2-b507-68dd0e16c4a3'
-
     const MEDIOS_PAGO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia / QR', cheque: 'Cheque' }
     // cuentas_caja.medio usa valores propios ('efectivo'/'banco'), distintos a
     // los de medio_pago ('efectivo'/'transferencia'/'cheque') — mismo criterio
@@ -1486,7 +1479,11 @@
                             // (modulos 'cuentas_corrientes' y 'facturas_pendientes')
       tabActiva: 'proveedores',
       maestros: { unidades: [], proveedores: [] }, // proveedores: solo activo=true y estado_alta='activo'
-      cuentasPablo: null, // se carga una sola vez, bajo demanda
+      // Cuentas del selector del modal "Registrar pago". Se cargan una sola
+      // vez, bajo demanda. Van separadas por grupo y no en una sola lista
+      // porque el <optgroup> del selector necesita distinguirlas: tiene que
+      // verse de qué caja sale la plata.
+      cuentasPago: null,        // { propias: [], empresa: [] }
       filtros: {
         proveedores: { busqueda: '', unidadId: '' },
         historial:   { busqueda: '', unidadId: '', fechaDesde: '', fechaHasta: '', rangoRapido: null },
@@ -1690,7 +1687,11 @@
         .from('empleado_tareas')
         .select('modulo, tarea')
         .eq('empleado_id', emp.id)
-        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes'])
+        // 'gastos' entra por gastos:gastos_empresa, que gatea el grupo
+        // "Cuenta de Empresa" del selector de pago — un pago a proveedor crea
+        // una fila en gastos, así que es literalmente cargar un gasto contra
+        // las cuentas de la Empresa.
+        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes', 'gastos'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
 
@@ -3267,14 +3268,45 @@
     // MODAL: REGISTRAR PAGO
     // ═══════════════════════════════════════════════════════════════════════
 
-    async function cargarCuentasPablo() {
-      if (estado.cuentasPablo) return
-      const { data, error } = await supabase.from('cuentas_caja')
+    // Antes traía las cuentas de un empleado hardcodeado (Pablo), bajo la
+    // regla vieja de "la plata de los pagos sale de la cuenta general". Eso
+    // dejó de ser cierto cuando apareció la Cuenta de Empresa, y el efecto
+    // era que cualquier otra persona veía cuentas ajenas al elegir efectivo y
+    // NINGUNA al elegir transferencia.
+    //
+    // Ahora: siempre las propias, y las de Empresa solo con
+    // gastos:gastos_empresa. El id de Empresa NO se hardcodea — sale de
+    // v_empleados_publico buscando tipo='empresa' (hay una sola). Tiene que
+    // ser esa vista y no `empleados`: el RLS de empleados deja leer la fila
+    // propia o las del alcance de empleados:ver_editar, así que un usuario
+    // común no vería la fila de Empresa y el grupo no aparecería nunca.
+    // v_empleados_publico no lleva security_invoker justamente para esto, y
+    // no filtra por activo (la fila de Empresa tiene activo=false).
+    async function cargarCuentasParaPago() {
+      if (estado.cuentasPago) return
+      estado.cuentasPago = { propias: [], empresa: [] }
+
+      const { data: propias, error } = await supabase.from('cuentas_caja')
         .select('id, nombre, medio, moneda, activa')
-        .eq('empleado_id', EMPLEADO_ID_PABLO)
+        .eq('empleado_id', estado.miEmpleadoId)
         .eq('activa', true)
-      if (error) { console.error(error); estado.cuentasPablo = []; return }
-      estado.cuentasPablo = data ?? []
+      if (error) console.error(error)
+      estado.cuentasPago.propias = propias ?? []
+
+      if (!tieneTarea('gastos', 'gastos_empresa')) return
+
+      const { data: emp } = await supabase.from('v_empleados_publico')
+        .select('id').eq('tipo', 'empresa').maybeSingle()
+      // Sin el id de Empresa se sigue con las propias: quedarse sin poder
+      // registrar el pago sería peor que no ofrecer el segundo grupo.
+      if (!emp?.id) return
+
+      const { data: empresa, error: errEmpresa } = await supabase.from('cuentas_caja')
+        .select('id, nombre, medio, moneda, activa')
+        .eq('empleado_id', emp.id)
+        .eq('activa', true)
+      if (errEmpresa) console.error(errEmpresa)
+      estado.cuentasPago.empresa = empresa ?? []
     }
 
     function seleccionarMedioPagoCC(valor) {
@@ -3293,11 +3325,33 @@
       }
       const moneda = document.getElementById('campo-moneda-pago').value
       const medioCuenta = MEDIO_PAGO_A_MEDIO_CUENTA[medioPagoSeleccionado]
-      const candidatas = (estado.cuentasPablo || []).filter(c => c.medio === medioCuenta && c.moneda === moneda)
+      // El filtro por medio y moneda se aplica DENTRO de cada grupo, para que
+      // un grupo sin candidatas en esa moneda no se dibuje vacío. Caso real:
+      // "Macro Paz Mirta USD" es la única cuenta en USD del sistema y es de
+      // Empresa, así que un pago en USD deja "Mis cuentas" sin nada.
+      const filtrar = lista => (lista || []).filter(c => c.medio === medioCuenta && c.moneda === moneda)
+      const propias = filtrar(estado.cuentasPago?.propias)
+      const empresa = filtrar(estado.cuentasPago?.empresa)
+
       grupo.style.display = 'flex'
-      poblarSelect('campo-cuenta-pago-cc', candidatas,
-        c => ({ value: c.id, label: `${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})` }),
-        '— Seleccioná —')
+
+      // A mano y no con poblarSelect(), que no sabe de <optgroup>. Los grupos
+      // existen para que se vea de qué caja sale la plata.
+      const opciones = c => `<option value="${c.id}">${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})</option>`
+      document.getElementById('campo-cuenta-pago-cc').innerHTML =
+        `<option value="">— Seleccioná —</option>` +
+        (propias.length ? `<optgroup label="Mis cuentas">${propias.map(opciones).join('')}</optgroup>` : '') +
+        (empresa.length ? `<optgroup label="Cuenta de Empresa">${empresa.map(opciones).join('')}</optgroup>` : '')
+
+      // Sin candidatas el selector quedaba mudo, con solo "— Seleccioná —" y
+      // nada más: fue el síntoma exacto que se reportó (transferencia sin
+      // ninguna cuenta). Decir por qué está vacío es la mitad del arreglo.
+      const aviso = document.getElementById('aviso-sin-cuentas-pago')
+      const vacio = !propias.length && !empresa.length
+      aviso.hidden = !vacio
+      if (vacio) {
+        aviso.textContent = `No tenés ninguna cuenta de ${MEDIO_CUENTA_LABEL[medioCuenta].toLowerCase()} en ${moneda}.`
+      }
     }
 
     async function abrirModalPago() {
@@ -3307,7 +3361,7 @@
         mostrarError('Elegí una unidad de negocio para registrar un pago.')
         return
       }
-      await cargarCuentasPablo()
+      await cargarCuentasParaPago()
 
       const monedasConDeuda = estado.fichaSaldos.filter(s => Number(s.deuda_pendiente) > 0)
       const grupoMoneda = document.getElementById('grupo-moneda-pago')
@@ -3499,7 +3553,13 @@
           p_monto: monto,
           p_medio_pago: medioPagoSeleccionado,
           p_cuenta_id: cuentaId,
-          p_empleado_id: EMPLEADO_ID_PABLO,
+          // A quién se le atribuye el gasto: quien registra el pago. Antes iba
+          // Pablo fijo, así que TODOS los pagos a proveedores quedaban a su
+          // nombre sin importar quién los hiciera. La caja NO se descuenta por
+          // este campo — fn_sincronizar_caja_gasto() resuelve el dueño desde
+          // cuentas_caja.empleado_id de p_cuenta_id, así que pagar con una
+          // cuenta de Empresa golpea la caja de Empresa igual.
+          p_empleado_id: estado.miEmpleadoId,
           p_fecha_pago: fecha,
           p_aplicaciones: aplicaciones,
         })
