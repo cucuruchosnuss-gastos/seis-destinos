@@ -1531,6 +1531,20 @@
       return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
     }
 
+    // Igual que tieneTarea() pero SIN el bypass de super_admin: exige la fila
+    // otorgada en empleado_tareas aunque quien mire sea super_admin.
+    //
+    // NO es una inconsistencia y no hay que "corregirlo" a tieneTarea(): es el
+    // mismo criterio que caja.html aplica a sus tareas de Empresa. La plata de
+    // la empresa no es de nadie en particular, así que operarla tiene que ser
+    // un permiso consciente y auditable — no algo que venga gratis con el rol
+    // más alto. Hoy lo usa un solo gate: el grupo "Cuenta de Empresa" del
+    // selector de cuenta en cargarCuentasParaPago(). Todo el resto del módulo
+    // sigue con tieneTarea().
+    function tieneTareaExplicita(modulo, tarea) {
+      return estado.misTareas.has(`${modulo}:${tarea}`)
+    }
+
     // El padrón de proveedores activos y aprobados. Vive en un helper porque
     // lo cargan tres lugares (init, alta y edición) y la lista de columnas
     // tiene que ser la misma en los tres — con `direccion`, que la usa el
@@ -3293,7 +3307,9 @@
       if (error) console.error(error)
       estado.cuentasPago.propias = propias ?? []
 
-      if (!tieneTarea('gastos', 'gastos_empresa')) return
+      // Explícita a propósito, sin bypass de super_admin — ver el comentario
+      // de tieneTareaExplicita(). Es el único gate del módulo que va así.
+      if (!tieneTareaExplicita('gastos', 'gastos_empresa')) return
 
       const { data: emp } = await supabase.from('v_empleados_publico')
         .select('id').eq('tipo', 'empresa').maybeSingle()
