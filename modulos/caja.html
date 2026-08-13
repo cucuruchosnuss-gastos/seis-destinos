@@ -1834,17 +1834,27 @@
       return estado.miEmpleado?.rol_app === 'super_admin' || estado.misTareasCaja.has(tarea)
     }
 
-    // Sin bypass de super_admin — las dos tareas de ingreso atómico
-    // ('ingreso_externo_propio' e 'ingreso_externo_empresa') se otorgan por
-    // persona puntual, no por rol (ver los usos en
-    // renderizarAccionesDetalle/abrirModalMovimiento). El resto de las
-    // tareas de este archivo sigue usando tieneTarea() con bypass normal.
+    // Sin bypass de super_admin: exige la fila otorgada en empleado_tareas
+    // aunque quien mire sea super_admin. Se otorgan por persona puntual, no
+    // por rol.
     //
-    // El ATAJO a la ficha de Empresa es la excepción deliberada: usa
-    // tieneTarea() con bypass, porque solo navega — la barrera real es el
-    // botón de adentro (explícito) y la RPC. Sin bypass, un super_admin sin
-    // fila explícita perdería el acceso rápido a la ficha donde justamente se
-    // administran las cuentas de Empresa.
+    // De las 8 tareas de este módulo, HOY son CINCO las que van por acá:
+    //   - ingreso_externo_propio    (meter plata "de la nada" en la caja propia)
+    //   - ingreso_externo_empresa   (lo mismo, en las cuentas de Empresa)
+    //   - ver_empresa               (ver la ficha y las cuentas de Empresa)
+    //   - egreso_empresa            (sacar plata de Empresa hacia una persona)
+    //   - traspaso_empresa          (mover plata entre cuentas de Empresa)
+    // Las otras tres —ver_listado, retiros_todos y movimientos_todos— usan
+    // tieneTarea() con bypass: son de LECTURA, no tocan plata.
+    //
+    // El criterio: operar la plata de la empresa, o hacer aparecer plata,
+    // tiene que ser un permiso consciente y auditable — no algo que venga
+    // gratis con el rol más alto. Eso incluye el ATAJO a la ficha de Empresa
+    // (ver_empresa), que es la puerta de entrada a todo lo demás: sin la
+    // tarea no aparece.
+    //
+    // Cuentas Corrientes aplica el mismo criterio a su grupo "Cuenta de
+    // Empresa" del selector de pago, con su propio tieneTareaExplicita().
     function tieneTareaExplicita(tarea) {
       return estado.misTareasCaja.has(tarea)
     }
