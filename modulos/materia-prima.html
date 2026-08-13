@@ -402,10 +402,16 @@
 
     /* ── Recepción parcial (llegó menos de lo que dice el papel) ──────────── */
 
+    /* Todo el bloque va en bordó y no en el marrón del módulo: lo que se carga
+       acá no es una preferencia de carga como "vino en bultos", es una
+       diferencia con el proveedor. Bordó y no rojo a propósito — el rojo acá
+       significa error, y recibir menos no es un error de quien carga. Si el
+       control se viera alarmante, se evitaría justo cuando corresponde usarlo. */
     .bloque-diferencia {
       margin-top: 0.5625rem;
       padding: 0.6875rem 0.75rem;
       background: var(--color-superficie);
+      border-left: 3px solid var(--bordo);
       border-radius: 11px;
       min-width: 0;
     }
@@ -414,7 +420,7 @@
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: var(--color-texto-suave);
+      color: var(--bordo-oscuro);
       margin-bottom: 0.3125rem;
     }
     .bloque-diferencia__label + .cantidad-fila { margin-bottom: 0.5rem; }
@@ -426,8 +432,8 @@
       border-radius: 8px;
       font-size: 0.8125rem;
       font-weight: 700;
-      background: var(--marron-suave);
-      color: var(--marron-oscuro);
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
       min-width: 0;
     }
     .resultado-diferencia--sin {
@@ -1038,6 +1044,25 @@
       border: 1px solid var(--amarillo);
     }
 
+    /* Ítem que matcheó contra un insumo todavía en 'pendiente_revision': el tipo
+       sale del catálogo y no se pregunta, pero esa clasificación NADIE la
+       confirmó — la puso el sistema o un compañero apurado en una carga
+       anterior. Y de ella depende si esta tarjeta pide lote o no. Mismo ámbar
+       que "Elegí si lleva lote": no es un error, es algo para mirar.
+       Es INFORMATIVA a propósito: `insumos` no tiene policy de UPDATE para el
+       cliente, así que corregir el tipo se hace en Stock. */
+    .aviso-sin-revisar {
+      margin-bottom: 0.75rem;
+      padding: 0.5rem 0.625rem;
+      background: var(--amarillo-suave);
+      border: 1px solid var(--amarillo);
+      border-radius: 10px;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--amarillo-oscuro);
+      min-width: 0;
+    }
+
     .btn-item-borrar {
       background: none;
       border: none;
@@ -1142,6 +1167,29 @@
       background: var(--marron-suave);
       border-color: var(--marron);
       color: var(--marron-oscuro);
+    }
+
+    /* El botón que abre la recepción parcial. Está en la misma fila que "Vino en
+       bultos" y "Lote ilegible", pero es de otra naturaleza: los otros dos
+       cambian CÓMO se carga el número, este registra una diferencia con el
+       proveedor. Sin distinguirlo pasaba desapercibido.
+       Bordó y no rojo: acá el rojo significa error, y recibir menos no es un
+       error de quien carga.
+       VA DESPUÉS de las reglas de arriba a propósito. `--dif:hover` y
+       `.btn-item-secundario:hover` tienen la MISMA especificidad (0,2,0), así
+       que decide el orden: puesto antes, el hover marrón del botón genérico le
+       ganaba. La regla combinada con --activo no depende del orden (dos clases
+       le ganan a una), pero se deja acá para que el variante viva junto. */
+    .btn-item-secundario--dif {
+      background: #fff;
+      border-color: var(--bordo);
+      color: var(--bordo-oscuro);
+    }
+    .btn-item-secundario--dif:hover { background: var(--bordo-suave); border-color: var(--bordo); color: var(--bordo-oscuro); }
+    .btn-item-secundario--dif.btn-item-secundario--activo {
+      background: var(--bordo-suave);
+      border-color: var(--bordo);
+      color: var(--bordo-oscuro);
     }
 
     .item-mp__texto-input {
@@ -2774,7 +2822,7 @@
       // único (lower(nombre), lower(coalesce(marca,''))).
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo')
+        .select('id, nombre, marca, unidad_medida, tipo, estado_alta')
       if (error) { console.error(error); mostrarError('Error al cargar el catálogo de insumos.'); return }
       estado.catalogoInsumos = data ?? []
     }
@@ -2820,6 +2868,10 @@
         // ítem: corregir el tipo después no re-valida lo ya cargado.
         tipo: match?.tipo ?? tipoSugeridoValido(crudo.tipo_sugerido),
         tipoDeOcr: !match && tipoSugeridoValido(crudo.tipo_sugerido) != null,
+        // El tipo salió del catálogo, pero de una fila que todavía nadie
+        // revisó: vale tanto como una sugerencia. Se avisa (ver
+        // .aviso-sin-revisar) en vez de dejar que se propague callado.
+        pendienteRevision: match?.estado_alta === 'pendiente_revision',
         unidadMedida: match?.unidad_medida ?? crudo.unidad_medida ?? 'kg',
         modoDesglose: bultos != null && contenido != null,
         bultos, contenido,
@@ -2843,6 +2895,9 @@
         uid: nuevoUid(), insumoId: null, esNuevo: true,
         // Agregado a mano: sin tipo. Hay que elegirlo, no se asume.
         nombre: '', marca: '', tipo: null, tipoDeOcr: false, unidadMedida: 'kg',
+        // Agregado a mano: no matcheó contra ninguna fila del catálogo, así que
+        // no hay clasificación previa que revisar.
+        pendienteRevision: false,
         modoDesglose: false, bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
@@ -3115,6 +3170,18 @@
           ${confirmacionApagado}
         </div>`
 
+      // Aviso de clasificación sin revisar. Solo para ítems que matchearon
+      // contra el catálogo (los nuevos ya muestran el selector de tipo, que es
+      // la decisión misma). Dice las tres cosas: qué quedó clasificado, qué
+      // consecuencia tiene acá —que es lo único que le importa a quien está en
+      // el depósito— y dónde se corrige.
+      const avisoSinRevisar = (item.esNuevo || !item.pendienteRevision) ? '' : `
+        <div class="aviso-sin-revisar">
+          ⚠ Clasificado como <strong>${esc(etiquetaTipo(item))}</strong>, sin revisar todavía —
+          por eso ${item.tipo === 'materia_prima' ? 'pide lote' : 'no pide lote'}.
+          Si está mal, corregilo en Stock.
+        </div>`
+
       // TRES ramas. Con tipo null NO se afirma que no lleva lote: eso sería
       // decidir por la persona justo lo que se le está pidiendo que decida.
       const loteHtml = item.tipo == null
@@ -3147,13 +3214,14 @@
 
           <div class="item-mp__cuerpo">
             ${identidadHtml}
+            ${avisoSinRevisar}
 
             <div class="item-mp__bloque">
               <div class="item-mp__bloque-label">${item.difiere ? 'Cantidad según el comprobante' : 'Cantidad'}</div>
               ${cantidadHtml}
               ${(item.difiere && item.cantidadOcrOriginal != null)
                 ? '<div class="marca-ocr-item">✓ leído de la foto — verificalo contra el papel</div>' : ''}
-              <button type="button" class="btn-item-secundario ${item.difiere ? 'btn-item-secundario--activo' : ''}" data-accion="toggle-diferencia">
+              <button type="button" class="btn-item-secundario btn-item-secundario--dif ${item.difiere ? 'btn-item-secundario--activo' : ''}" data-accion="toggle-diferencia">
                 ${item.difiere ? '✓ Recibí menos de lo que dice el remito' : 'Recibí menos de lo que dice el remito'}
               </button>
               ${bloqueDiferencia}
@@ -3326,6 +3394,10 @@
               // la marca (además, el bloque que la muestra deja de dibujarse
               // porque ya no es un ítem nuevo).
               item.tipoDeOcr = false
+              // ...pero puede ser una fila del catálogo sin revisar. Se evalúa
+              // acá también: este es el otro camino por el que un ítem pasa de
+              // nuevo a matcheado.
+              item.pendienteRevision = match.estado_alta === 'pendiente_revision'
               item.unidadMedida = match.unidad_medida
               // Se adopta el nombre del catálogo: es el que se va a mostrar
               // de acá en adelante y el que ya usan los ingresos anteriores.
