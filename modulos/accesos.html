@@ -823,10 +823,34 @@
             descripcion: 'Habilita el registro de ingresos de materia prima (el asistente con foto del remito y lotes) y muestra los ingresos que la persona misma cargó, en las unidades de su alcance.' },
           { modulo: 'materia_prima', tarea: 'ver_todo',            label: 'Ver los ingresos de todas las personas',                  conAlcance: true,
             descripcion: 'Muestra los ingresos de materia prima de todas las personas, en las unidades del alcance. Sin esta tarea, cada uno ve solo lo que cargó él.' },
-          { modulo: 'materia_prima', tarea: 'gestionar_catalogo',  label: 'Dar de alta y editar insumos del catálogo',
-            descripcion: 'Permite dar de alta y editar insumos del catálogo. El catálogo es único y compartido por las cuatro unidades — por eso esta tarea no lleva alcance.' },
+          // 'gestionar_catalogo' YA NO ESTÁ ACÁ: se mudó a stock:gestionar_catalogo
+          // (migración del 12-13/08/2026), porque la pantalla del catálogo de
+          // insumos vive ahora en el módulo Stock. La clave vieja ya no está en
+          // el CHECK; si quedara alguna fila con ella, entra por el passthrough
+          // (ver armarTareasPayload) y no se rompe nada.
           { modulo: 'materia_prima', tarea: 'editar_anular',       label: 'Corregir o anular ingresos ya cargados',                  conAlcance: true,
             descripcion: 'Permite corregir o anular ingresos de materia prima ya cargados, en las unidades del alcance.' },
+        ],
+      },
+      {
+        grupo: 'Stock',
+        // Acá 'stock' es igual en los dos namespaces (no lleva separador), así
+        // que la trampa del guión medio/bajo no aplica — a diferencia de
+        // materia-prima / materia_prima, justo arriba.
+        modulos: ['stock'],
+        tareas: [
+          { modulo: 'stock', tarea: 'ver',                    label: 'Ver el stock, los lotes y los movimientos', conAlcance: true,
+            descripcion: 'Muestra el módulo Stock completo: las existencias por insumo y por lote, la mercadería en tránsito entre unidades, los faltantes (stock negativo) y el historial de movimientos — en las unidades del alcance. Sin esta tarea, el módulo no muestra datos.' },
+          { modulo: 'stock', tarea: 'gestionar_catalogo',     label: 'Dar de alta y editar insumos del catálogo',
+            descripcion: 'Permite dar de alta insumos (a mano o importando un Excel), editarlos, desactivarlos y confirmar los que quedaron pendientes de revisión. El catálogo es único y compartido por las cuatro unidades, por eso no lleva alcance. Atención: quien la tiene decide si un insumo exige lote o no — puede apagar la trazabilidad — así que conviene otorgarla a poca gente.' },
+          { modulo: 'stock', tarea: 'dar_baja',               label: 'Dar de baja mercadería (rotura, vencimiento, merma)', conAlcance: true,
+            descripcion: 'Permite dar de baja mercadería con motivo obligatorio (rotura, vencimiento, merma), descontándola del stock de las unidades del alcance.' },
+          { modulo: 'stock', tarea: 'enviar_transferencia',   label: 'Enviar mercadería a otra unidad de negocio', conAlcance: true,
+            descripcion: 'Permite enviar mercadería desde una unidad del alcance hacia otra. El alcance controla desde dónde se saca; el destino puede ser cualquier unidad — recibirla la controla el otro lado.' },
+          { modulo: 'stock', tarea: 'recibir_transferencia',  label: 'Recibir y confirmar mercadería de otra unidad', conAlcance: true,
+            descripcion: 'Permite recibir mercadería enviada por otra unidad: confirmarla (incluso con una cantidad distinta a la enviada, con motivo obligatorio) o rechazarla. El alcance controla en qué unidades recibe.' },
+          { modulo: 'stock', tarea: 'ajustar_inventario',     label: 'Ajustar el stock del sistema al conteo real', conAlcance: true,
+            descripcion: 'Permite ajustar el stock del sistema al conteo físico real, creando o destruyendo existencias por diferencia de inventario, en las unidades del alcance.' },
         ],
       },
       {
