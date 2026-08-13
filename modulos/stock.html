@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <!-- Mismo CDN que usa cuentas-corrientes.html para el padrón de proveedores. -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body { overflow-x: hidden; }
+
+    /* Cualquier regla de autor con display le gana al [hidden] del user-agent —
+       bug conocido del proyecto (ver CLAUDE.md). Va primero y con !important
+       para restaurar la semántica global de hidden. */
+    [hidden] { display: none !important; }
+
+    .contenedor-stock {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 1.25rem 3rem;
+      min-width: 0;
+    }
+
+    /* ── Header — tarjeta blanca, mismo patrón que materia-prima ──────────── */
+
+    .stock-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1.25rem;
+      margin: 1.25rem 0;
+    }
+    .stock-header__marca { display: flex; align-items: center; gap: 0.625rem; min-width: 0; }
+    .stock-header__logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--verde), var(--verde-oscuro));
+      flex-shrink: 0;
+    }
+    .stock-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+    .stock-header__marca-texto {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--color-texto-suave);
+      text-transform: uppercase;
+    }
+    .stock-header__titulo {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-texto);
+      min-width: 0;
+    }
+    .stock-header__subtitulo {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+    }
+    .stock-header__volver {
+      padding: 0.5rem 0.875rem;
+      border-radius: 999px;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .stock-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
+
+    /* ── Aviso de pendientes de revisión ──────────────────────────────────── */
+
+    /* Trabajo acumulado que alguien tiene que resolver: tiene que molestar un
+       poco, por eso va arriba de la lista y no escondido en un chip. */
+    .aviso-pendientes {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-left: 4px solid var(--amarillo);
+      border-radius: 18px;
+      padding: 0.875rem 1.125rem;
+      box-shadow: var(--sombra-suave);
+      margin-bottom: 0.875rem;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .aviso-pendientes__texto { min-width: 0; font-size: 0.8125rem; line-height: 1.45; }
+    .aviso-pendientes__texto strong { color: var(--amarillo-oscuro); }
+
+    /* ── Barra de acciones ────────────────────────────────────────────────── */
+
+    .barra-acciones {
+      display: flex;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .buscador-stock {
+      flex: 1 1 16rem;
+      min-width: 0;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+    }
+    .buscador-stock:focus {
+      outline: none;
+      border-color: var(--verde);
+      box-shadow: 0 0 0 4px var(--verde-suave);
+    }
+
+    /* Un solo botón con fondo lleno por pantalla (el primario). Todo lo demás
+       va en outline verde. */
+    .btn-stock {
+      flex-shrink: 0;
+      padding: 0.6875rem 1.125rem;
+      border-radius: var(--radio-boton);
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid var(--verde);
+      background: var(--color-fondo);
+      color: var(--verde-oscuro);
+      white-space: nowrap;
+    }
+    .btn-stock:hover { background: var(--verde-suave); }
+    .btn-stock--primario {
+      background: var(--verde);
+      border-color: var(--verde);
+      color: #fff;
+    }
+    .btn-stock--primario:hover { background: var(--verde-oscuro); border-color: var(--verde-oscuro); }
+    .btn-stock--alerta {
+      border-color: var(--bordo);
+      color: var(--bordo-oscuro);
+      background: var(--color-fondo);
+    }
+    .btn-stock--alerta:hover { background: var(--bordo-suave); }
+    .btn-stock:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-stock--chico { padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }
+
+    /* ── Chips de filtro ──────────────────────────────────────────────────── */
+
+    .fila-chips {
+      display: flex;
+      gap: 0.4375rem;
+      overflow-x: auto;
+      padding-bottom: 0.875rem;
+      min-width: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chip-stock {
+      background: var(--color-fondo);
+      color: #55617d;
+      border: 1px solid var(--color-borde);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 0.5rem 0.9375rem;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .chip-stock--activo {
+      background: var(--verde-suave);
+      border-color: var(--verde);
+      color: var(--verde-oscuro);
+      font-weight: 650;
+    }
+    .chip-stock__contador {
+      display: inline-block;
+      margin-left: 0.375rem;
+      padding: 0.0625rem 0.375rem;
+      border-radius: 999px;
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+      font-size: 0.6875rem;
+      font-weight: 700;
+    }
+
+    /* ── Lista ────────────────────────────────────────────────────────────── */
+
+    .lista-contenido {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5625rem;
+      min-width: 0;
+    }
+    .lista-contenido[hidden] { display: none; }
+
+    /* .tarjeta-lista viene de css/main.css (fondo, borde, radius, padding).
+       Acá solo lo que esa clase no cubre. */
+    .fila-insumo { align-items: flex-start; cursor: default; }
+    .fila-insumo--pendiente { border-left: 4px solid var(--amarillo); }
+    .fila-insumo--inactivo { opacity: 0.6; }
+    .fila-insumo__info { flex: 1; min-width: 0; }
+    .fila-insumo__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .fila-insumo__marca { font-weight: 500; color: var(--color-texto-suave); }
+    .fila-insumo__meta {
+      margin-top: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      min-width: 0;
+    }
+    .fila-insumo__acciones {
+      display: flex;
+      gap: 0.375rem;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .chip-tipo {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .chip-tipo--materia_prima { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .chip-tipo--insumo        { background: var(--color-acento-suave); color: var(--color-acento); }
+    .chip-estado {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      white-space: nowrap;
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+    }
+    .chip-estado--inactivo { background: rgba(168,184,216,0.22); color: #55617d; }
+
+    /* Aviso del buscador cuando lo único que matchea está desactivado. Sin
+       esto la persona concluye "no existe" y crea un duplicado con otro
+       nombre para esquivar el error de la RPC. */
+    .aviso-inactivos {
+      background: var(--bordo-suave);
+      border: 1px solid var(--bordo);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5625rem;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: var(--bordo-oscuro);
+      min-width: 0;
+    }
+
+    .estado-vacio-stock {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--color-texto-suave);
+      font-size: 0.875rem;
+    }
+
+    /* ── Modales — bottom-sheet, mismo patrón que materia-prima ───────────── */
+
+    .modal-stock {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-stock[hidden] { display: none; }
+    .modal-stock__backdrop { position: absolute; inset: 0; background: rgba(17,17,17,0.45); }
+    .modal-stock__panel {
+      position: relative;
+      background: var(--color-fondo);
+      width: 100%;
+      max-height: 92dvh;
+      overflow-y: auto;
+      border-radius: 20px 20px 0 0;
+      padding: 1.25rem;
+      min-width: 0;
+    }
+    @media (min-width: 640px) {
+      .modal-stock { align-items: center; }
+      .modal-stock__panel { max-width: 34rem; border-radius: 20px; }
+    }
+    .modal-stock__titulo {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      margin: 0 0 0.875rem;
+      color: var(--color-texto);
+    }
+    .modal-stock__acciones {
+      display: flex;
+      gap: 0.625rem;
+      margin-top: 1.125rem;
+      flex-wrap: wrap;
+    }
+    .modal-stock__acciones .btn-stock { flex: 1 1 8rem; }
+
+    .campo-stock { margin-bottom: 0.875rem; min-width: 0; }
+    .campo-stock label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      margin-bottom: 0.3125rem;
+      color: var(--color-texto);
+    }
+    .campo-stock input,
+    .campo-stock select {
+      width: 100%;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+    }
+    .campo-stock input:focus,
+    .campo-stock select:focus {
+      outline: none;
+      border-color: var(--verde);
+      box-shadow: 0 0 0 4px var(--verde-suave);
+    }
+    .campo-stock__opcional { font-weight: 500; color: var(--color-texto-suave); }
+    /* La explicación va VISIBLE y no en un tooltip: el tipo decide si el
+       insumo exige lote, y la tolerancia decide cuánto desvío se acepta. Las
+       dos son decisiones que hay que entender antes de elegir, no después. */
+    .campo-stock__ayuda {
+      margin-top: 0.375rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--color-superficie);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: var(--color-texto);
+    }
+    .campo-stock__error {
+      margin-top: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--bordo-oscuro);
+    }
+
+    /* Paso de confirmación del cambio de tipo. En --bordo, que es el color de
+       alerta del proyecto — NO en --rojo, que es el acento del módulo Accesos. */
+    .confirmacion-tipo {
+      background: var(--bordo-suave);
+      border: 1px solid var(--bordo);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--bordo-oscuro);
+      min-width: 0;
+    }
+    .confirmacion-tipo strong { color: var(--bordo-oscuro); }
+
+    /* ── Importación ──────────────────────────────────────────────────────── */
+
+    .resumen-import {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .resumen-import__dato {
+      flex: 1 1 6rem;
+      min-width: 0;
+      background: var(--color-superficie);
+      border-radius: 12px;
+      padding: 0.625rem 0.75rem;
+      text-align: center;
+    }
+    .resumen-import__numero { font-size: 1.25rem; font-weight: 700; color: var(--color-texto); }
+    .resumen-import__etiqueta {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .lista-errores-import {
+      max-height: 15rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      min-width: 0;
+    }
+    .error-import {
+      background: var(--bordo-suave);
+      border: 1px solid var(--bordo);
+      border-radius: 10px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--bordo-oscuro);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .nota-omitidos {
+      background: var(--color-superficie);
+      border-radius: 10px;
+      padding: 0.625rem 0.75rem;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.875rem;
+    }
+  </style>
+</head>
+
+<body class="pagina-modulo">
+
+  <div class="contenedor-stock">
+
+    <header class="stock-header">
+      <a href="../dashboard.html" class="stock-header__volver" title="Volver al dashboard">‹ Volver</a>
+      <div class="stock-header__marca">
+        <div class="stock-header__logo"></div>
+        <div class="stock-header__marca-col">
+          <span class="stock-header__marca-texto">Seis Destinos</span>
+          <span class="stock-header__titulo">Stock <span style="color:var(--verde); font-size:0.875rem; line-height:1;">●</span> <span class="stock-header__subtitulo">Catálogo de insumos</span></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="aviso-pendientes" id="aviso-pendientes" hidden>
+      <div class="aviso-pendientes__texto">
+        Hay <strong id="aviso-pendientes-numero">0</strong> <span id="aviso-pendientes-palabra">insumos</span> creados durante una carga que <strong>nadie revisó todavía</strong>. Abrilos, verificá los datos y guardá para confirmarlos.
+      </div>
+      <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-pendientes">Ver pendientes</button>
+    </div>
+
+    <div class="barra-acciones">
+      <input type="search" class="buscador-stock" id="buscador-stock" placeholder="Buscar por nombre o marca…" autocomplete="off">
+      <button type="button" class="btn-stock btn-stock--primario" id="btn-nuevo-insumo" hidden>+ Nuevo insumo</button>
+      <button type="button" class="btn-stock" id="btn-importar-excel" hidden>Importar Excel</button>
+    </div>
+
+    <div class="fila-chips" id="chips-filtro"></div>
+
+    <div class="aviso-inactivos" id="aviso-inactivos" hidden></div>
+
+    <div class="lista-contenido" id="lista-insumos"></div>
+
+    <div class="estado-vacio-stock" id="estado-cargando">Cargando catálogo…</div>
+    <div class="estado-vacio-stock" id="estado-vacio" hidden></div>
+
+  </div><!-- /contenedor -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — ALTA / EDICIÓN DE INSUMO
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-insumo" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-insumo></div>
+    <div class="modal-stock__panel">
+      <h2 class="modal-stock__titulo" id="modal-insumo-titulo">Nuevo insumo</h2>
+
+      <div id="modal-insumo-formulario">
+        <div class="campo-stock">
+          <label for="campo-nombre">Nombre</label>
+          <input type="text" id="campo-nombre" placeholder="Ej: Harina 000" autocomplete="off">
+          <div class="campo-stock__error" id="error-nombre" hidden></div>
+        </div>
+
+        <div class="campo-stock">
+          <label for="campo-marca">Marca <span class="campo-stock__opcional">opcional</span></label>
+          <input type="text" id="campo-marca" placeholder="Ej: Cañuelas" autocomplete="off">
+        </div>
+
+        <div class="campo-stock">
+          <label for="campo-unidad">Unidad de medida</label>
+          <!-- Texto libre con datalist: sugiere las que YA existen en el
+               catálogo para no terminar con "kg", "Kg" y "kilos" como tres
+               unidades distintas, pero no impide cargar una nueva. -->
+          <input type="text" id="campo-unidad" list="unidades-existentes" placeholder="Ej: kg" autocomplete="off">
+          <datalist id="unidades-existentes"></datalist>
+          <div class="campo-stock__error" id="error-unidad" hidden></div>
+        </div>
+
+        <div class="campo-stock">
+          <label for="campo-tipo">Tipo</label>
+          <select id="campo-tipo">
+            <option value="materia_prima">Materia prima</option>
+            <option value="insumo">Insumo</option>
+          </select>
+          <div class="campo-stock__ayuda">
+            <strong>Materia prima</strong> = entra a la receta y EXIGE cargar el lote.<br>
+            <strong>Insumo</strong> = auxiliar (cajas, bolsas, limpieza) y no lleva lote.
+          </div>
+        </div>
+
+        <div class="campo-stock">
+          <label for="campo-tolerancia">Tolerancia de merma % <span class="campo-stock__opcional">opcional</span></label>
+          <input type="number" id="campo-tolerancia" min="0" max="100" step="0.01" placeholder="Vacío = control estricto" autocomplete="off">
+          <div class="campo-stock__ayuda">
+            Desvío aceptable entre el stock del sistema y el conteo físico. Dejalo vacío para control estricto. Usalo en insumos que se dosifican y nunca cierran exacto (por ejemplo lecitina: 300 g por masa de un tacho de 215 kg).
+          </div>
+          <div class="campo-stock__error" id="error-tolerancia" hidden></div>
+        </div>
+      </div>
+
+      <!-- Paso de confirmación del cambio de tipo. Reemplaza al formulario, no
+           se apila abajo: la decisión tiene que ser lo único en pantalla. -->
+      <div id="modal-insumo-confirmacion" hidden>
+        <div class="confirmacion-tipo">
+          Estás cambiando <strong id="confirmacion-nombre"></strong> de <strong>Materia prima</strong> a <strong>Insumo</strong>.
+          <br><br>
+          A partir de ahora <strong>las cargas ya no van a pedir el lote</strong> para este producto. Se pierde la trazabilidad hacia adelante: si mañana hay que rastrear de qué lote salió una producción, este insumo no va a tener el dato.
+          <br><br>
+          Lo ya cargado no se toca.
+        </div>
+        <div class="modal-stock__acciones">
+          <button type="button" class="btn-stock" id="btn-volver-formulario">Volver</button>
+          <button type="button" class="btn-stock btn-stock--alerta" id="btn-confirmar-cambio-tipo">Sí, quitar el lote</button>
+        </div>
+      </div>
+
+      <div class="modal-stock__acciones" id="modal-insumo-acciones">
+        <button type="button" class="btn-stock" data-cerrar-insumo>Cancelar</button>
+        <button type="button" class="btn-stock btn-stock--primario" id="btn-guardar-insumo">Guardar</button>
+      </div>
+    </div>
+  </div><!-- /modal-insumo -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — IMPORTAR EXCEL
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-importar" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-importar></div>
+    <div class="modal-stock__panel">
+      <h2 class="modal-stock__titulo">Importar insumos desde Excel</h2>
+
+      <div id="import-paso-elegir">
+        <div class="campo-stock__ayuda" style="margin-bottom:0.875rem;">
+          El archivo tiene que tener estas columnas, con estos nombres exactos:<br>
+          <strong>nombre · marca · unidad_medida · tipo · tolerancia_merma_pct</strong><br><br>
+          En <strong>tipo</strong> va literalmente <strong>materia_prima</strong> o <strong>insumo</strong>. La plantilla trae una fila de ejemplo para que se vea el formato; podés dejarla o borrarla, se ignora igual.
+        </div>
+        <div class="modal-stock__acciones" style="margin-top:0;">
+          <button type="button" class="btn-stock" id="btn-descargar-plantilla">Descargar plantilla</button>
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-elegir-archivo">Elegir archivo</button>
+        </div>
+        <input type="file" id="input-excel-insumos" accept=".xlsx,.xls" hidden>
+      </div>
+
+      <div id="import-paso-preview" hidden>
+        <div class="resumen-import">
+          <div class="resumen-import__dato">
+            <div class="resumen-import__numero" id="preview-total">0</div>
+            <div class="resumen-import__etiqueta">A importar</div>
+          </div>
+          <div class="resumen-import__dato">
+            <div class="resumen-import__numero" id="preview-ignoradas">0</div>
+            <div class="resumen-import__etiqueta">Ignoradas</div>
+          </div>
+        </div>
+        <div class="nota-omitidos" id="nota-ignoradas" hidden></div>
+        <div class="modal-stock__acciones" style="margin-top:0;">
+          <button type="button" class="btn-stock" data-cerrar-importar>Cancelar</button>
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-confirmar-import">Confirmar carga</button>
+        </div>
+      </div>
+
+      <div id="import-paso-resultado" hidden>
+        <div class="resumen-import">
+          <div class="resumen-import__dato">
+            <div class="resumen-import__numero" id="resultado-creados">0</div>
+            <div class="resumen-import__etiqueta">Creados</div>
+          </div>
+          <div class="resumen-import__dato">
+            <div class="resumen-import__numero" id="resultado-omitidos">0</div>
+            <div class="resumen-import__etiqueta">Ya existían</div>
+          </div>
+          <div class="resumen-import__dato">
+            <div class="resumen-import__numero" id="resultado-errores">0</div>
+            <div class="resumen-import__etiqueta">Con error</div>
+          </div>
+        </div>
+        <div class="nota-omitidos" id="nota-omitidos" hidden></div>
+        <div class="lista-errores-import" id="lista-errores-import"></div>
+        <div class="modal-stock__acciones" style="margin-top:0;">
+          <button type="button" class="btn-stock btn-stock--primario" data-cerrar-importar>Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /modal-importar -->
+
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTANTES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TIPOS = {
+      materia_prima: 'Materia prima',
+      insumo:        'Insumo',
+    }
+
+    // Columnas EXACTAS de la plantilla — el mismo array alimenta la descarga y
+    // la lectura, así que no pueden desincronizarse.
+    const COLUMNAS_PLANTILLA = ['nombre', 'marca', 'unidad_medida', 'tipo', 'tolerancia_merma_pct']
+
+    // Fila de ejemplo de la plantilla. Existe porque `tipo` tiene que decir
+    // literalmente 'materia_prima' o 'insumo' y sin un ejemplo eso se falla
+    // siempre. Y el parser la DESCARTA por nombre: alguien va a llenar la
+    // planilla debajo del ejemplo y mandarla entera, es el error garantizado.
+    const FILA_EJEMPLO = {
+      nombre: 'EJEMPLO - borrar esta fila',
+      marca: 'Marca ejemplo',
+      unidad_medida: 'kg',
+      tipo: 'materia_prima',
+      tolerancia_merma_pct: 0.5,
+    }
+
+    const FILTROS = [
+      { id: 'todos',      label: 'Todos' },
+      { id: 'materia_prima', label: 'Materia prima' },
+      { id: 'insumo',     label: 'Insumos' },
+      { id: 'pendientes', label: 'Sin revisar' },
+      { id: 'inactivos',  label: 'Inactivos' },
+    ]
+
+    const VACIO_POR_FILTRO = {
+      todos:         'No hay insumos cargados todavía.',
+      materia_prima: 'No hay materias primas cargadas.',
+      insumo:        'No hay insumos auxiliares cargados.',
+      pendientes:    'No hay nada pendiente de revisar. 👌',
+      inactivos:     'No hay insumos desactivados.',
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      misTareas: new Set(),   // claves 'modulo:tarea' de empleado_tareas
+      insumos: [],
+      filtro: 'todos',
+      busqueda: '',
+      // Modal de insumo: null = alta; el objeto = edición de ese insumo.
+      editando: null,
+      // Filas ya parseadas del Excel, esperando confirmación.
+      filasImport: [],
+    }
+
+    // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
+    // falla cerrado. El chequeo es COSMÉTICO — las 4 RPCs revalidan
+    // tiene_tarea('stock','gestionar_catalogo') del lado del servidor.
+    function tieneTarea(modulo, tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
+    }
+    const puedeGestionar = () => tieneTarea('stock', 'gestionar_catalogo')
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ))
+    }
+
+    // Sin acentos y en minúsculas — mismo criterio que el buscador de
+    // proveedores de gastos.html: los nombres se tipean sin tildes.
+    function normalizar(v) {
+      return (v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    }
+
+    function coincide(insumo, termino) {
+      const t = normalizar(termino)
+      if (!t) return true
+      return normalizar(insumo.nombre).includes(t) || normalizar(insumo.marca).includes(t)
+    }
+
+    function ordenarPorNombre(lista) {
+      return [...lista].sort((a, b) =>
+        (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
+    }
+
+    const esPendiente = i => i.estado_alta === 'pendiente_revision'
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // SELECT directo: la policy "leer catalogo de insumos" es
+    // (auth.uid() is not null), o sea cualquier usuario autenticado. El
+    // catálogo es ÚNICO y compartido por las 4 unidades — no lleva
+    // unidad_negocio_id ni selector de empresa.
+    async function cargarInsumos() {
+      const { data, error } = await supabase
+        .from('insumos')
+        .select('id, nombre, marca, unidad_medida, tipo, activo, estado_alta, tolerancia_merma_pct')
+
+      document.getElementById('estado-cargando').hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudo cargar el catálogo de insumos.')
+        return
+      }
+      estado.insumos = data ?? []
+      renderizarUnidadesSugeridas()
+      renderizarChips()
+      renderizarAvisoPendientes()
+      renderizarLista()
+    }
+
+    function renderizarUnidadesSugeridas() {
+      const unidades = [...new Set(
+        estado.insumos.map(i => (i.unidad_medida || '').trim()).filter(Boolean)
+      )].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+
+      document.getElementById('unidades-existentes').innerHTML =
+        unidades.map(u => `<option value="${esc(u)}"></option>`).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RENDER
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const contarPendientes = () =>
+      estado.insumos.filter(i => i.activo && esPendiente(i)).length
+
+    function renderizarChips() {
+      const pendientes = contarPendientes()
+      document.getElementById('chips-filtro').innerHTML = FILTROS.map(f => {
+        const activo = estado.filtro === f.id
+        const contador = (f.id === 'pendientes' && pendientes > 0)
+          ? `<span class="chip-stock__contador">${pendientes}</span>` : ''
+        return `<button type="button" class="chip-stock${activo ? ' chip-stock--activo' : ''}" data-filtro="${f.id}">${f.label}${contador}</button>`
+      }).join('')
+
+      document.querySelectorAll('#chips-filtro .chip-stock').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.filtro = btn.dataset.filtro
+          renderizarChips()
+          renderizarLista()
+        })
+      })
+    }
+
+    function renderizarAvisoPendientes() {
+      const n = contarPendientes()
+      const aviso = document.getElementById('aviso-pendientes')
+      aviso.hidden = n === 0
+      if (n === 0) return
+      document.getElementById('aviso-pendientes-numero').textContent = n
+      document.getElementById('aviso-pendientes-palabra').textContent = n === 1 ? 'insumo' : 'insumos'
+    }
+
+    // El chip decide QUÉ se lista por defecto. Los inactivos solo salen en su
+    // propio chip... salvo por el rescate del buscador, más abajo.
+    function filtrarPorChip(lista, filtro) {
+      if (filtro === 'inactivos')  return lista.filter(i => !i.activo)
+      if (filtro === 'pendientes') return lista.filter(i => i.activo && esPendiente(i))
+      const activos = lista.filter(i => i.activo)
+      if (filtro === 'materia_prima' || filtro === 'insumo') {
+        return activos.filter(i => i.tipo === filtro)
+      }
+      return activos
+    }
+
+    function renderizarLista() {
+      const listaEl = document.getElementById('lista-insumos')
+      const vacioEl = document.getElementById('estado-vacio')
+      const avisoInactivos = document.getElementById('aviso-inactivos')
+
+      let filas = ordenarPorNombre(
+        filtrarPorChip(estado.insumos, estado.filtro).filter(i => coincide(i, estado.busqueda))
+      )
+
+      // RESCATE DEL BUSCADOR. Si se buscó algo y entre lo listado no hay nada,
+      // buscar también entre los desactivados y mostrarlos.
+      //
+      // Sin esto: alguien busca "Harina 000 Cañuelas", no la encuentra porque
+      // está desactivada, la da de alta de nuevo, la RPC la rechaza con "Ya
+      // existe un insumo con ese nombre y esa marca" — y ese insumo no aparece
+      // en ninguna lista que esté mirando. Lo más probable es que cree
+      // "Harina 000 Cañuelas SA" para esquivar el error, y ahí queda el
+      // duplicado con la trazabilidad partida en dos.
+      //
+      // El buscador no puede devolver vacío para algo que existe.
+      let rescatados = []
+      if (estado.busqueda.trim() && !filas.length && estado.filtro !== 'inactivos') {
+        rescatados = ordenarPorNombre(
+          estado.insumos.filter(i => !i.activo && coincide(i, estado.busqueda))
+        )
+      }
+
+      avisoInactivos.hidden = rescatados.length === 0
+      if (rescatados.length) {
+        const plural = rescatados.length === 1
+        avisoInactivos.innerHTML = plural
+          ? 'Ese insumo <strong>existe pero está desactivado</strong>. No hace falta crearlo de nuevo: reactivalo y seguí usando el mismo.'
+          : `Hay <strong>${rescatados.length} insumos desactivados</strong> que coinciden con la búsqueda. No hace falta crearlos de nuevo: reactivalos.`
+        filas = rescatados
+      }
+
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        vacioEl.textContent = estado.busqueda.trim()
+          ? 'No se encontró ningún insumo con ese nombre o marca.'
+          : (VACIO_POR_FILTRO[estado.filtro] ?? 'Sin resultados.')
+        return
+      }
+      vacioEl.hidden = true
+
+      const gestiona = puedeGestionar()
+
+      listaEl.innerHTML = filas.map(i => {
+        const clases = [
+          'tarjeta-lista', 'fila-insumo',
+          i.activo && esPendiente(i) ? 'fila-insumo--pendiente' : '',
+          i.activo ? '' : 'fila-insumo--inactivo',
+        ].filter(Boolean).join(' ')
+
+        const marca = i.marca ? ` <span class="fila-insumo__marca">· ${esc(i.marca)}</span>` : ''
+        const tolerancia = i.tolerancia_merma_pct != null
+          ? `<span>· merma ${esc(i.tolerancia_merma_pct)}%</span>` : ''
+        const badgePendiente = (i.activo && esPendiente(i))
+          ? `<span class="chip-estado">Sin revisar</span>` : ''
+        const badgeInactivo = !i.activo
+          ? `<span class="chip-estado chip-estado--inactivo">Desactivado</span>` : ''
+
+        const acciones = gestiona ? `
+          <div class="fila-insumo__acciones">
+            <button type="button" class="btn-stock btn-stock--chico" data-editar="${i.id}">${i.activo && esPendiente(i) ? 'Revisar' : 'Editar'}</button>
+            <button type="button" class="btn-stock btn-stock--chico${i.activo ? ' btn-stock--alerta' : ''}" data-toggle-activo="${i.id}">${i.activo ? 'Desactivar' : 'Reactivar'}</button>
+          </div>` : ''
+
+        return `
+          <div class="${clases}">
+            <div class="fila-insumo__info">
+              <div class="fila-insumo__nombre">${esc(i.nombre)}${marca}</div>
+              <div class="fila-insumo__meta">
+                <span class="chip-tipo chip-tipo--${i.tipo}">${TIPOS[i.tipo] ?? esc(i.tipo)}</span>
+                <span>${esc(i.unidad_medida)}</span>
+                ${tolerancia}
+                ${badgePendiente}${badgeInactivo}
+              </div>
+            </div>
+            ${acciones}
+          </div>`
+      }).join('')
+
+      listaEl.querySelectorAll('[data-editar]').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalInsumo(btn.dataset.editar))
+      })
+      listaEl.querySelectorAll('[data-toggle-activo]').forEach(btn => {
+        btn.addEventListener('click', () => alternarActivo(btn.dataset.toggleActivo))
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL — ALTA / EDICIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function abrirModalInsumo(insumoId = null) {
+      if (!puedeGestionar()) return
+
+      estado.editando = insumoId
+        ? (estado.insumos.find(i => i.id === insumoId) ?? null) : null
+      const i = estado.editando
+
+      document.getElementById('modal-insumo-titulo').textContent = !i
+        ? 'Nuevo insumo'
+        : (esPendiente(i) ? 'Revisar insumo' : 'Editar insumo')
+
+      document.getElementById('campo-nombre').value     = i?.nombre ?? ''
+      document.getElementById('campo-marca').value      = i?.marca ?? ''
+      document.getElementById('campo-unidad').value     = i?.unidad_medida ?? ''
+      document.getElementById('campo-tipo').value       = i?.tipo ?? 'materia_prima'
+      document.getElementById('campo-tolerancia').value = i?.tolerancia_merma_pct ?? ''
+
+      limpiarErroresModal()
+      mostrarPasoFormulario()
+      document.getElementById('modal-insumo').hidden = false
+    }
+
+    function cerrarModalInsumo() {
+      document.getElementById('modal-insumo').hidden = true
+      estado.editando = null
+    }
+
+    function mostrarPasoFormulario() {
+      document.getElementById('modal-insumo-formulario').hidden = false
+      document.getElementById('modal-insumo-acciones').hidden = false
+      document.getElementById('modal-insumo-confirmacion').hidden = true
+    }
+
+    function mostrarPasoConfirmacion() {
+      document.getElementById('modal-insumo-formulario').hidden = true
+      document.getElementById('modal-insumo-acciones').hidden = true
+      document.getElementById('modal-insumo-confirmacion').hidden = false
+      document.getElementById('confirmacion-nombre').textContent =
+        document.getElementById('campo-nombre').value.trim()
+    }
+
+    function limpiarErroresModal() {
+      ;['error-nombre', 'error-unidad', 'error-tolerancia'].forEach(id => {
+        const el = document.getElementById(id)
+        el.hidden = true
+        el.textContent = ''
+      })
+    }
+
+    function marcarError(id, mensaje) {
+      const el = document.getElementById(id)
+      el.textContent = mensaje
+      el.hidden = false
+    }
+
+    // Devuelve los datos ya validados, o null si algo falta. La tolerancia se
+    // valida ACÁ y no se deja caer al CHECK chk_tolerancia_merma: el error
+    // crudo de Postgres que devuelve PostgREST es ilegible para un encargado
+    // de depósito.
+    function leerFormularioInsumo() {
+      limpiarErroresModal()
+      let ok = true
+
+      const nombre = document.getElementById('campo-nombre').value.trim()
+      const unidad = document.getElementById('campo-unidad').value.trim()
+      const crudo  = document.getElementById('campo-tolerancia').value.trim()
+
+      if (!nombre) { marcarError('error-nombre', 'El nombre es obligatorio.'); ok = false }
+      if (!unidad) { marcarError('error-unidad', 'La unidad de medida es obligatoria.'); ok = false }
+
+      let tolerancia = null
+      if (crudo !== '') {
+        tolerancia = Number(crudo)
+        if (!Number.isFinite(tolerancia)) {
+          marcarError('error-tolerancia', 'La tolerancia tiene que ser un número.')
+          ok = false
+        } else if (tolerancia < 0 || tolerancia > 100) {
+          marcarError('error-tolerancia', 'La tolerancia va entre 0 y 100.')
+          ok = false
+        }
+      }
+
+      if (!ok) return null
+
+      return {
+        nombre,
+        marca: document.getElementById('campo-marca').value.trim() || null,
+        unidad_medida: unidad,
+        tipo: document.getElementById('campo-tipo').value,
+        tolerancia_merma_pct: tolerancia,
+      }
+    }
+
+    // Cambiar de materia_prima a insumo APAGA la exigencia de lote hacia
+    // adelante. El servidor lo permite a propósito (editar_insumo solo emite
+    // un `raise notice`, que el cliente ni ve), así que esta confirmación es
+    // la ÚNICA barrera que existe para esa operación.
+    function pideConfirmacionDeTipo(datos) {
+      return !!estado.editando
+        && estado.editando.tipo === 'materia_prima'
+        && datos.tipo === 'insumo'
+    }
+
+    async function guardarInsumo({ saltearConfirmacion = false } = {}) {
+      const datos = leerFormularioInsumo()
+      if (!datos) return
+
+      if (!saltearConfirmacion && pideConfirmacionDeTipo(datos)) {
+        mostrarPasoConfirmacion()
+        return
+      }
+
+      const btn = document.getElementById('btn-guardar-insumo')
+      btn.disabled = true
+
+      let error
+      if (!estado.editando) {
+        ;({ error } = await supabase.rpc('crear_insumo', {
+          p_nombre: datos.nombre,
+          p_marca: datos.marca,
+          p_unidad_medida: datos.unidad_medida,
+          p_tipo: datos.tipo,
+          p_tolerancia_merma_pct: datos.tolerancia_merma_pct,
+        }))
+      } else {
+        // p_estado_alta: 'activo' EXPLÍCITO cuando el insumo estaba pendiente.
+        // editar_insumo hace coalesce(p_estado_alta, estado_alta), así que
+        // mandar null lo dejaría editado pero SIGUIENDO pendiente, y nadie se
+        // enteraría. En una edición normal se manda null para no tocarlo.
+        ;({ error } = await supabase.rpc('editar_insumo', {
+          p_insumo_id: estado.editando.id,
+          p_nombre: datos.nombre,
+          p_marca: datos.marca,
+          p_unidad_medida: datos.unidad_medida,
+          p_tipo: datos.tipo,
+          p_tolerancia_merma_pct: datos.tolerancia_merma_pct,
+          p_estado_alta: esPendiente(estado.editando) ? 'activo' : null,
+        }))
+      }
+
+      btn.disabled = false
+
+      if (error) {
+        // Mensaje crudo de la RPC: son mensajes escritos para leerse
+        // ("Ya existe un insumo con ese nombre y esa marca."). Envolverlos en
+        // un genérico perdería la única información útil.
+        mostrarError(error.message || 'No se pudo guardar el insumo.')
+        mostrarPasoFormulario()
+        return
+      }
+
+      mostrarExito(estado.editando ? 'Insumo actualizado.' : 'Insumo creado.')
+      cerrarModalInsumo()
+      await cargarInsumos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DESACTIVAR / REACTIVAR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // desactivar_insumo(p_insumo_id, p_activo) es un TOGGLE: el mismo RPC
+    // reactiva pasando true. Los insumos NUNCA se borran.
+    async function alternarActivo(insumoId) {
+      if (!puedeGestionar()) return
+      const insumo = estado.insumos.find(i => i.id === insumoId)
+      if (!insumo) return
+
+      const { error } = await supabase.rpc('desactivar_insumo', {
+        p_insumo_id: insumoId,
+        p_activo: !insumo.activo,
+      })
+
+      if (error) {
+        // La RPC devuelve el saldo dentro del mensaje ("todavía hay 40 en
+        // stock"). Ese número es la información que la persona necesita para
+        // saber qué hacer — se muestra tal cual.
+        mostrarError(error.message || 'No se pudo cambiar el estado del insumo.')
+        return
+      }
+
+      mostrarExito(insumo.activo ? 'Insumo desactivado.' : 'Insumo reactivado.')
+      await cargarInsumos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // IMPORTACIÓN POR EXCEL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function descargarPlantilla() {
+      const hoja = XLSX.utils.json_to_sheet([FILA_EJEMPLO], { header: COLUMNAS_PLANTILLA })
+      const libro = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(libro, hoja, 'Insumos')
+      XLSX.writeFile(libro, 'plantilla_insumos.xlsx')
+    }
+
+    // Busca el valor de una columna probando varias grafías del encabezado.
+    function valorFila(fila, ...nombres) {
+      for (const n of nombres) {
+        if (fila[n] !== undefined && fila[n] !== null) return fila[n]
+      }
+      return null
+    }
+
+    const limpiarTexto = v => (v == null ? '' : String(v).trim())
+
+    function parsearExcel(filasCrudas) {
+      const filas = []
+      let ignoradas = 0
+      let ejemploDescartado = false
+
+      filasCrudas.forEach(cruda => {
+        const nombre = limpiarTexto(valorFila(cruda, 'nombre', 'Nombre', 'NOMBRE'))
+
+        // La fila de ejemplo de la plantilla se descarta SIEMPRE. Alguien va a
+        // llenar la planilla debajo del ejemplo y mandarla entera — es el
+        // error garantizado, y crearía un insumo llamado "EJEMPLO - borrar
+        // esta fila".
+        if (normalizar(nombre) === normalizar(FILA_EJEMPLO.nombre)) {
+          ejemploDescartado = true
+          return
+        }
+
+        // Sin nombre no hay insumo que crear. Se cuentan para avisarlo:
+        // descartar filas en silencio es lo que después aparece como "faltan
+        // insumos".
+        if (!nombre) { ignoradas++; return }
+
+        const tolCruda = valorFila(cruda, 'tolerancia_merma_pct', 'Tolerancia_merma_pct', 'TOLERANCIA_MERMA_PCT')
+
+        filas.push({
+          nombre,
+          marca: limpiarTexto(valorFila(cruda, 'marca', 'Marca', 'MARCA')) || null,
+          unidad_medida: limpiarTexto(valorFila(cruda, 'unidad_medida', 'Unidad_medida', 'UNIDAD_MEDIDA')),
+          tipo: limpiarTexto(valorFila(cruda, 'tipo', 'Tipo', 'TIPO')).toLowerCase(),
+          tolerancia_merma_pct: (tolCruda === null || limpiarTexto(tolCruda) === '')
+            ? null : limpiarTexto(tolCruda),
+        })
+      })
+
+      return { filas, ignoradas, ejemploDescartado }
+    }
+
+    async function leerArchivoExcel(archivo) {
+      const buffer = await archivo.arrayBuffer()
+      const libro = XLSX.read(buffer, { type: 'array' })
+      const hoja = libro.Sheets[libro.SheetNames[0]]
+      if (!hoja) { mostrarError('El archivo no tiene ninguna hoja con datos.'); return }
+
+      const { filas, ignoradas, ejemploDescartado } = parsearExcel(
+        XLSX.utils.sheet_to_json(hoja, { defval: null })
+      )
+
+      if (!filas.length) {
+        mostrarError('No se encontró ninguna fila con nombre en el archivo.')
+        return
+      }
+
+      estado.filasImport = filas
+      document.getElementById('preview-total').textContent = filas.length
+      document.getElementById('preview-ignoradas').textContent = ignoradas
+
+      const nota = document.getElementById('nota-ignoradas')
+      const avisos = []
+      if (ignoradas) avisos.push(`Se ignoraron ${ignoradas} ${ignoradas === 1 ? 'fila' : 'filas'} sin nombre.`)
+      if (ejemploDescartado) avisos.push('Se descartó la fila de ejemplo de la plantilla.')
+      nota.hidden = avisos.length === 0
+      nota.textContent = avisos.join(' ')
+
+      document.getElementById('import-paso-elegir').hidden = true
+      document.getElementById('import-paso-preview').hidden = false
+    }
+
+    async function confirmarImportacion() {
+      const btn = document.getElementById('btn-confirmar-import')
+      btn.disabled = true
+
+      const { data, error } = await supabase.rpc('importar_insumos_excel', {
+        p_filas: estado.filasImport,
+      })
+
+      btn.disabled = false
+
+      if (error) {
+        mostrarError(error.message || 'No se pudo importar el Excel.')
+        return
+      }
+
+      const creados  = data?.creados ?? 0
+      const omitidos = data?.omitidos ?? 0
+      const errores  = data?.errores ?? []
+
+      document.getElementById('resultado-creados').textContent  = creados
+      document.getElementById('resultado-omitidos').textContent = omitidos
+      document.getElementById('resultado-errores').textContent  = errores.length
+
+      // "Omitidos" NO son errores: reimportar la planilla corregida es el caso
+      // normal, y sin esta aclaración el número se lee como si algo hubiera
+      // fallado.
+      const notaOmitidos = document.getElementById('nota-omitidos')
+      notaOmitidos.hidden = omitidos === 0
+      if (omitidos) {
+        notaOmitidos.textContent = `${omitidos} ${omitidos === 1 ? 'insumo ya existía' : 'insumos ya existían'} en el catálogo y no se volvieron a crear. No es un error: reimportar la misma planilla corregida es lo esperado.`
+      }
+
+      document.getElementById('lista-errores-import').innerHTML = errores.map(e => {
+        // OJO: `fila` que devuelve la RPC es el índice DENTRO DEL ARRAY que se
+        // mandó, no el renglón del Excel. Como acá se descartan filas (la de
+        // ejemplo y las que no tienen nombre), el offset se corre. Se ubica
+        // por nombre + marca, que es el dato con el que la persona busca en su
+        // planilla.
+        const nombre = e.nombre || '(sin nombre)'
+        const marca = e.marca ? ` · ${e.marca}` : ''
+        return `<div class="error-import"><strong>${esc(nombre)}${esc(marca)}</strong><br>${esc(e.motivo)}</div>`
+      }).join('')
+
+      document.getElementById('import-paso-preview').hidden = true
+      document.getElementById('import-paso-resultado').hidden = false
+
+      if (creados > 0) {
+        mostrarExito(`${creados} ${creados === 1 ? 'insumo creado' : 'insumos creados'}.`)
+        await cargarInsumos()
+      }
+    }
+
+    function abrirModalImportar() {
+      if (!puedeGestionar()) return
+      estado.filasImport = []
+      document.getElementById('input-excel-insumos').value = ''
+      document.getElementById('import-paso-elegir').hidden = false
+      document.getElementById('import-paso-preview').hidden = true
+      document.getElementById('import-paso-resultado').hidden = true
+      document.getElementById('modal-importar').hidden = false
+    }
+
+    function cerrarModalImportar() {
+      document.getElementById('modal-importar').hidden = true
+      estado.filasImport = []
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LISTENERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    document.getElementById('buscador-stock').addEventListener('input', (e) => {
+      estado.busqueda = e.target.value
+      renderizarLista()
+    })
+
+    document.getElementById('btn-ver-pendientes').addEventListener('click', () => {
+      estado.filtro = 'pendientes'
+      estado.busqueda = ''
+      document.getElementById('buscador-stock').value = ''
+      renderizarChips()
+      renderizarLista()
+    })
+
+    document.getElementById('btn-nuevo-insumo').addEventListener('click', () => abrirModalInsumo(null))
+    document.getElementById('btn-guardar-insumo').addEventListener('click', () => guardarInsumo())
+    document.getElementById('btn-volver-formulario').addEventListener('click', mostrarPasoFormulario)
+    document.getElementById('btn-confirmar-cambio-tipo').addEventListener('click', () =>
+      guardarInsumo({ saltearConfirmacion: true }))
+    document.querySelectorAll('[data-cerrar-insumo]').forEach(el =>
+      el.addEventListener('click', cerrarModalInsumo))
+
+    document.getElementById('btn-importar-excel').addEventListener('click', abrirModalImportar)
+    document.getElementById('btn-descargar-plantilla').addEventListener('click', descargarPlantilla)
+    document.getElementById('btn-elegir-archivo').addEventListener('click', () =>
+      document.getElementById('input-excel-insumos').click())
+    document.getElementById('input-excel-insumos').addEventListener('change', (e) => {
+      const archivo = e.target.files?.[0]
+      if (archivo) leerArchivoExcel(archivo)
+    })
+    document.getElementById('btn-confirmar-import').addEventListener('click', confirmarImportacion)
+    document.querySelectorAll('[data-cerrar-importar]').forEach(el =>
+      el.addEventListener('click', cerrarModalImportar))
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+
+      const { data: emp, error } = await supabase
+        .from('empleados')
+        .select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id)
+        .maybeSingle()
+
+      if (error || !emp) {
+        mostrarError('No tenés permiso para acceder a este módulo.')
+        setTimeout(() => window.location.replace('../dashboard.html'), 1500)
+        return
+      }
+      estado.miEmpleadoId = emp.id
+      estado.miRolApp = emp.rol_app
+
+      const { data: tareas } = await supabase
+        .from('empleado_tareas')
+        .select('modulo, tarea')
+        .eq('empleado_id', emp.id)
+        .in('modulo', ['stock'])
+        .eq('habilitado', true)
+      estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
+
+      // Los botones de escritura solo aparecen con la tarea. Es cosmético: las
+      // 4 RPCs revalidan del lado del servidor.
+      const gestiona = puedeGestionar()
+      document.getElementById('btn-nuevo-insumo').hidden = !gestiona
+      document.getElementById('btn-importar-excel').hidden = !gestiona
+      document.getElementById('btn-ver-pendientes').hidden = !gestiona
+
+      await cargarInsumos()
+    }
+
+    init()
+  </script>
+
+</body>
+</html>
