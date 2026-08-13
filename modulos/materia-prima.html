@@ -1662,6 +1662,17 @@
         cuitOcr: null,
         proveedorId: null,
         proveedorMatch: null,
+        // Lectura CRUDA del comprobante (pre-validación), tal como la devolvió
+        // el modelo. Se archiva en materia_prima_ingresos.ocr_crudo al
+        // confirmar. No se muestra en ninguna pantalla: la decisión de "nada de
+        // precios" sigue firme — esto es el registro del papel, que después no
+        // está más, no un dato del sistema.
+        //
+        // Vive acá y no en una variable suelta para que reiniciarLecturaWizard()
+        // lo limpie solo: si se reemplaza la foto, el archivo tiene que
+        // corresponder a la que finalmente quedó en foto_url, no a un intento
+        // anterior.
+        ocrCrudo: null,
         vinculaRemito: null,      // null = sin responder, true/false
         remitoVinculadoId: null,
         // Cache del paso 2B: null = todavía no se consultó. Decide si el paso
@@ -2445,6 +2456,10 @@
         // `error` viene en null: hay que mirar data.ok además de error.
         if (error) throw new Error(error.message)
         if (!data?.ok) throw new Error(data?.mensaje || 'No se pudo leer el comprobante')
+        // Dos cosas distintas: `datos` prellena el formulario, `crudo` se
+        // archiva. La función las devuelve separadas a propósito — ver el
+        // comentario en supabase/functions/ocr-materia-prima/index.ts.
+        w.ocrCrudo = data.crudo ?? null
         prellenarDesdeOcr(data.datos || {})
       } catch (e) {
         console.error(e)
@@ -3562,6 +3577,10 @@
             foto_url: w.foto.url,
             remito_vinculado_id: w.remitoVinculadoId,
             empleado_id: estado.miEmpleadoId,
+            // Archivo de la lectura del papel. Null cuando no hubo OCR
+            // ('sin_comprobante' o lectura fallida): es lo esperado, no un
+            // error. Se guarda UNA sola vez, con la última lectura.
+            ocr_crudo: w.ocrCrudo,
           })
           .select('id')
           .single()
