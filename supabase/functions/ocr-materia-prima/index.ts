@@ -49,6 +49,23 @@ Campos de cada ítem del detalle (array "items"), una entrada por cada línea:
 - precio_total: importe total de la línea, como número. Si no figura, null.
 - alicuota_iva: alícuota de IVA de la línea en porcentaje, como número (21, 10.5,
   0). Si no figura, null.
+- tipo_sugerido: clasificá el renglón según si el producto FORMA PARTE DEL
+  PRODUCTO FINAL que fabrica la empresa (cucuruchos, golosinas y pastas):
+  · "materia_prima": ingredientes que entran en la receta — harina, azúcar,
+    grasa, colorante, esencia, lecitina, fécula, cacao, bicarbonato, gelatina,
+    conservantes, aditivos alimentarios.
+  · "insumo": todo lo demás — envases y empaque (cajas, bolsas, film, etiquetas,
+    bobinas), limpieza y desinfección, repuestos, herramientas, indumentaria,
+    papelería.
+  · null: si no podés determinarlo con razonable seguridad.
+  CUIDADO con los renglones que NO son un producto físico: fletes, servicios,
+  bonificaciones, descuentos, intereses y cargos administrativos NO son ni
+  materia prima ni insumo. Devolvé null para ellos aunque el texto mencione un
+  producto: un renglón que dice "Fletes Harinas" es un servicio de transporte,
+  no harina, y va null.
+  ANTE LA DUDA, null. Una clasificación equivocada es peor que ninguna: la
+  persona la va a tener que elegir igual, y si viene sugerida mal puede pasar
+  desapercibida.
 
 Incluí TODAS las líneas del detalle, también las de BONIFICACIÓN, DESCUENTO,
 FLETE o similares, aunque tengan cantidad cero o negativa: forman parte del
@@ -92,7 +109,8 @@ Formato de respuesta (únicamente esto):
       "cantidad_total": número,
       "precio_unitario": número | null,
       "precio_total": número | null,
-      "alicuota_iva": número | null
+      "alicuota_iva": número | null,
+      "tipo_sugerido": "materia_prima" | "insumo" | null
     }
   ]
 }`
@@ -106,6 +124,8 @@ const HEADERS_CORS = {
 const MIME_VALIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
 
 const TIPOS_DOC_VALIDOS = ['Remito', 'Factura A', 'Factura X']
+
+const TIPOS_INSUMO_VALIDOS = ['materia_prima', 'insumo']
 
 Deno.serve(async (req) => {
   // Preflight CORS
@@ -271,6 +291,13 @@ Deno.serve(async (req) => {
       if (typeof item[campo] !== 'number' || !Number.isFinite(item[campo] as number)) {
         item[campo] = null
       }
+    }
+    // tipo_sugerido es una SUGERENCIA, nunca una decisión: cualquier cosa que
+    // no sea exactamente uno de los dos valores va a null, y el wizard obliga a
+    // elegir. Mismo criterio que tipo_doc. Un valor raro no invalida el
+    // renglón: el resto de la línea sigue sirviendo para prellenar.
+    if (typeof item.tipo_sugerido !== 'string' || !TIPOS_INSUMO_VALIDOS.includes(item.tipo_sugerido)) {
+      item.tipo_sugerido = null
     }
   }
   for (const campo of ['importe_neto', 'importe_iva', 'importe_total']) {

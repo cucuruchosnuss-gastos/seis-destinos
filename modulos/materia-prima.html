@@ -1030,6 +1030,13 @@
       white-space: nowrap;
     }
     .chip-tipo-insumo--mp { background: var(--marron-suave); color: var(--marron-oscuro); }
+    /* Tercer estado: todavía nadie eligió. En ámbar — no es un error todavía,
+       es algo que falta hacer. */
+    .chip-tipo-insumo--falta {
+      background: var(--amarillo-suave);
+      color: var(--amarillo-oscuro);
+      border: 1px solid var(--amarillo);
+    }
 
     .btn-item-borrar {
       background: none;
@@ -2801,9 +2808,18 @@
         esNuevo: !match,
         nombre: crudo.descripcion || '',
         marca: crudo.marca || '',
-        // Un insumo nuevo se crea siempre como materia_prima (decisión del
-        // módulo), así que siempre va a exigir lote.
-        tipo: match?.tipo ?? 'materia_prima',
+        // Si matcheó contra el catálogo, el tipo sale de ahí y no se pregunta.
+        // Si es nuevo, se usa la SUGERENCIA del OCR, y si no hay, queda en null
+        // y la persona tiene que elegir.
+        //
+        // Antes esto caía a 'materia_prima' por default. Parecía la opción
+        // segura y era lo contrario: como algo ya venía marcado, la vista pasaba
+        // de largo. Un toque accidental en "Insumo" no se notaba y quedaba
+        // guardado EN EL CATÁLOGO, así que ese producto no volvía a pedir lote
+        // nunca más. Y el trigger que exige lote solo valida al insertar el
+        // ítem: corregir el tipo después no re-valida lo ya cargado.
+        tipo: match?.tipo ?? tipoSugeridoValido(crudo.tipo_sugerido),
+        tipoDeOcr: !match && tipoSugeridoValido(crudo.tipo_sugerido) != null,
         unidadMedida: match?.unidad_medida ?? crudo.unidad_medida ?? 'kg',
         modoDesglose: bultos != null && contenido != null,
         bultos, contenido,
@@ -2825,7 +2841,8 @@
     function itemVacio() {
       return {
         uid: nuevoUid(), insumoId: null, esNuevo: true,
-        nombre: '', marca: '', tipo: 'materia_prima', unidadMedida: 'kg',
+        // Agregado a mano: sin tipo. Hay que elegirlo, no se asume.
+        nombre: '', marca: '', tipo: null, tipoDeOcr: false, unidadMedida: 'kg',
         modoDesglose: false, bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
@@ -2866,10 +2883,28 @@
       cablearItems()
     }
 
+    // Los dos valores que acepta insumos.tipo. Cualquier otra cosa que llegue
+    // del OCR se descarta acá: la sugerencia nunca decide, solo propone.
+    const TIPOS_INSUMO = ['materia_prima', 'insumo']
+    function tipoSugeridoValido(v) {
+      return TIPOS_INSUMO.includes(v) ? v : null
+    }
+
+    // TRES estados, y el tercero importa: sin tipo elegido NO se puede caer en
+    // la rama "insumo", porque eso equivale a afirmar que el producto no lleva
+    // lote cuando nadie lo decidió. El texto dice qué hacer y no qué falta:
+    // quien está en el depósito con el remito en la mano no piensa en "tipo de
+    // insumo", piensa en si tiene que copiar un número de la etiqueta.
     function chipTipoInsumo(item) {
-      return item.tipo === 'materia_prima'
-        ? '<span class="chip-tipo-insumo chip-tipo-insumo--mp">Materia prima</span>'
-        : '<span class="chip-tipo-insumo">Insumo</span>'
+      if (item.tipo === 'materia_prima') return '<span class="chip-tipo-insumo chip-tipo-insumo--mp">Materia prima</span>'
+      if (item.tipo === 'insumo')        return '<span class="chip-tipo-insumo">Insumo</span>'
+      return '<span class="chip-tipo-insumo chip-tipo-insumo--falta">Elegí si lleva lote</span>'
+    }
+
+    function etiquetaTipo(item) {
+      if (item.tipo === 'materia_prima') return 'Materia prima'
+      if (item.tipo === 'insumo')        return 'Insumo'
+      return 'Elegí si lleva lote'
     }
 
     function textoCantidad(item) {
@@ -2949,8 +2984,9 @@
     }
 
     function htmlItemCerrado(item) {
-      const sub = [item.marca, item.tipo === 'materia_prima' ? 'Materia prima' : 'Insumo']
-        .filter(Boolean).join(' · ')
+      const sub = [item.marca, etiquetaTipo(item)].filter(Boolean).join(' · ')
+      // Sin tipo elegido no se muestra chip de lote: todavía no se sabe si
+      // lleva. El aviso lo da la sub-línea.
       const chipLote = item.tipo !== 'materia_prima' ? ''
         : item.loteIlegible ? '<span class="chip-lote chip-lote--ilegible">Ilegible</span>'
         : item.lote ? `<span class="chip-lote">${esc(item.lote)}</span>`
@@ -3023,6 +3059,9 @@
                <button type="button" data-accion="tipo-materia-prima" class="${item.tipo === 'materia_prima' ? 'wz-toggle--sel' : ''}">Materia prima<br><small style="font-weight:500;">lleva lote</small></button>
                <button type="button" data-accion="tipo-insumo" class="${item.tipo === 'insumo' ? 'wz-toggle--sel' : ''}">Insumo<br><small style="font-weight:500;">no lleva lote</small></button>
              </div>
+             ${item.tipoDeOcr
+               ? '<div class="marca-ocr-item">✓ sugerido por la lectura — verificalo</div>'
+               : ''}
              <div class="item-mp__hint">ⓘ Se va a crear en el catálogo, pendiente de revisar.</div>
            </div>`
         : ''
@@ -3076,7 +3115,11 @@
           ${confirmacionApagado}
         </div>`
 
-      const loteHtml = item.tipo === 'materia_prima'
+      // TRES ramas. Con tipo null NO se afirma que no lleva lote: eso sería
+      // decidir por la persona justo lo que se le está pidiendo que decida.
+      const loteHtml = item.tipo == null
+        ? `<div class="item-mp__hint" style="margin-top:0.75rem;">ⓘ Elegí arriba si lleva lote para seguir.</div>`
+        : item.tipo === 'materia_prima'
         ? `<div class="item-mp__bloque">
              <div class="item-mp__bloque-label">Lote <span class="badge-oblig">OBLIGATORIO</span></div>
              <input class="item-mp__texto-input" data-campo="lote" value="${esc(item.lote)}"
@@ -3208,6 +3251,9 @@
             // sigue siendo 'pendiente_revision' en los dos casos.
             if (accion === 'tipo-materia-prima' || accion === 'tipo-insumo') {
               item.tipo = accion === 'tipo-insumo' ? 'insumo' : 'materia_prima'
+              // Lo eligió una persona: deja de ser una sugerencia del OCR y la
+              // marca desaparece, aunque haya elegido lo mismo que venía.
+              item.tipoDeOcr = false
               // Un insumo no lleva lote: se limpia lo que hubiera quedado
               // cargado antes de cambiar el tipo.
               if (item.tipo === 'insumo') { item.lote = ''; item.loteIlegible = false }
@@ -3276,6 +3322,10 @@
               item.insumoId = match.id
               item.esNuevo = false
               item.tipo = match.tipo
+              // Ahora el tipo sale del CATÁLOGO, no de una sugerencia: se saca
+              // la marca (además, el bloque que la muestra deja de dibujarse
+              // porque ya no es un ítem nuevo).
+              item.tipoDeOcr = false
               item.unidadMedida = match.unidad_medida
               // Se adopta el nombre del catálogo: es el que se va a mostrar
               // de acá en adelante y el que ya usan los ingresos anteriores.
@@ -3334,6 +3384,10 @@
           item.error = item.difiere
             ? 'Cargá la cantidad que recibiste.'
             : 'La cantidad tiene que ser mayor a cero.'
+        } else if (item.tipo == null) {
+          // Antes de la de lote: sin tipo no se sabe siquiera si el lote aplica.
+          // Y sin tipo el insert de `insumos` violaría el NOT NULL.
+          item.error = 'Elegí si lleva lote: materia prima o insumo.'
         } else if (item.tipo === 'materia_prima' && !item.loteIlegible && !String(item.lote || '').trim()) {
           item.error = 'Cargá el lote o marcalo como ilegible.'
         } else if (item.difiere && (item.cantidadDocumento == null || !(item.cantidadDocumento > 0))) {
@@ -3404,7 +3458,10 @@
 
       detalleTitulo.hidden = false
       detalle.innerHTML = w.items.map(item => {
-        const lote = item.tipo !== 'materia_prima' ? 'No lleva'
+        // Defensivo: validarItems() no deja llegar acá sin tipo, pero si algún
+        // día cambia, esto no puede afirmar "No lleva" por omisión.
+        const lote = item.tipo == null ? '—'
+          : item.tipo !== 'materia_prima' ? 'No lleva'
           : item.loteIlegible ? 'Ilegible' : (item.lote || '—')
         return `
           <div class="wz-conf-item">
