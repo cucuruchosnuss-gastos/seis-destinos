@@ -353,6 +353,102 @@
       flex-shrink: 0;
     }
 
+    /* Diferencia entre lo recibido y lo que dice el comprobante. Comparte la
+       geometría de .chip-revisar para que se lean como del mismo sistema, pero
+       en ámbar y NO en rojo: una diferencia con el remito es información para
+       reclamarle al proveedor, no un error del sistema. La roja significa
+       "algo está mal acá"; esta significa "hay algo que reclamar". */
+    .chip-diferencia {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      background: var(--marron-suave);
+      color: var(--marron-oscuro);
+      border: 1px solid var(--marron);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Diferencia en el detalle de un ingreso. */
+    .detalle-diferencia {
+      margin-top: 0.4375rem;
+      padding: 0.5rem 0.625rem;
+      background: var(--marron-suave);
+      border-left: 3px solid var(--marron);
+      border-radius: 8px;
+      min-width: 0;
+    }
+    .detalle-diferencia__titulo {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--marron-oscuro);
+    }
+    .detalle-diferencia__linea {
+      font-size: 0.75rem;
+      color: var(--color-texto);
+      margin-top: 0.125rem;
+    }
+    .detalle-diferencia__motivo {
+      font-size: 0.75rem;
+      font-style: italic;
+      color: var(--color-texto-suave);
+      margin-top: 0.1875rem;
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Recepción parcial (llegó menos de lo que dice el papel) ──────────── */
+
+    .bloque-diferencia {
+      margin-top: 0.5625rem;
+      padding: 0.6875rem 0.75rem;
+      background: var(--color-superficie);
+      border-radius: 11px;
+      min-width: 0;
+    }
+    .bloque-diferencia__label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.3125rem;
+    }
+    .bloque-diferencia__label + .cantidad-fila { margin-bottom: 0.5rem; }
+    /* Resultado en vivo. Es la confirmación de que los dos números se
+       cargaron en el orden correcto — el que suma stock es el de lo recibido. */
+    .resultado-diferencia {
+      margin-top: 0.5rem;
+      padding: 0.4375rem 0.625rem;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      background: var(--marron-suave);
+      color: var(--marron-oscuro);
+      min-width: 0;
+    }
+    .resultado-diferencia--sin {
+      background: rgba(168,184,216,0.18);
+      color: var(--color-texto-suave);
+      font-weight: 600;
+    }
+    /* Mismo marcador de "leído de la foto" que usan los campos del paso 2. El
+       número precargado es la base de un reclamo al proveedor: si aparece solo
+       y sin marca, se da por bueno sin mirar el papel. */
+    .marca-ocr-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 650;
+      color: var(--color-exito);
+      margin-top: 0.375rem;
+      min-width: 0;
+    }
+
     /* Antigüedad de un remito sin facturar. Solo aparece con ese filtro
        activo; en ámbar pasados los DIAS_REMITO_VIEJO. */
     .chip-antiguedad {
@@ -1815,7 +1911,11 @@
 
       const { data, error } = await supabase
         .from('materia_prima_ingresos')
-        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(count)')
+        // El embed trae `cantidad_documento` de cada ítem en vez del count
+        // agregado: sirve para las DOS cosas —la cantidad de ítems es el largo
+        // del array, y el indicador de diferencias es que alguno lo tenga
+        // cargado— sin sumar una consulta. Son pocos ítems por ingreso.
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(cantidad_documento)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -1829,7 +1929,8 @@
 
       estado.listaIngresos = (data ?? []).map(i => ({
         ...i,
-        cantidadItems: i.materia_prima_items?.[0]?.count ?? 0,
+        cantidadItems: i.materia_prima_items?.length ?? 0,
+        tieneDiferencias: (i.materia_prima_items ?? []).some(it => it.cantidad_documento != null),
       }))
       estado.entregas = fusionarEntregas(estado.listaIngresos)
 
@@ -1884,7 +1985,9 @@
       // remito, así que conservar la posición original dejaría una fila con
       // fecha vieja en el lugar donde estaba la factura, más nueva.
       return [...entregas.values()]
-        .map(e => ({ ...e, cantidadItems: e.base.cantidadItems }))
+        // Los dos salen de la BASE de la entrega: en una fusión remito+factura
+        // es el remito el que tiene los ítems, la factura vinculada tiene 0.
+        .map(e => ({ ...e, cantidadItems: e.base.cantidadItems, tieneDiferencias: e.base.tieneDiferencias }))
         .sort((a, b) =>
           String(b.base.fecha || '').localeCompare(String(a.base.fecha || '')) ||
           String(b.base.created_at || '').localeCompare(String(a.base.created_at || '')))
@@ -1966,6 +2069,7 @@
             <div class="ingreso__meta">
               ${e.comprobantes.map(c => chipTipoDoc(c.tipo_doc)).join('')}
               ${anomalia ? '<span class="chip-revisar" title="Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.">⚠ Revisar</span>' : ''}
+              ${e.tieneDiferencias ? '<span class="chip-diferencia" title="Llegó menos (o más) de lo que dice el comprobante. Abrí el detalle para ver las cantidades y el motivo.">Con diferencia</span>' : ''}
               ${chipAntiguedad}
               <span class="ingreso__fecha">${formatearFecha(b.fecha)} · ${nombreUnidad(b.unidad_negocio_id)}</span>
             </div>
@@ -2058,7 +2162,7 @@
       // es el remito el que los tiene, la factura vinculada siempre tiene 0.
       const { data: items, error } = await supabase
         .from('materia_prima_items')
-        .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, insumos(nombre, marca, unidad_medida, tipo)')
+        .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, cantidad_documento, motivo_diferencia, insumos(nombre, marca, unidad_medida, tipo)')
         .eq('ingreso_id', ingreso.id)
         .order('created_at')
 
@@ -2093,11 +2197,30 @@
               ${insumo.marca ? `<div class="fila-item-mp__marca">${insumo.marca}</div>` : ''}
               ${desglose}
               ${loteHtml}
+              ${htmlDiferenciaDetalle(item, insumo)}
             </div>
             <div class="fila-item-mp__cantidad">${formatearCantidad(item.cantidad, insumo.unidad_medida)}</div>
           </div>
         `
       }).join('') || '<p class="texto-suave texto-pequeno">Este ingreso no tiene ítems.</p>'
+    }
+
+    // Recepción parcial en el detalle. Es el dato que sirve para reclamarle al
+    // proveedor, así que tiene que verse sin entrar a editar nada: las dos
+    // cantidades, la diferencia y el motivo.
+    function htmlDiferenciaDetalle(item, insumo) {
+      if (item.cantidad_documento == null) return ''
+      const doc = Number(item.cantidad_documento)
+      const rec = Number(item.cantidad)
+      const d = doc - rec
+      const um = insumo.unidad_medida
+      const etiqueta = d > 0 ? 'Faltaron' : 'Sobraron'
+      return `
+        <div class="detalle-diferencia">
+          <div class="detalle-diferencia__titulo">${etiqueta} ${esc(formatearCantidad(Math.abs(d), um))}</div>
+          <div class="detalle-diferencia__linea">Recibido ${esc(formatearCantidad(rec, um))} · El comprobante dice ${esc(formatearCantidad(doc, um))}</div>
+          ${item.motivo_diferencia ? `<div class="detalle-diferencia__motivo">${esc(item.motivo_diferencia)}</div>` : ''}
+        </div>`
     }
 
     function cerrarDetalleIngreso() {
@@ -2652,6 +2775,15 @@
         modoDesglose: bultos != null && contenido != null,
         bultos, contenido,
         cantidad: numeroDesdeInput(crudo.cantidad_total),
+        // Lo que el OCR leyó del papel, conservado APARTE y sin pisarse cuando
+        // la persona corrige `cantidad`. Se usa solo como precarga al activar
+        // el control de recepción parcial: el OCR es la lectura del documento,
+        // que es exactamente el dato que va en cantidad_documento. Nunca
+        // automático — el OCR se equivoca y crearía diferencias fantasma.
+        cantidadOcrOriginal: numeroDesdeInput(crudo.cantidad_total),
+        bultosOcrOriginal: bultos,
+        difiere: false, cantidadDocumento: null, motivoDiferencia: '',
+        docPrecargadoDeOcr: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -2664,6 +2796,11 @@
         uid: nuevoUid(), insumoId: null, esNuevo: true,
         nombre: '', marca: '', tipo: 'materia_prima', unidadMedida: 'kg',
         modoDesglose: false, bultos: null, contenido: null, cantidad: null,
+        // Agregado a mano: no vino de ninguna foto, así que el campo del
+        // comprobante arranca vacío y sin marca de OCR.
+        cantidadOcrOriginal: null, bultosOcrOriginal: null,
+        difiere: false, cantidadDocumento: null, motivoDiferencia: '',
+        docPrecargadoDeOcr: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -2707,6 +2844,47 @@
     function textoCantidad(item) {
       if (item.cantidad == null) return '—'
       return formatearCantidad(item.cantidad, item.unidadMedida)
+    }
+
+    // ── Recepción parcial ──────────────────────────────────────────────────
+
+    // Tolerancia de comparación: la misma que ya usa filaItemParaBase() para
+    // la presentación. Sin ella, 2450 y 2450.0000001 contarían como distintos.
+    const TOLERANCIA_CANTIDAD = 0.01
+
+    function hayDiferenciaReal(item) {
+      return item.difiere
+        && item.cantidadDocumento != null
+        && item.cantidad != null
+        && Math.abs(item.cantidadDocumento - item.cantidad) > TOLERANCIA_CANTIDAD
+    }
+
+    // Positivo = faltó mercadería (el papel dice más de lo que llegó).
+    function diferenciaDe(item) {
+      if (item.cantidadDocumento == null || item.cantidad == null) return null
+      return item.cantidadDocumento - item.cantidad
+    }
+
+    function textoDiferencia(item) {
+      const d = diferenciaDe(item)
+      if (d == null) return 'Cargá las dos cantidades para ver la diferencia.'
+      if (Math.abs(d) <= TOLERANCIA_CANTIDAD) return 'No hay diferencia con el comprobante.'
+      const cantidad = formatearCantidad(Math.abs(d), item.unidadMedida)
+      return d > 0 ? `Faltan ${cantidad}` : `Sobran ${cantidad}`
+    }
+
+    // En modo desglose la persona ve BULTOS pero `cantidad` está en la unidad
+    // base. Si llegaron 98 de 100 cajas de 25 kg, lo recibido son 2450 kg y el
+    // papel dice 2500 kg — NO 100. Sin esta ayuda, el error más probable es
+    // escribir 100 en un campo que espera kilos, y que la diferencia quede
+    // registrada como 2350 kg faltantes.
+    function sugerenciaDocumento(item) {
+      if (!item.modoDesglose || item.contenido == null) return null
+      const bultosDoc = item.bultosOcrOriginal
+      if (bultosDoc == null || !(bultosDoc > 0)) return null
+      const total = bultosDoc * item.contenido
+      if (item.cantidad != null && Math.abs(total - item.cantidad) <= TOLERANCIA_CANTIDAD) return null
+      return { bultos: bultosDoc, total }
     }
 
     function htmlItemCerrado(item) {
@@ -2777,6 +2955,33 @@
            </div>`
         : ''
 
+      // Recepción parcial. El botón está SIEMPRE (es uno más en la fila de
+      // botones secundarios que ya tiene la tarjeta), pero el bloque solo se
+      // despliega al activarlo: el caso normal —llegó lo que dice el papel, el
+      // 95%— no agrega ni un clic.
+      const sug = sugerenciaDocumento(item)
+      const dif = diferenciaDe(item)
+      const sinDiferencia = dif == null || Math.abs(dif) <= TOLERANCIA_CANTIDAD
+
+      const bloqueDiferencia = !item.difiere ? '' : `
+        <div class="bloque-diferencia">
+          <div class="bloque-diferencia__label">Cantidad según el comprobante</div>
+          <div class="cantidad-fila">
+            <input type="number" inputmode="decimal" step="any" min="0" data-campo="cantidadDocumento"
+                   value="${item.cantidadDocumento ?? ''}" placeholder="0">
+            <span class="cantidad-fila__unidad">${u}</span>
+          </div>
+          ${item.docPrecargadoDeOcr ? `<div class="marca-ocr-item">✓ leído de la foto — verificalo contra el papel</div>` : ''}
+          ${sug ? `<div class="item-mp__hint">ⓘ El comprobante dice ${sug.bultos.toLocaleString('es-AR')} bultos → ${esc(formatearCantidad(sug.total, item.unidadMedida))}.
+                     <button type="button" class="btn-item-secundario" data-accion="usar-sugerencia" style="margin-top:0.375rem;">Usar ${esc(formatearCantidad(sug.total, item.unidadMedida))}</button></div>` : ''}
+
+          <div class="resultado-diferencia ${sinDiferencia ? 'resultado-diferencia--sin' : ''}" data-rol="diferencia">${esc(textoDiferencia(item))}</div>
+
+          <div class="bloque-diferencia__label" style="margin-top:0.6875rem;">Motivo de la diferencia</div>
+          <input class="item-mp__texto-input" data-campo="motivoDiferencia" value="${esc(item.motivoDiferencia)}"
+                 placeholder="Ej: rotura en el transporte, faltante del proveedor, mercadería rechazada por calidad">
+        </div>`
+
       const loteHtml = item.tipo === 'materia_prima'
         ? `<div class="item-mp__bloque">
              <div class="item-mp__bloque-label">Lote <span class="badge-oblig">OBLIGATORIO</span></div>
@@ -2807,8 +3012,12 @@
             ${identidadHtml}
 
             <div class="item-mp__bloque">
-              <div class="item-mp__bloque-label">Cantidad</div>
+              <div class="item-mp__bloque-label">${item.difiere ? 'Cantidad que llegó' : 'Cantidad'}</div>
               ${cantidadHtml}
+              <button type="button" class="btn-item-secundario ${item.difiere ? 'btn-item-secundario--activo' : ''}" data-accion="toggle-diferencia">
+                ${item.difiere ? '✓ Recibí menos de lo que dice el remito' : 'Recibí menos de lo que dice el remito'}
+              </button>
+              ${bloqueDiferencia}
             </div>
 
             ${loteHtml}
@@ -2847,6 +3056,17 @@
         : null
       const nodo = tarjeta.querySelector('[data-rol="total"]')
       if (nodo) nodo.textContent = textoCantidad(item)
+    }
+
+    // Misma razón que actualizarTotalEnVivo(): re-renderizar en cada tecla le
+    // haría perder el foco al input.
+    function actualizarDiferenciaEnVivo(tarjeta, item) {
+      const nodo = tarjeta.querySelector('[data-rol="diferencia"]')
+      if (!nodo) return
+      const d = diferenciaDe(item)
+      nodo.textContent = textoDiferencia(item)
+      nodo.classList.toggle('resultado-diferencia--sin',
+        d == null || Math.abs(d) <= TOLERANCIA_CANTIDAD)
     }
 
     function cablearItems() {
@@ -2891,6 +3111,37 @@
               if (item.tipo === 'insumo') { item.lote = ''; item.loteIlegible = false }
               renderizarItems()
             }
+            if (accion === 'toggle-diferencia') {
+              item.difiere = !item.difiere
+              if (item.difiere) {
+                // Precarga desde el OCR: es la lectura del papel, que es
+                // justamente lo que va en cantidad_documento. Solo al activar
+                // el control, nunca sola. Si el ítem se agregó a mano no hay
+                // valor de OCR y el campo arranca vacío.
+                const doc = item.modoDesglose
+                  ? (item.bultosOcrOriginal != null && item.contenido != null
+                      ? item.bultosOcrOriginal * item.contenido : null)
+                  : item.cantidadOcrOriginal
+                item.cantidadDocumento = doc
+                item.docPrecargadoDeOcr = doc != null
+              } else {
+                // Se apaga: las dos columnas se limpian. Sin diferencia
+                // declarada no hay nada que registrar.
+                item.cantidadDocumento = null
+                item.motivoDiferencia = ''
+                item.docPrecargadoDeOcr = false
+              }
+              renderizarItems()
+            }
+            if (accion === 'usar-sugerencia') {
+              const s = sugerenciaDocumento(item)
+              if (s) {
+                item.cantidadDocumento = s.total
+                // Sale del OCR igual que la precarga, así que conserva la marca.
+                item.docPrecargadoDeOcr = true
+              }
+              renderizarItems()
+            }
             if (accion === 'lote-ilegible') {
               item.loteIlegible = !item.loteIlegible
               // El CHECK chk_lote_ilegible_sin_lote prohíbe tener los dos.
@@ -2909,6 +3160,15 @@
             if (campo === 'bultos' || campo === 'contenido' || campo === 'cantidad') {
               item[campo] = numeroDesdeInput(el.value)
               actualizarTotalEnVivo(tarjeta, item)
+              // La cantidad recibida es un lado de la resta: si cambia, la
+              // diferencia mostrada cambia con ella.
+              actualizarDiferenciaEnVivo(tarjeta, item)
+            } else if (campo === 'cantidadDocumento') {
+              item.cantidadDocumento = numeroDesdeInput(el.value)
+              // Lo tocó a mano: deja de ser el número que leyó la foto, así que
+              // se saca la marca (se aplica en el próximo render).
+              item.docPrecargadoDeOcr = false
+              actualizarDiferenciaEnVivo(tarjeta, item)
             } else {
               item[campo] = el.value
             }
@@ -2979,6 +3239,13 @@
           item.error = 'La cantidad tiene que ser mayor a cero.'
         } else if (item.tipo === 'materia_prima' && !item.loteIlegible && !String(item.lote || '').trim()) {
           item.error = 'Cargá el lote o marcalo como ilegible.'
+        } else if (item.difiere && (item.cantidadDocumento == null || !(item.cantidadDocumento > 0))) {
+          // chk_cantidad_documento_positiva.
+          item.error = 'Cargá la cantidad que dice el comprobante, o desactivá "Recibí menos".'
+        } else if (hayDiferenciaReal(item) && !String(item.motivoDiferencia || '').trim()) {
+          // chk_motivo_diferencia: con una diferencia real el motivo es
+          // obligatorio. Es el dato que después se le reclama al proveedor.
+          item.error = 'Explicá por qué hay diferencia con el comprobante.'
         }
         if (item.error && !primeroConError) primeroConError = item.uid
       })
@@ -3136,16 +3403,28 @@
         bultos = null
         contenido = null
       }
+      // cantidad_documento se guarda SOLO cuando difiere de lo recibido. Si
+      // coincide —el 95% de los casos— van las dos en null: coincidir no es
+      // una diferencia, no hay nada que registrar. Misma tolerancia que arriba.
+      const hayDif = hayDiferenciaReal(item)
+
       return {
         ingreso_id: ingresoId,
         insumo_id: item.insumoId,
+        // OJO: `cantidad` es y sigue siendo lo REALMENTE RECIBIDO. Es la que
+        // suma stock. La del papel va en cantidad_documento.
         cantidad: item.cantidad,
         lote: item.loteIlegible ? null : (String(item.lote || '').trim() || null),
         lote_ilegible: !!item.loteIlegible,
         ficha_tecnica_url: item.fichaTecnicaUrl,
         foto_lote_url: item.fotoLoteUrl,
+        // La presentación describe lo RECIBIDO, no lo que decía el papel: si
+        // llegaron 98 de 100 cajas, cantidad_bultos es 98. Sale solo porque en
+        // modo desglose `cantidad` se deriva de bultos × contenido.
         cantidad_bultos: bultos,
         contenido_por_bulto: contenido,
+        cantidad_documento: hayDif ? item.cantidadDocumento : null,
+        motivo_diferencia: hayDif ? (String(item.motivoDiferencia || '').trim() || null) : null,
       }
     }
 
