@@ -1108,8 +1108,36 @@
 
     const limpiarTexto = v => (v == null ? '' : String(v).trim())
 
+    // La tolerancia del Excel puede venir de tres formas: número real (celda
+    // numérica), texto con punto, o texto con COMA — pasa cuando la columna
+    // está formateada como texto o cuando se copió y pegó de otro lado. La
+    // coma es el separador decimal local, así que es el caso más probable de
+    // los tres, no un borde.
+    //
+    // Devuelve { ok, valor, motivo }. `valor` es un número o null (vacío =
+    // control estricto, que es válido).
+    function parsearTolerancia(crudo) {
+      if (crudo === null || crudo === undefined) return { ok: true, valor: null }
+
+      const texto = limpiarTexto(crudo)
+      if (texto === '') return { ok: true, valor: null }
+
+      const n = Number(texto.replace(',', '.'))
+      if (!Number.isFinite(n)) {
+        return { ok: false, motivo: `la tolerancia "${texto}" no es un número` }
+      }
+      // Mismo rango que valida el modal y que exige el CHECK
+      // chk_tolerancia_merma. Se chequea acá para no mandar una fila que la
+      // base va a rechazar con un mensaje ilegible.
+      if (n < 0 || n > 100) {
+        return { ok: false, motivo: `la tolerancia ${n} está fuera del rango 0 a 100` }
+      }
+      return { ok: true, valor: n }
+    }
+
     function parsearExcel(filasCrudas) {
       const filas = []
+      const descartadas = []
       let ignoradas = 0
       let ejemploDescartado = false
 
@@ -1130,19 +1158,31 @@
         // insumos".
         if (!nombre) { ignoradas++; return }
 
-        const tolCruda = valorFila(cruda, 'tolerancia_merma_pct', 'Tolerancia_merma_pct', 'TOLERANCIA_MERMA_PCT')
+        const tol = parsearTolerancia(
+          valorFila(cruda, 'tolerancia_merma_pct', 'Tolerancia_merma_pct', 'TOLERANCIA_MERMA_PCT')
+        )
+
+        // La fila NO se manda si la tolerancia no sirve. La RPC le hace
+        // ::numeric y devolvería 'invalid input syntax for type numeric', que
+        // no le dice nada a nadie; y el rango lo valida el CHECK con un error
+        // igual de críptico. Se retiene acá y se avisa ANTES de confirmar, con
+        // el nombre del insumo, para que el problema se vea cuando todavía se
+        // puede arreglar la planilla.
+        if (!tol.ok) {
+          descartadas.push({ nombre, motivo: tol.motivo })
+          return
+        }
 
         filas.push({
           nombre,
           marca: limpiarTexto(valorFila(cruda, 'marca', 'Marca', 'MARCA')) || null,
           unidad_medida: limpiarTexto(valorFila(cruda, 'unidad_medida', 'Unidad_medida', 'UNIDAD_MEDIDA')),
           tipo: limpiarTexto(valorFila(cruda, 'tipo', 'Tipo', 'TIPO')).toLowerCase(),
-          tolerancia_merma_pct: (tolCruda === null || limpiarTexto(tolCruda) === '')
-            ? null : limpiarTexto(tolCruda),
+          tolerancia_merma_pct: tol.valor,
         })
       })
 
-      return { filas, ignoradas, ejemploDescartado }
+      return { filas, ignoradas, ejemploDescartado, descartadas }
     }
 
     async function leerArchivoExcel(archivo) {
@@ -1151,25 +1191,33 @@
       const hoja = libro.Sheets[libro.SheetNames[0]]
       if (!hoja) { mostrarError('El archivo no tiene ninguna hoja con datos.'); return }
 
-      const { filas, ignoradas, ejemploDescartado } = parsearExcel(
+      const { filas, ignoradas, ejemploDescartado, descartadas } = parsearExcel(
         XLSX.utils.sheet_to_json(hoja, { defval: null })
       )
 
-      if (!filas.length) {
+      if (!filas.length && !descartadas.length) {
         mostrarError('No se encontró ninguna fila con nombre en el archivo.')
         return
       }
 
       estado.filasImport = filas
       document.getElementById('preview-total').textContent = filas.length
-      document.getElementById('preview-ignoradas').textContent = ignoradas
+      // Las descartadas cuentan como ignoradas: tampoco se van a mandar.
+      document.getElementById('preview-ignoradas').textContent = ignoradas + descartadas.length
 
       const nota = document.getElementById('nota-ignoradas')
       const avisos = []
       if (ignoradas) avisos.push(`Se ignoraron ${ignoradas} ${ignoradas === 1 ? 'fila' : 'filas'} sin nombre.`)
       if (ejemploDescartado) avisos.push('Se descartó la fila de ejemplo de la plantilla.')
+      // Con nombre y motivo: es lo que hace falta para encontrar la celda en
+      // la planilla y arreglarla antes de confirmar.
+      descartadas.forEach(d => avisos.push(`«${d.nombre}»: ${d.motivo} — no se va a importar.`))
       nota.hidden = avisos.length === 0
       nota.textContent = avisos.join(' ')
+
+      // Si TODO quedó retenido no hay nada que confirmar, pero el aviso tiene
+      // que verse igual: es el motivo por el que no hay nada que importar.
+      document.getElementById('btn-confirmar-import').disabled = filas.length === 0
 
       document.getElementById('import-paso-elegir').hidden = true
       document.getElementById('import-paso-preview').hidden = false
@@ -1231,6 +1279,9 @@
       if (!puedeGestionar()) return
       estado.filasImport = []
       document.getElementById('input-excel-insumos').value = ''
+      // Se re-habilita: lo pudo haber apagado un archivo anterior donde todas
+      // las filas quedaron retenidas.
+      document.getElementById('btn-confirmar-import').disabled = false
       document.getElementById('import-paso-elegir').hidden = false
       document.getElementById('import-paso-preview').hidden = true
       document.getElementById('import-paso-resultado').hidden = true
