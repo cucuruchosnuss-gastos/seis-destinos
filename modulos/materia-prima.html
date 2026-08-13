@@ -435,6 +435,24 @@
       color: var(--color-texto-suave);
       font-weight: 600;
     }
+    /* Confirmación antes de descartar lo cargado como recibido. Va en bordó,
+       el color de alerta del proyecto: no es una opción más, es una pérdida. */
+    .confirmar-apagado {
+      margin-top: 0.5625rem;
+      padding: 0.625rem 0.75rem;
+      background: var(--bordo-suave);
+      border: 1px solid var(--bordo);
+      border-radius: 10px;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: var(--bordo-oscuro);
+      min-width: 0;
+    }
+    .confirmar-apagado__botones { display: flex; gap: 0.5rem; margin-top: 0.5rem; min-width: 0; }
+    .confirmar-apagado__botones .btn-item-secundario { margin-top: 0; flex: 1; min-width: 0; }
+    .btn-item-secundario--peligro { border-color: var(--bordo); color: var(--bordo-oscuro); }
+    .btn-item-secundario--peligro:hover { background: var(--bordo-suave); border-color: var(--bordo); color: var(--bordo-oscuro); }
+
     /* Mismo marcador de "leído de la foto" que usan los campos del paso 2. El
        número precargado es la base de un reclamo al proveedor: si aparece solo
        y sin marca, se da por bueno sin mirar el papel. */
@@ -2775,15 +2793,13 @@
         modoDesglose: bultos != null && contenido != null,
         bultos, contenido,
         cantidad: numeroDesdeInput(crudo.cantidad_total),
-        // Lo que el OCR leyó del papel, conservado APARTE y sin pisarse cuando
-        // la persona corrige `cantidad`. Se usa solo como precarga al activar
-        // el control de recepción parcial: el OCR es la lectura del documento,
-        // que es exactamente el dato que va en cantidad_documento. Nunca
-        // automático — el OCR se equivoca y crearía diferencias fantasma.
+        // Marca que el número de arriba salió de la foto. Solo se usa para
+        // mostrar el aviso de "verificalo contra el papel" cuando el control de
+        // recepción parcial está activo: ahí ese número pasa a ser la cantidad
+        // del comprobante, o sea la base de un reclamo al proveedor.
         cantidadOcrOriginal: numeroDesdeInput(crudo.cantidad_total),
-        bultosOcrOriginal: bultos,
         difiere: false, cantidadDocumento: null, motivoDiferencia: '',
-        docPrecargadoDeOcr: false,
+        bultosRecibidos: null, confirmandoApagado: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -2796,11 +2812,11 @@
         uid: nuevoUid(), insumoId: null, esNuevo: true,
         nombre: '', marca: '', tipo: 'materia_prima', unidadMedida: 'kg',
         modoDesglose: false, bultos: null, contenido: null, cantidad: null,
-        // Agregado a mano: no vino de ninguna foto, así que el campo del
-        // comprobante arranca vacío y sin marca de OCR.
-        cantidadOcrOriginal: null, bultosOcrOriginal: null,
+        // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
+        // marca de "leído de la foto".
+        cantidadOcrOriginal: null,
         difiere: false, cantidadDocumento: null, motivoDiferencia: '',
-        docPrecargadoDeOcr: false,
+        bultosRecibidos: null, confirmandoApagado: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -2873,18 +2889,48 @@
       return d > 0 ? `Faltan ${cantidad}` : `Sobran ${cantidad}`
     }
 
-    // En modo desglose la persona ve BULTOS pero `cantidad` está en la unidad
-    // base. Si llegaron 98 de 100 cajas de 25 kg, lo recibido son 2450 kg y el
-    // papel dice 2500 kg — NO 100. Sin esta ayuda, el error más probable es
-    // escribir 100 en un campo que espera kilos, y que la diferencia quede
-    // registrada como 2350 kg faltantes.
-    function sugerenciaDocumento(item) {
-      if (!item.modoDesglose || item.contenido == null) return null
-      const bultosDoc = item.bultosOcrOriginal
-      if (bultosDoc == null || !(bultosDoc > 0)) return null
-      const total = bultosDoc * item.contenido
-      if (item.cantidad != null && Math.abs(total - item.cantidad) <= TOLERANCIA_CANTIDAD) return null
-      return { bultos: bultosDoc, total }
+    // Total del comprobante, para el modo desglose con el control activo: ahí
+    // la fila de arriba describe el PAPEL y no lo recibido.
+    function textoCantidadDocumento(item) {
+      if (item.cantidadDocumento == null) return '—'
+      return formatearCantidad(item.cantidadDocumento, item.unidadMedida)
+    }
+
+    // Deriva los totales del desglose. Cuál se escribe depende del control:
+    // con el control apagado la fila de arriba es lo recibido; con el control
+    // activo la de arriba es el comprobante y la de abajo lo recibido.
+    //
+    // `contenido` es compartido a propósito: son los mismos bultos de 25 kg,
+    // solo que llegaron menos.
+    // ¿Hay algo tipeado en "recibí" que se perdería al apagar el control?
+    function tieneRecibidoCargado(item) {
+      return item.modoDesglose ? item.bultosRecibidos != null : item.cantidad != null
+    }
+
+    // Apaga el control y devuelve el estado al de una carga normal: `cantidad`
+    // vuelve a ser el número de arriba (el del comprobante, que pasa a valer
+    // como recibido) y no queda ningún residuo del campo de abajo.
+    function apagarDiferencia(item) {
+      item.difiere = false
+      item.confirmandoApagado = false
+      item.cantidad = item.cantidadDocumento
+      item.cantidadDocumento = null
+      item.motivoDiferencia = ''
+      item.bultosRecibidos = null
+      // En desglose la de arriba manda: cantidad se re-deriva de bultos ×
+      // contenido, que es exactamente lo que valía antes de activar el control.
+      recalcularDesglose(item)
+    }
+
+    function recalcularDesglose(item) {
+      if (!item.modoDesglose) return
+      const total = (a, b) => (a != null && b != null) ? a * b : null
+      if (item.difiere) {
+        item.cantidadDocumento = total(item.bultos, item.contenido)
+        item.cantidad = total(item.bultosRecibidos, item.contenido)
+      } else {
+        item.cantidad = total(item.bultos, item.contenido)
+      }
     }
 
     function htmlItemCerrado(item) {
@@ -2922,6 +2968,17 @@
             `<option value="${um}" ${um === item.unidadMedida ? 'selected' : ''}>${um}</option>`).join('')}</select>`
         : `<span class="cantidad-fila__unidad">${u}</span>`
 
+      // La fila de arriba es la que ya existía y no se toca de lugar. Lo único
+      // que cambia con el control activo es a QUÉ campo escribe: pasa a ser la
+      // cantidad del comprobante. `item.cantidad` sigue siendo siempre lo
+      // recibido — hay cuatro lugares del archivo que la leen para mostrarla
+      // (cabecera de la tarjeta cerrada, total del desglose, recálculo en vivo
+      // y el resumen del paso 4), y todos tienen que seguir mostrando lo que
+      // llegó, no lo que decía el papel.
+      const campoArriba = item.difiere ? 'cantidadDocumento' : 'cantidad'
+      const valorArriba = item.difiere ? item.cantidadDocumento : item.cantidad
+      const totalArriba = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
+
       const cantidadHtml = item.modoDesglose
         ? `<div class="cantidad-fila">
              <input type="number" inputmode="decimal" step="any" min="0" data-campo="bultos" value="${item.bultos ?? ''}" placeholder="0">
@@ -2930,11 +2987,11 @@
              <input type="number" inputmode="decimal" step="any" min="0" data-campo="contenido" value="${item.contenido ?? ''}" placeholder="0">
              ${selectorUnidad}
            </div>
-           <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(textoCantidad(item))}</span></div>
+           <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>
            <button type="button" class="btn-item-secundario" data-accion="modo-directo">Cargar una cantidad única</button>
            <div class="item-mp__hint">ⓘ Si el remito informa un solo total, sin desglosar por bulto.</div>`
         : `<div class="cantidad-fila">
-             <input type="number" inputmode="decimal" step="any" min="0" data-campo="cantidad" value="${item.cantidad ?? ''}" placeholder="0">
+             <input type="number" inputmode="decimal" step="any" min="0" data-campo="${campoArriba}" value="${valorArriba ?? ''}" placeholder="0">
              ${selectorUnidad}
            </div>
            <button type="button" class="btn-item-secundario" data-accion="modo-desglose">Vino en bultos (ej: 200 bolsas de 25 kg)</button>
@@ -2959,27 +3016,49 @@
       // botones secundarios que ya tiene la tarjeta), pero el bloque solo se
       // despliega al activarlo: el caso normal —llegó lo que dice el papel, el
       // 95%— no agrega ni un clic.
-      const sug = sugerenciaDocumento(item)
       const dif = diferenciaDe(item)
       const sinDiferencia = dif == null || Math.abs(dif) <= TOLERANCIA_CANTIDAD
 
+      // En desglose se piden solo los BULTOS recibidos: el contenido por bulto
+      // ya está arriba y es el mismo. Así la persona escribe "98" y el total
+      // sale solo — nunca multiplica de cabeza en el depósito.
+      const recibidoHtml = item.modoDesglose
+        ? `<div class="cantidad-fila">
+             <input type="number" inputmode="decimal" step="any" min="0" data-campo="bultosRecibidos"
+                    value="${item.bultosRecibidos ?? ''}" placeholder="0">
+             <span class="cantidad-fila__unidad">bultos de ${esc(formatearCantidad(item.contenido ?? 0, item.unidadMedida))}</span>
+           </div>
+           <div class="cantidad-total"><span>Total recibido</span><span data-rol="total-recibido">${esc(textoCantidad(item))}</span></div>`
+        : `<div class="cantidad-fila">
+             <input type="number" inputmode="decimal" step="any" min="0" data-campo="cantidad"
+                    value="${item.cantidad ?? ''}" placeholder="0">
+             <span class="cantidad-fila__unidad">${u}</span>
+           </div>`
+
+      // Apagar el control descarta lo que se escribió en "recibí": `cantidad`
+      // vuelve a ser el número de arriba. Perder un dato tipeado sin aviso es
+      // de las cosas que más desconfianza generan, así que se pregunta.
+      const confirmacionApagado = !item.confirmandoApagado ? '' : `
+        <div class="confirmar-apagado">
+          Si sacás la diferencia, se descarta lo que cargaste como recibido
+          (<strong>${esc(textoCantidad(item))}</strong>) y vuelve a valer la cantidad de arriba.
+          <div class="confirmar-apagado__botones">
+            <button type="button" class="btn-item-secundario" data-accion="cancelar-apagado">Cancelar</button>
+            <button type="button" class="btn-item-secundario btn-item-secundario--peligro" data-accion="confirmar-apagado">Descartar</button>
+          </div>
+        </div>`
+
       const bloqueDiferencia = !item.difiere ? '' : `
         <div class="bloque-diferencia">
-          <div class="bloque-diferencia__label">Cantidad según el comprobante</div>
-          <div class="cantidad-fila">
-            <input type="number" inputmode="decimal" step="any" min="0" data-campo="cantidadDocumento"
-                   value="${item.cantidadDocumento ?? ''}" placeholder="0">
-            <span class="cantidad-fila__unidad">${u}</span>
-          </div>
-          ${item.docPrecargadoDeOcr ? `<div class="marca-ocr-item">✓ leído de la foto — verificalo contra el papel</div>` : ''}
-          ${sug ? `<div class="item-mp__hint">ⓘ El comprobante dice ${sug.bultos.toLocaleString('es-AR')} bultos → ${esc(formatearCantidad(sug.total, item.unidadMedida))}.
-                     <button type="button" class="btn-item-secundario" data-accion="usar-sugerencia" style="margin-top:0.375rem;">Usar ${esc(formatearCantidad(sug.total, item.unidadMedida))}</button></div>` : ''}
+          <div class="bloque-diferencia__label">Cantidad que recibí</div>
+          ${recibidoHtml}
 
           <div class="resultado-diferencia ${sinDiferencia ? 'resultado-diferencia--sin' : ''}" data-rol="diferencia">${esc(textoDiferencia(item))}</div>
 
           <div class="bloque-diferencia__label" style="margin-top:0.6875rem;">Motivo de la diferencia</div>
           <input class="item-mp__texto-input" data-campo="motivoDiferencia" value="${esc(item.motivoDiferencia)}"
                  placeholder="Ej: rotura en el transporte, faltante del proveedor, mercadería rechazada por calidad">
+          ${confirmacionApagado}
         </div>`
 
       const loteHtml = item.tipo === 'materia_prima'
@@ -3012,8 +3091,10 @@
             ${identidadHtml}
 
             <div class="item-mp__bloque">
-              <div class="item-mp__bloque-label">${item.difiere ? 'Cantidad que llegó' : 'Cantidad'}</div>
+              <div class="item-mp__bloque-label">${item.difiere ? 'Cantidad según el comprobante' : 'Cantidad'}</div>
               ${cantidadHtml}
+              ${(item.difiere && item.cantidadOcrOriginal != null)
+                ? '<div class="marca-ocr-item">✓ leído de la foto — verificalo contra el papel</div>' : ''}
               <button type="button" class="btn-item-secundario ${item.difiere ? 'btn-item-secundario--activo' : ''}" data-accion="toggle-diferencia">
                 ${item.difiere ? '✓ Recibí menos de lo que dice el remito' : 'Recibí menos de lo que dice el remito'}
               </button>
@@ -3051,11 +3132,12 @@
     // la tarjeta en cada tecla, el input perdería el foco.
     function actualizarTotalEnVivo(tarjeta, item) {
       if (!item.modoDesglose) return
-      item.cantidad = (item.bultos != null && item.contenido != null)
-        ? item.bultos * item.contenido
-        : null
-      const nodo = tarjeta.querySelector('[data-rol="total"]')
-      if (nodo) nodo.textContent = textoCantidad(item)
+      recalcularDesglose(item)
+      // Con el control activo la fila de arriba totaliza el COMPROBANTE.
+      const arriba = tarjeta.querySelector('[data-rol="total"]')
+      if (arriba) arriba.textContent = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
+      const abajo = tarjeta.querySelector('[data-rol="total-recibido"]')
+      if (abajo) abajo.textContent = textoCantidad(item)
     }
 
     // Misma razón que actualizarTotalEnVivo(): re-renderizar en cada tecla le
@@ -3094,11 +3176,16 @@
               // Se arranca de cero: adivinar un desglose desde el total sería
               // inventar un dato que el papel no dice.
               item.bultos = null; item.contenido = null; item.cantidad = null
+              // Con el control activo también se van los dos de la recepción
+              // parcial: se derivan del desglose, que acaba de vaciarse.
+              item.bultosRecibidos = null
+              if (item.difiere) item.cantidadDocumento = null
               renderizarItems()
             }
             if (accion === 'modo-directo') {
               item.modoDesglose = false
               item.bultos = null; item.contenido = null
+              item.bultosRecibidos = null
               renderizarItems()
             }
             // Solo para ítems NUEVO: define el tipo del insumo que se va a
@@ -3112,34 +3199,28 @@
               renderizarItems()
             }
             if (accion === 'toggle-diferencia') {
-              item.difiere = !item.difiere
-              if (item.difiere) {
-                // Precarga desde el OCR: es la lectura del papel, que es
-                // justamente lo que va en cantidad_documento. Solo al activar
-                // el control, nunca sola. Si el ítem se agregó a mano no hay
-                // valor de OCR y el campo arranca vacío.
-                const doc = item.modoDesglose
-                  ? (item.bultosOcrOriginal != null && item.contenido != null
-                      ? item.bultosOcrOriginal * item.contenido : null)
-                  : item.cantidadOcrOriginal
-                item.cantidadDocumento = doc
-                item.docPrecargadoDeOcr = doc != null
+              if (!item.difiere) {
+                // ACTIVAR: el número de arriba no se mueve, cambia de rol —
+                // pasa a ser la cantidad del comprobante. Lo recibido queda
+                // vacío: es justamente lo que la persona vino a cargar.
+                item.difiere = true
+                item.cantidadDocumento = item.cantidad
+                item.cantidad = null
+                item.bultosRecibidos = null
+              } else if (tieneRecibidoCargado(item)) {
+                // APAGAR con algo cargado: se pregunta antes de descartarlo.
+                item.confirmandoApagado = true
               } else {
-                // Se apaga: las dos columnas se limpian. Sin diferencia
-                // declarada no hay nada que registrar.
-                item.cantidadDocumento = null
-                item.motivoDiferencia = ''
-                item.docPrecargadoDeOcr = false
+                apagarDiferencia(item)
               }
               renderizarItems()
             }
-            if (accion === 'usar-sugerencia') {
-              const s = sugerenciaDocumento(item)
-              if (s) {
-                item.cantidadDocumento = s.total
-                // Sale del OCR igual que la precarga, así que conserva la marca.
-                item.docPrecargadoDeOcr = true
-              }
+            if (accion === 'cancelar-apagado') {
+              item.confirmandoApagado = false
+              renderizarItems()
+            }
+            if (accion === 'confirmar-apagado') {
+              apagarDiferencia(item)
               renderizarItems()
             }
             if (accion === 'lote-ilegible') {
@@ -3157,17 +3238,14 @@
         tarjeta.querySelectorAll('[data-campo]').forEach(el => {
           el.addEventListener('input', () => {
             const campo = el.dataset.campo
-            if (campo === 'bultos' || campo === 'contenido' || campo === 'cantidad') {
+            // Los cinco campos numéricos. En desglose, `cantidad` y
+            // `cantidadDocumento` no se tipean: se derivan de bultos ×
+            // contenido, y recalcularDesglose() decide cuál escribe cada fila.
+            if (['bultos', 'contenido', 'bultosRecibidos', 'cantidad', 'cantidadDocumento'].includes(campo)) {
               item[campo] = numeroDesdeInput(el.value)
               actualizarTotalEnVivo(tarjeta, item)
-              // La cantidad recibida es un lado de la resta: si cambia, la
-              // diferencia mostrada cambia con ella.
-              actualizarDiferenciaEnVivo(tarjeta, item)
-            } else if (campo === 'cantidadDocumento') {
-              item.cantidadDocumento = numeroDesdeInput(el.value)
-              // Lo tocó a mano: deja de ser el número que leyó la foto, así que
-              // se saca la marca (se aplica en el próximo render).
-              item.docPrecargadoDeOcr = false
+              // Los dos son lados de la misma resta: toque el que toque, la
+              // diferencia mostrada cambia con él.
               actualizarDiferenciaEnVivo(tarjeta, item)
             } else {
               item[campo] = el.value
@@ -3236,7 +3314,11 @@
         if (!String(item.nombre || '').trim()) {
           item.error = 'Falta el nombre del producto.'
         } else if (item.cantidad == null || !(item.cantidad > 0)) {
-          item.error = 'La cantidad tiene que ser mayor a cero.'
+          // `cantidad` es siempre lo recibido. Con el control activo eso es el
+          // campo de abajo, así que el mensaje tiene que nombrar ESE campo.
+          item.error = item.difiere
+            ? 'Cargá la cantidad que recibiste.'
+            : 'La cantidad tiene que ser mayor a cero.'
         } else if (item.tipo === 'materia_prima' && !item.loteIlegible && !String(item.lote || '').trim()) {
           item.error = 'Cargá el lote o marcalo como ilegible.'
         } else if (item.difiere && (item.cantidadDocumento == null || !(item.cantidadDocumento > 0))) {
@@ -3397,7 +3479,13 @@
       // chk_presentacion_coherente: si el desglose no da exactamente el total,
       // se mandan los dos en null y queda solo la cantidad. Es la misma regla
       // que ya aplica la Edge Function sobre lo que lee.
-      let bultos = item.modoDesglose ? item.bultos : null
+      //
+      // La presentación describe lo RECIBIDO: si llegaron 98 de 100 cajas,
+      // cantidad_bultos es 98. Con el control activo esos bultos son los del
+      // campo de abajo; con el control apagado, los de arriba (que ahí son los
+      // recibidos).
+      const bultosRecibidos = item.difiere ? item.bultosRecibidos : item.bultos
+      let bultos = item.modoDesglose ? bultosRecibidos : null
       let contenido = item.modoDesglose ? item.contenido : null
       if (bultos == null || contenido == null || Math.abs(bultos * contenido - item.cantidad) > 0.01) {
         bultos = null
