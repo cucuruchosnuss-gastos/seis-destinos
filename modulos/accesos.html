@@ -409,6 +409,57 @@
       border-radius: 8px;
     }
 
+    /* El (?) va como hermano del <label>, no adentro: dentro de un label,
+       tocarlo tildaría la tarea. El wrapper los alinea. */
+    .fila-tarea-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.375rem;
+    }
+    .fila-tarea-wrap .fila-tarea { flex: 1; min-width: 0; }
+
+    .btn-ayuda {
+      flex: none;
+      margin-top: 0.25rem;
+      width: 1.125rem;
+      height: 1.125rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 50%;
+      background: transparent;
+      color: var(--color-texto-suave);
+      font-family: var(--fuente);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+    .btn-ayuda:hover { background: var(--color-superficie); }
+    .btn-ayuda--activo {
+      background: var(--rojo);
+      border-color: var(--rojo);
+      color: #fff;
+    }
+
+    /* Misma geometría que .sub-alcance — se lee como parte del mismo sistema
+       de sub-bloques contextuales. */
+    .ayuda-tarea {
+      margin: 0.125rem 0 0.5rem 1.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--color-superficie);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: var(--color-texto);
+    }
+
+    .tareas-vacio {
+      padding: 0.75rem 0;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--color-texto-suave);
+    }
+
     /* Misma geometría que .sub-alcance para que se lea como parte del mismo
        sistema, pero en colores de advertencia: no es una opción más, es algo
        que falta. */
@@ -650,24 +701,60 @@
           MODULOS_MODAL.push({ keys: [f.clave], label: f.nombre_visible })
         }
       })
+
+      // El campo `modulos` de CATALOGO_TAREAS va a mano contra claves que
+      // vienen de la BASE. Si alguna cambia allá, el vínculo se rompe y el
+      // grupo no aparecería NUNCA, sin ningún error. Esto convierte esa falla
+      // muda en una ruidosa.
+      const claves = new Set(MODULOS_INFO.map(m => m.key))
+      CATALOGO_TAREAS.forEach(g => {
+        (g.modulos ?? []).forEach(m => {
+          if (!claves.has(m)) {
+            console.warn(`[accesos] El grupo "${g.grupo}" declara el módulo "${m}", que no existe en la tabla \`modulos\`. Sus tareas no se van a mostrar nunca.`)
+          }
+        })
+      })
     }
 
     // Catálogo COMPLETO y FIJO de tareas granulares (empleado_tareas) —
     // hardcodeado a propósito (decisión de Facu): claves exactas que
-    // consumen los módulos, no se cargan de la base. Las tareas son TODAS
-    // independientes entre sí y de los toggles de módulos — cualquier
-    // combinación es válida; el gate de "ve o no ve el módulo" sigue
-    // siendo empleado_modulos.
+    // consumen los módulos, no se cargan de la base.
+    //
+    // VÍNCULO CON LOS MÓDULOS (decisión de Facu del 13/08/2026, que REVIERTE
+    // la anterior de "las tareas son todas independientes de los toggles"):
+    // cada grupo declara `modulos: [...]` con claves de empleado_modulos, y
+    // la UI solo muestra sus tareas si ALGUNO de esos módulos está tildado
+    // (semántica "any" — 'Facturas pendientes' se opera desde Gastos o desde
+    // Cuentas Corrientes, con uno solo ya sirve). Es data-driven, mismo
+    // precedente que `conAlcance` y `requiere`: un vínculo nuevo es una línea
+    // del catálogo, no otro if.
+    //
+    // El SERVIDOR sigue permisivo a propósito: NO valida el vínculo
+    // tarea-módulo. Si lo validara, rompería el passthrough de claves fuera
+    // de catálogo y los otorgamientos por SQL directo, que son justamente los
+    // casos que esta pantalla no sabe dibujar y no tiene que revocar.
+    //
+    // OJO con los guiones: `modulos` usa las claves de empleado_modulos, con
+    // guión MEDIO ('cuentas-corrientes', 'materia-prima'); el `modulo` de
+    // cada tarea usa guión BAJO ('cuentas_corrientes', 'materia_prima'). Son
+    // namespaces distintos (ver CLAUDE.md).
     const CATALOGO_TAREAS = [
       {
         grupo: 'Gastos y Caja', // un solo grupo, coherente con el toggle combinado de módulos
+        modulos: ['gastos', 'caja'],
         tareas: [
-          { modulo: 'gastos', tarea: 'ver_exportar',      label: 'Ver todos los gastos de la empresa + exportar Excel (incluye cargar gastos a nombre de otro)' },
-          { modulo: 'gastos', tarea: 'editar_anular',     label: 'Editar y anular cualquier gasto' },
-          { modulo: 'gastos', tarea: 'gastos_empresa',    label: 'Cargar gastos contra las cuentas de la Empresa' },
-          { modulo: 'caja',   tarea: 'ver_listado',       label: 'Ver el listado completo de cajas de la empresa' },
-          { modulo: 'caja',   tarea: 'retiros_todos',     label: 'Ver los retiros personales de todos' },
-          { modulo: 'caja',   tarea: 'movimientos_todos', label: 'Ver todos los movimientos de todas las cuentas' },
+          { modulo: 'gastos', tarea: 'ver_exportar',      label: 'Ver todos los gastos de la empresa + exportar Excel (incluye cargar gastos a nombre de otro)',
+            descripcion: 'Habilita la vista completa de Gastos: los gastos de todas las personas (no solo los propios), los filtros avanzados (unidad, categoría, vehículo, medio de pago, búsqueda por empleado), el botón de exportar a Excel, y elegir a nombre de quién se carga un gasto en el formulario. Sin esta tarea, la persona ve y carga únicamente gastos propios.' },
+          { modulo: 'gastos', tarea: 'editar_anular',     label: 'Editar y anular cualquier gasto',
+            descripcion: 'Permite editar los datos de cualquier gasto y anular gastos de otras personas (la anulación pide motivo, devuelve la plata a la caja correspondiente y reabre facturas pendientes que ese gasto hubiera pagado). Para anular los gastos propios no hace falta esta tarea: eso lo puede hacer cualquiera.' },
+          { modulo: 'gastos', tarea: 'gastos_empresa',    label: 'Cargar gastos contra las cuentas de la Empresa',
+            descripcion: 'Permite cargar gastos pagados con plata de la Empresa: al cargar se elige una cuenta de la Empresa y el descuento sale de ahí, no de la caja personal de quien lo carga.' },
+          { modulo: 'caja',   tarea: 'ver_listado',       label: 'Ver el listado completo de cajas de la empresa',
+            descripcion: 'Al entrar a Caja muestra el listado completo de la empresa: los saldos de todas las personas, con acceso a la ficha de cada una. Sin esta tarea, la persona entra directo a su propia ficha y no ve a nadie más.' },
+          { modulo: 'caja',   tarea: 'retiros_todos',     label: 'Ver los retiros personales de todos',
+            descripcion: 'Habilita la pestaña "Retiros socios", con los retiros personales de todas las personas.' },
+          { modulo: 'caja',   tarea: 'movimientos_todos', label: 'Ver todos los movimientos de todas las cuentas',
+            descripcion: 'Habilita la pestaña "Todos los movimientos": el historial completo de todas las cuentas de todas las personas, con sus filtros.' },
           // La vieja 'ingreso_externo' se partió en dos: el permiso ahora
           // depende de en qué caja entra la plata.
           //
@@ -676,55 +763,82 @@
           // que un super_admin también necesita la fila otorgada. 'ver_empresa'
           // es además la puerta de entrada: sin ella no aparece el atajo a la
           // ficha de Empresa, que es desde donde se opera su plata.
-          { modulo: 'caja',   tarea: 'ingreso_externo_propio',  label: 'Cargar ingresos externos en su propia caja' },
-          { modulo: 'caja',   tarea: 'ingreso_externo_empresa', label: 'Cargar ingresos en las cuentas de la Empresa' },
-          { modulo: 'caja',   tarea: 'ver_empresa',             label: 'Ver la ficha y las cuentas de la Empresa' },
-          { modulo: 'caja',   tarea: 'egreso_empresa',          label: 'Transferir plata de la Empresa a una persona' },
-          { modulo: 'caja',   tarea: 'traspaso_empresa',        label: 'Mover plata entre cuentas de la Empresa' },
+          { modulo: 'caja',   tarea: 'ingreso_externo_propio',  label: 'Cargar ingresos externos en su propia caja',
+            descripcion: 'Permite cargar un ingreso externo (plata que entra de afuera del sistema, por ejemplo una cobranza en mano) en una cuenta propia. Atención: esta tarea no se hereda por rol — un super admin también necesita tenerla tildada para usarla.' },
+          { modulo: 'caja',   tarea: 'ingreso_externo_empresa', label: 'Cargar ingresos en las cuentas de la Empresa',
+            descripcion: 'Permite cargar ingresos en las cuentas de la Empresa (por ejemplo, acreditaciones que aparecen en el resumen del banco). No se hereda por rol: un super admin también la necesita tildada.' },
+          { modulo: 'caja',   tarea: 'ver_empresa',             label: 'Ver la ficha y las cuentas de la Empresa',
+            descripcion: 'Da acceso a la ficha de la Empresa (el atajo para llegar y la ficha misma), con sus cuentas y movimientos. Es la puerta de entrada: sin esta tarea, las demás tareas de Empresa no tienen desde dónde usarse. No se hereda por rol.' },
+          { modulo: 'caja',   tarea: 'egreso_empresa',          label: 'Transferir plata de la Empresa a una persona',
+            descripcion: 'Permite transferir plata desde una cuenta de la Empresa hacia una persona. No se hereda por rol.' },
+          { modulo: 'caja',   tarea: 'traspaso_empresa',        label: 'Mover plata entre cuentas de la Empresa',
+            descripcion: 'Permite mover plata entre cuentas de la propia Empresa (por ejemplo, del banco al efectivo). No se hereda por rol.' },
         ],
       },
       {
         grupo: 'Empleados',
+        modulos: ['empleados'],
         tareas: [
-          { modulo: 'empleados', tarea: 'ver_editar',       label: 'Ver y editar empleados', conAlcance: true },
-          { modulo: 'empleados', tarea: 'importar_naaloo',  label: 'Importar/actualizar empleados desde Naaloo' },
-          { modulo: 'empleados', tarea: 'reasignar_unidad', label: 'Reasignar empleados entre unidades de negocio' },
+          { modulo: 'empleados', tarea: 'ver_editar',       label: 'Ver y editar empleados', conAlcance: true,
+            descripcion: 'Muestra el directorio de empleados de las unidades elegidas en el alcance, y permite completar sus datos (rol, domicilio, teléfono) y editar su contacto de emergencia. Sin esta tarea, la persona ve solo su propio perfil. El alcance define de qué unidades ve gente: una, varias o todas (y "todas" incluye las unidades que se creen en el futuro).' },
+          { modulo: 'empleados', tarea: 'importar_naaloo',  label: 'Importar/actualizar empleados desde Naaloo',
+            descripcion: 'Habilita el bloque de importación del Excel de Naaloo: da de alta empleados nuevos y actualiza los existentes, incluida la detección de bajas. Es independiente de "Ver y editar" — se puede otorgar sola.' },
+          { modulo: 'empleados', tarea: 'reasignar_unidad', label: 'Reasignar empleados entre unidades de negocio',
+            descripcion: 'Permite cambiar la unidad de negocio de un empleado en el formulario de completar datos. Sin ella, ese selector aparece bloqueado aunque se puedan editar los demás campos.' },
         ],
       },
       {
         grupo: 'Cuentas Corrientes',
+        modulos: ['cuentas-corrientes'],
         tareas: [
           // `requiere`: dependencia dura entre tareas, validada también
           // server-side por actualizar_permisos_empleado. Es data-driven a
           // propósito (mismo precedente que `conAlcance`): una dependencia
           // nueva se declara acá, no con otro if suelto.
-          { modulo: 'cuentas_corrientes', tarea: 'ver_todo',                  label: 'Ver proveedores, saldos y facturas de toda la empresa', requiere: 'gastos:ver_exportar' },
-          { modulo: 'cuentas_corrientes', tarea: 'alta_proveedor',            label: 'Dar de alta proveedores directamente' },
-          { modulo: 'cuentas_corrientes', tarea: 'aprobar_rechazar_proveedor', label: 'Aprobar/rechazar proveedores pendientes' },
-          { modulo: 'cuentas_corrientes', tarea: 'registrar_pago',            label: 'Registrar pagos a proveedores' },
-          { modulo: 'cuentas_corrientes', tarea: 'aplicar_credito',           label: 'Aplicar créditos a favor a facturas' },
-          { modulo: 'cuentas_corrientes', tarea: 'anular_factura',            label: 'Anular facturas pendientes' },
-          { modulo: 'cuentas_corrientes', tarea: 'asignar_proveedor_legado',  label: 'Asignar proveedor a facturas sin vincular' },
+          { modulo: 'cuentas_corrientes', tarea: 'ver_todo',                  label: 'Ver proveedores, saldos y facturas de toda la empresa', requiere: 'gastos:ver_exportar',
+            descripcion: 'Muestra los proveedores, saldos y facturas de toda la empresa (sin esta tarea, la persona ve solo las facturas que ella misma cargó). Requiere también "Ver todos los gastos + exportar": los pagos a proveedores están guardados como gastos, y sin poder verlos, los saldos se calcularían incompletos sin ningún aviso.' },
+          { modulo: 'cuentas_corrientes', tarea: 'alta_proveedor',            label: 'Dar de alta proveedores directamente',
+            descripcion: 'Permite dar de alta un proveedor directamente activo, sin pasar por la cola de aprobación.' },
+          { modulo: 'cuentas_corrientes', tarea: 'aprobar_rechazar_proveedor', label: 'Aprobar/rechazar proveedores pendientes',
+            descripcion: 'Habilita la pestaña de proveedores pendientes de aceptación (los que quedan en cola cuando llega una factura de un proveedor desconocido) y sus botones de aprobar y rechazar.' },
+          { modulo: 'cuentas_corrientes', tarea: 'registrar_pago',            label: 'Registrar pagos a proveedores',
+            descripcion: 'Habilita el flujo completo de pagar a un proveedor: elegir qué facturas cubrir (con sugerencia automática de las más viejas primero), pagos parciales, y generación de crédito a favor si sobra plata.' },
+          { modulo: 'cuentas_corrientes', tarea: 'aplicar_credito',           label: 'Aplicar créditos a favor a facturas',
+            descripcion: 'Permite aplicar un crédito a favor existente a una factura pendiente del mismo proveedor y la misma unidad.' },
+          { modulo: 'cuentas_corrientes', tarea: 'anular_factura',            label: 'Anular facturas pendientes',
+            descripcion: 'Permite anular una factura pendiente, siempre que todavía no tenga pagos aplicados.' },
+          { modulo: 'cuentas_corrientes', tarea: 'asignar_proveedor_legado',  label: 'Asignar proveedor a facturas sin vincular',
+            descripcion: 'Caso residual: permite vincular un proveedor a facturas viejas que quedaron cargadas sin proveedor asignado.' },
         ],
       },
       {
         grupo: 'Insumos / Materia Prima',
+        modulos: ['materia-prima'],
         // OJO con los guiones: acá el módulo es 'materia_prima' con guión BAJO,
         // que es lo que guarda empleado_tareas.modulo. La clave del módulo en
         // `modulos` / empleado_modulos es 'materia-prima' con guión MEDIO. Son
         // namespaces distintos (ver CLAUDE.md), no mezclarlos.
         tareas: [
-          { modulo: 'materia_prima', tarea: 'cargar',              label: 'Registrar ingresos de materia prima (y ver los propios)', conAlcance: true },
-          { modulo: 'materia_prima', tarea: 'ver_todo',            label: 'Ver los ingresos de todas las personas',                  conAlcance: true },
-          { modulo: 'materia_prima', tarea: 'gestionar_catalogo',  label: 'Dar de alta y editar insumos del catálogo' },
-          { modulo: 'materia_prima', tarea: 'editar_anular',       label: 'Corregir o anular ingresos ya cargados',                  conAlcance: true },
+          { modulo: 'materia_prima', tarea: 'cargar',              label: 'Registrar ingresos de materia prima (y ver los propios)', conAlcance: true,
+            descripcion: 'Habilita el registro de ingresos de materia prima (el asistente con foto del remito y lotes) y muestra los ingresos que la persona misma cargó, en las unidades de su alcance.' },
+          { modulo: 'materia_prima', tarea: 'ver_todo',            label: 'Ver los ingresos de todas las personas',                  conAlcance: true,
+            descripcion: 'Muestra los ingresos de materia prima de todas las personas, en las unidades del alcance. Sin esta tarea, cada uno ve solo lo que cargó él.' },
+          { modulo: 'materia_prima', tarea: 'gestionar_catalogo',  label: 'Dar de alta y editar insumos del catálogo',
+            descripcion: 'Permite dar de alta y editar insumos del catálogo. El catálogo es único y compartido por las cuatro unidades — por eso esta tarea no lleva alcance.' },
+          { modulo: 'materia_prima', tarea: 'editar_anular',       label: 'Corregir o anular ingresos ya cargados',                  conAlcance: true,
+            descripcion: 'Permite corregir o anular ingresos de materia prima ya cargados, en las unidades del alcance.' },
         ],
       },
       {
         grupo: 'Facturas pendientes',
+        // Los DOS módulos, con semántica "any": es la misma tarea operada
+        // desde dos pantallas, así que con cualquiera de los dos habilitado
+        // ya tiene sentido ofrecerla.
+        modulos: ['gastos', 'cuentas-corrientes'],
         nota: 'válida desde Gastos y desde Cuentas Corrientes',
         tareas: [
-          { modulo: 'facturas_pendientes', tarea: 'editar_interes', label: 'Editar facturas pendientes y agregar intereses' },
+          { modulo: 'facturas_pendientes', tarea: 'editar_interes', label: 'Editar facturas pendientes y agregar intereses',
+            descripcion: 'Permite editar los datos de una factura pendiente (mientras no tenga pagos aplicados) y agregarle intereses. Es un solo permiso con botones en dos pantallas: la vista de facturas de Gastos y el módulo Cuentas Corrientes.' },
         ],
       },
     ]
@@ -754,6 +868,80 @@
       return CATALOGO_TAREAS.flatMap(g => g.tareas.filter(t => t.conAlcance))
     }
 
+    // ── Vínculo grupo → módulos ────────────────────────────────────────────
+
+    // Semántica "any": alcanza con UNO de los módulos del grupo. Ver el
+    // comentario de CATALOGO_TAREAS.
+    function grupoEsVisible(grupo) {
+      return (grupo.modulos ?? []).some(m => estado.modal.modulosElegidos.has(m))
+    }
+
+    function gruposVisibles() {
+      return new Set(CATALOGO_TAREAS.filter(grupoEsVisible).map(g => g.grupo))
+    }
+
+    // El grupo al que pertenece una clave 'modulo:tarea', o null si la clave
+    // no está en el catálogo (passthrough — ver armarTareasPayload).
+    function grupoDeClave(clave) {
+      return CATALOGO_TAREAS.find(g =>
+        g.tareas.some(t => `${t.modulo}:${t.tarea}` === clave)) ?? null
+    }
+
+    // Label visible del TOGGLE que contiene ese módulo — el que la persona
+    // tiene que prender. Sale de MODULOS_MODAL (o sea de la base) y no se
+    // hardcodea: 'gastos' y 'caja' viven bajo un solo control, "Gastos y Caja".
+    function labelDeModulo(claveModulo) {
+      const entrada = MODULOS_MODAL.find(m => m.keys.includes(claveModulo))
+      return entrada?.label ?? claveModulo
+    }
+
+    // Mueve tareas entre el Set activo y la memoria de sesión cuando cambia
+    // la visibilidad de los grupos. SE LLAMA SOLO DESDE EL HANDLER DE LOS
+    // TOGGLES DE MÓDULOS, nunca al abrir el modal ni desde un render.
+    //
+    // TRES INVARIANTES, y romper cualquiera de las tres pierde permisos en
+    // silencio:
+    //
+    // 1. `alcances` NO SE TOCA NUNCA. Al restaurar una tarea su alcance
+    //    reaparece solo, porque nunca se fue. Es lo que mantiene válido el
+    //    fix de 0e70708 (un passthrough a medias es peor que ninguno).
+    //
+    // 2. Solo se mueve lo que está EN EL CATÁLOGO **y** EN EL SET. Una clave
+    //    otorgada por SQL que no está en CATALOGO_TAREAS no pertenece a
+    //    ningún grupo, así que ninguna rama la alcanza: atraviesa intacta.
+    //
+    // 3. AL ABRIR NO SE MUEVE NADA. Una tarea otorgada por SQL cuyo módulo
+    //    está destildado queda en el Set, oculta pero viva: abrir y guardar
+    //    sin tocar nada tiene que producir el payload idéntico al que había.
+    //    Solo la ACCIÓN de destildar revoca; no tocar preserva.
+    function moverTareasPorCambioDeModulos(visiblesAntes) {
+      const visiblesAhora = gruposVisibles()
+
+      for (const grupo of CATALOGO_TAREAS) {
+        const estaba = visiblesAntes.has(grupo.grupo)
+        const esta   = visiblesAhora.has(grupo.grupo)
+        if (estaba === esta) continue
+
+        if (!esta) {
+          // Se ocultó por este evento: sus tareas del catálogo salen del Set
+          // y quedan guardadas para poder volver.
+          const recordadas = new Set()
+          for (const t of grupo.tareas) {
+            const clave = `${t.modulo}:${t.tarea}`
+            if (estado.modal.tareasElegidas.delete(clave)) recordadas.add(clave)
+          }
+          if (recordadas.size) estado.modal.tareasRecordadas.set(grupo.grupo, recordadas)
+        } else {
+          // Volvió a estar visible: se restaura lo que ESTA sesión guardó.
+          const recordadas = estado.modal.tareasRecordadas.get(grupo.grupo)
+          if (recordadas) {
+            recordadas.forEach(c => estado.modal.tareasElegidas.add(c))
+            estado.modal.tareasRecordadas.delete(grupo.grupo)
+          }
+        }
+      }
+    }
+
     // Alcance de UNA tarea dentro del modal, creando la entrada vacía la
     // primera vez. Arranca sin nada a propósito: tildar una tarea con alcance
     // obliga a elegirlo de forma explícita, nunca hereda "todas" por defecto.
@@ -773,6 +961,18 @@
     // tareas otorgadas por SQL que no están en CATALOGO_TAREAS (hoy las cuatro
     // de materia_prima) no participan de esta regla y tienen que seguir
     // pasando intactas al payload. Ver el comentario de armarTareasPayload.
+    // Caso nuevo desde el despliegue condicional: la tarea requerida puede
+    // tener su grupo OCULTO porque su módulo está destildado. Sin esta frase,
+    // el mensaje nombra una tarea que no está en pantalla y no hay forma de
+    // saber cómo llegar a ella. Devuelve '' cuando el grupo sí está visible.
+    function avisoModuloDeRequerida(claveRequerida) {
+      const grupo = grupoDeClave(claveRequerida)
+      if (!grupo || grupoEsVisible(grupo)) return ''
+      const modulos = (grupo.modulos ?? []).map(labelDeModulo)
+      const lista = [...new Set(modulos)].map(m => `"${m}"`).join(' o ')
+      return `Para poder tildarla, primero hay que habilitar el módulo ${lista}. `
+    }
+
     function mensajeDeDependenciaFaltante() {
       const elegidas = estado.modal.tareasElegidas
 
@@ -782,6 +982,7 @@
           const clave = `${t.modulo}:${t.tarea}`
           if (elegidas.has(clave) && !elegidas.has(t.requiere)) {
             return `"${t.label}" necesita además "${labelDeTarea(t.requiere)}". `
+              + avisoModuloDeRequerida(t.requiere)
               + 'Sin esa tarea, los pagos a proveedor quedan filtrados por la seguridad de la base y '
               + 'los saldos de cuenta corriente se muestran INCOMPLETOS, sin ningún error a la vista.'
           }
@@ -1110,7 +1311,18 @@
     // del modal, no en el DOM, así que no se pierde nada.
     function renderizarModalTareas() {
       const el = document.getElementById('modal-tareas')
-      el.innerHTML = CATALOGO_TAREAS.map(grupo => `
+
+      // Solo los grupos cuyos módulos están tildados. El orden es el del
+      // catálogo, así que un grupo que reaparece lo hace en su lugar de
+      // siempre y no al final.
+      const visibles = CATALOGO_TAREAS.filter(grupoEsVisible)
+
+      if (!visibles.length) {
+        el.innerHTML = `<div class="tareas-vacio">Habilitá al menos un módulo arriba para elegir qué puede hacer dentro.</div>`
+        return
+      }
+
+      el.innerHTML = visibles.map(grupo => `
         <div class="grupo-tareas">
           <div class="grupo-tareas__titulo">${grupo.grupo}${grupo.nota ? ` <span class="grupo-tareas__nota">— ${grupo.nota}</span>` : ''}</div>
           ${grupo.tareas.map(t => {
@@ -1147,19 +1359,38 @@
             // apenas se la tilda, para no enterarse recién al apretar Guardar.
             let subDependencia = ''
             if (t.requiere && marcada && !estado.modal.tareasElegidas.has(t.requiere)) {
+              const avisoModulo = avisoModuloDeRequerida(t.requiere)
               subDependencia = `
                 <div class="sub-dependencia">
                   Falta tildar <strong>"${labelDeTarea(t.requiere)}"</strong>.
-                  Sin esa tarea los saldos de cuenta corriente se calculan incompletos, sin ningún aviso.
+                  ${avisoModulo}Sin esa tarea los saldos de cuenta corriente se calculan incompletos, sin ningún aviso.
                 </div>`
             }
 
+            // El botón (?) va FUERA del <label>: adentro, tocarlo tildaría la
+            // tarea, porque un label propaga el click a su checkbox. Por eso
+            // el wrapper.
+            //
+            // Y la descripción va como contenido de un div, no en un
+            // title=""; varias llevan comillas dobles adentro y romperían el
+            // atributo.
+            const ayudaAbierta = estado.modal.ayudaAbierta === clave
+            const ayuda = t.descripcion ? `
+              <button type="button" class="btn-ayuda${ayudaAbierta ? ' btn-ayuda--activo' : ''}"
+                      data-ayuda="${clave}" aria-expanded="${ayudaAbierta}"
+                      title="Qué habilita esta tarea">?</button>` : ''
+            const globoAyuda = (t.descripcion && ayudaAbierta)
+              ? `<div class="ayuda-tarea">${t.descripcion}</div>` : ''
+
             return `
-              <label class="fila-tarea">
-                <input type="checkbox" data-tarea="${clave}" ${marcada ? 'checked' : ''}>
-                <span>${t.label}</span>
-              </label>
-              ${subAlcance}${subDependencia}`
+              <div class="fila-tarea-wrap">
+                <label class="fila-tarea">
+                  <input type="checkbox" data-tarea="${clave}" ${marcada ? 'checked' : ''}>
+                  <span>${t.label}</span>
+                </label>
+                ${ayuda}
+              </div>
+              ${globoAyuda}${subAlcance}${subDependencia}`
           }).join('')}
         </div>
       `).join('')
@@ -1177,6 +1408,17 @@
       el.querySelectorAll('input[data-alcance-todas]').forEach(chk => {
         chk.addEventListener('change', () => {
           alcanceDe(chk.dataset.alcanceTodas).todas = chk.checked
+          renderizarModalTareas()
+        })
+      })
+      // Click/tap y no hover: esto se usa en el celular. Un solo globo abierto
+      // a la vez — tocar otro cierra el anterior, y tocar el mismo lo cierra.
+      // El estado vive en estado.modal y no en el DOM, para sobrevivir al
+      // re-render completo que hace esta función en cada cambio.
+      el.querySelectorAll('button[data-ayuda]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const clave = btn.dataset.ayuda
+          estado.modal.ayudaAbierta = estado.modal.ayudaAbierta === clave ? null : clave
           renderizarModalTareas()
         })
       })
@@ -1264,12 +1506,22 @@
 
       el.querySelectorAll('input[type="checkbox"]').forEach(chk => {
         chk.addEventListener('change', () => {
+          // La foto de "qué grupos se veían" se saca ANTES de mutar: es la
+          // única forma de saber cuáles cambiaron por ESTE evento.
+          const visiblesAntes = gruposVisibles()
+
           const keys = chk.dataset.modulos.split(',')
           keys.forEach(k => {
             if (chk.checked) estado.modal.modulosElegidos.add(k)
             else estado.modal.modulosElegidos.delete(k)
           })
+
+          moverTareasPorCambioDeModulos(visiblesAntes)
           renderizarModalModulos()
+          // El despliegue condicional depende de los módulos, así que tocar un
+          // toggle tiene que repintar las tareas. Antes esta función solo se
+          // re-renderizaba a sí misma.
+          renderizarModalTareas()
         })
       })
     }
@@ -1323,6 +1575,10 @@
         // Vacío: una solicitud nueva no tiene alcances previos. Cada tarea
         // con alcance que se tilde crea el suyo al vuelo (ver alcanceDe).
         alcances: new Map(),
+        // Memoria de sesión del despliegue condicional. Arranca vacía SIEMPRE:
+        // solo se llena al destildar un módulo durante esta sesión del modal.
+        tareasRecordadas: new Map(),
+        ayudaAbierta: null,
       }
 
       document.getElementById('modal-permisos__titulo').textContent = 'Revisar solicitud'
@@ -1385,6 +1641,13 @@
         unidadElegida: null,
         tareasElegidas,
         alcances,
+        // Arranca vacía a propósito: las tareas que vienen de la base con su
+        // módulo destildado (otorgadas por SQL) NO se mueven acá al abrir.
+        // Quedan en tareasElegidas, ocultas pero vivas, para que abrir y
+        // guardar sin tocar nada devuelva el payload idéntico. Solo la acción
+        // de destildar un módulo las mueve — ver moverTareasPorCambioDeModulos.
+        tareasRecordadas: new Map(),
+        ayudaAbierta: null,
       }
 
       document.getElementById('modal-permisos__titulo').textContent = 'Editar permisos'
