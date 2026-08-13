@@ -456,8 +456,8 @@
     }
     .confirmar-apagado__botones { display: flex; gap: 0.5rem; margin-top: 0.5rem; min-width: 0; }
     .confirmar-apagado__botones .btn-item-secundario { margin-top: 0; flex: 1; min-width: 0; }
-    .btn-item-secundario--peligro { border-color: var(--bordo); color: var(--bordo-oscuro); }
-    .btn-item-secundario--peligro:hover { background: var(--bordo-suave); border-color: var(--bordo); color: var(--bordo-oscuro); }
+    /* .btn-item-secundario--peligro: definido abajo, junto a la regla base del
+       botón — acá quedaba pisado por ella. */
 
     /* Mismo marcador de "leído de la foto" que usan los campos del paso 2. El
        número precargado es la base de un reclamo al proveedor: si aparece solo
@@ -913,7 +913,11 @@
       font-family: var(--fuente);
       min-width: 0;
     }
-    /* .wz-remito--sel: lo pinta la regla agrupada de arriba. */
+    /* .wz-remito--sel: el color, el fondo y el anillo los pinta la regla
+       agrupada de arriba. El `border-color` NO: el shorthand `border` de acá
+       le gana por venir después, con la misma especificidad. Se repone acá,
+       después de la base, en vez de sacar el selector del grupo. */
+    .wz-remito--sel { border-color: var(--marron); }
     .wz-remito__fila { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
     .wz-remito__check {
       width: 22px;
@@ -1175,11 +1179,13 @@
        proveedor. Sin distinguirlo pasaba desapercibido.
        Bordó y no rojo: acá el rojo significa error, y recibir menos no es un
        error de quien carga.
-       VA DESPUÉS de las reglas de arriba a propósito. `--dif:hover` y
-       `.btn-item-secundario:hover` tienen la MISMA especificidad (0,2,0), así
-       que decide el orden: puesto antes, el hover marrón del botón genérico le
-       ganaba. La regla combinada con --activo no depende del orden (dos clases
-       le ganan a una), pero se deja acá para que el variante viva junto. */
+       LOS VARIANTES VAN DESPUÉS DE LA REGLA BASE, SIEMPRE. Tienen la MISMA
+       especificidad que ella (`.x--m` y `.x` son 0,1,0; `.x--m:hover` y
+       `.x:hover` son 0,2,0), así que lo único que decide es el orden: puestos
+       antes, la base los pisa y el variante no pinta nada. Es el primo del bug
+       recurrente del [hidden].
+       La única que no depende del orden es la combinada con --activo (dos
+       clases le ganan a una), pero se deja acá para que el variante viva junto. */
     .btn-item-secundario--dif {
       background: #fff;
       border-color: var(--bordo);
@@ -1191,6 +1197,14 @@
       border-color: var(--bordo);
       color: var(--bordo-oscuro);
     }
+
+    /* El "Descartar" de la confirmación de apagado. Estaba definido allá arriba,
+       junto al bloque que lo usa, y la base lo pisaba ENTERO: el `border`
+       shorthand de `.btn-item-secundario` le ganaba al `border-color`, y el
+       `color` al `color`. O sea que el botón destructivo se veía igual que uno
+       común. */
+    .btn-item-secundario--peligro { border-color: var(--bordo); color: var(--bordo-oscuro); }
+    .btn-item-secundario--peligro:hover { background: var(--bordo-suave); border-color: var(--bordo); color: var(--bordo-oscuro); }
 
     .item-mp__texto-input {
       width: 100%;
