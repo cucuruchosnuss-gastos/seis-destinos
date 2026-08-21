@@ -1768,7 +1768,7 @@
                               // deje una entrada vieja con activa:true colgada en el mapa.
       saldosPorCuenta: [],   // filas de v_caja_saldos_cuenta { cuenta_id, saldo } del alcance
                               // actual (una persona puntual, o todas las visibles del listado)
-      superAdmins:     [],   // { id, nombre, caja_raiz } — todos los rol_app='super_admin'
+      superAdmins:     [],   // { id, nombre, caja_raiz, oculto_como_contraparte } — todos los rol_app='super_admin'
       nombresEmpleados: {},  // id -> nombre (todos los activos), para resolver contraparte/
                               // titular sin depender de embeds ambiguos (caja_movimientos
                               // tiene 3 FKs a empleados: empleado_id, contraparte_empleado_id,
@@ -2254,7 +2254,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     async function cargarSuperAdmins() {
-      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, caja_raiz').eq('rol_app', 'super_admin')
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, caja_raiz, oculto_como_contraparte').eq('rol_app', 'super_admin')
       if (error) { mostrarError('No se pudieron cargar los super admins.'); return }
       estado.superAdmins = data || []
     }
@@ -2364,7 +2364,7 @@
     // Reemplazo completo de estado.empleados — Empresa nunca viene en este
     // resultado (queda afuera por auth_user_id/activo), hay que reinsertarla.
     async function cargarPersonasConAcceso() {
-      const { data, error } = await supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz').not('auth_user_id', 'is', null).eq('activo', true).order('nombre')
+      const { data, error } = await supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz, oculto_como_contraparte').not('auth_user_id', 'is', null).eq('activo', true).order('nombre')
       if (error) { mostrarError('No se pudieron cargar las personas.'); return false }
       estado.empleados = data || []
       asegurarEmpresaEnEmpleados()
@@ -4053,6 +4053,31 @@
         : (estado.miEmpleado.rol_app === 'super_admin'
             ? estado.empleados.filter(e => e.id !== estado.miEmpleado.id)
             : estado.superAdmins.filter(s => s.id !== estado.miEmpleado.id))
+
+      // Quien tiene oculto_como_contraparte=true no se puede ELEGIR como
+      // contraparte. El caso que lo motivó: la plata de Pablo en los
+      // movimientos de empresa sale siempre de la Cuenta de Empresa, nunca de
+      // su caja personal, así que ofrecer sus cuentas personales solo servía
+      // para dejar un movimiento mal atribuido.
+      //
+      // Es una COLUMNA y no un nombre hardcodeado: si mañana pasa lo mismo con
+      // otra persona, es un UPDATE de un renglón.
+      //
+      // VA ACÁ, sobre los candidatos ya armados, y NO adentro de cada rama ni
+      // en las funciones que cargan las listas. Por dos motivos:
+      //   1. Una sola línea cubre las tres ramas — ninguna se puede olvidar.
+      //   2. estado.empleados lo comparten el listado general, el Directorio y
+      //      los filtros de Retiros y Movimientos: filtrar al cargar haría
+      //      desaparecer a esa persona de todos esos lugares.
+      // Y es sobre a quién se PUEDE ELEGIR, nunca sobre quién elige: no toca
+      // estado.miEmpleado, así que el oculto sigue viendo su lista completa
+      // desde su propia ficha.
+      //
+      // OJO: las dos consultas que llenan estas listas tienen que traer la
+      // columna, y una de ellas lee v_empleados_publico, que es una vista con
+      // lista fija de columnas. Si falta, esto no filtra nada y no da ningún
+      // error. Ver cargarSuperAdmins() y cargarPersonasConAcceso().
+      candidatos = candidatos.filter(c => !c.oculto_como_contraparte)
 
       // Empresa como contraparte solo cuando NO es ya mi lado.
       if (!desdeEmpresa && estado.idEmpresa && !candidatos.some(c => c.id === estado.idEmpresa)) {
