@@ -232,6 +232,15 @@
     .ingreso__derecha { text-align: right; flex-shrink: 0; }
     .ingreso__items-num { font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.02em; color: var(--color-texto); }
     .ingreso__items-label { font-size: 0.6875rem; color: var(--color-texto-suave); }
+    /* Solo cuando difiere del total: si la factura trae renglones que ya
+       entraron con remito, el número grande no es lo que sumó al stock. */
+    .ingreso__items-suman {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: var(--marron-oscuro);
+      margin-top: 0.125rem;
+      white-space: nowrap;
+    }
 
     /* ── Modal detalle de ingreso (mismo bottom-sheet que el resto) ───────── */
 
@@ -297,6 +306,14 @@
       min-width: 0;
     }
     .fila-item-mp:last-child { border-bottom: none; }
+    /* Variante DESPUÉS de la base: misma especificidad, decide el orden. */
+    .fila-item-mp--no-suma { opacity: 0.6; }
+    .fila-item-mp__no-suma {
+      font-size: 0.71875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      margin-top: 0.1875rem;
+    }
     .fila-item-mp__info { flex: 1; min-width: 0; }
     .fila-item-mp__nombre {
       font-size: 0.90625rem;
@@ -352,6 +369,25 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
+
+    /* Renglón que no suma stock porque esa mercadería ya entró con un remito.
+       Misma geometría que los otros chips, en gris neutro: no es un error ni
+       algo por hacer, es una decisión tomada. */
+    .chip-no-suma, .chip-vinculo-remito {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+      border: 1px solid var(--color-borde);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chip-no-suma { margin-top: 0.375rem; }
 
     /* Diferencia entre lo recibido y lo que dice el comprobante. Comparte la
        geometría de .chip-revisar para que se lean como del mismo sistema, pero
@@ -803,6 +839,16 @@
       color: var(--color-texto-suave);
       font-weight: 500;
     }
+    /* Cuántos renglones no van a sumar stock. En gris y no en ámbar: es el
+       resumen de decisiones ya tomadas, no algo pendiente. */
+    .wz-aviso--no-suma {
+      background: var(--color-superficie);
+      border-color: var(--color-borde);
+      color: var(--color-texto-suave);
+    }
+    /* Un [hidden] de HTML lo pisaría el display:flex de .wz-aviso — es el bug
+       recurrente del proyecto, y este aviso se oculta justamente así. */
+    .wz-aviso[hidden] { display: none; }
 
     /* ── Paso 2 — datos ──────────────────────────────────────────────────── */
 
@@ -982,6 +1028,55 @@
     }
     .item-mp--abierto { border-color: var(--marron); }
     .item-mp--error { border-color: var(--color-error); }
+    /* Atenuado: se tiene que ver de un vistazo cuál entra y cuál no. Solo el
+       cuerpo — la cabecera queda legible para poder identificar el renglón. */
+    .item-mp--no-suma .item-mp__cuerpo > *:not(.casilla-no-suma):not(.marca-ocr-item):not(.item-mp__hint) { opacity: 0.5; }
+    .item-mp--no-suma .item-mp__cantidad { opacity: 0.5; }
+
+    /* La casilla del vínculo por renglón. Es una casilla y no un botón más de
+       la fila de secundarios: cambia lo que el renglón SIGNIFICA, no cómo se
+       carga un número. */
+    .casilla-no-suma {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      margin-bottom: 0.75rem;
+      padding: 0.625rem 0.6875rem;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 11px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      text-align: left;
+      cursor: pointer;
+      min-width: 0;
+    }
+    .casilla-no-suma__caja {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 1.5px solid var(--color-borde);
+      background: #fff;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6875rem;
+      font-weight: 800;
+      color: var(--color-texto);
+    }
+    .casilla-no-suma--activa {
+      background: var(--color-superficie);
+      border-color: var(--color-texto-suave);
+      color: var(--color-texto);
+    }
+    .casilla-no-suma--activa .casilla-no-suma__caja {
+      border-color: var(--color-texto-suave);
+      background: var(--color-superficie);
+    }
 
     .item-mp__cabecera {
       display: flex;
@@ -1560,6 +1655,8 @@
           Revisá que estén todos los productos del remito. Si falta alguno, agregalo con el botón de abajo.
         </div>
 
+        <div class="wz-aviso wz-aviso--no-suma" id="wz-aviso-no-suma" hidden style="margin-top:0.875rem;"></div>
+
         <div id="wz-lista-items" style="margin-top:0.875rem;"></div>
 
         <button type="button" class="btn-agregar-item" id="btn-agregar-item">
@@ -1701,6 +1798,11 @@
       unidades: [],
       listaIngresos: [],        // filas crudas de la base, sin fusionar
       entregas: [],             // lo que se muestra: filas ya fusionadas (ver fusionarEntregas)
+      // Ids de remitos que ya tienen una factura vinculada, mirado desde el
+      // lado del remito. Lo llena cargarVinculosFacturaRemito() y lo consulta
+      // el filtro de vínculo. Arranca vacío para que el filtro pueda correr
+      // aunque el listado todavía no se haya cargado.
+      remitosFacturados: new Set(),
       filtros: {
         ingresos: { busqueda: '', unidadId: '', vinculo: '' },  // '' = Todas / Todos
       },
@@ -1743,7 +1845,13 @@
         // anterior.
         ocrCrudo: null,
         vinculaRemito: null,      // null = sin responder, true/false
-        remitoVinculadoId: null,
+        // VARIOS remitos, no uno: una factura puede corresponder a mercadería
+        // que entró en más de una entrega. Se guardan en la tabla puente
+        // materia_prima_factura_remitos. La columna vieja remito_vinculado_id
+        // ya NO se escribe (queda solo para los datos históricos), porque el
+        // vínculo dejó de ser todo-o-nada: qué suma stock y qué no se decide
+        // por RENGLÓN, con ya_recibido_con_remito.
+        remitosVinculadosIds: [],
         // Cache del paso 2B: null = todavía no se consultó. Decide si el paso
         // se muestra o se saltea, en los dos sentidos de la navegación.
         remitosVinculables: null,
@@ -1857,14 +1965,23 @@
     }
 
     // Filtro por vínculo, sobre una entrega ya fusionada.
+    // OJO con el cambio: desde el vínculo por renglón, una factura puede estar
+    // vinculada a un remito SIN fusionarse con él (cuando además trae mercadería
+    // nueva). Ahí el remito queda como una entrega de UN comprobante que sin
+    // embargo YA está facturada. Por eso las dos ramas consultan además
+    // estado.remitosFacturados, que mira el vínculo desde el lado del remito:
+    // sin eso, "Remitos sin factura" —que es la herramienta de control— pasaría
+    // a listar remitos que sí tienen factura.
     function entregaPasaVinculo(entrega, filtro) {
       if (!filtro) return true
-      if (filtro === 'con_factura') return entrega.comprobantes.length > 1
+      const facturado = estado.remitosFacturados.has(entrega.base.id)
+      if (filtro === 'con_factura') return entrega.comprobantes.length > 1 || facturado
       if (filtro === 'sin_factura') {
         // "Ninguna factura en el array" y no "un solo comprobante": hoy dan lo
         // mismo, pero esto dice lo que la condición significa.
         return entrega.base.tipo_doc === 'remito'
           && !entrega.comprobantes.some(c => esFactura(c.tipo_doc))
+          && !facturado
       }
       return true
     }
@@ -2013,7 +2130,7 @@
         // agregado: sirve para las DOS cosas —la cantidad de ítems es el largo
         // del array, y el indicador de diferencias es que alguno lo tenga
         // cargado— sin sumar una consulta. Son pocos ítems por ingreso.
-        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(cantidad_documento)')
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(cantidad_documento, ya_recibido_con_remito)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -2025,41 +2142,101 @@
         return
       }
 
+      const vinculos = await cargarVinculosFacturaRemito()
+
       estado.listaIngresos = (data ?? []).map(i => ({
         ...i,
         cantidadItems: i.materia_prima_items?.length ?? 0,
+        // Los que REALMENTE entran al stock. Es el número que decide si una
+        // factura es una llegada de mercadería o solo documentación.
+        itemsQueSuman: (i.materia_prima_items ?? []).filter(it => !it.ya_recibido_con_remito).length,
         tieneDiferencias: (i.materia_prima_items ?? []).some(it => it.cantidad_documento != null),
       }))
-      estado.entregas = fusionarEntregas(estado.listaIngresos)
+      estado.entregas = fusionarEntregas(estado.listaIngresos, vinculos)
 
       renderizarBannerIngresos()
       renderizarListaIngresos()
+    }
+
+    // Los vínculos factura→remitos. Va como consulta APARTE y no como embed:
+    // materia_prima_factura_remitos tiene DOS FKs a materia_prima_ingresos
+    // (factura_id y remito_id), así que PostgREST no puede resolver el embed y
+    // falla por ambigüedad — el mismo caso que gastos.anulado_por.
+    //
+    // Devuelve un Map facturaId -> [remitoId, ...] que UNIFICA las dos formas
+    // que conviven: la columna vieja remito_vinculado_id de los ingresos
+    // históricos y las filas de la tabla puente. La fila ya migrada está en las
+    // DOS a la vez, por eso el Set: sin él ese remito entraría dos veces y la
+    // entrega parecería tener un vínculo de más.
+    async function cargarVinculosFacturaRemito() {
+      const porFactura = new Map()
+      const agregar = (facturaId, remitoId) => {
+        if (!facturaId || !remitoId) return
+        if (!porFactura.has(facturaId)) porFactura.set(facturaId, new Set())
+        porFactura.get(facturaId).add(remitoId)
+      }
+
+      estado.listaIngresos.forEach(i => agregar(i.id, i.remito_vinculado_id))
+
+      const { data, error } = await supabase
+        .from('materia_prima_factura_remitos')
+        .select('factura_id, remito_id')
+      // Un error acá no puede voltear el listado: se pierde la fusión de lo
+      // nuevo, no los datos. La columna vieja sigue dando la de lo histórico.
+      if (error) console.error(error)
+      ;(data ?? []).forEach(v => agregar(v.factura_id, v.remito_id))
+
+      // Los remitos que YA tienen factura, mirado desde el otro lado. Lo usa el
+      // filtro "Remitos sin factura": ahora una factura puede estar vinculada a
+      // un remito SIN fusionarse con él (cuando además trae mercadería nueva),
+      // así que "tiene un solo comprobante" ya no equivale a "sin facturar".
+      estado.remitosFacturados = new Set([...porFactura.values()].flatMap(set => [...set]))
+
+      return new Map([...porFactura].map(([k, set]) => [k, [...set]]))
     }
 
     // Una ENTREGA es una llegada física de mercadería. Puede estar respaldada
     // por un comprobante o por dos (el remito, y la factura que lo vincula):
     // en la base son dos filas, pero en pantalla es una sola cosa.
     //
-    // La base es siempre el REMITO: es el que trae los ítems y el que
-    // representa la entrada de mercadería. La factura vinculada tiene 0 ítems
-    // a propósito, para no sumar la cantidad dos veces.
-    function fusionarEntregas(filas) {
+    // REGLA DE FUSIÓN, y es semántica: se fusiona solo cuando la factura NO es
+    // una llegada. O sea cuando no aporta NI UN renglón que sume stock —toda su
+    // mercadería ya había entrado con remito— y apunta a UN solo remito visible.
+    //
+    // Antes la regla era "tiene remito_vinculado_id", y descansaba en que una
+    // factura vinculada tenía 0 ítems a propósito. Con el vínculo por RENGLÓN
+    // eso dejó de ser cierto: una factura puede traer mercadería nueva ADEMÁS
+    // de la que ya entró. Esa factura SÍ es una llegada y le corresponde su
+    // propia fila; fusionarla escondería la mercadería nueva detrás del conteo
+    // del remito, porque cantidadItems sale de la base.
+    //
+    // Con los datos de hoy —donde toda factura vinculada no suma nada y apunta
+    // a un remito— la regla da exactamente el mismo resultado que antes.
+    function fusionarEntregas(filas, vinculosPorFactura = new Map()) {
       const porId = new Map(filas.map(f => [f.id, f]))
       const consumidos = new Set()
       const entregas = new Map()   // id del remito -> entrega
 
-      // Primera pasada, solo las vinculadas: así el remito queda siempre como
-      // base, sin importar en qué orden vinieron las filas.
+      const remitosDe = (f) => {
+        const ids = vinculosPorFactura.get(f.id) ?? []
+        // Los que el RLS no deja ver quedan afuera: nunca se asume que están.
+        const visibles = ids.filter(id => porId.has(id))
+        return { ids, visibles, noVisibles: ids.length - visibles.length }
+      }
+      // "No es una llegada": ningún renglón suma. Vale también para la factura
+      // vinculada de los datos viejos, que directamente no tiene ítems.
+      const noAportaStock = (f) => (f.itemsQueSuman ?? 0) === 0
+
+      // Primera pasada, solo las que se fusionan: así el remito queda siempre
+      // como base, sin importar en qué orden vinieron las filas.
       filas.forEach(f => {
-        if (!f.remito_vinculado_id) return
-        const remito = porId.get(f.remito_vinculado_id)
-        // Si el remito no está entre los datos cargados (el RLS puede
-        // ocultarlo), la factura NO se fusiona: se resuelve como suelta en la
-        // segunda pasada. Nunca se asume que el remito está.
-        if (!remito) return
+        const { visibles } = remitosDe(f)
+        if (visibles.length !== 1) return
+        if (!noAportaStock(f)) return
+        const remito = porId.get(visibles[0])
 
         const entrega = entregas.get(remito.id)
-          ?? { base: remito, comprobantes: [remito], huerfana: false }
+          ?? { base: remito, comprobantes: [remito], huerfana: false, remitosVinculados: [], noSuma: false }
         entrega.comprobantes.push(f)
         entregas.set(remito.id, entrega)
         consumidos.add(f.id)
@@ -2070,12 +2247,19 @@
       // solo comprobante.
       filas.forEach(f => {
         if (consumidos.has(f.id)) return
+        const { visibles, noVisibles } = remitosDe(f)
         entregas.set(f.id, {
           base: f,
           comprobantes: [f],
-          // Apunta a un remito que no está en los datos: hay que decirlo en la
+          // Apunta a remitos que no están en los datos: hay que decirlo en la
           // fila, si no parece una carga a la que le falta la mercadería.
-          huerfana: !!f.remito_vinculado_id,
+          huerfana: noVisibles > 0 && noAportaStock(f),
+          // Vinculada pero con fila propia: o porque trae mercadería nueva, o
+          // porque son varios remitos. En los dos casos se muestra el vínculo.
+          remitosVinculados: visibles,
+          // No sumó nada y aun así tiene fila propia (varios remitos): la fila
+          // tiene que decir que no aportó mercadería o parece una carga vacía.
+          noSuma: noAportaStock(f) && (visibles.length + noVisibles) > 0,
         })
       })
 
@@ -2083,8 +2267,8 @@
       // remito, así que conservar la posición original dejaría una fila con
       // fecha vieja en el lugar donde estaba la factura, más nueva.
       return [...entregas.values()]
-        // Los dos salen de la BASE de la entrega: en una fusión remito+factura
-        // es el remito el que tiene los ítems, la factura vinculada tiene 0.
+        // Sale de la BASE: en una fusión remito+factura es el remito el que
+        // tiene los ítems, y la factura fusionada por definición no suma.
         .map(e => ({ ...e, cantidadItems: e.base.cantidadItems, tieneDiferencias: e.base.tieneDiferencias }))
         .sort((a, b) =>
           String(b.base.fecha || '').localeCompare(String(a.base.fecha || '')) ||
@@ -2168,14 +2352,18 @@
               ${e.comprobantes.map(c => chipTipoDoc(c.tipo_doc)).join('')}
               ${anomalia ? '<span class="chip-revisar" title="Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.">⚠ Revisar</span>' : ''}
               ${e.tieneDiferencias ? '<span class="chip-diferencia" title="Llegó menos (o más) de lo que dice el comprobante. Abrí el detalle para ver las cantidades y el motivo.">Con diferencia</span>' : ''}
+              ${e.remitosVinculados?.length ? `<span class="chip-vinculo-remito" title="Parte de la mercadería de esta factura ya había entrado con un remito.">${e.remitosVinculados.length === 1 ? 'Vinculada a 1 remito' : `Vinculada a ${e.remitosVinculados.length} remitos`}</span>` : ''}
               ${chipAntiguedad}
               <span class="ingreso__fecha">${formatearFecha(b.fecha)} · ${nombreUnidad(b.unidad_negocio_id)}</span>
             </div>
             ${e.huerfana ? '<div class="ingreso__nota">Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</div>' : ''}
+            ${(e.noSuma && !e.huerfana) ? '<div class="ingreso__nota">No sumó mercadería: todos sus renglones ya habían entrado con un remito.</div>' : ''}
           </div>
           <div class="ingreso__derecha">
             <div class="ingreso__items-num">${e.cantidadItems}</div>
             <div class="ingreso__items-label">${e.cantidadItems === 1 ? 'ítem' : 'ítems'}</div>
+            ${(e.base.itemsQueSuman != null && e.base.itemsQueSuman < e.cantidadItems && !e.noSuma)
+              ? `<div class="ingreso__items-suman">${e.base.itemsQueSuman} suman</div>` : ''}
           </div>
         </div>`
       }).join('')
@@ -2256,12 +2444,15 @@
       document.getElementById('detalle-cargando').hidden = false
       document.getElementById('modal-ingreso').hidden = false
 
-      // Los ítems se consultan por el id de la BASE: en una entrega fusionada
-      // es el remito el que los tiene, la factura vinculada siempre tiene 0.
+      // Los ítems se piden por TODOS los comprobantes de la entrega, no solo
+      // por la base. Antes iba .eq(base.id) porque la factura vinculada tenía 0
+      // ítems siempre; con el vínculo por renglón puede traer los suyos, y con
+      // .eq() quedarían invisibles en el detalle.
+      const idsComprobantes = entrega.comprobantes.map(c => c.id)
       const { data: items, error } = await supabase
         .from('materia_prima_items')
-        .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, cantidad_documento, motivo_diferencia, insumos(nombre, marca, unidad_medida, tipo)')
-        .eq('ingreso_id', ingreso.id)
+        .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, cantidad_documento, motivo_diferencia, ya_recibido_con_remito, insumos(nombre, marca, unidad_medida, tipo)')
+        .in('ingreso_id', idsComprobantes)
         .order('created_at')
 
       document.getElementById('detalle-cargando').hidden = true
@@ -2274,9 +2465,11 @@
 
       document.getElementById('detalle-items').innerHTML = (items ?? []).map(item => {
         const insumo = item.insumos || {}
-        // El lote solo aplica a materia prima; los insumos no lo llevan
+        // El lote solo aplica a materia prima; los insumos no lo llevan. Y un
+        // renglón que ya entró con un remito tampoco: su lote lo tiene ese
+        // remito, acá no se cargó ninguno.
         let loteHtml = ''
-        if (insumo.tipo === 'materia_prima') {
+        if (insumo.tipo === 'materia_prima' && !item.ya_recibido_con_remito) {
           const chip = item.lote_ilegible
             ? '<span class="chip-lote chip-lote--ilegible">Ilegible</span>'
             : item.lote
@@ -2289,12 +2482,14 @@
           ? `<div class="fila-item-mp__marca">${Number(item.cantidad_bultos).toLocaleString('es-AR')} bultos de ${formatearCantidad(item.contenido_por_bulto, insumo.unidad_medida)}</div>`
           : ''
         return `
-          <div class="fila-item-mp">
+          <div class="fila-item-mp ${item.ya_recibido_con_remito ? 'fila-item-mp--no-suma' : ''}">
             <div class="fila-item-mp__info">
               <div class="fila-item-mp__nombre">${insumo.nombre || '(producto)'}</div>
               ${insumo.marca ? `<div class="fila-item-mp__marca">${insumo.marca}</div>` : ''}
               ${desglose}
               ${loteHtml}
+              ${item.ya_recibido_con_remito
+                ? '<div class="fila-item-mp__no-suma">No sumó stock: ya había entrado con un remito.</div>' : ''}
               ${htmlDiferenciaDetalle(item, insumo)}
             </div>
             <div class="fila-item-mp__cantidad">${formatearCantidad(item.cantidad, insumo.unidad_medida)}</div>
@@ -2367,7 +2562,7 @@
         datos:      'comprobante',
         vinculo:    'datos',
         items:      hayVinculo ? 'vinculo' : 'datos',
-        confirmar:  w.remitoVinculadoId ? 'vinculo' : 'items',
+        confirmar:  'items',
       }[w.paso]
 
       if (!previo) {
@@ -2726,13 +2921,13 @@
       document.getElementById('wz-lista-remitos-cont').hidden = w.vinculaRemito !== true
       // Con "Sí" hay que elegir un remito antes de seguir; con "No" alcanza.
       document.getElementById('btn-vinculo-continuar').disabled =
-        w.vinculaRemito == null || (w.vinculaRemito === true && !w.remitoVinculadoId)
+        w.vinculaRemito == null || (w.vinculaRemito === true && !w.remitosVinculadosIds.length)
     }
 
     function elegirVinculaRemito(valor) {
       const w = estado.wizard
       w.vinculaRemito = valor
-      if (!valor) w.remitoVinculadoId = null
+      if (!valor) w.remitosVinculadosIds = []
       renderizarSiNoVinculo()
       if (valor) renderizarRemitosCacheados()
     }
@@ -2789,7 +2984,7 @@
         // `items` es el jsonb que devuelve la RPC: [{nombre, marca, cantidad,
         // unidad}]. Nada de insumos(...) embebido.
         const items = Array.isArray(r.items) ? r.items : []
-        const sel = estado.wizard.remitoVinculadoId === r.id
+        const sel = estado.wizard.remitosVinculadosIds.includes(r.id)
         const meta = [formatearFecha(r.fecha), r.numero_doc].filter(Boolean).join(' · ')
         return `
           <button type="button" class="wz-remito ${sel ? 'wz-remito--sel' : ''}" data-id="${esc(r.id)}">
@@ -2811,19 +3006,24 @@
       cont.querySelectorAll('.wz-remito').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.dataset.id
-          // Volver a tocar el mismo lo deselecciona.
-          estado.wizard.remitoVinculadoId = estado.wizard.remitoVinculadoId === id ? null : id
+          const w = estado.wizard
+          // Toggle: volver a tocar uno lo saca de la selección.
+          w.remitosVinculadosIds = w.remitosVinculadosIds.includes(id)
+            ? w.remitosVinculadosIds.filter(x => x !== id)
+            : [...w.remitosVinculadosIds, id]
           renderizarRemitos(remitos)
           renderizarSiNoVinculo()
         })
       })
     }
 
+    // ANTES esto salteaba el paso 3 cuando había remito vinculado: la factura
+    // no cargaba ítems porque "la mercadería ya la sumó el remito". Con el
+    // vínculo por renglón eso dejó de ser cierto — una factura puede traer
+    // mercadería nueva ADEMÁS de la que ya entró — así que SIEMPRE se pasa por
+    // los ítems. Ahí se decide, renglón por renglón, qué suma y qué no.
     function continuarDesdeVinculo() {
-      const w = estado.wizard
-      // Con remito vinculado la factura NO carga ítems: la mercadería ya la
-      // sumó el remito. Saltea el paso 3 y va derecho a confirmar.
-      irAPasoWz(w.remitoVinculadoId ? 'confirmar' : 'items')
+      irAPasoWz('items')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2895,6 +3095,12 @@
         // recepción parcial está activo: ahí ese número pasa a ser la cantidad
         // del comprobante, o sea la base de un reclamo al proveedor.
         cantidadOcrOriginal: numeroDesdeInput(crudo.cantidad_total),
+        // Vínculo POR RENGLÓN. true = esta mercadería ya entró con un remito
+        // anterior, así que este renglón NO suma stock. Lo sugiere el match
+        // contra los ítems de los remitos vinculados (ver sugerirYaRecibido),
+        // pero la decisión es de la persona: `yaRecibidoTocado` marca que ya
+        // la tomó, para que un recálculo posterior no le pise la respuesta.
+        yaRecibido: false, yaRecibidoSugerido: false, yaRecibidoTocado: false,
         difiere: false, cantidadDocumento: null, motivoDiferencia: '',
         bultosRecibidos: null, confirmandoApagado: false,
         lote: '', loteIlegible: false,
@@ -2916,6 +3122,9 @@
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
         cantidadOcrOriginal: null,
+        // Agregado a mano: si la persona lo escribió es porque está en el
+        // papel y no vino antes; igual puede marcarlo si corresponde.
+        yaRecibido: false, yaRecibidoSugerido: false, yaRecibidoTocado: false,
         difiere: false, cantidadDocumento: null, motivoDiferencia: '',
         bultosRecibidos: null, confirmandoApagado: false,
         lote: '', loteIlegible: false,
@@ -2933,7 +3142,44 @@
         w.itemsInicializados = true
         w.itemAbierto = w.items[0]?.uid ?? null
       }
+      // FUERA del if: si se vuelve al paso 2B y se cambian los remitos, la
+      // sugerencia se recalcula al volver acá.
+      sugerirYaRecibido()
       renderizarItems()
+    }
+
+    // Claves de catálogo de los ítems de los remitos que se vincularon. La RPC
+    // `remitos_vinculables` devuelve los ítems como {nombre, marca, cantidad,
+    // unidad} — SIN insumo_id —, así que el match va por claveInsumo(), el
+    // mismo normalizador del catálogo. Es sólido porque los dos lados salen de
+    // `insumos.nombre`: el del remito de la RPC, y el del ítem de la factura de
+    // haber matcheado el catálogo. Un producto nuevo no puede haber venido en
+    // un remito anterior, así que no matchear es la respuesta correcta.
+    function clavesDeRemitosVinculados() {
+      const w = estado.wizard
+      const elegidos = new Set(w.remitosVinculadosIds)
+      const claves = new Set()
+      ;(w.remitosVinculables ?? []).forEach(r => {
+        if (!elegidos.has(r.id)) return
+        ;(Array.isArray(r.items) ? r.items : []).forEach(it => {
+          claves.add(claveInsumo(it.nombre, it.marca))
+        })
+      })
+      return claves
+    }
+
+    // SUGIERE, no decide. Marcar de más significa mercadería que nunca entra al
+    // stock, así que sin match la casilla queda SIN marcar — el default seguro.
+    // No toca los renglones que la persona ya resolvió a mano: se puede volver
+    // al paso 2B, cambiar los remitos y volver, y su respuesta sigue en pie.
+    function sugerirYaRecibido() {
+      const claves = clavesDeRemitosVinculados()
+      estado.wizard.items.forEach(item => {
+        if (item.yaRecibidoTocado) return
+        const sugerido = claves.has(claveInsumo(item.nombre, item.marca))
+        item.yaRecibido = sugerido
+        item.yaRecibidoSugerido = sugerido
+      })
     }
 
     function renderizarItems() {
@@ -2944,6 +3190,15 @@
       document.getElementById('wz-items-contador').textContent = w.items.length
         ? `${abiertoIdx >= 0 ? abiertoIdx + 1 : '—'} de ${w.items.length}`
         : 'Sin ítems'
+
+      const noSuman = w.items.filter(i => i.yaRecibido).length
+      const avisoNoSuma = document.getElementById('wz-aviso-no-suma')
+      avisoNoSuma.hidden = noSuman === 0
+      if (noSuman) {
+        avisoNoSuma.textContent = noSuman === 1
+          ? '1 renglón no suma stock porque ya entró con un remito.'
+          : `${noSuman} renglones no suman stock porque ya entraron con un remito.`
+      }
 
       cont.innerHTML = w.items.map(item =>
         item.uid === w.itemAbierto ? htmlItemAbierto(item) : htmlItemCerrado(item)
@@ -2969,6 +3224,12 @@
       if (item.tipo === 'insumo')        return '<span class="chip-tipo-insumo">Insumo</span>'
       return '<span class="chip-tipo-insumo chip-tipo-insumo--falta">Elegí si lleva lote</span>'
     }
+
+    // Un renglón marcado como ya recibido NO suma stock. El chip lo dice con
+    // esas palabras y no "ya recibido": lo que importa en pantalla es la
+    // consecuencia, no el nombre interno de la bandera. Va en gris y no en
+    // ámbar — no es algo que falte hacer, es una decisión ya tomada.
+    const CHIP_NO_SUMA = '<span class="chip-no-suma">No suma stock</span>'
 
     function etiquetaTipo(item) {
       if (item.tipo === 'materia_prima') return 'Materia prima'
@@ -3056,12 +3317,14 @@
       const sub = [item.marca, etiquetaTipo(item)].filter(Boolean).join(' · ')
       // Sin tipo elegido no se muestra chip de lote: todavía no se sabe si
       // lleva. El aviso lo da la sub-línea.
-      const chipLote = item.tipo !== 'materia_prima' ? ''
+      // Un renglón que no suma no lleva lote (ya lo tiene el remito), así que
+      // tampoco chip de lote: no falta nada.
+      const chipLote = (item.yaRecibido || item.tipo !== 'materia_prima') ? ''
         : item.loteIlegible ? '<span class="chip-lote chip-lote--ilegible">Ilegible</span>'
         : item.lote ? `<span class="chip-lote">${esc(item.lote)}</span>`
         : '<span class="chip-lote chip-lote--ilegible">Sin lote</span>'
       return `
-        <div class="item-mp ${item.error ? 'item-mp--error' : ''}" data-uid="${item.uid}">
+        <div class="item-mp ${item.error ? 'item-mp--error' : ''} ${item.yaRecibido ? 'item-mp--no-suma' : ''}" data-uid="${item.uid}">
           <div class="item-mp__cabecera" data-accion="abrir">
             <div class="item-mp__info">
               <div class="item-mp__nombre-fila">
@@ -3069,6 +3332,7 @@
                 ${item.esNuevo ? '<span class="badge-nuevo">NUEVO</span>' : ''}
               </div>
               ${sub ? `<div class="item-mp__marca">${esc(sub)}</div>` : ''}
+              ${item.yaRecibido ? CHIP_NO_SUMA : ''}
             </div>
             <div class="item-mp__derecha">
               <div class="item-mp__cantidad">${esc(textoCantidad(item))}</div>
@@ -3184,6 +3448,22 @@
           ${confirmacionApagado}
         </div>`
 
+      // La casilla del vínculo por renglón. SOLO en facturas: en un remito o
+      // en 'sin_comprobante' no hay nada con qué vincular y no tiene sentido.
+      // Va arriba de todo porque cambia lo que se pide más abajo — si está
+      // marcada, el bloque de lote desaparece.
+      const casillaYaRecibido = !esFactura(estado.wizard.encabezado.tipoDoc) ? '' : `
+        <button type="button" class="casilla-no-suma ${item.yaRecibido ? 'casilla-no-suma--activa' : ''}" data-accion="toggle-ya-recibido">
+          <span class="casilla-no-suma__caja">${item.yaRecibido ? '✓' : ''}</span>
+          <span>Esta mercadería ya entró con un remito</span>
+        </button>
+        ${item.yaRecibido && item.yaRecibidoSugerido
+          ? '<div class="marca-ocr-item">✓ sugerido por el remito vinculado — verificalo</div>'
+          : ''}
+        ${item.yaRecibido
+          ? '<div class="item-mp__hint" style="margin-top:0.5rem;">ⓘ No suma stock: la cantidad ya la cargó el remito. El lote también.</div>'
+          : ''}`
+
       // Aviso de clasificación sin revisar. Solo para ítems que matchearon
       // contra el catálogo (los nuevos ya muestran el selector de tipo, que es
       // la decisión misma). Dice las tres cosas: qué quedó clasificado, qué
@@ -3196,9 +3476,14 @@
           Si está mal, corregilo en Stock.
         </div>`
 
-      // TRES ramas. Con tipo null NO se afirma que no lleva lote: eso sería
-      // decidir por la persona justo lo que se le está pidiendo que decida.
-      const loteHtml = item.tipo == null
+      // CUATRO ramas contando esta: un renglón que ya entró con un remito no
+      // pide lote. Ese lote se tipeó al cargar el remito; pedirlo de nuevo
+      // obliga a inventarlo o a copiarlo distinto, y queda un dato muerto que
+      // puede diverger del real. El trigger fn_validar_item_materia_prima
+      // acompaña: exige lote solo con ya_recibido_con_remito = false.
+      const loteHtml = item.yaRecibido
+        ? ''
+        : item.tipo == null
         ? `<div class="item-mp__hint" style="margin-top:0.75rem;">ⓘ Elegí arriba si lleva lote para seguir.</div>`
         : item.tipo === 'materia_prima'
         ? `<div class="item-mp__bloque">
@@ -3213,7 +3498,7 @@
         : `<div class="item-mp__hint" style="margin-top:0.75rem;">ⓘ Este producto no lleva lote.</div>`
 
       return `
-        <div class="item-mp item-mp--abierto ${item.error ? 'item-mp--error' : ''}" data-uid="${item.uid}">
+        <div class="item-mp item-mp--abierto ${item.error ? 'item-mp--error' : ''} ${item.yaRecibido ? 'item-mp--no-suma' : ''}" data-uid="${item.uid}">
           <div class="item-mp__cabecera" data-accion="cerrar">
             <div class="item-mp__info">
               <div class="item-mp__nombre-fila">
@@ -3222,11 +3507,13 @@
               </div>
               ${item.marca ? `<div class="item-mp__marca">${esc(item.marca)}</div>` : ''}
               ${chipTipoInsumo(item)}
+              ${item.yaRecibido ? CHIP_NO_SUMA : ''}
             </div>
             <button type="button" class="btn-item-borrar" data-accion="borrar" title="Quitar ítem" aria-label="Quitar ítem">🗑</button>
           </div>
 
           <div class="item-mp__cuerpo">
+            ${casillaYaRecibido}
             ${identidadHtml}
             ${avisoSinRevisar}
 
@@ -3366,6 +3653,18 @@
               apagarDiferencia(item)
               renderizarItems()
             }
+            if (accion === 'toggle-ya-recibido') {
+              item.yaRecibido = !item.yaRecibido
+              // La persona decidió: de acá en más un cambio de remitos en el
+              // paso 2B no le vuelve a pisar la respuesta, y la marca de
+              // sugerencia desaparece aunque haya elegido lo mismo.
+              item.yaRecibidoTocado = true
+              item.yaRecibidoSugerido = false
+              // Un renglón que no suma no lleva lote: se limpia lo que hubiera
+              // quedado cargado antes de marcarlo, igual que al pasar a insumo.
+              if (item.yaRecibido) { item.lote = ''; item.loteIlegible = false }
+              renderizarItems()
+            }
             if (accion === 'lote-ilegible') {
               item.loteIlegible = !item.loteIlegible
               // El CHECK chk_lote_ilegible_sin_lote prohíbe tener los dos.
@@ -3474,7 +3773,12 @@
           // Antes de la de lote: sin tipo no se sabe siquiera si el lote aplica.
           // Y sin tipo el insert de `insumos` violaría el NOT NULL.
           item.error = 'Elegí si lleva lote: materia prima o insumo.'
-        } else if (item.tipo === 'materia_prima' && !item.loteIlegible && !String(item.lote || '').trim()) {
+        } else if (item.tipo === 'materia_prima' && !item.yaRecibido
+                   && !item.loteIlegible && !String(item.lote || '').trim()) {
+          // `!item.yaRecibido` acompaña al trigger fn_validar_item_materia_prima,
+          // que desde el vínculo por renglón exige lote solo cuando el renglón
+          // SUMA stock. Si el front lo pidiera igual, estaría obligando a
+          // inventar un lote que la base ya no necesita.
           item.error = 'Cargá el lote o marcalo como ilegible.'
         } else if (item.difiere && (item.cantidadDocumento == null || !(item.cantidadDocumento > 0))) {
           // chk_cantidad_documento_positiva.
@@ -3518,10 +3822,16 @@
         ['Fecha',     e.fecha ? formatearFecha(e.fecha) : '—'],
         ['Unidad',    nombreUnidad(e.unidadId) || '—'],
       ]
-      if (w.remitoVinculadoId) {
-        filas.push(['Vinculado a', 'Un remito ya cargado'])
-      } else {
-        filas.push(['Ítems', String(w.items.length)])
+      const vinculados = w.remitosVinculadosIds.length
+      if (vinculados) {
+        filas.push(['Vinculada a', vinculados === 1 ? '1 remito ya cargado' : `${vinculados} remitos ya cargados`])
+      }
+      // Los dos números, porque son distintos y los dos importan: cuántos
+      // renglones tiene la factura y cuántos entran realmente al stock.
+      const noSuman = w.items.filter(i => i.yaRecibido).length
+      filas.push(['Ítems', String(w.items.length)])
+      if (noSuman) {
+        filas.push(['Suman stock', `${w.items.length - noSuman} de ${w.items.length}`])
       }
 
       document.getElementById('wz-resumen').innerHTML = filas.map(([k, v]) => `
@@ -3532,15 +3842,6 @@
 
       const detalleTitulo = document.getElementById('wz-detalle-titulo')
       const detalle = document.getElementById('wz-detalle-items')
-
-      if (w.remitoVinculadoId) {
-        detalleTitulo.hidden = true
-        detalle.innerHTML = `
-          <div class="wz-aviso wz-aviso--neutro">
-            Esta factura queda vinculada al remito, así que no vuelve a sumar mercadería. Las cantidades ya las cargó el remito.
-          </div>`
-        return
-      }
 
       detalleTitulo.hidden = false
       detalle.innerHTML = w.items.map(item => {
@@ -3671,6 +3972,11 @@
         contenido_por_bulto: contenido,
         cantidad_documento: hayDif ? item.cantidadDocumento : null,
         motivo_diferencia: hayDif ? (String(item.motivoDiferencia || '').trim() || null) : null,
+        // El contrato con Stock: su espejado suma exactamente los ítems en
+        // false. Se re-chequea el tipo de documento acá y no solo al dibujar la
+        // casilla, para que un cambio de tipo después de marcarla no deje un
+        // remito con renglones que no suman.
+        ya_recibido_con_remito: esFactura(estado.wizard.encabezado.tipoDoc) && !!item.yaRecibido,
       }
     }
 
@@ -3678,8 +3984,9 @@
       const w = estado.wizard
       if (w.guardando) return
 
-      // Con remito vinculado no hay ítems que validar: la factura no suma.
-      if (!w.remitoVinculadoId && !validarItems()) { irAPasoWz('items'); return }
+      // SIEMPRE se validan los ítems: con el vínculo por renglón, una factura
+      // vinculada igual carga ítems (los que no vinieron con el remito).
+      if (!validarItems()) { irAPasoWz('items'); return }
 
       const btn = document.getElementById('btn-confirmar-ingreso')
       w.guardando = true
@@ -3718,7 +4025,12 @@
             proveedor_id: proveedorId,
             unidad_negocio_id: e.unidadId,
             foto_url: w.foto.url,
-            remito_vinculado_id: w.remitoVinculadoId,
+            // Los ingresos NUEVOS ya no la escriben: el vínculo va en la tabla
+            // puente materia_prima_factura_remitos, que admite varios remitos.
+            // La columna queda para los datos históricos y la retira el chat de
+            // Stock en su fase 2 — NO borrarla desde acá: las vistas de stock
+            // todavía la filtran.
+            remito_vinculado_id: null,
             empleado_id: estado.miEmpleadoId,
             // Archivo de la lectura del papel. Null cuando no hubo OCR
             // ('sin_comprobante' o lectura fallida): es lo esperado, no un
@@ -3732,10 +4044,22 @@
 
         // 4. Los ítems, en UN solo insert: un array es una sola sentencia, así
         // que entran todos o no entra ninguno.
-        if (!w.remitoVinculadoId && w.items.length) {
+        if (w.items.length) {
           const filas = w.items.map(item => filaItemParaBase(item, ingresoId))
           const { error: errorItems } = await supabase.from('materia_prima_items').insert(filas)
           if (errorItems) throw new Error(`No se pudieron guardar los ítems: ${errorItems.message}`)
+        }
+
+        // 5. Los vínculos con los remitos. Van DESPUÉS de los ítems y no antes:
+        // son trazabilidad documental, y si algo falla es preferible que quede
+        // el ingreso sin vincular a que quede el vínculo sin la mercadería.
+        if (w.remitosVinculadosIds.length) {
+          const vinculos = w.remitosVinculadosIds.map(remitoId => ({
+            factura_id: ingresoId, remito_id: remitoId,
+          }))
+          const { error: errorVinculos } = await supabase
+            .from('materia_prima_factura_remitos').insert(vinculos)
+          if (errorVinculos) throw new Error(`No se pudieron guardar los vínculos con los remitos: ${errorVinculos.message}`)
         }
 
         // El alta del proveedor no frena nada, pero si falló hay que decirlo:
@@ -3811,8 +4135,17 @@
     // ofrecen son los de una unidad concreta.
     document.getElementById('campo-unidad-negocio').addEventListener('change', () => {
       if (!estado.wizard) return
-      estado.wizard.remitoVinculadoId = null
+      estado.wizard.remitosVinculadosIds = []
       estado.wizard.vinculaRemito = null
+      // Las casillas "ya entró con un remito" que había PUESTO LA SUGERENCIA
+      // salían de esos remitos, así que dejan de tener respaldo. Las que tocó
+      // la persona no se tocan: son una decisión suya, no un derivado.
+      // sugerirYaRecibido() las recalcula sola al volver al paso de ítems.
+      estado.wizard.items.forEach(item => {
+        if (item.yaRecibidoTocado) return
+        item.yaRecibido = false
+        item.yaRecibidoSugerido = false
+      })
       // El cache es POR UNIDAD: si no se invalida, el paso 2B ofrecería los
       // remitos de la unidad anterior.
       estado.wizard.remitosVinculables = null
@@ -3832,8 +4165,10 @@
     document.getElementById('btn-items-continuar').addEventListener('click', continuarDesdeItems)
 
     document.getElementById('btn-confirmar-ingreso').addEventListener('click', confirmarIngreso)
+    // Siempre a los ítems: es el paso anterior a confirmar desde que el
+    // vínculo dejó de saltearlo.
     document.getElementById('btn-volver-corregir').addEventListener('click', () => {
-      irAPasoWz(estado.wizard.remitoVinculadoId ? 'vinculo' : 'items')
+      irAPasoWz('items')
     })
 
     init()
