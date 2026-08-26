@@ -946,6 +946,24 @@
       margin: 1.375rem 0 0.625rem;
     }
 
+    /* Hasta 10 tarjetas, y cada una lista sus ítems: en el celular eso estira
+       la pantalla y deja los botones del paso lejísimos. Scrollea DENTRO de su
+       bloque, así el "Continuar" queda siempre a mano.
+       El max-height va en vh y no en px para que en una pantalla chica ocupe la
+       misma proporción; el min-height evita que en un teclado abierto quede una
+       ventanita de dos centímetros. Sin scroll horizontal: las tarjetas ya
+       manejan su propio overflow. */
+    .wz-lista-remitos {
+      max-height: 55vh;
+      min-height: 180px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      min-width: 0;
+    }
+    /* Con una o dos tarjetas el bloque no tiene por qué reservar los 180px. */
+    .wz-lista-remitos:not(:has(.wz-remito + .wz-remito)) { min-height: 0; }
+
     .wz-remito {
       display: block;
       width: 100%;
@@ -1632,10 +1650,8 @@
           <div id="wz-cargando-remitos" class="estado-vacio" hidden>
             <div class="spinner"></div>
           </div>
-          <div id="wz-lista-remitos"></div>
-          <div class="wz-aviso wz-aviso--neutro" id="wz-sin-remitos" hidden>
-            No hay remitos sin vincular en esta unidad de negocio.
-          </div>
+          <div class="wz-lista-remitos" id="wz-lista-remitos"></div>
+          <div class="wz-aviso wz-aviso--neutro" id="wz-sin-remitos" hidden></div>
         </div>
 
         <div class="wz-nav">
@@ -1855,6 +1871,8 @@
         // Cache del paso 2B: null = todavía no se consultó. Decide si el paso
         // se muestra o se saltea, en los dos sentidos de la navegación.
         remitosVinculables: null,
+        // Con qué (unidad|proveedor) se construyó el cache de arriba.
+        remitosVinculablesClave: null,
         hayRemitosVinculables: false,
         itemsOcr: [],             // crudo de la Edge Function, sin matchear
         items: [],
@@ -2906,8 +2924,15 @@
     function entrarAPasoVinculo() {
       const w = estado.wizard
       document.getElementById('wz-vinculo-tipo').textContent = TIPOS_DOC[w.encabezado.tipoDoc]?.label || ''
+      // El título nombra el filtro que se aplicó. Si dijera siempre "de la
+      // unidad" y la RPC estuviera filtrando por proveedor, un remito que la
+      // persona sabe que existe faltaría de la lista sin ninguna explicación.
+      const cuantos = w.remitosVinculables?.length ?? 0
+      const deQuien = w.proveedorMatch
+        ? `de ${w.proveedorMatch.razon_social}`
+        : `de ${nombreUnidad(w.encabezado.unidadId) || 'la unidad'}`
       document.getElementById('wz-remitos-titulo').textContent =
-        `Últimos remitos de ${nombreUnidad(w.encabezado.unidadId) || 'la unidad'}`
+        cuantos ? `Remitos sin factura ${deQuien} (${cuantos})` : `Remitos sin factura ${deQuien}`
       renderizarSiNoVinculo()
       if (w.vinculaRemito === true) renderizarRemitosCacheados()
     }
@@ -2950,11 +2975,23 @@
     // no se usa para nada más.
     async function asegurarRemitosVinculables() {
       const w = estado.wizard
-      if (w.remitosVinculables) return w.remitosVinculables
+      // La lista depende de la unidad Y del proveedor, así que la clave del
+      // cache son los dos. Se compara acá adentro y no en cada lugar que
+      // cambia el proveedor: un call site nuevo que lo cambie no puede
+      // olvidarse de invalidar, porque no tiene que hacer nada.
+      const clave = `${w.encabezado.unidadId}|${w.proveedorId ?? ''}`
+      if (w.remitosVinculables && w.remitosVinculablesClave === clave) return w.remitosVinculables
 
       const { data, error } = await supabase.rpc('remitos_vinculables', {
         p_unidad_negocio_id: w.encabezado.unidadId,
+        // Con el proveedor identificado, la RPC devuelve solo SUS remitos. Hay
+        // proveedores que emiten varios remitos por semana y los facturan
+        // juntos al cierre; sin este filtro se mezclarían con los de otros.
+        // Null cuando todavía no se identificó: ahí se comporta como antes.
+        p_proveedor_id: w.proveedorId ?? null,
       })
+
+      w.remitosVinculablesClave = clave
 
       if (error) {
         console.error(error)
@@ -2974,7 +3011,16 @@
       const remitos = estado.wizard.remitosVinculables
       if (!remitos) return
       document.getElementById('wz-cargando-remitos').hidden = true
-      document.getElementById('wz-sin-remitos').hidden = remitos.length > 0
+      const sinRemitos = document.getElementById('wz-sin-remitos')
+      sinRemitos.hidden = remitos.length > 0
+      // El texto tiene que nombrar el MISMO filtro que se aplicó. Decir "en
+      // esta unidad" cuando la RPC filtró por proveedor haría que alguien
+      // saliera a buscar un remito que sí existe, creyendo que no se cargó.
+      if (!remitos.length) {
+        sinRemitos.textContent = estado.wizard.proveedorMatch
+          ? `No hay remitos sin facturar de ${estado.wizard.proveedorMatch.razon_social} en esta unidad de negocio.`
+          : 'No hay remitos sin vincular en esta unidad de negocio.'
+      }
       renderizarRemitos(remitos)
     }
 
