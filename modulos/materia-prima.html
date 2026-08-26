@@ -1319,6 +1319,95 @@
     .btn-item-secundario--peligro { border-color: var(--bordo); color: var(--bordo-oscuro); }
     .btn-item-secundario--peligro:hover { background: var(--bordo-suave); border-color: var(--bordo); color: var(--bordo-oscuro); }
 
+    /* Resolución por libretita. En el mismo verde-neutro que las otras
+       sugerencias del wizard: propone, no decide. Lleva el texto del papel
+       adentro porque es el dato que hay que mirar para saber si está bien. */
+    .marca-alias {
+      margin-bottom: 0.75rem;
+      padding: 0.625rem 0.6875rem;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: 11px;
+      min-width: 0;
+    }
+    .marca-alias__titulo {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--marron-oscuro);
+    }
+    .marca-alias__texto {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.1875rem;
+      overflow-wrap: anywhere;
+    }
+    .marca-alias .btn-item-secundario { margin-top: 0.5rem; }
+
+    /* Buscador de catálogo: la primera de las dos salidas de un renglón sin
+       resolver. El panel va en flujo y no flotando: adentro de una tarjeta de
+       acordeón, un dropdown absoluto se corta con el overflow del contenedor. */
+    .buscador-cat { min-width: 0; }
+    .sugerencias-cat {
+      margin-top: 0.375rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 11px;
+      overflow: hidden;
+      max-height: 240px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .sugerencias-cat[hidden] { display: none; }
+    .sugerencia-cat {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: var(--color-fondo);
+      border: none;
+      border-bottom: 1px solid var(--color-borde);
+      padding: 0.5625rem 0.6875rem;
+      font-family: var(--fuente);
+      cursor: pointer;
+      min-width: 0;
+    }
+    .sugerencia-cat:last-child { border-bottom: none; }
+    .sugerencia-cat__nombre {
+      display: block;
+      font-size: 0.84375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .sugerencia-cat__meta {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.0625rem;
+    }
+    .sugerencia-cat--vacia {
+      color: var(--color-texto-suave);
+      font-size: 0.78125rem;
+      cursor: default;
+    }
+
+    /* Separa las dos salidas para que no se lean como un solo formulario. */
+    .separador-o {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.6875rem 0 0.5rem;
+      font-size: 0.71875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .separador-o::before, .separador-o::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-borde);
+    }
+
     .item-mp__texto-input {
       width: 100%;
       height: 44px;
@@ -1873,6 +1962,10 @@
         remitosVinculables: null,
         // Con qué (unidad|proveedor) se construyó el cache de arriba.
         remitosVinculablesClave: null,
+        // La libretita de traducción de ESTE proveedor: texto normalizado del
+        // papel -> { id, texto_proveedor, insumo_id }. null = sin consultar.
+        aliasProveedor: null,
+        aliasProveedorClave: null,
         hayRemitosVinculables: false,
         itemsOcr: [],             // crudo de la Edge Function, sin matchear
         items: [],
@@ -2047,6 +2140,31 @@
       return String(valor ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
+    // ESPEJO EXACTO de normalizar_texto() de la base, que es la función del
+    // índice único (proveedor_id, normalizar_texto(texto_proveedor)) de
+    // proveedor_insumo_alias. Las dos tienen que dar el MISMO resultado: si el
+    // front normaliza distinto, cree que no hay alias, intenta insertarlo y se
+    // come un 23505 del índice.
+    //
+    // NO usar claveInsumo() para esto: colapsa los espacios internos y
+    // normalizar_texto NO. "caja  chica" y "caja chica" son alias DISTINTOS.
+    //
+    // El orden y el alcance copian al SQL: translate de esta lista exacta de
+    // acentos, btrim (que en Postgres saca SOLO espacios, no tabs ni saltos,
+    // por eso el regex y no .trim()) y lower. Ojo con lo que NO hace: no toca
+    // la puntuación ni los símbolos, así que 'Nº1' y 'N1' siguen siendo
+    // distintos.
+    const ALIAS_ACENTOS_DESDE = 'áàäâãÁÀÄÂÃéèëêÉÈËÊíìïîÍÌÏÎóòöôõÓÒÖÔÕúùüûÚÙÜÛñÑçÇ'
+    const ALIAS_ACENTOS_HACIA = 'aaaaaAAAAAeeeeEEEEiiiiIIIIoooooOOOOOuuuuUUUUnNcC'
+    function normalizarTextoAlias(texto) {
+      let salida = ''
+      for (const ch of String(texto ?? '')) {
+        const i = ALIAS_ACENTOS_DESDE.indexOf(ch)
+        salida += i >= 0 ? ALIAS_ACENTOS_HACIA[i] : ch
+      }
+      return salida.replace(/^ +| +$/g, '').toLowerCase()
     }
 
     // Clave de matching contra el catálogo. Colapsa los espacios internos, que
@@ -2899,14 +3017,20 @@
       if (!e.fecha)    return mostrarError('Completá la fecha del comprobante.')
       if (!e.unidadId) return mostrarError('Elegí la unidad de negocio.')
 
+      // ANTES del return de abajo, a propósito: un remito también tiene
+      // proveedor y también merece que la libretita le resuelva los renglones.
+      const btnDatos = document.getElementById('btn-datos-continuar')
+      btnDatos.disabled = true
+      await asegurarAliasProveedor()
+      btnDatos.disabled = false
+
       if (!esFactura(e.tipoDoc)) { irAPasoWz('items'); return }
 
       // El paso 2B solo tiene sentido si hay algo para elegir: se consulta
       // ANTES de mostrarlo y, si no hay remitos sin vincular, se saltea.
-      const btn = document.getElementById('btn-datos-continuar')
-      btn.disabled = true
+      btnDatos.disabled = true
       await asegurarRemitosVinculables()
-      btn.disabled = false
+      btnDatos.disabled = false
 
       irAPasoWz(w.hayRemitosVinculables ? 'vinculo' : 'items')
     }
@@ -3101,21 +3225,119 @@
       estado.proveedores = data ?? []
     }
 
+    // Los alias del proveedor del comprobante. SOLO por proveedor: la misma
+    // palabra significa cosas distintas según quién la escriba, así que no hay
+    // alias globales. Sin proveedor identificado no hay alias posible y queda
+    // un Map vacío — ni se busca ni se guarda, y se carga a mano como siempre.
+    //
+    // Cachea por proveedor con el mismo patrón que los remitos vinculables: la
+    // comparación vive acá adentro, así un lugar nuevo que cambie el proveedor
+    // no puede olvidarse de invalidar.
+    async function asegurarAliasProveedor() {
+      const w = estado.wizard
+      const clave = w.proveedorId ?? ''
+      if (w.aliasProveedor && w.aliasProveedorClave === clave) return w.aliasProveedor
+      w.aliasProveedorClave = clave
+
+      if (!w.proveedorId) { w.aliasProveedor = new Map(); return w.aliasProveedor }
+
+      const { data, error } = await supabase
+        .from('proveedor_insumo_alias')
+        .select('id, texto_proveedor, insumo_id')
+        .eq('proveedor_id', w.proveedorId)
+      // Sin alias se carga como antes: es una ayuda, no un requisito.
+      if (error) { console.error(error); w.aliasProveedor = new Map(); return w.aliasProveedor }
+
+      w.aliasProveedor = new Map((data ?? []).map(a => [normalizarTextoAlias(a.texto_proveedor), a]))
+      return w.aliasProveedor
+    }
+
+    // Busca el texto del papel en la libretita. Devuelve también el insumo del
+    // catálogo, porque un alias que apunta a un insumo que ya no está en el
+    // catálogo no sirve para nada: ahí se resuelve como si no hubiera alias.
+    function aliasDe(texto) {
+      const mapa = estado.wizard.aliasProveedor
+      if (!mapa || !String(texto || '').trim()) return null
+      const alias = mapa.get(normalizarTextoAlias(texto))
+      if (!alias) return null
+      const insumo = estado.catalogoInsumos.find(i => i.id === alias.insumo_id)
+      return insumo ? { alias, insumo } : null
+    }
+
+    // OJO: esta normalización es para BUSCAR en pantalla y no tiene nada que
+    // ver con normalizarTextoAlias(), que copia a la función del índice único.
+    // Acá conviene ser generoso (saca todos los acentos con NFD); allá hay que
+    // ser exacto. No unificarlas.
+    function normalizarBusquedaCat(v) {
+      return String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+    }
+
+    // Busca por nombre Y marca a la vez: la persona escribe lo que recuerda.
+    function buscarCatalogo(termino, limite = 8) {
+      const t = normalizarBusquedaCat(termino)
+      if (!t) return []
+      return estado.catalogoInsumos
+        .filter(i => normalizarBusquedaCat(`${i.nombre} ${i.marca || ''}`).includes(t))
+        .slice(0, limite)
+    }
+
+    function htmlSugerenciasCatalogo(termino) {
+      const encontrados = buscarCatalogo(termino)
+      if (!termino.trim()) return ''
+      if (!encontrados.length) {
+        return '<div class="sugerencia-cat sugerencia-cat--vacia">Nada en el catálogo con ese texto. Creá el producto abajo.</div>'
+      }
+      return encontrados.map(i => `
+        <button type="button" class="sugerencia-cat" data-insumo="${esc(i.id)}">
+          <span class="sugerencia-cat__nombre">${esc(i.nombre)}</span>
+          <span class="sugerencia-cat__meta">${esc([i.marca, i.unidad_medida].filter(Boolean).join(' · '))}</span>
+        </button>`).join('')
+    }
+
+    // Elegir del catálogo a mano. Es la OTRA salida de un renglón sin resolver
+    // —la primera es crear un producto nuevo— y es la que llena la libretita:
+    // el alias se guarda al confirmar, con el texto original del papel.
+    function elegirDelCatalogo(item, insumo) {
+      item.insumoId = insumo.id
+      item.esNuevo = false
+      item.tipo = insumo.tipo
+      item.tipoDeOcr = false
+      item.pendienteRevision = insumo.estado_alta === 'pendiente_revision'
+      item.unidadMedida = insumo.unidad_medida
+      item.nombre = insumo.nombre
+      item.marca = insumo.marca || ''
+      item.busquedaCatalogo = ''
+      // Lo eligió una persona: aunque coincida con lo que decía la libretita,
+      // deja de ser una resolución automática.
+      item.porAlias = false
+      renderizarItems()
+    }
+
     function buscarEnCatalogo(nombre, marca) {
       const clave = claveInsumo(nombre, marca)
       return estado.catalogoInsumos.find(i => claveInsumo(i.nombre, i.marca) === clave) || null
     }
 
     function itemDesdeOcr(crudo) {
-      const match = buscarEnCatalogo(crudo.descripcion, crudo.marca)
+      // ORDEN DE RESOLUCIÓN: alias del proveedor, después nombre+marca contra
+      // el catálogo, y si no, producto nuevo. El alias va primero porque es una
+      // traducción que alguien ya hizo a mano para ESTE proveedor: sabe más que
+      // el matcheo por texto.
+      const porAlias = aliasDe(crudo.descripcion)
+      const match = porAlias?.insumo ?? buscarEnCatalogo(crudo.descripcion, crudo.marca)
       const bultos    = numeroDesdeInput(crudo.cantidad_bultos)
       const contenido = numeroDesdeInput(crudo.contenido_por_bulto)
       return {
         uid: nuevoUid(),
         insumoId: match?.id ?? null,
         esNuevo: !match,
-        nombre: crudo.descripcion || '',
-        marca: crudo.marca || '',
+        // Resuelto por alias: se muestra el nombre DEL CATÁLOGO, no el del
+        // papel. Es lo que hace verificable la marca de "reconocido de cargas
+        // anteriores": sin ver a qué producto se mapeó, no hay forma de
+        // detectar un alias mal cargado, que es justo lo que la marca existe
+        // para evitar. El texto del papel se muestra igual, dentro de la marca.
+        nombre: porAlias ? porAlias.insumo.nombre : (crudo.descripcion || ''),
+        marca:  porAlias ? (porAlias.insumo.marca || '') : (crudo.marca || ''),
         // Si matcheó contra el catálogo, el tipo sale de ahí y no se pregunta.
         // Si es nuevo, se usa la SUGERENCIA del OCR, y si no hay, queda en null
         // y la persona tiene que elegir.
@@ -3128,6 +3350,15 @@
         // ítem: corregir el tipo después no re-valida lo ya cargado.
         tipo: match?.tipo ?? tipoSugeridoValido(crudo.tipo_sugerido),
         tipoDeOcr: !match && tipoSugeridoValido(crudo.tipo_sugerido) != null,
+        // Se resolvió con la libretita. NUNCA se aplica callado: la tarjeta lo
+        // dice y ofrece corregir. Un alias mal mapeado se propaga solo, así que
+        // tiene que pasar por delante de los ojos de alguien cada vez.
+        porAlias: !!porAlias,
+        // El texto TAL CUAL vino del papel, que es lo que se guarda como alias.
+        // Se conserva aparte de `nombre` porque al elegir del catálogo `nombre`
+        // pasa a ser el del catálogo, y guardar ESE texto haría que la próxima
+        // vez no matcheara nada.
+        textoOriginal: crudo.descripcion || '',
         // El tipo salió del catálogo, pero de una fila que todavía nadie
         // revisó: vale tanto como una sugerencia. Se avisa (ver
         // .aviso-sin-revisar) en vez de dejar que se propague callado.
@@ -3140,6 +3371,7 @@
         // mostrar el aviso de "verificalo contra el papel" cuando el control de
         // recepción parcial está activo: ahí ese número pasa a ser la cantidad
         // del comprobante, o sea la base de un reclamo al proveedor.
+        busquedaCatalogo: '',
         cantidadOcrOriginal: numeroDesdeInput(crudo.cantidad_total),
         // Vínculo POR RENGLÓN. true = esta mercadería ya entró con un remito
         // anterior, así que este renglón NO suma stock. Lo sugiere el match
@@ -3164,6 +3396,10 @@
         // Agregado a mano: no matcheó contra ninguna fila del catálogo, así que
         // no hay clasificación previa que revisar.
         pendienteRevision: false,
+        // Agregado a mano: no salió de ningún alias, y sin texto del papel no
+        // hay nada que guardar en la libretita.
+        porAlias: false, textoOriginal: '',
+        busquedaCatalogo: '',
         modoDesglose: false, bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
@@ -3427,11 +3663,39 @@
            <button type="button" class="btn-item-secundario" data-accion="modo-desglose">Vino en bultos (ej: 200 bolsas de 25 kg)</button>
            <div class="item-mp__hint">ⓘ Cargás cuántos bultos y cuánto trae cada uno; el total se calcula solo.</div>`
 
+      // Se resolvió con la libretita: se dice explícito y se ofrece corregir.
+      // NUNCA callado — un alias mal mapeado se propaga a todas las cargas
+      // futuras de este proveedor sin que nadie lo mire.
+      const marcaAlias = !item.porAlias ? '' : `
+        <div class="marca-alias">
+          <div class="marca-alias__titulo">✓ reconocido de cargas anteriores de este proveedor</div>
+          <div class="marca-alias__texto">El comprobante dice «${esc(item.textoOriginal)}»</div>
+          <button type="button" class="btn-item-secundario" data-accion="soltar-producto">Corregir</button>
+        </div>`
+
+      // Salida para un renglón ya resuelto que está mal: lo devuelve a "sin
+      // resolver", con el texto del papel a la vista. Para los que vienen por
+      // alias el botón ya está arriba, dentro de su marca.
+      const cambiarProducto = (item.esNuevo || item.porAlias) ? '' : `
+        <button type="button" class="btn-item-secundario" data-accion="soltar-producto">Cambiar producto</button>`
+
       // Nombre y marca editables solo si el insumo se va a crear. Si matcheó
       // contra el catálogo, se muestra el nombre del catálogo tal cual.
+      //
+      // DOS SALIDAS, y hasta ahora solo existía la segunda: elegir del catálogo
+      // (arriba) o crear uno nuevo (abajo). El texto del proveedor no se parece
+      // al del catálogo —ese es el problema entero que resuelven los alias— así
+      // que sin buscador la única opción real era crear un duplicado.
       const identidadHtml = item.esNuevo
         ? `<div class="item-mp__bloque">
              <div class="item-mp__bloque-label">Producto</div>
+             <div class="buscador-cat">
+               <input class="item-mp__texto-input" data-rol="buscador-catalogo"
+                      value="${esc(item.busquedaCatalogo || '')}"
+                      placeholder="Buscar en el catálogo por nombre o marca">
+               <div class="sugerencias-cat" data-rol="sugerencias-catalogo" ${item.busquedaCatalogo ? '' : 'hidden'}>${item.busquedaCatalogo ? htmlSugerenciasCatalogo(item.busquedaCatalogo) : ''}</div>
+             </div>
+             <div class="separador-o"><span>o creá un producto nuevo</span></div>
              <input class="item-mp__texto-input" data-campo="nombre" value="${esc(item.nombre)}" placeholder="Nombre del producto">
              <input class="item-mp__texto-input" data-campo="marca" value="${esc(item.marca)}" placeholder="Marca (opcional)" style="margin-top:0.5rem;">
              <div class="wz-toggle" style="margin-top:0.5rem;">
@@ -3559,8 +3823,10 @@
           </div>
 
           <div class="item-mp__cuerpo">
+            ${marcaAlias}
             ${casillaYaRecibido}
             ${identidadHtml}
+            ${cambiarProducto}
             ${avisoSinRevisar}
 
             <div class="item-mp__bloque">
@@ -3699,6 +3965,21 @@
               apagarDiferencia(item)
               renderizarItems()
             }
+            if (accion === 'soltar-producto') {
+              // Vuelve a "sin resolver" para poder elegir otro o crear uno.
+              item.insumoId = null
+              item.esNuevo = true
+              item.porAlias = false
+              item.pendienteRevision = false
+              // Se repone el texto DEL PAPEL: es de donde hay que partir para
+              // corregir, y es además lo que se va a guardar como alias.
+              if (item.textoOriginal) item.nombre = item.textoOriginal
+              // El tipo salía del catálogo; ahora no se sabe y hay que elegirlo.
+              item.tipo = null
+              item.tipoDeOcr = false
+              item.busquedaCatalogo = ''
+              renderizarItems()
+            }
             if (accion === 'toggle-ya-recibido') {
               item.yaRecibido = !item.yaRecibido
               // La persona decidió: de acá en más un cambio de remitos en el
@@ -3721,6 +4002,29 @@
             if (accion === 'adjuntar-lote')  tarjeta.querySelector('[data-input="lote"]').click()
           })
         })
+
+        // ── Buscador de catálogo ──────────────────────────────────────────
+        // Escribe y dibuja las sugerencias EN EL SITIO, sin re-renderizar la
+        // tarjeta: un renderizarItems() por tecla le sacaría el foco al input.
+        const inputCat = tarjeta.querySelector('[data-rol="buscador-catalogo"]')
+        if (inputCat) {
+          const panel = tarjeta.querySelector('[data-rol="sugerencias-catalogo"]')
+          const pintar = () => {
+            item.busquedaCatalogo = inputCat.value
+            panel.innerHTML = htmlSugerenciasCatalogo(item.busquedaCatalogo)
+            panel.hidden = !item.busquedaCatalogo.trim()
+            panel.querySelectorAll('[data-insumo]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                const insumo = estado.catalogoInsumos.find(i => i.id === btn.dataset.insumo)
+                if (insumo) elegirDelCatalogo(item, insumo)
+              })
+            })
+          }
+          inputCat.addEventListener('input', pintar)
+          // Al re-renderizar la tarjeta el panel se vuelve a dibujar desde el
+          // HTML, pero sus botones quedan sin listener: se recablean acá.
+          if (item.busquedaCatalogo) pintar()
+        }
 
         // ── Campos de texto y número (NO re-renderizan) ───────────────────
         tarjeta.querySelectorAll('[data-campo]').forEach(el => {
@@ -4026,6 +4330,71 @@
       }
     }
 
+    // Guarda en la libretita las traducciones nuevas de esta carga. Corre
+    // DESPUÉS de crear los insumos nuevos, así los renglones creados al vuelo
+    // ya tienen insumo_id y su alias también queda guardado.
+    //
+    // INSERT-ONLY, y es una decisión de diseño, no una limitación: si el texto
+    // ya tiene alias apuntando a OTRO insumo, no se pisa. Que alguien que carga
+    // apurado pueda re-apuntar en silencio un mapeo existente es peor que no
+    // poder hacerlo — se avisa a qué producto apunta hoy y se corrige en Stock.
+    // (La policy de UPDATE exige stock:gestionar_catalogo, que quien carga no
+    // tiene: las dos mitades dicen lo mismo.)
+    //
+    // Devuelve un aviso para mostrar, o null. NUNCA lanza: el alias es una
+    // ayuda y la mercadería ya está guardada.
+    async function guardarAliasNuevos() {
+      const w = estado.wizard
+      if (!w.proveedorId) return null
+      const mapa = w.aliasProveedor ?? new Map()
+
+      const nuevos = new Map()      // clave normalizada -> fila a insertar
+      const ambiguos = new Set()    // el mismo texto, dos insumos, en un mismo papel
+      const yaMapeados = []
+
+      w.items.forEach(item => {
+        const texto = String(item.textoOriginal || '').trim()
+        if (!texto || !item.insumoId) return
+        const clave = normalizarTextoAlias(texto)
+
+        const existente = mapa.get(clave)
+        if (existente) {
+          if (existente.insumo_id !== item.insumoId) yaMapeados.push({ texto, existente })
+          return
+        }
+        // Dos renglones del mismo comprobante con el mismo texto: si apuntan al
+        // mismo insumo, alcanza con uno. Si apuntan a distintos, no hay forma de
+        // saber cuál es la traducción correcta, así que no se guarda ninguna.
+        const yaJuntado = nuevos.get(clave)
+        if (yaJuntado && yaJuntado.insumo_id !== item.insumoId) { ambiguos.add(clave); return }
+        if (yaJuntado) return
+        nuevos.set(clave, {
+          proveedor_id: w.proveedorId,
+          // TAL CUAL vino del papel: la normalización la hace el índice.
+          texto_proveedor: texto,
+          insumo_id: item.insumoId,
+          // La policy exige creado_por = mi_empleado_id().
+          creado_por: estado.miEmpleadoId,
+        })
+      })
+
+      ambiguos.forEach(clave => nuevos.delete(clave))
+
+      if (nuevos.size) {
+        const { error } = await supabase.from('proveedor_insumo_alias').insert([...nuevos.values()])
+        // No se corta nada: el ingreso ya está guardado y esto es una ayuda.
+        if (error) { console.error(error); return 'El ingreso se guardó, pero no se pudieron recordar los nombres de este proveedor para la próxima.' }
+      }
+
+      if (yaMapeados.length) {
+        const { texto, existente } = yaMapeados[0]
+        const nombreViejo = estado.catalogoInsumos.find(i => i.id === existente.insumo_id)?.nombre || 'otro producto'
+        const resto = yaMapeados.length > 1 ? ` (y ${yaMapeados.length - 1} más)` : ''
+        return `«${texto}» ya está guardado para este proveedor como "${nombreViejo}"${resto}. El ingreso se cargó como elegiste; para cambiar esa traducción, entrá a Stock.`
+      }
+      return null
+    }
+
     async function confirmarIngreso() {
       const w = estado.wizard
       if (w.guardando) return
@@ -4108,9 +4477,15 @@
           if (errorVinculos) throw new Error(`No se pudieron guardar los vínculos con los remitos: ${errorVinculos.message}`)
         }
 
+        // 6. La libretita de traducción. Envuelto en su propio try: que falle
+        // no puede voltear una carga de mercadería que ya está guardada.
+        let avisoAlias = null
+        try { avisoAlias = await guardarAliasNuevos() } catch (e) { console.error(e) }
+
         // El alta del proveedor no frena nada, pero si falló hay que decirlo:
         // el ingreso queda sin vincular y alguien lo va a tener que corregir.
         if (avisoProveedor) mostrarError(avisoProveedor)
+        if (avisoAlias) mostrarError(avisoAlias)
         mostrarExito('Ingreso cargado.')
         cerrarWizard()
         await cargarIngresos()
