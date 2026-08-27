@@ -110,6 +110,133 @@
     .aviso-pendientes__texto { min-width: 0; font-size: 0.8125rem; line-height: 1.45; }
     .aviso-pendientes__texto strong { color: var(--amarillo-oscuro); }
 
+    /* ── Pestañas y vistas ───────────────────────────────────────────────── */
+
+    /* Las dos vistas se alternan con [hidden]. Llevan `display` de autor, así
+       que CADA UNA necesita su propia regla [hidden]: es el bug más recurrente
+       del proyecto —un display de autor le gana al atributo— y acá el costo
+       sería ver las dos pantallas encimadas. */
+    .vista-stock { display: block; min-width: 0; }
+    .vista-stock[hidden] { display: none; }
+
+    .pestanas-stock {
+      display: flex;
+      gap: 0.375rem;
+      margin-bottom: 0.875rem;
+      background: var(--color-superficie);
+      border-radius: 999px;
+      padding: 0.25rem;
+      min-width: 0;
+    }
+    .pestanas-stock[hidden] { display: none; }
+    .pestana-stock {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0.5625rem 0.75rem;
+      border: none;
+      border-radius: 999px;
+      background: none;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    /* Variante DESPUÉS de su base, siempre. */
+    .pestana-stock--activa {
+      background: var(--color-fondo);
+      color: var(--verde-oscuro);
+      box-shadow: var(--sombra-suave);
+    }
+
+    /* ── Lista de stock ──────────────────────────────────────────────────── */
+
+    .chips-unidad {
+      display: flex;
+      gap: 0.4375rem;
+      overflow-x: auto;
+      padding-bottom: 0.875rem;
+      min-width: 0;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent 100%);
+      mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent 100%);
+    }
+    .chips-unidad::-webkit-scrollbar { display: none; }
+    .chips-unidad[hidden] { display: none; }
+    .chip-unidad {
+      background: var(--color-fondo);
+      color: #55617d;
+      border: 1px solid var(--color-borde);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 0.5rem 0.9375rem;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .chip-unidad--activa {
+      background: var(--verde-suave);
+      border-color: var(--verde);
+      color: var(--verde-oscuro);
+      font-weight: 650;
+    }
+
+    .fila-stock { align-items: flex-start; cursor: pointer; }
+    .fila-stock__info { flex: 1; min-width: 0; }
+    .fila-stock__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.3;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .fila-stock__marca {
+      font-size: 0.78125rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      margin-top: 0.0625rem;
+      overflow-wrap: anywhere;
+    }
+    .fila-stock__meta {
+      margin-top: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4375rem;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      min-width: 0;
+    }
+    /* La cantidad es LO QUE SE VIENE A VER: pesa más que el resto de la meta. */
+    .fila-stock__cantidad {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+    .fila-stock__cantidad--negativa { color: var(--bordo-oscuro); }
+
+    /* Alguien consumió mercadería que nunca se cargó. Tiene que saltar en una
+       lista larga, en bordó (el rojo es el acento de Accesos). */
+    .chip-falta-remito {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
+      border: 1px solid var(--bordo);
+      white-space: nowrap;
+    }
+
     /* ── Barra de acciones ────────────────────────────────────────────────── */
 
     /* El buscador salió de acá y ocupa su propio renglón. Antes pedía
@@ -384,6 +511,91 @@
     /* Para que un nombre largo no se meta abajo de la X. */
     #modal-detalle-insumo .modal-stock__titulo { padding-right: 2rem; }
 
+    /* ── Modal de lotes ──────────────────────────────────────────────────── */
+
+    .total-stock {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: var(--verde-suave);
+      border-radius: 12px;
+      padding: 0.75rem 0.875rem;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .total-stock__etiqueta {
+      font-size: 0.75rem;
+      font-weight: 650;
+      color: var(--verde-oscuro);
+      flex-shrink: 0;
+    }
+    .total-stock__valor {
+      font-size: 1.125rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--verde-oscuro);
+      text-align: right;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .total-stock--negativo { background: var(--bordo-suave); }
+    .total-stock--negativo .total-stock__etiqueta,
+    .total-stock--negativo .total-stock__valor { color: var(--bordo-oscuro); }
+
+    .lotes-titulo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.375rem;
+    }
+    .lotes-tabla {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .lote-fila {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.5625rem 0;
+      border-bottom: 1px solid var(--color-borde);
+      min-width: 0;
+    }
+    .lote-fila:last-child { border-bottom: none; }
+    .lote-fila__lote {
+      font-size: 0.84375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .lote-fila__fecha {
+      display: block;
+      font-size: 0.71875rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      margin-top: 0.0625rem;
+    }
+    .lote-fila__saldo {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .lote-fila__saldo--negativo { color: var(--bordo-oscuro); }
+    .item-sin-lote {
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      min-width: 0;
+    }
+    .item-sin-lote[hidden] { display: none; }
+
     .detalle-insumo__marca {
       font-size: 0.875rem;
       color: var(--color-texto-suave);
@@ -566,10 +778,38 @@
         <div class="stock-header__logo"></div>
         <div class="stock-header__marca-col">
           <span class="stock-header__marca-texto">Seis Destinos</span>
-          <span class="stock-header__titulo">Stock <span style="color:var(--verde); font-size:0.875rem; line-height:1;">●</span> <span class="stock-header__subtitulo">Catálogo de insumos</span></span>
+          <span class="stock-header__titulo">Stock <span style="color:var(--verde); font-size:0.875rem; line-height:1;">●</span> <span class="stock-header__subtitulo" id="stock-subtitulo">Stock actual</span></span>
         </div>
       </div>
     </header>
+
+    <!-- Sin NINGUNA de las dos tareas no hay nada que mostrar. -->
+    <div class="estado-vacio-stock" id="sin-acceso" hidden>
+      No tenés permiso para ver el stock ni el catálogo de insumos. Pedíselo a un administrador.
+    </div>
+
+    <!-- Solo se dibuja si hay DOS vistas para elegir: una pestaña sola no es
+         una elección, es ruido. -->
+    <div class="pestanas-stock" id="pestanas-stock" hidden>
+      <button type="button" class="pestana-stock" data-vista="stock">Stock</button>
+      <button type="button" class="pestana-stock" data-vista="catalogo">Catálogo</button>
+    </div>
+
+    <!-- ══ VISTA: STOCK ACTUAL ═══════════════════════════════════════════ -->
+    <div class="vista-stock" id="vista-stock" hidden>
+
+      <div class="chips-unidad" id="chips-unidad-stock"></div>
+
+      <input type="search" class="buscador-stock" id="buscador-stock-actual" placeholder="Buscar por nombre o marca…" autocomplete="off">
+
+      <div class="lista-contenido" id="lista-stock"></div>
+
+      <div class="estado-vacio-stock" id="stock-cargando">Cargando stock…</div>
+      <div class="estado-vacio-stock" id="stock-vacio" hidden></div>
+    </div>
+
+    <!-- ══ VISTA: CATÁLOGO ═══════════════════════════════════════════════ -->
+    <div class="vista-stock" id="vista-catalogo" hidden>
 
     <div class="aviso-pendientes" id="aviso-pendientes" hidden>
       <div class="aviso-pendientes__texto">
@@ -594,7 +834,39 @@
     <div class="estado-vacio-stock" id="estado-cargando">Cargando catálogo…</div>
     <div class="estado-vacio-stock" id="estado-vacio" hidden></div>
 
+    </div><!-- /vista-catalogo -->
+
   </div><!-- /contenedor -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — STOCK POR LOTE
+       Solo LECTURA. Las bajas y los ajustes son la fase 3.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-stock-lotes" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-lotes></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-lotes aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo" id="lotes-nombre">—</h2>
+      <div class="detalle-insumo__marca" id="lotes-marca" hidden></div>
+
+      <div class="total-stock">
+        <span class="total-stock__etiqueta">Total en existencia</span>
+        <span class="total-stock__valor" id="lotes-total">—</span>
+      </div>
+
+      <div id="lotes-cargando" class="estado-vacio-stock">Cargando lotes…</div>
+
+      <div id="lotes-bloque" hidden>
+        <div class="lotes-titulo">Por lote, del más viejo al más nuevo</div>
+        <div class="lotes-tabla" id="lotes-tabla"></div>
+      </div>
+
+      <div id="lotes-sin-lote" class="item-sin-lote" hidden>
+        Este insumo no lleva lote, así que no hay desglose: el total de arriba es todo.
+      </div>
+    </div>
+  </div><!-- /modal-stock-lotes -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -764,7 +1036,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -830,6 +1102,19 @@
       detalle: null,
       // Filas ya parseadas del Excel, esperando confirmación.
       filasImport: [],
+
+      // ── Vista de STOCK ──────────────────────────────────────────────
+      vista: 'stock',          // 'stock' | 'catalogo'
+      // Unidades sobre las que la persona puede VER stock. Salen de
+      // v_mis_unidades_stock, que aplica la MISMA tiene_tarea_alcance que la
+      // RLS: un solo SELECT y cero lógica de alcance duplicada acá. Si se
+      // reimplementara en el cliente, el día que cambie el servidor la UI
+      // mostraría unidades de más (chips que no llevan a nada) o de menos
+      // (alguien deja de ver algo que sí puede ver, que es un bug de verdad).
+      unidadesStock: [],
+      unidadStock: '',         // '' = todas
+      busquedaStock: '',
+      stock: [],               // filas de v_stock_insumos
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -839,6 +1124,20 @@
       return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
     }
     const puedeGestionar = () => tieneTarea('stock', 'gestionar_catalogo')
+    const puedeVerStock  = () => tieneTarea('stock', 'ver')
+
+    // Cantidades del stock: separador de miles argentino y la unidad del
+    // catálogo. `maximumFractionDigits` en 3 porque hay insumos en kg y litros
+    // donde el decimal importa, pero sin arrastrar ceros al pedo.
+    function formatearCantidadStock(n, unidad) {
+      const num = Number(n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 3 })
+      return `${num} ${unidad || ''}`.trim()
+    }
+
+    function textoLotes(n) {
+      if (!n) return ''            // 0 = no lleva lote: no se dice nada
+      return n === 1 ? '1 lote' : `${n} lotes`
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // HELPERS
@@ -1050,6 +1349,218 @@
       listaEl.querySelectorAll('[data-insumo]').forEach(card => {
         card.addEventListener('click', () => abrirDetalleInsumo(card.dataset.insumo))
       })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISTA — STOCK ACTUAL
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // NO se filtra por unidad en la consulta: la RLS de la vista ya devuelve
+    // solo las unidades del alcance. El chip es comodidad, no seguridad.
+    async function cargarStock() {
+      const cargandoEl = document.getElementById('stock-cargando')
+      cargandoEl.hidden = false
+
+      const [unidades, filas] = await Promise.all([
+        supabase.from('v_mis_unidades_stock').select('id, nombre').order('nombre'),
+        supabase.from('v_stock_insumos')
+          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, cantidad_total, lotes_distintos'),
+      ])
+
+      cargandoEl.hidden = true
+
+      if (unidades.error || filas.error) {
+        console.error(unidades.error || filas.error)
+        mostrarError('Error al cargar el stock.')
+        return
+      }
+
+      estado.unidadesStock = unidades.data ?? []
+      estado.stock = filas.data ?? []
+
+      // Con una sola unidad no hay nada que elegir: se filtra por ella y los
+      // chips no se dibujan.
+      if (estado.unidadesStock.length === 1) estado.unidadStock = estado.unidadesStock[0].id
+
+      renderizarChipsUnidadStock()
+      renderizarStock()
+    }
+
+    function renderizarChipsUnidadStock() {
+      const cont = document.getElementById('chips-unidad-stock')
+      // Una sola unidad (o ninguna) no es una elección.
+      cont.hidden = estado.unidadesStock.length < 2
+      if (cont.hidden) { cont.innerHTML = ''; return }
+
+      const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidadesStock]
+      cont.innerHTML = chips.map(u => `
+        <button type="button" class="chip-unidad ${estado.unidadStock === u.id ? 'chip-unidad--activa' : ''}" data-unidad="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('.chip-unidad').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.unidadStock = btn.dataset.unidad
+          renderizarChipsUnidadStock()
+          renderizarStock()
+        })
+      })
+    }
+
+    function filasStockVisibles() {
+      return estado.stock
+        .filter(f => !estado.unidadStock || f.unidad_negocio_id === estado.unidadStock)
+        .filter(f => coincideStock(f, estado.busquedaStock))
+        .sort((a, b) => (a.insumo_nombre || '').localeCompare(b.insumo_nombre || '', 'es', { sensitivity: 'base' }))
+    }
+
+    // Misma normalización de acentos que el catálogo: normalizar() ya existe.
+    function coincideStock(f, termino) {
+      const t = normalizar(termino)
+      if (!t) return true
+      return normalizar(`${f.insumo_nombre} ${f.marca || ''}`).includes(t)
+    }
+
+    function renderizarStock() {
+      const listaEl = document.getElementById('lista-stock')
+      const vacioEl = document.getElementById('stock-vacio')
+      const filas = filasStockVisibles()
+
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        // DOS vacíos distintos. Con el libro en cero hay que explicar de dónde
+        // sale el stock; si hay stock y el filtro no encontró nada, decir eso
+        // mismo mandaría a buscar un problema que no existe.
+        vacioEl.textContent = estado.stock.length
+          ? 'No se encontró ningún insumo con ese nombre o marca.'
+          : 'Todavía no hay movimientos de stock. El stock se arma solo a medida que se cargan ingresos en el módulo de Insumos, o con el inventario inicial.'
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = filas.map(f => {
+        const negativo = Number(f.cantidad_total) < 0
+        const lotes = textoLotes(Number(f.lotes_distintos) || 0)
+        return `
+          <div class="tarjeta-lista fila-stock" data-stock="${esc(f.insumo_id)}" data-unidad="${esc(f.unidad_negocio_id)}">
+            <div class="fila-stock__info">
+              <div class="fila-stock__nombre">${esc(f.insumo_nombre)}</div>
+              ${f.marca ? `<div class="fila-stock__marca">${esc(f.marca)}</div>` : ''}
+              <div class="fila-stock__meta">
+                <span class="fila-stock__cantidad ${negativo ? 'fila-stock__cantidad--negativa' : ''}">${esc(formatearCantidadStock(f.cantidad_total, f.unidad_medida))}</span>
+                ${lotes ? `<span>${esc(lotes)}</span>` : ''}
+                <span class="chip-tipo chip-tipo--${f.tipo}">${TIPOS[f.tipo] ?? esc(f.tipo)}</span>
+                ${negativo ? '<span class="chip-falta-remito" title="El saldo es negativo: se consumió mercadería que nunca se cargó.">Falta cargar un remito</span>' : ''}
+              </div>
+            </div>
+          </div>`
+      }).join('')
+
+      listaEl.querySelectorAll('[data-stock]').forEach(card => {
+        card.addEventListener('click', () => abrirLotes(card.dataset.stock, card.dataset.unidad))
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL — STOCK POR LOTE (solo lectura)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirLotes(insumoId, unidadId) {
+      const fila = estado.stock.find(f => f.insumo_id === insumoId && f.unidad_negocio_id === unidadId)
+      if (!fila) return
+
+      document.getElementById('lotes-nombre').textContent = fila.insumo_nombre
+      const marcaEl = document.getElementById('lotes-marca')
+      marcaEl.textContent = fila.marca || ''
+      marcaEl.hidden = !fila.marca
+
+      const negativo = Number(fila.cantidad_total) < 0
+      const totalEl = document.getElementById('lotes-total')
+      totalEl.textContent = formatearCantidadStock(fila.cantidad_total, fila.unidad_medida)
+      totalEl.closest('.total-stock').classList.toggle('total-stock--negativo', negativo)
+
+      document.getElementById('lotes-bloque').hidden = true
+      document.getElementById('lotes-sin-lote').hidden = true
+      document.getElementById('lotes-cargando').hidden = false
+      document.getElementById('modal-stock-lotes').hidden = false
+
+      // Dos consultas: el saldo por lote, y las fechas para poder ordenarlos por
+      // antigüedad. PostgREST no hace agregados, así que el min(fecha) por lote
+      // se calcula acá con lo que ya se puede leer — la policy de
+      // stock_movimientos filtra por el mismo alcance que las vistas.
+      const [porLote, movs] = await Promise.all([
+        supabase.from('v_stock_por_lote')
+          .select('lote, saldo, unidad_medida')
+          .eq('insumo_id', insumoId).eq('unidad_negocio_id', unidadId),
+        supabase.from('stock_movimientos')
+          .select('lote, fecha')
+          .eq('insumo_id', insumoId).eq('unidad_negocio_id', unidadId),
+      ])
+
+      document.getElementById('lotes-cargando').hidden = true
+
+      if (porLote.error || movs.error) {
+        console.error(porLote.error || movs.error)
+        mostrarError('Error al cargar el detalle por lote.')
+        return
+      }
+
+      // Un lote sin movimientos legibles no puede quedar arriba de todo por
+      // tener fecha vacía: va al final, que es donde menos molesta.
+      const primeraFecha = new Map()
+      ;(movs.data ?? []).forEach(m => {
+        const clave = m.lote ?? ''
+        const previa = primeraFecha.get(clave)
+        if (!previa || String(m.fecha) < String(previa)) primeraFecha.set(clave, m.fecha)
+      })
+
+      const lotes = (porLote.data ?? [])
+        .filter(l => l.lote != null && String(l.lote).trim() !== '')
+        .map(l => ({ ...l, desde: primeraFecha.get(l.lote) ?? null }))
+        .sort((a, b) => {
+          if (a.desde && b.desde) return String(a.desde).localeCompare(String(b.desde))
+          if (a.desde) return -1
+          if (b.desde) return 1
+          return String(a.lote).localeCompare(String(b.lote), 'es')
+        })
+
+      // Sin lotes NO se dibuja una tabla vacía: el total de arriba ya es todo.
+      if (!lotes.length) {
+        document.getElementById('lotes-sin-lote').hidden = false
+        return
+      }
+
+      document.getElementById('lotes-tabla').innerHTML = lotes.map(l => {
+        const neg = Number(l.saldo) < 0
+        return `
+          <div class="lote-fila">
+            <span class="lote-fila__lote">${esc(l.lote)}
+              ${l.desde ? `<span class="lote-fila__fecha">desde ${esc(formatearFecha(l.desde))}</span>` : ''}
+            </span>
+            <span class="lote-fila__saldo ${neg ? 'lote-fila__saldo--negativo' : ''}">${esc(formatearCantidadStock(l.saldo, fila.unidad_medida))}</span>
+          </div>`
+      }).join('')
+      document.getElementById('lotes-bloque').hidden = false
+    }
+
+    function cerrarLotes() {
+      document.getElementById('modal-stock-lotes').hidden = true
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PESTAÑAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const SUBTITULO_VISTA = { stock: 'Stock actual', catalogo: 'Catálogo de insumos' }
+
+    function mostrarVista(id) {
+      estado.vista = id
+      document.getElementById('vista-stock').hidden = id !== 'stock'
+      document.getElementById('vista-catalogo').hidden = id !== 'catalogo'
+      document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
+      document.querySelectorAll('.pestana-stock').forEach(btn => {
+        btn.classList.toggle('pestana-stock--activa', btn.dataset.vista === id)
+      })
+      window.scrollTo({ top: 0, behavior: 'auto' })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1512,6 +2023,15 @@
       renderizarLista()
     })
 
+    document.querySelectorAll('[data-cerrar-lotes]').forEach(el =>
+      el.addEventListener('click', cerrarLotes))
+    document.getElementById('buscador-stock-actual').addEventListener('input', (e) => {
+      estado.busquedaStock = e.target.value
+      renderizarStock()
+    })
+    document.querySelectorAll('.pestana-stock').forEach(btn =>
+      btn.addEventListener('click', () => mostrarVista(btn.dataset.vista)))
+
     document.querySelectorAll('[data-cerrar-detalle]').forEach(el =>
       el.addEventListener('click', cerrarDetalleInsumo))
     // Las dos acciones toman el insumo del estado y no del DOM: el modal ya
@@ -1589,7 +2109,28 @@
       document.querySelector('.barra-acciones').hidden = !gestiona
       document.getElementById('btn-ver-pendientes').hidden = !gestiona
 
-      await cargarInsumos()
+      // ── Qué vistas tiene esta persona ──────────────────────────────────
+      const verStock = puedeVerStock()
+
+      if (!verStock && !gestiona) {
+        document.getElementById('sin-acceso').hidden = false
+        return
+      }
+
+      // Las pestañas solo si hay DOS: una pestaña sola no es una elección.
+      document.getElementById('pestanas-stock').hidden = !(verStock && gestiona)
+
+      // Abre en Stock, que es lo que se mira todos los días; el catálogo lo
+      // toca poca gente muy de vez en cuando. Pero se resuelve por PERMISO y no
+      // por costumbre: alguien puede tener gestionar_catalogo y no ver.
+      mostrarVista(verStock ? 'stock' : 'catalogo')
+
+      // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
+      // consulta volvería vacía por RLS igual, pero no tiene sentido hacerla.
+      await Promise.all([
+        verStock ? cargarStock() : Promise.resolve(),
+        gestiona ? cargarInsumos() : Promise.resolve(),
+      ])
     }
 
     init()
