@@ -588,6 +588,15 @@
       flex-shrink: 0;
     }
     .lote-fila__saldo--negativo { color: var(--bordo-oscuro); }
+    /* No es un lote: es la ausencia de uno. Se muestra igual —si no, el
+       desglose no sumaría el total— pero se lee distinto del resto. */
+    .lote-fila--sin-lote { border-top: 1px solid var(--color-borde); }
+    .lote-fila--sin-lote .lote-fila__lote {
+      font-style: italic;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+    }
+
     .item-sin-lote {
       font-size: 0.8125rem;
       line-height: 1.45;
@@ -1513,8 +1522,10 @@
         if (!previa || String(m.fecha) < String(previa)) primeraFecha.set(clave, m.fecha)
       })
 
-      const lotes = (porLote.data ?? [])
-        .filter(l => l.lote != null && String(l.lote).trim() !== '')
+      const tieneLote = (l) => l.lote != null && String(l.lote).trim() !== ''
+      const filasLote = porLote.data ?? []
+
+      const conLote = filasLote.filter(tieneLote)
         .map(l => ({ ...l, desde: primeraFecha.get(l.lote) ?? null }))
         .sort((a, b) => {
           if (a.desde && b.desde) return String(a.desde).localeCompare(String(b.desde))
@@ -1523,22 +1534,42 @@
           return String(a.lote).localeCompare(String(b.lote), 'es')
         })
 
-      // Sin lotes NO se dibuja una tabla vacía: el total de arriba ya es todo.
-      if (!lotes.length) {
+      // La fila de lote NULL NO se descarta. `lote_ilegible` existe justamente
+      // para las etiquetas rotas: esa mercadería entra al libro con lote null y
+      // cantidad real. Filtrándola, una harina con 80 kg de un lote y 20 kg de
+      // una bolsa con la etiqueta rota mostraba 100 kg arriba y 80 en el
+      // desglose — veinte kilos que existen y no aparecían, sin explicación.
+      // Va al FINAL y marcada: no es un lote, es la ausencia de uno.
+      const sinLote = filasLote.filter(l => !tieneLote(l))
+
+      // El insumo NO lleva lote (todo su saldo está en la fila null): ahí no hay
+      // nada que desglosar y el total de arriba ya es todo.
+      if (!conLote.length) {
         document.getElementById('lotes-sin-lote').hidden = false
         return
       }
 
-      document.getElementById('lotes-tabla').innerHTML = lotes.map(l => {
-        const neg = Number(l.saldo) < 0
-        return `
+      const htmlSaldo = (saldo) => {
+        const neg = Number(saldo) < 0
+        return `<span class="lote-fila__saldo ${neg ? 'lote-fila__saldo--negativo' : ''}">${esc(formatearCantidadStock(saldo, fila.unidad_medida))}</span>`
+      }
+
+      document.getElementById('lotes-tabla').innerHTML =
+        conLote.map(l => `
           <div class="lote-fila">
             <span class="lote-fila__lote">${esc(l.lote)}
               ${l.desde ? `<span class="lote-fila__fecha">desde ${esc(formatearFecha(l.desde))}</span>` : ''}
             </span>
-            <span class="lote-fila__saldo ${neg ? 'lote-fila__saldo--negativo' : ''}">${esc(formatearCantidadStock(l.saldo, fila.unidad_medida))}</span>
-          </div>`
-      }).join('')
+            ${htmlSaldo(l.saldo)}
+          </div>`).join('') +
+        sinLote.map(l => `
+          <div class="lote-fila lote-fila--sin-lote">
+            <span class="lote-fila__lote">Sin lote identificado
+              <span class="lote-fila__fecha">la etiqueta estaba rota o ilegible</span>
+            </span>
+            ${htmlSaldo(l.saldo)}
+          </div>`).join('')
+
       document.getElementById('lotes-bloque').hidden = false
     }
 
