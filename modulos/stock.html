@@ -126,7 +126,6 @@
       margin-bottom: 0.875rem;
       min-width: 0;
     }
-    .barra-acciones:empty { display: none; }
     .buscador-stock {
       display: block;
       width: 100%;
@@ -183,7 +182,12 @@
        borde lo hace evidente. Va con mask y no con un pseudo-elemento
        posicionado, así no ocupa lugar, no intercepta toques y desaparece solo
        cuando la fila entra entera (la máscara no tiene qué desvanecer).
-       El fade del borde izquierdo aparece solo cuando ya se scrolleó. */
+       SOLO EL BORDE DERECHO. Una máscara es estática, así que un tramo
+       transparente a la izquierda desvanecería el primer chip —"Todos", que es
+       el filtro activo por defecto— desde el momento en que se abre la
+       pantalla, sin que nadie haya scrolleado nada. Un fade izquierdo de verdad
+       necesita un listener de scroll que agregue una clase, y no vale la
+       complejidad para lo que aporta. */
     .fila-chips {
       display: flex;
       gap: 0.4375rem;
@@ -192,10 +196,8 @@
       min-width: 0;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
-      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 1.25rem, #000 calc(100% - 1.75rem), transparent 100%);
-      mask-image: linear-gradient(to right, transparent 0, #000 1.25rem, #000 calc(100% - 1.75rem), transparent 100%);
-      -webkit-mask-composite: source-over;
-      mask-composite: add;
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent 100%);
+      mask-image: linear-gradient(to right, #000 calc(100% - 1.75rem), transparent 100%);
     }
     .fila-chips::-webkit-scrollbar { display: none; }
     .chip-stock {
@@ -355,6 +357,32 @@
       color: var(--color-texto);
     }
     /* ── Modal de detalle ─────────────────────────────────────────────────── */
+
+    /* El cierre vive arriba y no como tercer botón abajo. Como botón competía
+       en peso con "Desactivar", que es destructivo, y era el que forzaba el
+       wrap de la fila de acciones en 375px. Tocar el backdrop también cierra;
+       esto es la afordancia explícita para quien la busca. */
+    .modal-stock__cerrar {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 50%;
+      background: none;
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      line-height: 1;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+    .modal-stock__cerrar:hover { background: var(--color-superficie); color: var(--color-texto); }
+    /* Para que un nombre largo no se meta abajo de la X. */
+    #modal-detalle-insumo .modal-stock__titulo { padding-right: 2rem; }
 
     .detalle-insumo__marca {
       font-size: 0.875rem;
@@ -576,6 +604,7 @@
   <div class="modal-stock" id="modal-detalle-insumo" hidden>
     <div class="modal-stock__backdrop" data-cerrar-detalle></div>
     <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-detalle aria-label="Cerrar">✕</button>
       <h2 class="modal-stock__titulo" id="detalle-insumo-nombre">—</h2>
       <div class="detalle-insumo__marca" id="detalle-insumo-marca" hidden></div>
 
@@ -586,7 +615,6 @@
       <div class="detalle-insumo__filas" id="detalle-insumo-filas"></div>
 
       <div class="modal-stock__acciones">
-        <button type="button" class="btn-stock" data-cerrar-detalle>Cerrar</button>
         <button type="button" class="btn-stock" id="btn-detalle-toggle">Desactivar</button>
         <button type="button" class="btn-stock btn-stock--primario" id="btn-detalle-editar">Editar</button>
       </div>
@@ -1554,6 +1582,11 @@
       const gestiona = puedeGestionar()
       document.getElementById('btn-nuevo-insumo').hidden = !gestiona
       document.getElementById('btn-importar-excel').hidden = !gestiona
+      // Y el contenedor con ellos. `hidden` no saca los botones del DOM, así
+      // que la barra sigue teniendo dos hijos: un `:empty` en CSS nunca
+      // matchearía y su margen quedaría como espacio muerto para quien no
+      // tiene la tarea. Se oculta acá, que es donde ya se decide lo mismo.
+      document.querySelector('.barra-acciones').hidden = !gestiona
       document.getElementById('btn-ver-pendientes').hidden = !gestiona
 
       await cargarInsumos()
