@@ -61,11 +61,17 @@
       color: var(--color-texto);
       min-width: 0;
     }
+    /* SIN `white-space: nowrap`. Verificado: `.stock-header__marca`, su
+       columna y el título ya tienen `min-width: 0`, así que no eran ellos los
+       que apretaban — el piso lo ponía el nowrap de acá, que impedía que
+       "Catálogo de insumos" bajara de renglón en una pantalla angosta y
+       obligaba al header a ser más ancho que el viewport. Sin la regla, en
+       pantallas donde entra se ve igual, y donde no entra baja en vez de
+       desbordar. */
     .stock-header__subtitulo {
       font-size: 0.75rem;
       font-weight: 600;
       color: var(--color-texto-suave);
-      white-space: nowrap;
     }
     .stock-header__volver {
       padding: 0.5rem 0.875rem;
@@ -106,16 +112,25 @@
 
     /* ── Barra de acciones ────────────────────────────────────────────────── */
 
+    /* El buscador salió de acá y ocupa su propio renglón. Antes pedía
+       `flex: 1 1 16rem` y en un celular de 375px eso se come el renglón entero,
+       empujando los dos botones a una segunda fila a tamaño completo: por eso
+       la banda pesaba tanto, y no porque los botones fueran grandes.
+       Ahora los botones van en --chico, alineados a la izquierda, y el conjunto
+       pesa mucho menos que la lista, que es lo que se viene a mirar. */
     .barra-acciones {
       display: flex;
-      gap: 0.625rem;
+      gap: 0.5rem;
       flex-wrap: wrap;
       align-items: center;
       margin-bottom: 0.875rem;
       min-width: 0;
     }
+    .barra-acciones:empty { display: none; }
     .buscador-stock {
-      flex: 1 1 16rem;
+      display: block;
+      width: 100%;
+      margin-bottom: 0.5625rem;
       min-width: 0;
       padding: 0.6875rem 0.875rem;
       border: 1.5px solid var(--color-borde);
@@ -164,6 +179,11 @@
 
     /* ── Chips de filtro ──────────────────────────────────────────────────── */
 
+    /* Se corta a la derecha y no se veía que hubiera más: el degradado del
+       borde lo hace evidente. Va con mask y no con un pseudo-elemento
+       posicionado, así no ocupa lugar, no intercepta toques y desaparece solo
+       cuando la fila entra entera (la máscara no tiene qué desvanecer).
+       El fade del borde izquierdo aparece solo cuando ya se scrolleó. */
     .fila-chips {
       display: flex;
       gap: 0.4375rem;
@@ -171,7 +191,13 @@
       padding-bottom: 0.875rem;
       min-width: 0;
       -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 1.25rem, #000 calc(100% - 1.75rem), transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0, #000 1.25rem, #000 calc(100% - 1.75rem), transparent 100%);
+      -webkit-mask-composite: source-over;
+      mask-composite: add;
     }
+    .fila-chips::-webkit-scrollbar { display: none; }
     .chip-stock {
       background: var(--color-fondo);
       color: #55617d;
@@ -214,32 +240,42 @@
 
     /* .tarjeta-lista viene de css/main.css (fondo, borde, radius, padding).
        Acá solo lo que esa clase no cubre. */
+    /* La tarjeta ya no tiene botones: TODO el ancho es para el contenido.
+       Tres líneas con pesos distintos —nombre, marca, meta— para que se lea de
+       un vistazo sin frenar a interpretar. */
     .fila-insumo { align-items: flex-start; cursor: default; }
+    /* Solo es tocable con permiso de gestión, que es cuando el render le pone
+       data-insumo. Sin permiso no hay puntero ni feedback: tocar no hace nada
+       y la tarjeta no promete lo contrario. */
+    .fila-insumo[data-insumo] { cursor: pointer; }
     .fila-insumo--pendiente { border-left: 4px solid var(--amarillo); }
     .fila-insumo--inactivo { opacity: 0.6; }
     .fila-insumo__info { flex: 1; min-width: 0; }
     .fila-insumo__nombre {
       font-size: 0.9375rem;
       font-weight: 650;
+      line-height: 1.3;
       color: var(--color-texto);
       overflow-wrap: anywhere;
     }
-    .fila-insumo__marca { font-weight: 500; color: var(--color-texto-suave); }
+    /* Debajo del nombre y claramente por detrás: antes iban en el mismo
+       renglón con un "·" y se leían como una sola frase cortada. */
+    .fila-insumo__marca {
+      font-size: 0.78125rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      margin-top: 0.0625rem;
+      overflow-wrap: anywhere;
+    }
     .fila-insumo__meta {
-      margin-top: 0.25rem;
+      margin-top: 0.375rem;
       display: flex;
       align-items: center;
-      gap: 0.375rem;
+      gap: 0.4375rem;
       flex-wrap: wrap;
       font-size: 0.75rem;
       color: var(--color-texto-suave);
       min-width: 0;
-    }
-    .fila-insumo__acciones {
-      display: flex;
-      gap: 0.375rem;
-      flex-wrap: wrap;
-      flex-shrink: 0;
     }
 
     .chip-tipo {
@@ -318,6 +354,57 @@
       margin: 0 0 0.875rem;
       color: var(--color-texto);
     }
+    /* ── Modal de detalle ─────────────────────────────────────────────────── */
+
+    .detalle-insumo__marca {
+      font-size: 0.875rem;
+      color: var(--color-texto-suave);
+      margin: -0.375rem 0 0.875rem;
+      overflow-wrap: anywhere;
+    }
+    .detalle-insumo__marca[hidden] { display: none; }
+    .detalle-insumo__filas {
+      display: flex;
+      flex-direction: column;
+      gap: 0.0625rem;
+      min-width: 0;
+    }
+    .detalle-fila {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.5625rem 0;
+      border-bottom: 1px solid var(--color-borde);
+      min-width: 0;
+    }
+    .detalle-fila:last-child { border-bottom: none; }
+    .detalle-fila__k {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      flex-shrink: 0;
+    }
+    .detalle-fila__v {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      text-align: right;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .aviso-detalle {
+      background: var(--amarillo-suave);
+      border: 1px solid var(--amarillo);
+      border-radius: 10px;
+      padding: 0.625rem 0.75rem;
+      margin-bottom: 0.875rem;
+      font-size: 0.78125rem;
+      line-height: 1.45;
+      color: var(--amarillo-oscuro);
+      min-width: 0;
+    }
+    .aviso-detalle[hidden] { display: none; }
+
     .modal-stock__acciones {
       display: flex;
       gap: 0.625rem;
@@ -463,10 +550,11 @@
       <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-pendientes">Ver pendientes</button>
     </div>
 
+    <input type="search" class="buscador-stock" id="buscador-stock" placeholder="Buscar por nombre o marca…" autocomplete="off">
+
     <div class="barra-acciones">
-      <input type="search" class="buscador-stock" id="buscador-stock" placeholder="Buscar por nombre o marca…" autocomplete="off">
-      <button type="button" class="btn-stock btn-stock--primario" id="btn-nuevo-insumo" hidden>+ Nuevo insumo</button>
-      <button type="button" class="btn-stock" id="btn-importar-excel" hidden>Importar Excel</button>
+      <button type="button" class="btn-stock btn-stock--chico btn-stock--primario" id="btn-nuevo-insumo" hidden>+ Nuevo insumo</button>
+      <button type="button" class="btn-stock btn-stock--chico" id="btn-importar-excel" hidden>Importar Excel</button>
     </div>
 
     <div class="fila-chips" id="chips-filtro"></div>
@@ -479,6 +567,31 @@
     <div class="estado-vacio-stock" id="estado-vacio" hidden></div>
 
   </div><!-- /contenedor -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — DETALLE DEL INSUMO
+       Reemplaza a los dos botones que antes vivían en cada tarjeta.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-detalle-insumo" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-detalle></div>
+    <div class="modal-stock__panel">
+      <h2 class="modal-stock__titulo" id="detalle-insumo-nombre">—</h2>
+      <div class="detalle-insumo__marca" id="detalle-insumo-marca" hidden></div>
+
+      <div class="aviso-detalle" id="detalle-insumo-aviso" hidden>
+        Este insumo se creó durante una carga y <strong>nadie revisó la clasificación</strong>. Verificá el tipo y la unidad, y guardá para confirmarlo.
+      </div>
+
+      <div class="detalle-insumo__filas" id="detalle-insumo-filas"></div>
+
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-detalle>Cerrar</button>
+        <button type="button" class="btn-stock" id="btn-detalle-toggle">Desactivar</button>
+        <button type="button" class="btn-stock btn-stock--primario" id="btn-detalle-editar">Editar</button>
+      </div>
+    </div>
+  </div><!-- /modal-detalle-insumo -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -684,6 +797,9 @@
       busqueda: '',
       // Modal de insumo: null = alta; el objeto = edición de ese insumo.
       editando: null,
+      // Insumo abierto en el modal de detalle (el que reemplazó a los botones
+      // por tarjeta). null = cerrado.
+      detalle: null,
       // Filas ya parseadas del Excel, esperando confirmación.
       filasImport: [],
     }
@@ -862,24 +978,35 @@
           i.activo ? '' : 'fila-insumo--inactivo',
         ].filter(Boolean).join(' ')
 
-        const marca = i.marca ? ` <span class="fila-insumo__marca">· ${esc(i.marca)}</span>` : ''
+        // TRES LÍNEAS, de mayor a menor peso: nombre / marca / meta. Antes el
+        // nombre y la marca iban juntos separados por "·", y con los botones
+        // comiéndose la mitad del ancho el nombre saltaba de renglón y el "·"
+        // quedaba abriendo la línea siguiente, como un error de tipeo. Ahora
+        // cada cosa tiene su renglón y los separadores no hacen falta: la
+        // separación la da el `gap` de la fila de meta.
+        const marca = i.marca ? `<div class="fila-insumo__marca">${esc(i.marca)}</div>` : ''
         const tolerancia = i.tolerancia_merma_pct != null
-          ? `<span>· merma ${esc(i.tolerancia_merma_pct)}%</span>` : ''
+          ? `<span>merma ${esc(i.tolerancia_merma_pct)}%</span>` : ''
         const badgePendiente = (i.activo && esPendiente(i))
           ? `<span class="chip-estado">Sin revisar</span>` : ''
         const badgeInactivo = !i.activo
           ? `<span class="chip-estado chip-estado--inactivo">Desactivado</span>` : ''
 
-        const acciones = gestiona ? `
-          <div class="fila-insumo__acciones">
-            <button type="button" class="btn-stock btn-stock--chico" data-editar="${i.id}">${i.activo && esPendiente(i) ? 'Revisar' : 'Editar'}</button>
-            <button type="button" class="btn-stock btn-stock--chico${i.activo ? ' btn-stock--alerta' : ''}" data-toggle-activo="${i.id}">${i.activo ? 'Desactivar' : 'Reactivar'}</button>
-          </div>` : ''
-
+        // SIN botones en la tarjeta. Con 51 insumos eran 102 botones en
+        // pantalla, ocupando la mitad del ancho para acciones que se usan una
+        // vez por mes y comprimiendo justo lo que hay que leer. La lista es
+        // para LEER; para actuar está el modal, que es el patrón de
+        // materia-prima.html.
+        //
+        // La tarjeta es tocable SOLO con permiso de gestión: si tocara para
+        // todos y a la mayoría le devolviera un modal donde no se puede hacer
+        // nada, enseñaría que tocar no sirve — y el día que alguien con permiso
+        // lo necesite, ya aprendió a no tocar.
         return `
-          <div class="${clases}">
+          <div class="${clases}"${gestiona ? ` data-insumo="${i.id}"` : ''}>
             <div class="fila-insumo__info">
-              <div class="fila-insumo__nombre">${esc(i.nombre)}${marca}</div>
+              <div class="fila-insumo__nombre">${esc(i.nombre)}</div>
+              ${marca}
               <div class="fila-insumo__meta">
                 <span class="chip-tipo chip-tipo--${i.tipo}">${TIPOS[i.tipo] ?? esc(i.tipo)}</span>
                 <span>${esc(i.unidad_medida)}</span>
@@ -887,16 +1014,63 @@
                 ${badgePendiente}${badgeInactivo}
               </div>
             </div>
-            ${acciones}
           </div>`
       }).join('')
 
-      listaEl.querySelectorAll('[data-editar]').forEach(btn => {
-        btn.addEventListener('click', () => abrirModalInsumo(btn.dataset.editar))
+      // Un solo listener por tarjeta, como el `data-ingreso` de materia-prima.
+      // Solo existe cuando la tarjeta lleva el atributo, o sea con permiso.
+      listaEl.querySelectorAll('[data-insumo]').forEach(card => {
+        card.addEventListener('click', () => abrirDetalleInsumo(card.dataset.insumo))
       })
-      listaEl.querySelectorAll('[data-toggle-activo]').forEach(btn => {
-        btn.addEventListener('click', () => alternarActivo(btn.dataset.toggleActivo))
-      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL — DETALLE DEL INSUMO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Lo que antes eran dos botones por tarjeta. Acá el dato se ve completo, sin
+    // competir por el ancho con nada, y las acciones tienen lugar para un label
+    // que se entienda.
+    function abrirDetalleInsumo(insumoId) {
+      if (!puedeGestionar()) return
+      const i = estado.insumos.find(x => x.id === insumoId)
+      if (!i) return
+      estado.detalle = i
+
+      document.getElementById('detalle-insumo-nombre').textContent = i.nombre
+      const marcaEl = document.getElementById('detalle-insumo-marca')
+      marcaEl.textContent = i.marca || ''
+      marcaEl.hidden = !i.marca
+
+      const filas = [
+        ['Tipo', TIPOS[i.tipo] ?? i.tipo],
+        ['Unidad de medida', i.unidad_medida],
+        ['Tolerancia de merma', i.tolerancia_merma_pct != null ? `${i.tolerancia_merma_pct}%` : 'Sin definir'],
+        ['Estado', !i.activo ? 'Desactivado' : (esPendiente(i) ? 'Sin revisar' : 'Activo')],
+      ]
+      document.getElementById('detalle-insumo-filas').innerHTML = filas.map(([k, v]) => `
+        <div class="detalle-fila">
+          <span class="detalle-fila__k">${esc(k)}</span>
+          <span class="detalle-fila__v">${esc(v)}</span>
+        </div>`).join('')
+
+      // El aviso de "sin revisar" explica qué se espera de quien lo abre.
+      const aviso = document.getElementById('detalle-insumo-aviso')
+      aviso.hidden = !(i.activo && esPendiente(i))
+
+      document.getElementById('btn-detalle-editar').textContent =
+        (i.activo && esPendiente(i)) ? 'Revisar' : 'Editar'
+      const btnActivo = document.getElementById('btn-detalle-toggle')
+      btnActivo.textContent = i.activo ? 'Desactivar' : 'Reactivar'
+      // Bordó para lo destructivo, nunca rojo (que es el color de Accesos).
+      btnActivo.classList.toggle('btn-stock--alerta', i.activo)
+
+      document.getElementById('modal-detalle-insumo').hidden = false
+    }
+
+    function cerrarDetalleInsumo() {
+      document.getElementById('modal-detalle-insumo').hidden = true
+      estado.detalle = null
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1308,6 +1482,21 @@
       document.getElementById('buscador-stock').value = ''
       renderizarChips()
       renderizarLista()
+    })
+
+    document.querySelectorAll('[data-cerrar-detalle]').forEach(el =>
+      el.addEventListener('click', cerrarDetalleInsumo))
+    // Las dos acciones toman el insumo del estado y no del DOM: el modal ya
+    // sabe cuál está abierto y así no hay un id duplicado en dos lugares.
+    document.getElementById('btn-detalle-editar').addEventListener('click', () => {
+      const id = estado.detalle?.id
+      cerrarDetalleInsumo()
+      if (id) abrirModalInsumo(id)
+    })
+    document.getElementById('btn-detalle-toggle').addEventListener('click', () => {
+      const id = estado.detalle?.id
+      cerrarDetalleInsumo()
+      if (id) alternarActivo(id)
     })
 
     document.getElementById('btn-nuevo-insumo').addEventListener('click', () => abrirModalInsumo(null))
