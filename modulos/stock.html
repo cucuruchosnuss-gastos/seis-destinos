@@ -1492,41 +1492,33 @@
       document.getElementById('lotes-cargando').hidden = false
       document.getElementById('modal-stock-lotes').hidden = false
 
-      // Dos consultas: el saldo por lote, y las fechas para poder ordenarlos por
-      // antigüedad. PostgREST no hace agregados, así que el min(fecha) por lote
-      // se calcula acá con lo que ya se puede leer — la policy de
-      // stock_movimientos filtra por el mismo alcance que las vistas.
-      const [porLote, movs] = await Promise.all([
-        supabase.from('v_stock_por_lote')
-          .select('lote, saldo, unidad_medida')
-          .eq('insumo_id', insumoId).eq('unidad_negocio_id', unidadId),
-        supabase.from('stock_movimientos')
-          .select('lote, fecha')
-          .eq('insumo_id', insumoId).eq('unidad_negocio_id', unidadId),
-      ])
+      // UNA sola consulta: `desde` es min(fecha) por lote y lo calcula Postgres
+      // sobre el libro entero.
+      //
+      // Antes esto salía de una segunda consulta a stock_movimientos con un
+      // reduce acá. Andaba, pero se rompía en silencio: PostgREST corta en 1000
+      // filas y cada consumo de sala de masa es un movimiento, así que un
+      // insumo de alta rotación llega a mil en meses — y a partir de ahí el
+      // mínimo salía de un subconjunto arbitrario, sin ningún error.
+      const porLote = await supabase.from('v_stock_por_lote')
+        .select('lote, saldo, desde')
+        .eq('insumo_id', insumoId).eq('unidad_negocio_id', unidadId)
 
       document.getElementById('lotes-cargando').hidden = true
 
-      if (porLote.error || movs.error) {
-        console.error(porLote.error || movs.error)
+      if (porLote.error) {
+        console.error(porLote.error)
         mostrarError('Error al cargar el detalle por lote.')
         return
       }
 
-      // Un lote sin movimientos legibles no puede quedar arriba de todo por
-      // tener fecha vacía: va al final, que es donde menos molesta.
-      const primeraFecha = new Map()
-      ;(movs.data ?? []).forEach(m => {
-        const clave = m.lote ?? ''
-        const previa = primeraFecha.get(clave)
-        if (!previa || String(m.fecha) < String(previa)) primeraFecha.set(clave, m.fecha)
-      })
-
       const tieneLote = (l) => l.lote != null && String(l.lote).trim() !== ''
       const filasLote = porLote.data ?? []
 
+      // Un lote sin fecha no puede quedar arriba de todo por tener el campo
+      // vacío: va al final, que es donde menos molesta.
       const conLote = filasLote.filter(tieneLote)
-        .map(l => ({ ...l, desde: primeraFecha.get(l.lote) ?? null }))
+        .slice()
         .sort((a, b) => {
           if (a.desde && b.desde) return String(a.desde).localeCompare(String(b.desde))
           if (a.desde) return -1
