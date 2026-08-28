@@ -424,8 +424,51 @@ PENDIENTE de Materia Prima: las 4 tareas ya se pueden otorgar desde Accesos, per
      - Se resalta en ámbar a partir de `DIAS_REMITO_VIEJO = 45`, constante arriba del archivo. **Es un número del negocio**: 45 días es el plazo máximo real en que puede llegar una factura después de la mercadería, así que hasta ahí no hay nada que reclamar y pasado ese plazo sí.
      - **LIMITACIÓN, y es la que importa si se lo usa para controlar:** el filtro trabaja sobre lo que la persona PUEDE VER. Con solo `materia_prima:cargar` ve únicamente sus propios ingresos, así que su lista de remitos sin factura está incompleta y no lo dice. Para usarlo como herramienta de control hace falta `materia_prima:ver_todo`.
 
-7. **Stock** (clave `stock`, nombre visible "Stock", orden 7, sin grupo): fila de `modulos` y las 6 tareas del CHECK **ya existen en la base** (migración del 12-13/08/2026), y el grupo "Stock" ya se puede otorgar desde Accesos. **El frontend del módulo está en construcción, en el chat de Stock** — todavía no hay archivo. Se lleva la administración del catálogo de insumos, que antes vivía como `materia_prima:gestionar_catalogo`.
+7. **Stock** (`modulos/stock.html`, clave `stock`, nombre visible "Stock", orden 7, sin grupo): fila de `modulos` y las 6 tareas del CHECK ya existen en la base (migración del 12-13/08/2026). El módulo tiene **DOS pestañas**: "Stock" (fase 2) y "Catálogo de insumos" (fase 1), que se lleva la administración del catálogo que antes vivía como `materia_prima:gestionar_catalogo`.
    - Ojo con los guiones: acá `stock` es igual en los dos namespaces (`modulos.clave` y `empleado_tareas.modulo`), a diferencia de `materia-prima` / `materia_prima`.
+
+   **`stock_movimientos` — el libro único.** id, unidad_negocio_id, insumo_id, lote, lote_ilegible, cantidad, tipo, motivo, lote_ambiguo, materia_prima_item_id, empleado_id, fecha, created_at. Una fila por cada entrada o salida, **con signo**: el saldo es siempre una suma, nunca un campo que alguien mantiene.
+   - **Los ONCE `tipo` válidos** (CHECK `chk_tipo_movimiento`): `ingreso`, `inventario_inicial`, `baja`, `ajuste`, `transferencia_salida`, `transferencia_entrada`, `transferencia_devolucion`, `consumo_sala_masa`, `consumo_produccion`, `consumo_envasado`, `despacho`.
+     - **Los últimos cuatro TODAVÍA NO SE USAN, y están a propósito.** Cuando llegue Producción o Despacho, consumir stock es insertar una fila con un tipo que ya existe: cero cambios en Stock, cero migración del CHECK.
+   - Los otros tres CHECK, todos verificados contra `pg_get_constraintdef`:
+     - `chk_signo_tipo`: `cantidad <> 0` **y** el signo atado al tipo — positivo en `ingreso`, `inventario_inicial`, `transferencia_entrada` y `transferencia_devolucion`; negativo en `baja`, `transferencia_salida` y los cuatro consumos/despacho. **`ajuste` cae en el `ELSE` y acepta los dos signos**, que es justamente lo que un ajuste necesita.
+     - `chk_motivo_obligatorio`: en `baja` y `ajuste` el motivo no puede quedar vacío. Son los dos tipos que una persona escribe a mano y los dos que hay que poder auditar después.
+     - `chk_lote_normalizado`: `lote` es NULL o viene sin espacios en los bordes y no vacío. **Nunca `''` ni `' L-1'`**: el saldo se agrupa por lote, así que un mismo lote escrito distinto se partiría en dos filas que no suman.
+   - **INMUTABILIDAD, con UNA excepción declarada.** Los movimientos que nacen en Stock (`baja`, `ajuste`, transferencias) **no se editan ni se borran**: se corrigen con otro movimiento que los compensa, y el libro conserva las dos filas. La excepción son los de tipo **`ingreso`**, que son ESPEJO de `materia_prima_items` y se sincronizan con él —el trigger borra y reinserta en cada UPDATE—: ahí la fuente de verdad es el documento, y el módulo de Ingreso ya tiene su propia auditoría de edición (`editado_por` / `editado_en`).
+   - **Dos triggers de espejado**, los dos sobre tablas de Materia Prima:
+     - `trg_espejar_stock_ingreso` → `fn_espejar_stock_ingreso()` (SECURITY DEFINER), AFTER INSERT/UPDATE/DELETE sobre `materia_prima_items`.
+     - `trg_espejar_stock_cabecera` → `fn_espejar_stock_ingreso_cabecera()`, AFTER UPDATE sobre `materia_prima_ingresos`: propaga la unidad de negocio y la fecha si se corrigen en la cabecera.
+   - **EL CONTRATO CON EL MÓDULO DE INGRESO, y es lo que hay que no romper:** el trigger suma **exactamente los ítems con `ya_recibido_con_remito = false`** (`v_suma := (new.ya_recibido_con_remito = false)`). Es por **RENGLÓN y no por documento**: una misma factura puede traer renglones que suman y renglones que no. Si esa columna cambia de nombre o de semántica, el espejo se rompe en silencio — el stock quedaría de menos o de más sin ningún error.
+
+   **Las cuatro vistas, TODAS con `security_invoker=true`** (verificado el 26/08/2026):
+   - `v_stock_por_lote` (unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, lote, saldo, **`desde`**) — la base de la trazabilidad: saldo por lote, con `HAVING sum(cantidad) <> 0`. `desde` es `min(fecha)` por lote y existe para ordenar por antigüedad **del lado de Postgres**: calcularlo en el cliente obligaba a traerse `stock_movimientos`, y PostgREST corta en 1000 filas, así que el mínimo salía de un subconjunto arbitrario sin ningún error.
+   - `v_stock_insumos` (… tolerancia_merma_pct, cantidad_total, lotes_distintos) — el total por insumo y unidad. Solo trae saldo distinto de cero. `lotes_distintos = 0` es el insumo que no lleva lote.
+   - `v_stock_negativo` — `v_stock_por_lote` filtrada a `saldo < 0`. En la pantalla se muestra como **"Falta cargar un remito"**: un saldo negativo significa que se consumió mercadería que nunca se cargó.
+   - `v_mis_unidades_stock` (id, nombre, ciudad) — las unidades activas donde la persona puede ver stock, resueltas con la **MISMA** `tiene_tarea_alcance('stock','ver', id)` que la RLS. **Existe para que los chips de unidad no reimplementen la lógica de alcance en el cliente**: duplicarla significa que el día que cambie el servidor la UI muestre unidades de más (chips que no llevan a nada) o de menos (alguien deja de ver algo que sí puede ver, que es un bug funcional). Además funciona con el libro en cero, que derivar los chips de `v_stock_insumos` no hace.
+   - **`v_stock_insumos_presentacion` fue ELIMINADA** (verificado: no existe). Desglosaba por bulto; el recuento se hace en la unidad base del catálogo.
+   - **La condición por `remito_vinculado_id` ya no existe en NINGUNA vista de stock** — el filtro por documento lo reemplazó `ya_recibido_con_remito`, que es por renglón.
+
+   **RLS de `stock_movimientos`: SOLO SELECT**, con `tiene_tarea_alcance('stock','ver', unidad_negocio_id)`. **CERO policies de escritura**: todo lo que entra al libro pasa por el trigger (SECURITY DEFINER) o por RPCs. Un `insert` directo desde el cliente no tiene por dónde entrar.
+
+   **La pantalla** (`modulos/stock.html`):
+   - **Abre en "Stock"**, que es lo que se mira todos los días; el catálogo lo toca poca gente muy de vez en cuando. Pero **el default se resuelve por PERMISO y no por costumbre**: es Stock si la persona tiene `stock:ver`, y Catálogo si solo tiene `gestionar_catalogo`. Sin ninguna de las dos, mensaje de sin acceso.
+   - Las pestañas **solo se dibujan si hay DOS** vistas para elegir. Con una sola no hay elección, hay ruido.
+   - La lista de stock usa la misma receta que el catálogo (`.tarjeta-lista`, tres líneas, sin botones, tocable). La **cantidad** va primera en la meta y con más peso: es lo que se viene a ver.
+   - **El desglose por lote incluye la fila de lote NULL**, al final y etiquetada "Sin lote identificado". `lote_ilegible` existe para las etiquetas rotas, así que esa mercadería entra al libro con lote null y cantidad real: filtrándola, el desglose no sumaba el total y faltaban kilos que existen, sin ninguna explicación en pantalla.
+   - **Es de LECTURA.** Las bajas, los ajustes y las transferencias son la fase 3 y todavía no existen.
+   - Pendiente: **nada de la fase 2 se verificó en un navegador con datos reales.** Con el libro en cero lo único observable es el estado vacío; el detalle por lote, el orden por antigüedad y el badge de saldo negativo necesitan que entre la primera factura o el inventario inicial.
+
+   **TRAMPAS ENCONTRADAS EN LA FASE 2.** Están escritas acá, en territorio propio, y no en Aprendizajes clave, que es de otro chat: en este proyecto ya pasó que un traspaso diera por hecho algo que nunca se ejecutó. Cuando el chat dueño de esa sección las promueva, se borran de acá.
+
+   *De arquitectura y SQL:*
+   1. **`CREATE OR REPLACE VIEW` sin repetir `WITH (security_invoker = true)` RESETEA las opciones**: la vista pasa a correr como su dueño y saltea el RLS. No avisa nada. Verificar `reloptions` después de cada replace.
+   2. **PostgREST corta en 1000 filas por defecto.** Cualquier agregado (`min`, `max`, `sum`) calculado en el cliente sobre una tabla que crece se rompe en silencio en cuanto pasa ese umbral: el resultado sale de un subconjunto arbitrario, sin error. **Los agregados van en la vista** — es por esto que `v_stock_por_lote` trae `desde`.
+   3. **No codificar contra una columna que alguien dio por creada.** Verificar con `pg_get_viewdef` o `information_schema` ANTES. En esta fase eso evitó romper el detalle por lote: el SQL se había pasado para correr y no se había corrido, y el `.select()` habría devuelto un 400 de PostgREST.
+
+   *De metodología de tests:*
+   4. **Un harness anclado a `HEAD` deja de probar nada en cuanto el cambio se commitea** —el "antes" pasa a ser el propio cambio— y sigue en verde. Anclarlo a un commit FIJO.
+   5. **`indexOf` devuelve −1**, así que una comparación de orden (`indexOf(a) < indexOf(b)`) da verdadera justo cuando el bloque que buscabas desapareció, que es exactamente el caso que la assertion tenía que detectar. Verificar primero que los dos existan.
+   6. **Una assertion contra el código fuente matchea también los comentarios**, incluido el que explica por qué se sacó aquello que estás afirmando que ya no está. Pelar comentarios antes de comparar.
 
 ### Planificados
 1. **Materia Prima — lo que falta**: la pantalla de edición de un ingreso (la columna `editado_en` y su trigger ya existen, esperándola) y el gateo de UI por tareas dentro del módulo. El alta/edición del catálogo de insumos **ya no es de este módulo**: se mudó a Stock.
