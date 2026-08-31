@@ -951,6 +951,16 @@
     .rec-delta--falta { color: var(--bordo-oscuro); }
     .rec-delta[hidden] { display: none; }
 
+    /* Lo que no se pudo leer se dice en la fila, no se descarta callado. */
+    .rec-error {
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--bordo-oscuro);
+      min-width: 0;
+    }
+    .rec-error[hidden] { display: none; }
+
     .rec-obs-toggle {
       align-self: flex-start;
       background: none;
@@ -1337,7 +1347,7 @@
 
         <div class="campo-stock">
           <label for="campo-tolerancia">Tolerancia de merma % <span class="campo-stock__opcional">opcional</span></label>
-          <input type="number" id="campo-tolerancia" min="0" max="100" step="0.01" placeholder="Vacío = control estricto" autocomplete="off">
+          <input type="text" inputmode="decimal" id="campo-tolerancia" placeholder="Vacío = control estricto" autocomplete="off">
           <div class="campo-stock__ayuda">
             Desvío aceptable entre el stock del sistema y el conteo físico. Dejalo vacío para control estricto. Usalo en insumos que se dosifican y nunca cierran exacto (por ejemplo lecitina: 300 g por masa de un tacho de 215 kg).
           </div>
@@ -1678,6 +1688,64 @@
     function formatearCantidadStock(n, unidad) {
       const num = Number(n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 3 })
       return `${num} ${unidad || ''}`.trim()
+    }
+
+    // Unidades que se cuentan de a enteros. Un separador ahí NO es un decimal:
+    // es el de miles. "47.000" cajas leído como 47 es un error de mil veces, y
+    // en un recuento inicial —donde TODO da diferencia— un delta enorme no
+    // llama la atención de nadie. Hoy son 32 de los 51 insumos del catálogo,
+    // justo los de mayor volumen, que son donde el separador es más tentador.
+    // OJO: una unidad contable nueva ("cajas", "bolsas") hay que sumarla acá o
+    // pierde esta protección.
+    const UNIDADES_ENTERAS = new Set(['un', 'un.', 'u', 'uni', 'unid', 'unidad', 'unidades'])
+
+    function esUnidadEntera(unidad) {
+      return UNIDADES_ENTERAS.has(normalizar(unidad))
+    }
+
+    // El teclado numérico de un celular en es-AR ofrece COMA, y type="number"
+    // DESCARTA esa tecla: al escribir "8,5" el campo queda en "85" —los dígitos
+    // se pegan— sin error, sin volver al guion y sin nada raro en pantalla. La
+    // coma se pierde ANTES de llegar al JS, así que ninguna normalización la
+    // recupera: los campos numéricos van type="text" + inputmode="decimal", que
+    // mantiene el teclado numérico del celular y deja pasar la coma.
+    // El criterio de separador es el mismo que parsearTolerancia() ya usaba
+    // para el Excel — hasta ahora los dos caminos de la tolerancia daban
+    // resultados distintos para el mismo valor tipeado.
+    //
+    // `permitirNegativos` existe para el campo de AJUSTE de la segunda parte de
+    // la fase 3, que lleva la cantidad CON SIGNO (negativa cuando falta
+    // mercadería). Va en false por defecto: en un recuento no se cuenta menos
+    // que nada, y la baja manda siempre positivo porque la RPC la guarda en
+    // negativo. Sin el parámetro, ese campo rechazaría todo lo negativo y
+    // parecería que un ajuste solo puede sumar.
+    function parsearCantidad(crudo, { permitirNegativos = false, unidad = '' } = {}) {
+      let texto = String(crudo ?? '').trim().replace(/\s/g, '')
+      if (texto === '') return null          // vacío = el guion, nunca un cero
+
+      let negativo = false
+      if (texto.startsWith('-')) {
+        if (!permitirNegativos) return null
+        negativo = true
+        texto = texto.slice(1)
+      }
+
+      const patron = esUnidadEntera(unidad)
+        ? /^\d+$/                            // ni decimal ni separador de miles
+        : /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/    // UN separador, siempre decimal
+      if (!patron.test(texto)) return null
+
+      const n = Number(texto.replace(',', '.'))
+      if (!Number.isFinite(n)) return null
+      return negativo ? -n : n
+    }
+
+    // Para volver a pintar en el input un número ya guardado. Con coma, que es
+    // lo que la persona tipeó, y SIN separador de miles: formatearCantidadStock
+    // pondría "1.234,5", que al releerlo tiene dos separadores y el parser
+    // rechazaría — el campo se vaciaría solo al re-renderizar la lista.
+    function textoParaInput(n) {
+      return n === null || n === undefined ? '' : String(n).replace('.', ',')
     }
 
     function textoLotes(n) {
@@ -2260,6 +2328,7 @@
         // El guion: null = todavía sin contar. Nunca cero por defecto.
         cantidad_contada: i.cantidad_contada === null ? null : Number(i.cantidad_contada),
         observacion: i.observacion ?? '',
+        errorCantidad: null,
         nombre: i.insumos?.nombre ?? '(insumo desconocido)',
         marca: i.insumos?.marca ?? '',
         unidad_medida: i.insumos?.unidad_medida ?? '',
@@ -2369,14 +2438,16 @@
               <span class="rec-fila__sistema">Sistema: ${esc(formatearCantidadStock(saldoDe(i), i.unidad_medida))}</span>
             </div>
             <div class="rec-fila__linea">
-              <input type="number" class="rec-input" inputmode="decimal" step="any" min="0"
+              <input type="text" class="rec-input" inputmode="decimal"
                      data-cantidad="${esc(i.id)}"
-                     value="${contada ? i.cantidad_contada : ''}"
+                     value="${esc(textoParaInput(i.cantidad_contada))}"
                      placeholder="—"
+                     autocomplete="off"
                      aria-label="Cantidad contada de ${esc(i.nombre)}">
               ${i.unidad_medida ? `<span class="rec-unidad">${esc(i.unidad_medida)}</span>` : ''}
               <span class="rec-delta ${delta?.falta ? 'rec-delta--falta' : ''}" ${delta ? '' : 'hidden'}>${delta ? esc(delta.texto) : ''}</span>
             </div>
+            <div class="rec-error" data-error="${esc(i.id)}" ${i.errorCantidad ? '' : 'hidden'}>${esc(i.errorCantidad || '')}</div>
             <button type="button" class="rec-obs-toggle" data-toggle-obs="${esc(i.id)}" ${obsAbierta ? 'hidden' : ''}>+ Observación</button>
             <input type="text" class="rec-obs" data-obs="${esc(i.id)}" value="${esc(i.observacion)}"
                    placeholder="Por qué hay diferencia (opcional)" ${obsAbierta ? '' : 'hidden'}
@@ -2440,6 +2511,11 @@
         span.textContent = delta ? delta.texto : ''
         span.classList.toggle('rec-delta--falta', !!delta?.falta)
       }
+      const err = fila.querySelector('.rec-error')
+      if (err) {
+        err.hidden = !item.errorCantidad
+        err.textContent = item.errorCantidad || ''
+      }
     }
 
     // ── Guardado automático ────────────────────────────────────────────────
@@ -2450,8 +2526,15 @@
       const crudo = String(valor).trim()
       // Vacío vuelve al guion: guardar_conteo acepta '' y lo escribe como
       // null, así que un ítem mal cargado se puede des-contar.
-      item.cantidad_contada = crudo === '' ? null : Number(crudo)
-      if (Number.isNaN(item.cantidad_contada)) item.cantidad_contada = null
+      item.cantidad_contada = parsearCantidad(crudo, { unidad: item.unidad_medida })
+      // Lo que no se pudo leer NO se guarda como número, y encima se dice por
+      // qué. Sin el mensaje, el campo volvería al guion en silencio y la
+      // persona no tendría forma de saber que su número no entró.
+      item.errorCantidad = (crudo !== '' && item.cantidad_contada === null)
+        ? (esUnidadEntera(item.unidad_medida)
+            ? 'Se cuenta por unidades enteras: escribilo sin puntos ni comas.'
+            : 'Escribí un número, con coma para los decimales (8,5). Sin separador de miles.')
+        : null
       estado.sucios.add(itemId)
       marcarGuardado('pendiente')
       refrescarFilaRec(itemId)
@@ -2977,8 +3060,13 @@
 
       let tolerancia = null
       if (crudo !== '') {
-        tolerancia = Number(crudo)
-        if (!Number.isFinite(tolerancia)) {
+        // Por el mismo helper que la cantidad del recuento: este campo también
+        // era type="number" y se comía la coma, así que "0,5" entraba como 5 —
+        // diez veces la tolerancia real. Y quedaba incoherente con el import de
+        // Excel, que pasa por parsearTolerancia() y sí acepta la coma: el mismo
+        // valor daba dos resultados según por dónde se cargara.
+        tolerancia = parsearCantidad(crudo, { permitirNegativos: true })
+        if (tolerancia === null) {
           marcarError('error-tolerancia', 'La tolerancia tiene que ser un número.')
           ok = false
         } else if (tolerancia < 0 || tolerancia > 100) {
