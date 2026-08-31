@@ -223,7 +223,7 @@
 
     /* Alguien consumió mercadería que nunca se cargó. Tiene que saltar en una
        lista larga, en bordó (el rojo es el acento de Accesos). */
-    .chip-falta-remito {
+    .chip-saldo-negativo {
       display: inline-block;
       font-size: 0.65625rem;
       font-weight: 800;
@@ -253,6 +253,7 @@
       margin-bottom: 0.875rem;
       min-width: 0;
     }
+    .barra-acciones[hidden] { display: none; }
     .buscador-stock {
       display: block;
       width: 100%;
@@ -1002,6 +1003,7 @@
       margin-top: 1.125rem;
       min-width: 0;
     }
+    .rec-acciones[hidden] { display: none; }
     .rec-nota-cierre {
       font-size: 0.75rem;
       line-height: 1.45;
@@ -1118,6 +1120,225 @@
     }
     .rec-aviso[hidden] { display: none; }
     .rec-aviso strong { font-weight: 700; }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       HISTORIAL DE RECUENTOS Y MOVIMIENTOS PUNTUALES
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .hist-volver {
+      display: inline-block;
+      margin-bottom: 0.875rem;
+      padding: 0.4375rem 0.75rem;
+      border: none;
+      border-radius: 999px;
+      background: none;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+    .hist-volver:hover { background: var(--color-superficie); color: var(--color-texto); }
+
+    .hist-fila { align-items: flex-start; flex-direction: column; gap: 0.3125rem; }
+    .hist-fila--anulado { opacity: 0.62; }
+    .hist-fila__linea {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.375rem 0.625rem;
+      min-width: 0;
+      width: 100%;
+    }
+    .hist-fila__unidad {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .hist-fila__meta {
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+    .hist-fila__motivo {
+      font-size: 0.78125rem;
+      line-height: 1.4;
+      color: var(--bordo-oscuro);
+      overflow-wrap: anywhere;
+    }
+
+    .hist-badge {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+    }
+    .hist-badge--cerrado { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .hist-badge--abierto { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+    .hist-badge--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+
+    .hist-cabecera {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 18px;
+      box-shadow: var(--sombra-suave);
+      padding: 1rem 1.125rem;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .hist-cabecera__titulo {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+      overflow-wrap: anywhere;
+    }
+    .hist-cabecera__dato {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+    .hist-cabecera__dato strong { color: var(--color-texto); }
+
+    .hist-titulo-bloque {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin: 1.125rem 0 0.5rem;
+    }
+
+    /* Fila del detalle congelado. Los tres números salen de la tabla tal como
+       los dejó cerrar_recuento: no se recalcula nada. */
+    .hist-item { align-items: flex-start; flex-direction: column; gap: 0.3125rem; cursor: default; }
+    .hist-item:hover { box-shadow: none; transform: none; }
+    .hist-item__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.3;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .hist-cifras {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem 1.125rem;
+      min-width: 0;
+      width: 100%;
+    }
+    .hist-cifra { min-width: 0; }
+    .hist-cifra__etiqueta {
+      display: block;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .hist-cifra__valor {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .hist-cifra__valor--falta { color: var(--bordo-oscuro); }
+    .hist-cifra__valor--sobra { color: var(--verde-oscuro); }
+    .hist-obs {
+      font-size: 0.78125rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Modal de movimiento ─────────────────────────────────────────────── */
+
+    .mov-unidad-fija {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      padding: 0.5rem 0;
+      overflow-wrap: anywhere;
+    }
+    .mov-unidad-fija[hidden] { display: none; }
+
+    .mov-elegido {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.625rem;
+      background: var(--verde-suave);
+      border-radius: 10px;
+      padding: 0.5rem 0.6875rem;
+      margin-top: 0.4375rem;
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--verde-oscuro);
+      min-width: 0;
+    }
+    .mov-elegido[hidden] { display: none; }
+    .mov-elegido__quitar {
+      background: none;
+      border: none;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      color: var(--verde-oscuro);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .mov-saldo {
+      background: var(--color-superficie);
+      border-radius: 12px;
+      padding: 0.6875rem 0.875rem;
+      margin-bottom: 0.875rem;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--color-texto);
+      min-width: 0;
+    }
+    .mov-saldo[hidden] { display: none; }
+    .mov-saldo strong { font-weight: 700; }
+
+    .mov-signo {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .mov-signo__btn {
+      flex: 1 1 9rem;
+      min-width: 0;
+      padding: 0.6875rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+    /* Variante DESPUÉS de su base, siempre: misma especificidad, decide el orden. */
+    .mov-signo__btn--activo {
+      border-color: var(--verde);
+      background: var(--verde-suave);
+      color: var(--verde-oscuro);
+    }
+
+    /* El aviso informativo reusa la caja de .rec-aviso pero no es una alerta:
+       el bordó queda para lo destructivo y lo irreversible. */
+    .rec-aviso--info {
+      background: var(--color-superficie);
+      border-left-color: var(--color-borde);
+      color: var(--color-texto);
+    }
   </style>
 </head>
 
@@ -1155,6 +1376,11 @@
       <div class="chips-unidad" id="chips-unidad-stock"></div>
 
       <input type="search" class="buscador-stock" id="buscador-stock-actual" placeholder="Buscar por nombre o marca…" autocomplete="off">
+
+      <div class="barra-acciones" id="acciones-stock" hidden>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-registrar-movimiento" hidden>Registrar movimiento</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
+      </div>
 
       <div class="lista-contenido" id="lista-stock"></div>
 
@@ -1244,6 +1470,51 @@
 
     </div><!-- /vista-recuento -->
 
+    <!-- ══ VISTA: HISTORIAL DE RECUENTOS ═════════════════════════════════
+         Drill-down de la vista de Stock, no una cuarta pestaña: cuatro no
+         entran en 375px, y el historial es `stock:ver`, la misma tarea que
+         gobierna esa pestaña.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="vista-stock" id="vista-historial" hidden>
+
+      <button type="button" class="hist-volver" id="btn-volver-de-historial">‹ Volver al stock</button>
+
+      <!-- ── Listado ────────────────────────────────────────────────────── -->
+      <div class="rec-paso" id="hist-paso-lista" hidden>
+        <div class="chips-unidad" id="chips-unidad-historial"></div>
+        <div class="lista-contenido" id="lista-historial"></div>
+        <div class="estado-vacio-stock" id="hist-cargando">Cargando recuentos…</div>
+        <div class="estado-vacio-stock" id="hist-vacio" hidden></div>
+      </div>
+
+      <!-- ── Detalle congelado ──────────────────────────────────────────── -->
+      <div class="rec-paso" id="hist-paso-detalle" hidden>
+        <button type="button" class="hist-volver" id="btn-volver-a-lista">‹ Volver al historial</button>
+
+        <div class="hist-cabecera" id="hist-detalle-cabecera"></div>
+
+        <div class="rec-aviso" id="hist-aviso-estado" hidden></div>
+
+        <div class="hist-titulo-bloque">Lo que se contó</div>
+        <div class="lista-contenido" id="hist-detalle-items"></div>
+        <div class="estado-vacio-stock" id="hist-detalle-cargando">Cargando el detalle…</div>
+
+        <div id="hist-bloque-ajustes" hidden>
+          <div class="hist-titulo-bloque">Ajustes de este recuento</div>
+          <div class="lista-contenido" id="hist-lista-ajustes"></div>
+        </div>
+
+        <div class="rec-acciones" id="hist-acciones-detalle" hidden>
+          <button type="button" class="btn-stock btn-stock--chico" id="btn-ajuste-vinculado">Ajuste vinculado a este recuento</button>
+        </div>
+        <div class="rec-nota-cierre" id="hist-nota-vinculado" hidden>
+          Un ajuste vinculado queda listado acá arriba, así que la corrección se ve junto al conteo en vez de quedar suelta en el libro.
+        </div>
+      </div>
+
+    </div><!-- /vista-historial -->
+
+
 
   </div><!-- /contenedor -->
 
@@ -1273,6 +1544,17 @@
 
       <div id="lotes-sin-lote" class="item-sin-lote" hidden>
         Este insumo no lleva lote, así que no hay desglose: el total de arriba es todo.
+      </div>
+
+      <!-- El chip de la lista dice solo "Saldo negativo" porque la pantalla no
+           sabe cuál de las dos causas fue. Acá hay lugar para nombrarlas. -->
+      <div id="lotes-aviso-negativo" class="rec-aviso" hidden>
+        El saldo es <strong>negativo</strong>: o se consumió mercadería que nunca se cargó —falta un remito— o se dio de baja más de lo que el sistema tenía registrado.
+      </div>
+
+      <div class="rec-acciones" id="lotes-acciones" hidden>
+        <button type="button" class="btn-stock btn-stock--alerta btn-stock--chico" id="btn-lotes-baja" hidden>Dar de baja</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-lotes-ajuste" hidden>Ajustar</button>
       </div>
     </div>
   </div><!-- /modal-stock-lotes -->
@@ -1570,6 +1852,98 @@
   </div><!-- /modal-anular-recuento -->
 
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — MOVIMIENTO PUNTUAL (ajuste o baja)
+       Una pantalla, dos modos. Tres entradas: suelta desde Stock, precargada
+       desde el detalle por lote, y precargada + VINCULADA desde el detalle de
+       un recuento cerrado.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-movimiento" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-mov></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-mov aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo" id="mov-titulo">Registrar movimiento</h2>
+
+      <!-- Solo se dibuja si la persona puede usar los DOS modos. -->
+      <div class="pestanas-stock" id="mov-modos" hidden>
+        <button type="button" class="pestana-stock" data-modo="ajuste">Ajuste</button>
+        <button type="button" class="pestana-stock" data-modo="baja">Baja</button>
+      </div>
+
+      <div class="campo-stock__ayuda" id="mov-explicacion"></div>
+
+      <!-- Vinculado a un recuento: la unidad viene fija y se dice de dónde. -->
+      <div class="rec-aviso rec-aviso--info" id="mov-vinculo" hidden></div>
+
+      <!-- Chips solo en la entrada suelta. Cambiar de modo cambia las unidades
+           disponibles: son alcances distintos (ajustar_inventario vs dar_baja). -->
+      <div class="campo-stock" id="mov-campo-unidad">
+        <label>Unidad de negocio</label>
+        <div class="chips-unidad" id="mov-chips-unidad"></div>
+        <div class="mov-unidad-fija" id="mov-unidad-fija" hidden></div>
+        <div class="campo-stock__error" id="mov-error-unidad" hidden></div>
+      </div>
+
+      <div class="campo-stock">
+        <label for="mov-buscar-insumo">Insumo</label>
+        <input type="search" id="mov-buscar-insumo" placeholder="Buscar en el catálogo…" autocomplete="off">
+        <div class="mov-elegido" id="mov-insumo-elegido" hidden></div>
+        <div class="campo-stock__error" id="mov-error-insumo" hidden></div>
+      </div>
+
+      <div class="rec-sugerencias" id="mov-sugerencias" hidden></div>
+
+      <div class="campo-stock" id="mov-campo-lote" hidden>
+        <label for="mov-lote">Lote</label>
+        <!-- Los lotes CON SALDO se sugieren, pero el campo es libre: puede
+             haber entrado mercadería que todavía no se cargó. -->
+        <input type="text" id="mov-lote" list="mov-lotes-existentes" placeholder="Como figura en la etiqueta" autocomplete="off">
+        <datalist id="mov-lotes-existentes"></datalist>
+        <div class="campo-stock__ayuda" id="mov-ayuda-lote"></div>
+        <div class="campo-stock__error" id="mov-error-lote" hidden></div>
+      </div>
+
+      <div class="mov-saldo" id="mov-saldo" hidden></div>
+
+      <!-- El SIGNO va en dos botones y no como un menos tipeado: el teclado
+           `inputmode="decimal"` de un celular NO trae la tecla del signo, así
+           que la persona escribiría 12 y el ajuste sumaría cuando tenía que
+           restar. Es el modo de falla simétrico del bug de la coma. Y aparte
+           "Apareció / Falta" se entiende sin traducir que un menos borra
+           stock. -->
+      <div class="campo-stock" id="mov-campo-signo" hidden>
+        <label>¿Qué pasó?</label>
+        <div class="mov-signo">
+          <button type="button" class="mov-signo__btn" data-signo="1">Apareció mercadería</button>
+          <button type="button" class="mov-signo__btn" data-signo="-1">Falta mercadería</button>
+        </div>
+        <div class="campo-stock__error" id="mov-error-signo" hidden></div>
+      </div>
+
+      <div class="campo-stock">
+        <label for="mov-cantidad" id="mov-label-cantidad">Cantidad</label>
+        <input type="text" inputmode="decimal" id="mov-cantidad" placeholder="0" autocomplete="off">
+        <div class="campo-stock__error" id="mov-error-cantidad" hidden></div>
+      </div>
+
+      <div class="campo-stock">
+        <label for="mov-motivo">Motivo</label>
+        <input type="text" id="mov-motivo" placeholder="Ej: rotura en el depósito" autocomplete="off">
+        <div class="campo-stock__ayuda">Queda en el libro para siempre. Es lo que se va a leer cuando alguien pregunte por qué cambió el stock.</div>
+        <div class="campo-stock__error" id="mov-error-motivo" hidden></div>
+      </div>
+
+      <div class="rec-aviso" id="mov-aviso-negativo" hidden></div>
+
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-mov>Cancelar</button>
+        <button type="button" class="btn-stock btn-stock--primario" id="btn-confirmar-mov">Registrar</button>
+      </div>
+    </div>
+  </div><!-- /modal-movimiento -->
+
+
+
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
@@ -1670,6 +2044,25 @@
       timerGuardado: null,
       insumoAgregar: null,
       agregados: 0,
+
+      // ── Historial de recuentos ──────────────────────────────────────
+      unidadHist: '',
+      recuentos: [],
+      recuentoDetalle: null,
+      itemsDetalle: [],
+      ajustesDetalle: [],
+      nombresAjuste: new Map(),
+
+      // ── Movimientos puntuales ───────────────────────────────────────
+      // Las unidades de BAJA salen de v_mis_unidades_baja y NO de la de
+      // ajuste: dar_baja y ajustar_inventario son tareas distintas con
+      // alcances distintos.
+      unidadesBaja: [],
+      mov: null,           // { modo, unidadId, unidadFija, insumo, signo, recuento }
+      lotesMov: [],
+      // Qué insumo/unidad tiene abierto el modal de lotes, para poder
+      // refrescarlo después de registrar un movimiento.
+      loteAbierto: null,
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -2075,7 +2468,7 @@
                 <span class="fila-stock__cantidad ${negativo ? 'fila-stock__cantidad--negativa' : ''}">${esc(formatearCantidadStock(f.cantidad_total, f.unidad_medida))}</span>
                 ${lotes ? `<span>${esc(lotes)}</span>` : ''}
                 <span class="chip-tipo chip-tipo--${f.tipo}">${TIPOS[f.tipo] ?? esc(f.tipo)}</span>
-                ${negativo ? '<span class="chip-falta-remito" title="El saldo es negativo: se consumió mercadería que nunca se cargó.">Falta cargar un remito</span>' : ''}
+                ${negativo ? '<span class="chip-saldo-negativo">Saldo negativo</span>' : ''}
               </div>
             </div>
           </div>`
@@ -2093,6 +2486,16 @@
     async function abrirLotes(insumoId, unidadId) {
       const fila = estado.stock.find(f => f.insumo_id === insumoId && f.unidad_negocio_id === unidadId)
       if (!fila) return
+      estado.loteAbierto = { insumoId, unidadId }
+
+      // Los dos botones de movimiento, cada uno contra SU alcance: se ofrecen
+      // solo si esta unidad está en la vista del modo que corresponde.
+      const puedeAj = estado.unidadesAjuste.some(u => u.id === unidadId)
+      const puedeBa = estado.unidadesBaja.some(u => u.id === unidadId)
+      document.getElementById('btn-lotes-ajuste').hidden = !puedeAj
+      document.getElementById('btn-lotes-baja').hidden = !puedeBa
+      document.getElementById('lotes-acciones').hidden = !(puedeAj || puedeBa)
+      document.getElementById('lotes-aviso-negativo').hidden = Number(fila.cantidad_total) >= 0
 
       document.getElementById('lotes-nombre').textContent = fila.insumo_nombre
       const marcaEl = document.getElementById('lotes-marca')
@@ -2913,6 +3316,673 @@
       await cargarRecuento()
     }
 
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HISTORIAL DE RECUENTOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const BADGE_RECUENTO = {
+      cerrado: { clase: 'hist-badge--cerrado', texto: 'Cerrado' },
+      abierto: { clase: 'hist-badge--abierto', texto: 'En curso' },
+      anulado: { clase: 'hist-badge--anulado', texto: 'Anulado' },
+    }
+
+    async function abrirHistorial() {
+      mostrarVista('historial')
+      document.getElementById('hist-paso-detalle').hidden = true
+      document.getElementById('hist-paso-lista').hidden = false
+      await cargarHistorial()
+    }
+
+    async function cargarHistorial() {
+      const cargandoEl = document.getElementById('hist-cargando')
+      cargandoEl.hidden = false
+
+      const { data, error } = await supabase
+        .from('v_recuentos')
+        .select('id, unidad_negocio_id, unidad_nombre, estado, abierto_en, cerrado_en, motivo_anulacion, abierto_por_nombre, cerrado_por_nombre, items, con_diferencia')
+        .order('abierto_en', { ascending: false })
+
+      cargandoEl.hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudo cargar el historial de recuentos.')
+        return
+      }
+      estado.recuentos = data ?? []
+      renderizarChipsUnidadHistorial()
+      renderizarHistorial()
+    }
+
+    // Los chips salen de v_mis_unidades_stock, que es la misma tarea que gatea
+    // esta pantalla. Se cargan en cargarStock().
+    function renderizarChipsUnidadHistorial() {
+      const cont = document.getElementById('chips-unidad-historial')
+      cont.hidden = estado.unidadesStock.length < 2
+      if (cont.hidden) { cont.innerHTML = ''; return }
+
+      const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidadesStock]
+      cont.innerHTML = chips.map(u => `
+        <button type="button" class="chip-unidad ${estado.unidadHist === u.id ? 'chip-unidad--activa' : ''}" data-unidad-hist="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('[data-unidad-hist]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.unidadHist = btn.dataset.unidadHist
+          renderizarChipsUnidadHistorial()
+          renderizarHistorial()
+        })
+      })
+    }
+
+    function renderizarHistorial() {
+      const listaEl = document.getElementById('lista-historial')
+      const vacioEl = document.getElementById('hist-vacio')
+      const filas = estado.recuentos.filter(r =>
+        !estado.unidadHist || r.unidad_negocio_id === estado.unidadHist)
+
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        vacioEl.textContent = estado.recuentos.length
+          ? 'No hay recuentos en esa unidad.'
+          : 'Todavía no se hizo ningún recuento.'
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = filas.map(r => {
+        const badge = BADGE_RECUENTO[r.estado] ?? { clase: '', texto: r.estado }
+        // `con_diferencia` SOLO significa algo en los cerrados: en un abierto o
+        // un anulado la columna `diferencia` está en null, así que la vista
+        // devuelve 0 siempre. Mostrarlo sería un número que parece un resultado
+        // y en realidad es ausencia de dato.
+        const dif = r.estado === 'cerrado'
+          ? ` · ${r.con_diferencia} con diferencia`
+          : ''
+        return `
+          <div class="tarjeta-lista hist-fila ${r.estado === 'anulado' ? 'hist-fila--anulado' : ''}" data-recuento="${esc(r.id)}">
+            <div class="hist-fila__linea">
+              <span class="hist-fila__unidad">${esc(r.unidad_nombre || '')}</span>
+              <span class="hist-badge ${badge.clase}">${esc(badge.texto)}</span>
+            </div>
+            <div class="hist-fila__meta">Abierto por ${esc(r.abierto_por_nombre || 'alguien')} el ${esc(formatearMomento(r.abierto_en))}</div>
+            ${r.estado === 'cerrado' && r.cerrado_en
+              ? `<div class="hist-fila__meta">Cerrado por ${esc(r.cerrado_por_nombre || 'alguien')} el ${esc(formatearMomento(r.cerrado_en))}</div>` : ''}
+            <div class="hist-fila__meta">${r.items} ${r.items === 1 ? 'ítem' : 'ítems'}${esc(dif)}</div>
+            ${r.estado === 'anulado' && r.motivo_anulacion
+              ? `<div class="hist-fila__motivo">Motivo: ${esc(r.motivo_anulacion)}</div>` : ''}
+          </div>`
+      }).join('')
+
+      listaEl.querySelectorAll('[data-recuento]').forEach(card => {
+        card.addEventListener('click', () => abrirDetalleRecuento(card.dataset.recuento))
+      })
+    }
+
+    // ── Detalle CONGELADO ──────────────────────────────────────────────────
+
+    async function abrirDetalleRecuento(recuentoId) {
+      const r = estado.recuentos.find(x => x.id === recuentoId)
+      if (!r) return
+      estado.recuentoDetalle = r
+      estado.itemsDetalle = []
+      estado.ajustesDetalle = []
+
+      document.getElementById('hist-paso-lista').hidden = true
+      document.getElementById('hist-paso-detalle').hidden = false
+      document.getElementById('hist-detalle-cargando').hidden = false
+      document.getElementById('hist-bloque-ajustes').hidden = true
+      document.getElementById('hist-lista-ajustes').innerHTML = ''
+      document.getElementById('hist-detalle-items').innerHTML = ''
+      window.scrollTo({ top: 0, behavior: 'auto' })
+
+      renderizarCabeceraRecuento()
+      await cargarDetalleRecuento()
+    }
+
+    async function cargarDetalleRecuento() {
+      const r = estado.recuentoDetalle
+      // El embed a insumos es inequívoco en las dos tablas: cada una tiene UNA
+      // sola FK a `insumos`.
+      const [items, ajustes] = await Promise.all([
+        supabase.from('stock_recuento_items')
+          .select('id, lote, cantidad_contada, cantidad_sistema, diferencia, observacion, insumos(nombre, marca, unidad_medida)')
+          .eq('recuento_id', r.id),
+        supabase.from('stock_movimientos')
+          .select('id, lote, cantidad, motivo, fecha, created_at, empleado_id, insumos(nombre, marca, unidad_medida)')
+          .eq('recuento_id', r.id)
+          .order('created_at'),
+      ])
+
+      document.getElementById('hist-detalle-cargando').hidden = true
+
+      if (items.error || ajustes.error) {
+        console.error(items.error || ajustes.error)
+        mostrarError('No se pudo cargar el detalle del recuento.')
+        return
+      }
+
+      estado.itemsDetalle = items.data ?? []
+      estado.ajustesDetalle = ajustes.data ?? []
+
+      // Los nombres se resuelven contra v_empleados_publico y NUNCA con un
+      // embed a `empleados`: el RLS de esa tabla solo deja leer la fila propia,
+      // así que un embed dejaría todos los nombres en blanco menos el tuyo.
+      const ids = [...new Set(estado.ajustesDetalle.map(a => a.empleado_id).filter(Boolean))]
+      estado.nombresAjuste = new Map()
+      if (ids.length) {
+        const { data: emps } = await supabase
+          .from('v_empleados_publico').select('id, nombre').in('id', ids)
+        estado.nombresAjuste = new Map((emps ?? []).map(e => [e.id, e.nombre]))
+      }
+
+      renderizarDetalleRecuento()
+      renderizarAjustesRecuento()
+    }
+
+    function renderizarCabeceraRecuento() {
+      const r = estado.recuentoDetalle
+      const badge = BADGE_RECUENTO[r.estado] ?? { clase: '', texto: r.estado }
+      document.getElementById('hist-detalle-cabecera').innerHTML = `
+        <div class="hist-cabecera__titulo">${esc(r.unidad_nombre || '')} <span class="hist-badge ${badge.clase}">${esc(badge.texto)}</span></div>
+        <div class="hist-cabecera__dato">Abierto por <strong>${esc(r.abierto_por_nombre || 'alguien')}</strong> el ${esc(formatearMomento(r.abierto_en))}</div>
+        ${r.estado === 'cerrado' && r.cerrado_en
+          ? `<div class="hist-cabecera__dato">Cerrado por <strong>${esc(r.cerrado_por_nombre || 'alguien')}</strong> el ${esc(formatearMomento(r.cerrado_en))}</div>` : ''}
+        <div class="hist-cabecera__dato">${r.items} ${r.items === 1 ? 'ítem' : 'ítems'}${r.estado === 'cerrado' ? ` · <strong>${r.con_diferencia}</strong> con diferencia` : ''}</div>`
+
+      // Los tres números congelados solo existen en los cerrados: en un abierto
+      // o un anulado, cantidad_sistema y diferencia quedaron en null porque las
+      // llena cerrar_recuento. Se dice por qué, en vez de mostrar celdas vacías.
+      const aviso = document.getElementById('hist-aviso-estado')
+      if (r.estado === 'cerrado') {
+        aviso.hidden = true
+      } else {
+        aviso.hidden = false
+        aviso.innerHTML = r.estado === 'anulado'
+          ? `Este recuento se <strong>anuló</strong> y no generó ningún ajuste: el stock quedó como estaba. Se ve lo que se había contado hasta ese momento, sin comparación contra el sistema — esa comparación se calcula al cerrar, y este nunca se cerró.${r.motivo_anulacion ? `<br><br>Motivo: ${esc(r.motivo_anulacion)}` : ''}`
+          : 'Este recuento <strong>todavía está en curso</strong>. Se ve lo contado hasta ahora, sin comparación contra el sistema: esa comparación se congela recién al cerrar.'
+      }
+    }
+
+    function renderizarDetalleRecuento() {
+      const r = estado.recuentoDetalle
+      const cerrado = r.estado === 'cerrado'
+      const listaEl = document.getElementById('hist-detalle-items')
+
+      // En los cerrados, primero lo que más se desvió. En los demás no hay
+      // diferencia que ordenar, así que va alfabético.
+      const filas = [...estado.itemsDetalle].sort((a, b) => {
+        if (cerrado) {
+          const da = Math.abs(Number(a.diferencia) || 0)
+          const db = Math.abs(Number(b.diferencia) || 0)
+          if (da !== db) return db - da
+        }
+        const n = (a.insumos?.nombre || '').localeCompare(b.insumos?.nombre || '', 'es', { sensitivity: 'base' })
+        if (n !== 0) return n
+        return (a.lote || '').localeCompare(b.lote || '', 'es', { sensitivity: 'base' })
+      })
+
+      if (!filas.length) {
+        listaEl.innerHTML = '<div class="estado-vacio-stock">Este recuento no tiene ítems.</div>'
+        return
+      }
+
+      listaEl.innerHTML = filas.map(i => {
+        const u = i.insumos?.unidad_medida || ''
+        // NADA de esto se recalcula: los tres números salen de la tabla tal
+        // como los dejó cerrar_recuento. Es la foto de ese día, aunque el
+        // stock se haya seguido moviendo después.
+        const dif = i.diferencia === null || i.diferencia === undefined ? null : Number(i.diferencia)
+        const claseDif = dif === null || dif === 0 ? '' : (dif < 0 ? ' hist-cifra__valor--falta' : ' hist-cifra__valor--sobra')
+        const textoDif = dif === null ? '—'
+          : (dif === 0 ? 'Sin diferencia' : `${dif > 0 ? '+' : '−'}${formatearCantidadStock(Math.abs(dif), u)}`)
+        return `
+          <div class="tarjeta-lista hist-item">
+            <div class="hist-item__nombre">${esc(i.insumos?.nombre || '(insumo desconocido)')}</div>
+            <div class="hist-fila__meta">${esc([i.insumos?.marca, i.lote ? `Lote ${i.lote}` : ''].filter(Boolean).join(' · '))}</div>
+            <div class="hist-cifras">
+              <div class="hist-cifra">
+                <span class="hist-cifra__etiqueta">Contado</span>
+                <span class="hist-cifra__valor">${i.cantidad_contada === null ? '—' : esc(formatearCantidadStock(i.cantidad_contada, u))}</span>
+              </div>
+              ${cerrado ? `
+              <div class="hist-cifra">
+                <span class="hist-cifra__etiqueta">Sistema</span>
+                <span class="hist-cifra__valor">${i.cantidad_sistema === null ? '—' : esc(formatearCantidadStock(i.cantidad_sistema, u))}</span>
+              </div>
+              <div class="hist-cifra">
+                <span class="hist-cifra__etiqueta">Diferencia</span>
+                <span class="hist-cifra__valor${claseDif}">${esc(textoDif)}</span>
+              </div>` : ''}
+            </div>
+            ${i.observacion ? `<div class="hist-obs">${esc(i.observacion)}</div>` : ''}
+          </div>`
+      }).join('')
+    }
+
+    function renderizarAjustesRecuento() {
+      const r = estado.recuentoDetalle
+      const bloque = document.getElementById('hist-bloque-ajustes')
+      const listaEl = document.getElementById('hist-lista-ajustes')
+
+      // Botón de ajuste vinculado: solo en cerrados y solo con la tarea en ESA
+      // unidad. v_mis_unidades_ajuste ya resolvió el alcance del lado del
+      // servidor, así que alcanza con preguntar si la unidad está en la lista.
+      const puedeVincular = r.estado === 'cerrado' &&
+        estado.unidadesAjuste.some(u => u.id === r.unidad_negocio_id)
+      document.getElementById('hist-acciones-detalle').hidden = !puedeVincular
+      document.getElementById('hist-nota-vinculado').hidden = !puedeVincular
+
+      if (!estado.ajustesDetalle.length) { bloque.hidden = true; return }
+      bloque.hidden = false
+
+      // SEPARAR LOS DEL CIERRE DE LAS CORRECCIONES POSTERIORES.
+      // Funciona porque `now()` en Postgres es el timestamp de la TRANSACCIÓN:
+      // cerrar_recuento fija `cerrado_en = now()` e inserta sus ajustes en esa
+      // misma transacción, con `created_at` default `now()`, así que los del
+      // cierre tienen created_at EXACTAMENTE IGUAL a cerrado_en y el `>` los
+      // excluye bien.
+      //
+      // DE QUÉ DEPENDE, y es lo que hay que no romper: si algún día se cambia
+      // el DEFAULT de stock_movimientos.created_at a `clock_timestamp()`, los
+      // ajustes del cierre pasarían a tener created_at unos microsegundos
+      // MAYOR que cerrado_en y esta pantalla los contaría a todos como
+      // correcciones posteriores. Sin ningún error, y a nadie se le va a
+      // ocurrir mirar el historial al tocar un default.
+      const cerradoEn = r.cerrado_en ? new Date(r.cerrado_en).getTime() : null
+      const esPosterior = (a) =>
+        cerradoEn !== null && new Date(a.created_at).getTime() > cerradoEn
+
+      const delCierre = estado.ajustesDetalle.filter(a => !esPosterior(a))
+      const posteriores = estado.ajustesDetalle.filter(esPosterior)
+
+      const fila = (a, posterior) => {
+        const u = a.insumos?.unidad_medida || ''
+        const n = Number(a.cantidad)
+        return `
+          <div class="tarjeta-lista hist-item">
+            <div class="hist-item__nombre">${esc(a.insumos?.nombre || '(insumo desconocido)')}</div>
+            <div class="hist-fila__meta">${esc([a.insumos?.marca, a.lote ? `Lote ${a.lote}` : ''].filter(Boolean).join(' · '))}</div>
+            <div class="hist-cifras">
+              <div class="hist-cifra">
+                <span class="hist-cifra__etiqueta">${posterior ? 'Corrección' : 'Ajuste del cierre'}</span>
+                <span class="hist-cifra__valor ${n < 0 ? 'hist-cifra__valor--falta' : 'hist-cifra__valor--sobra'}">${n > 0 ? '+' : '−'}${esc(formatearCantidadStock(Math.abs(n), u))}</span>
+              </div>
+              ${posterior ? `
+              <div class="hist-cifra">
+                <span class="hist-cifra__etiqueta">Quién</span>
+                <span class="hist-cifra__valor">${esc(estado.nombresAjuste.get(a.empleado_id) || '—')}</span>
+              </div>` : ''}
+            </div>
+            ${a.motivo ? `<div class="hist-obs">${esc(a.motivo)}</div>` : ''}
+          </div>`
+      }
+
+      listaEl.innerHTML =
+        (delCierre.length
+          ? `<div class="hist-fila__meta">El cierre generó ${delCierre.length} ${delCierre.length === 1 ? 'ajuste' : 'ajustes'}.</div>`
+            + delCierre.map(a => fila(a, false)).join('')
+          : '')
+        + (posteriores.length
+          ? `<div class="hist-fila__meta">Después hubo ${posteriores.length} ${posteriores.length === 1 ? 'corrección' : 'correcciones'}.</div>`
+            + posteriores.map(a => fila(a, true)).join('')
+          : '')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MOVIMIENTOS PUNTUALES — ajuste y baja
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const EXPLICACION_MODO = {
+      ajuste: 'Corrige el stock del sistema para que coincida con la realidad. Queda registrado con su motivo.',
+      baja: 'Descuenta mercadería que ya no está: rotura, vencimiento o merma. Siempre resta.',
+    }
+
+    function puedeDarBaja() { return tieneTarea('stock', 'dar_baja') }
+
+    function modosDisponibles() {
+      return [puedeAjustar() && 'ajuste', puedeDarBaja() && 'baja'].filter(Boolean)
+    }
+
+    // Cada modo tiene su propia vista de unidades porque son alcances
+    // distintos: ajustar_inventario y dar_baja son tareas separadas y alguien
+    // puede tener una en una unidad y la otra en otra.
+    function unidadesDelModo(modo) {
+      return modo === 'baja' ? estado.unidadesBaja : estado.unidadesAjuste
+    }
+
+    async function abrirModalMovimiento({ modo = null, unidadId = '', insumo = null,
+                                          lote = '', recuento = null } = {}) {
+      await asegurarCatalogo()
+      const modos = modosDisponibles()
+      if (!modos.length) return
+
+      estado.mov = {
+        modo: modo && modos.includes(modo) ? modo : modos[0],
+        unidadId: '',
+        unidadFija: !!recuento || !!unidadId,
+        insumo: null,
+        signo: 0,
+        recuento,
+      }
+
+      // Con un solo modo no hay elección, hay ruido. Y con un recuento de por
+      // medio tampoco hay elección: un movimiento vinculado es por definición
+      // un ajuste, y registrar_baja_stock ni siquiera recibe p_recuento_id.
+      // Dejar el selector permitiría pasar a Baja y perder el vínculo callado.
+      const contModos = document.getElementById('mov-modos')
+      contModos.hidden = modos.length < 2 || !!recuento
+      contModos.querySelectorAll('.pestana-stock').forEach(btn => {
+        btn.hidden = !modos.includes(btn.dataset.modo)
+      })
+
+      const vinculo = document.getElementById('mov-vinculo')
+      vinculo.hidden = !recuento
+      if (recuento) {
+        vinculo.innerHTML = `Este ajuste va a quedar <strong>vinculado al recuento</strong> de ${esc(recuento.unidad_nombre || '')} cerrado el ${esc(formatearMomento(recuento.cerrado_en))}, y se va a listar en su detalle.`
+      }
+
+      limpiarErroresMov()
+      document.getElementById('mov-buscar-insumo').value = ''
+      document.getElementById('mov-lote').value = lote || ''
+      document.getElementById('mov-cantidad').value = ''
+      document.getElementById('mov-motivo').value = ''
+      document.getElementById('mov-sugerencias').hidden = true
+      document.getElementById('mov-aviso-negativo').hidden = true
+
+      aplicarModoMov(estado.mov.modo, { unidadPreferida: unidadId })
+      if (insumo) await elegirInsumoMov(insumo.id, { conservarLote: true })
+
+      document.getElementById('modal-movimiento').hidden = false
+    }
+
+    function cerrarModalMovimiento() {
+      document.getElementById('modal-movimiento').hidden = true
+      estado.mov = null
+    }
+
+    function limpiarErroresMov() {
+      ;['mov-error-unidad', 'mov-error-insumo', 'mov-error-lote',
+        'mov-error-signo', 'mov-error-cantidad', 'mov-error-motivo']
+        .forEach(id => { const el = document.getElementById(id); el.hidden = true; el.textContent = '' })
+    }
+
+    function aplicarModoMov(modo, { unidadPreferida = '' } = {}) {
+      const m = estado.mov
+      m.modo = modo
+      m.signo = 0
+
+      document.getElementById('mov-titulo').textContent =
+        modo === 'baja' ? 'Dar de baja mercadería' : 'Ajustar el stock'
+      document.getElementById('mov-explicacion').textContent = EXPLICACION_MODO[modo]
+      document.getElementById('mov-label-cantidad').textContent =
+        modo === 'baja' ? 'Cantidad a dar de baja' : 'Cantidad'
+      // El signo solo existe en el ajuste: la baja siempre resta y la RPC
+      // recibe la cantidad en positivo.
+      document.getElementById('mov-campo-signo').hidden = modo !== 'ajuste'
+      document.querySelectorAll('.mov-signo__btn').forEach(b =>
+        b.classList.remove('mov-signo__btn--activo'))
+
+      document.querySelectorAll('#mov-modos .pestana-stock').forEach(btn => {
+        btn.classList.toggle('pestana-stock--activa', btn.dataset.modo === modo)
+      })
+
+      // Al cambiar de modo cambian las unidades disponibles. Si la que estaba
+      // elegida no está en el modo nuevo se resetea: dejarla apuntando a una
+      // unidad donde la RPC va a rechazar es el dead-end de siempre.
+      const unidades = unidadesDelModo(modo)
+      const candidata = unidadPreferida || m.unidadId
+      m.unidadId = unidades.some(u => u.id === candidata) ? candidata : ''
+      if (!m.unidadId && unidades.length === 1) m.unidadId = unidades[0].id
+
+      renderizarUnidadMov()
+      cargarLotesMov()
+    }
+
+    function renderizarUnidadMov() {
+      const m = estado.mov
+      const unidades = unidadesDelModo(m.modo)
+      const chips = document.getElementById('mov-chips-unidad')
+      const fija = document.getElementById('mov-unidad-fija')
+
+      // Con la unidad fija (viene de un lote o de un recuento) se muestra como
+      // texto: no hay nada que elegir.
+      if (m.unidadFija && m.unidadId) {
+        chips.hidden = true
+        chips.innerHTML = ''
+        fija.hidden = false
+        fija.textContent = unidades.find(u => u.id === m.unidadId)?.nombre
+          || estado.unidadesStock.find(u => u.id === m.unidadId)?.nombre || ''
+        return
+      }
+      fija.hidden = true
+
+      chips.hidden = false
+      chips.innerHTML = unidades.map(u => `
+        <button type="button" class="chip-unidad ${m.unidadId === u.id ? 'chip-unidad--activa' : ''}" data-unidad-mov="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      chips.querySelectorAll('[data-unidad-mov]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          m.unidadId = btn.dataset.unidadMov
+          renderizarUnidadMov()
+          cargarLotesMov()
+        })
+      })
+    }
+
+    function renderizarSugerenciasMov() {
+      const termino = document.getElementById('mov-buscar-insumo').value
+      const cont = document.getElementById('mov-sugerencias')
+      if (!normalizar(termino)) { cont.hidden = true; cont.innerHTML = ''; return }
+
+      const encontrados = ordenarPorNombre(
+        estado.insumos.filter(i => i.activo && coincide(i, termino))
+      ).slice(0, 8)
+
+      cont.hidden = false
+      if (!encontrados.length) {
+        cont.innerHTML = '<div class="campo-stock__ayuda">Ningún insumo activo coincide. Si el producto no existe todavía, hay que darlo de alta en el catálogo.</div>'
+        return
+      }
+      cont.innerHTML = encontrados.map(i => `
+        <button type="button" class="rec-sug" data-sug-mov="${esc(i.id)}">
+          <div class="rec-sug__nombre">${esc(i.nombre)}</div>
+          <div class="rec-sug__meta">${esc([i.marca, i.unidad_medida, TIPOS[i.tipo] ?? i.tipo].filter(Boolean).join(' · '))}</div>
+        </button>`).join('')
+      cont.querySelectorAll('[data-sug-mov]').forEach(btn => {
+        btn.addEventListener('click', () => elegirInsumoMov(btn.dataset.sugMov))
+      })
+    }
+
+    async function elegirInsumoMov(insumoId, { conservarLote = false } = {}) {
+      const i = estado.insumos.find(x => x.id === insumoId)
+      if (!i) return
+      estado.mov.insumo = i
+      limpiarErroresMov()
+
+      document.getElementById('mov-buscar-insumo').value = ''
+      document.getElementById('mov-sugerencias').hidden = true
+      const elegido = document.getElementById('mov-insumo-elegido')
+      elegido.hidden = false
+      elegido.innerHTML = `<span>${esc([i.nombre, i.marca].filter(Boolean).join(' · '))}</span>
+        <button type="button" class="mov-elegido__quitar" id="mov-quitar-insumo" aria-label="Quitar">✕</button>`
+      document.getElementById('mov-quitar-insumo').addEventListener('click', quitarInsumoMov)
+
+      // El lote solo aplica —y solo es obligatorio— en materia prima. La RPC lo
+      // exige igual; esto evita el viaje al servidor y da un mensaje claro.
+      const esMp = i.tipo === 'materia_prima'
+      document.getElementById('mov-campo-lote').hidden = !esMp
+      if (!conservarLote) document.getElementById('mov-lote').value = ''
+      document.getElementById('mov-ayuda-lote').textContent = esMp
+        ? 'Es materia prima: el lote es obligatorio. Se sugieren los que tienen saldo, pero podés escribir uno nuevo si entró mercadería que todavía no se cargó.'
+        : ''
+
+      await cargarLotesMov()
+    }
+
+    function quitarInsumoMov() {
+      estado.mov.insumo = null
+      document.getElementById('mov-insumo-elegido').hidden = true
+      document.getElementById('mov-campo-lote').hidden = true
+      document.getElementById('mov-lote').value = ''
+      document.getElementById('mov-saldo').hidden = true
+      document.getElementById('mov-aviso-negativo').hidden = true
+      estado.lotesMov = []
+    }
+
+    // Los lotes con saldo, para sugerir. El campo igual es libre.
+    async function cargarLotesMov() {
+      const m = estado.mov
+      estado.lotesMov = []
+      document.getElementById('mov-lotes-existentes').innerHTML = ''
+      if (!m || !m.insumo || !m.unidadId) { actualizarSaldoMov(); return }
+
+      const { data, error } = await supabase.from('v_stock_por_lote')
+        .select('lote, saldo')
+        .eq('insumo_id', m.insumo.id)
+        .eq('unidad_negocio_id', m.unidadId)
+
+      if (error) { console.error(error); actualizarSaldoMov(); return }
+      estado.lotesMov = data ?? []
+      document.getElementById('mov-lotes-existentes').innerHTML = estado.lotesMov
+        .filter(l => l.lote)
+        .map(l => `<option value="${esc(l.lote)}"></option>`).join('')
+      actualizarSaldoMov()
+    }
+
+    function saldoActualMov() {
+      const m = estado.mov
+      if (!m || !m.insumo) return null
+      const lote = (document.getElementById('mov-lote').value || '').trim()
+      const fila = estado.lotesMov.find(l => (l.lote ?? '') === lote)
+      return fila ? Number(fila.saldo) || 0 : 0
+    }
+
+    // Lo que se va a mandar a la RPC, o null si todavía no alcanza para saberlo.
+    // En el ajuste, la magnitud sale del campo y el SIGNO de los dos botones.
+    // Si alguien igual tipeó un "-12" —posible desde el escritorio— manda el
+    // signo tipeado y no se aplica dos veces.
+    function cantidadMov() {
+      const m = estado.mov
+      if (!m) return null
+      const crudo = document.getElementById('mov-cantidad').value
+      const n = parsearCantidad(crudo, {
+        permitirNegativos: m.modo === 'ajuste',
+        unidad: m.insumo?.unidad_medida ?? '',
+      })
+      if (n === null || n === 0) return null
+      if (m.modo === 'baja') return n > 0 ? n : null
+      if (n < 0) return n
+      return m.signo ? n * m.signo : null
+    }
+
+    function actualizarSaldoMov() {
+      const m = estado.mov
+      const cajaSaldo = document.getElementById('mov-saldo')
+      const avisoNeg = document.getElementById('mov-aviso-negativo')
+      if (!m || !m.insumo) { cajaSaldo.hidden = true; avisoNeg.hidden = true; return }
+
+      const u = m.insumo.unidad_medida || ''
+      const saldo = saldoActualMov()
+      const delta = cantidadMov()
+      const aplicado = m.modo === 'baja' && delta !== null ? -delta : delta
+
+      cajaSaldo.hidden = false
+      cajaSaldo.innerHTML = aplicado === null
+        ? `Saldo actual: <strong>${esc(formatearCantidadStock(saldo, u))}</strong>`
+        : `Saldo actual: <strong>${esc(formatearCantidadStock(saldo, u))}</strong> → quedaría en <strong>${esc(formatearCantidadStock(saldo + aplicado, u))}</strong>`
+
+      // Ninguna de las dos RPCs valida saldo, y está decidido que así sea:
+      // frenar una operación por papeleo es peor que el número mal. Se avisa,
+      // no se bloquea.
+      const quedaNegativo = aplicado !== null && (saldo + aplicado) < 0
+      avisoNeg.hidden = !quedaNegativo
+      if (quedaNegativo) {
+        avisoNeg.innerHTML = `El saldo va a quedar <strong>negativo</strong>. Se registra igual, y ese lote va a aparecer marcado en la pantalla de Stock hasta que se cargue lo que falta.`
+      }
+    }
+
+    async function confirmarMovimiento() {
+      const m = estado.mov
+      if (!m) return
+      limpiarErroresMov()
+      let ok = true
+
+      if (!m.unidadId) { marcarError('mov-error-unidad', 'Elegí la unidad de negocio.'); ok = false }
+      if (!m.insumo) { marcarError('mov-error-insumo', 'Elegí un insumo del catálogo.'); ok = false }
+
+      const lote = (document.getElementById('mov-lote').value || '').trim()
+      if (m.insumo?.tipo === 'materia_prima' && !lote) {
+        marcarError('mov-error-lote', 'Es materia prima: el lote es obligatorio.'); ok = false
+      }
+
+      const crudo = document.getElementById('mov-cantidad').value.trim()
+      const cantidad = cantidadMov()
+      if (crudo === '') {
+        marcarError('mov-error-cantidad', 'Poné la cantidad.'); ok = false
+      } else if (parsearCantidad(crudo, { permitirNegativos: m.modo === 'ajuste', unidad: m.insumo?.unidad_medida ?? '' }) === null) {
+        marcarError('mov-error-cantidad', esUnidadEntera(m.insumo?.unidad_medida)
+          ? 'Se cuenta por unidades enteras: escribilo sin puntos ni comas.'
+          : 'Escribí un número, con coma para los decimales (8,5).'); ok = false
+      } else if (cantidad === null) {
+        if (m.modo === 'ajuste' && !m.signo) {
+          marcarError('mov-error-signo', 'Elegí si apareció o si falta mercadería.'); ok = false
+        } else {
+          marcarError('mov-error-cantidad', m.modo === 'baja'
+            ? 'La cantidad a dar de baja tiene que ser mayor a cero.'
+            : 'La cantidad no puede ser cero.'); ok = false
+        }
+      }
+
+      const motivo = document.getElementById('mov-motivo').value.trim()
+      if (!motivo) { marcarError('mov-error-motivo', 'El motivo es obligatorio.'); ok = false }
+
+      if (!ok) return
+
+      const btn = document.getElementById('btn-confirmar-mov')
+      btn.disabled = true
+      const comun = {
+        p_unidad_negocio_id: m.unidadId,
+        p_insumo_id: m.insumo.id,
+        p_lote: lote || null,
+        p_motivo: motivo,
+      }
+      // La baja manda la cantidad SIEMPRE POSITIVA: la RPC la guarda en
+      // negativo. Nadie tiene que pensar el signo, y mandarla negativa acá la
+      // convertiría en una suma.
+      //
+      // INVARIANTE SOSTENIDA POR LA UI, NO POR EL SERVIDOR:
+      // registrar_ajuste_stock NO valida que p_recuento_id sea de la misma
+      // unidad ni que el recuento esté cerrado. Acá solo se manda desde el
+      // detalle de un recuento cerrado, con su propia unidad. Si alguna vez se
+      // llama desde otro lado, hay que revalidar eso ahí — la función no lo
+      // hace.
+      const { error } = m.modo === 'baja'
+        ? await supabase.rpc('registrar_baja_stock', { ...comun, p_cantidad: Math.abs(cantidad) })
+        : await supabase.rpc('registrar_ajuste_stock', {
+            ...comun, p_cantidad: cantidad, p_recuento_id: m.recuento?.id ?? null,
+          })
+      btn.disabled = false
+
+      if (error) {
+        console.error(error)
+        mostrarError(error.message || 'No se pudo registrar el movimiento.')
+        return
+      }
+
+      const eraRecuento = m.recuento
+      cerrarModalMovimiento()
+      mostrarExito(eraRecuento ? 'Ajuste registrado y vinculado al recuento.' : 'Movimiento registrado.')
+
+      // El stock cambió: lo que esté abierto queda desactualizado.
+      if (puedeVerStock()) await cargarStock()
+      if (eraRecuento && estado.recuentoDetalle?.id === eraRecuento.id) await cargarDetalleRecuento()
+      if (!document.getElementById('modal-stock-lotes').hidden && estado.loteAbierto) {
+        await abrirLotes(estado.loteAbierto.insumoId, estado.loteAbierto.unidadId)
+      }
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PESTAÑAS
     // ═══════════════════════════════════════════════════════════════════════
@@ -2921,16 +3991,24 @@
       stock: 'Stock actual',
       catalogo: 'Catálogo de insumos',
       recuento: 'Recuento de inventario',
+      historial: 'Historial de recuentos',
     }
+
+    // El historial es un drill-down de Stock, no una pestaña propia: cuatro no
+    // entran en 375px. Mientras se lo mira, la pestaña que queda marcada sigue
+    // siendo la de Stock.
+    const PESTANA_DE_VISTA = { historial: 'stock' }
 
     function mostrarVista(id) {
       estado.vista = id
       document.getElementById('vista-stock').hidden = id !== 'stock'
       document.getElementById('vista-catalogo').hidden = id !== 'catalogo'
       document.getElementById('vista-recuento').hidden = id !== 'recuento'
+      document.getElementById('vista-historial').hidden = id !== 'historial'
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
-        btn.classList.toggle('pestana-stock--activa', btn.dataset.vista === id)
+        btn.classList.toggle('pestana-stock--activa',
+          btn.dataset.vista === (PESTANA_DE_VISTA[id] ?? id))
       })
       window.scrollTo({ top: 0, behavior: 'auto' })
     }
@@ -3468,6 +4546,53 @@
     document.querySelectorAll('[data-cerrar-anular]').forEach(el =>
       el.addEventListener('click', cerrarModalAnular))
 
+    // ── Historial ──────────────────────────────────────────────────────────
+    document.getElementById('btn-ver-historial').addEventListener('click', abrirHistorial)
+    document.getElementById('btn-volver-de-historial').addEventListener('click', () => mostrarVista('stock'))
+    document.getElementById('btn-volver-a-lista').addEventListener('click', () => {
+      document.getElementById('hist-paso-detalle').hidden = true
+      document.getElementById('hist-paso-lista').hidden = false
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    })
+    document.getElementById('btn-ajuste-vinculado').addEventListener('click', () => {
+      const r = estado.recuentoDetalle
+      if (!r) return
+      abrirModalMovimiento({ modo: 'ajuste', unidadId: r.unidad_negocio_id, recuento: r })
+    })
+
+    // ── Movimientos puntuales ──────────────────────────────────────────────
+    document.getElementById('btn-registrar-movimiento').addEventListener('click', () => abrirModalMovimiento())
+    document.getElementById('btn-lotes-ajuste').addEventListener('click', () => {
+      const l = estado.loteAbierto
+      if (!l) return
+      const insumo = estado.insumos.find(i => i.id === l.insumoId) ?? { id: l.insumoId }
+      abrirModalMovimiento({ modo: 'ajuste', unidadId: l.unidadId, insumo })
+    })
+    document.getElementById('btn-lotes-baja').addEventListener('click', () => {
+      const l = estado.loteAbierto
+      if (!l) return
+      const insumo = estado.insumos.find(i => i.id === l.insumoId) ?? { id: l.insumoId }
+      abrirModalMovimiento({ modo: 'baja', unidadId: l.unidadId, insumo })
+    })
+    document.querySelectorAll('#mov-modos .pestana-stock').forEach(btn =>
+      btn.addEventListener('click', () => aplicarModoMov(btn.dataset.modo)))
+    document.getElementById('mov-buscar-insumo').addEventListener('input', renderizarSugerenciasMov)
+    document.getElementById('mov-lote').addEventListener('input', actualizarSaldoMov)
+    document.getElementById('mov-cantidad').addEventListener('input', actualizarSaldoMov)
+    document.querySelectorAll('.mov-signo__btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!estado.mov) return
+        estado.mov.signo = Number(btn.dataset.signo)
+        document.querySelectorAll('.mov-signo__btn').forEach(b =>
+          b.classList.toggle('mov-signo__btn--activo', b === btn))
+        document.getElementById('mov-error-signo').hidden = true
+        actualizarSaldoMov()
+      })
+    })
+    document.getElementById('btn-confirmar-mov').addEventListener('click', confirmarMovimiento)
+    document.querySelectorAll('[data-cerrar-mov]').forEach(el =>
+      el.addEventListener('click', cerrarModalMovimiento))
+
     // El caso real no es cerrar la pestaña: es el celular que se bloquea
     // mientras alguien camina por el depósito. 'hidden' se dispara ahí, y
     // beforeunload no serviría igual porque no puede esperar a un await.
@@ -3532,6 +4657,8 @@
       // en Stock, que es lo que se mira todos los días. Pero se resuelve por
       // PERMISO y no por costumbre — alguien puede tener solo el catálogo, o
       // solo el recuento.
+      const daBaja = puedeDarBaja()
+
       const vistas = [
         verStock && 'stock',
         gestiona && 'catalogo',
@@ -3549,11 +4676,36 @@
 
       // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
       // consulta volvería vacía por RLS igual, pero no tiene sentido hacerla.
+      // Las unidades de BAJA salen de su propia vista: dar_baja tiene un
+      // alcance distinto del de ajustar_inventario, y sacarlas de la de ajuste
+      // ofrecería unidades donde registrar_baja_stock va a rechazar.
+      const cargarUnidadesBaja = async () => {
+        const { data, error } = await supabase
+          .from('v_mis_unidades_baja').select('id, nombre').order('nombre')
+        if (error) { console.error(error); return }
+        estado.unidadesBaja = data ?? []
+      }
+
       await Promise.all([
         verStock ? cargarStock() : Promise.resolve(),
         gestiona ? cargarInsumos() : Promise.resolve(),
+        // Esto trae TAMBIÉN las unidades que usa el modal de movimientos en
+        // modo Ajuste: es la misma tarea (ajustar_inventario) que gatea la
+        // pestaña de recuento, así que una sola carga alcanza. La guarda que
+        // había acá (`!estado.unidadesAjuste.length`) se evaluaba sincrónica al
+        // armar el array, o sea siempre verdadera, y disparaba la consulta dos
+        // veces.
         ajusta   ? cargarUnidadesRecuento().then(cargarRecuento) : Promise.resolve(),
+        daBaja ? cargarUnidadesBaja() : Promise.resolve(),
       ])
+
+      // Los movimientos puntuales necesitan ADEMÁS `stock:ver`: la pantalla
+      // muestra el saldo para decidir qué tocar, y ese saldo sale de vistas
+      // security_invoker sobre el libro, cuyo RLS sigue siendo `ver` a secas.
+      // Sin `ver` no hay nada que mostrar — no es una restricción agregada, es
+      // que no hay pantalla posible.
+      document.getElementById('btn-registrar-movimiento').hidden = !(verStock && (ajusta || daBaja))
+      document.getElementById('acciones-stock').hidden = !verStock
     }
 
     init()
