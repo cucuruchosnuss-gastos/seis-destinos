@@ -774,6 +774,340 @@
       color: var(--color-texto-suave);
       margin-bottom: 0.875rem;
     }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       RECUENTO DE INVENTARIO
+       Se usa caminando por el depósito, con una mano, mirando pallets. Todo
+       acá está dimensionado para eso: el input es lo más grande de la fila y
+       lo que falta viaja fijo arriba mientras se scrollean 51 filas.
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /* Los tres pasos se alternan con [hidden] y llevan `display` de autor, así
+       que cada uno necesita su regla — el bug más recurrente del proyecto. */
+    .rec-paso { display: block; min-width: 0; }
+    .rec-paso[hidden] { display: none; }
+
+    /* ── Paso: empezar ────────────────────────────────────────────────────── */
+
+    .rec-inicio {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 18px;
+      box-shadow: var(--sombra-suave);
+      padding: 1.25rem;
+      min-width: 0;
+    }
+    .rec-inicio__titulo {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin: 0 0 0.5rem;
+    }
+    .rec-inicio__texto {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--color-texto-suave);
+      margin-bottom: 1rem;
+    }
+
+    /* ── Barra fija: lo que falta y el estado del guardado ────────────────── */
+
+    /* Pegajosa porque la lista es larga y las dos cosas que importan mientras
+       se cuenta —cuánto falta y si se guardó— no pueden quedar arriba de todo,
+       fuera de la vista, durante 51 filas. */
+    .rec-barra {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      min-width: 0;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      box-shadow: var(--sombra-suave);
+      padding: 0.6875rem 0.9375rem;
+      margin-bottom: 0.6875rem;
+    }
+    .rec-barra__contador {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      min-width: 0;
+    }
+    .rec-barra__contador--listo { color: var(--verde-oscuro); }
+
+    /* El estado del guardado no se comunica solo con color: el símbolo va como
+       TEXTO adentro, igual que los requisitos de contraseña. */
+    .rec-guardado {
+      font-size: 0.75rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .rec-guardado--pendiente { color: var(--bordo-oscuro); }
+    .rec-guardado--error { color: var(--bordo-oscuro); }
+
+    .rec-meta {
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.6875rem;
+      min-width: 0;
+    }
+    .rec-meta strong { color: var(--color-texto); }
+
+    .rec-herramientas {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 0.5625rem;
+      min-width: 0;
+    }
+    .rec-herramientas .buscador-stock { flex: 1 1 12rem; margin-bottom: 0; }
+
+    /* ── Fila de conteo ──────────────────────────────────────────────────── */
+
+    /* .tarjeta-lista trae fondo, borde y padding. Acá se le saca el cursor de
+       mano y el levantarse al pasar: la fila no se toca entera, se toca el
+       input que tiene adentro. */
+    .rec-fila {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 0.5rem;
+      cursor: default;
+    }
+    .rec-fila:hover { box-shadow: none; transform: none; }
+    .rec-fila--contada { border-left: 4px solid var(--verde); }
+    .rec-fila__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.3;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .rec-fila__sub {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem 0.625rem;
+      align-items: baseline;
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
+      min-width: 0;
+    }
+    .rec-fila__lote {
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .rec-fila__sistema { font-weight: 600; }
+
+    .rec-fila__linea {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    /* El elemento más grande de la fila. Se toca con el pulgar, de pie. */
+    .rec-input {
+      flex: 1 1 7rem;
+      min-width: 0;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      font-size: 1.125rem;
+      font-weight: 650;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      min-height: 3rem;
+    }
+    .rec-input:focus {
+      outline: none;
+      border-color: var(--verde);
+      box-shadow: 0 0 0 4px var(--verde-suave);
+    }
+    .rec-unidad {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      flex-shrink: 0;
+    }
+    /* La diferencia se ve mientras la persona está parada frente al pallet:
+       es el dato por el que vino. */
+    .rec-delta {
+      font-size: 0.875rem;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+      color: var(--verde-oscuro);
+    }
+    .rec-delta--falta { color: var(--bordo-oscuro); }
+    .rec-delta[hidden] { display: none; }
+
+    .rec-obs-toggle {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      padding: 0.25rem 0;
+      font-family: var(--fuente);
+      font-size: 0.78125rem;
+      font-weight: 650;
+      color: var(--verde-oscuro);
+      cursor: pointer;
+      text-align: left;
+    }
+    .rec-obs {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      padding: 0.5625rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+    }
+    .rec-obs:focus {
+      outline: none;
+      border-color: var(--verde);
+      box-shadow: 0 0 0 4px var(--verde-suave);
+    }
+    .rec-obs[hidden] { display: none; }
+
+    /* ── Acciones del final ──────────────────────────────────────────────── */
+
+    .rec-acciones {
+      display: flex;
+      gap: 0.625rem;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      margin-top: 1.125rem;
+      min-width: 0;
+    }
+    .rec-nota-cierre {
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      text-align: right;
+      margin-top: 0.5rem;
+    }
+    .rec-nota-cierre[hidden] { display: none; }
+
+    /* ── Buscador del catálogo (modal de agregar) ─────────────────────────── */
+
+    .rec-sugerencias {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      max-height: 15rem;
+      overflow-y: auto;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .rec-sugerencias[hidden] { display: none; }
+    .rec-sug {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.5625rem 0.75rem;
+      font-family: var(--fuente);
+      cursor: pointer;
+      min-width: 0;
+    }
+    .rec-sug:hover { background: var(--verde-suave); border-color: var(--verde); }
+    .rec-sug--elegido { background: var(--verde-suave); border-color: var(--verde); }
+    .rec-sug__nombre {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .rec-sug__meta {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Resumen del cierre ──────────────────────────────────────────────── */
+
+    .rec-resumen {
+      display: flex;
+      gap: 0.625rem;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .rec-resumen__dato {
+      flex: 1 1 0;
+      min-width: 0;
+      background: var(--color-superficie);
+      border-radius: 12px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+    .rec-resumen__numero {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-texto);
+    }
+    .rec-resumen__etiqueta {
+      font-size: 0.6875rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .rec-difs {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      max-height: 15rem;
+      overflow-y: auto;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .rec-difs[hidden] { display: none; }
+    .rec-dif {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.625rem;
+      background: var(--color-superficie);
+      border-radius: 10px;
+      padding: 0.5rem 0.6875rem;
+      font-size: 0.8125rem;
+      min-width: 0;
+    }
+    .rec-dif__nombre { min-width: 0; overflow-wrap: anywhere; }
+    .rec-dif__lote { color: var(--color-texto-suave); font-size: 0.75rem; }
+    .rec-dif__valor { font-weight: 700; white-space: nowrap; flex-shrink: 0; color: var(--verde-oscuro); }
+    .rec-dif__valor--falta { color: var(--bordo-oscuro); }
+
+    /* Lo destructivo y lo irreversible se avisan en bordó. --rojo es el color
+       de Accesos y no se usa acá. */
+    .rec-aviso {
+      background: var(--bordo-suave);
+      border-left: 4px solid var(--bordo);
+      border-radius: 12px;
+      padding: 0.75rem 0.875rem;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--bordo-oscuro);
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .rec-aviso[hidden] { display: none; }
+    .rec-aviso strong { font-weight: 700; }
   </style>
 </head>
 
@@ -802,6 +1136,7 @@
     <div class="pestanas-stock" id="pestanas-stock" hidden>
       <button type="button" class="pestana-stock" data-vista="stock">Stock</button>
       <button type="button" class="pestana-stock" data-vista="catalogo">Catálogo</button>
+      <button type="button" class="pestana-stock" data-vista="recuento">Recuento</button>
     </div>
 
     <!-- ══ VISTA: STOCK ACTUAL ═══════════════════════════════════════════ -->
@@ -844,6 +1179,61 @@
     <div class="estado-vacio-stock" id="estado-vacio" hidden></div>
 
     </div><!-- /vista-catalogo -->
+
+    <!-- ══ VISTA: RECUENTO DE INVENTARIO ═════════════════════════════════ -->
+    <div class="vista-stock" id="vista-recuento" hidden>
+
+      <!-- Los chips salen de v_mis_unidades_ajuste, que resuelve
+           tiene_tarea_alcance('stock','ajustar_inventario', id) — la MISMA que
+           revalidan las 5 RPCs. No hay opción "Todas": se cuenta una unidad
+           concreta, y un recuento pertenece a una sola. -->
+      <div class="chips-unidad" id="chips-unidad-recuento"></div>
+
+      <div class="estado-vacio-stock" id="rec-cargando">Cargando recuento…</div>
+
+      <!-- ── Paso 1: no hay recuento abierto ─────────────────────────────── -->
+      <div class="rec-paso" id="rec-paso-inicio" hidden>
+        <div class="rec-inicio">
+          <h2 class="rec-inicio__titulo">No hay ningún recuento abierto</h2>
+          <div class="rec-inicio__texto">
+            Al empezar, el sistema arma la lista con todos los insumos del catálogo y con cada lote de materia prima que tenga saldo. Contás uno por uno y, al cerrar, se generan los ajustes que igualan el sistema al conteo real.
+            <br><br>
+            Las materias primas de las que el sistema todavía no conoce ningún lote no se pueden precargar —el lote se lee de la etiqueta del envase— y se agregan a mano durante el conteo.
+          </div>
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-empezar-recuento">Empezar recuento</button>
+        </div>
+      </div>
+
+      <!-- ── Paso 2: contando ────────────────────────────────────────────── -->
+      <div class="rec-paso" id="rec-paso-contando" hidden>
+
+        <div class="rec-barra">
+          <span class="rec-barra__contador" id="rec-contador">—</span>
+          <span class="rec-guardado" id="rec-guardado">✓ Guardado</span>
+        </div>
+
+        <div class="rec-meta" id="rec-meta"></div>
+
+        <div class="rec-herramientas">
+          <input type="search" class="buscador-stock" id="rec-buscador" placeholder="Buscar por nombre, marca o lote…" autocomplete="off">
+          <button type="button" class="btn-stock btn-stock--chico" id="btn-agregar-item">+ Agregar insumo</button>
+        </div>
+
+        <div class="fila-chips" id="rec-chips-filtro"></div>
+
+        <div class="lista-contenido" id="rec-lista"></div>
+
+        <div class="estado-vacio-stock" id="rec-vacio" hidden></div>
+
+        <div class="rec-acciones">
+          <button type="button" class="btn-stock btn-stock--alerta" id="btn-anular-recuento">Anular recuento</button>
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-cerrar-recuento">Cerrar recuento</button>
+        </div>
+        <div class="rec-nota-cierre" id="rec-nota-cierre" hidden></div>
+      </div>
+
+    </div><!-- /vista-recuento -->
+
 
   </div><!-- /contenedor -->
 
@@ -1043,6 +1433,134 @@
   </div><!-- /modal-importar -->
 
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — AGREGAR UN ÍTEM AL RECUENTO
+       Para la mercadería de algo que el sistema tenía en cero, y para las
+       materias primas cuyo lote el sistema todavía no conoce (no se pueden
+       precargar: el lote se lee de la etiqueta).
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-agregar-item" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-agregar></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-agregar aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo">Agregar al recuento</h2>
+
+      <div class="campo-stock">
+        <label for="rec-buscar-catalogo">Insumo</label>
+        <input type="search" id="rec-buscar-catalogo" placeholder="Buscar en el catálogo…" autocomplete="off">
+        <div class="campo-stock__error" id="rec-error-insumo" hidden></div>
+      </div>
+
+      <div class="rec-sugerencias" id="rec-sugerencias" hidden></div>
+
+      <div class="campo-stock" id="rec-campo-lote" hidden>
+        <label for="rec-lote">Lote</label>
+        <input type="text" id="rec-lote" placeholder="Como figura en la etiqueta" autocomplete="off">
+        <div class="campo-stock__ayuda">
+          Es materia prima, así que el lote es obligatorio. Copialo tal cual de la etiqueta del envase.
+        </div>
+        <div class="campo-stock__error" id="rec-error-lote" hidden></div>
+      </div>
+
+      <!-- Se queda abierto y limpio después de agregar: cargar las materias
+           primas con su lote es trabajo repetitivo y cerrar el modal cada vez
+           obligaría a volver a tocar el botón en cada una. -->
+      <div class="campo-stock__ayuda" id="rec-agregados" hidden></div>
+
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-agregar>Listo</button>
+        <button type="button" class="btn-stock btn-stock--primario" id="btn-confirmar-agregar">Agregar</button>
+      </div>
+    </div>
+  </div><!-- /modal-agregar-item -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — CERRAR EL RECUENTO
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-cerrar-recuento" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-cierre></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-cierre aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo" id="cierre-titulo">Cerrar el recuento</h2>
+
+      <div id="cierre-paso-resumen">
+        <div class="rec-resumen">
+          <div class="rec-resumen__dato">
+            <div class="rec-resumen__numero" id="cierre-items">0</div>
+            <div class="rec-resumen__etiqueta">Ítems</div>
+          </div>
+          <div class="rec-resumen__dato">
+            <div class="rec-resumen__numero" id="cierre-difs">0</div>
+            <div class="rec-resumen__etiqueta">Con diferencia</div>
+          </div>
+        </div>
+
+        <div class="rec-difs" id="cierre-lista-difs" hidden></div>
+
+        <div class="rec-aviso" id="cierre-aviso">
+          Cerrar <strong>genera los ajustes de stock y es irreversible</strong>. El recuento queda cerrado y no se puede volver a editar.
+        </div>
+
+        <!-- El saldo del sistema se congela AL CERRAR, no ahora: si entra un
+             remito mientras se cuenta, el ajuste se calcula contra el saldo de
+             ese momento. Por eso el resumen es una estimación y el número real
+             lo devuelve el servidor. -->
+        <div class="campo-stock__ayuda" id="cierre-nota-estimacion">
+          Las diferencias de arriba son una estimación contra el stock de este momento. El cálculo definitivo lo hace el servidor al cerrar, con el saldo de ese instante.
+        </div>
+
+        <div class="modal-stock__acciones">
+          <button type="button" class="btn-stock" data-cerrar-cierre>Cancelar</button>
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-confirmar-cierre">Cerrar y generar ajustes</button>
+        </div>
+      </div>
+
+      <div id="cierre-paso-resultado" hidden>
+        <div class="rec-resumen">
+          <div class="rec-resumen__dato">
+            <div class="rec-resumen__numero" id="cierre-ajustes">0</div>
+            <div class="rec-resumen__etiqueta">Ajustes generados</div>
+          </div>
+        </div>
+        <div class="campo-stock__ayuda" id="cierre-texto-resultado"></div>
+        <div class="modal-stock__acciones">
+          <button type="button" class="btn-stock btn-stock--primario" data-cerrar-cierre>Listo</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /modal-cerrar-recuento -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — ANULAR EL RECUENTO
+       La salida para un conteo que se empezó y no se pudo terminar.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-anular-recuento" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-anular></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-anular aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo">Anular el recuento</h2>
+
+      <div class="rec-aviso">
+        Se descarta todo lo contado hasta ahora. <strong>No genera ningún ajuste y no toca el stock</strong>: queda como si no se hubiera hecho.
+      </div>
+
+      <div class="campo-stock">
+        <label for="rec-motivo-anulacion">Motivo</label>
+        <input type="text" id="rec-motivo-anulacion" placeholder="Ej: se cortó el conteo, se sigue mañana" autocomplete="off">
+        <div class="campo-stock__error" id="rec-error-motivo" hidden></div>
+      </div>
+
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-anular>Volver</button>
+        <button type="button" class="btn-stock btn-stock--alerta" id="btn-confirmar-anular">Anular recuento</button>
+      </div>
+    </div>
+  </div><!-- /modal-anular-recuento -->
+
+
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
@@ -1124,6 +1642,24 @@
       unidadStock: '',         // '' = todas
       busquedaStock: '',
       stock: [],               // filas de v_stock_insumos
+
+      // ── Vista de RECUENTO ───────────────────────────────────────────
+      // Las unidades salen de v_mis_unidades_ajuste, que resuelve
+      // ajustar_inventario — NO de v_mis_unidades_stock, que resuelve 'ver'.
+      // Son tareas distintas: alguien puede ver stock sin poder ajustarlo.
+      unidadesAjuste: [],
+      unidadRecuento: '',
+      recuento: null,          // la fila abierta de v_recuentos, o null
+      itemsRec: [],
+      saldos: new Map(),       // 'insumo|lote' -> saldo VIVO del sistema
+      busquedaRec: '',
+      filtroRec: 'todos',      // 'todos' | 'sin-contar'
+      sucios: new Set(),       // ítems con cambios todavía sin guardar
+      guardado: 'guardado',
+      guardando: false,
+      timerGuardado: null,
+      insumoAgregar: null,
+      agregados: 0,
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -1134,6 +1670,7 @@
     }
     const puedeGestionar = () => tieneTarea('stock', 'gestionar_catalogo')
     const puedeVerStock  = () => tieneTarea('stock', 'ver')
+    const puedeAjustar   = () => tieneTarea('stock', 'ajustar_inventario')
 
     // Cantidades del stock: separador de miles argentino y la unidad del
     // catálogo. `maximumFractionDigits` en 3 porque hay insumos en kg y litros
@@ -1146,6 +1683,18 @@
     function textoLotes(n) {
       if (!n) return ''            // 0 = no lleva lote: no se dice nada
       return n === 1 ? '1 lote' : `${n} lotes`
+    }
+
+    // `abierto_en` es timestamptz. formatearFecha() de utils.js espera un
+    // 'YYYY-MM-DD' y parte el string por los guiones, así que con una marca de
+    // tiempo devolvería basura: el huso horario también trae guiones.
+    function formatearMomento(iso) {
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return ''
+      return d.toLocaleString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1569,16 +2118,733 @@
       document.getElementById('modal-stock-lotes').hidden = true
     }
 
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RECUENTO DE INVENTARIO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Cada cuánto se guarda solo el avance. Contar 51 insumos lleva tiempo y
+    // perderlo porque se bloqueó el celular sería inaceptable.
+    const MS_AUTOGUARDADO = 2000
+    // Cuántas diferencias se listan en la confirmación del cierre.
+    const TOPE_DIFS_RESUMEN = 8
+
+    const FILTROS_REC = [
+      { id: 'todos',      label: 'Todos' },
+      { id: 'sin-contar', label: 'Sin contar' },
+    ]
+
+    // Clave del saldo del sistema. `lote` null y '' son la MISMA cosa acá —
+    // igual que en el índice único de la tabla, que usa coalesce(lote,'').
+    function claveSaldo(insumoId, lote) {
+      return `${insumoId}|${lote ?? ''}`
+    }
+
+    // ── Carga ──────────────────────────────────────────────────────────────
+
+    // Las unidades salen de v_mis_unidades_ajuste, que resuelve la MISMA
+    // tiene_tarea_alcance('stock','ajustar_inventario') que revalidan las 5
+    // RPCs. Cero lógica de alcance duplicada en el cliente.
+    async function cargarUnidadesRecuento() {
+      const { data, error } = await supabase
+        .from('v_mis_unidades_ajuste').select('id, nombre').order('nombre')
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudieron cargar las unidades para el recuento.')
+        return
+      }
+      estado.unidadesAjuste = data ?? []
+      if (estado.unidadesAjuste.length && !estado.unidadRecuento) {
+        estado.unidadRecuento = estado.unidadesAjuste[0].id
+      }
+      renderizarChipsUnidadRecuento()
+    }
+
+    function renderizarChipsUnidadRecuento() {
+      const cont = document.getElementById('chips-unidad-recuento')
+      // Una sola unidad no es una elección. Y sin "Todas": un recuento
+      // pertenece a UNA unidad, no se puede contar dos a la vez.
+      cont.hidden = estado.unidadesAjuste.length < 2
+      if (cont.hidden) { cont.innerHTML = ''; return }
+
+      cont.innerHTML = estado.unidadesAjuste.map(u => `
+        <button type="button" class="chip-unidad ${estado.unidadRecuento === u.id ? 'chip-unidad--activa' : ''}" data-unidad="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('.chip-unidad').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (btn.dataset.unidad === estado.unidadRecuento) return
+          // Cambiar de unidad con cambios sin guardar los perdería.
+          await guardarConteoAhora()
+          estado.unidadRecuento = btn.dataset.unidad
+          renderizarChipsUnidadRecuento()
+          await cargarRecuento()
+        })
+      })
+    }
+
+    // Busca el recuento ABIERTO de la unidad elegida. Si hay uno, lo retoma:
+    // solo puede haber uno por unidad, y puede haberlo empezado otra persona.
+    async function cargarRecuento() {
+      const cargandoEl = document.getElementById('rec-cargando')
+      cargandoEl.hidden = false
+      document.getElementById('rec-paso-inicio').hidden = true
+      document.getElementById('rec-paso-contando').hidden = true
+
+      estado.recuento = null
+      estado.itemsRec = []
+      estado.sucios.clear()
+
+      if (!estado.unidadRecuento) {
+        cargandoEl.hidden = true
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('v_recuentos')
+        .select('id, unidad_negocio_id, unidad_nombre, estado, abierto_en, abierto_por_nombre, items')
+        .eq('unidad_negocio_id', estado.unidadRecuento)
+        .eq('estado', 'abierto')
+        .maybeSingle()
+
+      if (error) {
+        cargandoEl.hidden = true
+        console.error(error)
+        mostrarError('No se pudo cargar el recuento.')
+        return
+      }
+
+      if (!data) {
+        cargandoEl.hidden = true
+        document.getElementById('rec-paso-inicio').hidden = false
+        return
+      }
+
+      estado.recuento = data
+      await cargarItemsRecuento()
+      cargandoEl.hidden = true
+      document.getElementById('rec-paso-contando').hidden = false
+      marcarGuardado('guardado')
+      renderizarMetaRecuento()
+      renderizarChipsFiltroRec()
+      renderizarItemsRecuento()
+    }
+
+    async function cargarItemsRecuento() {
+      // El embed a insumos es inequívoco: stock_recuento_items tiene UNA sola
+      // FK a esa tabla.
+      const [items, saldos] = await Promise.all([
+        supabase.from('stock_recuento_items')
+          .select('id, insumo_id, lote, cantidad_contada, observacion, insumos(nombre, marca, unidad_medida, tipo)')
+          .eq('recuento_id', estado.recuento.id),
+        // El saldo del sistema es VIVO: cantidad_sistema queda en null hasta
+        // que se cierra, así que mientras se cuenta hay que leerlo del libro.
+        supabase.from('v_stock_por_lote')
+          .select('insumo_id, lote, saldo')
+          .eq('unidad_negocio_id', estado.recuento.unidad_negocio_id),
+      ])
+
+      if (items.error || saldos.error) {
+        console.error(items.error || saldos.error)
+        mostrarError('No se pudieron cargar los ítems del recuento.')
+        return
+      }
+
+      estado.saldos = new Map(
+        (saldos.data ?? []).map(s => [claveSaldo(s.insumo_id, s.lote), Number(s.saldo) || 0])
+      )
+
+      estado.itemsRec = (items.data ?? []).map(i => ({
+        id: i.id,
+        insumo_id: i.insumo_id,
+        lote: i.lote,
+        // El guion: null = todavía sin contar. Nunca cero por defecto.
+        cantidad_contada: i.cantidad_contada === null ? null : Number(i.cantidad_contada),
+        observacion: i.observacion ?? '',
+        nombre: i.insumos?.nombre ?? '(insumo desconocido)',
+        marca: i.insumos?.marca ?? '',
+        unidad_medida: i.insumos?.unidad_medida ?? '',
+        tipo: i.insumos?.tipo ?? 'insumo',
+      }))
+      ordenarItemsRec()
+    }
+
+    // Orden alfabético ESTABLE, y por lote dentro de cada insumo. No se
+    // reordena al contar: reordenar la lista bajo el dedo de alguien que
+    // camina por un depósito es desorientador. Para saltar a lo que falta
+    // está el chip "Sin contar".
+    function ordenarItemsRec() {
+      estado.itemsRec.sort((a, b) => {
+        const n = (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })
+        if (n !== 0) return n
+        return (a.lote || '').localeCompare(b.lote || '', 'es', { sensitivity: 'base' })
+      })
+    }
+
+    function saldoDe(item) {
+      return estado.saldos.get(claveSaldo(item.insumo_id, item.lote)) ?? 0
+    }
+
+    // ── Render ─────────────────────────────────────────────────────────────
+
+    function renderizarMetaRecuento() {
+      const r = estado.recuento
+      const cuando = r.abierto_en ? formatearMomento(r.abierto_en) : ''
+      const quien = r.abierto_por_nombre || 'alguien'
+      document.getElementById('rec-meta').innerHTML =
+        `Recuento abierto por <strong>${esc(quien)}</strong>${cuando ? ` el ${esc(cuando)}` : ''} en <strong>${esc(r.unidad_nombre || '')}</strong>.`
+    }
+
+    function renderizarChipsFiltroRec() {
+      const faltan = estado.itemsRec.filter(i => i.cantidad_contada === null).length
+      document.getElementById('rec-chips-filtro').innerHTML = FILTROS_REC.map(f => {
+        const activo = estado.filtroRec === f.id
+        const contador = (f.id === 'sin-contar' && faltan > 0)
+          ? `<span class="chip-stock__contador">${faltan}</span>` : ''
+        return `<button type="button" class="chip-stock${activo ? ' chip-stock--activo' : ''}" data-filtro-rec="${f.id}">${f.label}${contador}</button>`
+      }).join('')
+      document.querySelectorAll('#rec-chips-filtro .chip-stock').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.filtroRec = btn.dataset.filtroRec
+          renderizarChipsFiltroRec()
+          renderizarItemsRecuento()
+        })
+      })
+    }
+
+    function coincideItemRec(i, termino) {
+      const t = normalizar(termino)
+      if (!t) return true
+      return normalizar(`${i.nombre} ${i.marca} ${i.lote || ''}`).includes(t)
+    }
+
+    function itemsRecVisibles() {
+      return estado.itemsRec
+        .filter(i => estado.filtroRec !== 'sin-contar' || i.cantidad_contada === null)
+        .filter(i => coincideItemRec(i, estado.busquedaRec))
+    }
+
+    function textoDelta(item) {
+      if (item.cantidad_contada === null) return null
+      const d = item.cantidad_contada - saldoDe(item)
+      if (d === 0) return { texto: 'Sin diferencia', falta: false }
+      const signo = d > 0 ? '+' : '−'
+      return {
+        texto: `${signo}${formatearCantidadStock(Math.abs(d), item.unidad_medida)}`,
+        falta: d < 0,
+      }
+    }
+
+    function renderizarItemsRecuento() {
+      const listaEl = document.getElementById('rec-lista')
+      const vacioEl = document.getElementById('rec-vacio')
+      const filas = itemsRecVisibles()
+
+      actualizarContadorRec()
+
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        // Tres vacíos distintos: sin ítems, todo contado, o el filtro/buscador
+        // no encontró nada. Decir lo que no es manda a buscar un problema
+        // que no existe.
+        vacioEl.textContent = !estado.itemsRec.length
+          ? 'Este recuento arrancó sin ítems. Agregá con el botón de arriba cada cosa que haya en el depósito.'
+          : (estado.filtroRec === 'sin-contar' && !estado.busquedaRec)
+            ? 'No queda nada sin contar.'
+            : 'Ningún ítem coincide con esa búsqueda.'
+        return
+      }
+      vacioEl.hidden = true
+
+      listaEl.innerHTML = filas.map(i => {
+        const contada = i.cantidad_contada !== null
+        const delta = textoDelta(i)
+        const obsAbierta = !!i.observacion
+        return `
+          <div class="tarjeta-lista rec-fila ${contada ? 'rec-fila--contada' : ''}" data-item="${esc(i.id)}">
+            <div class="rec-fila__nombre">${esc(i.nombre)}</div>
+            <div class="rec-fila__sub">
+              ${i.marca ? `<span>${esc(i.marca)}</span>` : ''}
+              ${i.lote ? `<span class="rec-fila__lote">Lote ${esc(i.lote)}</span>` : ''}
+              <span class="rec-fila__sistema">Sistema: ${esc(formatearCantidadStock(saldoDe(i), i.unidad_medida))}</span>
+            </div>
+            <div class="rec-fila__linea">
+              <input type="number" class="rec-input" inputmode="decimal" step="any" min="0"
+                     data-cantidad="${esc(i.id)}"
+                     value="${contada ? i.cantidad_contada : ''}"
+                     placeholder="—"
+                     aria-label="Cantidad contada de ${esc(i.nombre)}">
+              ${i.unidad_medida ? `<span class="rec-unidad">${esc(i.unidad_medida)}</span>` : ''}
+              <span class="rec-delta ${delta?.falta ? 'rec-delta--falta' : ''}" ${delta ? '' : 'hidden'}>${delta ? esc(delta.texto) : ''}</span>
+            </div>
+            <button type="button" class="rec-obs-toggle" data-toggle-obs="${esc(i.id)}" ${obsAbierta ? 'hidden' : ''}>+ Observación</button>
+            <input type="text" class="rec-obs" data-obs="${esc(i.id)}" value="${esc(i.observacion)}"
+                   placeholder="Por qué hay diferencia (opcional)" ${obsAbierta ? '' : 'hidden'}
+                   aria-label="Observación de ${esc(i.nombre)}">
+          </div>`
+      }).join('')
+
+      listaEl.querySelectorAll('[data-cantidad]').forEach(input => {
+        input.addEventListener('input', () => anotarCantidad(input.dataset.cantidad, input.value))
+        input.addEventListener('blur', () => guardarConteoAhora())
+      })
+      listaEl.querySelectorAll('[data-obs]').forEach(input => {
+        input.addEventListener('input', () => anotarObservacion(input.dataset.obs, input.value))
+        input.addEventListener('blur', () => guardarConteoAhora())
+      })
+      listaEl.querySelectorAll('[data-toggle-obs]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const campo = listaEl.querySelector(`[data-obs="${CSS.escape(btn.dataset.toggleObs)}"]`)
+          if (!campo) return
+          btn.hidden = true
+          campo.hidden = false
+          campo.focus()
+        })
+      })
+    }
+
+    function actualizarContadorRec() {
+      const total = estado.itemsRec.length
+      const faltan = estado.itemsRec.filter(i => i.cantidad_contada === null).length
+      const el = document.getElementById('rec-contador')
+      el.textContent = total === 0
+        ? 'Sin ítems'
+        : (faltan === 0 ? `Todo contado · ${total} ítems` : `Faltan ${faltan} de ${total}`)
+      el.classList.toggle('rec-barra__contador--listo', total > 0 && faltan === 0)
+
+      // El botón se deshabilita, pero el servidor lo revalida igual:
+      // cerrar_recuento rechaza si queda alguno sin contar.
+      const btn = document.getElementById('btn-cerrar-recuento')
+      const nota = document.getElementById('rec-nota-cierre')
+      const bloqueado = total === 0 || faltan > 0
+      btn.disabled = bloqueado
+      nota.hidden = !bloqueado
+      if (bloqueado) {
+        nota.textContent = total === 0
+          ? 'No se puede cerrar un recuento sin ítems: cerraría sin registrar nada.'
+          : `Falta contar ${faltan} ${faltan === 1 ? 'ítem' : 'ítems'}. Poné la cantidad o un cero en cada uno.`
+      }
+    }
+
+    // Repinta SOLO la fila tocada. Volver a renderizar la lista entera en cada
+    // tecla le sacaría el foco al input que se está usando.
+    function refrescarFilaRec(itemId) {
+      const item = estado.itemsRec.find(i => i.id === itemId)
+      const fila = document.querySelector(`[data-item="${CSS.escape(itemId)}"]`)
+      if (!item || !fila) return
+      fila.classList.toggle('rec-fila--contada', item.cantidad_contada !== null)
+      const delta = textoDelta(item)
+      const span = fila.querySelector('.rec-delta')
+      if (span) {
+        span.hidden = !delta
+        span.textContent = delta ? delta.texto : ''
+        span.classList.toggle('rec-delta--falta', !!delta?.falta)
+      }
+    }
+
+    // ── Guardado automático ────────────────────────────────────────────────
+
+    function anotarCantidad(itemId, valor) {
+      const item = estado.itemsRec.find(i => i.id === itemId)
+      if (!item) return
+      const crudo = String(valor).trim()
+      // Vacío vuelve al guion: guardar_conteo acepta '' y lo escribe como
+      // null, así que un ítem mal cargado se puede des-contar.
+      item.cantidad_contada = crudo === '' ? null : Number(crudo)
+      if (Number.isNaN(item.cantidad_contada)) item.cantidad_contada = null
+      estado.sucios.add(itemId)
+      marcarGuardado('pendiente')
+      refrescarFilaRec(itemId)
+      actualizarContadorRec()
+      renderizarChipsFiltroRec()
+      programarGuardado()
+    }
+
+    function anotarObservacion(itemId, valor) {
+      const item = estado.itemsRec.find(i => i.id === itemId)
+      if (!item) return
+      item.observacion = valor
+      estado.sucios.add(itemId)
+      marcarGuardado('pendiente')
+      programarGuardado()
+    }
+
+    const TEXTO_GUARDADO = {
+      guardado:  '✓ Guardado',
+      guardando: '… Guardando',
+      pendiente: '● Sin guardar',
+      error:     '● No se pudo guardar',
+    }
+
+    function marcarGuardado(estadoNuevo) {
+      estado.guardado = estadoNuevo
+      const el = document.getElementById('rec-guardado')
+      // El símbolo va como TEXTO y no solo como color: así lo lee un lector de
+      // pantalla, mismo criterio que los requisitos de contraseña.
+      el.textContent = TEXTO_GUARDADO[estadoNuevo] ?? ''
+      el.classList.toggle('rec-guardado--pendiente', estadoNuevo === 'pendiente')
+      el.classList.toggle('rec-guardado--error', estadoNuevo === 'error')
+    }
+
+    function programarGuardado() {
+      clearTimeout(estado.timerGuardado)
+      estado.timerGuardado = setTimeout(() => guardarConteoAhora(), MS_AUTOGUARDADO)
+    }
+
+    // Serialización de lo que se manda, para saber después si la fila cambió
+    // mientras el guardado estaba en vuelo.
+    function huellaItem(i) {
+      return `${i.cantidad_contada === null ? '' : i.cantidad_contada}|${i.observacion ?? ''}`
+    }
+
+    async function guardarConteoAhora() {
+      clearTimeout(estado.timerGuardado)
+      if (!estado.recuento || !estado.sucios.size) return
+      // Ya hay uno en vuelo: no se pisan. Lo que quedó sucio se reintenta al
+      // terminar ese, más abajo — sin eso, un blur que cae justo encima de un
+      // guardado en curso dejaría esa fila sin guardar y sin reintento hasta
+      // que la persona volviera a tocarla.
+      if (estado.guardando) return
+
+      const ids = [...estado.sucios]
+      const enVuelo = new Map()
+      const payload = []
+      for (const id of ids) {
+        const i = estado.itemsRec.find(x => x.id === id)
+        if (!i) { estado.sucios.delete(id); continue }
+        enVuelo.set(id, huellaItem(i))
+        payload.push({
+          item_id: id,
+          // SIEMPRE los dos campos. guardar_conteo pisa `observacion` con lo
+          // que venga en el jsonb, así que mandar solo la cantidad borraría en
+          // silencio la observación que la persona ya había escrito.
+          cantidad_contada: i.cantidad_contada === null ? '' : String(i.cantidad_contada),
+          observacion: i.observacion ?? '',
+        })
+      }
+      if (!payload.length) return
+
+      estado.guardando = true
+      marcarGuardado('guardando')
+      const { error } = await supabase.rpc('guardar_conteo', { p_items: payload })
+      estado.guardando = false
+
+      if (error) {
+        console.error(error)
+        // No se limpia el set: lo que no se guardó sigue pendiente y se
+        // reintenta en el próximo cambio o al salir del campo.
+        marcarGuardado('error')
+        return
+      }
+
+      // Solo se limpian las filas que NO cambiaron mientras se guardaba.
+      for (const [id, huella] of enVuelo) {
+        const i = estado.itemsRec.find(x => x.id === id)
+        if (i && huellaItem(i) === huella) estado.sucios.delete(id)
+      }
+      if (estado.sucios.size) {
+        // Quedó algo sucio: o cambió en vuelo, o entró mientras se guardaba.
+        marcarGuardado('pendiente')
+        programarGuardado()
+      } else {
+        marcarGuardado('guardado')
+      }
+    }
+
+    // ── Abrir ──────────────────────────────────────────────────────────────
+
+    async function empezarRecuento() {
+      const btn = document.getElementById('btn-empezar-recuento')
+      btn.disabled = true
+      const { error } = await supabase.rpc('abrir_recuento', {
+        p_unidad_negocio_id: estado.unidadRecuento,
+      })
+      btn.disabled = false
+      if (error) {
+        console.error(error)
+        // Los mensajes de las RPCs ya vienen redactados en español y dicen
+        // exactamente qué pasó ("Ya hay un recuento abierto en esa unidad…").
+        // Uno genérico taparía justo el dato que hace falta.
+        mostrarError(error.message || 'No se pudo abrir el recuento.')
+        return
+      }
+      await cargarRecuento()
+    }
+
+    // ── Agregar un ítem ────────────────────────────────────────────────────
+
+    // El catálogo puede no estar cargado: cargarInsumos() solo corre con
+    // gestionar_catalogo y además dibuja la pantalla del catálogo. `insumos`
+    // es legible por cualquier sesión, así que esto alcanza.
+    async function asegurarCatalogo() {
+      if (estado.insumos.length) return
+      const { data, error } = await supabase
+        .from('insumos')
+        .select('id, nombre, marca, unidad_medida, tipo, activo, estado_alta, tolerancia_merma_pct')
+      if (error) { console.error(error); return }
+      estado.insumos = data ?? []
+    }
+
+    async function abrirModalAgregar() {
+      await asegurarCatalogo()
+      estado.insumoAgregar = null
+      estado.agregados = 0
+      document.getElementById('rec-buscar-catalogo').value = ''
+      document.getElementById('rec-lote').value = ''
+      document.getElementById('rec-campo-lote').hidden = true
+      document.getElementById('rec-agregados').hidden = true
+      limpiarErroresAgregar()
+      renderizarSugerenciasCatalogo()
+      document.getElementById('modal-agregar-item').hidden = false
+      document.getElementById('rec-buscar-catalogo').focus()
+    }
+
+    function cerrarModalAgregar() {
+      document.getElementById('modal-agregar-item').hidden = true
+      estado.insumoAgregar = null
+    }
+
+    function limpiarErroresAgregar() {
+      document.getElementById('rec-error-insumo').hidden = true
+      document.getElementById('rec-error-lote').hidden = true
+    }
+
+    function renderizarSugerenciasCatalogo() {
+      const termino = document.getElementById('rec-buscar-catalogo').value
+      const cont = document.getElementById('rec-sugerencias')
+      const t = normalizar(termino)
+
+      if (!t) { cont.hidden = true; cont.innerHTML = ''; return }
+
+      const encontrados = ordenarPorNombre(
+        estado.insumos.filter(i => i.activo && coincide(i, termino))
+      ).slice(0, 8)
+
+      if (!encontrados.length) {
+        cont.hidden = false
+        cont.innerHTML = '<div class="campo-stock__ayuda">Ningún insumo activo coincide. Si el producto no existe todavía, hay que darlo de alta en el catálogo.</div>'
+        return
+      }
+
+      cont.hidden = false
+      cont.innerHTML = encontrados.map(i => `
+        <button type="button" class="rec-sug ${estado.insumoAgregar?.id === i.id ? 'rec-sug--elegido' : ''}" data-sug="${esc(i.id)}">
+          <div class="rec-sug__nombre">${esc(i.nombre)}</div>
+          <div class="rec-sug__meta">${esc([i.marca, i.unidad_medida, TIPOS[i.tipo] ?? i.tipo].filter(Boolean).join(' · '))}</div>
+        </button>`).join('')
+
+      cont.querySelectorAll('[data-sug]').forEach(btn => {
+        btn.addEventListener('click', () => elegirInsumoAgregar(btn.dataset.sug))
+      })
+    }
+
+    function elegirInsumoAgregar(insumoId) {
+      const i = estado.insumos.find(x => x.id === insumoId)
+      if (!i) return
+      estado.insumoAgregar = i
+      limpiarErroresAgregar()
+      // El lote solo tiene sentido —y solo es obligatorio— en materia prima.
+      // La RPC lo exige igual; esto evita el viaje al servidor.
+      document.getElementById('rec-campo-lote').hidden = i.tipo !== 'materia_prima'
+      renderizarSugerenciasCatalogo()
+      if (i.tipo === 'materia_prima') document.getElementById('rec-lote').focus()
+    }
+
+    async function confirmarAgregarItem() {
+      limpiarErroresAgregar()
+      const insumo = estado.insumoAgregar
+      if (!insumo) {
+        marcarError('rec-error-insumo', 'Elegí un insumo de la lista.')
+        return
+      }
+      const lote = insumo.tipo === 'materia_prima'
+        ? document.getElementById('rec-lote').value.trim()
+        : ''
+      if (insumo.tipo === 'materia_prima' && !lote) {
+        marcarError('rec-error-lote', 'Es materia prima: el lote es obligatorio.')
+        return
+      }
+
+      // El índice único es (recuento_id, insumo_id, coalesce(lote,'')). Sin
+      // este chequeo el duplicado vuelve como un 23505 crudo de Postgres.
+      const yaEsta = estado.itemsRec.some(i =>
+        i.insumo_id === insumo.id && (i.lote ?? '') === lote)
+      if (yaEsta) {
+        marcarError(lote ? 'rec-error-lote' : 'rec-error-insumo',
+          lote ? 'Ese insumo con ese lote ya está en la lista.' : 'Ese insumo ya está en la lista.')
+        return
+      }
+
+      const btn = document.getElementById('btn-confirmar-agregar')
+      btn.disabled = true
+      const { error } = await supabase.rpc('agregar_item_recuento', {
+        p_recuento_id: estado.recuento.id,
+        p_insumo_id: insumo.id,
+        p_lote: lote || null,
+      })
+      btn.disabled = false
+
+      if (error) {
+        console.error(error)
+        mostrarError(error.message || 'No se pudo agregar el ítem.')
+        return
+      }
+
+      await cargarItemsRecuento()
+      renderizarChipsFiltroRec()
+      renderizarItemsRecuento()
+
+      // El modal se queda abierto y limpio: agregar materias primas con su
+      // lote es trabajo repetitivo y cerrarlo obligaría a volver a tocar el
+      // botón en cada una.
+      estado.agregados += 1
+      const cont = document.getElementById('rec-agregados')
+      cont.hidden = false
+      cont.textContent = estado.agregados === 1
+        ? 'Se agregó 1 ítem. Podés seguir agregando.'
+        : `Se agregaron ${estado.agregados} ítems. Podés seguir agregando.`
+      estado.insumoAgregar = null
+      document.getElementById('rec-buscar-catalogo').value = ''
+      document.getElementById('rec-lote').value = ''
+      document.getElementById('rec-campo-lote').hidden = true
+      renderizarSugerenciasCatalogo()
+      document.getElementById('rec-buscar-catalogo').focus()
+    }
+
+    // ── Cerrar ─────────────────────────────────────────────────────────────
+
+    async function abrirModalCerrar() {
+      // Lo que quedó sin guardar tiene que estar en la base antes de cerrar:
+      // cerrar_recuento lee de la tabla, no de la pantalla.
+      await guardarConteoAhora()
+      if (estado.sucios.size) {
+        mostrarError('Quedó avance sin guardar. Revisá la conexión antes de cerrar.')
+        return
+      }
+
+      // Los saldos se releen ahora para que el resumen sea lo más fresco
+      // posible. Aun así es una estimación: el servidor congela el saldo
+      // recién al cerrar.
+      const { data, error } = await supabase.from('v_stock_por_lote')
+        .select('insumo_id, lote, saldo')
+        .eq('unidad_negocio_id', estado.recuento.unidad_negocio_id)
+      if (!error) {
+        estado.saldos = new Map(
+          (data ?? []).map(s => [claveSaldo(s.insumo_id, s.lote), Number(s.saldo) || 0])
+        )
+      }
+
+      const difs = estado.itemsRec
+        .map(i => ({ item: i, d: (i.cantidad_contada ?? 0) - saldoDe(i) }))
+        .filter(x => x.d !== 0)
+        .sort((a, b) => Math.abs(b.d) - Math.abs(a.d))
+
+      document.getElementById('cierre-items').textContent = estado.itemsRec.length
+      document.getElementById('cierre-difs').textContent = difs.length
+
+      const listaEl = document.getElementById('cierre-lista-difs')
+      listaEl.hidden = difs.length === 0
+      listaEl.innerHTML = difs.slice(0, TOPE_DIFS_RESUMEN).map(({ item, d }) => `
+        <div class="rec-dif">
+          <span class="rec-dif__nombre">${esc(item.nombre)}${item.lote ? ` <span class="rec-dif__lote">Lote ${esc(item.lote)}</span>` : ''}</span>
+          <span class="rec-dif__valor ${d < 0 ? 'rec-dif__valor--falta' : ''}">${d > 0 ? '+' : '−'}${esc(formatearCantidadStock(Math.abs(d), item.unidad_medida))}</span>
+        </div>`).join('')
+        // Un tope silencioso leería como "estas son todas". Se dice cuántas
+        // quedaron afuera.
+        + (difs.length > TOPE_DIFS_RESUMEN
+            ? `<div class="campo-stock__ayuda">Y ${difs.length - TOPE_DIFS_RESUMEN} diferencia${difs.length - TOPE_DIFS_RESUMEN === 1 ? '' : 's'} más que no se listan acá.</div>`
+            : '')
+
+      document.getElementById('cierre-paso-resumen').hidden = false
+      document.getElementById('cierre-paso-resultado').hidden = true
+      document.getElementById('cierre-titulo').textContent = 'Cerrar el recuento'
+      document.getElementById('modal-cerrar-recuento').hidden = false
+    }
+
+    function cerrarModalCierre() {
+      document.getElementById('modal-cerrar-recuento').hidden = true
+    }
+
+    async function confirmarCierre() {
+      const btn = document.getElementById('btn-confirmar-cierre')
+      btn.disabled = true
+      const { data, error } = await supabase.rpc('cerrar_recuento', {
+        p_recuento_id: estado.recuento.id,
+      })
+      btn.disabled = false
+
+      if (error) {
+        console.error(error)
+        mostrarError(error.message || 'No se pudo cerrar el recuento.')
+        return
+      }
+
+      const ajustes = Number(data?.ajustes_generados ?? 0)
+      document.getElementById('cierre-ajustes').textContent = ajustes
+      document.getElementById('cierre-texto-resultado').textContent = ajustes === 0
+        ? 'El conteo coincidió con el sistema en todos los ítems, así que no hizo falta ningún ajuste.'
+        : `Se generaron ${ajustes} ${ajustes === 1 ? 'movimiento de ajuste' : 'movimientos de ajuste'} para igualar el sistema al conteo real.`
+      document.getElementById('cierre-titulo').textContent = 'Recuento cerrado'
+      document.getElementById('cierre-paso-resumen').hidden = true
+      document.getElementById('cierre-paso-resultado').hidden = false
+
+      mostrarExito('Recuento cerrado.')
+      // El stock cambió: la otra pestaña quedó desactualizada.
+      await cargarRecuento()
+      if (puedeVerStock()) await cargarStock()
+    }
+
+    // ── Anular ─────────────────────────────────────────────────────────────
+
+    function abrirModalAnular() {
+      document.getElementById('rec-motivo-anulacion').value = ''
+      document.getElementById('rec-error-motivo').hidden = true
+      document.getElementById('modal-anular-recuento').hidden = false
+      document.getElementById('rec-motivo-anulacion').focus()
+    }
+
+    function cerrarModalAnular() {
+      document.getElementById('modal-anular-recuento').hidden = true
+    }
+
+    async function confirmarAnular() {
+      const motivo = document.getElementById('rec-motivo-anulacion').value.trim()
+      if (!motivo) {
+        marcarError('rec-error-motivo', 'El motivo es obligatorio.')
+        return
+      }
+      const btn = document.getElementById('btn-confirmar-anular')
+      btn.disabled = true
+      const { error } = await supabase.rpc('anular_recuento', {
+        p_recuento_id: estado.recuento.id,
+        p_motivo: motivo,
+      })
+      btn.disabled = false
+      if (error) {
+        console.error(error)
+        mostrarError(error.message || 'No se pudo anular el recuento.')
+        return
+      }
+      cerrarModalAnular()
+      mostrarExito('Recuento anulado.')
+      await cargarRecuento()
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PESTAÑAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const SUBTITULO_VISTA = { stock: 'Stock actual', catalogo: 'Catálogo de insumos' }
+    const SUBTITULO_VISTA = {
+      stock: 'Stock actual',
+      catalogo: 'Catálogo de insumos',
+      recuento: 'Recuento de inventario',
+    }
 
     function mostrarVista(id) {
       estado.vista = id
       document.getElementById('vista-stock').hidden = id !== 'stock'
       document.getElementById('vista-catalogo').hidden = id !== 'catalogo'
+      document.getElementById('vista-recuento').hidden = id !== 'recuento'
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
         btn.classList.toggle('pestana-stock--activa', btn.dataset.vista === id)
@@ -2087,6 +3353,39 @@
       if (archivo) leerArchivoExcel(archivo)
     })
     document.getElementById('btn-confirmar-import').addEventListener('click', confirmarImportacion)
+
+    // ── Recuento ───────────────────────────────────────────────────────────
+    document.getElementById('btn-empezar-recuento').addEventListener('click', empezarRecuento)
+    document.getElementById('rec-buscador').addEventListener('input', (e) => {
+      estado.busquedaRec = e.target.value
+      renderizarItemsRecuento()
+    })
+    document.getElementById('btn-agregar-item').addEventListener('click', abrirModalAgregar)
+    document.getElementById('rec-buscar-catalogo').addEventListener('input', () => {
+      estado.insumoAgregar = null
+      document.getElementById('rec-campo-lote').hidden = true
+      renderizarSugerenciasCatalogo()
+    })
+    document.getElementById('btn-confirmar-agregar').addEventListener('click', confirmarAgregarItem)
+    document.querySelectorAll('[data-cerrar-agregar]').forEach(el =>
+      el.addEventListener('click', cerrarModalAgregar))
+
+    document.getElementById('btn-cerrar-recuento').addEventListener('click', abrirModalCerrar)
+    document.getElementById('btn-confirmar-cierre').addEventListener('click', confirmarCierre)
+    document.querySelectorAll('[data-cerrar-cierre]').forEach(el =>
+      el.addEventListener('click', cerrarModalCierre))
+
+    document.getElementById('btn-anular-recuento').addEventListener('click', abrirModalAnular)
+    document.getElementById('btn-confirmar-anular').addEventListener('click', confirmarAnular)
+    document.querySelectorAll('[data-cerrar-anular]').forEach(el =>
+      el.addEventListener('click', cerrarModalAnular))
+
+    // El caso real no es cerrar la pestaña: es el celular que se bloquea
+    // mientras alguien camina por el depósito. 'hidden' se dispara ahí, y
+    // beforeunload no serviría igual porque no puede esperar a un await.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') guardarConteoAhora()
+    })
     document.querySelectorAll('[data-cerrar-importar]').forEach(el =>
       el.addEventListener('click', cerrarModalImportar))
 
@@ -2134,25 +3433,38 @@
 
       // ── Qué vistas tiene esta persona ──────────────────────────────────
       const verStock = puedeVerStock()
+      const ajusta   = puedeAjustar()
 
-      if (!verStock && !gestiona) {
+      if (!verStock && !gestiona && !ajusta) {
         document.getElementById('sin-acceso').hidden = false
         return
       }
 
-      // Las pestañas solo si hay DOS: una pestaña sola no es una elección.
-      document.getElementById('pestanas-stock').hidden = !(verStock && gestiona)
+      // El orden de este array es el de las pestañas Y el del default: se abre
+      // en Stock, que es lo que se mira todos los días. Pero se resuelve por
+      // PERMISO y no por costumbre — alguien puede tener solo el catálogo, o
+      // solo el recuento.
+      const vistas = [
+        verStock && 'stock',
+        gestiona && 'catalogo',
+        ajusta   && 'recuento',
+      ].filter(Boolean)
 
-      // Abre en Stock, que es lo que se mira todos los días; el catálogo lo
-      // toca poca gente muy de vez en cuando. Pero se resuelve por PERMISO y no
-      // por costumbre: alguien puede tener gestionar_catalogo y no ver.
-      mostrarVista(verStock ? 'stock' : 'catalogo')
+      // Las pestañas solo si hay DOS o más: una pestaña sola no es una
+      // elección, es ruido. Y las que no correspondan no se dibujan.
+      document.getElementById('pestanas-stock').hidden = vistas.length < 2
+      document.querySelectorAll('.pestana-stock').forEach(btn => {
+        btn.hidden = !vistas.includes(btn.dataset.vista)
+      })
+
+      mostrarVista(vistas[0])
 
       // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
       // consulta volvería vacía por RLS igual, pero no tiene sentido hacerla.
       await Promise.all([
         verStock ? cargarStock() : Promise.resolve(),
         gestiona ? cargarInsumos() : Promise.resolve(),
+        ajusta   ? cargarUnidadesRecuento().then(cargarRecuento) : Promise.resolve(),
       ])
     }
 
