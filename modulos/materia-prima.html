@@ -1047,9 +1047,17 @@
     .item-mp--abierto { border-color: var(--marron); }
     .item-mp--error { border-color: var(--color-error); }
     /* Atenuado: se tiene que ver de un vistazo cuál entra y cuál no. Solo el
-       cuerpo — la cabecera queda legible para poder identificar el renglón. */
-    .item-mp--no-suma .item-mp__cuerpo > *:not(.casilla-no-suma):not(.marca-ocr-item):not(.item-mp__hint) { opacity: 0.5; }
-    .item-mp--no-suma .item-mp__cantidad { opacity: 0.5; }
+       cuerpo — la cabecera queda legible para poder identificar el renglón.
+
+       EL ERROR GANA SOBRE EL ATENUADO, y por eso va el :not(.item-mp--error).
+       Son dos estados que dicen cosas opuestas: el atenuado dice "esto no
+       cuenta, seguí de largo" y el error dice "esto te está esperando". Sin la
+       exclusión se pisaban — .item-mp__error es hijo DIRECTO de
+       .item-mp__cuerpo, así que el cartel rojo quedaba al 50% de opacidad,
+       flotando sobre una tarjeta deshabilitada. Se lee como un adorno y no
+       como algo que pide una acción, que es justo lo que es. */
+    .item-mp--no-suma:not(.item-mp--error) .item-mp__cuerpo > *:not(.casilla-no-suma):not(.marca-ocr-item):not(.item-mp__hint) { opacity: 0.5; }
+    .item-mp--no-suma:not(.item-mp--error) .item-mp__cantidad { opacity: 0.5; }
 
     /* La casilla del vínculo por renglón. Es una casilla y no un botón más de
        la fila de secundarios: cambia lo que el renglón SIGNIFICA, no cómo se
