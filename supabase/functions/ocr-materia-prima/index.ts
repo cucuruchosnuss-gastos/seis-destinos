@@ -335,16 +335,24 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ACÁ HABÍA UN DESCARTE QUE ESTABA AL REVÉS: cuando bultos * contenido no
+  // cerraba contra cantidad_total, se anulaba el DESGLOSE y se conservaba el
+  // total. Pero bultos y contenido son transcripción directa de lo que dice el
+  // renglón, y el total es una multiplicación que hizo el modelo: ante una
+  // discrepancia, lo confiable son los dos primeros.
+  //
+  // Ahora los tres viajan como vinieron y es el wizard el que recalcula el
+  // total desde bultos * contenido y AVISA en pantalla si el comprobante decía
+  // otra cosa, para que alguien lo verifique contra el papel. Descartarlo acá
+  // dejaba a la persona sin la posibilidad de mirar.
+  //
+  // Solo se normaliza el tipo, igual que con los precios: lo que no sea un
+  // número finito va a null antes que ensuciar el prellenado.
   for (const item of datos.items as Record<string, unknown>[]) {
-    if (item.cantidad_bultos != null && item.contenido_por_bulto != null) {
-      const bultos = item.cantidad_bultos as number
-      const contenido = item.contenido_por_bulto as number
-      const total = item.cantidad_total as number
-      // El CHECK constraint de la base rechaza la fila si cantidad != bultos * contenido:
-      // ante una inconsistencia se pierde el desglose, nunca el total.
-      if (typeof bultos !== 'number' || typeof contenido !== 'number' || Math.abs(bultos * contenido - total) > 0.01) {
-        item.cantidad_bultos = null
-        item.contenido_por_bulto = null
+    for (const campo of ['cantidad_bultos', 'contenido_por_bulto']) {
+      const v = item[campo]
+      if (v != null && (typeof v !== 'number' || !Number.isFinite(v) || v <= 0)) {
+        item[campo] = null
       }
     }
   }

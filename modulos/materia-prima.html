@@ -1212,6 +1212,37 @@
       min-width: 0;
     }
 
+    /* El total del comprobante no coincide con bultos x contenido. No bloquea:
+       manda el desglose, pero puede ser que el modelo haya leido mal los bultos
+       y no el total, y eso solo lo sabe quien tiene el papel delante. */
+    .aviso-total-ocr {
+      min-width: 0;
+      margin-top: 0.5rem;
+      padding: 0.5625rem 0.75rem;
+      border-radius: 11px;
+      background: rgba(217,119,6,0.10);
+      border-left: 3px solid #B45309;
+      font-size: 0.78125rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #92400E;
+      overflow-wrap: anywhere;
+    }
+    /* Pregunta abierta con las DOS salidas: el renglon puede ser un flete o un
+       producto real que el modelo no supo clasificar. No empuja a borrar. */
+    .aviso-sin-clasificar {
+      min-width: 0;
+      margin-top: 0.5rem;
+      padding: 0.5625rem 0.75rem;
+      border-radius: 11px;
+      background: var(--color-superficie);
+      font-size: 0.78125rem;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+
     .cantidad-fila { display: flex; align-items: center; gap: 0.4375rem; min-width: 0; flex-wrap: wrap; }
     /* El aviso de un numero que no se pudo leer. Va DENTRO de .cantidad-fila,
        que es flex-wrap, con flex-basis 100% para caer en su propio renglon
@@ -3504,7 +3535,10 @@
         // .aviso-sin-revisar) en vez de dejar que se propague callado.
         pendienteRevision: match?.estado_alta === 'pendiente_revision',
         unidadMedida: match?.unidad_medida ?? normalizarUnidad(crudo.unidad_medida) ?? 'kg',
-        modoDesglose: bultos != null && contenido != null,
+        // Siempre en true: la presentación es obligatoria y ya no hay modo
+        // alternativo. Se conserva la propiedad porque la leen
+        // recalcularDesglose() y el payload; lo que se fue es la elección.
+        modoDesglose: true,
         bultos, contenido,
         cantidad: numeroDesdeOcr(crudo.cantidad_total),
         // Marca que el número de arriba salió de la foto. Solo se usa para
@@ -3540,7 +3574,7 @@
         // hay nada que guardar en la libretita.
         porAlias: false, textoOriginal: '', nombreOcr: '',
         busquedaCatalogo: '',
-        modoDesglose: false, bultos: null, contenido: null, cantidad: null,
+        modoDesglose: true, bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
         cantidadOcrOriginal: null,
@@ -3724,6 +3758,31 @@
       recalcularDesglose(item)
     }
 
+    // ¿El total que leyó el OCR coincide con bultos × contenido?
+    // `cantidadOcrOriginal` es el total tal como lo devolvió el modelo. Bultos y
+    // contenido son transcripción directa del renglón; el total es una
+    // multiplicación que hizo el modelo, así que ante una discrepancia mandan
+    // los dos primeros — pero se avisa, porque puede ser que el modelo haya
+    // leído mal los bultos y no el total, y eso solo lo sabe quien tiene el
+    // papel delante.
+    function totalOcrDiscrepante(item) {
+      const ocr = item.cantidadOcrOriginal
+      if (ocr == null || item.bultos == null || item.contenido == null) return null
+      const calculado = item.bultos * item.contenido
+      if (Math.abs(calculado - ocr) <= TOLERANCIA_CANTIDAD) return null
+      return { ocr, calculado }
+    }
+
+    function avisoTotalOcr(item) {
+      const d = totalOcrDiscrepante(item)
+      if (!d) return ''
+      return `<div class="aviso-total-ocr">
+          El comprobante decía <strong>${esc(formatearCantidad(d.ocr, item.unidadMedida))}</strong>
+          y este desglose da <strong>${esc(formatearCantidad(d.calculado, item.unidadMedida))}</strong>.
+          Verificá contra el papel cuál es el correcto: vale el desglose.
+        </div>`
+    }
+
     function recalcularDesglose(item) {
       if (!item.modoDesglose) return
       const total = (a, b) => (a != null && b != null) ? a * b : null
@@ -3785,8 +3844,18 @@
       const valorArriba = item.difiere ? item.cantidadDocumento : item.cantidad
       const totalArriba = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
 
-      const cantidadHtml = item.modoDesglose
-        ? `<div class="cantidad-fila">
+      // TODO renglón se carga como bultos × contenido, sin modos. El módulo de
+      // Stock muestra el saldo por bultos y copia contenido_por_bulto al
+      // movimiento: un ítem que entra sin presentación deja ese saldo en kilos
+      // PARA SIEMPRE, porque el movimiento es histórico y no se recalcula.
+      //
+      // Acá había dos modos y un botón "Cargar una cantidad única" que ponía
+      // bultos y contenido en null. Con la presentación obligatoria, eso es una
+      // salida hacia un estado inválido: dos modos donde uno no vale es una
+      // trampa. El caso realmente suelto se expresa igual — "1 bulto de 10 kg"—
+      // y no necesita una excepción.
+      const cantidadHtml = `
+          <div class="cantidad-fila">
              <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultos" value="${esc(textoParaInput(item.bultos))}" placeholder="0">
              <span class="cantidad-fila__unidad">bultos</span>
              <span class="cantidad-fila__x">×</span>
@@ -3794,14 +3863,22 @@
              ${selectorUnidad}
            </div>
            <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>
-           <button type="button" class="btn-item-secundario" data-accion="modo-directo">Cargar una cantidad única</button>
-           <div class="item-mp__hint">ⓘ Si el remito informa un solo total, sin desglosar por bulto.</div>`
-        : `<div class="cantidad-fila">
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="${campoArriba}" value="${esc(textoParaInput(valorArriba))}" placeholder="0">
-             ${selectorUnidad}
-           </div>
-           <button type="button" class="btn-item-secundario" data-accion="modo-desglose">Vino en bultos (ej: 200 bolsas de 25 kg)</button>
-           <div class="item-mp__hint">ⓘ Cargás cuántos bultos y cuánto trae cada uno; el total se calcula solo.</div>`
+           ${avisoTotalOcr(item)}
+           <div class="item-mp__hint">ⓘ Si vino a granel o en un solo envase, es 1 bulto por el total.</div>`
+
+      // El OCR no pudo clasificar el renglón y tampoco matcheó contra el
+      // catálogo. Puede ser un flete o un servicio —que no son mercadería y no
+      // van a tener bultos nunca— o un producto real que el modelo no supo
+      // clasificar: el prompt dice "ante la duda, null", así que este estado NO
+      // significa "esto es un flete".
+      //
+      // Por eso el texto es una PREGUNTA con las dos salidas, y no un empujón a
+      // borrar. Y por eso tampoco exime de cargar bultos: la exención la
+      // produce la persona borrando el renglón, no una marca del OCR.
+      const avisoSinClasificar = !(item.esNuevo && item.tipo == null) ? '' : `
+        <div class="aviso-sin-clasificar">
+          ¿Es un flete, un servicio o una bonificación? Si no es mercadería, borralo con la papelera; si es un producto, elegí el tipo acá arriba.
+        </div>`
 
       // Se resolvió con la libretita: se dice explícito y se ofrece corregir.
       // NUNCA callado — un alias mal mapeado se propaga a todas las cargas
@@ -3859,18 +3936,13 @@
       // En desglose se piden solo los BULTOS recibidos: el contenido por bulto
       // ya está arriba y es el mismo. Así la persona escribe "98" y el total
       // sale solo — nunca multiplica de cabeza en el depósito.
-      const recibidoHtml = item.modoDesglose
-        ? `<div class="cantidad-fila">
+      const recibidoHtml = `
+          <div class="cantidad-fila">
              <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultosRecibidos"
                     value="${esc(textoParaInput(item.bultosRecibidos))}" placeholder="0">
              <span class="cantidad-fila__unidad">bultos de ${esc(formatearCantidad(item.contenido ?? 0, item.unidadMedida))}</span>
            </div>
            <div class="cantidad-total"><span>Total recibido</span><span data-rol="total-recibido">${esc(textoCantidad(item))}</span></div>`
-        : `<div class="cantidad-fila">
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="cantidad"
-                    value="${esc(textoParaInput(item.cantidad))}" placeholder="0">
-             <span class="cantidad-fila__unidad">${u}</span>
-           </div>`
 
       // Apagar el control descarta lo que se escribió en "recibí": `cantidad`
       // vuelve a ser el número de arriba. Perder un dato tipeado sin aviso es
@@ -3966,6 +4038,7 @@
             ${marcaAlias}
             ${casillaYaRecibido}
             ${identidadHtml}
+            ${avisoSinClasificar}
             ${cambiarProducto}
             ${avisoSinRevisar}
 
@@ -4048,23 +4121,6 @@
             if (accion === 'borrar') {
               estado.wizard.items = estado.wizard.items.filter(i => i.uid !== item.uid)
               if (estado.wizard.itemAbierto === item.uid) estado.wizard.itemAbierto = null
-              renderizarItems()
-            }
-            if (accion === 'modo-desglose') {
-              item.modoDesglose = true
-              // Se arranca de cero: adivinar un desglose desde el total sería
-              // inventar un dato que el papel no dice.
-              item.bultos = null; item.contenido = null; item.cantidad = null
-              // Con el control activo también se van los dos de la recepción
-              // parcial: se derivan del desglose, que acaba de vaciarse.
-              item.bultosRecibidos = null
-              if (item.difiere) item.cantidadDocumento = null
-              renderizarItems()
-            }
-            if (accion === 'modo-directo') {
-              item.modoDesglose = false
-              item.bultos = null; item.contenido = null
-              item.bultosRecibidos = null
               renderizarItems()
             }
             // Solo para ítems NUEVO: define el tipo del insumo que se va a
@@ -4286,9 +4342,20 @@
         item.error = null
         if (!String(item.nombre || '').trim()) {
           item.error = 'Falta el nombre del producto.'
+        } else if (item.contenido == null || !(item.contenido > 0)) {
+          // La presentación es OBLIGATORIA: Stock copia contenido_por_bulto al
+          // movimiento y lo muestra como "250 bultos de 25 kg". Un ítem que
+          // entra sin ella deja ese saldo en kilos para siempre, porque el
+          // movimiento es histórico y no se recalcula.
+          item.error = 'Cargá cuánto trae cada bulto.'
+        } else if (item.bultos == null || !(item.bultos > 0)) {
+          item.error = 'Cargá cuántos bultos dice el comprobante.'
+        } else if (item.difiere && (item.bultosRecibidos == null || !(item.bultosRecibidos > 0))) {
+          item.error = 'Cargá cuántos bultos recibiste.'
         } else if (item.cantidad == null || !(item.cantidad > 0)) {
-          // `cantidad` es siempre lo recibido. Con el control activo eso es el
-          // campo de abajo, así que el mensaje tiene que nombrar ESE campo.
+          // `cantidad` es siempre lo recibido, y se deriva de bultos ×
+          // contenido. Llegar acá con los tres campos cargados significa que la
+          // derivación no cerró, no que falte tipear algo.
           item.error = item.difiere
             ? 'Cargá la cantidad que recibiste.'
             : 'La cantidad tiene que ser mayor a cero.'
@@ -4475,13 +4542,19 @@
       // cantidad_bultos es 98. Con el control activo esos bultos son los del
       // campo de abajo; con el control apagado, los de arriba (que ahí son los
       // recibidos).
-      const bultosRecibidos = item.difiere ? item.bultosRecibidos : item.bultos
-      let bultos = item.modoDesglose ? bultosRecibidos : null
-      let contenido = item.modoDesglose ? item.contenido : null
-      if (bultos == null || contenido == null || Math.abs(bultos * contenido - item.cantidad) > 0.01) {
-        bultos = null
-        contenido = null
-      }
+      // La presentación describe lo RECIBIDO, no lo que decía el papel: si
+      // llegaron 98 de 100 cajas, cantidad_bultos es 98. Es lo que exige
+      // chk_presentacion_coherente, que compara contra `cantidad`.
+      //
+      // Acá había un descarte que ponía los dos en null cuando no cerraban
+      // contra `cantidad`. Con la presentación OPCIONAL tenía sentido: se
+      // perdía el desglose y se salvaba la fila. Ahora que es obligatoria es lo
+      // contrario de lo que hay que hacer — el CHECK acepta el par en null, así
+      // que un descuadre habría guardado el renglón SIN presentación y en
+      // silencio, que es justo el agujero que este cambio viene a tapar.
+      // El descuadre lo corta validarItems() antes de llegar hasta acá.
+      const bultos = item.difiere ? item.bultosRecibidos : item.bultos
+      const contenido = item.contenido
       // cantidad_documento se guarda SOLO cuando difiere de lo recibido. Si
       // coincide —el 95% de los casos— van las dos en null: coincidir no es
       // una diferencia, no hay nada que registrar. Misma tolerancia que arriba.
