@@ -758,11 +758,17 @@
           // La vieja 'ingreso_externo' se partió en dos: el permiso ahora
           // depende de en qué caja entra la plata.
           //
-          // Estas cinco (las dos de ingreso + las tres de Empresa) se chequean
-          // server-side SIN bypass de super_admin (tiene_tarea_explicita), así
-          // que un super_admin también necesita la fila otorgada. 'ver_empresa'
-          // es además la puerta de entrada: sin ella no aparece el atajo a la
-          // ficha de Empresa, que es desde donde se opera su plata.
+          // Estas SEIS (las dos de ingreso + las tres de Empresa +
+          // 'transferir_entre_personas') se chequean server-side SIN bypass de
+          // super_admin (tiene_tarea_explicita), así que un super_admin también
+          // necesita la fila otorgada. 'ver_empresa' es además la puerta de
+          // entrada: sin ella no aparece el atajo a la ficha de Empresa, que es
+          // desde donde se opera su plata.
+          //
+          // La sexta es la única que NO toca plata de Empresa: lo que saltea es
+          // el requisito de que haya un super_admin en la operación. Por eso
+          // heredarla por rol sería circular — el super_admin ya cumple esa
+          // regla por su cuenta, así que el bypass la volvería inútil.
           { modulo: 'caja',   tarea: 'ingreso_externo_propio',  label: 'Cargar ingresos externos en su propia caja',
             descripcion: 'Permite cargar un ingreso externo (plata que entra de afuera del sistema, por ejemplo una cobranza en mano) en una cuenta propia. Atención: esta tarea no se hereda por rol — un super admin también necesita tenerla tildada para usarla.' },
           { modulo: 'caja',   tarea: 'ingreso_externo_empresa', label: 'Cargar ingresos en las cuentas de la Empresa',
@@ -773,6 +779,8 @@
             descripcion: 'Permite transferir plata desde una cuenta de la Empresa hacia una persona. No se hereda por rol.' },
           { modulo: 'caja',   tarea: 'traspaso_empresa',        label: 'Mover plata entre cuentas de la Empresa',
             descripcion: 'Permite mover plata entre cuentas de la propia Empresa (por ejemplo, del banco al efectivo). No se hereda por rol.' },
+          { modulo: 'caja',   tarea: 'transferir_entre_personas', label: 'Transferir plata entre dos personas',
+            descripcion: 'Permite iniciar una transferencia de plata hacia otra persona sin que ninguna de las dos sea super admin ni la Empresa. Solo la necesita quien inicia el movimiento: la otra persona no necesita ninguna tarea para aceptarlo. Como siempre, la plata no se mueve hasta que la otra parte confirma. No se hereda por rol: un super admin también la necesita tildada.' },
         ],
       },
       {
