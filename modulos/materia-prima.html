@@ -1314,6 +1314,79 @@
     }
     .texto-del-papel strong { color: #2c3242; font-weight: 600; }
 
+    /* ── El bloque de cantidad ──────────────────────────────────────────
+       Dos campos que NO son lo mismo: el de arriba ya viene lleno con el
+       numero del papel y casi nunca se toca; el de abajo esta vacio y es lo
+       unico que hay que completar. Siendo gemelos no se entendia cual pedia
+       accion. Se usa el vocabulario que ya tiene el proyecto: el label chico
+       en mayusculas de .wz-campo, y su altura de 48px para el protagonista. */
+    .campo-mp__label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+    }
+    .campo-mp__label--suave {
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.25rem;
+    }
+    .campo-mp {
+      display: flex; align-items: center; gap: 0.4375rem;
+      flex-wrap: wrap; min-width: 0;
+    }
+    .campo-mp input {
+      flex: 1 1 4.5rem; min-width: 0; height: 44px;
+      padding: 0 0.75rem;
+      border: 1px solid var(--color-borde); border-radius: 11px;
+      font-family: var(--fuente); font-size: 0.9375rem; font-weight: 650;
+      background: var(--color-fondo); color: var(--color-texto);
+      outline: none;
+    }
+    .campo-mp input:focus { border-color: var(--marron); }
+    .campo-mp select {
+      flex-shrink: 0; height: 44px; padding: 0 0.5rem;
+      border: 1px solid var(--color-borde); border-radius: 11px;
+      font-family: var(--fuente); font-size: 0.875rem;
+      background: var(--color-fondo); color: var(--color-texto);
+      min-width: 0;
+    }
+    /* El de confirmacion: mas chico, mas suave. No pide nada. */
+    .campo-mp--confirma input {
+      height: 36px; font-weight: 600;
+      color: var(--color-texto-suave);
+      background: var(--color-superficie);
+      border-color: var(--color-borde);
+    }
+    .campo-mp--confirma .campo-sufijo__unidad { font-size: 0.75rem; }
+    /* El protagonista: la altura del campo del wizard. */
+    .campo-mp--protagonista input { height: 48px; font-size: 1rem; }
+
+    /* La unidad DENTRO del campo: suelta a la derecha quedaba flotando y no se
+       leia como parte del numero. */
+    .campo-sufijo { position: relative; flex: 1 1 4.5rem; min-width: 0; display: flex; }
+    .campo-sufijo input { padding-right: 3rem; }
+    .campo-sufijo__unidad {
+      position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+      font-size: 0.8125rem; color: var(--color-texto-suave);
+      pointer-events: none; max-width: 2.5rem; overflow: hidden;
+    }
+
+    /* El resultado, pegado al campo que lo produce y repintado a cada tecla. */
+    .resultado-vivo {
+      flex: 0 1 auto; min-width: 0;
+      font-size: 0.8125rem; font-weight: 600;
+      color: var(--marron-oscuro);
+      overflow-wrap: anywhere;
+    }
+    .resultado-vivo--mal { color: #B91C1C; font-weight: 650; }
+
+    /* El campo cuyo valor no se pudo leer. Señala UNO solo: el texto del aviso
+       cae entre dos lineas y con cuatro presentaciones hay que adivinar. */
+    .dato-invalido { border-color: var(--color-error) !important; }
+
     .lineas-mixtas { margin-top: 0.5rem; }
     .linea-mixta {
       display: flex; align-items: center; gap: 0.375rem;
@@ -1325,10 +1398,19 @@
       font-size: 0.9375rem; font-family: inherit; text-align: right;
     }
     .linea-mixta input:focus { border-color: var(--marron); outline: none; }
+    /* Separada del campo de contenido: pegada, en el celular se tocaba por
+       error mientras se escribia. El margen la despega y el area de toque
+       llega a 40px sin agrandar el recuadro visible. */
     .btn-quitar-linea {
       flex-shrink: 0; width: 1.75rem; height: 1.75rem; padding: 0;
+      margin-left: 0.625rem; position: relative;
       border: 1px solid #d7dce7; border-radius: 8px; background: #fff;
       color: #6b7385; font-size: 0.8125rem; cursor: pointer; line-height: 1;
+    }
+    .btn-quitar-linea::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px; height: 40px;
     }
     .btn-quitar-linea:disabled { opacity: 0.35; cursor: default; }
 
@@ -4336,6 +4418,25 @@
       // el COMPROBANTE; sin él, lo recibido (que es lo mismo).
       const totalArriba = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
 
+      // LA LÍNEA "TOTAL" SOLO CUANDO APORTA. En el caso normal era el MISMO
+      // número tres veces —la línea del comprobante, el campo y el total— en un
+      // bloque que ya llena la pantalla del celular con cinco renglones por
+      // factura.
+      //
+      //   'unidades' / 'granel' simple → el total ES el número del papel
+      //   'bultos' simple              → el resultado ya está al lado del campo
+      //   con "recibí menos"           → SÍ: son dos cantidades distintas
+      //   mixto y la suma CIERRA       → SÍ: el total en unidad base no es la
+      //                                  suma de control cuando el modo es bultos
+      //   mixto y NO cierra            → NO. Mostrar 420 como "Total" al lado de
+      //                                  "Suma 420 de 300" en rojo es presentar
+      //                                  como válido un número que acaba de ser
+      //                                  declarado inválido: los dos estados
+      //                                  dicen cosas opuestas y gana el que pide
+      //                                  acción, igual que el cartel de error
+      //                                  sobre la tarjeta atenuada.
+      const mostrarTotal = item.difiere || (!!item.lineas && lineasCierran(item))
+
       // EL TOTAL DEL COMPROBANTE, FIJO. No es un campo: es el dato del papel,
       // la referencia contra la que se controla lo que se cargó. Antes vivía en
       // la misma línea que el total CALCULADO, así que al escribir en cualquier
@@ -4368,7 +4469,7 @@
              <div class="wz-toggle wz-toggle--tres">
                <button type="button" data-accion="interp-bultos" class="${item.interpretacion === 'bultos' ? 'wz-toggle--sel' : ''}">Son bultos<br><small style="font-weight:500;">cajas, bolsas, tachos</small></button>
                <button type="button" data-accion="interp-unidades" class="${item.interpretacion === 'unidades' ? 'wz-toggle--sel' : ''}">Son unidades<br><small style="font-weight:500;">el total suelto</small></button>
-               <button type="button" data-accion="interp-granel" class="${item.interpretacion === 'granel' ? 'wz-toggle--sel' : ''}">A granel<br><small style="font-weight:500;">o un solo envase</small></button>
+               <button type="button" data-accion="interp-granel" class="${item.interpretacion === 'granel' ? 'wz-toggle--sel' : ''}">Sin bultos<br><small style="font-weight:500;">granel o un solo envase</small></button>
              </div>
              ${item.interpretacionDeOcr && item.interpretacion === 'bultos'
                ? '<div class="marca-ocr-item">✓ el comprobante traía el desglose — verificalo</div>'
@@ -4383,13 +4484,35 @@
       const etiquetaNumero = item.interpretacion === 'bultos' ? 'bultos'
         : item.interpretacion === 'granel' ? esc(item.unidadMedida)
         : null
+      // La unidad va DENTRO del campo, como sufijo: suelta a la derecha quedaba
+      // flotando y no se leía como parte del número. La excepción es el
+      // producto nuevo, donde la unidad es un <select> y queda afuera: un
+      // sufijo es una etiqueta, un selector es un control.
+      const conSufijo = (input, sufijo) => `
+             <div class="campo-sufijo">
+               ${input}
+               <span class="campo-sufijo__unidad">${sufijo}</span>
+             </div>`
+
+      // JERARQUÍA. El campo de arriba YA viene lleno con el número del papel y
+      // casi nunca se toca: es una confirmación. El de abajo está vacío y es lo
+      // único que hay que completar. Siendo gemelos no se entendía cuál pedía
+      // acción, así que el que pide acción toma el tamaño del campo del wizard
+      // (.wz-campo, 48px) y el otro se achica.
+      //
+      // A granel NO hay segundo campo, así que ahí el del comprobante es el
+      // único y NO se compacta.
+      const hayProtagonista = item.interpretacion === 'bultos' || item.interpretacion === 'unidades'
+      const inputNumero = `<input type="text" inputmode="decimal" autocomplete="off" data-campo="numeroPapel"
+                    value="${esc(textoParaInput(item.numeroPapel))}" placeholder="0">`
       const filaNumero = `
-           <div class="cantidad-fila">
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="numeroPapel"
-                    value="${esc(textoParaInput(item.numeroPapel))}" placeholder="0">
+           ${hayProtagonista ? '<div class="campo-mp__label campo-mp__label--suave">Del comprobante</div>' : ''}
+           <div class="campo-mp ${hayProtagonista ? 'campo-mp--confirma' : ''}">
              ${etiquetaNumero === null
-               ? (item.esNuevo ? selectorUnidad : `<span class="cantidad-fila__unidad">${u}</span>`)
-               : `<span class="cantidad-fila__unidad">${etiquetaNumero}</span>`}
+               ? (item.esNuevo
+                   ? `${inputNumero}${selectorUnidad}`
+                   : conSufijo(inputNumero, u))
+               : conSufijo(inputNumero, etiquetaNumero)}
            </div>`
 
       // Segundo campo, distinto por rama. En 'bultos' se pide el contenido y el
@@ -4412,7 +4535,13 @@
       // En modo mixto no se ofrecen: un chip pone UN contenido y con varias
       // líneas no hay forma de saber a cuál. Ofrecerlos igual sería sugerir
       // algo sin sentido.
-      const chipsPresentacion = (opciones, rotulo) => (!opciones.length || item.lineas) ? '' : `
+      // Se ofrecen SOLO cuando hay algo que elegir. Un chip con el valor que ya
+      // está aplicado no aporta: es una opción que no cambia nada, apilada
+      // debajo de la marca de propuesta y del resultado, para decir "seguí".
+      const hayQueElegir = (opciones) =>
+        opciones.length > 1 || (opciones.length === 1 && opciones[0] !== item.contenido)
+      const chipsPresentacion = (opciones, rotulo) =>
+        (!opciones.length || item.lineas || !hayQueElegir(opciones)) ? '' : `
            <div class="presentaciones-usadas">
              <div class="presentaciones-usadas__titulo">${rotulo}</div>
              <div class="presentaciones-usadas__chips">
@@ -4421,6 +4550,36 @@
                          data-presentacion="${esc(String(c))}">${esc(formatearCantidad(c, item.unidadMedida))}</button>`).join('')}
              </div>
            </div>`
+
+    // EL RESULTADO, AL LADO DEL CAMPO QUE LO PRODUCE. Se pinta a cada tecla:
+    // el calculo abajo y en letra chica habia que ir a buscarlo, y quien esta
+    // escribiendo necesita ver el efecto sin apretar nada.
+    //
+    // Con el campo vacío no devuelve nada: vacío es vacío, no cero — es la
+    // misma regla del guion del recuento de Stock. Y si el numero no reparte
+    // exacto lo DICE, en vez de quedar en blanco sin explicar por que.
+    function textoResultadoVivo(item) {
+      if (item.lineas || item.interpretacion == null) return ''
+      if (item.interpretacion === 'bultos') {
+        if (item.numeroPapel == null || item.contenido == null) return ''
+        return `= ${formatearCantidad(item.numeroPapel * item.contenido, item.unidadMedida)} en total`
+      }
+      if (item.interpretacion === 'unidades') {
+        if (item.numeroPapel == null || item.bultos == null) return ''
+        const c = dividirExacto(item.numeroPapel, item.bultos)
+        if (c == null) {
+          return `${formatearNumero(item.numeroPapel)} no se reparte exacto en ${formatearNumero(item.bultos)} bultos`
+        }
+        return `= ${formatearCantidad(c, item.unidadMedida)} por bulto`
+      }
+      return ''
+    }
+
+    function resultadoNoCierra(item) {
+      return item.interpretacion === 'unidades' && !item.lineas &&
+             item.numeroPapel != null && item.bultos != null &&
+             dividirExacto(item.numeroPapel, item.bultos) == null
+    }
 
       // El aviso de la favorita que no sirve para este renglón. Es la mitad
       // que hace util al aprendizaje: sin el, la propuesta simplemente no
@@ -4475,26 +4634,32 @@
              Vino en más de una presentación
            </button>`)
 
+      // La etiqueta EMPIEZA POR LA PREGUNTA y va arriba del campo, con el mismo
+      // estilo de label que ya usan .wz-campo y .bloque-diferencia. Antes decía
+      // "vino en ___ bultos" al costado: arrancaba con un verbo que se lee como
+      // la bebida, y competía con el valor en vez de explicarlo.
+      const resultadoHtml = `<span class="resultado-vivo ${resultadoNoCierra(item) ? 'resultado-vivo--mal' : ''}" data-rol="resultado">${esc(textoResultadoVivo(item))}</span>`
+
       const segundaFila =
         item.lineas ? lineasHtml :
         item.interpretacion === 'bultos' ? `
-           <div class="cantidad-fila">
-             <span class="cantidad-fila__label">cada bulto trae</span>
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
-                    value="${esc(textoParaInput(item.contenido))}" placeholder="0">
-             ${item.esNuevo ? selectorUnidad : `<span class="cantidad-fila__unidad">${u}</span>`}
+           <div class="campo-mp__label">¿Cuánto trae cada bulto?</div>
+           <div class="campo-mp campo-mp--protagonista">
+             ${item.esNuevo
+               ? `<input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
+                    value="${esc(textoParaInput(item.contenido))}" placeholder="0">${selectorUnidad}`
+               : conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
+                    value="${esc(textoParaInput(item.contenido))}" placeholder="0">`, u)}
+             ${resultadoHtml}
            </div>
            ${chipsPresentacion(usadas, 'Ya usadas con este proveedor')}`
         : item.interpretacion === 'unidades' ? `
-           <div class="cantidad-fila">
-             <span class="cantidad-fila__label">vino en</span>
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultos"
-                    value="${esc(textoParaInput(item.bultos))}" placeholder="0">
-             <span class="cantidad-fila__unidad">bultos</span>
+           <div class="campo-mp__label">¿En cuántos bultos vino?</div>
+           <div class="campo-mp campo-mp--protagonista">
+             ${conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="bultos"
+                    value="${esc(textoParaInput(item.bultos))}" placeholder="0">`, 'bultos')}
+             ${resultadoHtml}
            </div>
-           ${item.contenido != null
-             ? `<div class="item-mp__hint">ⓘ Cada bulto trae ${esc(formatearCantidad(item.contenido, item.unidadMedida))}.</div>`
-             : ''}
            ${avisoFavorita}
            ${chipsPresentacion(dividen, 'Presentaciones que reparten exacto')}`
         : item.interpretacion === 'granel' ? `
@@ -4508,7 +4673,7 @@
              ${filaNumero}
              ${segundaFila}
              ${botonMixto}
-             <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>
+             ${mostrarTotal ? `<div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>` : ''}
              ${avisoTotalOcr(item)}`}`
 
       // El OCR no pudo clasificar el renglón y tampoco matcheó contra el
@@ -4770,6 +4935,13 @@
       if (arriba) arriba.textContent = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
       const abajo = tarjeta.querySelector('[data-rol="total-recibido"]')
       if (abajo) abajo.textContent = textoCantidad(item)
+      // El resultado al lado del campo: a CADA TECLA, que es el punto — el
+      // cálculo que aparecía recién al salir del campo había que ir a buscarlo.
+      const res = tarjeta.querySelector('[data-rol="resultado"]')
+      if (res) {
+        res.textContent = textoResultadoVivo(item)
+        res.classList.toggle('resultado-vivo--mal', resultadoNoCierra(item))
+      }
     }
 
     // Misma razón que actualizarTotalEnVivo(): re-renderizar en cada tecla le
@@ -5136,6 +5308,10 @@
       const n = Number(el.closest('[data-linea]')?.dataset.linea)
       const crudo = String(el.value ?? '').trim()
       const malo = crudo !== '' && item.lineas?.[n]?.[campo] == null
+      // El texto cae dentro de su .linea-mixta, pero visualmente queda ENTRE
+      // dos líneas y no se sabe de cuál es: con cuatro presentaciones hay que
+      // adivinar. El borde rojo señala UNA sola y no depende de la posición.
+      el.classList.toggle('dato-invalido', malo)
       let aviso = el.parentElement?.querySelector('.campo-invalido')
       if (!malo) { if (aviso) aviso.remove(); return }
       if (!aviso) {
