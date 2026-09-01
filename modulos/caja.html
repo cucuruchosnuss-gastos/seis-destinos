@@ -2363,8 +2363,31 @@
     // que no puede depender de que cargarListado() ya haya corrido.
     // Reemplazo completo de estado.empleados — Empresa nunca viene en este
     // resultado (queda afuera por auth_user_id/activo), hay que reinsertarla.
+    // Lee de v_empleados_publico y NO de `empleados`, que es de donde leía.
+    //
+    // El RLS de `empleados` es "la fila propia O tiene_tarea_alcance(
+    // 'empleados','ver_editar', ...)", así que quien no tenga esa tarea recibía
+    // UNA SOLA FILA: la suya. Y como todo consumidor de estado.empleados se
+    // excluye a sí mismo, la lista quedaba VACÍA — sin ningún error.
+    // Afectaba al selector de contraparte, al listado general, al Directorio y
+    // a los filtros de Retiros y Movimientos, todos a la vez, porque esta es la
+    // única función que llena estado.empleados.
+    //
+    // v_empleados_publico NO lleva security_invoker —es la excepción
+    // deliberada del proyecto, justamente para que estos selectores funcionen
+    // para todos— así que saltea ese RLS. Es de donde ya leía cargarSuperAdmins()
+    // y por eso esa lista sí andaba para cualquiera.
+    //
+    // `tiene_acceso` es (auth_user_id is not null) calculado en la vista, y
+    // reemplaza al .not('auth_user_id','is',null) de antes: la vista no expone
+    // el uuid de Auth a propósito, y un booleano alcanza. El filtro NO es
+    // opcional — hay 27 personas activas sin acceso contra 7 con acceso, y
+    // ofrecer a una de ellas como contraparte crea una solicitud que nadie va a
+    // poder aceptar nunca.
     async function cargarPersonasConAcceso() {
-      const { data, error } = await supabase.from('empleados').select('id, nombre, unidad_negocio_id, rol_app, caja_raiz, oculto_como_contraparte').not('auth_user_id', 'is', null).eq('activo', true).order('nombre')
+      const { data, error } = await supabase.from('v_empleados_publico')
+        .select('id, nombre, unidad_negocio_id, rol_app, caja_raiz, oculto_como_contraparte')
+        .eq('tiene_acceso', true).eq('activo', true).order('nombre')
       if (error) { mostrarError('No se pudieron cargar las personas.'); return false }
       estado.empleados = data || []
       asegurarEmpresaEnEmpleados()
@@ -4040,17 +4063,35 @@
     // acceso.
     async function poblarSelectorContraparte(empleadoPropioId) {
       const desdeEmpresa = !!estado.idEmpresa && empleadoPropioId === estado.idEmpresa
+      const esSuperAdmin = estado.miEmpleado.rol_app === 'super_admin'
 
-      // estado.empleados solo se llena completo en cargarListado(), que corre
-      // únicamente para quien tiene ver_listado. Sin esto, alguien con
-      // egreso_empresa pero sin ver_listado vería el selector vacío.
-      if (desdeEmpresa && !estado.empleados.some(e => e.id !== estado.idEmpresa)) {
+      // La regla general es que al menos una de las dos partes sea super_admin
+      // o la Empresa. 'transferir_entre_personas' es la EXCEPCIÓN: habilita un
+      // movimiento entre dos personas comunes.
+      //
+      // tieneTareaExplicita y no tieneTarea: SIN bypass de super_admin, igual
+      // que la validación de crear_solicitud_movimiento_caja. Para un
+      // super_admin no cambia nada de todos modos — ya ve la lista completa por
+      // su propia rama.
+      //
+      // La contraparte no necesita la tarea: la RPC la exige solo en quien
+      // llama. Y sigue siendo una SOLICITUD, así que la otra parte la tiene que
+      // aceptar; la auto-aceptación es solo para super_admin + Empresa.
+      const puedeEntrePersonas = tieneTareaExplicita('transferir_entre_personas')
+
+      // Las tres ramas que usan la lista completa la necesitan cargada.
+      // estado.empleados solo se llena en cargarListado(), que corre únicamente
+      // para quien tiene ver_listado — y ni Edgar ni Tomás la tienen, así que
+      // sin esto el selector les quedaba vacío. Antes el disparador era solo
+      // `desdeEmpresa`.
+      const necesitaListaCompleta = desdeEmpresa || esSuperAdmin || puedeEntrePersonas
+      if (necesitaListaCompleta && !estado.empleados.some(e => e.id !== estado.idEmpresa)) {
         await cargarPersonasConAcceso()
       }
 
       let candidatos = desdeEmpresa
         ? estado.empleados.filter(e => e.id !== estado.idEmpresa)
-        : (estado.miEmpleado.rol_app === 'super_admin'
+        : ((esSuperAdmin || puedeEntrePersonas)
             ? estado.empleados.filter(e => e.id !== estado.miEmpleado.id)
             : estado.superAdmins.filter(s => s.id !== estado.miEmpleado.id))
 
