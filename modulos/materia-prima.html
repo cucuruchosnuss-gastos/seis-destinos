@@ -1213,6 +1213,20 @@
     }
 
     .cantidad-fila { display: flex; align-items: center; gap: 0.4375rem; min-width: 0; flex-wrap: wrap; }
+    /* El aviso de un numero que no se pudo leer. Va DENTRO de .cantidad-fila,
+       que es flex-wrap, con flex-basis 100% para caer en su propio renglon
+       justo abajo del campo que lo causo. Mismo rojo que el resto de los
+       errores del modulo (#B91C1C), no la paleta de otro. */
+    .campo-invalido {
+      flex: 1 0 100%;
+      min-width: 0;
+      margin-top: 0.125rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.35;
+      color: #B91C1C;
+      overflow-wrap: anywhere;
+    }
     .cantidad-fila input {
       flex: 1;
       min-width: 60px;
@@ -2179,12 +2193,82 @@
     let contadorUid = 0
     function nuevoUid() { return `it${++contadorUid}` }
 
-    // Los inputs de cantidad son type="number", así que su .value ya viene con
-    // punto decimal — nunca se re-parsea un string formateado en es-AR.
-    function numeroDesdeInput(valor) {
+    // ── Números: DOS caminos distintos, a propósito ────────────────────────
+    //
+    // El bug que motivó separarlos: un <input type="number"> FILTRA la tecla de
+    // la coma, y en un teclado es-AR la coma es el único separador decimal que
+    // ofrece el teclado numérico del celular. Al escribir "8,5" el campo queda
+    // en "85" —los dígitos se pegan— y `.value` devuelve un string
+    // perfectamente válido: no hay badInput, no hay excepción, no se ve nada
+    // raro en pantalla. Se cargaban 85 kg de harina donde había 8,5.
+    //
+    // La coma se pierde ANTES de llegar al JS, así que ninguna normalización la
+    // recupera: los campos pasaron a type="text" + inputmode="decimal", que
+    // mantiene el teclado numérico y deja pasar la coma.
+    //
+    // (Acá vivía un comentario que decía que el .value "ya viene con punto
+    // decimal" por ser type="number". Era literalmente cierto y completamente
+    // engañoso: nunca traía coma porque la coma se DESCARTABA. Prometía una
+    // garantía que el código no daba, justo donde hacía falta sospechar.)
+
+    // Valores que vienen del OCR: la Edge Function los manda como números JSON,
+    // ya canónicos. NO se les aplica la regla estricta de abajo — si algún día
+    // devolviera "1.234,5" como string, rechazarlo acá descartaría el dato en
+    // silencio, que es cambiar un bug callado por otro.
+    function numeroDesdeOcr(valor) {
       if (valor === '' || valor == null) return null
       const n = Number(valor)
       return Number.isFinite(n) ? n : null
+    }
+
+    // Unidades que se cuentan de a enteros. Un separador ahí NO es un decimal:
+    // es el de miles, y "47.000" cajas leído como 47 es un error de mil veces.
+    const UNIDADES_ENTERAS = new Set(['un', 'un.', 'u', 'uni', 'unid', 'unidad', 'unidades'])
+
+    function esUnidadEntera(unidad) {
+      return UNIDADES_ENTERAS.has(String(unidad ?? '').trim().toLowerCase())
+    }
+
+    // Lo que TIPEA una persona. Acepta coma o punto como decimal, un solo
+    // separador —"1.500,25" no se adivina, se rechaza— y nada de negativos.
+    // El vacío sigue siendo "sin dato" (null), nunca cero.
+    //
+    // `enteros` fuerza el rechazo de cualquier separador. Se usa siempre en los
+    // campos de BULTOS: un bulto es un paquete discreto y no se reciben 2,5
+    // bolsas, y son justo los campos de mayor volumen, donde escribir "1.500"
+    // cajas es lo natural. Es más estricto que la base —cantidad_bultos es
+    // numeric y chk_presentacion_coherente solo exige > 0— y está bien que lo
+    // sea: la base no puede saber el contexto, la pantalla sí.
+    function parsearCantidad(crudo, { unidad = '', enteros = false } = {}) {
+      // trim() saca los espacios de los BORDES, pero los de adentro se
+      // rechazan: "8 5" —un dedazo donde iba la coma— daría 85, que es
+      // exactamente el error que este parser viene a evitar. Un espacio no es
+      // un separador decimal, así que no hay nada que interpretar.
+      const texto = String(crudo ?? '').trim()
+      if (texto === '') return null
+      const patron = (enteros || esUnidadEntera(unidad))
+        ? /^\d+$/                            // ni decimal ni separador de miles
+        : /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/    // UN separador, siempre decimal
+      if (!patron.test(texto)) return null
+      const n = Number(texto.replace(',', '.'))
+      return Number.isFinite(n) ? n : null
+    }
+
+    // Para repintar en el input un número ya guardado: con coma, que es lo que
+    // la persona tipeó, y SIN separador de miles — un "1.234,5" tiene dos
+    // separadores y el parser lo rechazaría, así que el campo se vaciaría solo
+    // al re-renderizar la tarjeta.
+    function textoParaInput(n) {
+      return n === null || n === undefined ? '' : String(n).replace('.', ',')
+    }
+
+    // Qué campos se cuentan de a enteros pase lo que pase.
+    const CAMPOS_ENTEROS = new Set(['bultos', 'bultosRecibidos'])
+
+    function mensajeCantidadInvalida(campo, unidad) {
+      return (CAMPOS_ENTEROS.has(campo) || esUnidadEntera(unidad))
+        ? 'Se cuenta por unidades enteras: escribilo sin puntos ni comas.'
+        : 'Escribí un número, con coma para los decimales (8,5). Sin separador de miles.'
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3325,8 +3409,8 @@
       // el matcheo por texto.
       const porAlias = aliasDe(crudo.descripcion)
       const match = porAlias?.insumo ?? buscarEnCatalogo(crudo.descripcion, crudo.marca)
-      const bultos    = numeroDesdeInput(crudo.cantidad_bultos)
-      const contenido = numeroDesdeInput(crudo.contenido_por_bulto)
+      const bultos    = numeroDesdeOcr(crudo.cantidad_bultos)
+      const contenido = numeroDesdeOcr(crudo.contenido_por_bulto)
       return {
         uid: nuevoUid(),
         insumoId: match?.id ?? null,
@@ -3366,13 +3450,13 @@
         unidadMedida: match?.unidad_medida ?? crudo.unidad_medida ?? 'kg',
         modoDesglose: bultos != null && contenido != null,
         bultos, contenido,
-        cantidad: numeroDesdeInput(crudo.cantidad_total),
+        cantidad: numeroDesdeOcr(crudo.cantidad_total),
         // Marca que el número de arriba salió de la foto. Solo se usa para
         // mostrar el aviso de "verificalo contra el papel" cuando el control de
         // recepción parcial está activo: ahí ese número pasa a ser la cantidad
         // del comprobante, o sea la base de un reclamo al proveedor.
         busquedaCatalogo: '',
-        cantidadOcrOriginal: numeroDesdeInput(crudo.cantidad_total),
+        cantidadOcrOriginal: numeroDesdeOcr(crudo.cantidad_total),
         // Vínculo POR RENGLÓN. true = esta mercadería ya entró con un remito
         // anterior, así que este renglón NO suma stock. Lo sugiere el match
         // contra los ítems de los remitos vinculados (ver sugerirYaRecibido),
@@ -3647,17 +3731,17 @@
 
       const cantidadHtml = item.modoDesglose
         ? `<div class="cantidad-fila">
-             <input type="number" inputmode="decimal" step="any" min="0" data-campo="bultos" value="${item.bultos ?? ''}" placeholder="0">
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultos" value="${esc(textoParaInput(item.bultos))}" placeholder="0">
              <span class="cantidad-fila__unidad">bultos</span>
              <span class="cantidad-fila__x">×</span>
-             <input type="number" inputmode="decimal" step="any" min="0" data-campo="contenido" value="${item.contenido ?? ''}" placeholder="0">
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido" value="${esc(textoParaInput(item.contenido))}" placeholder="0">
              ${selectorUnidad}
            </div>
            <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>
            <button type="button" class="btn-item-secundario" data-accion="modo-directo">Cargar una cantidad única</button>
            <div class="item-mp__hint">ⓘ Si el remito informa un solo total, sin desglosar por bulto.</div>`
         : `<div class="cantidad-fila">
-             <input type="number" inputmode="decimal" step="any" min="0" data-campo="${campoArriba}" value="${valorArriba ?? ''}" placeholder="0">
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="${campoArriba}" value="${esc(textoParaInput(valorArriba))}" placeholder="0">
              ${selectorUnidad}
            </div>
            <button type="button" class="btn-item-secundario" data-accion="modo-desglose">Vino en bultos (ej: 200 bolsas de 25 kg)</button>
@@ -3721,14 +3805,14 @@
       // sale solo — nunca multiplica de cabeza en el depósito.
       const recibidoHtml = item.modoDesglose
         ? `<div class="cantidad-fila">
-             <input type="number" inputmode="decimal" step="any" min="0" data-campo="bultosRecibidos"
-                    value="${item.bultosRecibidos ?? ''}" placeholder="0">
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultosRecibidos"
+                    value="${esc(textoParaInput(item.bultosRecibidos))}" placeholder="0">
              <span class="cantidad-fila__unidad">bultos de ${esc(formatearCantidad(item.contenido ?? 0, item.unidadMedida))}</span>
            </div>
            <div class="cantidad-total"><span>Total recibido</span><span data-rol="total-recibido">${esc(textoCantidad(item))}</span></div>`
         : `<div class="cantidad-fila">
-             <input type="number" inputmode="decimal" step="any" min="0" data-campo="cantidad"
-                    value="${item.cantidad ?? ''}" placeholder="0">
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="cantidad"
+                    value="${esc(textoParaInput(item.cantidad))}" placeholder="0">
              <span class="cantidad-fila__unidad">${u}</span>
            </div>`
 
@@ -4034,7 +4118,14 @@
             // `cantidadDocumento` no se tipean: se derivan de bultos ×
             // contenido, y recalcularDesglose() decide cuál escribe cada fila.
             if (['bultos', 'contenido', 'bultosRecibidos', 'cantidad', 'cantidadDocumento'].includes(campo)) {
-              item[campo] = numeroDesdeInput(el.value)
+              item[campo] = parsearCantidad(el.value, {
+                unidad: item.unidadMedida,
+                enteros: CAMPOS_ENTEROS.has(campo),
+              })
+              // Lo que no se pudo leer se DICE, y en el momento. Que el campo
+              // se vacíe en silencio es medio bug otra vez: la persona sigue
+              // escribiendo sin saber que su número no entró.
+              marcarCampoInvalido(el, campo, item)
               actualizarTotalEnVivo(tarjeta, item)
               // Los dos son lados de la misma resta: toque el que toque, la
               // diferencia mostrada cambia con él.
@@ -4105,6 +4196,29 @@
     // Las tres validaciones son las mismas que hace la base — se chequean acá
     // para poder señalar la tarjeta concreta en vez de mostrar el error crudo
     // de un trigger.
+    // El aviso va pegado al campo y NO re-renderiza la tarjeta: el handler de
+    // los campos numéricos evita el re-render a propósito para no robarle el
+    // foco a quien está escribiendo.
+    function marcarCampoInvalido(el, campo, item) {
+      const crudo = String(el.value ?? '').trim()
+      const malo = crudo !== '' && item[campo] === null
+      let aviso = el.parentElement?.querySelector('.campo-invalido')
+
+      if (!malo) { if (aviso) aviso.remove(); return }
+      if (!aviso) {
+        aviso = document.createElement('div')
+        aviso.className = 'campo-invalido'
+        el.parentElement?.appendChild(aviso)
+      }
+      aviso.textContent = mensajeCantidadInvalida(campo, item.unidadMedida)
+    }
+
+    // Un campo numérico con texto adentro que no se pudo leer. Se chequea
+    // contra el DOM porque el valor tipeado no vive en el ítem: ahí quedó null.
+    function hayCampoIlegible() {
+      return !!document.querySelector('.campo-invalido')
+    }
+
     function validarItems() {
       const w = estado.wizard
       let primeroConError = null
@@ -4145,6 +4259,15 @@
         w.itemAbierto = primeroConError
         renderizarItems()
         mostrarError('Revisá los ítems marcados en rojo.')
+        return false
+      }
+
+      // Un campo que no se pudo leer deja el valor en null y se propaga: un
+      // `bultos` ilegible termina disparando "la cantidad tiene que ser mayor a
+      // cero", que apunta al campo equivocado. Se corta acá, con el aviso ya
+      // visible al lado del campo que lo causó.
+      if (hayCampoIlegible()) {
+        mostrarError('Hay una cantidad que no se pudo leer. Revisá el campo marcado.')
         return false
       }
       return true
