@@ -37,7 +37,7 @@ Campos de cada ítem del detalle (array "items"), una entrada por cada línea:
   (ej: "ART-1042", "70351"). Si no figura, null.
 - marca: la marca comercial del producto si figura (ej: "Cañuelas", "Pureza",
   "Júpiter"). Si no figura, null.
-- unidad_medida: la unidad base del contenido: "kg", "l" o "un"
+- unidad_medida: la unidad base del contenido: "kg", "lt" o "un"
 - cantidad_bultos: cuántos bultos/bolsas/cajas/unidades se compraron, como número.
   Si la línea no distingue bultos de contenido, usá null.
 - contenido_por_bulto: cuánto contiene cada bulto en la unidad base (ej: para
@@ -103,7 +103,7 @@ Formato de respuesta (únicamente esto):
       "descripcion": "...",
       "codigo_articulo": "..." | null,
       "marca": "..." | null,
-      "unidad_medida": "kg" | "l" | "un",
+      "unidad_medida": "kg" | "lt" | "un",
       "cantidad_bultos": número | null,
       "contenido_por_bulto": número | null,
       "cantidad_total": número,

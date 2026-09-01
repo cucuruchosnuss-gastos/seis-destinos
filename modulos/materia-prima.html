@@ -1859,7 +1859,34 @@
     // está: no se elige, lo pone el camino "cargar a mano".
     const TIPOS_DOC_ELEGIBLES = ['remito', 'factura_a', 'factura_x']
 
-    const UNIDADES_MEDIDA = ['kg', 'l', 'un']
+    // 'lt' y no 'l': es lo que ya tiene el catálogo (5 insumos líquidos) y lo
+    // que muestra el módulo de Stock. Con 'l' acá, cada líquido creado desde
+    // este wizard nacía con una unidad distinta de los que ya existían y el
+    // stock de ese insumo se partía en dos.
+    const UNIDADES_MEDIDA = ['kg', 'lt', 'un']
+
+    // El OCR puede devolver cualquier cosa en unidad_medida: la Edge Function
+    // NO la valida contra una lista (a diferencia de tipo_sugerido). Y el
+    // deploy de la función va aparte del push, así que hasta que se despliegue
+    // el modelo va a seguir diciendo "l".
+    //
+    // Sin normalizar, un valor fuera de UNIDADES_MEDIDA deja el estado en "l"
+    // pero el <select> no encuentra su opción y muestra la PRIMERA: la persona
+    // ve "kg" y el insumo se crea en "l". Lo que se ve y lo que se guarda
+    // dejan de coincidir, sin ninguna señal.
+    const ALIAS_UNIDAD = {
+      l: 'lt', lts: 'lt', litro: 'lt', litros: 'lt',
+      kilo: 'kg', kilos: 'kg', kgs: 'kg',
+      u: 'un', unidad: 'un', unidades: 'un',
+    }
+
+    // Devuelve una unidad de UNIDADES_MEDIDA, o null si no se reconoce.
+    function normalizarUnidad(valor) {
+      const v = String(valor ?? '').trim().toLowerCase()
+      if (!v) return null
+      const canonica = ALIAS_UNIDAD[v] ?? v
+      return UNIDADES_MEDIDA.includes(canonica) ? canonica : null
+    }
 
     // PARÁMETRO DE NEGOCIO — a partir de cuántos días un remito sin factura se
     // marca como viejo en el listado (chip en ámbar).
@@ -3447,7 +3474,7 @@
         // revisó: vale tanto como una sugerencia. Se avisa (ver
         // .aviso-sin-revisar) en vez de dejar que se propague callado.
         pendienteRevision: match?.estado_alta === 'pendiente_revision',
-        unidadMedida: match?.unidad_medida ?? crudo.unidad_medida ?? 'kg',
+        unidadMedida: match?.unidad_medida ?? normalizarUnidad(crudo.unidad_medida) ?? 'kg',
         modoDesglose: bultos != null && contenido != null,
         bultos, contenido,
         cantidad: numeroDesdeOcr(crudo.cantidad_total),
