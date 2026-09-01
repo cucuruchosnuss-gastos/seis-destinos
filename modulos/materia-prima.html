@@ -1306,6 +1306,22 @@
     }
     .texto-del-papel strong { color: #2c3242; font-weight: 600; }
 
+    .presentaciones-usadas { margin-top: 0.5rem; }
+    .presentaciones-usadas__titulo {
+      font-size: 0.75rem; color: #6b7385; margin-bottom: 0.3125rem;
+    }
+    .presentaciones-usadas__chips { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+    .chip-presentacion {
+      padding: 0.3125rem 0.625rem; border: 1px solid #d7dce7; border-radius: 999px;
+      background: #fff; color: #2c3242; font-size: 0.8125rem; font-family: inherit;
+      cursor: pointer;
+    }
+    .chip-presentacion:hover { border-color: var(--marron); }
+    .chip-presentacion--sel {
+      border-color: var(--marron); background: var(--marron-suave); color: var(--marron-oscuro);
+      font-weight: 600;
+    }
+
     .parecidos { margin-bottom: 0.625rem; }
     .parecidos__titulo {
       font-size: 0.8125rem; font-weight: 600; color: #2c3242;
@@ -3464,6 +3480,100 @@
       return w.aliasProveedor
     }
 
+    // ── APRENDIZAJE DE LA PRESENTACIÓN ─────────────────────────────────────
+    //
+    // Preguntar siempre es molesto cuando la respuesta casi nunca cambia: la
+    // harina siempre viene por bultos, el film siempre suelto. La primera vez
+    // se pregunta; después se PROPONE lo aprendido y es un toque de confirmar.
+    //
+    // Por insumo Y POR PROVEEDOR, igual que el alias: si un molino factura la
+    // harina por bultos y otro la factura en kilos, cada uno tiene su regla sin
+    // pisar la del otro.
+    //
+    // Se resuelve del lado del servidor con presentaciones_sugeridas() —
+    // SECURITY DEFINER— y no contando acá los ingresos anteriores: el RLS de
+    // materia_prima_items deja ver SOLO los propios a quien tiene 'cargar', así
+    // que la cuenta hecha en el navegador saldría distinta según quién cargue y
+    // vacía para alguien que carga por primera vez. Es la trampa de "las filas
+    // no llegan": sin error, con menos datos.
+    async function asegurarHistorialPresentaciones(insumoIds) {
+      const w = estado.wizard
+      const ids = [...new Set(insumoIds.filter(Boolean))].sort()
+      const clave = `${w.proveedorId ?? ''}|${ids.join(',')}`
+      if (w.histPresentaciones && w.histPresentacionesClave === clave) return w.histPresentaciones
+      w.histPresentacionesClave = clave
+
+      if (!ids.length) { w.histPresentaciones = new Map(); return w.histPresentaciones }
+
+      const { data, error } = await supabase.rpc('presentaciones_sugeridas', {
+        p_proveedor_id: w.proveedorId ?? null,
+        p_insumo_ids: ids,
+      })
+      // Sin historial se carga como antes: es una ayuda, no un requisito.
+      if (error) { console.error(error); w.histPresentaciones = new Map(); return w.histPresentaciones }
+
+      // La función devuelve UNA FILA POR INSUMO PEDIDO, siempre. Un insumo sin
+      // historial vuelve con interpretacion null y lista vacía: ese es el caso
+      // "preguntá siempre" —el film, cuyas bobinas pesan distinto cada vez— y
+      // NO es un error. No se inventa un default.
+      w.histPresentaciones = new Map((data ?? []).map(r => [r.insumo_id, {
+        interpretacion: r.interpretacion ?? null,
+        presentaciones: Array.isArray(r.presentaciones) ? r.presentaciones : [],
+      }]))
+      return w.histPresentaciones
+    }
+
+    // La más usada. `presentaciones` viene ordenada por frecuencia desde la
+    // función, así que la favorita es la primera.
+    function presentacionFavorita(hist) {
+      return hist?.presentaciones?.[0]?.contenido ?? null
+    }
+
+    // Las OTRAS presentaciones ya usadas de ese insumo que sí reparten exacto
+    // el número del papel. Es la salida del caso de la lecitina: 200 kg con
+    // favorita 215 no da entero, pero con bultos de 50 son 4.
+    function presentacionesQueDividen(hist, total) {
+      if (total == null) return []
+      return (hist?.presentaciones ?? [])
+        .filter(pr => {
+          const bultos = total / pr.contenido
+          return Number.isInteger(bultos) && bultos > 0
+        })
+        .map(pr => pr.contenido)
+    }
+
+    // Aplica lo aprendido SOLO a los renglones que todavía no respondieron y
+    // que nadie tocó. Nunca pisa una decisión: si la persona ya eligió, el
+    // historial no tiene nada que decir.
+    function aplicarHistorial(item, hist) {
+      if (!hist || item.interpretacion != null || item.interpTocada) return false
+      const modo = hist.interpretacion
+      if (!modo) return false
+      const favorita = presentacionFavorita(hist)
+
+      if (modo === 'bultos') {
+        if (favorita == null) return false
+        item.interpretacion = 'bultos'
+        item.contenido = favorita
+      } else if (modo === 'unidades') {
+        // Acá se tipean los BULTOS, así que la favorita se traduce a un número
+        // de bultos — y solo si reparte exacto. Si no, se deja sin responder y
+        // el aviso ofrece las presentaciones que sí dividen.
+        if (favorita == null || item.numeroPapel == null) return false
+        const bultos = item.numeroPapel / favorita
+        if (!Number.isInteger(bultos) || bultos <= 0) return false
+        item.interpretacion = 'unidades'
+        item.bultos = bultos
+      } else if (modo === 'granel') {
+        item.interpretacion = 'granel'
+      } else {
+        return false
+      }
+      item.interpDeHistorial = true
+      derivarCantidades(item)
+      return true
+    }
+
     // Busca el texto del papel en la libretita. Devuelve también el insumo del
     // catálogo, porque un alias que apunta a un insumo que ya no está en el
     // catálogo no sirve para nada: ahí se resuelve como si no hubiera alias.
@@ -3713,6 +3823,15 @@
         // sugerencia. Si no, queda en null y hay que responder.
         interpretacion: (bultos != null && contenido != null) ? 'bultos' : null,
         interpretacionDeOcr: (bultos != null && contenido != null),
+        // La respuesta la propuso el historial de este insumo con este
+        // proveedor. Se muestra marcada: lo aprendido se PROPONE, nunca se
+        // aplica callado — mismo criterio que el alias, y por lo mismo, porque
+        // una propuesta equivocada se propaga sola.
+        interpDeHistorial: false,
+        // La persona ya respondió (aunque después la borre). Corta el
+        // aplicarHistorial() tardío: la respuesta de una persona no se pisa con
+        // una propuesta que llegó después por la red.
+        interpTocada: false,
         // EL NÚMERO DEL PAPEL, editable. Qué representa lo dice `interpretacion`.
         numeroPapel: (bultos != null && contenido != null)
           ? bultos
@@ -3762,6 +3881,7 @@
         // Agregado a mano: no hay número del papel que interpretar, pero la
         // pregunta se hace igual — es la que decide qué se pide abajo.
         interpretacion: null, interpretacionDeOcr: false, numeroPapel: null,
+        interpDeHistorial: false, interpTocada: false,
         bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
@@ -3790,6 +3910,22 @@
       // sugerencia se recalcula al volver acá.
       sugerirYaRecibido()
       renderizarItems()
+
+      // El historial se pide DESPUÉS de dibujar: la pantalla no espera a la
+      // red, y cuando llega se aplica solo a los renglones sin responder y se
+      // vuelve a dibujar. Si falla, todo sigue funcionando preguntando.
+      cargarHistorialYProponer()
+    }
+
+    async function cargarHistorialYProponer() {
+      const w = estado.wizard
+      const hist = await asegurarHistorialPresentaciones(w.items.map(i => i.insumoId))
+      if (!hist.size) return
+      let alguno = false
+      w.items.forEach(item => {
+        if (item.insumoId && aplicarHistorial(item, hist.get(item.insumoId))) alguno = true
+      })
+      if (alguno) renderizarItems()
     }
 
     // Claves de catálogo de los ítems de los remitos que se vincularon. La RPC
@@ -3959,6 +4095,12 @@
       // recibido difiera del papel es justamente lo que ese control registra,
       // y ahí el aviso sería ruido sobre un dato que ya se explicó.
       if (ocr == null || item.difiere) return null
+      // Y solo se compara cuando hay UN TOTAL REAL contra el cual comparar. Si
+      // el OCR no trajo desglose y la persona dijo que ese número son bultos,
+      // entonces no leyó un total: leyó la cuenta de bultos, y el "total" que
+      // se le opondría es el que acabamos de calcular con ella. El aviso
+      // saltaría SIEMPRE —en toda carga de harina— diciendo una obviedad.
+      if (!item.interpretacionDeOcr && item.interpretacion === 'bultos') return null
       const calculado = item.cantidad
       if (calculado == null) return null
       if (Math.abs(calculado - ocr) <= TOLERANCIA_CANTIDAD) return null
@@ -4089,9 +4231,17 @@
       // la referencia contra la que se controla lo que se cargó. Antes vivía en
       // la misma línea que el total CALCULADO, así que al escribir en cualquier
       // campo se lo pisaba y desaparecía justo cuando más se lo necesita.
+      // OJO CON LA ETIQUETA: el OCR devuelve ese número como "cantidad_total",
+      // pero si la persona respondió que son BULTOS, entonces son bultos y no
+      // un total en la unidad del catálogo. Decir "250 kg" de 250 bolsas es
+      // exactamente el error que este rediseño vino a sacar, entrando por la
+      // etiqueta. Cuando el OCR trajo su propio desglose sí es un total real.
+      const ocrEsTotal = item.interpretacionDeOcr || item.interpretacion !== 'bultos'
       const lineaComprobante = item.cantidadOcrOriginal == null ? '' : `
            <div class="linea-comprobante">
-             El comprobante dice <strong>${esc(formatearCantidad(item.cantidadOcrOriginal, item.unidadMedida))}</strong>
+             El comprobante dice <strong>${ocrEsTotal
+               ? esc(formatearCantidad(item.cantidadOcrOriginal, item.unidadMedida))
+               : esc(formatearNumero(item.cantidadOcrOriginal)) + ' bultos'}</strong>
            </div>`
 
       // LA PREGUNTA QUE FALTABA. El número del papel a veces son bultos y a
@@ -4113,6 +4263,9 @@
              </div>
              ${item.interpretacionDeOcr && item.interpretacion === 'bultos'
                ? '<div class="marca-ocr-item">✓ el comprobante traía el desglose — verificalo</div>'
+               : ''}
+             ${item.interpDeHistorial
+               ? '<div class="marca-ocr-item">✓ como las veces anteriores con este proveedor — verificá el total</div>'
                : ''}
            </div>`
 
@@ -4136,6 +4289,39 @@
       // bultos/contenido queda en NULL — sin inventar una presentación que no
       // existe. Esa tercera opción es la que faltaba: los 33 kg de film habían
       // quedado como "33 bultos de 1", que no es cierto.
+      // Lo que ya se uso antes para ESTE insumo con ESTE proveedor. Se ofrece
+      // como atajo, nunca se impone: si la favorita no reparte exacto el
+      // número del papel, no se aplica y acá quedan las que sí. Caso real: 200
+      // kg de lecitina con favorita 215 no da entero, y con bultos de 50 son 4.
+      const hist = estado.wizard.histPresentaciones?.get(item.insumoId) || null
+      const usadas = (hist?.presentaciones ?? []).map(pr => pr.contenido)
+      const dividen = presentacionesQueDividen(hist, item.numeroPapel)
+      const favorita = presentacionFavorita(hist)
+
+      // En 'bultos' el atajo pone el contenido; en 'unidades' pone los bultos,
+      // que es el campo que se tipea en esa rama.
+      const chipsPresentacion = (opciones, rotulo) => !opciones.length ? '' : `
+           <div class="presentaciones-usadas">
+             <div class="presentaciones-usadas__titulo">${rotulo}</div>
+             <div class="presentaciones-usadas__chips">
+               ${opciones.map(c => `
+                 <button type="button" class="chip-presentacion ${c === item.contenido ? 'chip-presentacion--sel' : ''}"
+                         data-presentacion="${esc(String(c))}">${esc(formatearCantidad(c, item.unidadMedida))}</button>`).join('')}
+             </div>
+           </div>`
+
+      // El aviso de la favorita que no sirve para este renglón. Es la mitad
+      // que hace util al aprendizaje: sin el, la propuesta simplemente no
+      // aparece y nadie sabe por que.
+      const favoritaNoDivide = (item.interpretacion === 'unidades' && favorita != null &&
+        item.numeroPapel != null && !Number.isInteger(item.numeroPapel / favorita))
+      const avisoFavorita = !favoritaNoDivide ? '' : `
+           <div class="aviso-total-ocr">
+             La presentación más usada acá es de ${esc(formatearCantidad(favorita, item.unidadMedida))},
+             y ${esc(formatearCantidad(item.numeroPapel, item.unidadMedida))} no se reparte exacto en bultos de esa medida.
+             ${dividen.length ? 'Estas sí:' : 'Cargá los bultos a mano.'}
+           </div>`
+
       const segundaFila =
         item.interpretacion === 'bultos' ? `
            <div class="cantidad-fila">
@@ -4143,7 +4329,8 @@
              <input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
                     value="${esc(textoParaInput(item.contenido))}" placeholder="0">
              ${item.esNuevo ? selectorUnidad : `<span class="cantidad-fila__unidad">${u}</span>`}
-           </div>`
+           </div>
+           ${chipsPresentacion(usadas, 'Ya usadas con este proveedor')}`
         : item.interpretacion === 'unidades' ? `
            <div class="cantidad-fila">
              <span class="cantidad-fila__label">vino en</span>
@@ -4153,7 +4340,9 @@
            </div>
            ${item.contenido != null
              ? `<div class="item-mp__hint">ⓘ Cada bulto trae ${esc(formatearCantidad(item.contenido, item.unidadMedida))}.</div>`
-             : ''}`
+             : ''}
+           ${avisoFavorita}
+           ${chipsPresentacion(dividen, 'Presentaciones que reparten exacto')}`
         : item.interpretacion === 'granel' ? `
            <div class="item-mp__hint">ⓘ Sin presentación: el stock de este renglón se va a ver solo en ${esc(item.unidadMedida)}.</div>`
         : ''
@@ -4539,6 +4728,10 @@
             // toca: ese es el dato, la respuesta solo dice qué representa.
             if (accion === 'interp-bultos' || accion === 'interp-unidades' || accion === 'interp-granel') {
               const nuevo = accion.slice('interp-'.length)
+              // Aunque toque la misma opción: fue una decisión suya y el
+              // historial ya no tiene que proponerle nada.
+              item.interpTocada = true
+              item.interpDeHistorial = false
               if (item.interpretacion !== nuevo) {
                 item.interpretacion = nuevo
                 item.interpretacionDeOcr = false
@@ -4562,6 +4755,28 @@
             }
             if (accion === 'adjuntar-ficha') tarjeta.querySelector('[data-input="ficha"]').click()
             if (accion === 'adjuntar-lote')  tarjeta.querySelector('[data-input="lote"]').click()
+          })
+        })
+
+        // ── Presentaciones ya usadas ──────────────────────────────────────
+        // Un atajo, no una decisión: pone el número y recalcula a la vista.
+        tarjeta.querySelectorAll('[data-presentacion]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const c = Number(btn.dataset.presentacion)
+            if (!Number.isFinite(c) || c <= 0) return
+            if (item.interpretacion === 'unidades') {
+              // Acá se tipean los bultos: el chip dice cuánto trae cada uno, y
+              // los bultos salen de repartir el número del papel.
+              const bultos = item.numeroPapel == null ? null : item.numeroPapel / c
+              if (!Number.isInteger(bultos) || bultos <= 0) return
+              item.bultos = bultos
+            } else {
+              item.contenido = c
+            }
+            // La eligió una persona: deja de ser una propuesta del historial.
+            item.interpDeHistorial = false
+            derivarCantidades(item)
+            renderizarItems()
           })
         })
 
