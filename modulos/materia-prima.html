@@ -1306,6 +1306,31 @@
     }
     .texto-del-papel strong { color: #2c3242; font-weight: 600; }
 
+    .lineas-mixtas { margin-top: 0.5rem; }
+    .linea-mixta {
+      display: flex; align-items: center; gap: 0.375rem;
+      flex-wrap: wrap; min-width: 0; margin-bottom: 0.4375rem;
+    }
+    .linea-mixta input {
+      flex: 1 1 3.5rem; min-width: 0; padding: 0.5rem 0.625rem;
+      border: 1px solid #d7dce7; border-radius: 8px;
+      font-size: 0.9375rem; font-family: inherit; text-align: right;
+    }
+    .linea-mixta input:focus { border-color: var(--marron); outline: none; }
+    .btn-quitar-linea {
+      flex-shrink: 0; width: 1.75rem; height: 1.75rem; padding: 0;
+      border: 1px solid #d7dce7; border-radius: 8px; background: #fff;
+      color: #6b7385; font-size: 0.8125rem; cursor: pointer; line-height: 1;
+    }
+    .btn-quitar-linea:disabled { opacity: 0.35; cursor: default; }
+
+    .suma-mixta {
+      margin-top: 0.5rem; padding: 0.4375rem 0.625rem;
+      border-radius: 8px; font-size: 0.8125rem;
+    }
+    .suma-mixta--ok  { background: #e8f6ee; color: #1f6b42; }
+    .suma-mixta--mal { background: #fdeceb; color: #9b2c22; }
+
     .presentaciones-usadas { margin-top: 0.5rem; }
     .presentaciones-usadas__titulo {
       font-size: 0.75rem; color: #6b7385; margin-bottom: 0.3125rem;
@@ -2313,6 +2338,16 @@
     // el índice único de la base (lower(nombre), lower(coalesce(marca,''))) NO
     // colapsa: de los dos errores posibles, encontrar de más es el seguro —
     // reusa un insumo existente en vez de chocar contra el índice al crearlo.
+    // Renglones distintos del comprobante, contados desde las filas guardadas.
+    // Ver la nota en cargarListado(): (insumo, lote) es la clave, y es un
+    // PROXY —dos renglones del mismo insumo con el mismo lote se contarían como
+    // uno—, no un dato guardado. Es el precio de no agregar una columna.
+    function contarRenglones(filas) {
+      if (!filas?.length) return 0
+      return new Set(filas.map(f =>
+        `${f.insumo_id}|${String(f.lote ?? '').trim()}|${f.lote_ilegible ? 1 : 0}`)).size
+    }
+
     function claveInsumo(nombre, marca) {
       const norm = (v) => String(v ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
       return `${norm(nombre)}|${norm(marca)}`
@@ -2494,7 +2529,7 @@
         // agregado: sirve para las DOS cosas —la cantidad de ítems es el largo
         // del array, y el indicador de diferencias es que alguno lo tenga
         // cargado— sin sumar una consulta. Son pocos ítems por ingreso.
-        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(cantidad_documento, ya_recibido_con_remito)')
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(insumo_id, lote, lote_ilegible, cantidad_documento, ya_recibido_con_remito)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -2510,10 +2545,21 @@
 
       estado.listaIngresos = (data ?? []).map(i => ({
         ...i,
-        cantidadItems: i.materia_prima_items?.length ?? 0,
+        // CUENTA RENGLONES DEL PAPEL, NO FILAS. Este número existe para
+        // controlar contra el comprobante —"5 ítems, 4 suman" contra una
+        // factura de 5 renglones—, así que tiene que contar lo mismo que el
+        // comprobante. Desde las presentaciones mixtas un renglón puede dejar
+        // varias filas, y contarlas haría que el número dejara de coincidir sin
+        // que nada lo explique.
+        //
+        // La clave es (insumo, lote): un renglón partido en presentaciones
+        // comparte las dos —el lote es del renglón y se copia a cada fila—,
+        // mientras que dos renglones del mismo producto van con lotes
+        // distintos, que es justamente por qué se cargan separados.
+        cantidadItems: contarRenglones(i.materia_prima_items),
         // Los que REALMENTE entran al stock. Es el número que decide si una
         // factura es una llegada de mercadería o solo documentación.
-        itemsQueSuman: (i.materia_prima_items ?? []).filter(it => !it.ya_recibido_con_remito).length,
+        itemsQueSuman: contarRenglones((i.materia_prima_items ?? []).filter(it => !it.ya_recibido_con_remito)),
         tieneDiferencias: (i.materia_prima_items ?? []).some(it => it.cantidad_documento != null),
       }))
       estado.entregas = fusionarEntregas(estado.listaIngresos, vinculos)
@@ -3828,6 +3874,12 @@
         // aplica callado — mismo criterio que el alias, y por lo mismo, porque
         // una propuesta equivocada se propaga sola.
         interpDeHistorial: false,
+        // PRESENTACIONES MIXTAS. `null` es el caso normal —una sola
+        // presentación, el 95%— y ahí mandan `bultos` y `contenido` de acá
+        // arriba: no conviven dos representaciones del mismo dato. Cuando la
+        // persona activa el modo, pasa a ser [{bultos, contenido}] y esos dos
+        // campos quedan en null porque el renglón ya no tiene UNA presentación.
+        lineas: null,
         // La persona ya respondió (aunque después la borre). Corta el
         // aplicarHistorial() tardío: la respuesta de una persona no se pisa con
         // una propuesta que llegó después por la red.
@@ -3881,7 +3933,7 @@
         // Agregado a mano: no hay número del papel que interpretar, pero la
         // pregunta se hace igual — es la que decide qué se pide abajo.
         interpretacion: null, interpretacionDeOcr: false, numeroPapel: null,
-        interpDeHistorial: false, interpTocada: false,
+        interpDeHistorial: false, interpTocada: false, lineas: null,
         bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
@@ -4140,6 +4192,41 @@
     // INVARIANTE que no cambia: `cantidad` es siempre lo REALMENTE RECIBIDO,
     // que es lo que suma stock. Con el control de recepción parcial activo,
     // `numeroPapel` describe el comprobante y `recibido` lo que llegó.
+    // Lo que aportan las líneas en total, en la unidad base. Null si alguna
+    // está incompleta: media suma no es un total.
+    function totalDeLineas(item) {
+      if (!item.lineas?.length) return null
+      let suma = 0
+      for (const l of item.lineas) {
+        if (!(l.bultos > 0) || !(l.contenido > 0)) return null
+        suma += l.bultos * l.contenido
+      }
+      return suma
+    }
+
+    // Lo que las líneas tienen que reconstruir: el NÚMERO DEL PAPEL, leído en
+    // la unidad que la respuesta dice que es. No es una regla nueva — es la
+    // misma que ya rige con una sola presentación, donde `bultos` ES el número
+    // del papel en modo 'bultos' y el total lo es en modo 'unidades'.
+    function sumaDeControl(item) {
+      if (!item.lineas?.length) return null
+      if (item.interpretacion === 'bultos') {
+        let suma = 0
+        for (const l of item.lineas) {
+          if (!(l.bultos > 0)) return null
+          suma += l.bultos
+        }
+        return suma
+      }
+      return totalDeLineas(item)
+    }
+
+    function lineasCierran(item) {
+      const suma = sumaDeControl(item)
+      return suma != null && item.numeroPapel != null &&
+             Math.abs(suma - item.numeroPapel) <= TOLERANCIA_CANTIDAD
+    }
+
     function derivarCantidades(item) {
       const modo = item.interpretacion
       const doc = item.numeroPapel
@@ -4148,6 +4235,20 @@
       if (modo == null) {
         item.bultos = null; item.contenido = null
         item.cantidad = null; item.cantidadDocumento = null
+        return
+      }
+
+      // MIXTO. Va ANTES de las tres ramas: acá el renglón no tiene una
+      // presentación única, así que `bultos` y `contenido` del ítem quedan en
+      // null y cada línea lleva la suya. El total sale de sumar las líneas, y
+      // sale igual aunque no cierre contra el papel — quien avisa y bloquea es
+      // validarItems(), con los dos números a la vista.
+      if (item.lineas) {
+        item.bultos = null; item.contenido = null
+        item.cantidad = totalDeLineas(item)
+        // El modo mixto excluye la recepción parcial, así que no hay cantidad
+        // de comprobante separada que registrar.
+        item.cantidadDocumento = null
         return
       }
 
@@ -4300,7 +4401,10 @@
 
       // En 'bultos' el atajo pone el contenido; en 'unidades' pone los bultos,
       // que es el campo que se tipea en esa rama.
-      const chipsPresentacion = (opciones, rotulo) => !opciones.length ? '' : `
+      // En modo mixto no se ofrecen: un chip pone UN contenido y con varias
+      // líneas no hay forma de saber a cuál. Ofrecerlos igual sería sugerir
+      // algo sin sentido.
+      const chipsPresentacion = (opciones, rotulo) => (!opciones.length || item.lineas) ? '' : `
            <div class="presentaciones-usadas">
              <div class="presentaciones-usadas__titulo">${rotulo}</div>
              <div class="presentaciones-usadas__chips">
@@ -4322,7 +4426,49 @@
              ${dividen.length ? 'Estas sí:' : 'Cargá los bultos a mano.'}
            </div>`
 
+      // ── Presentaciones mixtas ────────────────────────────────────────────
+      // "4 bultos de 250 y 2 de 500". Cada línea emite su propia fila de
+      // materia_prima_items, que es lo que Stock ya espera: el libro guarda una
+      // fila por presentación y v_stock_por_lote agrupa por (lote, contenido).
+      const sumaCtrl = sumaDeControl(item)
+      const cierran = lineasCierran(item)
+      const rotuloSuma = item.interpretacion === 'bultos' ? 'bultos' : esc(item.unidadMedida)
+      const lineasHtml = !item.lineas ? '' : `
+           <div class="lineas-mixtas">
+             ${item.lineas.map((l, n) => `
+               <div class="linea-mixta" data-linea="${n}">
+                 <input type="text" inputmode="decimal" autocomplete="off"
+                        data-linea-campo="bultos" value="${esc(textoParaInput(l.bultos))}" placeholder="0">
+                 <span class="cantidad-fila__unidad">bultos de</span>
+                 <input type="text" inputmode="decimal" autocomplete="off"
+                        data-linea-campo="contenido" value="${esc(textoParaInput(l.contenido))}" placeholder="0">
+                 <span class="cantidad-fila__unidad">${u}</span>
+                 <button type="button" class="btn-quitar-linea" data-accion="mixto-quitar"
+                         title="Quitar esta presentación" aria-label="Quitar esta presentación"
+                         ${item.lineas.length <= 1 ? 'disabled' : ''}>✕</button>
+               </div>`).join('')}
+             <button type="button" class="btn-item-secundario" data-accion="mixto-agregar">+ Otra presentación</button>
+             <div class="suma-mixta ${cierran ? 'suma-mixta--ok' : 'suma-mixta--mal'}">
+               Suma <strong>${sumaCtrl == null ? '—' : esc(formatearNumero(sumaCtrl))}</strong>
+               de <strong>${item.numeroPapel == null ? '—' : esc(formatearNumero(item.numeroPapel))}</strong> ${rotuloSuma}
+               ${cierran ? '✓' : ''}
+             </div>
+           </div>`
+
+      // El botón que activa el modo. Solo donde tiene sentido: a granel no hay
+      // presentación que partir. Y no cuando el control de recepción parcial
+      // está activo — ver el aviso de abajo.
+      const puedeMixto = (item.interpretacion === 'bultos' || item.interpretacion === 'unidades')
+      const botonMixto = (!puedeMixto || item.lineas) ? '' : (item.difiere ? `
+           <div class="item-mp__hint" style="margin-top:0.5rem;">
+             ⓘ Si vino en dos presentaciones y además faltó mercadería, cargalo como dos renglones.
+           </div>` : `
+           <button type="button" class="btn-item-secundario" data-accion="mixto-activar" style="margin-top:0.5rem;">
+             Vino en más de una presentación
+           </button>`)
+
       const segundaFila =
+        item.lineas ? lineasHtml :
         item.interpretacion === 'bultos' ? `
            <div class="cantidad-fila">
              <span class="cantidad-fila__label">cada bulto trae</span>
@@ -4353,6 +4499,7 @@
            ${item.interpretacion == null ? '' : `
              ${filaNumero}
              ${segundaFila}
+             ${botonMixto}
              <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>
              ${avisoTotalOcr(item)}`}`
 
@@ -4568,9 +4715,14 @@
               ${cantidadHtml}
               ${(item.difiere && item.cantidadOcrOriginal != null)
                 ? '<div class="marca-ocr-item">✓ leído de la foto — verificalo contra el papel</div>' : ''}
-              <button type="button" class="btn-item-secundario btn-item-secundario--dif ${item.difiere ? 'btn-item-secundario--activo' : ''}" data-accion="toggle-diferencia">
-                ${item.difiere ? '✓ Recibí menos de lo que dice el remito' : 'Recibí menos de lo que dice el remito'}
-              </button>
+              ${item.lineas ? `
+                <div class="item-mp__hint" style="margin-top:0.5rem;">
+                  ⓘ Con más de una presentación no se puede cargar una diferencia:
+                  si vino en dos presentaciones y además faltó mercadería, cargalo como dos renglones.
+                </div>` : `
+                <button type="button" class="btn-item-secundario btn-item-secundario--dif ${item.difiere ? 'btn-item-secundario--activo' : ''}" data-accion="toggle-diferencia">
+                  ${item.difiere ? '✓ Recibí menos de lo que dice el remito' : 'Recibí menos de lo que dice el remito'}
+                </button>`}
               ${bloqueDiferencia}
             </div>
 
@@ -4747,6 +4899,39 @@
               }
               renderizarItems()
             }
+            // Activar el modo mixto NO vacía nada: lo que ya está tipeado se
+            // convierte en la línea 1. Perder un número tipeado al tocar un
+            // botón es de las cosas que más desconfianza generan.
+            if (accion === 'mixto-activar') {
+              item.lineas = [
+                { bultos: item.interpretacion === 'bultos' ? item.numeroPapel : item.bultos,
+                  contenido: item.contenido },
+                { bultos: null, contenido: null },
+              ]
+              derivarCantidades(item)
+              renderizarItems()
+            }
+            if (accion === 'mixto-agregar') {
+              if (item.lineas) item.lineas.push({ bultos: null, contenido: null })
+              derivarCantidades(item)
+              renderizarItems()
+            }
+            if (accion === 'mixto-quitar') {
+              const n = Number(el.closest('[data-linea]')?.dataset.linea)
+              if (item.lineas && Number.isInteger(n)) item.lineas.splice(n, 1)
+              // Con una sola línea no hay nada mixto: se vuelve al modo normal
+              // y esa presentación pasa a ser la del ítem. Si no, quedaría una
+              // lista de uno, que es el mismo dato con dos formas.
+              if (item.lineas?.length === 1) {
+                const [sola] = item.lineas
+                item.lineas = null
+                item.contenido = sola.contenido
+                if (item.interpretacion === 'bultos') item.numeroPapel = sola.bultos
+                else item.bultos = sola.bultos
+              }
+              derivarCantidades(item)
+              renderizarItems()
+            }
             if (accion === 'lote-ilegible') {
               item.loteIlegible = !item.loteIlegible
               // El CHECK chk_lote_ilegible_sin_lote prohíbe tener los dos.
@@ -4755,6 +4940,26 @@
             }
             if (accion === 'adjuntar-ficha') tarjeta.querySelector('[data-input="ficha"]').click()
             if (accion === 'adjuntar-lote')  tarjeta.querySelector('[data-input="lote"]').click()
+          })
+        })
+
+        // ── Campos de las líneas mixtas ───────────────────────────────────
+        // Se atienden aparte de [data-campo] porque escriben en item.lineas[n]
+        // y no en el ítem. Mismo criterio de no re-renderizar por tecla.
+        tarjeta.querySelectorAll('[data-linea-campo]').forEach(el => {
+          el.addEventListener('input', () => {
+            const n = Number(el.closest('[data-linea]')?.dataset.linea)
+            if (!item.lineas || !Number.isInteger(n) || !item.lineas[n]) return
+            const campo = el.dataset.lineaCampo
+            // Los bultos de una línea son un paquete discreto igual que los del
+            // ítem: rechazan cualquier separador sin mirar la unidad.
+            item.lineas[n][campo] = parsearCantidad(el.value, {
+              unidad: item.unidadMedida,
+              enteros: campo === 'bultos',
+            })
+            marcarCampoInvalidoLinea(el, campo, item)
+            actualizarTotalEnVivo(tarjeta, item)
+            actualizarSumaMixtaEnVivo(tarjeta, item)
           })
         })
 
@@ -4901,6 +5106,38 @@
     // El aviso va pegado al campo y NO re-renderiza la tarjeta: el handler de
     // los campos numéricos evita el re-render a propósito para no robarle el
     // foco a quien está escribiendo.
+    // La suma en vivo, sin re-renderizar: si redibujara la tarjeta en cada
+    // tecla, el input perdería el foco.
+    function actualizarSumaMixtaEnVivo(tarjeta, item) {
+      const caja = tarjeta.querySelector('.suma-mixta')
+      if (!caja) return
+      const suma = sumaDeControl(item)
+      const cierran = lineasCierran(item)
+      const rotulo = item.interpretacion === 'bultos' ? 'bultos' : item.unidadMedida
+      caja.classList.toggle('suma-mixta--ok', cierran)
+      caja.classList.toggle('suma-mixta--mal', !cierran)
+      caja.innerHTML = `Suma <strong>${suma == null ? '—' : esc(formatearNumero(suma))}</strong>
+        de <strong>${item.numeroPapel == null ? '—' : esc(formatearNumero(item.numeroPapel))}</strong> ${esc(rotulo)}
+        ${cierran ? '✓' : ''}`
+    }
+
+    // Igual que marcarCampoInvalido pero para una línea: el valor vive en
+    // item.lineas[n] y no en el ítem, así que el chequeo de "quedó en null"
+    // hay que hacerlo contra otro lado.
+    function marcarCampoInvalidoLinea(el, campo, item) {
+      const n = Number(el.closest('[data-linea]')?.dataset.linea)
+      const crudo = String(el.value ?? '').trim()
+      const malo = crudo !== '' && item.lineas?.[n]?.[campo] == null
+      let aviso = el.parentElement?.querySelector('.campo-invalido')
+      if (!malo) { if (aviso) aviso.remove(); return }
+      if (!aviso) {
+        aviso = document.createElement('div')
+        aviso.className = 'campo-invalido'
+        el.parentElement?.appendChild(aviso)
+      }
+      aviso.textContent = mensajeCantidadInvalida(campo === 'bultos', item.unidadMedida)
+    }
+
     function marcarCampoInvalido(el, campo, item) {
       const crudo = String(el.value ?? '').trim()
       const malo = crudo !== '' && item[campo] === null
@@ -4945,11 +5182,19 @@
           }
         } else if (item.numeroPapel == null || !(item.numeroPapel > 0)) {
           item.error = 'Cargá la cantidad que dice el comprobante.'
-        } else if (item.interpretacion === 'bultos' && (item.contenido == null || !(item.contenido > 0))) {
+        } else if (item.lineas && item.lineas.some(l => !(l.bultos > 0) || !(l.contenido > 0))) {
+          // chk_presentacion_coherente valida CADA FILA por separado, así que
+          // cada línea tiene que cerrar sola además de que el conjunto cierre.
+          item.error = 'Completá los bultos y el contenido de cada presentación.'
+        } else if (item.lineas && !lineasCierran(item)) {
+          const suma = sumaDeControl(item)
+          const rot = item.interpretacion === 'bultos' ? 'bultos' : item.unidadMedida
+          item.error = `Las presentaciones suman ${formatearNumero(suma ?? 0)} ${rot} y el comprobante dice ${formatearNumero(item.numeroPapel)}.`
+        } else if (!item.lineas && item.interpretacion === 'bultos' && (item.contenido == null || !(item.contenido > 0))) {
           item.error = 'Cargá cuánto trae cada bulto.'
-        } else if (item.interpretacion === 'unidades' && (item.bultos == null || !(item.bultos > 0))) {
+        } else if (!item.lineas && item.interpretacion === 'unidades' && (item.bultos == null || !(item.bultos > 0))) {
           item.error = 'Cargá en cuántos bultos vino.'
-        } else if (item.interpretacion === 'unidades' && item.contenido == null) {
+        } else if (!item.lineas && item.interpretacion === 'unidades' && item.contenido == null) {
           // dividirExacto() devolvió null: no se reparte en partes iguales, y
           // chk_presentacion_coherente exige la igualdad exacta. Se dice acá y
           // no en el insert, al final del wizard.
@@ -5137,6 +5382,27 @@
       // gastos.html, que es el otro archivo que la llama.
       const id = typeof data === 'string' ? data : data?.id
       return { id: id ?? null, aviso: null }
+    }
+
+    // Devuelve UNA FILA POR PRESENTACIÓN. En el caso normal —`lineas` en
+    // null, el 95%— es exactamente una fila y exactamente la misma que antes:
+    // ese camino no cambió nada.
+    function filasItemParaBase(item, ingresoId) {
+      const base = filaItemParaBase(item, ingresoId)
+      if (!item.lineas?.length) return [base]
+      // El lote, los adjuntos, la interpretación y el vínculo con el remito son
+      // del RENGLÓN y se copian idénticos a cada fila. Lo único que cambia por
+      // línea es la presentación y la cantidad que aporta.
+      return item.lineas.map(l => ({
+        ...base,
+        cantidad: l.bultos * l.contenido,
+        cantidad_bultos: l.bultos,
+        contenido_por_bulto: l.contenido,
+        // El modo mixto excluye la recepción parcial, así que no hay
+        // diferencia con el comprobante que repartir entre las filas.
+        cantidad_documento: null,
+        motivo_diferencia: null,
+      }))
     }
 
     function filaItemParaBase(item, ingresoId) {
@@ -5328,7 +5594,9 @@
         // 4. Los ítems, en UN solo insert: un array es una sola sentencia, así
         // que entran todos o no entra ninguno.
         if (w.items.length) {
-          const filas = w.items.map(item => filaItemParaBase(item, ingresoId))
+          // flatMap: un renglón con presentaciones mixtas emite varias filas.
+          // Sigue siendo UN solo insert, así que la atomicidad no cambia.
+          const filas = w.items.flatMap(item => filasItemParaBase(item, ingresoId))
           const { error: errorItems } = await supabase.from('materia_prima_items').insert(filas)
           if (errorItems) throw new Error(`No se pudieron guardar los ítems: ${errorItems.message}`)
         }
