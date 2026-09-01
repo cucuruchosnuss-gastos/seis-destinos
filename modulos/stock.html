@@ -2176,7 +2176,18 @@
     // negativo. Sin el parámetro, ese campo rechazaría todo lo negativo y
     // parecería que un ajuste solo puede sumar.
     function parsearCantidad(crudo, { permitirNegativos = false, unidad = '' } = {}) {
-      let texto = String(crudo ?? '').trim().replace(/\s/g, '')
+      // trim() saca los espacios de los BORDES, pero los de ADENTRO se
+      // rechazan. Acá había un .replace(/\s/g, '') que los borraba, y con
+      // eso "8 5" —un dedazo donde iba la coma, con la barra espaciadora
+      // pegada al 0 en el teclado del celular— se convertía en 85 y pasaba el
+      // patrón sin una queja. Es el mismo mecanismo del bug que este helper
+      // vino a eliminar: un dato ambiguo transformado en un número plausible,
+      // sin error y sin señal, y de acá sale un ajuste de inventario.
+      //
+      // Un espacio no es un separador decimal en es-AR, así que no hay nada
+      // que interpretar: se devuelve null y el mensaje de la fila lo dice.
+      // Mismo criterio que rechazar más de un separador en vez de adivinar.
+      let texto = String(crudo ?? '').trim()
       if (texto === '') return null          // vacío = el guion, nunca un cero
 
       let negativo = false
