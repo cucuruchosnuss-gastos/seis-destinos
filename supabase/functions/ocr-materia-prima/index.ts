@@ -32,7 +32,22 @@ Totales del comprobante (null en los remitos, que no llevan importes):
 
 Campos de cada ítem del detalle (array "items"), una entrada por cada línea:
 - descripcion: nombre del producto SIN la marca y SIN el tamaño del envase
-  (ej: de "HARINA 000 CAÑUELAS X 25KG" devolvé "Harina 000")
+  (ej: de "HARINA 000 CAÑUELAS X 25KG" devolvé "Harina 000"). Este es el nombre
+  que se usa para prellenar el producto, así que va limpio.
+- descripcion_literal: la TRANSCRIPCIÓN EXACTA del renglón, tal como figura
+  impreso en el papel. Copialo carácter por carácter: marca, tamaño del envase,
+  paréntesis, códigos, abreviaturas, mayúsculas y minúsculas como estén.
+  (ej: de la línea "HARINA 000 JUPITER x 25 Kg. (NARANJA)" devolvé exactamente
+  "HARINA 000 JUPITER x 25 Kg. (NARANJA)", NO "Harina 000")
+  NO lo limpies, NO lo normalices, NO lo resumas, NO lo traduzcas y NO lo
+  interpretes: es lo contrario de `descripcion`.
+  TIENE QUE SER ESTABLE entre lecturas del mismo comprobante: es la clave de un
+  índice único con el que el sistema recuerda cómo llama este proveedor a cada
+  producto. Un texto que cambie según cómo decidas resumirlo esta vez no sirve
+  para nada. Si el mismo papel se lee dos veces, este campo tiene que dar el
+  mismo string las dos veces.
+  Si no podés transcribir el renglón con seguridad, usá null — nunca una
+  aproximación.
 - codigo_articulo: el código del artículo del proveedor si la línea lo trae
   (ej: "ART-1042", "70351"). Si no figura, null.
 - marca: la marca comercial del producto si figura (ej: "Cañuelas", "Pureza",
@@ -101,6 +116,7 @@ Formato de respuesta (únicamente esto):
   "items": [
     {
       "descripcion": "...",
+      "descripcion_literal": "..." | null,
       "codigo_articulo": "..." | null,
       "marca": "..." | null,
       "unidad_medida": "kg" | "lt" | "un",
@@ -291,6 +307,19 @@ Deno.serve(async (req) => {
       if (typeof item[campo] !== 'number' || !Number.isFinite(item[campo] as number)) {
         item[campo] = null
       }
+    }
+    // La transcripción literal es la clave con la que se guarda y se busca el
+    // alias del proveedor. Si no vino utilizable va a null y el wizard cae a
+    // `descripcion`, que es como venía funcionando: un renglón sin literal
+    // sigue sirviendo para todo lo demás, así que NO se descarta.
+    if (typeof item.descripcion_literal !== 'string' || item.descripcion_literal.trim() === '') {
+      item.descripcion_literal = null
+    } else {
+      // Solo los espacios de los BORDES. Nada de adentro se toca: la
+      // normalización real la hace normalizar_texto() en el índice único, y
+      // acá cualquier retoque extra haría que el mismo papel diera un texto
+      // distinto según por dónde pasó.
+      item.descripcion_literal = item.descripcion_literal.trim()
     }
     // tipo_sugerido es una SUGERENCIA, nunca una decisión: cualquier cosa que
     // no sea exactamente uno de los dos valores va a null, y el wizard obliga a

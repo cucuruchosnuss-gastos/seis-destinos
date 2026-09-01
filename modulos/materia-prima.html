@@ -3430,11 +3430,33 @@
     }
 
     function itemDesdeOcr(crudo) {
+      // EL TEXTO DEL PAPEL, que es la clave del alias. Es la transcripción
+      // literal del renglón —"HARINA 000 JUPITER x 25 Kg. (NARANJA)"— y no el
+      // nombre limpio que el modelo arma para prellenar el producto.
+      //
+      // Antes acá iba `descripcion`, que el prompt le pide RESUMIR: quedaban
+      // guardados alias como «Harina 000» que la próxima factura de ese
+      // proveedor —que vuelve a traer el texto largo— no iba a matchear nunca.
+      // La libretita se llenaba de entradas que no aciertan, dando la impresión
+      // de que el sistema aprende cuando no aprendía nada.
+      //
+      // El fallback a `descripcion` NO es cosmético: el deploy de la Edge
+      // Function va aparte del push, así que hasta que se despliegue este campo
+      // llega undefined y todo se comporta exactamente como antes.
+      const textoDelPapel = String(crudo.descripcion_literal || crudo.descripcion || '')
+
       // ORDEN DE RESOLUCIÓN: alias del proveedor, después nombre+marca contra
       // el catálogo, y si no, producto nuevo. El alias va primero porque es una
       // traducción que alguien ya hizo a mano para ESTE proveedor: sabe más que
       // el matcheo por texto.
-      const porAlias = aliasDe(crudo.descripcion)
+      //
+      // Se BUSCA con el mismo texto con el que se GUARDA (ver `textoOriginal`
+      // más abajo y guardarAliasNuevos). Si las dos puntas usaran campos
+      // distintos, la libretita guardaría con una clave y buscaría con otra: no
+      // acertaría jamás, y encima parecería que está aprendiendo.
+      const porAlias = aliasDe(textoDelPapel)
+      // El matcheo por catálogo SÍ va con el nombre limpio: se compara contra
+      // insumos.nombre + marca, que están limpios.
       const match = porAlias?.insumo ?? buscarEnCatalogo(crudo.descripcion, crudo.marca)
       const bultos    = numeroDesdeOcr(crudo.cantidad_bultos)
       const contenido = numeroDesdeOcr(crudo.contenido_por_bulto)
@@ -3469,7 +3491,14 @@
         // Se conserva aparte de `nombre` porque al elegir del catálogo `nombre`
         // pasa a ser el del catálogo, y guardar ESE texto haría que la próxima
         // vez no matcheara nada.
-        textoOriginal: crudo.descripcion || '',
+        textoOriginal: textoDelPapel,
+        // El nombre LIMPIO que armó el OCR. Existe por "Corregir": ese botón
+        // devuelve el renglón a "sin resolver" y repone un nombre editable, que
+        // si el producto es nuevo termina EN EL CATÁLOGO. Reponer el literal
+        // dejaría ahí un insumo llamado "HARINA 000 JUPITER x 25 Kg.
+        // (NARANJA)", que es el mismo problema que la separación vino a evitar,
+        // entrando por la otra puerta.
+        nombreOcr: crudo.descripcion || '',
         // El tipo salió del catálogo, pero de una fila que todavía nadie
         // revisó: vale tanto como una sugerencia. Se avisa (ver
         // .aviso-sin-revisar) en vez de dejar que se propague callado.
@@ -3509,7 +3538,7 @@
         pendienteRevision: false,
         // Agregado a mano: no salió de ningún alias, y sin texto del papel no
         // hay nada que guardar en la libretita.
-        porAlias: false, textoOriginal: '',
+        porAlias: false, textoOriginal: '', nombreOcr: '',
         busquedaCatalogo: '',
         modoDesglose: false, bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
@@ -4082,9 +4111,12 @@
               item.esNuevo = true
               item.porAlias = false
               item.pendienteRevision = false
-              // Se repone el texto DEL PAPEL: es de donde hay que partir para
-              // corregir, y es además lo que se va a guardar como alias.
-              if (item.textoOriginal) item.nombre = item.textoOriginal
+              // Se repone el nombre LIMPIO del OCR, no la transcripción literal:
+              // este campo es editable y, si el producto termina siendo nuevo,
+              // es el que se crea en el catálogo. `textoOriginal` sigue intacto
+              // y a la vista en la marca de alias — es la clave del alias, no
+              // un nombre de producto.
+              if (item.nombreOcr) item.nombre = item.nombreOcr
               // El tipo salía del catálogo; ahora no se sabe y hay que elegirlo.
               item.tipo = null
               item.tipoDeOcr = false
