@@ -40,7 +40,7 @@ Campos de cada ítem del detalle (array "items"), una entrada por cada línea:
   (ej: de la línea "HARINA 000 JUPITER x 25 Kg. (NARANJA)" devolvé exactamente
   "HARINA 000 JUPITER x 25 Kg. (NARANJA)", NO "Harina 000")
   NO lo limpies, NO lo normalices, NO lo resumas, NO lo traduzcas y NO lo
-  interpretes: es lo contrario de `descripcion`.
+  interpretes: es lo contrario de "descripcion".
   TIENE QUE SER ESTABLE entre lecturas del mismo comprobante: es la clave de un
   índice único con el que el sistema recuerda cómo llama este proveedor a cada
   producto. Un texto que cambie según cómo decidas resumirlo esta vez no sirve
