@@ -1297,6 +1297,31 @@
       flex-shrink: 0;
     }
     .cantidad-fila__x { font-size: 0.9375rem; color: #a3abbd; flex-shrink: 0; }
+    /* El texto crudo del renglon. Es el unico dato con el que se puede juzgar
+       si una sugerencia es la correcta, asi que va a la vista. */
+    .texto-del-papel {
+      font-size: 0.8125rem; color: #6b7385; line-height: 1.35;
+      background: #f4f6fa; border-radius: 8px;
+      padding: 0.4375rem 0.625rem; margin-bottom: 0.625rem;
+    }
+    .texto-del-papel strong { color: #2c3242; font-weight: 600; }
+
+    .parecidos { margin-bottom: 0.625rem; }
+    .parecidos__titulo {
+      font-size: 0.8125rem; font-weight: 600; color: #2c3242;
+      margin-bottom: 0.375rem;
+    }
+
+    /* Crear es la SALIDA, no la entrada: boton secundario debajo del catalogo,
+       no un formulario ya desplegado con el nombre del OCR adentro. */
+    .btn-crear-nuevo {
+      display: block; width: 100%; margin-top: 0.625rem;
+      padding: 0.5625rem 0.75rem; border: 1px dashed #c7cede;
+      border-radius: 8px; background: #fff; color: #6b7385;
+      font-size: 0.8125rem; font-family: inherit; cursor: pointer;
+    }
+    .btn-crear-nuevo:hover { border-color: var(--marron); color: var(--marron); }
+
     .cantidad-fila__label {
       font-size: 0.8125rem; color: #6b7385; flex-shrink: 0;
     }
@@ -3460,6 +3485,93 @@
     }
 
     // Busca por nombre Y marca a la vez: la persona escribe lo que recuerda.
+    // ── SUGERENCIA POR PARECIDO ────────────────────────────────────────────
+    //
+    // El texto del papel casi nunca coincide con el del catálogo: "ESQUINERO X
+    // 2 MTS X UNID" y "Esquineros 2 mts" son el mismo producto y no matchean
+    // como texto. Sin sugerir, la única salida real era crear un duplicado —
+    // verificado con una factura real: los 5 renglones salieron como NUEVO y 4
+    // YA EXISTÍAN. Con el catálogo partido en duplicados, ningún saldo sirve.
+
+    // Ruido de facturación: no dice nada del producto y aparece en casi todos
+    // los renglones, así que sumaría parecido entre cosas que no se parecen.
+    const RUIDO_CAT = new Set(['x', 'por', 'de', 'del', 'la', 'el', 'los', 'las',
+      'y', 'con', 'unid', 'unids', 'unidad', 'unidades', 'cu', 'c'])
+
+    // Los proveedores cierran el renglón con el envase — "X UNID", "X CAJA",
+    // "X KG", "X 2 ROLLOS"— y esa cola envenena el parecido: "CINTA D 48X100 X
+    // CAJA" traía un "caja" que la empujaba hacia los productos "Caja N°1".
+    // Se corta desde la última "x" suelta cuando lo que sigue es corto.
+    function sinColaDeEnvase(texto) {
+      const partes = String(texto || '').split(/\s+/)
+      for (let i = partes.length - 2; i >= 1; i--) {
+        if (partes[i].toLowerCase() === 'x' && partes.length - i - 1 <= 2) {
+          return partes.slice(0, i).join(' ')
+        }
+      }
+      return String(texto || '')
+    }
+
+    function tokensCat(texto) {
+      return sinColaDeEnvase(texto)
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .split(/[^a-z0-9]+/)
+        .filter(w => w.length > 1 && !RUIDO_CAT.has(w))
+    }
+
+    // Singular/plural y abreviaturas: "esquinero" vs "esquineros". El mínimo de
+    // 4 es lo que evita que "mt" matchee "mts" y "Esquineros 1 mt" empate con
+    // "Esquineros 2 mts" — ahí el número es lo único que distingue.
+    function tokensCoinciden(a, b) {
+      if (a === b) return true
+      if (a.length < 4 || b.length < 4) return false
+      return a.startsWith(b) || b.startsWith(a)
+    }
+
+    // Peso por rareza. "caja" está en diez insumos y no distingue nada; "cinta"
+    // está en dos y sí. Sin esto, un token frecuente compartido alcanzaba para
+    // empatar con uno raro.
+    function pesoToken(token, df, total) {
+      return Math.log(1 + total / Math.max(1, df))
+    }
+
+    function indiceFrecuencias() {
+      const df = new Map()
+      estado.catalogoInsumos.forEach(i => {
+        new Set(tokensCat(`${i.nombre} ${i.marca || ''}`)).forEach(w => df.set(w, (df.get(w) || 0) + 1))
+      })
+      return df
+    }
+
+    // Cuánto del NOMBRE DEL CATÁLOGO está en el texto del papel. Es
+    // direccional a propósito: el papel trae adornos que el catálogo no
+    // ("FILM STREECH X 50 CM VIRGEN BP" contra "Film"), y penalizarlos dejaría
+    // afuera justo los nombres cortos, que son los que mejor identifican.
+    const UMBRAL_SUGERENCIA = 0.4
+
+    function sugerenciasPorParecido(textoPapel, limite = 3) {
+      const tp = tokensCat(textoPapel)
+      if (!tp.length) return []
+      const df = indiceFrecuencias()
+      const total = estado.catalogoInsumos.length || 1
+      return estado.catalogoInsumos
+        .map(ins => {
+          const tc = tokensCat(`${ins.nombre} ${ins.marca || ''}`)
+          if (!tc.length) return null
+          let cubierto = 0, todo = 0
+          tc.forEach(w => {
+            const peso = pesoToken(w, df.get(w) || 1, total)
+            todo += peso
+            if (tp.some(x => tokensCoinciden(x, w))) cubierto += peso
+          })
+          return { insumo: ins, score: todo > 0 ? cubierto / todo : 0 }
+        })
+        .filter(r => r && r.score >= UMBRAL_SUGERENCIA)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limite)
+    }
+
     function buscarCatalogo(termino, limite = 8) {
       const t = normalizarBusquedaCat(termino)
       if (!t) return []
@@ -3487,6 +3599,7 @@
     function elegirDelCatalogo(item, insumo) {
       item.insumoId = insumo.id
       item.esNuevo = false
+      item.creando = false
       item.tipo = insumo.tipo
       item.tipoDeOcr = false
       item.pendienteRevision = insumo.estado_alta === 'pendiente_revision'
@@ -3559,6 +3672,12 @@
         // ítem: corregir el tipo después no re-valida lo ya cargado.
         tipo: match?.tipo ?? tipoSugeridoValido(crudo.tipo_sugerido),
         tipoDeOcr: !match && tipoSugeridoValido(crudo.tipo_sugerido) != null,
+        // ¿La persona eligió CREAR un producto nuevo? Arranca en false: hasta
+        // que alguien lo decida, el renglón está sin resolver y la pantalla
+        // ofrece primero el catálogo. Antes la tarjeta venía con el nombre del
+        // OCR ya escrito en el bloque de crear y el badge NUEVO puesto, así que
+        // crear era la entrada y buscar lo secundario — y nadie buscaba.
+        creando: false,
         // Se resolvió con la libretita. NUNCA se aplica callado: la tarjeta lo
         // dice y ofrece corregir. Un alias mal mapeado se propaga solo, así que
         // tiene que pasar por delante de los ojos de alguien cada vez.
@@ -3628,6 +3747,9 @@
     function itemVacio() {
       return {
         uid: nuevoUid(), insumoId: null, esNuevo: true,
+        // Agregado a mano: no hay texto del papel contra el cual sugerir, así
+        // que arranca directamente en modo crear. Igual queda el buscador.
+        creando: true,
         // Agregado a mano: sin tipo. Hay que elegirlo, no se asume.
         nombre: '', marca: '', tipo: null, tipoDeOcr: false, unidadMedida: 'kg',
         // Agregado a mano: no matcheó contra ninguna fila del catálogo, así que
@@ -3929,7 +4051,7 @@
             <div class="item-mp__info">
               <div class="item-mp__nombre-fila">
                 <span class="item-mp__nombre">${esc(item.nombre || '(sin nombre)')}</span>
-                ${item.esNuevo ? '<span class="badge-nuevo">NUEVO</span>' : ''}
+                ${item.esNuevo && item.creando ? '<span class="badge-nuevo">NUEVO</span>' : ''}
               </div>
               ${sub ? `<div class="item-mp__marca">${esc(sub)}</div>` : ''}
               ${item.yaRecibido ? CHIP_NO_SUMA : ''}
@@ -4082,16 +4204,30 @@
       // (arriba) o crear uno nuevo (abajo). El texto del proveedor no se parece
       // al del catálogo —ese es el problema entero que resuelven los alias— así
       // que sin buscador la única opción real era crear un duplicado.
-      const identidadHtml = item.esNuevo
-        ? `<div class="item-mp__bloque">
-             <div class="item-mp__bloque-label">Producto</div>
-             <div class="buscador-cat">
-               <input class="item-mp__texto-input" data-rol="buscador-catalogo"
-                      value="${esc(item.busquedaCatalogo || '')}"
-                      placeholder="Buscar en el catálogo por nombre o marca">
-               <div class="sugerencias-cat" data-rol="sugerencias-catalogo" ${item.busquedaCatalogo ? '' : 'hidden'}>${item.busquedaCatalogo ? htmlSugerenciasCatalogo(item.busquedaCatalogo) : ''}</div>
-             </div>
-             <div class="separador-o"><span>o creá un producto nuevo</span></div>
+      // Lo que el papel dice de este renglón, que es contra lo que se busca
+      // parecido. Se muestra siempre que haya: es el único dato que permite
+      // decidir si una sugerencia es la correcta.
+      const textoDelPapel = item.textoOriginal || item.nombreOcr || ''
+      const parecidos = (item.esNuevo && !item.creando) ? sugerenciasPorParecido(textoDelPapel) : []
+
+      // PRIMERO EL CATÁLOGO. Nunca se aplica solo: son botones que hay que
+      // tocar. Una sugerencia equivocada aceptada de apuro es peor que buscar
+      // a mano, así que la lista propone y no decide.
+      const sugerenciasHtml = !parecidos.length ? '' : `
+             <div class="parecidos">
+               <div class="parecidos__titulo">¿Es alguno de estos?</div>
+               ${parecidos.map(r => `
+                 <button type="button" class="sugerencia-cat" data-parecido="${esc(r.insumo.id)}">
+                   <span class="sugerencia-cat__nombre">${esc(r.insumo.nombre)}</span>
+                   <span class="sugerencia-cat__meta">${esc([r.insumo.marca, r.insumo.unidad_medida].filter(Boolean).join(' · '))}</span>
+                 </button>`).join('')}
+             </div>`
+
+      const bloqueCrear = !item.creando ? `
+             <button type="button" class="btn-crear-nuevo" data-accion="crear-nuevo">
+               + Crear un producto nuevo en el catálogo
+             </button>` : `
+             <div class="separador-o"><span>producto nuevo</span></div>
              <input class="item-mp__texto-input" data-campo="nombre" value="${esc(item.nombre)}" placeholder="Nombre del producto">
              <input class="item-mp__texto-input" data-campo="marca" value="${esc(item.marca)}" placeholder="Marca (opcional)" style="margin-top:0.5rem;">
              <div class="wz-toggle" style="margin-top:0.5rem;">
@@ -4101,7 +4237,20 @@
              ${item.tipoDeOcr
                ? '<div class="marca-ocr-item">✓ sugerido por la lectura — verificalo</div>'
                : ''}
-             <div class="item-mp__hint">ⓘ Se va a crear en el catálogo, pendiente de revisar.</div>
+             <div class="item-mp__hint">ⓘ Se va a crear en el catálogo, pendiente de revisar.</div>`
+
+      const identidadHtml = item.esNuevo
+        ? `<div class="item-mp__bloque">
+             <div class="item-mp__bloque-label">Producto</div>
+             ${textoDelPapel ? `<div class="texto-del-papel">El papel dice: <strong>${esc(textoDelPapel)}</strong></div>` : ''}
+             ${sugerenciasHtml}
+             <div class="buscador-cat">
+               <input class="item-mp__texto-input" data-rol="buscador-catalogo"
+                      value="${esc(item.busquedaCatalogo || '')}"
+                      placeholder="Buscar en el catálogo por nombre o marca">
+               <div class="sugerencias-cat" data-rol="sugerencias-catalogo" ${item.busquedaCatalogo ? '' : 'hidden'}>${item.busquedaCatalogo ? htmlSugerenciasCatalogo(item.busquedaCatalogo) : ''}</div>
+             </div>
+             ${bloqueCrear}
            </div>`
         : ''
 
@@ -4208,7 +4357,7 @@
             <div class="item-mp__info">
               <div class="item-mp__nombre-fila">
                 <span class="item-mp__nombre">${esc(item.nombre || '(sin nombre)')}</span>
-                ${item.esNuevo ? '<span class="badge-nuevo">NUEVO</span>' : ''}
+                ${item.esNuevo && item.creando ? '<span class="badge-nuevo">NUEVO</span>' : ''}
               </div>
               ${item.marca ? `<div class="item-mp__marca">${esc(item.marca)}</div>` : ''}
               ${chipTipoInsumo(item)}
@@ -4343,8 +4492,18 @@
               apagarDiferencia(item)
               renderizarItems()
             }
+            // Crear es una DECISIÓN explícita, no el estado inicial. Recién acá
+            // aparece el badge NUEVO: antes lo ponía la tarjeta sola, o sea que
+            // afirmaba algo que nadie había decidido.
+            if (accion === 'crear-nuevo') {
+              item.creando = true
+              renderizarItems()
+            }
             if (accion === 'soltar-producto') {
               // Vuelve a "sin resolver" para poder elegir otro o crear uno.
+              // `creando` en false: al soltar, la salida vuelve a ser el
+              // catálogo, no el formulario de alta.
+              item.creando = false
               item.insumoId = null
               item.esNuevo = true
               item.porAlias = false
@@ -4403,6 +4562,14 @@
             }
             if (accion === 'adjuntar-ficha') tarjeta.querySelector('[data-input="ficha"]').click()
             if (accion === 'adjuntar-lote')  tarjeta.querySelector('[data-input="lote"]').click()
+          })
+        })
+
+        // ── Sugerencias por parecido ──────────────────────────────────────
+        tarjeta.querySelectorAll('[data-parecido]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const insumo = estado.catalogoInsumos.find(i => i.id === btn.dataset.parecido)
+            if (insumo) elegirDelCatalogo(item, insumo)
           })
         })
 
@@ -4545,7 +4712,12 @@
 
       w.items.forEach(item => {
         item.error = null
-        if (!String(item.nombre || '').trim()) {
+        if (!item.insumoId && !item.creando) {
+          // Ni eligió del catálogo ni decidió crear. Antes esto no existía
+          // porque el renglón nacía en modo crear con el nombre del OCR ya
+          // puesto: pasaba la validación solo y se creaba un duplicado.
+          item.error = 'Elegí el producto del catálogo o creá uno nuevo.'
+        } else if (!String(item.nombre || '').trim()) {
           item.error = 'Falta el nombre del producto.'
         } else if (item.interpretacion == null) {
           // La pregunta es obligatoria salvo en un renglón que no suma stock:
@@ -4674,7 +4846,7 @@
               <div style="min-width:0;">
                 <div class="item-mp__nombre-fila">
                   <span class="item-mp__nombre">${esc(item.nombre)}</span>
-                  ${item.esNuevo ? '<span class="badge-nuevo">NUEVO</span>' : ''}
+                  ${item.esNuevo && item.creando ? '<span class="badge-nuevo">NUEVO</span>' : ''}
                 </div>
                 ${item.marca ? `<div class="item-mp__marca">${esc(item.marca)}</div>` : ''}
               </div>
@@ -4696,7 +4868,7 @@
     // producto se crean UNA sola vez (el índice único los rechazaría).
     async function crearInsumosNuevos(items) {
       const porClave = new Map()
-      items.filter(i => i.esNuevo).forEach(i => {
+      items.filter(i => i.esNuevo && i.creando).forEach(i => {
         const clave = claveInsumo(i.nombre, i.marca)
         if (!porClave.has(clave)) {
           porClave.set(clave, {
