@@ -277,9 +277,15 @@ Deno.serve(async (req) => {
   //     BONIFICACIÓN, DESCUENTO y FLETE de las facturas argentinas — que son
   //     justamente las que cambian el costo real del insumo el día que se
   //     reconstruyan precios.
-  //   · cantidad_bultos/contenido_por_bulto se anulan cuando no cierran contra
-  //     el total. Para el ítem está bien (lo exige chk_presentacion_coherente),
-  //     pero el papel decía "100 bolsas de 25 kg" y esa lectura se perdería.
+  //   · Los campos numéricos que vinieron mal tipados —un precio como
+  //     "$ 1.234,56", un contenido negativo— se normalizan a null para no
+  //     ensuciar el prellenado. El papel igual los tenía escritos, y `crudo`
+  //     conserva lo que vino.
+  //     (Acá decía que cantidad_bultos y contenido_por_bulto se anulaban cuando
+  //     no cerraban contra el total. Ya NO: ese descarte estaba al revés y se
+  //     sacó — ver el comentario más abajo. La frase quedaba describiendo un
+  //     comportamiento que el código ya no tiene, justo en la justificación de
+  //     por qué estos dos objetos van separados.)
   //
   // Unificarlos dejaría el archivo sin lo único para lo que existe.
   const crudo = structuredClone(datos)
