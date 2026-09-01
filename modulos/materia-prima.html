@@ -1297,6 +1297,28 @@
       flex-shrink: 0;
     }
     .cantidad-fila__x { font-size: 0.9375rem; color: #a3abbd; flex-shrink: 0; }
+    .cantidad-fila__label {
+      font-size: 0.8125rem; color: #6b7385; flex-shrink: 0;
+    }
+
+    /* El total del comprobante. Va SIEMPRE y no lo escribe nadie: es el dato
+       del papel, la referencia contra la que se controla lo cargado. Antes
+       compartia renglon con el total calculado y se lo comia al primer tecleo. */
+    .linea-comprobante {
+      font-size: 0.8125rem; color: #6b7385;
+      background: #f4f6fa; border-radius: 8px;
+      padding: 0.4375rem 0.625rem; margin-bottom: 0.625rem;
+    }
+    .linea-comprobante strong { color: #2c3242; }
+
+    .pregunta-interp { margin-bottom: 0.625rem; }
+    .pregunta-interp__texto {
+      font-size: 0.875rem; color: #2c3242; margin-bottom: 0.4375rem;
+    }
+    /* Tres opciones no entran en 375px en una fila comoda: se envuelven, y
+       cada boton toma al menos un tercio util. */
+    .wz-toggle--tres { flex-wrap: wrap; }
+    .wz-toggle--tres button { flex: 1 1 6rem; }
 
     .cantidad-total {
       display: flex;
@@ -2098,6 +2120,13 @@
       return unidadMedida ? `${num} ${unidadMedida}` : num
     }
 
+    // El número solo, sin unidad. Hace falta donde la unidad NO aplica: una
+    // cantidad de bultos no es "250 kg" ni "250 un" — son 250 bultos, y el
+    // bulto no es una unidad de medida del catálogo.
+    function formatearNumero(n) {
+      return Number(n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })
+    }
+
     function nombreUnidad(id) {
       return estado.unidades.find(u => u.id === id)?.nombre || ''
     }
@@ -2320,11 +2349,27 @@
       return n === null || n === undefined ? '' : String(n).replace('.', ',')
     }
 
-    // Qué campos se cuentan de a enteros pase lo que pase.
-    const CAMPOS_ENTEROS = new Set(['bultos', 'bultosRecibidos'])
+    // Qué campos se cuentan de a enteros. Ya no es un Set fijo: desde que el
+    // renglón declara qué SIGNIFICA el número del papel, el mismo campo cuenta
+    // bultos o cuenta unidades según el modo.
+    //
+    //   'bultos'   → numeroPapel y recibido son una cantidad de BULTOS
+    //   'unidades' → numeroPapel es un total (manda la unidad del catálogo) y
+    //                `bultos` es una cantidad de bultos
+    //   'granel'   → no hay bultos en juego; manda la unidad
+    //
+    // Un bulto es un paquete discreto: "1.500" cajas daría 1,5 bultos, así que
+    // esos campos rechazan cualquier separador sin mirar la unidad.
+    function campoEsEntero(item, campo) {
+      if (campo === 'bultos') return true
+      if (campo === 'numeroPapel' || campo === 'recibido') {
+        return item.interpretacion === 'bultos'
+      }
+      return false
+    }
 
-    function mensajeCantidadInvalida(campo, unidad) {
-      return (CAMPOS_ENTEROS.has(campo) || esUnidadEntera(unidad))
+    function mensajeCantidadInvalida(esEntero, unidad) {
+      return (esEntero || esUnidadEntera(unidad))
         ? 'Se cuenta por unidades enteras: escribilo sin puntos ni comas.'
         : 'Escribí un número, con coma para los decimales (8,5). Sin separador de miles.'
     }
@@ -3535,10 +3580,24 @@
         // .aviso-sin-revisar) en vez de dejar que se propague callado.
         pendienteRevision: match?.estado_alta === 'pendiente_revision',
         unidadMedida: match?.unidad_medida ?? normalizarUnidad(crudo.unidad_medida) ?? 'kg',
-        // Siempre en true: la presentación es obligatoria y ya no hay modo
-        // alternativo. Se conserva la propiedad porque la leen
-        // recalcularDesglose() y el payload; lo que se fue es la elección.
-        modoDesglose: true,
+        // QUÉ SIGNIFICA EL NÚMERO DEL PAPEL. Es el dato que faltaba: el mismo
+        // campo del comprobante a veces son bultos ("250" de harina son 250
+        // bolsas de 25 kg) y a veces son unidades ("2.000" bolsitas, que
+        // vinieron en 8 rollos). La pantalla no lo puede adivinar y hasta ahora
+        // no lo preguntaba: ponía dos campos vacíos y quien cargaba elegía mal
+        // la mitad de las veces. El total en unidad base siempre salía bien
+        // —así que nada se quejaba— pero el desglose quedaba dado vuelta, y de
+        // ahí sale el "N bultos" que muestra Stock.
+        //
+        // Si el OCR leyó bultos Y contenido, eso es transcripción directa del
+        // renglón y vale como respuesta: se pre-elige 'bultos' y se marca como
+        // sugerencia. Si no, queda en null y hay que responder.
+        interpretacion: (bultos != null && contenido != null) ? 'bultos' : null,
+        interpretacionDeOcr: (bultos != null && contenido != null),
+        // EL NÚMERO DEL PAPEL, editable. Qué representa lo dice `interpretacion`.
+        numeroPapel: (bultos != null && contenido != null)
+          ? bultos
+          : numeroDesdeOcr(crudo.cantidad_total),
         bultos, contenido,
         cantidad: numeroDesdeOcr(crudo.cantidad_total),
         // Marca que el número de arriba salió de la foto. Solo se usa para
@@ -3554,7 +3613,11 @@
         // la tomó, para que un recálculo posterior no le pise la respuesta.
         yaRecibido: false, yaRecibidoSugerido: false, yaRecibidoTocado: false,
         difiere: false, cantidadDocumento: null, motivoDiferencia: '',
-        bultosRecibidos: null, confirmandoApagado: false,
+        // Lo recibido, EN LA MISMA UNIDAD que `numeroPapel`: bultos en modo
+        // 'bultos', y el total en 'unidades' y 'granel'. Antes se llamaba
+        // `bultosRecibidos` y solo podía ser bultos, que es justo lo que dejó
+        // de ser cierto.
+        recibido: null, confirmandoApagado: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -3574,7 +3637,10 @@
         // hay nada que guardar en la libretita.
         porAlias: false, textoOriginal: '', nombreOcr: '',
         busquedaCatalogo: '',
-        modoDesglose: true, bultos: null, contenido: null, cantidad: null,
+        // Agregado a mano: no hay número del papel que interpretar, pero la
+        // pregunta se hace igual — es la que decide qué se pide abajo.
+        interpretacion: null, interpretacionDeOcr: false, numeroPapel: null,
+        bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
         cantidadOcrOriginal: null,
@@ -3582,7 +3648,7 @@
         // papel y no vino antes; igual puede marcarlo si corresponde.
         yaRecibido: false, yaRecibidoSugerido: false, yaRecibidoTocado: false,
         difiere: false, cantidadDocumento: null, motivoDiferencia: '',
-        bultosRecibidos: null, confirmandoApagado: false,
+        recibido: null, confirmandoApagado: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -3740,7 +3806,7 @@
     // solo que llegaron menos.
     // ¿Hay algo tipeado en "recibí" que se perdería al apagar el control?
     function tieneRecibidoCargado(item) {
-      return item.modoDesglose ? item.bultosRecibidos != null : item.cantidad != null
+      return item.recibido != null
     }
 
     // Apaga el control y devuelve el estado al de una carga normal: `cantidad`
@@ -3752,10 +3818,10 @@
       item.cantidad = item.cantidadDocumento
       item.cantidadDocumento = null
       item.motivoDiferencia = ''
-      item.bultosRecibidos = null
-      // En desglose la de arriba manda: cantidad se re-deriva de bultos ×
-      // contenido, que es exactamente lo que valía antes de activar el control.
-      recalcularDesglose(item)
+      item.recibido = null
+      // La de arriba manda: las cantidades se re-derivan del número del papel,
+      // que es exactamente lo que valían antes de activar el control.
+      derivarCantidades(item)
     }
 
     // ¿El total que leyó el OCR coincide con bultos × contenido?
@@ -3767,8 +3833,12 @@
     // papel delante.
     function totalOcrDiscrepante(item) {
       const ocr = item.cantidadOcrOriginal
-      if (ocr == null || item.bultos == null || item.contenido == null) return null
-      const calculado = item.bultos * item.contenido
+      // Con el control de recepción parcial activo NO se compara: que lo
+      // recibido difiera del papel es justamente lo que ese control registra,
+      // y ahí el aviso sería ruido sobre un dato que ya se explicó.
+      if (ocr == null || item.difiere) return null
+      const calculado = item.cantidad
+      if (calculado == null) return null
       if (Math.abs(calculado - ocr) <= TOLERANCIA_CANTIDAD) return null
       return { ocr, calculado }
     }
@@ -3778,20 +3848,69 @@
       if (!d) return ''
       return `<div class="aviso-total-ocr">
           El comprobante decía <strong>${esc(formatearCantidad(d.ocr, item.unidadMedida))}</strong>
-          y este desglose da <strong>${esc(formatearCantidad(d.calculado, item.unidadMedida))}</strong>.
-          Verificá contra el papel cuál es el correcto: vale el desglose.
+          y esto da <strong>${esc(formatearCantidad(d.calculado, item.unidadMedida))}</strong>.
+          Verificá contra el papel cuál es el correcto: vale lo que cargaste acá.
         </div>`
     }
 
-    function recalcularDesglose(item) {
-      if (!item.modoDesglose) return
-      const total = (a, b) => (a != null && b != null) ? a * b : null
-      if (item.difiere) {
-        item.cantidadDocumento = total(item.bultos, item.contenido)
-        item.cantidad = total(item.bultosRecibidos, item.contenido)
-      } else {
-        item.cantidad = total(item.bultos, item.contenido)
+    // Reparte un total en partes iguales EXACTAS. Existe por
+    // chk_presentacion_coherente, que exige `cantidad = bultos * contenido`
+    // como igualdad numérica estricta: 100 en 3 bultos daría 33,333333 y
+    // 3 × 33,333333 = 99,999999, o sea que el insert se caería al final del
+    // wizard con un error de constraint. Mejor decirlo en la fila, ahora.
+    function dividirExacto(total, partes) {
+      if (total == null || partes == null || !(partes > 0) || !(total > 0)) return null
+      const q = Math.round((total / partes) * 1e6) / 1e6
+      if (!(q > 0) || !Number.isFinite(q)) return null
+      // Tolerancia de ruido de punto flotante, NO de redondeo: 5,5 × 6 tiene
+      // que dar 33 clavado. Con 0,01 pasarían divisiones que la base rechaza.
+      if (Math.abs(q * partes - total) > 1e-9) return null
+      return q
+    }
+
+    // Deriva `bultos`, `contenido`, `cantidad` y `cantidadDocumento` a partir
+    // del número del papel y de lo que ese número SIGNIFICA. Es el corazón del
+    // rediseño: antes había dos campos vacíos y la persona elegía cuál era
+    // cuál; ahora hay un número conocido y una pregunta.
+    //
+    // INVARIANTE que no cambia: `cantidad` es siempre lo REALMENTE RECIBIDO,
+    // que es lo que suma stock. Con el control de recepción parcial activo,
+    // `numeroPapel` describe el comprobante y `recibido` lo que llegó.
+    function derivarCantidades(item) {
+      const modo = item.interpretacion
+      const doc = item.numeroPapel
+      const real = item.difiere ? item.recibido : doc
+
+      if (modo == null) {
+        item.bultos = null; item.contenido = null
+        item.cantidad = null; item.cantidadDocumento = null
+        return
       }
+
+      if (modo === 'granel') {
+        // A granel o en un solo envase: NO se inventa presentación. El par va
+        // en null, que chk_presentacion_coherente acepta y que Stock modela
+        // como "entró sin presentación conocida" (de ahí kilos_sueltos).
+        item.bultos = null; item.contenido = null
+        item.cantidad = real
+        item.cantidadDocumento = item.difiere ? doc : null
+        return
+      }
+
+      if (modo === 'bultos') {
+        // El número del papel ES la cantidad de bultos. El contenido se tipea.
+        item.bultos = real
+        item.cantidad = (real != null && item.contenido != null) ? real * item.contenido : null
+        item.cantidadDocumento = (item.difiere && doc != null && item.contenido != null)
+          ? doc * item.contenido : null
+        return
+      }
+
+      // 'unidades': el número del papel es el TOTAL, y se tipea en cuántos
+      // bultos vino. El contenido se deriva, y tiene que dar exacto.
+      item.cantidad = real
+      item.cantidadDocumento = item.difiere ? doc : null
+      item.contenido = dividirExacto(doc, item.bultos)
     }
 
     function htmlItemCerrado(item) {
@@ -3840,31 +3959,91 @@
       // (cabecera de la tarjeta cerrada, total del desglose, recálculo en vivo
       // y el resumen del paso 4), y todos tienen que seguir mostrando lo que
       // llegó, no lo que decía el papel.
-      const campoArriba = item.difiere ? 'cantidadDocumento' : 'cantidad'
-      const valorArriba = item.difiere ? item.cantidadDocumento : item.cantidad
+      // Con el control de recepción parcial activo, el total de arriba describe
+      // el COMPROBANTE; sin él, lo recibido (que es lo mismo).
       const totalArriba = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
 
-      // TODO renglón se carga como bultos × contenido, sin modos. El módulo de
-      // Stock muestra el saldo por bultos y copia contenido_por_bulto al
-      // movimiento: un ítem que entra sin presentación deja ese saldo en kilos
-      // PARA SIEMPRE, porque el movimiento es histórico y no se recalcula.
-      //
-      // Acá había dos modos y un botón "Cargar una cantidad única" que ponía
-      // bultos y contenido en null. Con la presentación obligatoria, eso es una
-      // salida hacia un estado inválido: dos modos donde uno no vale es una
-      // trampa. El caso realmente suelto se expresa igual — "1 bulto de 10 kg"—
-      // y no necesita una excepción.
-      const cantidadHtml = `
-          <div class="cantidad-fila">
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultos" value="${esc(textoParaInput(item.bultos))}" placeholder="0">
+      // EL TOTAL DEL COMPROBANTE, FIJO. No es un campo: es el dato del papel,
+      // la referencia contra la que se controla lo que se cargó. Antes vivía en
+      // la misma línea que el total CALCULADO, así que al escribir en cualquier
+      // campo se lo pisaba y desaparecía justo cuando más se lo necesita.
+      const lineaComprobante = item.cantidadOcrOriginal == null ? '' : `
+           <div class="linea-comprobante">
+             El comprobante dice <strong>${esc(formatearCantidad(item.cantidadOcrOriginal, item.unidadMedida))}</strong>
+           </div>`
+
+      // LA PREGUNTA QUE FALTABA. El número del papel a veces son bultos y a
+      // veces son unidades — "250" de harina son 250 bolsas de 25 kg, "2.000"
+      // bolsitas vinieron en 8 rollos— y es el mismo campo del comprobante.
+      // Sin preguntarlo, la pantalla ponía dos campos vacíos y quien cargaba
+      // elegía mal la mitad de las veces: el total salía bien igual, así que
+      // nada se quejaba, pero el desglose quedaba dado vuelta.
+      const num = item.numeroPapel
+      const preguntaHtml = `
+           <div class="pregunta-interp">
+             <div class="pregunta-interp__texto">${num == null
+               ? 'La cantidad que vas a cargar, ¿qué es?'
+               : `Ese <strong>${esc(formatearNumero(num))}</strong>, ¿qué es?`}</div>
+             <div class="wz-toggle wz-toggle--tres">
+               <button type="button" data-accion="interp-bultos" class="${item.interpretacion === 'bultos' ? 'wz-toggle--sel' : ''}">Son bultos<br><small style="font-weight:500;">cajas, bolsas, tachos</small></button>
+               <button type="button" data-accion="interp-unidades" class="${item.interpretacion === 'unidades' ? 'wz-toggle--sel' : ''}">Son unidades<br><small style="font-weight:500;">el total suelto</small></button>
+               <button type="button" data-accion="interp-granel" class="${item.interpretacion === 'granel' ? 'wz-toggle--sel' : ''}">A granel<br><small style="font-weight:500;">o un solo envase</small></button>
+             </div>
+             ${item.interpretacionDeOcr && item.interpretacion === 'bultos'
+               ? '<div class="marca-ocr-item">✓ el comprobante traía el desglose — verificalo</div>'
+               : ''}
+           </div>`
+
+      // Campo del número del papel. Su etiqueta cambia con la respuesta, que
+      // es el punto entero: el número es el mismo y lo que cambia es qué es.
+      const etiquetaNumero = item.interpretacion === 'bultos' ? 'bultos'
+        : item.interpretacion === 'granel' ? esc(item.unidadMedida)
+        : null
+      const filaNumero = `
+           <div class="cantidad-fila">
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="numeroPapel"
+                    value="${esc(textoParaInput(item.numeroPapel))}" placeholder="0">
+             ${etiquetaNumero === null
+               ? (item.esNuevo ? selectorUnidad : `<span class="cantidad-fila__unidad">${u}</span>`)
+               : `<span class="cantidad-fila__unidad">${etiquetaNumero}</span>`}
+           </div>`
+
+      // Segundo campo, distinto por rama. En 'bultos' se pide el contenido y el
+      // total sale de multiplicar; en 'unidades' se pide en cuántos bultos vino
+      // y el contenido sale de dividir; a granel no se pide nada, y el par
+      // bultos/contenido queda en NULL — sin inventar una presentación que no
+      // existe. Esa tercera opción es la que faltaba: los 33 kg de film habían
+      // quedado como "33 bultos de 1", que no es cierto.
+      const segundaFila =
+        item.interpretacion === 'bultos' ? `
+           <div class="cantidad-fila">
+             <span class="cantidad-fila__label">cada bulto trae</span>
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
+                    value="${esc(textoParaInput(item.contenido))}" placeholder="0">
+             ${item.esNuevo ? selectorUnidad : `<span class="cantidad-fila__unidad">${u}</span>`}
+           </div>`
+        : item.interpretacion === 'unidades' ? `
+           <div class="cantidad-fila">
+             <span class="cantidad-fila__label">vino en</span>
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultos"
+                    value="${esc(textoParaInput(item.bultos))}" placeholder="0">
              <span class="cantidad-fila__unidad">bultos</span>
-             <span class="cantidad-fila__x">×</span>
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido" value="${esc(textoParaInput(item.contenido))}" placeholder="0">
-             ${selectorUnidad}
            </div>
-           <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>
-           ${avisoTotalOcr(item)}
-           <div class="item-mp__hint">ⓘ Si vino a granel o en un solo envase, es 1 bulto por el total.</div>`
+           ${item.contenido != null
+             ? `<div class="item-mp__hint">ⓘ Cada bulto trae ${esc(formatearCantidad(item.contenido, item.unidadMedida))}.</div>`
+             : ''}`
+        : item.interpretacion === 'granel' ? `
+           <div class="item-mp__hint">ⓘ Sin presentación: el stock de este renglón se va a ver solo en ${esc(item.unidadMedida)}.</div>`
+        : ''
+
+      const cantidadHtml = `
+           ${lineaComprobante}
+           ${preguntaHtml}
+           ${item.interpretacion == null ? '' : `
+             ${filaNumero}
+             ${segundaFila}
+             <div class="cantidad-total"><span>Total</span><span data-rol="total">${esc(totalArriba)}</span></div>
+             ${avisoTotalOcr(item)}`}`
 
       // El OCR no pudo clasificar el renglón y tampoco matcheó contra el
       // catálogo. Puede ser un flete o un servicio —que no son mercadería y no
@@ -3933,14 +4112,18 @@
       const dif = diferenciaDe(item)
       const sinDiferencia = dif == null || Math.abs(dif) <= TOLERANCIA_CANTIDAD
 
-      // En desglose se piden solo los BULTOS recibidos: el contenido por bulto
-      // ya está arriba y es el mismo. Así la persona escribe "98" y el total
-      // sale solo — nunca multiplica de cabeza en el depósito.
+      // Se pide en la MISMA unidad que el número de arriba, que es la que la
+      // persona tiene en la cabeza mirando el papel: bultos si el papel cuenta
+      // bultos, y el total en los otros dos modos. Antes era siempre bultos,
+      // que dejó de ser cierto en cuanto el número del papel pudo ser otra cosa.
+      const unidadRecibido = item.interpretacion === 'bultos'
+        ? `bultos de ${esc(formatearCantidad(item.contenido ?? 0, item.unidadMedida))}`
+        : esc(item.unidadMedida)
       const recibidoHtml = `
           <div class="cantidad-fila">
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="bultosRecibidos"
-                    value="${esc(textoParaInput(item.bultosRecibidos))}" placeholder="0">
-             <span class="cantidad-fila__unidad">bultos de ${esc(formatearCantidad(item.contenido ?? 0, item.unidadMedida))}</span>
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="recibido"
+                    value="${esc(textoParaInput(item.recibido))}" placeholder="0">
+             <span class="cantidad-fila__unidad">${unidadRecibido}</span>
            </div>
            <div class="cantidad-total"><span>Total recibido</span><span data-rol="total-recibido">${esc(textoCantidad(item))}</span></div>`
 
@@ -4083,8 +4266,7 @@
     // Recalcula el total del modo desglosado sin re-renderizar: si re-dibujara
     // la tarjeta en cada tecla, el input perdería el foco.
     function actualizarTotalEnVivo(tarjeta, item) {
-      if (!item.modoDesglose) return
-      recalcularDesglose(item)
+      derivarCantidades(item)
       // Con el control activo la fila de arriba totaliza el COMPROBANTE.
       const arriba = tarjeta.querySelector('[data-rol="total"]')
       if (arriba) arriba.textContent = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
@@ -4144,7 +4326,7 @@
                 item.difiere = true
                 item.cantidadDocumento = item.cantidad
                 item.cantidad = null
-                item.bultosRecibidos = null
+                item.recibido = null
               } else if (tieneRecibidoCargado(item)) {
                 // APAGAR con algo cargado: se pregunta antes de descartarlo.
                 item.confirmandoApagado = true
@@ -4191,6 +4373,28 @@
               if (item.yaRecibido) { item.lote = ''; item.loteIlegible = false }
               renderizarItems()
             }
+            // Responder la pregunta. Cambiar de respuesta LIMPIA el segundo
+            // campo: en 'bultos' se tipea el contenido y en 'unidades' los
+            // bultos, así que arrastrar el valor de una rama a la otra dejaría
+            // un número que significa otra cosa. El número del papel NO se
+            // toca: ese es el dato, la respuesta solo dice qué representa.
+            if (accion === 'interp-bultos' || accion === 'interp-unidades' || accion === 'interp-granel') {
+              const nuevo = accion.slice('interp-'.length)
+              if (item.interpretacion !== nuevo) {
+                item.interpretacion = nuevo
+                item.interpretacionDeOcr = false
+                item.contenido = null
+                item.bultos = null
+                // Si el OCR había leído el desglose, el número de arriba era la
+                // cantidad de bultos. Al decir que NO son bultos, ese número
+                // deja de valer y vuelve el total que leyó el OCR.
+                if (nuevo !== 'bultos' && item.numeroPapel == null) {
+                  item.numeroPapel = item.cantidadOcrOriginal
+                }
+                derivarCantidades(item)
+              }
+              renderizarItems()
+            }
             if (accion === 'lote-ilegible') {
               item.loteIlegible = !item.loteIlegible
               // El CHECK chk_lote_ilegible_sin_lote prohíbe tener los dos.
@@ -4229,13 +4433,14 @@
         tarjeta.querySelectorAll('[data-campo]').forEach(el => {
           el.addEventListener('input', () => {
             const campo = el.dataset.campo
-            // Los cinco campos numéricos. En desglose, `cantidad` y
-            // `cantidadDocumento` no se tipean: se derivan de bultos ×
-            // contenido, y recalcularDesglose() decide cuál escribe cada fila.
-            if (['bultos', 'contenido', 'bultosRecibidos', 'cantidad', 'cantidadDocumento'].includes(campo)) {
+            // Los CUATRO campos numéricos que se tipean. `cantidad`,
+            // `cantidadDocumento` y el lado derivado del par bultos/contenido
+            // ya no se escriben a mano: los calcula derivarCantidades() según
+            // qué dijo la persona que es el número del papel.
+            if (['numeroPapel', 'contenido', 'bultos', 'recibido'].includes(campo)) {
               item[campo] = parsearCantidad(el.value, {
                 unidad: item.unidadMedida,
-                enteros: CAMPOS_ENTEROS.has(campo),
+                enteros: campoEsEntero(item, campo),
               })
               // Lo que no se pudo leer se DICE, y en el momento. Que el campo
               // se vacíe en silencio es medio bug otra vez: la persona sigue
@@ -4325,7 +4530,7 @@
         aviso.className = 'campo-invalido'
         el.parentElement?.appendChild(aviso)
       }
-      aviso.textContent = mensajeCantidadInvalida(campo, item.unidadMedida)
+      aviso.textContent = mensajeCantidadInvalida(campoEsEntero(item, campo), item.unidadMedida)
     }
 
     // Un campo numérico con texto adentro que no se pudo leer. Se chequea
@@ -4342,16 +4547,30 @@
         item.error = null
         if (!String(item.nombre || '').trim()) {
           item.error = 'Falta el nombre del producto.'
-        } else if (item.contenido == null || !(item.contenido > 0)) {
-          // La presentación es OBLIGATORIA: Stock copia contenido_por_bulto al
-          // movimiento y lo muestra como "250 bultos de 25 kg". Un ítem que
-          // entra sin ella deja ese saldo en kilos para siempre, porque el
-          // movimiento es histórico y no se recalcula.
+        } else if (item.interpretacion == null) {
+          // La pregunta es obligatoria salvo en un renglón que no suma stock:
+          // ese no genera movimiento, así que la presentación no va a ningún
+          // lado y pedirla era reclamar un dato para nada. Es lo que dejaba un
+          // error rojo flotando sobre una tarjeta ya atenuada.
+          if (!item.yaRecibido) item.error = 'Decí si ese número son bultos, unidades o si vino a granel.'
+          if (item.numeroPapel == null || !(item.numeroPapel > 0)) {
+            item.error = 'Cargá la cantidad.'
+          }
+        } else if (item.numeroPapel == null || !(item.numeroPapel > 0)) {
+          item.error = 'Cargá la cantidad que dice el comprobante.'
+        } else if (item.interpretacion === 'bultos' && (item.contenido == null || !(item.contenido > 0))) {
           item.error = 'Cargá cuánto trae cada bulto.'
-        } else if (item.bultos == null || !(item.bultos > 0)) {
-          item.error = 'Cargá cuántos bultos dice el comprobante.'
-        } else if (item.difiere && (item.bultosRecibidos == null || !(item.bultosRecibidos > 0))) {
-          item.error = 'Cargá cuántos bultos recibiste.'
+        } else if (item.interpretacion === 'unidades' && (item.bultos == null || !(item.bultos > 0))) {
+          item.error = 'Cargá en cuántos bultos vino.'
+        } else if (item.interpretacion === 'unidades' && item.contenido == null) {
+          // dividirExacto() devolvió null: no se reparte en partes iguales, y
+          // chk_presentacion_coherente exige la igualdad exacta. Se dice acá y
+          // no en el insert, al final del wizard.
+          item.error = `${formatearNumero(item.numeroPapel)} no se reparte exacto en ${formatearNumero(item.bultos)} bultos. Revisá el número de bultos.`
+        } else if (item.difiere && (item.recibido == null || !(item.recibido > 0))) {
+          item.error = item.interpretacion === 'bultos'
+            ? 'Cargá cuántos bultos recibiste.'
+            : 'Cargá la cantidad que recibiste.'
         } else if (item.cantidad == null || !(item.cantidad > 0)) {
           // `cantidad` es siempre lo recibido, y se deriva de bultos ×
           // contenido. Llegar acá con los tres campos cargados significa que la
@@ -4552,8 +4771,10 @@
       // contrario de lo que hay que hacer — el CHECK acepta el par en null, así
       // que un descuadre habría guardado el renglón SIN presentación y en
       // silencio, que es justo el agujero que este cambio viene a tapar.
-      // El descuadre lo corta validarItems() antes de llegar hasta acá.
-      const bultos = item.difiere ? item.bultosRecibidos : item.bultos
+      // La presentación describe lo RECIBIDO: derivarCantidades() ya dejó
+      // `bultos` con los recibidos cuando el control está activo. A granel las
+      // dos van en NULL, que chk_presentacion_coherente acepta.
+      const bultos = item.bultos
       const contenido = item.contenido
       // cantidad_documento se guarda SOLO cuando difiere de lo recibido. Si
       // coincide —el 95% de los casos— van las dos en null: coincidir no es
@@ -4575,6 +4796,11 @@
         // modo desglose `cantidad` se deriva de bultos × contenido.
         cantidad_bultos: bultos,
         contenido_por_bulto: contenido,
+        // QUÉ significaba el número del papel. Se guarda por renglón porque no
+        // se puede derivar de lo guardado: "250 bultos de 25" y "250 unidades
+        // en 25 bultos" no se distinguen mirando el resultado. Sin esta columna
+        // no hay nada que aprender, y la "más frecuente" saldría de adivinar.
+        interpretacion: item.interpretacion,
         cantidad_documento: hayDif ? item.cantidadDocumento : null,
         motivo_diferencia: hayDif ? (String(item.motivoDiferencia || '').trim() || null) : null,
         // El contrato con Stock: su espejado suma exactamente los ítems en
