@@ -443,13 +443,35 @@
        diferencia con el proveedor. Bordó y no rojo a propósito — el rojo acá
        significa error, y recibir menos no es un error de quien carga. Si el
        control se viera alarmante, se evitaría justo cuando corresponde usarlo. */
+    /* UNA ZONA APARTE, no una continuacion de lo de arriba. La barra izquierda
+       sola no separaba: con la cantidad del comprobante en gris, los bultos y
+       la cantidad recibida, habia tres numeros parecidos y no se entendia cual
+       se toca. Borde en los cuatro lados y fondo teñido para que la separacion
+       se note sin leer.
+
+       --bordo y NO el rojo de error: recibir menos no es un error de la
+       persona, es un dato normal. Un bloque que se ve alarmante lo van a
+       evitar justo cuando corresponde usarlo. */
     .bloque-diferencia {
-      margin-top: 0.5625rem;
-      padding: 0.6875rem 0.75rem;
-      background: var(--color-superficie);
-      border-left: 3px solid var(--bordo);
-      border-radius: 11px;
+      margin-top: 0.6875rem;
+      padding: 0.75rem;
+      background: var(--bordo-suave);
+      border: 1.5px solid var(--bordo);
+      border-radius: 14px;
       min-width: 0;
+    }
+    .bloque-diferencia__titulo {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--bordo-oscuro);
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+    /* Los campos de adentro van sobre fondo blanco: sobre el teñido se pierde
+       el borde y no se leen como editables. */
+    .bloque-diferencia .cantidad-fila input,
+    .bloque-diferencia .item-mp__texto-input {
+      background: var(--color-fondo);
     }
     .bloque-diferencia__label {
       font-size: 0.6875rem;
@@ -4218,12 +4240,17 @@
       return item.cantidadDocumento - item.cantidad
     }
 
+    // UNA SOLA LÍNEA para lo recibido y la diferencia. Eran dos —"Total
+    // recibido 275 un" y "Faltan 25 un"— para una sola idea, en un bloque que
+    // ya apila varios números. Juntas, la relación entre los dos queda
+    // explícita en vez de haber que buscarla.
     function textoDiferencia(item) {
       const d = diferenciaDe(item)
       if (d == null) return 'Cargá las dos cantidades para ver la diferencia.'
-      if (Math.abs(d) <= TOLERANCIA_CANTIDAD) return 'No hay diferencia con el comprobante.'
+      const recibido = `Recibiste ${formatearCantidad(item.cantidad, item.unidadMedida)}`
+      if (Math.abs(d) <= TOLERANCIA_CANTIDAD) return `${recibido} · sin diferencia con el comprobante`
       const cantidad = formatearCantidad(Math.abs(d), item.unidadMedida)
-      return d > 0 ? `Faltan ${cantidad}` : `Sobran ${cantidad}`
+      return d > 0 ? `${recibido} · faltan ${cantidad}` : `${recibido} · sobran ${cantidad}`
     }
 
     // Total del comprobante, para el modo desglose con el control activo: ahí
@@ -4526,7 +4553,13 @@
       //                                  dicen cosas opuestas y gana el que pide
       //                                  acción, igual que el cartel de error
       //                                  sobre la tarjeta atenuada.
-      const mostrarTotal = item.difiere || (!!item.lineas && lineasCierran(item))
+      // Con recepción parcial esta línea muestra el total DEL COMPROBANTE. En
+      // 'unidades' y 'granel' ese número ya está dicho dos veces arriba —la
+      // línea gris y el campo—, así que solo aporta en modo 'bultos', donde la
+      // línea gris cuenta bultos y el total en unidad base no está en ningún
+      // otro lado.
+      const mostrarTotal = (item.difiere && item.interpretacion === 'bultos')
+        || (!!item.lineas && lineasCierran(item))
 
       // EL TOTAL DEL COMPROBANTE, FIJO. No es un campo: es el dato del papel,
       // la referencia contra la que se controla lo que se cargó. Antes vivía en
@@ -4597,7 +4630,7 @@
       const inputNumero = `<input type="text" inputmode="decimal" autocomplete="off" data-campo="numeroPapel"
                     value="${esc(textoParaInput(item.numeroPapel))}" placeholder="0">`
       const filaNumero = `
-           ${hayProtagonista ? '<div class="campo-mp__label campo-mp__label--suave">Del comprobante</div>' : ''}
+           ${hayProtagonista ? `<div class="campo-mp__label campo-mp__label--suave">${item.difiere ? 'Lo que dice el papel' : 'Del comprobante'}</div>` : ''}
            <div class="campo-mp ${hayProtagonista ? 'campo-mp--confirma' : ''}">
              ${etiquetaNumero === null
                ? (item.esNuevo
@@ -4891,7 +4924,6 @@
                     value="${esc(textoParaInput(item.recibido))}" placeholder="0">
              <span class="cantidad-fila__unidad">${unidadRecibido}</span>
            </div>
-           <div class="cantidad-total"><span>Total recibido</span><span data-rol="total-recibido">${esc(textoCantidad(item))}</span></div>
            <div class="bulto-incompleto" data-rol="incompleto" ${textoBultoIncompleto(item) ? '' : 'hidden'}>${esc(textoBultoIncompleto(item))}</div>`
 
       // Apagar el control descarta lo que se escribió en "recibí": `cantidad`
@@ -4907,9 +4939,16 @@
           </div>
         </div>`
 
+      // El bloque se lee como una ZONA APARTE y no como continuación de lo de
+      // arriba: recuadro con borde en los cuatro lados y fondo teñido, para que
+      // la separación se note sin leer. La barra izquierda sola no alcanzaba —
+      // con tres números parecidos en pantalla, no se entendía cuál se toca.
+      //
+      // El título es una PREGUNTA DIRECTA: quien abre el bloque tiene que
+      // entender de una que es para responder eso.
       const bloqueDiferencia = !item.difiere ? '' : `
         <div class="bloque-diferencia">
-          <div class="bloque-diferencia__label">Cantidad que recibí</div>
+          <div class="bloque-diferencia__titulo">¿Cuánto recibiste en realidad?</div>
           ${recibidoHtml}
 
           <div class="resultado-diferencia ${sinDiferencia ? 'resultado-diferencia--sin' : ''}" data-rol="diferencia">${esc(textoDiferencia(item))}</div>
@@ -5042,8 +5081,6 @@
       // Con el control activo la fila de arriba totaliza el COMPROBANTE.
       const arriba = tarjeta.querySelector('[data-rol="total"]')
       if (arriba) arriba.textContent = item.difiere ? textoCantidadDocumento(item) : textoCantidad(item)
-      const abajo = tarjeta.querySelector('[data-rol="total-recibido"]')
-      if (abajo) abajo.textContent = textoCantidad(item)
       // El resultado al lado del campo: a CADA TECLA, que es el punto — el
       // cálculo que aparecía recién al salir del campo había que ir a buscarlo.
       // El bulto incompleto se recalcula con lo recibido, así que se repinta
