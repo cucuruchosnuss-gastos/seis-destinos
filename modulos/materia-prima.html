@@ -4269,6 +4269,18 @@
     // como igualdad numérica estricta: 100 en 3 bultos daría 33,333333 y
     // 3 × 33,333333 = 99,999999, o sea que el insert se caería al final del
     // wizard con un error de constraint. Mejor decirlo en la fila, ahora.
+    // Cuántos bultos ENTEROS son `total` a razón de `contenido` cada uno.
+    // Null si no da un entero: un bulto es un paquete, no se recibe 7,992 de
+    // uno. dividirExacto() sola no alcanza — verifica que la división sea
+    // EXACTA, no que dé un entero, y 1998 / 250 = 7,992 es exacto: pasaba el
+    // CHECK (1998 = 7,992 × 250) y se guardaba, así que Stock iba a mostrar
+    // "7,992 bultos". No rompía nada: era dato basura, que es el problema de
+    // calidad que este rediseño vino a sacar.
+    function bultosEnteros(total, contenido) {
+      const n = dividirExacto(total, contenido)
+      return (n != null && Number.isInteger(n)) ? n : null
+    }
+
     function dividirExacto(total, partes) {
       if (total == null || partes == null || !(partes > 0) || !(total > 0)) return null
       const q = Math.round((total / partes) * 1e6) / 1e6
@@ -4383,7 +4395,7 @@
       // sueltas— entonces ninguna presentación lo describe, y el par va en
       // NULL, que es lo mismo que ya se hace a granel. Los dos juntos: el
       // CHECK acepta los dos nulos o los dos con valor, nada intermedio.
-      item.bultos = item.contenido == null ? null : dividirExacto(real, item.contenido)
+      item.bultos = item.contenido == null ? null : bultosEnteros(real, item.contenido)
       if (item.bultos == null) item.contenido = null
     }
 
@@ -5715,6 +5727,21 @@
       }
     }
 
+    // Los tres números de la primera fila incoherente del renglón, en texto.
+    // Se arma desde la MISMA fila que se iba a insertar, no desde el ítem: si
+    // alguna vez volvieran a diferir, lo que hay que ver es lo que viajó.
+    function detalleFilaIncoherente(item) {
+      try {
+        const f = filasItemParaBase(item, null).find(filaIncoherente)
+        if (!f) return ''
+        const n = (v) => v == null ? '—' : formatearNumero(v)
+        return `cantidad ${n(f.cantidad)}, ${n(f.cantidad_bultos)} bultos de ${n(f.contenido_por_bulto)}`
+      } catch (e) {
+        console.error(e)
+        return ''
+      }
+    }
+
     // Un error del insert que nombra un constraint no le sirve a nadie en el
     // depósito: hay que decir QUÉ RENGLÓN y abrir esa tarjeta, igual que hace
     // validarItems(). El guard de arriba debería atajar todos los casos
@@ -5726,10 +5753,13 @@
       if (/chk_presentacion_coherente/.test(msg)) {
         const malo = w.items.find(itemProduceFilaIncoherente)
         if (malo) {
-          malo.error = 'La cantidad no coincide con la presentación de este renglón. Revisá los números.'
+          // Los TRES números de la fila que falló, para que el próximo
+          // diagnóstico no dependa de reconstruirlos a mano desde la pantalla.
+          const detalle = detalleFilaIncoherente(malo)
+          malo.error = `La cantidad no coincide con la presentación de este renglón${detalle ? ` (${detalle})` : ''}. Revisá los números.`
           w.itemAbierto = malo.uid
           renderizarItems()
-          return `Revisá el renglón "${malo.nombre || 'sin nombre'}": la cantidad no coincide con la presentación.`
+          return `Revisá el renglón "${malo.nombre || 'sin nombre'}"${detalle ? `: ${detalle}` : ''}. La cantidad no coincide con la presentación.`
         }
         return 'Hay un renglón cuya cantidad no coincide con su presentación. Revisá los números.'
       }
