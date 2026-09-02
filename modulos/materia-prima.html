@@ -2527,7 +2527,8 @@
     // Un bulto es un paquete discreto: "1.500" cajas daría 1,5 bultos, así que
     // esos campos rechazan cualquier separador sin mirar la unidad.
     function campoEsEntero(item, campo) {
-      if (campo === 'bultos') return true
+      // Los dos son una cuenta de bultos: paquetes discretos.
+      if (campo === 'bultos' || campo === 'bultosPapel') return true
       if (campo === 'numeroPapel' || campo === 'recibido') {
         return item.interpretacion === 'bultos'
       }
@@ -3699,7 +3700,7 @@
         const bultos = item.numeroPapel / favorita
         if (!Number.isInteger(bultos) || bultos <= 0) return false
         item.interpretacion = 'unidades'
-        item.bultos = bultos
+        item.bultosPapel = bultos
       } else if (modo === 'granel') {
         item.interpretacion = 'granel'
       } else {
@@ -3964,6 +3965,10 @@
         // aplica callado — mismo criterio que el alias, y por lo mismo, porque
         // una propuesta equivocada se propaga sola.
         interpDeHistorial: false,
+        // En cuántos bultos vino lo que dice el COMPROBANTE. Es el que se
+        // tipea en modo 'unidades'; `bultos` es su par derivado, y describe lo
+        // RECIBIDO. Sin recepción parcial valen lo mismo.
+        bultosPapel: null,
         // PRESENTACIONES MIXTAS. `null` es el caso normal —una sola
         // presentación, el 95%— y ahí mandan `bultos` y `contenido` de acá
         // arriba: no conviven dos representaciones del mismo dato. Cuando la
@@ -4023,7 +4028,7 @@
         // Agregado a mano: no hay número del papel que interpretar, pero la
         // pregunta se hace igual — es la que decide qué se pide abajo.
         interpretacion: null, interpretacionDeOcr: false, numeroPapel: null,
-        interpDeHistorial: false, interpTocada: false, lineas: null,
+        interpDeHistorial: false, interpTocada: false, lineas: null, bultosPapel: null,
         bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
@@ -4362,10 +4367,24 @@
       }
 
       // 'unidades': el número del papel es el TOTAL, y se tipea en cuántos
-      // bultos vino. El contenido se deriva, y tiene que dar exacto.
+      // bultos vino ESE TOTAL (`bultosPapel`). El contenido se deriva de ahí.
+      //
+      // OJO CON LA DIFERENCIA ENTRE LOS DOS CAMPOS, que es de donde salió el
+      // bug de producción: `bultosPapel` describe el COMPROBANTE y `bultos`
+      // describe lo RECIBIDO, que es lo que viaja al payload. Sin recepción
+      // parcial son el mismo número; con ella no, y mandar el del papel junto
+      // a la cantidad recibida rompe chk_presentacion_coherente —
+      // 298 ≠ 25 × 12— al confirmar, con los cinco renglones ya cargados.
       item.cantidad = real
       item.cantidadDocumento = item.difiere ? doc : null
-      item.contenido = dividirExacto(doc, item.bultos)
+      item.contenido = dividirExacto(doc, item.bultosPapel)
+      // Cuántos bultos son los REALMENTE recibidos. Si lo recibido no entra en
+      // un número exacto de bultos —298 unidades de a 12 son 24 bultos y 10
+      // sueltas— entonces ninguna presentación lo describe, y el par va en
+      // NULL, que es lo mismo que ya se hace a granel. Los dos juntos: el
+      // CHECK acepta los dos nulos o los dos con valor, nada intermedio.
+      item.bultos = item.contenido == null ? null : dividirExacto(real, item.contenido)
+      if (item.bultos == null) item.contenido = null
     }
 
     function htmlItemCerrado(item) {
@@ -4565,10 +4584,10 @@
         return `= ${formatearCantidad(item.numeroPapel * item.contenido, item.unidadMedida)} en total`
       }
       if (item.interpretacion === 'unidades') {
-        if (item.numeroPapel == null || item.bultos == null) return ''
-        const c = dividirExacto(item.numeroPapel, item.bultos)
+        if (item.numeroPapel == null || item.bultosPapel == null) return ''
+        const c = dividirExacto(item.numeroPapel, item.bultosPapel)
         if (c == null) {
-          return `${formatearNumero(item.numeroPapel)} no se reparte exacto en ${formatearNumero(item.bultos)} bultos`
+          return `${formatearNumero(item.numeroPapel)} no se reparte exacto en ${formatearNumero(item.bultosPapel)} bultos`
         }
         return `= ${formatearCantidad(c, item.unidadMedida)} por bulto`
       }
@@ -4577,8 +4596,8 @@
 
     function resultadoNoCierra(item) {
       return item.interpretacion === 'unidades' && !item.lineas &&
-             item.numeroPapel != null && item.bultos != null &&
-             dividirExacto(item.numeroPapel, item.bultos) == null
+             item.numeroPapel != null && item.bultosPapel != null &&
+             dividirExacto(item.numeroPapel, item.bultosPapel) == null
     }
 
       // El aviso de la favorita que no sirve para este renglón. Es la mitad
@@ -4656,11 +4675,14 @@
         : item.interpretacion === 'unidades' ? `
            <div class="campo-mp__label">¿En cuántos bultos vino?</div>
            <div class="campo-mp campo-mp--protagonista">
-             ${conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="bultos"
-                    value="${esc(textoParaInput(item.bultos))}" placeholder="0">`, 'bultos')}
+             ${conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="bultosPapel"
+                    value="${esc(textoParaInput(item.bultosPapel))}" placeholder="0">`, 'bultos')}
              ${resultadoHtml}
            </div>
            ${avisoFavorita}
+           ${(item.difiere && item.contenido == null && item.bultosPapel != null && item.recibido != null)
+             ? `<div class="item-mp__hint">ⓘ Lo recibido no entra en un número entero de bultos, así que este renglón se guarda sin presentación. La cantidad y el comprobante quedan igual.</div>`
+             : ''}
            ${chipsPresentacion(dividen, 'Presentaciones que reparten exacto')}`
         : item.interpretacion === 'granel' ? `
            <div class="item-mp__hint">ⓘ Sin presentación: el stock de este renglón se va a ver solo en ${esc(item.unidadMedida)}.</div>`
@@ -5069,6 +5091,7 @@
                 item.interpretacionDeOcr = false
                 item.contenido = null
                 item.bultos = null
+                item.bultosPapel = null
                 // Si el OCR había leído el desglose, el número de arriba era la
                 // cantidad de bultos. Al decir que NO son bultos, ese número
                 // deja de valer y vuelve el total que leyó el OCR.
@@ -5084,7 +5107,7 @@
             // botón es de las cosas que más desconfianza generan.
             if (accion === 'mixto-activar') {
               item.lineas = [
-                { bultos: item.interpretacion === 'bultos' ? item.numeroPapel : item.bultos,
+                { bultos: item.interpretacion === 'bultos' ? item.numeroPapel : item.bultosPapel,
                   contenido: item.contenido },
                 { bultos: null, contenido: null },
               ]
@@ -5107,7 +5130,7 @@
                 item.lineas = null
                 item.contenido = sola.contenido
                 if (item.interpretacion === 'bultos') item.numeroPapel = sola.bultos
-                else item.bultos = sola.bultos
+                else item.bultosPapel = sola.bultos
               }
               derivarCantidades(item)
               renderizarItems()
@@ -5154,7 +5177,7 @@
               // los bultos salen de repartir el número del papel.
               const bultos = item.numeroPapel == null ? null : item.numeroPapel / c
               if (!Number.isInteger(bultos) || bultos <= 0) return
-              item.bultos = bultos
+              item.bultosPapel = bultos
             } else {
               item.contenido = c
             }
@@ -5204,7 +5227,7 @@
             // `cantidadDocumento` y el lado derivado del par bultos/contenido
             // ya no se escriben a mano: los calcula derivarCantidades() según
             // qué dijo la persona que es el número del papel.
-            if (['numeroPapel', 'contenido', 'bultos', 'recibido'].includes(campo)) {
+            if (['numeroPapel', 'contenido', 'bultosPapel', 'recibido'].includes(campo)) {
               item[campo] = parsearCantidad(el.value, {
                 unidad: item.unidadMedida,
                 enteros: campoEsEntero(item, campo),
@@ -5342,6 +5365,39 @@
       return !!document.querySelector('.campo-invalido')
     }
 
+    // chk_presentacion_coherente, replicado LITERAL:
+    //   (bultos IS NULL AND contenido IS NULL)
+    //   OR (bultos > 0 AND contenido > 0 AND cantidad = bultos * contenido)
+    //
+    // IGUALDAD EXACTA, sin la tolerancia de 0,01 que usa el resto del archivo
+    // para comparar cantidades: la base compara numeric contra numeric y no
+    // perdona un centésimo. Una validación más floja que el CHECK deja pasar
+    // filas que el insert rechaza, que es exactamente lo que pasó.
+    function filaIncoherente(f) {
+      const b = f.cantidad_bultos, c = f.contenido_por_bulto
+      if (b == null && c == null) return false
+      if (b == null || c == null) return true
+      return !(b > 0) || !(c > 0) || f.cantidad !== b * c
+    }
+
+    // GUARD SOBRE LA FILA QUE SE VA A INSERTAR, no sobre el ítem. Es la red
+    // que faltaba: validarItems() chequeaba campo por campo, así que un camino
+    // que dejara `cantidad` desincronizada de `bultos × contenido` pasaba
+    // igual y reventaba recién en el insert, con un mensaje que nombra un
+    // constraint y no dice qué renglón fue.
+    //
+    // Va sobre filasItemParaBase(), o sea sobre lo mismo que viaja a la base:
+    // cualquier camino de desincronización —los que hay hoy y los que se
+    // agreguen— cae acá, y no hace falta acordarse de validarlo aparte.
+    function itemProduceFilaIncoherente(item) {
+      try {
+        return filasItemParaBase(item, null).some(filaIncoherente)
+      } catch (e) {
+        console.error(e)
+        return true
+      }
+    }
+
     function validarItems() {
       const w = estado.wizard
       let primeroConError = null
@@ -5376,13 +5432,19 @@
           item.error = `Las presentaciones suman ${formatearNumero(suma ?? 0)} ${rot} y el comprobante dice ${formatearNumero(item.numeroPapel)}.`
         } else if (!item.lineas && item.interpretacion === 'bultos' && (item.contenido == null || !(item.contenido > 0))) {
           item.error = 'Cargá cuánto trae cada bulto.'
-        } else if (!item.lineas && item.interpretacion === 'unidades' && (item.bultos == null || !(item.bultos > 0))) {
+        } else if (!item.lineas && item.interpretacion === 'unidades' && (item.bultosPapel == null || !(item.bultosPapel > 0))) {
           item.error = 'Cargá en cuántos bultos vino.'
-        } else if (!item.lineas && item.interpretacion === 'unidades' && item.contenido == null) {
-          // dividirExacto() devolvió null: no se reparte en partes iguales, y
-          // chk_presentacion_coherente exige la igualdad exacta. Se dice acá y
-          // no en el insert, al final del wizard.
-          item.error = `${formatearNumero(item.numeroPapel)} no se reparte exacto en ${formatearNumero(item.bultos)} bultos. Revisá el número de bultos.`
+        } else if (!item.lineas && item.interpretacion === 'unidades' &&
+                   dividirExacto(item.numeroPapel, item.bultosPapel) == null) {
+          // Lo del PAPEL no se reparte en partes iguales. Se mira la división
+          // del papel y NO `item.contenido == null`, porque desde el arreglo
+          // del CHECK ese null tiene DOS causas: esta, que es un error a
+          // corregir, y que lo RECIBIDO no entre en bultos enteros —298
+          // unidades de a 12— que es legítimo y se guarda sin presentación.
+          // Mirando solo el null, el segundo caso quedaba bloqueado con un
+          // mensaje falso: "300 no se reparte exacto en 25 bultos", cuando sí
+          // se reparte.
+          item.error = `${formatearNumero(item.numeroPapel)} no se reparte exacto en ${formatearNumero(item.bultosPapel)} bultos. Revisá el número de bultos.`
         } else if (item.difiere && (item.recibido == null || !(item.recibido > 0))) {
           item.error = item.interpretacion === 'bultos'
             ? 'Cargá cuántos bultos recibiste.'
@@ -5412,6 +5474,11 @@
           // chk_motivo_diferencia: con una diferencia real el motivo es
           // obligatorio. Es el dato que después se le reclama al proveedor.
           item.error = 'Explicá por qué hay diferencia con el comprobante.'
+        } else if (itemProduceFilaIncoherente(item)) {
+          // No debería pasar nunca: si pasa, es un camino de desincronización
+          // nuevo. Se corta ACÁ, nombrando el renglón, en vez de dejar que la
+          // base lo rechace al confirmar con todo ya cargado.
+          item.error = 'La cantidad no coincide con la presentación de este renglón. Revisá los números.'
         }
         if (item.error && !primeroConError) primeroConError = item.uid
       })
@@ -5648,6 +5715,30 @@
       }
     }
 
+    // Un error del insert que nombra un constraint no le sirve a nadie en el
+    // depósito: hay que decir QUÉ RENGLÓN y abrir esa tarjeta, igual que hace
+    // validarItems(). El guard de arriba debería atajar todos los casos
+    // conocidos, así que llegar acá significa un camino nuevo — y ahí el
+    // mensaje tiene que ayudar a encontrarlo, no citar el nombre del CHECK.
+    function mensajeErrorItems(error) {
+      const w = estado.wizard
+      const msg = String(error?.message || '')
+      if (/chk_presentacion_coherente/.test(msg)) {
+        const malo = w.items.find(itemProduceFilaIncoherente)
+        if (malo) {
+          malo.error = 'La cantidad no coincide con la presentación de este renglón. Revisá los números.'
+          w.itemAbierto = malo.uid
+          renderizarItems()
+          return `Revisá el renglón "${malo.nombre || 'sin nombre'}": la cantidad no coincide con la presentación.`
+        }
+        return 'Hay un renglón cuya cantidad no coincide con su presentación. Revisá los números.'
+      }
+      if (/chk_lote_ilegible_sin_lote/.test(msg)) return 'Un renglón tiene lote y está marcado como ilegible a la vez.'
+      if (/chk_motivo_diferencia/.test(msg)) return 'Falta el motivo de la diferencia en un renglón.'
+      if (/materia_prima_items_cantidad_check/.test(msg)) return 'Un renglón quedó con cantidad cero o negativa.'
+      return `No se pudieron guardar los ítems: ${msg}`
+    }
+
     // Guarda en la libretita las traducciones nuevas de esta carga. Corre
     // DESPUÉS de crear los insumos nuevos, así los renglones creados al vuelo
     // ya tienen insumo_id y su alias también queda guardado.
@@ -5782,7 +5873,7 @@
           // Sigue siendo UN solo insert, así que la atomicidad no cambia.
           const filas = w.items.flatMap(item => filasItemParaBase(item, ingresoId))
           const { error: errorItems } = await supabase.from('materia_prima_items').insert(filas)
-          if (errorItems) throw new Error(`No se pudieron guardar los ítems: ${errorItems.message}`)
+          if (errorItems) throw new Error(mensajeErrorItems(errorItems))
         }
 
         // 5. Los vínculos con los remitos. Van DESPUÉS de los ítems y no antes:
