@@ -107,6 +107,11 @@
       gap: 0.75rem;
       flex-wrap: wrap;
     }
+    /* El bug recurrente del proyecto: un `display` de autor le gana al
+       `[hidden]` del navegador, así que sin esta regla el aviso queda visible
+       SIEMPRE — y como renderizarAvisoPendientes() corta antes de actualizar
+       el número, se leía "Hay 0 insumos que nadie revisó todavía". */
+    .aviso-pendientes[hidden] { display: none; }
     .aviso-pendientes__texto { min-width: 0; font-size: 0.8125rem; line-height: 1.45; }
     .aviso-pendientes__texto strong { color: var(--amarillo-oscuro); }
 
@@ -734,6 +739,11 @@
       margin-top: 1.125rem;
       flex-wrap: wrap;
     }
+    /* Mismo caso: los pasos de confirmación de los modales ocultan su barra de
+       acciones con `hidden`, y sin esta regla los botones Cancelar/Guardar
+       seguían apareciendo debajo de la confirmación — que existe justamente
+       para que la decisión sea lo único en pantalla. */
+    .modal-stock__acciones[hidden] { display: none; }
     .modal-stock__acciones .btn-stock { flex: 1 1 8rem; }
 
     .campo-stock { margin-bottom: 0.875rem; min-width: 0; }
@@ -1195,6 +1205,70 @@
     .rec-aviso strong { font-weight: 700; }
 
     /* ═══════════════════════════════════════════════════════════════════════
+       ALIAS DE PROVEEDOR — la libretita de traducción
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .alias-grupo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin: 1.125rem 0 0.5rem;
+      overflow-wrap: anywhere;
+    }
+    .alias-grupo:first-child { margin-top: 0; }
+
+    .alias-fila { align-items: flex-start; flex-direction: column; gap: 0.375rem; cursor: default; }
+    .alias-fila:hover { box-shadow: none; transform: none; }
+
+    /* El texto del papel va en monoespaciado y entrecomillado: se tiene que
+       leer como TRANSCRIPCIÓN de un renglón de un comprobante, no como una
+       frase que escribió el sistema. */
+    .alias-texto {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+    .alias-flecha {
+      font-size: 0.75rem;
+      font-weight: 650;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .alias-destino {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.3;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+    .alias-meta {
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+    /* Un alias que apunta a un insumo desactivado no es una curiosidad: la
+       etiqueta dice qué va a pasar, no solo que está desactivado. */
+    .alias-alerta {
+      font-size: 0.78125rem;
+      line-height: 1.4;
+      color: var(--bordo-oscuro);
+      overflow-wrap: anywhere;
+    }
+    .alias-acciones {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.125rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════
        HISTORIAL DE RECUENTOS Y MOVIMIENTOS PUNTUALES
        ═══════════════════════════════════════════════════════════════════════ */
 
@@ -1507,6 +1581,7 @@
     <div class="barra-acciones">
       <button type="button" class="btn-stock btn-stock--chico btn-stock--primario" id="btn-nuevo-insumo" hidden>+ Nuevo insumo</button>
       <button type="button" class="btn-stock btn-stock--chico" id="btn-importar-excel" hidden>Importar Excel</button>
+      <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-alias" hidden>Alias de proveedor</button>
     </div>
 
     <div class="fila-chips" id="chips-filtro"></div>
@@ -1519,6 +1594,28 @@
     <div class="estado-vacio-stock" id="estado-vacio" hidden></div>
 
     </div><!-- /vista-catalogo -->
+
+    <!-- ══ VISTA: ALIAS DE PROVEEDOR ═════════════════════════════════════ -->
+    <!-- Drill-down del CATÁLOGO y no una cuarta pestaña: cuatro no entran en
+         375px, y esto lo toca la misma gente y con la misma tarea
+         (stock:gestionar_catalogo). Mientras se lo mira, la pestaña marcada
+         sigue siendo Catálogo — ver PESTANA_DE_VISTA. -->
+    <div class="vista-stock" id="vista-alias" hidden>
+
+      <button type="button" class="hist-volver" id="btn-volver-de-alias">‹ Volver al catálogo</button>
+
+      <div class="rec-aviso rec-aviso--info">
+        Cada proveedor le pone su propio nombre a la misma cosa. Un <strong>alias</strong> traduce el texto del remito o la factura al insumo del catálogo, para que la próxima carga de ese proveedor lo resuelva sola. Se crean solos al mapear un renglón a mano en <strong>Ingreso</strong>; acá se corrigen.
+      </div>
+
+      <input type="search" class="buscador-stock" id="buscador-alias" placeholder="Buscar por el texto del papel o por el insumo…" autocomplete="off">
+
+      <div class="lista-contenido" id="lista-alias"></div>
+
+      <div class="estado-vacio-stock" id="alias-cargando">Cargando alias…</div>
+      <div class="estado-vacio-stock" id="alias-vacio" hidden></div>
+
+    </div><!-- /vista-alias -->
 
     <!-- ══ VISTA: RECUENTO DE INVENTARIO ═════════════════════════════════ -->
     <div class="vista-stock" id="vista-recuento" hidden>
@@ -1772,6 +1869,81 @@
       </div>
     </div>
   </div><!-- /modal-insumo -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — CORREGIR O BORRAR UN ALIAS
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-alias" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-alias></div>
+    <div class="modal-stock__panel">
+      <h2 class="modal-stock__titulo" id="modal-alias-titulo">Corregir el alias</h2>
+
+      <!-- Paso 1 — elegir el insumo. El texto del proveedor se MUESTRA y no se
+           edita: es la clave con la que se busca contra el papel, y además es
+           la mitad del índice único de la tabla. Lo que se corrige es a qué
+           insumo apunta, nada más. -->
+      <div id="modal-alias-formulario">
+        <div class="campo-stock">
+          <label>Lo que dice el papel de <span id="alias-proveedor-nombre"></span></label>
+          <div class="alias-texto" id="alias-texto-actual"></div>
+          <div class="campo-stock__ayuda">
+            Este texto no se edita: es con lo que se busca el renglón del comprobante.
+          </div>
+        </div>
+
+        <div class="campo-stock">
+          <label for="alias-buscar-catalogo">Insumo del catálogo</label>
+          <input type="search" id="alias-buscar-catalogo" placeholder="Buscar en el catálogo…" autocomplete="off">
+          <div class="campo-stock__error" id="alias-error-insumo" hidden></div>
+        </div>
+
+        <div class="rec-sugerencias" id="alias-sugerencias" hidden></div>
+
+        <div class="campo-stock__ayuda" id="alias-actual-apunta"></div>
+      </div>
+
+      <!-- Paso 2 — la advertencia. Va ACÁ, en el momento de guardar, y no como
+           texto de ayuda del formulario: es lo que hay que leer justo antes de
+           confirmar. Mismo lugar y mismo criterio que la confirmación de
+           cambio de tipo del modal de insumo, que también reemplaza al
+           formulario en vez de apilarse abajo. -->
+      <div id="modal-alias-confirmacion" hidden>
+        <div class="confirmacion-tipo">
+          El alias de <strong id="alias-conf-proveedor"></strong> va a pasar a apuntar a <strong id="alias-conf-destino"></strong>.
+          <br><br>
+          <strong>Corregir un alias no corrige el pasado.</strong> Los ingresos ya cargados siguen apuntando a <strong id="alias-conf-viejo"></strong>, y su stock también. Eso se arregla con un <strong>ajuste de inventario</strong>, no cambiando el alias.
+          <br><br>
+          De acá en adelante, las cargas de ese proveedor van a resolver ese texto con el insumo nuevo.
+        </div>
+        <div class="modal-stock__acciones">
+          <button type="button" class="btn-stock" id="btn-volver-alias-form">Volver</button>
+          <button type="button" class="btn-stock btn-stock--primario" id="btn-confirmar-alias">Sí, corregir el alias</button>
+        </div>
+      </div>
+
+      <!-- Paso 3 — borrar. Se entra directo desde la fila, así que su salida
+           es cerrar y no volver al formulario. -->
+      <div id="modal-alias-borrado" hidden>
+        <div class="confirmacion-tipo">
+          Se va a borrar el alias de <strong id="alias-borrar-proveedor"></strong>.
+          <br><br>
+          La próxima vez que ese proveedor traiga ese renglón, <strong>el sistema no va a saber a qué insumo corresponde</strong> y va a haber que mapearlo a mano otra vez.
+          <br><br>
+          Los ingresos ya cargados no se tocan.
+        </div>
+        <div class="modal-stock__acciones">
+          <button type="button" class="btn-stock" data-cerrar-alias>Cancelar</button>
+          <button type="button" class="btn-stock btn-stock--alerta" id="btn-confirmar-borrado-alias">Sí, borrar</button>
+        </div>
+      </div>
+
+      <div class="modal-stock__acciones" id="modal-alias-acciones">
+        <button type="button" class="btn-stock" data-cerrar-alias>Cancelar</button>
+        <button type="button" class="btn-stock btn-stock--primario" id="btn-guardar-alias">Guardar</button>
+      </div>
+    </div>
+  </div><!-- /modal-alias -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -2197,6 +2369,13 @@
       itemsDetalle: [],
       ajustesDetalle: [],
       nombresAjuste: new Map(),
+
+      // ── Alias de proveedor ──────────────────────────────────────────
+      alias: [],
+      busquedaAlias: '',
+      nombresAlias: new Map(),
+      aliasEditando: null,     // la fila abierta en el modal
+      aliasDestino: null,      // el insumo elegido como destino nuevo
 
       // ── Movimientos puntuales ───────────────────────────────────────
       // Las unidades de BAJA salen de v_mis_unidades_baja y NO de la de
@@ -4103,6 +4282,292 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // ALIAS DE PROVEEDOR — la libretita de traducción
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Cada proveedor le pone su propio nombre a la misma cosa: "CAJA 4 PISOS
+    // C/IMPRESION" y "CAJA N°1 NUSS C/IMP" son el mismo insumo. La libretita
+    // vive en proveedor_insumo_alias y la escribe el wizard de Ingreso, que es
+    // INSERT-ONLY a propósito: si el texto ya está mapeado, no lo pisa. Acá es
+    // donde se corrige, con stock:gestionar_catalogo — que es exactamente lo
+    // que exigen las policies de UPDATE y DELETE de esa tabla.
+
+    async function abrirGestionAlias() {
+      mostrarVista('alias')
+      await cargarAlias()
+    }
+
+    async function cargarAlias() {
+      const cargandoEl = document.getElementById('alias-cargando')
+      cargandoEl.hidden = false
+
+      // Los dos embeds son inequívocos: proveedor_insumo_alias tiene UNA sola
+      // FK a `proveedores` y UNA sola a `insumos`. Lo que NO se puede embeber
+      // es `creado_por` hacia `empleados`: el RLS de esa tabla solo deja leer
+      // la fila propia, así que todos los nombres volverían en blanco menos el
+      // tuyo. Va aparte contra v_empleados_publico, igual que el historial.
+      const { data, error } = await supabase
+        .from('proveedor_insumo_alias')
+        .select('id, texto_proveedor, created_at, creado_por, proveedor_id, insumo_id, proveedores(razon_social, nombre_fantasia), insumos(nombre, marca, unidad_medida, aclaracion, activo)')
+        .order('created_at', { ascending: false })
+
+      cargandoEl.hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudieron cargar los alias de proveedor.')
+        return
+      }
+      estado.alias = data ?? []
+
+      const ids = [...new Set(estado.alias.map(a => a.creado_por).filter(Boolean))]
+      estado.nombresAlias = new Map()
+      if (ids.length) {
+        const { data: emps } = await supabase
+          .from('v_empleados_publico').select('id, nombre').in('id', ids)
+        estado.nombresAlias = new Map((emps ?? []).map(e => [e.id, e.nombre]))
+      }
+
+      renderizarAlias()
+    }
+
+    function nombreProveedorAlias(a) {
+      return a.proveedores?.razon_social || a.proveedores?.nombre_fantasia || 'Proveedor sin nombre'
+    }
+
+    // Busca en LAS DOS PUNTAS de la traducción. Se puede llegar desde el texto
+    // del papel ("no sé qué es esto que aparece en el remito") o desde el
+    // insumo ("a qué le pusieron alias, y quién").
+    function coincideAlias(a, termino) {
+      const t = normalizar(termino)
+      if (!t) return true
+      return normalizar(a.texto_proveedor).includes(t)
+        || normalizar(a.insumos?.nombre).includes(t)
+        || normalizar(a.insumos?.marca).includes(t)
+        || normalizar(nombreProveedorAlias(a)).includes(t)
+    }
+
+    function renderizarAlias() {
+      const listaEl = document.getElementById('lista-alias')
+      const vacioEl = document.getElementById('alias-vacio')
+      const filas = estado.alias.filter(a => coincideAlias(a, estado.busquedaAlias))
+
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        vacioEl.innerHTML = estado.alias.length
+          ? 'Ningún alias coincide con esa búsqueda.'
+          : 'Todavía no hay ningún alias. No se crean desde acá: aparecen solos cuando alguien mapea a mano un renglón de un remito o una factura en <strong>Ingreso</strong>. Ese texto queda guardado para ese proveedor y la próxima vez se resuelve solo.'
+        return
+      }
+      vacioEl.hidden = true
+
+      // Agrupado por proveedor porque un alias SOLO significa algo dentro del
+      // proveedor que lo escribió: el mismo texto quiere decir otra cosa en el
+      // papel de otro. Por eso el índice único de la tabla es por (proveedor,
+      // texto) y no global.
+      const grupos = new Map()
+      filas.forEach(a => {
+        const k = nombreProveedorAlias(a)
+        if (!grupos.has(k)) grupos.set(k, [])
+        grupos.get(k).push(a)
+      })
+
+      listaEl.innerHTML = [...grupos.entries()]
+        .sort((x, y) => x[0].localeCompare(y[0], 'es'))
+        .map(([prov, items]) => `
+          <div class="alias-grupo">${esc(prov)} · ${items.length} ${items.length === 1 ? 'traducción' : 'traducciones'}</div>
+          ${items.map(htmlFilaAlias).join('')}
+        `).join('')
+
+      listaEl.querySelectorAll('[data-editar-alias]').forEach(btn =>
+        btn.addEventListener('click', () => abrirModalAlias(btn.dataset.editarAlias)))
+      listaEl.querySelectorAll('[data-borrar-alias]').forEach(btn =>
+        btn.addEventListener('click', () => abrirBorradoAlias(btn.dataset.borrarAlias)))
+    }
+
+    // La fila muestra la traducción COMPLETA: sin ver a qué producto se mapeó,
+    // no hay forma de detectar un alias mal cargado, que es justo para lo que
+    // existe esta pantalla.
+    function htmlFilaAlias(a) {
+      const i = a.insumos
+      const meta = [i?.marca, i?.unidad_medida].filter(Boolean).join(' · ')
+      const quien = estado.nombresAlias.get(a.creado_por)
+      return `
+        <div class="tarjeta-lista alias-fila">
+          <div class="alias-texto">«${esc(a.texto_proveedor)}»</div>
+          <div class="alias-flecha">se carga como</div>
+          <div class="alias-destino">${esc(i?.nombre ?? '—')}${i ? htmlAclaracion(i.aclaracion) : ''}</div>
+          ${meta ? `<div class="alias-meta">${esc(meta)}</div>` : ''}
+          ${i && !i.activo ? `
+            <div class="alias-alerta"><strong>El insumo está desactivado.</strong> El alias sigue funcionando igual —el wizard de Ingreso no filtra por activo—, así que las próximas cargas de este proveedor van a seguir cayendo en un insumo que ya no se usa. Reapuntalo a uno activo o borralo.</div>` : ''}
+          <div class="alias-meta">Creado${quien ? ` por ${esc(quien)}` : ''} el ${esc(formatearMomento(a.created_at))}</div>
+          <div class="alias-acciones">
+            <button type="button" class="btn-stock btn-stock--chico" data-editar-alias="${esc(a.id)}">Corregir</button>
+            <button type="button" class="btn-stock btn-stock--chico" data-borrar-alias="${esc(a.id)}">Borrar</button>
+          </div>
+        </div>`
+    }
+
+    // ── El modal ───────────────────────────────────────────────────────────
+
+    function abrirModalAlias(aliasId) {
+      const a = estado.alias.find(x => x.id === aliasId)
+      if (!a) return
+      estado.aliasEditando = a
+      estado.aliasDestino = null
+
+      document.getElementById('modal-alias-titulo').textContent = 'Corregir el alias'
+      document.getElementById('alias-proveedor-nombre').textContent = nombreProveedorAlias(a)
+      document.getElementById('alias-texto-actual').textContent = `«${a.texto_proveedor}»`
+      document.getElementById('alias-actual-apunta').innerHTML =
+        `Hoy se carga como <strong>${esc(a.insumos?.nombre ?? '—')}</strong>.`
+      document.getElementById('alias-buscar-catalogo').value = ''
+      document.getElementById('alias-sugerencias').hidden = true
+      document.getElementById('alias-sugerencias').innerHTML = ''
+      document.getElementById('alias-error-insumo').hidden = true
+
+      mostrarPasoAlias('formulario')
+      document.getElementById('modal-alias').hidden = false
+      document.getElementById('alias-buscar-catalogo').focus()
+    }
+
+    function abrirBorradoAlias(aliasId) {
+      const a = estado.alias.find(x => x.id === aliasId)
+      if (!a) return
+      estado.aliasEditando = a
+      estado.aliasDestino = null
+      document.getElementById('modal-alias-titulo').textContent = 'Borrar el alias'
+      document.getElementById('alias-borrar-proveedor').innerHTML =
+        `${esc(nombreProveedorAlias(a))} para «${esc(a.texto_proveedor)}»`
+      mostrarPasoAlias('borrado')
+      document.getElementById('modal-alias').hidden = false
+    }
+
+    // El paso de confirmación REEMPLAZA al formulario y no se apila abajo:
+    // mismo criterio que el cambio de tipo del modal de insumo — la decisión
+    // tiene que ser lo único que hay en pantalla.
+    function mostrarPasoAlias(paso) {
+      document.getElementById('modal-alias-formulario').hidden = paso !== 'formulario'
+      document.getElementById('modal-alias-acciones').hidden = paso !== 'formulario'
+      document.getElementById('modal-alias-confirmacion').hidden = paso !== 'confirmacion'
+      document.getElementById('modal-alias-borrado').hidden = paso !== 'borrado'
+    }
+
+    function cerrarModalAlias() {
+      document.getElementById('modal-alias').hidden = true
+      estado.aliasEditando = null
+      estado.aliasDestino = null
+    }
+
+    // El mismo buscador del recuento, sin reinventarlo: solo insumos activos,
+    // hasta 8, con la aclaración al lado del nombre.
+    function renderizarSugerenciasAlias() {
+      const cont = document.getElementById('alias-sugerencias')
+      const t = normalizar(document.getElementById('alias-buscar-catalogo').value)
+
+      if (!t) { cont.hidden = true; cont.innerHTML = ''; return }
+
+      const encontrados = ordenarPorNombre(
+        estado.insumos.filter(i => i.activo && coincide(i, t))
+      ).slice(0, 8)
+
+      if (!encontrados.length) {
+        cont.hidden = false
+        cont.innerHTML = '<div class="campo-stock__ayuda">Ningún insumo activo coincide. Si el producto no existe todavía, hay que darlo de alta en el catálogo.</div>'
+        return
+      }
+
+      cont.hidden = false
+      cont.innerHTML = encontrados.map(i => `
+        <button type="button" class="rec-sug ${estado.aliasDestino?.id === i.id ? 'rec-sug--elegido' : ''}" data-sug-alias="${esc(i.id)}">
+          <div class="rec-sug__nombre">${esc(i.nombre)}${htmlAclaracion(i.aclaracion)}</div>
+          <div class="rec-sug__meta">${esc([i.marca, i.unidad_medida, TIPOS[i.tipo] ?? i.tipo].filter(Boolean).join(' · '))}</div>
+        </button>`).join('')
+
+      cont.querySelectorAll('[data-sug-alias]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.aliasDestino = estado.insumos.find(i => i.id === btn.dataset.sugAlias) ?? null
+          document.getElementById('alias-error-insumo').hidden = true
+          renderizarSugerenciasAlias()
+        })
+      })
+    }
+
+    function pedirConfirmacionAlias() {
+      const a = estado.aliasEditando
+      const destino = estado.aliasDestino
+      const err = document.getElementById('alias-error-insumo')
+      if (!a) return
+
+      if (!destino) {
+        err.hidden = false
+        err.textContent = 'Elegí a qué insumo tiene que apuntar el alias.'
+        return
+      }
+      if (destino.id === a.insumo_id) {
+        err.hidden = false
+        err.textContent = 'Ese es el insumo al que ya apunta: no hay nada que corregir.'
+        return
+      }
+      err.hidden = true
+
+      document.getElementById('alias-conf-proveedor').textContent =
+        `${nombreProveedorAlias(a)} para «${a.texto_proveedor}»`
+      document.getElementById('alias-conf-destino').textContent = destino.nombre
+      document.getElementById('alias-conf-viejo').textContent = a.insumos?.nombre ?? 'el insumo anterior'
+      mostrarPasoAlias('confirmacion')
+    }
+
+    // UPDATE y DELETE directos, sin RPC: las policies de esta tabla ya exigen
+    // stock:gestionar_catalogo para las dos, así que la barrera real está del
+    // lado del servidor. Se cambia insumo_id y NADA más — el texto del
+    // proveedor es la clave del match contra el papel y la mitad del índice
+    // único, así que editarlo rompería las dos cosas.
+    async function confirmarCambioAlias() {
+      const a = estado.aliasEditando
+      const destino = estado.aliasDestino
+      if (!a || !destino) return
+
+      const btn = document.getElementById('btn-confirmar-alias')
+      btn.disabled = true
+      const { error } = await supabase
+        .from('proveedor_insumo_alias')
+        .update({ insumo_id: destino.id })
+        .eq('id', a.id)
+      btn.disabled = false
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudo corregir el alias.')
+        return
+      }
+      cerrarModalAlias()
+      mostrarExito('Alias corregido.')
+      await cargarAlias()
+    }
+
+    async function confirmarBorradoAlias() {
+      const a = estado.aliasEditando
+      if (!a) return
+
+      const btn = document.getElementById('btn-confirmar-borrado-alias')
+      btn.disabled = true
+      const { error } = await supabase
+        .from('proveedor_insumo_alias').delete().eq('id', a.id)
+      btn.disabled = false
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudo borrar el alias.')
+        return
+      }
+      cerrarModalAlias()
+      mostrarExito('Alias borrado.')
+      await cargarAlias()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // MOVIMIENTOS PUNTUALES — ajuste y baja
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -4588,12 +5053,13 @@
       catalogo: 'Catálogo de insumos',
       recuento: 'Recuento de inventario',
       historial: 'Historial de recuentos',
+      alias: 'Alias de proveedor',
     }
 
     // El historial es un drill-down de Stock, no una pestaña propia: cuatro no
     // entran en 375px. Mientras se lo mira, la pestaña que queda marcada sigue
     // siendo la de Stock.
-    const PESTANA_DE_VISTA = { historial: 'stock' }
+    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo' }
 
     function mostrarVista(id) {
       estado.vista = id
@@ -4601,6 +5067,7 @@
       document.getElementById('vista-catalogo').hidden = id !== 'catalogo'
       document.getElementById('vista-recuento').hidden = id !== 'recuento'
       document.getElementById('vista-historial').hidden = id !== 'historial'
+      document.getElementById('vista-alias').hidden = id !== 'alias'
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
         btn.classList.toggle('pestana-stock--activa',
@@ -5168,6 +5635,24 @@
     document.querySelectorAll('[data-cerrar-anular]').forEach(el =>
       el.addEventListener('click', cerrarModalAnular))
 
+    // ── Alias de proveedor ──────────────────────────────────────────────
+    document.getElementById('btn-ver-alias').addEventListener('click', abrirGestionAlias)
+    document.getElementById('btn-volver-de-alias').addEventListener('click', () => mostrarVista('catalogo'))
+    document.getElementById('buscador-alias').addEventListener('input', (e) => {
+      estado.busquedaAlias = e.target.value
+      renderizarAlias()
+    })
+    document.getElementById('alias-buscar-catalogo').addEventListener('input', () => {
+      estado.aliasDestino = null
+      renderizarSugerenciasAlias()
+    })
+    document.getElementById('btn-guardar-alias').addEventListener('click', pedirConfirmacionAlias)
+    document.getElementById('btn-volver-alias-form').addEventListener('click', () => mostrarPasoAlias('formulario'))
+    document.getElementById('btn-confirmar-alias').addEventListener('click', confirmarCambioAlias)
+    document.getElementById('btn-confirmar-borrado-alias').addEventListener('click', confirmarBorradoAlias)
+    document.querySelectorAll('[data-cerrar-alias]').forEach(el =>
+      el.addEventListener('click', cerrarModalAlias))
+
     // ── Historial ──────────────────────────────────────────────────────────
     document.getElementById('btn-ver-historial').addEventListener('click', abrirHistorial)
     document.getElementById('btn-volver-de-historial').addEventListener('click', () => mostrarVista('stock'))
@@ -5265,6 +5750,7 @@
       const gestiona = puedeGestionar()
       document.getElementById('btn-nuevo-insumo').hidden = !gestiona
       document.getElementById('btn-importar-excel').hidden = !gestiona
+      document.getElementById('btn-ver-alias').hidden = !gestiona
       // Y el contenedor con ellos. `hidden` no saca los botones del DOM, así
       // que la barra sigue teniendo dos hijos: un `:empty` en CSS nunca
       // matchearía y su margen quedaría como espacio muerto para quien no
