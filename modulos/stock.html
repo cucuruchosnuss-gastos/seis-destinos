@@ -123,9 +123,6 @@
       display: flex;
       gap: 0.375rem;
       margin-bottom: 0.875rem;
-      background: var(--color-superficie);
-      border-radius: 999px;
-      padding: 0.25rem;
       min-width: 0;
     }
     .pestanas-stock[hidden] { display: none; }
@@ -133,9 +130,11 @@
       flex: 1 1 0;
       min-width: 0;
       padding: 0.5625rem 0.75rem;
-      border: none;
+      /* Con borde y fondo blanco: sin contorno se leian como texto suelto y no
+         como botones, sobre todo las inactivas. */
+      border: 1px solid var(--color-borde);
       border-radius: 999px;
-      background: none;
+      background: var(--color-fondo);
       font-family: var(--fuente);
       font-size: 0.875rem;
       font-weight: 650;
@@ -143,12 +142,60 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    /* Variante DESPUÉS de su base, siempre. */
+    /* Variante DESPUÉS de su base, siempre.
+
+       ACTIVA EN --verde-OSCURO Y NO EN --verde: es NAVEGACIÓN, no acción. Con
+       el verde pleno competiría con "+ Nuevo insumo" y con "Empezar recuento",
+       que sí son la acción principal de su pestaña — y la regla del proyecto es
+       un solo botón primario por pantalla. Un tono más oscuro se lee como
+       "estás acá" en vez de "tocá esto". */
     .pestana-stock--activa {
-      background: var(--color-fondo);
-      color: var(--verde-oscuro);
-      box-shadow: var(--sombra-suave);
+      background: var(--verde-oscuro);
+      border-color: var(--verde-oscuro);
+      color: #fff;
+      box-shadow: none;
     }
+
+    /* ── Encabezados de grupo ────────────────────────────────────────────
+       Reusan la receta de .grupo-empleados de empleados.html —punto de color +
+       texto chico— en vez de inventar un componente.
+
+       El de TIPO pesa MENOS que el de categoría, a propósito: hoy ninguna
+       categoría cruza el tipo ("Harinas" ya implica materia prima), asi que
+       ese nivel no agrega informacion. No se saca porque es la distincion que
+       decide si el sistema exige lote, y mañana puede aparecer una categoria
+       que cruce — pero dos niveles de encabezado sobre 53 filas en un celular
+       se vuelven ruido si pesan igual. */
+    .grupo-tipo { margin-bottom: 1.125rem; min-width: 0; }
+    .grupo-tipo__titulo {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #a3abbd;
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+
+    .grupo-cat { margin-bottom: 0.875rem; min-width: 0; }
+    .grupo-cat__titulo {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+    .grupo-cat__punto {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--verde);
+      flex-shrink: 0;
+    }
+    .grupo-cat__contador { font-weight: 500; }
 
     /* ── Lista de stock ──────────────────────────────────────────────────── */
 
@@ -185,8 +232,23 @@
       font-weight: 650;
     }
 
-    .fila-stock { align-items: flex-start; cursor: pointer; }
-    .fila-stock__info { flex: 1; min-width: 0; }
+    /* flex-wrap para que en mobile el total baje en vez de apretar el nombre.
+       El gap lo separa cuando comparten renglon. */
+    .fila-stock { align-items: flex-start; cursor: pointer; flex-wrap: wrap; gap: 0.5rem; }
+    .fila-stock__info { flex: 1 1 60%; min-width: 0; }
+    /* EL TOTAL, A LA DERECHA. Mismo criterio que .movimiento__monto de Caja:
+       concepto a la izquierda, numero a la derecha, en negro y con peso.
+       Antes vivia en la sub-linea gris y casi no se leia.
+
+       Al envolver en mobile MANTIENE el peso: nunca vuelve a ser gris chico. */
+    .fila-stock__total {
+      margin-left: auto;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
     .fila-stock__nombre {
       font-size: 0.9375rem;
       font-weight: 650;
@@ -2325,6 +2387,88 @@
       return normalizar(insumo.nombre).includes(t) || normalizar(insumo.marca).includes(t)
     }
 
+    // ── AGRUPADO POR TIPO Y CATEGORÍA ───────────────────────────────────
+    //
+    // Con 53 insumos la lista plana no dejaba encontrar nada, y mezclaba cosas
+    // sin relación: el film aparecía entre las cajas y el desengrasante entre
+    // las bolsas.
+    //
+    // El orden NO es alfabético: es el del negocio, de la materia prima al
+    // final de la línea. Va como array porque es una decisión, no un dato.
+    const CATEGORIAS = [
+      'Harinas', 'Grasas', 'Azúcares y secos', 'Aditivos',
+      'Cajas', 'Bolsas', 'Separadores y tiras', 'Paletizado',
+      'Cintas y adhesivos', 'Limpieza', 'Proceso y mantenimiento',
+    ]
+    const SIN_CATEGORIA = 'Sin categoría'
+    // Materia prima primero, que es como está ordenado el array de categorías.
+    const ORDEN_TIPO = ['materia_prima', 'insumo']
+
+    // Una categoría fuera del array va al final y NO rompe nada: el CHECK de la
+    // base puede ganar un valor antes que esta pantalla.
+    const ordenDe = (lista, v) => {
+      const i = lista.indexOf(v)
+      return i === -1 ? lista.length : i
+    }
+
+    // Dos niveles. Una sección sin filas visibles no se dibuja, así que con
+    // filtros o búsqueda activa las vacías desaparecen solas — no hay que
+    // acordarse de esconderlas.
+    function agruparPorTipoYCategoria(filas, nombreDe) {
+      const porTipo = new Map()
+      filas.forEach(f => {
+        const tipo = f.tipo || ''
+        // Un insumo creado al vuelo desde Ingreso nace sin categoría. Hoy no
+        // hay ninguno, pero va a haberlos.
+        const cat = f.categoria || SIN_CATEGORIA
+        if (!porTipo.has(tipo)) porTipo.set(tipo, new Map())
+        const cats = porTipo.get(tipo)
+        if (!cats.has(cat)) cats.set(cat, [])
+        cats.get(cat).push(f)
+      })
+      return [...porTipo.entries()]
+        .sort((a, b) => ordenDe(ORDEN_TIPO, a[0]) - ordenDe(ORDEN_TIPO, b[0]))
+        .map(([tipo, cats]) => ({
+          tipo,
+          categorias: [...cats.entries()]
+            .sort((a, b) => {
+              // "Sin categoría" SIEMPRE última, aunque no esté en el array.
+              const oa = a[0] === SIN_CATEGORIA ? Infinity : ordenDe(CATEGORIAS, a[0])
+              const ob = b[0] === SIN_CATEGORIA ? Infinity : ordenDe(CATEGORIAS, b[0])
+              return oa - ob || a[0].localeCompare(b[0], 'es')
+            })
+            .map(([categoria, filas]) => ({
+              categoria,
+              filas: [...filas].sort((x, y) =>
+                (nombreDe(x) || '').localeCompare(nombreDe(y) || '', 'es', { sensitivity: 'base' })),
+            })),
+        }))
+    }
+
+    // El encabezado reusa la receta de .grupo-empleados de empleados.html —
+    // punto de color + texto chico— en vez de inventar un componente.
+    //
+    // El de TIPO pesa claramente MENOS que el de categoría, y es a propósito:
+    // hoy ninguna categoría cruza el tipo ("Harinas" ya implica materia
+    // prima), así que ese nivel no agrega información. No se saca porque es la
+    // distinción que decide si el sistema exige lote, y mañana puede aparecer
+    // una categoría que cruce — pero dos niveles de encabezado sobre 53 filas
+    // en un celular se vuelven ruido si pesan igual.
+    function htmlAgrupado(grupos, htmlDeFila) {
+      return grupos.map(g => `
+        <div class="grupo-tipo">
+          <div class="grupo-tipo__titulo">${esc(TIPOS[g.tipo] ?? g.tipo)}</div>
+          ${g.categorias.map(c => `
+            <div class="grupo-cat">
+              <div class="grupo-cat__titulo">
+                <span class="grupo-cat__punto"></span>${esc(c.categoria)}
+                <span class="grupo-cat__contador">${c.filas.length}</span>
+              </div>
+              ${c.filas.map(htmlDeFila).join('')}
+            </div>`).join('')}
+        </div>`).join('')
+    }
+
     function ordenarPorNombre(lista) {
       return [...lista].sort((a, b) =>
         (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
@@ -2343,7 +2487,7 @@
     async function cargarInsumos() {
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo, activo, estado_alta, tolerancia_merma_pct')
+        .select('id, nombre, marca, unidad_medida, tipo, categoria, activo, estado_alta, tolerancia_merma_pct')
 
       document.getElementById('estado-cargando').hidden = true
 
@@ -2462,7 +2606,7 @@
 
       const gestiona = puedeGestionar()
 
-      listaEl.innerHTML = filas.map(i => {
+      listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, i => i.nombre), i => {
         const clases = [
           'tarjeta-lista', 'fila-insumo',
           i.activo && esPendiente(i) ? 'fila-insumo--pendiente' : '',
@@ -2506,7 +2650,7 @@
               </div>
             </div>
           </div>`
-      }).join('')
+      })
 
       // Un solo listener por tarjeta, como el `data-ingreso` de materia-prima.
       // Solo existe cuando la tarjeta lleva el atributo, o sea con permiso.
@@ -2528,7 +2672,7 @@
       const [unidades, filas] = await Promise.all([
         supabase.from('v_mis_unidades_stock').select('id, nombre').order('nombre'),
         supabase.from('v_stock_insumos')
-          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, cantidad_total, lotes_distintos, presentaciones, contenido_unico, kilos_sueltos'),
+          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, categoria, cantidad_total, lotes_distintos, presentaciones, contenido_unico, kilos_sueltos'),
       ])
 
       cargandoEl.hidden = true
@@ -2601,7 +2745,7 @@
       }
       vacioEl.hidden = true
 
-      listaEl.innerHTML = filas.map(f => {
+      listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, f => f.insumo_nombre), f => {
         const negativo = Number(f.cantidad_total) < 0
         const lotes = textoLotes(Number(f.lotes_distintos) || 0)
         const presentaciones = Number(f.presentaciones) || 0
@@ -2623,8 +2767,15 @@
           : soloEnBultos
 
         const principal = conSueltos ?? kilos
+        // EL TOTAL SALE DE LA SUB-LÍNEA GRIS Y VA A LA DERECHA. Los bultos son
+        // el dato principal, pero el total quedaba en un gris chico que casi no
+        // se leía, y las dos cifras importan. Concepto a la izquierda, número a
+        // la derecha: el mismo patrón de Caja y Cuentas Corrientes.
+        //
+        // Solo cuando hay desglose de bultos: sin presentación `principal` YA
+        // es el total, y repetirlo a la derecha sería el mismo número dos veces.
+        const totalDerecha = conSueltos ? kilos : ''
         const secundario = [
-          conSueltos ? kilos : '',
           lotes,
           textoPresentaciones(presentaciones),
         ].filter(Boolean).join(' · ')
@@ -2641,8 +2792,9 @@
               </div>
               ${secundario ? `<div class="fila-stock__sub">${esc(secundario)}</div>` : ''}
             </div>
+            ${totalDerecha ? `<div class="fila-stock__total">${esc(totalDerecha)}</div>` : ''}
           </div>`
-      }).join('')
+      })
 
       listaEl.querySelectorAll('[data-stock]').forEach(card => {
         card.addEventListener('click', () => abrirLotes(card.dataset.stock, card.dataset.unidad))
@@ -3270,7 +3422,7 @@
       if (estado.insumos.length) return
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo, activo, estado_alta, tolerancia_merma_pct')
+        .select('id, nombre, marca, unidad_medida, tipo, categoria, activo, estado_alta, tolerancia_merma_pct')
       if (error) { console.error(error); return }
       estado.insumos = data ?? []
     }
