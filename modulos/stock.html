@@ -3287,10 +3287,18 @@
         cantidad_contada: i.cantidad_contada === null ? null : Number(i.cantidad_contada),
         observacion: i.observacion ?? '',
         errorCantidad: null,
+        // OJO — ESTE MAPEO ES UN SÉPTIMO LUGAR DONDE UNA COLUMNA PUEDE NO
+        // LLEGAR, y es el más traicionero: el recuento es la ÚNICA pantalla
+        // que remapea la fila del servidor a un objeto propio en vez de usarla
+        // como viene. `aclaracion` llegaba del embed y se caía acá, con el
+        // .select() correcto y el render correcto — o sea que revisar las dos
+        // puntas no alcanzaba. Todo campo que se pida en el embed de arriba
+        // tiene que copiarse acá.
         nombre: i.insumos?.nombre ?? '(insumo desconocido)',
         marca: i.insumos?.marca ?? '',
         unidad_medida: i.insumos?.unidad_medida ?? '',
         tipo: i.insumos?.tipo ?? 'insumo',
+        aclaracion: i.insumos?.aclaracion ?? null,
       }))
       ordenarItemsRec()
     }
