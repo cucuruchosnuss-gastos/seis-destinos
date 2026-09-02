@@ -443,6 +443,17 @@
     .fila-insumo--pendiente { border-left: 4px solid var(--amarillo); }
     .fila-insumo--inactivo { opacity: 0.6; }
     .fila-insumo__info { flex: 1; min-width: 0; }
+    /* Subordinada al nombre: gris y mas chica, nunca compitiendo. Si no entra
+       se trunca ELLA y nunca el nombre — de ahi el min-width auto, que la deja
+       encogerse por debajo de su contenido dentro de un contenedor flex. */
+    .aclaracion-insumo {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--color-texto-suave);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
     .fila-insumo__nombre {
       font-size: 0.9375rem;
       font-weight: 650;
@@ -1699,6 +1710,15 @@
         </div>
 
         <div class="campo-stock">
+          <label for="campo-aclaracion">Aclaración <span class="campo-stock__opcional">opcional</span></label>
+          <input type="text" id="campo-aclaracion" maxlength="100" placeholder="Ej: el pegamento de los conitos" autocomplete="off">
+          <div class="campo-stock__ayuda">
+            Para que quien no conoce el insumo sepa qué es. Aparece entre paréntesis en los listados. Máximo 100 caracteres.
+          </div>
+          <div class="campo-stock__error" id="error-aclaracion" hidden></div>
+        </div>
+
+        <div class="campo-stock">
           <label for="campo-unidad">Unidad de medida</label>
           <!-- Texto libre con datalist: sugiere las que YA existen en el
                catálogo para no terminar con "kg", "Kg" y "kilos" como tres
@@ -2469,6 +2489,21 @@
         </div>`).join('')
     }
 
+    // ── LA ACLARACIÓN ───────────────────────────────────────────────────
+    //
+    // "Separador N°1" y "Separador N°2" son indistinguibles para alguien que
+    // recién entra al depósito, y "Pegamento hotmelt" no dice que es el de los
+    // conitos. Confundir dos insumos parecidos en un recuento mete el conteo en
+    // la fila equivocada y genera un ajuste falso en LAS DOS.
+    //
+    // Va entre paréntesis, subordinada al nombre: gris y más chica. Con la
+    // aclaración en null NO se emite el nodo, así que el layout no cambia — no
+    // es un span vacío ocupando lugar.
+    function htmlAclaracion(texto) {
+      const s = String(texto ?? '').trim()
+      return s ? ` <span class="aclaracion-insumo">(${esc(s)})</span>` : ''
+    }
+
     function ordenarPorNombre(lista) {
       return [...lista].sort((a, b) =>
         (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
@@ -2487,7 +2522,7 @@
     async function cargarInsumos() {
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo, categoria, activo, estado_alta, tolerancia_merma_pct')
+        .select('id, nombre, marca, unidad_medida, tipo, categoria, aclaracion, activo, estado_alta, tolerancia_merma_pct')
 
       document.getElementById('estado-cargando').hidden = true
 
@@ -2640,7 +2675,7 @@
         return `
           <div class="${clases}"${gestiona ? ` data-insumo="${i.id}"` : ''}>
             <div class="fila-insumo__info">
-              <div class="fila-insumo__nombre">${esc(i.nombre)}</div>
+              <div class="fila-insumo__nombre">${esc(i.nombre)}${htmlAclaracion(i.aclaracion)}</div>
               ${marca}
               <div class="fila-insumo__meta">
                 <span class="chip-tipo chip-tipo--${i.tipo}">${TIPOS[i.tipo] ?? esc(i.tipo)}</span>
@@ -2672,7 +2707,7 @@
       const [unidades, filas] = await Promise.all([
         supabase.from('v_mis_unidades_stock').select('id, nombre').order('nombre'),
         supabase.from('v_stock_insumos')
-          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, categoria, cantidad_total, lotes_distintos, presentaciones, contenido_unico, kilos_sueltos'),
+          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, categoria, aclaracion, cantidad_total, lotes_distintos, presentaciones, contenido_unico, kilos_sueltos'),
       ])
 
       cargandoEl.hidden = true
@@ -2783,7 +2818,7 @@
         return `
           <div class="tarjeta-lista fila-stock" data-stock="${esc(f.insumo_id)}" data-unidad="${esc(f.unidad_negocio_id)}">
             <div class="fila-stock__info">
-              <div class="fila-stock__nombre">${esc(f.insumo_nombre)}</div>
+              <div class="fila-stock__nombre">${esc(f.insumo_nombre)}${htmlAclaracion(f.aclaracion)}</div>
               ${f.marca ? `<div class="fila-stock__marca">${esc(f.marca)}</div>` : ''}
               <div class="fila-stock__meta">
                 <span class="fila-stock__cantidad ${negativo ? 'fila-stock__cantidad--negativa' : ''}">${esc(principal)}</span>
@@ -2819,7 +2854,8 @@
       document.getElementById('lotes-acciones').hidden = !(puedeAj || puedeBa)
       document.getElementById('lotes-aviso-negativo').hidden = Number(fila.cantidad_total) >= 0
 
-      document.getElementById('lotes-nombre').textContent = fila.insumo_nombre
+      document.getElementById('lotes-nombre').innerHTML =
+        esc(fila.insumo_nombre) + htmlAclaracion(fila.aclaracion)
       const marcaEl = document.getElementById('lotes-marca')
       marcaEl.textContent = fila.marca || ''
       marcaEl.hidden = !fila.marca
@@ -3044,7 +3080,7 @@
       // FK a esa tabla.
       const [items, saldos] = await Promise.all([
         supabase.from('stock_recuento_items')
-          .select('id, insumo_id, lote, contenido_por_bulto, cantidad_contada, observacion, insumos(nombre, marca, unidad_medida, tipo)')
+          .select('id, insumo_id, lote, contenido_por_bulto, cantidad_contada, observacion, insumos(nombre, marca, unidad_medida, tipo, aclaracion)')
           .eq('recuento_id', estado.recuento.id),
         // El saldo del sistema es VIVO: cantidad_sistema queda en null hasta
         // que se cierra, así que mientras se cuenta hay que leerlo del libro.
@@ -3180,7 +3216,7 @@
         const obsAbierta = !!i.observacion
         return `
           <div class="tarjeta-lista rec-fila ${contada ? 'rec-fila--contada' : ''}" data-item="${esc(i.id)}">
-            <div class="rec-fila__nombre">${esc(i.nombre)}</div>
+            <div class="rec-fila__nombre">${esc(i.nombre)}${htmlAclaracion(i.aclaracion)}</div>
             <div class="rec-fila__sub">
               ${i.marca ? `<span>${esc(i.marca)}</span>` : ''}
               ${i.lote ? `<span class="rec-fila__lote">Lote ${esc(i.lote)}</span>` : ''}
@@ -3422,7 +3458,7 @@
       if (estado.insumos.length) return
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo, categoria, activo, estado_alta, tolerancia_merma_pct')
+        .select('id, nombre, marca, unidad_medida, tipo, categoria, aclaracion, activo, estado_alta, tolerancia_merma_pct')
       if (error) { console.error(error); return }
       estado.insumos = data ?? []
     }
@@ -3476,7 +3512,7 @@
       cont.hidden = false
       cont.innerHTML = encontrados.map(i => `
         <button type="button" class="rec-sug ${estado.insumoAgregar?.id === i.id ? 'rec-sug--elegido' : ''}" data-sug="${esc(i.id)}">
-          <div class="rec-sug__nombre">${esc(i.nombre)}</div>
+          <div class="rec-sug__nombre">${esc(i.nombre)}${htmlAclaracion(i.aclaracion)}</div>
           <div class="rec-sug__meta">${esc([i.marca, i.unidad_medida, TIPOS[i.tipo] ?? i.tipo].filter(Boolean).join(' · '))}</div>
         </button>`).join('')
 
@@ -3883,10 +3919,10 @@
       // sola FK a `insumos`.
       const [items, ajustes] = await Promise.all([
         supabase.from('stock_recuento_items')
-          .select('id, lote, contenido_por_bulto, cantidad_contada, cantidad_sistema, diferencia, observacion, insumos(nombre, marca, unidad_medida)')
+          .select('id, lote, contenido_por_bulto, cantidad_contada, cantidad_sistema, diferencia, observacion, insumos(nombre, marca, unidad_medida, aclaracion)')
           .eq('recuento_id', r.id),
         supabase.from('stock_movimientos')
-          .select('id, lote, contenido_por_bulto, cantidad, motivo, fecha, created_at, empleado_id, insumos(nombre, marca, unidad_medida)')
+          .select('id, lote, contenido_por_bulto, cantidad, motivo, fecha, created_at, empleado_id, insumos(nombre, marca, unidad_medida, aclaracion)')
           .eq('recuento_id', r.id)
           .order('created_at'),
       ])
@@ -3975,7 +4011,7 @@
           : (dif === 0 ? 'Sin diferencia' : `${dif > 0 ? '+' : '−'}${formatearCantidadStock(Math.abs(dif), u)}`)
         return `
           <div class="tarjeta-lista hist-item">
-            <div class="hist-item__nombre">${esc(i.insumos?.nombre || '(insumo desconocido)')}</div>
+            <div class="hist-item__nombre">${esc(i.insumos?.nombre || '(insumo desconocido)')}${htmlAclaracion(i.insumos?.aclaracion)}</div>
             <div class="hist-fila__meta">${esc([i.insumos?.marca, i.lote ? `Lote ${i.lote}` : '', i.contenido_por_bulto ? textoPresentacion(i.contenido_por_bulto, u) : ''].filter(Boolean).join(' · '))}</div>
             <div class="hist-cifras">
               <div class="hist-cifra">
@@ -4038,7 +4074,7 @@
         const n = Number(a.cantidad)
         return `
           <div class="tarjeta-lista hist-item">
-            <div class="hist-item__nombre">${esc(a.insumos?.nombre || '(insumo desconocido)')}</div>
+            <div class="hist-item__nombre">${esc(a.insumos?.nombre || '(insumo desconocido)')}${htmlAclaracion(a.insumos?.aclaracion)}</div>
             <div class="hist-fila__meta">${esc([a.insumos?.marca, a.lote ? `Lote ${a.lote}` : '', a.contenido_por_bulto ? textoPresentacion(a.contenido_por_bulto, u) : ''].filter(Boolean).join(' · '))}</div>
             <div class="hist-cifras">
               <div class="hist-cifra">
@@ -4232,7 +4268,7 @@
       }
       cont.innerHTML = encontrados.map(i => `
         <button type="button" class="rec-sug" data-sug-mov="${esc(i.id)}">
-          <div class="rec-sug__nombre">${esc(i.nombre)}</div>
+          <div class="rec-sug__nombre">${esc(i.nombre)}${htmlAclaracion(i.aclaracion)}</div>
           <div class="rec-sug__meta">${esc([i.marca, i.unidad_medida, TIPOS[i.tipo] ?? i.tipo].filter(Boolean).join(' · '))}</div>
         </button>`).join('')
       cont.querySelectorAll('[data-sug-mov]').forEach(btn => {
@@ -4639,6 +4675,7 @@
 
       document.getElementById('campo-nombre').value     = i?.nombre ?? ''
       document.getElementById('campo-marca').value      = i?.marca ?? ''
+      document.getElementById('campo-aclaracion').value = i?.aclaracion ?? ''
       document.getElementById('campo-unidad').value     = i?.unidad_medida ?? ''
       document.getElementById('campo-tipo').value       = i?.tipo ?? 'materia_prima'
       document.getElementById('campo-tolerancia').value = i?.tolerancia_merma_pct ?? ''
@@ -4668,7 +4705,7 @@
     }
 
     function limpiarErroresModal() {
-      ;['error-nombre', 'error-unidad', 'error-tolerancia'].forEach(id => {
+      ;['error-nombre', 'error-unidad', 'error-tolerancia', 'error-aclaracion'].forEach(id => {
         const el = document.getElementById(id)
         el.hidden = true
         el.textContent = ''
@@ -4713,11 +4750,28 @@
         }
       }
 
+      // LOS 100 SE VALIDAN ACÁ, antes de llamar: el CHECK de la base
+      // (length(btrim(...)) between 1 and 100) devuelve un error crudo que
+      // nombra el constraint y no le sirve a nadie.
+      //
+      // Y vacío se manda como NULL, no como cadena vacía: con '' el mismo CHECK
+      // lo rechazaría, porque exige al menos un carácter cuando no es null.
+      const aclaracionCruda = document.getElementById('campo-aclaracion').value.trim()
+      const errAcl = document.getElementById('error-aclaracion')
+      errAcl.hidden = true
+      if (aclaracionCruda.length > 100) {
+        errAcl.textContent = `La aclaración no puede pasar de 100 caracteres (tiene ${aclaracionCruda.length}).`
+        errAcl.hidden = false
+        ok = false
+      }
+      const aclaracion = aclaracionCruda || null
+
       if (!ok) return null
 
       return {
         nombre,
         marca: document.getElementById('campo-marca').value.trim() || null,
+        aclaracion,
         unidad_medida: unidad,
         tipo: document.getElementById('campo-tipo').value,
         tolerancia_merma_pct: tolerancia,
@@ -4754,6 +4808,7 @@
           p_unidad_medida: datos.unidad_medida,
           p_tipo: datos.tipo,
           p_tolerancia_merma_pct: datos.tolerancia_merma_pct,
+          p_aclaracion: datos.aclaracion,
         }))
       } else {
         // p_estado_alta: 'activo' EXPLÍCITO cuando el insumo estaba pendiente.
@@ -4768,6 +4823,10 @@
           p_tipo: datos.tipo,
           p_tolerancia_merma_pct: datos.tolerancia_merma_pct,
           p_estado_alta: esPendiente(estado.editando) ? 'activo' : null,
+          // SIN coalesce del lado del servidor, a proposito: con coalesce seria
+          // imposible BORRAR una aclaracion, porque el null se leeria como "no
+          // la toques" en vez de como "sacala".
+          p_aclaracion: datos.aclaracion,
         }))
       }
 
