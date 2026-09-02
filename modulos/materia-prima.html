@@ -462,6 +462,20 @@
     .bloque-diferencia__label + .cantidad-fila { margin-bottom: 0.5rem; }
     /* Resultado en vivo. Es la confirmación de que los dos números se
        cargaron en el orden correcto — el que suma stock es el de lo recibido. */
+    /* El desglose con bulto incompleto. Va DENTRO del bloque de recepcion
+       parcial, debajo del total recibido: es la lectura fisica de ese numero. */
+    .bulto-incompleto {
+      margin-top: 0.375rem;
+      font-size: 0.75rem;
+      line-height: 1.35;
+      color: var(--bordo-oscuro);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    /* Se oculta con [hidden] desde JS y tiene display de autor en ningun lado,
+       pero la regla va igual: es el bug mas recurrente del proyecto. */
+    .bulto-incompleto[hidden] { display: none; }
+
     .resultado-diferencia {
       margin-top: 0.5rem;
       padding: 0.4375rem 0.625rem;
@@ -2952,7 +2966,7 @@
       const idsComprobantes = entrega.comprobantes.map(c => c.id)
       const { data: items, error } = await supabase
         .from('materia_prima_items')
-        .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, cantidad_documento, motivo_diferencia, ya_recibido_con_remito, insumos(nombre, marca, unidad_medida, tipo)')
+        .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, contenido_documento, cantidad_documento, interpretacion, motivo_diferencia, ya_recibido_con_remito, insumos(nombre, marca, unidad_medida, tipo)')
         .in('ingreso_id', idsComprobantes)
         .order('created_at')
 
@@ -2978,10 +2992,22 @@
               : '<span class="chip-lote chip-lote--ilegible">Sin lote</span>'
           loteHtml = `<div class="fila-item-mp__lote"><span>Lote</span>${chip}</div>`
         }
-        // Desglose "N bultos de M kg" cuando el ítem lo trae
+        // Desglose "N bultos de M kg" cuando el ítem lo trae. Y si el par
+        // quedó en null porque lo recibido no entra en bultos enteros, se
+        // deriva el desglose con bulto incompleto desde contenido_documento:
+        // sin eso, el renglón se veía sin presentación y sin explicación, y
+        // dentro de un mes nadie sabría si fue un olvido o una consecuencia.
+        //
+        // Los ítems viejos no tienen contenido_documento: ahí no se muestra
+        // nada. No se inventa el desglose ni se avisa que falta.
+        const incompleto = (item.cantidad_bultos == null && item.contenido_documento != null)
+          ? desgloseIncompleto(Number(item.cantidad), Number(item.contenido_documento), insumo.unidad_medida)
+          : ''
         const desglose = (item.cantidad_bultos != null && item.contenido_por_bulto != null)
           ? `<div class="fila-item-mp__marca">${Number(item.cantidad_bultos).toLocaleString('es-AR')} bultos de ${formatearCantidad(item.contenido_por_bulto, insumo.unidad_medida)}</div>`
-          : ''
+          : incompleto
+            ? `<div class="fila-item-mp__marca">${esc(incompleto)}</div>`
+            : ''
         return `
           <div class="fila-item-mp ${item.ya_recibido_con_remito ? 'fila-item-mp--no-suma' : ''}">
             <div class="fila-item-mp__info">
@@ -3969,6 +3995,9 @@
         // tipea en modo 'unidades'; `bultos` es su par derivado, y describe lo
         // RECIBIDO. Sin recepción parcial valen lo mismo.
         bultosPapel: null,
+        // El tamaño de bulto del COMPROBANTE. Sobrevive a que `contenido` se
+        // anule, que es cuando hace falta para calcular el bulto incompleto.
+        contenidoPapel: null,
         // PRESENTACIONES MIXTAS. `null` es el caso normal —una sola
         // presentación, el 95%— y ahí mandan `bultos` y `contenido` de acá
         // arriba: no conviven dos representaciones del mismo dato. Cuando la
@@ -4029,6 +4058,7 @@
         // pregunta se hace igual — es la que decide qué se pide abajo.
         interpretacion: null, interpretacionDeOcr: false, numeroPapel: null,
         interpDeHistorial: false, interpTocada: false, lineas: null, bultosPapel: null,
+        contenidoPapel: null,
         bultos: null, contenido: null, cantidad: null,
         // Agregado a mano: no vino de ninguna foto, así que nunca lleva la
         // marca de "leído de la foto".
@@ -4269,6 +4299,28 @@
     // como igualdad numérica estricta: 100 en 3 bultos daría 33,333333 y
     // 3 × 33,333333 = 99,999999, o sea que el insert se caería al final del
     // wizard con un error de constraint. Mejor decirlo en la fila, ahora.
+    // EL BULTO INCOMPLETO. Si de 8 bultos de 250 llegaron 1.985, lo que pasó
+    // en el depósito es que llegaron 7 bultos completos y uno abierto con 235
+    // —se rompió o se mojó parte de uno—. Decir "sin presentación" es una
+    // renuncia: el desglose es información que sirve para ir a mirar.
+    //
+    // Se deriva del tamaño de bulto DEL COMPROBANTE (`contenido_documento`),
+    // que se guarda aparte justamente para esto: describe el papel, no lo
+    // recibido, así que vive fuera de chk_presentacion_coherente.
+    function desgloseIncompleto(cantidad, contenidoDoc, unidad) {
+      if (cantidad == null || contenidoDoc == null || !(contenidoDoc > 0) || !(cantidad > 0)) return ''
+      const completos = Math.floor(cantidad / contenidoDoc)
+      const sobrante = cantidad - completos * contenidoDoc
+      // Sin sobrante no hay nada que explicar: son bultos enteros y el par
+      // nunca se habría anulado. Se contempla igual por si llega de otro lado.
+      // "1 bultos" se lee mal, y con dos bultos en el papel es un caso normal.
+      const nBultos = (n) => `${formatearNumero(n)} ${n === 1 ? 'bulto' : 'bultos'}`
+      if (sobrante <= 0) return `${nBultos(completos)} de ${formatearCantidad(contenidoDoc, unidad)}`
+      // Recibir menos que un bulto entero: no hay ninguno completo que contar.
+      if (completos <= 0) return `1 bulto incompleto de ${formatearCantidad(sobrante, unidad)}`
+      return `${nBultos(completos)} de ${formatearCantidad(contenidoDoc, unidad)} y 1 incompleto de ${formatearCantidad(sobrante, unidad)}`
+    }
+
     // Cuántos bultos ENTEROS son `total` a razón de `contenido` cada uno.
     // Null si no da un entero: un bulto es un paquete, no se recibe 7,992 de
     // uno. dividirExacto() sola no alcanza — verifica que la división sea
@@ -4340,7 +4392,7 @@
       const real = item.difiere ? item.recibido : doc
 
       if (modo == null) {
-        item.bultos = null; item.contenido = null
+        item.bultos = null; item.contenido = null; item.contenidoPapel = null
         item.cantidad = null; item.cantidadDocumento = null
         return
       }
@@ -4351,7 +4403,8 @@
       // sale igual aunque no cierre contra el papel — quien avisa y bloquea es
       // validarItems(), con los dos números a la vista.
       if (item.lineas) {
-        item.bultos = null; item.contenido = null
+        // Mixto: cada línea lleva su presentación, el ítem no tiene una sola.
+        item.bultos = null; item.contenido = null; item.contenidoPapel = null
         item.cantidad = totalDeLineas(item)
         // El modo mixto excluye la recepción parcial, así que no hay cantidad
         // de comprobante separada que registrar.
@@ -4363,14 +4416,17 @@
         // A granel o en un solo envase: NO se inventa presentación. El par va
         // en null, que chk_presentacion_coherente acepta y que Stock modela
         // como "entró sin presentación conocida" (de ahí kilos_sueltos).
-        item.bultos = null; item.contenido = null
+        // Tampoco hay tamaño de bulto en el papel: no hay bultos.
+        item.bultos = null; item.contenido = null; item.contenidoPapel = null
         item.cantidad = real
         item.cantidadDocumento = item.difiere ? doc : null
         return
       }
 
       if (modo === 'bultos') {
-        // El número del papel ES la cantidad de bultos. El contenido se tipea.
+        // El número del papel ES la cantidad de bultos. El contenido se tipea,
+        // y ese contenido ES el del comprobante.
+        item.contenidoPapel = item.contenido
         item.bultos = real
         item.cantidad = (real != null && item.contenido != null) ? real * item.contenido : null
         item.cantidadDocumento = (item.difiere && doc != null && item.contenido != null)
@@ -4390,6 +4446,10 @@
       item.cantidad = real
       item.cantidadDocumento = item.difiere ? doc : null
       item.contenido = dividirExacto(doc, item.bultosPapel)
+      // El tamaño de bulto SEGÚN EL PAPEL. Se guarda aparte porque `contenido`
+      // se anula abajo cuando lo recibido no entra en bultos enteros, y ahí es
+      // justo cuando más se necesita: es con lo que se calcula el incompleto.
+      item.contenidoPapel = item.contenido
       // Cuántos bultos son los REALMENTE recibidos. Si lo recibido no entra en
       // un número exacto de bultos —298 unidades de a 12 son 24 bultos y 10
       // sueltas— entonces ninguna presentación lo describe, y el par va en
@@ -4606,6 +4666,20 @@
       return ''
     }
 
+    // El desglose con bulto incompleto, mientras se tipea la cantidad recibida.
+    // Es el momento en que la persona puede LEVANTAR LA VISTA Y CONTAR: "¿te
+    // llegaron 7 cajas enteras y una abierta?" se responde mirando el camión,
+    // y después ya no. Por eso se muestra acá y no solo en el detalle.
+    //
+    // Solo cuando lo recibido NO entra en bultos enteros: si entra, la
+    // presentación se conserva y el desglose ya está a la vista arriba.
+    function textoBultoIncompleto(item) {
+      if (!item.difiere || item.lineas) return ''
+      if (item.bultos != null) return ''          // entró redondo: nada que explicar
+      if (item.contenidoPapel == null || item.cantidad == null) return ''
+      return desgloseIncompleto(item.cantidad, item.contenidoPapel, item.unidadMedida)
+    }
+
     function resultadoNoCierra(item) {
       return item.interpretacion === 'unidades' && !item.lineas &&
              item.numeroPapel != null && item.bultosPapel != null &&
@@ -4817,7 +4891,8 @@
                     value="${esc(textoParaInput(item.recibido))}" placeholder="0">
              <span class="cantidad-fila__unidad">${unidadRecibido}</span>
            </div>
-           <div class="cantidad-total"><span>Total recibido</span><span data-rol="total-recibido">${esc(textoCantidad(item))}</span></div>`
+           <div class="cantidad-total"><span>Total recibido</span><span data-rol="total-recibido">${esc(textoCantidad(item))}</span></div>
+           <div class="bulto-incompleto" data-rol="incompleto" ${textoBultoIncompleto(item) ? '' : 'hidden'}>${esc(textoBultoIncompleto(item))}</div>`
 
       // Apagar el control descarta lo que se escribió en "recibí": `cantidad`
       // vuelve a ser el número de arriba. Perder un dato tipeado sin aviso es
@@ -4971,6 +5046,14 @@
       if (abajo) abajo.textContent = textoCantidad(item)
       // El resultado al lado del campo: a CADA TECLA, que es el punto — el
       // cálculo que aparecía recién al salir del campo había que ir a buscarlo.
+      // El bulto incompleto se recalcula con lo recibido, así que se repinta
+      // en la misma pasada que el resto.
+      const inc = tarjeta.querySelector('[data-rol="incompleto"]')
+      if (inc) {
+        const txt = textoBultoIncompleto(item)
+        inc.textContent = txt
+        inc.hidden = !txt
+      }
       const res = tarjeta.querySelector('[data-rol="resultado"]')
       if (res) {
         res.textContent = textoResultadoVivo(item)
@@ -5661,6 +5744,8 @@
         cantidad: l.bultos * l.contenido,
         cantidad_bultos: l.bultos,
         contenido_por_bulto: l.contenido,
+        // En mixto cada línea ES una presentación del papel.
+        contenido_documento: l.contenido,
         // El modo mixto excluye la recepción parcial, así que no hay
         // diferencia con el comprobante que repartir entre las filas.
         cantidad_documento: null,
@@ -5712,6 +5797,11 @@
         // modo desglose `cantidad` se deriva de bultos × contenido.
         cantidad_bultos: bultos,
         contenido_por_bulto: contenido,
+        // El tamaño de bulto SEGÚN EL PAPEL, se conozca o no la presentación
+        // de lo recibido. Va suelta, fuera de chk_presentacion_coherente: no
+        // describe lo recibido, describe el comprobante. Es lo que permite
+        // reconstruir "7 bultos completos y uno incompleto".
+        contenido_documento: item.contenidoPapel,
         // QUÉ significaba el número del papel. Se guarda por renglón porque no
         // se puede derivar de lo guardado: "250 bultos de 25" y "250 unidades
         // en 25 bultos" no se distinguen mirando el resultado. Sin esta columna
