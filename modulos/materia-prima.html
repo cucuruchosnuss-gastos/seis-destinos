@@ -1510,6 +1510,14 @@
     /* Tres opciones no entran en 375px en una fila comoda: se envuelven, y
        cada boton toma al menos un tercio util. */
     .wz-toggle--tres { flex-wrap: wrap; }
+    /* El selector de unidad de lo recibido: dos opciones cortas, mas chico que
+       el de la pregunta principal — es una precision, no la decision. */
+    .wz-toggle--mini { margin-bottom: 0.5rem; }
+    .wz-toggle--mini button {
+      padding: 0.375rem 0.625rem;
+      font-size: 0.8125rem;
+      border-radius: 9px;
+    }
     .wz-toggle--tres button { flex: 1 1 6rem; }
 
     .cantidad-total {
@@ -2565,8 +2573,11 @@
     function campoEsEntero(item, campo) {
       // Los dos son una cuenta de bultos: paquetes discretos.
       if (campo === 'bultos' || campo === 'bultosPapel') return true
-      if (campo === 'numeroPapel' || campo === 'recibido') {
-        return item.interpretacion === 'bultos'
+      if (campo === 'numeroPapel') return item.interpretacion === 'bultos'
+      // `recibido` cuenta bultos solo si se eligió expresarlo en bultos. En
+      // unidades es una cantidad como cualquier otra y admite decimales.
+      if (campo === 'recibido') {
+        return item.interpretacion === 'bultos' && !item.recibidoEnUnidades
       }
       return false
     }
@@ -4054,6 +4065,11 @@
         // `bultosRecibidos` y solo podía ser bultos, que es justo lo que dejó
         // de ser cierto.
         recibido: null, confirmandoApagado: false,
+        // En modo 'bultos', ¿lo recibido se expresa en UNIDADES en vez de en
+        // bultos? La rotura pasa a nivel unidad —se rompe un rollo, no una
+        // caja entera— y ahí no hay número de bultos que se pueda escribir:
+        // 11 unidades de a 2 son 5,5 bultos, que no existen.
+        recibidoEnUnidades: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -4090,6 +4106,11 @@
         yaRecibido: false, yaRecibidoSugerido: false, yaRecibidoTocado: false,
         difiere: false, cantidadDocumento: null, motivoDiferencia: '',
         recibido: null, confirmandoApagado: false,
+        // En modo 'bultos', ¿lo recibido se expresa en UNIDADES en vez de en
+        // bultos? La rotura pasa a nivel unidad —se rompe un rollo, no una
+        // caja entera— y ahí no hay número de bultos que se pueda escribir:
+        // 11 unidades de a 2 son 5,5 bultos, que no existen.
+        recibidoEnUnidades: false,
         lote: '', loteIlegible: false,
         fichaTecnicaUrl: null, fotoLoteUrl: null,
         nombreFicha: '', nombreFotoLote: '',
@@ -4246,7 +4267,13 @@
     // explícita en vez de haber que buscarla.
     function textoDiferencia(item) {
       const d = diferenciaDe(item)
-      if (d == null) return 'Cargá las dos cantidades para ver la diferencia.'
+      // Con el bloque abierto, la del comprobante YA está: decir "las dos" se
+      // lee como si ninguna contara.
+      if (d == null) {
+        return item.cantidadDocumento != null
+          ? 'Escribí cuánto recibiste.'
+          : 'Cargá las dos cantidades para ver la diferencia.'
+      }
       const recibido = `Recibiste ${formatearCantidad(item.cantidad, item.unidadMedida)}`
       if (Math.abs(d) <= TOLERANCIA_CANTIDAD) return `${recibido} · sin diferencia con el comprobante`
       const cantidad = formatearCantidad(Math.abs(d), item.unidadMedida)
@@ -4454,10 +4481,23 @@
         // El número del papel ES la cantidad de bultos. El contenido se tipea,
         // y ese contenido ES el del comprobante.
         item.contenidoPapel = item.contenido
-        item.bultos = real
-        item.cantidad = (real != null && item.contenido != null) ? real * item.contenido : null
         item.cantidadDocumento = (item.difiere && doc != null && item.contenido != null)
           ? doc * item.contenido : null
+
+        // LO RECIBIDO EN UNIDADES. La rotura pasa a nivel unidad: se rompe un
+        // rollo, no una caja entera. La factura dice 6 bultos de 2 y llegaron
+        // 11 unidades — 5,5 bultos, que no se pueden escribir ni guardar.
+        // Acá `cantidad` ES lo tipeado y los bultos se derivan; si no dan
+        // enteros el par queda en null y el desglose muestra el incompleto.
+        if (item.difiere && item.recibidoEnUnidades) {
+          item.cantidad = item.recibido
+          item.bultos = (item.contenido == null || item.recibido == null)
+            ? null : bultosEnteros(item.recibido, item.contenido)
+          return
+        }
+
+        item.bultos = real
+        item.cantidad = (real != null && item.contenido != null) ? real * item.contenido : null
         return
       }
 
@@ -4915,13 +4955,27 @@
       // persona tiene en la cabeza mirando el papel: bultos si el papel cuenta
       // bultos, y el total en los otros dos modos. Antes era siempre bultos,
       // que dejó de ser cierto en cuanto el número del papel pudo ser otra cosa.
-      const unidadRecibido = item.interpretacion === 'bultos'
+      const enUnidades = item.interpretacion === 'bultos' && item.recibidoEnUnidades
+      const unidadRecibido = (item.interpretacion === 'bultos' && !enUnidades)
         ? `bultos de ${esc(formatearCantidad(item.contenido ?? 0, item.unidadMedida))}`
         : esc(item.unidadMedida)
+
+      // En modo 'bultos' se elige en qué se expresa lo recibido. Default
+      // bultos, que es el caso más común —falta una caja entera—; unidades es
+      // para la rotura, que pasa adentro del bulto.
+      const selectorRecibido = item.interpretacion !== 'bultos' ? '' : `
+           <div class="wz-toggle wz-toggle--mini">
+             <button type="button" data-accion="recibido-bultos" class="${!item.recibidoEnUnidades ? 'wz-toggle--sel' : ''}">En bultos</button>
+             <button type="button" data-accion="recibido-unidades" class="${item.recibidoEnUnidades ? 'wz-toggle--sel' : ''}">En ${esc(item.unidadMedida)}</button>
+           </div>`
+
+      // Sin placeholder "0": un cero se lee como un valor ya puesto, y en un
+      // campo de cantidad eso es peligroso. Vacío es vacío.
       const recibidoHtml = `
+          ${selectorRecibido}
           <div class="cantidad-fila">
              <input type="text" inputmode="decimal" autocomplete="off" data-campo="recibido"
-                    value="${esc(textoParaInput(item.recibido))}" placeholder="0">
+                    value="${esc(textoParaInput(item.recibido))}">
              <span class="cantidad-fila__unidad">${unidadRecibido}</span>
            </div>
            <div class="bulto-incompleto" data-rol="incompleto" ${textoBultoIncompleto(item) ? '' : 'hidden'}>${esc(textoBultoIncompleto(item))}</div>`
@@ -5267,6 +5321,20 @@
               derivarCantidades(item)
               renderizarItems()
             }
+            // Cambiar la unidad de lo recibido VACÍA el campo. Un 5 escrito
+            // pensando en bultos no puede pasar a significar 5 unidades sin
+            // que nadie lo toque: es la misma familia del bug de `item.bultos`
+            // significando dos cosas según el modo, y ahí el número ya está a
+            // la vista, así que reinterpretarlo en silencio es peor.
+            if (accion === 'recibido-bultos' || accion === 'recibido-unidades') {
+              const enUnid = accion === 'recibido-unidades'
+              if (item.recibidoEnUnidades !== enUnid) {
+                item.recibidoEnUnidades = enUnid
+                item.recibido = null
+                derivarCantidades(item)
+              }
+              renderizarItems()
+            }
             if (accion === 'lote-ilegible') {
               item.loteIlegible = !item.loteIlegible
               // El CHECK chk_lote_ilegible_sin_lote prohíbe tener los dos.
@@ -5578,7 +5646,7 @@
           // se reparte.
           item.error = `${formatearNumero(item.numeroPapel)} no se reparte exacto en ${formatearNumero(item.bultosPapel)} bultos. Revisá el número de bultos.`
         } else if (item.difiere && (item.recibido == null || !(item.recibido > 0))) {
-          item.error = item.interpretacion === 'bultos'
+          item.error = (item.interpretacion === 'bultos' && !item.recibidoEnUnidades)
             ? 'Cargá cuántos bultos recibiste.'
             : 'Cargá la cantidad que recibiste.'
         } else if (item.cantidad == null || !(item.cantidad > 0)) {
@@ -5813,7 +5881,14 @@
       // `bultos` con los recibidos cuando el control está activo. A granel las
       // dos van en NULL, que chk_presentacion_coherente acepta.
       const bultos = item.bultos
-      const contenido = item.contenido
+      // EL PAR VA JUNTO, DERIVADO DE `bultos`. chk_presentacion_coherente
+      // acepta los dos en null o los dos con valor, nada intermedio, y hasta
+      // acá eso dependía de que cada rama de derivarCantidades se acordara de
+      // anular los dos. En modo 'bultos' el contenido es el que se TIPEA, así
+      // que no se puede anular en el estado sin vaciarle el campo a la
+      // persona: se resuelve al armar la fila. Una regla, los tres modos, y el
+      // par a medias pasa a ser imposible por construcción.
+      const contenido = bultos == null ? null : item.contenido
       // cantidad_documento se guarda SOLO cuando difiere de lo recibido. Si
       // coincide —el 95% de los casos— van las dos en null: coincidir no es
       // una diferencia, no hay nada que registrar. Misma tolerancia que arriba.
