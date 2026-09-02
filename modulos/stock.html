@@ -11,7 +11,25 @@
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <style>
-    body { overflow-x: hidden; }
+    body {
+      overflow-x: hidden;
+
+      /* La receta de tarjeta del mockup de Claude Design: el borde marcado se
+         reemplaza por uno casi invisible más una sombra muy sutil. El fondo de
+         la vista NO cambia — el #eef1f6 del mockup ya ES --color-superficie,
+         que `.pagina-modulo` aplica contra tarjetas en --color-fondo. La
+         separación ya existía; lo que aplanaba la pantalla era este borde
+         compitiendo con ella.
+
+         Van como variables locales, que es el patrón del proyecto para color
+         de módulo: no hay equivalente global y repetir el literal en las dos
+         listas se desincroniza. */
+      --borde-tarjeta:  rgba(26, 42, 82, 0.06);
+      --sombra-tarjeta: 0 1px 2px rgba(26, 42, 82, 0.04);
+      /* Con una sombra de reposo de 1px, la --sombra-hover global (0 8px 28px)
+         da un salto brusco. Un intermedio. */
+      --sombra-tarjeta-hover: 0 4px 12px rgba(26, 42, 82, 0.10);
+    }
 
     /* Cualquier regla de autor con display le gana al [hidden] del user-agent —
        bug conocido del proyecto (ver CLAUDE.md). Va primero y con !important
@@ -172,13 +190,18 @@
        que cruce — pero dos niveles de encabezado sobre 53 filas en un celular
        se vuelven ruido si pesan igual. */
     .grupo-tipo { margin-bottom: 1.125rem; min-width: 0; }
+    /* El color era el hex #a3abbd hardcodeado. --color-texto-suave es #8a94ab,
+       que además es el tono que usa el mockup para este mismo rótulo. */
     .grupo-tipo__titulo {
+      display: flex;
+      align-items: center;
+      gap: 0.5625rem;
       font-size: 0.6875rem;
-      font-weight: 600;
+      font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: #a3abbd;
-      margin-bottom: 0.5rem;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.625rem;
       min-width: 0;
     }
 
@@ -186,21 +209,49 @@
     .grupo-cat__titulo {
       display: flex;
       align-items: center;
-      gap: 0.375rem;
-      font-size: 0.8125rem;
+      gap: 0.5625rem;
+      font-size: 0.9375rem;
       font-weight: 700;
-      color: var(--color-texto-suave);
-      margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
+      color: var(--color-texto);
+      margin-bottom: 0.5625rem;
       min-width: 0;
     }
+    /* El nombre puede encogerse: sin esto, una categoria larga empuja la
+       pildora y la linea fuera de la pantalla en 375px. */
+    .grupo-cat__nombre { min-width: 0; overflow-wrap: anywhere; }
     .grupo-cat__punto {
-      width: 6px;
-      height: 6px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: var(--verde);
       flex-shrink: 0;
     }
-    .grupo-cat__contador { font-weight: 500; }
+    /* El contador pasa de texto suelto a píldora: se lee como un dato del
+       grupo y no como parte del nombre de la categoría. */
+    .grupo-cat__contador {
+      background: rgba(26, 42, 82, 0.07);
+      color: var(--color-texto-suave);
+      font-size: 0.71875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5625rem;
+      flex-shrink: 0;
+      line-height: 1.5;
+    }
+    /* La línea que ocupa el resto del ancho: es lo que separa los grupos de
+       verdad, mucho más que el margen. La de CATEGORÍA usa el borde normal y
+       la de TIPO el sutil, para que el nivel de arriba pese menos — la misma
+       jerarquía que ya tenían los dos rótulos. min-width:0 porque es un hijo
+       flex con flex:1. */
+    .grupo-cat__linea,
+    .grupo-tipo__linea {
+      flex: 1;
+      height: 1px;
+      min-width: 0;
+    }
+    .grupo-cat__linea  { background: var(--color-borde); }
+    .grupo-tipo__linea { background: var(--borde-tarjeta); }
 
     /* ── Lista de stock ──────────────────────────────────────────────────── */
 
@@ -434,16 +485,35 @@
     .lista-contenido {
       display: flex;
       flex-direction: column;
-      gap: 0.5625rem;
+      gap: 0.5rem;
       min-width: 0;
     }
     .lista-contenido[hidden] { display: none; }
 
     /* .tarjeta-lista viene de css/main.css (fondo, borde, radius, padding).
-       Acá solo lo que esa clase no cubre. */
+       Acá solo lo que esa clase no cubre, MÁS los tres valores que el mockup
+       cambia. Se pisa localmente y NO se toca la clase global: la comparten
+       Gastos, Caja, Cuentas Corrientes y Empleados, y esto es de Stock.
+
+       El padding: el mockup usa 14/16px, que es EXACTAMENTE el de
+       .tarjeta-lista, así que "más compacta" no sale de ahí. Solo baja el
+       vertical a 13px; lo compacto de verdad lo dieron el gap y el paso de
+       tres líneas a dos de 6cf7e27. */
+    .fila-stock,
+    .fila-insumo {
+      border-radius: 1.0625rem;
+      border-color: var(--borde-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      padding-top: 0.8125rem;
+      padding-bottom: 0.8125rem;
+    }
+    .fila-stock:hover,
+    .fila-insumo:hover { box-shadow: var(--sombra-tarjeta-hover); }
+
     /* La tarjeta ya no tiene botones: TODO el ancho es para el contenido.
-       Tres líneas con pesos distintos —nombre, marca, meta— para que se lea de
-       un vistazo sin frenar a interpretar. */
+       DOS líneas con pesos distintos —nombre, y una meta que junta marca,
+       unidad y merma— para que se lea de un vistazo sin frenar a interpretar.
+       (Fueron tres hasta 6cf7e27, cuando la marca volvió a la meta.) */
     .fila-insumo { align-items: flex-start; cursor: default; }
     /* Solo es tocable con permiso de gestión, que es cuando el render le pone
        data-insumo. Sin permiso no hay puntero ni feedback: tocar no hace nada
@@ -2640,12 +2710,17 @@
     function htmlAgrupado(grupos, htmlDeFila) {
       return grupos.map(g => `
         <div class="grupo-tipo">
-          <div class="grupo-tipo__titulo">${esc(TIPOS[g.tipo] ?? g.tipo)}</div>
+          <div class="grupo-tipo__titulo">
+            <span>${esc(TIPOS[g.tipo] ?? g.tipo)}</span>
+            <span class="grupo-tipo__linea"></span>
+          </div>
           ${g.categorias.map(c => `
             <div class="grupo-cat">
               <div class="grupo-cat__titulo">
-                <span class="grupo-cat__punto"></span>${esc(c.categoria)}
+                <span class="grupo-cat__punto"></span>
+                <span class="grupo-cat__nombre">${esc(c.categoria)}</span>
                 <span class="grupo-cat__contador">${c.filas.length}</span>
+                <span class="grupo-cat__linea"></span>
               </div>
               ${c.filas.map(htmlDeFila).join('')}
             </div>`).join('')}
