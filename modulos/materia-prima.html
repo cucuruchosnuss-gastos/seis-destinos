@@ -1816,6 +1816,194 @@
     }
     .wz-conf-item__lote span:first-child { color: var(--color-texto-suave); font-weight: 600; }
     .wz-conf-item__lote span:last-child { font-weight: 700; color: var(--color-texto); }
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       INGRESOS INTERNOS — recepción de transferencias de otra unidad
+       ═══════════════════════════════════════════════════════════════════════
+       Reusa .tarjeta-lista, .lista-contenido, .wz-aviso, .cantidad-fila,
+       .btn-mp-primario y .btn-item-secundario. Acá solo lo propio. */
+
+    /* Encabezado por unidad destino: solo se dibuja si la persona puede recibir
+       en más de una. */
+    .int-grupo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin: 1.125rem 0 0.5rem;
+      overflow-wrap: anywhere;
+    }
+    .int-grupo:first-child { margin-top: 0; }
+
+    .int-fila { align-items: flex-start; flex-direction: column; gap: 0.3125rem; }
+    .int-fila__linea {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.375rem 0.625rem;
+      min-width: 0;
+      width: 100%;
+    }
+    .int-ruta {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .int-ruta__flecha { color: var(--color-texto-suave); font-weight: 500; }
+    .int-fila__meta {
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+    /* Los días en tránsito: esa mercadería no está en ningún stock. */
+    .int-dias {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+    }
+    .int-dias--viejo { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+
+    /* ── El detalle: un renglón por ítem ──────────────────────────────────── */
+
+    .int-item {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      padding: 0.8125rem 0.875rem;
+      min-width: 0;
+    }
+    .int-item__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.3;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .int-item__meta {
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+      overflow-wrap: anywhere;
+    }
+    /* Lo enviado, en el MISMO vocabulario en que se pide lo recibido: si no son
+       comparables de un vistazo, la comparación la tiene que hacer la persona
+       de memoria. */
+    .int-enviado {
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      margin-top: 0.5rem;
+      overflow-wrap: anywhere;
+    }
+    .int-pregunta {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin: 0.625rem 0 0.375rem;
+    }
+
+    /* Las fracciones de bulto. Un bidón medio usado se recibe como medio
+       bidón, no pesando los litros. */
+    .int-fracciones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      margin-top: 0.4375rem;
+      min-width: 0;
+    }
+    .int-frac {
+      border: 1px solid var(--color-borde);
+      border-radius: 999px;
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto-suave);
+      padding: 0.3125rem 0.6875rem;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .int-frac--activa {
+      border-color: var(--marron);
+      background: var(--marron-suave);
+      color: var(--marron-oscuro);
+      font-weight: 700;
+    }
+
+    /* El resultado en vivo: la traducción de bultos a la unidad base. Es la
+       confirmación de que el número que va al stock es el que se quiso poner. */
+    .int-resultado {
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      margin-top: 0.5rem;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+    .int-resultado__dif { color: var(--bordo-oscuro); font-weight: 700; }
+    /* El guion: todavía sin confirmar. Nunca un default con lo enviado. */
+    .int-resultado--pendiente { color: var(--color-texto-suave); font-weight: 500; }
+
+    .int-motivo { margin-top: 0.5rem; min-width: 0; }
+    /* Misma receta de input que .wz-campo: sin esto quedaba un campo sin borde
+       ni padding, que no se lee como editable. */
+    .int-motivo input {
+      width: 100%;
+      min-width: 0;
+      height: 44px;
+      padding: 0 0.875rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      outline: none;
+    }
+    .int-motivo input:focus { border-color: var(--marron); }
+
+    /* El resumen de la transferencia arriba del detalle. */
+    .int-resumen {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 18px;
+      box-shadow: var(--sombra-suave);
+      padding: 1rem 1.125rem;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .int-resumen__titulo {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+      overflow-wrap: anywhere;
+    }
+    .int-resumen__dato {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+    .int-resumen__dato strong { color: var(--color-texto); }
+
+    .int-acciones {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1.125rem;
+      min-width: 0;
+    }
+
   </style>
 </head>
 <body class="pagina-modulo">
@@ -1851,6 +2039,14 @@
         <span style="font-size:1.125rem; line-height:1;">＋</span> Cargar ingreso
       </button>
 
+      <!-- Recibir mercadería que viene de OTRA UNIDAD del grupo, no de un
+           proveedor. No pasa por el wizard de comprobantes: una transferencia
+           interna no tiene remito ni factura, y no crea un ingreso — llama a
+           responder_transferencia_stock, que es la que escribe el stock.
+           Gateado por stock:recibir_transferencia. -->
+      <button type="button" class="btn-item-secundario" id="btn-abrir-internos"
+              style="margin-bottom:0.875rem;" hidden>Ingresos internos</button>
+
       <div class="buscador-mp">
         <input type="text" id="filtro-busqueda-ingresos" placeholder="🔍 Buscar proveedor o número de documento">
       </div>
@@ -1870,6 +2066,87 @@
         <p class="estado-vacio__descripcion" id="vacio-ingresos-desc">No hay ingresos de mercadería con los filtros actuales.</p>
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         INGRESOS INTERNOS — recepción de transferencias
+
+         Drill-down por `hidden`, mismo criterio que el wizard. NO crea ninguna
+         fila en materia_prima_ingresos ni en materia_prima_items: una
+         transferencia interna no es ninguno de los tipo_doc válidos, y si
+         además generara items el trigger de espejado la haría entrar DOS veces
+         al libro de stock. La única escritura es responder_transferencia_stock.
+    ════════════════════════════════════════════════════════════════════ -->
+    <div id="pantalla-internos" hidden>
+
+      <div class="wz-header">
+        <button type="button" class="mp-header__volver" id="btn-internos-volver">‹ Volver</button>
+        <span class="wz-header__titulo">Ingresos internos</span>
+      </div>
+
+      <!-- ── Listado de lo que hay para recibir ──────────────────────────── -->
+      <div id="internos-paso-lista">
+        <div class="wz-aviso wz-aviso--neutro">
+          Mercadería que otra unidad del grupo ya despachó y todavía no entró acá. Mientras está en tránsito no figura en ningún stock.
+        </div>
+
+        <div class="lista-contenido" id="lista-internos"></div>
+
+        <div id="internos-cargando" class="estado-vacio" hidden>
+          <div class="spinner"></div>
+          <p class="estado-vacio__descripcion">Cargando…</p>
+        </div>
+        <div id="internos-vacio" class="estado-vacio" hidden>
+          <div class="estado-vacio__icono">🚚</div>
+          <div class="estado-vacio__titulo">Nada para recibir</div>
+          <p class="estado-vacio__descripcion">No hay mercadería en tránsito hacia tus unidades.</p>
+        </div>
+      </div>
+
+      <!-- ── El detalle: confirmar renglón por renglón ───────────────────── -->
+      <div id="internos-paso-detalle" hidden>
+        <button type="button" class="mp-header__volver" id="btn-internos-volver-lista"
+                style="margin-bottom:0.875rem;">‹ Volver a la lista</button>
+
+        <div class="int-resumen" id="internos-resumen"></div>
+
+        <div class="lista-contenido" id="internos-items"></div>
+
+        <!-- Cuántos renglones faltan confirmar. La RPC exige que vengan TODOS,
+             así que se dice acá y no se descubre en el error del servidor. -->
+        <div class="wz-aviso" id="internos-pendientes" hidden></div>
+        <div class="wz-aviso wz-aviso--error" id="internos-error" hidden></div>
+
+        <div class="int-acciones" id="internos-acciones">
+          <button type="button" class="btn-mp-primario" id="btn-internos-aceptar">Confirmar la recepción</button>
+          <button type="button" class="btn-item-secundario" id="btn-internos-rechazar">Rechazar el envío completo</button>
+        </div>
+      </div>
+
+      <!-- ── Rechazo: REEMPLAZA al detalle, no se apila abajo ─────────────
+           Mismo criterio que los pasos de confirmación del resto del proyecto:
+           la decisión tiene que ser lo único en pantalla. Y el motivo va en un
+           campo del módulo y no en un prompt() del navegador —que no se puede
+           estilar, se bloquea en algunos webviews y no lo usa ninguna otra
+           pantalla del proyecto—. -->
+      <div id="internos-paso-rechazo" hidden>
+        <div class="wz-aviso">
+          Rechazar devuelve <strong>todo</strong> el envío al stock de <span id="rechazo-origen"></span>. No entra nada acá. Se usa cuando el envío no corresponde o no llegó — si llegó menos, no se rechaza: se confirma con la diferencia y su motivo.
+        </div>
+
+        <div class="wz-campo">
+          <div class="wz-campo__label">Motivo del rechazo</div>
+          <input type="text" id="campo-motivo-rechazo" autocomplete="off"
+                 placeholder="Lo va a leer la unidad que lo mandó">
+          <div class="wz-aviso wz-aviso--error" id="rechazo-error" hidden></div>
+        </div>
+
+        <div class="int-acciones">
+          <button type="button" class="btn-mp-primario" id="btn-rechazo-confirmar">Sí, rechazar el envío</button>
+          <button type="button" class="btn-item-secundario" id="btn-rechazo-volver">Volver</button>
+        </div>
+      </div>
+
+    </div><!-- /pantalla-internos -->
 
     <!-- ═══════════════════════════════════════════════════════════════════
          WIZARD DE CARGA (etapa 2)
@@ -2214,7 +2491,30 @@
       empleados: [],
       empleadosCargados: false,
       wizard: null,
+
+      // ── Ingresos internos (recepción de transferencias) ─────────────
+      miRolApp: null,
+      misTareas: new Set(),        // claves 'modulo:tarea' de empleado_tareas
+      // Unidades donde esta persona puede RECIBIR. Salen de
+      // v_mis_unidades_recepcion, que resuelve recibir_transferencia con la
+      // misma tiene_tarea_alcance que la RPC: el alcance no se reimplementa acá.
+      unidadesRecepcion: [],
+      transito: [],                // filas de v_stock_en_transito hacia mis unidades
+      recepcion: null,             // { cabecera, items } de la que se está recibiendo
     }
+
+    // Mismo patrón que los otros módulos: super_admin tiene bypass y falla
+    // cerrado. Es COSMÉTICO — responder_transferencia_stock revalida
+    // tiene_tarea_alcance('stock','recibir_transferencia', destino) del lado del
+    // servidor.
+    //
+    // OJO: esto gatea SOLO el botón de ingresos internos. El gateo del resto del
+    // módulo por las tareas de materia_prima sigue siendo el pendiente que
+    // documenta CLAUDE.md, y no se resuelve acá de contrabando.
+    function tieneTarea(modulo, tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
+    }
+    const puedeRecibirTransferencia = () => tieneTarea('stock', 'recibir_transferencia')
 
     function wizardVacio() {
       return {
@@ -2598,7 +2898,7 @@
 
       const { data: emp, error } = await supabase
         .from('empleados')
-        .select('id')
+        .select('id, rol_app')
         .eq('auth_user_id', estado.sesion.user.id)
         .maybeSingle()
 
@@ -2608,6 +2908,17 @@
         return
       }
       estado.miEmpleadoId = emp.id
+      estado.miRolApp = emp.rol_app
+
+      // `habilitado` NO es opcional: una fila puede existir apagada, y contar
+      // filas sin filtrar reporta permisos que en la práctica no están.
+      const { data: tareas } = await supabase
+        .from('empleado_tareas')
+        .select('modulo, tarea')
+        .eq('empleado_id', emp.id)
+        .in('modulo', ['materia_prima', 'stock'])
+        .eq('habilitado', true)
+      estado.misTareas = new Set((tareas ?? []).map(x => `${x.modulo}:${x.tarea}`))
 
       // El RLS acota qué unidades ve cada usuario (hoy: la propia, salvo
       // super_admin) — que aparezcan menos unidades de las 4 es lo esperado.
@@ -2620,6 +2931,15 @@
 
       renderizarChipsUnidadIngresos()
       renderizarChipsVinculoIngresos()
+
+      // El botón de ingresos internos solo si puede recibir en algún lado. Se
+      // piden las unidades ANTES de mostrarlo: con la tarea pero sin alcance en
+      // ninguna unidad, la pantalla abriría vacía y el botón prometería algo
+      // que no hay.
+      if (puedeRecibirTransferencia()) {
+        await cargarUnidadesRecepcion()
+        document.getElementById('btn-abrir-internos').hidden = !estado.unidadesRecepcion.length
+      }
 
       await cargarIngresos()
     }
@@ -6158,10 +6478,618 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // INGRESOS INTERNOS — recibir una transferencia de otra unidad
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Cucuruchos le presta mercadería a Dolce Pasta. El ENVÍO y el TRÁNSITO
+    // viven en Stock; acá se RECIBE, que es donde se recibe mercadería venga de
+    // un proveedor o de otra empresa.
+    //
+    // LO QUE ESTA PANTALLA NO HACE, y es lo que no hay que "arreglar":
+    //   · NO inserta en materia_prima_ingresos — una transferencia interna no
+    //     es ninguno de los tipo_doc válidos (remito / factura_a / factura_x /
+    //     sin_comprobante).
+    //   · NO inserta en materia_prima_items — esa tabla se espeja al libro por
+    //     trigger, así que la mercadería entraría DOS veces: una por el espejo
+    //     y otra por el transferencia_entrada de la RPC.
+    //   · NO toca stock_movimientos. Eso lo hace responder_transferencia_stock,
+    //     que es la ÚNICA escritura de esta pantalla.
+    // Además, un ingreso paralelo perdería el vínculo con la transferencia.
+
+    // Días a partir de los cuales el tránsito llama la atención. Mismo criterio
+    // y mismo número que DIAS_TRANSITO_VIEJO de stock.html: mientras está en
+    // tránsito, esa mercadería no está en ningún stock.
+    const DIAS_TRANSITO_VIEJO_REC = 5
+
+    // Las fracciones de bulto con las que se recibe. Facu recibe contando
+    // bultos, no pesando: un bidón que salió medio usado se recibe como "medio
+    // bidón".
+    //
+    // OJO: esto es el INVERSO de equivalenteEnBultos() de stock.html, que va de
+    // unidad base a bultos para MOSTRAR. Acá se va de bultos a unidad base para
+    // GUARDAR. Van con nombres distintos a propósito: llamarlos igual invitaría
+    // a "unificarlos" y romper los dos.
+    const FRACCIONES_RECEPCION = [
+      { valor: 0,     texto: 'exacto' },
+      { valor: 1 / 4, texto: '¼' },
+      { valor: 1 / 3, texto: '⅓' },
+      { valor: 1 / 2, texto: '½' },
+      { valor: 2 / 3, texto: '⅔' },
+      { valor: 3 / 4, texto: '¾' },
+    ]
+
+    // Un tercio no termina en decimal: (0 + 1/3) * 3 da 1.0000000000000002, y la
+    // RPC compara la recibida contra la enviada con igualdad de `numeric`. Sin
+    // redondear, "llegó todo" podría dar una diferencia fantasma —o peor, algo
+    // mayor a lo enviado, que la RPC rechaza—.
+    function redondearRecepcion(n) {
+      return Math.round(n * 1e6) / 1e6
+    }
+
+    // De bultos + fracción a la unidad base. `bultos` null = todavía sin
+    // confirmar, y eso NO es cero: es el guion.
+    function baseDesdeBultos(bultos, fraccion, contenido) {
+      if (bultos === null || bultos === undefined) return null
+      const c = Number(contenido)
+      if (!Number.isFinite(c) || c <= 0) return null
+      return redondearRecepcion((Number(bultos) + Number(fraccion || 0)) * c)
+    }
+
+    // Lo recibido de un ítem en unidad base, o null si todavía no se confirmó.
+    // Los DOS caminos: con presentación se cuentan bultos, y sin presentación
+    // —que hoy es el caso de TODO el stock, cero movimientos tienen
+    // contenido_por_bulto— se carga la cantidad directo.
+    function recibidaDe(it) {
+      if (it.contenido != null) return baseDesdeBultos(it.bultos, it.fraccion, it.contenido)
+      return it.cantidadBase
+    }
+
+    // Cuando lo recibido y lo enviado son "lo mismo" salvo ruido de punto
+    // flotante, se manda EXACTAMENTE lo enviado: así la RPC no ve una
+    // diferencia que no existe y no pide un motivo inventado.
+    function recibidaParaRpc(it) {
+      const r = recibidaDe(it)
+      if (r === null) return null
+      return Math.abs(r - it.enviada) < 1e-9 ? it.enviada : r
+    }
+
+    function difiereDeLoEnviado(it) {
+      const r = recibidaParaRpc(it)
+      return r !== null && r !== it.enviada
+    }
+
+    async function cargarUnidadesRecepcion() {
+      const { data, error } = await supabase
+        .from('v_mis_unidades_recepcion').select('id, nombre').order('nombre')
+      if (error) { console.error(error); return }
+      estado.unidadesRecepcion = data ?? []
+    }
+
+    async function abrirInternos() {
+      document.getElementById('pantalla-ingresos').hidden = true
+      document.getElementById('pantalla-internos').removeAttribute('hidden')
+      mostrarPasoRecepcion('lista')
+      estado.recepcion = null
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      await cargarInternos()
+    }
+
+    function cerrarInternos() {
+      document.getElementById('pantalla-internos').hidden = true
+      document.getElementById('pantalla-ingresos').removeAttribute('hidden')
+      estado.recepcion = null
+    }
+
+    async function cargarInternos() {
+      const cargando = document.getElementById('internos-cargando')
+      cargando.removeAttribute('hidden')
+      const { data, error } = await supabase
+        .from('v_stock_en_transito')
+        .select('id, unidad_origen_id, origen_nombre, unidad_destino_id, destino_nombre, fecha, dias_en_transito, items')
+        .order('fecha')
+      cargando.hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudo cargar lo que hay para recibir.')
+        return
+      }
+      // Solo lo que va a las unidades donde esta persona PUEDE recibir. El
+      // alcance lo resuelve v_mis_unidades_recepcion del lado del servidor: no
+      // se reimplementa acá.
+      const mias = new Set(estado.unidadesRecepcion.map(u => u.id))
+      estado.transito = (data ?? []).filter(x => mias.has(x.unidad_destino_id))
+      renderizarInternos()
+    }
+
+    function renderizarInternos() {
+      const listaEl = document.getElementById('lista-internos')
+      const vacioEl = document.getElementById('internos-vacio')
+      if (!estado.transito.length) {
+        listaEl.innerHTML = ''
+        vacioEl.removeAttribute('hidden')
+        return
+      }
+      vacioEl.hidden = true
+
+      // Agrupado por unidad destino SOLO si la persona puede recibir en más de
+      // una: con una sola, el encabezado repetiría lo único posible.
+      const agrupar = estado.unidadesRecepcion.length > 1
+      const grupos = new Map()
+      estado.transito.forEach(x => {
+        const k = agrupar ? (x.destino_nombre || '') : ''
+        if (!grupos.has(k)) grupos.set(k, [])
+        grupos.get(k).push(x)
+      })
+
+      listaEl.innerHTML = [...grupos.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0], 'es'))
+        .map(([destino, filas]) => `
+          ${destino ? `<div class="int-grupo">Para ${esc(destino)}</div>` : ''}
+          ${filas.map(htmlFilaInterno).join('')}
+        `).join('')
+
+      listaEl.querySelectorAll('[data-transito]').forEach(card => {
+        card.addEventListener('click', () => abrirDetalleInterno(card.dataset.transito))
+      })
+    }
+
+    function htmlFilaInterno(x) {
+      const dias = Number(x.dias_en_transito) || 0
+      const viejo = dias >= DIAS_TRANSITO_VIEJO_REC
+      const txtDias = dias === 0 ? 'Salió hoy' : (dias === 1 ? '1 día en tránsito' : `${dias} días en tránsito`)
+      return `
+        <div class="tarjeta-lista int-fila" data-transito="${esc(x.id)}">
+          <div class="int-fila__linea">
+            <span class="int-ruta">${esc(x.origen_nombre || '')} <span class="int-ruta__flecha">→</span> ${esc(x.destino_nombre || '')}</span>
+            <span class="int-dias ${viejo ? 'int-dias--viejo' : ''}">${esc(txtDias)}</span>
+          </div>
+          <div class="int-fila__meta">${esc(formatearFechaTransito(x.fecha))} · ${x.items} ${x.items === 1 ? 'renglón' : 'renglones'}</div>
+        </div>`
+    }
+
+    // `fecha` es un date (YYYY-MM-DD): se parte el string en vez de pasar por
+    // Date(), que con una fecha sin hora corre un día según el huso.
+    function formatearFechaTransito(iso) {
+      if (!iso) return ''
+      const [a, m, d] = String(iso).slice(0, 10).split('-')
+      return (a && m && d) ? `${d}/${m}/${a}` : String(iso)
+    }
+
+    // ── El detalle ────────────────────────────────────────────────────────────
+
+    async function abrirDetalleInterno(id) {
+      const cab = estado.transito.find(x => x.id === id)
+      if (!cab) return
+
+      mostrarPasoRecepcion('detalle')
+      document.getElementById('internos-error').hidden = true
+      document.getElementById('internos-items').innerHTML = ''
+      window.scrollTo({ top: 0, behavior: 'auto' })
+
+      // El embed a insumos es inequívoco: stock_transferencia_items tiene UNA
+      // sola FK a esa tabla.
+      const { data, error } = await supabase
+        .from('stock_transferencia_items')
+        .select('id, lote, contenido_por_bulto, cantidad_enviada, insumos(nombre, marca, unidad_medida, aclaracion)')
+        .eq('transferencia_id', id)
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudo cargar el detalle de la transferencia.')
+        return
+      }
+
+      // EL GUION: cada renglón arranca SIN confirmar. Prellenar con lo enviado
+      // haría que confirmar sin mirar diera "llegó todo", que es la peor falla
+      // posible en una recepción. Un 0 es una acción explícita: "conté y no
+      // llegó nada".
+      estado.recepcion = {
+        cabecera: cab,
+        items: (data ?? []).map(it => ({
+          id: it.id,
+          nombre: it.insumos?.nombre ?? '(insumo desconocido)',
+          marca: it.insumos?.marca ?? '',
+          aclaracion: it.insumos?.aclaracion ?? null,
+          unidad: it.insumos?.unidad_medida ?? '',
+          lote: it.lote,
+          contenido: it.contenido_por_bulto === null ? null : Number(it.contenido_por_bulto),
+          enviada: Number(it.cantidad_enviada) || 0,
+          bultos: null,          // null = sin confirmar (el guion)
+          fraccion: 0,
+          cantidadBase: null,    // el camino sin presentación
+          motivo: '',
+          error: null,
+        })),
+      }
+      renderizarResumenInterno()
+      renderizarItemsInternos()
+    }
+
+    function renderizarResumenInterno() {
+      const r = estado.recepcion
+      const c = r.cabecera
+      const dias = Number(c.dias_en_transito) || 0
+      document.getElementById('internos-resumen').innerHTML = `
+        <div class="int-resumen__titulo">${esc(c.origen_nombre || '')} → ${esc(c.destino_nombre || '')}</div>
+        <div class="int-resumen__dato">Despachado el <strong>${esc(formatearFechaTransito(c.fecha))}</strong>${dias ? ` · <strong>${dias}</strong> ${dias === 1 ? 'día' : 'días'} en tránsito` : ''}</div>
+        <div class="int-resumen__dato">${r.items.length} ${r.items.length === 1 ? 'renglón' : 'renglones'} · confirmá cuánto llegó de cada uno</div>`
+    }
+
+    function renderizarItemsInternos() {
+      const r = estado.recepcion
+      if (!r) return
+      document.getElementById('internos-items').innerHTML = r.items.map((it, idx) => {
+        const u = it.unidad || ''
+        const meta = [
+          it.marca,
+          it.lote ? `Lote ${it.lote}` : null,
+          it.contenido != null ? `${formatearCantidad(it.contenido, u)} por bulto` : null,
+        ].filter(Boolean).join(' · ')
+
+        // Lo enviado se muestra en el MISMO vocabulario en que se pide lo
+        // recibido: si no son comparables de un vistazo, la comparación queda
+        // en la cabeza de la persona.
+        const enviadoTxt = it.contenido != null
+          ? `${textoBultosRecepcion(it.enviada, it.contenido)} — ${formatearCantidad(it.enviada, u)}`
+          : formatearCantidad(it.enviada, u)
+
+        const entrada = it.contenido != null
+          ? `<div class="cantidad-fila">
+               <input type="text" inputmode="numeric" autocomplete="off" data-rec="bultos" data-idx="${idx}"
+                      value="${esc(textoParaInput(it.bultos))}" placeholder="—" style="max-width:5.5rem;">
+               <span class="cantidad-fila__unidad">bultos</span>
+             </div>
+             <div class="int-fracciones">
+               ${FRACCIONES_RECEPCION.map(f => `
+                 <button type="button" class="int-frac ${it.fraccion === f.valor ? 'int-frac--activa' : ''}"
+                         data-rec="fraccion" data-idx="${idx}" data-valor="${f.valor}">${f.texto}</button>`).join('')}
+             </div>`
+          : `<div class="cantidad-fila">
+               <input type="text" inputmode="decimal" autocomplete="off" data-rec="base" data-idx="${idx}"
+                      value="${esc(textoParaInput(it.cantidadBase))}" placeholder="—" style="max-width:7rem;">
+               <span class="cantidad-fila__unidad">${esc(u)}</span>
+             </div>`
+
+        const recibida = recibidaParaRpc(it)
+        let resultado
+        if (it.error) {
+          resultado = `<div class="int-resultado int-resultado__dif">${esc(it.error)}</div>`
+        } else if (recibida === null) {
+          resultado = `<div class="int-resultado int-resultado--pendiente">Sin confirmar</div>`
+        } else {
+          const dif = redondearRecepcion(it.enviada - recibida)
+          resultado = `<div class="int-resultado">Llegó ${esc(formatearCantidad(recibida, u))}${
+            dif === 0 ? ' — igual que lo despachado'
+                      : ` · <span class="int-resultado__dif">${dif > 0 ? 'faltan' : 'sobran'} ${esc(formatearCantidad(Math.abs(dif), u))}</span>`}</div>`
+        }
+
+        // El motivo aparece SOLO cuando hay diferencia, y ahí es obligatorio:
+        // esa diferencia es la merma del traslado y es lo que se reporta.
+        const motivo = difiereDeLoEnviado(it)
+          ? `<div class="int-motivo">
+               <input type="text" autocomplete="off" data-rec="motivo" data-idx="${idx}"
+                      value="${esc(it.motivo)}" placeholder="Por qué falta (o sobra): rotura, se mojó, quedó en el camión…">
+             </div>`
+          : ''
+
+        return `
+          <div class="int-item">
+            <div class="int-item__nombre">${esc(it.nombre)}${it.aclaracion ? ` <span style="font-weight:500;color:var(--color-texto-suave);">(${esc(it.aclaracion)})</span>` : ''}</div>
+            ${meta ? `<div class="int-item__meta">${esc(meta)}</div>` : ''}
+            <div class="int-enviado">Despachado: ${esc(enviadoTxt)}</div>
+            <div class="int-pregunta">¿Cuánto llegó?</div>
+            ${entrada}
+            ${resultado}
+            ${motivo}
+          </div>`
+      }).join('')
+
+      cablearItemsInternos()
+      actualizarPendientesInternos()
+    }
+
+    // Lo enviado expresado en bultos, para poder compararlo con lo que se
+    // cuenta. Usa el mismo redondeo a fracciones que la entrada.
+    function textoBultosRecepcion(base, contenido) {
+      const c = Number(contenido)
+      if (!Number.isFinite(c) || c <= 0) return ''
+      const bultos = Number(base) / c
+      const enteros = Math.floor(bultos)
+      const resto = bultos - enteros
+      let mejor = FRACCIONES_RECEPCION[0]
+      for (const f of FRACCIONES_RECEPCION) {
+        if (Math.abs(resto - f.valor) < Math.abs(resto - mejor.valor)) mejor = f
+      }
+      const frac = mejor.valor === 0 ? '' : ` + ${mejor.texto}`
+      return `${enteros.toLocaleString('es-AR')} ${enteros === 1 && !frac ? 'bulto' : 'bultos'}${frac}`
+    }
+
+    function cablearItemsInternos() {
+      const cont = document.getElementById('internos-items')
+      cont.querySelectorAll('[data-rec="bultos"]').forEach(el => {
+        el.addEventListener('input', () => {
+          const it = estado.recepcion.items[Number(el.dataset.idx)]
+          // enteros: true — un bulto es un paquete discreto, y "1.500" cajas
+          // leído como 1,5 bultos es el error de mil veces.
+          const n = parsearCantidad(el.value, { enteros: true })
+          it.error = (el.value.trim() !== '' && n === null)
+            ? 'No se entiende ese número de bultos. Va entero, sin puntos ni comas.'
+            : null
+          it.bultos = n
+          repintarItemInterno(Number(el.dataset.idx))
+        })
+      })
+      cont.querySelectorAll('[data-rec="base"]').forEach(el => {
+        el.addEventListener('input', () => {
+          const it = estado.recepcion.items[Number(el.dataset.idx)]
+          const n = parsearCantidad(el.value, { unidad: it.unidad })
+          it.error = (el.value.trim() !== '' && n === null)
+            ? 'No se entiende esa cantidad. Usá coma para los decimales.'
+            : null
+          it.cantidadBase = n
+          repintarItemInterno(Number(el.dataset.idx))
+        })
+      })
+      cont.querySelectorAll('[data-rec="fraccion"]').forEach(el => {
+        el.addEventListener('click', () => {
+          const it = estado.recepcion.items[Number(el.dataset.idx)]
+          it.fraccion = Number(el.dataset.valor)
+          // Elegir una fracción con los bultos en blanco ES una afirmación de
+          // cantidad ("llegó medio bidón"), así que cuenta como 0 bultos. No es
+          // una decisión tomada sin datos: la persona acaba de tocar el chip.
+          if (it.bultos === null && it.fraccion > 0) it.bultos = 0
+          renderizarItemsInternos()
+        })
+      })
+      cont.querySelectorAll('[data-rec="motivo"]').forEach(el => {
+        el.addEventListener('input', () => {
+          estado.recepcion.items[Number(el.dataset.idx)].motivo = el.value
+          actualizarPendientesInternos()
+        })
+      })
+    }
+
+    // Re-render completo pero devolviendo el foco y el caret al campo que se
+    // estaba tipeando: sin esto, escribir "25" repinta después del "2" y el
+    // cursor se va.
+    function repintarItemInterno(idx) {
+      const activo = document.activeElement
+      const campo = activo?.dataset?.rec
+      const pos = activo?.selectionStart
+      renderizarItemsInternos()
+      if (!campo) return
+      const nuevo = document.querySelector(`#internos-items [data-rec="${campo}"][data-idx="${idx}"]`)
+      if (!nuevo) return
+      nuevo.focus()
+      try { nuevo.setSelectionRange(pos, pos) } catch { /* no aplica a todos los inputs */ }
+    }
+
+    // ── Las tres capas que evitan que la RPC sea la que avise ────────────────
+    //
+    // responder_transferencia_stock exige que TODOS los ítems vengan
+    // respondidos y corta con "Faltan ítems por confirmar". Que ese aviso venga
+    // del servidor sería descubrirlo después de tocar el botón: acá se dice
+    // antes, se deshabilita el botón, y además se revalida al confirmar.
+
+    function faltanConfirmarInternos() {
+      const r = estado.recepcion
+      if (!r) return []
+      return r.items.filter(it => recibidaDe(it) === null)
+    }
+
+    function problemasInternos() {
+      const r = estado.recepcion
+      if (!r) return []
+      const p = []
+      r.items.forEach(it => {
+        if (it.error) p.push(`${it.nombre}: ${it.error}`)
+        const rec = recibidaParaRpc(it)
+        if (rec === null) return
+        // La RPC rechaza recibir más de lo enviado. Se atajan acá los dos casos
+        // que ella corta, para que el error no llegue del servidor.
+        if (rec > it.enviada) {
+          p.push(`${it.nombre}: no se puede recibir más de lo despachado. Si hay de más, es un ajuste de inventario aparte.`)
+        }
+        if (rec !== it.enviada && !it.motivo.trim()) {
+          p.push(`${it.nombre}: hay una diferencia sin explicar. Cargá el motivo.`)
+        }
+      })
+      return p
+    }
+
+    function actualizarPendientesInternos() {
+      const r = estado.recepcion
+      const aviso = document.getElementById('internos-pendientes')
+      const btn = document.getElementById('btn-internos-aceptar')
+      if (!r) return
+
+      const faltan = faltanConfirmarInternos()
+      const problemas = problemasInternos()
+
+      if (faltan.length) {
+        aviso.removeAttribute('hidden')
+        aviso.textContent = faltan.length === r.items.length
+          ? `Falta confirmar los ${faltan.length} renglones.`
+          : `Falta confirmar ${faltan.length} ${faltan.length === 1 ? 'renglón' : 'renglones'}: ${faltan.map(i => i.nombre).join(', ')}.`
+      } else if (problemas.length) {
+        aviso.removeAttribute('hidden')
+        aviso.textContent = problemas[0]
+      } else {
+        aviso.hidden = true
+      }
+
+      // El disabled se aplica DESDE JS y no como atributo del HTML: si el
+      // script fallara, el botón queda usable en vez de dejar la pantalla
+      // inservible. Mismo criterio que el resto del proyecto.
+      btn.disabled = faltan.length > 0 || problemas.length > 0
+    }
+
+    // ── Confirmar y rechazar ─────────────────────────────────────────────────
+
+    // Los mensajes que la RPC lanza ya están escritos para una persona, así que
+    // se reconocen y se muestran. Lo importante es el FALLBACK: cualquier cosa
+    // que no se reconozca es casi seguro un error crudo de Postgres —un nombre
+    // de constraint, un "violates", una negativa de RLS— y pasar error.message
+    // a ciegas es exactamente lo que puso `chk_presentacion_coherente` en
+    // pantalla. Mismo criterio que _traducirError() de js/auth.js.
+    const ERRORES_RECEPCION = [
+      ['La transferencia no existe',
+       'Esa transferencia ya no está. Puede que la hayan cancelado desde la unidad que la envió.'],
+      ['ya fue respondida',
+       'Alguien ya respondió esta transferencia. Volvé a la lista para ver cómo quedó.'],
+      ['No tenés permiso para recibir',
+       'No tenés permiso para recibir en esa unidad. Pedíselo a un administrador.'],
+      ['motivo de rechazo es obligatorio',
+       'Para rechazar el envío hace falta escribir el motivo.'],
+      ['no pertenece a esta transferencia',
+       'Hubo un desajuste con los renglones. Volvé a entrar a la transferencia y cargala de nuevo.'],
+      ['no puede ser negativa',
+       'Una cantidad recibida no puede ser negativa.'],
+      ['No se puede recibir más de lo que se envió',
+       'Hay un renglón con más cantidad de la que se despachó. Si llegó de más, eso es un ajuste de inventario aparte.'],
+      ['diferencia sin explicar',
+       'Hay un renglón con diferencia y sin motivo. El motivo es obligatorio cuando lo recibido no coincide.'],
+      ['Faltan ítems por confirmar',
+       'Quedaron renglones sin confirmar. Cargá cuánto llegó de cada uno.'],
+      ['Respuesta inválida',
+       'No se pudo procesar la respuesta. Volvé a intentar.'],
+    ]
+
+    function traducirErrorRecepcion(error) {
+      const crudo = String(error?.message ?? '')
+      for (const [clave, texto] of ERRORES_RECEPCION) {
+        if (crudo.includes(clave)) return texto
+      }
+      // Irreconocible: genérico y el crudo a consola. NUNCA se muestra tal cual.
+      console.error('Error no traducido al recibir la transferencia:', error)
+      return 'No se pudo registrar la recepción. Quedó todo como estaba — no entró nada al stock. Si vuelve a pasar, avisá con el detalle de la transferencia.'
+    }
+
+    function mostrarErrorInterno(texto) {
+      const el = document.getElementById('internos-error')
+      el.removeAttribute('hidden')
+      el.textContent = texto
+    }
+
+    async function confirmarRecepcion() {
+      const r = estado.recepcion
+      if (!r) return
+      document.getElementById('internos-error').hidden = true
+
+      // Revalidación antes de llamar: la última de las tres capas.
+      const faltan = faltanConfirmarInternos()
+      if (faltan.length) {
+        mostrarErrorInterno(`Quedan ${faltan.length} ${faltan.length === 1 ? 'renglón' : 'renglones'} sin confirmar. Cargá cuánto llegó de cada uno antes de confirmar.`)
+        return
+      }
+      const problemas = problemasInternos()
+      if (problemas.length) { mostrarErrorInterno(problemas[0]); return }
+
+      const btn = document.getElementById('btn-internos-aceptar')
+      btn.disabled = true
+      btn.textContent = 'Confirmando…'
+
+      const { error } = await supabase.rpc('responder_transferencia_stock', {
+        p_transferencia_id: r.cabecera.id,
+        p_respuesta: 'aceptar',
+        p_items: r.items.map(it => ({
+          item_id: it.id,
+          cantidad_recibida: recibidaParaRpc(it),
+          motivo_diferencia: it.motivo.trim() || null,
+        })),
+        p_motivo_rechazo: null,
+      })
+
+      btn.disabled = false
+      btn.textContent = 'Confirmar la recepción'
+
+      if (error) { mostrarErrorInterno(traducirErrorRecepcion(error)); return }
+
+      mostrarExito('Recepción registrada. La mercadería ya entró al stock de ' + (r.cabecera.destino_nombre || 'la unidad destino') + '.')
+      estado.recepcion = null
+      mostrarPasoRecepcion('lista')
+      await cargarInternos()
+    }
+
+    // El paso de rechazo reemplaza al detalle: la decisión es lo único en
+    // pantalla mientras se toma.
+    function mostrarPasoRecepcion(paso) {
+      document.getElementById('internos-paso-lista').hidden = paso !== 'lista'
+      document.getElementById('internos-paso-detalle').hidden = paso !== 'detalle'
+      document.getElementById('internos-paso-rechazo').hidden = paso !== 'rechazo'
+    }
+
+    function abrirRechazoRecepcion() {
+      const r = estado.recepcion
+      if (!r) return
+      document.getElementById('rechazo-origen').textContent = r.cabecera.origen_nombre || 'la unidad de origen'
+      document.getElementById('campo-motivo-rechazo').value = ''
+      document.getElementById('rechazo-error').hidden = true
+      mostrarPasoRecepcion('rechazo')
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      document.getElementById('campo-motivo-rechazo').focus()
+    }
+
+    async function rechazarRecepcion() {
+      const r = estado.recepcion
+      if (!r) return
+
+      const errEl = document.getElementById('rechazo-error')
+      errEl.hidden = true
+      const motivo = document.getElementById('campo-motivo-rechazo').value.trim()
+      // La RPC también lo exige; se ataja acá para que el aviso no venga del
+      // servidor.
+      if (!motivo) {
+        errEl.removeAttribute('hidden')
+        errEl.textContent = 'El motivo es obligatorio: es lo que va a leer la unidad que mandó el envío.'
+        return
+      }
+
+      const btn = document.getElementById('btn-rechazo-confirmar')
+      btn.disabled = true
+      const { error } = await supabase.rpc('responder_transferencia_stock', {
+        p_transferencia_id: r.cabecera.id,
+        p_respuesta: 'rechazar',
+        p_items: null,
+        p_motivo_rechazo: motivo,
+      })
+      btn.disabled = false
+
+      if (error) {
+        errEl.removeAttribute('hidden')
+        errEl.textContent = traducirErrorRecepcion(error)
+        return
+      }
+
+      mostrarExito(`Envío rechazado. La mercadería volvió al stock de ${r.cabecera.origen_nombre || 'la unidad de origen'}.`)
+      estado.recepcion = null
+      mostrarPasoRecepcion('lista')
+      await cargarInternos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // WIZARD — LISTENERS
     // ═══════════════════════════════════════════════════════════════════════
 
     document.getElementById('btn-abrir-wizard').addEventListener('click', abrirWizard)
+
+    // ── Ingresos internos ──────────────────────────────────────────────────
+    document.getElementById('btn-abrir-internos').addEventListener('click', abrirInternos)
+    document.getElementById('btn-internos-volver').addEventListener('click', cerrarInternos)
+    document.getElementById('btn-internos-volver-lista').addEventListener('click', () => {
+      estado.recepcion = null
+      mostrarPasoRecepcion('lista')
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    })
+    document.getElementById('btn-internos-aceptar').addEventListener('click', confirmarRecepcion)
+    document.getElementById('btn-internos-rechazar').addEventListener('click', abrirRechazoRecepcion)
+    document.getElementById('btn-rechazo-confirmar').addEventListener('click', rechazarRecepcion)
+    document.getElementById('btn-rechazo-volver').addEventListener('click', () => {
+      mostrarPasoRecepcion('detalle')
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    })
+
     document.getElementById('btn-wizard-volver').addEventListener('click', volverAtrasWizard)
 
     document.getElementById('btn-sacar-foto').addEventListener('click', () => {
