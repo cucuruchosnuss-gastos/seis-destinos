@@ -1474,6 +1474,85 @@
       overflow-wrap: anywhere;
     }
 
+    /* ── Transferencias entre unidades ───────────────────────────────────
+       Reusa lo que ya existe: .tarjeta-lista, .hist-*, .mov-elegido, .mov-saldo,
+       chip-unidad y chip-stock. Acá solo lo propio. */
+
+    /* Cada ítem cargado en el envío, en la lista en memoria. Fila con el
+       detalle a la izquierda y la cantidad + quitar a la derecha. */
+    .transf-item { align-items: flex-start; gap: 0.75rem; cursor: default; }
+    .transf-item:hover { box-shadow: var(--sombra-tarjeta); transform: none; }
+    .transf-item__info { flex: 1 1 auto; min-width: 0; }
+    .transf-item__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.3;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .transf-item__meta {
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+      overflow-wrap: anywhere;
+    }
+    .transf-item__derecha {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .transf-item__cant {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      white-space: nowrap;
+      text-align: right;
+    }
+    .transf-item__quitar {
+      background: none;
+      border: none;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0.25rem;
+    }
+
+    /* Los días en tránsito, bien visibles. Pasado el umbral, en bordó: esa
+       mercadería no está en ningún stock y alguien se olvidó de recibirla. */
+    .transito-dias {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+    }
+    .transito-dias--viejo { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+
+    /* La flecha origen → destino de cada fila. */
+    .transito-ruta {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .transito-ruta__flecha { color: var(--color-texto-suave); font-weight: 500; }
+
+    /* El bloque de historial va separado del tránsito, con su propio título. */
+    .transf-subtitulo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin: 1.5rem 0 0.5rem;
+    }
+
     /* ── Modal de movimiento ─────────────────────────────────────────────── */
 
     .mov-unidad-fija {
@@ -1693,6 +1772,8 @@
 
       <div class="barra-acciones" id="acciones-stock" hidden>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-registrar-movimiento" hidden>Corregir stock</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-enviar-transferencia" hidden>Enviar a otra unidad</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-transito">En tránsito</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
       </div>
 
@@ -1850,6 +1931,43 @@
       </div>
 
     </div><!-- /vista-historial -->
+
+    <!-- ══ VISTA: TRÁNSITO E HISTORIAL DE TRANSFERENCIAS ═════════════════ -->
+    <!-- Drill-down de Stock (no una pestaña propia): PESTANA_DE_VISTA la marca
+         como Stock mientras se la mira, igual que el historial de recuentos. -->
+    <div class="vista-stock" id="vista-transito" hidden>
+
+      <button type="button" class="hist-volver" id="btn-volver-de-transito">‹ Volver al stock</button>
+
+      <!-- ── Listado: tránsito + historial ──────────────────────────────── -->
+      <div class="rec-paso" id="transito-paso-lista" hidden>
+        <div class="transf-subtitulo" style="margin-top:0;">En tránsito — salió y todavía no llegó</div>
+        <div class="lista-contenido" id="lista-transito"></div>
+        <div class="estado-vacio-stock" id="transito-cargando">Cargando…</div>
+        <div class="estado-vacio-stock" id="transito-vacio" hidden></div>
+
+        <div class="transf-subtitulo">Historial de transferencias</div>
+        <div class="lista-contenido" id="lista-transf-historial"></div>
+        <div class="estado-vacio-stock" id="transf-hist-vacio" hidden></div>
+      </div>
+
+      <!-- ── Detalle de una transferencia ───────────────────────────────── -->
+      <div class="rec-paso" id="transito-paso-detalle" hidden>
+        <button type="button" class="hist-volver" id="btn-volver-a-transito">‹ Volver</button>
+
+        <div class="hist-cabecera" id="transito-detalle-cabecera"></div>
+        <div class="rec-aviso" id="transito-aviso-rechazo" hidden></div>
+
+        <div class="hist-titulo-bloque">Qué lleva</div>
+        <div class="lista-contenido" id="transito-detalle-items"></div>
+        <div class="estado-vacio-stock" id="transito-detalle-cargando">Cargando el detalle…</div>
+
+        <div class="rec-acciones" id="transito-acciones-detalle" hidden>
+          <button type="button" class="btn-stock btn-stock--chico btn-stock--alerta" id="btn-cancelar-transferencia">Cancelar la transferencia</button>
+        </div>
+      </div>
+
+    </div><!-- /vista-transito -->
 
 
 
@@ -2405,6 +2523,108 @@
   </div><!-- /modal-movimiento -->
 
 
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — ENVIAR A OTRA UNIDAD
+       Mismo orden que el de movimiento: lo que condiciona el resto va primero y
+       nada se habilita hasta resolverlo. Origen → destino → ítems.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-transferencia" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-transf></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-transf aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo">Enviar a otra unidad</h2>
+
+      <div class="campo-stock">
+        <label>Sale de</label>
+        <div class="chips-unidad" id="transf-chips-origen"></div>
+        <div class="mov-unidad-fija" id="transf-origen-fija" hidden></div>
+        <div class="campo-stock__error" id="transf-error-origen" hidden></div>
+      </div>
+
+      <div class="campo-stock__ayuda" id="transf-falta-origen" hidden>
+        Elegí primero de qué unidad sale la mercadería: el stock disponible es el de esa unidad.
+      </div>
+
+      <div class="campo-stock" id="transf-campo-destino">
+        <label>Va a</label>
+        <div class="chips-unidad" id="transf-chips-destino"></div>
+        <div class="campo-stock__error" id="transf-error-destino" hidden></div>
+      </div>
+
+      <div class="campo-stock">
+        <label>Qué se manda</label>
+        <div class="lista-contenido" id="transf-lista-items"></div>
+        <div class="campo-stock__ayuda" id="transf-sin-items" hidden>Todavía no agregaste ningún ítem.</div>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-transf-agregar-item">+ Agregar ítem</button>
+        <div class="campo-stock__error" id="transf-error-items" hidden></div>
+      </div>
+
+      <div class="campo-stock">
+        <label for="transf-observaciones">Observaciones <span class="campo-stock__opcional">opcional</span></label>
+        <input type="text" id="transf-observaciones" placeholder="Ej: reparto del martes" autocomplete="off">
+      </div>
+
+      <div class="rec-aviso rec-aviso--info" id="transf-aviso-descuento" hidden></div>
+
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-transf>Cancelar</button>
+        <button type="button" class="btn-stock btn-stock--primario" id="btn-confirmar-transf">Enviar</button>
+      </div>
+    </div>
+  </div><!-- /modal-transferencia -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — AGREGAR UN ÍTEM AL ENVÍO
+       Reusa el buscador + lote + presentación del recuento y del movimiento. El
+       lote y la presentación se eligen de lo que HAY con saldo en el origen, y
+       se muestra ese saldo antes de decir cuánto se manda.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-transf-item" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-transf-item></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-transf-item aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo">Agregar al envío</h2>
+
+      <div class="campo-stock">
+        <label for="ti-buscar-insumo">Insumo</label>
+        <input type="search" id="ti-buscar-insumo" placeholder="Buscar en el catálogo…" autocomplete="off">
+        <div class="mov-elegido" id="ti-insumo-elegido" hidden></div>
+        <div class="campo-stock__error" id="ti-error-insumo" hidden></div>
+      </div>
+
+      <div class="rec-sugerencias" id="ti-sugerencias" hidden></div>
+
+      <div class="campo-stock" id="ti-campo-lote" hidden>
+        <label>Lote</label>
+        <div class="fila-chips" id="ti-chips-lote"></div>
+        <div class="campo-stock__error" id="ti-error-lote" hidden></div>
+      </div>
+
+      <div class="campo-stock" id="ti-campo-presentacion" hidden>
+        <label>Presentación</label>
+        <div class="fila-chips" id="ti-chips-presentacion"></div>
+        <div class="campo-stock__error" id="ti-error-presentacion" hidden></div>
+      </div>
+
+      <div class="mov-saldo" id="ti-saldo" hidden></div>
+
+      <div class="campo-stock" id="ti-campo-cantidad" hidden>
+        <label for="ti-cantidad">Cantidad a enviar</label>
+        <input type="text" inputmode="decimal" id="ti-cantidad" autocomplete="off">
+        <div class="campo-stock__error" id="ti-error-cantidad" hidden></div>
+      </div>
+
+      <div class="rec-aviso" id="ti-aviso-excede" hidden></div>
+
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-transf-item>Cancelar</button>
+        <button type="button" class="btn-stock btn-stock--primario" id="btn-transf-confirmar-item">Agregar</button>
+      </div>
+    </div>
+  </div><!-- /modal-transf-item -->
+
+
 
 
   <script type="module">
@@ -2535,6 +2755,26 @@
       // Qué insumo/unidad tiene abierto el modal de lotes, para poder
       // refrescarlo después de registrar un movimiento.
       loteAbierto: null,
+
+      // ── Transferencias entre unidades ───────────────────────────────
+      // unidadesEnvio sale de v_mis_unidades_envio (resuelve
+      // enviar_transferencia). destinos = TODAS las activas, sin filtro de
+      // permiso: quien envía elige el destino aunque no opere ahí.
+      unidadesEnvio: [],
+      destinos: [],
+      // El envío en curso. items es una lista en memoria —varias ternas—, algo
+      // nuevo en el módulo: el recuento y el movimiento cargan un ítem por
+      // modal. Se resetea al ABRIR (ver abrirModalTransferencia), no al cerrar.
+      transf: null,
+      // Draft del sub-modal de agregar ítem: el insumo, la presentación y los
+      // lotes/presentaciones con saldo del origen.
+      ti: null,
+      lotesTi: [],
+      // Tránsito e historial de transferencias.
+      transito: [],
+      transferencias: [],
+      transfDetalle: null,
+      itemsTransfDetalle: [],
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -2546,6 +2786,7 @@
     const puedeGestionar = () => tieneTarea('stock', 'gestionar_catalogo')
     const puedeVerStock  = () => tieneTarea('stock', 'ver')
     const puedeAjustar   = () => tieneTarea('stock', 'ajustar_inventario')
+    const puedeEnviar    = () => tieneTarea('stock', 'enviar_transferencia')
 
     // Cantidades del stock: separador de miles argentino y la unidad del
     // catálogo. `maximumFractionDigits` en 3 porque hay insumos en kg y litros
@@ -5334,12 +5575,13 @@
       recuento: 'Recuento de inventario',
       historial: 'Historial de recuentos',
       alias: 'Alias de proveedor',
+      transito: 'Transferencias entre unidades',
     }
 
     // El historial es un drill-down de Stock, no una pestaña propia: cuatro no
     // entran en 375px. Mientras se lo mira, la pestaña que queda marcada sigue
     // siendo la de Stock.
-    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo' }
+    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo', transito: 'stock' }
 
     function mostrarVista(id) {
       estado.vista = id
@@ -5347,6 +5589,7 @@
       document.getElementById('vista-catalogo').hidden = id !== 'catalogo'
       document.getElementById('vista-recuento').hidden = id !== 'recuento'
       document.getElementById('vista-historial').hidden = id !== 'historial'
+      document.getElementById('vista-transito').hidden = id !== 'transito'
       document.getElementById('vista-alias').hidden = id !== 'alias'
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
@@ -5828,6 +6071,724 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // TRANSFERENCIAS ENTRE UNIDADES — envío y tránsito
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Cucuruchos le presta harina a Dolce Pasta: quien carga el camión inicia
+    // la transferencia y la mercadería SALE de su stock en el acto; quien la
+    // recibe en la otra empresa la confirma (esa pantalla vive en Ingreso, no
+    // acá). Mientras tanto queda "en tránsito", fuera de todo stock.
+    //
+    // El origen sale de v_mis_unidades_envio (resuelve enviar_transferencia por
+    // unidad, igual que v_mis_unidades_baja resuelve dar_baja). El destino son
+    // TODAS las activas menos el origen, SIN filtro de permiso: quien envía
+    // elige el destino aunque no opere ahí — es el diseño, no un descuido.
+
+    const DIAS_TRANSITO_VIEJO = 5
+
+    async function cargarUnidadesEnvio() {
+      const { data, error } = await supabase
+        .from('v_mis_unidades_envio').select('id, nombre').order('nombre')
+      if (error) { console.error(error); return }
+      estado.unidadesEnvio = data ?? []
+    }
+
+    // Todas las unidades activas. El RLS de unidades_negocio es `true` para
+    // cualquier autenticado (verificado), así que esta consulta trae las 4 —el
+    // destino no se filtra por permiso a propósito.
+    async function cargarDestinos() {
+      const { data, error } = await supabase
+        .from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre')
+      if (error) { console.error(error); return }
+      estado.destinos = data ?? []
+    }
+
+    // ── El modal de envío ────────────────────────────────────────────────────
+
+    function abrirModalTransferencia() {
+      // RESETEO AL ABRIR y no al cerrar: cerrar puede pasar por el gesto de
+      // atrás, que no llama a la función de cierre. Si estado.transf.items
+      // sobreviviera, el próximo envío arrancaría con los ítems del anterior —
+      // el bug del modal de movimiento, multiplicado por ser una lista.
+      const origenUnico = estado.unidadesEnvio.length === 1 ? estado.unidadesEnvio[0].id : ''
+      estado.transf = { origenId: origenUnico, items: [] }
+
+      document.getElementById('transf-observaciones').value = ''
+      document.getElementById('transf-aviso-descuento').hidden = true
+      limpiarErroresTransf()
+      renderizarOrigenTransf()
+      renderizarDestinoTransf()
+      renderizarItemsTransf()
+
+      document.getElementById('modal-transferencia').hidden = false
+      abrirConHistorial(cerrarModalTransferencia)
+    }
+
+    function cerrarModalTransferencia() {
+      document.getElementById('modal-transferencia').hidden = true
+      estado.transf = null
+      // Si el sub-modal de agregar ítem estaba abierto —posible si el cierre
+      // vino del gesto de atrás—, se cierra con él: quedaría flotando sobre un
+      // padre ya cerrado.
+      cerrarModalTransfItem()
+      cerrarConHistorial()
+    }
+
+    function limpiarErroresTransf() {
+      ;['transf-error-origen', 'transf-error-destino', 'transf-error-items']
+        .forEach(id => { const el = document.getElementById(id); el.hidden = true; el.textContent = '' })
+    }
+
+    // Nada de destino/ítems tiene sentido sin origen: el saldo disponible es el
+    // de esa unidad. Se deshabilita DESDE JS (no como atributo) para que si el
+    // script fallara los controles queden usables, igual que el modal de
+    // movimiento.
+    function aplicarBloqueoOrigenTransf() {
+      const listo = !!(estado.transf && estado.transf.origenId)
+      document.getElementById('transf-falta-origen').hidden = listo
+      document.getElementById('btn-transf-agregar-item').disabled = !listo
+      document.getElementById('btn-confirmar-transf').disabled = !listo
+    }
+
+    function renderizarOrigenTransf() {
+      const tr = estado.transf
+      const chips = document.getElementById('transf-chips-origen')
+      const fija = document.getElementById('transf-origen-fija')
+      aplicarBloqueoOrigenTransf()
+
+      // Con una sola unidad de envío no hay elección: ya quedó elegida. A
+      // diferencia del movimiento, el origen NO se esconde —se muestra como
+      // texto—: en una transferencia de dónde sale es contexto que importa.
+      if (estado.unidadesEnvio.length === 1) {
+        chips.hidden = true
+        chips.innerHTML = ''
+        fija.hidden = false
+        fija.textContent = nombreUnidad(tr.origenId)
+        renderizarDestinoTransf()
+        return
+      }
+      fija.hidden = true
+      chips.hidden = false
+      chips.innerHTML = estado.unidadesEnvio.map(u => `
+        <button type="button" class="chip-unidad ${tr.origenId === u.id ? 'chip-unidad--activa' : ''}" data-origen-transf="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      chips.querySelectorAll('[data-origen-transf]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (tr.origenId === btn.dataset.origenTransf) return
+          tr.origenId = btn.dataset.origenTransf
+          // Cambiar de origen invalida los ítems: su saldo era el del origen
+          // anterior. Se vacían y se avisa por el render.
+          tr.items = []
+          document.getElementById('transf-error-origen').hidden = true
+          renderizarOrigenTransf()
+          renderizarDestinoTransf()
+          renderizarItemsTransf()
+        })
+      })
+    }
+
+    // Destino = todas las activas MENOS el origen. Deshabilitado hasta que haya
+    // origen, porque el "menos el origen" depende de él.
+    function renderizarDestinoTransf() {
+      const tr = estado.transf
+      const chips = document.getElementById('transf-chips-destino')
+      const disponibles = estado.destinos.filter(u => u.id !== tr.origenId)
+
+      if (!tr.origenId) { chips.hidden = true; chips.innerHTML = ''; return }
+      // Si el destino elegido era el que ahora es origen, se suelta.
+      if (tr.destinoId && !disponibles.some(u => u.id === tr.destinoId)) tr.destinoId = ''
+
+      chips.hidden = false
+      chips.innerHTML = disponibles.map(u => `
+        <button type="button" class="chip-unidad ${tr.destinoId === u.id ? 'chip-unidad--activa' : ''}" data-destino-transf="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      chips.querySelectorAll('[data-destino-transf]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          tr.destinoId = btn.dataset.destinoTransf
+          document.getElementById('transf-error-destino').hidden = true
+          renderizarDestinoTransf()
+        })
+      })
+    }
+
+    function renderizarItemsTransf() {
+      const tr = estado.transf
+      const cont = document.getElementById('transf-lista-items')
+      document.getElementById('transf-sin-items').hidden = tr.items.length > 0
+
+      cont.innerHTML = tr.items.map((it, idx) => {
+        const u = it.insumo.unidad_medida || ''
+        const bultos = textoBultos(it.cantidad, it.contenido, u)
+        const meta = [
+          it.insumo.marca,
+          it.lote ? `Lote ${it.lote}` : (it.insumo.tipo === 'materia_prima' ? 'Sin lote' : null),
+          it.contenido != null ? textoPresentacion(it.contenido, u) : null,
+        ].filter(Boolean).join(' · ')
+        return `
+          <div class="tarjeta-lista transf-item">
+            <div class="transf-item__info">
+              <div class="transf-item__nombre">${esc(it.insumo.nombre)}${htmlAclaracion(it.insumo.aclaracion)}</div>
+              ${meta ? `<div class="transf-item__meta">${esc(meta)}</div>` : ''}
+            </div>
+            <div class="transf-item__derecha">
+              <div class="transf-item__cant">${esc(formatearCantidadStock(it.cantidad, u))}${bultos ? ` <span class="mov-saldo__bultos">(${esc(bultos)})</span>` : ''}</div>
+              <button type="button" class="transf-item__quitar" data-quitar-item="${idx}" aria-label="Quitar">✕</button>
+            </div>
+          </div>`
+      }).join('')
+      cont.querySelectorAll('[data-quitar-item]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          tr.items.splice(Number(btn.dataset.quitarItem), 1)
+          renderizarItemsTransf()
+        })
+      })
+    }
+
+    async function confirmarTransferencia() {
+      const tr = estado.transf
+      if (!tr) return
+      limpiarErroresTransf()
+      let ok = true
+      const err = (id, msg) => { const e = document.getElementById(id); e.hidden = false; e.textContent = msg; ok = false }
+
+      if (!tr.origenId) err('transf-error-origen', 'Elegí de qué unidad sale.')
+      if (!tr.destinoId) err('transf-error-destino', 'Elegí a qué unidad va.')
+      if (!tr.items.length) err('transf-error-items', 'Agregá al menos un ítem.')
+      if (!ok) return
+
+      const btn = document.getElementById('btn-confirmar-transf')
+      btn.disabled = true
+      const items = tr.items.map(it => ({
+        insumo_id: it.insumo.id,
+        lote: it.lote || null,
+        contenido_por_bulto: it.contenido,
+        cantidad: it.cantidad,
+      }))
+      const { error } = await supabase.rpc('crear_transferencia_stock', {
+        p_unidad_origen_id: tr.origenId,
+        p_unidad_destino_id: tr.destinoId,
+        p_fecha: new Date().toISOString().slice(0, 10),
+        p_observaciones: document.getElementById('transf-observaciones').value.trim() || null,
+        p_items: items,
+      })
+      btn.disabled = false
+
+      if (error) {
+        console.error(error)
+        // La RPC valida saldo del lado del servidor: si algo no alcanza, su
+        // mensaje ("no hay saldo suficiente…") es entendible y se muestra tal
+        // cual en vez de un genérico.
+        mostrarError(error.message || 'No se pudo crear la transferencia.')
+        return
+      }
+
+      const origen = nombreUnidad(tr.origenId)
+      const destino = nombreUnidad(tr.destinoId)
+      cerrarModalTransferencia()
+      mostrarExito(`Enviado. La mercadería ya se descontó de ${origen} y queda en tránsito hasta que ${destino} la reciba.`)
+      if (puedeVerStock()) await cargarStock()
+    }
+
+    function nombreUnidad(id) {
+      return estado.destinos.find(u => u.id === id)?.nombre
+        || estado.unidadesEnvio.find(u => u.id === id)?.nombre
+        || estado.unidadesStock.find(u => u.id === id)?.nombre || ''
+    }
+
+    // ── El sub-modal de agregar ítem ──────────────────────────────────────────
+    // Reusa el buscador (.rec-sug), el chip de insumo elegido (.mov-elegido),
+    // los chips de presentación (chip-stock) y la caja de saldo (.mov-saldo).
+    // El lote y la presentación se eligen de lo que HAY con saldo en el origen.
+
+    function abrirModalTransfItem() {
+      const tr = estado.transf
+      if (!tr || !tr.origenId) return
+      estado.ti = { insumo: null, lote: null, presentacion: undefined }
+      estado.lotesTi = []
+
+      document.getElementById('ti-buscar-insumo').value = ''
+      document.getElementById('ti-buscar-insumo').disabled = false
+      document.getElementById('ti-insumo-elegido').hidden = true
+      document.getElementById('ti-sugerencias').hidden = true
+      document.getElementById('ti-campo-lote').hidden = true
+      document.getElementById('ti-campo-presentacion').hidden = true
+      document.getElementById('ti-saldo').hidden = true
+      document.getElementById('ti-campo-cantidad').hidden = true
+      document.getElementById('ti-cantidad').value = ''
+      document.getElementById('ti-aviso-excede').hidden = true
+      limpiarErroresTi()
+
+      document.getElementById('modal-transf-item').hidden = false
+      document.getElementById('ti-buscar-insumo').focus()
+    }
+
+    function cerrarModalTransfItem() {
+      document.getElementById('modal-transf-item').hidden = true
+      estado.ti = null
+      estado.lotesTi = []
+    }
+
+    function limpiarErroresTi() {
+      ;['ti-error-insumo', 'ti-error-lote', 'ti-error-presentacion', 'ti-error-cantidad']
+        .forEach(id => { const el = document.getElementById(id); el.hidden = true; el.textContent = '' })
+    }
+
+    function renderizarSugerenciasTi() {
+      const termino = document.getElementById('ti-buscar-insumo').value
+      const cont = document.getElementById('ti-sugerencias')
+      if (!normalizar(termino)) { cont.hidden = true; cont.innerHTML = ''; return }
+
+      const encontrados = ordenarPorNombre(
+        estado.insumos.filter(i => i.activo && coincide(i, termino))
+      ).slice(0, 8)
+
+      cont.hidden = false
+      if (!encontrados.length) {
+        cont.innerHTML = '<div class="campo-stock__ayuda">Ningún insumo activo coincide.</div>'
+        return
+      }
+      cont.innerHTML = encontrados.map(i => `
+        <button type="button" class="rec-sug" data-sug-ti="${esc(i.id)}">
+          <div class="rec-sug__nombre">${esc(i.nombre)}${htmlAclaracion(i.aclaracion)}</div>
+          <div class="rec-sug__meta">${esc([i.marca, i.unidad_medida, TIPOS[i.tipo] ?? i.tipo].filter(Boolean).join(' · '))}</div>
+        </button>`).join('')
+      cont.querySelectorAll('[data-sug-ti]').forEach(btn => {
+        btn.addEventListener('click', () => elegirInsumoTi(btn.dataset.sugTi))
+      })
+    }
+
+    async function elegirInsumoTi(insumoId) {
+      const i = estado.insumos.find(x => x.id === insumoId)
+      if (!i) return
+      const ti = estado.ti
+      ti.insumo = i
+      ti.lote = null
+      ti.presentacion = undefined
+      limpiarErroresTi()
+
+      document.getElementById('ti-buscar-insumo').value = ''
+      document.getElementById('ti-sugerencias').hidden = true
+      const elegido = document.getElementById('ti-insumo-elegido')
+      elegido.hidden = false
+      elegido.innerHTML = `<span>${esc([i.nombre, i.marca].filter(Boolean).join(' · '))}</span>
+        <button type="button" class="mov-elegido__quitar" id="ti-quitar-insumo" aria-label="Quitar">✕</button>`
+      document.getElementById('ti-quitar-insumo').addEventListener('click', quitarInsumoTi)
+
+      // Lo que hay con saldo de ese insumo en el ORIGEN. Solo se puede enviar lo
+      // que existe, así que el lote y la presentación salen de acá y no son
+      // texto libre.
+      const { data, error } = await supabase.from('v_stock_por_lote')
+        .select('lote, contenido_por_bulto, saldo')
+        .eq('insumo_id', i.id)
+        .eq('unidad_negocio_id', estado.transf.origenId)
+      estado.lotesTi = error ? [] : (data ?? [])
+      if (error) console.error(error)
+
+      renderizarLotesTi()
+    }
+
+    function quitarInsumoTi() {
+      const ti = estado.ti
+      ti.insumo = null; ti.lote = null; ti.presentacion = undefined
+      estado.lotesTi = []
+      document.getElementById('ti-insumo-elegido').hidden = true
+      document.getElementById('ti-campo-lote').hidden = true
+      document.getElementById('ti-campo-presentacion').hidden = true
+      document.getElementById('ti-saldo').hidden = true
+      document.getElementById('ti-campo-cantidad').hidden = true
+    }
+
+    function renderizarLotesTi() {
+      const ti = estado.ti
+      const campo = document.getElementById('ti-campo-lote')
+
+      if (!estado.lotesTi.length) {
+        // Sin saldo de ese insumo en el origen no hay nada que mandar.
+        campo.hidden = true
+        document.getElementById('ti-campo-presentacion').hidden = true
+        document.getElementById('ti-campo-cantidad').hidden = true
+        const s = document.getElementById('ti-saldo')
+        s.hidden = false
+        s.innerHTML = `<div class="mov-saldo__cero">No hay saldo de este insumo en ${esc(nombreUnidad(estado.transf.origenId))}. No se puede enviar lo que no está.</div>`
+        return
+      }
+
+      const lotes = [...new Set(estado.lotesTi.map(l => l.lote))]
+      // Con un solo lote se hereda sin preguntar.
+      if (lotes.length === 1) ti.lote = lotes[0]
+
+      campo.hidden = false
+      document.getElementById('ti-chips-lote').innerHTML = lotes.map(l => {
+        const val = l ?? ''
+        const txt = l ? l : 'Sin lote'
+        const activo = (ti.lote ?? '') === val
+        return `<button type="button" class="chip-stock ${activo ? 'chip-stock--activo' : ''}" data-lote-ti="${esc(val)}">${esc(txt)}</button>`
+      }).join('')
+      document.querySelectorAll('#ti-chips-lote .chip-stock').forEach(btn => {
+        btn.addEventListener('click', () => {
+          ti.lote = btn.dataset.loteTi || null
+          ti.presentacion = undefined
+          document.getElementById('ti-error-lote').hidden = true
+          renderizarPresentacionesTi()
+        })
+      })
+      renderizarPresentacionesTi()
+    }
+
+    // Las presentaciones con saldo del lote elegido.
+    function presentacionesTi() {
+      const ti = estado.ti
+      const filas = estado.lotesTi.filter(l => (l.lote ?? '') === (ti.lote ?? ''))
+      const conocidas = [...new Set(filas
+        .map(l => l.contenido_por_bulto)
+        .filter(c => c !== null && c !== undefined))]
+        .map(Number).sort((a, b) => b - a)
+      return { conocidas, haySueltos: filas.some(l => l.contenido_por_bulto == null) }
+    }
+
+    function renderizarPresentacionesTi() {
+      const ti = estado.ti
+      const campo = document.getElementById('ti-campo-presentacion')
+      if (ti.lote === undefined) { campo.hidden = true; actualizarSaldoTi(); return }
+
+      const { conocidas, haySueltos } = presentacionesTi()
+      const u = ti.insumo.unidad_medida || ''
+      const opciones = []
+      if (haySueltos) opciones.push({ valor: 'sin', texto: 'Sin presentación' })
+      conocidas.forEach(c => opciones.push({ valor: String(c), texto: textoPresentacion(c, u) }))
+
+      // Con una sola opción se hereda sin preguntar.
+      if (opciones.length === 1) {
+        ti.presentacion = haySueltos ? null : conocidas[0]
+      }
+
+      campo.hidden = false
+      const activo = ti.presentacion === undefined ? ''
+        : (ti.presentacion === null ? 'sin' : String(ti.presentacion))
+      document.getElementById('ti-chips-presentacion').innerHTML = opciones.map(o => `
+        <button type="button" class="chip-stock ${o.valor === activo ? 'chip-stock--activo' : ''}" data-pres-ti="${esc(o.valor)}">${esc(o.texto)}</button>
+      `).join('')
+      document.querySelectorAll('#ti-chips-presentacion .chip-stock').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const v = btn.dataset.presTi
+          ti.presentacion = v === 'sin' ? null : Number(v)
+          document.getElementById('ti-error-presentacion').hidden = true
+          actualizarSaldoTi()
+        })
+      })
+      actualizarSaldoTi()
+    }
+
+    // El contenido elegido, o null si es "sin presentación", o undefined si
+    // todavía falta elegir.
+    function contenidoTi() {
+      const ti = estado.ti
+      if (!ti || ti.presentacion === undefined) return undefined
+      return ti.presentacion   // null o número
+    }
+
+    // Saldo de la terna elegida. null cuando falta algo por elegir; el 0 no
+    // aplica acá porque las opciones salen de filas que TIENEN saldo.
+    function saldoTi() {
+      const ti = estado.ti
+      if (!ti || !ti.insumo || ti.lote === undefined || ti.presentacion === undefined) return null
+      const cont = contenidoTi()
+      const fila = estado.lotesTi.find(l =>
+        (l.lote ?? '') === (ti.lote ?? '') &&
+        (l.contenido_por_bulto ?? null) === (cont ?? null))
+      return fila ? Number(fila.saldo) || 0 : 0
+    }
+
+    function cantidadTi() {
+      const ti = estado.ti
+      if (!ti || !ti.insumo) return null
+      const n = parsearCantidad(document.getElementById('ti-cantidad').value, {
+        unidad: ti.insumo.unidad_medida ?? '',
+      })
+      return (n === null || n <= 0) ? null : n
+    }
+
+    function actualizarSaldoTi() {
+      const ti = estado.ti
+      const caja = document.getElementById('ti-saldo')
+      const campoCant = document.getElementById('ti-campo-cantidad')
+      const avisoExcede = document.getElementById('ti-aviso-excede')
+      if (!ti || !ti.insumo) { caja.hidden = true; campoCant.hidden = true; avisoExcede.hidden = true; return }
+
+      const saldo = saldoTi()
+      if (saldo === null) { caja.hidden = true; campoCant.hidden = true; avisoExcede.hidden = true; return }
+
+      const u = ti.insumo.unidad_medida || ''
+      const cont = contenidoTi()
+      const bultos = (k) => {
+        const txt = textoBultos(k, cont ?? null, u)
+        return txt ? ` <span class="mov-saldo__bultos">(${esc(txt)})</span>` : ''
+      }
+      caja.hidden = false
+      caja.innerHTML = `
+        <div class="mov-saldo__etiqueta">Disponible en el origen</div>
+        <div class="mov-saldo__cifra">${esc(formatearCantidadStock(saldo, u))}${bultos(saldo)}</div>`
+
+      // Elegida la terna, ya se puede decir cuánto. La cantidad no bloquea si
+      // excede —la RPC valida saldo del lado del servidor— pero se avisa antes.
+      campoCant.hidden = false
+      const cant = cantidadTi()
+      const excede = cant !== null && cant > saldo
+      avisoExcede.hidden = !excede
+      if (excede) {
+        avisoExcede.innerHTML = `Estás mandando <strong>más de lo disponible</strong>. Si confirmás, el envío se va a rechazar: no se puede sacar más de lo que hay.`
+      }
+    }
+
+    function confirmarTransfItem() {
+      const ti = estado.ti
+      const tr = estado.transf
+      if (!ti || !tr) return
+      limpiarErroresTi()
+      let ok = true
+      const err = (id, msg) => { const e = document.getElementById(id); e.hidden = false; e.textContent = msg; ok = false }
+
+      if (!ti.insumo) err('ti-error-insumo', 'Elegí un insumo.')
+      if (ti.insumo && ti.lote === undefined) err('ti-error-lote', 'Elegí el lote.')
+      if (ti.insumo && ti.presentacion === undefined) err('ti-error-presentacion', 'Elegí la presentación.')
+      const cant = cantidadTi()
+      if (ti.insumo && cant === null) err('ti-error-cantidad', 'Escribí cuánto mandás.')
+      if (!ok) return
+
+      const cont = contenidoTi()
+      // LA TERNA NO PUEDE REPETIRSE entre ítems del mismo envío: dos filas de la
+      // misma (insumo, lote, presentación) serían dos descuentos que la RPC
+      // procesa por separado, y el saldo del segundo se calcularía sobre un
+      // origen que el primero ya bajó. Se suma en el ítem que ya está.
+      const yaEsta = tr.items.some(it =>
+        it.insumo.id === ti.insumo.id &&
+        (it.lote ?? '') === (ti.lote ?? '') &&
+        (it.contenido ?? null) === (cont ?? null))
+      if (yaEsta) {
+        err('ti-error-insumo', 'Ese insumo, lote y presentación ya está en la lista. Quitá el que está y agregalo con la cantidad total, o cambiá alguno de los tres.')
+        return
+      }
+
+      tr.items.push({ insumo: ti.insumo, lote: ti.lote, contenido: cont, cantidad: cant })
+      renderizarItemsTransf()
+      cerrarModalTransfItem()
+    }
+
+    // ── Tránsito e historial ──────────────────────────────────────────────────
+
+    async function abrirTransito() {
+      mostrarVista('transito')
+      document.getElementById('transito-paso-detalle').hidden = true
+      document.getElementById('transito-paso-lista').hidden = false
+      await cargarTransito()
+    }
+
+    async function cargarTransito() {
+      document.getElementById('transito-cargando').hidden = false
+      const [transito, hist] = await Promise.all([
+        supabase.from('v_stock_en_transito')
+          .select('id, unidad_origen_id, origen_nombre, unidad_destino_id, destino_nombre, fecha, creado_por, dias_en_transito, items')
+          .order('fecha'),
+        supabase.from('v_transferencias')
+          .select('id, estado, fecha, origen_nombre, destino_nombre, motivo_rechazo, respondido_en, creado_por_nombre, respondido_por_nombre, items, items_con_diferencia')
+          .order('fecha', { ascending: false }),
+      ])
+      document.getElementById('transito-cargando').hidden = true
+
+      if (transito.error || hist.error) {
+        console.error(transito.error || hist.error)
+        mostrarError('No se pudo cargar el tránsito de transferencias.')
+        return
+      }
+      // El tránsito le importa a las DOS puntas: el de origen quiere ver qué
+      // mandó y no llegó; el de destino, qué le viene. Se filtra por las
+      // unidades que la persona ve, por origen O destino.
+      const mias = new Set(estado.unidadesStock.map(u => u.id))
+      estado.transito = (transito.data ?? []).filter(x =>
+        mias.has(x.unidad_origen_id) || mias.has(x.unidad_destino_id))
+      estado.transferencias = hist.data ?? []
+      renderizarTransito()
+      renderizarTransfHistorial()
+    }
+
+    function renderizarTransito() {
+      const listaEl = document.getElementById('lista-transito')
+      const vacioEl = document.getElementById('transito-vacio')
+      if (!estado.transito.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        vacioEl.textContent = 'No hay nada en tránsito.'
+        return
+      }
+      vacioEl.hidden = true
+      listaEl.innerHTML = estado.transito.map(x => {
+        const dias = Number(x.dias_en_transito) || 0
+        const viejo = dias >= DIAS_TRANSITO_VIEJO
+        const txtDias = dias === 0 ? 'Hoy' : (dias === 1 ? '1 día' : `${dias} días`)
+        return `
+          <div class="tarjeta-lista hist-fila" data-transito="${esc(x.id)}">
+            <div class="hist-fila__linea">
+              <span class="transito-ruta">${esc(x.origen_nombre || '')} <span class="transito-ruta__flecha">→</span> ${esc(x.destino_nombre || '')}</span>
+              <span class="transito-dias ${viejo ? 'transito-dias--viejo' : ''}">${esc(txtDias)} en tránsito</span>
+            </div>
+            <div class="hist-fila__meta">${esc(formatearFechaCorta(x.fecha))} · ${x.items} ${x.items === 1 ? 'ítem' : 'ítems'}</div>
+          </div>`
+      }).join('')
+      listaEl.querySelectorAll('[data-transito]').forEach(card => {
+        card.addEventListener('click', () => abrirDetalleTransferencia(card.dataset.transito))
+      })
+    }
+
+    function renderizarTransfHistorial() {
+      const listaEl = document.getElementById('lista-transf-historial')
+      const vacioEl = document.getElementById('transf-hist-vacio')
+      // El historial son las que ya no están pendientes.
+      const filas = estado.transferencias.filter(x => x.estado !== 'pendiente')
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        vacioEl.textContent = 'Todavía no hay transferencias cerradas.'
+        return
+      }
+      vacioEl.hidden = true
+      listaEl.innerHTML = filas.map(x => {
+        const badge = BADGE_TRANSF[x.estado] ?? { clase: '', texto: x.estado }
+        const dif = x.estado === 'aceptada' && x.items_con_diferencia > 0
+          ? ` · ${x.items_con_diferencia} con diferencia` : ''
+        return `
+          <div class="tarjeta-lista hist-fila ${x.estado === 'rechazada' || x.estado === 'cancelada' ? 'hist-fila--anulado' : ''}" data-transf="${esc(x.id)}">
+            <div class="hist-fila__linea">
+              <span class="transito-ruta">${esc(x.origen_nombre || '')} <span class="transito-ruta__flecha">→</span> ${esc(x.destino_nombre || '')}</span>
+              <span class="hist-badge ${badge.clase}">${esc(badge.texto)}</span>
+            </div>
+            <div class="hist-fila__meta">${esc(formatearFechaCorta(x.fecha))} · ${x.items} ${x.items === 1 ? 'ítem' : 'ítems'}${esc(dif)}</div>
+            <div class="hist-fila__meta">Envió ${esc(x.creado_por_nombre || 'alguien')}${x.respondido_por_nombre ? ` · respondió ${esc(x.respondido_por_nombre)}` : ''}</div>
+            ${x.estado === 'rechazada' && x.motivo_rechazo ? `<div class="hist-fila__motivo">Motivo: ${esc(x.motivo_rechazo)}</div>` : ''}
+          </div>`
+      }).join('')
+      listaEl.querySelectorAll('[data-transf]').forEach(card => {
+        card.addEventListener('click', () => abrirDetalleTransferencia(card.dataset.transf))
+      })
+    }
+
+    async function abrirDetalleTransferencia(id) {
+      const enTransito = estado.transito.find(x => x.id === id)
+      const enHist = estado.transferencias.find(x => x.id === id)
+      const cab = enTransito || enHist
+      if (!cab) return
+      estado.transfDetalle = { ...cab, pendiente: !!enTransito }
+      estado.itemsTransfDetalle = []
+
+      document.getElementById('transito-paso-lista').hidden = true
+      document.getElementById('transito-paso-detalle').hidden = false
+      document.getElementById('transito-detalle-cargando').hidden = false
+      document.getElementById('transito-detalle-items').innerHTML = ''
+      window.scrollTo({ top: 0, behavior: 'auto' })
+
+      renderizarCabeceraTransf()
+      await cargarItemsTransfDetalle(id)
+    }
+
+    async function cargarItemsTransfDetalle(id) {
+      // El embed a insumos es inequívoco: stock_transferencia_items tiene UNA
+      // sola FK a esa tabla.
+      const { data, error } = await supabase.from('stock_transferencia_items')
+        .select('id, lote, contenido_por_bulto, cantidad_enviada, cantidad_recibida, motivo_diferencia, insumos(nombre, marca, unidad_medida, aclaracion)')
+        .eq('transferencia_id', id)
+      document.getElementById('transito-detalle-cargando').hidden = true
+      if (error) { console.error(error); mostrarError('No se pudo cargar el detalle.'); return }
+      estado.itemsTransfDetalle = data ?? []
+      renderizarItemsTransfDetalle()
+    }
+
+    function renderizarCabeceraTransf() {
+      const d = estado.transfDetalle
+      const badge = d.pendiente
+        ? { clase: '', texto: 'En tránsito' }
+        : (BADGE_TRANSF[d.estado] ?? { clase: '', texto: d.estado })
+      document.getElementById('transito-detalle-cabecera').innerHTML = `
+        <div class="hist-cabecera__titulo">${esc(d.origen_nombre || '')} → ${esc(d.destino_nombre || '')} <span class="hist-badge ${badge.clase}">${esc(badge.texto)}</span></div>
+        <div class="hist-cabecera__dato">Fecha <strong>${esc(formatearFechaCorta(d.fecha))}</strong>${d.pendiente && d.dias_en_transito != null ? ` · <strong>${d.dias_en_transito}</strong> ${d.dias_en_transito === 1 ? 'día' : 'días'} en tránsito` : ''}</div>
+        ${d.creado_por_nombre ? `<div class="hist-cabecera__dato">Envió <strong>${esc(d.creado_por_nombre)}</strong>${d.respondido_por_nombre ? ` · respondió <strong>${esc(d.respondido_por_nombre)}</strong>` : ''}</div>` : ''}`
+
+      const aviso = document.getElementById('transito-aviso-rechazo')
+      aviso.hidden = !(d.estado === 'rechazada' && d.motivo_rechazo)
+      if (!aviso.hidden) aviso.innerHTML = `Rechazada. Motivo: ${esc(d.motivo_rechazo)}`
+
+      // Cancelar: solo en tránsito (pendiente), y solo si la creó la persona o
+      // tiene enviar_transferencia en el ORIGEN. Al cancelar vuelve todo a
+      // origen — se dice en la confirmación.
+      const puedeCancelar = d.pendiente && (
+        d.creado_por === estado.miEmpleadoId ||
+        estado.unidadesEnvio.some(u => u.id === d.unidad_origen_id))
+      document.getElementById('transito-acciones-detalle').hidden = !puedeCancelar
+    }
+
+    function renderizarItemsTransfDetalle() {
+      const cont = document.getElementById('transito-detalle-items')
+      cont.innerHTML = estado.itemsTransfDetalle.map(it => {
+        const u = it.insumos?.unidad_medida || ''
+        const enviada = Number(it.cantidad_enviada) || 0
+        const bultos = textoBultos(enviada, it.contenido_por_bulto, u)
+        const meta = [
+          it.insumos?.marca,
+          it.lote ? `Lote ${it.lote}` : null,
+          it.contenido_por_bulto != null ? textoPresentacion(it.contenido_por_bulto, u) : null,
+        ].filter(Boolean).join(' · ')
+        // La cantidad recibida solo existe si ya se respondió y hubo diferencia.
+        const dif = it.cantidad_recibida != null && Number(it.cantidad_recibida) !== enviada
+          ? `<div class="hist-fila__motivo">Recibido: ${esc(formatearCantidadStock(it.cantidad_recibida, u))}${it.motivo_diferencia ? ` — ${esc(it.motivo_diferencia)}` : ''}</div>`
+          : ''
+        return `
+          <div class="tarjeta-lista transf-item">
+            <div class="transf-item__info">
+              <div class="transf-item__nombre">${esc(it.insumos?.nombre ?? '—')}${it.insumos ? htmlAclaracion(it.insumos.aclaracion) : ''}</div>
+              ${meta ? `<div class="transf-item__meta">${esc(meta)}</div>` : ''}
+              ${dif}
+            </div>
+            <div class="transf-item__cant">${esc(formatearCantidadStock(enviada, u))}${bultos ? ` <span class="mov-saldo__bultos">(${esc(bultos)})</span>` : ''}</div>
+          </div>`
+      }).join('')
+    }
+
+    async function cancelarTransferencia() {
+      const d = estado.transfDetalle
+      if (!d) return
+      const origen = d.origen_nombre || 'el origen'
+      if (!confirm(`¿Cancelar esta transferencia? Toda la mercadería vuelve al stock de ${origen}.`)) return
+
+      const btn = document.getElementById('btn-cancelar-transferencia')
+      btn.disabled = true
+      const { error } = await supabase.rpc('cancelar_transferencia_stock', { p_transferencia_id: d.id })
+      btn.disabled = false
+      if (error) {
+        console.error(error)
+        mostrarError(error.message || 'No se pudo cancelar la transferencia.')
+        return
+      }
+      mostrarExito(`Cancelada. La mercadería volvió al stock de ${origen}.`)
+      document.getElementById('transito-paso-detalle').hidden = true
+      document.getElementById('transito-paso-lista').hidden = false
+      if (puedeVerStock()) await cargarStock()
+      await cargarTransito()
+    }
+
+    const BADGE_TRANSF = {
+      aceptada: { clase: 'hist-badge--cerrado', texto: 'Aceptada' },
+      rechazada: { clase: 'hist-badge--anulado', texto: 'Rechazada' },
+      cancelada: { clase: 'hist-badge--anulado', texto: 'Cancelada' },
+      pendiente: { clase: 'hist-badge--abierto', texto: 'En tránsito' },
+    }
+
+    // Fecha `date` (YYYY-MM-DD) a dd/mm/aaaa, sin pasar por Date() para no
+    // correr un día por huso: formatearMomento espera timestamp con hora.
+    function formatearFechaCorta(iso) {
+      if (!iso) return ''
+      const [a, m, d] = String(iso).slice(0, 10).split('-')
+      return (a && m && d) ? `${d}/${m}/${a}` : String(iso)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // LISTENERS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -5947,6 +6908,28 @@
       abrirModalMovimiento({ modo: 'ajuste', unidadId: r.unidad_negocio_id, recuento: r })
     })
 
+    // ── Transferencias entre unidades ────────────────────────────────────────
+    document.getElementById('btn-enviar-transferencia').addEventListener('click', abrirModalTransferencia)
+    document.getElementById('btn-transf-agregar-item').addEventListener('click', abrirModalTransfItem)
+    document.getElementById('btn-confirmar-transf').addEventListener('click', confirmarTransferencia)
+    document.querySelectorAll('[data-cerrar-transf]').forEach(el =>
+      el.addEventListener('click', cerrarModalTransferencia))
+
+    document.getElementById('ti-buscar-insumo').addEventListener('input', renderizarSugerenciasTi)
+    document.getElementById('ti-cantidad').addEventListener('input', actualizarSaldoTi)
+    document.getElementById('btn-transf-confirmar-item').addEventListener('click', confirmarTransfItem)
+    document.querySelectorAll('[data-cerrar-transf-item]').forEach(el =>
+      el.addEventListener('click', cerrarModalTransfItem))
+
+    document.getElementById('btn-ver-transito').addEventListener('click', abrirTransito)
+    document.getElementById('btn-volver-de-transito').addEventListener('click', () => mostrarVista('stock'))
+    document.getElementById('btn-volver-a-transito').addEventListener('click', () => {
+      document.getElementById('transito-paso-detalle').hidden = true
+      document.getElementById('transito-paso-lista').hidden = false
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    })
+    document.getElementById('btn-cancelar-transferencia').addEventListener('click', cancelarTransferencia)
+
     // ── Movimientos puntuales ──────────────────────────────────────────────
     document.getElementById('btn-registrar-movimiento').addEventListener('click', () => abrirModalMovimiento())
     document.getElementById('btn-lotes-ajuste').addEventListener('click', () => {
@@ -6052,6 +7035,7 @@
       // PERMISO y no por costumbre — alguien puede tener solo el catálogo, o
       // solo el recuento.
       const daBaja = puedeDarBaja()
+      const envia  = puedeEnviar()
 
       const vistas = [
         verStock && 'stock',
@@ -6091,6 +7075,12 @@
         // veces.
         ajusta   ? cargarUnidadesRecuento().then(cargarRecuento) : Promise.resolve(),
         daBaja ? cargarUnidadesBaja() : Promise.resolve(),
+        // El envío necesita las unidades de origen (v_mis_unidades_envio) y los
+        // destinos (todas las activas). Los destinos se cargan también si la
+        // persona solo VE el tránsito, para resolver nombres en el detalle —
+        // pero eso ya lo trae la propia vista, así que alcanza con envia.
+        envia ? cargarUnidadesEnvio() : Promise.resolve(),
+        envia ? cargarDestinos() : Promise.resolve(),
       ])
 
       // Los movimientos puntuales necesitan ADEMÁS `stock:ver`: la pantalla
@@ -6099,6 +7089,13 @@
       // Sin `ver` no hay nada que mostrar — no es una restricción agregada, es
       // que no hay pantalla posible.
       document.getElementById('btn-registrar-movimiento').hidden = !(verStock && (ajusta || daBaja))
+      // Enviar necesita ADEMÁS verStock: el modal muestra el saldo disponible
+      // para elegir, y ese saldo sale de v_stock_por_lote (security_invoker)
+      // sobre el libro, cuyo RLS es `ver`. Sin ver no hay nada que mostrar.
+      document.getElementById('btn-enviar-transferencia').hidden = !(verStock && envia)
+      // El tránsito es solo lectura de una vista filtrada por las unidades que
+      // la persona ve: alcanza con verStock.
+      document.getElementById('btn-ver-transito').hidden = !verStock
       document.getElementById('acciones-stock').hidden = !verStock
     }
 
