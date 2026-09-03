@@ -2004,6 +2004,108 @@
       min-width: 0;
     }
 
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       TRANSFERENCIAS RECIBIDAS EN EL LISTADO
+       ═══════════════════════════════════════════════════════════════════════
+       La pantalla se llama "Ingreso" y una transferencia recibida ES un
+       ingreso; que la fuente sea otra tabla es un detalle de implementación.
+       Reusa .tarjeta-lista, .ingreso__*, .chip-tipo-doc-mp y el modal. */
+
+    /* El chip va en --verde, que en este módulo NO estaba en uso —los cuatro
+       tipos de comprobante ocupan marrón, cian, violeta y gris-azul, y el ámbar
+       es el de "sin revisar"— y que además es el acento del módulo Stock, de
+       donde vienen estos datos. O sea que además de estar libre, significa algo.
+       La etiqueta dice INTERNO y no TRANSFERENCIA: "transferencia" es la palabra
+       del sistema; "interno" es lo que la distingue de un proveedor, que es la
+       pregunta que se hace quien mira la lista. */
+    .chip-interno {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      background: var(--verde-suave);
+      color: var(--verde-oscuro);
+    }
+
+    /* El aviso al pie del listado cuando falta stock:ver y hay transferencias
+       que NO se están mostrando. Un listado incompleto que no lo dice es peor
+       que no tener el dato. */
+    .aviso-sin-stock {
+      margin-top: 0.875rem;
+      padding: 0.75rem 0.875rem;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      font-size: 0.78125rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* ── El detalle de una transferencia ──────────────────────────────────── */
+
+    .tr-item {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.75rem 0.875rem;
+      min-width: 0;
+    }
+    .tr-item__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      line-height: 1.3;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .tr-item__meta {
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+      overflow-wrap: anywhere;
+    }
+    .tr-cifras {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem 1.125rem;
+      margin-top: 0.5rem;
+      min-width: 0;
+      width: 100%;
+    }
+    .tr-cifra { min-width: 0; }
+    .tr-cifra__etiqueta {
+      display: block;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .tr-cifra__valor {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    /* LA MERMA DEL TRASLADO es el dato que más importa de una transferencia:
+       va destacada, en bordó y con su motivo al lado. */
+    .tr-cifra__valor--merma { color: var(--bordo-oscuro); font-weight: 700; }
+    .tr-motivo {
+      margin-top: 0.375rem;
+      font-size: 0.78125rem;
+      line-height: 1.4;
+      color: var(--bordo-oscuro);
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+
   </style>
 </head>
 <body class="pagina-modulo">
@@ -2059,6 +2161,12 @@
       </div>
 
       <div class="lista-contenido" id="lista-ingresos"></div>
+
+      <!-- Aviso de listado INCOMPLETO. El RLS de stock_transferencias pide
+           stock:ver, que NO es el mismo criterio que el del listado de
+           ingresos: sin esa tarea las transferencias no llegan y no habría
+           ningún error. Se dice. -->
+      <div class="aviso-sin-stock" id="aviso-sin-stock" hidden></div>
 
       <div id="estado-vacio-ingresos" class="estado-vacio" hidden>
         <div class="estado-vacio__icono">📦</div>
@@ -2501,6 +2609,15 @@
       unidadesRecepcion: [],
       transito: [],                // filas de v_stock_en_transito hacia mis unidades
       recepcion: null,             // { cabecera, items } de la que se está recibiendo
+
+      // ── Transferencias RECIBIDAS, para el listado principal ──────────
+      // Las unidades donde la persona puede VER stock. Salen de
+      // v_mis_unidades_stock, que resuelve la MISMA tiene_tarea_alcance
+      // ('stock','ver') que el RLS de stock_transferencias: el alcance no se
+      // reimplementa acá, y de paso es lo que dice si el listado quedó
+      // incompleto.
+      unidadesStockVisibles: [],
+      transferenciasRecibidas: [],
     }
 
     // Mismo patrón que los otros módulos: super_admin tiene bypass y falla
@@ -2686,6 +2803,12 @@
     // a listar remitos que sí tienen factura.
     function entregaPasaVinculo(entrega, filtro) {
       if (!filtro) return true
+      // Las transferencias quedan FUERA de los dos filtros de vínculo. No es
+      // que "no aplique y da igual": listarlas en "Remitos sin factura" las
+      // marcaría como pendientes de una factura que nunca va a llegar, que es
+      // lo contrario de lo que ese filtro busca —remitos a los que hay que
+      // reclamarle la factura al proveedor—. En "Todos" aparecen.
+      if (entrega.esTransferencia) return false
       const facturado = estado.remitosFacturados.has(entrega.base.id)
       if (filtro === 'con_factura') return entrega.comprobantes.length > 1 || facturado
       if (filtro === 'sin_factura') {
@@ -3000,6 +3123,10 @@
       }
 
       const vinculos = await cargarVinculosFacturaRemito()
+      // Las unidades donde se ve stock hacen falta ANTES de pedir las
+      // transferencias: son el filtro por destino.
+      await cargarUnidadesStockVisibles()
+      await cargarTransferenciasRecibidas()
 
       estado.listaIngresos = (data ?? []).map(i => ({
         ...i,
@@ -3020,10 +3147,110 @@
         itemsQueSuman: contarRenglones((i.materia_prima_items ?? []).filter(it => !it.ya_recibido_con_remito)),
         tieneDiferencias: (i.materia_prima_items ?? []).some(it => it.cantidad_documento != null),
       }))
-      estado.entregas = fusionarEntregas(estado.listaIngresos, vinculos)
+      // Se fusiona SOLO lo de comprobantes y las transferencias se concatenan
+      // DESPUÉS, ya con forma de entrega. Así fusionarEntregas queda intacta.
+      // El orden es el mismo que usa ella —fecha y después created_at, ambos
+      // descendentes— para que la lista quede ordenada junta y no por bloques.
+      estado.entregas = [...fusionarEntregas(estado.listaIngresos, vinculos), ...transferenciasComoEntregas()]
+        .sort((a, b) =>
+          String(b.base.fecha || '').localeCompare(String(a.base.fecha || '')) ||
+          String(b.base.created_at || '').localeCompare(String(a.base.created_at || '')))
 
       renderizarBannerIngresos()
+      renderizarAvisoSinStock()
       renderizarListaIngresos()
+    }
+
+    async function cargarUnidadesStockVisibles() {
+      const { data, error } = await supabase
+        .from('v_mis_unidades_stock').select('id, nombre').order('nombre')
+      // Un error acá no puede voltear el listado: se pierden las transferencias,
+      // no los ingresos. Y con la lista vacía el aviso del pie lo dice.
+      if (error) { console.error(error); estado.unidadesStockVisibles = []; return }
+      estado.unidadesStockVisibles = data ?? []
+    }
+
+    // Las transferencias RECIBIDAS. Van al listado principal porque la pantalla
+    // se llama "Ingreso" y una transferencia recibida ES un ingreso de
+    // mercadería: que la fuente sea otra tabla es un detalle de implementación
+    // que al usuario no le importa. El caso que lo motivó: 500 bolsas de
+    // Cucuruchos a Mengui, 450 recibidas, y en el listado de Mengui no aparecía
+    // NADA — alguien que abriera el módulo al día siguiente no tenía forma de
+    // saber que habían llegado 450 bolsas.
+    //
+    // SOLO LAS RECIBIDAS: estado 'aceptada' y la unidad como DESTINO. Las que
+    // SALIERON son egresos y se ven en Stock.
+    //
+    // ⚠ DECISIÓN EXPLÍCITA, no un efecto de cómo quedó armada la consulta: el
+    // RLS de stock_transferencias entrega la fila si la persona tiene
+    // stock:ver sobre el ORIGEN **O** sobre el DESTINO. O sea que alguien con
+    // permiso en Cucuruchos y sin permiso en Mengui RECIBE del servidor esa
+    // transferencia, y no debería verla en el listado de Mengui. El filtro por
+    // destino contra unidadesStockVisibles es lo que lo ataja, y tiene test
+    // propio para que nadie lo "simplifique" sacándolo.
+    async function cargarTransferenciasRecibidas() {
+      estado.transferenciasRecibidas = []
+      // El embed a insumos es inequívoco: stock_transferencia_items tiene UNA
+      // sola FK a esa tabla.
+      const { data, error } = await supabase
+        .from('stock_transferencias')
+        .select('id, fecha, created_at, estado, unidad_origen_id, unidad_destino_id, observaciones, stock_transferencia_items(id, lote, contenido_por_bulto, cantidad_enviada, cantidad_recibida, motivo_diferencia, insumos(nombre, marca, unidad_medida, aclaracion))')
+        .eq('estado', 'aceptada')
+      if (error) { console.error(error); return }
+
+      const visibles = new Set(estado.unidadesStockVisibles.map(u => u.id))
+      estado.transferenciasRecibidas = (data ?? []).filter(x => visibles.has(x.unidad_destino_id))
+    }
+
+    // Una transferencia con la MISMA forma que una entrega, para poder mezclarla
+    // en la lista y ordenarla junto con el resto. NO pasa por fusionarEntregas:
+    // esa función decide sobre comprobantes y vínculos remito↔factura, y una
+    // transferencia no tiene ni puede tener ninguno de los dos. Pedirle que
+    // opine sobre esto sería meterle un caso que no existe, justo en la función
+    // que ya tiene cubiertos los bordes de factura huérfana y de anomalía.
+    function transferenciasComoEntregas() {
+      return estado.transferenciasRecibidas.map(x => {
+        const items = x.stock_transferencia_items ?? []
+        // Cada renglón es una fila real de stock_transferencia_items: no aplica
+        // el proxy de (insumo, lote) de los comprobantes, porque acá no hay
+        // presentaciones mixtas que partan un renglón en varias filas.
+        const cantidadItems = items.length
+        const conDiferencia = items.some(it =>
+          it.cantidad_recibida != null && Number(it.cantidad_recibida) !== Number(it.cantidad_enviada))
+        return {
+          base: {
+            id: x.id,
+            fecha: x.fecha,
+            created_at: x.created_at,
+            // La unidad de la fila es el DESTINO: para el listado de Ingreso,
+            // una transferencia recibida pertenece a la unidad que la recibió.
+            unidad_negocio_id: x.unidad_destino_id,
+            // Donde iría el proveedor va la unidad de ORIGEN: es de dónde vino
+            // la mercadería, que es la misma pregunta que responde el proveedor
+            // en un ingreso por comprobante.
+            razon_social: nombreUnidad(x.unidad_origen_id),
+            nombre_fantasia: null,
+            tipo_doc: null,
+            numero_doc: null,
+            cantidadItems,
+            // Igual a cantidadItems para que no se dibuje la línea "N suman":
+            // en una transferencia recibida todos los renglones sumaron.
+            itemsQueSuman: cantidadItems,
+            tieneDiferencias: conDiferencia,
+          },
+          comprobantes: [],          // una transferencia no tiene comprobante
+          huerfana: false,
+          remitosVinculados: [],
+          noSuma: false,
+          esTransferencia: true,
+          origenId: x.unidad_origen_id,
+          destinoId: x.unidad_destino_id,
+          observaciones: x.observaciones,
+          items,
+          cantidadItems,
+          tieneDiferencias: conDiferencia,
+        }
+      })
     }
 
     // Los vínculos factura→remitos. Va como consulta APARTE y no como embed:
@@ -3145,6 +3372,11 @@
 
     function entregaCoincide(entrega, termino) {
       const b = entrega.base
+      // En una transferencia, razon_social ES el nombre de la unidad de origen,
+      // así que el buscador por nombre ya funciona con la línea de abajo. Se
+      // suman las dos palabras con las que alguien la buscaría para AISLARLAS
+      // de la lista, que es el uso real del buscador acá.
+      if (entrega.esTransferencia && ('interno'.includes(termino) || 'transferencia'.includes(termino))) return true
       if ((b.razon_social || '').toLowerCase().includes(termino)) return true
       if ((b.nombre_fantasia || '').toLowerCase().includes(termino)) return true
       // Por el número de CUALQUIERA de los comprobantes: si la entrega tiene
@@ -3153,10 +3385,39 @@
       return entrega.comprobantes.some(c => (c.numero_doc || '').toLowerCase().includes(termino))
     }
 
+    // AVISO DE LISTADO INCOMPLETO. El RLS de stock_transferencias exige
+    // stock:ver, que NO es el mismo criterio que gatea el listado de ingresos
+    // (materia_prima:cargar / ver_todo). Sin esa tarea las transferencias no
+    // llegan y no hay ningún error: la lista queda incompleta en silencio, que
+    // es la trampa de "las filas no llegan".
+    //
+    // La regla es PRECISA para no ser ruido: se avisa solo si hay alguna unidad
+    // que APARECE en el listado de ingresos y sobre la que NO se ve stock. Un
+    // usuario que ve una sola unidad y ve su stock no recibe ningún aviso.
+    function renderizarAvisoSinStock() {
+      const el = document.getElementById('aviso-sin-stock')
+      const visibles = new Set(estado.unidadesStockVisibles.map(u => u.id))
+      const faltantes = [...new Set(estado.listaIngresos.map(i => i.unidad_negocio_id))]
+        .filter(id => id && !visibles.has(id))
+
+      if (!faltantes.length) { el.hidden = true; return }
+      el.hidden = false
+      const nombres = faltantes.map(id => nombreUnidad(id)).filter(Boolean).join(', ')
+      el.textContent = visibles.size === 0
+        ? 'Las transferencias recibidas de otras unidades no se están mostrando: hace falta el permiso de ver stock. Los ingresos por comprobante sí están completos.'
+        : `Las transferencias recibidas ${nombres ? `en ${nombres}` : 'en alguna unidad'} no se están mostrando: hace falta el permiso de ver stock en esa unidad.`
+    }
+
     function renderizarBannerIngresos() {
       // Stats del mes calendario actual, sobre la lista completa (sin filtros).
       // Cuenta ENTREGAS y no filas: una entrega con remito + factura son dos
       // filas en la base, pero una sola llegada de mercadería.
+      //
+      // LAS TRANSFERENCIAS RECIBIDAS CUENTAN, en las dos cifras. El banner dice
+      // "Ingresos del mes" y una transferencia recibida es un ingreso de
+      // mercadería del mes; excluirla haría que el número no cuadre con la lista
+      // que está justo debajo, que es la peor forma de tener un contador. Sale
+      // gratis: estado.entregas ya las trae.
       const hoy = new Date()
       const prefijoMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
       const delMes = estado.entregas.filter(e => (e.base.fecha || '').startsWith(prefijoMes))
@@ -3215,11 +3476,12 @@
         <div class="tarjeta-lista" data-ingreso="${b.id}">
           <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${inicialesEmpresa(b.razon_social)}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${b.razon_social || '(sin proveedor)'}</div>
+            <div class="tarjeta-lista__titulo">${e.esTransferencia ? `Desde ${b.razon_social || 'otra unidad'}` : (b.razon_social || '(sin proveedor)')}</div>
             <div class="ingreso__meta">
+              ${e.esTransferencia ? '<span class="chip-interno" title="Mercadería que llegó de otra unidad del grupo, no de un proveedor. Se registró al recibir la transferencia.">Interno</span>' : ''}
               ${e.comprobantes.map(c => chipTipoDoc(c.tipo_doc)).join('')}
               ${anomalia ? '<span class="chip-revisar" title="Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.">⚠ Revisar</span>' : ''}
-              ${e.tieneDiferencias ? '<span class="chip-diferencia" title="Llegó menos (o más) de lo que dice el comprobante. Abrí el detalle para ver las cantidades y el motivo.">Con diferencia</span>' : ''}
+              ${e.tieneDiferencias ? `<span class="chip-diferencia" title="${e.esTransferencia ? 'Llegó menos (o más) de lo que se despachó: es la merma del traslado. Abrí el detalle para ver las cantidades y el motivo.' : 'Llegó menos (o más) de lo que dice el comprobante. Abrí el detalle para ver las cantidades y el motivo.'}">Con diferencia</span>` : ''}
               ${e.remitosVinculados?.length ? `<span class="chip-vinculo-remito" title="Parte de la mercadería de esta factura ya había entrado con un remito.">${e.remitosVinculados.length === 1 ? 'Vinculada a 1 remito' : `Vinculada a ${e.remitosVinculados.length} remitos`}</span>` : ''}
               ${chipAntiguedad}
               <span class="ingreso__fecha">${formatearFecha(b.fecha)} · ${nombreUnidad(b.unidad_negocio_id)}</span>
@@ -3268,9 +3530,76 @@
       estado.empleadosCargados = true
     }
 
+    // El detalle de una transferencia recibida. LA MERMA DEL TRASLADO es el dato
+    // que más importa acá: es lo que se perdió entre que salió y llegó, y es lo
+    // único que este detalle muestra y ninguna otra pantalla de Ingreso puede.
+    function abrirDetalleTransferenciaRecibida(entrega) {
+      const origen = nombreUnidad(entrega.origenId) || 'otra unidad'
+      const destino = nombreUnidad(entrega.destinoId) || ''
+
+      document.getElementById('detalle-titulo').textContent = `Desde ${origen}`
+      document.getElementById('detalle-meta').innerHTML = [
+        `${formatearFecha(entrega.base.fecha)}${destino ? ` · recibido en ${esc(destino)}` : ''}`,
+        'Movimiento interno entre unidades del grupo: no tiene comprobante de proveedor.',
+        entrega.observaciones ? `Observaciones: ${esc(entrega.observaciones)}` : '',
+      ].filter(Boolean).join('<br>')
+
+      // No hay comprobantes: la sección queda vacía en vez de dibujar una caja
+      // vacía que se leería como un dato que falta.
+      document.getElementById('detalle-comprobantes').innerHTML = ''
+      document.getElementById('detalle-cargando').hidden = true
+
+      document.getElementById('detalle-items').innerHTML = entrega.items.map(it => {
+        const insumo = it.insumos || {}
+        const u = insumo.unidad_medida || ''
+        const enviada = Number(it.cantidad_enviada) || 0
+        // cantidad_recibida solo se llena al aceptar. En una 'aceptada' está
+        // siempre, pero no se asume: si viniera null se muestra la enviada y no
+        // se inventa una merma.
+        const recibida = it.cantidad_recibida == null ? null : Number(it.cantidad_recibida)
+        const merma = recibida === null ? null : enviada - recibida
+        const meta = [
+          insumo.marca,
+          it.lote ? `Lote ${it.lote}` : null,
+          it.contenido_por_bulto != null ? `${formatearCantidad(it.contenido_por_bulto, u)} por bulto` : null,
+        ].filter(Boolean).join(' · ')
+
+        return `
+          <div class="tr-item">
+            <div class="tr-item__nombre">${esc(insumo.nombre || '(insumo desconocido)')}${insumo.aclaracion ? ` <span style="font-weight:500;color:var(--color-texto-suave);">(${esc(insumo.aclaracion)})</span>` : ''}</div>
+            ${meta ? `<div class="tr-item__meta">${esc(meta)}</div>` : ''}
+            <div class="tr-cifras">
+              <div class="tr-cifra">
+                <span class="tr-cifra__etiqueta">Despachado</span>
+                <span class="tr-cifra__valor">${esc(formatearCantidad(enviada, u))}</span>
+              </div>
+              <div class="tr-cifra">
+                <span class="tr-cifra__etiqueta">Recibido</span>
+                <span class="tr-cifra__valor">${recibida === null ? '—' : esc(formatearCantidad(recibida, u))}</span>
+              </div>
+              ${merma ? `
+                <div class="tr-cifra">
+                  <span class="tr-cifra__etiqueta">${merma > 0 ? 'Faltó' : 'Sobró'}</span>
+                  <span class="tr-cifra__valor tr-cifra__valor--merma">${esc(formatearCantidad(Math.abs(merma), u))}</span>
+                </div>` : ''}
+            </div>
+            ${merma && it.motivo_diferencia ? `<div class="tr-motivo">Motivo: ${esc(it.motivo_diferencia)}</div>` : ''}
+            ${merma && !it.motivo_diferencia ? '<div class="tr-motivo">Hay diferencia y no quedó registrado el motivo.</div>' : ''}
+          </div>`
+      }).join('')
+
+      document.getElementById('modal-ingreso').hidden = false
+    }
+
     async function abrirDetalleIngreso(entregaId) {
       const entrega = estado.entregas.find(e => e.base.id === entregaId)
       if (!entrega) return
+      // Camino propio y salida temprana: una transferencia no tiene
+      // comprobantes que listar ni ítems que pedir —ya vinieron en el embed— y
+      // sus cifras son otras (enviada, recibida, la merma). Mezclarla con el
+      // camino de comprobantes obligaría a poner condicionales en todo el
+      // cuerpo de abajo.
+      if (entrega.esTransferencia) { abrirDetalleTransferenciaRecibida(entrega); return }
       const ingreso = entrega.base
 
       // Solo si hay algo que resolver.
