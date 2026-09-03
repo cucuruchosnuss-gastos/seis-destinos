@@ -3376,7 +3376,13 @@
       // así que el buscador por nombre ya funciona con la línea de abajo. Se
       // suman las dos palabras con las que alguien la buscaría para AISLARLAS
       // de la lista, que es el uso real del buscador acá.
-      if (entrega.esTransferencia && ('interno'.includes(termino) || 'transferencia'.includes(termino))) return true
+      if (entrega.esTransferencia) {
+        if ('interno'.includes(termino) || 'transferencia'.includes(termino)) return true
+        // Y las DOS puntas del traslado: con el destino de título, alguien que
+        // busque "Mengui" espera encontrarla. El origen lo cubre razon_social
+        // unas líneas más abajo; el destino no estaba en ningún campo de texto.
+        if ((nombreUnidad(entrega.destinoId) || '').toLowerCase().includes(termino)) return true
+      }
       if ((b.razon_social || '').toLowerCase().includes(termino)) return true
       if ((b.nombre_fantasia || '').toLowerCase().includes(termino)) return true
       // Por el número de CUALQUIERA de los comprobantes: si la entrega tiene
@@ -3472,11 +3478,32 @@
           }
         }
 
+        // EN UNA TRANSFERENCIA EL TÍTULO ES LA UNIDAD DESTINO. Esta pantalla se
+        // llama Ingreso: lo que importa acá es DÓNDE ENTRÓ la mercadería, y el
+        // egreso se mira en Stock. razon_social sigue siendo el ORIGEN (es de
+        // dónde vino), así que el título sale de la unidad de la fila, que para
+        // una transferencia recibida ES el destino.
+        const titulo = e.esTransferencia
+          ? (nombreUnidad(b.unidad_negocio_id) || 'esta unidad')
+          : (b.razon_social || '(sin proveedor)')
+        // El avatar es la representación gráfica del TÍTULO, no un dato aparte:
+        // un círculo "CN" al lado de la palabra "Mengui" se lee como una tarjeta
+        // mal armada. El fallback "(sin proveedor)" NO va al avatar: es un
+        // placeholder y no un nombre, así que daría "(P" en vez del guion que
+        // devuelve inicialesEmpresa cuando no hay nada.
+        const iniciales = inicialesEmpresa(e.esTransferencia ? titulo : b.razon_social)
+        // Y el ORIGEN baja a la línea chica, junto a la fecha. Sin esto el
+        // destino aparecería DOS VECES en la misma fila: la línea de meta
+        // muestra nombreUnidad(b.unidad_negocio_id), que acá ya es el título.
+        const metaFecha = e.esTransferencia
+          ? `desde ${b.razon_social || 'otra unidad'} · ${formatearFecha(b.fecha)}`
+          : `${formatearFecha(b.fecha)} · ${nombreUnidad(b.unidad_negocio_id)}`
+
         return `
         <div class="tarjeta-lista" data-ingreso="${b.id}">
-          <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${inicialesEmpresa(b.razon_social)}</div>
+          <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${iniciales}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${e.esTransferencia ? `Desde ${b.razon_social || 'otra unidad'}` : (b.razon_social || '(sin proveedor)')}</div>
+            <div class="tarjeta-lista__titulo">${titulo}</div>
             <div class="ingreso__meta">
               ${e.esTransferencia ? '<span class="chip-interno" title="Mercadería que llegó de otra unidad del grupo, no de un proveedor. Se registró al recibir la transferencia.">Interno</span>' : ''}
               ${e.comprobantes.map(c => chipTipoDoc(c.tipo_doc)).join('')}
@@ -3484,7 +3511,7 @@
               ${e.tieneDiferencias ? `<span class="chip-diferencia" title="${e.esTransferencia ? 'Llegó menos (o más) de lo que se despachó: es la merma del traslado. Abrí el detalle para ver las cantidades y el motivo.' : 'Llegó menos (o más) de lo que dice el comprobante. Abrí el detalle para ver las cantidades y el motivo.'}">Con diferencia</span>` : ''}
               ${e.remitosVinculados?.length ? `<span class="chip-vinculo-remito" title="Parte de la mercadería de esta factura ya había entrado con un remito.">${e.remitosVinculados.length === 1 ? 'Vinculada a 1 remito' : `Vinculada a ${e.remitosVinculados.length} remitos`}</span>` : ''}
               ${chipAntiguedad}
-              <span class="ingreso__fecha">${formatearFecha(b.fecha)} · ${nombreUnidad(b.unidad_negocio_id)}</span>
+              <span class="ingreso__fecha">${metaFecha}</span>
             </div>
             ${e.huerfana ? '<div class="ingreso__nota">Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</div>' : ''}
             ${(e.noSuma && !e.huerfana) ? '<div class="ingreso__nota">No sumó mercadería: todos sus renglones ya habían entrado con un remito.</div>' : ''}
@@ -3537,9 +3564,12 @@
       const origen = nombreUnidad(entrega.origenId) || 'otra unidad'
       const destino = nombreUnidad(entrega.destinoId) || ''
 
-      document.getElementById('detalle-titulo').textContent = `Desde ${origen}`
+      // Mismo criterio que la fila: arriba la unidad DESTINO —dónde entró la
+      // mercadería— y el origen como dato secundario. Y el destino no se repite
+      // abajo, que era lo que decía el "· recibido en X" de la versión anterior.
+      document.getElementById('detalle-titulo').textContent = destino || 'esta unidad'
       document.getElementById('detalle-meta').innerHTML = [
-        `${formatearFecha(entrega.base.fecha)}${destino ? ` · recibido en ${esc(destino)}` : ''}`,
+        `${formatearFecha(entrega.base.fecha)} · desde ${esc(origen)}`,
         'Movimiento interno entre unidades del grupo: no tiene comprobante de proveedor.',
         entrega.observaciones ? `Observaciones: ${esc(entrega.observaciones)}` : '',
       ].filter(Boolean).join('<br>')
