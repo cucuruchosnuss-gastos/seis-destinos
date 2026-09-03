@@ -886,6 +886,54 @@
        recurrente del proyecto, y este aviso se oculta justamente así. */
     .wz-aviso[hidden] { display: none; }
 
+    /* ── Comprobante ya cargado ──────────────────────────────────────────────
+       ÁMBAR y NO rojo: es una advertencia, no un error. Cargar el mismo papel
+       dos veces puede estar mal o puede ser deliberado, y el detector no sabe
+       cuál de las dos — así que informa y deja seguir. */
+    .wz-duplicado {
+      margin: 0 0 0.25rem;
+      padding: 0.8125rem 0.9375rem;
+      background: var(--amarillo-suave);
+      border: 1px solid var(--amarillo);
+      border-radius: 14px;
+      color: var(--amarillo-oscuro);
+      font-size: 0.84375rem;
+      line-height: 1.4;
+      min-width: 0;
+    }
+    /* El display de autor de arriba (block por defecto) no lo pisa, pero la
+       regla va igual: es el bug más recurrente del proyecto y esta caja se
+       oculta con [hidden]. */
+    .wz-duplicado[hidden] { display: none; }
+    .wz-duplicado__titulo { font-weight: 750; margin-bottom: 0.5rem; }
+    .wz-duplicado__fila {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1875rem;
+      padding: 0.5rem 0;
+      border-top: 1px solid rgba(201,154,46,0.35);
+      min-width: 0;
+    }
+    .wz-duplicado__donde { font-weight: 700; }
+    .wz-duplicado__datos { font-weight: 550; }
+    /* La consecuencia, que es DISTINTA según el origen: un duplicado en Ingreso
+       significa que la mercadería se va a contar dos veces; uno en contabilidad
+       significa que el papel ya se registró pero la mercadería quizá no. */
+    .wz-duplicado__consecuencia { font-weight: 500; opacity: 0.85; }
+    /* Chip de origen. El de ESTE módulo va en marrón —su propio acento— y los de
+       contabilidad en gris-azul: la diferencia tiene que entenderse sin leer. */
+    .chip-origen {
+      display: inline-block;
+      padding: 0.0625rem 0.4375rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      white-space: nowrap;
+      vertical-align: 0.05rem;
+    }
+    .chip-origen--mp { background: var(--marron-suave); color: var(--marron-oscuro); }
+    .chip-origen--contable { background: rgba(168,184,216,0.28); color: #55617d; }
+
     /* ── Paso 2 — datos ──────────────────────────────────────────────────── */
 
     .wz-campo { margin-top: 1.125rem; min-width: 0; }
@@ -2272,6 +2320,13 @@
 
       <div class="wz-progreso" id="wz-progreso"></div>
 
+      <!-- COMPROBANTE YA CARGADO. Va acá, FUERA de los paneles de paso y no
+           adentro del paso de datos, por dos razones: la detección ocurre justo
+           al SALIR de ese paso, así que ahí no se vería nunca; y desde acá sigue
+           visible en el paso de confirmación, que es donde se decide guardar.
+           Un contenedor por paso se desincroniza. -->
+      <div class="wz-duplicado" id="wz-duplicado" hidden></div>
+
       <!-- ── Paso 1 — El comprobante ────────────────────────────────────── -->
       <div class="wz-paso wz-paso--activo" id="wz-paso-comprobante">
         <div class="wz-titulo">El comprobante</div>
@@ -2649,6 +2704,11 @@
         cuitOcr: null,
         proveedorId: null,
         proveedorMatch: null,
+        // Los comprobantes ya cargados que matchearon este número. Vive en el
+        // wizard y no en una variable suelta para que reiniciarLecturaWizard()
+        // lo limpie solo: si se reemplaza la foto, el aviso viejo no puede
+        // sobrevivir a la lectura nueva.
+        duplicados: [],
         // Lectura CRUDA del comprobante (pre-validación), tal como la devolvió
         // el modelo. Se archiva en materia_prima_ingresos.ocr_crudo al
         // confirmar. No se muestra en ninguna pantalla: la decisión de "nada de
@@ -2702,6 +2762,10 @@
       estado.wizard.paso = previo.paso
       estado.wizard.encabezado.unidadId = previo.encabezado.unidadId
       limpiarFormularioDatos()
+      // Reemplazar la foto no cambia de paso, así que irAPasoWz() no corre: sin
+      // esto el aviso del comprobante ANTERIOR quedaría en pantalla sobre una
+      // lectura nueva. wizardVacio() ya limpió el estado; esto limpia el DOM.
+      renderizarAvisoDuplicado()
     }
 
     // La contraparte en el DOM: los inputs son la segunda fuente de verdad y
@@ -3818,6 +3882,10 @@
       document.querySelectorAll('.wz-paso').forEach(el => el.classList.remove('wz-paso--activo'))
       document.getElementById(`wz-paso-${id}`).classList.add('wz-paso--activo')
       renderizarProgresoWz()
+      // Un solo lugar donde el aviso de duplicado se sincroniza con el estado:
+      // así se dibuja apenas se detecta, sigue visible hasta confirmar —que es
+      // donde se decide guardar— y desaparece solo cuando el wizard se reinicia.
+      renderizarAvisoDuplicado()
       window.scrollTo({ top: 0, behavior: 'auto' })
 
       // Volver al paso 1 deshace el camino "sin comprobante": si no, el campo
@@ -4074,6 +4142,147 @@
       renderizarProveedorDetectado()
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — DETECTOR DE COMPROBANTE YA CARGADO
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // El mismo papel se puede cargar acá (por las cantidades) y en Gastos o
+    // Cuentas Corrientes (por la plata), y hasta ahora nada avisaba: nadie se
+    // enteraba hasta que los números no cuadraban.
+
+    // Cómo se nombra cada origen y QUÉ SIGNIFICA un duplicado ahí. Las tres
+    // claves son los valores que devuelve la RPC en su columna `modulo`.
+    //   label  → el chip: dónde está cargado
+    //   registro → cómo se llama esa fila en singular ("Gasto de $X"), porque
+    //              "Gastos de $X" no se lee
+    const ORIGENES_DUPLICADO = {
+      materia_prima: {
+        label: 'Ingreso', registro: 'Ingreso', chip: 'chip-origen--mp',
+        consecuencia: 'Si lo cargás igual, la mercadería va a contarse dos veces en el stock.',
+      },
+      gastos: {
+        label: 'Gastos', registro: 'Gasto', chip: 'chip-origen--contable',
+        consecuencia: 'El papel ya está registrado en contabilidad, pero la mercadería puede no estar cargada todavía.',
+      },
+      cuentas_corrientes: {
+        label: 'Cuentas corrientes', registro: 'Factura', chip: 'chip-origen--contable',
+        consecuencia: 'El papel ya está registrado en contabilidad, pero la mercadería puede no estar cargada todavía.',
+      },
+    }
+
+    // Es el ÚNICO importe que muestra este módulo, y no contradice la decisión
+    // de "nada de precios": no es el precio de lo que se está cargando —eso
+    // sigue sin capturarse— es un dato del registro que YA EXISTE en otro
+    // módulo, y sin él el aviso no alcanza para reconocerlo y decidir.
+    function formatearImporteDuplicado(v) {
+      // Se rechaza null/undefined/'' ANTES de convertir: Number(null) es 0, que
+      // es finito, así que con isFinite a secas un importe ausente se mostraría
+      // como "$0". Es la trampa ya documentada del proyecto, y acá entra por la
+      // puerta principal — la rama de materia_prima de la RPC devuelve el
+      // importe en null SIEMPRE (null::numeric, verificado en su cuerpo).
+      if (v === null || v === undefined || v === '') return null
+      const num = Number(v)
+      if (!Number.isFinite(num)) return null
+      return '$' + num.toLocaleString('es-AR', { maximumFractionDigits: 2 })
+    }
+
+    // Se consulta al SALIR del paso de datos, que es el primer momento en que ya
+    // hay proveedor y número.
+    //
+    // SIN CACHÉ, y es una inconsistencia APARENTE con asegurarAliasProveedor y
+    // asegurarRemitosVinculables, que sí cachean — no unificar el patrón. Esos
+    // dos cachean porque su resultado no depende de lo que la persona acaba de
+    // tipear; este sí depende, del número y del proveedor. Un aviso calculado
+    // con datos viejos es peor que ninguno, así que corregir cualquiera de los
+    // dos y volver a pasar por el paso vuelve a consultar.
+    async function buscarComprobanteYaCargado() {
+      const w = estado.wizard
+      const e = w.encabezado
+      w.duplicados = []
+
+      // Sin comprobante no hay número que buscar. Y sin un solo dígito tampoco:
+      // normalizar_numero_doc() devuelve null y la RPC corta con
+      // `c.num is not null`, así que sería un viaje al servidor para nada. El
+      // criterio es el MISMO que el de la función, a propósito.
+      if (e.tipoDoc === 'sin_comprobante') return
+      if (!/\d/.test(e.numeroDoc || '')) return
+
+      // El try/catch NO es de adorno: sin él, una caída de red rechaza la
+      // promesa, la excepción sube por continuarDesdeDatos y el botón queda
+      // deshabilitado para siempre — el wizard entero trabado por el detector.
+      let data, error
+      try {
+        ({ data, error } = await supabase.rpc('buscar_comprobante_cargado', {
+          p_proveedor_id: w.proveedorId ?? null,
+          // La razón social va SIEMPRE que se la tenga: sin proveedor
+          // identificado es la única vía de match que le queda a la RPC.
+          p_razon_social: e.razonSocial || null,
+          p_numero_doc: e.numeroDoc,
+        }))
+      } catch (ex) {
+        console.error('buscar_comprobante_cargado:', ex)
+        return
+      }
+      if (error) {
+        // Un detector caído NO puede impedir que se cargue mercadería.
+        console.error('buscar_comprobante_cargado:', error)
+        return
+      }
+      // PUERTA ABIERTA para cuando exista la pantalla de edición: un ingreso no
+      // debería detectarse a sí mismo. El filtro va en la RPC —un
+      // p_excluir_ingreso_id, que hoy NO tiene— y no acá: filtrar en el cliente
+      // deja la regla en dos lugares y descarta una fila que el servidor ya
+      // buscó. Hoy no aplica, no hay edición.
+      w.duplicados = data ?? []
+    }
+
+    // NO BLOQUEA: informa y deja seguir. Un bloqueo duro empuja a inventar un
+    // número distinto para poder cargar, y eso es peor que el duplicado — el
+    // duplicado se ve, el número inventado no.
+    function renderizarAvisoDuplicado() {
+      const cont = document.getElementById('wz-duplicado')
+      const filas = estado.wizard?.duplicados ?? []
+      if (!filas.length) { cont.hidden = true; cont.innerHTML = ''; return }
+
+      const desconocido = { label: 'otro módulo', registro: 'Registro', chip: 'chip-origen--contable', consecuencia: '' }
+
+      const html = filas.map(f => {
+        const o = ORIGENES_DUPLICADO[f.modulo] || desconocido
+        const importe = formatearImporteDuplicado(f.importe)
+        // "Gasto de $X cargado el DD/MM/AAAA" y NO un importe suelto al lado de
+        // la fecha: en un módulo donde no hay ningún otro número de plata, uno
+        // suelto se lee como el importe de lo que se está cargando.
+        const cuando = importe
+          ? `${o.registro} de ${importe} cargado el ${formatearFecha(f.fecha)}`
+          : `Cargado el ${formatearFecha(f.fecha)}`
+        const datos = [cuando, f.razon_social || '', nombreUnidad(f.unidad_negocio_id) || '']
+          .filter(Boolean).map(esc).join(' · ')
+        return `
+          <div class="wz-duplicado__fila">
+            <div class="wz-duplicado__donde">
+              <span class="chip-origen ${o.chip}">En ${esc(o.label)}</span>
+              ${esc(f.numero_doc || 'sin número')}
+            </div>
+            <div class="wz-duplicado__datos">${datos}</div>
+          </div>`
+      }).join('')
+
+      // Las consecuencias van UNA VEZ cada una y después de las filas: con un
+      // duplicado en Gastos y otro en Cuentas Corrientes el texto es el mismo, y
+      // repetirlo dos veces lo vuelve ruido.
+      const consecuencias = [...new Set(filas
+        .map(f => (ORIGENES_DUPLICADO[f.modulo] || desconocido).consecuencia)
+        .filter(Boolean))]
+
+      cont.innerHTML = `
+        <div class="wz-duplicado__titulo">⚠ ${filas.length === 1
+          ? 'Este comprobante ya está cargado'
+          : `Este comprobante ya está cargado en ${filas.length} lugares`}</div>
+        ${html}
+        ${consecuencias.map(c => `<div class="wz-duplicado__consecuencia">${esc(c)}</div>`).join('')}`
+      cont.hidden = false
+    }
+
     function renderizarProveedorDetectado() {
       const cont = document.getElementById('wz-proveedor-detectado')
       const w = estado.wizard
@@ -4125,6 +4334,9 @@
       const btnDatos = document.getElementById('btn-datos-continuar')
       btnDatos.disabled = true
       await asegurarAliasProveedor()
+      // ANTES del return de abajo también, y por el mismo motivo: un remito se
+      // puede duplicar igual que una factura. El aviso lo dibuja irAPasoWz().
+      await buscarComprobanteYaCargado()
       btnDatos.disabled = false
 
       if (!esFactura(e.tipoDoc)) { irAPasoWz('items'); return }
