@@ -149,6 +149,11 @@
       min-width: 0;
     }
     .pestanas-stock[hidden] { display: none; }
+    /* "Igualar a lo que hay" no entra en media pantalla de 375px con el nowrap
+       de .pestana-stock. Se afloja SOLO acá: el texto es el que le sirve a
+       quien está en el depósito, y la pestaña se adapta al texto y no al
+       revés. Las pestañas de la pantalla siguen en una sola línea. */
+    #mov-modos .pestana-stock { white-space: normal; line-height: 1.25; }
     .pestana-stock {
       flex: 1 1 0;
       min-width: 0;
@@ -1505,18 +1510,93 @@
       flex-shrink: 0;
     }
 
+    /* ── La jerarquía del modal de movimiento ────────────────────────────
+       Había TRES cajas con el mismo fondo gris —la explicación del modo, el
+       saldo y el aviso del motivo— pesando igual entre sí y más que los
+       títulos de sección, que quedaban aplastados entre ellas. No son lo
+       mismo: una es contexto que se lee una vez, otra es EL DATO por el que se
+       abre esta pantalla, y la tercera es una advertencia. */
+
+    /* Los títulos de sección, por encima de las cajas y no por debajo. */
+    #modal-movimiento .campo-stock label {
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-bottom: 0.4375rem;
+    }
+
+    /* La explicación del modo es contexto: pierde la caja y queda como texto
+       suelto debajo de las pestañas. */
+    #mov-explicacion {
+      background: none;
+      padding: 0;
+      margin: 0.5rem 0 1rem;
+      color: var(--color-texto-suave);
+    }
+
+    /* El aviso del motivo es una advertencia, no un bloque: más chico y sin
+       fondo, colgando de su campo. */
+    #mov-ayuda-motivo {
+      background: none;
+      padding: 0;
+      margin-top: 0.3125rem;
+      font-size: 0.71875rem;
+      color: var(--color-texto-suave);
+    }
+
+    /* EL SALDO ES EL DATO por el que se abre esta pantalla: deja de ser un
+       bloque gris más y pasa a leerse como una cifra, con la misma receta de
+       tarjeta del listado y el patrón de Cuentas Corrientes —etiqueta chica
+       arriba, número grande abajo—.
+
+       Tiene TRES estados y el diseño los sostiene a los tres: sin unidad no se
+       dibuja (ver saldoActualMov), con saldo muestra la cifra, y en cero real
+       muestra el cero MÁS la aclaración de que es un cero de verdad. */
     .mov-saldo {
-      background: var(--color-superficie);
-      border-radius: 12px;
-      padding: 0.6875rem 0.875rem;
-      margin-bottom: 0.875rem;
-      font-size: 0.8125rem;
-      line-height: 1.5;
+      background: var(--color-fondo);
+      border: 1px solid var(--borde-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      border-radius: 1.0625rem;
+      padding: 0.875rem 1rem;
+      margin-bottom: 1rem;
       color: var(--color-texto);
       min-width: 0;
     }
     .mov-saldo[hidden] { display: none; }
-    .mov-saldo strong { font-weight: 700; }
+    .mov-saldo__etiqueta {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.1875rem;
+    }
+    .mov-saldo__cifra {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+    .mov-saldo__despues {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--color-texto-suave);
+      margin-top: 0.4375rem;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+    .mov-saldo__despues strong { font-weight: 700; color: var(--color-texto); }
+    /* Un cero REAL se dice con palabras: si no, se confunde con el cero que
+       esta pantalla mostraba cuando no sabía. */
+    .mov-saldo__cero {
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: var(--color-texto-suave);
+      margin-top: 0.3125rem;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
 
     .mov-signo {
       display: flex;
@@ -1561,7 +1641,9 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .mov-saldo__bultos { color: var(--color-texto-suave); }
+    /* Dentro de la cifra de 1.25rem el equivalente en bultos no puede pesar
+       lo mismo: es la lectura de apoyo, no el numero. */
+    .mov-saldo__bultos { color: var(--color-texto-suave); font-size: 0.8125rem; font-weight: 600; }
     .rec-fila__presentacion { font-weight: 500; }
     .rec-fila__bultos {
       font-size: 0.78125rem;
@@ -1610,7 +1692,7 @@
       <input type="search" class="buscador-stock" id="buscador-stock-actual" placeholder="Buscar por nombre o marca…" autocomplete="off">
 
       <div class="barra-acciones" id="acciones-stock" hidden>
-        <button type="button" class="btn-stock btn-stock--chico" id="btn-registrar-movimiento" hidden>Registrar movimiento</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-registrar-movimiento" hidden>Corregir stock</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
       </div>
 
@@ -2215,12 +2297,16 @@
     <div class="modal-stock__backdrop" data-cerrar-mov></div>
     <div class="modal-stock__panel">
       <button type="button" class="modal-stock__cerrar" data-cerrar-mov aria-label="Cerrar">✕</button>
-      <h2 class="modal-stock__titulo" id="mov-titulo">Registrar movimiento</h2>
+      <h2 class="modal-stock__titulo" id="mov-titulo">Corregir stock</h2>
 
-      <!-- Solo se dibuja si la persona puede usar los DOS modos. -->
+      <!-- Solo se dibuja si la persona puede usar los DOS modos.
+           Los rótulos dicen QUÉ PASÓ y no qué operación es: "Ajuste" y "Baja"
+           se leían como una opción técnica. La distinción real es que en la
+           baja hay un hecho físico que alguien puede contar —se rompió, se
+           mojó— y en el otro solo hay un número que no cierra. -->
       <div class="pestanas-stock" id="mov-modos" hidden>
-        <button type="button" class="pestana-stock" data-modo="ajuste">Ajuste</button>
-        <button type="button" class="pestana-stock" data-modo="baja">Baja</button>
+        <button type="button" class="pestana-stock" data-modo="ajuste">Igualar a lo que hay</button>
+        <button type="button" class="pestana-stock" data-modo="baja">Dar de baja</button>
       </div>
 
       <div class="campo-stock__ayuda" id="mov-explicacion"></div>
@@ -2235,6 +2321,14 @@
         <div class="chips-unidad" id="mov-chips-unidad"></div>
         <div class="mov-unidad-fija" id="mov-unidad-fija" hidden></div>
         <div class="campo-stock__error" id="mov-error-unidad" hidden></div>
+      </div>
+
+      <!-- TODO lo que sigue depende de la unidad: el saldo se lee POR unidad,
+           así que dejar buscar el insumo antes invita al error que motivó este
+           arreglo. Se avisa en vez de dejar recorrer el formulario entero con
+           la unidad vacía. -->
+      <div class="campo-stock__ayuda" id="mov-falta-unidad" hidden>
+        Elegí primero la unidad de negocio: el stock de cada insumo es distinto en cada una.
       </div>
 
       <div class="campo-stock">
@@ -2297,7 +2391,7 @@
       <div class="campo-stock">
         <label for="mov-motivo">Motivo</label>
         <input type="text" id="mov-motivo" placeholder="Ej: rotura en el depósito" autocomplete="off">
-        <div class="campo-stock__ayuda">Queda en el libro para siempre. Es lo que se va a leer cuando alguien pregunte por qué cambió el stock.</div>
+        <div class="campo-stock__ayuda" id="mov-ayuda-motivo">Queda en el libro para siempre. Es lo que se va a leer cuando alguien pregunte por qué cambió el stock.</div>
         <div class="campo-stock__error" id="mov-error-motivo" hidden></div>
       </div>
 
@@ -4644,9 +4738,10 @@
     // MOVIMIENTOS PUNTUALES — ajuste y baja
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Redactadas para el depósito: dicen QUÉ PASÓ, no qué operación es.
     const EXPLICACION_MODO = {
-      ajuste: 'Corrige el stock del sistema para que coincida con la realidad. Queda registrado con su motivo.',
-      baja: 'Descuenta mercadería que ya no está: rotura, vencimiento o merma. Siempre resta.',
+      ajuste: 'El sistema no coincide con lo que hay en el depósito y hay que igualarlo. Puede sumar o restar.',
+      baja: 'Mercadería que ya no está: se rompió, se mojó, se venció o se perdió. Siempre descuenta.',
     }
 
     function puedeDarBaja() { return tieneTarea('stock', 'dar_baja') }
@@ -4699,6 +4794,20 @@
       }
 
       limpiarErroresMov()
+      // EL RESETEO VA AL ABRIR Y NO AL CERRAR, a propósito: cerrar puede pasar
+      // por caminos que esta función no controla —el gesto de atrás del
+      // celular, sin ir más lejos— y el formulario tiene que arrancar limpio
+      // igual. Antes el alta limpiaba seis campos pero NO el chip del insumo
+      // elegido, ni el campo de lote, ni la caja de saldo, ni estado.lotesMov:
+      // como estado.mov.insumo sí arrancaba en null, el DOM mostraba
+      // "Caja capelina" seleccionada mientras el estado creía que no había
+      // nada. Un formulario que se abre con datos viejos es un movimiento
+      // equivocado esperando que alguien confirme sin mirar.
+      //
+      // quitarInsumoMov() ya hacía exactamente esa limpieza; solo faltaba
+      // llamarla. La precarga intencional —desde el detalle por lote o desde
+      // un recuento— se aplica DESPUÉS, así que sigue funcionando.
+      quitarInsumoMov()
       document.getElementById('mov-buscar-insumo').value = ''
       document.getElementById('mov-lote').value = lote || ''
       document.getElementById('mov-cantidad').value = ''
@@ -4713,11 +4822,52 @@
       if (insumo) await elegirInsumoMov(insumo.id, { conservarLote: true })
 
       document.getElementById('modal-movimiento').hidden = false
+      abrirConHistorial(cerrarModalMovimiento)
     }
+
+    // ── EL BOTÓN DE ATRÁS DEL CELULAR ──────────────────────────────────────
+    //
+    // No hay NINGÚN manejo de historial en todo el proyecto: ni pushState ni
+    // popstate, en ningún archivo. Así que con un modal a pantalla completa
+    // abierto, el gesto de atrás SALE DE LA PÁGINA en vez de cerrar el modal —
+    // que es lo que dejó la pantalla en blanco.
+    //
+    // Esto empuja una entrada de historial al abrir y cierra el modal cuando
+    // vuelve. `enHistorial` evita apilar dos entradas si se reabre sin haber
+    // cerrado.
+    //
+    // OJO: hoy lo usa SOLO el modal de movimiento, que es donde se reportó.
+    // Los otros ocho modales del archivo siguen con el comportamiento viejo
+    // —atrás sale de la página—. Adoptarlo es UNA línea: llamar a
+    // abrirConHistorial(suFuncionDeCierre) después de mostrar el modal, y que
+    // esa función de cierre llame a cerrarConHistorial().
+    let enHistorial = null
+
+    function abrirConHistorial(alVolver) {
+      if (enHistorial) return
+      enHistorial = alVolver
+      history.pushState({ modalStock: true }, '')
+    }
+
+    // La cierra el propio modal (botón, Cancelar, backdrop): saca la entrada
+    // que se había empujado, para que atrás no tenga que apretarse dos veces.
+    function cerrarConHistorial() {
+      if (!enHistorial) return
+      enHistorial = null
+      history.back()
+    }
+
+    window.addEventListener('popstate', () => {
+      if (!enHistorial) return
+      const alVolver = enHistorial
+      enHistorial = null
+      alVolver()
+    })
 
     function cerrarModalMovimiento() {
       document.getElementById('modal-movimiento').hidden = true
       estado.mov = null
+      cerrarConHistorial()
     }
 
     function limpiarErroresMov() {
@@ -4732,11 +4882,13 @@
       m.modo = modo
       m.signo = 0
 
+      // El título coincide con el rótulo de su pestaña: si dijeran cosas
+      // distintas habría que traducir mentalmente entre uno y otro.
       document.getElementById('mov-titulo').textContent =
-        modo === 'baja' ? 'Dar de baja mercadería' : 'Ajustar el stock'
+        modo === 'baja' ? 'Dar de baja mercadería' : 'Igualar el stock a lo que hay'
       document.getElementById('mov-explicacion').textContent = EXPLICACION_MODO[modo]
       document.getElementById('mov-label-cantidad').textContent =
-        modo === 'baja' ? 'Cantidad a dar de baja' : 'Cantidad'
+        modo === 'baja' ? 'Cantidad a dar de baja' : 'Cantidad a corregir'
       // El signo solo existe en el ajuste: la baja siempre resta y la RPC
       // recibe la cantidad en positivo.
       document.getElementById('mov-campo-signo').hidden = modo !== 'ajuste'
@@ -4753,10 +4905,32 @@
       const unidades = unidadesDelModo(modo)
       const candidata = unidadPreferida || m.unidadId
       m.unidadId = unidades.some(u => u.id === candidata) ? candidata : ''
+      // Con una sola disponible se elige sola; renderizarUnidadMov además
+      // esconde el paso, para no pedir una decisión que no existe.
       if (!m.unidadId && unidades.length === 1) m.unidadId = unidades[0].id
 
       renderizarUnidadMov()
       cargarLotesMov()
+    }
+
+    // TODO el formulario cuelga de la unidad, así que hasta elegirla no se
+    // habilita nada. Antes se podía recorrer el camino completo —insumo, lote,
+    // cantidad, motivo— con la unidad vacía y el saldo diciendo 0.
+    //
+    // Se deshabilita DESDE JS y no con el atributo del HTML: si el script
+    // fallara, los campos quedan usables como antes en vez de dejar el
+    // formulario inutilizable. Mismo criterio que los botones de contraseña.
+    const CAMPOS_TRAS_UNIDAD = ['mov-buscar-insumo', 'mov-lote', 'mov-cantidad', 'mov-motivo']
+
+    function aplicarBloqueoUnidadMov() {
+      const m = estado.mov
+      const listo = !!(m && m.unidadId)
+      CAMPOS_TRAS_UNIDAD.forEach(id => {
+        const el = document.getElementById(id)
+        el.disabled = !listo
+      })
+      document.getElementById('btn-confirmar-mov').disabled = !listo
+      document.getElementById('mov-falta-unidad').hidden = listo
     }
 
     function renderizarUnidadMov() {
@@ -4764,6 +4938,17 @@
       const unidades = unidadesDelModo(m.modo)
       const chips = document.getElementById('mov-chips-unidad')
       const fija = document.getElementById('mov-unidad-fija')
+      const campo = document.getElementById('mov-campo-unidad')
+
+      aplicarBloqueoUnidadMov()
+
+      // Con UNA sola unidad no hay elección que hacer: ya quedó elegida más
+      // arriba y mostrar el paso sería pedir una decisión que no existe.
+      if (!m.unidadFija && unidades.length === 1) {
+        campo.hidden = true
+        return
+      }
+      campo.hidden = false
 
       // Con la unidad fija (viene de un lote o de un recuento) se muestra como
       // texto: no hay nada que elegir.
@@ -4902,8 +5087,12 @@
       // elección que hacer y un chip solo sería ruido.
       if (conocidas.length === 1 && !haySueltos) m.presentacion = conocidas[0]
       // Sin ninguna conocida, el default es "sin presentación" — y queda la
-      // opción de declarar una.
-      if (!conocidas.length && m.presentacion === undefined) m.presentacion = null
+      // opción de declarar una. PERO solo cuando la lista de conocidas es una
+      // respuesta y no una ausencia: sin unidad elegida está vacía porque no
+      // se consultó nada, y elegir por la persona ahí es la misma familia que
+      // el saldo en cero — una decisión tomada sin datos que después viaja al
+      // insert.
+      if (!conocidas.length && m.presentacion === undefined && m.unidadId) m.presentacion = null
 
       campo.hidden = false
       const opciones = [
@@ -4954,9 +5143,20 @@
       return m.presentacion
     }
 
+    // Devuelve null cuando NO SE PUEDE SABER y un número cuando se sabe. La
+    // diferencia es el bug que esta función tenía: sin unidad elegida
+    // cargarLotesMov() corta temprano y deja estado.lotesMov vacío, así que el
+    // find no encontraba nada y se devolvía 0 — un dato AUSENTE presentado
+    // como el número que justamente dice "no hay nada". Alguien puede dar de
+    // baja creyendo que el sistema está desactualizado, o no darla creyendo
+    // que ya está en cero.
+    //
+    // OJO con la asimetría: sin fila PERO con unidad e insumo elegidos, el 0
+    // SÍ es real — v_stock_por_lote filtra con HAVING sum(cantidad) <> 0, así
+    // que un lote sin fila es un lote sin saldo.
     function saldoActualMov() {
       const m = estado.mov
-      if (!m || !m.insumo) return null
+      if (!m || !m.insumo || !m.unidadId) return null
       const lote = (document.getElementById('mov-lote').value || '').trim()
       // La presentación forma parte de la clave: v_stock_por_lote agrupa por
       // ella, así que el mismo lote puede tener dos saldos distintos.
@@ -4991,8 +5191,13 @@
       const avisoNeg = document.getElementById('mov-aviso-negativo')
       if (!m || !m.insumo) { cajaSaldo.hidden = true; avisoNeg.hidden = true; return }
 
-      const u = m.insumo.unidad_medida || ''
       const saldo = saldoActualMov()
+      // Sin saldo conocido NO se dibuja nada: ni el número, ni el "quedaría
+      // en", ni el aviso de negativo, que antes se calculaban todos sobre el
+      // cero inventado. El paso que falta ya se pide arriba.
+      if (saldo === null) { cajaSaldo.hidden = true; avisoNeg.hidden = true; return }
+
+      const u = m.insumo.unidad_medida || ''
       const delta = cantidadMov()
       const aplicado = m.modo === 'baja' && delta !== null ? -delta : delta
 
@@ -5006,10 +5211,12 @@
       }
 
       cajaSaldo.hidden = false
-      cajaSaldo.innerHTML = aplicado === null
-        ? `Saldo actual: <strong>${esc(formatearCantidadStock(saldo, u))}</strong>${enBultos(saldo)}`
-        : `Saldo actual: <strong>${esc(formatearCantidadStock(saldo, u))}</strong>${enBultos(saldo)}`
-          + ` → quedaría en <strong>${esc(formatearCantidadStock(saldo + aplicado, u))}</strong>${enBultos(saldo + aplicado)}`
+      cajaSaldo.innerHTML = `
+        <div class="mov-saldo__etiqueta">Saldo actual</div>
+        <div class="mov-saldo__cifra">${esc(formatearCantidadStock(saldo, u))}${enBultos(saldo)}</div>
+        ${saldo === 0 ? '<div class="mov-saldo__cero">El sistema no tiene saldo registrado para este lote y presentación en esta unidad.</div>' : ''}
+        ${aplicado === null ? '' :
+          `<div class="mov-saldo__despues">Después del movimiento: <strong>${esc(formatearCantidadStock(saldo + aplicado, u))}</strong>${enBultos(saldo + aplicado)}</div>`}`
 
       // Ninguna de las dos RPCs valida saldo, y está decidido que así sea:
       // frenar una operación por papeleo es peor que el número mal. Se avisa,
