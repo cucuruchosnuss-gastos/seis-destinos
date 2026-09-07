@@ -2992,6 +2992,15 @@
     // ═══════════════════════════════════════════════════════════════════
     // DETECTOR DE COMPROBANTE YA CARGADO
     // ═══════════════════════════════════════════════════════════════════
+
+    // NO EXISTÍA EN ESTE ARCHIVO. El render del aviso se adaptó del módulo de
+    // Ingreso, que sí la tiene, y las cuatro referencias quedaron colgadas:
+    // ReferenceError cada vez que el aviso dibujaba una fila.
+    function esc(valor) {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
     //
     // El mismo papel se puede cargar acá (por la plata) y en Ingreso (por las
     // cantidades), y hasta ahora nada avisaba: nadie se enteraba hasta que los
@@ -3080,6 +3089,36 @@
         return
       }
       w.duplicados = data ?? []
+    }
+
+    // TODO LO QUE CORRE DESPUÉS DEL OCR, EN UN SOLO LUGAR Y CON SU PROPIO
+    // TRY/CATCH.
+    //
+    // El bug que esto cierra: las tres llamadas vivían sueltas DENTRO del try
+    // del OCR, así que cualquier excepción de ellas la agarraba el catch del
+    // OCR y mostraba "Error al procesar la imagen" — culpando al OCR de un
+    // problema que estaba más abajo, con el OCR funcionando perfecto. Y los
+    // datos leídos se perdían de vista detrás de un mensaje de error.
+    //
+    // El try/catch de buscarComprobanteYaCargado() NO alcanzaba: cubre la
+    // llamada a la RPC, pero ni intentarMatchAutomaticoProveedor() —que toca
+    // el DOM— ni el renderizado del aviso estaban adentro de nada.
+    //
+    // UN DETECTOR QUE ROMPE LA CARGA ES PEOR QUE NO TENER DETECTOR: acá el OCR
+    // ya terminó y sus datos ya están en el formulario, así que lo único que
+    // se pierde si esto falla es el aviso.
+    async function detectarDuplicadoTrasOcr() {
+      try {
+        // El match de proveedor va PRIMERO: corría recién al entrar a
+        // Detalles, o sea DESPUÉS de la consulta, así que el detector
+        // preguntaba con proveedorSeleccionado en null incluso para los gastos
+        // que sí iban a matchear un proveedor — se perdía la vía FUERTE.
+        intentarMatchAutomaticoProveedor()
+        await buscarComprobanteYaCargado()
+        renderizarAvisoDuplicado()
+      } catch (ex) {
+        console.error('detectarDuplicadoTrasOcr:', ex)
+      }
     }
 
     // NO BLOQUEA: informa y deja seguir. Un bloqueo duro empuja a inventar un
@@ -5108,24 +5147,9 @@
           prellenarPaso2(resultado.datos)
           const n = Object.values(resultado.datos).filter(v => v != null).length
           mostrarEstadoOcr('ok', `✓ Se detectaron ${n} campos automáticamente`)
-          // EL MOMENTO NATURAL PARA DETECTAR UN DUPLICADO: acá ya hay número y
-          // razón social, y la persona todavía no invirtió tiempo en completar
-          // el resto del wizard. Antes se consultaba recién al salir del paso
-          // Datos, con todo ya cargado.
-          //
-          // El match de proveedor va PRIMERO, y por eso importa: corría recién
-          // al entrar a Detalles, o sea DESPUÉS de la consulta, así que el
-          // detector preguntaba con proveedorSeleccionado en null incluso para
-          // los gastos que sí iban a matchear un proveedor. Se perdía la vía
-          // FUERTE —el proveedor_id— y quedaba dependiendo de que el OCR
-          // hubiera leído la razón social igual que la vez anterior.
-          //
-          // Efecto visible y buscado: el cartel del vínculo aparece apenas
-          // termina el OCR, no recién en Detalles. Es información correcta
-          // mostrada antes, cuando todavía se puede corregir.
-          intentarMatchAutomaticoProveedor()
-          await buscarComprobanteYaCargado()
-          renderizarAvisoDuplicado()
+          // Su propio try/catch adentro: el OCR ya terminó y sus datos ya
+          // están cargados. Ver detectarDuplicadoTrasOcr().
+          await detectarDuplicadoTrasOcr()
         } else {
           mostrarEstadoOcr('error', resultado?.mensaje || 'No se pudo leer el comprobante. Completá los datos manualmente.')
         }
