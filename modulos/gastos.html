@@ -1683,11 +1683,6 @@
             <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
           </div>
 
-          <div class="grupo-campo" id="grupo-descripcion">
-            <label for="campo-descripcion">Descripción <span class="etiqueta-opcional">opcional</span></label>
-            <input type="text" id="campo-descripcion" name="descripcion" placeholder="Ej: Nafta viaje a planta">
-          </div>
-
           <div class="grupo-campo">
             <label for="campo-observaciones">Observaciones <span class="etiqueta-opcional">opcional</span></label>
             <textarea id="campo-observaciones" name="observaciones" placeholder="Cualquier dato adicional…"></textarea>
@@ -2843,7 +2838,7 @@
       // Limpiar campos de formulario
       ;['campo-fecha','campo-numero-doc','campo-razon-social',
         'campo-receptor','campo-descripcion-item',
-        'campo-importe','campo-lugar','campo-descripcion',
+        'campo-importe','campo-lugar',
         'campo-kilometraje','campo-observaciones',
         'campo-proveedor-buscar','campo-proveedor-id',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
@@ -2908,8 +2903,8 @@
         const grupoNumero = document.getElementById('grupo-numero-doc')
         const grupoTipo   = document.getElementById('grupo-tipo-doc')
         // style.display y no [hidden]: es el patrón que ya usa esta misma
-        // función para grupo-descripcion y grupo-kilometraje-detalle, y esquiva
-        // el bug recurrente del [hidden] pisado por un display de autor.
+        // función para grupo-kilometraje-detalle, y esquiva el bug recurrente
+        // del [hidden] pisado por un display de autor.
         if (grupoNumero) grupoNumero.style.display = sin ? 'none' : 'block'
         if (grupoTipo)   grupoTipo.style.display   = sin ? 'none' : 'block'
 
@@ -2944,32 +2939,25 @@
         const grupoKmDetalle = document.getElementById('grupo-kilometraje-detalle')
         if (grupoKmDetalle) grupoKmDetalle.style.display = viaVehiculos ? 'block' : 'none'
 
-        // facturas_pendientes no tiene columna "descripción" (solo
-        // "observaciones") — se oculta para no mostrar un campo que en este
-        // flujo no se va a guardar.
-        const grupoDescripcion = document.getElementById('grupo-descripcion')
-        if (grupoDescripcion) grupoDescripcion.style.display = estado.wizard.esPendiente ? 'none' : 'block'
-
         // Proveedor — opcional en los dos flujos (ver armarGasto() y
         // armarFacturaPendiente()). Al volver a este paso ya elegido, no se
         // pisa la selección previa.
         intentarMatchAutomaticoProveedor()
 
+        // Solo Lugar: Descripción se sacó del formulario porque se pisaba con
+        // "Descripción del ítem", que se usa 94 de 100 veces contra 29.
         const inputLugar = document.getElementById('campo-lugar')
-        const inputDesc  = document.getElementById('campo-descripcion')
         const PLACEHOLDERS_VEHICULO = {
-          'Mantenimiento': { lugar: 'Ej: Taller Pérez, Ruta 9 Km 45', descripcion: 'Ej: Cambio de aceite y filtros' },
-          'Repuestos':      { lugar: 'Ej: Repuestos Sur S.A.',        descripcion: 'Ej: Cambio de pastillas de freno' },
-          'Service':        { lugar: 'Ej: Concesionario oficial',     descripcion: 'Ej: Service de los 20.000 km' },
+          'Mantenimiento': { lugar: 'Ej: Taller Pérez, Ruta 9 Km 45' },
+          'Repuestos':      { lugar: 'Ej: Repuestos Sur S.A.' },
+          'Service':        { lugar: 'Ej: Concesionario oficial' },
         }
         if (viaVehiculos) {
           const catObj = estado.maestros.categorias.find(c => c.id === categoriaSeleccionada)
           const ph = PLACEHOLDERS_VEHICULO[catObj?.nombre]
           if (inputLugar) inputLugar.placeholder = ph?.lugar || 'Lugar donde se realizó'
-          if (inputDesc)  inputDesc.placeholder  = ph?.descripcion || 'Qué se le hizo al vehículo'
         } else {
           if (inputLugar) inputLugar.placeholder = 'Ej: YPF Av. Colón'
-          if (inputDesc)  inputDesc.placeholder  = 'Ej: Nafta viaje a planta'
         }
       }
 
@@ -3635,7 +3623,6 @@
         proveedor_id:      toStr('campo-proveedor-id'),
         proyecto_id:       toStr('campo-proyecto'),
         lugar_servicio:    toStr('campo-lugar'),
-        descripcion:       toStr('campo-descripcion'),
         unidad_negocio_id: unidadSeleccionada,
         empleado_id:       toStr('campo-empleado'),
         vehiculo_id:       vehiculoSeleccionado,
@@ -3925,7 +3912,6 @@
           ${fila('Empleado',     empObj?.nombre)}
           ${fila('Proyecto',     proyObj?.nombre)}
           ${fila('Lugar',        g.lugar_servicio)}
-          ${fila('Descripción',  g.descripcion)}
           ${fila('Observaciones', g.observaciones)}
         </div>
 
@@ -4197,7 +4183,6 @@
           </div>
           ${campo('Proyecto', selectProyecto)}
           ${campo('Lugar', `<input type="text" id="edit-lugar" value="${g.lugar_servicio || ''}">`)}
-          ${campo('Descripción', `<input type="text" id="edit-descripcion" value="${g.descripcion || ''}">`)}
           ${campo('Observaciones', `<textarea id="edit-observaciones">${g.observaciones || ''}</textarea>`)}
         </div>
 
@@ -4263,7 +4248,6 @@
           empleado_id:       document.getElementById('edit-empleado').value || null,
           proyecto_id:       document.getElementById('edit-proyecto').value || null,
           lugar_servicio:    document.getElementById('edit-lugar').value || null,
-          descripcion:       document.getElementById('edit-descripcion').value || null,
           observaciones:     document.getElementById('edit-observaciones').value || null,
         }
 
