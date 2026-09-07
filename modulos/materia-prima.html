@@ -3129,6 +3129,64 @@
       }
 
       await cargarIngresos()
+      // Después de cargarIngresos(): estado.entregas recién existe acá.
+      await abrirIngresoDeLaUrl()
+    }
+
+    // DEEP LINK: materia-prima.html?ingreso=<id> abre el detalle directo.
+    // Lo usa el aviso de comprobantes duplicados de Gastos, cuya RPC devuelve
+    // `materia_prima_ingresos.id` para esta rama.
+    //
+    // El id puede ser el de una FACTURA fusionada con su remito: buscarEntrega()
+    // lo resuelve mirando también los comprobantes, y se abre la entrega
+    // completa. Y puede ser el de una transferencia recibida —no desde la RPC,
+    // pero sí pegando la URL a mano—: también entra por buscarEntrega() y
+    // abrirDetalleIngreso() la rutea a su detalle propio.
+    async function abrirIngresoDeLaUrl() {
+      const id = new URLSearchParams(location.search).get('ingreso')
+      if (!id) return
+
+      // Se limpia ANTES de abrir nada: si no, recargar la página vuelve a abrir
+      // el modal solo, y volver atrás desde el modal deja la URL mintiendo.
+      history.replaceState(null, '', location.pathname)
+
+      // Sin uuid válido no se consulta: sería un viaje al servidor para nada, y
+      // un 400 de PostgREST en vez de un mensaje.
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        mostrarError('El enlace no apunta a un ingreso válido.')
+        return
+      }
+
+      if (buscarEntrega(id)) { await abrirDetalleIngreso(id); return }
+
+      // No está en el listado. La consulta NO es para encontrarlo —si fuera
+      // visible ya estaría, porque cargarIngresos() no filtra nada en la
+      // consulta, solo ordena— sino para que el mensaje diga la verdad: el
+      // registro EXISTE (el aviso viene de una RPC SECURITY DEFINER, que
+      // encuentra lo que la persona no puede ver), así que decir "no existe"
+      // sería mentir.
+      const { data, error } = await supabase
+        .from('materia_prima_ingresos')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle()
+      if (error) console.error('abrirIngresoDeLaUrl:', error)
+
+      if (!data) {
+        mostrarError('No se pudo abrir ese ingreso: puede ser de otra persona o de una unidad que no ves.')
+        return
+      }
+
+      // CÓDIGO DEFENSIVO, Y HOY NO ES ALCANZABLE — no lo borres por "muerto".
+      // Llegar acá significa que el RLS SÍ deja leer el ingreso pero no está en
+      // estado.entregas, algo imposible mientras cargarIngresos() traiga todo:
+      // no tiene filtros, solo .order().
+      //
+      // Se vuelve alcanzable cuando la tabla pase de las 1000 filas que
+      // PostgREST devuelve por defecto y la lista quede cortada — la misma
+      // trampa que ya está documentada en CLAUDE.md. Ese día, sin esta rama, el
+      // mensaje de arriba diría "puede ser de otra persona", que sería FALSO.
+      mostrarError('Ese ingreso existe pero no aparece en tu listado.')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3685,8 +3743,31 @@
       document.getElementById('modal-ingreso').hidden = false
     }
 
+    // Busca por la base O por CUALQUIERA de los comprobantes de la entrega, y
+    // eso es lo que hace que el deep link funcione con una factura fusionada:
+    // el listado FUSIONA remito + factura en una sola entrega cuya base es el
+    // REMITO, así que un id de factura no matchea contra base.id.
+    //
+    // Era un no-op silencioso latente: abrirDetalleIngreso hacía
+    // `find(e => e.base.id === id)` + `if (!entrega) return`, y no se veía
+    // porque el listado siempre le pasa la base (`data-ingreso` es `b.id`). El
+    // deep link lo destapaba en el primer caso — el detector de duplicados
+    // encuentra la FACTURA, no el remito.
+    //
+    // Cubre también las transferencias recibidas: entran en estado.entregas con
+    // su propio id de base y `comprobantes: []`, así que el `some` no las
+    // rompe y abrirDetalleIngreso ya las rutea a su detalle propio.
+    // Sin guard de `!id`: el `?? null` del final ya devuelve null para un id
+    // vacio —ninguna entrega tiene ese id— asi que seria una linea que aparenta
+    // proteger sin proteger nada. Se saco al ver que mutarla no cambiaba el
+    // resultado en ningun caso.
+    function buscarEntrega(id) {
+      return estado.entregas.find(e =>
+        e.base.id === id || e.comprobantes.some(c => c.id === id)) ?? null
+    }
+
     async function abrirDetalleIngreso(entregaId) {
-      const entrega = estado.entregas.find(e => e.base.id === entregaId)
+      const entrega = buscarEntrega(entregaId)
       if (!entrega) return
       // Camino propio y salida temprana: una transferencia no tiene
       // comprobantes que listar ni ítems que pedir —ya vinieron en el embed— y
