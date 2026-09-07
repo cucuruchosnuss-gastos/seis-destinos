@@ -156,7 +156,11 @@
       font-size: 0.8125rem;
     }
     .proveedor-vinculado[hidden] { display: none; }
-    .proveedor-vinculado strong { flex: 1; font-weight: 600; }
+    /* El flex:1 vive en el <span> y no en el <strong>: el texto pasó a ser una
+       frase con el nombre adentro, así que el hijo directo del flex —el que
+       tiene que ocupar el ancho— es el span. */
+    .proveedor-vinculado span { flex: 1; min-width: 0; }
+    .proveedor-vinculado strong { font-weight: 700; }
     .proveedor-vinculado button {
       flex: none;
       width: 1.75rem;
@@ -170,6 +174,42 @@
       cursor: pointer;
     }
     .proveedor-vinculado button:hover { background: var(--turquesa); color: var(--color-fondo); }
+
+    /* DIVERGENCIA: el texto tipeado ya no coincide con el nombre del padrón.
+       NO suelta el vínculo —sigue siendo válido que difieran, que es para lo
+       que existe este campo— pero deja de leerse como un dato de contexto y
+       pasa a leerse como algo para mirar.
+
+       La medida es la más ESTRICTA posible: cualquier diferencia que no sea
+       acento, mayúscula o espacio. Se puede, justamente porque acá el costo de
+       un falso positivo es un cartel más llamativo y no un vínculo perdido —
+       por eso no hace falta ningún score ni umbral que calibrar.
+
+       OJO CON EL ORDEN: estas dos reglas van DESPUÉS de sus bases. Empatan en
+       especificidad (0,1,0 contra .proveedor-vinculado, y 0,1,1 contra
+       .proveedor-vinculado button), así que decide el orden — es el bug
+       recurrente del proyecto. */
+    .proveedor-vinculado--diverge {
+      /* OJO: --amarillo está en la paleta LOCAL de este archivo (mismo valor
+         que el global), pero --amarillo-suave y --amarillo-oscuro NO — salen
+         del :root de main.css. Si algún día se cambia el --amarillo de acá
+         arriba, los otros dos NO lo siguen y el trío se desincroniza. */
+      background: var(--amarillo-suave);
+      border-color: var(--amarillo);
+      color: var(--amarillo-oscuro);
+    }
+    .proveedor-vinculado--diverge button {
+      width: auto;
+      padding: 0 0.5rem;
+      border-radius: 999px;
+      color: var(--amarillo-oscuro);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .proveedor-vinculado--diverge button:hover {
+      background: var(--amarillo);
+      color: var(--color-fondo);
+    }
 
     /* Modal: cargar proveedor nuevo — mismo patrón bottom-sheet que ya usa
        caja.html en #modal-desactivar-cuenta. */
@@ -1504,8 +1544,12 @@
             <label for="campo-razon-social">Razón social / Proveedor</label>
             <input type="text" id="campo-razon-social" name="razon_social" placeholder="Nombre del emisor" autocomplete="off" required>
             <div class="sugerencias-proveedor" id="sugerencias-razon-social" hidden></div>
+            <!-- Dice la CONSECUENCIA y no solo el dato: "Proveedor: X" se lee
+                 como contexto, y así nadie miraba que el vínculo hubiera
+                 quedado apuntando a otro. Decir dónde se va a guardar es lo
+                 que hace que se note cuando está mal. -->
             <div class="proveedor-vinculado" id="proveedor-vinculado" hidden>
-              Proveedor: <strong id="proveedor-vinculado-nombre"></strong>
+              <span>Se va a guardar en la cuenta de <strong id="proveedor-vinculado-nombre"></strong></span>
               <button type="button" id="btn-soltar-proveedor" title="Quitar el vínculo con el proveedor">✕</button>
             </div>
           </div>
@@ -3657,7 +3701,40 @@
       if (!cartel) return
       const p = estado.maestros.proveedores.find(x => x.id === proveedorSeleccionado)
       cartel.hidden = !p
-      if (p) document.getElementById('proveedor-vinculado-nombre').textContent = p.razon_social
+      // Sin vínculo se limpia el ámbar además de ocultar: una clase que
+      // sobrevive escondida reaparece en el próximo proveedor que se elija.
+      if (!p) { cartel.classList.remove('proveedor-vinculado--diverge'); return }
+      document.getElementById('proveedor-vinculado-nombre').textContent = p.razon_social
+
+      // DIVERGENCIA — no suelta el vínculo, solo lo hace imposible de no ver.
+      //
+      // La medida es la MÁS ESTRICTA posible: cualquier diferencia que no sea
+      // acento, mayúscula o espacio. Se puede ser así de estricto justamente
+      // porque acá no se descarta nada — el costo de un falso positivo es un
+      // cartel más llamativo sobre una diferencia legítima, no un vínculo
+      // perdido en silencio.
+      //
+      // Y por eso NO hay score ni umbral: una regla capaz de soltar
+      // "FERRETERIA KM 711" → "FERRETERIA don pepe" soltaría también
+      // "Distribuidora del Centro SRL" → "DIST. CENTRO S.R.L.", que es
+      // EXACTAMENTE el caso para el que existe este campo. Medido contra la
+      // base al escribir esto: 14 gastos vinculados, los 14 con el texto
+      // idéntico al padrón, así que el ámbar no es ruido.
+      const texto = document.getElementById('campo-razon-social')?.value || ''
+      const diverge = normalizarRazonSocial(texto) !== normalizarRazonSocial(p.razon_social)
+      cartel.classList.toggle('proveedor-vinculado--diverge', diverge)
+      // El botón se nombra solo cuando hace falta: la ✕ sola no dice qué hace,
+      // y este es el momento exacto en que alguien la necesita.
+      document.getElementById('btn-soltar-proveedor').textContent = diverge ? '✕ No es este' : '✕'
+    }
+
+    // La ✕ y el caso "el campo quedó vacío" tienen que hacer LO MISMO. Estaba
+    // escrito solo en el handler de la ✕; extraído acá para que los dos caminos
+    // no puedan divergir.
+    function soltarVinculoProveedor() {
+      limpiarMatchProveedor()
+      document.getElementById('campo-proveedor-buscar').value = ''
+      document.getElementById('sugerencias-razon-social').hidden = true
     }
 
     // Autocompleta razón social al elegir — queda editable, es una "foto"
@@ -4843,14 +4920,24 @@
     // acá no suelta el vínculo con el padrón, porque el texto del papel
     // puede diferir del nombre registrado. Para soltarlo está la ✕.
     document.getElementById('campo-razon-social').addEventListener('input', (e) => {
+      // BORRAR TODO SÍ SUELTA EL VÍNCULO. Seguir escribiendo no —esa decisión
+      // sigue en pie— pero un campo vacío no puede ser una corrección menor del
+      // texto del comprobante, así que no hay falso positivo posible.
+      //
+      // El caso que arregla: se eligió "FERRETERIA KM 711", se borró todo y se
+      // escribió otro proveedor; el vínculo quedaba pegado y el gasto se
+      // guardaba en la cuenta corriente equivocada, sin ningún error.
+      //
+      // NO cubre "seleccionar todo y escribir encima", donde el campo nunca
+      // pasa por vacío: ese lo cubre el ámbar de actualizarIndicadorProveedor().
+      if (!e.target.value.trim() && proveedorSeleccionado != null) soltarVinculoProveedor()
       renderizarSugerenciasRazonSocial(filtrarProveedores(e.target.value))
+      // Recalcula la divergencia con cada tecla: el cartel tiene que decir la
+      // verdad sobre lo que hay escrito AHORA, no sobre lo que había al elegir.
+      actualizarIndicadorProveedor()
     })
 
-    document.getElementById('btn-soltar-proveedor').addEventListener('click', () => {
-      limpiarMatchProveedor()
-      document.getElementById('campo-proveedor-buscar').value = ''
-      document.getElementById('sugerencias-razon-social').hidden = true
-    })
+    document.getElementById('btn-soltar-proveedor').addEventListener('click', soltarVinculoProveedor)
 
     document.addEventListener('click', (e) => {
       const grupo = document.getElementById('grupo-proveedor')
