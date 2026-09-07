@@ -1856,6 +1856,10 @@
         fotoUrl:      null,
         camposOcr:    new Set(),
         esPendiente:  false, // true si se tocó "Enviar a pendiente de pago" en vez de "Siguiente" en Datos
+        // true cuando se entró por "Sin comprobante". Es un FLAG EXPLÍCITO y no
+        // se deriva de fotoArchivo === null a propósito: se puede volver al
+        // paso Foto y cargar una, y ahí los dos estados se contradicen.
+        sinComprobante: false,
         cuitOcr:      null,  // CUIT del emisor que extrajo el OCR — no hay campo visible, se usa
                               // solo para el matching automático de proveedor y el prellenado del
                               // modal "Cargar proveedor nuevo"
@@ -2823,6 +2827,7 @@
       estado.wizard.fotoUrl     = null
       estado.wizard.camposOcr   = new Set()
       estado.wizard.esPendiente = false
+      estado.wizard.sinComprobante = false
       estado.wizard.cuitOcr     = null
       categoriaSeleccionada = null
       tipDocSeleccionado    = null
@@ -2889,6 +2894,34 @@
       actualizarBreadcrumb(id)
 
       // Lógica de entrada por sub-paso
+      //
+      // OJO: el `if (id === 'datos')` de validarSubpaso() valida la SALIDA de
+      // este paso. Este es el de ENTRADA, y no existía hasta acá.
+      if (id === 'datos') {
+        // SIN COMPROBANTE NO HAY NÚMERO NI TIPO QUE PEDIR. La gente ponía
+        // números ficticios ("1", "0") para llenarlo, y eso además rompe el
+        // detector de duplicados: hoy ya hay 3 gastos con numero_doc = "1" del
+        // mismo proveedor, que buscar_comprobante_cargado() marcaría entre sí.
+        // Un número VACÍO es seguro — normalizar_numero_doc() devuelve NULL y
+        // la RPC no matchea nada.
+        const sin = estado.wizard.sinComprobante
+        const grupoNumero = document.getElementById('grupo-numero-doc')
+        const grupoTipo   = document.getElementById('grupo-tipo-doc')
+        // style.display y no [hidden]: es el patrón que ya usa esta misma
+        // función para grupo-descripcion y grupo-kilometraje-detalle, y esquiva
+        // el bug recurrente del [hidden] pisado por un display de autor.
+        if (grupoNumero) grupoNumero.style.display = sin ? 'none' : 'block'
+        if (grupoTipo)   grupoTipo.style.display   = sin ? 'none' : 'block'
+
+        // Ocultar no alcanza: lo que ya se haya tipeado o elegido ANTES de
+        // volver atrás y tocar "Sin comprobante" se guardaría igual, con un
+        // campo que la pantalla ya no muestra.
+        if (sin) {
+          document.getElementById('campo-numero-doc').value = ''
+          seleccionarTipoDoc(null)
+        }
+      }
+
       if (id === 'destino') {
         renderizarGrillaDestino() // re-renderiza con selección actual
       }
@@ -3495,9 +3528,15 @@
       return data
     }
 
+    // El selector va ACOTADO a #grilla-tipo-doc, igual que el de
+    // seleccionarMedioPago. Sin acotar tocaba los OCHO .btn-tipo-doc del
+    // archivo —los 3 de medio de pago incluidos—, así que elegir un tipo de
+    // documento deseleccionaba VISUALMENTE el medio de pago ya elegido
+    // mientras medioPagoSeleccionado seguía con su valor: la pantalla decía
+    // una cosa y la variable otra, y la validación pasaba igual.
     function seleccionarTipoDoc(valor) {
       tipDocSeleccionado = valor || null
-      document.querySelectorAll('.btn-tipo-doc').forEach(btn => {
+      document.querySelectorAll('#grilla-tipo-doc .btn-tipo-doc').forEach(btn => {
         btn.classList.toggle('btn-tipo-doc--seleccionado', btn.dataset.valor === valor)
       })
     }
@@ -4793,6 +4832,10 @@
       zona.className = 'zona-foto zona-foto--con-imagen'
       zona.innerHTML = `<img src="${URL.createObjectURL(archivo)}" alt="Preview" class="preview-foto">`
       estado.wizard.fotoArchivo = archivo
+      // EL CASO QUE HACE FALTA EL FLAG EXPLÍCITO: se entró por "Sin
+      // comprobante", se volvió al paso Foto y se cargó una. Ahora hay
+      // comprobante, así que Número y Tipo vuelven a pedirse.
+      estado.wizard.sinComprobante = false
 
       // Foto nueva sobre un match automático anterior (ej. volvió atrás
       // desde "Detalles" y cargó otro comprobante) — invalida el match
@@ -4847,8 +4890,17 @@
       document.getElementById('btn-cambiar-foto').style.display = 'none'
     })
 
-    document.getElementById('btn-sin-foto').addEventListener('click',    () => irASubpaso('datos'))
-    document.getElementById('btn-foto-siguiente').addEventListener('click', () => irASubpaso('datos'))
+    // Los DOS botones escriben el flag, cada uno con su valor. El "false" del
+    // botón normal es explícito y no por descarte: es la única forma de que el
+    // estado no dependa del orden en que se tocaron las cosas.
+    document.getElementById('btn-sin-foto').addEventListener('click', () => {
+      estado.wizard.sinComprobante = true
+      irASubpaso('datos')
+    })
+    document.getElementById('btn-foto-siguiente').addEventListener('click', () => {
+      estado.wizard.sinComprobante = false
+      irASubpaso('datos')
+    })
 
     // ── Sub-paso DATOS ─────────────────────────────────────────────────────
     document.getElementById('grilla-tipo-doc').addEventListener('click', (e) => {
