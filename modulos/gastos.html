@@ -2814,13 +2814,30 @@
     // WIZARD — INICIAR
     // ═══════════════════════════════════════════════════════════════════════
 
-    async function iniciarWizard() {
-      console.log('[DEBUG] iniciarWizard arranco')
-      // Resetear estado del wizard
+    // EL WIZARD COMO RECIÉN ABIERTO. Vive en su propia función y no inline en
+    // iniciarWizard() porque tiene DOS usos: abrir el wizard y volver al paso 1
+    // desde adentro. Un solo cuerpo, así no pueden divergir — mismo criterio
+    // que soltarVinculoProveedor().
+    //
+    // VOLVER AL PASO 1 ES EMPEZAR DE NUEVO, y es lo ÚNICO que resetea. El paso
+    // 1 es donde se define de dónde salen los datos (una foto, o "sin
+    // comprobante"), así que cambiar esa respuesta invalida todo lo cargado.
+    // Los pasos intermedios son solo navegación: volver del 4 al 3 no borra
+    // nada, porque ahí la persona está corrigiendo un campo puntual y perder el
+    // resto sería peor que el bug que esto arregla.
+    //
+    // NO incluye la carga de maestros, el poblado de selects ni el render de
+    // grillas: eso es apertura del wizard, no reseteo.
+    function resetearWizard() {
       estado.wizard.subpaso    = 'foto'
       estado.wizard.fotoArchivo = null
       estado.wizard.fotoUrl     = null
+      // El Set y las clases .campo-ocr van juntos: si no, quedan campos
+      // marcados como "leído de la foto" sobre datos que ya no salen de
+      // ninguna foto.
       estado.wizard.camposOcr   = new Set()
+      // Si queda pegado en true, el gasto se guarda como FACTURA PENDIENTE en
+      // vez de gasto. Es el peor de los que se arrastraban.
       estado.wizard.esPendiente = false
       estado.wizard.sinComprobante = false
       estado.wizard.cuitOcr     = null
@@ -2830,6 +2847,9 @@
       unidadSeleccionada    = null
       vehiculoSeleccionado  = null
       vehiculoFueElegido    = false
+      // Seguro de resetear: viaVehiculos se elige DENTRO del wizard, en el paso
+      // Destino, no antes de abrirlo. Si se seteara desde la lista, esto
+      // rompería el flujo de Vehículos.
       viaVehiculos          = false
       limpiarMatchProveedor()
       document.getElementById('sugerencias-razon-social').hidden = true
@@ -2841,6 +2861,11 @@
         'campo-importe','campo-lugar',
         'campo-kilometraje','campo-observaciones',
         'campo-proveedor-buscar','campo-proveedor-id',
+        // campo-proyecto se puebla UNA sola vez, al abrir el wizard, así que su
+        // valor elegido sobrevive a un reseteo intermedio si no se limpia acá.
+        // campo-empleado y campo-cuenta no hacen falta: se repueblan al entrar
+        // al paso Detalles.
+        'campo-proyecto',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
       document.getElementById('campo-fecha-pago').value = fechaISO(new Date())
       seleccionarTipoDoc(null)
@@ -2850,7 +2875,11 @@
 
       resetearZonaFoto()
       document.getElementById('btn-cambiar-foto').style.display = 'none'
+    }
 
+    async function iniciarWizard() {
+      console.log('[DEBUG] iniciarWizard arranco')
+      resetearWizard()
 
       console.log('[DEBUG] llegando al try de cargarMaestros')
       try {
@@ -4905,7 +4934,15 @@
 
     document.getElementById('campo-moneda').addEventListener('change', actualizarSelectorCuentaGasto)
 
-    document.getElementById('btn-datos-atras').addEventListener('click',    () => irASubpaso('foto'))
+    // VOLVER AL PASO 1 RESETEA EL WIZARD ENTERO. Sin esto, tocar "Sin
+    // comprobante" después de haber cargado una foto dejaba todos los campos
+    // con los datos del comprobante anterior; y cargar una foto NUEVA
+    // reemplazaba solo lo que el OCR llena, dejando pegado el medio de pago,
+    // la categoría y el destino del gasto anterior.
+    document.getElementById('btn-datos-atras').addEventListener('click', () => {
+      resetearWizard()
+      irASubpaso('foto')
+    })
     document.getElementById('btn-datos-siguiente').addEventListener('click', () => {
       estado.wizard.esPendiente = false
       if (validarSubpaso('datos')) irASubpaso('destino')
@@ -5033,7 +5070,12 @@
     })
 
     // ── Sub-paso RESUMEN ───────────────────────────────────────────────────
-    document.getElementById('btn-resumen-editar').addEventListener('click',  () => irASubpaso('foto'))
+    // A 'detalles' y NO a 'foto', que es adonde iba antes. Con el reseteo al
+    // volver al paso 1, mandar "← Editar" ahí BORRARÍA el gasto entero justo
+    // cuando la persona quiere corregir un campo — lo contrario de lo que pide
+    // el botón. "Editar" desde el resumen es volver a la última pantalla
+    // editable, no cargar otro comprobante.
+    document.getElementById('btn-resumen-editar').addEventListener('click',  () => irASubpaso('detalles'))
     document.getElementById('btn-resumen-guardar').addEventListener('click', () => {
       if (estado.wizard.esPendiente) guardarFacturaPendiente()
       else guardarGasto()
