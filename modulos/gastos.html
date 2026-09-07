@@ -3055,13 +3055,19 @@
       materia_prima: {
         label: 'Ingreso', registro: 'Ingreso', chip: 'chip-origen--mp',
         consecuencia: 'Si lo cargás igual, la mercadería va a contarse dos veces en el stock.',
-        // SIN DESTINO, a propósito: modulos/materia-prima.html no tiene NINGÚN
-        // deep link —cero URLSearchParams en todo el archivo— y su detalle es
-        // un modal que se abre desde el listado. Existe la pantalla, pero no
-        // hay a qué apuntar, y se prefiere una fila no clickeable antes que un
-        // destino inventado. Pedido al chat de Ingreso: ?ingreso=<id>. Cuando
-        // exista, esto es una línea.
-        destino: null,
+        // Estuvo SIN DESTINO hasta que el chat de Ingreso agregó el deep link
+        // (78c9b57): ese archivo no tenía ninguno —cero URLSearchParams— y su
+        // detalle era un modal que solo se abría desde el listado.
+        //
+        // Resuelve el caso que importa: la RPC devuelve el id de la FACTURA, y
+        // el listado de Ingreso fusiona remito + factura en una entrega cuya
+        // base es el REMITO. Del otro lado lo maneja buscarEntrega(), que busca
+        // por la base O por cualquiera de los comprobantes, así que se abre la
+        // entrega completa y no la factura sola.
+        //
+        // Sin prefijo, igual que los otros dos: gastos.html vive en modulos/ y
+        // materia-prima.html es su hermano.
+        destino: id => `materia-prima.html?ingreso=${encodeURIComponent(id)}`,
       },
       gastos: {
         label: 'Gastos', registro: 'Gasto', chip: 'chip-origen--contable',
