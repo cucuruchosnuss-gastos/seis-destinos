@@ -121,6 +121,49 @@
     .btn-link-proveedor:hover { background: var(--color-acento-suave); }
     .btn-link-proveedor[hidden] { display: none; }
 
+    /* El del WIZARD, discreto. Dispara una SOLICITUD DE ALTA que va a
+       aprobación en Cuentas Corrientes — no guarda un dato del formulario. Es
+       una acción excepcional: quien compró una tuerca en una ferretería
+       cualquiera no debería tocarlo, así que no tiene que competir con el flujo
+       de cargar un gasto ni invitar al toque accidental.
+
+       Va como MODIFICADOR y NO tocando .btn-link-proveedor, que la comparte
+       btn-edit-proveedor-nuevo del formulario de edición de factura: ahí elegir
+       o crear el proveedor SÍ es la acción principal de ese campo.
+
+       ORDEN: el :hover empata en especificidad con .btn-link-proveedor:hover
+       (los dos 0,2,0), así que estas reglas van DESPUÉS — el bug recurrente del
+       proyecto. El [hidden] de la base NO necesita guard propio acá: es 0,2,0
+       contra el 0,1,0 del modificador, así que gana sin importar el orden. */
+    .btn-link-proveedor--discreto {
+      display: inline-flex;
+      align-items: center;
+      width: auto;
+      /* EL ÁREA TÁCTIL NO SE ACHICA CON EL TEXTO: 40px de alto sobre 12px de
+         letra, con el relleno invisible porque no hay borde ni fondo. 40 y no
+         los 44 de Apple HIG a propósito — un recuadro fantasma más grande
+         empuja justo al toque accidental que esto viene a evitar, y 40 queda
+         muy por encima del mínimo de WCAG 2.5.8 AA, que son 24. */
+      min-height: 2.5rem;
+      padding: 0 0.25rem;
+      border: none;
+      background: none;
+      /* #5f6b85 y NO var(--color-texto-suave): ese gris (#8a94ab) da 3,04:1
+         contra el blanco y NO llega al 4,5:1 que pide WCAG AA para texto
+         normal — y a 12px, en un celular, en una fábrica con luz de más o de
+         menos, se deja de leer. Este da 5,35:1 y sigue siendo discreto. */
+      color: #5f6b85;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-align: left;
+      text-decoration: underline;
+      text-underline-offset: 0.1875rem;
+    }
+    .btn-link-proveedor--discreto:hover {
+      background: none;
+      color: var(--color-acento-highlight);
+    }
+
     /* Vinculo con el padron, en el campo "Razon social / Proveedor". Se
        mantiene aunque se siga escribiendo (a diferencia del buscador de
        Detalles, donde tipear lo suelta): el sentido de tener dos campos es
@@ -1543,7 +1586,7 @@
                  Este es su lugar correcto y no un parche: el modal ya se
                  prellena con campo-razon-social y el CUIT del OCR, o sea que el
                  contexto que necesita siempre vivió en este paso. -->
-            <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
+            <button type="button" class="btn-link-proveedor btn-link-proveedor--discreto" id="btn-proveedor-nuevo">Pedir alta de proveedor en Cuentas Corrientes</button>
           </div>
 
           <div class="grupo-campo" id="grupo-receptor">
