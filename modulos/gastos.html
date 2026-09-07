@@ -5108,6 +5108,24 @@
           prellenarPaso2(resultado.datos)
           const n = Object.values(resultado.datos).filter(v => v != null).length
           mostrarEstadoOcr('ok', `✓ Se detectaron ${n} campos automáticamente`)
+          // EL MOMENTO NATURAL PARA DETECTAR UN DUPLICADO: acá ya hay número y
+          // razón social, y la persona todavía no invirtió tiempo en completar
+          // el resto del wizard. Antes se consultaba recién al salir del paso
+          // Datos, con todo ya cargado.
+          //
+          // El match de proveedor va PRIMERO, y por eso importa: corría recién
+          // al entrar a Detalles, o sea DESPUÉS de la consulta, así que el
+          // detector preguntaba con proveedorSeleccionado en null incluso para
+          // los gastos que sí iban a matchear un proveedor. Se perdía la vía
+          // FUERTE —el proveedor_id— y quedaba dependiendo de que el OCR
+          // hubiera leído la razón social igual que la vez anterior.
+          //
+          // Efecto visible y buscado: el cartel del vínculo aparece apenas
+          // termina el OCR, no recién en Detalles. Es información correcta
+          // mostrada antes, cuando todavía se puede corregir.
+          intentarMatchAutomaticoProveedor()
+          await buscarComprobanteYaCargado()
+          renderizarAvisoDuplicado()
         } else {
           mostrarEstadoOcr('error', resultado?.mensaje || 'No se pudo leer el comprobante. Completá los datos manualmente.')
         }
