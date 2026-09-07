@@ -186,6 +186,34 @@
       padding: 0.5rem 0;
       border-top: 1px solid rgba(201,154,46,0.35);
     }
+    /* La fila con destino se lee como vínculo. NO lleva la protección contra el
+       toque accidental del botón de "Pedir alta", y la diferencia es la
+       CONSECUENCIA y no el gesto: aquel dispara una solicitud que alguien tiene
+       que rechazar, este abre una pestaña que se cierra. El área táctil de 40px
+       alcanza, y un scroll con el dedo encima no la activa —el navegador
+       cancela el click si hubo touchmove—. */
+    .aviso-duplicado__fila--link {
+      display: block;
+      width: 100%;
+      min-height: 2.5rem;
+      background: none;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+      font: inherit;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .aviso-duplicado__fila--link:hover { background: rgba(201,154,46,0.10); }
+    .aviso-duplicado__ir {
+      display: inline-block;
+      margin-top: 0.1875rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 0.1875rem;
+    }
     .aviso-duplicado__donde { font-weight: 700; }
     .aviso-duplicado__datos { font-weight: 550; }
     /* La consecuencia, que es DISTINTA segun el origen: en Ingreso la
@@ -2816,11 +2844,24 @@
 
     activarFiltroFecha('hoy')
 
-    // Deep link desde Caja: gastos.html?gasto=<id> abre el detalle directo.
+    // Deep link desde Caja y desde el aviso de duplicados:
+    // gastos.html?gasto=<id> abre el detalle directo.
+    //
+    // NO alcanza con cargarLista() + mostrarDetalleGasto(): esa función busca
+    // en estado.listaGastos, que está filtrada por TRES cosas —el RLS, el
+    // filtro cliente de gastos:ver_exportar, y los filtros que la persona
+    // tenga puestos (período, unidad, categoría, fechas)—. Si el gasto no
+    // cae en ninguna, mostrarDetalleGasto hace `if (!g) return`: NO-OP
+    // SILENCIOSO. La persona toca, no pasa nada, y no sabe si falló, si no
+    // tiene permiso o si tocó mal.
+    //
+    // Se consulta por id, como ya hacía el camino de ?factura=, así los
+    // filtros de pantalla dejan de importar y lo único que puede negarlo es
+    // el RLS de verdad.
     const idGastoURL = new URLSearchParams(location.search).get('gasto')
     if (idGastoURL) {
       await cargarLista()
-      mostrarDetalleGasto(idGastoURL)
+      await abrirGastoPorId(idGastoURL)
     }
 
     // Deep link desde Cuentas Corrientes: gastos.html?factura=<id> abre el
@@ -3014,14 +3055,27 @@
       materia_prima: {
         label: 'Ingreso', registro: 'Ingreso', chip: 'chip-origen--mp',
         consecuencia: 'Si lo cargás igual, la mercadería va a contarse dos veces en el stock.',
+        // SIN DESTINO, a propósito: modulos/materia-prima.html no tiene NINGÚN
+        // deep link —cero URLSearchParams en todo el archivo— y su detalle es
+        // un modal que se abre desde el listado. Existe la pantalla, pero no
+        // hay a qué apuntar, y se prefiere una fila no clickeable antes que un
+        // destino inventado. Pedido al chat de Ingreso: ?ingreso=<id>. Cuando
+        // exista, esto es una línea.
+        destino: null,
       },
       gastos: {
         label: 'Gastos', registro: 'Gasto', chip: 'chip-origen--contable',
         consecuencia: 'El papel ya está registrado como gasto: fijate que no sea el mismo pago cargado dos veces.',
+        destino: id => `gastos.html?gasto=${encodeURIComponent(id)}`,
       },
       cuentas_corrientes: {
         label: 'Cuentas corrientes', registro: 'Factura', chip: 'chip-origen--contable',
         consecuencia: 'El papel ya está en la cuenta corriente del proveedor.',
+        // A gastos.html?factura= y NO a cuentas-corrientes.html: el registro_id
+        // de esta rama ES facturas_pendientes.id, este deep link ya existe, y
+        // el de Cuentas Corrientes apunta a la FICHA DEL PROVEEDOR — inútil
+        // acá, porque una factura legada puede no tener proveedor_id.
+        destino: id => `gastos.html?factura=${encodeURIComponent(id)}`,
       },
     }
 
@@ -3134,6 +3188,7 @@
 
       const html = filas.map(f => {
         const o = ORIGENES_DUPLICADO[f.modulo] || desconocido
+        const url = o.destino && f.registro_id ? o.destino(f.registro_id) : null
         const importe = formatearImporteDuplicado(f.importe)
         // "Gasto de $X cargado el DD/MM/AAAA" y NO un importe suelto al lado de
         // la fecha: suelto se lee como el importe de lo que se está cargando.
@@ -3142,14 +3197,21 @@
           : `Cargado el ${formatearFecha(f.fecha)}`
         const unidad = estado.maestros.unidades.find(u => u.id === f.unidad_negocio_id)?.nombre || ''
         const datos = [cuando, f.razon_social || '', unidad].filter(Boolean).map(esc).join(' · ')
-        return `
-          <div class="aviso-duplicado__fila">
+        const cuerpo = `
             <div class="aviso-duplicado__donde">
               <span class="chip-origen ${o.chip}">En ${esc(o.label)}</span>
               ${esc(f.numero_doc || 'sin número')}
             </div>
-            <div class="aviso-duplicado__datos">${datos}</div>
-          </div>`
+            <div class="aviso-duplicado__datos">${datos}</div>`
+        // Sin destino queda como <div>: ni subrayado, ni pointer, ni tabulable.
+        // Una fila que se ve clickeable y no lleva a ningún lado es peor que
+        // una que no lo promete.
+        return url
+          ? `<button type="button" class="aviso-duplicado__fila aviso-duplicado__fila--link"
+                     data-url="${esc(url)}">${cuerpo}
+               <span class="aviso-duplicado__ir">Abrir en una pestaña nueva →</span>
+             </button>`
+          : `<div class="aviso-duplicado__fila">${cuerpo}</div>`
       }).join('')
 
       // Las consecuencias van UNA VEZ cada una y después de las filas: con dos
@@ -3166,6 +3228,26 @@
         ${consecuencias.map(c => `<div class="aviso-duplicado__consecuencia">${esc(c)}</div>`).join('')}`
       cont.hidden = false
     }
+
+    // PESTAÑA NUEVA, y el 'noopener' es lo que lo hace seguro y no una promesa:
+    // sin él la pestaña abierta recibe window.opener y PODRÍA NAVEGAR EL
+    // WIZARD, que es justo lo que no puede pasar — la persona está en medio de
+    // una carga, con datos sin guardar. Con noopener no tiene forma de tocarlo.
+    //
+    // Por eso tampoco es un modal: el detalle de este archivo es una pantalla
+    // completa con sus propias acciones (Editar, Anular), que apiladas sobre un
+    // wizard a medio cargar no tienen sentido; y apilarla exigiría hacer
+    // malabares con [hidden], el bug más recurrente del proyecto. Además el
+    // aviso está visible en los siete pasos, así que el link se puede tocar en
+    // cualquiera: una pestaña es segura por construcción, un modal habría que
+    // probarlo desde todos.
+    //
+    // Delegado en el contenedor porque las filas se re-renderizan.
+    document.getElementById('aviso-duplicado').addEventListener('click', (e) => {
+      const fila = e.target.closest('.aviso-duplicado__fila--link')
+      if (!fila?.dataset.url) return
+      window.open(fila.dataset.url, '_blank', 'noopener')
+    })
 
     function irASubpaso(id) {
       document.querySelectorAll('.paso').forEach(el => el.classList.remove('paso--activo'))
@@ -4290,6 +4372,39 @@
         </div>` : ''}
       `
       lucide.createIcons()
+    }
+
+    // Trae el gasto por id y lo mete en la cache que usa mostrarDetalleGasto,
+    // para no duplicar todo el armado del detalle. Devuelve false si no se
+    // pudo — y el mensaje NO afirma lo que no sabe: cuando esto viene del
+    // aviso de duplicados, el registro EXISTE (la RPC lo encontró con
+    // SECURITY DEFINER), así que decir "no existe" sería mentir. Lo que no
+    // podemos distinguir es RLS de un id inválido, y el texto lo refleja.
+    async function abrirGastoPorId(id) {
+      if (!estado.listaGastos.some(g => g.id === id)) {
+        const { data, error } = await supabase
+          .from('gastos')
+          .select(`
+            id, fecha, fecha_pago, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
+            medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
+            cuenta_id, anulado_por, anulado_en, motivo_anulacion,
+            categorias (id, nombre, icon),
+            empleados  (id, nombre),
+            unidades_negocio (id, nombre),
+            vehiculos  (id, nombre, marca, patente),
+            proyectos  (id, nombre)
+          `)
+          .eq('id', id)
+          .maybeSingle()
+        if (error) console.error('abrirGastoPorId:', error)
+        if (error || !data) {
+          mostrarError('No se pudo abrir ese registro: puede ser de otra persona o de una unidad que no ves.')
+          return false
+        }
+        estado.listaGastos.push(data)
+      }
+      await mostrarDetalleGasto(id)
+      return true
     }
 
     async function mostrarDetalleGasto(id) {
