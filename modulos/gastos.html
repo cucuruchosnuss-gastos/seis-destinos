@@ -121,48 +121,48 @@
     .btn-link-proveedor:hover { background: var(--color-acento-suave); }
     .btn-link-proveedor[hidden] { display: none; }
 
-    /* El del WIZARD, discreto. Dispara una SOLICITUD DE ALTA que va a
-       aprobación en Cuentas Corrientes — no guarda un dato del formulario. Es
-       una acción excepcional: quien compró una tuerca en una ferretería
-       cualquiera no debería tocarlo, así que no tiene que competir con el flujo
-       de cargar un gasto ni invitar al toque accidental.
+    /* El del WIZARD. Dispara una SOLICITUD DE ALTA que va a aprobación en
+       Cuentas Corrientes — no guarda un dato del formulario.
 
-       Va como MODIFICADOR y NO tocando .btn-link-proveedor, que la comparte
-       btn-edit-proveedor-nuevo del formulario de edición de factura: ahí elegir
-       o crear el proveedor SÍ es la acción principal de ese campo.
+       APARECE SOLO CUANDO LA BÚSQUEDA NO ENCONTRÓ NADA, y eso es lo que
+       permite que sea un botón lindo y visible en vez de un link apagado: ya
+       no está ahí para que se lo toque sin querer, aparece como respuesta a
+       "no lo encuentro". Antes estaba siempre, y por eso hubo que apagarlo.
+
+       TURQUESA, el mismo tratamiento de .btn-cuentas-corrientes: en este
+       proyecto ese color significa "esto te lleva a Cuentas Corrientes", y
+       este botón manda una solicitud justamente ahí. NO ámbar, que es el
+       color propio del módulo Caja.
+
+       VA DEBAJO DEL CAMPO Y NO AL COSTADO: medido en un navegador a 375px con
+       la fuente y los paddings reales, el ancho útil es 335px y este botón
+       mide 298 — al lado dejaría 29px de input, que no es apretado, es
+       inutilizable. Ningún texto más corto conserva las dos cosas que tiene
+       que decir (que es un PEDIDO, y que va a CUENTAS CORRIENTES).
 
        ORDEN: el :hover empata en especificidad con .btn-link-proveedor:hover
-       (los dos 0,2,0), así que estas reglas van DESPUÉS — el bug recurrente del
-       proyecto. El [hidden] de la base NO necesita guard propio acá: es 0,2,0
-       contra el 0,1,0 del modificador, así que gana sin importar el orden. */
-    .btn-link-proveedor--discreto {
+       (los dos 0,2,0), así que estas reglas van DESPUÉS — el bug recurrente
+       del proyecto. El [hidden] de la base NO necesita guard propio acá: es
+       0,2,0 contra el 0,1,0 del modificador, así que gana sin importar el
+       orden. */
+    .btn-link-proveedor--pedir {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
+      /* auto y no 100%: a todo el ancho se leería como la acción principal
+         del paso, y sigue siendo la excepción. */
       width: auto;
-      /* EL ÁREA TÁCTIL NO SE ACHICA CON EL TEXTO: 40px de alto sobre 12px de
-         letra, con el relleno invisible porque no hay borde ni fondo. 40 y no
-         los 44 de Apple HIG a propósito — un recuadro fantasma más grande
-         empuja justo al toque accidental que esto viene a evitar, y 40 queda
-         muy por encima del mínimo de WCAG 2.5.8 AA, que son 24. */
       min-height: 2.5rem;
-      padding: 0 0.25rem;
-      border: none;
-      background: none;
-      /* #5f6b85 y NO var(--color-texto-suave): ese gris (#8a94ab) da 3,04:1
-         contra el blanco y NO llega al 4,5:1 que pide WCAG AA para texto
-         normal — y a 12px, en un celular, en una fábrica con luz de más o de
-         menos, se deja de leer. Este da 5,35:1 y sigue siendo discreto. */
-      color: #5f6b85;
-      font-size: 0.75rem;
-      font-weight: 500;
-      text-align: left;
-      text-decoration: underline;
-      text-underline-offset: 0.1875rem;
+      padding: 0.5rem 0.875rem;
+      border: 1.5px solid var(--turquesa);
+      border-radius: var(--radio-boton);
+      background: var(--turquesa-suave);
+      color: var(--turquesa-oscuro);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      text-align: center;
     }
-    .btn-link-proveedor--discreto:hover {
-      background: none;
-      color: var(--color-acento-highlight);
-    }
+    .btn-link-proveedor--pedir:hover { background: #D6F5EE; }
 
     /* Vinculo con el padron, en el campo "Razon social / Proveedor". Se
        mantiene aunque se siga escribiendo (a diferencia del buscador de
@@ -1586,7 +1586,7 @@
                  Este es su lugar correcto y no un parche: el modal ya se
                  prellena con campo-razon-social y el CUIT del OCR, o sea que el
                  contexto que necesita siempre vivió en este paso. -->
-            <button type="button" class="btn-link-proveedor btn-link-proveedor--discreto" id="btn-proveedor-nuevo">Pedir alta de proveedor en Cuentas Corrientes</button>
+            <button type="button" class="btn-link-proveedor btn-link-proveedor--pedir" id="btn-proveedor-nuevo" hidden>Pedir alta de proveedor en Cuentas Corrientes</button>
           </div>
 
           <div class="grupo-campo" id="grupo-receptor">
@@ -2893,6 +2893,11 @@
         'campo-proyecto',
       ].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' })
       document.getElementById('campo-fecha-pago').value = fechaISO(new Date())
+      // DESPUES de vaciar los campos, no antes. limpiarMatchProveedor() corre
+      // arriba, cuando campo-razon-social todavia tiene el texto del gasto
+      // anterior: ahi el boton se calcula contra ese texto y queda visible
+      // sobre un campo que un renglon mas abajo se vacia.
+      actualizarBotonPedirAlta([])
       seleccionarTipoDoc(null)
       seleccionarMedioPago(null)
       document.getElementById('campo-moneda').value = 'ARS'
@@ -3760,7 +3765,28 @@
     // que el de Detalles, otro contenedor. Existe porque ahí es donde la
     // gente escribe el nombre del proveedor —el label lo promete— y no
     // encontrar nada era lo que terminaba creando duplicados.
+    // VISIBILIDAD DEL BOTÓN DE ALTA. Recibe la lista que YA calculó
+    // filtrarProveedores() en el listener — no se vuelve a buscar.
+    //
+    // Aparece SOLO cuando hay texto y CERO coincidencias, que es el único
+    // momento en que "no lo encuentro" es cierto:
+    //   campo vacío               → oculto (no hay nada que buscar)
+    //   con texto y coincidencias → oculto (que elija de la lista)
+    //   con texto y CERO          → VISIBLE
+    //   proveedor ya vinculado    → oculto (gana sobre todo lo demás)
+    //
+    // El vínculo se chequea PRIMERO: si ya hay proveedor elegido, el texto del
+    // campo puede diferir del nombre del padrón —para eso existen los dos
+    // campos— y la búsqueda daría cero sin que falte nada.
+    function actualizarBotonPedirAlta(lista) {
+      const btn = document.getElementById('btn-proveedor-nuevo')
+      if (!btn) return
+      const texto = document.getElementById('campo-razon-social')?.value.trim() || ''
+      btn.hidden = proveedorSeleccionado != null || texto === '' || lista.length > 0
+    }
+
     function renderizarSugerenciasRazonSocial(lista) {
+      actualizarBotonPedirAlta(lista)
       renderizarSugerenciasProveedorEn('sugerencias-razon-social', lista, (p) => {
         seleccionarProveedor(p)
         document.getElementById('sugerencias-razon-social').hidden = true
@@ -3823,6 +3849,8 @@
       proveedorSeleccionado = p.id
       proveedorSeleccionadoEsAuto = esAuto
       document.getElementById('campo-razon-social').value = p.razon_social
+      // Con proveedor elegido el botón se esconde siempre: no hace falta
+      // recalcular la búsqueda, el vínculo gana sobre todo lo demás.
       document.getElementById('btn-proveedor-nuevo').hidden = true
       actualizarIndicadorProveedor()
     }
@@ -3834,7 +3862,10 @@
     function limpiarMatchProveedor() {
       proveedorSeleccionado = null
       proveedorSeleccionadoEsAuto = false
-      document.getElementById('btn-proveedor-nuevo').hidden = false
+      // Al soltar el vínculo NO se muestra a ciegas: se recalcula contra lo que
+      // hay escrito. Si el campo quedó vacío —el caso de soltarlo borrando
+      // todo— no tiene que aparecer nada.
+      actualizarBotonPedirAlta(filtrarProveedores(document.getElementById('campo-razon-social')?.value || ''))
       actualizarIndicadorProveedor()
     }
 
