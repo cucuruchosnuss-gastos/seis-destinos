@@ -121,23 +121,6 @@
     .btn-link-proveedor:hover { background: var(--color-acento-suave); }
     .btn-link-proveedor[hidden] { display: none; }
 
-    /* Señal cuando el proveedor se autoseleccionó por matching de
-       CUIT/razón social del OCR — nunca silencioso, ver
-       intentarMatchAutomaticoProveedor(). */
-    .proveedor-auto-match {
-      display: block;
-      margin-top: 0.5rem;
-      padding: 0.625rem 0.875rem;
-      border-radius: 10px;
-      background: var(--turquesa-suave);
-      border: 1.5px solid var(--turquesa);
-      color: var(--turquesa-oscuro);
-      font-size: 0.8125rem;
-      font-weight: 600;
-      text-align: center;
-    }
-    .proveedor-auto-match[hidden] { display: none; }
-
     /* Vinculo con el padron, en el campo "Razon social / Proveedor". Se
        mantiene aunque se siga escribiendo (a diferencia del buscador de
        Detalles, donde tipear lo suelta): el sentido de tener dos campos es
@@ -1552,6 +1535,15 @@
               <span>Se va a guardar en la cuenta de <strong id="proveedor-vinculado-nombre"></strong></span>
               <button type="button" id="btn-soltar-proveedor" title="Quitar el vínculo con el proveedor">✕</button>
             </div>
+            <!-- Se MUDÓ acá desde el paso Detalles, junto con el buscador que
+                 se sacó. No podía irse sin reemplazo: es la única forma de dar
+                 de alta un proveedor desde el wizard, y en el flujo "pendiente"
+                 —donde el proveedor es OBLIGATORIO— sin él el flujo no se puede
+                 completar para un proveedor nuevo.
+                 Este es su lugar correcto y no un parche: el modal ya se
+                 prellena con campo-razon-social y el CUIT del OCR, o sea que el
+                 contexto que necesita siempre vivió en este paso. -->
+            <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
           </div>
 
           <div class="grupo-campo" id="grupo-receptor">
@@ -1672,15 +1664,6 @@
           <div class="grupo-campo">
             <label for="campo-lugar">Lugar / servicio <span class="etiqueta-opcional">opcional</span></label>
             <input type="text" id="campo-lugar" name="lugar_servicio" placeholder="Ej: YPF Av. Colón">
-          </div>
-
-          <div class="grupo-campo" id="grupo-proveedor" style="position:relative;">
-            <label for="campo-proveedor-buscar">Proveedor <span class="etiqueta-opcional">opcional</span></label>
-            <input type="text" id="campo-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off">
-            <input type="hidden" id="campo-proveedor-id">
-            <div class="sugerencias-proveedor" id="sugerencias-proveedor" hidden></div>
-            <span class="proveedor-auto-match" id="proveedor-auto-match" hidden>✓ encontrado automáticamente</span>
-            <button type="button" class="btn-link-proveedor" id="btn-proveedor-nuevo">+ Cargar proveedor nuevo</button>
           </div>
 
           <div class="grupo-campo">
@@ -2853,14 +2836,12 @@
       viaVehiculos          = false
       limpiarMatchProveedor()
       document.getElementById('sugerencias-razon-social').hidden = true
-      document.getElementById('sugerencias-proveedor').hidden = true
 
       // Limpiar campos de formulario
       ;['campo-fecha','campo-numero-doc','campo-razon-social',
         'campo-receptor','campo-descripcion-item',
         'campo-importe','campo-lugar',
         'campo-kilometraje','campo-observaciones',
-        'campo-proveedor-buscar','campo-proveedor-id',
         // campo-proyecto se puebla UNA sola vez, al abrir el wizard, así que su
         // valor elegido sobrevive a un reseteo intermedio si no se limpia acá.
         // campo-empleado y campo-cuenta no hacen falta: se repueblan al entrar
@@ -3485,8 +3466,8 @@
           return mostrarError('Ingresá el kilometraje del vehículo.'), false
         if ((medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') && !document.getElementById('campo-cuenta').value)
           return mostrarError('Seleccioná la cuenta.'), false
-        if (estado.wizard.esPendiente && !document.getElementById('campo-proveedor-id').value)
-          return mostrarError('Seleccioná el proveedor.'), false
+        if (estado.wizard.esPendiente && proveedorSeleccionado == null)
+          return mostrarError('Volvé al paso Datos y elegí el proveedor.'), false
       }
       return true
     }
@@ -3649,7 +3630,7 @@
         medio_pago:        medioPagoSeleccionado,
         cuenta_id:         (medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') ? toStr('campo-cuenta') : null,
         categoria_id:      categoriaSeleccionada,
-        proveedor_id:      toStr('campo-proveedor-id'),
+        proveedor_id:      proveedorSeleccionado,
         proyecto_id:       toStr('campo-proyecto'),
         lugar_servicio:    toStr('campo-lugar'),
         unidad_negocio_id: unidadSeleccionada,
@@ -3731,10 +3712,6 @@
       }
     }
 
-    function renderizarSugerenciasProveedor(lista) {
-      renderizarSugerenciasProveedorEn('sugerencias-proveedor', lista, seleccionarProveedor)
-    }
-
     // Buscador del campo "Razón social / Proveedor" (sp-datos). Mismo motor
     // que el de Detalles, otro contenedor. Existe porque ahí es donde la
     // gente escribe el nombre del proveedor —el label lo promete— y no
@@ -3788,23 +3765,20 @@
     // no puedan divergir.
     function soltarVinculoProveedor() {
       limpiarMatchProveedor()
-      document.getElementById('campo-proveedor-buscar').value = ''
       document.getElementById('sugerencias-razon-social').hidden = true
     }
 
     // Autocompleta razón social al elegir — queda editable, es una "foto"
     // de lo que dice el comprobante físico por si no coincide exacto con
-    // el nombre registrado del proveedor. Oculta la señal de "encontrado
-    // automáticamente" por default — la vuelve a mostrar
-    // intentarMatchAutomaticoProveedor() cuando corresponde.
+    // el nombre registrado del proveedor.
+    //
+    // proveedorSeleccionado es la ÚNICA fuente de verdad del vínculo. Antes
+    // había además un input hidden (#campo-proveedor-id) que la espejaba y que
+    // leían los dos payloads: un espejo que podía desincronizarse.
     function seleccionarProveedor(p, esAuto = false) {
       proveedorSeleccionado = p.id
       proveedorSeleccionadoEsAuto = esAuto
-      document.getElementById('campo-proveedor-id').value = p.id
-      document.getElementById('campo-proveedor-buscar').value = p.razon_social
-      document.getElementById('sugerencias-proveedor').hidden = true
       document.getElementById('campo-razon-social').value = p.razon_social
-      document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = true
       actualizarIndicadorProveedor()
     }
@@ -3816,8 +3790,6 @@
     function limpiarMatchProveedor() {
       proveedorSeleccionado = null
       proveedorSeleccionadoEsAuto = false
-      document.getElementById('campo-proveedor-id').value = ''
-      document.getElementById('proveedor-auto-match').hidden = true
       document.getElementById('btn-proveedor-nuevo').hidden = false
       actualizarIndicadorProveedor()
     }
@@ -3840,7 +3812,6 @@
     // (match único), después por razón social normalizada (match único y
     // exacto) — con 0 o más de un resultado, no autoselecciona.
     function intentarMatchAutomaticoProveedor() {
-      const indicador = document.getElementById('proveedor-auto-match')
       if (proveedorSeleccionado != null) return
 
       let match = null
@@ -3858,9 +3829,10 @@
       }
 
       if (match) {
+        // El "✓ encontrado automáticamente" se fue con el buscador: el cartel
+        // del paso Datos ya dice en qué cuenta se va a guardar, y lo dice tanto
+        // para el match automático como para una selección a mano.
         seleccionarProveedor(match, true)
-        indicador.hidden = false
-        document.getElementById('btn-proveedor-nuevo').hidden = true
       } else {
         limpiarMatchProveedor()
       }
@@ -3887,7 +3859,7 @@
         importe:            parseImporte(document.getElementById('campo-importe')?.value),
         moneda:             document.getElementById('campo-moneda')?.value || 'ARS',
         empleado_id:        toStr('campo-empleado'),
-        proveedor_id:       toStr('campo-proveedor-id'),
+        proveedor_id:       proveedorSeleccionado,
         fecha_factura:      document.getElementById('campo-fecha').value,
         proyecto_id:        toStr('campo-proyecto'),
         vehiculo_id:        vehiculoSeleccionado,
@@ -4983,11 +4955,6 @@
       if (validarSubpaso('detalles')) irASubpaso('resumen')
     })
 
-    // Buscador de proveedor — visible en los dos flujos.
-    document.getElementById('campo-proveedor-buscar').addEventListener('input', (e) => {
-      limpiarMatchProveedor()
-      renderizarSugerenciasProveedor(filtrarProveedores(e.target.value))
-    })
     // Buscador del campo "Razón social / Proveedor" (sp-datos). A diferencia
     // del de arriba NO llama a limpiarMatchProveedor(): seguir escribiendo
     // acá no suelta el vínculo con el padrón, porque el texto del papel
@@ -5013,10 +4980,6 @@
     document.getElementById('btn-soltar-proveedor').addEventListener('click', soltarVinculoProveedor)
 
     document.addEventListener('click', (e) => {
-      const grupo = document.getElementById('grupo-proveedor')
-      const sugerencias = document.getElementById('sugerencias-proveedor')
-      if (grupo && !grupo.contains(e.target)) sugerencias.hidden = true
-
       const grupoRazon = document.getElementById('grupo-razon-social')
       const sugerenciasRazon = document.getElementById('sugerencias-razon-social')
       if (grupoRazon && sugerenciasRazon && !grupoRazon.contains(e.target)) sugerenciasRazon.hidden = true
