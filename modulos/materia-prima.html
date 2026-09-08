@@ -886,6 +886,70 @@
        recurrente del proyecto, y este aviso se oculta justamente así. */
     .wz-aviso[hidden] { display: none; }
 
+    /* ── Proveedores parecidos ───────────────────────────────────────────────
+       La pregunta que evita crear un duplicado al vuelo. NEUTRA y no ámbar: no
+       hay nada mal todavía, se está preguntando algo que el sistema no puede
+       decidir solo. El ámbar es de las advertencias (duplicado de comprobante,
+       número corto) y acá diría que algo ya salió mal. */
+    .wz-parecidos {
+      margin-top: 0.5rem;
+      padding: 0.75rem 0.8125rem;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      min-width: 0;
+    }
+    .wz-parecidos__titulo {
+      font-size: 0.84375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.1875rem;
+    }
+    .wz-parecidos__sub {
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.5rem;
+    }
+    .wz-parecido {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      padding: 0.5625rem 0.6875rem;
+      margin-bottom: 0.375rem;
+      cursor: pointer;
+      min-width: 0;
+    }
+    .wz-parecido__nombre {
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      line-height: 1.3;
+    }
+    /* El CUIT va COMPLETO y sin recortar: con dos proveedores del mismo nombre
+       es lo único que los distingue, y quien tiene la factura en la mano tiene
+       que poder elegir de un vistazo. `break-all` en vez de ellipsis por eso
+       mismo — que se corte en dos renglones, pero que esté entero. */
+    .wz-parecido__cuit {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.125rem;
+      word-break: break-all;
+    }
+    /* Variante DESPUÉS de su base: con la misma especificidad decide el orden,
+       y ponerla antes la dejaría pisada (bug recurrente del proyecto). */
+    .wz-parecido--nuevo {
+      background: transparent;
+      border-style: dashed;
+      margin-bottom: 0;
+      color: var(--color-texto-suave);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
     /* ── Comprobante ya cargado ──────────────────────────────────────────────
        ÁMBAR y NO rojo: es una advertencia, no un error. Cargar el mismo papel
        dos veces puede estar mal o puede ser deliberado, y el detector no sabe
@@ -2428,6 +2492,13 @@
           </div>
           <!-- Resultado del matcheo contra la tabla `proveedores`. -->
           <div class="wz-aviso" id="wz-proveedor-detectado" hidden style="margin-top:0.5rem;"></div>
+          <!-- Los proveedores parecidos, cuando el matcheo exacto no encontró
+               ninguno pero hay candidatos. Va DEBAJO del aviso de arriba y no
+               adentro: aquel es una afirmación del sistema y este es una
+               pregunta, y mientras la pregunta esté abierta el de arriba se
+               oculta — no puede decir "se va a dar de alta" al lado de una
+               pregunta sobre si hay que darlo de alta. -->
+          <div class="wz-parecidos" id="wz-proveedor-parecidos" hidden></div>
         </div>
 
         <div class="wz-campo" id="wz-campo-nombre-fantasia">
@@ -2728,6 +2799,16 @@
         cuitOcr: null,
         proveedorId: null,
         proveedorMatch: null,
+        // Los proveedores PARECIDOS a la razón social escrita, cuando el match
+        // exacto no encontró ninguno. Con la lista no vacía hay una pregunta
+        // abierta y el paso Datos no deja avanzar: crear al vuelo sin mirarlos
+        // es cómo aparecieron los tres duplicados que hay hoy en la tabla.
+        proveedorParecidos: [],
+        // La respuesta explícita "no, es un proveedor nuevo". Arranca en false y
+        // lo resetea intentarMatchProveedor(), que es el único lugar que
+        // recalcula: si se corrige la razón social, la respuesta anterior era
+        // sobre OTRO texto y no puede seguir valiendo.
+        proveedorNuevoConfirmado: false,
         // Los comprobantes ya cargados que matchearon este número. Vive en el
         // wizard y no en una variable suelta para que reiniciarLecturaWizard()
         // lo limpie solo: si se reemplaza la foto, el aviso viejo no puede
@@ -2806,6 +2887,7 @@
       // Los campos se vaciaron: el aviso del número anterior no puede quedar.
       renderizarAvisoNumeroCorto()
       renderizarProveedorDetectado()
+      renderizarProveedorParecidos()
       actualizarAvisoSinProveedor()
     }
 
@@ -4271,29 +4353,159 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function normalizarCuit(v) { return String(v ?? '').replace(/\D/g, '') }
-    function normalizarRazonSocial(v) { return String(v ?? '').trim().toUpperCase().replace(/\s+/g, ' ') }
+
+    // La MISMA regla que normalizar_razon_social() de la base: minúsculas, sin
+    // acentos y sin nada que no sea alfanumérico.
+    //
+    // Reemplazó a una versión débil —solo mayúsculas y colapsar espacios— que
+    // dejaba pasar duplicados por un punto de diferencia. Medido sobre los 36
+    // proveedores reales antes de cambiarla: la fuerte agrega EXACTAMENTE un
+    // par que hoy no matchea ("BADIC S.A.S" y "BADIC S.A.S.", la misma empresa)
+    // y ningún otro. Cero falsos positivos.
+    function normalizarRazonSocial(v) {
+      return String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]/g, '')
+    }
+
+    // Cuánto tiene que medir el más corto para que la contención cuente. Sin un
+    // mínimo, un OCR que devuelva "S.A." da "sa", que está adentro de media
+    // tabla. Sobre los 36 de hoy 4, 5 y 6 dan idéntico resultado, así que se
+    // elige el más bajo que cierra esa puerta.
+    const MIN_CONTENCION_PROVEEDOR = 4
+
+    // Los proveedores PARECIDOS a un texto, para preguntar antes de crear uno
+    // nuevo. Dos criterios, y ninguno más:
+    //
+    //   1. NORMALIZADO IGUAL. No es redundante con el match exacto: ese exige
+    //      UN solo candidato, así que con dos "BADIC S.A.S" no autoselecciona
+    //      nada y sin esto la pregunta no los ofrecería.
+    //   2. UNO CONTIENE AL OTRO. Es el caso FerPlast: "ferplast" está adentro
+    //      de "ferplastsrl".
+    //
+    // Se escriben con UNA sola condición porque la igualdad es un caso
+    // particular de la contención: si son iguales, cada uno contiene al otro y
+    // el mínimo ya está garantizado por el return de arriba. Un `if (c === t)`
+    // aparte no podría cambiar nunca el resultado.
+    //
+    // NO se sacan los sufijos societarios (srl/sa/sas/saic) ni se mide
+    // distancia de edición, y eso se midió antes de descartarlo: sacar el
+    // sufijo encuentra EXACTAMENTE los mismos dos pares que la contención
+    // —porque el sufijo va siempre al final, así que la contención ya lo
+    // cubre— y el único caso de una letra de diferencia era BADIC, que lo
+    // resuelve la normalización fuerte de arriba. Agregarlos sería sumar dos
+    // reglas que hoy no encuentran nada y que hay que mantener para siempre.
+    //
+    // Compara contra razón social Y nombre de fantasía: el OCR lee el MEMBRETE,
+    // que muchas veces trae la fantasía y no la razón social (caso real de la
+    // tabla: "AVACA YANINA Y LIBRETTI F.A.S." se anuncia como "La casa de la
+    // Manguera"). Solo para OFRECER candidatos — el match exacto que
+    // autoselecciona sigue mirando únicamente la razón social.
+    function buscarProveedoresParecidos(texto) {
+      const t = normalizarRazonSocial(texto)
+      // El mínimo se chequea UNA sola vez, sobre el más corto de los dos, y no
+      // también acá arriba: `corto` es por definición el más corto, así que un
+      // segundo chequeo sobre `t` no puede cambiar el resultado nunca. Dos
+      // guards para una sola regla es la forma de que alguien cambie uno y crea
+      // que cambió la regla.
+      return estado.proveedores.filter(p => {
+        return [p.razon_social, p.nombre_fantasia].some(campo => {
+          const c = normalizarRazonSocial(campo)
+          if (!c) return false
+          const corto = c.length < t.length ? c : t
+          return corto.length >= MIN_CONTENCION_PROVEEDOR && (c.includes(t) || t.includes(c))
+        })
+      })
+    }
 
     // Mismo criterio que gastos.html: primero por CUIT (match confiable),
     // después por razón social normalizada. En los dos casos hace falta UN
     // solo candidato — con cero o con varios no se autoselecciona nada.
+    //
+    // Y cuando el exacto no encuentra, se buscan los PARECIDOS: hasta que esto
+    // existió, un remito de "FerPlast" creaba un proveedor nuevo aunque
+    // "FERPLAST S.R.L." ya estuviera en la tabla. Los remitos casi nunca traen
+    // CUIT, que es el único match confiable, así que sin la pregunta el
+    // duplicado era inevitable.
     function intentarMatchProveedor() {
       const w = estado.wizard
       w.proveedorId = null
       w.proveedorMatch = null
+      w.proveedorParecidos = []
+      // La respuesta anterior era sobre el texto anterior: si se corrigió la
+      // razón social, no puede seguir valiendo. Este es el único lugar que
+      // recalcula, así que alcanza con resetear acá.
+      w.proveedorNuevoConfirmado = false
 
       const cuit = normalizarCuit(w.cuitOcr)
       if (cuit) {
         const cands = estado.proveedores.filter(p => normalizarCuit(p.cuit) === cuit)
         if (cands.length === 1) { w.proveedorMatch = cands[0]; w.proveedorId = cands[0].id }
       }
+      const razon = document.getElementById('campo-razon-social').value
       if (!w.proveedorMatch) {
-        const razon = normalizarRazonSocial(document.getElementById('campo-razon-social').value)
-        if (razon) {
-          const cands = estado.proveedores.filter(p => normalizarRazonSocial(p.razon_social) === razon)
+        const r = normalizarRazonSocial(razon)
+        if (r) {
+          const cands = estado.proveedores.filter(p => normalizarRazonSocial(p.razon_social) === r)
           if (cands.length === 1) { w.proveedorMatch = cands[0]; w.proveedorId = cands[0].id }
         }
       }
+      // El CUIT manda: si resolvió, no se pregunta nada.
+      if (!w.proveedorMatch) w.proveedorParecidos = buscarProveedoresParecidos(razon)
+
       renderizarProveedorDetectado()
+      renderizarProveedorParecidos()
+    }
+
+    // Elegir uno de los parecidos NO pisa el texto del campo, a diferencia de
+    // gastos.html. Es deliberado: materia_prima_ingresos.razon_social guarda lo
+    // que decía el COMPROBANTE, y esa diferencia con el nombre del padrón es
+    // dato, no ruido. Se vincula el proveedor y el texto queda como vino.
+    function elegirProveedorParecido(id) {
+      const w = estado.wizard
+      const p = estado.proveedores.find(x => x.id === id)
+      if (!w || !p) return
+      w.proveedorMatch = p
+      w.proveedorId = p.id
+      w.proveedorParecidos = []
+      w.proveedorNuevoConfirmado = false
+      renderizarProveedorDetectado()
+      renderizarProveedorParecidos()
+    }
+
+    function confirmarProveedorNuevo() {
+      const w = estado.wizard
+      if (!w) return
+      w.proveedorNuevoConfirmado = true
+      w.proveedorParecidos = []
+      renderizarProveedorDetectado()
+      renderizarProveedorParecidos()
+    }
+
+    function renderizarProveedorParecidos() {
+      const cont = document.getElementById('wz-proveedor-parecidos')
+      const w = estado.wizard
+      if (!w || !w.proveedorParecidos.length) { cont.hidden = true; cont.innerHTML = ''; return }
+
+      // El CUIT va COMPLETO. Con dos proveedores del mismo nombre es lo único
+      // que los distingue, y los dos pares que hay hoy en la tabla (BADIC y
+      // Embalajes Mercosur) tienen CUITs que difieren EN EL MEDIO, no en un
+      // dígito de más: recortarlo dejaría a la persona sin con qué elegir.
+      // Quien tiene la factura en la mano lo compara de un vistazo.
+      const opciones = w.proveedorParecidos.map(p => {
+        const fant = p.nombre_fantasia && normalizarRazonSocial(p.nombre_fantasia) !== normalizarRazonSocial(p.razon_social)
+          ? ` · ${esc(p.nombre_fantasia)}` : ''
+        return `<button type="button" class="wz-parecido" data-proveedor="${esc(p.id)}">
+            <div class="wz-parecido__nombre">${esc(p.razon_social)}${fant}</div>
+            <div class="wz-parecido__cuit">${p.cuit ? `CUIT ${esc(p.cuit)}` : 'sin CUIT'}</div>
+          </button>`
+      }).join('')
+
+      cont.innerHTML = `
+        <div class="wz-parecidos__titulo">¿Es alguno de estos?</div>
+        <div class="wz-parecidos__sub">Ya hay ${w.proveedorParecidos.length === 1 ? 'un proveedor parecido' : `${w.proveedorParecidos.length} proveedores parecidos`} cargados. Si es el mismo, elegilo para no duplicarlo.</div>
+        ${opciones}
+        <button type="button" class="wz-parecido wz-parecido--nuevo" id="btn-proveedor-es-nuevo">No, es un proveedor nuevo</button>`
+      cont.hidden = false
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4468,6 +4680,11 @@
       const razon = document.getElementById('campo-razon-social').value.trim()
       if (!razon && !w.cuitOcr) { cont.hidden = true; return }
 
+      // Con la pregunta de parecidos abierta este aviso NO se dibuja: diría
+      // "se va a dar de alta" justo al lado de una pregunta sobre si hay que
+      // darlo de alta, y las dos cajas se contradirían.
+      if (w.proveedorParecidos.length) { cont.hidden = true; return }
+
       if (w.proveedorMatch) {
         cont.className = 'wz-aviso'
         cont.innerHTML = `✓ Proveedor identificado: <strong>${esc(w.proveedorMatch.razon_social)}</strong>`
@@ -4505,6 +4722,15 @@
       if (!e.tipoDoc)  return mostrarError('Elegí el tipo de documento.')
       if (!e.fecha)    return mostrarError('Completá la fecha del comprobante.')
       if (!e.unidadId) return mostrarError('Elegí la unidad de negocio.')
+
+      // La ÚNICA barrera que evita crear un duplicado en silencio. Sin esto, la
+      // pregunta se puede ignorar y el proveedor se crea igual al confirmar,
+      // que es exactamente cómo aparecieron los tres pares duplicados que hay
+      // hoy. Solo corre cuando hay parecidos: sin candidatos no hay ningún paso
+      // nuevo y el caso normal no cambia.
+      if (w.proveedorParecidos.length) {
+        return mostrarError('Decidí si el proveedor es alguno de los parecidos o si es uno nuevo.')
+      }
 
       // ANTES del return de abajo, a propósito: un remito también tiene
       // proveedor y también merece que la libretita le resuelva los renglones.
@@ -7892,9 +8118,18 @@
       estado.wizard.remitosVinculables = null
       estado.wizard.hayRemitosVinculables = false
     })
-    // Re-matchea si se corrige la razón social a mano.
+    // Re-matchea si se corrige la razón social a mano. El evento es `change` y
+    // no `input`, así que NO dispara al tocar un botón de la lista de parecidos
+    // —el input no cambió— y la elección no se pisa sola.
     document.getElementById('campo-razon-social').addEventListener('change', () => {
       if (estado.wizard) intentarMatchProveedor()
+    })
+
+    // Delegado: los botones de parecidos se redibujan en cada render.
+    document.getElementById('wz-proveedor-parecidos').addEventListener('click', (ev) => {
+      if (ev.target.closest('#btn-proveedor-es-nuevo')) { confirmarProveedorNuevo(); return }
+      const btn = ev.target.closest('.wz-parecido[data-proveedor]')
+      if (btn) elegirProveedorParecido(btn.dataset.proveedor)
     })
 
     document.querySelectorAll('#wz-si-no-vinculo button').forEach(btn => {
