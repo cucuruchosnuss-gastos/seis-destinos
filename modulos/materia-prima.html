@@ -890,6 +890,22 @@
        ÁMBAR y NO rojo: es una advertencia, no un error. Cargar el mismo papel
        dos veces puede estar mal o puede ser deliberado, y el detector no sabe
        cuál de las dos — así que informa y deja seguir. */
+    /* Aviso de número demasiado corto. Ámbar como el de duplicados —es una
+       advertencia, no un error— pero con su propia clase y su propio lugar: va
+       dentro del campo, así que no puede pisarse con aquel. */
+    .wz-numero-corto {
+      margin-top: 0.4375rem;
+      padding: 0.5rem 0.625rem;
+      background: var(--amarillo-suave);
+      border: 1px solid var(--amarillo);
+      border-radius: 10px;
+      color: var(--amarillo-oscuro);
+      font-size: 0.75rem;
+      line-height: 1.45;
+      min-width: 0;
+    }
+    .wz-numero-corto[hidden] { display: none; }
+
     .wz-duplicado {
       margin: 0 0 0.25rem;
       padding: 0.8125rem 0.9375rem;
@@ -2392,6 +2408,13 @@
           <div class="wz-campo__label">Número de documento</div>
           <input type="text" id="campo-numero-doc" placeholder="0003-00089780">
           <div class="wz-campo__ocr">leído de la foto</div>
+          <!-- Vive DENTRO del campo y no en la caja de duplicados, que está
+               arriba de todo: así los dos avisos conviven por construcción, sin
+               tener que coordinarlos. -->
+          <div class="wz-numero-corto" id="wz-numero-corto" hidden>
+            Este número es muy corto y puede repetirse entre proveedores.
+            Verificá que sea el número completo del comprobante.
+          </div>
         </div>
 
         <div class="wz-campo" id="wz-campo-razon-social">
@@ -2649,8 +2672,9 @@
       // abrir el wizard, no al entrar al módulo.
       catalogoInsumos: [],
       proveedores: [],
-      // Solo id y nombre, para resolver `editado_por`. Se carga bajo demanda:
-      // ver asegurarEmpleados().
+      // Solo id y nombre, para resolver `empleado_id` (quién cargó),
+      // `editado_por` y el `respondido_por` de una transferencia. Se carga bajo
+      // demanda: ver asegurarEmpleados().
       empleados: [],
       empleadosCargados: false,
       wizard: null,
@@ -2779,6 +2803,8 @@
       document.getElementById('wz-campo-tipo-doc').classList.remove('wz-campo--ocr')
       seleccionarTipoDocWz(null)
       document.getElementById('wz-datos-subtitulo').textContent = 'Completá los datos del comprobante.'
+      // Los campos se vaciaron: el aviso del número anterior no puede quedar.
+      renderizarAvisoNumeroCorto()
       renderizarProveedorDetectado()
       actualizarAvisoSinProveedor()
     }
@@ -2908,6 +2934,38 @@
     // Si el empleado no aparece (dado de baja, y la vista se filtra por
     // activo=true), se devuelve null y la línea muestra la fecha SIN nombre:
     // una baja no puede hacer desaparecer un dato de auditoría.
+    // Quién CARGÓ el ingreso. Mismo criterio que textoEdicion(): se resuelve
+    // contra el cache de v_empleados_publico y NUNCA con un embed —`empleados`
+    // tiene el RLS cerrado, así que un usuario común solo se ve a sí mismo—.
+    //
+    // Va POR COMPROBANTE y no una vez por entrega: una entrega fusionada puede
+    // tener el REMITO cargado por el de depósito y la FACTURA por el de
+    // administración, que es el circuito normal del módulo. Arriba se perdería
+    // uno de los dos.
+    //
+    // Si el empleado no aparece —la vista filtra activo=true, así que un dado
+    // de baja no está— se devuelve '' y la línea no se dibuja. Igual que en la
+    // edición: una baja no puede hacer desaparecer el ingreso.
+    function textoCarga(ingreso) {
+      const quien = estado.empleados.find(e => e.id === ingreso?.empleado_id)?.nombre
+      return quien ? `Cargado por ${quien}` : ''
+    }
+
+    // El equivalente en una transferencia recibida, y con OTRA etiqueta a
+    // propósito: no hay fila en materia_prima_ingresos, así que no hay
+    // `empleado_id`. El acto que corresponde a esta pantalla es RECIBIR —quien
+    // la envió ya está dicho en la unidad de origen— así que sale de
+    // `respondido_por`, que es quien la aceptó.
+    //
+    // "Cargado por" y "Recibido por" NO se unifican bajo un texto genérico:
+    // significan cosas distintas. En un comprobante alguien registró lo que
+    // llegó de un PROVEEDOR; en una transferencia alguien confirmó lo que llegó
+    // de OTRA EMPRESA NUESTRA.
+    function textoRecepcion(transferencia) {
+      const quien = estado.empleados.find(e => e.id === transferencia?.respondido_por)?.nombre
+      return quien ? `Recibido por ${quien}` : ''
+    }
+
     function textoEdicion(ingreso) {
       if (!ingreso?.editado_en) return ''
       const cuando = formatearFechaHora(ingreso.editado_en)
@@ -3232,7 +3290,7 @@
         // agregado: sirve para las DOS cosas —la cantidad de ítems es el largo
         // del array, y el indicador de diferencias es que alguno lo tenga
         // cargado— sin sumar una consulta. Son pocos ítems por ingreso.
-        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, editado_por, editado_en, created_at, materia_prima_items(insumo_id, lote, lote_ilegible, cantidad_documento, ya_recibido_con_remito)')
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, empleado_id, editado_por, editado_en, created_at, materia_prima_items(insumo_id, lote, lote_ilegible, cantidad_documento, ya_recibido_con_remito)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -3316,7 +3374,7 @@
       // sola FK a esa tabla.
       const { data, error } = await supabase
         .from('stock_transferencias')
-        .select('id, fecha, created_at, estado, unidad_origen_id, unidad_destino_id, observaciones, stock_transferencia_items(id, lote, contenido_por_bulto, cantidad_enviada, cantidad_recibida, motivo_diferencia, insumos(nombre, marca, unidad_medida, aclaracion))')
+        .select('id, fecha, created_at, estado, unidad_origen_id, unidad_destino_id, observaciones, respondido_por, stock_transferencia_items(id, lote, contenido_por_bulto, cantidad_enviada, cantidad_recibida, motivo_diferencia, insumos(nombre, marca, unidad_medida, aclaracion))')
         .eq('estado', 'aceptada')
       if (error) { console.error(error); return }
 
@@ -3664,10 +3722,14 @@
     // sería invisible justo para casi todos. La vista existe para esto y ya la
     // usan los selectores de Gastos y Caja con el mismo criterio.
     //
-    // Bajo demanda y una sola vez: hoy `editado_en` está siempre en null
-    // porque todavía no hay pantalla de edición, así que en la práctica esta
-    // consulta no se ejecuta nunca. No tiene sentido cargar la lista completa
-    // al entrar al módulo para un campo que nadie escribe todavía.
+    // Bajo demanda y UNA SOLA VEZ por sesión, por el flag de cache.
+    //
+    // OJO — ESTE COMENTARIO DECÍA OTRA COSA Y DEJÓ DE SER CIERTO: mientras el
+    // único consumidor era `editado_por`, la consulta no se ejecutaba NUNCA
+    // (no hay pantalla de edición, así que `editado_en` está siempre en null).
+    // Desde que el detalle muestra quién CARGÓ el ingreso, y `empleado_id` es
+    // NOT NULL, la condición que la dispara es siempre verdadera: corre al
+    // abrir el primer detalle de cada sesión. Sigue siendo una sola consulta.
     async function asegurarEmpleados() {
       if (estado.empleadosCargados) return
       const { data, error } = await supabase
@@ -3682,7 +3744,9 @@
     // El detalle de una transferencia recibida. LA MERMA DEL TRASLADO es el dato
     // que más importa acá: es lo que se perdió entre que salió y llegó, y es lo
     // único que este detalle muestra y ninguna otra pantalla de Ingreso puede.
-    function abrirDetalleTransferenciaRecibida(entrega) {
+    async function abrirDetalleTransferenciaRecibida(entrega) {
+      // Su camino propio no pedía los empleados: ahora sí, para "Recibido por".
+      if (entrega.base.respondido_por) await asegurarEmpleados()
       const origen = nombreUnidad(entrega.origenId) || 'otra unidad'
       const destino = nombreUnidad(entrega.destinoId) || ''
 
@@ -3693,6 +3757,7 @@
       document.getElementById('detalle-meta').innerHTML = [
         `${formatearFecha(entrega.base.fecha)} · desde ${esc(origen)}`,
         'Movimiento interno entre unidades del grupo: no tiene comprobante de proveedor.',
+        textoRecepcion(entrega.base),
         entrega.observaciones ? `Observaciones: ${esc(entrega.observaciones)}` : '',
       ].filter(Boolean).join('<br>')
 
@@ -3774,11 +3839,15 @@
       // sus cifras son otras (enviada, recibida, la merma). Mezclarla con el
       // camino de comprobantes obligaría a poner condicionales en todo el
       // cuerpo de abajo.
-      if (entrega.esTransferencia) { abrirDetalleTransferenciaRecibida(entrega); return }
+      if (entrega.esTransferencia) { await abrirDetalleTransferenciaRecibida(entrega); return }
       const ingreso = entrega.base
 
       // Solo si hay algo que resolver.
-      if (entrega.comprobantes.some(c => c.editado_por)) await asegurarEmpleados()
+      // `empleado_id` es NOT NULL, así que esto es en la práctica un "siempre"
+      // — ver la nota en asegurarEmpleados(). Se deja como condición y no como
+      // llamada suelta porque una entrega sin comprobantes (no debería haber)
+      // no tiene a quién resolver.
+      if (entrega.comprobantes.some(c => c.empleado_id || c.editado_por)) await asegurarEmpleados()
 
       document.getElementById('detalle-titulo').textContent = ingreso.razon_social || '(sin proveedor)'
       // Los chips de tipo se movieron a la sección "Comprobantes": acá quedan
@@ -3798,12 +3867,14 @@
       // perdería uno de los dos.
       document.getElementById('detalle-comprobantes').innerHTML = entrega.comprobantes.map(c => {
         const edicion = textoEdicion(c)
+        const carga = textoCarga(c)
         return `
         <div class="comprobante-mp">
           <div class="comprobante-mp__info">
             ${chipTipoDoc(c.tipo_doc)}
             <div class="comprobante-mp__numero">${c.numero_doc || 'Sin número'}</div>
             <div class="comprobante-mp__fecha">${formatearFecha(c.fecha)}</div>
+            ${carga ? `<div class="comprobante-mp__edicion">${esc(carga)}</div>` : ''}
             ${edicion ? `<div class="comprobante-mp__edicion">${esc(edicion)}</div>` : ''}
           </div>
           ${c.foto_url
@@ -4176,6 +4247,8 @@
         marcarCampoOcr(c.cont, true)
       })
       marcarCampoOcr('wz-campo-tipo-doc', w.camposOcr.has('tipo_doc'))
+      // El OCR llena el campo sin pasar por el listener de tipeo.
+      renderizarAvisoNumeroCorto()
 
       const sub = w.camposOcr.size
         ? 'Los campos marcados se leyeron de la foto. Revisalos.'
@@ -4320,6 +4393,29 @@
     // NO BLOQUEA: informa y deja seguir. Un bloqueo duro empuja a inventar un
     // número distinto para poder cargar, y eso es peor que el duplicado — el
     // duplicado se ve, el número inventado no.
+    // UN NÚMERO DE UNO O DOS DÍGITOS NO IDENTIFICA NADA, y deja al detector de
+    // duplicados sin con qué trabajar: matchea por proveedor + número, y hoy hay
+    // SIETE registros con el número "1" entre gastos y facturas, de cinco
+    // proveedores distintos.
+    //
+    // Es un AVISO Y NO UN BLOQUEO: hay comprobantes internos que legítimamente
+    // se numeran con un dígito. No toca ninguna validación ni el botón de
+    // continuar.
+    //
+    // Se cuenta con la MISMA normalización que usa el detector —solo dígitos—
+    // y no los caracteres del texto crudo: "0001" son cuatro dígitos y está
+    // bien, "0-1" es uno solo y no. Sin ningún dígito tampoco avisa: ahí el
+    // problema es otro y el campo ya lo cubre.
+    function digitosNumeroDoc(texto) {
+      return String(texto ?? '').replace(/\D/g, '')
+    }
+    function renderizarAvisoNumeroCorto() {
+      const el = document.getElementById('wz-numero-corto')
+      if (!el) return
+      const d = digitosNumeroDoc(document.getElementById('campo-numero-doc')?.value)
+      el.hidden = !(d.length >= 1 && d.length <= 2)
+    }
+
     function renderizarAvisoDuplicado() {
       const cont = document.getElementById('wz-duplicado')
       const filas = estado.wizard?.duplicados ?? []
@@ -7774,6 +7870,7 @@
     document.getElementById('btn-leer-ocr').addEventListener('click', leerConIA)
 
     document.getElementById('btn-datos-continuar').addEventListener('click', continuarDesdeDatos)
+    document.getElementById('campo-numero-doc').addEventListener('input', renderizarAvisoNumeroCorto)
     document.getElementById('campo-razon-social').addEventListener('input', actualizarAvisoSinProveedor)
     // Cambiar de unidad invalida el remito ya elegido: los remitos que se
     // ofrecen son los de una unidad concreta.
