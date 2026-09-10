@@ -1041,6 +1041,36 @@
     .wz-campo input:focus, .wz-campo select:focus { border-color: var(--marron); }
     .wz-campo__hint { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.375rem; }
 
+    /* ── Buscador de proveedor en el padrón ──────────────────────────────────
+       Va DESPUÉS de `.wz-campo input` a propósito: vive adentro de un
+       .wz-campo, así que sin más especificidad que aquella regla —y estando
+       antes— heredaría los 48px del campo de razón social y se leería como un
+       segundo campo del comprobante, que es justo lo que NO es. */
+    .wz-buscador-prov { margin-top: 0.5rem; min-width: 0; }
+    .wz-campo .wz-buscador-prov__input {
+      height: 42px;
+      border-radius: 11px;
+      font-size: 0.875rem;
+      background: #fff;
+    }
+    .wz-sugerencias-prov {
+      margin-top: 0.375rem;
+      max-height: 240px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      min-width: 0;
+    }
+    /* Un panel vacío se lee como "el buscador no anda". Con 36 proveedores,
+       escribir algo que no está va a pasar seguido. */
+    .wz-sugerencias-prov__vacio {
+      padding: 0.625rem 0.6875rem;
+      border: 1px dashed var(--color-borde);
+      border-radius: 10px;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: var(--color-texto-suave);
+    }
+
     /* Marcador de campo leído por OCR. Se pone/saca agregando .wz-campo--ocr
        al contenedor; el texto va por ::after para no ensuciar el HTML. */
     .wz-campo--ocr .wz-campo__ocr { display: flex; }
@@ -2499,6 +2529,17 @@
                oculta — no puede decir "se va a dar de alta" al lado de una
                pregunta sobre si hay que darlo de alta. -->
           <div class="wz-parecidos" id="wz-proveedor-parecidos" hidden></div>
+          <!-- BUSCADOR EN EL PADRÓN, con su propio input y NO dentro del campo
+               de razón social como en gastos.html. El caso que lo motiva es el
+               remito que no dice de quién es —solo el destinatario y el
+               producto—: ahí tipear "ferp" en el campo de arriba dejaría eso
+               guardado como razon_social, que es el texto histórico de lo que
+               decía el papel, y el papel no dice nada. -->
+          <div class="wz-buscador-prov">
+            <input type="text" id="campo-buscar-proveedor" class="wz-buscador-prov__input"
+                   placeholder="🔍 Buscar proveedor en el padrón" autocomplete="off">
+            <div class="wz-sugerencias-prov" id="wz-sugerencias-proveedor" hidden></div>
+          </div>
         </div>
 
         <div class="wz-campo" id="wz-campo-nombre-fantasia">
@@ -2888,6 +2929,11 @@
       renderizarAvisoNumeroCorto()
       renderizarProveedorDetectado()
       renderizarProveedorParecidos()
+      // El buscador NO está en CAMPOS_ENCABEZADO —no es un dato del
+      // comprobante— así que el forEach de arriba no lo toca y hay que
+      // limpiarlo aparte: una búsqueda del comprobante anterior no puede
+      // quedar sobre una lectura nueva.
+      limpiarBuscadorProveedor()
       actualizarAvisoSinProveedor()
     }
 
@@ -4490,6 +4536,66 @@
       renderizarProveedorParecidos()
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIZARD — BUSCADOR DE PROVEEDOR EN EL PADRÓN
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Hasta acá el proveedor solo se resolvía si el texto matcheaba o si salía
+    // como parecido. El caso que faltaba es real y común: un remito que no dice
+    // de quién es —solo el destinatario y el producto—, donde la persona SABE
+    // de quién es y no tenía forma de elegirlo.
+    //
+    // Filtra en el CLIENTE: `estado.proveedores` ya está en memoria y ya viene
+    // SIN filtrar por estado_alta, así que un proveedor pendiente de aprobación
+    // también se encuentra — si no, se crearía otro igual y chocaría contra el
+    // índice único de CUIT.
+    const TOPE_SUGERENCIAS_PROVEEDOR = 8
+
+    function filtrarProveedores(termino) {
+      const t = normalizarRazonSocial(termino)
+      if (!t) return []
+      return estado.proveedores
+        .filter(p => [p.razon_social, p.nombre_fantasia]
+          .some(campo => normalizarRazonSocial(campo).includes(t)))
+        .slice(0, TOPE_SUGERENCIAS_PROVEEDOR)
+    }
+
+    // Dibuja SOLO el panel y nunca vuelve a renderizar el bloque: un re-render
+    // por tecla le sacaría el foco al input. Es el bug que este archivo ya tuvo
+    // dos veces, y el mismo patrón que usa el buscador de catálogo del paso 3.
+    function renderizarSugerenciasProveedor() {
+      const panel = document.getElementById('wz-sugerencias-proveedor')
+      const termino = document.getElementById('campo-buscar-proveedor').value
+      if (!normalizarRazonSocial(termino)) { panel.hidden = true; panel.innerHTML = ''; return }
+
+      const lista = filtrarProveedores(termino)
+      // Sin resultados se DICE. Un panel vacío se lee como que el buscador no
+      // anda, y con 36 proveedores escribir algo que no está va a pasar seguido.
+      panel.innerHTML = lista.length
+        ? lista.map(p => `
+          <button type="button" class="wz-parecido" data-proveedor="${esc(p.id)}">
+            <div class="wz-parecido__nombre">${esc(p.razon_social)}${p.nombre_fantasia && normalizarRazonSocial(p.nombre_fantasia) !== normalizarRazonSocial(p.razon_social) ? ` · ${esc(p.nombre_fantasia)}` : ''}</div>
+            <div class="wz-parecido__cuit">${p.cuit ? `CUIT ${esc(p.cuit)}` : 'sin CUIT'}</div>
+          </button>`).join('')
+        : `<div class="wz-sugerencias-prov__vacio">No hay ningún proveedor que coincida con «${esc(termino.trim())}». Si es uno nuevo, seguí sin elegir nada: se va a dar de alta al confirmar.</div>`
+      panel.hidden = false
+    }
+
+    // Elegir del buscador vincula igual que elegir un parecido —misma función,
+    // así que tampoco pisa el texto de la razón social— y además cierra el
+    // buscador: la pregunta que la persona vino a responder ya está respondida.
+    function elegirProveedorDelBuscador(id) {
+      elegirProveedorParecido(id)
+      if (estado.wizard?.proveedorId !== id) return
+      document.getElementById('campo-buscar-proveedor').value = ''
+      renderizarSugerenciasProveedor()
+    }
+
+    function limpiarBuscadorProveedor() {
+      document.getElementById('campo-buscar-proveedor').value = ''
+      renderizarSugerenciasProveedor()
+    }
+
     function renderizarProveedorParecidos() {
       const cont = document.getElementById('wz-proveedor-parecidos')
       const w = estado.wizard
@@ -4691,7 +4797,11 @@
       if (!w) { apagar(); return }
 
       const razon = document.getElementById('campo-razon-social').value.trim()
-      if (!razon && !w.cuitOcr) { apagar(); return }
+      // `proveedorMatch` entra en la condición por el BUSCADOR: el caso que lo
+      // motiva es el remito que no dice de quién es, así que ahí no hay texto
+      // ni CUIT y sin esto elegir del padrón vincularía EN SILENCIO — la
+      // persona no tendría en pantalla ninguna confirmación de lo que eligió.
+      if (!razon && !w.cuitOcr && !w.proveedorMatch) { apagar(); return }
 
       // Con la pregunta de parecidos abierta este aviso NO se dibuja: diría
       // "se va a dar de alta" justo al lado de una pregunta sobre si hay que
@@ -8162,6 +8272,15 @@
       if (ev.target.closest('#btn-proveedor-es-nuevo')) { confirmarProveedorNuevo(); return }
       const btn = ev.target.closest('.wz-parecido[data-proveedor]')
       if (btn) elegirProveedorParecido(btn.dataset.proveedor)
+    })
+
+    // El buscador filtra en vivo. `input` y no `change`: es una búsqueda, no un
+    // dato del comprobante — lo que se tipea acá no se guarda en ningún lado.
+    document.getElementById('campo-buscar-proveedor').addEventListener('input', renderizarSugerenciasProveedor)
+    // Delegado por lo mismo que el de arriba: el panel se redibuja en cada tecla.
+    document.getElementById('wz-sugerencias-proveedor').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.wz-parecido[data-proveedor]')
+      if (btn) elegirProveedorDelBuscador(btn.dataset.proveedor)
     })
 
     document.querySelectorAll('#wz-si-no-vinculo button').forEach(btn => {
