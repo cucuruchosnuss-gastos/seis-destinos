@@ -7173,12 +7173,20 @@
           // toque; no elegir deja el producto fuera de su grupo en la pantalla
           // que se mira todos los días, y a "sin categoría" nadie va a buscar.
           //
-          // ESTO DEJA AL WIZARD MÁS ESTRICTO QUE LA PANTALLA DE ADMINISTRACIÓN
-          // DEL CATÁLOGO, que no captura la categoría en absoluto (crear_insumo
-          // ni recibe p_categoria). NO SE "CORRIGE" AFLOJANDO ESTE LADO: la
-          // asimetría se cierra agregándole el campo a Stock, que es el flojo.
-          // Quien carga en la fábrica tiene el producto en la mano y sabe si es
-          // harina o una caja, así que acá la pregunta es barata.
+          // ACÁ ES OBLIGATORIA Y EN STOCK ES OPCIONAL, y esa diferencia es
+          // DELIBERADA: NO se "corrige" emparejando los dos lados.
+          //   - STOCK es la pantalla de CURACIÓN, y ahí la categoría es
+          //     opcional porque tiene que poder DESclasificar algo mal puesto.
+          //     Obligatoria lo haría imposible — el mismo argumento por el que
+          //     `editar_insumo` asigna la categoría directo en vez de con un
+          //     coalesce contra el valor actual.
+          //   - ACÁ el producto se crea AL VUELO, en el medio de una carga, y
+          //     lo que no se clasifica en ese momento no lo mira nadie nunca
+          //     más: queda en "sin categoría", separado de su grupo, en la
+          //     pantalla que se usa todos los días. Y quien carga en la fábrica
+          //     tiene el producto en la mano, así que la pregunta es barata.
+          // O sea que cada lado es estricto donde le corresponde, y lo que
+          // parece una inconsistencia es la respuesta a dos preguntas distintas.
           //
           // El guard mira que HAYA categorías para elegir y no que el campo esté
           // en null: si la lista viene vacía por un fallo de carga, la tarjeta
