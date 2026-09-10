@@ -505,7 +505,8 @@
        vertical a 13px; lo compacto de verdad lo dieron el gap y el paso de
        tres líneas a dos de 6cf7e27. */
     .fila-stock,
-    .fila-insumo {
+    .fila-insumo,
+    .merma-fila {
       border-radius: 1.0625rem;
       border-color: var(--borde-tarjeta);
       box-shadow: var(--sombra-tarjeta);
@@ -1570,6 +1571,140 @@
       margin: 1.5rem 0 0.5rem;
     }
 
+    /* ── Tablero de mermas ───────────────────────────────────── */
+
+    /* ESTA PANTALLA VA EN --bordo Y NO EN EL VERDE DEL MÓDULO, a propósito: es
+       el listado de lo que se perdió, y --bordo ya es el color de alerta del
+       proyecto —los saldos negativos, el bloque de "recibí menos", las acciones
+       destructivas—. La diferencia con esos usos: ahí es una alerta PUNTUAL
+       dentro de una pantalla verde, y acá es el acento DE la pantalla.
+
+       Y por eso mismo NO va en todo. Lo llevan el mes, los números y el chip de
+       baja; el nombre del insumo, el motivo y la meta siguen siendo texto
+       normal. Si se pintara todo, el acento dejaría de señalar nada — que es
+       el mismo problema del aviso que se muestra siempre. */
+
+    .merma-mes { margin-bottom: 1.375rem; min-width: 0; }
+
+    .merma-mes__titulo {
+      display: flex;
+      align-items: center;
+      gap: 0.5625rem;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--bordo-oscuro);
+      margin-bottom: 0.25rem;
+      min-width: 0;
+    }
+    /* min-width:0 y wrap: sin esto un mes largo empuja la píldora y la línea
+       fuera de la pantalla en 375px. */
+    .merma-mes__nombre { min-width: 0; overflow-wrap: anywhere; }
+    .merma-mes__linea {
+      flex: 1;
+      height: 1px;
+      min-width: 0;
+      background: var(--color-borde);
+    }
+    /* EL CONTEO DE EVENTOS es el número del mes, y es el único que se puede
+       sumar sin mentir — ver el comentario de resumenDelMes(). */
+    .merma-mes__conteo {
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
+      font-size: 0.71875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5625rem;
+      flex-shrink: 0;
+      line-height: 1.5;
+    }
+    /* Los subtotales POR UNIDAD DE MEDIDA, como contexto del conteo. */
+    .merma-mes__totales {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.625rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* .tarjeta-lista es `display: flex; align-items: center`, y esta tarjeta
+       APILA tres renglones: sin esto los tres se acomodan en fila y el nombre
+       se parte letra por letra contra una columna de 40px. Ninguna assertion
+       sobre el fuente puede ver eso — se ve abriendo la pantalla.
+       Y `cursor: default` porque la fila NO abre nada: la clase global pone
+       pointer, que promete un toque que no existe. Por lo mismo el hover no
+       levanta la tarjeta. */
+    .merma-fila {
+      flex-direction: column;
+      align-items: stretch;
+      cursor: default;
+    }
+    .merma-fila:hover { box-shadow: var(--sombra-tarjeta); transform: none; }
+
+    .merma-fila__linea {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.625rem;
+      min-width: 0;
+    }
+    .merma-fila__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    /* La cantidad perdida a la derecha y con peso, igual que en el listado de
+       stock: es lo que se viene a ver. */
+    .merma-fila__cantidad {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--bordo-oscuro);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .merma-fila__meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.3125rem;
+      min-width: 0;
+    }
+    .merma-fila__meta span { min-width: 0; overflow-wrap: anywhere; }
+    /* El texto libre que escribió quien registró la pérdida, entrecomillado
+       para que se lea como algo que dijo una persona y no como una etiqueta del
+       sistema — el mismo criterio que el texto del papel en los alias. */
+    .merma-fila__texto {
+      font-size: 0.75rem;
+      color: var(--color-texto);
+      margin-top: 0.25rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* EL CHIP DE ORIGEN, y por qué son TRES tratamientos y no uno solo: "se
+       rompió una caja" es una pérdida CONSTATADA, y "faltan 12 en el recuento"
+       es una PREGUNTA ABIERTA —nadie sabe qué pasó—. Son cosas distintas y es
+       lo primero que se quiere saber de la fila, así que se distinguen sin
+       leer: bordó la baja, ámbar el recuento —que en este archivo ya significa
+       "esto espera una revisión"— y gris neutro el traslado. */
+    .merma-chip {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    /* Las variantes DESPUÉS de su base: misma especificidad, decide el orden. */
+    .merma-chip--baja          { background: var(--bordo-suave);     color: var(--bordo-oscuro); }
+    .merma-chip--recuento      { background: var(--amarillo-suave);  color: var(--amarillo-oscuro); }
+    .merma-chip--transferencia { background: var(--color-superficie); color: var(--color-texto-suave); }
+
     /* ── Modal de movimiento ─────────────────────────────────────────────── */
 
     .mov-unidad-fija {
@@ -1792,6 +1927,7 @@
         <button type="button" class="btn-stock btn-stock--chico" id="btn-enviar-transferencia" hidden>Enviar a otra unidad</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-transito">En tránsito</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-mermas">Mermas</button>
       </div>
 
       <div class="lista-contenido" id="lista-stock"></div>
@@ -1985,6 +2121,23 @@
       </div>
 
     </div><!-- /vista-transito -->
+
+    <!-- ══ VISTA: MERMAS ═══════════════════════════════════════ -->
+    <!-- Drill-down de Stock y no una pestaña propia: cuatro no entran en 375px.
+         PESTANA_DE_VISTA la deja marcada como Stock mientras se la mira, igual
+         que el historial de recuentos y el tránsito. -->
+    <div class="vista-stock" id="vista-mermas" hidden>
+
+      <button type="button" class="hist-volver" id="btn-volver-de-mermas">‹ Volver al stock</button>
+
+      <div class="chips-unidad" id="chips-unidad-mermas"></div>
+      <div class="chips-unidad" id="chips-origen-mermas"></div>
+
+      <div class="lista-contenido" id="lista-mermas"></div>
+
+      <div class="estado-vacio-stock" id="mermas-cargando">Cargando mermas…</div>
+      <div class="estado-vacio-stock" id="mermas-vacio" hidden></div>
+    </div><!-- /vista-mermas -->
 
 
 
@@ -2819,6 +2972,11 @@
       transferencias: [],
       transfDetalle: null,
       itemsTransfDetalle: [],
+      // Tablero de mermas. Los dos filtros son de UI: la barrera de alcance
+      // vive en v_mermas (ver cargarMermas).
+      mermas: [],
+      unidadMerma: '',
+      origenMerma: '',
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -5718,6 +5876,267 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // TABLERO DE MERMAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // El mes en palabras. Se arma PARTIENDO EL STRING por guiones y NUNCA con
+    // `new Date('2026-09-01')`: eso se parsea como UTC y en Argentina (UTC-3)
+    // devuelve el 31 de agosto — o sea, el mes anterior en TODAS las filas, sin
+    // ningún error y con un tablero entero corrido un mes.
+    const NOMBRE_MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+    function etiquetaMes(iso) {
+      const [anio, mes] = String(iso ?? '').split('-')
+      const nom = NOMBRE_MES[Number(mes) - 1]
+      if (!nom || !anio) return String(iso ?? '')
+      return `${nom.charAt(0).toUpperCase()}${nom.slice(1)} ${anio}`
+    }
+
+    const ORIGEN_MERMA = {
+      baja:          { clase: 'merma-chip--baja',          texto: 'Baja' },
+      recuento:      { clase: 'merma-chip--recuento',      texto: 'Recuento' },
+      transferencia: { clase: 'merma-chip--transferencia', texto: 'Traslado' },
+    }
+
+    const CHIPS_ORIGEN_MERMA = [
+      { id: '', nombre: 'Todos' },
+      { id: 'baja', nombre: 'Bajas' },
+      { id: 'recuento', nombre: 'Recuento' },
+      { id: 'transferencia', nombre: 'Traslados' },
+    ]
+
+    // Los DIEZ valores de `chk_motivo_tipo` MÁS `perdida_traslado`, que la
+    // vista genera para la diferencia de una transferencia y que NO está en el
+    // CHECK ni se escribe nunca: esa diferencia no es un movimiento con motivo,
+    // es la resta entre lo despachado y lo recibido.
+    //
+    // CUATRO DE ESTOS NO PUEDEN LLEGAR HOY Y ESTÁN IGUAL, A PROPÓSITO:
+    // `sobrante_recuento`, `aparecio_otro_lado`, `correccion_carga` y
+    // `carga_inicial` los excluye la vista porque NO SON MERMA — su rama de
+    // recuento filtra `motivo_tipo = 'faltante_recuento'`. Ahí adentro están
+    // las 21 correcciones del recuento inicial, que no se perdieron: nunca
+    // habían estado cargadas. Sin esta nota, alguien ve que no aparecen nunca,
+    // lo lee como un olvido y "arregla" el tablero metiéndole esas 21 filas —
+    // que es exactamente lo que este tablero no tiene que mostrar.
+    const MOTIVO_MERMA = {
+      rotura: 'Rotura',
+      mojado: 'Mojado',
+      vencido: 'Vencido',
+      robo: 'Robo',
+      otro: 'Otro',
+      faltante_recuento: 'Faltante en el recuento',
+      perdida_traslado: 'Perdido en el traslado',
+      sobrante_recuento: 'Sobrante en el recuento',
+      aparecio_otro_lado: 'Apareció en otro lado',
+      correccion_carga: 'Corrección de carga',
+      carga_inicial: 'Carga inicial',
+    }
+
+    // UNA BAJA SIN CLASIFICAR LLEGA COMO NULL Y SE DICE ASÍ, no como "Otro".
+    // La vista traía un `coalesce(motivo_tipo, 'otro')` y se sacó: "Otro" es
+    // UNA DE LAS DIEZ OPCIONES del CHECK, o sea una respuesta que alguien
+    // ELIGIÓ, y las bajas anteriores a la columna no las eligió nadie.
+    // Mostrarlas como "Otro" las vuelve indistinguibles de las clasificadas de
+    // verdad, y el tablero existe justamente para saber POR QUÉ se pierde.
+    //
+    // Un valor que no esté en el mapa cae al literal en vez de inventarle un
+    // nombre: el CHECK de la base puede ganar un valor antes que esta pantalla.
+    function etiquetaMotivo(tipo) {
+      if (tipo == null || tipo === '') return 'Sin clasificar'
+      return MOTIVO_MERMA[tipo] ?? tipo
+    }
+
+    // EL TOTAL DEL MES ES UN CONTEO DE EVENTOS, NO UNA SUMA DE CANTIDADES.
+    //
+    // No se pueden sumar 50 bolsas con 20 kg de harina: "70" no significa nada.
+    // Y NO HAY NINGÚN NÚMERO ÚNICO POSIBLE, tampoco uno en plata: este módulo
+    // NO captura precios, por decisión de diseño explícita, así que no existe
+    // una unidad común a la que convertir. Cualquier cifra única mentiría.
+    //
+    // Entonces el número que manda es CUÁNTAS VECES PASÓ —lo único que se suma
+    // sin mentir— y los subtotales POR UNIDAD DE MEDIDA van como contexto.
+    // LIMITACIÓN de esos subtotales, dicha en voz alta: sumar `un` de bolsas
+    // con `un` de cajas es coherente en la DIMENSIÓN pero no dice cuánto costó.
+    // Eso solo lo resolvería capturar precios, que es otra decisión y no un
+    // olvido de esta pantalla.
+    function resumenDelMes(filas) {
+      const porUnidad = new Map()
+      filas.forEach(f => {
+        const u = String(f.unidad_medida ?? '').trim()
+        // Sin `?? 0`, a propósito: las TRES ramas de v_mermas garantizan una
+        // cantidad no nula, así que ese guard sería para algo que no puede
+        // pasar — y si igual pasara, un cero silencioso bajaría el subtotal
+        // mientras el evento sigue contando. Que se vea el NaN: es la señal de
+        // que pasó algo que no debería.
+        porUnidad.set(u, (porUnidad.get(u) || 0) + Number(f.cantidad))
+      })
+      return {
+        eventos: filas.length,
+        totales: [...porUnidad].map(([u, n]) => formatearCantidadStock(n, u)),
+      }
+    }
+
+    // Agrupado por mes y el MÁS RECIENTE PRIMERO: es la unidad en la que esto
+    // se mira, a fin de mes. `mes` es el primer día del mes y viene como
+    // 'YYYY-MM-DD', así que ordenar los strings ordena las fechas.
+    function agruparMermasPorMes(filas) {
+      const meses = new Map()
+      filas.forEach(f => {
+        const k = String(f.mes ?? '')
+        if (!meses.has(k)) meses.set(k, [])
+        meses.get(k).push(f)
+      })
+      return [...meses]
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .map(([mes, deEseMes]) => ({ mes, filas: deEseMes }))
+    }
+
+    async function abrirMermas() {
+      mostrarVista('mermas')
+      await cargarMermas()
+    }
+
+    async function cargarMermas() {
+      const cargandoEl = document.getElementById('mermas-cargando')
+      cargandoEl.hidden = false
+
+      // EL ALCANCE POR UNIDAD LO RESUELVE LA VISTA, NO ESTA CONSULTA — y no
+      // hay que "completarlo" acá con un filtro contra estado.unidadesStock.
+      // v_mermas es security_invoker y sus TRES ramas comparten criterio: las
+      // dos que salen de stock_movimientos por el RLS del libro, y la de
+      // transferencias con un tiene_tarea_alcance('stock','ver', origen)
+      // propio adentro de la vista. Ese último hizo falta porque la policy de
+      // stock_transferencia_items entrega la fila con permiso sobre el origen
+      // O EL DESTINO, mientras que la merma del traslado es del ORIGEN: sin él,
+      // alguien con permiso solo en el destino recibía una fila de una unidad
+      // que no ve en ninguna otra pantalla del módulo.
+      //
+      // Y SE ARREGLÓ EN LA VISTA Y NO ACÁ a propósito: un filtro de UI esconde
+      // la fila, pero el dato viaja al navegador igual. Los chips de abajo son
+      // un FILTRO, no una barrera.
+      const { data, error } = await supabase
+        .from('v_mermas')
+        .select('unidad_negocio_id, unidad_nombre, fecha, mes, insumo_id, insumo_nombre, marca, unidad_medida, lote, cantidad, origen, motivo_tipo, motivo_texto')
+        .order('fecha', { ascending: false })
+
+      cargandoEl.hidden = true
+
+      if (error) {
+        console.error(error)
+        mostrarError('No se pudieron cargar las mermas.')
+        return
+      }
+      estado.mermas = data ?? []
+      renderizarChipsUnidadMerma()
+      renderizarChipsOrigenMerma()
+      renderizarMermas()
+    }
+
+    // Los chips salen de v_mis_unidades_stock, la misma tarea que gatea esta
+    // pantalla — se cargan en cargarStock(), igual que los del historial.
+    function renderizarChipsUnidadMerma() {
+      const cont = document.getElementById('chips-unidad-mermas')
+      cont.hidden = estado.unidadesStock.length < 2
+      if (cont.hidden) { cont.innerHTML = ''; return }
+
+      const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidadesStock]
+      cont.innerHTML = chips.map(u => `
+        <button type="button" class="chip-unidad ${estado.unidadMerma === u.id ? 'chip-unidad--activa' : ''}" data-unidad-merma="${esc(u.id)}">${esc(u.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('[data-unidad-merma]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.unidadMerma = btn.dataset.unidadMerma
+          renderizarChipsUnidadMerma()
+          renderizarMermas()
+        })
+      })
+    }
+
+    function renderizarChipsOrigenMerma() {
+      const cont = document.getElementById('chips-origen-mermas')
+      cont.innerHTML = CHIPS_ORIGEN_MERMA.map(o => `
+        <button type="button" class="chip-unidad ${estado.origenMerma === o.id ? 'chip-unidad--activa' : ''}" data-origen-merma="${esc(o.id)}">${esc(o.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('[data-origen-merma]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          estado.origenMerma = btn.dataset.origenMerma
+          renderizarChipsOrigenMerma()
+          renderizarMermas()
+        })
+      })
+    }
+
+    function renderizarMermas() {
+      const listaEl = document.getElementById('lista-mermas')
+      const vacioEl = document.getElementById('mermas-vacio')
+      const filas = estado.mermas.filter(f =>
+        (!estado.unidadMerma || f.unidad_negocio_id === estado.unidadMerma) &&
+        (!estado.origenMerma || f.origen === estado.origenMerma))
+
+      if (!filas.length) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = false
+        // El vacío CON filtro puesto y el vacío de verdad dicen cosas
+        // distintas: con filtro hay que aflojar el filtro, y sin filtro hay que
+        // explicar de dónde saldrían las mermas — porque hoy el tablero casi
+        // vacío es el estado NORMAL y no una pantalla rota.
+        vacioEl.innerHTML = estado.mermas.length
+          ? 'No hay pérdidas registradas con esos filtros.'
+          : 'Todavía no se registró ninguna pérdida.<br><br>' +
+            'Acá aparece lo que se dio de baja (rotura, mojado, vencimiento, robo), ' +
+            'lo que faltó en un recuento y lo que se perdió en un traslado entre unidades. ' +
+            'Las correcciones de la carga inicial no cuentan: esa mercadería no se perdió, nunca había estado cargada.'
+        return
+      }
+      vacioEl.hidden = true
+
+      // La marca se destaca cuando el nombre solo no alcanza, igual que en las
+      // otras dos listas del módulo — y por la misma razón, que no es el tipo.
+      // Se cuenta sobre las filas VISIBLES, ya filtradas, y una sola vez por
+      // render. Sigue en --verde y NO se pasa a --bordo con el resto de la
+      // pantalla: significa IDENTIDAD, y pintarla del color de alerta la
+      // convertiría en una advertencia sobre un insumo que no tiene nada malo.
+      const repes = nombresRepetidos(filas, f => f.insumo_nombre)
+
+      listaEl.innerHTML = agruparMermasPorMes(filas).map(g => {
+        const r = resumenDelMes(g.filas)
+        const cuerpo = g.filas.map(f => {
+          const o = ORIGEN_MERMA[f.origen] ?? { clase: '', texto: f.origen }
+          const marcaArriba = repes.has(normalizar(f.insumo_nombre)) && !!f.marca
+          // La unidad de negocio es la que PERDIÓ la mercadería. En un traslado
+          // eso es el ORIGEN: la vista no trae el destino, así que la fila no
+          // dice "a dónde iba" en vez de inventarlo.
+          const meta = [f.unidad_nombre, formatearFecha(f.fecha), etiquetaMotivo(f.motivo_tipo)]
+            .filter(Boolean).map(esc).join(' · ')
+          return `
+            <div class="tarjeta-lista merma-fila">
+              <div class="merma-fila__linea">
+                <span class="merma-fila__nombre">${esc(f.insumo_nombre)}${htmlMarca(f.marca, marcaArriba)}</span>
+                <span class="merma-fila__cantidad">${esc(formatearCantidadStock(f.cantidad, f.unidad_medida))}</span>
+              </div>
+              <div class="merma-fila__meta">
+                <span class="merma-chip ${o.clase}">${esc(o.texto)}</span>
+                <span>${meta}${f.lote ? ' · lote ' + esc(f.lote) : ''}</span>
+              </div>
+              ${f.motivo_texto ? `<div class="merma-fila__texto">“${esc(f.motivo_texto)}”</div>` : ''}
+            </div>`
+        }).join('')
+
+        return `
+          <div class="merma-mes">
+            <div class="merma-mes__titulo">
+              <span class="merma-mes__nombre">${esc(etiquetaMes(g.mes))}</span>
+              <span class="merma-mes__linea"></span>
+              <span class="merma-mes__conteo">${r.eventos} ${r.eventos === 1 ? 'pérdida' : 'pérdidas'}</span>
+            </div>
+            <div class="merma-mes__totales">${esc(r.totales.join(' · '))}</div>
+            <div class="lista-contenido">${cuerpo}</div>
+          </div>`
+      }).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // PESTAÑAS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -5728,12 +6147,13 @@
       historial: 'Historial de recuentos',
       alias: 'Alias de proveedor',
       transito: 'Transferencias entre unidades',
+      mermas: 'Mermas',
     }
 
     // El historial es un drill-down de Stock, no una pestaña propia: cuatro no
     // entran en 375px. Mientras se lo mira, la pestaña que queda marcada sigue
     // siendo la de Stock.
-    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo', transito: 'stock' }
+    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo', transito: 'stock', mermas: 'stock' }
 
     function mostrarVista(id) {
       estado.vista = id
@@ -5742,6 +6162,7 @@
       document.getElementById('vista-recuento').hidden = id !== 'recuento'
       document.getElementById('vista-historial').hidden = id !== 'historial'
       document.getElementById('vista-transito').hidden = id !== 'transito'
+      document.getElementById('vista-mermas').hidden = id !== 'mermas'
       document.getElementById('vista-alias').hidden = id !== 'alias'
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
@@ -7163,6 +7584,9 @@
 
     document.getElementById('btn-ver-transito').addEventListener('click', abrirTransito)
     document.getElementById('btn-volver-de-transito').addEventListener('click', () => mostrarVista('stock'))
+
+    document.getElementById('btn-ver-mermas').addEventListener('click', abrirMermas)
+    document.getElementById('btn-volver-de-mermas').addEventListener('click', () => mostrarVista('stock'))
     document.getElementById('btn-volver-a-transito').addEventListener('click', () => {
       document.getElementById('transito-paso-detalle').hidden = true
       document.getElementById('transito-paso-lista').hidden = false
