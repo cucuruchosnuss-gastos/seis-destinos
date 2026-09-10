@@ -2092,6 +2092,17 @@
         </div>
 
         <div class="campo-stock">
+          <label for="campo-categoria">Categoría <span class="campo-stock__opcional">opcional</span></label>
+          <!-- Las opciones las pone poblarSelectorCategoria() desde CATEGORIAS,
+               que es la misma constante que agrupa las dos listas: una segunda
+               copia acá se desincronizaría de aquella sin que nadie lo note. -->
+          <select id="campo-categoria"></select>
+          <div class="campo-stock__ayuda">
+            Agrupa el insumo en las listas de Stock y del catálogo. Sin categoría queda al final, en su propio grupo.
+          </div>
+        </div>
+
+        <div class="campo-stock">
           <label for="campo-tolerancia">Tolerancia de merma % <span class="campo-stock__opcional">opcional</span></label>
           <input type="text" inputmode="decimal" id="campo-tolerancia" placeholder="Vacío = control estricto" autocomplete="off">
           <div class="campo-stock__ayuda">
@@ -5652,6 +5663,24 @@
     // MODAL — ALTA / EDICIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
+    // LISTA CERRADA, no un campo de texto: `chk_categoria` admite NULL o uno de
+    // 11 valores exactos, así que un texto libre sería rechazado por la base —
+    // y aunque no lo fuera, con texto libre terminaríamos con "Cajas", "cajas"
+    // y "Caja" como TRES grupos distintos en las listas, que es la razón por la
+    // que la columna tiene el CHECK.
+    //
+    // Sale de CATEGORIAS, la MISMA constante que ordena los grupos de las dos
+    // listas. Una segunda copia acá se desincronizaría de aquella en silencio.
+    //
+    // "Sin categoría" va PRIMERA y con value vacío: es un valor legítimo —el
+    // CHECK acepta null— y tiene que poder elegirse para DESclasificar algo mal
+    // puesto. Ver el comentario de la llamada a editar_insumo.
+    function poblarSelectorCategoria() {
+      const sel = document.getElementById('campo-categoria')
+      sel.innerHTML = `<option value="">${SIN_CATEGORIA}</option>` +
+        CATEGORIAS.map(c => `<option value="${c}">${c}</option>`).join('')
+    }
+
     function abrirModalInsumo(insumoId = null) {
       if (!puedeGestionar()) return
 
@@ -5669,6 +5698,12 @@
       document.getElementById('campo-unidad').value     = i?.unidad_medida ?? ''
       document.getElementById('campo-tipo').value       = i?.tipo ?? 'materia_prima'
       document.getElementById('campo-tolerancia').value = i?.tolerancia_merma_pct ?? ''
+      // Las opciones se ponen ANTES de asignar el valor: sobre un <select>
+      // vacío la asignación no engancha y el campo quedaría en blanco, o sea
+      // pareciendo "Sin categoría" sobre un insumo que sí la tiene — y al
+      // guardar se la llevaría puesta.
+      poblarSelectorCategoria()
+      document.getElementById('campo-categoria').value  = i?.categoria ?? ''
 
       limpiarErroresModal()
       mostrarPasoFormulario()
@@ -5762,6 +5797,10 @@
         nombre,
         marca: document.getElementById('campo-marca').value.trim() || null,
         aclaracion,
+        // A NULL y no a cadena vacía, por lo mismo que la aclaración: `''` no
+        // está entre los 11 valores de `chk_categoria` y el UPDATE lo
+        // rechazaría. El null sí lo acepta, y es "Sin categoría".
+        categoria: document.getElementById('campo-categoria').value || null,
         unidad_medida: unidad,
         tipo: document.getElementById('campo-tipo').value,
         tolerancia_merma_pct: tolerancia,
@@ -5799,6 +5838,7 @@
           p_tipo: datos.tipo,
           p_tolerancia_merma_pct: datos.tolerancia_merma_pct,
           p_aclaracion: datos.aclaracion,
+          p_categoria: datos.categoria,
         }))
       } else {
         // p_estado_alta: 'activo' EXPLÍCITO cuando el insumo estaba pendiente.
@@ -5817,6 +5857,18 @@
           // imposible BORRAR una aclaracion, porque el null se leeria como "no
           // la toques" en vez de como "sacala".
           p_aclaracion: datos.aclaracion,
+          // LA CLAVE VA SIEMPRE, NUNCA OMITIDA — y esto NO es una precaución
+          // teórica: `p_categoria` tiene DEFAULT null y la RPC asigna
+          // `categoria = nullif(btrim(coalesce(p_categoria,'')),'')` DIRECTO,
+          // sin coalesce contra el valor actual. O sea que omitirla no la deja
+          // como estaba: LA BORRA. Editar una harina para corregirle una letra
+          // la sacaba de "Harinas" sin ningún error y sin que nadie lo notara.
+          //
+          // Es el mismo diseño que `p_aclaracion` de arriba, y es correcto por
+          // el mismo motivo: sin la asignación directa sería imposible SACAR
+          // una categoría mal puesta. El precio es que el cliente no puede
+          // "simplificar" la llamada omitiendo la clave.
+          p_categoria: datos.categoria,
         }))
       }
 
