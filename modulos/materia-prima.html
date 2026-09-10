@@ -3305,8 +3305,18 @@
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(x => `${x.modulo}:${x.tarea}`))
 
-      // El RLS acota qué unidades ve cada usuario (hoy: la propia, salvo
-      // super_admin) — que aparezcan menos unidades de las 4 es lo esperado.
+      // ESTA CONSULTA TRAE LAS 4 UNIDADES, NO LA PROPIA. La policy de SELECT de
+      // `unidades_negocio` es `USING (true)` para cualquier autenticado — una
+      // sola policy, verificado contra pg_policy el 10/09/2026.
+      //
+      // Acá decía lo contrario ("el RLS acota qué unidades ve cada usuario, hoy
+      // la propia salvo super_admin"), y era falso. Un comentario así invita a
+      // las dos cosas: a agregar un filtro "que falta" —que no falta— y a
+      // desconfiar de una consulta que funciona bien.
+      //
+      // El alcance por unidad NO vive acá: lo resuelven las policies de las
+      // tablas del módulo con tiene_tarea_alcance(). Este selector es la lista
+      // de unidades a secas.
       const { data: unids } = await supabase
         .from('unidades_negocio')
         .select('id, nombre')
