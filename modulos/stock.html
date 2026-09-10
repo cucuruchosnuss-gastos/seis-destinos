@@ -2102,6 +2102,22 @@
           </div>
         </div>
 
+        <!-- SOLO EN EDICIÓN: `crear_insumo` NO recibe p_vista_preferida, así que
+             ofrecerlo en el alta prometería algo que no se guarda — la persona
+             elegiría "En bultos", la pantalla confirmaría, y el insumo nacería
+             en 'base' igual. Un insumo nace en 'base' por el default de la
+             columna y se cambia acá después. Lo oculta abrirModalInsumo(). -->
+        <div class="campo-stock" id="campo-vista-contenedor" hidden>
+          <label for="campo-vista">Cómo mostrarlo en el stock</label>
+          <!-- Las opciones las pone poblarSelectorVista(): la etiqueta nombra
+               la unidad concreta de ESTE insumo, porque "base" no es una
+               palabra para nadie. -->
+          <select id="campo-vista"></select>
+          <div class="campo-stock__ayuda">
+            Si elegís bultos y el insumo todavía no tiene una presentación cargada, se muestra en su unidad hasta que la tenga.
+          </div>
+        </div>
+
         <div class="campo-stock">
           <label for="campo-tolerancia">Tolerancia de merma % <span class="campo-stock__opcional">opcional</span></label>
           <input type="text" inputmode="decimal" id="campo-tolerancia" placeholder="Vacío = control estricto" autocomplete="off">
@@ -3106,7 +3122,7 @@
     async function cargarInsumos() {
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo, categoria, aclaracion, activo, estado_alta, tolerancia_merma_pct')
+        .select('id, nombre, marca, unidad_medida, tipo, categoria, aclaracion, activo, estado_alta, tolerancia_merma_pct, vista_preferida')
 
       document.getElementById('estado-cargando').hidden = true
 
@@ -3294,7 +3310,7 @@
       const [unidades, filas] = await Promise.all([
         supabase.from('v_mis_unidades_stock').select('id, nombre').order('nombre'),
         supabase.from('v_stock_insumos')
-          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, categoria, aclaracion, cantidad_total, lotes_distintos, presentaciones, contenido_unico, kilos_sueltos'),
+          .select('unidad_negocio_id, insumo_id, insumo_nombre, marca, unidad_medida, tipo, categoria, aclaracion, cantidad_total, lotes_distintos, presentaciones, contenido_unico, kilos_sueltos, vista_preferida'),
       ])
 
       cargandoEl.hidden = true
@@ -3388,6 +3404,32 @@
           ? `${soloEnBultos} + ${formatearCantidadStock(sueltos, f.unidad_medida)}`
           : soloEnBultos
 
+        // LA VISTA PREFERIDA DECIDE QUÉ NÚMERO VA DESTACADO, no dónde va: la
+        // cantidad sigue SIEMPRE a la derecha (ver el bloque de más abajo). Lo
+        // que se intercambia es cuál de los dos ocupa ese lugar y cuál baja a
+        // la línea gris.
+        //
+        // LA CAÍDA AUTOMÁTICA ES EL CASO MAYORITARIO, NO EL BORDE: hoy hay 18
+        // filas de stock con `presentaciones = 0` contra 7 con una (los 18
+        // entraron por el recuento inicial, donde nadie declaró presentación).
+        // Un insumo marcado 'bulto' sin presentación cargada se muestra en su
+        // unidad, sin romperse ni mostrar vacío — la preferencia dice "cuando
+        // PUEDA, mostrame bultos", no "mostrame bultos o fallá".
+        //
+        // Y NO HACE FALTA UN `if` PARA ESO: `conSueltos` ya viene en null
+        // cuando no hay con qué armar los bultos, porque textoBultos() rechaza
+        // un `contenido_unico` que no sirve. La decisión vive en UN solo lugar.
+        // Si alguna vez se "optimiza" ese camino, lo que se rompe no es un caso
+        // raro: es casi todo el listado, y SOLO para los insumos marcados
+        // 'bulto' —los que están en 'base' se ven igual—, así que pasaría
+        // desapercibido. Tiene mutación propia.
+        //
+        // Con VARIAS presentaciones tampoco aplica: no existe "un" bulto que
+        // represente al total, y ahí `conSueltos` también es null.
+        const enBultos = f.vista_preferida === 'bulto' && conSueltos
+        const destacado = enBultos ? conSueltos : kilos
+        const secundario = enBultos ? kilos : conSueltos
+
         // LA CANTIDAD VA SIEMPRE A LA DERECHA, con o sin presentación. Antes
         // esto era condicional: sin desglose de bultos el número quedaba a la
         // IZQUIERDA, y hoy están así los 19 insumos con saldo —entraron por un
@@ -3402,7 +3444,7 @@
         // por tarjeta son varias tarjetas más en pantalla.
         const meta = [
           f.marca,
-          conSueltos,          // "10 bultos de 250 un", null si no hay presentación
+          secundario,          // el que NO quedó destacado; null si no hay bultos
           lotes,
           textoPresentaciones(presentaciones),
         ].filter(Boolean).join(' · ')
@@ -3417,7 +3459,7 @@
                 ${negativo ? '<span class="chip-saldo-negativo">Saldo negativo</span>' : ''}
               </div>
             </div>
-            <div class="fila-stock__total ${negativo ? 'fila-stock__total--negativa' : ''}">${esc(kilos)}</div>
+            <div class="fila-stock__total ${negativo ? 'fila-stock__total--negativa' : ''}">${esc(destacado)}</div>
           </div>`
       })
 
@@ -4056,7 +4098,7 @@
       if (estado.insumos.length) return
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo, categoria, aclaracion, activo, estado_alta, tolerancia_merma_pct')
+        .select('id, nombre, marca, unidad_medida, tipo, categoria, aclaracion, activo, estado_alta, tolerancia_merma_pct, vista_preferida')
       if (error) { console.error(error); return }
       estado.insumos = data ?? []
     }
@@ -5675,6 +5717,25 @@
     // "Sin categoría" va PRIMERA y con value vacío: es un valor legítimo —el
     // CHECK acepta null— y tiene que poder elegirse para DESclasificar algo mal
     // puesto. Ver el comentario de la llamada a editar_insumo.
+    // Cómo se nombra cada unidad en una frase. "base" no es una palabra para
+    // nadie: la etiqueta tiene que decir "kilos" o "unidades", que es lo que la
+    // persona va a ver en la tarjeta.
+    //
+    // Una unidad que no esté acá cae al literal en vez de inventar un nombre —
+    // hoy el catálogo tiene solo kg, lt y un (verificado el 10/09/2026), pero
+    // la columna es texto libre y puede ganar otra antes que esta lista.
+    const NOMBRE_UNIDAD = { kg: 'kilos', lt: 'litros', un: 'unidades' }
+    const nombreUnidad = (u) => NOMBRE_UNIDAD[String(u ?? '').trim().toLowerCase()] || String(u ?? '').trim()
+
+    // Se repuebla en CADA apertura y no una vez al cargar la pantalla: la
+    // etiqueta depende de la unidad del insumo que se está editando.
+    function poblarSelectorVista(unidad) {
+      const nom = nombreUnidad(unidad)
+      document.getElementById('campo-vista').innerHTML =
+        `<option value="base">En su unidad${nom ? ` (${nom})` : ''}</option>` +
+        '<option value="bulto">En bultos</option>'
+    }
+
     function poblarSelectorCategoria() {
       const sel = document.getElementById('campo-categoria')
       sel.innerHTML = `<option value="">${SIN_CATEGORIA}</option>` +
@@ -5704,6 +5765,14 @@
       // guardar se la llevaría puesta.
       poblarSelectorCategoria()
       document.getElementById('campo-categoria').value  = i?.categoria ?? ''
+      // Solo en edición — ver el comentario del markup. Y el poblado va ANTES
+      // de asignar el value, por lo mismo que la categoría: sobre un <select>
+      // vacío la asignación no engancha.
+      document.getElementById('campo-vista-contenedor').hidden = !i
+      if (i) {
+        poblarSelectorVista(i.unidad_medida)
+        document.getElementById('campo-vista').value = i.vista_preferida ?? 'base'
+      }
 
       limpiarErroresModal()
       mostrarPasoFormulario()
@@ -5801,6 +5870,9 @@
         // está entre los 11 valores de `chk_categoria` y el UPDATE lo
         // rechazaría. El null sí lo acepta, y es "Sin categoría".
         categoria: document.getElementById('campo-categoria').value || null,
+        // Cae a 'base' si el selector está oculto (alta) o vacío: la columna es
+        // NOT NULL y el CHECK solo acepta 'base' o 'bulto'.
+        vista_preferida: document.getElementById('campo-vista').value || 'base',
         unidad_medida: unidad,
         tipo: document.getElementById('campo-tipo').value,
         tolerancia_merma_pct: tolerancia,
@@ -5869,6 +5941,17 @@
           // una categoría mal puesta. El precio es que el cliente no puede
           // "simplificar" la llamada omitiendo la clave.
           p_categoria: datos.categoria,
+          // MISMO CASO QUE p_categoria, Y PEOR DE DETECTAR: `p_vista_preferida`
+          // tiene DEFAULT 'base' y la RPC asigna
+          // `vista_preferida = coalesce(nullif(btrim(...)),'base')` directo, así
+          // que omitirla RESETEA la preferencia a 'base' en cada edición.
+          //
+          // Y como la columna es NOT NULL, ese borrado NO deja rastro: 'base'
+          // es indistinguible de "nunca se cambió". Con `categoria` el borrado
+          // dejaba un null que se podía ir a contar para saber si había pasado
+          // —así se verificó que no—; acá no hay nada que contar, ni siquiera
+          // consultando la base. La clave va SIEMPRE.
+          p_vista_preferida: datos.vista_preferida,
         }))
       }
 
