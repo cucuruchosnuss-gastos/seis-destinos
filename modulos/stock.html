@@ -5725,12 +5725,18 @@
     // hoy el catálogo tiene solo kg, lt y un (verificado el 10/09/2026), pero
     // la columna es texto libre y puede ganar otra antes que esta lista.
     const NOMBRE_UNIDAD = { kg: 'kilos', lt: 'litros', un: 'unidades' }
-    const nombreUnidad = (u) => NOMBRE_UNIDAD[String(u ?? '').trim().toLowerCase()] || String(u ?? '').trim()
+    // NO se llama `nombreUnidad`: ese nombre YA EXISTE en este archivo, como
+    // la funcion del modulo de transferencias que traduce un ID DE UNIDAD DE
+    // NEGOCIO a su nombre. Son dos traducciones distintas —kg/un/lt a palabra
+    // vs. uuid a "Cucuruchos Nuss"— y declarar las dos en el mismo scope
+    // top-level rompe el <script> ENTERO con un SyntaxError: la pantalla queda
+    // gris y el modulo no carga. Ya paso una vez.
+    const nombreDeUnidadMedida = (u) => NOMBRE_UNIDAD[String(u ?? '').trim().toLowerCase()] || String(u ?? '').trim()
 
     // Se repuebla en CADA apertura y no una vez al cargar la pantalla: la
     // etiqueta depende de la unidad del insumo que se está editando.
     function poblarSelectorVista(unidad) {
-      const nom = nombreUnidad(unidad)
+      const nom = nombreDeUnidadMedida(unidad)
       document.getElementById('campo-vista').innerHTML =
         `<option value="base">En su unidad${nom ? ` (${nom})` : ''}</option>` +
         '<option value="bulto">En bultos</option>'
