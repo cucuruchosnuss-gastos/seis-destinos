@@ -4436,6 +4436,15 @@
       // recalcula, así que alcanza con resetear acá.
       w.proveedorNuevoConfirmado = false
 
+      // EL CUIT SE EVALÚA PRIMERO Y NO DEPENDE DEL CAMPO DE TEXTO, y eso es lo
+      // que hace que vaciar la razón social suelte el vínculo que vino DEL
+      // TEXTO pero NO el que vino del CUIT.
+      //
+      // NO LO "CORRIJAS" POR SIMETRÍA, aunque la regla intuitiva sea "sin razón
+      // social no hay proveedor que valga": las facturas X no traen la razón
+      // social impresa, así que ahí el campo arranca vacío y el CUIT es la
+      // ÚNICA vía de identificación. Soltar el vínculo con el campo vacío
+      // dejaría sin proveedor justo el caso donde el match automático anda bien.
       const cuit = normalizarCuit(w.cuitOcr)
       if (cuit) {
         const cands = estado.proveedores.filter(p => normalizarCuit(p.cuit) === cuit)
@@ -4675,15 +4684,19 @@
     function renderizarProveedorDetectado() {
       const cont = document.getElementById('wz-proveedor-detectado')
       const w = estado.wizard
-      if (!w) { cont.hidden = true; return }
+      // Ocultar Y VACIAR: dejar el texto viejo debajo de un [hidden] es un
+      // residuo que se vuelve visible en cuanto alguien toca un guard de acá
+      // arriba. El de parecidos ya lo hacía así.
+      const apagar = () => { cont.hidden = true; cont.innerHTML = '' }
+      if (!w) { apagar(); return }
 
       const razon = document.getElementById('campo-razon-social').value.trim()
-      if (!razon && !w.cuitOcr) { cont.hidden = true; return }
+      if (!razon && !w.cuitOcr) { apagar(); return }
 
       // Con la pregunta de parecidos abierta este aviso NO se dibuja: diría
       // "se va a dar de alta" justo al lado de una pregunta sobre si hay que
       // darlo de alta, y las dos cajas se contradirían.
-      if (w.proveedorParecidos.length) { cont.hidden = true; return }
+      if (w.proveedorParecidos.length) { apagar(); return }
 
       if (w.proveedorMatch) {
         cont.className = 'wz-aviso'
@@ -8097,7 +8110,26 @@
 
     document.getElementById('btn-datos-continuar').addEventListener('click', continuarDesdeDatos)
     document.getElementById('campo-numero-doc').addEventListener('input', renderizarAvisoNumeroCorto)
-    document.getElementById('campo-razon-social').addEventListener('input', actualizarAvisoSinProveedor)
+    // VACIAR EL CAMPO SUELTA EL VÍNCULO EN EL ACTO, y por eso hay un `input`
+    // además del `change` de más abajo. El `change` no dispara hasta que el
+    // campo pierde el foco, así que quien borraba la razón social seguía viendo
+    // "✓ Proveedor identificado: X" sobre un campo vacío, con el vínculo vivo:
+    // el ingreso se podía guardar apuntando a un proveedor que ya no tenía nada
+    // que ver con lo escrito.
+    //
+    // SOLO CON EL CAMPO VACÍO, nunca en cada tecla. Una regla que soltara el
+    // vínculo por falta de parecido soltaría también «Distribuidora del Centro
+    // SRL» → «DIST. CENTRO S.R.L.», que es el caso legítimo para el que existen
+    // los dos campos — el mismo argumento que ya está escrito en gastos.html.
+    // Un campo vacío, en cambio, no puede ser una corrección menor.
+    //
+    // `.trim()` porque "   " no es el nombre de ningún proveedor. Y el vínculo
+    // por CUIT sobrevive igual: lo garantiza intentarMatchProveedor(), que lo
+    // re-evalúa primero (ver el comentario ahí).
+    document.getElementById('campo-razon-social').addEventListener('input', (ev) => {
+      actualizarAvisoSinProveedor()
+      if (!ev.target.value.trim() && estado.wizard) intentarMatchProveedor()
+    })
     // Cambiar de unidad invalida el remito ya elegido: los remitos que se
     // ofrecen son los de una unidad concreta.
     document.getElementById('campo-unidad-negocio').addEventListener('change', () => {
