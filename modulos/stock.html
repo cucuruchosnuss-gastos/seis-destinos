@@ -538,6 +538,23 @@
       overflow-wrap: anywhere;
     }
 
+    /* La marca cuando es lo que IDENTIFICA la fila — va DESPUÉS de las reglas
+       de nombre, que es donde vive, para que ninguna la pise (la trampa del
+       orden de variantes de este proyecto).
+
+       `--verde` pleno: es el acento del módulo, da 5,04:1 sobre blanco (AA) y
+       acá no compite con ningún primario. NUNCA `--rojo` ni `--bordo`, que
+       significan alerta — esto no es una advertencia, es un dato.
+
+       Pesa MENOS que el nombre (600 contra 650) a propósito: acompaña, no lo
+       reemplaza. Lo que la hace escaneable es el color, no el tamaño. */
+    .marca-identidad {
+      color: var(--verde);
+      font-weight: 600;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
     .fila-insumo__nombre {
       font-size: 0.9375rem;
       font-weight: 650;
@@ -2947,13 +2964,72 @@
       return { signo, enteros, fraccion: mejor.texto }
     }
 
-    function textoBultos(kilos, contenido, unidad) {
+    // Solo el CONTEO: "100 bultos", "3 bultos + ½". Sin la cola "de 25 kg".
+    //
+    // Existe porque en la vista 'bulto' el número va destacado a la derecha y
+    // el "de 25 kg" baja a la línea gris: ahí compite con el 100, que es el
+    // número que se busca de un vistazo. La palabra "bultos" SÍ se queda con el
+    // número — sin ella no se entiende de qué son 100.
+    //
+    // `textoBultos` la reusa en vez de duplicar la lógica: cómo se dice "100
+    // bultos" —el signo, el singular, la fracción— se decide en UN solo lugar,
+    // y sus NUEVE call sites siguen sin enterarse.
+    function cabezaBultos(kilos, contenido) {
       const e = equivalenteEnBultos(kilos, contenido)
       if (!e) return null
       const menos = e.signo < 0 ? '−' : ''
       const palabra = (e.enteros === 1 && !e.fraccion) ? 'bulto' : 'bultos'
       const frac = e.fraccion ? ` + ${e.fraccion}` : ''
-      return `${menos}${e.enteros.toLocaleString('es-AR')} ${palabra}${frac} de ${formatearCantidadStock(contenido, unidad)}`
+      return `${menos}${e.enteros.toLocaleString('es-AR')} ${palabra}${frac}`
+    }
+
+    function textoBultos(kilos, contenido, unidad) {
+      const cabeza = cabezaBultos(kilos, contenido)
+      if (!cabeza) return null
+      return `${cabeza} de ${formatearCantidadStock(contenido, unidad)}`
+    }
+
+    // Los nombres que aparecen MÁS DE UNA VEZ entre las filas que se están
+    // mostrando. Con eso, la marca de esas filas pasa a destacarse.
+    //
+    // EL CRITERIO ES "NOMBRE REPETIDO" Y NO "ES MATERIA PRIMA", Y ESO SE
+    // DECIDIÓ MIRANDO LOS DATOS — no lo "simplifiques" a por-tipo más adelante:
+    // ya se consideró y se descartó. Por tipo parecía razonable —la marca de
+    // una harina es identidad y la de un pegamento es contexto— pero deja
+    // indistinguibles las TRES "Caja N°1", que son `tipo='insumo'` y difieren
+    // ÚNICAMENTE en la marca (Dolce Pasta / Nuss / Sin impresión). Lo que hace
+    // que la marca sea identidad no es el tipo: es que el nombre solo no
+    // alcance para saber cuál es cuál.
+    //
+    // Se cuenta sobre lo VISIBLE y ACTIVO, no sobre el catálogo entero: una
+    // harina desactivada no obliga a destacar la marca de la que quedó sola en
+    // pantalla. Por eso recibe las filas ya filtradas y no `estado.insumos`.
+    //
+    // Sin consulta nueva: son las filas que el render ya tiene en memoria.
+    function nombresRepetidos(filas, nombreDe) {
+      const cuenta = new Map()
+      filas.forEach(f => {
+        const k = normalizar(nombreDe(f))
+        if (k) cuenta.set(k, (cuenta.get(k) || 0) + 1)
+      })
+      return new Set([...cuenta].filter(([, n]) => n > 1).map(([k]) => k))
+    }
+
+    // La marca al lado del nombre cuando ES lo que identifica a esa fila.
+    //
+    // AL LADO DEL NOMBRE **Y** CON COLOR, las dos cosas juntas: sola, ninguna
+    // alcanza. Las cuatro "Harina 000" tienen el nombre IDÉNTICO, así que en
+    // negro quedan cuatro renglones que empiezan igual y difieren recién en el
+    // carácter 12 — para escanear es casi tan malo como el gris. El color es lo
+    // que la hace saltar.
+    //
+    // `--verde` PLENO y no `--verde-oscuro`: acá no compite con ningún botón
+    // primario —la tarjeta no tiene—, que es el único motivo por el que la
+    // pestaña activa usa el oscuro. Medido sobre blanco: 5,04:1, AA holgado.
+    // NUNCA `--rojo` ni `--bordo`, que en este proyecto significan alerta.
+    function htmlMarca(marca, destacar) {
+      if (!marca || !destacar) return ''
+      return ` <span class="marca-identidad">· ${esc(marca)}</span>`
     }
 
     // "bultos de 25 kg" — genérico a propósito: si era bolsa, tacho o bidón no
@@ -3241,6 +3317,10 @@
 
       const gestiona = puedeGestionar()
 
+      // Solo entre los ACTIVOS: un insumo desactivado se muestra atenuado pero
+      // no obliga a destacar la marca del que quedo solo en pantalla.
+      const repes = nombresRepetidos(filas.filter(i => i.activo), i => i.nombre)
+
       listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, i => i.nombre), i => {
         const clases = [
           'tarjeta-lista', 'fila-insumo',
@@ -3257,8 +3337,9 @@
         // Mismo criterio que la lista de stock, y por lo mismo: con 51 insumos
         // en un celular, un renglón menos por tarjeta son varias tarjetas más
         // en pantalla.
+        const marcaArriba = i.activo && repes.has(normalizar(i.nombre)) && !!i.marca
         const metaTexto = [
-          i.marca,
+          marcaArriba ? '' : i.marca,
           i.unidad_medida,
           i.tolerancia_merma_pct != null ? `merma ${i.tolerancia_merma_pct}%` : '',
         ].filter(Boolean).join(' · ')
@@ -3280,7 +3361,7 @@
         return `
           <div class="${clases}"${gestiona ? ` data-insumo="${i.id}"` : ''}>
             <div class="fila-insumo__info">
-              <div class="fila-insumo__nombre">${esc(i.nombre)}${htmlAclaracion(i.aclaracion)}</div>
+              <div class="fila-insumo__nombre">${esc(i.nombre)}${htmlMarca(i.marca, marcaArriba)}${htmlAclaracion(i.aclaracion)}</div>
               <div class="fila-insumo__meta">
                 ${metaTexto ? `<span class="fila-insumo__meta-texto">${esc(metaTexto)}</span>` : ''}
                 <span class="chip-tipo chip-tipo--${i.tipo}">${TIPOS[i.tipo] ?? esc(i.tipo)}</span>
@@ -3383,6 +3464,11 @@
       }
       vacioEl.hidden = true
 
+      // Una vez por render y no por fila. Son las filas YA filtradas por
+      // unidad y por buscador: si la otra harina no esta en pantalla, el nombre
+      // no esta repetido ACA y la marca no necesita saltar.
+      const repes = nombresRepetidos(filas, f => f.insumo_nombre)
+
       listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, f => f.insumo_nombre), f => {
         const negativo = Number(f.cantidad_total) < 0
         const lotes = textoLotes(Number(f.lotes_distintos) || 0)
@@ -3397,12 +3483,22 @@
         // Los KILOS SUELTOS (los que entraron sin presentación) NO se dividen:
         // no se sabe en qué venían. Sumarlos a la división daría bultos que
         // nadie puede ir a buscar al depósito.
-        const soloEnBultos = presentaciones === 1
-          ? textoBultos(Number(f.cantidad_total) - sueltos, f.contenido_unico, f.unidad_medida)
+        // EN LA VISTA 'bulto' EL "de 25 kg" NO CUELGA DEL NUMERO: a la derecha
+        // va "100 bultos" a secas y la cola baja a la linea gris, porque
+        // compite con el 100, que es lo que se busca de un vistazo.
+        //
+        // Y LOS SUELTOS VAN CON LA COLA, NUNCA CON EL NUMERO: "+ 100 kg" NO
+        // son bultos, asi que colgarlos de "100 bultos" diria algo falso.
+        const cabeza = presentaciones === 1
+          ? cabezaBultos(Number(f.cantidad_total) - sueltos, f.contenido_unico)
           : null
-        const conSueltos = soloEnBultos && sueltos !== 0
-          ? `${soloEnBultos} + ${formatearCantidadStock(sueltos, f.unidad_medida)}`
-          : soloEnBultos
+        const cola = cabeza
+          ? `de ${formatearCantidadStock(f.contenido_unico, f.unidad_medida)}` +
+            (sueltos !== 0 ? ` + ${formatearCantidadStock(sueltos, f.unidad_medida)}` : '')
+          : null
+        // El texto completo, para cuando los bultos van en la linea gris (vista
+        // 'base'): ahi no hay nada que separar, se lee de corrido.
+        const conSueltos = cabeza ? `${cabeza} ${cola}` : null
 
         // LA VISTA PREFERIDA DECIDE QUÉ NÚMERO VA DESTACADO, no dónde va: la
         // cantidad sigue SIEMPRE a la derecha (ver el bloque de más abajo). Lo
@@ -3426,9 +3522,10 @@
         //
         // Con VARIAS presentaciones tampoco aplica: no existe "un" bulto que
         // represente al total, y ahí `conSueltos` también es null.
-        const enBultos = f.vista_preferida === 'bulto' && conSueltos
-        const destacado = enBultos ? conSueltos : kilos
-        const secundario = enBultos ? kilos : conSueltos
+        const enBultos = f.vista_preferida === 'bulto' && cabeza
+        // A la derecha, la CABEZA sola. La cola viaja a la gris junto al total.
+        const destacado = enBultos ? cabeza : kilos
+        const secundario = enBultos ? `${cola} · ${kilos}` : conSueltos
 
         // LA CANTIDAD VA SIEMPRE A LA DERECHA, con o sin presentación. Antes
         // esto era condicional: sin desglose de bultos el número quedaba a la
@@ -3442,8 +3539,10 @@
         // otro; con el número afuera los tres caben en una sola línea
         // secundaria. Con 51 insumos en un celular, cada renglón que se ahorra
         // por tarjeta son varias tarjetas más en pantalla.
+        // La marca sale de la gris CUANDO subio al nombre: no se dibuja dos veces.
+        const marcaArriba = repes.has(normalizar(f.insumo_nombre)) && !!f.marca
         const meta = [
-          f.marca,
+          marcaArriba ? '' : f.marca,
           secundario,          // el que NO quedó destacado; null si no hay bultos
           lotes,
           textoPresentaciones(presentaciones),
@@ -3452,7 +3551,7 @@
         return `
           <div class="tarjeta-lista fila-stock" data-stock="${esc(f.insumo_id)}" data-unidad="${esc(f.unidad_negocio_id)}">
             <div class="fila-stock__info">
-              <div class="fila-stock__nombre">${esc(f.insumo_nombre)}${htmlAclaracion(f.aclaracion)}</div>
+              <div class="fila-stock__nombre">${esc(f.insumo_nombre)}${htmlMarca(f.marca, marcaArriba)}${htmlAclaracion(f.aclaracion)}</div>
               <div class="fila-stock__meta">
                 ${meta ? `<span class="fila-stock__meta-texto">${esc(meta)}</span>` : ''}
                 <span class="chip-tipo chip-tipo--${f.tipo}">${TIPOS[f.tipo] ?? esc(f.tipo)}</span>
