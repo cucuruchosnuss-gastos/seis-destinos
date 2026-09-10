@@ -1858,6 +1858,18 @@
       margin-top: 0.4375rem;
       min-width: 0;
     }
+    /* Variante DESPUÉS de su base: con la misma especificidad decide el orden,
+       y antes quedaría pisada (bug recurrente del proyecto).
+
+       El aviso de que no se pudieron cargar las categorías NO es un hint gris
+       más: es un estado DEGRADADO, y el producto va a quedar sin categoría. En
+       ámbar, que en este módulo es el color de "esto anda pero mirá", y con
+       `align-items: flex-start` porque el texto ocupa dos renglones. */
+    .item-mp__hint--sin-cat {
+      align-items: flex-start;
+      color: var(--amarillo-oscuro);
+      line-height: 1.4;
+    }
 
     .adjuntos-fila { display: flex; gap: 0.5rem; min-width: 0; }
     .btn-adjunto {
@@ -5047,9 +5059,71 @@
       // único (lower(nombre), lower(coalesce(marca,''))).
       const { data, error } = await supabase
         .from('insumos')
-        .select('id, nombre, marca, unidad_medida, tipo, estado_alta')
+        .select('id, nombre, marca, unidad_medida, tipo, estado_alta, categoria')
       if (error) { console.error(error); mostrarError('Error al cargar el catálogo de insumos.'); return }
       estado.catalogoInsumos = data ?? []
+    }
+
+    // Orden del NEGOCIO y no alfabético — el mismo array que stock.html, que es
+    // donde se muestran agrupadas. Va duplicado por la convención del proyecto
+    // (no hay JS compartido entre módulos).
+    const ORDEN_CATEGORIAS = [
+      'Harinas', 'Grasas', 'Azúcares y secos', 'Aditivos',
+      'Cajas', 'Bolsas', 'Separadores y tiras', 'Paletizado',
+      'Cintas y adhesivos', 'Limpieza', 'Proceso y mantenimiento',
+    ]
+
+    // LAS OPCIONES SALEN DE LA BASE Y NO DE UNA LISTA HARDCODEADA, y con lista
+    // CERRADA ese argumento es MÁS fuerte, no más débil: `insumos.categoria`
+    // tiene un CHECK con 11 valores fijos, así que **todo valor que exista en
+    // la tabla pasó el CHECK por definición** y es imposible ofrecer uno que el
+    // insert vaya a rechazar. Hardcodear tiene el riesgo inverso y peor — si
+    // Stock saca un valor del CHECK, el wizard lo seguiría ofreciendo y el
+    // insert reventaría AL CONFIRMAR, con todos los renglones ya cargados.
+    //
+    // Sale del catálogo que ya está en memoria: cero consultas nuevas. Y ese
+    // catálogo se carga SIN filtrar por `activo` ni `estado_alta` (ver arriba),
+    // así que una categoría usada solo por un insumo dado de baja aparece igual
+    // — sigue siendo un valor válido del CHECK.
+    //
+    // Una categoría que no esté en ORDEN_CATEGORIAS cae al FINAL y no rompe
+    // nada: el CHECK de la base puede ganar un valor antes que esta pantalla.
+    function categoriasConocidas() {
+      const vistas = new Set()
+      estado.catalogoInsumos.forEach(i => { if (i.categoria) vistas.add(i.categoria) })
+      const orden = c => { const n = ORDEN_CATEGORIAS.indexOf(c); return n === -1 ? ORDEN_CATEGORIAS.length : n }
+      return [...vistas].sort((a, b) => orden(a) - orden(b) || a.localeCompare(b, 'es'))
+    }
+
+    // El selector de categoría del producto que se está CREANDO.
+    //
+    // NO HAY CAMPO PARA ESCRIBIR UNA CATEGORÍA NUEVA, y no es un olvido:
+    // `chk_categoria` es una lista CERRADA de 11 valores, así que un texto
+    // libre violaría el constraint y el insert se caería AL CONFIRMAR el
+    // ingreso, con todos los renglones ya cargados. Agregar una categoría es un
+    // DROP + ADD del CHECK — deliberado a propósito, y territorio de Stock.
+    //
+    // SI LA LISTA LLEGA VACÍA, NO SE BLOQUEA LA CARGA: se avisa y el producto
+    // se crea con la categoría en null. Una lista vacía solo puede venir de un
+    // fallo al cargar el catálogo, o sea de un problema de infraestructura, y
+    // trabar la carga de mercadería por eso es el mismo error que ya está
+    // escrito para el detector de duplicados —un detector que rompe la carga es
+    // peor que no tener detector—. Categorizar mal es malo; no poder cargar lo
+    // que llegó en el camión es peor.
+    function htmlCategoriaNueva(item) {
+      const cats = categoriasConocidas()
+      if (!cats.length) {
+        return `<div class="item-mp__hint item-mp__hint--sin-cat" style="margin-top:0.5rem;">
+                  ⓘ No se pudieron cargar las categorías: el producto se va a crear sin una, y se le puede poner después desde Stock.
+                </div>`
+      }
+      const opciones = cats.map(c =>
+        `<option value="${esc(c)}"${item.categoria === c ? ' selected' : ''}>${esc(c)}</option>`).join('')
+      return `<select class="item-mp__texto-input" data-campo="categoria" style="margin-top:0.5rem;">
+                <option value=""${item.categoria ? '' : ' selected'}>Elegí una categoría…</option>
+                ${opciones}
+              </select>
+              <div class="item-mp__hint" style="margin-top:0.3125rem;">ⓘ Las categorías se administran desde Stock.</div>`
     }
 
     // SIN filtrar por estado_alta, a diferencia de gastos.html y
@@ -5395,6 +5469,11 @@
         // ítem: corregir el tipo después no re-valida lo ya cargado.
         tipo: match?.tipo ?? tipoSugeridoValido(crudo.tipo_sugerido),
         tipoDeOcr: !match && tipoSugeridoValido(crudo.tipo_sugerido) != null,
+        // La categoría del producto que se va a CREAR. Siempre arranca en null
+        // y no se hereda del match: si matcheó contra el catálogo, este campo
+        // no se usa —la categoría ya está en la fila del insumo— y la tarjeta
+        // ni siquiera lo pregunta. El OCR tampoco la sugiere: no la devuelve.
+        categoria: null,
         // ¿La persona eligió CREAR un producto nuevo? Arranca en false: hasta
         // que alguien lo decida, el renglón está sin resolver y la pantalla
         // ofrece primero el catálogo. Antes la tarjeta venía con el nombre del
@@ -5500,8 +5579,9 @@
         // Agregado a mano: no hay texto del papel contra el cual sugerir, así
         // que arranca directamente en modo crear. Igual queda el buscador.
         creando: true,
-        // Agregado a mano: sin tipo. Hay que elegirlo, no se asume.
+        // Agregado a mano: sin tipo ni categoría. Hay que elegirlos, no se asumen.
         nombre: '', marca: '', tipo: null, tipoDeOcr: false, unidadMedida: 'kg',
+        categoria: null,
         // Agregado a mano: no matcheó contra ninguna fila del catálogo, así que
         // no hay clasificación previa que revisar.
         pendienteRevision: false,
@@ -6344,6 +6424,7 @@
              ${item.tipoDeOcr
                ? '<div class="marca-ocr-item">✓ sugerido por la lectura — verificalo</div>'
                : ''}
+             ${htmlCategoriaNueva(item)}
              <div class="item-mp__hint">ⓘ Se va a crear en el catálogo, pendiente de revisar.</div>`
 
       const identidadHtml = item.esNuevo
@@ -6857,6 +6938,14 @@
               // Los dos son lados de la misma resta: toque el que toque, la
               // diferencia mostrada cambia con él.
               actualizarDiferenciaEnVivo(tarjeta, item)
+            } else if (campo === 'categoria') {
+              // A NULL Y NO A CADENA VACÍA: `''` no está en `chk_categoria`, así
+              // que guardarlo tal cual haría que el insert reventara al
+              // confirmar. El null sí lo acepta el CHECK.
+              //
+              // NO re-renderiza la tarjeta: un `<select>` ya muestra lo elegido,
+              // y redibujar acá le sacaría el foco al campo que se esté usando.
+              item.categoria = el.value || null
             } else {
               item[campo] = el.value
             }
@@ -7077,6 +7166,25 @@
           // Antes de la de lote: sin tipo no se sabe siquiera si el lote aplica.
           // Y sin tipo el insert de `insumos` violaría el NOT NULL.
           item.error = 'Elegí si lleva lote: materia prima o insumo.'
+        } else if (item.esNuevo && item.creando && !item.categoria && categoriasConocidas().length) {
+          // OBLIGATORIA, con el mismo argumento que el tipo: un producto mal
+          // clasificado queda mal PARA SIEMPRE en el catálogo y nadie lo nota.
+          // Y el costo es asimétrico — elegir mal se corrige desde Stock en un
+          // toque; no elegir deja el producto fuera de su grupo en la pantalla
+          // que se mira todos los días, y a "sin categoría" nadie va a buscar.
+          //
+          // ESTO DEJA AL WIZARD MÁS ESTRICTO QUE LA PANTALLA DE ADMINISTRACIÓN
+          // DEL CATÁLOGO, que no captura la categoría en absoluto (crear_insumo
+          // ni recibe p_categoria). NO SE "CORRIGE" AFLOJANDO ESTE LADO: la
+          // asimetría se cierra agregándole el campo a Stock, que es el flojo.
+          // Quien carga en la fábrica tiene el producto en la mano y sabe si es
+          // harina o una caja, así que acá la pregunta es barata.
+          //
+          // El guard mira que HAYA categorías para elegir y no que el campo esté
+          // en null: si la lista viene vacía por un fallo de carga, la tarjeta
+          // ni dibuja el selector y bloquear acá trabaría el wizard por un
+          // problema de infraestructura. Ver htmlCategoriaNueva().
+          item.error = 'Elegí la categoría del producto nuevo.'
         } else if (item.tipo === 'materia_prima' && !item.yaRecibido
                    && !item.loteIlegible && !String(item.lote || '').trim()) {
           // `!item.yaRecibido` acompaña al trigger fn_validar_item_materia_prima,
@@ -7206,6 +7314,15 @@
             // El tipo lo elige la persona en la tarjeta del ítem. La RLS
             // acepta cualquiera mientras estado_alta sea 'pendiente_revision'.
             tipo: i.tipo,
+            // La elige la persona en la tarjeta. Va NULL —y no cadena vacía—
+            // cuando no se pudo ofrecer ninguna: `chk_categoria` acepta null,
+            // pero `''` no está en su lista de 11 valores.
+            //
+            // La policy de INSERT no la menciona: su WITH CHECK es
+            // `tiene_tarea('materia_prima','cargar') AND estado_alta =
+            // 'pendiente_revision'` (verificado contra pg_policy), así que
+            // agregar esta columna no la toca.
+            categoria: i.categoria || null,
             estado_alta: 'pendiente_revision',
             activo: true,
           })
