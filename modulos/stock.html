@@ -859,10 +859,49 @@
       border-color: var(--verde);
       box-shadow: 0 0 0 4px var(--verde-suave);
     }
+    /* La clase del recuento: misma receta que los botones de signo del
+       movimiento, que es el precedente de este proyecto para una elección
+       binaria sin preselección. Clase propia y no la de mov-: están en
+       modales distintos y compartir el prefijo invita a tocar los dos. */
+    .rec-clase {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .rec-clase__btn {
+      flex: 1 1 10rem;
+      min-width: 0;
+      text-align: left;
+      padding: 0.6875rem 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+    /* Variante DESPUÉS de su base, siempre. */
+    .rec-clase__btn--activo {
+      border-color: var(--verde);
+      background: var(--verde-suave);
+      color: var(--verde-oscuro);
+    }
+    .rec-clase__que { display: block; font-weight: 500; margin-top: 0.1875rem; }
+
     .campo-stock__opcional { font-weight: 500; color: var(--color-texto-suave); }
     /* La explicación va VISIBLE y no en un tooltip: el tipo decide si el
        insumo exige lote, y la tolerancia decide cuánto desvío se acepta. Las
        dos son decisiones que hay que entender antes de elegir, no después. */
+    /* La ayuda del motivo dice si esa opción CUENTA COMO PÉRDIDA, que es lo
+       que decide si el movimiento entra al tablero de mermas: en un <option>
+       no entra, y es justo la consecuencia que importa entender ANTES de
+       elegir. En --bordo SOLO cuando la respuesta es que sí — acá es una
+       alerta puntual dentro de una pantalla verde, no el acento de una
+       pantalla (eso es el tablero de mermas). La variante va DESPUÉS de su
+       base: misma especificidad, decide el orden. */
     .campo-stock__ayuda {
       margin-top: 0.375rem;
       padding: 0.5rem 0.75rem;
@@ -872,6 +911,11 @@
       line-height: 1.5;
       color: var(--color-texto);
     }
+    .campo-stock__ayuda--merma {
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
+    }
+
     .campo-stock__error {
       margin-top: 0.375rem;
       font-size: 0.75rem;
@@ -2540,6 +2584,26 @@
 
         <div class="rec-difs" id="cierre-lista-difs" hidden></div>
 
+        <!-- LA CLASE DEL RECUENTO SE PREGUNTA UNA VEZ ACÁ, no una por renglón.
+             El signo alcanza para distinguir faltante de sobrante DENTRO de un
+             control, pero no para decidir si son pérdidas: eso es una propiedad
+             del recuento entero. El recuento inicial de este sistema produjo
+             DOS ajustes NEGATIVOS que no fueron faltantes —era la primera carga
+             de ese stock—, así que con la regla "negativo = faltante" habrían
+             entrado al tablero de mermas como pérdidas que nunca ocurrieron. -->
+        <div class="campo-stock">
+          <label id="cierre-label-clase">¿Qué clase de recuento es?</label>
+          <div class="rec-clase" id="cierre-clase">
+            <button type="button" class="rec-clase__btn" data-clase="control">Control de stock
+              <span class="rec-clase__que">Se cuenta contra lo que dice el sistema. Las diferencias son faltantes o sobrantes, y los faltantes van al tablero de mermas.</span>
+            </button>
+            <button type="button" class="rec-clase__btn" data-clase="carga_inicial">Carga inicial
+              <span class="rec-clase__que">Es la primera vez que se carga este stock. Las diferencias no son pérdidas y no van al tablero.</span>
+            </button>
+          </div>
+          <div class="campo-stock__error" id="cierre-error-clase" hidden></div>
+        </div>
+
         <div class="rec-aviso" id="cierre-aviso">
           Cerrar <strong>genera los ajustes de stock y es irreversible</strong>. El recuento queda cerrado y no se puede volver a editar.
         </div>
@@ -2701,6 +2765,13 @@
         <label for="mov-cantidad" id="mov-label-cantidad">Cantidad</label>
         <input type="text" inputmode="decimal" id="mov-cantidad" placeholder="0" autocomplete="off">
         <div class="campo-stock__error" id="mov-error-cantidad" hidden></div>
+      </div>
+
+      <div class="campo-stock">
+        <label for="mov-motivo-tipo">¿Qué pasó?</label>
+        <select id="mov-motivo-tipo"></select>
+        <div class="campo-stock__ayuda" id="mov-ayuda-motivo-tipo" hidden></div>
+        <div class="campo-stock__error" id="mov-error-motivo-tipo" hidden></div>
       </div>
 
       <div class="campo-stock">
@@ -2918,6 +2989,9 @@
       busquedaRec: '',
       filtroRec: 'todos',      // 'todos' | 'sin-contar'
       sucios: new Set(),       // ítems con cambios todavía sin guardar
+      // La clase del recuento, elegida al cerrar. Arranca vacía A PROPÓSITO:
+      // ver renderizarClaseRecuento().
+      claseRecuento: '',
       guardado: 'guardado',
       guardando: false,
       timerGuardado: null,
@@ -4610,10 +4684,32 @@
             ? `<div class="campo-stock__ayuda">Y ${difs.length - TOPE_DIFS_RESUMEN} diferencia${difs.length - TOPE_DIFS_RESUMEN === 1 ? '' : 's'} más que no se listan acá.</div>`
             : '')
 
+      // El reseteo va al ABRIR y no al cerrar: cerrar puede pasar por caminos
+      // que esta función no controla, y la clase del recuento anterior pegada
+      // sería la peor de las herencias — decide si las diferencias cuentan
+      // como pérdida.
+      estado.claseRecuento = ''
+      document.getElementById('cierre-error-clase').hidden = true
+      renderizarClaseRecuento()
+
       document.getElementById('cierre-paso-resumen').hidden = false
       document.getElementById('cierre-paso-resultado').hidden = true
       document.getElementById('cierre-titulo').textContent = 'Cerrar el recuento'
       document.getElementById('modal-cerrar-recuento').hidden = false
+    }
+
+    // SIN PRESELECCIÓN. `cerrar_recuento` tiene `p_clase default 'control'`,
+    // pero ese default es una RED DE SEGURIDAD y no el camino esperado: si la
+    // pantalla lo diera por elegido, un recuento de carga inicial cerrado sin
+    // mirar mandaría sus diferencias al tablero de mermas como pérdidas. El
+    // botón de confirmar queda deshabilitado hasta que se elija — desde JS y no
+    // como atributo del HTML, así un fallo del script deja el formulario usable
+    // en vez de inutilizable.
+    function renderizarClaseRecuento() {
+      document.querySelectorAll('#cierre-clase .rec-clase__btn').forEach(b => {
+        b.classList.toggle('rec-clase__btn--activo', b.dataset.clase === estado.claseRecuento)
+      })
+      document.getElementById('btn-confirmar-cierre').disabled = !estado.claseRecuento
     }
 
     function cerrarModalCierre() {
@@ -4621,10 +4717,24 @@
     }
 
     async function confirmarCierre() {
+      // Revalidación de fondo: el botón ya está deshabilitado sin clase, pero
+      // el mismo criterio de las tres capas de la recepción de Ingreso —una
+      // validación que solo vive en el `disabled` se cae con cualquier camino
+      // que no pase por el render.
+      if (!estado.claseRecuento) {
+        marcarError('cierre-error-clase', 'Elegí qué clase de recuento es.')
+        return
+      }
+
       const btn = document.getElementById('btn-confirmar-cierre')
       btn.disabled = true
       const { data, error } = await supabase.rpc('cerrar_recuento', {
         p_recuento_id: estado.recuento.id,
+        // SIEMPRE, nunca omitido: con el parámetro ausente la función cae a su
+        // default y clasifica por signo, así que una carga inicial mandaría sus
+        // negativos al tablero. Es la misma familia que el borrado por omisión,
+        // con la diferencia de que acá no borra: afirma.
+        p_clase: estado.claseRecuento,
       })
       btn.disabled = false
 
@@ -5450,6 +5560,11 @@
         btn.classList.toggle('pestana-stock--activa', btn.dataset.modo === modo)
       })
 
+      // Los cinco motivos son OTROS en cada modo, así que el selector se
+      // repuebla entero: arrastrar el elegido dejaría una clave que la RPC
+      // rechaza, y encima recién al confirmar.
+      poblarSelectorMotivoTipo(modo)
+
       // Al cambiar de modo cambian las unidades disponibles. Si la que estaba
       // elegida no está en el modo nuevo se resetea: dejarla apuntando a una
       // unidad donde la RPC va a rechazar es el dead-end de siempre.
@@ -5471,7 +5586,80 @@
     // Se deshabilita DESDE JS y no con el atributo del HTML: si el script
     // fallara, los campos quedan usables como antes en vez de dejar el
     // formulario inutilizable. Mismo criterio que los botones de contraseña.
-    const CAMPOS_TRAS_UNIDAD = ['mov-buscar-insumo', 'mov-lote', 'mov-cantidad', 'mov-motivo']
+    // LOS CINCO MOTIVOS DE CADA MODO, con el texto diciendo QUÉ SE AFIRMA al
+    // elegirlos. Las claves son las de `chk_motivo_tipo`, y las RPCs las
+    // REVALIDAN cruzadas —registrar_baja_stock solo acepta los de baja y
+    // registrar_ajuste_stock solo los de ajuste—, así que una clave del modo
+    // equivocado la rechaza el servidor y no solo esta pantalla.
+    const MOTIVOS_BAJA = [
+      { id: 'rotura',  label: 'Se rompió',       ayuda: 'Se rompió o se dañó y ya no se puede usar.' },
+      { id: 'mojado',  label: 'Se mojó',         ayuda: 'Se arruinó por agua o humedad.' },
+      { id: 'vencido', label: 'Se venció',       ayuda: 'Pasó la fecha de vencimiento.' },
+      { id: 'robo',    label: 'Robo o faltante', ayuda: 'Desapareció y hay sospecha de robo.' },
+      { id: 'otro',    label: 'Otra cosa',       ayuda: 'Contá abajo qué pasó: es lo único que va a explicar esta baja.' },
+    ]
+
+    // SOLO EL FALTANTE ENTRA AL TABLERO DE MERMAS. Los otros cuatro son
+    // correcciones administrativas: la mercadería nunca se perdió —estaba mal
+    // ubicada, mal cargada, o recién se está cargando por primera vez— así que
+    // contarlas como pérdida haría que el reporte de fin de mes midiera errores
+    // de tipeo. `merma` es lo que la pantalla usa para decírselo a quien elige.
+    const MOTIVOS_AJUSTE = [
+      { id: 'faltante_recuento',  label: 'Falta y no se sabe dónde está',      ayuda: 'Se contó y hay menos de lo que decía el sistema.', merma: true },
+      { id: 'sobrante_recuento',  label: 'Hay más de lo que decía el sistema', ayuda: 'Apareció mercadería que el sistema no tenía registrada.' },
+      { id: 'aparecio_otro_lado', label: 'Estaba mal ubicado',                 ayuda: 'No se perdió: estaba en otro lado y ya apareció.' },
+      { id: 'correccion_carga',   label: 'Se cargó mal en el sistema',         ayuda: 'El error fue de carga. La mercadería del depósito no cambió.' },
+      { id: 'carga_inicial',      label: 'Primera carga de este stock',        ayuda: 'Se carga por primera vez lo que ya estaba en el depósito.' },
+    ]
+
+    const motivosDelModo = (modo) => modo === 'baja' ? MOTIVOS_BAJA : MOTIVOS_AJUSTE
+
+    // "Otra cosa" es la ausencia de etiqueta: no dice nada por sí sola, así que
+    // el reporte depende ENTERO del texto libre. El mínimo es un número
+    // arbitrario y se declara como tal — no garantiza que lo escrito sirva,
+    // pero descarta "roto" y "varios", que es lo que se escribe cuando el campo
+    // solo exige no estar vacío.
+    const MINIMO_MOTIVO_OTRO = 10
+
+    // El motivo_tipo entra acá con los otros: está al mismo nivel que el texto
+    // libre y sin unidad tampoco se habilita.
+    const CAMPOS_TRAS_UNIDAD = ['mov-buscar-insumo', 'mov-lote', 'mov-cantidad', 'mov-motivo', 'mov-motivo-tipo']
+
+    // POBLAR ANTES de asignar el value: sobre un select vacío la asignación no
+    // engancha y el campo queda en blanco. Ya mordió con vista_preferida.
+    //
+    // Y SIN PRESELECCIÓN: la primera opción es un pedido, no una respuesta. Un
+    // default silencioso afirmaría por la persona justo lo que decide si el
+    // movimiento entra al tablero de mermas — el mismo criterio por el que el
+    // wizard de Ingreso no preselecciona el tipo de insumo.
+    function poblarSelectorMotivoTipo(modo) {
+      const sel = document.getElementById('mov-motivo-tipo')
+      sel.innerHTML = '<option value="">Elegí una opción…</option>' +
+        motivosDelModo(modo).map(m => `<option value="${esc(m.id)}">${esc(m.label)}</option>`).join('')
+      sel.value = ''
+      renderizarAyudaMotivoTipo()
+    }
+
+    function renderizarAyudaMotivoTipo() {
+      const el = document.getElementById('mov-ayuda-motivo-tipo')
+      const modo = estado.mov?.modo
+      const elegido = motivosDelModo(modo)
+        .find(x => x.id === document.getElementById('mov-motivo-tipo').value)
+
+      el.hidden = !elegido
+      el.classList.toggle('campo-stock__ayuda--merma', !!elegido?.merma)
+      if (!elegido) { el.textContent = ''; return }
+
+      // LA CONSECUENCIA SE DICE SOLO EN AJUSTE, y es a propósito: TODA baja es
+      // una pérdida, así que repetirlo en las cinco opciones no distingue nada
+      // y se vuelve el cartel que se muestra siempre y que nadie mira. En
+      // ajuste sí, porque ahí es exactamente lo que separa una de las otras.
+      el.textContent = modo === 'ajuste'
+        ? `${elegido.ayuda} ${elegido.merma
+            ? 'Cuenta como pérdida: va al tablero de mermas.'
+            : 'No es una pérdida: no va al tablero de mermas.'}`
+        : elegido.ayuda
+    }
 
     function aplicarBloqueoUnidadMov() {
       const m = estado.mov
@@ -5826,6 +6014,24 @@
       const motivo = document.getElementById('mov-motivo').value.trim()
       if (!motivo) { marcarError('mov-error-motivo', 'El motivo es obligatorio.'); ok = false }
 
+      // EL TEXTO LIBRE NO SE REEMPLAZA POR EL SELECTOR, y los dos son
+      // obligatorios: el motivo_tipo alimenta el reporte —es lo que permite
+      // separar un faltante real de una corrección de tipeo— y el texto explica
+      // ESTE caso. Uno agrupa, el otro cuenta qué pasó; ninguno sustituye al
+      // otro. Las dos RPCs exigen los dos, así que esto no es la barrera.
+      const motivoTipo = document.getElementById('mov-motivo-tipo').value
+      if (!motivoTipo) {
+        marcarError('mov-error-motivo-tipo', m.modo === 'baja'
+          ? 'Elegí qué pasó con la mercadería.'
+          : 'Elegí por qué se ajusta el stock.')
+        ok = false
+      }
+      if (motivoTipo === 'otro' && motivo.length < MINIMO_MOTIVO_OTRO) {
+        marcarError('mov-error-motivo',
+          `Elegiste "Otra cosa": contá qué pasó, en al menos ${MINIMO_MOTIVO_OTRO} caracteres.`)
+        ok = false
+      }
+
       if (!ok) return
 
       const btn = document.getElementById('btn-confirmar-mov')
@@ -5835,6 +6041,9 @@
         p_insumo_id: m.insumo.id,
         p_lote: lote || null,
         p_motivo: motivo,
+        // Va en `comun` para que lo lleven las DOS llamadas: mandarlo en una
+        // sola dejaría la otra chocando contra el raise del servidor.
+        p_motivo_tipo: motivoTipo,
       }
       // La baja manda la cantidad SIEMPRE POSITIVA: la RPC la guarda en
       // negativo. Nadie tiene que pensar el signo, y mandarla negativa acá la
@@ -7529,6 +7738,12 @@
 
     document.getElementById('btn-cerrar-recuento').addEventListener('click', abrirModalCerrar)
     document.getElementById('btn-confirmar-cierre').addEventListener('click', confirmarCierre)
+    document.querySelectorAll('#cierre-clase .rec-clase__btn').forEach(b =>
+      b.addEventListener('click', () => {
+        estado.claseRecuento = b.dataset.clase
+        document.getElementById('cierre-error-clase').hidden = true
+        renderizarClaseRecuento()
+      }))
     document.querySelectorAll('[data-cerrar-cierre]').forEach(el =>
       el.addEventListener('click', cerrarModalCierre))
 
@@ -7608,6 +7823,8 @@
       const insumo = estado.insumos.find(i => i.id === l.insumoId) ?? { id: l.insumoId }
       abrirModalMovimiento({ modo: 'baja', unidadId: l.unidadId, insumo })
     })
+    document.getElementById('mov-motivo-tipo').addEventListener('change', renderizarAyudaMotivoTipo)
+
     document.querySelectorAll('#mov-modos .pestana-stock').forEach(btn =>
       btn.addEventListener('click', () => aplicarModoMov(btn.dataset.modo)))
     document.getElementById('mov-buscar-insumo').addEventListener('input', renderizarSugerenciasMov)
