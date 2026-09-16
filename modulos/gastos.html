@@ -4606,19 +4606,12 @@
         : `<span>${esc(texto)}</span>`
     }
 
-    function fileABase64(archivo) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload  = () => resolve(reader.result.split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(archivo)
-      })
-    }
-
-    async function llamarOCR(archivo) {
-      const imagen_base64 = await fileABase64(archivo)
+    // Recibe la RUTA del archivo ya subido a Storage, no el archivo: la
+    // función lo baja con el token de quien llama. Antes viajaba entero en
+    // base64, además de subirse al guardar: dos transferencias pesadas.
+    async function llamarOCR(ruta) {
       const { data, error } = await supabase.functions.invoke('ocr-comprobante', {
-        body: { imagen_base64, mime_type: archivo.type },
+        body: { storage_path: ruta },
       })
       if (error) throw new Error(error.message)
       return data
@@ -6024,11 +6017,38 @@
 
       document.getElementById('btn-cambiar-foto').style.display = 'block'
 
-      mostrarEstadoOcr('cargando', 'Leyendo comprobante…')
       document.getElementById('btn-foto-siguiente').disabled = true
 
+      // SE SUBE AL ELEGIRLA, no al guardar: el OCR lee el archivo desde
+      // Storage, así que tiene que estar arriba antes. Costo aceptado: si la
+      // persona abandona el wizard o cambia la foto, esta queda huérfana en el
+      // bucket (mismo pendiente de limpieza que Cobranzas).
+      //
+      // Con su PROPIO try/catch: una subida fallida (sin señal) no es un error
+      // del OCR. La foto sigue elegida y guardarGasto() la vuelve a intentar
+      // subir, porque fotoUrl queda en null.
+      mostrarEstadoOcr('cargando', 'Subiendo comprobante…')
+      let ruta = null
       try {
-        const resultado = await llamarOCR(archivo)
+        ruta = await subirFoto(archivo)
+      } catch (err) {
+        if (turno !== turnoFoto) return
+        console.error('[foto] no se pudo subir para leerla', err)
+      }
+      // Guard ANTES de guardar la ruta: si ya se eligió otra foto, esta ruta
+      // no es la del comprobante que está en pantalla.
+      if (turno !== turnoFoto) return
+      if (!ruta) {
+        mostrarEstadoOcr('error', 'No se pudo subir el comprobante, así que no se leyó. Completá los datos a mano: al guardar se vuelve a intentar subirlo.')
+        document.getElementById('btn-foto-siguiente').disabled = false
+        return
+      }
+      estado.wizard.fotoUrl = ruta
+
+      mostrarEstadoOcr('cargando', 'Leyendo comprobante…')
+
+      try {
+        const resultado = await llamarOCR(ruta)
         // Otra foto elegida (o descartada) mientras se leía esta: su lectura
         // no puede prellenar el formulario de la nueva.
         if (turno !== turnoFoto) return

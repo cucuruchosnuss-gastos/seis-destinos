@@ -1,7 +1,26 @@
+// ocr-comprobante — lectura de comprobantes del módulo Gastos.
+//
+// Recibe la RUTA de un archivo ya subido al bucket "comprobantes"
+// (`storage_path`) y lo baja con el token de quien llama, así que respeta las
+// políticas de Storage y no puede leer el archivo de otra persona. Antes
+// recibía la imagen entera en base64: el mismo archivo viajaba dos veces desde
+// el celular (al OCR y a Storage). Mismo patrón que ocr-cheques.
+//
+// TRANSICIÓN: todavía acepta `imagen_base64` + `mime_type`, porque una pestaña
+// abierta con el gastos.html anterior (GitHub Pages sirve con caché) sigue
+// mandando eso. Se saca en un commit posterior, cuando ya no quede ninguna.
+//
+// El modelo se elige con el secret OCR_COMPROBANTE_MODELO, sin tocar código.
+// El default sigue siendo el de siempre a propósito: cambiarlo se decide
+// evaluando con comprobantes reales. Ojo al evaluar: los modelos de nivel
+// estándar miran la imagen a ~1568 px de lado largo, y gastos.html la
+// comprime a 2576 px, así que con ellos la resolución extra no se aprovecha.
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
-const MODELO = 'claude-sonnet-4-6'
+const MODELO_POR_DEFECTO = 'claude-sonnet-4-6'
+const BUCKET = 'comprobantes'
 
 const PROMPT_OCR = `Analizá esta imagen de un comprobante fiscal o ticket argentino y extraé los siguientes campos en formato JSON.
 
@@ -42,6 +61,13 @@ const HEADERS_CORS = {
 
 const MIME_VALIDOS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']
 
+// Storage no siempre devuelve el tipo en el blob; si falta, se deduce de la
+// extensión de la ruta. Lo que no se reconoce devuelve null y se rechaza.
+const MIME_POR_EXTENSION: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+  webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf',
+}
+
 Deno.serve(async (req) => {
   // Preflight CORS
   if (req.method === 'OPTIONS') {
@@ -70,21 +96,43 @@ Deno.serve(async (req) => {
   }
 
   // ── Validar cuerpo del request ─────────────────────────────────────────────
-  let body: { imagen_base64?: string; mime_type?: string }
+  let body: { storage_path?: unknown; imagen_base64?: unknown; mime_type?: unknown }
   try {
     body = await req.json()
   } catch {
     return json({ ok: false, mensaje: 'El cuerpo del request no es JSON válido' }, 400)
   }
 
-  const { imagen_base64, mime_type } = body
+  let imagen_base64: string
+  let mime_type: string
 
-  if (!imagen_base64 || !mime_type) {
-    return json({ ok: false, mensaje: 'Faltan campos requeridos: imagen_base64, mime_type' }, 400)
-  }
+  if (body.storage_path !== undefined) {
+    const ruta = rutaValida(body.storage_path, user.id)
+    // Solo archivos de la carpeta propia: la política del bucket ya lo exige
+    // para subir, y acá se corta antes de gastar una descarga y una llamada.
+    if (!ruta) return json({ ok: false, mensaje: 'Ruta de archivo inválida' }, 400)
 
-  if (!MIME_VALIDOS.includes(mime_type)) {
-    return json({ ok: false, mensaje: `Formato de imagen no soportado: ${mime_type}. Usá JPEG, PNG o WebP.` }, 400)
+    const { data: blob, error: errorDescarga } = await supabase.storage.from(BUCKET).download(ruta)
+    if (errorDescarga || !blob) {
+      console.error('No se pudo bajar el comprobante:', ruta, errorDescarga)
+      return json({ ok: false, mensaje: 'No se encontró el archivo. Volvé a cargarlo.' }, 404)
+    }
+    const mimeDetectado = mimeDeArchivo(blob.type, ruta)
+    if (!mimeDetectado) {
+      return json({ ok: false, mensaje: 'Formato no soportado. Usá JPG, PNG, WebP o PDF.' }, 400)
+    }
+    mime_type = mimeDetectado
+    imagen_base64 = base64DeBytes(new Uint8Array(await blob.arrayBuffer()))
+  } else {
+    // Rama de transición (ver el encabezado).
+    if (typeof body.imagen_base64 !== 'string' || !body.imagen_base64 || typeof body.mime_type !== 'string') {
+      return json({ ok: false, mensaje: 'Falta el campo requerido: storage_path' }, 400)
+    }
+    if (!MIME_VALIDOS.includes(body.mime_type)) {
+      return json({ ok: false, mensaje: `Formato de imagen no soportado: ${body.mime_type}. Usá JPEG, PNG o WebP.` }, 400)
+    }
+    imagen_base64 = body.imagen_base64
+    mime_type = body.mime_type
   }
 
   // ── Llamar a la API de Anthropic ───────────────────────────────────────────
@@ -93,6 +141,7 @@ Deno.serve(async (req) => {
     console.error('ANTHROPIC_API_KEY no está configurada como secret de Supabase.')
     return json({ ok: false, mensaje: 'Error de configuración del servidor' }, 500)
   }
+  const modelo = Deno.env.get('OCR_COMPROBANTE_MODELO')?.trim() || MODELO_POR_DEFECTO
 
   let respuestaAnthropic: Response
   try {
@@ -104,7 +153,7 @@ Deno.serve(async (req) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: MODELO,
+        model: modelo,
         max_tokens: 512,
         messages: [
           {
@@ -142,19 +191,49 @@ Deno.serve(async (req) => {
     datos = JSON.parse(match[0])
   } catch {
     console.error('No se pudo parsear la respuesta del modelo:', textoModelo)
-    return json({ ok: false, datos: {}, mensaje: 'No se pudo leer el comprobante' }, 200)
+    return json({ ok: false, datos: {}, modelo, mensaje: 'No se pudo leer el comprobante' }, 200)
   }
 
   // Considerar fallido si todos los campos son null
   const tieneAlgunDato = Object.values(datos).some((v) => v !== null && v !== undefined)
   if (!tieneAlgunDato) {
-    return json({ ok: false, datos: {}, mensaje: 'El comprobante no es legible' }, 200)
+    return json({ ok: false, datos: {}, modelo, mensaje: 'El comprobante no es legible' }, 200)
   }
 
-  return json({ ok: true, datos }, 200)
+  // `modelo` viaja en la respuesta para poder saber, al evaluar, cuál leyó.
+  return json({ ok: true, datos, modelo }, 200)
 })
 
-// ── Helper ─────────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+// La ruta tiene que ser texto, empezar con la carpeta de quien llama y no
+// tener segmentos vacíos ni "." / "..". Devuelve la ruta recortada o null.
+function rutaValida(valor: unknown, uid: string): string | null {
+  if (typeof valor !== 'string' || !uid) return null
+  const ruta = valor.trim()
+  if (!ruta.startsWith(`${uid}/`)) return null
+  const partes = ruta.split('/')
+  if (partes.length < 2 || partes.some((p) => p === '' || p === '.' || p === '..')) return null
+  return ruta
+}
+
+function mimeDeArchivo(tipoBlob: string | undefined, ruta: string): string | null {
+  const tipo = String(tipoBlob ?? '').split(';')[0].trim().toLowerCase()
+  if (MIME_VALIDOS.includes(tipo)) return tipo
+  const ext = ruta.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? ''
+  return MIME_POR_EXTENSION[ext] ?? null
+}
+
+// btoa sobre el arreglo entero revienta la pila con archivos de varios MB.
+function base64DeBytes(bytes: Uint8Array): string {
+  let binario = ''
+  const tramo = 0x8000
+  for (let i = 0; i < bytes.length; i += tramo) {
+    binario += String.fromCharCode(...bytes.subarray(i, i + tramo))
+  }
+  return btoa(binario)
+}
+
 function json(cuerpo: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(cuerpo), {
     status,
