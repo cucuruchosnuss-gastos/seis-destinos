@@ -2305,15 +2305,17 @@
       })
     }
 
-    // Poblar un <select> con items
+    // Poblar un <select> con items. ESCAPA value y label por dentro: los
+    // labels son nombres de cuentas y de proyectos que tipean los usuarios,
+    // así que quien llama pasa el texto crudo, nunca ya escapado.
     function poblarSelect(idCampo, items, mapFn, placeholder) {
       const sel = document.getElementById(idCampo)
       if (!sel) return
       sel.innerHTML =
-        `<option value="">${placeholder}</option>` +
+        `<option value="">${esc(placeholder)}</option>` +
         items.map(item => {
           const { value, label } = mapFn(item)
-          return `<option value="${value}">${label}</option>`
+          return `<option value="${esc(value)}">${esc(label)}</option>`
         }).join('')
     }
 
@@ -2343,7 +2345,8 @@
       if (!sel) return
       let monedas = estado.maestros.monedas || ['ARS', 'USD']
       if (monedaActual && !monedas.includes(monedaActual)) monedas = [...monedas, monedaActual]
-      sel.innerHTML = monedas.map(m => `<option value="${m}">${m}</option>`).join('')
+      // La moneda sale de cuentas_caja.moneda, que es texto libre.
+      sel.innerHTML = monedas.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('')
       if (monedaActual) sel.value = monedaActual
     }
 
@@ -2428,8 +2431,8 @@
       function renderizarOpciones() {
         panel.querySelector('.multiselect__opciones').innerHTML = opciones.map(op => `
           <label class="multiselect__opcion">
-            <input type="checkbox" value="${op.value}" ${borrador.map(String).includes(String(op.value)) ? 'checked' : ''}>
-            <span>${op.label}</span>
+            <input type="checkbox" value="${esc(op.value)}" ${borrador.map(String).includes(String(op.value)) ? 'checked' : ''}>
+            <span>${esc(op.label)}</span>
           </label>
         `).join('')
 
@@ -2490,8 +2493,8 @@
 
       panel.innerHTML = OPCIONES_ORDEN.map(op => `
         <label class="multiselect__opcion">
-          <input type="radio" name="orden" value="${op.value}" ${estado.filtros.orden === op.value ? 'checked' : ''}>
-          <span>${op.label}</span>
+          <input type="radio" name="orden" value="${esc(op.value)}" ${estado.filtros.orden === op.value ? 'checked' : ''}>
+          <span>${esc(op.label)}</span>
         </label>
       `).join('')
 
@@ -2528,7 +2531,7 @@
         : '🔍 Buscar empresa o categoría'
 
       let html = `
-        <input type="text" id="filtro-busqueda" placeholder="${placeholderBusqueda}" value="${estado.filtros.busqueda || ''}" style="flex:1; min-width:180px; padding:0.4375rem 0.875rem; border:1.5px solid var(--color-borde); border-radius:999px; font-family:var(--fuente); font-size:0.8125rem; background:var(--color-fondo); outline:none;">
+        <input type="text" id="filtro-busqueda" placeholder="${placeholderBusqueda}" value="${esc(estado.filtros.busqueda)}" style="flex:1; min-width:180px; padding:0.4375rem 0.875rem; border:1.5px solid var(--color-borde); border-radius:999px; font-family:var(--fuente); font-size:0.8125rem; background:var(--color-fondo); outline:none;">
 
         <div class="multiselect" id="ms-periodo">
           <button type="button" class="multiselect__boton" id="ms-periodo-boton">Todos los períodos</button>
@@ -2545,11 +2548,11 @@
 
           <div style="display:flex; align-items:center; gap:0.375rem; flex-shrink:0;">
             <span style="font-size:0.75rem; color:var(--color-texto-suave); white-space:nowrap;">Desde</span>
-            <input type="date" id="filtro-fecha-desde" value="${estado.filtros.fecha_desde || ''}">
+            <input type="date" id="filtro-fecha-desde" value="${esc(estado.filtros.fecha_desde)}">
           </div>
           <div style="display:flex; align-items:center; gap:0.375rem; flex-shrink:0;">
             <span style="font-size:0.75rem; color:var(--color-texto-suave); white-space:nowrap;">Hasta</span>
-            <input type="date" id="filtro-fecha-hasta" value="${estado.filtros.fecha_hasta || ''}">
+            <input type="date" id="filtro-fecha-hasta" value="${esc(estado.filtros.fecha_hasta)}">
           </div>
 
           <div class="multiselect" id="ms-categoria">
@@ -2911,30 +2914,34 @@
       const importe      = formatearImporte(g.importe, g.moneda)
       const fecha        = formatearFecha(g.fecha_pago)
 
-      const categoriaChip  = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${categoria}</span>` : ''
-      const metaSecundaria = [fecha, empleado].filter(Boolean).join(' · ')
+      // LA TARJETA DEL LISTADO ES EL PEOR LUGAR PARA NO ESCAPAR: el detalle
+      // hay que abrirlo, esto se dibuja con solo entrar al módulo. La razón
+      // social y el empleado los tipea cualquier usuario en su propio gasto
+      // (en "sin comprobante", a mano), y el listado lo mira un super_admin.
+      const categoriaChip  = categoria ? `<span class="gasto__categoria-chip">${iconoCategoriaHtml(categoria)} ${esc(categoria)}</span>` : ''
+      const metaSecundaria = esc([fecha, empleado].filter(Boolean).join(' · '))
 
       const esAnulado = g.estado === 'anulado'
       const puntoOBadge = esAnulado
         ? `<span class="badge-estado badge-estado--anulado">Anulado</span>`
-        : `<span class="gasto__punto-estado" title="${g.estado === 'registrado' ? 'Registrado' : g.estado}"></span>`
+        : `<span class="gasto__punto-estado" title="${esc(g.estado === 'registrado' ? 'Registrado' : g.estado)}"></span>`
 
       return `
-        <div class="tarjeta-lista${esAnulado ? ' tarjeta-lista--anulado' : ''}" data-id="${g.id}">
+        <div class="tarjeta-lista${esAnulado ? ' tarjeta-lista--anulado' : ''}" data-id="${esc(g.id)}">
           <div class="tarjeta-lista__avatar">
             ${logoEmpresa
-              ? `<img src="${logoEmpresa}" alt="${nombreUnidad || 'Vehículos'}" style="width:100%;height:100%;object-fit:contain;">`
-              : `<span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${inicialesEmpresa(razonSocial)}</span>`}
+              ? `<img src="${esc(logoEmpresa)}" alt="${esc(nombreUnidad || 'Vehículos')}" style="width:100%;height:100%;object-fit:contain;">`
+              : `<span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${esc(inicialesEmpresa(razonSocial))}</span>`}
           </div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${razonSocial}${puntoOBadge}</div>
+            <div class="tarjeta-lista__titulo">${esc(razonSocial)}${puntoOBadge}</div>
             <div class="gasto__meta">
               ${categoriaChip}
               <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${metaSecundaria}</span>
             </div>
           </div>
           <div class="gasto__derecha">
-            <div class="gasto__importe${esAnulado ? ' gasto__importe--anulado' : ''}">${importe}</div>
+            <div class="gasto__importe${esAnulado ? ' gasto__importe--anulado' : ''}">${esc(importe)}</div>
             <span class="gasto__meta-secundaria gasto__meta-secundaria--derecha">${metaSecundaria}</span>
           </div>
         </div>
@@ -3025,11 +3032,12 @@
       return [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
     }
 
-    // Los nombres los escribe una persona desde esta pantalla: se escapan
-    // SIEMPRE que se dibujan. Antes solo entraban por SQL.
+    // Los nombres los escribe una persona desde esta pantalla. Los escapa
+    // poblarSelect(): escaparlos también acá los mostraría dos veces
+    // escapados ("A &amp;amp; B").
     function poblarSelectProyecto(valorElegido = '') {
       poblarSelect('campo-proyecto', estado.maestros.proyectos,
-        p => ({ value: esc(p.id), label: esc(p.nombre) }),
+        p => ({ value: p.id, label: p.nombre }),
         '— Sin proyecto —')
       document.getElementById('campo-proyecto').value = valorElegido
     }
@@ -4014,7 +4022,7 @@
       } else {
         empresaLabel = '—'
       }
-      items.push({ label: empresaLabel, subpaso: 'destino' })
+      items.push({ labelHtml: esc(empresaLabel), subpaso: 'destino' })
 
       // Segmento vehículo (solo si se pasó por el paso vehiculo-destino)
       if (['categoria','detalles','resumen'].includes(subpaso) && viaVehiculos) {
@@ -4025,18 +4033,18 @@
         } else {
           vehLabel = 'Sin vehículo'
         }
-        items.push({ label: vehLabel, subpaso: 'vehiculo-destino' })
+        items.push({ labelHtml: esc(vehLabel), subpaso: 'vehiculo-destino' })
       }
 
       // Segmento categoría (una vez confirmada)
       if (['detalles','resumen'].includes(subpaso) && categoriaSeleccionada) {
         const cat = estado.maestros.categorias.find(c => c.id === categoriaSeleccionada)
-        if (cat) items.push({ label: `${iconoCategoriaHtml(cat.nombre)} ${cat.nombre}`, subpaso: 'categoria' })
+        if (cat) items.push({ labelHtml: `${iconoCategoriaHtml(cat.nombre)} ${esc(cat.nombre)}`, subpaso: 'categoria' })
       }
 
       bcEl.innerHTML = items.map((item, i) =>
         (i > 0 ? '<span class="breadcrumb__sep">›</span>' : '') +
-        `<button type="button" class="breadcrumb__item" data-subpaso="${item.subpaso}">${item.label}</button>`
+        `<button type="button" class="breadcrumb__item" data-subpaso="${esc(item.subpaso)}">${item.labelHtml}</button>`
       ).join('')
       lucide.createIcons()
     }
@@ -4053,13 +4061,13 @@
         const c = configEmpresa(nombre)
         return `
           <button type="button" class="tarjeta-destino ${seleccionada ? 'seleccionada' : ''}"
-                  data-id="${id}" data-tipo="empresa">
+                  data-id="${esc(id)}" data-tipo="empresa">
             <div class="tarjeta-destino__imagen">
-              <img class="tarjeta-destino__logo" src="${c.logo}" alt="${nombre}"
+              <img class="tarjeta-destino__logo" src="${c.logo}" alt="${esc(nombre)}"
                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
               <div class="tarjeta-destino__circulo" style="background:${c.color}">${c.inicial}</div>
             </div>
-            <span class="tarjeta-destino__nombre">${nombre}</span>
+            <span class="tarjeta-destino__nombre">${esc(nombre)}</span>
           </button>
         `
       }
@@ -4124,10 +4132,10 @@
 
       html += vehiculos.map(v => `
         <button type="button" class="tarjeta-destino ${vehiculoSeleccionado === v.id ? 'seleccionada' : ''}"
-                data-id="${v.id}">
+                data-id="${esc(v.id)}">
           <span class="tarjeta-destino__vehiculo-icono">🚗</span>
-          <span class="tarjeta-destino__nombre">${v.nombre}</span>
-          <span class="tarjeta-destino__subtexto">${v.patente}</span>
+          <span class="tarjeta-destino__nombre">${esc(v.nombre)}</span>
+          <span class="tarjeta-destino__subtexto">${esc(v.patente)}</span>
         </button>
       `).join('')
 
@@ -4197,9 +4205,9 @@
 
       grilla.innerHTML = categoriasAMostrar.map(cat => `
         <button type="button" class="btn-categoria ${categoriaSeleccionada === cat.id ? 'btn-categoria--seleccionado' : ''}"
-                data-id="${cat.id}">
+                data-id="${esc(cat.id)}">
           <span class="btn-categoria__icono">${iconoCategoriaHtml(cat.nombre)}</span>
-          <span class="btn-categoria__nombre">${cat.nombre}</span>
+          <span class="btn-categoria__nombre">${esc(cat.nombre)}</span>
         </button>
       `).join('')
       lucide.createIcons()
@@ -4416,9 +4424,9 @@
 
       sel.innerHTML =
         '<option value="">— Seleccioná empleado —</option>' +
-        naaloo.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('') +
+        naaloo.map(e => `<option value="${esc(e.id)}">${esc(e.nombre)}</option>`).join('') +
         (admins.length && naaloo.length ? '<option disabled>──────────────</option>' : '') +
-        admins.map(e => `<option value="${e.id}" style="color:#9CA3AF">${e.nombre} (Admin)</option>`).join('')
+        admins.map(e => `<option value="${esc(e.id)}" style="color:#9CA3AF">${esc(e.nombre)} (Admin)</option>`).join('')
 
       // Decisión de Facu (24/07/2026): cargar un gasto a nombre de otra
       // persona va con 'ver_exportar', coherente con el resto de la
@@ -4514,8 +4522,8 @@
       }
       el.style.cssText = estilos[tipo] ?? ''
       el.innerHTML = tipo === 'cargando'
-        ? `<div class="spinner-inline"></div><span>${texto}</span>`
-        : `<span>${texto}</span>`
+        ? `<div class="spinner-inline"></div><span>${esc(texto)}</span>`
+        : `<span>${esc(texto)}</span>`
     }
 
     function fileABase64(archivo) {
@@ -4704,8 +4712,8 @@
         return
       }
       cont.innerHTML = lista.map(p => `
-        <div class="sugerencias-proveedor__item" data-id="${p.id}">
-          ${p.razon_social}${p.nombre_fantasia ? ` <span style="color:var(--color-texto-suave);">(${p.nombre_fantasia})</span>` : ''}
+        <div class="sugerencias-proveedor__item" data-id="${esc(p.id)}">
+          ${esc(p.razon_social)}${p.nombre_fantasia ? ` <span style="color:var(--color-texto-suave);">(${esc(p.nombre_fantasia)})</span>` : ''}
         </div>
       `).join('')
       cont.hidden = false
@@ -4915,11 +4923,16 @@
       const vehObj  = estado.maestros.vehiculos  .find(v => v.id === vehiculoSeleccionado)
       const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
 
-      const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
+      // fila() ESCAPA SIEMPRE: casi todo lo que muestra es texto libre que
+      // tipeó un usuario o leyó el OCR. filaHtml() es la única que deja pasar
+      // HTML, y solo para lo que se arma acá (el ícono de categoría) — con
+      // los datos ya escapados en el call site.
+      const filaHtml = (etiqueta, html) => html != null && html !== '' ? `
         <div class="resumen-fila">
-          <span class="resumen-fila__etiqueta">${etiqueta}</span>
-          <span class="resumen-fila__valor">${valor}</span>
+          <span class="resumen-fila__etiqueta">${esc(etiqueta)}</span>
+          <span class="resumen-fila__valor">${html}</span>
         </div>` : ''
+      const fila = (etiqueta, valor) => filaHtml(etiqueta, valor != null && valor !== '' ? esc(valor) : null)
 
       document.getElementById('resumen-contenido').innerHTML = `
         <div class="resumen-seccion">
@@ -4932,7 +4945,7 @@
           ${fila('Medio de pago', MEDIOS_PAGO_LABEL[g.medio_pago])}
           <div class="resumen-fila resumen-fila--importe">
             <span class="resumen-fila__etiqueta">Importe</span>
-            <span class="resumen-importe">${formatearImporte(g.importe, g.moneda)}</span>
+            <span class="resumen-importe">${esc(formatearImporte(g.importe, g.moneda))}</span>
           </div>
         </div>
 
@@ -4941,13 +4954,13 @@
           ${fila('Empresa',      unidObj?.nombre)}
           ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : (vehiculoFueElegido ? 'Sin vehículo' : null))}
           ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
-          ${fila('Categoría',    catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${catObj.nombre}` : null)}
+          ${filaHtml('Categoría', catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${esc(catObj.nombre)}` : null)}
         </div>
 
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Detalles</div>
           ${fila('Empleado',     empObj?.nombre)}
-          ${fila('Proyecto',     proyObj ? esc(proyObj.nombre) : null)}
+          ${fila('Proyecto',     proyObj?.nombre)}
           ${fila('Lugar',        g.lugar_servicio)}
           ${fila('Observaciones', g.observaciones)}
         </div>
@@ -4975,11 +4988,16 @@
       const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
       const provObj = estado.maestros.proveedores.find(p => p.id === g.proveedor_id)
 
-      const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
+      // fila() ESCAPA SIEMPRE: casi todo lo que muestra es texto libre que
+      // tipeó un usuario o leyó el OCR. filaHtml() es la única que deja pasar
+      // HTML, y solo para lo que se arma acá (el ícono de categoría) — con
+      // los datos ya escapados en el call site.
+      const filaHtml = (etiqueta, html) => html != null && html !== '' ? `
         <div class="resumen-fila">
-          <span class="resumen-fila__etiqueta">${etiqueta}</span>
-          <span class="resumen-fila__valor">${valor}</span>
+          <span class="resumen-fila__etiqueta">${esc(etiqueta)}</span>
+          <span class="resumen-fila__valor">${html}</span>
         </div>` : ''
+      const fila = (etiqueta, valor) => filaHtml(etiqueta, valor != null && valor !== '' ? esc(valor) : null)
 
       document.getElementById('resumen-contenido').innerHTML = `
         <div class="resumen-seccion">
@@ -4991,7 +5009,7 @@
           ${fila('Razón social', g.razon_social)}
           <div class="resumen-fila resumen-fila--importe">
             <span class="resumen-fila__etiqueta">Importe</span>
-            <span class="resumen-importe">${formatearImporte(g.importe, g.moneda)}</span>
+            <span class="resumen-importe">${esc(formatearImporte(g.importe, g.moneda))}</span>
           </div>
         </div>
 
@@ -5000,13 +5018,13 @@
           ${fila('Empresa',      unidObj?.nombre)}
           ${fila('Vehículo',     vehObj ? `${vehObj.nombre} (${vehObj.patente})` : (vehiculoFueElegido ? 'Sin vehículo' : null))}
           ${fila('Kilometraje',  g.kilometraje ? `${g.kilometraje} km` : null)}
-          ${fila('Categoría',    catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${catObj.nombre}` : null)}
+          ${filaHtml('Categoría', catObj ? `${iconoCategoriaHtml(catObj.nombre)} ${esc(catObj.nombre)}` : null)}
         </div>
 
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Detalles</div>
           ${fila('Empleado',     empObj?.nombre)}
-          ${fila('Proyecto',     proyObj ? esc(proyObj.nombre) : null)}
+          ${fila('Proyecto',     proyObj?.nombre)}
           ${fila('Lugar',        g.lugar)}
           ${fila('Observaciones', g.observaciones)}
         </div>
@@ -5081,11 +5099,16 @@
         }
       }
 
-      const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
+      // fila() ESCAPA SIEMPRE: casi todo lo que muestra es texto libre que
+      // tipeó un usuario o leyó el OCR. filaHtml() es la única que deja pasar
+      // HTML, y solo para lo que se arma acá (el ícono de categoría) — con
+      // los datos ya escapados en el call site.
+      const filaHtml = (etiqueta, html) => html != null && html !== '' ? `
         <div class="resumen-fila">
-          <span class="resumen-fila__etiqueta">${etiqueta}</span>
-          <span class="resumen-fila__valor">${valor}</span>
+          <span class="resumen-fila__etiqueta">${esc(etiqueta)}</span>
+          <span class="resumen-fila__valor">${html}</span>
         </div>` : ''
+      const fila = (etiqueta, valor) => filaHtml(etiqueta, valor != null && valor !== '' ? esc(valor) : null)
 
       const esAnulado = g.estado === 'anulado'
       const nombreAnuladoPor = g.anulado_por
@@ -5115,7 +5138,7 @@
           ${fila('Cuenta',        nombreCuenta)}
           <div class="resumen-fila">
             <span class="resumen-fila__etiqueta">Importe</span>
-            <span class="resumen-importe">${formatearImporte(g.importe, g.moneda)}</span>
+            <span class="resumen-importe">${esc(formatearImporte(g.importe, g.moneda))}</span>
           </div>
         </div>
 
@@ -5124,13 +5147,13 @@
           ${fila('Empresa',     g.unidades_negocio?.nombre)}
           ${fila('Vehículo',    g.vehiculos ? `${g.vehiculos.nombre} (${g.vehiculos.patente})` : null)}
           ${fila('Kilometraje', g.kilometraje ? `${g.kilometraje} km` : null)}
-          ${fila('Categoría',   g.categorias ? `${iconoCategoriaHtml(g.categorias.nombre)} ${g.categorias.nombre}` : null)}
+          ${filaHtml('Categoría', g.categorias ? `${iconoCategoriaHtml(g.categorias.nombre)} ${esc(g.categorias.nombre)}` : null)}
         </div>
 
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Detalles</div>
           ${fila('Empleado',      g.empleados?.nombre)}
-          ${fila('Proyecto',      g.proyectos ? esc(g.proyectos.nombre) : null)}
+          ${fila('Proyecto',      g.proyectos?.nombre)}
           ${fila('Lugar',         g.lugar_servicio)}
           ${fila('Descripción',   g.descripcion)}
           ${fila('Observaciones', g.observaciones)}
@@ -5175,19 +5198,19 @@
       const selectEmpresa = `
         <select id="edit-unidad">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.unidades.map(u => `<option value="${u.id}" ${g.unidades_negocio?.id === u.id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
+          ${estado.maestros.unidades.map(u => `<option value="${esc(u.id)}" ${g.unidades_negocio?.id === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
         </select>`
 
       const selectVehiculo = `
         <select id="edit-vehiculo">
           <option value="">— Ninguno —</option>
-          ${estado.maestros.vehiculos.map(v => `<option value="${v.id}" ${g.vehiculos?.id === v.id ? 'selected' : ''}>${v.nombre} (${v.patente})</option>`).join('')}
+          ${estado.maestros.vehiculos.map(v => `<option value="${esc(v.id)}" ${g.vehiculos?.id === v.id ? 'selected' : ''}>${esc(v.nombre)} (${esc(v.patente)})</option>`).join('')}
         </select>`
 
       const selectCategoria = `
         <select id="edit-categoria">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${g.categorias?.id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+          ${estado.maestros.categorias.map(c => `<option value="${esc(c.id)}" ${g.categorias?.id === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}
         </select>`
 
       console.log('[edicion-empleado] Array completo:', estado.maestros.empleados)
@@ -5196,7 +5219,7 @@
       const selectEmpleado = `
         <select id="edit-empleado">
           <option value="">— Ninguno —</option>
-          ${estado.maestros.empleados.map(e => `<option value="${e.id}" ${g.empleados?.id === e.id ? 'selected' : ''}>${e.nombre}</option>`).join('')}
+          ${estado.maestros.empleados.map(e => `<option value="${esc(e.id)}" ${g.empleados?.id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}
         </select>`
 
       // estado.maestros.proyectos trae solo los ACTIVOS. Si el proyecto de este
@@ -5213,7 +5236,7 @@
 
       const selectMedioPago = `
         <select id="edit-medio-pago">
-          ${Object.entries(MEDIOS_PAGO_LABEL).map(([valor, label]) => `<option value="${valor}" ${g.medio_pago === valor ? 'selected' : ''}>${label}</option>`).join('')}
+          ${Object.entries(MEDIOS_PAGO_LABEL).map(([valor, label]) => `<option value="${esc(valor)}" ${g.medio_pago === valor ? 'selected' : ''}>${esc(label)}</option>`).join('')}
         </select>`
 
       const campo = (label, html) => `
@@ -5225,11 +5248,11 @@
       document.getElementById('detalle-gasto-contenido').innerHTML = `
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Comprobante</div>
-          ${campo('Fecha de pago', `<input type="date" id="edit-fecha-pago" value="${g.fecha_pago}">`)}
-          ${campo('Fecha de factura', `<input type="date" id="edit-fecha" value="${g.fecha}">`)}
-          ${campo('Tipo de documento', `<input type="text" id="edit-tipo-doc" value="${g.tipo_doc || ''}">`)}
-          ${campo('Número', `<input type="text" id="edit-numero-doc" value="${g.numero_doc || ''}">`)}
-          ${campo('Razón social', `<input type="text" id="edit-razon-social" value="${g.razon_social || ''}">`)}
+          ${campo('Fecha de pago', `<input type="date" id="edit-fecha-pago" value="${esc(g.fecha_pago)}">`)}
+          ${campo('Fecha de factura', `<input type="date" id="edit-fecha" value="${esc(g.fecha)}">`)}
+          ${campo('Tipo de documento', `<input type="text" id="edit-tipo-doc" value="${esc(g.tipo_doc)}">`)}
+          ${campo('Número', `<input type="text" id="edit-numero-doc" value="${esc(g.numero_doc)}">`)}
+          ${campo('Razón social', `<input type="text" id="edit-razon-social" value="${esc(g.razon_social)}">`)}
           ${campo('Medio de pago', selectMedioPago)}
           <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
             ${campo('Importe', `<input type="text" inputmode="decimal" id="edit-importe" value="${Number(g.importe).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">`)}
@@ -5241,7 +5264,7 @@
           <div class="resumen-seccion__titulo">Destino y clasificación</div>
           ${campo('Empresa', selectEmpresa)}
           ${campo('Vehículo', selectVehiculo)}
-          ${campo('Kilometraje', `<input type="number" id="edit-kilometraje" value="${g.kilometraje ?? ''}">`)}
+          ${campo('Kilometraje', `<input type="number" id="edit-kilometraje" value="${esc(g.kilometraje)}">`)}
           ${campo('Categoría', selectCategoria)}
         </div>
 
@@ -5254,8 +5277,8 @@
             <p class="etiqueta-opcional" id="edit-cuenta-vacio" hidden></p>
           </div>
           ${campo('Proyecto', selectProyecto)}
-          ${campo('Lugar', `<input type="text" id="edit-lugar" value="${g.lugar_servicio || ''}">`)}
-          ${campo('Observaciones', `<textarea id="edit-observaciones">${g.observaciones || ''}</textarea>`)}
+          ${campo('Lugar', `<input type="text" id="edit-lugar" value="${esc(g.lugar_servicio)}">`)}
+          ${campo('Observaciones', `<textarea id="edit-observaciones">${esc(g.observaciones)}</textarea>`)}
         </div>
 
         <div style="display:flex; gap:0.75rem; padding:1rem 0;">
@@ -5407,11 +5430,16 @@
 
       estado.facturaDetalleActual = f
 
-      const fila = (etiqueta, valor) => valor != null && valor !== '' ? `
+      // fila() ESCAPA SIEMPRE: casi todo lo que muestra es texto libre que
+      // tipeó un usuario o leyó el OCR. filaHtml() es la única que deja pasar
+      // HTML, y solo para lo que se arma acá (el ícono de categoría) — con
+      // los datos ya escapados en el call site.
+      const filaHtml = (etiqueta, html) => html != null && html !== '' ? `
         <div class="resumen-fila">
-          <span class="resumen-fila__etiqueta">${etiqueta}</span>
-          <span class="resumen-fila__valor">${valor}</span>
+          <span class="resumen-fila__etiqueta">${esc(etiqueta)}</span>
+          <span class="resumen-fila__valor">${html}</span>
         </div>` : ''
+      const fila = (etiqueta, valor) => filaHtml(etiqueta, valor != null && valor !== '' ? esc(valor) : null)
 
       document.getElementById('detalle-factura-contenido').innerHTML = `
         <div class="resumen-seccion">
@@ -5423,7 +5451,7 @@
           ${fila('Número',           f.numero_comprobante)}
           <div class="resumen-fila resumen-fila--importe">
             <span class="resumen-fila__etiqueta">Importe</span>
-            <span class="resumen-importe">${formatearImporte(f.importe, f.moneda)}</span>
+            <span class="resumen-importe">${esc(formatearImporte(f.importe, f.moneda))}</span>
           </div>
           ${fila('Saldo pendiente', f.saldo_pendiente != null ? formatearImporte(f.saldo_pendiente, f.moneda) : null)}
           ${['pendiente', 'parcial'].includes(f.estado) && tieneTarea('facturas_pendientes', 'editar_interes') ? `
@@ -5433,7 +5461,7 @@
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Destino y clasificación</div>
           ${fila('Empresa',   f.unidades_negocio?.nombre)}
-          ${fila('Categoría', f.categorias ? `${iconoCategoriaHtml(f.categorias.nombre)} ${f.categorias.nombre}` : null)}
+          ${filaHtml('Categoría', f.categorias ? `${iconoCategoriaHtml(f.categorias.nombre)} ${esc(f.categorias.nombre)}` : null)}
           ${fila('Estado',    f.estado)}
         </div>
 
@@ -5491,13 +5519,13 @@
       const selectUnidad = `
         <select id="edit-factura-unidad">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.unidades.map(u => `<option value="${u.id}" ${f.unidades_negocio?.id === u.id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
+          ${estado.maestros.unidades.map(u => `<option value="${esc(u.id)}" ${f.unidades_negocio?.id === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
         </select>`
 
       const selectCategoria = `
         <select id="edit-factura-categoria">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.categorias.map(c => `<option value="${c.id}" ${f.categorias?.id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+          ${estado.maestros.categorias.map(c => `<option value="${esc(c.id)}" ${f.categorias?.id === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}
         </select>`
 
       const campo = (label, html) => `
@@ -5511,14 +5539,14 @@
           <div class="resumen-seccion__titulo">Comprobante</div>
           <div class="grupo-campo" id="grupo-edit-proveedor" style="position:relative;">
             <label for="campo-edit-proveedor-buscar">Proveedor</label>
-            <input type="text" id="campo-edit-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off" value="${f.proveedores?.razon_social || ''}">
-            <input type="hidden" id="campo-edit-proveedor-id" value="${f.proveedor_id || ''}">
+            <input type="text" id="campo-edit-proveedor-buscar" placeholder="Buscar proveedor…" autocomplete="off" value="${esc(f.proveedores?.razon_social)}">
+            <input type="hidden" id="campo-edit-proveedor-id" value="${esc(f.proveedor_id)}">
             <div class="sugerencias-proveedor" id="sugerencias-edit-proveedor" hidden></div>
             <button type="button" class="btn-link-proveedor" id="btn-edit-proveedor-nuevo">+ Cargar proveedor nuevo</button>
           </div>
-          ${campo('Razón social', `<input type="text" id="edit-factura-razon-social" value="${f.razon_social || ''}">`)}
-          ${campo('Fecha de factura', `<input type="date" id="edit-factura-fecha" value="${f.fecha_factura}">`)}
-          ${campo('Número de comprobante', `<input type="text" id="edit-factura-numero" value="${f.numero_comprobante || ''}">`)}
+          ${campo('Razón social', `<input type="text" id="edit-factura-razon-social" value="${esc(f.razon_social)}">`)}
+          ${campo('Fecha de factura', `<input type="date" id="edit-factura-fecha" value="${esc(f.fecha_factura)}">`)}
+          ${campo('Número de comprobante', `<input type="text" id="edit-factura-numero" value="${esc(f.numero_comprobante)}">`)}
           <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
             ${campo('Importe', `<input type="text" inputmode="decimal" id="edit-factura-importe" value="${Number(f.importe).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">`)}
             ${campo('Moneda', `<select id="edit-factura-moneda" style="width:5.5rem;"></select>`)}
@@ -5533,8 +5561,8 @@
 
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Detalles</div>
-          ${campo('Lugar', `<input type="text" id="edit-factura-lugar" value="${f.lugar || ''}">`)}
-          ${campo('Observaciones', `<textarea id="edit-factura-observaciones">${f.observaciones || ''}</textarea>`)}
+          ${campo('Lugar', `<input type="text" id="edit-factura-lugar" value="${esc(f.lugar)}">`)}
+          ${campo('Observaciones', `<textarea id="edit-factura-observaciones">${esc(f.observaciones)}</textarea>`)}
         </div>
 
         <div style="display:flex; gap:0.75rem; padding:1rem 0;">
@@ -5621,8 +5649,8 @@
           <div class="grupo-campo" style="margin-top:1rem;">
             <label>Base del cálculo</label>
             <div class="grilla-tipo-doc" id="grilla-base-interes">
-              <button type="button" class="btn-tipo-doc" data-base="importe">Monto total de la factura (${formatearImporte(f.importe, f.moneda)})</button>
-              <button type="button" class="btn-tipo-doc btn-tipo-doc--seleccionado" data-base="saldo_pendiente">Saldo pendiente actual (${formatearImporte(f.saldo_pendiente, f.moneda)})</button>
+              <button type="button" class="btn-tipo-doc" data-base="importe">Monto total de la factura (${esc(formatearImporte(f.importe, f.moneda))})</button>
+              <button type="button" class="btn-tipo-doc btn-tipo-doc--seleccionado" data-base="saldo_pendiente">Saldo pendiente actual (${esc(formatearImporte(f.saldo_pendiente, f.moneda))})</button>
             </div>
           </div>
 
