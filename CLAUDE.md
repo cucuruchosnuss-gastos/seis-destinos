@@ -1315,7 +1315,8 @@ TERCER CASO (`7d145d7`), y el peor de los tres por dónde estaba: en `ocr-materi
     - **Gastos:** arreglado ese día (`9a0e9a8`).
     - **SIN NINGÚN HELPER, con el mismo patrón, y con traspaso a su chat:** `accesos.html`, `cuentas-corrientes.html`, `caja.html` y `empleados.html`.
     - **El peor es `accesos.html`:** `solicitudes_acceso.nombre` / `apellido` / `email` los carga alguien **SIN CUENTA** en `registro.html`, y la pantalla la abre un super_admin para aprobar. Un desconocido ejecuta código en la sesión de quien reparte los permisos.
-    - **Sin auditar:** `dashboard.html` (tampoco tiene helper) y las pantallas de auth.
+    - **`dashboard.html` y las pantallas de auth: AUDITADAS el 16/09/2026, sin sinks** (no tienen helper, y no les hace falta hoy). Todo dato de usuario va por `textContent` —el nombre y el email del header, los factores MFA, el match de `registro.html`, los mensajes de error—; los únicos `innerHTML` son el ícono del "ojito" (texto fijo) y la grilla del dashboard, que se arma con la constante `MODULOS` del código y un conteo numérico. **Si alguna vez la grilla pasa a leer la tabla `modulos`, deja de estar a salvo.**
+    - **`registro.html` es la ENTRADA del vector, no un sink:** ahí se escribe el nombre que después explota en Accesos, pero registro no lo dibuja. Y **`crear-solicitud-acceso` no valida `nombre` ni `apellido` más allá de que no estén vacíos**, y los guarda tal cual vienen del cliente, aunque el CUIL haya dado match. La defensa real es escapar en quien lo muestra.
   - **EL LISTADO ES PEOR QUE EL DETALLE:** un detalle hay que abrirlo; una tarjeta se dibuja con solo entrar al módulo.
   - **Las cinco lecciones, que valen para todo archivo:**
     1. **LOS ATRIBUTOS SON SINK IGUAL QUE EL CONTENIDO.** En `value="${x}"`, `alt`, `title` o `data-*` alcanza una comilla para cerrar el atributo e inyectar. Un formulario de edición que precarga `value="${emp.domicilio}"` es tan peligroso como un `<span>`.
