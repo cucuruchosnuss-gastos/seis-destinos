@@ -4289,16 +4289,23 @@
     // bajaba las fotos de todos. El patrón existía en el proyecto (el bucket
     // 'cobranzas' lo tuvo desde el día uno) pero este bucket no.
     //
-    // ESTADO VERIFICADO contra pg_policy más tarde el 16/09/2026 —las mantiene
-    // el chat de arquitectura, no este módulo—:
-    //   · INSERT: solo a la carpeta propia (foldername[1] = auth.uid()).
-    //   · SELECT: lo propio; o lo de 'mp/' con materia_prima:ver_todo; o lo de la
-    //     raíz (Gastos) con gastos:ver_exportar o cuentas_corrientes:ver_todo.
+    // ESTADO VERIFICADO contra pg_policy (storage.objects) el 16/09/2026 —las
+    // mantiene el chat de arquitectura, no este módulo—, las dos TO authenticated:
+    //   · "comprobantes: subir a la carpeta propia" (INSERT):
+    //     foldername(name)[1] = auth.uid().
+    //   · "comprobantes: ver los propios o los que la tarea habilita" (SELECT):
+    //     lo propio; o lo de 'mp/' si EXISTE un materia_prima_ingresos cuyo
+    //     foto_url contiene la ruta y tiene_tarea_alcance('materia_prima',
+    //     'ver_todo', su unidad); o lo de la raíz (Gastos) con
+    //     gastos:ver_exportar o cuentas_corrientes:ver_todo.
     // Por eso el 'mp/' ya no es cosmético: es lo que distingue una foto de Ingreso
     // de un comprobante de Gastos para la policy. Cambiar este formato de ruta
     // deja las fotos nuevas fuera de las dos ramas.
-    // Resto conocido: el SELECT usa tiene_tarea() y no tiene_tarea_alcance(), así
-    // que ver_todo en UNA unidad deja ver las fotos 'mp/' de TODAS.
+    // HUECO LATENTE: la rama 'mp/' solo busca en materia_prima_ingresos.foto_url,
+    // no en materia_prima_items.ficha_tecnica_url / foto_lote_url, que también
+    // salen de esta función. Hoy no se nota —esos adjuntos están todos en null y,
+    // además, viajan como URL firmada que no pasa por la policy—, pero cuando se
+    // firmen al mirar, un ver_todo no va a poder abrir la ficha de otra persona.
     // Al cerrarlo no se rompió nada existente: los 153 archivos del bucket (los
     // de Gastos y los 47 'mp/') tienen el uid de su dueño como primer segmento.
     async function subirArchivoMp(archivo) {

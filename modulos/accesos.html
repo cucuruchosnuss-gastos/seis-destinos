@@ -749,6 +749,8 @@
             descripcion: 'Permite editar los datos de cualquier gasto y anular gastos de otras personas (la anulación pide motivo, devuelve la plata a la caja correspondiente y reabre facturas pendientes que ese gasto hubiera pagado). Para anular los gastos propios no hace falta esta tarea: eso lo puede hacer cualquiera.' },
           { modulo: 'gastos', tarea: 'gastos_empresa',    label: 'Cargar gastos contra las cuentas de la Empresa',
             descripcion: 'Permite cargar gastos pagados con plata de la Empresa: al cargar se elige una cuenta de la Empresa y el descuento sale de ahí, no de la caja personal de quien lo carga.' },
+          { modulo: 'gastos', tarea: 'gestionar_proyectos', label: 'Dar de alta y baja proyectos del Taller',
+            descripcion: 'Permite crear proyectos nuevos y darlos de baja cuando terminan, para poder imputarles gastos. Hasta ahora los proyectos solo se podían crear tocando la base de datos directamente. No lleva alcance por unidad de negocio porque la tabla de proyectos no distingue unidades: un proyecto es visible desde cualquiera.' },
           { modulo: 'caja',   tarea: 'ver_listado',       label: 'Ver el listado completo de cajas de la empresa',
             descripcion: 'Al entrar a Caja muestra el listado completo de la empresa: los saldos de todas las personas, con acceso a la ficha de cada una. Sin esta tarea, la persona entra directo a su propia ficha y no ve a nadie más.' },
           { modulo: 'caja',   tarea: 'retiros_todos',     label: 'Ver los retiros personales de todos',
@@ -875,8 +877,13 @@
             descripcion: 'Muestra las cobranzas cargadas por cualquier persona, con sus cheques, sus fotos y el historial de cada una. Sin esta tarea, el módulo solo muestra lo propio. Es la tarea de quien recibe la cartera en administración.' },
           { modulo: 'cobranzas', tarea: 'procesar',       label: 'Marcar cobranzas como procesadas (y reabrirlas)',
             descripcion: 'Permite marcar una cobranza como procesada una vez que los cheques se depositaron o se asentaron, y volver a abrirla con motivo obligatorio si hubo que corregir algo. Una cobranza procesada no se puede editar, así que esta tarea es la que cierra el circuito.' },
-          { modulo: 'cobranzas', tarea: 'editar_anular',  label: 'Editar y anular cobranzas de cualquier persona',
-            descripcion: 'Permite corregir o anular una cobranza cargada por otra persona, con motivo obligatorio al anular. Anular una cobranza saca sus cheques de la cartera, así que el número de cheque queda libre para volver a cargarse.' },
+          // El límite va en el LABEL y no solo en la descripción: el label es lo
+          // que se lee al tildar, y la descripción está detrás del "?". Con
+          // "Editar y anular cobranzas de cualquier persona" quien otorga cree
+          // que habilita a corregir también lo ya procesado, y editar_cobranza
+          // lo rechaza para todos (estado <> 'registrada'), tenga o no la tarea.
+          { modulo: 'cobranzas', tarea: 'editar_anular',  label: 'Editar cobranzas ajenas sin procesar y anular cualquiera',
+            descripcion: 'Permite corregir y anular cobranzas cargadas por otras personas, con dos límites distintos. EDITAR solo se puede mientras la cobranza está registrada: una vez procesada queda bloqueada para todos, y para corregirla primero hay que reabrirla (eso lo hace quien tiene "Marcar cobranzas como procesadas"). ANULAR se puede en cualquier estado, también una ya procesada, salvo que ya esté anulada; el motivo es obligatorio. Anular saca sus cheques de la cartera, así que el número de cheque queda libre para volver a cargarse.' },
         ],
       },
       {
