@@ -4276,10 +4276,30 @@
       })
     }
 
-    // El uid va PRIMERO en la ruta a propósito: es el patrón de RLS de Storage
-    // (foldername[1] = auth.uid()) que ya usa gastos.html. El 'mp/' va después
-    // para separar lo de este módulo sin romper esa policy. El sufijo random
-    // evita que dos adjuntos subidos en el mismo milisegundo se pisen.
+    // RUTA: {uid}/mp/{timestamp}-{azar}.{ext}. El uid va PRIMERO por convención
+    // del proyecto —gastos.html arma {uid}/{timestamp}.{ext}— y porque de eso
+    // dependen las policies del bucket 'comprobantes'. El sufijo random evita
+    // que dos adjuntos subidos en el mismo milisegundo se pisen.
+    //
+    // OJO, esto NO siempre fue una garantía. Hasta el 16/09/2026 este comentario
+    // decía que el uid iba primero "porque es el patrón de RLS de Storage que ya
+    // usa gastos.html", y era FALSO: las dos policies de 'comprobantes' eran
+    // `bucket_id = 'comprobantes'` a secas, así que cualquier logueado listaba y
+    // bajaba las fotos de todos. El patrón existía en el proyecto (el bucket
+    // 'cobranzas' lo tuvo desde el día uno) pero este bucket no.
+    //
+    // ESTADO VERIFICADO contra pg_policy el 17/09/2026 —las policies las mantiene
+    // el chat de arquitectura, no este módulo—:
+    //   · INSERT: solo a la carpeta propia (foldername[1] = auth.uid()).
+    //   · SELECT: lo propio; o lo de 'mp/' con materia_prima:ver_todo; o lo de la
+    //     raíz (Gastos) con gastos:ver_exportar o cuentas_corrientes:ver_todo.
+    // Por eso el 'mp/' ya no es cosmético: es lo que distingue una foto de Ingreso
+    // de un comprobante de Gastos para la policy. Cambiar este formato de ruta
+    // deja las fotos nuevas fuera de las dos ramas.
+    // Resto conocido: el SELECT usa tiene_tarea() y no tiene_tarea_alcance(), así
+    // que ver_todo en UNA unidad deja ver las fotos 'mp/' de TODAS.
+    // Al cerrarlo no se rompió nada existente: los 153 archivos del bucket (los
+    // de Gastos y los 47 'mp/') tienen el uid de su dueño como primer segmento.
     async function subirArchivoMp(archivo) {
       const ext  = (archivo.name.split('.').pop() || 'jpg').toLowerCase()
       const azar = Math.random().toString(36).slice(2, 8)
@@ -4290,6 +4310,20 @@
         .upload(path, archivo, { contentType: archivo.type, upsert: false })
       if (error) throw new Error(`No se pudo subir el archivo: ${error.message}`)
 
+      // PENDIENTE DE SEGURIDAD: la URL se firma a 10 AÑOS y se guarda en la base.
+      // Una URL firmada funciona SIN SESIÓN y NO se revoca cerrando la policy:
+      // las policies de arriba se cerraron, pero los links ya emitidos siguen
+      // abriendo el archivo para cualquiera que los tenga, hasta dentro de una
+      // década. La única forma de invalidar uno hoy es mover el archivo.
+      // Esta función alimenta TRES columnas, con el mismo problema en las tres:
+      // materia_prima_ingresos.foto_url (la foto del comprobante) y
+      // materia_prima_items.ficha_tecnica_url / foto_lote_url (los adjuntos del
+      // renglón). Al 17/09/2026 las dos de items están en null en las 26 filas,
+      // así que el daño hoy es de foto_url; los adjuntos lo heredan en cuanto se
+      // cargue el primero.
+      // LA MIGRACIÓN: guardar la RUTA y firmar al mirar, con expiración corta
+      // (cobranzas.html firma a 300 s). Migrar las filas ya cargadas toca DATOS y
+      // necesita aprobación de Facu antes de correrse.
       const { data: firmada, error: errorFirma } = await supabase.storage
         .from('comprobantes')
         .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10) // 10 años
