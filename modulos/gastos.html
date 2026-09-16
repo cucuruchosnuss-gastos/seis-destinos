@@ -4486,7 +4486,87 @@
     // WIZARD — FOTO Y OCR
     // ═══════════════════════════════════════════════════════════════════════
 
+    // ── Compresión de la foto del comprobante ────────────────────────────
+    // Se comprime EN EL CELULAR, antes de subirla y de mandarla a leer: una
+    // foto de cámara pesa varios MB (en el bucket, los JPEG promedian 3,4 MB y
+    // llegan a 5,5) y viaja por la red de una fábrica. Mismo patrón que
+    // cobranzas.html.
+    //
+    // 2576 px es el lado largo al que miran los modelos de mayor resolución.
+    // Con uno de nivel estándar (1568 px) el excedente no se aprovecha, pero
+    // tampoco empeora la lectura: conviene tenerlo presente al evaluar modelos.
+    const LADO_MAXIMO_FOTO = 2576
+    const CALIDAD_JPEG_FOTO = 0.85
+    const BYTES_MAXIMO_COMPROBANTE = 10 * 1024 * 1024
+
+    // Sube cada vez que se elige o se descarta una foto. Todo lo que termina
+    // después de un await lo compara: si la persona ya eligió otra, el
+    // resultado viejo no pisa el estado de la nueva.
+    let turnoFoto = 0
+
+    async function comprimirFoto(archivo) {
+      let fuente
+      if (typeof createImageBitmap === 'function') {
+        try {
+          // imageOrientation 'from-image' aplica el EXIF: sin eso las fotos
+          // verticales del celular llegan acostadas y el OCR lee de costado.
+          fuente = await createImageBitmap(archivo, { imageOrientation: 'from-image' })
+        } catch {
+          fuente = await createImageBitmap(archivo)
+        }
+      } else {
+        fuente = await imagenDesdeArchivo(archivo)
+      }
+
+      const ancho = fuente.width, alto = fuente.height
+      const lado = Math.max(ancho, alto)
+      // Sin agrandar: una foto chica se deja en su tamaño.
+      const escala = lado > LADO_MAXIMO_FOTO ? LADO_MAXIMO_FOTO / lado : 1
+      const lienzo = document.createElement('canvas')
+      lienzo.width = Math.round(ancho * escala)
+      lienzo.height = Math.round(alto * escala)
+      lienzo.getContext('2d').drawImage(fuente, 0, 0, lienzo.width, lienzo.height)
+      if (typeof fuente.close === 'function') fuente.close()
+
+      const blob = await lienzoABlob(lienzo, CALIDAD_JPEG_FOTO)
+      if (!blob) return null
+      // Un File con extensión .jpg: subirFoto() saca de ahí la extensión y el
+      // contentType, así que la ruta y el tipo guardados quedan coherentes.
+      const nombre = String(archivo.name || 'foto').replace(/\.[^.]*$/, '') + '.jpg'
+      return new File([blob], nombre, { type: 'image/jpeg' })
+    }
+
+    function imagenDesdeArchivo(archivo) {
+      return new Promise((resolver, rechazar) => {
+        const img = new Image()
+        img.onload = () => resolver(img)
+        img.onerror = () => rechazar(new Error('No se pudo leer la imagen'))
+        img.src = URL.createObjectURL(archivo)
+      })
+    }
+
+    function lienzoABlob(lienzo, calidad) {
+      return new Promise(resolver => lienzo.toBlob(resolver, 'image/jpeg', calidad))
+    }
+
+    // Un PDF (o cualquier cosa que no sea imagen) pasa sin tocar. Si la
+    // compresión falla —un HEIC que el navegador no sabe decodificar, por
+    // ejemplo— se usa el ORIGINAL, que es lo que pasaba antes: comprimir es
+    // una mejora, no un requisito para cargar el gasto.
+    async function prepararArchivoComprobante(archivo) {
+      if (!String(archivo?.type ?? '').startsWith('image/')) return archivo
+      try {
+        const comprimido = await comprimirFoto(archivo)
+        if (comprimido) return comprimido
+        console.error('[foto] la compresión no devolvió nada; se usa el original')
+      } catch (err) {
+        console.error('[foto] no se pudo comprimir; se usa el original', err)
+      }
+      return archivo
+    }
+
     function resetearZonaFoto() {
+      turnoFoto++
       const zona = document.getElementById('zona-foto')
       zona.className = 'zona-foto'
       zona.innerHTML = `
@@ -5872,11 +5952,29 @@
     })
 
     document.getElementById('input-foto').addEventListener('change', async (e) => {
-      const archivo = e.target.files?.[0]
-      if (!archivo) return
+      const original = e.target.files?.[0]
+      if (!original) return
 
-      if (archivo.size > 10 * 1024 * 1024) {
+      // Un PDF no se comprime, así que su tamaño se mide acá, antes de tocar
+      // nada: la foto que ya estaba elegida queda como estaba.
+      const esImagen = String(original.type ?? '').startsWith('image/')
+      if (!esImagen && original.size > BYTES_MAXIMO_COMPROBANTE) {
+        mostrarError('El archivo supera los 10 MB. Usá uno más liviano.')
+        return
+      }
+
+      const turno = ++turnoFoto
+      document.getElementById('btn-foto-siguiente').disabled = true
+      mostrarEstadoOcr('cargando', 'Preparando la foto…')
+      const archivo = await prepararArchivoComprobante(original)
+      if (turno !== turnoFoto) return
+      // Una imagen se mide DESPUÉS de comprimir: una foto de cámara grande
+      // entra sin problema. Solo llega acá pasada de tamaño si la compresión
+      // falló y quedó el original.
+      if (archivo.size > BYTES_MAXIMO_COMPROBANTE) {
         mostrarError('La imagen supera los 10 MB. Usá una más pequeña.')
+        resetearZonaFoto()
+        document.getElementById('btn-cambiar-foto').style.display = 'none'
         return
       }
 
@@ -5903,6 +6001,9 @@
 
       try {
         const resultado = await llamarOCR(archivo)
+        // Otra foto elegida (o descartada) mientras se leía esta: su lectura
+        // no puede prellenar el formulario de la nueva.
+        if (turno !== turnoFoto) return
         if (resultado?.ok && resultado.datos) {
           prellenarPaso2(resultado.datos)
           const n = Object.values(resultado.datos).filter(v => v != null).length
@@ -5914,10 +6015,12 @@
           mostrarEstadoOcr('error', resultado?.mensaje || 'No se pudo leer el comprobante. Completá los datos manualmente.')
         }
       } catch (err) {
+        if (turno !== turnoFoto) return
         console.error('OCR error:', err)
         mostrarEstadoOcr('error', 'Error al procesar la imagen. Continuá completando los datos.')
       }
 
+      if (turno !== turnoFoto) return
       document.getElementById('btn-foto-siguiente').disabled = false
     })
 
