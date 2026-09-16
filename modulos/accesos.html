@@ -1052,6 +1052,17 @@
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Todo texto que no sea literal del código se escapa antes de entrar a
+    // innerHTML (regla del proyecto, ver CLAUDE.md). En esta pantalla es el
+    // peor caso: nombre, apellido y email de una solicitud los carga alguien
+    // SIN cuenta, y los mira el super_admin que reparte los permisos. Mismo
+    // helper que gastos.html (9a0e9a8).
+    function esc(valor) {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
     function soloDigitos(s) {
       return (s || '').replace(/\D/g, '')
     }
@@ -1191,23 +1202,23 @@
         const emp = match.empleado
         const unidadNombre = emp?.unidades_negocio?.nombre
         const chipUnidad = unidadNombre
-          ? `<span class="acceso__chip-unidad" style="background:${colorUnidad(unidadNombre)};">${unidadNombre}</span>`
+          ? `<span class="acceso__chip-unidad" style="background:${colorUnidad(unidadNombre)};">${esc(unidadNombre)}</span>`
           : ''
 
         let bloqueEstado = ''
-        let acciones = `<button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${sol.id}">Rechazar</button>`
+        let acciones = `<button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${esc(sol.id)}">Rechazar</button>`
 
         if (match.tipo === 'match') {
-          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--match"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Match encontrado — ${emp.rol || 'sin puesto registrado'}</div>`
+          bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--match"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Match encontrado — ${esc(emp.rol || 'sin puesto registrado')}</div>`
           acciones = `
-            <button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${sol.id}">Rechazar</button>
-            <button type="button" class="btn btn--exito btn-aprobar-solicitud" data-id="${sol.id}">Aprobar</button>
+            <button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${esc(sol.id)}">Rechazar</button>
+            <button type="button" class="btn btn--exito btn-aprobar-solicitud" data-id="${esc(sol.id)}">Aprobar</button>
           `
         } else if (match.tipo === 'sin_match') {
           bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--alerta"><i data-lucide="alert-triangle" style="width:14px;height:14px;"></i> No se encontró un empleado con este CUIL — se puede crear uno nuevo al aprobar</div>`
           acciones = `
-            <button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${sol.id}">Rechazar</button>
-            <button type="button" class="btn btn--exito btn-aprobar-solicitud" data-id="${sol.id}">Aprobar</button>
+            <button type="button" class="btn btn--rechazar btn-rechazar-solicitud" data-id="${esc(sol.id)}">Rechazar</button>
+            <button type="button" class="btn btn--exito btn-aprobar-solicitud" data-id="${esc(sol.id)}">Aprobar</button>
           `
         } else if (match.tipo === 'inactivo') {
           bloqueEstado = `<div class="acceso__estado-texto acceso__estado-texto--alerta"><i data-lucide="user-x" style="width:14px;height:14px;"></i> El CUIL corresponde a un empleado marcado como inactivo</div>`
@@ -1218,14 +1229,14 @@
         const nombreCompleto = [sol.nombre, sol.apellido].filter(Boolean).join(' ')
 
         return `
-          <div class="tarjeta-acceso" data-id="${sol.id}">
-            <div class="acceso__avatar" style="background:${colorAvatar(nombreCompleto)};">${iniciales(nombreCompleto)}</div>
+          <div class="tarjeta-acceso" data-id="${esc(sol.id)}">
+            <div class="acceso__avatar" style="background:${colorAvatar(nombreCompleto)};">${esc(iniciales(nombreCompleto))}</div>
             <div class="acceso__cuerpo">
               <div class="acceso__fila1">
-                <span class="acceso__nombre">${nombreCompleto}</span>
+                <span class="acceso__nombre">${esc(nombreCompleto)}</span>
                 ${chipUnidad}
               </div>
-              <div class="acceso__email">${sol.email}</div>
+              <div class="acceso__email">${esc(sol.email)}</div>
               ${bloqueEstado}
               <div class="acceso__acciones">${acciones}</div>
             </div>
@@ -1283,7 +1294,7 @@
         const chipsModulos = modulos.length
           ? modulos.map(m => {
               const info = MODULOS_INFO.find(i => i.key === m)
-              return `<span class="chip-modulo">${info ? info.label : m}</span>`
+              return `<span class="chip-modulo">${esc(info ? info.label : m)}</span>`
             }).join('')
           : `<span class="acceso__estado-texto--neutro" style="font-size:0.75rem;">Sin módulos habilitados</span>`
 
@@ -1293,19 +1304,19 @@
         const etiquetaRol  = esSuperAdmin ? 'Super admin' : 'Usuario'
 
         return `
-          <div class="tarjeta-acceso" data-id="${emp.id}">
-            <div class="acceso__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+          <div class="tarjeta-acceso" data-id="${esc(emp.id)}">
+            <div class="acceso__avatar" style="background:${colorAvatar(emp.nombre)};">${esc(iniciales(emp.nombre))}</div>
             <div class="acceso__cuerpo">
               <div class="acceso__fila1">
-                <span class="acceso__nombre">${emp.nombre}</span>
+                <span class="acceso__nombre">${esc(emp.nombre)}</span>
                 <span class="chip-rol chip-rol--${esSuperAdmin ? 'super_admin' : 'usuario'}">${etiquetaRol}</span>
               </div>
-              <div class="acceso__email">${formatearCuil(emp.cuil)}</div>
+              <div class="acceso__email">${esc(formatearCuil(emp.cuil))}</div>
               <div class="acceso__acciones" style="margin-top:0.5rem;">${chipsModulos}</div>
               ${(puedeEditar || puedeQuitarMfa) ? `
                 <div class="acceso__acciones">
-                  ${puedeEditar ? `<button type="button" class="btn btn--secundario btn-editar-usuario" data-id="${emp.id}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Editar</button>` : ''}
-                  ${puedeQuitarMfa ? `<button type="button" class="btn btn--rechazar btn-quitar-mfa" data-id="${emp.id}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Quitar verificación en dos pasos</button>` : ''}
+                  ${puedeEditar ? `<button type="button" class="btn btn--secundario btn-editar-usuario" data-id="${esc(emp.id)}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Editar</button>` : ''}
+                  ${puedeQuitarMfa ? `<button type="button" class="btn btn--rechazar btn-quitar-mfa" data-id="${esc(emp.id)}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Quitar verificación en dos pasos</button>` : ''}
                 </div>
               ` : ''}
             </div>
@@ -1404,8 +1415,8 @@
                   </label>
                   ${a.todas ? '' : estado.maestros.unidadesNegocio.map(u => `
                     <label class="fila-tarea">
-                      <input type="checkbox" data-alcance-clave="${clave}" data-alcance-unidad="${u.id}" ${a.unidades.has(u.id) ? 'checked' : ''}>
-                      <span>${u.nombre}</span>
+                      <input type="checkbox" data-alcance-clave="${clave}" data-alcance-unidad="${esc(u.id)}" ${a.unidades.has(u.id) ? 'checked' : ''}>
+                      <span>${esc(u.nombre)}</span>
                     </label>
                   `).join('')}
                 </div>`
@@ -1419,8 +1430,8 @@
               const avisoModulo = avisoModuloDeRequerida(t.requiere)
               subDependencia = `
                 <div class="sub-dependencia">
-                  Falta tildar <strong>"${labelDeTarea(t.requiere)}"</strong>.
-                  ${avisoModulo}Sin esa tarea los saldos de cuenta corriente se calculan incompletos, sin ningún aviso.
+                  Falta tildar <strong>"${esc(labelDeTarea(t.requiere))}"</strong>.
+                  ${esc(avisoModulo)}Sin esa tarea los saldos de cuenta corriente se calculan incompletos, sin ningún aviso.
                 </div>`
             }
 
@@ -1552,9 +1563,9 @@
 
         return `
           <div class="fila-modulo ${info.proximamente ? 'fila-modulo--deshabilitada' : ''}">
-            <span class="fila-modulo__nombre">${info.label} ${candado}</span>
+            <span class="fila-modulo__nombre">${esc(info.label)} ${candado}</span>
             <label class="toggle">
-              <input type="checkbox" data-modulos="${info.keys.join(',')}" ${checked ? 'checked' : ''} ${info.proximamente ? 'disabled' : ''}>
+              <input type="checkbox" data-modulos="${esc(info.keys.join(','))}" ${checked ? 'checked' : ''} ${info.proximamente ? 'disabled' : ''}>
               <span class="toggle__riel"></span>
             </label>
           </div>
@@ -1596,7 +1607,7 @@
       titulo.hidden = false
       select.hidden = false
       select.innerHTML = `<option value="">Elegí una unidad de negocio…</option>` +
-        estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+        estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
       select.value = estado.modal.unidadElegida || ''
     }
 
@@ -1895,7 +1906,7 @@
       `
       document.getElementById('filtro-modulo-usuarios').innerHTML = `
         <option value="">Todos los módulos</option>
-        ${MODULOS_INFO.filter(m => !m.proximamente).map(m => `<option value="${m.key}">${m.label}</option>`).join('')}
+        ${MODULOS_INFO.filter(m => !m.proximamente).map(m => `<option value="${esc(m.key)}">${esc(m.label)}</option>`).join('')}
       `
 
       await cargarTodo()
