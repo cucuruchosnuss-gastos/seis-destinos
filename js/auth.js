@@ -267,14 +267,31 @@ export async function actualizarEmail(nuevoEmail) {
   if (error) throw new Error(_traducirError(error.message))
 }
 
-// Busca en empleados por CUIL normalizado, vía RPC (nunca SELECT directo:
-// la tabla empleados no es legible sin sesión). Devuelve { nombre, rol } o null.
-export async function buscarEmpleadoPorCuil(cuil) {
-  const { data, error } = await supabase.rpc('buscar_empleado_por_cuil', { p_cuil: cuil })
+// Busca en empleados por CUIL normalizado a través de la Edge Function
+// buscar-empleado-cuil, que exige un token de Turnstile antes de consultar
+// (nunca SELECT directo: la tabla empleados no es legible sin sesión; y ya no
+// la RPC directa, que dejaba enumerar CUILs con la key pública).
+// captchaToken: token de un solo uso del widget del paso del CUIL.
+// Devuelve { nombre, rol } o null.
+export async function buscarEmpleadoPorCuil(cuil, captchaToken) {
+  const { data, error } = await supabase.functions.invoke('buscar-empleado-cuil', {
+    body: { cuil, captchaToken },
+  })
 
-  if (error) throw new Error('No se pudo verificar el CUIL. Probá de nuevo.')
+  if (error) {
+    // Con un status que no es 2xx, invoke devuelve el error y el cuerpo de la
+    // función queda en error.context (la Response). Los mensajes de la
+    // función ya vienen en español; si no se puede leer, cae al genérico.
+    let cuerpo = null
+    try { cuerpo = await error.context?.json() } catch { cuerpo = null }
+    if (cuerpo?.esErrorCaptcha) {
+      throw new Error('La verificación de seguridad falló. Recargá la página e intentá de nuevo.')
+    }
+    throw new Error(cuerpo?.mensaje || 'No se pudo verificar el CUIL. Probá de nuevo.')
+  }
+  if (!data?.ok) throw new Error(data?.mensaje || 'No se pudo verificar el CUIL. Probá de nuevo.')
 
-  return data && data.length ? data[0] : null
+  return data.empleado ?? null
 }
 
 // Crea la cuenta en Supabase Auth y la fila en solicitudes_acceso a través

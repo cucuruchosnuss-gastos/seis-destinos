@@ -6,6 +6,16 @@ const HEADERS_CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Copia de LARGO_MINIMO_CONTRASENA de js/utils.js: una Edge Function no puede
+// importar de ahí. Si se cambia una, hay que cambiar la otra (y el mínimo
+// configurado en el panel de Auth, que es el que manda).
+const LARGO_MINIMO_CONTRASENA = 10
+
+// Mismos caracteres que rechaza el CHECK chk_solicitud_texto_sin_html de
+// solicitudes_acceso (sobre nombre, apellido y email).
+const CARACTERES_PROHIBIDOS = /[<>]/
+const CONSTRAINT_TEXTO_SIN_HTML = 'chk_solicitud_texto_sin_html'
+
 // Endpoint público — se llama ANTES de que exista ninguna sesión (es el
 // paso que crea la cuenta). No requiere Authorization: Bearer.
 Deno.serve(async (req) => {
@@ -42,8 +52,23 @@ Deno.serve(async (req) => {
   if (!nombreCompleto || !nombre || !email || !contrasena || !cuil) {
     return json({ ok: false, mensaje: 'Faltan campos requeridos.' }, 400)
   }
-  if (contrasena.length < 6) {
-    return json({ ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres.' }, 400)
+  if (contrasena.length < LARGO_MINIMO_CONTRASENA) {
+    return json({ ok: false, mensaje: `La contraseña debe tener al menos ${LARGO_MINIMO_CONTRASENA} caracteres.` }, 400)
+  }
+
+  // Lo mismo que exige chk_solicitud_texto_sin_html, pero ANTES de crear la
+  // cuenta: sin esto se creaba la cuenta, fallaba el insert, se borraba la
+  // cuenta y la persona leía "probá de nuevo en unos minutos", cuando
+  // reintentar falla siempre. Se chequea campo por campo para poder decir cuál.
+  //
+  // En el camino CON match el nombre sale de la tabla empleados y la persona
+  // no puede editarlo: si tuviera < o >, no podría registrarse. Verificado el
+  // 16/09/2026: ningún empleado tiene esos caracteres en el nombre
+  // (SELECT id, nombre FROM empleados WHERE nombre ~ '[<>]' → 0 filas).
+  for (const [campo, valor] of [['nombre', nombre], ['apellido', apellido], ['email', email]] as const) {
+    if (CARACTERES_PROHIBIDOS.test(String(valor ?? ''))) {
+      return json({ ok: false, mensaje: `El ${campo} tiene caracteres que no se permiten (< o >). Sacalos e intentá de nuevo.` }, 400)
+    }
   }
 
   // ── Verificación del CAPTCHA (Cloudflare Turnstile) ────────────────────────
@@ -128,6 +153,14 @@ Deno.serve(async (req) => {
     const { error: errorRollback } = await supabaseAdmin.auth.admin.deleteUser(usuarioId)
     if (errorRollback) {
       console.error('CRÍTICO: no se pudo revertir la cuenta huérfana', usuarioId, '—', errorRollback.message)
+    }
+    // Red de último recurso: la validación de arriba ya lo ataja, pero si
+    // igual llega (el CHECK cambió, o se agregó un campo), el genérico
+    // "probá de nuevo" mentiría. Se exige el nombre del constraint además del
+    // código 23514: otro CHECK futuro con el mismo código no es este problema.
+    const textoError = `${errorSolicitud.message ?? ''} ${errorSolicitud.details ?? ''}`
+    if (errorSolicitud.code === '23514' && textoError.includes(CONSTRAINT_TEXTO_SIN_HTML)) {
+      return json({ ok: false, mensaje: 'El nombre, el apellido o el email tienen caracteres que no se permiten (< o >). Sacalos e intentá de nuevo.' }, 400)
     }
     return json({ ok: false, mensaje: 'No se pudo registrar la solicitud. Probá de nuevo en unos minutos.' }, 500)
   }

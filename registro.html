@@ -45,6 +45,8 @@
           <input type="text" id="cuil" name="cuil" placeholder="20-12345678-9" autocomplete="off" required>
         </div>
 
+        <div id="turnstile-cuil"></div>
+
         <div class="alerta alerta--error" id="alerta-error-cuil" role="alert"></div>
 
         <div class="formulario__acciones">
@@ -195,8 +197,11 @@
       document.getElementById(id).classList.remove('alerta--visible')
     }
 
-    // ── Turnstile: dos widgets, uno por formulario de envío ──────────────────
+    // ── Turnstile: tres widgets, uno por formulario de envío ─────────────────
+    // (el del CUIL, porque la búsqueda pasa por una Edge Function que lo exige,
+    // y uno por cada formulario de solicitud)
     const TURNSTILE_SITEKEY = '0x4AAAAAAEJjFW7fQjfhZCTy'
+    let widgetCuil = null
     let widgetMatch = null
     let widgetSinMatch = null
     let promesaTurnstile = null
@@ -224,6 +229,14 @@
       if (widgetId === null) return ''
       return window.turnstile?.getResponse(widgetId) ?? ''
     }
+
+    // El del CUIL se renderiza al cargar, a diferencia de los otros dos:
+    // #paso-cuil ya está visible. Sin await, para no frenar el resto de la
+    // página mientras carga Cloudflare; hasta que termine, tokenDe(null)
+    // devuelve '' y el submit pide esperar.
+    renderizarWidget('#turnstile-cuil')
+      .then(id => { widgetCuil = id })
+      .catch(err => console.error('No se pudo mostrar la verificación de seguridad del CUIL:', err))
 
     // ── Requisitos de la contraseña ─────────────────────────────────────────
     // Un par (campo, botón) por formulario. El gate es solo por requisitos: acá
@@ -276,12 +289,18 @@
         return
       }
 
+      const captchaToken = tokenDe(widgetCuil)
+      if (!captchaToken) {
+        mostrarAlerta('alerta-error-cuil', 'Esperá a que termine la verificación de seguridad.')
+        return
+      }
+
       const btn = document.getElementById('btn-buscar-cuil')
       btn.classList.add('btn--cargando')
       btn.disabled = true
 
       try {
-        const empleado = await buscarEmpleadoPorCuil(cuilLimpio)
+        const empleado = await buscarEmpleadoPorCuil(cuilLimpio, captchaToken)
         pasoCuil.hidden = true
 
         if (empleado) {
@@ -295,6 +314,8 @@
         }
       } catch (error) {
         mostrarAlerta('alerta-error-cuil', error.message)
+        // Token de un solo uso: sin reset, el reintento manda uno ya consumido.
+        window.turnstile?.reset(widgetCuil)
       } finally {
         btn.classList.remove('btn--cargando')
         btn.disabled = false
