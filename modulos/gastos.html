@@ -2372,12 +2372,15 @@
       estado.miRolApp     = emp.rol_app
 
       // Tareas granulares de los dos módulos lógicos que usa este archivo
-      // (ver tieneTarea()).
+      // (ver tieneTarea()). 'cuentas_corrientes' se carga SOLO para saber si
+      // la policy del bucket 'comprobantes' deja ver la foto de un gasto ajeno
+      // (cuentas_corrientes:ver_todo es una de sus dos puertas): ver
+      // puedeVerFotoComprobante().
       const { data: tareas } = await supabase
         .from('empleado_tareas')
         .select('modulo, tarea')
         .eq('empleado_id', emp.id)
-        .in('modulo', ['gastos', 'facturas_pendientes'])
+        .in('modulo', ['gastos', 'facturas_pendientes', 'cuentas_corrientes'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
     }
@@ -3261,6 +3264,137 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // FOTO DEL COMPROBANTE — se guarda la RUTA y se firma al mirar
+    // ═══════════════════════════════════════════════════════════════════════
+    // gastos.foto_url y facturas_pendientes.comprobante_url guardan la RUTA en
+    // el bucket 'comprobantes' ({uid}/{archivo}). Las filas anteriores a
+    // 2026-09 guardan una URL firmada a 10 años: se les extrae la ruta y se
+    // firma igual, así el código anda antes y después de migrar esas filas.
+    //
+    // La firma pasa por la policy SELECT del bucket: se ve lo de la carpeta
+    // propia, y lo de la raíz ({uid}/{archivo}, que es donde sube Gastos) con
+    // gastos:ver_exportar o cuentas_corrientes:ver_todo.
+    //
+    // "VENCIDO" NO EXISTE DENTRO DE LA APP: se firma en el momento del toque y
+    // se abre enseguida, así que la app nunca guarda una firma vieja. Lo único
+    // que vence es una pestaña ya abierta que se recarga después de
+    // SEGUNDOS_FIRMA_COMPROBANTE; volver a tocar el botón lo resuelve.
+    //
+    // SIN PERMISO vs NO EXISTE: Storage NO los distingue. Los dos vuelven con
+    // code 'NoSuchKey' / statusCode '404' (la doc lo dice: "si existe, no tenés
+    // permiso"), y el HTTP es 400 en los dos. Así que se distingue con lo que
+    // la app ya sabe ANTES de pedir: si la policy dejaría ver esa ruta. Nunca
+    // se lee el texto del mensaje.
+
+    const BUCKET_COMPROBANTES = 'comprobantes'
+    const SEGUNDOS_FIRMA_COMPROBANTE = 300
+
+    const MENSAJES_FOTO = {
+      sin_permiso:  'La foto de este comprobante está guardada, pero no tenés permiso para verla. Pedísela a quien cargó el gasto.',
+      no_encontrado: 'No se encontró el archivo de la foto en el servidor. Avisá para que lo revisen.',
+      no_se_sabe:   'No se pudo abrir la foto: el archivo no está o no tenés permiso para verlo.',
+      sesion:       'No se pudo abrir la foto porque tu sesión no es válida. Volvé a entrar e intentá de nuevo.',
+      ruta:         'No se pudo leer dónde está guardada la foto de este comprobante.',
+      bloqueada:    'El navegador bloqueó la pestaña de la foto. Permití ventanas emergentes para este sitio y volvé a tocar el botón.',
+      otro:         'No se pudo abrir la foto. Probá de nuevo en un momento.',
+    }
+
+    // Ruta en el bucket a partir de lo guardado: una ruta, o una URL firmada
+    // vieja. null si no se puede saber.
+    function rutaDeComprobante(valor) {
+      const v = String(valor ?? '').trim()
+      if (!v) return null
+      if (/^https?:\/\//i.test(v)) {
+        const m = v.match(/\/object\/sign\/comprobantes\/([^?#]+)/)
+        if (!m) return null
+        try { return decodeURIComponent(m[1]) } catch { return null }
+      }
+      return v
+    }
+
+    // ¿La policy SELECT del bucket dejaría ver esta ruta? true / false, o null
+    // si la ruta no tiene la forma de las de Gastos y la regla es otra (la de
+    // Ingreso, por ejemplo): ahí decide Storage.
+    function puedeVerFotoComprobante(ruta) {
+      const partes = String(ruta ?? '').split('/')
+      if (partes.length < 2 || !partes[0]) return null
+      if (partes[0] === estado.sesion?.user?.id) return true
+      if (partes.length !== 2) return null
+      return tieneTarea('gastos', 'ver_exportar') || tieneTarea('cuentas_corrientes', 'ver_todo')
+    }
+
+    // Por los campos estructurados del error, nunca por el texto. Verificado
+    // contra Storage real (supabase-js 2.116.0): objeto inexistente o sin
+    // permiso → code 'NoSuchKey', statusCode '404'; token inválido →
+    // code 'AccessDenied', statusCode '403'. error.status es 400 en los dos.
+    function clasificarErrorFirma(error) {
+      const codigo = String(error?.code ?? '')
+      const cuerpo = String(error?.statusCode ?? '')
+      if (codigo === 'NoSuchKey' || cuerpo === '404') return 'no_encontrado'
+      if (codigo === 'InvalidJWT' || codigo === 'AccessDenied' || cuerpo === '401' || cuerpo === '403') return 'sesion'
+      return 'otro'
+    }
+
+    async function firmarComprobante(ruta) {
+      const pedir = () => supabase.storage.from(BUCKET_COMPROBANTES).createSignedUrl(ruta, SEGUNDOS_FIRMA_COMPROBANTE)
+      let { data, error } = await pedir()
+      // Un token vencido se renueva y se reintenta UNA vez, sin avisar.
+      if (error && clasificarErrorFirma(error) === 'sesion') {
+        const { error: errorRefresco } = await supabase.auth.refreshSession()
+        if (!errorRefresco) ({ data, error } = await pedir())
+      }
+      if (error || !data?.signedUrl) return { url: null, falla: error ? clasificarErrorFirma(error) : 'otro', error }
+      return { url: data.signedUrl, falla: null, error: null }
+    }
+
+    function mensajeFallaFoto(falla, permisoPrevisto) {
+      if (falla === 'no_encontrado') return permisoPrevisto === true ? MENSAJES_FOTO.no_encontrado : MENSAJES_FOTO.no_se_sabe
+      return MENSAJES_FOTO[falla] ?? MENSAJES_FOTO.otro
+    }
+
+    function htmlSeccionComprobante(valor) {
+      if (!valor) return ''
+      const ruta = rutaDeComprobante(valor)
+      // Sin permiso se dice en el lugar del botón, y NO dice que la foto no
+      // existe: existe.
+      const cuerpo = ruta && puedeVerFotoComprobante(ruta) === false
+        ? `<p class="resumen-fila__etiqueta" style="margin:0;">${esc(MENSAJES_FOTO.sin_permiso)}</p>`
+        : `<button type="button" class="btn btn--secundario" data-ruta-comprobante="${esc(ruta ?? '')}" style="display:inline-flex;width:auto;">Ver foto del comprobante →</button>`
+      return `
+        <div class="resumen-seccion">
+          <div class="resumen-seccion__titulo">Comprobante</div>
+          ${cuerpo}
+        </div>`
+    }
+
+    async function abrirFotoComprobante(ruta) {
+      if (!ruta) { mostrarError(MENSAJES_FOTO.ruta); return }
+      const permiso = puedeVerFotoComprobante(ruta)
+      if (permiso === false) { mostrarError(MENSAJES_FOTO.sin_permiso); return }
+      // La pestaña se abre ANTES del await: abierta después, el bloqueador de
+      // ventanas emergentes del celular la frena porque ya no cuenta como
+      // respuesta al toque. Sin 'noopener' en window.open porque con él
+      // devuelve null y no se la puede redirigir; se corta a mano.
+      const ventana = window.open('', '_blank')
+      if (ventana) ventana.opener = null
+      const r = await firmarComprobante(ruta)
+      if (!r.url) {
+        ventana?.close()
+        console.error('[comprobante] no se pudo firmar', ruta, r.error)
+        mostrarError(mensajeFallaFoto(r.falla, permiso))
+        return
+      }
+      if (ventana) ventana.location.href = r.url
+      else mostrarError(MENSAJES_FOTO.bloqueada)
+    }
+
+    function manejarClickComprobante(e) {
+      const boton = e.target.closest('[data-ruta-comprobante]')
+      if (!boton) return
+      abrirFotoComprobante(boton.dataset.rutaComprobante)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // ARRANQUE INICIAL
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -3283,6 +3417,8 @@
       if (e.key === 'Enter') { e.preventDefault(); crearProyectoDesdePantalla() }
     })
     document.getElementById('proyectos-lista').addEventListener('click', manejarClickProyectos)
+    document.getElementById('detalle-gasto-contenido').addEventListener('click', manejarClickComprobante)
+    document.getElementById('detalle-factura-contenido').addEventListener('click', manejarClickComprobante)
 
     document.querySelectorAll('.segmented-rango__opcion').forEach(btn => {
       btn.addEventListener('click', () => activarFiltroFecha(btn.dataset.rango))
@@ -4477,12 +4613,12 @@
         .from('comprobantes')
         .upload(path, archivo, { contentType: archivo.type, upsert: false })
       if (error) throw new Error(`Error al subir la foto: ${error.message}`)
-      const { data: signedData, error: errorSigned } = await supabase.storage
-        .from('comprobantes')
-        .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10) // 10 años en segundos
-      if (errorSigned) throw new Error('Error al generar el link del comprobante: ' + errorSigned.message)
-      const publicUrl = signedData.signedUrl
-      return publicUrl
+      // Se guarda la RUTA ({uid}/{archivo}), no una URL. Hasta 2026-09 acá se
+      // firmaba a 10 AÑOS y se guardaba la URL: una llave que abre el archivo
+      // sin sesión y que ninguna policy revoca. Ahora se firma al mirar, por
+      // poco tiempo, y esa firma SÍ pasa por la policy del bucket (ver
+      // abrirFotoComprobante).
+      return data.path
     }
 
     function armarGasto() {
@@ -5000,11 +5136,7 @@
           ${fila('Observaciones', g.observaciones)}
         </div>
 
-        ${g.foto_url ? `
-        <div class="resumen-seccion">
-          <div class="resumen-seccion__titulo">Comprobante</div>
-          <a href="${g.foto_url}" target="_blank" rel="noopener" class="btn btn--secundario" style="display:inline-flex;width:auto;">Ver foto del comprobante →</a>
-        </div>` : ''}
+        ${htmlSeccionComprobante(g.foto_url)}
       `
       lucide.createIcons()
 
@@ -5311,11 +5443,7 @@
           ${fila('Observaciones', f.observaciones)}
         </div>
 
-        ${f.comprobante_url ? `
-        <div class="resumen-seccion">
-          <div class="resumen-seccion__titulo">Comprobante</div>
-          <a href="${f.comprobante_url}" target="_blank" rel="noopener" class="btn btn--secundario" style="display:inline-flex;width:auto;">Ver foto del comprobante →</a>
-        </div>` : ''}
+        ${htmlSeccionComprobante(f.comprobante_url)}
       `
       lucide.createIcons()
 
