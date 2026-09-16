@@ -1,0 +1,3056 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cobranzas — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+
+  <style>
+    /* Cualquier regla de autor con `display` le gana al [hidden] del
+       user-agent — es el bug más recurrente del proyecto. Va PRIMERO y con
+       !important, así una clase nueva con display no necesita acordarse de
+       nada. */
+    [hidden] { display: none !important; }
+
+    body {
+      overflow-x: hidden;
+      /* Receta de tarjeta del proyecto, como variables locales: es el patrón
+         para color de módulo y repetir los literales se desincroniza. */
+      --borde-tarjeta:  rgba(26, 42, 82, 0.06);
+      --sombra-tarjeta: 0 1px 2px rgba(26, 42, 82, 0.04);
+      /* Alto de la barra fija de abajo, para que el contenido no quede tapado
+         por ella. Se usa en el padding del contenedor. */
+      --alto-barra-fija: 5.5rem;
+    }
+
+    .cob-contenedor {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 1rem var(--alto-barra-fija);
+      min-width: 0;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+
+    .cob-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1rem;
+      margin: 1rem 0;
+    }
+    .cob-header__volver {
+      color: var(--color-texto-suave);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      flex-shrink: 0;
+      /* 44px de alto de toque: se usa con el celular en una mano. */
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+      padding-right: 0.5rem;
+    }
+    .cob-header__col { display: flex; flex-direction: column; min-width: 0; text-align: right; }
+    .cob-header__marca {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .cob-header__titulo {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-header__punto { color: var(--oliva); font-size: 0.875rem; line-height: 1; }
+
+    /* ── Avisos y banners ────────────────────────────────────────────────── */
+
+    .cob-aviso {
+      border-radius: 12px;
+      padding: 0.75rem 0.875rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      background: var(--color-superficie);
+      color: var(--color-texto);
+      border-left: 4px solid var(--color-borde);
+    }
+    /* Variantes DESPUÉS de su base: misma especificidad, decide el orden. */
+    .cob-aviso--oliva { background: var(--oliva-suave); border-left-color: var(--oliva); color: var(--oliva-oscuro); }
+    .cob-aviso--alerta { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); }
+    .cob-aviso--ambar { background: var(--amarillo-suave); border-left-color: var(--amarillo); color: var(--amarillo-oscuro); }
+    .cob-aviso__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.625rem; min-width: 0; }
+
+    /* ── Botones ─────────────────────────────────────────────────────────── */
+
+    .cob-btn {
+      /* 44px mínimo de alto: el contexto es un repartidor parado en la puerta
+         de un cliente con el celular en una mano. */
+      min-height: 44px;
+      padding: 0.6875rem 1rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      cursor: pointer;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cob-btn--primario {
+      background: var(--oliva);
+      border-color: var(--oliva);
+      color: #fff;
+    }
+    .cob-btn--alerta { border-color: var(--bordo); color: var(--bordo-oscuro); }
+    .cob-btn--chico { min-height: 40px; padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+    .cob-btn--ancho { width: 100%; }
+    .cob-btn--foto {
+      /* Los dos botones de foto son la acción más usada del módulo. */
+      min-height: 60px;
+      font-size: 1rem;
+      flex: 1 1 10rem;
+    }
+
+    .cob-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; margin-top: 0.75rem; }
+
+    /* ── Barra fija de abajo ─────────────────────────────────────────────── */
+
+    .cob-barra-fija {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 40;
+      background: var(--color-fondo);
+      border-top: 1px solid var(--color-borde);
+      box-shadow: 0 -2px 12px rgba(26, 42, 82, 0.08);
+      padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .cob-barra-fija__interno { max-width: 860px; margin: 0 auto; width: 100%; min-width: 0; }
+    .cob-barra-fija__total {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.625rem;
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+    .cob-barra-fija__etiqueta { font-size: 0.75rem; color: var(--color-texto-suave); font-weight: 600; }
+    .cob-barra-fija__cifra {
+      font-size: 1.375rem;
+      font-weight: 700;
+      color: var(--oliva-oscuro);
+      white-space: nowrap;
+    }
+
+    /* ── Filtros ─────────────────────────────────────────────────────────── */
+
+    .cob-filtros { margin-bottom: 0.875rem; min-width: 0; }
+    .cob-buscador {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      font-size: 1rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      margin-bottom: 0.5rem;
+    }
+    .cob-buscador:focus { outline: none; border-color: var(--oliva); box-shadow: 0 0 0 4px var(--oliva-suave); }
+    .cob-filtros__fila {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      min-width: 0;
+      margin-bottom: 0.5rem;
+    }
+    .cob-filtros__fila > * { flex: 1 1 8rem; min-width: 0; }
+    .cob-chips {
+      display: flex;
+      gap: 0.4375rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 0.25rem;
+      min-width: 0;
+    }
+    .cob-chips::-webkit-scrollbar { display: none; }
+    .cob-chip {
+      flex-shrink: 0;
+      min-height: 38px;
+      padding: 0.4375rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: 999px;
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .cob-chip--activo { border-color: var(--oliva); background: var(--oliva-suave); color: var(--oliva-oscuro); }
+
+    /* ── Lista de cobranzas ──────────────────────────────────────────────── */
+
+    .cob-lista { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+
+    .cob-fila {
+      /* Comparte .tarjeta-lista, que es `display: flex; align-items: center`.
+         Esta tarjeta APILA renglones, así que sin la columna los hijos se
+         acomodan en fila y el nombre del cliente se parte letra por letra. */
+      flex-direction: column;
+      align-items: stretch;
+      border-radius: 1.0625rem;
+      border-color: var(--borde-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+    }
+    .cob-fila__linea {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.625rem;
+      min-width: 0;
+    }
+    .cob-fila__cliente {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-fila__total {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--oliva-oscuro);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cob-fila__meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.375rem;
+      min-width: 0;
+    }
+    .cob-fila__meta span { min-width: 0; overflow-wrap: anywhere; }
+    /* Anulada: el total tachado además del chip. Un chip solo se pasa por alto
+       cuando lo que se escanea es el número. */
+    .cob-fila--anulada .cob-fila__cliente,
+    .cob-fila--anulada .cob-fila__total { text-decoration: line-through; color: var(--bordo-oscuro); }
+
+    .cob-estado {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+    }
+    .cob-estado--registrada { background: var(--oliva-suave); color: var(--oliva-oscuro); }
+    .cob-estado--procesada { background: var(--color-superficie); color: var(--color-texto-suave); }
+    .cob-estado--anulada { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .cob-estado--local { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+
+    .cob-vacio {
+      text-align: center;
+      color: var(--color-texto-suave);
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      padding: 2rem 1rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Secciones del formulario y del detalle ──────────────────────────── */
+
+    .cob-seccion {
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      border: 1px solid var(--borde-tarjeta);
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      min-width: 0;
+    }
+    .cob-seccion__titulo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.75rem;
+      min-width: 0;
+    }
+
+    .cob-campo { margin-bottom: 0.875rem; min-width: 0; }
+    .cob-campo:last-child { margin-bottom: 0; }
+    .cob-campo label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+    }
+    .cob-campo input,
+    .cob-campo select,
+    .cob-campo textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      /* 1rem evita el zoom automático de iOS al enfocar un campo. */
+      font-size: 1rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+    }
+    .cob-campo textarea { min-height: 76px; resize: vertical; }
+    .cob-campo input:focus,
+    .cob-campo select:focus,
+    .cob-campo textarea:focus {
+      outline: none;
+      border-color: var(--oliva);
+      box-shadow: 0 0 0 4px var(--oliva-suave);
+    }
+    .cob-campo__ayuda {
+      margin-top: 0.375rem;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: var(--color-texto-suave);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-campo__error {
+      margin-top: 0.375rem;
+      font-size: 0.78125rem;
+      font-weight: 650;
+      color: var(--bordo-oscuro);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-campo__ok {
+      margin-top: 0.375rem;
+      font-size: 0.78125rem;
+      font-weight: 650;
+      color: var(--verde-oscuro);
+      min-width: 0;
+    }
+
+    /* ── Tarjeta de revisión de un cheque ────────────────────────────────── */
+
+    .cob-cheque {
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-tarjeta);
+      padding: 0.875rem;
+      margin-bottom: 0.625rem;
+      min-width: 0;
+      background: var(--color-fondo);
+    }
+    .cob-cheque--confirmado { border-color: var(--oliva); background: var(--oliva-suave); }
+    .cob-cheque--error { border-color: var(--bordo); }
+    .cob-cheque__cabecera {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.625rem;
+      min-width: 0;
+    }
+    .cob-cheque__mini {
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      cursor: pointer;
+    }
+    .cob-cheque__resumen { flex: 1; min-width: 0; }
+    .cob-cheque__titulo {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-cheque__sub {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin-top: 0.1875rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-cheque__importe {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--oliva-oscuro);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cob-cheque__cuerpo { margin-top: 0.875rem; min-width: 0; }
+
+    /* Los 3 renglones del recuadro del cheque. */
+    .cob-renglon { margin-bottom: 0.75rem; min-width: 0; }
+    .cob-renglon input { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+    .cob-renglon--ok input { border-color: var(--verde); }
+    .cob-renglon--mal input { border-color: var(--bordo); }
+
+    .cob-plegado {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-height: 44px;
+      width: 100%;
+      padding: 0.5rem 0;
+      background: none;
+      border: none;
+      border-top: 1px solid var(--color-borde);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+      text-align: left;
+      min-width: 0;
+    }
+
+    .cob-titular {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+    .cob-titular input { flex: 1 1 8rem; min-width: 0; }
+
+    /* ── Fotos ───────────────────────────────────────────────────────────── */
+
+    .cob-fotos { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+    .cob-foto {
+      width: 92px;
+      min-width: 0;
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--color-superficie);
+    }
+    .cob-foto img { width: 100%; height: 72px; object-fit: cover; display: block; cursor: pointer; }
+    .cob-foto__pie {
+      font-size: 0.625rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      padding: 0.25rem 0.375rem;
+      text-align: center;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Visor de foto a pantalla completa ───────────────────────────────── */
+
+    .cob-visor {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: rgba(12, 16, 28, 0.94);
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .cob-visor__barra {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: calc(0.625rem + env(safe-area-inset-top, 0px)) 0.875rem 0.625rem;
+      color: #fff;
+      font-size: 0.8125rem;
+      min-width: 0;
+    }
+    .cob-visor__cerrar {
+      min-height: 44px;
+      min-width: 44px;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .cob-visor__lienzo {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      min-height: 0;
+    }
+    .cob-visor__img { max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; }
+    /* Tamaño real: el lienzo scrollea. La variante va DESPUÉS de su base. */
+    .cob-visor__img--real { max-width: none; max-height: none; cursor: zoom-out; }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
+
+    .cob-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      background: rgba(12, 16, 28, 0.5);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 1rem;
+      min-width: 0;
+    }
+    .cob-modal__caja {
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      padding: 1.25rem;
+      width: 100%;
+      max-width: 480px;
+      max-height: 86vh;
+      overflow-y: auto;
+      min-width: 0;
+    }
+    .cob-modal__titulo {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.75rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Historial ───────────────────────────────────────────────────────── */
+
+    .cob-hist { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+    .cob-hist__item {
+      border-left: 3px solid var(--color-borde);
+      padding-left: 0.625rem;
+      min-width: 0;
+    }
+    .cob-hist__linea {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-hist__detalle {
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      line-height: 1.5;
+      margin-top: 0.125rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Dato del detalle ────────────────────────────────────────────────── */
+
+    .cob-dato {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.375rem 0;
+      border-bottom: 1px solid var(--borde-tarjeta);
+      min-width: 0;
+    }
+    .cob-dato:last-child { border-bottom: none; }
+    .cob-dato__k { font-size: 0.8125rem; color: var(--color-texto-suave); flex-shrink: 0; }
+    .cob-dato__v {
+      font-size: 0.875rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      text-align: right;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    @media (min-width: 640px) {
+      .cob-modal { align-items: center; }
+    }
+  </style>
+</head>
+<body class="pagina-modulo">
+
+  <div class="cob-contenedor">
+
+    <header class="cob-header">
+      <a href="../dashboard.html" class="cob-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <div class="cob-header__col">
+        <span class="cob-header__marca">Seis Destinos</span>
+        <span class="cob-header__titulo">Cobranzas <span class="cob-header__punto">&#9679;</span> <span id="cob-subtitulo">Listado</span></span>
+      </div>
+    </header>
+
+    <!-- Sin ninguna de las cuatro tareas no hay nada que mostrar. El frontend
+         solo oculta: la barrera real son las policies y las RPCs. -->
+    <div class="cob-vacio" id="cob-sin-acceso" hidden>
+      No tenés acceso a Cobranzas.
+    </div>
+
+    <div class="cob-vacio" id="cob-cargando">Cargando…</div>
+
+    <!-- ══ LISTADO ══════════════════════════════════════════════════════ -->
+    <div id="cob-vista-listado" hidden>
+
+      <!-- Banner de lo que está solo en el celular. Se dibuja SOLO si hay algo
+           pendiente: un banner en cero entrena a ignorarlo. -->
+      <div class="cob-aviso cob-aviso--ambar" id="cob-banner-local" hidden></div>
+
+      <div class="cob-filtros">
+        <input type="search" class="cob-buscador" id="cob-buscar-cliente"
+               placeholder="Buscar por cliente…" autocomplete="off" maxlength="120">
+
+        <div class="cob-filtros__fila">
+          <div class="cob-campo" style="margin-bottom:0">
+            <label for="cob-filtro-desde">Desde</label>
+            <input type="date" id="cob-filtro-desde">
+          </div>
+          <div class="cob-campo" style="margin-bottom:0">
+            <label for="cob-filtro-hasta">Hasta</label>
+            <input type="date" id="cob-filtro-hasta">
+          </div>
+        </div>
+
+        <!-- Solo con ver_todo: sin esa tarea la persona ve únicamente las
+             propias y un selector de repartidor no tendría a quién ofrecer. -->
+        <div class="cob-campo" id="cob-campo-repartidor" hidden>
+          <label for="cob-filtro-repartidor">Repartidor</label>
+          <select id="cob-filtro-repartidor"></select>
+        </div>
+
+        <div class="cob-chips" id="cob-chips-estado"></div>
+      </div>
+
+      <div class="cob-lista" id="cob-lista"></div>
+      <div class="cob-vacio" id="cob-lista-vacia" hidden></div>
+      <div class="cob-acciones">
+        <button type="button" class="cob-btn cob-btn--ancho" id="cob-btn-mas" hidden>Cargar más</button>
+      </div>
+    </div>
+
+    <!-- ══ DETALLE ══════════════════════════════════════════════════════ -->
+    <div id="cob-vista-detalle" hidden>
+      <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-volver-listado">&lsaquo; Volver al listado</button>
+      <div id="cob-detalle-cuerpo"></div>
+    </div>
+
+    <!-- ══ NUEVA / EDITAR ═══════════════════════════════════════════════ -->
+    <div id="cob-vista-form" hidden>
+      <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-salir-form">&lsaquo; Volver</button>
+
+      <div class="cob-aviso" id="cob-form-aviso" hidden></div>
+
+      <div class="cob-seccion">
+        <div class="cob-seccion__titulo">Quién y cuándo</div>
+        <div class="cob-campo">
+          <label for="cob-cliente">Cliente</label>
+          <input type="text" id="cob-cliente" maxlength="120" autocomplete="off"
+                 placeholder="Nombre del cliente">
+          <div class="cob-campo__error" id="cob-error-cliente" hidden></div>
+        </div>
+        <div class="cob-campo">
+          <label for="cob-fecha">Fecha de la cobranza</label>
+          <input type="date" id="cob-fecha">
+          <div class="cob-campo__error" id="cob-error-fecha" hidden></div>
+        </div>
+      </div>
+
+      <div class="cob-seccion">
+        <div class="cob-seccion__titulo">Cheques</div>
+
+        <div class="cob-acciones" style="margin-top:0">
+          <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-camara">&#128247; Sacar foto</button>
+          <button type="button" class="cob-btn cob-btn--foto" id="cob-btn-galeria">&#128194; Elegir de la galería</button>
+        </div>
+        <!-- Dos inputs: `capture` fuerza la cámara, y el otro abre la galería.
+             Con uno solo no se puede ofrecer las dos cosas. -->
+        <input type="file" id="cob-file-camara" accept="image/*" capture="environment" hidden>
+        <input type="file" id="cob-file-galeria" accept="image/*" multiple hidden>
+
+        <div class="cob-campo__ayuda">Una foto puede tener varios cheques. Se leen solos y después los revisás.</div>
+
+        <div id="cob-fotos-estado"></div>
+        <div id="cob-lista-cheques"></div>
+
+        <div class="cob-acciones">
+          <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" id="cob-btn-cheque-mano">+ Agregar cheque a mano</button>
+        </div>
+      </div>
+
+      <div class="cob-seccion">
+        <div class="cob-seccion__titulo">Efectivo y datos del pago</div>
+        <div class="cob-campo">
+          <label for="cob-efectivo">Efectivo (opcional)</label>
+          <!-- type="text" + inputmode: type="number" DESCARTA la coma del
+               teclado es-AR y "8,5" se guardaría como 85. -->
+          <input type="text" inputmode="decimal" id="cob-efectivo" autocomplete="off" placeholder="0">
+          <div class="cob-campo__ayuda">Dejalo vacío si no hubo efectivo.</div>
+          <div class="cob-campo__error" id="cob-error-efectivo" hidden></div>
+        </div>
+        <div class="cob-campo">
+          <label for="cob-referencia">Remito o factura que paga (opcional)</label>
+          <input type="text" id="cob-referencia" maxlength="100" autocomplete="off"
+                 placeholder="Ej: R 1234 &middot; FC 0001-00012345">
+        </div>
+        <div class="cob-campo">
+          <label for="cob-observaciones">Observaciones (opcional)</label>
+          <textarea id="cob-observaciones" maxlength="500" placeholder="Lo que haga falta aclarar"></textarea>
+        </div>
+      </div>
+
+      <div class="cob-aviso" id="cob-form-pendientes" hidden></div>
+    </div>
+
+  </div>
+
+  <!-- ══ BARRA FIJA ═════════════════════════════════════════════════════ -->
+  <div class="cob-barra-fija" id="cob-barra-listado" hidden>
+    <div class="cob-barra-fija__interno">
+      <button type="button" class="cob-btn cob-btn--primario cob-btn--ancho" id="cob-btn-nueva">+ Nueva cobranza</button>
+    </div>
+  </div>
+
+  <div class="cob-barra-fija" id="cob-barra-form" hidden>
+    <div class="cob-barra-fija__interno">
+      <div class="cob-barra-fija__total">
+        <span class="cob-barra-fija__etiqueta">Total de la cobranza</span>
+        <span class="cob-barra-fija__cifra" id="cob-total">$ 0,00</span>
+      </div>
+      <button type="button" class="cob-btn cob-btn--primario cob-btn--ancho" id="cob-btn-guardar">Guardar cobranza</button>
+      <div class="cob-campo__error" id="cob-error-guardar" hidden></div>
+    </div>
+  </div>
+
+  <!-- ══ VISOR DE FOTO ══════════════════════════════════════════════════ -->
+  <div class="cob-visor" id="cob-visor" hidden>
+    <div class="cob-visor__barra">
+      <span id="cob-visor-texto">Foto del cheque</span>
+      <button type="button" class="cob-visor__cerrar" id="cob-visor-cerrar" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="cob-visor__lienzo" id="cob-visor-lienzo">
+      <img class="cob-visor__img" id="cob-visor-img" alt="Foto de los cheques">
+    </div>
+  </div>
+
+  <!-- ══ MODAL DE MOTIVO ════════════════════════════════════════════════ -->
+  <div class="cob-modal" id="cob-modal-motivo" hidden>
+    <div class="cob-modal__caja">
+      <div class="cob-modal__titulo" id="cob-modal-titulo">Motivo</div>
+      <div class="cob-campo">
+        <label for="cob-modal-texto" id="cob-modal-label">Motivo</label>
+        <textarea id="cob-modal-texto" maxlength="500" placeholder="Por qué"></textarea>
+        <div class="cob-campo__error" id="cob-modal-error" hidden></div>
+      </div>
+      <div class="cob-acciones">
+        <button type="button" class="cob-btn" id="cob-modal-cancelar">Cancelar</button>
+        <button type="button" class="cob-btn cob-btn--alerta" id="cob-modal-confirmar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const PAGINA = 50
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      misTareas: new Set(),
+
+      // Catálogo de bancos, cacheado también en IndexedDB para que los nombres
+      // se vean sin señal.
+      bancos: new Map(),
+      repartidores: [],
+
+      // Listado
+      cobranzas: [],
+      hayMas: false,
+      filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
+
+      detalle: null,          // { cabecera, cheques, fotos, historial }
+      // Borrador del formulario. Vive también en IndexedDB: es lo que sobrevive
+      // a que el navegador cierre la pestaña en medio de un reparto.
+      form: null,
+      // Cobranzas que todavía están solo en el celular.
+      locales: [],
+      // URLs firmadas ya pedidas, por ruta de Storage. Duran 300 s; el visor
+      // vuelve a pedirlas si hiciera falta.
+      urlsFirmadas: new Map(),
+      sincronizando: false,
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS PROPIOS
+    // Este módulo NO comparte JS con los otros: cada archivo duplica los suyos,
+    // que es el patrón establecido del proyecto.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Escape de TODO texto que venga de una persona o de la base antes de
+    // meterlo en un innerHTML. Definido acá y no importado: un helper que
+    // existe en otro archivo no existe en este por defecto.
+    function escCob(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    // Dígito verificador del código de ruta — BCRA, ponderador 9713. MISMA
+    // fórmula que public.dv_bcra() en la base y que dvBcra() en la Edge
+    // Function ocr-cheques: si se cambia una, se cambian las tres.
+    // Casos de la norma: '0110381425' → 7, '0111381425' → 0.
+    function dvBcra(digitos) {
+      if (!/^[0-9]+$/.test(String(digitos ?? ''))) return null
+      const pesos = [3, 1, 7, 9]
+      let suma = 0
+      const inv = String(digitos).split('').reverse()
+      for (let i = 0; i < inv.length; i++) suma += Number(inv[i]) * pesos[i % 4]
+      return (10 - (suma % 10)) % 10
+    }
+
+    // CUIT: módulo 11 con pesos 5,4,3,2,7,6,5,4,3,2. Informativo: un CUIT que
+    // no cierra se avisa pero no bloquea, porque el dato viene impreso en el
+    // cheque y el papel manda sobre nuestra validación.
+    function cuitValidoCob(cuit) {
+      const d = String(cuit ?? '')
+      if (!/^[0-9]{11}$/.test(d)) return false
+      const pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
+      const suma = pesos.reduce((acc, p, i) => acc + p * Number(d[i]), 0)
+      let dv = 11 - (suma % 11)
+      if (dv === 11) dv = 0
+      if (dv === 10) dv = 9
+      return dv === Number(d[10])
+    }
+
+    // El importe NUNCA sale de un type="number": el teclado es-AR ofrece COMA
+    // y ese input la DESCARTA, así que "8,5" queda en "85" sin ningún error a
+    // la vista. Los campos van type="text" + inputmode="decimal" y la lectura
+    // se normaliza acá.
+    function parseImporteCobranza(crudo) {
+      // Rechazar el dato AUSENTE antes de convertir: Number('') es 0, que es
+      // finito, así que un isFinite posterior convertiría "no hay dato" en una
+      // afirmación de cero.
+      if (crudo === null || crudo === undefined) return null
+      let t = String(crudo).trim()
+      if (t === '') return null
+      // Un espacio interno NO se borra, se RECHAZA: "8 5" es un dedazo donde
+      // iba la coma, y limpiarlo daría 85 — mil veces el error que este parser
+      // viene a evitar.
+      if (/\s/.test(t)) return null
+      if (!/^[0-9.,]+$/.test(t)) return null
+
+      const comas = (t.match(/,/g) || []).length
+      const puntos = (t.match(/\./g) || []).length
+      if (comas > 1) return null
+
+      let entero, decimales = ''
+      if (comas === 1) {
+        // Con coma, la coma es el decimal y los puntos son miles.
+        const [izq, der] = t.split(',')
+        // El largo de los decimales lo valida UN solo guard, el de abajo:
+        // repetirlo acá es como alguien cambia uno de los dos y cree que
+        // cambió la regla.
+        if (izq.includes('.') && !milesValidos(izq)) return null
+        entero = izq.replace(/\./g, '')
+        decimales = der
+      } else if (puntos === 0) {
+        entero = t
+      } else if (puntos === 1) {
+        // Sin coma y con UN punto, hay que decidir: "1250.5" es decimal y
+        // "420.000" son miles. Un grupo de exactamente 3 dígitos a la derecha
+        // es el separador de miles argentino; 1 o 2 dígitos es un decimal.
+        const [izq, der] = t.split('.')
+        if (der.length === 3) { entero = izq + der }
+        else if (der.length === 1 || der.length === 2) { entero = izq; decimales = der }
+        else return null
+      } else {
+        // Varios puntos: solo pueden ser miles.
+        if (!milesValidos(t)) return null
+        entero = t.replace(/\./g, '')
+      }
+
+      if (entero === '' || !/^[0-9]+$/.test(entero)) return null
+      if (decimales !== '' && !/^[0-9]{1,2}$/.test(decimales)) return null
+
+      const n = Number(entero + (decimales ? '.' + decimales : ''))
+      return Number.isFinite(n) ? n : null
+    }
+
+    // "1.000.000" sí, "42.00" no: los grupos después del primer punto tienen
+    // que ser de tres dígitos.
+    function milesValidos(t) {
+      const partes = t.split('.')
+      if (partes[0].length < 1 || partes[0].length > 3) return false
+      return partes.slice(1).every(p => /^[0-9]{3}$/.test(p))
+    }
+
+    // El número canónico vive como valor JS; esto es SOLO para mostrar. Nunca
+    // se re-parsea un texto ya formateado.
+    function formatearImporte(n) {
+      const v = Number(n)
+      if (!Number.isFinite(v)) return '—'
+      return v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 })
+    }
+
+    // Réplica EXACTA de normalizar_razon_social() de la base: si divergieran,
+    // el buscador del listado filtraría por una clave distinta de la guardada
+    // en cliente_normalizado y no encontraría nada.
+    const ACENTOS_COB = 'áàäâãÁÀÄÂÃéèëêÉÈËÊíìïîÍÌÏÎóòöôõÓÒÖÔÕúùüûÚÙÜÛñÑçÇ'
+    const SIN_ACENTOS_COB = 'aaaaaAAAAAeeeeEEEEiiiiIIIIoooooOOOOOuuuuUUUUnNcC'
+
+    function normalizarCliente(texto) {
+      if (texto === null || texto === undefined) return null
+      let t = ''
+      for (const ch of String(texto)) {
+        const i = ACENTOS_COB.indexOf(ch)
+        t += i >= 0 ? SIN_ACENTOS_COB[i] : ch
+      }
+      t = t.toLowerCase().replace(/[^a-z0-9]/g, '')
+      return t === '' ? null : t
+    }
+
+    // ── Fechas ────────────────────────────────────────────────────────────
+    // Toda la aritmética se hace sobre 'YYYY-MM-DD' interpretado en UTC. Con
+    // horas locales, un mismo día da resultados distintos según el huso y la
+    // regla de los 360 días se corre un día.
+
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+
+    // El "hoy" que vale es el de Argentina, no el del reloj del celular: un
+    // teléfono en otro huso mostraría una fecha que el servidor rechaza.
+    function hoyArgentina() {
+      const f = new Intl.DateTimeFormat('en-CA', {
+        timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit',
+      })
+      return f.format(new Date())
+    }
+
+    function esFechaIso(v) {
+      if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false
+      const d = new Date(v + 'T00:00:00Z')
+      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v
+    }
+
+    function diasEntre(desdeIso, hastaIso) {
+      if (!esFechaIso(desdeIso) || !esFechaIso(hastaIso)) return null
+      return Math.round((Date.parse(hastaIso + 'T00:00:00Z') - Date.parse(desdeIso + 'T00:00:00Z')) / 86400000)
+    }
+
+    // dd/mm/aaaa sin pasar por Date local, que con un 'YYYY-MM-DD' restaría el
+    // huso y mostraría el día anterior.
+    function formatearFechaCob(iso) {
+      if (!esFechaIso(iso)) return '—'
+      const [a, m, d] = iso.split('-')
+      return `${d}/${m}/${a}`
+    }
+
+    // Un timestamptz del servidor, leído en hora de Argentina.
+    function momentoArgentina(iso, { conHora = true } = {}) {
+      if (!iso) return '—'
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return '—'
+      const opciones = conHora
+        ? { timeZone: ZONA_AR, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }
+        : { timeZone: ZONA_AR, day: '2-digit', month: '2-digit' }
+      return new Intl.DateTimeFormat('es-AR', opciones).format(d).replace(',', ' ')
+    }
+
+    // La FECHA (sin hora) de un timestamptz, en Argentina. Sirve para comparar
+    // cuándo se cobró contra cuándo se cargó.
+    function fechaDeMomentoAr(iso) {
+      if (!iso) return null
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return null
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(d)
+    }
+
+    // ── Reglas de un cheque, las MISMAS que valida la base ─────────────────
+    // Se replican para avisar ANTES de mandar, no para reemplazar al servidor:
+    // una validación más permisiva que la base deja pasar justo las filas que
+    // el insert va a rechazar, y una más estricta bloquea lo que sí entra.
+    const DIAS_MAXIMO_DIFERIDO = 360
+
+    function erroresDeCheque(ch) {
+      const e = []
+      const r1 = (ch.banco_codigo ?? '') + (ch.sucursal_codigo ?? '') + (ch.codigo_postal ?? '')
+      if (r1.length !== 10 || dvBcra(r1) !== ch.dv_ruta) {
+        e.push('El renglón 1 no coincide con el dígito verificador, revisá contra el papel.')
+      }
+      if (!/^[0-9]{8}$/.test(ch.numero ?? '') || dvBcra(ch.numero) !== ch.dv_numero) {
+        e.push('El renglón 2 no coincide con el dígito verificador, revisá contra el papel.')
+      }
+      if (!/^[0-9]{11}$/.test(ch.cuenta ?? '') || dvBcra(ch.cuenta) !== ch.dv_cuenta) {
+        e.push('El renglón 3 no coincide con el dígito verificador, revisá contra el papel.')
+      }
+      if (ch.tipo !== 'comun' && ch.tipo !== 'diferido') e.push('Elegí si es común o diferido.')
+      if (!esFechaIso(ch.fecha_emision)) e.push('Falta la fecha de emisión.')
+      if (ch.tipo === 'comun' && ch.fecha_pago) {
+        e.push('Un cheque común no lleva fecha de pago.')
+      }
+      if (ch.tipo === 'diferido') {
+        if (!esFechaIso(ch.fecha_pago)) {
+          e.push('Un cheque diferido necesita la fecha de pago.')
+        } else if (esFechaIso(ch.fecha_emision)) {
+          const d = diasEntre(ch.fecha_emision, ch.fecha_pago)
+          if (d < 0) e.push('La fecha de pago no puede ser anterior a la de emisión.')
+          else if (d > DIAS_MAXIMO_DIFERIDO) e.push(`Entre emisión y pago no puede haber más de ${DIAS_MAXIMO_DIFERIDO} días.`)
+        }
+      }
+      if (!(Number(ch.importe) > 0)) e.push('El importe tiene que ser mayor a cero.')
+      if (!ch.foto_id) e.push('El cheque tiene que estar vinculado a una foto.')
+      return e
+    }
+
+    function nombreBanco(codigo) {
+      if (!codigo) return 'Banco sin identificar'
+      const b = estado.bancos.get(String(codigo))
+      // Un código que no está en el catálogo se DICE, con el número a la vista:
+      // inventarle un nombre o dejarlo vacío esconde que el dato puede estar mal.
+      return b ? b : `Banco ${codigo} (no está en el catálogo)`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function tieneTarea(tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(`cobranzas:${tarea}`)
+    }
+    const puedeCargar = () => tieneTarea('cargar')
+    const puedeVerTodo = () => tieneTarea('ver_todo')
+    const puedeProcesar = () => tieneTarea('procesar')
+    const puedeEditarAnular = () => tieneTarea('editar_anular')
+    const tieneAlgunAcceso = () =>
+      puedeCargar() || puedeVerTodo() || puedeProcesar() || puedeEditarAnular()
+
+    const esPropia = (c) => c && c.empleado_id === estado.miEmpleadoId
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ALMACÉN LOCAL (IndexedDB)
+    //
+    // El chofer sale de viaje y puede quedarse sin señal en la puerta de un
+    // cliente. Todo lo que se carga vive PRIMERO en el celular —incluidos los
+    // blobs de las fotos ya comprimidas— y recién después se sube. Se usa
+    // IndexedDB y no localStorage porque hay que guardar Blobs.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const DB_NOMBRE = 'cobranzas-offline'
+    const DB_VERSION = 1
+    const STORE_BORRADORES = 'borradores'
+    const STORE_CACHE = 'cache'
+
+    let dbPromesa = null
+
+    function abrirDb() {
+      if (dbPromesa) return dbPromesa
+      dbPromesa = new Promise((resolver, rechazar) => {
+        const req = indexedDB.open(DB_NOMBRE, DB_VERSION)
+        req.onupgradeneeded = () => {
+          const db = req.result
+          if (!db.objectStoreNames.contains(STORE_BORRADORES)) db.createObjectStore(STORE_BORRADORES)
+          if (!db.objectStoreNames.contains(STORE_CACHE)) db.createObjectStore(STORE_CACHE)
+        }
+        req.onsuccess = () => resolver(req.result)
+        req.onerror = () => rechazar(req.error)
+      })
+      return dbPromesa
+    }
+
+    async function dbGuardar(store, clave, valor) {
+      const db = await abrirDb()
+      return new Promise((resolver, rechazar) => {
+        const tx = db.transaction(store, 'readwrite')
+        tx.objectStore(store).put(valor, clave)
+        tx.oncomplete = () => resolver()
+        tx.onerror = () => rechazar(tx.error)
+      })
+    }
+
+    async function dbLeer(store, clave) {
+      const db = await abrirDb()
+      return new Promise((resolver, rechazar) => {
+        const tx = db.transaction(store, 'readonly')
+        const r = tx.objectStore(store).get(clave)
+        r.onsuccess = () => resolver(r.result ?? null)
+        r.onerror = () => rechazar(r.error)
+      })
+    }
+
+    async function dbBorrar(store, clave) {
+      const db = await abrirDb()
+      return new Promise((resolver, rechazar) => {
+        const tx = db.transaction(store, 'readwrite')
+        tx.objectStore(store).delete(clave)
+        tx.oncomplete = () => resolver()
+        tx.onerror = () => rechazar(tx.error)
+      })
+    }
+
+    async function dbTodos(store) {
+      const db = await abrirDb()
+      return new Promise((resolver, rechazar) => {
+        const tx = db.transaction(store, 'readonly')
+        const r = tx.objectStore(store).getAll()
+        r.onsuccess = () => resolver(r.result ?? [])
+        r.onerror = () => rechazar(r.error)
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CATÁLOGOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Los bancos se cachean en IndexedDB: sin señal, el nombre del banco tiene
+    // que seguir apareciendo en la tarjeta de revisión.
+    async function cargarBancos() {
+      try {
+        const { data, error } = await supabase
+          .from('bancos_bcra').select('codigo, denominacion').eq('activo', true)
+        if (error) throw error
+        estado.bancos = new Map((data ?? []).map(b => [String(b.codigo), b.denominacion]))
+        await dbGuardar(STORE_CACHE, 'bancos', [...estado.bancos])
+      } catch (err) {
+        console.error('No se pudo cargar el catálogo de bancos:', err)
+        try {
+          const cache = await dbLeer(STORE_CACHE, 'bancos')
+          if (cache) estado.bancos = new Map(cache)
+        } catch (err2) {
+          console.error('Tampoco había catálogo cacheado:', err2)
+        }
+      }
+    }
+
+    // Las opciones del filtro salen de la tabla de personas, NUNCA de las
+    // cobranzas ya filtradas: con un filtro de fecha puesto desaparecerían
+    // repartidores del selector sin que nada lo avise.
+    async function cargarRepartidores() {
+      if (!puedeVerTodo()) return
+      try {
+        const { data, error } = await supabase
+          .from('v_empleados_publico')
+          .select('id, nombre')
+          .eq('tiene_acceso', true)
+          .order('nombre')
+        if (error) throw error
+        estado.repartidores = data ?? []
+        const sel = document.getElementById('cob-filtro-repartidor')
+        sel.innerHTML = '<option value="">Todos</option>' +
+          estado.repartidores.map(r => `<option value="${escCob(r.id)}">${escCob(r.nombre)}</option>`).join('')
+        document.getElementById('cob-campo-repartidor').hidden = false
+      } catch (err) {
+        console.error('No se pudieron cargar los repartidores:', err)
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LISTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const ESTADOS_COBRANZA = [
+      { id: '', nombre: 'Todas' },
+      { id: 'registrada', nombre: 'Registradas' },
+      { id: 'procesada', nombre: 'Procesadas' },
+      { id: 'anulada', nombre: 'Anuladas' },
+    ]
+
+    function renderizarChipsEstado() {
+      const cont = document.getElementById('cob-chips-estado')
+      cont.innerHTML = ESTADOS_COBRANZA.map(e => `
+        <button type="button" class="cob-chip ${estado.filtros.estado === e.id ? 'cob-chip--activo' : ''}" data-estado="${escCob(e.id)}">${escCob(e.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('[data-estado]').forEach(b => {
+        b.addEventListener('click', () => {
+          estado.filtros.estado = b.dataset.estado
+          renderizarChipsEstado()
+          cargarCobranzas({ reiniciar: true })
+        })
+      })
+    }
+
+    async function cargarCobranzas({ reiniciar = false } = {}) {
+      if (reiniciar) estado.cobranzas = []
+      const desde = estado.cobranzas.length
+
+      let q = supabase
+        .from('v_cobranzas')
+        .select('*')
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(desde, desde + PAGINA - 1)
+
+      const f = estado.filtros
+      // El buscador compara contra la columna ya normalizada. Si el texto
+      // normaliza a vacío —alguien escribió solo espacios o signos— NO se
+      // filtra: un '%%' devolvería todo igual, pero dejarlo explícito evita
+      // que un día cambie el comportamiento sin que nadie lo note.
+      const clave = normalizarCliente(f.texto)
+      if (clave) q = q.like('cliente_normalizado', `%${clave}%`)
+      if (esFechaIso(f.desde)) q = q.gte('fecha', f.desde)
+      if (esFechaIso(f.hasta)) q = q.lte('fecha', f.hasta)
+      if (f.estado) q = q.eq('estado', f.estado)
+      if (f.repartidor) q = q.eq('empleado_id', f.repartidor)
+
+      try {
+        const { data, error } = await q
+        if (error) throw error
+        const filas = data ?? []
+        estado.cobranzas = estado.cobranzas.concat(filas)
+        estado.hayMas = filas.length === PAGINA
+        renderizarListado()
+      } catch (err) {
+        console.error('No se pudo cargar el listado:', err)
+        // Sin señal el listado del servidor no llega, pero lo local sí: se
+        // avisa sin borrar lo que ya estaba en pantalla.
+        mostrarError('No se pudo cargar el listado. Revisá la señal.')
+        renderizarListado()
+      }
+    }
+
+    function renderizarListado() {
+      const cont = document.getElementById('cob-lista')
+      const vacio = document.getElementById('cob-lista-vacia')
+      const filas = estado.cobranzas
+
+      document.getElementById('cob-btn-mas').hidden = !estado.hayMas
+
+      if (!filas.length) {
+        cont.innerHTML = ''
+        vacio.hidden = false
+        vacio.textContent = hayFiltrosPuestos()
+          ? 'No hay cobranzas con esos filtros.'
+          : 'Todavía no se cargó ninguna cobranza. Tocá "Nueva cobranza" para cargar la primera.'
+        return
+      }
+      vacio.hidden = true
+      cont.innerHTML = filas.map(htmlFilaCobranza).join('')
+      cont.querySelectorAll('[data-cobranza]').forEach(card => {
+        card.addEventListener('click', () => abrirDetalle(card.dataset.cobranza))
+      })
+    }
+
+    function hayFiltrosPuestos() {
+      const f = estado.filtros
+      return !!(normalizarCliente(f.texto) || f.desde || f.hasta || f.estado || f.repartidor)
+    }
+
+    // La tarjeta del listado. Se exporta como función pura de la fila para
+    // poder EJECUTARLA en la suite con casos límite (anulada, solo efectivo,
+    // sin cheques) en vez de verificarla por regex.
+    function htmlFilaCobranza(c) {
+      const cantidad = Number(c.cantidad_cheques ?? 0)
+      const efectivo = Number(c.efectivo ?? 0)
+      const anulada = c.estado === 'anulada'
+
+      // "N cheques · $ efectivo": se muestran las dos partes solo cuando
+      // existen, para no decir "0 cheques" en una cobranza que fue toda en
+      // efectivo ni "$ 0,00" en una que fue toda en cheques.
+      const partes = []
+      if (cantidad > 0) partes.push(`${cantidad} ${cantidad === 1 ? 'cheque' : 'cheques'}`)
+      if (efectivo > 0) partes.push(`${formatearImporte(efectivo)} en efectivo`)
+      if (!partes.length) partes.push('Sin cheques ni efectivo')
+
+      // La fecha de la cobranza es cuándo se COBRÓ; created_at es cuándo se
+      // cargó. Se muestran juntas solo si difieren: en el caso normal —se carga
+      // el mismo día— repetirlas es ruido.
+      const fechaCarga = fechaDeMomentoAr(c.created_at)
+      const difieren = fechaCarga && esFechaIso(c.fecha) && fechaCarga !== c.fecha
+      const cuando = difieren
+        ? `Cobrada ${formatearFechaCob(c.fecha)} · cargada ${momentoArgentina(c.created_at, { conHora: false })}`
+        : formatearFechaCob(c.fecha)
+
+      const etiquetaEstado = { registrada: 'Registrada', procesada: 'Procesada', anulada: 'Anulada' }[c.estado] ?? c.estado
+
+      return `
+        <div class="tarjeta-lista cob-fila ${anulada ? 'cob-fila--anulada' : ''}" data-cobranza="${escCob(c.id)}">
+          <div class="cob-fila__linea">
+            <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
+            <span class="cob-fila__total">${escCob(formatearImporte(c.total))}</span>
+          </div>
+          <div class="cob-fila__meta">
+            <span class="cob-estado cob-estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
+            <span>${escCob(cuando)} · ${escCob(partes.join(' · '))}</span>
+          </div>
+          ${puedeVerTodo() && c.cargada_por_nombre
+            ? `<div class="cob-fila__meta"><span>Cargada por ${escCob(c.cargada_por_nombre)}</span></div>` : ''}
+          ${c.editada ? '<div class="cob-fila__meta"><span>Editada después de cargarla</span></div>' : ''}
+        </div>`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NAVEGACIÓN ENTRE VISTAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const SUBTITULO_VISTA_COB = { listado: 'Listado', detalle: 'Detalle', form: 'Nueva cobranza' }
+
+    function mostrarVistaCob(id, { subtitulo } = {}) {
+      document.getElementById('cob-vista-listado').hidden = id !== 'listado'
+      document.getElementById('cob-vista-detalle').hidden = id !== 'detalle'
+      document.getElementById('cob-vista-form').hidden = id !== 'form'
+      // Cada vista tiene su barra fija, y la del listado solo aparece con
+      // permiso de cargar: sin él, el botón prometería algo que el servidor
+      // rechaza.
+      document.getElementById('cob-barra-listado').hidden = !(id === 'listado' && puedeCargar())
+      document.getElementById('cob-barra-form').hidden = id !== 'form'
+      document.getElementById('cob-subtitulo').textContent = subtitulo ?? SUBTITULO_VISTA_COB[id] ?? ''
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISOR DE FOTO
+    //
+    // Varios cheques comparten la misma foto y NO se recorta nada: el visor
+    // muestra la foto entera y se hace zoom. Recortar por cheque obligaría a
+    // adivinar dónde está cada uno, y cuando se adivina mal se pierde el dato.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function urlDeFoto(foto) {
+      // Una foto que todavía está solo en el celular se muestra desde su blob:
+      // sin señal no hay URL firmada posible, y es justo cuando más se la mira.
+      if (foto?.blob instanceof Blob) return URL.createObjectURL(foto.blob)
+      const ruta = foto?.storage_path
+      if (!ruta) return null
+      if (estado.urlsFirmadas.has(ruta)) return estado.urlsFirmadas.get(ruta)
+      try {
+        const { data, error } = await supabase.storage.from('cobranzas').createSignedUrl(ruta, 300)
+        if (error) throw error
+        estado.urlsFirmadas.set(ruta, data.signedUrl)
+        return data.signedUrl
+      } catch (err) {
+        console.error('No se pudo firmar la URL de la foto:', err)
+        return null
+      }
+    }
+
+    async function abrirVisor(foto, texto) {
+      const url = await urlDeFoto(foto)
+      const img = document.getElementById('cob-visor-img')
+      if (!url) {
+        mostrarError('No se pudo abrir la foto. Revisá la señal.')
+        return
+      }
+      img.src = url
+      img.classList.remove('cob-visor__img--real')
+      document.getElementById('cob-visor-texto').textContent = texto || 'Foto de los cheques'
+      document.getElementById('cob-visor').hidden = false
+    }
+
+    function cerrarVisor() {
+      document.getElementById('cob-visor').hidden = true
+      document.getElementById('cob-visor-img').src = ''
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODAL DE MOTIVO (anular / reabrir)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let accionDelModal = null
+
+    function abrirModalMotivo({ titulo, etiqueta, alConfirmar }) {
+      accionDelModal = alConfirmar
+      document.getElementById('cob-modal-titulo').textContent = titulo
+      document.getElementById('cob-modal-label').textContent = etiqueta
+      document.getElementById('cob-modal-texto').value = ''
+      document.getElementById('cob-modal-error').hidden = true
+      document.getElementById('cob-modal-motivo').hidden = false
+      document.getElementById('cob-modal-texto').focus()
+    }
+
+    function cerrarModalMotivo() {
+      document.getElementById('cob-modal-motivo').hidden = true
+      accionDelModal = null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DETALLE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirDetalle(cobranzaId) {
+      mostrarVistaCob('detalle')
+      const cuerpo = document.getElementById('cob-detalle-cuerpo')
+      cuerpo.innerHTML = '<div class="cob-vacio">Cargando el detalle…</div>'
+
+      try {
+        // Consultas SEPARADAS y nunca embeds: estas tablas tienen FKs que los
+        // vuelven ambiguos en PostgREST.
+        const [cab, cheques, fotos, hist] = await Promise.all([
+          supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
+          supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_fotos').select('id, storage_path, subida_por, ocr_modelo, created_at').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_historial').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
+        ])
+        if (cab.error) throw cab.error
+        if (!cab.data) { cuerpo.innerHTML = '<div class="cob-vacio">No se encontró la cobranza.</div>'; return }
+
+        // Los nombres salen de v_empleados_publico, NUNCA de empleados por
+        // embed: su RLS solo deja leer la fila propia, así que un embed
+        // dejaría todos los nombres en blanco menos el tuyo.
+        const ids = [...new Set((hist.data ?? []).map(h => h.empleado_id).filter(Boolean))]
+        const nombres = new Map()
+        if (ids.length) {
+          const { data: emps } = await supabase.from('v_empleados_publico').select('id, nombre').in('id', ids)
+          ;(emps ?? []).forEach(e => nombres.set(e.id, e.nombre))
+        }
+
+        estado.detalle = {
+          cabecera: cab.data,
+          cheques: cheques.data ?? [],
+          fotos: fotos.data ?? [],
+          historial: hist.data ?? [],
+          nombres,
+        }
+        renderizarDetalle()
+      } catch (err) {
+        console.error('No se pudo abrir el detalle:', err)
+        cuerpo.innerHTML = '<div class="cob-vacio">No se pudo cargar el detalle. Revisá la señal y volvé a intentar.</div>'
+      }
+    }
+
+    function renderizarDetalle() {
+      const d = estado.detalle
+      if (!d) return
+      document.getElementById('cob-detalle-cuerpo').innerHTML = htmlDetalle(d)
+      conectarDetalle()
+    }
+
+    // Función pura del detalle, para poder EJECUTARLA en la suite con los casos
+    // límite: banco fuera del catálogo, beneficiario null, común sin fecha de
+    // pago, cobranza solo efectivo, cobranza anulada.
+    function htmlDetalle(d) {
+      const c = d.cabecera
+      const anulada = c.estado === 'anulada'
+      const etiquetaEstado = { registrada: 'Registrada', procesada: 'Procesada', anulada: 'Anulada' }[c.estado] ?? c.estado
+
+      const datos = [
+        ['Fecha de la cobranza', formatearFechaCob(c.fecha)],
+        ['Efectivo', Number(c.efectivo ?? 0) > 0 ? formatearImporte(c.efectivo) : 'Sin efectivo'],
+        ['Cheques', `${Number(c.cantidad_cheques ?? 0)} · ${formatearImporte(c.total_cheques ?? 0)}`],
+        ['Total', formatearImporte(c.total)],
+      ]
+      if (c.comprobante_referencia) datos.push(['Remito o factura', c.comprobante_referencia])
+      if (c.observaciones) datos.push(['Observaciones', c.observaciones])
+      if (c.cargada_por_nombre) datos.push(['Cargada por', c.cargada_por_nombre])
+      if (c.procesada_por_nombre) datos.push(['Procesada por', c.procesada_por_nombre])
+      if (c.anulada_por_nombre) datos.push(['Anulada por', c.anulada_por_nombre])
+
+      const cabecera = `
+        <div class="cob-seccion">
+          <div class="cob-fila__linea">
+            <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
+            <span class="cob-estado cob-estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
+          </div>
+          ${anulada && c.motivo_anulacion
+            ? `<div class="cob-aviso cob-aviso--alerta" style="margin-top:.625rem">Anulada: ${escCob(c.motivo_anulacion)}</div>` : ''}
+          <div style="margin-top:.75rem">
+            ${datos.map(([k, v]) => `
+              <div class="cob-dato">
+                <span class="cob-dato__k">${escCob(k)}</span>
+                <span class="cob-dato__v">${escCob(v)}</span>
+              </div>`).join('')}
+          </div>
+        </div>`
+
+      const cheques = `
+        <div class="cob-seccion">
+          <div class="cob-seccion__titulo">Cheques</div>
+          ${d.cheques.length
+            ? d.cheques.map(ch => htmlChequeDetalle(ch)).join('')
+            : '<div class="cob-campo__ayuda">Esta cobranza no tiene cheques: fue todo en efectivo.</div>'}
+        </div>`
+
+      const fotos = d.fotos.length ? `
+        <div class="cob-seccion">
+          <div class="cob-seccion__titulo">Fotos</div>
+          <div class="cob-fotos">
+            ${d.fotos.map((f, i) => `
+              <div class="cob-foto">
+                <img data-foto-detalle="${escCob(f.id)}" alt="Foto ${i + 1} de los cheques">
+                <div class="cob-foto__pie">Foto ${i + 1}</div>
+              </div>`).join('')}
+          </div>
+        </div>` : ''
+
+      const historial = `
+        <div class="cob-seccion">
+          <div class="cob-seccion__titulo">Historial</div>
+          <div class="cob-hist">${htmlHistorial(d.historial, d.nombres)}</div>
+        </div>`
+
+      return cabecera + cheques + fotos + historial + htmlAccionesDetalle(c)
+    }
+
+    function htmlChequeDetalle(ch) {
+      const titulares = Array.isArray(ch.titulares) ? ch.titulares : []
+      // El beneficiario importa por una razón concreta: si el cheque no está a
+      // nombre nuestro, hay que endosarlo o no se puede depositar. Se compara
+      // normalizado porque en el papel aparece de mil formas.
+      const benef = ch.beneficiario ?? null
+      const aviso = benef && !(normalizarCliente(benef) ?? '').includes('nuss')
+        ? `<div class="cob-aviso cob-aviso--ambar" style="margin-top:.5rem">A nombre de ${escCob(benef)}: verificá que esté endosado al dorso.</div>`
+        : ''
+
+      return `
+        <div class="cob-cheque">
+          <div class="cob-cheque__cabecera">
+            <div class="cob-cheque__resumen">
+              <div class="cob-cheque__titulo">${escCob(nombreBanco(ch.banco_codigo))}</div>
+              <div class="cob-cheque__sub">N&deg; ${escCob(ch.numero ?? '—')} · ${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')} · cuenta ${escCob(ch.cuenta ?? '—')}</div>
+              <div class="cob-cheque__sub">Emisión ${escCob(formatearFechaCob(ch.fecha_emision))}${
+                // Un cheque común NO tiene fecha de pago: no se inventa un
+                // guion en un renglón que no existe, no se muestra el renglón.
+                ch.tipo === 'diferido' ? ` · pago ${escCob(formatearFechaCob(ch.fecha_pago))}` : ''}</div>
+              ${benef ? `<div class="cob-cheque__sub">Páguese a: ${escCob(benef)}</div>` : ''}
+            </div>
+            <span class="cob-cheque__importe">${escCob(formatearImporte(ch.importe))}</span>
+          </div>
+          ${aviso}
+          ${titulares.length ? `
+            <button type="button" class="cob-plegado" data-plegar-titulares="${escCob(ch.id)}">
+              <span>Titulares de la cuenta (${titulares.length})</span><span>▾</span>
+            </button>
+            <div hidden data-titulares="${escCob(ch.id)}">
+              ${titulares.map(t => `<div class="cob-cheque__sub">${escCob(t.nombre ?? 'Sin nombre')}${t.cuit ? ` · CUIT ${escCob(t.cuit)}` : ''}</div>`).join('')}
+            </div>` : ''}
+          <div class="cob-acciones">
+            <button type="button" class="cob-btn cob-btn--chico" data-ver-foto="${escCob(ch.foto_id ?? '')}">&#128247; Ver la foto</button>
+          </div>
+        </div>`
+    }
+
+    function htmlAccionesDetalle(c) {
+      const propia = esPropia(c)
+      const registrada = c.estado === 'registrada'
+      const botones = []
+
+      // Editar: solo mientras está registrada. Propia con `cargar`, o ajena
+      // con `editar_anular`.
+      if (registrada && ((propia && puedeCargar()) || puedeEditarAnular())) {
+        botones.push('<button type="button" class="cob-btn" id="cob-btn-editar">Editar</button>')
+      }
+      if (registrada && puedeProcesar()) {
+        botones.push('<button type="button" class="cob-btn cob-btn--primario" id="cob-btn-procesar">Marcar como procesada</button>')
+      }
+      if (c.estado === 'procesada' && puedeProcesar()) {
+        botones.push('<button type="button" class="cob-btn" id="cob-btn-reabrir">Reabrir</button>')
+      }
+      // Anular: cualquiera no anulada, con editar_anular; o la propia y
+      // todavía registrada, con cargar.
+      if (c.estado !== 'anulada' && ((registrada && propia && puedeCargar()) || puedeEditarAnular())) {
+        botones.push('<button type="button" class="cob-btn cob-btn--alerta" id="cob-btn-anular">Anular</button>')
+      }
+      if (!botones.length) return ''
+      return `<div class="cob-seccion"><div class="cob-acciones" style="margin-top:0">${botones.join('')}</div></div>`
+    }
+
+    // El historial se lee, no se descifra: cada línea dice QUÉ pasó, quién y
+    // cuándo, y en una edición qué cambió de verdad.
+    function htmlHistorial(filas, nombres) {
+      if (!filas.length) return '<div class="cob-campo__ayuda">Sin movimientos.</div>'
+      const ETIQUETA = {
+        alta: 'Alta', edicion: 'Edición', procesada: 'Procesada',
+        reabierta: 'Reabierta', anulada: 'Anulada',
+      }
+      return filas.map(h => {
+        const quien = nombres.get(h.empleado_id) ?? 'alguien'
+        const cambios = h.accion === 'edicion' ? resumirCambios(h.antes, h.despues) : []
+        return `
+          <div class="cob-hist__item">
+            <div class="cob-hist__linea">${escCob(ETIQUETA[h.accion] ?? h.accion)} · ${escCob(quien)} · ${escCob(momentoArgentina(h.created_at))}</div>
+            ${h.motivo ? `<div class="cob-hist__detalle">Motivo: ${escCob(h.motivo)}</div>` : ''}
+            ${cambios.length ? `<div class="cob-hist__detalle">${cambios.map(escCob).join('<br>')}</div>` : ''}
+            ${h.accion === 'edicion' && !cambios.length ? '<div class="cob-hist__detalle">Sin cambios visibles en los datos principales.</div>' : ''}
+          </div>`
+      }).join('')
+    }
+
+    // Compara las dos fotos del historial y devuelve frases. Se compara por ID
+    // de cheque y no por posición: un cheque quitado del medio correría todos
+    // los demás y daría una lista de cambios falsa.
+    function resumirCambios(antes, despues) {
+      const cambios = []
+      if (!antes || !despues) return cambios
+      const ca = antes.cabecera ?? {}
+      const cd = despues.cabecera ?? {}
+
+      const campos = [
+        ['cliente', 'Cliente'],
+        ['fecha', 'Fecha'],
+        ['efectivo', 'Efectivo'],
+        ['comprobante_referencia', 'Remito o factura'],
+        ['observaciones', 'Observaciones'],
+      ]
+      campos.forEach(([k, etiqueta]) => {
+        const va = ca[k] ?? null, vd = cd[k] ?? null
+        if (String(va ?? '') === String(vd ?? '')) return
+        const fmt = (v) => v === null || v === '' ? '(vacío)'
+          : k === 'efectivo' ? formatearImporte(v)
+          : k === 'fecha' ? formatearFechaCob(v) : String(v)
+        cambios.push(`${etiqueta}: ${fmt(va)} → ${fmt(vd)}`)
+      })
+
+      const cha = new Map((antes.cheques ?? []).map(c => [c.id, c]))
+      const chd = new Map((despues.cheques ?? []).map(c => [c.id, c]))
+      let agregados = 0, quitados = 0
+      chd.forEach((c, id) => { if (!cha.has(id)) agregados++ })
+      cha.forEach((c, id) => { if (!chd.has(id)) quitados++ })
+      if (agregados) cambios.push(`Se agregaron ${agregados} ${agregados === 1 ? 'cheque' : 'cheques'}`)
+      if (quitados) cambios.push(`Se quitaron ${quitados} ${quitados === 1 ? 'cheque' : 'cheques'}`)
+
+      cha.forEach((viejo, id) => {
+        const nuevo = chd.get(id)
+        if (!nuevo) return
+        const detalle = []
+        if (Number(viejo.importe) !== Number(nuevo.importe)) {
+          detalle.push(`importe ${formatearImporte(viejo.importe)} → ${formatearImporte(nuevo.importe)}`)
+        }
+        if ((viejo.fecha_emision ?? null) !== (nuevo.fecha_emision ?? null)) {
+          detalle.push(`emisión ${formatearFechaCob(viejo.fecha_emision)} → ${formatearFechaCob(nuevo.fecha_emision)}`)
+        }
+        if ((viejo.fecha_pago ?? null) !== (nuevo.fecha_pago ?? null)) {
+          detalle.push(`pago ${formatearFechaCob(viejo.fecha_pago)} → ${formatearFechaCob(nuevo.fecha_pago)}`)
+        }
+        const codigoViejo = `${viejo.banco_codigo}-${viejo.sucursal_codigo}-${viejo.numero}-${viejo.cuenta}`
+        const codigoNuevo = `${nuevo.banco_codigo}-${nuevo.sucursal_codigo}-${nuevo.numero}-${nuevo.cuenta}`
+        if (codigoViejo !== codigoNuevo) detalle.push(`código ${codigoViejo} → ${codigoNuevo}`)
+        if (detalle.length) cambios.push(`Cheque ${nuevo.numero ?? id}: ${detalle.join(', ')}`)
+      })
+
+      return cambios
+    }
+
+    function conectarDetalle() {
+      const d = estado.detalle
+      if (!d) return
+
+      // Las miniaturas se firman DESPUÉS de dibujar: la URL tarda y no se puede
+      // bloquear el render del detalle esperándolas.
+      document.querySelectorAll('[data-foto-detalle]').forEach(async (img) => {
+        const foto = d.fotos.find(f => f.id === img.dataset.fotoDetalle)
+        const url = await urlDeFoto(foto)
+        if (url) img.src = url
+        img.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
+      })
+
+      document.querySelectorAll('[data-ver-foto]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const foto = d.fotos.find(f => f.id === btn.dataset.verFoto)
+          if (!foto) { mostrarError('Ese cheque no tiene una foto asociada.'); return }
+          abrirVisor(foto, 'Foto de los cheques')
+        })
+      })
+
+      document.querySelectorAll('[data-plegar-titulares]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const caja = document.querySelector(`[data-titulares="${btn.dataset.plegarTitulares}"]`)
+          if (caja) caja.hidden = !caja.hidden
+        })
+      })
+
+      const c = d.cabecera
+      const btnEditar = document.getElementById('cob-btn-editar')
+      if (btnEditar) btnEditar.addEventListener('click', () => abrirFormularioEdicion(c.id))
+
+      const btnProcesar = document.getElementById('cob-btn-procesar')
+      if (btnProcesar) btnProcesar.addEventListener('click', () => accionSimple('marcar_cobranza_procesada', { p_id: c.id }, 'Cobranza marcada como procesada.'))
+
+      const btnReabrir = document.getElementById('cob-btn-reabrir')
+      if (btnReabrir) btnReabrir.addEventListener('click', () => abrirModalMotivo({
+        titulo: 'Reabrir la cobranza',
+        etiqueta: 'Por qué se reabre',
+        alConfirmar: (motivo) => accionSimple('reabrir_cobranza', { p_id: c.id, p_motivo: motivo }, 'Cobranza reabierta.'),
+      }))
+
+      const btnAnular = document.getElementById('cob-btn-anular')
+      if (btnAnular) btnAnular.addEventListener('click', () => abrirModalMotivo({
+        titulo: 'Anular la cobranza',
+        etiqueta: 'Por qué se anula',
+        alConfirmar: (motivo) => accionSimple('anular_cobranza', { p_id: c.id, p_motivo: motivo }, 'Cobranza anulada.'),
+      }))
+    }
+
+    // Las tres acciones de estado comparten forma: llamar, mostrar el mensaje
+    // del servidor TAL CUAL si falla —ya vienen redactados en español— y
+    // recargar lo que quedó desactualizado.
+    async function accionSimple(rpc, params, exito) {
+      try {
+        const { error } = await supabase.rpc(rpc, params)
+        if (error) throw error
+        mostrarExito(exito)
+        cerrarModalMotivo()
+        await abrirDetalle(params.p_id)
+        await cargarCobranzas({ reiniciar: true })
+      } catch (err) {
+        console.error(`Falló ${rpc}:`, err)
+        mostrarError(err?.message || 'No se pudo completar la acción.')
+      }
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FORMULARIO — nueva y edición
+    //
+    // El borrador vive en IndexedDB desde el primer toque: si el navegador
+    // cierra la pestaña en medio de un reparto, no se pierde nada. Los estados
+    // locales son:
+    //   'borrador'         → se está cargando
+    //   'para_revisar'     → hay fotos que se leyeron después y falta confirmar
+    //   'lista_para_subir' → la persona la dio por terminada y falta el servidor
+    // Se borra del celular recién cuando el servidor confirma.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const LADO_MAXIMO_FOTO = 2576
+    const BYTES_MAXIMO_FOTO = 5 * 1024 * 1024
+
+    function formularioVacio(id) {
+      return {
+        id,
+        modo: 'nueva',
+        estadoLocal: 'borrador',
+        cliente: '',
+        fecha: hoyArgentina(),
+        efectivo: '',
+        comprobante_referencia: '',
+        observaciones: '',
+        fotos: [],    // { id, storage_path, blob, subida, leida, ocr_crudo, ocr_modelo, error }
+        cheques: [],  // ver chequeVacio()
+        actualizado: Date.now(),
+      }
+    }
+
+    function chequeVacio(fotoId) {
+      return {
+        id: crypto.randomUUID(),
+        foto_id: fotoId,
+        // Los tres renglones se guardan como TEXTO tal cual se tipean: los
+        // códigos llevan ceros a la izquierda y pasarlos por Number los come.
+        r1: '', r2: '', r3: '',
+        banco_codigo: null, sucursal_codigo: null, codigo_postal: null, dv_ruta: null,
+        numero: null, dv_numero: null, cuenta: null, dv_cuenta: null,
+        tipo: null,
+        fecha_emision: '',
+        fecha_pago: '',
+        importe: '',
+        importe_letras: '',
+        beneficiario: '',
+        titulares: [],
+        confirmado: false,
+        abierto: true,
+        ocr_propuesto: null,
+        controles: null,
+        duplicado: null,   // { nivel: 'completo'|'parcial', texto }
+      }
+    }
+
+    async function guardarBorrador() {
+      const f = estado.form
+      if (!f) return
+      f.actualizado = Date.now()
+      try {
+        await dbGuardar(STORE_BORRADORES, f.id, f)
+      } catch (err) {
+        // Que falle el guardado local es grave —es lo que sostiene el trabajo
+        // sin señal— así que se dice, no se traga.
+        console.error('No se pudo guardar el borrador en el celular:', err)
+        mostrarError('No se pudo guardar el borrador en el celular. Evitá cerrar la pestaña.')
+      }
+    }
+
+    function abrirFormularioNuevo() {
+      if (!puedeCargar()) return
+      // El id se genera ACÁ y no al guardar: es la clave del borrador local, la
+      // carpeta de las fotos en Storage y lo que hace idempotente al alta.
+      estado.form = formularioVacio(crypto.randomUUID())
+      pintarFormulario()
+      mostrarVistaCob('form', { subtitulo: 'Nueva cobranza' })
+      guardarBorrador()
+    }
+
+    async function abrirFormularioLocal(id) {
+      try {
+        const f = await dbLeer(STORE_BORRADORES, id)
+        if (!f) { mostrarError('Ese borrador ya no está en el celular.'); return }
+        estado.form = f
+        pintarFormulario()
+        mostrarVistaCob('form', { subtitulo: 'Cobranza sin subir' })
+      } catch (err) {
+        console.error('No se pudo abrir el borrador local:', err)
+        mostrarError('No se pudo abrir el borrador guardado.')
+      }
+    }
+
+    // La edición precarga TODO desde la base. Las fotos existentes se mandan
+    // tal cual, sin volver a subirlas: ya están en Storage y el servidor las
+    // valida por ruta.
+    async function abrirFormularioEdicion(cobranzaId) {
+      try {
+        const [cab, cheques, fotos] = await Promise.all([
+          supabase.from('v_cobranzas').select('*').eq('id', cobranzaId).maybeSingle(),
+          supabase.from('cobranza_cheques').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
+          supabase.from('cobranza_fotos').select('id, storage_path, ocr_crudo, ocr_modelo').eq('cobranza_id', cobranzaId).order('created_at'),
+        ])
+        if (cab.error) throw cab.error
+        if (!cab.data) { mostrarError('No se encontró la cobranza.'); return }
+        const c = cab.data
+
+        estado.form = {
+          id: c.id,
+          modo: 'edicion',
+          estadoLocal: 'borrador',
+          cliente: c.cliente ?? '',
+          fecha: c.fecha ?? hoyArgentina(),
+          // El número canónico se pasa a texto para el input; el parser lo
+          // vuelve a número al leerlo. No se re-parsea un texto formateado.
+          efectivo: Number(c.efectivo ?? 0) > 0 ? String(c.efectivo) : '',
+          comprobante_referencia: c.comprobante_referencia ?? '',
+          observaciones: c.observaciones ?? '',
+          fotos: (fotos.data ?? []).map(f => ({
+            id: f.id, storage_path: f.storage_path, blob: null,
+            subida: true, leida: true, ocr_crudo: f.ocr_crudo ?? null, ocr_modelo: f.ocr_modelo ?? null,
+          })),
+          cheques: (cheques.data ?? []).map(ch => chequeDesdeBase(ch)),
+          actualizado: Date.now(),
+        }
+        pintarFormulario()
+        mostrarVistaCob('form', { subtitulo: 'Editar cobranza' })
+        await guardarBorrador()
+      } catch (err) {
+        console.error('No se pudo abrir la edición:', err)
+        mostrarError('No se pudo cargar la cobranza para editarla.')
+      }
+    }
+
+    function chequeDesdeBase(ch) {
+      const base = chequeVacio(ch.foto_id)
+      return {
+        ...base,
+        id: ch.id,
+        r1: `${ch.banco_codigo ?? ''}${ch.sucursal_codigo ?? ''}${ch.codigo_postal ?? ''}${ch.dv_ruta ?? ''}`,
+        r2: `${ch.numero ?? ''}${ch.dv_numero ?? ''}`,
+        r3: `${ch.cuenta ?? ''}${ch.dv_cuenta ?? ''}`,
+        banco_codigo: ch.banco_codigo, sucursal_codigo: ch.sucursal_codigo,
+        codigo_postal: ch.codigo_postal, dv_ruta: ch.dv_ruta,
+        numero: ch.numero, dv_numero: ch.dv_numero,
+        cuenta: ch.cuenta, dv_cuenta: ch.dv_cuenta,
+        tipo: ch.tipo,
+        fecha_emision: ch.fecha_emision ?? '',
+        fecha_pago: ch.fecha_pago ?? '',
+        importe: ch.importe != null ? String(ch.importe) : '',
+        importe_letras: ch.importe_letras ?? '',
+        beneficiario: ch.beneficiario ?? '',
+        titulares: Array.isArray(ch.titulares) ? ch.titulares : [],
+        confirmado: true,
+        abierto: false,
+        ocr_propuesto: ch.ocr_propuesto ?? null,
+        origen_datos_previo: ch.origen_datos ?? null,
+      }
+    }
+
+    // ── Fotos ─────────────────────────────────────────────────────────────
+
+    // Se comprime EN EL CELULAR antes de guardar: una foto de cámara moderna
+    // pesa 4-8 MB, y con eso una cobranza de cinco fotos no sube nunca con la
+    // señal de un pueblo.
+    async function comprimirFoto(archivo) {
+      let fuente
+      if (typeof createImageBitmap === 'function') {
+        try {
+          // imageOrientation 'from-image' aplica el EXIF: sin eso las fotos
+          // verticales del celular llegan acostadas y el OCR lee de costado.
+          fuente = await createImageBitmap(archivo, { imageOrientation: 'from-image' })
+        } catch {
+          fuente = await createImageBitmap(archivo)
+        }
+      } else {
+        fuente = await imagenDesdeArchivo(archivo)
+      }
+
+      const ancho = fuente.width, alto = fuente.height
+      const lado = Math.max(ancho, alto)
+      // Sin agrandar: una foto chica se deja como está.
+      const escala = lado > LADO_MAXIMO_FOTO ? LADO_MAXIMO_FOTO / lado : 1
+      const lienzo = document.createElement('canvas')
+      lienzo.width = Math.round(ancho * escala)
+      lienzo.height = Math.round(alto * escala)
+      lienzo.getContext('2d').drawImage(fuente, 0, 0, lienzo.width, lienzo.height)
+      if (typeof fuente.close === 'function') fuente.close()
+
+      let blob = await lienzoABlob(lienzo, 0.85)
+      if (blob && blob.size > BYTES_MAXIMO_FOTO) blob = await lienzoABlob(lienzo, 0.75)
+      return blob
+    }
+
+    function imagenDesdeArchivo(archivo) {
+      return new Promise((resolver, rechazar) => {
+        const img = new Image()
+        img.onload = () => resolver(img)
+        img.onerror = () => rechazar(new Error('No se pudo leer la imagen'))
+        img.src = URL.createObjectURL(archivo)
+      })
+    }
+
+    function lienzoABlob(lienzo, calidad) {
+      return new Promise(resolver => lienzo.toBlob(resolver, 'image/jpeg', calidad))
+    }
+
+    async function agregarFotos(archivos) {
+      const f = estado.form
+      if (!f) return
+      for (const archivo of archivos) {
+        // Cada paso de red o de proceso va en SU PROPIO try/catch: si la
+        // compresión falla, el mensaje tiene que hablar de la compresión y no
+        // heredar el de otro bloque.
+        let blob = null
+        try {
+          blob = await comprimirFoto(archivo)
+        } catch (err) {
+          console.error('No se pudo procesar la foto:', err)
+          mostrarError('No se pudo procesar una de las fotos. Probá sacarla de nuevo.')
+          continue
+        }
+        if (!blob) { mostrarError('No se pudo procesar una de las fotos.'); continue }
+
+        const foto = {
+          id: crypto.randomUUID(),
+          // La ruta es la que exige la política de Storage.
+          storage_path: `${estado.sesion.user.id}/${f.id}/${crypto.randomUUID()}.jpg`,
+          blob, subida: false, leida: false, ocr_crudo: null, ocr_modelo: null, error: null,
+        }
+        f.fotos.push(foto)
+        await guardarBorrador()
+        pintarFormulario()
+        // Subir y leer en segundo plano: la persona puede seguir sacando fotos.
+        procesarFoto(foto.id)
+      }
+    }
+
+    // Subida + OCR de UNA foto. Cada mitad con su propio guard y su propio
+    // mensaje: sin señal la subida falla y la foto queda pendiente, que es un
+    // estado normal y no un error de la persona.
+    async function procesarFoto(fotoId) {
+      const f = estado.form
+      if (!f) return
+      const foto = f.fotos.find(x => x.id === fotoId)
+      if (!foto || foto.leida) return
+
+      if (!navigator.onLine) {
+        foto.error = null
+        pintarFormulario()
+        return
+      }
+
+      if (!foto.subida) {
+        try {
+          const { error } = await supabase.storage.from('cobranzas')
+            .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
+          if (error) {
+            // Si el archivo YA existe es porque un intento anterior sí subió y
+            // no llegamos a marcarlo: tomarlo como subido evita reintentar para
+            // siempre una foto que ya está.
+            const yaEstaba = /exist/i.test(error.message ?? '')
+            if (!yaEstaba) throw error
+          }
+          foto.subida = true
+          foto.error = null
+          await guardarBorrador()
+        } catch (err) {
+          console.error('No se pudo subir la foto:', err)
+          foto.error = 'No se pudo subir. Se reintenta cuando haya señal.'
+          pintarFormulario()
+          return
+        }
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('ocr-cheques', {
+          body: { storage_path: foto.storage_path },
+        })
+        // La función devuelve sus errores con HTTP 200 y ok:false, así que
+        // mirar solo `error` dejaría pasar "no se detectó ningún cheque" como
+        // si hubiera salido bien.
+        if (error) throw error
+        foto.leida = true
+        foto.ocr_modelo = data?.modelo ?? null
+        foto.ocr_crudo = data?.crudo ?? null
+
+        if (!data?.ok) {
+          foto.error = data?.mensaje || 'No se pudo leer la foto. Cargá los cheques a mano.'
+        } else {
+          foto.error = null
+          const propuestos = Array.isArray(data.cheques) ? data.cheques : []
+          propuestos.forEach(p => f.cheques.push(chequeDesdeOcr(p, foto.id)))
+          // Que el modelo diga "hay 4" y devuelva 3 es una señal de que se le
+          // escapó uno: se avisa para que la persona lo agregue a mano.
+          const declarada = data.cantidad_declarada
+          if (typeof declarada === 'number' && declarada !== propuestos.length) {
+            foto.error = `El lector dice que hay ${declarada} cheques en esta foto y pudo leer ${propuestos.length}. Revisá y agregá el que falte a mano.`
+          }
+        }
+        await guardarBorrador()
+        pintarFormulario()
+      } catch (err) {
+        console.error('Falló el OCR de la foto:', err)
+        foto.error = 'No se pudo leer la foto todavía. Se reintenta cuando haya señal, o cargá los cheques a mano.'
+        pintarFormulario()
+      }
+    }
+
+    // Un cheque propuesto por el OCR entra a la pantalla con los datos ya
+    // cargados, pero SIN confirmar: el OCR propone y la persona confirma.
+    function chequeDesdeOcr(p, fotoId) {
+      const ch = chequeVacio(fotoId)
+      ch.foto_id = fotoId
+      ch.r1 = p.banco_codigo && p.sucursal_codigo && p.codigo_postal && p.dv_ruta !== null
+        ? `${p.banco_codigo}${p.sucursal_codigo}${p.codigo_postal}${p.dv_ruta}` : ''
+      ch.r2 = p.numero && p.dv_numero !== null ? `${p.numero}${p.dv_numero}` : ''
+      ch.r3 = p.cuenta && p.dv_cuenta !== null ? `${p.cuenta}${p.dv_cuenta}` : ''
+      aplicarRenglones(ch)
+      ch.tipo = p.tipo ?? null
+      ch.fecha_emision = p.fecha_emision ?? ''
+      ch.fecha_pago = p.tipo === 'comun' ? '' : (p.fecha_pago ?? '')
+      ch.importe = p.importe != null ? String(p.importe) : ''
+      ch.importe_letras = p.importe_letras ?? ''
+      ch.beneficiario = p.beneficiario ?? ''
+      ch.titulares = Array.isArray(p.titulares) ? p.titulares : []
+      ch.ocr_propuesto = p
+      ch.controles = p.controles ?? null
+      // Los renglones que el OCR trajo con el DV correcto se pliegan: ya están
+      // verificados por el dígito y volver a mirarlos no agrega nada. Los que
+      // se completaron desde la CMC-7 van ABIERTOS, porque ahí el DV se calculó
+      // y dejó de ser un control.
+      ch.abierto = true
+      return ch
+    }
+
+    // Toma los dígitos de los tres renglones y los reparte. Los campos son
+    // texto y se quedan como texto: los códigos llevan ceros a la izquierda.
+    function aplicarRenglones(ch) {
+      const d1 = String(ch.r1 ?? '').replace(/\D/g, '')
+      const d2 = String(ch.r2 ?? '').replace(/\D/g, '')
+      const d3 = String(ch.r3 ?? '').replace(/\D/g, '')
+
+      if (d1.length === 11) {
+        ch.banco_codigo = d1.slice(0, 3); ch.sucursal_codigo = d1.slice(3, 6)
+        ch.codigo_postal = d1.slice(6, 10); ch.dv_ruta = Number(d1[10])
+      } else {
+        ch.banco_codigo = null; ch.sucursal_codigo = null; ch.codigo_postal = null; ch.dv_ruta = null
+      }
+      if (d2.length === 9) { ch.numero = d2.slice(0, 8); ch.dv_numero = Number(d2[8]) }
+      else { ch.numero = null; ch.dv_numero = null }
+      if (d3.length === 12) { ch.cuenta = d3.slice(0, 11); ch.dv_cuenta = Number(d3[11]) }
+      else { ch.cuenta = null; ch.dv_cuenta = null }
+    }
+
+    // Estado de un renglón, para pintarlo en vivo. Devuelve 'vacio' | 'corto' |
+    // 'ok' | 'mal'.
+    function estadoRenglon(texto, largo) {
+      const d = String(texto ?? '').replace(/\D/g, '')
+      if (d.length === 0) return 'vacio'
+      if (d.length !== largo) return 'corto'
+      const cuerpo = d.slice(0, largo - 1)
+      return dvBcra(cuerpo) === Number(d[largo - 1]) ? 'ok' : 'mal'
+    }
+
+
+    // ── Render del formulario ─────────────────────────────────────────────
+
+    function pintarFormulario() {
+      const f = estado.form
+      if (!f) return
+
+      document.getElementById('cob-cliente').value = f.cliente
+      document.getElementById('cob-fecha').value = f.fecha
+      document.getElementById('cob-fecha').max = hoyArgentina()
+      document.getElementById('cob-efectivo').value = f.efectivo
+      document.getElementById('cob-referencia').value = f.comprobante_referencia
+      document.getElementById('cob-observaciones').value = f.observaciones
+
+      pintarEstadoFotos()
+      pintarCheques()
+      pintarTotalYGuardado()
+    }
+
+    function pintarEstadoFotos() {
+      const f = estado.form
+      const cont = document.getElementById('cob-fotos-estado')
+      if (!f.fotos.length) { cont.innerHTML = ''; return }
+
+      const avisos = f.fotos.map((foto, i) => {
+        const chequesDeLaFoto = f.cheques.filter(c => c.foto_id === foto.id).length
+        if (foto.error) {
+          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: ${escCob(foto.error)}</div>`
+        }
+        if (!foto.subida) {
+          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: guardada en el celular. Se va a leer cuando vuelva la señal.</div>`
+        }
+        if (!foto.leida) {
+          return `<div class="cob-aviso">Foto ${i + 1}: leyendo los cheques…</div>`
+        }
+        if (chequesDeLaFoto === 0) {
+          // Una foto sin cheques no suma nada y al guardar se descarta: hay que
+          // decirlo ANTES, no después.
+          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: no quedó ningún cheque. Agregalo a mano o la foto se descarta al guardar.</div>`
+        }
+        return ''
+      }).filter(Boolean).join('')
+
+      cont.innerHTML = `
+        <div class="cob-fotos" style="margin:.75rem 0">
+          ${f.fotos.map((foto, i) => `
+            <div class="cob-foto">
+              <img data-foto-form="${escCob(foto.id)}" alt="Foto ${i + 1}">
+              <div class="cob-foto__pie">Foto ${i + 1}</div>
+            </div>`).join('')}
+        </div>${avisos}`
+
+      document.querySelectorAll('[data-foto-form]').forEach(async (img) => {
+        const foto = f.fotos.find(x => x.id === img.dataset.fotoForm)
+        const url = await urlDeFoto(foto)
+        if (url) img.src = url
+        img.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
+      })
+    }
+
+    function pintarCheques() {
+      const f = estado.form
+      const cont = document.getElementById('cob-lista-cheques')
+      cont.innerHTML = f.cheques.map(ch => htmlTarjetaCheque(ch, f)).join('')
+      conectarTarjetasCheque()
+    }
+
+    // LA TARJETA DE REVISIÓN — el corazón del módulo.
+    //
+    // El OCR VA A FALLAR con letra manuscrita: el importe, las fechas y las
+    // letras son justo lo escrito a mano. La pantalla no está hecha para que se
+    // confirme rápido, está hecha para que CORREGIR sea cómodo: lo manuscrito
+    // va siempre abierto y a la vista, y lo impreso —que el dígito verificador
+    // ya validó— se pliega.
+    function htmlTarjetaCheque(ch, f) {
+      const foto = f.fotos.find(x => x.id === ch.foto_id)
+      const indiceFoto = f.fotos.findIndex(x => x.id === ch.foto_id) + 1
+      const errores = ch.confirmado ? [] : erroresDeCheque(chequeParaBase(ch))
+      const importeNum = parseImporteCobranza(ch.importe)
+
+      if (ch.confirmado && !ch.abierto) {
+        // Plegado: el resumen alcanza para reconocerlo sin volver a leerlo todo.
+        return `
+          <div class="cob-cheque cob-cheque--confirmado" data-cheque="${escCob(ch.id)}">
+            <div class="cob-cheque__cabecera">
+              <img class="cob-cheque__mini" data-mini="${escCob(ch.id)}" alt="Foto ${indiceFoto}">
+              <div class="cob-cheque__resumen">
+                <div class="cob-cheque__titulo">${escCob(nombreBanco(ch.banco_codigo))}</div>
+                <div class="cob-cheque__sub">N&deg; ${escCob(ch.numero ?? '—')} · ${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')}${
+                  ch.tipo === 'diferido' && ch.fecha_pago ? ` · paga ${escCob(formatearFechaCob(ch.fecha_pago))}` : ''}</div>
+              </div>
+              <span class="cob-cheque__importe">${escCob(formatearImporte(importeNum))}</span>
+            </div>
+            <div class="cob-acciones">
+              <button type="button" class="cob-btn cob-btn--chico" data-editar-cheque="${escCob(ch.id)}">Editar</button>
+              <button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-quitar-cheque="${escCob(ch.id)}">Quitar</button>
+            </div>
+          </div>`
+      }
+
+      const c = ch.controles ?? {}
+      const e1 = estadoRenglon(ch.r1, 11), e2 = estadoRenglon(ch.r2, 9), e3 = estadoRenglon(ch.r3, 12)
+      const claseRenglon = (est) => est === 'ok' ? 'cob-renglon--ok' : est === 'mal' ? 'cob-renglon--mal' : ''
+      const pieRenglon = (est) => est === 'ok'
+        ? '<div class="cob-campo__ok">✓ Coincide con el dígito verificador</div>'
+        : est === 'mal'
+          ? '<div class="cob-campo__error">No coincide con el dígito verificador, revisá contra el papel.</div>'
+          : ''
+
+      // Si el recuadro se completó desde la CMC-7, el DV se CALCULÓ: deja de
+      // ser un control y la persona tiene que mirar el papel.
+      const avisoCmc7 = c.completado_desde_cmc7
+        ? '<div class="cob-aviso cob-aviso--ambar">Estos números se completaron desde la banda magnética. Verificá estos números contra el papel.</div>'
+        : ''
+      const avisoCmc7Distinta = c.cmc7_coincide === false
+        ? '<div class="cob-aviso cob-aviso--alerta">La banda magnética de abajo no coincide con el recuadro de arriba. Revisá los tres renglones.</div>'
+        : ''
+      const avisoLetras = c.letras_coinciden === false && ch.ocr_propuesto
+        ? `<div class="cob-aviso cob-aviso--ambar">En letras dice ${escCob(formatearImporte(ch.ocr_propuesto.importe_letras_valor))}, en números ${escCob(formatearImporte(ch.ocr_propuesto.importe))}.</div>`
+        : ''
+      const avisoFechas = c.fechas_ok === false
+        ? '<div class="cob-aviso cob-aviso--alerta">Las fechas leídas no cierran. Miralas contra el papel.</div>'
+        : ''
+      const avisoCuit = c.cuits_ok === false
+        ? '<div class="cob-aviso cob-aviso--ambar">Algún CUIT de los titulares no es válido. Está impreso en el cheque: copialo de ahí.</div>'
+        : ''
+      // Los dólares no se pueden cargar acá: la cobranza es en pesos y la
+      // columna moneda de la base es 'ARS'.
+      const dolares = c.moneda_ok === false
+      const avisoMoneda = dolares
+        ? '<div class="cob-aviso cob-aviso--alerta">Cheque en dólares: no se puede cargar en este módulo.</div>'
+        : ''
+      const avisoNotas = ch.ocr_propuesto?.notas
+        ? `<div class="cob-aviso">El lector anotó: ${escCob(ch.ocr_propuesto.notas)}</div>` : ''
+      const avisoDuplicado = ch.duplicado
+        ? `<div class="cob-aviso ${ch.duplicado.nivel === 'completo' ? 'cob-aviso--alerta' : 'cob-aviso--ambar'}">${escCob(ch.duplicado.texto)}</div>`
+        : ''
+
+      return `
+        <div class="cob-cheque ${errores.length ? 'cob-cheque--error' : ''}" data-cheque="${escCob(ch.id)}">
+          <div class="cob-cheque__cabecera">
+            <img class="cob-cheque__mini" data-mini="${escCob(ch.id)}" alt="Foto ${indiceFoto}">
+            <div class="cob-cheque__resumen">
+              <div class="cob-cheque__titulo">${escCob(nombreBanco(ch.banco_codigo))}</div>
+              <div class="cob-cheque__sub">Foto ${indiceFoto}${foto ? '' : ' · sin foto'}</div>
+            </div>
+          </div>
+
+          ${avisoMoneda}${avisoCmc7}${avisoCmc7Distinta}${avisoDuplicado}
+
+          <div class="cob-cheque__cuerpo">
+            <div class="cob-renglon ${claseRenglon(e1)}">
+              <label>Renglón 1 (banco-sucursal-CP y dígito)</label>
+              <input type="text" inputmode="numeric" data-r1="${escCob(ch.id)}" value="${escCob(ch.r1)}" placeholder="285-386-3218 6">
+              <div class="cob-campo__ayuda">${escCob(nombreBanco(ch.banco_codigo))}</div>
+              ${pieRenglon(e1)}
+            </div>
+            <div class="cob-renglon ${claseRenglon(e2)}">
+              <label>Renglón 2 (número y dígito)</label>
+              <input type="text" inputmode="numeric" data-r2="${escCob(ch.id)}" value="${escCob(ch.r2)}" placeholder="66259862 8">
+              ${pieRenglon(e2)}
+            </div>
+            <div class="cob-renglon ${claseRenglon(e3)}">
+              <label>Renglón 3 (cuenta y dígito)</label>
+              <input type="text" inputmode="numeric" data-r3="${escCob(ch.id)}" value="${escCob(ch.r3)}" placeholder="09420314667 0">
+              ${pieRenglon(e3)}
+            </div>
+
+            <div class="cob-campo">
+              <label>Tipo de cheque</label>
+              <div class="cob-chips">
+                <button type="button" class="cob-chip ${ch.tipo === 'comun' ? 'cob-chip--activo' : ''}" data-tipo="comun" data-cheque-tipo="${escCob(ch.id)}">Común</button>
+                <button type="button" class="cob-chip ${ch.tipo === 'diferido' ? 'cob-chip--activo' : ''}" data-tipo="diferido" data-cheque-tipo="${escCob(ch.id)}">Diferido</button>
+              </div>
+            </div>
+
+            <div class="cob-campo">
+              <label>Fecha de emisión</label>
+              <input type="date" data-emision="${escCob(ch.id)}" value="${escCob(ch.fecha_emision)}">
+            </div>
+            <!-- Un cheque común no tiene fecha de pago: el campo no se
+                 esconde "por si acaso", se saca y el dato va en null. -->
+            <div class="cob-campo" ${ch.tipo === 'diferido' ? '' : 'hidden'}>
+              <label>Fecha de pago</label>
+              <input type="date" data-pago="${escCob(ch.id)}" value="${escCob(ch.fecha_pago)}">
+            </div>
+
+            <div class="cob-campo">
+              <label>Importe</label>
+              <input type="text" inputmode="decimal" data-importe="${escCob(ch.id)}" value="${escCob(ch.importe)}" placeholder="0,00">
+              <div class="cob-campo__ayuda">${escCob(importeNum === null ? 'Escribilo como en el cheque: 427.256,86' : formatearImporte(importeNum))}</div>
+            </div>
+            <div class="cob-campo">
+              <label>Importe en letras (opcional)</label>
+              <input type="text" data-letras="${escCob(ch.id)}" value="${escCob(ch.importe_letras)}" maxlength="300">
+            </div>
+            ${avisoLetras}${avisoFechas}${avisoNotas}
+
+            <div class="cob-campo">
+              <label>Páguese a (opcional)</label>
+              <input type="text" data-beneficiario="${escCob(ch.id)}" value="${escCob(ch.beneficiario)}" maxlength="200">
+            </div>
+
+            <button type="button" class="cob-plegado" data-plegar-tit="${escCob(ch.id)}">
+              <span>Titulares de la cuenta (${ch.titulares.length})</span><span>▾</span>
+            </button>
+            <div hidden data-tit-caja="${escCob(ch.id)}">
+              ${ch.titulares.map((t, i) => `
+                <div class="cob-titular">
+                  <input type="text" placeholder="Nombre" data-tit-nombre="${escCob(ch.id)}" data-i="${i}" value="${escCob(t.nombre ?? '')}" maxlength="200">
+                  <input type="text" inputmode="numeric" placeholder="CUIT" data-tit-cuit="${escCob(ch.id)}" data-i="${i}" value="${escCob(t.cuit ?? '')}" maxlength="13">
+                </div>`).join('')}
+              ${avisoCuit}
+              <button type="button" class="cob-btn cob-btn--chico" data-tit-agregar="${escCob(ch.id)}">+ Agregar titular</button>
+            </div>
+
+            ${errores.length ? `<div class="cob-aviso cob-aviso--alerta">${errores.map(escCob).join('<br>')}</div>` : ''}
+
+            <div class="cob-acciones">
+              <button type="button" class="cob-btn cob-btn--primario" data-confirmar-cheque="${escCob(ch.id)}"
+                ${errores.length || dolares || ch.duplicado?.nivel === 'completo' ? 'disabled' : ''}>Confirmar cheque</button>
+              <button type="button" class="cob-btn cob-btn--alerta" data-quitar-cheque="${escCob(ch.id)}">Quitar</button>
+            </div>
+          </div>
+        </div>`
+    }
+
+    // La fila tal cual va a viajar a la base. Se valida sobre ESTO y no campo
+    // por campo: es lo único que el servidor va a ver.
+    function chequeParaBase(ch) {
+      return {
+        id: ch.id,
+        foto_id: ch.foto_id,
+        banco_codigo: ch.banco_codigo, sucursal_codigo: ch.sucursal_codigo,
+        codigo_postal: ch.codigo_postal, dv_ruta: ch.dv_ruta,
+        numero: ch.numero, dv_numero: ch.dv_numero,
+        cuenta: ch.cuenta, dv_cuenta: ch.dv_cuenta,
+        tipo: ch.tipo,
+        fecha_emision: esFechaIso(ch.fecha_emision) ? ch.fecha_emision : null,
+        fecha_pago: ch.tipo === 'comun' ? null : (esFechaIso(ch.fecha_pago) ? ch.fecha_pago : null),
+        importe: parseImporteCobranza(ch.importe),
+        importe_letras: textoOpcional(ch.importe_letras),
+        titulares: (ch.titulares ?? [])
+          .map(t => ({ nombre: textoOpcional(t.nombre), cuit: (String(t.cuit ?? '').replace(/\D/g, '') || null) }))
+          .filter(t => t.nombre !== null || t.cuit !== null),
+        beneficiario: textoOpcional(ch.beneficiario),
+        origen_datos: origenDatosDe(ch),
+        ocr_propuesto: ch.ocr_propuesto ?? null,
+      }
+    }
+
+    // Un texto opcional vacío va como NULL y nunca como '': la base distingue
+    // "no hay dato" de "hay un dato que es la cadena vacía".
+    function textoOpcional(v) {
+      const t = String(v ?? '').trim()
+      return t === '' ? null : t
+    }
+
+    // 'manual' si nunca hubo propuesta; 'ocr' si lo confirmado es idéntico a lo
+    // propuesto; 'ocr_corregido' si se tocó algo. Sirve para saber después qué
+    // tan bien lee el OCR sin preguntárselo a nadie.
+    function origenDatosDe(ch) {
+      const p = ch.ocr_propuesto
+      if (!p) return 'manual'
+      const igual =
+        (p.banco_codigo ?? null) === ch.banco_codigo &&
+        (p.sucursal_codigo ?? null) === ch.sucursal_codigo &&
+        (p.codigo_postal ?? null) === ch.codigo_postal &&
+        (p.numero ?? null) === ch.numero &&
+        (p.cuenta ?? null) === ch.cuenta &&
+        (p.tipo ?? null) === ch.tipo &&
+        (p.fecha_emision ?? null) === (esFechaIso(ch.fecha_emision) ? ch.fecha_emision : null) &&
+        (p.fecha_pago ?? null) === (ch.tipo === 'comun' ? null : (esFechaIso(ch.fecha_pago) ? ch.fecha_pago : null)) &&
+        Number(p.importe ?? NaN) === Number(parseImporteCobranza(ch.importe) ?? NaN) &&
+        (p.beneficiario ?? null) === textoOpcional(ch.beneficiario)
+      return igual ? 'ocr' : 'ocr_corregido'
+    }
+
+    // ── Duplicados ────────────────────────────────────────────────────────
+    // Se consulta cuando los tres renglones cierran: antes no hay con qué
+    // preguntar. Va en su propio try/catch — sin señal no se puede chequear y
+    // eso NO puede trabar la carga.
+    async function chequearDuplicado(ch) {
+      if (!navigator.onLine) return
+      const b = chequeParaBase(ch)
+      if (!b.banco_codigo || !b.numero || !b.sucursal_codigo || !b.cuenta) return
+      try {
+        const { data, error } = await supabase.rpc('buscar_cheque_cargado', {
+          p_banco_codigo: b.banco_codigo,
+          p_numero: b.numero,
+          p_sucursal_codigo: b.sucursal_codigo,
+          p_cuenta: b.cuenta,
+          p_excluir_cobranza_id: estado.form?.id ?? null,
+        })
+        if (error) throw error
+        const filas = data ?? []
+        const completo = filas.find(x => x.coincide_completo)
+        if (completo) {
+          ch.duplicado = {
+            nivel: 'completo',
+            texto: `Este cheque ya está cargado: ${formatearFechaCob(completo.fecha)}, por ${completo.cargada_por ?? 'alguien'}, por ${formatearImporte(completo.importe)}.`,
+          }
+        } else if (filas.length) {
+          ch.duplicado = {
+            nivel: 'parcial',
+            texto: 'Hay otro cheque con el mismo banco y número, de otra cuenta. Verificá que hayas copiado bien los tres renglones.',
+          }
+        } else {
+          ch.duplicado = null
+        }
+        pintarCheques()
+      } catch (err) {
+        console.error('No se pudo chequear si el cheque ya estaba cargado:', err)
+      }
+    }
+
+
+    function conectarTarjetasCheque() {
+      const f = estado.form
+      if (!f) return
+      const buscar = (id) => f.cheques.find(c => c.id === id)
+
+      // Las miniaturas se firman después de dibujar: esperar la URL antes de
+      // pintar dejaría la tarjeta en blanco mientras tanto.
+      document.querySelectorAll('[data-mini]').forEach(async (img) => {
+        const ch = buscar(img.dataset.mini)
+        const foto = f.fotos.find(x => x.id === ch?.foto_id)
+        const url = await urlDeFoto(foto)
+        if (url) img.src = url
+        img.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
+      })
+
+      // Los tres renglones: se recalcula en vivo para que el ✓ o el rojo
+      // aparezcan mientras se tipea, no al salir del campo.
+      const conectarRenglon = (attr, prop) => {
+        document.querySelectorAll(`[data-${attr}]`).forEach(inp => {
+          inp.addEventListener('input', () => {
+            const ch = buscar(inp.dataset[attr])
+            if (!ch) return
+            ch[prop] = inp.value
+            aplicarRenglones(ch)
+            // Al cambiar el código el duplicado anterior ya no aplica.
+            ch.duplicado = null
+            guardarBorrador()
+            pintarCheques()
+            enfocar(`[data-${attr}="${ch.id}"]`)
+            if (estadoRenglon(ch.r1, 11) === 'ok' && estadoRenglon(ch.r2, 9) === 'ok' && estadoRenglon(ch.r3, 12) === 'ok') {
+              chequearDuplicado(ch)
+            }
+          })
+        })
+      }
+      conectarRenglon('r1', 'r1')
+      conectarRenglon('r2', 'r2')
+      conectarRenglon('r3', 'r3')
+
+      // Los campos de texto NO re-renderizan en cada tecla: un render por tecla
+      // le saca el foco al input, que es un bug que este proyecto ya tuvo.
+      const conectarTexto = (attr, prop) => {
+        document.querySelectorAll(`[data-${attr}]`).forEach(inp => {
+          inp.addEventListener('input', () => {
+            const ch = buscar(inp.dataset[attr])
+            if (!ch) return
+            ch[prop] = inp.value
+            guardarBorrador()
+          })
+          inp.addEventListener('change', () => { pintarCheques(); pintarTotalYGuardado() })
+        })
+      }
+      conectarTexto('importe', 'importe')
+      conectarTexto('letras', 'importe_letras')
+      conectarTexto('beneficiario', 'beneficiario')
+      conectarTexto('emision', 'fecha_emision')
+      conectarTexto('pago', 'fecha_pago')
+
+      document.querySelectorAll('[data-cheque-tipo]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ch = buscar(btn.dataset.chequeTipo)
+          if (!ch) return
+          ch.tipo = btn.dataset.tipo
+          // Pasar a común BORRA la fecha de pago: dejarla escondida la mandaría
+          // igual al guardar y el servidor la rechaza.
+          if (ch.tipo === 'comun') ch.fecha_pago = ''
+          guardarBorrador()
+          pintarCheques()
+        })
+      })
+
+      document.querySelectorAll('[data-plegar-tit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const caja = document.querySelector(`[data-tit-caja="${btn.dataset.plegarTit}"]`)
+          if (caja) caja.hidden = !caja.hidden
+        })
+      })
+
+      document.querySelectorAll('[data-tit-nombre]').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const ch = buscar(inp.dataset.titNombre)
+          if (ch) { ch.titulares[Number(inp.dataset.i)].nombre = inp.value; guardarBorrador() }
+        })
+      })
+      document.querySelectorAll('[data-tit-cuit]').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const ch = buscar(inp.dataset.titCuit)
+          if (ch) { ch.titulares[Number(inp.dataset.i)].cuit = inp.value; guardarBorrador() }
+        })
+      })
+      document.querySelectorAll('[data-tit-agregar]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ch = buscar(btn.dataset.titAgregar)
+          if (!ch) return
+          ch.titulares.push({ nombre: '', cuit: '' })
+          guardarBorrador(); pintarCheques()
+        })
+      })
+
+      document.querySelectorAll('[data-confirmar-cheque]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ch = buscar(btn.dataset.confirmarCheque)
+          if (!ch) return
+          // Se revalida con las MISMAS reglas que la base: el disabled del
+          // botón es comodidad, no la validación.
+          const errores = erroresDeCheque(chequeParaBase(ch))
+          if (errores.length) { pintarCheques(); return }
+          ch.confirmado = true
+          ch.abierto = false
+          guardarBorrador(); pintarCheques(); pintarTotalYGuardado()
+        })
+      })
+
+      document.querySelectorAll('[data-editar-cheque]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ch = buscar(btn.dataset.editarCheque)
+          if (!ch) return
+          ch.confirmado = false; ch.abierto = true
+          guardarBorrador(); pintarCheques(); pintarTotalYGuardado()
+        })
+      })
+
+      document.querySelectorAll('[data-quitar-cheque]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const f2 = estado.form
+          f2.cheques = f2.cheques.filter(c => c.id !== btn.dataset.quitarCheque)
+          guardarBorrador(); pintarCheques(); pintarTotalYGuardado(); pintarEstadoFotos()
+        })
+      })
+    }
+
+    // Devolver el foco y el cursor al final después de un re-render: sin esto,
+    // corregir un renglón obliga a volver a tocar el campo en cada dígito.
+    function enfocar(selector) {
+      const el = document.querySelector(selector)
+      if (!el) return
+      el.focus()
+      try { el.setSelectionRange(el.value.length, el.value.length) } catch { /* los date no lo soportan */ }
+    }
+
+    // ── Total y habilitación del botón ────────────────────────────────────
+
+    function totalDelFormulario() {
+      const f = estado.form
+      if (!f) return 0
+      const cheques = f.cheques
+        .filter(c => c.confirmado)
+        .reduce((acc, c) => acc + (parseImporteCobranza(c.importe) ?? 0), 0)
+      return cheques + efectivoDelFormulario()
+    }
+
+    // EL ÚNICO lugar donde el campo vacío de efectivo se convierte en 0. Vacío
+    // significa "no hubo efectivo" y la base espera un número, no un null; si
+    // esta conversión estuviera repetida, un día una de las copias mandaría
+    // null y el insert fallaría con un mensaje que no habla de efectivo.
+    function efectivoDelFormulario() {
+      const t = String(estado.form?.efectivo ?? '').trim()
+      if (t === '') return 0
+      return parseImporteCobranza(t) ?? 0
+    }
+
+    function motivosParaNoGuardar() {
+      const f = estado.form
+      const motivos = []
+      if (!f) return ['No hay nada que guardar.']
+      if (!String(f.cliente ?? '').trim()) motivos.push('Falta el cliente.')
+      if (!esFechaIso(f.fecha)) motivos.push('Falta la fecha.')
+      else if (diasEntre(hoyArgentina(), f.fecha) > 0) motivos.push('La fecha no puede ser posterior a hoy.')
+
+      const sinConfirmar = f.cheques.filter(c => !c.confirmado).length
+      if (sinConfirmar) motivos.push(`Quedan ${sinConfirmar} ${sinConfirmar === 1 ? 'cheque' : 'cheques'} sin confirmar.`)
+
+      const confirmados = f.cheques.filter(c => c.confirmado).length
+      if (confirmados === 0 && efectivoDelFormulario() <= 0) {
+        motivos.push('Cargá al menos un cheque o un importe en efectivo.')
+      }
+      const efectivoCrudo = String(f.efectivo ?? '').trim()
+      if (efectivoCrudo !== '' && parseImporteCobranza(efectivoCrudo) === null) {
+        motivos.push('El efectivo no se entiende. Escribilo así: 12.500,50')
+      }
+      return motivos
+    }
+
+    function pintarTotalYGuardado() {
+      const motivos = motivosParaNoGuardar()
+      document.getElementById('cob-total').textContent = formatearImporte(totalDelFormulario())
+      // El disabled se aplica DESDE JS y no como atributo del HTML: si el
+      // script fallara, el botón queda usable en vez de dejar el formulario
+      // inutilizable.
+      document.getElementById('cob-btn-guardar').disabled = motivos.length > 0
+
+      const caja = document.getElementById('cob-form-pendientes')
+      const f = estado.form
+      const fotosSinCheques = f ? f.fotos.filter(x => !f.cheques.some(c => c.foto_id === x.id)).length : 0
+      const extra = fotosSinCheques
+        ? [`${fotosSinCheques} ${fotosSinCheques === 1 ? 'foto quedó' : 'fotos quedaron'} sin cheques y se ${fotosSinCheques === 1 ? 'descarta' : 'descartan'} al guardar.`]
+        : []
+      const todo = motivos.concat(extra)
+      caja.hidden = todo.length === 0
+      if (todo.length) caja.innerHTML = todo.map(escCob).join('<br>')
+      caja.className = motivos.length ? 'cob-aviso cob-aviso--ambar' : 'cob-aviso'
+    }
+
+    // ── Guardado ──────────────────────────────────────────────────────────
+
+    async function guardarCobranza() {
+      const f = estado.form
+      if (!f) return
+      const motivos = motivosParaNoGuardar()
+      if (motivos.length) { pintarTotalYGuardado(); return }
+
+      const btn = document.getElementById('cob-btn-guardar')
+      const err = document.getElementById('cob-error-guardar')
+      btn.disabled = true
+      err.hidden = true
+
+      // La persona la dio por terminada: aunque falle la red, el celular ya
+      // sabe que esto tiene que subir.
+      f.estadoLocal = 'lista_para_subir'
+      await guardarBorrador()
+
+      const resultado = await subirCobranza(f)
+      btn.disabled = false
+
+      if (resultado.ok) {
+        await dbBorrar(STORE_BORRADORES, f.id)
+        estado.form = null
+        mostrarExito(resultado.yaExistia ? 'La cobranza ya estaba guardada.' : 'Cobranza guardada.')
+        mostrarVistaCob('listado')
+        await Promise.all([cargarCobranzas({ reiniciar: true }), refrescarLocales()])
+        return
+      }
+
+      if (resultado.tipo === 'red') {
+        // Sin señal no se pierde nada: queda en el celular y el sincronizador
+        // la reintenta. El alta es idempotente, así que reintentar es seguro.
+        mostrarExito('Se guardó en el celular. Se va a subir sola cuando haya señal.')
+        estado.form = null
+        mostrarVistaCob('listado')
+        await refrescarLocales()
+        return
+      }
+
+      // Una validación del servidor viene redactada en español: se muestra tal
+      // cual y la cobranza queda abierta para corregirla.
+      err.hidden = false
+      err.textContent = resultado.mensaje
+      f.estadoLocal = 'borrador'
+      await guardarBorrador()
+    }
+
+    // Sube las fotos que falten y llama a la RPC. La usan el botón Guardar y el
+    // sincronizador, así que devuelve un resultado en vez de tocar la pantalla.
+    async function subirCobranza(f) {
+      for (const foto of f.fotos) {
+        if (foto.subida) continue
+        if (!foto.blob) {
+          return { ok: false, tipo: 'validacion', mensaje: 'Una foto se perdió del celular. Sacala de nuevo.' }
+        }
+        try {
+          const { error } = await supabase.storage.from('cobranzas')
+            .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
+          if (error) {
+            // Ya existía = un intento anterior sí la subió.
+            if (!/exist/i.test(error.message ?? '')) throw error
+          }
+          foto.subida = true
+          await guardarBorrador()
+        } catch (errSubida) {
+          console.error('No se pudo subir una foto al guardar:', errSubida)
+          return { ok: false, tipo: 'red', mensaje: 'No se pudieron subir las fotos.' }
+        }
+      }
+
+      // Las fotos sin ningún cheque no se mandan: no aportan nada y el
+      // servidor exige que cada foto exista en Storage.
+      const fotosConCheques = f.fotos.filter(x => f.cheques.some(c => c.confirmado && c.foto_id === x.id))
+      const payload = {
+        p_id: f.id,
+        p_cliente: String(f.cliente).trim(),
+        p_fecha: f.fecha,
+        p_efectivo: efectivoDelFormulario(),
+        p_comprobante_referencia: textoOpcional(f.comprobante_referencia),
+        p_observaciones: textoOpcional(f.observaciones),
+        p_fotos: fotosConCheques.map(x => ({
+          id: x.id, storage_path: x.storage_path,
+          ocr_crudo: x.ocr_crudo ?? null, ocr_modelo: x.ocr_modelo ?? null,
+        })),
+        p_cheques: f.cheques.filter(c => c.confirmado).map(chequeParaBase),
+      }
+
+      try {
+        const rpc = f.modo === 'edicion' ? 'editar_cobranza' : 'guardar_cobranza'
+        const { data, error } = await supabase.rpc(rpc, payload)
+        if (error) {
+          // Distinguir "no hubo red" de "el servidor dijo que no" es lo que
+          // decide si la cobranza espera o si hay que corregirla: tratarlas
+          // igual haría que un error de validación se reintentara para siempre.
+          if (esErrorDeRed(error)) return { ok: false, tipo: 'red', mensaje: error.message ?? '' }
+          return { ok: false, tipo: 'validacion', mensaje: error.message || 'El servidor rechazó la cobranza.' }
+        }
+        return { ok: true, yaExistia: !!data?.ya_existia }
+      } catch (errRpc) {
+        console.error('Falló la RPC de guardado:', errRpc)
+        return { ok: false, tipo: 'red', mensaje: 'No se pudo contactar al servidor.' }
+      }
+    }
+
+    function esErrorDeRed(error) {
+      const m = String(error?.message ?? '').toLowerCase()
+      return !navigator.onLine || m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed')
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SINCRONIZADOR
+    //
+    // Corre al cargar la página, en el evento 'online' y cada 60 s si hay
+    // conexión. Hace tres cosas, cada una con su propio guard: sube las fotos
+    // que faltan, lee con el OCR las que todavía no se leyeron, y reintenta las
+    // cobranzas que la persona ya dio por terminadas.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const MS_SINCRONIZADOR = 60000
+
+    async function refrescarLocales() {
+      try {
+        estado.locales = await dbTodos(STORE_BORRADORES)
+      } catch (err) {
+        console.error('No se pudieron leer los borradores locales:', err)
+        estado.locales = []
+      }
+      pintarBannerLocal()
+    }
+
+    function pintarBannerLocal() {
+      const banner = document.getElementById('cob-banner-local')
+      const pendientes = estado.locales.filter(f => f.id !== estado.form?.id)
+      // Un banner que se dibuja cuando no hay nada que avisar entrena a
+      // ignorarlo: sin pendientes, no se dibuja.
+      if (!pendientes.length) { banner.hidden = true; banner.innerHTML = ''; return }
+
+      const paraSubir = pendientes.filter(f => f.estadoLocal === 'lista_para_subir').length
+      const paraRevisar = pendientes.filter(f => f.estadoLocal === 'para_revisar').length
+      const borradores = pendientes.filter(f => f.estadoLocal === 'borrador').length
+
+      const partes = []
+      if (paraSubir) partes.push(`${paraSubir} esperando señal para subir`)
+      if (paraRevisar) partes.push(`${paraRevisar} con cheques leídos para revisar`)
+      if (borradores) partes.push(`${borradores} a medio cargar`)
+
+      banner.hidden = false
+      banner.innerHTML = `
+        <strong>Hay cobranzas solo en este celular.</strong><br>${escCob(partes.join(' · '))}
+        <div class="cob-aviso__acciones">
+          ${pendientes.map(f => `
+            <button type="button" class="cob-btn cob-btn--chico" data-abrir-local="${escCob(f.id)}">
+              ${escCob(f.cliente || 'Sin cliente')} · ${escCob(formatearFechaCob(f.fecha))}
+            </button>
+            <button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-descartar-local="${escCob(f.id)}">Descartar</button>
+          `).join('')}
+        </div>`
+
+      banner.querySelectorAll('[data-abrir-local]').forEach(b => {
+        b.addEventListener('click', () => abrirFormularioLocal(b.dataset.abrirLocal))
+      })
+      banner.querySelectorAll('[data-descartar-local]').forEach(b => {
+        b.addEventListener('click', async () => {
+          // Descartar borra fotos que pueden no estar en ningún otro lado: se
+          // confirma, no se hace de una.
+          if (!window.confirm('¿Descartar esta cobranza guardada en el celular? No se puede recuperar.')) return
+          await dbBorrar(STORE_BORRADORES, b.dataset.descartarLocal)
+          await refrescarLocales()
+        })
+      })
+    }
+
+    async function sincronizar() {
+      if (estado.sincronizando || !navigator.onLine || !estado.sesion) return
+      estado.sincronizando = true
+      try {
+        const borradores = await dbTodos(STORE_BORRADORES)
+        for (const f of borradores) {
+          // El que está abierto en pantalla lo maneja la pantalla: tocarlo
+          // desde acá pisaría lo que la persona está tipeando.
+          if (f.id === estado.form?.id) continue
+
+          if (f.estadoLocal === 'lista_para_subir') {
+            const r = await subirCobranza(f)
+            if (r.ok) {
+              await dbBorrar(STORE_BORRADORES, f.id)
+              mostrarExito(`Se subió la cobranza de ${f.cliente || 'un cliente'}.`)
+              await cargarCobranzas({ reiniciar: true })
+            } else if (r.tipo === 'validacion') {
+              // El servidor la rechazó: reintentarla para siempre no la va a
+              // arreglar. Vuelve a 'borrador' para que alguien la corrija.
+              f.estadoLocal = 'borrador'
+              await dbGuardar(STORE_BORRADORES, f.id, f)
+              mostrarError(`La cobranza de ${f.cliente || 'un cliente'} no se pudo subir: ${r.mensaje}`)
+            }
+            continue
+          }
+
+          // Fotos que quedaron sin subir o sin leer: se completan solas y la
+          // cobranza pasa a 'para_revisar' para que alguien mire los cheques
+          // que el OCR agregó mientras tanto.
+          const pendientes = f.fotos.filter(x => !x.leida)
+          if (!pendientes.length) continue
+          let hubo = false
+          for (const foto of pendientes) {
+            const leida = await subirYLeerFoto(f, foto)
+            if (leida) hubo = true
+          }
+          if (hubo) {
+            f.estadoLocal = 'para_revisar'
+            await dbGuardar(STORE_BORRADORES, f.id, f)
+            mostrarExito(`Se leyeron los cheques de ${f.cliente || 'una cobranza'}. Revisalos antes de subirla.`)
+          }
+        }
+        await refrescarLocales()
+      } catch (err) {
+        console.error('Falló el sincronizador:', err)
+      } finally {
+        estado.sincronizando = false
+      }
+    }
+
+    // Igual que procesarFoto pero sobre un borrador que NO está en pantalla:
+    // muta el objeto y devuelve si quedó leída.
+    async function subirYLeerFoto(f, foto) {
+      if (!foto.subida) {
+        if (!foto.blob) return false
+        try {
+          const { error } = await supabase.storage.from('cobranzas')
+            .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
+          if (error && !/exist/i.test(error.message ?? '')) throw error
+          foto.subida = true
+        } catch (err) {
+          console.error('El sincronizador no pudo subir una foto:', err)
+          return false
+        }
+      }
+      try {
+        const { data, error } = await supabase.functions.invoke('ocr-cheques', {
+          body: { storage_path: foto.storage_path },
+        })
+        if (error) throw error
+        foto.leida = true
+        foto.ocr_modelo = data?.modelo ?? null
+        foto.ocr_crudo = data?.crudo ?? null
+        if (data?.ok) {
+          foto.error = null
+          ;(Array.isArray(data.cheques) ? data.cheques : []).forEach(p => f.cheques.push(chequeDesdeOcr(p, foto.id)))
+        } else {
+          foto.error = data?.mensaje || 'No se pudo leer la foto. Cargá los cheques a mano.'
+        }
+        return true
+      } catch (err) {
+        console.error('El sincronizador no pudo leer una foto:', err)
+        return false
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LISTENERS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function conectarTodo() {
+      // ── Listado ──
+      let temporizadorBusqueda = null
+      document.getElementById('cob-buscar-cliente').addEventListener('input', (ev) => {
+        estado.filtros.texto = ev.target.value
+        clearTimeout(temporizadorBusqueda)
+        // Sin debounce, cada tecla es una consulta: con la señal de un pueblo
+        // eso es una pantalla que nunca termina de cargar.
+        temporizadorBusqueda = setTimeout(() => cargarCobranzas({ reiniciar: true }), 350)
+      })
+      document.getElementById('cob-filtro-desde').addEventListener('change', (ev) => {
+        estado.filtros.desde = ev.target.value; cargarCobranzas({ reiniciar: true })
+      })
+      document.getElementById('cob-filtro-hasta').addEventListener('change', (ev) => {
+        estado.filtros.hasta = ev.target.value; cargarCobranzas({ reiniciar: true })
+      })
+      document.getElementById('cob-filtro-repartidor').addEventListener('change', (ev) => {
+        estado.filtros.repartidor = ev.target.value; cargarCobranzas({ reiniciar: true })
+      })
+      document.getElementById('cob-btn-mas').addEventListener('click', () => cargarCobranzas())
+      document.getElementById('cob-btn-nueva').addEventListener('click', abrirFormularioNuevo)
+      document.getElementById('cob-btn-volver-listado').addEventListener('click', () => mostrarVistaCob('listado'))
+
+      // ── Formulario ──
+      document.getElementById('cob-btn-salir-form').addEventListener('click', async () => {
+        // No se descarta nada al salir: el borrador queda en el celular y el
+        // banner lo muestra. Perder una cobranza a medio cargar por tocar
+        // "Volver" sería el peor final posible.
+        estado.form = null
+        mostrarVistaCob('listado')
+        await refrescarLocales()
+      })
+
+      const campos = [
+        ['cob-cliente', 'cliente'], ['cob-fecha', 'fecha'], ['cob-efectivo', 'efectivo'],
+        ['cob-referencia', 'comprobante_referencia'], ['cob-observaciones', 'observaciones'],
+      ]
+      campos.forEach(([id, prop]) => {
+        const el = document.getElementById(id)
+        el.addEventListener('input', () => {
+          if (!estado.form) return
+          estado.form[prop] = el.value
+          guardarBorrador()
+          pintarTotalYGuardado()
+        })
+      })
+
+      document.getElementById('cob-btn-camara').addEventListener('click', () => document.getElementById('cob-file-camara').click())
+      document.getElementById('cob-btn-galeria').addEventListener('click', () => document.getElementById('cob-file-galeria').click())
+      ;['cob-file-camara', 'cob-file-galeria'].forEach(id => {
+        document.getElementById(id).addEventListener('change', async (ev) => {
+          const archivos = [...(ev.target.files ?? [])]
+          // El input se limpia SIEMPRE: sin esto, sacar dos veces la misma foto
+          // no dispara el change la segunda vez.
+          ev.target.value = ''
+          if (archivos.length) await agregarFotos(archivos)
+        })
+      })
+
+      document.getElementById('cob-btn-cheque-mano').addEventListener('click', () => {
+        const f = estado.form
+        if (!f) return
+        // La foto es OBLIGATORIA: un cheque sin foto no se puede verificar
+        // después contra nada, y el servidor lo rechaza igual.
+        if (!f.fotos.length) {
+          mostrarError('Primero sacá la foto del cheque: cada cheque tiene que estar vinculado a una foto.')
+          return
+        }
+        if (f.fotos.length === 1) {
+          f.cheques.push(chequeVacio(f.fotos[0].id))
+        } else {
+          const cual = window.prompt(`¿A qué foto corresponde? Escribí un número del 1 al ${f.fotos.length}.`)
+          const i = Number(cual) - 1
+          if (!Number.isInteger(i) || i < 0 || i >= f.fotos.length) {
+            mostrarError('No se agregó el cheque: hay que decir a qué foto corresponde.')
+            return
+          }
+          f.cheques.push(chequeVacio(f.fotos[i].id))
+        }
+        guardarBorrador(); pintarCheques(); pintarTotalYGuardado()
+      })
+
+      document.getElementById('cob-btn-guardar').addEventListener('click', guardarCobranza)
+
+      // ── Visor ──
+      document.getElementById('cob-visor-cerrar').addEventListener('click', cerrarVisor)
+      document.getElementById('cob-visor-img').addEventListener('click', (ev) => {
+        // Tocar alterna entre "entra en pantalla" y tamaño real con scroll: es
+        // la única forma de leer un número de cheque en un celular.
+        ev.target.classList.toggle('cob-visor__img--real')
+      })
+
+      // ── Modal de motivo ──
+      document.getElementById('cob-modal-cancelar').addEventListener('click', cerrarModalMotivo)
+      document.getElementById('cob-modal-confirmar').addEventListener('click', () => {
+        const texto = document.getElementById('cob-modal-texto').value.trim()
+        if (!texto) {
+          const err = document.getElementById('cob-modal-error')
+          err.hidden = false
+          err.textContent = 'El motivo es obligatorio.'
+          return
+        }
+        if (accionDelModal) accionDelModal(texto)
+      })
+
+      // ── Sincronización ──
+      window.addEventListener('online', sincronizar)
+      setInterval(sincronizar, MS_SINCRONIZADOR)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+
+      // Que el navegador no borre los borradores por falta de espacio: son lo
+      // único que sostiene el trabajo de un día sin señal.
+      try {
+        if (navigator.storage?.persist) await navigator.storage.persist()
+      } catch (err) {
+        console.error('No se pudo pedir almacenamiento persistente:', err)
+      }
+
+      try {
+        const { data: emp, error } = await supabase
+          .from('empleados').select('id, rol_app')
+          .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+        if (error || !emp) throw error ?? new Error('sin empleado')
+        estado.miEmpleadoId = emp.id
+        estado.miRolApp = emp.rol_app
+      } catch (err) {
+        console.error('No se pudo identificar al empleado:', err)
+        document.getElementById('cob-cargando').hidden = true
+        document.getElementById('cob-sin-acceso').hidden = false
+        return
+      }
+
+      try {
+        const { data: tareas } = await supabase
+          .from('empleado_tareas').select('modulo, tarea')
+          .eq('empleado_id', estado.miEmpleadoId)
+          .eq('modulo', 'cobranzas')
+          .eq('habilitado', true)
+        estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
+      } catch (err) {
+        console.error('No se pudieron leer los permisos:', err)
+      }
+
+      document.getElementById('cob-cargando').hidden = true
+
+      if (!tieneAlgunAcceso()) {
+        document.getElementById('cob-sin-acceso').hidden = false
+        return
+      }
+
+      conectarTodo()
+      renderizarChipsEstado()
+      mostrarVistaCob('listado')
+
+      await Promise.all([cargarBancos(), cargarRepartidores()])
+      await Promise.all([cargarCobranzas({ reiniciar: true }), refrescarLocales()])
+      sincronizar()
+    }
+
+    init()
+
+  </script>
+
+</body>
+</html>
