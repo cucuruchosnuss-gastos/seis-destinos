@@ -4294,18 +4294,25 @@
     //   · "comprobantes: subir a la carpeta propia" (INSERT):
     //     foldername(name)[1] = auth.uid().
     //   · "comprobantes: ver los propios o los que la tarea habilita" (SELECT):
-    //     lo propio; o lo de 'mp/' si EXISTE un materia_prima_ingresos cuyo
-    //     foto_url contiene la ruta y tiene_tarea_alcance('materia_prima',
-    //     'ver_todo', su unidad); o lo de la raíz (Gastos) con
-    //     gastos:ver_exportar o cuentas_corrientes:ver_todo.
+    //     lo propio; o lo de 'mp/' con tiene_tarea_alcance('materia_prima',
+    //     'ver_todo', <unidad>) donde la unidad sale de UNA DE DOS ramas:
+    //       - un materia_prima_ingresos cuyo foto_url contiene la ruta, o
+    //       - un materia_prima_items cuyo ficha_tecnica_url o foto_lote_url la
+    //         contiene (join a materia_prima_ingresos por la unidad);
+    //     o lo de la raíz (Gastos) con gastos:ver_exportar o
+    //     cuentas_corrientes:ver_todo.
     // Por eso el 'mp/' ya no es cosmético: es lo que distingue una foto de Ingreso
     // de un comprobante de Gastos para la policy. Cambiar este formato de ruta
     // deja las fotos nuevas fuera de las dos ramas.
-    // HUECO LATENTE: la rama 'mp/' solo busca en materia_prima_ingresos.foto_url,
-    // no en materia_prima_items.ficha_tecnica_url / foto_lote_url, que también
-    // salen de esta función. Hoy no se nota —esos adjuntos están todos en null y,
-    // además, viajan como URL firmada que no pasa por la policy—, pero cuando se
-    // firmen al mirar, un ver_todo no va a poder abrir la ficha de otra persona.
+    // Esas dos ramas cubren las TRES columnas que alimenta esta función. La
+    // segunda (adjuntos de items) se agregó el mismo 16/09: antes solo se
+    // buscaba en foto_url y la ficha técnica de otra persona no iba a abrirse.
+    // PARA LA FASE 2: el match es un LIKE '%ruta%' contra la URL firmada que se
+    // guarda hoy. Cuando se guarde la RUTA, la policy puede pasar a comparar
+    // exacto —mejora, no rotura—, pero hay que revisarla en ese momento.
+    // Una foto HUÉRFANA (subida por una carga abandonada, sin fila que la
+    // nombre) no matchea ninguna rama: solo la ve quien la subió, y limpiarla
+    // requiere service_role. Ver el pendiente en CLAUDE.md.
     // Al cerrarlo no se rompió nada existente: los 153 archivos del bucket (los
     // de Gastos y los 47 'mp/') tienen el uid de su dueño como primer segmento.
     async function subirArchivoMp(archivo) {
