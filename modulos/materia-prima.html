@@ -4283,12 +4283,13 @@
     //
     // OJO, esto NO siempre fue una garantía. Hasta el 16/09/2026 este comentario
     // decía que el uid iba primero "porque es el patrón de RLS de Storage que ya
-    // usa gastos.html", y era FALSO: las dos policies de 'comprobantes' eran
+    // usa gastos.html", y era FALSO: en una lectura de ese mismo día las dos
+    // policies de 'comprobantes' todavía eran
     // `bucket_id = 'comprobantes'` a secas, así que cualquier logueado listaba y
     // bajaba las fotos de todos. El patrón existía en el proyecto (el bucket
     // 'cobranzas' lo tuvo desde el día uno) pero este bucket no.
     //
-    // ESTADO VERIFICADO contra pg_policy el 17/09/2026 —las policies las mantiene
+    // ESTADO VERIFICADO contra pg_policy más tarde el 16/09/2026 —las mantiene
     // el chat de arquitectura, no este módulo—:
     //   · INSERT: solo a la carpeta propia (foldername[1] = auth.uid()).
     //   · SELECT: lo propio; o lo de 'mp/' con materia_prima:ver_todo; o lo de la
@@ -4318,7 +4319,7 @@
       // Esta función alimenta TRES columnas, con el mismo problema en las tres:
       // materia_prima_ingresos.foto_url (la foto del comprobante) y
       // materia_prima_items.ficha_tecnica_url / foto_lote_url (los adjuntos del
-      // renglón). Al 17/09/2026 las dos de items están en null en las 26 filas,
+      // renglón). Al 16/09/2026 las dos de items están en null en las 26 filas,
       // así que el daño hoy es de foto_url; los adjuntos lo heredan en cuanto se
       // cargue el primero.
       // LA MIGRACIÓN: guardar la RUTA y firmar al mirar, con expiración corta
