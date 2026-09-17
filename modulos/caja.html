@@ -1885,6 +1885,24 @@
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Todo texto que no sea literal del código se escapa antes de entrar a
+    // innerHTML (regla del proyecto, ver CLAUDE.md). Acá lo escriben los
+    // usuarios —descripciones de movimientos y solicitudes, nombres de cuenta,
+    // nombres de personas, la razón social de los gastos— y lo mira la
+    // contraparte, muchas veces un super_admin. Mismo helper que gastos.html.
+    function esc(valor) {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
+    // formatearImporte() para HTML: ver el comentario de formatearImporte().
+    function importeHtml(importe, moneda) {
+      return esc(formatearImporte(importe, moneda))
+    }
+
+    // Devuelve texto crudo (los primeros caracteres del nombre): escapar el
+    // resultado donde se interpole.
     function iniciales(nombre) {
       const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean)
       if (!palabras.length) return '—'
@@ -1892,6 +1910,12 @@
       return (palabras[0][0] + palabras[1][0]).toUpperCase()
     }
 
+    // TEXTO PLANO, a propósito NO escapa (mismo criterio que
+    // cuentas-corrientes.html): un formateador tiene que servir también para
+    // textContent o para un export, donde escapar mostraría "&amp;" literal.
+    // Para meter un importe en HTML, usar importeHtml(): así hay UN solo lugar
+    // que decide cómo entra un importe a la página. La moneda tiene CHECK en
+    // la base (12 códigos), así que hoy es consistencia y no un vector.
     function formatearImporte(importe, moneda = 'ARS') {
       if (importe == null) return '—'
       const num = Number(importe).toLocaleString('es-AR', {
@@ -1908,7 +1932,8 @@
       const [entero, centavos] = Number(importe || 0).toLocaleString('es-AR', {
         minimumFractionDigits: 2, maximumFractionDigits: 2,
       }).split(',')
-      const simbolo = moneda === 'ARS' ? '$' : moneda
+      // Devuelve HTML, así que escapa por dentro.
+      const simbolo = moneda === 'ARS' ? '$' : esc(moneda)
       return `${simbolo} ${entero}<span class="stat-card-caja__centavos">,${centavos}</span>`
     }
 
@@ -1979,8 +2004,8 @@
       function renderizarOpciones() {
         panel.querySelector('.multiselect__opciones').innerHTML = opciones.map(op => `
           <label class="multiselect__opcion">
-            <input type="checkbox" value="${op.value}" ${borrador.map(String).includes(String(op.value)) ? 'checked' : ''}>
-            <span>${op.label}</span>
+            <input type="checkbox" value="${esc(op.value)}" ${borrador.map(String).includes(String(op.value)) ? 'checked' : ''}>
+            <span>${esc(op.label)}</span>
           </label>
         `).join('')
 
@@ -2145,7 +2170,7 @@
           ? cuentasDelMedio.find(c => c.moneda === 'ARS' && c.favorita)
           : null
         const lineaFavoritaHtml = favoritaARS
-          ? `<div class="desglose-favorita-banco">★ ${favoritaARS.nombre}: ${formatearImporte(saldoDeCuenta(favoritaARS.id), 'ARS')}</div>`
+          ? `<div class="desglose-favorita-banco">★ ${esc(favoritaARS.nombre)}: ${importeHtml(saldoDeCuenta(favoritaARS.id), 'ARS')}</div>`
           : ''
 
         // Color por signo — mismo criterio que el saldo de la ficha
@@ -2155,7 +2180,7 @@
         const resumenHtml = `
           <div class="tarjeta-cuenta__info">
             <span class="tarjeta-cuenta__nombre">${MEDIO_CUENTA_LABEL[medio] || medio}</span>
-            <span class="tarjeta-cuenta__saldo ${claseSigno}">· ${formatearImporte(sumaARS, 'ARS')}</span>
+            <span class="tarjeta-cuenta__saldo ${claseSigno}">· ${importeHtml(sumaARS, 'ARS')}</span>
           </div>
           <span class="desglose-medio-pago__flecha">▾</span>`
 
@@ -2181,11 +2206,11 @@
         // gestionable=false: fila clara, sin ninguna acción — viendo la
         // ficha de otra persona (no la propia).
         const filas = cuentasDelMedio
-          .map(c => `<div class="desglose-cuenta__fila">${c.nombre}: ${formatearImporte(saldoDeCuenta(c.id), c.moneda)}</div>`)
+          .map(c => `<div class="desglose-cuenta__fila">${esc(c.nombre)}: ${importeHtml(saldoDeCuenta(c.id), c.moneda)}</div>`)
           .join('')
         return `
           <details class="desglose-medio-pago__chip">
-            <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: <span class="${claseSigno}">${formatearImporte(sumaARS, 'ARS')}</span><span class="desglose-medio-pago__flecha">▾</span></summary>
+            <summary>${MEDIO_CUENTA_LABEL[medio] || medio}: <span class="${claseSigno}">${importeHtml(sumaARS, 'ARS')}</span><span class="desglose-medio-pago__flecha">▾</span></summary>
             <div class="desglose-cuenta__resto">${filas}</div>
           </details>
           ${lineaFavoritaHtml}`
@@ -2203,6 +2228,8 @@
       return medio === 'efectivo' ? 'transferencia' : 'efectivo'
     }
 
+    // TEXTO PLANO: también alimenta el export a Excel. Escapar su resultado
+    // donde entra a HTML (trae nombres de personas).
     function etiquetaMovimiento(m) {
       if (m.tipo === 'egreso_transferencia') {
         return 'Entregado a ' + (estado.nombresEmpleados[m.contraparte_empleado_id] || '—')
@@ -2483,7 +2510,7 @@
       const principal = monedas[0]
       const montoPrincipalHtml = `<span class="stat-card-caja__monto">${formatearImporteCentavosSuaves(principal ? totalesPorMoneda[principal] : 0, principal || 'ARS')}</span>`
       const chipsExtra = monedas.slice(1)
-        .map(m => `<span class="chip-moneda ${totalesPorMoneda[m] < 0 ? 'chip-moneda--negativo' : ''}">${formatearImporte(totalesPorMoneda[m], m)}</span>`)
+        .map(m => `<span class="chip-moneda ${totalesPorMoneda[m] < 0 ? 'chip-moneda--negativo' : ''}">${importeHtml(totalesPorMoneda[m], m)}</span>`)
         .join('')
 
       // Ya viene envuelto en .desglose-medio-pago (o '' si no hay cuentas) —
@@ -2566,19 +2593,19 @@
       const saldosOtrasMonedas = saldos.filter(s => s.moneda !== principal.moneda)
       const otrasMonedas = saldosOtrasMonedas.length
         ? `<div class="persona__monedas">${saldosOtrasMonedas.map(s => `
-            <span class="chip-moneda ${Number(s.saldo) < 0 ? 'chip-moneda--negativo' : ''}">${formatearImporte(s.saldo, s.moneda)}</span>
+            <span class="chip-moneda ${Number(s.saldo) < 0 ? 'chip-moneda--negativo' : ''}">${importeHtml(s.saldo, s.moneda)}</span>
           `).join('')}</div>`
         : ''
 
       return `
-        <div class="tarjeta-lista" data-id="${emp.id}">
-          <div class="tarjeta-lista__avatar">${iniciales(emp.nombre)}</div>
+        <div class="tarjeta-lista" data-id="${esc(emp.id)}">
+          <div class="tarjeta-lista__avatar">${esc(iniciales(emp.nombre))}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${emp.nombre}</div>
-            ${empresa ? `<div class="tarjeta-lista__subtitulo">${empresa}</div>` : ''}
+            <div class="tarjeta-lista__titulo">${esc(emp.nombre)}</div>
+            ${empresa ? `<div class="tarjeta-lista__subtitulo">${esc(empresa)}</div>` : ''}
             ${otrasMonedas}
           </div>
-          <div class="persona__saldo ${negativoPrincipal ? 'persona__saldo--negativo' : ''}">${formatearImporte(principal.saldo, principal.moneda)}</div>
+          <div class="persona__saldo ${negativoPrincipal ? 'persona__saldo--negativo' : ''}">${importeHtml(principal.saldo, principal.moneda)}</div>
         </div>
       `
     }
@@ -2604,13 +2631,13 @@
       cont.innerHTML = grupos.map(g => {
         const totales = subtotalGrupo(g.lista)
         const subtotalHtml = Object.entries(totales).map(([moneda, total]) => `
-          <span class="chip-moneda ${Number(total) < 0 ? 'chip-moneda--negativo' : ''}">${formatearImporte(total, moneda)}</span>
+          <span class="chip-moneda ${Number(total) < 0 ? 'chip-moneda--negativo' : ''}">${importeHtml(total, moneda)}</span>
         `).join('')
 
         return `
           <div class="grupo-personas">
             <div class="grupo-personas__titulo">
-              <span class="grupo-personas__nombre"><span class="grupo-personas__punto"></span>${g.nombre} <span style="font-weight:500;">· ${g.lista.length}</span></span>
+              <span class="grupo-personas__nombre"><span class="grupo-personas__punto"></span>${esc(g.nombre)} <span style="font-weight:500;">· ${g.lista.length}</span></span>
               <span class="grupo-personas__subtotales">${subtotalHtml}</span>
             </div>
             <div class="lista-personas">
@@ -2723,10 +2750,10 @@
       const cont = document.getElementById('directorio-contenido')
       const personas = [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
       cont.innerHTML = personas.map(p => `
-        <div class="tarjeta-lista" data-id="${p.id}" style="margin-bottom:0.625rem;">
-          <div class="tarjeta-lista__avatar">${iniciales(p.nombre)}</div>
+        <div class="tarjeta-lista" data-id="${esc(p.id)}" style="margin-bottom:0.625rem;">
+          <div class="tarjeta-lista__avatar">${esc(iniciales(p.nombre))}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${p.nombre}</div>
+            <div class="tarjeta-lista__titulo">${esc(p.nombre)}</div>
           </div>
         </div>
       `).join('')
@@ -2753,10 +2780,10 @@
         return
       }
       cont.innerHTML = cuentas.map(c => `
-        <div class="tarjeta-lista" data-id="${c.id}" style="margin-bottom:0.625rem;">
+        <div class="tarjeta-lista" data-id="${esc(c.id)}" style="margin-bottom:0.625rem;">
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${c.nombre}</div>
-            <div class="tarjeta-lista__subtitulo">${MEDIO_CUENTA_LABEL[c.medio]} · ${c.moneda}</div>
+            <div class="tarjeta-lista__titulo">${esc(c.nombre)}</div>
+            <div class="tarjeta-lista__subtitulo">${MEDIO_CUENTA_LABEL[c.medio]} · ${esc(c.moneda)}</div>
           </div>
         </div>
       `).join('')
@@ -2964,7 +2991,7 @@
       // (USD vs $), no hace falta repetirla en el label.
       const montosHtml = lista.map(s => {
         const clase = Number(s.saldo) < 0 ? 'color-negativo' : Number(s.saldo) > 0 ? 'color-positivo' : ''
-        return `<span class="stat-card-caja__monto ${clase}">${formatearImporte(s.saldo, s.moneda)}</span>`
+        return `<span class="stat-card-caja__monto ${clase}">${importeHtml(s.saldo, s.moneda)}</span>`
       }).join('')
       const desgloseHtml = renderizarDesglosePorCuenta(cuentaIds, { gestionable: puedeGestionar })
       const botonNuevaCuenta = puedeGestionar
@@ -3251,15 +3278,18 @@
       const signo = esPositivo ? '+' : '−'
 
       const personaHtml = mostrarPersona
-        ? `<div class="movimiento__persona">${estado.nombresEmpleados[m.empleado_id] || '—'}</div>`
+        ? `<div class="movimiento__persona">${esc(estado.nombresEmpleados[m.empleado_id] || '—')}</div>`
         : ''
 
       const sublineaContraparte = (m.tipo === 'ingreso' && m.contraparte_empleado_id)
-        ? `<div class="movimiento__contraparte">de ${estado.nombresEmpleados[m.contraparte_empleado_id] || '—'}</div>`
+        ? `<div class="movimiento__contraparte">de ${esc(estado.nombresEmpleados[m.contraparte_empleado_id] || '—')}</div>`
         : ''
 
+      // El href es seguro por encodeURIComponent + comillas DOBLES en el
+      // atributo. encodeURIComponent NO escapa la comilla simple: no cambiar
+      // el delimitador a comillas simples.
       const refGasto = (m.gasto_id && m.gastos)
-        ? `<div class="movimiento__referencia">${m.gastos.razon_social || 'Gasto'}${m.gastos.categorias?.nombre ? ' · ' + m.gastos.categorias.nombre : ''} — <a href="gastos.html?gasto=${m.gasto_id}&volver=${encodeURIComponent(location.href)}">Ver gasto →</a></div>`
+        ? `<div class="movimiento__referencia">${esc(m.gastos.razon_social || 'Gasto')}${m.gastos.categorias?.nombre ? ' · ' + esc(m.gastos.categorias.nombre) : ''} — <a href="gastos.html?gasto=${encodeURIComponent(m.gasto_id)}&volver=${encodeURIComponent(location.href)}">Ver gasto →</a></div>`
         : ''
 
       // Si el movimiento tiene cuenta_id, mostramos el nombre de la cuenta
@@ -3274,13 +3304,13 @@
           <div class="movimiento__cabecera">
             <div class="movimiento__info">
               ${personaHtml}
-              <span class="chip-tipo-movimiento chip-tipo-movimiento--${m.tipo}">${etiquetaMovimiento(m)}</span>
+              <span class="chip-tipo-movimiento chip-tipo-movimiento--${esc(m.tipo)}">${esc(etiquetaMovimiento(m))}</span>
               ${sublineaContraparte}
-              <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${etiquetaMedio}</div>
-              ${m.descripcion ? `<div class="movimiento__descripcion">${m.descripcion}</div>` : ''}
+              <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${esc(etiquetaMedio)}</div>
+              ${m.descripcion ? `<div class="movimiento__descripcion">${esc(m.descripcion)}</div>` : ''}
               ${refGasto}
             </div>
-            <div class="movimiento__monto">${signo} ${formatearImporte(m.monto, m.moneda)}</div>
+            <div class="movimiento__monto">${signo} ${importeHtml(m.monto, m.moneda)}</div>
           </div>
         </div>
       `
@@ -3347,7 +3377,7 @@
       const miId = estado.miEmpleado.id
       const nombreOrigen  = estado.nombresEmpleados[s.origen_empleado_id]  || '—'
       const nombreDestino = estado.nombresEmpleados[s.destino_empleado_id] || '—'
-      const importe = formatearImporte(s.monto, s.moneda)
+      const importe = importeHtml(s.monto, s.moneda)
 
       const soyOrigen  = miId === s.origen_empleado_id
       const soyDestino = miId === s.destino_empleado_id
@@ -3365,8 +3395,8 @@
         // que él pidió. Dos acciones por caso, nunca dos botones que signifiquen
         // lo mismo.
         const botonNegativo = soyCreador
-          ? `<button type="button" class="btn btn--secundario" data-accion="cancelar" data-id="${s.id}">Cancelar</button>`
-          : `<button type="button" class="btn btn--secundario" data-accion="rechazar" data-id="${s.id}">Rechazar</button>`
+          ? `<button type="button" class="btn btn--secundario" data-accion="cancelar" data-id="${esc(s.id)}">Cancelar</button>`
+          : `<button type="button" class="btn btn--secundario" data-accion="rechazar" data-id="${esc(s.id)}">Rechazar</button>`
         // Aceptar la propia solicitud desconcierta si no se explica, y acá hay
         // plata de por medio. Va en el mismo lugar que el cartel de espera, para
         // no sumar una fila más a la tarjeta.
@@ -3377,14 +3407,14 @@
           ${nota}
           <div class="tarjeta-solicitud__acciones">
             ${botonNegativo}
-            <button type="button" class="btn btn--exito" data-accion="aceptar" data-id="${s.id}">Aceptar</button>
+            <button type="button" class="btn btn--exito" data-accion="aceptar" data-id="${esc(s.id)}">Aceptar</button>
           </div>`
       } else if (soyCreador) {
         const nombreContraparte = soyOrigen ? nombreDestino : nombreOrigen
         acciones = `
-          <div class="tarjeta-solicitud__espera">Esperando que ${nombreContraparte} la confirme</div>
+          <div class="tarjeta-solicitud__espera">Esperando que ${esc(nombreContraparte)} la confirme</div>
           <div class="tarjeta-solicitud__acciones">
-            <button type="button" class="btn btn--secundario" data-accion="cancelar" data-id="${s.id}">Cancelar</button>
+            <button type="button" class="btn btn--secundario" data-accion="cancelar" data-id="${esc(s.id)}">Cancelar</button>
           </div>`
       }
 
@@ -3397,8 +3427,8 @@
       return `
         <div class="tarjeta-solicitud">
           <div class="tarjeta-solicitud__monto">${importe}</div>
-          <div class="tarjeta-solicitud__detalle">${nombreOrigen} → ${nombreDestino} · ${MEDIO_PAGO_LABEL_CAJA[s.medio_pago] || s.medio_pago}${detalleCuentas} · ${formatearFecha(s.fecha)}</div>
-          ${s.descripcion ? `<div class="tarjeta-solicitud__detalle">${s.descripcion}</div>` : ''}
+          <div class="tarjeta-solicitud__detalle">${esc(nombreOrigen)} → ${esc(nombreDestino)} · ${esc(MEDIO_PAGO_LABEL_CAJA[s.medio_pago] || s.medio_pago)}${esc(detalleCuentas)} · ${formatearFecha(s.fecha)}</div>
+          ${s.descripcion ? `<div class="tarjeta-solicitud__detalle">${esc(s.descripcion)}</div>` : ''}
           ${acciones}
         </div>`
     }
@@ -3507,7 +3537,7 @@
     // nunca fuera de la ficha propia, ni en conDueno ni viendo la ficha de
     // otra persona.
     function renderizarFilaCuenta(c, { mostrarDueño = false, gestionable = false } = {}) {
-      const saldo = formatearImporte(saldoDeCuenta(c.id), c.moneda)
+      const saldo = importeHtml(saldoDeCuenta(c.id), c.moneda)
       const nombre = mostrarDueño ? `${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}` : c.nombre
       // Botones-ícono chicos en vez de texto completo — mismo criterio de
       // caracteres simples que ya usa el "▾" del desglose (sin Lucide acá
@@ -3515,11 +3545,11 @@
       const accionesHtml = gestionable ? `
         <div class="tarjeta-cuenta__acciones">
           ${c.favorita ? '' : `
-            <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="favorita-cuenta" data-id="${c.id}" aria-label="Marcar como favorita" title="Marcar como favorita">☆</button>
-            <button type="button" class="tarjeta-cuenta__boton-icono tarjeta-cuenta__boton-icono--peligro" data-accion="desactivar-cuenta" data-id="${c.id}" aria-label="Desactivar cuenta" title="Desactivar cuenta">×</button>
+            <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="favorita-cuenta" data-id="${esc(c.id)}" aria-label="Marcar como favorita" title="Marcar como favorita">☆</button>
+            <button type="button" class="tarjeta-cuenta__boton-icono tarjeta-cuenta__boton-icono--peligro" data-accion="desactivar-cuenta" data-id="${esc(c.id)}" aria-label="Desactivar cuenta" title="Desactivar cuenta">×</button>
           `}
-          <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="renombrar-cuenta" data-id="${c.id}" aria-label="Renombrar cuenta" title="Renombrar cuenta">✏️</button>
-          <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="editar-bancarios-cuenta" data-id="${c.id}" aria-label="Editar datos bancarios" title="Editar datos bancarios">🏦</button>
+          <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="renombrar-cuenta" data-id="${esc(c.id)}" aria-label="Renombrar cuenta" title="Renombrar cuenta">✏️</button>
+          <button type="button" class="tarjeta-cuenta__boton-icono" data-accion="editar-bancarios-cuenta" data-id="${esc(c.id)}" aria-label="Editar datos bancarios" title="Editar datos bancarios">🏦</button>
         </div>` : ''
 
       // CAMBIO 4 — logo de unidad + ícono de medio + nombre de respaldo.
@@ -3536,9 +3566,9 @@
           const logo = LOGOS_EMPRESA[nombreUnidad]
           const iconoMedio = c.medio === 'banco' ? '💳' : '💵'
           unidadHtml = `
-            ${logo ? `<img src="${logo}" alt="${nombreUnidad}" class="tarjeta-cuenta__logo-unidad">` : ''}
+            ${logo ? `<img src="${logo}" alt="${esc(nombreUnidad)}" class="tarjeta-cuenta__logo-unidad">` : ''}
             <span title="${MEDIO_CUENTA_LABEL[c.medio]}">${iconoMedio}</span>
-            <span class="tarjeta-cuenta__unidad">(${nombreUnidad})</span>
+            <span class="tarjeta-cuenta__unidad">(${esc(nombreUnidad)})</span>
           `
         }
       }
@@ -3546,7 +3576,7 @@
       return `
         <div class="tarjeta-cuenta">
           <div class="tarjeta-cuenta__info">
-            <span class="tarjeta-cuenta__nombre">${nombre}</span>
+            <span class="tarjeta-cuenta__nombre">${esc(nombre)}</span>
             ${unidadHtml}
             ${c.favorita ? '<span class="chip-favorita">★</span>' : ''}
             <span class="tarjeta-cuenta__saldo">· ${saldo}</span>
@@ -3713,7 +3743,7 @@
       grupoUnidad.hidden = !esParaEmpresa
       if (esParaEmpresa) {
         document.getElementById('cuenta-unidad-negocio').innerHTML = '<option value="">— Sin asignar —</option>' +
-          estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+          estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
       }
 
       document.getElementById('modal-cuenta-nueva').hidden = false
@@ -3775,7 +3805,7 @@
       const sel = document.getElementById('filtro-retiros-persona')
       const personas = [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
       sel.innerHTML = '<option value="">Todas las personas</option>' +
-        personas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('')
+        personas.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')
       sel.value = estado.filtrosRetiros.empleado_id
     }
 
@@ -3788,7 +3818,7 @@
       const totales = {}
       retiros.forEach(m => { totales[m.moneda] = (totales[m.moneda] || 0) + Number(m.monto) })
       const montosHtml = Object.entries(totales)
-        .map(([moneda, total]) => `<span class="stat-card-caja__monto">${formatearImporte(total, moneda)}</span>`)
+        .map(([moneda, total]) => `<span class="stat-card-caja__monto">${importeHtml(total, moneda)}</span>`)
         .join('')
       cont.innerHTML = `
         <div class="stat-card-caja stat-card-caja--bordo">
@@ -3964,7 +3994,7 @@
       const totales = {}
       movimientos.forEach(m => { totales[m.moneda] = (totales[m.moneda] || 0) + Number(m.monto) })
       const montosHtml = Object.entries(totales)
-        .map(([moneda, total]) => `<span class="stat-card-caja__monto">${formatearImporte(total, moneda)}</span>`)
+        .map(([moneda, total]) => `<span class="stat-card-caja__monto">${importeHtml(total, moneda)}</span>`)
         .join('')
       cont.innerHTML = `
         <div class="stat-card-caja">
@@ -4126,14 +4156,16 @@
       }
 
       document.getElementById('contraparte-select').innerHTML = '<option value="">— Seleccioná —</option>' +
-        candidatos.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')
+        candidatos.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')
     }
 
     // favoritaId es opcional — si se pasa, esa cuenta arranca preseleccionada
     // en vez de "— Seleccioná —" (ver favoritaEfectivoARS()).
+    // Arma HTML y la usan cuatro selectores: escapa por dentro. Los call
+    // sites pasan las cuentas crudas.
     function opcionesCuenta(cuentas, favoritaId) {
       return '<option value="">— Seleccioná —</option>' +
-        cuentas.map(c => `<option value="${c.id}" ${c.id === favoritaId ? 'selected' : ''}>${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})</option>`).join('')
+        cuentas.map(c => `<option value="${esc(c.id)}" ${c.id === favoritaId ? 'selected' : ''}>${esc(c.nombre)} (${esc(MEDIO_CUENTA_LABEL[c.medio])} ${esc(c.moneda)})</option>`).join('')
     }
 
     // La cuenta que se preselecciona por defecto en los selectores "propios"
