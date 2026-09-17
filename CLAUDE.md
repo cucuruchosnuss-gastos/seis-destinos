@@ -1401,6 +1401,8 @@ Caso real (agosto 2026): un traspaso reportó "31 tareas en el CHECK" cuando era
 
 **POR QUÉ EXISTE:** el 16/09/2026 hubo **DOS agentes escribiendo en producción en paralelo sin coordinarse**. Las funciones de `public` ejecutables por `anon` pasaron de **65 a 11** durante una misma sesión por trabajo que nadie reportó, y lo detectó el chat de permisos al medir dos veces con media hora de diferencia. No rompió nada y el trabajo iba en la dirección correcta, pero **nadie sabía que estaba pasando** — que es exactamente lo que la regla de escritura (arriba) dice que el reporte tiene que evitar.
 
+**65 y 66 NO son un error de tipeo: son dos mediciones distintas del mismo momento, y se dejan las dos a propósito.** **65** es la cantidad de funciones con `anon=X` **explícito** en `proacl`; **66** es la cantidad que `anon` **realmente podía ejecutar**, medida con `has_function_privilege`. La que hace la diferencia no tenía el grant explícito: lo recibía **por `PUBLIC`**, del que `anon` es miembro. Es el caso concreto, medido en este proyecto, del aprendizaje *"el ACL ya no muestra ese rol no es lo mismo que ese rol no puede"*. **No unificar el número:** uno solo borra el ejemplo, y con él la razón para medir con `has_function_privilege` y no leyendo el ACL.
+
 **REGLA: todo chat que escriba en la base reporta, EN EL MISMO TURNO, el SQL exacto y la verificación posterior**, y se anota acá. El acceso de lectura es para todos; el de escritura deja rastro solo si se escribe.
 
 **16/09/2026 — chat de permisos** (todo esquema y políticas, cero datos):
