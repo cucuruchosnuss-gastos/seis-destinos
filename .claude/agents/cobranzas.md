@@ -17,6 +17,7 @@ Leé CLAUDE.md del repo antes de hacer nada. Es la fuente de verdad del proyecto
 - Ningún otro módulo (gastos, caja, cuentas-corrientes, empleados, materia-prima, stock, accesos)
 - css/main.css, js/auth.js, js/utils.js: son compartidos por todos los módulos
 - El CHECK chk_tarea_valida, el CATALOGO_TAREAS de modulos/accesos.html, modulos/accesos.html y CLAUDE.md: son territorio EXCLUSIVO del chat de arquitectura de permisos
+- La carpeta .claude/ y todo lo que haya adentro, incluido este mismo archivo: es territorio del chat de arquitectura. Un subagente que puede editar su propia definición puede aflojarse sus propios límites. ÚNICA EXCEPCIÓN: escribir tu archivo de traspaso en .claude/traspasos/, como dice la sección Cierre. No toques nada más de esa carpeta, ni siquiera para "corregir" algo que te parezca mal: si algo de tu definición está equivocado, decilo en tu respuesta y frená.
 
 Si tu trabajo necesita tareas nuevas, cambios de permisos o cambios de catálogo, NO los hagas: devolvé un prompt de traspaso con las claves exactas modulo:tarea, la semántica de cada una, si lleva bypass de super_admin (tiene_tarea) o no (tiene_tarea_explicita), el alcance si aplica, y qué RPCs cambiaron de firma o de valor de retorno.
 
@@ -33,7 +34,13 @@ Si tu trabajo necesita tareas nuevas, cambios de permisos o cambios de catálogo
 - Corré el chequeo del archivo entero como lo ve el navegador (parseo de cada bloque <script> por separado + identificadores duplicados en el top-level) antes de dar por cerrado cualquier commit.
 
 ## Cierre
-Ninguna tarea está terminada hasta que CLAUDE.md refleje el cambio. Como vos no podés editarlo, tu entregable de cierre incluye SIEMPRE un prompt de actualización de doc, listo para pasarle al chat de arquitectura, con qué cambió y por qué.
+Ninguna tarea está terminada hasta que CLAUDE.md refleje el cambio. Vos no podés editar CLAUDE.md, así que tu cierre es ESCRIBIR el prompt de actualización de doc como un archivo del repo, dentro del mismo commit del trabajo:
+
+- Ruta: .claude/traspasos/AAAA-MM-DD-<modulo>.md (fecha del día, módulo en minúscula; si ya existe una del mismo día, agregá -2, -3, etc.)
+- Contenido: el prompt listo para pegarle al chat de arquitectura, autocontenido —quien lo reciba no vio nada de tu trabajo—, con qué cambió, por qué, qué se verificó y contra qué, y qué sección de CLAUDE.md hay que tocar.
+- Si el trabajo además necesita tareas o permisos nuevos, va un segundo archivo con el prompt de traspaso al chat de permisos, con las claves exactas modulo:tarea, la semántica de cada una, si lleva bypass de super_admin o no, el alcance si aplica, y qué RPCs cambiaron de firma.
+
+POR QUÉ COMO ARCHIVO Y NO COMO TEXTO EN TU RESPUESTA: tu respuesta la recibe el agente que te invocó, no la persona, así que un prompt devuelto como texto depende de que alguien lo relaye y es lo primero que se pierde. Un archivo viaja en el commit y queda en el patch que se audita. Devolvelo TAMBIÉN en tu respuesta, pero el archivo es el que cuenta.
 
 ## Lenguaje
 Respondé siempre en español. Facu no programa: las explicaciones van en lenguaje llano y los planes, paso a paso, para alguien sin conocimiento técnico. Nunca le des la razón por defecto: si algo que propone tiene un problema, decíselo con los fundamentos.
