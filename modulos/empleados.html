@@ -561,16 +561,29 @@
     // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Todo texto que no sea literal del código se escapa antes de entrar a
+    // innerHTML (regla del proyecto, ver CLAUDE.md). Nombre, puesto,
+    // domicilio, teléfono y contacto de emergencia los carga la propia persona
+    // o vienen del Excel de Naaloo, y los mira quien tiene empleados:ver_editar.
+    // Mismo helper que gastos.html.
+    function esc(valor) {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
     function soloDigitos(s) {
       return (s || '').replace(/\D/g, '')
     }
 
+    // Devuelve el CUIL CRUDO si no tiene 11 dígitos: escapar el resultado.
     function formatearCuil(cuil) {
       const d = soloDigitos(cuil)
       if (d.length !== 11) return cuil || '—'
       return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`
     }
 
+    // Devuelve texto crudo (los primeros caracteres): escapar el resultado.
     function iniciales(nombre) {
       const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean)
       if (!palabras.length) return '—'
@@ -733,18 +746,18 @@
       const etiquetaRol = emp.rol_app === 'super_admin' ? 'Super admin' : emp.rol_app === 'admin' ? 'Admin' : 'Usuario'
 
       const badgeAcceso = tieneAcceso
-        ? `<span class="chip-rol chip-rol--${emp.rol_app}">${etiquetaRol}</span>`
+        ? `<span class="chip-rol chip-rol--${esc(emp.rol_app)}">${etiquetaRol}</span>`
         : `<span class="chip-sin-acceso">Sin acceso</span>`
 
       return `
-        <div class="tarjeta-lista ${incompleto ? 'tarjeta-empleado--incompleta' : ''}" data-id="${emp.id}">
-          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(emp.nombre)};">${iniciales(emp.nombre)}</div>
+        <div class="tarjeta-lista ${incompleto ? 'tarjeta-empleado--incompleta' : ''}" data-id="${esc(emp.id)}">
+          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(emp.nombre)};">${esc(iniciales(emp.nombre))}</div>
           <div class="tarjeta-lista__info">
             <div class="acceso__fila1">
-              <span class="tarjeta-lista__titulo">${emp.nombre}</span>
+              <span class="tarjeta-lista__titulo">${esc(emp.nombre)}</span>
               ${badgeAcceso}
             </div>
-            <div class="tarjeta-lista__subtitulo">${emp.rol || (incompleto ? 'Datos incompletos' : 'Sin puesto registrado')}</div>
+            <div class="tarjeta-lista__subtitulo">${esc(emp.rol || (incompleto ? 'Datos incompletos' : 'Sin puesto registrado'))}</div>
           </div>
           ${incompleto ? '<i data-lucide="alert-triangle" class="tarjeta-empleado__alerta"></i>' : ''}
         </div>
@@ -771,7 +784,7 @@
       cont.innerHTML = grupos.map(g => `
         <div class="grupo-empleados">
           <div class="grupo-empleados__titulo">
-            <span class="grupo-empleados__punto"></span>${g.nombre}
+            <span class="grupo-empleados__punto"></span>${esc(g.nombre)}
             <span class="grupo-empleados__contador">· ${g.lista.length}</span>
           </div>
           <div class="lista-accesos">
@@ -805,22 +818,22 @@
       document.getElementById('ficha-datos-laborales').innerHTML = `
         <div class="grupo-campo">
           <label for="edit-rol">Categoría</label>
-          <input type="text" id="edit-rol" value="${emp.rol || ''}" placeholder="Ej: Fuera de convenio · Categoría I">
+          <input type="text" id="edit-rol" value="${esc(emp.rol)}" placeholder="Ej: Fuera de convenio · Categoría I">
         </div>
         <div class="grupo-campo">
           <label for="edit-unidad">Unidad de negocio</label>
           <select id="edit-unidad" ${tieneTarea('empleados', 'reasignar_unidad') ? '' : 'disabled title="Solo quien tiene permiso para reasignar unidad puede cambiar este campo"'}>
             <option value="">Elegí una unidad de negocio…</option>
-            ${estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}" ${u.id === emp.unidad_negocio_id ? 'selected' : ''}>${u.nombre}</option>`).join('')}
+            ${estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}" ${u.id === emp.unidad_negocio_id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
           </select>
         </div>
         <div class="grupo-campo">
           <label for="edit-domicilio">Domicilio</label>
-          <input type="text" id="edit-domicilio" value="${emp.domicilio || ''}">
+          <input type="text" id="edit-domicilio" value="${esc(emp.domicilio)}">
         </div>
         <div class="grupo-campo">
           <label for="edit-telefono">Teléfono</label>
-          <input type="text" id="edit-telefono" value="${emp.telefono || ''}">
+          <input type="text" id="edit-telefono" value="${esc(emp.telefono)}">
         </div>
         <div class="modal-ficha__form-acciones">
           <button type="button" class="btn btn--secundario" id="btn-cancelar-edicion">Cancelar</button>
@@ -838,11 +851,11 @@
       document.getElementById('ficha-contacto-emergencia').innerHTML = `
         <div class="grupo-campo">
           <label for="edit-contacto-nombre">Nombre</label>
-          <input type="text" id="edit-contacto-nombre" value="${emp.contacto_emergencia_nombre || ''}">
+          <input type="text" id="edit-contacto-nombre" value="${esc(emp.contacto_emergencia_nombre)}">
         </div>
         <div class="grupo-campo">
           <label for="edit-contacto-telefono">Teléfono</label>
-          <input type="text" id="edit-contacto-telefono" value="${emp.contacto_emergencia_telefono || ''}">
+          <input type="text" id="edit-contacto-telefono" value="${esc(emp.contacto_emergencia_telefono)}">
         </div>
         <div class="modal-ficha__form-acciones">
           <button type="button" class="btn btn--secundario" id="btn-cancelar-contacto">Cancelar</button>
@@ -868,10 +881,10 @@
       const unidadNombre = estado.maestros.unidadesNegocio.find(u => u.id === emp.unidad_negocio_id)?.nombre || '—'
 
       document.getElementById('ficha-datos-naaloo').innerHTML = `
-        <div class="ficha-campo"><span>Legajo</span><span>${emp.legajo || '—'}</span></div>
-        <div class="ficha-campo"><span>CUIL</span><span>${formatearCuil(emp.cuil)}</span></div>
-        <div class="ficha-campo"><span>Domicilio</span><span>${emp.domicilio || '—'}</span></div>
-        <div class="ficha-campo"><span>Teléfono</span><span>${emp.telefono || '—'}</span></div>
+        <div class="ficha-campo"><span>Legajo</span><span>${esc(emp.legajo || '—')}</span></div>
+        <div class="ficha-campo"><span>CUIL</span><span>${esc(formatearCuil(emp.cuil))}</span></div>
+        <div class="ficha-campo"><span>Domicilio</span><span>${esc(emp.domicilio || '—')}</span></div>
+        <div class="ficha-campo"><span>Teléfono</span><span>${esc(emp.telefono || '—')}</span></div>
         <div class="ficha-campo"><span>Fecha de nacimiento</span><span>${emp.fecha_nacimiento ? formatearFecha(emp.fecha_nacimiento) : '—'}</span></div>
         <div class="ficha-campo"><span>Fecha de alta</span><span>${emp.fecha_alta ? formatearFecha(emp.fecha_alta) : '—'}</span></div>
       `
@@ -882,8 +895,8 @@
         renderizarFormularioEdicion(emp)
       } else {
         document.getElementById('ficha-datos-laborales').innerHTML = `
-          <div class="ficha-campo"><span>Categoría</span><span>${emp.rol || '—'}</span></div>
-          <div class="ficha-campo"><span>Unidad de negocio</span><span>${unidadNombre}</span></div>
+          <div class="ficha-campo"><span>Categoría</span><span>${esc(emp.rol || '—')}</span></div>
+          <div class="ficha-campo"><span>Unidad de negocio</span><span>${esc(unidadNombre)}</span></div>
         `
       }
 
@@ -892,8 +905,8 @@
         renderizarFormularioContacto(emp)
       } else {
         document.getElementById('ficha-contacto-emergencia').innerHTML = `
-          <div class="ficha-campo"><span>Nombre</span><span>${emp.contacto_emergencia_nombre || '—'}</span></div>
-          <div class="ficha-campo"><span>Teléfono</span><span>${emp.contacto_emergencia_telefono || '—'}</span></div>
+          <div class="ficha-campo"><span>Nombre</span><span>${esc(emp.contacto_emergencia_nombre || '—')}</span></div>
+          <div class="ficha-campo"><span>Teléfono</span><span>${esc(emp.contacto_emergencia_telefono || '—')}</span></div>
         `
       }
 
@@ -903,7 +916,7 @@
         const chipsModulos = modulos.length
           ? modulos.map(m => {
               const info = MODULOS_INFO.find(i => i.key === m)
-              return `<span class="chip-modulo">${info ? info.label : m}</span>`
+              return `<span class="chip-modulo">${esc(info ? info.label : m)}</span>`
             }).join('')
           : `<span class="ficha-sin-modulos">Sin módulos habilitados</span>`
 
@@ -911,7 +924,7 @@
           <div class="ficha-acceso__caja">
             <div class="ficha-acceso__fila1">
               <span>Tiene acceso</span>
-              <span class="chip-rol chip-rol--${emp.rol_app}">${etiquetaRol}</span>
+              <span class="chip-rol chip-rol--${esc(emp.rol_app)}">${etiquetaRol}</span>
             </div>
             <div class="ficha-acceso__modulos">${chipsModulos}</div>
           </div>
@@ -1153,7 +1166,7 @@
         document.getElementById('bloque-importar').hidden = false
         document.getElementById('select-empresa-import').innerHTML =
           `<option value="">Elegí una empresa…</option>` +
-          estado.maestros.unidadesNegocio.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+          estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
       }
 
       // Sin 'ver_editar' la consulta de cargarTodo() ya vuelve acotada por
