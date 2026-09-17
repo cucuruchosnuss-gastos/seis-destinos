@@ -312,6 +312,9 @@
     /* El display de autor de arriba no lo pisa, pero la regla va igual: es el
        bug más recurrente del proyecto y esta caja se oculta con [hidden]. */
     .aviso-duplicado[hidden] { display: none; }
+    /* En los formularios de edición la caja va dentro de una sección que ya
+       tiene su padding: sin esto heredaría el margen lateral del wizard. */
+    .aviso-duplicado--edicion { margin: 0 0 0.75rem; }
     .aviso-duplicado__titulo { font-weight: 750; margin-bottom: 0.5rem; }
     .aviso-duplicado__fila {
       padding: 0.5rem 0;
@@ -2827,6 +2830,7 @@
         .from('gastos')
         .select(`
           id, fecha, fecha_pago, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
+          proveedor_id,
           medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
           cuenta_id, anulado_por, anulado_en, motivo_anulacion,
           categorias (id, nombre, icon),
@@ -3750,11 +3754,10 @@
     // ninguno. Corregir cualquiera de los dos y volver a pasar vuelve a
     // consultar.
     //
-    // SOLO EN EL WIZARD, no en los dos formularios de edición: editar no puede
-    // CREAR un duplicado, y además la RPC no tiene con qué excluir el registro
-    // que se está editando, así que cada edición se detectaría a sí misma. Un
-    // aviso que aparece siempre entrena a ignorarlo, y como sería el mismo
-    // aviso, rompería también este.
+    // Los dos formularios de edición tienen su propia consulta, más abajo
+    // (detectarDuplicadoEdicion): excluyen el registro que se está editando con
+    // p_excluir_modulo / p_excluir_id. Esta llamada no los manda: en el wizard
+    // no hay nada que excluir.
     async function buscarComprobanteYaCargado() {
       const w = estado.wizard
       w.duplicados = []
@@ -3831,11 +3834,19 @@
     // número para poder cargar, y eso es peor que el duplicado — el duplicado
     // se ve, el número inventado no.
     function renderizarAvisoDuplicado() {
-      const cont = document.getElementById('aviso-duplicado')
-      if (!cont) return
-      const filas = estado.wizard?.duplicados ?? []
-      if (!filas.length) { cont.hidden = true; cont.innerHTML = ''; return }
+      pintarAvisoDuplicado(document.getElementById('aviso-duplicado'), estado.wizard?.duplicados ?? [])
+    }
 
+    // Una sola caja de aviso para el wizard y los dos formularios de edición:
+    // el mismo aviso tiene que decir lo mismo en los tres lugares.
+    function pintarAvisoDuplicado(cont, filas) {
+      if (!cont) return
+      if (!filas.length) { cont.hidden = true; cont.innerHTML = ''; return }
+      cont.innerHTML = htmlAvisoDuplicado(filas)
+      cont.hidden = false
+    }
+
+    function htmlAvisoDuplicado(filas) {
       const desconocido = { label: 'otro módulo', registro: 'Registro', chip: 'chip-origen--contable', consecuencia: '' }
 
       const html = filas.map(f => {
@@ -3872,13 +3883,12 @@
         .map(f => (ORIGENES_DUPLICADO[f.modulo] || desconocido).consecuencia)
         .filter(Boolean))]
 
-      cont.innerHTML = `
+      return `
         <div class="aviso-duplicado__titulo">⚠ ${filas.length === 1
           ? 'Este comprobante ya está cargado'
           : `Este comprobante ya está cargado en ${filas.length} lugares`}</div>
         ${html}
         ${consecuencias.map(c => `<div class="aviso-duplicado__consecuencia">${esc(c)}</div>`).join('')}`
-      cont.hidden = false
     }
 
     // PESTAÑA NUEVA, y el 'noopener' es lo que lo hace seguro y no una promesa:
@@ -3894,12 +3904,73 @@
     // cualquiera: una pestaña es segura por construcción, un modal habría que
     // probarlo desde todos.
     //
-    // Delegado en el contenedor porque las filas se re-renderizan.
-    document.getElementById('aviso-duplicado').addEventListener('click', (e) => {
+    // Delegado en el contenedor porque las filas se re-renderizan. Lo usan
+    // también las cajas de los formularios de edición.
+    function abrirDuplicadoEnPestana(e) {
       const fila = e.target.closest('.aviso-duplicado__fila--link')
       if (!fila?.dataset.url) return
       window.open(fila.dataset.url, '_blank', 'noopener')
-    })
+    }
+    document.getElementById('aviso-duplicado').addEventListener('click', abrirDuplicadoEnPestana)
+
+    // ── Detector en los FORMULARIOS DE EDICIÓN ─────────────────────────────
+    // Editar no crea un registro, pero sí puede cambiarle el número a uno que
+    // choca con OTRO. Para eso la RPC recibe p_excluir_modulo / p_excluir_id:
+    // sin excluir, cada edición se detectaría a sí misma.
+    //
+    // SE CONSULTA SOLO CUANDO NÚMERO, RAZÓN SOCIAL O PROVEEDOR CAMBIAN respecto
+    // de lo guardado, y NO al abrir el formulario. Al abrir no hay nada nuevo
+    // que avisar —nadie tocó el número— y el aviso aparecería casi siempre:
+    // al 17/09/2026, 15 de los 20 gastos con proveedor tienen su factura espejo
+    // en Cuentas Corrientes con el MISMO número. Un aviso que aparece siempre
+    // deja de leerse. Si el valor vuelve al original, el aviso se limpia.
+    //
+    // EL ESPEJO PROPIO PUEDE APARECER, Y ES CORRECTO: al editar un gasto con
+    // factura espejo, cambiarle la razón social sin tocar el número hace que
+    // la RPC encuentre esa factura (mismo proveedor y número). Taparlo exigiría
+    // que la RPC entienda la relación entre las dos filas. No es un bug.
+    //
+    // Mismas reglas que el wizard: parámetros por nombre, número CRUDO, sin
+    // caché, y un try/catch que no puede trabar el formulario — guardar nunca
+    // espera al detector. El importe null de Ingreso lo resuelve
+    // htmlAvisoDuplicado() con formatearImporteDuplicado().
+    //
+    // turnoDuplicadoEdicion descarta la respuesta que llega tarde: sin él, la
+    // consulta de un valor anterior podría pintar un aviso que ya no aplica, o
+    // uno sobre un formulario que se cerró.
+    let turnoDuplicadoEdicion = 0
+    // Lo llama seleccionarProveedorEdicion(): elegir un proveedor no dispara
+    // ningún evento del campo.
+    let detectorEdicionFactura = null
+
+    async function detectarDuplicadoEdicion({ contId, modulo, id, original, leer }) {
+      const turno = ++turnoDuplicadoEdicion
+      const cont = document.getElementById(contId)
+      try {
+        const v = leer()
+        const sinCambios = v.numero === original.numero && v.razon === original.razon && v.proveedor === original.proveedor
+        // Misma guarda que la RPC: sin dígitos no hay número que buscar.
+        if (sinCambios || !/\d/.test(v.numero)) { pintarAvisoDuplicado(cont, []); return }
+        const { data, error } = await supabase.rpc('buscar_comprobante_cargado', {
+          p_proveedor_id:   v.proveedor || null,
+          p_numero_doc:     v.numero,
+          p_razon_social:   v.razon || null,
+          p_excluir_modulo: modulo,
+          p_excluir_id:     id,
+        })
+        if (turno !== turnoDuplicadoEdicion || document.getElementById(contId) !== cont) return
+        if (error) {
+          // Un detector caído no puede impedir la edición. Se limpia el aviso
+          // anterior: era de otro valor.
+          console.error('buscar_comprobante_cargado (edición):', error)
+          pintarAvisoDuplicado(cont, [])
+          return
+        }
+        pintarAvisoDuplicado(cont, data ?? [])
+      } catch (ex) {
+        console.error('detectarDuplicadoEdicion:', ex)
+      }
+    }
 
     function irASubpaso(id) {
       document.querySelectorAll('.paso').forEach(el => el.classList.remove('paso--activo'))
@@ -5325,6 +5396,7 @@
           ${campo('Fecha de factura', `<input type="date" id="edit-fecha" value="${esc(g.fecha)}">`)}
           ${campo('Tipo de documento', `<input type="text" id="edit-tipo-doc" value="${esc(g.tipo_doc)}">`)}
           ${campo('Número', `<input type="text" id="edit-numero-doc" value="${esc(g.numero_doc)}">`)}
+          <div class="aviso-duplicado aviso-duplicado--edicion" id="aviso-duplicado-edicion-gasto" hidden></div>
           ${campo('Razón social', `<input type="text" id="edit-razon-social" value="${esc(g.razon_social)}">`)}
           ${campo('Medio de pago', selectMedioPago)}
           <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
@@ -5363,6 +5435,23 @@
       console.log('[edicion-empleado] Options agregadas al select:', document.querySelector('#edit-empleado').options.length)
 
       document.getElementById('btn-cancelar-edicion').addEventListener('click', () => mostrarDetalleGasto(id))
+
+      // Detector de duplicados (ver detectarDuplicadoEdicion). El proveedor no
+      // se edita acá: sale del gasto, y por eso la lista trae proveedor_id.
+      const detectarDuplicadoGasto = () => detectarDuplicadoEdicion({
+        contId: 'aviso-duplicado-edicion-gasto',
+        modulo: 'gastos',
+        id,
+        original: { numero: (g.numero_doc || '').trim(), razon: (g.razon_social || '').trim(), proveedor: g.proveedor_id || '' },
+        leer: () => ({
+          numero:    document.getElementById('edit-numero-doc').value.trim(),
+          razon:     document.getElementById('edit-razon-social').value.trim(),
+          proveedor: g.proveedor_id || '',
+        }),
+      })
+      document.getElementById('aviso-duplicado-edicion-gasto').addEventListener('click', abrirDuplicadoEnPestana)
+      document.getElementById('edit-numero-doc').addEventListener('change', detectarDuplicadoGasto)
+      document.getElementById('edit-razon-social').addEventListener('change', detectarDuplicadoGasto)
 
       poblarSelectMoneda('edit-moneda', g.moneda || 'ARS')
       formatearImporteEnVivo(document.getElementById('edit-importe'))
@@ -5578,6 +5667,7 @@
       document.getElementById('campo-edit-proveedor-id').value = p.id
       document.getElementById('campo-edit-proveedor-buscar').value = p.razon_social
       document.getElementById('sugerencias-edit-proveedor').hidden = true
+      detectorEdicionFactura?.()
     }
 
     // Mismos campos que mostrarFormularioEdicionGasto(), adaptados a las
@@ -5620,6 +5710,7 @@
           ${campo('Razón social', `<input type="text" id="edit-factura-razon-social" value="${esc(f.razon_social)}">`)}
           ${campo('Fecha de factura', `<input type="date" id="edit-factura-fecha" value="${esc(f.fecha_factura)}">`)}
           ${campo('Número de comprobante', `<input type="text" id="edit-factura-numero" value="${esc(f.numero_comprobante)}">`)}
+          <div class="aviso-duplicado aviso-duplicado--edicion" id="aviso-duplicado-edicion-factura" hidden></div>
           <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
             ${campo('Importe', `<input type="text" inputmode="decimal" id="edit-factura-importe" value="${Number(f.importe).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">`)}
             ${campo('Moneda', `<select id="edit-factura-moneda" style="width:5.5rem;"></select>`)}
@@ -5648,6 +5739,25 @@
       formatearImporteEnVivo(document.getElementById('edit-factura-importe'))
 
       document.getElementById('btn-cancelar-edicion-factura').addEventListener('click', () => mostrarDetalleFactura(id))
+
+      // Detector de duplicados (ver detectarDuplicadoEdicion).
+      detectorEdicionFactura = () => detectarDuplicadoEdicion({
+        contId: 'aviso-duplicado-edicion-factura',
+        modulo: 'cuentas_corrientes',
+        id,
+        original: { numero: (f.numero_comprobante || '').trim(), razon: (f.razon_social || '').trim(), proveedor: f.proveedor_id || '' },
+        leer: () => ({
+          numero:    document.getElementById('edit-factura-numero').value.trim(),
+          razon:     document.getElementById('edit-factura-razon-social').value.trim(),
+          proveedor: document.getElementById('campo-edit-proveedor-id').value,
+        }),
+      })
+      document.getElementById('aviso-duplicado-edicion-factura').addEventListener('click', abrirDuplicadoEnPestana)
+      document.getElementById('edit-factura-numero').addEventListener('change', detectorEdicionFactura)
+      document.getElementById('edit-factura-razon-social').addEventListener('change', detectorEdicionFactura)
+      // Al tipear en el buscador se suelta el proveedor (ver abajo): al salir
+      // del campo se vuelve a consultar sin él.
+      document.getElementById('campo-edit-proveedor-buscar').addEventListener('change', detectorEdicionFactura)
 
       document.getElementById('campo-edit-proveedor-buscar').addEventListener('input', (e) => {
         document.getElementById('campo-edit-proveedor-id').value = ''
