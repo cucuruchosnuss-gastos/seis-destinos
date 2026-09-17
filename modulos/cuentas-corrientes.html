@@ -1966,6 +1966,9 @@
 
       listaEl.innerHTML = estado.listaSinProveedor.map(f => {
         const razon = f.razon_social || '(sin razón social)'
+        // Los href de abajo son seguros por encodeURIComponent + comillas
+        // DOBLES en el atributo. encodeURIComponent NO escapa la comilla
+        // simple: no cambiar el delimitador a comillas simples.
         return `
           <div class="tarjeta-lista" data-id="${esc(f.id)}" style="position:relative;">
             ${puedeAnularFP ? `<button type="button" class="btn-icono-eliminar" data-id="${esc(f.id)}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
@@ -3082,6 +3085,9 @@
           && ['pendiente', 'parcial'].includes(estadoPorFactura[m.factura_pendiente_id])
           && tieneTarea('cuentas_corrientes', 'anular_factura')
         const volverFicha = encodeURIComponent(location.href)
+        // Los href de abajo son seguros por encodeURIComponent + comillas
+        // DOBLES en el atributo. encodeURIComponent NO escapa la comilla
+        // simple: no cambiar el delimitador a comillas simples.
         const iconos = esFactura ? `
           <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
             <a href="gastos.html?factura=${encodeURIComponent(m.factura_pendiente_id)}&volver=${volverFicha}" class="btn-icono-accion" title="Ver">👁</a>
