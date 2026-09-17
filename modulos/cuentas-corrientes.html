@@ -1556,6 +1556,12 @@
       estado.maestros.proveedores = data ?? []
     }
 
+    // TEXTO PLANO, a propósito NO escapa: también se usa con textContent
+    // (modal de asignar proveedor, modal de aplicar crédito) y en el label que
+    // va a poblarSelect(), que ya escapa por dentro. Si escapara acá, esos
+    // lugares mostrarían "&amp;" literal. Para meter un importe en HTML, usar
+    // importeHtml(): la moneda es texto libre en la base (ninguna columna
+    // `moneda` tiene CHECK), así que interpolarla cruda es un sink de XSS.
     function formatearImporte(importe, moneda = 'ARS') {
       if (importe == null) return '—'
       const num = Number(importe).toLocaleString('es-AR', {
@@ -1571,7 +1577,8 @@
       const [entero, centavos] = Number(importe || 0).toLocaleString('es-AR', {
         minimumFractionDigits: 2, maximumFractionDigits: 2,
       }).split(',')
-      const simbolo = moneda === 'ARS' ? '$' : moneda
+      // Devuelve HTML, así que escapa por dentro: la moneda es texto libre.
+      const simbolo = moneda === 'ARS' ? '$' : esc(moneda)
       return `${simbolo} ${entero}<span class="cc-centavos">,${centavos}</span>`
     }
 
@@ -1618,6 +1625,24 @@
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
     }
 
+    // Todo texto que no sea literal del código se escapa antes de entrar a
+    // innerHTML (regla del proyecto, ver CLAUDE.md). Acá lo escriben usuarios
+    // con pocos permisos —razón social y número de comprobante desde Gastos,
+    // proveedores pendientes, nombres de cuenta, monedas— y lo mira quien
+    // aprueba o tiene ver_todo. Mismo helper que gastos.html.
+    function esc(valor) {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
+    // formatearImporte() para HTML: ver el comentario de formatearImporte().
+    function importeHtml(importe, moneda) {
+      return esc(formatearImporte(importe, moneda))
+    }
+
+    // Devuelve texto crudo (los primeros caracteres del nombre): escapar el
+    // resultado donde se interpole.
     function inicialesEmpresa(nombre) {
       const palabras = (nombre || '').trim().split(/\s+/).filter(Boolean)
       if (!palabras.length) return '—'
@@ -1632,14 +1657,16 @@
       return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length]
     }
 
+    // Escapa por dentro placeholder, value y label: los call sites pasan
+    // texto crudo (no escapar antes, o sale doble escapado).
     function poblarSelect(idCampo, items, mapFn, placeholder) {
       const sel = document.getElementById(idCampo)
       if (!sel) return
       sel.innerHTML =
-        `<option value="">${placeholder}</option>` +
+        `<option value="">${esc(placeholder)}</option>` +
         items.map(item => {
           const { value, label } = mapFn(item)
-          return `<option value="${value}">${label}</option>`
+          return `<option value="${esc(value)}">${esc(label)}</option>`
         }).join('')
     }
 
@@ -1827,18 +1854,18 @@
         // Mismo criterio de prioridad-a-la-deuda que la ficha (Cambio E/D):
         // por moneda, "DEBE" y "CRÉDITO A FAVOR" son mutuamente excluyentes.
         const saldosHtml = saldosVisibles.map(s => {
-          const sufijoMoneda = multiMoneda ? ` · ${s.moneda}` : ''
+          const sufijoMoneda = multiMoneda ? ` · ${esc(s.moneda)}` : ''
           if (s.deuda > 0) {
             return `
               <div class="proveedor-cc__saldo">
                 <div class="proveedor-cc__etiqueta">Debe${sufijoMoneda}</div>
-                <div class="proveedor-cc__monto">${formatearImporte(s.deuda, s.moneda)}</div>
+                <div class="proveedor-cc__monto">${importeHtml(s.deuda, s.moneda)}</div>
               </div>`
           }
           return `
             <div class="proveedor-cc__saldo">
               <div class="proveedor-cc__etiqueta proveedor-cc__etiqueta--favor">Crédito a favor${sufijoMoneda}</div>
-              <div class="proveedor-cc__monto proveedor-cc__monto--favor">${formatearImporte(s.credito, s.moneda)}</div>
+              <div class="proveedor-cc__monto proveedor-cc__monto--favor">${importeHtml(s.credito, s.moneda)}</div>
             </div>`
         }).join('') || `
           <div class="proveedor-cc__saldo">
@@ -1847,15 +1874,15 @@
           </div>`
 
         return `
-          <div class="tarjeta-lista" data-proveedor="${g.proveedor_id}" data-unidad="${g.unidad_negocio_id}">
-            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(g.proveedor.razon_social)};">${inicialesEmpresa(g.proveedor.razon_social)}</div>
+          <div class="tarjeta-lista" data-proveedor="${esc(g.proveedor_id)}" data-unidad="${esc(g.unidad_negocio_id)}">
+            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(g.proveedor.razon_social)};">${esc(inicialesEmpresa(g.proveedor.razon_social))}</div>
             <div class="tarjeta-lista__info">
-              <div class="tarjeta-lista__titulo">${g.proveedor.razon_social}</div>
-              <div class="tarjeta-lista__subtitulo">${unidadNombre}</div>
+              <div class="tarjeta-lista__titulo">${esc(g.proveedor.razon_social)}</div>
+              <div class="tarjeta-lista__subtitulo">${esc(unidadNombre)}</div>
             </div>
             <div class="proveedor-cc__derecha">
               ${saldosHtml}
-              <button type="button" class="btn btn-ver-cuenta" data-proveedor="${g.proveedor_id}" data-unidad="${g.unidad_negocio_id}" data-nombre="${g.proveedor.razon_social}">Ver cuenta</button>
+              <button type="button" class="btn btn-ver-cuenta" data-proveedor="${esc(g.proveedor_id)}" data-unidad="${esc(g.unidad_negocio_id)}" data-nombre="${esc(g.proveedor.razon_social)}">Ver cuenta</button>
             </div>
           </div>
         `
@@ -1940,21 +1967,21 @@
       listaEl.innerHTML = estado.listaSinProveedor.map(f => {
         const razon = f.razon_social || '(sin razón social)'
         return `
-          <div class="tarjeta-lista" data-id="${f.id}" style="position:relative;">
-            ${puedeAnularFP ? `<button type="button" class="btn-icono-eliminar" data-id="${f.id}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
-            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(razon)};">${inicialesEmpresa(razon)}</div>
+          <div class="tarjeta-lista" data-id="${esc(f.id)}" style="position:relative;">
+            ${puedeAnularFP ? `<button type="button" class="btn-icono-eliminar" data-id="${esc(f.id)}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
+            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(razon)};">${esc(inicialesEmpresa(razon))}</div>
             <div class="tarjeta-lista__info">
-              <div class="tarjeta-lista__titulo">${razon}</div>
+              <div class="tarjeta-lista__titulo">${esc(razon)}</div>
               <div class="gasto__meta">
                 <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${formatearFecha(f.fecha_factura)}</span>
               </div>
             </div>
             <div class="gasto__derecha" style="align-items:flex-end; gap:0.375rem;">
-              <div class="gasto__importe">${formatearImporte(f.importe, f.moneda)}</div>
+              <div class="gasto__importe">${importeHtml(f.importe, f.moneda)}</div>
               <div style="display:flex; gap:0.5rem; align-items:center;">
-                <a href="gastos.html?factura=${f.id}&volver=${encodeURIComponent('cuentas-corrientes.html')}" class="btn-icono-accion" title="Ver">👁</a>
-                ${puedeEditarFP ? `<a href="gastos.html?factura=${f.id}&volver=${encodeURIComponent('cuentas-corrientes.html')}" class="btn-icono-accion" title="Editar">✏️</a>` : ''}
-                ${puedeAsignar ? `<button type="button" class="btn btn--exito btn-asignar-proveedor" data-id="${f.id}" style="width:auto; padding:0.375rem 0.75rem; font-size:0.75rem;">Asignar proveedor</button>` : ''}
+                <a href="gastos.html?factura=${encodeURIComponent(f.id)}&volver=${encodeURIComponent('cuentas-corrientes.html')}" class="btn-icono-accion" title="Ver">👁</a>
+                ${puedeEditarFP ? `<a href="gastos.html?factura=${encodeURIComponent(f.id)}&volver=${encodeURIComponent('cuentas-corrientes.html')}" class="btn-icono-accion" title="Editar">✏️</a>` : ''}
+                ${puedeAsignar ? `<button type="button" class="btn btn--exito btn-asignar-proveedor" data-id="${esc(f.id)}" style="width:auto; padding:0.375rem 0.75rem; font-size:0.75rem;">Asignar proveedor</button>` : ''}
               </div>
             </div>
           </div>
@@ -2007,8 +2034,8 @@
         return
       }
       cont.innerHTML = lista.map(p => `
-        <div class="sugerencias-proveedor-cc__item" data-id="${p.id}">
-          ${p.razon_social}${p.nombre_fantasia ? ` <span style="color:var(--color-texto-suave);">(${p.nombre_fantasia})</span>` : ''}
+        <div class="sugerencias-proveedor-cc__item" data-id="${esc(p.id)}">
+          ${esc(p.razon_social)}${p.nombre_fantasia ? ` <span style="color:var(--color-texto-suave);">(${esc(p.nombre_fantasia)})</span>` : ''}
         </div>
       `).join('')
       cont.hidden = false
@@ -2069,14 +2096,14 @@
 
       const filasFacturas = aplicaciones.map(a => {
         const fp = a.facturas_pendientes
-        const categoria = fp?.categorias?.nombre ? ` · ${fp.categorias.nombre}` : ''
+        const categoria = fp?.categorias?.nombre ? ` · ${esc(fp.categorias.nombre)}` : ''
         return `
           <div class="fila-pago-aplicacion">
             <div class="fila-fifo__info">
-              <div class="fila-fifo__numero">Factura ${fp?.numero_comprobante || '—'}</div>
-              <div class="fila-fifo__meta">${fp?.razon_social || ''}${categoria}</div>
+              <div class="fila-fifo__numero">Factura ${esc(fp?.numero_comprobante || '—')}</div>
+              <div class="fila-fifo__meta">${esc(fp?.razon_social || '')}${categoria}</div>
             </div>
-            <div class="fila-pago-aplicacion__monto">${formatearImporte(a.monto_aplicado, gasto?.moneda)}</div>
+            <div class="fila-pago-aplicacion__monto">${importeHtml(a.monto_aplicado, gasto?.moneda)}</div>
           </div>
         `
       }).join('')
@@ -2086,21 +2113,21 @@
       const bloquesCredito = creditos.map(c => {
         const aplicacionesCredito = c.aplicaciones_credito ?? []
         if (!aplicacionesCredito.length) {
-          return `<div>Sobrante: ${formatearImporte(c.monto_original, c.moneda)} — sigue como crédito a favor, sin aplicar todavía.</div>`
+          return `<div>Sobrante: ${importeHtml(c.monto_original, c.moneda)} — sigue como crédito a favor, sin aplicar todavía.</div>`
         }
         const lineas = aplicacionesCredito.map(ac =>
-          `<div>${formatearImporte(ac.monto_aplicado, c.moneda)} se aplicó a la Factura ${ac.facturas_pendientes?.numero_comprobante || '—'}</div>`
+          `<div>${importeHtml(ac.monto_aplicado, c.moneda)} se aplicó a la Factura ${esc(ac.facturas_pendientes?.numero_comprobante || '—')}</div>`
         ).join('')
         const restante = Number(c.monto_disponible) > 0
-          ? `<div>${formatearImporte(c.monto_disponible, c.moneda)} sigue disponible como crédito a favor.</div>`
+          ? `<div>${importeHtml(c.monto_disponible, c.moneda)} sigue disponible como crédito a favor.</div>`
           : ''
         return lineas + restante
       }).join('')
 
       cont.innerHTML = `
         <div class="detalle-pago-hero">
-          <div class="detalle-pago-hero__monto">${formatearImporte(gasto?.importe, gasto?.moneda)}</div>
-          <div class="detalle-pago-hero__meta">${formatearFecha(gasto?.fecha_pago)} · ${MEDIOS_PAGO_LABEL[gasto?.medio_pago] || gasto?.medio_pago || ''}</div>
+          <div class="detalle-pago-hero__monto">${importeHtml(gasto?.importe, gasto?.moneda)}</div>
+          <div class="detalle-pago-hero__meta">${formatearFecha(gasto?.fecha_pago)} · ${esc(MEDIOS_PAGO_LABEL[gasto?.medio_pago] || gasto?.medio_pago || '')}</div>
         </div>
         <div class="detalle-pago-seccion-titulo">Facturas cubiertas</div>
         ${filasFacturas || '<p style="color:var(--color-texto-suave); font-size:0.8125rem;">Sin facturas asociadas.</p>'}
@@ -2168,18 +2195,18 @@
       vacioEl.hidden = true
 
       listaEl.innerHTML = data.map(p => `
-        <div class="tarjeta-lista" data-id="${p.id}">
-          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(p.razon_social)};">${inicialesEmpresa(p.razon_social)}</div>
+        <div class="tarjeta-lista" data-id="${esc(p.id)}">
+          <div class="tarjeta-lista__avatar" style="background:${colorAvatar(p.razon_social)};">${esc(inicialesEmpresa(p.razon_social))}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${p.razon_social}</div>
+            <div class="tarjeta-lista__titulo">${esc(p.razon_social)}</div>
             <div class="gasto__meta">
-              ${p.cuit ? `<span class="gasto__meta-secundaria gasto__meta-secundaria--chip">CUIT ${p.cuit}</span>` : ''}
-              ${p.nombre_fantasia ? `<span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${p.nombre_fantasia}</span>` : ''}
+              ${p.cuit ? `<span class="gasto__meta-secundaria gasto__meta-secundaria--chip">CUIT ${esc(p.cuit)}</span>` : ''}
+              ${p.nombre_fantasia ? `<span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${esc(p.nombre_fantasia)}</span>` : ''}
             </div>
           </div>
           <div class="gasto__derecha" style="gap:0.5rem;">
-            <button type="button" class="btn btn--rechazar btn-rechazar-proveedor" data-id="${p.id}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Rechazar</button>
-            <button type="button" class="btn btn--exito btn-aprobar-proveedor" data-id="${p.id}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Aprobar</button>
+            <button type="button" class="btn btn--rechazar btn-rechazar-proveedor" data-id="${esc(p.id)}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Rechazar</button>
+            <button type="button" class="btn btn--exito btn-aprobar-proveedor" data-id="${esc(p.id)}" style="width:auto; padding:0.5rem 0.875rem; font-size:0.8125rem;">Aprobar</button>
           </div>
         </div>
       `).join('')
@@ -2347,18 +2374,18 @@
 
         const saldoHtml = lineas.length
           ? lineas.map(l => {
-              const sufijo = multiMoneda ? ` · ${l.moneda}` : ''
+              const sufijo = multiMoneda ? ` · ${esc(l.moneda)}` : ''
               if (l.neto > 0) {
                 return `
                   <div class="proveedor-cc__saldo">
                     <div class="proveedor-cc__etiqueta">Debe${sufijo}</div>
-                    <div class="proveedor-cc__monto">${formatearImporte(l.neto, l.moneda)}</div>
+                    <div class="proveedor-cc__monto">${importeHtml(l.neto, l.moneda)}</div>
                   </div>`
               }
               return `
                 <div class="proveedor-cc__saldo">
                   <div class="proveedor-cc__etiqueta proveedor-cc__etiqueta--favor">Crédito a favor${sufijo}</div>
-                  <div class="proveedor-cc__monto proveedor-cc__monto--favor">${formatearImporte(-l.neto, l.moneda)}</div>
+                  <div class="proveedor-cc__monto proveedor-cc__monto--favor">${importeHtml(-l.neto, l.moneda)}</div>
                 </div>`
             }).join('')
           : `
@@ -2368,15 +2395,15 @@
             </div>`
 
         return `
-          <div class="tarjeta-lista tarjeta-padron" data-id="${p.id}">
-            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(p.razon_social)};">${inicialesEmpresa(p.razon_social)}</div>
+          <div class="tarjeta-lista tarjeta-padron" data-id="${esc(p.id)}">
+            <div class="tarjeta-lista__avatar" style="background:${colorAvatar(p.razon_social)};">${esc(inicialesEmpresa(p.razon_social))}</div>
             <div class="tarjeta-lista__info">
-              <div class="tarjeta-lista__titulo">${p.razon_social}</div>
-              <div class="tarjeta-lista__subtitulo">${subtitulo}</div>
+              <div class="tarjeta-lista__titulo">${esc(p.razon_social)}</div>
+              <div class="tarjeta-lista__subtitulo">${esc(subtitulo)}</div>
             </div>
             <div class="proveedor-cc__derecha">
               ${saldoHtml}
-              ${puedeEditar ? `<button type="button" class="btn-icono-accion btn-editar-padron" data-id="${p.id}" title="Editar" aria-label="Editar proveedor">✏️</button>` : ''}
+              ${puedeEditar ? `<button type="button" class="btn-icono-accion btn-editar-padron" data-id="${esc(p.id)}" title="Editar" aria-label="Editar proveedor">✏️</button>` : ''}
             </div>
           </div>
         `
@@ -2800,11 +2827,11 @@
         return `
           <div class="tarjeta-lista fila-movimiento">
             <div style="flex:1; min-width:0;">
-              <span class="chip-tipo-mov chip-tipo-mov--${m.tipo}">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</span>
-              <div class="fila-movimiento__referencia">${m.proveedorNombre}${referencia ? ` — ${referencia}` : ''}${badgeEstado}</div>
-              <div class="fila-movimiento__fecha">${unidadNombre} · ${formatearFecha(m.fecha)}</div>
+              <span class="chip-tipo-mov chip-tipo-mov--${esc(m.tipo)}">${esc(TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo)}</span>
+              <div class="fila-movimiento__referencia">${esc(m.proveedorNombre)}${referencia ? ` — ${esc(referencia)}` : ''}${badgeEstado}</div>
+              <div class="fila-movimiento__fecha">${esc(unidadNombre)} · ${formatearFecha(m.fecha)}</div>
             </div>
-            <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
+            <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>
           </div>
         `
       }).join('')
@@ -2891,7 +2918,7 @@
     function renderizarSelectorUnidadFicha() {
       const sel = document.getElementById('filtro-unidad-ficha')
       sel.innerHTML = `<option value="">Todas las unidades</option>` +
-        estado.ficha.unidades.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('')
+        estado.ficha.unidades.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
       sel.value = estado.ficha.unidadId || ''
     }
 
@@ -2961,14 +2988,14 @@
           const deuda   = Number(s.deuda_pendiente) || 0
           const credito = Number(s.credito_disponible) || 0
           const esFavor = deuda === 0 && credito > 0
-          const etiqueta = esFavor ? `Saldo a favor · ${s.moneda}` : `A pagar · ${s.moneda}`
+          const etiqueta = esFavor ? `Saldo a favor · ${esc(s.moneda)}` : `A pagar · ${esc(s.moneda)}`
           const monto = esFavor ? credito : deuda
           return `
             <div class="banner-ficha-cc${i > 0 ? ' banner-ficha-cc--secundaria' : ''}">
               <div>
-                ${todas ? `<div class="banner-ficha-cc__unidad">${nombreUnidad(s.unidad_negocio_id)}</div>` : ''}
+                ${todas ? `<div class="banner-ficha-cc__unidad">${esc(nombreUnidad(s.unidad_negocio_id))}</div>` : ''}
                 <div class="banner-ficha-cc__etiqueta">${etiqueta}</div>
-                <div class="banner-ficha-cc__monto">${formatearImporte(monto, s.moneda)}</div>
+                <div class="banner-ficha-cc__monto">${importeHtml(monto, s.moneda)}</div>
               </div>
               ${i === 0 ? acciones : ''}
             </div>`
@@ -3057,12 +3084,12 @@
         const volverFicha = encodeURIComponent(location.href)
         const iconos = esFactura ? `
           <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
-            <a href="gastos.html?factura=${m.factura_pendiente_id}&volver=${volverFicha}" class="btn-icono-accion" title="Ver">👁</a>
-            ${tieneTarea('facturas_pendientes', 'editar_interes') ? `<a href="gastos.html?factura=${m.factura_pendiente_id}&volver=${volverFicha}" class="btn-icono-accion" title="Editar">✏️</a>` : ''}
-            ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${m.factura_pendiente_id}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
+            <a href="gastos.html?factura=${encodeURIComponent(m.factura_pendiente_id)}&volver=${volverFicha}" class="btn-icono-accion" title="Ver">👁</a>
+            ${tieneTarea('facturas_pendientes', 'editar_interes') ? `<a href="gastos.html?factura=${encodeURIComponent(m.factura_pendiente_id)}&volver=${volverFicha}" class="btn-icono-accion" title="Editar">✏️</a>` : ''}
+            ${puedeEliminar ? `<button type="button" class="btn-icono-eliminar btn-icono-eliminar--inline" data-id="${esc(m.factura_pendiente_id)}" title="Eliminar" aria-label="Eliminar">✕</button>` : ''}
           </div>` : esPago ? `
           <div style="display:flex; gap:0.375rem; align-items:center; margin-top:0.375rem;">
-            <button type="button" class="btn-icono-accion btn-detalle-pago" data-gasto-id="${m.gasto_id}" title="Detalle del pago">📋</button>
+            <button type="button" class="btn-icono-accion btn-detalle-pago" data-gasto-id="${esc(m.gasto_id)}" title="Detalle del pago">📋</button>
           </div>` : ''
         // El saldo corrido NO se muestra con las unidades mezcladas.
         // saldo_acumulado sale de la vista particionado por proveedor +
@@ -3071,7 +3098,7 @@
         // números correctos en un contexto que los hace parecer un error.
         const saldoAcum = Number(m.saldo_acumulado) || 0
         const lineaSaldo = (!todas && saldoAcum !== 0)
-          ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${formatearImporte(Math.abs(saldoAcum), m.moneda)}</div>`
+          ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${importeHtml(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
         const referencia = m.referencia || '—'
         const badgeEstado = m.tipo === 'factura'
@@ -3079,14 +3106,14 @@
           : ''
         return `
           <div class="tarjeta-lista fila-movimiento">
-            <span class="punto-tipo-mov punto-tipo-mov--${m.tipo}"></span>
+            <span class="punto-tipo-mov punto-tipo-mov--${esc(m.tipo)}"></span>
             <div style="flex:1; min-width:0;">
-              <div class="fila-movimiento__tipo">${TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo}</div>
-              <div class="fila-movimiento__referencia">${referencia}${badgeEstado}</div>
-              <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas ? ` · ${nombreUnidad(m.unidad_negocio_id)}` : ''}</div>
+              <div class="fila-movimiento__tipo">${esc(TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo)}</div>
+              <div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>
+              <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas ? ` · ${esc(nombreUnidad(m.unidad_negocio_id))}` : ''}</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
-              <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${formatearImporte(Math.abs(monto), m.moneda)}</div>
+              <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>
               ${lineaSaldo}
               ${iconos}
             </div>
@@ -3131,8 +3158,8 @@
 
       panel.innerHTML = OPCIONES_ORDEN_MOVIMIENTOS.map(op => `
         <label class="multiselect__opcion">
-          <input type="radio" name="orden-ficha" value="${op.value}">
-          <span>${op.label}</span>
+          <input type="radio" name="orden-ficha" value="${esc(op.value)}">
+          <span>${esc(op.label)}</span>
         </label>
       `).join('')
 
@@ -3206,10 +3233,10 @@
       }
 
       document.getElementById('lista-creditos-para-elegir').innerHTML = estado.fichaCreditos.map(c => `
-        <div class="tarjeta-lista btn-elegir-credito" data-id="${c.id}" style="margin-bottom:0.5rem;">
+        <div class="tarjeta-lista btn-elegir-credito" data-id="${esc(c.id)}" style="margin-bottom:0.5rem;">
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${formatearImporte(c.monto_disponible, c.moneda)}</div>
-            <div class="tarjeta-lista__subtitulo">de ${formatearImporte(c.monto_original, c.moneda)} original</div>
+            <div class="tarjeta-lista__titulo">${importeHtml(c.monto_disponible, c.moneda)}</div>
+            <div class="tarjeta-lista__subtitulo">de ${importeHtml(c.monto_original, c.moneda)} original</div>
           </div>
         </div>
       `).join('')
@@ -3353,7 +3380,7 @@
 
       // A mano y no con poblarSelect(), que no sabe de <optgroup>. Los grupos
       // existen para que se vea de qué caja sale la plata.
-      const opciones = c => `<option value="${c.id}">${c.nombre} (${MEDIO_CUENTA_LABEL[c.medio]} ${c.moneda})</option>`
+      const opciones = c => `<option value="${esc(c.id)}">${esc(c.nombre)} (${esc(MEDIO_CUENTA_LABEL[c.medio])} ${esc(c.moneda)})</option>`
       document.getElementById('campo-cuenta-pago-cc').innerHTML =
         `<option value="">— Seleccioná —</option>` +
         (propias.length ? `<optgroup label="Mis cuentas">${propias.map(opciones).join('')}</optgroup>` : '') +
@@ -3387,7 +3414,7 @@
       } else {
         grupoMoneda.style.display = 'none'
         document.getElementById('campo-moneda-pago').innerHTML =
-          `<option value="${monedasConDeuda[0]?.moneda || 'ARS'}">${monedasConDeuda[0]?.moneda || 'ARS'}</option>`
+          `<option value="${esc(monedasConDeuda[0]?.moneda || 'ARS')}">${esc(monedasConDeuda[0]?.moneda || 'ARS')}</option>`
       }
 
       document.getElementById('campo-monto-pago').value = ''
@@ -3479,8 +3506,8 @@
         <div class="fila-fifo">
           <input type="checkbox" data-index="${i}" class="check-fifo" ${f.checked ? 'checked' : ''}>
           <div class="fila-fifo__info">
-            <div class="fila-fifo__numero">${f.numero} · ${formatearFecha(f.fecha)}</div>
-            <div class="fila-fifo__meta">Saldo pendiente: ${formatearImporte(f.saldo)}</div>
+            <div class="fila-fifo__numero">${esc(f.numero)} · ${formatearFecha(f.fecha)}</div>
+            <div class="fila-fifo__meta">Saldo pendiente: ${importeHtml(f.saldo)}</div>
           </div>
           <input type="text" class="fila-fifo__monto monto-fifo" data-index="${i}" value="${f.monto ? formatearNumeroEditable(f.monto) : ''}" placeholder="0,00" inputmode="decimal">
         </div>
@@ -3517,9 +3544,9 @@
       const sumaAplicada = facturasParaPago.filter(f => f.checked).reduce((acc, f) => acc + (f.monto || 0), 0)
       const excedente = monto - sumaAplicada
 
-      let html = `Aplicado: <strong>${formatearImporte(sumaAplicada)}</strong> de <strong>${formatearImporte(monto)}</strong>`
+      let html = `Aplicado: <strong>${importeHtml(sumaAplicada)}</strong> de <strong>${importeHtml(monto)}</strong>`
       if (excedente > 0.009) {
-        html += `<div class="resumen-aplicacion__excedente">${formatearImporte(excedente)} va a quedar como saldo a favor.</div>`
+        html += `<div class="resumen-aplicacion__excedente">${importeHtml(excedente)} va a quedar como saldo a favor.</div>`
       } else if (excedente < -0.009) {
         html += `<div class="resumen-aplicacion__error">Lo aplicado supera el monto a pagar — ajustá los montos.</div>`
       }
