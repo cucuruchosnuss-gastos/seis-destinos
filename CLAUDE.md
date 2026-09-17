@@ -1327,10 +1327,10 @@ TERCER CASO (`7d145d7`), y el peor de los tres por dónde estaba: en `ocr-materi
 - **EL TEST VERDE QUE MIDE OTRA COSA.** Todas comparten el modo de falla: la verificación sigue en verde mientras dejó de medir lo que dice medir, que es peor que no tenerla porque además da confianza. Las tres primeras aparecieron DOS VECES cada una en el mismo módulo, así que son un patrón y no anécdotas; el resto salió de los harness de Stock y de Insumos. **Ninguna se detecta leyendo la suite: se detectan mutando el código y exigiendo que se ponga en rojo.**
   - **EL HARNESS VALIDA UN FRAGMENTO Y EL NAVEGADOR NO PUEDE NI CARGAR EL ARCHIVO. Es la peor de toda esta familia, porque el modo de falla no es un dato mal: es el módulo entero sin cargar.** Caso real (`0c41698` → `4511880`, septiembre 2026): se declaró `const nombreUnidad` para traducir `kg`/`un`/`lt` a palabra, y ese identificador **YA EXISTÍA 700 líneas más abajo** como `function nombreUnidad(id)` del módulo de transferencias, que traduce un **uuid de unidad de negocio**. Dos declaraciones top-level con el mismo nombre en el mismo `<script type="module">` son un `SyntaxError`, y **el script entero no parsea**: pantalla gris, módulo muerto, en producción.
     - **SE ESCAPÓ CON 32 MUTACIONES EN VERDE Y LAS NUEVE SUITES DE STOCK PASANDO.** El andamio **extrae funciones sueltas y las evalúa por separado**, así que verifica LÓGICA sobre fragmentos mientras el archivo COMPLETO no puede cargarse. **Un fragmento válido no dice nada sobre el archivo:** el choque cruza dos zonas que ninguna extracción mira juntas, y `node --check` sobre un bloque tampoco lo ve.
-    - **REGLA: además de probar la lógica por fragmentos, VALIDAR EL ARCHIVO ENTERO COMO LO VE EL NAVEGADOR.** Está implementado en `check-scripts.js` del scratchpad, y hace dos cosas:
+    - **REGLA: además de probar la lógica por fragmentos, VALIDAR EL ARCHIVO ENTERO COMO LO VE EL NAVEGADOR.** Está implementado en **`pruebas/check-scripts.js`** —versionado en el repo desde el 17/09/2026; antes vivía en el scratchpad, que es donde no tenía que estar— y hace dos cosas:
       1. **Parsea cada `<script>` inline con `node --check` sobre un `.mjs`** —que es exactamente lo que el navegador hace antes de ejecutar una línea—. **BLOQUE POR BLOQUE y no todo concatenado**: cada `<script type="module">` tiene su propio scope, así que concatenarlos daría falsos positivos.
       2. **Escanea identificadores duplicados en el top-level**, porque el parse SOLO los agarra cuando alguno es `const`/`let`. **Con dos `function` o dos `var`, JavaScript los deja pisarse EN SILENCIO** — y eso es peor que el `SyntaxError`: no rompe nada, simplemente una de las dos implementaciones desaparece y nadie se entera.
-    - Verificado que habría atajado este bug: sobre `0c41698` reproduce el error exacto del navegador; sobre el arreglo, pasa. Corrido sobre los 14 HTML del proyecto, ninguno tiene otro choque latente.
+    - Verificado que habría atajado este bug: sobre `0c41698` reproduce el error exacto del navegador; sobre el arreglo, pasa. Corrido sobre **todos** los HTML del proyecto, ninguno tiene otro choque latente (se corre sin argumentos y los busca solo, así que el número no hay que mantenerlo en ningún lado).
     - **CORRERLO ES PARTE DEL CIERRE DE TODO COMMIT DE UN MÓDULO**, junto con las suites — no es una herramienta para cuando algo ya se rompió. Y antes de declarar un identificador nuevo en un archivo de miles de líneas, **verificar que el nombre esté libre** cuesta un `grep`.
     - **EL PATRÓN DE FONDO YA HABÍA APARECIDO Y NO EXPLOTÓ POR SUERTE:** `enBultos` existe como dos cosas distintas en este mismo archivo, solo que en scopes que no colisionan. **Un nombre genérico —`nombreUnidad`, `enBultos`, `esValido`— en un archivo de 6.000 líneas es una colisión esperando**, y la defensa es que el nombre diga QUÉ hace: `nombreDeUnidadMedida` y `nombreUnidad` no se pisan porque nombran cosas distintas.
     - **Y la lección operativa, que es la que costó cara:** un bug de CARGA se ve **en el primer segundo** en un navegador. No hace falta sesión ni datos — alcanza con servir el archivo y mirar la consola. Ninguna cantidad de mutaciones reemplaza ese minuto.
@@ -1472,6 +1472,33 @@ Caso real (agosto 2026): un traspaso reportó "31 tareas en el CHECK" cuando era
 - **TODA escritura se reporta a Facu**: qué se corrió, con qué verificación y qué resultado. Es lo que conserva **un único punto donde se ve todo lo que entra a producción**, en un proyecto donde varios chats trabajan en paralelo sin verse entre ellos: antes lo daba que Facu corriera cada SQL a mano; ahora lo da el reporte.
 - **Los demás chats de módulo mantienen el acceso que tengan configurado.** Si no tienen escritura, **entregan el SQL a Claude Code o a Facu** para que lo apliquen.
 - **Lo que NO cambió:** leer antes de escribir; el traspaso entre chats cuando el cambio toca territorio de otro; y **nunca regenerar de memoria un CHECK o un catálogo compartido** —se lee el real y se agrega sobre eso (ver el corolario de la regla del territorio compartido)—. Tener permiso para escribir no vuelve más seguro escribir sin haber leído: la corrección chiquita de un chat sigue siendo el cambio invisible que otro chat va a pisar si no está reportada.
+
+### REGLA DE ORO — Las suites de verificación viven en `pruebas/`, no en el scratchpad
+
+**Toda suite, runner de mutaciones o chequeo que valga la pena volver a correr va versionado en `pruebas/` del repo.** El motivo es el que las justifica: **una verificación que se borra con la sesión no impide nada mañana**, que es justamente para lo que se escribió.
+
+**El costo ya se pagó y no se recupera:** cuando se adoptó esta convención (`bb1f2b6`, 17/09/2026), Gastos, Caja, Cuentas Corrientes y Empleados figuraban en este documento con su **barrido de XSS cerrado y la prueba que lo demostraba ya no existía en ningún lado** — se fue con las sesiones que las escribieron. No se rehacen: la convención arranca con lo único que sobrevivía, la de Cobranzas.
+
+**Qué hay hoy** (`pruebas/`, con su propio README):
+- `test-cobranzas-xss.js` — el barrido de escapado, en sus dos mitades: los renders EJECUTADOS con un `document` falso y el chequeo estático.
+- `mut-cobranzas-xss.js` — su runner de mutaciones.
+- `check-scripts.js` — el archivo entero como lo ve el navegador. **Se corre en el cierre de TODO commit de módulo**, junto con las suites. Sin argumentos revisa todos los HTML del repo.
+- Helpers compartidos: `escaner-interpolaciones.js` (tokeniza el `<script>`), `clasificar.js`, `sandbox.js` y `extraer.js`.
+
+**Patrón de nombres:** `test-<modulo>-<tema>.js` para una suite y `mut-<modulo>-<tema>.js` para su runner; los helpers se llaman como lo que hacen. Se corren desde cualquier directorio —las rutas se resuelven contra `__dirname`— y el archivo bajo prueba se cambia con `ARCHIVO_TEST`.
+
+**EL BASELINE SE ANCLA A UN COMMIT FIJO, NUNCA A `HEAD`.** Una suite que compara contra `HEAD` **deja de probar en el momento en que el cambio se commitea**: el "antes" pasa a ser el propio cambio, las dos mitades se vuelven idénticas y toda aserción de "antes era X, ahora es Y" queda verde para siempre sin mirar nada.
+
+**Y NUNCA `git stash` para conseguir el archivo limpio**: el round-trip convierte el archivo a CRLF, las suites comparan contra lo que devuelve `git show` —siempre LF— y se ponen **todas en rojo a la vez**, lo que se lee como que el cambio rompió medio módulo. La forma correcta no toca el working copy:
+
+```bash
+git show <commit>:modulos/x.html > limpio.html
+ARCHIVO_TEST=limpio.html node pruebas/test-x-xss.js
+```
+
+**SI LA SUITE NO ESTÁ VERDE SOBRE EL ARCHIVO LIMPIO, LAS MUTACIONES NO CORREN.** El runner decide "mutación detectada" preguntando si el sub-proceso falló, así que con la suite ya fallando por cualquier otro motivo **toda mutación se reporta como detectada** y el número final no mide nada. El harness lo detecta y **aborta diciéndolo**, en vez de informar cobertura. Mismo criterio en los otros dos guards: una mutación cuyo texto **no es único** en el archivo se aborta nombrándola —si no, pega en el renglón equivocado y se reporta como escapada—, y una que **no cambia nada** es un error del test, nunca cobertura.
+
+**Qué NO va en `pruebas/`:** lo de un solo uso —scripts que aplican una edición, generadores de vistas para mirar en el navegador, volcados intermedios—. Eso sigue en el scratchpad de la sesión. En `pruebas/` va lo que tiene que poder volver a correrse dentro de seis meses.
 
 ### Registro de escrituras en la base
 

@@ -28,6 +28,16 @@ Las mutaciones se corren aparte, y tardan bastante porque cada una levanta la su
 node pruebas/mut-cobranzas-xss.js
 ```
 
+## El archivo entero, como lo ve el navegador
+
+```bash
+node pruebas/check-scripts.js
+```
+
+Sin argumentos revisa **todos** los HTML del repo; con argumentos, solo los que se le pasen. Hace dos cosas que ninguna suite puede hacer: parsea **cada bloque `<script>` por separado** con `node --check` —cada uno tiene su propio scope, concatenarlos daría falsos positivos— y busca **identificadores duplicados en el top-level**, porque con dos `function` o dos `var` JavaScript los deja pisarse **en silencio**, que es peor que el `SyntaxError`: una de las dos implementaciones desaparece y nadie se entera.
+
+**Se corre en el cierre de todo commit de módulo**, junto con las suites. El harness valida fragmentos; el navegador parsea el archivo completo antes de ejecutar una línea, y un choque de nombres deja el módulo muerto con las mutaciones en verde.
+
 ## Patrón de nombres
 
 - `test-<modulo>-<tema>.js` — una suite. Ej.: `test-cobranzas-xss.js`.
