@@ -1,0 +1,331 @@
+// Barrido de escapado de modulos/cobranzas.html.
+//
+// DOS MITADES, y ninguna reemplaza a la otra:
+//  1. EJECUTA los renders con un document falso y una MARCA DISTINTA POR CAMPO.
+//     Es lo único que prueba que el helper existe y que escapa el argumento
+//     correcto.
+//  2. CHEQUEO ESTÁTICO: recorre el <script> y exige que cada ${...} que entra a
+//     una plantilla que arma HTML —y cada asignación a innerHTML— esté escapada
+//     o figure en la lista de seguras CON SU MOTIVO. Una interpolación nueva
+//     sin escapar pone esto en rojo NOMBRANDO la expresión y la línea.
+//     NO se cuentan los innerHTML: un conteo exacto se rompe solo con cualquier
+//     cambio y después nadie sabe si fue una regresión o un render nuevo.
+//
+// Archivo bajo prueba: ARCHIVO_TEST, o modulos/cobranzas.html.
+
+const fs = require('fs')
+const path = require('path')
+const { construir } = require('./sandbox')
+const { interpolaciones } = require('./escaner-interpolaciones')
+const { clasificar } = require('./clasificar')
+
+const RAIZ = path.join(__dirname, '..')
+const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cobranzas.html')
+const SOLO = process.env.SOLO || ''   // 'render' | 'estatico' | ''
+
+let ok = 0, fallas = []
+function chk(nombre, condicion, detalle) {
+  if (condicion) ok++
+  else fallas.push(nombre + (detalle ? ` — ${detalle}` : ''))
+}
+
+// El sub-proceso VERIFICA que leyó el archivo que el runner le pasó, no lo
+// asume: un runner que a veces lee el limpio invierte el significado del
+// resultado en vez de dar un falso negativo.
+const FUENTE = fs.readFileSync(ARCHIVO, 'utf8')
+console.log(`ARCHIVO ${ARCHIVO} (${FUENTE.length} bytes)`)
+
+const marca = (campo) => `"><b data-xss="${campo}">`
+const escapada = (campo) => `&lt;b data-xss=&quot;${campo}&quot;&gt;`
+
+function chequearMarcas(render, html, campos) {
+  chk(`${render}: no aparece NINGUNA marca cruda`, !/<b data-xss=/.test(html),
+    (html.match(/.{0,60}<b data-xss=[^>]*>/) || [''])[0])
+  for (const campo of campos) {
+    chk(`${render}: «${campo}» aparece escapado`, html.includes(escapada(campo)))
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 1. RENDERS EJECUTADOS
+// ══════════════════════════════════════════════════════════════════════════
+
+if (SOLO !== 'estatico') {
+  const S = construir(ARCHIVO)
+
+  // ── htmlFilaCobranza ────────────────────────────────────────────────────
+  {
+    const c = {
+      id: marca('fila_id'), cliente: marca('fila_cliente'), estado: marca('fila_estado'),
+      fecha: '2026-09-17', total: 1500.5, efectivo: 500, cantidad_cheques: 2,
+      created_at: '2026-09-16T12:00:00Z', cargada_por_nombre: marca('fila_cargada_por'),
+      editada: true,
+    }
+    chequearMarcas('htmlFilaCobranza', S.htmlFilaCobranza(c),
+      ['fila_id', 'fila_cliente', 'fila_estado', 'fila_cargada_por'])
+    // Cobranza anulada, solo efectivo, sin cheques: la otra rama de la tarjeta.
+    const c2 = { ...c, estado: 'anulada', cantidad_cheques: 0, efectivo: 0, total: 0 }
+    chequearMarcas('htmlFilaCobranza (anulada, sin cheques)', S.htmlFilaCobranza(c2),
+      ['fila_id', 'fila_cliente', 'fila_cargada_por'])
+  }
+
+  // ── htmlDetalle ─────────────────────────────────────────────────────────
+  const chequeConMarcas = (sufijo, bancoEnCatalogo) => ({
+    id: marca('ch_id' + sufijo),
+    cobranza_id: 'c1',
+    foto_id: marca('ch_foto' + sufijo),
+    banco_codigo: bancoEnCatalogo ? '007' : marca('ch_banco' + sufijo),
+    sucursal_codigo: '386', codigo_postal: '3218', dv_ruta: 6,
+    numero: marca('ch_numero' + sufijo), dv_numero: 8,
+    cuenta: marca('ch_cuenta' + sufijo), dv_cuenta: 0,
+    tipo: 'diferido', fecha_emision: '2026-09-01', fecha_pago: '2026-10-01',
+    importe: 1000, importe_letras: marca('ch_letras' + sufijo),
+    beneficiario: marca('ch_benef' + sufijo),
+    titulares: [{ nombre: marca('ch_tit_nombre' + sufijo), cuit: marca('ch_tit_cuit' + sufijo) }],
+    estado: 'en_cartera',
+  })
+
+  {
+    const S2 = construir(ARCHIVO)
+    // El nombre del banco sale de la tabla bancos_bcra: también es texto de la
+    // base y se marca.
+    S2.estado.bancos = new Map([['007', marca('banco_denominacion')]])
+
+    const d = {
+      cabecera: {
+        id: 'c1', empleado_id: 'emp-1', cliente: marca('det_cliente'), estado: 'anulada',
+        fecha: '2026-09-17', efectivo: 800, cantidad_cheques: 1, total_cheques: 1000, total: 1800,
+        comprobante_referencia: marca('det_referencia'),
+        observaciones: marca('det_observaciones'),
+        cargada_por_nombre: marca('det_cargada_por'),
+        procesada_por_nombre: marca('det_procesada_por'),
+        anulada_por_nombre: marca('det_anulada_por'),
+        motivo_anulacion: marca('det_motivo_anulacion'),
+      },
+      cheques: [chequeConMarcas('', false), chequeConMarcas('_b', true)],
+      fotos: [{ id: marca('det_foto_id'), storage_path: 'x/y.jpg' }],
+      historial: [
+        { accion: marca('hist_accion'), empleado_id: 'e9', motivo: marca('hist_motivo'), created_at: '2026-09-17T10:00:00Z' },
+        {
+          accion: 'edicion', empleado_id: 'e9', motivo: null, created_at: '2026-09-17T11:00:00Z',
+          antes: { cabecera: { cliente: marca('hist_cliente_antes'), observaciones: 'x' }, cheques: [{ id: 'k', importe: 1, banco_codigo: '1', sucursal_codigo: '2', numero: marca('hist_num_antes'), cuenta: '4' }] },
+          despues: { cabecera: { cliente: 'otro', observaciones: marca('hist_obs_despues') }, cheques: [{ id: 'k', importe: 2, banco_codigo: '1', sucursal_codigo: '2', numero: marca('hist_num_despues'), cuenta: '4' }] },
+        },
+      ],
+      nombres: new Map([['e9', marca('hist_quien')]]),
+    }
+    chequearMarcas('htmlDetalle', S2.htmlDetalle(d), [
+      'det_cliente', 'det_referencia', 'det_observaciones', 'det_cargada_por',
+      'det_procesada_por', 'det_anulada_por', 'det_motivo_anulacion', 'det_foto_id',
+      'ch_id', 'ch_foto', 'ch_banco', 'ch_numero', 'ch_cuenta', 'ch_benef',
+      'ch_tit_nombre', 'ch_tit_cuit', 'banco_denominacion',
+      'hist_accion', 'hist_motivo', 'hist_quien',
+      'hist_cliente_antes', 'hist_obs_despues', 'hist_num_antes', 'hist_num_despues',
+    ])
+
+    // Cobranza sin cheques y en estado marcado (la otra rama de la cabecera).
+    const d2 = {
+      cabecera: { id: 'c2', empleado_id: 'emp-1', cliente: 'x', estado: marca('det_estado'), fecha: '2026-09-17', efectivo: 0, cantidad_cheques: 0, total_cheques: 0, total: 0 },
+      cheques: [], fotos: [], historial: [], nombres: new Map(),
+    }
+    chequearMarcas('htmlDetalle (sin cheques ni fotos)', S2.htmlDetalle(d2), ['det_estado'])
+
+    // Un cheque común NO muestra fecha de pago, y un beneficiario null no
+    // dibuja el aviso de endoso: los dos casos límite, ejecutados.
+    const comun = { ...chequeConMarcas('_c', false), tipo: 'comun', fecha_pago: null, beneficiario: null, titulares: [] }
+    const htmlComun = S2.htmlChequeDetalle(comun)
+    // Sin titulares, ch.id no se interpola en esta rama: se esperan solo los
+    // campos que SÍ salen a la página.
+    chequearMarcas('htmlChequeDetalle (común, sin beneficiario)', htmlComun,
+      ['ch_foto_c', 'ch_banco_c', 'ch_numero_c', 'ch_cuenta_c'])
+    chk('htmlChequeDetalle: un cheque común no dibuja la fecha de pago', !/pago /.test(htmlComun))
+  }
+
+  // ── htmlTarjetaCheque ───────────────────────────────────────────────────
+  {
+    const S3 = construir(ARCHIVO)
+    S3.estado.bancos = new Map([['007', marca('tarj_banco_denominacion')]])
+    const foto = { id: 'f1', storage_path: 'x/y.jpg', blob: null, subida: true, leida: true, error: null }
+    const base = {
+      id: marca('tarj_id'), foto_id: 'f1',
+      r1: marca('tarj_r1'), r2: marca('tarj_r2'), r3: marca('tarj_r3'),
+      banco_codigo: marca('tarj_banco'), sucursal_codigo: null, codigo_postal: null, dv_ruta: null,
+      numero: marca('tarj_numero'), dv_numero: null, cuenta: null, dv_cuenta: null,
+      // Los tres van CRUDOS a un value="…" del formulario: no pasan por ningún
+      // formateador que los limpie, así que se marcan.
+      tipo: 'diferido', fecha_emision: marca('tarj_emision'), fecha_pago: marca('tarj_pago'),
+      importe: marca('tarj_importe'), importe_letras: marca('tarj_letras'),
+      beneficiario: marca('tarj_benef'),
+      titulares: [{ nombre: marca('tarj_tit_nombre'), cuit: marca('tarj_tit_cuit') }],
+      confirmado: false, abierto: true,
+      ocr_propuesto: { notas: marca('tarj_notas') },
+      controles: { cuits_ok: false, fechas_ok: false, completado_desde_cmc7: true, cmc7_coincide: false },
+      duplicado: { nivel: 'parcial', texto: marca('tarj_duplicado') },
+    }
+    const f = { id: 'form1', fotos: [foto], cheques: [base] }
+    chequearMarcas('htmlTarjetaCheque (abierta)', S3.htmlTarjetaCheque(base, f), [
+      'tarj_id', 'tarj_r1', 'tarj_r2', 'tarj_r3', 'tarj_letras', 'tarj_benef',
+      'tarj_tit_nombre', 'tarj_tit_cuit', 'tarj_banco', 'tarj_notas', 'tarj_duplicado',
+      'tarj_emision', 'tarj_pago', 'tarj_importe',
+    ])
+
+    // Plegada: el otro camino de la misma función.
+    const plegado = { ...base, confirmado: true, abierto: false, banco_codigo: '007' }
+    chequearMarcas('htmlTarjetaCheque (plegada)', S3.htmlTarjetaCheque(plegado, { ...f, cheques: [plegado] }),
+      ['tarj_id', 'tarj_numero', 'tarj_banco_denominacion'])
+
+    // Un banco que NO está en el catálogo se muestra con su número: esa rama
+    // de nombreBanco también imprime dato de la base.
+    chk('nombreBanco: un código fuera del catálogo se escapa',
+      S3.escCob(S3.nombreBanco(marca('bk'))).includes(escapada('bk')))
+  }
+
+  // ── pintarEstadoFotos ───────────────────────────────────────────────────
+  {
+    const S4 = construir(ARCHIVO)
+    S4.estado.form = {
+      id: 'form1', cheques: [],
+      fotos: [
+        { id: marca('foto_id'), error: marca('foto_error'), subida: true, leida: true },
+        { id: 'f2', error: null, subida: false, leida: false },
+      ],
+    }
+    S4.pintarEstadoFotos()
+    chequearMarcas('pintarEstadoFotos', S4.__els.get('cob-fotos-estado').innerHTML,
+      ['foto_id', 'foto_error'])
+  }
+
+  // ── pintarBannerLocal ───────────────────────────────────────────────────
+  {
+    const S5 = construir(ARCHIVO)
+    S5.estado.locales = [
+      { id: marca('local_id'), cliente: marca('local_cliente'), fecha: '2026-09-17', estadoLocal: 'lista_para_subir' },
+    ]
+    S5.pintarBannerLocal()
+    chequearMarcas('pintarBannerLocal', S5.__els.get('cob-banner-local').innerHTML,
+      ['local_id', 'local_cliente'])
+    // Sin pendientes no se dibuja nada: un banner que aparece cuando no hay
+    // nada que avisar entrena a ignorarlo.
+    S5.estado.locales = []
+    S5.pintarBannerLocal()
+    chk('pintarBannerLocal: sin pendientes no dibuja nada', S5.__els.get('cob-banner-local').innerHTML === '')
+  }
+
+  // ── cargarRepartidores (el <option> del filtro) ──────────────────────────
+  {
+    const S6 = construir(ARCHIVO)
+    S6.estado.miRolApp = 'super_admin'
+    S6.__set([{ id: marca('rep_id'), nombre: marca('rep_nombre') }])
+    const esperar = S6.cargarRepartidores()
+    esperar.then(() => {
+      chequearMarcas('cargarRepartidores', S6.__els.get('cob-filtro-repartidor').innerHTML,
+        ['rep_id', 'rep_nombre'])
+      cerrar()
+    })
+  }
+
+  // ── renderizarChipsEstado / pintarTotalYGuardado ─────────────────────────
+  {
+    const S7 = construir(ARCHIVO)
+    S7.renderizarChipsEstado()
+    chk('renderizarChipsEstado: dibuja los cuatro chips',
+      (S7.__els.get('cob-chips-estado').innerHTML.match(/data-estado=/g) || []).length === 4)
+    S7.estado.form = { id: 'f', cliente: '', fecha: '2026-09-17', efectivo: '', cheques: [], fotos: [{ id: 'z' }] }
+    S7.pintarTotalYGuardado()
+    const caja = S7.__els.get('cob-form-pendientes')
+    chk('pintarTotalYGuardado: avisa lo que falta', /Falta el cliente\./.test(caja.innerHTML))
+    chk('pintarTotalYGuardado: el botón queda deshabilitado desde JS',
+      S7.__els.get('cob-btn-guardar').disabled === true)
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 2. CHEQUEO ESTÁTICO
+// ══════════════════════════════════════════════════════════════════════════
+
+if (SOLO !== 'render') {
+  const r = interpolaciones(ARCHIVO)
+  const enHtml = r.interpolaciones.filter(i => i.html)
+  const aRevisar = enHtml.concat(r.asignaciones.map(a => ({ ...a, html: true, sink: true })))
+
+  const malas = []
+  for (const x of aRevisar) {
+    const c = clasificar(x.expr)
+    if (!c.ok) malas.push(`línea ${x.linea}: ${c.hojasMalas.join(' | ')}`)
+  }
+  chk('estático: no queda ninguna interpolación de HTML sin escapar ni justificar',
+    malas.length === 0, malas.join('  //  '))
+
+  // El escáner tiene que estar VIENDO el archivo, no una versión pelada a la
+  // que se le comió medio contenido.
+  chk('estático: el escáner encontró interpolaciones en HTML', enHtml.length > 100,
+    `solo ${enHtml.length}`)
+  chk('estático: el escáner encontró las asignaciones a innerHTML', r.asignaciones.length >= 10,
+    `solo ${r.asignaciones.length}`)
+  chk('estático: hay escapes de verdad, no todo justificado por lista',
+    enHtml.filter(i => /^escCob\(/.test(i.expr.trim())).length > 60)
+
+  // ── En qué CONTEXTO del HTML cae cada interpolación ──────────────────────
+  // escCob alcanza para el contenido y para un atributo ENTRE COMILLAS. No
+  // alcanza para un atributo sin comillas (un espacio ya rompe afuera) ni para
+  // un manejador de evento o una URL, donde el contenido es código.
+  const sinComillas = [], enEvento = [], enUrl = []
+  for (const x of enHtml) {
+    // Último '<' del texto previo: dice si estamos dentro de una etiqueta.
+    const ultimaEtiqueta = x.antes.lastIndexOf('<')
+    const ultimoCierre = x.antes.lastIndexOf('>')
+    const dentroDeEtiqueta = ultimaEtiqueta > ultimoCierre
+    if (!dentroDeEtiqueta) continue
+    const tramo = x.antes.slice(ultimaEtiqueta)
+    const comillas = (tramo.match(/"/g) || []).length
+    const dentroDeAtributo = comillas % 2 === 1
+    if (!dentroDeAtributo && /[\w-]+\s*=\s*$/.test(tramo)) sinComillas.push(x.linea)
+    if (dentroDeAtributo) {
+      const nombreAttr = (tramo.match(/([\w-]+)\s*=\s*"[^"]*$/) || [])[1] || ''
+      if (/^on/i.test(nombreAttr)) enEvento.push(`${x.linea} (${nombreAttr})`)
+      if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr)) enUrl.push(`${x.linea} (${nombreAttr})`)
+    }
+  }
+  chk('estático: ninguna interpolación cae en un atributo SIN comillas',
+    sinComillas.length === 0, sinComillas.join(', '))
+  chk('estático: ninguna interpolación cae dentro de un manejador on*=',
+    enEvento.length === 0, enEvento.join(', '))
+  chk('estático: ninguna interpolación cae dentro de un href/src (ahí escapar HTML no alcanza)',
+    enUrl.length === 0, enUrl.join(', '))
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 3. CONTROLES DE CALIBRACIÓN — si estos dan mal, el barrido está mal
+// ══════════════════════════════════════════════════════════════════════════
+
+{
+  // (1) El aviso de cheque duplicado SÍ se escapa.
+  chk('control 1: el aviso de duplicado se escapa',
+    /escCob\(ch\.duplicado\.texto\)/.test(FUENTE))
+  // (2) mostrarError/mostrarExito NO son sink: los toasts usan textContent.
+  const utils = fs.readFileSync(path.join(RAIZ, 'js/utils.js'), 'utf8')
+  chk('control 2: los toasts de js/utils.js usan textContent y no innerHTML',
+    /toast\.textContent\s*=/.test(utils) && !/toast\.innerHTML\s*=/.test(utils))
+  // (3) escCob cubre los cinco caracteres, EJECUTÁNDOLO: sin la comilla doble,
+  // un value="..." se sigue pudiendo cerrar desde adentro del atributo.
+  const { extraerFn } = require('./extraer')
+  const escCobReal = new Function(extraerFn(FUENTE, 'escCob') + '\nreturn escCob')()
+  for (const [crudo, esperado] of [['&', '&amp;'], ['<', '&lt;'], ['>', '&gt;'], ['"', '&quot;'], ["'", '&#39;']]) {
+    chk(`control 3: escCob escapa ${crudo}`, escCobReal(crudo) === esperado, escCobReal(crudo))
+  }
+  chk('control 3: escCob no convierte null en la palabra null', escCobReal(null) === '')
+}
+
+let cerrado = false
+function cerrar() {
+  if (cerrado) return
+  cerrado = true
+  const total = ok + fallas.length
+  for (const f of fallas) console.log('  ✗ ' + f)
+  console.log(`${ok}/${total}${fallas.length ? '  ROJO' : '  verde'}`)
+  process.exit(fallas.length ? 1 : 0)
+}
+
+// cargarRepartidores es async: si esa rama corrió, cierra ella.
+if (SOLO === 'estatico') cerrar()
+else setTimeout(cerrar, 300)
