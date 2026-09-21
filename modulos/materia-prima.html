@@ -886,6 +886,92 @@
        recurrente del proyecto, y este aviso se oculta justamente así. */
     .wz-aviso[hidden] { display: none; }
 
+    /* ── Circuito con Gastos y Cuentas Corrientes ─────────────────────────────
+       Qué pasó con la factura después de que entró la mercadería. Cuatro
+       niveles: ok (quedó vinculada), ámbar (falta algo que no depende de esta
+       pantalla: un gasto, un precio, dos importes que no coinciden), error (la
+       base rechazó: el ingreso quedó guardado sin vincular) y neutro. */
+    .circuito-mp {
+      margin-top: 0.75rem;
+      padding: 0.75rem 0.875rem;
+      border-radius: 14px;
+      border: 1px solid var(--color-borde);
+      background: var(--color-fondo);
+      font-size: 0.84375rem;
+      line-height: 1.4;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .circuito-mp--ok    { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.3); color: var(--color-exito); }
+    .circuito-mp--ambar { background: var(--amarillo-suave); border-color: var(--amarillo); color: var(--amarillo-oscuro); }
+    .circuito-mp--error { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); color: #B91C1C; }
+    .circuito-mp__linea + .circuito-mp__linea { margin-top: 0.375rem; }
+    .circuito-mp__reintento { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.625rem; min-width: 0; }
+    .circuito-mp__reintento input {
+      flex: 1 1 8rem;
+      min-width: 0;
+      height: 44px;
+      padding: 0 0.75rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      background: #fff;
+      color: var(--color-texto);
+    }
+    .circuito-mp__reintento .btn-mp-primario { flex: 1 1 10rem; width: auto; min-width: 0; margin: 0; }
+
+    /* "Pagado sin ingresar": gastos de materia prima ya pagados cuya mercadería
+       no se cargó. Ámbar porque es trabajo pendiente del depósito. */
+    .pendientes-mp {
+      margin-bottom: 0.875rem;
+      padding: 0.875rem;
+      border-radius: 17px;
+      background: var(--color-fondo);
+      border: 1px solid var(--amarillo);
+      min-width: 0;
+    }
+    .pendientes-mp[hidden] { display: none; }
+    .pendientes-mp__titulo { font-weight: 700; font-size: 0.9375rem; color: var(--amarillo-oscuro); }
+    .pendientes-mp__desc { font-size: 0.78125rem; color: var(--color-texto-suave); margin: 0.25rem 0 0.5rem; }
+    .pendiente-mp { padding: 0.625rem 0 0.25rem; border-top: 1px solid var(--color-borde); min-width: 0; }
+    .pendiente-mp__titulo { font-weight: 650; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .pendiente-mp__meta { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.125rem; overflow-wrap: anywhere; }
+    .pendiente-mp__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+    .pendiente-mp__acciones button { flex: 1 1 8rem; width: auto; min-width: 0; margin: 0; }
+    .pendiente-mp textarea, .sin-stock-mp textarea {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      margin-top: 0.5rem;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      background: #fff;
+      color: var(--color-texto);
+      resize: vertical;
+    }
+    .pendiente-mp__error { color: #B91C1C; font-size: 0.75rem; margin-top: 0.375rem; overflow-wrap: anywhere; }
+
+    /* Factura de mercadería que ya estaba (se contó antes): no suma stock. Se
+       decide al cargar y un trigger de la base impide cambiarlo después. */
+    .sin-stock-mp {
+      margin-top: 1.125rem;
+      padding: 0.75rem 0.875rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 14px;
+      background: var(--color-fondo);
+      min-width: 0;
+    }
+    .sin-stock-mp[hidden] { display: none; }
+    .sin-stock-mp__check { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+    .sin-stock-mp__check input { margin-top: 0.1875rem; flex-shrink: 0; }
+    .sin-stock-mp__aviso { font-size: 0.75rem; color: var(--amarillo-oscuro); margin-top: 0.375rem; }
+
     /* ── Proveedores parecidos ───────────────────────────────────────────────
        La pregunta que evita crear un duplicado al vuelo. NEUTRA y no ámbar: no
        hay nada mal todavía, se está preguntando algo que el sistema no puede
@@ -2319,6 +2405,15 @@
       <button type="button" class="btn-item-secundario" id="btn-abrir-internos"
               style="margin-bottom:0.875rem;" hidden>Ingresos internos</button>
 
+      <!-- Gastos de materia prima YA PAGADOS cuya mercadería todavía no se
+           cargó acá (RPC gastos_sin_ingreso). Cuenta desde
+           fecha_inicio_circuito_stock(). Ingreso nunca crea gastos: los lee. -->
+      <section class="pendientes-mp" id="seccion-pagado-sin-ingresar" hidden>
+        <div class="pendientes-mp__titulo" id="pagado-sin-ingresar-titulo">Pagado sin ingresar</div>
+        <p class="pendientes-mp__desc">Gastos de materia prima ya pagados cuya mercadería todavía no se cargó acá.</p>
+        <div id="lista-pagado-sin-ingresar"></div>
+      </section>
+
       <div class="buscador-mp">
         <input type="text" id="filtro-busqueda-ingresos" placeholder="🔍 Buscar proveedor o número de documento">
       </div>
@@ -2453,6 +2548,7 @@
       <div class="wz-paso wz-paso--activo" id="wz-paso-comprobante">
         <div class="wz-titulo">El comprobante</div>
         <div class="wz-subtitulo">Sacale una foto al remito o a la factura. Los datos se leen solos.</div>
+        <div class="wz-aviso wz-aviso--neutro" id="wz-aviso-desde-gasto" hidden></div>
 
         <!-- Estado A: elegir origen -->
         <div id="wz-elegir-comprobante">
@@ -2636,6 +2732,28 @@
         <div class="wz-seccion" id="wz-detalle-titulo">Detalle</div>
         <div id="wz-detalle-items"></div>
 
+        <!-- Qué va a pasar con la factura al confirmar: cuenta corriente, el
+             gasto de quien la pagó, o el gasto del que viene este ingreso. -->
+        <div class="wz-aviso wz-aviso--neutro" id="wz-aviso-circuito" hidden></div>
+
+        <div class="wz-campo" id="wz-bloque-total" hidden>
+          <div class="wz-campo__label">Total de la factura</div>
+          <input type="text" inputmode="decimal" id="campo-total-factura" autocomplete="off" placeholder="0,00">
+          <div class="wz-campo__hint" id="wz-total-hint"></div>
+        </div>
+
+        <div class="sin-stock-mp" id="wz-bloque-sin-stock" hidden>
+          <label class="sin-stock-mp__check">
+            <input type="checkbox" id="campo-sin-stock">
+            <span>Mercadería que ya estaba (se contó antes): no suma stock</span>
+          </label>
+          <div id="wz-sin-stock-detalle" hidden>
+            <textarea id="campo-sin-stock-motivo" rows="2" maxlength="300"
+                      placeholder="Por qué no suma: por ejemplo, ya se contó en el recuento inicial"></textarea>
+            <div class="sin-stock-mp__aviso">Esto no se puede cambiar después: si te equivocás, hay que anular el ingreso y cargarlo de nuevo.</div>
+          </div>
+        </div>
+
         <div class="wz-aviso wz-aviso--error" id="wz-error-guardado" hidden></div>
 
         <div class="wz-nav">
@@ -2655,6 +2773,9 @@
       <button type="button" class="btn btn--icono modal-cerrar-mp" id="btn-cerrar-detalle" title="Cerrar">✕</button>
       <h2 id="detalle-titulo"></h2>
       <div class="detalle-ingreso__meta" id="detalle-meta"></div>
+      <!-- El circuito: si la factura pasó a cuenta corriente, se vinculó a un
+           gasto o quedó pendiente (con el botón de reintento). -->
+      <div id="detalle-circuito"></div>
 
       <div class="detalle-ingreso__seccion">Ítems</div>
 
@@ -2821,6 +2942,19 @@
       // incompleto.
       unidadesStockVisibles: [],
       transferenciasRecibidas: [],
+
+      // ── Circuito con Gastos y Cuentas Corrientes ─────────────────────
+      // 'AAAA-MM-DD' de fecha_inicio_circuito_stock(): todo lo "pendiente"
+      // cuenta desde ahí. null si no se pudo leer (y entonces el detalle no
+      // ofrece reintentos: mejor no mostrar nada que mostrarlo en ingresos
+      // históricos).
+      fechaInicioCircuito: null,
+      pagadoSinIngresar: [],       // filas de gastos_sin_ingreso()
+      errorPagadoSinIngresar: null,
+      descarte: { gastoId: null, texto: '', error: null },
+      // El resultado de la última llamada al circuito, para mostrarlo en el
+      // detalle del ingreso recién guardado. { ingresoId, nivel, lineas }
+      resultadoCircuito: null,
     }
 
     // Mismo patrón que los otros módulos: super_admin tiene bypass y falla
@@ -2901,6 +3035,16 @@
         itemsInicializados: false, // para no pisar lo editado al volver al paso 3
         itemAbierto: null,        // uid del ítem expandido (acordeón)
         guardando: false,
+        // El gasto del que viene este ingreso ("Pagado sin ingresar" o
+        // ?desde_gasto=). Con él, al confirmar se llama a
+        // vincular_ingreso_a_gasto y NO a registrar_factura_de_ingreso.
+        desdeGasto: null,
+        // importe_total que leyó el OCR (número o null) y lo que la persona
+        // escribió en "Total de la factura" (texto; null = no lo tocó).
+        importeOcr: null,
+        totalFactura: null,
+        sinStock: false,
+        sinStockMotivo: '',
       }
     }
 
@@ -2919,6 +3063,9 @@
       estado.wizard = wizardVacio()
       estado.wizard.paso = previo.paso
       estado.wizard.encabezado.unidadId = previo.encabezado.unidadId
+      // De qué gasto viene este ingreso es una decisión de la persona (tocó
+      // "Ingresar" en un gasto pagado), no un derivado de la lectura.
+      estado.wizard.desdeGasto = previo.desdeGasto
       limpiarFormularioDatos()
       // Reemplazar la foto no cambia de paso, así que irAPasoWz() no corre: sin
       // esto el aviso del comprobante ANTERIOR quedaría en pantalla sobre una
@@ -3301,9 +3448,15 @@
         .from('empleado_tareas')
         .select('modulo, tarea')
         .eq('empleado_id', emp.id)
-        .in('modulo', ['materia_prima', 'stock'])
+        .in('modulo', ['materia_prima', 'stock', 'gastos'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(x => `${x.modulo}:${x.tarea}`))
+
+      // Desde cuándo cuenta el circuito con Gastos y Cuentas Corrientes. Vive
+      // en la base (una sola fuente) y no hardcodeada acá.
+      const { data: inicio, error: errorInicio } = await supabase.rpc('fecha_inicio_circuito_stock')
+      if (errorInicio) console.error('fecha_inicio_circuito_stock:', errorInicio)
+      estado.fechaInicioCircuito = inicio ?? null
 
       // ESTA CONSULTA TRAE LAS 4 UNIDADES, NO LA PROPIA. La policy de SELECT de
       // `unidades_negocio` es `USING (true)` para cualquier autenticado — una
@@ -3337,7 +3490,10 @@
       }
 
       await cargarIngresos()
-      // Después de cargarIngresos(): estado.entregas recién existe acá.
+      await cargarPagadoSinIngresar()
+      // Después de cargarIngresos(): estado.entregas recién existe acá. Y el del
+      // gasto va PRIMERO: los dos limpian la URL, y un enlace trae uno solo.
+      await abrirGastoDeLaUrl()
       await abrirIngresoDeLaUrl()
     }
 
@@ -3440,7 +3596,10 @@
         // agregado: sirve para las DOS cosas —la cantidad de ítems es el largo
         // del array, y el indicador de diferencias es que alguno lo tenga
         // cargado— sin sumar una consulta. Son pocos ítems por ingreso.
-        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, empleado_id, editado_por, editado_en, created_at, materia_prima_items(insumo_id, lote, lote_ilegible, cantidad_documento, ya_recibido_con_remito)')
+        // gasto_id / factura_pendiente_id / proveedores(cuenta_corriente) son
+        // del circuito con Gastos y CC; importe_ocr es el total que leyó el
+        // OCR, para prellenar el reintento sin traer el jsonb entero.
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, unidad_negocio_id, foto_url, remito_vinculado_id, empleado_id, editado_por, editado_en, created_at, proveedor_id, gasto_id, factura_pendiente_id, sin_stock_motivo, importe_ocr:ocr_crudo->>importe_total, proveedores(razon_social, cuenta_corriente), materia_prima_items(insumo_id, lote, lote_ilegible, cantidad_documento, ya_recibido_con_remito)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
@@ -3831,9 +3990,9 @@
 
         return `
         <div class="tarjeta-lista" data-ingreso="${b.id}">
-          <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${iniciales}</div>
+          <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${esc(iniciales)}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${titulo}</div>
+            <div class="tarjeta-lista__titulo">${esc(titulo)}</div>
             <div class="ingreso__meta">
               ${e.esTransferencia ? '<span class="chip-interno" title="Mercadería que llegó de otra unidad del grupo, no de un proveedor. Se registró al recibir la transferencia.">Interno</span>' : ''}
               ${e.comprobantes.map(c => chipTipoDoc(c.tipo_doc)).join('')}
@@ -3841,7 +4000,7 @@
               ${e.tieneDiferencias ? `<span class="chip-diferencia" title="${e.esTransferencia ? 'Llegó menos (o más) de lo que se despachó: es la merma del traslado. Abrí el detalle para ver las cantidades y el motivo.' : 'Llegó menos (o más) de lo que dice el comprobante. Abrí el detalle para ver las cantidades y el motivo.'}">Con diferencia</span>` : ''}
               ${e.remitosVinculados?.length ? `<span class="chip-vinculo-remito" title="Parte de la mercadería de esta factura ya había entrado con un remito.">${e.remitosVinculados.length === 1 ? 'Vinculada a 1 remito' : `Vinculada a ${e.remitosVinculados.length} remitos`}</span>` : ''}
               ${chipAntiguedad}
-              <span class="ingreso__fecha">${metaFecha}</span>
+              <span class="ingreso__fecha">${esc(metaFecha)}</span>
             </div>
             ${e.huerfana ? '<div class="ingreso__nota">Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</div>' : ''}
             ${(e.noSuma && !e.huerfana) ? '<div class="ingreso__nota">No sumó mercadería: todos sus renglones ya habían entrado con un remito.</div>' : ''}
@@ -4004,12 +4163,18 @@
       // solo los datos comunes a toda la entrega.
       document.getElementById('detalle-meta').innerHTML = [
         `${formatearFecha(ingreso.fecha)} · ${nombreUnidad(ingreso.unidad_negocio_id)}`,
-        ingreso.nombre_fantasia ? `Fantasía: ${ingreso.nombre_fantasia}` : '',
+        ingreso.nombre_fantasia ? `Fantasía: ${esc(ingreso.nombre_fantasia)}` : '',
         entrega.huerfana ? '<em>Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</em>' : '',
         entrega.comprobantes.length > 2
           ? '<strong style="color:#B91C1C;">⚠ Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.</strong>'
           : '',
       ].filter(Boolean).join('<br>')
+
+      document.getElementById('detalle-circuito').innerHTML = htmlCircuitoDetalle(entrega, {
+        resultado: estado.resultadoCircuito,
+        fechaInicio: estado.fechaInicioCircuito,
+        puedeReintentar: puedePasarAlCircuito(),
+      })
 
       // La edición va POR COMPROBANTE y no una vez para toda la entrega:
       // editado_por/editado_en son de cada fila, y una entrega puede tener el
@@ -4022,13 +4187,13 @@
         <div class="comprobante-mp">
           <div class="comprobante-mp__info">
             ${chipTipoDoc(c.tipo_doc)}
-            <div class="comprobante-mp__numero">${c.numero_doc || 'Sin número'}</div>
+            <div class="comprobante-mp__numero">${esc(c.numero_doc || 'Sin número')}</div>
             <div class="comprobante-mp__fecha">${formatearFecha(c.fecha)}</div>
             ${carga ? `<div class="comprobante-mp__edicion">${esc(carga)}</div>` : ''}
             ${edicion ? `<div class="comprobante-mp__edicion">${esc(edicion)}</div>` : ''}
           </div>
           ${c.foto_url
-            ? `<a href="${c.foto_url}" target="_blank" rel="noopener" class="comprobante-mp__foto">Ver foto →</a>`
+            ? `<a href="${esc(c.foto_url)}" target="_blank" rel="noopener" class="comprobante-mp__foto">Ver foto →</a>`
             : '<span class="comprobante-mp__sin-foto">Sin foto</span>'}
         </div>`
       }).join('')
@@ -4066,7 +4231,7 @@
           const chip = item.lote_ilegible
             ? '<span class="chip-lote chip-lote--ilegible">Ilegible</span>'
             : item.lote
-              ? `<span class="chip-lote">${item.lote}</span>`
+              ? `<span class="chip-lote">${esc(item.lote)}</span>`
               : '<span class="chip-lote chip-lote--ilegible">Sin lote</span>'
           loteHtml = `<div class="fila-item-mp__lote"><span>Lote</span>${chip}</div>`
         }
@@ -4089,8 +4254,8 @@
         return `
           <div class="fila-item-mp ${item.ya_recibido_con_remito ? 'fila-item-mp--no-suma' : ''}">
             <div class="fila-item-mp__info">
-              <div class="fila-item-mp__nombre">${insumo.nombre || '(producto)'}</div>
-              ${insumo.marca ? `<div class="fila-item-mp__marca">${insumo.marca}</div>` : ''}
+              <div class="fila-item-mp__nombre">${esc(insumo.nombre || '(producto)')}</div>
+              ${insumo.marca ? `<div class="fila-item-mp__marca">${esc(insumo.marca)}</div>` : ''}
               ${desglose}
               ${loteHtml}
               ${item.ya_recibido_con_remito
@@ -4123,6 +4288,8 @@
 
     function cerrarDetalleIngreso() {
       document.getElementById('modal-ingreso').hidden = true
+      // El resultado se muestra UNA vez, en el detalle que se abre al guardar.
+      estado.resultadoCircuito = null
     }
     document.getElementById('btn-cerrar-detalle').addEventListener('click', cerrarDetalleIngreso)
     document.querySelector('#modal-ingreso .modal-mp__backdrop').addEventListener('click', cerrarDetalleIngreso)
@@ -4142,6 +4309,7 @@
       renderizarTogglesTipoDoc()
       poblarSelectUnidades()
       resetearPaso1()
+      renderizarAvisoDesdeGasto()
       irAPasoWz('comprobante')
 
       await Promise.all([cargarCatalogoInsumos(), cargarProveedores()])
@@ -4463,6 +4631,12 @@
       // Los ítems del OCR se convierten recién al entrar al paso 3, cuando el
       // catálogo ya está cargado. Acá solo se guardan crudos.
       w.itemsOcr = Array.isArray(datos.items) ? datos.items : []
+
+      // El total del papel, para prellenar "Total de la factura". La Edge
+      // Function ya lo manda como número o null.
+      w.importeOcr = (typeof datos.importe_total === 'number' && Number.isFinite(datos.importe_total))
+        ? datos.importe_total : null
+      aplicarDatosDelGasto()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -5194,7 +5368,9 @@
     async function cargarProveedores() {
       const { data, error } = await supabase
         .from('proveedores')
-        .select('id, razon_social, nombre_fantasia, cuit')
+        // cuenta_corriente: LA regla del circuito. Decide si al confirmar se
+        // pide el total de la factura (solo tiene sentido con cuenta corriente).
+        .select('id, razon_social, nombre_fantasia, cuit, cuenta_corriente')
       if (error) { console.error(error); mostrarError('Error al cargar los proveedores.'); return }
       estado.proveedores = data ?? []
     }
@@ -7336,6 +7512,8 @@
       const detalleTitulo = document.getElementById('wz-detalle-titulo')
       const detalle = document.getElementById('wz-detalle-items')
 
+      renderizarBloquesCircuito(w)
+
       detalleTitulo.hidden = false
       detalle.innerHTML = w.items.map(item => {
         // Defensivo: validarItems() no deja llegar acá sin tipo, pero si algún
@@ -7644,6 +7822,16 @@
       // SIEMPRE se validan los ítems: con el vínculo por renglón, una factura
       // vinculada igual carga ítems (los que no vinieron con el remito).
       if (!validarItems()) { irAPasoWz('items'); return }
+      const errorCircuito = validarCircuitoAntesDeGuardar(w)
+      if (errorCircuito) { avisoGuardado(errorCircuito); return }
+      // Lo que el circuito necesita, leído ANTES de guardar: cerrarWizard()
+      // deja estado.wizard en null.
+      const circuito = {
+        tipoDoc: w.encabezado.tipoDoc,
+        gastoId: w.desdeGasto?.gasto_id ?? null,
+        importe: pideTotalFactura(w) ? parseImporte(textoTotalFactura(w)) : null,
+        nombre: w.proveedorMatch?.razon_social || w.encabezado.razonSocial || '',
+      }
 
       const btn = document.getElementById('btn-confirmar-ingreso')
       w.guardando = true
@@ -7693,6 +7881,9 @@
             // ('sin_comprobante' o lectura fallida): es lo esperado, no un
             // error. Se guarda UNA sola vez, con la última lectura.
             ocr_crudo: w.ocrCrudo,
+            // "Mercadería que ya estaba": solo facturas, se fija ACÁ y un
+            // trigger impide cambiarla después (_ingreso_sin_stock_inmutable).
+            sin_stock_motivo: (esFactura(e.tipoDoc) && w.sinStock) ? w.sinStockMotivo.trim() : null,
           })
           .select('id')
           .single()
@@ -7728,11 +7919,23 @@
 
         // El alta del proveedor no frena nada, pero si falló hay que decirlo:
         // el ingreso queda sin vincular y alguien lo va a tener que corregir.
+        // 7. El circuito con Gastos y Cuentas Corrientes. El ingreso YA ESTÁ
+        // GUARDADO: pasarAlCircuito() no tira nunca —si la RPC falla devuelve
+        // el error como resultado—, porque un throw acá caería en el catch de
+        // abajo, que BORRA el ingreso. Un vínculo que falla se reintenta desde
+        // el detalle; una carga de mercadería perdida, no.
+        const resultado = await pasarAlCircuito(ingresoId, circuito)
+
         if (avisoProveedor) mostrarError(avisoProveedor)
         if (avisoAlias) mostrarError(avisoAlias)
         mostrarExito('Ingreso cargado.')
         cerrarWizard()
         await cargarIngresos()
+        await cargarPagadoSinIngresar()
+        if (resultado && buscarEntrega(ingresoId)) {
+          estado.resultadoCircuito = { ingresoId, ...resultado }
+          await abrirDetalleIngreso(ingresoId)
+        }
 
       } catch (e) {
         console.error(e)
@@ -7756,6 +7959,471 @@
       w.guardando = false
       btn.disabled = false
       btn.textContent = 'Confirmar ingreso'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CIRCUITO CON GASTOS Y CUENTAS CORRIENTES
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Qué pasa con una factura después de que entró la mercadería. LA REGLA ES
+    // DEL PROVEEDOR (proveedores.cuenta_corriente): con cuenta corriente, toda
+    // factura va a su cuenta; ocasional, nunca pasa por ahí y la vincula el
+    // gasto de quien la pagó. LA DECIDE LA BASE (registrar_factura_de_ingreso),
+    // no esta pantalla: acá se la llama y se cuenta el resultado en palabras.
+    //
+    // INGRESO NUNCA CREA GASTOS. Un gasto mueve una caja, y el depósito no sabe
+    // quién pagó ni de qué caja salió la plata.
+    //
+    // Los errores de las RPCs se muestran TAL CUAL: sus mensajes ya están
+    // escritos para una persona, y un genérico taparía justo el motivo.
+
+    // Los tipos que entran al circuito. Un remito no: suma stock y espera a su
+    // factura.
+    const TIPOS_CON_CIRCUITO = ['factura_a', 'factura_x', 'sin_comprobante']
+    function llevaCircuito(tipoDoc) {
+      return TIPOS_CON_CIRCUITO.includes(tipoDoc)
+    }
+
+    // Importe en formato argentino (punto de miles, coma decimal). Copia de
+    // parseImporte() de gastos.html: el proyecto duplica los helpers por módulo
+    // a propósito. NO usar parsearCantidad() para plata: rechaza "1.234,50" por
+    // tener dos separadores, que es justo como se escribe un importe.
+    function parseImporte(str) {
+      if (str === null || str === undefined || String(str).trim() === '') return null
+      const limpio = String(str).replace(/\./g, '').replace(',', '.')
+      const num = parseFloat(limpio)
+      return Number.isFinite(num) ? num : null
+    }
+
+    // Separador de miles en vivo, copia de gastos.html.
+    function formatearImporteEnVivo(input) {
+      input.addEventListener('input', (e) => {
+        const desdeElFinal = e.target.value.length - e.target.selectionStart
+        let valor = e.target.value.replace(/[^\d,]/g, '')
+        const primeraComa = valor.indexOf(',')
+        if (primeraComa !== -1) valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '')
+        let [entero, decimal] = valor.split(',')
+        entero = (entero || '').replace(/^0+(?=\d)/, '')
+        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+        let nuevoValor = entero
+        if (decimal !== undefined) nuevoValor += ',' + decimal.slice(0, 2)
+        e.target.value = nuevoValor
+        const nuevaPosicion = Math.max(0, nuevoValor.length - desdeElFinal)
+        e.target.setSelectionRange(nuevaPosicion, nuevaPosicion)
+      })
+    }
+
+    // Un número (del OCR o de la base) al formato del campo: "1.234,5". Rechaza
+    // null/''/no-número ANTES de convertir —Number(null) es 0— y devuelve ''
+    // para que el campo quede vacío y no con un "0" que nadie escribió.
+    function textoImporteInput(n) {
+      if (n === null || n === undefined || n === '') return ''
+      const num = Number(n)
+      if (!Number.isFinite(num)) return ''
+      return num.toLocaleString('es-AR', { maximumFractionDigits: 2 })
+    }
+
+    // "$1.234,5" o "USD 1.234,5"; null si no hay importe. Reusa
+    // formatearImporteDuplicado(), que ya rechaza el null antes de convertir.
+    function importeConMoneda(v, moneda) {
+      const base = formatearImporteDuplicado(v)
+      if (!base) return null
+      return (moneda && moneda !== 'ARS') ? `${moneda} ${base.slice(1)}` : base
+    }
+
+    // ── En el wizard ────────────────────────────────────────────────────────
+
+    // El total se pide SOLO si la factura va a entrar a la cuenta corriente:
+    // factura, proveedor identificado CON cuenta corriente, y no viene de un
+    // gasto (ahí el importe ya lo tiene el gasto). Un proveedor nuevo nace sin
+    // cuenta corriente (default de la columna), así que tampoco se le pide.
+    function pideTotalFactura(w) {
+      return esFactura(w.encabezado.tipoDoc) && !w.desdeGasto && w.proveedorMatch?.cuenta_corriente === true
+    }
+    // El texto del campo: lo que escribió la persona, o lo que leyó el OCR si
+    // no lo tocó.
+    function textoTotalFactura(w) {
+      return w.totalFactura ?? textoImporteInput(w.importeOcr)
+    }
+
+    // Qué va a pasar al confirmar, en una línea. null = nada que decir.
+    function avisoCircuitoPrevio(w) {
+      const t = w.encabezado.tipoDoc
+      const g = w.desdeGasto
+      if (g) {
+        const partes = [importeConMoneda(g.importe, g.moneda), g.numero_doc ? `N° ${g.numero_doc}` : null].filter(Boolean)
+        return `Al confirmar, este ingreso queda vinculado al gasto ya pagado${partes.length ? ` (${partes.join(' · ')})` : ''}.`
+      }
+      if (!llevaCircuito(t)) return null
+      const p = w.proveedorMatch
+      const nombre = p?.razon_social || w.encabezado.razonSocial
+      if (!nombre) return 'Sin proveedor no se puede pasar a la cuenta corriente ni vincular con un gasto.'
+      if (p?.cuenta_corriente === true) {
+        return t === 'sin_comprobante'
+          ? `Va a quedar en la cuenta de ${nombre} como descarga sin importe: un administrador tiene que cargar el precio.`
+          : null
+      }
+      return `${nombre} no tiene cuenta corriente: ${t === 'sin_comprobante' ? 'la descarga' : 'la factura'} queda esperando el gasto de quien la pagó.`
+    }
+
+    function renderizarBloquesCircuito(w) {
+      const aviso = avisoCircuitoPrevio(w)
+      const avisoEl = document.getElementById('wz-aviso-circuito')
+      avisoEl.textContent = aviso || ''
+      avisoEl.hidden = !aviso
+
+      const bloqueTotal = document.getElementById('wz-bloque-total')
+      bloqueTotal.hidden = !pideTotalFactura(w)
+      document.getElementById('campo-total-factura').value = textoTotalFactura(w)
+      document.getElementById('wz-total-hint').textContent = (w.totalFactura == null && w.importeOcr != null)
+        ? 'Leído de la foto: revisalo contra el papel. Es el total final, con impuestos.'
+        : 'El total final de la factura, con impuestos. Con ese número entra a la cuenta corriente.'
+
+      // "Mercadería que ya estaba": solo en facturas.
+      document.getElementById('wz-bloque-sin-stock').hidden = !esFactura(w.encabezado.tipoDoc)
+      document.getElementById('campo-sin-stock').checked = !!w.sinStock
+      document.getElementById('wz-sin-stock-detalle').hidden = !w.sinStock
+      document.getElementById('campo-sin-stock-motivo').value = w.sinStockMotivo || ''
+    }
+
+    // null = se puede guardar; un texto = qué falta.
+    function validarCircuitoAntesDeGuardar(w) {
+      if (pideTotalFactura(w)) {
+        const n = parseImporte(textoTotalFactura(w))
+        if (!(n > 0)) return 'Cargá el total de la factura: con ese número entra a la cuenta corriente.'
+      }
+      if (esFactura(w.encabezado.tipoDoc) && w.sinStock) {
+        const m = (w.sinStockMotivo || '').trim()
+        if (m.length < 3) return 'Escribí por qué esta mercadería no suma stock.'
+        if (m.length > 300) return 'El motivo de "no suma stock" puede tener hasta 300 caracteres.'
+      }
+      return null
+    }
+
+    // Los datos del gasto del que viene este ingreso. Llena SOLO lo que quedó
+    // vacío —lo que leyó el OCR es el papel y manda—, y vincula el proveedor
+    // del gasto, que ya está identificado.
+    function aplicarDatosDelGasto() {
+      const w = estado.wizard
+      const g = w?.desdeGasto
+      if (!g) return
+      const siVacio = (inputId, clave, valor) => {
+        if (!valor || w.encabezado[clave]) return
+        document.getElementById(inputId).value = valor
+        w.encabezado[clave] = String(valor)
+      }
+      siVacio('campo-numero-doc', 'numeroDoc', g.numero_doc)
+      siVacio('campo-razon-social', 'razonSocial', g.razon_social)
+      siVacio('campo-fecha', 'fecha', g.fecha)
+      renderizarAvisoNumeroCorto()
+      if (g.proveedor_id && w.proveedorId !== g.proveedor_id && estado.proveedores.some(p => p.id === g.proveedor_id)) {
+        elegirProveedorParecido(g.proveedor_id)
+      }
+    }
+
+    function renderizarAvisoDesdeGasto(sinFoto = false) {
+      const el = document.getElementById('wz-aviso-desde-gasto')
+      const g = estado.wizard?.desdeGasto
+      if (!g) { el.textContent = ''; el.hidden = true; return }
+      const partes = [g.razon_social, g.numero_doc ? `N° ${g.numero_doc}` : null, importeConMoneda(g.importe, g.moneda)].filter(Boolean)
+      el.textContent = `Ingresando la mercadería del gasto ya pagado: ${partes.join(' · ') || 'sin datos'}.`
+        + (sinFoto ? ' No se pudo abrir la foto del gasto: sacale una foto al papel o cargalo a mano.' : '')
+      el.hidden = false
+    }
+
+    // ── Después de guardar ──────────────────────────────────────────────────
+
+    // La respuesta de registrar_factura_de_ingreso en palabras.
+    // { nivel: 'ok'|'ambar'|'error'|'neutro', lineas: [texto plano] }
+    function resultadoCircuito(data, nombreProveedor, importeCargado) {
+      const x = nombreProveedor || 'este proveedor'
+      switch (data?.accion) {
+        case 'creada':
+          return { nivel: 'ok', lineas: [`Cargada en la cuenta corriente de ${x}.`] }
+        case 'creada_sin_importe':
+          return { nivel: 'ambar', lineas: [`Quedó en la cuenta de ${x} como descarga sin importe: un administrador tiene que cargar el precio.`] }
+        case 'vinculado_cc': {
+          const lineas = ['Esta factura ya estaba en la cuenta corriente, quedó vinculada.']
+          if (!data.importe_distinto) return { nivel: 'ok', lineas }
+          const cc = importeConMoneda(data.importe_cc)
+          const aca = importeConMoneda(importeCargado) || 'otro importe'
+          // importe_cc en null = la factura está en la cuenta SIN importe. No
+          // se muestra "$0": sería afirmar un precio que nadie cargó.
+          lineas.push(cc
+            ? `Los importes no coinciden: en la cuenta corriente figura ${cc} y acá se cargó ${aca}. Avisale a administración.`
+            : `En la cuenta corriente esa factura todavía no tiene importe (acá se cargó ${aca}): un administrador tiene que cargarlo.`)
+          return { nivel: 'ambar', lineas }
+        }
+        case 'falta_gasto':
+          return { nivel: 'ambar', lineas: [`${x} no tiene cuenta corriente: quien la pagó tiene que cargar el gasto.`] }
+        case 'vinculado_gasto':
+          return { nivel: 'ok', lineas: ['Vinculada al gasto ya cargado.'] }
+        case 'ya_vinculado':
+          return { nivel: 'ok', lineas: ['Este ingreso ya estaba vinculado: no se cambió nada.'] }
+        case 'remito':
+          return { nivel: 'neutro', lineas: [data.mensaje || 'Un remito no va a cuenta corriente: espera a su factura.'] }
+        default:
+          console.error('registrar_factura_de_ingreso: respuesta inesperada', data)
+          return { nivel: 'error', lineas: ['La base respondió algo que esta pantalla no conoce. El ingreso quedó guardado: revisá su detalle.'] }
+      }
+    }
+
+    function errorCircuito(error, alGasto) {
+      console.error(error)
+      return {
+        nivel: 'error',
+        lineas: [
+          error?.message || 'No hubo respuesta de la base.',
+          alGasto
+            ? 'El ingreso quedó guardado, pero sin vincular al gasto.'
+            : 'El ingreso quedó guardado sin vincular. Podés reintentar desde su detalle, con «Pasar a cuenta corriente».',
+        ],
+      }
+    }
+
+    // NUNCA TIRA: el ingreso ya está guardado, y confirmarIngreso() borra el
+    // ingreso si algo tira dentro de su try. Devuelve el resultado, o null si
+    // el tipo no entra al circuito (un remito).
+    async function pasarAlCircuito(ingresoId, { tipoDoc, gastoId = null, importe = null, nombre = '' }) {
+      try {
+        if (gastoId) {
+          const { error } = await supabase.rpc('vincular_ingreso_a_gasto', { p_ingreso_id: ingresoId, p_gasto_id: gastoId })
+          if (error) return errorCircuito(error, true)
+          return { nivel: 'ok', lineas: ['Vinculado al gasto ya cargado.'] }
+        }
+        if (!llevaCircuito(tipoDoc)) return null
+        const { data, error } = await supabase.rpc('registrar_factura_de_ingreso', {
+          p_ingreso_id: ingresoId,
+          // Sin comprobante no hay precio: queda como descarga sin importe.
+          p_importe: tipoDoc === 'sin_comprobante' ? null : importe,
+          p_moneda: 'ARS',
+        })
+        if (error) return errorCircuito(error, false)
+        return resultadoCircuito(data, nombre, importe)
+      } catch (e) {
+        return errorCircuito(e, !!gastoId)
+      }
+    }
+
+    const NIVELES_CIRCUITO = ['ok', 'ambar', 'error', 'neutro']
+    function htmlResultadoCircuito(r) {
+      const nivel = NIVELES_CIRCUITO.includes(r?.nivel) ? r.nivel : 'neutro'
+      const lineas = (r?.lineas ?? []).map(l => `<div class="circuito-mp__linea">${esc(l)}</div>`).join('')
+      return `<div class="circuito-mp circuito-mp--${nivel}">${lineas}</div>`
+    }
+
+    const puedePasarAlCircuito = () => tieneTarea('materia_prima', 'cargar') || tieneTarea('materia_prima', 'editar_anular')
+
+    // El estado del circuito de cada comprobante de la entrega, y el reintento
+    // cuando quedó sin vincular. Solo desde fecha_inicio_circuito_stock(): lo
+    // anterior no entra al circuito y no se llena de botones.
+    function htmlCircuitoDetalle(entrega, { resultado = null, fechaInicio = null, puedeReintentar = false } = {}) {
+      const partes = []
+      if (resultado && entrega.comprobantes.some(c => c.id === resultado.ingresoId)) {
+        partes.push(htmlResultadoCircuito(resultado))
+      }
+      const varios = entrega.comprobantes.length > 1
+      for (const c of entrega.comprobantes) {
+        const etiqueta = varios ? `${TIPOS_DOC[c.tipo_doc]?.label || 'Comprobante'} ${c.numero_doc || ''}`.trim() + ': ' : ''
+        if (c.sin_stock_motivo) {
+          partes.push(htmlResultadoCircuito({ nivel: 'neutro', lineas: [`${etiqueta}No sumó stock: mercadería que ya estaba. Motivo: ${c.sin_stock_motivo}`] }))
+        }
+        if (!llevaCircuito(c.tipo_doc) || !fechaInicio || String(c.fecha || '') < fechaInicio) continue
+
+        const nombre = c.proveedores?.razon_social || c.razon_social || 'Este proveedor'
+        if (c.factura_pendiente_id) {
+          partes.push(htmlResultadoCircuito({ nivel: 'ok', lineas: [`${etiqueta}En la cuenta corriente de ${nombre}.`] }))
+          continue
+        }
+        if (c.gasto_id) {
+          partes.push(htmlResultadoCircuito({ nivel: 'ok', lineas: [`${etiqueta}Vinculada a un gasto ya cargado.`] }))
+          continue
+        }
+        if (!c.proveedor_id) {
+          partes.push(htmlResultadoCircuito({ nivel: 'ambar', lineas: [`${etiqueta}Sin proveedor: no se puede pasar a la cuenta corriente ni vincular con un gasto.`] }))
+          continue
+        }
+        const conCc = c.proveedores?.cuenta_corriente === true
+        const texto = conCc
+          ? `${etiqueta}Todavía no pasó a la cuenta corriente de ${nombre}.`
+          : `${etiqueta}${nombre} no tiene cuenta corriente: falta que quien la pagó cargue el gasto.`
+        // Con cuenta corriente, el total hace falta salvo que la factura ya
+        // esté en la cuenta —eso lo decide la base—. Sin comprobante no hay
+        // precio. Un ocasional no lleva total: el reintento busca el gasto.
+        const pideTotal = conCc && c.tipo_doc !== 'sin_comprobante'
+        const boton = conCc ? 'Pasar a cuenta corriente' : 'Buscar el gasto de nuevo'
+        partes.push(`<div class="circuito-mp circuito-mp--ambar">
+          <div class="circuito-mp__linea">${esc(texto)}</div>
+          ${puedeReintentar ? `<div class="circuito-mp__reintento">
+            ${pideTotal ? `<input type="text" inputmode="decimal" class="campo-reintento-total" autocomplete="off" placeholder="Total de la factura" aria-label="Total de la factura" value="${esc(textoImporteInput(c.importe_ocr))}">` : ''}
+            <button type="button" class="btn-mp-primario btn-reintento-circuito" data-ingreso="${esc(c.id)}">${esc(boton)}</button>
+          </div>` : ''}
+        </div>`)
+      }
+      return partes.join('')
+    }
+
+    async function reintentarCircuito(btn) {
+      const ingresoId = btn.dataset.ingreso
+      const c = estado.listaIngresos.find(i => i.id === ingresoId)
+      if (!c || btn.disabled) return
+      const input = btn.closest('.circuito-mp__reintento')?.querySelector('.campo-reintento-total')
+      const importe = input ? parseImporte(input.value) : null
+      btn.disabled = true
+      btn.textContent = 'Un momento…'
+      const r = await pasarAlCircuito(ingresoId, {
+        tipoDoc: c.tipo_doc, importe, nombre: c.proveedores?.razon_social || c.razon_social || '',
+      })
+      estado.resultadoCircuito = r ? { ingresoId, ...r } : null
+      await cargarIngresos()
+      await cargarPagadoSinIngresar()
+      if (buscarEntrega(ingresoId)) await abrirDetalleIngreso(ingresoId)
+    }
+
+    // ── "Pagado sin ingresar" ───────────────────────────────────────────────
+
+    async function cargarPagadoSinIngresar() {
+      const { data, error } = await supabase.rpc('gastos_sin_ingreso')
+      if (error) {
+        console.error('gastos_sin_ingreso:', error)
+        estado.pagadoSinIngresar = []
+        estado.errorPagadoSinIngresar = error.message || 'No se pudo cargar la lista de gastos pagados sin ingresar.'
+      } else {
+        estado.pagadoSinIngresar = data ?? []
+        estado.errorPagadoSinIngresar = null
+      }
+      renderizarPagadoSinIngresar()
+    }
+
+    const puedeDescartarIngreso = () => tieneTarea('materia_prima', 'editar_anular') || tieneTarea('gastos', 'editar_anular')
+
+    function htmlPagadoSinIngresar(filas, { descarte = {}, puedeDescartar = false } = {}) {
+      return filas.map(f => {
+        const meta = [
+          f.fecha ? formatearFecha(f.fecha) : null,
+          f.numero_doc ? `N° ${f.numero_doc}` : 'Sin número',
+          importeConMoneda(f.importe, f.moneda),
+          nombreUnidad(f.unidad_negocio_id) || null,
+        ].filter(Boolean).join(' · ')
+        const descartando = descarte.gastoId === f.gasto_id
+        return `
+        <div class="pendiente-mp" data-gasto="${esc(f.gasto_id)}">
+          <div class="pendiente-mp__titulo">${esc(f.razon_social || '(sin proveedor)')}</div>
+          <div class="pendiente-mp__meta">${esc(meta)}</div>
+          ${descartando ? `
+            <textarea class="campo-descarte" rows="2" maxlength="300" placeholder="Por qué este gasto no lleva ingreso de mercadería">${esc(descarte.texto)}</textarea>
+            ${descarte.error ? `<div class="pendiente-mp__error">${esc(descarte.error)}</div>` : ''}
+            <div class="pendiente-mp__acciones">
+              <button type="button" class="btn-mp-primario btn-pendiente-confirmar-descarte">Confirmar: no lleva ingreso</button>
+              <button type="button" class="btn-item-secundario btn-pendiente-cancelar">Cancelar</button>
+            </div>` : `
+            <div class="pendiente-mp__acciones">
+              <button type="button" class="btn-mp-primario btn-pendiente-ingresar">Ingresar</button>
+              ${puedeDescartar ? '<button type="button" class="btn-item-secundario btn-pendiente-descartar">No lleva ingreso</button>' : ''}
+            </div>`}
+        </div>`
+      }).join('')
+    }
+
+    function renderizarPagadoSinIngresar() {
+      const seccion = document.getElementById('seccion-pagado-sin-ingresar')
+      const filas = estado.pagadoSinIngresar
+      const lista = document.getElementById('lista-pagado-sin-ingresar')
+      if (estado.errorPagadoSinIngresar) {
+        seccion.hidden = false
+        document.getElementById('pagado-sin-ingresar-titulo').textContent = 'Pagado sin ingresar'
+        lista.innerHTML = `<div class="pendiente-mp__error">${esc(estado.errorPagadoSinIngresar)}</div>`
+        return
+      }
+      // Si no hay nada pendiente no se dibuja: un aviso que está siempre deja
+      // de leerse.
+      seccion.hidden = !filas.length
+      if (!filas.length) { lista.innerHTML = ''; return }
+      document.getElementById('pagado-sin-ingresar-titulo').textContent = `Pagado sin ingresar (${filas.length})`
+      lista.innerHTML = htmlPagadoSinIngresar(filas, { descarte: estado.descarte, puedeDescartar: puedeDescartarIngreso() })
+    }
+
+    // gastos.foto_url guarda la RUTA en Storage (migración de septiembre 2026);
+    // una fila vieja puede traer todavía la URL firmada, y de ahí sale la ruta.
+    function rutaComprobanteGasto(valor) {
+      const v = String(valor ?? '').trim()
+      if (!v) return null
+      if (!/^https?:\/\//i.test(v)) return v
+      const m = v.match(/\/object\/sign\/comprobantes\/([^?]+)/)
+      return m ? decodeURIComponent(m[1]) : null
+    }
+
+    // La foto del gasto como archivo, para que el OCR la lea igual que una
+    // foto sacada acá. null si no hay o no se puede bajar: la policy del bucket
+    // deja leer la raíz de otra persona solo con gastos:ver_exportar o
+    // cuentas_corrientes:ver_todo, así que alguien de depósito puede no tener
+    // acceso. Ahí se le pide que le saque una foto al papel.
+    async function archivoDelGasto(foto) {
+      const ruta = rutaComprobanteGasto(foto)
+      if (!ruta) return null
+      try {
+        const { data, error } = await supabase.storage.from('comprobantes').download(ruta)
+        if (error || !data) { console.error('archivoDelGasto:', error); return null }
+        const nombre = ruta.split('/').pop() || 'comprobante'
+        const tipo = data.type || (/\.pdf$/i.test(nombre) ? 'application/pdf' : 'image/jpeg')
+        return new File([data], nombre, { type: tipo })
+      } catch (e) {
+        console.error('archivoDelGasto:', e)
+        return null
+      }
+    }
+
+    async function ingresarDesdeGasto(fila) {
+      await abrirWizard()
+      const w = estado.wizard
+      w.desdeGasto = fila
+      if (fila.unidad_negocio_id) {
+        w.encabezado.unidadId = fila.unidad_negocio_id
+        poblarSelectUnidades()
+      }
+      renderizarAvisoDesdeGasto()
+      const archivo = await archivoDelGasto(fila.foto_url)
+      // Se cerró o se reabrió el wizard mientras bajaba la foto.
+      if (estado.wizard !== w) return
+      if (archivo) tomarArchivoComprobante(archivo)
+      renderizarAvisoDesdeGasto(!archivo)
+    }
+
+    // DEEP LINK: materia-prima.html?desde_gasto=<id>. Lo usa Gastos al guardar
+    // un gasto de materia prima. Abre el mismo flujo que "Ingresar".
+    async function abrirGastoDeLaUrl() {
+      const id = new URLSearchParams(location.search).get('desde_gasto')
+      if (!id) return
+      history.replaceState(null, '', location.pathname)
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+        mostrarError('El enlace no apunta a un gasto válido.')
+        return
+      }
+      const fila = estado.pagadoSinIngresar.find(f => f.gasto_id === id)
+      if (!fila) {
+        const desde = estado.fechaInicioCircuito ? ` o que sea anterior al ${formatearFecha(estado.fechaInicioCircuito)}, cuando empieza el circuito` : ''
+        mostrarError(`Ese gasto no está pendiente de ingresar: puede que ya tenga su ingreso, que se haya marcado que no lleva${desde}, o que no tengas permiso.`)
+        return
+      }
+      await ingresarDesdeGasto(fila)
+    }
+
+    async function confirmarDescarte(btn) {
+      const d = estado.descarte
+      const motivo = (d.texto || '').trim()
+      if (motivo.length < 3) { d.error = 'Escribí el motivo (al menos 3 letras).'; renderizarPagadoSinIngresar(); return }
+      if (motivo.length > 300) { d.error = 'El motivo puede tener hasta 300 caracteres.'; renderizarPagadoSinIngresar(); return }
+      btn.disabled = true
+      const { error } = await supabase.rpc('descartar_ingreso_de_gasto', { p_gasto_id: d.gastoId, p_motivo: motivo })
+      if (error) {
+        console.error(error)
+        d.error = error.message
+        renderizarPagadoSinIngresar()
+        return
+      }
+      estado.descarte = { gastoId: null, texto: '', error: null }
+      mostrarExito('Listo: ese gasto quedó marcado como que no lleva ingreso.')
+      await cargarPagadoSinIngresar()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -8398,6 +9066,7 @@
       estado.wizard.encabezado.tipoDoc = 'sin_comprobante'
       document.getElementById('wz-campo-tipo-doc').hidden = true
       document.getElementById('wz-datos-subtitulo').textContent = 'Cargá los datos del comprobante a mano.'
+      aplicarDatosDelGasto()
       irAPasoWz('datos')
     })
     document.getElementById('btn-leer-ocr').addEventListener('click', leerConIA)
@@ -8480,6 +9149,53 @@
     // vínculo dejó de saltearlo.
     document.getElementById('btn-volver-corregir').addEventListener('click', () => {
       irAPasoWz('items')
+    })
+
+    // ── Circuito ─────────────────────────────────────────────────────────
+    const campoTotal = document.getElementById('campo-total-factura')
+    formatearImporteEnVivo(campoTotal)
+    campoTotal.addEventListener('input', () => {
+      if (estado.wizard) estado.wizard.totalFactura = campoTotal.value
+      document.getElementById('wz-total-hint').textContent = 'El total final de la factura, con impuestos. Con ese número entra a la cuenta corriente.'
+    })
+    document.getElementById('campo-sin-stock').addEventListener('change', (ev) => {
+      if (!estado.wizard) return
+      estado.wizard.sinStock = ev.target.checked
+      document.getElementById('wz-sin-stock-detalle').hidden = !ev.target.checked
+    })
+    document.getElementById('campo-sin-stock-motivo').addEventListener('input', (ev) => {
+      if (estado.wizard) estado.wizard.sinStockMotivo = ev.target.value
+    })
+    document.getElementById('detalle-circuito').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.btn-reintento-circuito')
+      if (btn) reintentarCircuito(btn)
+    })
+    // El input del reintento se formatea al tipear; delegado porque se redibuja.
+    document.getElementById('detalle-circuito').addEventListener('focusin', (ev) => {
+      const input = ev.target.closest('.campo-reintento-total')
+      if (input && !input.dataset.formateado) { input.dataset.formateado = '1'; formatearImporteEnVivo(input) }
+    })
+    const listaPagado = document.getElementById('lista-pagado-sin-ingresar')
+    listaPagado.addEventListener('click', (ev) => {
+      const fila = ev.target.closest('.pendiente-mp[data-gasto]')
+      if (!fila) return
+      const id = fila.dataset.gasto
+      if (ev.target.closest('.btn-pendiente-ingresar')) {
+        const g = estado.pagadoSinIngresar.find(f => f.gasto_id === id)
+        if (g) ingresarDesdeGasto(g)
+      } else if (ev.target.closest('.btn-pendiente-descartar')) {
+        estado.descarte = { gastoId: id, texto: '', error: null }
+        renderizarPagadoSinIngresar()
+        listaPagado.querySelector('.campo-descarte')?.focus()
+      } else if (ev.target.closest('.btn-pendiente-cancelar')) {
+        estado.descarte = { gastoId: null, texto: '', error: null }
+        renderizarPagadoSinIngresar()
+      } else if (ev.target.closest('.btn-pendiente-confirmar-descarte')) {
+        confirmarDescarte(ev.target.closest('.btn-pendiente-confirmar-descarte'))
+      }
+    })
+    listaPagado.addEventListener('input', (ev) => {
+      if (ev.target.closest('.campo-descarte')) estado.descarte.texto = ev.target.value
     })
 
     init()
