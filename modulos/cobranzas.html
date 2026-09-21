@@ -27,6 +27,11 @@
       /* Fondo del segmentado de filtros: el naranja del módulo al 9%. Sale de
          la variable y no de un rgba suelto, así un cambio de acento lo arrastra. */
       --cob-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
+      /* Tarjeta de cheque: el divisor interno y las etiquetas de columna son
+         más claros que el borde y el texto suave del sistema, y no existen
+         como variables globales. */
+      --cob-divisor-tarjeta: rgba(26, 42, 82, 0.07);
+      --cob-etiqueta: #a3abbd;
     }
 
     .cob-contenedor {
@@ -378,9 +383,14 @@
       color: var(--color-texto);
       margin-bottom: 0.375rem;
     }
+    /* Los renglones y los titulares viven FUERA de un .cob-campo, así que sus
+       inputs no recibían esta regla y se dibujaban como el input crudo del
+       navegador: chicos, sin borde redondeado y sin los 44px táctiles. */
     .cob-campo input,
     .cob-campo select,
-    .cob-campo textarea {
+    .cob-campo textarea,
+    .cob-renglon input,
+    .cob-titular input {
       width: 100%;
       min-height: 44px;
       padding: 0.6875rem 0.875rem;
@@ -395,7 +405,8 @@
     .cob-campo textarea { min-height: 76px; resize: vertical; }
     .cob-campo input:focus,
     .cob-campo select:focus,
-    .cob-campo textarea:focus {
+    .cob-campo textarea:focus,
+    .cob-titular input:focus {
       outline: none;
       border-color: var(--naranja);
       box-shadow: 0 0 0 4px var(--naranja-suave);
@@ -434,23 +445,15 @@
       min-width: 0;
       background: var(--color-fondo);
     }
-    .cob-cheque--confirmado { border-color: var(--naranja); background: var(--naranja-suave); }
+    /* Confirmado: solo el borde naranja. Sin fondo teñido: el naranja suave
+       queda para lo seleccionado y el estado "registrada". */
+    .cob-cheque--confirmado { border-color: var(--naranja); }
     .cob-cheque--error { border-color: var(--bordo); }
     .cob-cheque__cabecera {
       display: flex;
       align-items: flex-start;
       gap: 0.625rem;
       min-width: 0;
-    }
-    .cob-cheque__mini {
-      width: 56px;
-      height: 56px;
-      border-radius: 10px;
-      object-fit: cover;
-      flex-shrink: 0;
-      background: var(--color-superficie);
-      border: 1px solid var(--color-borde);
-      cursor: pointer;
     }
     .cob-cheque__resumen { flex: 1; min-width: 0; }
     .cob-cheque__titulo {
@@ -467,20 +470,106 @@
       min-width: 0;
       overflow-wrap: anywhere;
     }
-    .cob-cheque__importe {
-      font-size: 1.0625rem;
-      font-weight: 700;
+    .cob-cheque__cuerpo { margin-top: 0.875rem; min-width: 0; }
+    .cob-cheque__verfoto { flex-shrink: 0; white-space: nowrap; }
+
+    /* LA TARJETA EN TRES NIVELES: 1) el importe, solo; 2) Emisión · Paga el ·
+       N° cheque, cada uno con su etiqueta y siempre en el mismo lugar; 3) banco
+       y cuenta al pie, en gris. Lo que decide es el importe, las fechas y el
+       número; el banco y la cuenta sirven para confirmar que es el cheque. */
+    .cob-cheque__top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.625rem;
+      min-width: 0;
+    }
+    .cob-cheque__monto {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-cheque__tipo {
+      font-size: 0.625rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      border-radius: 5px;
+      padding: 0.1875rem 0.4375rem;
+      background: var(--color-superficie);
+      color: var(--color-acento);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .cob-cheque__confirmado {
+      font-size: 0.65625rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
       color: var(--naranja-oscuro);
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .cob-cheque__cuerpo { margin-top: 0.875rem; min-width: 0; }
+    .cob-cheque__datos {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.625rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--cob-divisor-tarjeta);
+      min-width: 0;
+    }
+    .cob-cheque__etq {
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--cob-etiqueta);
+    }
+    .cob-cheque__val {
+      margin-top: 0.125rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-texto);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-cheque__dias { font-size: 0.71875rem; color: var(--color-texto-suave); margin-top: 0.0625rem; }
+    .cob-cheque__num { font-variant-numeric: tabular-nums; letter-spacing: 0.03em; }
+    .cob-cheque__pie {
+      margin-top: 0.625rem;
+      font-size: 0.75rem;
+      line-height: 1.55;
+      color: var(--color-texto-suave);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    /* Tres botones del mismo ancho en la tarjeta plegada. */
+    .cob-acciones--tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
     /* Los 3 renglones del recuadro del cheque. */
     .cob-renglon { margin-bottom: 0.75rem; min-width: 0; }
+    .cob-renglon label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+    }
     .cob-renglon input { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
-    .cob-renglon--ok input { border-color: var(--verde); }
-    .cob-renglon--mal input { border-color: var(--bordo); }
+    /* El foco NO pisa el borde de validación: mientras se tipea, el verde o el
+       bordó dicen si el dígito cierra, y el naranja nunca marca validez. Sin
+       estado todavía, el foco es naranja como en cualquier campo. */
+    .cob-renglon input:focus { outline: none; box-shadow: 0 0 0 4px var(--naranja-suave); border-color: var(--naranja); }
+    .cob-renglon--ok input,
+    .cob-renglon--ok input:focus { border-color: var(--verde); }
+    .cob-renglon--mal input,
+    .cob-renglon--mal input:focus { border-color: var(--bordo); }
 
     .cob-plegado {
       display: flex;
@@ -780,7 +869,9 @@
     /* El elegido. Va DESPUÉS de .cob-btn y de .cob-btn--grande. */
     .cob-btn--elegido { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
 
-    .cob-estado--en_cartera { background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    /* En cartera es el estado NORMAL de un cheque, no algo que reclame acción:
+       neutro, y no el naranja suave que ya usa "registrada". */
+    .cob-estado--en_cartera { background: var(--color-superficie); color: var(--color-acento); }
     .cob-estado--depositado { background: var(--color-superficie); color: var(--color-texto-suave); }
     .cob-estado--endosado { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
     .cob-estado--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
@@ -1960,8 +2051,9 @@
 
     function htmlFilaCheque(ch, cob) {
       const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
-      // Un cheque común no tiene fecha de pago: se cobra al día.
-      const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'Al día'
+      // Un cheque común no tiene fecha de pago: es "a la vista", la misma
+      // palabra que la tarjeta.
+      const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'A la vista'
       const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
       // El destino lo TIPEA una persona: es texto libre y va escapado.
       const celdaSalida = salido
@@ -2362,6 +2454,44 @@
       return ETIQUETA_ESTADO_CHEQUE[estadoCheque] ?? String(estadoCheque ?? '')
     }
 
+    // Cuántos días faltan para cobrar un diferido, en palabras. `hoy` se pasa
+    // (en pantalla, hoyArgentina()) para poder ejecutarla con cualquier fecha.
+    // Una fecha que falta o no es válida NO inventa días: diasEntre da null y
+    // no se dice nada, nunca "en NaN días".
+    function textoDiasHastaPago(fechaPago, hoy) {
+      const n = diasEntre(hoy, fechaPago)
+      if (n === null) return ''
+      if (n > 1) return `en ${n} días`
+      if (n === 1) return 'mañana'
+      if (n === 0) return 'hoy'
+      if (n === -1) return 'desde ayer'
+      return `desde hace ${-n} días`
+    }
+
+    // El nivel 2 de la tarjeta, compartido por el detalle y la tarjeta
+    // plegada de la carga: un dato por columna, siempre en el mismo orden. Un
+    // común dice "A la vista" en "Paga el", así las dos fechas no se confunden.
+    function htmlDatosCheque(ch, hoy) {
+      const diferido = ch.tipo === 'diferido'
+      const dias = diferido ? textoDiasHastaPago(ch.fecha_pago, hoy) : ''
+      return `
+          <div class="cob-cheque__datos">
+            <div>
+              <div class="cob-cheque__etq">Emisión</div>
+              <div class="cob-cheque__val">${escCob(formatearFechaCob(ch.fecha_emision))}</div>
+            </div>
+            <div>
+              <div class="cob-cheque__etq">Paga el</div>
+              <div class="cob-cheque__val">${escCob(diferido ? formatearFechaCob(ch.fecha_pago) : 'A la vista')}</div>
+              ${dias ? `<div class="cob-cheque__dias">${escCob(dias)}</div>` : ''}
+            </div>
+            <div>
+              <div class="cob-cheque__etq">N&deg; cheque</div>
+              <div class="cob-cheque__val cob-cheque__num">${escCob(ch.numero ?? '—')}</div>
+            </div>
+          </div>`
+    }
+
     function htmlChequeDetalle(ch, nombres) {
       const titulares = Array.isArray(ch.titulares) ? ch.titulares : []
       const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
@@ -2376,21 +2506,16 @@
 
       return `
         <div class="cob-cheque">
-          <div class="cob-cheque__cabecera">
-            <div class="cob-cheque__resumen">
-              <div class="cob-cheque__titulo">${escCob(nombreBanco(ch.banco_codigo))}</div>
-              <div class="cob-cheque__sub">N&deg; ${escCob(ch.numero ?? '—')} · ${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')} · cuenta ${escCob(ch.cuenta ?? '—')}</div>
-              <div class="cob-cheque__sub">Emisión ${escCob(formatearFechaCob(ch.fecha_emision))}${
-                // Un cheque común NO tiene fecha de pago: no se inventa un
-                // guion en un renglón que no existe, no se muestra el renglón.
-                ch.tipo === 'diferido' ? ` · pago ${escCob(formatearFechaCob(ch.fecha_pago))}` : ''}</div>
-              ${benef ? `<div class="cob-cheque__sub">Páguese a: ${escCob(benef)}</div>` : ''}
-              <div class="cob-cheque__sub"><span class="cob-estado cob-estado--${escCob(ch.estado)}">${escCob(ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado)}</span>${
-                salido ? ` ${escCob(textoSalidaCheque(ch.estado, ch.salida_fecha, ch.salida_destino))}` : ''}</div>
-              ${porQuien ? `<div class="cob-cheque__sub">Registró la salida: ${escCob(porQuien)}</div>` : ''}
-            </div>
-            <span class="cob-cheque__importe">${escCob(formatearImporte(ch.importe))}</span>
+          <div class="cob-cheque__top">
+            <span class="cob-cheque__monto">${escCob(formatearImporte(ch.importe))}</span>
+            <span class="cob-cheque__tipo">${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')}</span>
           </div>
+          ${htmlDatosCheque(ch, hoyArgentina())}
+          <div class="cob-cheque__pie">${escCob(nombreBanco(ch.banco_codigo))} · cuenta <span class="cob-cheque__num">${escCob(ch.cuenta ?? '—')}</span></div>
+          ${benef ? `<div class="cob-cheque__sub">Páguese a: ${escCob(benef)}</div>` : ''}
+          <div class="cob-cheque__sub"><span class="cob-estado cob-estado--${escCob(ch.estado)}">${escCob(ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado)}</span>${
+            salido ? ` ${escCob(textoSalidaCheque(ch.estado, ch.salida_fecha, ch.salida_destino))}` : ''}</div>
+          ${porQuien ? `<div class="cob-cheque__sub">Registró la salida: ${escCob(porQuien)}</div>` : ''}
           ${aviso}
           ${titulares.length ? `
             <button type="button" class="cob-plegado" data-plegar-titulares="${escCob(ch.id)}">
@@ -2400,7 +2525,7 @@
               ${titulares.map(t => `<div class="cob-cheque__sub">${escCob(t.nombre ?? 'Sin nombre')}${t.cuit ? ` · CUIT ${escCob(t.cuit)}` : ''}</div>`).join('')}
             </div>` : ''}
           <div class="cob-acciones">
-            <button type="button" class="cob-btn cob-btn--chico" data-ver-foto="${escCob(ch.foto_id ?? '')}">&#128247; Ver la foto</button>
+            <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" data-ver-foto="${escCob(ch.foto_id ?? '')}">Ver la foto</button>
           </div>
         </div>`
     }
@@ -3226,6 +3351,7 @@
     function htmlTarjetaCheque(ch, f) {
       const foto = f.fotos.find(x => x.id === ch.foto_id)
       const indiceFoto = f.fotos.findIndex(x => x.id === ch.foto_id) + 1
+      const posicion = f.cheques.indexOf(ch) + 1
       const errores = ch.confirmado ? [] : erroresDeCheque(chequeParaBase(ch))
       const importeNum = parseImporteCobranza(ch.importe)
 
@@ -3233,16 +3359,17 @@
         // Plegado: el resumen alcanza para reconocerlo sin volver a leerlo todo.
         return `
           <div class="cob-cheque cob-cheque--confirmado" data-cheque="${escCob(ch.id)}">
-            <div class="cob-cheque__cabecera">
-              <img class="cob-cheque__mini" data-mini="${escCob(ch.id)}" alt="Foto ${indiceFoto}">
-              <div class="cob-cheque__resumen">
-                <div class="cob-cheque__titulo">${escCob(nombreBanco(ch.banco_codigo))}</div>
-                <div class="cob-cheque__sub">N&deg; ${escCob(ch.numero ?? '—')} · ${escCob(ch.tipo === 'diferido' ? 'Diferido' : 'Común')}${
-                  ch.tipo === 'diferido' && ch.fecha_pago ? ` · paga ${escCob(formatearFechaCob(ch.fecha_pago))}` : ''}</div>
-              </div>
-              <span class="cob-cheque__importe">${escCob(formatearImporte(importeNum))}</span>
+            <div class="cob-cheque__top">
+              <span class="cob-cheque__monto">${escCob(formatearImporte(importeNum))}</span>
+              <span class="cob-cheque__confirmado">✓ Confirmado</span>
             </div>
-            <div class="cob-acciones">
+            ${htmlDatosCheque(ch, hoyArgentina())}
+            <div class="cob-cheque__pie">${escCob(nombreBanco(ch.banco_codigo))} · ${ch.tipo === 'diferido' ? 'diferido' : 'común'} · cuenta <span class="cob-cheque__num">${escCob(ch.cuenta ?? '—')}</span></div>
+            <!-- La miniatura SALIÓ de la tarjeta: a 56px no se leía nada. La
+                 foto se abre con este botón (lleva el data-mini que antes
+                 llevaba la miniatura) y las fotos se ven juntas arriba. -->
+            <div class="cob-acciones cob-acciones--tres">
+              <button type="button" class="cob-btn cob-btn--chico" data-mini="${escCob(ch.id)}">Ver la foto</button>
               <button type="button" class="cob-btn cob-btn--chico" data-editar-cheque="${escCob(ch.id)}">Editar</button>
               <button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-quitar-cheque="${escCob(ch.id)}">Quitar</button>
             </div>
@@ -3305,11 +3432,11 @@
       return `
         <div class="cob-cheque ${errores.length ? 'cob-cheque--error' : ''}" data-cheque="${escCob(ch.id)}">
           <div class="cob-cheque__cabecera">
-            <img class="cob-cheque__mini" data-mini="${escCob(ch.id)}" alt="Foto ${indiceFoto}">
             <div class="cob-cheque__resumen">
-              <div class="cob-cheque__titulo">${escCob(nombreBanco(ch.banco_codigo))}</div>
-              <div class="cob-cheque__sub">Foto ${indiceFoto}${foto ? '' : ' · sin foto'}</div>
+              <div class="cob-cheque__titulo">Cheque ${escCob(posicion)} de ${escCob(f.cheques.length)}</div>
+              <div class="cob-cheque__sub">${escCob(nombreBanco(ch.banco_codigo))} · ${foto ? `foto ${indiceFoto}` : 'sin foto'}</div>
             </div>
+            <button type="button" class="cob-btn cob-btn--chico cob-cheque__verfoto" data-mini="${escCob(ch.id)}">Ver la foto</button>
           </div>
 
           ${avisoMoneda}${avisoCmc7}${avisoCmc7Distinta}${avisoDuplicado}
@@ -3486,14 +3613,13 @@
       if (!f) return
       const buscar = (id) => f.cheques.find(c => c.id === id)
 
-      // Las miniaturas se firman después de dibujar: esperar la URL antes de
-      // pintar dejaría la tarjeta en blanco mientras tanto.
-      document.querySelectorAll('[data-mini]').forEach(async (img) => {
-        const ch = buscar(img.dataset.mini)
+      // "Ver la foto" de cada tarjeta. Antes era una miniatura que se firmaba
+      // al dibujar; ahora es un botón y la URL se pide recién al tocarlo, en
+      // abrirVisor(), que ya avisa si no se pudo abrir.
+      document.querySelectorAll('[data-mini]').forEach((boton) => {
+        const ch = buscar(boton.dataset.mini)
         const foto = f.fotos.find(x => x.id === ch?.foto_id)
-        const url = await urlDeFoto(foto)
-        if (url) img.src = url
-        img.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
+        boton.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
       })
 
       // Los tres renglones: se recalcula en vivo para que el ✓ o el rojo

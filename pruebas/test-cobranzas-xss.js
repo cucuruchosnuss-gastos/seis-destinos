@@ -407,7 +407,7 @@ if (SOLO !== 'estatico') {
     chk('tabla: el número va en la primera columna (la fija)',
       /<tr [^>]*>\s*<td>&quot;&gt;&lt;b data-xss=&quot;tab_numero/.test(tbody))
     const fila = (id) => { const i = tbody.indexOf(`data-cheque-fila="${id}"`); return tbody.slice(tbody.lastIndexOf('<tr', i), tbody.indexOf('</tr>', i)) }
-    chk('tabla: un cheque común dice "Al día" en el pago', fila('x3').includes('Al día'))
+    chk('tabla: un cheque común dice "A la vista" en el pago', fila('x3').includes('A la vista'))
     chk('tabla: un diferido muestra su fecha de pago', fila(escCobDe(S13, marca('tab_id'))).includes('01/10/2026'))
     chk('tabla: un depositado va atenuado y con su etiqueta',
       fila('x3').includes('cob-tabla__fila--salido') && fila('x3').includes('>Depositado<'))
@@ -725,6 +725,78 @@ if (SOLO !== 'estatico') {
     chk('detalle: un cheque en cartera dice "En cartera" y ninguna salida', sinSalidos.includes('>En cartera<') && !/Depositado el|Endosado el/.test(sinSalidos))
     const anulada = S27.htmlDetalle({ ...d, cabecera: { ...d.cabecera, estado: 'anulada' }, historial: [] })
     chk('detalle: en una cobranza anulada no se sugiere volver cheques a cartera', !/primero hay que volverlos a cartera/.test(anulada))
+  }
+
+  // ── Rediseño 3.3: la tarjeta de cheque en tres niveles ────────────────────
+  // Importe solo arriba; Emisión · Paga el · N° cheque con etiqueta; banco y
+  // cuenta al pie. "A la vista" en comunes y "en N días" en diferidos. Las
+  // miniaturas salieron de las tarjetas: "Ver la foto" es un botón.
+  {
+    const S33 = construir(ARCHIVO)
+    S33.estado.bancos = new Map([['007', 'Banco de Galicia']])
+    const hoy = '2026-09-17'
+    chk('3.3 días: 59 días', S33.textoDiasHastaPago('2026-11-15', hoy) === 'en 59 días')
+    chk('3.3 días: mañana, hoy, ayer y el pasado', S33.textoDiasHastaPago('2026-09-18', hoy) === 'mañana' &&
+      S33.textoDiasHastaPago('2026-09-17', hoy) === 'hoy' && S33.textoDiasHastaPago('2026-09-16', hoy) === 'desde ayer' &&
+      S33.textoDiasHastaPago('2026-09-10', hoy) === 'desde hace 7 días')
+    chk('3.3 días: una fecha que falta o no es válida no inventa días (nunca NaN)',
+      [null, undefined, '', 'basura', '2026-02-30'].every(x => S33.textoDiasHastaPago(x, hoy) === ''))
+    chk('3.3 días: un "hoy" que no es válido tampoco inventa días', S33.textoDiasHastaPago('2026-11-15', null) === '')
+
+    const dif = { id: 'k1', foto_id: 'f1', banco_codigo: '007', numero: '66259862', cuenta: '09420314667',
+      tipo: 'diferido', fecha_emision: '2026-09-15', fecha_pago: '2026-11-15', importe: 827500, estado: 'en_cartera', titulares: [] }
+    const com = { ...dif, id: 'k2', tipo: 'comun', fecha_pago: null }
+    const dDif = S33.htmlDatosCheque(dif, hoy), dCom = S33.htmlDatosCheque(com, hoy)
+    const col = (html, etq) => { const i = html.indexOf(`>${etq}<`); return i === -1 ? '' : html.slice(i, html.indexOf('</div>\n            </div>', i)) }
+    chk('3.3 datos: tres columnas etiquetadas, en orden Emisión · Paga el · N° cheque',
+      dDif.indexOf('>Emisión<') !== -1 && dDif.indexOf('>Emisión<') < dDif.indexOf('>Paga el<') && dDif.indexOf('>Paga el<') < dDif.indexOf('>N&deg; cheque<'))
+    chk('3.3 datos: el diferido dice su fecha de pago y cuántos días faltan',
+      col(dDif, 'Paga el').includes('15/11/2026') && dDif.includes('<div class="cob-cheque__dias">en 59 días</div>'))
+    chk('3.3 datos: el común dice "A la vista" y ningún conteo de días',
+      col(dCom, 'Paga el').includes('>A la vista<') && !dCom.includes('cob-cheque__dias'))
+    chk('3.3 datos: un diferido sin fecha de pago no dice "NaN"', !/NaN/.test(S33.htmlDatosCheque({ ...dif, fecha_pago: null }, hoy)))
+
+    const det = S33.htmlChequeDetalle(dif, new Map())
+    chk('3.3 detalle: el importe va solo arriba, con el chip de tipo al lado',
+      /<div class="cob-cheque__top">\s*<span class="cob-cheque__monto">\$\s827\.500,00<\/span>\s*<span class="cob-cheque__tipo">Diferido<\/span>/.test(det))
+    chk('3.3 detalle: banco y cuenta al pie, después de los datos',
+      /<div class="cob-cheque__pie">Banco de Galicia · cuenta <span class="cob-cheque__num">09420314667<\/span><\/div>/.test(det) &&
+      det.indexOf('cob-cheque__pie') > det.indexOf('cob-cheque__datos'))
+    chk('3.3 detalle: sin miniatura y con "Ver la foto" de ancho completo',
+      !/<img/.test(det) && /class="cob-btn cob-btn--chico cob-btn--ancho" data-ver-foto="f1">Ver la foto</.test(det))
+
+    const foto = { id: 'f1', storage_path: 'x/y.jpg' }
+    const pleg = { ...S33.chequeVacio('f1'), ...dif, confirmado: true, abierto: false, importe: '827.500,00' }
+    const htmlPleg = S33.htmlTarjetaCheque(pleg, { id: 'form', fotos: [foto], cheques: [pleg] })
+    chk('3.3 plegada: importe, "✓ Confirmado", los tres datos y banco · tipo · cuenta al pie',
+      htmlPleg.includes('<span class="cob-cheque__confirmado">✓ Confirmado</span>') && htmlPleg.includes('cob-cheque__datos') &&
+      /Banco de Galicia · diferido · cuenta <span class="cob-cheque__num">09420314667</.test(htmlPleg))
+    chk('3.3 plegada: sin miniatura; Ver la foto, Editar y Quitar como botones',
+      !/<img/.test(htmlPleg) && /<button[^>]*data-mini="k1">Ver la foto<\/button>/.test(htmlPleg) &&
+      /data-editar-cheque="k1"/.test(htmlPleg) && /data-quitar-cheque="k1"/.test(htmlPleg))
+    const conDv = (c) => c + String(S33.dvBcra(c))
+    const abierta = { ...S33.chequeVacio('f1'), id: 'k9', r1: conDv('0073863218'), r2: conDv('66259862'), r3: conDv('09420314667'), abierto: true }
+    S33.aplicarRenglones(abierta)
+    const htmlAb = S33.htmlTarjetaCheque(abierta, { id: 'form', fotos: [foto], cheques: [pleg, abierta] })
+    chk('3.3 abierta: "Cheque 2 de 2", banco · foto 1 y el botón Ver la foto, sin miniatura',
+      htmlAb.includes('>Cheque 2 de 2<') && htmlAb.includes('Banco de Galicia · foto 1') &&
+      /<button[^>]*data-mini="k9">Ver la foto<\/button>/.test(htmlAb) && !/<img/.test(htmlAb))
+
+    const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+    const regla = (sel) => { const i = css.indexOf('\n    ' + sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
+    chk('3.3 css: el importe del cheque va en tinta neutra, nunca naranja',
+      /color:\s*var\(--color-texto\)/.test(regla('.cob-cheque__monto')) && !/naranja/.test(regla('.cob-cheque__monto')))
+    chk('3.3 css: los inputs de los renglones y los titulares reciben el estilo de campo (ancho y 44px)',
+      /\.cob-renglon input,\s*\n\s*\.cob-titular input \{[^}]*width:\s*100%[^}]*min-height:\s*44px/.test(css))
+    chk('3.3 css: con el foco, el borde de validación del renglón sigue ganando',
+      /\.cob-renglon--ok input:focus \{ border-color: var\(--verde\); \}/.test(css) &&
+      /\.cob-renglon--mal input:focus \{ border-color: var\(--bordo\); \}/.test(css) &&
+      css.indexOf('.cob-renglon--ok input:focus') > css.indexOf('.cob-renglon input:focus'))
+    chk('3.3 css: "En cartera" es neutro, no el naranja suave de "registrada"',
+      !/naranja/.test(regla('.cob-estado--en_cartera')))
+    chk('3.3 css: la tarjeta confirmada no lleva fondo teñido', !/background/.test(regla('.cob-cheque--confirmado')))
+    chk('3.3 css: no queda la regla de la miniatura', !css.includes('.cob-cheque__mini'))
+    chk('3.3 módulo: no queda ningún "Al día"', !FUENTE.includes('Al día'))
   }
 
   // ── Rediseño 3.2: jerarquía del listado ──────────────────────────────────

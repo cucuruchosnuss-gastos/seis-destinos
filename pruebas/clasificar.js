@@ -43,8 +43,11 @@ function partirTopLevel(expr, op) {
       continue
     }
     if (d === 0 && expr.startsWith(op, i)) {
-      // Un '?' de encadenamiento opcional (?.) o de ?? no es un ternario.
-      if (op === '?' && (n === '.' || n === '?')) { ultimo = c; continue }
+      // Un '?' de encadenamiento opcional (?.) o de ?? no es un ternario. Hay
+      // que mirar LOS DOS signos del ??: mirando solo el primero, el segundo
+      // se tomaba como ternario, `a ?? 'x'` quedaba reducido a 'x' y `a`
+      // pasaba sin clasificar (lo destapó una mutación de la 3.3).
+      if (op === '?' && (n === '.' || n === '?' || expr[i - 1] === '?')) { ultimo = c; continue }
       if (op === ':' && expr[i - 1] === '?') { ultimo = c; continue }
       if (op === '+' && (n === '+' || ultimo === '+')) { ultimo = c; continue }
       partes.push(expr.slice(ini, i))
@@ -150,6 +153,7 @@ const SEGURAS = [
   ['claseRenglon(e3)', 'clase CSS constante del código'],
   ['botones.join(\'\')', 'HTML constante del código: los botones se arman con literales'],
   ['metaFila', 'HTML ya escapado: htmlFilaCobranza() lo arma arriba con escCob() de cada parte'],
+  ['htmlDatosCheque(ch, hoyArgentina())', 'HTML armado por htmlDatosCheque(), que escapa adentro'],
   // HTML armado por funciones que escapan adentro
   ['htmlHistorial(d.historial, d.nombres)', 'HTML armado por htmlHistorial(), que escapa adentro'],
   // Vista de cheques

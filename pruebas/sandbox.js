@@ -11,6 +11,7 @@ const FUNCIONES = [
   'momentoArgentina', 'fechaDeMomentoAr', 'erroresDeCheque', 'nombreBanco', 'tieneTarea',
   'htmlFilaCobranza', 'htmlDetalle', 'htmlChequeDetalle', 'htmlAccionesDetalle',
   'htmlHistorial', 'resumirCambios', 'htmlTarjetaCheque', 'chequeParaBase',
+  'textoDiasHastaPago', 'htmlDatosCheque',
   'textoOpcional', 'origenDatosDe', 'estadoRenglon', 'aplicarRenglones', 'chequeVacio',
   'pintarEstadoFotos', 'htmlAvisoFoto', 'fotoLeidaSinProblemas', 'fotoSinSenal', 'textoLecturaFoto',
   'textoChequesLeidos', 'hayFotosLeyendo', 'asegurarContadorLecturas', 'detenerContadorLecturas', 'tickLecturas',
