@@ -14,6 +14,7 @@ const FUNCIONES = [
   'textoOpcional', 'origenDatosDe', 'estadoRenglon', 'aplicarRenglones', 'chequeVacio',
   'pintarEstadoFotos', 'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores',
   'pintarTotalYGuardado', 'motivosParaNoGuardar', 'efectivoDelFormulario', 'totalDelFormulario',
+  'renglonComoImpreso', 'chequeDesdeBase', 'chequeDesdeOcr',
 ]
 
 const CONSTANTES = [

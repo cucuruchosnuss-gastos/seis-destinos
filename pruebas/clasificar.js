@@ -136,10 +136,14 @@ const SEGURAS = [
   ['avisoLetras', 'HTML ya escapado: se arma arriba con escCob(formatearImporte(...))'],
   ['avisoNotas', 'HTML ya escapado: se arma arriba con escCob(ch.ocr_propuesto.notas)'],
   ['avisoDuplicado', 'HTML ya escapado: se arma arriba con escCob(ch.duplicado.texto)'],
-  // HTML constante del código, elegido por una función pura
-  ['pieRenglon(e1)', 'HTML constante del código según el estado del renglón'],
-  ['pieRenglon(e2)', 'HTML constante del código según el estado del renglón'],
-  ['pieRenglon(e3)', 'HTML constante del código según el estado del renglón'],
+  // HTML armado por pieRenglon(), que escapa adentro. OJO: hasta que el pie
+  // pasó a decir qué número se guarda separado de su dígito de control, estas
+  // tres estaban justificadas como "HTML constante del código" — y dejó de ser
+  // cierto en cuanto la función interpoló datos. El motivo viejo habría tapado
+  // el cambio en silencio.
+  ['pieRenglon(e1, ch.r1, 11)', 'HTML armado por pieRenglon(), que escapa adentro'],
+  ['pieRenglon(e2, ch.r2, 9)', 'HTML armado por pieRenglon(), que escapa adentro'],
+  ['pieRenglon(e3, ch.r3, 12)', 'HTML armado por pieRenglon(), que escapa adentro'],
   ['claseRenglon(e1)', 'clase CSS constante del código'],
   ['claseRenglon(e2)', 'clase CSS constante del código'],
   ['claseRenglon(e3)', 'clase CSS constante del código'],

@@ -99,6 +99,28 @@ for (const m of ['cambios.map(escCob).join', 'errores.map(escCob).join', 'todo.m
   })
 }
 
+// Mutaciones de COMPORTAMIENTO: no sacan un escape, rompen una regla de un
+// render. Cada ancla tiene que ser ÚNICA en el archivo; si no, se aborta.
+const COMPORTAMIENTO = [
+  ['pie: el caso CMC-7 muestra el desglose como si se hubiera leído',
+    "if (c.completado_desde_cmc7) return '<div class=\"cob-campo__ayuda\">", "if (false) return '<div class=\"cob-campo__ayuda\">"],
+  ['pie: el desglose guarda el número pegado a su dígito',
+    'Se guarda ${escCob(d.slice(0, largo - 1))}', 'Se guarda ${escCob(d)}'],
+  ['pie: un renglón corto también muestra el desglose',
+    "if (est !== 'ok') return ''", "if (est !== 'ok' && est !== 'corto') return ''"],
+  ['pie: un renglón que no cierra no avisa',
+    "if (est === 'mal') return '<div class=\"cob-campo__error\">", "if (false) return '<div class=\"cob-campo__error\">"],
+  ['renglones: el prellenado vuelve a pegar el número a su dígito',
+    "return `${partes.join('-')} ${dv}`", "return `${partes.join('')}${dv}`"],
+  ['renglones: un renglón sin dígito se prellena a medias',
+    "if (dv === null || dv === undefined || dv === '') return ''", "if (dv === null) return ''"],
+]
+for (const [nombre, ancla, reemplazo] of COMPORTAMIENTO) {
+  const veces = src.split(ancla).length - 1
+  if (veces !== 1) { ambiguas.push(`«${nombre}»: el ancla aparece ${veces} veces`); continue }
+  mutaciones.push({ nombre, ancla, reemplazo })
+}
+
 if (ambiguas.length) {
   console.log('\nMUTACIONES ABORTADAS POR AMBIGÜEDAD (no se reportan como huecos de cobertura):')
   for (const a of ambiguas) console.log('  · ' + a)

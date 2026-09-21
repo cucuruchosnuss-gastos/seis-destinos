@@ -180,6 +180,91 @@ if (SOLO !== 'estatico') {
       S3.escCob(S3.nombreBanco(marca('bk'))).includes(escapada('bk')))
   }
 
+  // ── El pie de los tres renglones: sus TRES estados, ejecutados ──────────
+  // Un solo pie por renglón. 'ok' sin CMC-7 dice qué se guarda y qué queda
+  // aparte; 'ok' CON CMC-7 NO muestra ni el ✓ ni el desglose, porque el dígito
+  // lo calculó el sistema y nadie lo leyó del papel; 'mal' dice que no cierra.
+  {
+    const S8 = construir(ARCHIVO)
+    const conDv = (cuerpo) => cuerpo + String(S8.dvBcra(cuerpo))
+    const r1 = conDv('2853863218'), r2 = conDv('66259862'), r3 = conDv('09420314667')
+    const foto = { id: 'f1', storage_path: 'x/y.jpg' }
+    const tarjeta = (extra) => {
+      const ch = { ...S8.chequeVacio('f1'), r1, r2, r3, ...extra }
+      S8.aplicarRenglones(ch)
+      return S8.htmlTarjetaCheque(ch, { id: 'form', fotos: [foto], cheques: [ch] })
+    }
+    // Parte el HTML en los tres renglones, para afirmar renglón por renglón.
+    const renglones = (html) => html.split('class="cob-renglon').slice(1, 4)
+      .map(s => s.slice(0, s.indexOf('class="cob-campo">') === -1 ? s.length : s.indexOf('class="cob-campo">')))
+    const cuenta = (s, t) => s.split(t).length - 1
+
+    // (1) 'ok' sin CMC-7: el desglose, uno por renglón.
+    const ok = renglones(tarjeta({ controles: null }))
+    chk('pie ok: hay tres renglones', ok.length === 3, ok.length)
+    const partes = [[r1, 11], [r2, 9], [r3, 12]]
+    ok.forEach((s, i) => {
+      const [txt, largo] = partes[i]
+      chk(`pie ok renglón ${i + 1}: un solo ✓`, cuenta(s, '✓') === 1, cuenta(s, '✓'))
+      chk(`pie ok renglón ${i + 1}: dice qué se guarda y qué dígito queda aparte`,
+        s.includes(`Se guarda ${txt.slice(0, largo - 1)} y el ${txt.slice(largo - 1)} queda aparte`))
+      chk(`pie ok renglón ${i + 1}: no aparece el texto de la banda magnética`, !s.includes('banda magnética'))
+      chk(`pie ok renglón ${i + 1}: no aparece el error`, !s.includes('cob-campo__error'))
+    })
+
+    // (2) 'ok' CON completado_desde_cmc7: ni ✓ ni desglose en NINGÚN renglón.
+    const cmc = renglones(tarjeta({ controles: { completado_desde_cmc7: true } }))
+    cmc.forEach((s, i) => {
+      chk(`pie cmc7 renglón ${i + 1}: sin ✓`, cuenta(s, '✓') === 0)
+      chk(`pie cmc7 renglón ${i + 1}: sin desglose`, !s.includes('Se guarda'))
+      chk(`pie cmc7 renglón ${i + 1}: dice que el dígito no se leyó del papel`,
+        cuenta(s, 'no se leyó del papel') === 1)
+    })
+
+    // (3) 'mal': el dígito no cierra. Error, y nunca un ✓ ni un desglose.
+    const malR2 = r2.slice(0, 8) + String((Number(r2[8]) + 1) % 10)
+    const mal = renglones(tarjeta({ r2: malR2, controles: { completado_desde_cmc7: true } }))
+    chk('pie mal: el renglón 2 muestra el error', cuenta(mal[1], 'No coincide con el dígito de control') === 1)
+    chk('pie mal: el renglón 2 no muestra ✓ ni desglose ni el texto de la banda',
+      !mal[1].includes('✓') && !mal[1].includes('Se guarda') && !mal[1].includes('banda magnética'))
+
+    // (4) vacío y corto: sin pie.
+    const vacios = renglones(tarjeta({ r1: '', r2: '6625', controles: null }))
+    for (const [i, s] of [[0, vacios[0]], [1, vacios[1]]]) {
+      chk(`pie vacío/corto renglón ${i + 1}: no dibuja ningún pie`,
+        !s.includes('✓') && !s.includes('cob-campo__error') && !s.includes('Se guarda'))
+    }
+
+    // (5) Texto malicioso con los dígitos justos: el renglón da 'ok', el pie
+    // muestra SOLO dígitos y el value del input sale escapado.
+    const html5 = tarjeta({ r2: marca('pie_rdos') + r2, controles: null })
+    chequearMarcas('pie ok con texto malicioso en el renglón', html5, ['pie_rdos'])
+    chk('pie ok con texto malicioso: el desglose sale igual, solo con dígitos',
+      html5.includes(`Se guarda ${r2.slice(0, 8)} y el ${r2[8]} queda aparte`))
+  }
+
+  // ── Prellenado de los renglones: separado, como está impreso ─────────────
+  // Pegado, el dígito de control se lee como la última cifra del número.
+  {
+    const S9 = construir(ARCHIVO)
+    const deBase = S9.chequeDesdeBase({
+      id: 'c', foto_id: 'f', banco_codigo: '285', sucursal_codigo: '386', codigo_postal: '3218',
+      dv_ruta: 6, numero: '66259862', dv_numero: 8, cuenta: '09420314667', dv_cuenta: 0,
+      tipo: 'comun', fecha_emision: '2026-09-01', importe: 10, titulares: [],
+    })
+    chk('prellenado desde la base: renglón 1 separado', deBase.r1 === '285-386-3218 6', deBase.r1)
+    chk('prellenado desde la base: renglón 2 separado', deBase.r2 === '66259862 8', deBase.r2)
+    chk('prellenado desde la base: renglón 3 separado (con el 0 del dígito)', deBase.r3 === '09420314667 0', deBase.r3)
+    chk('prellenado desde la base: los campos siguen iguales al repartir',
+      deBase.numero === '66259862' && deBase.dv_numero === 8 && deBase.cuenta === '09420314667')
+    const deOcr = S9.chequeDesdeOcr({ banco_codigo: '285', sucursal_codigo: '386', codigo_postal: '3218',
+      dv_ruta: 6, numero: '66259862', dv_numero: 8, cuenta: null, dv_cuenta: 0 }, 'f')
+    chk('prellenado desde el OCR: renglón 2 separado', deOcr.r2 === '66259862 8', deOcr.r2)
+    chk('prellenado desde el OCR: un renglón sin dato queda VACÍO, no a medias', deOcr.r3 === '', deOcr.r3)
+    chk('prellenado desde el OCR: sin dígito el renglón queda vacío',
+      S9.renglonComoImpreso(['66259862'], null) === '' && S9.renglonComoImpreso(['66259862'], undefined) === '')
+  }
+
   // ── pintarEstadoFotos ───────────────────────────────────────────────────
   {
     const S4 = construir(ARCHIVO)

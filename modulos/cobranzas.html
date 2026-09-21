@@ -1871,9 +1871,9 @@
       return {
         ...base,
         id: ch.id,
-        r1: `${ch.banco_codigo ?? ''}${ch.sucursal_codigo ?? ''}${ch.codigo_postal ?? ''}${ch.dv_ruta ?? ''}`,
-        r2: `${ch.numero ?? ''}${ch.dv_numero ?? ''}`,
-        r3: `${ch.cuenta ?? ''}${ch.dv_cuenta ?? ''}`,
+        r1: renglonComoImpreso([ch.banco_codigo, ch.sucursal_codigo, ch.codigo_postal], ch.dv_ruta),
+        r2: renglonComoImpreso([ch.numero], ch.dv_numero),
+        r3: renglonComoImpreso([ch.cuenta], ch.dv_cuenta),
         banco_codigo: ch.banco_codigo, sucursal_codigo: ch.sucursal_codigo,
         codigo_postal: ch.codigo_postal, dv_ruta: ch.dv_ruta,
         numero: ch.numero, dv_numero: ch.dv_numero,
@@ -2046,10 +2046,9 @@
     function chequeDesdeOcr(p, fotoId) {
       const ch = chequeVacio(fotoId)
       ch.foto_id = fotoId
-      ch.r1 = p.banco_codigo && p.sucursal_codigo && p.codigo_postal && p.dv_ruta !== null
-        ? `${p.banco_codigo}${p.sucursal_codigo}${p.codigo_postal}${p.dv_ruta}` : ''
-      ch.r2 = p.numero && p.dv_numero !== null ? `${p.numero}${p.dv_numero}` : ''
-      ch.r3 = p.cuenta && p.dv_cuenta !== null ? `${p.cuenta}${p.dv_cuenta}` : ''
+      ch.r1 = renglonComoImpreso([p.banco_codigo, p.sucursal_codigo, p.codigo_postal], p.dv_ruta)
+      ch.r2 = renglonComoImpreso([p.numero], p.dv_numero)
+      ch.r3 = renglonComoImpreso([p.cuenta], p.dv_cuenta)
       aplicarRenglones(ch)
       ch.tipo = p.tipo ?? null
       ch.fecha_emision = p.fecha_emision ?? ''
@@ -2066,6 +2065,20 @@
       // y dejó de ser un control.
       ch.abierto = true
       return ch
+    }
+
+    // El texto con el que se PRELLENA un renglón —desde el OCR o desde la
+    // base—, con la misma forma del placeholder: "66259862 8" y no
+    // "662598628". Pegado, el dígito de control se lee como la última cifra
+    // del número, que es justo la confusión que el pie de cada renglón viene a
+    // aclarar. aplicarRenglones() se queda solo con los dígitos, así que el
+    // espacio y los guiones no cambian lo que se guarda.
+    // Sin algún dato, el renglón va VACÍO: un renglón a medias se leería como
+    // un código completo que no cierra.
+    function renglonComoImpreso(partes, dv) {
+      if (partes.some(x => x === null || x === undefined || x === '')) return ''
+      if (dv === null || dv === undefined || dv === '') return ''
+      return `${partes.join('-')} ${dv}`
     }
 
     // Toma los dígitos de los tres renglones y los reparte. Los campos son
@@ -2200,11 +2213,26 @@
       const c = ch.controles ?? {}
       const e1 = estadoRenglon(ch.r1, 11), e2 = estadoRenglon(ch.r2, 9), e3 = estadoRenglon(ch.r3, 12)
       const claseRenglon = (est) => est === 'ok' ? 'cob-renglon--ok' : est === 'mal' ? 'cob-renglon--mal' : ''
-      const pieRenglon = (est) => est === 'ok'
-        ? '<div class="cob-campo__ok">✓ Coincide con el dígito verificador</div>'
-        : est === 'mal'
-          ? '<div class="cob-campo__error">No coincide con el dígito verificador, revisá contra el papel.</div>'
-          : ''
+      // UN SOLO PIE POR RENGLÓN, nunca dos: el ✓ y el desglose de qué se guarda
+      // dicen cosas parecidas, y dos líneas debajo del mismo campo se leen como
+      // ruido. El desglose REEMPLAZA al ✓, no se suma abajo.
+      //
+      // CON completado_desde_cmc7 EL DESGLOSE NO APARECE. Ahí el dígito lo
+      // CALCULÓ el sistema desde la banda magnética: nadie lo leyó del papel,
+      // así que decir "el 8 es el dígito de control del banco" lo presentaría
+      // como un dato verificado, y el ✓ afirmaría un control que no se hizo. En
+      // su lugar se dice de dónde salió el dígito y se manda a mirar el cheque,
+      // que es la única instrucción honesta en ese estado.
+      // LÍMITE CONOCIDO: el flag describe la PROPUESTA del OCR y no se recalcula
+      // si la persona retipea el renglón, igual que el aviso ámbar de arriba.
+      // Errar hacia "mirá el papel" es el lado seguro.
+      const pieRenglon = (est, texto, largo) => {
+        if (est === 'mal') return '<div class="cob-campo__error">No coincide con el dígito de control, revisá contra el papel.</div>'
+        if (est !== 'ok') return ''
+        if (c.completado_desde_cmc7) return '<div class="cob-campo__ayuda">Este dígito lo calculó el sistema desde la banda magnética: no se leyó del papel. Contralo contra el cheque.</div>'
+        const d = String(texto ?? '').replace(/\D/g, '')
+        return `<div class="cob-campo__ok">✓ Cierra. Se guarda ${escCob(d.slice(0, largo - 1))} y el ${escCob(d.slice(largo - 1))} queda aparte, como dígito de control.</div>`
+      }
 
       // Si el recuadro se completó desde la CMC-7, el DV se CALCULÓ: deja de
       // ser un control y la persona tiene que mirar el papel.
@@ -2249,20 +2277,20 @@
 
           <div class="cob-cheque__cuerpo">
             <div class="cob-renglon ${claseRenglon(e1)}">
-              <label>Renglón 1 (banco-sucursal-CP y dígito)</label>
+              <label>Renglón 1 — banco-sucursal-CP y el dígito de control del banco, como está impreso</label>
               <input type="text" inputmode="numeric" data-r1="${escCob(ch.id)}" value="${escCob(ch.r1)}" placeholder="285-386-3218 6">
               <div class="cob-campo__ayuda">${escCob(nombreBanco(ch.banco_codigo))}</div>
-              ${pieRenglon(e1)}
+              ${pieRenglon(e1, ch.r1, 11)}
             </div>
             <div class="cob-renglon ${claseRenglon(e2)}">
-              <label>Renglón 2 (número y dígito)</label>
+              <label>Renglón 2 — número del cheque y el dígito de control del banco, como está impreso</label>
               <input type="text" inputmode="numeric" data-r2="${escCob(ch.id)}" value="${escCob(ch.r2)}" placeholder="66259862 8">
-              ${pieRenglon(e2)}
+              ${pieRenglon(e2, ch.r2, 9)}
             </div>
             <div class="cob-renglon ${claseRenglon(e3)}">
-              <label>Renglón 3 (cuenta y dígito)</label>
+              <label>Renglón 3 — número de cuenta y el dígito de control del banco, como está impreso</label>
               <input type="text" inputmode="numeric" data-r3="${escCob(ch.id)}" value="${escCob(ch.r3)}" placeholder="09420314667 0">
-              ${pieRenglon(e3)}
+              ${pieRenglon(e3, ch.r3, 12)}
             </div>
 
             <div class="cob-campo">
