@@ -96,15 +96,16 @@ function posicionesDeValor(expr) {
   return [e]
 }
 
-// Hojas seguras por REGLA (no por lista).
-function porRegla(hoja) {
+// Hojas seguras por REGLA (no por lista). `escape` es la función de escapado
+// del módulo: escCob en Cobranzas, esc en los demás.
+function porRegla(hoja, escape = 'escCob') {
   const h = hoja.trim()
   if (/^`/.test(h) && /`$/.test(h)) return 'plantilla anidada: sus propias interpolaciones se verifican aparte'
   if (/^'.*'$/s.test(h) || /^".*"$/s.test(h)) return 'literal del código'
   if (/^-?\d+(\.\d+)?$/.test(h)) return 'número literal'
-  if (/^escCob\(/.test(h) && cierraAlFinal(h, 'escCob(')) return 'escapada'
+  if (h.startsWith(escape + '(') && cierraAlFinal(h, escape + '(')) return 'escapada'
   if (/^encodeURIComponent\(/.test(h) && cierraAlFinal(h, 'encodeURIComponent(')) return 'escapada para URL'
-  if (/\.map\(escCob\)\.join\(/.test(h)) return 'escapada elemento por elemento'
+  if (h.includes(`.map(${escape}).join(`)) return 'escapada elemento por elemento'
   return null
 }
 
@@ -180,19 +181,21 @@ const SEGURAS_REGEX = [
   [/^ESTADOS_FILTRO_CHEQUES\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
 ]
 
-function motivoSeguro(hoja) {
+function motivoSeguro(hoja, seguras = SEGURAS, segurasRegex = SEGURAS_REGEX) {
   const h = sinComentarios(hoja).trim().replace(/\s+/g, ' ')
-  for (const [texto, motivo] of SEGURAS) if (h === texto.replace(/\s+/g, ' ')) return motivo
-  for (const [re, motivo] of SEGURAS_REGEX) if (re.test(h)) return motivo
+  for (const [texto, motivo] of seguras) if (h === texto.replace(/\s+/g, ' ')) return motivo
+  for (const [re, motivo] of segurasRegex) if (re.test(h)) return motivo
   return null
 }
 
 // Devuelve { ok, motivos:[...], hojasMalas:[...] }
-function clasificar(expr) {
+// Sin opciones clasifica como Cobranzas (escCob y sus listas). Otro módulo pasa
+// su función de escapado y SUS listas de hojas seguras, cada una con su motivo.
+function clasificar(expr, { escape = 'escCob', seguras = SEGURAS, segurasRegex = SEGURAS_REGEX } = {}) {
   const hojas = posicionesDeValor(expr)
   const motivos = [], malas = []
   for (const h of hojas) {
-    const m = porRegla(h) || motivoSeguro(h)
+    const m = porRegla(h, escape) || motivoSeguro(h, seguras, segurasRegex)
     if (m) motivos.push(m); else malas.push(h.trim().replace(/\s+/g, ' '))
   }
   return { ok: malas.length === 0, motivos, hojasMalas: malas }

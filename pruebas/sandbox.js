@@ -103,21 +103,33 @@ const PRELUDIO = `
   }
 `
 
-function construir(rutaHtml) {
+function scriptModulo(rutaHtml) {
   const html = fs.readFileSync(rutaHtml, 'utf8')
   const ini = html.indexOf('<script type="module">')
   const fin = html.indexOf('</script>', ini)
   if (ini === -1 || fin === -1) throw new Error('no se encontró el <script type="module">')
-  const src = html.slice(ini, fin)
+  return html.slice(ini, fin)
+}
 
-  let codigo = PRELUDIO
-  for (const c of CONSTANTES) codigo += extraerConst(src, c) + '\n'
-  for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n\n'
-  codigo += `return { ${FUNCIONES.join(', ')}, estado, __els, __doc: document, __llamadas, __set(r){ __repartidoresFalsos = r }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f }, __accion(){ return accionDelModal } }`
-
-  // Ejecutar el sandbox es lo que prueba que ningún helper falte: un escCob()
+// La variante GENÉRICA, para cualquier módulo: el preludio (el document falso y
+// los stubs), las funciones y las constantes las pone cada suite. `retorno` se
+// suma al objeto que devuelve el sandbox, además de las funciones.
+function construirCon(rutaHtml, { preludio, funciones, constantes = [], retorno = '' }) {
+  const src = scriptModulo(rutaHtml)
+  let codigo = preludio
+  for (const c of constantes) codigo += extraerConst(src, c) + '\n'
+  for (const f of funciones) codigo += extraerFn(src, f) + '\n\n'
+  codigo += `return { ${funciones.join(', ')}${retorno ? ', ' + retorno : ''} }`
+  // Ejecutar el sandbox es lo que prueba que ningún helper falte: una función
   // sin definir tira ReferenceError acá, no en producción.
   return new Function(codigo)()
 }
 
-module.exports = { construir, FUNCIONES, CONSTANTES }
+function construir(rutaHtml) {
+  return construirCon(rutaHtml, {
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
+    retorno: `estado, __els, __doc: document, __llamadas, __set(r){ __repartidoresFalsos = r }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f }, __accion(){ return accionDelModal }`,
+  })
+}
+
+module.exports = { construir, construirCon, scriptModulo, FUNCIONES, CONSTANTES }

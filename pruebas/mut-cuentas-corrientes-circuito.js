@@ -1,0 +1,67 @@
+// Mutaciones de test-cuentas-corrientes-circuito.js. Ver mutar.js.
+//
+//   node pruebas/mut-cuentas-corrientes-circuito.js
+
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+
+const RAIZ = path.join(__dirname, '..')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-cuentas-corrientes-circuito.js'),
+  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/cuentas-corrientes.html'),
+  funciones: ['htmlSinImporte', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos'],
+  manuales: [
+    { nombre: 'la descarga sin importe se muestra como $ 0,00',
+      de: '<div class="fila-movimiento__monto fila-movimiento__monto--falta">Falta importe</div>\n            ${puedeCargar',
+      a: '<div class="fila-movimiento__monto">${importeHtml(Number(m.monto) || 0, m.moneda)}</div>\n            ${puedeCargar' },
+    { nombre: '"Cargar importe" sin registrar_pago',
+      de: "${puedeCargar && !form ? `<button", a: "${!form ? `<button" },
+    { nombre: 'esSinImporte ignora el monto null',
+      de: '&& (m.monto == null || estadoPorFactura?.[m.factura_pendiente_id] === \'sin_importe\')', a: '&& (estadoPorFactura?.[m.factura_pendiente_id] === \'sin_importe\')' },
+    { nombre: 'precio por unidad no multiplica',
+      de: 'return Math.round(n * cantidades[0].cantidad * 100) / 100', a: 'return n' },
+    { nombre: 'precio por unidad con varios productos',
+      de: 'if (!cantidades || cantidades.length !== 1) return null', a: 'if (!cantidades) return null' },
+    { nombre: 'el total acepta cero',
+      de: 'if (n == null || !(n > 0)) return null\n      if (form.modo', a: 'if (n == null) return null\n      if (form.modo' },
+    { nombre: 'el error de completar_importe_factura se tapa',
+      de: "form.error = error.message || 'La base no dijo el motivo.'", a: "form.error = 'Error.'" },
+    { nombre: 'se manda el precio por unidad en vez del total',
+      de: "supabase.rpc('completar_importe_factura', { p_factura_id: facturaId, p_importe: total })", a: "supabase.rpc('completar_importe_factura', { p_factura_id: facturaId, p_importe: parseImporte(form.texto) })" },
+    { nombre: 'resumenCantidades cuenta el null como 0',
+      de: 'if (it.cantidad == null || !Number.isFinite(cant)) continue', a: 'if (!Number.isFinite(cant)) continue' },
+    { nombre: 'contarSinImporte ignora la unidad',
+      de: '(!unidadId || f.unidad_negocio_id === unidadId)).length', a: 'true).length' },
+    { nombre: 'la lista vuelve a decir $ 0,00 sin saldo conocido',
+      de: '            <div class="proveedor-cc__etiqueta">Debe</div>\n            <div class="proveedor-cc__monto">—</div>', a: '            <div class="proveedor-cc__etiqueta">Debe</div>\n            <div class="proveedor-cc__monto">$ 0,00</div>' },
+    { nombre: 'la lista no avisa las descargas sin importe',
+      de: '              ${saldosHtml}\n              ${sinImporteHtml}\n', a: '              ${saldosHtml}\n' },
+    { nombre: 'el resumen no avisa',
+      de: 'if (sinImporte) contDeuda.innerHTML += htmlSinImporte(sinImporte)', a: '' },
+    { nombre: 'el padrón vuelve a $ 0,00',
+      de: "${sinImporte ? '—' : '$ 0,00'}</div>\n            </div>`\n\n        return `\n          <div class=\"tarjeta-lista tarjeta-padron\"", a: "$ 0,00</div>\n            </div>`\n\n        return `\n          <div class=\"tarjeta-lista tarjeta-padron\"" },
+    { nombre: 'el padrón no avisa',
+      de: '              ${htmlSinImporte(sinImporte)}\n              ${puedeEditar ?', a: '              ${puedeEditar ?' },
+    { nombre: 'el banner no dice que el saldo está incompleto',
+      de: '                ${i === 0 ? avisoSinImporte : \'\'}\n', a: '' },
+    { nombre: 'el banner sin saldo vuelve a $ 0,00 con descargas',
+      de: "<div class=\"banner-ficha-cc__monto\">${sinImporte ? '—' : '$ 0,00'}</div>", a: '<div class="banner-ficha-cc__monto">$ 0,00</div>' },
+    { nombre: 'el historial muestra $0 para un monto null',
+      de: '        const montoHtml = m.monto == null\n', a: '        const montoHtml = false\n' },
+    { nombre: 'el excel pone 0 en un monto null',
+      de: "'Monto':      m.monto == null ? '' : Number(m.monto),", a: "'Monto':      Number(m.monto) || 0," },
+    { nombre: 'la lista no suma los proveedores con SOLO descargas',
+      de: '|| contarSinImporte(g.proveedor_id, g.unidad_negocio_id) > 0)', a: ')' },
+    { nombre: 'las descargas se cargan DESPUÉS de los saldos',
+      de: '      await cargarSinImporte()\n      const cargas = [cargarSinProveedor()]', a: '      const cargas = [cargarSinProveedor(), cargarSinImporte()]' },
+    { nombre: 'los remitos se consultan sin permiso',
+      de: "if (!(tieneTarea('cuentas_corrientes', 'ver_todo') || tieneTarea('cuentas_corrientes', 'registrar_pago'))) {", a: 'if (false) {' },
+    { nombre: 'los remitos no se filtran por unidad',
+      de: 'const filas = (remitos ?? []).filter(r => !unidadId || r.unidad_negocio_id === unidadId)', a: 'const filas = (remitos ?? [])' },
+    { nombre: 'los remitos dan NaN con items null',
+      de: 'const items = Number(r.items) || 0', a: 'const items = Number(r.items)' },
+    { nombre: 'si la consulta de descargas falla no se avisa',
+      de: "        mostrarError(`No se pudo saber si hay descargas sin importe, así que los saldos pueden estar incompletos sin avisarlo: ${error.message}`)\n", a: '' },
+  ],
+})

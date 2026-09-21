@@ -66,6 +66,23 @@ Por eso el runner corre primero la suite sobre el archivo limpio y, si no está 
 - Una mutación cuyo texto **no es único** en el archivo se aborta nombrándola, en vez de mutar el renglón equivocado y reportarse como escapada. Una mutación que escapa se investiga antes de asumir que falta cobertura.
 - Una mutación que **no cambia nada** es un error del test, nunca cobertura. Y el sub-proceso informa cuántos caracteres leyó, para que el padre confirme que leyó el archivo mutado y no el original.
 
+## Las suites del circuito Ingreso ↔ Gastos ↔ Cuentas Corrientes
+
+```bash
+node pruebas/test-materia-prima-circuito.js
+node pruebas/test-gastos-circuito.js
+node pruebas/test-cuentas-corrientes-circuito.js
+node pruebas/mut-materia-prima-circuito.js
+node pruebas/mut-gastos-circuito.js
+node pruebas/mut-cuentas-corrientes-circuito.js
+```
+
+Cubren **los renders nuevos del circuito, no el archivo entero**: el chequeo estático se acota a las funciones que cada suite nombra (`estaticoAcotado()` de `circuito-comun.js`), porque `materia-prima.html` todavía tiene su barrido de XSS pendiente y el archivo entero daría rojo por sinks que no son de este trabajo. Si una función nombrada deja de existir, eso es rojo.
+
+`mutar.js` es el runner genérico: saca cada `esc()` de esas funciones y aplica las mutaciones de comportamiento que declara cada `mut-*.js`, con los mismos tres guards de arriba. Las mutaciones corren de a una: cada sub-proceso termina antes de escribir la siguiente.
+
+`construirCon()` de `sandbox.js` y las opciones `{ escape, seguras, segurasRegex }` de `clasificar()` existen para esto; sin opciones, las dos hacen lo mismo que antes para Cobranzas.
+
 ## Qué NO va acá
 
 Archivos de un solo uso: scripts que aplican una edición, generadores de vistas para mirar en el navegador, volcados intermedios. Esos siguen viviendo en el scratchpad de la sesión. Acá va lo que tiene que poder volver a correrse dentro de seis meses.
