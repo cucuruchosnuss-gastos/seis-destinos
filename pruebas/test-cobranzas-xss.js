@@ -727,6 +727,95 @@ if (SOLO !== 'estatico') {
     chk('detalle: en una cobranza anulada no se sugiere volver cheques a cartera', !/primero hay que volverlos a cartera/.test(anulada))
   }
 
+  // ── Rediseño 3.4: la escala de avisos ────────────────────────────────────
+  // Dos escalones: .cob-aviso a secas INFORMA (neutro) y .cob-aviso--grave
+  // dice que un dato está mal o que no se puede seguir (bordó). Sin ámbar y
+  // sin naranja. Se ejecutan los renders de cada caso.
+  {
+    const S34 = construir(ARCHIVO)
+    S34.estado.bancos = new Map([['007', 'Banco de Galicia']])
+    const claseAviso = (html) => (html.match(/<div class="(cob-aviso[^"]*)"/) || [])[1]
+    const neutro = (html) => claseAviso(html) === 'cob-aviso'
+    const grave = (html) => /\bcob-aviso--grave\b/.test(claseAviso(html) || '')
+
+    // Los estados de las fotos: todos informan.
+    const f = { id: 'form', fotos: [], cheques: [{ id: 'c1', foto_id: 'leida' }] }
+    const estadosFoto = {
+      subiendo: { id: 's', enCurso: true, fase: 'subiendo' },
+      leyendo: { id: 'l', enCurso: true, fase: 'leyendo', leyendoDesde: 0 },
+      lenta: { id: 'l2', enCurso: true, fase: 'leyendo', leyendoDesde: -200000 },
+      errorLector: { id: 'e', error: 'No se pudo leer la foto. Cargá los cheques a mano.', subida: true },
+      sinSenal: { id: 'n', subida: false, leida: false, errorRed: true },
+      reintenta: { id: 'r', subida: true, leida: false },
+      sinCheques: { id: 'v', subida: true, leida: true },
+      leida: { id: 'leida', subida: true, leida: true },
+    }
+    for (const [nombre, foto] of Object.entries(estadosFoto)) {
+      const html = S34.htmlAvisoFoto(foto, 0, f, 1000)
+      chk(`3.4 foto (${nombre}): aviso neutro, ni bordó ni ámbar ni naranja`, neutro(html), html.slice(0, 120))
+    }
+
+    // La tarjeta abierta: lo que está MAL va bordó, lo que informa va neutro.
+    const conDv = (c) => c + String(S34.dvBcra(c))
+    const tarjeta = (extra) => {
+      const ch = { ...S34.chequeVacio('f1'), id: 'k', r1: conDv('0073863218'), r2: conDv('66259862'), r3: conDv('09420314667'), abierto: true, ...extra }
+      S34.aplicarRenglones(ch)
+      return S34.htmlTarjetaCheque(ch, { id: 'form', fotos: [{ id: 'f1' }], cheques: [ch] })
+    }
+    const avisos = (html) => html.match(/<div class="cob-aviso[^"]*"[^>]*>[^<]*/g) || []
+    const avisoCon = (html, texto) => avisos(html).find(a => a.includes(texto)) || ''
+    const dvMal = tarjeta({ r2: '662598620' })
+    chk('3.4 tarjeta: un dígito que no cierra marca el renglón y la lista de errores va bordó',
+      dvMal.includes('No coincide con el dígito de control') && /class="cob-aviso cob-aviso--grave"/.test(dvMal))
+    const t1 = tarjeta({
+      controles: { completado_desde_cmc7: true, letras_coinciden: false, cuits_ok: false, cmc7_coincide: false, fechas_ok: false },
+      ocr_propuesto: { importe: 1000, importe_letras_valor: 900, notas: 'borroso' },
+    })
+    chk('3.4 tarjeta: "se completaron desde la banda magnética" informa (neutro)',
+      /^<div class="cob-aviso">/.test(avisoCon(t1, 'banda magnética. Verificá')))
+    chk('3.4 tarjeta: letras distintas de números es un dato mal (bordó)', /cob-aviso--grave/.test(avisoCon(t1, 'En letras dice')))
+    chk('3.4 tarjeta: un CUIT inválido es un dato mal (bordó)', /cob-aviso--grave/.test(avisoCon(t1, 'CUIT')))
+    chk('3.4 tarjeta: la banda que no coincide con el recuadro es un dato mal (bordó)', /cob-aviso--grave/.test(avisoCon(t1, 'no coincide con el recuadro')))
+    chk('3.4 tarjeta: las fechas que no cierran son un dato mal (bordó)', /cob-aviso--grave/.test(avisoCon(t1, 'fechas leídas')))
+    chk('3.4 tarjeta: la nota del lector informa (neutro)', /^<div class="cob-aviso">/.test(avisoCon(t1, 'El lector anotó')))
+    const dupP = tarjeta({ duplicado: { nivel: 'parcial', texto: 'Mismo número en otra cuenta' } })
+    const dupC = tarjeta({ duplicado: { nivel: 'completo', texto: 'Este cheque ya está cargado' } })
+    chk('3.4 tarjeta: el choque parcial de numeración informa; el cheque repetido es grave',
+      !/cob-aviso--grave/.test(avisoCon(dupP, 'Mismo número')) && /cob-aviso--grave/.test(avisoCon(dupC, 'ya está cargado')))
+    chk('3.4 tarjeta: dólares no se puede cargar (bordó)', /cob-aviso--grave/.test(avisoCon(tarjeta({ controles: { moneda_ok: false } }), 'dólares')))
+
+    // El detalle.
+    const ch = { id: 'k1', foto_id: 'f1', banco_codigo: '007', numero: '66259862', cuenta: '09420314667', tipo: 'comun',
+      fecha_emision: '2026-09-15', fecha_pago: null, importe: 1, estado: 'en_cartera', titulares: [], beneficiario: 'Otro SA' }
+    chk('3.4 detalle: el aviso de endoso informa (neutro)', /^<div class="cob-aviso" /.test(avisoCon(S34.htmlChequeDetalle(ch, new Map()), 'endosado al dorso')))
+    const d = { cabecera: { id: 'c1', empleado_id: 'emp-1', cliente: 'x', estado: 'registrada', fecha: '2026-09-17', efectivo: 0, cantidad_cheques: 1, total_cheques: 1, total: 1 },
+      cheques: [{ ...ch, estado: 'depositado', salida_fecha: '2026-09-18' }], fotos: [], historial: [], nombres: new Map() }
+    chk('3.4 detalle: "hay cheques que ya salieron" informa (neutro)', /^<div class="cob-aviso">/.test(avisoCon(S34.htmlDetalle(d), 'ya salieron de cartera')))
+    const dAn = { ...d, cabecera: { ...d.cabecera, estado: 'anulada', motivo_anulacion: 'error' }, cheques: [] }
+    chk('3.4 detalle: el motivo de una anulada va bordó', /cob-aviso--grave/.test(avisoCon(S34.htmlDetalle(dAn), 'Anulada:')))
+
+    // Lo que falta para guardar informa: faltar un dato no es tener uno mal.
+    S34.estado.form = { id: 'f', cliente: '', fecha: '2026-09-17', efectivo: '', cheques: [], fotos: [] }
+    S34.pintarTotalYGuardado()
+    chk('3.4 lo que falta para guardar informa (neutro)', S34.__els.get('cob-form-pendientes').className === 'cob-aviso')
+
+    const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+    const regla = (sel) => { const i = css.indexOf('\n    ' + sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
+    chk('3.4 css: el aviso base es neutro (superficie, franja gris terciaria, texto secundario)',
+      /background:\s*var\(--color-superficie\)/.test(regla('.cob-aviso')) &&
+      /border-left:\s*4px solid var\(--color-texto-suave\)/.test(regla('.cob-aviso')) &&
+      /color:\s*var\(--cob-texto-secundario\)/.test(regla('.cob-aviso')))
+    chk('3.4 css: el aviso grave es bordó', /--bordo-suave/.test(regla('.cob-aviso--grave')) && /--bordo\)/.test(regla('.cob-aviso--grave')) && /--bordo-oscuro/.test(regla('.cob-aviso--grave')))
+    const iAv = css.indexOf('\n    .cob-aviso {')
+    chk('3.4 css: la variante grave va DESPUÉS de su base', iAv !== -1 && css.indexOf('\n    .cob-aviso--grave {') > iAv)
+    chk('3.4 módulo: no queda ámbar (ni la variable ni la clase)', !/amarillo|cob-aviso--ambar|cob-aviso--naranja|cob-aviso--alerta/.test(FUENTE))
+    chk('3.4 css: Endosado es un estado gris, como Depositado',
+      regla('.cob-estado--endosado').replace('.cob-estado--endosado', '') === regla('.cob-estado--depositado').replace('.cob-estado--depositado', ''))
+    chk('3.4 css: el total de la barra de carga va en tinta neutra',
+      /color:\s*var\(--color-texto\)/.test(regla('.cob-barra-fija__cifra')) && !/naranja/.test(regla('.cob-barra-fija__cifra')))
+    chk('3.4 html: el aviso de cobranzas solo en el celular es neutro', FUENTE.includes('<div class="cob-aviso" id="cob-banner-local" hidden>'))
+  }
+
   // ── Rediseño 3.3: la tarjeta de cheque en tres niveles ────────────────────
   // Importe solo arriba; Emisión · Paga el · N° cheque con etiqueta; banco y
   // cuenta al pie. "A la vista" en comunes y "en N días" en diferidos. Las

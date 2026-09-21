@@ -32,6 +32,9 @@
          como variables globales. */
       --cob-divisor-tarjeta: rgba(26, 42, 82, 0.07);
       --cob-etiqueta: #a3abbd;
+      /* Texto secundario de los avisos neutros: más oscuro que el gris
+         terciario (--color-texto-suave), que queda para la franja. */
+      --cob-texto-secundario: #55617d;
     }
 
     .cob-contenedor {
@@ -86,22 +89,30 @@
 
     /* ── Avisos y banners ────────────────────────────────────────────────── */
 
+    /* LA ESCALA DE AVISOS TIENE DOS ESCALONES, y el color dice cuál:
+       - .cob-aviso a secas: INFORMA (neutro). Lo que pasa, qué va a pasar o
+         qué conviene mirar: se está leyendo, no hay señal, el cheque es de un
+         tercero, falta el cliente, estos números vinieron de la banda.
+       - .cob-aviso--grave: un DATO ESTÁ MAL o no se puede seguir (bordó): el
+         dígito no cierra, letras y números no coinciden, CUIT inválido,
+         dólares, cheque repetido, cobranza anulada.
+       El ámbar se retiró del módulo: con el acento naranja quedaba a un paso
+       del color del módulo y dejaba de leerse como aviso. Y el naranja NUNCA
+       marca un aviso: es del módulo, no un estado. */
     .cob-aviso {
       border-radius: 12px;
       padding: 0.75rem 0.875rem;
-      font-size: 0.875rem;
+      font-size: 0.78125rem;
       line-height: 1.5;
       margin-bottom: 0.75rem;
       min-width: 0;
       overflow-wrap: anywhere;
       background: var(--color-superficie);
-      color: var(--color-texto);
-      border-left: 4px solid var(--color-borde);
+      color: var(--cob-texto-secundario);
+      border-left: 4px solid var(--color-texto-suave);
     }
-    /* Variantes DESPUÉS de su base: misma especificidad, decide el orden. */
-    .cob-aviso--naranja { background: var(--naranja-suave); border-left-color: var(--naranja); color: var(--naranja-oscuro); }
-    .cob-aviso--alerta { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); }
-    .cob-aviso--ambar { background: var(--amarillo-suave); border-left-color: var(--amarillo); color: var(--amarillo-oscuro); }
+    /* Variante DESPUÉS de su base: misma especificidad, decide el orden. */
+    .cob-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
     .cob-aviso__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.625rem; min-width: 0; }
 
     /* ── Botones ─────────────────────────────────────────────────────────── */
@@ -165,10 +176,12 @@
       min-width: 0;
     }
     .cob-barra-fija__etiqueta { font-size: 0.75rem; color: var(--color-texto-suave); font-weight: 600; }
+    /* Un total: tinta neutra, nunca el color del módulo. */
     .cob-barra-fija__cifra {
       font-size: 1.375rem;
-      font-weight: 700;
-      color: var(--naranja-oscuro);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--color-texto);
       white-space: nowrap;
     }
 
@@ -873,7 +886,9 @@
        neutro, y no el naranja suave que ya usa "registrada". */
     .cob-estado--en_cartera { background: var(--color-superficie); color: var(--color-acento); }
     .cob-estado--depositado { background: var(--color-superficie); color: var(--color-texto-suave); }
-    .cob-estado--endosado { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+    /* Endosado es un ESTADO, no un aviso: el cheque salió de cartera igual que
+       uno depositado, y lleva el mismo tratamiento gris. El texto dice cuál. */
+    .cob-estado--endosado { background: var(--color-superficie); color: var(--color-texto-suave); }
     .cob-estado--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
 
     @media (min-width: 640px) {
@@ -912,7 +927,7 @@
 
       <!-- Banner de lo que está solo en el celular. Se dibuja SOLO si hay algo
            pendiente: un banner en cero entrena a ignorarlo. -->
-      <div class="cob-aviso cob-aviso--ambar" id="cob-banner-local" hidden></div>
+      <div class="cob-aviso" id="cob-banner-local" hidden></div>
 
       <div class="cob-filtros">
         <input type="search" class="cob-buscador" id="cob-buscar-cliente"
@@ -969,12 +984,12 @@
         </div>
         <!-- pre-line: las líneas del aviso se componen en JS y van por
              textContent, que sin esto saldrían pegadas en un solo renglón. -->
-        <div class="cob-aviso cob-aviso--ambar" id="cob-aviso-cheque"
+        <div class="cob-aviso" id="cob-aviso-cheque"
              style="white-space:pre-line" hidden></div>
         <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-limpiar-cheques" hidden>Limpiar filtros</button>
       </div>
 
-      <div class="cob-aviso cob-aviso--ambar" id="cob-cheques-aviso" style="white-space:pre-line" hidden></div>
+      <div class="cob-aviso" id="cob-cheques-aviso" style="white-space:pre-line" hidden></div>
       <div class="cob-tabla-scroll" id="cob-tabla-caja" hidden>
         <table class="cob-tabla" id="cob-tabla-cheques"></table>
       </div>
@@ -2395,7 +2410,7 @@
             <span class="cob-estado cob-estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
           </div>
           ${anulada && c.motivo_anulacion
-            ? `<div class="cob-aviso cob-aviso--alerta" style="margin-top:.625rem">Anulada: ${escCob(c.motivo_anulacion)}</div>` : ''}
+            ? `<div class="cob-aviso cob-aviso--grave" style="margin-top:.625rem">Anulada: ${escCob(c.motivo_anulacion)}</div>` : ''}
           <div style="margin-top:.75rem">
             ${datos.map(([k, v]) => `
               <div class="cob-dato">
@@ -2410,7 +2425,7 @@
       // mensaje de la base igual llega tal cual si lo intentan.
       const haySalidos = !anulada && d.cheques.some(ch => ch.estado === 'depositado' || ch.estado === 'endosado')
       const avisoSalidos = haySalidos
-        ? '<div class="cob-aviso cob-aviso--ambar">Hay cheques que ya salieron de cartera: para editar o anular esta cobranza, primero hay que volverlos a cartera.</div>'
+        ? '<div class="cob-aviso">Hay cheques que ya salieron de cartera: para editar o anular esta cobranza, primero hay que volverlos a cartera.</div>'
         : ''
 
       const cheques = `
@@ -2501,7 +2516,7 @@
       // normalizado porque en el papel aparece de mil formas.
       const benef = ch.beneficiario ?? null
       const aviso = benef && !(normalizarCliente(benef) ?? '').includes('nuss')
-        ? `<div class="cob-aviso cob-aviso--ambar" style="margin-top:.5rem">A nombre de ${escCob(benef)}: verificá que esté endosado al dorso.</div>`
+        ? `<div class="cob-aviso" style="margin-top:.5rem">A nombre de ${escCob(benef)}: verificá que esté endosado al dorso.</div>`
         : ''
 
       return `
@@ -3283,20 +3298,23 @@
         return `<div class="cob-aviso">Foto ${i + 1}: <span data-lectura-foto="${escCob(foto.id)}">${escCob(textoLecturaFoto(segundos))}</span></div>`
       }
       if (foto.error) {
-        return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: ${escCob(foto.error)}</div>`
+        // Un error del lector o de la subida INFORMA, no marca un dato mal:
+        // ningún número cargado está equivocado, faltó leer o subir, y el
+        // texto dice qué hacer. Por eso va neutro y no bordó.
+        return `<div class="cob-aviso">Foto ${i + 1}: ${escCob(foto.error)}</div>`
       }
       if (!foto.leida) {
         if (fotoSinSenal(foto)) {
-          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: sin señal. Quedó guardada en el celular y se lee sola cuando vuelva la señal.</div>`
+          return `<div class="cob-aviso">Foto ${i + 1}: sin señal. Quedó guardada en el celular y se lee sola cuando vuelva la señal.</div>`
         }
         return `<div class="cob-aviso">Foto ${i + 1}: ${foto.subida ? 'subida, falta leer los cheques.' : 'falta subirla.'} Se reintenta sola en unos segundos.</div>`
       }
       if (chequesDeLaFoto === 0) {
         // Una foto sin cheques no suma nada y al guardar se descarta: hay que
         // decirlo ANTES, no después.
-        return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: no quedó ningún cheque. Agregalo a mano o la foto se descarta al guardar.</div>`
+        return `<div class="cob-aviso">Foto ${i + 1}: no quedó ningún cheque. Agregalo a mano o la foto se descarta al guardar.</div>`
       }
-      return `<div class="cob-aviso cob-aviso--naranja">Foto ${i + 1}: ${escCob(textoChequesLeidos(chequesDeLaFoto))}</div>`
+      return `<div class="cob-aviso">Foto ${i + 1}: ${escCob(textoChequesLeidos(chequesDeLaFoto))}</div>`
     }
 
     // ── Contador de la lectura ────────────────────────────────────────────
@@ -3403,30 +3421,33 @@
       // Si el recuadro se completó desde la CMC-7, el DV se CALCULÓ: deja de
       // ser un control y la persona tiene que mirar el papel.
       const avisoCmc7 = c.completado_desde_cmc7
-        ? '<div class="cob-aviso cob-aviso--ambar">Estos números se completaron desde la banda magnética. Verificá estos números contra el papel.</div>'
+        ? '<div class="cob-aviso">Estos números se completaron desde la banda magnética. Verificá estos números contra el papel.</div>'
         : ''
       const avisoCmc7Distinta = c.cmc7_coincide === false
-        ? '<div class="cob-aviso cob-aviso--alerta">La banda magnética de abajo no coincide con el recuadro de arriba. Revisá los tres renglones.</div>'
+        ? '<div class="cob-aviso cob-aviso--grave">La banda magnética de abajo no coincide con el recuadro de arriba. Revisá los tres renglones.</div>'
         : ''
       const avisoLetras = c.letras_coinciden === false && ch.ocr_propuesto
-        ? `<div class="cob-aviso cob-aviso--ambar">En letras dice ${escCob(formatearImporte(ch.ocr_propuesto.importe_letras_valor))}, en números ${escCob(formatearImporte(ch.ocr_propuesto.importe))}.</div>`
+        ? `<div class="cob-aviso cob-aviso--grave">En letras dice ${escCob(formatearImporte(ch.ocr_propuesto.importe_letras_valor))}, en números ${escCob(formatearImporte(ch.ocr_propuesto.importe))}.</div>`
         : ''
       const avisoFechas = c.fechas_ok === false
-        ? '<div class="cob-aviso cob-aviso--alerta">Las fechas leídas no cierran. Miralas contra el papel.</div>'
+        ? '<div class="cob-aviso cob-aviso--grave">Las fechas leídas no cierran. Miralas contra el papel.</div>'
         : ''
       const avisoCuit = c.cuits_ok === false
-        ? '<div class="cob-aviso cob-aviso--ambar">Algún CUIT de los titulares no es válido. Está impreso en el cheque: copialo de ahí.</div>'
+        ? '<div class="cob-aviso cob-aviso--grave">Algún CUIT de los titulares no es válido. Está impreso en el cheque: copialo de ahí.</div>'
         : ''
       // Los dólares no se pueden cargar acá: la cobranza es en pesos y la
       // columna moneda de la base es 'ARS'.
       const dolares = c.moneda_ok === false
       const avisoMoneda = dolares
-        ? '<div class="cob-aviso cob-aviso--alerta">Cheque en dólares: no se puede cargar en este módulo.</div>'
+        ? '<div class="cob-aviso cob-aviso--grave">Cheque en dólares: no se puede cargar en este módulo.</div>'
         : ''
       const avisoNotas = ch.ocr_propuesto?.notas
         ? `<div class="cob-aviso">El lector anotó: ${escCob(ch.ocr_propuesto.notas)}</div>` : ''
       const avisoDuplicado = ch.duplicado
-        ? `<div class="cob-aviso ${ch.duplicado.nivel === 'completo' ? 'cob-aviso--alerta' : 'cob-aviso--ambar'}">${escCob(ch.duplicado.texto)}</div>`
+        // Completo (mismo banco, sucursal, cuenta y número) es un cheque que ya
+        // está cargado: grave. Parcial (mismo banco y número, otra cuenta) es
+        // un choque esperable de numeración: informa.
+        ? `<div class="cob-aviso ${ch.duplicado.nivel === 'completo' ? 'cob-aviso--grave' : ''}">${escCob(ch.duplicado.texto)}</div>`
         : ''
 
       return `
@@ -3507,7 +3528,7 @@
               <button type="button" class="cob-btn cob-btn--chico" data-tit-agregar="${escCob(ch.id)}">+ Agregar titular</button>
             </div>
 
-            ${errores.length ? `<div class="cob-aviso cob-aviso--alerta">${errores.map(escCob).join('<br>')}</div>` : ''}
+            ${errores.length ? `<div class="cob-aviso cob-aviso--grave">${errores.map(escCob).join('<br>')}</div>` : ''}
 
             <div class="cob-acciones">
               <button type="button" class="cob-btn cob-btn--primario" data-confirmar-cheque="${escCob(ch.id)}"
@@ -3807,7 +3828,9 @@
       const todo = motivos.concat(extra)
       caja.hidden = todo.length === 0
       if (todo.length) caja.innerHTML = todo.map(escCob).join('<br>')
-      caja.className = motivos.length ? 'cob-aviso cob-aviso--ambar' : 'cob-aviso'
+      // Lo que falta para guardar INFORMA (falta un dato, no hay uno mal): neutro
+      // siempre. Antes se pintaba ámbar cuando faltaba algo.
+      caja.className = 'cob-aviso'
     }
 
     // ── Guardado ──────────────────────────────────────────────────────────
