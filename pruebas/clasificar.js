@@ -128,7 +128,7 @@ const SEGURAS = [
   ['ch.titulares.length', 'número: largo del array'],
   // HTML ya armado y escapado más arriba en la misma función
   ['aviso', 'HTML ya escapado: se arma arriba con escCob(benef)'],
-  ['avisos', 'HTML ya escapado: se arma arriba con escCob(foto.error)'],
+  ['avisos', 'HTML armado arriba por htmlAvisoFoto(), que escapa adentro'],
   ['avisoMoneda', 'HTML constante del código'],
   ['avisoCmc7', 'HTML constante del código'],
   ['avisoCmc7Distinta', 'HTML constante del código'],

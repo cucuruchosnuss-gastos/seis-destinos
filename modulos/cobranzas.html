@@ -2065,6 +2065,8 @@
       document.getElementById('cob-vista-cheques').hidden = id !== 'cheques'
       document.getElementById('cob-vista-detalle').hidden = id !== 'detalle'
       document.getElementById('cob-vista-form').hidden = id !== 'form'
+      // Fuera del formulario no hay fotos que reintentar ni contador que mover.
+      if (id !== 'form') detenerReintentosFotos()
       // Las pestañas, solo en las dos vistas de lista.
       document.getElementById('cob-pestanas').hidden = !(id === 'listado' || id === 'cheques')
       document.getElementById('cob-pestana-listado').classList.toggle('cob-pestana--activa', id === 'listado')
@@ -2755,6 +2757,36 @@
       }
     }
 
+    // ── Estado de cada foto mientras se sube y se lee ─────────────────────
+    //
+    // Lo que dice la pantalla sobre una foto sale de estas marcas, que viven
+    // SOLO EN MEMORIA: enCurso (hay un procesarFoto trabajando sobre ella),
+    // fase ('subiendo' | 'leyendo'), leyendoDesde (cuándo empezó la lectura),
+    // errorRed (el último intento falló por falta de red) e intentosLector.
+    //
+    // Van como propiedades NO ENUMERABLES y eso es lo que las deja fuera del
+    // borrador: guardarBorrador() manda el objeto entero a IndexedDB, y el
+    // clonado estructurado copia solo las propiedades enumerables. Si enCurso
+    // se guardara y la página se cerrara a mitad de una lectura, al reabrirla
+    // la foto quedaría marcada "en curso" para siempre y no se leería nunca.
+    function marcarFotoEnMemoria(foto, cambios) {
+      for (const [clave, valor] of Object.entries(cambios)) {
+        Object.defineProperty(foto, clave, { value: valor, writable: true, configurable: true, enumerable: false })
+      }
+    }
+
+    // La lectura con IA tarda de verdad (30-40 s es lo normal): el contador
+    // está para que nadie crea que se colgó. Pasado este tope se avisa, pero
+    // NO se cancela — una lectura lenta que termina vale más que una cortada.
+    const SEGUNDOS_LECTURA_LENTA = 90
+    // Con el formulario abierto, las fotos que no se pudieron leer se
+    // reintentan cada tanto y al volver la señal. El sincronizador de fondo
+    // saltea el formulario abierto, así que sin esto nadie las reintentaría.
+    const MS_REINTENTO_FOTOS = 30000
+    // Un error DEL LECTOR (no de red) se reintenta pocas veces: cada intento es
+    // una llamada paga al modelo, y un error que se repite no se arregla solo.
+    const MAX_INTENTOS_LECTOR = 3
+
     // Subida + OCR de UNA foto. Cada mitad con su propio guard y su propio
     // mensaje: sin señal la subida falla y la foto queda pendiente, que es un
     // estado normal y no un error de la persona.
@@ -2763,66 +2795,144 @@
       if (!f) return
       const foto = f.fotos.find(x => x.id === fotoId)
       if (!foto || foto.leida) return
+      // DOS procesarFoto a la vez sobre la misma foto agregarían sus cheques
+      // DOS VECES (los disparan la foto nueva, el reintento de 30 s y el evento
+      // 'online'). La marca se libera en el finally, pase lo que pase.
+      if (foto.enCurso) return
 
       if (!navigator.onLine) {
         foto.error = null
-        pintarFormulario()
+        pintarEstadoFotos()
         return
       }
 
-      if (!foto.subida) {
-        try {
-          const { error } = await supabase.storage.from('cobranzas')
-            .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
-          if (error) {
-            // Si el archivo YA existe es porque un intento anterior sí subió y
-            // no llegamos a marcarlo: tomarlo como subido evita reintentar para
-            // siempre una foto que ya está.
-            const yaEstaba = /exist/i.test(error.message ?? '')
-            if (!yaEstaba) throw error
+      marcarFotoEnMemoria(foto, { enCurso: true, errorRed: false })
+      let leyoCheques = false
+      try {
+        if (!foto.subida) {
+          marcarFotoEnMemoria(foto, { fase: 'subiendo' })
+          pintarEstadoFotos()
+          try {
+            const { error } = await supabase.storage.from('cobranzas')
+              .upload(foto.storage_path, foto.blob, { contentType: 'image/jpeg', upsert: false })
+            if (error) {
+              // Si el archivo YA existe es porque un intento anterior sí subió y
+              // no llegamos a marcarlo: tomarlo como subido evita reintentar para
+              // siempre una foto que ya está.
+              const yaEstaba = /exist/i.test(error.message ?? '')
+              if (!yaEstaba) throw error
+            }
+            foto.subida = true
+            foto.error = null
+            await guardarBorrador()
+          } catch (err) {
+            console.error('No se pudo subir la foto:', err)
+            if (esErrorDeRed(err)) {
+              // Falta de señal: no es un error de nadie, y el aviso lo dice.
+              foto.error = null
+              marcarFotoEnMemoria(foto, { errorRed: true })
+            } else {
+              foto.error = `No se pudo subir la foto (${err?.message || 'error desconocido'}). Se reintenta sola.`
+            }
+            return
           }
-          foto.subida = true
-          foto.error = null
+        }
+
+        marcarFotoEnMemoria(foto, { fase: 'leyendo', leyendoDesde: Date.now() })
+        pintarEstadoFotos()
+        try {
+          const { data, error } = await supabase.functions.invoke('ocr-cheques', {
+            body: { storage_path: foto.storage_path },
+          })
+          // La función devuelve sus errores con HTTP 200 y ok:false, así que
+          // mirar solo `error` dejaría pasar "no se detectó ningún cheque" como
+          // si hubiera salido bien.
+          if (error) throw error
+          foto.leida = true
+          foto.ocr_modelo = data?.modelo ?? null
+          foto.ocr_crudo = data?.crudo ?? null
+
+          if (!data?.ok) {
+            foto.error = data?.mensaje || 'No se pudo leer la foto. Cargá los cheques a mano.'
+          } else {
+            foto.error = null
+            const propuestos = Array.isArray(data.cheques) ? data.cheques : []
+            propuestos.forEach(p => f.cheques.push(chequeDesdeOcr(p, foto.id)))
+            // Que el modelo diga "hay 4" y devuelva 3 es una señal de que se le
+            // escapó uno: se avisa para que la persona lo agregue a mano.
+            const declarada = data.cantidad_declarada
+            if (typeof declarada === 'number' && declarada !== propuestos.length) {
+              foto.error = `El lector dice que hay ${declarada} cheques en esta foto y pudo leer ${propuestos.length}. Revisá y agregá el que falte a mano.`
+            }
+          }
+          leyoCheques = true
           await guardarBorrador()
         } catch (err) {
-          console.error('No se pudo subir la foto:', err)
-          foto.error = 'No se pudo subir. Se reintenta cuando haya señal.'
-          pintarFormulario()
-          return
-        }
-      }
-
-      try {
-        const { data, error } = await supabase.functions.invoke('ocr-cheques', {
-          body: { storage_path: foto.storage_path },
-        })
-        // La función devuelve sus errores con HTTP 200 y ok:false, así que
-        // mirar solo `error` dejaría pasar "no se detectó ningún cheque" como
-        // si hubiera salido bien.
-        if (error) throw error
-        foto.leida = true
-        foto.ocr_modelo = data?.modelo ?? null
-        foto.ocr_crudo = data?.crudo ?? null
-
-        if (!data?.ok) {
-          foto.error = data?.mensaje || 'No se pudo leer la foto. Cargá los cheques a mano.'
-        } else {
-          foto.error = null
-          const propuestos = Array.isArray(data.cheques) ? data.cheques : []
-          propuestos.forEach(p => f.cheques.push(chequeDesdeOcr(p, foto.id)))
-          // Que el modelo diga "hay 4" y devuelva 3 es una señal de que se le
-          // escapó uno: se avisa para que la persona lo agregue a mano.
-          const declarada = data.cantidad_declarada
-          if (typeof declarada === 'number' && declarada !== propuestos.length) {
-            foto.error = `El lector dice que hay ${declarada} cheques en esta foto y pudo leer ${propuestos.length}. Revisá y agregá el que falte a mano.`
+          console.error('Falló el OCR de la foto:', err)
+          // supabase-js envuelve la caída de red en un FunctionsFetchError cuyo
+          // mensaje no dice "fetch": el error original viaja en .context.
+          if (esErrorDeRed(err) || esErrorDeRed(err?.context)) {
+            foto.error = null
+            marcarFotoEnMemoria(foto, { errorRed: true })
+          } else {
+            const intentos = (foto.intentosLector ?? 0) + 1
+            marcarFotoEnMemoria(foto, { intentosLector: intentos })
+            const detalle = await mensajeDelLector(err)
+            foto.error = `El lector no pudo leer la foto: ${detalle}. ` +
+              (intentos < MAX_INTENTOS_LECTOR ? 'Se reintenta sola, o cargá los cheques a mano.' : 'Cargá los cheques a mano.')
           }
         }
-        await guardarBorrador()
-        pintarFormulario()
-      } catch (err) {
-        console.error('Falló el OCR de la foto:', err)
-        foto.error = 'No se pudo leer la foto todavía. Se reintenta cuando haya señal, o cargá los cheques a mano.'
-        pintarFormulario()
+      } finally {
+        marcarFotoEnMemoria(foto, { enCurso: false, fase: null, leyendoDesde: null })
+        if (leyoCheques) pintarFormulario()
+        else pintarEstadoFotos()
+      }
+    }
+
+    // El mensaje que la Edge Function redactó, si vino; si no, el del error.
+    async function mensajeDelLector(err) {
+      try {
+        const cuerpo = typeof err?.context?.json === 'function' ? await err.context.json() : null
+        if (cuerpo?.mensaje) return String(cuerpo.mensaje)
+      } catch { /* el cuerpo no era JSON: se usa el mensaje del error */ }
+      return err?.message || 'error desconocido'
+    }
+
+    // ── Reintentos con el formulario abierto ──────────────────────────────
+    //
+    // Arrancan al pintar el formulario y se detienen al salir de esa vista
+    // (mostrarVistaCob): un solo intervalo y un solo listener, nunca dos. No se
+    // toca el sincronizador de fondo: esto cubre justo lo que él saltea.
+    let reintentoFotos = null
+
+    function iniciarReintentosFotos() {
+      if (reintentoFotos) return
+      const reintentar = () => reintentarFotosPendientes()
+      reintentoFotos = { intervalo: setInterval(reintentar, MS_REINTENTO_FOTOS), reintentar }
+      window.addEventListener('online', reintentar)
+    }
+
+    function detenerReintentosFotos() {
+      detenerContadorLecturas()
+      if (!reintentoFotos) return
+      clearInterval(reintentoFotos.intervalo)
+      window.removeEventListener('online', reintentoFotos.reintentar)
+      reintentoFotos = null
+    }
+
+    function reintentarFotosPendientes() {
+      const f = estado.form
+      if (!f) { detenerReintentosFotos(); return }
+      // Si el sincronizador está corriendo puede estar justo sobre este
+      // borrador (lo tomó antes de que se abriera): se espera al próximo turno
+      // para no leer la misma foto dos veces.
+      if (estado.sincronizando) return
+      if (!navigator.onLine) { pintarEstadoFotos(); return }
+      for (const foto of f.fotos) {
+        if (foto.leida || foto.enCurso) continue
+        if ((foto.intentosLector ?? 0) >= MAX_INTENTOS_LECTOR) continue
+        if (!foto.subida && !foto.blob) continue
+        procesarFoto(foto.id)
       }
     }
 
@@ -2912,38 +3022,26 @@
       pintarEstadoFotos()
       pintarCheques()
       pintarTotalYGuardado()
+      // Con el formulario en pantalla, las fotos pendientes se reintentan
+      // solas. Idempotente: si ya estaban corriendo, no arranca otro.
+      iniciarReintentosFotos()
     }
 
     function pintarEstadoFotos() {
       const f = estado.form
+      if (!f) return
       const cont = document.getElementById('cob-fotos-estado')
-      if (!f.fotos.length) { cont.innerHTML = ''; return }
+      if (!f.fotos.length) { cont.innerHTML = ''; asegurarContadorLecturas(); return }
 
-      const avisos = f.fotos.map((foto, i) => {
-        const chequesDeLaFoto = f.cheques.filter(c => c.foto_id === foto.id).length
-        if (foto.error) {
-          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: ${escCob(foto.error)}</div>`
-        }
-        if (!foto.subida) {
-          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: guardada en el celular. Se va a leer cuando vuelva la señal.</div>`
-        }
-        if (!foto.leida) {
-          return `<div class="cob-aviso">Foto ${i + 1}: leyendo los cheques…</div>`
-        }
-        if (chequesDeLaFoto === 0) {
-          // Una foto sin cheques no suma nada y al guardar se descarta: hay que
-          // decirlo ANTES, no después.
-          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: no quedó ningún cheque. Agregalo a mano o la foto se descarta al guardar.</div>`
-        }
-        return ''
-      }).filter(Boolean).join('')
+      const ahora = Date.now()
+      const avisos = f.fotos.map((foto, i) => htmlAvisoFoto(foto, i, f, ahora)).join('')
 
       cont.innerHTML = `
         <div class="cob-fotos" style="margin:.75rem 0">
           ${f.fotos.map((foto, i) => `
             <div class="cob-foto">
               <img data-foto-form="${escCob(foto.id)}" alt="Foto ${i + 1}">
-              <div class="cob-foto__pie">Foto ${i + 1}</div>
+              <div class="cob-foto__pie">Foto ${i + 1}${fotoLeidaSinProblemas(foto, f) ? ' ✓' : ''}</div>
             </div>`).join('')}
         </div>${avisos}`
 
@@ -2952,6 +3050,95 @@
         const url = await urlDeFoto(foto)
         if (url) img.src = url
         img.addEventListener('click', () => abrirVisor(foto, 'Foto de los cheques'))
+      })
+
+      // El contador de la lectura lo decide ESTE render: si ya no queda
+      // ninguna foto leyendo, se apaga acá mismo.
+      asegurarContadorLecturas()
+    }
+
+    function fotoLeidaSinProblemas(foto, f) {
+      return !!foto.leida && !foto.error && f.cheques.some(c => c.foto_id === foto.id)
+    }
+
+    // "Sin señal" se dice SOLO cuando lo es: el celular avisa que no hay red,
+    // o el último intento falló por red (esErrorDeRed). Una subida normal en
+    // curso NO es falta de señal, y decirlo manda a la persona a buscar señal
+    // que ya tiene.
+    function fotoSinSenal(foto) {
+      return !navigator.onLine || !!foto.errorRed
+    }
+
+    function textoLecturaFoto(segundos) {
+      const s = Math.max(0, Math.floor(segundos))
+      const base = `Leyendo los cheques con IA… puede tardar hasta un minuto (${s} s).`
+      return s > SEGUNDOS_LECTURA_LENTA
+        ? `${base} Está tardando más de lo normal. Podés seguir cargando; se completa sola.`
+        : base
+    }
+
+    function textoChequesLeidos(n) {
+      return n === 1 ? '✓ 1 cheque leído' : `✓ ${n} cheques leídos`
+    }
+
+    function htmlAvisoFoto(foto, i, f, ahora) {
+      const chequesDeLaFoto = f.cheques.filter(c => c.foto_id === foto.id).length
+      if (foto.enCurso && foto.fase === 'subiendo') {
+        return `<div class="cob-aviso">Foto ${i + 1}: Subiendo la foto…</div>`
+      }
+      if (foto.enCurso && foto.fase === 'leyendo') {
+        const segundos = (ahora - (foto.leyendoDesde ?? ahora)) / 1000
+        return `<div class="cob-aviso">Foto ${i + 1}: <span data-lectura-foto="${escCob(foto.id)}">${escCob(textoLecturaFoto(segundos))}</span></div>`
+      }
+      if (foto.error) {
+        return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: ${escCob(foto.error)}</div>`
+      }
+      if (!foto.leida) {
+        if (fotoSinSenal(foto)) {
+          return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: sin señal. Quedó guardada en el celular y se lee sola cuando vuelva la señal.</div>`
+        }
+        return `<div class="cob-aviso">Foto ${i + 1}: ${foto.subida ? 'subida, falta leer los cheques.' : 'falta subirla.'} Se reintenta sola en unos segundos.</div>`
+      }
+      if (chequesDeLaFoto === 0) {
+        // Una foto sin cheques no suma nada y al guardar se descarta: hay que
+        // decirlo ANTES, no después.
+        return `<div class="cob-aviso cob-aviso--ambar">Foto ${i + 1}: no quedó ningún cheque. Agregalo a mano o la foto se descarta al guardar.</div>`
+      }
+      return `<div class="cob-aviso cob-aviso--oliva">Foto ${i + 1}: ${escCob(textoChequesLeidos(chequesDeLaFoto))}</div>`
+    }
+
+    // ── Contador de la lectura ────────────────────────────────────────────
+    //
+    // UN SOLO intervalo para todas las fotos, que se apaga cuando no queda
+    // ninguna leyendo. Cada segundo cambia solo el texto del contador —con
+    // textContent— y no vuelve a dibujar las miniaturas.
+    let contadorLecturas = null
+
+    function hayFotosLeyendo() {
+      const f = estado.form
+      return !!f && f.fotos.some(x => x.enCurso && x.fase === 'leyendo')
+    }
+
+    function asegurarContadorLecturas() {
+      if (!hayFotosLeyendo()) { detenerContadorLecturas(); return }
+      if (contadorLecturas) return
+      contadorLecturas = setInterval(tickLecturas, 1000)
+    }
+
+    function detenerContadorLecturas() {
+      if (!contadorLecturas) return
+      clearInterval(contadorLecturas)
+      contadorLecturas = null
+    }
+
+    function tickLecturas() {
+      if (!hayFotosLeyendo()) { detenerContadorLecturas(); return }
+      const ahora = Date.now()
+      const fotos = estado.form.fotos
+      document.querySelectorAll('[data-lectura-foto]').forEach((el) => {
+        const foto = fotos.find(x => x.id === el.dataset.lecturaFoto)
+        if (!foto || !foto.enCurso || foto.fase !== 'leyendo') return
+        el.textContent = textoLecturaFoto((ahora - (foto.leyendoDesde ?? ahora)) / 1000)
       })
     }
 

@@ -83,6 +83,23 @@ Cubren **los renders nuevos del circuito, no el archivo entero**: el chequeo est
 
 `construirCon()` de `sandbox.js` y las opciones `{ escape, seguras, segurasRegex }` de `clasificar()` existen para esto; sin opciones, las dos hacen lo mismo que antes para Cobranzas.
 
+## Los estados de las fotos al cargar una cobranza
+
+```bash
+node pruebas/test-cobranzas-fotos.js
+node pruebas/mut-cobranzas-fotos.js
+```
+
+EJECUTA `procesarFoto`, el render de cada estado (`htmlAvisoFoto` / `pintarEstadoFotos`), el contador de la lectura y los reintentos con el formulario abierto, con **timers falsos, un `Date.now` controlado, un `window` con listeners contables y un supabase falso** cuyas respuestas (subida, OCR) se resuelven desde la suite con promesas diferidas. Lo que afirma:
+
+- con señal y una subida en curso, la palabra "señal" **no aparece**; solo aparece sin red o con un error clasificado como de red (`esErrorDeRed`);
+- dos `procesarFoto` a la vez sobre la misma foto llaman **una** vez al OCR y no duplican los cheques, y la marca `enCurso` se libera aunque la subida o el OCR fallen;
+- el intervalo del contador se apaga cuando no queda ninguna foto leyendo, y el aviso de más de 90 s aparece sin cancelar la lectura;
+- las marcas en memoria (`enCurso`, `fase`, `leyendoDesde`, `errorRed`, `intentosLector`) **no llegan al borrador**: `dbGuardar` falso clona con `structuredClone`, que es el mismo algoritmo que usa IndexedDB;
+- con el formulario abierto se reintenta en `'online'` y cada 30 s, y todo se limpia al salir del formulario.
+
+El runner saca cada `escCob()` de `htmlAvisoFoto()` —dos son equivalentes declaradas, con su motivo— y aplica mutaciones de comportamiento de a una.
+
 ## Qué NO va acá
 
 Archivos de un solo uso: scripts que aplican una edición, generadores de vistas para mirar en el navegador, volcados intermedios. Esos siguen viviendo en el scratchpad de la sesión. Acá va lo que tiene que poder volver a correrse dentro de seis meses.

@@ -12,7 +12,9 @@ const FUNCIONES = [
   'htmlFilaCobranza', 'htmlDetalle', 'htmlChequeDetalle', 'htmlAccionesDetalle',
   'htmlHistorial', 'resumirCambios', 'htmlTarjetaCheque', 'chequeParaBase',
   'textoOpcional', 'origenDatosDe', 'estadoRenglon', 'aplicarRenglones', 'chequeVacio',
-  'pintarEstadoFotos', 'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores',
+  'pintarEstadoFotos', 'htmlAvisoFoto', 'fotoLeidaSinProblemas', 'fotoSinSenal', 'textoLecturaFoto',
+  'textoChequesLeidos', 'hayFotosLeyendo', 'asegurarContadorLecturas', 'detenerContadorLecturas', 'tickLecturas',
+  'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores',
   'pintarTotalYGuardado', 'motivosParaNoGuardar', 'efectivoDelFormulario', 'totalDelFormulario',
   'renglonComoImpreso', 'chequeDesdeBase', 'chequeDesdeOcr',
   // Vista de cheques
@@ -32,7 +34,7 @@ const CONSTANTES = [
   'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ESTADOS_COBRANZA',
   'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
   'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO', 'ESTADOS_FILTRO_CHEQUES', 'ETIQUETA_ESTADO_CHEQUE',
-  'LARGO_MAXIMO_DESTINO',
+  'LARGO_MAXIMO_DESTINO', 'SEGUNDOS_LECTURA_LENTA',
 ]
 
 const PRELUDIO = `
@@ -56,6 +58,9 @@ const PRELUDIO = `
   }
   var window = { scrollTo(){}, confirm: () => true, prompt: () => null }
   var navigator = { onLine: true }
+  // El contador de la lectura de fotos es un let del módulo: extraerConst
+  // solo toma const, así que se declara acá.
+  var contadorLecturas = null
 
   // --- dependencias externas, stubeadas --------------------------------
   var __repartidoresFalsos = []
