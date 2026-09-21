@@ -629,6 +629,52 @@
     .fila-movimiento__monto--deuda { color: var(--color-texto); }
     .fila-movimiento__monto--reduce { color: #1E8C4A; }
 
+    /* ── Descargas sin importe ─────────────────────────────────────────────
+       Una factura en 'sin_importe' (una descarga sin comprobante cargada por
+       Ingreso) NO entra a ningún saldo: v_saldo_proveedor suma pendiente y
+       parcial. El saldo que se muestra queda incompleto y la pantalla lo dice
+       en rojo, al lado. Con fondo propio para que se lea también sobre la
+       tarjeta navy del resumen. */
+    .sin-importe-cc {
+      display: inline-block;
+      margin-top: 0.25rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 999px;
+      background: #FDECEC;
+      color: #B91C1C;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .fila-movimiento--sin-importe { border-color: rgba(185,28,28,0.35); }
+    .fila-movimiento__monto--falta { color: #B91C1C; font-weight: 700; white-space: nowrap; }
+    .fila-movimiento__cantidades { font-size: 0.8125rem; color: var(--color-texto); margin-top: 0.25rem; overflow-wrap: anywhere; }
+    .fila-movimiento__aviso { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.25rem; overflow-wrap: anywhere; }
+    .badge-estado-factura--sin_importe { background: #FDECEC; color: #B91C1C; }
+    .cargar-importe-cc {
+      margin-top: 0.625rem;
+      padding: 0.75rem;
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      background: var(--color-superficie);
+      min-width: 0;
+    }
+    .cargar-importe-cc__modos { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.8125rem; margin-bottom: 0.5rem; }
+    .cargar-importe-cc__modos label { display: flex; gap: 0.375rem; align-items: flex-start; cursor: pointer; overflow-wrap: anywhere; }
+    .cargar-importe-cc input[type="text"] {
+      width: 100%; box-sizing: border-box; height: 42px; padding: 0 0.75rem;
+      border: 1px solid var(--color-borde); border-radius: 10px; font-family: var(--fuente); font-size: 0.9375rem;
+    }
+    .cargar-importe-cc__total { font-size: 0.8125rem; font-weight: 700; margin-top: 0.375rem; }
+    .cargar-importe-cc__error { font-size: 0.8125rem; color: #B91C1C; margin-top: 0.375rem; overflow-wrap: anywhere; }
+    .cargar-importe-cc__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.625rem; }
+    .cargar-importe-cc__acciones .btn { width: auto; flex: 1 1 8rem; margin: 0; }
+    .remitos-cc { margin-top: 1.5rem; }
+    .remitos-cc__desc { font-size: 0.78125rem; color: var(--color-texto-suave); margin: 0.25rem 0 0.5rem; }
+    .remito-cc { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 0; border-top: 1px solid var(--color-borde); font-size: 0.8125rem; min-width: 0; }
+    .remito-cc__info { min-width: 0; overflow-wrap: anywhere; }
+    .remito-cc__items { color: var(--color-texto-suave); white-space: nowrap; }
+
 
     /* ── Modales (mismo patrón bottom-sheet que ya usan caja.html/gastos.html) */
 
@@ -1105,6 +1151,10 @@
         <div class="estado-vacio__icono">📄</div>
         <div class="estado-vacio__titulo">Sin movimientos todavía</div>
       </div>
+
+      <!-- Remitos de este proveedor que todavía no tienen factura
+           (remitos_sin_facturar). Informativo: NO suma al saldo. -->
+      <div id="ficha-remitos-sin-facturar"></div>
     </div>
   </div><!-- /vista-ficha -->
 
@@ -1460,7 +1510,7 @@
     const TIPO_MOVIMIENTO_LABEL = { factura: 'Factura', pago: 'Pago', credito_aplicado: 'Crédito aplicado', interes: 'Interés' }
     // Estados de facturas_pendientes que llevan badge. 'anulada' no está a
     // propósito: esas facturas no aparecen en v_cuenta_corriente_movimientos.
-    const ESTADO_FACTURA_LABEL = { pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada' }
+    const ESTADO_FACTURA_LABEL = { pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada', sin_importe: 'Falta importe' }
     const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']
 
     // Selector "Ordenar" de Movimientos (ficha) — se aplica del lado del
@@ -1502,6 +1552,10 @@
       estadoPorFacturaHistorial: {},
       historialCargadoUnaVez: false,
       ficha: null,        // { proveedorId, unidadId, nombre }
+      // Facturas en 'sin_importe' (id, proveedor_id, unidad_negocio_id,
+      // moneda): descargas sin comprobante que Ingreso cargó sin precio. No
+      // entran a ningún saldo, así que se cuentan aparte para decirlo.
+      sinImporte: [],
       fichaSaldos: [],     // filas de v_saldo_proveedor para este proveedor+unidad (todas las monedas)
       fichaCreditos: [],
     }
@@ -1770,6 +1824,9 @@
         document.querySelector('.tabs-cc__opcion[data-tab="pendientes"]').hidden = true
       }
 
+      // ANTES que los saldos: cargarSaldos() las necesita para sumar a la lista
+      // los proveedores que solo tienen descargas sin importe.
+      await cargarSinImporte()
       const cargas = [cargarSinProveedor()]
       if (tieneTarea('cuentas_corrientes', 'ver_todo')) cargas.push(cargarSaldos())
       if (tieneTarea('cuentas_corrientes', 'aprobar_rechazar_proveedor')) cargas.push(cargarContadorPendientes())
@@ -1820,10 +1877,24 @@
         return
       }
 
-      let grupos = agruparSaldosPorProveedorUnidad(data ?? [])
+      // Un proveedor que SOLO tiene descargas sin importe no aparece en
+      // v_saldo_proveedor (esa vista suma pendiente y parcial). Se le arma un
+      // grupo vacío para que la lista de trabajo lo muestre igual: es alguien
+      // a quien se le debe algo que todavía no tiene precio.
+      const filasSaldo = [...(data ?? [])]
+      const claves = new Set(filasSaldo.map(f => `${f.proveedor_id}__${f.unidad_negocio_id}`))
+      for (const f of estado.sinImporte) {
+        if (estado.filtros.proveedores.unidadId && f.unidad_negocio_id !== estado.filtros.proveedores.unidadId) continue
+        const clave = `${f.proveedor_id}__${f.unidad_negocio_id}`
+        if (claves.has(clave)) continue
+        claves.add(clave)
+        filasSaldo.push({ proveedor_id: f.proveedor_id, unidad_negocio_id: f.unidad_negocio_id, moneda: f.moneda, deuda_pendiente: 0, credito_disponible: 0 })
+      }
+
+      let grupos = agruparSaldosPorProveedorUnidad(filasSaldo)
         .map(g => ({ ...g, proveedor: estado.maestros.proveedores.find(p => p.id === g.proveedor_id) }))
         .filter(g => g.proveedor) // oculta proveedores no aprobados/inactivos
-        .filter(g => g.saldos.some(s => s.deuda > 0 || s.credito > 0))
+        .filter(g => g.saldos.some(s => s.deuda > 0 || s.credito > 0) || contarSinImporte(g.proveedor_id, g.unidad_negocio_id) > 0)
 
       const termino = estado.filtros.proveedores.busqueda.trim().toLowerCase()
       if (termino) grupos = grupos.filter(g => g.proveedor.razon_social.toLowerCase().includes(termino))
@@ -1870,8 +1941,11 @@
         }).join('') || `
           <div class="proveedor-cc__saldo">
             <div class="proveedor-cc__etiqueta">Debe</div>
-            <div class="proveedor-cc__monto">$ 0,00</div>
+            <div class="proveedor-cc__monto">—</div>
           </div>`
+        // Sin saldo conocido NO se dice "$ 0,00": si hay descargas sin
+        // importe, se debe algo que todavía no tiene precio.
+        const sinImporteHtml = htmlSinImporte(contarSinImporte(g.proveedor_id, g.unidad_negocio_id))
 
         return `
           <div class="tarjeta-lista" data-proveedor="${esc(g.proveedor_id)}" data-unidad="${esc(g.unidad_negocio_id)}">
@@ -1882,6 +1956,7 @@
             </div>
             <div class="proveedor-cc__derecha">
               ${saldosHtml}
+              ${sinImporteHtml}
               <button type="button" class="btn btn-ver-cuenta" data-proveedor="${esc(g.proveedor_id)}" data-unidad="${esc(g.unidad_negocio_id)}" data-nombre="${esc(g.proveedor.razon_social)}">Ver cuenta</button>
             </div>
           </div>
@@ -1924,6 +1999,10 @@
           <div class="resumen-cc-card__monto resumen-cc-card__monto--favor${i > 0 ? ' resumen-cc-card__monto--secundaria' : ''}">${formatearImporteCentavosSuaves(porMoneda[m].credito, m)}</div>
         `).join('')
       }
+
+      // El total a pagar no incluye las descargas sin importe: se dice al lado.
+      const sinImporte = estado.listaSaldos.reduce((n, g) => n + contarSinImporte(g.proveedor_id, g.unidad_negocio_id), 0)
+      if (sinImporte) contDeuda.innerHTML += htmlSinImporte(sinImporte)
 
       document.getElementById('resumen-cc-proveedores').textContent = `${estado.listaSaldos.length} activos`
     }
@@ -2373,6 +2452,8 @@
         const lineas = [...(estado.padronSaldos.get(p.id)?.entries() ?? [])]
           .map(([moneda, s]) => ({ moneda, neto: s.deuda - s.credito }))
           .filter(l => Math.abs(l.neto) >= 0.005)
+        // Descargas sin importe en todas sus unidades: el saldo no las incluye.
+        const sinImporte = contarSinImporte(p.id)
         const multiMoneda = lineas.length > 1
 
         const saldoHtml = lineas.length
@@ -2394,7 +2475,7 @@
           : `
             <div class="proveedor-cc__saldo">
               <div class="proveedor-cc__etiqueta">Saldo</div>
-              <div class="proveedor-cc__monto">$ 0,00</div>
+              <div class="proveedor-cc__monto">${sinImporte ? '—' : '$ 0,00'}</div>
             </div>`
 
         return `
@@ -2406,6 +2487,7 @@
             </div>
             <div class="proveedor-cc__derecha">
               ${saldoHtml}
+              ${htmlSinImporte(sinImporte)}
               ${puedeEditar ? `<button type="button" class="btn-icono-accion btn-editar-padron" data-id="${esc(p.id)}" title="Editar" aria-label="Editar proveedor">✏️</button>` : ''}
             </div>
           </div>
@@ -2822,6 +2904,10 @@
       listaEl.innerHTML = estado.listaHistorial.map(m => {
         const monto = Number(m.monto) || 0
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
+        // Una descarga sin importe trae monto null: no es $0, es "falta".
+        const montoHtml = m.monto == null
+          ? '<div class="fila-movimiento__monto fila-movimiento__monto--falta">Falta importe</div>'
+          : `<div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>`
         const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
         const referencia = m.referencia || ''
         const badgeEstado = m.tipo === 'factura'
@@ -2834,7 +2920,7 @@
               <div class="fila-movimiento__referencia">${esc(m.proveedorNombre)}${referencia ? ` — ${esc(referencia)}` : ''}${badgeEstado}</div>
               <div class="fila-movimiento__fecha">${esc(unidadNombre)} · ${formatearFecha(m.fecha)}</div>
             </div>
-            <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>
+            ${montoHtml}
           </div>
         `
       }).join('')
@@ -2851,7 +2937,8 @@
         'Fecha':      formatearFecha(m.fecha),
         'Tipo':       TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo,
         'Referencia': m.referencia || '',
-        'Monto':      Number(m.monto) || 0,
+        // Vacío y no 0: una descarga sin importe no vale cero.
+        'Monto':      m.monto == null ? '' : Number(m.monto),
         'Moneda':     m.moneda || '',
       }))
       const hoja = XLSX.utils.json_to_sheet(filas)
@@ -2899,7 +2986,7 @@
         .filter(Boolean)
       renderizarSelectorUnidadFicha()
 
-      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos()])
       renderizarFichaBanner()
     }
 
@@ -2977,12 +3064,19 @@
         </div>
         ${todas ? `<div class="banner-ficha-cc__ayuda">Elegí una unidad de negocio para registrar un pago</div>` : ''}`
 
+      // Las descargas sin importe no entran al saldo: se cuentan y se dice.
+      const sinImporte = contarSinImporte(estado.ficha.proveedorId, estado.ficha.unidadId)
+      const avisoSinImporte = sinImporte
+        ? `${htmlSinImporte(sinImporte)}<div class="banner-ficha-cc__ayuda">Este saldo está incompleto: no incluye las descargas que todavía no tienen precio.</div>`
+        : ''
+
       if (!monedasConSaldo.length) {
         cont.innerHTML = `
           <div class="banner-ficha-cc">
             <div>
               <div class="banner-ficha-cc__etiqueta">Saldo</div>
-              <div class="banner-ficha-cc__monto">$ 0,00</div>
+              <div class="banner-ficha-cc__monto">${sinImporte ? '—' : '$ 0,00'}</div>
+              ${avisoSinImporte}
             </div>
             ${acciones}
           </div>`
@@ -2999,6 +3093,7 @@
                 ${todas ? `<div class="banner-ficha-cc__unidad">${esc(nombreUnidad(s.unidad_negocio_id))}</div>` : ''}
                 <div class="banner-ficha-cc__etiqueta">${etiqueta}</div>
                 <div class="banner-ficha-cc__monto">${importeHtml(monto, s.moneda)}</div>
+                ${i === 0 ? avisoSinImporte : ''}
               </div>
               ${i === 0 ? acciones : ''}
             </div>`
@@ -3042,10 +3137,16 @@
         estadoPorFactura = Object.fromEntries((facturas ?? []).map(f => [f.id, f.estado]))
       }
 
+      // Las cantidades del ingreso vinculado a cada descarga sin importe: es lo
+      // único que hay para ponerle precio.
+      const idsSinImporte = idsFactura.filter(id => estadoPorFactura[id] === 'sin_importe')
+      const cantidades = idsSinImporte.length ? await cargarCantidadesSinImporte(idsSinImporte) : new Map()
+
       cargandoEl.hidden = true
 
       estado.ficha.movimientosRaw   = data ?? []
       estado.ficha.estadoPorFactura = estadoPorFactura
+      estado.ficha.cantidadesSinImporte = cantidades
       renderizarFichaMovimientos()
     }
 
@@ -3077,6 +3178,16 @@
       vacioEl.hidden = true
 
       listaEl.innerHTML = filas.map(m => {
+        // Una descarga sin importe va por su propio render: sin monto, en
+        // rojo, con las cantidades y el botón para ponerle precio.
+        if (esSinImporte(m, estadoPorFactura)) {
+          return htmlFilaSinImporte(m, {
+            cantidades: estado.ficha.cantidadesSinImporte?.get(m.factura_pendiente_id) ?? null,
+            puedeCargar: tieneTarea('cuentas_corrientes', 'registrar_pago'),
+            form: estado.ficha.formImporte?.facturaId === m.factura_pendiente_id ? estado.ficha.formImporte : null,
+            todas,
+          })
+        }
         const monto = Number(m.monto) || 0
         const claseMonto = monto < 0 ? 'fila-movimiento__monto--reduce' : 'fila-movimiento__monto--deuda'
         const esFactura = m.tipo === 'factura' && m.factura_pendiente_id
@@ -3140,6 +3251,216 @@
           }
         })
       })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DESCARGAS SIN IMPORTE Y REMITOS SIN FACTURAR (circuito con Ingreso)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Ingreso carga en la cuenta de un proveedor con cuenta corriente las
+    // descargas SIN COMPROBANTE como facturas en estado 'sin_importe', con
+    // importe y saldo en null (registrar_factura_de_ingreso). Ninguna vista de
+    // saldo las suma, así que todo saldo que se muestra está incompleto
+    // mientras haya alguna: se dice al lado, en rojo. Nada muestra "$ 0,00"
+    // por un null.
+
+    async function cargarSinImporte() {
+      const { data, error } = await supabase
+        .from('facturas_pendientes')
+        .select('id, proveedor_id, unidad_negocio_id, moneda')
+        .eq('estado', 'sin_importe')
+      if (error) {
+        console.error('descargas sin importe:', error)
+        estado.sinImporte = []
+        mostrarError(`No se pudo saber si hay descargas sin importe, así que los saldos pueden estar incompletos sin avisarlo: ${error.message}`)
+        return
+      }
+      estado.sinImporte = data ?? []
+    }
+
+    // Cuántas descargas sin importe tiene un proveedor. Sin unidad, en todas.
+    function contarSinImporte(proveedorId, unidadId = null) {
+      return (estado.sinImporte ?? []).filter(f =>
+        f.proveedor_id === proveedorId && (!unidadId || f.unidad_negocio_id === unidadId)).length
+    }
+
+    function htmlSinImporte(n) {
+      if (!(n > 0)) return ''
+      return `<div class="sin-importe-cc" title="El saldo no las incluye: todavía no tienen precio.">+ ${n} ${n === 1 ? 'descarga' : 'descargas'} sin importe</div>`
+    }
+
+    function esSinImporte(m, estadoPorFactura) {
+      return m.tipo === 'factura' && !!m.factura_pendiente_id
+        && (m.monto == null || estadoPorFactura?.[m.factura_pendiente_id] === 'sin_importe')
+    }
+
+    // Las cantidades del ingreso vinculado a cada factura. Map facturaId ->
+    // [{ insumoId, nombre, unidad, cantidad }] agrupado por insumo. Una factura
+    // que no vuelve es que el RLS de Ingreso no deja ver ese ingreso (hace
+    // falta materia_prima:ver_todo): se dice en la fila, no se inventa nada.
+    async function cargarCantidadesSinImporte(ids) {
+      const mapa = new Map()
+      const { data, error } = await supabase
+        .from('materia_prima_ingresos')
+        .select('factura_pendiente_id, materia_prima_items(cantidad, insumo_id, insumos(nombre, unidad_medida))')
+        .in('factura_pendiente_id', ids)
+      if (error) { console.error('cantidades de descargas:', error); return mapa }
+      for (const ing of data ?? []) {
+        mapa.set(ing.factura_pendiente_id, resumenCantidades(ing.materia_prima_items ?? []))
+      }
+      return mapa
+    }
+
+    function resumenCantidades(items) {
+      const porInsumo = new Map()
+      for (const it of items) {
+        const cant = Number(it.cantidad)
+        if (it.cantidad == null || !Number.isFinite(cant)) continue
+        const previo = porInsumo.get(it.insumo_id) || { insumoId: it.insumo_id, nombre: it.insumos?.nombre || 'Producto', unidad: it.insumos?.unidad_medida || '', cantidad: 0 }
+        previo.cantidad += cant
+        porInsumo.set(it.insumo_id, previo)
+      }
+      return [...porInsumo.values()]
+    }
+
+    function textoCantidadInsumo(c) {
+      const num = Number(c.cantidad).toLocaleString('es-AR', { maximumFractionDigits: 3 })
+      return `${num} ${c.unidad} de ${c.nombre}`.replace(/\s+/g, ' ')
+    }
+
+    // El total que se va a cargar. null si el texto no es un importe > 0.
+    // Precio por unidad: solo con UN producto; se multiplica y se redondea al
+    // centavo, que es como se guarda.
+    function totalImporteFormulario(form, cantidades) {
+      const n = parseImporte(form?.texto)
+      if (n == null || !(n > 0)) return null
+      if (form.modo !== 'unidad') return n
+      if (!cantidades || cantidades.length !== 1) return null
+      return Math.round(n * cantidades[0].cantidad * 100) / 100
+    }
+
+    function htmlFilaSinImporte(m, { cantidades = null, puedeCargar = false, form = null, todas = false } = {}) {
+      const id = m.factura_pendiente_id
+      const unico = cantidades && cantidades.length === 1 ? cantidades[0] : null
+      const cantidadesHtml = cantidades && cantidades.length
+        ? `<div class="fila-movimiento__cantidades">${cantidades.map(c => esc(textoCantidadInsumo(c))).join('<br>')}</div>`
+        : cantidades
+          ? '<div class="fila-movimiento__aviso">El ingreso vinculado no tiene renglones.</div>'
+          : '<div class="fila-movimiento__aviso">No se pueden ver las cantidades de esta descarga: se ven con permiso para ver los ingresos de materia prima.</div>'
+
+      let formHtml = ''
+      if (form) {
+        const total = totalImporteFormulario(form, cantidades)
+        formHtml = `
+          <div class="cargar-importe-cc" data-id="${esc(id)}">
+            <div class="cargar-importe-cc__modos">
+              <label><input type="radio" name="modo-importe-${esc(id)}" class="modo-importe" value="total"${form.modo !== 'unidad' ? ' checked' : ''}> Total de la descarga</label>
+              ${unico ? `<label><input type="radio" name="modo-importe-${esc(id)}" class="modo-importe" value="unidad"${form.modo === 'unidad' ? ' checked' : ''}> Precio por ${esc(unico.unidad || 'unidad')} (se multiplica por ${esc(textoCantidadInsumo(unico))})</label>` : ''}
+            </div>
+            ${!unico && cantidades && cantidades.length > 1 ? '<div class="fila-movimiento__aviso">Son varios productos: cargá el total.</div>' : ''}
+            <input type="text" inputmode="decimal" class="campo-importe-sin" autocomplete="off" placeholder="0,00" value="${esc(form.texto || '')}" aria-label="Importe">
+            <div class="cargar-importe-cc__total">${total != null ? `Total a cargar: ${importeHtml(total, m.moneda)}` : 'Escribí un importe mayor a cero.'}</div>
+            ${form.error ? `<div class="cargar-importe-cc__error">${esc(form.error)}</div>` : ''}
+            <div class="cargar-importe-cc__acciones">
+              <button type="button" class="btn btn--primario btn-confirmar-importe" data-id="${esc(id)}"${form.enCurso ? ' disabled' : ''}>${form.enCurso ? 'Guardando…' : 'Guardar importe'}</button>
+              <button type="button" class="btn btn--secundario btn-cancelar-importe">Cancelar</button>
+            </div>
+          </div>`
+      }
+
+      return `
+        <div class="tarjeta-lista fila-movimiento fila-movimiento--sin-importe">
+          <span class="punto-tipo-mov punto-tipo-mov--factura"></span>
+          <div style="flex:1; min-width:0;">
+            <div class="fila-movimiento__tipo">Descarga sin comprobante</div>
+            <div class="fila-movimiento__referencia">${esc(m.referencia || 'Sin número')}${badgeEstadoFactura('sin_importe')}</div>
+            <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas ? ` · ${esc(nombreUnidad(m.unidad_negocio_id))}` : ''}</div>
+            ${cantidadesHtml}
+            ${formHtml}
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.375rem;">
+            <div class="fila-movimiento__monto fila-movimiento__monto--falta">Falta importe</div>
+            ${puedeCargar && !form ? `<button type="button" class="btn btn--primario btn-cargar-importe" data-id="${esc(id)}">Cargar importe</button>` : ''}
+          </div>
+        </div>`
+    }
+
+    async function confirmarImporteSinImporte(facturaId) {
+      const form = estado.ficha?.formImporte
+      if (!form || form.facturaId !== facturaId || form.enCurso) return
+      const total = totalImporteFormulario(form, estado.ficha.cantidadesSinImporte?.get(facturaId) ?? null)
+      if (total == null) { form.error = 'Cargá un importe mayor a cero.'; renderizarFichaMovimientos(); return }
+      form.enCurso = true
+      form.error = null
+      renderizarFichaMovimientos()
+      const { error } = await supabase.rpc('completar_importe_factura', { p_factura_id: facturaId, p_importe: total })
+      form.enCurso = false
+      if (error) {
+        console.error(error)
+        // TAL CUAL: los mensajes de la RPC están escritos para una persona.
+        form.error = error.message || 'La base no dijo el motivo.'
+        renderizarFichaMovimientos()
+        return
+      }
+      estado.ficha.formImporte = null
+      mostrarExito('Importe cargado: la descarga ya cuenta en el saldo.')
+      await recargarTrasImporte()
+    }
+
+    async function recargarTrasImporte() {
+      await cargarSinImporte()
+      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
+      renderizarFichaBanner()
+      if (tieneTarea('cuentas_corrientes', 'ver_todo')) cargarSaldos()
+    }
+
+    // ── Remitos sin facturar ───────────────────────────────────────────────
+
+    async function cargarFichaRemitos() {
+      estado.ficha.remitos = null
+      estado.ficha.errorRemitos = null
+      if (!(tieneTarea('cuentas_corrientes', 'ver_todo') || tieneTarea('cuentas_corrientes', 'registrar_pago'))) {
+        renderizarFichaRemitos()
+        return
+      }
+      const proveedorId = estado.ficha.proveedorId
+      const { data, error } = await supabase.rpc('remitos_sin_facturar', { p_proveedor_id: proveedorId })
+      // La ficha pudo cerrarse o cambiar de proveedor mientras se consultaba.
+      if (!estado.ficha || estado.ficha.proveedorId !== proveedorId) return
+      if (error) {
+        console.error('remitos_sin_facturar:', error)
+        estado.ficha.errorRemitos = error.message || 'No se pudieron cargar los remitos sin facturar.'
+      } else {
+        estado.ficha.remitos = data ?? []
+      }
+      renderizarFichaRemitos()
+    }
+
+    function htmlRemitosSinFacturar(remitos, { unidadId = null, error = null } = {}) {
+      if (error) {
+        return `<div class="remitos-cc"><h3 class="titulo-seccion-cc">Remitos sin facturar</h3><div class="cargar-importe-cc__error">${esc(error)}</div></div>`
+      }
+      const filas = (remitos ?? []).filter(r => !unidadId || r.unidad_negocio_id === unidadId)
+      if (!filas.length) return ''
+      return `
+        <div class="remitos-cc">
+          <h3 class="titulo-seccion-cc">Remitos sin facturar (${filas.length})</h3>
+          <p class="remitos-cc__desc">Mercadería que ya entró y todavía no tiene factura. Es informativo: no suma al saldo.</p>
+          ${filas.map(r => {
+            const items = Number(r.items) || 0
+            return `
+            <div class="remito-cc">
+              <div class="remito-cc__info">${esc(r.numero_doc || 'Sin número')} · ${formatearFecha(r.fecha)}${unidadId ? '' : ` · ${esc(nombreUnidad(r.unidad_negocio_id))}`}</div>
+              <div class="remito-cc__items">${items} ${items === 1 ? 'ítem' : 'ítems'}</div>
+            </div>`
+          }).join('')}
+        </div>`
+    }
+
+    function renderizarFichaRemitos() {
+      const cont = document.getElementById('ficha-remitos-sin-facturar')
+      if (!estado.ficha) { cont.innerHTML = ''; return }
+      cont.innerHTML = htmlRemitosSinFacturar(estado.ficha.remitos, { unidadId: estado.ficha.unidadId, error: estado.ficha.errorRemitos })
     }
 
     function actualizarSegmentedRangoFicha() {
@@ -3793,12 +4114,56 @@
     // Filtro de unidad de la ficha. Recarga las tres consultas porque las
     // tres cambian con la unidad, y re-sincroniza la URL para que el
     // `volver=` de los links a gastos.html apunte a lo que se está mirando.
+    // ── Cargar importe de una descarga sin importe (delegado: se redibuja) ─
+    const listaMovFicha = document.getElementById('lista-movimientos-ficha')
+    listaMovFicha.addEventListener('click', (ev) => {
+      if (!estado.ficha) return
+      const abrir = ev.target.closest('.btn-cargar-importe')
+      if (abrir) {
+        estado.ficha.formImporte = { facturaId: abrir.dataset.id, modo: 'total', texto: '', error: null, enCurso: false }
+        renderizarFichaMovimientos()
+        listaMovFicha.querySelector('.campo-importe-sin')?.focus()
+        return
+      }
+      if (ev.target.closest('.btn-cancelar-importe')) {
+        estado.ficha.formImporte = null
+        renderizarFichaMovimientos()
+        return
+      }
+      const confirmar = ev.target.closest('.btn-confirmar-importe')
+      if (confirmar) confirmarImporteSinImporte(confirmar.dataset.id)
+    })
+    listaMovFicha.addEventListener('change', (ev) => {
+      const radio = ev.target.closest('.modo-importe')
+      if (!radio || !estado.ficha?.formImporte) return
+      estado.ficha.formImporte.modo = radio.value
+      renderizarFichaMovimientos()
+    })
+    listaMovFicha.addEventListener('focusin', (ev) => {
+      const input = ev.target.closest('.campo-importe-sin')
+      if (input && !input.dataset.formateado) { input.dataset.formateado = '1'; formatearImporteEnVivo(input) }
+    })
+    listaMovFicha.addEventListener('input', (ev) => {
+      const input = ev.target.closest('.campo-importe-sin')
+      const form = estado.ficha?.formImporte
+      if (!input || !form) return
+      form.texto = input.value
+      // Solo la línea del total: redibujar la fila le sacaría el foco al campo.
+      const total = totalImporteFormulario(form, estado.ficha.cantidadesSinImporte?.get(form.facturaId) ?? null)
+      const moneda = estado.ficha.movimientosRaw.find(m => m.factura_pendiente_id === form.facturaId)?.moneda
+      const linea = input.closest('.cargar-importe-cc')?.querySelector('.cargar-importe-cc__total')
+      if (linea) linea.innerHTML = total != null ? `Total a cargar: ${importeHtml(total, moneda)}` : 'Escribí un importe mayor a cero.'
+    })
+
     document.getElementById('filtro-unidad-ficha').addEventListener('change', async (e) => {
       if (!estado.ficha) return
       estado.ficha.unidadId = e.target.value || null
+      estado.ficha.formImporte = null
       sincronizarUrlFicha()
       await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
       renderizarFichaBanner()
+      // Los remitos ya están cargados para todas las unidades: solo se filtran.
+      renderizarFichaRemitos()
     })
 
     // ── Importar proveedores desde Excel ──────────────────────────────────
