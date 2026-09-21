@@ -727,6 +727,68 @@ if (SOLO !== 'estatico') {
     chk('detalle: en una cobranza anulada no se sugiere volver cheques a cartera', !/primero hay que volverlos a cartera/.test(anulada))
   }
 
+  // ── Rediseño 3.2: jerarquía del listado ──────────────────────────────────
+  // El total va en tinta neutra, el estado de la fila es TEXTO (la franja
+  // izquierda ya lo marca con color) y los filtros de estado son un
+  // segmentado, distinto del chip de estado. Se ejecutan los renders; el
+  // color, que un render no puede mostrar, se mira en el CSS.
+  {
+    const S32 = construir(ARCHIVO)
+    const base = { id: 'c1', cliente: 'Cliente', fecha: '2026-09-17', total: 1500, efectivo: 500,
+      cantidad_cheques: 2, created_at: '2026-09-17T12:00:00Z', cargada_por_nombre: 'X', editada: false }
+    const reg = S32.htmlFilaCobranza({ ...base, estado: 'registrada' })
+    const proc = S32.htmlFilaCobranza({ ...base, estado: 'procesada' })
+    const anu = S32.htmlFilaCobranza({ ...base, estado: 'anulada' })
+    chk('3.2 fila: lleva la clase de su estado (la franja sale de ahí)',
+      /class="tarjeta-lista cob-fila cob-fila--registrada"/.test(reg) && /cob-fila--anulada/.test(anu) && /cob-fila--procesada/.test(proc))
+    chk('3.2 fila: el estado es texto y no chip',
+      /class="cob-fila__estado cob-fila__estado--registrada">Registrada</.test(reg) && !/cob-estado/.test(reg + proc + anu))
+    chk('3.2 fila: la cantidad de cheques va en su propio span',
+      /<span class="cob-fila__cheques">2 cheques<\/span>/.test(reg))
+    chk('3.2 fila: fecha, cheques y efectivo separados por el punto medio',
+      /<span class="cob-fila__detalle"><span>17\/09\/2026<\/span> · <span class="cob-fila__cheques">2 cheques<\/span> · <span>\$\s500,00 en efectivo<\/span><\/span>/.test(reg))
+    const soloEf = S32.htmlFilaCobranza({ ...base, estado: 'procesada', cantidad_cheques: 0, efectivo: 0 })
+    chk('3.2 fila: sin cheques ni efectivo lo dice, sin "0 cheques"',
+      soloEf.includes('Sin cheques ni efectivo') && !soloEf.includes('0 cheques'))
+
+    const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+    const regla = (sel) => { const i = css.indexOf('\n    ' + sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
+    chk('3.2 css: el total de la fila va en tinta neutra, nunca naranja',
+      /color:\s*var\(--color-texto\)/.test(regla('.cob-fila__total')) && !/naranja/.test(regla('.cob-fila__total')))
+    chk('3.2 css: el total de la cartera va en tinta neutra, nunca naranja',
+      /color:\s*var\(--color-texto\)/.test(regla('.cob-cartera__v')) && !/naranja/.test(regla('.cob-cartera__v')))
+    chk('3.2 css: franja naranja en lo registrado y bordó en lo anulado',
+      /border-left-color:\s*var\(--naranja\)/.test(regla('.cob-fila--registrada')) &&
+      /border-left-color:\s*var\(--bordo\)/.test(regla('.cob-fila--anulada')))
+    const iBase = css.indexOf('\n    .cob-fila {')
+    chk('3.2 css: las variantes de franja van DESPUÉS de .cob-fila',
+      iBase !== -1 && css.indexOf('\n    .cob-fila--registrada {') > iBase && css.indexOf('\n    .cob-fila--anulada {') > iBase)
+    chk('3.2 css: el segmentado respeta el mínimo táctil de 44px', /min-height:\s*44px/.test(regla('.cob-segmento__opcion')))
+    const iSeg = css.indexOf('\n    .cob-segmento__opcion {')
+    chk('3.2 css: la opción activa va DESPUÉS de su base',
+      iSeg !== -1 && css.indexOf('\n    .cob-segmento__opcion--activo {') > iSeg)
+    chk('3.2 css: no queda el CSS muerto .cob-estado--local', !css.includes('.cob-estado--local'))
+
+    const opciones = (html) => html.match(/<button[^>]*>/g) || []
+    S32.estado.filtros.estado = 'procesada'
+    S32.renderizarChipsEstado()
+    const seg = S32.__els.get('cob-chips-estado').innerHTML
+    const bs = opciones(seg)
+    chk('3.2 segmentado: cuatro opciones, ninguna con el tratamiento de chip',
+      bs.length === 4 && bs.every(b => /class="cob-segmento__opcion /.test(b)) && !/cob-chip/.test(seg))
+    chk('3.2 segmentado: UNA sola activa, la del filtro, y aria-pressed lo dice',
+      bs.filter(b => /cob-segmento__opcion--activo/.test(b)).length === 1 &&
+      bs.filter(b => /aria-pressed="true"/.test(b)).length === 1 &&
+      /cob-segmento__opcion--activo" aria-pressed="true" data-estado="procesada"/.test(seg))
+    S32.pintarFiltrosCheques()
+    const segCh = S32.__els.get('cob-chips-cheques').innerHTML
+    const bc = opciones(segCh)
+    chk('3.2 segmentado de cheques: tres opciones, "En cartera" activa por defecto',
+      bc.length === 3 && !/cob-chip/.test(segCh) &&
+      /cob-segmento__opcion--activo" aria-pressed="true" data-estado-cheque="en_cartera"/.test(segCh) &&
+      bc.filter(b => /aria-pressed="true"/.test(b)).length === 1)
+  }
+
   // ── CSS de la tabla: lo que un render no puede mostrar ────────────────────
   {
     const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))

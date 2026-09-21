@@ -24,6 +24,9 @@
       /* Alto de la barra fija de abajo, para que el contenido no quede tapado
          por ella. Se usa en el padding del contenedor. */
       --alto-barra-fija: 5.5rem;
+      /* Fondo del segmentado de filtros: el naranja del módulo al 9%. Sale de
+         la variable y no de un rgba suelto, así un cambio de acento lo arrastra. */
+      --cob-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
     }
 
     .cob-contenedor {
@@ -213,6 +216,39 @@
     }
     .cob-chip--activo { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
 
+    /* SEGMENTADO de los filtros de estado (cobranzas y cheques). Es un
+       tratamiento DISTINTO del chip de estado a propósito: antes filtro y
+       estado se veían iguales y no se sabía qué era botón y qué era dato.
+       .cob-chip queda solo para el tipo de cheque del formulario. 44px de alto
+       en celular, que es el mínimo táctil del módulo (el diseño dice 34px
+       para escritorio). Las opciones se reparten el ancho y NO scrollean: a
+       375px entran las cuatro. */
+    .cob-segmento {
+      display: flex;
+      gap: 2px;
+      padding: 3px;
+      border-radius: 10px;
+      background: var(--cob-segmento-fondo);
+      min-width: 0;
+    }
+    .cob-segmento__opcion {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 44px;
+      padding: 0 0.5rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--naranja-oscuro);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    /* Variante DESPUÉS de su base: misma especificidad, decide el orden. */
+    .cob-segmento__opcion--activo { background: var(--naranja); color: #fff; font-weight: 700; }
+
     /* ── Lista de cobranzas ──────────────────────────────────────────────── */
 
     .cob-lista { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
@@ -226,7 +262,13 @@
       border-radius: 1.0625rem;
       border-color: var(--borde-tarjeta);
       box-shadow: var(--sombra-tarjeta);
+      /* La franja de la izquierda es el canal del estado: naranja lo que falta
+         procesar (reclama acción), bordó lo anulado, nada lo procesado. */
+      border-left: 4px solid transparent;
     }
+    /* Variantes DESPUÉS de .cob-fila: tocan solo el borde izquierdo. */
+    .cob-fila--registrada { border-left-color: var(--naranja); }
+    .cob-fila--anulada { border-left-color: var(--bordo); }
     .cob-fila__linea {
       display: flex;
       align-items: baseline;
@@ -241,10 +283,13 @@
       min-width: 0;
       overflow-wrap: anywhere;
     }
+    /* El total NUNCA lleva el color del módulo: es el número que se escanea,
+       y pintado competía con el estado. Tinta neutra. */
     .cob-fila__total {
       font-size: 1.125rem;
       font-weight: 700;
-      color: var(--naranja-oscuro);
+      color: var(--color-texto);
+      font-variant-numeric: tabular-nums;
       white-space: nowrap;
       flex-shrink: 0;
     }
@@ -259,8 +304,23 @@
       min-width: 0;
     }
     .cob-fila__meta span { min-width: 0; overflow-wrap: anywhere; }
-    /* Anulada: el total tachado además del chip. Un chip solo se pasa por alto
-       cuando lo que se escanea es el número. */
+    /* El estado en la fila es TEXTO, no chip: la franja ya lo marca con color
+       y un chip con fondo repetía lo mismo. */
+    .cob-fila__estado {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--color-texto-suave);
+    }
+    .cob-fila__estado--registrada { color: var(--naranja-oscuro); }
+    .cob-fila__estado--anulada { color: var(--bordo-oscuro); }
+    /* Sin procesar, la cantidad de cheques va en el color del módulo: es lo
+       que hay que ir a controlar. Procesada, gris como el resto. */
+    .cob-fila--registrada .cob-fila__cheques { color: var(--naranja-oscuro); font-weight: 600; }
+    /* Anulada: el total tachado además del estado. Un estado solo se pasa por
+       alto cuando lo que se escanea es el número. */
     .cob-fila--anulada .cob-fila__cliente,
     .cob-fila--anulada .cob-fila__total { text-decoration: line-through; color: var(--bordo-oscuro); }
 
@@ -277,7 +337,6 @@
     .cob-estado--registrada { background: var(--naranja-suave); color: var(--naranja-oscuro); }
     .cob-estado--procesada { background: var(--color-superficie); color: var(--color-texto-suave); }
     .cob-estado--anulada { background: var(--bordo-suave); color: var(--bordo-oscuro); }
-    .cob-estado--local { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
 
     .cob-vacio {
       text-align: center;
@@ -632,10 +691,12 @@
       min-width: 0;
     }
     .cob-cartera__k { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave); }
+    /* Un total: tinta neutra, nunca el color del módulo. */
     .cob-cartera__v {
       font-size: 1.375rem;
       font-weight: 700;
-      color: var(--naranja-oscuro);
+      color: var(--color-texto);
+      font-variant-numeric: tabular-nums;
       overflow-wrap: anywhere;
     }
     .cob-cartera__sub { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
@@ -784,7 +845,7 @@
           <select id="cob-filtro-repartidor"></select>
         </div>
 
-        <div class="cob-chips" id="cob-chips-estado"></div>
+        <div class="cob-segmento" id="cob-chips-estado" role="group" aria-label="Filtrar por estado"></div>
       </div>
 
       <div class="cob-lista" id="cob-lista"></div>
@@ -801,7 +862,7 @@
       <div class="cob-cartera" id="cob-cartera"></div>
 
       <div class="cob-filtros">
-        <div class="cob-chips" id="cob-chips-cheques" style="margin-bottom:.5rem"></div>
+        <div class="cob-segmento" id="cob-chips-cheques" role="group" aria-label="Filtrar cheques por estado" style="margin-bottom:.5rem"></div>
         <div class="cob-filtros__fila">
           <div class="cob-campo" style="margin-bottom:0">
             <label for="cob-filtro-cheque">N&deg; de cheque</label>
@@ -1421,7 +1482,7 @@
     function renderizarChipsEstado() {
       const cont = document.getElementById('cob-chips-estado')
       cont.innerHTML = ESTADOS_COBRANZA.map(e => `
-        <button type="button" class="cob-chip ${estado.filtros.estado === e.id ? 'cob-chip--activo' : ''}" data-estado="${escCob(e.id)}">${escCob(e.nombre)}</button>
+        <button type="button" class="cob-segmento__opcion ${estado.filtros.estado === e.id ? 'cob-segmento__opcion--activo' : ''}" aria-pressed="${estado.filtros.estado === e.id ? 'true' : 'false'}" data-estado="${escCob(e.id)}">${escCob(e.nombre)}</button>
       `).join('')
       cont.querySelectorAll('[data-estado]').forEach(b => {
         b.addEventListener('click', () => {
@@ -1504,15 +1565,18 @@
     function htmlFilaCobranza(c) {
       const cantidad = Number(c.cantidad_cheques ?? 0)
       const efectivo = Number(c.efectivo ?? 0)
-      const anulada = c.estado === 'anulada'
 
       // "N cheques · $ efectivo": se muestran las dos partes solo cuando
       // existen, para no decir "0 cheques" en una cobranza que fue toda en
       // efectivo ni "$ 0,00" en una que fue toda en cheques.
+      // Cada parte es su propio <span>, escapado acá: así la cantidad de
+      // cheques puede llevar su propio color sin tocar el resto.
       const partes = []
-      if (cantidad > 0) partes.push(`${cantidad} ${cantidad === 1 ? 'cheque' : 'cheques'}`)
-      if (efectivo > 0) partes.push(`${formatearImporte(efectivo)} en efectivo`)
-      if (!partes.length) partes.push('Sin cheques ni efectivo')
+      const textoCheques = `${cantidad} ${cantidad === 1 ? 'cheque' : 'cheques'}`
+      const textoEfectivo = `${formatearImporte(efectivo)} en efectivo`
+      if (cantidad > 0) partes.push(`<span class="cob-fila__cheques">${escCob(textoCheques)}</span>`)
+      if (efectivo > 0) partes.push(`<span>${escCob(textoEfectivo)}</span>`)
+      if (!partes.length) partes.push('<span>Sin cheques ni efectivo</span>')
 
       // La fecha de la cobranza es cuándo se COBRÓ; created_at es cuándo se
       // cargó. Se muestran juntas solo si difieren: en el caso normal —se carga
@@ -1524,16 +1588,19 @@
         : formatearFechaCob(c.fecha)
 
       const etiquetaEstado = { registrada: 'Registrada', procesada: 'Procesada', anulada: 'Anulada' }[c.estado] ?? c.estado
+      // Todo en UN span de texto corrido: así, al partirse en dos renglones,
+      // el punto medio viaja con el texto y no queda colgando al final.
+      const metaFila = [`<span>${escCob(cuando)}</span>`, ...partes].join(' · ')
 
       return `
-        <div class="tarjeta-lista cob-fila ${anulada ? 'cob-fila--anulada' : ''}" data-cobranza="${escCob(c.id)}">
+        <div class="tarjeta-lista cob-fila cob-fila--${escCob(c.estado)}" data-cobranza="${escCob(c.id)}">
           <div class="cob-fila__linea">
             <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
             <span class="cob-fila__total">${escCob(formatearImporte(c.total))}</span>
           </div>
           <div class="cob-fila__meta">
-            <span class="cob-estado cob-estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
-            <span>${escCob(cuando)} · ${escCob(partes.join(' · '))}</span>
+            <span class="cob-fila__estado cob-fila__estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
+            <span class="cob-fila__detalle">${metaFila}</span>
           </div>
           ${puedeVerTodo() && c.cargada_por_nombre
             ? `<div class="cob-fila__meta"><span>Cargada por ${escCob(c.cargada_por_nombre)}</span></div>` : ''}
@@ -1756,7 +1823,7 @@
       const f = estado.cheques.filtros
       const cont = document.getElementById('cob-chips-cheques')
       cont.innerHTML = ESTADOS_FILTRO_CHEQUES.map(e => `
-        <button type="button" class="cob-chip ${f.estado === e.id ? 'cob-chip--activo' : ''}" data-estado-cheque="${escCob(e.id)}">${escCob(e.nombre)}</button>
+        <button type="button" class="cob-segmento__opcion ${f.estado === e.id ? 'cob-segmento__opcion--activo' : ''}" aria-pressed="${f.estado === e.id ? 'true' : 'false'}" data-estado-cheque="${escCob(e.id)}">${escCob(e.nombre)}</button>
       `).join('')
       cont.querySelectorAll('[data-estado-cheque]').forEach(b => {
         b.addEventListener('click', () => {

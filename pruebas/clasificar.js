@@ -149,6 +149,7 @@ const SEGURAS = [
   ['claseRenglon(e2)', 'clase CSS constante del código'],
   ['claseRenglon(e3)', 'clase CSS constante del código'],
   ['botones.join(\'\')', 'HTML constante del código: los botones se arman con literales'],
+  ['metaFila', 'HTML ya escapado: htmlFilaCobranza() lo arma arriba con escCob() de cada parte'],
   // HTML armado por funciones que escapan adentro
   ['htmlHistorial(d.historial, d.nombres)', 'HTML armado por htmlHistorial(), que escapa adentro'],
   // Vista de cheques
