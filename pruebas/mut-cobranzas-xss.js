@@ -210,7 +210,10 @@ const COMPORTAMIENTO = [
   ['3.2: la fila pierde la clase de su estado',
     'cob-fila cob-fila--${escCob(c.estado)}', 'cob-fila'],
   ['3.2: el estado de la fila vuelve a ser chip',
-    'cob-fila__estado cob-fila__estado--${escCob(c.estado)}', 'cob-estado cob-estado--${escCob(c.estado)}'],
+    // Con la comilla delante: desde el rediseño 3.5 la celda de escritorio
+    // también lleva cob-fila__estado (detrás de cob-celda), y sin la comilla
+    // el texto deja de ser único.
+    'class="cob-fila__estado cob-fila__estado--${escCob(c.estado)}"', 'class="cob-estado cob-estado--${escCob(c.estado)}"'],
   ['3.2: la cantidad de cheques pierde su span',
     '<span class="cob-fila__cheques">', '<span>'],
   ['3.2: sin franja naranja en lo registrado',
@@ -222,7 +225,9 @@ const COMPORTAMIENTO = [
   ['3.2: el segmentado baja de 44px',
     '      min-height: 44px;\n      padding: 0 0.5rem;', '      min-height: 34px;\n      padding: 0 0.5rem;'],
   ['cheques: la columna del número deja de ser fija',
-    'position: sticky;', 'position: static;'],
+    // Con el renglón siguiente: desde el rediseño 3.5 el panel de escritorio
+    // también es sticky.
+    'position: sticky;\n      left: 0;', 'position: static;\n      left: 0;'],
   ['cheques: la tabla deja de scrollear en su caja',
     'overflow-x: auto;\n      -webkit-overflow-scrolling: touch;', 'overflow-x: visible;\n      -webkit-overflow-scrolling: touch;'],
   ['cheques: los salidos se atenúan con opacity',

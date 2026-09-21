@@ -35,6 +35,13 @@
       /* Texto secundario de los avisos neutros: más oscuro que el gris
          terciario (--color-texto-suave), que queda para la franja. */
       --cob-texto-secundario: #55617d;
+      /* Escritorio (master-detail): fondo del panel derecho y del encabezado
+         de la tabla, divisor de la tabla, hover de fila y la grilla de las
+         siete columnas, compartida por el encabezado y las filas. */
+      --cob-fondo-panel: #f8fafc;
+      --cob-divisor-tabla: rgba(26, 42, 82, 0.09);
+      --cob-hover-fila: rgba(26, 42, 82, 0.02);
+      --cob-cols-tabla: 64px minmax(0, 1fr) 56px 104px 116px minmax(0, 120px) 88px;
     }
 
     .cob-contenedor {
@@ -337,6 +344,10 @@
     /* Sin procesar, la cantidad de cheques va en el color del módulo: es lo
        que hay que ir a controlar. Procesada, gris como el resto. */
     .cob-fila--registrada .cob-fila__cheques { color: var(--naranja-oscuro); font-weight: 600; }
+    /* La fila de la tabla de escritorio y su encabezado viven en el HTML
+       siempre, pero en celular no se dibujan: ver el bloque de escritorio. */
+    .cob-fila__tabla,
+    .cob-lista-cabecera { display: none; }
     /* Anulada: el total tachado además del estado. Un estado solo se pasa por
        alto cuando lo que se escanea es el número. */
     .cob-fila--anulada .cob-fila__cliente,
@@ -894,6 +905,125 @@
     @media (min-width: 640px) {
       .cob-modal { align-items: center; }
     }
+
+    /* ══ ESCRITORIO: LISTADO Y CONTROL EN UNA PANTALLA (master-detail) ═════
+       Desde 1100px, el listado es una tabla y la cobranza elegida se abre a
+       la derecha sin navegar. EL CORTE ES EL MISMO QUE MQ_ESCRITORIO DEL
+       SCRIPT: si cambia uno, cambia el otro. Todo lo de acá cuelga además de
+       .cob-maestro--activo, que el script pone SOLO en escritorio y solo en
+       el listado (o en un detalle abierto desde el listado): abajo de 1100px
+       y en las otras vistas no aplica nada, y el celular queda idéntico.
+       La franja de la fila CAMBIA de significado acá: en celular dice "falta
+       procesar"; en escritorio marca la fila ELEGIDA (lo que falta procesar
+       ya lo dice la columna Estado). Se redefine solo adentro de este bloque. */
+    @media (min-width: 1100px) {
+      .cob-contenedor:has(.cob-maestro--activo) { max-width: 1440px; padding-left: 1.25rem; padding-right: 1.25rem; }
+      .cob-maestro--activo {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 468px;
+        align-items: start;
+        column-gap: 1.25rem;
+      }
+      .cob-maestro--activo #cob-vista-listado { min-width: 0; }
+      /* El panel derecho: fondo propio y scroll propio, pegado arriba. */
+      .cob-maestro--activo #cob-vista-detalle {
+        position: sticky;
+        top: 1rem;
+        max-height: calc(100vh - 2rem - var(--alto-barra-fija));
+        overflow-y: auto;
+        min-width: 0;
+        background: var(--cob-fondo-panel);
+        border: 1px solid var(--cob-divisor-tabla);
+        border-radius: 16px;
+        padding: 1.375rem 1.5rem;
+      }
+      /* En escritorio no hay a dónde volver: el listado está al lado. */
+      .cob-maestro--activo #cob-btn-volver-listado { display: none; }
+
+      /* Filtros en una sola fila. */
+      .cob-maestro--activo .cob-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.625rem; }
+      .cob-maestro--activo .cob-buscador { flex: 1 1 220px; margin-bottom: 0; }
+      .cob-maestro--activo .cob-filtros__fila { flex: 0 1 auto; margin-bottom: 0; }
+      .cob-maestro--activo #cob-campo-repartidor { margin-bottom: 0; flex: 0 1 12rem; }
+      .cob-maestro--activo .cob-segmento { flex: 0 0 auto; }
+
+      /* La tabla: encabezado y filas con la MISMA grilla. */
+      .cob-maestro--activo .cob-lista-cabecera {
+        display: grid;
+        grid-template-columns: var(--cob-cols-tabla);
+        column-gap: 0.75rem;
+        /* 3px más a la izquierda que las filas: compensan la franja de 4px
+           de cada fila (menos el borde de 1px), así las columnas alinean. */
+        padding: 0.625rem 1rem 0.625rem calc(1.25rem + 3px);
+        background: var(--cob-fondo-panel);
+        border: 1px solid var(--cob-divisor-tabla);
+        border-radius: 16px 16px 0 0;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--color-texto-suave);
+      }
+      .cob-maestro--activo .cob-lista-cabecera > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .cob-maestro--activo .cob-lista {
+        gap: 0;
+        background: var(--color-fondo);
+        border: 1px solid var(--cob-divisor-tabla);
+        border-top: 0;
+        border-radius: 0 0 16px 16px;
+        overflow: hidden;
+      }
+      .cob-maestro--activo .cob-fila {
+        border: 0;
+        border-bottom: 1px solid var(--cob-divisor-tarjeta);
+        border-left: 4px solid transparent;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0.9375rem 1rem 0.9375rem 1.25rem;
+        font-size: 0.84375rem;
+      }
+      .cob-maestro--activo .cob-fila:hover { box-shadow: none; transform: none; background: var(--cob-hover-fila); }
+      .cob-maestro--activo .cob-fila > .cob-fila__linea,
+      .cob-maestro--activo .cob-fila > .cob-fila__meta { display: none; }
+      .cob-maestro--activo .cob-fila__tabla {
+        display: grid;
+        grid-template-columns: var(--cob-cols-tabla);
+        column-gap: 0.75rem;
+        align-items: baseline;
+        min-width: 0;
+      }
+      /* Variantes de franja DESPUÉS de la base de escritorio, y la elegida
+         al final: gana sobre registrada y anulada. */
+      .cob-maestro--activo .cob-fila--registrada { border-left-color: transparent; }
+      .cob-maestro--activo .cob-fila--anulada { border-left-color: var(--bordo); }
+      .cob-maestro--activo .cob-fila--seleccionada,
+      .cob-maestro--activo .cob-fila--seleccionada:hover { border-left-color: var(--naranja); background: var(--naranja-suave); }
+
+      .cob-maestro--activo .cob-celda { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .cob-maestro--activo .cob-celda--fecha { color: var(--cob-texto-secundario); font-variant-numeric: tabular-nums; }
+      .cob-maestro--activo .cob-celda--cliente { font-weight: 700; color: var(--color-texto); }
+      .cob-maestro--activo .cob-celda--num { text-align: right; font-variant-numeric: tabular-nums; color: var(--cob-texto-secundario); }
+      .cob-maestro--activo .cob-fila--registrada .cob-celda--cheques { color: var(--naranja-oscuro); font-weight: 600; }
+      /* El total NUNCA lleva el color del módulo. */
+      .cob-maestro--activo .cob-celda--total { font-weight: 700; color: var(--color-texto); }
+      .cob-maestro--activo .cob-celda--quien { color: var(--cob-texto-secundario); }
+      .cob-maestro--activo .cob-celda--vacia { color: var(--cob-etiqueta); }
+      .cob-maestro--activo .cob-fila--anulada .cob-celda--cliente,
+      .cob-maestro--activo .cob-fila--anulada .cob-celda--total { color: var(--bordo-oscuro); text-decoration: line-through; }
+      .cob-maestro--activo .cob-fila--anulada .cob-celda--fecha,
+      .cob-maestro--activo .cob-fila--anulada .cob-celda--quien { color: var(--color-texto-suave); }
+    }
+    /* Entre 1100 y 1279px las siete columnas no entran al lado del panel de
+       468px: el cliente quedaba con cero de ancho. Se esconden Efectivo y
+       Cargada por (la 4.ª y la 6.ª), que están igual en el panel de la
+       derecha; el resto de la tabla no cambia. */
+    @media (min-width: 1100px) and (max-width: 1279px) {
+      .cob-maestro--activo { --cob-cols-tabla: 60px minmax(0, 1fr) 68px 116px 88px; }
+      .cob-maestro--activo .cob-lista-cabecera > :nth-child(4),
+      .cob-maestro--activo .cob-lista-cabecera > :nth-child(6),
+      .cob-maestro--activo .cob-fila__tabla > :nth-child(4),
+      .cob-maestro--activo .cob-fila__tabla > :nth-child(6) { display: none; }
+    }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -922,6 +1052,11 @@
       <button type="button" class="cob-pestana" id="cob-pestana-cheques" role="tab">Cheques</button>
     </div>
 
+    <!-- ══ LISTADO + DETALLE ══════════════════════════════════════════
+         En celular son dos pantallas separadas. Desde 1100px el script le pone
+         .cob-maestro--activo y quedan lado a lado: la tabla a la izquierda y
+         la cobranza elegida a la derecha, sin navegar. -->
+    <div class="cob-maestro" id="cob-maestro">
     <!-- ══ LISTADO ══════════════════════════════════════════════════════ -->
     <div id="cob-vista-listado" hidden>
 
@@ -954,11 +1089,23 @@
         <div class="cob-segmento" id="cob-chips-estado" role="group" aria-label="Filtrar por estado"></div>
       </div>
 
+      <!-- Encabezado de la tabla de escritorio. En celular no se dibuja. -->
+      <div class="cob-lista-cabecera">
+        <span>Fecha</span><span>Cliente</span><span class="cob-celda--num">Cheques</span><span class="cob-celda--num">Efectivo</span><span class="cob-celda--num">Total</span><span>Cargada por</span><span>Estado</span>
+      </div>
       <div class="cob-lista" id="cob-lista"></div>
       <div class="cob-vacio" id="cob-lista-vacia" hidden></div>
       <div class="cob-acciones">
         <button type="button" class="cob-btn cob-btn--ancho" id="cob-btn-mas" hidden>Cargar más</button>
       </div>
+    </div>
+
+    <!-- ══ DETALLE ══════════════════════════════════════════════════════ -->
+    <div id="cob-vista-detalle" hidden>
+      <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-volver-listado">&lsaquo; Volver al listado</button>
+      <div id="cob-detalle-cuerpo"></div>
+    </div>
+
     </div>
 
     <!-- ══ CHEQUES ══════════════════════════════════════════════════════ -->
@@ -994,12 +1141,6 @@
         <table class="cob-tabla" id="cob-tabla-cheques"></table>
       </div>
       <div class="cob-vacio" id="cob-cheques-vacio" hidden></div>
-    </div>
-
-    <!-- ══ DETALLE ══════════════════════════════════════════════════════ -->
-    <div id="cob-vista-detalle" hidden>
-      <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-volver-listado">&lsaquo; Volver al listado</button>
-      <div id="cob-detalle-cuerpo"></div>
     </div>
 
     <!-- ══ NUEVA / EDITAR ═══════════════════════════════════════════════ -->
@@ -1193,6 +1334,11 @@
       detalle: null,          // { cabecera, cheques, fotos, historial }
       // A qué vista vuelve el detalle: 'listado' o 'cheques'.
       detalleOrigen: 'listado',
+      // La vista que está en pantalla (la última que pidió mostrarVistaCob).
+      vista: null,
+      // ESCRITORIO: la cobranza abierta en el panel derecho. Solo se usa
+      // desde 1100px; en celular la navegación entre pantallas cumple ese rol.
+      cobranzaSeleccionadaId: null,
       // El diálogo de salida abierto: { cheque, cobranza, tipo } o null.
       salida: null,
       // Borrador del formulario. Vive también en IndexedDB: es lo que sobrevive
@@ -1651,6 +1797,8 @@
         vacio.textContent = hayFiltrosPuestos()
           ? 'No hay cobranzas con esos filtros.'
           : 'Todavía no se cargó ninguna cobranza. Tocá "Nueva cobranza" para cargar la primera.'
+        // Un filtro que no deja NINGUNA fila también deja afuera la elegida.
+        soltarSeleccionFueraDelListado()
         return
       }
       vacio.hidden = true
@@ -1658,6 +1806,21 @@
       cont.querySelectorAll('[data-cobranza]').forEach(card => {
         card.addEventListener('click', () => abrirDetalle(card.dataset.cobranza))
       })
+      soltarSeleccionFueraDelListado()
+    }
+
+    // ESCRITORIO: si los filtros dejan afuera la cobranza abierta en el panel,
+    // el panel se vacía con un texto neutro — mostrar una cobranza que el
+    // listado de al lado ya no tiene confunde más que no mostrar nada. Solo
+    // en modo maestro: un detalle abierto desde la vista Cheques ocupa toda
+    // la pantalla y no depende del listado.
+    function soltarSeleccionFueraDelListado() {
+      const id = estado.cobranzaSeleccionadaId
+      if (!id || !enModoMaestro()) return
+      if (estado.cobranzas.some(c => c.id === id)) return
+      estado.cobranzaSeleccionadaId = null
+      estado.detalle = null
+      pintarPanelVacio('La cobranza que estaba abierta no está en el listado con estos filtros.')
     }
 
     function hayFiltrosPuestos() {
@@ -1697,9 +1860,13 @@
       // Todo en UN span de texto corrido: así, al partirse en dos renglones,
       // el punto medio viaja con el texto y no queda colgando al final.
       const metaFila = [`<span>${escCob(cuando)}</span>`, ...partes].join(' · ')
+      const seleccionada = c.id === estado.cobranzaSeleccionadaId
+      const fechaCorta = formatearFechaCob(c.fecha).slice(0, 5)
+      const textoCantidad = cantidad > 0 ? String(cantidad) : '—'
+      const textoEfectivoCelda = efectivo > 0 ? formatearImporte(efectivo) : '—'
 
       return `
-        <div class="tarjeta-lista cob-fila cob-fila--${escCob(c.estado)}" data-cobranza="${escCob(c.id)}">
+        <div class="tarjeta-lista cob-fila cob-fila--${escCob(c.estado)}${seleccionada ? ' cob-fila--seleccionada' : ''}"${seleccionada ? ' aria-current="true"' : ''} data-cobranza="${escCob(c.id)}">
           <div class="cob-fila__linea">
             <span class="cob-fila__cliente">${escCob(c.cliente)}</span>
             <span class="cob-fila__total">${escCob(formatearImporte(c.total))}</span>
@@ -1711,6 +1878,15 @@
           ${puedeVerTodo() && c.cargada_por_nombre
             ? `<div class="cob-fila__meta"><span>Cargada por ${escCob(c.cargada_por_nombre)}</span></div>` : ''}
           ${c.editada ? '<div class="cob-fila__meta"><span>Editada después de cargarla</span></div>' : ''}
+          <div class="cob-fila__tabla">
+            <span class="cob-celda cob-celda--fecha">${escCob(fechaCorta)}</span>
+            <span class="cob-celda cob-celda--cliente">${escCob(c.cliente)}</span>
+            <span class="cob-celda cob-celda--num cob-celda--cheques${cantidad > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoCantidad)}</span>
+            <span class="cob-celda cob-celda--num${efectivo > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoEfectivoCelda)}</span>
+            <span class="cob-celda cob-celda--num cob-celda--total">${escCob(formatearImporte(c.total))}</span>
+            <span class="cob-celda cob-celda--quien">${escCob(c.cargada_por_nombre || '—')}</span>
+            <span class="cob-celda cob-fila__estado cob-fila__estado--${escCob(c.estado)}">${escCob(etiquetaEstado)}</span>
+          </div>
         </div>`
     }
 
@@ -2234,24 +2410,68 @@
 
     const SUBTITULO_VISTA_COB = { listado: 'Listado', cheques: 'Cheques', detalle: 'Detalle', form: 'Nueva cobranza' }
 
+    // ESCRITORIO. El mismo corte que el @media (min-width: 1100px) del CSS:
+    // si cambia uno, cambia el otro.
+    const MQ_ESCRITORIO = '(min-width: 1100px)'
+
+    function esEscritorio() {
+      return typeof window.matchMedia === 'function' && window.matchMedia(MQ_ESCRITORIO).matches
+    }
+
+    // Modo maestro: listado y detalle lado a lado. Solo en escritorio, y solo
+    // en el listado o en un detalle abierto DESDE el listado. Un detalle que
+    // viene de la vista Cheques sigue ocupando la pantalla entera.
+    function enModoMaestro(vista = estado.vista) {
+      return esEscritorio() && (vista === 'listado' || (vista === 'detalle' && estado.detalleOrigen === 'listado'))
+    }
+
+    // El panel derecho sin ninguna cobranza abierta. Texto neutro: no es un
+    // error ni un aviso.
+    function pintarPanelVacio(texto = 'Elegí una cobranza del listado para verla acá.') {
+      document.getElementById('cob-detalle-cuerpo').innerHTML = `<div class="cob-vacio">${escCob(texto)}</div>`
+    }
+
+    // Marca la fila elegida SIN volver a dibujar el listado: redibujarlo le
+    // haría perder el scroll a quien está recorriendo la tabla.
+    function marcarFilaSeleccionada() {
+      document.querySelectorAll('#cob-lista [data-cobranza]').forEach(fila => {
+        const es = fila.dataset.cobranza === estado.cobranzaSeleccionadaId
+        fila.classList.toggle('cob-fila--seleccionada', es)
+        if (es) fila.setAttribute('aria-current', 'true')
+        else fila.removeAttribute('aria-current')
+      })
+    }
+
     function mostrarVistaCob(id, { subtitulo } = {}) {
-      document.getElementById('cob-vista-listado').hidden = id !== 'listado'
+      estado.vista = id
+      const maestro = enModoMaestro(id)
+      document.getElementById('cob-maestro').classList.toggle('cob-maestro--activo', maestro)
+      document.getElementById('cob-vista-listado').hidden = !(id === 'listado' || maestro)
       document.getElementById('cob-vista-cheques').hidden = id !== 'cheques'
-      document.getElementById('cob-vista-detalle').hidden = id !== 'detalle'
+      document.getElementById('cob-vista-detalle').hidden = !(id === 'detalle' || maestro)
       document.getElementById('cob-vista-form').hidden = id !== 'form'
       // Fuera del formulario no hay fotos que reintentar ni contador que mover.
       if (id !== 'form') detenerReintentosFotos()
-      // Las pestañas, solo en las dos vistas de lista.
-      document.getElementById('cob-pestanas').hidden = !(id === 'listado' || id === 'cheques')
-      document.getElementById('cob-pestana-listado').classList.toggle('cob-pestana--activa', id === 'listado')
+      // Las pestañas, solo en las dos vistas de lista (en escritorio, el
+      // listado sigue a la vista aunque haya una cobranza abierta al lado).
+      document.getElementById('cob-pestanas').hidden = !(id === 'listado' || id === 'cheques' || maestro)
+      document.getElementById('cob-pestana-listado').classList.toggle('cob-pestana--activa', id === 'listado' || maestro)
       document.getElementById('cob-pestana-cheques').classList.toggle('cob-pestana--activa', id === 'cheques')
       // Cada vista tiene su barra fija, y la del listado solo aparece con
       // permiso de cargar: sin él, el botón prometería algo que el servidor
       // rechaza.
-      document.getElementById('cob-barra-listado').hidden = !(id === 'listado' && puedeCargar())
+      document.getElementById('cob-barra-listado').hidden = !((id === 'listado' || maestro) && puedeCargar())
       document.getElementById('cob-barra-form').hidden = id !== 'form'
-      document.getElementById('cob-subtitulo').textContent = subtitulo ?? SUBTITULO_VISTA_COB[id] ?? ''
-      window.scrollTo({ top: 0, behavior: 'auto' })
+      document.getElementById('cob-subtitulo').textContent = subtitulo ?? SUBTITULO_VISTA_COB[maestro ? 'listado' : id] ?? ''
+      // Abrir una cobranza en el panel NO mueve la página: se pierde el lugar
+      // de la tabla, que es lo que el escritorio viene a evitar.
+      if (!(maestro && id === 'detalle')) window.scrollTo({ top: 0, behavior: 'auto' })
+      // Volver al listado en escritorio vuelve a leer la cobranza abierta (pudo
+      // cambiar al editarla), o deja el panel vacío si no hay ninguna.
+      if (maestro && id === 'listado') {
+        if (estado.cobranzaSeleccionadaId) abrirDetalle(estado.cobranzaSeleccionadaId)
+        else pintarPanelVacio()
+      }
     }
 
 
@@ -2327,11 +2547,22 @@
     // `origen` va como PARÁMETRO CON DEFAULT y no como una variable que se
     // setea antes de llamar: así un call site nuevo no hereda en silencio el
     // origen del anterior.
+    // Cada apertura tiene su turno: en escritorio se pasa de una cobranza a
+    // otra con un clic, y la respuesta de la anterior no puede pisar el panel
+    // de la que está elegida ahora.
+    let turnoDetalle = 0
+
     async function abrirDetalle(cobranzaId, { origen = 'listado' } = {}) {
       estado.detalleOrigen = origen
+      if (origen === 'listado') {
+        estado.cobranzaSeleccionadaId = cobranzaId
+        marcarFilaSeleccionada()
+      }
+      const turno = ++turnoDetalle
       document.getElementById('cob-btn-volver-listado').textContent =
         origen === 'cheques' ? '‹ Volver a los cheques' : '‹ Volver al listado'
       mostrarVistaCob('detalle')
+      if (enModoMaestro()) document.getElementById('cob-vista-detalle').scrollTop = 0
       const cuerpo = document.getElementById('cob-detalle-cuerpo')
       cuerpo.innerHTML = '<div class="cob-vacio">Cargando el detalle…</div>'
 
@@ -2344,6 +2575,7 @@
           supabase.from('cobranza_fotos').select('id, storage_path, subida_por, ocr_modelo, created_at').eq('cobranza_id', cobranzaId).order('created_at'),
           supabase.from('cobranza_historial').select('*').eq('cobranza_id', cobranzaId).order('created_at'),
         ])
+        if (turno !== turnoDetalle) return
         if (cab.error) throw cab.error
         if (!cab.data) { cuerpo.innerHTML = '<div class="cob-vacio">No se encontró la cobranza.</div>'; return }
 
@@ -2361,6 +2593,7 @@
           const { data: emps } = await supabase.from('v_empleados_publico').select('id, nombre').in('id', ids)
           ;(emps ?? []).forEach(e => nombres.set(e.id, e.nombre))
         }
+        if (turno !== turnoDetalle) return
 
         estado.detalle = {
           cabecera: cab.data,
@@ -2372,6 +2605,7 @@
         renderizarDetalle()
       } catch (err) {
         console.error('No se pudo abrir el detalle:', err)
+        if (turno !== turnoDetalle) return
         cuerpo.innerHTML = '<div class="cob-vacio">No se pudo cargar el detalle. Revisá la señal y volvé a intentar.</div>'
       }
     }
@@ -4098,6 +4332,15 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function conectarTodo() {
+      // ── Escritorio ──
+      // Al cruzar los 1100px (girar una tablet, achicar la ventana) se vuelve
+      // a acomodar la vista actual: lado a lado o pantallas separadas.
+      if (typeof window.matchMedia === 'function') {
+        window.matchMedia(MQ_ESCRITORIO).addEventListener('change', () => {
+          if (estado.vista) mostrarVistaCob(estado.vista)
+        })
+      }
+
       // ── Listado ──
       let temporizadorBusqueda = null
       document.getElementById('cob-buscar-cliente').addEventListener('input', (ev) => {

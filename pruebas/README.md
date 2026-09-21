@@ -115,6 +115,24 @@ Inventaría, del baseline y del archivo actual, **cada id**, **cada atributo `da
 - El baseline es el commit fijo `BASE_COMMIT` del archivo (hoy `fba6396`), nunca `HEAD`. `ARCHIVO_TEST` cambia el archivo bajo prueba y `ARCHIVO_BASE` reemplaza el baseline por un archivo ya extraído. `LISTAR=1` imprime el inventario completo.
 - Si una parte del rediseño cambia **a propósito** el texto de un control sin id ni `data-*`, el cambio va declarado en `RENOMBRADOS`, con su motivo, y la salida lo lista.
 
+## La vista de escritorio de Cobranzas
+
+```bash
+node pruebas/test-cobranzas-escritorio.js
+node pruebas/mut-cobranzas-escritorio.js
+```
+
+EJECUTA `mostrarVistaCob`, `abrirDetalle`, `renderizarListado`, `htmlFilaCobranza` y las funciones de la selección con un `document` falso cuyos elementos guardan sus clases y atributos, y un `window.matchMedia` que la suite prende y apaga (celular / escritorio). Lo que afirma:
+
+- **en celular nada cambia**: listado y detalle son pantallas separadas y abrir una cobranza sube la página;
+- en escritorio el listado y el panel conviven, abrir una cobranza **no mueve la página**, y la fila elegida lleva la clase y `aria-current` —una sola—, también al redibujar;
+- si el filtro deja afuera la elegida, el panel se vacía con un texto neutro, sin cifras; un detalle abierto desde la vista Cheques sigue a pantalla entera y no toca la selección;
+- la respuesta de una apertura vieja no pisa el panel de la elegida, y volver al listado vuelve a leer la cobranza abierta;
+- en el CSS, **toda** regla de `.cob-maestro--activo` y de la fila elegida vive adentro del `@media (min-width: 1100px)`, con el mismo corte que `MQ_ESCRITORIO` del script, y la franja de celular sigue diciendo "falta procesar";
+- no hay cifras de cabecera ("Sin procesar" / "Total del mes"): no existe una agregación en la base con los mismos filtros, y sumar en el cliente daría un total falso.
+
+El runner no tiene mutaciones automáticas: los `escCob()` de la fila ya los mutan `mut-cobranzas-xss.js` y los detecta `test-cobranzas-xss.js`.
+
 ## Qué NO va acá
 
 Archivos de un solo uso: scripts que aplican una edición, generadores de vistas para mirar en el navegador, volcados intermedios. Esos siguen viviendo en el scratchpad de la sesión. Acá va lo que tiene que poder volver a correrse dentro de seis meses.

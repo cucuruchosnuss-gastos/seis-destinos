@@ -1,0 +1,100 @@
+// Mutaciones de test-cobranzas-escritorio.js. Ver mutar.js.
+//
+//   node pruebas/mut-cobranzas-escritorio.js
+//
+// Sin automáticas: los escCob() de la fila los mutan y los detectan
+// mut-cobranzas-xss.js / test-cobranzas-xss.js. Las de acá rompen, de a una,
+// cada garantía de la vista de escritorio.
+
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+
+const RAIZ = path.join(__dirname, '..')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-cobranzas-escritorio.js'),
+  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/cobranzas.html'),
+  funciones: [],
+  escape: 'escCob',
+  manuales: [
+    // ── El modo maestro ───────────────────────────────────────────────────
+    { nombre: 'el corte del script deja de coincidir con el del CSS',
+      de: "const MQ_ESCRITORIO = '(min-width: 1100px)'", a: "const MQ_ESCRITORIO = '(min-width: 900px)'" },
+    { nombre: 'el corte del CSS deja de coincidir con el del script',
+      de: '    @media (min-width: 1100px) {\n', a: '    @media (min-width: 900px) {\n' },
+    { nombre: 'un detalle abierto desde Cheques también entra al modo maestro',
+      de: "(vista === 'detalle' && estado.detalleOrigen === 'listado')", a: "vista === 'detalle'" },
+    { nombre: 'el modo maestro se activa también en celular',
+      de: "return typeof window.matchMedia === 'function' && window.matchMedia(MQ_ESCRITORIO).matches",
+      a: 'return true' },
+    { nombre: 'en escritorio el listado se oculta al abrir una cobranza',
+      de: "document.getElementById('cob-vista-listado').hidden = !(id === 'listado' || maestro)",
+      a: "document.getElementById('cob-vista-listado').hidden = id !== 'listado'" },
+    { nombre: 'en escritorio el panel no se muestra en el listado',
+      de: "document.getElementById('cob-vista-detalle').hidden = !(id === 'detalle' || maestro)",
+      a: "document.getElementById('cob-vista-detalle').hidden = id !== 'detalle'" },
+    { nombre: 'abrir una cobranza en escritorio mueve la página',
+      de: "if (!(maestro && id === 'detalle')) window.scrollTo", a: 'window.scrollTo' },
+    { nombre: 'en celular abrir una cobranza ya no sube la página',
+      de: "if (!(maestro && id === 'detalle')) window.scrollTo", a: "if (false) window.scrollTo" },
+    { nombre: 'en escritorio el subtítulo dice Detalle',
+      de: "SUBTITULO_VISTA_COB[maestro ? 'listado' : id]", a: 'SUBTITULO_VISTA_COB[id]' },
+    { nombre: 'en escritorio las pestañas se ocultan con una cobranza abierta',
+      de: "document.getElementById('cob-pestanas').hidden = !(id === 'listado' || id === 'cheques' || maestro)",
+      a: "document.getElementById('cob-pestanas').hidden = !(id === 'listado' || id === 'cheques')" },
+    // ── La selección ───────────────────────────────────────────────────────
+    { nombre: 'abrir una cobranza no la deja elegida',
+      de: '        estado.cobranzaSeleccionadaId = cobranzaId\n        marcarFilaSeleccionada()', a: '        marcarFilaSeleccionada()' },
+    { nombre: 'abrir desde Cheques también cambia la elegida',
+      de: "      if (origen === 'listado') {\n        estado.cobranzaSeleccionadaId", a: "      if (true) {\n        estado.cobranzaSeleccionadaId" },
+    { nombre: 'la fila elegida no se marca sin redibujar',
+      de: "        fila.classList.toggle('cob-fila--seleccionada', es)\n", a: '' },
+    { nombre: 'se marcan TODAS las filas',
+      de: "        const es = fila.dataset.cobranza === estado.cobranzaSeleccionadaId", a: '        const es = true' },
+    { nombre: 'el render de la fila no lleva la clase de elegida',
+      de: "${seleccionada ? ' cob-fila--seleccionada' : ''}", a: '' },
+    { nombre: 'la fila elegida pierde aria-current',
+      de: `\${seleccionada ? ' aria-current="true"' : ''}`, a: '' },
+    // ── El panel ───────────────────────────────────────────────────────────
+    { nombre: 'el filtro que deja afuera la elegida no vacía el panel',
+      de: '      soltarSeleccionFueraDelListado()\n    }', a: '    }' },
+    { nombre: 'un filtro sin ninguna fila no suelta la selección',
+      de: '        soltarSeleccionFueraDelListado()\n        return', a: '        return' },
+    { nombre: 'soltar la selección también en un detalle de pantalla entera',
+      de: '      if (!id || !enModoMaestro()) return', a: '      if (!id) return' },
+    { nombre: 'la selección nunca se suelta',
+      de: '      if (estado.cobranzas.some(c => c.id === id)) return', a: '      return' },
+    { nombre: 'el panel vacío no se dibuja',
+      de: "        if (estado.cobranzaSeleccionadaId) abrirDetalle(estado.cobranzaSeleccionadaId)\n        else pintarPanelVacio()",
+      a: '        if (estado.cobranzaSeleccionadaId) abrirDetalle(estado.cobranzaSeleccionadaId)' },
+    { nombre: 'volver al listado no vuelve a leer la cobranza abierta',
+      de: "        if (estado.cobranzaSeleccionadaId) abrirDetalle(estado.cobranzaSeleccionadaId)\n        else pintarPanelVacio()",
+      a: '        pintarPanelVacio()' },
+    { nombre: 'una respuesta vieja pisa el panel (sin el turno)',
+      de: '        if (turno !== turnoDetalle) return\n        if (cab.error) throw cab.error', a: '        if (cab.error) throw cab.error' },
+    { nombre: 'el panel vacío muestra una cifra en vez de un texto neutro',
+      de: "function pintarPanelVacio(texto = 'Elegí una cobranza del listado para verla acá.')",
+      a: "function pintarPanelVacio(texto = 'Sin procesar: $ 0,00')" },
+    // ── El CSS ─────────────────────────────────────────────────────────────
+    { nombre: 'la fila elegida se pinta también en celular',
+      de: '    .cob-fila__tabla,\n    .cob-lista-cabecera { display: none; }',
+      a: '    .cob-fila__tabla,\n    .cob-lista-cabecera { display: none; }\n    .cob-fila--seleccionada { background: var(--naranja-suave); }' },
+    { nombre: 'en escritorio la franja sigue marcando "registrada"',
+      de: '      .cob-maestro--activo .cob-fila--registrada { border-left-color: transparent; }\n', a: '' },
+    { nombre: 'la tabla de escritorio se dibuja en celular',
+      de: '    .cob-fila__tabla,\n    .cob-lista-cabecera { display: none; }', a: '    .cob-lista-cabecera { display: none; }' },
+    { nombre: 'en celular la franja deja de marcar "falta procesar"',
+      de: '    .cob-fila--registrada { border-left-color: var(--naranja); }', a: '    .cob-fila--registrada { border-left-color: transparent; }' },
+    { nombre: 'el panel pierde su scroll propio',
+      de: '        overflow-y: auto;\n        min-width: 0;\n        background: var(--cob-fondo-panel);', a: '        min-width: 0;\n        background: var(--cob-fondo-panel);' },
+    { nombre: 'el total de la tabla toma el color del módulo',
+      de: '.cob-maestro--activo .cob-celda--total { font-weight: 700; color: var(--color-texto); }',
+      a: '.cob-maestro--activo .cob-celda--total { font-weight: 700; color: var(--naranja-oscuro); }' },
+    // ── La fila ────────────────────────────────────────────────────────────
+    { nombre: 'la fecha de la tabla sale completa',
+      de: 'const fechaCorta = formatearFechaCob(c.fecha).slice(0, 5)', a: 'const fechaCorta = formatearFechaCob(c.fecha)' },
+    { nombre: 'sin efectivo la celda dice $ 0,00',
+      de: "const textoEfectivoCelda = efectivo > 0 ? formatearImporte(efectivo) : '—'",
+      a: 'const textoEfectivoCelda = formatearImporte(efectivo)' },
+  ],
+})

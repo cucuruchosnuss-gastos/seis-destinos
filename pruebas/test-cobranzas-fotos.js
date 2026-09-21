@@ -109,9 +109,12 @@ const FUNCIONES = [
   'pintarFormulario', 'pintarEstadoFotos', 'fotoLeidaSinProblemas', 'fotoSinSenal', 'textoLecturaFoto',
   'textoChequesLeidos', 'htmlAvisoFoto', 'hayFotosLeyendo', 'asegurarContadorLecturas',
   'detenerContadorLecturas', 'tickLecturas', 'mostrarVistaCob',
+  // mostrarVistaCob consulta el modo de escritorio (rediseño 3.5); acá no hay
+  // matchMedia, así que corre siempre como celular.
+  'esEscritorio', 'enModoMaestro', 'pintarPanelVacio',
   'chequeVacio', 'chequeDesdeOcr', 'renglonComoImpreso', 'aplicarRenglones',
 ]
-const CONSTANTES = ['SEGUNDOS_LECTURA_LENTA', 'MS_REINTENTO_FOTOS', 'MAX_INTENTOS_LECTOR']
+const CONSTANTES = ['SEGUNDOS_LECTURA_LENTA', 'MS_REINTENTO_FOTOS', 'MAX_INTENTOS_LECTOR', 'MQ_ESCRITORIO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
