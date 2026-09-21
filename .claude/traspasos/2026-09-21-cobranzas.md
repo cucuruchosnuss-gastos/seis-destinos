@@ -88,3 +88,106 @@ afirma que se controló algo.
   CMC-7 mostrando el desglose, el desglose pegando el número, un renglón corto
   con desglose, un renglón mal sin aviso, el prellenado pegado y el prellenado
   a medias.
+
+---
+
+## Parte 2 — Vista "Cheques" (commit 2)
+
+### Qué cambió en `modulos/cobranzas.html`
+
+- **Pestañas "Cobranzas" / "Cheques"** arriba de las dos vistas de lista (solo
+  se ven ahí). La pestaña activa va en `--oliva-oscuro`: es navegación, no una
+  acción, y no compite con el botón primario.
+- **Vista nueva "Cheques": una tabla estilo planilla, una fila por cheque.**
+  Columnas: N° de cheque (el de 8, sin dígito de control), banco (el nombre de
+  `bancos_bcra`; si no está, "Banco 999 (no está en el catálogo)" — la misma
+  `nombreBanco()` de todo el módulo), emisión, pago ("Al día" en un común),
+  importe, cliente, estado y salida (fecha y destino).
+- **Arriba, el total en pesos y la cantidad de los cheques EN CARTERA.** Es el
+  total de TODA la cartera, no el de los filtros — responde "cuánto tengo en
+  cartera". Con un filtro puesto, la tarjeta lo dice con una línea. Si la
+  consulta falla, dice "No se pudo calcular" y NUNCA "$ 0,00".
+- **Filtro de estado con tres chips:** En cartera (por defecto) / Salidos
+  (depositados y endosados) / Todos. **Los anulados solo aparecen con "Todos".**
+- **Orden:** por fecha de cobro ascendente — la de pago en un diferido, la de
+  emisión en un común —, así lo que se cobra primero queda arriba. A igual
+  fecha, por número.
+- Los salidos van **atenuados con color** (no con `opacity`: la celda fija se
+  volvería transparente) y con la etiqueta "Depositado" / "Endosado". Los
+  anulados, tachados.
+- **Tocar una fila** (o Enter/espacio con el teclado) abre el detalle de la
+  cobranza, que muestra sus fotos. El "Volver" del detalle vuelve a la vista de
+  la que se vino (`abrirDetalle(id, { origen })`, parámetro con default y no
+  variable suelta) y el botón dice "Volver a los cheques".
+- **375 px, verificado en un navegador:** la página mide 375 px de ancho (no
+  scrollea de costado); la tabla (841 px de contenido) scrollea dentro de su
+  propia caja (342 px) con la columna del número `position: sticky`. Probado
+  con una página armada con el CSS real del módulo y la tabla generada por las
+  funciones reales, porque la pantalla real exige sesión.
+
+### Los filtros por número y por banco se MUDARON a esta vista
+
+Estaban (sin commitear) en la lista de cobranzas y se resolvían en dos pasos:
+buscar en `cobranza_cheques` los `cobranza_id` y después filtrar `v_cobranzas`
+con `.in('id', ids)`, con un tope de 200 ids. **Acá se filtra
+`cobranza_cheques` directo, así que el `.in()`, el tope y el aviso de truncado
+no existen: no entraron al código.** La lista de cobranzas quedó sin filtros de
+cheque.
+
+- **Número** (`filtroNumeroCheque`), la regla de los cuatro largos: menos de 8
+  dígitos → contiene; 8 → exacto; 9 → exacto sobre los primeros 8, avisando si
+  el noveno cierra o no como dígito de control (con la `dvBcra()` del archivo,
+  no una copia); más de 9 → avisa y NO filtra por número. **Se cuentan
+  dígitos, no caracteres**, y **el patrón del `like` se arma con los dígitos
+  ya extraídos, nunca con el texto crudo**: un `%` o un `_` tipeados nunca
+  llegan a la consulta.
+- **DECISIÓN NUEVA, tomada sin preguntar:** un texto con ALGO escrito pero
+  NINGÚN dígito ("%", "abc") da **cero resultados y un aviso**, sin consultar.
+  Antes caía en "no filtrar", o sea mostraba todos los cheques.
+- **Banco** (select): la lista sale de **todos los cheques visibles, sin
+  ningún filtro** (una sola consulta, `cargarResumenCheques`, que arma también
+  el total en cartera) y se recarga con esa misma consulta al guardar, anular,
+  reabrir y marcar una salida (`refrescarListado`). Si el banco elegido deja
+  de tener cheques, queda igual como opción, para que el selector no diga
+  "Todos" con el filtro puesto.
+- **"Limpiar filtros"** borra los tres —estado vuelve a "En cartera", número y
+  banco en blanco—, en el estado Y en los campos, y vuelve a consultar. Solo
+  aparece con algún filtro puesto. Verificado ejecutándolo.
+
+### EL TOPE MEDIDO DEL `.in()`, por si vuelve a hacer falta
+
+Medido contra el PostgREST de este proyecto el 17/09/2026, con uuids reales en
+la query (`id=in.(...)` viaja en la URL): **650 ids (24.128 B de URL) todavía
+entran; 700 ids (25.978 B) ya se rechazan; de 1200 para arriba la conexión se
+corta sin respuesta.** El código viejo usaba 200 (unos 7,5 KB), más de tres
+veces por debajo, porque en el camino hay proxies que cortan antes y no se
+pueden medir desde acá. Hoy ese código no existe.
+
+### Límites conocidos (declarados en pantalla, no silenciosos)
+
+- **PostgREST devuelve 1000 filas por defecto.** La tabla, la consulta de
+  cobranzas (de donde sale el cliente) y el resumen avisan si llegan a 1000.
+  Hoy hay 11 cheques.
+- **El cliente sale de una segunda consulta con TODAS las cobranzas visibles**
+  (`id, cliente, estado, fecha`), sin embed —el módulo no usa embeds entre
+  estas tablas— y sin `.in()`, que es justo lo que tenía tope. Un cheque cuya
+  cobranza no llegó muestra "—", nunca "undefined".
+- RLS: con solo `cobranzas:cargar` la persona ve sus propios cheques, así que
+  su total y su lista de bancos son los suyos. No se completa con `bancos_bcra`.
+
+### Verificación (commit 2)
+
+- `check-scripts` OK. Suite **195/195**. Tests nuevos ejecutados: los cuatro
+  largos del número; `%`, `%%_`, `6625%`, `12_4` y `a%b1` contra un
+  constructor de consultas que anota lo pedido (ningún patrón `like` tiene otra
+  cosa que dígitos entre los `%`; un `%` solo no consulta); los tres estados;
+  el orden; el total (en centavos, con importes que arrastran error de punto
+  flotante); el total ante un error; cada columna de la tabla con texto
+  malicioso; el selector de banco; limpiar; vacío y error; y el CSS de la
+  columna fija y del scroll.
+- Mutaciones **139/139** (+2 equivalentes ya declaradas), incluidas 23 de
+  comportamiento de esta vista. Tres escaparon en la primera corrida y se
+  investigaron antes de agregar nada: un `escCob` innecesario sobre un número
+  (se sacó), un caso de prueba que no distinguía sumar en centavos (0,1 y 0,2
+  dan exacto; se cambió por 1,1 + 2,2 + 0,29) y el camino de error del resumen
+  sin test (se agregó).

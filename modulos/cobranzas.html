@@ -595,6 +595,124 @@
       overflow-wrap: anywhere;
     }
 
+    /* ── Pestañas Cobranzas / Cheques ────────────────────────────────────── */
+
+    .cob-pestanas {
+      display: flex;
+      gap: 0.375rem;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .cob-pestana {
+      flex: 1 1 0;
+      min-height: 44px;
+      min-width: 0;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto-suave);
+      cursor: pointer;
+    }
+    /* Navegación, no acción: el tono oscuro para no competir con el botón
+       primario de la pantalla. Va DESPUÉS de su base. */
+    .cob-pestana--activa { border-color: var(--oliva-oscuro); background: var(--oliva-oscuro); color: #fff; }
+
+    /* ── Vista de cheques ────────────────────────────────────────────────── */
+
+    .cob-cartera {
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      border: 1px solid var(--borde-tarjeta);
+      padding: 0.875rem 1rem;
+      margin-bottom: 0.75rem;
+      min-width: 0;
+    }
+    .cob-cartera__k { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave); }
+    .cob-cartera__v {
+      font-size: 1.375rem;
+      font-weight: 700;
+      color: var(--oliva-oscuro);
+      overflow-wrap: anywhere;
+    }
+    .cob-cartera__sub { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+
+    /* LA TABLA SCROLLEA DE COSTADO ADENTRO DE SU CAJA, NUNCA LA PÁGINA. La
+       caja tiene max-width 100% y overflow-x auto; la tabla, un ancho mínimo
+       para que las columnas no se aplasten en 375px. */
+    .cob-tabla-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--color-fondo);
+      border: 1px solid var(--borde-tarjeta);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      min-width: 0;
+    }
+    /* `separate` y no `collapse`: con bordes colapsados la columna sticky
+       pierde el borde al scrollear en varios navegadores. */
+    .cob-tabla {
+      width: 100%;
+      min-width: 46rem;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.875rem;
+    }
+    .cob-tabla th {
+      text-align: left;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      padding: 0.625rem 0.625rem;
+      border-bottom: 1px solid var(--color-borde);
+      white-space: nowrap;
+      background: var(--color-fondo);
+    }
+    .cob-tabla td {
+      padding: 0.625rem 0.625rem;
+      border-bottom: 1px solid var(--borde-tarjeta);
+      color: var(--color-texto);
+      vertical-align: top;
+      background: var(--color-fondo);
+    }
+    .cob-tabla tbody tr { cursor: pointer; }
+    .cob-tabla tbody tr:last-child td { border-bottom: none; }
+    /* La columna del número queda FIJA al scrollear. Fondo OPACO: sin él, lo
+       que pasa por debajo se ve a través. */
+    .cob-tabla th:first-child,
+    .cob-tabla td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      border-right: 1px solid var(--color-borde);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .cob-tabla__num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cob-tabla__fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cob-tabla__sub { font-size: 0.75rem; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .cob-tabla__destino { max-width: 14rem; overflow-wrap: anywhere; }
+    /* Banco y cliente: un ancho mínimo para que un nombre largo no se parta
+       en cinco renglones y haga cada fila altísima. */
+    .cob-tabla__texto { min-width: 11rem; overflow-wrap: anywhere; }
+    /* ATENUADO CON COLOR Y NO CON opacity: una celda sticky con opacity se
+       vuelve transparente y deja ver las columnas que pasan por debajo. Va
+       DESPUÉS de la regla base de td, con la misma especificidad. */
+    .cob-tabla__fila--salido td { color: var(--color-texto-suave); }
+    .cob-tabla__fila--anulado td { color: var(--color-texto-suave); text-decoration: line-through; }
+
+    .cob-estado--en_cartera { background: var(--oliva-suave); color: var(--oliva-oscuro); }
+    .cob-estado--depositado { background: var(--color-superficie); color: var(--color-texto-suave); }
+    .cob-estado--endosado { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
+    .cob-estado--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+
     @media (min-width: 640px) {
       .cob-modal { align-items: center; }
     }
@@ -619,6 +737,12 @@
     </div>
 
     <div class="cob-vacio" id="cob-cargando">Cargando…</div>
+
+    <!-- Pestañas entre las dos vistas de lista. Solo se ven en esas dos. -->
+    <div class="cob-pestanas" id="cob-pestanas" role="tablist" hidden>
+      <button type="button" class="cob-pestana" id="cob-pestana-listado" role="tab">Cobranzas</button>
+      <button type="button" class="cob-pestana" id="cob-pestana-cheques" role="tab">Cheques</button>
+    </div>
 
     <!-- ══ LISTADO ══════════════════════════════════════════════════════ -->
     <div id="cob-vista-listado" hidden>
@@ -657,6 +781,41 @@
       <div class="cob-acciones">
         <button type="button" class="cob-btn cob-btn--ancho" id="cob-btn-mas" hidden>Cargar más</button>
       </div>
+    </div>
+
+    <!-- ══ CHEQUES ══════════════════════════════════════════════════════ -->
+    <!-- Una fila por cheque. Los filtros por número y por banco viven ACÁ y
+         no en la lista de cobranzas: acá se filtra cobranza_cheques directo. -->
+    <div id="cob-vista-cheques" hidden>
+      <div class="cob-cartera" id="cob-cartera"></div>
+
+      <div class="cob-filtros">
+        <div class="cob-chips" id="cob-chips-cheques" style="margin-bottom:.5rem"></div>
+        <div class="cob-filtros__fila">
+          <div class="cob-campo" style="margin-bottom:0">
+            <label for="cob-filtro-cheque">N&deg; de cheque</label>
+            <input type="search" id="cob-filtro-cheque" inputmode="numeric"
+                   placeholder="66259862" autocomplete="off" maxlength="20">
+          </div>
+          <!-- Las opciones salen de TODOS los cheques que la persona puede
+               ver, sin ningún otro filtro puesto: ver cargarResumenCheques(). -->
+          <div class="cob-campo" id="cob-campo-banco" style="margin-bottom:0" hidden>
+            <label for="cob-filtro-banco">Banco</label>
+            <select id="cob-filtro-banco"></select>
+          </div>
+        </div>
+        <!-- pre-line: las líneas del aviso se componen en JS y van por
+             textContent, que sin esto saldrían pegadas en un solo renglón. -->
+        <div class="cob-aviso cob-aviso--ambar" id="cob-aviso-cheque"
+             style="white-space:pre-line" hidden></div>
+        <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-limpiar-cheques" hidden>Limpiar filtros</button>
+      </div>
+
+      <div class="cob-aviso cob-aviso--ambar" id="cob-cheques-aviso" style="white-space:pre-line" hidden></div>
+      <div class="cob-tabla-scroll" id="cob-tabla-caja" hidden>
+        <table class="cob-tabla" id="cob-tabla-cheques"></table>
+      </div>
+      <div class="cob-vacio" id="cob-cheques-vacio" hidden></div>
     </div>
 
     <!-- ══ DETALLE ══════════════════════════════════════════════════════ -->
@@ -809,7 +968,22 @@
       hayMas: false,
       filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
 
+      // Vista de cheques. Los filtros arrancan en "en cartera".
+      cheques: {
+        filtros: { estado: 'en_cartera', numero: '', banco: '' },
+        filas: [],
+        cobranzas: new Map(),   // id → { id, cliente, estado, fecha }
+        cartera: null,          // { cantidad, total } — null = no se pudo saber
+        tope: false,
+        topeResumen: false,
+        error: null,
+      },
+      // Los códigos de banco que de verdad tienen algún cheque a la vista.
+      bancosDeCheques: [],
+
       detalle: null,          // { cabecera, cheques, fotos, historial }
+      // A qué vista vuelve el detalle: 'listado' o 'cheques'.
+      detalleOrigen: 'listado',
       // Borrador del formulario. Vive también en IndexedDB: es lo que sobrevive
       // a que el navegador cierre la pestaña en medio de un reparto.
       form: null,
@@ -1323,16 +1497,384 @@
         </div>`
     }
 
+    // Recarga lo que queda desactualizado DESPUÉS DE UNA ESCRITURA —guardar,
+    // anular, reabrir, marcar la salida de un cheque—: el listado de
+    // cobranzas, la tabla de cheques y el resumen de la cartera, que es de
+    // donde sale también la lista de bancos. Los listeners de los filtros NO
+    // pasan por acá: no cambian datos, solo la vista.
+    async function refrescarListado() {
+      await Promise.all([cargarCobranzas({ reiniciar: true }), cargarCheques(), cargarResumenCheques()])
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CHEQUES — una fila por cheque
+    //
+    // Acá viven los filtros por número y por banco. Se filtra cobranza_cheques
+    // DIRECTO, así que no hace falta la consulta en dos pasos con .in() que
+    // tenían esos filtros cuando colgaban de la lista de cobranzas.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // PostgREST devuelve 1000 filas por defecto. Si una consulta llega a eso,
+    // la lista está cortada y SE DICE: cortar en silencio es el peor final.
+    const TOPE_FILAS_POSTGREST = 1000
+
+    const FILTROS_CHEQUES_DEFECTO = { estado: 'en_cartera', numero: '', banco: '' }
+
+    const ESTADOS_FILTRO_CHEQUES = [
+      { id: 'en_cartera', nombre: 'En cartera' },
+      { id: 'salidos', nombre: 'Salidos' },
+      // "Todos" es el ÚNICO que muestra los anulados.
+      { id: 'todos', nombre: 'Todos' },
+    ]
+
+    const ETIQUETA_ESTADO_CHEQUE = {
+      en_cartera: 'En cartera', depositado: 'Depositado', endosado: 'Endosado', anulado: 'Anulado',
+    }
+
+    // Qué hacer con lo que se escribió en el filtro de número de cheque:
+    //
+    //   sin dígitos   -> NO se muestra ningún cheque, y se avisa
+    //   menos de 8    -> búsqueda PARCIAL
+    //   exactamente 8 -> el número, búsqueda EXACTA
+    //   exactamente 9 -> número + dígito de control: se usan los PRIMEROS 8
+    //   más de 9      -> NO se adivina: se avisa y NO se filtra por número
+    //
+    // El caso de más de 9 no filtra en vez de recortar: cortar "los primeros
+    // 8" de un número que la persona escribió mal devolvería resultados que
+    // parecen buenos y no lo son.
+    function filtroNumeroCheque(texto) {
+      // PRIMERO se extraen los dígitos y RECIÉN DESPUÉS se arma el patrón del
+      // like. En SQL el % y el _ son comodines: un '%' tipeado que llegara
+      // crudo al patrón devolvería TODOS los cheques sin ningún error —el
+      // filtro se vería andando—. Por lo mismo se cuentan los DÍGITOS y no los
+      // caracteres: "285-386" son 6 dígitos, no 7.
+      const crudo = String(texto ?? '').trim()
+      const d = crudo.replace(/\D/g, '')
+      if (!crudo) return { modo: 'ninguno', digitos: '', aviso: '' }
+      // Escribió algo pero ningún dígito ("%", "abc"): mostrar todos los
+      // cheques sería contestar otra pregunta. Cero resultados y un aviso.
+      if (!d) {
+        return {
+          modo: 'sin_digitos', digitos: '',
+          aviso: 'El número de cheque se busca por sus dígitos y lo que escribiste no tiene ninguno. No se muestra ningún cheque: borralo o escribí el número.',
+        }
+      }
+      // CONTIENE, no empieza-con: el repartidor se acuerda de los ÚLTIMOS
+      // dígitos del cheque, no de los primeros.
+      if (d.length < 8) return { modo: 'parcial', digitos: d, aviso: '' }
+      if (d.length === 8) return { modo: 'exacto', digitos: d, aviso: '' }
+      if (d.length === 9) {
+        const cuerpo = d.slice(0, 8)
+        // dvBcra() es LA del archivo, no una copia local: la fórmula ya vive
+        // en tres lugares (public.dv_bcra, la Edge Function ocr-cheques y acá)
+        // y una cuarta sería una más que mantener sincronizada.
+        const cierra = dvBcra(cuerpo) === Number(d[8])
+        return {
+          modo: 'exacto', digitos: cuerpo,
+          aviso: cierra
+            ? `Buscamos ${cuerpo}: el último dígito es el de control del banco y no es parte del número.`
+            : `Buscamos ${cuerpo} igual, pero el último dígito no coincide con el de control: revisá el número.`,
+        }
+      }
+      return {
+        modo: 'demasiado', digitos: '',
+        aviso: `Un número de cheque tiene 8 dígitos (9 con el de control) y escribiste ${d.length}. No estamos filtrando por número: revisalo.`,
+      }
+    }
+
+    // Aplica los filtros a una consulta sobre cobranza_cheques. Separada de la
+    // carga para poder EJECUTARLA en la suite contra un constructor que anota
+    // qué se le pidió. Devuelve sinResultados cuando no hay que consultar.
+    function aplicarFiltrosCheques(q, f) {
+      if (f.estado === 'en_cartera') q = q.eq('estado', 'en_cartera')
+      else if (f.estado === 'salidos') q = q.in('estado', ['depositado', 'endosado'])
+      // 'todos': sin filtro de estado, que es lo que trae también los anulados.
+      if (f.banco) q = q.eq('banco_codigo', f.banco)
+      const fn = filtroNumeroCheque(f.numero)
+      if (fn.modo === 'sin_digitos') return { q, sinResultados: true }
+      // El patrón se arma con fn.digitos —ya sin comodines— y NUNCA con el
+      // texto crudo del input.
+      if (fn.modo === 'exacto') q = q.eq('numero', fn.digitos)
+      else if (fn.modo === 'parcial') q = q.like('numero', `%${fn.digitos}%`)
+      return { q, sinResultados: false }
+    }
+
+    function hayFiltrosCheques() {
+      const f = estado.cheques.filtros
+      return f.estado !== FILTROS_CHEQUES_DEFECTO.estado || String(f.numero ?? '').trim() !== '' || !!f.banco
+    }
+
+    // La fecha en que el cheque se puede cobrar: la de pago en un diferido, la
+    // de emisión en uno común (un común se cobra desde que se emite).
+    function fechaDeCobroCheque(ch) {
+      return ch.tipo === 'diferido' && esFechaIso(ch.fecha_pago) ? ch.fecha_pago : ch.fecha_emision
+    }
+
+    // Lo que se cobra primero, arriba. Sin fecha, al final. A igual fecha, por
+    // número, para que el orden no cambie entre una carga y otra.
+    function ordenarCheques(filas) {
+      const clave = (ch) => esFechaIso(fechaDeCobroCheque(ch)) ? fechaDeCobroCheque(ch) : '9999-99-99'
+      return [...filas].sort((a, b) => {
+        const fa = clave(a), fb = clave(b)
+        if (fa !== fb) return fa < fb ? -1 : 1
+        return String(a.numero ?? '').localeCompare(String(b.numero ?? ''))
+      })
+    }
+
+    // Cuánto hay en cartera. Se suma en CENTAVOS: sumar decimales de a uno
+    // arrastra error de punto flotante en una pantalla de plata.
+    function resumenCartera(filas) {
+      let centavos = 0, cantidad = 0
+      for (const ch of filas) {
+        if (ch.estado !== 'en_cartera') continue
+        cantidad++
+        centavos += Math.round(Number(ch.importe) * 100)
+      }
+      return { cantidad, total: centavos / 100 }
+    }
+
+    // UNA SOLA CONSULTA, SIN NINGÚN FILTRO, arma dos cosas: el total en
+    // cartera y la lista del selector de banco.
+    //
+    // LA LISTA DE BANCOS SALE DE TODOS LOS CHEQUES QUE LA PERSONA PUEDE VER, y
+    // esa es la decisión delicada del filtro. Si se derivara de los cheques que
+    // quedaron después de filtrar por estado o por número, poner un filtro
+    // BORRARÍA bancos del selector: el filtro "sigue andando" con opciones de
+    // menos y nada lo avisa. Mismo caso que el selector de repartidor.
+    //
+    // POR ESO HAY UNA SOLA FUNCIÓN que arma la lista, y la llaman los dos
+    // lados: la carga inicial y refrescarListado() después de guardar, anular
+    // o marcar una salida. Dos caminos podrían divergir.
+    //
+    // CONSECUENCIA DEL RLS, aceptada a propósito: cobranza_cheques se lee por
+    // un exists sobre cobranzas, así que alguien con solo `cargar` ve nada más
+    // que sus propios cheques: su lista de bancos y su total son los suyos.
+    // NO se completa leyendo bancos_bcra: ofrecería 59 bancos sin un solo
+    // cheque detrás.
+    async function cargarResumenCheques() {
+      try {
+        const { data, error } = await supabase
+          .from('cobranza_cheques').select('banco_codigo, estado, importe')
+        if (error) throw error
+        const filas = data ?? []
+        estado.cheques.cartera = resumenCartera(filas)
+        estado.cheques.topeResumen = filas.length >= TOPE_FILAS_POSTGREST
+        const codigos = [...new Set(filas.map(x => String(x.banco_codigo ?? '')).filter(Boolean))]
+        estado.bancosDeCheques = codigos.sort((a, b) => nombreBanco(a).localeCompare(nombreBanco(b), 'es'))
+      } catch (err) {
+        console.error('No se pudo calcular la cartera de cheques:', err)
+        // null y NO cero: un total que no se pudo calcular no es "$ 0,00".
+        estado.cheques.cartera = null
+      }
+      pintarSelectorBancos()
+      pintarCartera()
+    }
+
+    function pintarSelectorBancos() {
+      const sel = document.getElementById('cob-filtro-banco')
+      const elegido = estado.cheques.filtros.banco
+      const codigos = [...estado.bancosDeCheques]
+      // Si el banco elegido ya no tiene cheques a la vista, se deja como
+      // opción igual: si no, el selector diría "Todos" con el filtro puesto.
+      if (elegido && !codigos.includes(elegido)) codigos.push(elegido)
+      sel.innerHTML = '<option value="">Todos</option>' +
+        codigos.map(c => `<option value="${escCob(c)}">${escCob(nombreBanco(c))}</option>`).join('')
+      sel.value = elegido || ''
+      // Sin ningún cheque a la vista, un selector vacío es ruido.
+      document.getElementById('cob-campo-banco').hidden = codigos.length === 0
+    }
+
+    function pintarCartera() {
+      document.getElementById('cob-cartera').innerHTML =
+        htmlCartera(estado.cheques.cartera, hayFiltrosCheques(), estado.cheques.topeResumen)
+    }
+
+    // Función pura, para ejecutarla en la suite.
+    function htmlCartera(cartera, conFiltros, tope) {
+      if (!cartera) {
+        return '<div class="cob-cartera__sub">No se pudo calcular el total en cartera. Revisá la señal.</div>'
+      }
+      const cantidadCartera = cartera.cantidad
+      const notas = []
+      // El total NO sigue a los filtros: responde "cuánto tengo en cartera".
+      // Con un filtro puesto se dice, o se leería como el total del filtro.
+      if (conFiltros) notas.push('Es el total de toda la cartera, no de los filtros de abajo.')
+      if (tope) notas.push(`Se sumaron los primeros ${TOPE_FILAS_POSTGREST} cheques: el total puede estar incompleto.`)
+      return `
+        <div class="cob-cartera__k">En cartera</div>
+        <div class="cob-cartera__v">${escCob(formatearImporte(cartera.total))}</div>
+        <div class="cob-cartera__sub">${cantidadCartera} ${cantidadCartera === 1 ? 'cheque' : 'cheques'}</div>
+        ${notas.map(t => `<div class="cob-cartera__sub">${escCob(t)}</div>`).join('')}`
+    }
+
+    // Los chips de estado, el aviso del número y el botón de limpiar.
+    function pintarFiltrosCheques() {
+      const f = estado.cheques.filtros
+      const cont = document.getElementById('cob-chips-cheques')
+      cont.innerHTML = ESTADOS_FILTRO_CHEQUES.map(e => `
+        <button type="button" class="cob-chip ${f.estado === e.id ? 'cob-chip--activo' : ''}" data-estado-cheque="${escCob(e.id)}">${escCob(e.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('[data-estado-cheque]').forEach(b => {
+        b.addEventListener('click', () => {
+          estado.cheques.filtros.estado = b.dataset.estadoCheque
+          cargarCheques()
+        })
+      })
+      // El aviso va por textContent: es texto, no HTML.
+      const caja = document.getElementById('cob-aviso-cheque')
+      const aviso = filtroNumeroCheque(f.numero).aviso
+      caja.textContent = aviso
+      caja.hidden = !aviso
+      // Solo con algún filtro distinto del de arranque: un botón que no tiene
+      // nada que limpiar es ruido.
+      document.getElementById('cob-btn-limpiar-cheques').hidden = !hayFiltrosCheques()
+      pintarCartera()
+    }
+
+    // Limpia TODOS los filtros de la vista: estado, número y banco, en el
+    // estado Y en los campos. Si quedara uno en el campo y no en el estado (o
+    // al revés), la pantalla diría una cosa y la consulta haría otra.
+    function limpiarFiltrosCheques() {
+      estado.cheques.filtros = { ...FILTROS_CHEQUES_DEFECTO }
+      document.getElementById('cob-filtro-cheque').value = ''
+      document.getElementById('cob-filtro-banco').value = ''
+      cargarCheques()
+    }
+
+    // Contador de turno: si los filtros cambian mientras una consulta está en
+    // vuelo, la respuesta vieja NO pisa a la nueva.
+    let turnoCheques = 0
+
+    async function cargarCheques() {
+      const turno = ++turnoCheques
+      const c = estado.cheques
+      pintarFiltrosCheques()
+      const { q, sinResultados } = aplicarFiltrosCheques(
+        supabase.from('cobranza_cheques').select(
+          'id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino'),
+        c.filtros)
+      if (sinResultados) {
+        c.filas = []; c.error = null; c.tope = false
+        renderizarCheques()
+        return
+      }
+      try {
+        // El cliente de cada cheque sale de OTRA consulta y no de un embed:
+        // el módulo no usa embeds entre estas tablas. Se traen todas las
+        // cobranzas visibles y no un .in() con los ids de los cheques, que es
+        // justo lo que tenía tope por el largo de la URL.
+        const [ch, cob] = await Promise.all([
+          q,
+          supabase.from('cobranzas').select('id, cliente, estado, fecha'),
+        ])
+        if (turno !== turnoCheques) return
+        if (ch.error) throw ch.error
+        if (cob.error) throw cob.error
+        const filas = ch.data ?? []
+        const cobs = cob.data ?? []
+        c.filas = ordenarCheques(filas)
+        c.cobranzas = new Map(cobs.map(x => [x.id, x]))
+        c.tope = filas.length >= TOPE_FILAS_POSTGREST || cobs.length >= TOPE_FILAS_POSTGREST
+        c.error = null
+      } catch (err) {
+        if (turno !== turnoCheques) return
+        console.error('No se pudieron cargar los cheques:', err)
+        // Se vacía la tabla: dejar las filas de OTRO filtro bajo el filtro
+        // nuevo sería mostrar algo que no es lo que se pidió.
+        c.filas = []
+        c.error = 'No se pudieron cargar los cheques. Revisá la señal.'
+        c.tope = false
+      }
+      renderizarCheques()
+    }
+
+    function renderizarCheques() {
+      const c = estado.cheques
+      const aviso = document.getElementById('cob-cheques-aviso')
+      const lineas = []
+      if (c.error) lineas.push(c.error)
+      if (c.tope) lineas.push(`Hay más de ${TOPE_FILAS_POSTGREST} filas y se muestran las primeras: afiná la búsqueda.`)
+      aviso.textContent = lineas.join('\n')
+      aviso.hidden = lineas.length === 0
+
+      const caja = document.getElementById('cob-tabla-caja')
+      const tabla = document.getElementById('cob-tabla-cheques')
+      const vacio = document.getElementById('cob-cheques-vacio')
+      if (c.error || !c.filas.length) {
+        caja.hidden = true
+        tabla.innerHTML = ''
+        vacio.hidden = !!c.error
+        vacio.textContent = hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
+        return
+      }
+      vacio.hidden = true
+      caja.hidden = false
+      tabla.innerHTML = htmlTablaCheques(c.filas, c.cobranzas)
+      tabla.querySelectorAll('[data-cheque-fila]').forEach(tr => {
+        const abrir = () => abrirDetalle(tr.dataset.chequeCobranza, { origen: 'cheques' })
+        tr.addEventListener('click', abrir)
+        tr.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir() }
+        })
+      })
+    }
+
+    // Función pura de la tabla, para EJECUTARLA en la suite.
+    function htmlTablaCheques(filas, cobranzas) {
+      return `
+        <thead>
+          <tr>
+            <th scope="col">N&deg; de cheque</th>
+            <th scope="col">Banco</th>
+            <th scope="col">Emisión</th>
+            <th scope="col">Pago</th>
+            <th scope="col" class="cob-tabla__num">Importe</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Salida</th>
+          </tr>
+        </thead>
+        <tbody>${filas.map(ch => htmlFilaCheque(ch, cobranzas.get(ch.cobranza_id))).join('')}</tbody>`
+    }
+
+    function htmlFilaCheque(ch, cob) {
+      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      // Un cheque común no tiene fecha de pago: se cobra al día.
+      const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'Al día'
+      const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
+      // El destino lo TIPEA una persona: es texto libre y va escapado.
+      const celdaSalida = salido
+        ? `<span class="cob-tabla__fecha">${escCob(formatearFechaCob(ch.salida_fecha))}</span>${
+            ch.salida_destino ? `<div class="cob-tabla__sub cob-tabla__destino">${escCob(ch.salida_destino)}</div>` : ''}`
+        : '—'
+      return `
+        <tr class="${salido ? 'cob-tabla__fila--salido' : ch.estado === 'anulado' ? 'cob-tabla__fila--anulado' : ''}" data-cheque-fila="${escCob(ch.id)}" data-cheque-cobranza="${escCob(ch.cobranza_id)}" tabindex="0">
+          <td>${escCob(ch.numero ?? '—')}</td>
+          <td class="cob-tabla__texto">${escCob(nombreBanco(ch.banco_codigo))}</td>
+          <td class="cob-tabla__fecha">${escCob(formatearFechaCob(ch.fecha_emision))}</td>
+          <td class="cob-tabla__fecha">${escCob(pago)}</td>
+          <td class="cob-tabla__num">${escCob(formatearImporte(ch.importe))}</td>
+          <td class="cob-tabla__texto">${escCob(cob?.cliente ?? '—')}</td>
+          <td><span class="cob-estado cob-estado--${escCob(ch.estado)}">${escCob(etiqueta)}</span></td>
+          <td>${celdaSalida}</td>
+        </tr>`
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // NAVEGACIÓN ENTRE VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const SUBTITULO_VISTA_COB = { listado: 'Listado', detalle: 'Detalle', form: 'Nueva cobranza' }
+    const SUBTITULO_VISTA_COB = { listado: 'Listado', cheques: 'Cheques', detalle: 'Detalle', form: 'Nueva cobranza' }
 
     function mostrarVistaCob(id, { subtitulo } = {}) {
       document.getElementById('cob-vista-listado').hidden = id !== 'listado'
+      document.getElementById('cob-vista-cheques').hidden = id !== 'cheques'
       document.getElementById('cob-vista-detalle').hidden = id !== 'detalle'
       document.getElementById('cob-vista-form').hidden = id !== 'form'
+      // Las pestañas, solo en las dos vistas de lista.
+      document.getElementById('cob-pestanas').hidden = !(id === 'listado' || id === 'cheques')
+      document.getElementById('cob-pestana-listado').classList.toggle('cob-pestana--activa', id === 'listado')
+      document.getElementById('cob-pestana-cheques').classList.toggle('cob-pestana--activa', id === 'cheques')
       // Cada vista tiene su barra fija, y la del listado solo aparece con
       // permiso de cargar: sin él, el botón prometería algo que el servidor
       // rechaza.
@@ -1412,7 +1954,13 @@
     // DETALLE
     // ═══════════════════════════════════════════════════════════════════════
 
-    async function abrirDetalle(cobranzaId) {
+    // `origen` va como PARÁMETRO CON DEFAULT y no como una variable que se
+    // setea antes de llamar: así un call site nuevo no hereda en silencio el
+    // origen del anterior.
+    async function abrirDetalle(cobranzaId, { origen = 'listado' } = {}) {
+      estado.detalleOrigen = origen
+      document.getElementById('cob-btn-volver-listado').textContent =
+        origen === 'cheques' ? '‹ Volver a los cheques' : '‹ Volver al listado'
       mostrarVistaCob('detalle')
       const cuerpo = document.getElementById('cob-detalle-cuerpo')
       cuerpo.innerHTML = '<div class="cob-vacio">Cargando el detalle…</div>'
@@ -1724,8 +2272,8 @@
         if (error) throw error
         mostrarExito(exito)
         cerrarModalMotivo()
-        await abrirDetalle(params.p_id)
-        await cargarCobranzas({ reiniciar: true })
+        await abrirDetalle(params.p_id, { origen: estado.detalleOrigen })
+        await refrescarListado()
       } catch (err) {
         console.error(`Falló ${rpc}:`, err)
         mostrarError(err?.message || 'No se pudo completar la acción.')
@@ -2671,7 +3219,7 @@
         estado.form = null
         mostrarExito(resultado.yaExistia ? 'La cobranza ya estaba guardada.' : 'Cobranza guardada.')
         mostrarVistaCob('listado')
-        await Promise.all([cargarCobranzas({ reiniciar: true }), refrescarLocales()])
+        await Promise.all([refrescarListado(), refrescarLocales()])
         return
       }
 
@@ -2834,7 +3382,7 @@
             if (r.ok) {
               await dbBorrar(STORE_BORRADORES, f.id)
               mostrarExito(`Se subió la cobranza de ${f.cliente || 'un cliente'}.`)
-              await cargarCobranzas({ reiniciar: true })
+              await refrescarListado()
             } else if (r.tipo === 'validacion') {
               // El servidor la rechazó: reintentarla para siempre no la va a
               // arreglar. Vuelve a 'borrador' para que alguien la corrija.
@@ -2929,8 +3477,29 @@
         estado.filtros.repartidor = ev.target.value; cargarCobranzas({ reiniciar: true })
       })
       document.getElementById('cob-btn-mas').addEventListener('click', () => cargarCobranzas())
+
+      // ── Pestañas y vista de cheques ──
+      document.getElementById('cob-pestana-listado').addEventListener('click', () => mostrarVistaCob('listado'))
+      document.getElementById('cob-pestana-cheques').addEventListener('click', () => mostrarVistaCob('cheques'))
+      let temporizadorCheque = null
+      document.getElementById('cob-filtro-cheque').addEventListener('input', (ev) => {
+        estado.cheques.filtros.numero = ev.target.value
+        // El aviso se pinta en el acto —sin esperar el debounce— porque con
+        // más de 9 dígitos no se va a filtrar y el silencio se leería como que
+        // el filtro no hace nada.
+        pintarFiltrosCheques()
+        clearTimeout(temporizadorCheque)
+        temporizadorCheque = setTimeout(cargarCheques, 350)
+      })
+      document.getElementById('cob-filtro-banco').addEventListener('change', (ev) => {
+        estado.cheques.filtros.banco = ev.target.value; cargarCheques()
+      })
+      document.getElementById('cob-btn-limpiar-cheques').addEventListener('click', () => {
+        clearTimeout(temporizadorCheque)
+        limpiarFiltrosCheques()
+      })
       document.getElementById('cob-btn-nueva').addEventListener('click', abrirFormularioNuevo)
-      document.getElementById('cob-btn-volver-listado').addEventListener('click', () => mostrarVistaCob('listado'))
+      document.getElementById('cob-btn-volver-listado').addEventListener('click', () => mostrarVistaCob(estado.detalleOrigen))
 
       // ── Formulario ──
       document.getElementById('cob-btn-salir-form').addEventListener('click', async () => {
@@ -3072,7 +3641,7 @@
       mostrarVistaCob('listado')
 
       await Promise.all([cargarBancos(), cargarRepartidores()])
-      await Promise.all([cargarCobranzas({ reiniciar: true }), refrescarLocales()])
+      await Promise.all([refrescarListado(), refrescarLocales()])
       sincronizar()
     }
 

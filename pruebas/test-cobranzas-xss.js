@@ -24,6 +24,10 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cobranzas.h
 const SOLO = process.env.SOLO || ''   // 'render' | 'estatico' | ''
 
 let ok = 0, fallas = []
+// Las ramas ASYNC se juntan acá y la suite cierra cuando terminan TODAS: un
+// cierre por timeout podría cortar antes de que una afirme nada.
+const esperas = []
+const escCobDe = (S, t) => S.escCob(t)
 function chk(nombre, condicion, detalle) {
   if (condicion) ok++
   else fallas.push(nombre + (detalle ? ` — ${detalle}` : ''))
@@ -265,6 +269,251 @@ if (SOLO !== 'estatico') {
       S9.renglonComoImpreso(['66259862'], null) === '' && S9.renglonComoImpreso(['66259862'], undefined) === '')
   }
 
+  // ══ VISTA DE CHEQUES ════════════════════════════════════════════════════
+
+  // ── filtroNumeroCheque: los cuatro largos, más el vacío y el sin dígitos ──
+  {
+    const S10 = construir(ARCHIVO)
+    const f = S10.filtroNumeroCheque
+    const cuerpo = '66259862'
+    const dv = String(S10.dvBcra(cuerpo))
+    const dvMal = String((Number(dv) + 1) % 10)
+
+    chk('número: vacío no filtra', f('').modo === 'ninguno' && f('   ').modo === 'ninguno')
+    chk('número: menos de 8 dígitos es PARCIAL', f('9862').modo === 'parcial' && f('9862').digitos === '9862')
+    chk('número: se cuentan DÍGITOS y no caracteres ("285-386" son 6)',
+      f('285-386').modo === 'parcial' && f('285-386').digitos === '285386')
+    chk('número: exactamente 8 es EXACTO', f(cuerpo).modo === 'exacto' && f(cuerpo).digitos === cuerpo && f(cuerpo).aviso === '')
+    const nueve = f(cuerpo + dv)
+    chk('número: 9 con el dígito que cierra → exacto sobre los primeros 8',
+      nueve.modo === 'exacto' && nueve.digitos === cuerpo && /de control del banco/.test(nueve.aviso))
+    const nueveMal = f(cuerpo + dvMal)
+    chk('número: 9 con un dígito que no cierra → busca igual y AVISA',
+      nueveMal.modo === 'exacto' && nueveMal.digitos === cuerpo && /no coincide/.test(nueveMal.aviso))
+    const diez = f(cuerpo + '12')
+    chk('número: más de 9 NO filtra y avisa cuántos se escribieron',
+      diez.modo === 'demasiado' && diez.digitos === '' && /escribiste 10/.test(diez.aviso))
+    chk('número: un "%" solo NO es "ninguno" (que mostraría todos)',
+      f('%').modo === 'sin_digitos' && f('%').aviso !== '')
+  }
+
+  // ── aplicarFiltrosCheques: qué se le pide de verdad a la consulta ─────────
+  {
+    const S11 = construir(ARCHIVO)
+    const grabar = () => {
+      const llamadas = []
+      const q = {}
+      for (const m of ['eq', 'in', 'like', 'ilike', 'neq', 'or', 'filter', 'not', 'match'])
+        q[m] = (...a) => { llamadas.push([m, ...a]); return q }
+      return { q, llamadas }
+    }
+    const correr = (filtros) => {
+      const g = grabar()
+      const r = S11.aplicarFiltrosCheques(g.q, { estado: 'en_cartera', numero: '', banco: '', ...filtros })
+      return { ...r, llamadas: g.llamadas }
+    }
+    const likes = (ll) => ll.filter(x => x[0] === 'like' || x[0] === 'ilike')
+
+    const pct = correr({ numero: '%' })
+    chk('filtro: un "%" tipeado da CERO resultados (no consulta)', pct.sinResultados === true)
+    const pct2 = correr({ numero: '%%_' })
+    chk('filtro: "%%_" tampoco consulta', pct2.sinResultados === true)
+    const mezcla = correr({ numero: '6625%' })
+    chk('filtro: "6625%" busca los dígitos, sin el comodín tipeado',
+      !mezcla.sinResultados && likes(mezcla.llamadas).length === 1 && likes(mezcla.llamadas)[0][2] === '%6625%',
+      JSON.stringify(mezcla.llamadas))
+    const guion = correr({ numero: '12_4' })
+    chk('filtro: el "_" tipeado no llega al patrón', likes(guion.llamadas)[0]?.[2] === '%124%', JSON.stringify(guion.llamadas))
+    // Ningún patrón like puede tener otra cosa que dígitos entre los %.
+    const todos = [correr({ numero: '9862' }), mezcla, guion, correr({ numero: 'a%b1' })]
+    chk('filtro: todo patrón like es %dígitos%',
+      todos.every(r => likes(r.llamadas).every(x => /^%\d+%$/.test(x[2]))))
+    const exacto = correr({ numero: '66259862' })
+    chk('filtro: 8 dígitos → eq sobre numero, sin like',
+      exacto.llamadas.some(x => x[0] === 'eq' && x[1] === 'numero' && x[2] === '66259862') && likes(exacto.llamadas).length === 0)
+    const diez = correr({ numero: '6625986212' })
+    chk('filtro: más de 9 no filtra por número pero SÍ consulta',
+      !diez.sinResultados && !diez.llamadas.some(x => x[1] === 'numero'))
+    chk('filtro: "en cartera" pide estado = en_cartera',
+      correr({}).llamadas.some(x => x[0] === 'eq' && x[1] === 'estado' && x[2] === 'en_cartera'))
+    const sal = correr({ estado: 'salidos' }).llamadas.find(x => x[1] === 'estado')
+    chk('filtro: "salidos" pide depositado y endosado, y nada más',
+      sal && sal[0] === 'in' && JSON.stringify(sal[2]) === JSON.stringify(['depositado', 'endosado']), JSON.stringify(sal))
+    chk('filtro: "todos" no filtra por estado (es el único que trae anulados)',
+      !correr({ estado: 'todos' }).llamadas.some(x => x[1] === 'estado'))
+    chk('filtro: el banco va por eq sobre banco_codigo',
+      correr({ banco: '007' }).llamadas.some(x => x[0] === 'eq' && x[1] === 'banco_codigo' && x[2] === '007'))
+  }
+
+  // ── Orden y total en cartera ──────────────────────────────────────────────
+  {
+    const S12 = construir(ARCHIVO)
+    const filas = [
+      { id: 'a', numero: '4', tipo: 'diferido', fecha_emision: '2026-08-01', fecha_pago: '2026-10-01' },
+      { id: 'b', numero: '1', tipo: 'comun', fecha_emision: '2026-09-20', fecha_pago: null },
+      { id: 'c', numero: '3', tipo: 'diferido', fecha_emision: '2026-09-01', fecha_pago: '2026-09-25' },
+      { id: 'd', numero: '2', tipo: 'comun', fecha_emision: '2026-11-01', fecha_pago: null },
+    ]
+    const orden = S12.ordenarCheques(filas).map(x => x.id).join('')
+    chk('orden: por fecha de cobro ascendente (pago en diferidos, emisión en comunes)', orden === 'bcad', orden)
+    chk('orden: no muta el array de entrada', filas.map(x => x.id).join('') === 'abcd')
+
+    // 1,1 · 2,2 · 0,29: multiplicados por 100 arrastran error de punto
+    // flotante (0,1 y 0,2 no: dan exacto y no distinguirían nada).
+    const r = S12.resumenCartera([
+      { estado: 'en_cartera', importe: 1.1 }, { estado: 'en_cartera', importe: 2.2 },
+      { estado: 'en_cartera', importe: 0.29 },
+      { estado: 'depositado', importe: 1000 }, { estado: 'endosado', importe: 1000 },
+      { estado: 'anulado', importe: 1000 },
+    ])
+    chk('cartera: cuenta SOLO los en cartera', r.cantidad === 3, r.cantidad)
+    chk('cartera: suma en centavos (1,1 + 2,2 + 0,29 da 3,59 exacto)', r.total === 3.59, r.total)
+
+    const sinDato = S12.htmlCartera(null, false, false)
+    chk('cartera: si no se pudo calcular NO dice $ 0,00', !/\$/.test(sinDato) && /No se pudo/.test(sinDato))
+    const conFiltro = S12.htmlCartera({ cantidad: 1, total: 5 }, true, false)
+    chk('cartera: con filtros aclara que es el total de TODA la cartera', /toda la cartera/.test(conFiltro))
+    chk('cartera: singular con un cheque', /1 cheque</.test(conFiltro))
+    chk('cartera: sin filtros no agrega la aclaración', !/toda la cartera/.test(S12.htmlCartera({ cantidad: 2, total: 5 }, false, false)))
+    chk('cartera: con el tope lo dice', /incompleto/.test(S12.htmlCartera({ cantidad: 2, total: 5 }, false, true)))
+  }
+
+  // ── La tabla: cada columna con texto malicioso, ejecutada ─────────────────
+  {
+    const S13 = construir(ARCHIVO)
+    S13.estado.bancos = new Map([['007', marca('tab_banco_denominacion')]])
+    const cobs = new Map([
+      ['cob1', { id: 'cob1', cliente: marca('tab_cliente'), estado: 'procesada', fecha: '2026-09-01' }],
+    ])
+    const filas = [
+      { id: marca('tab_id'), cobranza_id: 'cob1', banco_codigo: marca('tab_banco'), numero: marca('tab_numero'),
+        tipo: 'diferido', fecha_emision: '2026-09-01', fecha_pago: '2026-10-01', importe: 1500,
+        estado: 'endosado', salida_fecha: '2026-09-15', salida_destino: marca('tab_destino') },
+      { id: 'x2', cobranza_id: marca('tab_cobranza'), banco_codigo: '007', numero: '12345678',
+        tipo: 'comun', fecha_emision: '2026-09-02', fecha_pago: null, importe: 10,
+        estado: marca('tab_estado'), salida_fecha: null, salida_destino: null },
+      { id: 'x3', cobranza_id: 'cob1', banco_codigo: '007', numero: '87654321',
+        tipo: 'comun', fecha_emision: '2026-09-02', fecha_pago: null, importe: 10,
+        estado: 'depositado', salida_fecha: '2026-09-10', salida_destino: null },
+      { id: 'x4', cobranza_id: 'cob1', banco_codigo: '007', numero: '11112222',
+        tipo: 'comun', fecha_emision: '2026-09-02', fecha_pago: null, importe: 10,
+        estado: 'anulado', salida_fecha: null, salida_destino: null },
+    ]
+    const html = S13.htmlTablaCheques(filas, cobs)
+    chequearMarcas('htmlTablaCheques', html, ['tab_id', 'tab_banco', 'tab_numero', 'tab_destino',
+      'tab_cliente', 'tab_cobranza', 'tab_estado', 'tab_banco_denominacion'])
+    const tbody = html.slice(html.indexOf('<tbody>'))
+    chk('tabla: una fila por cheque', (tbody.match(/<tr /g) || []).length === 4)
+    chk('tabla: el número va en la primera columna (la fija)',
+      /<tr [^>]*>\s*<td>&quot;&gt;&lt;b data-xss=&quot;tab_numero/.test(tbody))
+    const fila = (id) => { const i = tbody.indexOf(`data-cheque-fila="${id}"`); return tbody.slice(tbody.lastIndexOf('<tr', i), tbody.indexOf('</tr>', i)) }
+    chk('tabla: un cheque común dice "Al día" en el pago', fila('x3').includes('Al día'))
+    chk('tabla: un diferido muestra su fecha de pago', fila(escCobDe(S13, marca('tab_id'))).includes('01/10/2026'))
+    chk('tabla: un depositado va atenuado y con su etiqueta',
+      fila('x3').includes('cob-tabla__fila--salido') && fila('x3').includes('>Depositado<'))
+    chk('tabla: un endosado va atenuado y con su etiqueta',
+      fila(escCobDe(S13, marca('tab_id'))).includes('cob-tabla__fila--salido') && fila(escCobDe(S13, marca('tab_id'))).includes('>Endosado<'))
+    chk('tabla: un salido muestra su fecha de salida', fila('x3').includes('10/09/2026'))
+    chk('tabla: un anulado va tachado y NO como salido',
+      fila('x4').includes('cob-tabla__fila--anulado') && !fila('x4').includes('cob-tabla__fila--salido'))
+    chk('tabla: uno sin cobranza visible dice — en el cliente, no "undefined"',
+      !html.includes('undefined') && fila('x2').includes('<td class="cob-tabla__texto">—</td>'))
+    chk('tabla: el banco muestra el NOMBRE cuando está en el catálogo', fila('x3').includes('tab_banco_denominacion'))
+  }
+
+  // ── Selector de banco, filtros y limpiar ───────────────────────────────────
+  {
+    const S14 = construir(ARCHIVO)
+    S14.estado.bancosDeCheques = ['007', marca('sel_banco')]
+    S14.estado.cheques.filtros.banco = marca('sel_elegido')
+    S14.pintarSelectorBancos()
+    const sel = S14.__doc.getElementById('cob-filtro-banco')
+    chequearMarcas('pintarSelectorBancos', sel.innerHTML, ['sel_banco', 'sel_elegido'])
+    chk('selector: un banco elegido que ya no está en la lista queda como opción y seleccionado',
+      sel.value === marca('sel_elegido'))
+    chk('selector: visible si hay bancos', S14.__doc.getElementById('cob-campo-banco').hidden === false)
+
+    // Limpiar: TODOS los filtros, en el estado y en los campos, y vuelve a consultar.
+    S14.estado.cheques.filtros = { estado: 'todos', numero: '1234', banco: '007' }
+    S14.__doc.getElementById('cob-filtro-cheque').value = '1234'
+    sel.value = '007'
+    S14.pintarFiltrosCheques()
+    chk('limpiar: el botón aparece con filtros puestos', S14.__doc.getElementById('cob-btn-limpiar-cheques').hidden === false)
+    const antes = S14.__llamadas.cargarCheques
+    S14.limpiarFiltrosCheques()
+    const fl = S14.estado.cheques.filtros
+    chk('limpiar: vuelve al estado de arranque (en cartera)', fl.estado === 'en_cartera')
+    chk('limpiar: borra el número y el banco del estado', fl.numero === '' && fl.banco === '')
+    chk('limpiar: borra el número y el banco de los CAMPOS',
+      S14.__doc.getElementById('cob-filtro-cheque').value === '' && sel.value === '')
+    chk('limpiar: vuelve a consultar', S14.__llamadas.cargarCheques === antes + 1)
+    S14.pintarFiltrosCheques()
+    chk('limpiar: sin filtros el botón no se dibuja', S14.__doc.getElementById('cob-btn-limpiar-cheques').hidden === true)
+
+    S14.estado.cheques.filtros.numero = '%'
+    S14.pintarFiltrosCheques()
+    chk('aviso: un "%" muestra el aviso', S14.__doc.getElementById('cob-aviso-cheque').hidden === false &&
+      /no tiene ninguno/.test(S14.__doc.getElementById('cob-aviso-cheque').textContent))
+  }
+
+  // ── renderizarCheques: vacío y error ───────────────────────────────────────
+  {
+    const S15 = construir(ARCHIVO)
+    S15.estado.cheques.filas = []
+    S15.renderizarCheques()
+    chk('vacío: sin filtros dice que no hay cheques en cartera',
+      S15.__doc.getElementById('cob-cheques-vacio').textContent === 'No hay cheques en cartera.' && S15.__doc.getElementById('cob-tabla-caja').hidden === true)
+    S15.estado.cheques.error = 'No se pudieron cargar los cheques. Revisá la señal.'
+    S15.renderizarCheques()
+    chk('error: se dice, y no se muestra además el "no hay cheques"',
+      S15.__doc.getElementById('cob-cheques-aviso').hidden === false && S15.__doc.getElementById('cob-cheques-vacio').hidden === true)
+  }
+
+  // ── cargarResumenCheques: bancos de TODOS los cheques, sin filtros ─────────
+  {
+    const S16 = construir(ARCHIVO)
+    // El filtro de estado puesto en "salidos" NO puede recortar la lista.
+    S16.estado.cheques.filtros.estado = 'salidos'
+    S16.__set([
+      { banco_codigo: '007', estado: 'en_cartera', importe: 100 },
+      { banco_codigo: '011', estado: 'anulado', importe: 5 },
+      { banco_codigo: '285', estado: 'depositado', importe: 7 },
+    ])
+    esperas.push(S16.cargarResumenCheques().then(() => {
+      chk('resumen: la lista de bancos sale de TODOS los cheques', JSON.stringify([...S16.estado.bancosDeCheques].sort()) === '["007","011","285"]',
+        JSON.stringify(S16.estado.bancosDeCheques))
+      chk('resumen: el total en cartera cuenta solo los en cartera',
+        S16.estado.cheques.cartera && S16.estado.cheques.cartera.cantidad === 1 && S16.estado.cheques.cartera.total === 100)
+    }))
+  }
+
+  // ── cargarResumenCheques con la consulta fallando: NUNCA un cero ──────────
+  {
+    const S17 = construir(ARCHIVO)
+    S17.estado.cheques.cartera = { cantidad: 4, total: 99 }
+    S17.__setError(new Error('sin señal'))
+    esperas.push(S17.cargarResumenCheques().then(() => {
+      chk('resumen con error: la cartera queda en null, no en cero', S17.estado.cheques.cartera === null,
+        JSON.stringify(S17.estado.cheques.cartera))
+      const h = S17.__doc.getElementById('cob-cartera').innerHTML
+      chk('resumen con error: la pantalla dice que no se pudo, sin "$ 0,00"', /No se pudo/.test(h) && !/\$/.test(h))
+    }))
+  }
+
+  // ── CSS de la tabla: lo que un render no puede mostrar ────────────────────
+  {
+    const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+    const regla = (sel) => { const i = css.indexOf(sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
+    chk('css: la caja de la tabla scrollea de costado', /overflow-x:\s*auto/.test(regla('.cob-tabla-scroll')))
+    chk('css: la primera columna es sticky y opaca',
+      /th:first-child,\s*\n\s*\.cob-tabla td:first-child \{[^}]*position:\s*sticky[^}]*left:\s*0/.test(css) &&
+      /background:\s*var\(--color-fondo\)/.test(regla('.cob-tabla td')))
+    chk('css: los salidos se atenúan con color, no con opacity (la celda fija se transparentaría)',
+      regla('.cob-tabla__fila--salido td') !== '' && !/opacity/.test(regla('.cob-tabla__fila--salido td')))
+    chk('css: la variante de fila salida va DESPUÉS de la regla base de td',
+      css.indexOf('.cob-tabla td {') !== -1 && css.indexOf('.cob-tabla__fila--salido td') > css.indexOf('.cob-tabla td {'))
+  }
+
   // ── pintarEstadoFotos ───────────────────────────────────────────────────
   {
     const S4 = construir(ARCHIVO)
@@ -301,12 +550,10 @@ if (SOLO !== 'estatico') {
     const S6 = construir(ARCHIVO)
     S6.estado.miRolApp = 'super_admin'
     S6.__set([{ id: marca('rep_id'), nombre: marca('rep_nombre') }])
-    const esperar = S6.cargarRepartidores()
-    esperar.then(() => {
+    esperas.push(S6.cargarRepartidores().then(() => {
       chequearMarcas('cargarRepartidores', S6.__els.get('cob-filtro-repartidor').innerHTML,
         ['rep_id', 'rep_nombre'])
-      cerrar()
-    })
+    }))
   }
 
   // ── renderizarChipsEstado / pintarTotalYGuardado ─────────────────────────
@@ -411,6 +658,7 @@ function cerrar() {
   process.exit(fallas.length ? 1 : 0)
 }
 
-// cargarRepartidores es async: si esa rama corrió, cierra ella.
-if (SOLO === 'estatico') cerrar()
-else setTimeout(cerrar, 300)
+// Las ramas async (cargarRepartidores, cargarResumenCheques) cierran al
+// terminar. Una que falle con excepción es una falla, no un silencio.
+Promise.all(esperas.map(p => p.catch(err => chk('rama async sin excepción', false, String(err && err.stack || err)))))
+  .then(cerrar)

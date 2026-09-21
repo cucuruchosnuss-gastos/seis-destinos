@@ -15,11 +15,17 @@ const FUNCIONES = [
   'pintarEstadoFotos', 'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores',
   'pintarTotalYGuardado', 'motivosParaNoGuardar', 'efectivoDelFormulario', 'totalDelFormulario',
   'renglonComoImpreso', 'chequeDesdeBase', 'chequeDesdeOcr',
+  // Vista de cheques
+  'filtroNumeroCheque', 'aplicarFiltrosCheques', 'hayFiltrosCheques', 'fechaDeCobroCheque',
+  'ordenarCheques', 'resumenCartera', 'htmlCartera', 'htmlTablaCheques', 'htmlFilaCheque',
+  'pintarSelectorBancos', 'pintarFiltrosCheques', 'limpiarFiltrosCheques', 'pintarCartera',
+  'renderizarCheques', 'cargarResumenCheques',
 ]
 
 const CONSTANTES = [
   'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ESTADOS_COBRANZA',
   'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
+  'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO', 'ESTADOS_FILTRO_CHEQUES', 'ETIQUETA_ESTADO_CHEQUE',
 ]
 
 const PRELUDIO = `
@@ -46,12 +52,13 @@ const PRELUDIO = `
 
   // --- dependencias externas, stubeadas --------------------------------
   var __repartidoresFalsos = []
+  var __errorFalso = null
   var supabase = {
     from() {
       const q = {
         select: () => q, eq: () => q, in: () => q, order: () => q, range: () => q,
         like: () => q, gte: () => q, lte: () => q, maybeSingle: () => q,
-        then(res) { return Promise.resolve({ data: __repartidoresFalsos, error: null }).then(res) },
+        then(res) { return Promise.resolve({ data: __errorFalso ? null : __repartidoresFalsos, error: __errorFalso }).then(res) },
       }
       return q
     },
@@ -65,6 +72,11 @@ const PRELUDIO = `
   async function urlDeFoto(){ return null } function abrirVisor(){}
   function abrirFormularioLocal(){} function refrescarLocales(){}
   function dbBorrar(){} function hayFiltrosPuestos(){ return false }
+  // La vista de cheques: la carga va stubeada y CUENTA sus llamadas, así se
+  // puede afirmar que limpiar los filtros vuelve a consultar.
+  var __llamadas = { cargarCheques: 0, abrirDetalle: [] }
+  function cargarCheques(){ __llamadas.cargarCheques++ }
+  function abrirDetalle(id, op){ __llamadas.abrirDetalle.push([id, op]) }
 
   var estado = {
     sesion: { user: { id: 'uid-de-prueba' } },
@@ -73,6 +85,11 @@ const PRELUDIO = `
     bancos: new Map(), repartidores: [], cobranzas: [], hayMas: false,
     filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
     detalle: null, form: null, locales: [], urlsFirmadas: new Map(), sincronizando: false,
+    cheques: {
+      filtros: { estado: 'en_cartera', numero: '', banco: '' },
+      filas: [], cobranzas: new Map(), cartera: null, tope: false, topeResumen: false, error: null,
+    },
+    bancosDeCheques: [], detalleOrigen: 'listado',
   }
 `
 
@@ -86,7 +103,7 @@ function construir(rutaHtml) {
   let codigo = PRELUDIO
   for (const c of CONSTANTES) codigo += extraerConst(src, c) + '\n'
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n\n'
-  codigo += `return { ${FUNCIONES.join(', ')}, estado, __els, __set(r){ __repartidoresFalsos = r } }`
+  codigo += `return { ${FUNCIONES.join(', ')}, estado, __els, __doc: document, __llamadas, __set(r){ __repartidoresFalsos = r }, __setError(e){ __errorFalso = e } }`
 
   // Ejecutar el sandbox es lo que prueba que ningún helper falte: un escCob()
   // sin definir tira ReferenceError acá, no en producción.

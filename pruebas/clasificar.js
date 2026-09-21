@@ -150,6 +150,11 @@ const SEGURAS = [
   ['botones.join(\'\')', 'HTML constante del código: los botones se arman con literales'],
   // HTML armado por funciones que escapan adentro
   ['htmlHistorial(d.historial, d.nombres)', 'HTML armado por htmlHistorial(), que escapa adentro'],
+  // Vista de cheques
+  ['cantidadCartera', 'número: conteo calculado en resumenCartera()'],
+  ['celdaSalida', 'HTML ya escapado: se arma arriba con escCob() de la fecha y del destino'],
+  ['htmlTablaCheques(c.filas, c.cobranzas)', 'HTML armado por htmlTablaCheques(), que escapa adentro'],
+  ['htmlCartera(estado.cheques.cartera, hayFiltrosCheques(), estado.cheques.topeResumen)', 'HTML armado por htmlCartera(), que escapa adentro'],
 ]
 
 const SEGURAS_REGEX = [
@@ -165,6 +170,11 @@ const SEGURAS_REGEX = [
   [/^ESTADOS_COBRANZA\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^estado\.repartidores\.map\(r =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^htmlDetalle\(d\)$/s, 'HTML armado por htmlDetalle(), que escapa adentro'],
+  // Vista de cheques
+  [/^filas\.map\(ch => htmlFilaCheque\(ch, cobranzas\.get\(ch\.cobranza_id\)\)\)\.join\(''\)$/s, 'HTML armado por htmlFilaCheque(), que escapa adentro'],
+  [/^notas\.map\(t =>/s, 'HTML de una plantilla anidada, verificada aparte'],
+  [/^codigos\.map\(c =>/s, 'HTML de una plantilla anidada, verificada aparte'],
+  [/^ESTADOS_FILTRO_CHEQUES\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
 ]
 
 function motivoSeguro(hoja) {
