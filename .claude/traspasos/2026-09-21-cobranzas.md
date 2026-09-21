@@ -191,3 +191,166 @@ pueden medir desde acá. Hoy ese código no existe.
   (se sacó), un caso de prueba que no distinguía sumar en centavos (0,1 y 0,2
   dan exacto; se cambió por 1,1 + 2,2 + 0,29) y el camino de error del resumen
   sin test (se agregó).
+
+---
+
+## Parte 3 — Salida de cheques (commit 3)
+
+### Lo que la base ya tenía (verificado el 21/09/2026, sin crear ni tocar nada)
+
+Consultado con `pg_constraint`, `information_schema.columns`, `pg_get_functiondef`,
+`pg_trigger`, `pg_get_viewdef` y `pg_policies`:
+
+- **`cobranza_cheques.estado` tiene CUATRO valores**: `en_cartera`, `anulado`,
+  `depositado`, `endosado` (`cobranza_cheques_estado_check`).
+- **Cuatro columnas nuevas**, las cuatro nullable: `salida_fecha` (date),
+  `salida_destino` (text), `salida_por` (uuid, FK `cobranza_cheques_salida_por_fkey`
+  → `empleados`) y `salida_registrada_en` (timestamptz). Dos CHECK:
+  - `chk_salida_coherente`: con estado depositado/endosado exige fecha, quién y
+    cuándo, y además destino si es endosado; en cualquier otro estado, las
+    cuatro en null.
+  - `chk_salida_destino`: null o entre 1 y 150 caracteres (sin contar bordes).
+  - **`salida_por` es una SEGUNDA referencia a `empleados` en el universo de
+    Cobranzas.** El nombre se resuelve contra `v_empleados_publico` en
+    `abrirDetalle()`, junto con los del historial, y NUNCA con un embed. Hay que
+    corregir la frase de CLAUDE.md que dice "LA ÚNICA FK A `empleados` ES
+    `cobranzas.empleado_id`": ya no es la única.
+- **`marcar_salida_cheque(p_cheque_id uuid, p_tipo text, p_fecha date, p_destino text)`
+  → void.** SECURITY DEFINER, `search_path = public`, `authenticated` sí, `anon`
+  no. Exige `cobranzas:procesar` (`tiene_tarea`, CON bypass), tipo
+  `depositado`/`endosado`, fecha obligatoria, destino obligatorio si es endosado
+  y de hasta 150, la cobranza `procesada`, el cheque `en_cartera`, la fecha no
+  futura (`_cobranza_hoy_ar()`) y **no anterior a la fecha de la cobranza**.
+  Escribe el historial `cheque_salida` con `despues = {cheque_id, banco_codigo,
+  numero, importe, estado, fecha, destino}`.
+- **`volver_cheque_a_cartera(p_cheque_id uuid, p_motivo text)` → void.** Mismos
+  atributos. Exige `procesar`, motivo, y que el cheque esté depositado o
+  endosado. **NO pide que la cobranza esté procesada.** Limpia las cuatro
+  columnas y escribe el historial `cheque_vuelve_cartera` con el motivo y
+  `antes = {…, estado, fecha, destino, por}` (lo que el cheque ERA).
+- **Trigger `trg_cobranza_cheque_proteger_salida`** (BEFORE DELETE OR UPDATE
+  sobre `cobranza_cheques`, función `_cobranza_cheque_proteger_salida`): si el
+  cheque está depositado o endosado, **bloquea el DELETE y cualquier UPDATE que
+  no sea volverlo a cartera o dejarlo igual**. Por eso `editar_cobranza` (que
+  borra y reinserta los cheques) y `anular_cobranza` (que los pasa a `anulado`)
+  fallan con: *"El cheque 007 Nº 12345678 ya salió de cartera (depositado). Para
+  editar o anular esta cobranza, primero volvelo a cartera."* (con los datos del
+  cheque). El `delete` de `editar_cobranza` está fuera del bloque que traduce
+  errores, así que el mensaje sale tal cual.
+- `cobranza_historial.accion` admite `cheque_salida` y `cheque_vuelve_cartera`,
+  y `chk_historial_motivo` exige motivo también en `cheque_vuelve_cartera`.
+- **`v_cobranzas` NO cambió** (sigue con `security_invoker=true`):
+  `total_cheques` suma todos los cheques de la cobranza, incluidos los que
+  salieron, que es lo correcto porque la cobranza fue por ese total.
+  **`_cobranza_snapshot` no cambió de código**, pero como usa `to_jsonb(q)`, el
+  snapshot de cada cheque ahora incluye también las cuatro columnas `salida_*`.
+- Las policies no cambiaron: cinco, las cinco `SELECT`.
+- Datos al 21/09/2026: 15 cobranzas y 18 cheques (16 en cartera, 2 anulados,
+  ninguno salido todavía).
+
+### Qué cambió en `modulos/cobranzas.html`
+
+- **Botón "Salió"** en cada fila en cartera de la tabla, solo con
+  `cobranzas:procesar` y solo si la cobranza está procesada (la RPC rechaza
+  cualquier otro estado). **"Volver a cartera"** en cada fila que salió, solo con
+  `procesar` (sin mirar el estado de la cobranza, igual que la RPC).
+  **DECISIÓN tomada sin preguntar: los botones van DEBAJO DEL NÚMERO, en la
+  columna fija**, y no en una columna al final: en 375 px la última columna
+  queda fuera de la pantalla y habría que ir a buscar el botón. Tocarlos no abre
+  la cobranza (`stopPropagation`), y un Enter sobre el botón no abre la fila (la
+  fila solo responde al teclado cuando el foco está en ella).
+- **Diálogo propio** (nada de `prompt`/`confirm`): "¿Qué pasó con el cheque?"
+  con dos botones grandes, Depositado / Endosado; fecha que arranca en
+  `hoyArgentina()`, con `max` = hoy y `min` = fecha de la cobranza; con
+  Endosado, "¿A quién se lo pasaste?" obligatorio; con Depositado, "¿En qué
+  banco o cuenta? (opcional)". Se valida antes de llamar con las mismas reglas
+  que la RPC; un destino vacío viaja como null. **Un error del servidor se
+  muestra TAL CUAL dentro del diálogo, que queda abierto.**
+- "Volver a cartera" reusa el diálogo de motivo que ya usaban anular y reabrir.
+- **Detalle:** cada cheque muestra su estado (chip) y, si salió, "Depositado el
+  dd/mm/aaaa en X" / "Endosado el dd/mm/aaaa a X", más "Registró la salida:
+  nombre". **Agregado sin preguntar:** si la cobranza tiene algún cheque afuera
+  (y no está anulada), un aviso ámbar dice que para editarla o anularla primero
+  hay que volverlos a cartera. Los botones Editar/Anular siguen visibles: si
+  igual lo intentan, el mensaje de la base llega entero.
+- **Historial:** "Salida de un cheque" y "Cheque vuelto a cartera", con una
+  frase ("Cheque N° 12345678 (Banco): endosado el 12/09/2026 a X." / "…: volvió
+  a cartera. Figuraba depositado el 12/09/2026 en X.") más el motivo.
+- **`salida_destino` es un sink nuevo de XSS** (lo tipea una persona): va con
+  `escCob` en la tabla, en el detalle y en el historial, verificado ejecutando
+  los tres renders con texto malicioso.
+
+### LO QUE NO SE PROBÓ: la prueba manual del error en un navegador
+
+**No se hizo.** La pantalla necesita una sesión iniciada y no la tengo. La única
+otra vía era crear la cobranza de prueba por SQL haciéndome pasar por un
+usuario real (poniendo su uid en los claims del JWT), que equivale a inventar
+una sesión, así que se descartó. **No quedó ninguna cobranza de prueba en la
+base.**
+
+Lo que SÍ está probado ejecutando el código: con la RPC devolviendo el texto
+exacto del trigger, editar muestra el mensaje entero en el error del guardado y
+anular lo muestra entero en el aviso. Si alguno se tapara con un genérico, la
+suite da rojo (hay una mutación por cada camino).
+
+**Pasos para que Facu lo pruebe a mano** (con una cobranza de prueba que se
+note que no es real):
+1. Nueva cobranza, cliente "PRUEBA - NO ES REAL", un cheque cualquiera con foto.
+2. Detalle → "Marcar como procesada".
+3. Pestaña "Cheques" → en la fila del cheque, "Salió" → Depositado → Confirmar.
+   Tiene que quedar atenuado, con la etiqueta "Depositado".
+4. Tocar la fila → detalle → tiene que aparecer el aviso ámbar → "Reabrir", con
+   un motivo.
+5. "Editar" → "Guardar cobranza". Debajo del botón tiene que aparecer el mensaje
+   entero: "El cheque … ya salió de cartera (depositado). Para editar o anular
+   esta cobranza, primero volvelo a cartera."
+6. Salir del formulario y tocar "Anular": tiene que salir el mismo mensaje.
+7. Limpieza: pestaña Cheques → filtro "Salidos" → "Volver a cartera" con un
+   motivo → detalle → "Anular". La cobranza queda anulada y su cheque, anulado.
+   Ojo: el paso 5 deja un borrador de edición en el celular; se descarta desde
+   el aviso "Hay cobranzas solo en este celular".
+
+### Para Cuentas Corrientes (a futuro)
+
+**Solo el ENDOSADO va a descontar Cuentas Corrientes cuando se conecte**: se le
+paga a un proveedor con el cheque. El depositado no. Por eso el destino es
+obligatorio en el endoso y opcional en el depósito. Hoy no hay ninguna conexión:
+marcar la salida no toca ni Caja ni Cuentas Corrientes.
+
+### Verificación (commit 3)
+
+- `check-scripts` OK. Suite **256/256**. Tests nuevos, todos ejecutados: quién
+  ve cada botón (con y sin `procesar`, super_admin, cobranza registrada o
+  procesada, cada estado del cheque, y que el botón esté en la columna fija);
+  las reglas del diálogo (endosado sin destino, fecha futura, anterior a la
+  cobranza, 150/151); los parámetros exactos que viajan; el diálogo abierto
+  (fecha, límites, pregunta); confirmar con error local, con error de la base y
+  con éxito; volver a cartera (error y parámetros); el error del trigger al
+  editar y al anular; detalle e historial con texto malicioso, y el cheque
+  depositado y el endosado.
+- Mutaciones **170/170** (+2 equivalentes ya declaradas). El guard de unicidad
+  abortó una mutación ambigua (la misma línea en la tabla y en el detalle) y se
+  ancló a su contexto; después escapó "un depositado no muestra su salida en el
+  detalle", que era un hueco real (el test solo usaba un endosado) y se agregó.
+- **Lo que la suite NO cubre** (necesita eventos del DOM de verdad): el
+  `stopPropagation` de los botones de la fila, el guard del Enter sobre el
+  botón, y que `abrirDetalle` sume `salida_por` a los nombres que busca.
+
+---
+
+## Resumen para la sección Cobranzas de CLAUDE.md
+
+- Cuatro estados del cheque: `en_cartera`, `depositado`, `endosado`, `anulado`.
+  Un cheque sale de cartera solo por `marcar_salida_cheque` (con la cobranza
+  procesada) y vuelve solo por `volver_cheque_a_cartera` (con motivo). Pasa a
+  `anulado` solo cuando se anula la cobranza entera.
+- El trigger `trg_cobranza_cheque_proteger_salida` impide borrar o anular un
+  cheque que salió, así que editar o anular su cobranza falla con un mensaje
+  claro que la pantalla muestra tal cual. Hay que volverlo a cartera primero.
+- Solo el endosado va a descontar Cuentas Corrientes cuando se conecte.
+- Los filtros por número y por banco viven en la vista de cheques, no en la
+  lista de cobranzas.
+- Sumar las dos RPCs nuevas a la lista de RPCs de Cobranzas, y el trigger, y
+  corregir la frase de "la única FK a empleados" (ver arriba).
+- No hace falta nada del chat de permisos: ninguna tarea nueva (las dos RPCs
+  usan `cobranzas:procesar`, que ya existe) y ninguna firma existente cambió.

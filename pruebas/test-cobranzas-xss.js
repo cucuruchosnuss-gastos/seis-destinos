@@ -500,6 +500,233 @@ if (SOLO !== 'estatico') {
     }))
   }
 
+  // ══ SALIDA DE CHEQUES ═══════════════════════════════════════════════════
+
+  // El texto EXACTO que arma el trigger _cobranza_cheque_proteger_salida
+  // (leído de pg_get_functiondef el 21/09/2026), con un cheque de ejemplo.
+  const MSG_TRIGGER = 'El cheque 007 Nº 12345678 ya salió de cartera (depositado). Para editar o anular esta cobranza, primero volvelo a cartera.'
+
+  // ── El botón de cada fila: quién y cuándo ──────────────────────────────────
+  {
+    const S20 = construir(ARCHIVO)
+    const cobs = new Map([
+      ['proc', { id: 'proc', cliente: 'A', estado: 'procesada', fecha: '2026-09-01' }],
+      ['reg', { id: 'reg', cliente: 'B', estado: 'registrada', fecha: '2026-09-01' }],
+    ])
+    const base = { banco_codigo: '007', tipo: 'comun', fecha_emision: '2026-09-01', fecha_pago: null, importe: 10 }
+    const filas = [
+      { ...base, id: 'k1', cobranza_id: 'proc', numero: '11111111', estado: 'en_cartera' },
+      { ...base, id: 'k2', cobranza_id: 'reg', numero: '22222222', estado: 'en_cartera' },
+      { ...base, id: 'k3', cobranza_id: 'proc', numero: '33333333', estado: 'depositado', salida_fecha: '2026-09-10' },
+      { ...base, id: 'k4', cobranza_id: 'proc', numero: '44444444', estado: 'anulado' },
+      { ...base, id: 'k5', cobranza_id: 'reg', numero: '55555555', estado: 'endosado', salida_fecha: '2026-09-10', salida_destino: 'X' },
+    ]
+    const primeraCelda = (html, id) => {
+      const i = html.indexOf(`data-cheque-fila="${id}"`)
+      const td = html.indexOf('<td>', i)
+      return html.slice(td, html.indexOf('</td>', td))
+    }
+    const html = S20.htmlTablaCheques(filas, cobs)
+    chk('salió: en cartera y cobranza procesada → botón "Salió" en la columna fija',
+      /data-salio="k1"/.test(primeraCelda(html, 'k1')))
+    chk('salió: en cartera pero cobranza registrada → sin botón', !/data-salio|data-volver/.test(primeraCelda(html, 'k2')))
+    chk('volver: un depositado tiene "Volver a cartera"', /data-volver-cartera="k3"/.test(primeraCelda(html, 'k3')))
+    chk('volver: un endosado también, aunque su cobranza esté registrada', /data-volver-cartera="k5"/.test(primeraCelda(html, 'k5')))
+    chk('salió: un anulado no tiene ningún botón', !/data-salio|data-volver/.test(primeraCelda(html, 'k4')))
+
+    S20.estado.misTareas = new Set(['cobranzas:cargar', 'cobranzas:ver_todo'])
+    const sinProcesar = S20.htmlTablaCheques(filas, cobs)
+    chk('sin la tarea procesar no hay ningún botón', !/data-salio|data-volver-cartera/.test(sinProcesar))
+    S20.estado.miRolApp = 'super_admin'
+    chk('super_admin ve los botones (bypass, igual que tiene_tarea)', /data-salio="k1"/.test(S20.htmlTablaCheques(filas, cobs)))
+  }
+
+  // ── Reglas del diálogo, ejecutadas ─────────────────────────────────────────
+  {
+    const S21 = construir(ARCHIVO)
+    const hoy = '2026-09-21'
+    const e = (d, fc = '2026-09-01') => S21.erroresSalida(d, fc, hoy)
+    chk('diálogo: sin elegir depositado/endosado no sigue', e({ tipo: null, fecha: hoy, destino: '' }).length === 1)
+    chk('diálogo: endosado SIN destino no sigue', e({ tipo: 'endosado', fecha: hoy, destino: '   ' }).some(x => /a quién/.test(x)))
+    chk('diálogo: depositado sin destino SÍ sigue', e({ tipo: 'depositado', fecha: hoy, destino: '' }).length === 0)
+    chk('diálogo: una fecha futura no sigue', e({ tipo: 'depositado', fecha: '2026-09-22', destino: '' }).some(x => /posterior/.test(x)))
+    chk('diálogo: hoy sí', e({ tipo: 'depositado', fecha: hoy, destino: '' }).length === 0)
+    chk('diálogo: anterior a la cobranza no sigue (igual que la RPC)',
+      e({ tipo: 'depositado', fecha: '2026-08-31', destino: '' }).some(x => /anterior a la cobranza/.test(x)))
+    chk('diálogo: el mismo día de la cobranza sí', e({ tipo: 'depositado', fecha: '2026-09-01', destino: '' }).length === 0)
+    chk('diálogo: 150 caracteres de destino entran', e({ tipo: 'endosado', fecha: hoy, destino: 'x'.repeat(150) }).length === 0)
+    chk('diálogo: 151 no', e({ tipo: 'endosado', fecha: hoy, destino: 'x'.repeat(151) }).some(x => /150/.test(x)))
+    chk('diálogo: sin fecha no sigue', e({ tipo: 'depositado', fecha: '', destino: '' }).some(x => /fecha/.test(x)))
+
+    const p1 = S21.parametrosSalida('ch1', { tipo: 'depositado', fecha: hoy, destino: '   ' })
+    chk('parámetros: un destino vacío viaja como null, no como ""', p1.p_destino === null && p1.p_cheque_id === 'ch1' && p1.p_tipo === 'depositado' && p1.p_fecha === hoy)
+    chk('parámetros: el destino viaja sin espacios en los bordes',
+      S21.parametrosSalida('ch1', { tipo: 'endosado', fecha: hoy, destino: '  Molino SA ' }).p_destino === 'Molino SA')
+  }
+
+  // ── El diálogo abierto: fecha por defecto, límites y la pregunta del destino
+  {
+    const S22 = construir(ARCHIVO)
+    S22.estado.cheques.filas = [{ id: 'z1', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 50, estado: 'en_cartera' }]
+    S22.estado.cheques.cobranzas = new Map([['c', { id: 'c', cliente: marca('dlg_cliente'), estado: 'procesada', fecha: '2026-09-01' }]])
+    S22.abrirModalSalida('z1')
+    const doc = S22.__doc
+    const hoy = S22.hoyArgentina()
+    chk('diálogo: la fecha arranca en hoy (Argentina)', doc.getElementById('cob-salida-fecha').value === hoy)
+    chk('diálogo: la fecha no puede ser futura (max = hoy)', doc.getElementById('cob-salida-fecha').max === hoy)
+    chk('diálogo: ni anterior a la cobranza (min)', doc.getElementById('cob-salida-fecha').min === '2026-09-01')
+    chk('diálogo: arranca sin tipo y sin la pregunta del destino',
+      S22.estado.salida.tipo === null && doc.getElementById('cob-salida-campo-destino').hidden === true)
+    chk('diálogo: el cheque se describe por textContent (el cliente va crudo ahí, no es HTML)',
+      doc.getElementById('cob-salida-cheque').textContent.includes(marca('dlg_cliente')) &&
+      doc.getElementById('cob-salida-cheque').innerHTML === '')
+    S22.estado.salida.tipo = 'endosado'; S22.pintarModalSalida()
+    chk('diálogo: endosado pregunta a quién', doc.getElementById('cob-salida-label-destino').textContent === '¿A quién se lo pasaste?' &&
+      doc.getElementById('cob-salida-campo-destino').hidden === false)
+    S22.estado.salida.tipo = 'depositado'; S22.pintarModalSalida()
+    chk('diálogo: depositado pregunta en qué banco o cuenta, opcional', /banco o cuenta\? \(opcional\)/.test(doc.getElementById('cob-salida-label-destino').textContent))
+  }
+
+  // ── Confirmar: validación local, error de la base TAL CUAL y éxito ─────────
+  {
+    const S23 = construir(ARCHIVO)
+    const doc = S23.__doc
+    const llamadas = []
+    S23.estado.cheques.filas = [{ id: 'z2', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 50, estado: 'en_cartera' }]
+    S23.estado.cheques.cobranzas = new Map([['c', { id: 'c', cliente: 'A', estado: 'procesada', fecha: '2026-09-01' }]])
+
+    esperas.push((async () => {
+      // (1) Endosado sin destino: no llama a la base.
+      S23.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
+      S23.abrirModalSalida('z2')
+      S23.estado.salida.tipo = 'endosado'
+      doc.getElementById('cob-salida-destino').value = ''
+      await S23.confirmarSalida()
+      chk('confirmar: endosado sin destino NO llama a la base', llamadas.length === 0)
+      chk('confirmar: y lo dice en el diálogo', doc.getElementById('cob-salida-error').hidden === false &&
+        /a quién/.test(doc.getElementById('cob-salida-error').textContent))
+
+      // (2) La base rechaza: su mensaje llega ENTERO, y el diálogo sigue abierto.
+      const MSG = 'Solo se puede marcar la salida de un cheque de una cobranza procesada.'
+      S23.__setRpc(async () => ({ data: null, error: { message: MSG } }))
+      doc.getElementById('cob-salida-destino').value = 'Molino'
+      await S23.confirmarSalida()
+      chk('confirmar: el error de la base se muestra TAL CUAL', doc.getElementById('cob-salida-error').textContent === MSG,
+        doc.getElementById('cob-salida-error').textContent)
+      chk('confirmar: con error el diálogo NO se cierra', S23.estado.salida !== null && doc.getElementById('cob-modal-salida').hidden === false)
+
+      // (3) Éxito: los parámetros exactos, cierra, avisa y refresca.
+      const antes = S23.__llamadas.refrescar
+      S23.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
+      doc.getElementById('cob-salida-destino').value = '  Molino del Centro  '
+      await S23.confirmarSalida()
+      const ult = llamadas[llamadas.length - 1]
+      chk('confirmar: llama a marcar_salida_cheque con los parámetros exactos',
+        ult && ult[0] === 'marcar_salida_cheque' && JSON.stringify(ult[1]) === JSON.stringify({
+          p_cheque_id: 'z2', p_tipo: 'endosado', p_fecha: S23.hoyArgentina(), p_destino: 'Molino del Centro' }),
+        JSON.stringify(ult))
+      chk('confirmar: al salir bien cierra el diálogo', S23.estado.salida === null && doc.getElementById('cob-modal-salida').hidden === true)
+      chk('confirmar: y recarga la tabla, la cartera y el listado', S23.__llamadas.refrescar === antes + 1)
+    })())
+  }
+
+  // ── Volver a cartera: pide motivo en el diálogo y muestra el error TAL CUAL
+  {
+    const S24 = construir(ARCHIVO)
+    S24.estado.cheques.filas = [{ id: 'z3', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 50, estado: 'depositado' }]
+    esperas.push((async () => {
+      S24.abrirVolverACartera('z3')
+      chk('volver: abre el diálogo de motivo (no un prompt)', S24.__doc.getElementById('cob-modal-motivo').hidden === false)
+      const MSG = 'Este cheque no salió de cartera (está en_cartera).'
+      S24.__setRpc(async () => ({ data: null, error: { message: MSG } }))
+      const errores = S24.__llamadas.errores
+      await (async () => { const f = S24.__accion(); if (f) await f('se devolvió') })()
+      chk('volver: el error de la base llega TAL CUAL', errores[errores.length - 1] === MSG, errores[errores.length - 1])
+      const llamadas = []
+      S24.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
+      await (async () => { const f = S24.__accion(); if (f) await f('se devolvió') })()
+      chk('volver: llama a volver_cheque_a_cartera con cheque y motivo',
+        llamadas[0] && llamadas[0][0] === 'volver_cheque_a_cartera' &&
+        JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_cheque_id: 'z3', p_motivo: 'se devolvió' }))
+    })())
+  }
+
+  // ── El error de la BASE al editar o anular una cobranza con un cheque afuera
+  // Tiene que llegar ENTERO a la persona, por los dos caminos.
+  {
+    const S25 = construir(ARCHIVO)
+    const hoy = S25.hoyArgentina()
+    S25.estado.form = {
+      id: 'cob-prueba', modo: 'edicion', estadoLocal: 'borrador', cliente: 'Cliente', fecha: hoy,
+      efectivo: '', comprobante_referencia: '', observaciones: '',
+      fotos: [{ id: 'f1', storage_path: 'u/cob-prueba/x.jpg', subida: true, leida: true }],
+      cheques: [{ ...S25.chequeVacio('f1'), id: 'q1', confirmado: true, importe: '1000', tipo: 'comun',
+        fecha_emision: hoy, r1: '', r2: '', r3: '' }],
+    }
+    S25.__setRpc(async () => ({ data: null, error: { message: MSG_TRIGGER } }))
+    esperas.push(S25.guardarCobranza().then(() => {
+      const err = S25.__doc.getElementById('cob-error-guardar')
+      chk('editar con un cheque afuera: el mensaje de la base se ve ENTERO', err.textContent === MSG_TRIGGER && err.hidden === false,
+        err.textContent)
+      chk('editar con un cheque afuera: la cobranza queda abierta para corregir', S25.estado.form && S25.estado.form.estadoLocal === 'borrador')
+    }))
+
+    const S26 = construir(ARCHIVO)
+    S26.__setRpc(async () => ({ data: null, error: { message: MSG_TRIGGER } }))
+    esperas.push(S26.accionSimple('anular_cobranza', { p_id: 'c', p_motivo: 'x' }, 'ok').then(() => {
+      const e = S26.__llamadas.errores
+      chk('anular con un cheque afuera: el mensaje de la base se ve ENTERO', e[e.length - 1] === MSG_TRIGGER, e[e.length - 1])
+    }))
+  }
+
+  // ── Detalle e historial: el destino es texto libre y va escapado ───────────
+  {
+    const S27 = construir(ARCHIVO)
+    S27.estado.bancos = new Map([['007', 'BANCO DE GALICIA']])
+    const ch = {
+      id: 'q9', cobranza_id: 'c9', foto_id: 'f9', banco_codigo: '007', numero: '12345678', cuenta: '09420314667',
+      tipo: 'comun', fecha_emision: '2026-09-01', fecha_pago: null, importe: 10, titulares: [], beneficiario: null,
+      estado: 'endosado', salida_fecha: '2026-09-12', salida_destino: marca('det_destino'), salida_por: 'e5',
+    }
+    const d = {
+      cabecera: { id: 'c9', empleado_id: 'emp-1', cliente: 'x', estado: 'registrada', fecha: '2026-09-01',
+        efectivo: 0, cantidad_cheques: 1, total_cheques: 10, total: 10 },
+      cheques: [ch], fotos: [],
+      historial: [
+        { accion: 'cheque_salida', empleado_id: 'e5', motivo: null, created_at: '2026-09-12T12:00:00Z',
+          despues: { cheque_id: 'q9', banco_codigo: marca('hist_banco'), numero: marca('hist_numero'), importe: 10,
+            estado: 'endosado', fecha: '2026-09-12', destino: marca('hist_destino') } },
+        { accion: 'cheque_vuelve_cartera', empleado_id: 'e5', motivo: marca('hist_motivo_vuelta'), created_at: '2026-09-13T12:00:00Z',
+          antes: { cheque_id: 'q9', banco_codigo: '007', numero: '12345678', importe: 10,
+            estado: 'depositado', fecha: '2026-09-12', destino: marca('hist_destino_antes'), por: 'e5' } },
+      ],
+      nombres: new Map([['e5', marca('det_salida_por')]]),
+    }
+    const html = S27.htmlDetalle(d)
+    chequearMarcas('detalle con un cheque salido', html,
+      ['det_destino', 'det_salida_por', 'hist_banco', 'hist_numero', 'hist_destino', 'hist_motivo_vuelta', 'hist_destino_antes'])
+    chk('detalle: el cheque muestra su estado', html.includes('cob-estado--endosado') && html.includes('>Endosado<'))
+    chk('detalle: y la fecha de salida', html.includes('Endosado el 12/09/2026 a '))
+    chk('detalle: con un cheque afuera avisa que hay que volverlo a cartera para editar o anular',
+      /primero hay que volverlos a cartera/.test(html))
+    chk('historial: la salida se lee en castellano', html.includes('Salida de un cheque') && html.includes(': endosado el 12/09/2026 a '))
+    chk('historial: la vuelta a cartera dice lo que el cheque ERA',
+      html.includes('Cheque vuelto a cartera') && html.includes('volvió a cartera. Figuraba depositado el 12/09/2026 en '))
+    chk('historial: ninguna acción cruda (cheque_salida) en pantalla', !/>cheque_salida|>cheque_vuelve_cartera/.test(html))
+
+    const depositado = S27.htmlChequeDetalle({ ...ch, estado: 'depositado', salida_destino: marca('det_destino_dep') }, d.nombres)
+    chequearMarcas('detalle con un cheque depositado', depositado, ['det_destino_dep', 'det_salida_por'])
+    chk('detalle: un depositado muestra fecha y dónde', depositado.includes('>Depositado<') && depositado.includes('Depositado el 12/09/2026 en '))
+    const depSinDestino = S27.htmlChequeDetalle({ ...ch, estado: 'depositado', salida_destino: null }, d.nombres)
+    chk('detalle: un depositado sin destino no deja un "en" colgando', depSinDestino.includes('Depositado el 12/09/2026<'))
+
+    const sinSalidos = S27.htmlDetalle({ ...d, cheques: [{ ...ch, estado: 'en_cartera', salida_fecha: null, salida_destino: null, salida_por: null }], historial: [] })
+    chk('detalle: sin cheques afuera no hay aviso', !/primero hay que volverlos a cartera/.test(sinSalidos))
+    chk('detalle: un cheque en cartera dice "En cartera" y ninguna salida', sinSalidos.includes('>En cartera<') && !/Depositado el|Endosado el/.test(sinSalidos))
+    const anulada = S27.htmlDetalle({ ...d, cabecera: { ...d.cabecera, estado: 'anulada' }, historial: [] })
+    chk('detalle: en una cobranza anulada no se sugiere volver cheques a cartera', !/primero hay que volverlos a cartera/.test(anulada))
+  }
+
   // ── CSS de la tabla: lo que un render no puede mostrar ────────────────────
   {
     const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))

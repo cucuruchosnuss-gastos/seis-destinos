@@ -20,12 +20,19 @@ const FUNCIONES = [
   'ordenarCheques', 'resumenCartera', 'htmlCartera', 'htmlTablaCheques', 'htmlFilaCheque',
   'pintarSelectorBancos', 'pintarFiltrosCheques', 'limpiarFiltrosCheques', 'pintarCartera',
   'renderizarCheques', 'cargarResumenCheques',
+  // Salida de cheques
+  'htmlAccionCheque', 'textoSalidaCheque', 'textoHistorialCheque', 'erroresSalida', 'parametrosSalida',
+  'abrirModalSalida', 'cerrarModalSalida', 'pintarModalSalida', 'confirmarSalida', 'abrirVolverACartera',
+  'abrirModalMotivo', 'cerrarModalMotivo',
+  // Los caminos del error de la base, que se tienen que mostrar TAL CUAL
+  'subirCobranza', 'guardarCobranza', 'esErrorDeRed', 'accionSimple',
 ]
 
 const CONSTANTES = [
   'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ESTADOS_COBRANZA',
   'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
   'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO', 'ESTADOS_FILTRO_CHEQUES', 'ETIQUETA_ESTADO_CHEQUE',
+  'LARGO_MAXIMO_DESTINO',
 ]
 
 const PRELUDIO = `
@@ -36,7 +43,7 @@ const PRELUDIO = `
       disabled: false, max: '', dataset: {}, src: '',
       querySelectorAll: () => [],
       querySelector: () => null,
-      addEventListener: () => {},
+      addEventListener: () => {}, focus: () => {},
       classList: { add(){}, remove(){}, toggle(){} },
     }
   }
@@ -53,6 +60,8 @@ const PRELUDIO = `
   // --- dependencias externas, stubeadas --------------------------------
   var __repartidoresFalsos = []
   var __errorFalso = null
+  var __rpc = async () => ({ data: null, error: null })
+  var accionDelModal = null
   var supabase = {
     from() {
       const q = {
@@ -62,11 +71,12 @@ const PRELUDIO = `
       }
       return q
     },
-    rpc: async () => ({ data: null, error: null }),
+    rpc: (...a) => __rpc(...a),
     storage: { from: () => ({ createSignedUrl: async () => ({ data: null, error: new Error('sin red') }) }) },
     functions: { invoke: async () => ({ data: null, error: new Error('sin red') }) },
   }
-  function mostrarError(){} function mostrarExito(){}
+  function mostrarError(m){ __llamadas.errores.push(m) } function mostrarExito(m){ __llamadas.exitos.push(m) }
+  function mostrarVistaCob(){} async function refrescarListado(){ __llamadas.refrescar++ }
   function guardarBorrador(){} function conectarTarjetasCheque(){}
   function cargarCobranzas(){} function conectarDetalle(){}
   async function urlDeFoto(){ return null } function abrirVisor(){}
@@ -74,7 +84,7 @@ const PRELUDIO = `
   function dbBorrar(){} function hayFiltrosPuestos(){ return false }
   // La vista de cheques: la carga va stubeada y CUENTA sus llamadas, así se
   // puede afirmar que limpiar los filtros vuelve a consultar.
-  var __llamadas = { cargarCheques: 0, abrirDetalle: [] }
+  var __llamadas = { cargarCheques: 0, abrirDetalle: [], errores: [], exitos: [], refrescar: 0 }
   function cargarCheques(){ __llamadas.cargarCheques++ }
   function abrirDetalle(id, op){ __llamadas.abrirDetalle.push([id, op]) }
 
@@ -103,7 +113,7 @@ function construir(rutaHtml) {
   let codigo = PRELUDIO
   for (const c of CONSTANTES) codigo += extraerConst(src, c) + '\n'
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n\n'
-  codigo += `return { ${FUNCIONES.join(', ')}, estado, __els, __doc: document, __llamadas, __set(r){ __repartidoresFalsos = r }, __setError(e){ __errorFalso = e } }`
+  codigo += `return { ${FUNCIONES.join(', ')}, estado, __els, __doc: document, __llamadas, __set(r){ __repartidoresFalsos = r }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f }, __accion(){ return accionDelModal } }`
 
   // Ejecutar el sandbox es lo que prueba que ningún helper falte: un escCob()
   // sin definir tira ReferenceError acá, no en producción.

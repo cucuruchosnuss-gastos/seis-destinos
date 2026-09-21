@@ -155,10 +155,13 @@ const SEGURAS = [
   ['celdaSalida', 'HTML ya escapado: se arma arriba con escCob() de la fecha y del destino'],
   ['htmlTablaCheques(c.filas, c.cobranzas)', 'HTML armado por htmlTablaCheques(), que escapa adentro'],
   ['htmlCartera(estado.cheques.cartera, hayFiltrosCheques(), estado.cheques.topeResumen)', 'HTML armado por htmlCartera(), que escapa adentro'],
+  // Salida de cheques
+  ['htmlAccionCheque(ch, cob)', 'HTML armado por htmlAccionCheque(), que escapa adentro'],
+  ['avisoSalidos', 'HTML constante del código'],
 ]
 
 const SEGURAS_REGEX = [
-  [/^d\.cheques\.map\(ch => htmlChequeDetalle\(ch\)\)\.join\(''\)$/s, 'HTML armado por htmlChequeDetalle(), que escapa adentro'],
+  [/^d\.cheques\.map\(ch => htmlChequeDetalle\(ch, d\.nombres\)\)\.join\(''\)$/s, 'HTML armado por htmlChequeDetalle(), que escapa adentro'],
   [/^datos\.map\(\[?\(?\[k, v\]\)? =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^d\.fotos\.map\(\(f, i\) =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^f\.fotos\.map\(\(foto, i\) =>/s, 'HTML de una plantilla anidada, verificada aparte'],

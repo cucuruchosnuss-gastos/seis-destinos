@@ -708,6 +708,17 @@
     .cob-tabla__fila--salido td { color: var(--color-texto-suave); }
     .cob-tabla__fila--anulado td { color: var(--color-texto-suave); text-decoration: line-through; }
 
+    /* El botón de la salida va DEBAJO DEL NÚMERO, en la columna fija: así
+       está siempre a la vista en el celular, sin tener que scrollear la
+       tabla hasta la última columna para encontrarlo. */
+    .cob-tabla__accion { display: block; margin-top: 0.375rem; }
+
+    /* Diálogo de la salida de un cheque: dos botones grandes. */
+    .cob-salida-tipos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; min-width: 0; }
+    .cob-btn--grande { min-height: 64px; font-size: 1.0625rem; }
+    /* El elegido. Va DESPUÉS de .cob-btn y de .cob-btn--grande. */
+    .cob-btn--elegido { border-color: var(--oliva); background: var(--oliva-suave); color: var(--oliva-oscuro); }
+
     .cob-estado--en_cartera { background: var(--oliva-suave); color: var(--oliva-oscuro); }
     .cob-estado--depositado { background: var(--color-superficie); color: var(--color-texto-suave); }
     .cob-estado--endosado { background: var(--amarillo-suave); color: var(--amarillo-oscuro); }
@@ -938,6 +949,37 @@
     </div>
   </div>
 
+  <!-- ══ DIÁLOGO DE SALIDA DE UN CHEQUE ═════════════════════════════════ -->
+  <!-- Un diálogo propio y no prompt()/confirm(): no se pueden estilar y
+       algunos webviews los bloquean. -->
+  <div class="cob-modal" id="cob-modal-salida" hidden>
+    <div class="cob-modal__caja">
+      <div class="cob-modal__titulo">Salida del cheque</div>
+      <div class="cob-campo__ayuda" id="cob-salida-cheque" style="margin:-.25rem 0 .875rem"></div>
+      <div class="cob-campo">
+        <label>¿Qué pasó con el cheque?</label>
+        <div class="cob-salida-tipos">
+          <button type="button" class="cob-btn cob-btn--grande" data-salida-tipo="depositado">Depositado</button>
+          <button type="button" class="cob-btn cob-btn--grande" data-salida-tipo="endosado">Endosado</button>
+        </div>
+      </div>
+      <div class="cob-campo">
+        <label for="cob-salida-fecha">Fecha</label>
+        <input type="date" id="cob-salida-fecha">
+      </div>
+      <div class="cob-campo" id="cob-salida-campo-destino" hidden>
+        <label for="cob-salida-destino" id="cob-salida-label-destino">¿A quién se lo pasaste?</label>
+        <input type="text" id="cob-salida-destino" maxlength="150" autocomplete="off">
+        <div class="cob-campo__ayuda" id="cob-salida-ayuda-destino"></div>
+      </div>
+      <div class="cob-campo__error" id="cob-salida-error" hidden></div>
+      <div class="cob-acciones">
+        <button type="button" class="cob-btn" id="cob-salida-cancelar">Cancelar</button>
+        <button type="button" class="cob-btn cob-btn--primario" id="cob-salida-confirmar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { mostrarError, mostrarExito } from '../js/utils.js'
@@ -984,6 +1026,8 @@
       detalle: null,          // { cabecera, cheques, fotos, historial }
       // A qué vista vuelve el detalle: 'listado' o 'cheques'.
       detalleOrigen: 'listado',
+      // El diálogo de salida abierto: { cheque, cobranza, tipo } o null.
+      salida: null,
       // Borrador del formulario. Vive también en IndexedDB: es lo que sobrevive
       // a que el navegador cierre la pestaña en medio de un reparto.
       form: null,
@@ -1814,9 +1858,19 @@
         const abrir = () => abrirDetalle(tr.dataset.chequeCobranza, { origen: 'cheques' })
         tr.addEventListener('click', abrir)
         tr.addEventListener('keydown', (ev) => {
+          // Solo la fila misma: un Enter sobre el botón de adentro burbujea
+          // hasta acá y abriría el detalle además del diálogo.
+          if (ev.target !== tr) return
           if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir() }
         })
       })
+      // Los botones de la fila NO abren el detalle: stopPropagation.
+      tabla.querySelectorAll('[data-salio]').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation(); abrirModalSalida(b.dataset.salio)
+      }))
+      tabla.querySelectorAll('[data-volver-cartera]').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation(); abrirVolverACartera(b.dataset.volverCartera)
+      }))
     }
 
     // Función pura de la tabla, para EJECUTARLA en la suite.
@@ -1849,7 +1903,7 @@
         : '—'
       return `
         <tr class="${salido ? 'cob-tabla__fila--salido' : ch.estado === 'anulado' ? 'cob-tabla__fila--anulado' : ''}" data-cheque-fila="${escCob(ch.id)}" data-cheque-cobranza="${escCob(ch.cobranza_id)}" tabindex="0">
-          <td>${escCob(ch.numero ?? '—')}</td>
+          <td>${escCob(ch.numero ?? '—')}${htmlAccionCheque(ch, cob)}</td>
           <td class="cob-tabla__texto">${escCob(nombreBanco(ch.banco_codigo))}</td>
           <td class="cob-tabla__fecha">${escCob(formatearFechaCob(ch.fecha_emision))}</td>
           <td class="cob-tabla__fecha">${escCob(pago)}</td>
@@ -1858,6 +1912,146 @@
           <td><span class="cob-estado cob-estado--${escCob(ch.estado)}">${escCob(etiqueta)}</span></td>
           <td>${celdaSalida}</td>
         </tr>`
+    }
+
+    // El botón de la fila. Solo quien tiene `procesar`, que es la tarea que
+    // exigen las dos RPCs. "Salió" además solo con la cobranza PROCESADA: la
+    // RPC lo rechaza en cualquier otro estado, y ofrecerlo igual sería un
+    // botón que siempre falla. "Volver a cartera" no depende del estado de la
+    // cobranza: la RPC tampoco lo pide.
+    function htmlAccionCheque(ch, cob) {
+      if (!puedeProcesar()) return ''
+      if (ch.estado === 'en_cartera' && cob?.estado === 'procesada') {
+        return `<button type="button" class="cob-btn cob-btn--chico cob-tabla__accion" data-salio="${escCob(ch.id)}">Salió</button>`
+      }
+      if (ch.estado === 'depositado' || ch.estado === 'endosado') {
+        return `<button type="button" class="cob-btn cob-btn--chico cob-tabla__accion" data-volver-cartera="${escCob(ch.id)}">Volver a cartera</button>`
+      }
+      return ''
+    }
+
+    // ── Salida de un cheque ──────────────────────────────────────────────
+    // Depositado o endosado. SOLO EL ENDOSADO va a descontar la cuenta
+    // corriente de un proveedor el día que se conecte con Cuentas Corrientes:
+    // por eso el destino es obligatorio ahí y opcional en un depósito.
+
+    const LARGO_MAXIMO_DESTINO = 150
+
+    // Lo que se valida ANTES de llamar, con las MISMAS reglas que
+    // marcar_salida_cheque: una validación más permisiva deja pasar lo que el
+    // servidor rechaza, y una más estricta bloquea lo que sí entra.
+    function erroresSalida({ tipo, fecha, destino }, fechaCobranza, hoy) {
+      const e = []
+      if (tipo !== 'depositado' && tipo !== 'endosado') e.push('Elegí si se depositó o se endosó.')
+      if (!esFechaIso(fecha)) e.push('Falta la fecha.')
+      else {
+        if (diasEntre(hoy, fecha) > 0) e.push('La fecha no puede ser posterior a hoy.')
+        if (esFechaIso(fechaCobranza) && diasEntre(fechaCobranza, fecha) < 0) {
+          e.push(`La fecha no puede ser anterior a la cobranza (${formatearFechaCob(fechaCobranza)}).`)
+        }
+      }
+      const d = String(destino ?? '').trim()
+      if (tipo === 'endosado' && !d) e.push('Escribí a quién se lo pasaste.')
+      if (d.length > LARGO_MAXIMO_DESTINO) e.push(`El destino no puede tener más de ${LARGO_MAXIMO_DESTINO} caracteres.`)
+      return e
+    }
+
+    // Los parámetros tal cual viajan. Un destino vacío va como null: la base
+    // distingue "no hay dato" de "hay un dato que es la cadena vacía".
+    function parametrosSalida(chequeId, { tipo, fecha, destino }) {
+      return { p_cheque_id: chequeId, p_tipo: tipo, p_fecha: fecha, p_destino: textoOpcional(destino) }
+    }
+
+    function abrirModalSalida(chequeId) {
+      const ch = estado.cheques.filas.find(x => x.id === chequeId)
+      if (!ch) return
+      const cob = estado.cheques.cobranzas.get(ch.cobranza_id) ?? null
+      estado.salida = { cheque: ch, cobranza: cob, tipo: null }
+      document.getElementById('cob-salida-cheque').textContent =
+        `N° ${ch.numero ?? '—'} · ${nombreBanco(ch.banco_codigo)} · ${formatearImporte(ch.importe)}${cob?.cliente ? ` · ${cob.cliente}` : ''}`
+      const fecha = document.getElementById('cob-salida-fecha')
+      fecha.value = hoyArgentina()
+      fecha.max = hoyArgentina()
+      fecha.min = esFechaIso(cob?.fecha) ? cob.fecha : ''
+      document.getElementById('cob-salida-destino').value = ''
+      pintarModalSalida()
+      document.getElementById('cob-modal-salida').hidden = false
+    }
+
+    function cerrarModalSalida() {
+      document.getElementById('cob-modal-salida').hidden = true
+      estado.salida = null
+    }
+
+    // Lo que cambia según el tipo elegido: el botón marcado, la pregunta del
+    // destino y si es obligatorio. El error se limpia: era sobre otro estado.
+    function pintarModalSalida() {
+      const s = estado.salida
+      if (!s) return
+      document.querySelectorAll('[data-salida-tipo]').forEach(b => {
+        b.classList.toggle('cob-btn--elegido', b.dataset.salidaTipo === s.tipo)
+      })
+      const campo = document.getElementById('cob-salida-campo-destino')
+      campo.hidden = !s.tipo
+      document.getElementById('cob-salida-label-destino').textContent =
+        s.tipo === 'endosado' ? '¿A quién se lo pasaste?' : '¿En qué banco o cuenta? (opcional)'
+      document.getElementById('cob-salida-ayuda-destino').textContent =
+        s.tipo === 'endosado' ? 'Obligatorio: el nombre de quien lo recibió.' : 'Si no lo sabés, dejalo vacío.'
+      document.getElementById('cob-salida-error').hidden = true
+    }
+
+    async function confirmarSalida() {
+      const s = estado.salida
+      if (!s) return
+      const datos = {
+        tipo: s.tipo,
+        fecha: document.getElementById('cob-salida-fecha').value,
+        destino: document.getElementById('cob-salida-destino').value,
+      }
+      const err = document.getElementById('cob-salida-error')
+      const errores = erroresSalida(datos, s.cobranza?.fecha, hoyArgentina())
+      if (errores.length) {
+        err.textContent = errores.join(' ')
+        err.hidden = false
+        return
+      }
+      const btn = document.getElementById('cob-salida-confirmar')
+      btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('marcar_salida_cheque', parametrosSalida(s.cheque.id, datos))
+        if (error) throw error
+        cerrarModalSalida()
+        mostrarExito(datos.tipo === 'endosado' ? 'Cheque marcado como endosado.' : 'Cheque marcado como depositado.')
+        await refrescarListado()
+      } catch (e) {
+        console.error('Falló marcar_salida_cheque:', e)
+        // El mensaje del servidor ya viene en castellano: se muestra TAL CUAL.
+        err.textContent = e?.message || 'No se pudo marcar la salida del cheque.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
+      }
+    }
+
+    function abrirVolverACartera(chequeId) {
+      const ch = estado.cheques.filas.find(x => x.id === chequeId)
+      if (!ch) return
+      abrirModalMotivo({
+        titulo: `Volver a cartera el cheque N° ${ch.numero ?? '—'}`,
+        etiqueta: 'Por qué vuelve a cartera',
+        alConfirmar: async (motivo) => {
+          try {
+            const { error } = await supabase.rpc('volver_cheque_a_cartera', { p_cheque_id: ch.id, p_motivo: motivo })
+            if (error) throw error
+            cerrarModalMotivo()
+            mostrarExito('El cheque volvió a cartera.')
+            await refrescarListado()
+          } catch (e) {
+            console.error('Falló volver_cheque_a_cartera:', e)
+            mostrarError(e?.message || 'No se pudo volver el cheque a cartera.')
+          }
+        },
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1980,7 +2174,12 @@
         // Los nombres salen de v_empleados_publico, NUNCA de empleados por
         // embed: su RLS solo deja leer la fila propia, así que un embed
         // dejaría todos los nombres en blanco menos el tuyo.
-        const ids = [...new Set((hist.data ?? []).map(h => h.empleado_id).filter(Boolean))]
+        // salida_por es una segunda referencia a empleados: se resuelve acá,
+        // contra la vista, y NUNCA con un embed.
+        const ids = [...new Set([
+          ...(hist.data ?? []).map(h => h.empleado_id),
+          ...(cheques.data ?? []).map(ch => ch.salida_por),
+        ].filter(Boolean))]
         const nombres = new Map()
         if (ids.length) {
           const { data: emps } = await supabase.from('v_empleados_publico').select('id, nombre').in('id', ids)
@@ -2045,11 +2244,20 @@
           </div>
         </div>`
 
+      // Con un cheque afuera, la base NO deja editar ni anular la cobranza
+      // (un trigger protege al cheque). Se dice antes de que lo intenten; el
+      // mensaje de la base igual llega tal cual si lo intentan.
+      const haySalidos = !anulada && d.cheques.some(ch => ch.estado === 'depositado' || ch.estado === 'endosado')
+      const avisoSalidos = haySalidos
+        ? '<div class="cob-aviso cob-aviso--ambar">Hay cheques que ya salieron de cartera: para editar o anular esta cobranza, primero hay que volverlos a cartera.</div>'
+        : ''
+
       const cheques = `
         <div class="cob-seccion">
           <div class="cob-seccion__titulo">Cheques</div>
+          ${avisoSalidos}
           ${d.cheques.length
-            ? d.cheques.map(ch => htmlChequeDetalle(ch)).join('')
+            ? d.cheques.map(ch => htmlChequeDetalle(ch, d.nombres)).join('')
             : '<div class="cob-campo__ayuda">Esta cobranza no tiene cheques: fue todo en efectivo.</div>'}
         </div>`
 
@@ -2074,8 +2282,21 @@
       return cabecera + cheques + fotos + historial + htmlAccionesDetalle(c)
     }
 
-    function htmlChequeDetalle(ch) {
+    // Cómo se lee la salida de un cheque, en una frase de texto plano. La
+    // usan el detalle y el historial: una sola redacción. El destino lo tipea
+    // una persona: quien la muestre en HTML la escapa.
+    function textoSalidaCheque(estadoCheque, fecha, destino) {
+      const cuando = esFechaIso(fecha) ? ` el ${formatearFechaCob(fecha)}` : ''
+      const d = String(destino ?? '').trim()
+      if (estadoCheque === 'endosado') return `Endosado${cuando}${d ? ` a ${d}` : ''}`
+      if (estadoCheque === 'depositado') return `Depositado${cuando}${d ? ` en ${d}` : ''}`
+      return ETIQUETA_ESTADO_CHEQUE[estadoCheque] ?? String(estadoCheque ?? '')
+    }
+
+    function htmlChequeDetalle(ch, nombres) {
       const titulares = Array.isArray(ch.titulares) ? ch.titulares : []
+      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      const porQuien = salido && ch.salida_por ? (nombres?.get(ch.salida_por) ?? null) : null
       // El beneficiario importa por una razón concreta: si el cheque no está a
       // nombre nuestro, hay que endosarlo o no se puede depositar. Se compara
       // normalizado porque en el papel aparece de mil formas.
@@ -2095,6 +2316,9 @@
                 // guion en un renglón que no existe, no se muestra el renglón.
                 ch.tipo === 'diferido' ? ` · pago ${escCob(formatearFechaCob(ch.fecha_pago))}` : ''}</div>
               ${benef ? `<div class="cob-cheque__sub">Páguese a: ${escCob(benef)}</div>` : ''}
+              <div class="cob-cheque__sub"><span class="cob-estado cob-estado--${escCob(ch.estado)}">${escCob(ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado)}</span>${
+                salido ? ` ${escCob(textoSalidaCheque(ch.estado, ch.salida_fecha, ch.salida_destino))}` : ''}</div>
+              ${porQuien ? `<div class="cob-cheque__sub">Registró la salida: ${escCob(porQuien)}</div>` : ''}
             </div>
             <span class="cob-cheque__importe">${escCob(formatearImporte(ch.importe))}</span>
           </div>
@@ -2144,6 +2368,7 @@
       const ETIQUETA = {
         alta: 'Alta', edicion: 'Edición', procesada: 'Procesada',
         reabierta: 'Reabierta', anulada: 'Anulada',
+        cheque_salida: 'Salida de un cheque', cheque_vuelve_cartera: 'Cheque vuelto a cartera',
       }
       return filas.map(h => {
         const quien = nombres.get(h.empleado_id) ?? 'alguien'
@@ -2151,11 +2376,23 @@
         return `
           <div class="cob-hist__item">
             <div class="cob-hist__linea">${escCob(ETIQUETA[h.accion] ?? h.accion)} · ${escCob(quien)} · ${escCob(momentoArgentina(h.created_at))}</div>
+            ${h.accion === 'cheque_salida' || h.accion === 'cheque_vuelve_cartera'
+              ? `<div class="cob-hist__detalle">${escCob(textoHistorialCheque(h))}</div>` : ''}
             ${h.motivo ? `<div class="cob-hist__detalle">Motivo: ${escCob(h.motivo)}</div>` : ''}
             ${cambios.length ? `<div class="cob-hist__detalle">${cambios.map(escCob).join('<br>')}</div>` : ''}
             ${h.accion === 'edicion' && !cambios.length ? '<div class="cob-hist__detalle">Sin cambios visibles en los datos principales.</div>' : ''}
           </div>`
       }).join('')
+    }
+
+    // Las dos acciones de un cheque, en castellano. La salida guarda el dato en
+    // `despues` y la vuelta a cartera en `antes` (lo que el cheque ERA).
+    function textoHistorialCheque(h) {
+      const x = (h.accion === 'cheque_salida' ? h.despues : h.antes) ?? {}
+      const cual = `Cheque N° ${x.numero ?? '—'} (${nombreBanco(x.banco_codigo)})`
+      const salida = textoSalidaCheque(x.estado, x.fecha, x.destino)
+      if (h.accion === 'cheque_salida') return `${cual}: ${salida.charAt(0).toLowerCase()}${salida.slice(1)}.`
+      return `${cual}: volvió a cartera. Figuraba ${salida.charAt(0).toLowerCase()}${salida.slice(1)}.`
     }
 
     // Compara las dos fotos del historial y devuelve frases. Se compara por ID
@@ -3569,6 +3806,16 @@
         // la única forma de leer un número de cheque en un celular.
         ev.target.classList.toggle('cob-visor__img--real')
       })
+
+      // ── Diálogo de salida de un cheque ──
+      document.querySelectorAll('[data-salida-tipo]').forEach(b => b.addEventListener('click', () => {
+        if (!estado.salida) return
+        estado.salida.tipo = b.dataset.salidaTipo
+        pintarModalSalida()
+        if (!document.getElementById('cob-salida-campo-destino').hidden) document.getElementById('cob-salida-destino').focus()
+      }))
+      document.getElementById('cob-salida-cancelar').addEventListener('click', cerrarModalSalida)
+      document.getElementById('cob-salida-confirmar').addEventListener('click', confirmarSalida)
 
       // ── Modal de motivo ──
       document.getElementById('cob-modal-cancelar').addEventListener('click', cerrarModalMotivo)
