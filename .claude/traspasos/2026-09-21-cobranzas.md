@@ -96,7 +96,7 @@ afirma que se controló algo.
 ### Qué cambió en `modulos/cobranzas.html`
 
 - **Pestañas "Cobranzas" / "Cheques"** arriba de las dos vistas de lista (solo
-  se ven ahí). La pestaña activa va en `--oliva-oscuro`: es navegación, no una
+  se ven ahí). La pestaña activa va en el tono oscuro del acento del módulo (hoy `--naranja-oscuro`): es navegación, no una
   acción, y no compite con el botón primario.
 - **Vista nueva "Cheques": una tabla estilo planilla, una fila por cheque.**
   Columnas: N° de cheque (el de 8, sin dígito de control), banco (el nombre de

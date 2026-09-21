@@ -42,7 +42,7 @@ Sin argumentos revisa **todos** los HTML del repo; con argumentos, solo los que 
 
 - `test-<modulo>-<tema>.js` — una suite. Ej.: `test-cobranzas-xss.js`.
 - `mut-<modulo>-<tema>.js` — el runner de mutaciones de esa suite.
-- El resto son helpers compartidos, con el nombre de lo que hacen: `escaner-interpolaciones.js` (tokeniza el `<script>` y devuelve cada `${...}` con su línea y si el template arma HTML), `clasificar.js` (dice si una expresión está escapada o por qué es segura), `sandbox.js` (arma el `document` falso y carga las funciones reales del módulo) y `extraer.js` (saca una función o una constante del `<script>`).
+- El resto son helpers compartidos, con el nombre de lo que hacen: `escaner-interpolaciones.js` (tokeniza el `<script>` y devuelve cada `${...}` con su línea y si el template arma HTML; `analizar()` expone además el texto de cada template y los rangos de cada string), `clasificar.js` (dice si una expresión está escapada o por qué es segura), `sandbox.js` (arma el `document` falso y carga las funciones reales del módulo) y `extraer.js` (saca una función o una constante del `<script>`).
 
 ## El baseline se ancla a un COMMIT FIJO, nunca a `HEAD`
 
@@ -99,6 +99,21 @@ EJECUTA `procesarFoto`, el render de cada estado (`htmlAvisoFoto` / `pintarEstad
 - con el formulario abierto se reintenta en `'online'` y cada 30 s, y todo se limpia al salir del formulario.
 
 El runner saca cada `escCob()` de `htmlAvisoFoto()` —dos son equivalentes declaradas, con su motivo— y aplica mutaciones de comportamiento de a una.
+
+## Ningún control de Cobranzas se pierde
+
+```bash
+node pruebas/controles-cobranzas.js
+```
+
+Existe para el rediseño visual del módulo: reacomodar HTML y estilos es justo el trabajo donde un botón, un id o un `data-*` desaparece sin que nada se queje — el JS que lo buscaba hace `?.` o un `querySelectorAll` vacío y la pantalla sigue andando sin esa acción.
+
+Inventaría, del baseline y del archivo actual, **cada id**, **cada atributo `data-*`** (todos: es un superconjunto de "los que disparan acciones", así no hay que decidir a mano cuál cuenta) y **cada control** (`button`, `input`, `select`, `textarea`, `a`), del HTML estático y de las plantillas y strings del `<script>` —leídos con el tokenizador de `escaner-interpolaciones.js`, así los comentarios no cuentan—. La clave de un control **no depende de clases ni estilos**: id, nombres de `data-*`, `type`, `name`, `href`; y solo si no tiene nada de eso, su texto literal.
+
+- Compara **cantidades**: todo lo que estaba tiene que seguir estando al menos las mismas veces, o ROJO nombrándolo. Lo nuevo se permite y se lista.
+- Sobre el archivo actual, cada `getElementById('x')`, `querySelector` con `#x` o `[data-x]` y cada `.dataset.x` literal tiene que apuntar a algo que exista: un id renombrado en el HTML y no en el JS es una acción que deja de estar sin ningún error.
+- El baseline es el commit fijo `BASE_COMMIT` del archivo (hoy `fba6396`), nunca `HEAD`. `ARCHIVO_TEST` cambia el archivo bajo prueba y `ARCHIVO_BASE` reemplaza el baseline por un archivo ya extraído. `LISTAR=1` imprime el inventario completo.
+- Si una parte del rediseño cambia **a propósito** el texto de un control sin id ni `data-*`, el cambio va declarado en `RENOMBRADOS`, con su motivo, y la salida lo lista.
 
 ## Qué NO va acá
 

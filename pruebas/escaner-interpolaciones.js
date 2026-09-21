@@ -203,7 +203,10 @@ function analizar(codigo, offsetGlobal, html) {
     asignaciones.push({ linea: lineaDe(mm.index), expr: (expr ?? codigo.slice(desde, desde + 120)).trim() })
   }
 
-  return { interpolaciones: salida, asignaciones }
+  // `templates` y `rangos` los usa controles-cobranzas.js para leer el texto
+  // literal de cada template y de cada string. Agregarlos no cambia nada para
+  // quien solo lee `interpolaciones` y `asignaciones`.
+  return { interpolaciones: salida, asignaciones, templates, rangos }
 }
 
 function interpolaciones(rutaHtml) {
@@ -216,7 +219,7 @@ function interpolaciones(rutaHtml) {
   return { interpolaciones: out, asignaciones: asig }
 }
 
-module.exports = { interpolaciones, bloquesScript }
+module.exports = { interpolaciones, bloquesScript, analizar }
 
 if (require.main === module) {
   const ruta = process.argv[2]
