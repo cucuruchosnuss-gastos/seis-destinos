@@ -3270,17 +3270,38 @@
 
     function chipTipoDoc(tipo) {
       const t = TIPOS_DOC[tipo] || { label: tipo || '—', bg: 'var(--color-superficie)', fg: 'var(--color-texto-suave)' }
-      return `<span class="chip-tipo-doc-mp" style="background:${t.bg}; color:${t.fg};">${t.label}</span>`
+      return `<span class="chip-tipo-doc-mp" style="background:${t.bg}; color:${t.fg};">${esc(t.label)}</span>`
     }
 
     // Los nombres de producto salen del OCR y del teclado, y en el wizard van
     // adentro de atributos (value="..."). Una comilla en "Caja 40x30\"" rompería
-    // el markup, así que se escapan. El listado de la etapa 1 no lo necesita
-    // porque ahí todo va como texto, nunca como atributo.
+    // el markup, así que se escapan. TODO texto que no sea literal del código
+    // pasa por acá antes de entrar a innerHTML, también en el listado y en el
+    // detalle (barrido del 21/09/2026, pruebas/test-materia-prima-xss.js). Una
+    // versión anterior de este comentario decía que el listado "no lo
+    // necesita porque ahí todo va como texto": era falso, el listado arma HTML.
     function esc(valor) {
       return String(valor ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
+    // La URL de una foto que va a un href. Escapar HTML NO alcanza en un href:
+    // un `javascript:...` no tiene ningún carácter que esc() toque y se
+    // ejecuta igual al tocar el enlace. foto_url es texto libre en la base (la
+    // policy de INSERT de materia_prima_ingresos solo mira la tarea), así que
+    // quien carga podría guardar cualquier cosa y hacerla correr en la sesión
+    // de quien mira el detalle con `ver_todo`. Solo se acepta https:// —las
+    // fotos del módulo son URLs firmadas de Storage— y lo demás no se enlaza.
+    // Devuelve la URL CRUDA: el call site la escapa igual, porque va adentro
+    // de un atributo entre comillas.
+    function hrefFoto(url) {
+      const u = String(url ?? '').trim()
+      // La regex va en una asignación y no después de `return`: los
+      // tokenizadores de pruebas/ deciden regex-o-división por el carácter
+      // anterior, y detrás de una palabra leerían una división.
+      const esHttps = /^https:\/\/[^\s"'<>]+$/i
+      return esHttps.test(u) ? u : null
     }
 
     // ESPEJO EXACTO de normalizar_texto() de la base, que es la función del
@@ -3613,7 +3634,7 @@
       const cont = document.getElementById('chips-unidad-ingresos')
       const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidades]
       cont.innerHTML = chips.map(u => `
-        <button type="button" class="chip-unidad ${estado.filtros.ingresos.unidadId === u.id ? 'chip-unidad--activa' : ''}" data-unidad="${u.id}">${u.nombre}</button>
+        <button type="button" class="chip-unidad ${estado.filtros.ingresos.unidadId === u.id ? 'chip-unidad--activa' : ''}" data-unidad="${esc(u.id)}">${esc(u.nombre)}</button>
       `).join('')
       cont.querySelectorAll('.chip-unidad').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -4116,10 +4137,10 @@
       // abajo, que era lo que decía el "· recibido en X" de la versión anterior.
       document.getElementById('detalle-titulo').textContent = destino || 'esta unidad'
       document.getElementById('detalle-meta').innerHTML = [
-        `${formatearFecha(entrega.base.fecha)} · desde ${esc(origen)}`,
+        esc(`${formatearFecha(entrega.base.fecha)} · desde ${origen}`),
         'Movimiento interno entre unidades del grupo: no tiene comprobante de proveedor.',
-        textoRecepcion(entrega.base),
-        entrega.observaciones ? `Observaciones: ${esc(entrega.observaciones)}` : '',
+        esc(textoRecepcion(entrega.base)),
+        entrega.observaciones ? esc(`Observaciones: ${entrega.observaciones}`) : '',
       ].filter(Boolean).join('<br>')
 
       // No hay comprobantes: la sección queda vacía en vez de dibujar una caja
@@ -4214,8 +4235,8 @@
       // Los chips de tipo se movieron a la sección "Comprobantes": acá quedan
       // solo los datos comunes a toda la entrega.
       document.getElementById('detalle-meta').innerHTML = [
-        `${formatearFecha(ingreso.fecha)} · ${nombreUnidad(ingreso.unidad_negocio_id)}`,
-        ingreso.nombre_fantasia ? `Fantasía: ${esc(ingreso.nombre_fantasia)}` : '',
+        esc(`${formatearFecha(ingreso.fecha)} · ${nombreUnidad(ingreso.unidad_negocio_id)}`),
+        ingreso.nombre_fantasia ? esc(`Fantasía: ${ingreso.nombre_fantasia}`) : '',
         entrega.huerfana ? '<em>Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</em>' : '',
         entrega.comprobantes.length > 2
           ? '<strong style="color:#B91C1C;">⚠ Hay más de una factura vinculada a este remito: revisá que la mercadería no esté facturada dos veces.</strong>'
@@ -4245,9 +4266,11 @@
             ${carga ? `<div class="comprobante-mp__edicion">${esc(carga)}</div>` : ''}
             ${edicion ? `<div class="comprobante-mp__edicion">${esc(edicion)}</div>` : ''}
           </div>
-          ${c.foto_url
-            ? `<a href="${esc(c.foto_url)}" target="_blank" rel="noopener" class="comprobante-mp__foto">Ver foto →</a>`
-            : '<span class="comprobante-mp__sin-foto">Sin foto</span>'}
+          ${!c.foto_url
+            ? '<span class="comprobante-mp__sin-foto">Sin foto</span>'
+            : hrefFoto(c.foto_url)
+              ? `<a href="${esc(hrefFoto(c.foto_url))}" target="_blank" rel="noopener" class="comprobante-mp__foto">Ver foto →</a>`
+              : '<span class="comprobante-mp__sin-foto">Foto no disponible</span>'}
         </div>`
       }).join('')
 
@@ -4300,7 +4323,7 @@
           ? desgloseIncompleto(Number(item.cantidad), Number(item.contenido_documento), insumo.unidad_medida)
           : ''
         const desglose = (item.cantidad_bultos != null && item.contenido_por_bulto != null)
-          ? `<div class="fila-item-mp__marca">${Number(item.cantidad_bultos).toLocaleString('es-AR')} bultos de ${formatearCantidad(item.contenido_por_bulto, insumo.unidad_medida)}</div>`
+          ? `<div class="fila-item-mp__marca">${Number(item.cantidad_bultos).toLocaleString('es-AR')} bultos de ${esc(formatearCantidad(item.contenido_por_bulto, insumo.unidad_medida))}</div>`
           : incompleto
             ? `<div class="fila-item-mp__marca">${esc(incompleto)}</div>`
             : ''
@@ -4315,7 +4338,7 @@
                 ? '<div class="fila-item-mp__no-suma">No sumó stock: ya había entrado con un remito.</div>' : ''}
               ${htmlDiferenciaDetalle(item, insumo)}
             </div>
-            <div class="fila-item-mp__cantidad">${formatearCantidad(item.cantidad, insumo.unidad_medida)}</div>
+            <div class="fila-item-mp__cantidad">${esc(formatearCantidad(item.cantidad, insumo.unidad_medida))}</div>
           </div>
         `
       }).join('') || '<p class="texto-suave texto-pequeno">Este ingreso no tiene ítems.</p>'
@@ -6341,14 +6364,14 @@
     }
 
     function htmlItemAbierto(item) {
-      const u = esc(item.unidadMedida)
+      const unidadHtml = esc(item.unidadMedida)
 
       // La unidad de medida vive en el catálogo, compartido por las 4
       // empresas: solo se puede elegir cuando el insumo se va a CREAR.
       const selectorUnidad = item.esNuevo
         ? `<select data-campo="unidadMedida">${UNIDADES_MEDIDA.map(um =>
             `<option value="${um}" ${um === item.unidadMedida ? 'selected' : ''}>${um}</option>`).join('')}</select>`
-        : `<span class="cantidad-fila__unidad">${u}</span>`
+        : `<span class="cantidad-fila__unidad">${unidadHtml}</span>`
 
       // La fila de arriba es la que ya existía y no se toca de lugar. Lo único
       // que cambia con el control activo es a QUÉ campo escribe: pasa a ser la
@@ -6460,7 +6483,7 @@
              ${etiquetaNumero === null
                ? (item.esNuevo
                    ? `${inputNumero}${selectorUnidad}`
-                   : conSufijo(inputNumero, u))
+                   : conSufijo(inputNumero, unidadHtml))
                : conSufijo(inputNumero, etiquetaNumero)}
            </div>`
 
@@ -6572,7 +6595,7 @@
                  <span class="cantidad-fila__unidad">bultos de</span>
                  <input type="text" inputmode="decimal" autocomplete="off"
                         data-linea-campo="contenido" placeholder="0">
-                 <span class="cantidad-fila__unidad">${u}</span>
+                 <span class="cantidad-fila__unidad">${unidadHtml}</span>
                  <button type="button" class="btn-quitar-linea" data-accion="mixto-quitar"
                          title="Quitar esta presentación" aria-label="Quitar esta presentación"
                          ${item.lineas.length <= 1 ? 'disabled' : ''}>✕</button>
@@ -6612,7 +6635,7 @@
                ? `<input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
                     placeholder="0">${selectorUnidad}`
                : conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
-                    placeholder="0">`, u)}
+                    placeholder="0">`, unidadHtml)}
              ${resultadoHtml}
            </div>
            ${chipsPresentacion(usadas, 'Ya usadas con este proveedor')}`
