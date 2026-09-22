@@ -29,7 +29,16 @@ const FUNCIONES_BASE = [
   'hoyArgentina', 'horaArgentina', 'horaDelDiaAr', 'turnoSegunHora', 'mantenerPantalla',
   'leerTablero', 'estadoMaquinas', 'textoMasas', 'textoEstadoMaquina', 'htmlMaquina', 'mostrarTablero',
   'formularioAbrirVacio', 'htmlOpcionesOperario', 'htmlFilaAbrir', 'faltanParaAbrir', 'parametrosAbrirTurnos',
-  'mostrarAbrir', 'pintarAbrir', 'pintarBotonAbrir', 'confirmarAbrir', 'htmlLotesAsignados', 'abrirPlanilla',
+  'mostrarAbrir', 'pintarAbrir', 'pintarBotonAbrir', 'confirmarAbrir', 'htmlLotesAsignados',
+  // B4: planilla, paradas y cierre
+  'nombrePersona', 'duracionTexto', 'leerPlanilla', 'paradaEnCurso', 'htmlDatosPlanilla', 'htmlParadas',
+  'abrirPlanilla', 'pintarPlanilla', 'pintarBotonesPlanilla', 'motivosSugeridos', 'mostrarFormParada',
+  'confirmarParada', 'reanudar', 'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre',
+  'guardarBorradorCierre', 'leerCatalogoProductos', 'detallePresentacion', 'describirProducido',
+  'sublotesProvisorios', 'totalesCierre', 'moverProducto', 'faltanParaCerrar', 'parametrosCerrarTurno',
+  'htmlProducido', 'htmlResumenCierre', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'actualizarProductos',
+  'normalizarBusqueda', 'marcasFiltradas', 'htmlMarcas', 'abrirAgregar', 'pintarAgregar', 'confirmarAgregar',
+  'intentarCerrar', 'enviarCierre', 'htmlSublotesDefinitivos',
 ]
 
 const CONSTANTES_BASE = [
@@ -73,6 +82,7 @@ const PRELUDIO = `
   }
   // let del módulo (extraerConst solo toma const).
   var bloqueoPantalla = null
+  var camposCierreEnlazados = false
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }
@@ -114,6 +124,7 @@ const PRELUDIO = `
     unidades: new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']]),
     unidadId: 'u-cn', unidadesPosibles: ['u-cn'], modo: null, persona: null, personal: [],
     tablero: null, hayTurnoAbierto: false, abrir: null, abrirOperarios: [], abriendo: false,
+    planilla: null, catalogo: null, cierre: null, agregar: null, cerrando: false,
   }
 `
 
@@ -124,7 +135,8 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
     funciones: [...FUNCIONES_BASE, ...funciones],
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __llamadas, __ls, localStorage,
-      __tablas, __setRpc(f){ __rpc = f }, __uuids(){ return __uuids }, __nav: navigator`,
+      __tablas, __setRpc(f){ __rpc = f }, __uuids(){ return __uuids }, __nav: navigator,
+      ponerNumero, leerCampoNumero, enlazarCampoNumero`,
   })
 }
 

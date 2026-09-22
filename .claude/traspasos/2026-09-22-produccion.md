@@ -60,3 +60,30 @@ Supabase se usó SOLO en lectura: la base ya estaba hecha. Toda la verificación
 - Pantalla encendida con la Wake Lock API mientras haya un turno abierto (try/catch; se vuelve a pedir al volver a la
   pestaña).
 - Pruebas: `test-produccion-abrir.js` (+ mut). Corre con `TZ=UTC` para que una hora sin zona de Argentina dé rojo.
+- **Commit `7aed9b3`.** Números: test-produccion-abrir 59/59, mut 33/33 (+1 equivalente); test-produccion-xss 6/6;
+  controles-produccion 74/74 (baselines B1 y B2); check-scripts OK; el resto del repo en verde.
+
+### A2 — Cheques con unidad (subagente cheques) — commit `f4d1a0f`
+- Ver `.claude/traspasos/2026-09-22-cheques-2.md` (números y decisiones del subagente). Decisión que queda abierta
+  para Facu: **a 1280 px, con cheques salidos a la vista, la tabla ya no entra entera** (se desplaza de costado dentro
+  de su caja, la página no); CLAUDE.md decía "desde 1280 la tabla entra entera". Se dejó así en vez de recortar
+  columnas. El filtro de unidad solo aparece si hay al menos dos grupos: hoy las 17 cobranzas están sin unidad.
+
+### B4 — Modo Producción: planilla, paradas y cierre
+- Planilla de cada máquina abierta: lote grande, operario, encargado, masas (solo lectura: las carga el masero; solo
+  las no anuladas) y paradas con su duración.
+- "Parada" pide el motivo sugiriendo los usados antes (los últimos 200, sin repetir) → `iniciar_parada`. Mientras
+  dura, un cartel fijo arriba con "Reanudar" → `terminar_parada`, y no se puede ni parar otra vez ni cerrar (la base
+  rechaza las dos cosas).
+- "Cerrar planilla": hora en que se apagó el fuego (arranca en la hora actual de Argentina), scrap en kg
+  (`enlazarCampoNumero`, 3 decimales, OBLIGATORIO — 0 si no hubo), observaciones y lo producido EN ORDEN: "Agregar
+  producto" → producto → presentación (con cono / media caja / empaque / unidades por caja) → marca ("Común" o una
+  marca personalizada, con buscador sin acentos) → cajas (enteras). Cada renglón muestra su sublote PROVISORIO
+  (`7023-1`…) y cajas × unidades por caja = unidades; se sube, baja y borra antes de confirmar. Resumen con total de
+  cajas, unidades y sublotes. `cerrar_turno` recibe `p_productos` en el orden de la pantalla y se muestran los
+  sublotes DEFINITIVOS que devuelve la base.
+- Sin productos: "No cargaste nada producido. ¿Seguro que esta máquina no produjo?" con confirmación.
+- **Borrador** en localStorage (`produccion.cierre.<turno_id>`): cada cambio se guarda en el momento; al volver se
+  recupera y se dice. Se borra recién cuando la base confirmó el cierre; si la base rechaza, queda y el mensaje se
+  muestra tal cual.
+- Pruebas: `test-produccion-cierre.js` (+ mut).

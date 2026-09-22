@@ -25,6 +25,7 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/produccion.
 const BASES = [
   '9a70841', // B1: estructura y acceso
   'd995d1f', // B2: modo y ¿Quién sos?
+  '7aed9b3', // B3: tablero y abrir turno
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].

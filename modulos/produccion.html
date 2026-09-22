@@ -180,6 +180,52 @@
       .pr-abrir-fila .pr-select { grid-column: 1 / -1; }
     }
 
+    /* ── Planilla ──────────────────────────────────────────────────────── */
+    .pr-datos { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin: 0.5rem 0; }
+    .pr-dato { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; overflow-wrap: anywhere; }
+    .pr-dato__rotulo { font-size: 0.95rem; color: var(--pr-texto-secundario); font-weight: 600; }
+    .pr-dato__valor { font-size: 1.25rem; font-weight: 800; }
+    .pr-parada-activa {
+      position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
+      gap: 0.75rem; flex-wrap: wrap; padding: 1rem 1.25rem; margin-bottom: 1rem;
+      background: var(--bordo); color: #fff; border-radius: var(--radio-tarjeta); font-size: 1.25rem; font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+    .pr-parada-activa .pr-btn { background: #fff; color: var(--bordo-oscuro); border-color: #fff; }
+    .pr-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+    .pr-lista__item { padding: 0.75rem 1rem; border-radius: var(--radio-input); background: var(--color-superficie); overflow-wrap: anywhere; }
+    .pr-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
+    .pr-chip {
+      min-height: var(--pr-alto-boton); padding: 0 1rem; font: inherit; font-size: 1.05rem; font-weight: 600;
+      border-radius: 999px; border: 2px solid var(--color-borde); background: var(--color-fondo); color: var(--color-texto);
+      cursor: pointer; touch-action: manipulation; overflow-wrap: anywhere; text-align: left;
+    }
+    .pr-chip[aria-pressed="true"] { border-color: var(--azul); background: var(--azul-suave); color: var(--azul-oscuro); }
+
+    /* ── Cierre: lo producido ─────────────────────────────────────────── */
+    .pr-agregar { margin-top: 1rem; padding: 1rem; border: 2px dashed var(--azul); border-radius: var(--radio-tarjeta); }
+    .pr-producido {
+      display: grid; grid-template-columns: auto 1fr auto; gap: 0.75rem; align-items: center;
+      padding: 0.75rem; border: 2px solid var(--color-borde); border-radius: var(--radio-input); margin-bottom: 0.625rem;
+    }
+    .pr-producido--invalido { border-color: var(--bordo); background: var(--bordo-suave); }
+    .pr-producido__sublote { font-size: 1.5rem; font-weight: 900; color: var(--azul-oscuro); min-width: 5.5rem; }
+    .pr-producido__desc { min-width: 0; overflow-wrap: anywhere; }
+    .pr-producido__nombre { font-weight: 800; font-size: 1.15rem; }
+    .pr-producido__botones { display: flex; gap: 0.375rem; }
+    .pr-btn-icono {
+      min-width: var(--pr-alto-boton); min-height: var(--pr-alto-boton); font: inherit; font-size: 1.3rem; font-weight: 800;
+      border-radius: var(--radio-boton); border: 2px solid var(--color-borde); background: var(--color-fondo);
+      color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-btn-icono:disabled { opacity: 0.35; cursor: not-allowed; }
+    .pr-btn-icono--borrar { color: var(--bordo); border-color: var(--bordo-suave); }
+    .pr-resumen { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 1.3rem; font-weight: 800; margin-bottom: 1rem; }
+    @media (max-width: 600px) {
+      .pr-producido { grid-template-columns: auto 1fr; }
+      .pr-producido__botones { grid-column: 1 / -1; justify-content: flex-end; }
+    }
+
     /* El lote asignado: el número se lee de lejos. */
     .pr-lote { font-size: 3rem; font-weight: 900; color: var(--azul-oscuro); letter-spacing: 0.02em; line-height: 1.1; }
 
@@ -306,12 +352,135 @@
         <div class="pr-grilla" id="pr-abiertos-lista"></div>
         <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-abiertos-volver">Volver a las máquinas</button>
       </section>
+
+      <!-- B4: la planilla de una máquina abierta. Las masas las carga el
+           masero: acá se ven en solo lectura. -->
+      <section id="pr-planilla" hidden>
+        <!-- Mientras dura una parada queda fija arriba, con "Reanudar". -->
+        <div class="pr-parada-activa" id="pr-parada-activa" hidden>
+          <span id="pr-parada-activa-texto"></span>
+          <button type="button" class="pr-btn pr-btn--grande" id="pr-btn-reanudar">Reanudar</button>
+        </div>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo" id="pr-planilla-maquina"></h1>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-planilla-volver">‹ Máquinas</button>
+          </div>
+          <div id="pr-planilla-datos"></div>
+          <p class="pr-error" id="pr-planilla-error" hidden></p>
+          <div class="pr-acciones">
+            <button type="button" class="pr-btn pr-btn--secundario pr-btn--grande" id="pr-btn-parada">Parada</button>
+            <button type="button" class="pr-btn pr-btn--grande" id="pr-btn-cerrar-planilla">Cerrar planilla</button>
+          </div>
+        </div>
+        <!-- El motivo de una parada nueva, sugiriendo los usados antes. -->
+        <div class="pr-tarjeta" id="pr-parada-form" hidden>
+          <h2 class="pr-subtitulo">¿Por qué se para?</h2>
+          <div class="pr-chips" id="pr-parada-sugerencias"></div>
+          <label class="pr-campo">
+            <span class="pr-campo__rotulo">Motivo</span>
+            <input type="text" id="pr-parada-motivo" class="pr-input" maxlength="300" autocomplete="off">
+          </label>
+          <p class="pr-error" id="pr-parada-error" hidden></p>
+          <div class="pr-acciones">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-parada-cancelar">Cancelar</button>
+            <button type="button" class="pr-btn pr-btn--peligro" id="pr-parada-confirmar">Parar la máquina</button>
+          </div>
+        </div>
+        <div class="pr-tarjeta">
+          <h2 class="pr-subtitulo">Paradas</h2>
+          <div id="pr-planilla-paradas"></div>
+        </div>
+      </section>
+
+      <!-- B4: cerrar la planilla. Lo producido va EN ORDEN: cada renglón es un
+           sublote, y el sublote lo arma la base en el orden en que se manda. -->
+      <section id="pr-cierre" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo" id="pr-cierre-titulo">Cerrar planilla</h1>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-cierre-volver">‹ Planilla</button>
+          </div>
+          <p class="pr-texto-suave" id="pr-cierre-borrador" hidden></p>
+          <div class="pr-campos">
+            <label class="pr-campo">
+              <span class="pr-campo__rotulo">Hora en que se apagó el fuego</span>
+              <input type="time" id="pr-cierre-hora" class="pr-input">
+            </label>
+            <label class="pr-campo">
+              <span class="pr-campo__rotulo">Scrap (kg) — 0 si no hubo</span>
+              <input type="text" id="pr-cierre-scrap" class="pr-input" autocomplete="off">
+            </label>
+          </div>
+          <label class="pr-campo pr-espacio-arriba">
+            <span class="pr-campo__rotulo">Observaciones</span>
+            <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000"></textarea>
+          </label>
+        </div>
+
+        <div class="pr-tarjeta">
+          <h2 class="pr-subtitulo">Lo producido, en orden</h2>
+          <div id="pr-cierre-productos"></div>
+          <button type="button" class="pr-btn pr-btn--secundario pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-btn-agregar-producto">Agregar producto</button>
+
+          <div class="pr-agregar" id="pr-agregar" hidden>
+            <div class="pr-campos">
+              <label class="pr-campo">
+                <span class="pr-campo__rotulo">Producto</span>
+                <select id="pr-agregar-producto" class="pr-select"></select>
+              </label>
+              <label class="pr-campo">
+                <span class="pr-campo__rotulo">Presentación</span>
+                <select id="pr-agregar-presentacion" class="pr-select"></select>
+              </label>
+            </div>
+            <div class="pr-campo pr-espacio-arriba">
+              <span class="pr-campo__rotulo">Marca</span>
+              <input type="text" id="pr-agregar-marca-buscar" class="pr-input" placeholder="Buscar una marca personalizada" autocomplete="off">
+              <div class="pr-chips" id="pr-agregar-marcas"></div>
+            </div>
+            <label class="pr-campo pr-espacio-arriba">
+              <span class="pr-campo__rotulo">Cajas</span>
+              <input type="text" id="pr-agregar-cajas" class="pr-input" autocomplete="off">
+            </label>
+            <p class="pr-texto-suave" id="pr-agregar-unidades"></p>
+            <p class="pr-error" id="pr-agregar-error" hidden></p>
+            <div class="pr-acciones">
+              <button type="button" class="pr-btn pr-btn--secundario" id="pr-agregar-cancelar">Cancelar</button>
+              <button type="button" class="pr-btn" id="pr-agregar-confirmar">Agregar a la planilla</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pr-tarjeta">
+          <div id="pr-cierre-resumen"></div>
+          <p class="pr-error" id="pr-cierre-error" hidden></p>
+          <!-- Sin productos, antes de mandar se pregunta fuerte. -->
+          <div class="pr-aviso pr-aviso--grave" id="pr-cierre-vacio" hidden>
+            <p>No cargaste nada producido. ¿Seguro que esta máquina no produjo?</p>
+            <div class="pr-acciones">
+              <button type="button" class="pr-btn pr-btn--secundario" id="pr-cierre-vacio-no">No, voy a cargar lo producido</button>
+              <button type="button" class="pr-btn pr-btn--peligro" id="pr-cierre-vacio-si">Sí, no produjo nada</button>
+            </div>
+          </div>
+          <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho" id="pr-cierre-enviar">Cerrar y enviar</button>
+        </div>
+      </section>
+
+      <!-- B4: la planilla cerrada, con los sublotes que devolvió la base. -->
+      <section class="pr-tarjeta" id="pr-cerrado" hidden>
+        <h1 class="pr-titulo">Planilla cerrada</h1>
+        <div id="pr-cerrado-lista"></div>
+        <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-cerrado-volver">Volver a las máquinas</button>
+      </section>
     </main>
   </div>
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import {
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
+    } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -341,6 +510,11 @@
       abrir: null,         // el formulario de abrir turno
       abrirOperarios: [],
       abriendo: false,
+      planilla: null,      // { turno, operarios, masas, paradas, maquinaNombre }
+      catalogo: null,      // { productos, presentaciones, marcas } de la unidad
+      cierre: null,        // el borrador del cierre: { hora, scrap, obs, productos }
+      agregar: null,       // el producto que se está agregando
+      cerrando: false,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -452,7 +626,7 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos']
+    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado']
 
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -606,6 +780,7 @@
         const b = ev.target.closest('[data-menu]'); if (b) accionDelMenu(b.dataset.menu)
       })
       conectarProduccion()
+      conectarPlanilla()
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
       })
@@ -926,10 +1101,555 @@
       })
     }
 
-    // La planilla de una máquina abierta llega en B4.
-    function abrirPlanilla(turnoId) {
-      document.getElementById('pr-inicio-texto').textContent = 'La planilla de cada máquina se habilita en la próxima actualización.'
-      mostrarVista('pr-inicio')
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODO PRODUCCIÓN — la planilla de una máquina abierta
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function nombrePersona(id) {
+      if (!id) return '—'
+      return estado.personal.find(p => p.id === id)?.nombre ?? '—'
+    }
+
+    // Duración legible entre dos momentos: "1 h 05 min", "12 min". Sin fin,
+    // hasta ahora. '' si no se puede calcular.
+    function duracionTexto(inicio, fin, ahora = new Date()) {
+      const a = new Date(inicio), b = fin ? new Date(fin) : ahora
+      if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return ''
+      const min = Math.floor((b - a) / 60000)
+      if (min < 60) return `${min} min`
+      return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`
+    }
+
+    async function leerPlanilla(turnoId) {
+      const { data: turno, error: e1 } = await supabase.from('turnos_produccion')
+        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado').eq('id', turnoId).maybeSingle()
+      if (e1) throw e1
+      if (!turno) throw new Error('El turno no existe.')
+      const { data: ops, error: e2 } = await supabase.from('turno_operarios').select('empleado_id').eq('turno_id', turnoId)
+      if (e2) throw e2
+      const { data: masas, error: e3 } = await supabase.from('masas').select('id').eq('turno_id', turnoId).eq('anulada', false)
+      if (e3) throw e3
+      const { data: paradas, error: e4 } = await supabase.from('paradas_produccion')
+        .select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio')
+      if (e4) throw e4
+      return { turno, operarios: (ops ?? []).map(o => o.empleado_id), masas: (masas ?? []).length, paradas: paradas ?? [] }
+    }
+
+    function paradaEnCurso(paradas) {
+      return (paradas ?? []).find(p => !p.fin) ?? null
+    }
+
+    function htmlDatosPlanilla(p) {
+      const ops = p.operarios.length ? p.operarios.map(nombrePersona).join(', ') : 'Sin operario'
+      return `<div class="pr-datos">` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(p.turno.lote)}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Operario</span><span class="pr-dato__valor">${esc(ops)}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Masas (las carga el masero)</span><span class="pr-dato__valor">${esc(p.masas)}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Turno</span><span class="pr-dato__valor">${esc(p.turno.turno)} · abierta ${esc(horaArgentina(p.turno.abierto_en) || '—')}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Encargado</span><span class="pr-dato__valor">${esc(nombrePersona(p.turno.encargado_id))}</span></div>` +
+        `</div>`
+    }
+
+    function htmlParadas(paradas) {
+      if (!paradas.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
+      return '<ul class="pr-lista">' + paradas.map(p => {
+        const desde = horaArgentina(p.inicio) || '—'
+        const hasta = p.fin ? (horaArgentina(p.fin) || '—') : 'en curso'
+        const dur = duracionTexto(p.inicio, p.fin)
+        return `<li class="pr-lista__item"><strong>${esc(p.motivo)}</strong> · ${esc(desde)} a ${esc(hasta)}${dur ? ` · ${esc(dur)}` : ''}</li>`
+      }).join('') + '</ul>'
+    }
+
+    async function abrirPlanilla(turnoId) {
+      estado.planilla = null
+      document.getElementById('pr-planilla-datos').innerHTML = '<p class="pr-texto-suave">Cargando la planilla…</p>'
+      document.getElementById('pr-planilla-paradas').innerHTML = ''
+      document.getElementById('pr-planilla-error').hidden = true
+      document.getElementById('pr-parada-form').hidden = true
+      document.getElementById('pr-parada-activa').hidden = true
+      const nombre = (estado.tablero ?? []).find(e => e.turno?.id === turnoId)?.maquina.nombre ?? 'Máquina'
+      document.getElementById('pr-planilla-maquina').textContent = nombre
+      mostrarVista('pr-planilla')
+      try {
+        estado.planilla = { ...(await leerPlanilla(turnoId)), maquinaNombre: nombre }
+      } catch (err) {
+        console.error('planilla:', err)
+        document.getElementById('pr-planilla-datos').innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer la planilla. Revisá la conexión y volvé a abrirla.</div>'
+        pintarBotonesPlanilla()
+        return
+      }
+      pintarPlanilla()
+    }
+
+    function pintarPlanilla() {
+      const p = estado.planilla
+      if (!p) return
+      document.getElementById('pr-planilla-datos').innerHTML = htmlDatosPlanilla(p)
+      document.getElementById('pr-planilla-paradas').innerHTML = htmlParadas(p.paradas)
+      const enCurso = paradaEnCurso(p.paradas)
+      document.getElementById('pr-parada-activa').hidden = !enCurso
+      document.getElementById('pr-parada-activa-texto').textContent = enCurso
+        ? `Parada: ${enCurso.motivo} · desde ${horaArgentina(enCurso.inicio) || '—'}` : ''
+      pintarBotonesPlanilla()
+    }
+
+    // Con una parada en curso no se abre otra ni se cierra la planilla: la
+    // base rechaza las dos cosas ("Ya hay una parada en curso", "Hay una
+    // parada sin terminar").
+    function pintarBotonesPlanilla() {
+      const p = estado.planilla
+      const enCurso = p ? paradaEnCurso(p.paradas) : null
+      const parada = document.getElementById('pr-btn-parada')
+      const cerrar = document.getElementById('pr-btn-cerrar-planilla')
+      parada.disabled = !p || !!enCurso
+      cerrar.disabled = !p || !!enCurso
+      cerrar.title = enCurso ? 'Terminá la parada antes de cerrar la planilla' : ''
+    }
+
+    // Los motivos usados antes, del más reciente al más viejo, sin repetir
+    // (comparados sin mayúsculas ni espacios de más).
+    function motivosSugeridos(filas, max = 8) {
+      const vistos = new Set(), out = []
+      for (const f of filas ?? []) {
+        const t = String(f.motivo ?? '').trim()
+        const k = t.toLowerCase().replace(/\s+/g, ' ')
+        if (!t || vistos.has(k)) continue
+        vistos.add(k); out.push(t)
+        if (out.length >= max) break
+      }
+      return out
+    }
+
+    async function mostrarFormParada() {
+      document.getElementById('pr-parada-motivo').value = ''
+      document.getElementById('pr-parada-error').hidden = true
+      document.getElementById('pr-parada-form').hidden = false
+      const cont = document.getElementById('pr-parada-sugerencias')
+      cont.innerHTML = ''
+      try {
+        const { data, error } = await supabase.from('paradas_produccion').select('motivo').order('inicio', { ascending: false }).limit(200)
+        if (error) throw error
+        cont.innerHTML = motivosSugeridos(data)
+          .map(m => `<button type="button" class="pr-chip" data-sugerencia="${esc(m)}">${esc(m)}</button>`).join('')
+      } catch (err) {
+        console.warn('Sin sugerencias de motivos:', err)
+      }
+      document.getElementById('pr-parada-motivo').focus()
+    }
+
+    async function confirmarParada() {
+      const motivo = document.getElementById('pr-parada-motivo').value.trim()
+      const err = document.getElementById('pr-parada-error')
+      if (motivo.length < 2) { err.textContent = 'Escribí el motivo de la parada.'; err.hidden = false; return }
+      const btn = document.getElementById('pr-parada-confirmar')
+      btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('iniciar_parada', { p_turno_id: estado.planilla.turno.id, p_motivo: motivo })
+        if (error) throw error
+        document.getElementById('pr-parada-form').hidden = true
+        await abrirPlanilla(estado.planilla.turno.id)
+      } catch (e) {
+        err.textContent = e?.message || 'No se pudo registrar la parada.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
+      }
+    }
+
+    async function reanudar() {
+      const enCurso = estado.planilla ? paradaEnCurso(estado.planilla.paradas) : null
+      if (!enCurso) return
+      const btn = document.getElementById('pr-btn-reanudar')
+      btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('terminar_parada', { p_parada_id: enCurso.id })
+        if (error) throw error
+        await abrirPlanilla(estado.planilla.turno.id)
+      } catch (e) {
+        const err = document.getElementById('pr-planilla-error')
+        err.textContent = e?.message || 'No se pudo terminar la parada.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODO PRODUCCIÓN — cerrar la planilla, con borrador
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // El borrador del cierre, por turno. Si se corta la conexión o se recarga
+    // la tablet en el medio, no se pierde nada.
+    function claveBorradorCierre(turnoId) {
+      return `produccion.cierre.${turnoId}`
+    }
+
+    function borradorCierreVacio() {
+      return { hora: '', scrap: null, obs: '', productos: [] }
+    }
+
+    function leerBorradorCierre(turnoId) {
+      const crudo = leerPreferencia(claveBorradorCierre(turnoId))
+      if (!crudo) return null
+      try {
+        const b = JSON.parse(crudo)
+        if (!b || typeof b !== 'object' || !Array.isArray(b.productos)) return null
+        return {
+          hora: typeof b.hora === 'string' ? b.hora : '',
+          scrap: typeof b.scrap === 'number' && Number.isFinite(b.scrap) ? b.scrap : null,
+          obs: typeof b.obs === 'string' ? b.obs : '',
+          productos: b.productos.filter(x => x && typeof x.presentacion_id === 'string' && Number.isInteger(x.cajas) && x.cajas > 0)
+            .map(x => ({ presentacion_id: x.presentacion_id, marca_id: typeof x.marca_id === 'string' ? x.marca_id : null, cajas: x.cajas })),
+        }
+      } catch { return null }
+    }
+
+    function guardarBorradorCierre(turnoId, b) {
+      guardarPreferencia(claveBorradorCierre(turnoId), JSON.stringify(b))
+    }
+
+    // Catálogo de lo que puede producir la unidad: productos activos con sus
+    // presentaciones activas, y las marcas personalizadas activas.
+    async function leerCatalogoProductos(unidadId) {
+      const { data: productos, error: e1 } = await supabase.from('productos_terminados')
+        .select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')
+      if (e1) throw e1
+      const ids = (productos ?? []).map(p => p.id)
+      let presentaciones = []
+      if (ids.length) {
+        const r = await supabase.from('producto_presentaciones')
+          .select('id, producto_id, nombre, con_cono, media_caja, empaque, unidades_por_caja, orden').in('producto_id', ids).eq('activa', true).order('orden')
+        if (r.error) throw r.error
+        presentaciones = r.data ?? []
+      }
+      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre').eq('activa', true).order('nombre')
+      if (e3) throw e3
+      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [] }
+    }
+
+    // Detalle de una presentación: "con cono · media caja · bolsa granel".
+    function detallePresentacion(pr) {
+      const partes = []
+      if (pr.con_cono) partes.push('con cono')
+      if (pr.media_caja) partes.push('media caja')
+      if (pr.empaque) partes.push(pr.empaque)
+      return partes.join(' · ')
+    }
+
+    // Todo lo que hace falta para mostrar un renglón, o null si su
+    // presentación ya no está en el catálogo (se desactivó).
+    function describirProducido(item, cat) {
+      const pr = cat.presentaciones.find(x => x.id === item.presentacion_id)
+      if (!pr) return null
+      const prod = cat.productos.find(x => x.id === pr.producto_id)
+      const marca = item.marca_id ? cat.marcas.find(m => m.id === item.marca_id) : null
+      return {
+        producto: prod?.nombre ?? 'Producto',
+        presentacion: pr.nombre,
+        detalle: detallePresentacion(pr),
+        marca: item.marca_id ? (marca?.nombre ?? 'Marca que ya no está') : 'Común',
+        unidadesPorCaja: pr.unidades_por_caja,
+        unidades: item.cajas * pr.unidades_por_caja,
+      }
+    }
+
+    // El sublote que le va a poner la base a cada renglón: lote-1, lote-2…,
+    // en el orden de la lista (cerrar_turno numera en el orden de
+    // p_productos). Es PROVISORIO: el definitivo lo devuelve la base.
+    function sublotesProvisorios(lote, cantidad) {
+      return Array.from({ length: cantidad }, (_, i) => `${lote}-${i + 1}`)
+    }
+
+    function totalesCierre(productos, cat) {
+      let cajas = 0, unidades = 0
+      for (const it of productos) {
+        cajas += it.cajas
+        const d = describirProducido(it, cat)
+        if (d) unidades += d.unidades
+      }
+      return { cajas, unidades }
+    }
+
+    // Mover un renglón una posición arriba (-1) o abajo (+1). Devuelve una
+    // lista nueva; fuera de rango, la misma.
+    function moverProducto(lista, i, delta) {
+      const j = i + delta
+      if (i < 0 || i >= lista.length || j < 0 || j >= lista.length) return lista
+      const nueva = [...lista]
+      ;[nueva[i], nueva[j]] = [nueva[j], nueva[i]]
+      return nueva
+    }
+
+    function faltanParaCerrar(b, cat) {
+      const faltan = []
+      if (!/^\d{2}:\d{2}$/.test(b.hora ?? '')) faltan.push('la hora en que se apagó el fuego')
+      if (b.scrap == null) faltan.push('el scrap en kilos (0 si no hubo)')
+      if (b.productos.some(it => !describirProducido(it, cat))) faltan.push('sacar los productos que ya no están en el catálogo')
+      return faltan
+    }
+
+    // El payload de cerrar_turno. El ORDEN del array es el orden de los
+    // sublotes: no se reordena acá.
+    function parametrosCerrarTurno(turnoId, b) {
+      return {
+        p_turno_id: turnoId,
+        p_hora_apagado: b.hora,
+        p_scrap_kg: b.scrap,
+        p_observaciones: b.obs.trim() === '' ? null : b.obs.trim(),
+        p_productos: b.productos.map(it => ({ presentacion_id: it.presentacion_id, cajas: it.cajas, marca_id: it.marca_id ?? null })),
+      }
+    }
+
+    function htmlProducido(it, i, total, sublote, cat) {
+      const d = describirProducido(it, cat)
+      if (!d) {
+        return `<div class="pr-producido pr-producido--invalido"><span class="pr-producido__sublote">${esc(sublote)}</span>` +
+          `<div class="pr-producido__desc"><span class="pr-producido__nombre">Un producto que ya no está en el catálogo</span><br>Borralo y cargalo de nuevo.</div>` +
+          `<div class="pr-producido__botones"><button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${i}" aria-label="Borrar el renglón ${esc(sublote)}">✕</button></div></div>`
+      }
+      const detalle = d.detalle ? ` · ${esc(d.detalle)}` : ''
+      return `<div class="pr-producido"><span class="pr-producido__sublote">${esc(sublote)}</span>` +
+        `<div class="pr-producido__desc"><span class="pr-producido__nombre">${esc(d.producto)} · ${esc(d.presentacion)}</span>${detalle}<br>` +
+        `Marca: ${esc(d.marca)} · ${esc(formatearNumeroAr(it.cajas, { decimales: 0 }))} cajas × ${esc(formatearNumeroAr(d.unidadesPorCaja, { decimales: 0 }))} = <strong>${esc(formatearNumeroAr(d.unidades, { decimales: 0 }))} unidades</strong></div>` +
+        `<div class="pr-producido__botones">` +
+        `<button type="button" class="pr-btn-icono" data-subir="${i}" aria-label="Subir ${esc(sublote)}"${i === 0 ? ' disabled' : ''}>▲</button>` +
+        `<button type="button" class="pr-btn-icono" data-bajar="${i}" aria-label="Bajar ${esc(sublote)}"${i === total - 1 ? ' disabled' : ''}>▼</button>` +
+        `<button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${i}" aria-label="Borrar ${esc(sublote)}">✕</button>` +
+        `</div></div>`
+    }
+
+    function htmlResumenCierre(b, cat) {
+      const t = totalesCierre(b.productos, cat)
+      return `<div class="pr-resumen"><span>${esc(formatearNumeroAr(t.cajas, { decimales: 0 }))} cajas</span>` +
+        `<span>${esc(formatearNumeroAr(t.unidades, { decimales: 0 }))} unidades</span>` +
+        `<span>${esc(b.productos.length)} ${b.productos.length === 1 ? 'sublote' : 'sublotes'}</span></div>`
+    }
+
+    let camposCierreEnlazados = false
+
+    async function mostrarCierre() {
+      const p = estado.planilla
+      if (!p || paradaEnCurso(p.paradas)) return
+      document.getElementById('pr-cierre-titulo').textContent = `Cerrar ${p.maquinaNombre} · lote ${p.turno.lote}`
+      document.getElementById('pr-cierre-error').hidden = true
+      document.getElementById('pr-cierre-vacio').hidden = true
+      document.getElementById('pr-agregar').hidden = true
+      if (!camposCierreEnlazados) {
+        enlazarCampoNumero(document.getElementById('pr-cierre-scrap'), { decimales: 3 })
+        enlazarCampoNumero(document.getElementById('pr-agregar-cajas'), { decimales: 0 })
+        camposCierreEnlazados = true
+      }
+      mostrarVista('pr-cierre')
+      document.getElementById('pr-cierre-productos').innerHTML = '<p class="pr-texto-suave">Cargando los productos…</p>'
+      try {
+        estado.catalogo = await leerCatalogoProductos(estado.unidadId)
+      } catch (err) {
+        console.error('catálogo de productos:', err)
+        estado.catalogo = null
+        document.getElementById('pr-cierre-productos').innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer los productos. Revisá la conexión y volvé a entrar.</div>'
+        document.getElementById('pr-cierre-enviar').disabled = true
+        return
+      }
+      const guardado = leerBorradorCierre(p.turno.id)
+      estado.cierre = guardado ?? { ...borradorCierreVacio(), hora: horaArgentina(new Date()) }
+      document.getElementById('pr-cierre-borrador').hidden = !guardado
+      document.getElementById('pr-cierre-borrador').textContent = guardado ? 'Se recuperó lo que habías cargado en esta tablet.' : ''
+      document.getElementById('pr-cierre-hora').value = estado.cierre.hora
+      ponerNumero(document.getElementById('pr-cierre-scrap'), estado.cierre.scrap)
+      document.getElementById('pr-cierre-obs').value = estado.cierre.obs
+      pintarCierre()
+    }
+
+    function pintarCierre() {
+      const b = estado.cierre, cat = estado.catalogo
+      if (!b || !cat) return
+      const subs = sublotesProvisorios(estado.planilla.turno.lote, b.productos.length)
+      document.getElementById('pr-cierre-productos').innerHTML = b.productos.length
+        ? b.productos.map((it, i) => htmlProducido(it, i, b.productos.length, subs[i], cat)).join('')
+        : '<p class="pr-texto-suave">Todavía no cargaste nada producido.</p>'
+      document.getElementById('pr-cierre-resumen').innerHTML = htmlResumenCierre(b, cat)
+      const faltan = faltanParaCerrar(b, cat)
+      const btn = document.getElementById('pr-cierre-enviar')
+      btn.disabled = faltan.length > 0 || !!estado.cerrando
+      btn.title = faltan.length ? `Falta ${faltan.join(', ')}` : ''
+      document.getElementById('pr-cierre-error').hidden = !faltan.length || !b.intentado
+      if (faltan.length && b.intentado) document.getElementById('pr-cierre-error').textContent = `Falta ${faltan.join(', ')}.`
+    }
+
+    // Cada cambio se guarda en la tablet en el momento.
+    function cambioEnCierre() {
+      const b = estado.cierre
+      if (!b) return
+      b.hora = document.getElementById('pr-cierre-hora').value
+      b.scrap = leerCampoNumero(document.getElementById('pr-cierre-scrap'))
+      b.obs = document.getElementById('pr-cierre-obs').value
+      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, productos: b.productos })
+      pintarCierre()
+    }
+
+    function actualizarProductos(lista) {
+      estado.cierre.productos = lista
+      guardarBorradorCierre(estado.planilla.turno.id, { hora: estado.cierre.hora, scrap: estado.cierre.scrap, obs: estado.cierre.obs, productos: lista })
+      pintarCierre()
+    }
+
+    // ── Agregar un producto: producto → presentación → marca → cajas ──────
+
+    function normalizarBusqueda(t) {
+      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    }
+
+    function marcasFiltradas(marcas, texto) {
+      const q = normalizarBusqueda(texto)
+      if (!q) return marcas
+      return marcas.filter(m => normalizarBusqueda(m.nombre).includes(q))
+    }
+
+    function htmlMarcas(marcas, texto, elegida) {
+      const comun = `<button type="button" class="pr-chip" data-marca="" aria-pressed="${elegida ? 'false' : 'true'}">Común</button>`
+      const lista = marcasFiltradas(marcas, texto)
+      const botones = lista.map(m => `<button type="button" class="pr-chip" data-marca="${esc(m.id)}" aria-pressed="${m.id === elegida ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+      const nada = texto && !lista.length ? `<span class="pr-texto-suave">Ninguna marca coincide con "${esc(texto)}".</span>` : ''
+      return comun + botones + nada
+    }
+
+    function abrirAgregar() {
+      const cat = estado.catalogo
+      if (!cat) return
+      estado.agregar = { productoId: '', presentacionId: '', marcaId: null, busqueda: '' }
+      document.getElementById('pr-agregar-producto').innerHTML = '<option value="">Elegí el producto</option>' +
+        cat.productos.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')
+      document.getElementById('pr-agregar-producto').value = ''
+      document.getElementById('pr-agregar-marca-buscar').value = ''
+      ponerNumero(document.getElementById('pr-agregar-cajas'), null)
+      document.getElementById('pr-agregar-error').hidden = true
+      document.getElementById('pr-agregar').hidden = false
+      pintarAgregar()
+    }
+
+    function pintarAgregar() {
+      const a = estado.agregar, cat = estado.catalogo
+      if (!a || !cat) return
+      const pres = cat.presentaciones.filter(pr => pr.producto_id === a.productoId)
+      const selPres = document.getElementById('pr-agregar-presentacion')
+      selPres.innerHTML = '<option value="">' + (a.productoId ? 'Elegí la presentación' : 'Primero el producto') + '</option>' +
+        pres.map(pr => {
+          const det = detallePresentacion(pr)
+          return `<option value="${esc(pr.id)}">${esc(pr.nombre)}${det ? ` (${esc(det)})` : ''} · ${esc(pr.unidades_por_caja)} por caja</option>`
+        }).join('')
+      selPres.disabled = !a.productoId
+      selPres.value = pres.some(pr => pr.id === a.presentacionId) ? a.presentacionId : ''
+      if (selPres.value !== a.presentacionId) a.presentacionId = ''
+      document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(cat.marcas, a.busqueda, a.marcaId)
+      const cajas = leerCampoNumero(document.getElementById('pr-agregar-cajas'))
+      const pr = cat.presentaciones.find(x => x.id === a.presentacionId)
+      document.getElementById('pr-agregar-unidades').textContent = pr && cajas
+        ? `${formatearNumeroAr(cajas, { decimales: 0 })} cajas × ${formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 })} = ${formatearNumeroAr(cajas * pr.unidades_por_caja, { decimales: 0 })} unidades`
+        : ''
+    }
+
+    function confirmarAgregar() {
+      const a = estado.agregar
+      const err = document.getElementById('pr-agregar-error')
+      const cajas = leerCampoNumero(document.getElementById('pr-agregar-cajas'))
+      if (!a.presentacionId) { err.textContent = 'Elegí el producto y la presentación.'; err.hidden = false; return }
+      if (!Number.isInteger(cajas) || cajas <= 0) { err.textContent = 'Poné cuántas cajas (un número entero mayor a cero).'; err.hidden = false; return }
+      document.getElementById('pr-agregar').hidden = true
+      actualizarProductos([...estado.cierre.productos, { presentacion_id: a.presentacionId, marca_id: a.marcaId, cajas }])
+    }
+
+    // ── Enviar ────────────────────────────────────────────────────────────
+
+    function intentarCerrar() {
+      estado.cierre.intentado = true
+      cambioEnCierre()
+      if (faltanParaCerrar(estado.cierre, estado.catalogo).length) return
+      if (!estado.cierre.productos.length) {
+        document.getElementById('pr-cierre-vacio').hidden = false
+        return
+      }
+      enviarCierre()
+    }
+
+    async function enviarCierre() {
+      if (estado.cerrando) return
+      estado.cerrando = true
+      document.getElementById('pr-cierre-vacio').hidden = true
+      pintarCierre()
+      const err = document.getElementById('pr-cierre-error')
+      const turnoId = estado.planilla.turno.id
+      try {
+        const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre))
+        if (error) throw error
+        // Recién ahora se borra el borrador: la base ya tiene todo.
+        guardarPreferencia(claveBorradorCierre(turnoId), null)
+        document.getElementById('pr-cerrado-lista').innerHTML = htmlSublotesDefinitivos(data)
+        mostrarVista('pr-cerrado')
+        mostrarExito('Planilla cerrada.')
+      } catch (e) {
+        // El borrador queda en la tablet: no se pierde nada.
+        err.textContent = e?.message || 'No se pudo cerrar la planilla. Lo que cargaste quedó guardado en esta tablet.'
+        err.hidden = false
+      } finally {
+        estado.cerrando = false
+        pintarCierre()
+      }
+    }
+
+    function htmlSublotesDefinitivos(res) {
+      const subs = Array.isArray(res?.sublotes) ? res.sublotes : []
+      const cab = `<p class="pr-texto-suave">Lote ${esc(res?.lote ?? '')}</p>`
+      if (!subs.length) return cab + '<p class="pr-dato__valor">Sin productos.</p>'
+      return cab + '<ul class="pr-lista">' + subs.map(s =>
+        `<li class="pr-lista__item"><span class="pr-producido__sublote">${esc(s.sublote)}</span> ` +
+        `${esc(formatearNumeroAr(s.cajas, { decimales: 0 }))} cajas · ${esc(formatearNumeroAr(s.unidades, { decimales: 0 }))} unidades</li>`).join('') + '</ul>'
+    }
+
+    function conectarPlanilla() {
+      document.getElementById('pr-planilla-volver').addEventListener('click', mostrarTablero)
+      document.getElementById('pr-btn-parada').addEventListener('click', mostrarFormParada)
+      document.getElementById('pr-parada-cancelar').addEventListener('click', () => { document.getElementById('pr-parada-form').hidden = true })
+      document.getElementById('pr-parada-confirmar').addEventListener('click', confirmarParada)
+      document.getElementById('pr-parada-sugerencias').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-sugerencia]'); if (b) document.getElementById('pr-parada-motivo').value = b.dataset.sugerencia
+      })
+      document.getElementById('pr-btn-reanudar').addEventListener('click', reanudar)
+      document.getElementById('pr-btn-cerrar-planilla').addEventListener('click', mostrarCierre)
+      document.getElementById('pr-cierre-volver').addEventListener('click', () => abrirPlanilla(estado.planilla.turno.id))
+      for (const id of ['pr-cierre-hora', 'pr-cierre-scrap', 'pr-cierre-obs']) {
+        document.getElementById(id).addEventListener('input', cambioEnCierre)
+      }
+      document.getElementById('pr-cierre-productos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-subir], [data-bajar], [data-borrar]')
+        if (!b || b.disabled) return
+        const lista = estado.cierre.productos
+        if (b.dataset.subir !== undefined) actualizarProductos(moverProducto(lista, Number(b.dataset.subir), -1))
+        else if (b.dataset.bajar !== undefined) actualizarProductos(moverProducto(lista, Number(b.dataset.bajar), +1))
+        else actualizarProductos(lista.filter((_, i) => i !== Number(b.dataset.borrar)))
+      })
+      document.getElementById('pr-btn-agregar-producto').addEventListener('click', abrirAgregar)
+      document.getElementById('pr-agregar-cancelar').addEventListener('click', () => { document.getElementById('pr-agregar').hidden = true })
+      document.getElementById('pr-agregar-confirmar').addEventListener('click', confirmarAgregar)
+      document.getElementById('pr-agregar-producto').addEventListener('change', ev => {
+        estado.agregar.productoId = ev.target.value; estado.agregar.presentacionId = ''; pintarAgregar()
+      })
+      document.getElementById('pr-agregar-presentacion').addEventListener('change', ev => {
+        estado.agregar.presentacionId = ev.target.value; pintarAgregar()
+      })
+      document.getElementById('pr-agregar-marca-buscar').addEventListener('input', ev => {
+        estado.agregar.busqueda = ev.target.value
+        document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(estado.catalogo.marcas, estado.agregar.busqueda, estado.agregar.marcaId)
+      })
+      document.getElementById('pr-agregar-marcas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-marca]'); if (!b) return
+        estado.agregar.marcaId = b.dataset.marca || null
+        document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(estado.catalogo.marcas, estado.agregar.busqueda, estado.agregar.marcaId)
+      })
+      document.getElementById('pr-agregar-cajas').addEventListener('input', pintarAgregar)
+      document.getElementById('pr-cierre-enviar').addEventListener('click', intentarCerrar)
+      document.getElementById('pr-cierre-vacio-no').addEventListener('click', () => { document.getElementById('pr-cierre-vacio').hidden = true })
+      document.getElementById('pr-cierre-vacio-si').addEventListener('click', enviarCierre)
+      document.getElementById('pr-cerrado-volver').addEventListener('click', mostrarTablero)
     }
 
     // ═══════════════════════════════════════════════════════════════════════

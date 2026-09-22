@@ -11,6 +11,8 @@ const SEGURAS_PRODUCCION = [
   ['clase', 'clase CSS constante del código, o vacía'],
   ['i', 'número: índice del .map()'],
   ['htmlOpcionesOperario(operarios, f.operario)', 'HTML armado por htmlOpcionesOperario(), que escapa adentro'],
+  // B4
+  ['detalle', 'HTML ya escapado: htmlProducido() lo arma arriba con esc(d.detalle), o vacío'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [
