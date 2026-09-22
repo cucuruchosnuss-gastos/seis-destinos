@@ -16,6 +16,9 @@ const FUNCIONES = [
   'ordenarCheques', 'resumenCartera', 'cargarResumenCheques', 'pintarSelectorBancos',
   'pintarCartera', 'htmlCartera', 'pintarFiltrosCheques', 'limpiarFiltrosCheques',
   'renderizarCheques', 'htmlTablaCheques', 'htmlFilaCheque', 'htmlSalidaCheque',
+  // vencimiento (Parte 6)
+  'plazoPresentacion', 'estadoVencimiento', 'textoVencimiento', 'textoVencimientoCorto', 'resumenVencimientos', 'filasVisibles',
+  'alternarSoloVencen', 'htmlAvisoVencimientos',
   'accionSalida', 'htmlAccionSalida', 'textoSalidaCorto', 'fechaCorta', 'htmlTarjetaCheque', 'htmlListaCheques', 'conectarFilas',
   // salida y vuelta a cartera
   'erroresSalida', 'parametrosSalida', 'abrirModalSalida', 'cerrarModalSalida',
@@ -29,7 +32,7 @@ const FUNCIONES = [
 
 const CONSTANTES = [
   'ZONA_AR', 'ETIQUETA_ESTADO_CHEQUE', 'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO',
-  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN', 'SENTIDO_EN_PALABRAS',
+  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN', 'SENTIDO_EN_PALABRAS', 'DIAS_PLAZO_PRESENTACION', 'DIAS_AVISO_VENCIMIENTO',
   'puedeProcesar', 'puedeVerCartera',
 ]
 
@@ -108,7 +111,8 @@ const PRELUDIO = `
     miEmpleadoId: 'emp-1', miRolApp: 'usuario',
     misTareas: new Set(['cobranzas:ver_todo', 'cobranzas:procesar']),
     bancos: new Map(),
-    filtros: { estado: 'en_cartera', numero: '', banco: '' },
+    filtros: { estado: 'en_cartera', numero: '', banco: '', soloVencen: false },
+    vencimientos: null,
     orden: { campo: 'pago', sentido: 'asc' },
     filas: [], cobranzas: new Map(), cartera: null, tope: false, topeResumen: false, error: null,
     bancosDeCheques: [], destacado: null, salida: null,

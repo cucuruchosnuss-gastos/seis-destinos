@@ -16,6 +16,8 @@ correrMutaciones({
     { expr: 'esc(clases)', motivo: 'las clases son literales del código' },
     { expr: 'esc(formatearImporte(ch.importe))', motivo: 'formatearImporte solo devuelve dígitos, puntos, comas, "$", "-" o "—"' },
     { expr: 'esc(pago)', motivo: '"a la vista" o "paga dd/mm/aa" (fechaCorta solo arma dígitos y barras)' },
+    { expr: 'esc(textoVencimientoCorto(venc))', motivo: 'palabras fijas y una fecha dd/mm armada por el código' },
+    { expr: 'esc(textoVencimiento(venc))', motivo: 'palabras fijas y una fecha dd/mm armada por el código (la prueba estática de test-cheques-vista.js igual exige el esc)' },
   ],
   manuales: [
     { nombre: 'un común dice la fecha de pago (null)',
@@ -29,7 +31,7 @@ correrMutaciones({
     { nombre: 'la tarjeta decide la acción por su cuenta (siempre "Dar salida")',
       de: "      const accion = htmlAccionSalida(ch, accionSalida(ch, cob))", a: "      const accion = htmlAccionSalida(ch, 'dar')" },
     { nombre: 'la lista no se llena',
-      de: '      lista.innerHTML = htmlListaCheques(estado.filas, estado.cobranzas)\n', a: '' },
+      de: '      lista.innerHTML = htmlListaCheques(visibles, estado.cobranzas)\n', a: '' },
     { nombre: 'sin cheques la lista queda a la vista',
       de: "        lista.hidden = true\n        lista.innerHTML = ''", a: "        lista.innerHTML = ''" },
     { nombre: 'se ven la tabla y la lista en el celular',

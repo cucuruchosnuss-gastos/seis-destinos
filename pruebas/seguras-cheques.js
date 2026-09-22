@@ -4,13 +4,15 @@
 
 const SEGURAS_CHEQUES = [
   ['cantidadCartera', 'número: conteo calculado en resumenCartera()'],
-  ['htmlTablaCheques(estado.filas, estado.cobranzas)', 'HTML armado por htmlTablaCheques(), que escapa adentro'],
+  ['htmlTablaCheques(visibles, estado.cobranzas)', 'HTML armado por htmlTablaCheques(), que escapa adentro'],
+  ['htmlAvisoVencimientos(estado.vencimientos, !!estado.filtros.soloVencen)', 'HTML armado por htmlAvisoVencimientos(), que escapa adentro'],
+  ['celdaPago', 'HTML ya escapado: se arma arriba con esc() de la fecha y de la etiqueta del plazo'],
   ['htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen)', 'HTML armado por htmlCartera(), que escapa adentro'],
   ['htmlSalidaCheque(ch, cob)', 'HTML armado por htmlSalidaCheque(), que escapa adentro'],
   ['rotulo', 'HTML constante del código: htmlEncabezadoOrden() se llama SOLO con literales (lo verifica test-cheques-vista.js)'],
   ['htmlAccionSalida(ch, accion)', 'HTML armado por htmlAccionSalida(), que escapa adentro'],
   ['accion', 'HTML ya escapado: htmlAccionSalida() lo arma arriba y escapa adentro'],
-  ['htmlListaCheques(estado.filas, estado.cobranzas)', 'HTML armado por htmlListaCheques() → htmlTarjetaCheque(), que escapa adentro'],
+  ['htmlListaCheques(visibles, estado.cobranzas)', 'HTML armado por htmlListaCheques() → htmlTarjetaCheque(), que escapa adentro'],
   ['volver', 'HTML ya escapado: el botón se arma arriba con esc(ch.id), o vacío'],
 ]
 

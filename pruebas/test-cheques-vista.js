@@ -291,7 +291,7 @@ if (SOLO !== 'estatico') {
     const S2 = construirCheques(ARCHIVO)
     S2.__almacen.set('cheques-preferencias', S.__almacen.get('cheques-preferencias'))
     S2.leerPreferencias()
-    chk('preferencias: los filtros vuelven', JSON.stringify(S2.estado.filtros) === JSON.stringify({ estado: 'salidos', numero: '9862', banco: '007' }),
+    chk('preferencias: los filtros vuelven', JSON.stringify(S2.estado.filtros) === JSON.stringify({ estado: 'salidos', numero: '9862', banco: '007', soloVencen: false }),
       JSON.stringify(S2.estado.filtros))
     const S3 = construirCheques(ARCHIVO)
     S3.__almacen.set('cheques-preferencias', JSON.stringify({ filtros: { estado: '<x>', numero: 5, banco: '"><b>' } }))

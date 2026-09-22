@@ -28,6 +28,9 @@
       /* Fondo del segmentado: el naranja del módulo al 9%, desde la variable. */
       --chq-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
       --chq-texto-secundario: #55617d;
+      /* Plazo para depositar YA VENCIDO: el bordó suave del sistema, más
+         cargado. Sale de las variables, nunca de un hex suelto. */
+      --chq-vencido-fondo: color-mix(in srgb, var(--bordo) 18%, var(--bordo-suave));
     }
 
     .chq-contenedor {
@@ -411,6 +414,55 @@
     .chq-tarjeta--anulado .chq-tarjeta__importe { color: var(--color-texto-suave); text-decoration: line-through; }
     .chq-tarjeta--destacada { background: var(--naranja-suave); }
 
+    /* ── Vencimiento del plazo para depositar (Parte 6) ──────────────────
+       SE TIENE QUE VER DE UN VISTAZO, SIN LEER: la fila (o la tarjeta) entera
+       con fondo bordó suave a 7 días o menos del plazo, y más intenso si ya
+       venció. NUNCA naranja: la franja naranja es "por controlar" y el fondo
+       naranja suave es la selección. Van DESPUÉS de la regla base de td y
+       ANTES de la de la selección, que les gana. */
+    .chq-tabla__fila--vence td { background: var(--bordo-suave); }
+    .chq-tabla__fila--vencido td { background: var(--chq-vencido-fondo); }
+    .chq-tarjeta--vence { background: var(--bordo-suave); }
+    .chq-tarjeta--vencido { background: var(--chq-vencido-fondo); }
+    .chq-tabla__pago { line-height: 1.2; }
+    .chq-vence__fecha { display: block; color: var(--bordo); font-weight: 700; }
+    .chq-vence__etiqueta { display: block; font-size: 0.6875rem; font-weight: 700; color: var(--bordo-oscuro); white-space: nowrap; }
+    .chq-tabla__fila--vence .chq-tabla__pago,
+    .chq-tabla__fila--vencido .chq-tabla__pago { color: var(--bordo); }
+    .chq-tarjeta--vence .chq-tarjeta__pago,
+    .chq-tarjeta--vencido .chq-tarjeta__pago { color: var(--bordo); font-weight: 700; }
+    /* En la tarjeta la etiqueta (corta) NUNCA se corta: es lo que hay que
+       ver. Lo que se achica es el número y el banco. */
+    .chq-tarjeta__l2 .chq-vence__etiqueta { display: inline; font-size: inherit; flex: 0 0 auto; }
+    .chq-tarjeta--vence .chq-tarjeta__num,
+    .chq-tarjeta--vencido .chq-tarjeta__num { flex-shrink: 1; }
+    /* El aviso de arriba, tocable: "3 cheques vencen esta semana · $ …". */
+    .chq-vencen {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.25rem 0.75rem;
+      width: 100%;
+      min-height: 44px;
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border: 1.5px solid var(--bordo);
+      border-radius: var(--radio-boton);
+      background: var(--bordo-suave);
+      color: var(--bordo-oscuro);
+      font-family: var(--fuente);
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+      min-width: 0;
+    }
+    .chq-vencen--vencido { background: var(--chq-vencido-fondo); }
+    .chq-vencen[aria-pressed="true"] { border-width: 2.5px; }
+    .chq-vencen__texto { min-width: 0; overflow-wrap: anywhere; }
+    .chq-vencen__accion { font-size: 0.8125rem; text-decoration: underline; white-space: nowrap; }
+
     /* Una sola de las dos vistas a la vez. En el celular además se achica lo
        de arriba de la lista: cada renglón que se ahorra es un cheque más a la
        vista. */
@@ -607,8 +659,11 @@
       misTareas: new Set(),
       // Catálogo de bancos: código → nombre.
       bancos: new Map(),
-      // Los filtros arrancan en "en cartera".
-      filtros: { estado: 'en_cartera', numero: '', banco: '' },
+      // Los filtros arrancan en "en cartera". soloVencen: el recorte "los que
+      // vencen esta semana" del aviso de arriba (Parte 6).
+      filtros: { estado: 'en_cartera', numero: '', banco: '', soloVencen: false },
+      // { cantidad, vencidos, total } de toda la cartera; null = no se pudo saber.
+      vencimientos: null,
       // El orden de la lista: por defecto, lo que se cobra primero arriba.
       orden: { campo: 'pago', sentido: 'asc' },
       filas: [],
@@ -774,7 +829,91 @@
 
     function hayFiltrosCheques() {
       const f = estado.filtros
-      return f.estado !== FILTROS_CHEQUES_DEFECTO.estado || String(f.numero ?? '').trim() !== '' || !!f.banco
+      return f.estado !== FILTROS_CHEQUES_DEFECTO.estado || String(f.numero ?? '').trim() !== '' || !!f.banco || !!f.soloVencen
+    }
+
+    // ── Vencimiento del plazo para depositar (Parte 6) ───────────────────
+    // Un cheque se tiene que depositar dentro de los 30 días de su fecha de
+    // pago, o de su emisión si es común. MISMA regla que la función de la base
+    // public.cheque_plazo_presentacion(tipo, emision, pago):
+    //   case when tipo = 'diferido' then pago else emision end + 30
+    // (un diferido sin fecha de pago da null, igual que allá). La prueba
+    // compara las dos con los mismos casos medidos en la base.
+    const DIAS_PLAZO_PRESENTACION = 30
+    // A cuántos días del plazo se empieza a marcar. El mismo 7 que usa
+    // mis_pendientes() para la burbuja del dashboard.
+    const DIAS_AVISO_VENCIMIENTO = 7
+
+    function plazoPresentacion(ch) {
+      const base = ch.tipo === 'diferido' ? ch.fecha_pago : ch.fecha_emision
+      if (!esFechaIso(base)) return null
+      const d = new Date(base + 'T00:00:00Z')
+      d.setUTCDate(d.getUTCDate() + DIAS_PLAZO_PRESENTACION)
+      return d.toISOString().slice(0, 10)
+    }
+
+    // Solo cheques EN CARTERA: uno que ya salió o está anulado no se deposita.
+    // null = no hay nada que marcar.
+    function estadoVencimiento(ch, hoy) {
+      if (ch.estado !== 'en_cartera') return null
+      const plazo = plazoPresentacion(ch)
+      const dias = diasEntre(hoy, plazo)
+      if (dias === null) return null
+      if (dias < 0) return { nivel: 'vencido', plazo, dias }
+      if (dias <= DIAS_AVISO_VENCIMIENTO) return { nivel: 'por_vencer', plazo, dias }
+      return null
+    }
+
+    // "Vence el 22/10 · quedan 5 días" / "Plazo vencido el 22/10".
+    function textoVencimiento(v) {
+      if (!v) return ''
+      const [, m, d] = v.plazo.split('-')
+      const fecha = `${d}/${m}`
+      if (v.nivel === 'vencido') return `Plazo vencido el ${fecha}`
+      if (v.dias === 0) return `Vence hoy, ${fecha}`
+      return `Vence el ${fecha} · ${v.dias === 1 ? 'queda 1 día' : `quedan ${v.dias} días`}`
+    }
+
+    // La versión corta, para la tarjeta del celular: el renglón no da para la
+    // larga y cortada con puntos suspensivos no se lee. "Vence 22/10 · 5 días"
+    // / "Vence hoy" / "Vencido el 22/10".
+    function textoVencimientoCorto(v) {
+      if (!v) return ''
+      const [, m, d] = v.plazo.split('-')
+      if (v.nivel === 'vencido') return `Vencido el ${d}/${m}`
+      if (v.dias === 0) return 'Vence hoy'
+      return `Vence ${d}/${m} · ${v.dias === 1 ? '1 día' : `${v.dias} días`}`
+    }
+
+    // Los que vencen esta semana (o ya vencieron), de TODA la cartera: la
+    // misma cuenta que la burbuja del dashboard. Se suma en centavos.
+    function resumenVencimientos(filas, hoy) {
+      let cantidad = 0, vencidos = 0, centavos = 0
+      for (const ch of filas) {
+        const v = estadoVencimiento(ch, hoy)
+        if (!v) continue
+        cantidad++
+        if (v.nivel === 'vencido') vencidos++
+        centavos += Math.round(Number(ch.importe) * 100)
+      }
+      return { cantidad, vencidos, total: centavos / 100 }
+    }
+
+    // Lo que se ve: con "solo los que vencen" puesto, se filtra acá lo que ya
+    // trajo la consulta (en cartera).
+    function filasVisibles() {
+      if (!estado.filtros.soloVencen) return estado.filas
+      const hoy = hoyArgentina()
+      return estado.filas.filter(ch => estadoVencimiento(ch, hoy))
+    }
+
+    // Tocar el aviso de arriba: mostrar solo los que vencen (o volver a todos).
+    function alternarSoloVencen() {
+      const activo = !estado.filtros.soloVencen
+      estado.filtros.soloVencen = activo
+      if (activo) estado.filtros.estado = 'en_cartera'
+      guardarPreferencias()
+      cargarCheques()
     }
 
     // La fecha en que el cheque se puede cobrar: la de pago en un diferido, la
@@ -918,10 +1057,11 @@
     async function cargarResumenCheques() {
       try {
         const { data, error } = await supabase
-          .from('cobranza_cheques').select('banco_codigo, estado, importe')
+          .from('cobranza_cheques').select('id, banco_codigo, estado, importe, tipo, fecha_emision, fecha_pago')
         if (error) throw error
         const filas = data ?? []
         estado.cartera = resumenCartera(filas)
+        estado.vencimientos = resumenVencimientos(filas, hoyArgentina())
         estado.topeResumen = filas.length >= TOPE_FILAS_POSTGREST
         const codigos = [...new Set(filas.map(x => String(x.banco_codigo ?? '')).filter(Boolean))]
         estado.bancosDeCheques = codigos.sort((a, b) => nombreBanco(a).localeCompare(nombreBanco(b), 'es'))
@@ -929,6 +1069,7 @@
         console.error('No se pudo calcular la cartera de cheques:', err)
         // null y NO cero: un total que no se pudo calcular no es "$ 0,00".
         estado.cartera = null
+        estado.vencimientos = null
       }
       pintarSelectorBancos()
       pintarCartera()
@@ -949,8 +1090,25 @@
     }
 
     function pintarCartera() {
-      document.getElementById('chq-cartera').innerHTML =
-        htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen)
+      const caja = document.getElementById('chq-cartera')
+      caja.innerHTML = htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen) +
+        htmlAvisoVencimientos(estado.vencimientos, !!estado.filtros.soloVencen)
+      const btn = caja.querySelector('[data-ver-vencen]')
+      if (btn) btn.addEventListener('click', alternarSoloVencen)
+    }
+
+    // Junto al total: "3 cheques vencen esta semana · $ TOTAL", tocable. Si no
+    // hay ninguno no se dibuja (un aviso en cero entrena a ignorarlo), salvo
+    // que el filtro esté puesto: ahí hace falta el botón para sacarlo.
+    function htmlAvisoVencimientos(v, activo) {
+      if (!v || (!v.cantidad && !activo)) return ''
+      const cheques = v.cantidad === 1 ? '1 cheque vence' : `${v.cantidad} cheques vencen`
+      const vencidos = v.vencidos ? ` (${v.vencidos === 1 ? '1 ya vencido' : `${v.vencidos} ya vencidos`})` : ''
+      const texto = `${cheques} esta semana${vencidos} · ${formatearImporte(v.total)}`
+      return `<button type="button" class="chq-vencen${v.vencidos ? ' chq-vencen--vencido' : ''}" data-ver-vencen aria-pressed="${activo ? 'true' : 'false'}">
+          <span class="chq-vencen__texto">${esc(texto)}</span>
+          <span class="chq-vencen__accion">${activo ? 'Ver todos' : 'Ver solo esos'}</span>
+        </button>`
     }
 
     // Función pura, para ejecutarla en la suite.
@@ -980,6 +1138,9 @@
       cont.querySelectorAll('[data-estado-cheque]').forEach(b => {
         b.addEventListener('click', () => {
           estado.filtros.estado = b.dataset.estadoCheque
+          // "Solo los que vencen" es un recorte de la cartera: cambiar de
+          // estado lo saca.
+          estado.filtros.soloVencen = false
           guardarPreferencias()
           cargarCheques()
         })
@@ -998,7 +1159,7 @@
     // el campo y no en el estado (o al revés), la pantalla diría una cosa y la
     // consulta haría otra.
     function limpiarFiltrosCheques() {
-      estado.filtros = { ...FILTROS_CHEQUES_DEFECTO }
+      estado.filtros = { ...FILTROS_CHEQUES_DEFECTO, soloVencen: false }
       document.getElementById('chq-filtro-numero').value = ''
       document.getElementById('chq-filtro-banco').value = ''
       guardarPreferencias()
@@ -1073,20 +1234,22 @@
       const tabla = document.getElementById('chq-tabla')
       const vacio = document.getElementById('chq-vacio')
       const lista = document.getElementById('chq-lista')
-      if (estado.error || !estado.filas.length) {
+      const visibles = filasVisibles()
+      if (estado.error || !visibles.length) {
         caja.hidden = true
         tabla.innerHTML = ''
         lista.hidden = true
         lista.innerHTML = ''
         vacio.hidden = !!estado.error
-        vacio.textContent = hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
+        vacio.textContent = estado.filtros.soloVencen ? 'No hay cheques en cartera que venzan esta semana.'
+          : hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
         return
       }
       vacio.hidden = true
       caja.hidden = false
       lista.hidden = false
-      tabla.innerHTML = htmlTablaCheques(estado.filas, estado.cobranzas)
-      lista.innerHTML = htmlListaCheques(estado.filas, estado.cobranzas)
+      tabla.innerHTML = htmlTablaCheques(visibles, estado.cobranzas)
+      lista.innerHTML = htmlListaCheques(visibles, estado.cobranzas)
       // Tocar un encabezado ordena por esa columna.
       tabla.querySelectorAll('[data-orden]').forEach(b => b.addEventListener('click', () => {
         aplicarOrden(siguienteOrden(estado.orden, b.dataset.orden))
@@ -1167,16 +1330,22 @@
       // Un cheque común no tiene fecha de pago: es "a la vista".
       const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'A la vista'
       const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
+      const venc = estadoVencimiento(ch, hoyArgentina())
       const clases = [
         salido ? 'chq-tabla__fila--salido' : ch.estado === 'anulado' ? 'chq-tabla__fila--anulado' : '',
+        venc ? (venc.nivel === 'vencido' ? 'chq-tabla__fila--vencido' : 'chq-tabla__fila--vence') : '',
         ch.id === estado.destacado ? 'chq-tabla__fila--destacada' : '',
       ].filter(Boolean).join(' ')
+      // Por vencer: la fecha de pago en bordó y negrita, y debajo la etiqueta.
+      const celdaPago = venc
+        ? `<span class="chq-vence__fecha">${esc(pago)}</span><span class="chq-vence__etiqueta">${esc(textoVencimiento(venc))}</span>`
+        : esc(pago)
       return `
         <tr class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0">
           <td>${esc(ch.numero ?? '—')}</td>
           <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${esc(nombreBanco(ch.banco_codigo))}</td>
           <td class="chq-tabla__fecha">${esc(formatearFechaCob(ch.fecha_emision))}</td>
-          <td class="chq-tabla__fecha">${esc(pago)}</td>
+          <td class="chq-tabla__fecha chq-tabla__pago">${celdaPago}</td>
           <td class="chq-tabla__num">${esc(formatearImporte(ch.importe))}</td>
           <td class="chq-tabla__texto" title="${esc(cob?.cliente ?? '')}">${esc(cob?.cliente ?? '—')}</td>
           <td class="chq-tabla__persona" title="${esc(cob?.cargada_por_nombre ?? '')}">${esc(cob?.cargada_por_nombre ?? '—')}</td>
@@ -1265,9 +1434,11 @@
       // Un cheque que salió muestra CUÁNDO y A QUIÉN en lugar del cliente: el
       // renglón no da para los dos, y el cliente está en la cobranza.
       const salida = salido ? textoSalidaCorto(ch) : ''
+      const venc = estadoVencimiento(ch, hoyArgentina())
       const clases = [
         'chq-tarjeta',
         salido ? 'chq-tarjeta--salido' : ch.estado === 'anulado' ? 'chq-tarjeta--anulado' : '',
+        venc ? (venc.nivel === 'vencido' ? 'chq-tarjeta--vencido' : 'chq-tarjeta--vence') : '',
         ch.id === estado.destacado ? 'chq-tarjeta--destacada' : '',
       ].filter(Boolean).join(' ')
       const accion = htmlAccionSalida(ch, accionSalida(ch, cob))
@@ -1278,7 +1449,7 @@
               <span class="chq-tarjeta__importe">${esc(formatearImporte(ch.importe))}</span>
               <span class="chq-tarjeta__pago">${esc(pago)}</span>
             </div>
-            <div class="chq-tarjeta__l2">${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
+            <div class="chq-tarjeta__l2">${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
           </div>
           ${accion ? `<div class="chq-tarjeta__lado">${accion}</div>` : ''}
         </div>`
@@ -1461,6 +1632,7 @@
         if (ESTADOS_FILTRO_CHEQUES.some(e => e.id === f.estado)) estado.filtros.estado = f.estado
         estado.filtros.numero = typeof f.numero === 'string' ? f.numero : ''
         estado.filtros.banco = typeof f.banco === 'string' && /^[0-9]{3}$/.test(f.banco) ? f.banco : ''
+        estado.filtros.soloVencen = f.soloVencen === true
       } catch { /* datos viejos o ilegibles: se ignoran */ }
     }
 
