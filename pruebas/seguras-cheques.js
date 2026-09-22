@@ -13,6 +13,8 @@ const SEGURAS_CHEQUES = [
   ['htmlAccionSalida(ch, accion)', 'HTML armado por htmlAccionSalida(), que escapa adentro'],
   ['accion', 'HTML ya escapado: htmlAccionSalida() lo arma arriba y escapa adentro'],
   ['htmlListaCheques(visibles, estado.cobranzas)', 'HTML armado por htmlListaCheques() → htmlTarjetaCheque(), que escapa adentro'],
+  ['htmlAriaElegido(ch)', 'HTML armado por htmlAriaElegido(): un atributo con "true" o "false", constantes'],
+  ['htmlCasillaElegir(ch)', 'HTML armado por htmlCasillaElegir(), que escapa adentro'],
   ['volver', 'HTML ya escapado: el botón se arma arriba con esc(ch.id), o vacío'],
 ]
 

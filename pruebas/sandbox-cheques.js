@@ -19,6 +19,10 @@ const FUNCIONES = [
   // vencimiento (Parte 6)
   'plazoPresentacion', 'estadoVencimiento', 'textoVencimiento', 'textoVencimientoCorto', 'resumenVencimientos', 'filasVisibles',
   'alternarSoloVencen', 'htmlAvisoVencimientos',
+  // selección (Parte 7)
+  'diasHastaCobro', 'resumenSeleccion', 'textoResumenSeleccion', 'chequesElegidos', 'activarSeleccion',
+  'cancelarSeleccion', 'tocarParaElegir', 'marcarElegidosEnPantalla', 'pintarSeleccion', 'soltarSeleccionPorFiltro',
+  'htmlCasillaElegir', 'htmlAriaElegido',
   'accionSalida', 'htmlAccionSalida', 'textoSalidaCorto', 'fechaCorta', 'htmlTarjetaCheque', 'htmlListaCheques', 'conectarFilas',
   // salida y vuelta a cartera
   'erroresSalida', 'parametrosSalida', 'abrirModalSalida', 'cerrarModalSalida',
@@ -116,9 +120,11 @@ const PRELUDIO = `
     orden: { campo: 'pago', sentido: 'asc' },
     filas: [], cobranzas: new Map(), cartera: null, tope: false, topeResumen: false, error: null,
     bancosDeCheques: [], destacado: null, salida: null,
+    seleccion: { activa: false, ids: new Set(), ultimo: null },
   }
   var accionDelMotivo = null
   var turnoCheques = 0
+  var temporizadorAvisoSeleccion = null
 `
 
 function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [] } = {}) {

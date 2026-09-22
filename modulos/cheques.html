@@ -291,8 +291,6 @@
        vuelve transparente. DESPUÉS de la regla base de td. */
     .chq-tabla__fila--salido td { color: var(--color-texto-suave); }
     .chq-tabla__fila--anulado td { color: var(--color-texto-suave); text-decoration: line-through; }
-    /* El cheque que se pidió ver desde una cobranza (?cheque=). */
-    .chq-tabla__fila--destacada td { background: var(--naranja-suave); }
     /* TODAS LAS FILAS MIDEN LO MISMO (Parte 2): cada celda en un renglón y
        centrada; el alto sale de acá y no del contenido, así una fila con
        botón no queda más alta que una sin él. */
@@ -412,7 +410,6 @@
     .chq-tarjeta--salido .chq-tarjeta__importe,
     .chq-tarjeta--salido .chq-tarjeta__pago { color: var(--color-texto-suave); }
     .chq-tarjeta--anulado .chq-tarjeta__importe { color: var(--color-texto-suave); text-decoration: line-through; }
-    .chq-tarjeta--destacada { background: var(--naranja-suave); }
 
     /* ── Vencimiento del plazo para depositar (Parte 6) ──────────────────
        SE TIENE QUE VER DE UN VISTAZO, SIN LEER: la fila (o la tarjeta) entera
@@ -478,6 +475,52 @@
     @media (min-width: 900px) {
       .chq-lista { display: none; }
     }
+
+    /* ── Selección (Parte 7) ─────────────────────────────────────────────
+       Lo elegido va con fondo --naranja-suave. Va DESPUÉS de las marcas de
+       vencimiento: la selección les gana el fondo, y la etiqueta bordó del
+       plazo sigue a la vista porque es texto, no fondo. */
+    /* También el cheque que se pidió ver desde una cobranza (?cheque=). */
+    .chq-tabla__fila--destacada td,
+    .chq-tabla__fila--elegida td { background: var(--naranja-suave); }
+    .chq-tarjeta--destacada,
+    .chq-tarjeta--elegida { background: var(--naranja-suave); }
+    .chq-tabla__elegir { width: 2.75rem; text-align: center; }
+    .chq-tarjeta__elegir { flex: 0 0 auto; display: flex; align-items: center; }
+    .chq-casilla { width: 1.25rem; height: 1.25rem; accent-color: var(--naranja); cursor: pointer; }
+    .chq-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .chq-nav { justify-content: space-between; align-items: center; }
+    .chq-nav__seleccionar[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    .chq-aviso-chico { font-size: 0.75rem; color: var(--chq-texto-secundario); margin: -0.25rem 0 0.5rem; }
+    /* La barra fija de abajo, con el resumen de lo elegido. Respeta la barra
+       de gestos del celular (safe-area). */
+    .chq-barra {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 40;
+      background: var(--color-fondo);
+      border-top: 1px solid var(--color-borde);
+      box-shadow: 0 -2px 12px rgba(26, 42, 82, 0.08);
+      padding: 0.625rem 1rem calc(0.625rem + env(safe-area-inset-bottom, 0px));
+      min-width: 0;
+    }
+    .chq-barra__interno {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem 1rem;
+      min-width: 0;
+    }
+    .chq-barra__texto { display: flex; flex-direction: column; min-width: 0; }
+    .chq-barra__cifras { font-size: 0.9375rem; font-weight: 700; color: var(--color-texto); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .chq-barra__vencen { font-size: 0.8125rem; font-weight: 700; color: var(--bordo-oscuro); }
+    .chq-barra__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .chq-barra__acciones .chq-btn { min-height: 44px; }
+    /* Con la barra a la vista, lo último de la lista no queda tapado. */
+    body.chq-con-barra .chq-contenedor { padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); }
 
     /* El botón de la columna: el de la acción principal de la fila. */
     .chq-btn--salida { border-color: var(--naranja); color: var(--naranja-oscuro); }
@@ -546,6 +589,9 @@
     <div id="chq-vista" hidden>
       <nav class="chq-nav">
         <a id="chq-link-cobranzas" class="chq-nav__link" href="cobranzas.html">&lsaquo; Cobranzas</a>
+        <!-- Selección con resumen (Parte 7): una casilla en cada cheque y la
+             barra de abajo con la cantidad, el total y el plazo. -->
+        <button type="button" class="chq-btn chq-btn--chico chq-nav__seleccionar" id="chq-btn-seleccionar" aria-pressed="false">Seleccionar</button>
       </nav>
 
       <div class="chq-cartera" id="chq-cartera"></div>
@@ -579,6 +625,8 @@
       </div>
 
       <div class="chq-aviso" id="chq-aviso" style="white-space:pre-line" hidden></div>
+      <!-- Un aviso CHICO: cambiar un filtro limpió la selección. -->
+      <div class="chq-aviso-chico" id="chq-aviso-seleccion" role="status" hidden></div>
       <div class="chq-tabla-scroll" id="chq-tabla-caja" hidden>
         <table class="chq-tabla" id="chq-tabla"></table>
       </div>
@@ -586,6 +634,20 @@
            cheque. Las dos se dibujan con los mismos datos; el CSS muestra una. -->
       <div class="chq-lista" id="chq-lista" hidden></div>
       <div class="chq-vacio" id="chq-vacio" hidden></div>
+    </div>
+  </div>
+
+  <!-- ══ BARRA DE LA SELECCIÓN (Parte 7) ════════════════════════════════ -->
+  <!-- Fija abajo, respetando el safe-area. Solo con la selección activa. -->
+  <div class="chq-barra" id="chq-barra-seleccion" hidden>
+    <div class="chq-barra__interno">
+      <div class="chq-barra__texto">
+        <span class="chq-barra__cifras" id="chq-sel-resumen"></span>
+        <span class="chq-barra__vencen" id="chq-sel-vencen" hidden></span>
+      </div>
+      <div class="chq-barra__acciones" id="chq-sel-acciones">
+        <button type="button" class="chq-btn chq-btn--chico" id="chq-sel-cancelar">Cancelar</button>
+      </div>
     </div>
   </div>
 
@@ -676,6 +738,9 @@
       bancosDeCheques: [],
       // El cheque que se pidió ver desde una cobranza (?cheque=).
       destacado: null,
+      // La selección (Parte 7): { activa, ids: Set de ids de cheque, ultimo }.
+      // `ultimo` es el último tocado, para marcar un tramo con Shift + clic.
+      seleccion: { activa: false, ids: new Set(), ultimo: null },
       // El diálogo de salida abierto: { cheque, cobranza, tipo } o null.
       salida: null,
     }
@@ -913,7 +978,136 @@
       estado.filtros.soloVencen = activo
       if (activo) estado.filtros.estado = 'en_cartera'
       guardarPreferencias()
+      soltarSeleccionPorFiltro()
       cargarCheques()
+    }
+
+    // ── Selección con resumen (Parte 7) ──────────────────────────────────
+    // Los días de un cheque: cuántos faltan para poder cobrarlo, contados
+    // desde hoy. Uno a la vista (común) o con la fecha de pago ya pasada
+    // cuenta 0: se puede cobrar ya, y un número negativo bajaría el promedio
+    // de los demás sin significar nada.
+    function diasHastaCobro(ch, hoy) {
+      if (ch.tipo !== 'diferido') return 0
+      const d = diasEntre(hoy, ch.fecha_pago)
+      return d === null ? 0 : Math.max(0, d)
+    }
+
+    // El resumen de lo elegido: cantidad, total (en centavos), plazo simple
+    // (promedio de días) y ponderado (cada cheque pesa por su importe), los
+    // dos redondeados a días enteros, y cuántos vencen pronto (Parte 6).
+    // $100.000 a 0 días y $4.000.000 a 60: simple 30, ponderado 59.
+    function resumenSeleccion(filas, hoy) {
+      let centavos = 0, sumaDias = 0, sumaPonderada = 0, vencenPronto = 0
+      for (const ch of filas) {
+        const c = Math.round(Number(ch.importe) * 100)
+        const d = diasHastaCobro(ch, hoy)
+        centavos += c
+        sumaDias += d
+        sumaPonderada += d * c
+        if (estadoVencimiento(ch, hoy)) vencenPronto++
+      }
+      const n = filas.length
+      return {
+        cantidad: n,
+        total: centavos / 100,
+        simple: n ? Math.round(sumaDias / n) : null,
+        // Sin importe no hay con qué ponderar: se dice "—" y no un cero.
+        ponderado: centavos > 0 ? Math.round(sumaPonderada / centavos) : null,
+        vencenPronto,
+      }
+    }
+
+    // "N cheques · $ TOTAL · plazo X días (ponderado Y)".
+    function textoResumenSeleccion(r) {
+      const cheques = r.cantidad === 1 ? '1 cheque' : `${r.cantidad} cheques`
+      const dias = (n) => n === null ? '—' : n === 1 ? '1 día' : `${n} días`
+      const plazo = r.cantidad ? ` · plazo ${dias(r.simple)} (ponderado ${r.ponderado === null ? '—' : r.ponderado})` : ''
+      return `${cheques} · ${formatearImporte(r.total)}${plazo}`
+    }
+
+    // Los elegidos, en el orden de la lista.
+    function chequesElegidos() {
+      return estado.filas.filter(ch => estado.seleccion.ids.has(ch.id))
+    }
+
+    function activarSeleccion() {
+      estado.seleccion = { activa: true, ids: new Set(), ultimo: null }
+      renderizarCheques()
+      pintarSeleccion()
+    }
+
+    function cancelarSeleccion() {
+      estado.seleccion = { activa: false, ids: new Set(), ultimo: null }
+      renderizarCheques()
+      pintarSeleccion()
+    }
+
+    // Tocar un cheque con la selección activa: lo marca o lo desmarca. Con
+    // Shift (escritorio) marca el TRAMO desde el último tocado, en el orden
+    // en que está la lista a la vista.
+    function tocarParaElegir(id, conShift) {
+      const s = estado.seleccion
+      if (!s.activa || !id) return
+      const orden = filasVisibles().map(ch => ch.id)
+      if (conShift && s.ultimo && orden.includes(s.ultimo) && orden.includes(id)) {
+        const [a, b] = [orden.indexOf(s.ultimo), orden.indexOf(id)].sort((x, y) => x - y)
+        for (const x of orden.slice(a, b + 1)) s.ids.add(x)
+      } else if (s.ids.has(id)) {
+        s.ids.delete(id)
+      } else {
+        s.ids.add(id)
+      }
+      s.ultimo = id
+      marcarElegidosEnPantalla()
+      pintarSeleccion()
+    }
+
+    // Marca las filas y tarjetas SIN redibujar la lista (redibujarla perdería
+    // el scroll de quien está recorriendo la tabla).
+    function marcarElegidosEnPantalla() {
+      document.querySelectorAll('[data-cheque-fila]').forEach(el => {
+        const elegido = estado.seleccion.ids.has(el.dataset.chequeFila)
+        el.classList.toggle(el.tagName === 'TR' ? 'chq-tabla__fila--elegida' : 'chq-tarjeta--elegida', elegido)
+        el.setAttribute('aria-selected', elegido ? 'true' : 'false')
+        const casilla = el.querySelector('[data-elegir-cheque]')
+        if (casilla) casilla.checked = elegido
+      })
+    }
+
+    // La barra de abajo y el botón "Seleccionar".
+    function pintarSeleccion() {
+      const s = estado.seleccion
+      const btn = document.getElementById('chq-btn-seleccionar')
+      btn.setAttribute('aria-pressed', s.activa ? 'true' : 'false')
+      btn.textContent = s.activa ? 'Listo' : 'Seleccionar'
+      const barra = document.getElementById('chq-barra-seleccion')
+      barra.hidden = !s.activa
+      document.body.classList.toggle('chq-con-barra', s.activa)
+      if (!s.activa) return
+      const r = resumenSeleccion(chequesElegidos(), hoyArgentina())
+      document.getElementById('chq-sel-resumen').textContent =
+        r.cantidad ? textoResumenSeleccion(r) : 'Tocá los cheques para elegirlos.'
+      const vencen = document.getElementById('chq-sel-vencen')
+      vencen.textContent = r.vencenPronto ? `Vencen pronto: ${r.vencenPronto}` : ''
+      vencen.hidden = !r.vencenPronto
+    }
+
+    // Cambiar un filtro LIMPIA la selección (lo elegido podría quedar
+    // escondido y seguir contando), con un aviso chico que se va solo.
+    // Reordenar NO: los mismos cheques siguen a la vista.
+    let temporizadorAvisoSeleccion = null
+    function soltarSeleccionPorFiltro() {
+      const s = estado.seleccion
+      if (!s.activa || !s.ids.size) return
+      s.ids = new Set()
+      s.ultimo = null
+      pintarSeleccion()
+      const aviso = document.getElementById('chq-aviso-seleccion')
+      aviso.textContent = 'Se limpió la selección porque cambiaste un filtro.'
+      aviso.hidden = false
+      clearTimeout(temporizadorAvisoSeleccion)
+      temporizadorAvisoSeleccion = setTimeout(() => { aviso.hidden = true }, 5000)
     }
 
     // La fecha en que el cheque se puede cobrar: la de pago en un diferido, la
@@ -1028,8 +1222,8 @@
     function pintarOrdenMovil() {
       const sel = document.getElementById('chq-orden-campo')
       sel.innerHTML = COLUMNAS_ORDEN.flatMap(c => ['asc', 'desc'].map(s => {
-        const rotulo = c.nombre + ' ' + (s === 'asc' ? '▲' : '▼') + ' ' + SENTIDO_EN_PALABRAS[c.tipo][s]
-        return `<option value="${esc(c.id + ':' + s)}">${esc(rotulo)}</option>`
+        const textoOpcion = c.nombre + ' ' + (s === 'asc' ? '▲' : '▼') + ' ' + SENTIDO_EN_PALABRAS[c.tipo][s]
+        return `<option value="${esc(c.id + ':' + s)}">${esc(textoOpcion)}</option>`
       })).join('')
       sel.value = `${estado.orden.campo}:${estado.orden.sentido}`
     }
@@ -1142,6 +1336,7 @@
           // estado lo saca.
           estado.filtros.soloVencen = false
           guardarPreferencias()
+          soltarSeleccionPorFiltro()
           cargarCheques()
         })
       })
@@ -1163,6 +1358,7 @@
       document.getElementById('chq-filtro-numero').value = ''
       document.getElementById('chq-filtro-banco').value = ''
       guardarPreferencias()
+      soltarSeleccionPorFiltro()
       cargarCheques()
     }
 
@@ -1272,12 +1468,21 @@
     // Tocar una fila o una tarjeta abre la cobranza; sus botones hacen lo suyo.
     function conectarFilas(cont) {
       cont.querySelectorAll('[data-cheque-fila]').forEach(tr => {
-        const abrir = () => abrirCobranza(tr.dataset.chequeCobranza)
-        tr.addEventListener('click', abrir)
+        // Con la selección activa, tocar el cheque lo elige (y no abre la
+        // cobranza); sin ella, abre la cobranza como siempre.
+        const tocar = (conShift) => {
+          if (estado.seleccion.activa) tocarParaElegir(tr.dataset.chequeFila, conShift)
+          else abrirCobranza(tr.dataset.chequeCobranza)
+        }
+        tr.addEventListener('click', (ev) => {
+          // La casilla cambia sola al tocarla; se deja que decida la fila.
+          if (ev.target?.matches?.('[data-elegir-cheque]')) ev.preventDefault()
+          tocar(!!ev.shiftKey)
+        })
         tr.addEventListener('keydown', (ev) => {
           // Solo la fila misma: un Enter sobre el botón de adentro burbujea.
           if (ev.target !== tr) return
-          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir() }
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); tocar(!!ev.shiftKey) }
         })
       })
       // Los botones de la fila NO abren la cobranza: stopPropagation.
@@ -1300,6 +1505,7 @@
       return `
         <thead>
           <tr>
+            ${estado.seleccion.activa ? '<th scope="col" class="chq-tabla__elegir"><span class="chq-oculto">Elegir</span></th>' : ''}
             ${htmlEncabezadoOrden('numero', 'N&deg; de cheque')}
             ${htmlEncabezadoOrden('banco', 'Banco')}
             ${htmlEncabezadoOrden('emision', 'Emisión')}
@@ -1335,13 +1541,15 @@
         salido ? 'chq-tabla__fila--salido' : ch.estado === 'anulado' ? 'chq-tabla__fila--anulado' : '',
         venc ? (venc.nivel === 'vencido' ? 'chq-tabla__fila--vencido' : 'chq-tabla__fila--vence') : '',
         ch.id === estado.destacado ? 'chq-tabla__fila--destacada' : '',
+        estado.seleccion.ids.has(ch.id) ? 'chq-tabla__fila--elegida' : '',
       ].filter(Boolean).join(' ')
       // Por vencer: la fecha de pago en bordó y negrita, y debajo la etiqueta.
       const celdaPago = venc
         ? `<span class="chq-vence__fecha">${esc(pago)}</span><span class="chq-vence__etiqueta">${esc(textoVencimiento(venc))}</span>`
         : esc(pago)
       return `
-        <tr class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0">
+        <tr class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0"${htmlAriaElegido(ch)}>
+          ${estado.seleccion.activa ? `<td class="chq-tabla__elegir">${htmlCasillaElegir(ch)}</td>` : ''}
           <td>${esc(ch.numero ?? '—')}</td>
           <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${esc(nombreBanco(ch.banco_codigo))}</td>
           <td class="chq-tabla__fecha">${esc(formatearFechaCob(ch.fecha_emision))}</td>
@@ -1423,6 +1631,21 @@
       return `${d}/${m}/${a.slice(2)}`
     }
 
+    // La casilla de un cheque, con la selección activa. El texto para el
+    // lector de pantalla dice qué cheque es.
+    function htmlCasillaElegir(ch) {
+      const marcado = estado.seleccion.ids.has(ch.id)
+      const nombreCasilla = 'Elegir el cheque Nº ' + (ch.numero ?? '—')
+      return `<input type="checkbox" class="chq-casilla" data-elegir-cheque="${esc(ch.id)}" aria-label="${esc(nombreCasilla)}"${marcado ? ' checked' : ''} tabindex="-1">`
+    }
+
+    // aria-selected solo con la selección activa (sin ella no hay nada que
+    // elegir y el atributo diría algo falso).
+    function htmlAriaElegido(ch) {
+      if (!estado.seleccion.activa) return ''
+      return ` aria-selected="${estado.seleccion.ids.has(ch.id) ? 'true' : 'false'}"`
+    }
+
     function htmlTarjetaCheque(ch, cob) {
       const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
       // La fecha corta (dd/mm/aa): con el año entero no entraba al lado de un
@@ -1440,10 +1663,12 @@
         salido ? 'chq-tarjeta--salido' : ch.estado === 'anulado' ? 'chq-tarjeta--anulado' : '',
         venc ? (venc.nivel === 'vencido' ? 'chq-tarjeta--vencido' : 'chq-tarjeta--vence') : '',
         ch.id === estado.destacado ? 'chq-tarjeta--destacada' : '',
+        estado.seleccion.ids.has(ch.id) ? 'chq-tarjeta--elegida' : '',
       ].filter(Boolean).join(' ')
       const accion = htmlAccionSalida(ch, accionSalida(ch, cob))
       return `
-        <div class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0">
+        <div class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0"${htmlAriaElegido(ch)}>
+          ${estado.seleccion.activa ? `<div class="chq-tarjeta__elegir">${htmlCasillaElegir(ch)}</div>` : ''}
           <div class="chq-tarjeta__cuerpo">
             <div class="chq-tarjeta__l1">
               <span class="chq-tarjeta__importe">${esc(formatearImporte(ch.importe))}</span>
@@ -1645,6 +1870,7 @@
       document.getElementById('chq-filtro-numero').addEventListener('input', (ev) => {
         estado.filtros.numero = ev.target.value
         guardarPreferencias()
+        soltarSeleccionPorFiltro()
         // El aviso se pinta en el acto —sin esperar el debounce—.
         pintarFiltrosCheques()
         clearTimeout(temporizadorCheque)
@@ -1653,6 +1879,7 @@
       document.getElementById('chq-filtro-banco').addEventListener('change', (ev) => {
         estado.filtros.banco = ev.target.value
         guardarPreferencias()
+        soltarSeleccionPorFiltro()
         cargarCheques()
       })
       document.getElementById('chq-orden-campo').addEventListener('change', (ev) => {
@@ -1688,10 +1915,20 @@
       })
 
       // Escape cierra el diálogo que esté abierto.
+      // ── Selección ──
+      document.getElementById('chq-btn-seleccionar').addEventListener('click', () => {
+        if (estado.seleccion.activa) cancelarSeleccion()
+        else activarSeleccion()
+      })
+      document.getElementById('chq-sel-cancelar').addEventListener('click', cancelarSeleccion)
+
+      // Escape cierra el diálogo que esté abierto; si no hay ninguno, limpia
+      // la selección.
       document.addEventListener('keydown', (ev) => {
         if (ev.key !== 'Escape') return
         if (!document.getElementById('chq-modal-salida').hidden) cerrarModalSalida()
         else if (!document.getElementById('chq-modal-motivo').hidden) cerrarModalMotivo()
+        else if (estado.seleccion.activa) cancelarSeleccion()
       })
     }
 

@@ -22,7 +22,7 @@ correrMutaciones({
     { expr: 'esc(campo)', motivo: 'el campo es un literal del código' },
     { expr: 'esc(flecha)', motivo: "'', '▲' o '▼', constantes" },
     { expr: "esc(c.id + ':' + s)", motivo: "COLUMNAS_ORDEN es una constante del código y s es 'asc' o 'desc'" },
-    { expr: 'esc(rotulo)', motivo: 'se arma con COLUMNAS_ORDEN y SENTIDO_EN_PALABRAS, constantes del código' },
+    { expr: 'esc(textoOpcion)', motivo: 'se arma con COLUMNAS_ORDEN y SENTIDO_EN_PALABRAS, constantes del código' },
   ],
   manuales: [
     { nombre: 'el orden por defecto pasa a descendente',
