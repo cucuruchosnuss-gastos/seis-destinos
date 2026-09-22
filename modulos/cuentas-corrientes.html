@@ -3175,6 +3175,7 @@
           return htmlFilaSinImporte(m, {
             cantidades: estado.ficha.cantidadesSinImporte?.get(m.factura_pendiente_id) ?? null,
             puedeCargar: tieneTarea('cuentas_corrientes', 'registrar_pago'),
+            puedeVerCantidades: tieneTarea('cuentas_corrientes', 'ver_todo') || tieneTarea('cuentas_corrientes', 'registrar_pago'),
             form: estado.ficha.formImporte?.facturaId === m.factura_pendiente_id ? estado.ficha.formImporte : null,
             todas,
           })
@@ -3297,38 +3298,80 @@
         && (m.monto == null || estadoPorFactura?.[m.factura_pendiente_id] === 'sin_importe')
     }
 
-    // Las cantidades del ingreso vinculado a cada factura. Map facturaId ->
-    // [{ insumoId, nombre, unidad, cantidad }] agrupado por insumo. Una factura
-    // que no vuelve es que el RLS de Ingreso no deja ver ese ingreso (hace
-    // falta materia_prima:ver_todo): se dice en la fila, no se inventa nada.
+    // La mercadería de cada descarga sin importe. Map facturaId -> array de
+    // [{ nombre, marca, unidad, cantidad, bultos, contenido }] agrupado por
+    // producto, o null si la consulta falló.
+    //
+    // SALE DE LA RPC items_de_factura_pendiente(p_factura_id) y NO de
+    // materia_prima_ingresos / materia_prima_items: esas tablas tienen el RLS
+    // de Ingreso (materia_prima:ver_todo), así que un administrador de cuentas
+    // corrientes sin esa tarea no veía nada y solo podía cargar el total. La
+    // RPC es SECURITY DEFINER y exige cuentas_corrientes:ver_todo o
+    // registrar_pago (verificado contra pg_get_functiondef el 22/09/2026); sin
+    // ninguna de las dos devuelve CERO filas, sin error. Por eso sin esas
+    // tareas ni se la llama: la fila lo dice con palabras.
     async function cargarCantidadesSinImporte(ids) {
       const mapa = new Map()
-      const { data, error } = await supabase
-        .from('materia_prima_ingresos')
-        .select('factura_pendiente_id, materia_prima_items(cantidad, insumo_id, insumos(nombre, unidad_medida))')
-        .in('factura_pendiente_id', ids)
-      if (error) { console.error('cantidades de descargas:', error); return mapa }
-      for (const ing of data ?? []) {
-        mapa.set(ing.factura_pendiente_id, resumenCantidades(ing.materia_prima_items ?? []))
-      }
+      if (!(tieneTarea('cuentas_corrientes', 'ver_todo') || tieneTarea('cuentas_corrientes', 'registrar_pago'))) return mapa
+      await Promise.all(ids.map(async (id) => {
+        try {
+          const { data, error } = await supabase.rpc('items_de_factura_pendiente', { p_factura_id: id })
+          if (error) { console.error('mercadería de la descarga', id, error); mapa.set(id, null); return }
+          mapa.set(id, resumenCantidades(data ?? []))
+        } catch (e) {
+          console.error('mercadería de la descarga', id, e)
+          mapa.set(id, null)
+        }
+      }))
       return mapa
     }
 
-    function resumenCantidades(items) {
-      const porInsumo = new Map()
-      for (const it of items) {
+    // Agrupa los renglones de la RPC por producto (nombre + marca + unidad:
+    // insumos tiene índice único por nombre y marca). Una cantidad null NO se
+    // cuenta como 0: el producto queda con cantidad null ("—") y no se le
+    // puede cargar precio por unidad. Los bultos solo se muestran si todos los
+    // renglones del producto son de la misma presentación.
+    function resumenCantidades(filas) {
+      const porProducto = new Map()
+      for (const it of filas) {
+        const clave = JSON.stringify([it.insumo ?? '', it.marca ?? '', it.unidad_medida ?? ''])
+        const previo = porProducto.get(clave) || { nombre: it.insumo || 'Producto', marca: it.marca || null, unidad: it.unidad_medida || '',
+          cantidad: 0, bultos: 0, contenido: undefined }
         const cant = Number(it.cantidad)
-        if (it.cantidad == null || !Number.isFinite(cant)) continue
-        const previo = porInsumo.get(it.insumo_id) || { insumoId: it.insumo_id, nombre: it.insumos?.nombre || 'Producto', unidad: it.insumos?.unidad_medida || '', cantidad: 0 }
-        previo.cantidad += cant
-        porInsumo.set(it.insumo_id, previo)
+        if (it.cantidad == null || it.cantidad === '' || !Number.isFinite(cant)) previo.cantidad = null
+        else if (previo.cantidad != null) previo.cantidad += cant
+        const bultos = Number(it.cantidad_bultos)
+        const contenido = it.contenido_por_bulto == null ? null : Number(it.contenido_por_bulto)
+        if (it.cantidad_bultos == null || !Number.isFinite(bultos) || contenido == null || !Number.isFinite(contenido)
+          || (previo.contenido !== undefined && previo.contenido !== contenido)) {
+          previo.bultos = null
+          previo.contenido = null
+        } else if (previo.bultos != null) {
+          previo.bultos += bultos
+          previo.contenido = contenido
+        }
+        porProducto.set(clave, previo)
       }
-      return [...porInsumo.values()]
+      return [...porProducto.values()].map(c => ({ ...c, contenido: c.bultos == null ? null : c.contenido }))
     }
 
+    // El único producto de la descarga, si hay uno solo Y tiene una cantidad
+    // mayor a cero: es la condición para ofrecer precio por unidad.
+    function productoUnicoConCantidad(cantidades) {
+      if (!Array.isArray(cantidades) || cantidades.length !== 1) return null
+      const c = cantidades[0]
+      const cant = Number(c?.cantidad)
+      return c?.cantidad == null || !(cant > 0) ? null : c
+    }
+
+    // TEXTO PLANO: se escapa donde entra a HTML. Una cantidad null dice "—".
     function textoCantidadInsumo(c) {
       const num = formatearNumeroAr(c.cantidad, { decimales: 3, minimos: 0 })
-      return `${num} ${c.unidad} de ${c.nombre}`.replace(/\s+/g, ' ')
+      const marca = c.marca ? ` (${c.marca})` : ''
+      const bultos = c.bultos != null && c.contenido != null
+        ? ` · ${formatearNumeroAr(c.bultos, { decimales: 3, minimos: 0 })} ${Number(c.bultos) === 1 ? 'bulto' : 'bultos'} de ${formatearNumeroAr(c.contenido, { decimales: 3, minimos: 0 })} ${c.unidad}`
+        : ''
+      return `${num} ${c.unidad} de ${c.nombre}${marca}${bultos}`.replace(/\s+/g, ' ')
     }
 
     // El total que se va a cargar. null si el importe no es un número > 0.
@@ -3340,18 +3383,23 @@
       const n = leerNumeroAr(form?.importe ?? null)
       if (n == null || !(n > 0)) return null
       if (form.modo !== 'unidad') return n
-      if (!cantidades || cantidades.length !== 1) return null
-      return Math.round(n * cantidades[0].cantidad * 100) / 100
+      const unico = productoUnicoConCantidad(cantidades)
+      if (!unico) return null
+      return Math.round(n * Number(unico.cantidad) * 100) / 100
     }
 
-    function htmlFilaSinImporte(m, { cantidades = null, puedeCargar = false, form = null, todas = false } = {}) {
+    // cantidades: array (lo que devolvió la RPC, quizá vacío) o null (falló).
+    // puedeVerCantidades: ver_todo o registrar_pago, lo que exige la RPC.
+    function htmlFilaSinImporte(m, { cantidades = null, puedeCargar = false, puedeVerCantidades = true, form = null, todas = false } = {}) {
       const id = m.factura_pendiente_id
-      const unico = cantidades && cantidades.length === 1 ? cantidades[0] : null
-      const cantidadesHtml = cantidades && cantidades.length
-        ? `<div class="fila-movimiento__cantidades">${cantidades.map(c => esc(textoCantidadInsumo(c))).join('<br>')}</div>`
-        : cantidades
-          ? '<div class="fila-movimiento__aviso">El ingreso vinculado no tiene renglones.</div>'
-          : '<div class="fila-movimiento__aviso">No se pueden ver las cantidades de esta descarga: se ven con permiso para ver los ingresos de materia prima.</div>'
+      const unico = productoUnicoConCantidad(cantidades)
+      const cantidadesHtml = !puedeVerCantidades
+        ? '<div class="fila-movimiento__aviso">Las cantidades de esta descarga se ven con permiso para ver todas las cuentas corrientes o para registrar pagos.</div>'
+        : Array.isArray(cantidades) && cantidades.length
+          ? `<div class="fila-movimiento__cantidades">${cantidades.map(c => esc(textoCantidadInsumo(c))).join('<br>')}</div>`
+          : Array.isArray(cantidades)
+            ? '<div class="fila-movimiento__aviso">No se encontraron los productos de esta descarga: se puede cargar el total.</div>'
+            : '<div class="fila-movimiento__aviso">No se pudieron traer los productos de esta descarga: se puede cargar el total igual.</div>'
 
       let formHtml = ''
       if (form) {
@@ -3362,7 +3410,7 @@
               <label><input type="radio" name="modo-importe-${esc(id)}" class="modo-importe" value="total"${form.modo !== 'unidad' ? ' checked' : ''}> Total de la descarga</label>
               ${unico ? `<label><input type="radio" name="modo-importe-${esc(id)}" class="modo-importe" value="unidad"${form.modo === 'unidad' ? ' checked' : ''}> Precio por ${esc(unico.unidad || 'unidad')} (se multiplica por ${esc(textoCantidadInsumo(unico))})</label>` : ''}
             </div>
-            ${!unico && cantidades && cantidades.length > 1 ? '<div class="fila-movimiento__aviso">Son varios productos: cargá el total.</div>' : ''}
+            ${!unico && Array.isArray(cantidades) && cantidades.length > 1 ? '<div class="fila-movimiento__aviso">Son varios productos: cargá el total.</div>' : ''}
             <input type="text" inputmode="decimal" class="campo-importe-sin" autocomplete="off" placeholder="0,00" aria-label="Importe">
             <div class="cargar-importe-cc__total">${total != null ? `Total a cargar: ${importeHtml(total, m.moneda)}` : 'Escribí un importe mayor a cero.'}</div>
             ${form.error ? `<div class="cargar-importe-cc__error">${esc(form.error)}</div>` : ''}

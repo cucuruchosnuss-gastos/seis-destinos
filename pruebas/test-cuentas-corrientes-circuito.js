@@ -60,7 +60,7 @@ const PRELUDIO = `
 const FUNCIONES = [
   'esc', 'formatearImporte', 'formatearImporteCentavosSuaves', 'importeHtml', 'tieneTarea',
   'nombreUnidad', 'badgeEstadoFactura', 'inicialesEmpresa', 'colorAvatar', 'filtrarPadron',
-  'contarSinImporte', 'htmlSinImporte', 'esSinImporte', 'resumenCantidades', 'textoCantidadInsumo',
+  'contarSinImporte', 'htmlSinImporte', 'esSinImporte', 'resumenCantidades', 'textoCantidadInsumo', 'productoUnicoConCantidad', 'cargarCantidadesSinImporte',
   'totalImporteFormulario', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'confirmarImporteSinImporte', 'cargarSinImporte', 'cargarFichaRemitos', 'renderizarListaSaldos',
   'renderizarResumenCC', 'renderizarPadron', 'renderizarFichaBanner', 'renderizarListaHistorial',
@@ -88,8 +88,9 @@ const sinCeroNiNaN = (html) => !/\$\s*0,00/.test(html) && !/NaN/.test(html)
   chk('sin importe: muestra las cantidades del ingreso', html.includes('250 '))
   chk('sin importe: con registrar_pago ofrece "Cargar importe"', html.includes('btn-cargar-importe'))
   chk('sin importe: sin registrar_pago no lo ofrece', !S.htmlFilaSinImporte(m, { cantidades, puedeCargar: false }).includes('btn-cargar-importe'))
-  const sinVer = S.htmlFilaSinImporte(m, { cantidades: null, puedeCargar: true })
-  chk('sin importe: si el RLS no deja ver el ingreso, lo dice', sinVer.includes('No se pueden ver las cantidades'))
+  const sinVer = S.htmlFilaSinImporte(m, { cantidades: null, puedeCargar: false, puedeVerCantidades: false })
+  chk('sin importe: sin ver_todo ni registrar_pago dice qué permiso hace falta', sinVer.includes('se ven con permiso para ver todas las cuentas corrientes o para registrar pagos'))
+  chk('sin importe: el aviso viejo de materia prima ya no está', !S.htmlFilaSinImporte(m, { cantidades: null, puedeCargar: true }).includes('ingresos de materia prima'))
 
   const form = { facturaId: m.factura_pendiente_id, modo: 'total', importe: null, error: marca('error_rpc'), enCurso: false }
   const conForm = S.htmlFilaSinImporte(m, { cantidades, puedeCargar: true, form })
@@ -118,12 +119,99 @@ const sinCeroNiNaN = (html) => !/\$\s*0,00/.test(html) && !/NaN/.test(html)
   chk('total: por unidad con varios productos no da número', S.totalImporteFormulario({ modo: 'unidad', importe: 10 }, [...una, { cantidad: 1 }]) === null)
   chk('total: por unidad sin cantidades no da número', S.totalImporteFormulario({ modo: 'unidad', importe: 10 }, null) === null)
   chk('total: vacío o cero es null (no 0)', S.totalImporteFormulario({ modo: 'total', importe: null }, una) === null && S.totalImporteFormulario({ modo: 'total', importe: 0 }, una) === null)
+  // Las filas tienen la forma EXACTA que devuelve items_de_factura_pendiente.
   const r = S.resumenCantidades([
-    { insumo_id: 'a', cantidad: '100', insumos: { nombre: 'Harina', unidad_medida: 'kg' } },
-    { insumo_id: 'a', cantidad: 150, insumos: { nombre: 'Harina', unidad_medida: 'kg' } },
-    { insumo_id: 'b', cantidad: null, insumos: { nombre: 'Nada', unidad_medida: 'un' } },
+    { insumo: 'Harina', marca: 'Jupiter', unidad_medida: 'kg', cantidad: '100', cantidad_bultos: 4, contenido_por_bulto: 25 },
+    { insumo: 'Harina', marca: 'Jupiter', unidad_medida: 'kg', cantidad: 150, cantidad_bultos: 6, contenido_por_bulto: 25 },
+    { insumo: 'Nada', marca: null, unidad_medida: 'un', cantidad: null, cantidad_bultos: null, contenido_por_bulto: null },
   ])
-  chk('cantidades: suma por insumo y descarta el null (no lo cuenta como 0)', r.length === 1 && r[0].cantidad === 250, JSON.stringify(r))
+  chk('cantidades: agrupa por producto y suma', r.length === 2 && r[0].cantidad === 250 && r[0].bultos === 10 && r[0].contenido === 25, JSON.stringify(r))
+  chk('cantidades: un null NO se cuenta como 0', r[1].cantidad === null, JSON.stringify(r))
+  chk('texto: cantidad null dice "—", nunca 0', S.textoCantidadInsumo(r[1]) === '— un de Nada', S.textoCantidadInsumo(r[1]))
+  chk('texto: con marca y bultos', S.textoCantidadInsumo(r[0]) === '250 kg de Harina (Jupiter) · 10 bultos de 25 kg', S.textoCantidadInsumo(r[0]))
+  const mezcla = S.resumenCantidades([
+    { insumo: 'Film', marca: null, unidad_medida: 'kg', cantidad: 10, cantidad_bultos: 2, contenido_por_bulto: 5 },
+    { insumo: 'Film', marca: null, unidad_medida: 'kg', cantidad: 3, cantidad_bultos: null, contenido_por_bulto: null },
+  ])
+  chk('cantidades: presentaciones distintas no inventan bultos', mezcla.length === 1 && mezcla[0].cantidad === 13 && mezcla[0].bultos === null && !S.textoCantidadInsumo(mezcla[0]).includes('bulto'), JSON.stringify(mezcla))
+  const dosPres = S.resumenCantidades([
+    { insumo: 'Lecitina', marca: null, unidad_medida: 'kg', cantidad: 100, cantidad_bultos: 4, contenido_por_bulto: 25 },
+    { insumo: 'Lecitina', marca: null, unidad_medida: 'kg', cantidad: 100, cantidad_bultos: 2, contenido_por_bulto: 50 },
+  ])
+  chk('cantidades: dos presentaciones con bultos tampoco suman bultos', dosPres.length === 1 && dosPres[0].cantidad === 200 && dosPres[0].bultos === null && !S.textoCantidadInsumo(dosPres[0]).includes('bulto'), JSON.stringify(dosPres))
+  chk('precio por unidad: un producto con cantidad null no lo habilita', S.totalImporteFormulario({ modo: 'unidad', importe: 10 }, [r[1]]) === null)
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 2b. LA MERCADERÍA SALE DE items_de_factura_pendiente (no de materia_prima_*)
+// ══════════════════════════════════════════════════════════════════════════
+const ramaRpcItems = async () => {
+  const m = { tipo: 'factura', monto: null, factura_pendiente_id: 'f9', referencia: 'X', fecha: '2026-10-02', moneda: 'ARS', unidad_negocio_id: 'u1' }
+  const fila = (o) => ({ insumo: 'Harina 000', marca: 'Jupiter', unidad_medida: 'kg', cantidad: 2000, cantidad_bultos: 80, contenido_por_bulto: 25, ...o })
+  const cargar = async (rpc, tareas = ['cuentas_corrientes:registrar_pago']) => {
+    S.estado.misTareas = new Set(tareas)
+    S.__setRpc(rpc)
+    const n0 = S.__llamadas.rpc.length
+    const mapa = await S.cargarCantidadesSinImporte(['f9'])
+    S.estado.misTareas = new Set(['cuentas_corrientes:ver_todo', 'cuentas_corrientes:registrar_pago'])
+    return { mapa, llamadas: S.__llamadas.rpc.slice(n0) }
+  }
+  const form = (o) => ({ facturaId: 'f9', modo: 'total', importe: null, error: null, enCurso: false, ...o })
+
+  // UN producto: se ofrece precio por unidad y 2.000 kg x "1.234,50" manda 2469000.
+  {
+    const { mapa, llamadas } = await cargar(async () => ({ data: [fila({})], error: null }))
+    chk('rpc: llama a items_de_factura_pendiente con p_factura_id', llamadas.length === 1 && llamadas[0][0] === 'items_de_factura_pendiente' && llamadas[0][1].p_factura_id === 'f9', JSON.stringify(llamadas))
+    const cant = mapa.get('f9')
+    const html = S.htmlFilaSinImporte(m, { cantidades: cant, puedeCargar: true, form: form({}) })
+    chk('un producto: muestra la mercadería con marca y bultos', html.includes('2.000 kg de Harina 000 (Jupiter) · 80 bultos de 25 kg'), html)
+    chk('un producto: ofrece precio por unidad', html.includes('value="unidad"') && html.includes('Precio por kg'))
+    chk('un producto: sin aviso de permiso ni de error', !html.includes('permiso') && !html.includes('No se pudieron'))
+    S.estado.ficha = { proveedorId: 'p', unidadId: 'u1', cantidadesSinImporte: mapa, movimientosRaw: [m], formImporte: form({ modo: 'unidad', importe: '1.234,50' }) }
+    S.__setRpc(async () => ({ data: null, error: null }))
+    const n0 = S.__llamadas.rpc.length
+    await S.confirmarImporteSinImporte('f9')
+    const ult = S.__llamadas.rpc.slice(n0).find(l => l[0] === 'completar_importe_factura')
+    chk('un producto: 2.000 kg x "1.234,50" manda p_importe = 2469000 exacto', ult && ult[1].p_importe === 2469000 && ult[1].p_factura_id === 'f9', JSON.stringify(ult))
+  }
+  // VARIOS productos: solo total.
+  {
+    const { mapa } = await cargar(async () => ({ data: [fila({}), fila({ insumo: 'Azúcar', marca: null, cantidad: 50, cantidad_bultos: null, contenido_por_bulto: null })], error: null }))
+    const html = S.htmlFilaSinImporte(m, { cantidades: mapa.get('f9'), puedeCargar: true, form: form({}) })
+    chk('varios: NO ofrece precio por unidad', !html.includes('value="unidad"') && html.includes('Son varios productos'), html)
+    chk('varios: muestra los dos productos', html.includes('Harina 000') && html.includes('50 kg de Azúcar'))
+    chk('varios: el modo unidad no da total', S.totalImporteFormulario(form({ modo: 'unidad', importe: '10' }), mapa.get('f9')) === null)
+  }
+  // ERROR de la RPC: solo total + aviso honesto, sin trabar.
+  {
+    const { mapa } = await cargar(async () => ({ data: null, error: { message: 'boom' } }))
+    chk('error: la descarga queda marcada como fallida (null)', mapa.has('f9') && mapa.get('f9') === null)
+    const html = S.htmlFilaSinImporte(m, { cantidades: mapa.get('f9'), puedeCargar: true, form: form({}) })
+    chk('error: avisa que no se pudieron traer y que se puede cargar el total', html.includes('No se pudieron traer los productos') && html.includes('cargar el total'))
+    chk('error: no ofrece precio por unidad pero sí el campo y Guardar', !html.includes('value="unidad"') && html.includes('campo-importe-sin') && html.includes('btn-confirmar-importe'))
+    const { mapa: m2 } = await cargar(async () => { throw new Error('red') })
+    chk('error: una excepción de red también degrada a null', m2.get('f9') === null)
+  }
+  // VACÍO.
+  {
+    const { mapa } = await cargar(async () => ({ data: [], error: null }))
+    const html = S.htmlFilaSinImporte(m, { cantidades: mapa.get('f9'), puedeCargar: true, form: form({}) })
+    chk('vacío: lo dice y deja cargar el total', html.includes('No se encontraron los productos') && !html.includes('value="unidad"') && html.includes('campo-importe-sin'))
+    chk('vacío: nada de $0 ni NaN', sinCeroNiNaN(html))
+  }
+  // SIN PERMISO: ni se llama a la RPC.
+  {
+    const { mapa, llamadas } = await cargar(async () => ({ data: [fila({})], error: null }), [])
+    chk('sin ver_todo ni registrar_pago no se llama a la RPC', llamadas.length === 0 && mapa.size === 0)
+    const { llamadas: l2 } = await cargar(async () => ({ data: [], error: null }), ['cuentas_corrientes:ver_todo'])
+    chk('con solo ver_todo sí se llama (lo acepta la RPC)', l2.length === 1)
+  }
+  // TEXTO MALICIOSO en insumo / marca / unidad.
+  {
+    const { mapa } = await cargar(async () => ({ data: [fila({ insumo: marca('rpc_insumo'), marca: marca('rpc_marca'), unidad_medida: marca('rpc_unidad') })], error: null }))
+    const html = S.htmlFilaSinImporte(m, { cantidades: mapa.get('f9'), puedeCargar: true, form: form({}) })
+    chequearMarcas(chk, 'htmlFilaSinImporte (datos de la RPC)', html, ['rpc_insumo', 'rpc_marca', 'rpc_unidad'])
+  }
 }
 
 // Corre DESPUÉS de los bloques síncronos (ver el final): comparte
@@ -249,6 +337,9 @@ const ramaAsync = async () => {
     /\|\| contarSinImporte\(g\.proveedor_id, g\.unidad_negocio_id\) > 0\)/.test(cs) && /for \(const f of estado\.sinImporte\)/.test(cs))
   chk('lista: respeta el filtro de unidad al sumarlos',
     /if \(estado\.filtros\.proveedores\.unidadId && f\.unidad_negocio_id !== estado\.filtros\.proveedores\.unidadId\) continue/.test(cs))
+  const cc = extraerFn(FUENTE, 'cargarCantidadesSinImporte')
+  chk('mercadería: sale de la RPC items_de_factura_pendiente', /supabase\.rpc\('items_de_factura_pendiente', \{ p_factura_id: id \}\)/.test(cc))
+  chk('mercadería: el archivo ya no lee materia_prima_ingresos ni materia_prima_items', !/from\('materia_prima_ingresos'\)|from\('materia_prima_items'\)|materia_prima_items\(/.test(FUENTE))
   const init = extraerFn(FUENTE, 'init')
   chk('init: las descargas se cargan ANTES que los saldos', init.indexOf('await cargarSinImporte()') > 0 && init.indexOf('await cargarSinImporte()') < init.indexOf('cargas.push(cargarSaldos())'))
   const ex = extraerFn(FUENTE, 'exportarExcelHistorial')
@@ -282,5 +373,5 @@ estaticoAcotado(chk, ARCHIVO, FUENTE,
     ],
   })
 
-esperas.push(ramaAsync())
+esperas.push(ramaAsync().then(ramaRpcItems))
 fin()

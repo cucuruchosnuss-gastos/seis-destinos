@@ -194,7 +194,7 @@ const PRELUDIO = `
 
 const FUNCIONES = [
   'esc', 'formatearImporte', 'importeHtml', 'formatearImporteCentavosSuaves', 'enlazarCamposMonto', 'montoDeCampo',
-  'tieneTarea', 'nombreUnidad', 'badgeEstadoFactura', 'esSinImporte', 'textoCantidadInsumo', 'totalImporteFormulario',
+  'tieneTarea', 'nombreUnidad', 'badgeEstadoFactura', 'esSinImporte', 'textoCantidadInsumo', 'productoUnicoConCantidad', 'totalImporteFormulario',
   'htmlFilaSinImporte', 'renderizarFichaMovimientos', 'enlazarCampoImporteSin', 'confirmarImporteSinImporte',
   'actualizarSugerenciasPago', 'renderizarFilasFifo', 'actualizarResumenAplicacion', 'confirmarPago',
   'abrirModalPago', 'fechaISO', 'seleccionarCreditoParaAplicar', 'cerrarModalAplicarCredito', 'confirmarAplicarCredito',
