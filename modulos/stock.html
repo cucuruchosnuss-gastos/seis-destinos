@@ -2897,7 +2897,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -3065,12 +3065,27 @@
     const puedeEnviar    = () => tieneTarea('stock', 'enviar_transferencia')
 
     // Cantidades del stock: separador de miles argentino y la unidad del
-    // catálogo. `maximumFractionDigits` en 3 porque hay insumos en kg y litros
-    // donde el decimal importa, pero sin arrastrar ceros al pedo.
+    // catálogo. Hasta 3 decimales porque hay insumos en kg y litros donde el
+    // decimal importa, pero sin arrastrar ceros al pedo.
+    //
+    // Desde el 21/09/2026 sale de formatearNumeroAr() de js/utils.js y se ve
+    // igual que antes. Lo único que cambia es la AUSENCIA: null, undefined, ''
+    // o NaN dicen "—", sin unidad, y ya no "0 kg" —antes Number(n ?? 0)
+    // convertía "no hay dato" en un cero, que es una afirmación—. Un cero REAL
+    // (el número 0, un saldo que existe y es cero) sigue diciendo "0 kg": los
+    // call sites que tienen un cero real ya lo pasan como número (saldoDe()
+    // devuelve `?? 0`, el saldo del modal descarta el null antes de llamar).
     function formatearCantidadStock(n, unidad) {
-      const num = Number(n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 3 })
+      const num = formatearNumeroAr(n, { decimales: DECIMALES_CANTIDAD, minimos: 0 })
+      if (num === '—') return '—'
       return `${num} ${unidad || ''}`.trim()
     }
+
+    // Cuántos decimales admite una cantidad. Las unidades que se cuentan de a
+    // enteros (UNIDADES_ENTERAS, más abajo): 0. Kilos, litros y cualquier otra:
+    // 3, la misma decisión que Ingreso (21/09/2026) — alcanza para 0,300 kg de
+    // lecitina, y es lo que ya mostraba formatearCantidadStock.
+    const DECIMALES_CANTIDAD = 3
 
     // Unidades que se cuentan de a enteros. Un separador ahí NO es un decimal:
     // es el de miles. "47.000" cajas leído como 47 es un error de mil veces, y
@@ -3085,60 +3100,95 @@
       return UNIDADES_ENTERAS.has(normalizar(unidad))
     }
 
+    function decimalesCantidad(unidad) {
+      return esUnidadEntera(unidad) ? 0 : DECIMALES_CANTIDAD
+    }
+
     // El teclado numérico de un celular en es-AR ofrece COMA, y type="number"
     // DESCARTA esa tecla: al escribir "8,5" el campo queda en "85" —los dígitos
     // se pegan— sin error, sin volver al guion y sin nada raro en pantalla. La
     // coma se pierde ANTES de llegar al JS, así que ninguna normalización la
     // recupera: los campos numéricos van type="text" + inputmode="decimal", que
     // mantiene el teclado numérico del celular y deja pasar la coma.
-    // El criterio de separador es el mismo que parsearTolerancia() ya usaba
-    // para el Excel — hasta ahora los dos caminos de la tolerancia daban
-    // resultados distintos para el mismo valor tipeado.
     //
-    // `permitirNegativos` existe para el campo de AJUSTE de la segunda parte de
-    // la fase 3, que lleva la cantidad CON SIGNO (negativa cuando falta
-    // mercadería). Va en false por defecto: en un recuento no se cuenta menos
-    // que nada, y la baja manda siempre positivo porque la RPC la guarda en
-    // negativo. Sin el parámetro, ese campo rechazaría todo lo negativo y
-    // parecería que un ajuste solo puede sumar.
+    // LO QUE TIPEA UNA PERSONA (21/09/2026): los campos de cantidad pasan por
+    // las funciones compartidas de js/utils.js. Se ENLAZAN con
+    // enlazarCampoNumero() —ponen los puntos de miles mientras se escribe, el
+    // punto tipeado vale como coma decimal, aceptan pegar—, se LEEN con este
+    // parsearCantidad() —ahora un envoltorio de leerNumeroAr()— y se ESCRIBEN
+    // desde código con ponerNumero() / ponerCantidadEnCampo(). Reemplazan al
+    // parser propio y al textoParaInput() de antes.
+    //
+    // CAMBIO DE SEMÁNTICA, a propósito: el parser viejo tomaba el único
+    // separador como decimal, así que "1.500" kg eran 1,5 kg. Ahora es la regla
+    // del proyecto —punto de miles, coma decimal—: "1.500" = 1500 y "1,5" =
+    // 1,5. TIPEANDO no hay ambigüedad (el campo convierte el punto tipeado en
+    // coma y pone él los de miles); lo único que cambia es al PEGAR: "1.5" y
+    // "1.50" siguen siendo decimales (un punto con 1 o 2 dígitos detrás) y
+    // "1.500" es mil quinientos. En las unidades enteras ya era así.
+    //
+    // Los espacios internos siguen rechazados ("8 5" no es 85), y lo que no se
+    // puede leer sin adivinar sigue siendo null: el mensaje de la fila lo dice.
+    //
+    // `permitirNegativos` existe para el campo de AJUSTE, que lleva la
+    // cantidad CON SIGNO (negativa cuando falta mercadería). Va en false por
+    // defecto: en un recuento no se cuenta menos que nada, y la baja manda
+    // siempre positivo porque la RPC la guarda en negativo.
+    //
+    // `unidad` decide los decimales: 0 en las que se cuentan de a enteros, 3
+    // en el resto. Sin unidad (el contenido por bulto, que hoy admite
+    // decimales en cualquier unidad) son 3.
     function parsearCantidad(crudo, { permitirNegativos = false, unidad = '' } = {}) {
-      // trim() saca los espacios de los BORDES, pero los de ADENTRO se
-      // rechazan. Acá había un .replace(/\s/g, '') que los borraba, y con
-      // eso "8 5" —un dedazo donde iba la coma, con la barra espaciadora
-      // pegada al 0 en el teclado del celular— se convertía en 85 y pasaba el
-      // patrón sin una queja. Es el mismo mecanismo del bug que este helper
-      // vino a eliminar: un dato ambiguo transformado en un número plausible,
-      // sin error y sin señal, y de acá sale un ajuste de inventario.
-      //
-      // Un espacio no es un separador decimal en es-AR, así que no hay nada
-      // que interpretar: se devuelve null y el mensaje de la fila lo dice.
-      // Mismo criterio que rechazar más de un separador en vez de adivinar.
-      let texto = String(crudo ?? '').trim()
-      if (texto === '') return null          // vacío = el guion, nunca un cero
-
-      let negativo = false
-      if (texto.startsWith('-')) {
-        if (!permitirNegativos) return null
-        negativo = true
-        texto = texto.slice(1)
-      }
-
-      const patron = esUnidadEntera(unidad)
-        ? /^\d+$/                            // ni decimal ni separador de miles
-        : /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/    // UN separador, siempre decimal
-      if (!patron.test(texto)) return null
-
-      const n = Number(texto.replace(',', '.'))
-      if (!Number.isFinite(n)) return null
-      return negativo ? -n : n
+      return leerNumeroAr(crudo, { decimales: decimalesCantidad(unidad), negativos: permitirNegativos })
     }
 
-    // Para volver a pintar en el input un número ya guardado. Con coma, que es
-    // lo que la persona tipeó, y SIN separador de miles: formatearCantidadStock
-    // pondría "1.234,5", que al releerlo tiene dos separadores y el parser
-    // rechazaría — el campo se vaciaría solo al re-renderizar la lista.
-    function textoParaInput(n) {
-      return n === null || n === undefined ? '' : String(n).replace('.', ',')
+    // Escribe un número guardado en un campo de cantidad ya enlazado. Si NO
+    // entra en los decimales del campo —un 1,5 en un campo de "un", un valor
+    // de 4 decimales en uno de 3—, ponerNumero lo redondearía y la pantalla
+    // mostraría un número distinto del que está guardado, en silencio. En ese
+    // caso se muestra el número tal cual (así se lee como no válido y el
+    // mensaje del campo lo dice) en vez de redondearlo.
+    function ponerCantidadEnCampo(el, n) {
+      ponerNumero(el, n)
+      if (n === null || n === undefined || n === '') return
+      const leido = leerCampoNumero(el)
+      if (leido !== null && Math.abs(leido - Number(n)) < 1e-9) return
+      el.value = formatearNumeroAr(n, { decimales: 6, minimos: 0 })
+    }
+
+    // Los campos de cantidad de los modales de MOVIMIENTO y de TRANSFERENCIA
+    // cambian de reglas según el insumo elegido (0 decimales en "un", 3 en kg)
+    // y, en el movimiento, según el modo (el ajuste admite un "-" tipeado desde
+    // el escritorio; la baja no). El enlace de utils.js NO se reconfigura, así
+    // que cuando la regla cambia el <input> se REEMPLAZA por una copia limpia
+    // (mismo id y atributos), se enlaza con la regla nueva, se le vuelve a
+    // poner su listener y se le escribe el número que tenía. Mismo criterio
+    // que Ingreso, donde el campo se re-crea con el re-render de la tarjeta.
+    const _reglaCampoCantidad = new Map()
+    function prepararCampoCantidad(id, { decimales, negativos = false }, alEscribir) {
+      const clave = `${decimales}|${negativos}`
+      let el = document.getElementById(id)
+      if (!el || _reglaCampoCantidad.get(id) === clave) return el
+      if (_reglaCampoCantidad.has(id)) {
+        const previo = leerCampoNumero(el)
+        const nuevo = el.cloneNode(false)
+        nuevo.value = ''
+        el.replaceWith(nuevo)
+        el = nuevo
+        enlazarCampoNumero(el, { decimales, negativos })
+        ponerCantidadEnCampo(el, previo)
+      } else {
+        enlazarCampoNumero(el, { decimales, negativos })
+      }
+      el.addEventListener('input', alEscribir)
+      _reglaCampoCantidad.set(id, clave)
+      return el
+    }
+
+    function mensajeCantidadInvalida(unidad) {
+      return esUnidadEntera(unidad)
+        ? 'Se cuenta por unidades enteras: escribilo sin decimales.'
+        : `Escribí un número, con coma para los decimales (8,5) y hasta ${DECIMALES_CANTIDAD} decimales.`
     }
 
     function textoLotes(n) {
@@ -3212,7 +3262,7 @@
       const menos = e.signo < 0 ? '−' : ''
       const palabra = (e.enteros === 1 && !e.fraccion) ? 'bulto' : 'bultos'
       const frac = e.fraccion ? ` + ${e.fraccion}` : ''
-      return `${menos}${e.enteros.toLocaleString('es-AR')} ${palabra}${frac}`
+      return `${menos}${formatearNumeroAr(e.enteros, { decimales: 0 })} ${palabra}${frac}`
     }
 
     function textoBultos(kilos, contenido, unidad) {
@@ -3573,7 +3623,7 @@
         const metaTexto = [
           marcaArriba ? '' : i.marca,
           i.unidad_medida,
-          i.tolerancia_merma_pct != null ? `merma ${i.tolerancia_merma_pct}%` : '',
+          i.tolerancia_merma_pct != null ? `merma ${formatearNumeroAr(i.tolerancia_merma_pct, { decimales: 2, minimos: 0 })}%` : '',
         ].filter(Boolean).join(' · ')
         const badgePendiente = (i.activo && esPendiente(i))
           ? `<span class="chip-estado">Sin revisar</span>` : ''
@@ -4062,8 +4112,13 @@
         (saldos.data ?? []).map(s => [claveSaldo(s.insumo_id, s.lote, s.contenido_por_bulto), Number(s.saldo) || 0])
       )
 
+      // El texto que la persona escribió en cada campo sobrevive a la recarga
+      // (agregar un ítem vuelve a leer la lista entera): el render lo repone
+      // SOLO si todavía dice el mismo número que vino del servidor.
+      const textoAnterior = new Map((estado.itemsRec ?? []).map(x => [x.id, x.textoCantidad]))
       estado.itemsRec = (items.data ?? []).map(i => ({
         id: i.id,
+        textoCantidad: textoAnterior.get(i.id) ?? null,
         insumo_id: i.insumo_id,
         lote: i.lote,
         contenido_por_bulto: i.contenido_por_bulto === null ? null : Number(i.contenido_por_bulto),
@@ -4197,7 +4252,6 @@
             <div class="rec-fila__linea">
               <input type="text" class="rec-input" inputmode="decimal"
                      data-cantidad="${esc(i.id)}"
-                     value="${esc(textoParaInput(i.cantidad_contada))}"
                      placeholder="—"
                      autocomplete="off"
                      aria-label="Cantidad contada de ${esc(i.nombre)}">
@@ -4214,9 +4268,36 @@
           </div>`
       }).join('')
 
+      // LOS CAMPOS DE CANTIDAD SE DIBUJAN SIN value: se enlazan acá (0
+      // decimales en las unidades enteras, 3 en el resto) y el número guardado
+      // se escribe con ponerNumero, con los puntos de miles. Antes se repintaba
+      // "con coma y SIN separador de miles" porque el parser viejo rechazaba
+      // "1.234,5"; leerNumeroAr lo lee bien, así que ya no hace falta.
+      //
+      // RE-RENDERIZAR NO CAMBIA NINGÚN CAMPO. El chip de filtro, el buscador y
+      // agregar un ítem vuelven a dibujar la lista entera, y ponerNumero
+      // reescribiría "0,300" como "0,30" y "8," como "8". Por eso cada ítem
+      // recuerda el texto que la persona escribió (textoCantidad): si todavía
+      // dice lo mismo que el número guardado, se repone ESE texto, carácter
+      // por carácter. No es escribir un número desde código —el número lo
+      // escribió ponerNumero una línea antes—: es devolverle al campo el texto
+      // que el enlace ya había formateado mientras se tipeaba. Y si el campo
+      // que se re-dibuja tenía el foco, lo recupera con el cursor al final.
+      const enfocado = document.activeElement?.dataset?.cantidad ?? null
       listaEl.querySelectorAll('[data-cantidad]').forEach(input => {
+        const item = estado.itemsRec.find(x => x.id === input.dataset.cantidad)
+        enlazarCampoNumero(input, { decimales: decimalesCantidad(item?.unidad_medida) })
+        ponerCantidadEnCampo(input, item?.cantidad_contada ?? null)
+        if (item && item.textoCantidad != null &&
+            parsearCantidad(item.textoCantidad, { unidad: item.unidad_medida }) === item.cantidad_contada) {
+          input.value = item.textoCantidad
+        }
         input.addEventListener('input', () => anotarCantidad(input.dataset.cantidad, input.value))
         input.addEventListener('blur', () => guardarConteoAhora())
+        if (enfocado !== null && input.dataset.cantidad === enfocado) {
+          input.focus()
+          try { input.setSelectionRange(input.value.length, input.value.length) } catch {}
+        }
       })
       listaEl.querySelectorAll('[data-obs]').forEach(input => {
         input.addEventListener('input', () => anotarObservacion(input.dataset.obs, input.value))
@@ -4290,6 +4371,9 @@
       const item = estado.itemsRec.find(i => i.id === itemId)
       if (!item) return
       const crudo = String(valor).trim()
+      // Lo que la persona ve en el campo (ya formateado por el enlace): el
+      // re-render lo repone tal cual si sigue diciendo el mismo número.
+      item.textoCantidad = String(valor)
       // Vacío vuelve al guion: guardar_conteo acepta '' y lo escribe como
       // null, así que un ítem mal cargado se puede des-contar.
       item.cantidad_contada = parsearCantidad(crudo, { unidad: item.unidad_medida })
@@ -4297,9 +4381,7 @@
       // qué. Sin el mensaje, el campo volvería al guion en silencio y la
       // persona no tendría forma de saber que su número no entró.
       item.errorCantidad = (crudo !== '' && item.cantidad_contada === null)
-        ? (esUnidadEntera(item.unidad_medida)
-            ? 'Se cuenta por unidades enteras: escribilo sin puntos ni comas.'
-            : 'Escribí un número, con coma para los decimales (8,5). Sin separador de miles.')
+        ? mensajeCantidadInvalida(item.unidad_medida)
         : null
       estado.sucios.add(itemId)
       marcarGuardado('pendiente')
@@ -4440,7 +4522,7 @@
       estado.presentacionAgregar = undefined
       estado.agregados = 0
       document.getElementById('rec-buscar-catalogo').value = ''
-      document.getElementById('rec-contenido').value = ''
+      ponerNumero(document.getElementById('rec-contenido'), null)
       document.getElementById('rec-campo-presentacion').hidden = true
       document.getElementById('rec-campo-contenido').hidden = true
       document.getElementById('rec-lote').value = ''
@@ -4525,7 +4607,7 @@
         btn.addEventListener('click', () => {
           const v = btn.dataset.presentacionRec
           estado.presentacionAgregar = v === 'sin' ? null : (v === 'otra' ? NaN : Number(v))
-          if (v !== 'otra') document.getElementById('rec-contenido').value = ''
+          if (v !== 'otra') ponerNumero(document.getElementById('rec-contenido'), null)
           document.getElementById('rec-error-presentacion').hidden = true
           renderizarPresentacionesAgregar()
         })
@@ -4632,7 +4714,7 @@
       estado.presentacionAgregar = undefined
       document.getElementById('rec-buscar-catalogo').value = ''
       document.getElementById('rec-lote').value = ''
-      document.getElementById('rec-contenido').value = ''
+      ponerNumero(document.getElementById('rec-contenido'), null)
       document.getElementById('rec-campo-lote').hidden = true
       document.getElementById('rec-campo-presentacion').hidden = true
       document.getElementById('rec-campo-contenido').hidden = true
@@ -5471,9 +5553,9 @@
       quitarInsumoMov()
       document.getElementById('mov-buscar-insumo').value = ''
       document.getElementById('mov-lote').value = lote || ''
-      document.getElementById('mov-cantidad').value = ''
+      ponerNumero(document.getElementById('mov-cantidad'), null)
       document.getElementById('mov-motivo').value = ''
-      document.getElementById('mov-contenido').value = ''
+      ponerNumero(document.getElementById('mov-contenido'), null)
       document.getElementById('mov-campo-presentacion').hidden = true
       document.getElementById('mov-campo-contenido').hidden = true
       document.getElementById('mov-sugerencias').hidden = true
@@ -5542,6 +5624,7 @@
       const m = estado.mov
       m.modo = modo
       m.signo = 0
+      prepararCantidadMov()
 
       // El título coincide con el rótulo de su pestaña: si dijeran cosas
       // distintas habría que traducir mentalmente entre uno y otro.
@@ -5742,6 +5825,7 @@
       const i = estado.insumos.find(x => x.id === insumoId)
       if (!i) return
       estado.mov.insumo = i
+      prepararCantidadMov()
       // Cambiar de insumo invalida la presentación elegida para el anterior.
       estado.mov.presentacion = undefined
       limpiarErroresMov()
@@ -5768,10 +5852,11 @@
 
     function quitarInsumoMov() {
       estado.mov.insumo = null
+      prepararCantidadMov()
       estado.mov.presentacion = undefined
       document.getElementById('mov-campo-presentacion').hidden = true
       document.getElementById('mov-campo-contenido').hidden = true
-      document.getElementById('mov-contenido').value = ''
+      ponerNumero(document.getElementById('mov-contenido'), null)
       document.getElementById('mov-insumo-elegido').hidden = true
       document.getElementById('mov-campo-lote').hidden = true
       document.getElementById('mov-lote').value = ''
@@ -5862,7 +5947,7 @@
       const m = estado.mov
       if (!m) return
       document.getElementById('mov-error-presentacion').hidden = true
-      if (valor === 'sin') { m.presentacion = null; document.getElementById('mov-contenido').value = '' }
+      if (valor === 'sin') { m.presentacion = null; ponerNumero(document.getElementById('mov-contenido'), null) }
       else if (valor === 'otra') { m.presentacion = NaN }   // pendiente de tipear
       else m.presentacion = Number(valor)
       renderizarPresentacionesMov()
@@ -5904,6 +5989,18 @@
         (l.lote ?? '') === lote &&
         (l.contenido_por_bulto ?? null) === (cont === undefined ? null : cont))
       return fila ? Number(fila.saldo) || 0 : 0
+    }
+
+    // La regla del campo de cantidad del movimiento: los decimales de la unidad
+    // del insumo elegido (0 en "un", 3 en kg/lt; 3 si todavía no hay insumo) y
+    // el "-" tipeado SOLO en el ajuste. La baja no tiene signo que elegir: un
+    // negativo ahí sería una doble negación que terminaría sumando stock.
+    function prepararCantidadMov() {
+      const m = estado.mov
+      return prepararCampoCantidad('mov-cantidad', {
+        decimales: decimalesCantidad(m?.insumo?.unidad_medida ?? ''),
+        negativos: m?.modo === 'ajuste',
+      }, actualizarSaldoMov)
     }
 
     // Lo que se va a mandar a la RPC, o null si todavía no alcanza para saberlo.
@@ -5986,9 +6083,12 @@
       if (crudo === '') {
         marcarError('mov-error-cantidad', 'Poné la cantidad.'); ok = false
       } else if (parsearCantidad(crudo, { permitirNegativos: m.modo === 'ajuste', unidad: m.insumo?.unidad_medida ?? '' }) === null) {
-        marcarError('mov-error-cantidad', esUnidadEntera(m.insumo?.unidad_medida)
-          ? 'Se cuenta por unidades enteras: escribilo sin puntos ni comas.'
-          : 'Escribí un número, con coma para los decimales (8,5).'); ok = false
+        // Un "-" que quedó de cuando el modal estaba en ajuste: en la baja la
+        // cantidad va siempre positiva, y decirlo es más útil que "no es un
+        // número".
+        marcarError('mov-error-cantidad', (m.modo === 'baja' && crudo.startsWith('-'))
+          ? 'La cantidad a dar de baja va en positivo: la baja ya resta.'
+          : mensajeCantidadInvalida(m.insumo?.unidad_medida)); ok = false
       } else if (cantidad === null) {
         if (m.modo === 'ajuste' && !m.signo) {
           marcarError('mov-error-signo', 'Elegí si apareció o si falta mercadería.'); ok = false
@@ -6176,8 +6276,10 @@
         // Sin `?? 0`, a propósito: las TRES ramas de v_mermas garantizan una
         // cantidad no nula, así que ese guard sería para algo que no puede
         // pasar — y si igual pasara, un cero silencioso bajaría el subtotal
-        // mientras el evento sigue contando. Que se vea el NaN: es la señal de
-        // que pasó algo que no debería.
+        // mientras el evento sigue contando. Que se vea: el NaN llega a
+        // formatearCantidadStock, que desde el 21/09/2026 lo muestra como "—"
+        // (antes "NaN un"). Sigue siendo la señal de que pasó algo que no
+        // debería, y nunca un cero.
         porUnidad.set(u, (porUnidad.get(u) || 0) + Number(f.cantidad))
       })
       return {
@@ -6402,7 +6504,7 @@
       const filas = [
         ['Tipo', TIPOS[i.tipo] ?? i.tipo],
         ['Unidad de medida', i.unidad_medida],
-        ['Tolerancia de merma', i.tolerancia_merma_pct != null ? `${i.tolerancia_merma_pct}%` : 'Sin definir'],
+        ['Tolerancia de merma', i.tolerancia_merma_pct != null ? `${formatearNumeroAr(i.tolerancia_merma_pct, { decimales: 2, minimos: 0 })}%` : 'Sin definir'],
         ['Estado', !i.activo ? 'Desactivado' : (esPendiente(i) ? 'Sin revisar' : 'Activo')],
       ]
       document.getElementById('detalle-insumo-filas').innerHTML = filas.map(([k, v]) => `
@@ -6493,7 +6595,11 @@
       document.getElementById('campo-aclaracion').value = i?.aclaracion ?? ''
       document.getElementById('campo-unidad').value     = i?.unidad_medida ?? ''
       document.getElementById('campo-tipo').value       = i?.tipo ?? 'materia_prima'
-      document.getElementById('campo-tolerancia').value = i?.tolerancia_merma_pct ?? ''
+      // Con ponerNumero, con coma decimal ("0,50"): antes se precargaba el
+      // número crudo con PUNTO ("0.5"), distinto de todo lo demás. Si lo
+      // guardado no entra en 2 decimales se muestra tal cual en vez de
+      // redondearlo en silencio (y al guardar el campo pide corregirlo).
+      ponerCantidadEnCampo(document.getElementById('campo-tolerancia'), i?.tolerancia_merma_pct ?? null)
       // Las opciones se ponen ANTES de asignar el valor: sobre un <select>
       // vacío la asignación no engancha y el campo quedaría en blanco, o sea
       // pareciendo "Sin categoría" sobre un insumo que sí la tiene — y al
@@ -6564,14 +6670,16 @@
 
       let tolerancia = null
       if (crudo !== '') {
-        // Por el mismo helper que la cantidad del recuento: este campo también
-        // era type="number" y se comía la coma, así que "0,5" entraba como 5 —
-        // diez veces la tolerancia real. Y quedaba incoherente con el import de
-        // Excel, que pasa por parsearTolerancia() y sí acepta la coma: el mismo
-        // valor daba dos resultados según por dónde se cargara.
-        tolerancia = parsearCantidad(crudo, { permitirNegativos: true })
+        // Este campo era type="number" y se comía la coma, así que "0,5"
+        // entraba como 5 — diez veces la tolerancia real. Desde el 21/09/2026
+        // está enlazado (2 decimales, tope 100) y se lee con el campo; el
+        // import de Excel pasa por la MISMA leerNumeroAr() con la misma regla
+        // (parsearTolerancia), así que el mismo valor da lo mismo por los dos
+        // caminos. El rango se sigue validando: el campo no deja pasar de 100
+        // tipeando, pero un valor precargado podría.
+        tolerancia = leerCampoNumero(document.getElementById('campo-tolerancia'))
         if (tolerancia === null) {
-          marcarError('error-tolerancia', 'La tolerancia tiene que ser un número.')
+          marcarError('error-tolerancia', 'La tolerancia tiene que ser un número, con hasta 2 decimales.')
           ok = false
         } else if (tolerancia < 0 || tolerancia > 100) {
           marcarError('error-tolerancia', 'La tolerancia va entre 0 y 100.')
@@ -6769,9 +6877,14 @@
       const texto = limpiarTexto(crudo)
       if (texto === '') return { ok: true, valor: null }
 
-      const n = Number(texto.replace(',', '.'))
-      if (!Number.isFinite(n)) {
-        return { ok: false, motivo: `la tolerancia "${texto}" no es un número` }
+      // Con leerNumeroAr(), la misma regla que el campo del modal: coma
+      // decimal y hasta 2 decimales. Una celda NUMÉRICA llega como número y se
+      // toma tal cual. CAMBIO DE SEMÁNTICA (21/09/2026): un texto "1.500" es
+      // mil quinientos (y queda fuera de rango), no 1,5; "0.5" y "12.5" siguen
+      // siendo decimales (un punto con 1 o 2 dígitos detrás).
+      const n = leerNumeroAr(typeof crudo === 'number' ? crudo : texto, { decimales: 2, negativos: true })
+      if (n === null) {
+        return { ok: false, motivo: `la tolerancia "${texto}" no es un número (con hasta 2 decimales)` }
       }
       // Mismo rango que valida el modal y que exige el CHECK
       // chk_tolerancia_merma. Se chequea acá para no mandar una fila que la
@@ -7175,6 +7288,7 @@
       if (!tr || !tr.origenId) return
       estado.ti = { insumo: null, lote: null, presentacion: undefined }
       estado.lotesTi = []
+      prepararCantidadTi()
 
       document.getElementById('ti-buscar-insumo').value = ''
       document.getElementById('ti-buscar-insumo').disabled = false
@@ -7184,7 +7298,7 @@
       document.getElementById('ti-campo-presentacion').hidden = true
       document.getElementById('ti-saldo').hidden = true
       document.getElementById('ti-campo-cantidad').hidden = true
-      document.getElementById('ti-cantidad').value = ''
+      ponerNumero(document.getElementById('ti-cantidad'), null)
       document.getElementById('ti-aviso-excede').hidden = true
       limpiarErroresTi()
 
@@ -7232,6 +7346,7 @@
       if (!i) return
       const ti = estado.ti
       ti.insumo = i
+      prepararCantidadTi()
       ti.lote = null
       ti.presentacion = undefined
       limpiarErroresTi()
@@ -7260,6 +7375,7 @@
     function quitarInsumoTi() {
       const ti = estado.ti
       ti.insumo = null; ti.lote = null; ti.presentacion = undefined
+      prepararCantidadTi()
       estado.lotesTi = []
       document.getElementById('ti-insumo-elegido').hidden = true
       document.getElementById('ti-campo-lote').hidden = true
@@ -7367,6 +7483,14 @@
         (l.lote ?? '') === (ti.lote ?? '') &&
         (l.contenido_por_bulto ?? null) === (cont ?? null))
       return fila ? Number(fila.saldo) || 0 : 0
+    }
+
+    // La regla del campo de cantidad de la transferencia: los decimales de la
+    // unidad del insumo elegido. Siempre positiva.
+    function prepararCantidadTi() {
+      return prepararCampoCantidad('ti-cantidad', {
+        decimales: decimalesCantidad(estado.ti?.insumo?.unidad_medida ?? ''),
+      }, actualizarSaldoTi)
     }
 
     function cantidadTi() {
@@ -7662,6 +7786,21 @@
     // LISTENERS
     // ═══════════════════════════════════════════════════════════════════════
 
+    // LOS CAMPOS DE NÚMERO SE ENLAZAN ANTES DE SUS LISTENERS: el enlace
+    // formatea en su propio 'input', y el del módulo lee lo ya formateado.
+    //  - Contenido por bulto ("Otra…" del recuento y del movimiento): 3
+    //    decimales en cualquier unidad, como hoy.
+    //  - Tolerancia de merma: un porcentaje de 0 a 100 con hasta 2 decimales;
+    //    pasarse de 100 no escribe nada.
+    //  - La cantidad del movimiento y la de la transferencia se enlazan con
+    //    prepararCampoCantidad(), que las vuelve a crear cuando cambia la
+    //    regla (el insumo o el modo). Arrancan en la regla sin insumo: 3.
+    enlazarCampoNumero(document.getElementById('rec-contenido'), { decimales: DECIMALES_CANTIDAD })
+    enlazarCampoNumero(document.getElementById('mov-contenido'), { decimales: DECIMALES_CANTIDAD })
+    enlazarCampoNumero(document.getElementById('campo-tolerancia'), { decimales: 2, max: 100 })
+    prepararCantidadMov()
+    prepararCantidadTi()
+
     document.getElementById('buscador-stock').addEventListener('input', (e) => {
       estado.busqueda = e.target.value
       renderizarLista()
@@ -7792,7 +7931,6 @@
       el.addEventListener('click', cerrarModalTransferencia))
 
     document.getElementById('ti-buscar-insumo').addEventListener('input', renderizarSugerenciasTi)
-    document.getElementById('ti-cantidad').addEventListener('input', actualizarSaldoTi)
     document.getElementById('btn-transf-confirmar-item').addEventListener('click', confirmarTransfItem)
     document.querySelectorAll('[data-cerrar-transf-item]').forEach(el =>
       el.addEventListener('click', cerrarModalTransfItem))
@@ -7835,7 +7973,6 @@
       renderizarPresentacionesMov()
     })
     document.getElementById('mov-contenido').addEventListener('input', actualizarSaldoMov)
-    document.getElementById('mov-cantidad').addEventListener('input', actualizarSaldoMov)
     document.querySelectorAll('.mov-signo__btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (!estado.mov) return
