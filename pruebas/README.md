@@ -55,7 +55,7 @@ git show 6654fac:modulos/cobranzas.html > /tmp/antes.html
 ARCHIVO_TEST=/tmp/antes.html node pruebas/test-cobranzas-xss.js
 ```
 
-**Nunca `git stash` para conseguir el archivo limpio.** En este repo el round-trip convierte el archivo a CRLF, y como las suites comparan contra lo que devuelve `git show` —que siempre viene en LF— se ponen todas en rojo a la vez y parece que el cambio rompió medio módulo.
+**Nunca `git stash` para conseguir el archivo limpio.** Antes del `.gitattributes` (21/09/2026) el round-trip convertía el archivo a CRLF en este repo, y como las suites comparan contra lo que devuelve `git show` —que siempre viene en LF— se ponen todas en rojo a la vez y parece que el cambio rompió medio módulo.
 
 ## Si la suite no está verde sobre el archivo limpio, las mutaciones no corren
 
