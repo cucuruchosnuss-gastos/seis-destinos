@@ -170,8 +170,14 @@ if (SOLO !== 'estatico') {
     chequearMarcas('htmlTarjetaCheque (abierta)', S3.htmlTarjetaCheque(base, f), [
       'tarj_id', 'tarj_r1', 'tarj_r2', 'tarj_r3', 'tarj_letras', 'tarj_benef',
       'tarj_tit_nombre', 'tarj_tit_cuit', 'tarj_banco', 'tarj_notas', 'tarj_duplicado',
-      'tarj_emision', 'tarj_pago', 'tarj_importe',
+      'tarj_emision', 'tarj_pago',
     ])
+    // El importe YA NO se interpola en la plantilla (21/09/2026): el campo se
+    // enlaza con enlazarCampoNumero y el valor lo escribe ponerNumero después
+    // de insertar el HTML. Donde antes había un sink escapado ahora no hay
+    // ninguno, y eso es lo que se afirma: la marca no aparece NI escapada.
+    chk('htmlTarjetaCheque (abierta): el importe tipeado no entra al HTML (lo escribe ponerNumero)',
+      !S3.htmlTarjetaCheque(base, f).includes('tarj_importe'))
 
     // Plegada: el otro camino de la misma función.
     const plegado = { ...base, confirmado: true, abierto: false, banco_codigo: '007' }

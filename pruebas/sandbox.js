@@ -4,9 +4,12 @@
 
 const fs = require('fs')
 const { extraerFn, extraerConst } = require('./extraer')
+// Las funciones de números de js/utils.js (leerNumeroAr, ponerNumero…),
+// con su código REAL: el módulo las importa desde el 21/09/2026.
+const { fuenteNumeros } = require('./numeros-comun')
 
 const FUNCIONES = [
-  'escCob', 'dvBcra', 'parseImporteCobranza', 'milesValidos', 'formatearImporte',
+  'escCob', 'dvBcra', 'escribirImporteEnCampo', 'formatearImporte',
   'normalizarCliente', 'hoyArgentina', 'esFechaIso', 'diasEntre', 'formatearFechaCob',
   'momentoArgentina', 'fechaDeMomentoAr', 'erroresDeCheque', 'nombreBanco', 'tieneTarea',
   'htmlFilaCobranza', 'htmlDetalle', 'htmlChequeDetalle', 'htmlAccionesDetalle',
@@ -41,6 +44,7 @@ const CONSTANTES = [
 ]
 
 const PRELUDIO = `
+  ${fuenteNumeros()}
   // --- DOM falso -------------------------------------------------------
   function nuevoEl(id) {
     return {

@@ -18,6 +18,9 @@
 const fs = require('fs')
 const path = require('path')
 const { construirCon } = require('./sandbox')
+// Las funciones de números de js/utils.js (leerNumeroAr, ponerNumero…),
+// con su código REAL: el módulo las importa desde el 21/09/2026.
+const { fuenteNumeros } = require('./numeros-comun')
 const { bloquesScript, analizar } = require('./escaner-interpolaciones')
 
 const RAIZ = path.join(__dirname, '..')
@@ -35,6 +38,7 @@ function chk(nombre, condicion, detalle) {
 }
 
 const PRELUDIO = `
+  ${fuenteNumeros()}
   var console = { error(){}, log(){}, warn(){} }
 
   // --- DOM falso -----------------------------------------------------------
@@ -129,7 +133,7 @@ const FUNCIONES = [
   'parametrosResumen', 'cargarResumen', 'pintarResumen', 'numeroDeResumen', 'htmlResumen',
   'cargarCobranzas', 'refrescarListado',
   // tarjeta
-  'htmlTarjetaCheque', 'parseImporteCobranza', 'milesValidos', 'estadoRenglon', 'erroresDeCheque', 'chequeParaBase', 'dvBcra',
+  'htmlTarjetaCheque', 'escribirImporteEnCampo', 'estadoRenglon', 'erroresDeCheque', 'chequeParaBase', 'dvBcra',
   'textoOpcional', 'origenDatosDe',
 ]
 const CONSTANTES = [
@@ -387,8 +391,12 @@ async function pruebas() {
   // Un total null (o que no es número) no termina en "$ 0,00".
   {
     const S = sandbox()
+    // Desde el 21/09/2026 formatearImporte(null) ya da "—" y no "$ 0,00", así
+    // que "no aparece $" dejó de distinguir el guard de htmlResumen: se exige
+    // además el texto, que es lo que el guard garantiza.
+    const hNull = S.htmlResumen({ etiqueta: 'Total del mes', desdeMes: '2026-09-01', porControlar: 2, cantidad: 3, total: null, estadoFiltro: null })
     chk('total null: "No se pudo calcular", nunca "$ 0,00"',
-      !/\$/.test(S.htmlResumen({ etiqueta: 'Total del mes', desdeMes: '2026-09-01', porControlar: 2, cantidad: 3, total: null, estadoFiltro: null })))
+      !/\$/.test(hNull) && /Total del mes<\/div>\s*<div class="cob-resumen__v cob-resumen__v--texto">No se pudo calcular/.test(hNull))
     chk('total "": tampoco', !/\$/.test(S.htmlResumen({ etiqueta: 'Total del mes', porControlar: 2, cantidad: 3, total: '', estadoFiltro: null })))
     chk('por_controlar null: "No se pudo calcular", no 0',
       /Por controlar<\/div>\s*<div class="cob-resumen__v cob-resumen__v--texto">No se pudo calcular/.test(

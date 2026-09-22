@@ -1419,7 +1419,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { mostrarError, mostrarExito, leerNumeroAr, formatearNumeroAr, enlazarCampoNumero, ponerNumero } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1531,72 +1531,42 @@
 
     // El importe NUNCA sale de un type="number": el teclado es-AR ofrece COMA
     // y ese input la DESCARTA, así que "8,5" queda en "85" sin ningún error a
-    // la vista. Los campos van type="text" + inputmode="decimal" y la lectura
-    // se normaliza acá.
-    function parseImporteCobranza(crudo) {
-      // Rechazar el dato AUSENTE antes de convertir: Number('') es 0, que es
-      // finito, así que un isFinite posterior convertiría "no hay dato" en una
-      // afirmación de cero.
-      if (crudo === null || crudo === undefined) return null
-      let t = String(crudo).trim()
-      if (t === '') return null
-      // Un espacio interno NO se borra, se RECHAZA: "8 5" es un dedazo donde
-      // iba la coma, y limpiarlo daría 85 — mil veces el error que este parser
-      // viene a evitar.
-      if (/\s/.test(t)) return null
-      if (!/^[0-9.,]+$/.test(t)) return null
-
-      const comas = (t.match(/,/g) || []).length
-      const puntos = (t.match(/\./g) || []).length
-      if (comas > 1) return null
-
-      let entero, decimales = ''
-      if (comas === 1) {
-        // Con coma, la coma es el decimal y los puntos son miles.
-        const [izq, der] = t.split(',')
-        // El largo de los decimales lo valida UN solo guard, el de abajo:
-        // repetirlo acá es como alguien cambia uno de los dos y cree que
-        // cambió la regla.
-        if (izq.includes('.') && !milesValidos(izq)) return null
-        entero = izq.replace(/\./g, '')
-        decimales = der
-      } else if (puntos === 0) {
-        entero = t
-      } else if (puntos === 1) {
-        // Sin coma y con UN punto, hay que decidir: "1250.5" es decimal y
-        // "420.000" son miles. Un grupo de exactamente 3 dígitos a la derecha
-        // es el separador de miles argentino; 1 o 2 dígitos es un decimal.
-        const [izq, der] = t.split('.')
-        if (der.length === 3) { entero = izq + der }
-        else if (der.length === 1 || der.length === 2) { entero = izq; decimales = der }
-        else return null
-      } else {
-        // Varios puntos: solo pueden ser miles.
-        if (!milesValidos(t)) return null
-        entero = t.replace(/\./g, '')
-      }
-
-      if (entero === '' || !/^[0-9]+$/.test(entero)) return null
-      if (decimales !== '' && !/^[0-9]{1,2}$/.test(decimales)) return null
-
-      const n = Number(entero + (decimales ? '.' + decimales : ''))
-      return Number.isFinite(n) ? n : null
-    }
-
-    // "1.000.000" sí, "42.00" no: los grupos después del primer punto tienen
-    // que ser de tres dígitos.
-    function milesValidos(t) {
-      const partes = t.split('.')
-      if (partes[0].length < 1 || partes[0].length > 3) return false
-      return partes.slice(1).every(p => /^[0-9]{3}$/.test(p))
-    }
+    // la vista. Los campos van type="text" enlazados con enlazarCampoNumero()
+    // y se LEEN con leerNumeroAr() de js/utils.js (21/09/2026): la misma
+    // lectura que el resto de los módulos, así que "387.300" no puede ser
+    // 387.300 acá y 387,3 en otro lado. Reemplaza al parser propio que tenía
+    // este archivo; las reglas que importaban siguen: punto de miles, coma
+    // decimal, un solo punto con 1 o 2 dígitos al final es decimal
+    // ("387300.5", que es como quedaban en el borrador los importes del OCR y
+    // de la base), y los espacios internos y los negativos se rechazan.
 
     // El número canónico vive como valor JS; esto es SOLO para mostrar. Nunca
     // se re-parsea un texto ya formateado.
+    // Un importe AUSENTE (null, undefined, '') dice "—" y nunca "$ 0,00":
+    // Number(null) es 0 y es finito, así que la versión anterior convertía "no
+    // hay dato" en una cifra plausible en una pantalla de plata. El "$" va con
+    // un espacio que no se corta (como lo ponía toLocaleString), así el importe
+    // no se parte en dos renglones.
     function formatearImporte(n) {
-      const v = Number(n)
-      if (!Number.isFinite(v)) return '—'
-      return v.toLocaleString('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 })
+      const texto = formatearNumeroAr(n, { decimales: 2 })
+      if (texto === '—') return '—'
+      return texto.startsWith('-') ? '-$\u00a0' + texto.slice(1) : '$\u00a0' + texto
+    }
+
+    // Escribe un importe en un campo enlazado. El valor puede ser un número
+    // (OCR, base) o el texto que quedó en un borrador del celular ("12.500,50",
+    // "387300.5"); ponerNumero lo deja formateado igual en los dos casos. Un
+    // texto de un borrador VIEJO que no se puede leer ("12,500.50", tipeado
+    // antes de que el campo formateara) se muestra TAL CUAL: vaciar el campo
+    // escondería justo el dato del que habla "El efectivo no se entiende".
+    function escribirImporteEnCampo(input, valor) {
+      if (!input) return
+      const n = leerNumeroAr(valor)
+      if (n === null && valor !== null && valor !== undefined && String(valor).trim() !== '') {
+        input.value = String(valor)
+        return
+      }
+      ponerNumero(input, n)
     }
 
     // Réplica EXACTA de normalizar_razon_social() de la base: si divergieran,
@@ -3354,7 +3324,7 @@
           fecha: c.fecha ?? hoyArgentina(),
           // El número canónico se pasa a texto para el input; el parser lo
           // vuelve a número al leerlo. No se re-parsea un texto formateado.
-          efectivo: Number(c.efectivo ?? 0) > 0 ? String(c.efectivo) : '',
+          efectivo: Number(c.efectivo ?? 0) > 0 ? c.efectivo : '',
           comprobante_referencia: c.comprobante_referencia ?? '',
           observaciones: c.observaciones ?? '',
           fotos: (fotos.data ?? []).map(f => ({
@@ -3388,7 +3358,7 @@
         tipo: ch.tipo,
         fecha_emision: ch.fecha_emision ?? '',
         fecha_pago: ch.fecha_pago ?? '',
-        importe: ch.importe != null ? String(ch.importe) : '',
+        importe: ch.importe ?? '',
         importe_letras: ch.importe_letras ?? '',
         beneficiario: ch.beneficiario ?? '',
         titulares: Array.isArray(ch.titulares) ? ch.titulares : [],
@@ -3668,7 +3638,10 @@
       ch.tipo = p.tipo ?? null
       ch.fecha_emision = p.fecha_emision ?? ''
       ch.fecha_pago = p.tipo === 'comun' ? '' : (p.fecha_pago ?? '')
-      ch.importe = p.importe != null ? String(p.importe) : ''
+      // El OCR devuelve un NÚMERO y se guarda como número: pasarlo a texto
+      // era lo que dejaba "387300.5" en el borrador. Al campo lo escribe
+      // escribirImporteEnCampo() → ponerNumero().
+      ch.importe = typeof p.importe === 'number' && Number.isFinite(p.importe) ? p.importe : ''
       ch.importe_letras = p.importe_letras ?? ''
       ch.beneficiario = p.beneficiario ?? ''
       ch.titulares = Array.isArray(p.titulares) ? p.titulares : []
@@ -3735,7 +3708,7 @@
       document.getElementById('cob-cliente').value = f.cliente
       document.getElementById('cob-fecha').value = f.fecha
       document.getElementById('cob-fecha').max = hoyArgentina()
-      document.getElementById('cob-efectivo').value = f.efectivo
+      escribirImporteEnCampo(document.getElementById('cob-efectivo'), f.efectivo)
       document.getElementById('cob-referencia').value = f.comprobante_referencia
       document.getElementById('cob-observaciones').value = f.observaciones
 
@@ -3884,7 +3857,7 @@
       const indiceFoto = f.fotos.findIndex(x => x.id === ch.foto_id) + 1
       const posicion = f.cheques.indexOf(ch) + 1
       const errores = ch.confirmado ? [] : erroresDeCheque(chequeParaBase(ch))
-      const importeNum = parseImporteCobranza(ch.importe)
+      const importeNum = leerNumeroAr(ch.importe)
 
       if (ch.confirmado && !ch.abierto) {
         // Plegado y COMPACTO: una fila de ~72px, así tres cheques confirmados
@@ -4023,7 +3996,7 @@
 
             <div class="cob-campo">
               <label>Importe</label>
-              <input type="text" inputmode="decimal" data-importe="${escCob(ch.id)}" value="${escCob(ch.importe)}" placeholder="0,00">
+              <input type="text" inputmode="decimal" data-importe="${escCob(ch.id)}" placeholder="0,00">
               <div class="cob-campo__ayuda">${escCob(importeNum === null ? 'Escribilo como en el cheque: 427.256,86' : formatearImporte(importeNum))}</div>
             </div>
             <div class="cob-campo">
@@ -4074,7 +4047,7 @@
         tipo: ch.tipo,
         fecha_emision: esFechaIso(ch.fecha_emision) ? ch.fecha_emision : null,
         fecha_pago: ch.tipo === 'comun' ? null : (esFechaIso(ch.fecha_pago) ? ch.fecha_pago : null),
-        importe: parseImporteCobranza(ch.importe),
+        importe: leerNumeroAr(ch.importe),
         importe_letras: textoOpcional(ch.importe_letras),
         titulares: (ch.titulares ?? [])
           .map(t => ({ nombre: textoOpcional(t.nombre), cuit: (String(t.cuit ?? '').replace(/\D/g, '') || null) }))
@@ -4107,7 +4080,7 @@
         (p.tipo ?? null) === ch.tipo &&
         (p.fecha_emision ?? null) === (esFechaIso(ch.fecha_emision) ? ch.fecha_emision : null) &&
         (p.fecha_pago ?? null) === (ch.tipo === 'comun' ? null : (esFechaIso(ch.fecha_pago) ? ch.fecha_pago : null)) &&
-        Number(p.importe ?? NaN) === Number(parseImporteCobranza(ch.importe) ?? NaN) &&
+        Number(p.importe ?? NaN) === Number(leerNumeroAr(ch.importe) ?? NaN) &&
         (p.beneficiario ?? null) === textoOpcional(ch.beneficiario)
       return igual ? 'ocr' : 'ocr_corregido'
     }
@@ -4202,6 +4175,15 @@
           inp.addEventListener('change', () => { pintarCheques(); pintarTotalYGuardado() })
         })
       }
+      // El importe se ENLAZA antes de conectar su listener: el enlace formatea
+      // el valor en su propio 'input', y así el listener de abajo guarda en el
+      // estado el texto ya formateado. Enlazado al revés, guardaría el crudo
+      // ("12.5003" mientras el campo pasa a "125.003") y leería otro número.
+      // El valor lo escribe ponerNumero(), no el value="" de la plantilla.
+      document.querySelectorAll('[data-importe]').forEach(inp => {
+        enlazarCampoNumero(inp, { decimales: 2 })
+        escribirImporteEnCampo(inp, buscar(inp.dataset.importe)?.importe)
+      })
       conectarTexto('importe', 'importe')
       conectarTexto('letras', 'importe_letras')
       conectarTexto('beneficiario', 'beneficiario')
@@ -4297,7 +4279,7 @@
       if (!f) return 0
       const cheques = f.cheques
         .filter(c => c.confirmado)
-        .reduce((acc, c) => acc + (parseImporteCobranza(c.importe) ?? 0), 0)
+        .reduce((acc, c) => acc + (leerNumeroAr(c.importe) ?? 0), 0)
       return cheques + efectivoDelFormulario()
     }
 
@@ -4306,9 +4288,9 @@
     // esta conversión estuviera repetida, un día una de las copias mandaría
     // null y el insert fallaría con un mensaje que no habla de efectivo.
     function efectivoDelFormulario() {
-      const t = String(estado.form?.efectivo ?? '').trim()
-      if (t === '') return 0
-      return parseImporteCobranza(t) ?? 0
+      const v = estado.form?.efectivo
+      if (v === null || v === undefined || String(v).trim() === '') return 0
+      return leerNumeroAr(v) ?? 0
     }
 
     function motivosParaNoGuardar() {
@@ -4327,7 +4309,7 @@
         motivos.push('Cargá al menos un cheque o un importe en efectivo.')
       }
       const efectivoCrudo = String(f.efectivo ?? '').trim()
-      if (efectivoCrudo !== '' && parseImporteCobranza(efectivoCrudo) === null) {
+      if (efectivoCrudo !== '' && leerNumeroAr(f.efectivo) === null) {
         motivos.push('El efectivo no se entiende. Escribilo así: 12.500,50')
       }
       return motivos
@@ -4686,6 +4668,10 @@
         ['cob-cliente', 'cliente'], ['cob-fecha', 'fecha'], ['cob-efectivo', 'efectivo'],
         ['cob-referencia', 'comprobante_referencia'], ['cob-observaciones', 'observaciones'],
       ]
+      // El efectivo se enlaza ANTES de conectar el listener de abajo, por lo
+      // mismo que el importe de cada cheque: que el estado guarde el texto ya
+      // formateado y no el crudo de la tecla.
+      enlazarCampoNumero(document.getElementById('cob-efectivo'), { decimales: 2 })
       campos.forEach(([id, prop]) => {
         const el = document.getElementById(id)
         el.addEventListener('input', () => {

@@ -19,6 +19,9 @@
 const fs = require('fs')
 const path = require('path')
 const { construirCon } = require('./sandbox')
+// Las funciones de números de js/utils.js (leerNumeroAr, ponerNumero…),
+// con su código REAL: el módulo las importa desde el 21/09/2026.
+const { fuenteNumeros } = require('./numeros-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cobranzas.html')
@@ -35,6 +38,7 @@ function chk(nombre, condicion, detalle) {
 }
 
 const PRELUDIO = `
+  ${fuenteNumeros()}
   var console = { error(){}, log(){}, warn(){} }
   // --- tiempo y timers falsos ----------------------------------------------
   var __ahora = 1000000
@@ -113,6 +117,7 @@ const FUNCIONES = [
   // matchMedia, así que corre siempre como celular.
   'esEscritorio', 'enModoMaestro', 'pintarPanelVacio',
   'chequeVacio', 'chequeDesdeOcr', 'renglonComoImpreso', 'aplicarRenglones',
+  'escribirImporteEnCampo',
 ]
 const CONSTANTES = ['SEGUNDOS_LECTURA_LENTA', 'MS_REINTENTO_FOTOS', 'MAX_INTENTOS_LECTOR', 'MQ_ESCRITORIO']
 
