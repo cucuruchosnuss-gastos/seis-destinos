@@ -182,7 +182,7 @@ if (SOLO !== 'estatico') {
       S.htmlTablaCheques(filas, cobs).includes('class="chq-tabla__fila--salido chq-tabla__fila--destacada"'))
   }
 
-  // ── Los botones de cada fila: quién y cuándo ─────────────────────────────
+  // ── La columna "Salida" (Parte 2): quién, cuándo y qué dice ────────────
   {
     const S = construirCheques(ARCHIVO)
     const cobs = new Map([
@@ -195,22 +195,47 @@ if (SOLO !== 'estatico') {
       { ...base, id: 'k2', cobranza_id: 'reg', numero: '22222222', estado: 'en_cartera' },
       { ...base, id: 'k3', cobranza_id: 'proc', numero: '33333333', estado: 'depositado', salida_fecha: '2026-09-10' },
       { ...base, id: 'k4', cobranza_id: 'proc', numero: '44444444', estado: 'anulado' },
-      { ...base, id: 'k5', cobranza_id: 'reg', numero: '55555555', estado: 'endosado', salida_fecha: '2026-09-10', salida_destino: 'X' },
+      { ...base, id: 'k5', cobranza_id: 'reg', numero: '55555555', estado: 'endosado', salida_fecha: '2026-09-10', salida_destino: marca('sal_destino') },
+      { ...base, id: 'k6', cobranza_id: 'otra-que-no-veo', numero: '66666666', estado: 'en_cartera' },
     ]
-    const filaDe = (html, id) => {
+    // Las celdas de una fila, en orden.
+    const celdas = (html, id) => {
       const i = html.indexOf(`data-cheque-fila="${id}"`)
-      return html.slice(i, html.indexOf('</tr>', i))
+      const tr = html.slice(i, html.indexOf('</tr>', i))
+      return [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(x => x[1].trim())
     }
     const html = S.htmlTablaCheques(filas, cobs)
-    chk('salida: en cartera y cobranza asentada → botón de salida', /data-dar-salida="k1"/.test(filaDe(html, 'k1')))
-    chk('salida: en cartera pero cobranza por controlar → sin botón', !/data-dar-salida|data-volver/.test(filaDe(html, 'k2')))
-    chk('volver: un depositado tiene "Volver a cartera"', /data-volver-cartera="k3"/.test(filaDe(html, 'k3')))
-    chk('volver: un endosado también, aunque su cobranza esté por controlar', /data-volver-cartera="k5"/.test(filaDe(html, 'k5')))
-    chk('salida: un anulado no tiene ningún botón', !/data-dar-salida|data-volver/.test(filaDe(html, 'k4')))
+    const ult = (h, id) => { const c = celdas(h, id); return c[c.length - 1] }
+    const cabecera = html.slice(0, html.indexOf('</thead>'))
+    chk('la última columna se sigue llamando "Salida"', /<th[^>]*>Salida<\/th>\s*<\/tr>/.test(cabecera))
+    chk('en cartera + asentada + permiso → "Dar salida" en la columna Salida',
+      /data-dar-salida="k1"[^>]*>Dar salida<\/button>/.test(ult(html, 'k1')), ult(html, 'k1'))
+    chk('el botón NO va en la columna del número', celdas(html, 'k1')[0] === '11111111', celdas(html, 'k1')[0])
+    chk('ninguna fila tiene botones fuera de la columna Salida',
+      filas.every(f => celdas(html, f.id).slice(0, -1).every(c => !/<button/.test(c))))
+    chk('en cartera + por controlar → el texto chico, sin botón',
+      ult(html, 'k2') === '<span class="chq-salida__nota">Asentá la cobranza para darle salida</span>', ult(html, 'k2'))
+    chk('ya salió → fecha y destino, escapados, y "Volver a cartera"',
+      ult(html, 'k5').includes('10/09/2026 · ' + S.esc(marca('sal_destino'))) && /data-volver-cartera="k5"/.test(ult(html, 'k5')))
+    chequearMarcas('columna Salida', html, ['sal_destino'])
+    chk('un depositado sin destino dice solo la fecha', /title="10\/09\/2026">10\/09\/2026</.test(ult(html, 'k3')), ult(html, 'k3'))
+    chk('un anulado → "—"', ult(html, 'k4') === '—', ult(html, 'k4'))
+    chk('una cobranza que no se ve → "—" (no se ofrece un botón que la RPC va a rechazar)', ult(html, 'k6') === '—', ult(html, 'k6'))
+
     S.estado.misTareas = new Set(['cobranzas:ver_todo'])
-    chk('sin la tarea procesar no hay ningún botón', !/data-dar-salida|data-volver-cartera/.test(S.htmlTablaCheques(filas, cobs)))
+    const sin = S.htmlTablaCheques(filas, cobs)
+    chk('sin permiso: en cartera → "—"', ult(sin, 'k1') === '—' && ult(sin, 'k2') === '—')
+    chk('sin permiso: un salido sigue mostrando fecha y destino, sin el botón',
+      ult(sin, 'k3').includes('10/09/2026') && !/<button/.test(sin))
     S.estado.miRolApp = 'super_admin'
     chk('super_admin ve los botones (bypass, igual que tiene_tarea)', /data-dar-salida="k1"/.test(S.htmlTablaCheques(filas, cobs)))
+
+    // Todas las filas miden lo mismo: el alto sale del CSS, no del contenido.
+    const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+    chk('css: las celdas del cuerpo tienen un alto fijo y centrado', /\.chq-tabla tbody td \{ height: 3\.5rem; vertical-align: middle; \}/.test(css))
+    chk('css: la salida va en UN renglón (fecha · destino con puntos suspensivos)',
+      /\.chq-salida__texto \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/.test(css))
+    chk('css: no queda la regla del botón debajo del número', !/chq-tabla__accion/.test(css))
   }
 
   // ── Tocar un cheque abre su cobranza, con volver= ────────────────────────

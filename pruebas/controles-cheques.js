@@ -21,6 +21,22 @@ const { MOVIDOS } = require('./controles-movidos')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cheques.html')
 
+// RENOMBRADOS: controles que además de mudarse cambiaron de TEXTO o de LUGAR a
+// propósito. Se listan en la salida y se verifica el texto y el lugar nuevos
+// sobre el código real: un cambio que nadie declaró no pasa como mudanza.
+const RENOMBRADOS = [
+  {
+    vieja: 'button[data-salio]{Salió}',
+    nueva: 'button[data-dar-salida]{Dar salida}',
+    lugar: 'de debajo del número (la columna fija) a la columna "Salida"',
+    motivo: 'Parte 2 (22/09/2026): en la columna fija estiraba la fila al doble; la columna Salida mostraba "—".',
+    // El botón existe con ese texto…
+    texto: /data-dar-salida="\$\{esc\(ch\.id\)\}">Dar salida<\/button>/,
+    // …y se dibuja en la celda de la columna Salida, no en la del número.
+    lugarRe: /<td class="chq-tabla__salida">\$\{htmlSalidaCheque\(ch, cob\)\}<\/td>/,
+  },
+]
+
 let ok = 0
 const fallas = []
 function chk(nombre, cond, detalle) {
@@ -46,6 +62,12 @@ try {
     chk(`la clave movida ${vieja} existía en el baseline (si no, la entrada del mapa está mal)`, n > 0)
     const hay = veces(A, m.nueva)
     chk(`${vieja} → está en cheques.html como ${m.nueva}`, hay >= n, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
+  }
+
+  for (const r of RENOMBRADOS) {
+    console.log(`RENOMBRADO: ${r.vieja} → ${r.nueva}, ${r.lugar} (${r.motivo})`)
+    chk(`${r.nueva}: el texto nuevo está en el código`, r.texto.test(actual))
+    chk(`${r.nueva}: y en su lugar nuevo`, r.lugarRe.test(actual))
   }
 
   for (const r of referenciasDelJs(A.referencias)) {

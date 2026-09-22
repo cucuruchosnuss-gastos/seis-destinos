@@ -4,10 +4,10 @@
 
 const SEGURAS_CHEQUES = [
   ['cantidadCartera', 'número: conteo calculado en resumenCartera()'],
-  ['celdaSalida', 'HTML ya escapado: se arma arriba con esc() de la fecha y del destino'],
   ['htmlTablaCheques(estado.filas, estado.cobranzas)', 'HTML armado por htmlTablaCheques(), que escapa adentro'],
   ['htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen)', 'HTML armado por htmlCartera(), que escapa adentro'],
-  ['htmlAccionCheque(ch, cob)', 'HTML armado por htmlAccionCheque(), que escapa adentro'],
+  ['htmlSalidaCheque(ch, cob)', 'HTML armado por htmlSalidaCheque(), que escapa adentro'],
+  ['volver', 'HTML ya escapado: el botón se arma arriba con esc(ch.id), o vacío'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [

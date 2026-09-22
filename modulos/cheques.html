@@ -285,7 +285,30 @@
     .chq-tabla__fila--anulado td { color: var(--color-texto-suave); text-decoration: line-through; }
     /* El cheque que se pidió ver desde una cobranza (?cheque=). */
     .chq-tabla__fila--destacada td { background: var(--naranja-suave); }
-    .chq-tabla__accion { display: block; margin-top: 0.375rem; }
+    /* TODAS LAS FILAS MIDEN LO MISMO (Parte 2): cada celda en un renglón y
+       centrada; el alto sale de acá y no del contenido, así una fila con
+       botón no queda más alta que una sin él. */
+    .chq-tabla tbody td { height: 3.5rem; vertical-align: middle; }
+    .chq-tabla__salida { white-space: nowrap; }
+    .chq-salida { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+    .chq-salida__texto {
+      min-width: 0;
+      max-width: 14rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .chq-salida__nota {
+      display: inline-block;
+      max-width: 12rem;
+      white-space: normal;
+      font-size: 0.75rem;
+      line-height: 1.3;
+      color: var(--color-texto-suave);
+    }
+    /* El botón de la columna: el de la acción principal de la fila. */
+    .chq-btn--salida { border-color: var(--naranja); color: var(--naranja-oscuro); }
 
     /* ── Estado del cheque ───────────────────────────────────────────────── */
     .chq-estado {
@@ -871,42 +894,53 @@
       // Un cheque común no tiene fecha de pago: es "a la vista".
       const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'A la vista'
       const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
-      // El destino lo TIPEA una persona: es texto libre y va escapado.
-      const celdaSalida = salido
-        ? `<span class="chq-tabla__fecha">${esc(formatearFechaCob(ch.salida_fecha))}</span>${
-            ch.salida_destino ? `<div class="chq-tabla__sub chq-tabla__destino">${esc(ch.salida_destino)}</div>` : ''}`
-        : '—'
       const clases = [
         salido ? 'chq-tabla__fila--salido' : ch.estado === 'anulado' ? 'chq-tabla__fila--anulado' : '',
         ch.id === estado.destacado ? 'chq-tabla__fila--destacada' : '',
       ].filter(Boolean).join(' ')
       return `
         <tr class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0">
-          <td>${esc(ch.numero ?? '—')}${htmlAccionCheque(ch, cob)}</td>
+          <td>${esc(ch.numero ?? '—')}</td>
           <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${esc(nombreBanco(ch.banco_codigo))}</td>
           <td class="chq-tabla__fecha">${esc(formatearFechaCob(ch.fecha_emision))}</td>
           <td class="chq-tabla__fecha">${esc(pago)}</td>
           <td class="chq-tabla__num">${esc(formatearImporte(ch.importe))}</td>
           <td class="chq-tabla__texto">${esc(cob?.cliente ?? '—')}</td>
           <td><span class="chq-estado chq-estado--${esc(ch.estado)}">${esc(etiqueta)}</span></td>
-          <td>${celdaSalida}</td>
+          <td class="chq-tabla__salida">${htmlSalidaCheque(ch, cob)}</td>
         </tr>`
     }
 
-    // El botón de la fila. Solo quien tiene `procesar`, que es la tarea que
-    // exigen las dos RPCs. "Dar salida" además solo con la cobranza ASENTADA
-    // (procesada): la RPC lo rechaza en cualquier otro estado, y ofrecerlo
-    // igual sería un botón que siempre falla. "Volver a cartera" no depende
-    // del estado de la cobranza: la RPC tampoco lo pide.
-    function htmlAccionCheque(ch, cob) {
-      if (!puedeProcesar()) return ''
-      if (ch.estado === 'en_cartera' && cob?.estado === 'procesada') {
-        return `<button type="button" class="chq-btn chq-btn--chico chq-tabla__accion" data-dar-salida="${esc(ch.id)}">Salió</button>`
+    // LA COLUMNA "SALIDA" (Parte 2, 22/09/2026). Antes el botón "Salió" iba
+    // debajo del número, en la columna fija, y estiraba la fila al doble. Ahora
+    // todo lo de la salida vive en su columna, en UN renglón, así todas las
+    // filas miden lo mismo:
+    //   - en cartera, cobranza asentada, con `procesar` → botón "Dar salida";
+    //   - en cartera, cobranza por controlar, con `procesar` → el texto chico
+    //     "Asentá la cobranza para darle salida" (la RPC rechaza la salida de
+    //     un cheque de una cobranza sin asentar: un botón ahí siempre fallaría);
+    //   - ya salió → la fecha y el destino, y con `procesar` "Volver a
+    //     cartera" (la RPC no mira el estado de la cobranza). Sin la tarea se
+    //     ven igual la fecha y el destino: es información, no una acción;
+    //   - sin permiso, un anulado o una cobranza que no se ve → "—".
+    function htmlSalidaCheque(ch, cob) {
+      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      if (salido) {
+        // El destino lo TIPEA una persona: es texto libre y va escapado.
+        const texto = [formatearFechaCob(ch.salida_fecha), String(ch.salida_destino ?? '').trim()].filter(Boolean).join(' · ')
+        const volver = puedeProcesar()
+          ? `<button type="button" class="chq-btn chq-btn--chico" data-volver-cartera="${esc(ch.id)}">Volver a cartera</button>`
+          : ''
+        return `<div class="chq-salida"><span class="chq-salida__texto" title="${esc(texto)}">${esc(texto)}</span>${volver}</div>`
       }
-      if (ch.estado === 'depositado' || ch.estado === 'endosado') {
-        return `<button type="button" class="chq-btn chq-btn--chico chq-tabla__accion" data-volver-cartera="${esc(ch.id)}">Volver a cartera</button>`
+      if (ch.estado !== 'en_cartera' || !puedeProcesar()) return '—'
+      if (cob?.estado === 'procesada') {
+        return `<button type="button" class="chq-btn chq-btn--chico chq-btn--salida" data-dar-salida="${esc(ch.id)}">Dar salida</button>`
       }
-      return ''
+      if (cob?.estado === 'registrada') {
+        return '<span class="chq-salida__nota">Asentá la cobranza para darle salida</span>'
+      }
+      return '—'
     }
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -15,7 +15,7 @@ const FUNCIONES = [
   'filtroNumeroCheque', 'aplicarFiltrosCheques', 'hayFiltrosCheques', 'fechaDeCobroCheque',
   'ordenarCheques', 'resumenCartera', 'cargarResumenCheques', 'pintarSelectorBancos',
   'pintarCartera', 'htmlCartera', 'pintarFiltrosCheques', 'limpiarFiltrosCheques',
-  'renderizarCheques', 'htmlTablaCheques', 'htmlFilaCheque', 'htmlAccionCheque',
+  'renderizarCheques', 'htmlTablaCheques', 'htmlFilaCheque', 'htmlSalidaCheque',
   // salida y vuelta a cartera
   'erroresSalida', 'parametrosSalida', 'abrirModalSalida', 'cerrarModalSalida',
   'pintarModalSalida', 'confirmarSalida', 'abrirModalMotivo', 'cerrarModalMotivo',
