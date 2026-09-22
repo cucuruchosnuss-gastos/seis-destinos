@@ -198,6 +198,42 @@ h3 { font-size: 1.0625rem; font-weight: 600; line-height: 1.4; }
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
 }
 
+/* ─── Campos de fecha/hora ────────────────────────────────────────────────── */
+/* En iOS, input[type=date/time/datetime-local] trae un ancho mínimo propio del
+   control nativo y NO se achica: se sale de la tarjeta y desborda la fila. La
+   clave es `appearance: none` + `min-width: 0`, que sueltan ese piso; el resto
+   fija que ocupe el ancho del contenedor sin pasarse. El borde, el alto y la
+   fuente los toma de la regla de campo de cada módulo (su `<style>` carga
+   después de este archivo y gana en empate de especificidad); acá van los
+   valores base para un campo de fecha que ningún módulo llegue a estilar. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.6875rem 0.875rem;
+  border: 1.5px solid var(--color-borde);
+  border-radius: var(--radio-input);
+  background: var(--color-fondo);
+  font-family: var(--fuente);
+  font-size: 0.9375rem;
+  color: var(--color-texto);
+  text-align: left;
+}
+
+/* El valor de la fecha, alineado a la izquierda: sin esto WebKit lo empuja a la
+   derecha y reserva ancho para el hueco, que es parte del desborde en iPhone. */
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 .formulario__acciones {
   margin-top: 0.5rem;
 }
