@@ -767,18 +767,6 @@
     const esAdmin      = ['admin', 'super_admin'].includes(miEmpleado.rol_app)
     const esSuperAdmin  = miEmpleado.rol_app === 'super_admin'
 
-    // Solicitudes de acceso pendientes — solo super_admin puede verlas y
-    // resolverlas (admin ya no gestiona accesos), se muestran como badge
-    // sobre la tarjeta de Accesos.
-    let pendientes = 0
-    if (esSuperAdmin) {
-      const { count } = await supabase
-        .from('solicitudes_acceso')
-        .select('id', { count: 'exact', head: true })
-        .eq('estado', 'pendiente')
-      pendientes = count || 0
-    }
-
     // Módulos habilitados individualmente — solo hace falta consultarlos
     // para no-admin: un admin/super_admin ve todos los módulos que no son
     // soloAdmin/soloSuperAdmin sin restricción (ver filtro de abajo).
@@ -813,9 +801,6 @@
 
     const tarjetas = modulosVisibles.map((modulo) => {
       const colores = COLORES_MODULO[modulo.color]
-      const badge = (modulo.clave === 'accesos' && pendientes > 0)
-        ? `<span class="tarjeta-modulo__badge">${pendientes}</span>`
-        : ''
 
       if (modulo.proximamente) {
         return `
@@ -832,10 +817,9 @@
         `
       }
       return `
-        <a href="${modulo.url}" class="tarjeta-modulo">
+        <a href="${modulo.url}" class="tarjeta-modulo" data-clave="${modulo.clave}">
           <span class="tarjeta-modulo__icono-contenedor" style="background:${colores.bg}; color:${colores.fg};">
             <i data-lucide="${modulo.icono}"></i>
-            ${badge}
           </span>
           <span class="tarjeta-modulo__texto">
             <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
@@ -857,6 +841,99 @@
 
     grilla.innerHTML = tarjetas + placeholder
     lucide.createIcons()
+
+    // ═══ Burbujas de pendientes ═══════════════════════════════════════════
+    // mis_pendientes() devuelve SOLO lo que la persona que mira tiene que
+    // resolver, según sus permisos: filas (modulo, clave, cantidad, texto).
+    // Una llamada al abrir y otra al volver a la pestaña.
+    //
+    // Si la llamada falla NO se muestra ninguna burbuja: nunca un número viejo
+    // o inventado. Un contador que miente es peor que no tener contador.
+    //
+    // Los nombres de módulo de la RPC (guión BAJO, los de empleado_tareas) y
+    // los de MODULOS (guión MEDIO, los de empleado_modulos) son namespaces
+    // distintos: se mapean acá, explícitos. Un módulo que la RPC devuelva y no
+    // esté en este mapa se ignora (y se avisa por consola), no se adivina.
+    const MODULO_DE_PENDIENTE = {
+      cobranzas: 'cobranzas',
+      accesos: 'accesos',
+      materia_prima: 'materia-prima',
+      gastos: 'gastos',
+      cuentas_corrientes: 'cuentas-corrientes',
+      stock: 'stock',
+      caja: 'caja',
+    }
+
+    function escDash(texto) {
+      return String(texto ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    }
+
+    // "Cobranzas por controlar" + 5 → "5 cobranzas por controlar".
+    function textoPendiente(fila) {
+      const t = String(fila.texto ?? '').trim()
+      const frase = t ? t.charAt(0).toLowerCase() + t.slice(1) : 'pendientes'
+      return `${fila.cantidad} ${frase}`
+    }
+
+    // Filas de la RPC → Map(clave de MODULOS → { total, detalle[] }).
+    // Solo cuentan las cantidades enteras y positivas: un null o un texto no
+    // se convierten en un número.
+    function agruparPendientes(filas) {
+      const porModulo = new Map()
+      for (const fila of filas || []) {
+        const clave = MODULO_DE_PENDIENTE[fila?.modulo]
+        if (!clave) { console.warn('mis_pendientes: módulo sin tarjeta', fila?.modulo); continue }
+        const n = typeof fila.cantidad === 'number' ? fila.cantidad : Number(fila.cantidad)
+        if (fila.cantidad === null || fila.cantidad === undefined || fila.cantidad === '' || !Number.isInteger(n) || n <= 0) continue
+        const actual = porModulo.get(clave) || { total: 0, detalle: [] }
+        actual.total += n
+        actual.detalle.push(textoPendiente({ ...fila, cantidad: n }))
+        porModulo.set(clave, actual)
+      }
+      return porModulo
+    }
+
+    function htmlBurbuja(p) {
+      if (!p || !(p.total > 0)) return ''
+      const detalle = escDash(p.detalle.join(' · '))
+      const numero = p.total > 99 ? '99+' : String(p.total)
+      return `<span class="tarjeta-modulo__burbuja" title="${detalle}" aria-label="${detalle}">${numero}</span>`
+    }
+
+    // Saca TODAS las burbujas y pone las nuevas. Con null (la llamada falló)
+    // solo las saca.
+    function pintarBurbujas(porModulo) {
+      document.querySelectorAll('.tarjeta-modulo__burbuja').forEach(b => b.remove())
+      if (!porModulo) return
+      document.querySelectorAll('.tarjeta-modulo[data-clave]').forEach(tarjeta => {
+        const html = htmlBurbuja(porModulo.get(tarjeta.dataset.clave))
+        if (html) tarjeta.insertAdjacentHTML('beforeend', html)
+      })
+    }
+
+    // Un turno por llamada: la respuesta de una llamada vieja no pisa la nueva.
+    let turnoPendientes = 0
+    async function cargarPendientes() {
+      const turno = ++turnoPendientes
+      let porModulo = null
+      try {
+        const { data, error } = await supabase.rpc('mis_pendientes')
+        if (error) throw error
+        porModulo = agruparPendientes(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error('mis_pendientes:', err)
+        porModulo = null
+      }
+      if (turno !== turnoPendientes) return
+      pintarBurbujas(porModulo)
+    }
+
+    cargarPendientes()
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') cargarPendientes()
+    })
   </script>
 
 </body>
