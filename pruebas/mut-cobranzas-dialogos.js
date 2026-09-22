@@ -31,7 +31,10 @@ correrMutaciones({
     { nombre: 'Escape no hace nada',
       de: "      if (ev.key === 'Escape') {", a: "      if (ev.key === 'Esc_no') {" },
     { nombre: 'Cancelar de la foto elige la primera (0 en vez de null)',
-      de: "addEventListener('click', () => cerrarDialogo(null))", a: "addEventListener('click', () => cerrarDialogo(0))" },
+      // Anclado al id: desde el 22/09/2026 el diálogo de la unidad tiene su
+      // propio "Cancelar" con el mismo listener.
+      de: "getElementById('cob-dlg-foto-cancelar').addEventListener('click', () => cerrarDialogo(null))",
+      a: "getElementById('cob-dlg-foto-cancelar').addEventListener('click', () => cerrarDialogo(0))" },
     { nombre: 'el diálogo de la foto cancela con 0 (Escape elige la foto 1)',
       de: "const respuesta = abrirDialogo('cob-dialogo-foto', null)", a: "const respuesta = abrirDialogo('cob-dialogo-foto', 0)" },
     // ── Foco ────────────────────────────────────────────────────────────────

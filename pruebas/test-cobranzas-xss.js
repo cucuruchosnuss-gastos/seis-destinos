@@ -833,6 +833,8 @@ if (SOLO !== 'render') {
   // clasificar.js, CADA UNA CON SU MOTIVO (22/09/2026).
   const SEGURAS_LOCALES = new Map([
     ['htmlLinkChequeEnCartera(ch)', 'HTML armado por htmlLinkChequeEnCartera(): literal del código + encodeURIComponent(ch.id) entre comillas dobles'],
+    ['botonUnidad', 'HTML armado en htmlDetalle(): un <button> con textos literales del código ("Cambiar" / "Asignar unidad")'],
+    ['filaUnidad', 'HTML armado en htmlDetalle(): literales del código + escCob(c.unidad_negocio_nombre) + botonUnidad'],
   ])
   const malas = []
   for (const x of aRevisar) {

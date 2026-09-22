@@ -47,8 +47,8 @@ correrMutaciones({
       de: "{ id: 'procesada', nombre: 'Asentadas' },", a: "{ id: 'asentada', nombre: 'Asentadas' }," },
     { nombre: 'el segmento manda "por_controlar" (la base no lo conoce)',
       de: "{ id: 'registrada', nombre: 'Por controlar' },", a: "{ id: 'por_controlar', nombre: 'Por controlar' }," },
-    { nombre: 'asentar llama a una RPC que no existe',
-      de: "accionSimple('marcar_cobranza_procesada',", a: "accionSimple('marcar_cobranza_asentada'," },
+    { nombre: 'asentar vuelve a la RPC vieja, sin unidad (22/09/2026)',
+      de: "accionSimple('marcar_cobranza_asentada',", a: "accionSimple('marcar_cobranza_procesada'," },
     // "Salió" se mudó a cheques.html (22/09/2026): su mutación vive allá.
     { nombre: 'el detalle vuelve a tener un botón de salida',
       de: '            ${htmlLinkChequeEnCartera(ch)}\n', a: '            ${htmlLinkChequeEnCartera(ch)}<button type="button" data-salio="${escCob(ch.id)}">Salió</button>\n' },

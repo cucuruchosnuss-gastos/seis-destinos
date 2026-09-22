@@ -108,6 +108,9 @@ const PRELUDIO = `
   async function abrirDetalle(){ __llamadas.abrirDetalle++ }
   function renderizarListado(){}
   async function urlDeFoto(){ return null } function abrirVisor(){}
+  // El diálogo de la unidad (test-cobranzas-unidad.js lo ejecuta de verdad):
+  // acá responde siempre la misma unidad.
+  async function elegirUnidadConDialogo(){ return 'u-elegida' }
   var turnoResumen = 0
 
   var estado = {
@@ -128,6 +131,9 @@ const FUNCIONES = [
   'renderizarChipsEstado', 'htmlFilaCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
   'htmlChequeDetalle', 'htmlDatosCheque', 'textoDiasHastaPago', 'textoSalidaCheque', 'textoHistorialCheque',
   'resumirCambios', 'htmlLinkChequeEnCartera', 'conectarDetalle', 'accionSimple',
+  // Asentar pide la unidad (22/09/2026): el diálogo va stubeado en el
+  // preludio; lo prueba de verdad test-cobranzas-unidad.js.
+  'asentarConUnidad',
   // cabecera
   'parametrosResumen', 'cargarResumen', 'pintarResumen', 'numeroDeResumen', 'htmlResumen',
   'cargarCobranzas', 'refrescarListado',
@@ -228,8 +234,11 @@ async function pruebas() {
     await btn.__clicks[0]()
     await esperar()
     const rpcAsentar = S.__rpcs().find(r => r.nombre !== 'resumen_cobranzas')
-    chk('asentar: llama a marcar_cobranza_procesada (la base no conoce "asentada") con p_id',
-      rpcAsentar && rpcAsentar.nombre === 'marcar_cobranza_procesada' && rpcAsentar.params.p_id === 'c1', JSON.stringify(S.__rpcs()))
+    // Desde el 22/09/2026 asentar pide la unidad de negocio y llama a
+    // marcar_cobranza_asentada (que adentro llama a marcar_cobranza_procesada).
+    chk('asentar: llama a marcar_cobranza_asentada con p_id y la unidad elegida',
+      rpcAsentar && rpcAsentar.nombre === 'marcar_cobranza_asentada' && rpcAsentar.params.p_id === 'c1' &&
+      rpcAsentar.params.p_unidad_negocio_id === 'u-elegida', JSON.stringify(S.__rpcs()))
     chk('asentar: el mensaje dice "Cobranza asentada."', S.__llamadas.exitos.includes('Cobranza asentada.'), JSON.stringify(S.__llamadas.exitos))
     chk('asentar: después se recalculan las cifras de cabecera',
       S.__rpcs().some(r => r.nombre === 'resumen_cobranzas'), JSON.stringify(S.__rpcs().map(r => r.nombre)))

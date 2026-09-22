@@ -1288,6 +1288,24 @@
     </div>
   </div>
 
+  <!-- La unidad de negocio de una cobranza: se elige AL ASENTAR (el repartidor
+       no sabe de qué unidad es la plata) y se puede corregir después.
+       Mismo patrón que los dos de arriba (abrirDialogo). -->
+  <div class="cob-modal" id="cob-dialogo-unidad" hidden role="dialog" aria-modal="true" aria-labelledby="cob-dlg-unidad-titulo">
+    <div class="cob-modal__caja">
+      <div class="cob-modal__titulo" id="cob-dlg-unidad-titulo">¿De qué unidad de negocio es esta cobranza?</div>
+      <div class="cob-campo__ayuda" id="cob-dlg-unidad-texto" style="margin:-.25rem 0 .875rem"></div>
+      <div class="cob-campo">
+        <label for="cob-dlg-unidad-select">Unidad de negocio</label>
+        <select id="cob-dlg-unidad-select"></select>
+      </div>
+      <div class="cob-acciones">
+        <button type="button" class="cob-btn" id="cob-dlg-unidad-cancelar">Cancelar</button>
+        <button type="button" class="cob-btn cob-btn--primario" id="cob-dlg-unidad-si">Asentar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { mostrarError, mostrarExito, leerNumeroAr, enlazarCampoNumero, ponerNumero } from '../js/utils.js'
@@ -1318,6 +1336,10 @@
       // se vean sin señal.
       bancos: new Map(),
       repartidores: [],
+      // Las unidades de negocio ([{ id, nombre, activo }]), para el diálogo de
+      // asentar y para leer el historial. Todas, activas o no: una unidad dada
+      // de baja igual tiene que poder nombrarse en una cobranza vieja.
+      unidades: [],
 
       // Listado
       cobranzas: [],
@@ -1620,6 +1642,45 @@
       }
     }
 
+    // Las unidades de negocio. La policy de SELECT de unidades_negocio es
+    // USING (true) para cualquier autenticado, así que llegan las cuatro. Se
+    // traen TODAS (también las inactivas) para poder nombrarlas en el
+    // historial; el diálogo ofrece solo las activas (unidadesParaElegir).
+    // Devuelve true si llegaron.
+    async function cargarUnidades() {
+      try {
+        const { data, error } = await supabase
+          .from('unidades_negocio').select('id, nombre, activo').order('nombre')
+        if (error) throw error
+        estado.unidades = data ?? []
+        return true
+      } catch (err) {
+        console.error('No se pudieron cargar las unidades de negocio:', err)
+        return false
+      }
+    }
+
+    // Una sola carga en vuelo: el init la lanza y el diálogo la espera si
+    // alguien toca "asentar" antes de que llegue. Si falló, el próximo pedido
+    // vuelve a intentar.
+    let promesaUnidades = null
+    function asegurarUnidades() {
+      if (!promesaUnidades) {
+        promesaUnidades = cargarUnidades().then(ok => {
+          if (!ok) promesaUnidades = null
+          return estado.unidades
+        })
+      }
+      return promesaUnidades
+    }
+
+    // Las que se pueden ELEGIR: las activas, más la que la cobranza ya tiene
+    // aunque se haya dado de baja (si no, "Cambiar" mostraría un select que
+    // no contiene el valor actual).
+    function unidadesParaElegir(unidades, actual) {
+      return (unidades ?? []).filter(u => u.activo !== false || u.id === actual)
+    }
+
     // Las opciones del filtro salen de la tabla de personas, NUNCA de las
     // cobranzas ya filtradas: con un filtro de fecha puesto desaparecerían
     // repartidores del selector sin que nada lo avise.
@@ -1918,6 +1979,9 @@
       if (cantidad > 0) partes.push(`<span class="cob-fila__cheques">${escCob(textoCheques)}</span>`)
       if (efectivo > 0) partes.push(`<span>${escCob(textoEfectivo)}</span>`)
       if (!partes.length) partes.push('<span>Sin cheques ni efectivo</span>')
+      // La unidad, solo en la asentada que la tiene: va en la misma línea
+      // chica, que ya es texto corrido y se parte sola en dos renglones.
+      if (c.estado === 'procesada' && c.unidad_negocio_nombre) partes.push(`<span class="cob-fila__unidad">${escCob(c.unidad_negocio_nombre)}</span>`)
 
       // La fecha de la cobranza es cuándo se COBRÓ; created_at es cuándo se
       // cargó. Se muestran juntas solo si difieren: en el caso normal —se carga
@@ -2319,6 +2383,22 @@
       document.getElementById('cob-dlg-confirmar-no').addEventListener('click', () => cerrarDialogo(false))
       document.getElementById('cob-dlg-confirmar-si').addEventListener('click', () => cerrarDialogo(true))
       document.getElementById('cob-dlg-foto-cancelar').addEventListener('click', () => cerrarDialogo(null))
+      // El de la unidad: "Cancelar" = null; confirmar devuelve el id elegido.
+      // Con el botón deshabilitado el clic no llega, pero la guarda de abajo
+      // queda igual como red: sin unidad elegida no se resuelve nada.
+      const selUnidad = document.getElementById('cob-dlg-unidad-select')
+      selUnidad.addEventListener('change', pintarBotonUnidad)
+      document.getElementById('cob-dlg-unidad-cancelar').addEventListener('click', () => cerrarDialogo(null))
+      document.getElementById('cob-dlg-unidad-si').addEventListener('click', () => {
+        if (!selUnidad.value) return
+        cerrarDialogo(selUnidad.value)
+      })
+    }
+
+    // Confirmar queda deshabilitado —desde JS— hasta que haya una unidad
+    // elegida.
+    function pintarBotonUnidad() {
+      document.getElementById('cob-dlg-unidad-si').disabled = !document.getElementById('cob-dlg-unidad-select').value
     }
 
     // El reemplazo de window.confirm: resuelve true con "sí" y false con
@@ -2358,6 +2438,59 @@
         }
       })
       return respuesta
+    }
+
+    // Pide la unidad de negocio: resuelve con el id elegido, o null si se
+    // cancela (Cancelar o Escape) o si no hay unidades para elegir. No
+    // preselecciona nada, salvo la unidad que la cobranza ya tiene ("Cambiar")
+    // o la única que haya: con una sola, preguntar sería ruido.
+    async function elegirUnidadConDialogo({ titulo, texto, textoSi, actual }) {
+      const opciones = unidadesParaElegir(await asegurarUnidades(), actual)
+      if (!opciones.length) {
+        mostrarError('No se pudo cargar la lista de unidades de negocio. Revisá la señal y volvé a intentar.')
+        return null
+      }
+      const elegida = opciones.length === 1
+        ? opciones[0].id
+        : (opciones.some(u => u.id === actual) ? actual : '')
+      const sel = document.getElementById('cob-dlg-unidad-select')
+      // Se puebla ANTES de asignar el value: sobre un select vacío la
+      // asignación no engancha.
+      sel.innerHTML = (opciones.length === 1 ? '' : '<option value="">Elegí una unidad…</option>') +
+        opciones.map(u => `<option value="${escCob(u.id)}">${escCob(u.nombre)}</option>`).join('')
+      sel.value = elegida
+      document.getElementById('cob-dlg-unidad-titulo').textContent = titulo
+      document.getElementById('cob-dlg-unidad-texto').textContent = texto
+      document.getElementById('cob-dlg-unidad-si').textContent = textoSi
+      pintarBotonUnidad()
+      return abrirDialogo('cob-dialogo-unidad', null)
+    }
+
+    // "Controlada, asentar": se asienta CON la unidad, en una sola llamada
+    // (marcar_cobranza_asentada). Ya no se usa marcar_cobranza_procesada.
+    async function asentarConUnidad(c) {
+      const unidad = await elegirUnidadConDialogo({
+        titulo: '¿De qué unidad de negocio es esta cobranza?',
+        texto: 'Se asienta con esa unidad. Si te equivocás, se puede cambiar después.',
+        textoSi: 'Asentar',
+        actual: c.unidad_negocio_id ?? null,
+      })
+      if (!unidad) return
+      await accionSimple('marcar_cobranza_asentada', { p_id: c.id, p_unidad_negocio_id: unidad }, 'Cobranza asentada.')
+    }
+
+    // "Asignar unidad" / "Cambiar" sobre una cobranza ya asentada. Elegir la
+    // misma que ya tiene no llama a nada: no hay nada que cambiar.
+    async function asignarUnidad(c) {
+      const actual = c.unidad_negocio_id ?? null
+      const unidad = await elegirUnidadConDialogo({
+        titulo: actual ? 'Cambiar la unidad de negocio' : 'Asignar la unidad de negocio',
+        texto: 'El cambio queda en el historial de la cobranza.',
+        textoSi: 'Guardar',
+        actual,
+      })
+      if (!unidad || unidad === actual) return
+      await accionSimple('asignar_unidad_cobranza', { p_id: c.id, p_unidad_negocio_id: unidad }, 'Unidad de negocio guardada.')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2455,6 +2588,25 @@
       if (c.procesada_por_nombre) datos.push(['Asentada por', c.procesada_por_nombre])
       if (c.anulada_por_nombre) datos.push(['Anulada por', c.anulada_por_nombre])
 
+      // La unidad de negocio se decide AL ASENTAR. Se muestra si la cobranza
+      // la tiene (en cualquier estado) o si está asentada sin ella ("Sin
+      // unidad", en gris). Asignarla o cambiarla pide `procesar`, y la base
+      // solo lo deja sobre una asentada. Estilos en línea a propósito: el CSS
+      // de abajo de 1100px está fijado contra un baseline
+      // (test-cobranzas-escritorio.js).
+      const asentada = c.estado === 'procesada'
+      const tieneUnidad = !!c.unidad_negocio_id
+      const botonUnidad = asentada && puedeProcesar()
+        ? ` <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-unidad" style="min-height:44px;margin-left:.5rem${tieneUnidad ? ';font-weight:500' : ''}">${tieneUnidad ? 'Cambiar' : 'Asignar unidad'}</button>`
+        : ''
+      const filaUnidad = tieneUnidad || asentada ? `
+            <div class="cob-dato" style="align-items:center">
+              <span class="cob-dato__k">Unidad de negocio</span>
+              <span class="cob-dato__v">${tieneUnidad
+                ? escCob(c.unidad_negocio_nombre || 'unidad desconocida')
+                : '<span style="color:var(--color-texto-suave);font-weight:500" data-sin-unidad>Sin unidad</span>'}${botonUnidad}</span>
+            </div>` : ''
+
       const cabecera = `
         <div class="cob-seccion">
           <div class="cob-fila__linea">
@@ -2469,6 +2621,7 @@
                 <span class="cob-dato__k">${escCob(k)}</span>
                 <span class="cob-dato__v">${escCob(v)}</span>
               </div>`).join('')}
+            ${filaUnidad}
           </div>
         </div>`
 
@@ -2626,10 +2779,16 @@
       }
       return filas.map(h => {
         const quien = nombres.get(h.empleado_id) ?? 'alguien'
+        // 'unidad_asignada' nombra la unidad NUEVA, resuelta desde su id
+        // contra el catálogo (estado.unidades).
+        const idUnidad = h.accion === 'unidad_asignada' ? (h.despues?.unidad_negocio_id ?? null) : null
+        const titulo = h.accion === 'unidad_asignada'
+          ? `Unidad asignada: ${(estado.unidades ?? []).find(u => u.id === idUnidad)?.nombre ?? 'unidad desconocida'}`
+          : (ETIQUETA[h.accion] ?? h.accion)
         const cambios = h.accion === 'edicion' ? resumirCambios(h.antes, h.despues) : []
         return `
           <div class="cob-hist__item">
-            <div class="cob-hist__linea">${escCob(ETIQUETA[h.accion] ?? h.accion)} · ${escCob(quien)} · ${escCob(momentoArgentina(h.created_at))}</div>
+            <div class="cob-hist__linea">${escCob(titulo)} · ${escCob(quien)} · ${escCob(momentoArgentina(h.created_at))}</div>
             ${h.accion === 'cheque_salida' || h.accion === 'cheque_vuelve_cartera'
               ? `<div class="cob-hist__detalle">${escCob(textoHistorialCheque(h))}</div>` : ''}
             ${h.motivo ? `<div class="cob-hist__detalle">Motivo: ${escCob(h.motivo)}</div>` : ''}
@@ -2737,7 +2896,10 @@
       if (btnEditar) btnEditar.addEventListener('click', () => abrirFormularioEdicion(c.id))
 
       const btnProcesar = document.getElementById('cob-btn-procesar')
-      if (btnProcesar) btnProcesar.addEventListener('click', () => accionSimple('marcar_cobranza_procesada', { p_id: c.id }, 'Cobranza asentada.'))
+      if (btnProcesar) btnProcesar.addEventListener('click', () => asentarConUnidad(c))
+
+      const btnUnidad = document.getElementById('cob-btn-unidad')
+      if (btnUnidad) btnUnidad.addEventListener('click', () => asignarUnidad(c))
 
       const btnReabrir = document.getElementById('cob-btn-reabrir')
       if (btnReabrir) btnReabrir.addEventListener('click', () => abrirModalMotivo({
@@ -4354,6 +4516,11 @@
       const link = leerLinkDirecto(location.search, location.href)
       if (link) abrirLinkDirecto(link)
 
+      // Si el link directo ya dibujó el detalle, se redibuja cuando llegan
+      // las unidades: el historial nombra la unidad a partir de su id.
+      asegurarUnidades().then(() => {
+        if (estado.detalle?.historial?.some(h => h.accion === 'unidad_asignada')) renderizarDetalle()
+      })
       await Promise.all([cargarBancos(), cargarRepartidores()])
       await Promise.all([refrescarListado(), refrescarLocales()])
       sincronizar()

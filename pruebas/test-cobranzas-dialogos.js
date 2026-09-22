@@ -120,6 +120,8 @@ const FUNCIONES = [
   'enfocablesDe', 'teclaEnDialogo', 'abrirDialogo', 'cerrarDialogo',
   'confirmarConDialogo', 'elegirFotoConDialogo', 'agregarChequeAMano',
   'descartarBorradorLocal', 'chequeVacio', 'conectarDialogos',
+  // conectarDialogos cablea también el diálogo de la unidad (22/09/2026).
+  'pintarBotonUnidad',
 ]
 
 function nuevo() {
