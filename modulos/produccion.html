@@ -97,6 +97,39 @@
       color: var(--color-texto); font-size: 1.05rem;
     }
     .pr-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+
+    /* ── Grillas de botones grandes (modo, unidad, "¿Quién sos?") ─────── */
+    .pr-grilla {
+      display: grid; gap: 0.875rem;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    }
+    .pr-opcion {
+      min-height: 88px; padding: 1rem; font: inherit; font-size: 1.3rem; font-weight: 700;
+      text-align: left; border-radius: var(--radio-tarjeta); cursor: pointer;
+      border: 2px solid var(--borde-tarjeta); background: var(--color-fondo); color: var(--color-texto);
+      box-shadow: var(--sombra-tarjeta); display: flex; flex-direction: column; justify-content: center; gap: 0.25rem;
+      overflow-wrap: anywhere; touch-action: manipulation;
+    }
+    .pr-opcion:focus-visible, .pr-btn:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+    .pr-opcion__detalle { font-size: 1rem; font-weight: 500; color: var(--pr-texto-secundario); }
+    .pr-opcion--modo { min-height: 120px; border-color: var(--azul); }
+    .pr-opcion--modo .pr-opcion__titulo { color: var(--azul-oscuro); font-size: 1.45rem; }
+
+    /* La persona que está usando la tablet, siempre a la vista. */
+    .pr-persona {
+      display: inline-flex; align-items: center; min-height: var(--pr-alto-boton); padding: 0 1rem;
+      border-radius: var(--radio-boton); background: var(--azul-suave); color: var(--azul-oscuro);
+      font-weight: 700; overflow-wrap: anywhere;
+    }
+
+    /* El menú de la tablet: un panel que se despliega bajo la cabecera. */
+    .pr-menu { display: grid; gap: 0.625rem; }
+    .pr-menu .pr-btn { justify-content: flex-start; }
+
+    @media (max-width: 600px) {
+      .pr-header__acciones { width: 100%; }
+      .pr-header__acciones .pr-btn, .pr-header__acciones .pr-persona { flex: 1 1 auto; }
+    }
   </style>
 </head>
 
@@ -110,8 +143,20 @@
         <span class="pr-header__titulo">Producción <span class="pr-header__punto">&#9679;</span> <span id="pr-header-seccion">Tablet</span></span>
         <span class="pr-header__contexto" id="pr-header-contexto"></span>
       </div>
-      <div class="pr-header__acciones" id="pr-header-acciones"></div>
+      <div class="pr-header__acciones" id="pr-header-acciones">
+        <span class="pr-persona" id="pr-persona-actual" hidden></span>
+        <!-- Siempre visible mientras haya alguien elegido: en la fábrica la
+             tablet pasa de mano en mano y no hay contraseña en esta versión. -->
+        <button type="button" class="pr-btn" id="pr-btn-cambiar-persona" hidden>Cambiar de persona</button>
+        <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-menu" aria-expanded="false" aria-controls="pr-menu" hidden>Menú</button>
+      </div>
     </header>
+
+    <nav class="pr-tarjeta pr-menu" id="pr-menu" hidden aria-label="Menú de la tablet">
+      <button type="button" class="pr-btn pr-btn--secundario" data-menu="modo">Cambiar el modo de esta tablet</button>
+      <button type="button" class="pr-btn pr-btn--secundario" data-menu="unidad" id="pr-menu-unidad">Cambiar de unidad</button>
+      <a class="pr-btn pr-btn--secundario" href="../dashboard.html" id="pr-menu-dashboard">Volver al inicio de la app</a>
+    </nav>
 
     <!-- Sin ninguna de las tres tareas no hay nada que mostrar: se dice y se
          vuelve al dashboard. El frontend solo oculta: la barrera real son las
@@ -123,6 +168,36 @@
       <section class="pr-tarjeta" id="pr-inicio">
         <h1 class="pr-titulo">Producción</h1>
         <p class="pr-texto-suave" id="pr-inicio-texto"></p>
+      </section>
+
+      <!-- B2: la unidad, si la cuenta puede cargar en más de una. Se elige una
+           vez y se recuerda en esta tablet. -->
+      <section class="pr-tarjeta" id="pr-elegir-unidad" hidden>
+        <h1 class="pr-titulo">¿En qué fábrica está esta tablet?</h1>
+        <div class="pr-grilla" id="pr-unidades"></div>
+      </section>
+
+      <!-- B2: el modo del equipo. Se recuerda en esta tablet y se cambia desde
+           el menú. -->
+      <section class="pr-tarjeta" id="pr-elegir-modo" hidden>
+        <h1 class="pr-titulo">¿Para qué se usa esta tablet?</h1>
+        <div class="pr-grilla">
+          <button type="button" class="pr-opcion pr-opcion--modo" data-modo="produccion">
+            <span class="pr-opcion__titulo">Producción (encargado)</span>
+            <span class="pr-opcion__detalle">Abrir y cerrar turnos, paradas y lo producido</span>
+          </button>
+          <button type="button" class="pr-opcion pr-opcion--modo" data-modo="masa">
+            <span class="pr-opcion__titulo">Sala de masa (masero)</span>
+            <span class="pr-opcion__detalle">Registrar las masas de las máquinas abiertas</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- B2: "¿Quién sos?". Cada vez que alguien empieza a usar la tablet. -->
+      <section class="pr-tarjeta" id="pr-quien" hidden>
+        <h1 class="pr-titulo">¿Quién sos?</h1>
+        <div id="pr-quien-aviso"></div>
+        <div class="pr-grilla" id="pr-quien-lista"></div>
       </section>
     </main>
   </div>
@@ -147,6 +222,12 @@
       misTareas: new Map(),
       // Todas las unidades activas: id → nombre.
       unidades: new Map(),
+      // La tablet: en qué unidad está, en qué modo, y quién la está usando.
+      unidadId: null,
+      unidadesPosibles: [],
+      modo: null,          // 'produccion' | 'masa'
+      persona: null,       // { id, nombre }
+      personal: [],        // lo que devuelve personal_produccion
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -189,6 +270,227 @@
       if (alcance && alcance.todas === true) return activas
       const lista = Array.isArray(alcance?.unidades) ? alcance.unidades.map(String) : []
       return activas.filter(id => lista.includes(id))
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PREFERENCIAS DE ESTA TABLET (localStorage, siempre con try/catch)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const CLAVE_MODO = 'produccion.modo'
+    const CLAVE_UNIDAD = 'produccion.unidad'
+
+    // Qué puesto responde "¿Quién sos?" en cada modo.
+    const PUESTO_DE_MODO = { produccion: 'encargado', masa: 'masero' }
+    const TITULO_DE_MODO = { produccion: 'Producción', masa: 'Sala de masa' }
+    const PLURAL_PUESTO = { encargado: 'encargados', masero: 'maseros', operario: 'operarios' }
+
+    // En un navegador privado, sin espacio o con el sitio bloqueado,
+    // localStorage puede tirar: la tablet sigue andando, solo que no recuerda.
+    function leerPreferencia(clave) {
+      try { return localStorage.getItem(clave) } catch { return null }
+    }
+    function guardarPreferencia(clave, valor) {
+      try {
+        if (valor == null) localStorage.removeItem(clave)
+        else localStorage.setItem(clave, valor)
+      } catch { /* sin memoria: se vuelve a preguntar la próxima vez */ }
+    }
+
+    function modoGuardado() {
+      const m = leerPreferencia(CLAVE_MODO)
+      return Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, m ?? '') ? m : null
+    }
+
+    // Con una sola unidad posible no se pregunta nada. Con varias, la que se
+    // eligió antes en esta tablet si todavía es posible; si no, hay que elegir.
+    function unidadInicial(candidatas, guardada) {
+      if (candidatas.length === 1) return candidatas[0]
+      if (guardada && candidatas.includes(guardada)) return guardada
+      return null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // "¿QUIÉN SOS?"
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Las personas que pueden responder para un puesto. Si la unidad tiene a
+    // alguien con ese puesto, SOLO esas (la base exige lo mismo: abrir_turnos
+    // rechaza a quien no figure como encargado y registrar_masa a quien no
+    // figure como masero, cuando la unidad los tiene configurados). Si nadie
+    // tiene el puesto, todo el personal activo, con un aviso.
+    function personasParaPuesto(personal, puesto) {
+      const lista = Array.isArray(personal) ? personal : []
+      const conPuesto = lista.filter(p => Array.isArray(p.puestos) && p.puestos.includes(puesto))
+      if (conPuesto.length) return { personas: conPuesto, sinConfigurar: false }
+      return { personas: lista, sinConfigurar: true }
+    }
+
+    function htmlBotonPersona(p) {
+      const otra = p.misma_unidad === false ? '<span class="pr-opcion__detalle">De otra unidad</span>' : ''
+      return `<button type="button" class="pr-opcion" data-persona="${esc(p.id)}"><span>${esc(p.nombre)}</span>${otra}</button>`
+    }
+
+    function htmlAvisoPuestos(sinConfigurar, puesto) {
+      if (!sinConfigurar) return ''
+      return `<div class="pr-aviso">Esta unidad todavía no tiene ${esc(PLURAL_PUESTO[puesto] ?? puesto)} configurados, así que aparece todo el personal. Pedí que los carguen en Configuración → Personal.</div>`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NAVEGACIÓN
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien']
+
+    function mostrarVista(id) {
+      for (const v of VISTAS) document.getElementById(v).hidden = v !== id
+      cerrarMenu()
+      pintarCabecera()
+      if (window.scrollTo) window.scrollTo(0, 0)
+    }
+
+    function pintarCabecera() {
+      const partes = []
+      if (estado.unidadId) partes.push(estado.unidades.get(estado.unidadId) ?? 'Unidad')
+      if (estado.modo) partes.push(TITULO_DE_MODO[estado.modo])
+      document.getElementById('pr-header-contexto').textContent = partes.join(' · ')
+      document.getElementById('pr-header-seccion').textContent = estado.modo ? TITULO_DE_MODO[estado.modo] : 'Tablet'
+      const chip = document.getElementById('pr-persona-actual')
+      chip.textContent = estado.persona ? estado.persona.nombre : ''
+      chip.hidden = !estado.persona
+      document.getElementById('pr-btn-cambiar-persona').hidden = !estado.persona
+      document.getElementById('pr-btn-menu').hidden = !tieneTarea('cargar')
+      document.getElementById('pr-menu-unidad').hidden = estado.unidadesPosibles.length < 2
+    }
+
+    function cerrarMenu() {
+      document.getElementById('pr-menu').hidden = true
+      document.getElementById('pr-btn-menu').setAttribute('aria-expanded', 'false')
+    }
+
+    function alternarMenu() {
+      const menu = document.getElementById('pr-menu')
+      menu.hidden = !menu.hidden
+      document.getElementById('pr-btn-menu').setAttribute('aria-expanded', menu.hidden ? 'false' : 'true')
+    }
+
+    // El orden de las preguntas: unidad → modo → persona → el modo.
+    function siguientePaso() {
+      if (!estado.unidadId) return mostrarElegirUnidad()
+      if (!estado.modo) return mostrarVista('pr-elegir-modo')
+      if (!estado.persona) return mostrarQuien()
+      return entrarAlModo()
+    }
+
+    function mostrarElegirUnidad() {
+      document.getElementById('pr-unidades').innerHTML = estado.unidadesPosibles
+        .map(id => `<button type="button" class="pr-opcion" data-unidad="${esc(id)}">${esc(estado.unidades.get(id) ?? id)}</button>`)
+        .join('')
+      mostrarVista('pr-elegir-unidad')
+    }
+
+    function elegirUnidad(id) {
+      if (!estado.unidadesPosibles.includes(id)) return
+      estado.unidadId = id
+      estado.persona = null
+      guardarPreferencia(CLAVE_UNIDAD, id)
+      siguientePaso()
+    }
+
+    function elegirModo(modo) {
+      if (!Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo)) return
+      estado.modo = modo
+      // Cambiar de modo cambia quién puede responder "¿Quién sos?".
+      estado.persona = null
+      guardarPreferencia(CLAVE_MODO, modo)
+      siguientePaso()
+    }
+
+    async function mostrarQuien() {
+      const lista = document.getElementById('pr-quien-lista')
+      const aviso = document.getElementById('pr-quien-aviso')
+      lista.innerHTML = '<p class="pr-texto-suave">Cargando el personal…</p>'
+      aviso.innerHTML = ''
+      mostrarVista('pr-quien')
+      try {
+        const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: estado.unidadId })
+        if (error) throw error
+        estado.personal = data ?? []
+      } catch (err) {
+        console.error('personal_produccion:', err)
+        lista.innerHTML = '<button type="button" class="pr-btn" id="pr-quien-reintentar">Reintentar</button>'
+        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo cargar el personal. Revisá la conexión.</div>'
+        return
+      }
+      const puesto = PUESTO_DE_MODO[estado.modo]
+      const { personas, sinConfigurar } = personasParaPuesto(estado.personal, puesto)
+      aviso.innerHTML = htmlAvisoPuestos(sinConfigurar, puesto)
+      lista.innerHTML = personas.length
+        ? personas.map(htmlBotonPersona).join('')
+        : '<p class="pr-texto-suave">No hay personal activo para elegir.</p>'
+    }
+
+    function elegirPersona(id) {
+      const p = estado.personal.find(x => x.id === id)
+      if (!p) return
+      estado.persona = { id: p.id, nombre: p.nombre }
+      siguientePaso()
+    }
+
+    function cambiarDePersona() {
+      estado.persona = null
+      siguientePaso()
+    }
+
+    function accionDelMenu(que) {
+      if (que === 'modo') {
+        estado.modo = null
+        estado.persona = null
+        guardarPreferencia(CLAVE_MODO, null)
+      } else if (que === 'unidad') {
+        estado.unidadId = null
+        estado.persona = null
+        guardarPreferencia(CLAVE_UNIDAD, null)
+      }
+      siguientePaso()
+    }
+
+    // Lo que se ve una vez que se sabe unidad, modo y persona.
+    function entrarAlModo() {
+      document.getElementById('pr-inicio-texto').textContent =
+        `${TITULO_DE_MODO[estado.modo]} — ${estado.persona?.nombre ?? ''}`
+      mostrarVista('pr-inicio')
+    }
+
+    // Las unidades donde esta cuenta carga y que tienen alguna máquina activa.
+    // Si ninguna tiene máquinas, todas las de carga (así se ve el aviso de que
+    // falta configurarlas, en vez de una pantalla vacía).
+    async function unidadesDeCarga() {
+      const permitidas = unidadesCon('cargar')
+      if (!permitidas.length) return []
+      const { data, error } = await supabase.from('maquinas').select('unidad_negocio_id')
+        .eq('activa', true).in('unidad_negocio_id', permitidas)
+      if (error) throw error
+      const con = new Set((data ?? []).map(m => m.unidad_negocio_id))
+      const conMaquinas = permitidas.filter(id => con.has(id))
+      return conMaquinas.length ? conMaquinas : permitidas
+    }
+
+    function conectarTodo() {
+      document.getElementById('pr-unidades').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-unidad]'); if (b) elegirUnidad(b.dataset.unidad)
+      })
+      document.getElementById('pr-elegir-modo').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-modo]'); if (b) elegirModo(b.dataset.modo)
+      })
+      document.getElementById('pr-quien-lista').addEventListener('click', ev => {
+        if (ev.target.closest('#pr-quien-reintentar')) { mostrarQuien(); return }
+        const b = ev.target.closest('[data-persona]'); if (b) elegirPersona(b.dataset.persona)
+      })
+      document.getElementById('pr-btn-cambiar-persona').addEventListener('click', cambiarDePersona)
+      document.getElementById('pr-btn-menu').addEventListener('click', alternarMenu)
+      document.getElementById('pr-menu').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-menu]'); if (b) accionDelMenu(b.dataset.menu)
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -240,8 +542,27 @@
       }
       document.getElementById('pr-cargando').hidden = true
       document.getElementById('pr-vista').hidden = false
-      document.getElementById('pr-inicio-texto').textContent = 'Cargando la tablet…'
+      conectarTodo()
       if (window.lucide) window.lucide.createIcons()
+
+      // Sin produccion:cargar no es una tablet: es alguien de la oficina que
+      // mira el historial o configura.
+      if (!tieneTarea('cargar')) {
+        document.getElementById('pr-inicio-texto').textContent = 'Tu usuario puede ver o configurar Producción, pero no cargar desde la tablet.'
+        mostrarVista('pr-inicio')
+        return
+      }
+      try {
+        estado.unidadesPosibles = await unidadesDeCarga()
+      } catch (err) {
+        console.error('No se pudieron leer las máquinas:', err)
+        document.getElementById('pr-inicio-texto').textContent = 'No se pudieron leer las máquinas. Revisá la conexión y recargá la página.'
+        mostrarVista('pr-inicio')
+        return
+      }
+      estado.unidadId = unidadInicial(estado.unidadesPosibles, leerPreferencia(CLAVE_UNIDAD))
+      estado.modo = modoGuardado()
+      siguientePaso()
     }
 
     init()

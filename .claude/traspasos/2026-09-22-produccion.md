@@ -25,3 +25,20 @@ Supabase se usó SOLO en lectura: la base ya estaba hecha. Toda la verificación
 - `.claude/agents/produccion.md` (el subagente) y CLAUDE.md: diez subagentes.
 - Pruebas: `test-produccion-acceso.js` (+ mut), `test-accesos-produccion.js`, `test-dashboard-produccion.js`,
   `controles-produccion.js` (baseline por sub-parte), `sandbox-produccion.js`.
+- **Commit `9a70841`.** Números: check-scripts OK; test-produccion-acceso 15/15, mut 7/7 (+1 equivalente anotado en
+  el archivo); test-accesos-produccion 19/19; test-dashboard-produccion 9/9; controles-produccion 6/6 (sin baseline:
+  primera sub-parte). Todas las demás suites del repo en verde en un árbol limpio con estos cambios.
+
+### B2 — Modo de la tablet y "¿Quién sos?"
+- La tablet usa una cuenta propia. Se elige el **modo** del equipo (`produccion.modo` en localStorage:
+  `produccion` o `masa`) y, si la cuenta puede cargar en más de una unidad, la **unidad** (`produccion.unidad`).
+  Las dos se cambian desde el menú. localStorage siempre con try/catch.
+- La unidad posible es la de las máquinas: unidades con `produccion:cargar` que tienen alguna máquina activa (si
+  ninguna tiene, todas las de carga).
+- "¿Quién sos?" pregunta cada vez que se entra o se toca "Cambiar de persona" (siempre visible, sin contraseña):
+  encargados en modo Producción, maseros en Sala de masa, de `personal_produccion(p_unidad_negocio_id)`. Si la unidad
+  no tiene a nadie con ese puesto, todo el personal activo con un aviso para configurarlos. **La persona elegida NO se
+  guarda**: recargar vuelve a preguntar (decisión: la tablet pasa de mano en mano).
+- Cambiar de modo borra la persona (los que responden son otros).
+- Pruebas: `test-produccion-quien.js` (+ mut), `test-produccion-xss.js` (chequeo estático de TODO el archivo, con
+  `seguras-produccion.js`).

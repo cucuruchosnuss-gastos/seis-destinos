@@ -14,12 +14,22 @@
 const { construirCon } = require('./sandbox')
 const { fuenteNumeros } = require('./numeros-comun')
 
+// TODAS las funciones que las suites ejecutan. Crece con cada sub-parte: se
+// cargan juntas porque una llama a la otra (siguientePaso → entrarAlModo → …) y
+// una que falte tiene que tirar ReferenceError acá, no en la tablet.
 const FUNCIONES_BASE = [
   'esc', 'tieneTarea', 'unidadesCon',
+  // B2: preferencias, ¿Quién sos?, navegación
+  'leerPreferencia', 'guardarPreferencia', 'modoGuardado', 'unidadInicial',
+  'personasParaPuesto', 'htmlBotonPersona', 'htmlAvisoPuestos',
+  'mostrarVista', 'pintarCabecera', 'cerrarMenu', 'alternarMenu', 'siguientePaso',
+  'mostrarElegirUnidad', 'elegirUnidad', 'elegirModo', 'mostrarQuien', 'elegirPersona',
+  'cambiarDePersona', 'accionDelMenu', 'entrarAlModo', 'unidadesDeCarga',
 ]
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
+  'CLAVE_MODO', 'CLAVE_UNIDAD', 'PUESTO_DE_MODO', 'TITULO_DE_MODO', 'PLURAL_PUESTO', 'VISTAS',
 ]
 
 const PRELUDIO = `
@@ -94,6 +104,7 @@ const PRELUDIO = `
     miEmpleadoId: 'emp-tablet', miRolApp: 'usuario',
     misTareas: new Map([['cargar', { unidades: ['u-cn'] }]]),
     unidades: new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']]),
+    unidadId: 'u-cn', unidadesPosibles: ['u-cn'], modo: null, persona: null, personal: [],
   }
 `
 
