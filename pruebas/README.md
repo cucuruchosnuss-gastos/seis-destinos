@@ -145,3 +145,24 @@ node pruebas/mut-numeros.js
 ```
 
 `numeros-comun.js` carga las funciones de números del `utils.js` REAL (sin los `export`) y trae un `<input>` falso que imita al navegador al tipear, borrar, suprimir y pegar (dispara `beforeinput` cancelable, aplica el cambio, dispara `input`, y asignar `.value` manda el cursor al final). `fuenteNumeros()` devuelve ese mismo código para meterlo en el preludio del sandbox de un módulo, así las suites de cada módulo ejecutan la lectura real y no una copia. Para correr contra otra copia de utils.js: `UTILS_TEST=/ruta/utils.js`.
+
+## Las suites del módulo Cheques (22/09/2026)
+
+```bash
+node pruebas/test-cheques-vista.js      # la vista mudada de Cobranzas + escapado (renders y estático)
+node pruebas/test-cheques-orden.js      # ordenar por columna
+node pruebas/test-cheques-cargo.js      # la columna "Cargó"
+node pruebas/test-cheques-celular.js    # la tarjeta de dos renglones
+node pruebas/test-cheques-plazo.js      # el vencimiento del plazo para depositar (vs. la base)
+node pruebas/test-cheques-seleccion.js  # la selección con resumen
+node pruebas/test-cheques-lote.js       # dar salida a los seleccionados (todo o nada)
+node pruebas/controles-cheques.js       # ningún control mudado de Cobranzas se perdió
+```
+
+Cada `test-cheques-*.js` tiene su `mut-cheques-*.js`. Usan `sandbox-cheques.js` (el `document` falso y las funciones reales del módulo) y `seguras-cheques.js` (las hojas seguras del chequeo estático, con su motivo).
+
+**Las funciones que Cobranzas y Cheques comparten viven en `js/cobranzas-comun.js`.** `fuente-cobranzas.js` pega al `<script>` de cada módulo lo que importa de ese archivo (sin el `export`), así las suites prueban el código real; `mutar-cobranzas-comun.js` muta el archivo común.
+
+**Controles:** `controles-comun.js` tiene el inventario; `controles-movidos.js`, qué salió de `cobranzas.html` y a dónde fue. `controles-cobranzas.js` acepta lo movido y `controles-cheques.js` lo exige en `cheques.html`, los dos contra el baseline fijo `fba6396`.
+
+`test-toast.js` / `mut-toast.js`: el cartel de error de toda la app (`js/utils.js` + `css/main.css`) no se sale del borde.
