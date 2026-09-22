@@ -31,7 +31,7 @@
     }
 
     .chq-contenedor {
-      max-width: 1180px;
+      max-width: 1440px;
       margin: 0 auto;
       padding: 0 1rem 2rem;
       min-width: 0;
@@ -163,7 +163,7 @@
     /* ── Filtros ─────────────────────────────────────────────────────────── */
     .chq-filtros { margin-bottom: 0.875rem; min-width: 0; }
     .chq-filtros__fila { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; margin-bottom: 0.5rem; }
-    .chq-filtros__fila > * { flex: 1 1 8rem; min-width: 0; }
+    .chq-filtros__fila > * { flex: 1 1 6rem; min-width: 0; }
     .chq-segmento {
       display: flex;
       gap: 2px;
@@ -277,10 +277,13 @@
     .chq-tabla__fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .chq-tabla__sub { font-size: 0.75rem; color: var(--color-texto-suave); overflow-wrap: anywhere; }
     .chq-tabla__destino { max-width: 14rem; overflow-wrap: anywhere; }
-    .chq-tabla__texto { min-width: 11rem; overflow-wrap: anywhere; }
-    .chq-tabla__banco { max-width: 16rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Banco y cliente en UN renglón, cortados con puntos suspensivos (el
+       texto entero en title): un nombre largo que bajara de renglón haría esa
+       fila más alta que las otras. */
+    .chq-tabla__texto { max-width: 10rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chq-tabla__banco { max-width: 9rem; }
     /* Quién cargó la cobranza (Parte 4): un nombre, en un renglón. */
-    .chq-tabla__persona { max-width: 11rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chq-tabla__persona { max-width: 9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* ATENUADO CON COLOR Y NO CON opacity: una celda sticky con opacity se
        vuelve transparente. DESPUÉS de la regla base de td. */
     .chq-tabla__fila--salido td { color: var(--color-texto-suave); }
@@ -290,12 +293,13 @@
     /* TODAS LAS FILAS MIDEN LO MISMO (Parte 2): cada celda en un renglón y
        centrada; el alto sale de acá y no del contenido, así una fila con
        botón no queda más alta que una sin él. */
-    .chq-tabla tbody td { height: 3.5rem; vertical-align: middle; }
+    .chq-tabla tbody td { height: 3.5rem; vertical-align: middle; padding-top: 0.375rem; padding-bottom: 0.375rem; }
+    .chq-tabla th, .chq-tabla td { padding-left: 0.5rem; padding-right: 0.5rem; }
     .chq-tabla__salida { white-space: nowrap; }
     .chq-salida { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
     .chq-salida__texto {
       min-width: 0;
-      max-width: 14rem;
+      max-width: 6.5rem;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -328,12 +332,99 @@
     }
     .chq-th-orden--activo { color: var(--naranja-oscuro); }
     .chq-th-orden__flecha { font-size: 0.625rem; min-width: 0.625rem; }
-    .chq-orden-movil { display: flex; align-items: flex-end; gap: 0.5rem; min-width: 0; margin-top: 0.5rem; }
-    .chq-orden-movil > .chq-campo { flex: 1 1 auto; }
-    .chq-orden-movil__sentido { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
+
     /* En escritorio se ordena tocando los encabezados. */
     @media (min-width: 900px) {
       .chq-orden-movil { display: none; }
+    }
+
+    /* ── Celular: tarjetas de dos renglones (Parte 5) ─────────────────────
+       Una lista compacta en UNA caja, con divisores y no tarjetas separadas:
+       el espacio entre tarjetas es lo que no deja entrar seis cheques en
+       390px. Desde 900px se ve la tabla y esto no se dibuja. */
+    .chq-lista {
+      background: var(--color-fondo);
+      border: 1px solid var(--borde-tarjeta);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      overflow: hidden;
+      min-width: 0;
+    }
+    .chq-tarjeta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 56px;
+      padding: 0.4375rem 0.75rem;
+      border-top: 1px solid var(--borde-tarjeta);
+      cursor: pointer;
+      min-width: 0;
+    }
+    .chq-tarjeta:first-child { border-top: none; }
+    .chq-tarjeta__cuerpo { flex: 1 1 auto; min-width: 0; }
+    .chq-tarjeta__l1 { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; overflow: hidden; }
+    /* Un importe: tinta neutra, nunca el color del módulo. */
+    .chq-tarjeta__importe {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .chq-tarjeta__pago { font-size: 0.8125rem; color: var(--color-texto); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    /* El estado, chiquito, al final del segundo renglón: nunca se corta (los
+       datos de antes se achican con puntos suspensivos). */
+    .chq-tarjeta__estado { flex: 0 0 auto; margin-left: auto; font-size: 0.625rem; padding: 0.0625rem 0.4375rem; align-self: center; }
+    .chq-tarjeta__l2 {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      overflow: hidden;
+      margin-top: 0.125rem;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      white-space: nowrap;
+    }
+    /* Cada dato se corta con puntos suspensivos; el separador " · " sale del
+       CSS, así un dato vacío no deja dos puntos seguidos. */
+    .chq-tarjeta__dato { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .chq-tarjeta__dato + .chq-tarjeta__dato::before { content: ' · '; }
+    .chq-tarjeta__num,
+    .chq-tarjeta__salida { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+    /* El banco y el cliente se achican, pero nunca hasta desaparecer. */
+    /* Lo único que NUNCA se achica es el número y el estado: el banco, el
+       cliente y la salida se cortan con puntos suspensivos (el texto entero
+       queda en title). */
+    .chq-tarjeta__banco { flex: 1 1 auto; }
+    .chq-tarjeta__cliente { flex: 0 1 auto; }
+    .chq-tarjeta__salida { flex: 0 1 auto; }
+    /* El costado tiene un ancho FIJO: así el renglón de datos mide lo mismo en
+       todas las tarjetas y el estado nunca queda tapado por el botón. */
+    .chq-tarjeta__lado { flex: 0 0 5.75rem; display: flex; align-items: center; justify-content: flex-end; }
+    /* El costado es angosto: "Volver a cartera" baja a dos renglones antes
+       que comerle lugar a los datos. Sigue midiendo 44px de alto. */
+    .chq-tarjeta__lado .chq-btn { min-height: 44px; width: 100%; padding: 0.25rem 0.5rem; line-height: 1.15; white-space: normal; }
+    .chq-tarjeta__lado .chq-salida__nota { max-width: 100%; font-size: 0.625rem; text-align: right; }
+    /* Atenuado con color, como la tabla. DESPUÉS de las reglas base. */
+    .chq-tarjeta--salido .chq-tarjeta__importe,
+    .chq-tarjeta--salido .chq-tarjeta__pago { color: var(--color-texto-suave); }
+    .chq-tarjeta--anulado .chq-tarjeta__importe { color: var(--color-texto-suave); text-decoration: line-through; }
+    .chq-tarjeta--destacada { background: var(--naranja-suave); }
+
+    /* Una sola de las dos vistas a la vez. En el celular además se achica lo
+       de arriba de la lista: cada renglón que se ahorra es un cheque más a la
+       vista. */
+    @media (max-width: 899.98px) {
+      .chq-tabla-scroll { display: none; }
+      .chq-header { margin: 0.75rem 0; padding: 0.625rem 0.875rem; }
+      .chq-nav { margin-bottom: 0.5rem; }
+      .chq-cartera { padding: 0.625rem 0.875rem; margin-bottom: 0.5rem; }
+      .chq-cartera__v { font-size: 1.25rem; }
+      .chq-filtros { margin-bottom: 0.625rem; }
+      .chq-filtros .chq-campo label { font-size: 0.75rem; margin-bottom: 0.25rem; }
+    }
+    @media (min-width: 900px) {
+      .chq-lista { display: none; }
     }
 
     /* El botón de la columna: el de la acción principal de la fila. */
@@ -421,25 +512,27 @@
             <label for="chq-filtro-banco">Banco</label>
             <select id="chq-filtro-banco"></select>
           </div>
+          <!-- En el celular no hay encabezados que tocar: el orden se elige acá,
+               columna y sentido en UN solo select, en la misma fila que los
+               filtros (cada renglón de más es un cheque menos en pantalla). En
+               escritorio no se dibuja: los encabezados ordenan. -->
+          <div class="chq-campo chq-orden-movil" style="margin-bottom:0">
+            <label for="chq-orden-campo">Ordenar por</label>
+            <select id="chq-orden-campo"></select>
+          </div>
         </div>
         <!-- pre-line: las líneas del aviso van por textContent. -->
         <div class="chq-aviso" id="chq-aviso-numero" style="white-space:pre-line" hidden></div>
         <button type="button" class="chq-btn chq-btn--chico" id="chq-btn-limpiar" hidden>Limpiar filtros</button>
-        <!-- En el celular no hay encabezados que tocar: el orden se elige acá.
-             En escritorio no se dibuja (los encabezados ordenan). -->
-        <div class="chq-orden-movil">
-          <div class="chq-campo" style="margin-bottom:0">
-            <label for="chq-orden-campo">Ordenar por</label>
-            <select id="chq-orden-campo"></select>
-          </div>
-          <button type="button" class="chq-btn chq-btn--chico chq-orden-movil__sentido" id="chq-orden-sentido">▲ Ascendente</button>
-        </div>
       </div>
 
       <div class="chq-aviso" id="chq-aviso" style="white-space:pre-line" hidden></div>
       <div class="chq-tabla-scroll" id="chq-tabla-caja" hidden>
         <table class="chq-tabla" id="chq-tabla"></table>
       </div>
+      <!-- En el celular, en lugar de la tabla: una tarjeta de dos renglones por
+           cheque. Las dos se dibujan con los mismos datos; el CSS muestra una. -->
+      <div class="chq-lista" id="chq-lista" hidden></div>
       <div class="chq-vacio" id="chq-vacio" hidden></div>
     </div>
   </div>
@@ -785,15 +878,21 @@
       renderizarCheques()
     }
 
-    // El selector del celular: columna y sentido.
+    // El selector del celular: cada columna dos veces, una por sentido, con
+    // valor "campo:sentido". Las fechas y los importes dicen el sentido en
+    // palabras ("más antiguo primero"), los textos A→Z / Z→A.
+    const SENTIDO_EN_PALABRAS = {
+      fecha: { asc: 'más antiguo primero', desc: 'más nuevo primero' },
+      numero: { asc: 'menor primero', desc: 'mayor primero' },
+      texto: { asc: 'A → Z', desc: 'Z → A' },
+    }
     function pintarOrdenMovil() {
       const sel = document.getElementById('chq-orden-campo')
-      sel.innerHTML = COLUMNAS_ORDEN.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')
-      sel.value = estado.orden.campo
-      const btn = document.getElementById('chq-orden-sentido')
-      const asc = estado.orden.sentido === 'asc'
-      btn.textContent = asc ? '▲ Ascendente' : '▼ Descendente'
-      btn.setAttribute('aria-label', asc ? 'Orden ascendente: tocá para invertir' : 'Orden descendente: tocá para invertir')
+      sel.innerHTML = COLUMNAS_ORDEN.flatMap(c => ['asc', 'desc'].map(s => {
+        const rotulo = c.nombre + ' ' + (s === 'asc' ? '▲' : '▼') + ' ' + SENTIDO_EN_PALABRAS[c.tipo][s]
+        return `<option value="${esc(c.id + ':' + s)}">${esc(rotulo)}</option>`
+      })).join('')
+      sel.value = `${estado.orden.campo}:${estado.orden.sentido}`
     }
 
     // Cuánto hay en cartera. Se suma en CENTAVOS: sumar decimales de a uno
@@ -973,21 +1072,43 @@
       const caja = document.getElementById('chq-tabla-caja')
       const tabla = document.getElementById('chq-tabla')
       const vacio = document.getElementById('chq-vacio')
+      const lista = document.getElementById('chq-lista')
       if (estado.error || !estado.filas.length) {
         caja.hidden = true
         tabla.innerHTML = ''
+        lista.hidden = true
+        lista.innerHTML = ''
         vacio.hidden = !!estado.error
         vacio.textContent = hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
         return
       }
       vacio.hidden = true
       caja.hidden = false
+      lista.hidden = false
       tabla.innerHTML = htmlTablaCheques(estado.filas, estado.cobranzas)
+      lista.innerHTML = htmlListaCheques(estado.filas, estado.cobranzas)
       // Tocar un encabezado ordena por esa columna.
       tabla.querySelectorAll('[data-orden]').forEach(b => b.addEventListener('click', () => {
         aplicarOrden(siguienteOrden(estado.orden, b.dataset.orden))
       }))
-      tabla.querySelectorAll('[data-cheque-fila]').forEach(tr => {
+      conectarFilas(tabla)
+      conectarFilas(lista)
+      if (estado.destacado) {
+        // La que está a la vista: en escritorio la fila, en el celular la
+        // tarjeta (la otra está escondida por el CSS y no tiene dónde ir).
+        const candidatas = document.querySelectorAll(`[data-cheque-fila="${CSS.escape(estado.destacado)}"]`)
+        const fila = [...candidatas].find(el => el.offsetParent !== null)
+        if (fila && typeof fila.scrollIntoView === 'function') fila.scrollIntoView({ block: 'center' })
+      }
+    }
+
+    function htmlListaCheques(filas, cobranzas) {
+      return filas.map(ch => htmlTarjetaCheque(ch, cobranzas.get(ch.cobranza_id))).join('')
+    }
+
+    // Tocar una fila o una tarjeta abre la cobranza; sus botones hacen lo suyo.
+    function conectarFilas(cont) {
+      cont.querySelectorAll('[data-cheque-fila]').forEach(tr => {
         const abrir = () => abrirCobranza(tr.dataset.chequeCobranza)
         tr.addEventListener('click', abrir)
         tr.addEventListener('keydown', (ev) => {
@@ -997,16 +1118,12 @@
         })
       })
       // Los botones de la fila NO abren la cobranza: stopPropagation.
-      tabla.querySelectorAll('[data-dar-salida]').forEach(b => b.addEventListener('click', (ev) => {
+      cont.querySelectorAll('[data-dar-salida]').forEach(b => b.addEventListener('click', (ev) => {
         ev.stopPropagation(); abrirModalSalida(b.dataset.darSalida)
       }))
-      tabla.querySelectorAll('[data-volver-cartera]').forEach(b => b.addEventListener('click', (ev) => {
+      cont.querySelectorAll('[data-volver-cartera]').forEach(b => b.addEventListener('click', (ev) => {
         ev.stopPropagation(); abrirVolverACartera(b.dataset.volverCartera)
       }))
-      if (estado.destacado) {
-        const fila = tabla.querySelector(`[data-cheque-fila="${CSS.escape(estado.destacado)}"]`)
-        if (fila && typeof fila.scrollIntoView === 'function') fila.scrollIntoView({ block: 'center' })
-      }
     }
 
     // Tocar un cheque abre su cobranza en Cobranzas, que sabe volver acá.
@@ -1061,7 +1178,7 @@
           <td class="chq-tabla__fecha">${esc(formatearFechaCob(ch.fecha_emision))}</td>
           <td class="chq-tabla__fecha">${esc(pago)}</td>
           <td class="chq-tabla__num">${esc(formatearImporte(ch.importe))}</td>
-          <td class="chq-tabla__texto">${esc(cob?.cliente ?? '—')}</td>
+          <td class="chq-tabla__texto" title="${esc(cob?.cliente ?? '')}">${esc(cob?.cliente ?? '—')}</td>
           <td class="chq-tabla__persona" title="${esc(cob?.cargada_por_nombre ?? '')}">${esc(cob?.cargada_por_nombre ?? '—')}</td>
           <td><span class="chq-estado chq-estado--${esc(ch.estado)}">${esc(etiqueta)}</span></td>
           <td class="chq-tabla__salida">${htmlSalidaCheque(ch, cob)}</td>
@@ -1080,24 +1197,91 @@
     //     cartera" (la RPC no mira el estado de la cobranza). Sin la tarea se
     //     ven igual la fecha y el destino: es información, no una acción;
     //   - sin permiso, un anulado o una cobranza que no se ve → "—".
+    // QUÉ SE PUEDE HACER con la salida de un cheque. La deciden acá, en UN solo
+    // lugar, la tabla de escritorio y la tarjeta del celular:
+    //   'dar'    → en cartera, cobranza asentada, con `procesar`
+    //   'nota'   → en cartera, cobranza por controlar, con `procesar`
+    //   'volver' → ya salió, con `procesar`
+    //   null     → nada (sin permiso, anulado, cobranza que no se ve)
+    function accionSalida(ch, cob) {
+      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      if (salido) return puedeProcesar() ? 'volver' : null
+      if (ch.estado !== 'en_cartera' || !puedeProcesar()) return null
+      if (cob?.estado === 'procesada') return 'dar'
+      if (cob?.estado === 'registrada') return 'nota'
+      return null
+    }
+
+    // El botón (o el texto) de esa acción. '' si no hay ninguna.
+    function htmlAccionSalida(ch, accion) {
+      if (accion === 'dar') return `<button type="button" class="chq-btn chq-btn--chico chq-btn--salida" data-dar-salida="${esc(ch.id)}">Dar salida</button>`
+      if (accion === 'volver') return `<button type="button" class="chq-btn chq-btn--chico" data-volver-cartera="${esc(ch.id)}">Volver a cartera</button>`
+      if (accion === 'nota') return '<span class="chq-salida__nota">Asentá la cobranza para darle salida</span>'
+      return ''
+    }
+
+    // La fecha y el destino de un cheque que salió, en una línea de texto
+    // plano. El destino lo TIPEA una persona: quien la muestre, la escapa.
+    function textoSalidaCorto(ch) {
+      return [formatearFechaCob(ch.salida_fecha), String(ch.salida_destino ?? '').trim()].filter(Boolean).join(' · ')
+    }
+
     function htmlSalidaCheque(ch, cob) {
       const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      const accion = accionSalida(ch, cob)
       if (salido) {
-        // El destino lo TIPEA una persona: es texto libre y va escapado.
-        const texto = [formatearFechaCob(ch.salida_fecha), String(ch.salida_destino ?? '').trim()].filter(Boolean).join(' · ')
-        const volver = puedeProcesar()
-          ? `<button type="button" class="chq-btn chq-btn--chico" data-volver-cartera="${esc(ch.id)}">Volver a cartera</button>`
-          : ''
-        return `<div class="chq-salida"><span class="chq-salida__texto" title="${esc(texto)}">${esc(texto)}</span>${volver}</div>`
+        const texto = textoSalidaCorto(ch)
+        return `<div class="chq-salida"><span class="chq-salida__texto" title="${esc(texto)}">${esc(texto)}</span>${htmlAccionSalida(ch, accion)}</div>`
       }
-      if (ch.estado !== 'en_cartera' || !puedeProcesar()) return '—'
-      if (cob?.estado === 'procesada') {
-        return `<button type="button" class="chq-btn chq-btn--chico chq-btn--salida" data-dar-salida="${esc(ch.id)}">Dar salida</button>`
-      }
-      if (cob?.estado === 'registrada') {
-        return '<span class="chq-salida__nota">Asentá la cobranza para darle salida</span>'
-      }
-      return '—'
+      return htmlAccionSalida(ch, accion) || '—'
+    }
+
+    // ── La tarjeta del celular (Parte 5) ─────────────────────────────────
+    // DOS RENGLONES, para que entren al menos seis cheques en una pantalla de
+    // 390px:
+    //   arriba: el importe, grande, y cuándo se cobra ("a la vista" si es
+    //           común); el estado, chiquito, a la derecha;
+    //   abajo:  chico y gris, "Nº 00000353 · Santander · JyM" — el banco se
+    //           corta con puntos suspensivos y el nombre entero va en title.
+    // A la derecha de la tarjeta, lo mismo que la columna Salida de la tabla:
+    // el botón o el texto, con 44px de alto. Sin acción no se dibuja nada: un
+    // "—" solo en el costado de una tarjeta no dice nada.
+    // dd/mm/aa, para la tarjeta del celular. Una fecha que no es válida dice
+    // "—", igual que formatearFechaCob.
+    function fechaCorta(iso) {
+      if (!esFechaIso(iso)) return '—'
+      const [a, m, d] = iso.split('-')
+      return `${d}/${m}/${a.slice(2)}`
+    }
+
+    function htmlTarjetaCheque(ch, cob) {
+      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      // La fecha corta (dd/mm/aa): con el año entero no entraba al lado de un
+      // importe de millones y se cortaba a la mitad del año.
+      const pago = ch.tipo === 'diferido' ? `paga ${fechaCorta(ch.fecha_pago)}` : 'a la vista'
+      const banco = nombreBanco(ch.banco_codigo)
+      const cliente = cob?.cliente ?? '—'
+      const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
+      // Un cheque que salió muestra CUÁNDO y A QUIÉN en lugar del cliente: el
+      // renglón no da para los dos, y el cliente está en la cobranza.
+      const salida = salido ? textoSalidaCorto(ch) : ''
+      const clases = [
+        'chq-tarjeta',
+        salido ? 'chq-tarjeta--salido' : ch.estado === 'anulado' ? 'chq-tarjeta--anulado' : '',
+        ch.id === estado.destacado ? 'chq-tarjeta--destacada' : '',
+      ].filter(Boolean).join(' ')
+      const accion = htmlAccionSalida(ch, accionSalida(ch, cob))
+      return `
+        <div class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0">
+          <div class="chq-tarjeta__cuerpo">
+            <div class="chq-tarjeta__l1">
+              <span class="chq-tarjeta__importe">${esc(formatearImporte(ch.importe))}</span>
+              <span class="chq-tarjeta__pago">${esc(pago)}</span>
+            </div>
+            <div class="chq-tarjeta__l2">${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
+          </div>
+          ${accion ? `<div class="chq-tarjeta__lado">${accion}</div>` : ''}
+        </div>`
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1300,10 +1484,8 @@
         cargarCheques()
       })
       document.getElementById('chq-orden-campo').addEventListener('change', (ev) => {
-        aplicarOrden({ campo: ev.target.value, sentido: estado.orden.sentido })
-      })
-      document.getElementById('chq-orden-sentido').addEventListener('click', () => {
-        aplicarOrden(siguienteOrden(estado.orden, estado.orden.campo))
+        const [campo, sentido] = String(ev.target.value).split(':')
+        aplicarOrden({ campo, sentido })
       })
       document.getElementById('chq-btn-limpiar').addEventListener('click', () => {
         clearTimeout(temporizadorCheque)

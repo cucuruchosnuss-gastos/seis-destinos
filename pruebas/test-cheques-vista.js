@@ -232,7 +232,8 @@ if (SOLO !== 'estatico') {
 
     // Todas las filas miden lo mismo: el alto sale del CSS, no del contenido.
     const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
-    chk('css: las celdas del cuerpo tienen un alto fijo y centrado', /\.chq-tabla tbody td \{ height: 3\.5rem; vertical-align: middle; \}/.test(css))
+    chk('css: las celdas del cuerpo tienen un alto fijo y centrado', /\.chq-tabla tbody td \{ height: 3\.5rem; vertical-align: middle;/.test(css))
+    chk('css: banco y cliente en un renglón (un nombre largo no estira la fila)', /\.chq-tabla__texto \{[^}]*white-space: nowrap;[^}]*text-overflow: ellipsis;/.test(css))
     chk('css: la salida va en UN renglón (fecha · destino con puntos suspensivos)',
       /\.chq-salida__texto \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/.test(css))
     chk('css: no queda la regla del botón debajo del número', !/chq-tabla__accion/.test(css))

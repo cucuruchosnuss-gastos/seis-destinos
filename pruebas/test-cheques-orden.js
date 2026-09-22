@@ -122,11 +122,17 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   S.estado.orden = { campo: 'cliente', sentido: 'desc' }
   S.pintarOrdenMovil()
   const sel = S.__doc.getElementById('chq-orden-campo')
-  chk('celular: el select tiene las mismas ocho opciones', (sel.innerHTML.match(/<option /g) || []).length === 8)
-  chk('celular: marca la columna activa', sel.value === 'cliente')
-  chk('celular: el botón dice el sentido', S.__doc.getElementById('chq-orden-sentido').textContent === '▼ Descendente')
+  // Desde la Parte 5 es UN select con columna y sentido juntos: las mismas
+  // ocho columnas, dos veces cada una (16 opciones), valor "campo:sentido".
+  const opciones = [...sel.innerHTML.matchAll(/<option value="([^"]+)">([^<]+)<\/option>/g)].map(m => [m[1], m[2]])
+  chk('celular: las ocho columnas, en los dos sentidos (16 opciones)', opciones.length === 16, opciones.length)
+  chk('celular: cada columna tiene su ▲ y su ▼', S.COLUMNAS_ORDEN.every(c =>
+    opciones.some(([v, t]) => v === `${c.id}:asc` && t.includes('▲')) && opciones.some(([v, t]) => v === `${c.id}:desc` && t.includes('▼'))))
+  chk('celular: el sentido dicho en palabras (fecha: "más antiguo primero")',
+    opciones.some(([v, t]) => v === 'pago:asc' && /más antiguo primero/.test(t)) && opciones.some(([v, t]) => v === 'importe:desc' && /mayor primero/.test(t)))
+  chk('celular: marca la columna Y el sentido activos', sel.value === 'cliente:desc', sel.value)
   S.estado.orden.sentido = 'asc'; S.pintarOrdenMovil()
-  chk('celular: ascendente', S.__doc.getElementById('chq-orden-sentido').textContent === '▲ Ascendente')
+  chk('celular: ascendente', sel.value === 'cliente:asc')
 }
 
 // ── El orden sobrevive a filtrar (cargarCheques real) ─────────────────────
@@ -168,7 +174,8 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
   chk('css: el selector de orden del celular no se dibuja en escritorio',
     /@media \(min-width: 900px\) \{\s*\.chq-orden-movil \{ display: none; \}/.test(css))
-  chk('css: el botón del sentido tiene 44px', /\.chq-orden-movil__sentido \{[^}]*min-height: 44px/.test(css))
+  chk('css: el select de orden del celular va en la misma fila que los filtros',
+    /<div class="chq-filtros__fila">[\s\S]*?id="chq-filtro-numero"[\s\S]*?id="chq-filtro-banco"[\s\S]*?id="chq-orden-campo"[\s\S]*?<\/div>\s*<\/div>/.test(FUENTE))
 }
 
 Promise.all(esperas.map(p => p.catch(err => chk('rama async sin excepción', false, String(err && err.stack || err))))).then(() => {

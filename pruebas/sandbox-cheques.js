@@ -16,6 +16,7 @@ const FUNCIONES = [
   'ordenarCheques', 'resumenCartera', 'cargarResumenCheques', 'pintarSelectorBancos',
   'pintarCartera', 'htmlCartera', 'pintarFiltrosCheques', 'limpiarFiltrosCheques',
   'renderizarCheques', 'htmlTablaCheques', 'htmlFilaCheque', 'htmlSalidaCheque',
+  'accionSalida', 'htmlAccionSalida', 'textoSalidaCorto', 'fechaCorta', 'htmlTarjetaCheque', 'htmlListaCheques', 'conectarFilas',
   // salida y vuelta a cartera
   'erroresSalida', 'parametrosSalida', 'abrirModalSalida', 'cerrarModalSalida',
   'pintarModalSalida', 'confirmarSalida', 'abrirModalMotivo', 'cerrarModalMotivo',
@@ -28,7 +29,7 @@ const FUNCIONES = [
 
 const CONSTANTES = [
   'ZONA_AR', 'ETIQUETA_ESTADO_CHEQUE', 'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO',
-  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN',
+  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN', 'SENTIDO_EN_PALABRAS',
   'puedeProcesar', 'puedeVerCartera',
 ]
 

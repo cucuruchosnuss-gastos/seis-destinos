@@ -21,8 +21,8 @@ correrMutaciones({
     { expr: 'esc(ariaSort)', motivo: "'none' / 'ascending' / 'descending', constantes" },
     { expr: 'esc(campo)', motivo: 'el campo es un literal del código' },
     { expr: 'esc(flecha)', motivo: "'', '▲' o '▼', constantes" },
-    { expr: 'esc(c.id)', motivo: 'COLUMNAS_ORDEN es una constante del código' },
-    { expr: 'esc(c.nombre)', motivo: 'COLUMNAS_ORDEN es una constante del código' },
+    { expr: "esc(c.id + ':' + s)", motivo: "COLUMNAS_ORDEN es una constante del código y s es 'asc' o 'desc'" },
+    { expr: 'esc(rotulo)', motivo: 'se arma con COLUMNAS_ORDEN y SENTIDO_EN_PALABRAS, constantes del código' },
   ],
   manuales: [
     { nombre: 'el orden por defecto pasa a descendente',
@@ -74,7 +74,9 @@ correrMutaciones({
       de: 'afiná la búsqueda. El orden es solo sobre esas.`)', a: 'afiná la búsqueda.`)' },
     { nombre: 'el selector del celular se ve en escritorio',
       de: '      .chq-orden-movil { display: none; }\n', a: '' },
-    { nombre: 'el botón de sentido no dice el sentido',
-      de: "btn.textContent = asc ? '▲ Ascendente' : '▼ Descendente'", a: "btn.textContent = 'Invertir'" },
+    { nombre: 'el select del celular pierde el sentido',
+      de: "sel.value = `${estado.orden.campo}:${estado.orden.sentido}`", a: "sel.value = `${estado.orden.campo}:asc`" },
+    { nombre: 'el select del celular ofrece un solo sentido',
+      de: "COLUMNAS_ORDEN.flatMap(c => ['asc', 'desc'].map(s => {", a: "COLUMNAS_ORDEN.flatMap(c => ['asc'].map(s => {" },
   ],
 })
