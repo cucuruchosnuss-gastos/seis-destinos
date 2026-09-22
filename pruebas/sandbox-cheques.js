@@ -23,6 +23,8 @@ const FUNCIONES = [
   'diasHastaCobro', 'resumenSeleccion', 'textoResumenSeleccion', 'chequesElegidos', 'activarSeleccion',
   'cancelarSeleccion', 'tocarParaElegir', 'marcarElegidosEnPantalla', 'pintarSeleccion', 'soltarSeleccionPorFiltro',
   'htmlCasillaElegir', 'htmlAriaElegido',
+  // salida de los elegidos (Parte 8)
+  'puedeSalir', 'validarSalidaLote', 'pintarSalidaLote', 'marcarNoSalen', 'parametrosSalidaLote', 'fechaMinimaLote', 'abrirModalSalidaLote',
   'accionSalida', 'htmlAccionSalida', 'textoSalidaCorto', 'fechaCorta', 'htmlTarjetaCheque', 'htmlListaCheques', 'conectarFilas',
   // salida y vuelta a cartera
   'erroresSalida', 'parametrosSalida', 'abrirModalSalida', 'cerrarModalSalida',
@@ -36,7 +38,7 @@ const FUNCIONES = [
 
 const CONSTANTES = [
   'ZONA_AR', 'ETIQUETA_ESTADO_CHEQUE', 'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO',
-  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN', 'SENTIDO_EN_PALABRAS', 'DIAS_PLAZO_PRESENTACION', 'DIAS_AVISO_VENCIMIENTO',
+  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN', 'SENTIDO_EN_PALABRAS', 'DIAS_PLAZO_PRESENTACION', 'DIAS_AVISO_VENCIMIENTO', 'TOPE_SALIDA_LOTE',
   'puedeProcesar', 'puedeVerCartera',
 ]
 

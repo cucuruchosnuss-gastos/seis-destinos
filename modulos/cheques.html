@@ -519,6 +519,11 @@
     .chq-barra__vencen { font-size: 0.8125rem; font-weight: 700; color: var(--bordo-oscuro); }
     .chq-barra__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .chq-barra__acciones .chq-btn { min-height: 44px; }
+    .chq-barra__no-salen { flex-basis: 100%; font-size: 0.8125rem; font-weight: 600; color: var(--bordo-oscuro); }
+    /* Los elegidos que no pueden salir: una franja BORDÓ a la izquierda (el
+       naranja es "por controlar" y la selección). */
+    .chq-tabla__fila--no-sale td:first-child { box-shadow: inset 4px 0 0 var(--bordo); }
+    .chq-tarjeta--no-sale { box-shadow: inset 4px 0 0 var(--bordo); }
     /* Con la barra a la vista, lo último de la lista no queda tapado. */
     body.chq-con-barra .chq-contenedor { padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); }
 
@@ -646,8 +651,12 @@
         <span class="chq-barra__vencen" id="chq-sel-vencen" hidden></span>
       </div>
       <div class="chq-barra__acciones" id="chq-sel-acciones">
+        <!-- Parte 8: dar salida a todos los elegidos de una vez (todo o nada).
+             Solo con cobranzas:procesar; se habilita desde JS. -->
+        <button type="button" class="chq-btn chq-btn--chico chq-btn--primario" id="chq-sel-dar-salida" hidden>Dar salida</button>
         <button type="button" class="chq-btn chq-btn--chico" id="chq-sel-cancelar">Cancelar</button>
       </div>
+      <div class="chq-barra__no-salen" id="chq-sel-no-salen" hidden></div>
     </div>
   </div>
 
@@ -740,7 +749,8 @@
       destacado: null,
       // La selección (Parte 7): { activa, ids: Set de ids de cheque, ultimo }.
       // `ultimo` es el último tocado, para marcar un tramo con Shift + clic.
-      seleccion: { activa: false, ids: new Set(), ultimo: null },
+      // `noPueden` (Parte 8): los elegidos que no pueden salir, marcados.
+      seleccion: { activa: false, ids: new Set(), ultimo: null, noPueden: new Set() },
       // El diálogo de salida abierto: { cheque, cobranza, tipo } o null.
       salida: null,
     }
@@ -1091,6 +1101,110 @@
       const vencen = document.getElementById('chq-sel-vencen')
       vencen.textContent = r.vencenPronto ? `Vencen pronto: ${r.vencenPronto}` : ''
       vencen.hidden = !r.vencenPronto
+      pintarSalidaLote()
+    }
+
+    // ── Dar salida a los elegidos (Parte 8) ──────────────────────────────
+    // marcar_salida_cheques(p_cheque_ids, p_tipo, p_fecha, p_destino) es TODO
+    // O NADA: si uno no puede salir, no sale ninguno y el mensaje de la base
+    // dice cuál y por qué. Tope: 100 por vez. La pantalla habilita el botón
+    // solo si TODOS pueden salir (en cartera y de una cobranza asentada); la
+    // base igual lo vuelve a controlar.
+    const TOPE_SALIDA_LOTE = 100
+
+    // Si un cheque, por lo que se ve acá, puede salir.
+    function puedeSalir(ch) {
+      return ch.estado === 'en_cartera' && estado.cobranzas.get(ch.cobranza_id)?.estado === 'procesada'
+    }
+
+    // ¿Se puede dar salida a lo elegido? { puede, noPueden: [ids], motivo }.
+    function validarSalidaLote(elegidos) {
+      const noPueden = elegidos.filter(ch => !puedeSalir(ch)).map(ch => ch.id)
+      if (!elegidos.length) return { puede: false, noPueden, motivo: '' }
+      if (noPueden.length) {
+        return { puede: false, noPueden, motivo: noPueden.length === 1
+          ? 'Hay 1 cheque que no puede salir (no está en cartera o su cobranza no está asentada). Está marcado.'
+          : `Hay ${noPueden.length} cheques que no pueden salir (no están en cartera o su cobranza no está asentada). Están marcados.` }
+      }
+      if (elegidos.length > TOPE_SALIDA_LOTE) {
+        return { puede: false, noPueden, motivo: `Se puede dar salida hasta ${TOPE_SALIDA_LOTE} cheques a la vez: elegiste ${elegidos.length}.` }
+      }
+      return { puede: true, noPueden, motivo: '' }
+    }
+
+    // El botón "Dar salida a N" y lo que no puede salir, marcado.
+    function pintarSalidaLote() {
+      const btn = document.getElementById('chq-sel-dar-salida')
+      const aviso = document.getElementById('chq-sel-no-salen')
+      const elegidos = chequesElegidos()
+      // Sin la tarea no hay botón (la RPC lo rechazaría) ni aviso.
+      if (!puedeProcesar() || !elegidos.length) {
+        btn.hidden = true
+        aviso.hidden = true
+        estado.seleccion.noPueden = new Set()
+        marcarNoSalen()
+        return
+      }
+      const v = validarSalidaLote(elegidos)
+      btn.hidden = false
+      btn.disabled = !v.puede
+      btn.textContent = `Dar salida a ${elegidos.length}`
+      aviso.textContent = v.motivo
+      aviso.hidden = !v.motivo
+      estado.seleccion.noPueden = new Set(v.noPueden)
+      marcarNoSalen()
+    }
+
+    // Marca en la lista los elegidos que no pueden salir (sin redibujar).
+    function marcarNoSalen() {
+      const no = estado.seleccion.noPueden ?? new Set()
+      document.querySelectorAll('[data-cheque-fila]').forEach(el => {
+        el.classList.toggle(el.tagName === 'TR' ? 'chq-tabla__fila--no-sale' : 'chq-tarjeta--no-sale', no.has(el.dataset.chequeFila))
+      })
+    }
+
+    // Los parámetros tal cual viajan, en el orden de la lista.
+    function parametrosSalidaLote(ids, { tipo, fecha, destino }) {
+      return { p_cheque_ids: [...ids], p_tipo: tipo, p_fecha: fecha, p_destino: textoOpcional(destino) }
+    }
+
+    // La fecha más nueva de las cobranzas de los elegidos: la salida no puede
+    // ser anterior a NINGUNA (la base valida cheque por cheque).
+    function fechaMinimaLote(cheques) {
+      let max = null
+      for (const ch of cheques) {
+        const f = estado.cobranzas.get(ch.cobranza_id)?.fecha
+        if (esFechaIso(f) && (max === null || f > max)) max = f
+      }
+      return max
+    }
+
+    // El MISMO diálogo de salida, con el título "Dar salida a N cheques ·
+    // $ TOTAL" y la lista corta de los cheques.
+    function abrirModalSalidaLote() {
+      const elegidos = chequesElegidos()
+      const v = validarSalidaLote(elegidos)
+      if (!v.puede) return
+      const total = resumenSeleccion(elegidos, hoyArgentina()).total
+      const minima = fechaMinimaLote(elegidos)
+      estado.salida = { lote: true, cheques: elegidos, cobranza: minima ? { fecha: minima } : null, tipo: null }
+      document.getElementById('chq-salida-titulo').textContent =
+        `Dar salida a ${elegidos.length} ${elegidos.length === 1 ? 'cheque' : 'cheques'} · ${formatearImporte(total)}`
+      // textContent (el cliente va crudo acá): una línea por cheque, hasta 6.
+      const MAX_LINEAS = 6
+      const lineas = elegidos.slice(0, MAX_LINEAS).map(ch => {
+        const cob = estado.cobranzas.get(ch.cobranza_id)
+        return `N° ${ch.numero ?? '—'} · ${nombreBanco(ch.banco_codigo)} · ${formatearImporte(ch.importe)}${cob?.cliente ? ` · ${cob.cliente}` : ''}`
+      })
+      if (elegidos.length > MAX_LINEAS) lineas.push(`y ${elegidos.length - MAX_LINEAS} más`)
+      document.getElementById('chq-salida-cheques').textContent = lineas.join('\n')
+      const fecha = document.getElementById('chq-salida-fecha')
+      fecha.value = hoyArgentina()
+      fecha.max = hoyArgentina()
+      fecha.min = minima ?? ''
+      document.getElementById('chq-salida-destino').value = ''
+      pintarModalSalida()
+      document.getElementById('chq-modal-salida').hidden = false
     }
 
     // Cambiar un filtro LIMPIA la selección (lo elegido podría quedar
@@ -1542,6 +1656,7 @@
         venc ? (venc.nivel === 'vencido' ? 'chq-tabla__fila--vencido' : 'chq-tabla__fila--vence') : '',
         ch.id === estado.destacado ? 'chq-tabla__fila--destacada' : '',
         estado.seleccion.ids.has(ch.id) ? 'chq-tabla__fila--elegida' : '',
+        estado.seleccion.noPueden?.has(ch.id) ? 'chq-tabla__fila--no-sale' : '',
       ].filter(Boolean).join(' ')
       // Por vencer: la fecha de pago en bordó y negrita, y debajo la etiqueta.
       const celdaPago = venc
@@ -1664,6 +1779,7 @@
         venc ? (venc.nivel === 'vencido' ? 'chq-tarjeta--vencido' : 'chq-tarjeta--vence') : '',
         ch.id === estado.destacado ? 'chq-tarjeta--destacada' : '',
         estado.seleccion.ids.has(ch.id) ? 'chq-tarjeta--elegida' : '',
+        estado.seleccion.noPueden?.has(ch.id) ? 'chq-tarjeta--no-sale' : '',
       ].filter(Boolean).join(' ')
       const accion = htmlAccionSalida(ch, accionSalida(ch, cob))
       return `
@@ -1718,6 +1834,7 @@
       if (!ch) return
       const cob = estado.cobranzas.get(ch.cobranza_id) ?? null
       estado.salida = { cheque: ch, cobranza: cob, tipo: null }
+      document.getElementById('chq-salida-titulo').textContent = 'Salida del cheque'
       // textContent: el cliente va crudo acá, no es HTML.
       document.getElementById('chq-salida-cheques').textContent =
         `N° ${ch.numero ?? '—'} · ${nombreBanco(ch.banco_codigo)} · ${formatearImporte(ch.importe)}${cob?.cliente ? ` · ${cob.cliente}` : ''}`
@@ -1769,15 +1886,29 @@
       const btn = document.getElementById('chq-salida-confirmar')
       btn.disabled = true
       try {
+        if (s.lote) {
+          // TODO O NADA: si la base rechaza, no salió ninguno y el mensaje dice
+          // cuál y por qué ("No salió ninguno. El cheque 007 Nº … no puede
+          // salir: …"). Se muestra ENTERO.
+          const ids = s.cheques.map(ch => ch.id)
+          const { data, error } = await supabase.rpc('marcar_salida_cheques', parametrosSalidaLote(ids, datos))
+          if (error) throw error
+          const n = Number.isInteger(data) ? data : ids.length
+          cerrarModalSalida()
+          cancelarSeleccion()
+          mostrarExito(n === 1 ? 'Salió 1 cheque.' : `Salieron ${n} cheques.`)
+          await refrescarTodo()
+          return
+        }
         const { error } = await supabase.rpc('marcar_salida_cheque', parametrosSalida(s.cheque.id, datos))
         if (error) throw error
         cerrarModalSalida()
         mostrarExito(datos.tipo === 'endosado' ? 'Cheque marcado como endosado.' : 'Cheque marcado como depositado.')
         await refrescarTodo()
       } catch (e) {
-        console.error('Falló marcar_salida_cheque:', e)
+        console.error(s.lote ? 'Falló marcar_salida_cheques:' : 'Falló marcar_salida_cheque:', e)
         // El mensaje del servidor ya viene en castellano: se muestra TAL CUAL.
-        err.textContent = e?.message || 'No se pudo marcar la salida del cheque.'
+        err.textContent = e?.message || 'No se pudo marcar la salida.'
         err.hidden = false
       } finally {
         btn.disabled = false
@@ -1921,6 +2052,7 @@
         else activarSeleccion()
       })
       document.getElementById('chq-sel-cancelar').addEventListener('click', cancelarSeleccion)
+      document.getElementById('chq-sel-dar-salida').addEventListener('click', abrirModalSalidaLote)
 
       // Escape cierra el diálogo que esté abierto; si no hay ninguno, limpia
       // la selección.
