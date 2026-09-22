@@ -1135,6 +1135,17 @@
       .cob-maestro--activo .cob-fila--anulada .cob-celda--total { color: var(--bordo-oscuro); text-decoration: line-through; }
       .cob-maestro--activo .cob-fila--anulada .cob-celda--fecha,
       .cob-maestro--activo .cob-fila--anulada .cob-celda--quien { color: var(--color-texto-suave); }
+
+      /* LA VISTA CHEQUES EN ESCRITORIO usa el MISMO ancho que el listado en
+         modo maestro (la regla de arriba): con los 860px del celular la
+         planilla quedaba centrada y angosta, el banco en tres renglones y la
+         columna Estado cortada. Se engancha a la vista VISIBLE, así un
+         detalle abierto desde Cheques vuelve al ancho de siempre. */
+      .cob-contenedor:has(#cob-vista-cheques:not([hidden])) { max-width: 1440px; padding-left: 1.25rem; padding-right: 1.25rem; }
+      /* El banco en UNA línea, cortado con puntos suspensivos; el nombre
+         completo va en el title de la celda (escapado, es texto de la base).
+         Solo acá: abajo de 1100px la celda sigue partiéndose como antes. */
+      .cob-tabla__banco { max-width: 16rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     }
     /* Entre 1100 y 1399px las siete columnas no entran al lado del panel de
        468px: el cliente quedaba con cero de ancho (a 1280px de viewport, con
@@ -1147,6 +1158,11 @@
       .cob-maestro--activo .cob-lista-cabecera > :nth-child(6),
       .cob-maestro--activo .cob-fila__tabla > :nth-child(4),
       .cob-maestro--activo .cob-fila__tabla > :nth-child(6) { display: none; }
+      /* La planilla de Cheques: con el banco a 16rem, a 1100px la tabla se
+         pasaba 77px del ancho y aparecía scroll de costado. Acá el banco se
+         achica a 10rem (el min-width de 11rem de .cob-tabla__texto se suelta,
+         si no le gana al max-width). Medido en Chrome a 1100px. */
+      .cob-tabla__banco { min-width: 0; max-width: 10rem; }
     }
   </style>
 </head>
@@ -2503,7 +2519,7 @@
       return `
         <tr class="${salido ? 'cob-tabla__fila--salido' : ch.estado === 'anulado' ? 'cob-tabla__fila--anulado' : ''}" data-cheque-fila="${escCob(ch.id)}" data-cheque-cobranza="${escCob(ch.cobranza_id)}" tabindex="0">
           <td>${escCob(ch.numero ?? '—')}${htmlAccionCheque(ch, cob)}</td>
-          <td class="cob-tabla__texto">${escCob(nombreBanco(ch.banco_codigo))}</td>
+          <td class="cob-tabla__texto cob-tabla__banco" title="${escCob(nombreBanco(ch.banco_codigo))}">${escCob(nombreBanco(ch.banco_codigo))}</td>
           <td class="cob-tabla__fecha">${escCob(formatearFechaCob(ch.fecha_emision))}</td>
           <td class="cob-tabla__fecha">${escCob(pago)}</td>
           <td class="cob-tabla__num">${escCob(formatearImporte(ch.importe))}</td>
@@ -3901,14 +3917,17 @@
       // así que decir "el 8 es el dígito de control del banco" lo presentaría
       // como un dato verificado, y el ✓ afirmaría un control que no se hizo. En
       // su lugar se dice de dónde salió el dígito y se manda a mirar el cheque,
-      // que es la única instrucción honesta en ese estado.
+      // que es la única instrucción honesta en ese estado. El texto dice "PUEDE
+      // que este renglón no se haya leído" porque el flag es POR CHEQUE y no
+      // por renglón: el OCR no dice cuál completó (opción A del traspaso del
+      // 21/09/2026). Afirmarlo de los tres sería falso en los que sí se leyeron.
       // LÍMITE CONOCIDO: el flag describe la PROPUESTA del OCR y no se recalcula
       // si la persona retipea el renglón, igual que el aviso ámbar de arriba.
       // Errar hacia "mirá el papel" es el lado seguro.
       const pieRenglon = (est, texto, largo) => {
         if (est === 'mal') return '<div class="cob-campo__error">No coincide con el dígito de control, revisá contra el papel.</div>'
         if (est !== 'ok') return ''
-        if (c.completado_desde_cmc7) return '<div class="cob-campo__ayuda">Este dígito lo calculó el sistema desde la banda magnética: no se leyó del papel. Contralo contra el cheque.</div>'
+        if (c.completado_desde_cmc7) return '<div class="cob-campo__ayuda">Puede que este renglón no se haya leído del papel: en este cheque el sistema completó datos desde la banda magnética y calculó su dígito. Comparalo con lo impreso.</div>'
         const d = String(texto ?? '').replace(/\D/g, '')
         return `<div class="cob-campo__ok">✓ Cierra. Se guarda ${escCob(d.slice(0, largo - 1))} y el ${escCob(d.slice(largo - 1))} queda aparte, como dígito de control.</div>`
       }

@@ -104,6 +104,8 @@ for (const m of ['cambios.map(escCob).join', 'errores.map(escCob).join', 'todo.m
 const COMPORTAMIENTO = [
   ['pie: el caso CMC-7 muestra el desglose como si se hubiera leído',
     "if (c.completado_desde_cmc7) return '<div class=\"cob-campo__ayuda\">", "if (false) return '<div class=\"cob-campo__ayuda\">"],
+  ['pie: el caso CMC-7 vuelve a afirmar que el renglón lo calculó el sistema (texto viejo)',
+    "Puede que este renglón no se haya leído del papel: en este cheque el sistema completó datos desde la banda magnética y calculó su dígito. Comparalo con lo impreso.", "Este dígito lo calculó el sistema desde la banda magnética: no se leyó del papel. Contralo contra el cheque."],
   ['pie: el desglose guarda el número pegado a su dígito',
     'Se guarda ${escCob(d.slice(0, largo - 1))}', 'Se guarda ${escCob(d)}'],
   ['pie: un renglón corto también muestra el desglose',

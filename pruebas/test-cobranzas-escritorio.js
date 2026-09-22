@@ -367,6 +367,113 @@ async function pruebas() {
       /\.cob-maestro--activo \.cob-celda--total \{ font-weight: 700; color: var\(--color-texto\); \}/.test(css))
   }
 
+
+  // ── La vista CHEQUES en escritorio (parte 9, 21/09/2026) ─────────────────
+  // Desde 1100px la planilla usa el MISMO ancho que el listado en modo maestro
+  // y el banco va en UNA línea con el nombre completo en el title. Abajo de
+  // 1100px NADA cambia: el CSS fuera de los @media (min-width: 1100px) tiene
+  // que ser idéntico al del baseline fijo (d79765b, NUNCA HEAD).
+  {
+    const pelar = (f) => f.slice(f.indexOf('<style>'), f.indexOf('</style>')).replace(/\/\*[\s\S]*?\*\//g, '')
+    const bloquesDe = (css) => {
+      const out = []
+      const re = /@media\s*([^{]+)\{/g
+      let m
+      while ((m = re.exec(css)) !== null) {
+        let d = 1, i = re.lastIndex
+        for (; i < css.length && d; i++) { if (css[i] === '{') d++; else if (css[i] === '}') d-- }
+        out.push({ cond: m[1].trim(), ini: m.index, fin: i, texto: css.slice(m.index, i) })
+        re.lastIndex = i
+      }
+      return out
+    }
+    // El CSS que rige ABAJO de 1100px: todo menos los bloques con min-width 1100.
+    const fueraDeEscritorio = (css) => {
+      let r = css
+      for (const b of bloquesDe(css).filter(b => /min-width:\s*1100px/.test(b.cond)).reverse()) r = r.slice(0, b.ini) + r.slice(b.fin)
+      return r.replace(/\s+/g, ' ').trim()
+    }
+    const css = pelar(FUENTE)
+    const bloques = bloquesDe(css)
+    const escritorio = bloques.filter(b => b.cond === '(min-width: 1100px)')
+    const angosto = bloques.filter(b => b.cond === '(min-width: 1100px) and (max-width: 1399px)')
+
+    // (1) El contenedor de la vista Cheques toma el ancho del listado.
+    const cuerpoDe = (sel) => {
+      for (const b of escritorio) {
+        const i = b.texto.indexOf(sel + ' {')
+        if (i !== -1) return (b.texto.slice(i).match(/^[^{]*\{([^}]*)\}/) || [])[1] || null
+      }
+      return null
+    }
+    const cuerpoListado = cuerpoDe('.cob-contenedor:has(.cob-maestro--activo)')
+    const cuerpoCheques = cuerpoDe('.cob-contenedor:has(#cob-vista-cheques:not([hidden]))')
+    const max = (c) => ((c || '').match(/max-width:\s*([^;]+);/) || [])[1]
+    chk('cheques escritorio: hay regla del contenedor de la vista Cheques adentro del @media (min-width: 1100px)', !!cuerpoCheques)
+    chk('cheques escritorio: el ancho es EL MISMO que el del listado en modo maestro',
+      !!max(cuerpoListado) && max(cuerpoListado) === max(cuerpoCheques), `${max(cuerpoListado)} vs ${max(cuerpoCheques)}`)
+    chk('cheques escritorio: el ancho engancha a la vista VISIBLE (un detalle abierto desde Cheques vuelve al ancho de siempre)',
+      !/\.cob-contenedor:has\(#cob-vista-cheques\)\s*\{/.test(css))
+
+    // (2) El banco en una línea, con puntos suspensivos, SOLO en escritorio.
+    const posBanco = []
+    { let k = -1; while ((k = css.indexOf('.cob-tabla__banco', k + 1)) !== -1) posBanco.push(k) }
+    const enEscritorio = (p) => bloques.some(b => b.ini < p && p < b.fin && /min-width:\s*1100px/.test(b.cond))
+    chk('cheques escritorio: toda regla de .cob-tabla__banco vive adentro de un @media (min-width: 1100px)',
+      posBanco.length > 0 && posBanco.every(enEscritorio))
+    const reglaBanco = escritorio.map(b => (b.texto.match(/\.cob-tabla__banco \{([^}]*)\}/) || [])[1]).find(Boolean) || ''
+    chk('cheques escritorio: el banco no se parte (white-space: nowrap)', /white-space:\s*nowrap/.test(reglaBanco), reglaBanco)
+    chk('cheques escritorio: el banco se corta con puntos suspensivos',
+      /overflow:\s*hidden/.test(reglaBanco) && /text-overflow:\s*ellipsis/.test(reglaBanco), reglaBanco)
+    chk('cheques escritorio: el banco tiene un ancho máximo (sin él, nowrap no corta nada)', /max-width:\s*[\d.]+rem/.test(reglaBanco), reglaBanco)
+    // Entre 1100 y 1399 el banco se achica y suelta el min-width de
+    // .cob-tabla__texto, que si no le gana al max-width: medido en Chrome, sin
+    // esto a 1100px la tabla se pasaba 77px y aparecía scroll de costado.
+    const reglaAngosta = angosto.map(b => (b.texto.match(/\.cob-tabla__banco \{([^}]*)\}/) || [])[1]).find(Boolean) || ''
+    chk('cheques escritorio: entre 1100 y 1399 el banco se achica y suelta el min-width',
+      /min-width:\s*0/.test(reglaAngosta) && /max-width:\s*[\d.]+rem/.test(reglaAngosta), reglaAngosta)
+    const remDe = (c) => Number((c.match(/max-width:\s*([\d.]+)rem/) || [])[1])
+    chk('cheques escritorio: entre 1100 y 1399 el banco es más angosto que desde 1400',
+      remDe(reglaAngosta) < remDe(reglaBanco), `${remDe(reglaAngosta)} vs ${remDe(reglaBanco)}`)
+
+    // (3) ABAJO DE 1100 NADA CAMBIÓ: el CSS fuera de los bloques de escritorio,
+    // idéntico al del baseline fijo.
+    let base = ''
+    try {
+      base = require('child_process').execSync('git show d79765b:modulos/cobranzas.html',
+        { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    } catch (e) { base = '' }
+    chk('baseline d79765b: se pudo leer (si no, esta verificación no mide nada)', base.length > 100000 && base.includes('<style>'), base.length)
+    const hoyFuera = fueraDeEscritorio(css)
+    const antesFuera = fueraDeEscritorio(pelar(base))
+    let dif = ''
+    if (hoyFuera !== antesFuera) {
+      let i = 0; while (hoyFuera[i] === antesFuera[i]) i++
+      dif = `hoy «${hoyFuera.slice(Math.max(0, i - 60), i + 80)}» / antes «${antesFuera.slice(Math.max(0, i - 60), i + 80)}»`
+    }
+    chk('abajo de 1100px el CSS es IDÉNTICO al del baseline d79765b', base.length > 100000 && hoyFuera === antesFuera, dif)
+
+    // (4) La celda del banco, EJECUTADA: la clase de una línea y el title
+    // escapado. El nombre es texto de la base (bancos_bcra, o el texto de un
+    // código que no está en el catálogo): va con escCob, también en el atributo.
+    const { construir } = require('./sandbox')
+    const S = construir(ARCHIVO)
+    const marcaT = '"><b data-xss="banco_title">'
+    const nombre = marcaT + 'BANCO DE GALICIA Y BUENOS AIRES S.A.'
+    S.estado.bancos = new Map([['007', nombre]])
+    const h = S.htmlTablaCheques([{ id: 'x1', cobranza_id: 'c1', banco_codigo: '007', numero: '12345678', tipo: 'comun',
+      fecha_emision: '2026-09-02', fecha_pago: null, importe: 10, estado: 'en_cartera', salida_fecha: null, salida_destino: null }],
+      new Map([['c1', { id: 'c1', cliente: 'X', estado: 'registrada' }]]))
+    const esc = S.escCob(nombre)
+    const td = (h.match(/<td class="[^"]*cob-tabla__banco[^"]*"[^>]*>/) || [])[0] || ''
+    chk('cheques: la celda del banco lleva la clase de una línea', td !== '', h.slice(0, 400))
+    chk('cheques: la celda del banco lleva el nombre COMPLETO en el title, escapado', td.includes(`title="${esc}"`), td)
+    chk('cheques: ninguna marca sale cruda (tampoco en el title)', !/<b data-xss=/.test(h))
+    chk('cheques: el texto de la celda sigue siendo el nombre, escapado', h.includes(`>${esc}</td>`))
+    chk('cheques: la celda conserva .cob-tabla__texto (abajo de 1100 se ve como antes)',
+      /class="cob-tabla__texto cob-tabla__banco"/.test(td), td)
+  }
+
 }
 
 pruebas().then(() => {

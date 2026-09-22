@@ -193,7 +193,7 @@ if (SOLO !== 'estatico') {
   // ── El pie de los tres renglones: sus TRES estados, ejecutados ──────────
   // Un solo pie por renglón. 'ok' sin CMC-7 dice qué se guarda y qué queda
   // aparte; 'ok' CON CMC-7 NO muestra ni el ✓ ni el desglose, porque el dígito
-  // lo calculó el sistema y nadie lo leyó del papel; 'mal' dice que no cierra.
+  // pudo calcularlo el sistema y no leerse del papel; 'mal' dice que no cierra.
   {
     const S8 = construir(ARCHIVO)
     const conDv = (cuerpo) => cuerpo + String(S8.dvBcra(cuerpo))
@@ -227,8 +227,10 @@ if (SOLO !== 'estatico') {
     cmc.forEach((s, i) => {
       chk(`pie cmc7 renglón ${i + 1}: sin ✓`, cuenta(s, '✓') === 0)
       chk(`pie cmc7 renglón ${i + 1}: sin desglose`, !s.includes('Se guarda'))
-      chk(`pie cmc7 renglón ${i + 1}: dice que el dígito no se leyó del papel`,
-        cuenta(s, 'no se leyó del papel') === 1)
+      chk(`pie cmc7 renglón ${i + 1}: dice, con el texto exacto, que puede no haberse leído del papel`,
+        cuenta(s, 'Puede que este renglón no se haya leído del papel: en este cheque el sistema completó datos desde la banda magnética y calculó su dígito. Comparalo con lo impreso.') === 1)
+      chk(`pie cmc7 renglón ${i + 1}: ya no afirma que el renglón lo calculó el sistema`,
+        !s.includes('lo calculó el sistema') && !s.includes('no se leyó del papel'))
     })
 
     // (3) 'mal': el dígito no cierra. Error, y nunca un ✓ ni un desglose.
