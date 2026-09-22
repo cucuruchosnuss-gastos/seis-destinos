@@ -3253,8 +3253,15 @@
       const form = estado.ficha?.formImporte
       const input = listaEl.querySelector('.campo-importe-sin')
       if (!form || !input) return
-      enlazarCampoNumero(input, { decimales: 2 })
+      enlazarCampoNumero(input, { decimales: decimalesImporteSin(form) })
       ponerNumero(input, form.importe ?? null)
+    }
+
+    // El total va con 2 decimales; el precio por unidad admite hasta 4
+    // ("0,3333"), porque multiplicado por miles de unidades el centavo pesa.
+    // El total que se guarda se redondea igual a 2: totalImporteFormulario.
+    function decimalesImporteSin(form) {
+      return form?.modo === 'unidad' ? 4 : 2
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3377,12 +3384,13 @@
     // El total que se va a cargar. null si el importe no es un número > 0.
     // form.importe es el NÚMERO leído del campo (leerCampoNumero), nunca el
     // texto. Precio por unidad: solo con UN producto; se multiplica y se
-    // redondea al centavo, que es como se guarda. El precio por unidad se
-    // escribe con 2 decimales (es un importe): ver el traspaso del 21/09/2026.
+    // redondea al centavo, que es como se guarda. El precio por unidad admite
+    // hasta 4 decimales (decimalesImporteSin); el total, en los dos modos, se
+    // redondea a 2 (un número que vino con más decimales no viaja así).
     function totalImporteFormulario(form, cantidades) {
-      const n = leerNumeroAr(form?.importe ?? null)
+      const n = leerNumeroAr(form?.importe ?? null, { decimales: decimalesImporteSin(form) })
       if (n == null || !(n > 0)) return null
-      if (form.modo !== 'unidad') return n
+      if (form.modo !== 'unidad') return Math.round(n * 100) / 100
       const unico = productoUnicoConCantidad(cantidades)
       if (!unico) return null
       return Math.round(n * Number(unico.cantidad) * 100) / 100

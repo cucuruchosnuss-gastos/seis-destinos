@@ -194,7 +194,7 @@ const PRELUDIO = `
 
 const FUNCIONES = [
   'esc', 'formatearImporte', 'importeHtml', 'formatearImporteCentavosSuaves', 'enlazarCamposMonto', 'montoDeCampo',
-  'tieneTarea', 'nombreUnidad', 'badgeEstadoFactura', 'esSinImporte', 'textoCantidadInsumo', 'productoUnicoConCantidad', 'totalImporteFormulario',
+  'tieneTarea', 'nombreUnidad', 'badgeEstadoFactura', 'esSinImporte', 'textoCantidadInsumo', 'productoUnicoConCantidad', 'decimalesImporteSin', 'totalImporteFormulario',
   'htmlFilaSinImporte', 'renderizarFichaMovimientos', 'enlazarCampoImporteSin', 'confirmarImporteSinImporte',
   'actualizarSugerenciasPago', 'renderizarFilasFifo', 'actualizarResumenAplicacion', 'confirmarPago',
   'abrirModalPago', 'fechaISO', 'seleccionarCreditoParaAplicar', 'cerrarModalAplicarCredito', 'confirmarAplicarCredito',
@@ -449,14 +449,52 @@ async function main() {
     chk('cargar importe por unidad: p_importe = 300025 (el total, no el precio)', ll.length === 1 && ll[0].params.p_importe === 300025, ll)
   }
   {
-    // El precio por unidad es un importe: 2 decimales. "0,333" queda "0,33".
-    const { S, click, campo } = prepararSinImporte([{ insumoId: 'i', nombre: 'Film', unidad: 'kg', cantidad: 3 }])
-    S.estado.ficha.formImporte.modo = 'unidad'
+    // El precio por unidad admite hasta 4 decimales; el total se redondea a 2.
+    // 0,333 × 3.000 = 999,00.
+    const { S, lista, click, campo } = prepararSinImporte([{ insumoId: 'i', nombre: 'Film', unidad: 'kg', cantidad: 3000 }])
+    const radio = { value: 'unidad', closest: (sel) => sel === '.modo-importe' ? radio : null }
+    lista.__disparar('change', { target: radio })
     campo().teclear('0,333')
-    chk('cargar importe por unidad: el campo admite 2 decimales ("0,333" → "0,33")', campo().value === '0,33', campo().value)
+    chk('cargar importe por unidad: el campo admite "0,333"', campo().value === '0,333', campo().value)
+    chk('cargar importe por unidad: 0,333 × 3.000 = 999,00 en la línea del total', lista.total.innerHTML.includes('Total a cargar: $ 999,00'), lista.total.innerHTML)
     click('.btn-confirmar-importe', { id: 'f1' })
     await new Promise(r => setImmediate(r))
-    chk('cargar importe por unidad: 0,33 × 3 = 0.99', rpc(S, 'completar_importe_factura')[0]?.params.p_importe === 0.99, S.__llamadas())
+    chk('cargar importe por unidad: 0,333 × 3.000 = 999 (p_importe)', rpc(S, 'completar_importe_factura')[0]?.params.p_importe === 999, S.__llamadas())
+  }
+  {
+    // Hasta 4 decimales, no 5: "0,33335" queda "0,3333". Y el total al centavo.
+    const { S, lista, click, campo } = prepararSinImporte([{ insumoId: 'i', nombre: 'Film', unidad: 'kg', cantidad: 3 }])
+    const radio = { value: 'unidad', closest: (sel) => sel === '.modo-importe' ? radio : null }
+    lista.__disparar('change', { target: radio })
+    campo().teclear('0,33335')
+    chk('cargar importe por unidad: admite 4 decimales ("0,33335" → "0,3333")', campo().value === '0,3333', campo().value)
+    click('.btn-confirmar-importe', { id: 'f1' })
+    await new Promise(r => setImmediate(r))
+    chk('cargar importe por unidad: 0,3333 × 3 = 0.9999 → se guarda 1 (redondeado a 2)', rpc(S, 'completar_importe_factura')[0]?.params.p_importe === 1, S.__llamadas())
+  }
+  {
+    // Si el importe llega como TEXTO (form restaurado), se lee con los decimales del modo.
+    const S = sandbox()
+    chk('totalImporteFormulario: "0,3333" por unidad × 3.000 = 999.9', S.totalImporteFormulario({ modo: 'unidad', importe: '0,3333' }, [{ cantidad: 3000 }]) === 999.9)
+    chk('totalImporteFormulario: "0,3333" como total no se lee (2 decimales)', S.totalImporteFormulario({ modo: 'total', importe: '0,3333' }, [{ cantidad: 3000 }]) === null)
+  }
+  {
+    // El total sigue con 2 decimales: "1,234" queda "1,23".
+    const { campo } = prepararSinImporte(HARINA)
+    campo().teclear('1,234')
+    chk('cargar importe total: sigue en 2 decimales ("1,234" → "1,23")', campo().value === '1,23', campo().value)
+  }
+  {
+    // Volver de "por unidad" a "total" con 4 decimales: el total viaja al centavo.
+    const { S, lista, click, campo } = prepararSinImporte(HARINA)
+    const aUnidad = { value: 'unidad', closest: (sel) => sel === '.modo-importe' ? aUnidad : null }
+    lista.__disparar('change', { target: aUnidad })
+    campo().teclear('12,3456')
+    const aTotal = { value: 'total', closest: (sel) => sel === '.modo-importe' ? aTotal : null }
+    lista.__disparar('change', { target: aTotal })
+    click('.btn-confirmar-importe', { id: 'f1' })
+    await new Promise(r => setImmediate(r))
+    chk('cargar importe: de unidad a total, 12,3456 viaja como 12.35', rpc(S, 'completar_importe_factura')[0]?.params.p_importe === 12.35, S.__llamadas())
   }
   {
     const { S, lista, click, campo } = prepararSinImporte(HARINA)
@@ -514,7 +552,8 @@ async function main() {
     chk('IDS_CAMPOS_MONTO son exactamente pago y crédito', /const IDS_CAMPOS_MONTO = \['campo-monto-pago', 'campo-monto-credito'\]/.test(codigo))
     chk('los montos se enlazan con 2 decimales', /enlazarCampoNumero\(document\.getElementById\(id\), \{ decimales: 2 \}\)/.test(codigo))
     const enlaces = codigo.split('\n').filter(l => /enlazarCampoNumero\(/.test(l)).map(l => l.trim())
-    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO, cargar importe), todos con 2 decimales', enlaces.length === 3 && enlaces.every(a => /decimales: 2/.test(a)), enlaces)
+    chk('hay exactamente 3 enlazarCampoNumero (fijos, FIFO con 2 decimales; cargar importe según el modo)',
+      enlaces.length === 3 && enlaces.filter(a => /decimales: 2 \}/.test(a)).length === 2 && enlaces.some(a => /decimales: decimalesImporteSin\(form\)/.test(a)), enlaces)
     chk('los CUIT NO se enlazan', !/enlazarCampoNumero\([^)]*cuit/i.test(codigo) && !/IDS_CAMPOS_MONTO = \[[^\]]*cuit/.test(codigo))
     const iEnlace = codigo.indexOf('\n    enlazarCamposMonto()\n'), iListener = codigo.indexOf("document.getElementById('campo-monto-pago').addEventListener('input'")
     chk('el enlace corre al iniciar, ANTES del listener de sugerencias', iEnlace !== -1 && iListener !== -1 && iEnlace < iListener, [iEnlace, iListener])

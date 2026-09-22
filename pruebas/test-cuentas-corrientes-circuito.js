@@ -61,7 +61,7 @@ const FUNCIONES = [
   'esc', 'formatearImporte', 'formatearImporteCentavosSuaves', 'importeHtml', 'tieneTarea',
   'nombreUnidad', 'badgeEstadoFactura', 'inicialesEmpresa', 'colorAvatar', 'filtrarPadron',
   'contarSinImporte', 'htmlSinImporte', 'esSinImporte', 'resumenCantidades', 'textoCantidadInsumo', 'productoUnicoConCantidad', 'cargarCantidadesSinImporte',
-  'totalImporteFormulario', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
+  'decimalesImporteSin', 'totalImporteFormulario', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'confirmarImporteSinImporte', 'cargarSinImporte', 'cargarFichaRemitos', 'renderizarListaSaldos',
   'renderizarResumenCC', 'renderizarPadron', 'renderizarFichaBanner', 'renderizarListaHistorial',
 ]
