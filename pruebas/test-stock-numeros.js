@@ -161,7 +161,7 @@ const FUNCIONES = [
   'textoDelta',
   // recuento
   'renderizarItemsRecuento', 'anotarCantidad', 'huellaItem', 'guardarConteoAhora',
-  'contenidoAgregar', 'confirmarAgregarItem', 'cargarItemsRecuento', 'ordenarItemsRec',
+  'contenidoAgregar', 'avisoRenglonSinPresentacion', 'confirmarAgregarItem', 'cargarItemsRecuento', 'ordenarItemsRec',
   // movimiento
   'prepararCantidadMov', 'aplicarModoMov', 'elegirInsumoMov', 'quitarInsumoMov', 'contenidoMov',
   'cantidadMov', 'confirmarMovimiento',
