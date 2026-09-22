@@ -5857,10 +5857,23 @@
     // Corrientes), cerrar vuelve a esa URL puntual en vez de a la lista de
     // Gastos. Cubre tanto el botón Volver como el cierre automático después
     // de guardar una edición (ambos llaman a esta misma función).
+    //
+    // SOLO A UNA URL DE ESTA MISMA APP (mismo origen, http/https). El valor
+    // viene de la URL y cualquiera puede armar un link: sin este control,
+    // gastos.html?gasto=<id>&volver=javascript:… ejecutaba código en la
+    // sesión de quien tocara "Volver" o guardara la edición — casi siempre un
+    // super_admin. Un destino que no pasa se ignora y se cierra el detalle
+    // como si no hubiera ?volver=. Caja manda la URL absoluta y Cuentas
+    // Corrientes una relativa ('cuentas-corrientes.html' o su location.href):
+    // las dos siguen andando.
     function volverOrigenSiCorresponde() {
       const volver = new URLSearchParams(location.search).get('volver')
-      if (volver) { window.location.href = decodeURIComponent(volver); return true }
-      return false
+      if (!volver) return false
+      let destino
+      try { destino = new URL(decodeURIComponent(volver), location.href) } catch { return false }
+      if (!/^https?:$/.test(destino.protocol) || destino.origin !== location.origin) return false
+      window.location.href = destino.href
+      return true
     }
 
     function cerrarDetalleGasto() {

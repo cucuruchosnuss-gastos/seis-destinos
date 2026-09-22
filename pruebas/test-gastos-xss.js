@@ -48,7 +48,7 @@ const { chk, esperas, fin } = arnes()
 // Cada uno invierte SU chequeo (se afirma que el sink sigue ahí, así la suite
 // queda verde sobre el estado actual y no se olvida) y se imprime. Arreglarlo
 // sin sacarlo de acá da ROJO; sacarlo de acá sin arreglarlo, también.
-const HALLAZGOS_ABIERTOS = new Set(['volver'])
+const HALLAZGOS_ABIERTOS = new Set([])
 
 // ══════════════════════════════════════════════════════════════════════════
 // 1. RENDERS EJECUTADOS

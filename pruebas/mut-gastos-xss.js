@@ -92,6 +92,13 @@ correrMutaciones({
       de: 'destino: id => `materia-prima.html?ingreso=${encodeURIComponent(id)}`', a: 'destino: id => `materia-prima.html?ingreso=${id}`' },
     { nombre: 'el href de "Ingresar la mercadería" pierde el encodeURIComponent',
       de: 'desde_gasto=${encodeURIComponent(p.gastoId)}', a: 'desde_gasto=${p.gastoId}' },
+    // ?volver=: el control del destino.
+    { nombre: '?volver= deja de controlar el origen',
+      de: "if (!/^https?:$/.test(destino.protocol) || destino.origin !== location.origin) return false",
+      a: "if (!/^https?:$/.test(destino.protocol)) return false" },
+    { nombre: '?volver= deja de controlar el protocolo y el origen',
+      de: "if (!/^https?:$/.test(destino.protocol) || destino.origin !== location.origin) return false",
+      a: '' },
   ],
   // Sin equivalentes: los esc() de constantes (OPCIONES_ORDEN, MENSAJES_FOTO,
   // ORIGENES_DUPLICADO, LOGOS_EMPRESA, las etiquetas de fila()) los detecta el
