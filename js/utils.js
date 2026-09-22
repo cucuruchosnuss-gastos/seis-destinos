@@ -96,6 +96,9 @@ function _renderizarToast(mensaje, tipo) {
 
   toast.textContent = mensaje
   toast.className = `toast toast--${tipo}`
+  // Un lector de pantalla anuncia el error apenas aparece; el éxito, sin
+  // interrumpir.
+  toast.setAttribute('role', tipo === 'error' ? 'alert' : 'status')
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => toast.classList.add('toast--visible'))
@@ -104,7 +107,16 @@ function _renderizarToast(mensaje, tipo) {
   clearTimeout(toastTimer)
   toastTimer = setTimeout(() => {
     toast.classList.remove('toast--visible')
-  }, 3500)
+  }, duracionToast(mensaje))
+}
+
+// Cuánto tiempo queda a la vista un cartel. Los errores de la base vienen
+// ENTEROS (a propósito: dicen qué cheque no pudo salir y por qué) y en 3,5
+// segundos no se alcanzaban a leer. Mínimo 3,5 s, unos 60 ms por carácter, y
+// como mucho 12 s.
+export function duracionToast(mensaje) {
+  const largo = String(mensaje ?? '').length
+  return Math.min(12000, Math.max(3500, largo * 60))
 }
 
 export function mostrarError(mensaje) {

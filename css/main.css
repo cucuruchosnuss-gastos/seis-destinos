@@ -826,18 +826,31 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 
 /* ─── Toast de notificación ──────────────────────────────────────────────── */
 
+/* EL CARTEL NUNCA SALE DEL BORDE (22/09/2026). Tenía white-space: nowrap y
+   forma de píldora: en el celular un error largo —los de la base vienen
+   enteros— se cortaba a los dos costados y no se podía leer. Ahora el ancho
+   máximo es la pantalla menos un margen de 1rem por lado y menos el
+   safe-area (la muesca del iPhone), el texto baja de renglón, y el borde
+   inferior respeta la barra de gestos. Un mensaje corto sigue ocupando lo
+   que necesita (width: max-content). */
 .toast {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  transform: translateX(-50%) translateY(calc(100% + 2rem));
+  transform: translateX(-50%) translateY(calc(100% + 2rem + env(safe-area-inset-bottom, 0px)));
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
   background: var(--color-texto);
   color: #fff;
   padding: 0.75rem 1.25rem;
-  border-radius: 999px;
+  border-radius: 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  white-space: nowrap;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
   z-index: 9999;
   box-shadow: var(--sombra-media);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
