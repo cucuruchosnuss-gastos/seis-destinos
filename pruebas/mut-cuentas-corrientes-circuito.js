@@ -28,7 +28,7 @@ correrMutaciones({
     { nombre: 'el error de completar_importe_factura se tapa',
       de: "form.error = error.message || 'La base no dijo el motivo.'", a: "form.error = 'Error.'" },
     { nombre: 'se manda el precio por unidad en vez del total',
-      de: "supabase.rpc('completar_importe_factura', { p_factura_id: facturaId, p_importe: total })", a: "supabase.rpc('completar_importe_factura', { p_factura_id: facturaId, p_importe: parseImporte(form.texto) })" },
+      de: "supabase.rpc('completar_importe_factura', { p_factura_id: facturaId, p_importe: total })", a: "supabase.rpc('completar_importe_factura', { p_factura_id: facturaId, p_importe: form.importe })" },
     { nombre: 'resumenCantidades cuenta el null como 0',
       de: 'if (it.cantidad == null || !Number.isFinite(cant)) continue', a: 'if (!Number.isFinite(cant)) continue' },
     { nombre: 'contarSinImporte ignora la unidad',

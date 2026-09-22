@@ -1499,7 +1499,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1568,6 +1568,10 @@
     let facturaPendienteAAsignar   = null
     let proveedorAsignarSeleccionado = null
     let creditoAAplicar            = null
+    // Las facturas que se ofrecen al aplicar un crédito, con su saldo como
+    // NÚMERO: el prefill del monto sale de acá y no de re-leer el texto
+    // formateado de la <option>.
+    let facturasParaCredito        = []
     let medioPagoSeleccionado      = null
     let facturasParaPago           = [] // [{id, numero, fecha, saldo, checked, monto}]
     let proveedorAEditar           = null
@@ -1618,65 +1622,48 @@
     // (modal de asignar proveedor, modal de aplicar crédito) y en el label que
     // va a poblarSelect(), que ya escapa por dentro. Si escapara acá, esos
     // lugares mostrarían "&amp;" literal. Para meter un importe en HTML, usar
-    // importeHtml(): la moneda es texto libre en la base (ninguna columna
-    // `moneda` tiene CHECK), así que interpolarla cruda es un sink de XSS.
+    // importeHtml(): hay un solo lugar que decide cómo entra un importe a la
+    // página (la moneda tiene CHECK en la base desde el 17/09/2026, así que
+    // hoy es consistencia y no un vector).
+    // Un importe AUSENTE (null, undefined, '', NaN) dice "—" y nunca "$ 0,00"
+    // ni "$ NaN". El formato sale de formatearNumeroAr() de js/utils.js
+    // (21/09/2026), el de todos los módulos; todo valor presente se ve igual
+    // que antes. No llega al export a Excel: esa columna va con el número.
     function formatearImporte(importe, moneda = 'ARS') {
-      if (importe == null) return '—'
-      const num = Number(importe).toLocaleString('es-AR', {
-        minimumFractionDigits: 2, maximumFractionDigits: 2,
-      })
+      const num = formatearNumeroAr(importe, { decimales: 2 })
+      if (num === '—') return '—'
       return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
     }
 
     // Igual que formatearImporte() pero con los centavos envueltos en un
     // <span> aparte para pintarlos en un tono más claro — solo para las 3
     // tarjetas de resumen de Pantalla 1.
+    // Un importe ausente dice "—" (antes, "$ 0,00"): los call sites le pasan
+    // un 0 explícito cuando no hay ningún saldo, así que ese caso no cambia.
     function formatearImporteCentavosSuaves(importe, moneda = 'ARS') {
-      const [entero, centavos] = Number(importe || 0).toLocaleString('es-AR', {
-        minimumFractionDigits: 2, maximumFractionDigits: 2,
-      }).split(',')
+      const texto = formatearNumeroAr(importe, { decimales: 2 })
+      if (texto === '—') return '—'
+      const [entero, centavos] = texto.split(',')
       // Devuelve HTML, así que escapa por dentro: la moneda es texto libre.
       const simbolo = moneda === 'ARS' ? '$' : esc(moneda)
       return `${simbolo} ${entero}<span class="cc-centavos">,${centavos}</span>`
     }
 
-    function parseImporte(str) {
-      if (str == null || str === '') return null
-      const limpio = String(str).replace(/\./g, '').replace(',', '.')
-      const num = parseFloat(limpio)
-      return isNaN(num) ? null : num
+    // NÚMEROS (21/09/2026): los campos de importe se ENLAZAN con
+    // enlazarCampoNumero() de js/utils.js —formatea mientras se escribe,
+    // mantiene el cursor, acepta pegar—, se LEEN con leerCampoNumero() y se
+    // ESCRIBEN desde código con ponerNumero(). Reemplazan a parseImporte(),
+    // formatearNumeroEditable() y formatearImporteEnVivo() propios: el parser
+    // viejo borraba TODOS los puntos, así que un "387300.50" pegado se leía
+    // como 38.730.050. Todos son importes: 2 decimales.
+    const IDS_CAMPOS_MONTO = ['campo-monto-pago', 'campo-monto-credito']
+
+    function enlazarCamposMonto() {
+      for (const id of IDS_CAMPOS_MONTO) enlazarCampoNumero(document.getElementById(id), { decimales: 2 })
     }
 
-    // Formatea un número para prellenar un input que después se lee con
-    // parseImporte() (formato es-AR: coma decimal) — nunca usar toFixed(2)
-    // para esto, produce punto decimal que parseImporte() interpreta mal
-    // (lee todo como parte entera).
-    function formatearNumeroEditable(n) {
-      return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    }
-
-    // Separador de miles en vivo, mientras se escribe — mantiene el cursor a
-    // la misma distancia del final del texto (no del principio), para que no
-    // salte cuando se agrega o saca un punto de miles por un dígito tipeado
-    // en el medio del número.
-    function formatearImporteEnVivo(input) {
-      input.addEventListener('input', (e) => {
-        const desdeElFinal = e.target.value.length - e.target.selectionStart
-        let valor = e.target.value.replace(/[^\d,]/g, '')
-        // Si hay más de una coma, conserva la primera como separador
-        // decimal y descarta las siguientes — sin esto, split(',') tira
-        // en silencio todo lo que venga después de la segunda coma.
-        const primeraComa = valor.indexOf(',')
-        if (primeraComa !== -1) valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '')
-        let [entero, decimal] = valor.split(',')
-        entero = (entero || '').replace(/^0+(?=\d)/, '')
-        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-        let nuevoValor = entero
-        if (decimal !== undefined) nuevoValor += ',' + decimal.slice(0, 2)
-        e.target.value = nuevoValor
-        const nuevaPosicion = Math.max(0, nuevoValor.length - desdeElFinal)
-        e.target.setSelectionRange(nuevaPosicion, nuevaPosicion)
-      })
+    function montoDeCampo(id) {
+      return leerCampoNumero(document.getElementById(id))
     }
 
     function fechaISO(d) {
@@ -3255,6 +3242,18 @@
           }
         })
       })
+
+      enlazarCampoImporteSin(listaEl)
+    }
+
+    // El campo de "Cargar importe" se dibuja SIN value: se enlaza después de
+    // insertar el HTML y el número del formulario se escribe con ponerNumero.
+    function enlazarCampoImporteSin(listaEl) {
+      const form = estado.ficha?.formImporte
+      const input = listaEl.querySelector('.campo-importe-sin')
+      if (!form || !input) return
+      enlazarCampoNumero(input, { decimales: 2 })
+      ponerNumero(input, form.importe ?? null)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3328,15 +3327,17 @@
     }
 
     function textoCantidadInsumo(c) {
-      const num = Number(c.cantidad).toLocaleString('es-AR', { maximumFractionDigits: 3 })
+      const num = formatearNumeroAr(c.cantidad, { decimales: 3, minimos: 0 })
       return `${num} ${c.unidad} de ${c.nombre}`.replace(/\s+/g, ' ')
     }
 
-    // El total que se va a cargar. null si el texto no es un importe > 0.
-    // Precio por unidad: solo con UN producto; se multiplica y se redondea al
-    // centavo, que es como se guarda.
+    // El total que se va a cargar. null si el importe no es un número > 0.
+    // form.importe es el NÚMERO leído del campo (leerCampoNumero), nunca el
+    // texto. Precio por unidad: solo con UN producto; se multiplica y se
+    // redondea al centavo, que es como se guarda. El precio por unidad se
+    // escribe con 2 decimales (es un importe): ver el traspaso del 21/09/2026.
     function totalImporteFormulario(form, cantidades) {
-      const n = parseImporte(form?.texto)
+      const n = leerNumeroAr(form?.importe ?? null)
       if (n == null || !(n > 0)) return null
       if (form.modo !== 'unidad') return n
       if (!cantidades || cantidades.length !== 1) return null
@@ -3362,7 +3363,7 @@
               ${unico ? `<label><input type="radio" name="modo-importe-${esc(id)}" class="modo-importe" value="unidad"${form.modo === 'unidad' ? ' checked' : ''}> Precio por ${esc(unico.unidad || 'unidad')} (se multiplica por ${esc(textoCantidadInsumo(unico))})</label>` : ''}
             </div>
             ${!unico && cantidades && cantidades.length > 1 ? '<div class="fila-movimiento__aviso">Son varios productos: cargá el total.</div>' : ''}
-            <input type="text" inputmode="decimal" class="campo-importe-sin" autocomplete="off" placeholder="0,00" value="${esc(form.texto || '')}" aria-label="Importe">
+            <input type="text" inputmode="decimal" class="campo-importe-sin" autocomplete="off" placeholder="0,00" aria-label="Importe">
             <div class="cargar-importe-cc__total">${total != null ? `Total a cargar: ${importeHtml(total, m.moneda)}` : 'Escribí un importe mayor a cero.'}</div>
             ${form.error ? `<div class="cargar-importe-cc__error">${esc(form.error)}</div>` : ''}
             <div class="cargar-importe-cc__acciones">
@@ -3587,7 +3588,8 @@
       creditoAAplicar = credito
       document.getElementById('aplicar-credito-texto').textContent =
         `Crédito disponible: ${formatearImporte(credito.monto_disponible, credito.moneda)}`
-      document.getElementById('campo-monto-credito').value = ''
+      ponerNumero(document.getElementById('campo-monto-credito'), null)
+      facturasParaCredito = []
 
       const { data, error } = await supabase.from('facturas_pendientes')
         .select('id, numero_comprobante, fecha_factura, saldo_pendiente')
@@ -3599,6 +3601,7 @@
 
       if (error) { console.error(error); mostrarError('Error al cargar las facturas.'); return }
 
+      facturasParaCredito = data ?? []
       poblarSelect('campo-factura-credito', data ?? [],
         f => ({ value: f.id, label: `${formatearFecha(f.fecha_factura)} — ${f.numero_comprobante || '(sin número)'} — saldo ${formatearImporte(f.saldo_pendiente, credito.moneda)}` }),
         '— Seleccioná una factura —')
@@ -3616,7 +3619,7 @@
     async function confirmarAplicarCredito() {
       if (!creditoAAplicar) return
       const facturaId = document.getElementById('campo-factura-credito').value
-      const monto = parseImporte(document.getElementById('campo-monto-credito').value)
+      const monto = montoDeCampo('campo-monto-credito')
       if (!facturaId) return mostrarError('Seleccioná una factura.')
       if (monto == null || monto <= 0) return mostrarError('Ingresá un monto válido.')
 
@@ -3748,7 +3751,7 @@
           `<option value="${esc(monedasConDeuda[0]?.moneda || 'ARS')}">${esc(monedasConDeuda[0]?.moneda || 'ARS')}</option>`
       }
 
-      document.getElementById('campo-monto-pago').value = ''
+      ponerNumero(document.getElementById('campo-monto-pago'), null)
       document.getElementById('campo-fecha-pago-cc').value = fechaISO(new Date())
       seleccionarMedioPagoCC(null)
       facturasParaPago = []
@@ -3778,7 +3781,7 @@
     // nombres tal cual, sin fallback a otras variantes.
     async function actualizarSugerenciasPago() {
       const moneda = document.getElementById('campo-moneda-pago').value
-      const monto  = parseImporte(document.getElementById('campo-monto-pago').value)
+      const monto  = montoDeCampo('campo-monto-pago')
 
       if (!moneda || monto == null || monto <= 0) {
         facturasParaPago = []
@@ -3840,7 +3843,7 @@
             <div class="fila-fifo__numero">${esc(f.numero)} · ${formatearFecha(f.fecha)}</div>
             <div class="fila-fifo__meta">Saldo pendiente: ${importeHtml(f.saldo)}</div>
           </div>
-          <input type="text" class="fila-fifo__monto monto-fifo" data-index="${i}" value="${f.monto ? formatearNumeroEditable(f.monto) : ''}" placeholder="0,00" inputmode="decimal">
+          <input type="text" class="fila-fifo__monto monto-fifo" data-index="${i}" placeholder="0,00" inputmode="decimal">
         </div>
       `).join('')
 
@@ -3850,18 +3853,22 @@
           facturasParaPago[i].checked = e.target.checked
           if (e.target.checked && !facturasParaPago[i].monto) {
             facturasParaPago[i].monto = facturasParaPago[i].saldo
-            cont.querySelector(`.monto-fifo[data-index="${i}"]`).value = formatearNumeroEditable(facturasParaPago[i].monto)
+            ponerNumero(cont.querySelector(`.monto-fifo[data-index="${i}"]`), facturasParaPago[i].monto)
           }
           actualizarResumenAplicacion()
         })
       })
+      // Cada monto se dibuja SIN value: se enlaza, se escribe con ponerNumero
+      // (0 = vacío, como antes) y recién después se escucha, así el listener
+      // lee lo que el enlace ya formateó.
       cont.querySelectorAll('.monto-fifo').forEach(inp => {
+        enlazarCampoNumero(inp, { decimales: 2 })
+        ponerNumero(inp, facturasParaPago[Number(inp.dataset.index)].monto || null)
         inp.addEventListener('input', (e) => {
           const i = Number(e.target.dataset.index)
-          facturasParaPago[i].monto = parseImporte(e.target.value) || 0
+          facturasParaPago[i].monto = leerCampoNumero(e.target) || 0
           actualizarResumenAplicacion()
         })
-        formatearImporteEnVivo(inp)
       })
 
       actualizarResumenAplicacion()
@@ -3869,7 +3876,7 @@
 
     function actualizarResumenAplicacion() {
       const resumenEl = document.getElementById('resumen-aplicacion')
-      const monto = parseImporte(document.getElementById('campo-monto-pago').value)
+      const monto = montoDeCampo('campo-monto-pago')
       if (monto == null || monto <= 0) { resumenEl.hidden = true; return }
 
       const sumaAplicada = facturasParaPago.filter(f => f.checked).reduce((acc, f) => acc + (f.monto || 0), 0)
@@ -3887,7 +3894,7 @@
 
     async function confirmarPago() {
       const moneda = document.getElementById('campo-moneda-pago').value
-      const monto = parseImporte(document.getElementById('campo-monto-pago').value)
+      const monto = montoDeCampo('campo-monto-pago')
       if (!moneda) return mostrarError('Seleccioná la moneda.')
       if (monto == null || monto <= 0) return mostrarError('Ingresá un monto válido.')
       if (!medioPagoSeleccionado) return mostrarError('Seleccioná el medio de pago.')
@@ -4124,7 +4131,7 @@
       if (!estado.ficha) return
       const abrir = ev.target.closest('.btn-cargar-importe')
       if (abrir) {
-        estado.ficha.formImporte = { facturaId: abrir.dataset.id, modo: 'total', texto: '', error: null, enCurso: false }
+        estado.ficha.formImporte = { facturaId: abrir.dataset.id, modo: 'total', importe: null, error: null, enCurso: false }
         renderizarFichaMovimientos()
         listaMovFicha.querySelector('.campo-importe-sin')?.focus()
         return
@@ -4143,15 +4150,11 @@
       estado.ficha.formImporte.modo = radio.value
       renderizarFichaMovimientos()
     })
-    listaMovFicha.addEventListener('focusin', (ev) => {
-      const input = ev.target.closest('.campo-importe-sin')
-      if (input && !input.dataset.formateado) { input.dataset.formateado = '1'; formatearImporteEnVivo(input) }
-    })
     listaMovFicha.addEventListener('input', (ev) => {
       const input = ev.target.closest('.campo-importe-sin')
       const form = estado.ficha?.formImporte
       if (!input || !form) return
-      form.texto = input.value
+      form.importe = leerCampoNumero(input)
       // Solo la línea del total: redibujar la fila le sacaría el foco al campo.
       const total = totalImporteFormulario(form, estado.ficha.cantidadesSinImporte?.get(form.facturaId) ?? null)
       const moneda = estado.ficha.movimientosRaw.find(m => m.factura_pendiente_id === form.facturaId)?.moneda
@@ -4206,8 +4209,9 @@
       actualizarSelectorCuentaPago()
       programarActualizarSugerenciasPago()
     })
+    // Primero el enlace y después el listener: así lee el valor ya formateado.
+    enlazarCamposMonto()
     document.getElementById('campo-monto-pago').addEventListener('input', programarActualizarSugerenciasPago)
-    formatearImporteEnVivo(document.getElementById('campo-monto-pago'))
     document.getElementById('grilla-medio-pago-cc').addEventListener('click', (e) => {
       const btn = e.target.closest('.btn-tipo-doc')
       if (!btn) return
@@ -4221,17 +4225,20 @@
     // ── Modal: Aplicar crédito ────────────────────────────────────────────
     document.getElementById('campo-factura-credito').addEventListener('change', (e) => {
       if (!creditoAAplicar || !e.target.value) return
-      // Prefill: lo que alcance primero, el saldo de la factura o el crédito disponible.
-      const opcionTexto = e.target.selectedOptions[0]?.textContent || ''
-      const match = opcionTexto.match(/saldo\s+[^\d]*([\d.,]+)/)
-      let saldoFactura = null
-      if (match) saldoFactura = parseImporte(match[1])
-      const sugerido = saldoFactura != null
-        ? Math.min(saldoFactura, Number(creditoAAplicar.monto_disponible))
-        : Number(creditoAAplicar.monto_disponible)
-      document.getElementById('campo-monto-credito').value = formatearNumeroEditable(sugerido)
+      // Prefill: lo que alcance primero, el saldo de la factura o el crédito
+      // disponible. El saldo sale del NÚMERO de la factura, no del texto de la
+      // <option> (que es un importe ya formateado).
+      const factura = facturasParaCredito.find(f => f.id === e.target.value)
+      // Son columnas numeric de la base (llegan como número): Number() y no
+      // leerNumeroAr, que leería "1234.500" como miles. Lo ausente es null.
+      const aNumero = (v) => (v == null || v === '' || !Number.isFinite(Number(v))) ? null : Number(v)
+      const saldoFactura = aNumero(factura?.saldo_pendiente)
+      const disponible = aNumero(creditoAAplicar.monto_disponible)
+      const sugerido = saldoFactura != null && disponible != null
+        ? Math.min(saldoFactura, disponible)
+        : (disponible ?? saldoFactura)
+      ponerNumero(document.getElementById('campo-monto-credito'), sugerido)
     })
-    formatearImporteEnVivo(document.getElementById('campo-monto-credito'))
     document.getElementById('btn-cerrar-aplicar-credito').addEventListener('click', cerrarModalAplicarCredito)
     document.getElementById('btn-cancelar-aplicar-credito').addEventListener('click', cerrarModalAplicarCredito)
     document.querySelector('#modal-aplicar-credito .modal-cc__backdrop').addEventListener('click', cerrarModalAplicarCredito)

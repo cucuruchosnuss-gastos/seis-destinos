@@ -12,6 +12,7 @@
 const path = require('path')
 const { construirCon } = require('./sandbox')
 const { arnes, marca, chequearMarcas, estaticoAcotado, leer } = require('./circuito-comun')
+const { fuenteNumeros } = require('./numeros-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cuentas-corrientes.html')
@@ -19,6 +20,7 @@ const FUENTE = leer(ARCHIVO)
 const { chk, esperas, fin } = arnes()
 
 const PRELUDIO = `
+  ${fuenteNumeros()}
   function nuevoEl(id) {
     return { id, innerHTML: '', textContent: '', value: '', hidden: false, dataset: {},
       addEventListener(){}, querySelectorAll: () => [], querySelector: () => null }
@@ -56,7 +58,7 @@ const PRELUDIO = `
 `
 
 const FUNCIONES = [
-  'esc', 'formatearImporte', 'formatearImporteCentavosSuaves', 'importeHtml', 'parseImporte', 'tieneTarea',
+  'esc', 'formatearImporte', 'formatearImporteCentavosSuaves', 'importeHtml', 'tieneTarea',
   'nombreUnidad', 'badgeEstadoFactura', 'inicialesEmpresa', 'colorAvatar', 'filtrarPadron',
   'contarSinImporte', 'htmlSinImporte', 'esSinImporte', 'resumenCantidades', 'textoCantidadInsumo',
   'totalImporteFormulario', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
@@ -89,12 +91,13 @@ const sinCeroNiNaN = (html) => !/\$\s*0,00/.test(html) && !/NaN/.test(html)
   const sinVer = S.htmlFilaSinImporte(m, { cantidades: null, puedeCargar: true })
   chk('sin importe: si el RLS no deja ver el ingreso, lo dice', sinVer.includes('No se pueden ver las cantidades'))
 
-  const form = { facturaId: m.factura_pendiente_id, modo: 'total', texto: marca('texto'), error: marca('error_rpc'), enCurso: false }
+  const form = { facturaId: m.factura_pendiente_id, modo: 'total', importe: null, error: marca('error_rpc'), enCurso: false }
   const conForm = S.htmlFilaSinImporte(m, { cantidades, puedeCargar: true, form })
-  chequearMarcas(chk, 'htmlFilaSinImporte (formulario)', conForm, ['factura_id', 'texto', 'error_rpc', 'insumo', 'unidad'])
+  chequearMarcas(chk, 'htmlFilaSinImporte (formulario)', conForm, ['factura_id', 'error_rpc', 'insumo', 'unidad'])
+  chk('formulario: el campo de importe se dibuja SIN value (lo escribe ponerNumero)', /<input[^>]*campo-importe-sin[^>]*>/.test(conForm) && !/<input[^>]*campo-importe-sin[^>]*value=/.test(conForm))
   chk('formulario: con un producto ofrece precio por unidad', conForm.includes('value="unidad"'))
-  chk('formulario: con texto inválido no inventa un total', conForm.includes('Escribí un importe mayor a cero.') && sinCeroNiNaN(conForm))
-  const varios = S.htmlFilaSinImporte(m, { cantidades: [...cantidades, { insumoId: 'i2', nombre: 'B', unidad: 'kg', cantidad: 3 }], puedeCargar: true, form: { ...form, error: null, texto: '' } })
+  chk('formulario: sin importe no inventa un total', conForm.includes('Escribí un importe mayor a cero.') && sinCeroNiNaN(conForm))
+  const varios = S.htmlFilaSinImporte(m, { cantidades: [...cantidades, { insumoId: 'i2', nombre: 'B', unidad: 'kg', cantidad: 3 }], puedeCargar: true, form: { ...form, error: null, importe: null } })
   chk('formulario: con varios productos NO ofrece precio por unidad', !varios.includes('value="unidad"') && varios.includes('Son varios productos'))
 
   chk('esSinImporte: monto null en una factura', S.esSinImporte({ tipo: 'factura', monto: null, factura_pendiente_id: 'f' }, {}))
@@ -109,12 +112,12 @@ const sinCeroNiNaN = (html) => !/\$\s*0,00/.test(html) && !/NaN/.test(html)
 // ══════════════════════════════════════════════════════════════════════════
 {
   const una = [{ insumoId: 'i', nombre: 'Harina', unidad: 'kg', cantidad: 250 }]
-  chk('total: modo total toma el número', S.totalImporteFormulario({ modo: 'total', texto: '1.234,50' }, una) === 1234.5)
-  chk('total: por unidad multiplica por la cantidad', S.totalImporteFormulario({ modo: 'unidad', texto: '1.200,10' }, una) === 300025)
-  chk('total: por unidad redondea al centavo', S.totalImporteFormulario({ modo: 'unidad', texto: '0,333' }, [{ cantidad: 3 }]) === 1)
-  chk('total: por unidad con varios productos no da número', S.totalImporteFormulario({ modo: 'unidad', texto: '10' }, [...una, { cantidad: 1 }]) === null)
-  chk('total: por unidad sin cantidades no da número', S.totalImporteFormulario({ modo: 'unidad', texto: '10' }, null) === null)
-  chk('total: vacío o cero es null (no 0)', S.totalImporteFormulario({ modo: 'total', texto: '' }, una) === null && S.totalImporteFormulario({ modo: 'total', texto: '0' }, una) === null)
+  chk('total: modo total toma el número', S.totalImporteFormulario({ modo: 'total', importe: 1234.5 }, una) === 1234.5)
+  chk('total: por unidad multiplica por la cantidad', S.totalImporteFormulario({ modo: 'unidad', importe: 1200.1 }, una) === 300025)
+  chk('total: por unidad redondea al centavo', S.totalImporteFormulario({ modo: 'unidad', importe: 0.333 }, [{ cantidad: 3 }]) === 1)
+  chk('total: por unidad con varios productos no da número', S.totalImporteFormulario({ modo: 'unidad', importe: 10 }, [...una, { cantidad: 1 }]) === null)
+  chk('total: por unidad sin cantidades no da número', S.totalImporteFormulario({ modo: 'unidad', importe: 10 }, null) === null)
+  chk('total: vacío o cero es null (no 0)', S.totalImporteFormulario({ modo: 'total', importe: null }, una) === null && S.totalImporteFormulario({ modo: 'total', importe: 0 }, una) === null)
   const r = S.resumenCantidades([
     { insumo_id: 'a', cantidad: '100', insumos: { nombre: 'Harina', unidad_medida: 'kg' } },
     { insumo_id: 'a', cantidad: 150, insumos: { nombre: 'Harina', unidad_medida: 'kg' } },
@@ -128,17 +131,17 @@ const sinCeroNiNaN = (html) => !/\$\s*0,00/.test(html) && !/NaN/.test(html)
 const ramaAsync = async () => {
   // Confirmar: el total va a completar_importe_factura y el error se muestra tal cual.
   S.estado.ficha = { proveedorId: 'p', unidadId: 'u1', cantidadesSinImporte: new Map([['f1', [{ cantidad: 250 }]]]),
-    formImporte: { facturaId: 'f1', modo: 'unidad', texto: '100', error: null, enCurso: false }, movimientosRaw: [] }
+    formImporte: { facturaId: 'f1', modo: 'unidad', importe: 100, error: null, enCurso: false }, movimientosRaw: [] }
   S.__setRpc(async () => ({ data: null, error: { message: 'Este movimiento ya tiene importe.' } }))
   await S.confirmarImporteSinImporte('f1')
   const ult = S.__llamadas.rpc.at(-1)
   chk('cargar importe: llama a completar_importe_factura con el TOTAL', ult?.[0] === 'completar_importe_factura' && ult[1].p_factura_id === 'f1' && ult[1].p_importe === 25000, JSON.stringify(ult))
   chk('cargar importe: el error de la RPC queda tal cual', S.estado.ficha.formImporte.error === 'Este movimiento ya tiene importe.')
-  S.estado.ficha.formImporte = { facturaId: 'f1', modo: 'total', texto: '', error: null, enCurso: false }
+  S.estado.ficha.formImporte = { facturaId: 'f1', modo: 'total', importe: null, error: null, enCurso: false }
   const antes = S.__llamadas.rpc.length
   await S.confirmarImporteSinImporte('f1')
   chk('cargar importe: sin importe válido no llama a la RPC', S.__llamadas.rpc.length === antes && !!S.estado.ficha.formImporte.error)
-  S.estado.ficha.formImporte = { facturaId: 'f1', modo: 'total', texto: '5.000', error: null, enCurso: false }
+  S.estado.ficha.formImporte = { facturaId: 'f1', modo: 'total', importe: 5000, error: null, enCurso: false }
   S.__setRpc(async () => ({ data: null, error: null }))
   await S.confirmarImporteSinImporte('f1')
   chk('cargar importe: al terminar recarga saldos y movimientos', S.__llamadas.recargas === 1 && S.estado.ficha.formImporte === null)
