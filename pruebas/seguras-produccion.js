@@ -37,6 +37,12 @@ const SEGURAS_PRODUCCION = [
   ['editor', 'HTML ya escapado: htmlConfigRecetas() arma cada fila con esc() del ingrediente, la cantidad y los insumos'],
   ['historial', 'HTML ya escapado: htmlConfigRecetas() arma cada versión con esc() de la versión, la fecha, el autor y la nota'],
   ['panelInsumos', 'HTML ya escapado: htmlConfigIngredientes() lo arma arriba con esc() de la búsqueda y de cada insumo, o vacío'],
+  // B7
+  ['TOPE_FILAS', 'constante numérica del código: 1000'],
+  ['masas', 'HTML ya escapado: htmlDetalleTurno() arma cada masa con esc() de cada dato'],
+  ['htmlParadas(d.paradas)', 'HTML armado por htmlParadas(), que escapa adentro'],
+  ['producido', 'HTML ya escapado: htmlDetalleTurno() arma cada sublote con esc() de cada dato'],
+  ['totales', 'HTML ya escapado: htmlDetalleTurno() arma cada total con esc() del insumo, el lote y los kilos'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

@@ -61,6 +61,11 @@ const FUNCIONES_BASE = [
   'htmlPresentacionConfig', 'htmlConfigProductos', 'parametrosGuardarProducto', 'parametrosGuardarPresentacion',
   'campoNumero', 'accionProducto', 'leerMarcasConfig', 'htmlConfigMarcas', 'accionMarca', 'leerPersonalConfig',
   'personalVisible', 'htmlConfigPersonal', 'puestosElegidos', 'accionPersonal',
+  // B7: historial y stock terminado
+  'unidadesDeHistorial', 'sumarDias', 'fechaDelDia', 'unidadInicialOficina', 'nombresDeEmpleados', 'mostrarHistorial',
+  'filtrosHistorialValidos', 'cargarHistorial', 'htmlFilaHistorial', 'leerDetalleTurno', 'totalesConsumidos',
+  'nombreInsumo', 'htmlDetalleTurno', 'abrirDetalleHistorial', 'mostrarStockTerminado', 'cargarStockTerminado',
+  'agruparStockTerminado', 'htmlStockTerminado',
 ]
 
 const CONSTANTES_BASE = [
@@ -69,6 +74,7 @@ const CONSTANTES_BASE = [
   'ZONA_AR', 'TURNOS', 'SIN_OPERARIO',
   'PREFIJO_BORRADOR_MASA', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
+  'puedeVerHistorial', 'TOPE_FILAS',
 ]
 
 const PRELUDIO = `
@@ -151,7 +157,7 @@ const PRELUDIO = `
     tablero: null, hayTurnoAbierto: false, abrir: null, abrirOperarios: [], abriendo: false,
     planilla: null, catalogo: null, cierre: null, agregar: null, cerrando: false,
     salaTurno: null, masa: null, datosMasa: null, tiposMasa: null, masasTurno: null, enviandoMasa: false, anulando: null,
-    config: null,
+    config: null, historial: null, stockUnidad: null,
   }
 `
 

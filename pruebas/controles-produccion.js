@@ -28,6 +28,7 @@ const BASES = [
   '7aed9b3', // B3: tablero y abrir turno
   'fa693f2', // B4: planilla, paradas y cierre
   '10df632', // B5: sala de masa
+  '7cb199b', // B6: configuración
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].

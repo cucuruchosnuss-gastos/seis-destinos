@@ -146,3 +146,20 @@ Supabase se usó SOLO en lectura: la base ya estaba hecha. Toda la verificación
 - **Decisión sin preguntar:** "Cambiar el modo" del menú ganó un id (`#pr-menu-modo`) para ocultarlo a quien no carga;
   está declarado como renombrado en `controles-produccion.js`.
 - Pruebas: `test-produccion-config.js` (+ mut).
+- **Commit `7cb199b`.** Números: test-produccion-config 104/104, mut 99/99 (+1 equivalente); test-produccion-xss 6/6;
+  controles-produccion 392/392 (baselines B1–B5, más un renombrado declarado); el resto del repo en verde.
+
+### B7 — Historial y stock terminado (produccion:ver o produccion:configurar)
+- Accesos: en el menú y, sin `cargar`, en el inicio de la oficina ("Historial de producción", "Stock terminado"). Las
+  unidades son las de `ver` más las de `configurar`.
+- **Historial**: turnos de la unidad filtrados por fecha (arranca en los últimos 7 días; "desde" posterior a "hasta"
+  se avisa y no consulta), máquina y estado; aviso si se llega al tope de 1000 de PostgREST. El detalle: lote,
+  fecha y turno, encargado, operario, horario (hora de inicio y de apagado), scrap y observaciones; cada masa con
+  hora, tipo, simple/doble, origen, masero, ingredientes con insumo y lote ("lote fuera de stock" marcado) y la
+  diferencia contra SU receta (o "Anulada: motivo"); paradas con duración; los sublotes producidos con cajas ×
+  unidades por caja = unidades; y lo consumido por insumo y lote (solo masas no anuladas; `cantidad_kg` ya incluye
+  la doble).
+- **Stock terminado**: de `stock_terminado_movimientos` de la unidad, sumado por presentación, marca y sublote (un
+  sublote en cero no se lista), agrupado por "producto · presentación · marca" con su total y cada sublote en orden.
+  Solo lectura. Aviso si hay 1000 movimientos o más (los totales podrían estar incompletos).
+- Pruebas: `test-produccion-historial.js` (+ mut).

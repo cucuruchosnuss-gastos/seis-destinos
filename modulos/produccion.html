@@ -303,6 +303,8 @@
     <nav class="pr-tarjeta pr-menu" id="pr-menu" hidden aria-label="Menú de la tablet">
       <button type="button" class="pr-btn pr-btn--secundario" data-menu="modo" id="pr-menu-modo">Cambiar el modo de esta tablet</button>
       <button type="button" class="pr-btn pr-btn--secundario" data-menu="unidad" id="pr-menu-unidad">Cambiar de unidad</button>
+      <button type="button" class="pr-btn pr-btn--secundario" data-menu="historial" id="pr-menu-historial" hidden>Historial de producción</button>
+      <button type="button" class="pr-btn pr-btn--secundario" data-menu="stock" id="pr-menu-stock" hidden>Stock terminado</button>
       <button type="button" class="pr-btn pr-btn--secundario" data-menu="config" id="pr-menu-config" hidden>Configuración</button>
       <a class="pr-btn pr-btn--secundario" href="../dashboard.html" id="pr-menu-dashboard">Volver al inicio de la app</a>
     </nav>
@@ -318,6 +320,8 @@
         <h1 class="pr-titulo">Producción</h1>
         <p class="pr-texto-suave" id="pr-inicio-texto"></p>
         <div class="pr-grilla pr-espacio-arriba" id="pr-oficina">
+          <button type="button" class="pr-opcion" id="pr-btn-ir-historial" hidden>Historial de producción</button>
+          <button type="button" class="pr-opcion" id="pr-btn-ir-stock" hidden>Stock terminado</button>
           <button type="button" class="pr-opcion" id="pr-btn-ir-config" hidden>Configuración</button>
         </div>
       </section>
@@ -581,6 +585,53 @@
         <div class="pr-tarjeta" id="pr-config-cuerpo"></div>
       </section>
 
+      <!-- B7: historial de turnos (produccion:ver o :configurar). -->
+      <section id="pr-historial" hidden>
+        <div id="pr-historial-listado">
+          <div class="pr-tarjeta">
+            <div class="pr-fila-titulo">
+              <h1 class="pr-titulo">Historial de producción</h1>
+              <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-volver">‹ Volver</button>
+            </div>
+            <div class="pr-campos">
+              <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-historial-unidad" class="pr-select"></select></label>
+              <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-historial-desde" class="pr-input"></label>
+              <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-historial-hasta" class="pr-input"></label>
+              <label class="pr-campo"><span class="pr-campo__rotulo">Máquina</span><select id="pr-historial-maquina" class="pr-select"></select></label>
+              <label class="pr-campo"><span class="pr-campo__rotulo">Estado</span>
+                <select id="pr-historial-estado" class="pr-select">
+                  <option value="">Todos</option>
+                  <option value="abierto">Abiertos</option>
+                  <option value="cerrado">Cerrados</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div id="pr-historial-aviso"></div>
+          <div class="pr-grilla" id="pr-historial-lista"></div>
+        </div>
+        <div class="pr-tarjeta" id="pr-historial-detalle" hidden>
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo">Turno</h1>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-detalle-volver">‹ Historial</button>
+          </div>
+          <div id="pr-historial-detalle-cuerpo"></div>
+        </div>
+      </section>
+
+      <!-- B7: stock de producto terminado. Solo lectura. -->
+      <section id="pr-stock" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo">Stock terminado</h1>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-stock-volver">‹ Volver</button>
+          </div>
+          <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-stock-unidad" class="pr-select"></select></label>
+        </div>
+        <div id="pr-stock-aviso"></div>
+        <div id="pr-stock-lista"></div>
+      </section>
+
       <!-- B4: la planilla cerrada, con los sublotes que devolvió la base. -->
       <section class="pr-tarjeta" id="pr-cerrado" hidden>
         <h1 class="pr-titulo">Planilla cerrada</h1>
@@ -639,6 +690,9 @@
       anulando: null,
       // Configuración
       config: null,        // { unidadId, tab, busqueda, datos, … }
+      // Historial y stock terminado
+      historial: null,     // { unidadId, desde, hasta, maquina, estado, turnos, … }
+      stockUnidad: null,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -750,7 +804,7 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-masa', 'pr-config']
+    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-masa', 'pr-config', 'pr-historial', 'pr-stock']
 
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -864,6 +918,10 @@
         guardarPreferencia(CLAVE_UNIDAD, null)
       } else if (que === 'config') {
         return mostrarConfig()
+      } else if (que === 'historial') {
+        return mostrarHistorial()
+      } else if (que === 'stock') {
+        return mostrarStockTerminado()
       }
       siguientePaso()
     }
@@ -911,6 +969,7 @@
       conectarPlanilla()
       conectarSala()
       conectarConfig()
+      conectarHistorial()
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
       })
@@ -2615,9 +2674,15 @@
       mostrarVista('pr-inicio')
     }
 
+    const puedeVerHistorial = () => tieneTarea('ver') || tieneTarea('configurar')
+
     function pintarAccesosOficina() {
       document.getElementById('pr-btn-ir-config').hidden = !tieneTarea('configurar')
+      document.getElementById('pr-btn-ir-historial').hidden = !puedeVerHistorial()
+      document.getElementById('pr-btn-ir-stock').hidden = !puedeVerHistorial()
       document.getElementById('pr-menu-config').hidden = !tieneTarea('configurar')
+      document.getElementById('pr-menu-historial').hidden = !puedeVerHistorial()
+      document.getElementById('pr-menu-stock').hidden = !puedeVerHistorial()
     }
 
     function unidadesDeConfig() {
@@ -3264,6 +3329,298 @@
           nuevo.setSelectionRange?.(nuevo.value.length, nuevo.value.length)
         }
       })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HISTORIAL Y STOCK TERMINADO (produccion:ver o produccion:configurar)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TOPE_FILAS = 1000   // PostgREST corta ahí: si se llega, se avisa.
+
+    // Las unidades que la persona puede mirar: las de ver y las de configurar.
+    function unidadesDeHistorial() {
+      const set = new Set([...unidadesCon('ver'), ...unidadesCon('configurar')])
+      return [...estado.unidades.keys()].filter(id => set.has(id))
+    }
+
+    function sumarDias(iso, dias) {
+      const d = new Date(`${iso}T12:00:00Z`)
+      d.setUTCDate(d.getUTCDate() + dias)
+      return d.toISOString().slice(0, 10)
+    }
+
+    // dd/mm/aaaa de una fecha (date de la base, sin hora).
+    function fechaDelDia(iso) {
+      return fechaCorta(`${iso}T12:00:00Z`)
+    }
+
+    function unidadInicialOficina(unidades) {
+      if (unidades.includes(estado.unidadId)) return estado.unidadId
+      return unidades[0] ?? null
+    }
+
+    async function nombresDeEmpleados(ids) {
+      const unicos = [...new Set(ids.filter(Boolean))]
+      if (!unicos.length) return new Map()
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre').in('id', unicos)
+      if (error) throw error
+      return new Map((data ?? []).map(p => [p.id, p.nombre]))
+    }
+
+    // ── Historial de turnos ───────────────────────────────────────────────
+
+    async function mostrarHistorial() {
+      const unidades = unidadesDeHistorial()
+      if (!unidades.length) return
+      const hoy = hoyArgentina()
+      estado.historial = estado.historial ?? { desde: sumarDias(hoy, -7), hasta: hoy, maquina: '', estado: '' }
+      estado.historial.unidadId = unidades.includes(estado.historial.unidadId) ? estado.historial.unidadId : unidadInicialOficina(unidades)
+      pintarSelectorUnidad('pr-historial-unidad', unidades, estado.historial.unidadId)
+      document.getElementById('pr-historial-desde').value = estado.historial.desde
+      document.getElementById('pr-historial-hasta').value = estado.historial.hasta
+      document.getElementById('pr-historial-estado').value = estado.historial.estado
+      document.getElementById('pr-historial-detalle').hidden = true
+      document.getElementById('pr-historial-listado').hidden = false
+      mostrarVista('pr-historial')
+      await cargarHistorial()
+    }
+
+    function filtrosHistorialValidos(h) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(h.desde ?? '') && /^\d{4}-\d{2}-\d{2}$/.test(h.hasta ?? '') && h.desde <= h.hasta
+    }
+
+    async function cargarHistorial() {
+      const h = estado.historial
+      const lista = document.getElementById('pr-historial-lista')
+      const aviso = document.getElementById('pr-historial-aviso')
+      aviso.innerHTML = ''
+      if (!filtrosHistorialValidos(h)) {
+        lista.innerHTML = ''
+        aviso.innerHTML = '<div class="pr-aviso">Elegí un "desde" que no sea posterior al "hasta".</div>'
+        return
+      }
+      lista.innerHTML = '<p class="pr-texto-suave">Buscando…</p>'
+      try {
+        const { data: maquinas, error: e1 } = await supabase.from('maquinas').select('id, nombre').eq('unidad_negocio_id', h.unidadId).order('orden').order('nombre')
+        if (e1) throw e1
+        h.maquinas = maquinas ?? []
+        const sel = document.getElementById('pr-historial-maquina')
+        sel.innerHTML = '<option value="">Todas las máquinas</option>' + h.maquinas.map(m => `<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join('')
+        if (!h.maquinas.some(m => m.id === h.maquina)) h.maquina = ''
+        sel.value = h.maquina
+        let q = supabase.from('turnos_produccion')
+          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en')
+          .eq('unidad_negocio_id', h.unidadId).gte('fecha', h.desde).lte('fecha', h.hasta)
+        if (h.maquina) q = q.eq('maquina_id', h.maquina)
+        if (h.estado) q = q.eq('estado', h.estado)
+        const { data: turnos, error: e2 } = await q.order('fecha', { ascending: false }).order('abierto_en', { ascending: false })
+        if (e2) throw e2
+        h.turnos = turnos ?? []
+        h.nombres = await nombresDeEmpleados(h.turnos.map(t => t.encargado_id))
+      } catch (err) {
+        console.error('historial:', err)
+        lista.innerHTML = ''
+        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer el historial. Revisá la conexión.</div>'
+        return
+      }
+      if (h.turnos.length >= TOPE_FILAS) aviso.innerHTML = `<div class="pr-aviso">Se muestran los primeros ${TOPE_FILAS} turnos: acotá las fechas para ver el resto.</div>`
+      lista.innerHTML = h.turnos.length ? h.turnos.map(t => htmlFilaHistorial(t, h)).join('') : '<p class="pr-texto-suave">No hay turnos con esos filtros.</p>'
+    }
+
+    function htmlFilaHistorial(t, h) {
+      const maquina = h.maquinas.find(m => m.id === t.maquina_id)?.nombre ?? 'Máquina'
+      const encargado = h.nombres.get(t.encargado_id) ?? '—'
+      return `<button type="button" class="pr-maquina${t.estado === 'abierto' ? ' pr-maquina--abierta' : ''}" data-historial-turno="${esc(t.id)}">` +
+        `<span class="pr-maquina__nombre">Lote ${esc(t.lote)} · ${esc(maquina)}</span>` +
+        `<span class="pr-maquina__estado">${esc(fechaDelDia(t.fecha))} · ${esc(t.turno)} · ${t.estado === 'abierto' ? 'Abierto' : 'Cerrado'} · ${esc(encargado)}</span></button>`
+    }
+
+    async function leerDetalleTurno(turnoId) {
+      const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
+      const [turno] = await leer(supabase.from('turnos_produccion')
+        .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones').eq('id', turnoId))
+      if (!turno) throw new Error('El turno no existe.')
+      const operarios = await leer(supabase.from('turno_operarios').select('empleado_id').eq('turno_id', turnoId))
+      const masas = await leer(supabase.from('masas').select('id, nro, hora, tipo_masa, doble, origen, receta_id, masero_id, anulada, anulada_motivo').eq('turno_id', turnoId).order('nro'))
+      const ids = masas.map(m => m.id)
+      const items = ids.length ? await leer(supabase.from('masa_items').select('masa_id, ingrediente_id, insumo_id, lote, lote_fuera_de_stock, cantidad_simple_kg, cantidad_kg').in('masa_id', ids)) : []
+      const recetas = [...new Set(masas.map(m => m.receta_id))]
+      const recItems = recetas.length ? await leer(supabase.from('receta_items').select('receta_id, ingrediente_id, cantidad_kg').in('receta_id', recetas)) : []
+      const ingredientes = await leer(supabase.from('ingredientes').select('id, nombre, orden'))
+      const insIds = [...new Set(items.map(i => i.insumo_id).filter(Boolean))]
+      const insumos = insIds.length ? await leer(supabase.from('insumos').select('id, nombre, marca').in('id', insIds)) : []
+      const paradas = await leer(supabase.from('paradas_produccion').select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio'))
+      const producido = await leer(supabase.from('produccion_items').select('orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades').eq('turno_id', turnoId).order('orden'))
+      const presIds = [...new Set(producido.map(p => p.presentacion_id))]
+      const presentaciones = presIds.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre').in('id', presIds)) : []
+      const prodIds = [...new Set(presentaciones.map(p => p.producto_id))]
+      const productos = prodIds.length ? await leer(supabase.from('productos_terminados').select('id, nombre').in('id', prodIds)) : []
+      const marcaIds = [...new Set(producido.map(p => p.marca_id).filter(Boolean))]
+      const marcas = marcaIds.length ? await leer(supabase.from('marcas_personalizadas').select('id, nombre').in('id', marcaIds)) : []
+      const nombres = await nombresDeEmpleados([turno.encargado_id, ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id)])
+      return { turno, operarios: operarios.map(o => o.empleado_id), masas, items, recItems, ingredientes, insumos, paradas, producido, presentaciones, productos, marcas, nombres }
+    }
+
+    // Lo consumido por insumo y lote: la suma de lo que descontaron las masas
+    // NO anuladas (cantidad_kg ya es la doble ×2 cuando corresponde).
+    function totalesConsumidos(d) {
+      const vivas = new Set(d.masas.filter(m => !m.anulada).map(m => m.id))
+      const mapa = new Map()
+      for (const it of d.items) {
+        if (!it.insumo_id || !vivas.has(it.masa_id)) continue
+        const k = `${it.insumo_id}|${it.lote ?? ''}`
+        const act = mapa.get(k) ?? { insumo_id: it.insumo_id, lote: it.lote ?? null, kg: 0 }
+        act.kg = redondearKg(act.kg + Number(it.cantidad_kg))
+        mapa.set(k, act)
+      }
+      return [...mapa.values()]
+    }
+
+    function nombreInsumo(d, id) {
+      const i = d.insumos.find(x => x.id === id)
+      return i ? i.nombre + (i.marca ? ` · ${i.marca}` : '') : 'Insumo'
+    }
+
+    function htmlDetalleTurno(d) {
+      const t = d.turno
+      const nom = (id) => d.nombres.get(id) ?? '—'
+      const ingNombre = (id) => d.ingredientes.find(g => g.id === id)?.nombre ?? 'Ingrediente'
+      const cab = `<div class="pr-datos">` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Fecha y turno</span><span class="pr-dato__valor">${esc(fechaDelDia(t.fecha))} · ${esc(t.turno)}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Encargado</span><span class="pr-dato__valor">${esc(nom(t.encargado_id))}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Operario</span><span class="pr-dato__valor">${esc(d.operarios.length ? d.operarios.map(nom).join(', ') : 'Sin operario')}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Horario</span><span class="pr-dato__valor">${esc(String(t.hora_inicio ?? horaArgentina(t.abierto_en) ?? '').slice(0, 5) || '—')} a ${esc(String(t.hora_apagado ?? '').slice(0, 5) || (t.estado === 'abierto' ? 'sigue abierto' : '—'))}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Scrap</span><span class="pr-dato__valor">${t.scrap_kg == null ? '—' : esc(textoKg(Number(t.scrap_kg)))}</span></div>` +
+        `</div>` + (t.observaciones ? `<p><strong>Observaciones:</strong> ${esc(t.observaciones)}</p>` : '')
+      const masas = d.masas.length ? d.masas.map(m => {
+        const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0)
+        const detalle = suyos.map(i => `${ingNombre(i.ingrediente_id)} ${textoKg(Number(i.cantidad_kg))}` +
+          (i.insumo_id ? ` (${nombreInsumo(d, i.insumo_id)}${i.lote ? `, lote ${i.lote}` : ''}${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''})` : '')).join(' · ')
+        const dif = textoDiferencias(diferenciaDeMasa(m, { items: d.items, recItems: d.recItems, ingredientes: d.ingredientes }))
+        return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}"><strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · ${m.doble ? 'Doble' : 'Simple'} · ` +
+          `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(ETIQUETA_ORIGEN[m.origen] ?? m.origen)}</span> · masero ${esc(nom(m.masero_id))}` +
+          (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}` : `<br>${esc(dif)}`) +
+          `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
+      }).join('') : '<li class="pr-lista__item">Sin masas.</li>'
+      const producido = d.producido.length ? d.producido.map(p => {
+        const pr = d.presentaciones.find(x => x.id === p.presentacion_id)
+        const prod = d.productos.find(x => x.id === pr?.producto_id)
+        const marca = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Marca') : 'Común'
+        return `<li class="pr-lista__item"><span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(prod?.nombre ?? 'Producto')} · ${esc(pr?.nombre ?? '')} · ${esc(marca)} · ` +
+          `${esc(formatearNumeroAr(p.cajas, { decimales: 0 }))} cajas × ${esc(formatearNumeroAr(p.unidades_por_caja, { decimales: 0 }))} = ${esc(formatearNumeroAr(p.unidades, { decimales: 0 }))} unidades</li>`
+      }).join('') : `<li class="pr-lista__item">${t.estado === 'abierto' ? 'Todavía abierto.' : 'No produjo nada.'}</li>`
+      const consumidos = totalesConsumidos(d)
+      const totales = consumidos.length ? consumidos.map(c =>
+        `<li class="pr-lista__item">${esc(nombreInsumo(d, c.insumo_id))} · ${c.lote ? `lote ${esc(c.lote)}` : 'sin lote'}: <strong>${esc(textoKg(c.kg))}</strong></li>`).join('') : '<li class="pr-lista__item">Nada descontado del stock.</li>'
+      return cab +
+        `<h2 class="pr-subtitulo">Masas</h2><ul class="pr-lista">${masas}</ul>` +
+        `<h2 class="pr-subtitulo">Paradas</h2>${htmlParadas(d.paradas)}` +
+        `<h2 class="pr-subtitulo">Lo producido</h2><ul class="pr-lista">${producido}</ul>` +
+        `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2><ul class="pr-lista">${totales}</ul>`
+    }
+
+    async function abrirDetalleHistorial(turnoId) {
+      const cont = document.getElementById('pr-historial-detalle-cuerpo')
+      document.getElementById('pr-historial-listado').hidden = true
+      document.getElementById('pr-historial-detalle').hidden = false
+      cont.innerHTML = '<p class="pr-texto-suave">Cargando el turno…</p>'
+      try {
+        cont.innerHTML = htmlDetalleTurno(await leerDetalleTurno(turnoId))
+      } catch (err) {
+        console.error('detalle del turno:', err)
+        cont.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer el turno. Revisá la conexión.</div>'
+      }
+      if (window.scrollTo) window.scrollTo(0, 0)
+    }
+
+    // ── Stock de producto terminado ───────────────────────────────────────
+
+    async function mostrarStockTerminado() {
+      const unidades = unidadesDeHistorial()
+      if (!unidades.length) return
+      estado.stockUnidad = unidades.includes(estado.stockUnidad) ? estado.stockUnidad : unidadInicialOficina(unidades)
+      pintarSelectorUnidad('pr-stock-unidad', unidades, estado.stockUnidad)
+      mostrarVista('pr-stock')
+      await cargarStockTerminado()
+    }
+
+    async function cargarStockTerminado() {
+      const cont = document.getElementById('pr-stock-lista')
+      const aviso = document.getElementById('pr-stock-aviso')
+      aviso.innerHTML = ''
+      cont.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
+      let movs, productos, presentaciones, marcas
+      try {
+        const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
+        movs = await leer(supabase.from('stock_terminado_movimientos').select('presentacion_id, marca_id, lote, cajas, unidades').eq('unidad_negocio_id', estado.stockUnidad))
+        productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden').eq('unidad_negocio_id', estado.stockUnidad))
+        const ids = productos.map(p => p.id)
+        presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, orden').in('producto_id', ids)) : []
+        marcas = await leer(supabase.from('marcas_personalizadas').select('id, nombre'))
+      } catch (err) {
+        console.error('stock terminado:', err)
+        cont.innerHTML = ''
+        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer el stock terminado. Revisá la conexión.</div>'
+        return
+      }
+      if (movs.length >= TOPE_FILAS) aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">Hay más de 1000 movimientos y solo se leyeron los primeros: los totales pueden estar incompletos.</div>'
+      cont.innerHTML = htmlStockTerminado(agruparStockTerminado(movs), { productos, presentaciones, marcas })
+    }
+
+    // Suma por presentación, marca y sublote. Quedan solo los que tienen
+    // cajas: un sublote despachado entero no se lista.
+    function agruparStockTerminado(movs) {
+      const mapa = new Map()
+      for (const m of movs) {
+        const k = `${m.presentacion_id}|${m.marca_id ?? ''}|${m.lote}`
+        const act = mapa.get(k) ?? { presentacion_id: m.presentacion_id, marca_id: m.marca_id ?? null, lote: m.lote, cajas: 0, unidades: 0 }
+        act.cajas += Number(m.cajas) || 0
+        act.unidades += Number(m.unidades) || 0
+        mapa.set(k, act)
+      }
+      return [...mapa.values()].filter(x => x.cajas !== 0 || x.unidades !== 0)
+    }
+
+    function htmlStockTerminado(filas, cat) {
+      if (!filas.length) return '<p class="pr-texto-suave">No hay producto terminado en stock.</p>'
+      const grupos = new Map()
+      for (const f of filas) {
+        const pr = cat.presentaciones.find(x => x.id === f.presentacion_id)
+        const prod = cat.productos.find(x => x.id === pr?.producto_id)
+        const marca = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'
+        const clave = `${prod?.nombre ?? 'Producto'} · ${pr?.nombre ?? 'Presentación'} · ${marca}`
+        const g = grupos.get(clave) ?? { titulo: clave, cajas: 0, unidades: 0, sublotes: [] }
+        g.cajas += f.cajas; g.unidades += f.unidades; g.sublotes.push(f)
+        grupos.set(clave, g)
+      }
+      return [...grupos.values()].sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')).map(g =>
+        `<div class="pr-tarjeta"><h2 class="pr-subtitulo">${esc(g.titulo)}</h2>` +
+        `<p class="pr-dato__valor">${esc(formatearNumeroAr(g.cajas, { decimales: 0 }))} cajas · ${esc(formatearNumeroAr(g.unidades, { decimales: 0 }))} unidades</p>` +
+        `<ul class="pr-lista">` + g.sublotes.sort((a, b) => String(a.lote).localeCompare(String(b.lote), 'es', { numeric: true })).map(s =>
+          `<li class="pr-lista__item"><span class="pr-producido__sublote">${esc(s.lote)}</span> ${esc(formatearNumeroAr(s.cajas, { decimales: 0 }))} cajas · ${esc(formatearNumeroAr(s.unidades, { decimales: 0 }))} unidades</li>`).join('') +
+        `</ul></div>`).join('')
+    }
+
+    function conectarHistorial() {
+      document.getElementById('pr-btn-ir-historial').addEventListener('click', mostrarHistorial)
+      document.getElementById('pr-btn-ir-stock').addEventListener('click', mostrarStockTerminado)
+      document.getElementById('pr-historial-volver').addEventListener('click', volverDeOficina)
+      document.getElementById('pr-stock-volver').addEventListener('click', volverDeOficina)
+      document.getElementById('pr-historial-detalle-volver').addEventListener('click', () => {
+        document.getElementById('pr-historial-detalle').hidden = true
+        document.getElementById('pr-historial-listado').hidden = false
+      })
+      const cambio = (campo) => (ev) => { estado.historial[campo] = ev.target.value; cargarHistorial() }
+      document.getElementById('pr-historial-unidad').addEventListener('change', cambio('unidadId'))
+      document.getElementById('pr-historial-desde').addEventListener('change', cambio('desde'))
+      document.getElementById('pr-historial-hasta').addEventListener('change', cambio('hasta'))
+      document.getElementById('pr-historial-maquina').addEventListener('change', cambio('maquina'))
+      document.getElementById('pr-historial-estado').addEventListener('change', cambio('estado'))
+      document.getElementById('pr-historial-lista').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-historial-turno]'); if (b) abrirDetalleHistorial(b.dataset.historialTurno)
+      })
+      document.getElementById('pr-stock-unidad').addEventListener('change', ev => { estado.stockUnidad = ev.target.value; cargarStockTerminado() })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
