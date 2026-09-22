@@ -31,6 +31,10 @@
       /* Plazo para depositar YA VENCIDO: el bordó suave del sistema, más
          cargado. Sale de las variables, nunca de un hex suelto. */
       --chq-vencido-fondo: color-mix(in srgb, var(--bordo) 18%, var(--bordo-suave));
+      /* Con el filtro "Salidos" puesto, la caja entera. MUY leve (5%): las
+         filas ya van en --verde-suave y la caja solo tiene que decir que esto
+         es otra lista. Sale de la variable, nunca de un hex suelto. */
+      --chq-salidos-caja: color-mix(in srgb, var(--verde) 5%, var(--color-fondo));
     }
 
     .chq-contenedor {
@@ -291,10 +295,27 @@
        en un renglón. "Sin unidad" en gris: es la ausencia del dato. */
     .chq-tabla__unidad { max-width: 8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chq-sin-unidad { color: var(--color-texto-suave); }
-    /* ATENUADO CON COLOR Y NO CON opacity: una celda sticky con opacity se
-       vuelve transparente. DESPUÉS de la regla base de td. */
-    .chq-tabla__fila--salido td { color: var(--color-texto-suave); }
-    .chq-tabla__fila--anulado td { color: var(--color-texto-suave); text-decoration: line-through; }
+    /* CADA ESTADO CON SU FONDO SUAVE, Y EL TEXTO A PLENO CONTRASTE (22/09/2026).
+       Antes un cheque que había salido iba con el texto en
+       --color-texto-suave: se leía como DESHABILITADO —no como "este ya salió
+       de la cartera"— y medido daba 2,68:1 sobre blanco, por debajo de AA. Lo
+       que distingue el estado es el FONDO; el texto queda como el de todos.
+       NUNCA con opacity: una celda sticky con opacity se vuelve transparente y
+       la columna del número deja de tapar lo que pasa por abajo.
+       El fondo va DESPUÉS de la regla base de td (misma especificidad) y ANTES
+       del de la selección, que le gana. */
+    .chq-tabla__fila--salido td { background: var(--verde-suave); }
+    .chq-tabla__fila--anulado td { background: var(--bordo-suave); }
+    /* Un anulado tacha SOLO EL IMPORTE, que es la plata que ya no está. Tachar
+       la fila entera tachaba también el chip "Anulado", que es justo lo que
+       tiene que leerse. */
+    .chq-tabla__fila--anulado .chq-tabla__num { text-decoration: line-through; }
+    /* La cobranza de este cheque todavía está POR CONTROLAR: una franja
+       naranja a la izquierda, el mismo significado que en Cobranzas. El fondo
+       queda blanco: el cheque está en cartera como cualquier otro. Va ANTES de
+       la franja bordó de --no-sale (misma especificidad), que le gana porque
+       responde por qué ese cheque no puede salir. */
+    .chq-tabla__fila--por-controlar td:first-child { box-shadow: inset 4px 0 0 var(--naranja); }
     /* TODAS LAS FILAS MIDEN LO MISMO (Parte 2): cada celda en un renglón y
        centrada; el alto sale de acá y no del contenido, así una fila con
        botón no queda más alta que una sin él. */
@@ -410,10 +431,14 @@
        que comerle lugar a los datos. Sigue midiendo 44px de alto. */
     .chq-tarjeta__lado .chq-btn { min-height: 44px; width: 100%; padding: 0.25rem 0.5rem; line-height: 1.15; white-space: normal; }
     .chq-tarjeta__lado .chq-salida__nota { max-width: 100%; font-size: 0.625rem; text-align: right; }
-    /* Atenuado con color, como la tabla. DESPUÉS de las reglas base. */
-    .chq-tarjeta--salido .chq-tarjeta__importe,
-    .chq-tarjeta--salido .chq-tarjeta__pago { color: var(--color-texto-suave); }
-    .chq-tarjeta--anulado .chq-tarjeta__importe { color: var(--color-texto-suave); text-decoration: line-through; }
+    /* El mismo fondo por estado que la tabla, y el texto a pleno contraste.
+       DESPUÉS de las reglas base y ANTES de la selección, que le gana. */
+    .chq-tarjeta--salido { background: var(--verde-suave); }
+    .chq-tarjeta--anulado { background: var(--bordo-suave); }
+    .chq-tarjeta--anulado .chq-tarjeta__importe { text-decoration: line-through; }
+    /* La cobranza por controlar, como en la tabla: franja naranja, fondo
+       blanco. ANTES de la franja bordó de --no-sale, que le gana. */
+    .chq-tarjeta--por-controlar { box-shadow: inset 4px 0 0 var(--naranja); }
 
     /* ── Vencimiento del plazo para depositar (Parte 6) ──────────────────
        SE TIENE QUE VER DE UN VISTAZO, SIN LEER: la fila (o la tarjeta) entera
@@ -463,6 +488,56 @@
     .chq-vencen[aria-pressed="true"] { border-width: 2.5px; }
     .chq-vencen__texto { min-width: 0; overflow-wrap: anywhere; }
     .chq-vencen__accion { font-size: 0.8125rem; text-decoration: underline; white-space: nowrap; }
+
+    /* ── El color de cada estado: la caja y la leyenda ───────────────────
+       Con el filtro "Salidos" puesto, el recuadro entero toma un verde MUY
+       leve: se nota sin leer que esto es otra lista y no la cartera. Va
+       después de .chq-tabla-scroll y de .chq-lista (misma especificidad), y el
+       encabezado de la tabla lo toma también —si no, la única parte visible de
+       la caja sería el borde—. */
+    .chq-tabla-scroll--salidos,
+    .chq-tabla-scroll--salidos .chq-tabla th,
+    .chq-lista--salidos { background: var(--chq-salidos-caja); }
+
+    /* La leyenda: una muestrita de color con su nombre, SOLO con los estados
+       que están en la lista que se está viendo. Un color sin nombre no se
+       entiende, y un nombre de algo que no está en pantalla es ruido. */
+    .chq-leyenda {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.25rem 0.875rem;
+      margin: 0 0 0.5rem;
+      padding: 0 0.125rem;
+      font-size: 0.75rem;
+      color: var(--chq-texto-secundario);
+      min-width: 0;
+    }
+    .chq-leyenda__item { display: inline-flex; align-items: center; gap: 0.375rem; min-width: 0; overflow-wrap: anywhere; }
+    .chq-leyenda__muestra {
+      flex: 0 0 auto;
+      width: 1.125rem;
+      height: 1.125rem;
+      border-radius: 5px;
+      border: 1px solid var(--color-borde);
+      background: var(--color-fondo);
+    }
+    .chq-leyenda__muestra--por_controlar { box-shadow: inset 4px 0 0 var(--naranja); }
+    .chq-leyenda__muestra--vence { background: var(--bordo-suave); }
+    .chq-leyenda__muestra--vencido { background: var(--chq-vencido-fondo); }
+    .chq-leyenda__muestra--salido { background: var(--verde-suave); }
+    /* La muestra del anulado lleva su TACHADO, que es lo que lo distingue del
+       fondo del plazo: los dos son --bordo-suave. (En los datos no pueden
+       coexistir —estadoVencimiento() solo mira los que están en cartera— pero
+       en la leyenda sí quedan uno al lado del otro.) */
+    .chq-leyenda__muestra--anulado { background: var(--bordo-suave); position: relative; }
+    .chq-leyenda__muestra--anulado::after {
+      content: '';
+      position: absolute;
+      left: 2px; right: 2px; top: 50%;
+      height: 1.5px;
+      background: var(--bordo-oscuro);
+    }
 
     /* Una sola de las dos vistas a la vez. En el celular además se achica lo
        de arriba de la lista: cada renglón que se ahorra es un cheque más a la
@@ -552,7 +627,13 @@
     }
     /* En cartera es el estado NORMAL: neutro. */
     .chq-estado--en_cartera { color: var(--color-acento); }
-    .chq-estado--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    /* NUNCA EL COLOR SOLO: el fondo de la fila dice el estado de un vistazo y
+       el chip lo NOMBRA. El chip va sobre fondo BLANCO y no sobre el tinte de
+       su estado: encima de una fila ya tintada del mismo color desaparecería.
+       Medido sobre blanco: --verde-oscuro 8,02:1 y --bordo-oscuro 12,13:1. */
+    .chq-estado--depositado,
+    .chq-estado--endosado { background: var(--color-fondo); color: var(--verde-oscuro); }
+    .chq-estado--anulado { background: var(--color-fondo); color: var(--bordo-oscuro); text-transform: uppercase; letter-spacing: 0.04em; }
 
     /* ── Modal ───────────────────────────────────────────────────────────── */
     .chq-modal {
@@ -649,6 +730,10 @@
       <div class="chq-aviso" id="chq-aviso" style="white-space:pre-line" hidden></div>
       <!-- Un aviso CHICO: cambiar un filtro limpió la selección. -->
       <div class="chq-aviso-chico" id="chq-aviso-seleccion" role="status" hidden></div>
+      <!-- Qué significa cada color, con los estados que están en la lista que
+           se está viendo. Arriba de la tabla y de la lista del celular: las
+           dos usan los mismos colores. -->
+      <div class="chq-leyenda" id="chq-leyenda" hidden></div>
       <div class="chq-tabla-scroll" id="chq-tabla-caja" hidden>
         <table class="chq-tabla" id="chq-tabla"></table>
       </div>
@@ -1685,6 +1770,7 @@
         tabla.innerHTML = ''
         lista.hidden = true
         lista.innerHTML = ''
+        pintarLeyendaEstados([])
         vacio.hidden = !!estado.error
         vacio.textContent = estado.filtros.soloVencen ? 'No hay cheques en cartera que venzan esta semana.'
           : hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
@@ -1693,6 +1779,12 @@
       vacio.hidden = true
       caja.hidden = false
       lista.hidden = false
+      pintarLeyendaEstados(visibles)
+      // Con el filtro "Salidos" puesto, el recuadro entero toma un verde muy
+      // leve: se nota sin leer que esto es otra lista y no la cartera.
+      const soloSalidos = estado.filtros.estado === 'salidos'
+      caja.classList.toggle('chq-tabla-scroll--salidos', soloSalidos)
+      lista.classList.toggle('chq-lista--salidos', soloSalidos)
       tabla.innerHTML = htmlTablaCheques(visibles, estado.cobranzas)
       lista.innerHTML = htmlListaCheques(visibles, estado.cobranzas)
       // Tocar un encabezado ordena por esa columna.
@@ -1712,6 +1804,70 @@
 
     function htmlListaCheques(filas, cobranzas) {
       return filas.map(ch => htmlTarjetaCheque(ch, cobranzas.get(ch.cobranza_id))).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL COLOR DE CADA ESTADO (22/09/2026)
+    // Cada fila (o tarjeta) lleva un fondo suave según su estado, y el chip lo
+    // NOMBRA: el color solo no dice nada, y un color sin nombre tampoco.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // La cobranza de este cheque todavía está POR CONTROLAR: el cheque está en
+    // cartera, pero no puede salir hasta que alguien la asiente.
+    // MIRA LA COBRANZA, NO EL PERMISO: es el estado del cheque y no una acción
+    // — accionSalida() decide aparte qué se puede hacer, y con qué tarea.
+    function esPorControlar(ch, cob) {
+      return ch.estado === 'en_cartera' && cob?.estado === 'registrada'
+    }
+
+    // Lo que puede aparecer en la leyenda, EN ESTE ORDEN.
+    const LEYENDA_ESTADOS = [
+      { clave: 'por_controlar', nombre: 'Cobranza por controlar' },
+      { clave: 'en_cartera', nombre: 'En cartera' },
+      { clave: 'vence', nombre: 'Vence esta semana' },
+      { clave: 'vencido', nombre: 'Plazo vencido' },
+      { clave: 'salido', nombre: 'Salió de cartera' },
+      { clave: 'anulado', nombre: 'Anulado' },
+    ]
+
+    // Qué marcas lleva un cheque. Puede aportar MÁS DE UNA: la franja naranja
+    // de "por controlar" y el fondo del plazo son dos canales distintos sobre
+    // la misma fila.
+    function clavesEstadoCheque(ch, cob, hoy) {
+      if (ch.estado === 'depositado' || ch.estado === 'endosado') return ['salido']
+      if (ch.estado === 'anulado') return ['anulado']
+      const claves = esPorControlar(ch, cob) ? ['por_controlar'] : []
+      const venc = estadoVencimiento(ch, hoy)
+      // Uno marcado por el plazo NO aporta además "En cartera": su fondo es el
+      // del plazo, y una muestra blanca al lado nombraría un color que esa
+      // fila no tiene.
+      claves.push(venc ? (venc.nivel === 'vencido' ? 'vencido' : 'vence') : 'en_cartera')
+      return claves
+    }
+
+    // Las entradas de la leyenda de lo que se está viendo.
+    // DEVUELVE VACÍO cuando no hay ningún color que explicar —todo en cartera,
+    // sin ninguna marca—: una leyenda que dice "blanco = en cartera" sobre una
+    // lista toda blanca es el cartel que se muestra siempre y que nadie lee.
+    function leyendaDeCheques(filas, cobranzas, hoy) {
+      const presentes = new Set()
+      for (const ch of filas) {
+        for (const c of clavesEstadoCheque(ch, cobranzas.get(ch.cobranza_id), hoy)) presentes.add(c)
+      }
+      if (![...presentes].some(c => c !== 'en_cartera')) return []
+      return LEYENDA_ESTADOS.filter(e => presentes.has(e.clave))
+    }
+
+    // La muestrita es decorativa (aria-hidden): lo que se lee es el nombre.
+    function htmlLeyendaEstados(entradas) {
+      return entradas.map(e => `<span class="chq-leyenda__item"><span class="chq-leyenda__muestra chq-leyenda__muestra--${esc(e.clave)}" aria-hidden="true"></span>${esc(e.nombre)}</span>`).join('')
+    }
+
+    function pintarLeyendaEstados(filas) {
+      const el = document.getElementById('chq-leyenda')
+      const entradas = leyendaDeCheques(filas, estado.cobranzas, hoyArgentina())
+      el.innerHTML = htmlLeyendaEstados(entradas)
+      el.hidden = entradas.length === 0
     }
 
     // Tocar una fila o una tarjeta abre la cobranza; sus botones hacen lo suyo.
@@ -1789,6 +1945,7 @@
       const venc = estadoVencimiento(ch, hoyArgentina())
       const clases = [
         salido ? 'chq-tabla__fila--salido' : ch.estado === 'anulado' ? 'chq-tabla__fila--anulado' : '',
+        esPorControlar(ch, cob) ? 'chq-tabla__fila--por-controlar' : '',
         venc ? (venc.nivel === 'vencido' ? 'chq-tabla__fila--vencido' : 'chq-tabla__fila--vence') : '',
         ch.id === estado.destacado ? 'chq-tabla__fila--destacada' : '',
         estado.seleccion.ids.has(ch.id) ? 'chq-tabla__fila--elegida' : '',
@@ -1921,6 +2078,7 @@
       const clases = [
         'chq-tarjeta',
         salido ? 'chq-tarjeta--salido' : ch.estado === 'anulado' ? 'chq-tarjeta--anulado' : '',
+        esPorControlar(ch, cob) ? 'chq-tarjeta--por-controlar' : '',
         venc ? (venc.nivel === 'vencido' ? 'chq-tarjeta--vencido' : 'chq-tarjeta--vence') : '',
         ch.id === estado.destacado ? 'chq-tarjeta--destacada' : '',
         estado.seleccion.ids.has(ch.id) ? 'chq-tarjeta--elegida' : '',

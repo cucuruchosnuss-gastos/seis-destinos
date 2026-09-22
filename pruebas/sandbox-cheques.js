@@ -49,8 +49,10 @@ const OPCIONALES = [
   // unidad de negocio (22/09/2026, tarea A2)
   'filasPorPlazo', 'unidadDeCheque', 'filtrarPorUnidad', 'unidadesDeCheques', 'pintarSelectorUnidades',
   'desgloseUnidades', 'textoUnidadesSeleccion', 'htmlCeldaUnidad',
+  // color por estado y leyenda (22/09/2026)
+  'esPorControlar', 'clavesEstadoCheque', 'leyendaDeCheques', 'htmlLeyendaEstados', 'pintarLeyendaEstados',
 ]
-const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD']
+const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS']
 
 const PRELUDIO = `
   ${fuenteNumeros()}

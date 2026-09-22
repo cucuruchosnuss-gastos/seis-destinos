@@ -75,7 +75,7 @@ const partes = (html) => ({
   chk('salido: el destino no entra crudo ni en el texto ni en el title', !/<b data-xss=/.test(sal) &&
     (sal.split(escapada('tar_destino')).length - 1) === 2, sal)
   chk('salido: en lugar del cliente (el renglón no da para los dos)', !/chq-tarjeta__cliente/.test(ps.l2))
-  chk('salido: atenuado', /class="chq-tarjeta chq-tarjeta--salido"/.test(sal))
+  chk('salido: con su marca de salido (el fondo verde suave)', /class="chq-tarjeta chq-tarjeta--salido"/.test(sal))
   const anul = tarjeta({ ...base, id: 'x', cobranza_id: 'c1', numero: '4', estado: 'anulado' }, cobs.get('c1'))
   chk('anulado: sin costado (un "—" solo no dice nada)', partes(anul).lado === null && /chq-tarjeta--anulado/.test(anul))
   S.estado.misTareas = new Set(['cobranzas:ver_todo'])

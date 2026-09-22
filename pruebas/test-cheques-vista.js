@@ -167,10 +167,10 @@ if (SOLO !== 'estatico') {
     const idMal = S.esc(marca('tab_id'))
     chk('tabla: un cheque común dice "A la vista" en el pago', fila('x3').includes('A la vista'))
     chk('tabla: un diferido muestra su fecha de pago', fila(idMal).includes('01/10/2026'))
-    chk('tabla: un depositado va atenuado y con su etiqueta', fila('x3').includes('chq-tabla__fila--salido') && fila('x3').includes('>Depositado<'))
-    chk('tabla: un endosado va atenuado y con su etiqueta', fila(idMal).includes('chq-tabla__fila--salido') && fila(idMal).includes('>Endosado<'))
+    chk('tabla: un depositado lleva su marca de salido y su etiqueta', fila('x3').includes('chq-tabla__fila--salido') && fila('x3').includes('>Depositado<'))
+    chk('tabla: un endosado lleva la misma marca y su etiqueta', fila(idMal).includes('chq-tabla__fila--salido') && fila(idMal).includes('>Endosado<'))
     chk('tabla: un salido muestra su fecha de salida', fila('x3').includes('10/09/2026'))
-    chk('tabla: un anulado va tachado y NO como salido',
+    chk('tabla: un anulado lleva su marca y NO la de salido',
       fila('x4').includes('chq-tabla__fila--anulado') && !fila('x4').includes('chq-tabla__fila--salido'))
     chk('tabla: uno sin cobranza visible dice — en el cliente, no "undefined"', !html.includes('undefined'))
     chk('tabla: el banco muestra el NOMBRE cuando está en el catálogo', fila('x3').includes('tab_banco_denominacion'))

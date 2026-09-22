@@ -17,6 +17,7 @@ const SEGURAS_CHEQUES = [
   ['htmlCasillaElegir(ch)', 'HTML armado por htmlCasillaElegir(), que escapa adentro'],
   ['volver', 'HTML ya escapado: el botón se arma arriba con esc(ch.id), o vacío'],
   ['htmlCeldaUnidad(ch, cob)', 'HTML armado por htmlCeldaUnidad(), que escapa adentro'],
+  ['htmlLeyendaEstados(entradas)', 'HTML armado por htmlLeyendaEstados(), que escapa adentro'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [
