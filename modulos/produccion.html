@@ -226,6 +226,38 @@
       .pr-producido__botones { grid-column: 1 / -1; justify-content: flex-end; }
     }
 
+    /* ── Sala de masa ─────────────────────────────────────────────────── */
+    .pr-paso { margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--color-borde); }
+    .pr-paso__titulo { font-size: 1.3rem; font-weight: 800; margin: 0 0 0.75rem; }
+    .pr-base { display: grid; gap: 0.875rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+    .pr-base .pr-opcion { min-height: 120px; }
+    .pr-base .pr-opcion:disabled { opacity: 0.45; cursor: not-allowed; }
+    .pr-ing {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem 0.75rem; align-items: center;
+      padding: 0.75rem; border: 2px solid var(--color-borde); border-radius: var(--radio-input); margin-bottom: 0.625rem;
+    }
+    .pr-ing--cambia { border-color: var(--bordo); }
+    .pr-ing__nombre { font-size: 1.2rem; font-weight: 800; overflow-wrap: anywhere; }
+    .pr-ing__dif { font-weight: 700; color: var(--pr-texto-secundario); }
+    .pr-ing--cambia .pr-ing__dif { color: var(--bordo); }
+    .pr-ing__control { display: flex; align-items: center; gap: 0.5rem; grid-column: 1 / -1; }
+    .pr-ing__control .pr-input { text-align: center; font-size: 1.35rem; font-weight: 800; max-width: 10rem; }
+    .pr-ing__control .pr-btn-icono { min-width: 64px; min-height: 64px; font-size: 1.8rem; }
+    .pr-chip-origen { display: inline-block; padding: 0.2rem 0.75rem; border-radius: 999px; font-size: 0.95rem; font-weight: 800;
+      background: var(--color-superficie); color: var(--color-texto); }
+    .pr-chip-origen--original { background: var(--azul-suave); color: var(--azul-oscuro); }
+    .pr-chip-origen--modificada { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pr-doble { display: inline-block; padding: 0.35rem 1rem; border-radius: var(--radio-boton); background: var(--azul);
+      color: #fff; font-size: 1.6rem; font-weight: 900; }
+    .pr-masa-fila { display: grid; grid-template-columns: auto 1fr auto; gap: 0.75rem; align-items: center;
+      padding: 0.75rem; border-bottom: 1px solid var(--color-borde); overflow-wrap: anywhere; }
+    .pr-masa-fila--anulada { opacity: 0.6; }
+    .pr-masa-fila--anulada .pr-masa-fila__nro { text-decoration: line-through; }
+    .pr-masa-fila__nro { font-size: 1.4rem; font-weight: 900; min-width: 2.5rem; }
+    .pr-tabla-resumen { width: 100%; border-collapse: collapse; font-size: 1.1rem; }
+    .pr-tabla-resumen th, .pr-tabla-resumen td { padding: 0.5rem; border-bottom: 1px solid var(--color-borde); text-align: left; overflow-wrap: anywhere; }
+    .pr-tabla-resumen td.pr-num { text-align: right; white-space: nowrap; font-weight: 700; }
+
     /* El lote asignado: el número se lee de lejos. */
     .pr-lote { font-size: 3rem; font-weight: 900; color: var(--azul-oscuro); letter-spacing: 0.02em; line-height: 1.1; }
 
@@ -467,6 +499,54 @@
         </div>
       </section>
 
+      <!-- B5: la sala de masa. Solo las máquinas ABIERTAS: el masero hace las
+           masas para lo que el encargado ya arrancó. -->
+      <section id="pr-sala" hidden>
+        <div class="pr-aviso pr-aviso--grave" id="pr-sala-pendiente" hidden>
+          <span id="pr-sala-pendiente-texto"></span>
+          <button type="button" class="pr-btn pr-espacio-arriba" id="pr-sala-reintentar">Reintentar ahora</button>
+        </div>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo">¿Para qué máquina es la masa?</h1>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-sala-actualizar">Actualizar</button>
+          </div>
+          <div id="pr-sala-aviso"></div>
+          <div class="pr-grilla" id="pr-sala-maquinas"></div>
+        </div>
+      </section>
+
+      <!-- B5: una máquina elegida: "Nueva masa" y las masas del turno. -->
+      <section id="pr-masa" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo" id="pr-masa-titulo"></h1>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-masa-volver">‹ Máquinas</button>
+          </div>
+          <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho" id="pr-btn-nueva-masa">Nueva masa</button>
+          <div id="pr-masa-wizard" hidden></div>
+          <p class="pr-error" id="pr-masa-error" hidden></p>
+        </div>
+        <div class="pr-tarjeta">
+          <h2 class="pr-subtitulo">Masas de este turno</h2>
+          <!-- Anular una masa: motivo y confirmación. Devuelve lo descontado. -->
+          <div class="pr-aviso pr-aviso--grave" id="pr-anular-masa" hidden>
+            <p id="pr-anular-masa-titulo"></p>
+            <p>Anularla devuelve al stock lo que había descontado.</p>
+            <label class="pr-campo">
+              <span class="pr-campo__rotulo">Motivo</span>
+              <input type="text" id="pr-anular-masa-motivo" class="pr-input" maxlength="300" autocomplete="off">
+            </label>
+            <p class="pr-error" id="pr-anular-masa-error" hidden></p>
+            <div class="pr-acciones">
+              <button type="button" class="pr-btn pr-btn--secundario" id="pr-anular-masa-cancelar">Cancelar</button>
+              <button type="button" class="pr-btn pr-btn--peligro" id="pr-anular-masa-confirmar">Anular la masa</button>
+            </div>
+          </div>
+          <div id="pr-masa-lista"></div>
+        </div>
+      </section>
+
       <!-- B4: la planilla cerrada, con los sublotes que devolvió la base. -->
       <section class="pr-tarjeta" id="pr-cerrado" hidden>
         <h1 class="pr-titulo">Planilla cerrada</h1>
@@ -515,6 +595,14 @@
       cierre: null,        // el borrador del cierre: { hora, scrap, obs, productos }
       agregar: null,       // el producto que se está agregando
       cerrando: false,
+      // Sala de masa
+      salaTurno: null,     // { id, lote, maquinaId, maquinaNombre } de la máquina elegida
+      masa: null,          // el borrador de la masa en curso (con su client_uuid)
+      datosMasa: null,     // lo que devolvió datos_para_masa: { original, anterior, insumos }
+      tiposMasa: null,
+      masasTurno: null,
+      enviandoMasa: false,
+      anulando: null,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -626,7 +714,7 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado']
+    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-masa']
 
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -744,6 +832,7 @@
     // Lo que se ve una vez que se sabe unidad, modo y persona.
     function entrarAlModo() {
       if (estado.modo === 'produccion') return mostrarTablero()
+      if (estado.modo === 'masa') return mostrarSala()
       document.getElementById('pr-inicio-texto').textContent =
         `${TITULO_DE_MODO[estado.modo]} — ${estado.persona?.nombre ?? ''}`
       mostrarVista('pr-inicio')
@@ -781,6 +870,7 @@
       })
       conectarProduccion()
       conectarPlanilla()
+      conectarSala()
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
       })
@@ -1650,6 +1740,814 @@
       document.getElementById('pr-cierre-vacio-no').addEventListener('click', () => { document.getElementById('pr-cierre-vacio').hidden = true })
       document.getElementById('pr-cierre-vacio-si').addEventListener('click', enviarCierre)
       document.getElementById('pr-cerrado-volver').addEventListener('click', mostrarTablero)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — las máquinas abiertas
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function mostrarSala() {
+      mostrarVista('pr-sala')
+      const cont = document.getElementById('pr-sala-maquinas')
+      const aviso = document.getElementById('pr-sala-aviso')
+      cont.innerHTML = '<p class="pr-texto-suave">Cargando las máquinas…</p>'
+      aviso.innerHTML = ''
+      pintarPendientes()
+      reintentarPendientes()
+      try {
+        estado.tablero = estadoMaquinas(await leerTablero(estado.unidadId))
+      } catch (err) {
+        console.error('sala:', err)
+        cont.innerHTML = ''
+        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer las máquinas. Revisá la conexión y tocá "Actualizar".</div>'
+        return
+      }
+      const abiertas = estado.tablero.filter(e => e.turno)
+      estado.hayTurnoAbierto = abiertas.length > 0
+      mantenerPantalla(estado.hayTurnoAbierto)
+      if (!abiertas.length) {
+        cont.innerHTML = ''
+        aviso.innerHTML = '<div class="pr-aviso">Todavía no hay máquinas abiertas: el encargado tiene que abrir el turno.</div>'
+        return
+      }
+      cont.innerHTML = abiertas.map(e =>
+        `<button type="button" class="pr-maquina pr-maquina--abierta" data-sala-turno="${esc(e.turno.id)}">` +
+        `<span class="pr-maquina__nombre">${esc(e.maquina.nombre)}</span><span class="pr-maquina__estado">Lote</span>` +
+        `<span class="pr-lote">${esc(e.turno.lote)}</span><span class="pr-maquina__estado">${esc(textoMasas(e.masas))}</span></button>`).join('')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — el borrador de cada masa y su uuid
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // LA REGLA DEL UUID: cada masa lleva un client_uuid NUEVO, generado UNA vez
+    // al empezarla (nuevoBorradorMasa) y guardado con su borrador. Todo
+    // reintento manda ESE MISMO uuid: registrar_masa lo busca primero y, si la
+    // masa ya se guardó (la respuesta se perdió en el camino), la devuelve sin
+    // tocar nada — ni otra masa ni otro descuento de stock. Generar otro uuid
+    // al reintentar sería justo lo que duplica. El único lugar que llama a
+    // crypto.randomUUID() es nuevoBorradorMasa().
+
+    const PREFIJO_BORRADOR_MASA = 'produccion.masa.'
+
+    function claveBorradorMasa(turnoId) {
+      return PREFIJO_BORRADOR_MASA + turnoId
+    }
+
+    function nuevoBorradorMasa(turnoId, lote, maquinaNombre) {
+      return {
+        client_uuid: crypto.randomUUID(),
+        turnoId, lote, maquinaNombre,
+        paso: 'tipo', tipo: null, doble: false,
+        base: null, partida: null,     // 'original' | 'anterior' | 'modificada'; de dónde parte al modificar
+        cantidades: {},                // ingrediente_id → kg de UNA masa simple
+        mismosLotes: null,
+        lotes: {},                     // ingrediente_id → { insumo_id, lote, manual }
+        payload: null,                 // lo que se mandó (o se va a reintentar), tal cual
+        pendiente: false,              // se mandó y no hubo respuesta: se reintenta solo
+      }
+    }
+
+    function leerBorradorMasa(turnoId) {
+      const crudo = leerPreferencia(claveBorradorMasa(turnoId))
+      if (!crudo) return null
+      try {
+        const b = JSON.parse(crudo)
+        return b && typeof b.client_uuid === 'string' && b.turnoId === turnoId ? b : null
+      } catch { return null }
+    }
+
+    function guardarBorradorMasa(b) {
+      guardarPreferencia(claveBorradorMasa(b.turnoId), JSON.stringify(b))
+    }
+
+    function borrarBorradorMasa(turnoId) {
+      guardarPreferencia(claveBorradorMasa(turnoId), null)
+    }
+
+    // Todos los borradores de masa de la tablet que esperan un reintento.
+    function borradoresPendientes() {
+      const out = []
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)
+          if (!k || !k.startsWith(PREFIJO_BORRADOR_MASA)) continue
+          const b = leerBorradorMasa(k.slice(PREFIJO_BORRADOR_MASA.length))
+          if (b && b.pendiente && b.payload) out.push(b)
+        }
+      } catch { /* sin localStorage no hay pendientes que recordar */ }
+      return out
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — cantidades y diferencias contra la original
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Kilos con hasta 3 decimales, sin ruido de coma flotante.
+    function redondearKg(n) {
+      return Math.round(n * 1000) / 1000
+    }
+
+    // Paso de los botones − / +: 100 g en agua, harina, azúcar y grasa; 10 g
+    // en los demás.
+    const INGREDIENTES_PASO_GRANDE = ['agua', 'harina', 'azucar', 'grasa']
+    function pasoDe(nombreIngrediente) {
+      return INGREDIENTES_PASO_GRANDE.includes(normalizarBusqueda(nombreIngrediente)) ? 0.1 : 0.01
+    }
+
+    // Las cantidades de UNA masa simple según de dónde parte: la original, o
+    // la anterior (un ingrediente que la anterior no tenía —la receta cambió—
+    // toma el de la original).
+    function cantidadesDesde(partida, original, anterior) {
+      const out = {}
+      for (const it of original.items) {
+        const ant = anterior?.items?.find(x => x.ingrediente_id === it.ingrediente_id)
+        const v = partida === 'anterior' && ant && ant.cantidad_simple_kg != null ? Number(ant.cantidad_simple_kg) : Number(it.cantidad_kg)
+        out[it.ingrediente_id] = redondearKg(v)
+      }
+      return out
+    }
+
+    // Diferencia contra la original, en gramos, solo los que cambian.
+    function diferencias(cantidades, original) {
+      const out = []
+      for (const it of original.items) {
+        const g = Math.round(((cantidades[it.ingrediente_id] ?? 0) - Number(it.cantidad_kg)) * 1000)
+        if (g !== 0) out.push({ ingrediente_id: it.ingrediente_id, nombre: it.ingrediente, gramos: g })
+      }
+      return out
+    }
+
+    function textoGramos(g) {
+      return `${g > 0 ? '+' : '−'}${formatearNumeroAr(Math.abs(g), { decimales: 0 })} g`
+    }
+
+    function textoDiferencias(difs, max = Infinity) {
+      if (!difs.length) return 'Igual a la original'
+      const partes = difs.slice(0, max).map(d => `${textoGramos(d.gramos)} ${d.nombre}`)
+      return partes.join(' · ') + (difs.length > max ? ' · …' : '')
+    }
+
+    function textoKg(kg) {
+      return `${formatearNumeroAr(kg, { decimales: 3, minimos: 0 })} kg`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — los lotes
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Los ingredientes que piden lote: descuentan stock, llevan cantidad y
+    // tienen algún insumo del catálogo que los cumple. Los que no tienen
+    // insumo (hoy grasa, colorante y fécula) no descuentan: la base los guarda
+    // sin insumo ni lote.
+    function ingredientesConLote(datos, cantidades) {
+      return datos.original.items.filter(it =>
+        it.descuenta_stock && (cantidades[it.ingrediente_id] ?? 0) > 0 &&
+        datos.insumos.some(x => x.ingrediente_id === it.ingrediente_id))
+    }
+
+    function insumosDe(datos, ingredienteId) {
+      return datos.insumos.filter(x => x.ingrediente_id === ingredienteId)
+    }
+
+    // Lo que usó la anterior para cada ingrediente, si lo tiene.
+    function lotesDeLaAnterior(datos) {
+      const out = {}
+      for (const it of datos.anterior?.items ?? []) {
+        if (it.insumo_id) out[it.ingrediente_id] = { insumo_id: it.insumo_id, lote: it.lote ?? null, manual: false }
+      }
+      return out
+    }
+
+    // El insumo que se propone por defecto: el de la anterior, si no el
+    // preferido de la receta, si no el único que haya.
+    function insumoPorDefecto(datos, ingredienteId) {
+      const posibles = insumosDe(datos, ingredienteId)
+      const ant = datos.anterior?.items?.find(x => x.ingrediente_id === ingredienteId)?.insumo_id
+      if (ant && posibles.some(x => x.insumo_id === ant)) return ant
+      const pref = datos.original.items.find(x => x.ingrediente_id === ingredienteId)?.insumo_preferido_id
+      if (pref && posibles.some(x => x.insumo_id === pref)) return pref
+      return posibles.length === 1 ? posibles[0].insumo_id : ''
+    }
+
+    // Qué falta en los lotes. Lista vacía = se puede seguir. La materia prima
+    // exige lote (la base también: "Falta el lote de …").
+    function faltanLotes(b, datos) {
+      const faltan = []
+      for (const it of ingredientesConLote(datos, b.cantidades)) {
+        const l = b.lotes[it.ingrediente_id]
+        const ins = l && insumosDe(datos, it.ingrediente_id).find(x => x.insumo_id === l.insumo_id)
+        if (!ins) { faltan.push(`qué ${it.ingrediente.toLowerCase()} se usó`); continue }
+        if (ins.tipo === 'materia_prima' && !String(l.lote ?? '').trim()) faltan.push(`el lote de ${it.ingrediente.toLowerCase()}`)
+      }
+      return faltan
+    }
+
+    // Lo que se eligió en el select de lote. "Sin lote" NO viaja como texto:
+    // es lote null (solo se ofrece para un insumo que no es materia prima).
+    // "El lote no está en la lista" abre el campo para escribirlo.
+    function aplicarEleccionLote(actual, valor) {
+      const l = { insumo_id: '', lote: null, manual: false, ...(actual ?? {}) }
+      l.sinLote = valor === '__sin__'
+      if (valor === '__manual__') { l.manual = true; l.lote = null }
+      else { l.manual = false; l.lote = valor === '' || l.sinLote ? null : valor }
+      return l
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — el payload
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // UNA masa simple: las cantidades van sin multiplicar y la base guarda la
+    // doble ×2 (registrar_masa: cantidad_kg = cantidad_simple_kg × factor). TODOS
+    // los ingredientes de la original, con 0 si no lleva. El origen no se
+    // manda: lo calcula la base.
+    function parametrosRegistrarMasa(b, datos, maseroId) {
+      const conLote = new Set(ingredientesConLote(datos, b.cantidades).map(it => it.ingrediente_id))
+      return {
+        p_turno_id: b.turnoId,
+        p_tipo_masa: b.tipo,
+        p_doble: !!b.doble,
+        p_masero_id: maseroId,
+        p_items: datos.original.items.map(it => {
+          const l = conLote.has(it.ingrediente_id) ? b.lotes[it.ingrediente_id] : null
+          const lote = l ? String(l.lote ?? '').trim() : ''
+          return {
+            ingrediente_id: it.ingrediente_id,
+            cantidad_simple_kg: redondearKg(b.cantidades[it.ingrediente_id] ?? 0),
+            insumo_id: l?.insumo_id || null,
+            lote: lote === '' ? null : lote,
+          }
+        }),
+        p_client_uuid: b.client_uuid,
+      }
+    }
+
+    // Sin respuesta de la base (sin señal, se cortó): se reintenta con el
+    // mismo uuid. Un error CON código es la base diciendo que no (un raise de
+    // la RPC trae P0001): eso no se reintenta, se muestra tal cual.
+    function esErrorDeRed(err) {
+      if (!err) return true
+      if (typeof err.code === 'string' && err.code !== '') return false
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return true
+      return err.name === 'TypeError' || /fetch|network|conexi|load failed|timeout/i.test(String(err.message ?? ''))
+    }
+
+    // Manda (o vuelve a mandar) el payload guardado en el borrador. Devuelve
+    // 'ok' | 'red' | 'rechazo'. El uuid es el del borrador: nunca otro.
+    async function enviarMasa(b) {
+      b.pendiente = true
+      guardarBorradorMasa(b)
+      let data = null, error = null
+      try {
+        ;({ data, error } = await supabase.rpc('registrar_masa', b.payload))
+      } catch (e) {
+        error = e
+      }
+      if (error) {
+        if (esErrorDeRed(error)) return { resultado: 'red', error }
+        // La base dijo que no: no se guardó nada con ese uuid, así que se
+        // puede corregir y volver a mandar (con el mismo uuid igual).
+        b.pendiente = false
+        b.payload = null
+        guardarBorradorMasa(b)
+        return { resultado: 'rechazo', error }
+      }
+      borrarBorradorMasa(b.turnoId)
+      return { resultado: 'ok', data }
+    }
+
+    let reintentando = false
+
+    async function reintentarPendientes() {
+      if (reintentando) return
+      reintentando = true
+      try {
+        for (const b of borradoresPendientes()) {
+          const r = await enviarMasa(b)
+          if (r.resultado === 'ok') {
+            mostrarExito(`Se envió la masa pendiente de la ${b.maquinaNombre ?? 'máquina'}.`)
+            if (estado.masa?.turnoId === b.turnoId) { estado.masa = null; pintarWizard() }
+            if (estado.salaTurno?.id === b.turnoId) cargarMasasTurno()
+          } else if (r.resultado === 'rechazo') {
+            mostrarError(r.error?.message || 'La base rechazó la masa pendiente.')
+            if (estado.masa?.turnoId === b.turnoId) { estado.masa = b; pintarWizard() }
+          }
+        }
+      } finally {
+        reintentando = false
+        pintarPendientes()
+      }
+    }
+
+    function pintarPendientes() {
+      const pend = borradoresPendientes()
+      const cont = document.getElementById('pr-sala-pendiente')
+      cont.hidden = !pend.length
+      document.getElementById('pr-sala-pendiente-texto').textContent = pend.length
+        ? (pend.length === 1
+          ? `Hay una masa sin enviar (${pend[0].maquinaNombre ?? 'máquina'}, lote ${pend[0].lote ?? '—'}). Quedó guardada en esta tablet y se envía sola cuando vuelva la conexión.`
+          : `Hay ${pend.length} masas sin enviar. Quedaron guardadas en esta tablet y se envían solas cuando vuelva la conexión.`)
+        : ''
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — una máquina elegida
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function abrirMaquinaSala(turnoId) {
+      const e = (estado.tablero ?? []).find(x => x.turno?.id === turnoId)
+      if (!e) return
+      estado.salaTurno = { id: turnoId, lote: e.turno.lote, maquinaId: e.maquina.id, maquinaNombre: e.maquina.nombre }
+      estado.masa = leerBorradorMasa(turnoId)
+      estado.datosMasa = null
+      document.getElementById('pr-masa-titulo').textContent = `${e.maquina.nombre} · lote ${e.turno.lote}`
+      document.getElementById('pr-masa-error').hidden = true
+      mostrarVista('pr-masa')
+      // Una masa empezada antes (se recargó la tablet, se fue a otra pantalla)
+      // se retoma con SU borrador y SU uuid.
+      if (estado.masa && !estado.masa.pendiente) {
+        try {
+          estado.tiposMasa = await cargarTiposMasa(e.maquina.id)
+          if (estado.masa.tipo) await cargarDatosMasa()
+        } catch (err) {
+          console.error('retomar la masa:', err)
+          estado.masa.paso = 'tipo'
+        }
+      }
+      pintarWizard()
+      cargarMasasTurno()
+    }
+
+    async function cargarTiposMasa(maquinaId) {
+      const { data, error } = await supabase.from('recetas').select('tipo_masa').eq('maquina_id', maquinaId)
+      if (error) throw error
+      return [...new Set((data ?? []).map(r => r.tipo_masa))].sort((a, b) => a.localeCompare(b, 'es'))
+    }
+
+    async function nuevaMasa() {
+      const t = estado.salaTurno
+      if (!t) return
+      // Si ya hay una masa empezada para esta máquina, se sigue con ESA (y su
+      // uuid): no se pisa con una nueva.
+      estado.masa = leerBorradorMasa(t.id) ?? nuevoBorradorMasa(t.id, t.lote, t.maquinaNombre)
+      guardarBorradorMasa(estado.masa)
+      try {
+        estado.tiposMasa = await cargarTiposMasa(t.maquinaId)
+      } catch (err) {
+        console.error('tipos de masa:', err)
+        estado.tiposMasa = []
+      }
+      pintarWizard()
+    }
+
+    function descartarMasa() {
+      const b = estado.masa
+      if (!b || b.pendiente) return
+      borrarBorradorMasa(b.turnoId)
+      estado.masa = null
+      estado.datosMasa = null
+      pintarWizard()
+    }
+
+    async function cargarDatosMasa() {
+      const b = estado.masa
+      const { data, error } = await supabase.rpc('datos_para_masa', { p_turno_id: b.turnoId, p_tipo_masa: b.tipo })
+      if (error) throw error
+      estado.datosMasa = { original: data.original, anterior: data.anterior ?? null, insumos: data.insumos ?? [] }
+    }
+
+    function irAPaso(paso) {
+      estado.masa.paso = paso
+      guardarBorradorMasa(estado.masa)
+      pintarWizard()
+    }
+
+    async function elegirTipoMasa(tipo) {
+      const b = estado.masa
+      b.tipo = tipo
+      b.base = null; b.partida = null; b.cantidades = {}; b.mismosLotes = null; b.lotes = {}
+      guardarBorradorMasa(b)
+      const err = document.getElementById('pr-masa-error')
+      err.hidden = true
+      try {
+        await cargarDatosMasa()
+      } catch (e) {
+        err.textContent = e?.message || 'No se pudieron leer la receta y los lotes.'
+        err.hidden = false
+        return
+      }
+      irAPaso('base')
+    }
+
+    function elegirBase(base) {
+      const b = estado.masa, d = estado.datosMasa
+      if (base === 'anterior' && !d.anterior) return
+      if (base === 'modificar') { b.base = 'modificada'; b.partida = null; irAPaso('partida'); return }
+      b.base = base
+      b.partida = base
+      b.cantidades = cantidadesDesde(base, d.original, d.anterior)
+      irAPaso('lotes')
+    }
+
+    function elegirPartida(partida) {
+      const b = estado.masa, d = estado.datosMasa
+      if (partida === 'anterior' && !d.anterior) return
+      b.partida = partida
+      b.cantidades = cantidadesDesde(partida, d.original, d.anterior)
+      irAPaso('editar')
+    }
+
+    function cambiarCantidad(ingredienteId, kg) {
+      const b = estado.masa
+      if (kg == null || !Number.isFinite(kg)) return
+      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))
+      guardarBorradorMasa(b)
+    }
+
+    function sumarPaso(ingredienteId, signo) {
+      const it = estado.datosMasa.original.items.find(x => x.ingrediente_id === ingredienteId)
+      if (!it) return
+      cambiarCantidad(ingredienteId, (estado.masa.cantidades[ingredienteId] ?? 0) + signo * pasoDe(it.ingrediente))
+      pintarWizard()
+    }
+
+    function elegirMismosLotes(si) {
+      const b = estado.masa, d = estado.datosMasa
+      b.mismosLotes = si
+      b.lotes = si ? lotesDeLaAnterior(d) : {}
+      if (!si) {
+        for (const it of ingredientesConLote(d, b.cantidades)) {
+          const ins = insumoPorDefecto(d, it.ingrediente_id)
+          b.lotes[it.ingrediente_id] = { insumo_id: ins, lote: null, manual: false }
+        }
+      }
+      guardarBorradorMasa(b)
+      pintarWizard()
+    }
+
+    async function registrarMasa() {
+      const b = estado.masa, d = estado.datosMasa
+      const err = document.getElementById('pr-masa-error')
+      err.hidden = true
+      if (!b.payload) {
+        const faltan = faltanLotes(b, d)
+        if (faltan.length) { err.textContent = `Falta ${faltan.join(', ')}.`; err.hidden = false; return }
+        b.payload = parametrosRegistrarMasa(b, d, estado.persona?.id ?? null)
+      }
+      estado.enviandoMasa = true
+      pintarWizard()
+      const r = await enviarMasa(b)
+      estado.enviandoMasa = false
+      if (r.resultado === 'ok') {
+        estado.masa = null
+        estado.datosMasa = null
+        const res = r.data ?? {}
+        mostrarExito(`Masa ${res.nro ?? ''} registrada${res.origen ? ` (${ETIQUETA_ORIGEN[res.origen] ?? res.origen})` : ''}.`)
+        cargarMasasTurno()
+      } else if (r.resultado === 'red') {
+        // No se sabe si llegó: queda guardada con su uuid y se reintenta sola.
+        err.textContent = 'Sin conexión. La masa quedó guardada en esta tablet y se envía sola cuando vuelva la señal. No la cargues de nuevo.'
+        err.hidden = false
+      } else {
+        err.textContent = r.error?.message || 'La base no aceptó la masa.'
+        err.hidden = false
+      }
+      pintarWizard()
+      pintarPendientes()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — el asistente, paso por paso
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const ETIQUETA_ORIGEN = { original: 'Original', anterior: 'Anterior', modificada: 'Modificada' }
+
+    function htmlPasoTipo(b, tipos) {
+      const botones = tipos.length
+        ? tipos.map(t => `<button type="button" class="pr-chip" data-tipo-masa="${esc(t)}" aria-pressed="${t === b.tipo ? 'true' : 'false'}">${esc(t)}</button>`).join('')
+        : '<p class="pr-aviso">Esta máquina no tiene recetas cargadas. Se cargan en Configuración → Recetas.</p>'
+      return `<div class="pr-paso"><h2 class="pr-paso__titulo">1. Tipo de masa</h2><div class="pr-chips">${botones}</div>` +
+        `<div class="pr-segmento pr-espacio-arriba" role="group" aria-label="Simple o doble">` +
+        `<button type="button" class="pr-segmento__opcion" data-doble="no" aria-pressed="${b.doble ? 'false' : 'true'}">Simple</button>` +
+        `<button type="button" class="pr-segmento__opcion" data-doble="si" aria-pressed="${b.doble ? 'true' : 'false'}">Doble (×2)</button></div></div>`
+    }
+
+    function htmlPasoBase(b, d) {
+      const ant = d.anterior
+      let detalleAnt = 'No hay una masa anterior de este tipo en esta máquina.'
+      if (ant) {
+        const difs = diferencias(cantidadesDesde('anterior', d.original, ant), d.original)
+        detalleAnt = `Lote ${esc(ant.lote)} · masa ${esc(ant.nro)} · ${esc(horaArgentina(ant.hora) || '—')}<br>` +
+          (difs.length ? `Contra la original: ${esc(textoDiferencias(difs))}` : 'Es igual a la original')
+      }
+      return `<div class="pr-paso"><h2 class="pr-paso__titulo">2. ¿Qué receta usás?</h2><div class="pr-base">` +
+        `<button type="button" class="pr-opcion" data-base="original"><span>Usar la original</span><span class="pr-opcion__detalle">Receta vigente, versión ${esc(d.original.version)}</span></button>` +
+        `<button type="button" class="pr-opcion" data-base="anterior"${ant ? '' : ' disabled'}><span>Usar la anterior</span><span class="pr-opcion__detalle">${detalleAnt}</span></button>` +
+        `<button type="button" class="pr-opcion" data-base="modificar"><span>Modificar</span><span class="pr-opcion__detalle">Cambiar cantidades, partiendo de la original o de la anterior</span></button>` +
+        `</div></div>`
+    }
+
+    function htmlPasoPartida(d) {
+      return `<div class="pr-paso"><h2 class="pr-paso__titulo">¿De dónde partís?</h2><div class="pr-base">` +
+        `<button type="button" class="pr-opcion" data-partida="original"><span>De la original</span></button>` +
+        `<button type="button" class="pr-opcion" data-partida="anterior"${d.anterior ? '' : ' disabled'}><span>De la anterior</span></button>` +
+        `</div></div>`
+    }
+
+    function htmlFilaIngrediente(it, kg) {
+      const g = Math.round((kg - Number(it.cantidad_kg)) * 1000)
+      const dif = g === 0 ? 'igual a la original' : `${textoGramos(g)} contra la original`
+      return `<div class="pr-ing${g !== 0 ? ' pr-ing--cambia' : ''}">` +
+        `<span class="pr-ing__nombre">${esc(it.ingrediente)}</span><span class="pr-ing__dif">${esc(dif)}</span>` +
+        `<div class="pr-ing__control">` +
+        `<button type="button" class="pr-btn-icono" data-menos="${esc(it.ingrediente_id)}" aria-label="Menos ${esc(it.ingrediente)}"${kg <= 0 ? ' disabled' : ''}>−</button>` +
+        `<input type="text" class="pr-input" data-cant="${esc(it.ingrediente_id)}" aria-label="Kilos de ${esc(it.ingrediente)}">` +
+        `<span>kg</span>` +
+        `<button type="button" class="pr-btn-icono" data-mas="${esc(it.ingrediente_id)}" aria-label="Más ${esc(it.ingrediente)}">+</button>` +
+        `</div></div>`
+    }
+
+    function htmlPasoEditar(b, d) {
+      return `<div class="pr-paso"><h2 class="pr-paso__titulo">Cantidades de una masa simple</h2>` +
+        d.original.items.map(it => htmlFilaIngrediente(it, b.cantidades[it.ingrediente_id] ?? 0)).join('') +
+        `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--grande" data-ir="lotes">Siguiente: lotes</button></div></div>`
+    }
+
+    function htmlOpcionesLote(ins, elegido) {
+      const opciones = ['<option value="">Elegí el lote</option>']
+      for (const l of ins?.lotes ?? []) {
+        opciones.push(`<option value="${esc(l.lote)}"${l.lote === elegido ? ' selected' : ''}>Lote ${esc(l.lote)} · ${esc(textoKg(Number(l.stock)))}</option>`)
+      }
+      if (ins && ins.tipo !== 'materia_prima') opciones.push(`<option value="__sin__"${elegido === '__sin__' ? ' selected' : ''}>Sin lote</option>`)
+      opciones.push(`<option value="__manual__"${elegido === '__manual__' ? ' selected' : ''}>El lote no está en la lista</option>`)
+      return opciones.join('')
+    }
+
+    function htmlLoteIngrediente(it, b, d) {
+      const l = b.lotes[it.ingrediente_id] ?? { insumo_id: '', lote: null, manual: false }
+      const posibles = insumosDe(d, it.ingrediente_id)
+      const ins = posibles.find(x => x.insumo_id === l.insumo_id)
+      const opcInsumo = ['<option value="">Elegí cuál se usó</option>'].concat(posibles.map(x =>
+        `<option value="${esc(x.insumo_id)}"${x.insumo_id === l.insumo_id ? ' selected' : ''}>${esc(x.nombre)}${x.marca ? ` · ${esc(x.marca)}` : ''}</option>`)).join('')
+      // Un lote que no está en la lista (se escribió a mano, o vino de la
+      // anterior y ya no tiene stock) se muestra escrito, con el aviso.
+      const enLista = !!ins?.lotes?.some(x => x.lote === l.lote)
+      const esManual = l.manual || (l.lote != null && !enLista)
+      const valorLote = esManual ? '__manual__' : (l.sinLote ? '__sin__' : (l.lote ?? ''))
+      const manual = esManual
+        ? `<input type="text" class="pr-input pr-espacio-arriba" data-lote-manual="${esc(it.ingrediente_id)}" maxlength="80" aria-label="Lote de ${esc(it.ingrediente)}">` +
+          `<p class="pr-aviso">Un lote que no figura con stock queda marcado para revisar.</p>`
+        : ''
+      return `<div class="pr-ing"><span class="pr-ing__nombre">${esc(it.ingrediente)}</span><span class="pr-ing__dif">${esc(textoKg(b.cantidades[it.ingrediente_id] ?? 0))}</span>` +
+        `<div class="pr-ing__control" style="flex-direction: column; align-items: stretch;">` +
+        `<select class="pr-select" data-insumo="${esc(it.ingrediente_id)}" aria-label="Qué ${esc(it.ingrediente)} se usó">${opcInsumo}</select>` +
+        (ins ? `<select class="pr-select" data-lote="${esc(it.ingrediente_id)}" aria-label="Lote de ${esc(it.ingrediente)}">${htmlOpcionesLote(ins, valorLote)}</select>` : '') +
+        manual + `</div></div>`
+    }
+
+    function htmlPasoLotes(b, d) {
+      const con = ingredientesConLote(d, b.cantidades)
+      const sinInsumo = d.original.items.filter(it => it.descuenta_stock && (b.cantidades[it.ingrediente_id] ?? 0) > 0 &&
+        !d.insumos.some(x => x.ingrediente_id === it.ingrediente_id))
+      const notaSin = sinInsumo.length
+        ? `<p class="pr-texto-suave">No descuentan stock porque no tienen insumo en el catálogo: ${esc(sinInsumo.map(x => x.ingrediente).join(', '))}.</p>` : ''
+      let cuerpo
+      if (!con.length) {
+        cuerpo = '<p class="pr-texto-suave">Esta masa no lleva ingredientes con lote.</p>'
+      } else if (d.anterior && b.mismosLotes === null) {
+        cuerpo = `<p class="pr-campo__rotulo">¿Mismos lotes que la anterior (lote ${esc(d.anterior.lote)}, masa ${esc(d.anterior.nro)})?</p>` +
+          `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario pr-btn--grande" data-mismos="no">No</button>` +
+          `<button type="button" class="pr-btn pr-btn--grande" data-mismos="si">Sí, los mismos</button></div>`
+      } else {
+        cuerpo = con.map(it => htmlLoteIngrediente(it, b, d)).join('')
+        if (b.mismosLotes === true) cuerpo = '<p class="pr-texto-suave">Con los lotes de la anterior. Cambiá lo que no sea igual.</p>' + cuerpo
+      }
+      const listo = !con.length || b.mismosLotes !== null || !d.anterior
+      return `<div class="pr-paso"><h2 class="pr-paso__titulo">3. Lotes</h2>${notaSin}${cuerpo}` +
+        (listo ? `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--grande" data-ir="resumen">Siguiente: resumen</button></div>` : '') + `</div>`
+    }
+
+    function htmlPasoResumen(b, d) {
+      const difs = diferencias(b.cantidades, d.original)
+      const factor = b.doble ? 2 : 1
+      const filas = d.original.items.map(it => {
+        const kg = b.cantidades[it.ingrediente_id] ?? 0
+        const l = b.lotes[it.ingrediente_id]
+        const conLote = ingredientesConLote(d, b.cantidades).some(x => x.ingrediente_id === it.ingrediente_id)
+        const ins = conLote && l ? insumosDe(d, it.ingrediente_id).find(x => x.insumo_id === l.insumo_id) : null
+        const loteTxt = !conLote ? '—' : `${ins ? ins.nombre + (ins.marca ? ` · ${ins.marca}` : '') : '—'} · ${l?.lote ? `lote ${l.lote}` : 'sin lote'}`
+        return `<tr><td>${esc(it.ingrediente)}</td><td class="pr-num">${esc(textoKg(kg))}</td>` +
+          (b.doble ? `<td class="pr-num">${esc(textoKg(redondearKg(kg * factor)))}</td>` : '') + `<td>${esc(loteTxt)}</td></tr>`
+      }).join('')
+      const cabDoble = b.doble ? '<th>×2 (total)</th>' : ''
+      const cartel = b.doble ? '<span class="pr-doble">DOBLE ×2</span>' : '<span class="pr-chip-origen">Simple</span>'
+      return `<div class="pr-paso"><h2 class="pr-paso__titulo">4. Resumen</h2>` +
+        `<p class="pr-dato__valor">${esc(b.tipo)} ${cartel}</p>` +
+        `<p class="${difs.length ? 'pr-error' : 'pr-texto-suave'}">${esc(textoDiferencias(difs))}</p>` +
+        `<table class="pr-tabla-resumen"><thead><tr><th>Ingrediente</th><th>Una masa</th>${cabDoble}<th>Insumo y lote</th></tr></thead><tbody>${filas}</tbody></table>` +
+        `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--grande" data-registrar="1"${estado.enviandoMasa ? ' disabled' : ''}>Registrar masa</button></div></div>`
+    }
+
+    function pintarWizard() {
+      const cont = document.getElementById('pr-masa-wizard')
+      const btnNueva = document.getElementById('pr-btn-nueva-masa')
+      const b = estado.masa
+      if (!b) {
+        cont.hidden = true
+        cont.innerHTML = ''
+        btnNueva.hidden = false
+        return
+      }
+      btnNueva.hidden = true
+      cont.hidden = false
+      const d = estado.datosMasa
+      let html = ''
+      if (b.pendiente) {
+        html = `<div class="pr-aviso pr-aviso--grave">Esta masa (${esc(b.tipo ?? '')}${b.doble ? ', doble' : ''}) se mandó y no hubo respuesta. Quedó guardada en esta tablet y se reintenta sola, sin duplicarse. No la cargues de nuevo.</div>` +
+          `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--grande" data-reintentar="1"${estado.enviandoMasa ? ' disabled' : ''}>Reintentar ahora</button></div>`
+      } else {
+        html = `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario" data-descartar="1">Descartar esta masa</button></div>`
+        html += htmlPasoTipo(b, estado.tiposMasa ?? (b.tipo ? [b.tipo] : []))
+        if (d && b.paso !== 'tipo') {
+          html += htmlPasoBase(b, d)
+          if (b.paso === 'partida') html += htmlPasoPartida(d)
+          if (b.paso === 'editar') html += htmlPasoEditar(b, d)
+          if (b.paso === 'lotes' || b.paso === 'resumen') html += htmlPasoLotes(b, d)
+          if (b.paso === 'resumen') html += htmlPasoResumen(b, d)
+        }
+      }
+      cont.innerHTML = html
+      // Los números se escriben con ponerNumero, nunca con value=.
+      for (const input of cont.querySelectorAll('[data-cant]')) {
+        enlazarCampoNumero(input, { decimales: 3 })
+        ponerNumero(input, b.cantidades[input.dataset.cant] ?? 0)
+      }
+      for (const input of cont.querySelectorAll('[data-lote-manual]')) {
+        input.value = b.lotes[input.dataset.loteManual]?.lote ?? ''
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALA DE MASA — las masas del turno
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function leerMasasTurno(turnoId) {
+      const { data: masas, error: e1 } = await supabase.from('masas')
+        .select('id, nro, hora, tipo_masa, doble, origen, receta_id, anulada, anulada_motivo').eq('turno_id', turnoId).order('nro')
+      if (e1) throw e1
+      const ids = (masas ?? []).map(m => m.id)
+      const recetas = [...new Set((masas ?? []).map(m => m.receta_id))]
+      let items = [], recItems = [], ingredientes = []
+      if (ids.length) {
+        const r1 = await supabase.from('masa_items').select('masa_id, ingrediente_id, cantidad_simple_kg').in('masa_id', ids)
+        if (r1.error) throw r1.error
+        items = r1.data ?? []
+        const r2 = await supabase.from('receta_items').select('receta_id, ingrediente_id, cantidad_kg').in('receta_id', recetas)
+        if (r2.error) throw r2.error
+        recItems = r2.data ?? []
+        const r3 = await supabase.from('ingredientes').select('id, nombre')
+        if (r3.error) throw r3.error
+        ingredientes = r3.data ?? []
+      }
+      return { masas: masas ?? [], items, recItems, ingredientes }
+    }
+
+    // La diferencia de una masa ya registrada contra SU receta.
+    function diferenciaDeMasa(masa, datos) {
+      const nombres = new Map(datos.ingredientes.map(i => [i.id, i.nombre]))
+      const original = {
+        items: datos.recItems.filter(r => r.receta_id === masa.receta_id)
+          .map(r => ({ ingrediente_id: r.ingrediente_id, ingrediente: nombres.get(r.ingrediente_id) ?? 'ingrediente', cantidad_kg: r.cantidad_kg })),
+      }
+      const cantidades = {}
+      for (const it of datos.items.filter(x => x.masa_id === masa.id)) cantidades[it.ingrediente_id] = Number(it.cantidad_simple_kg)
+      return diferencias(cantidades, original)
+    }
+
+    function htmlMasaFila(m, datos, puedeAnular) {
+      const origen = ETIQUETA_ORIGEN[m.origen] ?? m.origen
+      const dif = m.anulada ? `Anulada: ${m.anulada_motivo ?? ''}` : textoDiferencias(diferenciaDeMasa(m, datos), 2)
+      const anular = puedeAnular && !m.anulada ? `<button type="button" class="pr-btn pr-btn--secundario" data-anular-masa="${esc(m.id)}">Anular</button>` : ''
+      return `<div class="pr-masa-fila${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
+        `<span class="pr-masa-fila__nro">${esc(m.nro)}</span>` +
+        `<div><strong>${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · ${m.doble ? 'Doble' : 'Simple'}</strong> ` +
+        `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(origen)}</span><br>` +
+        `<span class="pr-texto-suave">${esc(dif)}</span></div>${anular}</div>`
+    }
+
+    async function cargarMasasTurno() {
+      const t = estado.salaTurno
+      const cont = document.getElementById('pr-masa-lista')
+      if (!t) return
+      try {
+        estado.masasTurno = await leerMasasTurno(t.id)
+      } catch (err) {
+        console.error('masas del turno:', err)
+        cont.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer las masas del turno.</div>'
+        return
+      }
+      const lista = estado.masasTurno.masas
+      cont.innerHTML = lista.length
+        ? lista.map(m => htmlMasaFila(m, estado.masasTurno, tieneTarea('cargar'))).join('')
+        : '<p class="pr-texto-suave">Todavía no hay masas en este turno.</p>'
+    }
+
+    function pedirAnularMasa(masaId) {
+      const m = estado.masasTurno?.masas.find(x => x.id === masaId)
+      if (!m) return
+      estado.anulando = masaId
+      const dlg = document.getElementById('pr-anular-masa')
+      document.getElementById('pr-anular-masa-titulo').textContent = `Anular la masa ${m.nro} (${m.tipo_masa}${m.doble ? ', doble' : ''})`
+      document.getElementById('pr-anular-masa-motivo').value = ''
+      document.getElementById('pr-anular-masa-error').hidden = true
+      dlg.hidden = false
+      document.getElementById('pr-anular-masa-motivo').focus()
+    }
+
+    async function confirmarAnularMasa() {
+      const motivo = document.getElementById('pr-anular-masa-motivo').value.trim()
+      const err = document.getElementById('pr-anular-masa-error')
+      if (motivo.length < 3) { err.textContent = 'Escribí el motivo (al menos 3 letras).'; err.hidden = false; return }
+      const btn = document.getElementById('pr-anular-masa-confirmar')
+      btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('anular_masa', { p_masa_id: estado.anulando, p_motivo: motivo })
+        if (error) throw error
+        document.getElementById('pr-anular-masa').hidden = true
+        estado.anulando = null
+        mostrarExito('Masa anulada: se devolvió al stock lo que había descontado.')
+        cargarMasasTurno()
+      } catch (e) {
+        err.textContent = e?.message || 'No se pudo anular la masa.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
+      }
+    }
+
+    function conectarSala() {
+      document.getElementById('pr-sala-actualizar').addEventListener('click', mostrarSala)
+      document.getElementById('pr-sala-reintentar').addEventListener('click', reintentarPendientes)
+      document.getElementById('pr-sala-maquinas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-sala-turno]'); if (b) abrirMaquinaSala(b.dataset.salaTurno)
+      })
+      document.getElementById('pr-masa-volver').addEventListener('click', mostrarSala)
+      document.getElementById('pr-btn-nueva-masa').addEventListener('click', nuevaMasa)
+      const w = document.getElementById('pr-masa-wizard')
+      w.addEventListener('click', ev => {
+        const t = ev.target.closest('[data-tipo-masa], [data-doble], [data-base], [data-partida], [data-menos], [data-mas], [data-ir], [data-mismos], [data-registrar], [data-reintentar], [data-descartar]')
+        if (!t || t.disabled) return
+        const ds = t.dataset
+        if (ds.tipoMasa !== undefined) elegirTipoMasa(ds.tipoMasa)
+        else if (ds.doble !== undefined) { estado.masa.doble = ds.doble === 'si'; guardarBorradorMasa(estado.masa); pintarWizard() }
+        else if (ds.base !== undefined) elegirBase(ds.base)
+        else if (ds.partida !== undefined) elegirPartida(ds.partida)
+        else if (ds.menos !== undefined) sumarPaso(ds.menos, -1)
+        else if (ds.mas !== undefined) sumarPaso(ds.mas, +1)
+        else if (ds.ir !== undefined) irAPaso(ds.ir)
+        else if (ds.mismos !== undefined) elegirMismosLotes(ds.mismos === 'si')
+        else if (ds.registrar !== undefined) registrarMasa()
+        else if (ds.reintentar !== undefined) reintentarMasaActual()
+        else if (ds.descartar !== undefined) descartarMasa()
+      })
+      // El número tipeado: se guarda al salir del campo (y se repinta la
+      // diferencia contra la original).
+      w.addEventListener('change', ev => {
+        const cant = ev.target.closest('[data-cant]')
+        if (cant) { cambiarCantidad(cant.dataset.cant, leerCampoNumero(cant)); pintarWizard(); return }
+        const ins = ev.target.closest('[data-insumo]')
+        if (ins) {
+          estado.masa.lotes[ins.dataset.insumo] = { insumo_id: ins.value, lote: null, manual: false }
+          guardarBorradorMasa(estado.masa); pintarWizard(); return
+        }
+        const lote = ev.target.closest('[data-lote]')
+        if (lote) {
+          estado.masa.lotes[lote.dataset.lote] = aplicarEleccionLote(estado.masa.lotes[lote.dataset.lote], lote.value)
+          guardarBorradorMasa(estado.masa); pintarWizard()
+        }
+      })
+      w.addEventListener('input', ev => {
+        const m = ev.target.closest('[data-lote-manual]')
+        if (m) { estado.masa.lotes[m.dataset.loteManual].lote = m.value; guardarBorradorMasa(estado.masa) }
+      })
+      document.getElementById('pr-masa-lista').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-anular-masa]'); if (b) pedirAnularMasa(b.dataset.anularMasa)
+      })
+      document.getElementById('pr-anular-masa-cancelar').addEventListener('click', () => { document.getElementById('pr-anular-masa').hidden = true; estado.anulando = null })
+      document.getElementById('pr-anular-masa-confirmar').addEventListener('click', confirmarAnularMasa)
+      window.addEventListener('online', reintentarPendientes)
+      setInterval(() => { if (borradoresPendientes().length) reintentarPendientes() }, 30000)
+    }
+
+    async function reintentarMasaActual() {
+      const b = estado.masa
+      if (!b || !b.payload) return
+      estado.enviandoMasa = true
+      pintarWizard()
+      await reintentarPendientes()
+      estado.enviandoMasa = false
+      if (estado.masa) pintarWizard()
     }
 
     // ═══════════════════════════════════════════════════════════════════════

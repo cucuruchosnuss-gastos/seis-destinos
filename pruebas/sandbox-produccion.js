@@ -39,12 +39,24 @@ const FUNCIONES_BASE = [
   'htmlProducido', 'htmlResumenCierre', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'actualizarProductos',
   'normalizarBusqueda', 'marcasFiltradas', 'htmlMarcas', 'abrirAgregar', 'pintarAgregar', 'confirmarAgregar',
   'intentarCerrar', 'enviarCierre', 'htmlSublotesDefinitivos',
+  // B5: sala de masa
+  'mostrarSala', 'claveBorradorMasa', 'nuevoBorradorMasa', 'leerBorradorMasa', 'guardarBorradorMasa',
+  'borrarBorradorMasa', 'borradoresPendientes', 'redondearKg', 'pasoDe', 'cantidadesDesde', 'diferencias',
+  'textoGramos', 'textoDiferencias', 'textoKg', 'ingredientesConLote', 'insumosDe', 'lotesDeLaAnterior',
+  'insumoPorDefecto', 'faltanLotes', 'aplicarEleccionLote', 'parametrosRegistrarMasa', 'esErrorDeRed', 'enviarMasa',
+  'reintentarPendientes', 'pintarPendientes', 'abrirMaquinaSala', 'cargarTiposMasa', 'nuevaMasa',
+  'descartarMasa', 'cargarDatosMasa', 'irAPaso', 'elegirTipoMasa', 'elegirBase', 'elegirPartida',
+  'cambiarCantidad', 'sumarPaso', 'elegirMismosLotes', 'registrarMasa', 'htmlPasoTipo', 'htmlPasoBase',
+  'htmlPasoPartida', 'htmlFilaIngrediente', 'htmlPasoEditar', 'htmlOpcionesLote', 'htmlLoteIngrediente',
+  'htmlPasoLotes', 'htmlPasoResumen', 'pintarWizard', 'leerMasasTurno', 'diferenciaDeMasa', 'htmlMasaFila',
+  'cargarMasasTurno', 'pedirAnularMasa', 'confirmarAnularMasa', 'reintentarMasaActual',
 ]
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
   'CLAVE_MODO', 'CLAVE_UNIDAD', 'PUESTO_DE_MODO', 'TITULO_DE_MODO', 'PLURAL_PUESTO', 'VISTAS',
   'ZONA_AR', 'TURNOS', 'SIN_OPERARIO',
+  'PREFIJO_BORRADOR_MASA', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
 ]
 
 const PRELUDIO = `
@@ -83,6 +95,7 @@ const PRELUDIO = `
   // let del módulo (extraerConst solo toma const).
   var bloqueoPantalla = null
   var camposCierreEnlazados = false
+  var reintentando = false
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }
@@ -125,6 +138,7 @@ const PRELUDIO = `
     unidadId: 'u-cn', unidadesPosibles: ['u-cn'], modo: null, persona: null, personal: [],
     tablero: null, hayTurnoAbierto: false, abrir: null, abrirOperarios: [], abriendo: false,
     planilla: null, catalogo: null, cierre: null, agregar: null, cerrando: false,
+    salaTurno: null, masa: null, datosMasa: null, tiposMasa: null, masasTurno: null, enviandoMasa: false, anulando: null,
   }
 `
 

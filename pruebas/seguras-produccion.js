@@ -13,6 +13,17 @@ const SEGURAS_PRODUCCION = [
   ['htmlOpcionesOperario(operarios, f.operario)', 'HTML armado por htmlOpcionesOperario(), que escapa adentro'],
   // B4
   ['detalle', 'HTML ya escapado: htmlProducido() lo arma arriba con esc(d.detalle), o vacío'],
+  // B5
+  ['botones', 'HTML ya escapado: htmlPasoTipo() lo arma arriba con esc(t) de cada tipo, o un aviso constante'],
+  ['detalleAnt', 'HTML ya escapado: htmlPasoBase() lo arma arriba con esc() del lote, el número, la hora y la diferencia, o un texto constante'],
+  ['opcInsumo', 'HTML ya escapado: htmlLoteIngrediente() lo arma arriba con esc() del id, el nombre y la marca de cada insumo'],
+  ['htmlOpcionesLote(ins, valorLote)', 'HTML armado por htmlOpcionesLote(), que escapa adentro'],
+  ['notaSin', 'HTML ya escapado: htmlPasoLotes() lo arma arriba con esc() de los nombres, o vacío'],
+  ['cuerpo', 'HTML ya escapado: htmlPasoLotes() lo arma con htmlLoteIngrediente() (escapa adentro), esc() del lote y el número de la anterior, o textos constantes'],
+  ['cartel', 'HTML constante del código: "DOBLE ×2" o "Simple"'],
+  ['cabDoble', 'HTML constante del código, o vacío'],
+  ['filas', 'HTML ya escapado: htmlPasoResumen() arma cada fila con esc() de cada celda'],
+  ['anular', 'HTML ya escapado: htmlMasaFila() lo arma arriba con esc(m.id), o vacío'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

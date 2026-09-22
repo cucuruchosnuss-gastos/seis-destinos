@@ -87,3 +87,38 @@ Supabase se usó SOLO en lectura: la base ya estaba hecha. Toda la verificación
   recupera y se dice. Se borra recién cuando la base confirmó el cierre; si la base rechaza, queda y el mensaje se
   muestra tal cual.
 - Pruebas: `test-produccion-cierre.js` (+ mut).
+- **Commit `fa693f2`.** Números: test-produccion-cierre 104/104, mut 66/66 (+14 equivalentes, cada una con su motivo
+  en el archivo); test-produccion-xss 6/6; controles-produccion 191/191 (baselines B1–B3); el resto del repo en verde.
+
+### A1 — Cobranzas con unidad (subagente cobranzas) — commit `b65ac10`
+- "Controlada, asentar" abre un diálogo propio que pide la unidad y llama a `marcar_cobranza_asentada`; la pantalla ya
+  no llama a `marcar_cobranza_procesada`. El detalle muestra la unidad o "Sin unidad" con "Asignar unidad" / "Cambiar"
+  (`asignar_unidad_cobranza`, con `cobranzas:procesar`), y el historial "Unidad asignada: … · quién · fecha".
+  Detalle, números y lo no probado en `.claude/traspasos/2026-09-22-cobranzas-3.md`. Medido: las 11 cobranzas
+  asentadas están sin unidad; no se tocó ningún dato.
+
+### B5 — Sala de masa
+- Solo las máquinas ABIERTAS de la unidad, grandes, con su lote; sin ninguna: "Todavía no hay máquinas abiertas: el
+  encargado tiene que abrir el turno". Elegida una: "Nueva masa" y la lista de masas del turno.
+- **Nueva masa**: 1) tipo (los tipos con receta en esa máquina) y Simple / Doble (×2); 2) "Usar la original", "Usar
+  la anterior" (dice lote, número y hora de la anterior y su diferencia contra la original, o "Es igual a la
+  original"; deshabilitado si no hay) o "Modificar" (parte de la original o de la anterior; − / + de 100 g en agua,
+  harina, azúcar y grasa y de 10 g en los demás, número editable con `enlazarCampoNumero`, diferencia en gramos en
+  vivo, en bordó si se aleja, nunca negativo); 3) lotes: si hay anterior, "¿Mismos lotes que la anterior?"; si no,
+  por ingrediente el insumo (por defecto el de la anterior, si no el preferido de la receta) y el lote de los que
+  tienen stock según `datos_para_masa`, con su cantidad, o "El lote no está en la lista" (se escribe, con el aviso
+  de que queda marcado para revisar). Un insumo que no es materia prima ofrece además "Sin lote" (viaja null). Los
+  ingredientes sin insumo en el catálogo no piden lote y la pantalla lo dice; 4) resumen con "DOBLE ×2" grande,
+  cada ingrediente simple y ×2, y la diferencia contra la original.
+- **Payload de `registrar_masa`**: SIEMPRE una masa simple (la doble es `p_doble`), TODOS los ingredientes de la
+  original (0 si no lleva), `p_masero_id` = la persona de "¿Quién sos?". El origen no se manda: lo calcula la base.
+- **LA REGLA DEL UUID**: `crypto.randomUUID()` se llama en UN solo lugar (`nuevoBorradorMasa`), al empezar la masa, y
+  queda en su borrador (`produccion.masa.<turno_id>`). El payload se congela en el borrador al mandarlo. Sin
+  respuesta (error sin código, o `navigator.onLine === false`) la masa queda PENDIENTE y se reintenta sola (al
+  volver la conexión, cada 30 s y al entrar a la sala) con el MISMO payload y el MISMO uuid, también después de
+  recargar la tablet. Un error CON código (un `raise` de la RPC) es un rechazo: se muestra tal cual, no queda
+  pendiente y se puede corregir (sigue el mismo uuid: la base no guardó nada con él). "Nueva masa" con una empezada
+  la retoma; una pendiente no se puede descartar. La respuesta `reintento: true` de la base cuenta como enviada.
+- Lista de masas del turno: número, hora, tipo, simple o doble, chip de origen y diferencia corta contra SU receta;
+  "Anular" con motivo (3 letras o más) → `anular_masa`, y avisa que se devolvió lo descontado.
+- Pruebas: `test-produccion-masa.js` (+ mut).
