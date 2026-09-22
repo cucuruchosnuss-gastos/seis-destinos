@@ -7,10 +7,13 @@ const SEGURAS_CHEQUES = [
   ['htmlTablaCheques(estado.filas, estado.cobranzas)', 'HTML armado por htmlTablaCheques(), que escapa adentro'],
   ['htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen)', 'HTML armado por htmlCartera(), que escapa adentro'],
   ['htmlSalidaCheque(ch, cob)', 'HTML armado por htmlSalidaCheque(), que escapa adentro'],
+  ['rotulo', 'HTML constante del código: htmlEncabezadoOrden() se llama SOLO con literales (lo verifica test-cheques-vista.js)'],
   ['volver', 'HTML ya escapado: el botón se arma arriba con esc(ch.id), o vacío'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [
+  [/^htmlEncabezadoOrden\('[a-z]+', '[^'$`]*'(, '[a-z_-]*')?\)$/s, 'HTML armado por htmlEncabezadoOrden(), que escapa adentro; los argumentos son literales'],
+  [/^COLUMNAS_ORDEN\.map\(c =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^filas\.map\(ch => htmlFilaCheque\(ch, cobranzas\.get\(ch\.cobranza_id\)\)\)\.join\(''\)$/s, 'HTML armado por htmlFilaCheque(), que escapa adentro'],
   [/^notas\.map\(t =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^codigos\.map\(c =>/s, 'HTML de una plantilla anidada, verificada aparte'],

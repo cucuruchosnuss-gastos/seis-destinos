@@ -226,7 +226,7 @@ if (SOLO !== 'estatico') {
     const sin = S.htmlTablaCheques(filas, cobs)
     chk('sin permiso: en cartera → "—"', ult(sin, 'k1') === '—' && ult(sin, 'k2') === '—')
     chk('sin permiso: un salido sigue mostrando fecha y destino, sin el botón',
-      ult(sin, 'k3').includes('10/09/2026') && !/<button/.test(sin))
+      ult(sin, 'k3').includes('10/09/2026') && !/<button/.test(sin.slice(sin.indexOf('<tbody>'))))
     S.estado.miRolApp = 'super_admin'
     chk('super_admin ve los botones (bypass, igual que tiene_tarea)', /data-dar-salida="k1"/.test(S.htmlTablaCheques(filas, cobs)))
 

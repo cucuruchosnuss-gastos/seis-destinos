@@ -22,11 +22,13 @@ const FUNCIONES = [
   'abrirVolverACartera',
   // preferencias
   'guardarPreferencias', 'leerPreferencias',
+  // orden (Parte 3)
+  'valorDeOrden', 'compararValores', 'siguienteOrden', 'aplicarOrden', 'pintarOrdenMovil', 'htmlEncabezadoOrden',
 ]
 
 const CONSTANTES = [
   'ZONA_AR', 'ETIQUETA_ESTADO_CHEQUE', 'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO',
-  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL',
+  'ESTADOS_FILTRO_CHEQUES', 'LARGO_MAXIMO_DESTINO', 'CLAVE_PREFERENCIAS', 'AVISO_CARTERA_PARCIAL', 'ORDEN_DEFECTO', 'COLUMNAS_ORDEN',
   'puedeProcesar', 'puedeVerCartera',
 ]
 
@@ -98,6 +100,7 @@ const PRELUDIO = `
   function cargarCheques(){ __llamadas.cargarCheques++ }
   async function refrescarTodo(){ __llamadas.refrescar++ }
   function abrirCobranza(id){ __llamadas.abrirCobranza = id }
+  var __renders = 0
 
   var estado = {
     sesion: { user: { id: 'uid-de-prueba' } },
@@ -105,6 +108,7 @@ const PRELUDIO = `
     misTareas: new Set(['cobranzas:ver_todo', 'cobranzas:procesar']),
     bancos: new Map(),
     filtros: { estado: 'en_cartera', numero: '', banco: '' },
+    orden: { campo: 'pago', sentido: 'asc' },
     filas: [], cobranzas: new Map(), cartera: null, tope: false, topeResumen: false, error: null,
     bancosDeCheques: [], destacado: null, salida: null,
   }
@@ -124,7 +128,7 @@ function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes
     preludio: PRELUDIO + preludioExtra,
     funciones: [...new Set(fns)],
     constantes: [...new Set(cts)],
-    retorno: `${cts.filter(c => /^[a-z]/.test(c)).join(', ')}${cts.some(c => /^[a-z]/.test(c)) ? ',' : ''} estado, __els, __doc: document, __llamadas, __consultas, __almacen, window,
+    retorno: `${[...new Set(cts)].join(", ")}, estado, __els, __doc: document, __llamadas, __consultas, __almacen, window,
       __set(d){ __datos = d }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f },
       __accionMotivo(){ return accionDelMotivo }`,
   })

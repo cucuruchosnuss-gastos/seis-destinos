@@ -307,6 +307,33 @@
       line-height: 1.3;
       color: var(--color-texto-suave);
     }
+    /* ── Orden por columna (Parte 3) ── */
+    /* El botón ocupa el encabezado entero: se toca el título, no una flechita. */
+    .chq-th-orden {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      min-height: 32px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: inherit;
+      color: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chq-th-orden--activo { color: var(--naranja-oscuro); }
+    .chq-th-orden__flecha { font-size: 0.625rem; min-width: 0.625rem; }
+    .chq-orden-movil { display: flex; align-items: flex-end; gap: 0.5rem; min-width: 0; margin-top: 0.5rem; }
+    .chq-orden-movil > .chq-campo { flex: 1 1 auto; }
+    .chq-orden-movil__sentido { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
+    /* En escritorio se ordena tocando los encabezados. */
+    @media (min-width: 900px) {
+      .chq-orden-movil { display: none; }
+    }
+
     /* El botón de la columna: el de la acción principal de la fila. */
     .chq-btn--salida { border-color: var(--naranja); color: var(--naranja-oscuro); }
 
@@ -396,6 +423,15 @@
         <!-- pre-line: las líneas del aviso van por textContent. -->
         <div class="chq-aviso" id="chq-aviso-numero" style="white-space:pre-line" hidden></div>
         <button type="button" class="chq-btn chq-btn--chico" id="chq-btn-limpiar" hidden>Limpiar filtros</button>
+        <!-- En el celular no hay encabezados que tocar: el orden se elige acá.
+             En escritorio no se dibuja (los encabezados ordenan). -->
+        <div class="chq-orden-movil">
+          <div class="chq-campo" style="margin-bottom:0">
+            <label for="chq-orden-campo">Ordenar por</label>
+            <select id="chq-orden-campo"></select>
+          </div>
+          <button type="button" class="chq-btn chq-btn--chico chq-orden-movil__sentido" id="chq-orden-sentido">▲ Ascendente</button>
+        </div>
       </div>
 
       <div class="chq-aviso" id="chq-aviso" style="white-space:pre-line" hidden></div>
@@ -478,6 +514,8 @@
       bancos: new Map(),
       // Los filtros arrancan en "en cartera".
       filtros: { estado: 'en_cartera', numero: '', banco: '' },
+      // El orden de la lista: por defecto, lo que se cobra primero arriba.
+      orden: { campo: 'pago', sentido: 'asc' },
       filas: [],
       cobranzas: new Map(),   // id → { id, cliente, estado, fecha }
       cartera: null,          // { cantidad, total } — null = no se pudo saber
@@ -650,15 +688,108 @@
       return ch.tipo === 'diferido' && esFechaIso(ch.fecha_pago) ? ch.fecha_pago : ch.fecha_emision
     }
 
-    // Lo que se cobra primero, arriba. Sin fecha, al final. A igual fecha, por
-    // número, para que el orden no cambie entre una carga y otra.
-    function ordenarCheques(filas) {
-      const clave = (ch) => esFechaIso(fechaDeCobroCheque(ch)) ? fechaDeCobroCheque(ch) : '9999-99-99'
-      return [...filas].sort((a, b) => {
-        const fa = clave(a), fb = clave(b)
-        if (fa !== fb) return fa < fb ? -1 : 1
+    // ── Orden (Parte 3) ──────────────────────────────────────────────────
+    // Por defecto, lo que se cobra primero arriba: la fecha de pago, y en un
+    // común la de emisión (se cobra desde que se emite). Tocar un encabezado
+    // ordena por esa columna; el segundo toque invierte.
+    //
+    // SE ORDENA EN EL CLIENTE, y es una decisión: el cliente, el banco por su
+    // NOMBRE y quién cargó no son columnas de cobranza_cheques, así que un
+    // .order() de la base no los puede ordenar. Vale mientras la consulta no
+    // llegue al tope de 1000 filas de PostgREST; si llega, la pantalla ya dice
+    // que la lista está cortada y además que el orden es solo sobre esas.
+    const ORDEN_DEFECTO = { campo: 'pago', sentido: 'asc' }
+
+    // Las columnas ordenables, con el texto de la opción del celular. El tipo
+    // dice CÓMO se compara: fechas por fecha, importes por monto, textos con
+    // localeCompare en castellano sin distinguir mayúsculas ni acentos.
+    const COLUMNAS_ORDEN = [
+      { id: 'numero', nombre: 'N° de cheque', tipo: 'texto' },
+      { id: 'banco', nombre: 'Banco', tipo: 'texto' },
+      { id: 'emision', nombre: 'Emisión', tipo: 'fecha' },
+      { id: 'pago', nombre: 'Pago', tipo: 'fecha' },
+      { id: 'importe', nombre: 'Importe', tipo: 'numero' },
+      { id: 'cliente', nombre: 'Cliente', tipo: 'texto' },
+      { id: 'estado', nombre: 'Estado', tipo: 'texto' },
+    ]
+
+    // El valor por el que se ordena una columna. null = no hay dato, y lo sin
+    // dato va SIEMPRE al final, en los dos sentidos: invertir el orden no
+    // tiene que subir arriba los cheques sin fecha.
+    function valorDeOrden(ch, campo, cobranzas) {
+      const cob = cobranzas?.get?.(ch.cobranza_id)
+      switch (campo) {
+        case 'numero': return ch.numero ? String(ch.numero) : null
+        case 'banco': return ch.banco_codigo ? nombreBanco(ch.banco_codigo) : null
+        case 'emision': return esFechaIso(ch.fecha_emision) ? ch.fecha_emision : null
+        case 'pago': return esFechaIso(fechaDeCobroCheque(ch)) ? fechaDeCobroCheque(ch) : null
+        case 'importe': {
+          if (ch.importe === null || ch.importe === undefined || ch.importe === '') return null
+          const n = Number(ch.importe)
+          return Number.isFinite(n) ? n : null
+        }
+        case 'cliente': return cob?.cliente ? String(cob.cliente) : null
+        case 'estado': return ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? (ch.estado ? String(ch.estado) : null)
+        default: return null
+      }
+    }
+
+    function compararValores(a, b, tipo) {
+      if (tipo === 'numero') return a === b ? 0 : (a < b ? -1 : 1)
+      if (tipo === 'fecha') return a === b ? 0 : (a < b ? -1 : 1)
+      return String(a).localeCompare(String(b), 'es', { sensitivity: 'base' })
+    }
+
+    // Ordena una COPIA. A igual valor, por fecha de cobro y después por
+    // número: el orden no cambia entre una carga y otra.
+    function ordenarCheques(filas, orden = ORDEN_DEFECTO, cobranzas = new Map()) {
+      const col = COLUMNAS_ORDEN.find(c => c.id === orden?.campo) ?? COLUMNAS_ORDEN.find(c => c.id === ORDEN_DEFECTO.campo)
+      const signo = orden?.sentido === 'desc' ? -1 : 1
+      const desempate = (a, b) => {
+        const fa = valorDeOrden(a, 'pago'), fb = valorDeOrden(b, 'pago')
+        if (fa !== fb) {
+          if (fa === null) return 1
+          if (fb === null) return -1
+          return fa < fb ? -1 : 1
+        }
         return String(a.numero ?? '').localeCompare(String(b.numero ?? ''))
+      }
+      return [...filas].sort((a, b) => {
+        const va = valorDeOrden(a, col.id, cobranzas), vb = valorDeOrden(b, col.id, cobranzas)
+        if (va === null && vb === null) return desempate(a, b)
+        if (va === null) return 1
+        if (vb === null) return -1
+        const c = compararValores(va, vb, col.tipo)
+        return c !== 0 ? signo * c : desempate(a, b)
       })
+    }
+
+    // Tocar un encabezado: la misma columna invierte; otra columna la
+    // reemplaza, ascendente. Devuelve el orden nuevo (no toca el estado).
+    function siguienteOrden(actual, campo) {
+      if (actual?.campo === campo) return { campo, sentido: actual.sentido === 'asc' ? 'desc' : 'asc' }
+      return { campo, sentido: 'asc' }
+    }
+
+    // Reordena lo que ya está cargado, sin volver a consultar.
+    function aplicarOrden(orden) {
+      if (!COLUMNAS_ORDEN.some(c => c.id === orden?.campo)) return
+      estado.orden = { campo: orden.campo, sentido: orden.sentido === 'desc' ? 'desc' : 'asc' }
+      guardarPreferencias()
+      estado.filas = ordenarCheques(estado.filas, estado.orden, estado.cobranzas)
+      pintarOrdenMovil()
+      renderizarCheques()
+    }
+
+    // El selector del celular: columna y sentido.
+    function pintarOrdenMovil() {
+      const sel = document.getElementById('chq-orden-campo')
+      sel.innerHTML = COLUMNAS_ORDEN.map(c => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')
+      sel.value = estado.orden.campo
+      const btn = document.getElementById('chq-orden-sentido')
+      const asc = estado.orden.sentido === 'asc'
+      btn.textContent = asc ? '▲ Ascendente' : '▼ Descendente'
+      btn.setAttribute('aria-label', asc ? 'Orden ascendente: tocá para invertir' : 'Orden descendente: tocá para invertir')
     }
 
     // Cuánto hay en cartera. Se suma en CENTAVOS: sumar decimales de a uno
@@ -800,7 +931,7 @@
         if (cob.error) throw cob.error
         const filas = ch.data ?? []
         const cobs = cob.data ?? []
-        estado.filas = ordenarCheques(filas)
+        estado.filas = ordenarCheques(filas, estado.orden, new Map(cobs.map(x => [x.id, x])))
         estado.cobranzas = new Map(cobs.map(x => [x.id, x]))
         estado.tope = filas.length >= TOPE_FILAS_POSTGREST || cobs.length >= TOPE_FILAS_POSTGREST
         estado.error = null
@@ -820,7 +951,7 @@
       const aviso = document.getElementById('chq-aviso')
       const lineas = []
       if (estado.error) lineas.push(estado.error)
-      if (estado.tope) lineas.push(`Hay más de ${TOPE_FILAS_POSTGREST} filas y se muestran las primeras: afiná la búsqueda.`)
+      if (estado.tope) lineas.push(`Hay más de ${TOPE_FILAS_POSTGREST} filas y se muestran las primeras: afiná la búsqueda. El orden es solo sobre esas.`)
       // LA CARTERA DE QUIEN NO TIENE ver_todo ESTÁ INCOMPLETA, y se dice. La
       // policy de cobranzas deja leer solo las propias sin esa tarea
       // (cobranzas: leer propias o con ver_todo), así que alguien con solo
@@ -843,6 +974,10 @@
       vacio.hidden = true
       caja.hidden = false
       tabla.innerHTML = htmlTablaCheques(estado.filas, estado.cobranzas)
+      // Tocar un encabezado ordena por esa columna.
+      tabla.querySelectorAll('[data-orden]').forEach(b => b.addEventListener('click', () => {
+        aplicarOrden(siguienteOrden(estado.orden, b.dataset.orden))
+      }))
       tabla.querySelectorAll('[data-cheque-fila]').forEach(tr => {
         const abrir = () => abrirCobranza(tr.dataset.chequeCobranza)
         tr.addEventListener('click', abrir)
@@ -876,17 +1011,28 @@
       return `
         <thead>
           <tr>
-            <th scope="col">N&deg; de cheque</th>
-            <th scope="col">Banco</th>
-            <th scope="col">Emisión</th>
-            <th scope="col">Pago</th>
-            <th scope="col" class="chq-tabla__num">Importe</th>
-            <th scope="col">Cliente</th>
-            <th scope="col">Estado</th>
+            ${htmlEncabezadoOrden('numero', 'N&deg; de cheque')}
+            ${htmlEncabezadoOrden('banco', 'Banco')}
+            ${htmlEncabezadoOrden('emision', 'Emisión')}
+            ${htmlEncabezadoOrden('pago', 'Pago')}
+            ${htmlEncabezadoOrden('importe', 'Importe', 'chq-tabla__num')}
+            ${htmlEncabezadoOrden('cliente', 'Cliente')}
+            ${htmlEncabezadoOrden('estado', 'Estado')}
             <th scope="col">Salida</th>
           </tr>
         </thead>
         <tbody>${filas.map(ch => htmlFilaCheque(ch, cobranzas.get(ch.cobranza_id))).join('')}</tbody>`
+    }
+
+    // Un encabezado ordenable: un botón adentro del <th>, con la flecha y el
+    // aria-sort. `rotulo` es HTML CONSTANTE del código (lleva &deg;), nunca un
+    // dato.
+    function htmlEncabezadoOrden(campo, rotulo, clase = '') {
+      const activo = estado.orden?.campo === campo
+      const sentido = activo ? estado.orden.sentido : null
+      const ariaSort = !activo ? 'none' : sentido === 'desc' ? 'descending' : 'ascending'
+      const flecha = !activo ? '' : sentido === 'desc' ? '▼' : '▲'
+      return `<th scope="col" class="${esc(clase)}" aria-sort="${esc(ariaSort)}"><button type="button" class="chq-th-orden${activo ? ' chq-th-orden--activo' : ''}" data-orden="${esc(campo)}">${rotulo}<span class="chq-th-orden__flecha" aria-hidden="true">${esc(flecha)}</span></button></th>`
     }
 
     function htmlFilaCheque(ch, cob) {
@@ -1104,13 +1250,17 @@
 
     function guardarPreferencias() {
       try {
-        sessionStorage.setItem(CLAVE_PREFERENCIAS, JSON.stringify({ filtros: estado.filtros }))
+        sessionStorage.setItem(CLAVE_PREFERENCIAS, JSON.stringify({ filtros: estado.filtros, orden: estado.orden }))
       } catch { /* sin almacenamiento: no pasa nada */ }
     }
 
     function leerPreferencias() {
       try {
         const p = JSON.parse(sessionStorage.getItem(CLAVE_PREFERENCIAS) || 'null')
+        const o = p?.orden
+        if (o && COLUMNAS_ORDEN.some(c => c.id === o.campo)) {
+          estado.orden = { campo: o.campo, sentido: o.sentido === 'desc' ? 'desc' : 'asc' }
+        }
         const f = p?.filtros
         if (!f) return
         if (ESTADOS_FILTRO_CHEQUES.some(e => e.id === f.estado)) estado.filtros.estado = f.estado
@@ -1137,6 +1287,12 @@
         estado.filtros.banco = ev.target.value
         guardarPreferencias()
         cargarCheques()
+      })
+      document.getElementById('chq-orden-campo').addEventListener('change', (ev) => {
+        aplicarOrden({ campo: ev.target.value, sentido: estado.orden.sentido })
+      })
+      document.getElementById('chq-orden-sentido').addEventListener('click', () => {
+        aplicarOrden(siguienteOrden(estado.orden, estado.orden.campo))
       })
       document.getElementById('chq-btn-limpiar').addEventListener('click', () => {
         clearTimeout(temporizadorCheque)
@@ -1241,6 +1397,7 @@
       document.getElementById('chq-cargando').hidden = true
       document.getElementById('chq-vista').hidden = false
       document.getElementById('chq-filtro-numero').value = estado.filtros.numero
+      pintarOrdenMovil()
       conectarTodo()
 
       await cargarBancos()

@@ -27,8 +27,6 @@ correrMutaciones({
       de: "if (ch.estado !== 'en_cartera') continue\n        cantidad++", a: "cantidad++" },
     { nombre: 'la cartera con error queda en cero',
       de: '        estado.cartera = null\n', a: '        estado.cartera = { cantidad: 0, total: 0 }\n' },
-    { nombre: 'el orden pierde el desempate por número',
-      de: "return String(a.numero ?? '').localeCompare(String(b.numero ?? ''))\n      })\n    }\n\n    // Cuánto", a: "return 0\n      })\n    }\n\n    // Cuánto" },
     { nombre: 'Dar salida se ofrece con la cobranza por controlar',
       de: "      if (cob?.estado === 'procesada') {", a: "      if (cob) {" },
     { nombre: 'Dar salida se ofrece sin la tarea procesar',
