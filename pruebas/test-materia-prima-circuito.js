@@ -12,6 +12,9 @@ const path = require('path')
 const { construirCon } = require('./sandbox')
 const { arnes, marca, chequearMarcas, estaticoAcotado, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
+// Las funciones de números de js/utils.js (ponerNumero, leerCampoNumero…),
+// con su código REAL: el módulo las importa desde el 21/09/2026.
+const { fuenteNumeros } = require('./numeros-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/materia-prima.html')
@@ -19,6 +22,7 @@ const FUENTE = leer(ARCHIVO)
 const { chk, esperas, fin } = arnes()
 
 const PRELUDIO = `
+  ${fuenteNumeros()}
   function nuevoEl(id) {
     return {
       id, innerHTML: '', textContent: '', value: '', hidden: false, checked: false, disabled: false,
@@ -49,8 +53,8 @@ const PRELUDIO = `
 `
 
 const FUNCIONES = [
-  'esc', 'formatearImporteDuplicado', 'importeConMoneda', 'textoImporteInput', 'parseImporte',
-  'llevaCircuito', 'esFactura', 'pideTotalFactura', 'textoTotalFactura', 'avisoCircuitoPrevio',
+  'esc', 'formatearImporteDuplicado', 'importeConMoneda', 'numeroDesdeOcr', 'importeOcrDe',
+  'llevaCircuito', 'esFactura', 'pideTotalFactura', 'totalFacturaDe', 'avisoCircuitoPrevio',
   'renderizarBloquesCircuito', 'validarCircuitoAntesDeGuardar', 'resultadoCircuito', 'errorCircuito',
   'pasarAlCircuito', 'htmlResultadoCircuito', 'htmlCircuitoDetalle', 'htmlPagadoSinIngresar',
   'renderizarPagadoSinIngresar', 'cargarPagadoSinIngresar', 'rutaComprobanteGasto',
@@ -97,9 +101,11 @@ const el = (id) => S.__els.get(id) || { innerHTML: '', textContent: '', hidden: 
   chk('detalle: el vinculado a un gasto lo dice', html.includes('Vinculada a un gasto ya cargado.'))
   chk('detalle: con cuenta corriente pide el total (y solo una vez)', (html.match(/campo-reintento-total/g) || []).length === 1)
   chk('detalle: el resultado reciente se muestra (nivel error)', html.includes('circuito-mp--error'))
-  // Un importe_ocr que no es número NO se escapa: se descarta y el campo queda
-  // vacío. Es más fuerte que escaparlo: no hay texto del OCR en el atributo.
-  chk('detalle: un importe_ocr que no es número deja el campo vacío', /class="campo-reintento-total"[^>]*value=""/.test(html) && !html.includes('importe_ocr'))
+  // Desde el 21/09/2026 el campo se dibuja SIN value: el importe del OCR lo
+  // escribe ponerNumero después de insertar (enlazarReintentosCircuito). Así
+  // no hay texto del OCR en el atributo, y uno que no es número queda en null.
+  chk('detalle: el total del reintento se dibuja SIN value', /<input[^>]*campo-reintento-total[^>]*>/.test(html) && !/<input[^>]*campo-reintento-total[^>]*value=/.test(html) && !html.includes('importe_ocr'))
+  chk('detalle: un importe_ocr que no es número da null (campo vacío)', S.importeOcrDe({ importe_ocr: marca('importe_ocr') }) === null)
 
   const sinPermiso = S.htmlCircuitoDetalle(entrega, { fechaInicio: '2026-10-01', puedeReintentar: false })
   chk('detalle: sin permiso no hay botón de reintento', !/btn-reintento-circuito/.test(sinPermiso))
@@ -120,7 +126,7 @@ const el = (id) => S.__els.get(id) || { innerHTML: '', textContent: '', hidden: 
   chk('detalle: sin comprobante no pide total', !/campo-reintento-total/.test(sinCompr) && /btn-reintento-circuito/.test(sinCompr))
   const nuloOcr = S.htmlCircuitoDetalle({ comprobantes: [{ ...entrega.comprobantes[0], importe_ocr: null, sin_stock_motivo: null }] },
     { fechaInicio: '2026-10-01', puedeReintentar: true })
-  chk('detalle: sin importe del OCR el campo queda vacío, no en 0', /value=""/.test(nuloOcr), nuloOcr.match(/value="[^"]*"/)?.[0])
+  chk('detalle: sin importe del OCR el campo queda vacío, no en 0', !/value=/.test(nuloOcr) && S.importeOcrDe({ importe_ocr: null }) === null && S.importeOcrDe({ importe_ocr: '' }) === null, nuloOcr.match(/value="[^"]*"/)?.[0])
 }
 
 // htmlPagadoSinIngresar y su render.
@@ -264,7 +270,7 @@ esperas.push((async () => {
   const w = (extra = {}) => ({
     encabezado: { tipoDoc: 'factura_a', razonSocial: 'Papel SA', numeroDoc: '', fecha: '' },
     proveedorMatch: { id: 'p', razon_social: 'DIMAFLO', cuenta_corriente: true },
-    desdeGasto: null, importeOcr: null, totalFactura: null, sinStock: false, sinStockMotivo: '', ...extra,
+    desdeGasto: null, importeOcr: null, totalFactura: null, totalFacturaTocado: false, sinStock: false, sinStockMotivo: '', ...extra,
   })
   chk('total: se pide con factura + proveedor con CC', S.pideTotalFactura(w()) === true)
   chk('total: NO con proveedor ocasional', S.pideTotalFactura(w({ proveedorMatch: { cuenta_corriente: false } })) === false)
@@ -275,17 +281,25 @@ esperas.push((async () => {
 
   chk('validar: con CC y sin total, no deja guardar', !!S.validarCircuitoAntesDeGuardar(w()))
   chk('validar: el total del OCR alcanza', S.validarCircuitoAntesDeGuardar(w({ importeOcr: 1500.5 })) === null)
-  chk('validar: el total tipeado "1.234,50" alcanza', S.validarCircuitoAntesDeGuardar(w({ totalFactura: '1.234,50' })) === null)
-  chk('validar: un total en 0 no alcanza', !!S.validarCircuitoAntesDeGuardar(w({ totalFactura: '0' })))
+  // Desde el 21/09/2026 totalFactura es el NÚMERO leído del campo enlazado
+  // (lo que el campo convierte de "1.234,50"), y totalFacturaTocado dice si la
+  // persona lo tocó.
+  chk('validar: el total tipeado (1234,5) alcanza', S.validarCircuitoAntesDeGuardar(w({ totalFactura: 1234.5, totalFacturaTocado: true })) === null)
+  chk('validar: un total en 0 no alcanza', !!S.validarCircuitoAntesDeGuardar(w({ totalFactura: 0, totalFacturaTocado: true })))
+  chk('validar: el total BORRADO no vuelve al del OCR', !!S.validarCircuitoAntesDeGuardar(w({ importeOcr: 1500, totalFactura: null, totalFacturaTocado: true })))
   chk('validar: "no suma stock" sin motivo no deja guardar', !!S.validarCircuitoAntesDeGuardar(w({ importeOcr: 1, sinStock: true, sinStockMotivo: '  ' })))
   chk('validar: "no suma stock" con motivo deja guardar', S.validarCircuitoAntesDeGuardar(w({ importeOcr: 1, sinStock: true, sinStockMotivo: 'se contó el 1/10' })) === null)
   chk('validar: el motivo de más de 300 no pasa', !!S.validarCircuitoAntesDeGuardar(w({ importeOcr: 1, sinStock: true, sinStockMotivo: 'x'.repeat(301) })))
 
-  chk('parseImporte "1.234,50"', S.parseImporte('1.234,50') === 1234.5)
-  chk('parseImporte vacío es null, no 0', S.parseImporte('') === null && S.parseImporte(null) === null)
-  chk('textoImporteInput(null) es vacío, no "0"', S.textoImporteInput(null) === '' && S.textoImporteInput('') === '')
-  chk('textoImporteInput(1234.5) es "1.234,5"', S.textoImporteInput(1234.5) === '1.234,5', S.textoImporteInput(1234.5))
-  chk('ida y vuelta: parseImporte(textoImporteInput(x)) === x', S.parseImporte(S.textoImporteInput(98765.43)) === 98765.43)
+  // parseImporte/textoImporteInput ya no existen (21/09/2026): lo tipeado lo
+  // lee leerCampoNumero (probado en test-materia-prima-numeros.js) y lo que
+  // se escribe, ponerNumero. Lo que queda del módulo: el total como número y
+  // el importe del OCR del ingreso guardado (texto de un número JSON).
+  chk('totalFacturaDe: sin tocar es el del OCR', S.totalFacturaDe(w({ importeOcr: 98765.43 })) === 98765.43)
+  chk('totalFacturaDe: tocado manda lo tipeado', S.totalFacturaDe(w({ importeOcr: 1, totalFactura: 1234.5, totalFacturaTocado: true })) === 1234.5)
+  chk('totalFacturaDe: sin nada es null, no 0', S.totalFacturaDe(w()) === null)
+  chk('importeOcrDe: el texto de un número JSON', S.importeOcrDe({ importe_ocr: '387300.5' }) === 387300.5 && S.importeOcrDe({ importe_ocr: '12.345' }) === 12.345)
+  chk('importeOcrDe: vacío o ausente es null, no 0', S.importeOcrDe({ importe_ocr: '' }) === null && S.importeOcrDe(null) === null)
 
   chk('aviso: ocasional dice que espera el gasto', S.avisoCircuitoPrevio(w({ proveedorMatch: { razon_social: 'DARIO', cuenta_corriente: false } })) === 'DARIO no tiene cuenta corriente: la factura queda esperando el gasto de quien la pagó.')
   chk('aviso: sin comprobante con CC dice descarga sin importe', S.avisoCircuitoPrevio(w({ encabezado: { tipoDoc: 'sin_comprobante' } })).includes('descarga sin importe'))

@@ -2795,7 +2795,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -3040,9 +3040,11 @@
         // vincular_ingreso_a_gasto y NO a registrar_factura_de_ingreso.
         desdeGasto: null,
         // importe_total que leyó el OCR (número o null) y lo que la persona
-        // escribió en "Total de la factura" (texto; null = no lo tocó).
+        // escribió en "Total de la factura" (NÚMERO leído del campo, o null si
+        // lo borró; totalFacturaTocado dice si lo tocó).
         importeOcr: null,
         totalFactura: null,
+        totalFacturaTocado: false,
         sinStock: false,
         sinStockMotivo: '',
       }
@@ -3109,16 +3111,22 @@
 
     // Cantidades en formato es-AR, solo para mostrar — el número canónico
     // vive como valor JS plano, nunca se re-parsea el string formateado.
+    // El formato sale de formatearNumeroAr() de js/utils.js (21/09/2026) y se
+    // ve igual que antes (hasta 2 decimales, sin ceros de relleno). Lo único
+    // que cambia es la AUSENCIA: null, undefined, '' o NaN dicen "—", sin
+    // unidad, y ya no "0 kg" —antes Number(n ?? 0) convertía "no hay dato" en
+    // un cero—. Un cero REAL (el número 0) sigue diciendo "0 kg".
     function formatearCantidad(n, unidadMedida) {
-      const num = Number(n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })
+      const num = formatearNumeroAr(n, { decimales: 2, minimos: 0 })
+      if (num === '—') return '—'
       return unidadMedida ? `${num} ${unidadMedida}` : num
     }
 
     // El número solo, sin unidad. Hace falta donde la unidad NO aplica: una
     // cantidad de bultos no es "250 kg" ni "250 un" — son 250 bultos, y el
-    // bulto no es una unidad de medida del catálogo.
+    // bulto no es una unidad de medida del catálogo. Ausente: "—".
     function formatearNumero(n) {
-      return Number(n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })
+      return formatearNumeroAr(n, { decimales: 2, minimos: 0 })
     }
 
     function nombreUnidad(id) {
@@ -3358,37 +3366,53 @@
       return UNIDADES_ENTERAS.has(String(unidad ?? '').trim().toLowerCase())
     }
 
-    // Lo que TIPEA una persona. Acepta coma o punto como decimal, un solo
-    // separador —"1.500,25" no se adivina, se rechaza— y nada de negativos.
-    // El vacío sigue siendo "sin dato" (null), nunca cero.
+    // LO QUE TIPEA UNA PERSONA (21/09/2026): los campos de cantidad pasan por
+    // las funciones compartidas de js/utils.js. Se ENLAZAN con
+    // enlazarCampoNumero() al dibujarse —ponen los puntos de miles mientras se
+    // escribe, el punto tipeado vale como coma decimal, aceptan pegar—, se
+    // LEEN con leerCampoNumero() y se ESCRIBEN desde código con
+    // ponerCantidadEnCampo() (ponerNumero por dentro). Reemplazan al
+    // parsearCantidad() y al textoParaInput() propios.
     //
-    // `enteros` fuerza el rechazo de cualquier separador. Se usa siempre en los
-    // campos de BULTOS: un bulto es un paquete discreto y no se reciben 2,5
-    // bolsas, y son justo los campos de mayor volumen, donde escribir "1.500"
-    // cajas es lo natural. Es más estricto que la base —cantidad_bultos es
-    // numeric y chk_presentacion_coherente solo exige > 0— y está bien que lo
-    // sea: la base no puede saber el contexto, la pantalla sí.
-    function parsearCantidad(crudo, { unidad = '', enteros = false } = {}) {
-      // trim() saca los espacios de los BORDES, pero los de adentro se
-      // rechazan: "8 5" —un dedazo donde iba la coma— daría 85, que es
-      // exactamente el error que este parser viene a evitar. Un espacio no es
-      // un separador decimal, así que no hay nada que interpretar.
-      const texto = String(crudo ?? '').trim()
-      if (texto === '') return null
-      const patron = (enteros || esUnidadEntera(unidad))
-        ? /^\d+$/                            // ni decimal ni separador de miles
-        : /^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/    // UN separador, siempre decimal
-      if (!patron.test(texto)) return null
-      const n = Number(texto.replace(',', '.'))
-      return Number.isFinite(n) ? n : null
+    // CAMBIO DE SEMÁNTICA, a propósito: el parser viejo tomaba el único
+    // separador como decimal, así que "1.500" kg eran 1,5 kg. Ahora es la regla
+    // del proyecto —punto de miles, coma decimal—: "1.500" = 1500 y "1,5" =
+    // 1,5. TIPEANDO no hay ambigüedad (el campo convierte el punto tipeado en
+    // coma y pone él los de miles); pegando, "1.5" y "1.50" siguen siendo
+    // decimales (un punto con 1 o 2 dígitos detrás) y "1.500" es mil quinientos.
+    //
+    // CUÁNTOS DECIMALES. Los campos de BULTOS y las unidades que se cuentan de
+    // a enteros (UNIDADES_ENTERAS): 0 — un bulto es un paquete discreto, y ahí
+    // "1.500" cajas son mil quinientas. Kilos y litros: 3, la decisión del
+    // 21/09/2026 (antes no había tope; 3 alcanza para 0,300 kg de lecitina).
+    // Como el enlace no se reconfigura, un campo que cambia de unidad o de
+    // modo se VUELVE A CREAR con el re-render de la tarjeta (elegir otro
+    // insumo, otra unidad o otra respuesta re-renderiza), y nace enlazado con
+    // los decimales nuevos.
+    const DECIMALES_CANTIDAD = 3
+
+    function decimalesCantidad({ unidad = '', enteros = false } = {}) {
+      return (enteros || esUnidadEntera(unidad)) ? 0 : DECIMALES_CANTIDAD
     }
 
-    // Para repintar en el input un número ya guardado: con coma, que es lo que
-    // la persona tipeó, y SIN separador de miles — un "1.234,5" tiene dos
-    // separadores y el parser lo rechazaría, así que el campo se vaciaría solo
-    // al re-renderizar la tarjeta.
-    function textoParaInput(n) {
-      return n === null || n === undefined ? '' : String(n).replace('.', ',')
+    // Escribe un número del estado en un campo de cantidad ya enlazado. Si el
+    // número NO entra en los decimales del campo —2,5 bultos del OCR en un
+    // campo de enteros, 0,3333 kg en uno de tres—, ponerNumero lo redondearía
+    // y la pantalla mostraría un número distinto del que se va a guardar, en
+    // silencio. En ese caso se muestra el número tal cual y el campo queda
+    // marcado: hayCampoIlegible() no deja avanzar hasta que se corrija.
+    function ponerCantidadEnCampo(el, n, esEntero) {
+      ponerNumero(el, n)
+      if (n === null || n === undefined) return
+      const leido = leerCampoNumero(el)
+      if (leido !== null && Math.abs(leido - n) < 1e-9) return
+      el.value = formatearNumeroAr(n, { decimales: 6, minimos: 0 })
+      const aviso = document.createElement('div')
+      aviso.className = 'campo-invalido'
+      aviso.textContent = esEntero
+        ? 'Se cuenta por unidades enteras: revisá este número.'
+        : `Tiene más de ${DECIMALES_CANTIDAD} decimales: revisá este número.`
+      el.parentElement?.appendChild(aviso)
     }
 
     // Qué campos se cuentan de a enteros. Ya no es un Set fijo: desde que el
@@ -3416,8 +3440,36 @@
 
     function mensajeCantidadInvalida(esEntero, unidad) {
       return (esEntero || esUnidadEntera(unidad))
-        ? 'Se cuenta por unidades enteras: escribilo sin puntos ni comas.'
-        : 'Escribí un número, con coma para los decimales (8,5). Sin separador de miles.'
+        ? 'Se cuenta por unidades enteras: escribilo sin decimales.'
+        : `Escribí un número, con coma para los decimales (8,5) y hasta ${DECIMALES_CANTIDAD} decimales.`
+    }
+
+    // Los CUATRO campos numéricos que se tipean en la tarjeta de un ítem.
+    const CAMPOS_CANTIDAD_ITEM = ['numeroPapel', 'contenido', 'bultosPapel', 'recibido']
+
+    function decimalesCampoItem(item, campo) {
+      return decimalesCantidad({ unidad: item.unidadMedida, enteros: campoEsEntero(item, campo) })
+    }
+
+    // Enlaza los campos de cantidad de UNA tarjeta recién dibujada y les
+    // escribe el número del estado. Va ANTES de los listeners del módulo, así
+    // el listener lee lo que el enlace ya formateó. Los inputs se dibujan SIN
+    // value: el número entra solo por acá.
+    function enlazarCantidadesItem(tarjeta, item) {
+      tarjeta.querySelectorAll('[data-campo]').forEach(el => {
+        const campo = el.dataset.campo
+        if (!CAMPOS_CANTIDAD_ITEM.includes(campo)) return
+        const decimales = decimalesCampoItem(item, campo)
+        enlazarCampoNumero(el, { decimales })
+        ponerCantidadEnCampo(el, item[campo], decimales === 0)
+      })
+      tarjeta.querySelectorAll('[data-linea-campo]').forEach(el => {
+        const n = Number(el.closest('[data-linea]')?.dataset.linea)
+        const campo = el.dataset.lineaCampo
+        const decimales = decimalesCantidad({ unidad: item.unidadMedida, enteros: campo === 'bultos' })
+        enlazarCampoNumero(el, { decimales })
+        ponerCantidadEnCampo(el, item.lineas?.[n]?.[campo] ?? null, decimales === 0)
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4175,6 +4227,7 @@
         fechaInicio: estado.fechaInicioCircuito,
         puedeReintentar: puedePasarAlCircuito(),
       })
+      enlazarReintentosCircuito(document.getElementById('detalle-circuito'), entrega)
 
       // La edición va POR COMPROBANTE y no una vez para toda la entrega:
       // editado_por/editado_en son de cada fila, y una entrega puede tener el
@@ -6400,7 +6453,7 @@
       // único y NO se compacta.
       const hayProtagonista = item.interpretacion === 'bultos' || item.interpretacion === 'unidades'
       const inputNumero = `<input type="text" inputmode="decimal" autocomplete="off" data-campo="numeroPapel"
-                    value="${esc(textoParaInput(item.numeroPapel))}" placeholder="0">`
+                    placeholder="0">`
       const filaNumero = `
            ${hayProtagonista ? `<div class="campo-mp__label campo-mp__label--suave">${item.difiere ? 'Lo que dice el papel' : 'Del comprobante'}</div>` : ''}
            <div class="campo-mp ${hayProtagonista ? 'campo-mp--confirma' : ''}">
@@ -6515,10 +6568,10 @@
              ${item.lineas.map((l, n) => `
                <div class="linea-mixta" data-linea="${n}">
                  <input type="text" inputmode="decimal" autocomplete="off"
-                        data-linea-campo="bultos" value="${esc(textoParaInput(l.bultos))}" placeholder="0">
+                        data-linea-campo="bultos" placeholder="0">
                  <span class="cantidad-fila__unidad">bultos de</span>
                  <input type="text" inputmode="decimal" autocomplete="off"
-                        data-linea-campo="contenido" value="${esc(textoParaInput(l.contenido))}" placeholder="0">
+                        data-linea-campo="contenido" placeholder="0">
                  <span class="cantidad-fila__unidad">${u}</span>
                  <button type="button" class="btn-quitar-linea" data-accion="mixto-quitar"
                          title="Quitar esta presentación" aria-label="Quitar esta presentación"
@@ -6557,9 +6610,9 @@
            <div class="campo-mp campo-mp--protagonista">
              ${item.esNuevo
                ? `<input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
-                    value="${esc(textoParaInput(item.contenido))}" placeholder="0">${selectorUnidad}`
+                    placeholder="0">${selectorUnidad}`
                : conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="contenido"
-                    value="${esc(textoParaInput(item.contenido))}" placeholder="0">`, u)}
+                    placeholder="0">`, u)}
              ${resultadoHtml}
            </div>
            ${chipsPresentacion(usadas, 'Ya usadas con este proveedor')}`
@@ -6567,7 +6620,7 @@
            <div class="campo-mp__label">¿En cuántos bultos vino?</div>
            <div class="campo-mp campo-mp--protagonista">
              ${conSufijo(`<input type="text" inputmode="decimal" autocomplete="off" data-campo="bultosPapel"
-                    value="${esc(textoParaInput(item.bultosPapel))}" placeholder="0">`, 'bultos')}
+                    placeholder="0">`, 'bultos')}
              ${resultadoHtml}
            </div>
            ${avisoFavorita}
@@ -6707,8 +6760,7 @@
       const recibidoHtml = `
           ${selectorRecibido}
           <div class="cantidad-fila">
-             <input type="text" inputmode="decimal" autocomplete="off" data-campo="recibido"
-                    value="${esc(textoParaInput(item.recibido))}">
+             <input type="text" inputmode="decimal" autocomplete="off" data-campo="recibido">
              <span class="cantidad-fila__unidad">${unidadRecibido}</span>
            </div>
            <div class="bulto-incompleto" data-rol="incompleto" ${textoBultoIncompleto(item) ? '' : 'hidden'}>${esc(textoBultoIncompleto(item))}</div>`
@@ -6903,6 +6955,10 @@
         const item = itemPorUid(tarjeta.dataset.uid)
         if (!item) return
 
+        // Los campos de cantidad se enlazan ANTES de sus listeners: el enlace
+        // formatea en su propio 'input', y el del módulo lee lo ya formateado.
+        enlazarCantidadesItem(tarjeta, item)
+
         // ── Acciones (re-renderizan) ──────────────────────────────────────
         tarjeta.querySelectorAll('[data-accion]').forEach(el => {
           el.addEventListener('click', (ev) => {
@@ -7088,11 +7144,8 @@
             if (!item.lineas || !Number.isInteger(n) || !item.lineas[n]) return
             const campo = el.dataset.lineaCampo
             // Los bultos de una línea son un paquete discreto igual que los del
-            // ítem: rechazan cualquier separador sin mirar la unidad.
-            item.lineas[n][campo] = parsearCantidad(el.value, {
-              unidad: item.unidadMedida,
-              enteros: campo === 'bultos',
-            })
+            // ítem: el campo se enlazó con 0 decimales sin mirar la unidad.
+            item.lineas[n][campo] = leerCampoNumero(el)
             marcarCampoInvalidoLinea(el, campo, item)
             actualizarTotalEnVivo(tarjeta, item)
             actualizarSumaMixtaEnVivo(tarjeta, item)
@@ -7160,11 +7213,9 @@
             // `cantidadDocumento` y el lado derivado del par bultos/contenido
             // ya no se escriben a mano: los calcula derivarCantidades() según
             // qué dijo la persona que es el número del papel.
-            if (['numeroPapel', 'contenido', 'bultosPapel', 'recibido'].includes(campo)) {
-              item[campo] = parsearCantidad(el.value, {
-                unidad: item.unidadMedida,
-                enteros: campoEsEntero(item, campo),
-              })
+            if (CAMPOS_CANTIDAD_ITEM.includes(campo)) {
+              // Con los decimales con que se enlazó (decimalesCampoItem).
+              item[campo] = leerCampoNumero(el)
               // Lo que no se pudo leer se DICE, y en el momento. Que el campo
               // se vacíe en silencio es medio bug otra vez: la persona sigue
               // escribiendo sin saber que su número no entró.
@@ -7826,12 +7877,7 @@
       if (errorCircuito) { avisoGuardado(errorCircuito); return }
       // Lo que el circuito necesita, leído ANTES de guardar: cerrarWizard()
       // deja estado.wizard en null.
-      const circuito = {
-        tipoDoc: w.encabezado.tipoDoc,
-        gastoId: w.desdeGasto?.gasto_id ?? null,
-        importe: pideTotalFactura(w) ? parseImporte(textoTotalFactura(w)) : null,
-        nombre: w.proveedorMatch?.razon_social || w.encabezado.razonSocial || '',
-      }
+      const circuito = datosParaCircuito(w)
 
       const btn = document.getElementById('btn-confirmar-ingreso')
       w.guardando = true
@@ -7984,43 +8030,22 @@
       return TIPOS_CON_CIRCUITO.includes(tipoDoc)
     }
 
-    // Importe en formato argentino (punto de miles, coma decimal). Copia de
-    // parseImporte() de gastos.html: el proyecto duplica los helpers por módulo
-    // a propósito. NO usar parsearCantidad() para plata: rechaza "1.234,50" por
-    // tener dos separadores, que es justo como se escribe un importe.
-    function parseImporte(str) {
-      if (str === null || str === undefined || String(str).trim() === '') return null
-      const limpio = String(str).replace(/\./g, '').replace(',', '.')
-      const num = parseFloat(limpio)
-      return Number.isFinite(num) ? num : null
-    }
+    // IMPORTES (21/09/2026): "Total de la factura" y el del reintento del
+    // circuito pasan por las funciones compartidas de js/utils.js —se ENLAZAN
+    // con enlazarCampoNumero({ decimales: 2 }), se LEEN con leerCampoNumero()
+    // y se ESCRIBEN con ponerNumero()—. Reemplazan al parseImporte(), al
+    // formatearImporteEnVivo() y al textoImporteInput() propios: el parser
+    // viejo borraba TODOS los puntos, así que un "387300.50" pegado se leía
+    // como 38.730.050.
 
-    // Separador de miles en vivo, copia de gastos.html.
-    function formatearImporteEnVivo(input) {
-      input.addEventListener('input', (e) => {
-        const desdeElFinal = e.target.value.length - e.target.selectionStart
-        let valor = e.target.value.replace(/[^\d,]/g, '')
-        const primeraComa = valor.indexOf(',')
-        if (primeraComa !== -1) valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '')
-        let [entero, decimal] = valor.split(',')
-        entero = (entero || '').replace(/^0+(?=\d)/, '')
-        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-        let nuevoValor = entero
-        if (decimal !== undefined) nuevoValor += ',' + decimal.slice(0, 2)
-        e.target.value = nuevoValor
-        const nuevaPosicion = Math.max(0, nuevoValor.length - desdeElFinal)
-        e.target.setSelectionRange(nuevaPosicion, nuevaPosicion)
-      })
-    }
-
-    // Un número (del OCR o de la base) al formato del campo: "1.234,5". Rechaza
-    // null/''/no-número ANTES de convertir —Number(null) es 0— y devuelve ''
-    // para que el campo quede vacío y no con un "0" que nadie escribió.
-    function textoImporteInput(n) {
-      if (n === null || n === undefined || n === '') return ''
-      const num = Number(n)
-      if (!Number.isFinite(num)) return ''
-      return num.toLocaleString('es-AR', { maximumFractionDigits: 2 })
+    // El importe_total que leyó el OCR, del ingreso ya guardado: la columna es
+    // `ocr_crudo->>importe_total`, o sea el TEXTO de un número JSON
+    // ("387300.5"). Es un valor del OCR, así que se lee con numeroDesdeOcr() y
+    // no con la regla de lo tipeado: leerNumeroAr leería "12.345" (un JSON con
+    // tres decimales) como doce mil. Lo que no es un número queda en null y el
+    // campo, vacío.
+    function importeOcrDe(c) {
+      return numeroDesdeOcr(c?.importe_ocr)
     }
 
     // "$1.234,5" o "USD 1.234,5"; null si no hay importe. Reusa
@@ -8040,10 +8065,22 @@
     function pideTotalFactura(w) {
       return esFactura(w.encabezado.tipoDoc) && !w.desdeGasto && w.proveedorMatch?.cuenta_corriente === true
     }
-    // El texto del campo: lo que escribió la persona, o lo que leyó el OCR si
-    // no lo tocó.
-    function textoTotalFactura(w) {
-      return w.totalFactura ?? textoImporteInput(w.importeOcr)
+    // El total como NÚMERO: lo que escribió la persona (leído del campo
+    // enlazado), o lo que leyó el OCR si no lo tocó. `totalFacturaTocado`
+    // distingue "no lo tocó" de "lo borró": borrado es null y NO vuelve a
+    // aparecer el del OCR.
+    function totalFacturaDe(w) {
+      return w.totalFacturaTocado ? (w.totalFactura ?? null) : (w.importeOcr ?? null)
+    }
+
+    // El listener del campo, con nombre propio para poder ejecutarlo en la
+    // suite: guarda el NÚMERO, nunca el texto.
+    function alEscribirTotalFactura(campo) {
+      if (estado.wizard) {
+        estado.wizard.totalFactura = leerCampoNumero(campo)
+        estado.wizard.totalFacturaTocado = true
+      }
+      document.getElementById('wz-total-hint').textContent = 'El total final de la factura, con impuestos. Con ese número entra a la cuenta corriente.'
     }
 
     // Qué va a pasar al confirmar, en una línea. null = nada que decir.
@@ -8074,8 +8111,8 @@
 
       const bloqueTotal = document.getElementById('wz-bloque-total')
       bloqueTotal.hidden = !pideTotalFactura(w)
-      document.getElementById('campo-total-factura').value = textoTotalFactura(w)
-      document.getElementById('wz-total-hint').textContent = (w.totalFactura == null && w.importeOcr != null)
+      ponerNumero(document.getElementById('campo-total-factura'), totalFacturaDe(w))
+      document.getElementById('wz-total-hint').textContent = (!w.totalFacturaTocado && w.importeOcr != null)
         ? 'Leído de la foto: revisalo contra el papel. Es el total final, con impuestos.'
         : 'El total final de la factura, con impuestos. Con ese número entra a la cuenta corriente.'
 
@@ -8086,10 +8123,22 @@
       document.getElementById('campo-sin-stock-motivo').value = w.sinStockMotivo || ''
     }
 
+    // Lo que el circuito necesita al confirmar. El importe es el NÚMERO del
+    // campo enlazado (o el del OCR si no se tocó): viaja tal cual como
+    // p_importe de registrar_factura_de_ingreso.
+    function datosParaCircuito(w) {
+      return {
+        tipoDoc: w.encabezado.tipoDoc,
+        gastoId: w.desdeGasto?.gasto_id ?? null,
+        importe: pideTotalFactura(w) ? totalFacturaDe(w) : null,
+        nombre: w.proveedorMatch?.razon_social || w.encabezado.razonSocial || '',
+      }
+    }
+
     // null = se puede guardar; un texto = qué falta.
     function validarCircuitoAntesDeGuardar(w) {
       if (pideTotalFactura(w)) {
-        const n = parseImporte(textoTotalFactura(w))
+        const n = totalFacturaDe(w)
         if (!(n > 0)) return 'Cargá el total de la factura: con ese número entra a la cuenta corriente.'
       }
       if (esFactura(w.encabezado.tipoDoc) && w.sinStock) {
@@ -8255,7 +8304,7 @@
         partes.push(`<div class="circuito-mp circuito-mp--ambar">
           <div class="circuito-mp__linea">${esc(texto)}</div>
           ${puedeReintentar ? `<div class="circuito-mp__reintento">
-            ${pideTotal ? `<input type="text" inputmode="decimal" class="campo-reintento-total" autocomplete="off" placeholder="Total de la factura" aria-label="Total de la factura" value="${esc(textoImporteInput(c.importe_ocr))}">` : ''}
+            ${pideTotal ? `<input type="text" inputmode="decimal" class="campo-reintento-total" data-ingreso="${esc(c.id)}" autocomplete="off" placeholder="Total de la factura" aria-label="Total de la factura">` : ''}
             <button type="button" class="btn-mp-primario btn-reintento-circuito" data-ingreso="${esc(c.id)}">${esc(boton)}</button>
           </div>` : ''}
         </div>`)
@@ -8263,12 +8312,22 @@
       return partes.join('')
     }
 
+    // El total del reintento se dibuja SIN value: se enlaza después de insertar
+    // el HTML y el importe del OCR se escribe con ponerNumero.
+    function enlazarReintentosCircuito(cont, entrega) {
+      cont.querySelectorAll('.campo-reintento-total').forEach(input => {
+        enlazarCampoNumero(input, { decimales: 2 })
+        const c = entrega.comprobantes.find(x => x.id === input.dataset.ingreso)
+        ponerNumero(input, importeOcrDe(c))
+      })
+    }
+
     async function reintentarCircuito(btn) {
       const ingresoId = btn.dataset.ingreso
       const c = estado.listaIngresos.find(i => i.id === ingresoId)
       if (!c || btn.disabled) return
       const input = btn.closest('.circuito-mp__reintento')?.querySelector('.campo-reintento-total')
-      const importe = input ? parseImporte(input.value) : null
+      const importe = input ? leerCampoNumero(input) : null
       btn.disabled = true
       btn.textContent = 'Un momento…'
       const r = await pasarAlCircuito(ingresoId, {
@@ -8686,7 +8745,7 @@
         const entrada = it.contenido != null
           ? `<div class="cantidad-fila">
                <input type="text" inputmode="numeric" autocomplete="off" data-rec="bultos" data-idx="${idx}"
-                      value="${esc(textoParaInput(it.bultos))}" placeholder="—" style="max-width:5.5rem;">
+                      placeholder="—" style="max-width:5.5rem;">
                <span class="cantidad-fila__unidad">bultos</span>
              </div>
              <div class="int-fracciones">
@@ -8696,7 +8755,7 @@
              </div>`
           : `<div class="cantidad-fila">
                <input type="text" inputmode="decimal" autocomplete="off" data-rec="base" data-idx="${idx}"
-                      value="${esc(textoParaInput(it.cantidadBase))}" placeholder="—" style="max-width:7rem;">
+                      placeholder="—" style="max-width:7rem;">
                <span class="cantidad-fila__unidad">${esc(u)}</span>
              </div>`
 
@@ -8756,14 +8815,26 @@
 
     function cablearItemsInternos() {
       const cont = document.getElementById('internos-items')
+      // Se enlazan ANTES de sus listeners y se escriben con ponerNumero: los
+      // inputs se dibujan sin value. Bultos: 0 decimales (un bulto es un
+      // paquete discreto, "1.500" cajas son mil quinientas). La cantidad
+      // directa: los de la unidad (0 en `un`, 3 en kg/lt).
+      cont.querySelectorAll('[data-rec="bultos"]').forEach(el => {
+        enlazarCampoNumero(el, { decimales: 0 })
+        ponerCantidadEnCampo(el, estado.recepcion.items[Number(el.dataset.idx)]?.bultos ?? null, true)
+      })
+      cont.querySelectorAll('[data-rec="base"]').forEach(el => {
+        const it = estado.recepcion.items[Number(el.dataset.idx)]
+        const decimales = decimalesCantidad({ unidad: it?.unidad })
+        enlazarCampoNumero(el, { decimales })
+        ponerCantidadEnCampo(el, it?.cantidadBase ?? null, decimales === 0)
+      })
       cont.querySelectorAll('[data-rec="bultos"]').forEach(el => {
         el.addEventListener('input', () => {
           const it = estado.recepcion.items[Number(el.dataset.idx)]
-          // enteros: true — un bulto es un paquete discreto, y "1.500" cajas
-          // leído como 1,5 bultos es el error de mil veces.
-          const n = parsearCantidad(el.value, { enteros: true })
+          const n = leerCampoNumero(el)
           it.error = (el.value.trim() !== '' && n === null)
-            ? 'No se entiende ese número de bultos. Va entero, sin puntos ni comas.'
+            ? 'No se entiende ese número de bultos. Va entero, sin decimales.'
             : null
           it.bultos = n
           repintarItemInterno(Number(el.dataset.idx))
@@ -8772,7 +8843,7 @@
       cont.querySelectorAll('[data-rec="base"]').forEach(el => {
         el.addEventListener('input', () => {
           const it = estado.recepcion.items[Number(el.dataset.idx)]
-          const n = parsearCantidad(el.value, { unidad: it.unidad })
+          const n = leerCampoNumero(el)
           it.error = (el.value.trim() !== '' && n === null)
             ? 'No se entiende esa cantidad. Usá coma para los decimales.'
             : null
@@ -8806,10 +8877,17 @@
       const activo = document.activeElement
       const campo = activo?.dataset?.rec
       const pos = activo?.selectionStart
+      // El TEXTO que la persona está escribiendo, tal cual lo dejó el enlace.
+      // El re-render vuelve a escribir el campo desde el número, y "8," o
+      // "8,0" valen 8: sin esto la coma se perdería a mitad de tipear y "8,05"
+      // terminaría en 85. No es escribir un número desde código: es devolverle
+      // al campo lo que ya tenía.
+      const texto = activo?.value
       renderizarItemsInternos()
       if (!campo) return
       const nuevo = document.querySelector(`#internos-items [data-rec="${campo}"][data-idx="${idx}"]`)
       if (!nuevo) return
+      if (texto !== undefined && campo !== 'motivo') nuevo.value = texto
       nuevo.focus()
       try { nuevo.setSelectionRange(pos, pos) } catch { /* no aplica a todos los inputs */ }
     }
@@ -9153,11 +9231,8 @@
 
     // ── Circuito ─────────────────────────────────────────────────────────
     const campoTotal = document.getElementById('campo-total-factura')
-    formatearImporteEnVivo(campoTotal)
-    campoTotal.addEventListener('input', () => {
-      if (estado.wizard) estado.wizard.totalFactura = campoTotal.value
-      document.getElementById('wz-total-hint').textContent = 'El total final de la factura, con impuestos. Con ese número entra a la cuenta corriente.'
-    })
+    enlazarCampoNumero(campoTotal, { decimales: 2 })
+    campoTotal.addEventListener('input', () => alEscribirTotalFactura(campoTotal))
     document.getElementById('campo-sin-stock').addEventListener('change', (ev) => {
       if (!estado.wizard) return
       estado.wizard.sinStock = ev.target.checked
@@ -9169,11 +9244,6 @@
     document.getElementById('detalle-circuito').addEventListener('click', (ev) => {
       const btn = ev.target.closest('.btn-reintento-circuito')
       if (btn) reintentarCircuito(btn)
-    })
-    // El input del reintento se formatea al tipear; delegado porque se redibuja.
-    document.getElementById('detalle-circuito').addEventListener('focusin', (ev) => {
-      const input = ev.target.closest('.campo-reintento-total')
-      if (input && !input.dataset.formateado) { input.dataset.formateado = '1'; formatearImporteEnVivo(input) }
     })
     const listaPagado = document.getElementById('lista-pagado-sin-ingresar')
     listaPagado.addEventListener('click', (ev) => {
