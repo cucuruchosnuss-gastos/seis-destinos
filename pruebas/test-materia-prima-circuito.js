@@ -54,7 +54,7 @@ const PRELUDIO = `
 
 const FUNCIONES = [
   'esc', 'formatearImporteDuplicado', 'importeConMoneda', 'numeroDesdeOcr', 'importeOcrDe',
-  'llevaCircuito', 'esFactura', 'pideTotalFactura', 'totalFacturaDe', 'avisoCircuitoPrevio',
+  'llevaCircuito', 'esFactura', 'ingresoNoSumaStock', 'renderizarBloqueSinStock', 'pideTotalFactura', 'totalFacturaDe', 'avisoCircuitoPrevio',
   'renderizarBloquesCircuito', 'validarCircuitoAntesDeGuardar', 'resultadoCircuito', 'errorCircuito',
   'pasarAlCircuito', 'htmlResultadoCircuito', 'htmlCircuitoDetalle', 'htmlPagadoSinIngresar',
   'renderizarPagadoSinIngresar', 'cargarPagadoSinIngresar', 'rutaComprobanteGasto',
@@ -315,9 +315,21 @@ esperas.push((async () => {
   chk('confirmar: con ocasional el total no se muestra', el('wz-bloque-total').hidden === true)
   S.renderizarBloquesCircuito(w({ importeOcr: 1500 }))
   chk('confirmar: con CC el total se muestra y viene del OCR', el('wz-bloque-total').hidden === false && el('campo-total-factura').value === '1.500')
-  chk('confirmar: "no suma stock" se ofrece en facturas', el('wz-bloque-sin-stock').hidden === false)
-  S.renderizarBloquesCircuito(w({ encabezado: { tipoDoc: 'sin_comprobante' } }))
-  chk('confirmar: "no suma stock" NO se ofrece sin comprobante', el('wz-bloque-sin-stock').hidden === true)
+  // "No suma stock" se mudó al paso Datos (22/09/2026): lo dibuja
+  // renderizarBloqueSinStock, que lee estado.wizard.
+  S.estado.wizard = w()
+  S.renderizarBloqueSinStock()
+  chk('datos: "no suma stock" se ofrece en facturas', el('wz-bloque-sin-stock').hidden === false)
+  S.estado.wizard = w({ encabezado: { tipoDoc: 'sin_comprobante' } })
+  S.renderizarBloqueSinStock()
+  chk('datos: "no suma stock" NO se ofrece sin comprobante', el('wz-bloque-sin-stock').hidden === true)
+  S.estado.wizard = w({ encabezado: { tipoDoc: 'remito' } })
+  S.renderizarBloqueSinStock()
+  chk('datos: "no suma stock" NO se ofrece en un remito', el('wz-bloque-sin-stock').hidden === true)
+  S.estado.wizard = null
+  chk('ingresoNoSumaStock: factura con casilla → true; remito o sin casilla → false',
+    S.ingresoNoSumaStock(w({ sinStock: true })) === true && S.ingresoNoSumaStock(w({ sinStock: true, encabezado: { tipoDoc: 'remito' } })) === false &&
+    S.ingresoNoSumaStock(w()) === false && S.ingresoNoSumaStock(null) === false)
 
   // Datos del gasto: solo llenan lo vacío y vinculan su proveedor.
   S.estado.proveedores = [{ id: 'pg' }]
@@ -345,7 +357,7 @@ esperas.push((async () => {
   chk('guardado: existen el insert de ítems, la llamada al circuito y el catch', iInsertItems > 0 && iCircuito > 0 && iCatch > 0)
   chk('guardado: el circuito corre DESPUÉS de guardar los ítems', iInsertItems > 0 && iCircuito > iInsertItems)
   chk('guardado: sin_stock_motivo va al insert, solo en facturas',
-    /sin_stock_motivo: \(esFactura\(e\.tipoDoc\) && w\.sinStock\) \? w\.sinStockMotivo\.trim\(\) : null/.test(conf))
+    /sin_stock_motivo: ingresoNoSumaStock\(w\) \? w\.sinStockMotivo\.trim\(\) : null/.test(conf))
   chk('guardado: se valida el circuito ANTES de marcar guardando',
     conf.indexOf('validarCircuitoAntesDeGuardar(w)') > 0 && conf.indexOf('validarCircuitoAntesDeGuardar(w)') < conf.indexOf('w.guardando = true'))
   chk('guardado: Ingreso nunca inserta en gastos', !/from\('gastos'\)/.test(FUENTE))

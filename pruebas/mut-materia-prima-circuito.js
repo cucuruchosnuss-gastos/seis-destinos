@@ -47,7 +47,7 @@ correrMutaciones({
     { nombre: 'la lista con error de la RPC se esconde',
       de: '      if (estado.errorPagadoSinIngresar) {\n        seccion.hidden = false', a: '      if (estado.errorPagadoSinIngresar) {\n        seccion.hidden = true' },
     { nombre: 'sin_stock_motivo se guarda también en remitos',
-      de: 'sin_stock_motivo: (esFactura(e.tipoDoc) && w.sinStock)', a: 'sin_stock_motivo: (w.sinStock)' },
+      de: 'return !!w && esFactura(w.encabezado?.tipoDoc) && !!w.sinStock', a: 'return !!w && !!w.sinStock' },
     { nombre: 'reiniciar la lectura pierde el gasto de origen',
       de: '      estado.wizard.desdeGasto = previo.desdeGasto\n', a: '' },
     { nombre: 'el circuito corre ANTES de insertar los ítems',

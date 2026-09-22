@@ -1432,6 +1432,17 @@
       color: #B91C1C;
       flex-shrink: 0;
     }
+    /* Lote con "mercadería que ya estaba": se puede cargar, no se exige. */
+    .badge-opcional {
+      font-size: 0.625rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      border-radius: 5px;
+      padding: 0.125rem 0.375rem;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+      flex-shrink: 0;
+    }
     .chip-tipo-insumo {
       display: inline-block;
       font-size: 0.65625rem;
@@ -2672,6 +2683,21 @@
           <div class="wz-campo__hint">Cambiala si la mercadería va a otra empresa.</div>
         </div>
 
+        <!-- "Mercadería que ya estaba": solo en facturas. Vive en este paso y
+             NO en la confirmación porque decide si los renglones piden lote:
+             hay que saberlo ANTES de cargarlos. -->
+        <div class="sin-stock-mp" id="wz-bloque-sin-stock" hidden>
+          <label class="sin-stock-mp__check">
+            <input type="checkbox" id="campo-sin-stock">
+            <span>Mercadería que ya estaba (se contó antes): no suma stock</span>
+          </label>
+          <div id="wz-sin-stock-detalle" hidden>
+            <textarea id="campo-sin-stock-motivo" rows="2" maxlength="300"
+                      placeholder="Por qué no suma: por ejemplo, ya se contó en el recuento inicial"></textarea>
+            <div class="sin-stock-mp__aviso">Como no suma stock, el lote de los renglones es opcional. Esto no se puede cambiar después: si te equivocás, hay que anular el ingreso y cargarlo de nuevo.</div>
+          </div>
+        </div>
+
         <div class="wz-nav">
           <button type="button" class="btn-mp-primario" id="btn-datos-continuar">Continuar</button>
         </div>
@@ -2744,18 +2770,6 @@
           <div class="wz-campo__label">Total de la factura</div>
           <input type="text" inputmode="decimal" id="campo-total-factura" autocomplete="off" placeholder="0,00">
           <div class="wz-campo__hint" id="wz-total-hint"></div>
-        </div>
-
-        <div class="sin-stock-mp" id="wz-bloque-sin-stock" hidden>
-          <label class="sin-stock-mp__check">
-            <input type="checkbox" id="campo-sin-stock">
-            <span>Mercadería que ya estaba (se contó antes): no suma stock</span>
-          </label>
-          <div id="wz-sin-stock-detalle" hidden>
-            <textarea id="campo-sin-stock-motivo" rows="2" maxlength="300"
-                      placeholder="Por qué no suma: por ejemplo, ya se contó en el recuento inicial"></textarea>
-            <div class="sin-stock-mp__aviso">Esto no se puede cambiar después: si te equivocás, hay que anular el ingreso y cargarlo de nuevo.</div>
-          </div>
         </div>
 
         <div class="wz-aviso wz-aviso--error" id="wz-error-guardado" hidden></div>
@@ -4375,7 +4389,7 @@
       const idsComprobantes = entrega.comprobantes.map(c => c.id)
       const { data: items, error } = await supabase
         .from('materia_prima_items')
-        .select('id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, contenido_documento, cantidad_documento, interpretacion, motivo_diferencia, ya_recibido_con_remito, insumos(nombre, marca, unidad_medida, tipo)')
+        .select('id, ingreso_id, cantidad, lote, lote_ilegible, cantidad_bultos, contenido_por_bulto, contenido_documento, cantidad_documento, interpretacion, motivo_diferencia, ya_recibido_con_remito, insumos(nombre, marca, unidad_medida, tipo)')
         .in('ingreso_id', idsComprobantes)
         .order('created_at')
 
@@ -4387,6 +4401,9 @@
         return
       }
 
+      // Comprobantes con "mercadería que ya estaba": sus renglones no suman ni
+      // piden lote, así que sin lote no se muestra el chip "Sin lote".
+      const sinStock = new Set(entrega.comprobantes.filter(c => c.sin_stock_motivo).map(c => c.id))
       document.getElementById('detalle-items').innerHTML = (items ?? []).map(item => {
         const insumo = item.insumos || {}
         // El lote solo aplica a materia prima; los insumos no lo llevan. Y un
@@ -4398,8 +4415,9 @@
             ? '<span class="chip-lote chip-lote--ilegible">Ilegible</span>'
             : item.lote
               ? `<span class="chip-lote">${esc(item.lote)}</span>`
+              : sinStock.has(item.ingreso_id) ? ''
               : '<span class="chip-lote chip-lote--ilegible">Sin lote</span>'
-          loteHtml = `<div class="fila-item-mp__lote"><span>Lote</span>${chip}</div>`
+          loteHtml = chip ? `<div class="fila-item-mp__lote"><span>Lote</span>${chip}</div>` : ''
         }
         // Desglose "N bultos de M kg" cuando el ítem lo trae. Y si el par
         // quedó en null porque lo recibido no entra en bultos enteros, se
@@ -4537,7 +4555,7 @@
         }
       }
 
-      if (id === 'datos')     actualizarAvisoSinProveedor()
+      if (id === 'datos')     { actualizarAvisoSinProveedor(); renderizarBloqueSinStock() }
       if (id === 'vinculo')   entrarAPasoVinculo()
       if (id === 'items')     entrarAPasoItems()
       if (id === 'confirmar') renderizarConfirmacion()
@@ -4557,6 +4575,24 @@
 
     function esFactura(tipoDoc) {
       return tipoDoc === 'factura_a' || tipoDoc === 'factura_x'
+    }
+
+    // "Mercadería que ya estaba": el ingreso entero no suma stock. Solo en
+    // facturas. Es el mismo criterio que la base: fn_espejar_stock_ingreso no
+    // suma y fn_validar_item_materia_prima no pide lote con sin_stock_motivo
+    // cargado. Lo usan la validación del lote, las tarjetas y el payload.
+    function ingresoNoSumaStock(w) {
+      return !!w && esFactura(w.encabezado?.tipoDoc) && !!w.sinStock
+    }
+
+    // La casilla vive en el paso Datos y depende del tipo de documento.
+    function renderizarBloqueSinStock() {
+      const w = estado.wizard
+      if (!w) return
+      document.getElementById('wz-bloque-sin-stock').hidden = !esFactura(w.encabezado.tipoDoc)
+      document.getElementById('campo-sin-stock').checked = !!w.sinStock
+      document.getElementById('wz-sin-stock-detalle').hidden = !w.sinStock
+      document.getElementById('campo-sin-stock-motivo').value = w.sinStockMotivo || ''
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4738,6 +4774,7 @@
       document.querySelectorAll('#wz-toggle-tipo-doc button').forEach(btn => {
         btn.classList.toggle('wz-toggle--sel', btn.dataset.valor === valor)
       })
+      renderizarBloqueSinStock()
     }
 
     function poblarSelectUnidades() {
@@ -5248,6 +5285,13 @@
       if (!e.tipoDoc)  return mostrarError('Elegí el tipo de documento.')
       if (!e.fecha)    return mostrarError('Completá la fecha del comprobante.')
       if (!e.unidadId) return mostrarError('Elegí la unidad de negocio.')
+      // El motivo de "no suma stock" se pide acá, donde está la casilla. Se
+      // revalida al confirmar (validarCircuitoAntesDeGuardar).
+      if (ingresoNoSumaStock(w)) {
+        const m = (w.sinStockMotivo || '').trim()
+        if (m.length < 3) return mostrarError('Escribí por qué esta mercadería no suma stock.')
+        if (m.length > 300) return mostrarError('El motivo de "no suma stock" puede tener hasta 300 caracteres.')
+      }
 
       // La ÚNICA barrera que evita crear un duplicado en silencio. Sin esto, la
       // pregunta se puede ignorar y el proveedor se crea igual al confirmar,
@@ -6422,9 +6466,12 @@
       // lleva. El aviso lo da la sub-línea.
       // Un renglón que no suma no lleva lote (ya lo tiene el remito), así que
       // tampoco chip de lote: no falta nada.
+      // Con "mercadería que ya estaba" el lote es opcional: sin lote no falta
+      // nada, así que tampoco hay chip "Sin lote".
       const chipLote = (item.yaRecibido || item.tipo !== 'materia_prima') ? ''
         : item.loteIlegible ? '<span class="chip-lote chip-lote--ilegible">Ilegible</span>'
         : item.lote ? `<span class="chip-lote">${esc(item.lote)}</span>`
+        : ingresoNoSumaStock(estado.wizard) ? ''
         : '<span class="chip-lote chip-lote--ilegible">Sin lote</span>'
       return `
         <div class="item-mp ${item.error ? 'item-mp--error' : ''} ${item.yaRecibido ? 'item-mp--no-suma' : ''}" data-uid="${item.uid}">
@@ -6942,10 +6989,14 @@
         ? `<div class="item-mp__hint" style="margin-top:0.75rem;">ⓘ Elegí arriba si lleva lote para seguir.</div>`
         : item.tipo === 'materia_prima'
         ? `<div class="item-mp__bloque">
-             <div class="item-mp__bloque-label">Lote <span class="badge-oblig">OBLIGATORIO</span></div>
+             <div class="item-mp__bloque-label">Lote ${ingresoNoSumaStock(estado.wizard)
+               ? '<span class="badge-opcional">OPCIONAL</span>'
+               : '<span class="badge-oblig">OBLIGATORIO</span>'}</div>
              <input class="item-mp__texto-input" data-campo="lote" value="${esc(item.lote)}"
                     placeholder="Ej: L-2408-C14" ${item.loteIlegible ? 'disabled' : ''}>
-             <div class="item-mp__hint">ⓘ Copialo de la etiqueta del envase.</div>
+             <div class="item-mp__hint">ⓘ ${ingresoNoSumaStock(estado.wizard)
+               ? 'No suma stock: el lote es opcional. Si lo tenés, copialo de la etiqueta del envase.'
+               : 'Copialo de la etiqueta del envase.'}</div>
              <button type="button" class="btn-item-secundario ${item.loteIlegible ? 'btn-item-secundario--activo' : ''}" data-accion="lote-ilegible">
                ${item.loteIlegible ? '✓ Lote ilegible / sin etiqueta' : 'Lote ilegible / sin etiqueta'}
              </button>
@@ -7584,8 +7635,10 @@
           // ni dibuja el selector y bloquear acá trabaría el wizard por un
           // problema de infraestructura. Ver htmlCategoriaNueva().
           item.error = 'Elegí la categoría del producto nuevo.'
-        } else if (item.tipo === 'materia_prima' && !item.yaRecibido
+        } else if (item.tipo === 'materia_prima' && !item.yaRecibido && !ingresoNoSumaStock(w)
                    && !item.loteIlegible && !String(item.lote || '').trim()) {
+          // `!ingresoNoSumaStock(w)`: con "mercadería que ya estaba" el ingreso
+          // no suma y el trigger tampoco pide lote (mira sin_stock_motivo).
           // `!item.yaRecibido` acompaña al trigger fn_validar_item_materia_prima,
           // que desde el vínculo por renglón exige lote solo cuando el renglón
           // SUMA stock. Si el front lo pidiera igual, estaría obligando a
@@ -8034,7 +8087,7 @@
             ocr_crudo: w.ocrCrudo,
             // "Mercadería que ya estaba": solo facturas, se fija ACÁ y un
             // trigger impide cambiarla después (_ingreso_sin_stock_inmutable).
-            sin_stock_motivo: (esFactura(e.tipoDoc) && w.sinStock) ? w.sinStockMotivo.trim() : null,
+            sin_stock_motivo: ingresoNoSumaStock(w) ? w.sinStockMotivo.trim() : null,
           })
           .select('id')
           .single()
@@ -8220,12 +8273,6 @@
       document.getElementById('wz-total-hint').textContent = (!w.totalFacturaTocado && w.importeOcr != null)
         ? 'Leído de la foto: revisalo contra el papel. Es el total final, con impuestos.'
         : 'El total final de la factura, con impuestos. Con ese número entra a la cuenta corriente.'
-
-      // "Mercadería que ya estaba": solo en facturas.
-      document.getElementById('wz-bloque-sin-stock').hidden = !esFactura(w.encabezado.tipoDoc)
-      document.getElementById('campo-sin-stock').checked = !!w.sinStock
-      document.getElementById('wz-sin-stock-detalle').hidden = !w.sinStock
-      document.getElementById('campo-sin-stock-motivo').value = w.sinStockMotivo || ''
     }
 
     // Lo que el circuito necesita al confirmar. El importe es el NÚMERO del
@@ -8246,7 +8293,7 @@
         const n = totalFacturaDe(w)
         if (!(n > 0)) return 'Cargá el total de la factura: con ese número entra a la cuenta corriente.'
       }
-      if (esFactura(w.encabezado.tipoDoc) && w.sinStock) {
+      if (ingresoNoSumaStock(w)) {
         const m = (w.sinStockMotivo || '').trim()
         if (m.length < 3) return 'Escribí por qué esta mercadería no suma stock.'
         if (m.length > 300) return 'El motivo de "no suma stock" puede tener hasta 300 caracteres.'
@@ -9342,6 +9389,10 @@
       if (!estado.wizard) return
       estado.wizard.sinStock = ev.target.checked
       document.getElementById('wz-sin-stock-detalle').hidden = !ev.target.checked
+      // Cambia si el lote es obligatorio: las tarjetas ya cargadas se
+      // redibujan (badge y chip). Al desmarcarla, validarItems() vuelve a
+      // exigir lote al avanzar.
+      if (estado.wizard.items?.length) renderizarItems()
     })
     document.getElementById('campo-sin-stock-motivo').addEventListener('input', (ev) => {
       if (estado.wizard) estado.wizard.sinStockMotivo = ev.target.value
