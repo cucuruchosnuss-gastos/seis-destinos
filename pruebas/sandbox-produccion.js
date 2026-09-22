@@ -25,11 +25,17 @@ const FUNCIONES_BASE = [
   'mostrarVista', 'pintarCabecera', 'cerrarMenu', 'alternarMenu', 'siguientePaso',
   'mostrarElegirUnidad', 'elegirUnidad', 'elegirModo', 'mostrarQuien', 'elegirPersona',
   'cambiarDePersona', 'accionDelMenu', 'entrarAlModo', 'unidadesDeCarga',
+  // B3: fechas, pantalla encendida, tablero y abrir turno
+  'hoyArgentina', 'horaArgentina', 'horaDelDiaAr', 'turnoSegunHora', 'mantenerPantalla',
+  'leerTablero', 'estadoMaquinas', 'textoMasas', 'textoEstadoMaquina', 'htmlMaquina', 'mostrarTablero',
+  'formularioAbrirVacio', 'htmlOpcionesOperario', 'htmlFilaAbrir', 'faltanParaAbrir', 'parametrosAbrirTurnos',
+  'mostrarAbrir', 'pintarAbrir', 'pintarBotonAbrir', 'confirmarAbrir', 'htmlLotesAsignados', 'abrirPlanilla',
 ]
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
   'CLAVE_MODO', 'CLAVE_UNIDAD', 'PUESTO_DE_MODO', 'TITULO_DE_MODO', 'PLURAL_PUESTO', 'VISTAS',
+  'ZONA_AR', 'TURNOS', 'SIN_OPERARIO',
 ]
 
 const PRELUDIO = `
@@ -65,6 +71,8 @@ const PRELUDIO = `
     key(i) { return [...__ls.keys()][i] ?? null },
     get length() { return __ls.size },
   }
+  // let del módulo (extraerConst solo toma const).
+  var bloqueoPantalla = null
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }
@@ -105,6 +113,7 @@ const PRELUDIO = `
     misTareas: new Map([['cargar', { unidades: ['u-cn'] }]]),
     unidades: new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']]),
     unidadId: 'u-cn', unidadesPosibles: ['u-cn'], modo: null, persona: null, personal: [],
+    tablero: null, hayTurnoAbierto: false, abrir: null, abrirOperarios: [], abriendo: false,
   }
 `
 

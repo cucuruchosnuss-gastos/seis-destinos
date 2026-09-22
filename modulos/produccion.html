@@ -126,6 +126,63 @@
     .pr-menu { display: grid; gap: 0.625rem; }
     .pr-menu .pr-btn { justify-content: flex-start; }
 
+    /* ── Formularios ───────────────────────────────────────────────────── */
+    .pr-fila-titulo { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    .pr-fila-titulo .pr-titulo { margin: 0; }
+    .pr-espacio-arriba { margin-top: 1rem; }
+    .pr-campos { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+    .pr-campo { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; }
+    .pr-campo__rotulo { font-weight: 700; font-size: 1.05rem; }
+    .pr-input, .pr-select, .pr-textarea {
+      min-height: var(--pr-alto-boton); padding: 0 0.875rem; font: inherit; font-size: 1.125rem;
+      border: 2px solid var(--color-borde); border-radius: var(--radio-input); background: var(--color-fondo);
+      color: var(--color-texto); width: 100%; min-width: 0; box-sizing: border-box;
+    }
+    .pr-textarea { padding: 0.75rem 0.875rem; min-height: 96px; resize: vertical; }
+    .pr-input:focus, .pr-select:focus, .pr-textarea:focus { outline: none; border-color: var(--azul); }
+    .pr-error { color: var(--bordo); font-weight: 700; margin: 0.75rem 0 0; }
+    .pr-acciones { display: flex; gap: 0.75rem; justify-content: flex-end; flex-wrap: wrap; margin-top: 1.25rem; }
+    .pr-acciones .pr-btn { flex: 1 1 12rem; }
+
+    /* Segmentado grande (turno, simple/doble). */
+    .pr-segmento { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pr-segmento__opcion {
+      flex: 1 1 6rem; min-height: var(--pr-alto-boton); font: inherit; font-size: 1.15rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--color-borde); background: var(--color-fondo);
+      color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-segmento__opcion[aria-pressed="true"] { background: var(--azul); border-color: var(--azul); color: #fff; }
+
+    /* ── Tablero de máquinas ──────────────────────────────────────────── */
+    .pr-maquina {
+      min-height: 120px; padding: 1rem 1.125rem; border-radius: var(--radio-tarjeta);
+      border: 2px solid var(--borde-tarjeta); background: var(--color-fondo); box-shadow: var(--sombra-tarjeta);
+      display: flex; flex-direction: column; gap: 0.375rem; text-align: left; font: inherit; color: var(--color-texto);
+      overflow-wrap: anywhere; min-width: 0;
+    }
+    button.pr-maquina { cursor: pointer; touch-action: manipulation; }
+    .pr-maquina--abierta { border-color: var(--azul); background: var(--azul-suave); }
+    .pr-maquina__nombre { font-size: 1.35rem; font-weight: 800; }
+    .pr-maquina__estado { font-size: 1.1rem; font-weight: 600; color: var(--pr-texto-secundario); }
+    .pr-maquina--abierta .pr-maquina__estado { color: var(--azul-oscuro); }
+    .pr-maquina__parada { font-weight: 800; color: var(--bordo); }
+
+    /* Filas de máquinas para abrir: casilla + nombre + operario. */
+    .pr-abrir-fila {
+      display: grid; grid-template-columns: auto 1fr minmax(0, 18rem); gap: 0.75rem; align-items: center;
+      padding: 0.75rem; border: 2px solid var(--color-borde); border-radius: var(--radio-input); margin-bottom: 0.625rem;
+    }
+    .pr-abrir-fila--elegida { border-color: var(--azul); background: var(--azul-suave); }
+    .pr-casilla { width: 36px; height: 36px; accent-color: var(--azul); }
+    .pr-abrir-fila__nombre { font-size: 1.25rem; font-weight: 800; }
+    @media (max-width: 600px) {
+      .pr-abrir-fila { grid-template-columns: auto 1fr; }
+      .pr-abrir-fila .pr-select { grid-column: 1 / -1; }
+    }
+
+    /* El lote asignado: el número se lee de lejos. */
+    .pr-lote { font-size: 3rem; font-weight: 900; color: var(--azul-oscuro); letter-spacing: 0.02em; line-height: 1.1; }
+
     @media (max-width: 600px) {
       .pr-header__acciones { width: 100%; }
       .pr-header__acciones .pr-btn, .pr-header__acciones .pr-persona { flex: 1 1 auto; }
@@ -199,6 +256,56 @@
         <div id="pr-quien-aviso"></div>
         <div class="pr-grilla" id="pr-quien-lista"></div>
       </section>
+
+      <!-- B3: el inicio del encargado. Cada máquina activa con su estado. -->
+      <section id="pr-produccion" hidden>
+        <div class="pr-tarjeta">
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo">Máquinas</h1>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-actualizar">Actualizar</button>
+          </div>
+          <div id="pr-tablero-aviso"></div>
+          <div class="pr-grilla" id="pr-tablero"></div>
+          <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-btn-abrir-turno">Abrir turno</button>
+        </div>
+      </section>
+
+      <!-- B3: abrir turno. Una sola llamada a abrir_turnos con todas las
+           máquinas elegidas, cada una con su operario. -->
+      <section class="pr-tarjeta" id="pr-abrir" hidden>
+        <h1 class="pr-titulo">Abrir turno</h1>
+        <p class="pr-texto-suave" id="pr-abrir-encargado"></p>
+        <div class="pr-campos">
+          <label class="pr-campo">
+            <span class="pr-campo__rotulo">Fecha</span>
+            <input type="date" id="pr-abrir-fecha" class="pr-input">
+          </label>
+          <div class="pr-campo">
+            <span class="pr-campo__rotulo">Turno</span>
+            <div class="pr-segmento" id="pr-abrir-turnos" role="group" aria-label="Turno">
+              <button type="button" class="pr-segmento__opcion" data-turno="Mañana" aria-pressed="false">Mañana</button>
+              <button type="button" class="pr-segmento__opcion" data-turno="Tarde" aria-pressed="false">Tarde</button>
+              <button type="button" class="pr-segmento__opcion" data-turno="Noche" aria-pressed="false">Noche</button>
+            </div>
+          </div>
+        </div>
+        <h2 class="pr-subtitulo">¿Qué máquinas arrancan?</h2>
+        <div id="pr-abrir-aviso-operarios"></div>
+        <div id="pr-abrir-maquinas"></div>
+        <p class="pr-error" id="pr-abrir-error" hidden></p>
+        <div class="pr-acciones">
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-abrir-cancelar">Cancelar</button>
+          <button type="button" class="pr-btn pr-btn--grande" id="pr-abrir-confirmar">Abrir turno</button>
+        </div>
+      </section>
+
+      <!-- B3: los lotes que asignó la base, bien grandes. -->
+      <section class="pr-tarjeta" id="pr-abiertos" hidden>
+        <h1 class="pr-titulo">Turno abierto</h1>
+        <p class="pr-texto-suave">Estos son los lotes de cada máquina:</p>
+        <div class="pr-grilla" id="pr-abiertos-lista"></div>
+        <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-abiertos-volver">Volver a las máquinas</button>
+      </section>
     </main>
   </div>
 
@@ -228,6 +335,12 @@
       modo: null,          // 'produccion' | 'masa'
       persona: null,       // { id, nombre }
       personal: [],        // lo que devuelve personal_produccion
+      // Modo Producción
+      tablero: null,       // estadoMaquinas() de la unidad, o null si no se pudo leer
+      hayTurnoAbierto: false,
+      abrir: null,         // el formulario de abrir turno
+      abrirOperarios: [],
+      abriendo: false,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -339,7 +452,7 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien']
+    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos']
 
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
@@ -456,6 +569,7 @@
 
     // Lo que se ve una vez que se sabe unidad, modo y persona.
     function entrarAlModo() {
+      if (estado.modo === 'produccion') return mostrarTablero()
       document.getElementById('pr-inicio-texto').textContent =
         `${TITULO_DE_MODO[estado.modo]} — ${estado.persona?.nombre ?? ''}`
       mostrarVista('pr-inicio')
@@ -491,6 +605,331 @@
       document.getElementById('pr-menu').addEventListener('click', ev => {
         const b = ev.target.closest('[data-menu]'); if (b) accionDelMenu(b.dataset.menu)
       })
+      conectarProduccion()
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FECHAS Y HORAS DE ARGENTINA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Supabase y la tablet pueden estar en otra zona: "hoy" y la hora que se
+    // muestran son siempre los de Argentina.
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+
+    function hoyArgentina(fecha = new Date()) {
+      const p = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(fecha)
+      const v = (t) => p.find(x => x.type === t)?.value
+      return `${v('year')}-${v('month')}-${v('day')}`
+    }
+
+    // 'HH:MM' de un timestamp; '' si no se puede leer (nunca "NaN:NaN").
+    function horaArgentina(momento) {
+      if (momento == null || momento === '') return ''
+      const d = new Date(momento)
+      if (Number.isNaN(d.getTime())) return ''
+      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+    }
+
+    // La hora de Argentina (0–23) de un Date.
+    function horaDelDiaAr(fecha = new Date()) {
+      return Number(new Intl.DateTimeFormat('en-US', { timeZone: ZONA_AR, hour: '2-digit', hour12: false }).format(fecha)) % 24
+    }
+
+    // Una sugerencia, NO una decisión: el turno queda marcado y se cambia con
+    // un toque. De 5 a 13 Mañana, de 13 a 21 Tarde, el resto Noche.
+    function turnoSegunHora(hora) {
+      if (hora >= 5 && hora < 13) return 'Mañana'
+      if (hora >= 13 && hora < 21) return 'Tarde'
+      return 'Noche'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PANTALLA ENCENDIDA (Wake Lock) mientras haya un turno abierto
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let bloqueoPantalla = null
+
+    // No todos los navegadores la tienen, y el pedido falla si la pestaña no
+    // está visible: siempre con try/catch, y sin avisar (no es un error de la
+    // persona). Se vuelve a pedir al volver a la pestaña.
+    async function mantenerPantalla(activar) {
+      try {
+        if (activar) {
+          if (bloqueoPantalla || !navigator.wakeLock) return
+          bloqueoPantalla = await navigator.wakeLock.request('screen')
+          bloqueoPantalla.addEventListener?.('release', () => { bloqueoPantalla = null })
+        } else if (bloqueoPantalla) {
+          const b = bloqueoPantalla
+          bloqueoPantalla = null
+          await b.release()
+        }
+      } catch (err) {
+        bloqueoPantalla = null
+        console.warn('No se pudo mantener la pantalla encendida:', err)
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODO PRODUCCIÓN — el tablero de máquinas
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Máquinas activas + turnos abiertos + masas (sin anular) + paradas en
+    // curso de la unidad. Devuelve { maquinas, turnos, masas, paradas }.
+    async function leerTablero(unidadId) {
+      const { data: maquinas, error: e1 } = await supabase.from('maquinas')
+        .select('id, nombre, orden').eq('unidad_negocio_id', unidadId).eq('activa', true).order('orden').order('nombre')
+      if (e1) throw e1
+      const { data: turnos, error: e2 } = await supabase.from('turnos_produccion')
+        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en')
+        .eq('unidad_negocio_id', unidadId).eq('estado', 'abierto')
+      if (e2) throw e2
+      const ids = (turnos ?? []).map(t => t.id)
+      let masas = [], paradas = []
+      if (ids.length) {
+        const r1 = await supabase.from('masas').select('turno_id').in('turno_id', ids).eq('anulada', false)
+        if (r1.error) throw r1.error
+        masas = r1.data ?? []
+        const r2 = await supabase.from('paradas_produccion').select('id, turno_id, motivo, inicio').in('turno_id', ids).is('fin', null)
+        if (r2.error) throw r2.error
+        paradas = r2.data ?? []
+      }
+      return { maquinas: maquinas ?? [], turnos: turnos ?? [], masas, paradas }
+    }
+
+    // Una entrada por máquina activa: su turno abierto (o null), cuántas masas
+    // lleva y su parada en curso (o null).
+    function estadoMaquinas({ maquinas, turnos, masas, paradas }) {
+      return maquinas.map(m => {
+        const turno = turnos.find(t => t.maquina_id === m.id) ?? null
+        return {
+          maquina: m,
+          turno,
+          masas: turno ? masas.filter(x => x.turno_id === turno.id).length : 0,
+          parada: turno ? (paradas.find(p => p.turno_id === turno.id) ?? null) : null,
+        }
+      })
+    }
+
+    function textoMasas(n) {
+      return n === 1 ? '1 masa' : `${n} masas`
+    }
+
+    function textoEstadoMaquina(e) {
+      if (!e.turno) return 'Libre'
+      const hora = horaArgentina(e.turno.abierto_en)
+      return `Lote ${e.turno.lote} · abierta${hora ? ` desde ${hora}` : ''} · ${textoMasas(e.masas)}`
+    }
+
+    // Una máquina abierta es un botón que lleva a su planilla; una libre, no.
+    function htmlMaquina(e) {
+      const estadoTxt = esc(textoEstadoMaquina(e))
+      if (!e.turno) {
+        return `<div class="pr-maquina"><span class="pr-maquina__nombre">${esc(e.maquina.nombre)}</span><span class="pr-maquina__estado">${estadoTxt}</span></div>`
+      }
+      const parada = e.parada ? `<span class="pr-maquina__parada">En parada: ${esc(e.parada.motivo)}</span>` : ''
+      return `<button type="button" class="pr-maquina pr-maquina--abierta" data-planilla="${esc(e.turno.id)}">` +
+        `<span class="pr-maquina__nombre">${esc(e.maquina.nombre)}</span><span class="pr-maquina__estado">${estadoTxt}</span>${parada}</button>`
+    }
+
+    async function mostrarTablero() {
+      const cont = document.getElementById('pr-tablero')
+      const aviso = document.getElementById('pr-tablero-aviso')
+      mostrarVista('pr-produccion')
+      cont.innerHTML = '<p class="pr-texto-suave">Cargando las máquinas…</p>'
+      aviso.innerHTML = ''
+      const btn = document.getElementById('pr-btn-abrir-turno')
+      btn.disabled = true
+      try {
+        estado.tablero = estadoMaquinas(await leerTablero(estado.unidadId))
+      } catch (err) {
+        console.error('tablero:', err)
+        estado.tablero = null
+        cont.innerHTML = ''
+        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer las máquinas. Revisá la conexión y tocá "Actualizar".</div>'
+        return
+      }
+      estado.hayTurnoAbierto = estado.tablero.some(e => e.turno)
+      mantenerPantalla(estado.hayTurnoAbierto)
+      if (!estado.tablero.length) {
+        cont.innerHTML = ''
+        aviso.innerHTML = '<div class="pr-aviso">Esta unidad no tiene máquinas activas. Se cargan en Configuración → Máquinas.</div>'
+        return
+      }
+      cont.innerHTML = estado.tablero.map(htmlMaquina).join('')
+      btn.disabled = !estado.tablero.some(e => !e.turno)
+      btn.textContent = estado.hayTurnoAbierto ? 'Abrir otra máquina' : 'Abrir turno'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODO PRODUCCIÓN — abrir turno
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TURNOS = ['Mañana', 'Tarde', 'Noche']
+    const SIN_OPERARIO = '__sin__'
+
+    // El formulario de abrir: turno elegido y, por máquina libre, si arranca y
+    // con qué operario ('' = todavía sin elegir; SIN_OPERARIO = elegido "sin").
+    function formularioAbrirVacio(libres, horaAr) {
+      return {
+        turno: turnoSegunHora(horaAr),
+        filas: libres.map(e => ({ maquinaId: e.maquina.id, nombre: e.maquina.nombre, elegida: false, operario: '' })),
+      }
+    }
+
+    function htmlOpcionesOperario(operarios, elegido) {
+      const opciones = [`<option value=""${elegido === '' ? ' selected' : ''}>Elegí el operario</option>`]
+      for (const o of operarios) {
+        opciones.push(`<option value="${esc(o.id)}"${o.id === elegido ? ' selected' : ''}>${esc(o.nombre)}</option>`)
+      }
+      opciones.push(`<option value="${SIN_OPERARIO}"${elegido === SIN_OPERARIO ? ' selected' : ''}>Sin operario</option>`)
+      return opciones.join('')
+    }
+
+    function htmlFilaAbrir(f, i, operarios) {
+      const clase = f.elegida ? ' pr-abrir-fila--elegida' : ''
+      return `<div class="pr-abrir-fila${clase}">` +
+        `<input type="checkbox" class="pr-casilla" data-abrir-maquina="${i}" aria-label="Abrir ${esc(f.nombre)}"${f.elegida ? ' checked' : ''}>` +
+        `<span class="pr-abrir-fila__nombre">${esc(f.nombre)}</span>` +
+        `<select class="pr-select" data-operario="${i}" aria-label="Operario de ${esc(f.nombre)}"${f.elegida ? '' : ' disabled'}>${htmlOpcionesOperario(operarios, f.operario)}</select>` +
+        `</div>`
+    }
+
+    // Qué falta para poder abrir. Lista vacía = se puede.
+    function faltanParaAbrir(form, fecha) {
+      const faltan = []
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha ?? '')) faltan.push('la fecha')
+      else if (fecha > hoyArgentina()) faltan.push('una fecha que no sea futura')
+      if (!TURNOS.includes(form.turno)) faltan.push('el turno')
+      const elegidas = form.filas.filter(f => f.elegida)
+      if (!elegidas.length) faltan.push('al menos una máquina')
+      const sinOperario = elegidas.filter(f => f.operario === '')
+      if (sinOperario.length) faltan.push(`el operario de ${sinOperario.map(f => f.nombre).join(', ')}`)
+      return faltan
+    }
+
+    // El payload de abrir_turnos, en el orden de la pantalla. "Sin operario"
+    // viaja como null (la base lo acepta: abrir_turno no exige operarios).
+    function parametrosAbrirTurnos(form, fecha, encargadoId) {
+      return {
+        p_fecha: fecha,
+        p_turno: form.turno,
+        p_encargado_id: encargadoId,
+        p_maquinas: form.filas.filter(f => f.elegida).map(f => ({
+          maquina_id: f.maquinaId,
+          operario_id: f.operario === SIN_OPERARIO || f.operario === '' ? null : f.operario,
+        })),
+      }
+    }
+
+    function mostrarAbrir() {
+      const libres = (estado.tablero ?? []).filter(e => !e.turno)
+      if (!libres.length) return
+      estado.abrir = formularioAbrirVacio(libres, horaDelDiaAr())
+      const fecha = document.getElementById('pr-abrir-fecha')
+      fecha.value = hoyArgentina()
+      fecha.max = hoyArgentina()
+      document.getElementById('pr-abrir-encargado').textContent = `Encargado: ${estado.persona?.nombre ?? ''}`
+      const { personas, sinConfigurar } = personasParaPuesto(estado.personal, 'operario')
+      estado.abrirOperarios = personas
+      document.getElementById('pr-abrir-aviso-operarios').innerHTML = htmlAvisoPuestos(sinConfigurar, 'operario')
+      document.getElementById('pr-abrir-error').hidden = true
+      pintarAbrir()
+      mostrarVista('pr-abrir')
+    }
+
+    function pintarAbrir() {
+      const form = estado.abrir
+      for (const b of document.querySelectorAll('#pr-abrir-turnos [data-turno]')) {
+        b.setAttribute('aria-pressed', b.dataset.turno === form.turno ? 'true' : 'false')
+      }
+      document.getElementById('pr-abrir-maquinas').innerHTML =
+        form.filas.map((f, i) => htmlFilaAbrir(f, i, estado.abrirOperarios ?? [])).join('')
+      pintarBotonAbrir()
+    }
+
+    function pintarBotonAbrir() {
+      const faltan = faltanParaAbrir(estado.abrir, document.getElementById('pr-abrir-fecha').value)
+      const btn = document.getElementById('pr-abrir-confirmar')
+      btn.disabled = faltan.length > 0 || !!estado.abriendo
+      btn.title = faltan.length ? `Falta ${faltan.join(', ')}` : ''
+      const n = estado.abrir.filas.filter(f => f.elegida).length
+      btn.textContent = n > 1 ? `Abrir ${n} máquinas` : 'Abrir turno'
+    }
+
+    async function confirmarAbrir() {
+      const fecha = document.getElementById('pr-abrir-fecha').value
+      const faltan = faltanParaAbrir(estado.abrir, fecha)
+      const err = document.getElementById('pr-abrir-error')
+      if (faltan.length) { err.textContent = `Falta ${faltan.join(', ')}.`; err.hidden = false; return }
+      if (estado.abriendo) return
+      estado.abriendo = true
+      pintarBotonAbrir()
+      err.hidden = true
+      try {
+        const { data, error } = await supabase.rpc('abrir_turnos', parametrosAbrirTurnos(estado.abrir, fecha, estado.persona?.id ?? null))
+        if (error) throw error
+        document.getElementById('pr-abiertos-lista').innerHTML = htmlLotesAsignados(data)
+        mostrarVista('pr-abiertos')
+        mostrarExito('Turno abierto.')
+      } catch (e) {
+        // El mensaje de la base TAL CUAL: ya viene redactado para una persona
+        // ("Esa persona no figura como encargado de esta unidad.", "La Máquina
+        // 1 ya tiene un turno abierto…").
+        err.textContent = e?.message || 'No se pudo abrir el turno.'
+        err.hidden = false
+      } finally {
+        estado.abriendo = false
+        pintarBotonAbrir()
+      }
+    }
+
+    function htmlLotesAsignados(filas) {
+      const lista = Array.isArray(filas) ? filas : []
+      if (!lista.length) return '<p class="pr-texto-suave">La base no devolvió lotes.</p>'
+      return lista.map(f => `<div class="pr-maquina pr-maquina--abierta"><span class="pr-maquina__nombre">${esc(f.maquina)}</span>` +
+        `<span class="pr-maquina__estado">Lote</span><span class="pr-lote">${esc(f.lote)}</span></div>`).join('')
+    }
+
+    function conectarProduccion() {
+      document.getElementById('pr-btn-actualizar').addEventListener('click', mostrarTablero)
+      document.getElementById('pr-btn-abrir-turno').addEventListener('click', mostrarAbrir)
+      document.getElementById('pr-abrir-cancelar').addEventListener('click', mostrarTablero)
+      document.getElementById('pr-abiertos-volver').addEventListener('click', mostrarTablero)
+      document.getElementById('pr-abrir-confirmar').addEventListener('click', confirmarAbrir)
+      document.getElementById('pr-abrir-fecha').addEventListener('input', pintarBotonAbrir)
+      document.getElementById('pr-abrir-turnos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-turno]'); if (!b) return
+        estado.abrir.turno = b.dataset.turno
+        pintarAbrir()
+      })
+      const maquinas = document.getElementById('pr-abrir-maquinas')
+      maquinas.addEventListener('change', ev => {
+        const casilla = ev.target.closest('[data-abrir-maquina]')
+        if (casilla) {
+          const f = estado.abrir.filas[Number(casilla.dataset.abrirMaquina)]
+          if (f) f.elegida = casilla.checked
+          pintarAbrir()
+          return
+        }
+        const sel = ev.target.closest('[data-operario]')
+        if (sel) {
+          const f = estado.abrir.filas[Number(sel.dataset.operario)]
+          if (f) f.operario = sel.value
+          pintarBotonAbrir()
+        }
+      })
+      document.getElementById('pr-tablero').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-planilla]'); if (b) abrirPlanilla(b.dataset.planilla)
+      })
+    }
+
+    // La planilla de una máquina abierta llega en B4.
+    function abrirPlanilla(turnoId) {
+      document.getElementById('pr-inicio-texto').textContent = 'La planilla de cada máquina se habilita en la próxima actualización.'
+      mostrarVista('pr-inicio')
     }
 
     // ═══════════════════════════════════════════════════════════════════════

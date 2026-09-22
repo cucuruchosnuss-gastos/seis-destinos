@@ -42,3 +42,21 @@ Supabase se usó SOLO en lectura: la base ya estaba hecha. Toda la verificación
 - Cambiar de modo borra la persona (los que responden son otros).
 - Pruebas: `test-produccion-quien.js` (+ mut), `test-produccion-xss.js` (chequeo estático de TODO el archivo, con
   `seguras-produccion.js`).
+- **Commit `d995d1f`.** Números: test-produccion-quien 46/46, mut 24/24 (+1 equivalente); test-produccion-xss 6/6;
+  controles-produccion 33/33 (baseline B1); check-scripts OK; el resto de las suites del repo en verde.
+
+### B3 — Modo Producción: el tablero y abrir turno
+- Inicio del encargado: cada máquina activa de la unidad con su estado ("Libre" o "Lote 7023 · abierta desde 06:02 ·
+  5 masas", con la hora de Argentina y contando solo masas sin anular; y "En parada: …" si hay una en curso). Solo
+  una máquina abierta lleva a su planilla.
+- "Abrir turno" ("Abrir otra máquina" si ya hay alguna abierta): fecha (hoy de Argentina, no futura), turno
+  (Mañana/Tarde/Noche) y las máquinas LIBRES con una casilla y su operario. **UNA sola llamada** a
+  `abrir_turnos(p_fecha, p_turno, p_encargado_id = la persona de "¿Quién sos?", p_maquinas [{maquina_id, operario_id}])`
+  y los lotes que devuelve, grandes. Los errores de la base se muestran tal cual.
+- **Decisiones sin preguntar:** el turno viene **sugerido por la hora** (5–13 Mañana, 13–21 Tarde, resto Noche) y se
+  cambia con un toque; cada máquina elegida **exige elegir operario**, con la opción explícita "Sin operario" (viaja
+  como null, que la base acepta) — así nadie la abre sin mirar; los operarios salen de los puestos `operario` (sin
+  configurar, todo el personal con aviso).
+- Pantalla encendida con la Wake Lock API mientras haya un turno abierto (try/catch; se vuelve a pedir al volver a la
+  pestaña).
+- Pruebas: `test-produccion-abrir.js` (+ mut). Corre con `TZ=UTC` para que una hora sin zona de Argentina dé rojo.

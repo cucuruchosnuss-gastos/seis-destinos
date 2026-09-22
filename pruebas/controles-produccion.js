@@ -24,6 +24,7 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/produccion.
 // Un commit por sub-parte ya cerrada, en orden.
 const BASES = [
   '9a70841', // B1: estructura y acceso
+  'd995d1f', // B2: modo y ¿Quién sos?
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
