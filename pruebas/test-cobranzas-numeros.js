@@ -18,8 +18,9 @@
 //  3. El OCR (número) y la edición (lo que vino de la base) entran al campo
 //     por ponerNumero.
 //  4. formatearImporte: igual que antes para todo valor presente, "—" para un
-//     importe ausente (nunca "$ 0,00"), también en la tabla de Cheques y en
-//     las cifras de cabecera.
+//     importe ausente (nunca "$ 0,00"), también en el cheque del detalle y en
+//     las cifras de cabecera. (La tabla de Cheques se mudó a cheques.html el
+//     22/09/2026: la prueba allá es de pruebas/test-cheques-*.js.)
 //  5. Los IDENTIFICADORES (renglones de la banda, CUIT) no se tocan.
 //
 // Archivo bajo prueba: ARCHIVO_TEST, o modulos/cobranzas.html.
@@ -33,6 +34,7 @@ const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cobranzas.html')
 const FUENTE = fs.readFileSync(ARCHIVO, 'utf8')
 console.log(`ARCHIVO ${ARCHIVO} (${FUENTE.length} bytes)`)
+require('./mutar-cobranzas-comun').informarComun()
 
 let ok = 0
 const fallas = []
@@ -97,23 +99,24 @@ const PRELUDIO = `
     misTareas: new Set(['cobranzas:cargar']),
     bancos: new Map([['007', 'BANCO DE GALICIA Y BUENOS AIRES S.A.U.']]),
     form: null, filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
-    cheques: { filtros: { estado: 'en_cartera', numero: '', banco: '' }, filas: [], cobranzas: new Map() },
   }
 `
 
 const FUNCIONES = [
   'escCob', 'dvBcra', 'formatearImporte', 'escribirImporteEnCampo', 'hoyArgentina', 'esFechaIso', 'diasEntre',
-  'formatearFechaCob', 'nombreBanco', 'estadoRenglon', 'erroresDeCheque', 'chequeParaBase', 'textoOpcional',
+  'formatearFechaCob', 'nombreBanco', 'nombreBancoDe', 'estadoRenglon', 'erroresDeCheque', 'chequeParaBase', 'textoOpcional',
   'origenDatosDe', 'htmlTarjetaCheque', 'textoDiasHastaPago', 'htmlDatosCheque',
   'chequeVacio', 'chequeDesdeOcr', 'chequeDesdeBase', 'renglonComoImpreso', 'aplicarRenglones', 'formularioVacio',
   'pintarFormulario', 'pintarCheques', 'conectarTarjetasCheque',
   'pintarTotalYGuardado', 'motivosParaNoGuardar', 'totalDelFormulario', 'efectivoDelFormulario',
   'subirCobranza', 'esErrorDeRed',
   // Para mostrar
-  'numeroDeResumen', 'htmlResumen', 'htmlFilaCheque', 'htmlAccionCheque', 'tieneTarea', 'resumenCartera',
+  'numeroDeResumen', 'htmlResumen', 'tieneTarea',
+  'htmlChequeDetalle', 'normalizarCliente', 'textoSalidaCheque', 'htmlLinkChequeEnCartera',
 ]
 const CONSTANTES = [
   'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_CHEQUE', 'ESTADOS_COBRANZA', 'ETIQUETA_ESTADO_COBRANZA', 'puedeProcesar',
+  'puedeVerTodo', 'puedeVerCartera', 'ACENTOS_COB', 'SIN_ACENTOS_COB',
 ]
 
 function sandbox() {
@@ -351,11 +354,12 @@ async function main() {
       chk(`formatearImporte(${String(v)}) = "—" (nunca "$ 0,00")`, S.formatearImporte(v) === '—', S.formatearImporte(v))
     }
     chk('formatearImporte: el $ va con espacio que no corta', S.formatearImporte(5) === `$${NB}5,00`, S.formatearImporte(5))
-    // La tabla de Cheques con un importe ausente no dice "$ 0,00".
-    const fila = S.htmlFilaCheque({ id: 'z', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: null, estado: 'en_cartera', tipo: 'comun', fecha_emision: '2026-09-01' }, { cliente: 'x', estado: 'procesada' })
-    chk('tabla de Cheques: un importe null no dice "$ 0,00"', !/\$\s?0,00/.test(fila) && /—/.test(fila), fila.slice(0, 200))
-    const fila2 = S.htmlFilaCheque({ id: 'z', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 387300.5, estado: 'en_cartera', tipo: 'comun', fecha_emision: '2026-09-01' }, { cliente: 'x', estado: 'procesada' })
-    chk('tabla de Cheques: 387300.5 se ve $ 387.300,50', fila2.includes(`$${NB}387.300,50`))
+    // El cheque del detalle con un importe ausente no dice "$ 0,00".
+    const chDet = { id: 'z', numero: '12345678', banco_codigo: '007', cuenta: '09420314667', estado: 'en_cartera', tipo: 'comun', fecha_emision: '2026-09-01', titulares: [] }
+    const fila = S.htmlChequeDetalle({ ...chDet, importe: null }, new Map())
+    chk('cheque del detalle: un importe null no dice "$ 0,00"', !/\$\s?0,00/.test(fila) && /cob-cheque__monto">—</.test(fila), fila.slice(0, 200))
+    const fila2 = S.htmlChequeDetalle({ ...chDet, importe: 387300.5 }, new Map())
+    chk('cheque del detalle: 387300.5 se ve $ 387.300,50', fila2.includes(`$${NB}387.300,50`))
     // Cifras de cabecera: un total null dice "No se pudo calcular", nunca $ 0,00.
     for (const total of [null, undefined, '']) {
       const h = S.htmlResumen({ etiqueta: 'Total del mes', porControlar: 3, cantidad: 2, total, desdeMes: '2026-09-01' })
@@ -363,9 +367,6 @@ async function main() {
     }
     const hOk = S.htmlResumen({ etiqueta: 'Total del mes', porControlar: 0, cantidad: 2, total: '2000000.5', desdeMes: '2026-09-01' })
     chk('cabecera: un total "2000000.5" de la base se ve $ 2.000.000,50', hOk.includes(`$${NB}2.000.000,50`), hOk.replace(/\s+/g, ' ').slice(0, 300))
-    // El total de la cartera sigue sumando en centavos.
-    const cart = S.resumenCartera([{ estado: 'en_cartera', importe: 0.1 }, { estado: 'en_cartera', importe: 0.2 }])
-    chk('cartera: 0,1 + 0,2 = 0,3 exacto', cart.total === 0.3, cart.total)
   }
 
   // ══ 6. Los IDENTIFICADORES no se tocan ═══════════════════════════════════

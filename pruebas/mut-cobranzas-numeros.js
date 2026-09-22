@@ -10,9 +10,23 @@
 
 const path = require('path')
 const { correrMutaciones } = require('./mutar')
+const { correrMutacionesComun } = require('./mutar-cobranzas-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const PF = (x) => `parseFloat(String(${x}).replace(',', '.'))`
+
+// formatearImporte vive en js/cobranzas-comun.js desde el 22/09/2026: sus
+// mutaciones van contra ese archivo (ver mutar-cobranzas-comun.js).
+correrMutacionesComun({
+  suite: path.join(__dirname, 'test-cobranzas-numeros.js'),
+  manuales: [
+    { nombre: 'formatearImporte vuelve a Number(): null da "$ 0,00"',
+      de: "  const texto = formatearNumeroAr(n, { decimales: 2 })\n  if (texto === '—') return '—'",
+      a: "  const v = Number(n)\n  if (!Number.isFinite(v)) return '—'\n  const texto = formatearNumeroAr(v, { decimales: 2 })" },
+    { nombre: 'formatearImporte pierde el espacio que no corta',
+      de: "'-$\u00a0' + texto.slice(1) : '$\u00a0' + texto", a: "'-$ ' + texto.slice(1) : '$ ' + texto" },
+  ],
+})
 
 correrMutaciones({
   suite: path.join(__dirname, 'test-cobranzas-numeros.js'),
@@ -68,10 +82,5 @@ correrMutaciones({
     { nombre: 'la plantilla vuelve a poner el importe en value=""',
       de: 'data-importe="${escCob(ch.id)}" placeholder="0,00">', a: 'data-importe="${escCob(ch.id)}" value="${escCob(ch.importe)}" placeholder="0,00">' },
     // ── Mostrar ──────────────────────────────────────────────────────────────
-    { nombre: 'formatearImporte vuelve a Number(): null da "$ 0,00"',
-      de: "      const texto = formatearNumeroAr(n, { decimales: 2 })\n      if (texto === '—') return '—'",
-      a: "      const v = Number(n)\n      if (!Number.isFinite(v)) return '—'\n      const texto = formatearNumeroAr(v, { decimales: 2 })" },
-    { nombre: 'formatearImporte pierde el espacio que no corta',
-      de: "'-$\\u00a0' + texto.slice(1) : '$\\u00a0' + texto", a: "'-$ ' + texto.slice(1) : '$ ' + texto" },
   ],
 })

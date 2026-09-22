@@ -10,8 +10,10 @@
 //  - en escritorio el listado y el panel conviven, abrir NO mueve la página,
 //    la fila elegida lleva la clase y aria-current, y solo una;
 //  - si el filtro deja afuera la elegida, el panel se vacía con texto neutro;
-//  - un detalle abierto desde la vista Cheques sigue a pantalla entera y no
-//    toca la selección;
+//  - un detalle abierto por LINK DIRECTO (?cobranza=&volver=, desde
+//    cheques.html) va al panel, NO se suelta cuando llega el listado aunque no
+//    esté en él, y su "‹ Volver" se muestra y dice a dónde lleva (22/09/2026:
+//    la vista Cheques se mudó a cheques.html);
 //  - la respuesta de una apertura vieja no pisa el panel de la elegida;
 //  - volver al listado vuelve a leer la cobranza abierta;
 //  - el CSS: todo lo de escritorio vive adentro del @media (min-width: 1100px),
@@ -134,7 +136,7 @@ const PRELUDIO = `
   var turnoDetalle = 0
 
   var estado = {
-    vista: null, cobranzas: [], hayMas: false, detalle: null, detalleOrigen: 'listado',
+    vista: null, cobranzas: [], hayMas: false, detalle: null, linkDirecto: null,
     cobranzaSeleccionadaId: null,
     filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
   }
@@ -145,6 +147,7 @@ const FUNCIONES = [
   'normalizarCliente', 'hayFiltrosPuestos', 'htmlFilaCobranza', 'renderizarListado',
   'soltarSeleccionFueraDelListado', 'esEscritorio', 'enModoMaestro', 'pintarPanelVacio',
   'marcarFilaSeleccionada', 'mostrarVistaCob', 'abrirDetalle',
+  'volverDelDetalle', 'pintarBotonVolver',
 ]
 const CONSTANTES = ['ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'SUBTITULO_VISTA_COB', 'MQ_ESCRITORIO', 'ETIQUETA_ESTADO_COBRANZA']
 
@@ -186,6 +189,12 @@ async function pruebas() {
       el(S, 'cob-vista-listado').hidden === true && el(S, 'cob-vista-detalle').hidden === false && !maestro(S))
     chk('celular: abrir una cobranza sube la página', S.__scrolls() > antes)
     chk('celular: el subtítulo dice Detalle', el(S, 'cob-subtitulo').textContent === 'Detalle')
+    // En celular el detalle es su propia pantalla: un listado que cambia
+    // atrás (el refresco después de una acción) no lo vacía.
+    S.estado.cobranzas = []
+    S.renderizarListado()
+    chk('celular: redibujar el listado no vacía el detalle abierto',
+      el(S, 'cob-detalle-cuerpo').innerHTML === 'DETALLE:c1' && S.estado.cobranzaSeleccionadaId === 'c1')
   }
 
   // ── Escritorio: lado a lado ──────────────────────────────────────────────
@@ -206,8 +215,8 @@ async function pruebas() {
     chk('escritorio: abrir una cobranza NO mueve la página', S.__scrolls() === antes)
     chk('escritorio: el panel muestra la elegida', el(S, 'cob-detalle-cuerpo').innerHTML === 'DETALLE:c2')
     chk('escritorio: el subtítulo sigue diciendo Listado', el(S, 'cob-subtitulo').textContent === 'Listado')
-    chk('escritorio: las pestañas y la barra del listado siguen a la vista',
-      el(S, 'cob-pestanas').hidden === false && el(S, 'cob-barra-listado').hidden === false)
+    chk('escritorio: la barra del listado sigue a la vista', el(S, 'cob-barra-listado').hidden === false)
+    chk('escritorio: ya no hay pestañas Cobranzas / Cheques que prender', !S.__els.has('cob-pestanas'))
     const filas = S.__filas()
     const marcadas = filas.filter(f => f.classList.contains('cob-fila--seleccionada'))
     chk('escritorio: la fila elegida lleva la clase, y solo ella', marcadas.length === 1 && marcadas[0].dataset.cobranza === 'c2')
@@ -239,20 +248,52 @@ async function pruebas() {
       /no está en el listado/.test(el(S, 'cob-detalle-cuerpo').innerHTML) && !/\$/.test(el(S, 'cob-detalle-cuerpo').innerHTML))
   }
 
-  // ── Escritorio: un detalle abierto desde Cheques sigue a pantalla entera ──
+  // ── Link directo desde Cheques (?cobranza=<id>&volver=cheques.html) ─────
   {
+    const VOLVER = { url: 'https://x.github.io/seis-destinos/modulos/cheques.html', texto: '‹ Volver a los cheques' }
+    // Escritorio: la cobranza del link NO está en la primera página del
+    // listado. Cuando la lista llega, el panel NO se vacía.
     const S = sandbox()
     S.__escritorio(true)
     conListado(S, ['c1', 'c2'])
+    S.__cabeceras.set('cz', cob('cz'))
     S.mostrarVistaCob('listado')
-    await S.abrirDetalle('c1')
-    await S.abrirDetalle('c2', { origen: 'cheques' })
-    chk('desde Cheques: el detalle ocupa la pantalla (sin modo maestro, listado oculto)',
-      !maestro(S) && el(S, 'cob-vista-listado').hidden === true && el(S, 'cob-vista-detalle').hidden === false)
-    chk('desde Cheques: la selección del listado no cambia', S.estado.cobranzaSeleccionadaId === 'c1')
-    S.estado.cobranzas = []
+    S.estado.linkDirecto = { cobranzaId: 'cz', volver: VOLVER }
+    await S.abrirDetalle('cz')
+    chk('link directo escritorio: el panel muestra esa cobranza, al lado del listado',
+      maestro(S) && el(S, 'cob-detalle-cuerpo').innerHTML === 'DETALLE:cz' && el(S, 'cob-vista-listado').hidden === false)
     S.renderizarListado()
-    chk('desde Cheques: redibujar el listado no vacía el detalle abierto', el(S, 'cob-detalle-cuerpo').innerHTML === 'DETALLE:c2')
+    chk('link directo escritorio: llega el listado sin esa cobranza y el panel NO se vacía',
+      S.estado.cobranzaSeleccionadaId === 'cz' && el(S, 'cob-detalle-cuerpo').innerHTML === 'DETALLE:cz')
+    const btn = el(S, 'cob-btn-volver-listado')
+    chk('link directo: el botón dice "‹ Volver a los cheques"', btn.textContent === '‹ Volver a los cheques', btn.textContent)
+    chk('link directo escritorio: el botón lleva la clase que lo muestra en escritorio',
+      btn.classList.contains('cob-btn--volver-externo'))
+    // Elegir otra cobranza del listado: el volver del link no la alcanza.
+    await S.abrirDetalle('c1')
+    chk('link directo: otra cobranza vuelve al "‹ Volver al listado" de siempre',
+      btn.textContent === '‹ Volver al listado' && !btn.classList.contains('cob-btn--volver-externo'), btn.textContent)
+    // Y ahí la regla de siempre: si el filtro la deja afuera, se suelta.
+    S.estado.cobranzas = [cob('c2')]
+    S.renderizarListado()
+    chk('link directo: la excepción es SOLO para la cobranza del link', S.estado.cobranzaSeleccionadaId === null)
+
+    // Celular: el detalle ocupa la pantalla, con el mismo botón.
+    const C = sandbox()
+    C.__escritorio(false)
+    C.__cabeceras.set('cz', cob('cz'))
+    C.estado.linkDirecto = { cobranzaId: 'cz', volver: VOLVER }
+    await C.abrirDetalle('cz')
+    chk('link directo celular: el detalle es otra pantalla',
+      !maestro(C) && el(C, 'cob-vista-listado').hidden === true && el(C, 'cob-vista-detalle').hidden === false)
+    chk('link directo celular: el botón dice "‹ Volver a los cheques"', el(C, 'cob-btn-volver-listado').textContent === '‹ Volver a los cheques')
+    // Sin volver= en el link: el botón es el de siempre.
+    const V = sandbox()
+    V.__cabeceras.set('cz', cob('cz'))
+    V.estado.linkDirecto = { cobranzaId: 'cz', volver: null }
+    await V.abrirDetalle('cz')
+    chk('link directo sin volver=: "‹ Volver al listado"', el(V, 'cob-btn-volver-listado').textContent === '‹ Volver al listado' &&
+      !el(V, 'cob-btn-volver-listado').classList.contains('cob-btn--volver-externo'))
   }
 
   // ── Escritorio: una respuesta vieja no pisa el panel ─────────────────────
@@ -361,6 +402,13 @@ async function pruebas() {
     const iTablaBase = css.indexOf('.cob-fila__tabla,\n    .cob-lista-cabecera { display: none; }')
     chk('css: la tabla de escritorio no se dibuja en celular', iTablaBase !== -1 && !dentroDeEscritorio(iTablaBase))
     chk('css: en escritorio se esconde "Volver al listado"', /\.cob-maestro--activo #cob-btn-volver-listado \{ display: none; \}/.test(css))
+    {
+      const iOculto = css.indexOf('.cob-maestro--activo #cob-btn-volver-listado { display: none; }')
+      const reglaExt = reglas.find(r => r.sel === '.cob-maestro--activo #cob-btn-volver-listado.cob-btn--volver-externo')
+      chk('css: con un volver externo el botón SÍ se ve en escritorio, DESPUÉS de la regla que lo esconde',
+        !!reglaExt && reglaExt.pos > iOculto && dentroDeEscritorio(reglaExt.pos) && /display:\s*inline-block/.test(reglaExt.cuerpo),
+        reglaExt ? reglaExt.cuerpo : 'no existe')
+    }
     chk('css: el panel tiene scroll propio',
       /\.cob-maestro--activo #cob-vista-detalle \{[^}]*position:\s*sticky[^}]*overflow-y:\s*auto/.test(css))
     chk('css: el total de la tabla nunca lleva el color del módulo',
@@ -368,11 +416,12 @@ async function pruebas() {
   }
 
 
-  // ── La vista CHEQUES en escritorio (parte 9, 21/09/2026) ─────────────────
-  // Desde 1100px la planilla usa el MISMO ancho que el listado en modo maestro
-  // y el banco va en UNA línea con el nombre completo en el title. Abajo de
-  // 1100px NADA cambia: el CSS fuera de los @media (min-width: 1100px) tiene
-  // que ser idéntico al del baseline fijo (d79765b, NUNCA HEAD).
+  // ── ABAJO DE 1100px SOLO CAMBIÓ LO DE LA CARTERA (22/09/2026) ─────────────
+  // La vista Cheques se mudó a cheques.html. Contra el baseline FIJO f3633ba
+  // (el commit anterior a la mudanza, NUNCA HEAD), el CSS que rige abajo de
+  // 1100px tiene que ser el mismo regla por regla, salvo las que se fueron
+  // (pestañas, cartera, tabla, el elegido del diálogo de salida) y las que
+  // entraron (el link a la cartera y el <a> con receta de botón).
   {
     const pelar = (f) => f.slice(f.indexOf('<style>'), f.indexOf('</style>')).replace(/\/\*[\s\S]*?\*\//g, '')
     const bloquesDe = (css) => {
@@ -382,96 +431,32 @@ async function pruebas() {
       while ((m = re.exec(css)) !== null) {
         let d = 1, i = re.lastIndex
         for (; i < css.length && d; i++) { if (css[i] === '{') d++; else if (css[i] === '}') d-- }
-        out.push({ cond: m[1].trim(), ini: m.index, fin: i, texto: css.slice(m.index, i) })
+        out.push({ cond: m[1].trim(), ini: m.index, fin: i })
         re.lastIndex = i
       }
       return out
     }
-    // El CSS que rige ABAJO de 1100px: todo menos los bloques con min-width 1100.
-    const fueraDeEscritorio = (css) => {
+    const reglasFuera = (css) => {
       let r = css
       for (const b of bloquesDe(css).filter(b => /min-width:\s*1100px/.test(b.cond)).reverse()) r = r.slice(0, b.ini) + r.slice(b.fin)
-      return r.replace(/\s+/g, ' ').trim()
+      return [...r.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => (m[1].trim() + '{' + m[2] + '}').replace(/\s+/g, ' '))
     }
-    const css = pelar(FUENTE)
-    const bloques = bloquesDe(css)
-    const escritorio = bloques.filter(b => b.cond === '(min-width: 1100px)')
-    const angosto = bloques.filter(b => b.cond === '(min-width: 1100px) and (max-width: 1399px)')
-
-    // (1) El contenedor de la vista Cheques toma el ancho del listado.
-    const cuerpoDe = (sel) => {
-      for (const b of escritorio) {
-        const i = b.texto.indexOf(sel + ' {')
-        if (i !== -1) return (b.texto.slice(i).match(/^[^{]*\{([^}]*)\}/) || [])[1] || null
-      }
-      return null
-    }
-    const cuerpoListado = cuerpoDe('.cob-contenedor:has(.cob-maestro--activo)')
-    const cuerpoCheques = cuerpoDe('.cob-contenedor:has(#cob-vista-cheques:not([hidden]))')
-    const max = (c) => ((c || '').match(/max-width:\s*([^;]+);/) || [])[1]
-    chk('cheques escritorio: hay regla del contenedor de la vista Cheques adentro del @media (min-width: 1100px)', !!cuerpoCheques)
-    chk('cheques escritorio: el ancho es EL MISMO que el del listado en modo maestro',
-      !!max(cuerpoListado) && max(cuerpoListado) === max(cuerpoCheques), `${max(cuerpoListado)} vs ${max(cuerpoCheques)}`)
-    chk('cheques escritorio: el ancho engancha a la vista VISIBLE (un detalle abierto desde Cheques vuelve al ancho de siempre)',
-      !/\.cob-contenedor:has\(#cob-vista-cheques\)\s*\{/.test(css))
-
-    // (2) El banco en una línea, con puntos suspensivos, SOLO en escritorio.
-    const posBanco = []
-    { let k = -1; while ((k = css.indexOf('.cob-tabla__banco', k + 1)) !== -1) posBanco.push(k) }
-    const enEscritorio = (p) => bloques.some(b => b.ini < p && p < b.fin && /min-width:\s*1100px/.test(b.cond))
-    chk('cheques escritorio: toda regla de .cob-tabla__banco vive adentro de un @media (min-width: 1100px)',
-      posBanco.length > 0 && posBanco.every(enEscritorio))
-    const reglaBanco = escritorio.map(b => (b.texto.match(/\.cob-tabla__banco \{([^}]*)\}/) || [])[1]).find(Boolean) || ''
-    chk('cheques escritorio: el banco no se parte (white-space: nowrap)', /white-space:\s*nowrap/.test(reglaBanco), reglaBanco)
-    chk('cheques escritorio: el banco se corta con puntos suspensivos',
-      /overflow:\s*hidden/.test(reglaBanco) && /text-overflow:\s*ellipsis/.test(reglaBanco), reglaBanco)
-    chk('cheques escritorio: el banco tiene un ancho máximo (sin él, nowrap no corta nada)', /max-width:\s*[\d.]+rem/.test(reglaBanco), reglaBanco)
-    // Entre 1100 y 1399 el banco se achica y suelta el min-width de
-    // .cob-tabla__texto, que si no le gana al max-width: medido en Chrome, sin
-    // esto a 1100px la tabla se pasaba 77px y aparecía scroll de costado.
-    const reglaAngosta = angosto.map(b => (b.texto.match(/\.cob-tabla__banco \{([^}]*)\}/) || [])[1]).find(Boolean) || ''
-    chk('cheques escritorio: entre 1100 y 1399 el banco se achica y suelta el min-width',
-      /min-width:\s*0/.test(reglaAngosta) && /max-width:\s*[\d.]+rem/.test(reglaAngosta), reglaAngosta)
-    const remDe = (c) => Number((c.match(/max-width:\s*([\d.]+)rem/) || [])[1])
-    chk('cheques escritorio: entre 1100 y 1399 el banco es más angosto que desde 1400',
-      remDe(reglaAngosta) < remDe(reglaBanco), `${remDe(reglaAngosta)} vs ${remDe(reglaBanco)}`)
-
-    // (3) ABAJO DE 1100 NADA CAMBIÓ: el CSS fuera de los bloques de escritorio,
-    // idéntico al del baseline fijo.
     let base = ''
     try {
-      base = require('child_process').execSync('git show d79765b:modulos/cobranzas.html',
+      base = require('child_process').execSync('git show f3633ba:modulos/cobranzas.html',
         { cwd: path.join(__dirname, '..'), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     } catch (e) { base = '' }
-    chk('baseline d79765b: se pudo leer (si no, esta verificación no mide nada)', base.length > 100000 && base.includes('<style>'), base.length)
-    const hoyFuera = fueraDeEscritorio(css)
-    const antesFuera = fueraDeEscritorio(pelar(base))
-    let dif = ''
-    if (hoyFuera !== antesFuera) {
-      let i = 0; while (hoyFuera[i] === antesFuera[i]) i++
-      dif = `hoy «${hoyFuera.slice(Math.max(0, i - 60), i + 80)}» / antes «${antesFuera.slice(Math.max(0, i - 60), i + 80)}»`
-    }
-    chk('abajo de 1100px el CSS es IDÉNTICO al del baseline d79765b', base.length > 100000 && hoyFuera === antesFuera, dif)
-
-    // (4) La celda del banco, EJECUTADA: la clase de una línea y el title
-    // escapado. El nombre es texto de la base (bancos_bcra, o el texto de un
-    // código que no está en el catálogo): va con escCob, también en el atributo.
-    const { construir } = require('./sandbox')
-    const S = construir(ARCHIVO)
-    const marcaT = '"><b data-xss="banco_title">'
-    const nombre = marcaT + 'BANCO DE GALICIA Y BUENOS AIRES S.A.'
-    S.estado.bancos = new Map([['007', nombre]])
-    const h = S.htmlTablaCheques([{ id: 'x1', cobranza_id: 'c1', banco_codigo: '007', numero: '12345678', tipo: 'comun',
-      fecha_emision: '2026-09-02', fecha_pago: null, importe: 10, estado: 'en_cartera', salida_fecha: null, salida_destino: null }],
-      new Map([['c1', { id: 'c1', cliente: 'X', estado: 'registrada' }]]))
-    const esc = S.escCob(nombre)
-    const td = (h.match(/<td class="[^"]*cob-tabla__banco[^"]*"[^>]*>/) || [])[0] || ''
-    chk('cheques: la celda del banco lleva la clase de una línea', td !== '', h.slice(0, 400))
-    chk('cheques: la celda del banco lleva el nombre COMPLETO en el title, escapado', td.includes(`title="${esc}"`), td)
-    chk('cheques: ninguna marca sale cruda (tampoco en el title)', !/<b data-xss=/.test(h))
-    chk('cheques: el texto de la celda sigue siendo el nombre, escapado', h.includes(`>${esc}</td>`))
-    chk('cheques: la celda conserva .cob-tabla__texto (abajo de 1100 se ve como antes)',
-      /class="cob-tabla__texto cob-tabla__banco"/.test(td), td)
+    chk('baseline f3633ba: se pudo leer (si no, esta verificación no mide nada)', base.length > 100000 && base.includes('<style>'), base.length)
+    const SALIERON = /cob-pestana|cob-cartera|cob-tabla|cob-btn--elegido/
+    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn/
+    const antes = reglasFuera(pelar(base)).filter(r => !SALIERON.test(r))
+    const hoy = reglasFuera(pelar(FUENTE)).filter(r => !ENTRARON.test(r))
+    chk('abajo de 1100px: se fueron las reglas de la cartera', reglasFuera(pelar(base)).some(r => SALIERON.test(r)) &&
+      !reglasFuera(pelar(FUENTE)).some(r => SALIERON.test(r)))
+    const faltan = antes.filter(r => !hoy.includes(r)), sobran = hoy.filter(r => !antes.includes(r))
+    chk('abajo de 1100px el resto del CSS es IDÉNTICO al de f3633ba, regla por regla',
+      base.length > 100000 && antes.length > 50 && !faltan.length && !sobran.length,
+      `faltan: ${faltan.join(' | ').slice(0, 200)} // sobran: ${sobran.join(' | ').slice(0, 200)}`)
   }
 
 }

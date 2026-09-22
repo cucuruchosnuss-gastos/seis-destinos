@@ -7,11 +7,12 @@ const { extraerFn, extraerConst } = require('./extraer')
 // Las funciones de números de js/utils.js (leerNumeroAr, ponerNumero…),
 // con su código REAL: el módulo las importa desde el 21/09/2026.
 const { fuenteNumeros } = require('./numeros-comun')
+const { fuenteConComun } = require('./fuente-cobranzas')
 
 const FUNCIONES = [
   'escCob', 'dvBcra', 'escribirImporteEnCampo', 'formatearImporte',
   'normalizarCliente', 'hoyArgentina', 'esFechaIso', 'diasEntre', 'formatearFechaCob',
-  'momentoArgentina', 'fechaDeMomentoAr', 'erroresDeCheque', 'nombreBanco', 'tieneTarea',
+  'momentoArgentina', 'fechaDeMomentoAr', 'erroresDeCheque', 'nombreBanco', 'nombreBancoDe', 'tieneTarea',
   'htmlFilaCobranza', 'htmlDetalle', 'htmlChequeDetalle', 'htmlAccionesDetalle',
   'htmlHistorial', 'resumirCambios', 'htmlTarjetaCheque', 'chequeParaBase',
   'textoDiasHastaPago', 'htmlDatosCheque',
@@ -21,14 +22,12 @@ const FUNCIONES = [
   'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores',
   'pintarTotalYGuardado', 'motivosParaNoGuardar', 'efectivoDelFormulario', 'totalDelFormulario',
   'renglonComoImpreso', 'chequeDesdeBase', 'chequeDesdeOcr',
-  // Vista de cheques
-  'filtroNumeroCheque', 'aplicarFiltrosCheques', 'hayFiltrosCheques', 'fechaDeCobroCheque',
-  'ordenarCheques', 'resumenCartera', 'htmlCartera', 'htmlTablaCheques', 'htmlFilaCheque',
-  'pintarSelectorBancos', 'pintarFiltrosCheques', 'limpiarFiltrosCheques', 'pintarCartera',
-  'renderizarCheques', 'cargarResumenCheques',
-  // Salida de cheques
-  'htmlAccionCheque', 'textoSalidaCheque', 'textoHistorialCheque', 'erroresSalida', 'parametrosSalida',
-  'abrirModalSalida', 'cerrarModalSalida', 'pintarModalSalida', 'confirmarSalida', 'abrirVolverACartera',
+  // La cartera de cheques se mudó a modulos/cheques.html (22/09/2026): acá
+  // quedan los accesos y el link directo que usa Cheques para volver.
+  'textoSalidaCheque', 'textoHistorialCheque',
+  'pintarAccesoCheques', 'htmlLinkChequeEnCartera', 'destinoVolver', 'textoVolver',
+  'leerLinkDirecto', 'urlSinLinkDirecto', 'abrirLinkDirecto', 'volverDelDetalle',
+  'pintarBotonVolver', 'irAtrasDelDetalle',
   'abrirModalMotivo', 'cerrarModalMotivo',
   // Los caminos del error de la base, que se tienen que mostrar TAL CUAL
   'subirCobranza', 'guardarCobranza', 'esErrorDeRed', 'accionSimple',
@@ -38,9 +37,8 @@ const FUNCIONES = [
 
 const CONSTANTES = [
   'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA',
-  'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
-  'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO', 'ESTADOS_FILTRO_CHEQUES', 'ETIQUETA_ESTADO_CHEQUE',
-  'LARGO_MAXIMO_DESTINO', 'SEGUNDOS_LECTURA_LENTA',
+  'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia', 'puedeVerCartera',
+  'ETIQUETA_ESTADO_CHEQUE', 'UUID_COB', 'SEGUNDOS_LECTURA_LENTA',
 ]
 
 const PRELUDIO = `
@@ -63,7 +61,14 @@ const PRELUDIO = `
     querySelector: () => null,
     createElement: () => nuevoEl('creado'),
   }
-  var window = { scrollTo(){}, confirm: () => true, prompt: () => null }
+  // La URL de la página y el historial, para el link directo. irAtrasDelDetalle
+  // navega con window.location.href: queda en location.href.
+  var location = {
+    href: 'https://cucuruchosnuss-gastos.github.io/seis-destinos/modulos/cobranzas.html',
+    search: '', origin: 'https://cucuruchosnuss-gastos.github.io',
+  }
+  var history = { state: null, replaceState(st, t, u) { __llamadas.replace.push(u); __llamadas.orden.push('replace') } }
+  var window = { scrollTo(){}, confirm: () => true, prompt: () => null, location }
   var navigator = { onLine: true }
   // El contador de la lectura de fotos es un let del módulo: extraerConst
   // solo toma const, así que se declara acá.
@@ -88,17 +93,16 @@ const PRELUDIO = `
     functions: { invoke: async () => ({ data: null, error: new Error('sin red') }) },
   }
   function mostrarError(m){ __llamadas.errores.push(m) } function mostrarExito(m){ __llamadas.exitos.push(m) }
-  function mostrarVistaCob(){} async function refrescarListado(){ __llamadas.refrescar++ }
+  function mostrarVistaCob(v){ __llamadas.vistas.push(v) } async function refrescarListado(){ __llamadas.refrescar++ }
   function guardarBorrador(){} function conectarTarjetasCheque(){}
   function cargarCobranzas(){} function conectarDetalle(){}
   async function urlDeFoto(){ return null } function abrirVisor(){}
   function abrirFormularioLocal(){} function refrescarLocales(){}
   function dbBorrar(){} function hayFiltrosPuestos(){ return false }
-  // La vista de cheques: la carga va stubeada y CUENTA sus llamadas, así se
-  // puede afirmar que limpiar los filtros vuelve a consultar.
-  var __llamadas = { cargarCheques: 0, abrirDetalle: [], errores: [], exitos: [], refrescar: 0 }
-  function cargarCheques(){ __llamadas.cargarCheques++ }
-  function abrirDetalle(id, op){ __llamadas.abrirDetalle.push([id, op]) }
+  // Lo que se llamó, para afirmarlo: abrirDetalle, la vista pedida, los
+  // toasts, los refrescos y el replaceState del link directo.
+  var __llamadas = { abrirDetalle: [], vistas: [], errores: [], exitos: [], refrescar: 0, replace: [], orden: [] }
+  function abrirDetalle(id, op){ __llamadas.abrirDetalle.push([id, op]); __llamadas.orden.push('abrir') }
 
   var estado = {
     sesion: { user: { id: 'uid-de-prueba' } },
@@ -107,20 +111,20 @@ const PRELUDIO = `
     bancos: new Map(), repartidores: [], cobranzas: [], hayMas: false,
     filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
     detalle: null, form: null, locales: [], urlsFirmadas: new Map(), sincronizando: false,
-    cheques: {
-      filtros: { estado: 'en_cartera', numero: '', banco: '' },
-      filas: [], cobranzas: new Map(), cartera: null, tope: false, topeResumen: false, error: null,
-    },
-    bancosDeCheques: [], detalleOrigen: 'listado',
+    linkDirecto: null, cobranzaSeleccionadaId: null,
   }
 `
 
+// El <script type="module"> del HTML MÁS lo que importa de
+// js/cobranzas-comun.js y no declara por su cuenta (22/09/2026): las funciones
+// compartidas entre Cobranzas y Cheques ya no están en el HTML, y el sandbox
+// tiene que cargar el código REAL que corre en el navegador.
 function scriptModulo(rutaHtml) {
   const html = fs.readFileSync(rutaHtml, 'utf8')
   const ini = html.indexOf('<script type="module">')
   const fin = html.indexOf('</script>', ini)
   if (ini === -1 || fin === -1) throw new Error('no se encontró el <script type="module">')
-  return html.slice(ini, fin)
+  return fuenteConComun(html.slice(ini, fin))
 }
 
 // La variante GENÉRICA, para cualquier módulo: el preludio (el document falso y
@@ -140,7 +144,7 @@ function construirCon(rutaHtml, { preludio, funciones, constantes = [], retorno 
 function construir(rutaHtml) {
   return construirCon(rutaHtml, {
     preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
-    retorno: `estado, __els, __doc: document, __llamadas, __set(r){ __repartidoresFalsos = r }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f }, __accion(){ return accionDelModal }`,
+    retorno: `estado, __els, __doc: document, __llamadas, __location: location, __set(r){ __repartidoresFalsos = r }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f }, __accion(){ return accionDelModal }`,
   })
 }
 

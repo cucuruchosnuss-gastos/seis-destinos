@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Cheques — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+
+  <!-- CARTERA DE CHEQUES (22/09/2026). Salió de Cobranzas: Cobranzas es para
+       cobrar, cargar, ver y controlar/asentar; la cartera es administración de
+       la plata de la empresa. Acá se ven todos los cheques, se filtran y se les
+       da salida (depositado / endosado). Los cheques siguen siendo de su
+       cobranza: tocar uno abre esa cobranza en cobranzas.html. -->
+
+  <style>
+    /* Cualquier regla de autor con `display` le gana al [hidden] del
+       user-agent: va PRIMERO y con !important (main.css ya lo tiene global;
+       se repite acá para que el módulo no dependa de eso). */
+    [hidden] { display: none !important; }
+
+    body {
+      overflow-x: hidden;
+      /* Receta de tarjeta del proyecto, como variables locales. */
+      --borde-tarjeta:  rgba(26, 42, 82, 0.06);
+      --sombra-tarjeta: 0 1px 2px rgba(26, 42, 82, 0.04);
+      /* Fondo del segmentado: el naranja del módulo al 9%, desde la variable. */
+      --chq-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
+      --chq-texto-secundario: #55617d;
+    }
+
+    .chq-contenedor {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 1rem 2rem;
+      min-width: 0;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    .chq-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave);
+      padding: 0.875rem 1rem;
+      margin: 1rem 0;
+    }
+    .chq-header__volver {
+      color: var(--color-texto-suave);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+      padding-right: 0.5rem;
+    }
+    .chq-header__col { display: flex; flex-direction: column; min-width: 0; text-align: right; }
+    .chq-header__marca {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .chq-header__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); min-width: 0; overflow-wrap: anywhere; }
+    .chq-header__punto { color: var(--naranja); font-size: 0.875rem; line-height: 1; }
+
+    /* Link de vuelta a Cobranzas: navegación, no acción. */
+    .chq-nav { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; min-width: 0; }
+    .chq-nav__link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      color: var(--naranja-oscuro);
+      font-size: 0.875rem;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    /* ── Avisos ─────────────────────────────────────────────────────────── */
+    /* Dos escalones, como en Cobranzas: neutro INFORMA; --grave dice que un
+       dato está mal o no se puede seguir. El naranja nunca es un aviso. */
+    .chq-aviso {
+      border-radius: 12px;
+      padding: 0.75rem 0.875rem;
+      font-size: 0.78125rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      background: var(--color-superficie);
+      color: var(--chq-texto-secundario);
+      border-left: 4px solid var(--color-texto-suave);
+    }
+    .chq-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+
+    .chq-vacio {
+      text-align: center;
+      color: var(--color-texto-suave);
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      padding: 2rem 1rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    /* ── Botones ─────────────────────────────────────────────────────────── */
+    .chq-btn {
+      min-height: 44px;
+      padding: 0.6875rem 1rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-boton);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      cursor: pointer;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .chq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chq-btn--primario { background: var(--naranja); border-color: var(--naranja); color: #fff; }
+    .chq-btn--alerta { border-color: var(--bordo); color: var(--bordo-oscuro); }
+    .chq-btn--chico { min-height: 40px; padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+    .chq-btn--grande { min-height: 64px; font-size: 1.0625rem; }
+    /* El elegido. DESPUÉS de .chq-btn y de .chq-btn--grande. */
+    .chq-btn--elegido { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    .chq-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; margin-top: 0.75rem; }
+
+    /* ── Cartera ─────────────────────────────────────────────────────────── */
+    .chq-cartera {
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      border: 1px solid var(--borde-tarjeta);
+      padding: 0.875rem 1rem;
+      margin-bottom: 0.75rem;
+      min-width: 0;
+    }
+    .chq-cartera__k { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave); }
+    /* Un total: tinta neutra, nunca el color del módulo. */
+    .chq-cartera__v {
+      font-size: 1.375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+    .chq-cartera__sub { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+
+    /* ── Filtros ─────────────────────────────────────────────────────────── */
+    .chq-filtros { margin-bottom: 0.875rem; min-width: 0; }
+    .chq-filtros__fila { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; margin-bottom: 0.5rem; }
+    .chq-filtros__fila > * { flex: 1 1 8rem; min-width: 0; }
+    .chq-segmento {
+      display: flex;
+      gap: 2px;
+      padding: 3px;
+      border-radius: 10px;
+      background: var(--chq-segmento-fondo);
+      min-width: 0;
+      margin-bottom: 0.5rem;
+    }
+    .chq-segmento__opcion {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 44px;
+      padding: 0 0.5rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--naranja-oscuro);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .chq-segmento__opcion--activo { background: var(--naranja); color: #fff; font-weight: 700; }
+
+    .chq-campo { margin-bottom: 0.875rem; min-width: 0; }
+    .chq-campo:last-child { margin-bottom: 0; }
+    .chq-campo label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+    }
+    .chq-campo input,
+    .chq-campo select,
+    .chq-campo textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      font-size: 1rem;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+      min-width: 0;
+    }
+    .chq-campo textarea { min-height: 88px; resize: vertical; }
+    .chq-campo input:focus, .chq-campo select:focus, .chq-campo textarea:focus {
+      outline: none; border-color: var(--naranja); box-shadow: 0 0 0 4px var(--naranja-suave);
+    }
+    .chq-campo__ayuda { font-size: 0.78125rem; color: var(--color-texto-suave); margin-top: 0.375rem; line-height: 1.45; overflow-wrap: anywhere; }
+    .chq-campo__error { font-size: 0.8125rem; color: var(--bordo-oscuro); font-weight: 600; margin-top: 0.5rem; overflow-wrap: anywhere; }
+
+    /* ── Tabla ───────────────────────────────────────────────────────────── */
+    /* LA TABLA SCROLLEA DE COSTADO ADENTRO DE SU CAJA, NUNCA LA PÁGINA. */
+    .chq-tabla-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--color-fondo);
+      border: 1px solid var(--borde-tarjeta);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      min-width: 0;
+    }
+    /* `separate` y no `collapse`: con bordes colapsados la columna sticky
+       pierde el borde al scrollear en varios navegadores. */
+    .chq-tabla {
+      width: 100%;
+      min-width: 46rem;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.875rem;
+    }
+    .chq-tabla th {
+      text-align: left;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      padding: 0.625rem;
+      border-bottom: 1px solid var(--color-borde);
+      white-space: nowrap;
+      background: var(--color-fondo);
+    }
+    .chq-tabla td {
+      padding: 0.625rem;
+      border-bottom: 1px solid var(--borde-tarjeta);
+      color: var(--color-texto);
+      vertical-align: top;
+      background: var(--color-fondo);
+    }
+    .chq-tabla tbody tr { cursor: pointer; }
+    .chq-tabla tbody tr:last-child td { border-bottom: none; }
+    /* La columna del número queda FIJA al scrollear. Fondo OPACO. */
+    .chq-tabla th:first-child,
+    .chq-tabla td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      border-right: 1px solid var(--color-borde);
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .chq-tabla__num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .chq-tabla__fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .chq-tabla__sub { font-size: 0.75rem; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .chq-tabla__destino { max-width: 14rem; overflow-wrap: anywhere; }
+    .chq-tabla__texto { min-width: 11rem; overflow-wrap: anywhere; }
+    .chq-tabla__banco { max-width: 16rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* ATENUADO CON COLOR Y NO CON opacity: una celda sticky con opacity se
+       vuelve transparente. DESPUÉS de la regla base de td. */
+    .chq-tabla__fila--salido td { color: var(--color-texto-suave); }
+    .chq-tabla__fila--anulado td { color: var(--color-texto-suave); text-decoration: line-through; }
+    /* El cheque que se pidió ver desde una cobranza (?cheque=). */
+    .chq-tabla__fila--destacada td { background: var(--naranja-suave); }
+    .chq-tabla__accion { display: block; margin-top: 0.375rem; }
+
+    /* ── Estado del cheque ───────────────────────────────────────────────── */
+    .chq-estado {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 0.125rem 0.5rem;
+      white-space: nowrap;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+    }
+    /* En cartera es el estado NORMAL: neutro. */
+    .chq-estado--en_cartera { color: var(--color-acento); }
+    .chq-estado--anulado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
+    .chq-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      background: rgba(12, 16, 28, 0.5);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 1rem;
+      min-width: 0;
+    }
+    .chq-modal__caja {
+      background: var(--color-fondo);
+      border-radius: var(--radio-tarjeta);
+      padding: 1.25rem;
+      width: 100%;
+      max-width: 480px;
+      max-height: 86vh;
+      overflow-y: auto;
+      min-width: 0;
+    }
+    .chq-modal__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); margin-bottom: 0.75rem; overflow-wrap: anywhere; }
+    .chq-salida-tipos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; min-width: 0; }
+
+    @media (min-width: 640px) {
+      .chq-modal { align-items: center; }
+    }
+  </style>
+</head>
+<body class="pagina-modulo">
+
+  <div class="chq-contenedor">
+
+    <header class="chq-header">
+      <a href="../dashboard.html" class="chq-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <div class="chq-header__col">
+        <span class="chq-header__marca">Seis Destinos</span>
+        <span class="chq-header__titulo">Cheques <span class="chq-header__punto">&#9679;</span> Cartera</span>
+      </div>
+    </header>
+
+    <!-- Sin ver_todo ni procesar no hay cartera que mostrar. El frontend solo
+         oculta: la barrera real son las policies y las RPCs. -->
+    <div class="chq-vacio" id="chq-sin-acceso" hidden></div>
+    <div class="chq-vacio" id="chq-cargando">Cargando…</div>
+
+    <div id="chq-vista" hidden>
+      <nav class="chq-nav">
+        <a id="chq-link-cobranzas" class="chq-nav__link" href="cobranzas.html">&lsaquo; Cobranzas</a>
+      </nav>
+
+      <div class="chq-cartera" id="chq-cartera"></div>
+
+      <div class="chq-filtros">
+        <div class="chq-segmento" id="chq-chips-estado" role="group" aria-label="Filtrar cheques por estado"></div>
+        <div class="chq-filtros__fila">
+          <div class="chq-campo" style="margin-bottom:0">
+            <label for="chq-filtro-numero">N&deg; de cheque</label>
+            <input type="search" id="chq-filtro-numero" inputmode="numeric"
+                   placeholder="66259862" autocomplete="off" maxlength="20">
+          </div>
+          <!-- Las opciones salen de TODOS los cheques que la persona puede
+               ver, sin ningún otro filtro puesto: ver cargarResumenCheques(). -->
+          <div class="chq-campo" id="chq-campo-banco" style="margin-bottom:0" hidden>
+            <label for="chq-filtro-banco">Banco</label>
+            <select id="chq-filtro-banco"></select>
+          </div>
+        </div>
+        <!-- pre-line: las líneas del aviso van por textContent. -->
+        <div class="chq-aviso" id="chq-aviso-numero" style="white-space:pre-line" hidden></div>
+        <button type="button" class="chq-btn chq-btn--chico" id="chq-btn-limpiar" hidden>Limpiar filtros</button>
+      </div>
+
+      <div class="chq-aviso" id="chq-aviso" style="white-space:pre-line" hidden></div>
+      <div class="chq-tabla-scroll" id="chq-tabla-caja" hidden>
+        <table class="chq-tabla" id="chq-tabla"></table>
+      </div>
+      <div class="chq-vacio" id="chq-vacio" hidden></div>
+    </div>
+  </div>
+
+  <!-- ══ DIÁLOGO DE SALIDA DE UN CHEQUE ═════════════════════════════════ -->
+  <!-- Un diálogo propio y no prompt()/confirm(): no se pueden estilar y
+       algunos webviews los bloquean. -->
+  <div class="chq-modal" id="chq-modal-salida" hidden role="dialog" aria-modal="true" aria-labelledby="chq-salida-titulo">
+    <div class="chq-modal__caja">
+      <div class="chq-modal__titulo" id="chq-salida-titulo">Salida del cheque</div>
+      <div class="chq-campo__ayuda" id="chq-salida-cheques" style="margin:-.25rem 0 .875rem;white-space:pre-line"></div>
+      <div class="chq-campo">
+        <label>¿Qué pasó con el cheque?</label>
+        <div class="chq-salida-tipos">
+          <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="depositado">Depositado</button>
+          <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="endosado">Endosado</button>
+        </div>
+      </div>
+      <div class="chq-campo">
+        <label for="chq-salida-fecha">Fecha</label>
+        <input type="date" id="chq-salida-fecha">
+      </div>
+      <div class="chq-campo" id="chq-salida-campo-destino" hidden>
+        <label for="chq-salida-destino" id="chq-salida-label-destino">¿A quién se lo pasaste?</label>
+        <input type="text" id="chq-salida-destino" maxlength="150" autocomplete="off">
+        <div class="chq-campo__ayuda" id="chq-salida-ayuda-destino"></div>
+      </div>
+      <div class="chq-campo__error" id="chq-salida-error" hidden></div>
+      <div class="chq-acciones">
+        <button type="button" class="chq-btn" id="chq-salida-cancelar">Cancelar</button>
+        <button type="button" class="chq-btn chq-btn--primario" id="chq-salida-confirmar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DIÁLOGO DE MOTIVO (volver a cartera) ═══════════════════════════ -->
+  <div class="chq-modal" id="chq-modal-motivo" hidden role="dialog" aria-modal="true" aria-labelledby="chq-motivo-titulo">
+    <div class="chq-modal__caja">
+      <div class="chq-modal__titulo" id="chq-motivo-titulo">Motivo</div>
+      <div class="chq-campo">
+        <label for="chq-motivo-texto" id="chq-motivo-label">Motivo</label>
+        <textarea id="chq-motivo-texto" maxlength="500" placeholder="Por qué"></textarea>
+        <div class="chq-campo__error" id="chq-motivo-error" hidden></div>
+      </div>
+      <div class="chq-acciones">
+        <button type="button" class="chq-btn" id="chq-motivo-cancelar">Cancelar</button>
+        <button type="button" class="chq-btn chq-btn--alerta" id="chq-motivo-confirmar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+    import {
+      dvBcra, formatearImporte, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
+      ETIQUETA_ESTADO_CHEQUE, nombreBancoDe,
+    } from '../js/cobranzas-comun.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      misTareas: new Set(),
+      // Catálogo de bancos: código → nombre.
+      bancos: new Map(),
+      // Los filtros arrancan en "en cartera".
+      filtros: { estado: 'en_cartera', numero: '', banco: '' },
+      filas: [],
+      cobranzas: new Map(),   // id → { id, cliente, estado, fecha }
+      cartera: null,          // { cantidad, total } — null = no se pudo saber
+      tope: false,
+      topeResumen: false,
+      error: null,
+      // Los códigos de banco que de verdad tienen algún cheque a la vista.
+      bancosDeCheques: [],
+      // El cheque que se pidió ver desde una cobranza (?cheque=).
+      destacado: null,
+      // El diálogo de salida abierto: { cheque, cobranza, tipo } o null.
+      salida: null,
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS PROPIOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Escape de TODO texto que venga de una persona o de la base antes de
+    // meterlo en un innerHTML. Cada módulo tiene el suyo.
+    function esc(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    function nombreBanco(codigo) {
+      return nombreBancoDe(estado.bancos, codigo)
+    }
+
+    // Un texto opcional viaja como null si queda vacío: la base distingue "no
+    // hay dato" de "hay un dato que es la cadena vacía".
+    function textoOpcional(v) {
+      const t = String(v ?? '').trim()
+      return t === '' ? null : t
+    }
+
+    // A dónde lleva tocar un cheque: su cobranza, en Cobranzas, con un volver=
+    // a esta pantalla. Cobranzas valida ese volver= (misma app, http/https).
+    function urlDeCobranza(cobranzaId, volverA) {
+      return `cobranzas.html?cobranza=${encodeURIComponent(cobranzaId)}&volver=${encodeURIComponent(volverA)}`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Las tareas son las de Cobranzas: los cheques son de una cobranza, y las
+    // RPCs de salida exigen cobranzas:procesar. Con bypass de super_admin,
+    // igual que tiene_tarea() en la base.
+    function tieneTarea(tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(`cobranzas:${tarea}`)
+    }
+    const puedeProcesar = () => tieneTarea('procesar')
+    // Ver la cartera: quien ve todas las cobranzas o quien las procesa. Con
+    // solo `cargar` la persona vería nada más que sus propios cheques, y eso
+    // no es una cartera.
+    const puedeVerCartera = () => tieneTarea('ver_todo') || tieneTarea('procesar')
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CATÁLOGO DE BANCOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Sin caché local: esta pantalla es de administración, no se usa sin
+    // señal. Si el catálogo no llega, nombreBanco() dice el código.
+    async function cargarBancos() {
+      try {
+        const { data, error } = await supabase
+          .from('bancos_bcra').select('codigo, denominacion').eq('activo', true)
+        if (error) throw error
+        estado.bancos = new Map((data ?? []).map(b => [String(b.codigo), b.denominacion]))
+      } catch (err) {
+        console.error('No se pudo cargar el catálogo de bancos:', err)
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CHEQUES — una fila por cheque
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // PostgREST devuelve 1000 filas por defecto. Si una consulta llega a eso,
+    // la lista está cortada y SE DICE: cortar en silencio es el peor final.
+    const TOPE_FILAS_POSTGREST = 1000
+
+    const AVISO_CARTERA_PARCIAL = 'Ves solo los cheques de las cobranzas que cargaste vos. Para ver toda la cartera hace falta la tarea «Ver las cobranzas de todas las personas».'
+
+    const FILTROS_CHEQUES_DEFECTO = { estado: 'en_cartera', numero: '', banco: '' }
+
+    const ESTADOS_FILTRO_CHEQUES = [
+      { id: 'en_cartera', nombre: 'En cartera' },
+      { id: 'salidos', nombre: 'Salidos' },
+      // "Todos" es el ÚNICO que muestra los anulados.
+      { id: 'todos', nombre: 'Todos' },
+    ]
+
+    // Qué hacer con lo que se escribió en el filtro de número de cheque:
+    //
+    //   sin dígitos   -> NO se muestra ningún cheque, y se avisa
+    //   menos de 8    -> búsqueda PARCIAL
+    //   exactamente 8 -> el número, búsqueda EXACTA
+    //   exactamente 9 -> número + dígito de control: se usan los PRIMEROS 8
+    //   más de 9      -> NO se adivina: se avisa y NO se filtra por número
+    //
+    // El caso de más de 9 no filtra en vez de recortar: cortar "los primeros
+    // 8" de un número que la persona escribió mal devolvería resultados que
+    // parecen buenos y no lo son.
+    function filtroNumeroCheque(texto) {
+      // PRIMERO se extraen los dígitos y RECIÉN DESPUÉS se arma el patrón del
+      // like. En SQL el % y el _ son comodines: un '%' tipeado que llegara
+      // crudo al patrón devolvería TODOS los cheques sin ningún error.
+      const crudo = String(texto ?? '').trim()
+      const d = crudo.replace(/\D/g, '')
+      if (!crudo) return { modo: 'ninguno', digitos: '', aviso: '' }
+      if (!d) {
+        return {
+          modo: 'sin_digitos', digitos: '',
+          aviso: 'El número de cheque se busca por sus dígitos y lo que escribiste no tiene ninguno. No se muestra ningún cheque: borralo o escribí el número.',
+        }
+      }
+      // CONTIENE, no empieza-con: uno se acuerda de los ÚLTIMOS dígitos.
+      if (d.length < 8) return { modo: 'parcial', digitos: d, aviso: '' }
+      if (d.length === 8) return { modo: 'exacto', digitos: d, aviso: '' }
+      if (d.length === 9) {
+        const cuerpo = d.slice(0, 8)
+        // dvBcra() viene de js/cobranzas-comun.js: la fórmula vive en tres
+        // lugares (public.dv_bcra, la Edge Function ocr-cheques y ese archivo)
+        // y una cuarta sería una más que mantener sincronizada.
+        const cierra = dvBcra(cuerpo) === Number(d[8])
+        return {
+          modo: 'exacto', digitos: cuerpo,
+          aviso: cierra
+            ? `Buscamos ${cuerpo}: el último dígito es el de control del banco y no es parte del número.`
+            : `Buscamos ${cuerpo} igual, pero el último dígito no coincide con el de control: revisá el número.`,
+        }
+      }
+      return {
+        modo: 'demasiado', digitos: '',
+        aviso: `Un número de cheque tiene 8 dígitos (9 con el de control) y escribiste ${d.length}. No estamos filtrando por número: revisalo.`,
+      }
+    }
+
+    // Aplica los filtros a una consulta sobre cobranza_cheques. Separada de la
+    // carga para poder EJECUTARLA en la suite contra un constructor que anota
+    // qué se le pidió. Devuelve sinResultados cuando no hay que consultar.
+    function aplicarFiltrosCheques(q, f) {
+      if (f.estado === 'en_cartera') q = q.eq('estado', 'en_cartera')
+      else if (f.estado === 'salidos') q = q.in('estado', ['depositado', 'endosado'])
+      // 'todos': sin filtro de estado, que es lo que trae también los anulados.
+      if (f.banco) q = q.eq('banco_codigo', f.banco)
+      const fn = filtroNumeroCheque(f.numero)
+      if (fn.modo === 'sin_digitos') return { q, sinResultados: true }
+      // El patrón se arma con fn.digitos —ya sin comodines— y NUNCA con el
+      // texto crudo del input.
+      if (fn.modo === 'exacto') q = q.eq('numero', fn.digitos)
+      else if (fn.modo === 'parcial') q = q.like('numero', `%${fn.digitos}%`)
+      return { q, sinResultados: false }
+    }
+
+    function hayFiltrosCheques() {
+      const f = estado.filtros
+      return f.estado !== FILTROS_CHEQUES_DEFECTO.estado || String(f.numero ?? '').trim() !== '' || !!f.banco
+    }
+
+    // La fecha en que el cheque se puede cobrar: la de pago en un diferido, la
+    // de emisión en uno común (un común se cobra desde que se emite).
+    function fechaDeCobroCheque(ch) {
+      return ch.tipo === 'diferido' && esFechaIso(ch.fecha_pago) ? ch.fecha_pago : ch.fecha_emision
+    }
+
+    // Lo que se cobra primero, arriba. Sin fecha, al final. A igual fecha, por
+    // número, para que el orden no cambie entre una carga y otra.
+    function ordenarCheques(filas) {
+      const clave = (ch) => esFechaIso(fechaDeCobroCheque(ch)) ? fechaDeCobroCheque(ch) : '9999-99-99'
+      return [...filas].sort((a, b) => {
+        const fa = clave(a), fb = clave(b)
+        if (fa !== fb) return fa < fb ? -1 : 1
+        return String(a.numero ?? '').localeCompare(String(b.numero ?? ''))
+      })
+    }
+
+    // Cuánto hay en cartera. Se suma en CENTAVOS: sumar decimales de a uno
+    // arrastra error de punto flotante en una pantalla de plata.
+    function resumenCartera(filas) {
+      let centavos = 0, cantidad = 0
+      for (const ch of filas) {
+        if (ch.estado !== 'en_cartera') continue
+        cantidad++
+        centavos += Math.round(Number(ch.importe) * 100)
+      }
+      return { cantidad, total: centavos / 100 }
+    }
+
+    // UNA SOLA CONSULTA, SIN NINGÚN FILTRO, arma dos cosas: el total en
+    // cartera y la lista del selector de banco.
+    //
+    // LA LISTA DE BANCOS SALE DE TODOS LOS CHEQUES QUE LA PERSONA PUEDE VER.
+    // Si se derivara de los cheques que quedaron después de filtrar, poner un
+    // filtro BORRARÍA bancos del selector sin que nada lo avise. Por eso hay
+    // UNA SOLA FUNCIÓN que la arma, y la llaman la carga inicial y
+    // refrescarTodo() después de dar salida o volver a cartera.
+    async function cargarResumenCheques() {
+      try {
+        const { data, error } = await supabase
+          .from('cobranza_cheques').select('banco_codigo, estado, importe')
+        if (error) throw error
+        const filas = data ?? []
+        estado.cartera = resumenCartera(filas)
+        estado.topeResumen = filas.length >= TOPE_FILAS_POSTGREST
+        const codigos = [...new Set(filas.map(x => String(x.banco_codigo ?? '')).filter(Boolean))]
+        estado.bancosDeCheques = codigos.sort((a, b) => nombreBanco(a).localeCompare(nombreBanco(b), 'es'))
+      } catch (err) {
+        console.error('No se pudo calcular la cartera de cheques:', err)
+        // null y NO cero: un total que no se pudo calcular no es "$ 0,00".
+        estado.cartera = null
+      }
+      pintarSelectorBancos()
+      pintarCartera()
+    }
+
+    function pintarSelectorBancos() {
+      const sel = document.getElementById('chq-filtro-banco')
+      const elegido = estado.filtros.banco
+      const codigos = [...estado.bancosDeCheques]
+      // Si el banco elegido ya no tiene cheques a la vista, se deja como
+      // opción igual: si no, el selector diría "Todos" con el filtro puesto.
+      if (elegido && !codigos.includes(elegido)) codigos.push(elegido)
+      sel.innerHTML = '<option value="">Todos</option>' +
+        codigos.map(c => `<option value="${esc(c)}">${esc(nombreBanco(c))}</option>`).join('')
+      sel.value = elegido || ''
+      // Sin ningún cheque a la vista, un selector vacío es ruido.
+      document.getElementById('chq-campo-banco').hidden = codigos.length === 0
+    }
+
+    function pintarCartera() {
+      document.getElementById('chq-cartera').innerHTML =
+        htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen)
+    }
+
+    // Función pura, para ejecutarla en la suite.
+    function htmlCartera(cartera, conFiltros, tope) {
+      if (!cartera) {
+        return '<div class="chq-cartera__sub">No se pudo calcular el total en cartera. Revisá la señal.</div>'
+      }
+      const cantidadCartera = cartera.cantidad
+      const notas = []
+      // El total NO sigue a los filtros: responde "cuánto tengo en cartera".
+      if (conFiltros) notas.push('Es el total de toda la cartera, no de los filtros de abajo.')
+      if (tope) notas.push(`Se sumaron los primeros ${TOPE_FILAS_POSTGREST} cheques: el total puede estar incompleto.`)
+      return `
+        <div class="chq-cartera__k">En cartera</div>
+        <div class="chq-cartera__v">${esc(formatearImporte(cartera.total))}</div>
+        <div class="chq-cartera__sub">${cantidadCartera} ${cantidadCartera === 1 ? 'cheque' : 'cheques'}</div>
+        ${notas.map(t => `<div class="chq-cartera__sub">${esc(t)}</div>`).join('')}`
+    }
+
+    // El segmentado de estado, el aviso del número y el botón de limpiar.
+    function pintarFiltrosCheques() {
+      const f = estado.filtros
+      const cont = document.getElementById('chq-chips-estado')
+      cont.innerHTML = ESTADOS_FILTRO_CHEQUES.map(e => `
+        <button type="button" class="chq-segmento__opcion ${f.estado === e.id ? 'chq-segmento__opcion--activo' : ''}" aria-pressed="${f.estado === e.id ? 'true' : 'false'}" data-estado-cheque="${esc(e.id)}">${esc(e.nombre)}</button>
+      `).join('')
+      cont.querySelectorAll('[data-estado-cheque]').forEach(b => {
+        b.addEventListener('click', () => {
+          estado.filtros.estado = b.dataset.estadoCheque
+          guardarPreferencias()
+          cargarCheques()
+        })
+      })
+      // El aviso va por textContent: es texto, no HTML.
+      const caja = document.getElementById('chq-aviso-numero')
+      const aviso = filtroNumeroCheque(f.numero).aviso
+      caja.textContent = aviso
+      caja.hidden = !aviso
+      // Solo con algún filtro distinto del de arranque.
+      document.getElementById('chq-btn-limpiar').hidden = !hayFiltrosCheques()
+      pintarCartera()
+    }
+
+    // Limpia TODOS los filtros, en el estado Y en los campos. Si quedara uno en
+    // el campo y no en el estado (o al revés), la pantalla diría una cosa y la
+    // consulta haría otra.
+    function limpiarFiltrosCheques() {
+      estado.filtros = { ...FILTROS_CHEQUES_DEFECTO }
+      document.getElementById('chq-filtro-numero').value = ''
+      document.getElementById('chq-filtro-banco').value = ''
+      guardarPreferencias()
+      cargarCheques()
+    }
+
+    // Contador de turno: si los filtros cambian mientras una consulta está en
+    // vuelo, la respuesta vieja NO pisa a la nueva.
+    let turnoCheques = 0
+
+    async function cargarCheques() {
+      const turno = ++turnoCheques
+      pintarFiltrosCheques()
+      const { q, sinResultados } = aplicarFiltrosCheques(
+        supabase.from('cobranza_cheques').select(
+          'id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino'),
+        estado.filtros)
+      if (sinResultados) {
+        estado.filas = []; estado.error = null; estado.tope = false
+        renderizarCheques()
+        return
+      }
+      try {
+        // El cliente de cada cheque sale de OTRA consulta y no de un embed.
+        // Se traen todas las cobranzas visibles y no un .in() con los ids,
+        // que tiene tope por el largo de la URL.
+        const [ch, cob] = await Promise.all([
+          q,
+          supabase.from('cobranzas').select('id, cliente, estado, fecha'),
+        ])
+        if (turno !== turnoCheques) return
+        if (ch.error) throw ch.error
+        if (cob.error) throw cob.error
+        const filas = ch.data ?? []
+        const cobs = cob.data ?? []
+        estado.filas = ordenarCheques(filas)
+        estado.cobranzas = new Map(cobs.map(x => [x.id, x]))
+        estado.tope = filas.length >= TOPE_FILAS_POSTGREST || cobs.length >= TOPE_FILAS_POSTGREST
+        estado.error = null
+      } catch (err) {
+        if (turno !== turnoCheques) return
+        console.error('No se pudieron cargar los cheques:', err)
+        // Se vacía la tabla: dejar las filas de OTRO filtro bajo el filtro
+        // nuevo sería mostrar algo que no es lo que se pidió.
+        estado.filas = []
+        estado.error = 'No se pudieron cargar los cheques. Revisá la señal.'
+        estado.tope = false
+      }
+      renderizarCheques()
+    }
+
+    function renderizarCheques() {
+      const aviso = document.getElementById('chq-aviso')
+      const lineas = []
+      if (estado.error) lineas.push(estado.error)
+      if (estado.tope) lineas.push(`Hay más de ${TOPE_FILAS_POSTGREST} filas y se muestran las primeras: afiná la búsqueda.`)
+      // LA CARTERA DE QUIEN NO TIENE ver_todo ESTÁ INCOMPLETA, y se dice. La
+      // policy de cobranzas deja leer solo las propias sin esa tarea
+      // (cobranzas: leer propias o con ver_todo), así que alguien con solo
+      // `procesar` vería nada más que los cheques de lo que cargó. Un listado
+      // incompleto que no se declara es peor que no tener el dato.
+      if (!tieneTarea('ver_todo')) lineas.push(AVISO_CARTERA_PARCIAL)
+      aviso.textContent = lineas.join('\n')
+      aviso.hidden = lineas.length === 0
+
+      const caja = document.getElementById('chq-tabla-caja')
+      const tabla = document.getElementById('chq-tabla')
+      const vacio = document.getElementById('chq-vacio')
+      if (estado.error || !estado.filas.length) {
+        caja.hidden = true
+        tabla.innerHTML = ''
+        vacio.hidden = !!estado.error
+        vacio.textContent = hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
+        return
+      }
+      vacio.hidden = true
+      caja.hidden = false
+      tabla.innerHTML = htmlTablaCheques(estado.filas, estado.cobranzas)
+      tabla.querySelectorAll('[data-cheque-fila]').forEach(tr => {
+        const abrir = () => abrirCobranza(tr.dataset.chequeCobranza)
+        tr.addEventListener('click', abrir)
+        tr.addEventListener('keydown', (ev) => {
+          // Solo la fila misma: un Enter sobre el botón de adentro burbujea.
+          if (ev.target !== tr) return
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir() }
+        })
+      })
+      // Los botones de la fila NO abren la cobranza: stopPropagation.
+      tabla.querySelectorAll('[data-dar-salida]').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation(); abrirModalSalida(b.dataset.darSalida)
+      }))
+      tabla.querySelectorAll('[data-volver-cartera]').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation(); abrirVolverACartera(b.dataset.volverCartera)
+      }))
+      if (estado.destacado) {
+        const fila = tabla.querySelector(`[data-cheque-fila="${CSS.escape(estado.destacado)}"]`)
+        if (fila && typeof fila.scrollIntoView === 'function') fila.scrollIntoView({ block: 'center' })
+      }
+    }
+
+    // Tocar un cheque abre su cobranza en Cobranzas, que sabe volver acá.
+    function abrirCobranza(cobranzaId) {
+      if (!cobranzaId) return
+      window.location.href = urlDeCobranza(cobranzaId, window.location.href)
+    }
+
+    // Función pura de la tabla, para EJECUTARLA en la suite.
+    function htmlTablaCheques(filas, cobranzas) {
+      return `
+        <thead>
+          <tr>
+            <th scope="col">N&deg; de cheque</th>
+            <th scope="col">Banco</th>
+            <th scope="col">Emisión</th>
+            <th scope="col">Pago</th>
+            <th scope="col" class="chq-tabla__num">Importe</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Salida</th>
+          </tr>
+        </thead>
+        <tbody>${filas.map(ch => htmlFilaCheque(ch, cobranzas.get(ch.cobranza_id))).join('')}</tbody>`
+    }
+
+    function htmlFilaCheque(ch, cob) {
+      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      // Un cheque común no tiene fecha de pago: es "a la vista".
+      const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'A la vista'
+      const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
+      // El destino lo TIPEA una persona: es texto libre y va escapado.
+      const celdaSalida = salido
+        ? `<span class="chq-tabla__fecha">${esc(formatearFechaCob(ch.salida_fecha))}</span>${
+            ch.salida_destino ? `<div class="chq-tabla__sub chq-tabla__destino">${esc(ch.salida_destino)}</div>` : ''}`
+        : '—'
+      const clases = [
+        salido ? 'chq-tabla__fila--salido' : ch.estado === 'anulado' ? 'chq-tabla__fila--anulado' : '',
+        ch.id === estado.destacado ? 'chq-tabla__fila--destacada' : '',
+      ].filter(Boolean).join(' ')
+      return `
+        <tr class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0">
+          <td>${esc(ch.numero ?? '—')}${htmlAccionCheque(ch, cob)}</td>
+          <td class="chq-tabla__texto chq-tabla__banco" title="${esc(nombreBanco(ch.banco_codigo))}">${esc(nombreBanco(ch.banco_codigo))}</td>
+          <td class="chq-tabla__fecha">${esc(formatearFechaCob(ch.fecha_emision))}</td>
+          <td class="chq-tabla__fecha">${esc(pago)}</td>
+          <td class="chq-tabla__num">${esc(formatearImporte(ch.importe))}</td>
+          <td class="chq-tabla__texto">${esc(cob?.cliente ?? '—')}</td>
+          <td><span class="chq-estado chq-estado--${esc(ch.estado)}">${esc(etiqueta)}</span></td>
+          <td>${celdaSalida}</td>
+        </tr>`
+    }
+
+    // El botón de la fila. Solo quien tiene `procesar`, que es la tarea que
+    // exigen las dos RPCs. "Dar salida" además solo con la cobranza ASENTADA
+    // (procesada): la RPC lo rechaza en cualquier otro estado, y ofrecerlo
+    // igual sería un botón que siempre falla. "Volver a cartera" no depende
+    // del estado de la cobranza: la RPC tampoco lo pide.
+    function htmlAccionCheque(ch, cob) {
+      if (!puedeProcesar()) return ''
+      if (ch.estado === 'en_cartera' && cob?.estado === 'procesada') {
+        return `<button type="button" class="chq-btn chq-btn--chico chq-tabla__accion" data-dar-salida="${esc(ch.id)}">Salió</button>`
+      }
+      if (ch.estado === 'depositado' || ch.estado === 'endosado') {
+        return `<button type="button" class="chq-btn chq-btn--chico chq-tabla__accion" data-volver-cartera="${esc(ch.id)}">Volver a cartera</button>`
+      }
+      return ''
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SALIDA DE UN CHEQUE
+    // Depositado o endosado. SOLO EL ENDOSADO va a descontar la cuenta
+    // corriente de un proveedor el día que se conecte con Cuentas Corrientes:
+    // por eso el destino es obligatorio ahí y opcional en un depósito.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const LARGO_MAXIMO_DESTINO = 150
+
+    // Lo que se valida ANTES de llamar, con las MISMAS reglas que
+    // marcar_salida_cheque: una validación más permisiva deja pasar lo que el
+    // servidor rechaza, y una más estricta bloquea lo que sí entra.
+    function erroresSalida({ tipo, fecha, destino }, fechaCobranza, hoy) {
+      const e = []
+      if (tipo !== 'depositado' && tipo !== 'endosado') e.push('Elegí si se depositó o se endosó.')
+      if (!esFechaIso(fecha)) e.push('Falta la fecha.')
+      else {
+        if (diasEntre(hoy, fecha) > 0) e.push('La fecha no puede ser posterior a hoy.')
+        if (esFechaIso(fechaCobranza) && diasEntre(fechaCobranza, fecha) < 0) {
+          e.push(`La fecha no puede ser anterior a la cobranza (${formatearFechaCob(fechaCobranza)}).`)
+        }
+      }
+      const d = String(destino ?? '').trim()
+      if (tipo === 'endosado' && !d) e.push('Escribí a quién se lo pasaste.')
+      if (d.length > LARGO_MAXIMO_DESTINO) e.push(`El destino no puede tener más de ${LARGO_MAXIMO_DESTINO} caracteres.`)
+      return e
+    }
+
+    // Los parámetros tal cual viajan. Un destino vacío va como null.
+    function parametrosSalida(chequeId, { tipo, fecha, destino }) {
+      return { p_cheque_id: chequeId, p_tipo: tipo, p_fecha: fecha, p_destino: textoOpcional(destino) }
+    }
+
+    function abrirModalSalida(chequeId) {
+      const ch = estado.filas.find(x => x.id === chequeId)
+      if (!ch) return
+      const cob = estado.cobranzas.get(ch.cobranza_id) ?? null
+      estado.salida = { cheque: ch, cobranza: cob, tipo: null }
+      // textContent: el cliente va crudo acá, no es HTML.
+      document.getElementById('chq-salida-cheques').textContent =
+        `N° ${ch.numero ?? '—'} · ${nombreBanco(ch.banco_codigo)} · ${formatearImporte(ch.importe)}${cob?.cliente ? ` · ${cob.cliente}` : ''}`
+      const fecha = document.getElementById('chq-salida-fecha')
+      fecha.value = hoyArgentina()
+      fecha.max = hoyArgentina()
+      fecha.min = esFechaIso(cob?.fecha) ? cob.fecha : ''
+      document.getElementById('chq-salida-destino').value = ''
+      pintarModalSalida()
+      document.getElementById('chq-modal-salida').hidden = false
+    }
+
+    function cerrarModalSalida() {
+      document.getElementById('chq-modal-salida').hidden = true
+      estado.salida = null
+    }
+
+    // Lo que cambia según el tipo elegido: el botón marcado, la pregunta del
+    // destino y si es obligatorio. El error se limpia: era sobre otro estado.
+    function pintarModalSalida() {
+      const s = estado.salida
+      if (!s) return
+      document.querySelectorAll('[data-salida-tipo]').forEach(b => {
+        b.classList.toggle('chq-btn--elegido', b.dataset.salidaTipo === s.tipo)
+      })
+      document.getElementById('chq-salida-campo-destino').hidden = !s.tipo
+      document.getElementById('chq-salida-label-destino').textContent =
+        s.tipo === 'endosado' ? '¿A quién se lo pasaste?' : '¿En qué banco o cuenta? (opcional)'
+      document.getElementById('chq-salida-ayuda-destino').textContent =
+        s.tipo === 'endosado' ? 'Obligatorio: el nombre de quien lo recibió.' : 'Si no lo sabés, dejalo vacío.'
+      document.getElementById('chq-salida-error').hidden = true
+    }
+
+    async function confirmarSalida() {
+      const s = estado.salida
+      if (!s) return
+      const datos = {
+        tipo: s.tipo,
+        fecha: document.getElementById('chq-salida-fecha').value,
+        destino: document.getElementById('chq-salida-destino').value,
+      }
+      const err = document.getElementById('chq-salida-error')
+      const errores = erroresSalida(datos, s.cobranza?.fecha, hoyArgentina())
+      if (errores.length) {
+        err.textContent = errores.join(' ')
+        err.hidden = false
+        return
+      }
+      const btn = document.getElementById('chq-salida-confirmar')
+      btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('marcar_salida_cheque', parametrosSalida(s.cheque.id, datos))
+        if (error) throw error
+        cerrarModalSalida()
+        mostrarExito(datos.tipo === 'endosado' ? 'Cheque marcado como endosado.' : 'Cheque marcado como depositado.')
+        await refrescarTodo()
+      } catch (e) {
+        console.error('Falló marcar_salida_cheque:', e)
+        // El mensaje del servidor ya viene en castellano: se muestra TAL CUAL.
+        err.textContent = e?.message || 'No se pudo marcar la salida del cheque.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
+      }
+    }
+
+    // ── Volver a cartera: pide un motivo en un diálogo propio ─────────────
+
+    let accionDelMotivo = null
+
+    function abrirModalMotivo({ titulo, etiqueta, alConfirmar }) {
+      document.getElementById('chq-motivo-titulo').textContent = titulo
+      document.getElementById('chq-motivo-label').textContent = etiqueta
+      document.getElementById('chq-motivo-texto').value = ''
+      document.getElementById('chq-motivo-error').hidden = true
+      accionDelMotivo = alConfirmar
+      document.getElementById('chq-modal-motivo').hidden = false
+    }
+
+    function cerrarModalMotivo() {
+      document.getElementById('chq-modal-motivo').hidden = true
+      accionDelMotivo = null
+    }
+
+    function abrirVolverACartera(chequeId) {
+      const ch = estado.filas.find(x => x.id === chequeId)
+      if (!ch) return
+      abrirModalMotivo({
+        titulo: `Volver a cartera el cheque N° ${ch.numero ?? '—'}`,
+        etiqueta: 'Por qué vuelve a cartera',
+        alConfirmar: async (motivo) => {
+          try {
+            const { error } = await supabase.rpc('volver_cheque_a_cartera', { p_cheque_id: ch.id, p_motivo: motivo })
+            if (error) throw error
+            cerrarModalMotivo()
+            mostrarExito('El cheque volvió a cartera.')
+            await refrescarTodo()
+          } catch (e) {
+            console.error('Falló volver_cheque_a_cartera:', e)
+            // El mensaje de la base, entero.
+            mostrarError(e?.message || 'No se pudo volver el cheque a cartera.')
+          }
+        },
+      })
+    }
+
+    // Después de dar salida o volver a cartera: la lista, el total y los
+    // bancos. Una sola función, así los dos caminos no divergen.
+    async function refrescarTodo() {
+      await Promise.all([cargarCheques(), cargarResumenCheques()])
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PREFERENCIAS DE ESTA PERSONA (filtros), en sessionStorage
+    // Tocar un cheque abre Cobranzas y "Volver" trae de vuelta acá: sin esto
+    // los filtros se perderían en cada ida y vuelta. Es una comodidad por
+    // pestaña; si el navegador no deja guardar, se arranca con los de siempre.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const CLAVE_PREFERENCIAS = 'cheques-preferencias'
+
+    function guardarPreferencias() {
+      try {
+        sessionStorage.setItem(CLAVE_PREFERENCIAS, JSON.stringify({ filtros: estado.filtros }))
+      } catch { /* sin almacenamiento: no pasa nada */ }
+    }
+
+    function leerPreferencias() {
+      try {
+        const p = JSON.parse(sessionStorage.getItem(CLAVE_PREFERENCIAS) || 'null')
+        const f = p?.filtros
+        if (!f) return
+        if (ESTADOS_FILTRO_CHEQUES.some(e => e.id === f.estado)) estado.filtros.estado = f.estado
+        estado.filtros.numero = typeof f.numero === 'string' ? f.numero : ''
+        estado.filtros.banco = typeof f.banco === 'string' && /^[0-9]{3}$/.test(f.banco) ? f.banco : ''
+      } catch { /* datos viejos o ilegibles: se ignoran */ }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONEXIONES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function conectarTodo() {
+      let temporizadorCheque = null
+      document.getElementById('chq-filtro-numero').addEventListener('input', (ev) => {
+        estado.filtros.numero = ev.target.value
+        guardarPreferencias()
+        // El aviso se pinta en el acto —sin esperar el debounce—.
+        pintarFiltrosCheques()
+        clearTimeout(temporizadorCheque)
+        temporizadorCheque = setTimeout(cargarCheques, 350)
+      })
+      document.getElementById('chq-filtro-banco').addEventListener('change', (ev) => {
+        estado.filtros.banco = ev.target.value
+        guardarPreferencias()
+        cargarCheques()
+      })
+      document.getElementById('chq-btn-limpiar').addEventListener('click', () => {
+        clearTimeout(temporizadorCheque)
+        limpiarFiltrosCheques()
+      })
+
+      // ── Diálogo de salida ──
+      document.querySelectorAll('[data-salida-tipo]').forEach(b => b.addEventListener('click', () => {
+        if (!estado.salida) return
+        estado.salida.tipo = b.dataset.salidaTipo
+        pintarModalSalida()
+        if (!document.getElementById('chq-salida-campo-destino').hidden) document.getElementById('chq-salida-destino').focus()
+      }))
+      document.getElementById('chq-salida-cancelar').addEventListener('click', cerrarModalSalida)
+      document.getElementById('chq-salida-confirmar').addEventListener('click', confirmarSalida)
+
+      // ── Diálogo de motivo ──
+      document.getElementById('chq-motivo-cancelar').addEventListener('click', cerrarModalMotivo)
+      document.getElementById('chq-motivo-confirmar').addEventListener('click', () => {
+        const texto = document.getElementById('chq-motivo-texto').value.trim()
+        if (!texto) {
+          const err = document.getElementById('chq-motivo-error')
+          err.hidden = false
+          err.textContent = 'El motivo es obligatorio.'
+          return
+        }
+        if (accionDelMotivo) accionDelMotivo(texto)
+      })
+
+      // Escape cierra el diálogo que esté abierto.
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Escape') return
+        if (!document.getElementById('chq-modal-salida').hidden) cerrarModalSalida()
+        else if (!document.getElementById('chq-modal-motivo').hidden) cerrarModalMotivo()
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    // Sin permiso se dice y se vuelve al dashboard: quedarse en una pantalla
+    // vacía no le dice a nadie por qué no ve nada.
+    function sinAcceso(texto) {
+      document.getElementById('chq-cargando').hidden = true
+      const el = document.getElementById('chq-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      mostrarError(texto)
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+
+      try {
+        const { data: emp, error } = await supabase
+          .from('empleados').select('id, rol_app')
+          .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+        if (error || !emp) throw error ?? new Error('sin empleado')
+        estado.miEmpleadoId = emp.id
+        estado.miRolApp = emp.rol_app
+      } catch (err) {
+        console.error('No se pudo identificar al empleado:', err)
+        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        return
+      }
+
+      try {
+        const { data: tareas } = await supabase
+          .from('empleado_tareas').select('modulo, tarea')
+          .eq('empleado_id', estado.miEmpleadoId)
+          .eq('modulo', 'cobranzas')
+          .eq('habilitado', true)
+        estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
+      } catch (err) {
+        console.error('No se pudieron leer los permisos:', err)
+      }
+
+      if (!puedeVerCartera()) {
+        sinAcceso('No tenés acceso a la cartera de cheques. Te llevamos al inicio…')
+        return
+      }
+
+      // ?cheque=<id>: se pidió ver un cheque puntual desde una cobranza. Se
+      // muestran TODOS los estados (puede estar salido) y se marca la fila. El
+      // parámetro se limpia para que recargar no lo vuelva a marcar.
+      leerPreferencias()
+      const params = new URLSearchParams(window.location.search)
+      const pedido = params.get('cheque')
+      if (pedido) {
+        history.replaceState(null, '', window.location.pathname)
+        if (UUID.test(pedido)) {
+          estado.destacado = pedido
+          estado.filtros = { ...FILTROS_CHEQUES_DEFECTO, estado: 'todos' }
+        }
+      }
+
+      document.getElementById('chq-cargando').hidden = true
+      document.getElementById('chq-vista').hidden = false
+      document.getElementById('chq-filtro-numero').value = estado.filtros.numero
+      conectarTodo()
+
+      await cargarBancos()
+      await refrescarTodo()
+    }
+
+    init()
+
+  </script>
+
+</body>
+</html>

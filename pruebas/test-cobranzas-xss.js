@@ -38,6 +38,7 @@ function chk(nombre, condicion, detalle) {
 // resultado en vez de dar un falso negativo.
 const FUENTE = fs.readFileSync(ARCHIVO, 'utf8')
 console.log(`ARCHIVO ${ARCHIVO} (${FUENTE.length} bytes)`)
+require('./mutar-cobranzas-comun').informarComun()
 
 const marca = (campo) => `"><b data-xss="${campo}">`
 const escapada = (campo) => `&lt;b data-xss=&quot;${campo}&quot;&gt;`
@@ -277,387 +278,197 @@ if (SOLO !== 'estatico') {
       S9.renglonComoImpreso(['66259862'], null) === '' && S9.renglonComoImpreso(['66259862'], undefined) === '')
   }
 
-  // ══ VISTA DE CHEQUES ════════════════════════════════════════════════════
+  // ══ ACCESOS A LA CARTERA Y LINK DIRECTO (22/09/2026) ════════════════════
+  // La cartera de cheques se mudó a modulos/cheques.html. Acá quedan: el link
+  // "Cartera de cheques →", el "Ver en Cheques" de cada cheque del detalle y
+  // el link directo cobranzas.html?cobranza=<id>&volver=<url>. Las pruebas de
+  // la cartera (filtros, tabla, salida, volver a cartera) viven en
+  // pruebas/test-cheques-*.js.
 
-  // ── filtroNumeroCheque: los cuatro largos, más el vacío y el sin dígitos ──
+  const AQUI = 'https://cucuruchosnuss-gastos.github.io/seis-destinos/modulos/cobranzas.html'
+  const CHEQUES_ABS = 'https://cucuruchosnuss-gastos.github.io/seis-destinos/modulos/cheques.html'
+  const UUID = '0b2d6c1e-3f4a-4b5c-8d9e-0123456789ab'
+
+  // ── destinoVolver: SOLO una URL de esta misma app ─────────────────────────
   {
-    const S10 = construir(ARCHIVO)
-    const f = S10.filtroNumeroCheque
-    const cuerpo = '66259862'
-    const dv = String(S10.dvBcra(cuerpo))
-    const dvMal = String((Number(dv) + 1) % 10)
-
-    chk('número: vacío no filtra', f('').modo === 'ninguno' && f('   ').modo === 'ninguno')
-    chk('número: menos de 8 dígitos es PARCIAL', f('9862').modo === 'parcial' && f('9862').digitos === '9862')
-    chk('número: se cuentan DÍGITOS y no caracteres ("285-386" son 6)',
-      f('285-386').modo === 'parcial' && f('285-386').digitos === '285386')
-    chk('número: exactamente 8 es EXACTO', f(cuerpo).modo === 'exacto' && f(cuerpo).digitos === cuerpo && f(cuerpo).aviso === '')
-    const nueve = f(cuerpo + dv)
-    chk('número: 9 con el dígito que cierra → exacto sobre los primeros 8',
-      nueve.modo === 'exacto' && nueve.digitos === cuerpo && /de control del banco/.test(nueve.aviso))
-    const nueveMal = f(cuerpo + dvMal)
-    chk('número: 9 con un dígito que no cierra → busca igual y AVISA',
-      nueveMal.modo === 'exacto' && nueveMal.digitos === cuerpo && /no coincide/.test(nueveMal.aviso))
-    const diez = f(cuerpo + '12')
-    chk('número: más de 9 NO filtra y avisa cuántos se escribieron',
-      diez.modo === 'demasiado' && diez.digitos === '' && /escribiste 10/.test(diez.aviso))
-    chk('número: un "%" solo NO es "ninguno" (que mostraría todos)',
-      f('%').modo === 'sin_digitos' && f('%').aviso !== '')
-  }
-
-  // ── aplicarFiltrosCheques: qué se le pide de verdad a la consulta ─────────
-  {
-    const S11 = construir(ARCHIVO)
-    const grabar = () => {
-      const llamadas = []
-      const q = {}
-      for (const m of ['eq', 'in', 'like', 'ilike', 'neq', 'or', 'filter', 'not', 'match'])
-        q[m] = (...a) => { llamadas.push([m, ...a]); return q }
-      return { q, llamadas }
-    }
-    const correr = (filtros) => {
-      const g = grabar()
-      const r = S11.aplicarFiltrosCheques(g.q, { estado: 'en_cartera', numero: '', banco: '', ...filtros })
-      return { ...r, llamadas: g.llamadas }
-    }
-    const likes = (ll) => ll.filter(x => x[0] === 'like' || x[0] === 'ilike')
-
-    const pct = correr({ numero: '%' })
-    chk('filtro: un "%" tipeado da CERO resultados (no consulta)', pct.sinResultados === true)
-    const pct2 = correr({ numero: '%%_' })
-    chk('filtro: "%%_" tampoco consulta', pct2.sinResultados === true)
-    const mezcla = correr({ numero: '6625%' })
-    chk('filtro: "6625%" busca los dígitos, sin el comodín tipeado',
-      !mezcla.sinResultados && likes(mezcla.llamadas).length === 1 && likes(mezcla.llamadas)[0][2] === '%6625%',
-      JSON.stringify(mezcla.llamadas))
-    const guion = correr({ numero: '12_4' })
-    chk('filtro: el "_" tipeado no llega al patrón', likes(guion.llamadas)[0]?.[2] === '%124%', JSON.stringify(guion.llamadas))
-    // Ningún patrón like puede tener otra cosa que dígitos entre los %.
-    const todos = [correr({ numero: '9862' }), mezcla, guion, correr({ numero: 'a%b1' })]
-    chk('filtro: todo patrón like es %dígitos%',
-      todos.every(r => likes(r.llamadas).every(x => /^%\d+%$/.test(x[2]))))
-    const exacto = correr({ numero: '66259862' })
-    chk('filtro: 8 dígitos → eq sobre numero, sin like',
-      exacto.llamadas.some(x => x[0] === 'eq' && x[1] === 'numero' && x[2] === '66259862') && likes(exacto.llamadas).length === 0)
-    const diez = correr({ numero: '6625986212' })
-    chk('filtro: más de 9 no filtra por número pero SÍ consulta',
-      !diez.sinResultados && !diez.llamadas.some(x => x[1] === 'numero'))
-    chk('filtro: "en cartera" pide estado = en_cartera',
-      correr({}).llamadas.some(x => x[0] === 'eq' && x[1] === 'estado' && x[2] === 'en_cartera'))
-    const sal = correr({ estado: 'salidos' }).llamadas.find(x => x[1] === 'estado')
-    chk('filtro: "salidos" pide depositado y endosado, y nada más',
-      sal && sal[0] === 'in' && JSON.stringify(sal[2]) === JSON.stringify(['depositado', 'endosado']), JSON.stringify(sal))
-    chk('filtro: "todos" no filtra por estado (es el único que trae anulados)',
-      !correr({ estado: 'todos' }).llamadas.some(x => x[1] === 'estado'))
-    chk('filtro: el banco va por eq sobre banco_codigo',
-      correr({ banco: '007' }).llamadas.some(x => x[0] === 'eq' && x[1] === 'banco_codigo' && x[2] === '007'))
-  }
-
-  // ── Orden y total en cartera ──────────────────────────────────────────────
-  {
-    const S12 = construir(ARCHIVO)
-    const filas = [
-      { id: 'a', numero: '4', tipo: 'diferido', fecha_emision: '2026-08-01', fecha_pago: '2026-10-01' },
-      { id: 'b', numero: '1', tipo: 'comun', fecha_emision: '2026-09-20', fecha_pago: null },
-      { id: 'c', numero: '3', tipo: 'diferido', fecha_emision: '2026-09-01', fecha_pago: '2026-09-25' },
-      { id: 'd', numero: '2', tipo: 'comun', fecha_emision: '2026-11-01', fecha_pago: null },
+    const S40 = construir(ARCHIVO)
+    const d = (v) => S40.destinoVolver(v, AQUI)
+    const RECHAZOS = [
+      ['javascript:', 'javascript:alert(1)'],
+      ['javascript: codificado', encodeURIComponent('javascript:alert(document.cookie)')],
+      ['javascript: en mayúsculas', 'JaVaScRiPt:alert(1)'],
+      ['data:', 'data:text/html,<script>alert(1)</script>'],
+      ['otro origen', 'https://evil.example/cheques.html'],
+      ['otro origen, codificado', encodeURIComponent('https://evil.example/cheques.html')],
+      ['//evil (relativa al protocolo)', '//evil.example/cheques.html'],
+      ['http en vez de https (otro origen)', 'http://cucuruchosnuss-gastos.github.io/seis-destinos/modulos/cheques.html'],
+      ['otro subdominio', 'https://cucuruchosnuss-gastos.github.io.evil.example/cheques.html'],
+      ['un % que no decodifica', '%E0%A4%A'],
+      ['blob: del mismo origen (no es http/https)', 'blob:https://cucuruchosnuss-gastos.github.io/0b2d6c1e'],
+      ['vacío', ''],
+      ['null', null],
     ]
-    const orden = S12.ordenarCheques(filas).map(x => x.id).join('')
-    chk('orden: por fecha de cobro ascendente (pago en diferidos, emisión en comunes)', orden === 'bcad', orden)
-    chk('orden: no muta el array de entrada', filas.map(x => x.id).join('') === 'abcd')
+    for (const [nombre, v] of RECHAZOS) chk(`volver=: ${nombre} se ignora (null)`, d(v) === null, String(d(v)))
+    chk('volver=: relativa "cheques.html" resuelve a la de esta misma carpeta', d('cheques.html') === CHEQUES_ABS, d('cheques.html'))
+    chk('volver=: relativa con query conserva la query', d('cheques.html?estado=salidos') === CHEQUES_ABS + '?estado=salidos')
+    chk('volver=: absoluta del mismo origen se acepta tal cual', d(CHEQUES_ABS + '?cheque=k1') === CHEQUES_ABS + '?cheque=k1')
+    chk('volver=: absoluta del mismo origen codificada una vez más (como la manda Cheques) también',
+      d(encodeURIComponent(CHEQUES_ABS)) === CHEQUES_ABS)
+    chk('volver=: otra página de la app se acepta', d('gastos.html') === 'https://cucuruchosnuss-gastos.github.io/seis-destinos/modulos/gastos.html')
 
-    // 1,1 · 2,2 · 0,29: multiplicados por 100 arrastran error de punto
-    // flotante (0,1 y 0,2 no: dan exacto y no distinguirían nada).
-    const r = S12.resumenCartera([
-      { estado: 'en_cartera', importe: 1.1 }, { estado: 'en_cartera', importe: 2.2 },
-      { estado: 'en_cartera', importe: 0.29 },
-      { estado: 'depositado', importe: 1000 }, { estado: 'endosado', importe: 1000 },
-      { estado: 'anulado', importe: 1000 },
-    ])
-    chk('cartera: cuenta SOLO los en cartera', r.cantidad === 3, r.cantidad)
-    chk('cartera: suma en centavos (1,1 + 2,2 + 0,29 da 3,59 exacto)', r.total === 3.59, r.total)
-
-    const sinDato = S12.htmlCartera(null, false, false)
-    chk('cartera: si no se pudo calcular NO dice $ 0,00', !/\$/.test(sinDato) && /No se pudo/.test(sinDato))
-    const conFiltro = S12.htmlCartera({ cantidad: 1, total: 5 }, true, false)
-    chk('cartera: con filtros aclara que es el total de TODA la cartera', /toda la cartera/.test(conFiltro))
-    chk('cartera: singular con un cheque', /1 cheque</.test(conFiltro))
-    chk('cartera: sin filtros no agrega la aclaración', !/toda la cartera/.test(S12.htmlCartera({ cantidad: 2, total: 5 }, false, false)))
-    chk('cartera: con el tope lo dice', /incompleto/.test(S12.htmlCartera({ cantidad: 2, total: 5 }, false, true)))
+    chk('texto: a cheques.html dice "‹ Volver a los cheques"', S40.textoVolver(CHEQUES_ABS) === '‹ Volver a los cheques')
+    chk('texto: con query también', S40.textoVolver(CHEQUES_ABS + '?cheque=k1#x') === '‹ Volver a los cheques')
+    chk('texto: otra página de la app es "‹ Volver"', S40.textoVolver('https://cucuruchosnuss-gastos.github.io/seis-destinos/modulos/gastos.html') === '‹ Volver')
+    chk('texto: un nombre que solo TERMINA parecido no es la cartera',
+      S40.textoVolver('https://cucuruchosnuss-gastos.github.io/seis-destinos/modulos/micheques.html') === '‹ Volver')
+    chk('texto: una URL rota no rompe', S40.textoVolver('no es url') === '‹ Volver')
   }
 
-  // ── La tabla: cada columna con texto malicioso, ejecutada ─────────────────
+  // ── leerLinkDirecto y la barra de direcciones ─────────────────────────────
   {
-    const S13 = construir(ARCHIVO)
-    S13.estado.bancos = new Map([['007', marca('tab_banco_denominacion')]])
-    const cobs = new Map([
-      ['cob1', { id: 'cob1', cliente: marca('tab_cliente'), estado: 'procesada', fecha: '2026-09-01' }],
-    ])
-    const filas = [
-      { id: marca('tab_id'), cobranza_id: 'cob1', banco_codigo: marca('tab_banco'), numero: marca('tab_numero'),
-        tipo: 'diferido', fecha_emision: '2026-09-01', fecha_pago: '2026-10-01', importe: 1500,
-        estado: 'endosado', salida_fecha: '2026-09-15', salida_destino: marca('tab_destino') },
-      { id: 'x2', cobranza_id: marca('tab_cobranza'), banco_codigo: '007', numero: '12345678',
-        tipo: 'comun', fecha_emision: '2026-09-02', fecha_pago: null, importe: 10,
-        estado: marca('tab_estado'), salida_fecha: null, salida_destino: null },
-      { id: 'x3', cobranza_id: 'cob1', banco_codigo: '007', numero: '87654321',
-        tipo: 'comun', fecha_emision: '2026-09-02', fecha_pago: null, importe: 10,
-        estado: 'depositado', salida_fecha: '2026-09-10', salida_destino: null },
-      { id: 'x4', cobranza_id: 'cob1', banco_codigo: '007', numero: '11112222',
-        tipo: 'comun', fecha_emision: '2026-09-02', fecha_pago: null, importe: 10,
-        estado: 'anulado', salida_fecha: null, salida_destino: null },
+    const S41 = construir(ARCHIVO)
+    const l = (q) => S41.leerLinkDirecto(q, AQUI)
+    chk('link: sin ?cobranza no hay link (null)', l('') === null && l('?volver=cheques.html') === null)
+    const ok = l(`?cobranza=${UUID}&volver=cheques.html`)
+    chk('link: uuid válido y volver relativo', ok && ok.id === UUID && ok.volver && ok.volver.url === CHEQUES_ABS &&
+      ok.volver.texto === '‹ Volver a los cheques', JSON.stringify(ok))
+    chk('link: el uuid se normaliza a minúsculas', l(`?cobranza=${UUID.toUpperCase()}`).id === UUID)
+    chk('link: sin volver, volver es null', l(`?cobranza=${UUID}`).volver === null)
+    chk('link: un id que no es uuid da id null (no se consulta nada)',
+      l('?cobranza=abc').id === null && l("?cobranza=1' or '1'='1").id === null && l('?cobranza=').id === null)
+    chk('link: volver=javascript: se descarta, el id sigue', (() => { const x = l(`?cobranza=${UUID}&volver=javascript:alert(1)`); return x.id === UUID && x.volver === null })())
+    chk('link: volver de otro origen se descarta', l(`?cobranza=${UUID}&volver=${encodeURIComponent('https://evil.example/cheques.html')}`).volver === null)
+
+    chk('barra: se sacan ?cobranza y ?volver, y queda lo demás',
+      S41.urlSinLinkDirecto(`${AQUI}?a=1&cobranza=${UUID}&volver=cheques.html#h`) === '/seis-destinos/modulos/cobranzas.html?a=1#h',
+      S41.urlSinLinkDirecto(`${AQUI}?a=1&cobranza=${UUID}&volver=cheques.html#h`))
+    chk('barra: sin otra query queda la ruta sola', S41.urlSinLinkDirecto(`${AQUI}?cobranza=${UUID}`) === '/seis-destinos/modulos/cobranzas.html')
+
+    // Abrir: la barra se limpia ANTES de abrir el detalle.
+    const S42 = construir(ARCHIVO)
+    S42.abrirLinkDirecto({ id: UUID, volver: { url: CHEQUES_ABS, texto: '‹ Volver a los cheques' } })
+    chk('abrir: limpia la barra y DESPUÉS abre el detalle', S42.__llamadas.orden.join() === 'replace,abrir', S42.__llamadas.orden.join())
+    chk('abrir: abre ESA cobranza', S42.__llamadas.abrirDetalle.length === 1 && S42.__llamadas.abrirDetalle[0][0] === UUID)
+    chk('abrir: recuerda a qué cobranza le vale el volver', S42.estado.linkDirecto && S42.estado.linkDirecto.cobranzaId === UUID &&
+      S42.estado.linkDirecto.volver.url === CHEQUES_ABS)
+    const S43 = construir(ARCHIVO)
+    S43.abrirLinkDirecto({ id: null, volver: null })
+    chk('abrir: un id inválido NO abre nada, lo dice, y limpia la barra igual',
+      S43.__llamadas.abrirDetalle.length === 0 && /no apunta a una cobranza válida/.test(S43.__llamadas.errores.join()) &&
+      S43.__llamadas.replace.length === 1 && S43.estado.linkDirecto === null)
+
+    // Volver: al destino SOLO desde la cobranza del link.
+    const S44 = construir(ARCHIVO)
+    S44.estado.linkDirecto = { cobranzaId: UUID, volver: { url: CHEQUES_ABS, texto: '‹ Volver a los cheques' } }
+    S44.estado.cobranzaSeleccionadaId = UUID
+    S44.irAtrasDelDetalle()
+    chk('volver: desde la cobranza del link navega a Cheques', S44.__location.href === CHEQUES_ABS && S44.__llamadas.vistas.length === 0,
+      S44.__location.href)
+    const S45 = construir(ARCHIVO)
+    S45.estado.linkDirecto = { cobranzaId: UUID, volver: { url: CHEQUES_ABS, texto: '‹ Volver a los cheques' } }
+    S45.estado.cobranzaSeleccionadaId = 'otra'
+    S45.irAtrasDelDetalle()
+    chk('volver: desde otra cobranza vuelve al listado, sin navegar', S45.__llamadas.vistas.join() === 'listado' && S45.__location.href === AQUI)
+    const S46 = construir(ARCHIVO)
+    S46.estado.linkDirecto = { cobranzaId: UUID, volver: null }
+    S46.estado.cobranzaSeleccionadaId = UUID
+    S46.irAtrasDelDetalle()
+    chk('volver: link sin volver= vuelve al listado', S46.__llamadas.vistas.join() === 'listado' && S46.__location.href === AQUI)
+    S46.pintarBotonVolver(UUID)
+    chk('botón: sin volver dice "‹ Volver al listado"', S46.__doc.getElementById('cob-btn-volver-listado').textContent === '‹ Volver al listado')
+    S44.pintarBotonVolver(UUID)
+    chk('botón: con volver a Cheques dice "‹ Volver a los cheques"', S44.__doc.getElementById('cob-btn-volver-listado').textContent === '‹ Volver a los cheques')
+  }
+
+  // ── "Cartera de cheques →" del listado: con y sin permiso ─────────────────
+  {
+    const casos = [
+      [['cobranzas:cargar'], 'usuario', true, 'solo cargar: oculto'],
+      [['cobranzas:cargar', 'cobranzas:editar_anular'], 'usuario', true, 'cargar + editar_anular: oculto'],
+      [['cobranzas:ver_todo'], 'usuario', false, 'ver_todo: visible'],
+      [['cobranzas:procesar'], 'usuario', false, 'procesar: visible'],
+      [[], 'super_admin', false, 'super_admin: visible'],
     ]
-    const html = S13.htmlTablaCheques(filas, cobs)
-    chequearMarcas('htmlTablaCheques', html, ['tab_id', 'tab_banco', 'tab_numero', 'tab_destino',
-      'tab_cliente', 'tab_cobranza', 'tab_estado', 'tab_banco_denominacion'])
-    const tbody = html.slice(html.indexOf('<tbody>'))
-    chk('tabla: una fila por cheque', (tbody.match(/<tr /g) || []).length === 4)
-    chk('tabla: el número va en la primera columna (la fija)',
-      /<tr [^>]*>\s*<td>&quot;&gt;&lt;b data-xss=&quot;tab_numero/.test(tbody))
-    const fila = (id) => { const i = tbody.indexOf(`data-cheque-fila="${id}"`); return tbody.slice(tbody.lastIndexOf('<tr', i), tbody.indexOf('</tr>', i)) }
-    chk('tabla: un cheque común dice "A la vista" en el pago', fila('x3').includes('A la vista'))
-    chk('tabla: un diferido muestra su fecha de pago', fila(escCobDe(S13, marca('tab_id'))).includes('01/10/2026'))
-    chk('tabla: un depositado va atenuado y con su etiqueta',
-      fila('x3').includes('cob-tabla__fila--salido') && fila('x3').includes('>Depositado<'))
-    chk('tabla: un endosado va atenuado y con su etiqueta',
-      fila(escCobDe(S13, marca('tab_id'))).includes('cob-tabla__fila--salido') && fila(escCobDe(S13, marca('tab_id'))).includes('>Endosado<'))
-    chk('tabla: un salido muestra su fecha de salida', fila('x3').includes('10/09/2026'))
-    chk('tabla: un anulado va tachado y NO como salido',
-      fila('x4').includes('cob-tabla__fila--anulado') && !fila('x4').includes('cob-tabla__fila--salido'))
-    chk('tabla: uno sin cobranza visible dice — en el cliente, no "undefined"',
-      !html.includes('undefined') && fila('x2').includes('<td class="cob-tabla__texto">—</td>'))
-    chk('tabla: el banco muestra el NOMBRE cuando está en el catálogo', fila('x3').includes('tab_banco_denominacion'))
+    for (const [tareas, rol, oculto, nombre] of casos) {
+      const S47 = construir(ARCHIVO)
+      S47.estado.misTareas = new Set(tareas)
+      S47.estado.miRolApp = rol
+      S47.pintarAccesoCheques()
+      chk(`acceso a la cartera, ${nombre}`, S47.__doc.getElementById('cob-acceso-cheques').hidden === oculto)
+    }
+    // El HTML estático: el link existe, va a cheques.html y arranca oculto.
+    const bloque = (FUENTE.match(/<div class="cob-acceso-cheques" id="cob-acceso-cheques" hidden>\s*<a class="cob-link-cheques" id="cob-link-cheques" href="cheques\.html">Cartera de cheques &rarr;<\/a>\s*<\/div>/) || [])[0]
+    chk('acceso a la cartera: el HTML trae el link a cheques.html, oculto de arranque', !!bloque)
+    chk('acceso a la cartera: vive DENTRO del listado', FUENTE.indexOf('id="cob-acceso-cheques"') > FUENTE.indexOf('<div id="cob-vista-listado" hidden>') &&
+      FUENTE.indexOf('id="cob-acceso-cheques"') < FUENTE.indexOf('id="cob-banner-local"'))
+    chk('acceso a la cartera: se pinta al arrancar', /pintarAccesoCheques\(\)\n\s*mostrarVistaCob\('listado'\)/.test(FUENTE))
+    chk('link directo: init lo lee de la URL y lo abre',
+      /const link = leerLinkDirecto\(location\.search, location\.href\)\n\s*if \(link\) abrirLinkDirecto\(link\)/.test(FUENTE))
+    chk('link directo: el botón del detalle va por irAtrasDelDetalle',
+      /getElementById\('cob-btn-volver-listado'\)\.addEventListener\('click', irAtrasDelDetalle\)/.test(FUENTE))
+    const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+    const regla = (sel) => { const i = css.indexOf('\n    ' + sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
+    chk('acceso a la cartera: 44px táctil y el naranja oscuro del módulo',
+      /min-height:\s*44px/.test(regla('.cob-link-cheques')) && /color:\s*var\(--naranja-oscuro\)/.test(regla('.cob-link-cheques')))
   }
 
-  // ── Selector de banco, filtros y limpiar ───────────────────────────────────
+  // ── "Ver en Cheques" de cada cheque del detalle ───────────────────────────
   {
-    const S14 = construir(ARCHIVO)
-    S14.estado.bancosDeCheques = ['007', marca('sel_banco')]
-    S14.estado.cheques.filtros.banco = marca('sel_elegido')
-    S14.pintarSelectorBancos()
-    const sel = S14.__doc.getElementById('cob-filtro-banco')
-    chequearMarcas('pintarSelectorBancos', sel.innerHTML, ['sel_banco', 'sel_elegido'])
-    chk('selector: un banco elegido que ya no está en la lista queda como opción y seleccionado',
-      sel.value === marca('sel_elegido'))
-    chk('selector: visible si hay bancos', S14.__doc.getElementById('cob-campo-banco').hidden === false)
-
-    // Limpiar: TODOS los filtros, en el estado y en los campos, y vuelve a consultar.
-    S14.estado.cheques.filtros = { estado: 'todos', numero: '1234', banco: '007' }
-    S14.__doc.getElementById('cob-filtro-cheque').value = '1234'
-    sel.value = '007'
-    S14.pintarFiltrosCheques()
-    chk('limpiar: el botón aparece con filtros puestos', S14.__doc.getElementById('cob-btn-limpiar-cheques').hidden === false)
-    const antes = S14.__llamadas.cargarCheques
-    S14.limpiarFiltrosCheques()
-    const fl = S14.estado.cheques.filtros
-    chk('limpiar: vuelve al estado de arranque (en cartera)', fl.estado === 'en_cartera')
-    chk('limpiar: borra el número y el banco del estado', fl.numero === '' && fl.banco === '')
-    chk('limpiar: borra el número y el banco de los CAMPOS',
-      S14.__doc.getElementById('cob-filtro-cheque').value === '' && sel.value === '')
-    chk('limpiar: vuelve a consultar', S14.__llamadas.cargarCheques === antes + 1)
-    S14.pintarFiltrosCheques()
-    chk('limpiar: sin filtros el botón no se dibuja', S14.__doc.getElementById('cob-btn-limpiar-cheques').hidden === true)
-
-    S14.estado.cheques.filtros.numero = '%'
-    S14.pintarFiltrosCheques()
-    chk('aviso: un "%" muestra el aviso', S14.__doc.getElementById('cob-aviso-cheque').hidden === false &&
-      /no tiene ninguno/.test(S14.__doc.getElementById('cob-aviso-cheque').textContent))
+    const S48 = construir(ARCHIVO)
+    const idRaro = `k"1'<b>&x`
+    const ch = { id: idRaro, estado: 'en_cartera', banco_codigo: '007', numero: '00000001', cuenta: '1', tipo: 'comun',
+      fecha_emision: '2026-09-17', importe: 1, titulares: [] }
+    const h = S48.htmlChequeDetalle(ch, new Map())
+    const esperado = `href="cheques.html?cheque=${encodeURIComponent(idRaro)}"`
+    chk('ver en Cheques: el id va con encodeURIComponent, entre comillas DOBLES', h.includes(esperado), (h.match(/href="[^"]*"/) || [''])[0])
+    chk('ver en Cheques: nada del id sale crudo (ni comillas ni <)', !h.includes(idRaro) && !/<b>/.test(h))
+    chk('ver en Cheques: el texto es "Ver en Cheques"', /<a class="cob-btn[^"]*" href="cheques\.html\?cheque=[^"]*">Ver en Cheques<\/a>/.test(h))
+    for (const [tareas, rol, ve, nombre] of [
+      [['cobranzas:cargar'], 'usuario', false, 'solo cargar: no lo ve'],
+      [['cobranzas:ver_todo'], 'usuario', true, 'ver_todo: lo ve'],
+      [['cobranzas:procesar'], 'usuario', true, 'procesar: lo ve'],
+      [[], 'super_admin', true, 'super_admin: lo ve'],
+    ]) {
+      const S49 = construir(ARCHIVO)
+      S49.estado.misTareas = new Set(tareas)
+      S49.estado.miRolApp = rol
+      chk(`ver en Cheques, ${nombre}`, /Ver en Cheques/.test(S49.htmlChequeDetalle(ch, new Map())) === ve)
+    }
+    chk('ver en Cheques: un cheque sin id no dibuja el link', S48.htmlLinkChequeEnCartera({ ...ch, id: null }) === '')
   }
 
-  // ── renderizarCheques: vacío y error ───────────────────────────────────────
+  // ── El detalle NO tiene botones de salida: se dan en Cheques ──────────────
   {
-    const S15 = construir(ARCHIVO)
-    S15.estado.cheques.filas = []
-    S15.renderizarCheques()
-    chk('vacío: sin filtros dice que no hay cheques en cartera',
-      S15.__doc.getElementById('cob-cheques-vacio').textContent === 'No hay cheques en cartera.' && S15.__doc.getElementById('cob-tabla-caja').hidden === true)
-    S15.estado.cheques.error = 'No se pudieron cargar los cheques. Revisá la señal.'
-    S15.renderizarCheques()
-    chk('error: se dice, y no se muestra además el "no hay cheques"',
-      S15.__doc.getElementById('cob-cheques-aviso').hidden === false && S15.__doc.getElementById('cob-cheques-vacio').hidden === true)
+    const S50 = construir(ARCHIVO)
+    S50.estado.misTareas = new Set(['cobranzas:cargar', 'cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:editar_anular'])
+    const base = { banco_codigo: '007', numero: '00000001', cuenta: '1', tipo: 'comun', fecha_emision: '2026-09-17', importe: 1, titulares: [] }
+    const d = {
+      cabecera: { id: 'c1', empleado_id: 'emp-1', cliente: 'X', estado: 'procesada', fecha: '2026-09-17', efectivo: 0, cantidad_cheques: 3, total_cheques: 3, total: 3 },
+      cheques: [
+        { ...base, id: 'k1', estado: 'en_cartera' },
+        { ...base, id: 'k2', estado: 'depositado', salida_fecha: '2026-09-18', salida_destino: 'Galicia' },
+        { ...base, id: 'k3', estado: 'endosado', salida_fecha: '2026-09-18', salida_destino: 'Molino' },
+      ],
+      fotos: [], historial: [], nombres: new Map(),
+    }
+    const h = S50.htmlDetalle(d)
+    chk('detalle: ningún botón de salida ni de volver a cartera',
+      !/data-salio|data-dar-salida|data-volver-cartera|data-salida-tipo/.test(h) && !/>\s*Sali[óo]\s*</.test(h) && !/>\s*Volver a cartera\s*</.test(h))
+    chk('detalle: el estado y la salida de cada cheque se siguen leyendo',
+      h.includes('>En cartera<') && h.includes('Depositado el 18/09/2026 en Galicia') && h.includes('Endosado el 18/09/2026 a Molino'))
+    chk('detalle: el aviso de cheques afuera dice que se vuelven desde Cheques',
+      /primero hay que volverlos a cartera \(desde Cheques\)/.test(h))
+    chk('fuente: no queda ninguna llamada a las RPCs de salida',
+      !/marcar_salida_cheque|volver_cheque_a_cartera/.test(FUENTE))
+    chk('fuente: no queda el diálogo de salida ni la vista Cheques',
+      !/id="cob-modal-salida"|id="cob-vista-cheques"|id="cob-pestanas"/.test(FUENTE))
   }
 
-  // ── cargarResumenCheques: bancos de TODOS los cheques, sin filtros ─────────
-  {
-    const S16 = construir(ARCHIVO)
-    // El filtro de estado puesto en "salidos" NO puede recortar la lista.
-    S16.estado.cheques.filtros.estado = 'salidos'
-    S16.__set([
-      { banco_codigo: '007', estado: 'en_cartera', importe: 100 },
-      { banco_codigo: '011', estado: 'anulado', importe: 5 },
-      { banco_codigo: '285', estado: 'depositado', importe: 7 },
-    ])
-    esperas.push(S16.cargarResumenCheques().then(() => {
-      chk('resumen: la lista de bancos sale de TODOS los cheques', JSON.stringify([...S16.estado.bancosDeCheques].sort()) === '["007","011","285"]',
-        JSON.stringify(S16.estado.bancosDeCheques))
-      chk('resumen: el total en cartera cuenta solo los en cartera',
-        S16.estado.cheques.cartera && S16.estado.cheques.cartera.cantidad === 1 && S16.estado.cheques.cartera.total === 100)
-    }))
-  }
-
-  // ── cargarResumenCheques con la consulta fallando: NUNCA un cero ──────────
-  {
-    const S17 = construir(ARCHIVO)
-    S17.estado.cheques.cartera = { cantidad: 4, total: 99 }
-    S17.__setError(new Error('sin señal'))
-    esperas.push(S17.cargarResumenCheques().then(() => {
-      chk('resumen con error: la cartera queda en null, no en cero', S17.estado.cheques.cartera === null,
-        JSON.stringify(S17.estado.cheques.cartera))
-      const h = S17.__doc.getElementById('cob-cartera').innerHTML
-      chk('resumen con error: la pantalla dice que no se pudo, sin "$ 0,00"', /No se pudo/.test(h) && !/\$/.test(h))
-    }))
-  }
-
-  // ══ SALIDA DE CHEQUES ═══════════════════════════════════════════════════
+  // ══ ERROR DE LA BASE CON UN CHEQUE AFUERA ═══════════════════════════════
 
   // El texto EXACTO que arma el trigger _cobranza_cheque_proteger_salida
   // (leído de pg_get_functiondef el 21/09/2026), con un cheque de ejemplo.
   const MSG_TRIGGER = 'El cheque 007 Nº 12345678 ya salió de cartera (depositado). Para editar o anular esta cobranza, primero volvelo a cartera.'
-
-  // ── El botón de cada fila: quién y cuándo ──────────────────────────────────
-  {
-    const S20 = construir(ARCHIVO)
-    const cobs = new Map([
-      ['proc', { id: 'proc', cliente: 'A', estado: 'procesada', fecha: '2026-09-01' }],
-      ['reg', { id: 'reg', cliente: 'B', estado: 'registrada', fecha: '2026-09-01' }],
-    ])
-    const base = { banco_codigo: '007', tipo: 'comun', fecha_emision: '2026-09-01', fecha_pago: null, importe: 10 }
-    const filas = [
-      { ...base, id: 'k1', cobranza_id: 'proc', numero: '11111111', estado: 'en_cartera' },
-      { ...base, id: 'k2', cobranza_id: 'reg', numero: '22222222', estado: 'en_cartera' },
-      { ...base, id: 'k3', cobranza_id: 'proc', numero: '33333333', estado: 'depositado', salida_fecha: '2026-09-10' },
-      { ...base, id: 'k4', cobranza_id: 'proc', numero: '44444444', estado: 'anulado' },
-      { ...base, id: 'k5', cobranza_id: 'reg', numero: '55555555', estado: 'endosado', salida_fecha: '2026-09-10', salida_destino: 'X' },
-    ]
-    const primeraCelda = (html, id) => {
-      const i = html.indexOf(`data-cheque-fila="${id}"`)
-      const td = html.indexOf('<td>', i)
-      return html.slice(td, html.indexOf('</td>', td))
-    }
-    const html = S20.htmlTablaCheques(filas, cobs)
-    chk('salió: en cartera y cobranza procesada → botón "Salió" en la columna fija',
-      /data-salio="k1"/.test(primeraCelda(html, 'k1')))
-    chk('salió: en cartera pero cobranza registrada → sin botón', !/data-salio|data-volver/.test(primeraCelda(html, 'k2')))
-    chk('volver: un depositado tiene "Volver a cartera"', /data-volver-cartera="k3"/.test(primeraCelda(html, 'k3')))
-    chk('volver: un endosado también, aunque su cobranza esté registrada', /data-volver-cartera="k5"/.test(primeraCelda(html, 'k5')))
-    chk('salió: un anulado no tiene ningún botón', !/data-salio|data-volver/.test(primeraCelda(html, 'k4')))
-
-    S20.estado.misTareas = new Set(['cobranzas:cargar', 'cobranzas:ver_todo'])
-    const sinProcesar = S20.htmlTablaCheques(filas, cobs)
-    chk('sin la tarea procesar no hay ningún botón', !/data-salio|data-volver-cartera/.test(sinProcesar))
-    S20.estado.miRolApp = 'super_admin'
-    chk('super_admin ve los botones (bypass, igual que tiene_tarea)', /data-salio="k1"/.test(S20.htmlTablaCheques(filas, cobs)))
-  }
-
-  // ── Reglas del diálogo, ejecutadas ─────────────────────────────────────────
-  {
-    const S21 = construir(ARCHIVO)
-    const hoy = '2026-09-21'
-    const e = (d, fc = '2026-09-01') => S21.erroresSalida(d, fc, hoy)
-    chk('diálogo: sin elegir depositado/endosado no sigue', e({ tipo: null, fecha: hoy, destino: '' }).length === 1)
-    chk('diálogo: endosado SIN destino no sigue', e({ tipo: 'endosado', fecha: hoy, destino: '   ' }).some(x => /a quién/.test(x)))
-    chk('diálogo: depositado sin destino SÍ sigue', e({ tipo: 'depositado', fecha: hoy, destino: '' }).length === 0)
-    chk('diálogo: una fecha futura no sigue', e({ tipo: 'depositado', fecha: '2026-09-22', destino: '' }).some(x => /posterior/.test(x)))
-    chk('diálogo: hoy sí', e({ tipo: 'depositado', fecha: hoy, destino: '' }).length === 0)
-    chk('diálogo: anterior a la cobranza no sigue (igual que la RPC)',
-      e({ tipo: 'depositado', fecha: '2026-08-31', destino: '' }).some(x => /anterior a la cobranza/.test(x)))
-    chk('diálogo: el mismo día de la cobranza sí', e({ tipo: 'depositado', fecha: '2026-09-01', destino: '' }).length === 0)
-    chk('diálogo: 150 caracteres de destino entran', e({ tipo: 'endosado', fecha: hoy, destino: 'x'.repeat(150) }).length === 0)
-    chk('diálogo: 151 no', e({ tipo: 'endosado', fecha: hoy, destino: 'x'.repeat(151) }).some(x => /150/.test(x)))
-    chk('diálogo: sin fecha no sigue', e({ tipo: 'depositado', fecha: '', destino: '' }).some(x => /fecha/.test(x)))
-
-    const p1 = S21.parametrosSalida('ch1', { tipo: 'depositado', fecha: hoy, destino: '   ' })
-    chk('parámetros: un destino vacío viaja como null, no como ""', p1.p_destino === null && p1.p_cheque_id === 'ch1' && p1.p_tipo === 'depositado' && p1.p_fecha === hoy)
-    chk('parámetros: el destino viaja sin espacios en los bordes',
-      S21.parametrosSalida('ch1', { tipo: 'endosado', fecha: hoy, destino: '  Molino SA ' }).p_destino === 'Molino SA')
-  }
-
-  // ── El diálogo abierto: fecha por defecto, límites y la pregunta del destino
-  {
-    const S22 = construir(ARCHIVO)
-    S22.estado.cheques.filas = [{ id: 'z1', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 50, estado: 'en_cartera' }]
-    S22.estado.cheques.cobranzas = new Map([['c', { id: 'c', cliente: marca('dlg_cliente'), estado: 'procesada', fecha: '2026-09-01' }]])
-    S22.abrirModalSalida('z1')
-    const doc = S22.__doc
-    const hoy = S22.hoyArgentina()
-    chk('diálogo: la fecha arranca en hoy (Argentina)', doc.getElementById('cob-salida-fecha').value === hoy)
-    chk('diálogo: la fecha no puede ser futura (max = hoy)', doc.getElementById('cob-salida-fecha').max === hoy)
-    chk('diálogo: ni anterior a la cobranza (min)', doc.getElementById('cob-salida-fecha').min === '2026-09-01')
-    chk('diálogo: arranca sin tipo y sin la pregunta del destino',
-      S22.estado.salida.tipo === null && doc.getElementById('cob-salida-campo-destino').hidden === true)
-    chk('diálogo: el cheque se describe por textContent (el cliente va crudo ahí, no es HTML)',
-      doc.getElementById('cob-salida-cheque').textContent.includes(marca('dlg_cliente')) &&
-      doc.getElementById('cob-salida-cheque').innerHTML === '')
-    S22.estado.salida.tipo = 'endosado'; S22.pintarModalSalida()
-    chk('diálogo: endosado pregunta a quién', doc.getElementById('cob-salida-label-destino').textContent === '¿A quién se lo pasaste?' &&
-      doc.getElementById('cob-salida-campo-destino').hidden === false)
-    S22.estado.salida.tipo = 'depositado'; S22.pintarModalSalida()
-    chk('diálogo: depositado pregunta en qué banco o cuenta, opcional', /banco o cuenta\? \(opcional\)/.test(doc.getElementById('cob-salida-label-destino').textContent))
-  }
-
-  // ── Confirmar: validación local, error de la base TAL CUAL y éxito ─────────
-  {
-    const S23 = construir(ARCHIVO)
-    const doc = S23.__doc
-    const llamadas = []
-    S23.estado.cheques.filas = [{ id: 'z2', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 50, estado: 'en_cartera' }]
-    S23.estado.cheques.cobranzas = new Map([['c', { id: 'c', cliente: 'A', estado: 'procesada', fecha: '2026-09-01' }]])
-
-    esperas.push((async () => {
-      // (1) Endosado sin destino: no llama a la base.
-      S23.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
-      S23.abrirModalSalida('z2')
-      S23.estado.salida.tipo = 'endosado'
-      doc.getElementById('cob-salida-destino').value = ''
-      await S23.confirmarSalida()
-      chk('confirmar: endosado sin destino NO llama a la base', llamadas.length === 0)
-      chk('confirmar: y lo dice en el diálogo', doc.getElementById('cob-salida-error').hidden === false &&
-        /a quién/.test(doc.getElementById('cob-salida-error').textContent))
-
-      // (2) La base rechaza: su mensaje llega ENTERO, y el diálogo sigue abierto.
-      const MSG = 'Solo se puede marcar la salida de un cheque de una cobranza procesada.'
-      S23.__setRpc(async () => ({ data: null, error: { message: MSG } }))
-      doc.getElementById('cob-salida-destino').value = 'Molino'
-      await S23.confirmarSalida()
-      chk('confirmar: el error de la base se muestra TAL CUAL', doc.getElementById('cob-salida-error').textContent === MSG,
-        doc.getElementById('cob-salida-error').textContent)
-      chk('confirmar: con error el diálogo NO se cierra', S23.estado.salida !== null && doc.getElementById('cob-modal-salida').hidden === false)
-
-      // (3) Éxito: los parámetros exactos, cierra, avisa y refresca.
-      const antes = S23.__llamadas.refrescar
-      S23.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
-      doc.getElementById('cob-salida-destino').value = '  Molino del Centro  '
-      await S23.confirmarSalida()
-      const ult = llamadas[llamadas.length - 1]
-      chk('confirmar: llama a marcar_salida_cheque con los parámetros exactos',
-        ult && ult[0] === 'marcar_salida_cheque' && JSON.stringify(ult[1]) === JSON.stringify({
-          p_cheque_id: 'z2', p_tipo: 'endosado', p_fecha: S23.hoyArgentina(), p_destino: 'Molino del Centro' }),
-        JSON.stringify(ult))
-      chk('confirmar: al salir bien cierra el diálogo', S23.estado.salida === null && doc.getElementById('cob-modal-salida').hidden === true)
-      chk('confirmar: y recarga la tabla, la cartera y el listado', S23.__llamadas.refrescar === antes + 1)
-    })())
-  }
-
-  // ── Volver a cartera: pide motivo en el diálogo y muestra el error TAL CUAL
-  {
-    const S24 = construir(ARCHIVO)
-    S24.estado.cheques.filas = [{ id: 'z3', cobranza_id: 'c', numero: '12345678', banco_codigo: '007', importe: 50, estado: 'depositado' }]
-    esperas.push((async () => {
-      S24.abrirVolverACartera('z3')
-      chk('volver: abre el diálogo de motivo (no un prompt)', S24.__doc.getElementById('cob-modal-motivo').hidden === false)
-      const MSG = 'Este cheque no salió de cartera (está en_cartera).'
-      S24.__setRpc(async () => ({ data: null, error: { message: MSG } }))
-      const errores = S24.__llamadas.errores
-      await (async () => { const f = S24.__accion(); if (f) await f('se devolvió') })()
-      chk('volver: el error de la base llega TAL CUAL', errores[errores.length - 1] === MSG, errores[errores.length - 1])
-      const llamadas = []
-      S24.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
-      await (async () => { const f = S24.__accion(); if (f) await f('se devolvió') })()
-      chk('volver: llama a volver_cheque_a_cartera con cheque y motivo',
-        llamadas[0] && llamadas[0][0] === 'volver_cheque_a_cartera' &&
-        JSON.stringify(llamadas[0][1]) === JSON.stringify({ p_cheque_id: 'z3', p_motivo: 'se devolvió' }))
-    })())
-  }
 
   // ── El error de la BASE al editar o anular una cobranza con un cheque afuera
   // Tiene que llegar ENTERO a la persona, por los dos caminos.
@@ -927,8 +738,6 @@ if (SOLO !== 'estatico') {
     const regla = (sel) => { const i = css.indexOf('\n    ' + sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
     chk('3.2 css: el total de la fila va en tinta neutra, nunca naranja',
       /color:\s*var\(--color-texto\)/.test(regla('.cob-fila__total')) && !/naranja/.test(regla('.cob-fila__total')))
-    chk('3.2 css: el total de la cartera va en tinta neutra, nunca naranja',
-      /color:\s*var\(--color-texto\)/.test(regla('.cob-cartera__v')) && !/naranja/.test(regla('.cob-cartera__v')))
     chk('3.2 css: franja naranja en lo registrado y bordó en lo anulado',
       /border-left-color:\s*var\(--naranja\)/.test(regla('.cob-fila--registrada')) &&
       /border-left-color:\s*var\(--bordo\)/.test(regla('.cob-fila--anulada')))
@@ -952,27 +761,6 @@ if (SOLO !== 'estatico') {
       bs.filter(b => /cob-segmento__opcion--activo/.test(b)).length === 1 &&
       bs.filter(b => /aria-pressed="true"/.test(b)).length === 1 &&
       /cob-segmento__opcion--activo" aria-pressed="true" data-estado="procesada"/.test(seg))
-    S32.pintarFiltrosCheques()
-    const segCh = S32.__els.get('cob-chips-cheques').innerHTML
-    const bc = opciones(segCh)
-    chk('3.2 segmentado de cheques: tres opciones, "En cartera" activa por defecto',
-      bc.length === 3 && !/cob-chip/.test(segCh) &&
-      /cob-segmento__opcion--activo" aria-pressed="true" data-estado-cheque="en_cartera"/.test(segCh) &&
-      bc.filter(b => /aria-pressed="true"/.test(b)).length === 1)
-  }
-
-  // ── CSS de la tabla: lo que un render no puede mostrar ────────────────────
-  {
-    const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
-    const regla = (sel) => { const i = css.indexOf(sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
-    chk('css: la caja de la tabla scrollea de costado', /overflow-x:\s*auto/.test(regla('.cob-tabla-scroll')))
-    chk('css: la primera columna es sticky y opaca',
-      /th:first-child,\s*\n\s*\.cob-tabla td:first-child \{[^}]*position:\s*sticky[^}]*left:\s*0/.test(css) &&
-      /background:\s*var\(--color-fondo\)/.test(regla('.cob-tabla td')))
-    chk('css: los salidos se atenúan con color, no con opacity (la celda fija se transparentaría)',
-      regla('.cob-tabla__fila--salido td') !== '' && !/opacity/.test(regla('.cob-tabla__fila--salido td')))
-    chk('css: la variante de fila salida va DESPUÉS de la regla base de td',
-      css.indexOf('.cob-tabla td {') !== -1 && css.indexOf('.cob-tabla__fila--salido td') > css.indexOf('.cob-tabla td {'))
   }
 
   // ── pintarEstadoFotos ───────────────────────────────────────────────────
@@ -1041,10 +829,16 @@ if (SOLO !== 'render') {
   const enHtml = r.interpolaciones.filter(i => i.html)
   const aRevisar = enHtml.concat(r.asignaciones.map(a => ({ ...a, html: true, sink: true })))
 
+  // Hojas seguras PROPIAS de este archivo que todavía no están en la lista de
+  // clasificar.js, CADA UNA CON SU MOTIVO (22/09/2026).
+  const SEGURAS_LOCALES = new Map([
+    ['htmlLinkChequeEnCartera(ch)', 'HTML armado por htmlLinkChequeEnCartera(): literal del código + encodeURIComponent(ch.id) entre comillas dobles'],
+  ])
   const malas = []
   for (const x of aRevisar) {
     const c = clasificar(x.expr)
-    if (!c.ok) malas.push(`línea ${x.linea}: ${c.hojasMalas.join(' | ')}`)
+    const hojas = c.hojasMalas.filter(h => !SEGURAS_LOCALES.has(h))
+    if (hojas.length) malas.push(`línea ${x.linea}: ${hojas.join(' | ')}`)
   }
   chk('estático: no queda ninguna interpolación de HTML sin escapar ni justificar',
     malas.length === 0, malas.join('  //  '))
@@ -1062,7 +856,7 @@ if (SOLO !== 'render') {
   // escCob alcanza para el contenido y para un atributo ENTRE COMILLAS. No
   // alcanza para un atributo sin comillas (un espacio ya rompe afuera) ni para
   // un manejador de evento o una URL, donde el contenido es código.
-  const sinComillas = [], enEvento = [], enUrl = []
+  const sinComillas = [], enEvento = [], enUrl = [], urlsPermitidas = []
   for (const x of enHtml) {
     // Último '<' del texto previo: dice si estamos dentro de una etiqueta.
     const ultimaEtiqueta = x.antes.lastIndexOf('<')
@@ -1076,7 +870,18 @@ if (SOLO !== 'render') {
     if (dentroDeAtributo) {
       const nombreAttr = (tramo.match(/([\w-]+)\s*=\s*"[^"]*$/) || [])[1] || ''
       if (/^on/i.test(nombreAttr)) enEvento.push(`${x.linea} (${nombreAttr})`)
-      if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr)) enUrl.push(`${x.linea} (${nombreAttr})`)
+      if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr)) {
+        // LA ÚNICA EXCEPCIÓN (22/09/2026): un link RELATIVO a otra página del
+        // módulo con el esquema fijado por el literal ("cheques.html?cheque=")
+        // y SOLO un encodeURIComponent(...) interpolado como valor. Ahí el
+        // valor no puede cambiar a dónde apunta el link ni cerrar el atributo
+        // (encodeURIComponent codifica la comilla doble). Cualquier otra forma
+        // sigue en rojo.
+        const valorHastaAca = (tramo.match(/[\w-]+\s*=\s*"([^"]*)$/) || [])[1]
+        if (/^href$/i.test(nombreAttr) && /^[a-z-]+\.html\?[a-z_]+=$/.test(valorHastaAca) &&
+            /^encodeURIComponent\([^()]*\)$/.test(x.expr.trim())) urlsPermitidas.push(`${x.linea}: ${valorHastaAca}\${${x.expr.trim()}}`)
+        else enUrl.push(`${x.linea} (${nombreAttr})`)
+      }
     }
   }
   chk('estático: ninguna interpolación cae en un atributo SIN comillas',
@@ -1085,6 +890,8 @@ if (SOLO !== 'render') {
     enEvento.length === 0, enEvento.join(', '))
   chk('estático: ninguna interpolación cae dentro de un href/src (ahí escapar HTML no alcanza)',
     enUrl.length === 0, enUrl.join(', '))
+  chk('estático: el único href interpolado es el "Ver en Cheques", con encodeURIComponent',
+    urlsPermitidas.length === 1 && /cheques\.html\?cheque=\$\{encodeURIComponent\(ch\.id\)\}$/.test(urlsPermitidas[0]), urlsPermitidas.join(' | '))
 }
 
 // ══════════════════════════════════════════════════════════════════════════

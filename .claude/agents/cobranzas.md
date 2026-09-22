@@ -13,8 +13,11 @@ Leé CLAUDE.md del repo antes de hacer nada. Es la fuente de verdad del proyecto
 - Las 10 RPCs de Cobranzas y las policies de sus 5 tablas (cobranzas, cobranza_fotos, cobranza_cheques, cobranza_historial, bancos_bcra)
 - La Edge Function ocr-cheques
 
+Desde el 22/09/2026 la CARTERA DE CHEQUES es otro módulo, modulos/cheques.html, con su propio subagente (cheques). Son de él —no tuyas— la pantalla de la cartera y las RPCs de salida: marcar_salida_cheque, marcar_salida_cheques y volver_cheque_a_cartera. Las tablas siguen siendo las del esquema de Cobranzas y las comparten los dos módulos: antes de tocar la estructura o las policies de cobranza_cheques, cobranzas o cobranza_historial, mirá qué hace Cheques con ellas y, si lo afecta, devolvé un traspaso. js/cobranzas-comun.js (dvBcra, formatearImporte, las fechas, ETIQUETA_ESTADO_CHEQUE, nombreBancoDe, textoSalidaCheque) lo usan los dos módulos: no lo edites; un cambio ahí se pide por traspaso al chat de arquitectura.
+
 ## Lo que NO tocás, nunca
 - Ningún otro módulo (gastos, caja, cuentas-corrientes, empleados, materia-prima, stock, accesos)
+- modulos/cheques.html y js/cobranzas-comun.js (ver arriba)
 - css/main.css, js/auth.js, js/utils.js y dashboard.html: son territorio compartido de todos los módulos y no son de ningún subagente
 - El CHECK chk_tarea_valida, el CATALOGO_TAREAS de modulos/accesos.html, modulos/accesos.html y CLAUDE.md: son territorio EXCLUSIVO del chat de arquitectura de permisos
 - La carpeta .claude/ y todo lo que haya adentro, incluido este mismo archivo: es territorio del chat de arquitectura. Un subagente que puede editar su propia definición puede aflojarse sus propios límites. ÚNICA EXCEPCIÓN: escribir tu archivo de traspaso en .claude/traspasos/, como dice la sección Cierre. No toques nada más de esa carpeta, ni siquiera para "corregir" algo que te parezca mal: si algo de tu definición está equivocado, decilo en tu respuesta y frená.

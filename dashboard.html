@@ -379,8 +379,40 @@
         url: 'modulos/cobranzas.html',
         proximamente: false,
         color: 'naranja'
+      },
+      {
+        // La cartera de cheques (22/09/2026). No tiene fila propia en
+        // empleado_modulos: se ve con el módulo cobranzas habilitado Y alguna
+        // de las dos tareas que dejan ver la cartera. Con solo "cargar" la
+        // persona vería nada más que sus propios cheques, que no es una cartera.
+        clave: 'cheques',
+        nombre: 'Cheques',
+        icono: 'banknote',
+        descripcion: 'Cartera de cheques y su salida',
+        url: 'modulos/cheques.html',
+        proximamente: false,
+        color: 'naranja',
+        requiereModulo: 'cobranzas',
+        requiereTareas: ['cobranzas:ver_todo', 'cobranzas:procesar'],
       }
     ]
+
+    // Si una tarjeta se dibuja para esta persona. Función pura, para
+    // ejecutarla en la suite.
+    //  - soloSuperAdmin / soloAdmin: por rol.
+    //  - el resto: el módulo habilitado en empleado_modulos (o ser admin). Un
+    //    módulo puede pedir el de OTRO (requiereModulo): Cheques cuelga de
+    //    cobranzas, que es el que se otorga en Accesos.
+    //  - requiereTareas: además, alguna de esas tareas (super_admin las tiene
+    //    todas, como en tiene_tarea()).
+    function moduloVisible(modulo, { esAdmin, esSuperAdmin, misModulos, misTareas }) {
+      if (modulo.soloSuperAdmin) return esSuperAdmin
+      if (modulo.soloAdmin) return esAdmin
+      const habilitado = esAdmin || misModulos.includes(modulo.requiereModulo ?? modulo.clave)
+      if (!habilitado) return false
+      if (!modulo.requiereTareas) return true
+      return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))
+    }
 
     const COLORES_MODULO = {
       cyan:      { bg: 'var(--color-acento-suave)', fg: 'var(--color-acento-highlight)' },
@@ -783,11 +815,27 @@
       misModulos = (modulosData || []).map(m => m.modulo)
     }
 
-    const modulosVisibles = MODULOS.filter(modulo => {
-      if (modulo.soloSuperAdmin) return esSuperAdmin
-      if (modulo.soloAdmin) return esAdmin
-      return esAdmin || misModulos.includes(modulo.clave)
-    })
+    // Tareas de los módulos que las piden para mostrarse (hoy solo Cheques).
+    // Un super_admin no pasa por acá: tiene todas (bypass, igual que
+    // tiene_tarea() en la base). Si la consulta falla, esas tarjetas no se
+    // muestran: nunca una tarjeta que después rebota por falta de permiso.
+    let misTareas = new Set()
+    if (!esSuperAdmin && MODULOS.some(m => m.requiereTareas)) {
+      try {
+        const { data: tareasData, error: errTareas } = await supabase
+          .from('empleado_tareas')
+          .select('modulo, tarea')
+          .eq('empleado_id', miEmpleado.id)
+          .eq('habilitado', true)
+        if (errTareas) throw errTareas
+        misTareas = new Set((tareasData || []).map(t => `${t.modulo}:${t.tarea}`))
+      } catch (err) {
+        console.error('No se pudieron leer las tareas para el dashboard:', err)
+      }
+    }
+
+    const modulosVisibles = MODULOS.filter(modulo =>
+      moduloVisible(modulo, { esAdmin, esSuperAdmin, misModulos, misTareas }))
 
     if (!esAdmin && !modulosVisibles.length) {
       document.getElementById('dashboard-titulo').hidden = true
@@ -856,6 +904,9 @@
     // esté en este mapa se ignora (y se avisa por consola), no se adivina.
     const MODULO_DE_PENDIENTE = {
       cobranzas: 'cobranzas',
+      // "Cheques que vencen esta semana" (clave por_vencer): la burbuja va en
+      // la tarjeta de Cheques, que es donde se les da salida.
+      cheques: 'cheques',
       accesos: 'accesos',
       materia_prima: 'materia-prima',
       gastos: 'gastos',

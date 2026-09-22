@@ -245,7 +245,7 @@
     }
     .cob-chip--activo { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
 
-    /* SEGMENTADO de los filtros de estado (cobranzas y cheques). Es un
+    /* SEGMENTADO del filtro de estado del listado. Es un
        tratamiento DISTINTO del chip de estado a propósito: antes filtro y
        estado se veían iguales y no se sabía qué era botón y qué era dato.
        .cob-chip queda solo para el tipo de cheque del formulario. 44px de alto
@@ -886,131 +886,33 @@
       overflow-wrap: anywhere;
     }
 
-    /* ── Pestañas Cobranzas / Cheques ────────────────────────────────────── */
-
-    .cob-pestanas {
-      display: flex;
-      gap: 0.375rem;
-      margin-bottom: 0.875rem;
-      min-width: 0;
-    }
-    .cob-pestana {
-      flex: 1 1 0;
+    /* ── Accesos a la cartera de cheques ─────────────────────────────────── */
+    /* La cartera vive en modulos/cheques.html (22/09/2026). Acá queda el link
+       del listado: navegación, no acción, así que va en el tono oscuro del
+       módulo y no compite con "+ Nueva cobranza". 44px de alto táctil. */
+    .cob-acceso-cheques { display: flex; justify-content: flex-end; margin-bottom: 0.5rem; min-width: 0; }
+    .cob-acceso-cheques[hidden] { display: none; }
+    .cob-link-cheques {
+      display: inline-flex;
+      align-items: center;
       min-height: 44px;
-      min-width: 0;
-      border: 1.5px solid var(--color-borde);
-      border-radius: var(--radio-boton);
-      background: var(--color-fondo);
-      font-family: var(--fuente);
+      padding: 0 0.25rem;
       font-size: 0.9375rem;
-      font-weight: 650;
-      color: var(--color-texto-suave);
-      cursor: pointer;
-    }
-    /* Navegación, no acción: el tono oscuro para no competir con el botón
-       primario de la pantalla. Va DESPUÉS de su base. */
-    .cob-pestana--activa { border-color: var(--naranja-oscuro); background: var(--naranja-oscuro); color: #fff; }
-
-    /* ── Vista de cheques ────────────────────────────────────────────────── */
-
-    .cob-cartera {
-      background: var(--color-fondo);
-      border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-tarjeta);
-      border: 1px solid var(--borde-tarjeta);
-      padding: 0.875rem 1rem;
-      margin-bottom: 0.75rem;
-      min-width: 0;
-    }
-    .cob-cartera__k { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave); }
-    /* Un total: tinta neutra, nunca el color del módulo. */
-    .cob-cartera__v {
-      font-size: 1.375rem;
       font-weight: 700;
-      color: var(--color-texto);
-      font-variant-numeric: tabular-nums;
+      color: var(--naranja-oscuro);
+      text-decoration: none;
+      min-width: 0;
       overflow-wrap: anywhere;
     }
-    .cob-cartera__sub { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+    .cob-link-cheques:hover { text-decoration: underline; }
+    .cob-link-cheques:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 4px; }
+    /* Un link (etiqueta a) con la receta de .cob-btn ("Ver en Cheques"): el
+       botón no declara display, y un link quedaría inline sin los 44px. */
+    a.cob-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; text-align: center; }
 
-    /* LA TABLA SCROLLEA DE COSTADO ADENTRO DE SU CAJA, NUNCA LA PÁGINA. La
-       caja tiene max-width 100% y overflow-x auto; la tabla, un ancho mínimo
-       para que las columnas no se aplasten en 375px. */
-    .cob-tabla-scroll {
-      max-width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      background: var(--color-fondo);
-      border: 1px solid var(--borde-tarjeta);
-      border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-tarjeta);
-      min-width: 0;
-    }
-    /* `separate` y no `collapse`: con bordes colapsados la columna sticky
-       pierde el borde al scrollear en varios navegadores. */
-    .cob-tabla {
-      width: 100%;
-      min-width: 46rem;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 0.875rem;
-    }
-    .cob-tabla th {
-      text-align: left;
-      font-size: 0.6875rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--color-texto-suave);
-      padding: 0.625rem 0.625rem;
-      border-bottom: 1px solid var(--color-borde);
-      white-space: nowrap;
-      background: var(--color-fondo);
-    }
-    .cob-tabla td {
-      padding: 0.625rem 0.625rem;
-      border-bottom: 1px solid var(--borde-tarjeta);
-      color: var(--color-texto);
-      vertical-align: top;
-      background: var(--color-fondo);
-    }
-    .cob-tabla tbody tr { cursor: pointer; }
-    .cob-tabla tbody tr:last-child td { border-bottom: none; }
-    /* La columna del número queda FIJA al scrollear. Fondo OPACO: sin él, lo
-       que pasa por debajo se ve a través. */
-    .cob-tabla th:first-child,
-    .cob-tabla td:first-child {
-      position: sticky;
-      left: 0;
-      z-index: 1;
-      border-right: 1px solid var(--color-borde);
-      font-variant-numeric: tabular-nums;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .cob-tabla__num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .cob-tabla__fecha { white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .cob-tabla__sub { font-size: 0.75rem; color: var(--color-texto-suave); overflow-wrap: anywhere; }
-    .cob-tabla__destino { max-width: 14rem; overflow-wrap: anywhere; }
-    /* Banco y cliente: un ancho mínimo para que un nombre largo no se parta
-       en cinco renglones y haga cada fila altísima. */
-    .cob-tabla__texto { min-width: 11rem; overflow-wrap: anywhere; }
-    /* ATENUADO CON COLOR Y NO CON opacity: una celda sticky con opacity se
-       vuelve transparente y deja ver las columnas que pasan por debajo. Va
-       DESPUÉS de la regla base de td, con la misma especificidad. */
-    .cob-tabla__fila--salido td { color: var(--color-texto-suave); }
-    .cob-tabla__fila--anulado td { color: var(--color-texto-suave); text-decoration: line-through; }
-
-    /* El botón de la salida va DEBAJO DEL NÚMERO, en la columna fija: así
-       está siempre a la vista en el celular, sin tener que scrollear la
-       tabla hasta la última columna para encontrarlo. */
-    .cob-tabla__accion { display: block; margin-top: 0.375rem; }
-
-    /* Diálogo de la salida de un cheque: dos botones grandes. */
+    /* Grilla de dos botones grandes por fila: el diálogo de elegir foto. */
     .cob-salida-tipos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; min-width: 0; }
     .cob-btn--grande { min-height: 64px; font-size: 1.0625rem; }
-    /* El elegido. Va DESPUÉS de .cob-btn y de .cob-btn--grande. */
-    .cob-btn--elegido { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
 
     /* En cartera es el estado NORMAL de un cheque, no algo que reclame acción:
        neutro, y no el naranja suave que ya usa "registrada". */
@@ -1061,6 +963,10 @@
       }
       /* En escritorio no hay a dónde volver: el listado está al lado. */
       .cob-maestro--activo #cob-btn-volver-listado { display: none; }
+      /* SALVO con un link directo que trae volver= (desde Cheques): ahí el
+         botón lleva a OTRA pantalla y se muestra. Va DESPUÉS de la regla de
+         arriba y con más especificidad (una clase más). */
+      .cob-maestro--activo #cob-btn-volver-listado.cob-btn--volver-externo { display: inline-block; margin-bottom: 0.75rem; }
 
       /* Filtros en una sola fila. */
       .cob-maestro--activo .cob-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.625rem; }
@@ -1135,17 +1041,6 @@
       .cob-maestro--activo .cob-fila--anulada .cob-celda--total { color: var(--bordo-oscuro); text-decoration: line-through; }
       .cob-maestro--activo .cob-fila--anulada .cob-celda--fecha,
       .cob-maestro--activo .cob-fila--anulada .cob-celda--quien { color: var(--color-texto-suave); }
-
-      /* LA VISTA CHEQUES EN ESCRITORIO usa el MISMO ancho que el listado en
-         modo maestro (la regla de arriba): con los 860px del celular la
-         planilla quedaba centrada y angosta, el banco en tres renglones y la
-         columna Estado cortada. Se engancha a la vista VISIBLE, así un
-         detalle abierto desde Cheques vuelve al ancho de siempre. */
-      .cob-contenedor:has(#cob-vista-cheques:not([hidden])) { max-width: 1440px; padding-left: 1.25rem; padding-right: 1.25rem; }
-      /* El banco en UNA línea, cortado con puntos suspensivos; el nombre
-         completo va en el title de la celda (escapado, es texto de la base).
-         Solo acá: abajo de 1100px la celda sigue partiéndose como antes. */
-      .cob-tabla__banco { max-width: 16rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     }
     /* Entre 1100 y 1399px las siete columnas no entran al lado del panel de
        468px: el cliente quedaba con cero de ancho (a 1280px de viewport, con
@@ -1158,11 +1053,6 @@
       .cob-maestro--activo .cob-lista-cabecera > :nth-child(6),
       .cob-maestro--activo .cob-fila__tabla > :nth-child(4),
       .cob-maestro--activo .cob-fila__tabla > :nth-child(6) { display: none; }
-      /* La planilla de Cheques: con el banco a 16rem, a 1100px la tabla se
-         pasaba 77px del ancho y aparecía scroll de costado. Acá el banco se
-         achica a 10rem (el min-width de 11rem de .cob-tabla__texto se suelta,
-         si no le gana al max-width). Medido en Chrome a 1100px. */
-      .cob-tabla__banco { min-width: 0; max-width: 10rem; }
     }
   </style>
 </head>
@@ -1186,12 +1076,6 @@
 
     <div class="cob-vacio" id="cob-cargando">Cargando…</div>
 
-    <!-- Pestañas entre las dos vistas de lista. Solo se ven en esas dos. -->
-    <div class="cob-pestanas" id="cob-pestanas" role="tablist" hidden>
-      <button type="button" class="cob-pestana" id="cob-pestana-listado" role="tab">Cobranzas</button>
-      <button type="button" class="cob-pestana" id="cob-pestana-cheques" role="tab">Cheques</button>
-    </div>
-
     <!-- ══ LISTADO + DETALLE ══════════════════════════════════════════
          En celular son dos pantallas separadas. Desde 1100px el script le pone
          .cob-maestro--activo y quedan lado a lado: la tabla a la izquierda y
@@ -1199,6 +1083,12 @@
     <div class="cob-maestro" id="cob-maestro">
     <!-- ══ LISTADO ══════════════════════════════════════════════════════ -->
     <div id="cob-vista-listado" hidden>
+
+      <!-- La cartera de cheques vive en su propio módulo (cheques.html). El
+           link se ve solo con ver_todo o procesar: pintarAccesoCheques(). -->
+      <div class="cob-acceso-cheques" id="cob-acceso-cheques" hidden>
+        <a class="cob-link-cheques" id="cob-link-cheques" href="cheques.html">Cartera de cheques &rarr;</a>
+      </div>
 
       <!-- Banner de lo que está solo en el celular. Se dibuja SOLO si hay algo
            pendiente: un banner en cero entrena a ignorarlo. -->
@@ -1251,41 +1141,6 @@
       <div id="cob-detalle-cuerpo"></div>
     </div>
 
-    </div>
-
-    <!-- ══ CHEQUES ══════════════════════════════════════════════════════ -->
-    <!-- Una fila por cheque. Los filtros por número y por banco viven ACÁ y
-         no en la lista de cobranzas: acá se filtra cobranza_cheques directo. -->
-    <div id="cob-vista-cheques" hidden>
-      <div class="cob-cartera" id="cob-cartera"></div>
-
-      <div class="cob-filtros">
-        <div class="cob-segmento" id="cob-chips-cheques" role="group" aria-label="Filtrar cheques por estado" style="margin-bottom:.5rem"></div>
-        <div class="cob-filtros__fila">
-          <div class="cob-campo" style="margin-bottom:0">
-            <label for="cob-filtro-cheque">N&deg; de cheque</label>
-            <input type="search" id="cob-filtro-cheque" inputmode="numeric"
-                   placeholder="66259862" autocomplete="off" maxlength="20">
-          </div>
-          <!-- Las opciones salen de TODOS los cheques que la persona puede
-               ver, sin ningún otro filtro puesto: ver cargarResumenCheques(). -->
-          <div class="cob-campo" id="cob-campo-banco" style="margin-bottom:0" hidden>
-            <label for="cob-filtro-banco">Banco</label>
-            <select id="cob-filtro-banco"></select>
-          </div>
-        </div>
-        <!-- pre-line: las líneas del aviso se componen en JS y van por
-             textContent, que sin esto saldrían pegadas en un solo renglón. -->
-        <div class="cob-aviso" id="cob-aviso-cheque"
-             style="white-space:pre-line" hidden></div>
-        <button type="button" class="cob-btn cob-btn--chico" id="cob-btn-limpiar-cheques" hidden>Limpiar filtros</button>
-      </div>
-
-      <div class="cob-aviso" id="cob-cheques-aviso" style="white-space:pre-line" hidden></div>
-      <div class="cob-tabla-scroll" id="cob-tabla-caja" hidden>
-        <table class="cob-tabla" id="cob-tabla-cheques"></table>
-      </div>
-      <div class="cob-vacio" id="cob-cheques-vacio" hidden></div>
     </div>
 
     <!-- ══ NUEVA / EDITAR ═══════════════════════════════════════════════ -->
@@ -1402,37 +1257,6 @@
     </div>
   </div>
 
-  <!-- ══ DIÁLOGO DE SALIDA DE UN CHEQUE ═════════════════════════════════ -->
-  <!-- Un diálogo propio y no prompt()/confirm(): no se pueden estilar y
-       algunos webviews los bloquean. -->
-  <div class="cob-modal" id="cob-modal-salida" hidden>
-    <div class="cob-modal__caja">
-      <div class="cob-modal__titulo">Salida del cheque</div>
-      <div class="cob-campo__ayuda" id="cob-salida-cheque" style="margin:-.25rem 0 .875rem"></div>
-      <div class="cob-campo">
-        <label>¿Qué pasó con el cheque?</label>
-        <div class="cob-salida-tipos">
-          <button type="button" class="cob-btn cob-btn--grande" data-salida-tipo="depositado">Depositado</button>
-          <button type="button" class="cob-btn cob-btn--grande" data-salida-tipo="endosado">Endosado</button>
-        </div>
-      </div>
-      <div class="cob-campo">
-        <label for="cob-salida-fecha">Fecha</label>
-        <input type="date" id="cob-salida-fecha">
-      </div>
-      <div class="cob-campo" id="cob-salida-campo-destino" hidden>
-        <label for="cob-salida-destino" id="cob-salida-label-destino">¿A quién se lo pasaste?</label>
-        <input type="text" id="cob-salida-destino" maxlength="150" autocomplete="off">
-        <div class="cob-campo__ayuda" id="cob-salida-ayuda-destino"></div>
-      </div>
-      <div class="cob-campo__error" id="cob-salida-error" hidden></div>
-      <div class="cob-acciones">
-        <button type="button" class="cob-btn" id="cob-salida-cancelar">Cancelar</button>
-        <button type="button" class="cob-btn cob-btn--primario" id="cob-salida-confirmar">Confirmar</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ══ DIÁLOGOS QUE RESPONDEN UNA PREGUNTA ════════════════════════════ -->
   <!-- Reemplazan a window.confirm y window.prompt: no se pueden estilar y
        algunos webviews los bloquean. Foco atrapado adentro, Escape = cancelar,
@@ -1462,7 +1286,13 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito, leerNumeroAr, formatearNumeroAr, enlazarCampoNumero, ponerNumero } from '../js/utils.js'
+    import { mostrarError, mostrarExito, leerNumeroAr, enlazarCampoNumero, ponerNumero } from '../js/utils.js'
+    // Los helpers que Cobranzas comparte con Cheques (modulos/cheques.html):
+    // una sola copia, en js/cobranzas-comun.js (22/09/2026).
+    import {
+      dvBcra, formatearImporte, ZONA_AR, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
+      ETIQUETA_ESTADO_CHEQUE, nombreBancoDe, textoSalidaCheque,
+    } from '../js/cobranzas-comun.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1493,29 +1323,18 @@
       // nunca se muestra un número que no vino de la base.
       resumen: { cargando: true, etiqueta: 'Total del mes' },
 
-      // Vista de cheques. Los filtros arrancan en "en cartera".
-      cheques: {
-        filtros: { estado: 'en_cartera', numero: '', banco: '' },
-        filas: [],
-        cobranzas: new Map(),   // id → { id, cliente, estado, fecha }
-        cartera: null,          // { cantidad, total } — null = no se pudo saber
-        tope: false,
-        topeResumen: false,
-        error: null,
-      },
-      // Los códigos de banco que de verdad tienen algún cheque a la vista.
-      bancosDeCheques: [],
+      // La cartera de cheques vive en modulos/cheques.html (22/09/2026).
 
       detalle: null,          // { cabecera, cheques, fotos, historial }
-      // A qué vista vuelve el detalle: 'listado' o 'cheques'.
-      detalleOrigen: 'listado',
+      // La cobranza que se abrió por un link directo
+      // (cobranzas.html?cobranza=<id>&volver=<url>) y a dónde vuelve:
+      // { cobranzaId, volver: { url, texto } | null } o null.
+      linkDirecto: null,
       // La vista que está en pantalla (la última que pidió mostrarVistaCob).
       vista: null,
       // ESCRITORIO: la cobranza abierta en el panel derecho. Solo se usa
       // desde 1100px; en celular la navegación entre pantallas cumple ese rol.
       cobranzaSeleccionadaId: null,
-      // El diálogo de salida abierto: { cheque, cobranza, tipo } o null.
-      salida: null,
       // Borrador del formulario. Vive también en IndexedDB: es lo que sobrevive
       // a que el navegador cierre la pestaña en medio de un reparto.
       form: null,
@@ -1545,18 +1364,11 @@
         .replace(/'/g, '&#39;')
     }
 
-    // Dígito verificador del código de ruta — BCRA, ponderador 9713. MISMA
-    // fórmula que public.dv_bcra() en la base y que dvBcra() en la Edge
-    // Function ocr-cheques: si se cambia una, se cambian las tres.
-    // Casos de la norma: '0110381425' → 7, '0111381425' → 0.
-    function dvBcra(digitos) {
-      if (!/^[0-9]+$/.test(String(digitos ?? ''))) return null
-      const pesos = [3, 1, 7, 9]
-      let suma = 0
-      const inv = String(digitos).split('').reverse()
-      for (let i = 0; i < inv.length; i++) suma += Number(inv[i]) * pesos[i % 4]
-      return (10 - (suma % 10)) % 10
-    }
+    // dvBcra() —el dígito verificador BCRA, ponderador 9713— vive en
+    // js/cobranzas-comun.js desde el 22/09/2026, igual que formatearImporte,
+    // las fechas, ETIQUETA_ESTADO_CHEQUE, nombreBancoDe y textoSalidaCheque.
+    // La MISMA fórmula está en public.dv_bcra() y en la Edge Function
+    // ocr-cheques: si se cambia una, se cambian las tres.
 
     // CUIT: módulo 11 con pesos 5,4,3,2,7,6,5,4,3,2. Informativo: un CUIT que
     // no cierra se avisa pero no bloquea, porque el dato viene impreso en el
@@ -1583,18 +1395,8 @@
     // ("387300.5", que es como quedaban en el borrador los importes del OCR y
     // de la base), y los espacios internos y los negativos se rechazan.
 
-    // El número canónico vive como valor JS; esto es SOLO para mostrar. Nunca
-    // se re-parsea un texto ya formateado.
-    // Un importe AUSENTE (null, undefined, '') dice "—" y nunca "$ 0,00":
-    // Number(null) es 0 y es finito, así que la versión anterior convertía "no
-    // hay dato" en una cifra plausible en una pantalla de plata. El "$" va con
-    // un espacio que no se corta (como lo ponía toLocaleString), así el importe
-    // no se parte en dos renglones.
-    function formatearImporte(n) {
-      const texto = formatearNumeroAr(n, { decimales: 2 })
-      if (texto === '—') return '—'
-      return texto.startsWith('-') ? '-$\u00a0' + texto.slice(1) : '$\u00a0' + texto
-    }
+    // formatearImporte() (solo para MOSTRAR; un importe ausente dice "—" y
+    // nunca "$ 0,00") vive en js/cobranzas-comun.js.
 
     // Escribe un importe en un campo enlazado. El valor puede ser un número
     // (OCR, base) o el texto que quedó en un borrador del celular ("12.500,50",
@@ -1634,35 +1436,8 @@
     // horas locales, un mismo día da resultados distintos según el huso y la
     // regla de los 360 días se corre un día.
 
-    const ZONA_AR = 'America/Argentina/Buenos_Aires'
-
-    // El "hoy" que vale es el de Argentina, no el del reloj del celular: un
-    // teléfono en otro huso mostraría una fecha que el servidor rechaza.
-    function hoyArgentina() {
-      const f = new Intl.DateTimeFormat('en-CA', {
-        timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit',
-      })
-      return f.format(new Date())
-    }
-
-    function esFechaIso(v) {
-      if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false
-      const d = new Date(v + 'T00:00:00Z')
-      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v
-    }
-
-    function diasEntre(desdeIso, hastaIso) {
-      if (!esFechaIso(desdeIso) || !esFechaIso(hastaIso)) return null
-      return Math.round((Date.parse(hastaIso + 'T00:00:00Z') - Date.parse(desdeIso + 'T00:00:00Z')) / 86400000)
-    }
-
-    // dd/mm/aaaa sin pasar por Date local, que con un 'YYYY-MM-DD' restaría el
-    // huso y mostraría el día anterior.
-    function formatearFechaCob(iso) {
-      if (!esFechaIso(iso)) return '—'
-      const [a, m, d] = iso.split('-')
-      return `${d}/${m}/${a}`
-    }
+    // ZONA_AR, hoyArgentina(), esFechaIso(), diasEntre() y formatearFechaCob()
+    // viven en js/cobranzas-comun.js (22/09/2026).
 
     // Un timestamptz del servidor, leído en hora de Argentina.
     function momentoArgentina(iso, { conHora = true } = {}) {
@@ -1723,12 +1498,10 @@
       return e
     }
 
+    // La regla (un código fuera del catálogo se DICE, con el número a la
+    // vista) vive en nombreBancoDe() de js/cobranzas-comun.js.
     function nombreBanco(codigo) {
-      if (!codigo) return 'Banco sin identificar'
-      const b = estado.bancos.get(String(codigo))
-      // Un código que no está en el catálogo se DICE, con el número a la vista:
-      // inventarle un nombre o dejarlo vacío esconde que el dato puede estar mal.
-      return b ? b : `Banco ${codigo} (no está en el catálogo)`
+      return nombreBancoDe(estado.bancos, codigo)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1899,7 +1672,7 @@
 
     async function cargarCobranzas({ reiniciar = false } = {}) {
       // Un listado que arranca de cero es un filtro que cambió o una escritura
-      // que terminó (guardar, asentar, reabrir, anular, una salida): las
+      // que terminó (guardar, asentar, reabrir, anular): las
       // cifras de cabecera se recalculan con los filtros de AHORA. "Cargar
       // más" no las toca: los filtros son los mismos.
       if (reiniciar) {
@@ -2104,12 +1877,15 @@
     // ESCRITORIO: si los filtros dejan afuera la cobranza abierta en el panel,
     // el panel se vacía con un texto neutro — mostrar una cobranza que el
     // listado de al lado ya no tiene confunde más que no mostrar nada. Solo
-    // en modo maestro: un detalle abierto desde la vista Cheques ocupa toda
-    // la pantalla y no depende del listado.
+    // en modo maestro.
+    // LA EXCEPCIÓN es la cobranza que abrió un link directo: se pidió por su
+    // id, así que no tiene por qué estar en la primera página del listado (ni
+    // pasar sus filtros), y soltarla vaciaría el panel apenas llega la lista.
     function soltarSeleccionFueraDelListado() {
       const id = estado.cobranzaSeleccionadaId
       if (!id || !enModoMaestro()) return
       if (estado.cobranzas.some(c => c.id === id)) return
+      if (estado.linkDirecto?.cobranzaId === id) return
       estado.cobranzaSeleccionadaId = null
       estado.detalle = null
       pintarPanelVacio('La cobranza que estaba abierta no está en el listado con estos filtros.')
@@ -2183,524 +1959,141 @@
     }
 
     // Recarga lo que queda desactualizado DESPUÉS DE UNA ESCRITURA —guardar,
-    // anular, reabrir, marcar la salida de un cheque—: el listado de
-    // cobranzas, la tabla de cheques y el resumen de la cartera, que es de
-    // donde sale también la lista de bancos. Los listeners de los filtros NO
-    // pasan por acá: no cambian datos, solo la vista.
+    // anular, reabrir, asentar—: el listado de cobranzas (que recalcula
+    // también las cifras de cabecera). Los listeners de los filtros NO pasan
+    // por acá: no cambian datos, solo la vista.
+    // La cartera de cheques ya no vive en este archivo (22/09/2026): está en
+    // modulos/cheques.html, que carga lo suyo al abrirse.
     async function refrescarListado() {
-      await Promise.all([cargarCobranzas({ reiniciar: true }), cargarCheques(), cargarResumenCheques()])
+      await cargarCobranzas({ reiniciar: true })
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // CHEQUES — una fila por cheque
+    // CARTERA DE CHEQUES — vive en modulos/cheques.html (22/09/2026)
     //
-    // Acá viven los filtros por número y por banco. Se filtra cobranza_cheques
-    // DIRECTO, así que no hace falta la consulta en dos pasos con .in() que
-    // tenían esos filtros cuando colgaban de la lista de cobranzas.
+    // Acá quedan solo los ACCESOS: el link "Cartera de cheques →" del listado,
+    // el "Ver en Cheques" de cada cheque del detalle, y el link directo que
+    // usa Cheques para abrir una cobranza (cobranzas.html?cobranza=<id>
+    // &volver=<url>). Dar salida a un cheque y volverlo a cartera se hace
+    // SOLO en Cheques: este archivo ya no tiene ningún botón para eso.
     // ═══════════════════════════════════════════════════════════════════════
 
-    // PostgREST devuelve 1000 filas por defecto. Si una consulta llega a eso,
-    // la lista está cortada y SE DICE: cortar en silencio es el peor final.
-    const TOPE_FILAS_POSTGREST = 1000
+    // Quién ve los accesos a la cartera: las mismas dos tareas que abren
+    // cheques.html. Sin ninguna, el link llevaría a una pantalla vacía.
+    const puedeVerCartera = () => puedeVerTodo() || puedeProcesar()
 
-    const FILTROS_CHEQUES_DEFECTO = { estado: 'en_cartera', numero: '', banco: '' }
-
-    const ESTADOS_FILTRO_CHEQUES = [
-      { id: 'en_cartera', nombre: 'En cartera' },
-      { id: 'salidos', nombre: 'Salidos' },
-      // "Todos" es el ÚNICO que muestra los anulados.
-      { id: 'todos', nombre: 'Todos' },
-    ]
-
-    const ETIQUETA_ESTADO_CHEQUE = {
-      en_cartera: 'En cartera', depositado: 'Depositado', endosado: 'Endosado', anulado: 'Anulado',
+    function pintarAccesoCheques() {
+      document.getElementById('cob-acceso-cheques').hidden = !puedeVerCartera()
     }
 
-    // Qué hacer con lo que se escribió en el filtro de número de cheque:
-    //
-    //   sin dígitos   -> NO se muestra ningún cheque, y se avisa
-    //   menos de 8    -> búsqueda PARCIAL
-    //   exactamente 8 -> el número, búsqueda EXACTA
-    //   exactamente 9 -> número + dígito de control: se usan los PRIMEROS 8
-    //   más de 9      -> NO se adivina: se avisa y NO se filtra por número
-    //
-    // El caso de más de 9 no filtra en vez de recortar: cortar "los primeros
-    // 8" de un número que la persona escribió mal devolvería resultados que
-    // parecen buenos y no lo son.
-    function filtroNumeroCheque(texto) {
-      // PRIMERO se extraen los dígitos y RECIÉN DESPUÉS se arma el patrón del
-      // like. En SQL el % y el _ son comodines: un '%' tipeado que llegara
-      // crudo al patrón devolvería TODOS los cheques sin ningún error —el
-      // filtro se vería andando—. Por lo mismo se cuentan los DÍGITOS y no los
-      // caracteres: "285-386" son 6 dígitos, no 7.
-      const crudo = String(texto ?? '').trim()
-      const d = crudo.replace(/\D/g, '')
-      if (!crudo) return { modo: 'ninguno', digitos: '', aviso: '' }
-      // Escribió algo pero ningún dígito ("%", "abc"): mostrar todos los
-      // cheques sería contestar otra pregunta. Cero resultados y un aviso.
-      if (!d) {
-        return {
-          modo: 'sin_digitos', digitos: '',
-          aviso: 'El número de cheque se busca por sus dígitos y lo que escribiste no tiene ninguno. No se muestra ningún cheque: borralo o escribí el número.',
-        }
-      }
-      // CONTIENE, no empieza-con: el repartidor se acuerda de los ÚLTIMOS
-      // dígitos del cheque, no de los primeros.
-      if (d.length < 8) return { modo: 'parcial', digitos: d, aviso: '' }
-      if (d.length === 8) return { modo: 'exacto', digitos: d, aviso: '' }
-      if (d.length === 9) {
-        const cuerpo = d.slice(0, 8)
-        // dvBcra() es LA del archivo, no una copia local: la fórmula ya vive
-        // en tres lugares (public.dv_bcra, la Edge Function ocr-cheques y acá)
-        // y una cuarta sería una más que mantener sincronizada.
-        const cierra = dvBcra(cuerpo) === Number(d[8])
-        return {
-          modo: 'exacto', digitos: cuerpo,
-          aviso: cierra
-            ? `Buscamos ${cuerpo}: el último dígito es el de control del banco y no es parte del número.`
-            : `Buscamos ${cuerpo} igual, pero el último dígito no coincide con el de control: revisá el número.`,
-        }
-      }
+    // El link de un cheque a su fila en la cartera. El id va con
+    // encodeURIComponent y el atributo que lo recibe va entre comillas DOBLES:
+    // encodeURIComponent NO escapa la comilla simple, así que cambiar el
+    // delimitador —algo que parece cosmético— tiraría la defensa.
+    function htmlLinkChequeEnCartera(ch) {
+      if (!puedeVerCartera() || !ch?.id) return ''
+      return `<a class="cob-btn cob-btn--chico cob-btn--ancho cob-link-cheque" href="cheques.html?cheque=${encodeURIComponent(ch.id)}">Ver en Cheques</a>`
+    }
+
+    // ── Link directo: cobranzas.html?cobranza=<uuid>&volver=<url> ─────────
+
+    const UUID_COB = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    // A dónde puede llevar "‹ Volver". SOLO A UNA URL DE ESTA MISMA APP (mismo
+    // origen, http/https): el valor viene de la URL y cualquiera puede armar
+    // un link, así que sin este control volver=javascript:… ejecutaría código
+    // en la sesión de quien toque "Volver". Es el MISMO criterio que
+    // volverOrigenSiCorresponde() de gastos.html (8f73654): decodificar una
+    // vez más, resolver contra la URL actual (así una relativa como
+    // 'cheques.html' anda) y exigir protocolo y origen. Lo que no pasa se
+    // IGNORA (null): el detalle vuelve al listado como si no hubiera volver=.
+    function destinoVolver(crudo, aqui) {
+      if (!crudo) return null
+      let destino, origen
+      try {
+        destino = new URL(decodeURIComponent(crudo), aqui)
+        origen = new URL(aqui).origin
+      } catch { return null }
+      if (!/^https?:$/.test(destino.protocol) || destino.origin !== origen) return null
+      return destino.href
+    }
+
+    // El texto del botón según a dónde lleva. Solo se nombra la cartera
+    // cuando el destino ES cheques.html; cualquier otra página de la app es un
+    // "‹ Volver" genérico, que no promete un lugar que no conoce.
+    function textoVolver(url) {
+      let ruta = ''
+      try { ruta = new URL(url).pathname } catch { return '‹ Volver' }
+      return /(^|\/)cheques\.html$/.test(ruta) ? '‹ Volver a los cheques' : '‹ Volver'
+    }
+
+    // Lee el link directo. null = no hay ?cobranza. Con ?cobranza, `id` es el
+    // uuid o null si no es uno (se avisa, no se consulta nada), y `volver` el
+    // destino ya validado o null.
+    function leerLinkDirecto(search, aqui) {
+      const p = new URLSearchParams(search)
+      if (!p.has('cobranza')) return null
+      const crudo = (p.get('cobranza') ?? '').trim()
+      const url = destinoVolver(p.get('volver'), aqui)
       return {
-        modo: 'demasiado', digitos: '',
-        aviso: `Un número de cheque tiene 8 dígitos (9 con el de control) y escribiste ${d.length}. No estamos filtrando por número: revisalo.`,
+        id: UUID_COB.test(crudo) ? crudo.toLowerCase() : null,
+        volver: url ? { url, texto: textoVolver(url) } : null,
       }
     }
 
-    // Aplica los filtros a una consulta sobre cobranza_cheques. Separada de la
-    // carga para poder EJECUTARLA en la suite contra un constructor que anota
-    // qué se le pidió. Devuelve sinResultados cuando no hay que consultar.
-    function aplicarFiltrosCheques(q, f) {
-      if (f.estado === 'en_cartera') q = q.eq('estado', 'en_cartera')
-      else if (f.estado === 'salidos') q = q.in('estado', ['depositado', 'endosado'])
-      // 'todos': sin filtro de estado, que es lo que trae también los anulados.
-      if (f.banco) q = q.eq('banco_codigo', f.banco)
-      const fn = filtroNumeroCheque(f.numero)
-      if (fn.modo === 'sin_digitos') return { q, sinResultados: true }
-      // El patrón se arma con fn.digitos —ya sin comodines— y NUNCA con el
-      // texto crudo del input.
-      if (fn.modo === 'exacto') q = q.eq('numero', fn.digitos)
-      else if (fn.modo === 'parcial') q = q.like('numero', `%${fn.digitos}%`)
-      return { q, sinResultados: false }
+    // La URL sin ?cobranza ni ?volver, para que recargar no vuelva a abrir el
+    // detalle. El resto de la query y el hash quedan como estaban.
+    function urlSinLinkDirecto(href) {
+      const u = new URL(href)
+      u.searchParams.delete('cobranza')
+      u.searchParams.delete('volver')
+      return u.pathname + u.search + u.hash
     }
 
-    function hayFiltrosCheques() {
-      const f = estado.cheques.filtros
-      return f.estado !== FILTROS_CHEQUES_DEFECTO.estado || String(f.numero ?? '').trim() !== '' || !!f.banco
-    }
-
-    // La fecha en que el cheque se puede cobrar: la de pago en un diferido, la
-    // de emisión en uno común (un común se cobra desde que se emite).
-    function fechaDeCobroCheque(ch) {
-      return ch.tipo === 'diferido' && esFechaIso(ch.fecha_pago) ? ch.fecha_pago : ch.fecha_emision
-    }
-
-    // Lo que se cobra primero, arriba. Sin fecha, al final. A igual fecha, por
-    // número, para que el orden no cambie entre una carga y otra.
-    function ordenarCheques(filas) {
-      const clave = (ch) => esFechaIso(fechaDeCobroCheque(ch)) ? fechaDeCobroCheque(ch) : '9999-99-99'
-      return [...filas].sort((a, b) => {
-        const fa = clave(a), fb = clave(b)
-        if (fa !== fb) return fa < fb ? -1 : 1
-        return String(a.numero ?? '').localeCompare(String(b.numero ?? ''))
-      })
-    }
-
-    // Cuánto hay en cartera. Se suma en CENTAVOS: sumar decimales de a uno
-    // arrastra error de punto flotante en una pantalla de plata.
-    function resumenCartera(filas) {
-      let centavos = 0, cantidad = 0
-      for (const ch of filas) {
-        if (ch.estado !== 'en_cartera') continue
-        cantidad++
-        centavos += Math.round(Number(ch.importe) * 100)
-      }
-      return { cantidad, total: centavos / 100 }
-    }
-
-    // UNA SOLA CONSULTA, SIN NINGÚN FILTRO, arma dos cosas: el total en
-    // cartera y la lista del selector de banco.
-    //
-    // LA LISTA DE BANCOS SALE DE TODOS LOS CHEQUES QUE LA PERSONA PUEDE VER, y
-    // esa es la decisión delicada del filtro. Si se derivara de los cheques que
-    // quedaron después de filtrar por estado o por número, poner un filtro
-    // BORRARÍA bancos del selector: el filtro "sigue andando" con opciones de
-    // menos y nada lo avisa. Mismo caso que el selector de repartidor.
-    //
-    // POR ESO HAY UNA SOLA FUNCIÓN que arma la lista, y la llaman los dos
-    // lados: la carga inicial y refrescarListado() después de guardar, anular
-    // o marcar una salida. Dos caminos podrían divergir.
-    //
-    // CONSECUENCIA DEL RLS, aceptada a propósito: cobranza_cheques se lee por
-    // un exists sobre cobranzas, así que alguien con solo `cargar` ve nada más
-    // que sus propios cheques: su lista de bancos y su total son los suyos.
-    // NO se completa leyendo bancos_bcra: ofrecería 59 bancos sin un solo
-    // cheque detrás.
-    async function cargarResumenCheques() {
+    // Abre la cobranza del link directo. La barra se limpia ANTES de abrir.
+    // Si no es un uuid, se dice y se queda en el listado. Si no existe o el
+    // RLS no deja verla, abrirDetalle lo dice en el detalle (con las dos
+    // posibilidades: desde acá no se pueden distinguir).
+    function abrirLinkDirecto(link) {
       try {
-        const { data, error } = await supabase
-          .from('cobranza_cheques').select('banco_codigo, estado, importe')
-        if (error) throw error
-        const filas = data ?? []
-        estado.cheques.cartera = resumenCartera(filas)
-        estado.cheques.topeResumen = filas.length >= TOPE_FILAS_POSTGREST
-        const codigos = [...new Set(filas.map(x => String(x.banco_codigo ?? '')).filter(Boolean))]
-        estado.bancosDeCheques = codigos.sort((a, b) => nombreBanco(a).localeCompare(nombreBanco(b), 'es'))
+        history.replaceState(history.state, '', urlSinLinkDirecto(location.href))
       } catch (err) {
-        console.error('No se pudo calcular la cartera de cheques:', err)
-        // null y NO cero: un total que no se pudo calcular no es "$ 0,00".
-        estado.cheques.cartera = null
+        console.error('No se pudo limpiar la barra de direcciones:', err)
       }
-      pintarSelectorBancos()
-      pintarCartera()
-    }
-
-    function pintarSelectorBancos() {
-      const sel = document.getElementById('cob-filtro-banco')
-      const elegido = estado.cheques.filtros.banco
-      const codigos = [...estado.bancosDeCheques]
-      // Si el banco elegido ya no tiene cheques a la vista, se deja como
-      // opción igual: si no, el selector diría "Todos" con el filtro puesto.
-      if (elegido && !codigos.includes(elegido)) codigos.push(elegido)
-      sel.innerHTML = '<option value="">Todos</option>' +
-        codigos.map(c => `<option value="${escCob(c)}">${escCob(nombreBanco(c))}</option>`).join('')
-      sel.value = elegido || ''
-      // Sin ningún cheque a la vista, un selector vacío es ruido.
-      document.getElementById('cob-campo-banco').hidden = codigos.length === 0
-    }
-
-    function pintarCartera() {
-      document.getElementById('cob-cartera').innerHTML =
-        htmlCartera(estado.cheques.cartera, hayFiltrosCheques(), estado.cheques.topeResumen)
-    }
-
-    // Función pura, para ejecutarla en la suite.
-    function htmlCartera(cartera, conFiltros, tope) {
-      if (!cartera) {
-        return '<div class="cob-cartera__sub">No se pudo calcular el total en cartera. Revisá la señal.</div>'
-      }
-      const cantidadCartera = cartera.cantidad
-      const notas = []
-      // El total NO sigue a los filtros: responde "cuánto tengo en cartera".
-      // Con un filtro puesto se dice, o se leería como el total del filtro.
-      if (conFiltros) notas.push('Es el total de toda la cartera, no de los filtros de abajo.')
-      if (tope) notas.push(`Se sumaron los primeros ${TOPE_FILAS_POSTGREST} cheques: el total puede estar incompleto.`)
-      return `
-        <div class="cob-cartera__k">En cartera</div>
-        <div class="cob-cartera__v">${escCob(formatearImporte(cartera.total))}</div>
-        <div class="cob-cartera__sub">${cantidadCartera} ${cantidadCartera === 1 ? 'cheque' : 'cheques'}</div>
-        ${notas.map(t => `<div class="cob-cartera__sub">${escCob(t)}</div>`).join('')}`
-    }
-
-    // Los chips de estado, el aviso del número y el botón de limpiar.
-    function pintarFiltrosCheques() {
-      const f = estado.cheques.filtros
-      const cont = document.getElementById('cob-chips-cheques')
-      cont.innerHTML = ESTADOS_FILTRO_CHEQUES.map(e => `
-        <button type="button" class="cob-segmento__opcion ${f.estado === e.id ? 'cob-segmento__opcion--activo' : ''}" aria-pressed="${f.estado === e.id ? 'true' : 'false'}" data-estado-cheque="${escCob(e.id)}">${escCob(e.nombre)}</button>
-      `).join('')
-      cont.querySelectorAll('[data-estado-cheque]').forEach(b => {
-        b.addEventListener('click', () => {
-          estado.cheques.filtros.estado = b.dataset.estadoCheque
-          cargarCheques()
-        })
-      })
-      // El aviso va por textContent: es texto, no HTML.
-      const caja = document.getElementById('cob-aviso-cheque')
-      const aviso = filtroNumeroCheque(f.numero).aviso
-      caja.textContent = aviso
-      caja.hidden = !aviso
-      // Solo con algún filtro distinto del de arranque: un botón que no tiene
-      // nada que limpiar es ruido.
-      document.getElementById('cob-btn-limpiar-cheques').hidden = !hayFiltrosCheques()
-      pintarCartera()
-    }
-
-    // Limpia TODOS los filtros de la vista: estado, número y banco, en el
-    // estado Y en los campos. Si quedara uno en el campo y no en el estado (o
-    // al revés), la pantalla diría una cosa y la consulta haría otra.
-    function limpiarFiltrosCheques() {
-      estado.cheques.filtros = { ...FILTROS_CHEQUES_DEFECTO }
-      document.getElementById('cob-filtro-cheque').value = ''
-      document.getElementById('cob-filtro-banco').value = ''
-      cargarCheques()
-    }
-
-    // Contador de turno: si los filtros cambian mientras una consulta está en
-    // vuelo, la respuesta vieja NO pisa a la nueva.
-    let turnoCheques = 0
-
-    async function cargarCheques() {
-      const turno = ++turnoCheques
-      const c = estado.cheques
-      pintarFiltrosCheques()
-      const { q, sinResultados } = aplicarFiltrosCheques(
-        supabase.from('cobranza_cheques').select(
-          'id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino'),
-        c.filtros)
-      if (sinResultados) {
-        c.filas = []; c.error = null; c.tope = false
-        renderizarCheques()
+      if (!link.id) {
+        mostrarError('El link no apunta a una cobranza válida.')
         return
       }
-      try {
-        // El cliente de cada cheque sale de OTRA consulta y no de un embed:
-        // el módulo no usa embeds entre estas tablas. Se traen todas las
-        // cobranzas visibles y no un .in() con los ids de los cheques, que es
-        // justo lo que tenía tope por el largo de la URL.
-        const [ch, cob] = await Promise.all([
-          q,
-          supabase.from('cobranzas').select('id, cliente, estado, fecha'),
-        ])
-        if (turno !== turnoCheques) return
-        if (ch.error) throw ch.error
-        if (cob.error) throw cob.error
-        const filas = ch.data ?? []
-        const cobs = cob.data ?? []
-        c.filas = ordenarCheques(filas)
-        c.cobranzas = new Map(cobs.map(x => [x.id, x]))
-        c.tope = filas.length >= TOPE_FILAS_POSTGREST || cobs.length >= TOPE_FILAS_POSTGREST
-        c.error = null
-      } catch (err) {
-        if (turno !== turnoCheques) return
-        console.error('No se pudieron cargar los cheques:', err)
-        // Se vacía la tabla: dejar las filas de OTRO filtro bajo el filtro
-        // nuevo sería mostrar algo que no es lo que se pidió.
-        c.filas = []
-        c.error = 'No se pudieron cargar los cheques. Revisá la señal.'
-        c.tope = false
-      }
-      renderizarCheques()
+      estado.linkDirecto = { cobranzaId: link.id, volver: link.volver }
+      abrirDetalle(link.id)
     }
 
-    function renderizarCheques() {
-      const c = estado.cheques
-      const aviso = document.getElementById('cob-cheques-aviso')
-      const lineas = []
-      if (c.error) lineas.push(c.error)
-      if (c.tope) lineas.push(`Hay más de ${TOPE_FILAS_POSTGREST} filas y se muestran las primeras: afiná la búsqueda.`)
-      aviso.textContent = lineas.join('\n')
-      aviso.hidden = lineas.length === 0
-
-      const caja = document.getElementById('cob-tabla-caja')
-      const tabla = document.getElementById('cob-tabla-cheques')
-      const vacio = document.getElementById('cob-cheques-vacio')
-      if (c.error || !c.filas.length) {
-        caja.hidden = true
-        tabla.innerHTML = ''
-        vacio.hidden = !!c.error
-        vacio.textContent = hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
-        return
-      }
-      vacio.hidden = true
-      caja.hidden = false
-      tabla.innerHTML = htmlTablaCheques(c.filas, c.cobranzas)
-      tabla.querySelectorAll('[data-cheque-fila]').forEach(tr => {
-        const abrir = () => abrirDetalle(tr.dataset.chequeCobranza, { origen: 'cheques' })
-        tr.addEventListener('click', abrir)
-        tr.addEventListener('keydown', (ev) => {
-          // Solo la fila misma: un Enter sobre el botón de adentro burbujea
-          // hasta acá y abriría el detalle además del diálogo.
-          if (ev.target !== tr) return
-          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir() }
-        })
-      })
-      // Los botones de la fila NO abren el detalle: stopPropagation.
-      tabla.querySelectorAll('[data-salio]').forEach(b => b.addEventListener('click', (ev) => {
-        ev.stopPropagation(); abrirModalSalida(b.dataset.salio)
-      }))
-      tabla.querySelectorAll('[data-volver-cartera]').forEach(b => b.addEventListener('click', (ev) => {
-        ev.stopPropagation(); abrirVolverACartera(b.dataset.volverCartera)
-      }))
+    // El volver del link directo vale SOLO para la cobranza que abrió el link:
+    // si después se abre otra desde el listado, su "‹ Volver" es el de siempre.
+    function volverDelDetalle(cobranzaId) {
+      const l = estado.linkDirecto
+      return l && l.volver && l.cobranzaId === cobranzaId ? l.volver : null
     }
 
-    // Función pura de la tabla, para EJECUTARLA en la suite.
-    function htmlTablaCheques(filas, cobranzas) {
-      return `
-        <thead>
-          <tr>
-            <th scope="col">N&deg; de cheque</th>
-            <th scope="col">Banco</th>
-            <th scope="col">Emisión</th>
-            <th scope="col">Pago</th>
-            <th scope="col" class="cob-tabla__num">Importe</th>
-            <th scope="col">Cliente</th>
-            <th scope="col">Estado</th>
-            <th scope="col">Salida</th>
-          </tr>
-        </thead>
-        <tbody>${filas.map(ch => htmlFilaCheque(ch, cobranzas.get(ch.cobranza_id))).join('')}</tbody>`
+    function pintarBotonVolver(cobranzaId) {
+      const btn = document.getElementById('cob-btn-volver-listado')
+      const v = volverDelDetalle(cobranzaId)
+      btn.textContent = v ? v.texto : '‹ Volver al listado'
+      // En escritorio el botón se esconde (el listado está al lado); con un
+      // volver externo se muestra igual, porque lleva a otra pantalla.
+      btn.classList.toggle('cob-btn--volver-externo', !!v)
     }
 
-    function htmlFilaCheque(ch, cob) {
-      const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
-      // Un cheque común no tiene fecha de pago: es "a la vista", la misma
-      // palabra que la tarjeta.
-      const pago = ch.tipo === 'diferido' ? formatearFechaCob(ch.fecha_pago) : 'A la vista'
-      const etiqueta = ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? ch.estado
-      // El destino lo TIPEA una persona: es texto libre y va escapado.
-      const celdaSalida = salido
-        ? `<span class="cob-tabla__fecha">${escCob(formatearFechaCob(ch.salida_fecha))}</span>${
-            ch.salida_destino ? `<div class="cob-tabla__sub cob-tabla__destino">${escCob(ch.salida_destino)}</div>` : ''}`
-        : '—'
-      return `
-        <tr class="${salido ? 'cob-tabla__fila--salido' : ch.estado === 'anulado' ? 'cob-tabla__fila--anulado' : ''}" data-cheque-fila="${escCob(ch.id)}" data-cheque-cobranza="${escCob(ch.cobranza_id)}" tabindex="0">
-          <td>${escCob(ch.numero ?? '—')}${htmlAccionCheque(ch, cob)}</td>
-          <td class="cob-tabla__texto cob-tabla__banco" title="${escCob(nombreBanco(ch.banco_codigo))}">${escCob(nombreBanco(ch.banco_codigo))}</td>
-          <td class="cob-tabla__fecha">${escCob(formatearFechaCob(ch.fecha_emision))}</td>
-          <td class="cob-tabla__fecha">${escCob(pago)}</td>
-          <td class="cob-tabla__num">${escCob(formatearImporte(ch.importe))}</td>
-          <td class="cob-tabla__texto">${escCob(cob?.cliente ?? '—')}</td>
-          <td><span class="cob-estado cob-estado--${escCob(ch.estado)}">${escCob(etiqueta)}</span></td>
-          <td>${celdaSalida}</td>
-        </tr>`
+    function irAtrasDelDetalle() {
+      const v = volverDelDetalle(estado.cobranzaSeleccionadaId)
+      if (v) { window.location.href = v.url; return }
+      mostrarVistaCob('listado')
     }
-
-    // El botón de la fila. Solo quien tiene `procesar`, que es la tarea que
-    // exigen las dos RPCs. "Salió" además solo con la cobranza PROCESADA: la
-    // RPC lo rechaza en cualquier otro estado, y ofrecerlo igual sería un
-    // botón que siempre falla. "Volver a cartera" no depende del estado de la
-    // cobranza: la RPC tampoco lo pide.
-    function htmlAccionCheque(ch, cob) {
-      if (!puedeProcesar()) return ''
-      if (ch.estado === 'en_cartera' && cob?.estado === 'procesada') {
-        return `<button type="button" class="cob-btn cob-btn--chico cob-tabla__accion" data-salio="${escCob(ch.id)}">Salió</button>`
-      }
-      if (ch.estado === 'depositado' || ch.estado === 'endosado') {
-        return `<button type="button" class="cob-btn cob-btn--chico cob-tabla__accion" data-volver-cartera="${escCob(ch.id)}">Volver a cartera</button>`
-      }
-      return ''
-    }
-
-    // ── Salida de un cheque ──────────────────────────────────────────────
-    // Depositado o endosado. SOLO EL ENDOSADO va a descontar la cuenta
-    // corriente de un proveedor el día que se conecte con Cuentas Corrientes:
-    // por eso el destino es obligatorio ahí y opcional en un depósito.
-
-    const LARGO_MAXIMO_DESTINO = 150
-
-    // Lo que se valida ANTES de llamar, con las MISMAS reglas que
-    // marcar_salida_cheque: una validación más permisiva deja pasar lo que el
-    // servidor rechaza, y una más estricta bloquea lo que sí entra.
-    function erroresSalida({ tipo, fecha, destino }, fechaCobranza, hoy) {
-      const e = []
-      if (tipo !== 'depositado' && tipo !== 'endosado') e.push('Elegí si se depositó o se endosó.')
-      if (!esFechaIso(fecha)) e.push('Falta la fecha.')
-      else {
-        if (diasEntre(hoy, fecha) > 0) e.push('La fecha no puede ser posterior a hoy.')
-        if (esFechaIso(fechaCobranza) && diasEntre(fechaCobranza, fecha) < 0) {
-          e.push(`La fecha no puede ser anterior a la cobranza (${formatearFechaCob(fechaCobranza)}).`)
-        }
-      }
-      const d = String(destino ?? '').trim()
-      if (tipo === 'endosado' && !d) e.push('Escribí a quién se lo pasaste.')
-      if (d.length > LARGO_MAXIMO_DESTINO) e.push(`El destino no puede tener más de ${LARGO_MAXIMO_DESTINO} caracteres.`)
-      return e
-    }
-
-    // Los parámetros tal cual viajan. Un destino vacío va como null: la base
-    // distingue "no hay dato" de "hay un dato que es la cadena vacía".
-    function parametrosSalida(chequeId, { tipo, fecha, destino }) {
-      return { p_cheque_id: chequeId, p_tipo: tipo, p_fecha: fecha, p_destino: textoOpcional(destino) }
-    }
-
-    function abrirModalSalida(chequeId) {
-      const ch = estado.cheques.filas.find(x => x.id === chequeId)
-      if (!ch) return
-      const cob = estado.cheques.cobranzas.get(ch.cobranza_id) ?? null
-      estado.salida = { cheque: ch, cobranza: cob, tipo: null }
-      document.getElementById('cob-salida-cheque').textContent =
-        `N° ${ch.numero ?? '—'} · ${nombreBanco(ch.banco_codigo)} · ${formatearImporte(ch.importe)}${cob?.cliente ? ` · ${cob.cliente}` : ''}`
-      const fecha = document.getElementById('cob-salida-fecha')
-      fecha.value = hoyArgentina()
-      fecha.max = hoyArgentina()
-      fecha.min = esFechaIso(cob?.fecha) ? cob.fecha : ''
-      document.getElementById('cob-salida-destino').value = ''
-      pintarModalSalida()
-      document.getElementById('cob-modal-salida').hidden = false
-    }
-
-    function cerrarModalSalida() {
-      document.getElementById('cob-modal-salida').hidden = true
-      estado.salida = null
-    }
-
-    // Lo que cambia según el tipo elegido: el botón marcado, la pregunta del
-    // destino y si es obligatorio. El error se limpia: era sobre otro estado.
-    function pintarModalSalida() {
-      const s = estado.salida
-      if (!s) return
-      document.querySelectorAll('[data-salida-tipo]').forEach(b => {
-        b.classList.toggle('cob-btn--elegido', b.dataset.salidaTipo === s.tipo)
-      })
-      const campo = document.getElementById('cob-salida-campo-destino')
-      campo.hidden = !s.tipo
-      document.getElementById('cob-salida-label-destino').textContent =
-        s.tipo === 'endosado' ? '¿A quién se lo pasaste?' : '¿En qué banco o cuenta? (opcional)'
-      document.getElementById('cob-salida-ayuda-destino').textContent =
-        s.tipo === 'endosado' ? 'Obligatorio: el nombre de quien lo recibió.' : 'Si no lo sabés, dejalo vacío.'
-      document.getElementById('cob-salida-error').hidden = true
-    }
-
-    async function confirmarSalida() {
-      const s = estado.salida
-      if (!s) return
-      const datos = {
-        tipo: s.tipo,
-        fecha: document.getElementById('cob-salida-fecha').value,
-        destino: document.getElementById('cob-salida-destino').value,
-      }
-      const err = document.getElementById('cob-salida-error')
-      const errores = erroresSalida(datos, s.cobranza?.fecha, hoyArgentina())
-      if (errores.length) {
-        err.textContent = errores.join(' ')
-        err.hidden = false
-        return
-      }
-      const btn = document.getElementById('cob-salida-confirmar')
-      btn.disabled = true
-      try {
-        const { error } = await supabase.rpc('marcar_salida_cheque', parametrosSalida(s.cheque.id, datos))
-        if (error) throw error
-        cerrarModalSalida()
-        mostrarExito(datos.tipo === 'endosado' ? 'Cheque marcado como endosado.' : 'Cheque marcado como depositado.')
-        await refrescarListado()
-      } catch (e) {
-        console.error('Falló marcar_salida_cheque:', e)
-        // El mensaje del servidor ya viene en castellano: se muestra TAL CUAL.
-        err.textContent = e?.message || 'No se pudo marcar la salida del cheque.'
-        err.hidden = false
-      } finally {
-        btn.disabled = false
-      }
-    }
-
-    function abrirVolverACartera(chequeId) {
-      const ch = estado.cheques.filas.find(x => x.id === chequeId)
-      if (!ch) return
-      abrirModalMotivo({
-        titulo: `Volver a cartera el cheque N° ${ch.numero ?? '—'}`,
-        etiqueta: 'Por qué vuelve a cartera',
-        alConfirmar: async (motivo) => {
-          try {
-            const { error } = await supabase.rpc('volver_cheque_a_cartera', { p_cheque_id: ch.id, p_motivo: motivo })
-            if (error) throw error
-            cerrarModalMotivo()
-            mostrarExito('El cheque volvió a cartera.')
-            await refrescarListado()
-          } catch (e) {
-            console.error('Falló volver_cheque_a_cartera:', e)
-            mostrarError(e?.message || 'No se pudo volver el cheque a cartera.')
-          }
-        },
-      })
-    }
-
     // ═══════════════════════════════════════════════════════════════════════
     // NAVEGACIÓN ENTRE VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const SUBTITULO_VISTA_COB = { listado: 'Listado', cheques: 'Cheques', detalle: 'Detalle', form: 'Nueva cobranza' }
+    const SUBTITULO_VISTA_COB = { listado: 'Listado', detalle: 'Detalle', form: 'Nueva cobranza' }
 
     // ESCRITORIO. El mismo corte que el @media (min-width: 1100px) del CSS:
     // si cambia uno, cambia el otro.
@@ -2711,10 +2104,11 @@
     }
 
     // Modo maestro: listado y detalle lado a lado. Solo en escritorio, y solo
-    // en el listado o en un detalle abierto DESDE el listado. Un detalle que
-    // viene de la vista Cheques sigue ocupando la pantalla entera.
+    // en el listado o en el detalle (el formulario ocupa la pantalla entera).
+    // Desde que la cartera de cheques se mudó a cheques.html, todo detalle
+    // se abre desde el listado o por un link directo, y los dos van al panel.
     function enModoMaestro(vista = estado.vista) {
-      return esEscritorio() && (vista === 'listado' || (vista === 'detalle' && estado.detalleOrigen === 'listado'))
+      return esEscritorio() && (vista === 'listado' || vista === 'detalle')
     }
 
     // El panel derecho sin ninguna cobranza abierta. Texto neutro: no es un
@@ -2739,16 +2133,10 @@
       const maestro = enModoMaestro(id)
       document.getElementById('cob-maestro').classList.toggle('cob-maestro--activo', maestro)
       document.getElementById('cob-vista-listado').hidden = !(id === 'listado' || maestro)
-      document.getElementById('cob-vista-cheques').hidden = id !== 'cheques'
       document.getElementById('cob-vista-detalle').hidden = !(id === 'detalle' || maestro)
       document.getElementById('cob-vista-form').hidden = id !== 'form'
       // Fuera del formulario no hay fotos que reintentar ni contador que mover.
       if (id !== 'form') detenerReintentosFotos()
-      // Las pestañas, solo en las dos vistas de lista (en escritorio, el
-      // listado sigue a la vista aunque haya una cobranza abierta al lado).
-      document.getElementById('cob-pestanas').hidden = !(id === 'listado' || id === 'cheques' || maestro)
-      document.getElementById('cob-pestana-listado').classList.toggle('cob-pestana--activa', id === 'listado' || maestro)
-      document.getElementById('cob-pestana-cheques').classList.toggle('cob-pestana--activa', id === 'cheques')
       // Cada vista tiene su barra fija, y la del listado solo aparece con
       // permiso de cargar: sin él, el botón prometería algo que el servidor
       // rechaza.
@@ -2970,23 +2358,18 @@
     // DETALLE
     // ═══════════════════════════════════════════════════════════════════════
 
-    // `origen` va como PARÁMETRO CON DEFAULT y no como una variable que se
-    // setea antes de llamar: así un call site nuevo no hereda en silencio el
-    // origen del anterior.
     // Cada apertura tiene su turno: en escritorio se pasa de una cobranza a
     // otra con un clic, y la respuesta de la anterior no puede pisar el panel
     // de la que está elegida ahora.
     let turnoDetalle = 0
 
-    async function abrirDetalle(cobranzaId, { origen = 'listado' } = {}) {
-      estado.detalleOrigen = origen
-      if (origen === 'listado') {
-        estado.cobranzaSeleccionadaId = cobranzaId
-        marcarFilaSeleccionada()
-      }
+    async function abrirDetalle(cobranzaId) {
+      estado.cobranzaSeleccionadaId = cobranzaId
+      marcarFilaSeleccionada()
       const turno = ++turnoDetalle
-      document.getElementById('cob-btn-volver-listado').textContent =
-        origen === 'cheques' ? '‹ Volver a los cheques' : '‹ Volver al listado'
+      // "‹ Volver al listado", o el destino del link directo si esta es la
+      // cobranza que abrió el link (por ejemplo "‹ Volver a los cheques").
+      pintarBotonVolver(cobranzaId)
       mostrarVistaCob('detalle')
       if (enModoMaestro()) document.getElementById('cob-vista-detalle').scrollTop = 0
       const cuerpo = document.getElementById('cob-detalle-cuerpo')
@@ -3003,7 +2386,10 @@
         ])
         if (turno !== turnoDetalle) return
         if (cab.error) throw cab.error
-        if (!cab.data) { cuerpo.innerHTML = '<div class="cob-vacio">No se encontró la cobranza.</div>'; return }
+        // Sin fila puede ser que no exista o que el RLS no deje verla: desde
+        // acá son indistinguibles, así que se dicen las dos (un link directo
+        // viejo o de otra persona cae acá).
+        if (!cab.data) { cuerpo.innerHTML = '<div class="cob-vacio">No se encontró la cobranza. Puede que no exista o que no tengas permiso para verla.</div>'; return }
 
         // Los nombres salen de v_empleados_publico, NUNCA de empleados por
         // embed: su RLS solo deja leer la fila propia, así que un embed
@@ -3085,7 +2471,7 @@
       // mensaje de la base igual llega tal cual si lo intentan.
       const haySalidos = !anulada && d.cheques.some(ch => ch.estado === 'depositado' || ch.estado === 'endosado')
       const avisoSalidos = haySalidos
-        ? '<div class="cob-aviso">Hay cheques que ya salieron de cartera: para editar o anular esta cobranza, primero hay que volverlos a cartera.</div>'
+        ? '<div class="cob-aviso">Hay cheques que ya salieron de cartera: para editar o anular esta cobranza, primero hay que volverlos a cartera (desde Cheques).</div>'
         : ''
 
       const cheques = `
@@ -3118,16 +2504,8 @@
       return cabecera + cheques + fotos + historial + htmlAccionesDetalle(c)
     }
 
-    // Cómo se lee la salida de un cheque, en una frase de texto plano. La
-    // usan el detalle y el historial: una sola redacción. El destino lo tipea
-    // una persona: quien la muestre en HTML la escapa.
-    function textoSalidaCheque(estadoCheque, fecha, destino) {
-      const cuando = esFechaIso(fecha) ? ` el ${formatearFechaCob(fecha)}` : ''
-      const d = String(destino ?? '').trim()
-      if (estadoCheque === 'endosado') return `Endosado${cuando}${d ? ` a ${d}` : ''}`
-      if (estadoCheque === 'depositado') return `Depositado${cuando}${d ? ` en ${d}` : ''}`
-      return ETIQUETA_ESTADO_CHEQUE[estadoCheque] ?? String(estadoCheque ?? '')
-    }
+    // textoSalidaCheque() —cómo se lee la salida de un cheque, en texto
+    // plano— vive en js/cobranzas-comun.js: la comparte la cartera de cheques.
 
     // Cuántos días faltan para cobrar un diferido, en palabras. `hoy` se pasa
     // (en pantalla, hoyArgentina()) para poder ejecutarla con cualquier fecha.
@@ -3201,6 +2579,7 @@
             </div>` : ''}
           <div class="cob-acciones">
             <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" data-ver-foto="${escCob(ch.foto_id ?? '')}">Ver la foto</button>
+            ${htmlLinkChequeEnCartera(ch)}
           </div>
         </div>`
     }
@@ -3378,7 +2757,7 @@
         if (error) throw error
         mostrarExito(exito)
         cerrarModalMotivo()
-        await abrirDetalle(params.p_id, { origen: estado.detalleOrigen })
+        await abrirDetalle(params.p_id)
         await refrescarListado()
       } catch (err) {
         console.error(`Falló ${rpc}:`, err)
@@ -4818,28 +4197,8 @@
       })
       document.getElementById('cob-btn-mas').addEventListener('click', () => cargarCobranzas())
 
-      // ── Pestañas y vista de cheques ──
-      document.getElementById('cob-pestana-listado').addEventListener('click', () => mostrarVistaCob('listado'))
-      document.getElementById('cob-pestana-cheques').addEventListener('click', () => mostrarVistaCob('cheques'))
-      let temporizadorCheque = null
-      document.getElementById('cob-filtro-cheque').addEventListener('input', (ev) => {
-        estado.cheques.filtros.numero = ev.target.value
-        // El aviso se pinta en el acto —sin esperar el debounce— porque con
-        // más de 9 dígitos no se va a filtrar y el silencio se leería como que
-        // el filtro no hace nada.
-        pintarFiltrosCheques()
-        clearTimeout(temporizadorCheque)
-        temporizadorCheque = setTimeout(cargarCheques, 350)
-      })
-      document.getElementById('cob-filtro-banco').addEventListener('change', (ev) => {
-        estado.cheques.filtros.banco = ev.target.value; cargarCheques()
-      })
-      document.getElementById('cob-btn-limpiar-cheques').addEventListener('click', () => {
-        clearTimeout(temporizadorCheque)
-        limpiarFiltrosCheques()
-      })
       document.getElementById('cob-btn-nueva').addEventListener('click', abrirFormularioNuevo)
-      document.getElementById('cob-btn-volver-listado').addEventListener('click', () => mostrarVistaCob(estado.detalleOrigen))
+      document.getElementById('cob-btn-volver-listado').addEventListener('click', irAtrasDelDetalle)
 
       // ── Formulario ──
       document.getElementById('cob-btn-salir-form').addEventListener('click', async () => {
@@ -4892,16 +4251,6 @@
         // la única forma de leer un número de cheque en un celular.
         ev.target.classList.toggle('cob-visor__img--real')
       })
-
-      // ── Diálogo de salida de un cheque ──
-      document.querySelectorAll('[data-salida-tipo]').forEach(b => b.addEventListener('click', () => {
-        if (!estado.salida) return
-        estado.salida.tipo = b.dataset.salidaTipo
-        pintarModalSalida()
-        if (!document.getElementById('cob-salida-campo-destino').hidden) document.getElementById('cob-salida-destino').focus()
-      }))
-      document.getElementById('cob-salida-cancelar').addEventListener('click', cerrarModalSalida)
-      document.getElementById('cob-salida-confirmar').addEventListener('click', confirmarSalida)
 
       // ── Diálogos de pregunta (confirm / elegir foto) ──
       conectarDialogos()
@@ -4974,7 +4323,12 @@
 
       conectarTodo()
       renderizarChipsEstado()
+      pintarAccesoCheques()
       mostrarVistaCob('listado')
+      // El link directo se abre ANTES de que llegue el listado: en celular
+      // tapa la pantalla con el detalle, y en escritorio lo pone en el panel.
+      const link = leerLinkDirecto(location.search, location.href)
+      if (link) abrirLinkDirecto(link)
 
       await Promise.all([cargarBancos(), cargarRepartidores()])
       await Promise.all([refrescarListado(), refrescarLocales()])

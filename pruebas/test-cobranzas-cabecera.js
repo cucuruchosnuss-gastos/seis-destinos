@@ -102,12 +102,11 @@ const PRELUDIO = `
   }
 
   // --- lo que estas funciones llaman y acá no importa ------------------------
-  var __llamadas = { exitos: [], errores: [], abrirDetalle: 0, cheques: 0 }
+  var __llamadas = { exitos: [], errores: [], abrirDetalle: 0 }
   function mostrarExito(m){ __llamadas.exitos.push(m) } function mostrarError(m){ __llamadas.errores.push(m) }
   function cerrarModalMotivo(){} function abrirModalMotivo(){} function abrirFormularioEdicion(){}
   async function abrirDetalle(){ __llamadas.abrirDetalle++ }
   function renderizarListado(){}
-  async function cargarCheques(){ __llamadas.cheques++ } async function cargarResumenCheques(){}
   async function urlDeFoto(){ return null } function abrirVisor(){}
   var turnoResumen = 0
 
@@ -115,7 +114,7 @@ const PRELUDIO = `
     miEmpleadoId: 'emp-1', miRolApp: 'usuario',
     misTareas: new Set(['cobranzas:cargar', 'cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:editar_anular']),
     bancos: new Map([['007', 'BANCO DE GALICIA Y BUENOS AIRES S.A.U.']]),
-    cobranzas: [], hayMas: false, cobranzaSeleccionadaId: null, detalleOrigen: 'listado',
+    cobranzas: [], hayMas: false, cobranzaSeleccionadaId: null, linkDirecto: null,
     filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
     resumen: { cargando: true, etiqueta: 'Total del mes' },
     detalle: null,
@@ -124,11 +123,11 @@ const PRELUDIO = `
 
 const FUNCIONES = [
   'escCob', 'formatearImporte', 'esFechaIso', 'formatearFechaCob', 'momentoArgentina', 'fechaDeMomentoAr',
-  'normalizarCliente', 'nombreBanco', 'tieneTarea', 'diasEntre',
+  'normalizarCliente', 'nombreBanco', 'nombreBancoDe', 'tieneTarea', 'diasEntre',
   // estados
   'renderizarChipsEstado', 'htmlFilaCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
   'htmlChequeDetalle', 'htmlDatosCheque', 'textoDiasHastaPago', 'textoSalidaCheque', 'textoHistorialCheque',
-  'resumirCambios', 'htmlAccionCheque', 'conectarDetalle', 'accionSimple',
+  'resumirCambios', 'htmlLinkChequeEnCartera', 'conectarDetalle', 'accionSimple',
   // cabecera
   'parametrosResumen', 'cargarResumen', 'pintarResumen', 'numeroDeResumen', 'htmlResumen',
   'cargarCobranzas', 'refrescarListado',
@@ -139,6 +138,7 @@ const FUNCIONES = [
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA', 'PAGINA',
   'ETIQUETA_ESTADO_CHEQUE', 'DIAS_MAXIMO_DIFERIDO', 'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
+  'puedeVerCartera',
 ]
 
 function sandbox() {
@@ -234,13 +234,13 @@ async function pruebas() {
     chk('asentar: después se recalculan las cifras de cabecera',
       S.__rpcs().some(r => r.nombre === 'resumen_cobranzas'), JSON.stringify(S.__rpcs().map(r => r.nombre)))
 
-    // "Salió" solo con la cobranza asentada: la condición compara contra el
-    // valor de la BASE.
-    const ch = { id: 'k1', estado: 'en_cartera' }
-    chk('salida: con la cobranza procesada (asentada) aparece "Salió"',
-      /data-salio="k1"/.test(S.htmlAccionCheque(ch, { estado: 'procesada' })))
-    chk('salida: con la cobranza registrada (por controlar) no aparece',
-      !/data-salio/.test(S.htmlAccionCheque(ch, { estado: 'registrada' })))
+    // "Dar salida" y "Volver a cartera" se mudaron a cheques.html
+    // (22/09/2026): ni una cobranza asentada con un cheque en cartera tiene
+    // acá un botón de salida.
+    const conCheque = S.htmlDetalle({ cabecera: { ...base, estado: 'procesada' }, nombres, fotos: [], historial: [],
+      cheques: [{ id: 'k1', estado: 'en_cartera', banco_codigo: '007', numero: '00000001', tipo: 'comun', fecha_emision: '2026-09-17', importe: 1 }] })
+    chk('detalle asentado con un cheque en cartera: sin botón de salida (se da en Cheques)',
+      !/data-salio|data-dar-salida|data-volver-cartera/.test(conCheque) && /Ver en Cheques/.test(conCheque))
   }
 
   // ══ 1b. NINGÚN TEXTO DE PANTALLA DEL FUENTE DICE LAS PALABRAS VIEJAS ══════

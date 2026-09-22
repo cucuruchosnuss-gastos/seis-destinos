@@ -19,7 +19,7 @@ let ok = 0
 const fallas = []
 function chk(nombre, cond, detalle) { if (cond) ok++; else fallas.push(nombre + (detalle !== undefined ? ` — ${detalle}` : '')) }
 
-const FUNCIONES = ['escDash', 'textoPendiente', 'agruparPendientes', 'htmlBurbuja', 'pintarBurbujas', 'cargarPendientes']
+const FUNCIONES = ['moduloVisible', 'escDash', 'textoPendiente', 'agruparPendientes', 'htmlBurbuja', 'pintarBurbujas', 'cargarPendientes']
 let codigo = `
   var __tarjetas = []
   var __rpc = async () => ({ data: [], error: null })
@@ -51,13 +51,38 @@ const S = new Function(codigo)()
 const clavesTarjeta = new Set(S.MODULOS.map(m => m.clave))
 // Los módulos que devuelve la RPC, leídos de su cuerpo el 22/09/2026
 // (pg_get_functiondef de public.mis_pendientes).
-const DE_LA_RPC = ['cobranzas', 'accesos', 'materia_prima', 'gastos', 'cuentas_corrientes', 'stock', 'caja']
+const DE_LA_RPC = ['cobranzas', 'cheques', 'accesos', 'materia_prima', 'gastos', 'cuentas_corrientes', 'stock', 'caja']
 for (const m of DE_LA_RPC) {
   chk(`el módulo «${m}» de la RPC está mapeado`, !!S.MODULO_DE_PENDIENTE[m])
   chk(`«${m}» apunta a una tarjeta que existe`, clavesTarjeta.has(S.MODULO_DE_PENDIENTE[m]), S.MODULO_DE_PENDIENTE[m])
 }
 chk('materia_prima (guión bajo) → materia-prima (guión medio)', S.MODULO_DE_PENDIENTE.materia_prima === 'materia-prima')
 chk('cuentas_corrientes → cuentas-corrientes', S.MODULO_DE_PENDIENTE.cuentas_corrientes === 'cuentas-corrientes')
+chk('cheques (por_vencer) → la tarjeta de Cheques', S.MODULO_DE_PENDIENTE.cheques === 'cheques')
+
+// --- la tarjeta de Cheques: módulo cobranzas Y (ver_todo o procesar) --------
+{
+  const cheques = S.MODULOS.find(m => m.clave === 'cheques')
+  chk('hay tarjeta de Cheques que abre modulos/cheques.html', cheques && cheques.url === 'modulos/cheques.html')
+  const ver = (ctx) => S.moduloVisible(cheques, { esAdmin: false, esSuperAdmin: false, misModulos: [], misTareas: new Set(), ...ctx })
+  chk('Cheques: sin el módulo cobranzas no se ve, aunque tenga la tarea',
+    !ver({ misTareas: new Set(['cobranzas:procesar']) }))
+  chk('Cheques: con cobranzas y solo "cargar" no se ve',
+    !ver({ misModulos: ['cobranzas'], misTareas: new Set(['cobranzas:cargar']) }))
+  chk('Cheques: con cobranzas y ver_todo se ve', ver({ misModulos: ['cobranzas'], misTareas: new Set(['cobranzas:ver_todo']) }))
+  chk('Cheques: con cobranzas y procesar se ve', ver({ misModulos: ['cobranzas'], misTareas: new Set(['cobranzas:procesar']) }))
+  chk('Cheques: una fila "cheques" en empleado_modulos NO alcanza (cuelga de cobranzas)',
+    !ver({ misModulos: ['cheques'], misTareas: new Set(['cobranzas:procesar']) }))
+  chk('Cheques: super_admin la ve (bypass, como tiene_tarea)', ver({ esAdmin: true, esSuperAdmin: true }))
+  chk('Cheques: un "admin" viejo sin la tarea no la ve', !ver({ esAdmin: true }))
+  // Las demás tarjetas no cambiaron de regla.
+  const gastos = S.MODULOS.find(m => m.clave === 'gastos')
+  chk('Gastos: se sigue viendo solo con su módulo', S.moduloVisible(gastos, { esAdmin: false, esSuperAdmin: false, misModulos: ['gastos'], misTareas: new Set() }) &&
+    !S.moduloVisible(gastos, { esAdmin: false, esSuperAdmin: false, misModulos: [], misTareas: new Set() }))
+  const accesos = S.MODULOS.find(m => m.clave === 'accesos')
+  chk('Accesos: solo super_admin', !S.moduloVisible(accesos, { esAdmin: true, esSuperAdmin: false, misModulos: ['accesos'], misTareas: new Set() }) &&
+    S.moduloVisible(accesos, { esAdmin: true, esSuperAdmin: true, misModulos: [], misTareas: new Set() }))
+}
 
 // --- agrupar --------------------------------------------------------------
 {

@@ -317,8 +317,10 @@ function normalizarCheque(c: Record<string, unknown>) {
 
 // Dígito verificador del código de ruta — BCRA, "Características de los
 // instrumentos de pago", punto 1.3.1 (ponderador 9713). MISMA fórmula que
-// public.dv_bcra() en la base y que dvBcra() en cobranzas.html: si se cambia
-// una, se cambian las tres. Casos de la norma: "0110381425" → 7, "0111381425" → 0.
+// public.dv_bcra() en la base y que dvBcra() de js/cobranzas-comun.js (la
+// copia del cliente, que usan Cobranzas y Cheques desde el 22/09/2026; hasta
+// ese día vivía dentro de modulos/cobranzas.html): si se cambia una, se
+// cambian las tres. Casos de la norma: "0110381425" → 7, "0111381425" → 0.
 function dvBcra(digitos: string): number | null {
   if (!/^[0-9]+$/.test(digitos)) return null
   const pesos = [3, 1, 7, 9]

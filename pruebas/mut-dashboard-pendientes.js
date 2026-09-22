@@ -27,6 +27,11 @@ correrMutaciones({
     { nombre: 'no se recarga al volver', de: "if (document.visibilityState === 'visible') cargarPendientes()", a: "if (false) cargarPendientes()" },
     { nombre: 'el detalle no dice la cantidad', de: 'return `${fila.cantidad} ${frase}`', a: 'return frase' },
     { nombre: 'el escape no escapa comillas', de: ".replace(/\"/g, '&quot;')", a: '' },
+    { nombre: 'cheques sin mapear', de: "      cheques: 'cheques',\n", a: '' },
+    { nombre: 'Cheques no pide tareas', de: "      if (!modulo.requiereTareas) return true\n", a: '      return true\n' },
+    { nombre: 'Cheques cuelga de su propia clave y no de cobranzas', de: 'misModulos.includes(modulo.requiereModulo ?? modulo.clave)', a: 'misModulos.includes(modulo.clave)' },
+    { nombre: 'super_admin no ve Cheques sin la fila', de: "      return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))", a: "      return modulo.requiereTareas.some(t => misTareas.has(t))" },
+    { nombre: 'Cheques acepta también cargar', de: "requiereTareas: ['cobranzas:ver_todo', 'cobranzas:procesar'],", a: "requiereTareas: ['cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:cargar']," },
     { nombre: 'repintar duplica', de: "    function pintarBurbujas(porModulo) {\n      document.querySelectorAll('.tarjeta-modulo__burbuja').forEach(b => b.remove())", a: "    function pintarBurbujas(porModulo) {\n      if (!porModulo) document.querySelectorAll('.tarjeta-modulo__burbuja').forEach(b => b.remove())" },
   ],
 })

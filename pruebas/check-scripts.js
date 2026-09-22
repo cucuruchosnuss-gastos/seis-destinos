@@ -119,5 +119,72 @@ for (const archivo of archivos) {
   })
 }
 
-console.log(problemas ? `\n${problemas} PROBLEMA(S)` : '\nOK: todos los bloques parsean y no hay identificadores pisados')
+// ── Los módulos JS del repo (js/*.js), sin argumentos ────────────────────
+// Desde el 22/09/2026 dos módulos importan js/cobranzas-comun.js: un archivo
+// JS que no parsea deja muertas las DOS pantallas. Se parsean igual que un
+// bloque <script>, y se buscan los mismos duplicados.
+const jsDelRepo = process.argv.length > 2 ? [] :
+  fs.readdirSync(path.join(RAIZ, 'js')).filter(f => f.endsWith('.js')).map(f => path.join(RAIZ, 'js', f)).sort()
+for (const archivo of jsDelRepo) {
+  const codigo = fs.readFileSync(archivo, 'utf8')
+  const nombre = 'js/' + path.basename(archivo)
+  const tmp = path.join(os.tmpdir(), `chk-${process.pid}-js.mjs`)
+  fs.writeFileSync(tmp, codigo)
+  try {
+    execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' })
+  } catch (err) {
+    problemas++
+    console.log(`✗ ${nombre}: NO PARSEA`)
+    console.log(String(err.stderr).split('\n').slice(0, 6).map(l => '    ' + l).join('\n'))
+  } finally {
+    fs.existsSync(tmp) && fs.unlinkSync(tmp)
+  }
+  const vistos = new Map()
+  for (const { nombre: clave, offset } of declaracionesTopLevel(codigo)) {
+    const donde = codigo.slice(0, offset).split('\n').length
+    if (vistos.has(clave)) { problemas++; console.log(`✗ ${nombre}: «${clave}» se declara DOS veces, líneas ${vistos.get(clave)} y ${donde}`) }
+    else vistos.set(clave, donde)
+  }
+  console.log(`  ${nombre}: ${vistos.size} identificadores top-level`)
+}
+
+// ── Cada nombre IMPORTADO existe como export del archivo local ───────────
+// node --check no resuelve los imports; el navegador sí, y un
+// `import { x } from './a.js'` con x que a.js no exporta es un SyntaxError al
+// enlazar: la pantalla entera no carga. Se revisan los imports con ruta
+// relativa (los del repo) de cada HTML y cada js/*.js.
+function exportsDe(ruta) {
+  const codigo = fs.readFileSync(ruta, 'utf8')
+  const out = new Set()
+  for (const m of codigo.matchAll(/^export\s+(?:async\s+)?(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)) out.add(m[1])
+  for (const m of codigo.matchAll(/^export\s*\{([^}]*)\}/gm)) {
+    for (const parte of m[1].split(',')) {
+      const n = parte.trim().split(/\s+as\s+/).pop().trim()
+      if (n) out.add(n)
+    }
+  }
+  return out
+}
+let importsRevisados = 0
+function revisarImports(codigo, desde, nombre) {
+  for (const m of codigo.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
+    const destino = path.resolve(path.dirname(desde), m[2])
+    if (!fs.existsSync(destino)) { problemas++; console.log(`✗ ${nombre}: importa de ${m[2]}, que NO EXISTE`); continue }
+    const exp = exportsDe(destino)
+    for (const parte of m[1].split(',')) {
+      const n = parte.trim().split(/\s+as\s+/)[0].trim()
+      if (!n) continue
+      importsRevisados++
+      if (!exp.has(n)) { problemas++; console.log(`✗ ${nombre}: importa «${n}» de ${m[2]}, que NO lo exporta`) }
+    }
+  }
+}
+for (const archivo of archivos) {
+  const html = fs.readFileSync(archivo, 'utf8')
+  for (const b of bloquesScript(html)) revisarImports(b.codigo, archivo, path.basename(archivo))
+}
+for (const archivo of jsDelRepo) revisarImports(fs.readFileSync(archivo, 'utf8'), archivo, 'js/' + path.basename(archivo))
+console.log(`  imports revisados: ${importsRevisados}`)
+
+console.log(problemas ? `\n${problemas} PROBLEMA(S)` : '\nOK: todos los bloques parsean, no hay identificadores pisados y cada nombre importado existe')
 process.exit(problemas ? 1 : 0)
