@@ -63,6 +63,15 @@
 
 /* ─── Reset ─────────────────────────────────────────────────────────────── */
 
+/* [hidden] GANA SIEMPRE. Cualquier regla de autor con `display` (un .btn con
+   inline-flex, una tarjeta con flex) le gana al [hidden] del navegador, y ese
+   fue el bug más recurrente del proyecto: pantallas superpuestas y, una vez,
+   un botón visible para quien no debía verlo. Con !important acá, un
+   elemento con el atributo hidden no se ve, sin que cada clase nueva tenga
+   que acordarse de su guard. Consecuencia: para mostrar algo hay que sacarle
+   el atributo (el.hidden = false), no pisarlo con style.display. */
+[hidden] { display: none !important; }
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
