@@ -15,7 +15,7 @@ Leé CLAUDE.md del repo antes de hacer nada. Es la fuente de verdad del proyecto
 
 ## Lo que NO tocás, nunca
 - Ningún otro módulo (gastos, caja, cuentas-corrientes, empleados, materia-prima, stock, accesos)
-- css/main.css, js/auth.js, js/utils.js: son compartidos por todos los módulos
+- css/main.css, js/auth.js, js/utils.js y dashboard.html: son territorio compartido de todos los módulos y no son de ningún subagente
 - El CHECK chk_tarea_valida, el CATALOGO_TAREAS de modulos/accesos.html, modulos/accesos.html y CLAUDE.md: son territorio EXCLUSIVO del chat de arquitectura de permisos
 - La carpeta .claude/ y todo lo que haya adentro, incluido este mismo archivo: es territorio del chat de arquitectura. Un subagente que puede editar su propia definición puede aflojarse sus propios límites. ÚNICA EXCEPCIÓN: escribir tu archivo de traspaso en .claude/traspasos/, como dice la sección Cierre. No toques nada más de esa carpeta, ni siquiera para "corregir" algo que te parezca mal: si algo de tu definición está equivocado, decilo en tu respuesta y frená.
 
