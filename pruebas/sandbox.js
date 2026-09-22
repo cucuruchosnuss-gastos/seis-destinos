@@ -17,7 +17,7 @@ const FUNCIONES = [
   'htmlHistorial', 'resumirCambios', 'htmlTarjetaCheque', 'chequeParaBase',
   'textoDiasHastaPago', 'htmlDatosCheque',
   'textoOpcional', 'origenDatosDe', 'estadoRenglon', 'aplicarRenglones', 'chequeVacio',
-  'pintarEstadoFotos', 'htmlAvisoFoto', 'fotoLeidaSinProblemas', 'fotoSinSenal', 'textoLecturaFoto',
+  'pintarEstadoFotos', 'pintarBotonChequeMano', 'htmlAvisoFoto', 'fotoLeidaSinProblemas', 'fotoSinSenal', 'textoLecturaFoto',
   'textoChequesLeidos', 'hayFotosLeyendo', 'asegurarContadorLecturas', 'detenerContadorLecturas', 'tickLecturas',
   'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores',
   'pintarTotalYGuardado', 'motivosParaNoGuardar', 'efectivoDelFormulario', 'totalDelFormulario',
@@ -38,7 +38,7 @@ const FUNCIONES = [
 const CONSTANTES = [
   'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA',
   'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia', 'puedeVerCartera',
-  'ETIQUETA_ESTADO_CHEQUE', 'UUID_COB', 'SEGUNDOS_LECTURA_LENTA',
+  'ETIQUETA_ESTADO_CHEQUE', 'UUID_COB', 'SEGUNDOS_LECTURA_LENTA', 'TEXTO_BOTON_CHEQUE_MANO',
 ]
 
 const PRELUDIO = `

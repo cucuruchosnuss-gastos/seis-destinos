@@ -56,6 +56,8 @@ correrMutaciones({
       de: '        if (estado.form !== f) return\n', a: '' },
     { nombre: 'cancelar no avisa',
       de: "        mostrarError('No se agregó el cheque: hay que decir a qué foto corresponde.')\n", a: '' },
+    { nombre: 'sin la guarda de foto (red detrás del botón deshabilitado)',
+      de: '      if (!f.fotos.length) {\n        mostrarError(', a: '      if (false) {\n        mostrarError(' },
     // ── Estático: vuelve un nativo ──────────────────────────────────────────
     { nombre: 'vuelve window.confirm al descartar',
       de: '      if (!si) return\n      await dbBorrar', a: "      if (!si || !window.confirm('¿Seguro?')) return\n      await dbBorrar" },

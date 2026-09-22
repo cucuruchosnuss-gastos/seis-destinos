@@ -1181,9 +1181,13 @@
         <div id="cob-fotos-estado"></div>
         <div id="cob-lista-cheques"></div>
 
+        <!-- Sin ninguna foto el botón queda deshabilitado con el motivo a la
+             vista. El disabled y el aviso los pone pintarBotonChequeMano()
+             DESDE JS: si el script fallara, el HTML no deja un botón muerto. -->
         <div class="cob-acciones">
-          <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" id="cob-btn-cheque-mano">+ Agregar cheque a mano</button>
+          <button type="button" class="cob-btn cob-btn--chico cob-btn--ancho" id="cob-btn-cheque-mano" aria-describedby="cob-ayuda-cheque-mano">+ Agregar un cheque que no se leyó</button>
         </div>
+        <div class="cob-campo__ayuda" id="cob-ayuda-cheque-mano" hidden>Primero sacá la foto</div>
       </div>
 
       <div class="cob-seccion">
@@ -2220,13 +2224,15 @@
       accionDelModal = null
     }
 
-    // Agregar un cheque a mano: con una foto va a esa; con varias se pregunta a
-    // cuál con elegirFotoConDialogo (antes era un window.prompt).
+    // Agregar un cheque que el lector no leyó: con una foto va a esa; con
+    // varias se pregunta a cuál con elegirFotoConDialogo (antes era un
+    // window.prompt).
     async function agregarChequeAMano() {
       const f = estado.form
       if (!f) return
       // La foto es OBLIGATORIA: un cheque sin foto no se puede verificar
-      // después contra nada, y el servidor lo rechaza igual.
+      // después contra nada, y el servidor lo rechaza igual. El botón ya
+      // queda deshabilitado sin fotos (pintarBotonChequeMano); esto es la red.
       if (!f.fotos.length) {
         mostrarError('Primero sacá la foto del cheque: cada cheque tiene que estar vinculado a una foto.')
         return
@@ -3276,7 +3282,25 @@
       iniciarReintentosFotos()
     }
 
+    // El botón de agregar un cheque que el lector no leyó. La base exige foto
+    // para cada cheque (cobranza_cheques.foto_id es NOT NULL): es lo que
+    // permite controlar contra el papel. Sin ninguna foto el botón no sirve,
+    // así que queda deshabilitado y se dice por qué, en vez de dejar tocarlo
+    // para que falle con un cartel. Se llama desde pintarEstadoFotos(), que es
+    // el render por el que pasa TODO cambio de fotos (agregar, abrir un
+    // borrador o una edición, quitar).
+    const TEXTO_BOTON_CHEQUE_MANO = '+ Agregar un cheque que no se leyó'
+    function pintarBotonChequeMano() {
+      const f = estado.form
+      const hayFoto = !!f && f.fotos.length > 0
+      const btn = document.getElementById('cob-btn-cheque-mano')
+      btn.textContent = TEXTO_BOTON_CHEQUE_MANO
+      btn.disabled = !hayFoto
+      document.getElementById('cob-ayuda-cheque-mano').hidden = hayFoto
+    }
+
     function pintarEstadoFotos() {
+      pintarBotonChequeMano()
       const f = estado.form
       if (!f) return
       const cont = document.getElementById('cob-fotos-estado')

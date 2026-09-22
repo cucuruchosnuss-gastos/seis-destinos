@@ -12,7 +12,10 @@
 //  - las marcas en memoria (enCurso, fase, …) NO llegan al borrador: se clona
 //    igual que IndexedDB, con structuredClone;
 //  - con el formulario abierto se reintenta en 'online' y cada 30 s, y todo se
-//    limpia al salir del formulario.
+//    limpia al salir del formulario;
+//  - el botón "+ Agregar un cheque que no se leyó" queda deshabilitado, con
+//    "Primero sacá la foto" a la vista, mientras no haya ninguna foto, y se
+//    recalcula al agregar o quitar fotos y al abrir un borrador o una edición.
 //
 // Archivo bajo prueba: ARCHIVO_TEST, o modulos/cobranzas.html.
 
@@ -83,10 +86,24 @@ const PRELUDIO = `
     upload: async () => ({ error: null }),
     invoke: async () => ({ data: { ok: true, cheques: [] }, error: null }),
   }
+  // __sb.tablas: lo que devuelve cada tabla en abrirFormularioEdicion.
+  __sb.tablas = {}
+  function __consulta(tabla) {
+    const r = () => Promise.resolve(__sb.tablas[tabla] ?? { data: null, error: null })
+    const q = { select: () => q, eq: () => q, order: () => r(), maybeSingle: () => r() }
+    return q
+  }
   var supabase = {
     storage: { from: () => ({ upload: (...a) => { __sb.uploads++; return __sb.upload(...a) } }) },
     functions: { invoke: (...a) => { __sb.invokes++; return __sb.invoke(...a) } },
+    from: (tabla) => __consulta(tabla),
   }
+  var crypto = { randomUUID: (() => { let n = 0; return () => 'uuid-' + (++n) })() }
+  // Abrir un borrador: lo que devuelve IndexedDB, controlado desde la prueba.
+  var __borradorLocal = null
+  async function dbLeer() { return __borradorLocal }
+  // Agregar una foto: la compresión real necesita un canvas; acá se saltea.
+  async function comprimirFoto() { return { size: 10 } }
 
   // --- IndexedDB falso: se clona IGUAL que IndexedDB -------------------------
   var __guardados = []
@@ -118,13 +135,18 @@ const FUNCIONES = [
   'esEscritorio', 'enModoMaestro', 'pintarPanelVacio',
   'chequeVacio', 'chequeDesdeOcr', 'renglonComoImpreso', 'aplicarRenglones',
   'escribirImporteEnCampo',
+  // El botón de agregar un cheque que no se leyó (22/09/2026)
+  'pintarBotonChequeMano', 'agregarFotos', 'formularioVacio',
+  'abrirFormularioNuevo', 'abrirFormularioLocal', 'abrirFormularioEdicion', 'chequeDesdeBase',
 ]
-const CONSTANTES = ['SEGUNDOS_LECTURA_LENTA', 'MS_REINTENTO_FOTOS', 'MAX_INTENTOS_LECTOR', 'MQ_ESCRITORIO']
+const CONSTANTES = ['SEGUNDOS_LECTURA_LENTA', 'MS_REINTENTO_FOTOS', 'MAX_INTENTOS_LECTOR', 'MQ_ESCRITORIO',
+  'TEXTO_BOTON_CHEQUE_MANO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
     preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
     retorno: `estado, __sb, __els, __spans, __timersDe, __listeners, __guardados, navigator,
+      __ponerBorradorLocal(b){ __borradorLocal = b },
       __setAhora(t){ __ahora = t }, __ahoraEs(){ return __ahora }, __reintento(){ return reintentoFotos }`,
   })
 }
@@ -423,6 +445,84 @@ async function main() {
     const foto2 = formConFoto(S, { error: marca('error_foto'), subida: true })
     const h2 = S.htmlAvisoFoto(foto2, 0, S.estado.form, S.__ahoraEs())
     chk('escape: el error de la foto', h2.includes(escapada('error_foto')) && !/<b data-xss=/.test(h2), h2)
+  }
+
+  // ── 11. El botón de agregar un cheque que no se leyó ───────────────────────
+  // La base exige foto para cada cheque. Sin ninguna foto el botón queda
+  // deshabilitado con "Primero sacá la foto" a la vista; con al menos una se
+  // habilita. Se EJECUTAN los caminos reales por los que cambian las fotos.
+  {
+    const TEXTO = '+ Agregar un cheque que no se leyó'
+    const AVISO = 'Primero sacá la foto'
+    const btn = (S) => S.__els.get('cob-btn-cheque-mano')
+    const ayuda = (S) => S.__els.get('cob-ayuda-cheque-mano')
+    const sinFoto = (S, donde) => {
+      chk(`${donde}: sin fotos el botón queda deshabilitado`, btn(S)?.disabled === true, btn(S)?.disabled)
+      chk(`${donde}: sin fotos se ve "${AVISO}"`, ayuda(S)?.hidden === false)
+      chk(`${donde}: el texto del botón es el nuevo`, btn(S)?.textContent === TEXTO, btn(S)?.textContent)
+    }
+    const conFoto = (S, donde) => {
+      chk(`${donde}: con foto el botón se habilita`, btn(S)?.disabled === false, btn(S)?.disabled)
+      chk(`${donde}: con foto el aviso se esconde`, ayuda(S)?.hidden === true)
+      chk(`${donde}: con foto el botón dice "${TEXTO}"`, btn(S)?.textContent === TEXTO, btn(S)?.textContent)
+    }
+
+    // El HTML estático: el texto nuevo, el aviso existe y arranca oculto
+    // (el disabled NO va en el HTML: lo pone JS).
+    const tag = FUENTE.match(/<button[^>]*id="cob-btn-cheque-mano"[^>]*>([^<]*)<\/button>/)
+    chk('HTML: el botón dice el texto nuevo', !!tag && tag[1] === TEXTO, tag && tag[1])
+    chk('HTML: el botón NO trae disabled (lo pone JS)', !!tag && !/\sdisabled\b/.test(tag[0]), tag && tag[0])
+    chk('HTML: el viejo "Agregar cheque a mano" ya no está', !FUENTE.includes('Agregar cheque a mano'))
+    const div = FUENTE.match(/<div[^>]*id="cob-ayuda-cheque-mano"[^>]*>([^<]*)<\/div>/)
+    chk('HTML: el aviso existe, oculto, con el texto', !!div && div[1] === AVISO && /\shidden\b/.test(div[0]), div && div[0])
+    chk('HTML: el botón apunta al aviso con aria-describedby', !!tag && /aria-describedby="cob-ayuda-cheque-mano"/.test(tag[0]))
+
+    // Formulario nuevo: sin fotos.
+    let S = sandbox()
+    S.abrirFormularioNuevo()
+    sinFoto(S, 'nueva')
+
+    // Agregar una foto (el camino real): se habilita.
+    await S.agregarFotos([{ name: 'a.jpg' }])
+    await ticks()
+    chk('agregar foto: hay una foto en el formulario', S.estado.form.fotos.length === 1, S.estado.form.fotos.length)
+    conFoto(S, 'agregar foto')
+
+    // Quitar la foto: el formulario no tiene un botón para eso; todo cambio
+    // de fotos pasa por pintarEstadoFotos(), que es donde se recalcula.
+    S.estado.form.fotos = []
+    S.pintarEstadoFotos()
+    sinFoto(S, 'quitar foto')
+    S.estado.form.fotos = [{ id: 'f1', subida: true, leida: true }, { id: 'f2', subida: true, leida: true }]
+    S.pintarEstadoFotos()
+    conFoto(S, 'dos fotos')
+
+    // Abrir un borrador con foto después de uno sin: se recalcula.
+    S = sandbox()
+    S.abrirFormularioNuevo()
+    sinFoto(S, 'antes del borrador')
+    S.__ponerBorradorLocal({ id: 'b-1', modo: 'nueva', estadoLocal: 'borrador', cliente: 'X', fecha: '2026-09-21',
+      efectivo: '', comprobante_referencia: '', observaciones: '',
+      fotos: [{ id: 'f1', storage_path: 'uid/b-1/1.jpg', blob: null, subida: true, leida: true }], cheques: [], actualizado: 0 })
+    await S.abrirFormularioLocal('b-1')
+    conFoto(S, 'abrir borrador con foto')
+    // Y un borrador SIN fotos después de uno con: vuelve a deshabilitarse.
+    S.__ponerBorradorLocal({ id: 'b-2', modo: 'nueva', estadoLocal: 'borrador', cliente: '', fecha: '2026-09-21',
+      efectivo: '', comprobante_referencia: '', observaciones: '', fotos: [], cheques: [], actualizado: 0 })
+    await S.abrirFormularioLocal('b-2')
+    sinFoto(S, 'abrir borrador sin fotos')
+
+    // Abrir una edición: las fotos vienen de la base.
+    S = sandbox()
+    S.abrirFormularioNuevo()
+    S.__sb.tablas = {
+      v_cobranzas: { data: { id: 'c-1', cliente: 'Don Pepe', fecha: '2026-09-20', efectivo: 0 }, error: null },
+      cobranza_cheques: { data: [], error: null },
+      cobranza_fotos: { data: [{ id: 'fb-1', storage_path: 'uid/c-1/1.jpg' }], error: null },
+    }
+    await S.abrirFormularioEdicion('c-1')
+    chk('edición: se abrió con la foto de la base', S.estado.form?.fotos.length === 1, S.estado.form?.fotos.length)
+    conFoto(S, 'abrir edición')
   }
 
   for (const f of fallas) console.log('  FALLA: ' + f)

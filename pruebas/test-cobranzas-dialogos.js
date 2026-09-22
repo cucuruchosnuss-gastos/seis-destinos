@@ -6,6 +6,8 @@
 // agregarChequeAMano y descartarBorradorLocal— con un document falso que
 // sigue el foco, despacha teclas y hace clic en los botones que el render
 // dibujó. Lo que se afirma:
+//  - agregar un cheque a mano sin ninguna foto no agrega nada (la red detrás
+//    del botón deshabilitado);
 //  - agregar un cheque a mano con UNA foto no abre ningún diálogo;
 //  - con tres fotos, elegir la 2 deja el cheque con esa foto_id;
 //  - Cancelar y Escape hacen lo mismo que el prompt en null: no se agrega y se
@@ -135,6 +137,19 @@ const formCon = (n) => ({ id: 'form-1', fotos: Array.from({ length: n }, (_, i) 
 const MSG_SIN_FOTO = 'No se agregó el cheque: hay que decir a qué foto corresponde.'
 
 async function main() {
+  // ── Sin ninguna foto: la guarda queda como red ──────────────────────────
+  // El botón ya está deshabilitado sin fotos (test-cobranzas-fotos.js, 11);
+  // si igual se llegara acá, no se agrega nada y se dice por qué.
+  {
+    const S = nuevo()
+    S.estado.form = formCon(0)
+    await S.agregarChequeAMano()
+    chk('0 fotos (red): no se agrega ningún cheque', S.estado.form.cheques.length === 0)
+    chk('0 fotos (red): no se abre ningún diálogo', S.__abierto() === null)
+    chk('0 fotos (red): se avisa que primero va la foto', S.__llamadas.errores.length === 1 && /Primero sacá la foto/.test(S.__llamadas.errores[0]), S.__llamadas.errores)
+    chk('0 fotos (red): no se guarda el borrador', S.__llamadas.guardarBorrador === 0)
+  }
+
   // ── Elegir foto: UNA foto, sin diálogo ──────────────────────────────────
   {
     const S = nuevo()
