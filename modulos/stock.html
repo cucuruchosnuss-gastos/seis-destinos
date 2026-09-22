@@ -3659,12 +3659,12 @@
         // nada, enseñaría que tocar no sirve — y el día que alguien con permiso
         // lo necesite, ya aprendió a no tocar.
         return `
-          <div class="${clases}"${gestiona ? ` data-insumo="${i.id}"` : ''}>
+          <div class="${clases}"${gestiona ? ` data-insumo="${esc(i.id)}"` : ''}>
             <div class="fila-insumo__info">
               <div class="fila-insumo__nombre">${esc(i.nombre)}${htmlMarca(i.marca, marcaArriba)}${htmlAclaracion(i.aclaracion)}</div>
               <div class="fila-insumo__meta">
                 ${metaTexto ? `<span class="fila-insumo__meta-texto">${esc(metaTexto)}</span>` : ''}
-                <span class="chip-tipo chip-tipo--${i.tipo}">${TIPOS[i.tipo] ?? esc(i.tipo)}</span>
+                <span class="chip-tipo chip-tipo--${esc(i.tipo)}">${esc(TIPOS[i.tipo] ?? i.tipo)}</span>
                 ${badgePendiente}${badgeInactivo}
               </div>
             </div>
@@ -3854,7 +3854,7 @@
               <div class="fila-stock__nombre">${esc(f.insumo_nombre)}${htmlMarca(f.marca, marcaArriba)}${htmlAclaracion(f.aclaracion)}</div>
               <div class="fila-stock__meta">
                 ${meta ? `<span class="fila-stock__meta-texto">${esc(meta)}</span>` : ''}
-                <span class="chip-tipo chip-tipo--${f.tipo}">${TIPOS[f.tipo] ?? esc(f.tipo)}</span>
+                <span class="chip-tipo chip-tipo--${esc(f.tipo)}">${esc(TIPOS[f.tipo] ?? f.tipo)}</span>
                 ${negativo ? '<span class="chip-saldo-negativo">Saldo negativo</span>' : ''}
               </div>
             </div>
@@ -6634,10 +6634,14 @@
 
     // Se repuebla en CADA apertura y no una vez al cargar la pantalla: la
     // etiqueta depende de la unidad del insumo que se está editando.
+    // `nom` va con esc(): una unidad que no está en NOMBRE_UNIDAD vuelve TAL
+    // CUAL, e insumos.unidad_medida es texto libre sin CHECK (verificado el
+    // 22/09/2026) — un producto creado al vuelo desde Ingreso lo trae como lo
+    // tipeó quien cargaba.
     function poblarSelectorVista(unidad) {
       const nom = nombreDeUnidadMedida(unidad)
       document.getElementById('campo-vista').innerHTML =
-        `<option value="base">En su unidad${nom ? ` (${nom})` : ''}</option>` +
+        `<option value="base">En su unidad${nom ? ` (${esc(nom)})` : ''}</option>` +
         '<option value="bulto">En bultos</option>'
     }
 
