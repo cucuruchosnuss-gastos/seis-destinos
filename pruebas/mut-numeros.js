@@ -20,7 +20,9 @@ const TMP = path.join(__dirname, 'mut-tmp-utils.js')
 const MUTACIONES = [
   ['el punto con 3 dígitos pasa a ser decimal', "/^\\d+\\.\\d{1,2}$/.test(s)", "/^\\d+\\.\\d{1,3}$/.test(s)"],
   ['el punto pegado deja de ser decimal', "else if (puntos === 1 && /^\\d+\\.\\d{1,2}$/.test(s)) [entero, decimal] = s.split('.')\n", ''],
-  ['no se validan los grupos de miles', "const GRUPOS = /^\\d{1,3}(\\.\\d{3})+$/", "const GRUPOS = /^[\\d.]+$/"],
+  ['no se validan los grupos de miles', "const GRUPOS = /^[1-9]\\d{0,2}(\\.\\d{3})+$/", "const GRUPOS = /^[\\d.]+$/"],
+  ['vuelve el \\d{1,3} inicial (grupo de miles que empieza con 0)', "const GRUPOS = /^[1-9]\\d{0,2}(\\.\\d{3})+$/", "const GRUPOS = /^\\d{1,3}(\\.\\d{3})+$/"],
+  ['"0.300" deja de tener punto decimal', "    else if (puntos === 1 && /^0\\.\\d+$/.test(s)) [entero, decimal] = s.split('.')\n", ''],
   ['no se limita la cantidad de decimales', 'if (decimal.length > decimales) return null', ''],
   ['el espacio interno se come', "let s = String(texto).trim()", "let s = String(texto).replace(/\\s/g, '')"],
   ['leer vuelve a parseFloat', "const n = Number(entero + (decimal ? '.' + decimal : ''))", "const n = parseFloat(String(texto).replace(',', '.'))"],

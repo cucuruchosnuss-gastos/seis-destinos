@@ -164,7 +164,9 @@ export function leerNumeroAr(texto, { decimales = 2, negativos = false } = {}) {
   if (!/^[0-9.,]+$/.test(s)) return null
   const comas = s.split(',').length - 1
   if (comas > 1) return null
-  const GRUPOS = /^\d{1,3}(\.\d{3})+$/
+  // Un grupo de miles no empieza con 0: "0.300", "00.300" y "012.345" no son
+  // miles. Con "0" como parte entera, el punto es decimal (ver abajo).
+  const GRUPOS = /^[1-9]\d{0,2}(\.\d{3})+$/
   let entero
   let decimal = ''
   if (comas === 1) {
@@ -179,6 +181,9 @@ export function leerNumeroAr(texto, { decimales = 2, negativos = false } = {}) {
   } else {
     const puntos = s.split('.').length - 1
     if (puntos === 0) entero = s
+    // "0.300" y "0.5": parte entera 0, así que el punto es decimal. Si sobran
+    // decimales para el campo, el chequeo de abajo da null.
+    else if (puntos === 1 && /^0\.\d+$/.test(s)) [entero, decimal] = s.split('.')
     else if (puntos === 1 && /^\d+\.\d{1,2}$/.test(s)) [entero, decimal] = s.split('.')
     else if (GRUPOS.test(s)) entero = s.replace(/\./g, '')
     else return null

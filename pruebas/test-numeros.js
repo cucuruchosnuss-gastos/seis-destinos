@@ -51,6 +51,17 @@ igual('con negativos, número negativo → tal cual', leer(-3, { negativos: true
 igual('"-0" con negativos → 0 (no -0)', leer('-0', { negativos: true }), 0)
 // los montos grandes no pierden precisión en los centavos
 igual('"99.999.999,99"', leer('99.999.999,99'), 99999999.99)
+// Un grupo de miles no empieza con 0 (con "0" de parte entera, el punto es decimal)
+igual('"0.300" con 3 decimales → 0.3', leer('0.300', { decimales: 3 }), 0.3)
+igual('"0.300" con 2 decimales → null', leer('0.300', { decimales: 2 }), null)
+igual('"0.300" por default (2) → null, no 300', leer('0.300'), null)
+igual('"00.300" → null', leer('00.300', { decimales: 3 }), null)
+igual('"012.345" → null', leer('012.345', { decimales: 3 }), null)
+igual('"012.345" con 0 decimales → null', leer('012.345', { decimales: 0 }), null)
+igual('"0.5" → 0.5', leer('0.5'), 0.5)
+igual('"1.500" → 1500 (igual que antes)', leer('1.500'), 1500)
+igual('"0.300,5" → null', leer('0.300,5', { decimales: 3 }), null)
+igual('"012.345,5" → null', leer('012.345,5'), null)
 
 // --- formatearNumeroAr ---------------------------------------------------
 igual('fmt(null) → "—"', fmt(null), '—')
