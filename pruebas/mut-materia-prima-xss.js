@@ -31,10 +31,13 @@ correrMutaciones({
   ],
   manuales: [
     // Los sinks cerrados en este barrido.
-    { nombre: 'la foto vuelve a enlazarse sin hrefFoto (acepta javascript:)',
-      de: '            : hrefFoto(c.foto_url)\n', a: '            : c.foto_url\n' },
-    { nombre: 'hrefFoto acepta cualquier esquema',
-      de: 'const esHttps = /^https:\\/\\/[^\\s"\'<>]+$/i', a: 'const esHttps = /^/' },
+    { nombre: 'la foto vuelve a un href con el valor crudo de la base',
+      de: '<button type="button" data-ruta-foto="${esc(rutaFotoMp(c.foto_url))}" class="comprobante-mp__foto">Ver foto →</button>',
+      a: '<a href="${c.foto_url}" class="comprobante-mp__foto">Ver foto →</a>' },
+    { nombre: 'rutaFotoMp acepta cualquier esquema como ruta',
+      de: '      if (/^[a-z][a-z0-9+.-]*:/i.test(v)) {', a: '      if (false) {' },
+    { nombre: 'la ruta del botón de la foto pierde el esc()',
+      de: 'data-ruta-foto="${esc(rutaFotoMp(c.foto_url))}"', a: 'data-ruta-foto="${rutaFotoMp(c.foto_url)}"' },
     { nombre: 'la cabecera de la transferencia pierde el esc() de "Recibido por"',
       de: '        esc(textoRecepcion(entrega.base)),', a: '        textoRecepcion(entrega.base),' },
     { nombre: 'la cabecera de la transferencia pierde el esc() de fecha y origen',

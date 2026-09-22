@@ -57,7 +57,7 @@ const RENDERS = [
   'renderizarAvisoDuplicado', 'renderizarRemitos', 'htmlSugerenciasCatalogo', 'htmlCategoriaNueva',
   'htmlItemCerrado', 'htmlItemAbierto', 'renderizarConfirmacion', 'renderizarInternos',
   'htmlFilaInterno', 'renderizarResumenInterno', 'renderizarItemsInternos',
-  'actualizarSumaMixtaEnVivo', 'htmlResultadoCircuito', 'hrefFoto', 'esc', 'itemVacio',
+  'actualizarSumaMixtaEnVivo', 'htmlResultadoCircuito', 'rutaFotoMp', 'esc', 'itemVacio',
   'renderizarProgresoWz', 'renderizarTogglesTipoDoc', 'poblarSelectUnidades',
 ]
 
@@ -154,17 +154,21 @@ function correrRenders(S) {
   const el = (id) => S.__el(id)
   const E = S.estado
 
-  // ── esc y hrefFoto ────────────────────────────────────────────────────────
+  // ── esc y rutaFotoMp ────────────────────────────────────────────────────────
   for (const [crudo, esperado] of [['&', '&amp;'], ['<', '&lt;'], ['>', '&gt;'], ['"', '&quot;'], ["'", '&#39;']]) {
     chk(`esc escapa ${crudo}`, S.esc(crudo) === esperado, S.esc(crudo))
   }
   chk('esc no convierte null en la palabra null', S.esc(null) === '' && S.esc(undefined) === '')
-  if (!S.hrefFoto) { chk('existe hrefFoto(): sin ella el href de la foto acepta un javascript:', false); S.hrefFoto = () => null }
-  for (const malo of ['javascript:alert(1)', ' JavaScript:alert(1)', 'data:text/html,<b>', 'http://x/y', '//x/y', 'https://x/"onmouseover=1', 'https://x/<b>', '', null]) {
-    chk(`hrefFoto rechaza ${JSON.stringify(malo)}`, S.hrefFoto(malo) === null, S.hrefFoto(malo))
+  // Desde la fase 2 de las fotos ningún valor de la base va a un href: el
+  // detalle dibuja un botón con la RUTA (escapada) y la URL se firma al tocar.
+  // rutaFotoMp() es la que decide qué es una ruta del bucket; la suite
+  // test-materia-prima-fotos.js la prueba entera, acá solo lo que toca al XSS.
+  if (!S.rutaFotoMp) { chk('existe rutaFotoMp()', false); S.rutaFotoMp = () => null }
+  for (const malo of ['javascript:alert(1)', ' JavaScript:alert(1)', 'data:text/html,<b>', 'http://x/y', '//x/y', 'https://x/"onmouseover=1', 'https://x/<b>', 'uid/mp/"onmouseover=1', '', null]) {
+    chk(`rutaFotoMp rechaza ${JSON.stringify(malo)}`, S.rutaFotoMp(malo) === null, S.rutaFotoMp(malo))
   }
-  const buena = 'https://xtorxouhzuizdvawqakb.supabase.co/storage/v1/object/sign/comprobantes/a.jpg?token=x&y=1'
-  chk('hrefFoto acepta una URL firmada de Storage', S.hrefFoto(buena) === buena)
+  const buena = 'https://xtorxouhzuizdvawqakb.supabase.co/storage/v1/object/sign/comprobantes/u1/mp/a.jpg?token=SECRETO&y=1'
+  chk('rutaFotoMp extrae la ruta de una URL firmada vieja', S.rutaFotoMp(buena) === 'u1/mp/a.jpg', S.rutaFotoMp(buena))
 
   // ── chipTipoDoc con un tipo que no está en TIPOS_DOC ─────────────────────
   chequearMarcas(chk, 'chipTipoDoc (tipo desconocido)', S.chipTipoDoc(marca('tipo_doc')), ['tipo_doc'])
@@ -226,8 +230,9 @@ function correrRenders(S) {
     chequearMarcas(chk, 'detalle de ingreso (cabecera)', el('detalle-meta').innerHTML, ['fantasia', 'unidad_nombre'])
     const comp = el('detalle-comprobantes').innerHTML
     chequearMarcas(chk, 'detalle de ingreso (comprobantes)', comp, ['tipo_doc_detalle', 'numero_doc', 'cargado_por', 'editado_por'])
-    chk('detalle de ingreso: una foto_url javascript: NO se enlaza', !/href="\s*javascript/i.test(comp) && comp.includes('Foto no disponible'))
-    chk('detalle de ingreso: la foto de Storage sí se enlaza, escapada', comp.includes(`href="${S.esc(buena)}"`))
+    chk('detalle de ingreso: una foto_url javascript: NO se enlaza', !/javascript/i.test(comp) && comp.includes('Foto no disponible'))
+    chk('detalle de ingreso: la foto vieja va como botón con su RUTA, sin href', comp.includes('data-ruta-foto="u1/mp/a.jpg"') && !/href=/i.test(comp))
+    chk('detalle de ingreso: el token de la URL vieja NO aparece en la página', !comp.includes('SECRETO'))
     chequearMarcas(chk, 'detalle de ingreso (renglones)', el('detalle-items').innerHTML,
       ['lote_detalle', 'motivo_detalle', 'insumo_detalle', 'marca_detalle', 'unidad_detalle', 'unidad_incompleto'])
   })())
@@ -621,7 +626,7 @@ if (SOLO !== 'render') {
   // esc alcanza para el contenido y para un atributo ENTRE COMILLAS. No alcanza
   // sin comillas, ni en un on*=, ni en un href/src (un javascript: no tiene
   // nada que esc() toque). En un href solo se acepta encodeURIComponent() o
-  // esc(hrefFoto(...)), que deja pasar solo https://. En style, solo hojas de
+  // nada más: desde la fase 2 de las fotos ningún valor de la base va a un href. En style, solo hojas de
   // la lista (constantes).
   const sinComillas = [], enEvento = [], enUrl = [], enStyle = []
   for (const x of enHtml) {
@@ -634,12 +639,12 @@ if (SOLO !== 'render') {
     const attr = (tramo.match(/([\w-]+)\s*=\s*"[^"]*$/) || [])[1] || ''
     const e = x.expr.trim()
     if (/^on/i.test(attr)) enEvento.push(`${x.linea} (${attr})`)
-    if (/^(href|src|action|formaction|xlink:href)$/i.test(attr) && !/^encodeURIComponent\(/.test(e) && !/^esc\(hrefFoto\(/.test(e)) enUrl.push(`${x.linea} (${attr}: ${e})`)
+    if (/^(href|src|action|formaction|xlink:href)$/i.test(attr) && !/^encodeURIComponent\(/.test(e)) enUrl.push(`${x.linea} (${attr}: ${e})`)
     if (/^style$/i.test(attr) && !(SEGURAS[funcionDe(x.linea)] || {})[e]) enStyle.push(`${x.linea}: ${e}`)
   }
   chk('estático: ninguna interpolación cae en un atributo SIN comillas', sinComillas.length === 0, sinComillas.join(', '))
   chk('estático: ninguna interpolación cae dentro de un on*=', enEvento.length === 0, enEvento.join(', '))
-  chk('estático: ninguna interpolación cae en un href/src sin encodeURIComponent ni hrefFoto', enUrl.length === 0, enUrl.join(', '))
+  chk('estático: ninguna interpolación cae en un href/src sin encodeURIComponent', enUrl.length === 0, enUrl.join(', '))
   chk('estático: en un style solo entran constantes de la lista', enStyle.length === 0, enStyle.join(', '))
 
   // Los toasts no son sink: usan textContent.

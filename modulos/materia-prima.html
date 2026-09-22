@@ -612,6 +612,10 @@
       padding: 0.375rem 0.75rem;
     }
     .comprobante-mp__foto:hover { background: var(--marron-suave); text-decoration: none; }
+    /* Es un <button> desde la fase 2 de las fotos: sin el fondo ni la
+       tipografía del navegador. */
+    button.comprobante-mp__foto { background: none; font-family: inherit; line-height: inherit; cursor: pointer; }
+    button.comprobante-mp__foto:hover { background: var(--marron-suave); }
     .comprobante-mp__sin-foto {
       flex-shrink: 0;
       font-size: 0.75rem;
@@ -3286,22 +3290,108 @@
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
     }
 
-    // La URL de una foto que va a un href. Escapar HTML NO alcanza en un href:
-    // un `javascript:...` no tiene ningún carácter que esc() toque y se
-    // ejecuta igual al tocar el enlace. foto_url es texto libre en la base (la
-    // policy de INSERT de materia_prima_ingresos solo mira la tarea), así que
-    // quien carga podría guardar cualquier cosa y hacerla correr en la sesión
-    // de quien mira el detalle con `ver_todo`. Solo se acepta https:// —las
-    // fotos del módulo son URLs firmadas de Storage— y lo demás no se enlaza.
-    // Devuelve la URL CRUDA: el call site la escapa igual, porque va adentro
-    // de un atributo entre comillas.
-    function hrefFoto(url) {
-      const u = String(url ?? '').trim()
-      // La regex va en una asignación y no después de `return`: los
-      // tokenizadores de pruebas/ deciden regex-o-división por el carácter
-      // anterior, y detrás de una palabra leerían una división.
-      const esHttps = /^https:\/\/[^\s"'<>]+$/i
-      return esHttps.test(u) ? u : null
+    // ─── FOTOS DEL MÓDULO: se guarda la RUTA y se firma AL MIRAR ────────────
+    // Fase 2 de las fotos de Ingreso (21/09/2026), mismo criterio que Gastos
+    // (21289ef) y Cobranzas. foto_url / ficha_tecnica_url / foto_lote_url
+    // guardan la RUTA en el bucket ('{uid}/mp/{archivo}'); las filas viejas
+    // traen todavía una URL firmada a 10 años, y de ahí se extrae la ruta. En
+    // los dos casos se firma a SEGUNDOS_FIRMA_FOTO_MP recién al tocar "Ver
+    // foto", así que el token viejo NO aparece nunca en la página.
+    //
+    // NUNCA va un valor de la base a un href/src: foto_url es texto libre (la
+    // policy de INSERT solo mira la tarea) y un `javascript:` no tiene nada que
+    // esc() toque. Lo único que se abre es la URL que devuelve
+    // createSignedUrl, armada por el cliente de Supabase contra nuestro
+    // proyecto. Reemplaza a hrefFoto(), que dejaba pasar https:// a un href.
+    //
+    // SIN PERMISO vs NO EXISTE: Storage devuelve NoSuchKey/404 en los dos
+    // (verificado por Gastos contra Storage real). Lo único que se sabe antes
+    // de pedir es que la carpeta propia siempre se ve; lo de otra persona lo
+    // decide la policy (rama 'mp/' con materia_prima:ver_todo en la unidad del
+    // ingreso, que es la misma tarea que deja ver esa fila en el listado).
+    const BUCKET_FOTOS_MP = 'comprobantes'
+    const SEGUNDOS_FIRMA_FOTO_MP = 300
+
+    const MENSAJES_FOTO_MP = {
+      no_encontrado: 'No se encontró el archivo de la foto en el servidor. Avisá para que lo revisen.',
+      no_se_sabe:    'No se pudo abrir la foto: el archivo no está o no tenés permiso para verlo.',
+      sesion:        'No se pudo abrir la foto porque tu sesión no es válida. Volvé a entrar e intentá de nuevo.',
+      ruta:          'No se pudo leer dónde está guardada la foto de este comprobante.',
+      bloqueada:     'El navegador bloqueó la pestaña de la foto. Permití ventanas emergentes para este sitio y volvé a tocar el botón.',
+      otro:          'No se pudo abrir la foto. Probá de nuevo en un momento.',
+    }
+
+    // Ruta en el bucket a partir de lo guardado: una ruta, o una URL firmada
+    // vieja de Storage. null si no tiene forma de ruta del bucket — un
+    // `javascript:`, una URL de otro lado, segmentos vacíos o `..`.
+    function rutaFotoMp(valor) {
+      let v = String(valor ?? '').trim()
+      if (!v) return null
+      if (/^[a-z][a-z0-9+.-]*:/i.test(v)) {
+        const m = v.match(/^https:\/\/[^/\s]+\/storage\/v1\/object\/sign\/comprobantes\/([^?#\s]+)(?:[?#]|$)/i)
+        if (!m) return null
+        try { v = decodeURIComponent(m[1]) } catch { return null }
+      }
+      const partes = v.split('/')
+      if (partes.length < 2) return null
+      const segmentoValido = /^[\w.-]+$/
+      if (partes.some(p => !segmentoValido.test(p) || p === '.' || p === '..')) return null
+      return v
+    }
+
+    // Por los campos estructurados del error, nunca por el texto (mismos
+    // códigos que midió Gastos: NoSuchKey/404; token inválido AccessDenied/403).
+    function clasificarErrorFirmaMp(error) {
+      const codigo = String(error?.code ?? '')
+      const cuerpo = String(error?.statusCode ?? '')
+      if (codigo === 'NoSuchKey' || cuerpo === '404') return 'no_encontrado'
+      if (codigo === 'InvalidJWT' || codigo === 'AccessDenied' || cuerpo === '401' || cuerpo === '403') return 'sesion'
+      return 'otro'
+    }
+
+    async function firmarFotoMp(ruta) {
+      const pedir = () => supabase.storage.from(BUCKET_FOTOS_MP).createSignedUrl(ruta, SEGUNDOS_FIRMA_FOTO_MP)
+      let { data, error } = await pedir()
+      // Un token vencido se renueva y se reintenta UNA vez, sin avisar.
+      if (error && clasificarErrorFirmaMp(error) === 'sesion') {
+        const { error: errorRefresco } = await supabase.auth.refreshSession()
+        if (!errorRefresco) ({ data, error } = await pedir())
+      }
+      if (error || !data?.signedUrl) return { url: null, falla: error ? clasificarErrorFirmaMp(error) : 'otro', error }
+      return { url: data.signedUrl, falla: null, error: null }
+    }
+
+    async function abrirFotoMp(ruta) {
+      if (!ruta) { mostrarError(MENSAJES_FOTO_MP.ruta); return }
+      const propia = ruta.split('/')[0] === estado.sesion?.user?.id
+      // La pestaña se abre ANTES del await: abierta después, el bloqueador de
+      // ventanas emergentes del celular la frena porque ya no cuenta como
+      // respuesta al toque. Sin 'noopener' en window.open porque con él
+      // devuelve null y no se la puede redirigir; se corta a mano.
+      const ventana = window.open('', '_blank')
+      if (ventana) ventana.opener = null
+      let r
+      try {
+        r = await firmarFotoMp(ruta)
+      } catch (e) {
+        r = { url: null, falla: 'otro', error: e }
+      }
+      if (!r.url) {
+        ventana?.close()
+        console.error('[foto ingreso] no se pudo firmar', ruta, r.error)
+        mostrarError(r.falla === 'no_encontrado'
+          ? (propia ? MENSAJES_FOTO_MP.no_encontrado : MENSAJES_FOTO_MP.no_se_sabe)
+          : (MENSAJES_FOTO_MP[r.falla] ?? MENSAJES_FOTO_MP.otro))
+        return
+      }
+      if (ventana) ventana.location.href = r.url
+      else mostrarError(MENSAJES_FOTO_MP.bloqueada)
+    }
+
+    function manejarClickFotoMp(e) {
+      const boton = e.target.closest?.('[data-ruta-foto]')
+      if (!boton) return
+      abrirFotoMp(boton.dataset.rutaFoto)
     }
 
     // ESPEJO EXACTO de normalizar_texto() de la base, que es la función del
@@ -4268,8 +4358,8 @@
           </div>
           ${!c.foto_url
             ? '<span class="comprobante-mp__sin-foto">Sin foto</span>'
-            : hrefFoto(c.foto_url)
-              ? `<a href="${esc(hrefFoto(c.foto_url))}" target="_blank" rel="noopener" class="comprobante-mp__foto">Ver foto →</a>`
+            : rutaFotoMp(c.foto_url)
+              ? `<button type="button" data-ruta-foto="${esc(rutaFotoMp(c.foto_url))}" class="comprobante-mp__foto">Ver foto →</button>`
               : '<span class="comprobante-mp__sin-foto">Foto no disponible</span>'}
         </div>`
       }).join('')
@@ -4368,6 +4458,8 @@
       estado.resultadoCircuito = null
     }
     document.getElementById('btn-cerrar-detalle').addEventListener('click', cerrarDetalleIngreso)
+    // "Ver foto →" de cada comprobante: firma al tocar (ver abrirFotoMp).
+    document.getElementById('detalle-comprobantes').addEventListener('click', manejarClickFotoMp)
     document.querySelector('#modal-ingreso .modal-mp__backdrop').addEventListener('click', cerrarDetalleIngreso)
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4551,43 +4643,33 @@
     // Esas dos ramas cubren las TRES columnas que alimenta esta función. La
     // segunda (adjuntos de items) se agregó el mismo 16/09: antes solo se
     // buscaba en foto_url y la ficha técnica de otra persona no iba a abrirse.
-    // PARA LA FASE 2: el match es un LIKE '%ruta%' contra la URL firmada que se
-    // guarda hoy. Cuando se guarde la RUTA, la policy puede pasar a comparar
-    // exacto —mejora, no rotura—, pero hay que revisarla en ese momento.
-    // Una foto HUÉRFANA (subida por una carga abandonada, sin fila que la
-    // nombre) no matchea ninguna rama: solo la ve quien la subió, y limpiarla
-    // requiere service_role. Ver el pendiente en CLAUDE.md.
-    // Al cerrarlo no se rompió nada existente: los 153 archivos del bucket (los
-    // de Gastos y los 47 'mp/') tienen el uid de su dueño como primer segmento.
+    // FASE 2 HECHA (21/09/2026): se guarda la RUTA. El match de la policy es
+    // un LIKE '%' || name || '%' contra la columna, y la ruta está contenida en
+    // sí misma, así que las filas nuevas siguen entrando en las dos ramas sin
+    // tocar la policy (verificado contra pg_policy ese día). Las 12 filas
+    // viejas con URL firmada también: la URL contiene la ruta. Pasar a una
+    // comparación exacta es una mejora posible, no una rotura — y la decide el
+    // chat de arquitectura, dueño de las policies del bucket.
     async function subirArchivoMp(archivo) {
-      const ext  = (archivo.name.split('.').pop() || 'jpg').toLowerCase()
+      // La extensión sale del nombre del archivo, que es texto libre del
+      // celular: se limpia para que la ruta tenga solo [\w.-] y rutaFotoMp()
+      // la reconozca al mirarla.
+      const ext  = ((archivo.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg').slice(0, 8)
       const azar = Math.random().toString(36).slice(2, 8)
       const path = `${estado.sesion.user.id}/mp/${Date.now()}-${azar}.${ext}`
 
       const { data, error } = await supabase.storage
-        .from('comprobantes')
+        .from(BUCKET_FOTOS_MP)
         .upload(path, archivo, { contentType: archivo.type, upsert: false })
       if (error) throw new Error(`No se pudo subir el archivo: ${error.message}`)
 
-      // PENDIENTE DE SEGURIDAD: la URL se firma a 10 AÑOS y se guarda en la base.
-      // Una URL firmada funciona SIN SESIÓN y NO se revoca cerrando la policy:
-      // las policies de arriba se cerraron, pero los links ya emitidos siguen
-      // abriendo el archivo para cualquiera que los tenga, hasta dentro de una
-      // década. La única forma de invalidar uno hoy es mover el archivo.
-      // Esta función alimenta TRES columnas, con el mismo problema en las tres:
-      // materia_prima_ingresos.foto_url (la foto del comprobante) y
-      // materia_prima_items.ficha_tecnica_url / foto_lote_url (los adjuntos del
-      // renglón). Al 16/09/2026 las dos de items están en null en las 26 filas,
-      // así que el daño hoy es de foto_url; los adjuntos lo heredan en cuanto se
-      // cargue el primero.
-      // LA MIGRACIÓN: guardar la RUTA y firmar al mirar, con expiración corta
-      // (cobranzas.html firma a 300 s). Migrar las filas ya cargadas toca DATOS y
-      // necesita aprobación de Facu antes de correrse.
-      const { data: firmada, error: errorFirma } = await supabase.storage
-        .from('comprobantes')
-        .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10) // 10 años
-      if (errorFirma) throw new Error(`No se pudo generar el link: ${errorFirma.message}`)
-      return firmada.signedUrl
+      // Se devuelve la RUTA y NO una URL firmada: es lo que se guarda en
+      // foto_url / ficha_tecnica_url / foto_lote_url. Antes se firmaba a 10
+      // AÑOS, y una URL firmada abre el archivo SIN SESIÓN y no se revoca: la
+      // única forma de invalidarla es mover el archivo. Ahora la firma se pide
+      // al mirar, a SEGUNDOS_FIRMA_FOTO_MP (ver abrirFotoMp). Las filas viejas
+      // con URL NO se migran desde acá: tocar datos necesita aprobación de Facu.
+      return data?.path || path
     }
 
     function avisoOcr(texto) {
