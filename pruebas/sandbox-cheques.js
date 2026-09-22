@@ -45,8 +45,12 @@ const CONSTANTES = [
 // Las funciones y constantes opcionales: las que agregan las partes
 // siguientes. El sandbox las carga SI EXISTEN, así la suite de una parte no
 // depende de las otras.
-const OPCIONALES = []
-const CONSTANTES_OPCIONALES = []
+const OPCIONALES = [
+  // unidad de negocio (22/09/2026, tarea A2)
+  'filasPorPlazo', 'unidadDeCheque', 'filtrarPorUnidad', 'unidadesDeCheques', 'pintarSelectorUnidades',
+  'desgloseUnidades', 'textoUnidadesSeleccion', 'htmlCeldaUnidad',
+]
+const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD']
 
 const PRELUDIO = `
   ${fuenteNumeros()}
@@ -117,11 +121,11 @@ const PRELUDIO = `
     miEmpleadoId: 'emp-1', miRolApp: 'usuario',
     misTareas: new Set(['cobranzas:ver_todo', 'cobranzas:procesar']),
     bancos: new Map(),
-    filtros: { estado: 'en_cartera', numero: '', banco: '', soloVencen: false },
+    filtros: { estado: 'en_cartera', numero: '', banco: '', unidad: '', soloVencen: false },
     vencimientos: null,
     orden: { campo: 'pago', sentido: 'asc' },
     filas: [], cobranzas: new Map(), cartera: null, tope: false, topeResumen: false, error: null,
-    bancosDeCheques: [], destacado: null, salida: null,
+    bancosDeCheques: [], cobranzaIdsDeCheques: [], destacado: null, salida: null,
     seleccion: { activa: false, ids: new Set(), ultimo: null },
   }
   var accionDelMotivo = null

@@ -24,7 +24,7 @@ correrMutaciones({
     { nombre: 'ordenar por cargó no mira el nombre',
       de: "        case 'cargo': return cob?.cargada_por_nombre ? String(cob.cargada_por_nombre) : null\n", a: '' },
     { nombre: 'la consulta vuelve a la tabla cobranzas (sin el nombre)',
-      de: "supabase.from('v_cobranzas').select('id, cliente, estado, fecha, cargada_por_nombre')", a: "supabase.from('cobranzas').select('id, cliente, estado, fecha')" },
+      de: "supabase.from('v_cobranzas').select('id, cliente, estado, fecha, cargada_por_nombre, unidad_negocio_id, unidad_negocio_nombre')", a: "supabase.from('cobranzas').select('id, cliente, estado, fecha')" },
     { nombre: 'Cargó no está en el selector del celular',
       de: "      { id: 'cargo', nombre: 'Cargó', tipo: 'texto' },\n", a: '' },
   ],

@@ -16,6 +16,7 @@ const SEGURAS_CHEQUES = [
   ['htmlAriaElegido(ch)', 'HTML armado por htmlAriaElegido(): un atributo con "true" o "false", constantes'],
   ['htmlCasillaElegir(ch)', 'HTML armado por htmlCasillaElegir(), que escapa adentro'],
   ['volver', 'HTML ya escapado: el botón se arma arriba con esc(ch.id), o vacío'],
+  ['htmlCeldaUnidad(ch, cob)', 'HTML armado por htmlCeldaUnidad(), que escapa adentro'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [
@@ -24,6 +25,7 @@ const SEGURAS_REGEX_CHEQUES = [
   [/^filas\.map\(ch => htmlFilaCheque\(ch, cobranzas\.get\(ch\.cobranza_id\)\)\)\.join\(''\)$/s, 'HTML armado por htmlFilaCheque(), que escapa adentro'],
   [/^notas\.map\(t =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^codigos\.map\(c =>/s, 'HTML de una plantilla anidada, verificada aparte'],
+  [/^unidades\.map\(u =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^ESTADOS_FILTRO_CHEQUES\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
 ]
 

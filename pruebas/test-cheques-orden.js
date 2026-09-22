@@ -81,9 +81,10 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   const html = S.htmlTablaCheques([], new Map())
   const ths = [...html.matchAll(/<th\b[^>]*>[\s\S]*?<\/th>/g)].map(m => m[0])
   const conOrden = ths.filter(t => /data-orden=/.test(t))
-  chk('ocho columnas ordenables (sin contar Salida)', conOrden.length === 8, conOrden.length)
+  // Nueve desde la tarea A2 (22/09/2026): se sumó Unidad, después de Importe.
+  chk('nueve columnas ordenables (sin contar Salida)', conOrden.length === 9, conOrden.length)
   const campos = conOrden.map(t => (t.match(/data-orden="([a-z]+)"/) || [])[1])
-  chk('las columnas ordenables son las pedidas', JSON.stringify(campos) === JSON.stringify(['numero', 'banco', 'emision', 'pago', 'importe', 'cliente', 'cargo', 'estado']), JSON.stringify(campos))
+  chk('las columnas ordenables son las pedidas', JSON.stringify(campos) === JSON.stringify(['numero', 'banco', 'emision', 'pago', 'importe', 'unidad', 'cliente', 'cargo', 'estado']), JSON.stringify(campos))
   chk('Salida NO se ordena', /<th scope="col">Salida<\/th>/.test(html))
   const imp = conOrden.find(t => /data-orden="importe"/.test(t))
   chk('la columna activa lleva aria-sort="descending" y ▼', /aria-sort="descending"/.test(imp) && />▼</.test(imp), imp)
@@ -97,7 +98,7 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   // lleva &deg;, y eso es seguro únicamente si nunca es un dato.
   const llamadas = [...FUENTE.matchAll(/htmlEncabezadoOrden\(([^)]*)\)/g)].map(m => m[1]).filter(a => !/^campo, rotulo/.test(a))
   chk('htmlEncabezadoOrden se llama solo con literales entre comillas simples',
-    llamadas.length === 8 && llamadas.every(a => /^'[a-z]+', '[^'$`]*'(, '[a-z_-]*')?$/.test(a)), JSON.stringify(llamadas))
+    llamadas.length === 9 && llamadas.every(a => /^'[a-z]+', '[^'$`]*'(, '[a-z_-]*')?$/.test(a)), JSON.stringify(llamadas))
 }
 
 // ── aplicarOrden: reordena lo cargado, sin consultar, y lo guarda ─────────
@@ -123,9 +124,10 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   S.pintarOrdenMovil()
   const sel = S.__doc.getElementById('chq-orden-campo')
   // Desde la Parte 5 es UN select con columna y sentido juntos: las mismas
-  // ocho columnas, dos veces cada una (16 opciones), valor "campo:sentido".
+  // columnas, dos veces cada una, valor "campo:sentido". Nueve columnas desde
+  // la tarea A2 (Unidad): 18 opciones.
   const opciones = [...sel.innerHTML.matchAll(/<option value="([^"]+)">([^<]+)<\/option>/g)].map(m => [m[1], m[2]])
-  chk('celular: las ocho columnas, en los dos sentidos (16 opciones)', opciones.length === 16, opciones.length)
+  chk('celular: las nueve columnas, en los dos sentidos (18 opciones)', opciones.length === 18, opciones.length)
   chk('celular: cada columna tiene su ▲ y su ▼', S.COLUMNAS_ORDEN.every(c =>
     opciones.some(([v, t]) => v === `${c.id}:asc` && t.includes('▲')) && opciones.some(([v, t]) => v === `${c.id}:desc` && t.includes('▼'))))
   chk('celular: el sentido dicho en palabras (fecha: "más antiguo primero")',

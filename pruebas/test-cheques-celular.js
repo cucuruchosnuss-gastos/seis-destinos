@@ -32,7 +32,9 @@ const S = construirCheques(ARCHIVO)
 S.estado.bancos = new Map([['072', 'Banco Santander Río S.A.'], ['666', marca('tar_banco')]])
 const cobs = new Map([
   ['c1', { id: 'c1', cliente: 'JyM', estado: 'procesada', fecha: '2026-09-01' }],
-  ['c2', { id: 'c2', cliente: marca('tar_cliente'), estado: 'registrada', fecha: '2026-09-01' }],
+  // La unidad (tarea A2, 22/09/2026) va en el title de la tarjeta y como
+  // texto oculto: también tiene que ir escapada.
+  ['c2', { id: 'c2', cliente: marca('tar_cliente'), estado: 'registrada', fecha: '2026-09-01', unidad_negocio_id: 'u2', unidad_negocio_nombre: marca('tar_unidad') }],
 ])
 const tarjeta = (ch, cob) => S.htmlTarjetaCheque(ch, cob)
 const partes = (html) => ({
@@ -89,7 +91,8 @@ const partes = (html) => ({
   const html = tarjeta({ id: marca('tar_id'), cobranza_id: marca('tar_cob'), numero: marca('tar_num'), banco_codigo: '666', tipo: 'comun',
     fecha_emision: '2026-09-01', importe: 1, estado: marca('tar_estado') }, cobs.get('c2'))
   chk('tarjeta: ninguna marca cruda', !/<b data-xss=/.test(html), (html.match(/.{0,40}<b data-xss=[^>]*>/) || [''])[0])
-  for (const c of ['tar_id', 'tar_cob', 'tar_num', 'tar_banco', 'tar_cliente', 'tar_estado']) chk(`tarjeta: «${c}» escapado`, html.includes(escapada(c)))
+  for (const c of ['tar_id', 'tar_cob', 'tar_num', 'tar_banco', 'tar_cliente', 'tar_estado', 'tar_unidad']) chk(`tarjeta: «${c}» escapado`, html.includes(escapada(c)))
+  chk('tarjeta: la unidad escapada en el title Y en el texto oculto', (html.split(escapada('tar_unidad')).length - 1) === 2)
   const sinCob = tarjeta({ id: 'z', cobranza_id: 'q', numero: '9', banco_codigo: null, tipo: 'comun', fecha_emision: '2026-09-01', importe: null, estado: 'en_cartera' }, undefined)
   chk('sin cobranza visible ni importe: "—", nunca "undefined" ni "$ 0,00"', !/undefined|0,00/.test(sinCob) && /chq-tarjeta__importe">—</.test(sinCob))
 }

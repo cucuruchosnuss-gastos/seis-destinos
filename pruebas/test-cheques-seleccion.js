@@ -160,7 +160,7 @@ function elementoFalso(id, tag = 'TR') {
   chk('Escape limpia la selección cuando no hay un diálogo abierto',
     /else if \(estado\.seleccion\.activa\) cancelarSeleccion\(\)/.test(SCRIPT))
   const llamadas = (SCRIPT.match(/soltarSeleccionPorFiltro\(\)/g) || []).length
-  chk('cada cambio de filtro limpia la selección (estado, número, banco, limpiar, vencen)', llamadas === 6, llamadas)
+  chk('cada cambio de filtro limpia la selección (estado, número, banco, unidad, limpiar, vencen)', llamadas === 7, llamadas)
   chk('reordenar NO la limpia', !/function aplicarOrden\([^)]*\) \{[^}]*soltarSeleccionPorFiltro/.test(SCRIPT))
   const posVence = CSS.indexOf('.chq-tabla__fila--vence td {')
   const posElegida = CSS.indexOf('.chq-tabla__fila--elegida td {')

@@ -64,7 +64,7 @@ correrMutaciones({
     { nombre: 'limpiar no vacía el campo del número',
       de: "      document.getElementById('chq-filtro-numero').value = ''\n      document.getElementById('chq-filtro-banco').value = ''", a: "      document.getElementById('chq-filtro-banco').value = ''" },
     { nombre: 'la lista de bancos sale de los cheques filtrados',
-      de: ".from('cobranza_cheques').select('id, banco_codigo, estado, importe, tipo, fecha_emision, fecha_pago')", a: ".from('cobranza_cheques').select('id, banco_codigo, estado, importe, tipo, fecha_emision, fecha_pago').eq('estado', estado.filtros.estado)" },
+      de: ".from('cobranza_cheques').select('id, cobranza_id, banco_codigo, estado, importe, tipo, fecha_emision, fecha_pago')", a: ".from('cobranza_cheques').select('id, cobranza_id, banco_codigo, estado, importe, tipo, fecha_emision, fecha_pago').eq('estado', estado.filtros.estado)" },
     { nombre: 'volver a cartera tapa el error de la base',
       de: "mostrarError(e?.message || 'No se pudo volver el cheque a cartera.')", a: "mostrarError('No se pudo volver el cheque a cartera.')" },
     { nombre: 'sin ver_todo no se avisa que la cartera es parcial',
