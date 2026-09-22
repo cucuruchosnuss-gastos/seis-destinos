@@ -27,10 +27,13 @@ const BASES = [
   'd995d1f', // B2: modo y ¿Quién sos?
   '7aed9b3', // B3: tablero y abrir turno
   'fa693f2', // B4: planilla, paradas y cierre
+  '10df632', // B5: sala de masa
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
 const RENOMBRADOS = [
+  ['control:button[data-menu][type=button]', 'control:button#pr-menu-modo[data-menu][type=button]',
+    'B6: "Cambiar el modo" ganó un id para ocultarlo a quien no carga desde la tablet; mismo texto y mismo data-menu'],
 ]
 
 let ok = 0

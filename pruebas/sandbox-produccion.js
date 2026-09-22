@@ -50,6 +50,17 @@ const FUNCIONES_BASE = [
   'htmlPasoPartida', 'htmlFilaIngrediente', 'htmlPasoEditar', 'htmlOpcionesLote', 'htmlLoteIngrediente',
   'htmlPasoLotes', 'htmlPasoResumen', 'pintarWizard', 'leerMasasTurno', 'diferenciaDeMasa', 'htmlMasaFila',
   'cargarMasasTurno', 'pedirAnularMasa', 'confirmarAnularMasa', 'reintentarMasaActual',
+  // B6: configuración
+  'volverDeOficina', 'mostrarInicioOficina', 'pintarAccesosOficina', 'unidadesDeConfig', 'pintarSelectorUnidad',
+  'mostrarConfig', 'htmlPestanasConfig', 'errorConfig', 'cargarPestanaConfig', 'pintarPestanaConfig',
+  'leerMaquinasConfig', 'htmlConfigMaquinas', 'ordenTrasMover', 'parametrosGuardarMaquina', 'guardarEnConfig',
+  'accionMaquina', 'leerRecetasConfig', 'leerInsumosDeIngredientes', 'recetaVigente', 'recetaParaRevisar',
+  'filasEditorReceta', 'parametrosGuardarReceta', 'faltanEnReceta', 'htmlConfigRecetas', 'fechaCorta',
+  'leerEditorReceta', 'guardarReceta', 'leerIngredientesConfig', 'ingredientesSinInsumo', 'htmlConfigIngredientes',
+  'parametrosGuardarIngrediente', 'valorDe', 'accionIngrediente', 'leerProductosConfig', 'avisoProductosRevisado',
+  'htmlPresentacionConfig', 'htmlConfigProductos', 'parametrosGuardarProducto', 'parametrosGuardarPresentacion',
+  'campoNumero', 'accionProducto', 'leerMarcasConfig', 'htmlConfigMarcas', 'accionMarca', 'leerPersonalConfig',
+  'personalVisible', 'htmlConfigPersonal', 'puestosElegidos', 'accionPersonal',
 ]
 
 const CONSTANTES_BASE = [
@@ -57,6 +68,7 @@ const CONSTANTES_BASE = [
   'CLAVE_MODO', 'CLAVE_UNIDAD', 'PUESTO_DE_MODO', 'TITULO_DE_MODO', 'PLURAL_PUESTO', 'VISTAS',
   'ZONA_AR', 'TURNOS', 'SIN_OPERARIO',
   'PREFIJO_BORRADOR_MASA', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
+  'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
 ]
 
 const PRELUDIO = `
@@ -139,6 +151,7 @@ const PRELUDIO = `
     tablero: null, hayTurnoAbierto: false, abrir: null, abrirOperarios: [], abriendo: false,
     planilla: null, catalogo: null, cierre: null, agregar: null, cerrando: false,
     salaTurno: null, masa: null, datosMasa: null, tiposMasa: null, masasTurno: null, enviandoMasa: false, anulando: null,
+    config: null,
   }
 `
 

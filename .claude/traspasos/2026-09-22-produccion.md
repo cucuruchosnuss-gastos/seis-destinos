@@ -122,3 +122,27 @@ Supabase se usó SOLO en lectura: la base ya estaba hecha. Toda la verificación
 - Lista de masas del turno: número, hora, tipo, simple o doble, chip de origen y diferencia corta contra SU receta;
   "Anular" con motivo (3 letras o más) → `anular_masa`, y avisa que se devolvió lo descontado.
 - Pruebas: `test-produccion-masa.js` (+ mut).
+- **Commit `10df632`.** Números: test-produccion-masa 143/143, mut 92/92 (+12 equivalentes, cada una con su motivo);
+  test-produccion-xss 6/6; controles-produccion 280/280 (baselines B1–B4); el resto del repo en verde.
+
+### B6 — Configuración (produccion:configurar), por unidad
+- Se entra por el menú ("Configuración") o, sin `cargar`, por el inicio de la oficina. Selector de unidad (las de
+  `configurar`) y seis pestañas:
+  - **Máquinas**: agregar (al final), renombrar, activar/desactivar y ordenar (▲/▼ manda `guardar_maquina` solo por
+    las que cambian de número). El rechazo de la base ("La máquina tiene un turno abierto…") se muestra tal cual.
+  - **Recetas**: por máquina y tipo de masa, la vigente (versión más alta) editable — kilos con `ponerNumero`,
+    insumo preferido entre los del ingrediente —; guardar crea una versión NUEVA con **nota obligatoria**; historial
+    de versiones con autor, fecha y nota; "Tipo nuevo…" con nombre y "Partir de" otro tipo; aviso bordó "Revisar:
+    esta receta vino del prototipo" cuando la nota de la vigente lo dice.
+  - **Ingredientes**: alta y edición (nombre, descuenta stock, activo) y sus insumos del catálogo con buscador;
+    aviso bordó con los que descuentan y no tienen insumo (hoy grasa, fécula y colorante).
+  - **Productos y presentaciones**: producto (nombre, tipo de masa, activo) y presentaciones (nombre, con cono, media
+    caja, empaque, unidades por caja enteras > 0, activa). Aviso de que vinieron del prototipo hasta "Ya los revisé"
+    (se recuerda en esa tablet: `produccion.aviso-productos-revisado`). Una presentación nueva nace con 1 por caja y
+    se avisa que hay que corregirla. Nota: cambiar las unidades por caja no toca lo ya producido.
+  - **Marcas**: alta y baja/reactivación con buscador.
+  - **Personal**: por persona, encargado / masero / operario en la unidad → `guardar_puestos`. Muestra el personal
+    de la unidad y a quien ya tiene puesto acá; "Mostrar también el personal de otras unidades".
+- **Decisión sin preguntar:** "Cambiar el modo" del menú ganó un id (`#pr-menu-modo`) para ocultarlo a quien no carga;
+  está declarado como renombrado en `controles-produccion.js`.
+- Pruebas: `test-produccion-config.js` (+ mut).
