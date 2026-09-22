@@ -1981,7 +1981,7 @@
 
           <div class="grupo-campo" id="grupo-kilometraje-detalle" style="display:none;">
             <label for="campo-kilometraje">Kilometraje del vehículo</label>
-            <input type="number" id="campo-kilometraje" name="kilometraje" placeholder="Ej: 85000" min="0">
+            <input type="text" inputmode="numeric" id="campo-kilometraje" name="kilometraje" placeholder="Ej: 85.000" autocomplete="off">
           </div>
 
           <div class="grupo-campo">
@@ -2132,7 +2132,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -2248,11 +2248,13 @@
       return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
     }
 
+    // Un importe AUSENTE (null, undefined, '', NaN) dice "—" y nunca "$ 0,00"
+    // ni "$ NaN": un dato que no está no es una cifra. El formato sale de
+    // formatearNumeroAr() de js/utils.js (21/09/2026), el mismo de todos los
+    // módulos; para todo valor presente se ve igual que antes.
     function formatearImporte(importe, moneda = 'ARS') {
-      if (importe == null) return '—'
-      const num = Number(importe).toLocaleString('es-AR', {
-        minimumFractionDigits: 2, maximumFractionDigits: 2,
-      })
+      const num = formatearNumeroAr(importe, { decimales: 2 })
+      if (num === '—') return '—'
       return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
     }
 
@@ -2340,36 +2342,31 @@
       })
     }
 
-    // Convierte "1.349.799,77" → 1349799.77
-    function parseImporte(str) {
-      if (!str) return null
-      const limpio = String(str).replace(/\./g, '').replace(',', '.')
-      const num    = parseFloat(limpio)
-      return isNaN(num) ? null : num
+    // NÚMEROS (21/09/2026): los campos de importe y de kilometraje se ENLAZAN
+    // con enlazarCampoNumero() de js/utils.js —formatea mientras se escribe,
+    // mantiene el cursor, acepta pegar— y se LEEN con leerCampoNumero().
+    // Reemplazan al parseImporte() y al formatearImporteEnVivo() propios: el
+    // parser viejo borraba TODOS los puntos, así que un "387300.50" pegado se
+    // guardaba como 38.730.050. Los números que llegan de código (OCR, base)
+    // entran al campo SOLO con ponerNumero().
+    //  - Importes y la tasa del interés (un porcentaje): 2 decimales.
+    //  - Kilometraje: ENTERO (la columna es integer en gastos y en
+    //    facturas_pendientes). Era type="number", y en un teclado es-AR
+    //    "85.000" podía entrar como 85.
+    function enlazarCamposNumeroWizard() {
+      enlazarCampoNumero(document.getElementById('campo-importe'), { decimales: 2 })
+      enlazarCampoNumero(document.getElementById('campo-kilometraje'), { decimales: 0 })
     }
 
-    // Separador de miles en vivo, mientras se escribe — mantiene el cursor a
-    // la misma distancia del final del texto (no del principio), para que no
-    // salte cuando se agrega o saca un punto de miles por un dígito tipeado
-    // en el medio del número.
-    function formatearImporteEnVivo(input) {
-      input.addEventListener('input', (e) => {
-        const desdeElFinal = e.target.value.length - e.target.selectionStart
-        let valor = e.target.value.replace(/[^\d,]/g, '')
-        // Si hay más de una coma, conserva la primera como separador
-        // decimal y descarta las siguientes — sin esto, split(',') tira
-        // en silencio todo lo que venga después de la segunda coma.
-        const primeraComa = valor.indexOf(',')
-        if (primeraComa !== -1) valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '')
-        let [entero, decimal] = valor.split(',')
-        entero = (entero || '').replace(/^0+(?=\d)/, '')
-        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-        let nuevoValor = entero
-        if (decimal !== undefined) nuevoValor += ',' + decimal.slice(0, 2)
-        e.target.value = nuevoValor
-        const nuevaPosicion = Math.max(0, nuevoValor.length - desdeElFinal)
-        e.target.setSelectionRange(nuevaPosicion, nuevaPosicion)
-      })
+    // El importe del paso Datos. Lo leen las dos validaciones de salida y los
+    // dos payloads (gasto y factura pendiente): una sola lectura para los
+    // cuatro, así no pueden entender distinto el mismo campo.
+    function importeDelWizard() {
+      return leerCampoNumero(document.getElementById('campo-importe'))
+    }
+
+    function kilometrajeDelWizard() {
+      return leerCampoNumero(document.getElementById('campo-kilometraje'))
     }
 
     // Poblar un <select> con items. ESCAPA value y label por dentro: los
@@ -3825,7 +3822,7 @@
       if (v === null || v === undefined || v === '') return null
       const num = Number(v)
       if (!Number.isFinite(num)) return null
-      return '$' + num.toLocaleString('es-AR', { maximumFractionDigits: 2 })
+      return '$' + formatearNumeroAr(num, { decimales: 2, minimos: 0 })
     }
 
     // Se consulta al SALIR del paso Datos, desde las DOS salidas —"Siguiente" y
@@ -4624,7 +4621,7 @@
           return mostrarError('Completá la fecha de pago.'), false
         if (!document.getElementById('campo-razon-social').value.trim())
           return mostrarError('Completá la razón social.'), false
-        const imp = parseImporte(document.getElementById('campo-importe').value)
+        const imp = importeDelWizard()
         if (imp == null || imp <= 0)
           return mostrarError('Ingresá un importe válido mayor a cero.'), false
         if (!medioPagoSeleccionado)
@@ -4633,7 +4630,7 @@
       if (id === 'detalles') {
         if (!document.getElementById('campo-empleado').value)
           return mostrarError('Seleccioná el empleado.'), false
-        if (viaVehiculos && !document.getElementById('campo-kilometraje').value)
+        if (viaVehiculos && kilometrajeDelWizard() == null)
           return mostrarError('Ingresá el kilometraje del vehículo.'), false
         if ((medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') && !document.getElementById('campo-cuenta').value)
           return mostrarError('Seleccioná la cuenta.'), false
@@ -4811,15 +4808,17 @@
         estado.wizard.camposOcr.add('tipo_doc')
       }
 
+      // El OCR devuelve un NÚMERO ("con punto decimal", dice su prompt) y entra
+      // al campo con ponerNumero(). Si llegara algo que no se puede leer, el
+      // campo queda vacío y NO se marca como "leído de la foto".
       if (datos.importe != null) {
-        const fmt = Number(datos.importe).toLocaleString('es-AR', {
-          minimumFractionDigits: 2, maximumFractionDigits: 2,
-        })
         const campoImp = document.getElementById('campo-importe')
         if (campoImp) {
-          campoImp.value = fmt
-          campoImp.closest('.grupo-campo')?.classList.add('campo-ocr')
-          estado.wizard.camposOcr.add('importe')
+          ponerNumero(campoImp, datos.importe)
+          if (campoImp.value) {
+            campoImp.closest('.grupo-campo')?.classList.add('campo-ocr')
+            estado.wizard.camposOcr.add('importe')
+          }
         }
       }
 
@@ -4937,6 +4936,12 @@
     // importe_ocr viene como TEXTO (sale de ocr_crudo->>'importe_total'). Se
     // rechaza el vacío ANTES de convertir: Number('') es 0, y un "$ 0,00" sería
     // afirmar un precio que nadie leyó.
+    // Se queda con Number() y NO pasa a leerNumeroAr(), a propósito: no es
+    // texto tipeado por una persona sino un número JSON pasado a texto por
+    // Postgres ("522261.82", "4418400"), siempre con punto decimal y sin miles.
+    // leerNumeroAr leería un "150.000" (150 con escala 3) como 150 mil. Un
+    // helper por FUENTE (ver numeroDesdeOcr de Ingreso). Al campo entra con
+    // ponerNumero() (ver cargarGastoDesdeIngreso).
     function importeDeOcr(texto) {
       if (texto === null || texto === undefined || String(texto).trim() === '') return null
       const n = Number(texto)
@@ -5029,9 +5034,7 @@
       poner('campo-razon-social', fila.razon_social)
       poner('campo-fecha', fila.fecha)
       const importe = importeDeOcr(fila.importe_ocr)
-      if (importe != null) {
-        poner('campo-importe', importe.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-      }
+      if (importe != null) ponerNumero(document.getElementById('campo-importe'), importe)
       const prov = estado.maestros.proveedores.find(p => p.id === fila.proveedor_id)
       if (prov) seleccionarProveedor(prov, false)
       const cat = estado.maestros.categorias.find(c => c.nombre === CATEGORIA_MATERIA_PRIMA)
@@ -5083,7 +5086,6 @@
     function armarGasto() {
       const fecha     = document.getElementById('campo-fecha').value
       const fechaPago = document.getElementById('campo-fecha-pago').value
-      const toNum = id => { const v = document.getElementById(id)?.value; return (v && v !== '') ? Number(v) : null }
       const toStr = id => document.getElementById(id)?.value.trim() || null
       return {
         fecha,
@@ -5094,7 +5096,7 @@
         razon_social:      toStr('campo-razon-social'),
         receptor:          toStr('campo-receptor'),
         descripcion_item:  toStr('campo-descripcion-item'),
-        importe:           parseImporte(document.getElementById('campo-importe')?.value),
+        importe:           importeDelWizard(),
         moneda:            document.getElementById('campo-moneda')?.value || 'ARS',
         medio_pago:        medioPagoSeleccionado,
         cuenta_id:         (medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') ? toStr('campo-cuenta') : null,
@@ -5105,7 +5107,7 @@
         unidad_negocio_id: unidadSeleccionada,
         empleado_id:       toStr('campo-empleado'),
         vehiculo_id:       vehiculoSeleccionado,
-        kilometraje:       toNum('campo-kilometraje'),
+        kilometraje:       kilometrajeDelWizard(),
         observaciones:     toStr('campo-observaciones'),
         foto_url:          estado.wizard.fotoUrl,
         estado:            'registrado',
@@ -5343,7 +5345,6 @@
     // campos que esa tabla no tiene (receptor, descripción del ítem,
     // descripción — solo "observaciones").
     function armarFacturaPendiente() {
-      const toNum = id => { const v = document.getElementById(id)?.value; return (v && v !== '') ? Number(v) : null }
       const toStr = id => document.getElementById(id)?.value.trim() || null
       return {
         unidad_negocio_id:  unidadSeleccionada,
@@ -5351,14 +5352,14 @@
         razon_social:       toStr('campo-razon-social'),
         tipo_documento:     tipDocSeleccionado,
         numero_comprobante: toStr('campo-numero-doc'),
-        importe:            parseImporte(document.getElementById('campo-importe')?.value),
+        importe:            importeDelWizard(),
         moneda:             document.getElementById('campo-moneda')?.value || 'ARS',
         empleado_id:        toStr('campo-empleado'),
         proveedor_id:       proveedorSeleccionado,
         fecha_factura:      document.getElementById('campo-fecha').value,
         proyecto_id:        toStr('campo-proyecto'),
         vehiculo_id:        vehiculoSeleccionado,
-        kilometraje:        toNum('campo-kilometraje'),
+        kilometraje:        kilometrajeDelWizard(),
         lugar:              toStr('campo-lugar'),
         observaciones:      toStr('campo-observaciones'),
         comprobante_url:    estado.wizard.fotoUrl,
@@ -5707,7 +5708,7 @@
           ${campo('Razón social', `<input type="text" id="edit-razon-social" value="${esc(g.razon_social)}">`)}
           ${campo('Medio de pago', selectMedioPago)}
           <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
-            ${campo('Importe', `<input type="text" inputmode="decimal" id="edit-importe" value="${Number(g.importe).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">`)}
+            ${campo('Importe', `<input type="text" inputmode="decimal" id="edit-importe">`)}
             ${campo('Moneda', `<select id="edit-moneda" style="width:5.5rem;"></select>`)}
           </div>
         </div>
@@ -5716,7 +5717,7 @@
           <div class="resumen-seccion__titulo">Destino y clasificación</div>
           ${campo('Empresa', selectEmpresa)}
           ${campo('Vehículo', selectVehiculo)}
-          ${campo('Kilometraje', `<input type="number" id="edit-kilometraje" value="${esc(g.kilometraje)}">`)}
+          ${campo('Kilometraje', `<input type="text" inputmode="numeric" id="edit-kilometraje">`)}
           ${campo('Categoría', selectCategoria)}
         </div>
 
@@ -5761,7 +5762,15 @@
       document.getElementById('edit-razon-social').addEventListener('change', detectarDuplicadoGasto)
 
       poblarSelectMoneda('edit-moneda', g.moneda || 'ARS')
-      formatearImporteEnVivo(document.getElementById('edit-importe'))
+      // Los números NO van en value="" de la plantilla: se enlazan y se
+      // escriben con ponerNumero(). Con el importe en null el campo queda
+      // vacío (la plantilla vieja escribía "0,00").
+      const campoEditImporte = document.getElementById('edit-importe')
+      enlazarCampoNumero(campoEditImporte, { decimales: 2 })
+      ponerNumero(campoEditImporte, g.importe)
+      const campoEditKm = document.getElementById('edit-kilometraje')
+      enlazarCampoNumero(campoEditKm, { decimales: 0 })
+      ponerNumero(campoEditKm, g.kilometraje)
       actualizarSelectorCuentaEdicion(g.cuenta_id)
       document.getElementById('edit-empleado').addEventListener('change', () => actualizarSelectorCuentaEdicion())
       document.getElementById('edit-medio-pago').addEventListener('change', () => actualizarSelectorCuentaEdicion())
@@ -5803,11 +5812,11 @@
           razon_social:      document.getElementById('edit-razon-social').value || null,
           medio_pago:        medioPagoVal,
           cuenta_id:         (medioPagoVal === 'efectivo' || medioPagoVal === 'transferencia') ? cuentaVal : null,
-          importe:           parseImporte(document.getElementById('edit-importe').value),
+          importe:           leerCampoNumero(document.getElementById('edit-importe')),
           moneda:            document.getElementById('edit-moneda').value || 'ARS',
           unidad_negocio_id: document.getElementById('edit-unidad').value || null,
           vehiculo_id:       document.getElementById('edit-vehiculo').value || null,
-          kilometraje:       document.getElementById('edit-kilometraje').value ? Number(document.getElementById('edit-kilometraje').value) : null,
+          kilometraje:       leerCampoNumero(document.getElementById('edit-kilometraje')),
           categoria_id:      document.getElementById('edit-categoria').value || null,
           empleado_id:       document.getElementById('edit-empleado').value || null,
           proyecto_id:       document.getElementById('edit-proyecto').value || null,
@@ -6019,7 +6028,7 @@
           ${campo('Número de comprobante', `<input type="text" id="edit-factura-numero" value="${esc(f.numero_comprobante)}">`)}
           <div class="aviso-duplicado aviso-duplicado--edicion" id="aviso-duplicado-edicion-factura" hidden></div>
           <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem;">
-            ${campo('Importe', `<input type="text" inputmode="decimal" id="edit-factura-importe" value="${Number(f.importe).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">`)}
+            ${campo('Importe', `<input type="text" inputmode="decimal" id="edit-factura-importe">`)}
             ${campo('Moneda', `<select id="edit-factura-moneda" style="width:5.5rem;"></select>`)}
           </div>
         </div>
@@ -6043,7 +6052,11 @@
       `
 
       poblarSelectMoneda('edit-factura-moneda', f.moneda || 'ARS')
-      formatearImporteEnVivo(document.getElementById('edit-factura-importe'))
+      // Mismo criterio que la edición del gasto: enlazar y escribir con
+      // ponerNumero(), nunca con value="" en la plantilla.
+      const campoEditFacturaImporte = document.getElementById('edit-factura-importe')
+      enlazarCampoNumero(campoEditFacturaImporte, { decimales: 2 })
+      ponerNumero(campoEditFacturaImporte, f.importe)
 
       document.getElementById('btn-cancelar-edicion-factura').addEventListener('click', () => mostrarDetalleFactura(id))
 
@@ -6081,7 +6094,7 @@
       document.getElementById('btn-guardar-edicion-factura').addEventListener('click', async () => {
         const razonSocial = document.getElementById('edit-factura-razon-social').value.trim()
         if (!razonSocial) { mostrarError('Completá la razón social.'); return }
-        const importe = parseImporte(document.getElementById('edit-factura-importe').value)
+        const importe = leerCampoNumero(document.getElementById('edit-factura-importe'))
         if (!importe || importe <= 0) { mostrarError('Ingresá un importe válido.'); return }
         const fechaFactura = document.getElementById('edit-factura-fecha').value
         if (!fechaFactura) { mostrarError('Completá la fecha de factura.'); return }
@@ -6180,8 +6193,11 @@
         </div>
       `
 
-      formatearImporteEnVivo(document.getElementById('campo-interes-monto'))
-      formatearImporteEnVivo(document.getElementById('campo-interes-tasa'))
+      // El monto es un importe y la tasa un porcentaje: los dos con 2
+      // decimales. Se enlazan ANTES de conectar sus listeners de abajo, así
+      // el recálculo lee el texto ya formateado.
+      enlazarCampoNumero(document.getElementById('campo-interes-monto'), { decimales: 2 })
+      enlazarCampoNumero(document.getElementById('campo-interes-tasa'), { decimales: 2 })
       document.getElementById('campo-interes-fecha').value = new Date().toISOString().slice(0, 10)
 
       let modo = 'monto'
@@ -6197,7 +6213,7 @@
 
       function actualizarInfoModoA() {
         const info = document.getElementById('interes-tasa-info')
-        const monto = parseImporte(document.getElementById('campo-interes-monto').value)
+        const monto = leerCampoNumero(document.getElementById('campo-interes-monto'))
         const dias = diasEntre(fechaFactura, new Date().toISOString().slice(0, 10))
         const base = obtenerBase()
         if (!monto || monto <= 0 || !dias || dias <= 0 || base <= 0) { info.textContent = ''; return }
@@ -6207,7 +6223,7 @@
 
       function actualizarMontoModoB() {
         const el = document.getElementById('interes-monto-calculado')
-        const tasa = parseImporte(document.getElementById('campo-interes-tasa').value)
+        const tasa = leerCampoNumero(document.getElementById('campo-interes-tasa'))
         const fechaCalculo = document.getElementById('campo-interes-fecha').value
         const dias = diasEntre(fechaFactura, fechaCalculo)
         const base = obtenerBase()
@@ -6255,13 +6271,13 @@
 
         let monto, pTasa, pPeriodo, pDias
         if (modo === 'monto') {
-          monto = parseImporte(document.getElementById('campo-interes-monto').value)
+          monto = leerCampoNumero(document.getElementById('campo-interes-monto'))
           if (!monto || monto <= 0) { mostrarError('Ingresá un monto válido.'); return }
           pTasa = null; pPeriodo = null; pDias = null
         } else {
           if (!montoCalculadoModoB || montoCalculadoModoB <= 0) { mostrarError('Completá tasa y fecha de cálculo para un monto válido.'); return }
           monto = montoCalculadoModoB
-          pTasa = parseImporte(document.getElementById('campo-interes-tasa').value)
+          pTasa = leerCampoNumero(document.getElementById('campo-interes-tasa'))
           pPeriodo = periodo
           pDias = diasEntre(fechaFactura, document.getElementById('campo-interes-fecha').value)
         }
@@ -6581,7 +6597,7 @@
       seleccionarMedioPago(nuevo)
     })
 
-    formatearImporteEnVivo(document.getElementById('campo-importe'))
+    enlazarCamposNumeroWizard()
 
     document.getElementById('campo-moneda').addEventListener('change', actualizarSelectorCuentaGasto)
 
@@ -6615,7 +6631,7 @@
         return mostrarError('Completá la fecha de factura.')
       if (!document.getElementById('campo-razon-social').value.trim())
         return mostrarError('Completá la razón social.')
-      const imp = parseImporte(document.getElementById('campo-importe').value)
+      const imp = importeDelWizard()
       if (imp == null || imp <= 0)
         return mostrarError('Ingresá un importe válido mayor a cero.')
 
