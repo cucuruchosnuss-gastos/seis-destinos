@@ -1433,6 +1433,33 @@
     </div>
   </div>
 
+  <!-- ══ DIÁLOGOS QUE RESPONDEN UNA PREGUNTA ════════════════════════════ -->
+  <!-- Reemplazan a window.confirm y window.prompt: no se pueden estilar y
+       algunos webviews los bloquean. Foco atrapado adentro, Escape = cancelar,
+       y al cerrar el foco vuelve al botón que los abrió (abrirDialogo). -->
+  <div class="cob-modal" id="cob-dialogo-confirmar" hidden role="dialog" aria-modal="true" aria-labelledby="cob-dlg-confirmar-titulo">
+    <div class="cob-modal__caja">
+      <div class="cob-modal__titulo" id="cob-dlg-confirmar-titulo">¿Seguro?</div>
+      <div class="cob-campo__ayuda" id="cob-dlg-confirmar-texto" style="margin:-.25rem 0 .875rem"></div>
+      <div class="cob-acciones">
+        <button type="button" class="cob-btn" id="cob-dlg-confirmar-no">Cancelar</button>
+        <button type="button" class="cob-btn cob-btn--alerta" id="cob-dlg-confirmar-si">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cob-modal" id="cob-dialogo-foto" hidden role="dialog" aria-modal="true" aria-labelledby="cob-dlg-foto-titulo">
+    <div class="cob-modal__caja">
+      <div class="cob-modal__titulo" id="cob-dlg-foto-titulo">¿A qué foto corresponde el cheque?</div>
+      <!-- Estilos en línea a propósito: el CSS de abajo de 1100px está fijado
+           contra un baseline (test-cobranzas-escritorio.js). -->
+      <div class="cob-salida-tipos" id="cob-dlg-fotos-opciones" style="margin-bottom:.875rem"></div>
+      <div class="cob-acciones">
+        <button type="button" class="cob-btn" id="cob-dlg-foto-cancelar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import { mostrarError, mostrarExito, leerNumeroAr, formatearNumeroAr, enlazarCampoNumero, ponerNumero } from '../js/utils.js'
@@ -2803,6 +2830,140 @@
     function cerrarModalMotivo() {
       document.getElementById('cob-modal-motivo').hidden = true
       accionDelModal = null
+    }
+
+    // Agregar un cheque a mano: con una foto va a esa; con varias se pregunta a
+    // cuál con elegirFotoConDialogo (antes era un window.prompt).
+    async function agregarChequeAMano() {
+      const f = estado.form
+      if (!f) return
+      // La foto es OBLIGATORIA: un cheque sin foto no se puede verificar
+      // después contra nada, y el servidor lo rechaza igual.
+      if (!f.fotos.length) {
+        mostrarError('Primero sacá la foto del cheque: cada cheque tiene que estar vinculado a una foto.')
+        return
+      }
+      if (f.fotos.length === 1) {
+        f.cheques.push(chequeVacio(f.fotos[0].id))
+      } else {
+        const i = await elegirFotoConDialogo(f.fotos)
+        // Mientras el diálogo está abierto tapa la pantalla, pero la
+        // respuesta es asíncrona: si igual se cambió de formulario, el cheque
+        // no se agrega a uno que ya no está en pantalla.
+        if (estado.form !== f) return
+        if (!Number.isInteger(i) || i < 0 || i >= f.fotos.length) {
+          mostrarError('No se agregó el cheque: hay que decir a qué foto corresponde.')
+          return
+        }
+        f.cheques.push(chequeVacio(f.fotos[i].id))
+      }
+      guardarBorrador(); pintarCheques(); pintarTotalYGuardado()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DIÁLOGOS QUE RESPONDEN UNA PREGUNTA (en lugar de confirm / prompt)
+    //
+    // abrirDialogo() devuelve una PROMESA que resuelve con la respuesta: el
+    // código que antes era síncrono alrededor del confirm/prompt ahora hace
+    // `await` y sigue igual. Escape y "Cancelar" resuelven con el mismo valor
+    // que devolvía el nativo al cancelar (false para confirm, null para prompt).
+    // Tab y Shift+Tab ciclan adentro del diálogo, y al cerrar el foco vuelve
+    // al elemento que lo tenía al abrir.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let dialogoAbierto = null
+
+    function enfocablesDe(el) {
+      return [...el.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')]
+        .filter(x => !x.hidden)
+    }
+
+    function teclaEnDialogo(ev) {
+      const d = dialogoAbierto
+      if (!d) return
+      if (ev.key === 'Escape') {
+        ev.preventDefault()
+        cerrarDialogo(d.valorCancelar)
+        return
+      }
+      if (ev.key !== 'Tab') return
+      const lista = enfocablesDe(d.el)
+      if (!lista.length) { ev.preventDefault(); return }
+      const primero = lista[0], ultimo = lista[lista.length - 1]
+      const activo = document.activeElement
+      const afuera = !lista.includes(activo)
+      if (ev.shiftKey && (activo === primero || afuera)) { ev.preventDefault(); ultimo.focus() }
+      else if (!ev.shiftKey && (activo === ultimo || afuera)) { ev.preventDefault(); primero.focus() }
+    }
+
+    function abrirDialogo(id, valorCancelar) {
+      // Uno solo a la vez: si quedara otro abierto, se cancela.
+      if (dialogoAbierto) cerrarDialogo(dialogoAbierto.valorCancelar)
+      const el = document.getElementById(id)
+      const volverA = document.activeElement
+      return new Promise((resolver) => {
+        dialogoAbierto = { el, resolver, volverA, valorCancelar }
+        el.hidden = false
+        document.addEventListener('keydown', teclaEnDialogo)
+        enfocablesDe(el)[0]?.focus()
+      })
+    }
+
+    function cerrarDialogo(valor) {
+      const d = dialogoAbierto
+      if (!d) return
+      dialogoAbierto = null
+      d.el.hidden = true
+      document.removeEventListener('keydown', teclaEnDialogo)
+      if (d.volverA && typeof d.volverA.focus === 'function') d.volverA.focus()
+      d.resolver(valor)
+    }
+
+    // Los botones fijos de los dos diálogos. "Cancelar" resuelve con el mismo
+    // valor que el nativo al cancelar: false (confirm) y null (prompt).
+    function conectarDialogos() {
+      document.getElementById('cob-dlg-confirmar-no').addEventListener('click', () => cerrarDialogo(false))
+      document.getElementById('cob-dlg-confirmar-si').addEventListener('click', () => cerrarDialogo(true))
+      document.getElementById('cob-dlg-foto-cancelar').addEventListener('click', () => cerrarDialogo(null))
+    }
+
+    // El reemplazo de window.confirm: resuelve true con "sí" y false con
+    // "Cancelar" o Escape. Los textos son del código, van con textContent.
+    function confirmarConDialogo({ titulo, texto, textoSi }) {
+      document.getElementById('cob-dlg-confirmar-titulo').textContent = titulo
+      document.getElementById('cob-dlg-confirmar-texto').textContent = texto
+      document.getElementById('cob-dlg-confirmar-si').textContent = textoSi
+      return abrirDialogo('cob-dialogo-confirmar', false)
+    }
+
+    // El reemplazo del window.prompt que pedía el número de foto: resuelve con
+    // el ÍNDICE elegido (0, 1, …) o null al cancelar. Con una sola foto no se
+    // llama: el cheque se asigna solo, como antes.
+    function elegirFotoConDialogo(fotos) {
+      const cont = document.getElementById('cob-dlg-fotos-opciones')
+      cont.innerHTML = fotos.map((foto, i) => `
+        <button type="button" class="cob-btn cob-btn--grande" data-elegir-foto="${i}" style="display:flex;flex-direction:column;align-items:center;gap:.375rem;padding:.5rem">
+          <img alt="" hidden data-mini-dialogo="${i}" style="width:100%;height:4.5rem;object-fit:cover;border-radius:6px">
+          <span>Foto ${i + 1}</span>
+        </button>`).join('')
+      cont.querySelectorAll('[data-elegir-foto]').forEach(b => {
+        b.addEventListener('click', () => cerrarDialogo(Number(b.dataset.elegirFoto)))
+      })
+      const respuesta = abrirDialogo('cob-dialogo-foto', null)
+      // Las miniaturas llegan cuando llegan: sin ellas el botón dice "Foto N"
+      // igual, que es todo lo que decía el prompt.
+      fotos.forEach(async (foto, i) => {
+        try {
+          const url = await urlDeFoto(foto)
+          const img = url && cont.querySelector(`[data-mini-dialogo="${i}"]`)
+          if (!img) return
+          img.src = url
+          img.hidden = false
+        } catch (e) {
+          console.error('No se pudo mostrar la miniatura:', e)
+        }
+      })
+      return respuesta
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4520,14 +4681,21 @@
         b.addEventListener('click', () => abrirFormularioLocal(b.dataset.abrirLocal))
       })
       banner.querySelectorAll('[data-descartar-local]').forEach(b => {
-        b.addEventListener('click', async () => {
-          // Descartar borra fotos que pueden no estar en ningún otro lado: se
-          // confirma, no se hace de una.
-          if (!window.confirm('¿Descartar esta cobranza guardada en el celular? No se puede recuperar.')) return
-          await dbBorrar(STORE_BORRADORES, b.dataset.descartarLocal)
-          await refrescarLocales()
-        })
+        b.addEventListener('click', () => descartarBorradorLocal(b.dataset.descartarLocal))
       })
+    }
+
+    async function descartarBorradorLocal(id) {
+      // Descartar borra fotos que pueden no estar en ningún otro lado: se
+      // confirma, no se hace de una.
+      const si = await confirmarConDialogo({
+        titulo: '¿Descartar esta cobranza?',
+        texto: 'Está guardada solo en este celular. No se puede recuperar.',
+        textoSi: 'Descartar',
+      })
+      if (!si) return
+      await dbBorrar(STORE_BORRADORES, id)
+      await refrescarLocales()
     }
 
     async function sincronizar() {
@@ -4713,28 +4881,7 @@
         })
       })
 
-      document.getElementById('cob-btn-cheque-mano').addEventListener('click', () => {
-        const f = estado.form
-        if (!f) return
-        // La foto es OBLIGATORIA: un cheque sin foto no se puede verificar
-        // después contra nada, y el servidor lo rechaza igual.
-        if (!f.fotos.length) {
-          mostrarError('Primero sacá la foto del cheque: cada cheque tiene que estar vinculado a una foto.')
-          return
-        }
-        if (f.fotos.length === 1) {
-          f.cheques.push(chequeVacio(f.fotos[0].id))
-        } else {
-          const cual = window.prompt(`¿A qué foto corresponde? Escribí un número del 1 al ${f.fotos.length}.`)
-          const i = Number(cual) - 1
-          if (!Number.isInteger(i) || i < 0 || i >= f.fotos.length) {
-            mostrarError('No se agregó el cheque: hay que decir a qué foto corresponde.')
-            return
-          }
-          f.cheques.push(chequeVacio(f.fotos[i].id))
-        }
-        guardarBorrador(); pintarCheques(); pintarTotalYGuardado()
-      })
+      document.getElementById('cob-btn-cheque-mano').addEventListener('click', agregarChequeAMano)
 
       document.getElementById('cob-btn-guardar').addEventListener('click', guardarCobranza)
 
@@ -4755,6 +4902,9 @@
       }))
       document.getElementById('cob-salida-cancelar').addEventListener('click', cerrarModalSalida)
       document.getElementById('cob-salida-confirmar').addEventListener('click', confirmarSalida)
+
+      // ── Diálogos de pregunta (confirm / elegir foto) ──
+      conectarDialogos()
 
       // ── Modal de motivo ──
       document.getElementById('cob-modal-cancelar').addEventListener('click', cerrarModalMotivo)

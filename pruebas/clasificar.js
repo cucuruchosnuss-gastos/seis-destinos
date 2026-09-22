@@ -173,6 +173,7 @@ const SEGURAS_REGEX = [
   [/^datos\.map\(\[?\(?\[k, v\]\)? =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^d\.fotos\.map\(\(f, i\) =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^f\.fotos\.map\(\(foto, i\) =>/s, 'HTML de una plantilla anidada, verificada aparte'],
+  [/^fotos\.map\(\(foto, i\) =>/s, 'HTML de una plantilla anidada (elegirFotoConDialogo: solo interpola el índice), verificada aparte'],
   [/^pendientes\.map\(f =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^titulares\.map\(t =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^ch\.titulares\.map\(\(t, i\) =>/s, 'HTML de una plantilla anidada, verificada aparte'],
