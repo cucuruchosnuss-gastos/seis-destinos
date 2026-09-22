@@ -279,6 +279,8 @@
     .chq-tabla__destino { max-width: 14rem; overflow-wrap: anywhere; }
     .chq-tabla__texto { min-width: 11rem; overflow-wrap: anywhere; }
     .chq-tabla__banco { max-width: 16rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Quién cargó la cobranza (Parte 4): un nombre, en un renglón. */
+    .chq-tabla__persona { max-width: 11rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* ATENUADO CON COLOR Y NO CON opacity: una celda sticky con opacity se
        vuelve transparente. DESPUÉS de la regla base de td. */
     .chq-tabla__fila--salido td { color: var(--color-texto-suave); }
@@ -517,7 +519,7 @@
       // El orden de la lista: por defecto, lo que se cobra primero arriba.
       orden: { campo: 'pago', sentido: 'asc' },
       filas: [],
-      cobranzas: new Map(),   // id → { id, cliente, estado, fecha }
+      cobranzas: new Map(),   // id → { id, cliente, estado, fecha, cargada_por_nombre }
       cartera: null,          // { cantidad, total } — null = no se pudo saber
       tope: false,
       topeResumen: false,
@@ -710,6 +712,7 @@
       { id: 'pago', nombre: 'Pago', tipo: 'fecha' },
       { id: 'importe', nombre: 'Importe', tipo: 'numero' },
       { id: 'cliente', nombre: 'Cliente', tipo: 'texto' },
+      { id: 'cargo', nombre: 'Cargó', tipo: 'texto' },
       { id: 'estado', nombre: 'Estado', tipo: 'texto' },
     ]
 
@@ -729,6 +732,7 @@
           return Number.isFinite(n) ? n : null
         }
         case 'cliente': return cob?.cliente ? String(cob.cliente) : null
+        case 'cargo': return cob?.cargada_por_nombre ? String(cob.cargada_por_nombre) : null
         case 'estado': return ETIQUETA_ESTADO_CHEQUE[ch.estado] ?? (ch.estado ? String(ch.estado) : null)
         default: return null
       }
@@ -924,7 +928,12 @@
         // que tiene tope por el largo de la URL.
         const [ch, cob] = await Promise.all([
           q,
-          supabase.from('cobranzas').select('id, cliente, estado, fecha'),
+          // v_cobranzas y no cobranzas: trae además el NOMBRE de quien la cargó
+          // (cargada_por_nombre), resuelto por la vista contra
+          // v_empleados_publico. Nunca un embed a empleados, cuyo RLS solo deja
+          // leer la fila propia. La vista es security_invoker: ve lo mismo que
+          // cobranzas.
+          supabase.from('v_cobranzas').select('id, cliente, estado, fecha, cargada_por_nombre'),
         ])
         if (turno !== turnoCheques) return
         if (ch.error) throw ch.error
@@ -1017,6 +1026,7 @@
             ${htmlEncabezadoOrden('pago', 'Pago')}
             ${htmlEncabezadoOrden('importe', 'Importe', 'chq-tabla__num')}
             ${htmlEncabezadoOrden('cliente', 'Cliente')}
+            ${htmlEncabezadoOrden('cargo', 'Cargó')}
             ${htmlEncabezadoOrden('estado', 'Estado')}
             <th scope="col">Salida</th>
           </tr>
@@ -1052,6 +1062,7 @@
           <td class="chq-tabla__fecha">${esc(pago)}</td>
           <td class="chq-tabla__num">${esc(formatearImporte(ch.importe))}</td>
           <td class="chq-tabla__texto">${esc(cob?.cliente ?? '—')}</td>
+          <td class="chq-tabla__persona" title="${esc(cob?.cargada_por_nombre ?? '')}">${esc(cob?.cargada_por_nombre ?? '—')}</td>
           <td><span class="chq-estado chq-estado--${esc(ch.estado)}">${esc(etiqueta)}</span></td>
           <td class="chq-tabla__salida">${htmlSalidaCheque(ch, cob)}</td>
         </tr>`

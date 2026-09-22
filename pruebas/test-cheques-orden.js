@@ -81,9 +81,9 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   const html = S.htmlTablaCheques([], new Map())
   const ths = [...html.matchAll(/<th\b[^>]*>[\s\S]*?<\/th>/g)].map(m => m[0])
   const conOrden = ths.filter(t => /data-orden=/.test(t))
-  chk('siete columnas ordenables (sin contar Salida)', conOrden.length === 7, conOrden.length)
+  chk('ocho columnas ordenables (sin contar Salida)', conOrden.length === 8, conOrden.length)
   const campos = conOrden.map(t => (t.match(/data-orden="([a-z]+)"/) || [])[1])
-  chk('las columnas ordenables son las pedidas', JSON.stringify(campos) === JSON.stringify(['numero', 'banco', 'emision', 'pago', 'importe', 'cliente', 'estado']), JSON.stringify(campos))
+  chk('las columnas ordenables son las pedidas', JSON.stringify(campos) === JSON.stringify(['numero', 'banco', 'emision', 'pago', 'importe', 'cliente', 'cargo', 'estado']), JSON.stringify(campos))
   chk('Salida NO se ordena', /<th scope="col">Salida<\/th>/.test(html))
   const imp = conOrden.find(t => /data-orden="importe"/.test(t))
   chk('la columna activa lleva aria-sort="descending" y ▼', /aria-sort="descending"/.test(imp) && />▼</.test(imp), imp)
@@ -97,7 +97,7 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   // lleva &deg;, y eso es seguro únicamente si nunca es un dato.
   const llamadas = [...FUENTE.matchAll(/htmlEncabezadoOrden\(([^)]*)\)/g)].map(m => m[1]).filter(a => !/^campo, rotulo/.test(a))
   chk('htmlEncabezadoOrden se llama solo con literales entre comillas simples',
-    llamadas.length === 7 && llamadas.every(a => /^'[a-z]+', '[^'$`]*'(, '[a-z_-]*')?$/.test(a)), JSON.stringify(llamadas))
+    llamadas.length === 8 && llamadas.every(a => /^'[a-z]+', '[^'$`]*'(, '[a-z_-]*')?$/.test(a)), JSON.stringify(llamadas))
 }
 
 // ── aplicarOrden: reordena lo cargado, sin consultar, y lo guarda ─────────
@@ -122,7 +122,7 @@ const bancos = new Map([['007', 'Zeta Banco'], ['011', 'Alfa Banco'], ['285', 'M
   S.estado.orden = { campo: 'cliente', sentido: 'desc' }
   S.pintarOrdenMovil()
   const sel = S.__doc.getElementById('chq-orden-campo')
-  chk('celular: el select tiene las mismas siete opciones', (sel.innerHTML.match(/<option /g) || []).length === 7)
+  chk('celular: el select tiene las mismas ocho opciones', (sel.innerHTML.match(/<option /g) || []).length === 8)
   chk('celular: marca la columna activa', sel.value === 'cliente')
   chk('celular: el botón dice el sentido', S.__doc.getElementById('chq-orden-sentido').textContent === '▼ Descendente')
   S.estado.orden.sentido = 'asc'; S.pintarOrdenMovil()
