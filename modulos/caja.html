@@ -1738,7 +1738,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito, formatearFecha } from '../js/utils.js'
+    import { mostrarError, mostrarExito, formatearFecha, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1916,11 +1916,13 @@
     // Para meter un importe en HTML, usar importeHtml(): así hay UN solo lugar
     // que decide cómo entra un importe a la página. La moneda tiene CHECK en
     // la base (12 códigos), así que hoy es consistencia y no un vector.
+    // Un importe AUSENTE (null, undefined, '', NaN) dice "—" y nunca "$ 0,00"
+    // ni "$ NaN". El formato sale de formatearNumeroAr() de js/utils.js
+    // (21/09/2026), el de todos los módulos; todo valor presente se ve igual
+    // que antes. No llega al export a Excel: esa columna va con el número.
     function formatearImporte(importe, moneda = 'ARS') {
-      if (importe == null) return '—'
-      const num = Number(importe).toLocaleString('es-AR', {
-        minimumFractionDigits: 2, maximumFractionDigits: 2,
-      })
+      const num = formatearNumeroAr(importe, { decimales: 2 })
+      if (num === '—') return '—'
       return moneda === 'ARS' ? `$ ${num}` : `${moneda} ${num}`
     }
 
@@ -1928,45 +1930,31 @@
     // <span> aparte para pintarlos en un tono más claro — mismo patrón que
     // .cc-centavos de cuentas-corrientes.html. Solo para "Total de la
     // empresa".
+    // Un importe ausente dice "—" (antes, "$ 0,00"): el único call site le pasa
+    // un 0 explícito cuando no hay ningún saldo, así que ese caso no cambia.
     function formatearImporteCentavosSuaves(importe, moneda = 'ARS') {
-      const [entero, centavos] = Number(importe || 0).toLocaleString('es-AR', {
-        minimumFractionDigits: 2, maximumFractionDigits: 2,
-      }).split(',')
+      const texto = formatearNumeroAr(importe, { decimales: 2 })
+      if (texto === '—') return '—'
+      const [entero, centavos] = texto.split(',')
       // Devuelve HTML, así que escapa por dentro.
       const simbolo = moneda === 'ARS' ? '$' : esc(moneda)
       return `${simbolo} ${entero}<span class="stat-card-caja__centavos">,${centavos}</span>`
     }
 
-    // Convierte "1.349.799,77" → 1349799.77
-    function parseImporte(str) {
-      if (!str) return null
-      const limpio = String(str).replace(/\./g, '').replace(',', '.')
-      const num    = parseFloat(limpio)
-      return isNaN(num) ? null : num
+    // NÚMEROS (21/09/2026): los tres campos de monto se ENLAZAN con
+    // enlazarCampoNumero() de js/utils.js —formatea mientras se escribe,
+    // mantiene el cursor, acepta pegar— y se LEEN con leerCampoNumero().
+    // Reemplazan al parseImporte() y al formatearImporteEnVivo() propios: el
+    // parser viejo borraba TODOS los puntos, así que un "387300.50" pegado se
+    // mandaba a la RPC como 38.730.050. Todos son importes: 2 decimales.
+    const IDS_CAMPOS_MONTO = ['movimiento-monto', 'traspaso-monto', 'traspaso-monto-destino']
+
+    function enlazarCamposMonto() {
+      for (const id of IDS_CAMPOS_MONTO) enlazarCampoNumero(document.getElementById(id), { decimales: 2 })
     }
 
-    // Separador de miles en vivo, mientras se escribe — mantiene el cursor a
-    // la misma distancia del final del texto (no del principio), para que no
-    // salte cuando se agrega o saca un punto de miles por un dígito tipeado
-    // en el medio del número.
-    function formatearImporteEnVivo(input) {
-      input.addEventListener('input', (e) => {
-        const desdeElFinal = e.target.value.length - e.target.selectionStart
-        let valor = e.target.value.replace(/[^\d,]/g, '')
-        // Si hay más de una coma, conserva la primera como separador
-        // decimal y descarta las siguientes — sin esto, split(',') tira
-        // en silencio todo lo que venga después de la segunda coma.
-        const primeraComa = valor.indexOf(',')
-        if (primeraComa !== -1) valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '')
-        let [entero, decimal] = valor.split(',')
-        entero = (entero || '').replace(/^0+(?=\d)/, '')
-        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-        let nuevoValor = entero
-        if (decimal !== undefined) nuevoValor += ',' + decimal.slice(0, 2)
-        e.target.value = nuevoValor
-        const nuevaPosicion = Math.max(0, nuevoValor.length - desdeElFinal)
-        e.target.setSelectionRange(nuevaPosicion, nuevaPosicion)
-      })
+    function montoDeCampo(id) {
+      return leerCampoNumero(document.getElementById(id))
     }
 
     function fechaISO(d) {
@@ -4319,7 +4307,7 @@
         }
       }
 
-      document.getElementById('movimiento-monto').value = ''
+      ponerNumero(document.getElementById('movimiento-monto'), null)
       document.getElementById('movimiento-fecha').value = fechaISO(new Date())
       document.getElementById('movimiento-descripcion').value = ''
 
@@ -4350,7 +4338,7 @@
 
     async function guardarMovimiento() {
       const { tipo, subtipo, empleadoId, empleadoPropioId } = estado.wizardMovimiento
-      const monto       = parseImporte(document.getElementById('movimiento-monto').value)
+      const monto       = montoDeCampo('movimiento-monto')
       const fecha         = document.getElementById('movimiento-fecha').value || null
       const descripcion   = document.getElementById('movimiento-descripcion').value.trim() || null
 
@@ -4513,8 +4501,8 @@
       document.getElementById('traspaso-titulo').textContent = esEmpresa
         ? `Traspaso entre cuentas de ${estado.nombresEmpleados[estado.idEmpresa] || 'Empresa'}`
         : 'Traspaso entre cuentas'
-      document.getElementById('traspaso-monto').value = ''
-      document.getElementById('traspaso-monto-destino').value = ''
+      ponerNumero(document.getElementById('traspaso-monto'), null)
+      ponerNumero(document.getElementById('traspaso-monto-destino'), null)
       document.getElementById('traspaso-fecha').value = fechaISO(new Date())
       await cargarCuentasDe(empleadoId)
       poblarSelectoresTraspaso()
@@ -4528,7 +4516,7 @@
     async function guardarTraspaso() {
       const cuentaOrigenId  = document.getElementById('traspaso-cuenta-origen').value
       const cuentaDestinoId = document.getElementById('traspaso-cuenta-destino').value
-      const monto           = parseImporte(document.getElementById('traspaso-monto').value)
+      const monto           = montoDeCampo('traspaso-monto')
       const fecha            = document.getElementById('traspaso-fecha').value || null
 
       if (!cuentaOrigenId || !cuentaDestinoId) { mostrarError('Elegí las dos cuentas.'); return }
@@ -4538,7 +4526,7 @@
       const cuentaDestino = estado.cuentasPorId[cuentaDestinoId]
       let montoDestino = monto
       if (cuentaOrigen.moneda !== cuentaDestino.moneda) {
-        montoDestino = parseImporte(document.getElementById('traspaso-monto-destino').value)
+        montoDestino = montoDeCampo('traspaso-monto-destino')
         if (!montoDestino || montoDestino <= 0) { mostrarError('Ingresá el monto que entra.'); return }
       }
 
@@ -4676,9 +4664,7 @@
       }
     }
 
-    formatearImporteEnVivo(document.getElementById('movimiento-monto'))
-    formatearImporteEnVivo(document.getElementById('traspaso-monto'))
-    formatearImporteEnVivo(document.getElementById('traspaso-monto-destino'))
+    enlazarCamposMonto()
 
     init()
   </script>
