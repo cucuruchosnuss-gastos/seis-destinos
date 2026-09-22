@@ -29,10 +29,12 @@ const FUNCIONES = [
   'abrirModalMotivo', 'cerrarModalMotivo',
   // Los caminos del error de la base, que se tienen que mostrar TAL CUAL
   'subirCobranza', 'guardarCobranza', 'esErrorDeRed', 'accionSimple',
+  // Cifras de cabecera del listado
+  'numeroDeResumen', 'htmlResumen', 'parametrosResumen',
 ]
 
 const CONSTANTES = [
-  'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ESTADOS_COBRANZA',
+  'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ZONA_AR', 'DIAS_MAXIMO_DIFERIDO', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA',
   'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
   'TOPE_FILAS_POSTGREST', 'FILTROS_CHEQUES_DEFECTO', 'ESTADOS_FILTRO_CHEQUES', 'ETIQUETA_ESTADO_CHEQUE',
   'LARGO_MAXIMO_DESTINO', 'SEGUNDOS_LECTURA_LENTA',

@@ -857,11 +857,14 @@ if (SOLO !== 'estatico') {
     const foto = { id: 'f1', storage_path: 'x/y.jpg' }
     const pleg = { ...S33.chequeVacio('f1'), ...dif, confirmado: true, abierto: false, importe: '827.500,00' }
     const htmlPleg = S33.htmlTarjetaCheque(pleg, { id: 'form', fotos: [foto], cheques: [pleg] })
-    chk('3.3 plegada: importe, "✓ Confirmado", los tres datos y banco · tipo · cuenta al pie',
-      htmlPleg.includes('<span class="cob-cheque__confirmado">✓ Confirmado</span>') && htmlPleg.includes('cob-cheque__datos') &&
-      /Banco de Galicia · diferido · cuenta <span class="cob-cheque__num">09420314667</.test(htmlPleg))
-    chk('3.3 plegada: sin miniatura; Ver la foto, Editar y Quitar como botones',
-      !/<img/.test(htmlPleg) && /<button[^>]*data-mini="k1">Ver la foto<\/button>/.test(htmlPleg) &&
+    // La plegada es la FILA COMPACTA (septiembre 2026); el detalle de arriba
+    // queda igual. La fila en detalle: test-cobranzas-cabecera.js.
+    chk('3.3 plegada: fila compacta con el importe, "Nº · paga DD/MM" y el banco (cuenta en el title)',
+      /<span class="cob-cheque-fila__monto">\$\s827\.500,00<\/span>/.test(htmlPleg) &&
+      /<span class="cob-cheque-fila__sub">Nº 66259862 · paga 15\/11<\/span>/.test(htmlPleg) &&
+      /<span class="cob-cheque-fila__banco" title="Banco de Galicia · cuenta 09420314667">Banco de Galicia<\/span>/.test(htmlPleg))
+    chk('3.3 plegada: sin miniatura; la foto se abre desde el cheque (data-mini), Editar y Quitar como botones',
+      !/<img/.test(htmlPleg) && /<button[^>]*class="cob-cheque-fila__info" data-mini="k1"/.test(htmlPleg) &&
       /data-editar-cheque="k1"/.test(htmlPleg) && /data-quitar-cheque="k1"/.test(htmlPleg))
     const conDv = (c) => c + String(S33.dvBcra(c))
     const abierta = { ...S33.chequeVacio('f1'), id: 'k9', r1: conDv('0073863218'), r2: conDv('66259862'), r3: conDv('09420314667'), abierto: true }
@@ -903,7 +906,7 @@ if (SOLO !== 'estatico') {
     chk('3.2 fila: lleva la clase de su estado (la franja sale de ahí)',
       /class="tarjeta-lista cob-fila cob-fila--registrada"/.test(reg) && /cob-fila--anulada/.test(anu) && /cob-fila--procesada/.test(proc))
     chk('3.2 fila: el estado es texto y no chip',
-      /class="cob-fila__estado cob-fila__estado--registrada">Registrada</.test(reg) && !/cob-estado/.test(reg + proc + anu))
+      /class="cob-fila__estado cob-fila__estado--registrada">Por controlar</.test(reg) && !/cob-estado/.test(reg + proc + anu))
     chk('3.2 fila: la cantidad de cheques va en su propio span',
       /<span class="cob-fila__cheques">2 cheques<\/span>/.test(reg))
     chk('3.2 fila: fecha, cheques y efectivo separados por el punto medio',

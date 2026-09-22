@@ -41,7 +41,11 @@
       --cob-fondo-panel: #f8fafc;
       --cob-divisor-tabla: rgba(26, 42, 82, 0.09);
       --cob-hover-fila: rgba(26, 42, 82, 0.02);
-      --cob-cols-tabla: 64px minmax(0, 1fr) 56px 104px 116px minmax(0, 120px) 88px;
+      /* Cheques en 72px y Estado en 108px: con 56px el encabezado "CHEQUES"
+         (mayúsculas y espaciado) se cortaba en "CHEQ…", y "POR CONTROLAR"
+         no entra en 88px. Medido en Chrome a 1100, 1280, 1399, 1400 y 1440px
+         de viewport. */
+      --cob-cols-tabla: 64px minmax(0, 1fr) 72px 104px 116px minmax(0, 120px) 108px;
     }
 
     .cob-contenedor {
@@ -367,6 +371,59 @@
     .cob-estado--procesada { background: var(--color-superficie); color: var(--color-texto-suave); }
     .cob-estado--anulada { background: var(--bordo-suave); color: var(--bordo-oscuro); }
 
+    /* ── Cifras de cabecera del listado ───────────────────────────────── */
+    /* Dos cifras: cuántas faltan controlar y el total (del mes o del
+       período). El total en tinta neutra, nunca naranja; "por controlar" sí
+       en el color del módulo cuando hay alguna, porque reclama acción. */
+    .cob-resumen {
+      display: grid;
+      /* El total se lleva más ancho: "$ 12.345.678,90" no se parte (el
+         espacio después del $ es duro) y en 375px, mitad y mitad, no entraba. */
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      min-width: 0;
+    }
+    .cob-resumen__cifra {
+      background: var(--color-fondo);
+      border: 1px solid var(--borde-tarjeta);
+      border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      padding: 0.625rem 0.875rem;
+      min-width: 0;
+    }
+    .cob-resumen__k {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-resumen__v {
+      margin-top: 0.125rem;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      font-variant-numeric: tabular-nums;
+      min-width: 0;
+      /* break-word y no anywhere: una cifra se corta por el espacio después
+         del "$", no por la mitad de los centavos. */
+      overflow-wrap: break-word;
+    }
+    /* Variantes DESPUÉS de su base. */
+    .cob-resumen__v--pendientes { color: var(--naranja-oscuro); }
+    .cob-resumen__v--texto { font-size: 0.875rem; font-weight: 600; color: var(--cob-texto-secundario); }
+    .cob-resumen__sub {
+      margin-top: 0.125rem;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: var(--color-texto-suave);
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
     .cob-vacio {
       text-align: center;
       color: var(--color-texto-suave);
@@ -573,8 +630,70 @@
       min-width: 0;
       overflow-wrap: anywhere;
     }
-    /* Tres botones del mismo ancho en la tarjeta plegada. */
-    .cob-acciones--tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    /* EL CHEQUE CONFIRMADO, PLEGADO: UNA FILA DE ~72px. Con tres cheques
+       tienen que entrar sin scroll en la pantalla del formulario. A la
+       izquierda el importe, "Nº · paga" y el banco (una línea, cortada con
+       puntos suspensivos y completo en el title); a la derecha Editar y
+       Quitar, de 44px. La parte de la izquierda es el botón "Ver la foto"
+       (lleva el data-mini): tocar el cheque muestra su papel. Va DESPUÉS de
+       .cob-cheque y .cob-cheque--confirmado: misma especificidad, decide el
+       orden. */
+    .cob-cheque--fila {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 72px;
+      padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .cob-cheque-fila__info {
+      flex: 1 1 auto;
+      align-self: stretch;
+      min-width: 0;
+      min-height: 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0;
+      border: 0;
+      background: none;
+      font-family: var(--fuente);
+      text-align: left;
+      color: var(--color-texto);
+      cursor: pointer;
+    }
+    .cob-cheque-fila__monto,
+    .cob-cheque-fila__sub,
+    .cob-cheque-fila__banco {
+      display: block;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cob-cheque-fila__monto {
+      font-size: 1.125rem;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+    }
+    .cob-cheque-fila__sub {
+      font-size: 0.75rem;
+      line-height: 1.3;
+      color: var(--cob-texto-secundario);
+      font-variant-numeric: tabular-nums;
+    }
+    .cob-cheque-fila__banco {
+      font-size: 0.6875rem;
+      line-height: 1.3;
+      color: var(--color-texto-suave);
+    }
+    .cob-cheque-fila__acciones { display: flex; gap: 0.375rem; flex-shrink: 0; }
+    /* 44px aunque sean .cob-btn--chico (40px): van en la fila, al alcance
+       del pulgar, y es el mínimo táctil del módulo. */
+    .cob-cheque-fila__acciones .cob-btn { min-height: 44px; min-width: 44px; padding: 0.5rem 0.625rem; }
 
     /* Los 3 renglones del recuadro del cheque. */
     .cob-renglon { margin-bottom: 0.75rem; min-width: 0; }
@@ -913,9 +1032,12 @@
        .cob-maestro--activo, que el script pone SOLO en escritorio y solo en
        el listado (o en un detalle abierto desde el listado): abajo de 1100px
        y en las otras vistas no aplica nada, y el celular queda idéntico.
-       La franja de la fila CAMBIA de significado acá: en celular dice "falta
-       procesar"; en escritorio marca la fila ELEGIDA (lo que falta procesar
-       ya lo dice la columna Estado). Se redefine solo adentro de este bloque. */
+       LA FRANJA NARANJA SIGNIFICA LO MISMO QUE EN CELULAR: "por controlar"
+       (estado registrada), y nada más. La fila ELEGIDA se marca solo con el
+       fondo naranja suave y aria-current, sin franja propia: si la franja
+       marcara la selección, en escritorio dejaría de decir qué falta
+       controlar justo en la pantalla desde donde se controla. Una fila
+       elegida que además está por controlar lleva las dos cosas. */
     @media (min-width: 1100px) {
       .cob-contenedor:has(.cob-maestro--activo) { max-width: 1440px; padding-left: 1.25rem; padding-right: 1.25rem; }
       .cob-maestro--activo {
@@ -992,12 +1114,13 @@
         align-items: baseline;
         min-width: 0;
       }
-      /* Variantes de franja DESPUÉS de la base de escritorio, y la elegida
-         al final: gana sobre registrada y anulada. */
-      .cob-maestro--activo .cob-fila--registrada { border-left-color: transparent; }
+      /* Variantes de franja DESPUÉS de la base de escritorio: la base pone
+         la franja transparente con más especificidad que las de celular,
+         así que se repiten acá. La elegida NO toca la franja: solo el fondo. */
+      .cob-maestro--activo .cob-fila--registrada { border-left-color: var(--naranja); }
       .cob-maestro--activo .cob-fila--anulada { border-left-color: var(--bordo); }
       .cob-maestro--activo .cob-fila--seleccionada,
-      .cob-maestro--activo .cob-fila--seleccionada:hover { border-left-color: var(--naranja); background: var(--naranja-suave); }
+      .cob-maestro--activo .cob-fila--seleccionada:hover { background: var(--naranja-suave); }
 
       .cob-maestro--activo .cob-celda { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .cob-maestro--activo .cob-celda--fecha { color: var(--cob-texto-secundario); font-variant-numeric: tabular-nums; }
@@ -1013,12 +1136,13 @@
       .cob-maestro--activo .cob-fila--anulada .cob-celda--fecha,
       .cob-maestro--activo .cob-fila--anulada .cob-celda--quien { color: var(--color-texto-suave); }
     }
-    /* Entre 1100 y 1279px las siete columnas no entran al lado del panel de
-       468px: el cliente quedaba con cero de ancho. Se esconden Efectivo y
+    /* Entre 1100 y 1399px las siete columnas no entran al lado del panel de
+       468px: el cliente quedaba con cero de ancho (a 1280px de viewport, con
+       las siete, le quedaban 54px). Se esconden Efectivo y
        Cargada por (la 4.ª y la 6.ª), que están igual en el panel de la
        derecha; el resto de la tabla no cambia. */
-    @media (min-width: 1100px) and (max-width: 1279px) {
-      .cob-maestro--activo { --cob-cols-tabla: 60px minmax(0, 1fr) 68px 116px 88px; }
+    @media (min-width: 1100px) and (max-width: 1399px) {
+      .cob-maestro--activo { --cob-cols-tabla: 60px minmax(0, 1fr) 72px 116px 108px; }
       .cob-maestro--activo .cob-lista-cabecera > :nth-child(4),
       .cob-maestro--activo .cob-lista-cabecera > :nth-child(6),
       .cob-maestro--activo .cob-fila__tabla > :nth-child(4),
@@ -1088,6 +1212,11 @@
 
         <div class="cob-segmento" id="cob-chips-estado" role="group" aria-label="Filtrar por estado"></div>
       </div>
+
+      <!-- Cifras de cabecera. Salen de resumen_cobranzas() con los MISMOS
+           filtros del listado, NUNCA de sumar las filas cargadas: el listado
+           pagina de a 50 y esa suma daría un total falso. -->
+      <div class="cob-resumen" id="cob-resumen"></div>
 
       <!-- Encabezado de la tabla de escritorio. En celular no se dibuja. -->
       <div class="cob-lista-cabecera">
@@ -1317,6 +1446,9 @@
       cobranzas: [],
       hayMas: false,
       filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
+      // Cifras de cabecera del listado (resumen_cobranzas). Arranca cargando:
+      // nunca se muestra un número que no vino de la base.
+      resumen: { cargando: true, etiqueta: 'Total del mes' },
 
       // Vista de cheques. Los filtros arrancan en "en cartera".
       cheques: {
@@ -1724,11 +1856,18 @@
     // LISTADO
     // ═══════════════════════════════════════════════════════════════════════
 
+    // LOS NOMBRES DE LOS ESTADOS SON SOLO DE PANTALLA. En la base siguen
+    // siendo registrada / procesada / anulada: los `id` de acá son esos
+    // valores y viajan tal cual al filtro y a resumen_cobranzas. "Por
+    // controlar" y "Asentada" dicen lo que la persona tiene que hacer y lo que
+    // ya pasó; "registrada" y "procesada" eran palabras del sistema.
+    const ETIQUETA_ESTADO_COBRANZA = { registrada: 'Por controlar', procesada: 'Asentada', anulada: 'Anulada' }
+
     const ESTADOS_COBRANZA = [
-      { id: '', nombre: 'Todas' },
-      { id: 'registrada', nombre: 'Registradas' },
-      { id: 'procesada', nombre: 'Procesadas' },
+      { id: 'registrada', nombre: 'Por controlar' },
+      { id: 'procesada', nombre: 'Asentadas' },
       { id: 'anulada', nombre: 'Anuladas' },
+      { id: '', nombre: 'Todas' },
     ]
 
     function renderizarChipsEstado() {
@@ -1746,7 +1885,14 @@
     }
 
     async function cargarCobranzas({ reiniciar = false } = {}) {
-      if (reiniciar) estado.cobranzas = []
+      // Un listado que arranca de cero es un filtro que cambió o una escritura
+      // que terminó (guardar, asentar, reabrir, anular, una salida): las
+      // cifras de cabecera se recalculan con los filtros de AHORA. "Cargar
+      // más" no las toca: los filtros son los mismos.
+      if (reiniciar) {
+        estado.cobranzas = []
+        cargarResumen()
+      }
       const desde = estado.cobranzas.length
 
       let q = supabase
@@ -1809,6 +1955,139 @@
       soltarSeleccionFueraDelListado()
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // CIFRAS DE CABECERA — resumen_cobranzas()
+    //
+    // "Por controlar: N" y el total, calculados POR LA BASE con los mismos
+    // filtros del listado. NUNCA se suman las filas cargadas: el listado
+    // pagina de a 50 (y PostgREST corta en 1000), así que esa suma daría un
+    // total falso sin ningún error.
+    //
+    // Lo que devuelve la función, y cómo se lee:
+    //   - por_controlar: las registradas con los filtros de cliente, fecha y
+    //     repartidor, IGNORANDO el de estado.
+    //   - cantidad y total: con todos los filtros, y SIN LAS ANULADAS siempre.
+    //     Con el filtro "Anuladas" dan 0 y $0 legítimamente: ahí la pantalla
+    //     dice que las anuladas no suman, en vez de un "$ 0,00" que parece un
+    //     total.
+    //
+    // SIN FILTRO DE FECHA, el total es DEL MES (del 1º a hoy), aunque el
+    // listado muestre todas las fechas: la etiqueta lo dice. Y en ese caso son
+    // DOS llamadas: "por controlar" va sin fechas —si fuera del mes, una
+    // cobranza del mes pasado sin controlar desaparecería de la cuenta, que
+    // es justo la que más importa—, y el total va con el mes.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let turnoResumen = 0
+
+    // Los parámetros, POR NOMBRE, a partir de los filtros del listado. Pura,
+    // para poder ejecutarla en la suite. p_estado lleva el valor de la BASE
+    // (registrada / procesada / anulada), nunca el nombre de pantalla.
+    function parametrosResumen(f, hoy) {
+      const desde = esFechaIso(f.desde) ? f.desde : null
+      const hasta = esFechaIso(f.hasta) ? f.hasta : null
+      const base = {
+        // La MISMA clave que el listado: normalizarCliente() deja solo
+        // [a-z0-9], así que el like '%clave%' del listado y el position() de
+        // la función encuentran exactamente las mismas cobranzas.
+        p_clave: normalizarCliente(f.texto),
+        p_desde: desde,
+        p_hasta: hasta,
+        p_estado: f.estado || null,
+        p_repartidor: f.repartidor || null,
+      }
+      const conFecha = !!(desde || hasta)
+      const inicioMes = `${String(hoy).slice(0, 7)}-01`
+      return {
+        base,
+        total: conFecha ? null : { ...base, p_desde: inicioMes, p_hasta: hoy },
+        etiqueta: conFecha ? 'Total del período' : 'Total del mes',
+        estadoFiltro: base.p_estado,
+        desdeMes: conFecha ? null : inicioMes,
+      }
+    }
+
+    async function cargarResumen() {
+      const turno = ++turnoResumen
+      const p = parametrosResumen(estado.filtros, hoyArgentina())
+      const meta = { etiqueta: p.etiqueta, estadoFiltro: p.estadoFiltro, desdeMes: p.desdeMes }
+      // Mientras carga NO queda el número viejo: sería la cifra de otros
+      // filtros al lado de un listado que ya cambió.
+      estado.resumen = { ...meta, cargando: true }
+      pintarResumen()
+      let resultado
+      try {
+        const llamadas = [supabase.rpc('resumen_cobranzas', p.base)]
+        if (p.total) llamadas.push(supabase.rpc('resumen_cobranzas', p.total))
+        const rs = await Promise.all(llamadas)
+        for (const r of rs) if (r.error) throw r.error
+        const fila = (r) => (Array.isArray(r.data) ? r.data[0] : r.data) ?? null
+        const a = fila(rs[0])
+        const b = fila(rs[rs.length - 1])
+        if (!a || !b) throw new Error('resumen_cobranzas no devolvió ninguna fila')
+        resultado = { ...meta, porControlar: a.por_controlar, cantidad: b.cantidad, total: b.total }
+      } catch (err) {
+        console.error('No se pudieron calcular las cifras del listado:', err)
+        resultado = { ...meta, error: true }
+      }
+      // Una respuesta vieja (filtros de antes) no pisa la nueva.
+      if (turno !== turnoResumen) return
+      estado.resumen = resultado
+      pintarResumen()
+    }
+
+    function pintarResumen() {
+      document.getElementById('cob-resumen').innerHTML = htmlResumen(estado.resumen)
+    }
+
+    // Un número que vino de la base, o null. null, undefined y '' se rechazan
+    // ANTES de convertir: Number(null) es 0, y un "no sé" terminaría diciendo
+    // "$ 0,00".
+    function numeroDeResumen(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    function htmlResumen(r) {
+      if (!r) return ''
+      const cifra = (k, v, sub, clase = '') => `
+        <div class="cob-resumen__cifra">
+          <div class="cob-resumen__k">${escCob(k)}</div>
+          <div class="cob-resumen__v${escCob(clase)}">${escCob(v)}</div>
+          ${sub ? `<div class="cob-resumen__sub">${escCob(sub)}</div>` : ''}
+        </div>`
+      const etiqueta = r.etiqueta || 'Total'
+      const NO_SE = 'No se pudo calcular'
+      if (r.cargando) return cifra('Por controlar', '…', '') + cifra(etiqueta, '…', '')
+      if (r.error) {
+        return cifra('Por controlar', NO_SE, '', ' cob-resumen__v--texto') +
+          cifra(etiqueta, NO_SE, '', ' cob-resumen__v--texto')
+      }
+
+      const pendientes = numeroDeResumen(r.porControlar)
+      const subPendientes = r.desdeMes ? 'de todas las fechas' : 'en el período'
+      const htmlPendientes = pendientes === null
+        ? cifra('Por controlar', NO_SE, '', ' cob-resumen__v--texto')
+        : cifra('Por controlar', String(pendientes), subPendientes, pendientes > 0 ? ' cob-resumen__v--pendientes' : '')
+
+      if (r.estadoFiltro === 'anulada') {
+        return htmlPendientes + cifra(etiqueta, 'Las anuladas no suman', 'Una cobranza anulada no cuenta en ningún total.', ' cob-resumen__v--texto')
+      }
+      const total = numeroDeResumen(r.total)
+      const cantidad = numeroDeResumen(r.cantidad)
+      if (total === null || cantidad === null) {
+        return htmlPendientes + cifra(etiqueta, NO_SE, '', ' cob-resumen__v--texto')
+      }
+      const cuales = r.estadoFiltro
+        ? ` ${(ESTADOS_COBRANZA.find(e => e.id === r.estadoFiltro)?.nombre ?? '').toLowerCase()}`
+        : ''
+      const cuantas = `${cantidad} ${cantidad === 1 ? 'cobranza' : 'cobranzas'}${cantidad === 1 ? cuales.replace(/s$/, '') : cuales}`
+      const periodo = r.desdeMes ? ` del ${formatearFechaCob(r.desdeMes).slice(0, 5)} a hoy` : ''
+      const sinAnuladas = r.estadoFiltro ? '' : ', sin las anuladas'
+      return htmlPendientes + cifra(etiqueta, formatearImporte(total), `${cuantas}${periodo}${sinAnuladas}`)
+    }
+
     // ESCRITORIO: si los filtros dejan afuera la cobranza abierta en el panel,
     // el panel se vacía con un texto neutro — mostrar una cobranza que el
     // listado de al lado ya no tiene confunde más que no mostrar nada. Solo
@@ -1856,7 +2135,7 @@
         ? `Cobrada ${formatearFechaCob(c.fecha)} · cargada ${momentoArgentina(c.created_at, { conHora: false })}`
         : formatearFechaCob(c.fecha)
 
-      const etiquetaEstado = { registrada: 'Registrada', procesada: 'Procesada', anulada: 'Anulada' }[c.estado] ?? c.estado
+      const etiquetaEstado = ETIQUETA_ESTADO_COBRANZA[c.estado] ?? c.estado
       // Todo en UN span de texto corrido: así, al partirse en dos renglones,
       // el punto medio viaja con el texto y no queda colgando al final.
       const metaFila = [`<span>${escCob(cuando)}</span>`, ...partes].join(' · ')
@@ -2623,7 +2902,7 @@
     function htmlDetalle(d) {
       const c = d.cabecera
       const anulada = c.estado === 'anulada'
-      const etiquetaEstado = { registrada: 'Registrada', procesada: 'Procesada', anulada: 'Anulada' }[c.estado] ?? c.estado
+      const etiquetaEstado = ETIQUETA_ESTADO_COBRANZA[c.estado] ?? c.estado
 
       const datos = [
         ['Fecha de la cobranza', formatearFechaCob(c.fecha)],
@@ -2634,7 +2913,7 @@
       if (c.comprobante_referencia) datos.push(['Remito o factura', c.comprobante_referencia])
       if (c.observaciones) datos.push(['Observaciones', c.observaciones])
       if (c.cargada_por_nombre) datos.push(['Cargada por', c.cargada_por_nombre])
-      if (c.procesada_por_nombre) datos.push(['Procesada por', c.procesada_por_nombre])
+      if (c.procesada_por_nombre) datos.push(['Asentada por', c.procesada_por_nombre])
       if (c.anulada_por_nombre) datos.push(['Anulada por', c.anulada_por_nombre])
 
       const cabecera = `
@@ -2790,7 +3069,7 @@
         botones.push('<button type="button" class="cob-btn" id="cob-btn-editar">Editar</button>')
       }
       if (registrada && puedeProcesar()) {
-        botones.push('<button type="button" class="cob-btn cob-btn--primario" id="cob-btn-procesar">Marcar como procesada</button>')
+        botones.push('<button type="button" class="cob-btn cob-btn--primario" id="cob-btn-procesar">Controlada, asentar</button>')
       }
       if (c.estado === 'procesada' && puedeProcesar()) {
         botones.push('<button type="button" class="cob-btn" id="cob-btn-reabrir">Reabrir</button>')
@@ -2809,7 +3088,7 @@
     function htmlHistorial(filas, nombres) {
       if (!filas.length) return '<div class="cob-campo__ayuda">Sin movimientos.</div>'
       const ETIQUETA = {
-        alta: 'Alta', edicion: 'Edición', procesada: 'Procesada',
+        alta: 'Alta', edicion: 'Edición', procesada: 'Asentada',
         reabierta: 'Reabierta', anulada: 'Anulada',
         cheque_salida: 'Salida de un cheque', cheque_vuelve_cartera: 'Cheque vuelto a cartera',
       }
@@ -2926,7 +3205,7 @@
       if (btnEditar) btnEditar.addEventListener('click', () => abrirFormularioEdicion(c.id))
 
       const btnProcesar = document.getElementById('cob-btn-procesar')
-      if (btnProcesar) btnProcesar.addEventListener('click', () => accionSimple('marcar_cobranza_procesada', { p_id: c.id }, 'Cobranza marcada como procesada.'))
+      if (btnProcesar) btnProcesar.addEventListener('click', () => accionSimple('marcar_cobranza_procesada', { p_id: c.id }, 'Cobranza asentada.'))
 
       const btnReabrir = document.getElementById('cob-btn-reabrir')
       if (btnReabrir) btnReabrir.addEventListener('click', () => abrirModalMotivo({
@@ -3178,11 +3457,11 @@
         try {
           blob = await comprimirFoto(archivo)
         } catch (err) {
-          console.error('No se pudo procesar la foto:', err)
-          mostrarError('No se pudo procesar una de las fotos. Probá sacarla de nuevo.')
+          console.error('No se pudo preparar la foto:', err)
+          mostrarError('No se pudo preparar una de las fotos. Probá sacarla de nuevo.')
           continue
         }
-        if (!blob) { mostrarError('No se pudo procesar una de las fotos.'); continue }
+        if (!blob) { mostrarError('No se pudo preparar una de las fotos.'); continue }
 
         const foto = {
           id: crypto.randomUUID(),
@@ -3608,20 +3887,29 @@
       const importeNum = parseImporteCobranza(ch.importe)
 
       if (ch.confirmado && !ch.abierto) {
-        // Plegado: el resumen alcanza para reconocerlo sin volver a leerlo todo.
+        // Plegado y COMPACTO: una fila de ~72px, así tres cheques confirmados
+        // entran sin scroll. Lo que sale de la fila: la fecha de emisión y
+        // "común/diferido" (se ven en Editar; "a la vista" ya dice que es
+        // común), la cuenta (va en el title del banco) y el rótulo
+        // "✓ Confirmado" (lo dice el borde naranja, y el lector de pantalla
+        // lo oye en el aria-label). "Ver la foto" NO se pierde: es toda la
+        // parte izquierda, con el mismo data-mini de antes.
+        const diferido = ch.tipo === 'diferido'
+        const cuando = diferido ? `paga ${formatearFechaCob(ch.fecha_pago).slice(0, 5)}` : 'a la vista'
+        const importeTxt = formatearImporte(importeNum)
+        const numeroTxt = `Nº ${ch.numero ?? '—'}`
+        const banco = nombreBanco(ch.banco_codigo)
+        const bancoCompleto = `${banco} · cuenta ${ch.cuenta ?? '—'}`
+        const subTxt = `${numeroTxt} · ${cuando}`
+        const leido = `Cheque confirmado de ${importeTxt}, ${numeroTxt}, ${cuando}, ${banco}. Tocá para ver la foto.`
         return `
-          <div class="cob-cheque cob-cheque--confirmado" data-cheque="${escCob(ch.id)}">
-            <div class="cob-cheque__top">
-              <span class="cob-cheque__monto">${escCob(formatearImporte(importeNum))}</span>
-              <span class="cob-cheque__confirmado">✓ Confirmado</span>
-            </div>
-            ${htmlDatosCheque(ch, hoyArgentina())}
-            <div class="cob-cheque__pie">${escCob(nombreBanco(ch.banco_codigo))} · ${ch.tipo === 'diferido' ? 'diferido' : 'común'} · cuenta <span class="cob-cheque__num">${escCob(ch.cuenta ?? '—')}</span></div>
-            <!-- La miniatura SALIÓ de la tarjeta: a 56px no se leía nada. La
-                 foto se abre con este botón (lleva el data-mini que antes
-                 llevaba la miniatura) y las fotos se ven juntas arriba. -->
-            <div class="cob-acciones cob-acciones--tres">
-              <button type="button" class="cob-btn cob-btn--chico" data-mini="${escCob(ch.id)}">Ver la foto</button>
+          <div class="cob-cheque cob-cheque--confirmado cob-cheque--fila" data-cheque="${escCob(ch.id)}">
+            <button type="button" class="cob-cheque-fila__info" data-mini="${escCob(ch.id)}" aria-label="${escCob(leido)}">
+              <span class="cob-cheque-fila__monto">${escCob(importeTxt)}</span>
+              <span class="cob-cheque-fila__sub">${escCob(subTxt)}</span>
+              <span class="cob-cheque-fila__banco" title="${escCob(bancoCompleto)}">${escCob(banco)}</span>
+            </button>
+            <div class="cob-cheque-fila__acciones">
               <button type="button" class="cob-btn cob-btn--chico" data-editar-cheque="${escCob(ch.id)}">Editar</button>
               <button type="button" class="cob-btn cob-btn--chico cob-btn--alerta" data-quitar-cheque="${escCob(ch.id)}">Quitar</button>
             </div>

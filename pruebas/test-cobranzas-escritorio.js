@@ -15,10 +15,13 @@
 //  - la respuesta de una apertura vieja no pisa el panel de la elegida;
 //  - volver al listado vuelve a leer la cobranza abierta;
 //  - el CSS: todo lo de escritorio vive adentro del @media (min-width: 1100px),
-//    con el mismo corte que MQ_ESCRITORIO, y la franja de celular no cambia;
-//  - no hay cifras de cabecera ("Sin procesar" / "Total del mes"): no existe
-//    una agregación en la base con los mismos filtros, y sumar en el cliente
-//    daría un total falso.
+//    con el mismo corte que MQ_ESCRITORIO;
+//  - LA FRANJA NARANJA DICE SIEMPRE "POR CONTROLAR" (estado registrada), en
+//    celular y en escritorio. La fila elegida se marca solo con el fondo y
+//    aria-current: ninguna regla de .cob-fila--seleccionada toca un borde.
+//  - las cifras de cabecera ("Por controlar" / "Total del mes") viven en
+//    test-cobranzas-cabecera.js: salen de resumen_cobranzas(), nunca de sumar
+//    filas.
 //
 // Archivo bajo prueba: ARCHIVO_TEST, o modulos/cobranzas.html.
 
@@ -139,7 +142,7 @@ const FUNCIONES = [
   'soltarSeleccionFueraDelListado', 'esEscritorio', 'enModoMaestro', 'pintarPanelVacio',
   'marcarFilaSeleccionada', 'mostrarVistaCob', 'abrirDetalle',
 ]
-const CONSTANTES = ['ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'SUBTITULO_VISTA_COB', 'MQ_ESCRITORIO']
+const CONSTANTES = ['ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'SUBTITULO_VISTA_COB', 'MQ_ESCRITORIO', 'ETIQUETA_ESTADO_COBRANZA']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
@@ -297,6 +300,15 @@ async function pruebas() {
     chk('fila: sin cheques ni efectivo, las celdas dicen "—" atenuado',
       (h.match(/cob-celda--vacia">—</g) || []).length === 2)
     chk('fila: sin elegir, ni la clase ni aria-current', !/cob-fila--seleccionada/.test(h) && !/aria-current/.test(h))
+    S.estado.cobranzaSeleccionadaId = 'r'
+    const elegidaPorControlar = S.htmlFilaCobranza(cob('r', { estado: 'registrada' }))
+    chk('fila: elegida y por controlar lleva las DOS clases (franja y fondo) y aria-current',
+      /class="tarjeta-lista cob-fila cob-fila--registrada cob-fila--seleccionada" aria-current="true"/.test(elegidaPorControlar))
+    S.estado.cobranzaSeleccionadaId = 'p'
+    const elegidaAsentada = S.htmlFilaCobranza(cob('p', { estado: 'procesada' }))
+    chk('fila: elegida y asentada lleva la clase de elegida y aria-current, sin la de por controlar',
+      /class="tarjeta-lista cob-fila cob-fila--procesada cob-fila--seleccionada" aria-current="true"/.test(elegidaAsentada) &&
+      !/cob-fila--registrada/.test(elegidaAsentada))
   }
 
   // ── El CSS ────────────────────────────────────────────────────────────────
@@ -326,12 +338,22 @@ async function pruebas() {
     const mqJs = (FUENTE.match(/const MQ_ESCRITORIO = '([^']+)'/) || [])[1]
     chk('css: el corte del script es el mismo que el del CSS', mqJs === '(min-width: 1100px)' && bloques.some(b => b.cond === mqJs))
     const franjaCelular = css.indexOf('\n    .cob-fila--registrada { border-left-color: var(--naranja); }')
-    chk('css: en celular la franja naranja sigue diciendo "falta procesar"', franjaCelular !== -1 && !dentroDeEscritorio(franjaCelular))
-    const iReg = css.indexOf('.cob-maestro--activo .cob-fila--registrada { border-left-color: transparent; }')
-    const iSel = css.indexOf('.cob-maestro--activo .cob-fila--seleccionada,')
-    chk('css: en escritorio la franja pasa a marcar la elegida (registrada sin franja, elegida después)',
-      iReg !== -1 && iSel !== -1 && iSel > iReg && dentroDeEscritorio(iReg) &&
-      /border-left-color:\s*var\(--naranja\);\s*background:\s*var\(--naranja-suave\)/.test(css.slice(iSel, css.indexOf('}', iSel))))
+    chk('css: en celular la franja naranja dice "por controlar"', franjaCelular !== -1 && !dentroDeEscritorio(franjaCelular))
+
+    // Las reglas, con su selector y su cuerpo, para mirar QUÉ toca cada una.
+    const reglas = []
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) reglas.push({ sel: m[1].trim(), cuerpo: m[2], pos: m.index + m[0].indexOf(m[1].trim()) })
+    const deSeleccion = reglas.filter(r => /cob-fila--seleccionada/.test(r.sel))
+    chk('css: hay regla de la fila elegida, con el fondo naranja suave',
+      deSeleccion.length > 0 && deSeleccion.some(r => /background:\s*var\(--naranja-suave\)/.test(r.cuerpo)))
+    chk('css: NINGUNA regla de la fila elegida toca un borde (la franja no depende de la selección)',
+      deSeleccion.every(r => !/border/.test(r.cuerpo)), deSeleccion.filter(r => /border/.test(r.cuerpo)).map(r => r.sel + ' {' + r.cuerpo + '}').join(' | '))
+    const iBaseEsc = css.indexOf('.cob-maestro--activo .cob-fila {')
+    const regEsc = reglas.filter(r => r.sel === '.cob-maestro--activo .cob-fila--registrada' && dentroDeEscritorio(r.pos))
+    chk('css: en escritorio lo por controlar lleva la franja naranja, DESPUÉS de la base que la pone transparente',
+      iBaseEsc !== -1 && regEsc.length === 1 && regEsc[0].pos > iBaseEsc && /border-left-color:\s*var\(--naranja\)/.test(regEsc[0].cuerpo))
+    chk('css: ninguna regla de escritorio le saca la franja a lo por controlar',
+      !reglas.some(r => /cob-fila--registrada/.test(r.sel) && dentroDeEscritorio(r.pos) && /border-left-color:\s*transparent/.test(r.cuerpo)))
     const iTablaBase = css.indexOf('.cob-fila__tabla,\n    .cob-lista-cabecera { display: none; }')
     chk('css: la tabla de escritorio no se dibuja en celular', iTablaBase !== -1 && !dentroDeEscritorio(iTablaBase))
     chk('css: en escritorio se esconde "Volver al listado"', /\.cob-maestro--activo #cob-btn-volver-listado \{ display: none; \}/.test(css))
@@ -341,11 +363,6 @@ async function pruebas() {
       /\.cob-maestro--activo \.cob-celda--total \{ font-weight: 700; color: var\(--color-texto\); \}/.test(css))
   }
 
-  // ── Cifras de cabecera: no existen, a propósito ─────────────────────────────
-  chk('no hay "Sin procesar" ni "Total del mes": no hay agregación en la base con los mismos filtros',
-    // Como texto que llega a la pantalla (entre comillas o como contenido de
-    // una etiqueta), no en los comentarios que explican por qué no están.
-    !/['"`>]\s*(sin procesar|total del mes)/i.test(FUENTE))
 }
 
 pruebas().then(() => {

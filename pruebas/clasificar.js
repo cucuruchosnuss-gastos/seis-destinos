@@ -164,6 +164,8 @@ const SEGURAS = [
   // Salida de cheques
   ['htmlAccionCheque(ch, cob)', 'HTML armado por htmlAccionCheque(), que escapa adentro'],
   ['avisoSalidos', 'HTML constante del código'],
+  // Cifras de cabecera
+  ['htmlResumen(estado.resumen)', 'HTML armado por htmlResumen(), que escapa adentro'],
 ]
 
 const SEGURAS_REGEX = [
