@@ -163,3 +163,83 @@ Supabase se usó SOLO en lectura: la base ya estaba hecha. Toda la verificación
   sublote en cero no se lista), agrupado por "producto · presentación · marca" con su total y cada sublote en orden.
   Solo lectura. Aviso si hay 1000 movimientos o más (los totales podrían estar incompletos).
 - Pruebas: `test-produccion-historial.js` (+ mut).
+- **Commit `94b3356`.** Números: test-produccion-historial 68/68, mut 50/50 (+12 equivalentes); test-produccion-xss
+  6/6; controles-produccion 551/551 (baselines B1–B6); el resto del repo en verde.
+
+## Cierre (commit de docs)
+
+- **Textos de 18 px o más** (arreglo posterior a B7, encontrado midiendo): la vista previa a 390 px, 800×1280 y
+  1280×800 mostró rótulos y detalles de 12,8 a 17,6 px. Todo `font-size` del módulo pasó a 1.125rem como mínimo, y
+  `test-produccion-acceso.js` ahora lo exige (y el alto de 56 px de los botones), con mutaciones.
+- **Una mutación de B3 perdió su ancla única en B6** (`fechaCorta()` repitió el renglón del NaN de `horaArgentina()`);
+  el guard de unicidad la atajó en la corrida final y se ancló con más contexto. Por eso las mutaciones se volvieron
+  a correr TODAS sobre el archivo terminado.
+- CLAUDE.md: la unidad de las cobranzas (tabla, vista, RPCs, tareas, módulo 8, Planificados), Cheques con unidad
+  (módulo 9, y la medida de 1280 px), el módulo 10 Producción (cómo trabaja la fábrica, las reglas de la base, los
+  modos de la tablet, la regla del uuid, configuración, historial), las 16 tablas y sus RPCs, la tarjeta del
+  dashboard, las tres tareas (40 en el CHECK y en el catálogo), el color `--azul` y las suites.
+
+### Números finales (archivo terminado)
+- `check-scripts.js`: OK (todos los HTML).
+- Producción: acceso 20/20 (mut 10/10), quien 46/46 (mut 24/24 +1 eq.), abrir 59/59 (mut 33/33), cierre 104/104
+  (mut 66/66 +14 eq.), masa 143/143 (mut 92/92 +12 eq.), config 104/104 (mut 99/99 +1 eq.), historial 68/68 (mut 50/50 +12 eq.),
+  xss 6/6, controles 551/551.
+- test-accesos-produccion 19/19, test-dashboard-produccion 9/9.
+- Cobranzas y Cheques: ver sus traspasos (`2026-09-22-cobranzas-3.md`, `2026-09-22-cheques-2.md`).
+- Todas las demás `pruebas/test-*.js` y los tres `controles-*.js` del repo en verde en un árbol limpio.
+
+## Decisiones tomadas sin preguntar
+
+1. **La persona de "¿Quién sos?" no se guarda**: recargar la tablet vuelve a preguntar.
+2. **El turno viene sugerido por la hora** (5–13 Mañana, 13–21 Tarde, resto Noche); se cambia con un toque.
+3. **Cada máquina elegida exige elegir operario**, con "Sin operario" explícito (null).
+4. **El scrap es obligatorio** (0 si no hubo) y la hora del apagado arranca en la hora actual.
+5. **Una masa pendiente de envío no se puede descartar**, y el payload queda congelado desde que se mandó.
+6. **"Sin lote"** solo se ofrece para insumos que no son materia prima (la base exige lote a la materia prima).
+7. **La nota de una versión nueva de receta es obligatoria.**
+8. **Las cantidades de la receta que quedan vacías no se mandan**; un 0 sí (es un dato).
+9. **Una presentación nueva nace con 1 por caja** y se avisa que hay que corregirla (la RPC exige > 0).
+10. **El aviso de productos del prototipo** se oculta con "Ya los revisé", recordado por tablet.
+11. **El historial arranca en los últimos 7 días.**
+12. **`unidadesCon()` replica `tiene_tarea_alcance()`** en el cliente: no existe una vista `v_mis_unidades_*` de
+    producción. Si la regla del servidor cambia, hay que cambiar esta también.
+13. Color del módulo: `--azul` #1F5FAD (nuevo en `main.css`).
+14. A2: a 1280 px la tabla de Cheques con salidos a la vista scrollea dentro de su caja (no se recortaron columnas).
+
+## Lo que NO se pudo probar
+
+- **Nada con sesión en un navegador real**: ni la tablet, ni el Wake Lock, ni el flujo sin señal y la vuelta de la
+  conexión, ni `crypto.randomUUID` en el navegador de la tablet (existe en contexto seguro: GitHub Pages es https).
+- Las medidas a 1280×800, 800×1280 y 390 px se tomaron sobre una **vista previa estática** armada con el CSS real y
+  los renders reales del sandbox (sin datos de la base): ningún control mide menos de 56 px, ningún texto menos de
+  18 px y no hay scroll horizontal. No se midió cada pantalla en cada tamaño.
+- Ninguna RPC se ejecutó contra la base: el conector es de solo lectura. Los contratos se leyeron de
+  `pg_get_functiondef` y las suites los prueban con un doble.
+
+## Guion para Facu
+
+1. **Cuenta de cada tablet**: en la tablet, `registro.html` con un email propio de la tablet (ej. "Tablet Producción
+   Córdoba"); en Accesos, aprobar la solicitud, **habilitar el módulo Producción** y tildar **"Abrir y cerrar turnos,
+   registrar masas, paradas y lo producido desde la tablet" (produccion:cargar) SOLO con la unidad Cucuruchos Nuss**
+   en el alcance, y como unidad de la persona Cucuruchos Nuss. Nada más. Entrar con esa cuenta en la tablet y elegir el
+   modo ("Producción (encargado)" en la del encargado, "Sala de masa (masero)" en la de la sala). **Ojo:** la cuenta de
+   la tablet queda como una "persona" más del personal activo, así que aparece en "¿Quién sos?" mientras la unidad no
+   tenga puestos configurados — el paso 2 lo resuelve.
+2. **Puestos**: con una cuenta que tenga `produccion:configurar` (o super_admin): Producción → Menú → Configuración →
+   Personal → Cucuruchos Nuss. Marcar **Encargado** a Federico Silva y a Agustín Barrera, **Masero** a los maseros y
+   **Operario** a los operarios, y "Guardar" en cada uno. Desde ese momento solo ellos aparecen en "¿Quién sos?" y la
+   base rechaza a cualquier otro como encargado o masero.
+3. **Revisar lo que vino del prototipo**: Configuración → Recetas (cada máquina, cada tipo: corregir cantidades y
+   "Guardar versión nueva" con una nota) → Ingredientes (asignarles insumo a grasa, fécula y colorante, si existen en
+   el catálogo de Stock) → Productos (nombres, presentaciones, unidades por caja; al terminar, "Ya los revisé").
+4. **Turno de prueba de punta a punta**, marcado PRUEBA: en la tablet del encargado, "Abrir turno" con UNA máquina
+   (anotar el lote); en la de la sala, elegir esa máquina y registrar una masa **simple** con "Usar la original"
+   (anotar qué lotes descontó; en Stock se ve el descuento) y otra **doble** con "Modificar"; revisar que la lista de
+   masas diga el origen y la diferencia; **anular las dos masas** con motivo "PRUEBA" (devuelve el stock descontado;
+   hacerlo ANTES de cerrar, porque con el turno cerrado solo puede anular quien tenga `configurar`). Volver al
+   encargado: "Parada" con motivo "PRUEBA" y "Reanudar"; "Cerrar planilla" con scrap 0, observaciones **"PRUEBA — no
+   es producción real"** y un producto con 1 caja; ver el sublote definitivo. **El sublote de prueba queda en
+   el stock terminado**: no hay pantalla para descontarlo (no existe una RPC de ajuste de stock terminado); queda
+   identificado por la observación "PRUEBA" del turno, y si hay que sacarlo es un ajuste por SQL que decide Facu.
+   Probar también: cortar el WiFi de la tablet de la sala al registrar una masa (tiene que decir "Sin conexión… No la
+   cargues de nuevo") y volver a conectarlo (tiene que enviarse sola, UNA sola vez).

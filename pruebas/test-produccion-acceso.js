@@ -57,4 +57,19 @@ function armar(rol, tareas) {
   chk('sinAcceso vuelve al dashboard', /window\.location\.href = '\.\.\/dashboard\.html'/.test(FUENTE))
 }
 
+// ── Tablet: tamaños mínimos ───────────────────────────────────────────────
+// Botones de 56 px como mínimo y texto de 18 px o más (con la raíz en 16 px,
+// 1.125rem). Se lee el <style> del módulo: cada font-size en rem tiene que ser
+// ≥ 1.125, ninguno en em por debajo de 1, y el alto mínimo es 56 px.
+{
+  const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+  const rems = [...css.matchAll(/font-size:\s*([0-9.]+)rem/g)].map(m => Number(m[1]))
+  chk('hay tamaños de letra en rem (si da cero, no se está leyendo)', rems.length > 5)
+  chk('ningún texto por debajo de 18 px (1.125rem)', rems.every(r => r >= 1.125), rems.filter(r => r < 1.125).join(', '))
+  const ems = [...css.matchAll(/font-size:\s*([0-9.]+)em/g)].map(m => Number(m[1]))
+  chk('ningún tamaño en em por debajo de 1', ems.every(r => r >= 1), ems.join(', '))
+  chk('el texto base del módulo es de 18 px', /body \{[^}]*font-size: 18px;/.test(css))
+  chk('el alto mínimo de los botones es 56 px', /--pr-alto-boton: 56px;/.test(css) && /\.pr-btn \{[^}]*min-height: var\(--pr-alto-boton\)/.test(css))
+}
+
 fin()

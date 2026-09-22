@@ -18,7 +18,8 @@ correrMutaciones({
     { nombre: 'cuenta también las masas anuladas', de: ".in('turno_id', ids).eq('anulada', false)", a: ".in('turno_id', ids)" },
     { nombre: 'lee turnos de todas las unidades', de: "        .eq('unidad_negocio_id', unidadId).eq('estado', 'abierto')", a: "        .eq('estado', 'abierto')" },
     { nombre: 'la hora sin zona de Argentina', de: "new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour: '2-digit', minute: '2-digit', hour12: false })", a: "new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })" },
-    { nombre: 'hora ilegible dice NaN', de: '      if (Number.isNaN(d.getTime())) return \'\'\n', a: '' },
+    // Anclada al Intl de la hora: fechaCorta() (B6) tiene el mismo renglón del NaN.
+    { nombre: 'hora ilegible dice NaN', de: "      if (Number.isNaN(d.getTime())) return ''\n      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour:", a: "      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour:" },
     { nombre: 'no pide la pantalla encendida', de: '      mantenerPantalla(estado.hayTurnoAbierto)\n      if (!estado.tablero.length) {', a: '      if (!estado.tablero.length) {' },
     { nombre: 'wake lock sin try', de: "      } catch (err) {\n        bloqueoPantalla = null\n        console.warn('No se pudo mantener la pantalla encendida:', err)\n      }", a: '      } finally {}' },
     { nombre: 'el botón abrir con todas abiertas', de: '      btn.disabled = !estado.tablero.some(e => !e.turno)', a: '      btn.disabled = false' },

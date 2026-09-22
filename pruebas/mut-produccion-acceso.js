@@ -19,6 +19,9 @@ correrMutaciones({
     // sin la tarea el alcance es undefined y la lista sale vacía igual.)
     { nombre: 'super_admin sin todas las unidades', de: "      if (estado.miRolApp === 'super_admin') return activas\n", a: '' },
     { nombre: 'lee tareas sin filtrar habilitado', de: ".eq('empleado_id', emp.id).eq('modulo', 'produccion').eq('habilitado', true)", a: ".eq('empleado_id', emp.id).eq('modulo', 'produccion')" },
+    { nombre: 'un rótulo vuelve a 0.95rem', de: '    .pr-dato__rotulo { font-size: 1.125rem;', a: '    .pr-dato__rotulo { font-size: 0.95rem;' },
+    { nombre: 'botones de 48 px', de: '      --pr-alto-boton: 56px;', a: '      --pr-alto-boton: 48px;' },
+    { nombre: 'texto base de 16 px', de: '      font-size: 18px;\n    }', a: '      font-size: 16px;\n    }' },
     { nombre: 'sin permiso se queda', de: '      if (!puedeEntrar()) {\n        sinAcceso(', a: '      if (false) {\n        sinAcceso(' },
   ],
 })
