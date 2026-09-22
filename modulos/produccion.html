@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Producción — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- PRODUCCIÓN (22/09/2026). La tablet de la fábrica, en modo kiosco.
+
+       Cómo trabaja la fábrica, y es lo que manda sobre el diseño:
+       1. El ENCARGADO abre el turno: quién es, qué turno, qué máquinas
+          arrancan y con qué operario. Cada máquina abierta recibe su LOTE.
+       2. Recién ahí esas máquinas le aparecen al MASERO en la sala de masa.
+       3. Al terminar, el encargado cierra la planilla de CADA máquina: la
+          hora en que se apagó el fuego, el scrap y lo producido EN ORDEN. Cada
+          renglón es un SUBLOTE (7023-1, 7023-2…), el número que se sella en la
+          caja; suma al stock de producto terminado.
+       4. Una máquina que sigue al turno siguiente se vuelve a abrir: es un
+          lote nuevo.
+
+       Todas las reglas de fondo (el origen de la masa, el descuento de los
+       lotes, el sublote, quién puede figurar como encargado o masero) viven en
+       la base. La pantalla no las repite ni las contradice. -->
+
+  <style>
+    [hidden] { display: none !important; }
+
+    body {
+      overflow-x: hidden;
+      --borde-tarjeta:  rgba(26, 42, 82, 0.10);
+      --sombra-tarjeta: 0 1px 2px rgba(26, 42, 82, 0.05);
+      --pr-texto-secundario: #4a5670;
+      /* Tablet: todo más grande. Botones de 56 px como mínimo y texto de 18 px
+         o más, porque se usa de pie, con guantes o harina en las manos. */
+      --pr-alto-boton: 56px;
+      font-size: 18px;
+    }
+
+    .pr-app {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1rem calc(2rem + env(safe-area-inset-bottom));
+      min-width: 0;
+    }
+
+    /* ── Cabecera ─────────────────────────────────────────────────────── */
+    .pr-header {
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      padding: 0.875rem 1rem; margin: 0.75rem 0 1rem;
+      background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+    }
+    .pr-header__volver {
+      display: inline-flex; align-items: center; min-height: var(--pr-alto-boton);
+      padding: 0 0.75rem; color: var(--color-acento); font-weight: 600;
+      text-decoration: none; border-radius: var(--radio-boton);
+    }
+    .pr-header__col { display: flex; flex-direction: column; min-width: 0; flex: 1 1 12rem; }
+    .pr-header__marca { font-size: 0.8rem; color: var(--pr-texto-secundario); font-weight: 600; letter-spacing: 0.02em; }
+    .pr-header__titulo { font-size: 1.35rem; font-weight: 800; color: var(--color-texto); }
+    .pr-header__punto { color: var(--azul); font-size: 0.8em; }
+    .pr-header__contexto { font-size: 1rem; color: var(--pr-texto-secundario); overflow-wrap: anywhere; }
+    .pr-header__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    /* ── Botones ──────────────────────────────────────────────────────── */
+    .pr-btn {
+      min-height: var(--pr-alto-boton); padding: 0 1.25rem;
+      font: inherit; font-size: 1.125rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--azul);
+      background: var(--azul); color: #fff; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      text-align: center; touch-action: manipulation;
+    }
+    .pr-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .pr-btn--secundario { background: var(--color-fondo); color: var(--azul-oscuro); }
+    .pr-btn--peligro { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .pr-btn--ancho { width: 100%; }
+    .pr-btn--grande { min-height: 80px; font-size: 1.35rem; }
+
+    /* ── Tarjetas y avisos ────────────────────────────────────────────── */
+    .pr-tarjeta {
+      background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      padding: 1.25rem; margin-bottom: 1rem; min-width: 0;
+    }
+    .pr-titulo { font-size: 1.5rem; font-weight: 800; margin: 0 0 0.75rem; color: var(--color-texto); }
+    .pr-subtitulo { font-size: 1.2rem; font-weight: 700; margin: 1rem 0 0.5rem; color: var(--color-texto); }
+    .pr-texto-suave { color: var(--pr-texto-secundario); }
+    .pr-vacio { padding: 2rem 1rem; text-align: center; font-size: 1.2rem; color: var(--pr-texto-secundario); }
+    .pr-aviso {
+      padding: 0.875rem 1rem; border-radius: var(--radio-input); margin: 0.75rem 0;
+      background: var(--color-superficie); border-left: 5px solid var(--color-acento-gris);
+      color: var(--color-texto); font-size: 1.05rem;
+    }
+    .pr-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+  </style>
+</head>
+
+<body class="pagina-modulo">
+  <div class="pr-app">
+
+    <header class="pr-header">
+      <a href="../dashboard.html" class="pr-header__volver" id="pr-volver-dashboard" title="Volver al dashboard">&lsaquo; Volver</a>
+      <div class="pr-header__col">
+        <span class="pr-header__marca">Seis Destinos</span>
+        <span class="pr-header__titulo">Producción <span class="pr-header__punto">&#9679;</span> <span id="pr-header-seccion">Tablet</span></span>
+        <span class="pr-header__contexto" id="pr-header-contexto"></span>
+      </div>
+      <div class="pr-header__acciones" id="pr-header-acciones"></div>
+    </header>
+
+    <!-- Sin ninguna de las tres tareas no hay nada que mostrar: se dice y se
+         vuelve al dashboard. El frontend solo oculta: la barrera real son las
+         policies y las RPCs. -->
+    <div class="pr-vacio" id="pr-sin-acceso" hidden></div>
+    <div class="pr-vacio" id="pr-cargando">Cargando…</div>
+
+    <main id="pr-vista" hidden>
+      <section class="pr-tarjeta" id="pr-inicio">
+        <h1 class="pr-titulo">Producción</h1>
+        <p class="pr-texto-suave" id="pr-inicio-texto"></p>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      // Tareas de produccion habilitadas: tarea → alcance (jsonb o null).
+      misTareas: new Map(),
+      // Todas las unidades activas: id → nombre.
+      unidades: new Map(),
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS PROPIOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Escape de TODO texto que venga de una persona o de la base antes de
+    // meterlo en un innerHTML. Cada módulo tiene el suyo.
+    function esc(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TAREAS_PRODUCCION = ['cargar', 'ver', 'configurar']
+
+    // Con bypass de super_admin, igual que tiene_tarea() en la base.
+    function tieneTarea(tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(tarea)
+    }
+    const puedeEntrar = () => TAREAS_PRODUCCION.some(tieneTarea)
+
+    // Las unidades donde la persona tiene esa tarea, con la MISMA regla que
+    // tiene_tarea_alcance(): super_admin todas; {"todas": true} todas; si no,
+    // las de {"unidades": [...]}. Solo unidades activas. No hay una vista
+    // v_mis_unidades_* para producción, así que se resuelve acá — si la regla
+    // del servidor cambia, esto tiene que cambiar con ella.
+    function unidadesCon(tarea) {
+      const activas = [...estado.unidades.keys()]
+      if (estado.miRolApp === 'super_admin') return activas
+      if (!estado.misTareas.has(tarea)) return []
+      const alcance = estado.misTareas.get(tarea)
+      if (alcance && alcance.todas === true) return activas
+      const lista = Array.isArray(alcance?.unidades) ? alcance.unidades.map(String) : []
+      return activas.filter(id => lista.includes(id))
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARRANQUE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Sin permiso se dice y se vuelve al dashboard: quedarse en una pantalla
+    // vacía no le dice a nadie por qué no ve nada.
+    function sinAcceso(texto) {
+      document.getElementById('pr-cargando').hidden = true
+      const el = document.getElementById('pr-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      mostrarError(texto)
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    async function cargarPermisos() {
+      const { data: emp, error } = await supabase
+        .from('empleados').select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+      if (error || !emp) throw error ?? new Error('sin empleado')
+      estado.miEmpleadoId = emp.id
+      estado.miRolApp = emp.rol_app
+      const { data: tareas, error: e2 } = await supabase
+        .from('empleado_tareas').select('tarea, alcance')
+        .eq('empleado_id', emp.id).eq('modulo', 'produccion').eq('habilitado', true)
+      if (e2) throw e2
+      estado.misTareas = new Map((tareas ?? []).map(t => [t.tarea, t.alcance ?? null]))
+      const { data: unidades, error: e3 } = await supabase
+        .from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre')
+      if (e3) throw e3
+      estado.unidades = new Map((unidades ?? []).map(u => [u.id, u.nombre]))
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+      try {
+        await cargarPermisos()
+      } catch (err) {
+        console.error('No se pudieron leer los permisos:', err)
+        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        return
+      }
+      if (!puedeEntrar()) {
+        sinAcceso('No tenés acceso a Producción. Te llevamos al inicio…')
+        return
+      }
+      document.getElementById('pr-cargando').hidden = true
+      document.getElementById('pr-vista').hidden = false
+      document.getElementById('pr-inicio-texto').textContent = 'Cargando la tablet…'
+      if (window.lucide) window.lucide.createIcons()
+    }
+
+    init()
+  </script>
+</body>
+</html>

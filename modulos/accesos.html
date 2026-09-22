@@ -887,6 +887,25 @@
         ],
       },
       {
+        grupo: 'Producción',
+        // Igual que 'stock', la clave es la misma en los dos namespaces.
+        // Las tres CON alcance por unidad: las RPCs del módulo gatean con
+        // tiene_tarea_alcance() sobre la unidad de la máquina (abrir_turno,
+        // registrar_masa, cerrar_turno, guardar_maquina…). Excepción del
+        // lado del servidor: ingredientes y marcas son catálogos compartidos
+        // y guardar_ingrediente / guardar_marca piden configurar con
+        // tiene_tarea(), sin mirar la unidad.
+        modulos: ['produccion'],
+        tareas: [
+          { modulo: 'produccion', tarea: 'cargar',     label: 'Abrir y cerrar turnos, registrar masas, paradas y lo producido desde la tablet', conAlcance: true,
+            descripcion: 'Es la tarea de la tablet de la fábrica. Permite abrir el turno de cada máquina (que le asigna su lote), registrar las masas de la sala de masa, anotar las paradas y cerrar la planilla con el scrap y lo producido, que suma al stock de producto terminado. Cada masa descuenta del stock los insumos que usó. En las unidades del alcance.' },
+          { modulo: 'produccion', tarea: 'ver',        label: 'Ver el historial de producción y el stock terminado', conAlcance: true,
+            descripcion: 'Muestra los turnos ya cerrados con sus masas, lotes de insumos, paradas, scrap y sublotes producidos, y el stock de producto terminado por producto, presentación y marca. Solo lectura.' },
+          { modulo: 'produccion', tarea: 'configurar', label: 'Máquinas, recetas, productos, marcas, personal e insumos de cada ingrediente', conAlcance: true,
+            descripcion: 'Permite dar de alta y ordenar las máquinas, cambiar la receta original de cada máquina y tipo de masa (cada cambio queda como una versión nueva), cargar los productos y sus presentaciones, las marcas personalizadas, los puestos del personal (encargado, masero, operario) y qué insumos del catálogo cumplen cada ingrediente. Ingredientes y marcas son comunes a todas las unidades. Permite además anular una masa de un turno ya cerrado.' },
+        ],
+      },
+      {
         grupo: 'Facturas pendientes',
         // Los DOS módulos, con semántica "any": es la misma tarea operada
         // desde dos pantallas, así que con cualquiera de los dos habilitado
