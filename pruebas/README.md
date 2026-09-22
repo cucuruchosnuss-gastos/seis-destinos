@@ -136,3 +136,12 @@ El runner no tiene mutaciones automáticas: los `escCob()` de la fila ya los mut
 ## Qué NO va acá
 
 Archivos de un solo uso: scripts que aplican una edición, generadores de vistas para mirar en el navegador, volcados intermedios. Esos siguen viviendo en el scratchpad de la sesión. Acá va lo que tiene que poder volver a correrse dentro de seis meses.
+
+## Números en formato argentino (`js/utils.js`)
+
+```bash
+node pruebas/test-numeros.js
+node pruebas/mut-numeros.js
+```
+
+`numeros-comun.js` carga las funciones de números del `utils.js` REAL (sin los `export`) y trae un `<input>` falso que imita al navegador al tipear, borrar, suprimir y pegar (dispara `beforeinput` cancelable, aplica el cambio, dispara `input`, y asignar `.value` manda el cursor al final). `fuenteNumeros()` devuelve ese mismo código para meterlo en el preludio del sandbox de un módulo, así las suites de cada módulo ejecutan la lectura real y no una copia. Para correr contra otra copia de utils.js: `UTILS_TEST=/ruta/utils.js`.
