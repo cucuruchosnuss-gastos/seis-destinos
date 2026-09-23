@@ -166,3 +166,28 @@ Cada `test-cheques-*.js` tiene su `mut-cheques-*.js`. Usan `sandbox-cheques.js` 
 **Controles:** `controles-comun.js` tiene el inventario; `controles-movidos.js`, qué salió de `cobranzas.html` y a dónde fue. `controles-cobranzas.js` acepta lo movido y `controles-cheques.js` lo exige en `cheques.html`, los dos contra el baseline fijo `fba6396`.
 
 `test-toast.js` / `mut-toast.js`: el cartel de error de toda la app (`js/utils.js` + `css/main.css`) no se sale del borde.
+
+## El recuento de Stock (23/09/2026)
+
+```bash
+node pruebas/test-stock-recuento.js
+node pruebas/mut-stock-recuento.js
+node pruebas/controles-stock.js        # ningún control de stock.html se pierde
+```
+
+`test-stock-recuento.js` EJECUTA el recuento entero contra un `document` falso
+y un supabase mockeado que **respeta las columnas pedidas en el `.select()`**:
+pedir de menos se nota en el resultado, que es la única forma de atajar la
+trampa de "la columna no llega". El mock también sabe **fallar**: `__setErrorEn`
+rompe una consulta y `__setErrorRpc` una RPC, para probar qué muestra la
+pantalla cuando no se pudo leer. Y `new Date()` sin argumentos devuelve un
+instante donde **UTC y la zona de acá no dicen el mismo día** (las 22 del 30/09
+en Argentina son el 1/10 en UTC), así que una fecha sacada de UTC da rojo.
+
+`controles-stock.js` es el cuarto chequeo de controles del proyecto (mismo
+inventario y mismo criterio que `controles-cobranzas.js`), con baseline fijo
+**`2cd547a`**. Tiene una lista propia, `EN_PLANTILLA_ANIDADA`, para los
+atributos que el inventario no puede ver porque el HTML que los escribe vive en
+una plantilla anidada dentro de una interpolación —hoy solo `data-insumo`—. **No
+es un perdón en blanco:** la excepción exige igual que el atributo aparezca
+literalmente en el archivo, y da rojo si la declaración deja de hacer falta.

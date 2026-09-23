@@ -141,6 +141,21 @@ const PRELUDIO = `
   function limpiarErroresAgregar() {}
   function htmlAclaracion() { return '' }
   function presentacionesDelInsumoRec() { return [] }
+  function formatearFecha(iso) { return iso ? iso.split('-').reverse().join('/') : '' }
+  var __impresiones = 0
+  var window = { print() { __impresiones++ } }
+  // UN INSTANTE DONDE UTC Y LA ZONA DE ACÁ NO DICEN EL MISMO DÍA: las 22 del
+  // 30/09 en Argentina son ya el 1/10 en UTC. Un Date sin argumentos devuelve
+  // ese momento falso; con argumentos (esAgregadoAMano lee fechas de la base)
+  // sigue siendo el Date de verdad.
+  var __Date = globalThis.Date
+  var Date = function (...a) {
+    if (a.length) return new __Date(...a)
+    return {
+      getFullYear: () => 2026, getMonth: () => 8, getDate: () => 30,
+      toISOString: () => '2026-10-01T01:00:00.000Z',
+    }
+  }
 
   var estado = {
     itemsRec: [], saldos: new Map(), sucios: new Set(), guardando: false,
@@ -162,13 +177,15 @@ const FUNCIONES = [
   'baseDesdeBultosRec', 'bultosDeItem', 'anotarBultos', 'refrescarRecuento',
   // Parte 3: quitar un renglón agregado a mano.
   'esAgregadoAMano', 'abrirModalQuitar', 'cerrarModalQuitar', 'confirmarQuitarItem',
+  // Parte 5: la planilla para imprimir.
+  'armarPlanilla', 'imprimirPlanilla', 'hoyLocal',
 ]
 const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', 'TOPE_DIFS_RESUMEN',
   'FILTROS_REC', 'DECIMALES_BULTOS', 'CATEGORIAS', 'SIN_CATEGORIA', 'ORDEN_TIPO', 'TIPOS', 'ordenDe', 'redondear6', 'parsearBultos']
 
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
-  retorno: '__setDatos(d){ __datos = d }, __setErrorEn(t){ __errorTabla = t }, __setErrorRpc(n){ __errorRpc = n }, estado, __llamadas, document, __lista, FILTROS_REC, DECIMALES_BULTOS',
+  retorno: '__setDatos(d){ __datos = d }, __setErrorEn(t){ __errorTabla = t }, __setErrorRpc(n){ __errorRpc = n }, estado, __llamadas, document, __lista, FILTROS_REC, DECIMALES_BULTOS, __impresiones(){ return __impresiones }, __romperPrint(){ window.print = () => { throw new Error(\'no\') } }',
 })
 const el = (id) => S.document.getElementById(id)
 const ultimaRpc = (n) => [...S.__llamadas.rpc].reverse().find(r => r[0] === n)?.[1]
@@ -573,6 +590,23 @@ pendientes.push(async () => {
   S.anotarBultos('u', '2,5')
   const u = S.estado.itemsRec[0]
   chk('bultos: en un insumo por unidades, medio bulto se lee igual', u.cantidad_contada === 25, [u.cantidad_contada, u.errorCantidad])
+
+  // PERO SI ESA CUENTA DA UNA CANTIDAD IMPOSIBLE, se frena: 2,5 bultos de 3
+  // cajas son 7,5 cajas, y media caja no existe. La regla de la unidad sigue
+  // valiendo sobre la CANTIDAD, que es lo que se guarda; el renglón queda sin
+  // contar y se dice por qué, en vez de guardar 7,5 cajas.
+  S.estado.itemsRec = [item('v', { nombre: 'Caja rara', contenido_por_bulto: 3, unidad_medida: 'un', categoria: 'Cajas' })]
+  S.estado.sucios = new Set()
+  S.renderizarItemsRecuento()
+  S.anotarBultos('v', '2,5')
+  const v = S.estado.itemsRec[0]
+  chk('bultos: una cuenta que da media caja no se guarda y se dice',
+    v.cantidad_contada === null && !!v.errorCantidad, [v.cantidad_contada, v.errorCantidad])
+  // Y sobre todo: NO se redondea a 8. Ese era el modo de falla real — el campo
+  // de la cantidad tiene 0 decimales y ponerNumero redondeaba 7,5 a 8.
+  chk('bultos: y NO se redondea a 8 (una cantidad que nadie contó)',
+    v.cantidad_contada !== 8 && !/^8$/.test(input('v').value), [v.cantidad_contada, input('v').value])
+  chk('bultos: el aviso dice la cuenta que no cierra', /7,5 un/.test(v.errorCantidad || ''), v.errorCantidad)
 })
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -775,6 +809,112 @@ pendientes.push(async () => {
   S.__setDatos({ v_stock_por_lote: [{ insumo_id: 'n', lote: null, contenido_por_bulto: null, saldo: -10 }] })
   await S.abrirModalCerrar()
   chk('resumen: con saldo negativo la marca se calcula sobre su magnitud', /rec-dif--grande/.test(el('cierre-lista-difs').innerHTML))
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// 10. LA PLANILLA PARA IMPRIMIR  (Parte 5)
+// ══════════════════════════════════════════════════════════════════════════
+{
+  const html = require('fs').readFileSync(ARCHIVO, 'utf8')
+  // El contenedor NO puede llevar el atributo hidden: css/main.css tiene
+  // [hidden] { display: none !important } global, así que con el atributo no
+  // se vería ni al imprimir. Se esconde con su clase.
+  const div = html.match(/<div class="rec-planilla" id="rec-planilla"[^>]*>/)?.[0] ?? ''
+  chk('planilla: el contenedor existe', !!div, div)
+  // OJO: `aria-hidden` NO es el atributo `hidden`. El que mata la impresión es
+  // el segundo, así que la condición tiene que distinguirlos.
+  chk('planilla: NO lleva el atributo hidden (la regla global lo mataría al imprimir)',
+    !/(^|[\s"])hidden([\s>=]|$)/.test(div), div)
+  chk('planilla: en pantalla no se ve', /\.rec-planilla \{ display: none; \}/.test(html))
+  chk('planilla: al imprimir es lo único que se ve',
+    /@media print \{[\s\S]*?body > \*:not\(\.rec-planilla\) \{ display: none !important; \}/.test(html))
+  chk('planilla: y ella sí se muestra', /@media print \{[\s\S]*?\.rec-planilla \{ display: block; \}/.test(html))
+  // Es hijo DIRECTO de body: de eso depende que el selector de arriba tape todo.
+  chk('planilla: es hijo directo de <body>', /\n  <div class="rec-planilla" id="rec-planilla"[\s\S]{0,80}<\/body>/.test(html))
+
+  // NINGUNA FECHA DEL MÓDULO SE SACA DE UTC. `new Date().toISOString()` da el
+  // día de UTC, que después de las 21:00 de Argentina ya es el siguiente. Lo
+  // resuelve hoyLocal(), y esta assertion es la que impide que vuelva a
+  // aparecer el patrón viejo en cualquier parte del archivo.
+  // Sin los comentarios: el comentario que EXPLICA por qué no se usa UTC
+  // nombra el patrón, y una assertion contra el fuente crudo lo matchearía.
+  const script = scriptModulo(ARCHIVO).split('\n')
+    .filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
+  const enUtc = [...script.matchAll(/new Date\(\)\.toISOString\(\)/g)]
+  chk('fechas: ningún "hoy" del módulo sale de UTC', enUtc.length === 0, `${enUtc.length} usos de new Date().toISOString()`)
+}
+
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1',
+    abierto_en: ABIERTO_EN, unidad_nombre: 'Cucuruchos <b>Nuss</b>' }
+  S.estado.filtroRec = 'sin-contar'      // un filtro puesto NO recorta la hoja
+  S.estado.busquedaRec = 'harina'        // el buscador tampoco
+  S.estado.saldos = new Map([['h||', 100]])
+  S.estado.itemsRec = [
+    item('h', { insumo_id: 'h', nombre: 'Harina <b>000</b>', marca: '"><img src=x>', lote: 'L-1',
+      contenido_por_bulto: 25, unidad_medida: 'kg', tipo: 'materia_prima', categoria: 'Harinas',
+      aclaracion: '<script>a</script>', cantidad_contada: 103 }),
+    item('c', { insumo_id: 'c', nombre: 'Caja N°1', unidad_medida: 'un', categoria: 'Cajas' }),
+    item('x', { insumo_id: 'x', nombre: 'Trapo', unidad_medida: 'un', categoria: null }),
+  ]
+  S.armarPlanilla()
+  const hoja = el('rec-planilla').innerHTML
+
+  chk('planilla: imprime la lista ENTERA, sin el filtro ni el buscador',
+    /Harina/.test(hoja) && /Caja N°1/.test(hoja) && /Trapo/.test(hoja), hoja.slice(0, 200))
+  chk('planilla: un casillero vacío por renglón', (hoja.match(/plan-fila__casillero/g) || []).length === 3)
+  chk('planilla: con la unidad al lado', /plan-fila__unidad">kg</.test(hoja) && /plan-fila__unidad">un</.test(hoja))
+  chk('planilla: agrupada por categoría', /plan-grupo__titulo">Harinas/.test(hoja) && /plan-grupo__titulo">Cajas/.test(hoja))
+  chk('planilla: "Sin categoría" también sale', /Sin categoría/.test(hoja))
+  chk('planilla: Harinas antes que Cajas', hoja.indexOf('>Harinas') < hoja.indexOf('>Cajas'))
+  chk('planilla: cada renglón dice marca, lote y presentación', /Lote L-1/.test(hoja) && /bultos de 25 kg/.test(hoja))
+  chk('planilla: la aclaración va entre paréntesis', /\(&lt;script&gt;a&lt;\/script&gt;\)/.test(hoja), hoja.slice(hoja.indexOf('Harina'), hoja.indexOf('Harina') + 260))
+  chk('planilla: dice la unidad de negocio y cuántos renglones hay',
+    /Cucuruchos/.test(hoja) && /3 renglones/.test(hoja), hoja.slice(0, 300))
+  // LA FECHA ES LA DE ACÁ Y NO LA DE UTC. A las 22 del 30/09 en Argentina, en
+  // UTC ya es 1/10: una planilla impresa a la noche saldría fechada mañana.
+  chk('planilla: la fecha es la del día de acá, no la de UTC',
+    /Impresa el 30\/09\/2026/.test(hoja) && !/01\/10\/2026/.test(hoja), hoja.slice(0, 300))
+  chk('planilla: tiene dónde firmar quién contó', /Contó:/.test(hoja))
+  chk('planilla: dice que lo que no hay va con 0', /va con un 0/.test(hoja))
+
+  // NO LLEVA EL SALDO DEL SISTEMA: un número impreso al lado de un casillero
+  // vacío se copia, y lo que se busca es cuánto HAY.
+  chk('planilla: no imprime el saldo del sistema', !/Sistema/.test(hoja) && !/\b100\b/.test(hoja), hoja)
+  // Ni lo ya contado: la hoja es para contar, no para revisar.
+  chk('planilla: tampoco lo ya contado', !/\b103\b/.test(hoja))
+
+  // NADA DE LO QUE VIENE DE LA BASE ENTRA CRUDO.
+  chk('planilla: el nombre va escapado', /Harina &lt;b&gt;000&lt;\/b&gt;/.test(hoja) && !/<b>000/.test(hoja))
+  chk('planilla: la marca va escapada', !/<img src=x>/.test(hoja))
+  chk('planilla: la aclaración va escapada', !/<script>a<\/script>/.test(hoja))
+  chk('planilla: la unidad de negocio va escapada', !/Cucuruchos <b>Nuss<\/b>/.test(hoja) && /Cucuruchos &lt;b&gt;Nuss/.test(hoja))
+
+  // "Imprimir" ARMA LA HOJA ÉL MISMO y recién después llama a print: si no,
+  // saldría la hoja de la vez anterior, con los renglones de antes.
+  const antes = S.__impresiones()
+  el('rec-planilla').innerHTML = '<!-- la hoja de la vez pasada -->'
+  S.estado.itemsRec = [item('z', { nombre: 'Bolsa 100x80', unidad_medida: 'un', categoria: 'Bolsas' })]
+  S.imprimirPlanilla()
+  chk('planilla: "Imprimir" llama a print()', S.__impresiones() === antes + 1, S.__impresiones())
+  chk('planilla: y arma la hoja con lo de AHORA, no con lo de la vez anterior',
+    /Bolsa 100x80/.test(el('rec-planilla').innerHTML) && !/la vez pasada/.test(el('rec-planilla').innerHTML),
+    el('rec-planilla').innerHTML.slice(0, 200))
+
+  // Sin renglones no se manda una hoja vacía a la impresora.
+  S.__llamadas.errores = []
+  S.estado.itemsRec = []
+  S.imprimirPlanilla()
+  chk('planilla: sin renglones no imprime y lo dice',
+    S.__impresiones() === antes + 1 && S.__llamadas.errores.length === 1, S.__llamadas.errores)
+
+  // Un webview sin print(): se dice, no se queda en la nada.
+  S.estado.itemsRec = [item('c', { nombre: 'Caja', unidad_medida: 'un' })]
+  S.__llamadas.errores = []
+  S.__romperPrint()
+  S.imprimirPlanilla()
+  chk('planilla: si el navegador no deja imprimir, se avisa',
+    S.__llamadas.errores.some(m => /imprimir/.test(m)), S.__llamadas.errores)
 })
 
 ;(async () => {

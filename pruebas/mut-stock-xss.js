@@ -22,7 +22,7 @@ correrMutaciones({
     'htmlMarca', 'htmlAgrupado', 'htmlAclaracion',
     'renderizarUnidadesSugeridas', 'renderizarLista', 'abrirDetalleInsumo', 'confirmarImportacion',
     'renderizarChipsUnidadStock', 'renderizarStock', 'abrirLotes',
-    'renderizarChipsUnidadRecuento', 'renderizarMetaRecuento', 'renderizarItemsRecuento',
+    'renderizarChipsUnidadRecuento', 'renderizarMetaRecuento', 'renderizarItemsRecuento', 'armarPlanilla',
     'renderizarSugerenciasCatalogo', 'renderizarPresentacionesAgregar', 'abrirModalCerrar',
     'renderizarChipsUnidadHistorial', 'renderizarHistorial', 'renderizarCabeceraRecuento',
     'renderizarDetalleRecuento', 'renderizarAjustesRecuento',

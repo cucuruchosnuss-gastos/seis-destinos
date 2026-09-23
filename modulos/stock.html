@@ -2000,6 +2000,63 @@
     /* Dentro de la cifra de 1.25rem el equivalente en bultos no puede pesar
        lo mismo: es la lectura de apoyo, no el numero. */
     .mov-saldo__bultos { color: var(--color-texto-suave); font-size: 0.8125rem; font-weight: 600; }
+    /* ═══════════════════════════════════════════════════════════════════════
+       LA PLANILLA PARA IMPRIMIR
+       En pantalla no existe; al imprimir es lo ÚNICO que existe.
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    .rec-planilla { display: none; }
+
+    @media print {
+      /* Todo lo demás se va. `.rec-planilla` es hijo DIRECTO de <body>, que es
+         lo que hace que este selector alcance para taparlo todo —la pantalla,
+         los diez modales, la cabecera— sin ir marcando uno por uno. */
+      body > *:not(.rec-planilla) { display: none !important; }
+      .rec-planilla { display: block; }
+      html, body { background: #fff; }
+
+      @page { margin: 12mm 10mm; }
+
+      .plan-cab { margin-bottom: 6mm; }
+      .plan-cab__titulo { font-size: 15pt; font-weight: 700; }
+      .plan-cab__meta { font-size: 9pt; color: #444; margin-top: 1mm; }
+      .plan-cab__firma { font-size: 10pt; margin-top: 4mm; }
+
+      .plan-grupo { margin-top: 5mm; }
+      /* Un encabezado que queda solo al pie de una hoja no dice de qué son las
+         filas de la hoja siguiente. */
+      .plan-grupo__titulo {
+        font-size: 11pt;
+        font-weight: 700;
+        border-bottom: 1px solid #000;
+        padding-bottom: 1mm;
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+      .plan-fila {
+        display: flex;
+        align-items: center;
+        gap: 4mm;
+        padding: 2mm 0;
+        border-bottom: 1px dotted #999;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .plan-fila__que { flex: 1 1 auto; min-width: 0; }
+      .plan-fila__nombre { font-size: 10.5pt; font-weight: 600; }
+      .plan-fila__meta { font-size: 8.5pt; color: #444; }
+      /* El casillero: lo suficientemente grande para escribir con lapicera
+         apoyando el papel en una caja. */
+      .plan-fila__casillero {
+        flex: 0 0 auto;
+        width: 28mm;
+        height: 9mm;
+        border: 1px solid #000;
+      }
+      .plan-fila__unidad { flex: 0 0 auto; width: 10mm; font-size: 9pt; }
+      .plan-pie { margin-top: 6mm; font-size: 8.5pt; color: #444; }
+    }
+
     .rec-fila__presentacion { font-weight: 500; }
     /* .rec-fila__bultos —el equivalente en bultos como texto de apoyo— se fue
        cuando el renglón con presentación pasó a tener su propio CAMPO de
@@ -2160,6 +2217,7 @@
           <!-- Dos personas pueden estar contando la misma unidad a la vez: un
                recuento es de la unidad, no de quien lo abrió. -->
           <button type="button" class="btn-stock btn-stock--chico" id="btn-refrescar-recuento">Actualizar</button>
+          <button type="button" class="btn-stock btn-stock--chico" id="btn-imprimir-planilla">Imprimir la planilla</button>
         </div>
 
         <div class="fila-chips" id="rec-chips-filtro"></div>
@@ -4716,6 +4774,23 @@
       }
       const base = baseDesdeBultosRec(bultos, item.contenido_por_bulto)
       if (base === null) return
+
+      // LA CUENTA PUEDE DAR UNA CANTIDAD QUE ESA UNIDAD NO ADMITE: 2,5 bultos
+      // de 3 cajas son 7,5 cajas, y media caja no existe. Sin este corte,
+      // ponerNumero escribe el número en un campo de 0 decimales y lo
+      // REDONDEA a 8 — una cantidad que nadie contó, guardada sin ningún
+      // error. Es la misma familia que el dato ausente que se muestra como un
+      // número plausible. Se dice qué pasó y la cantidad no se toca.
+      if (esUnidadEntera(item.unidad_medida) && !Number.isInteger(base)) {
+        item.errorCantidad =
+          `${formatearNumeroAr(bultos, { decimales: DECIMALES_BULTOS, minimos: 0 })} bultos de ` +
+          `${formatearCantidadStock(item.contenido_por_bulto, item.unidad_medida)} dan ` +
+          `${formatearCantidadStock(base, item.unidad_medida)}, y esto se cuenta por unidades enteras.`
+        estado.sucios.add(itemId)
+        refrescarFilaRec(itemId)
+        return
+      }
+
       ponerNumero(input, base)
       anotarCantidad(itemId, input.value)
     }
@@ -5111,6 +5186,87 @@
       document.getElementById('rec-campo-contenido').hidden = true
       renderizarSugerenciasCatalogo()
       document.getElementById('rec-buscar-catalogo').focus()
+    }
+
+    // "HOY" ES EL DE ACÁ Y NO EL DE UTC. `new Date().toISOString()` devuelve
+    // el día EN UTC, que después de las 21:00 de Argentina ya es el siguiente:
+    // una planilla impresa a la noche saldría fechada mañana, y una
+    // transferencia despachada a esa hora quedaría registrada con la fecha de
+    // mañana. Es la misma trampa que en Cobranzas resolvió _cobranza_hoy_ar()
+    // del lado del servidor; acá alcanza con la zona del propio dispositivo,
+    // que es el que está en la fábrica.
+    //
+    // No queda ningún `new Date().toISOString()` en el módulo, y hay una
+    // assertion sobre el fuente que lo exige.
+    function hoyLocal() {
+      const d = new Date()
+      const p = (n) => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+    }
+
+    // ── La planilla para imprimir ──────────────────────────────────────────
+    //
+    // Se cuenta caminando el depósito, y la tablet no siempre va: esto se
+    // imprime, se anota a mano y después se tipea.
+    //
+    // IMPRIME LA LISTA ENTERA, sin el buscador ni el filtro. Lo que se lleva
+    // al depósito es todo lo que hay que contar; una planilla recortada por un
+    // filtro que quedó puesto es una planilla a la que le faltan renglones, y
+    // eso no se nota hasta que se vuelve del depósito.
+    //
+    // NO LLEVA EL SALDO DEL SISTEMA, y es deliberado: un número impreso al
+    // lado de un casillero vacío se copia. Es el mismo motivo por el que el
+    // conteo arranca en el guion y nunca en cero — lo que se busca es cuánto
+    // hay, no confirmar lo que el sistema cree.
+    function armarPlanilla() {
+      const r = estado.recuento
+      const grupos = agruparPorTipoYCategoria(estado.itemsRec, (i) => i.nombre)
+      const hoy = formatearFecha(hoyLocal())
+
+      const filaHtml = (i) => {
+        const meta = [
+          i.marca,
+          i.lote ? `Lote ${i.lote}` : null,
+          i.contenido_por_bulto ? textoPresentacion(i.contenido_por_bulto, i.unidad_medida) : null,
+        ].filter(Boolean).join(' · ')
+        return `
+          <div class="plan-fila">
+            <div class="plan-fila__que">
+              <div class="plan-fila__nombre">${esc(i.nombre)}${i.aclaracion ? ` (${esc(i.aclaracion)})` : ''}</div>
+              ${meta ? `<div class="plan-fila__meta">${esc(meta)}</div>` : ''}
+            </div>
+            <div class="plan-fila__casillero"></div>
+            <div class="plan-fila__unidad">${esc(i.unidad_medida || '')}</div>
+          </div>`
+      }
+
+      document.getElementById('rec-planilla').innerHTML = `
+        <div class="plan-cab">
+          <div class="plan-cab__titulo">Recuento de inventario — ${esc(r?.unidad_nombre || '')}</div>
+          <div class="plan-cab__meta">Impresa el ${esc(hoy)} · ${estado.itemsRec.length} renglones para contar</div>
+          <div class="plan-cab__firma">Contó: ______________________________   Fecha: ____ / ____ / ______</div>
+        </div>
+        ${grupos.map(g => g.categorias.map(c => `
+          <div class="plan-grupo">
+            <div class="plan-grupo__titulo">${esc(c.categoria)} <span style="font-weight:400">· ${esc(TIPOS[g.tipo] ?? g.tipo)} · ${c.filas.length}</span></div>
+            ${c.filas.map(filaHtml).join('')}
+          </div>`).join('')).join('')}
+        <div class="plan-pie">Anotá la cantidad en la unidad que dice cada renglón. Lo que no haya va con un 0: dejarlo en blanco no es lo mismo.</div>`
+    }
+
+    function imprimirPlanilla() {
+      if (!estado.recuento || !estado.itemsRec.length) {
+        mostrarError('No hay renglones para imprimir.')
+        return
+      }
+      armarPlanilla()
+      // Algunos webviews no tienen print(): se dice, en vez de no hacer nada.
+      try {
+        window.print()
+      } catch (e) {
+        console.error(e)
+        mostrarError('Este navegador no deja imprimir desde acá.')
+      }
     }
 
     // ── Quitar un renglón ──────────────────────────────────────────────────
@@ -7733,7 +7889,7 @@
       const { error } = await supabase.rpc('crear_transferencia_stock', {
         p_unidad_origen_id: tr.origenId,
         p_unidad_destino_id: tr.destinoId,
-        p_fecha: new Date().toISOString().slice(0, 10),
+        p_fecha: hoyLocal(),
         p_observaciones: document.getElementById('transf-observaciones').value.trim() || null,
         p_items: items,
       })
@@ -8347,6 +8503,7 @@
     })
     document.getElementById('btn-agregar-item').addEventListener('click', abrirModalAgregar)
     document.getElementById('btn-refrescar-recuento').addEventListener('click', refrescarRecuento)
+    document.getElementById('btn-imprimir-planilla').addEventListener('click', imprimirPlanilla)
     document.getElementById('rec-buscar-catalogo').addEventListener('input', () => {
       estado.insumoAgregar = null
       estado.presentacionAgregar = undefined
@@ -8607,6 +8764,18 @@
 
     init()
   </script>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       LA PLANILLA PARA IMPRIMIR
+       Se cuenta caminando el depósito y la tablet no siempre va: esto se
+       imprime, se anota a mano y después se tipea.
+
+       NO LLEVA EL ATRIBUTO `hidden`, a propósito: css/main.css tiene
+       `[hidden] { display: none !important }` global, así que con el atributo
+       no se vería ni al imprimir. Se esconde en pantalla con su propia clase y
+       @media print la muestra.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="rec-planilla" id="rec-planilla" aria-hidden="true"></div>
 
 </body>
 </html>

@@ -432,6 +432,15 @@ const SEGURAS = {
     'c.filas.length': NUM,
     "c.filas.map(htmlDeFila).join('')": 'HTML del callback que recibe htmlAgrupado: sus plantillas tienen HTML propio y el escáner las revisa en renderizarLista / renderizarStock',
   },
+  // La planilla para imprimir. Todo lo que viene de la base —nombre, marca,
+  // lote, presentación, aclaración, unidad, la unidad de negocio— pasa por
+  // esc() adentro de filaHtml y de la cabecera; acá quedan los números y el
+  // HTML del propio callback.
+  armarPlanilla: {
+    'estado.itemsRec.length': NUM,
+    'c.filas.length': NUM,
+    "c.filas.map(filaHtml).join('')": 'HTML de filaHtml, una const de la misma función: sus plantillas tienen HTML propio y las revisa el escáner',
+  },
   renderizarChips: {
     pendientes: 'número: contarPendientes() es un .length',
     'f.id': 'constante FILTROS', 'f.label': 'constante FILTROS', contador: HTML_PROPIO,
