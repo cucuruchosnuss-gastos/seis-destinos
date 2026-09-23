@@ -703,6 +703,80 @@ pendientes.push(async () => {
   S.cerrarModalQuitar()
 })
 
+// ══════════════════════════════════════════════════════════════════════════
+// 9. AVISOS QUE EVITAN UN INVENTARIO MAL CARGADO  (Parte 4)
+// ══════════════════════════════════════════════════════════════════════════
+{
+  const html = require('fs').readFileSync(ARCHIVO, 'utf8')
+  // (b) La franja del saldo congelado, en el recuento abierto y sin forma de
+  // cerrarla: es la regla de la que depende que el inventario quede bien.
+  const paso = html.slice(html.indexOf('id="rec-paso-contando"'), html.indexOf('id="rec-paso-contando"') + 3000)
+  chk('franja: está dentro del recuento abierto', /id="rec-aviso-congelado"/.test(paso))
+  chk('franja: va ANTES de la barra, o sea arriba del todo',
+    paso.indexOf('rec-aviso-congelado') < paso.indexOf('class="rec-barra"'))
+  chk('franja: dice qué no hay que cargar', /no cargues ingresos, bajas ni transferencias en esta unidad/.test(paso))
+  chk('franja: dice POR QUÉ (el saldo se congela al cerrar)', /se congela recién al cerrar/.test(paso))
+  chk('franja: dice qué pasaría (desaparece sin aviso)', /desaparecería sin aviso/.test(paso))
+  chk('franja: dice qué hacer', /Contá y cerrá el mismo día/.test(paso))
+  chk('franja: no se puede cerrar (ningún botón la esconde)',
+    !/rec-aviso-congelado[\s\S]{0,400}?<button/.test(paso) && !/data-cerrar[^>]*>[\s\S]{0,200}rec-aviso-congelado/.test(paso))
+  // Nace visible: con el atributo hidden no la vería nadie (la regla global de
+  // [hidden] en main.css le gana a cualquier display de autor).
+  chk('franja: nace visible, sin el atributo hidden',
+    !/id="rec-aviso-congelado"[^>]*\bhidden\b/.test(paso), paso.match(/<div class="rec-aviso" id="rec-aviso-congelado"[^>]*>/)?.[0])
+  // (c) El orden del CSS: la variante después de su base, o el fondo no aplica.
+  chk('CSS: .rec-dif--grande va DESPUÉS de .rec-dif',
+    html.indexOf('.rec-dif {') !== -1 && html.indexOf('.rec-dif--grande {') > html.indexOf('.rec-dif {'))
+}
+
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1', abierto_en: ABIERTO_EN }
+  S.estado.sucios = new Set()
+  S.__setErrorEn(null)
+  S.__setErrorRpc(null)
+  // Sistema: 100 kg de harina, 1000 cajas, 50 de film.
+  // Contado: 103 (3%), 470 (¡53%! un tipeo), 50 (sin diferencia).
+  S.estado.itemsRec = [
+    item('h', { insumo_id: 'h', nombre: 'Harina', unidad_medida: 'kg', cantidad_contada: 103 }),
+    item('c', { insumo_id: 'c', nombre: 'Caja N°1', unidad_medida: 'un', cantidad_contada: 470 }),
+    item('f', { insumo_id: 'f', nombre: 'Film', unidad_medida: 'kg', cantidad_contada: 50 }),
+  ]
+  S.__setDatos({ v_stock_por_lote: [
+    { insumo_id: 'h', lote: null, contenido_por_bulto: null, saldo: 100 },
+    { insumo_id: 'c', lote: null, contenido_por_bulto: null, saldo: 1000 },
+    { insumo_id: 'f', lote: null, contenido_por_bulto: null, saldo: 50 },
+  ] })
+  await S.abrirModalCerrar()
+  const lista = el('cierre-lista-difs').innerHTML
+
+  chk('resumen: solo lista las que tienen diferencia', el('cierre-difs').textContent === 2, el('cierre-difs').textContent)
+  chk('resumen: la diferencia más grande va primero (−530 antes que +3)',
+    lista.indexOf('Caja N°1') < lista.indexOf('Harina'), lista)
+  chk('resumen: la que supera el 20% queda marcada', /rec-dif rec-dif--grande[\s\S]*?Caja N°1/.test(lista), lista)
+  chk('resumen: y la marca dice por qué', /más del 20%/.test(lista))
+  chk('resumen: la del 3% NO queda marcada',
+    !/rec-dif rec-dif--grande[\s\S]*?Harina/.test(lista.slice(lista.indexOf('Harina') - 120, lista.indexOf('Harina') + 40)), lista)
+
+  // CON EL SISTEMA EN 0 NO SE MARCA NADA: es la carga inicial, donde TODO da
+  // diferencia, y pintar las 55 filas de bordó es el cartel que no se lee.
+  S.estado.itemsRec = [
+    item('a', { insumo_id: 'a', nombre: 'Bolsa', unidad_medida: 'un', cantidad_contada: 5000 }),
+    item('b', { insumo_id: 'b', nombre: 'Cinta', unidad_medida: 'un', cantidad_contada: 36 }),
+  ]
+  S.__setDatos({ v_stock_por_lote: [] })
+  await S.abrirModalCerrar()
+  const inicial = el('cierre-lista-difs').innerHTML
+  chk('resumen: en una carga inicial (sistema en 0) no se marca ninguna',
+    !/rec-dif--grande/.test(inicial) && /Bolsa/.test(inicial), inicial)
+  chk('resumen: pero igual se ordenan de mayor a menor', inicial.indexOf('Bolsa') < inicial.indexOf('Cinta'))
+
+  // Un saldo NEGATIVO también tiene contra qué comparar (se usa su magnitud).
+  S.estado.itemsRec = [item('n', { insumo_id: 'n', nombre: 'Lecitina', unidad_medida: 'kg', cantidad_contada: 0 })]
+  S.__setDatos({ v_stock_por_lote: [{ insumo_id: 'n', lote: null, contenido_por_bulto: null, saldo: -10 }] })
+  await S.abrirModalCerrar()
+  chk('resumen: con saldo negativo la marca se calcula sobre su magnitud', /rec-dif--grande/.test(el('cierre-lista-difs').innerHTML))
+})
+
 ;(async () => {
   for (const f of pendientes) await f()
   console.log(`${ok}/${ok + fallas.length}`)

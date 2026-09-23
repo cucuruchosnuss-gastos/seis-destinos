@@ -1384,6 +1384,20 @@
     }
     .rec-dif__nombre { min-width: 0; overflow-wrap: anywhere; }
     .rec-dif__lote { color: var(--color-texto-suave); font-size: 0.75rem; }
+    /* Más del 20% del saldo del sistema: la diferencia que conviene mirar dos
+       veces antes de cerrar. Va DESPUÉS de .rec-dif — misma especificidad, así
+       que si estuviera antes, el fondo de la base se lo comería. Y la marca no
+       es solo el color: lleva el texto que dice por qué está marcada. */
+    .rec-dif--grande { background: var(--bordo-suave); }
+    .rec-dif--grande .rec-dif__nombre { color: var(--bordo-oscuro); font-weight: 650; }
+    .rec-dif__marca {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--bordo-oscuro);
+      white-space: nowrap;
+    }
     .rec-dif__valor { font-weight: 700; white-space: nowrap; flex-shrink: 0; color: var(--verde-oscuro); }
     .rec-dif__valor--falta { color: var(--bordo-oscuro); }
 
@@ -2119,6 +2133,19 @@
 
       <!-- ── Paso 2: contando ────────────────────────────────────────────── -->
       <div class="rec-paso" id="rec-paso-contando" hidden>
+
+        <!-- EL RIESGO OPERATIVO DEL RECUENTO, dicho donde se cuenta.
+             El saldo del sistema se congela AL CERRAR, no al abrir: si mientras
+             el recuento está abierto entra un remito, una baja o una
+             transferencia en esta unidad, el ajuste del cierre lo compensa y
+             esa mercadería desaparece sin ningún error.
+             No se puede cerrar: es la regla de la que depende que el inventario
+             quede bien. Va arriba del todo y NO pegajosa a propósito — .rec-barra
+             ya ocupa el top:0 con lo que falta y el estado del guardado, y dos
+             franjas peleando ese lugar se comen media pantalla de 375px. -->
+        <div class="rec-aviso" id="rec-aviso-congelado">
+          Mientras este recuento esté abierto, <strong>no cargues ingresos, bajas ni transferencias en esta unidad</strong>: el saldo se congela recién al cerrar y esa mercadería desaparecería sin aviso. Contá y cerrá el mismo día.
+        </div>
 
         <div class="rec-barra">
           <span class="rec-barra__contador" id="rec-contador">—</span>
@@ -4993,8 +5020,11 @@
         i.insumo_id === insumo.id && (i.lote ?? '') === (lote ?? '') &&
         i.contenido_por_bulto === null && i.cantidad_contada !== 0)
       if (!otro) return ''
+      // El texto arranca por la CONSECUENCIA y después dice qué hacer: "no
+      // cuentes dos veces" es una instrucción, "va a quedar contada dos veces"
+      // es lo que pasa si no se hace nada.
       return ` Ojo: ${otro.nombre} también está en la lista sin presentación. ` +
-        'No cuentes dos veces lo mismo: si todo está en bultos, poné ese renglón en 0.'
+        'Acordate de poner en 0 el renglón sin presentación, o esa cantidad va a quedar contada dos veces.'
     }
 
     async function confirmarAgregarItem() {
@@ -5178,8 +5208,24 @@
         )
       }
 
+      // LAS MÁS GRANDES PRIMERO, en valor absoluto: son las que hay que mirar
+      // antes de cerrar, y un tipeo de más (470 en vez de 47) siempre cae
+      // arriba.
       const difs = estado.itemsRec
-        .map(i => ({ item: i, d: (i.cantidad_contada ?? 0) - saldoDe(i) }))
+        .map(i => {
+          const sistema = saldoDe(i)
+          const d = (i.cantidad_contada ?? 0) - sistema
+          // GRANDE = más del 20% de lo que dice el sistema. Es lo que hace ver
+          // un error de tipeo antes de cerrar.
+          //
+          // SOLO CUANDO HAY SALDO CONTRA QUÉ COMPARAR. Con el sistema en 0 no
+          // hay porcentaje posible, y marcar igual pintaría de bordó TODAS las
+          // filas de una carga inicial —donde todo da diferencia porque el
+          // libro arranca vacío—, que es justo el cartel que se muestra
+          // siempre y deja de leerse.
+          const base = Math.abs(sistema)
+          return { item: i, d, grande: base > 0 && Math.abs(d) / base > 0.20 }
+        })
         .filter(x => x.d !== 0)
         .sort((a, b) => Math.abs(b.d) - Math.abs(a.d))
 
@@ -5188,9 +5234,9 @@
 
       const listaEl = document.getElementById('cierre-lista-difs')
       listaEl.hidden = difs.length === 0
-      listaEl.innerHTML = difs.slice(0, TOPE_DIFS_RESUMEN).map(({ item, d }) => `
-        <div class="rec-dif">
-          <span class="rec-dif__nombre">${esc(item.nombre)}${item.lote ? ` <span class="rec-dif__lote">Lote ${esc(item.lote)}</span>` : ''}</span>
+      listaEl.innerHTML = difs.slice(0, TOPE_DIFS_RESUMEN).map(({ item, d, grande }) => `
+        <div class="rec-dif ${grande ? 'rec-dif--grande' : ''}">
+          <span class="rec-dif__nombre">${esc(item.nombre)}${item.lote ? ` <span class="rec-dif__lote">Lote ${esc(item.lote)}</span>` : ''}${grande ? ' <span class="rec-dif__marca">más del 20%</span>' : ''}</span>
           <span class="rec-dif__valor ${d < 0 ? 'rec-dif__valor--falta' : ''}">${d > 0 ? '+' : '−'}${esc(formatearCantidadStock(Math.abs(d), item.unidad_medida))}</span>
         </div>`).join('')
         // Un tope silencioso leería como "estas son todas". Se dice cuántas
