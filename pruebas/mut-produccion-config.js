@@ -114,7 +114,8 @@ correrMutaciones({
     { nombre: 'el personal oculta a los prestados con puesto', de: '      const base = todos ? personal : personal.filter(p => p.misma_unidad || (p.puestos ?? []).length)', a: '      const base = todos ? personal : personal.filter(p => p.misma_unidad)' },
 
     // ── Salir sin guardar ──────────────────────────────────────────────
-    { nombre: 'nunca se pregunta antes de salir', de: '      if (!cambiosSinGuardar(c)) return true', a: '      return true' },
+    { nombre: 'nunca se pregunta antes de salir', de: '      if (!cambiosSinGuardar(c) || !c.datos) return true', a: '      return true' },
+    { nombre: 'se pregunta aunque no haya nada cambiado', de: '      if (!cambiosSinGuardar(c) || !c.datos) return true', a: '      if (!c.datos) return true' },
     { nombre: 'preguntar no frena la salida', de: '      c.salida = accion\n      pintarPestanaConfig()\n      return false', a: '      c.salida = accion\n      pintarPestanaConfig()\n      return true' },
     { nombre: 'salir sin guardar no tira los cambios', de: '      c.salida = null\n      c.cambios = new Map()', a: '      c.salida = null' },
     { nombre: 'el aviso de salida no se dibuja', de: '      cuerpo.innerHTML = c.salida ? htmlSalirSinGuardar(c) : RENDERS_CONFIG[c.tab](c)', a: '      cuerpo.innerHTML = RENDERS_CONFIG[c.tab](c)' },
