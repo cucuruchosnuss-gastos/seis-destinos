@@ -68,17 +68,24 @@ const FUNCIONES_BASE = [
   'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
   'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',
   'cambiarHoraCierre', 'cambiarScrapCierre', 'intentarCerrar', 'enviarCierre', 'htmlSublotesDefinitivos',
-  // B5: sala de masa
-  'mostrarSala', 'claveBorradorMasa', 'nuevoBorradorMasa', 'leerBorradorMasa', 'guardarBorradorMasa',
-  'borrarBorradorMasa', 'borradoresPendientes', 'redondearKg', 'pasoDe', 'cantidadesDesde', 'diferencias',
-  'textoGramos', 'textoDiferencias', 'textoKg', 'ingredientesConLote', 'insumosDe', 'lotesDeLaAnterior',
-  'insumoPorDefecto', 'faltanLotes', 'aplicarEleccionLote', 'parametrosRegistrarMasa', 'esErrorDeRed', 'enviarMasa',
-  'reintentarPendientes', 'pintarPendientes', 'abrirMaquinaSala', 'cargarTiposMasa', 'nuevaMasa',
-  'descartarMasa', 'cargarDatosMasa', 'irAPaso', 'elegirTipoMasa', 'elegirBase', 'elegirPartida',
-  'cambiarCantidad', 'sumarPaso', 'elegirMismosLotes', 'registrarMasa', 'htmlPasoTipo', 'htmlPasoBase',
-  'htmlPasoPartida', 'htmlFilaIngrediente', 'htmlPasoEditar', 'htmlOpcionesLote', 'htmlLoteIngrediente',
-  'htmlPasoLotes', 'htmlPasoResumen', 'pintarWizard', 'leerMasasTurno', 'diferenciaDeMasa', 'htmlMasaFila',
-  'cargarMasasTurno', 'pedirAnularMasa', 'confirmarAnularMasa', 'reintentarMasaActual',
+  // B5 + rediseño parte 4: la sala de masa, la receta y las masas del turno
+  'mostrarSala', 'maquinasAbiertas', 'soltarMaquinaSala', 'htmlFilaSala', 'detalleAnterior', 'htmlComo',
+  'htmlPanelSala', 'partidaDeModificar', 'dePartida', 'pintarSala',
+  'claveBorradorMasa', 'claveMasaEnCurso', 'nuevoBorradorMasa', 'leerBorradorMasa', 'guardarBorradorMasa',
+  'borrarBorradorMasa', 'marcarEnCurso', 'soltarEnCurso', 'borradorEnCurso', 'borradoresPendientes',
+  'redondearKg', 'pasoDe', 'cantidadesDesde', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'textoCantidad',
+  'diferenciaDeMasa', 'seAleja',
+  'ingredientesConLote', 'pideLote', 'insumosDe', 'lotesIniciales', 'opcionesLote', 'indiceLote', 'estadoLote',
+  'faltanParaRegistrar', 'leerDefineChocolate', 'esChocolate',
+  'parametrosRegistrarMasa', 'esErrorDeRed', 'enviarMasa', 'reintentarPendientes', 'textoPendientes', 'pintarPendientes',
+  'elegirMaquinaSala', 'cargarTiposMasa', 'cargarDatosMasa', 'elegirTipoMasa', 'elegirTamano', 'elegirComo',
+  'mostrarReceta', 'etiquetaBorrador', 'htmlCabeceraReceta', 'htmlOpcionesLote', 'htmlCeldaLote', 'htmlCeldaQueda',
+  'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilasReceta', 'pintarReceta', 'pintarPieReceta',
+  'cambiarCantidad', 'sumarPaso', 'elegirOpcionLote', 'escribirLoteManual',
+  'abrirOtro', 'cerrarOtro', 'faltaParaOtro', 'agregarOtro', 'quitarOtro', 'cambiarCantidadOtro', 'sumarPasoOtro',
+  'registrarMasa', 'detalleBandaExito', 'horaDeAhoraAr', 'mostrarBandaExito', 'ocultarBandaExito', 'pintarBandaExito',
+  'leerMasasSala', 'nombreDeTurno', 'htmlFilaMasaPendiente', 'htmlFilaMasaTurno', 'mostrarMasasTurno',
+  'pintarMasasTurno', 'pedirAnularMasa', 'confirmarAnularMasa',
   // B6: configuración
   'volverDeOficina', 'mostrarInicioOficina', 'pintarAccesosOficina', 'unidadesDeConfig', 'pintarSelectorUnidad',
   'mostrarConfig', 'htmlPestanasConfig', 'errorConfig', 'cargarPestanaConfig', 'pintarPestanaConfig',
@@ -103,7 +110,8 @@ const CONSTANTES_BASE = [
   'ROL_DE_MODO', 'PLURAL_PUESTO', 'VISTAS', 'VISTAS_OFICINA',
   'MINUTOS_INACTIVIDAD', 'LARGO_PIN', 'LARGO_PIN_MAESTRO',
   'ZONA_AR', 'TURNOS', 'CTX_PLANILLA',
-  'PREFIJO_BORRADOR_MASA', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
+  'PREFIJO_BORRADOR_MASA', 'PREFIJO_MASA_EN_CURSO', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
+  'UMBRAL_ALEJADA', 'MS_BANDA_EXITO',
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS',
 ]
@@ -157,6 +165,7 @@ const PRELUDIO = `
   var pinMaestro = null
   var camposPlanillaEnlazados = false
   var reintentando = false
+  var relojBandaExito = null
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }
@@ -202,7 +211,9 @@ const PRELUDIO = `
     tablero: null, hayTurnoAbierto: false, abrir: null, operarios: [], abriendo: false,
     planilla: null, opsPlanilla: { buscando: false, busqueda: '', guardando: false }, catalogo: null, cierre: null,
     agregar: null, corregir: null, cerrando: false,
-    salaTurno: null, masa: null, datosMasa: null, tiposMasa: null, masasTurno: null, enviandoMasa: false, anulando: null,
+    salaTurno: null, salaDoble: false, masa: null, datosMasa: null, tiposMasa: null, tipoMasa: null,
+    defineChocolate: null, errorSala: null, errorReceta: null, exitoMasa: null,
+    masasTurno: null, enviandoMasa: false, anulando: null,
     config: null, historial: null, stockUnidad: null,
   }
 `

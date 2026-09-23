@@ -20,7 +20,7 @@ correrMutaciones({
   manuales: [
     // ── El tablero ──────────────────────────────────────────────────────
     { nombre: 'la libre también lleva a una planilla', de: '      if (!e.turno) {\n        return `<div class="pr-maquina pr-maquina--libre">', a: '      if (false) {\n        return `<div class="pr-maquina pr-maquina--libre">' },
-    { nombre: 'cuenta también las masas anuladas', de: ".select('turno_id').in('turno_id', ids).eq('anulada', false)", a: ".select('turno_id').in('turno_id', ids)" },
+    { nombre: 'cuenta también las masas anuladas', de: ".select('turno_id, hora').in('turno_id', ids).eq('anulada', false)", a: ".select('turno_id, hora').in('turno_id', ids)" },
     { nombre: 'cuenta también los sublotes anulados', de: ".from('produccion_items').select('turno_id').in('turno_id', ids).eq('anulado', false)", a: ".from('produccion_items').select('turno_id').in('turno_id', ids)" },
     { nombre: 'lee turnos de todas las unidades', de: "        .eq('unidad_negocio_id', unidadId).eq('estado', 'abierto')", a: "        .eq('estado', 'abierto')" },
     { nombre: 'lee también los turnos pendiente_completar', de: "        .eq('unidad_negocio_id', unidadId).eq('estado', 'abierto')", a: "        .eq('unidad_negocio_id', unidadId)" },

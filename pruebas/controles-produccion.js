@@ -31,6 +31,7 @@ const BASES = [
   '7cb199b', // B6: configuración
   'f502c3d', // Rediseño parte 1: barra de modos, fondo por modo y acceso con PIN
   'd3f8203', // Rediseño parte 2: tablero de máquinas y abrir turno con varios operarios
+  '54a216d', // Rediseño parte 3: la planilla, carga durante el turno y cierre
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
@@ -48,6 +49,18 @@ const RENOMBRADOS = [
   ['control:button#pr-cierre-vacio-no[type=button]', 'control:button#pr-cierre-confirmar-no[type=button]',
     'Rediseño parte 3: el par del de arriba. Además ahora vuelve a la planilla, que es donde se reanuda la parada o se ' +
     'carga lo que produjo.'],
+  ['control:button#pr-masa-volver[type=button]', 'control:button#pr-receta-cambiar[type=button]',
+    'Rediseño parte 4: el botón que sale de la masa y vuelve a elegir máquina se llama "Cambiar" y vive en la cabecera ' +
+    'de la receta (6c). Mismo destino que "‹ Máquinas": la pantalla de la sala, que ahora trae la máquina, el tamaño y ' +
+    'de dónde sale la masa en una sola vista.'],
+  ['control:button#pr-btn-nueva-masa[type=button]', 'control:button#pr-masas-nueva[type=button]',
+    'Rediseño parte 4: "Nueva masa" ya no vive en la pantalla de una máquina —empezar una masa ES elegir máquina, ' +
+    'tamaño y cómo la hacés en 6a/6b— y quedó como "+ Nueva masa" en Masas del turno (6d), que es la única pantalla ' +
+    'desde donde hace falta volver a empezar una.'],
+  ['control:button[data-registrar][type=button]', 'control:button#pr-receta-registrar[type=button]',
+    'Rediseño parte 4: "Registrar masa" dejó de estar adentro del paso del resumen —que ya no existe— y pasó al pie ' +
+    'fijo de la receta, con el error pegado al lado. Mismo botón y misma acción (registrar_masa), ahora con id propio ' +
+    'porque el pie es HTML estático.'],
 ]
 
 // Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS
@@ -89,6 +102,32 @@ const RETIRADOS = [
     'agregan de a uno con el buscador que se abre dentro de la fila (P4a). abrir_turnos recibe operarios: [uuid, …] ' +
     'por máquina, así que el select de una sola opción no podía representar lo que la RPC acepta. Los controles ' +
     'nuevos son data-mas-operario, data-buscar-op, data-elegir-op, data-cancelar-op y data-quitar-op.'],
+  ['control:button[data-ir][type=button]',
+    'Rediseño parte 4: la sala dejó de ser un asistente de pasos (tipo → receta → cantidades → lotes → resumen). ' +
+    'Elegir máquina, tamaño y cómo la hacés entra en UNA pantalla (6a/6b) y de ahí se cae en la receta entera (6c), ' +
+    'que es una planilla con todo a la vista. No queda ningún "Siguiente" al que ir.'],
+  ['control:button[data-partida][type=button]',
+    'Rediseño parte 4: "Modificar" ya no pregunta "¿de dónde partís?". Arranca de la última masa de HOY de esa ' +
+    'máquina —que es lo que se está ajustando— y de la receta vigente si no hay ninguna, y el propio botón lo dice ' +
+    '("Parte de la masa 9" / "Parte de la receta vigente"). Una pregunta menos entre el masero y la masa.'],
+  ['control:button[data-mismos][type=button]',
+    'Rediseño parte 4: NO se pregunta más "¿mismos lotes que la anterior?". Los lotes VIENEN PUESTOS de la masa ' +
+    'anterior de esa máquina, se elija original, anterior o modificada, y solo se tocan si uno se terminó. En la ' +
+    'primera masa del día llegan vacíos y hay que cargarlos, con Registrar bloqueado hasta que estén.'],
+  ['control:select[data-insumo]',
+    'Rediseño parte 4: elegir el insumo dejó de ser un <select> propio. En la planilla (6c) hay UNA sola columna ' +
+    'Lote, y cada opción del desplegable ES un par (insumo, lote) con su stock; la columna Marca muestra el insumo ' +
+    'del lote elegido. Dos desplegables por renglón no entran en un renglón de 64px y obligaban a tocar dos veces ' +
+    'para decir una sola cosa. El control que quedó es data-lote.'],
+  ['control:button[data-descartar][type=button]',
+    'Rediseño parte 4: no hay nada que descartar a mano. El borrador de una masa sin registrar se retoma solo al ' +
+    'volver a elegir cómo la hacés —con SU uuid— y se rehace entero ahí mismo. Y una masa PENDIENTE de envío ya no ' +
+    'ocupa el lugar de la siguiente: el borrador se guarda bajo su uuid, no bajo el turno, así que la masa que sigue ' +
+    'arranca de cero sin pisarla. Que no exista el botón es, además, lo que hace imposible perder una pendiente.'],
+  ['control:button[data-reintentar][type=button]',
+    'Rediseño parte 4: el "Reintentar ahora" del asistente se fue con el asistente. El reintento sigue estando —y es ' +
+    'el mismo: reintentarPendientes()— en el botón de la banda bordó de pendientes, #pr-sala-reintentar, que ya ' +
+    'existía y ahora es el único. Además se reintenta solo al volver la conexión, cada 30 s y al entrar a la sala.'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:
@@ -100,6 +139,10 @@ const MENOS_COPIAS = [
     'Rediseño parte 3: htmlProducido() tenía DOS ramas con su propio botón "Borrar" —la del renglón normal y la del ' +
     'producto que ya no está en el catálogo— y ahora las dos comparten los mismos botones, así que el control está ' +
     'escrito una sola vez. El botón no se fue: es el que anula el sublote con anular_produccion_item.'],
+  ['control:button[data-base][type=button]', 1,
+    'Rediseño parte 4: los tres botones de "¿Cómo la hacés?" (Usar la original / Usar la anterior / Modificar) ' +
+    'estaban escritos uno por uno y ahora los arma htmlComo(), que es una sola plantilla con su título, su ' +
+    'explicación y su "›". Los tres siguen estando en la pantalla: lo que hay una sola vez es el molde.'],
 ]
 
 let ok = 0

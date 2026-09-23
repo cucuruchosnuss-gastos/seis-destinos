@@ -66,6 +66,17 @@ const SEGURAS_PRODUCCION = [
   ['htmlParadas(d.paradas)', 'HTML armado por htmlParadas(), que escapa adentro'],
   ['producido', 'HTML ya escapado: htmlDetalleTurno() y htmlResumenCierre() arman cada sublote con esc() de cada dato'],
   ['totales', 'HTML ya escapado: htmlDetalleTurno() arma cada total con esc() del insumo, el lote y los kilos'],
+  // Rediseño parte 4: la sala, la receta y las masas del turno
+  ['parada', 'HTML constante del código (el " · parada" en bordó de una máquina frenada), o vacío'],
+  ['der', 'HTML ya escapado: htmlFilaSala() lo arma arriba con esc(textoMasas()) y esc(horaArgentina()), o texto constante'],
+  ['detalleHtml', 'HTML armado por detalleAnterior() —que escapa el número, la hora, el lote y las diferencias— o texto ya escapado en el call site'],
+  ['apagado', 'clase CSS constante del código (" pr-sala__apagado"), o vacía'],
+  ['tipo', 'HTML ya escapado: htmlCabeceraReceta() lo arma arriba con esc(b.tipo), o vacío'],
+  ['opciones', 'HTML armado por htmlOpcionesLote(), que escapa la etiqueta de cada opción, más la de "Se terminó", constante'],
+  ['manual', 'HTML ya escapado: htmlCeldaLote() lo arma arriba con esc() del ingrediente, o vacío'],
+  ["clases.join(' ')", 'clases CSS constantes del código, armadas con banderas de la fila'],
+  ['htmlCeldaLote(it, b, e)', 'HTML armado por htmlCeldaLote(), que escapa adentro'],
+  ['estadoHtml', 'HTML ya escapado: htmlFilaMasaTurno() lo arma arriba con esc(m.anulada_motivo) y esc(m.id), o texto constante'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

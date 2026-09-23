@@ -1,4 +1,5 @@
-// Mutaciones de test-produccion-masa.js (B5 de Producción). Ver mutar.js.
+// Mutaciones de test-produccion-masa.js (B5 de Producción · rediseño parte 4:
+// la sala de masa, la receta y las masas del turno). Ver mutar.js.
 //
 //   node pruebas/mut-produccion-masa.js
 
@@ -9,83 +10,135 @@ correrMutaciones({
   suite: path.join(__dirname, 'test-produccion-masa.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
-  funciones: ['mostrarSala', 'htmlPasoTipo', 'htmlPasoBase', 'htmlPasoPartida', 'htmlFilaIngrediente', 'htmlOpcionesLote',
-    'htmlLoteIngrediente', 'htmlPasoLotes', 'htmlPasoResumen', 'pintarWizard', 'htmlMasaFila'],
+  funciones: ['htmlFilaSala', 'detalleAnterior', 'htmlComo', 'htmlCabeceraReceta', 'htmlOpcionesLote',
+    'htmlCeldaLote', 'htmlCeldaQueda', 'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilaMasaPendiente', 'htmlFilaMasaTurno'],
   equivalentes: [
     { expr: 'esc(textoMasas(e.masas))', motivo: 'un conteo con "masa"/"masas"' },
-    { expr: "esc(horaArgentina(ant.hora) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
-    { expr: 'esc(textoDiferencias(difs))', motivo: 'la diferencia se arma con gramos formateados y el nombre del ingrediente; en htmlPasoBase la anterior del test de marcas no difiere, y el nombre se prueba escapado en htmlFilaIngrediente y en el resumen' },
-    { expr: 'esc(dif)', motivo: 'textoGramos() + un texto constante: signo, dígitos y "g"' },
-    { expr: 'esc(textoKg(Number(l.stock)))', motivo: 'formatearNumeroAr() + " kg"' },
-    { expr: 'esc(textoKg(b.cantidades[it.ingrediente_id] ?? 0))', motivo: 'formatearNumeroAr() + " kg"' },
-    { expr: 'esc(textoKg(kg))', motivo: 'formatearNumeroAr() + " kg"' },
-    { expr: 'esc(textoKg(redondearKg(kg * factor)))', motivo: 'formatearNumeroAr() + " kg"' },
-    { expr: "esc(b.tipo ?? '')", motivo: 'el cartel de masa pendiente: el tipo se prueba escapado en los pasos tipo y resumen; el pendiente se dibuja con el mismo esc()' },
+    { expr: "esc(horaArgentina(e.ultimaMasa) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
+    { expr: "esc(horaArgentina(a.hora) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
     { expr: "esc(horaArgentina(m.hora) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
-    { expr: 'esc(sinInsumo.map(x => x.ingrediente).join(\', \'))', motivo: 'el test de marcas no tiene ingredientes sin insumo; los nombres se prueban escapados en las filas y el resumen' },
+    { expr: 'esc(a.nro)', motivo: 'el número de la anterior sale de datos_para_masa; el de la cabecera y el de 6d se prueban escapados en htmlCabeceraReceta y htmlFilaMasaTurno, con el mismo esc()' },
+    { expr: 'esc(textoDiferencias(difs, 2))', motivo: 'gramos formateados más el nombre del ingrediente, que se prueba escapado en htmlFilaReceta' },
+    { expr: 'esc(textoGramos(g))', motivo: 'textoGramos(): signo, dígitos y " g"' },
+    { expr: 'esc(textoCantidad(e.queda))', motivo: 'formatearNumeroAr() + " kg" o " g"' },
+    { expr: 'esc(o.etiqueta)', motivo: 'la etiqueta la arma opcionesLote() con el lote, el insumo y su marca; los tres se prueban escapados en htmlFilaReceta' },
+    { expr: "esc(ETIQUETA_ORIGEN[clave] ?? clave)", motivo: 'constante del código: Original / Anterior / Modificada' },
+    { expr: 'esc(clave)', motivo: 'constante del código: etiquetaBorrador() devuelve original / anterior / modificada y nada más' },
+    { expr: 'esc(d.original.version)', motivo: 'el número de versión de la receta vigente, que sale de datos_para_masa' },
+    { expr: 'esc(dePartida(d))', motivo: 'texto constante más el número de la masa anterior, que ya se prueba escapado en detalleAnterior' },
   ],
   manuales: [
-    // La regla del uuid
+    // ── LA REGLA DEL UUID ────────────────────────────────────────────────
     { nombre: 'uuid nuevo en cada reintento', de: "        ;({ data, error } = await supabase.rpc('registrar_masa', b.payload))", a: "        ;({ data, error } = await supabase.rpc('registrar_masa', { ...b.payload, p_client_uuid: crypto.randomUUID() }))" },
-    { nombre: 'el payload se rehace en cada envío', de: '      if (!b.payload) {\n        const faltan = faltanLotes(b, d)', a: '      if (true) {\n        const faltan = faltanLotes(b, d)' },
-    { nombre: '"Nueva masa" pisa la empezada', de: '      estado.masa = leerBorradorMasa(t.id) ?? nuevoBorradorMasa(t.id, t.lote, t.maquinaNombre)', a: '      estado.masa = nuevoBorradorMasa(t.id, t.lote, t.maquinaNombre)' },
-    { nombre: 'el borrador no se guarda al empezar', de: '      estado.masa = leerBorradorMasa(t.id) ?? nuevoBorradorMasa(t.id, t.lote, t.maquinaNombre)\n      guardarBorradorMasa(estado.masa)', a: '      estado.masa = leerBorradorMasa(t.id) ?? nuevoBorradorMasa(t.id, t.lote, t.maquinaNombre)' },
+    { nombre: 'el reintento manda un payload distinto del que se mandó', de: '      let data = null, error = null', a: '      let data = null, error = null\n      b.payload = { ...b.payload, p_items: [] }' },
+    { nombre: 'empezar otra masa pisa la empezada', de: '      const b = estado.masa ?? nuevoBorradorMasa(t)', a: '      const b = nuevoBorradorMasa(t)' },
+    { nombre: 'el borrador no se guarda al empezarlo', de: '      estado.masa = b\n      guardarBorradorMasa(b)\n      marcarEnCurso(b)', a: '      estado.masa = b' },
     { nombre: 'no queda pendiente antes de mandar', de: '    async function enviarMasa(b) {\n      b.pendiente = true\n      guardarBorradorMasa(b)', a: '    async function enviarMasa(b) {' },
-    { nombre: 'el borrador se borra aunque no llegue', de: "        if (esErrorDeRed(error)) return { resultado: 'red', error }", a: "        if (esErrorDeRed(error)) { borrarBorradorMasa(b.turnoId); return { resultado: 'red', error } }" },
-    { nombre: 'el borrador no se borra al llegar', de: "      borrarBorradorMasa(b.turnoId)\n      return { resultado: 'ok', data }", a: "      return { resultado: 'ok', data }" },
+    { nombre: 'el borrador se borra aunque no llegue', de: "        if (esErrorDeRed(error)) return { resultado: 'red', error }", a: "        if (esErrorDeRed(error)) { borrarBorradorMasa(b); return { resultado: 'red', error } }" },
+    { nombre: 'el borrador no se borra al llegar', de: "      borrarBorradorMasa(b)\n      return { resultado: 'ok', data }", a: "      return { resultado: 'ok', data }" },
     { nombre: 'un rechazo queda pendiente', de: '        b.pendiente = false\n        b.payload = null\n        guardarBorradorMasa(b)', a: '        guardarBorradorMasa(b)' },
     { nombre: 'toda falla se trata como de red', de: "      if (typeof err.code === 'string' && err.code !== '') return false", a: '' },
     { nombre: 'no hay reintento automático', de: '          if (b && b.pendiente && b.payload) out.push(b)', a: '          if (false) out.push(b)' },
-    { nombre: 'se puede descartar una pendiente', de: '      if (!b || b.pendiente) return\n      borrarBorradorMasa(b.turnoId)', a: '      if (!b) return\n      borrarBorradorMasa(b.turnoId)' },
-    { nombre: 'el borrador de otro turno se acepta', de: "        return b && typeof b.client_uuid === 'string' && b.turnoId === turnoId ? b : null", a: "        return b && typeof b.client_uuid === 'string' ? b : null" },
-    // El payload
-    { nombre: 'manda la doble multiplicada', de: '            cantidad_simple_kg: redondearKg(b.cantidades[it.ingrediente_id] ?? 0),', a: '            cantidad_simple_kg: redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1)),' },
-    { nombre: 'p_doble siempre falso', de: '        p_doble: !!b.doble,', a: '        p_doble: false,' },
-    { nombre: 'solo los ingredientes con cantidad', de: '        p_items: datos.original.items.map(it => {', a: '        p_items: datos.original.items.filter(it => (b.cantidades[it.ingrediente_id] ?? 0) > 0).map(it => {' },
-    { nombre: 'el masero no es la persona', de: 'b.payload = parametrosRegistrarMasa(b, d, estado.persona?.id ?? null)', a: 'b.payload = parametrosRegistrarMasa(b, d, null)' },
-    { nombre: '"sin lote" viaja como texto', de: "      l.sinLote = valor === '__sin__'\n      if (valor === '__manual__') { l.manual = true; l.lote = null }\n      else { l.manual = false; l.lote = valor === '' || l.sinLote ? null : valor }", a: "      if (valor === '__manual__') { l.manual = true; l.lote = null }\n      else { l.manual = false; l.lote = valor === '' ? null : valor }" },
-    { nombre: 'elegir un lote no apaga el "a mano"', de: "      else { l.manual = false; l.lote = valor === '' || l.sinLote ? null : valor }", a: "      else { l.lote = valor === '' || l.sinLote ? null : valor }" },
-    { nombre: 'el lote a mano sin recortar', de: "          const lote = l ? String(l.lote ?? '').trim() : ''", a: "          const lote = l ? String(l.lote ?? '') : ''" },
-    { nombre: 'los que no piden lote viajan con insumo', de: '          const l = conLote.has(it.ingrediente_id) ? b.lotes[it.ingrediente_id] : null', a: '          const l = b.lotes[it.ingrediente_id] ?? null' },
-    // Cantidades y diferencias
-    { nombre: 'paso de 100 g en todos', de: "      return INGREDIENTES_PASO_GRANDE.includes(normalizarBusqueda(nombreIngrediente)) ? 0.1 : 0.01", a: '      return 0.1' },
-    { nombre: 'el paso no reconoce "Azúcar" con tilde', de: "      return INGREDIENTES_PASO_GRANDE.includes(normalizarBusqueda(nombreIngrediente)) ? 0.1 : 0.01", a: "      return INGREDIENTES_PASO_GRANDE.includes(String(nombreIngrediente).toLowerCase()) ? 0.1 : 0.01" },
-    { nombre: 'puede quedar negativo', de: '      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))', a: '      b.cantidades[ingredienteId] = redondearKg(kg)' },
-    { nombre: 'un número ilegible pone 0', de: '      if (kg == null || !Number.isFinite(kg)) return\n', a: '' },
-    { nombre: 'la anterior no se usa al partir de ella', de: "        const v = partida === 'anterior' && ant && ant.cantidad_simple_kg != null ? Number(ant.cantidad_simple_kg) : Number(it.cantidad_kg)", a: '        const v = Number(it.cantidad_kg)' },
-    { nombre: 'la diferencia contra la anterior en vez de la original', de: '        const g = Math.round(((cantidades[it.ingrediente_id] ?? 0) - Number(it.cantidad_kg)) * 1000)', a: '        const g = Math.round((cantidades[it.ingrediente_id] ?? 0) * 1000)' },
-    { nombre: 'la diferencia en vivo sin bordó', de: "      return `<div class=\"pr-ing${g !== 0 ? ' pr-ing--cambia' : ''}\">` +", a: '      return `<div class="pr-ing">` +' },
-    { nombre: 'sin redondeo de coma flotante', de: '      return Math.round(n * 1000) / 1000', a: '      return n' },
-    // Base
-    { nombre: '"Usar la anterior" sin anterior', de: "      if (base === 'anterior' && !d.anterior) return\n", a: '' },
-    { nombre: '"Usar la anterior" nunca deshabilitado', de: "`<button type=\"button\" class=\"pr-opcion\" data-base=\"anterior\"${ant ? '' : ' disabled'}>", a: '`<button type="button" class="pr-opcion" data-base="anterior">' },
-    { nombre: 'no dice si la anterior es igual', de: "(difs.length ? `Contra la original: ${esc(textoDiferencias(difs))}` : 'Es igual a la original')", a: "`Contra la original: ${esc(textoDiferencias(difs))}`" },
-    { nombre: '"Modificar" no pregunta de dónde parte', de: "      if (base === 'modificar') { b.base = 'modificada'; b.partida = null; irAPaso('partida'); return }", a: "      if (base === 'modificar') { b.base = 'modificada'; b.cantidades = cantidadesDesde('original', d.original, d.anterior); irAPaso('editar'); return }" },
-    // Lotes
-    { nombre: 'piden lote también los sin insumo', de: '        datos.insumos.some(x => x.ingrediente_id === it.ingrediente_id))\n    }', a: '        true)\n    }' },
-    { nombre: 'piden lote también los de cantidad 0', de: "        it.descuenta_stock && (cantidades[it.ingrediente_id] ?? 0) > 0 &&\n        datos.insumos", a: "        it.descuenta_stock &&\n        datos.insumos" },
-    { nombre: 'la materia prima no exige lote', de: "        if (ins.tipo === 'materia_prima' && !String(l.lote ?? '').trim()) faltan.push", a: "        if (false) faltan.push" },
-    { nombre: '"Sí" no copia los lotes de la anterior', de: '      b.lotes = si ? lotesDeLaAnterior(d) : {}', a: '      b.lotes = {}' },
-    { nombre: 'el insumo por defecto ignora la anterior', de: '      if (ant && posibles.some(x => x.insumo_id === ant)) return ant\n', a: '' },
-    { nombre: 'el insumo por defecto ignora el preferido', de: '      if (pref && posibles.some(x => x.insumo_id === pref)) return pref\n', a: '' },
-    { nombre: 'no pregunta por los lotes de la anterior', de: '      } else if (d.anterior && b.mismosLotes === null) {', a: '      } else if (false) {' },
-    { nombre: 'materia prima ofrece "Sin lote"', de: "      if (ins && ins.tipo !== 'materia_prima') opciones.push", a: '      if (ins) opciones.push' },
-    { nombre: 'sin "El lote no está en la lista"', de: "      opciones.push(`<option value=\"__manual__\"${elegido === '__manual__' ? ' selected' : ''}>El lote no está en la lista</option>`)", a: '' },
-    { nombre: 'sin el aviso de revisión', de: '          `<p class="pr-aviso">Un lote que no figura con stock queda marcado para revisar.</p>`', a: "          ''" },
-    { nombre: 'no se manda aunque falten lotes', de: "        if (faltan.length) { err.textContent = `Falta ${faltan.join(', ')}.`; err.hidden = false; return }\n        b.payload", a: '        b.payload' },
-    { nombre: 'no avisa de los que no descuentan', de: "? `<p class=\"pr-texto-suave\">No descuentan stock porque no tienen insumo en el catálogo: ${esc(sinInsumo.map(x => x.ingrediente).join(', '))}.</p>` : ''", a: "? '' : ''" },
-    // Resumen
-    { nombre: 'la doble no se ve', de: "      const cartel = b.doble ? '<span class=\"pr-doble\">DOBLE ×2</span>' : '<span class=\"pr-chip-origen\">Simple</span>'", a: "      const cartel = '<span class=\"pr-chip-origen\">Simple</span>'" },
-    { nombre: 'el ×2 no multiplica', de: 'esc(textoKg(redondearKg(kg * factor)))', a: 'esc(textoKg(redondearKg(kg)))' },
-    // Sala y lista
-    { nombre: 'la sala muestra también las libres', de: '      const abiertas = estado.tablero.filter(e => e.turno)', a: '      const abiertas = estado.tablero.filter(e => e.turno || true)' },
-    { nombre: 'los tipos se repiten', de: '      return [...new Set((data ?? []).map(r => r.tipo_masa))].sort((a, b) => a.localeCompare(b, \'es\'))', a: '      return (data ?? []).map(r => r.tipo_masa)' },
-    { nombre: 'la diferencia de la lista contra la original de hoy', de: '        items: datos.recItems.filter(r => r.receta_id === masa.receta_id)', a: '        items: datos.recItems' },
-    { nombre: 'una anulada se puede anular', de: '      const anular = puedeAnular && !m.anulada ?', a: '      const anular = puedeAnular ?' },
+    { nombre: 'el borrador de otro uuid se acepta', de: '        return b && b.client_uuid === uuid ? b : null', a: '        return b ? b : null' },
+    // La masa PENDIENTE no se pierde al empezar la siguiente: el borrador va
+    // por uuid, no por turno, y borradorEnCurso() no la devuelve.
+    { nombre: 'una pendiente se retoma como si estuviera a medias', de: '      return b && !b.pendiente ? b : null', a: '      return b ?? null' },
+    { nombre: 'el borrador se guarda bajo el turno y la siguiente lo pisa', de: '      return PREFIJO_BORRADOR_MASA + uuid', a: '      return PREFIJO_BORRADOR_MASA' },
+
+    // ── LOS LOTES VIENEN PUESTOS ─────────────────────────────────────────
+    { nombre: 'los lotes NO vienen de la anterior', de: '      b.lotes = lotesIniciales(d)', a: '      b.lotes = {}' },
+    { nombre: 'la primera masa del día igual copia los lotes de otro día', de: '      if (!ant || ant.es_de_hoy === false) return {}', a: '      if (!ant) return {}' },
+
+    // ── El 10% ───────────────────────────────────────────────────────────
+    { nombre: 'cualquier diferencia va en bordó', de: '      if (!(base > 0)) return false\n      return Math.abs(Number(kg ?? 0) - base) > base * UMBRAL_ALEJADA + 1e-9', a: '      return Math.abs(Number(kg ?? 0) - base) > 0' },
+    { nombre: 'el umbral es un número fijo y no el 10% de ese ingrediente', de: '      return Math.abs(Number(kg ?? 0) - base) > base * UMBRAL_ALEJADA + 1e-9', a: '      return Math.abs(Number(kg ?? 0) - base) > 0.25' },
+    { nombre: 'con la receta en 0 cualquier cantidad va en bordó', de: '      if (!(base > 0)) return false', a: '' },
+    { nombre: 'la diferencia no se muestra si no pasa el umbral', de: "      const dif = g === 0\n        ? '<span class=\"pr-rec__igual\">=</span>'", a: "      const dif = g === 0 || !aleja\n        ? '<span class=\"pr-rec__igual\">=</span>'" },
+
+    // ── "Queda" y el bloqueo de Registrar ────────────────────────────────
+    { nombre: 'queda no descuenta esta masa', de: '      const queda = redondearKg(Number(enLista.stock) - consumo)', a: '      const queda = redondearKg(Number(enLista.stock))' },
+    { nombre: 'una doble descuenta como una simple', de: "      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))", a: '      const consumo = redondearKg(b.cantidades[it.ingrediente_id] ?? 0)' },
+    { nombre: 'nunca avisa que no alcanza para otra', de: '      return { ...base, queda, alcanza: queda >= consumo }', a: '      return { ...base, queda, alcanza: true }' },
+    { nombre: 'un lote que se terminó pasa como bueno', de: '      if (!enLista) return { ...base, terminado: true }', a: '      if (!enLista) return { ...base }' },
+    { nombre: 'un lote sin elegir no bloquea', de: '      if (!l || !ins) return { ...base, falta: true }', a: '      if (!l || !ins) return { ...base }' },
+    { nombre: 'un lote escrito a mano vacío no bloquea', de: "      if (l.manual) return { ...base, falta: !String(l.lote ?? '').trim() }", a: '      if (l.manual) return { ...base }' },
+    { nombre: 'Registrar no se bloquea con lo que falta', de: "      btn.disabled = !!pendiente.length || !!estado.enviandoMasa", a: '      btn.disabled = !!estado.enviandoMasa' },
+    { nombre: 'se manda igual con lotes sin elegir', de: '        const faltan = faltanParaRegistrar(b, d)\n        if (faltan.length) { pintarPieReceta(); return }', a: '        const faltan = faltanParaRegistrar(b, d)' },
+    { nombre: 'el renglón flojo no se tinta', de: '      if (!e.alcanza || e.terminado) clases.push(\'pr-rec--floja\')', a: '' },
+    { nombre: 'el desplegable del lote terminado no se marca', de: "      const clase = e.terminado ? 'pr-rec__lote pr-rec__lote--terminado' : 'pr-rec__lote'", a: "      const clase = 'pr-rec__lote'" },
+
+    // ── El payload ───────────────────────────────────────────────────────
+    { nombre: 'se manda la cantidad ya multiplicada por 2', de: '          cantidad_simple_kg: redondearKg(b.cantidades[it.ingrediente_id] ?? 0),\n          insumo_id: l?.insumo_id || null,', a: '          cantidad_simple_kg: redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1)),\n          insumo_id: l?.insumo_id || null,' },
+    { nombre: 'los ingredientes en cero no viajan', de: '      const items = datos.original.items.map(it => {', a: '      const items = datos.original.items.filter(it => (b.cantidades[it.ingrediente_id] ?? 0) > 0).map(it => {' },
+    { nombre: 'se manda el origen calculado en la pantalla', de: '        p_client_uuid: b.client_uuid,\n      }\n    }', a: '        p_client_uuid: b.client_uuid,\n        p_origen: etiquetaBorrador(b),\n      }\n    }' },
+    { nombre: 'un "otro" viaja con ingrediente_id', de: "          ingrediente_id: null,\n          ingrediente_libre: String(o.nombre ?? '').trim(),", a: "          ingrediente_id: o.id,\n          ingrediente_libre: String(o.nombre ?? '').trim()," },
+    { nombre: 'un "otro" viaja con insumo y lote', de: "          cantidad_simple_kg: redondearKg(o.kg ?? 0),\n        })", a: "          cantidad_simple_kg: redondearKg(o.kg ?? 0),\n          insumo_id: null, lote: null,\n        })" },
+    // Anclada al items.push() y no al `for` solo: desde que faltanParaRegistrar
+    // también recorre los "otro", ese renglón aparece DOS veces en el archivo.
+    { nombre: 'los "otro" no viajan', de: '      for (const o of b.otros ?? []) {\n        items.push({', a: '      for (const o of []) {\n        items.push({' },
+    { nombre: 'el lote a mano no se recorta', de: "          lote: lote === '' ? null : lote,", a: '          lote: l ? l.lote : null,' },
+    { nombre: 'el masero no viaja', de: '        p_masero_id: maseroId,', a: '        p_masero_id: null,' },
+
+    // ── "+ Otro": la misma regla que la base ─────────────────────────────
+    { nombre: 'un "otro" con una sola letra se agrega', de: "      if (String(nombre ?? '').trim().length < 2) return 'Escribí qué le pusiste (al menos 2 letras).'", a: "      if (String(nombre ?? '').trim().length < 1) return 'Escribí qué le pusiste (al menos 2 letras).'" },
+    { nombre: 'un "otro" en cero se agrega', de: "      if (kg == null || !Number.isFinite(kg) || kg <= 0) return 'Escribí cuánto le pusiste, en kilos.'", a: "      if (kg == null || !Number.isFinite(kg) || kg < 0) return 'Escribí cuánto le pusiste, en kilos.'" },
+    { nombre: 'solo puede haber un "otro"', de: '      b.otros.push({ id: `o${b.proximoOtro ?? b.otros.length + 1}`, nombre, kg: redondearKg(kg) })', a: '      b.otros = [{ id: `o${b.proximoOtro ?? 1}`, nombre, kg: redondearKg(kg) }]' },
+    { nombre: 'los "otro" comparten id', de: '      b.proximoOtro = (b.proximoOtro ?? b.otros.length) + 1', a: '' },
+    { nombre: '"Quitar" saca todos', de: '      b.otros = (b.otros ?? []).filter(o => o.id !== id)', a: '      b.otros = []' },
+
+    // ── El chocolate ─────────────────────────────────────────────────────
+    { nombre: 'el chocolate sale del NOMBRE del ingrediente', de: '        if (definen.has(it) && (b.cantidades[it] ?? 0) > 0) return true', a: "        if (normalizarBusqueda(it).includes('cacao') && (b.cantidades[it] ?? 0) > 0) return true" },
+    { nombre: 'el chip de chocolate aparece con el ingrediente en cero', de: '        if (definen.has(it) && (b.cantidades[it] ?? 0) > 0) return true', a: '        if (definen.has(it)) return true' },
+    { nombre: 'define_chocolate no se lee de la tabla', de: "      const { data, error } = await supabase.from('ingredientes').select('id, define_chocolate')", a: "      const { data, error } = { data: [], error: null }; if (false) await supabase.from('ingredientes').select('id, define_chocolate')" },
+    { nombre: 'cualquier ingrediente define chocolate', de: '      return new Set((data ?? []).filter(x => x.define_chocolate === true).map(x => x.id))', a: '      return new Set((data ?? []).map(x => x.id))' },
+
+    // ── 6a / 6b ──────────────────────────────────────────────────────────
+    { nombre: 'la sala muestra también las máquinas libres', de: '      return (estado.tablero ?? []).filter(e => e.turno)', a: '      return (estado.tablero ?? []).filter(e => e.turno || true)' },
+    { nombre: 'la máquina sin masas no avisa que hay que cargar los lotes', de: "        : '<div class=\"pr-sala-maq__cuenta pr-sala-maq__primera\">Primera masa</div>' +", a: "        : '<div class=\"pr-sala-maq__cuenta\">Sin masas</div>' +" },
+    { nombre: 'la parada no se ve en la fila', de: "      const parada = e.parada ? ' · <span class=\"pr-sala-maq__parada\">parada</span>' : ''", a: "      const parada = ''" },
+    { nombre: 'el tipo de masa se pregunta aunque haya una sola receta', de: '      const tipoHtml = tipos.length > 1', a: '      const tipoHtml = tipos.length > 0' },
+    { nombre: 'el panel se habilita sin máquina elegida', de: "      const off = listo ? '' : ' disabled'", a: "      const off = ''" },
+    { nombre: '"Usar la anterior" se ofrece sin anterior', de: "        htmlComo('anterior', 'Usar la anterior', listo ? detalleAnterior(d) : 'Igual a la última masa de esa máquina.', listo && hayAnterior) +", a: "        htmlComo('anterior', 'Usar la anterior', listo ? detalleAnterior(d) : 'Igual a la última masa de esa máquina.', listo) +" },
+    { nombre: 'no se avisa que la anterior era de chocolate', de: "      const choco = a.es_chocolate ? ' <span class=\"pr-como__choco\">Era de CHOCOLATE.</span>' : ''", a: "      const choco = ''" },
+    { nombre: '"Modificar" siempre parte de la original', de: "      return d?.anterior && d.anterior.es_de_hoy !== false ? 'anterior' : 'original'", a: "      return 'original'" },
+    { nombre: '"Usar la anterior" trae las cantidades de la original', de: "      b.partida = como === 'modificar' ? partidaDeModificar(d) : como", a: "      b.partida = 'original'" },
+    { nombre: 'los tipos se repiten', de: "      return [...new Set((data ?? []).map(r => r.tipo_masa))].sort((a, b) => a.localeCompare(b, 'es'))", a: '      return (data ?? []).map(r => r.tipo_masa)' },
+    { nombre: 'datos_para_masa sin el tipo', de: "supabase.rpc('datos_para_masa', { p_turno_id: estado.salaTurno.id, p_tipo_masa: estado.tipoMasa })", a: "supabase.rpc('datos_para_masa', { p_turno_id: estado.salaTurno.id, p_tipo_masa: null })" },
+
+    // ── 6c: la cabecera y los renglones ──────────────────────────────────
+    { nombre: 'la cabecera no dice si quedó modificada', de: '      if (b.cambiada) return \'modificada\'', a: '' },
+    { nombre: 'tocar una cantidad no marca la masa como cambiada', de: '      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))\n      b.cambiada = true', a: '      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))' },
+    { nombre: 'una cantidad negativa queda negativa', de: '      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))', a: '      b.cantidades[ingredienteId] = redondearKg(kg)' },
+    { nombre: 'un número ilegible borra la cantidad', de: '      if (!b || kg == null || !Number.isFinite(kg)) return', a: '      if (!b) return' },
+    { nombre: 'el paso es siempre el chico', de: "      return INGREDIENTES_PASO_GRANDE.includes(normalizarBusqueda(nombreIngrediente)) ? 0.1 : 0.01", a: '      return 0.01' },
+    { nombre: 'el ingrediente en cero no se ve apagado', de: "      if (kg <= 0) clases.push('pr-rec--cero')", a: '' },
+    { nombre: 'el "+" del ingrediente en cero se deshabilita', de: 'aria-label="Más ${esc(it.ingrediente)}">+</button>`', a: 'aria-label="Más ${esc(it.ingrediente)}"${kg <= 0 ? \' disabled\' : \'\'}>+</button>`' },
+    { nombre: 'la columna Marca queda vacía', de: "      const marca = e.ins ? (e.ins.marca || e.ins.nombre || '') : ''", a: "      const marca = ''" },
+    { nombre: 'el ingrediente sin insumo igual pide lote', de: "        if (!insumosDe(estado.datosMasa ?? { insumos: [] }, it.ingrediente_id).length) {\n          return '<span class=\"pr-rec__nota\">no lleva lote</span>'\n        }", a: '' },
+    { nombre: 'un insumo de materia prima ofrece "Sin lote"', de: "        if (ins.tipo !== 'materia_prima') {", a: '        if (true) {' },
+    { nombre: 'no se puede escribir un lote que no figura', de: "        out.push({\n          insumo_id: ins.insumo_id, lote: null, manual: true, sinLote: false, stock: null,", a: "        if (false) out.push({\n          insumo_id: ins.insumo_id, lote: null, manual: true, sinLote: false, stock: null," },
+    { nombre: 'elegir un lote no guarda el insumo', de: '        ? { insumo_id: o.insumo_id, lote: o.manual || o.sinLote ? null : o.lote, manual: !!o.manual, sinLote: !!o.sinLote }', a: "        ? { insumo_id: '', lote: o.manual || o.sinLote ? null : o.lote, manual: !!o.manual, sinLote: !!o.sinLote }" },
+    { nombre: 'un "otro" en 0 se manda igual y la base lo rechaza', de: "        if (!(Number(o.kg ?? 0) > 0)) faltan.push(", a: '        if (false) faltan.push(' },
+    { nombre: 'el rechazo de una masa queda escrito sobre la siguiente', de: "    function mostrarReceta() {\n      estado.errorReceta = null", a: '    function mostrarReceta() {' },
+    // Number('') es 0: sin el guard, volver a la opción vacía del desplegable
+    // elige el PRIMER lote de la lista sin que nadie lo haya tocado.
+    { nombre: 'la opción vacía del desplegable elige el primer lote', de: "      const i = indice === '' || indice == null ? -1 : Number(indice)\n      const o = Number.isInteger(i) && i >= 0 ? ops[i] : undefined", a: '      const o = ops[Number(indice)]' },
+    { nombre: 'menos de un kilo se lee en kilos', de: "      if (n !== 0 && Math.abs(n) < 1) return `${formatearNumeroAr(Math.round(n * 1000000) / 1000, { decimales: 3, minimos: 0 })} g`", a: '' },
+
+    // ── Registrar, la banda y 6d ─────────────────────────────────────────
+    { nombre: 'un rechazo de la base se muestra genérico', de: "        estado.errorReceta = r.error?.message || 'La base no aceptó la masa.'", a: "        estado.errorReceta = 'La base no aceptó la masa.'" },
+    { nombre: 'la máquina queda elegida con datos viejos después de registrar', de: '      soltarMaquinaSala()\n      await mostrarSala()', a: '      await mostrarSala()' },
+    { nombre: 'un rechazo se lleva la masa puesta', de: "      if (r.resultado === 'rechazo') {", a: '      if (false) {' },
+    { nombre: 'la banda verde muestra el origen del borrador y no el de la base', de: '      if (res.origen) partes.push((ETIQUETA_ORIGEN[res.origen] ?? res.origen).toLowerCase())', a: '      partes.push(etiquetaBorrador(b))' },
+    { nombre: 'la banda verde no se puede apagar', de: '      estado.exitoMasa = null\n      pintarBandaExito()', a: '      pintarBandaExito()' },
+    { nombre: 'la banda de pendientes no dice que no la carguen de nuevo', de: "        return `${cual} quedó guardada en esta tablet. Se manda sola cuando vuelva la señal. No la cargues de nuevo.`", a: '        return `${cual} quedó guardada en esta tablet.`' },
+    { nombre: 'las pendientes no van primero en 6d', de: '      const html = pend.map(b => htmlFilaMasaPendiente(b)).join(\'\') +\n        lista.map(m => htmlFilaMasaTurno(m, tieneTarea(\'cargar\'))).join(\'\')', a: "      const html = lista.map(m => htmlFilaMasaTurno(m, tieneTarea('cargar'))).join('') +\n        pend.map(b => htmlFilaMasaPendiente(b)).join('')" },
+    { nombre: 'la pendiente no se ve tintada ni dice que espera', de: "      return '<div class=\"pr-masa-fila pr-masa-fila--espera\">' +", a: "      return '<div class=\"pr-masa-fila\">' +" },
+    { nombre: '6d muestra solo las masas de la máquina elegida', de: '        estado.masasTurno = await leerMasasSala(maquinasAbiertas().map(e => e.turno.id))', a: '        estado.masasTurno = await leerMasasSala([estado.salaTurno?.id].filter(Boolean))' },
+    { nombre: 'una anulada se ve como enviada y se puede anular', de: '      const estadoHtml = m.anulada', a: '      const estadoHtml = false' },
+    { nombre: 'el botón de anular aparece sin permiso de cargar', de: '(puedeAnular ? `<button type="button" class="pr-btn pr-btn--secundario" data-anular-masa=', a: '(true ? `<button type="button" class="pr-btn pr-btn--secundario" data-anular-masa=' },
+    { nombre: 'una masa sin turno se cuelga de una máquina libre', de: "      if (!turnoId) return '—'\n      const e = (estado.tablero ?? []).find(x => x.turno && x.turno.id === turnoId)", a: "      const e = (estado.tablero ?? []).find(x => x.turno?.id === turnoId)" },
     { nombre: 'anular sin motivo', de: "      if (motivo.length < 3) { err.textContent = 'Escribí el motivo (al menos 3 letras).'", a: "      if (motivo.length < 0) { err.textContent = 'Escribí el motivo (al menos 3 letras).'" },
     { nombre: 'anular manda otra masa', de: "supabase.rpc('anular_masa', { p_masa_id: estado.anulando, p_motivo: motivo })", a: "supabase.rpc('anular_masa', { p_masa_id: null, p_motivo: motivo })" },
-    { nombre: 'datos_para_masa sin el tipo', de: "supabase.rpc('datos_para_masa', { p_turno_id: b.turnoId, p_tipo_masa: b.tipo })", a: "supabase.rpc('datos_para_masa', { p_turno_id: b.turnoId, p_tipo_masa: null })" },
-    { nombre: 'rechazo con mensaje genérico', de: "        err.textContent = r.error?.message || 'La base no aceptó la masa.'", a: "        err.textContent = 'La base no aceptó la masa.'" },
-    { nombre: 'sin conexión no lo dice', de: "        err.textContent = 'Sin conexión. La masa quedó guardada en esta tablet y se envía sola cuando vuelva la señal. No la cargues de nuevo.'", a: "        err.textContent = ''" },
   ],
 })
