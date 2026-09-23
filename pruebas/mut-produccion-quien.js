@@ -29,7 +29,7 @@ correrMutaciones({
     // Muta el normalizador COMPARTIDO, no una sola punta: normalizar solo la
     // búsqueda y no los nombres (o al revés) deja el caso "agustin" andando
     // igual, y la mutación se escapaba sin que faltara cobertura.
-    { nombre: 'el buscador no ignora acentos', de: "      return String(t ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim()", a: "      return String(t ?? '').toLowerCase().trim()" },
+    { nombre: 'el buscador no ignora acentos', de: "      return String(t ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase()", a: "      return String(t ?? '').toLowerCase()" },
     { nombre: 'el buscador no filtra nada', de: '      return personas.filter(p => normalizarBusqueda(p.nombre).includes(q))', a: '      return personas' },
 
     // ── La barra de modos ──────────────────────────────────────────────────

@@ -69,6 +69,9 @@
       --pr-off-borde:           #C3C8D1;
       --pr-borde-control:       #D5D9E0;   /* borde de control de tablet, 2px */
       --pr-panel-gris:          #F4F5F7;
+      /* El bordó, aclarado, para un borde punteado de "no se puede todavía"
+         que igual se lee como bordó. No hay equivalente global. */
+      --pr-bordo-borde:         #C9A0AC;
     }
 
     /* El fondo de toda la pantalla toma el color del modo: desde la puerta se
@@ -118,6 +121,18 @@
     .pr-btn--peligro { background: var(--bordo); border-color: var(--bordo); color: #fff; }
     .pr-btn--ancho { width: 100%; }
     .pr-btn--grande { min-height: 80px; font-size: 1.35rem; }
+    /* La acción principal de una pantalla de tablet: 64px y naranja, que en
+       este proyecto significa "esto es lo que hay que tocar acá". Mismo
+       precedente que la tecla Entrar del PIN (rediseño parte 1). */
+    .pr-btn--accion {
+      min-height: 64px; font-size: 1.25rem; font-weight: 800;
+      background: var(--naranja); border-color: var(--naranja); color: #fff;
+    }
+    /* "Cerrar planilla de ayer" lleva las DOS clases, y --accion está definida
+       DESPUÉS de --peligro: con la misma especificidad gana la de abajo, así
+       que sin esta regla el botón saldría naranja en vez de bordó. Es la
+       trampa del orden entre variantes de la misma clase, ya documentada. */
+    .pr-btn--peligro.pr-btn--accion { background: var(--bordo); border-color: var(--bordo); }
 
     /* ── Tarjetas y avisos ────────────────────────────────────────────── */
     .pr-tarjeta {
@@ -304,6 +319,8 @@
     /* ── Formularios ───────────────────────────────────────────────────── */
     .pr-fila-titulo { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
     .pr-fila-titulo .pr-titulo { margin: 0; }
+    .pr-fila-titulo__col { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; min-width: 0; }
+    .pr-fila-titulo__botones { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
     .pr-espacio-arriba { margin-top: 1rem; }
     .pr-campos { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
     .pr-campo { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; }
@@ -328,7 +345,11 @@
     }
     .pr-segmento__opcion[aria-pressed="true"] { background: var(--azul); border-color: var(--azul); color: #fff; }
 
-    /* ── Tablero de máquinas ──────────────────────────────────────────── */
+    /* ── Tarjeta de máquina, la base ──────────────────────────────────────
+       La comparten el TABLERO del encargado, la elección de máquina de la Sala
+       de masa y el historial. Lo que sigue acá es lo de siempre; el rediseño
+       del tablero (parte 2) va abajo, ACOTADO a .pr-tablero, para no cambiarle
+       el aspecto a las otras dos pantallas, que se rehacen en otra parte. */
     .pr-maquina {
       min-height: 120px; padding: 1rem 1.125rem; border-radius: var(--radio-tarjeta);
       border: 2px solid var(--borde-tarjeta); background: var(--color-fondo); box-shadow: var(--sombra-tarjeta);
@@ -340,19 +361,164 @@
     .pr-maquina__nombre { font-size: 1.35rem; font-weight: 800; }
     .pr-maquina__estado { font-size: 1.125rem; font-weight: 600; color: var(--pr-texto-secundario); }
     .pr-maquina--abierta .pr-maquina__estado { color: var(--azul-oscuro); }
-    .pr-maquina__parada { font-weight: 800; color: var(--bordo); }
 
-    /* Filas de máquinas para abrir: casilla + nombre + operario. */
-    .pr-abrir-fila {
-      display: grid; grid-template-columns: auto 1fr minmax(0, 18rem); gap: 0.75rem; align-items: center;
-      padding: 0.75rem; border: 2px solid var(--color-borde); border-radius: var(--radio-input); margin-bottom: 0.625rem;
+    /* ── Tablero de máquinas ──────────────────────────────────────────────
+       Una tarjeta por máquina. El LOTE es el número más grande de la tarjeta
+       porque es lo que se copia a la planilla de papel. El orden lo decide
+       ordenTablero(): abierta de ayer → paradas → abiertas → libres. */
+    /* 32px y 28px son los del diseño para estas dos pantallas. Van acotados:
+       .pr-titulo la usan todas las pantallas del módulo. */
+    #pr-produccion .pr-titulo { font-size: 2rem; }
+    .pr-abrir__panel .pr-titulo { font-size: 1.75rem; }
+    .pr-tablero { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); }
+    .pr-tablero .pr-maquina { min-height: 150px; padding: 1.125rem 1.375rem; }
+    .pr-tablero .pr-maquina__nombre { font-size: 1.5rem; }
+    .pr-tablero .pr-maquina__estado { font-size: 1.25rem; font-weight: 400; color: var(--pr-texto-secundario); margin-top: auto; }
+    .pr-maquina__cab { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .pr-maquina__chip {
+      font-size: 1.125rem; font-weight: 700; border-radius: 999px; padding: 0.15rem 0.75rem; white-space: nowrap;
+      background: var(--pr-prod-fondo); color: var(--pr-prod-activo);
     }
-    .pr-abrir-fila--elegida { border-color: var(--azul); background: var(--azul-suave); }
-    .pr-casilla { width: 36px; height: 36px; accent-color: var(--azul); }
-    .pr-abrir-fila__nombre { font-size: 1.25rem; font-weight: 800; }
+    .pr-maquina__lote { font-size: 3.25rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1.05; }
+    .pr-maquina__cuenta { font-size: 1.25rem; font-weight: 700; }
+    /* Abierta hoy: franja izquierda de 8px en el gris del modo Producción. */
+    .pr-maquina--activa { border-left: 8px solid var(--pr-prod-activo); }
+    /* Parada: la MISMA franja pero en bordó, y el chip dice "Parada". El color
+       nunca va solo: el renglón dice desde cuándo y por qué. */
+    .pr-maquina--parada { border-left: 8px solid var(--bordo); }
+    .pr-maquina--parada .pr-maquina__chip { background: var(--bordo); color: #fff; }
+    .pr-tablero .pr-maquina--parada .pr-maquina__estado { color: var(--bordo-oscuro); font-weight: 700; }
+    /* Libre: gris y con el borde PUNTEADO, que dice "acá no hay nada" sin
+       depender del color. No es un botón: no lleva a ninguna planilla. */
+    .pr-maquina--libre { background: var(--pr-panel-gris); border: 2px dashed var(--pr-off-borde); box-shadow: none; }
+    .pr-maquina--libre .pr-maquina__nombre { color: var(--pr-texto-secundario); }
+    .pr-maquina__libre { font-size: 2.5rem; font-weight: 800; color: var(--color-texto-suave); margin-top: auto; }
+    /* La abierta de AYER va a TODO EL ANCHO y antes que todas: esa máquina no
+       se puede volver a abrir hasta que alguien cierre su planilla, así que no
+       se puede pasar por alto. */
+    .pr-maquina--ayer {
+      grid-column: 1 / -1; min-height: 0; border: 3px solid var(--bordo);
+      flex-direction: row; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .pr-sello {
+      background: var(--bordo); color: #fff; border-radius: 12px; padding: 0.625rem 1rem;
+      font-size: 1.125rem; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap;
+    }
+    .pr-maquina--ayer .pr-maquina__cuerpo { flex: 1 1 18rem; min-width: 0; }
+    .pr-maquina--ayer .pr-maquina__cab { display: flex; align-items: baseline; justify-content: flex-start; gap: 1rem; flex-wrap: wrap; }
+    .pr-maquina--ayer .pr-maquina__nombre { font-size: 1.625rem; }
+    .pr-maquina--ayer .pr-maquina__lote { font-size: 2.5rem; color: var(--bordo-oscuro); }
+    .pr-tablero .pr-maquina--ayer .pr-maquina__estado { font-size: 1.25rem; color: var(--bordo-oscuro); margin-top: 0.125rem; }
+
+    /* ── Abrir turno ──────────────────────────────────────────────────────
+       Fecha y turno a la izquierda; a la derecha una fila por máquina con su
+       casilla y sus operarios. */
+    .pr-abrir { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 1.25rem; align-items: stretch; }
+    /* El margen de .pr-tarjeta sobra adentro de una grilla que ya tiene gap. */
+    .pr-abrir > .pr-tarjeta { margin-bottom: 0; }
+    .pr-abrir__panel { display: flex; flex-direction: column; gap: 1.375rem; }
+    .pr-abrir__pie { margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+    .pr-abrir__resumen { font-size: 1.125rem; color: var(--pr-texto-secundario); text-align: center; }
+    /* La fecha va con ‹ ›: en la tablet, con harina en las manos, el
+       calendario nativo no se puede usar. Nunca va hacia adelante de hoy. */
+    .pr-fecha { display: flex; gap: 0.5rem; align-items: stretch; }
+    .pr-fecha__paso {
+      width: 56px; min-height: 64px; flex-shrink: 0; font: inherit; font-size: 1.625rem; font-weight: 700;
+      border-radius: 14px; border: 2px solid var(--pr-borde-control); background: var(--color-fondo);
+      color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-fecha__paso:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pr-fecha__valor {
+      flex: 1; min-height: 64px; min-width: 0; border: 2px solid var(--pr-borde-control); border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1;
+    }
+    .pr-fecha__dia { font-size: 1.375rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .pr-fecha__nota { font-size: 1.125rem; color: var(--color-texto-suave); }
+    .pr-segmento--columna { flex-direction: column; flex-wrap: nowrap; }
+    .pr-segmento--columna .pr-segmento__opcion { min-height: 64px; font-size: 1.375rem; flex: 0 0 auto; }
+    .pr-segmento--columna .pr-segmento__opcion[aria-pressed="true"] {
+      background: var(--pr-prod-activo); border-color: var(--pr-prod-activo); color: var(--pr-prod-letra);
+    }
+    .pr-abrir-fila { padding: 0.75rem 0; border-bottom: 1px solid var(--color-borde); }
+    .pr-abrir-fila__cab { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    /* La casilla es un checkbox DE VERDAD —lo lee un lector de pantalla—
+       dibujado a 56×56 para marcarlo con el dedo. */
+    .pr-casilla {
+      width: 56px; height: 56px; flex-shrink: 0; margin: 0; appearance: none; -webkit-appearance: none;
+      border: 3px solid var(--pr-prod-apagado-borde); border-radius: 12px; background: var(--color-fondo);
+      cursor: pointer; touch-action: manipulation; display: grid; place-content: center;
+    }
+    .pr-casilla::after { content: '\2713'; font-size: 1.875rem; font-weight: 900; color: var(--pr-prod-letra); visibility: hidden; }
+    .pr-casilla:checked { background: var(--pr-prod-activo); border-color: var(--pr-prod-activo); }
+    .pr-casilla:checked::after { visibility: visible; }
+    .pr-casilla:disabled { cursor: not-allowed; border-style: dashed; border-color: var(--pr-bordo-borde); background: var(--bordo-suave); }
+    .pr-abrir-fila__nombre { width: 150px; flex-shrink: 0; font-size: 1.375rem; font-weight: 800; overflow-wrap: anywhere; }
+    /* La tira de chips de operarios: la comparten la fila de Abrir turno y el
+       bloque de la planilla, por eso el nombre no nombra ninguna de las dos. */
+    .pr-ops { flex: 1 1 12rem; display: flex; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+    .pr-abrir-fila__nota { flex: 1 1 12rem; font-size: 1.125rem; color: var(--color-texto-suave); }
+    .pr-abrir-fila--bloqueada .pr-abrir-fila__nombre { color: var(--bordo-oscuro); }
+    .pr-abrir-fila--bloqueada .pr-abrir-fila__nota { color: var(--bordo-oscuro); font-weight: 700; }
+    .pr-chip-op {
+      min-height: 56px; max-width: 100%; display: inline-flex; align-items: center; padding-left: 1rem;
+      border-radius: 12px; background: var(--pr-prod-fondo); font-size: 1.25rem; font-weight: 700;
+      color: var(--color-texto); overflow-wrap: anywhere;
+    }
+    .pr-chip-op--fuera { background: var(--pr-panel-gris); color: var(--pr-texto-secundario); font-weight: 600; padding-right: 1rem; }
+    .pr-chip-op__x {
+      width: 52px; min-height: 56px; flex-shrink: 0; border: none; background: none; font: inherit;
+      font-size: 1.5rem; color: var(--pr-texto-secundario); cursor: pointer; touch-action: manipulation;
+    }
+    /* El buscador se abre DENTRO de la fila que lo pidió y no en un modal: así
+       no se pierde de vista a qué máquina se le está poniendo el operario. */
+    .pr-buscador-op {
+      margin: 0.625rem 0 0 72px; border: 2px solid var(--pr-prod-activo); border-radius: 14px;
+      padding: 0.625rem; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0;
+    }
+    .pr-buscador-op__linea { display: flex; gap: 0.5rem; }
+    .pr-buscador-op__linea .pr-input { flex: 1; min-height: 56px; font-size: 1.25rem; min-width: 0; }
+    .pr-buscador-op__res { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pr-op {
+      flex: 1 1 12rem; min-height: 56px; padding: 0 1rem; border-radius: 12px;
+      border: 2px solid var(--pr-borde-control); background: var(--color-fondo); color: var(--color-texto);
+      font: inherit; font-size: 1.25rem; font-weight: 700; text-align: left;
+      cursor: pointer; touch-action: manipulation; overflow-wrap: anywhere;
+    }
+    .pr-op:disabled {
+      background: var(--pr-panel-gris); border-color: var(--borde-tarjeta); color: var(--color-texto-suave);
+      font-size: 1.125rem; font-weight: 600; cursor: not-allowed;
+    }
+    .pr-op__nada { font-size: 1.125rem; color: var(--pr-texto-secundario); }
+
+    /* Los lotes recién asignados: el número se copia a la planilla de papel
+       desde un metro de distancia. */
+    .pr-exito-turno { display: flex; align-items: center; gap: 1rem; }
+    .pr-exito-turno__tilde {
+      width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; background: var(--verde); color: #fff;
+      font-size: 2rem; font-weight: 900; display: flex; align-items: center; justify-content: center;
+    }
+    .pr-exito-turno__titulo { font-size: 2rem; font-weight: 900; }
+    .pr-lotes { display: grid; gap: 1.125rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+    .pr-lote-tarjeta {
+      background: var(--color-fondo); border: 2px solid var(--borde-tarjeta); border-radius: var(--radio-tarjeta);
+      padding: 1.625rem; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; overflow-wrap: anywhere;
+    }
+    .pr-lote-tarjeta__maquina { font-size: 1.625rem; font-weight: 800; }
+    .pr-lote-tarjeta__lote { font-size: 7.75rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1; }
+    .pr-lote-tarjeta__ops { font-size: 1.25rem; color: var(--pr-texto-secundario); }
+
+    @media (max-width: 1000px) {
+      .pr-abrir { grid-template-columns: minmax(0, 1fr); }
+      .pr-buscador-op { margin-left: 0; }
+    }
     @media (max-width: 600px) {
-      .pr-abrir-fila { grid-template-columns: auto 1fr; }
-      .pr-abrir-fila .pr-select { grid-column: 1 / -1; }
+      .pr-abrir-fila__nombre { width: auto; }
+      .pr-lote-tarjeta__lote { font-size: 4.5rem; }
+      /* En el celular las tarjetas se apilan y el diseño las achica: nombre de
+         22px y lote de 40px, contra 24 y 52 de la tablet. */
+      .pr-tablero .pr-maquina__nombre { font-size: 1.375rem; }
+      .pr-maquina__lote { font-size: 2.5rem; }
+      .pr-maquina--ayer .pr-maquina__lote { font-size: 1.75rem; }
     }
 
     /* ── Planilla ──────────────────────────────────────────────────────── */
@@ -581,54 +747,83 @@
         </div>
       </section>
 
-      <!-- B3: el inicio del encargado. Cada máquina activa con su estado. -->
+      <!-- B3: el inicio del encargado. Cada máquina activa con su estado.
+           Rediseño parte 2: el turno y la fecha al lado del título, "+ Abrir
+           otra máquina" arriba a la derecha, y las tarjetas en grilla, con la
+           abierta de ayer a todo el ancho antes que todas. -->
       <section id="pr-produccion" hidden>
         <div class="pr-tarjeta">
           <div class="pr-fila-titulo">
-            <h1 class="pr-titulo">Máquinas</h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-actualizar">Actualizar</button>
+            <div class="pr-fila-titulo__col">
+              <h1 class="pr-titulo">Máquinas</h1>
+              <span class="pr-texto-suave" id="pr-tablero-cuando"></span>
+            </div>
+            <div class="pr-fila-titulo__botones">
+              <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-actualizar">Actualizar</button>
+              <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-abrir-turno">+ Abrir otra máquina</button>
+            </div>
           </div>
           <div id="pr-tablero-aviso"></div>
-          <div class="pr-grilla" id="pr-tablero"></div>
-          <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-btn-abrir-turno">Abrir turno</button>
+          <div class="pr-tablero" id="pr-tablero"></div>
         </div>
       </section>
 
       <!-- B3: abrir turno. Una sola llamada a abrir_turnos con todas las
-           máquinas elegidas, cada una con su operario. -->
-      <section class="pr-tarjeta" id="pr-abrir" hidden>
-        <h1 class="pr-titulo">Abrir turno</h1>
-        <p class="pr-texto-suave" id="pr-abrir-encargado"></p>
-        <div class="pr-campos">
-          <label class="pr-campo">
-            <span class="pr-campo__rotulo">Fecha</span>
-            <input type="date" id="pr-abrir-fecha" class="pr-input">
-          </label>
-          <div class="pr-campo">
-            <span class="pr-campo__rotulo">Turno</span>
-            <div class="pr-segmento" id="pr-abrir-turnos" role="group" aria-label="Turno">
-              <button type="button" class="pr-segmento__opcion" data-turno="Mañana" aria-pressed="false">Mañana</button>
-              <button type="button" class="pr-segmento__opcion" data-turno="Tarde" aria-pressed="false">Tarde</button>
-              <button type="button" class="pr-segmento__opcion" data-turno="Noche" aria-pressed="false">Noche</button>
+           máquinas elegidas, cada una con SUS operarios (la RPC recibe
+           operarios: [uuid, …] por máquina). -->
+      <section id="pr-abrir" hidden>
+        <div class="pr-abrir">
+          <div class="pr-tarjeta pr-abrir__panel">
+            <h1 class="pr-titulo">Abrir turno</h1>
+            <div>
+              <span class="pr-campo__rotulo">Fecha</span>
+              <div class="pr-fecha">
+                <button type="button" class="pr-fecha__paso" data-abrir-dia="-1" aria-label="Un día antes">&lsaquo;</button>
+                <div class="pr-fecha__valor">
+                  <span class="pr-fecha__dia" id="pr-abrir-fecha-dia"></span>
+                  <span class="pr-fecha__nota" id="pr-abrir-fecha-nota"></span>
+                </div>
+                <button type="button" class="pr-fecha__paso" data-abrir-dia="1" id="pr-abrir-dia-mas" aria-label="Un día después">&rsaquo;</button>
+              </div>
+            </div>
+            <div>
+              <span class="pr-campo__rotulo">Turno</span>
+              <div class="pr-segmento pr-segmento--columna" id="pr-abrir-turnos" role="group" aria-label="Turno">
+                <button type="button" class="pr-segmento__opcion" data-turno="Mañana" aria-pressed="false">Mañana</button>
+                <button type="button" class="pr-segmento__opcion" data-turno="Tarde" aria-pressed="false">Tarde</button>
+                <button type="button" class="pr-segmento__opcion" data-turno="Noche" aria-pressed="false">Noche</button>
+              </div>
+            </div>
+            <!-- El error va PEGADO al botón que lo provoca, nunca arriba de
+                 todo (regla del handoff). -->
+            <div class="pr-abrir__pie">
+              <p class="pr-error" id="pr-abrir-error" hidden></p>
+              <span class="pr-abrir__resumen" id="pr-abrir-resumen"></span>
+              <button type="button" class="pr-btn pr-btn--accion pr-btn--ancho" id="pr-abrir-confirmar">Abrir turno</button>
+              <button type="button" class="pr-btn pr-btn--secundario pr-btn--ancho" id="pr-abrir-cancelar">Cancelar</button>
             </div>
           </div>
-        </div>
-        <h2 class="pr-subtitulo">¿Qué máquinas arrancan?</h2>
-        <div id="pr-abrir-aviso-operarios"></div>
-        <div id="pr-abrir-maquinas"></div>
-        <p class="pr-error" id="pr-abrir-error" hidden></p>
-        <div class="pr-acciones">
-          <button type="button" class="pr-btn pr-btn--secundario" id="pr-abrir-cancelar">Cancelar</button>
-          <button type="button" class="pr-btn pr-btn--grande" id="pr-abrir-confirmar">Abrir turno</button>
+          <div class="pr-tarjeta">
+            <h2 class="pr-subtitulo">¿Qué máquinas arrancan?</h2>
+            <p class="pr-texto-suave" id="pr-abrir-encargado"></p>
+            <div id="pr-abrir-aviso-operarios"></div>
+            <div id="pr-abrir-maquinas"></div>
+          </div>
         </div>
       </section>
 
-      <!-- B3: los lotes que asignó la base, bien grandes. -->
+      <!-- B3: los lotes que asignó la base, a 124px, para copiarlos a la
+           planilla de papel sin acercarse a la tablet. -->
       <section class="pr-tarjeta" id="pr-abiertos" hidden>
-        <h1 class="pr-titulo">Turno abierto</h1>
-        <p class="pr-texto-suave">Estos son los lotes de cada máquina:</p>
-        <div class="pr-grilla" id="pr-abiertos-lista"></div>
-        <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-abiertos-volver">Volver a las máquinas</button>
+        <div class="pr-exito-turno">
+          <span class="pr-exito-turno__tilde" aria-hidden="true">&#10003;</span>
+          <div>
+            <div class="pr-exito-turno__titulo" id="pr-abiertos-titulo">Turno abierto</div>
+            <div class="pr-texto-suave" id="pr-abiertos-sub">Anotá estos lotes</div>
+          </div>
+        </div>
+        <div class="pr-lotes pr-espacio-arriba" id="pr-abiertos-lista"></div>
+        <button type="button" class="pr-btn pr-btn--accion pr-btn--ancho pr-espacio-arriba" id="pr-abiertos-volver">Listo, ir a las máquinas</button>
       </section>
 
       <!-- B4: la planilla de una máquina abierta. Las masas las carga el
@@ -645,6 +840,13 @@
             <button type="button" class="pr-btn pr-btn--secundario" id="pr-planilla-volver">‹ Máquinas</button>
           </div>
           <div id="pr-planilla-datos"></div>
+          <!-- Los operarios se pueden sumar y sacar con el turno abierto.
+               quitar_operario_turno NO borra la fila: le pone `hasta`, así que
+               el que se fue se sigue viendo con su hora de salida. -->
+          <div class="pr-espacio-arriba">
+            <span class="pr-campo__rotulo">Operarios</span>
+            <div id="pr-planilla-operarios"></div>
+          </div>
           <p class="pr-error" id="pr-planilla-error" hidden></p>
           <div class="pr-acciones">
             <button type="button" class="pr-btn pr-btn--secundario pr-btn--grande" id="pr-btn-parada">Parada</button>
@@ -910,9 +1112,10 @@
       tablero: null,       // estadoMaquinas() de la unidad, o null si no se pudo leer
       hayTurnoAbierto: false,
       abrir: null,         // el formulario de abrir turno
-      abrirOperarios: [],
+      operarios: [],       // las personas que pueden ser operario en esta unidad
       abriendo: false,
       planilla: null,      // { turno, operarios, masas, paradas, maquinaNombre }
+      opsPlanilla: { buscando: false, busqueda: '', guardando: false },
       catalogo: null,      // { productos, presentaciones, marcas } de la unidad
       cierre: null,        // el borrador del cierre: { hora, scrap, obs, productos }
       agregar: null,       // el producto que se está agregando
@@ -2020,12 +2223,15 @@
       const { data: maquinas, error: e1 } = await supabase.from('maquinas')
         .select('id, nombre, orden').eq('unidad_negocio_id', unidadId).eq('activa', true).order('orden').order('nombre')
       if (e1) throw e1
+      // SOLO 'abierto'. Un turno 'pendiente_completar' NO está abierto: alguien
+      // forzó su cierre y la máquina quedó libre, así que el tablero no la
+      // puede mostrar ocupada.
       const { data: turnos, error: e2 } = await supabase.from('turnos_produccion')
         .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en')
         .eq('unidad_negocio_id', unidadId).eq('estado', 'abierto')
       if (e2) throw e2
       const ids = (turnos ?? []).map(t => t.id)
-      let masas = [], paradas = []
+      let masas = [], paradas = [], sublotes = []
       if (ids.length) {
         const r1 = await supabase.from('masas').select('turno_id').in('turno_id', ids).eq('anulada', false)
         if (r1.error) throw r1.error
@@ -2033,19 +2239,23 @@
         const r2 = await supabase.from('paradas_produccion').select('id, turno_id, motivo, inicio').in('turno_id', ids).is('fin', null)
         if (r2.error) throw r2.error
         paradas = r2.data ?? []
+        const r3 = await supabase.from('produccion_items').select('turno_id').in('turno_id', ids).eq('anulado', false)
+        if (r3.error) throw r3.error
+        sublotes = r3.data ?? []
       }
-      return { maquinas: maquinas ?? [], turnos: turnos ?? [], masas, paradas }
+      return { maquinas: maquinas ?? [], turnos: turnos ?? [], masas, paradas, sublotes }
     }
 
     // Una entrada por máquina activa: su turno abierto (o null), cuántas masas
-    // lleva y su parada en curso (o null).
-    function estadoMaquinas({ maquinas, turnos, masas, paradas }) {
+    // y cuántos sublotes lleva, y su parada en curso (o null).
+    function estadoMaquinas({ maquinas, turnos, masas, paradas, sublotes }) {
       return maquinas.map(m => {
         const turno = turnos.find(t => t.maquina_id === m.id) ?? null
         return {
           maquina: m,
           turno,
           masas: turno ? masas.filter(x => x.turno_id === turno.id).length : 0,
+          sublotes: turno ? (sublotes ?? []).filter(x => x.turno_id === turno.id).length : 0,
           parada: turno ? (paradas.find(p => p.turno_id === turno.id) ?? null) : null,
         }
       })
@@ -2055,29 +2265,106 @@
       return n === 1 ? '1 masa' : `${n} masas`
     }
 
-    function textoEstadoMaquina(e) {
-      if (!e.turno) return 'Libre'
-      const hora = horaArgentina(e.turno.abierto_en)
-      return `Lote ${e.turno.lote} · abierta${hora ? ` desde ${hora}` : ''} · ${textoMasas(e.masas)}`
+    function textoSublotes(n) {
+      return n === 1 ? '1 sublote' : `${n} sublotes`
     }
 
-    // Una máquina abierta es un botón que lleva a su planilla; una libre, no.
-    function htmlMaquina(e) {
-      const estadoTxt = esc(textoEstadoMaquina(e))
+    // "martes", en la zona de Argentina. Con una fecha ilegible devuelve ''.
+    function diaDeLaSemana(iso) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso ?? ''))) return ''
+      const d = new Date(`${iso}T12:00:00Z`)
+      if (Number.isNaN(d.getTime())) return ''
+      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, weekday: 'long' }).format(d)
+    }
+
+    // "22/09", sacado del propio ISO y NO de Intl: es-AR devuelve el mes sin el
+    // cero adelante ("21/9") y acá los dos números van parejos.
+    function diaMes(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? ''))
+      return m ? `${m[3]}/${m[2]}` : ''
+    }
+
+    // Una máquina "abierta de ayer" es la que tiene un turno abierto con fecha
+    // anterior a hoy: no se puede volver a abrir hasta que alguien cierre su
+    // planilla. Sin fecha legible NO se afirma nada y se trata como una
+    // abierta normal — decir "de ayer" sin poder saberlo es peor que no
+    // decirlo.
+    function esDeAyer(e, hoy) {
+      const f = e?.turno?.fecha
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(f ?? '')) && String(f) < String(hoy)
+    }
+
+    // 0 de ayer · 1 parada · 2 abierta · 3 libre.
+    function rangoTablero(e, hoy) {
+      if (!e.turno) return 3
+      if (esDeAyer(e, hoy)) return 0
+      return e.parada ? 1 : 2
+    }
+
+    // El orden del tablero: la de ayer primero, después las paradas, las
+    // abiertas y las libres. ESTABLE: dentro de cada grupo se conserva el
+    // orden de las máquinas (el `orden` de la tabla y después el nombre).
+    function ordenTablero(entradas, hoy) {
+      return (entradas ?? []).map((e, i) => [e, i])
+        .sort((a, b) => (rangoTablero(a[0], hoy) - rangoTablero(b[0], hoy)) || (a[1] - b[1]))
+        .map(par => par[0])
+    }
+
+    // "Turno Mañana · martes 22/09". El turno sale de las máquinas abiertas
+    // HOY: si no hay ninguna no se inventa, y queda solo la fecha.
+    function encabezadoTablero(entradas, hoy) {
+      const t = (entradas ?? []).find(e => e.turno && e.turno.fecha === hoy && e.turno.turno)?.turno.turno
+      const dia = diaDeLaSemana(hoy), dm = diaMes(hoy)
+      return [t ? `Turno ${t}` : '', dia && dm ? `${dia} ${dm}` : ''].filter(Boolean).join(' · ')
+    }
+
+    // Tres tarjetas distintas. La de AYER va a todo el ancho y antes que todas
+    // (lo decide ordenTablero): esa máquina no se puede volver a abrir hasta
+    // cerrarla, así que no se puede pasar por alto. Una abierta es un botón
+    // que lleva a su planilla; una libre, no.
+    function htmlMaquina(e, hoy) {
+      const nombreEsc = esc(e.maquina.nombre)
       if (!e.turno) {
-        return `<div class="pr-maquina"><span class="pr-maquina__nombre">${esc(e.maquina.nombre)}</span><span class="pr-maquina__estado">${estadoTxt}</span></div>`
+        return `<div class="pr-maquina pr-maquina--libre">` +
+          `<div class="pr-maquina__cab"><span class="pr-maquina__nombre">${nombreEsc}</span></div>` +
+          `<span class="pr-maquina__libre">Libre</span></div>`
       }
-      const parada = e.parada ? `<span class="pr-maquina__parada">En parada: ${esc(e.parada.motivo)}</span>` : ''
-      return `<button type="button" class="pr-maquina pr-maquina--abierta" data-planilla="${esc(e.turno.id)}">` +
-        `<span class="pr-maquina__nombre">${esc(e.maquina.nombre)}</span><span class="pr-maquina__estado">${estadoTxt}</span>${parada}</button>`
+      const hora = horaArgentina(e.turno.abierto_en)
+      const cuentaHtml = `${esc(textoMasas(e.masas))} · ${esc(textoSublotes(e.sublotes ?? 0))}`
+      if (esDeAyer(e, hoy)) {
+        const dia = diaDeLaSemana(e.turno.fecha), dm = diaMes(e.turno.fecha)
+        const cuando = [dia && dm ? `Abierta el ${dia} ${dm}` : 'Abierta', hora ? `a las ${hora}` : ''].filter(Boolean).join(' ')
+        return `<div class="pr-maquina pr-maquina--ayer">` +
+          `<span class="pr-sello">ABIERTA DE AYER</span>` +
+          `<div class="pr-maquina__cuerpo">` +
+          `<div class="pr-maquina__cab"><span class="pr-maquina__nombre">${nombreEsc}</span>` +
+          `<span class="pr-maquina__lote">Lote ${esc(e.turno.lote)}</span></div>` +
+          `<div class="pr-maquina__estado">${esc(cuando)} · ${cuentaHtml}. Hay que cerrarla antes de volver a usarla.</div>` +
+          `</div>` +
+          `<button type="button" class="pr-btn pr-btn--peligro pr-btn--accion" data-planilla="${esc(e.turno.id)}">Cerrar planilla de ayer</button>` +
+          `</div>`
+      }
+      const parado = !!e.parada
+      const pieHtml = parado
+        ? `Parada desde ${esc(horaArgentina(e.parada.inicio) || '—')} · ${esc(e.parada.motivo)}`
+        : `abierta ${esc(hora || '—')}`
+      return `<button type="button" class="pr-maquina pr-maquina--${parado ? 'parada' : 'activa'}" data-planilla="${esc(e.turno.id)}">` +
+        `<div class="pr-maquina__cab"><span class="pr-maquina__nombre">${nombreEsc}</span>` +
+        `<span class="pr-maquina__chip">${parado ? 'Parada' : 'Abierta'}</span></div>` +
+        `<span class="pr-maquina__lote">${esc(e.turno.lote)}</span>` +
+        `<span class="pr-maquina__estado">${pieHtml}</span>` +
+        `<span class="pr-maquina__cuenta">${cuentaHtml}</span>` +
+        `</button>`
     }
 
     async function mostrarTablero() {
       const cont = document.getElementById('pr-tablero')
       const aviso = document.getElementById('pr-tablero-aviso')
+      const cuando = document.getElementById('pr-tablero-cuando')
       mostrarVista('pr-produccion')
       cont.innerHTML = '<p class="pr-texto-suave">Cargando las máquinas…</p>'
       aviso.innerHTML = ''
+      cuando.textContent = ''
       const btn = document.getElementById('pr-btn-abrir-turno')
       btn.disabled = true
       try {
@@ -2095,9 +2382,11 @@
         aviso.innerHTML = '<div class="pr-aviso">Esta unidad no tiene máquinas activas. Se cargan en Configuración → Máquinas.</div>'
         return
       }
-      cont.innerHTML = estado.tablero.map(htmlMaquina).join('')
+      const hoy = hoyArgentina()
+      cuando.textContent = encabezadoTablero(estado.tablero, hoy)
+      cont.innerHTML = ordenTablero(estado.tablero, hoy).map(e => htmlMaquina(e, hoy)).join('')
       btn.disabled = !estado.tablero.some(e => !e.turno)
-      btn.textContent = estado.hayTurnoAbierto ? 'Abrir otra máquina' : 'Abrir turno'
+      btn.textContent = estado.hayTurnoAbierto ? '+ Abrir otra máquina' : 'Abrir turno'
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2105,72 +2394,198 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     const TURNOS = ['Mañana', 'Tarde', 'Noche']
-    const SIN_OPERARIO = '__sin__'
+    // El contexto de los data-* del buscador de operarios cuando se usa en la
+    // planilla. En Abrir turno el contexto es el índice de la fila.
+    const CTX_PLANILLA = 'planilla'
 
-    // El formulario de abrir: turno elegido y, por máquina libre, si arranca y
-    // con qué operario ('' = todavía sin elegir; SIN_OPERARIO = elegido "sin").
-    function formularioAbrirVacio(libres, horaAr) {
+    // El formulario de abrir: fecha, turno y una fila por máquina, con SUS
+    // operarios (la RPC recibe operarios: [uuid, …] por máquina). Las
+    // BLOQUEADAS son las que tienen un turno abierto de otro día: van al final,
+    // no se pueden marcar, y la fila dice qué hacer.
+    function formularioAbrirVacio(entradas, horaAr, hoy) {
+      const filas = (entradas ?? []).map(e => ({
+        maquinaId: e.maquina.id,
+        nombre: e.maquina.nombre,
+        elegida: false,
+        operarios: [],
+        buscando: false,
+        busqueda: '',
+        bloqueada: esDeAyer(e, hoy),
+        lote: e.turno?.lote ?? null,
+      }))
       return {
+        fecha: hoy,
         turno: turnoSegunHora(horaAr),
-        filas: libres.map(e => ({ maquinaId: e.maquina.id, nombre: e.maquina.nombre, elegida: false, operario: '' })),
+        filas: [...filas.filter(f => !f.bloqueada), ...filas.filter(f => f.bloqueada)],
       }
     }
 
-    function htmlOpcionesOperario(operarios, elegido) {
-      const opciones = [`<option value=""${elegido === '' ? ' selected' : ''}>Elegí el operario</option>`]
-      for (const o of operarios) {
-        opciones.push(`<option value="${esc(o.id)}"${o.id === elegido ? ' selected' : ''}>${esc(o.nombre)}</option>`)
-      }
-      opciones.push(`<option value="${SIN_OPERARIO}"${elegido === SIN_OPERARIO ? ' selected' : ''}>Sin operario</option>`)
-      return opciones.join('')
+    // "22/09/2026" + "hoy, martes". Con una fecha ilegible los dos renglones
+    // salen vacíos: no se inventa ningún día.
+    function textoFechaAbrir(iso, hoy) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso ?? ''))) return { dia: '', nota: '' }
+      const semana = diaDeLaSemana(iso)
+      let nota = semana
+      if (iso === hoy) nota = `hoy, ${semana}`
+      else if (iso === sumarDias(hoy, -1)) nota = `ayer, ${semana}`
+      return { dia: fechaDelDia(iso), nota }
     }
 
-    function htmlFilaAbrir(f, i, operarios) {
-      const clase = f.elegida ? ' pr-abrir-fila--elegida' : ''
-      return `<div class="pr-abrir-fila${clase}">` +
-        `<input type="checkbox" class="pr-casilla" data-abrir-maquina="${i}" aria-label="Abrir ${esc(f.nombre)}"${f.elegida ? ' checked' : ''}>` +
-        `<span class="pr-abrir-fila__nombre">${esc(f.nombre)}</span>` +
-        `<select class="pr-select" data-operario="${i}" aria-label="Operario de ${esc(f.nombre)}"${f.elegida ? '' : ' disabled'}>${htmlOpcionesOperario(operarios, f.operario)}</select>` +
+    function nombreOperario(personas, id) {
+      return (personas ?? []).find(p => p.id === id)?.nombre ?? '—'
+    }
+
+    // Dónde cae la búsqueda dentro del nombre, en índices del nombre ORIGINAL.
+    // Se normaliza carácter por carácter y se guarda de cuál salió cada uno:
+    // normalizar la cadena entera le cambia el largo ("José" → "jose") y el
+    // resaltado terminaría en negrita sobre las letras equivocadas.
+    function tramoCoincidencia(nombre, texto) {
+      const q = normalizarBusqueda(texto)
+      if (!q) return null
+      const s = String(nombre ?? '')
+      let plano = ''
+      const de = []
+      let k = 0
+      for (const ch of s) {
+        for (const c of textoPlano(ch)) { plano += c; de.push(k) }
+        k += ch.length
+      }
+      const i = plano.indexOf(q)
+      if (i < 0) return null
+      return [de[i], de[i + q.length - 1] + 1]
+    }
+
+    // La coincidencia en NEGRITA. Los tres pedazos se escapan por separado: el
+    // <strong> es del código y el nombre viene de la base.
+    function htmlResaltado(nombre, texto) {
+      const s = String(nombre ?? '')
+      const t = tramoCoincidencia(s, texto)
+      if (!t) return esc(s)
+      return esc(s.slice(0, t[0])) + '<strong>' + esc(s.slice(t[0], t[1])) + '</strong>' + esc(s.slice(t[1]))
+    }
+
+    // Los operarios que se pueden agregar: los que todavía NO están (`yaEstan`),
+    // y los que están en otro lado APAGADOS con su nota (`donde(id)` la dice).
+    // Apagados y no escondidos: si no, buscar a alguien que ya está puesto no
+    // devuelve nada y parece que el buscador no anda.
+    function candidatosOperario(personas, texto, yaEstan, donde) {
+      const puestos = new Set(yaEstan ?? [])
+      return personasFiltradas(personas ?? [], texto)
+        .filter(p => !puestos.has(p.id))
+        .map(p => {
+          const d = donde ? donde(p.id) : ''
+          return { id: p.id, nombre: p.nombre, nota: d, apagado: !!d }
+        })
+    }
+
+    // LOS data-* VAN CON NOMBRE LITERAL Y UN CONTEXTO COMO VALOR, y no con el
+    // nombre armado desde una variable: así el inventario de controles
+    // (pruebas/controles-produccion.js) los puede ver, y un control que
+    // desaparezca al mover código se nota. `ctx` es el índice de la fila en
+    // Abrir turno y CTX_PLANILLA en la planilla; como cada pantalla escucha
+    // sobre su propio contenedor, los mismos nombres no se pisan.
+    function htmlResultadosOperario(cands, texto, ctx) {
+      if (!cands.length) {
+        return `<span class="pr-op__nada">${texto ? `Nadie coincide con "${esc(texto)}".` : 'No hay operarios para agregar.'}</span>`
+      }
+      return cands.map(c => `<button type="button" class="pr-op" data-elegir-op="${esc(ctx)}" data-op-id="${esc(c.id)}"${c.apagado ? ' disabled' : ''}>` +
+        `${htmlResaltado(c.nombre, texto)}${c.nota ? ` · ${esc(c.nota)}` : ''}</button>`).join('')
+    }
+
+    // El buscador de operarios, el MISMO en Abrir turno y en la planilla. Se
+    // dibuja DENTRO de la fila que lo pidió y no en un modal: así no se pierde
+    // de vista a qué máquina se le está poniendo el operario.
+    function htmlBuscadorOperarios(cands, texto, ctx) {
+      return `<div class="pr-buscador-op">` +
+        `<div class="pr-buscador-op__linea">` +
+        `<input type="search" class="pr-input" data-buscar-op="${esc(ctx)}" value="${esc(texto)}" placeholder="Buscar por nombre…" autocomplete="off" aria-label="Buscar un operario">` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-cancelar-op="${esc(ctx)}">Cancelar</button>` +
+        `</div>` +
+        `<div class="pr-buscador-op__res" data-res-op="${esc(ctx)}">${htmlResultadosOperario(cands, texto, ctx)}</div>` +
         `</div>`
     }
 
+    function htmlChipOperario(nombre, ctx, id) {
+      return `<span class="pr-chip-op">${esc(nombre)}` +
+        `<button type="button" class="pr-chip-op__x" data-quitar-op="${esc(ctx)}" data-op-id="${esc(id)}" aria-label="Sacar a ${esc(nombre)}">&times;</button></span>`
+    }
+
+    function htmlFilaAbrir(f, i, operarios, form) {
+      if (f.bloqueada) {
+        return `<div class="pr-abrir-fila pr-abrir-fila--bloqueada"><div class="pr-abrir-fila__cab">` +
+          `<input type="checkbox" class="pr-casilla" data-abrir-maquina="${i}" disabled aria-label="${esc(f.nombre)}: abierta de ayer, no se puede marcar">` +
+          `<span class="pr-abrir-fila__nombre">${esc(f.nombre)}</span>` +
+          `<span class="pr-abrir-fila__nota">Abierta de ayer (lote ${esc(f.lote ?? '—')}). Cerrala primero.</span>` +
+          `</div></div>`
+      }
+      let derechaHtml = '<span class="pr-abrir-fila__nota">Sin marcar</span>'
+      let buscadorHtml = ''
+      if (f.elegida) {
+        const chipsHtml = f.operarios.map(id => htmlChipOperario(nombreOperario(operarios, id), i, id)).join('')
+        derechaHtml = `<div class="pr-ops">${chipsHtml}</div>` +
+          (f.buscando ? '' : `<button type="button" class="pr-btn pr-btn--secundario" data-mas-operario="${i}">+ Operario</button>`)
+        if (f.buscando) {
+          const donde = (id) => {
+            const otra = (form?.filas ?? []).find((x, j) => j !== i && x.elegida && !x.bloqueada && x.operarios.includes(id))
+            return otra ? `en ${otra.nombre}` : ''
+          }
+          buscadorHtml = htmlBuscadorOperarios(candidatosOperario(operarios, f.busqueda, f.operarios, donde), f.busqueda, i)
+        }
+      }
+      // La fila marcada NO se tiñe: lo dice la casilla de 56×56 llena y los
+      // chips de sus operarios, que es lo que muestra el diseño. Un fondo de
+      // más competiría con el bordó de la bloqueada, que sí tiene que saltar.
+      return `<div class="pr-abrir-fila"><div class="pr-abrir-fila__cab">` +
+        `<input type="checkbox" class="pr-casilla" data-abrir-maquina="${i}" aria-label="Abrir ${esc(f.nombre)}"${f.elegida ? ' checked' : ''}>` +
+        `<span class="pr-abrir-fila__nombre">${esc(f.nombre)}</span>${derechaHtml}</div>${buscadorHtml}</div>`
+    }
+
     // Qué falta para poder abrir. Lista vacía = se puede.
+    //
+    // Una máquina marcada SIN operarios se puede abrir: abrir_turnos no los
+    // exige y tampoco valida su puesto (eso solo lo hace agregar_operario_turno,
+    // verificado con pg_get_functiondef el 22/09/2026). Que falte alguno se ve
+    // en el resumen "N máquinas · M operarios", y se suman durante el turno.
     function faltanParaAbrir(form, fecha) {
       const faltan = []
       if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha ?? '')) faltan.push('la fecha')
       else if (fecha > hoyArgentina()) faltan.push('una fecha que no sea futura')
       if (!TURNOS.includes(form.turno)) faltan.push('el turno')
-      const elegidas = form.filas.filter(f => f.elegida)
-      if (!elegidas.length) faltan.push('al menos una máquina')
-      const sinOperario = elegidas.filter(f => f.operario === '')
-      if (sinOperario.length) faltan.push(`el operario de ${sinOperario.map(f => f.nombre).join(', ')}`)
+      if (!form.filas.some(f => f.elegida && !f.bloqueada)) faltan.push('al menos una máquina')
       return faltan
     }
 
-    // El payload de abrir_turnos, en el orden de la pantalla. "Sin operario"
-    // viaja como null (la base lo acepta: abrir_turno no exige operarios).
+    function resumenAbrir(form) {
+      const elegidas = (form?.filas ?? []).filter(f => f.elegida && !f.bloqueada)
+      const ops = elegidas.reduce((n, f) => n + f.operarios.length, 0)
+      return `${elegidas.length === 1 ? '1 máquina' : `${elegidas.length} máquinas`} · ` +
+        `${ops === 1 ? '1 operario' : `${ops} operarios`}`
+    }
+
+    // El payload de abrir_turnos, en el orden de la pantalla. Cada máquina
+    // viaja con SUS operarios en `operarios`, que es la clave que la RPC lee.
     function parametrosAbrirTurnos(form, fecha, encargadoId) {
       return {
         p_fecha: fecha,
         p_turno: form.turno,
         p_encargado_id: encargadoId,
-        p_maquinas: form.filas.filter(f => f.elegida).map(f => ({
+        p_maquinas: form.filas.filter(f => f.elegida && !f.bloqueada).map(f => ({
           maquina_id: f.maquinaId,
-          operario_id: f.operario === SIN_OPERARIO || f.operario === '' ? null : f.operario,
+          operarios: [...f.operarios],
         })),
       }
     }
 
     function mostrarAbrir() {
-      const libres = (estado.tablero ?? []).filter(e => !e.turno)
-      if (!libres.length) return
-      estado.abrir = formularioAbrirVacio(libres, horaDelDiaAr())
-      const fecha = document.getElementById('pr-abrir-fecha')
-      fecha.value = hoyArgentina()
-      fecha.max = hoyArgentina()
+      const hoy = hoyArgentina()
+      // Las libres, para abrir; y las abiertas de OTRO día, que aparecen al
+      // final bloqueadas porque hay que cerrarlas antes de volver a usarlas.
+      const ofrecibles = (estado.tablero ?? []).filter(e => !e.turno || esDeAyer(e, hoy))
+      if (!ofrecibles.some(e => !e.turno)) return
+      estado.abrir = formularioAbrirVacio(ofrecibles, horaDelDiaAr(), hoy)
       document.getElementById('pr-abrir-encargado').textContent = `Encargado: ${estado.persona?.nombre ?? ''}`
       const { personas, sinConfigurar } = personasParaPuesto(estado.personal, 'operario')
-      estado.abrirOperarios = personas
+      estado.operarios = personas
       document.getElementById('pr-abrir-aviso-operarios').innerHTML = htmlAvisoPuestos(sinConfigurar, 'operario')
       document.getElementById('pr-abrir-error').hidden = true
       pintarAbrir()
@@ -2182,23 +2597,85 @@
       for (const b of document.querySelectorAll('#pr-abrir-turnos [data-turno]')) {
         b.setAttribute('aria-pressed', b.dataset.turno === form.turno ? 'true' : 'false')
       }
+      const hoy = hoyArgentina()
+      const f = textoFechaAbrir(form.fecha, hoy)
+      document.getElementById('pr-abrir-fecha-dia').textContent = f.dia
+      document.getElementById('pr-abrir-fecha-nota').textContent = f.nota
+      document.getElementById('pr-abrir-dia-mas').disabled = form.fecha >= hoy
       document.getElementById('pr-abrir-maquinas').innerHTML =
-        form.filas.map((f, i) => htmlFilaAbrir(f, i, estado.abrirOperarios ?? [])).join('')
+        form.filas.map((fila, i) => htmlFilaAbrir(fila, i, estado.operarios ?? [], form)).join('')
+      document.getElementById('pr-abrir-resumen').textContent = resumenAbrir(form)
       pintarBotonAbrir()
     }
 
     function pintarBotonAbrir() {
-      const faltan = faltanParaAbrir(estado.abrir, document.getElementById('pr-abrir-fecha').value)
+      const faltan = faltanParaAbrir(estado.abrir, estado.abrir.fecha)
       const btn = document.getElementById('pr-abrir-confirmar')
       btn.disabled = faltan.length > 0 || !!estado.abriendo
       btn.title = faltan.length ? `Falta ${faltan.join(', ')}` : ''
-      const n = estado.abrir.filas.filter(f => f.elegida).length
+      const n = estado.abrir.filas.filter(f => f.elegida && !f.bloqueada).length
       btn.textContent = n > 1 ? `Abrir ${n} máquinas` : 'Abrir turno'
     }
 
+    // La fecha va con ‹ ›: en la tablet, con las manos con harina, el
+    // calendario nativo no se puede usar. Nunca pasa de hoy — la RPC rechaza
+    // una fecha futura y frenarlo acá es no ofrecer lo que va a fallar.
+    function cambiarDiaAbrir(delta) {
+      const form = estado.abrir
+      if (!form) return
+      const nueva = sumarDias(form.fecha, delta)
+      if (nueva > hoyArgentina()) return
+      form.fecha = nueva
+      pintarAbrir()
+    }
+
+    function abrirBuscadorOperario(i, abierto) {
+      const f = estado.abrir?.filas[i]
+      if (!f || f.bloqueada) return
+      f.buscando = abierto
+      f.busqueda = ''
+      pintarAbrir()
+      if (abierto) document.querySelector(`[data-buscar-op="${i}"]`)?.focus()
+    }
+
+    function agregarOperarioFila(i, id) {
+      const f = estado.abrir?.filas[i]
+      if (!f || !id || f.operarios.includes(id)) return
+      f.operarios.push(id)
+      // El buscador queda ABIERTO y vacío: casi siempre se cargan dos o tres
+      // operarios seguidos, y cerrarlo obligaría a volver a tocar "+ Operario".
+      f.busqueda = ''
+      pintarAbrir()
+      document.querySelector(`[data-buscar-op="${i}"]`)?.focus()
+    }
+
+    function quitarOperarioFila(i, id) {
+      const f = estado.abrir?.filas[i]
+      if (!f) return
+      f.operarios = f.operarios.filter(x => x !== id)
+      pintarAbrir()
+    }
+
+    // Al tipear se repinta SOLO la lista de resultados. Repintar la fila entera
+    // volvería a crear el campo y le sacaría el foco en cada tecla.
+    function pintarResultadosOperario(i) {
+      const form = estado.abrir
+      const f = form?.filas[i]
+      if (!f) return
+      const cont = document.querySelector(`[data-res-op="${i}"]`)
+      if (!cont) return
+      const donde = (id) => {
+        const otra = form.filas.find((x, j) => j !== i && x.elegida && !x.bloqueada && x.operarios.includes(id))
+        return otra ? `en ${otra.nombre}` : ''
+      }
+      cont.innerHTML = htmlResultadosOperario(
+        candidatosOperario(estado.operarios ?? [], f.busqueda, f.operarios, donde), f.busqueda, i)
+    }
+
     async function confirmarAbrir() {
-      const fecha = document.getElementById('pr-abrir-fecha').value
-      const faltan = faltanParaAbrir(estado.abrir, fecha)
+      const form = estado.abrir
+      const fecha = form.fecha
+      const faltan = faltanParaAbrir(form, fecha)
       const err = document.getElementById('pr-abrir-error')
       if (faltan.length) { err.textContent = `Falta ${faltan.join(', ')}.`; err.hidden = false; return }
       if (estado.abriendo) return
@@ -2206,9 +2683,16 @@
       pintarBotonAbrir()
       err.hidden = true
       try {
-        const { data, error } = await supabase.rpc('abrir_turnos', parametrosAbrirTurnos(estado.abrir, fecha, estado.persona?.id ?? null))
+        const { data, error } = await supabase.rpc('abrir_turnos', parametrosAbrirTurnos(form, fecha, estado.persona?.id ?? null))
         if (error) throw error
-        document.getElementById('pr-abiertos-lista').innerHTML = htmlLotesAsignados(data)
+        // SALA DE MASA se habilita ACÁ y no al volver al tablero: las máquinas
+        // se acaban de abrir, así que ya se sabe que hay alguna. Esperar a la
+        // próxima lectura dejaría el botón apagado un toque de más, justo
+        // cuando el masero está esperando para arrancar.
+        marcarAbiertas(true)
+        document.getElementById('pr-abiertos-titulo').textContent = `Turno ${form.turno} abierto`
+        document.getElementById('pr-abiertos-sub').textContent = `${fechaDelDia(fecha)} · anotá estos lotes`
+        document.getElementById('pr-abiertos-lista').innerHTML = htmlLotesAsignados(data, form, estado.operarios ?? [])
         mostrarVista('pr-abiertos')
         mostrarExito('Turno abierto.')
       } catch (e) {
@@ -2223,11 +2707,20 @@
       }
     }
 
-    function htmlLotesAsignados(filas) {
+    // El lote a 124px: se copia a la planilla de papel sin acercarse a la
+    // tablet. Los operarios salen del formulario, no de la RPC, que devuelve
+    // solo [{maquina_id, maquina, turno_id, lote}].
+    function htmlLotesAsignados(filas, form, operarios) {
       const lista = Array.isArray(filas) ? filas : []
       if (!lista.length) return '<p class="pr-texto-suave">La base no devolvió lotes.</p>'
-      return lista.map(f => `<div class="pr-maquina pr-maquina--abierta"><span class="pr-maquina__nombre">${esc(f.maquina)}</span>` +
-        `<span class="pr-maquina__estado">Lote</span><span class="pr-lote">${esc(f.lote)}</span></div>`).join('')
+      return lista.map(f => {
+        const fila = (form?.filas ?? []).find(x => x.maquinaId === f.maquina_id)
+        const ops = (fila?.operarios ?? []).map(id => nombreOperario(operarios ?? [], id)).join(' · ')
+        return `<div class="pr-lote-tarjeta">` +
+          `<span class="pr-lote-tarjeta__maquina">${esc(f.maquina)}</span>` +
+          `<span class="pr-lote-tarjeta__lote">${esc(f.lote)}</span>` +
+          `<span class="pr-lote-tarjeta__ops">${ops ? esc(ops) : 'Sin operarios'}</span></div>`
+      }).join('')
     }
 
     function conectarProduccion() {
@@ -2236,27 +2729,40 @@
       document.getElementById('pr-abrir-cancelar').addEventListener('click', mostrarTablero)
       document.getElementById('pr-abiertos-volver').addEventListener('click', mostrarTablero)
       document.getElementById('pr-abrir-confirmar').addEventListener('click', confirmarAbrir)
-      document.getElementById('pr-abrir-fecha').addEventListener('input', pintarBotonAbrir)
       document.getElementById('pr-abrir-turnos').addEventListener('click', ev => {
         const b = ev.target.closest('[data-turno]'); if (!b) return
         estado.abrir.turno = b.dataset.turno
         pintarAbrir()
       })
+      document.getElementById('pr-abrir').addEventListener('click', ev => {
+        const d = ev.target.closest('[data-abrir-dia]'); if (d) cambiarDiaAbrir(Number(d.dataset.abrirDia))
+      })
       const maquinas = document.getElementById('pr-abrir-maquinas')
       maquinas.addEventListener('change', ev => {
-        const casilla = ev.target.closest('[data-abrir-maquina]')
-        if (casilla) {
-          const f = estado.abrir.filas[Number(casilla.dataset.abrirMaquina)]
-          if (f) f.elegida = casilla.checked
-          pintarAbrir()
-          return
+        const casilla = ev.target.closest('[data-abrir-maquina]'); if (!casilla) return
+        const f = estado.abrir.filas[Number(casilla.dataset.abrirMaquina)]
+        if (f && !f.bloqueada) {
+          f.elegida = casilla.checked
+          if (!f.elegida) { f.buscando = false; f.busqueda = '' }
         }
-        const sel = ev.target.closest('[data-operario]')
-        if (sel) {
-          const f = estado.abrir.filas[Number(sel.dataset.operario)]
-          if (f) f.operario = sel.value
-          pintarBotonAbrir()
-        }
+        pintarAbrir()
+      })
+      maquinas.addEventListener('input', ev => {
+        const campo = ev.target.closest('[data-buscar-op]'); if (!campo) return
+        const i = Number(campo.dataset.buscarOp)
+        const f = estado.abrir?.filas[i]; if (!f) return
+        f.busqueda = campo.value
+        pintarResultadosOperario(i)
+      })
+      maquinas.addEventListener('click', ev => {
+        const mas = ev.target.closest('[data-mas-operario]')
+        if (mas) return abrirBuscadorOperario(Number(mas.dataset.masOperario), true)
+        const can = ev.target.closest('[data-cancelar-op]')
+        if (can) return abrirBuscadorOperario(Number(can.dataset.cancelarOp), false)
+        const eleg = ev.target.closest('[data-elegir-op]')
+        if (eleg) return agregarOperarioFila(Number(eleg.dataset.elegirOp), eleg.dataset.opId)
+        const quitar = ev.target.closest('[data-quitar-op]')
+        if (quitar) return quitarOperarioFila(Number(quitar.dataset.quitarOp), quitar.dataset.opId)
       })
       document.getElementById('pr-tablero').addEventListener('click', ev => {
         const b = ev.target.closest('[data-planilla]'); if (b) abrirPlanilla(b.dataset.planilla)
@@ -2287,25 +2793,28 @@
         .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado').eq('id', turnoId).maybeSingle()
       if (e1) throw e1
       if (!turno) throw new Error('El turno no existe.')
-      const { data: ops, error: e2 } = await supabase.from('turno_operarios').select('empleado_id').eq('turno_id', turnoId)
+      // `desde` y `hasta` van los dos: quitar_operario_turno NO borra la fila,
+      // le pone `hasta`. El que se fue sigue siendo parte del turno.
+      const { data: ops, error: e2 } = await supabase.from('turno_operarios')
+        .select('empleado_id, desde, hasta').eq('turno_id', turnoId).order('desde')
       if (e2) throw e2
       const { data: masas, error: e3 } = await supabase.from('masas').select('id').eq('turno_id', turnoId).eq('anulada', false)
       if (e3) throw e3
       const { data: paradas, error: e4 } = await supabase.from('paradas_produccion')
         .select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio')
       if (e4) throw e4
-      return { turno, operarios: (ops ?? []).map(o => o.empleado_id), masas: (masas ?? []).length, paradas: paradas ?? [] }
+      return { turno, operarios: ops ?? [], masas: (masas ?? []).length, paradas: paradas ?? [] }
     }
 
     function paradaEnCurso(paradas) {
       return (paradas ?? []).find(p => !p.fin) ?? null
     }
 
+    // Los operarios YA NO van acá: tienen su propio bloque, porque se pueden
+    // sumar y sacar durante el turno (htmlOperariosPlanilla).
     function htmlDatosPlanilla(p) {
-      const ops = p.operarios.length ? p.operarios.map(nombrePersona).join(', ') : 'Sin operario'
       return `<div class="pr-datos">` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(p.turno.lote)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Operario</span><span class="pr-dato__valor">${esc(ops)}</span></div>` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Masas (las carga el masero)</span><span class="pr-dato__valor">${esc(p.masas)}</span></div>` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Turno</span><span class="pr-dato__valor">${esc(p.turno.turno)} · abierta ${esc(horaArgentina(p.turno.abierto_en) || '—')}</span></div>` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Encargado</span><span class="pr-dato__valor">${esc(nombrePersona(p.turno.encargado_id))}</span></div>` +
@@ -2322,9 +2831,90 @@
       }).join('') + '</ul>'
     }
 
+    // Los operarios del turno, que se suman y se sacan con el turno abierto.
+    //
+    // EL QUE SE FUE SIGUE EN LA LISTA con su hora de salida, y eso no es un
+    // detalle: quitar_operario_turno NO borra la fila, le pone `hasta`, así que
+    // esconderlo borraría de la pantalla quién estuvo en ese turno — que es
+    // justo lo que la planilla tiene que poder contar después.
+    function htmlOperariosPlanilla(p, ops, personas) {
+      const filas = Array.isArray(p?.operarios) ? p.operarios : []
+      const adentro = filas.filter(o => !o.hasta)
+      const chipsHtml = adentro.map(o =>
+        htmlChipOperario(nombrePersona(o.empleado_id), CTX_PLANILLA, o.empleado_id)).join('') +
+        filas.filter(o => o.hasta).map(o =>
+          `<span class="pr-chip-op pr-chip-op--fuera">${esc(nombrePersona(o.empleado_id))} · salió ${esc(horaArgentina(o.hasta) || '—')}</span>`).join('')
+      const vacioHtml = filas.length ? '' : '<span class="pr-texto-suave">Todavía no hay operarios en esta máquina.</span>'
+      const sumarHtml = ops.buscando ? '' : `<button type="button" class="pr-btn pr-btn--secundario" data-mas-operario="${CTX_PLANILLA}">+ Sumar</button>`
+      const buscadorHtml = ops.buscando
+        ? htmlBuscadorOperarios(candidatosOperario(personas, ops.busqueda, adentro.map(o => o.empleado_id)), ops.busqueda, CTX_PLANILLA)
+        : ''
+      return `<div class="pr-ops">${chipsHtml}${vacioHtml}${sumarHtml}</div>${buscadorHtml}`
+    }
+
+    function pintarOperariosPlanilla() {
+      const cont = document.getElementById('pr-planilla-operarios')
+      const p = estado.planilla
+      if (!p) { cont.innerHTML = ''; return }
+      cont.innerHTML = htmlOperariosPlanilla(p, estado.opsPlanilla, estado.operarios ?? [])
+    }
+
+    // Repinta SOLO los resultados: repintar el bloque entero volvería a crear
+    // el campo y le sacaría el foco en cada tecla.
+    function pintarResultadosPlanillaOp() {
+      const cont = document.querySelector(`[data-res-op="${CTX_PLANILLA}"]`)
+      if (!cont || !estado.planilla) return
+      const adentro = (estado.planilla.operarios ?? []).filter(o => !o.hasta).map(o => o.empleado_id)
+      const texto = estado.opsPlanilla.busqueda
+      cont.innerHTML = htmlResultadosOperario(candidatosOperario(estado.operarios ?? [], texto, adentro), texto, CTX_PLANILLA)
+    }
+
+    async function recargarPlanilla() {
+      const p = estado.planilla
+      if (!p) return
+      estado.planilla = { ...(await leerPlanilla(p.turno.id)), maquinaNombre: p.maquinaNombre }
+      pintarPlanilla()
+    }
+
+    // Sumar y sacar un operario. Las dos RPCs ya traen su mensaje escrito para
+    // una persona ("Esa persona no figura como operario de esta unidad.", "El
+    // turno ya está cerrado."), así que se muestra TAL CUAL.
+    async function cambiarOperarioTurno(rpc, id, generico) {
+      const p = estado.planilla
+      if (!p || !id || estado.opsPlanilla.guardando) return
+      estado.opsPlanilla.guardando = true
+      const err = document.getElementById('pr-planilla-error')
+      err.hidden = true
+      // `guardado` separa las dos mitades: si lo que falló fue la RELECTURA, el
+      // cambio YA está en la base, y mostrar ahí el error crudo de la consulta
+      // haría creer que el operario no entró — y que hay que cargarlo de nuevo.
+      let guardado = false
+      try {
+        const { error } = await supabase.rpc(rpc, { p_turno_id: p.turno.id, p_empleado_id: id })
+        if (error) throw error
+        guardado = true
+        estado.opsPlanilla = { buscando: false, busqueda: '', guardando: true }
+        await recargarPlanilla()
+      } catch (e) {
+        console.error(rpc + ':', e)
+        err.textContent = guardado
+          ? 'El cambio se guardó, pero no se pudo actualizar la lista. Salí de la planilla y volvé a entrar.'
+          : (e?.message || generico)
+        err.hidden = false
+      } finally {
+        estado.opsPlanilla.guardando = false
+        pintarOperariosPlanilla()
+      }
+    }
+
     async function abrirPlanilla(turnoId) {
       estado.planilla = null
+      estado.opsPlanilla = { buscando: false, busqueda: '', guardando: false }
+      // A la planilla se puede llegar sin pasar por Abrir turno, así que la
+      // lista de operarios se resuelve también acá.
+      estado.operarios = personasParaPuesto(estado.personal, 'operario').personas
       document.getElementById('pr-planilla-datos').innerHTML = '<p class="pr-texto-suave">Cargando la planilla…</p>'
+      document.getElementById('pr-planilla-operarios').innerHTML = ''
       document.getElementById('pr-planilla-paradas').innerHTML = ''
       document.getElementById('pr-planilla-error').hidden = true
       document.getElementById('pr-parada-form').hidden = true
@@ -2347,6 +2937,7 @@
       const p = estado.planilla
       if (!p) return
       document.getElementById('pr-planilla-datos').innerHTML = htmlDatosPlanilla(p)
+      pintarOperariosPlanilla()
       document.getElementById('pr-planilla-paradas').innerHTML = htmlParadas(p.paradas)
       const enCurso = paradaEnCurso(p.paradas)
       document.getElementById('pr-parada-activa').hidden = !enCurso
@@ -2657,8 +3248,19 @@
 
     // ── Agregar un producto: producto → presentación → marca → cajas ──────
 
+    // La normalizaci\u00f3n de TODOS los buscadores del m\u00f3dulo: sin acentos y en
+    // min\u00fasculas. textoPlano() NO recorta los bordes, para poder aplicarla
+    // car\u00e1cter por car\u00e1cter sin que un espacio del medio desaparezca (lo usa
+    // tramoCoincidencia); normalizarBusqueda() es esa misma, recortada, que es
+    // lo que hace falta para comparar. Una sola regla, en un solo lugar: dos
+    // normalizaciones conviviendo es exactamente c\u00f3mo alguien usa la
+    // equivocada.
+    function textoPlano(t) {
+      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    }
+
     function normalizarBusqueda(t) {
-      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+      return textoPlano(t).trim()
     }
 
     function marcasFiltradas(marcas, texto) {
@@ -2776,6 +3378,29 @@
         const b = ev.target.closest('[data-sugerencia]'); if (b) document.getElementById('pr-parada-motivo').value = b.dataset.sugerencia
       })
       document.getElementById('pr-btn-reanudar').addEventListener('click', reanudar)
+      const ops = document.getElementById('pr-planilla-operarios')
+      ops.addEventListener('input', ev => {
+        const campo = ev.target.closest('[data-buscar-op]'); if (!campo) return
+        estado.opsPlanilla.busqueda = campo.value
+        pintarResultadosPlanillaOp()
+      })
+      ops.addEventListener('click', ev => {
+        if (ev.target.closest('[data-mas-operario]')) {
+          estado.opsPlanilla = { ...estado.opsPlanilla, buscando: true, busqueda: '' }
+          pintarOperariosPlanilla()
+          document.querySelector(`[data-buscar-op="${CTX_PLANILLA}"]`)?.focus()
+          return
+        }
+        if (ev.target.closest('[data-cancelar-op]')) {
+          estado.opsPlanilla = { ...estado.opsPlanilla, buscando: false, busqueda: '' }
+          pintarOperariosPlanilla()
+          return
+        }
+        const eleg = ev.target.closest('[data-elegir-op]')
+        if (eleg) return cambiarOperarioTurno('agregar_operario_turno', eleg.dataset.opId, 'No se pudo sumar el operario.')
+        const quitar = ev.target.closest('[data-quitar-op]')
+        if (quitar) return cambiarOperarioTurno('quitar_operario_turno', quitar.dataset.opId, 'No se pudo sacar el operario.')
+      })
       document.getElementById('pr-btn-cerrar-planilla').addEventListener('click', mostrarCierre)
       document.getElementById('pr-cierre-volver').addEventListener('click', () => abrirPlanilla(estado.planilla.turno.id))
       for (const id of ['pr-cierre-hora', 'pr-cierre-scrap', 'pr-cierre-obs']) {

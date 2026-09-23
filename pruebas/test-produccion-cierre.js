@@ -225,7 +225,10 @@ esperas.push((async () => {
   await S.abrirPlanilla('t1')
   const datos = S.__doc.getElementById('pr-planilla-datos').innerHTML
   chk('planilla: el lote grande', /class="pr-lote">7023</.test(datos))
-  chk('… el operario y las masas (solo lectura)', /Operario Uno/.test(datos) && /Masas \(las carga el masero\)<\/span><span class="pr-dato__valor">2</.test(datos))
+  chk('… las masas (solo lectura)', /Masas \(las carga el masero\)<\/span><span class="pr-dato__valor">2</.test(datos))
+  // Los operarios salieron de los datos y tienen su propio bloque: se suman y
+  // se sacan con el turno abierto (rediseño parte 2).
+  chk('… y el operario, en su bloque', /Operario Uno/.test(S.__doc.getElementById('pr-planilla-operarios').innerHTML))
   chk('… cuenta solo masas sin anular', S.__llamadas.consultas.some(([t, f]) => t === 'masas' && JSON.stringify(f).includes('["eq","anulada",false]')))
   chk('… las paradas con su duración', /Cambio de molde<\/strong> · 07:00 a 07:35 · 35 min/.test(S.__doc.getElementById('pr-planilla-paradas').innerHTML), S.__doc.getElementById('pr-planilla-paradas').innerHTML)
   chk('sin parada en curso: se puede parar y cerrar', S.__doc.getElementById('pr-btn-parada').disabled === false && S.__doc.getElementById('pr-btn-cerrar-planilla').disabled === false)

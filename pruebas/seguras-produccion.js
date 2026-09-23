@@ -9,12 +9,20 @@ const SEGURAS_PRODUCCION = [
   ['d', 'número: el dígito del for del teclado, de 1 a 9'],
   ['off', 'constante del código: " disabled" o vacío'],
   // B3
-  ['estadoTxt', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(textoEstadoMaquina(e))'],
-  ['parada', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(e.parada.motivo), o vacío'],
-  ['SIN_OPERARIO', 'constante del código: "__sin__"'],
   ['clase', 'clase CSS constante del código, o vacía'],
   ['i', 'número: índice del .map()'],
-  ['htmlOpcionesOperario(operarios, f.operario)', 'HTML armado por htmlOpcionesOperario(), que escapa adentro'],
+  // Rediseño parte 2: tablero, abrir turno y los operarios del turno
+  ['nombreEsc', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(e.maquina.nombre)'],
+  ['cuentaHtml', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(textoMasas()) y esc(textoSublotes())'],
+  ['pieHtml', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc() de la hora y del motivo de la parada'],
+  ['htmlResaltado(c.nombre, texto)', 'HTML armado por htmlResaltado(), que escapa los tres pedazos del nombre por separado'],
+  ['htmlResultadosOperario(cands, texto, ctx)', 'HTML armado por htmlResultadosOperario(), que escapa adentro'],
+  ['chipsHtml', 'HTML armado por htmlChipOperario() (escapa adentro) más esc() del nombre y la hora de salida'],
+  ['derechaHtml', 'HTML ya escapado: htmlFilaAbrir() lo arma con htmlChipOperario() (escapa adentro) y texto constante'],
+  ['buscadorHtml', 'HTML armado por htmlBuscadorOperarios(), que escapa adentro, o vacío'],
+  ['vacioHtml', 'HTML constante del código, o vacío'],
+  ['sumarHtml', 'HTML constante del código (el botón "+ Sumar" con CTX_PLANILLA), o vacío'],
+  ['CTX_PLANILLA', 'constante del código: "planilla"'],
   // B4
   ['detalle', 'HTML ya escapado: htmlProducido() lo arma arriba con esc(d.detalle), o vacío'],
   // B5

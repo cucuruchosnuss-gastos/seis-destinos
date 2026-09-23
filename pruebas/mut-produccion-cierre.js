@@ -55,7 +55,7 @@ correrMutaciones({
     { nombre: 'agrega al principio', de: '      actualizarProductos([...estado.cierre.productos, { presentacion_id: a.presentacionId, marca_id: a.marcaId, cajas }])', a: '      actualizarProductos([{ presentacion_id: a.presentacionId, marca_id: a.marcaId, cajas }, ...estado.cierre.productos])' },
     { nombre: 'agrega sin la marca', de: '{ presentacion_id: a.presentacionId, marca_id: a.marcaId, cajas }])', a: '{ presentacion_id: a.presentacionId, marca_id: null, cajas }])' },
     { nombre: 'las presentaciones no se filtran por producto', de: '      const pres = cat.presentaciones.filter(pr => pr.producto_id === a.productoId)', a: '      const pres = cat.presentaciones' },
-    { nombre: 'el buscador distingue acentos', de: "      return String(t ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim()", a: "      return String(t ?? '').toLowerCase().trim()" },
+    { nombre: 'el buscador distingue acentos', de: "      return String(t ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase()", a: "      return String(t ?? '').toLowerCase()" },
     { nombre: 'sin "Común"', de: '      const comun = `<button type="button" class="pr-chip" data-marca="" aria-pressed="${elegida ? \'false\' : \'true\'}">Común</button>`', a: "      const comun = ''" },
     { nombre: 'se puede cerrar con una parada en curso', de: '      cerrar.disabled = !p || !!enCurso', a: '      cerrar.disabled = !p' },
     { nombre: 'se puede parar dos veces', de: '      parada.disabled = !p || !!enCurso', a: '      parada.disabled = !p' },

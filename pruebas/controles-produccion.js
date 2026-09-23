@@ -29,6 +29,7 @@ const BASES = [
   'fa693f2', // B4: planilla, paradas y cierre
   '10df632', // B5: sala de masa
   '7cb199b', // B6: configuración
+  'f502c3d', // Rediseño parte 1: barra de modos, fondo por modo y acceso con PIN
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
@@ -53,6 +54,16 @@ const RETIRADOS = [
   ['control:button#pr-menu-modo[data-menu][type=button]',
     'Rediseño parte 1: "Cambiar el modo de esta tablet" no existe más porque el cambio de modo son los dos ' +
     'botones de la barra, que además dicen en qué modo está la tablet sin abrir ningún menú.'],
+  ['control:input#pr-abrir-fecha[type=date]',
+    'Rediseño parte 2: la fecha de Abrir turno pasó a ‹ › de 56×64 con el valor al medio (P4a del handoff). ' +
+    'En la tablet, de pie y con harina en las manos, el calendario nativo de un input[type=date] no se puede usar; ' +
+    'y la fecha nunca se elige libre: va de hoy hacia atrás, de a un día. El valor vive en estado.abrir.fecha y se ' +
+    'escribe con los botones data-abrir-dia.'],
+  ['control:select[data-operario]',
+    'Rediseño parte 2: un solo operario por máquina en un <select> pasó a VARIOS operarios como chips, que se ' +
+    'agregan de a uno con el buscador que se abre dentro de la fila (P4a). abrir_turnos recibe operarios: [uuid, …] ' +
+    'por máquina, así que el select de una sola opción no podía representar lo que la RPC acepta. Los controles ' +
+    'nuevos son data-mas-operario, data-buscar-op, data-elegir-op, data-cancelar-op y data-quitar-op.'],
 ]
 
 let ok = 0
