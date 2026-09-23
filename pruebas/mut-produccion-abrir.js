@@ -91,9 +91,9 @@ correrMutaciones({
     { nombre: 'al que se fue se le ofrece la ×', de: '      const chipsHtml = adentro.map(o =>', a: '      const chipsHtml = filas.map(o =>' },
     { nombre: 'se ofrece sumar a quien ya está adentro', de: '        ? htmlBuscadorOperarios(candidatosOperario(personas, ops.busqueda, adentro.map(o => o.empleado_id)), ops.busqueda, CTX_PLANILLA)', a: '        ? htmlBuscadorOperarios(candidatosOperario(personas, ops.busqueda, []), ops.busqueda, CTX_PLANILLA)' },
     { nombre: 'sumar no manda el turno', de: "        const { error } = await supabase.rpc(rpc, { p_turno_id: p.turno.id, p_empleado_id: id })", a: "        const { error } = await supabase.rpc(rpc, { p_turno_id: null, p_empleado_id: id })" },
-    { nombre: 'sumar no relee la lista', de: '        await recargarPlanilla()\n', a: '' },
+    { nombre: 'sumar no relee la lista', de: "        estado.opsPlanilla = { buscando: false, busqueda: '', guardando: true }\n        await recargarPlanilla()\n", a: "        estado.opsPlanilla = { buscando: false, busqueda: '', guardando: true }\n" },
     { nombre: 'el error de sumar un operario se tapa', de: '          : (e?.message || generico)', a: '          : generico' },
-    { nombre: 'una relectura que falla se lee como que no se guardó', de: '        err.textContent = guardado\n          ? ', a: '        err.textContent = false\n          ? ' },
+    { nombre: 'una relectura que falla se lee como que no se guardó', de: "        err.textContent = guardado\n          ? 'El cambio se guardó, pero no se pudo actualizar la lista.", a: "        err.textContent = false\n          ? 'El cambio se guardó, pero no se pudo actualizar la lista." },
     { nombre: 'queda trabado después de un error', de: '      } finally {\n        estado.opsPlanilla.guardando = false\n        pintarOperariosPlanilla()', a: '      } finally {\n        pintarOperariosPlanilla()' },
   ],
 })

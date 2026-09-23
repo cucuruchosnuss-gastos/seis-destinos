@@ -526,13 +526,23 @@
     .pr-dato { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; overflow-wrap: anywhere; }
     .pr-dato__rotulo { font-size: 1.125rem; color: var(--pr-texto-secundario); font-weight: 600; }
     .pr-dato__valor { font-size: 1.25rem; font-weight: 800; }
+    /* La franja de parada: 80px, fija bajo la barra MIENTRAS DURE, con
+       "Reanudar" al alcance. Sin parada en curso no existe (ver el handoff,
+       5a), y el botón "Parada" aparece al lado de "Cerrar planilla". */
     .pr-parada-activa {
-      position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
-      gap: 0.75rem; flex-wrap: wrap; padding: 1rem 1.25rem; margin-bottom: 1rem;
-      background: var(--bordo); color: #fff; border-radius: var(--radio-tarjeta); font-size: 1.25rem; font-weight: 800;
+      position: sticky; top: 0; z-index: 5; display: flex; align-items: center;
+      gap: 1.25rem; flex-wrap: wrap; padding: 0.625rem 1.25rem 0.625rem 1.75rem; margin-bottom: 0.875rem;
+      min-height: 80px; box-sizing: border-box;
+      background: var(--bordo); color: #fff; border-radius: var(--radio-tarjeta);
       overflow-wrap: anywhere;
     }
-    .pr-parada-activa .pr-btn { background: #fff; color: var(--bordo-oscuro); border-color: #fff; }
+    .pr-parada-activa__sello {
+      border: 2px solid rgba(255, 255, 255, 0.7); border-radius: 10px; padding: 0.375rem 0.75rem;
+      font-size: 1.125rem; font-weight: 900; letter-spacing: 0.1em; white-space: nowrap;
+    }
+    .pr-parada-activa__que { font-size: 1.625rem; font-weight: 800; min-width: 0; }
+    .pr-parada-activa__hace { font-size: 1.25rem; opacity: 0.85; font-variant-numeric: tabular-nums; }
+    .pr-parada-activa .pr-btn { margin-left: auto; background: #fff; color: var(--bordo-oscuro); border-color: #fff; }
     .pr-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
     .pr-lista__item { padding: 0.75rem 1rem; border-radius: var(--radio-input); background: var(--color-superficie); overflow-wrap: anywhere; }
     .pr-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
@@ -543,28 +553,208 @@
     }
     .pr-chip[aria-pressed="true"] { border-color: var(--azul); background: var(--azul-suave); color: var(--azul-oscuro); }
 
-    /* ── Cierre: lo producido ─────────────────────────────────────────── */
-    .pr-agregar { margin-top: 1rem; padding: 1rem; border: 2px dashed var(--azul); border-radius: var(--radio-tarjeta); }
-    .pr-producido {
-      display: grid; grid-template-columns: auto 1fr auto; gap: 0.75rem; align-items: center;
-      padding: 0.75rem; border: 2px solid var(--color-borde); border-radius: var(--radio-input); margin-bottom: 0.625rem;
+    /* ── La planilla: dos columnas ────────────────────────────────────────
+       A la izquierda lo que se MIRA (operarios, masas, paradas) y a la derecha
+       lo que se CARGA: lo producido, que desde el rediseño parte 3 se carga
+       DURANTE el turno y no al cerrar. */
+    .pr-planilla { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 0.875rem; align-items: start; }
+    .pr-planilla > .pr-tarjeta, .pr-planilla .pr-col > .pr-tarjeta { margin-bottom: 0; }
+    .pr-col { display: flex; flex-direction: column; gap: 0.875rem; min-width: 0; }
+
+    /* La cabecera: el LOTE es el número más grande de la pantalla porque es lo
+       que se copia a la planilla de papel. */
+    .pr-planilla-cab {
+      display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+      background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      padding: 0.625rem 0.875rem 0.625rem 1.5rem; margin-bottom: 0.875rem;
     }
-    .pr-producido--invalido { border-color: var(--bordo); background: var(--bordo-suave); }
-    .pr-producido__sublote { font-size: 1.5rem; font-weight: 900; color: var(--azul-oscuro); min-width: 5.5rem; }
-    .pr-producido__desc { min-width: 0; overflow-wrap: anywhere; }
-    .pr-producido__nombre { font-weight: 800; font-size: 1.15rem; }
-    .pr-producido__botones { display: flex; gap: 0.375rem; }
+    .pr-planilla-cab__lote { display: flex; align-items: baseline; gap: 0.875rem; min-width: 0; }
+    .pr-planilla-cab__rotulo { font-size: 1.25rem; font-weight: 800; color: var(--color-texto-suave); letter-spacing: 0.08em; }
+    .pr-planilla-cab__numero { font-size: 4rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1; }
+    .pr-planilla-cab__que { font-size: 1.25rem; line-height: 1.3; min-width: 0; overflow-wrap: anywhere; }
+    .pr-planilla-cab__maquina { font-weight: 800; }
+    .pr-planilla-cab__turno { color: var(--pr-texto-secundario); }
+    .pr-planilla-cab__botones { margin-left: auto; display: flex; gap: 0.625rem; flex-wrap: wrap; }
+    .pr-planilla-cab .pr-btn--accion { border: 2px solid var(--pr-prod-activo); background: var(--color-fondo); color: var(--pr-prod-activo); }
+
+    /* Los bloques de la columna izquierda. */
+    .pr-bloque__cab { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+    .pr-bloque__titulo { font-size: 1.25rem; font-weight: 800; }
+    .pr-bloque__nota { font-size: 1.125rem; color: var(--color-texto-suave); }
+    .pr-masas__cuenta { display: flex; align-items: baseline; gap: 0.625rem; flex-wrap: wrap; margin: 0.375rem 0; }
+    .pr-masas__numero { font-size: 2.5rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+    .pr-masas__ultima { font-size: 1.25rem; color: var(--pr-texto-secundario); }
+    .pr-renglon {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+      padding: 0.4375rem 0; border-top: 1px solid var(--color-borde); font-size: 1.125rem; overflow-wrap: anywhere;
+    }
+    .pr-renglon__num { font-variant-numeric: tabular-nums; }
+    .pr-renglon__dato { color: var(--pr-texto-secundario); }
+    /* La parada en curso va primera y en bordó: es la única que sigue pasando. */
+    .pr-renglon--curso .pr-renglon__dato { color: var(--bordo-oscuro); font-weight: 800; }
+
+    /* ── Lo producido ─────────────────────────────────────────────────────
+       Cada renglón es un SUBLOTE que ya existe en la base: registrarlo suma el
+       stock terminado en el acto. Por eso se corrige o se anula con motivo, y
+       un anulado NO se esconde: se muestra anulado. */
+    .pr-producido-col { display: flex; flex-direction: column; min-height: 0; }
+    .pr-producido-col .pr-bloque__cab { align-items: center; margin-bottom: 0.25rem; }
+    .pr-producido {
+      display: grid; grid-template-columns: 104px minmax(0, 1fr) 100px 110px auto; gap: 0.875rem;
+      align-items: center; padding: 0.625rem 0; border-top: 1px solid var(--color-borde);
+    }
+    .pr-producido--anulado { opacity: 0.55; }
+    .pr-producido--anulado .pr-producido__sublote { text-decoration: line-through; }
+    .pr-producido--invalido { border-top-color: var(--bordo); background: var(--bordo-suave); }
+    .pr-producido__sublote { font-size: 1.375rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .pr-producido__desc { min-width: 0; line-height: 1.25; overflow-wrap: anywhere; }
+    .pr-producido__nombre { font-size: 1.25rem; font-weight: 800; }
+    .pr-producido__detalle { font-size: 1.125rem; color: var(--pr-texto-secundario); }
+    .pr-producido__cajas { font-size: 1.25rem; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+    .pr-producido__unidades { font-size: 1.25rem; color: var(--pr-texto-secundario); text-align: right; font-variant-numeric: tabular-nums; }
+    .pr-producido__botones { display: flex; gap: 0.5rem; justify-content: flex-end; }
     .pr-btn-icono {
-      min-width: var(--pr-alto-boton); min-height: var(--pr-alto-boton); font: inherit; font-size: 1.3rem; font-weight: 800;
-      border-radius: var(--radio-boton); border: 2px solid var(--color-borde); background: var(--color-fondo);
+      min-width: var(--pr-alto-boton); min-height: var(--pr-alto-boton); padding: 0 1rem; font: inherit;
+      font-size: 1.125rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--pr-borde-control); background: var(--color-fondo);
       color: var(--color-texto); cursor: pointer; touch-action: manipulation;
     }
     .pr-btn-icono:disabled { opacity: 0.35; cursor: not-allowed; }
-    .pr-btn-icono--borrar { color: var(--bordo); border-color: var(--bordo-suave); }
-    .pr-resumen { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 1.3rem; font-weight: 800; margin-bottom: 1rem; }
-    @media (max-width: 600px) {
-      .pr-producido { grid-template-columns: auto 1fr; }
-      .pr-producido__botones { grid-column: 1 / -1; justify-content: flex-end; }
+    .pr-btn-icono--borrar { color: var(--bordo-oscuro); border-color: var(--pr-bordo-borde); }
+    .pr-total {
+      margin-top: auto; display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem;
+      flex-wrap: wrap; padding-top: 0.75rem; border-top: 2px solid var(--color-texto);
+    }
+    .pr-total__rotulo { font-size: 1.25rem; font-weight: 800; }
+    .pr-total__valor { font-size: 1.625rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+    /* El panel de corregir o anular un sublote: los dos piden motivo, porque
+       la base los exige (>= 3 caracteres). */
+    .pr-corregir { margin-top: 1rem; padding: 1rem; border: 2px solid var(--bordo); border-radius: var(--radio-tarjeta); }
+
+    /* ── Agregar producto, en pasos ───────────────────────────────────────
+       Los 5 pasos a la izquierda: el actual pintado, los hechos con lo
+       elegido y tocables para volver, los que faltan apagados. Los pasos de
+       cono y cajas comparten pantalla para ahorrar un toque. */
+    .pr-ag { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 1rem; align-items: stretch; }
+    .pr-ag--cono-cajas { grid-template-columns: 320px minmax(0, 1fr) 360px; }
+    .pr-ag > .pr-tarjeta { margin-bottom: 0; display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+    .pr-ag__lote { font-size: 1.125rem; font-weight: 700; color: var(--color-texto-suave); }
+    .pr-ag .pr-titulo { font-size: 1.625rem; margin: 0 0 0.5rem; }
+    .pr-paso-bloque {
+      min-height: 64px; width: 100%; border-radius: 14px; border: 2px solid var(--pr-borde-control);
+      background: var(--color-fondo); color: var(--color-texto); font: inherit; text-align: left;
+      padding: 0.5rem 1rem; display: flex; flex-direction: column; justify-content: center; gap: 0.125rem;
+      overflow-wrap: anywhere; box-sizing: border-box;
+    }
+    button.pr-paso-bloque { cursor: pointer; touch-action: manipulation; }
+    .pr-paso-bloque__n { font-size: 1.125rem; color: var(--color-texto-suave); }
+    .pr-paso-bloque__valor { font-size: 1.25rem; font-weight: 800; }
+    .pr-paso-bloque--actual { background: var(--pr-prod-activo); border-color: var(--pr-prod-activo); color: var(--pr-prod-letra); }
+    .pr-paso-bloque--actual .pr-paso-bloque__n { color: rgba(255, 255, 255, 0.85); }
+    .pr-paso-bloque--falta { border-color: var(--borde-tarjeta); color: var(--color-texto-suave); font-weight: 700; font-size: 1.25rem; }
+    .pr-ag__cancelar { margin-top: auto; }
+    .pr-ag__titulo { font-size: 1.75rem; font-weight: 900; }
+    .pr-ag__grilla { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+    .pr-ag__opcion {
+      min-height: 88px; border-radius: 14px; border: 2px solid var(--pr-borde-control); background: var(--color-fondo);
+      color: var(--color-texto); font: inherit; font-size: 1.375rem; font-weight: 800; text-align: left;
+      padding: 0 1.25rem; cursor: pointer; touch-action: manipulation; overflow-wrap: anywhere;
+      display: flex; flex-direction: column; justify-content: center; gap: 0.125rem;
+    }
+    .pr-ag__opcion:disabled { background: var(--pr-panel-gris); color: var(--color-texto-suave); border-style: dashed; cursor: not-allowed; }
+    .pr-ag__opcion[aria-pressed="true"] { border: 3px solid var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    .pr-ag__opcion-nota { font-size: 1.125rem; font-weight: 600; color: var(--pr-texto-secundario); }
+    /* Los de chocolate van ABAJO y separados por una línea de 3px con su
+       nombre: es como se piden en la fábrica, y el marrón es el color que este
+       proyecto ya usa para el chocolate (insumos). */
+    .pr-ag__corte { display: flex; align-items: center; gap: 0.875rem; margin: 0.5rem 0 0.125rem; }
+    .pr-ag__corte-texto { font-size: 1.25rem; font-weight: 800; color: var(--marron-oscuro); }
+    .pr-ag__corte-linea { flex: 1; height: 3px; border-radius: 2px; background: var(--marron-oscuro); }
+    .pr-ag__buscar { min-height: 64px; font-size: 1.375rem; }
+    .pr-ag__lista { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+    .pr-cono {
+      min-height: 72px; border-radius: 14px; border: 2px solid var(--pr-borde-control); background: var(--color-fondo);
+      color: var(--color-texto); font: inherit; font-size: 1.375rem; font-weight: 700; text-align: left;
+      padding: 0.5rem 1.25rem; cursor: pointer; touch-action: manipulation; overflow-wrap: anywhere;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .pr-cono[aria-pressed="true"] { border: 3px solid var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 800; }
+    .pr-cono__nota { font-size: 1.125rem; font-weight: 600; }
+    /* Un cono propuesto desde la tablet se puede usar igual: lo dice el chip,
+       no lo esconde. */
+    .pr-cono__pendiente {
+      font-size: 1.125rem; font-weight: 700; color: var(--naranja-oscuro); background: var(--naranja-suave);
+      border-radius: 999px; padding: 0.1rem 0.75rem; white-space: nowrap;
+    }
+    .pr-ag__nuevo { min-height: 64px; border: 2px dashed var(--pr-prod-apagado-borde); background: var(--color-fondo); color: var(--pr-prod-activo); font-weight: 800; }
+    .pr-ag__nota { font-size: 1.125rem; color: var(--color-texto-suave); text-align: center; }
+    .pr-ag__alta { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pr-ag__alta .pr-input { flex: 1 1 10rem; min-height: 64px; font-size: 1.25rem; }
+    /* − / número / + de 96px: el número se tipea igual, con enlazarCampoNumero. */
+    .pr-contador { display: flex; gap: 0.625rem; align-items: stretch; }
+    .pr-contador__paso {
+      width: 80px; flex-shrink: 0; min-height: 96px; border-radius: 14px; border: 2px solid var(--pr-borde-control);
+      background: var(--color-fondo); color: var(--color-texto); font: inherit; font-size: 2.75rem; font-weight: 700;
+      cursor: pointer; touch-action: manipulation;
+    }
+    .pr-contador .pr-input {
+      flex: 1; min-width: 0; min-height: 96px; text-align: center; font-size: 3.5rem; font-weight: 900;
+      font-variant-numeric: tabular-nums; border-color: var(--pr-prod-activo);
+    }
+    .pr-calculo { background: var(--pr-panel-gris); border-radius: 14px; padding: 1rem; text-align: center; }
+    .pr-calculo__cuenta { font-size: 1.125rem; color: var(--pr-texto-secundario); }
+    .pr-calculo__total { font-size: 2.5rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .pr-ag__confirmar { margin-top: auto; min-height: 72px; }
+
+    /* ── Cerrar planilla ──────────────────────────────────────────────────
+       El error va PEGADO al botón y el campo que falta se marca; nunca un
+       banner arriba de todo (regla del handoff). */
+    .pr-cierre { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 1rem; align-items: stretch; }
+    .pr-cierre > .pr-tarjeta { margin-bottom: 0; display: flex; flex-direction: column; gap: 1.125rem; min-width: 0; }
+    .pr-rota {
+      min-height: 72px; width: 100%; border-radius: 14px; border: 2px solid var(--pr-borde-control);
+      background: var(--color-fondo); color: var(--color-texto); font: inherit; text-align: left;
+      display: flex; align-items: center; gap: 1rem; padding: 0.5rem 1.125rem; cursor: pointer;
+      touch-action: manipulation; font-size: 1.375rem; font-weight: 800; overflow-wrap: anywhere;
+    }
+    .pr-rota__casilla {
+      width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; border: 3px solid var(--pr-prod-apagado-borde);
+      display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 900; color: transparent;
+    }
+    .pr-rota[aria-pressed="true"] { border: 3px solid var(--bordo); background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pr-rota[aria-pressed="true"] .pr-rota__casilla { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .pr-cierre__campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 1.125rem; }
+    .pr-campo__nota { font-size: 1.125rem; color: var(--color-texto-suave); margin: 0.375rem 0 0; }
+    .pr-campo--mal .pr-campo__nota { color: var(--bordo-oscuro); font-weight: 700; }
+    .pr-campo--mal .pr-contador .pr-input { border: 3px solid var(--bordo); background: var(--bordo-suave); }
+    .pr-campo--mal .pr-textarea { border: 3px solid var(--bordo); background: var(--bordo-suave); }
+    .pr-contador--chico .pr-contador__paso { width: 64px; min-height: 72px; font-size: 2.125rem; }
+    .pr-contador--chico .pr-input { min-height: 72px; font-size: 2.125rem; }
+    .pr-cierre__obs { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 0.5rem; }
+    .pr-cierre__obs .pr-textarea { flex: 1; min-height: 100px; font-size: 1.25rem; }
+    .pr-obligatorio { font-weight: 600; color: var(--bordo-oscuro); }
+    .pr-resumen { display: flex; flex-direction: column; gap: 0.25rem; }
+    .pr-resumen__fila { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 1.25rem; padding: 0.375rem 0; border-top: 1px solid var(--color-borde); overflow-wrap: anywhere; }
+    .pr-resumen__rotulo { color: var(--pr-texto-secundario); }
+    .pr-resumen__sub { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 1.1875rem; padding: 0.25rem 0; overflow-wrap: anywhere; }
+    /* El error del cierre: pegado al botón, con su franja bordó. */
+    .pr-error-pegado {
+      background: var(--bordo-suave); border-left: 6px solid var(--bordo); border-radius: 12px;
+      padding: 0.75rem 0.875rem; font-size: 1.1875rem; font-weight: 700; color: var(--bordo-oscuro); margin: 0;
+    }
+    .pr-cierre__pie { margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    @media (max-width: 1100px) {
+      .pr-planilla, .pr-cierre, .pr-ag, .pr-ag--cono-cajas { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 700px) {
+      .pr-ag__grilla { grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); }
+      .pr-producido { grid-template-columns: auto minmax(0, 1fr); }
+      .pr-producido__cajas, .pr-producido__unidades { text-align: left; }
+      .pr-producido__botones { grid-column: 1 / -1; }
+      .pr-planilla-cab__numero { font-size: 3rem; }
     }
 
     /* ── Sala de masa ─────────────────────────────────────────────────── */
@@ -826,33 +1016,85 @@
         <button type="button" class="pr-btn pr-btn--accion pr-btn--ancho pr-espacio-arriba" id="pr-abiertos-volver">Listo, ir a las máquinas</button>
       </section>
 
-      <!-- B4: la planilla de una máquina abierta. Las masas las carga el
-           masero: acá se ven en solo lectura. -->
+      <!-- Rediseño parte 3 (P5a): la planilla de una máquina abierta. A la
+           izquierda lo que se MIRA (operarios, masas, paradas) y a la derecha
+           lo que se CARGA: lo producido. Las masas las carga el masero: acá
+           se ven en solo lectura. -->
       <section id="pr-planilla" hidden>
         <!-- Mientras dura una parada queda fija arriba, con "Reanudar". -->
         <div class="pr-parada-activa" id="pr-parada-activa" hidden>
-          <span id="pr-parada-activa-texto"></span>
-          <button type="button" class="pr-btn pr-btn--grande" id="pr-btn-reanudar">Reanudar</button>
+          <span class="pr-parada-activa__sello">PARADA</span>
+          <span class="pr-parada-activa__que" id="pr-parada-activa-texto"></span>
+          <span class="pr-parada-activa__hace" id="pr-parada-activa-hace"></span>
+          <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-reanudar">Reanudar</button>
         </div>
-        <div class="pr-tarjeta">
-          <div class="pr-fila-titulo">
-            <h1 class="pr-titulo" id="pr-planilla-maquina"></h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-planilla-volver">‹ Máquinas</button>
-          </div>
-          <div id="pr-planilla-datos"></div>
-          <!-- Los operarios se pueden sumar y sacar con el turno abierto.
-               quitar_operario_turno NO borra la fila: le pone `hasta`, así que
-               el que se fue se sigue viendo con su hora de salida. -->
-          <div class="pr-espacio-arriba">
-            <span class="pr-campo__rotulo">Operarios</span>
-            <div id="pr-planilla-operarios"></div>
-          </div>
-          <p class="pr-error" id="pr-planilla-error" hidden></p>
-          <div class="pr-acciones">
-            <button type="button" class="pr-btn pr-btn--secundario pr-btn--grande" id="pr-btn-parada">Parada</button>
-            <button type="button" class="pr-btn pr-btn--grande" id="pr-btn-cerrar-planilla">Cerrar planilla</button>
+
+        <div class="pr-planilla-cab">
+          <div class="pr-planilla-cab__lote" id="pr-planilla-lote"></div>
+          <div class="pr-planilla-cab__que" id="pr-planilla-que"></div>
+          <div class="pr-planilla-cab__botones">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-planilla-volver">&lsaquo; Máquinas</button>
+            <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-parada">Parada</button>
+            <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-cerrar-planilla">Cerrar planilla</button>
           </div>
         </div>
+        <!-- Una planilla de otro día, o una que quedó pendiente de completar
+             después de un cierre forzado: se dice bien claro. -->
+        <div id="pr-planilla-estado"></div>
+        <p class="pr-error" id="pr-planilla-error" hidden></p>
+
+        <div class="pr-planilla">
+          <div class="pr-col">
+            <!-- Los operarios se pueden sumar y sacar con el turno abierto.
+                 quitar_operario_turno NO borra la fila: le pone `hasta`, así que
+                 el que se fue se sigue viendo con su hora de salida. -->
+            <div class="pr-tarjeta">
+              <div class="pr-bloque__cab"><span class="pr-bloque__titulo">Operarios</span></div>
+              <div id="pr-planilla-operarios"></div>
+            </div>
+            <div class="pr-tarjeta">
+              <div class="pr-bloque__cab">
+                <span class="pr-bloque__titulo">Masas</span>
+                <span class="pr-bloque__nota">las carga el masero</span>
+              </div>
+              <div id="pr-planilla-masas"></div>
+            </div>
+            <div class="pr-tarjeta">
+              <div class="pr-bloque__cab"><span class="pr-bloque__titulo">Paradas</span></div>
+              <div id="pr-planilla-paradas"></div>
+            </div>
+          </div>
+
+          <!-- Lo producido se carga DURANTE el turno: cada renglón ya es un
+               sublote en la base y su stock terminado ya entró. Por eso se
+               corrige o se anula con motivo, nunca se borra. -->
+          <div class="pr-tarjeta pr-producido-col">
+            <div class="pr-bloque__cab">
+              <span class="pr-ag__titulo">Lo producido</span>
+              <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-agregar-producto">+ Agregar producto</button>
+            </div>
+            <div id="pr-planilla-producido"></div>
+            <div class="pr-total" id="pr-planilla-total"></div>
+
+            <div class="pr-corregir" id="pr-corregir" hidden>
+              <h2 class="pr-subtitulo" id="pr-corregir-titulo"></h2>
+              <label class="pr-campo" id="pr-corregir-campo-cajas">
+                <span class="pr-campo__rotulo">Cajas</span>
+                <input type="text" id="pr-corregir-cajas" class="pr-input" autocomplete="off">
+              </label>
+              <label class="pr-campo pr-espacio-arriba">
+                <span class="pr-campo__rotulo">¿Por qué?</span>
+                <input type="text" id="pr-corregir-motivo" class="pr-input" maxlength="300" autocomplete="off">
+              </label>
+              <p class="pr-error" id="pr-corregir-error" hidden></p>
+              <div class="pr-acciones">
+                <button type="button" class="pr-btn pr-btn--secundario" id="pr-corregir-cancelar">Cancelar</button>
+                <button type="button" class="pr-btn" id="pr-corregir-confirmar">Guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- El motivo de una parada nueva, sugiriendo los usados antes. -->
         <div class="pr-tarjeta" id="pr-parada-form" hidden>
           <h2 class="pr-subtitulo">¿Por qué se para?</h2>
@@ -867,83 +1109,141 @@
             <button type="button" class="pr-btn pr-btn--peligro" id="pr-parada-confirmar">Parar la máquina</button>
           </div>
         </div>
-        <div class="pr-tarjeta">
-          <h2 class="pr-subtitulo">Paradas</h2>
-          <div id="pr-planilla-paradas"></div>
+
+        <!-- Cerrar a la fuerza una planilla que quedó abierta de otro día: la
+             máquina se libera, la planilla queda PENDIENTE DE COMPLETAR y no
+             suma nada al stock. -->
+        <div class="pr-tarjeta" id="pr-forzar-form" hidden>
+          <h2 class="pr-subtitulo">Cerrar a la fuerza</h2>
+          <div class="pr-aviso pr-aviso--grave">
+            La máquina queda libre para abrir un turno nuevo, pero la planilla queda
+            <strong>pendiente de completar</strong> y <strong>no suma nada al stock terminado</strong>.
+            Después hay que completarla desde acá mismo, con la hora, el scrap y lo que produjo.
+          </div>
+          <label class="pr-campo">
+            <span class="pr-campo__rotulo">¿Por qué se cierra a la fuerza?</span>
+            <input type="text" id="pr-forzar-motivo" class="pr-input" maxlength="300" autocomplete="off">
+          </label>
+          <p class="pr-error" id="pr-forzar-error" hidden></p>
+          <div class="pr-acciones">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-forzar-cancelar">Cancelar</button>
+            <button type="button" class="pr-btn pr-btn--peligro" id="pr-forzar-confirmar">Cerrar a la fuerza</button>
+          </div>
         </div>
       </section>
 
-      <!-- B4: cerrar la planilla. Lo producido va EN ORDEN: cada renglón es un
-           sublote, y el sublote lo arma la base en el orden en que se manda. -->
-      <section id="pr-cierre" hidden>
-        <div class="pr-tarjeta">
-          <div class="pr-fila-titulo">
-            <h1 class="pr-titulo" id="pr-cierre-titulo">Cerrar planilla</h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-cierre-volver">‹ Planilla</button>
+      <!-- Rediseño parte 3 (P5b y P5c): agregar un producto, en pasos. Los
+           pasos de cono y cajas COMPARTEN pantalla para ahorrar un toque. -->
+      <section id="pr-agregar-prod" hidden>
+        <div class="pr-ag" id="pr-ag-grilla">
+          <div class="pr-tarjeta">
+            <span class="pr-ag__lote" id="pr-agregar-lote"></span>
+            <h1 class="pr-titulo">Agregar producto</h1>
+            <div class="pr-ag__lista" id="pr-agregar-pasos"></div>
+            <button type="button" class="pr-btn pr-btn--secundario pr-ag__cancelar" id="pr-agregar-cancelar">Cancelar</button>
           </div>
-          <p class="pr-texto-suave" id="pr-cierre-borrador" hidden></p>
-          <div class="pr-campos">
-            <label class="pr-campo">
-              <span class="pr-campo__rotulo">Hora en que se apagó el fuego</span>
-              <input type="time" id="pr-cierre-hora" class="pr-input">
-            </label>
-            <label class="pr-campo">
-              <span class="pr-campo__rotulo">Scrap (kg) — 0 si no hubo</span>
-              <input type="text" id="pr-cierre-scrap" class="pr-input" autocomplete="off">
-            </label>
+
+          <!-- Pasos 1, 2 y 3: son solo botones, así que se dibujan enteros. -->
+          <div class="pr-tarjeta" id="pr-agregar-panel"></div>
+
+          <!-- El cono va en HTML fijo porque tiene un buscador: redibujar el
+               bloque en cada tecla le sacaría el foco al campo. -->
+          <div class="pr-tarjeta" id="pr-agregar-cono" hidden>
+            <span class="pr-ag__titulo">¿Qué cono?</span>
+            <input type="text" id="pr-agregar-marca-buscar" class="pr-input pr-ag__buscar" placeholder="Buscar un cono…" autocomplete="off" aria-label="Buscar un cono">
+            <div class="pr-ag__lista" id="pr-agregar-marcas"></div>
+            <button type="button" class="pr-btn pr-ag__nuevo" id="pr-agregar-cono-nuevo">+ Agregar cono nuevo</button>
+            <div class="pr-ag__alta" id="pr-agregar-cono-form" hidden>
+              <input type="text" id="pr-agregar-cono-nombre" class="pr-input" maxlength="80" placeholder="Nombre del cono" autocomplete="off" aria-label="Nombre del cono nuevo">
+              <button type="button" class="pr-btn" id="pr-agregar-cono-confirmar">Agregarlo</button>
+            </div>
+            <p class="pr-ag__nota">Un cono nuevo queda pendiente hasta que lo revisen en Configuración, y se puede usar igual.</p>
+            <p class="pr-error" id="pr-agregar-cono-error" hidden></p>
           </div>
-          <label class="pr-campo pr-espacio-arriba">
-            <span class="pr-campo__rotulo">Observaciones</span>
-            <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000"></textarea>
-          </label>
-        </div>
 
-        <div class="pr-tarjeta">
-          <h2 class="pr-subtitulo">Lo producido, en orden</h2>
-          <div id="pr-cierre-productos"></div>
-          <button type="button" class="pr-btn pr-btn--secundario pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-btn-agregar-producto">Agregar producto</button>
-
-          <div class="pr-agregar" id="pr-agregar" hidden>
-            <div class="pr-campos">
-              <label class="pr-campo">
-                <span class="pr-campo__rotulo">Producto</span>
-                <select id="pr-agregar-producto" class="pr-select"></select>
-              </label>
-              <label class="pr-campo">
-                <span class="pr-campo__rotulo">Presentación</span>
-                <select id="pr-agregar-presentacion" class="pr-select"></select>
-              </label>
+          <!-- Las cajas: − / número / + de 96px, y el cálculo debajo. -->
+          <div class="pr-tarjeta" id="pr-agregar-cajas-panel" hidden>
+            <span class="pr-ag__titulo">¿Cuántas cajas?</span>
+            <div class="pr-contador">
+              <button type="button" class="pr-contador__paso" data-cajas-paso="-1" aria-label="Una caja menos">&minus;</button>
+              <input type="text" id="pr-agregar-cajas" class="pr-input" autocomplete="off" aria-label="Cajas">
+              <button type="button" class="pr-contador__paso" data-cajas-paso="1" aria-label="Una caja más">+</button>
             </div>
-            <div class="pr-campo pr-espacio-arriba">
-              <span class="pr-campo__rotulo">Marca</span>
-              <input type="text" id="pr-agregar-marca-buscar" class="pr-input" placeholder="Buscar una marca personalizada" autocomplete="off">
-              <div class="pr-chips" id="pr-agregar-marcas"></div>
+            <div class="pr-calculo">
+              <div class="pr-calculo__cuenta" id="pr-agregar-cuenta"></div>
+              <div class="pr-calculo__total" id="pr-agregar-unidades"></div>
             </div>
-            <label class="pr-campo pr-espacio-arriba">
-              <span class="pr-campo__rotulo">Cajas</span>
-              <input type="text" id="pr-agregar-cajas" class="pr-input" autocomplete="off">
-            </label>
-            <p class="pr-texto-suave" id="pr-agregar-unidades"></p>
             <p class="pr-error" id="pr-agregar-error" hidden></p>
-            <div class="pr-acciones">
-              <button type="button" class="pr-btn pr-btn--secundario" id="pr-agregar-cancelar">Cancelar</button>
-              <button type="button" class="pr-btn" id="pr-agregar-confirmar">Agregar a la planilla</button>
-            </div>
+            <button type="button" class="pr-btn pr-btn--accion pr-ag__confirmar" id="pr-agregar-confirmar">Agregar a lo producido</button>
           </div>
         </div>
+      </section>
 
-        <div class="pr-tarjeta">
-          <div id="pr-cierre-resumen"></div>
-          <p class="pr-error" id="pr-cierre-error" hidden></p>
-          <!-- Sin productos, antes de mandar se pregunta fuerte. -->
-          <div class="pr-aviso pr-aviso--grave" id="pr-cierre-vacio" hidden>
-            <p>No cargaste nada producido. ¿Seguro que esta máquina no produjo?</p>
-            <div class="pr-acciones">
-              <button type="button" class="pr-btn pr-btn--secundario" id="pr-cierre-vacio-no">No, voy a cargar lo producido</button>
-              <button type="button" class="pr-btn pr-btn--peligro" id="pr-cierre-vacio-si">Sí, no produjo nada</button>
+      <!-- Rediseño parte 3 (P5d): cerrar la planilla. Lo producido YA está
+           cargado —se carga durante el turno—, así que acá no se agrega nada:
+           p_productos va vacío y la base, si alguna vez recibiera algo,
+           continuaría la numeración de los sublotes. -->
+      <section id="pr-cierre" hidden>
+        <div class="pr-cierre">
+          <div class="pr-tarjeta">
+            <h1 class="pr-titulo" id="pr-cierre-titulo">Cerrar planilla</h1>
+            <p class="pr-texto-suave" id="pr-cierre-borrador" hidden></p>
+
+            <!-- Marcada: la hora pasa a ser la de la rotura y "Qué pasó" se
+                 vuelve obligatorio. -->
+            <button type="button" class="pr-rota" id="pr-cierre-rota" aria-pressed="false">
+              <span class="pr-rota__casilla" aria-hidden="true">&#10003;</span>
+              <span>La máquina se rompió y no volvió</span>
+            </button>
+
+            <div class="pr-cierre__campos">
+              <div class="pr-campo" id="pr-cierre-campo-hora">
+                <span class="pr-campo__rotulo" id="pr-cierre-hora-rotulo">Hora en que se apagó el fuego</span>
+                <div class="pr-contador pr-contador--chico">
+                  <button type="button" class="pr-contador__paso" data-hora-paso="-5" aria-label="Cinco minutos menos">&minus;</button>
+                  <input type="text" id="pr-cierre-hora" class="pr-input" inputmode="numeric" autocomplete="off" aria-label="Hora">
+                  <button type="button" class="pr-contador__paso" data-hora-paso="5" aria-label="Cinco minutos más">+</button>
+                </div>
+                <p class="pr-campo__nota" id="pr-cierre-hora-nota">De a 5 minutos · tocá el número para escribirlo</p>
+              </div>
+              <div class="pr-campo" id="pr-cierre-campo-scrap">
+                <span class="pr-campo__rotulo">Scrap (kg)</span>
+                <div class="pr-contador pr-contador--chico">
+                  <button type="button" class="pr-contador__paso" data-scrap-paso="-1" aria-label="Un kilo menos">&minus;</button>
+                  <input type="text" id="pr-cierre-scrap" class="pr-input" autocomplete="off" aria-label="Scrap en kilos">
+                  <button type="button" class="pr-contador__paso" data-scrap-paso="1" aria-label="Un kilo más">+</button>
+                </div>
+                <p class="pr-campo__nota" id="pr-cierre-scrap-nota">Si no hubo, poné 0.</p>
+              </div>
+            </div>
+
+            <div class="pr-campo pr-cierre__obs" id="pr-cierre-campo-obs">
+              <span class="pr-campo__rotulo" id="pr-cierre-obs-rotulo">Observaciones</span>
+              <textarea id="pr-cierre-obs" class="pr-textarea" maxlength="1000"></textarea>
+              <p class="pr-campo__nota" id="pr-cierre-obs-nota" hidden></p>
             </div>
           </div>
-          <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho" id="pr-cierre-enviar">Cerrar y enviar</button>
+
+          <div class="pr-tarjeta">
+            <span class="pr-ag__titulo">Resumen</span>
+            <div class="pr-resumen" id="pr-cierre-resumen"></div>
+
+            <div class="pr-cierre__pie">
+              <!-- Lo que hay que confirmar antes de mandar: una parada sin
+                   terminar, o que no se cargó nada producido. -->
+              <div class="pr-aviso pr-aviso--grave" id="pr-cierre-confirmar" hidden>
+                <div id="pr-cierre-confirmar-texto"></div>
+                <div class="pr-acciones">
+                  <button type="button" class="pr-btn pr-btn--secundario" id="pr-cierre-confirmar-no">No, vuelvo a la planilla</button>
+                  <button type="button" class="pr-btn pr-btn--peligro" id="pr-cierre-confirmar-si">Sí, cerrar igual</button>
+                </div>
+              </div>
+              <!-- El error va PEGADO al botón, nunca arriba de todo. -->
+              <p class="pr-error-pegado" id="pr-cierre-error" hidden></p>
+              <button type="button" class="pr-btn pr-btn--accion pr-btn--ancho" id="pr-cierre-enviar">Cerrar planilla</button>
+              <button type="button" class="pr-btn pr-btn--secundario pr-btn--ancho" id="pr-cierre-volver">Volver a la planilla</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1114,11 +1414,12 @@
       abrir: null,         // el formulario de abrir turno
       operarios: [],       // las personas que pueden ser operario en esta unidad
       abriendo: false,
-      planilla: null,      // { turno, operarios, masas, paradas, maquinaNombre }
+      planilla: null,      // { turno, operarios, masas, paradas, items, maquinaNombre }
       opsPlanilla: { buscando: false, busqueda: '', guardando: false },
       catalogo: null,      // { productos, presentaciones, marcas } de la unidad
-      cierre: null,        // el borrador del cierre: { hora, scrap, obs, productos }
-      agregar: null,       // el producto que se está agregando
+      cierre: null,        // el borrador del cierre: { hora, scrap, obs, rota }
+      agregar: null,       // el producto que se está agregando, paso por paso
+      corregir: null,      // { id, modo: 'corregir' | 'anular' } del sublote que se está tocando
       cerrando: false,
       // Sala de masa
       salaTurno: null,     // { id, lote, maquinaId, maquinaNombre } de la máquina elegida
@@ -1409,7 +1710,7 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-quien', 'pr-acceso', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-masa', 'pr-config', 'pr-historial', 'pr-stock']
+    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-quien', 'pr-acceso', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-agregar-prod', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-masa', 'pr-config', 'pr-historial', 'pr-stock']
 
     // Las pantallas que NO son la tablet: la oficina (quien no carga) y las que
     // se usan en la compu. Ahí manda la cabecera vieja con su menú; en la
@@ -2387,6 +2688,35 @@
       cont.innerHTML = ordenTablero(estado.tablero, hoy).map(e => htmlMaquina(e, hoy)).join('')
       btn.disabled = !estado.tablero.some(e => !e.turno)
       btn.textContent = estado.hayTurnoAbierto ? '+ Abrir otra máquina' : 'Abrir turno'
+      // Las planillas cerradas a la fuerza: la máquina está libre —por eso no
+      // están en el tablero, que solo muestra los turnos abiertos— pero lo que
+      // produjeron todavía no entró al stock. Si la consulta falla, no se
+      // muestra nada: un aviso inventado sería peor que ninguno.
+      try {
+        aviso.innerHTML = htmlPendientesCompletar(await leerPendientesCompletar(estado.unidadId), estado.tablero.map(e => e.maquina))
+      } catch (err) {
+        console.warn('pendientes de completar:', err)
+      }
+    }
+
+    // Los turnos 'pendiente_completar' de la unidad.
+    async function leerPendientesCompletar(unidadId) {
+      const { data, error } = await supabase.from('turnos_produccion')
+        .select('id, lote, maquina_id, fecha, turno').eq('unidad_negocio_id', unidadId).eq('estado', 'pendiente_completar').order('fecha')
+      if (error) throw error
+      return data ?? []
+    }
+
+    function htmlPendientesCompletar(pendientes, maquinas) {
+      const lista = pendientes ?? []
+      if (!lista.length) return ''
+      const nombre = id => (maquinas ?? []).find(m => m.id === id)?.nombre ?? 'Máquina'
+      const cuantas = lista.length === 1 ? '1 planilla quedó pendiente de completar' : `${lista.length} planillas quedaron pendientes de completar`
+      return `<div class="pr-aviso pr-aviso--grave"><strong>${esc(cuantas)}.</strong> ` +
+        'Se cerraron a la fuerza: la máquina quedó libre, pero lo que produjeron todavía no está en el stock.' +
+        '<div class="pr-chips">' + lista.map(t =>
+          `<button type="button" class="pr-btn pr-btn--peligro" data-planilla="${esc(t.id)}">${esc(nombre(t.maquina_id))} · lote ${esc(t.lote)}</button>`).join('') +
+        '</div></div>'
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2764,9 +3094,11 @@
         const quitar = ev.target.closest('[data-quitar-op]')
         if (quitar) return quitarOperarioFila(Number(quitar.dataset.quitarOp), quitar.dataset.opId)
       })
-      document.getElementById('pr-tablero').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-planilla]'); if (b) abrirPlanilla(b.dataset.planilla)
-      })
+      for (const id of ['pr-tablero', 'pr-tablero-aviso']) {
+        document.getElementById(id).addEventListener('click', ev => {
+          const b = ev.target.closest('[data-planilla]'); if (b) abrirPlanilla(b.dataset.planilla)
+        })
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2780,17 +3112,22 @@
 
     // Duración legible entre dos momentos: "1 h 05 min", "12 min". Sin fin,
     // hasta ahora. '' si no se puede calcular.
-    function duracionTexto(inicio, fin, ahora = new Date()) {
-      const a = new Date(inicio), b = fin ? new Date(fin) : ahora
-      if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return ''
-      const min = Math.floor((b - a) / 60000)
+    function textoMinutos(min) {
+      if (!Number.isFinite(min) || min < 0) return ''
       if (min < 60) return `${min} min`
       return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`
     }
 
+    function duracionTexto(inicio, fin, ahora = new Date()) {
+      const a = new Date(inicio), b = fin ? new Date(fin) : ahora
+      if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return ''
+      return textoMinutos(Math.floor((b - a) / 60000))
+    }
+
     async function leerPlanilla(turnoId) {
       const { data: turno, error: e1 } = await supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado').eq('id', turnoId).maybeSingle()
+        .select('id, lote, maquina_id, fecha, turno, encargado_id, abierto_en, estado, forzado_por, forzado_en, forzado_motivo')
+        .eq('id', turnoId).maybeSingle()
       if (e1) throw e1
       if (!turno) throw new Error('El turno no existe.')
       // `desde` y `hasta` van los dos: quitar_operario_turno NO borra la fila,
@@ -2798,37 +3135,114 @@
       const { data: ops, error: e2 } = await supabase.from('turno_operarios')
         .select('empleado_id, desde, hasta').eq('turno_id', turnoId).order('desde')
       if (e2) throw e2
-      const { data: masas, error: e3 } = await supabase.from('masas').select('id').eq('turno_id', turnoId).eq('anulada', false)
+      // Las masas se MIRAN: cuántas van y cómo fueron las dos últimas. Las
+      // carga el masero y desde acá no se editan.
+      const { data: masas, error: e3 } = await supabase.from('masas')
+        .select('id, nro, hora, doble, origen').eq('turno_id', turnoId).eq('anulada', false).order('nro')
       if (e3) throw e3
       const { data: paradas, error: e4 } = await supabase.from('paradas_produccion')
         .select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio')
       if (e4) throw e4
-      return { turno, operarios: ops ?? [], masas: (masas ?? []).length, paradas: paradas ?? [] }
+      // Lo producido: cada fila ya es un sublote en la base y su stock
+      // terminado ya entró. Los ANULADOS vienen también, a propósito: se
+      // muestran anulados, no se esconden.
+      const { data: items, error: e5 } = await supabase.from('produccion_items')
+        .select('id, orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades, anulado')
+        .eq('turno_id', turnoId).order('orden')
+      if (e5) throw e5
+      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [] }
     }
 
     function paradaEnCurso(paradas) {
       return (paradas ?? []).find(p => !p.fin) ?? null
     }
 
-    // Los operarios YA NO van acá: tienen su propio bloque, porque se pueden
-    // sumar y sacar durante el turno (htmlOperariosPlanilla).
-    function htmlDatosPlanilla(p) {
-      return `<div class="pr-datos">` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(p.turno.lote)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Masas (las carga el masero)</span><span class="pr-dato__valor">${esc(p.masas)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Turno</span><span class="pr-dato__valor">${esc(p.turno.turno)} · abierta ${esc(horaArgentina(p.turno.abierto_en) || '—')}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Encargado</span><span class="pr-dato__valor">${esc(nombrePersona(p.turno.encargado_id))}</span></div>` +
-        `</div>`
+    // El tiempo total parado del turno. Una parada EN CURSO cuenta hasta ahora:
+    // si no, el resumen del cierre diría menos de lo que la máquina estuvo
+    // parada justo cuando más importa.
+    function minutosParadas(paradas, ahora = new Date()) {
+      let total = 0
+      for (const p of paradas ?? []) {
+        const a = new Date(p.inicio), b = p.fin ? new Date(p.fin) : ahora
+        if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) continue
+        total += Math.floor((b - a) / 60000)
+      }
+      return total
     }
 
+    // ── La cabecera ───────────────────────────────────────────────────────
+
+    // El LOTE es el número más grande de la pantalla porque es lo que se copia
+    // a la planilla de papel, desde un metro de distancia.
+    function htmlLotePlanilla(p) {
+      return '<span class="pr-planilla-cab__rotulo">LOTE</span>' +
+        `<span class="pr-planilla-cab__numero">${esc(p.turno.lote)}</span>`
+    }
+
+    function htmlQuePlanilla(p) {
+      return `<div class="pr-planilla-cab__maquina">${esc(p.maquinaNombre)}</div>` +
+        `<div class="pr-planilla-cab__turno">Turno ${esc(p.turno.turno)} · abierta ${esc(horaArgentina(p.turno.abierto_en) || '—')}</div>`
+    }
+
+    // Una planilla de otro día o una que quedó pendiente de completar se dice
+    // bien claro, con lo que hay que hacer. Lo demás no lleva ningún cartel.
+    function htmlEstadoPlanilla(p, hoy) {
+      const t = p.turno
+      if (t.estado === 'pendiente_completar') {
+        const quien = nombrePersona(t.forzado_por)
+        const motivo = String(t.forzado_motivo ?? '').trim()
+        return '<div class="pr-aviso pr-aviso--grave"><strong>Pendiente de completar.</strong> ' +
+          `Esta planilla se cerró a la fuerza${quien === '—' ? '' : ` (${esc(quien)})`}${motivo ? `: ${esc(motivo)}` : ''}. ` +
+          'La máquina quedó libre, pero <strong>lo que produjo todavía no está en el stock</strong>. ' +
+          'Cargá lo producido y completala con "Completar la planilla".</div>'
+      }
+      const dia = diaDeLaSemana(t.fecha), dm = diaMes(t.fecha)
+      if (t.estado === 'abierto' && /^\d{4}-\d{2}-\d{2}$/.test(String(t.fecha ?? '')) && String(t.fecha) < String(hoy)) {
+        return '<div class="pr-aviso pr-aviso--grave"><strong>Esta planilla quedó abierta de otro día</strong>' +
+          `${dia && dm ? ` (${esc(dia)} ${esc(dm)})` : ''}. La máquina no se puede volver a abrir hasta cerrarla. ` +
+          'Si no sabés qué produjo, <button type="button" class="pr-link" data-forzar="1">cerrala a la fuerza</button>: ' +
+          'la máquina queda libre y la planilla, pendiente de completar.</div>'
+      }
+      return ''
+    }
+
+    // ── La columna de la izquierda: lo que se MIRA ────────────────────────
+
+    // Las masas, en solo lectura: cuántas van y cómo fueron las dos últimas.
+    function htmlMasasPlanilla(masas) {
+      const lista = masas ?? []
+      if (!lista.length) return '<p class="pr-texto-suave">Todavía no hay masas en esta máquina.</p>'
+      const ultimas = lista.slice(-2).reverse()
+      const hora = horaArgentina(ultimas[0].hora)
+      const filas = ultimas.map(m => {
+        const origen = ETIQUETA_ORIGEN[m.origen] ?? m.origen
+        return '<div class="pr-renglon">' +
+          `<span class="pr-renglon__num"><strong>${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${m.doble ? 'doble' : 'simple'}</span>` +
+          `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(origen)}</span></div>`
+      }).join('')
+      return '<div class="pr-masas__cuenta">' +
+        `<span class="pr-masas__numero">${esc(lista.length)}</span>` +
+        `<span class="pr-masas__ultima">${lista.length === 1 ? 'masa' : 'masas'}${hora ? ` · última ${esc(hora)}` : ''}</span></div>${filas}`
+    }
+
+    // Las paradas: la EN CURSO primero y en bordó, porque es la única que
+    // sigue pasando; las terminadas con su rango y su duración.
     function htmlParadas(paradas) {
-      if (!paradas.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
-      return '<ul class="pr-lista">' + paradas.map(p => {
+      const lista = paradas ?? []
+      if (!lista.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
+      const orden = [...lista.filter(p => !p.fin), ...lista.filter(p => p.fin)]
+      return orden.map(p => {
         const desde = horaArgentina(p.inicio) || '—'
-        const hasta = p.fin ? (horaArgentina(p.fin) || '—') : 'en curso'
         const dur = duracionTexto(p.inicio, p.fin)
-        return `<li class="pr-lista__item"><strong>${esc(p.motivo)}</strong> · ${esc(desde)} a ${esc(hasta)}${dur ? ` · ${esc(dur)}` : ''}</li>`
-      }).join('') + '</ul>'
+        if (!p.fin) {
+          return '<div class="pr-renglon pr-renglon--curso">' +
+            `<span class="pr-renglon__num"><strong>${esc(desde)}</strong> · ${esc(p.motivo)}</span>` +
+            `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}</span></div>`
+        }
+        return '<div class="pr-renglon">' +
+          `<span class="pr-renglon__num"><strong>${esc(desde)}–${esc(horaArgentina(p.fin) || '—')}</strong> · ${esc(p.motivo)}</span>` +
+          `<span class="pr-renglon__dato">${esc(dur)}</span></div>`
+      }).join('')
     }
 
     // Los operarios del turno, que se suman y se sacan con el turno abierto.
@@ -2869,6 +3283,101 @@
       cont.innerHTML = htmlResultadosOperario(candidatosOperario(estado.operarios ?? [], texto, adentro), texto, CTX_PLANILLA)
     }
 
+    // ── Lo producido ──────────────────────────────────────────────────────
+
+    // Detalle de una presentación: "con cono · media caja · bolsa granel".
+    function detallePresentacion(pr) {
+      const partes = []
+      if (pr.con_cono) partes.push('con cono')
+      if (pr.media_caja) partes.push('media caja')
+      if (pr.empaque) partes.push(pr.empaque)
+      return partes.join(' · ')
+    }
+
+    // Todo lo que hace falta para mostrar un renglón, o null si su
+    // presentación no está en el catálogo (se desactivó, o el catálogo no se
+    // pudo leer).
+    function describirProducido(item, cat) {
+      const pr = (cat?.presentaciones ?? []).find(x => x.id === item.presentacion_id)
+      if (!pr) return null
+      const prod = (cat?.productos ?? []).find(x => x.id === pr.producto_id)
+      const marca = item.marca_id ? (cat?.marcas ?? []).find(m => m.id === item.marca_id) : null
+      return {
+        producto: prod?.nombre ?? 'Producto',
+        presentacion: pr.nombre,
+        detalle: detallePresentacion(pr),
+        marca: item.marca_id ? (marca?.nombre ?? 'Marca que ya no está') : 'Común',
+        unidadesPorCaja: pr.unidades_por_caja,
+        unidades: item.cajas * pr.unidades_por_caja,
+      }
+    }
+
+    // Los sublotes que cuentan: un anulado se sigue viendo, pero no suma.
+    function itemsVivos(items) {
+      return (items ?? []).filter(it => !it.anulado)
+    }
+
+    // El total del turno. Las unidades salen de la fila de la base
+    // (`unidades`), que es lo que de verdad entró al stock: no se recalculan
+    // contra el catálogo de hoy, que puede haber cambiado.
+    function totalesProducido(items) {
+      let cajas = 0, unidades = 0
+      for (const it of itemsVivos(items)) {
+        cajas += it.cajas
+        unidades += it.unidades ?? 0
+      }
+      return { cajas, unidades }
+    }
+
+    // Un renglón de lo producido. Un ANULADO no se esconde: se muestra
+    // anulado, porque ese sublote existió, se selló en una caja y su stock
+    // entró y salió.
+    function htmlProducido(it, cat) {
+      const d = describirProducido(it, cat)
+      const clases = 'pr-producido' + (it.anulado ? ' pr-producido--anulado' : '') + (d ? '' : ' pr-producido--invalido')
+      const desc = d
+        ? `<div class="pr-producido__nombre">${esc(d.producto)}</div>` +
+          `<div class="pr-producido__detalle">${esc([d.presentacion, d.detalle, d.marca].filter(Boolean).join(' · '))} · caja ×${esc(formatearNumeroAr(d.unidadesPorCaja, { decimales: 0 }))}</div>`
+        : (cat
+          ? '<div class="pr-producido__nombre">Un producto que ya no está en el catálogo</div>' +
+            '<div class="pr-producido__detalle">El sublote quedó cargado igual y su stock ya entró.</div>'
+          : '<div class="pr-producido__nombre">Producto</div>' +
+            '<div class="pr-producido__detalle">No se pudo leer el catálogo: el nombre no se puede mostrar.</div>')
+      const botones = it.anulado
+        ? '<span class="pr-producido__detalle">Anulado</span>'
+        : `<button type="button" class="pr-btn-icono" data-corregir="${esc(it.id)}">Corregir</button>` +
+          `<button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${esc(it.id)}">Borrar</button>`
+      return `<div class="${clases}">` +
+        `<span class="pr-producido__sublote">${esc(it.sublote)}</span>` +
+        `<div class="pr-producido__desc">${desc}</div>` +
+        `<span class="pr-producido__cajas">${esc(formatearNumeroAr(it.cajas, { decimales: 0 }))} cajas</span>` +
+        `<span class="pr-producido__unidades">${esc(formatearNumeroAr(it.unidades, { decimales: 0 }))} u</span>` +
+        `<div class="pr-producido__botones">${botones}</div>` +
+        '</div>'
+    }
+
+    function htmlLoProducido(items, cat) {
+      if (!(items ?? []).length) {
+        return '<p class="pr-texto-suave">Todavía no cargaste nada producido. Se carga a medida que salen las cajas, sin esperar al cierre.</p>'
+      }
+      return items.map(it => htmlProducido(it, cat)).join('')
+    }
+
+    function htmlTotalTurno(items) {
+      const t = totalesProducido(items)
+      return '<span class="pr-total__rotulo">Total del turno</span>' +
+        `<span class="pr-total__valor">${esc(formatearNumeroAr(t.cajas, { decimales: 0 }))} cajas · ${esc(formatearNumeroAr(t.unidades, { decimales: 0 }))} u</span>`
+    }
+
+    function pintarProducido() {
+      const p = estado.planilla
+      if (!p) return
+      document.getElementById('pr-planilla-producido').innerHTML = htmlLoProducido(p.items, estado.catalogo)
+      document.getElementById('pr-planilla-total').innerHTML = htmlTotalTurno(p.items)
+    }
+
+    // ── Abrir y pintar la planilla ────────────────────────────────────────
+
     async function recargarPlanilla() {
       const p = estado.planilla
       if (!p) return
@@ -2907,28 +3416,57 @@
       }
     }
 
+    // Kilos con 3 decimales y cajas enteras, como manda js/utils.js.
+    let camposPlanillaEnlazados = false
+
+    function enlazarCamposPlanilla() {
+      if (camposPlanillaEnlazados) return
+      enlazarCampoNumero(document.getElementById('pr-cierre-scrap'), { decimales: 3 })
+      enlazarCampoNumero(document.getElementById('pr-agregar-cajas'), { decimales: 0 })
+      enlazarCampoNumero(document.getElementById('pr-corregir-cajas'), { decimales: 0 })
+      camposPlanillaEnlazados = true
+    }
+
     async function abrirPlanilla(turnoId) {
+      enlazarCamposPlanilla()
       estado.planilla = null
       estado.opsPlanilla = { buscando: false, busqueda: '', guardando: false }
+      estado.corregir = null
       // A la planilla se puede llegar sin pasar por Abrir turno, así que la
       // lista de operarios se resuelve también acá.
       estado.operarios = personasParaPuesto(estado.personal, 'operario').personas
-      document.getElementById('pr-planilla-datos').innerHTML = '<p class="pr-texto-suave">Cargando la planilla…</p>'
+      document.getElementById('pr-planilla-lote').innerHTML = ''
+      document.getElementById('pr-planilla-que').innerHTML = '<span class="pr-texto-suave">Cargando la planilla…</span>'
+      document.getElementById('pr-planilla-estado').innerHTML = ''
       document.getElementById('pr-planilla-operarios').innerHTML = ''
+      document.getElementById('pr-planilla-masas').innerHTML = ''
       document.getElementById('pr-planilla-paradas').innerHTML = ''
+      document.getElementById('pr-planilla-producido').innerHTML = ''
+      document.getElementById('pr-planilla-total').innerHTML = ''
       document.getElementById('pr-planilla-error').hidden = true
       document.getElementById('pr-parada-form').hidden = true
+      document.getElementById('pr-forzar-form').hidden = true
+      document.getElementById('pr-corregir').hidden = true
       document.getElementById('pr-parada-activa').hidden = true
-      const nombre = (estado.tablero ?? []).find(e => e.turno?.id === turnoId)?.maquina.nombre ?? 'Máquina'
-      document.getElementById('pr-planilla-maquina').textContent = nombre
       mostrarVista('pr-planilla')
+      const nombre = (estado.tablero ?? []).find(e => e.turno?.id === turnoId)?.maquina.nombre ?? 'Máquina'
       try {
         estado.planilla = { ...(await leerPlanilla(turnoId)), maquinaNombre: nombre }
       } catch (err) {
         console.error('planilla:', err)
-        document.getElementById('pr-planilla-datos').innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer la planilla. Revisá la conexión y volvé a abrirla.</div>'
+        document.getElementById('pr-planilla-que').innerHTML = ''
+        document.getElementById('pr-planilla-estado').innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer la planilla. Revisá la conexión y volvé a abrirla.</div>'
         pintarBotonesPlanilla()
         return
+      }
+      // El catálogo hace falta ACÁ y no al cerrar: lo producido se carga
+      // durante el turno. Si no se puede leer, los renglones se siguen viendo
+      // con su sublote y sus cajas, pero no se puede agregar nada.
+      try {
+        estado.catalogo = await leerCatalogoProductos(estado.unidadId)
+      } catch (err) {
+        console.error('catálogo de productos:', err)
+        estado.catalogo = null
       }
       pintarPlanilla()
     }
@@ -2936,28 +3474,42 @@
     function pintarPlanilla() {
       const p = estado.planilla
       if (!p) return
-      document.getElementById('pr-planilla-datos').innerHTML = htmlDatosPlanilla(p)
+      document.getElementById('pr-planilla-lote').innerHTML = htmlLotePlanilla(p)
+      document.getElementById('pr-planilla-que').innerHTML = htmlQuePlanilla(p)
+      document.getElementById('pr-planilla-estado').innerHTML = htmlEstadoPlanilla(p, hoyArgentina())
       pintarOperariosPlanilla()
+      document.getElementById('pr-planilla-masas').innerHTML = htmlMasasPlanilla(p.masas)
       document.getElementById('pr-planilla-paradas').innerHTML = htmlParadas(p.paradas)
+      pintarProducido()
       const enCurso = paradaEnCurso(p.paradas)
       document.getElementById('pr-parada-activa').hidden = !enCurso
       document.getElementById('pr-parada-activa-texto').textContent = enCurso
-        ? `Parada: ${enCurso.motivo} · desde ${horaArgentina(enCurso.inicio) || '—'}` : ''
+        ? `desde ${horaArgentina(enCurso.inicio) || '—'} · ${enCurso.motivo}` : ''
+      document.getElementById('pr-parada-activa-hace').textContent = enCurso
+        ? (duracionTexto(enCurso.inicio, null) ? `hace ${duracionTexto(enCurso.inicio, null)}` : '') : ''
       pintarBotonesPlanilla()
     }
 
-    // Con una parada en curso no se abre otra ni se cierra la planilla: la
-    // base rechaza las dos cosas ("Ya hay una parada en curso", "Hay una
-    // parada sin terminar").
+    // "Parada" solo aparece SIN parada en curso: la base rechaza una segunda.
+    //
+    // "Cerrar planilla" SIEMPRE se puede, y eso cambió a propósito: cerrar_turno
+    // da por terminada la parada que quedó abierta y la marca como que la
+    // máquina no volvió en todo el turno (`hasta_fin_de_turno`). La pantalla lo
+    // avisa y lo hace confirmar, pero no lo bloquea — un turno que terminó con
+    // la máquina parada es un caso normal, no un error.
     function pintarBotonesPlanilla() {
       const p = estado.planilla
       const enCurso = p ? paradaEnCurso(p.paradas) : null
-      const parada = document.getElementById('pr-btn-parada')
+      document.getElementById('pr-btn-parada').hidden = !p || !!enCurso
       const cerrar = document.getElementById('pr-btn-cerrar-planilla')
-      parada.disabled = !p || !!enCurso
-      cerrar.disabled = !p || !!enCurso
-      cerrar.title = enCurso ? 'Terminá la parada antes de cerrar la planilla' : ''
+      cerrar.disabled = !p
+      cerrar.textContent = p && p.turno.estado === 'pendiente_completar' ? 'Completar la planilla' : 'Cerrar planilla'
+      const agregar = document.getElementById('pr-btn-agregar-producto')
+      agregar.disabled = !p || !estado.catalogo
+      agregar.title = p && !estado.catalogo ? 'No se pudo leer el catálogo de productos' : ''
     }
+
+    // ── Paradas ───────────────────────────────────────────────────────────
 
     // Los motivos usados antes, del más reciente al más viejo, sin repetir
     // (comparados sin mayúsculas ni espacios de más).
@@ -3027,42 +3579,115 @@
       }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // MODO PRODUCCIÓN — cerrar la planilla, con borrador
-    // ═══════════════════════════════════════════════════════════════════════
+    // ── Cerrar a la fuerza ────────────────────────────────────────────────
 
-    // El borrador del cierre, por turno. Si se corta la conexión o se recarga
-    // la tablet en el medio, no se pierde nada.
-    function claveBorradorCierre(turnoId) {
-      return `produccion.cierre.${turnoId}`
+    // forzar_cierre_turno libera la máquina y deja el turno
+    // 'pendiente_completar'. NO crea sublotes ni suma stock: lo que produjo se
+    // carga después, completando la planilla con el mismo cierre de siempre.
+    function abrirForzar() {
+      document.getElementById('pr-forzar-motivo').value = ''
+      document.getElementById('pr-forzar-error').hidden = true
+      document.getElementById('pr-forzar-form').hidden = false
+      document.getElementById('pr-forzar-motivo').focus()
     }
 
-    function borradorCierreVacio() {
-      return { hora: '', scrap: null, obs: '', productos: [] }
-    }
-
-    function leerBorradorCierre(turnoId) {
-      const crudo = leerPreferencia(claveBorradorCierre(turnoId))
-      if (!crudo) return null
+    async function confirmarForzar() {
+      const p = estado.planilla
+      const err = document.getElementById('pr-forzar-error')
+      if (!p) return
+      const motivo = document.getElementById('pr-forzar-motivo').value.trim()
+      err.hidden = true
+      if (motivo.length < 3) { err.textContent = 'Escribí por qué, con tres letras por lo menos.'; err.hidden = false; return }
+      // p_persona_id es la persona de la tablet: la que entró con su PIN, que
+      // no es lo mismo que la cuenta con la que la tablet está logueada.
+      const persona = estado.persona?.id
+      if (!persona) { err.textContent = 'No hay nadie adentro de la tablet.'; err.hidden = false; return }
+      const btn = document.getElementById('pr-forzar-confirmar')
+      btn.disabled = true
       try {
-        const b = JSON.parse(crudo)
-        if (!b || typeof b !== 'object' || !Array.isArray(b.productos)) return null
-        return {
-          hora: typeof b.hora === 'string' ? b.hora : '',
-          scrap: typeof b.scrap === 'number' && Number.isFinite(b.scrap) ? b.scrap : null,
-          obs: typeof b.obs === 'string' ? b.obs : '',
-          productos: b.productos.filter(x => x && typeof x.presentacion_id === 'string' && Number.isInteger(x.cajas) && x.cajas > 0)
-            .map(x => ({ presentacion_id: x.presentacion_id, marca_id: typeof x.marca_id === 'string' ? x.marca_id : null, cajas: x.cajas })),
-        }
-      } catch { return null }
+        const { error } = await supabase.rpc('forzar_cierre_turno', { p_turno_id: p.turno.id, p_persona_id: persona, p_motivo: motivo })
+        if (error) throw error
+        document.getElementById('pr-forzar-form').hidden = true
+        mostrarExito('La máquina quedó libre. La planilla quedó pendiente de completar.')
+        await mostrarTablero()
+      } catch (e) {
+        console.error('forzar_cierre_turno:', e)
+        err.textContent = e?.message || 'No se pudo cerrar a la fuerza.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
+      }
     }
 
-    function guardarBorradorCierre(turnoId, b) {
-      guardarPreferencia(claveBorradorCierre(turnoId), JSON.stringify(b))
+    // ── Corregir o anular un sublote ──────────────────────────────────────
+
+    // Los DOS piden motivo porque la base lo exige (3 caracteres), y anular NO
+    // borra el renglón: le pone `anulado` y devuelve el stock con un ajuste.
+    function abrirCorregir(itemId, modo) {
+      const it = (estado.planilla?.items ?? []).find(x => x.id === itemId)
+      if (!it) return
+      estado.corregir = { id: itemId, modo, guardando: false }
+      document.getElementById('pr-corregir-titulo').textContent = modo === 'anular'
+        ? `Borrar el sublote ${it.sublote}` : `Corregir el sublote ${it.sublote}`
+      document.getElementById('pr-corregir-campo-cajas').hidden = modo === 'anular'
+      ponerNumero(document.getElementById('pr-corregir-cajas'), it.cajas)
+      document.getElementById('pr-corregir-motivo').value = ''
+      document.getElementById('pr-corregir-error').hidden = true
+      document.getElementById('pr-corregir-confirmar').textContent = modo === 'anular' ? 'Borrarlo' : 'Guardar'
+      document.getElementById('pr-corregir').hidden = false
+      document.getElementById('pr-corregir-motivo').focus()
     }
+
+    function cerrarCorregir() {
+      estado.corregir = null
+      document.getElementById('pr-corregir').hidden = true
+    }
+
+    async function confirmarCorregir() {
+      const c = estado.corregir
+      if (!c || c.guardando) return
+      const err = document.getElementById('pr-corregir-error')
+      const motivo = document.getElementById('pr-corregir-motivo').value.trim()
+      err.hidden = true
+      if (motivo.length < 3) { err.textContent = 'Escribí por qué, con tres letras por lo menos.'; err.hidden = false; return }
+      const cajas = leerCampoNumero(document.getElementById('pr-corregir-cajas'))
+      if (c.modo === 'corregir' && (!Number.isInteger(cajas) || cajas <= 0)) {
+        err.textContent = 'Poné cuántas cajas (un número entero mayor a cero). Para sacarlo, borralo.'
+        err.hidden = false
+        return
+      }
+      c.guardando = true
+      const btn = document.getElementById('pr-corregir-confirmar')
+      btn.disabled = true
+      let guardado = false
+      try {
+        const { error } = c.modo === 'anular'
+          ? await supabase.rpc('anular_produccion_item', { p_item_id: c.id, p_motivo: motivo })
+          : await supabase.rpc('corregir_produccion_item', { p_item_id: c.id, p_cajas: cajas, p_motivo: motivo })
+        if (error) throw error
+        guardado = true
+        await recargarPlanilla()
+        cerrarCorregir()
+      } catch (e) {
+        console.error('corregir/anular sublote:', e)
+        err.textContent = guardado
+          ? 'El cambio se guardó, pero no se pudo actualizar la planilla. Salí de la planilla y volvé a entrar.'
+          : (e?.message || 'No se pudo guardar el cambio.')
+        err.hidden = false
+      } finally {
+        if (estado.corregir) estado.corregir.guardando = false
+        btn.disabled = false
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODO PRODUCCIÓN — agregar un producto, paso por paso
+    // ═══════════════════════════════════════════════════════════════════════
 
     // Catálogo de lo que puede producir la unidad: productos activos con sus
-    // presentaciones activas, y las marcas personalizadas activas.
+    // presentaciones activas, y las marcas (conos) activas. `estado_alta` viene
+    // para poder decir cuál está pendiente de revisar: un cono propuesto desde
+    // la tablet se puede usar igual, pero se dice.
     async function leerCatalogoProductos(unidadId) {
       const { data: productos, error: e1 } = await supabase.from('productos_terminados')
         .select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')
@@ -3075,134 +3700,464 @@
         if (r.error) throw r.error
         presentaciones = r.data ?? []
       }
-      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre').eq('activa', true).order('nombre')
+      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas')
+        .select('id, nombre, estado_alta').eq('activa', true).order('nombre')
       if (e3) throw e3
       return { productos: productos ?? [], presentaciones, marcas: marcas ?? [] }
     }
 
-    // Detalle de una presentación: "con cono · media caja · bolsa granel".
-    function detallePresentacion(pr) {
-      const partes = []
-      if (pr.con_cono) partes.push('con cono')
-      if (pr.media_caja) partes.push('media caja')
-      if (pr.empaque) partes.push(pr.empaque)
-      return partes.join(' · ')
+    // La normalización de TODOS los buscadores del módulo: sin acentos y en
+    // minúsculas. textoPlano() NO recorta los bordes, para poder aplicarla
+    // carácter por carácter sin que un espacio del medio desaparezca (lo usa
+    // tramoCoincidencia); normalizarBusqueda() es esa misma, recortada, que es
+    // lo que hace falta para comparar. Una sola regla, en un solo lugar: dos
+    // normalizaciones conviviendo es exactamente cómo alguien usa la
+    // equivocada.
+    function textoPlano(t) {
+      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     }
 
-    // Todo lo que hace falta para mostrar un renglón, o null si su
-    // presentación ya no está en el catálogo (se desactivó).
-    function describirProducido(item, cat) {
-      const pr = cat.presentaciones.find(x => x.id === item.presentacion_id)
-      if (!pr) return null
-      const prod = cat.productos.find(x => x.id === pr.producto_id)
-      const marca = item.marca_id ? cat.marcas.find(m => m.id === item.marca_id) : null
-      return {
-        producto: prod?.nombre ?? 'Producto',
-        presentacion: pr.nombre,
-        detalle: detallePresentacion(pr),
-        marca: item.marca_id ? (marca?.nombre ?? 'Marca que ya no está') : 'Común',
-        unidadesPorCaja: pr.unidades_por_caja,
-        unidades: item.cajas * pr.unidades_por_caja,
+    function normalizarBusqueda(t) {
+      return textoPlano(t).trim()
+    }
+
+    // Un producto es de chocolate por su TIPO DE MASA, que es el mismo dato con
+    // el que la sala elige la receta. No se adivina por el nombre.
+    function esProductoChocolate(p) {
+      return normalizarBusqueda(p?.tipo_masa).includes('chocolate')
+    }
+
+    // Los comunes arriba y los de chocolate abajo, separados: es como se piden
+    // en la fábrica, y es lo que evita tocar "Mini" cuando se quería "Mini
+    // chocolate".
+    function productosPorMasa(cat) {
+      const todos = cat?.productos ?? []
+      return { comunes: todos.filter(p => !esProductoChocolate(p)), chocolate: todos.filter(p => esProductoChocolate(p)) }
+    }
+
+    // Las presentaciones de un producto. Con `conCono` en null, todas.
+    function presentacionesDe(cat, productoId, conCono) {
+      return (cat?.presentaciones ?? []).filter(pr => pr.producto_id === productoId && (conCono === null || conCono === undefined || pr.con_cono === conCono))
+    }
+
+    // Los pasos, con lo que ya se eligió. SIN CONO el paso del cono no aparece
+    // y la numeración se corre sola: los bloques se numeran por posición.
+    function pasosAgregar(a, cat) {
+      const prod = (cat?.productos ?? []).find(p => p.id === a.productoId)
+      const pres = (cat?.presentaciones ?? []).find(pr => pr.id === a.presentacionId)
+      const marca = a.marcaId ? (cat?.marcas ?? []).find(m => m.id === a.marcaId) : null
+      const pasos = [
+        { clave: 'producto', titulo: 'Producto', valor: prod ? prod.nombre : '' },
+        { clave: 'cono_si_no', titulo: 'Con o sin cono', valor: a.conCono === null ? '' : (a.conCono ? 'Con cono' : 'Sin cono') },
+        { clave: 'presentacion', titulo: 'Presentación', valor: pres ? pres.nombre : '' },
+      ]
+      // Mientras no se sepa si lleva cono, el paso se muestra igual: son los
+      // 5 del diseño. Recién al contestar "Sin cono" desaparece y Cajas pasa
+      // a ser el 4.
+      if (a.conCono !== false) pasos.push({ clave: 'cono', titulo: 'Cono', valor: a.marcaElegida ? (marca ? marca.nombre : 'Común') : '' })
+      pasos.push({ clave: 'cajas', titulo: 'Cajas', valor: a.cajas ? formatearNumeroAr(a.cajas, { decimales: 0 }) : '' })
+      return pasos.map((x, i) => ({ ...x, n: i + 1, estado: x.clave === a.paso ? 'actual' : (x.valor ? 'hecho' : 'falta') }))
+    }
+
+    // El actual pintado, los hechos con lo elegido y TOCABLES para volver, los
+    // que faltan apagados y sin valor: un paso que todavía no se contestó no
+    // puede mostrar nada.
+    function htmlPasosAgregar(pasos) {
+      return pasos.map(x => {
+        const cab = `<span class="pr-paso-bloque__n">${esc(x.n)} · ${esc(x.titulo)}</span>`
+        const valor = `<span class="pr-paso-bloque__valor">${esc(x.valor || 'Elegí uno')}</span>`
+        if (x.estado === 'hecho') return `<button type="button" class="pr-paso-bloque" data-paso-ag="${esc(x.clave)}">${cab}${valor}</button>`
+        if (x.estado === 'actual') return `<div class="pr-paso-bloque pr-paso-bloque--actual">${cab}${valor}</div>`
+        return `<div class="pr-paso-bloque pr-paso-bloque--falta">${esc(x.n)} · ${esc(x.titulo)}</div>`
+      }).join('')
+    }
+
+    function htmlPasoProducto(cat) {
+      const { comunes, chocolate } = productosPorMasa(cat)
+      if (!comunes.length && !chocolate.length) {
+        return '<span class="pr-ag__titulo">¿Qué producto?</span>' +
+          '<div class="pr-aviso pr-aviso--grave">Esta unidad no tiene productos cargados. Se cargan en Configuración → Productos.</div>'
+      }
+      const boton = p => `<button type="button" class="pr-ag__opcion" data-ag-producto="${esc(p.id)}">${esc(p.nombre)}</button>`
+      const chocoHtml = chocolate.length
+        ? '<div class="pr-ag__corte"><span class="pr-ag__corte-texto">Chocolate</span><span class="pr-ag__corte-linea"></span></div>' +
+          `<div class="pr-ag__grilla">${chocolate.map(boton).join('')}</div>`
+        : ''
+      return '<span class="pr-ag__titulo">¿Qué producto?</span>' +
+        `<div class="pr-ag__grilla">${comunes.map(boton).join('')}</div>${chocoHtml}`
+    }
+
+    // Con cono o sin cono. La opción que no tiene ninguna presentación se ve
+    // apagada y dice por qué, en vez de desaparecer: así no parece que falta
+    // algo en la pantalla.
+    function htmlPasoConoSiNo(a, cat) {
+      const opcion = (v, texto) => {
+        const cuantas = presentacionesDe(cat, a.productoId, v).length
+        return `<button type="button" class="pr-ag__opcion" data-ag-cono="${v ? '1' : '0'}"${cuantas ? '' : ' disabled'} aria-pressed="${a.conCono === v ? 'true' : 'false'}">` +
+          `${esc(texto)}<span class="pr-ag__opcion-nota">${cuantas ? `${esc(cuantas)} ${cuantas === 1 ? 'presentación' : 'presentaciones'}` : 'no hay presentaciones'}</span></button>`
+      }
+      return '<span class="pr-ag__titulo">¿Con cono o sin cono?</span>' +
+        `<div class="pr-ag__grilla">${opcion(true, 'Con cono')}${opcion(false, 'Sin cono')}</div>`
+    }
+
+    function htmlPasoPresentacion(a, cat) {
+      const pres = presentacionesDe(cat, a.productoId, a.conCono)
+      if (!pres.length) {
+        return '<span class="pr-ag__titulo">¿Qué presentación?</span>' +
+          '<div class="pr-aviso pr-aviso--grave">No hay presentaciones para eso. Se cargan en Configuración → Productos.</div>'
+      }
+      return '<span class="pr-ag__titulo">¿Qué presentación?</span><div class="pr-ag__grilla">' +
+        pres.map(pr => {
+          const det = detallePresentacion(pr)
+          return `<button type="button" class="pr-ag__opcion" data-ag-presentacion="${esc(pr.id)}" aria-pressed="${pr.id === a.presentacionId ? 'true' : 'false'}">${esc(pr.nombre)}` +
+            `<span class="pr-ag__opcion-nota">${esc(formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 }))} por caja${det ? ` · ${esc(det)}` : ''}</span></button>`
+        }).join('') + '</div>'
+    }
+
+    // El cono del sublote anterior: dentro de un turno se repite casi siempre,
+    // así que decirlo ahorra buscarlo. Se PROPONE, nunca se aplica solo.
+    function conoAnterior(items) {
+      const conMarca = itemsVivos(items).filter(it => it.marca_id)
+      const ult = conMarca[conMarca.length - 1]
+      return ult ? { marcaId: ult.marca_id, sublote: ult.sublote } : null
+    }
+
+    function marcasFiltradas(marcas, texto) {
+      const q = normalizarBusqueda(texto)
+      if (!q) return marcas ?? []
+      return (marcas ?? []).filter(m => normalizarBusqueda(m.nombre).includes(q))
+    }
+
+    // La lista de conos. "Común" va primera y es un caso real —un cono sin
+    // marca de cliente—, no un placeholder. Un cono propuesto desde la tablet
+    // se puede usar IGUAL: lo dice el chip, no se esconde.
+    function htmlMarcas(marcas, texto, a, anterior) {
+      const elegida = a?.marcaId ?? null
+      const comun = `<button type="button" class="pr-cono" data-marca="" aria-pressed="${a?.marcaElegida && !elegida ? 'true' : 'false'}">` +
+        'Común<span class="pr-cono__nota">sin marca</span></button>'
+      const lista = marcasFiltradas(marcas, texto)
+      const botones = lista.map(m => {
+        const notas = (anterior && anterior.marcaId === m.id ? `<span class="pr-cono__nota">el de ${esc(anterior.sublote)}</span>` : '') +
+          (m.estado_alta === 'pendiente_revision' ? '<span class="pr-cono__pendiente">nuevo, a revisar</span>' : '')
+        return `<button type="button" class="pr-cono" data-marca="${esc(m.id)}" aria-pressed="${m.id === elegida ? 'true' : 'false'}">` +
+          `<span>${htmlResaltado(m.nombre, texto)}</span>${notas}</button>`
+      }).join('')
+      const nada = texto && !lista.length ? `<span class="pr-op__nada">Ningún cono coincide con "${esc(texto)}". Si es nuevo, agregalo acá abajo.</span>` : ''
+      return comun + botones + nada
+    }
+
+    function abrirAgregar() {
+      if (!estado.catalogo || !estado.planilla) return
+      estado.agregar = {
+        paso: 'producto', productoId: '', conCono: null, presentacionId: '',
+        marcaId: null, marcaElegida: false, busqueda: '', cajas: null, guardando: false,
+      }
+      document.getElementById('pr-agregar-marca-buscar').value = ''
+      document.getElementById('pr-agregar-cono-form').hidden = true
+      document.getElementById('pr-agregar-cono-nombre').value = ''
+      document.getElementById('pr-agregar-cono-error').hidden = true
+      document.getElementById('pr-agregar-error').hidden = true
+      ponerNumero(document.getElementById('pr-agregar-cajas'), null)
+      mostrarVista('pr-agregar-prod')
+      pintarAgregar()
+    }
+
+    function irAPasoAgregar(clave) {
+      if (!estado.agregar) return
+      estado.agregar.paso = clave
+      pintarAgregar()
+    }
+
+    // Cambiar algo de más arriba invalida lo de abajo: elegir otro producto no
+    // puede dejar puesta la presentación del anterior, que es de otro producto.
+    function elegirProductoAgregar(id) {
+      const a = estado.agregar
+      if (!a) return
+      if (a.productoId !== id) { a.conCono = null; a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false }
+      a.productoId = id
+      a.paso = 'cono_si_no'
+      pintarAgregar()
+    }
+
+    function elegirConoSiNo(v) {
+      const a = estado.agregar
+      if (!a) return
+      if (a.conCono !== v) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false }
+      a.conCono = v
+      a.paso = 'presentacion'
+      pintarAgregar()
+    }
+
+    function elegirPresentacionAgregar(id) {
+      const a = estado.agregar
+      if (!a) return
+      a.presentacionId = id
+      // Con cono hay que elegirlo; sin cono se va derecho a las cajas.
+      a.paso = a.conCono ? 'cono' : 'cajas'
+      pintarAgregar()
+    }
+
+    function elegirCono(id) {
+      const a = estado.agregar
+      if (!a) return
+      a.marcaId = id || null
+      a.marcaElegida = true
+      a.paso = 'cajas'
+      pintarAgregar()
+    }
+
+    function cambiarCajas(delta) {
+      const a = estado.agregar
+      if (!a) return
+      const campo = document.getElementById('pr-agregar-cajas')
+      ponerNumero(campo, Math.max(0, (leerCampoNumero(campo) ?? 0) + delta))
+      a.cajas = leerCampoNumero(campo)
+      pintarAgregar()
+    }
+
+    function pintarCajasAgregar() {
+      const a = estado.agregar, cat = estado.catalogo
+      if (!a || !cat) return
+      const pr = cat.presentaciones.find(x => x.id === a.presentacionId)
+      const porCaja = pr ? formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 }) : ''
+      document.getElementById('pr-agregar-cuenta').textContent = pr
+        ? (a.cajas ? `${formatearNumeroAr(a.cajas, { decimales: 0 })} × ${porCaja} por caja` : `${porCaja} por caja`)
+        : ''
+      document.getElementById('pr-agregar-unidades').textContent = pr && a.cajas
+        ? `${formatearNumeroAr(a.cajas * pr.unidades_por_caja, { decimales: 0 })} u` : '—'
+    }
+
+    function pintarAgregar() {
+      const a = estado.agregar, cat = estado.catalogo, p = estado.planilla
+      if (!a || !cat) return
+      document.getElementById('pr-agregar-lote').textContent = p ? `Lote ${p.turno.lote} · ${p.maquinaNombre}` : ''
+      document.getElementById('pr-agregar-pasos').innerHTML = htmlPasosAgregar(pasosAgregar(a, cat))
+      const enFinal = a.paso === 'cono' || a.paso === 'cajas'
+      const panel = document.getElementById('pr-agregar-panel')
+      panel.hidden = enFinal
+      if (!panel.hidden) {
+        panel.innerHTML = a.paso === 'producto' ? htmlPasoProducto(cat)
+          : a.paso === 'cono_si_no' ? htmlPasoConoSiNo(a, cat)
+          : htmlPasoPresentacion(a, cat)
+      }
+      // El cono y las cajas COMPARTEN pantalla: se llega al cono con las cajas
+      // ya al lado, así que se ahorra un toque.
+      const cono = document.getElementById('pr-agregar-cono')
+      cono.hidden = !(a.conCono && enFinal)
+      if (!cono.hidden) {
+        document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(cat.marcas, a.busqueda, a, conoAnterior(p?.items))
+      }
+      document.getElementById('pr-agregar-cajas-panel').hidden = !enFinal
+      document.getElementById('pr-ag-grilla').className = 'pr-ag' + (cono.hidden ? '' : ' pr-ag--cono-cajas')
+      pintarCajasAgregar()
+      document.getElementById('pr-agregar-confirmar').disabled = !!a.guardando
+    }
+
+    function parametrosRegistrarProducido(turnoId, a) {
+      return { p_turno_id: turnoId, p_presentacion_id: a.presentacionId, p_marca_id: a.marcaId ?? null, p_cajas: a.cajas }
+    }
+
+    // registrar_produccion_item SUMA EL STOCK TERMINADO EN EL ACTO y devuelve
+    // el sublote definitivo: acá no hay sublotes provisorios.
+    async function confirmarAgregar() {
+      const a = estado.agregar
+      if (!a || a.guardando) return
+      const err = document.getElementById('pr-agregar-error')
+      err.hidden = true
+      if (!a.presentacionId) { err.textContent = 'Elegí el producto y la presentación.'; err.hidden = false; return }
+      if (!Number.isInteger(a.cajas) || a.cajas <= 0) { err.textContent = 'Poné cuántas cajas (un número entero mayor a cero).'; err.hidden = false; return }
+      a.guardando = true
+      pintarAgregar()
+      // Igual que al sumar un operario: si lo que falló fue la RELECTURA, el
+      // sublote YA está cargado y su stock ya entró. Decir "no se pudo" ahí
+      // llevaría a cargarlo dos veces.
+      let guardado = false
+      try {
+        const { data, error } = await supabase.rpc('registrar_produccion_item', parametrosRegistrarProducido(estado.planilla.turno.id, a))
+        if (error) throw error
+        guardado = true
+        await recargarPlanilla()
+        mostrarVista('pr-planilla')
+        mostrarExito(`Sublote ${data?.sublote ?? ''} cargado.`)
+      } catch (e) {
+        console.error('registrar_produccion_item:', e)
+        err.textContent = guardado
+          ? 'El sublote quedó cargado, pero no se pudo actualizar la planilla. Salí de la planilla y volvé a entrar.'
+          : (e?.message || 'No se pudo cargar el producto.')
+        err.hidden = false
+      } finally {
+        a.guardando = false
+        pintarAgregar()
       }
     }
 
-    // El sublote que le va a poner la base a cada renglón: lote-1, lote-2…,
-    // en el orden de la lista (cerrar_turno numera en el orden de
-    // p_productos). Es PROVISORIO: el definitivo lo devuelve la base.
-    function sublotesProvisorios(lote, cantidad) {
-      return Array.from({ length: cantidad }, (_, i) => `${lote}-${i + 1}`)
-    }
-
-    function totalesCierre(productos, cat) {
-      let cajas = 0, unidades = 0
-      for (const it of productos) {
-        cajas += it.cajas
-        const d = describirProducido(it, cat)
-        if (d) unidades += d.unidades
+    // proponer_marca guarda el nombre en MAYÚSCULAS y, con solo `cargar`, lo
+    // deja 'pendiente_revision': se puede usar igual. Un nombre ya RECHAZADO
+    // hace que la función LANCE, y ese mensaje ya viene escrito para una
+    // persona, así que se muestra tal cual.
+    async function crearConoNuevo() {
+      const campo = document.getElementById('pr-agregar-cono-nombre')
+      const err = document.getElementById('pr-agregar-cono-error')
+      const nombre = campo.value.trim()
+      err.hidden = true
+      if (!nombre) { err.textContent = 'Escribí el nombre del cono.'; err.hidden = false; return }
+      const btn = document.getElementById('pr-agregar-cono-confirmar')
+      btn.disabled = true
+      try {
+        const { data, error } = await supabase.rpc('proponer_marca', { p_nombre: nombre })
+        if (error) throw error
+        const id = data?.marca_id
+        if (!id) throw new Error('No se pudo agregar el cono.')
+        if (!estado.catalogo.marcas.some(m => m.id === id)) {
+          // Si YA existía no se sabe en qué estado está, así que no se le pone
+          // ninguno: afirmar "a revisar" sobre un cono aprobado sería mentir.
+          estado.catalogo.marcas = [...estado.catalogo.marcas,
+            { id, nombre: nombre.toUpperCase(), estado_alta: data?.ya_existia ? null : 'pendiente_revision' }]
+            .sort((x, y) => String(x.nombre).localeCompare(String(y.nombre), 'es'))
+        }
+        document.getElementById('pr-agregar-cono-form').hidden = true
+        campo.value = ''
+        estado.agregar.busqueda = ''
+        document.getElementById('pr-agregar-marca-buscar').value = ''
+        elegirCono(id)
+      } catch (e) {
+        console.error('proponer_marca:', e)
+        err.textContent = e?.message || 'No se pudo agregar el cono.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
       }
-      return { cajas, unidades }
     }
 
-    // Mover un renglón una posición arriba (-1) o abajo (+1). Devuelve una
-    // lista nueva; fuera de rango, la misma.
-    function moverProducto(lista, i, delta) {
-      const j = i + delta
-      if (i < 0 || i >= lista.length || j < 0 || j >= lista.length) return lista
-      const nueva = [...lista]
-      ;[nueva[i], nueva[j]] = [nueva[j], nueva[i]]
-      return nueva
+    // ═══════════════════════════════════════════════════════════════════════
+    // MODO PRODUCCIÓN — cerrar la planilla, con borrador
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // El borrador del cierre, por turno. Si se corta la conexión o se recarga
+    // la tablet en el medio, no se pierde nada. Lo PRODUCIDO ya no vive acá:
+    // está en la base desde que se cargó, sublote por sublote.
+    function claveBorradorCierre(turnoId) {
+      return `produccion.cierre.${turnoId}`
     }
 
-    function faltanParaCerrar(b, cat) {
+    function borradorCierreVacio() {
+      return { hora: '', scrap: null, obs: '', rota: false }
+    }
+
+    function leerBorradorCierre(turnoId) {
+      const crudo = leerPreferencia(claveBorradorCierre(turnoId))
+      if (!crudo) return null
+      try {
+        const b = JSON.parse(crudo)
+        if (!b || typeof b !== 'object') return null
+        return {
+          hora: typeof b.hora === 'string' ? b.hora : '',
+          scrap: typeof b.scrap === 'number' && Number.isFinite(b.scrap) ? b.scrap : null,
+          obs: typeof b.obs === 'string' ? b.obs : '',
+          rota: b.rota === true,
+        }
+      } catch { return null }
+    }
+
+    function guardarBorradorCierre(turnoId, b) {
+      guardarPreferencia(claveBorradorCierre(turnoId), JSON.stringify(b))
+    }
+
+    // "9:5" no es una hora; "9:05" sí y se guarda como "09:05". Lo que no sea
+    // una hora del día devuelve '' y no se manda.
+    function normalizarHora(t) {
+      const m = /^\s*(\d{1,2})\s*[:.]?\s*(\d{2})\s*$/.exec(String(t ?? ''))
+      if (!m) return ''
+      const h = Number(m[1]), min = Number(m[2])
+      if (h > 23 || min > 59) return ''
+      return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+    }
+
+    // La hora de a 5 minutos, dando la vuelta en medianoche.
+    function horaConPaso(hora, minutos) {
+      const base = normalizarHora(hora)
+      if (!base) return ''
+      const total = ((Number(base.slice(0, 2)) * 60 + Number(base.slice(3)) + minutos) % 1440 + 1440) % 1440
+      return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+    }
+
+    // Lo que falta para poder cerrar, con el texto del ERROR (que va pegado al
+    // botón) y el de la NOTA del campo (que se marca). "La máquina se rompió"
+    // vuelve obligatorio contar qué pasó.
+    function faltanParaCerrar(b) {
       const faltan = []
-      if (!/^\d{2}:\d{2}$/.test(b.hora ?? '')) faltan.push('la hora en que se apagó el fuego')
-      if (b.scrap == null) faltan.push('el scrap en kilos (0 si no hubo)')
-      if (b.productos.some(it => !describirProducido(it, cat))) faltan.push('sacar los productos que ya no están en el catálogo')
+      if (!normalizarHora(b.hora)) {
+        faltan.push({ campo: 'hora', error: b.rota ? 'Falta la hora en que se rompió.' : 'Falta la hora en que se apagó el fuego.', nota: 'Poné la hora.' })
+      }
+      if (b.scrap == null) faltan.push({ campo: 'scrap', error: 'Falta el scrap. Si no hubo, poné 0.', nota: 'Si no hubo, poné 0.' })
+      else if (b.scrap < 0) faltan.push({ campo: 'scrap', error: 'El scrap no puede ser negativo.', nota: 'No puede ser negativo.' })
+      if (b.rota && String(b.obs ?? '').trim() === '') {
+        faltan.push({ campo: 'obs', error: 'Falta contar qué pasó con la máquina.', nota: 'Contá qué pasó: es obligatorio.' })
+      }
       return faltan
     }
 
-    // El payload de cerrar_turno. El ORDEN del array es el orden de los
-    // sublotes: no se reordena acá.
+    // El payload de cerrar_turno. p_productos va VACÍO: lo producido ya está
+    // cargado sublote por sublote durante el turno, y la base continúa la
+    // numeración si alguna vez se le mandara algo acá.
     function parametrosCerrarTurno(turnoId, b) {
       return {
         p_turno_id: turnoId,
-        p_hora_apagado: b.hora,
+        p_hora_apagado: normalizarHora(b.hora),
         p_scrap_kg: b.scrap,
         p_observaciones: b.obs.trim() === '' ? null : b.obs.trim(),
-        p_productos: b.productos.map(it => ({ presentacion_id: it.presentacion_id, cajas: it.cajas, marca_id: it.marca_id ?? null })),
+        p_productos: [],
       }
     }
 
-    function htmlProducido(it, i, total, sublote, cat) {
-      const d = describirProducido(it, cat)
-      if (!d) {
-        return `<div class="pr-producido pr-producido--invalido"><span class="pr-producido__sublote">${esc(sublote)}</span>` +
-          `<div class="pr-producido__desc"><span class="pr-producido__nombre">Un producto que ya no está en el catálogo</span><br>Borralo y cargalo de nuevo.</div>` +
-          `<div class="pr-producido__botones"><button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${i}" aria-label="Borrar el renglón ${esc(sublote)}">✕</button></div></div>`
+    // Lo que hay que CONFIRMAR antes de mandar. Una parada sin terminar no
+    // bloquea —cerrar_turno la cierra sola y la marca como que la máquina no
+    // volvió en todo el turno— pero no puede pasar en silencio.
+    function avisosDeCierre(p) {
+      const avisos = []
+      const enCurso = paradaEnCurso(p?.paradas)
+      if (enCurso) {
+        avisos.push(`Quedó una parada sin terminar ("${enCurso.motivo}", desde ${horaArgentina(enCurso.inicio) || '—'}). ` +
+          'Al cerrar, la planilla la va a dar por terminada y va a quedar anotada como que la máquina no volvió en todo el turno.')
       }
-      const detalle = d.detalle ? ` · ${esc(d.detalle)}` : ''
-      return `<div class="pr-producido"><span class="pr-producido__sublote">${esc(sublote)}</span>` +
-        `<div class="pr-producido__desc"><span class="pr-producido__nombre">${esc(d.producto)} · ${esc(d.presentacion)}</span>${detalle}<br>` +
-        `Marca: ${esc(d.marca)} · ${esc(formatearNumeroAr(it.cajas, { decimales: 0 }))} cajas × ${esc(formatearNumeroAr(d.unidadesPorCaja, { decimales: 0 }))} = <strong>${esc(formatearNumeroAr(d.unidades, { decimales: 0 }))} unidades</strong></div>` +
-        `<div class="pr-producido__botones">` +
-        `<button type="button" class="pr-btn-icono" data-subir="${i}" aria-label="Subir ${esc(sublote)}"${i === 0 ? ' disabled' : ''}>▲</button>` +
-        `<button type="button" class="pr-btn-icono" data-bajar="${i}" aria-label="Bajar ${esc(sublote)}"${i === total - 1 ? ' disabled' : ''}>▼</button>` +
-        `<button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${i}" aria-label="Borrar ${esc(sublote)}">✕</button>` +
-        `</div></div>`
+      if (!itemsVivos(p?.items).length) avisos.push('No cargaste nada producido. ¿Seguro que esta máquina no produjo?')
+      return avisos
     }
 
-    function htmlResumenCierre(b, cat) {
-      const t = totalesCierre(b.productos, cat)
-      return `<div class="pr-resumen"><span>${esc(formatearNumeroAr(t.cajas, { decimales: 0 }))} cajas</span>` +
-        `<span>${esc(formatearNumeroAr(t.unidades, { decimales: 0 }))} unidades</span>` +
-        `<span>${esc(b.productos.length)} ${b.productos.length === 1 ? 'sublote' : 'sublotes'}</span></div>`
+    function htmlAvisosCierre(avisos) {
+      return (avisos ?? []).map(a => `<p>${esc(a)}</p>`).join('')
     }
 
-    let camposCierreEnlazados = false
+    function htmlResumenCierre(p, cat) {
+      const vivos = itemsVivos(p?.items)
+      const t = totalesProducido(p?.items)
+      const min = minutosParadas(p?.paradas)
+      const paradas = (p?.paradas ?? []).length
+      const filas = vivos.map(it => {
+        const d = describirProducido(it, cat)
+        return '<div class="pr-resumen__sub">' +
+          `<span><strong>${esc(it.sublote)}</strong> ${esc(d ? d.producto : 'Producto')}</span>` +
+          `<span>${esc(formatearNumeroAr(it.cajas, { decimales: 0 }))} cj</span></div>`
+      }).join('')
+      const producido = vivos.length
+        ? `<div class="pr-resumen__fila"><span class="pr-resumen__rotulo">Lo producido</span><strong>${esc(vivos.length)} ${vivos.length === 1 ? 'sublote' : 'sublotes'}</strong></div>${filas}`
+        : '<div class="pr-resumen__fila"><span class="pr-resumen__rotulo">Lo producido</span><strong>nada cargado</strong></div>'
+      return `<div class="pr-resumen__fila"><span class="pr-resumen__rotulo">Masas</span><strong>${esc((p?.masas ?? []).length)}</strong></div>` +
+        `<div class="pr-resumen__fila"><span class="pr-resumen__rotulo">Paradas</span><strong>${esc(paradas)}${min ? ` · ${esc(textoMinutos(min))}` : ''}</strong></div>` +
+        producido +
+        `<div class="pr-total"><span class="pr-total__rotulo">Total</span>` +
+        `<span class="pr-total__valor">${esc(formatearNumeroAr(t.cajas, { decimales: 0 }))} cj · ${esc(formatearNumeroAr(t.unidades, { decimales: 0 }))} u</span></div>`
+    }
 
+    // El cierre se abre SIEMPRE, también con una parada en curso: la base la
+    // cierra sola. Lo que la pantalla hace es avisarlo y hacerlo confirmar.
     async function mostrarCierre() {
       const p = estado.planilla
-      if (!p || paradaEnCurso(p.paradas)) return
-      document.getElementById('pr-cierre-titulo').textContent = `Cerrar ${p.maquinaNombre} · lote ${p.turno.lote}`
+      if (!p) return
+      document.getElementById('pr-cierre-titulo').textContent = `${p.turno.estado === 'pendiente_completar' ? 'Completar' : 'Cerrar'} ${p.maquinaNombre} · lote ${p.turno.lote}`
       document.getElementById('pr-cierre-error').hidden = true
-      document.getElementById('pr-cierre-vacio').hidden = true
-      document.getElementById('pr-agregar').hidden = true
-      if (!camposCierreEnlazados) {
-        enlazarCampoNumero(document.getElementById('pr-cierre-scrap'), { decimales: 3 })
-        enlazarCampoNumero(document.getElementById('pr-agregar-cajas'), { decimales: 0 })
-        camposCierreEnlazados = true
-      }
+      document.getElementById('pr-cierre-confirmar').hidden = true
       mostrarVista('pr-cierre')
-      document.getElementById('pr-cierre-productos').innerHTML = '<p class="pr-texto-suave">Cargando los productos…</p>'
-      try {
-        estado.catalogo = await leerCatalogoProductos(estado.unidadId)
-      } catch (err) {
-        console.error('catálogo de productos:', err)
-        estado.catalogo = null
-        document.getElementById('pr-cierre-productos').innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer los productos. Revisá la conexión y volvé a entrar.</div>'
-        document.getElementById('pr-cierre-enviar').disabled = true
-        return
-      }
       const guardado = leerBorradorCierre(p.turno.id)
       estado.cierre = guardado ?? { ...borradorCierreVacio(), hora: horaArgentina(new Date()) }
       document.getElementById('pr-cierre-borrador').hidden = !guardado
@@ -3214,19 +4169,41 @@
     }
 
     function pintarCierre() {
-      const b = estado.cierre, cat = estado.catalogo
-      if (!b || !cat) return
-      const subs = sublotesProvisorios(estado.planilla.turno.lote, b.productos.length)
-      document.getElementById('pr-cierre-productos').innerHTML = b.productos.length
-        ? b.productos.map((it, i) => htmlProducido(it, i, b.productos.length, subs[i], cat)).join('')
-        : '<p class="pr-texto-suave">Todavía no cargaste nada producido.</p>'
-      document.getElementById('pr-cierre-resumen').innerHTML = htmlResumenCierre(b, cat)
-      const faltan = faltanParaCerrar(b, cat)
-      const btn = document.getElementById('pr-cierre-enviar')
-      btn.disabled = faltan.length > 0 || !!estado.cerrando
-      btn.title = faltan.length ? `Falta ${faltan.join(', ')}` : ''
-      document.getElementById('pr-cierre-error').hidden = !faltan.length || !b.intentado
-      if (faltan.length && b.intentado) document.getElementById('pr-cierre-error').textContent = `Falta ${faltan.join(', ')}.`
+      const b = estado.cierre, p = estado.planilla
+      if (!b || !p) return
+      const rota = !!b.rota
+      document.getElementById('pr-cierre-rota').setAttribute('aria-pressed', rota ? 'true' : 'false')
+      document.getElementById('pr-cierre-hora-rotulo').textContent = rota ? 'Hora en que se rompió' : 'Hora en que se apagó el fuego'
+      document.getElementById('pr-cierre-obs-rotulo').innerHTML = rota
+        ? 'Qué pasó <span class="pr-obligatorio">· obligatorio</span>' : 'Observaciones'
+      document.getElementById('pr-cierre-resumen').innerHTML = htmlResumenCierre(p, estado.catalogo)
+
+      // El campo que falta se marca SOLO después de intentar: marcarlo antes
+      // sería señalar en rojo un formulario que nadie terminó de llenar.
+      const faltan = faltanParaCerrar(b)
+      const marcados = new Set(b.intentado ? faltan.map(f => f.campo) : [])
+      const clase = (id, campo, extra) => {
+        document.getElementById(id).className = 'pr-campo' + extra + (marcados.has(campo) ? ' pr-campo--mal' : '')
+      }
+      clase('pr-cierre-campo-hora', 'hora', '')
+      clase('pr-cierre-campo-scrap', 'scrap', '')
+      clase('pr-cierre-campo-obs', 'obs', ' pr-cierre__obs')
+      const fObs = faltan.find(f => f.campo === 'obs')
+      const notaObs = document.getElementById('pr-cierre-obs-nota')
+      notaObs.hidden = !(fObs && b.intentado)
+      notaObs.textContent = fObs ? fObs.nota : ''
+      const fScrap = faltan.find(f => f.campo === 'scrap')
+      document.getElementById('pr-cierre-scrap-nota').textContent = fScrap ? fScrap.nota : 'Si no hubo, poné 0.'
+
+      // El error va PEGADO al botón: o lo que falta, o lo que contestó la base.
+      const err = document.getElementById('pr-cierre-error')
+      const texto = (faltan.length && b.intentado) ? faltan.map(f => f.error).join(' ') : (b.errorBase || '')
+      err.textContent = texto
+      err.hidden = !texto
+      // El botón NO se deshabilita por lo que falta: si no se puede tocar, el
+      // error pegado a él no aparece nunca y la persona se queda sin saber qué
+      // falta. Solo se traba mientras se está mandando.
+      document.getElementById('pr-cierre-enviar').disabled = !!estado.cerrando
     }
 
     // Cada cambio se guarda en la tablet en el momento.
@@ -3236,100 +4213,40 @@
       b.hora = document.getElementById('pr-cierre-hora').value
       b.scrap = leerCampoNumero(document.getElementById('pr-cierre-scrap'))
       b.obs = document.getElementById('pr-cierre-obs').value
-      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, productos: b.productos })
+      b.errorBase = ''
+      guardarBorradorCierre(estado.planilla.turno.id, { hora: b.hora, scrap: b.scrap, obs: b.obs, rota: !!b.rota })
       pintarCierre()
     }
 
-    function actualizarProductos(lista) {
-      estado.cierre.productos = lista
-      guardarBorradorCierre(estado.planilla.turno.id, { hora: estado.cierre.hora, scrap: estado.cierre.scrap, obs: estado.cierre.obs, productos: lista })
-      pintarCierre()
+    function alternarRota() {
+      const b = estado.cierre
+      if (!b) return
+      b.rota = !b.rota
+      cambioEnCierre()
     }
 
-    // ── Agregar un producto: producto → presentación → marca → cajas ──────
-
-    // La normalizaci\u00f3n de TODOS los buscadores del m\u00f3dulo: sin acentos y en
-    // min\u00fasculas. textoPlano() NO recorta los bordes, para poder aplicarla
-    // car\u00e1cter por car\u00e1cter sin que un espacio del medio desaparezca (lo usa
-    // tramoCoincidencia); normalizarBusqueda() es esa misma, recortada, que es
-    // lo que hace falta para comparar. Una sola regla, en un solo lugar: dos
-    // normalizaciones conviviendo es exactamente c\u00f3mo alguien usa la
-    // equivocada.
-    function textoPlano(t) {
-      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    function cambiarHoraCierre(minutos) {
+      const campo = document.getElementById('pr-cierre-hora')
+      campo.value = horaConPaso(normalizarHora(campo.value) || horaArgentina(new Date()), minutos)
+      cambioEnCierre()
     }
 
-    function normalizarBusqueda(t) {
-      return textoPlano(t).trim()
+    function cambiarScrapCierre(kg) {
+      const campo = document.getElementById('pr-cierre-scrap')
+      ponerNumero(campo, Math.max(0, redondearKg((leerCampoNumero(campo) ?? 0) + kg)))
+      cambioEnCierre()
     }
-
-    function marcasFiltradas(marcas, texto) {
-      const q = normalizarBusqueda(texto)
-      if (!q) return marcas
-      return marcas.filter(m => normalizarBusqueda(m.nombre).includes(q))
-    }
-
-    function htmlMarcas(marcas, texto, elegida) {
-      const comun = `<button type="button" class="pr-chip" data-marca="" aria-pressed="${elegida ? 'false' : 'true'}">Común</button>`
-      const lista = marcasFiltradas(marcas, texto)
-      const botones = lista.map(m => `<button type="button" class="pr-chip" data-marca="${esc(m.id)}" aria-pressed="${m.id === elegida ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
-      const nada = texto && !lista.length ? `<span class="pr-texto-suave">Ninguna marca coincide con "${esc(texto)}".</span>` : ''
-      return comun + botones + nada
-    }
-
-    function abrirAgregar() {
-      const cat = estado.catalogo
-      if (!cat) return
-      estado.agregar = { productoId: '', presentacionId: '', marcaId: null, busqueda: '' }
-      document.getElementById('pr-agregar-producto').innerHTML = '<option value="">Elegí el producto</option>' +
-        cat.productos.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')
-      document.getElementById('pr-agregar-producto').value = ''
-      document.getElementById('pr-agregar-marca-buscar').value = ''
-      ponerNumero(document.getElementById('pr-agregar-cajas'), null)
-      document.getElementById('pr-agregar-error').hidden = true
-      document.getElementById('pr-agregar').hidden = false
-      pintarAgregar()
-    }
-
-    function pintarAgregar() {
-      const a = estado.agregar, cat = estado.catalogo
-      if (!a || !cat) return
-      const pres = cat.presentaciones.filter(pr => pr.producto_id === a.productoId)
-      const selPres = document.getElementById('pr-agregar-presentacion')
-      selPres.innerHTML = '<option value="">' + (a.productoId ? 'Elegí la presentación' : 'Primero el producto') + '</option>' +
-        pres.map(pr => {
-          const det = detallePresentacion(pr)
-          return `<option value="${esc(pr.id)}">${esc(pr.nombre)}${det ? ` (${esc(det)})` : ''} · ${esc(pr.unidades_por_caja)} por caja</option>`
-        }).join('')
-      selPres.disabled = !a.productoId
-      selPres.value = pres.some(pr => pr.id === a.presentacionId) ? a.presentacionId : ''
-      if (selPres.value !== a.presentacionId) a.presentacionId = ''
-      document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(cat.marcas, a.busqueda, a.marcaId)
-      const cajas = leerCampoNumero(document.getElementById('pr-agregar-cajas'))
-      const pr = cat.presentaciones.find(x => x.id === a.presentacionId)
-      document.getElementById('pr-agregar-unidades').textContent = pr && cajas
-        ? `${formatearNumeroAr(cajas, { decimales: 0 })} cajas × ${formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 })} = ${formatearNumeroAr(cajas * pr.unidades_por_caja, { decimales: 0 })} unidades`
-        : ''
-    }
-
-    function confirmarAgregar() {
-      const a = estado.agregar
-      const err = document.getElementById('pr-agregar-error')
-      const cajas = leerCampoNumero(document.getElementById('pr-agregar-cajas'))
-      if (!a.presentacionId) { err.textContent = 'Elegí el producto y la presentación.'; err.hidden = false; return }
-      if (!Number.isInteger(cajas) || cajas <= 0) { err.textContent = 'Poné cuántas cajas (un número entero mayor a cero).'; err.hidden = false; return }
-      document.getElementById('pr-agregar').hidden = true
-      actualizarProductos([...estado.cierre.productos, { presentacion_id: a.presentacionId, marca_id: a.marcaId, cajas }])
-    }
-
-    // ── Enviar ────────────────────────────────────────────────────────────
 
     function intentarCerrar() {
-      estado.cierre.intentado = true
+      const b = estado.cierre
+      if (!b) return
+      b.intentado = true
       cambioEnCierre()
-      if (faltanParaCerrar(estado.cierre, estado.catalogo).length) return
-      if (!estado.cierre.productos.length) {
-        document.getElementById('pr-cierre-vacio').hidden = false
+      if (faltanParaCerrar(b).length) return
+      const avisos = avisosDeCierre(estado.planilla)
+      if (avisos.length && !b.confirmado) {
+        document.getElementById('pr-cierre-confirmar-texto').innerHTML = htmlAvisosCierre(avisos)
+        document.getElementById('pr-cierre-confirmar').hidden = false
         return
       }
       enviarCierre()
@@ -3338,30 +4255,32 @@
     async function enviarCierre() {
       if (estado.cerrando) return
       estado.cerrando = true
-      document.getElementById('pr-cierre-vacio').hidden = true
+      estado.cierre.errorBase = ''
+      document.getElementById('pr-cierre-confirmar').hidden = true
       pintarCierre()
-      const err = document.getElementById('pr-cierre-error')
       const turnoId = estado.planilla.turno.id
       try {
         const { data, error } = await supabase.rpc('cerrar_turno', parametrosCerrarTurno(turnoId, estado.cierre))
         if (error) throw error
         // Recién ahora se borra el borrador: la base ya tiene todo.
         guardarPreferencia(claveBorradorCierre(turnoId), null)
-        document.getElementById('pr-cerrado-lista').innerHTML = htmlSublotesDefinitivos(data)
+        document.getElementById('pr-cerrado-lista').innerHTML = htmlSublotesDefinitivos(data, estado.planilla.items)
         mostrarVista('pr-cerrado')
         mostrarExito('Planilla cerrada.')
       } catch (e) {
         // El borrador queda en la tablet: no se pierde nada.
-        err.textContent = e?.message || 'No se pudo cerrar la planilla. Lo que cargaste quedó guardado en esta tablet.'
-        err.hidden = false
+        estado.cierre.errorBase = e?.message || 'No se pudo cerrar la planilla. Lo que cargaste quedó guardado en esta tablet.'
       } finally {
         estado.cerrando = false
         pintarCierre()
       }
     }
 
-    function htmlSublotesDefinitivos(res) {
-      const subs = Array.isArray(res?.sublotes) ? res.sublotes : []
+    // Los sublotes del turno: los que se cargaron DURANTE el turno más los que
+    // haya agregado el cierre (hoy ninguno, porque p_productos va vacío).
+    function htmlSublotesDefinitivos(res, items) {
+      const deAntes = itemsVivos(items).map(it => ({ sublote: it.sublote, cajas: it.cajas, unidades: it.unidades }))
+      const subs = [...deAntes, ...(Array.isArray(res?.sublotes) ? res.sublotes : [])]
       const cab = `<p class="pr-texto-suave">Lote ${esc(res?.lote ?? '')}</p>`
       if (!subs.length) return cab + '<p class="pr-dato__valor">Sin productos.</p>'
       return cab + '<ul class="pr-lista">' + subs.map(s =>
@@ -3378,6 +4297,11 @@
         const b = ev.target.closest('[data-sugerencia]'); if (b) document.getElementById('pr-parada-motivo').value = b.dataset.sugerencia
       })
       document.getElementById('pr-btn-reanudar').addEventListener('click', reanudar)
+      document.getElementById('pr-planilla-estado').addEventListener('click', ev => {
+        if (ev.target.closest('[data-forzar]')) abrirForzar()
+      })
+      document.getElementById('pr-forzar-cancelar').addEventListener('click', () => { document.getElementById('pr-forzar-form').hidden = true })
+      document.getElementById('pr-forzar-confirmar').addEventListener('click', confirmarForzar)
       const ops = document.getElementById('pr-planilla-operarios')
       ops.addEventListener('input', ev => {
         const campo = ev.target.closest('[data-buscar-op]'); if (!campo) return
@@ -3401,41 +4325,76 @@
         const quitar = ev.target.closest('[data-quitar-op]')
         if (quitar) return cambiarOperarioTurno('quitar_operario_turno', quitar.dataset.opId, 'No se pudo sacar el operario.')
       })
-      document.getElementById('pr-btn-cerrar-planilla').addEventListener('click', mostrarCierre)
-      document.getElementById('pr-cierre-volver').addEventListener('click', () => abrirPlanilla(estado.planilla.turno.id))
-      for (const id of ['pr-cierre-hora', 'pr-cierre-scrap', 'pr-cierre-obs']) {
-        document.getElementById(id).addEventListener('input', cambioEnCierre)
-      }
-      document.getElementById('pr-cierre-productos').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-subir], [data-bajar], [data-borrar]')
-        if (!b || b.disabled) return
-        const lista = estado.cierre.productos
-        if (b.dataset.subir !== undefined) actualizarProductos(moverProducto(lista, Number(b.dataset.subir), -1))
-        else if (b.dataset.bajar !== undefined) actualizarProductos(moverProducto(lista, Number(b.dataset.bajar), +1))
-        else actualizarProductos(lista.filter((_, i) => i !== Number(b.dataset.borrar)))
+
+      // Lo producido: corregir o borrar (anular) un sublote.
+      document.getElementById('pr-planilla-producido').addEventListener('click', ev => {
+        const c = ev.target.closest('[data-corregir]')
+        if (c) return abrirCorregir(c.dataset.corregir, 'corregir')
+        const b = ev.target.closest('[data-borrar]')
+        if (b) return abrirCorregir(b.dataset.borrar, 'anular')
       })
+      document.getElementById('pr-corregir-cancelar').addEventListener('click', cerrarCorregir)
+      document.getElementById('pr-corregir-confirmar').addEventListener('click', confirmarCorregir)
+
+      // Agregar un producto, paso por paso.
       document.getElementById('pr-btn-agregar-producto').addEventListener('click', abrirAgregar)
-      document.getElementById('pr-agregar-cancelar').addEventListener('click', () => { document.getElementById('pr-agregar').hidden = true })
-      document.getElementById('pr-agregar-confirmar').addEventListener('click', confirmarAgregar)
-      document.getElementById('pr-agregar-producto').addEventListener('change', ev => {
-        estado.agregar.productoId = ev.target.value; estado.agregar.presentacionId = ''; pintarAgregar()
+      document.getElementById('pr-agregar-cancelar').addEventListener('click', () => mostrarVista('pr-planilla'))
+      document.getElementById('pr-agregar-pasos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-paso-ag]'); if (b) irAPasoAgregar(b.dataset.pasoAg)
       })
-      document.getElementById('pr-agregar-presentacion').addEventListener('change', ev => {
-        estado.agregar.presentacionId = ev.target.value; pintarAgregar()
+      document.getElementById('pr-agregar-panel').addEventListener('click', ev => {
+        const prod = ev.target.closest('[data-ag-producto]')
+        if (prod) return elegirProductoAgregar(prod.dataset.agProducto)
+        const cono = ev.target.closest('[data-ag-cono]')
+        if (cono && !cono.disabled) return elegirConoSiNo(cono.dataset.agCono === '1')
+        const pres = ev.target.closest('[data-ag-presentacion]')
+        if (pres) return elegirPresentacionAgregar(pres.dataset.agPresentacion)
       })
       document.getElementById('pr-agregar-marca-buscar').addEventListener('input', ev => {
         estado.agregar.busqueda = ev.target.value
-        document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(estado.catalogo.marcas, estado.agregar.busqueda, estado.agregar.marcaId)
+        document.getElementById('pr-agregar-marcas').innerHTML =
+          htmlMarcas(estado.catalogo.marcas, estado.agregar.busqueda, estado.agregar, conoAnterior(estado.planilla?.items))
       })
       document.getElementById('pr-agregar-marcas').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-marca]'); if (!b) return
-        estado.agregar.marcaId = b.dataset.marca || null
-        document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(estado.catalogo.marcas, estado.agregar.busqueda, estado.agregar.marcaId)
+        const b = ev.target.closest('[data-marca]'); if (b) elegirCono(b.dataset.marca)
       })
-      document.getElementById('pr-agregar-cajas').addEventListener('input', pintarAgregar)
+      document.getElementById('pr-agregar-cono-nuevo').addEventListener('click', () => {
+        const f = document.getElementById('pr-agregar-cono-form')
+        f.hidden = false
+        document.getElementById('pr-agregar-cono-nombre').focus()
+      })
+      document.getElementById('pr-agregar-cono-confirmar').addEventListener('click', crearConoNuevo)
+      document.getElementById('pr-agregar-cajas-panel').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-cajas-paso]'); if (b) cambiarCajas(Number(b.dataset.cajasPaso))
+      })
+      document.getElementById('pr-agregar-cajas').addEventListener('input', () => {
+        estado.agregar.cajas = leerCampoNumero(document.getElementById('pr-agregar-cajas'))
+        pintarAgregar()
+      })
+      document.getElementById('pr-agregar-confirmar').addEventListener('click', confirmarAgregar)
+
+      // Cerrar la planilla.
+      document.getElementById('pr-btn-cerrar-planilla').addEventListener('click', mostrarCierre)
+      document.getElementById('pr-cierre-volver').addEventListener('click', () => abrirPlanilla(estado.planilla.turno.id))
+      document.getElementById('pr-cierre-rota').addEventListener('click', alternarRota)
+      for (const id of ['pr-cierre-hora', 'pr-cierre-scrap', 'pr-cierre-obs']) {
+        document.getElementById(id).addEventListener('input', cambioEnCierre)
+      }
+      document.getElementById('pr-cierre-campo-hora').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-hora-paso]'); if (b) cambiarHoraCierre(Number(b.dataset.horaPaso))
+      })
+      document.getElementById('pr-cierre-campo-scrap').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-scrap-paso]'); if (b) cambiarScrapCierre(Number(b.dataset.scrapPaso))
+      })
       document.getElementById('pr-cierre-enviar').addEventListener('click', intentarCerrar)
-      document.getElementById('pr-cierre-vacio-no').addEventListener('click', () => { document.getElementById('pr-cierre-vacio').hidden = true })
-      document.getElementById('pr-cierre-vacio-si').addEventListener('click', enviarCierre)
+      document.getElementById('pr-cierre-confirmar-no').addEventListener('click', () => {
+        document.getElementById('pr-cierre-confirmar').hidden = true
+        abrirPlanilla(estado.planilla.turno.id)
+      })
+      document.getElementById('pr-cierre-confirmar-si').addEventListener('click', () => {
+        estado.cierre.confirmado = true
+        enviarCierre()
+      })
       document.getElementById('pr-cerrado-volver').addEventListener('click', mostrarTablero)
     }
 
@@ -4371,6 +5330,17 @@
 
     // El orden que quedaría al mover una máquina: 1, 2, 3… en el orden de la
     // lista. Devuelve SOLO las que cambian de número, para mandar lo mínimo.
+    // Mover un renglón una posición arriba (-1) o abajo (+1). Devuelve una
+    // lista nueva; fuera de rango, la MISMA (y de eso se apoya ordenTrasMover
+    // para no mandar nada).
+    function moverProducto(lista, i, delta) {
+      const j = i + delta
+      if (i < 0 || i >= lista.length || j < 0 || j >= lista.length) return lista
+      const nueva = [...lista]
+      ;[nueva[i], nueva[j]] = [nueva[j], nueva[i]]
+      return nueva
+    }
+
     function ordenTrasMover(lista, i, delta) {
       const nueva = moverProducto(lista, i, delta)
       if (nueva === lista) return []

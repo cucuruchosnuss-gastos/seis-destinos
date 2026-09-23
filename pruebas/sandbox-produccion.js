@@ -49,16 +49,25 @@ const FUNCIONES_BASE = [
   'mostrarAbrir', 'pintarAbrir', 'pintarBotonAbrir', 'cambiarDiaAbrir', 'abrirBuscadorOperario',
   'agregarOperarioFila', 'quitarOperarioFila', 'pintarResultadosOperario',
   'confirmarAbrir', 'htmlLotesAsignados',
-  // B4: planilla, paradas y cierre
-  'nombrePersona', 'duracionTexto', 'leerPlanilla', 'paradaEnCurso', 'htmlDatosPlanilla', 'htmlParadas',
+  // B4 + rediseño parte 3: planilla, lo producido, paradas y cierre
+  'nombrePersona', 'textoMinutos', 'duracionTexto', 'leerPlanilla', 'paradaEnCurso', 'minutosParadas',
+  'htmlLotePlanilla', 'htmlQuePlanilla', 'htmlEstadoPlanilla', 'htmlMasasPlanilla', 'htmlParadas',
   'htmlOperariosPlanilla', 'pintarOperariosPlanilla', 'pintarResultadosPlanillaOp', 'recargarPlanilla',
   'cambiarOperarioTurno', 'abrirPlanilla', 'pintarPlanilla', 'pintarBotonesPlanilla', 'motivosSugeridos', 'mostrarFormParada',
-  'confirmarParada', 'reanudar', 'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre',
-  'guardarBorradorCierre', 'leerCatalogoProductos', 'detallePresentacion', 'describirProducido',
-  'sublotesProvisorios', 'totalesCierre', 'moverProducto', 'faltanParaCerrar', 'parametrosCerrarTurno',
-  'htmlProducido', 'htmlResumenCierre', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'actualizarProductos',
-  'textoPlano', 'normalizarBusqueda', 'marcasFiltradas', 'htmlMarcas', 'abrirAgregar', 'pintarAgregar', 'confirmarAgregar',
-  'intentarCerrar', 'enviarCierre', 'htmlSublotesDefinitivos',
+  'confirmarParada', 'reanudar', 'abrirForzar', 'confirmarForzar',
+  'leerPendientesCompletar', 'htmlPendientesCompletar',
+  'detallePresentacion', 'describirProducido', 'itemsVivos', 'totalesProducido', 'htmlProducido',
+  'htmlLoProducido', 'htmlTotalTurno', 'pintarProducido',
+  'abrirCorregir', 'cerrarCorregir', 'confirmarCorregir',
+  'leerCatalogoProductos', 'textoPlano', 'normalizarBusqueda', 'esProductoChocolate', 'productosPorMasa',
+  'presentacionesDe', 'pasosAgregar', 'htmlPasosAgregar', 'htmlPasoProducto', 'htmlPasoConoSiNo',
+  'htmlPasoPresentacion', 'conoAnterior', 'marcasFiltradas', 'htmlMarcas', 'abrirAgregar', 'irAPasoAgregar',
+  'elegirProductoAgregar', 'elegirConoSiNo', 'elegirPresentacionAgregar', 'elegirCono', 'cambiarCajas',
+  'pintarCajasAgregar', 'pintarAgregar', 'parametrosRegistrarProducido', 'confirmarAgregar', 'crearConoNuevo',
+  'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre', 'guardarBorradorCierre',
+  'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
+  'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',
+  'cambiarHoraCierre', 'cambiarScrapCierre', 'intentarCerrar', 'enviarCierre', 'htmlSublotesDefinitivos',
   // B5: sala de masa
   'mostrarSala', 'claveBorradorMasa', 'nuevoBorradorMasa', 'leerBorradorMasa', 'guardarBorradorMasa',
   'borrarBorradorMasa', 'borradoresPendientes', 'redondearKg', 'pasoDe', 'cantidadesDesde', 'diferencias',
@@ -73,7 +82,7 @@ const FUNCIONES_BASE = [
   // B6: configuración
   'volverDeOficina', 'mostrarInicioOficina', 'pintarAccesosOficina', 'unidadesDeConfig', 'pintarSelectorUnidad',
   'mostrarConfig', 'htmlPestanasConfig', 'errorConfig', 'cargarPestanaConfig', 'pintarPestanaConfig',
-  'leerMaquinasConfig', 'htmlConfigMaquinas', 'ordenTrasMover', 'parametrosGuardarMaquina', 'guardarEnConfig',
+  'leerMaquinasConfig', 'htmlConfigMaquinas', 'moverProducto', 'ordenTrasMover', 'parametrosGuardarMaquina', 'guardarEnConfig',
   'accionMaquina', 'leerRecetasConfig', 'leerInsumosDeIngredientes', 'recetaVigente', 'recetaParaRevisar',
   'filasEditorReceta', 'parametrosGuardarReceta', 'faltanEnReceta', 'htmlConfigRecetas', 'fechaCorta',
   'leerEditorReceta', 'guardarReceta', 'leerIngredientesConfig', 'ingredientesSinInsumo', 'htmlConfigIngredientes',
@@ -146,7 +155,7 @@ const PRELUDIO = `
   var bloqueoPantalla = null
   // El PIN del acceso maestro: let del módulo, en memoria y nada más.
   var pinMaestro = null
-  var camposCierreEnlazados = false
+  var camposPlanillaEnlazados = false
   var reintentando = false
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
@@ -191,7 +200,8 @@ const PRELUDIO = `
     vista: null, quienBusqueda: '', pin: null, maestro: null, acceso: null,
     ultimoToque: null, abiertasConocido: false,
     tablero: null, hayTurnoAbierto: false, abrir: null, operarios: [], abriendo: false,
-    planilla: null, opsPlanilla: { buscando: false, busqueda: '', guardando: false }, catalogo: null, cierre: null, agregar: null, cerrando: false,
+    planilla: null, opsPlanilla: { buscando: false, busqueda: '', guardando: false }, catalogo: null, cierre: null,
+    agregar: null, corregir: null, cerrando: false,
     salaTurno: null, masa: null, datosMasa: null, tiposMasa: null, masasTurno: null, enviandoMasa: false, anulando: null,
     config: null, historial: null, stockUnidad: null,
   }

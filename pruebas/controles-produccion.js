@@ -30,6 +30,7 @@ const BASES = [
   '10df632', // B5: sala de masa
   '7cb199b', // B6: configuración
   'f502c3d', // Rediseño parte 1: barra de modos, fondo por modo y acceso con PIN
+  'd3f8203', // Rediseño parte 2: tablero de máquinas y abrir turno con varios operarios
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
@@ -38,6 +39,15 @@ const RENOMBRADOS = [
     'B6: "Cambiar el modo" ganó un id para ocultarlo a quien no carga desde la tablet; mismo texto y mismo data-menu'],
   ['control:button#pr-btn-cambiar-persona[type=button]', 'control:button#pr-btn-salir[type=button]',
     'Rediseño parte 1: el botón que dejaba la tablet sin nadie se llama Salir y vive en la barra de modos; hace lo mismo'],
+  ['control:input#pr-cierre-hora[type=time]', 'control:input#pr-cierre-hora[type=text]',
+    'Rediseño parte 3: la hora del cierre pasó a − / + de a 5 minutos con el número editable (P5d). En la tablet, de pie ' +
+    'y con harina en las manos, el reloj nativo de un input[type=time] no se puede usar. Mismo campo, mismo id, mismo dato.'],
+  ['control:button#pr-cierre-vacio-si[type=button]', 'control:button#pr-cierre-confirmar-si[type=button]',
+    'Rediseño parte 3: el panel dejó de preguntar SOLO por "no produjo nada". Ahora junta todo lo que hay que confirmar ' +
+    'antes de mandar —una parada sin terminar, y/o que no se cargó nada producido— así que el id decía menos de lo que pregunta.'],
+  ['control:button#pr-cierre-vacio-no[type=button]', 'control:button#pr-cierre-confirmar-no[type=button]',
+    'Rediseño parte 3: el par del de arriba. Además ahora vuelve a la planilla, que es donde se reanuda la parada o se ' +
+    'carga lo que produjo.'],
 ]
 
 // Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS
@@ -59,11 +69,37 @@ const RETIRADOS = [
     'En la tablet, de pie y con harina en las manos, el calendario nativo de un input[type=date] no se puede usar; ' +
     'y la fecha nunca se elige libre: va de hoy hacia atrás, de a un día. El valor vive en estado.abrir.fecha y se ' +
     'escribe con los botones data-abrir-dia.'],
+  ['control:select#pr-agregar-producto',
+    'Rediseño parte 3: elegir el producto pasó de un <select> a botones de 88px en una grilla de 3 columnas (P5b), con ' +
+    'los comunes arriba y los de chocolate abajo separados por una línea. Un <select> nativo en la tablet obliga a ' +
+    'desplegar una lista y no deja separar los de chocolate, que es lo que evita tocar "Mini" queriendo "Mini chocolate". ' +
+    'El control nuevo es data-ag-producto.'],
+  ['control:select#pr-agregar-presentacion',
+    'Rediseño parte 3: igual que el producto, pasó a botones (data-ag-presentacion) que muestran las unidades por caja ' +
+    'en su propia línea, que en un <option> no entra legible.'],
+  ['control:button[data-subir][type=button]',
+    'Rediseño parte 3: lo producido se carga DURANTE el turno y cada renglón YA es un sublote en la base, con su número ' +
+    'sellado en la caja y su stock adentro. No hay nada que reordenar: el orden es el de carga y lo pone la base. ' +
+    'Corregir un renglón cargado es data-corregir (corregir_produccion_item) y sacarlo es data-borrar ' +
+    '(anular_produccion_item), los dos con motivo.'],
+  ['control:button[data-bajar][type=button]',
+    'Rediseño parte 3: el par del de arriba, por el mismo motivo.'],
   ['control:select[data-operario]',
     'Rediseño parte 2: un solo operario por máquina en un <select> pasó a VARIOS operarios como chips, que se ' +
     'agregan de a uno con el buscador que se abre dentro de la fila (P4a). abrir_turnos recibe operarios: [uuid, …] ' +
     'por máquina, así que el select de una sola opción no podía representar lo que la RPC acepta. Los controles ' +
     'nuevos son data-mas-operario, data-buscar-op, data-elegir-op, data-cancelar-op y data-quitar-op.'],
+]
+
+// Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:
+// [clave, cuántas veces ahora, motivo]. No es una excepción al chequeo —la
+// clave tiene que seguir existiendo— y si aparece más veces que lo declarado,
+// la declaración sobra y se dice.
+const MENOS_COPIAS = [
+  ['control:button[data-borrar][type=button]', 1,
+    'Rediseño parte 3: htmlProducido() tenía DOS ramas con su propio botón "Borrar" —la del renglón normal y la del ' +
+    'producto que ya no está en el catálogo— y ahora las dos comparten los mismos botones, así que el control está ' +
+    'escrito una sola vez. El botón no se fue: es el que anula el sublote con anular_produccion_item.'],
 ]
 
 let ok = 0
@@ -82,6 +118,11 @@ try {
   // Un RETIRADO que ya no hace falta es ruido que tapa el próximo: si el
   // control sigue en el archivo, la declaración sobra y se dice.
   for (const [k] of RETIRADOS) chk(`el retirado ${k} ya no está en el archivo`, veces(A, k) === 0, 'sigue estando: sacá la declaración de RETIRADOS')
+  const copias = new Map(MENOS_COPIAS.map(([k, n, m]) => { console.log(`MENOS COPIAS: ${k} × ${n} (${m})`); return [k, n] }))
+  for (const [k, n] of MENOS_COPIAS) {
+    chk(`el control ${k} sigue en el archivo`, veces(A, k) > 0, 'ya no está: va en RETIRADOS, no en MENOS_COPIAS')
+    chk(`${k} aparece las ${n} veces declaradas`, veces(A, k) === n, `aparece ${veces(A, k)}: actualizá o sacá la declaración`)
+  }
 
   if (!BASES.length) console.log('Sin baseline todavía: es la primera sub-parte del archivo.')
   for (const base of BASES) {
@@ -93,7 +134,8 @@ try {
       const nueva = renombrada.get(k) || k
       if (retirada.has(nueva)) continue
       const n = veces(B, k), hay = veces(A, nueva)
-      chk(`${base}: ${k} sigue estando`, hay >= n, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
+      const pide = copias.has(nueva) ? Math.min(n, copias.get(nueva)) : n
+      chk(`${base}: ${k} sigue estando`, hay >= pide && hay > 0, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
     }
   }
 

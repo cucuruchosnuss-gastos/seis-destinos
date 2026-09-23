@@ -588,3 +588,408 @@ obtener un número que después nadie puede explicar.
    al día siguiente (o pedí que alguien deje una abierta). Tiene que aparecer
    arriba de todo, en bordó, y en "Abrir turno" al final con la casilla que no
    se puede marcar.
+
+---
+
+# Traspaso de la PARTE 3
+
+# Traspaso al chat de arquitectura — Producción, rediseño PARTE 3 de 7 (23/09/2026)
+
+Sos el chat de arquitectura de Seis Destinos. Actualizá `CLAUDE.md` con lo que
+sigue. Quien lo recibe no vio nada de este trabajo, así que está todo explicado.
+
+**Contexto:** el módulo Producción (`modulos/produccion.html`, la tablet de la
+fábrica) se está rehaciendo con un diseño nuevo, en 7 partes. La parte 1 (barra
+de modos y PIN) es `f502c3d` y la parte 2 (tablero y abrir turno) es `d3f8203`;
+sus traspasos están en `.claude/traspasos/2026-09-23-produccion-2.md`. Esta es
+la **parte 3: la planilla de la máquina, lo producido y el cierre**. Si te
+llegan varios juntos, fusionalos en una sola edición de la sección del módulo.
+
+**Qué NO cambió:** ninguna RPC, ninguna tabla, ninguna policy, ningún permiso.
+**Cero SQL corrido.** Todo es frontend contra RPCs que ya existían, y todas se
+leyeron con `pg_get_functiondef` antes de usarlas (el detalle, más abajo).
+
+---
+
+## 1. Sección "Módulos → 10. Producción": reemplazar lo de la planilla y el cierre
+
+Donde hoy dice **"Modo Producción: tablero con cada máquina activa…"** —el
+párrafo que describe la planilla y "Cerrar planilla"— poner:
+
+> - **LA PLANILLA DE UNA MÁQUINA** (rediseño parte 3). La pantalla donde más
+>   tiempo pasa el encargado. Arriba, el **LOTE en 64 px**, porque es lo que se
+>   copia a la planilla de papel desde un metro; al lado la máquina, el turno y
+>   la hora de apertura, y a la derecha **Cerrar planilla** y **Parada**.
+>   Abajo, dos columnas: a la izquierda **lo que se MIRA** —operarios (se suman
+>   y se sacan, como en la parte 2), **masas** y **paradas**— y a la derecha
+>   **lo que se CARGA: lo producido**.
+>   - **Las masas son SOLO LECTURA y lo dice la pantalla** ("las carga el
+>     masero"): la cantidad en 40 px y **las dos últimas** con su hora, si fue
+>     simple o doble y su chip de origen. No hay ni un control para editarlas,
+>     y hay una prueba que se pone en rojo si aparece uno.
+>   - **Las paradas: la EN CURSO primero y en bordó**, porque es la única que
+>     sigue pasando; las terminadas con su rango y su duración. Mientras dura
+>     una, una **franja fija de 80 px bajo la barra**, en bordó, con el sello
+>     PARADA, "desde HH:MM · motivo", hace cuánto, y **Reanudar** (64 px,
+>     blanco con letra bordó). Sin parada en curso la franja no existe y
+>     aparece el botón **Parada**.
+> - **LO PRODUCIDO SE CARGA DURANTE EL TURNO, no al cerrar** (el cambio más
+>   grande de esta parte). Cada renglón se manda con
+>   **`registrar_produccion_item`**, que **suma el stock terminado en el acto**
+>   y devuelve el **sublote definitivo**: **ya no existen los sublotes
+>   provisorios**. Un renglón se lee "7023-1 · Mini con cono · Caserato ·
+>   35 cajas · 11.200 u", y el total del turno va al pie en 26 px.
+>   - Se **corrige** con `corregir_produccion_item` y se **borra** con
+>     `anular_produccion_item`, los dos **con motivo** (la base exige 3
+>     caracteres). **Anular NO borra la fila: le pone `anulado`**, así que el
+>     renglón **se sigue viendo, anulado** —ese sublote existió, se selló en una
+>     caja y su stock entró y salió— y **no suma al total**.
+>   - **Ya no se reordena nada**: el orden es el de carga y lo pone la base, así
+>     que los botones de subir y bajar del cierre viejo no existen más.
+>   - **`agregar_produccion_item` NO se usa acá**: es solo para un turno ya
+>     CERRADO y con `produccion:configurar`.
+> - **AGREGAR UN PRODUCTO, EN PASOS** (P5b y P5c). Pantalla propia con los
+>   pasos a la izquierda como bloques de 64 px: el actual pintado, los hechos
+>   **con lo elegido y tocables para volver**, los que faltan apagados y **sin
+>   ningún valor**. Los pasos son **1 Producto → 2 Con o sin cono →
+>   3 Presentación → 4 Cono → 5 Cajas**, y **el del cono desaparece al
+>   contestar "Sin cono"**, con lo que Cajas pasa a ser el 4: la numeración
+>   sale de la posición, no está escrita. **Los pasos del cono y de las cajas
+>   comparten pantalla** para ahorrar un toque.
+>   - **Paso 1: los de chocolate ABAJO y separados** por una línea de 3 px con
+>     la palabra "Chocolate", en el marrón que el proyecto ya usa para el
+>     chocolate. **Lo decide `tipo_masa`, no el nombre**: es el mismo dato con
+>     el que la sala elige la receta.
+>   - **Paso 2:** la opción que no tiene ninguna presentación queda **apagada y
+>     dice por qué**, en vez de desaparecer.
+>   - **Paso 4, el cono:** buscador de 64 px, resultados de 72 px con **la
+>     coincidencia en negrita** (el mismo `htmlResaltado()` del buscador de
+>     operarios) y **el usado en el sublote anterior marcado** ("el de
+>     7023-1"), que es el que más se repite dentro de un turno. Se PROPONE,
+>     nunca se aplica solo. **"Común" va primera y es una opción de verdad**
+>     —un cono sin marca de cliente—, no un placeholder.
+>   - **Un cono que no está: "+ Agregar cono nuevo"** (borde punteado) llama a
+>     **`proponer_marca`**, que guarda el nombre en **MAYÚSCULAS** y, con solo
+>     `produccion:cargar`, lo deja **`pendiente_revision`**. **Queda pendiente
+>     y se puede usar igual**: lo dice un chip "nuevo, a revisar", no se
+>     esconde. Un nombre **ya rechazado hace que la función LANCE**, y ese
+>     mensaje ya viene escrito para una persona, así que se muestra tal cual.
+>     Si el cono **ya existía**, no se le pone ningún chip: afirmar "a revisar"
+>     sobre uno aprobado sería mentir.
+>   - **Paso 5:** − / número / + de 96 px de alto, número de 56 px, y debajo el
+>     cálculo "35 × 320 por caja = **11.200 u**". Las cajas no bajan de cero.
+> - **CERRAR LA PLANILLA** (P5d). Dos columnas: a la izquierda los datos, a la
+>   derecha el resumen (masas, paradas con su tiempo total, los sublotes y el
+>   total) y el botón.
+>   - **`p_productos` va VACÍO (`[]`)**: lo producido ya está cargado sublote
+>     por sublote. La base continúa la numeración si alguna vez recibiera algo,
+>     pero la pantalla no manda nada.
+>   - **SE PUEDE CERRAR CON UNA PARADA ABIERTA, y eso cambió.** `cerrar_turno`
+>     **primero** cierra la parada que quedó abierta con
+>     **`hasta_fin_de_turno = true`** —"no volvió en todo el turno"— y recién
+>     después valida hora y scrap. Antes la pantalla lo BLOQUEABA, con un
+>     comentario que decía que "la base rechaza las dos cosas": **era falso**,
+>     la base solo rechaza una segunda parada en curso. Ahora el botón se puede
+>     tocar siempre, y **la pantalla avisa y hace confirmar** antes de mandar,
+>     nombrando el motivo y la hora de la parada. La misma pregunta junta el
+>     otro caso —"no cargaste nada producido"— así que es **una sola
+>     confirmación** y no dos seguidas.
+>   - **La casilla de 72 px "La máquina se rompió y no volvió"**: marcada,
+>     cambia la etiqueta de la hora a "Hora en que se rompió" y hace
+>     **obligatorio** "Qué pasó".
+>   - **La hora va de a 5 minutos** con − / + de 64×72, y tocando el número se
+>     escribe. El scrap en kg tiene el mismo control, de a 1 kg, y no baja de
+>     cero. **Los dos son campos de `enlazarCampoNumero`** (kilos con 3
+>     decimales, cajas enteras), enlazados **al abrir la planilla** y no al
+>     cerrarla: a "Agregar producto" y a "Corregir" se llega sin pasar nunca
+>     por el cierre.
+>   - **El error va PEGADO al botón**, en bordó justo arriba de "Cerrar
+>     planilla", **y el campo que falta se marca** con borde de 3 px bordó y su
+>     propio texto debajo. Nunca un banner arriba de todo. **El botón NO se
+>     deshabilita por lo que falta** (ver el aprendizaje nuevo, más abajo).
+>   - El borrador del cierre sigue viviendo en la tablet por turno; ahora
+>     guarda `{ hora, scrap, obs, rota }` y **ya no lo producido**, que está en
+>     la base desde que se cargó.
+> - **CERRAR A LA FUERZA UNA PLANILLA DE OTRO DÍA.** Una planilla abierta de
+>   otro día lo dice en bordó y ofrece **cerrarla a la fuerza** con motivo:
+>   **`forzar_cierre_turno(p_turno_id, p_persona_id, p_motivo)`**, donde
+>   `p_persona_id` es **la persona de la tablet** (la que entró con su PIN), no
+>   la cuenta con la que la tablet está logueada. La máquina **se libera**, la
+>   planilla queda **`pendiente_completar`** y **NO suma nada al stock**.
+>   - **El tablero solo muestra los turnos ABIERTOS**, así que sin un aviso una
+>     planilla pendiente sería inalcanzable: arriba del tablero aparece
+>     **"N planillas quedaron pendientes de completar"** con un botón por cada
+>     una. Si esa consulta falla no se dibuja nada: un aviso inventado sería
+>     peor que ninguno.
+>   - **Completarla después es EL MISMO CIERRE**: `cerrar_turno` funciona sobre
+>     un `pendiente_completar` y ahí completa `completado_por` /
+>     `completado_en`. La planilla lo dice con quién la forzó y por qué, avisa
+>     que **lo que produjo todavía no está en el stock**, deja seguir cargando
+>     lo producido, y el botón pasa a decir **"Completar la planilla"**.
+
+## 2. Sección "Estilo visual": nada que agregar
+
+Todo lo nuevo son clases locales del módulo (`.pr-planilla`, `.pr-producido`,
+`.pr-ag*`, `.pr-cierre`, `.pr-contador`, `.pr-rota`, `.pr-error-pegado`) sobre
+variables que ya existían. **No se tocó `css/main.css`.** El único color que se
+suma es `--marron-oscuro`, que ya está en el `:root` global, para la línea que
+separa los productos de chocolate.
+
+## 3. Sección "Aprendizajes clave": DOS entradas nuevas
+
+> - **UN BOTÓN DESHABILITADO HACE INALCANZABLE EL ERROR QUE CUELGA DE ÉL.** Si
+>   la regla del proyecto es *"el error va pegado al botón que lo provoca"*,
+>   entonces **ese botón no se puede deshabilitar por lo que falta**: el error
+>   aparece al intentar, y si no se puede intentar, no aparece nunca. La
+>   persona queda mirando un botón apagado sin saber qué falta.
+>   - **Caso real** (Producción, cierre de la planilla, 23/09/2026): el cierre
+>     ponía `btn.disabled = faltan.length > 0` **y además** mostraba el texto de
+>     lo que falta solo si `intentado`, que se pone en el handler del clic. Las
+>     dos condiciones juntas hacían el mensaje **imposible de ver**.
+>   - **Y la suite estaba en VERDE**, porque llamaba a `intentarCerrar()`
+>     directo en vez de simular el clic: es la familia del **test que mide otra
+>     cosa**. La assertion que lo cierra no es sobre el mensaje sino sobre el
+>     botón — *"el botón sigue pudiéndose tocar"*— y tiene su mutación.
+>   - **REGLA:** el botón se traba **solo mientras se está mandando**. Lo que
+>     falta se dice al tocarlo, y además se marca el campo.
+> - **UN REPINTADO POSTERIOR PUEDE TAPAR EL ERROR QUE ACABA DE ESCRIBIR EL
+>   `catch`.** Con un `finally` que vuelve a pintar, el orden es
+>   `catch` (escribe el error) → `finally` (repinta y lo borra), así que el
+>   mensaje de la base **se ve un instante o no se ve nunca**.
+>   - **Caso real** (mismo cierre): el `catch` hacía
+>     `err.textContent = e.message; err.hidden = false` y el `finally` llamaba a
+>     `pintarCierre()`, que recalcula `err.hidden` a partir de lo que falta. Sin
+>     nada faltando, lo escondía. **La suite pasaba igual porque afirmaba sobre
+>     `textContent` y no sobre `hidden`** — el texto quedaba puesto, invisible.
+>   - **REGLA: el error va al ESTADO, no al DOM.** El `catch` guarda el mensaje
+>     (`estado.cierre.errorBase`) y el único que escribe en el DOM es el
+>     render, que decide qué mostrar: lo que falta, o lo que contestó la base.
+>     Y la assertion afirma **`hidden === false`**, no solo el texto.
+
+## 4. Sección "Suites" del módulo
+
+`test-produccion-cierre.js` se reescribió entera para el diseño nuevo (pasó de
+294 a ~700 líneas) y ahora cubre la planilla, lo producido, el paso a paso de
+agregar, el cierre y el cierre forzado. Su `mut-produccion-cierre.js` también.
+No hay suites nuevas: el archivo ya existía y creció.
+
+En `controles-produccion.js` hay un mecanismo nuevo, **`MENOS_COPIAS`**, que
+conviene nombrar en la doc junto a `RENOMBRADOS` y `RETIRADOS`:
+
+> **`MENOS_COPIAS`** declara `[clave, cuántas veces ahora, motivo]` para un
+> control que **sigue estando** pero que aparece **menos veces en el fuente**
+> —por ejemplo, dos ramas de un render que pasaron a compartir el mismo
+> botón—. No es una excepción al chequeo: la clave tiene que seguir existiendo,
+> y **si aparece más veces que lo declarado, la declaración sobra y se dice**.
+
+## 5. Qué se verificó, y contra qué
+
+**La base, leída con `pg_get_functiondef` el 23/09/2026** (cuerpo completo, no
+la firma):
+
+- `registrar_produccion_item(p_turno_id, p_presentacion_id, p_marca_id,
+  p_cajas)` → `{produccion_item_id, sublote, orden, unidades}`. Rechaza el
+  turno `cerrado`, exige `produccion:cargar` en la unidad, valida que la
+  presentación sea de esa unidad y esté activa, y **inserta en
+  `stock_terminado_movimientos` en la misma transacción**.
+- `corregir_produccion_item` y `anular_produccion_item`: motivo ≥ 3, escriben
+  `produccion_correcciones` y ajustan el stock con un movimiento `ajuste`.
+  Anular **solo pone `anulado = true`**.
+- `cerrar_turno`: **el `update` de la parada abierta con
+  `hasta_fin_de_turno = true` está ANTES de las validaciones de hora y scrap**
+  — de ahí sale que cerrar con una parada en curso se pueda. `p_productos`
+  puede ser `[]` y el orden arranca en `max(orden) + 1`.
+- `forzar_cierre_turno`: solo sobre `abierto`, cierra las paradas **sin**
+  marcar `hasta_fin_de_turno`, deja `pendiente_completar` y **no inserta ni un
+  `produccion_items` ni un movimiento de stock**.
+- `proponer_marca`: `upper(btrim())`, `pendiente_revision` sin `configurar`, y
+  `raise` si el nombre ya está `rechazada`.
+- Columnas de `produccion_items`, `marcas_personalizadas`,
+  `paradas_produccion` y `turnos_produccion` contra `information_schema`.
+- `productos_terminados.tipo_masa` en la base real: los valores son **`Común` y
+  `Chocolate`**, que es lo que usa la separación del paso 1.
+
+**El código, ejecutado:** las 12 suites del módulo y las 8 corridas de
+mutaciones (números abajo). Los renders se ejecutan con un `document` falso y
+datos de prueba; el escapado se verifica por las dos mitades (los renders con
+HTML malicioso y el chequeo estático de interpolaciones).
+
+## 6. Lo que NO se pudo probar
+
+- **Nada se probó en la tablet ni en un navegador con sesión.** Las medidas del
+  diseño (1280×800 sin scroll, 400 px de columna, 88/72/96 px de botón) están
+  escritas en el CSS pero **no se miraron renderizadas**. Es lo mismo que en
+  las partes 1 y 2.
+- Se armó una **foto estática** de las cuatro pantallas (el CSS real del módulo
+  más el HTML real con los renders ejecutados) para poder mirarlas sin sesión,
+  pero **no se llegó a verlas**: el visor de este entorno no deja sacarles una
+  captura. El script quedó en el scratchpad, no en el repo.
+- **El circuito real contra la base no se corrió**: ninguna RPC se llamó de
+  verdad, todo es contra el doble de `supabase`.
+- La **recuperación del borrador del cierre con una tablet que se apaga** no se
+  probó más allá del `localStorage` en memoria.
+
+## 7. Decisiones que se tomaron sin preguntar
+
+1. **El cierre ya no agrega productos.** El diseño (5d) no tiene "agregar" en
+   el cierre y la parte 3 pide cargar durante el turno, así que `p_productos`
+   va siempre vacío y el único lugar donde se carga es la planilla. Si alguna
+   vez se quiere volver a agregar desde el cierre, la base lo soporta sin
+   cambios (continúa la numeración).
+2. **"Común" se mantiene en el paso del cono**, aunque el diseño no la muestra:
+   `produccion_items.marca_id` es nullable y `registrar_produccion_item` acepta
+   null, así que sacarla haría imposible cargar una producción con cono sin
+   marca de cliente.
+3. **El paso 2 muestra las dos opciones y apaga la que no tiene
+   presentaciones**, en vez de ofrecer solo las posibles: una opción que
+   desaparece se lee como que falta algo en la pantalla.
+4. **El paso del cono se muestra mientras no se sepa** si lleva cono (son los 5
+   del diseño en 5b) y desaparece recién al contestar "Sin cono".
+5. **Una sola pregunta de confirmación** antes de cerrar, que junta la parada
+   abierta y el "no produjo nada", en vez de dos diálogos seguidos. Por eso los
+   botones pasaron de `pr-cierre-vacio-si/no` a `pr-cierre-confirmar-si/no`.
+6. **El scrap tiene − / + de 1 kg** (el README dice "el mismo control" pero no
+   el paso; la hora sí dice 5 minutos).
+7. **El aviso de las planillas pendientes de completar vive en el tablero.** No
+   estaba pedido explícitamente, pero sin él una planilla forzada es
+   inalcanzable, y la parte 3 pide que "completarla después" sea posible.
+8. **`htmlParadas()` es la misma de la planilla y del historial**, así que el
+   detalle del historial ahora muestra las paradas con la hora primero
+   ("09:00–09:45 · Cambio de molde · 45 min"). Se actualizó su assertion.
+
+## 8. Lo que cambió en el repo
+
+- `modulos/produccion.html` — único archivo del módulo tocado.
+- `pruebas/test-produccion-cierre.js` y `pruebas/mut-produccion-cierre.js`,
+  reescritos.
+- `pruebas/sandbox-produccion.js` — la lista de funciones del módulo.
+- `pruebas/seguras-produccion.js` — las hojas seguras nuevas, y se **unificaron
+  dos claves duplicadas** (`botones` y `producido` estaban dos veces con
+  motivos distintos: dos entradas con la misma clave son exactamente cómo
+  alguien lee el motivo equivocado).
+- `pruebas/controles-produccion.js` — `d3f8203` sumado a `BASES`, las
+  declaraciones de esta parte y el mecanismo `MENOS_COPIAS`.
+- `pruebas/test-produccion-historial.js` — la assertion de las paradas.
+- `pruebas/mut-produccion-abrir.js` — **dos anclas dejaron de ser únicas** al
+  sumar `confirmarCorregir()` y `confirmarAgregar()`, que usan el mismo patrón
+  de `guardado` (a propósito: es la regla de no confundir un fallo de la
+  RELECTURA con un fallo de la escritura). El runner **abortó nombrándolas**,
+  que es para lo que está ese guard; se anclaron al renglón de
+  `cambiarOperarioTurno`.
+
+**No se tocó** `css/main.css`, `js/utils.js`, `js/auth.js`, `dashboard.html`,
+`modulos/accesos.html` ni ningún otro módulo.
+
+## 9. Controles declarados (para la doc, si se lleva el detalle)
+
+- **Renombrados:** `pr-cierre-hora` de `type=time` a `type=text` (el reloj
+  nativo no se puede usar con harina en las manos; ahora es − / + de 5
+  minutos); `pr-cierre-vacio-si/no` → `pr-cierre-confirmar-si/no`.
+- **Retirados:** los `<select>` de producto y presentación (pasaron a botones
+  de 88 px, que es lo que permite separar los de chocolate); `data-subir` y
+  `data-bajar` (no hay nada que reordenar: el sublote ya está sellado).
+- **Menos copias:** `data-borrar`, de 2 a 1 (las dos ramas de `htmlProducido`
+  comparten los mismos botones).
+
+## 10. Números
+
+```
+node pruebas/check-scripts.js      OK (todos los bloques parsean)
+
+test-produccion-acceso             23/23    verde
+test-produccion-quien             129/129   verde
+test-produccion-pin               144/144   verde
+test-produccion-abrir             162/162   verde
+test-produccion-cierre            249/249   verde
+test-produccion-masa              143/143   verde
+test-produccion-config            104/104   verde
+test-produccion-historial          68/68    verde
+test-produccion-xss                 6/6     verde
+test-accesos-produccion            19/19    verde
+test-dashboard-produccion           9/9     verde
+controles-produccion              960/960   verde
+
+mut-produccion-acceso              13/13
+mut-produccion-quien               57/57    (+2 equivalentes)
+mut-produccion-pin                 71/71    (+2 equivalentes)
+mut-produccion-abrir               92/92    (+2 equivalentes)
+mut-produccion-cierre             156/156   (+34 equivalentes)
+mut-produccion-masa                92/92    (+12 equivalentes)
+mut-produccion-config              99/99    (+1 equivalente)
+mut-produccion-historial           50/50    (+12 equivalentes)
+```
+
+**Seis mutaciones escaparon en la primera corrida del cierre y ninguna era
+falta de cobertura por sí sola: se investigaron una por una** (la regla de
+"una mutación que escapa se investiga antes de asumir que falta cobertura").
+Tres eran huecos reales que se cerraron con casos nuevos —la relectura que
+falla después de una corrección que SÍ se guardó, el buscador de conos con un
+nombre acentuado, y reanudar con una parada vieja adelante en la lista—; dos
+eran assertions que faltaban (las masas se piden sin las anuladas; ningún campo
+se marca antes de intentar); y **una estaba mal apuntada**: mutaba el `5` del
+handler del clic, que el sandbox nunca engancha, así que no probaba nada. Se
+movió a mutar el atributo `data-hora-paso="5"` del HTML, que es donde vive de
+verdad el paso de 5 minutos.
+
+## 11. Guion para Facu (lo nuevo de esta parte)
+
+1. **Cargar producción durante el turno.** En la planilla de una máquina
+   abierta, tocar **"+ Agregar producto"** y hacer el camino entero: producto →
+   con cono → presentación → cono → cajas. Mirar que **los de chocolate estén
+   abajo y separados**, que el cálculo de unidades cierre, y que al confirmar
+   aparezca el **sublote que devolvió la base** (no uno provisorio).
+2. **Corregir y borrar.** Corregir las cajas de un renglón con un motivo, y
+   borrar otro. El borrado **tiene que quedar a la vista, tachado y sin
+   botones**, y el total tiene que bajar. Después, mirar el stock terminado:
+   tiene que haber entrado y salido.
+3. **Un cono nuevo.** En el paso del cono, **"+ Agregar cono nuevo"**: se
+   elige solo, dice **"nuevo, a revisar"** y **se puede usar igual**. Después
+   aparece para aprobar en Configuración → Marcas.
+4. **Cerrar con una parada abierta.** Parar la máquina y, sin reanudar, tocar
+   **Cerrar planilla**: tiene que dejar seguir, avisar que la parada va a
+   quedar como "no volvió en todo el turno" y **pedir confirmar**.
+5. **El error pegado al botón.** Cerrar sin poner el scrap: el botón se tiene
+   que poder tocar, el mensaje aparece **arriba del botón** y el campo del
+   scrap se marca en bordó. Marcar **"La máquina se rompió y no volvió"** y
+   probar que "Qué pasó" se vuelva obligatorio.
+6. **Cerrar a la fuerza.** Dejar una máquina abierta de un día para el otro.
+   Al día siguiente, entrar a su planilla: tiene que decir que quedó abierta de
+   otro día y ofrecer **cerrarla a la fuerza**. Después de hacerlo, la máquina
+   tiene que quedar **libre en el tablero** y arriba tiene que aparecer el
+   aviso de **"pendiente de completar"**. Entrar por ahí, cargar lo producido y
+   **completarla**: el stock tiene que entrar recién en ese momento.
+
+---
+
+## Parte 2 — máquinas y abrir turno · `d3f8203`
+
+`check-scripts` OK · abrir 162/162 · cierre 105/105 · acceso 23/23 · quien 129/129 ·
+pin 144/144 · config 104/104 · historial 68/68 · masa 143/143 · xss 6/6 ·
+accesos 19/19 · dashboard 9/9 · **controles 753/753**.
+Mutaciones: 539/539, +45 equivalentes.
+Controles retirados: `input#pr-abrir-fecha[type=date]` (la fecha pasó a ‹ ›) y
+`select[data-operario]` (un operario por máquina pasó a varios como chips).
+
+## Andamio — caché del sandbox · `e0563b9`
+
+`construirCon()` cachea la función compilada por **contenido** del archivo (no
+por ruta ni por fecha: el runner de mutaciones escribe un archivo distinto por
+mutación y a veces en el mismo milisegundo). Medido sobre test-produccion-abrir,
+que arma 16 sandboxes: **12 s → 0,83 s**. Todas las suites del repo en verde y
+mut-produccion-abrir sigue detectando sus 92.
+
+## Parte 3 — la planilla · `108f7ef`
+
+`check-scripts` OK · acceso 23/23 · quien 129/129 · pin 144/144 · abrir 162/162 ·
+cierre 249/249 · masa 143/143 · config 104/104 · historial 68/68 · xss 6/6 ·
+accesos 19/19 · dashboard 9/9 · **controles 960/960**.
+Mutaciones: acceso 13/13 · quien 57/57 (+2 eq.) · pin 71/71 (+2 eq.) ·
+abrir 92/92 (+2 eq.) · cierre 156/156 (+34 eq.) · masa 92/92 (+12 eq.) ·
+config 99/99 (+1 eq.) · historial 50/50 (+12 eq.).
+
+Dos bugs encontrados que no estaban en el pedido: **el botón de cerrar se
+deshabilitaba cuando faltaba un dato y el error va pegado a ese botón**, o sea
+que el mensaje era imposible de ver (la suite estaba verde porque llamaba a
+`intentarCerrar()` directo en vez de simular el clic); y **el `finally` tapaba
+el error de la base**, porque el repintado posterior lo escondía (la suite
+pasaba porque afirmaba sobre `textContent` y no sobre `hidden`).

@@ -116,7 +116,9 @@ esperas.push((async () => {
   chk('… el lote fuera de stock se marca', /lote A-X, lote fuera de stock/.test(hd))
   chk('… la diferencia contra su receta', /\+200 g Harina/.test(hd))
   chk('… la anulada, con su motivo', /Anulada:<\/strong> Se volcó/.test(hd))
-  chk('… las paradas con su duración', /Cambio de molde<\/strong> · 09:00 a 09:45 · 45 min/.test(hd))
+  // htmlParadas() es la MISMA de la planilla (rediseño parte 3): la hora
+  // primero, en tabular, y el motivo después.
+  chk('… las paradas con su duración', /09:00–09:45<\/strong> · Cambio de molde[\s\S]*45 min/.test(hd), hd.slice(hd.indexOf('Cambio de molde') - 200, hd.indexOf('Cambio de molde') + 80))
   chk('… los sublotes producidos con cajas y unidades', /7023-1<\/span> Cucuruchón Mini · Caja x600 · Común · 12 cajas × 600 = 7\.200 unidades/.test(hd) && /7023-2<\/span>[^<]*GRIDO/.test(hd))
   chk('… y lo consumido por insumo y lote', /Harina 000 · Jupiter · lote L-100: <strong>75,4 kg/.test(hd))
 

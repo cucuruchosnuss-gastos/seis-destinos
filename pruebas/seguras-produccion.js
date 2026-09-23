@@ -23,10 +23,21 @@ const SEGURAS_PRODUCCION = [
   ['vacioHtml', 'HTML constante del código, o vacío'],
   ['sumarHtml', 'HTML constante del código (el botón "+ Sumar" con CTX_PLANILLA), o vacío'],
   ['CTX_PLANILLA', 'constante del código: "planilla"'],
-  // B4
+  // B4 + rediseño parte 3: la planilla, lo producido y agregar un producto
+  ['clases', 'clases CSS constantes del código, armadas con banderas de la fila'],
+  ['desc', 'HTML ya escapado: htmlProducido() lo arma arriba con esc() del producto, la presentación, la marca y las unidades por caja, o texto constante'],
+  ['cab', 'HTML ya escapado: htmlPasosAgregar() lo arma arriba con esc(x.n) y esc(x.titulo)'],
+  ['valor', 'HTML ya escapado: htmlPasosAgregar() lo arma arriba con esc(x.valor)'],
+  ["chocolate.map(boton).join('')", 'HTML armado por boton(), que escapa el id y el nombre de cada producto'],
+  ["comunes.map(boton).join('')", 'HTML armado por boton(), que escapa el id y el nombre de cada producto'],
+  ['chocoHtml', "HTML ya escapado: htmlPasoProducto() lo arma arriba con boton() (escapa adentro) y la palabra 'Chocolate', constante"],
+  ["opcion(true, 'Con cono')", 'HTML armado por opcion(), que escapa el texto y la cuenta de presentaciones'],
+  ["opcion(false, 'Sin cono')", 'HTML armado por opcion(), que escapa el texto y la cuenta de presentaciones'],
+  ['htmlResaltado(m.nombre, texto)', 'HTML armado por htmlResaltado(), que escapa los tres pedazos del nombre por separado'],
+  ['notas', 'HTML ya escapado: htmlMarcas() lo arma arriba con esc(anterior.sublote), o un chip de texto constante'],
   ['detalle', 'HTML ya escapado: htmlProducido() lo arma arriba con esc(d.detalle), o vacío'],
   // B5
-  ['botones', 'HTML ya escapado: htmlPasoTipo() lo arma arriba con esc(t) de cada tipo, o un aviso constante'],
+  ['botones', 'HTML ya escapado: lo arman htmlPasoTipo() con esc(t) de cada tipo y htmlProducido() con esc(it.id), o un texto constante'],
   ['detalleAnt', 'HTML ya escapado: htmlPasoBase() lo arma arriba con esc() del lote, el número, la hora y la diferencia, o un texto constante'],
   ['opcInsumo', 'HTML ya escapado: htmlLoteIngrediente() lo arma arriba con esc() del id, el nombre y la marca de cada insumo'],
   ['htmlOpcionesLote(ins, valorLote)', 'HTML armado por htmlOpcionesLote(), que escapa adentro'],
@@ -53,7 +64,7 @@ const SEGURAS_PRODUCCION = [
   ['TOPE_FILAS', 'constante numérica del código: 1000'],
   ['masas', 'HTML ya escapado: htmlDetalleTurno() arma cada masa con esc() de cada dato'],
   ['htmlParadas(d.paradas)', 'HTML armado por htmlParadas(), que escapa adentro'],
-  ['producido', 'HTML ya escapado: htmlDetalleTurno() arma cada sublote con esc() de cada dato'],
+  ['producido', 'HTML ya escapado: htmlDetalleTurno() y htmlResumenCierre() arman cada sublote con esc() de cada dato'],
   ['totales', 'HTML ya escapado: htmlDetalleTurno() arma cada total con esc() del insumo, el lote y los kilos'],
 ]
 
