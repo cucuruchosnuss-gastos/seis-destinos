@@ -32,6 +32,7 @@ const BASES = [
   'f502c3d', // Rediseño parte 1: barra de modos, fondo por modo y acceso con PIN
   'd3f8203', // Rediseño parte 2: tablero de máquinas y abrir turno con varios operarios
   '54a216d', // Rediseño parte 3: la planilla, carga durante el turno y cierre
+  '9e178ae', // Rediseño parte 4: la sala de masa y la receta
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
@@ -57,6 +58,21 @@ const RENOMBRADOS = [
     'Rediseño parte 4: "Nueva masa" ya no vive en la pantalla de una máquina —empezar una masa ES elegir máquina, ' +
     'tamaño y cómo la hacés en 6a/6b— y quedó como "+ Nueva masa" en Masas del turno (6d), que es la única pantalla ' +
     'desde donde hace falta volver a empezar una.'],
+  // Rediseño parte 5: los cinco botones de Configuración que ahora llevan el
+  // error PEGADO a ellos necesitan un id, que es a dónde va también el foco
+  // (errorConfig(texto, donde) enfoca ese id). Mismo botón, mismo data-*,
+  // misma acción: lo único que se suma es la identidad.
+  ['control:button[data-maq-agregar][type=button]', 'control:button#pr-cfg-maq-agregar[data-maq-agregar][type=button]',
+    'Rediseño parte 5: "Agregar máquina" gana id porque el error de Máquinas se dibuja pegado a él y el foco va ahí.'],
+  ['control:button[data-receta-guardar][type=button]', 'control:button#pr-cfg-receta-guardar[data-receta-guardar][type=button]',
+    'Rediseño parte 5: el botón de guardar la receta gana id por el error pegado (7b) y porque ahora dice qué versión ' +
+    'va a crear ("Guardar versión 8"), que sale de la base y no de un texto fijo.'],
+  ['control:button[data-ing-agregar][type=button]', 'control:button#pr-cfg-ing-agregar[data-ing-agregar][type=button]',
+    'Rediseño parte 5: "Agregar ingrediente" gana id por el error pegado.'],
+  ['control:button[data-prod-agregar][type=button]', 'control:button#pr-cfg-prod-agregar[data-prod-agregar][type=button]',
+    'Rediseño parte 5: "Agregar producto" gana id por el error pegado.'],
+  ['control:button[data-marca-agregar][type=button]', 'control:button#pr-cfg-marca-agregar[data-marca-agregar][type=button]',
+    'Rediseño parte 5: "Agregar marca" gana id por el error pegado.'],
   ['control:button[data-registrar][type=button]', 'control:button#pr-receta-registrar[type=button]',
     'Rediseño parte 4: "Registrar masa" dejó de estar adentro del paso del resumen —que ya no existe— y pasó al pie ' +
     'fijo de la receta, con el error pegado al lado. Mismo botón y misma acción (registrar_masa), ahora con id propio ' +
@@ -124,6 +140,12 @@ const RETIRADOS = [
     'volver a elegir cómo la hacés —con SU uuid— y se rehace entero ahí mismo. Y una masa PENDIENTE de envío ya no ' +
     'ocupa el lugar de la siguiente: el borrador se guarda bajo su uuid, no bajo el turno, así que la masa que sigue ' +
     'arranca de cero sin pisarla. Que no exista el botón es, además, lo que hace imposible perder una pendiente.'],
+  ['control:button[data-puestos-guardar][type=button]',
+    'Rediseño parte 5: Personal dejó de guardar fila por fila. El diseño (7a) pide UN SOLO botón al pie que cuenta ' +
+    'cuántas filas se tocaron ("Guardar los cambios · 3 filas"), y por eso tocar una casilla ya no manda nada: marca ' +
+    'la fila (franja naranja, fondo y la palabra "Cambiada") y las manda todas juntas #pr-cfg-personal-guardar, una ' +
+    'llamada a guardar_puestos por fila tocada y ninguna por las demás. Con un botón por fila, cargarle los tres ' +
+    'puestos a cinco personas eran quince toques y quince viajes al servidor.'],
   ['control:button[data-reintentar][type=button]',
     'Rediseño parte 4: el "Reintentar ahora" del asistente se fue con el asistente. El reintento sigue estando —y es ' +
     'el mismo: reintentarPendientes()— en el botón de la banda bordó de pendientes, #pr-sala-reintentar, que ya ' +

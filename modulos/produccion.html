@@ -971,6 +971,109 @@
     .pr-check { display: flex; align-items: center; gap: 0.625rem; min-height: var(--pr-alto-boton); font-size: 1.125rem; overflow-wrap: anywhere; }
     .pr-config-marca { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
 
+    /* ── Configuración: LA EXCEPCIÓN DEL MÓDULO ───────────────────────────
+       Todo lo demás se usa en la tablet, de pie y con harina en las manos.
+       Configuración se usa en la COMPU, sentado, así que la densidad sube:
+       texto de 15 px, filas de 52 px y controles de 40 px (README 7a). El
+       ancho también: la tabla de Personal tiene seis columnas y a 1280 px el
+       nombre queda apretado. */
+    .pr-app:has(#pr-config:not([hidden])) { max-width: 1440px; }
+    .pr-cfg { font-size: 0.9375rem; }
+    .pr-cfg .pr-input, .pr-cfg .pr-select, .pr-cfg .pr-textarea { min-height: 40px; font-size: 0.9375rem; }
+    .pr-cfg .pr-textarea { min-height: 56px; }
+    .pr-cfg .pr-btn { min-height: 40px; font-size: 0.9375rem; padding: 0 1rem; }
+    .pr-cfg .pr-check { min-height: 40px; font-size: 0.9375rem; }
+    /* La casilla de la tablet mide 56 px porque se toca con el dedo. Acá se
+       toca con el mouse, así que baja a los 22 px del diseño (7a) — que es lo
+       que deja la fila en 52 px. */
+    .pr-cfg .pr-casilla { width: 22px; height: 22px; border-width: 2px; border-radius: 6px; }
+    .pr-cfg .pr-casilla::after { font-size: 0.875rem; }
+    .pr-cfg .pr-titulo { font-size: 1.375rem; }
+    .pr-cfg .pr-config-fila { padding: 0.75rem; }
+
+    .pr-cfg-tabs { display: flex; gap: 0.25rem; flex-wrap: wrap; border-bottom: 1px solid var(--color-borde); margin-top: 0.75rem; }
+    .pr-cfg-tab {
+      border: none; background: none; cursor: pointer; padding: 0.625rem 1rem; font: inherit; font-size: 0.9375rem;
+      font-weight: 600; color: var(--pr-texto-secundario); border-bottom: 3px solid transparent; margin-bottom: -1px;
+      display: flex; align-items: center; gap: 0.5rem; min-height: 44px;
+    }
+    .pr-cfg-tab--activa { color: var(--color-texto); font-weight: 800; border-bottom-color: var(--naranja); }
+    /* El contador de pendientes: solo se dibuja si la cuenta se pudo leer. */
+    .pr-cfg-tab__pend { background: var(--naranja); color: #fff; border-radius: 999px; padding: 0.05rem 0.45rem;
+      font-size: 0.75rem; font-weight: 800; }
+
+    .pr-cfg-tabla { border: 1px solid var(--color-borde); border-radius: 16px; overflow: hidden; background: #fff; }
+    .pr-cfg-cab, .pr-cfg-fila { display: grid; align-items: center; gap: 1rem; padding: 0 1.5rem 0 1.25rem;
+      border-left: 4px solid transparent; }
+    .pr-cfg-cab { background: var(--color-superficie); border-bottom: 1px solid var(--color-borde); padding-top: 0.75rem;
+      padding-bottom: 0.75rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--color-texto-suave); }
+    .pr-cfg-fila { min-height: 52px; border-bottom: 1px solid var(--color-borde); }
+    .pr-cfg-fila:last-child { border-bottom: none; }
+    /* La fila tocada: franja naranja Y fondo Y la palabra "Cambiada". Tres
+       señales, ninguna solo de color. */
+    .pr-cfg-fila--tocada { border-left-color: var(--naranja); background: var(--naranja-suave); }
+    .pr-cfg-fila__aviso { font-size: 0.8125rem; font-weight: 700; color: var(--naranja-oscuro); text-align: right; }
+    .pr-cfg-personal { grid-template-columns: minmax(0, 1fr) 96px 96px 96px 190px 150px 108px; }
+    .pr-cfg-centro { justify-self: center; }
+    .pr-cfg-chip { display: inline-block; border-radius: 999px; padding: 0.2rem 0.625rem; font-size: 0.8125rem; font-weight: 700; }
+    .pr-cfg-chip--ok { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .pr-cfg-chip--alerta { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pr-cfg-chip--gris { color: var(--color-texto-suave); font-weight: 600; }
+
+    /* El pie con el botón de guardar, y EL ERROR PEGADO A ÉL (nunca arriba de
+       todo): a su izquierda, en la misma línea. */
+    .pr-cfg-pie { display: flex; align-items: center; justify-content: flex-end; gap: 0.875rem; flex-wrap: wrap;
+      margin-top: 1rem; padding-top: 0.875rem; border-top: 1px solid var(--color-borde); }
+    .pr-cfg-error { background: var(--bordo-suave); border-left: 4px solid var(--bordo); border-radius: 10px;
+      padding: 0.625rem 0.875rem; font-size: 0.875rem; font-weight: 600; color: var(--bordo-oscuro); max-width: 520px; }
+    .pr-cfg-panel { border: 2px solid var(--naranja); background: var(--naranja-suave); border-radius: 14px;
+      padding: 0.875rem 1rem; margin-top: 0.75rem; display: grid; gap: 0.625rem; }
+    .pr-cfg-temporal { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      flex-wrap: wrap; padding: 0.5rem 0; border-bottom: 1px solid var(--color-borde); }
+
+    /* Conos pendientes de revisar (7c): arriba, en naranja. */
+    .pr-cfg-pendiente { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.875rem 1rem;
+      border: 1.5px solid var(--naranja); background: var(--naranja-suave); border-radius: 12px; margin-bottom: 0.625rem; }
+    .pr-cfg-pendiente__datos { flex: 1 1 14rem; min-width: 0; }
+    .pr-cfg-rotulo { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--naranja-oscuro); margin: 0.75rem 0 0.5rem; }
+    .pr-cfg-rotulo--gris { color: var(--color-texto-suave); }
+    .pr-cfg-catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: 0.375rem 1.25rem; }
+
+    /* Recetas (7b): recetas a la izquierda, editor al medio, historial a la
+       derecha. */
+    .pr-cfg-recetas { display: grid; grid-template-columns: 240px minmax(0, 1fr) 360px; gap: 1.25rem; align-items: start; }
+    .pr-cfg-version { border-left: 3px solid var(--color-borde); padding-left: 0.75rem; margin-bottom: 0.75rem; }
+    .pr-cfg-version--vigente { border-left-color: var(--naranja); }
+    /* Una cantidad cambiada respecto de la versión vigente: naranja y el valor
+       anterior al lado. */
+    .pr-cfg-antes { color: var(--naranja-oscuro); font-weight: 700; font-size: 0.8125rem; }
+
+    @media (max-width: 1100px) {
+      .pr-cfg-recetas { grid-template-columns: minmax(0, 1fr); }
+      .pr-cfg-personal { grid-template-columns: minmax(0, 1fr) 72px 72px 72px; }
+      .pr-cfg-personal > :nth-child(n+5) { grid-column: 1 / -1; justify-self: start; text-align: left; }
+      .pr-cfg-fila { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    }
+
+    /* LA HOJA DE PINES: se muestra UNA vez y se imprime. Al cerrarla, los
+       PINes se borran de la memoria y del DOM. */
+    .pr-hoja {
+      position: fixed; inset: 0; z-index: 60; background: #fff; overflow-y: auto; padding: 1.5rem;
+    }
+    .pr-tira { border: 1px dashed var(--pr-off-borde); border-radius: 10px; padding: 0.875rem 1rem; margin-bottom: 0.5rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; break-inside: avoid; }
+    .pr-tira__pin { font-size: 2rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: 0.25em; }
+    .pr-tira__nota { font-size: 0.8125rem; color: var(--pr-texto-secundario); }
+
+    @media print {
+      body { background: #fff !important; }
+      .pr-barra, .pr-maestro, .pr-app > main, .pr-hoja__botones { display: none !important; }
+      .pr-hoja { position: static; padding: 0; overflow: visible; }
+    }
+    /* ── fin de Configuración: de acá para abajo vuelve a mandar la tablet ── */
+
     /* El lote asignado: el número se lee de lejos. */
     .pr-lote { font-size: 3rem; font-weight: 900; color: var(--azul-oscuro); letter-spacing: 0.02em; line-height: 1.1; }
 
@@ -1519,8 +1622,11 @@
         </div>
       </section>
 
-      <!-- B6: configuración (produccion:configurar), por unidad. -->
-      <section id="pr-config" hidden>
+      <!-- B6: configuración (produccion:configurar), por unidad.
+           Es la ÚNICA pantalla del módulo que se usa en la compu y no en la
+           tablet, así que sube la densidad (.pr-cfg): texto de 15 px, filas de
+           52 px y controles de 40 px. -->
+      <section id="pr-config" class="pr-cfg" hidden>
         <div class="pr-tarjeta">
           <div class="pr-fila-titulo">
             <h1 class="pr-titulo">Configuración</h1>
@@ -1530,7 +1636,7 @@
             <span class="pr-campo__rotulo">Unidad</span>
             <select id="pr-config-unidad" class="pr-select"></select>
           </label>
-          <div class="pr-segmento pr-espacio-arriba" id="pr-config-tabs" role="group" aria-label="Qué configurar"></div>
+          <div class="pr-cfg-tabs" id="pr-config-tabs" role="group" aria-label="Qué configurar"></div>
           <p class="pr-error" id="pr-config-error" hidden></p>
         </div>
         <div class="pr-tarjeta" id="pr-config-cuerpo"></div>
@@ -1590,6 +1696,22 @@
         <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho pr-espacio-arriba" id="pr-cerrado-volver">Volver a las máquinas</button>
       </section>
     </main>
+
+    <!-- LA HOJA DE PINES. Los PINes que devuelve generar_pines_iniciales se
+         muestran UNA sola vez: se imprime, se recorta y se reparte. Al cerrar,
+         se borran de la memoria (estado.config.hoja) y del DOM. Vive fuera de
+         <main> para que @media print pueda esconder todo lo demás. -->
+    <div class="pr-hoja" id="pr-cfg-hoja" hidden>
+      <div class="pr-fila-titulo pr-hoja__botones">
+        <h1 class="pr-titulo">PINes para repartir</h1>
+        <div class="pr-config-fila__botones">
+          <button type="button" class="pr-btn" id="pr-cfg-hoja-imprimir">Imprimir</button>
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-hoja-cerrar">Cerrar</button>
+        </div>
+      </div>
+      <p class="pr-hoja__botones pr-texto-suave" id="pr-cfg-hoja-aviso"></p>
+      <div id="pr-cfg-hoja-tiras"></div>
+    </div>
   </div>
 
   <script type="module">
@@ -5852,7 +5974,7 @@
 
     const PESTANAS_CONFIG = [
       ['maquinas', 'Máquinas'], ['recetas', 'Recetas'], ['ingredientes', 'Ingredientes'],
-      ['productos', 'Productos'], ['marcas', 'Marcas'], ['personal', 'Personal'],
+      ['productos', 'Productos'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal'],
     ]
     const PUESTOS = [['encargado', 'Encargado'], ['masero', 'Masero'], ['operario', 'Operario']]
     const CLAVE_AVISO_PRODUCTOS = 'produccion.aviso-productos-revisado'
@@ -5901,48 +6023,131 @@
         unidadId: unidades.includes(actual) ? actual : (unidades.includes(estado.unidadId) ? estado.unidadId : unidades[0]),
         tab: estado.config?.tab ?? 'maquinas',
         busqueda: '', datos: null, recetaMaquina: null, recetaTipo: null,
+        // Lo que se tocó en Personal y todavía no se guardó: id → puestos.
+        cambios: new Map(),
+        error: null,          // { texto, donde } — el error vive en el ESTADO
+        pendientes: null,     // conos por revisar; null = no se pudo contar
+        hoja: null,           // los PINes recién generados, SOLO en memoria
+        salida: null,         // a dónde se quería ir con cambios sin guardar
+        pinPara: null, temporal: null, guardando: false,
       }
       pintarSelectorUnidad('pr-config-unidad', unidades, estado.config.unidadId)
       mostrarVista('pr-config')
       await cargarPestanaConfig()
     }
 
-    function htmlPestanasConfig(tab) {
-      return PESTANAS_CONFIG.map(([claveTab, tituloTab]) => `<button type="button" class="pr-segmento__opcion" data-config-tab="${claveTab}" aria-pressed="${claveTab === tab ? 'true' : 'false'}">${tituloTab}</button>`).join('')
+    // El contador de conos por revisar de la pestaña "Marcas / Conos". Va como
+    // número o como null: un contador inventado es peor que ninguno.
+    function htmlPestanasConfig(tab, pendientes) {
+      return PESTANAS_CONFIG.map(([claveTab, tituloTab]) => {
+        const chapa = claveTab === 'marcas' && pendientes > 0 ? ` <span class="pr-cfg-tab__pend">${esc(pendientes)}</span>` : ''
+        return `<button type="button" class="pr-cfg-tab${claveTab === tab ? ' pr-cfg-tab--activa' : ''}" data-config-tab="${claveTab}" aria-pressed="${claveTab === tab ? 'true' : 'false'}">${tituloTab}${chapa}</button>`
+      }).join('')
     }
 
-    function errorConfig(texto) {
-      const el = document.getElementById('pr-config-error')
-      el.textContent = texto ?? ''
-      el.hidden = !texto
+    // EL ERROR VA AL ESTADO, NO AL DOM: el catch guarda el mensaje y el único
+    // que escribe en el DOM es el render, que lo dibuja PEGADO a su botón.
+    // `donde` es el id de ese botón, y ahí va también el foco.
+    function errorConfig(texto, donde = null) {
+      const c = estado.config
+      const habia = !!c?.error
+      if (c) c.error = texto ? { texto: String(texto), donde } : null
+      // Sin pestaña dibujada (falló la lectura) no hay botón al que pegarlo.
+      const suelto = !!texto && !c?.datos
+      const arriba = document.getElementById('pr-config-error')
+      arriba.textContent = suelto ? texto : ''
+      arriba.hidden = !suelto
+      if (c?.datos && (texto || habia)) pintarPestanaConfig()
+      if (texto && donde) document.getElementById(donde)?.focus?.()
+    }
+
+    // El error de ESTE botón, justo al lado del botón. Nunca arriba de todo.
+    function htmlErrorPegado(c, donde) {
+      return c?.error && c.error.donde === donde ? `<div class="pr-cfg-error" role="alert">${esc(c.error.texto)}</div>` : ''
+    }
+
+    // Los conos pendientes de revisar: una consulta chica que corre en cada
+    // pestaña, para que el contador esté al día sin importar dónde se esté.
+    // Devuelve null si no se pudo contar, y nunca tira: que falle el contador
+    // no puede voltear la pestaña que la persona vino a mirar.
+    async function contarPendientesMarcas() {
+      try {
+        const { data, error } = await supabase.from('marcas_personalizadas').select('id').eq('estado_alta', 'pendiente_revision')
+        if (error) return null
+        return (data ?? []).length
+      } catch { return null }
     }
 
     async function cargarPestanaConfig() {
       const c = estado.config
-      document.getElementById('pr-config-tabs').innerHTML = htmlPestanasConfig(c.tab)
       const cuerpo = document.getElementById('pr-config-cuerpo')
       cuerpo.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
-      errorConfig(null)
+      c.error = null
+      document.getElementById('pr-config-error').hidden = true
       try {
         c.datos = await LECTORES_CONFIG[c.tab](c)
       } catch (err) {
         console.error('configuración:', err)
         c.datos = null
+        document.getElementById('pr-config-tabs').innerHTML = htmlPestanasConfig(c.tab, c.pendientes)
         cuerpo.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer la configuración. Revisá la conexión.</div>'
         return
       }
+      c.pendientes = await contarPendientesMarcas()
       pintarPestanaConfig()
     }
 
     function pintarPestanaConfig() {
       const c = estado.config
+      document.getElementById('pr-config-tabs').innerHTML = htmlPestanasConfig(c.tab, c.pendientes)
       const cuerpo = document.getElementById('pr-config-cuerpo')
-      cuerpo.innerHTML = RENDERS_CONFIG[c.tab](c)
+      cuerpo.innerHTML = c.salida ? htmlSalirSinGuardar(c) : RENDERS_CONFIG[c.tab](c)
       // Los números se escriben con ponerNumero, nunca con value=.
       for (const input of cuerpo.querySelectorAll('[data-numero]')) {
         enlazarCampoNumero(input, { decimales: Number(input.dataset.decimales ?? 3) })
         ponerNumero(input, input.dataset.numero === '' ? null : Number(input.dataset.numero))
       }
+    }
+
+    // ── Salir con cambios sin guardar ─────────────────────────────────────
+
+    // Hoy solo Personal acumula cambios sin guardar (un solo botón al pie).
+    function cambiosSinGuardar(c) {
+      return c?.cambios instanceof Map ? c.cambios.size : 0
+    }
+
+    // Devuelve true si se puede seguir; si no, deja pedida la confirmación.
+    // Sin datos dibujados no hay dónde preguntar, así que deja salir: los
+    // cambios de Personal solo existen cuando su pestaña se pudo leer.
+    function pedirSalida(c, accion) {
+      if (!cambiosSinGuardar(c) || !c.datos) return true
+      c.salida = accion
+      pintarPestanaConfig()
+      return false
+    }
+
+    function htmlSalirSinGuardar(c) {
+      const n = cambiosSinGuardar(c)
+      return `<div class="pr-aviso pr-aviso--grave">Tenés ${esc(n)} ${n === 1 ? 'fila cambiada' : 'filas cambiadas'} sin guardar en Personal. Si salís de acá, se pierden.</div>` +
+        `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-salir-no">Seguir acá</button>` +
+        `<button type="button" class="pr-btn pr-btn--peligro" id="pr-cfg-salir-si">Salir sin guardar</button></div>`
+    }
+
+    function cancelarSalida() {
+      estado.config.salida = null
+      pintarPestanaConfig()
+    }
+
+    async function confirmarSalida() {
+      const c = estado.config
+      const accion = c.salida
+      c.salida = null
+      c.cambios = new Map()
+      if (!accion) return pintarPestanaConfig()
+      if (accion.volver) return volverDeOficina()
+      if (accion.unidad) { c.unidadId = accion.unidad; c.recetaMaquina = null }
+      if (accion.tab) { c.tab = accion.tab; c.busqueda = '' }
+      await cargarPestanaConfig()
     }
 
     // ── Máquinas ──────────────────────────────────────────────────────────
@@ -5966,7 +6171,8 @@
         `</div></div>`).join('')
       return (filas || '<p class="pr-texto-suave">Esta unidad todavía no tiene máquinas.</p>') +
         `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-maq-nueva" maxlength="60" placeholder="Nombre de la máquina nueva" aria-label="Nombre de la máquina nueva">` +
-        `<button type="button" class="pr-btn" data-maq-agregar="1">Agregar máquina</button></div>`
+        htmlErrorPegado(c, 'pr-cfg-maq-agregar') +
+        `<button type="button" class="pr-btn" id="pr-cfg-maq-agregar" data-maq-agregar="1">Agregar máquina</button></div>`
     }
 
     // El orden que quedaría al mover una máquina: 1, 2, 3… en el orden de la
@@ -5998,13 +6204,13 @@
       }
     }
 
-    async function guardarEnConfig(rpc, params, exito) {
+    async function guardarEnConfig(rpc, params, exito, donde = null) {
       errorConfig(null)
       const { data, error } = await supabase.rpc(rpc, params)
       if (error) {
         // El mensaje de la base TAL CUAL ("La máquina tiene un turno abierto:
-        // cerralo antes de desactivarla.", "Puesto inválido.").
-        errorConfig(error.message || 'No se pudo guardar.')
+        // cerralo antes de desactivarla.", "Puesto inválido."), pegado al botón.
+        errorConfig(error.message || 'No se pudo guardar.', donde)
         return { ok: false }
       }
       if (exito) mostrarExito(exito)
@@ -6013,18 +6219,19 @@
 
     async function accionMaquina(ds) {
       const c = estado.config, lista = c.datos.maquinas
+      const DONDE = 'pr-cfg-maq-agregar'
       if (ds.maqAgregar !== undefined) {
         const nombre = document.getElementById('pr-config-maq-nueva').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre de la máquina.'); return }
+        if (!nombre) { errorConfig('Escribí el nombre de la máquina.', DONDE); return }
         const orden = lista.reduce((mx, m) => Math.max(mx, m.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(null, c.unidadId, { nombre, activa: true, orden }), 'Máquina agregada.')
+        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(null, c.unidadId, { nombre, activa: true, orden }), 'Máquina agregada.', DONDE)
         if (r.ok) await cargarPestanaConfig()
         return
       }
       if (ds.maqSubir !== undefined || ds.maqBajar !== undefined) {
         const i = Number(ds.maqSubir ?? ds.maqBajar)
         for (const m of ordenTrasMover(lista, i, ds.maqSubir !== undefined ? -1 : +1)) {
-          const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { orden: m.orden }))
+          const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { orden: m.orden }), null, DONDE)
           if (!r.ok) break
         }
         await cargarPestanaConfig()
@@ -6036,11 +6243,11 @@
       if (ds.maqGuardar !== undefined) {
         const input = [...document.getElementById('pr-config-cuerpo').querySelectorAll('[data-maq-nombre]')].find(x => x.dataset.maqNombre === id)
         const nombre = (input?.value ?? '').trim()
-        if (!nombre) { errorConfig('El nombre no puede quedar vacío.'); return }
-        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { nombre }), 'Nombre guardado.')
+        if (!nombre) { errorConfig('El nombre no puede quedar vacío.', DONDE); return }
+        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { nombre }), 'Nombre guardado.', DONDE)
         if (r.ok) await cargarPestanaConfig()
       } else {
-        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { activa: !m.activa }), m.activa ? 'Máquina desactivada.' : 'Máquina activada.')
+        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { activa: !m.activa }), m.activa ? 'Máquina desactivada.' : 'Máquina activada.', DONDE)
         if (r.ok) await cargarPestanaConfig()
       }
     }
@@ -6120,6 +6327,9 @@
       }
     }
 
+    // La nota es OBLIGATORIA acá, aunque guardar_receta_original la acepte en
+    // null: una versión sin decir qué cambió deja un historial que no explica
+    // nada, que es justo para lo que existe el historial.
     function faltanEnReceta(p) {
       const faltan = []
       if (!p.p_maquina_id) faltan.push('la máquina')
@@ -6128,6 +6338,18 @@
       if (!p.p_items.length) faltan.push('al menos un ingrediente con cantidad')
       if (!p.p_nota) faltan.push('una nota que diga qué cambió')
       return faltan
+    }
+
+    // El número que va a tener la versión que se está por guardar.
+    function proximaVersion(recetas, tipo) {
+      return (recetaVigente(recetas, tipo)?.version ?? 0) + 1
+    }
+
+    // "antes 2,5" al lado de una cantidad que se cambió. Null si no cambió.
+    function textoAntes(original, actual) {
+      if (original == null || actual == null) return null
+      if (Math.abs(Number(original) - Number(actual)) < 1e-9) return null
+      return `antes ${formatearNumeroAr(Number(original), { decimales: 3, minimos: 0 })}`
     }
 
     function htmlConfigRecetas(c) {
@@ -6146,7 +6368,7 @@
       const aviso = recetaParaRevisar(vigente)
         ? `<div class="pr-aviso pr-aviso--grave">Revisar: esta receta vino del prototipo. Confirmá las cantidades con la fábrica y guardá una versión nueva.</div>` : ''
       const cabNuevo = nuevo
-        ? `<div class="pr-campos pr-espacio-arriba"><label class="pr-campo"><span class="pr-campo__rotulo">Nombre del tipo nuevo</span><input type="text" class="pr-input" id="pr-config-tipo-nuevo" maxlength="40" placeholder="Ej.: Chocolate"></label>` +
+        ? `<div class="pr-campos"><label class="pr-campo"><span class="pr-campo__rotulo">Nombre del tipo nuevo</span><input type="text" class="pr-input" id="pr-config-tipo-nuevo" maxlength="40" placeholder="Ej.: Chocolate"></label>` +
           (d.tipos.length ? `<label class="pr-campo"><span class="pr-campo__rotulo">Partir de</span><select class="pr-select" data-receta-partida="1">` +
             d.tipos.map(t => `<option value="${esc(t)}"${t === (c.recetaPartida ?? d.tipos[0]) ? ' selected' : ''}>${esc(t)}</option>`).join('') + `</select></label>` : '') + `</div>`
         : `<p class="pr-texto-suave">Vigente: versión ${esc(vigente?.version ?? '—')}. Guardar crea una versión NUEVA; las masas ya hechas no cambian.</p>`
@@ -6155,16 +6377,22 @@
           .map(r => d.insumos.find(i => i.id === r.insumo_id)).filter(Boolean)
         return `<div class="pr-config-fila"><span class="pr-ing__nombre">${esc(f.nombre)}</span>` +
           `<label class="pr-campo"><span class="pr-campo__rotulo">kg por masa simple</span><input type="text" class="pr-input" data-receta-kg="${esc(f.ingrediente_id)}" data-numero="${f.kg == null ? '' : esc(f.kg)}" data-decimales="3" aria-label="Kilos de ${esc(f.nombre)}"></label>` +
+          `<span class="pr-cfg-antes" data-receta-antes="${esc(f.ingrediente_id)}" hidden></span>` +
           (opciones.length ? `<label class="pr-campo"><span class="pr-campo__rotulo">Insumo preferido</span><select class="pr-select" data-receta-pref="${esc(f.ingrediente_id)}"><option value="">Ninguno</option>` +
             opciones.map(o => `<option value="${esc(o.id)}"${o.id === f.preferido ? ' selected' : ''}>${esc(o.nombre)}${o.marca ? ` · ${esc(o.marca)}` : ''}</option>`).join('') + `</select></label>` : '') +
           `</div>`
       }).join('')
-      const historial = nuevo ? '' : '<h3 class="pr-subtitulo">Versiones</h3><ul class="pr-lista">' +
-        d.recetas.filter(r => r.tipo_masa === c.recetaTipo).map(r =>
-          `<li class="pr-lista__item"><strong>Versión ${esc(r.version)}</strong> · ${esc(fechaCorta(r.created_at))} · ${esc(d.nombres.get(r.creada_por) ?? '—')}<br>${esc(r.nota ?? 'Sin nota')}</li>`).join('') + '</ul>'
-      return `<div class="pr-campos">${selMaq}${selTipo}</div>${aviso}${cabNuevo}${editor}` +
-        `<label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">Nota (qué cambió y por qué)</span><textarea class="pr-textarea" id="pr-config-receta-nota" maxlength="300"></textarea></label>` +
-        `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--grande" data-receta-guardar="1">Guardar versión nueva</button></div>${historial}`
+      const historial = nuevo ? '' : '<h3 class="pr-subtitulo">Versiones</h3>' +
+        d.recetas.filter(r => r.tipo_masa === c.recetaTipo).map((r, i) =>
+          `<div class="pr-cfg-version${i === 0 ? ' pr-cfg-version--vigente' : ''}"><strong>Versión ${esc(r.version)}${i === 0 ? ' · vigente' : ''}</strong> · ${esc(fechaCorta(r.created_at))} · ${esc(d.nombres.get(r.creada_por) ?? '—')}` +
+          `<div class="pr-texto-suave">${esc(r.nota ?? 'Sin nota')}</div></div>`).join('')
+      const version = nuevo ? 1 : proximaVersion(d.recetas, c.recetaTipo)
+      return `<div class="pr-cfg-recetas"><div>${selMaq}${selTipo}</div>` +
+        `<div>${aviso}${cabNuevo}${editor}` +
+        `<label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">Nota (qué cambió y por qué) <span class="pr-obligatorio">· obligatoria</span></span><textarea class="pr-textarea" id="pr-config-receta-nota" maxlength="300"></textarea></label>` +
+        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-receta-guardar')}` +
+        `<button type="button" class="pr-btn" id="pr-cfg-receta-guardar" data-receta-guardar="1">Guardar versión ${esc(version)}</button></div></div>` +
+        `<div>${historial}</div></div>`
     }
 
     // dd/mm/aaaa de un timestamp, en Argentina; '' si no se puede leer.
@@ -6183,13 +6411,27 @@
       }))
     }
 
+    // Al tocar una cantidad se marca contra la de la versión vigente. Se
+    // escribe DIRECTO en el DOM y no con un re-render, porque re-renderizar
+    // mientras se escribe le saca el foco al campo.
+    function marcarCambioReceta(input) {
+      const cuerpo = document.getElementById('pr-config-cuerpo')
+      const antes = [...cuerpo.querySelectorAll('[data-receta-antes]')].find(x => x.dataset.recetaAntes === input.dataset.recetaKg)
+      if (!antes) return
+      const original = input.dataset.numero === '' ? null : Number(input.dataset.numero)
+      const texto = textoAntes(original, leerCampoNumero(input))
+      antes.textContent = texto ?? ''
+      antes.hidden = !texto
+    }
+
     async function guardarReceta() {
       const c = estado.config
+      const DONDE = 'pr-cfg-receta-guardar'
       const tipo = c.recetaTipo === NUEVO_TIPO ? document.getElementById('pr-config-tipo-nuevo')?.value : c.recetaTipo
       const p = parametrosGuardarReceta(c.recetaMaquina, tipo, leerEditorReceta(), document.getElementById('pr-config-receta-nota').value)
       const faltan = faltanEnReceta(p)
-      if (faltan.length) { errorConfig(`Falta ${faltan.join(', ')}.`); return }
-      const r = await guardarEnConfig('guardar_receta_original', p, null)
+      if (faltan.length) { errorConfig(`Falta ${faltan.join(', ')}.`, DONDE); return }
+      const r = await guardarEnConfig('guardar_receta_original', p, null, DONDE)
       if (r.ok) {
         mostrarExito(`Receta guardada: ${p.p_tipo_masa}, versión ${r.data?.version ?? ''}.`)
         c.recetaTipo = p.p_tipo_masa
@@ -6235,7 +6477,8 @@
       }).join('')
       return aviso + filas +
         `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-ing-nuevo" maxlength="60" placeholder="Ingrediente nuevo" aria-label="Ingrediente nuevo">` +
-        `<button type="button" class="pr-btn" data-ing-agregar="1">Agregar ingrediente</button></div>`
+        htmlErrorPegado(c, 'pr-cfg-ing-agregar') +
+        `<button type="button" class="pr-btn" id="pr-cfg-ing-agregar" data-ing-agregar="1">Agregar ingrediente</button></div>`
     }
 
     function parametrosGuardarIngrediente(g, cambios = {}) {
@@ -6256,11 +6499,12 @@
 
     async function accionIngrediente(ds) {
       const c = estado.config, d = c.datos
+      const DONDE = 'pr-cfg-ing-agregar'
       if (ds.ingAgregar !== undefined) {
         const nombre = document.getElementById('pr-config-ing-nuevo').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre del ingrediente.'); return }
+        if (!nombre) { errorConfig('Escribí el nombre del ingrediente.', DONDE); return }
         const orden = d.ingredientes.reduce((mx, g) => Math.max(mx, g.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_ingrediente', parametrosGuardarIngrediente(null, { nombre, orden }), 'Ingrediente agregado.')
+        const r = await guardarEnConfig('guardar_ingrediente', parametrosGuardarIngrediente(null, { nombre, orden }), 'Ingrediente agregado.', DONDE)
         if (r.ok) await cargarPestanaConfig()
         return
       }
@@ -6274,7 +6518,7 @@
       }
       if (ds.ingGuardarInsumos !== undefined) {
         const r = await guardarEnConfig('guardar_ingrediente_insumos',
-          { p_ingrediente_id: ds.ingGuardarInsumos, p_insumo_ids: [...(c.insumosElegidos ?? [])] }, 'Insumos guardados.')
+          { p_ingrediente_id: ds.ingGuardarInsumos, p_insumo_ids: [...(c.insumosElegidos ?? [])] }, 'Insumos guardados.', DONDE)
         if (r.ok) { c.ingredienteAbierto = null; await cargarPestanaConfig() }
         return
       }
@@ -6282,10 +6526,10 @@
         const g = d.ingredientes.find(x => x.id === ds.ingGuardar)
         if (!g) return
         const nombre = String(valorDe('data-ing-nombre', g.id) ?? g.nombre).trim()
-        if (!nombre) { errorConfig('El nombre no puede quedar vacío.'); return }
+        if (!nombre) { errorConfig('El nombre no puede quedar vacío.', DONDE); return }
         const r = await guardarEnConfig('guardar_ingrediente', parametrosGuardarIngrediente(g, {
           nombre, descuenta_stock: valorDe('data-ing-descuenta', g.id, 'checked') ?? g.descuenta_stock, activo: valorDe('data-ing-activo', g.id, 'checked') ?? g.activo,
-        }), 'Ingrediente guardado.')
+        }), 'Ingrediente guardado.', DONDE)
         if (r.ok) await cargarPestanaConfig()
       }
     }
@@ -6328,17 +6572,25 @@
         ? `<div class="pr-aviso pr-aviso--grave">Los productos que ya están cargados vinieron del prototipo: revisá nombres, presentaciones y unidades por caja.` +
           ` <button type="button" class="pr-btn pr-btn--secundario" data-productos-revisados="1">Ya los revisé</button></div>` : ''
       const nota = '<p class="pr-texto-suave">Cambiar las unidades por caja no toca lo ya producido: cada sublote guardó las suyas.</p>'
-      const bloques = d.productos.map(p => `<div class="pr-config-fila${p.activo ? '' : ' pr-config-fila--inactiva'}">` +
+      const bloque = (p) => `<div class="pr-config-fila${p.activo ? '' : ' pr-config-fila--inactiva'}">` +
         `<input type="text" class="pr-input" data-prod-nombre="${esc(p.id)}" value="${esc(p.nombre)}" maxlength="80" aria-label="Nombre del producto">` +
         `<input type="text" class="pr-input" data-prod-tipo="${esc(p.id)}" value="${esc(p.tipo_masa ?? '')}" maxlength="40" placeholder="Tipo de masa" aria-label="Tipo de masa">` +
         `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-prod-activo="${esc(p.id)}"${p.activo ? ' checked' : ''}> Activo</label>` +
         `<button type="button" class="pr-btn pr-btn--secundario" data-prod-guardar="${esc(p.id)}">Guardar producto</button>` +
         d.presentaciones.filter(pr => pr.producto_id === p.id).map(htmlPresentacionConfig).join('') +
         `<div class="pr-config-alta"><input type="text" class="pr-input" data-pres-nueva="${esc(p.id)}" maxlength="80" placeholder="Presentación nueva" aria-label="Presentación nueva">` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-pres-agregar="${esc(p.id)}">Agregar presentación</button></div></div>`).join('')
+        `<button type="button" class="pr-btn pr-btn--secundario" data-pres-agregar="${esc(p.id)}">Agregar presentación</button></div></div>`
+      // Los de chocolate abajo y separados, igual que en la carga (P5b). Lo
+      // decide tipo_masa, no el nombre: es el mismo dato con el que la sala
+      // elige la receta.
+      const { comunes, chocolate } = productosPorMasa(d)
+      const corte = `<div class="pr-ag__corte"><span class="pr-ag__corte-texto">Chocolate</span><span class="pr-ag__corte-linea"></span></div>`
+      const bloques = comunes.map(bloque).join('') +
+        (chocolate.length ? corte + chocolate.map(bloque).join('') : '')
       return aviso + nota + bloques +
         `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-prod-nuevo" maxlength="80" placeholder="Producto nuevo" aria-label="Producto nuevo">` +
-        `<button type="button" class="pr-btn" data-prod-agregar="1">Agregar producto</button></div>`
+        htmlErrorPegado(c, 'pr-cfg-prod-agregar') +
+        `<button type="button" class="pr-btn" id="pr-cfg-prod-agregar" data-prod-agregar="1">Agregar producto</button></div>`
     }
 
     function parametrosGuardarProducto(p, unidadId, cambios = {}) {
@@ -6373,12 +6625,13 @@
 
     async function accionProducto(ds) {
       const c = estado.config, d = c.datos
+      const DONDE = 'pr-cfg-prod-agregar'
       if (ds.productosRevisados !== undefined) { guardarPreferencia(CLAVE_AVISO_PRODUCTOS, '1'); pintarPestanaConfig(); return }
       if (ds.prodAgregar !== undefined) {
         const nombre = document.getElementById('pr-config-prod-nuevo').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre del producto.'); return }
+        if (!nombre) { errorConfig('Escribí el nombre del producto.', DONDE); return }
         const orden = d.productos.reduce((mx, p) => Math.max(mx, p.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_producto', parametrosGuardarProducto(null, c.unidadId, { nombre, orden }), 'Producto agregado.')
+        const r = await guardarEnConfig('guardar_producto', parametrosGuardarProducto(null, c.unidadId, { nombre, orden }), 'Producto agregado.', DONDE)
         if (r.ok) await cargarPestanaConfig()
         return
       }
@@ -6388,16 +6641,16 @@
         const r = await guardarEnConfig('guardar_producto', parametrosGuardarProducto(p, c.unidadId, {
           nombre: valorDe('data-prod-nombre', p.id) ?? p.nombre, tipo_masa: valorDe('data-prod-tipo', p.id) ?? p.tipo_masa,
           activo: valorDe('data-prod-activo', p.id, 'checked') ?? p.activo,
-        }), 'Producto guardado.')
+        }), 'Producto guardado.', DONDE)
         if (r.ok) await cargarPestanaConfig()
         return
       }
       if (ds.presAgregar !== undefined) {
         const nombre = String(valorDe('data-pres-nueva', ds.presAgregar) ?? '').trim()
-        if (!nombre) { errorConfig('Escribí el nombre de la presentación.'); return }
+        if (!nombre) { errorConfig('Escribí el nombre de la presentación.', DONDE); return }
         // Una presentación nueva arranca con 1 por caja: se corrige al lado.
         const orden = d.presentaciones.filter(x => x.producto_id === ds.presAgregar).reduce((mx, x) => Math.max(mx, x.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_presentacion', parametrosGuardarPresentacion(null, ds.presAgregar, { nombre, unidades_por_caja: 1, orden }), 'Presentación agregada: revisá sus unidades por caja.')
+        const r = await guardarEnConfig('guardar_presentacion', parametrosGuardarPresentacion(null, ds.presAgregar, { nombre, unidades_por_caja: 1, orden }), 'Presentación agregada: revisá sus unidades por caja.', DONDE)
         if (r.ok) await cargarPestanaConfig()
         return
       }
@@ -6405,56 +6658,119 @@
         const pr = d.presentaciones.find(x => x.id === ds.presGuardar)
         if (!pr) return
         const upc = campoNumero('data-pres-unidades', pr.id)
-        if (upc !== undefined && (!Number.isInteger(upc) || upc <= 0)) { errorConfig('Las unidades por caja tienen que ser un número entero mayor a cero.'); return }
+        if (upc !== undefined && (!Number.isInteger(upc) || upc <= 0)) { errorConfig('Las unidades por caja tienen que ser un número entero mayor a cero.', DONDE); return }
         const r = await guardarEnConfig('guardar_presentacion', parametrosGuardarPresentacion(pr, pr.producto_id, {
           nombre: valorDe('data-pres-nombre', pr.id) ?? pr.nombre, con_cono: valorDe('data-pres-cono', pr.id, 'checked') ?? pr.con_cono,
           media_caja: valorDe('data-pres-media', pr.id, 'checked') ?? pr.media_caja, empaque: valorDe('data-pres-empaque', pr.id) ?? pr.empaque,
           unidades_por_caja: upc ?? pr.unidades_por_caja, activa: valorDe('data-pres-activa', pr.id, 'checked') ?? pr.activa,
-        }), 'Presentación guardada.')
+        }), 'Presentación guardada.', DONDE)
         if (r.ok) await cargarPestanaConfig()
       }
     }
 
-    // ── Marcas personalizadas ─────────────────────────────────────────────
+    // ── Marcas / Conos ────────────────────────────────────────────────────
 
     async function leerMarcasConfig() {
-      const { data, error } = await supabase.from('marcas_personalizadas').select('id, nombre, activa').order('nombre')
+      const { data, error } = await supabase.from('marcas_personalizadas')
+        .select('id, nombre, activa, estado_alta, creada_por, creada_en').order('nombre')
       if (error) throw error
-      return { marcas: data ?? [] }
+      const marcas = data ?? []
+      const nombres = await nombresDeEmpleados(marcasPendientes({ marcas }).map(m => m.creada_por))
+      return { marcas, nombres }
+    }
+
+    // Los conos que propuso alguien desde la tablet y todavía nadie revisó.
+    function marcasPendientes(d) {
+      return (d?.marcas ?? []).filter(m => m.estado_alta === 'pendiente_revision')
+    }
+
+    // El catálogo: todo lo que no está pendiente ni rechazado.
+    function marcasDelCatalogo(d) {
+      return (d?.marcas ?? []).filter(m => m.estado_alta !== 'pendiente_revision' && m.estado_alta !== 'rechazada')
+    }
+
+    function parametrosRevisarMarca(id, aprobar, nombre) {
+      const n = String(nombre ?? '').trim()
+      return { p_marca_id: id, p_aprobar: aprobar, p_nombre: n === '' ? null : n }
+    }
+
+    // Quién lo cargó y cuándo. El sublote del diseño (7c) no se puede decir:
+    // marcas_personalizadas no guarda de qué producción salió.
+    function htmlPendienteMarca(m, nombres) {
+      const quien = nombres?.get(m.creada_por)
+      const cuando = [fechaCorta(m.creada_en), horaArgentina(m.creada_en)].filter(Boolean).join(' ')
+      const pie = [quien ? `Lo cargó ${quien}` : null, cuando || null].filter(Boolean).join(' · ')
+      return `<div class="pr-cfg-pendiente"><div class="pr-cfg-pendiente__datos">` +
+        `<input type="text" class="pr-input" data-pend-nombre="${esc(m.id)}" value="${esc(m.nombre)}" maxlength="80" aria-label="Nombre del cono">` +
+        (pie ? `<div class="pr-texto-suave">${esc(pie)}</div>` : '') + `</div>` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-pend-no="${esc(m.id)}">Rechazar</button>` +
+        `<button type="button" class="pr-btn" data-pend-si="${esc(m.id)}">Aceptar</button></div>`
     }
 
     function htmlConfigMarcas(c) {
-      const lista = marcasFiltradas(c.datos.marcas, c.busqueda)
-      return `<input type="text" class="pr-input" id="pr-config-marca-buscar" placeholder="Buscar marca" aria-label="Buscar marca" value="${esc(c.busqueda)}">` +
+      const d = c.datos
+      const pend = marcasPendientes(d)
+      const arriba = pend.length
+        ? `<div id="pr-cfg-pendientes" tabindex="-1"><p class="pr-cfg-rotulo">Pendientes de revisar · ${esc(pend.length)}</p>` +
+          htmlErrorPegado(c, 'pr-cfg-pendientes') +
+          `<p class="pr-texto-suave">Se pueden usar igual mientras tanto. Al aceptar podés corregirle el nombre.</p>` +
+          pend.map(m => htmlPendienteMarca(m, d.nombres)).join('') + `</div>` : ''
+      const lista = marcasFiltradas(marcasDelCatalogo(d), c.busqueda)
+      return arriba + `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Catálogo · ${esc(marcasDelCatalogo(d).length)} conos</p>` +
+        `<input type="text" class="pr-input" id="pr-config-marca-buscar" placeholder="Buscar marca" aria-label="Buscar marca" value="${esc(c.busqueda)}">` +
         `<ul class="pr-lista pr-espacio-arriba">` + (lista.length ? lista.map(m =>
           `<li class="pr-lista__item pr-config-marca${m.activa ? '' : ' pr-config-fila--inactiva'}"><strong>${esc(m.nombre)}</strong>${m.activa ? '' : ' (dada de baja)'} ` +
           `<button type="button" class="pr-btn pr-btn--secundario" data-marca-activa="${esc(m.id)}">${m.activa ? 'Dar de baja' : 'Reactivar'}</button></li>`).join('')
           : `<li class="pr-lista__item">Ninguna marca coincide.</li>`) + `</ul>` +
         `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-marca-nueva" maxlength="80" placeholder="Marca nueva" aria-label="Marca nueva">` +
-        `<button type="button" class="pr-btn" data-marca-agregar="1">Agregar marca</button></div>`
+        htmlErrorPegado(c, 'pr-cfg-marca-agregar') +
+        `<button type="button" class="pr-btn" id="pr-cfg-marca-agregar" data-marca-agregar="1">Agregar marca</button></div>`
     }
 
     async function accionMarca(ds) {
       const c = estado.config
+      const DONDE = 'pr-cfg-marca-agregar'
       if (ds.marcaAgregar !== undefined) {
         const nombre = document.getElementById('pr-config-marca-nueva').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre de la marca.'); return }
-        const r = await guardarEnConfig('guardar_marca', { p_id: null, p_nombre: nombre, p_activa: true }, 'Marca agregada.')
+        if (!nombre) { errorConfig('Escribí el nombre de la marca.', DONDE); return }
+        const r = await guardarEnConfig('guardar_marca', { p_id: null, p_nombre: nombre, p_activa: true }, 'Marca agregada.', DONDE)
+        if (r.ok) await cargarPestanaConfig()
+        return
+      }
+      if (ds.pendSi !== undefined || ds.pendNo !== undefined) {
+        const id = ds.pendSi ?? ds.pendNo
+        const aprobar = ds.pendSi !== undefined
+        // Al aceptar se manda el nombre del campo, que puede estar corregido.
+        const nombre = aprobar ? valorDe('data-pend-nombre', id) : null
+        const r = await guardarEnConfig('revisar_marca', parametrosRevisarMarca(id, aprobar, nombre),
+          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', 'pr-cfg-pendientes')
         if (r.ok) await cargarPestanaConfig()
         return
       }
       const m = c.datos.marcas.find(x => x.id === ds.marcaActiva)
       if (!m) return
-      const r = await guardarEnConfig('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !m.activa }, m.activa ? 'Marca dada de baja.' : 'Marca reactivada.')
+      const r = await guardarEnConfig('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !m.activa }, m.activa ? 'Marca dada de baja.' : 'Marca reactivada.', DONDE)
       if (r.ok) await cargarPestanaConfig()
     }
 
-    // ── Personal: los puestos de cada persona en la unidad ────────────────
+    // ── Personal: puestos, PINes y accesos temporales ─────────────────────
 
     async function leerPersonalConfig(c) {
       const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: c.unidadId })
       if (error) throw error
-      return { personal: data ?? [] }
+      const t = await supabase.from('puestos_temporales').select('id, empleado_id, puesto, desde, hasta, otorgado_por')
+        .eq('unidad_negocio_id', c.unidadId).is('revocado_en', null).order('hasta')
+      if (t.error) throw t.error
+      // Vigentes: el vencimiento se mira acá porque `hasta` es un timestamptz
+      // y la consulta no puede compararlo contra el "ahora" del servidor.
+      const temporales = (t.data ?? []).filter(x => temporalVigente(x))
+      const nombres = await nombresDeEmpleados(temporales.map(x => x.otorgado_por))
+      return { personal: data ?? [], temporales, nombres }
+    }
+
+    function temporalVigente(t, ahora = Date.now()) {
+      const hasta = new Date(t?.hasta ?? '').getTime()
+      return Number.isFinite(hasta) && hasta > ahora
     }
 
     function personalVisible(personal, busqueda, todos) {
@@ -6462,25 +6778,271 @@
       return marcasFiltradas(base, busqueda)
     }
 
+    // El estado del PIN, tal como lo devuelve personal_produccion(). No hay
+    // "Bloqueado": la RPC no lo dice, y un chip que no se puede saber sería
+    // inventarlo.
+    function estadoDelPin(p) {
+      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--gris' }
+      if (p.debe_cambiar_pin) return { texto: 'PIN pendiente de cambiar', clase: 'pr-cfg-chip--alerta' }
+      return { texto: 'PIN propio', clase: 'pr-cfg-chip--ok' }
+    }
+
+    // Los puestos que muestra la fila: los tocados si se tocó, los de la base
+    // si no.
+    function puestosDe(c, p) {
+      return c.cambios.get(p.id) ?? (p.puestos ?? [])
+    }
+
+    // Marcar o desmarcar un puesto. Si la fila vuelve a quedar como está en la
+    // base deja de contar como cambiada: el número del botón tiene que decir
+    // cuántas filas se van a mandar, ni una más.
+    function alternarPuesto(c, persona, puesto, marcado) {
+      const set = new Set(puestosDe(c, persona))
+      if (marcado) set.add(puesto)
+      else set.delete(puesto)
+      const nuevos = PUESTOS.map(([k]) => k).filter(k => set.has(k))
+      const antes = [...(persona.puestos ?? [])].sort().join(',')
+      if (nuevos.slice().sort().join(',') === antes) c.cambios.delete(persona.id)
+      else c.cambios.set(persona.id, nuevos)
+    }
+
+    function textoBotonPersonal(n) {
+      return n ? `Guardar los cambios · ${n} ${n === 1 ? 'fila' : 'filas'}` : 'Guardar los cambios'
+    }
+
+    function htmlFilaPersonal(c, p) {
+      const puestos = puestosDe(c, p)
+      const tocada = c.cambios.has(p.id)
+      const pin = estadoDelPin(p)
+      const temp = p.pin_temporal ? ` <span class="pr-cfg-chip pr-cfg-chip--gris">temporal</span>` : ''
+      return `<div class="pr-cfg-fila pr-cfg-personal${tocada ? ' pr-cfg-fila--tocada' : ''}"><strong>${esc(p.nombre)}</strong>` +
+        PUESTOS.map(([puestoClave, puestoRotulo]) => `<input type="checkbox" class="pr-casilla pr-cfg-centro" data-puesto="${puestoClave}" data-persona-puesto="${esc(p.id)}"${puestos.includes(puestoClave) ? ' checked' : ''} aria-label="${puestoRotulo}: ${esc(p.nombre)}">`).join('') +
+        `<span><span class="pr-cfg-chip ${pin.clase}">${esc(pin.texto)}</span>${temp}</span>` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-pin-asignar="${esc(p.id)}">${p.tiene_pin ? 'Resetear PIN' : 'Asignar PIN'}</button>` +
+        `<span class="pr-cfg-fila__aviso">${tocada ? 'Cambiada' : ''}</span></div>`
+    }
+
+    // El panel del PIN. Un PIN es un IDENTIFICADOR, no una cantidad: va como
+    // texto y NUNCA por enlazarCampoNumero, que le metería separador de miles.
+    function htmlPanelPin(c) {
+      if (!c.pinPara) return ''
+      const maestro = c.pinPara.maestro
+      const largo = maestro ? LARGO_PIN_MAESTRO : LARGO_PIN
+      return `<div class="pr-cfg-panel"><strong>${maestro ? 'Mi PIN maestro' : `PIN para ${esc(c.pinPara.nombre)}`}</strong>` +
+        `<p class="pr-texto-suave">${maestro ? `${largo} números. Con él se entra a cualquier modo y se dan accesos por hoy.` : `${largo} números. Se los pasás a mano; la primera vez que entre va a tener que elegir uno suyo.`}</p>` +
+        `<input type="text" class="pr-input" id="pr-cfg-pin-valor" inputmode="numeric" autocomplete="off" maxlength="${largo}" placeholder="${'0'.repeat(largo)}" aria-label="PIN">` +
+        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-pin-guardar')}` +
+        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-pin-cancelar">Cancelar</button>` +
+        `<button type="button" class="pr-btn" id="pr-cfg-pin-guardar">Guardar el PIN</button></div></div>`
+    }
+
+    function htmlPanelTemporal(c) {
+      if (!c.temporal) return ''
+      const personas = personalVisible(c.datos.personal, '', true)
+      return `<div class="pr-cfg-panel"><strong>Dar acceso temporal</strong>` +
+        `<p class="pr-texto-suave">Dura como mucho 7 días. Si esa persona todavía no tiene PIN, se le genera uno y se muestra una sola vez.</p>` +
+        `<label class="pr-campo"><span class="pr-campo__rotulo">Quién</span><select class="pr-select" id="pr-cfg-temporal-persona">` +
+        `<option value="">Elegí a quién</option>` +
+        personas.map(p => `<option value="${esc(p.id)}"${p.id === c.temporal.personaId ? ' selected' : ''}>${esc(p.nombre)}</option>`).join('') + `</select></label>` +
+        `<label class="pr-campo"><span class="pr-campo__rotulo">Puesto</span><select class="pr-select" id="pr-cfg-temporal-puesto">` +
+        `<option value="">Elegí el puesto</option>` +
+        PUESTOS.map(([k, r]) => `<option value="${k}"${k === c.temporal.puesto ? ' selected' : ''}>${r}</option>`).join('') + `</select></label>` +
+        `<label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" class="pr-input" id="pr-cfg-temporal-hasta" value="${esc(c.temporal.hasta ?? '')}"></label>` +
+        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-temporal-dar')}` +
+        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-temporal-cancelar">Cancelar</button>` +
+        `<button type="button" class="pr-btn" id="pr-cfg-temporal-dar">Dar el acceso</button></div></div>`
+    }
+
+    // Los puestos temporales vigentes: quién los dio, hasta cuándo, y Revocar.
+    function htmlTemporales(c) {
+      const lista = c.datos.temporales ?? []
+      if (!lista.length) return '<p class="pr-texto-suave">No hay ningún acceso temporal vigente.</p>'
+      const nombre = (id) => c.datos.personal.find(p => p.id === id)?.nombre ?? '—'
+      return lista.map(t => `<div class="pr-cfg-temporal"><span><strong>${esc(nombre(t.empleado_id))}</strong> · ${esc(t.puesto)}` +
+        `<div class="pr-texto-suave">Lo dio ${esc(c.datos.nombres.get(t.otorgado_por) ?? '—')} · hasta ${esc(fechaCorta(t.hasta))} ${esc(horaArgentina(t.hasta))}</div></span>` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-temporal-revocar="${esc(t.id)}">Revocar</button></div>`).join('')
+    }
+
     function htmlConfigPersonal(c) {
       const lista = personalVisible(c.datos.personal, c.busqueda, c.todoElPersonal)
-      return `<input type="text" class="pr-input" id="pr-config-personal-buscar" placeholder="Buscar persona" aria-label="Buscar persona" value="${esc(c.busqueda)}">` +
-        `<label class="pr-check pr-espacio-arriba"><input type="checkbox" class="pr-casilla" data-personal-todos="1"${c.todoElPersonal ? ' checked' : ''}> Mostrar también el personal de otras unidades</label>` +
-        (lista.length ? lista.map(p => `<div class="pr-config-fila"><span class="pr-ing__nombre">${esc(p.nombre)}</span>` +
-          PUESTOS.map(([puestoClave, puestoRotulo]) => `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-puesto="${puestoClave}" data-persona-puesto="${esc(p.id)}"${(p.puestos ?? []).includes(puestoClave) ? ' checked' : ''}> ${puestoRotulo}</label>`).join('') +
-          `<button type="button" class="pr-btn pr-btn--secundario" data-puestos-guardar="${esc(p.id)}">Guardar</button></div>`).join('')
-          : '<p class="pr-texto-suave">Nadie coincide con la búsqueda.</p>')
+      const n = cambiosSinGuardar(c)
+      const cab = `<div class="pr-cfg-cab pr-cfg-personal"><span>Persona</span>` +
+        PUESTOS.map(([, r]) => `<span class="pr-cfg-centro">${r}</span>`).join('') +
+        `<span>PIN</span><span></span><span></span></div>`
+      return `<input type="text" class="pr-input" id="pr-config-personal-buscar" placeholder="Buscar por nombre…" aria-label="Buscar persona" value="${esc(c.busqueda)}">` +
+        `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-personal-todos="1"${c.todoElPersonal ? ' checked' : ''}> Mostrar también el personal de otras unidades</label>` +
+        `<div class="pr-cfg-tabla pr-espacio-arriba">${cab}` +
+        (lista.length ? lista.map(p => htmlFilaPersonal(c, p)).join('') : '<div class="pr-cfg-fila pr-cfg-personal"><span>Nadie coincide con la búsqueda.</span></div>') +
+        `</div>` +
+        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-personal-guardar')}` +
+        `<button type="button" class="pr-btn" id="pr-cfg-personal-guardar"${c.guardando ? ' disabled' : ''}>${esc(textoBotonPersonal(n))}</button></div>` +
+        `<h3 class="pr-subtitulo">PINes</h3>` +
+        `<div class="pr-config-fila__botones">${htmlErrorPegado(c, 'pr-cfg-generar-pines')}` +
+        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-generar-pines">Generar PIN para los que no tienen</button>` +
+        (tieneTarea('configurar') ? `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-abrir-maestro">Mi PIN maestro</button>` : '') +
+        `</div>${htmlPanelPin(c)}` +
+        `<h3 class="pr-subtitulo">Accesos temporales</h3>${htmlTemporales(c)}` +
+        `<div class="pr-config-fila__botones pr-espacio-arriba">${htmlErrorPegado(c, 'pr-cfg-abrir-temporal')}` +
+        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-abrir-temporal">Dar acceso temporal</button></div>${htmlPanelTemporal(c)}`
     }
 
-    function puestosElegidos(personaId) {
-      return [...document.getElementById('pr-config-cuerpo').querySelectorAll('[data-persona-puesto]')]
-        .filter(x => x.dataset.personaPuesto === personaId && x.checked).map(x => x.dataset.puesto)
-    }
-
-    async function accionPersonal(ds) {
+    // Manda SOLO las filas tocadas, de a una, y para en la primera que falla.
+    // El botón se traba mientras manda, nunca por lo que falta: si no, el
+    // error que cuelga de él sería imposible de ver.
+    async function guardarCambiosPersonal() {
       const c = estado.config
-      const id = ds.puestosGuardar
-      const r = await guardarEnConfig('guardar_puestos', { p_empleado_id: id, p_unidad_negocio_id: c.unidadId, p_puestos: puestosElegidos(id) }, 'Puestos guardados.')
+      const DONDE = 'pr-cfg-personal-guardar'
+      if (c.guardando) return
+      const ids = [...c.cambios.keys()]
+      if (!ids.length) { errorConfig('No cambiaste nada todavía.', DONDE); return }
+      c.guardando = true
+      pintarPestanaConfig()
+      let hechas = 0
+      try {
+        for (const id of ids) {
+          const r = await guardarEnConfig('guardar_puestos', { p_empleado_id: id, p_unidad_negocio_id: c.unidadId, p_puestos: c.cambios.get(id) }, null, DONDE)
+          if (!r.ok) break
+          c.cambios.delete(id)
+          hechas++
+        }
+      } finally {
+        c.guardando = false
+      }
+      if (hechas) mostrarExito(`${hechas} ${hechas === 1 ? 'fila guardada' : 'filas guardadas'}.`)
+      // Con algo sin guardar no se recarga: la recarga traería los puestos de
+      // la base y borraría lo que todavía no entró.
+      if (c.cambios.size) pintarPestanaConfig()
+      else await cargarPestanaConfig()
+    }
+
+    // ── PINes ─────────────────────────────────────────────────────────────
+
+    function pinValido(texto, largo) {
+      return new RegExp(`^[0-9]{${largo}}$`).test(String(texto ?? ''))
+    }
+
+    function abrirPanelPin(persona, maestro = false) {
+      const c = estado.config
+      c.pinPara = { id: persona?.id ?? null, nombre: persona?.nombre ?? '', maestro }
+      errorConfig(null)
+      pintarPestanaConfig()
+      document.getElementById('pr-cfg-pin-valor')?.focus?.()
+    }
+
+    // El campo se vacía a mano antes de soltarlo. El re-render lo reemplaza
+    // igual, pero un PIN tipeado no tiene que sobrevivir ni un instante de más.
+    function olvidarCampoPin() {
+      const el = document.getElementById('pr-cfg-pin-valor')
+      if (el) el.value = ''
+    }
+
+    function cerrarPanelPin() {
+      olvidarCampoPin()
+      estado.config.pinPara = null
+      errorConfig(null)
+      pintarPestanaConfig()
+    }
+
+    async function confirmarPinConfig() {
+      const c = estado.config
+      const DONDE = 'pr-cfg-pin-guardar'
+      if (!c.pinPara) return
+      const maestro = c.pinPara.maestro
+      const largo = maestro ? LARGO_PIN_MAESTRO : LARGO_PIN
+      const pin = String(document.getElementById('pr-cfg-pin-valor')?.value ?? '').trim()
+      if (!pinValido(pin, largo)) { errorConfig(`El PIN tiene que ser de ${largo} números.`, DONDE); return }
+      const r = maestro
+        ? await guardarEnConfig('asignar_mi_pin_maestro', { p_pin: pin }, 'PIN maestro guardado.', DONDE)
+        : await guardarEnConfig('asignar_pin_produccion', { p_empleado_id: c.pinPara.id, p_pin: pin }, 'PIN asignado.', DONDE)
+      if (!r.ok) return
+      olvidarCampoPin()
+      c.pinPara = null
+      await cargarPestanaConfig()
+    }
+
+    // ── La hoja de PINes: se ve UNA vez, se imprime y se borra ────────────
+
+    function htmlTiraPin(t) {
+      return `<div class="pr-tira"><div><strong>${esc(t.nombre)}</strong>` +
+        `<div class="pr-tira__nota">PIN de un solo uso: la primera vez vas a elegir uno tuyo.</div></div>` +
+        `<div class="pr-tira__pin">${esc(t.pin)}</div></div>`
+    }
+
+    function mostrarHojaPines(lista, aviso) {
+      estado.config.hoja = lista
+      document.getElementById('pr-cfg-hoja-aviso').textContent = aviso
+      document.getElementById('pr-cfg-hoja-tiras').innerHTML = lista.map(htmlTiraPin).join('')
+      document.getElementById('pr-cfg-hoja').hidden = false
+    }
+
+    // Al cerrar, los PINes se van de la memoria Y del DOM. Nunca estuvieron en
+    // localStorage ni en sessionStorage, y no tienen que quedar en ningún lado.
+    function cerrarHojaPines() {
+      if (estado.config) estado.config.hoja = null
+      document.getElementById('pr-cfg-hoja-tiras').innerHTML = ''
+      document.getElementById('pr-cfg-hoja-aviso').textContent = ''
+      document.getElementById('pr-cfg-hoja').hidden = true
+    }
+
+    async function generarPines() {
+      const c = estado.config
+      const DONDE = 'pr-cfg-generar-pines'
+      const r = await guardarEnConfig('generar_pines_iniciales', { p_unidad_negocio_id: c.unidadId }, null, DONDE)
+      if (!r.ok) return
+      const lista = (r.data ?? []).map(x => ({ nombre: x.nombre, pin: x.pin }))
+      // Sin nadie sin PIN no se abre una hoja vacía: se dice.
+      if (!lista.length) { errorConfig('Ya todos tienen PIN: no hizo falta generar ninguno.', DONDE); return }
+      mostrarExito(`${lista.length} ${lista.length === 1 ? 'PIN generado' : 'PINes generados'}.`)
+      await cargarPestanaConfig()
+      mostrarHojaPines(lista, 'Se muestran UNA sola vez. Imprimí, recortá y repartí antes de cerrar.')
+    }
+
+    // ── Accesos temporales ────────────────────────────────────────────────
+
+    function abrirPanelTemporal() {
+      const c = estado.config
+      c.temporal = { personaId: null, puesto: null, hasta: hoyArgentina() }
+      errorConfig(null)
+      pintarPestanaConfig()
+    }
+
+    function cerrarPanelTemporal() {
+      estado.config.temporal = null
+      errorConfig(null)
+      pintarPestanaConfig()
+    }
+
+    function parametrosDarTemporal(c, hoy) {
+      return {
+        p_empleado_id: c.temporal?.personaId ?? null,
+        p_unidad_negocio_id: c.unidadId,
+        p_puesto: c.temporal?.puesto ?? null,
+        p_hasta: hastaDesdeFecha(c.temporal?.hasta, hoy),
+      }
+    }
+
+    async function confirmarTemporal() {
+      const c = estado.config
+      const DONDE = 'pr-cfg-temporal-dar'
+      const hoy = hoyArgentina()
+      const faltan = faltanParaAcceso(c.temporal, hoy)
+      if (faltan.length) { errorConfig(`Falta: ${faltan.join(' · ')}.`, DONDE); return }
+      const persona = c.datos.personal.find(p => p.id === c.temporal.personaId)
+      const r = await guardarEnConfig('otorgar_puesto_temporal', parametrosDarTemporal(c, hoy), null, DONDE)
+      if (!r.ok) return
+      if (r.data && r.data.ok === false) { errorConfig(r.data.motivo ?? 'No se pudo dar el acceso.', DONDE); return }
+      mostrarExito('Acceso dado.')
+      c.temporal = null
+      await cargarPestanaConfig()
+      // El PIN temporal viene en null cuando esa persona ya tenía el suyo.
+      if (r.data?.pin_temporal) {
+        mostrarHojaPines([{ nombre: persona?.nombre ?? '', pin: r.data.pin_temporal }],
+          'Se muestra UNA sola vez. Anotalo y pasáselo antes de cerrar.')
+      }
+    }
+
+    async function revocarTemporal(id) {
+      const r = await guardarEnConfig('revocar_puesto_temporal', { p_id: id }, 'Acceso revocado.', 'pr-cfg-abrir-temporal')
       if (r.ok) await cargarPestanaConfig()
     }
 
@@ -6495,29 +7057,56 @@
 
     function conectarConfig() {
       document.getElementById('pr-btn-ir-config').addEventListener('click', mostrarConfig)
-      document.getElementById('pr-config-volver').addEventListener('click', volverDeOficina)
+      document.getElementById('pr-config-volver').addEventListener('click', () => {
+        if (pedirSalida(estado.config, { volver: true })) volverDeOficina()
+      })
       document.getElementById('pr-config-unidad').addEventListener('change', ev => {
-        estado.config.unidadId = ev.target.value
+        const unidad = ev.target.value
+        if (!pedirSalida(estado.config, { unidad })) return
+        estado.config.unidadId = unidad
         estado.config.recetaMaquina = null
         cargarPestanaConfig()
       })
       document.getElementById('pr-config-tabs').addEventListener('click', ev => {
         const b = ev.target.closest('[data-config-tab]'); if (!b) return
-        estado.config.tab = b.dataset.configTab
+        const tab = b.dataset.configTab
+        if (tab === estado.config.tab) return
+        if (!pedirSalida(estado.config, { tab })) return
+        estado.config.tab = tab
         estado.config.busqueda = ''
         cargarPestanaConfig()
+      })
+      document.getElementById('pr-cfg-hoja-cerrar').addEventListener('click', cerrarHojaPines)
+      document.getElementById('pr-cfg-hoja-imprimir').addEventListener('click', () => window.print?.())
+      // Cerrar la pestaña del navegador con cambios sin guardar: lo único que
+      // se puede hacer ahí es el aviso del propio navegador.
+      window.addEventListener('beforeunload', ev => {
+        if (!cambiosSinGuardar(estado.config)) return
+        ev.preventDefault()
+        ev.returnValue = ''
       })
       const cuerpo = document.getElementById('pr-config-cuerpo')
       cuerpo.addEventListener('click', ev => {
         const b = ev.target.closest('button'); if (!b || b.disabled) return
         const ds = b.dataset
+        if (b.id === 'pr-cfg-salir-si') return confirmarSalida()
+        if (b.id === 'pr-cfg-salir-no') return cancelarSalida()
+        if (b.id === 'pr-cfg-personal-guardar') return guardarCambiosPersonal()
+        if (b.id === 'pr-cfg-generar-pines') return generarPines()
+        if (b.id === 'pr-cfg-abrir-maestro') return abrirPanelPin(null, true)
+        if (b.id === 'pr-cfg-pin-cancelar') return cerrarPanelPin()
+        if (b.id === 'pr-cfg-pin-guardar') return confirmarPinConfig()
+        if (b.id === 'pr-cfg-abrir-temporal') return abrirPanelTemporal()
+        if (b.id === 'pr-cfg-temporal-cancelar') return cerrarPanelTemporal()
+        if (b.id === 'pr-cfg-temporal-dar') return confirmarTemporal()
+        if (ds.pinAsignar !== undefined) return abrirPanelPin(estado.config.datos.personal.find(p => p.id === ds.pinAsignar))
+        if (ds.temporalRevocar !== undefined) return revocarTemporal(ds.temporalRevocar)
         const tab = estado.config.tab
         if (tab === 'maquinas') accionMaquina(ds)
         else if (tab === 'recetas' && ds.recetaGuardar !== undefined) guardarReceta()
         else if (tab === 'ingredientes') accionIngrediente(ds)
         else if (tab === 'productos') accionProducto(ds)
         else if (tab === 'marcas') accionMarca(ds)
-        else if (tab === 'personal' && ds.puestosGuardar !== undefined) accionPersonal(ds)
       })
       cuerpo.addEventListener('change', ev => {
         const t = ev.target, c = estado.config
@@ -6526,9 +7115,14 @@
         else if (t.dataset?.recetaPartida !== undefined) { c.recetaPartida = t.value; pintarPestanaConfig() }
         else if (t.dataset?.ingInsumo !== undefined) { t.checked ? c.insumosElegidos.add(t.dataset.ingInsumo) : c.insumosElegidos.delete(t.dataset.ingInsumo) }
         else if (t.dataset?.personalTodos !== undefined) { c.todoElPersonal = t.checked; pintarPestanaConfig() }
+        else if (t.dataset?.personaPuesto !== undefined) { tocarPuestoPersonal(t.dataset.personaPuesto, t.dataset.puesto, t.checked) }
+        else if (t.id === 'pr-cfg-temporal-persona') { c.temporal.personaId = t.value || null }
+        else if (t.id === 'pr-cfg-temporal-puesto') { c.temporal.puesto = t.value || null }
+        else if (t.id === 'pr-cfg-temporal-hasta') { c.temporal.hasta = t.value }
       })
       cuerpo.addEventListener('input', ev => {
         const t = ev.target, c = estado.config
+        if (t.dataset?.recetaKg !== undefined) return marcarCambioReceta(t)
         if (['pr-config-marca-buscar', 'pr-config-personal-buscar', 'pr-config-insumo-buscar'].includes(t.id)) {
           c.busqueda = t.value
           pintarPestanaConfig()
@@ -6537,6 +7131,16 @@
           nuevo.setSelectionRange?.(nuevo.value.length, nuevo.value.length)
         }
       })
+    }
+
+    // Tocar una casilla de puesto NO guarda: deja la fila marcada como
+    // cambiada y la manda el botón del pie, todas juntas.
+    function tocarPuestoPersonal(personaId, puesto, marcado) {
+      const c = estado.config
+      const p = c.datos?.personal?.find(x => x.id === personaId)
+      if (!p) return
+      alternarPuesto(c, p, puesto, marcado)
+      pintarPestanaConfig()
     }
 
     // ═══════════════════════════════════════════════════════════════════════

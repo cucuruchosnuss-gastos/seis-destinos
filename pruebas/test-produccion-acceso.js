@@ -62,10 +62,21 @@ function armar(rol, tareas) {
 // 1.125rem). Se lee el <style> del módulo: cada font-size en rem tiene que ser
 // ≥ 1.125, ninguno en em por debajo de 1, y el alto mínimo es 56 px.
 {
-  const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+  const todoElCss = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+  // Configuración es LA EXCEPCIÓN del módulo: se usa en la compu y no en la
+  // tablet, así que su densidad es otra (README 7a: 14–16 px, filas de 52 px).
+  // Se mide aparte, entre sus dos marcadores.
+  const iniCfg = todoElCss.indexOf('/* ── Configuración: LA EXCEPCIÓN DEL MÓDULO')
+  const finCfg = todoElCss.indexOf('/* ── fin de Configuración')
+  chk('el bloque de Configuración está delimitado (si no, se mide lo que no es)', iniCfg > 0 && finCfg > iniCfg)
+  const cssCfg = todoElCss.slice(iniCfg, finCfg)
+  const css = todoElCss.slice(0, iniCfg) + todoElCss.slice(finCfg)
   const rems = [...css.matchAll(/font-size:\s*([0-9.]+)rem/g)].map(m => Number(m[1]))
   chk('hay tamaños de letra en rem (si da cero, no se está leyendo)', rems.length > 5)
   chk('ningún texto por debajo de 18 px (1.125rem)', rems.every(r => r >= 1.125), rems.filter(r => r < 1.125).join(', '))
+  const remsCfg = [...cssCfg.matchAll(/font-size:\s*([0-9.]+)rem/g)].map(m => Number(m[1]))
+  chk('Configuración sí baja de 18 px (si no, la excepción no se está aplicando)', remsCfg.some(r => r < 1.125), remsCfg.join(', '))
+  chk('… pero nunca por debajo de 12 px (0.75rem)', remsCfg.every(r => r >= 0.75), remsCfg.filter(r => r < 0.75).join(', '))
   const ems = [...css.matchAll(/font-size:\s*([0-9.]+)em/g)].map(m => Number(m[1]))
   chk('ningún tamaño en em por debajo de 1', ems.every(r => r >= 1), ems.join(', '))
   chk('el texto base del módulo es de 18 px', /body \{[^}]*font-size: 18px;/.test(css))
