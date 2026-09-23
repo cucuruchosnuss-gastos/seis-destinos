@@ -252,6 +252,22 @@ async function correrRenders(S) {
   E.modoEdicionFicha = false
   E.modoEdicionContacto = false
 
+  // ── PIN de producción ────────────────────────────────────────────────────
+  // Los dos textos no confiables de la sección: el nombre de la persona (que
+  // viene de empleados) y el mensaje de error, que lo redacta la BASE.
+  E.pin = {
+    empleadoId: p1.id, cargando: false, error: false, panel: true, guardando: false,
+    datos: { tiene_pin: false, debe_cambiar: false, puede_asignar: true },
+    error_texto: marca('pin_error'),
+  }
+  S.renderizarPin()
+  chequearMarcas(chk, 'PIN: el panel con el nombre de la persona y el error de la base', html('ficha-pin'), ['p1_nombre', 'pin_error'])
+  chk('PIN: el panel se dibujó (si no, el chequeo de arriba no mira nada)', /id="pin-valor"/.test(html('ficha-pin')))
+  chk('PIN: el campo es type="text" + inputmode, NUNCA type="number" (un PIN es un identificador)',
+    /<input type="text" id="pin-valor" inputmode="numeric"/.test(html('ficha-pin')))
+  E.pin = { empleadoId: null, cargando: false, datos: null, error: false, panel: false, guardando: false, error_texto: null }
+  S.renderizarPin()
+
   // Persona sin acceso, incompleta: "Completar datos" y "Sin acceso".
   S.abrirFicha('p2')
   chk('ficha incompleta: botón literal "Completar datos"', /btn-completar-datos/.test(html('ficha-acciones')))
@@ -331,6 +347,18 @@ const SEGURAS = {
     etiquetaRol: ETIQUETA_ROL,
     chipsModulos: HTML_PROPIO,
     "acciones.join('')": 'botón y enlace literales del código',
+  },
+  htmlPanelPin: {
+    LARGO_PIN_PRODUCCION: 'número: la constante 4 del código (el largo del PIN)',
+  },
+  htmlSeccionPin: {
+    'est.clase': "clase CSS: estadoDelPin() devuelve uno de los tres literales del código ('chip-pin--gris' / '--alerta' / '--ok')",
+    'est.texto': "estadoDelPin() devuelve uno de los tres literales del código ('Sin PIN' / 'PIN pendiente de cambiar' / 'PIN propio')",
+    boton: HTML_PROPIO,
+    'htmlPanelPin(emp)': 'HTML armado por htmlPanelPin(), que escapa adentro (sus interpolaciones las revisa el escáner)',
+  },
+  renderizarPin: {
+    'htmlSeccionPin()': 'HTML armado por htmlSeccionPin(), que escapa adentro (sus interpolaciones las revisa el escáner)',
   },
 }
 const SEGURAS_REGEX = {}

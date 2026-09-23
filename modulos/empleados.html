@@ -414,6 +414,71 @@
       color: var(--color-texto-suave);
     }
 
+    /* PIN de producción. El chip usa los colores del SISTEMA (gris / ámbar /
+       verde) y no el violeta del módulo: dice un estado, no de qué pantalla es.
+       Mismos tres estados y mismos nombres que la configuración de Producción. */
+    .ficha-pin__caja {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .chip-pin {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .chip-pin--gris   { background: var(--color-superficie);  color: var(--color-texto-suave); }
+    .chip-pin--alerta { background: var(--amarillo-suave);    color: var(--amarillo-oscuro); }
+    .chip-pin--ok     { background: var(--verde-suave);       color: var(--verde-oscuro); }
+
+    .ficha-pin__caja .btn {
+      width: auto;
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .ficha-pin__panel {
+      margin-top: 0.75rem;
+      background: var(--color-superficie);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+    }
+
+    .ficha-pin__ayuda {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin: 0 0 0.625rem;
+    }
+
+    /* El PIN es un IDENTIFICADOR, no una cantidad: el campo es type="text" y
+       NUNCA pasa por enlazarCampoNumero, que le metería separador de miles. */
+    .ficha-pin__panel input {
+      width: 100%;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 1.125rem;
+      letter-spacing: 0.3em;
+      color: var(--color-texto);
+      outline: none;
+    }
+
+    /* El error va PEGADO al botón que lo provoca, nunca en un banner arriba. */
+    .ficha-pin__error {
+      font-size: 0.8125rem;
+      color: var(--rojo);
+      margin-top: 0.625rem;
+    }
+
     #ficha-datos-laborales .grupo-campo { margin-bottom: 0.75rem; }
     #ficha-datos-laborales select {
       width: 100%;
@@ -521,6 +586,12 @@
       <div class="modal-ficha__seccion-titulo">Acceso a la app</div>
       <div id="ficha-acceso"></div>
 
+      <!-- PIN de producción. El TÍTULO de la sección se dibuja adentro de este
+           contenedor a propósito: así, cuando la base dice que no hay nada que
+           mostrar, el innerHTML queda vacío y la sección entera desaparece —
+           un título solo, sin contenido, sería peor que no tener la sección. -->
+      <div id="ficha-pin"></div>
+
       <div id="ficha-acciones"></div>
     </div>
   </div>
@@ -548,6 +619,9 @@
       modoEdicionContacto: false,
       filtros:         { busqueda: '' },
       misTareasEmpleados: new Set(), // tareas granulares en empleado_tareas (modulo='empleados')
+      // PIN de producción de la persona de la ficha. `datos` es lo que
+      // devolvió estado_pin_produccion(): null = no hay nada que mostrar.
+      pin: { empleadoId: null, cargando: false, datos: null, error: false, panel: false, guardando: false, error_texto: null },
     }
 
     const MODULOS_INFO = [
@@ -810,8 +884,13 @@
       estado.fichaAbierta = empleadoId
       estado.modoEdicionFicha = false
       estado.modoEdicionContacto = false
+      reiniciarPin(empleadoId)
       renderizarFicha()
       document.getElementById('modal-ficha').hidden = false
+      // Arranca sin await: la ficha se abre ya y la sección del PIN aparece
+      // cuando la base contesta. Hasta entonces no se dibuja NADA, para no
+      // mostrar un título que después puede tener que desaparecer.
+      cargarEstadoPin(empleadoId)
     }
 
     function renderizarFormularioEdicion(emp) {
@@ -942,6 +1021,8 @@
       }
       document.getElementById('ficha-acciones').innerHTML = acciones.join('')
 
+      renderizarPin()
+
       const btnCompletar = document.getElementById('btn-completar-datos')
       if (btnCompletar) {
         btnCompletar.addEventListener('click', () => {
@@ -951,6 +1032,150 @@
       }
 
       lucide.createIcons()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PIN de producción
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // QUIÉN VE QUÉ LO DECIDE LA BASE, y no un gate propio de esta pantalla:
+    // estado_pin_produccion() devuelve NULL a quien no tiene ni
+    // produccion:configurar ni empleados:ver_editar —y ahí no se dibuja nada—,
+    // y su 'puede_asignar' es produccion:configurar, que es MÁS restrictivo que
+    // ver la sección: con solo empleados:ver_editar se ve el estado y no aparece
+    // ningún botón. Un tieneTarea() propio acá sería una segunda tabla de
+    // decisión que se desincroniza de aquella en silencio — y además este módulo
+    // ni siquiera carga las tareas de 'produccion'.
+    const LARGO_PIN_PRODUCCION = 4
+    const TITULO_PIN = '<div class="modal-ficha__seccion-titulo">PIN de producción</div>'
+
+    function reiniciarPin(empleadoId) {
+      olvidarCampoPin()
+      estado.pin = {
+        empleadoId, cargando: Boolean(empleadoId), datos: null, error: false,
+        panel: false, guardando: false, error_texto: null,
+      }
+    }
+
+    // El PIN tipeado se borra del campo a mano antes de soltarlo. El re-render
+    // lo reemplaza igual, pero no tiene que sobrevivir ni un instante de más.
+    function olvidarCampoPin() {
+      const el = document.getElementById('pin-valor')
+      if (el) el.value = ''
+    }
+
+    // Los tres estados, con los MISMOS nombres que usa la configuración de
+    // Producción. No hay "Bloqueado": la RPC no lo dice, y un chip que no se
+    // puede saber sería inventarlo.
+    function estadoDelPin(p) {
+      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'chip-pin--gris' }
+      if (p.debe_cambiar) return { texto: 'PIN pendiente de cambiar', clase: 'chip-pin--alerta' }
+      return { texto: 'PIN propio', clase: 'chip-pin--ok' }
+    }
+
+    async function cargarEstadoPin(empleadoId) {
+      const { data, error } = await supabase.rpc('estado_pin_produccion', { p_empleado_id: empleadoId })
+      // Una respuesta que llega tarde no pisa la ficha que está abierta AHORA.
+      if (estado.pin.empleadoId !== empleadoId) return
+      estado.pin.cargando = false
+      // Si la llamada falla NO se inventa un estado: un "Sin PIN" falso llevaría
+      // a asignarle un PIN nuevo a alguien que ya tiene el suyo.
+      estado.pin.error = Boolean(error)
+      estado.pin.datos = error ? null : (data ?? null)
+      renderizarPin()
+    }
+
+    // El panel para asignar o resetear. Un PIN es un IDENTIFICADOR, no una
+    // cantidad: va como texto, NUNCA por enlazarCampoNumero (que le metería
+    // separador de miles) y NUNCA en un type="number" (que se come la coma y
+    // acepta notación que no es un PIN).
+    function htmlPanelPin(emp) {
+      const p = estado.pin
+      return `
+        <div class="ficha-pin__panel">
+          <p class="ficha-pin__ayuda">${LARGO_PIN_PRODUCCION} números para ${esc(emp?.nombre || 'esta persona')}. Se los pasás a mano; la primera vez que entre va a tener que elegir uno suyo.</p>
+          <input type="text" id="pin-valor" inputmode="numeric" autocomplete="off" maxlength="${LARGO_PIN_PRODUCCION}" placeholder="0000" aria-label="PIN de producción">
+          ${p.error_texto ? `<div class="ficha-pin__error">${esc(p.error_texto)}</div>` : ''}
+          <div class="modal-ficha__form-acciones">
+            <button type="button" class="btn btn--secundario" id="btn-pin-cancelar">Cancelar</button>
+            <button type="button" class="btn btn--exito" id="btn-pin-guardar"${p.guardando ? ' disabled' : ''}>Guardar el PIN</button>
+          </div>
+        </div>
+      `
+    }
+
+    function htmlSeccionPin() {
+      const p = estado.pin
+      // Mientras se espera la respuesta no se dibuja NADA: un título que
+      // después puede tener que desaparecer es peor que uno que aparece tarde.
+      if (p.cargando) return ''
+      if (p.error) return TITULO_PIN + '<div class="ficha-sin-acceso">No se pudo leer el estado del PIN.</div>'
+      // null = la base dice que quien mira no puede ver esto. Sección entera fuera.
+      if (!p.datos) return ''
+      const emp = estado.empleados.find(e => e.id === p.empleadoId)
+      const est = estadoDelPin(p.datos)
+      const boton = p.datos.puede_asignar
+        ? `<button type="button" class="btn btn--secundario" id="btn-pin-asignar">${p.datos.tiene_pin ? 'Resetear PIN' : 'Asignar PIN'}</button>`
+        : ''
+      return TITULO_PIN + `
+        <div class="ficha-pin__caja">
+          <span class="chip-pin ${est.clase}">${est.texto}</span>
+          ${boton}
+        </div>
+        ${p.panel ? htmlPanelPin(emp) : ''}
+      `
+    }
+
+    function renderizarPin() {
+      const cont = document.getElementById('ficha-pin')
+      if (!cont) return
+      cont.innerHTML = htmlSeccionPin()
+
+      document.getElementById('btn-pin-asignar')?.addEventListener('click', () => {
+        estado.pin.panel = true
+        estado.pin.error_texto = null
+        renderizarPin()
+        document.getElementById('pin-valor')?.focus?.()
+      })
+      document.getElementById('btn-pin-cancelar')?.addEventListener('click', cerrarPanelPin)
+      document.getElementById('btn-pin-guardar')?.addEventListener('click', guardarPin)
+    }
+
+    function cerrarPanelPin() {
+      olvidarCampoPin()
+      estado.pin.panel = false
+      estado.pin.error_texto = null
+      renderizarPin()
+    }
+
+    async function guardarPin() {
+      const p = estado.pin
+      // El botón se traba SOLO mientras se manda, nunca por lo que falta: un
+      // botón apagado no puede explicar por qué, y el error va pegado a él.
+      if (p.guardando || !p.datos?.puede_asignar) return
+      const pin = String(document.getElementById('pin-valor')?.value ?? '').trim()
+      if (!new RegExp(`^[0-9]{${LARGO_PIN_PRODUCCION}}$`).test(pin)) {
+        p.error_texto = `El PIN tiene que ser de ${LARGO_PIN_PRODUCCION} números.`
+        renderizarPin()
+        return
+      }
+      p.guardando = true
+      p.error_texto = null
+      renderizarPin()
+      const { error } = await supabase.rpc('asignar_pin_produccion', { p_empleado_id: p.empleadoId, p_pin: pin })
+      olvidarCampoPin()
+      p.guardando = false
+      if (error) {
+        // El mensaje de la base ya está escrito para una persona —incluido el
+        // del PIN demasiado obvio—. Esa lista NO se replica acá: una segunda
+        // copia se desincroniza en silencio y rechazaría lo que la base acepta.
+        p.error_texto = error.message || 'No se pudo guardar el PIN.'
+        renderizarPin()
+        return
+      }
+      p.panel = false
+      mostrarExito('PIN asignado.')
+      await cargarEstadoPin(p.empleadoId)
     }
 
     async function guardarDatosCompletos(empleadoId) {
@@ -1017,6 +1242,7 @@
       estado.fichaAbierta = null
       estado.modoEdicionFicha = false
       estado.modoEdicionContacto = false
+      reiniciarPin(null)
     }
 
     document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)

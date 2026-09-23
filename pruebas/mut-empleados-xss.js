@@ -20,7 +20,7 @@ correrMutaciones({
   original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/empleados.html'),
   funciones: [
     'renderizarFilaEmpleado', 'renderizarListado', 'renderizarFormularioEdicion',
-    'renderizarFormularioContacto', 'renderizarFicha', 'init',
+    'renderizarFormularioContacto', 'renderizarFicha', 'htmlPanelPin', 'init',
   ],
   manuales: [
     { nombre: 'esc() deja de escapar la comilla doble (rompe los value="..." y data-id)',
