@@ -52,7 +52,7 @@ const PRELUDIO = `
   // La lista del recuento: su innerHTML crea inputs, botones "0" y filas,
   // como el navegador.
   var __lista = elemento('rec-lista')
-  __lista.inputs = []; __lista.ceros = []; __lista.filas = []; __lista.bultos = []
+  __lista.inputs = []; __lista.ceros = []; __lista.filas = []; __lista.bultos = []; __lista.quitar = []
   Object.defineProperty(__lista, 'innerHTML', {
     get() { return this._html || '' },
     set(h) {
@@ -63,6 +63,9 @@ const PRELUDIO = `
       })
       this.bultos = [...s.matchAll(/class="rec-input rec-input--bultos"[\\s\\S]*?data-bultos="([^"]+)"/g)].map(m => {
         const e = elemento('rec-bultos-' + m[1]); e.dataset = { bultos: m[1] }; return e
+      })
+      this.quitar = [...s.matchAll(/class="rec-quitar" data-quitar="([^"]+)"/g)].map(m => {
+        const e = elemento('rec-quitar-' + m[1]); e.dataset = { quitar: m[1] }; return e
       })
       this.ceros = [...s.matchAll(/<button type="button" class="rec-cero" data-cero="([^"]+)"([^>]*)>/g)].map(m => {
         const e = elemento('rec-cero-' + m[1]); e.dataset = { cero: m[1] }; e.disabled = /\\bdisabled\\b/.test(m[2]); return e
@@ -79,7 +82,7 @@ const PRELUDIO = `
   })
   __lista.querySelectorAll = (sel) =>
     sel === '[data-cantidad]' ? __lista.inputs : sel === '[data-cero]' ? __lista.ceros
-    : sel === '[data-bultos]' ? __lista.bultos : []
+    : sel === '[data-bultos]' ? __lista.bultos : sel === '[data-quitar]' ? __lista.quitar : []
   __els.set('rec-lista', __lista)
   var document = {
     activeElement: null,
@@ -94,7 +97,7 @@ const PRELUDIO = `
     },
   }
 
-  var __llamadas = { rpc: [], selects: [], programados: 0, errores: [] }
+  var __llamadas = { rpc: [], selects: [], programados: 0, errores: [], exitos: [] }
   var __datos = {}
   // La tabla cuya consulta falla (para probar qué muestra la pantalla cuando
   // no se pudo leer). null = todo anda.
@@ -129,6 +132,7 @@ const PRELUDIO = `
     from: (t) => __consulta(t),
   }
   function mostrarError(m) { __llamadas.errores.push(m) }
+  function mostrarExito(m) { __llamadas.exitos.push(m) }
   function marcarError(id, m) { __llamadas.errores.push(id + ': ' + m) }
   function marcarGuardado(e) { estado.guardado = e }
   function programarGuardado() { __llamadas.programados++ }
@@ -140,8 +144,9 @@ const PRELUDIO = `
 
   var estado = {
     itemsRec: [], saldos: new Map(), sucios: new Set(), guardando: false,
-    recuento: { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1' },
+    recuento: { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1', abierto_en: '2026-10-01T12:00:00+00:00' },
     filtroRec: 'todos', busquedaRec: '', insumoAgregar: null, presentacionAgregar: undefined, agregados: 0,
+    itemQuitar: null,
   }
 `
 
@@ -155,6 +160,8 @@ const FUNCIONES = [
   // Parte 2: contador, filtro, agrupado, "Actualizar" y contar en bultos.
   'actualizarContadorRec', 'renderizarChipsFiltroRec', 'agruparPorTipoYCategoria', 'htmlAgrupado',
   'baseDesdeBultosRec', 'bultosDeItem', 'anotarBultos', 'refrescarRecuento',
+  // Parte 3: quitar un renglón agregado a mano.
+  'esAgregadoAMano', 'abrirModalQuitar', 'cerrarModalQuitar', 'confirmarQuitarItem',
 ]
 const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', 'TOPE_DIFS_RESUMEN',
   'FILTROS_REC', 'DECIMALES_BULTOS', 'CATEGORIAS', 'SIN_CATEGORIA', 'ORDEN_TIPO', 'TIPOS', 'ordenDe', 'redondear6', 'parsearBultos']
@@ -169,7 +176,8 @@ const ultimaRpc = (n) => [...S.__llamadas.rpc].reverse().find(r => r[0] === n)?.
 function item(id, extra = {}) {
   return { id, insumo_id: 'ins-' + id, lote: null, contenido_por_bulto: null, cantidad_contada: null,
     observacion: '', errorCantidad: null, nombre: 'Insumo ' + id, marca: '', unidad_medida: 'kg',
-    tipo: 'insumo', categoria: null, aclaracion: null, textoCantidad: null, textoEnBultos: null, ...extra }
+    tipo: 'insumo', categoria: null, aclaracion: null, textoCantidad: null, textoEnBultos: null,
+    agregadoAMano: false, ...extra }
 }
 const cero = (id) => S.__lista.ceros.find(c => c.dataset.cero === id)
 const input = (id) => S.__lista.inputs.find(i => i.dataset.cantidad === id)
@@ -598,6 +606,101 @@ pendientes.push(async () => {
     orden.indexOf('guardar_conteo') > orden.indexOf('agregar_item_recuento') && orden.includes('guardar_conteo'), orden)
   chk('agregar: el ítem nuevo aparece', S.estado.itemsRec.some(i => i.id === 'n'))
   chk('agregar: lo que ya estaba contado no se pierde', S.estado.itemsRec.find(i => i.id === 'a').cantidad_contada === 12)
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// 8. QUITAR UN RENGLÓN AGREGADO A MANO  (Parte 3)
+// ══════════════════════════════════════════════════════════════════════════
+const ABIERTO_EN = '2026-10-01T12:00:00+00:00'
+const quitar = (id) => S.__lista.quitar.find(b => b.dataset.quitar === id)
+
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1', abierto_en: ABIERTO_EN }
+
+  // Quién es "agregado a mano": created_at POSTERIOR a abierto_en. Los
+  // precargados entran en la misma transacción que el recuento, así que su
+  // created_at es exactamente igual.
+  chk('agregado a mano: created_at igual a abierto_en es un precargado', S.esAgregadoAMano(ABIERTO_EN) === false)
+  chk('agregado a mano: created_at posterior sí lo es', S.esAgregadoAMano('2026-10-01T12:00:01+00:00') === true)
+  chk('agregado a mano: created_at anterior no lo es', S.esAgregadoAMano('2026-10-01T11:59:59+00:00') === false)
+  chk('agregado a mano: sin created_at se responde que NO (un precargado no se quita)', S.esAgregadoAMano(null) === false)
+  chk('agregado a mano: una fecha ilegible tampoco', S.esAgregadoAMano('cualquier cosa') === false)
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1' }
+  chk('agregado a mano: sin abierto_en tampoco', S.esAgregadoAMano('2026-10-01T12:00:01+00:00') === false)
+
+  // Y llega desde la base: el .select() lo pide y el remapeo lo calcula.
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1', abierto_en: ABIERTO_EN }
+  S.estado.sucios = new Set()
+  S.estado.itemsRec = []
+  S.__setDatos({
+    stock_recuento_items: [
+      { id: 'pre', insumo_id: 'caja', lote: null, contenido_por_bulto: null, cantidad_contada: null, observacion: null,
+        created_at: ABIERTO_EN,
+        insumos: { nombre: 'Caja N°1', marca: '', unidad_medida: 'un', tipo: 'insumo', categoria: 'Cajas', aclaracion: null } },
+      { id: 'man', insumo_id: 'har', lote: 'L-MAL', contenido_por_bulto: 25, cantidad_contada: 100, observacion: null,
+        created_at: '2026-10-01T14:30:00+00:00',
+        insumos: { nombre: 'Harina <b>000</b>', marca: 'Júpiter', unidad_medida: 'kg', tipo: 'materia_prima', categoria: 'Harinas', aclaracion: null } },
+    ],
+    v_stock_por_lote: [],
+  })
+  S.__llamadas.selects = []
+  await S.cargarItemsRecuento()
+  const selItems = S.__llamadas.selects.find(s => s[0] === 'stock_recuento_items')?.[1] ?? ''
+  chk('quitar: el .select() pide created_at', /\bcreated_at\b/.test(selItems), selItems)
+  chk('quitar: el precargado no queda marcado', S.estado.itemsRec.find(i => i.id === 'pre').agregadoAMano === false)
+  chk('quitar: el agregado a mano sí', S.estado.itemsRec.find(i => i.id === 'man').agregadoAMano === true)
+
+  S.renderizarItemsRecuento()
+  chk('quitar: el botón está SOLO en el agregado a mano', S.__lista.quitar.length === 1 && !!quitar('man') && !quitar('pre'))
+  chk('quitar: el aria-label nombra el insumo, escapado',
+    /aria-label="Quitar del recuento Harina &lt;b&gt;000&lt;\/b&gt;"/.test(S.__lista.innerHTML) && !/<b>000/.test(S.__lista.innerHTML))
+
+  // Con el recuento cerrado no hay botón, aunque el renglón sea agregado.
+  S.estado.recuento = { id: 'rec-1', estado: 'cerrado', unidad_negocio_id: 'u-1', abierto_en: ABIERTO_EN }
+  S.renderizarItemsRecuento()
+  chk('quitar: en un recuento cerrado no se dibuja', S.__lista.quitar.length === 0)
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1', abierto_en: ABIERTO_EN }
+  S.renderizarItemsRecuento()
+
+  // El diálogo: propio, no confirm(), y nombra el renglón.
+  quitar('man').click()
+  chk('quitar: se abre el diálogo propio', el('modal-quitar-item').hidden === false)
+  chk('quitar: el diálogo nombra el insumo (como TEXTO, no como HTML)',
+    el('quitar-nombre').textContent === 'Harina <b>000</b>', el('quitar-nombre').textContent)
+  chk('quitar: y dice marca, lote y presentación, que es lo que lo distingue',
+    /Júpiter/.test(el('quitar-detalle').textContent) && /Lote L-MAL/.test(el('quitar-detalle').textContent) &&
+    /bultos de 25 kg/.test(el('quitar-detalle').textContent), el('quitar-detalle').textContent)
+  chk('quitar: avisa que lo contado se va con el renglón',
+    el('quitar-contado').hidden === false && /100 kg/.test(el('quitar-contado').textContent), el('quitar-contado').textContent)
+
+  // Confirmar: la RPC con su parámetro, y la lista se relee.
+  S.__llamadas.rpc = []
+  S.__llamadas.exitos = []
+  S.estado.sucios = new Set(['man'])
+  S.__setDatos({ stock_recuento_items: [
+    { id: 'pre', insumo_id: 'caja', lote: null, contenido_por_bulto: null, cantidad_contada: null, observacion: null,
+      created_at: ABIERTO_EN,
+      insumos: { nombre: 'Caja N°1', marca: '', unidad_medida: 'un', tipo: 'insumo', categoria: 'Cajas', aclaracion: null } },
+  ], v_stock_por_lote: [] })
+  await S.confirmarQuitarItem()
+  chk('quitar: llama a quitar_item_recuento con p_item_id', JSON.stringify(ultimaRpc('quitar_item_recuento')) === '{"p_item_id":"man"}', ultimaRpc('quitar_item_recuento'))
+  chk('quitar: el renglón desaparece de la lista', !S.estado.itemsRec.some(i => i.id === 'man'))
+  chk('quitar: sale del set de sucios (si no, el autoguardado mandaría un id que ya no existe)', !S.estado.sucios.has('man'))
+  chk('quitar: se cierra el diálogo', el('modal-quitar-item').hidden === true && S.estado.itemQuitar === null)
+  chk('quitar: lo dice', S.__llamadas.exitos.length === 1, S.__llamadas.exitos)
+
+  // El recuento ya no está abierto: la RPC rechaza y su mensaje se muestra TAL
+  // CUAL, que es lo que dice qué pasó.
+  S.estado.itemQuitar = 'man'
+  el('modal-quitar-item').hidden = false   // el diálogo está abierto
+  S.__llamadas.errores = []
+  S.__setErrorRpc('quitar_item_recuento')
+  await S.confirmarQuitarItem()
+  chk('quitar: si la RPC rechaza, se muestra su mensaje', S.__llamadas.errores.some(m => /sin señal/.test(m)), S.__llamadas.errores)
+  chk('quitar: y el diálogo NO se cierra (el renglón sigue estando)', el('modal-quitar-item').hidden === false)
+  chk('quitar: el botón de confirmar vuelve a quedar usable', el('btn-confirmar-quitar').disabled === false)
+  S.__setErrorRpc(null)
+  S.cerrarModalQuitar()
 })
 
 ;(async () => {

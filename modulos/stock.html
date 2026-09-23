@@ -1237,6 +1237,44 @@
     }
     .rec-obs[hidden] { display: none; }
 
+    /* "Quitar del recuento": bordó, porque borra un renglón, pero con el mismo
+       peso visual que "+ Observación" — es una salida para un error de tipeo,
+       no una acción que haya que ofrecer de entrada. */
+    .rec-quitar {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      padding: 0.375rem 0;
+      min-height: 2.75rem;
+      font-family: var(--fuente);
+      font-size: 0.78125rem;
+      font-weight: 650;
+      color: var(--bordo-oscuro);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    /* La ficha del renglón que se va a quitar, en el modal. */
+    .quitar-ficha {
+      background: var(--color-superficie);
+      border-radius: 12px;
+      padding: 0.75rem 0.875rem;
+      margin-bottom: 0.875rem;
+      min-width: 0;
+    }
+    .quitar-ficha__nombre {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--color-texto);
+      overflow-wrap: anywhere;
+    }
+    .quitar-ficha__detalle {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+    .quitar-ficha__detalle[hidden] { display: none; }
+
     /* ── Acciones del final ──────────────────────────────────────────────── */
 
     .rec-acciones {
@@ -2678,6 +2716,40 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       MODAL — QUITAR UN RENGLÓN DEL RECUENTO
+       Diálogo propio y no un confirm(): no se puede estilar, algunos webviews
+       lo bloquean, y acá hace falta NOMBRAR el renglón —insumo, lote y
+       presentación— para que nadie quite el que no era.
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-stock" id="modal-quitar-item" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-quitar></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-quitar aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo">Quitar del recuento</h2>
+
+      <div class="quitar-ficha">
+        <div class="quitar-ficha__nombre" id="quitar-nombre"></div>
+        <div class="quitar-ficha__detalle" id="quitar-detalle" hidden></div>
+      </div>
+
+      <div class="rec-aviso">
+        Sale de la lista de este recuento. <strong>No toca el stock ni el catálogo</strong>: el insumo sigue existiendo y el saldo del sistema queda como está.
+        <span id="quitar-contado" hidden></span>
+      </div>
+
+      <div class="campo-stock__ayuda">
+        Es para un renglón agregado por error —un lote mal copiado de la etiqueta, por ejemplo—. Si el renglón está bien y lo que pasa es que no hay nada de eso en el depósito, no lo quites: ponelo en <strong>0</strong>.
+      </div>
+
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-quitar>Volver</button>
+        <button type="button" class="btn-stock btn-stock--alerta" id="btn-confirmar-quitar">Quitar el renglón</button>
+      </div>
+    </div>
+  </div><!-- /modal-quitar-item -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        MODAL — ANULAR EL RECUENTO
        La salida para un conteo que se empezó y no se pudo terminar.
        ═══════════════════════════════════════════════════════════════════════ -->
@@ -3031,6 +3103,8 @@
       // La clase del recuento, elegida al cerrar. Arranca vacía A PROPÓSITO:
       // ver renderizarClaseRecuento().
       claseRecuento: '',
+      // El renglón que el modal de quitar tiene adelante, o null.
+      itemQuitar: null,
       guardado: 'guardado',
       guardando: false,
       timerGuardado: null,
@@ -4144,7 +4218,7 @@
       // FK a esa tabla.
       const [items, saldos] = await Promise.all([
         supabase.from('stock_recuento_items')
-          .select('id, insumo_id, lote, contenido_por_bulto, cantidad_contada, observacion, insumos(nombre, marca, unidad_medida, tipo, categoria, aclaracion)')
+          .select('id, insumo_id, lote, contenido_por_bulto, cantidad_contada, observacion, created_at, insumos(nombre, marca, unidad_medida, tipo, categoria, aclaracion)')
           .eq('recuento_id', estado.recuento.id),
         // El saldo del sistema es VIVO: cantidad_sistema queda en null hasta
         // que se cierra, así que mientras se cuenta hay que leerlo del libro.
@@ -4202,6 +4276,7 @@
           tipo: i.insumos?.tipo ?? 'insumo',
           categoria: i.insumos?.categoria ?? null,
           aclaracion: i.insumos?.aclaracion ?? null,
+          agregadoAMano: esAgregadoAMano(i.created_at),
         }
       })
       ordenarItemsRec()
@@ -4226,6 +4301,35 @@
 
     function saldoDe(item) {
       return estado.saldos.get(claveSaldo(item.insumo_id, item.lote, item.contenido_por_bulto)) ?? 0
+    }
+
+    // ¿ESTE RENGLÓN LO AGREGÓ ALGUIEN A MANO, o lo precargó abrir_recuento?
+    // La tabla no tiene ninguna columna que lo diga, pero no hace falta:
+    // abrir_recuento inserta el recuento Y sus ítems en UNA SOLA transacción,
+    // y el default de created_at es now(), que en Postgres es el timestamp de
+    // la TRANSACCIÓN. O sea que los precargados tienen created_at EXACTAMENTE
+    // igual a abierto_en, y todo lo posterior se agregó después. Es el mismo
+    // razonamiento con el que el historial separa los ajustes del cierre de
+    // las correcciones posteriores (created_at > cerrado_en).
+    //
+    // Verificado contra la base el 23/09/2026: en los dos recuentos que
+    // existen, los 39 ítems de cada uno tienen created_at = abierto_en, cero
+    // anteriores y cero posteriores.
+    //
+    // SI ALGÚN DÍA SE CAMBIA EL DEFAULT A clock_timestamp(), los precargados
+    // pasarían a tener created_at unos microsegundos MAYOR y todos se verían
+    // como agregados a mano.
+    //
+    // Ante la duda se responde que NO: un precargado no se puede quitar (se
+    // pone en 0), así que equivocarse hacia "no" solo esconde un botón, y
+    // hacia "sí" deja borrar un renglón que tiene que estar.
+    function esAgregadoAMano(creadoEn) {
+      const abierto = estado.recuento?.abierto_en
+      if (!creadoEn || !abierto) return false
+      const a = new Date(creadoEn).getTime()
+      const b = new Date(abierto).getTime()
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return false
+      return a > b
     }
 
     // ── Contar en bultos ───────────────────────────────────────────────────
@@ -4388,6 +4492,8 @@
             <input type="text" class="rec-obs" data-obs="${esc(i.id)}" value="${esc(i.observacion)}"
                    placeholder="Por qué hay diferencia (opcional)" ${obsAbierta ? '' : 'hidden'}
                    aria-label="Observación de ${esc(i.nombre)}">
+            ${abierto && i.agregadoAMano ? `<button type="button" class="rec-quitar" data-quitar="${esc(i.id)}"
+                    aria-label="Quitar del recuento ${esc(i.nombre)}">Quitar del recuento</button>` : ''}
           </div>`
       }
 
@@ -4449,6 +4555,9 @@
       })
       listaEl.querySelectorAll('[data-cero]').forEach(btn => {
         btn.addEventListener('click', () => ponerCeroRec(btn.dataset.cero))
+      })
+      listaEl.querySelectorAll('[data-quitar]').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalQuitar(btn.dataset.quitar))
       })
       listaEl.querySelectorAll('[data-obs]').forEach(input => {
         input.addEventListener('input', () => anotarObservacion(input.dataset.obs, input.value))
@@ -4972,6 +5081,65 @@
       document.getElementById('rec-campo-contenido').hidden = true
       renderizarSugerenciasCatalogo()
       document.getElementById('rec-buscar-catalogo').focus()
+    }
+
+    // ── Quitar un renglón ──────────────────────────────────────────────────
+    //
+    // SOLO LOS AGREGADOS A MANO. Un precargado no se quita: está porque el
+    // sistema tiene saldo de eso o porque es un insumo del catálogo, y sacarlo
+    // de la lista sería decidir que no se cuenta. Lo que corresponde ahí es
+    // ponerlo en 0, que es lo que dice "conté y no hay".
+    //
+    // Esto existe para el error de tipeo: se agrega una materia prima con el
+    // lote mal copiado de la etiqueta y hasta ahora la única salida era
+    // dejarla en 0 para siempre, con un lote inventado adentro del recuento.
+    function abrirModalQuitar(itemId) {
+      const item = estado.itemsRec.find(i => i.id === itemId)
+      if (!item) return
+      estado.itemQuitar = itemId
+      const partes = [
+        item.marca,
+        item.lote ? `Lote ${item.lote}` : null,
+        item.contenido_por_bulto ? textoPresentacion(item.contenido_por_bulto, item.unidad_medida) : null,
+      ].filter(Boolean)
+      document.getElementById('quitar-nombre').textContent = item.nombre
+      document.getElementById('quitar-detalle').textContent = partes.join(' · ')
+      document.getElementById('quitar-detalle').hidden = partes.length === 0
+      // Lo contado en ese renglón se va con él, y conviene decirlo antes.
+      const cont = document.getElementById('quitar-contado')
+      cont.hidden = item.cantidad_contada === null
+      cont.textContent = item.cantidad_contada === null ? ''
+        : `Tenía contado ${formatearCantidadStock(item.cantidad_contada, item.unidad_medida)}: eso también se borra.`
+      document.getElementById('modal-quitar-item').hidden = false
+    }
+
+    function cerrarModalQuitar() {
+      document.getElementById('modal-quitar-item').hidden = true
+      estado.itemQuitar = null
+    }
+
+    async function confirmarQuitarItem() {
+      const itemId = estado.itemQuitar
+      if (!itemId) return
+      const btn = document.getElementById('btn-confirmar-quitar')
+      btn.disabled = true
+      const { error } = await supabase.rpc('quitar_item_recuento', { p_item_id: itemId })
+      btn.disabled = false
+      if (error) {
+        console.error(error)
+        // Los mensajes de la RPC ya están escritos para una persona ("El
+        // recuento no está abierto.", "No tenés permiso sobre esa unidad.").
+        mostrarError(error.message || 'No se pudo quitar el renglón.')
+        return
+      }
+      // Sale del set de sucios ANTES de recargar: si quedara, el autoguardado
+      // mandaría un item_id que ya no existe.
+      estado.sucios.delete(itemId)
+      cerrarModalQuitar()
+      await cargarItemsRecuento()
+      renderizarChipsFiltroRec()
+      renderizarItemsRecuento()
+      mostrarExito('Se quitó el renglón del recuento.')
     }
 
     // ── Cerrar ─────────────────────────────────────────────────────────────
@@ -8155,6 +8323,10 @@
       }))
     document.querySelectorAll('[data-cerrar-cierre]').forEach(el =>
       el.addEventListener('click', cerrarModalCierre))
+
+    document.getElementById('btn-confirmar-quitar').addEventListener('click', confirmarQuitarItem)
+    document.querySelectorAll('[data-cerrar-quitar]').forEach(el =>
+      el.addEventListener('click', cerrarModalQuitar))
 
     document.getElementById('btn-anular-recuento').addEventListener('click', abrirModalAnular)
     document.getElementById('btn-confirmar-anular').addEventListener('click', confirmarAnular)

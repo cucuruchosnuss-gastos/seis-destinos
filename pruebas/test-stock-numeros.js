@@ -162,7 +162,7 @@ const FUNCIONES = [
   // recuento
   'renderizarItemsRecuento', 'anotarCantidad', 'huellaItem', 'guardarConteoAhora',
   'agruparPorTipoYCategoria', 'htmlAgrupado', 'bultosDeItem', 'baseDesdeBultosRec', 'anotarBultos',
-  'refrescarFilaRec', 'actualizarContadorRec', 'renderizarChipsFiltroRec',
+  'refrescarFilaRec', 'actualizarContadorRec', 'renderizarChipsFiltroRec', 'esAgregadoAMano',
   'contenidoAgregar', 'avisoRenglonSinPresentacion', 'confirmarAgregarItem', 'cargarItemsRecuento', 'ordenarItemsRec',
   // movimiento
   'prepararCantidadMov', 'aplicarModoMov', 'elegirInsumoMov', 'quitarInsumoMov', 'contenidoMov',
