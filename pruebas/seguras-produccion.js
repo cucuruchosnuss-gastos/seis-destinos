@@ -86,8 +86,14 @@ const SEGURAS_PRODUCCION = [
   ['htmlPanelPin(c)', 'HTML armado por htmlPanelPin(), que escapa adentro, o vacío'],
   ['htmlPanelTemporal(c)', 'HTML armado por htmlPanelTemporal(), que escapa adentro, o vacío'],
   ['htmlTemporales(c)', 'HTML armado por htmlTemporales(), que escapa adentro'],
-  // B7
+  // B7 + rediseño parte 7: historial y stock terminado
   ['TOPE_FILAS', 'constante numérica del código: 1000'],
+  ['novolvio', 'clase CSS constante del código (" pr-renglon--novolvio"), o vacía'],
+  ['htmlEstadoTurno(t.estado)', 'HTML armado por htmlEstadoTurno(), que escapa el texto del estado; la clase sale de ESTADO_TURNO, constante del código'],
+  ['choco', 'HTML constante del código: el chip "Chocolate", o vacío'],
+  ['htmlOperariosHistorial(d)', 'HTML armado por htmlOperariosHistorial(), que escapa el nombre y el rango de horas de cada operario'],
+  ['pieProducido', 'HTML ya escapado: htmlDetalleTurno() lo arma arriba con esc(textoEntero()) de las cajas y las unidades, o vacío'],
+  ['incompleto', 'HTML constante del código: el aviso de que se llegó al tope de filas, o vacío'],
   ['masas', 'HTML ya escapado: htmlDetalleTurno() arma cada masa con esc() de cada dato'],
   ['htmlParadas(d.paradas)', 'HTML armado por htmlParadas(), que escapa adentro'],
   ['producido', 'HTML ya escapado: htmlDetalleTurno() y htmlResumenCierre() arman cada sublote con esc() de cada dato'],

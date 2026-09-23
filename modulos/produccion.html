@@ -1057,6 +1057,80 @@
       .pr-cfg-fila { padding-top: 0.5rem; padding-bottom: 0.5rem; }
     }
 
+    /* ── OFICINA: Historial y Stock terminado ─────────────────────────────
+       Estas dos pantallas se miran en la COMPU y no en la tablet (están en
+       VISTAS_OFICINA), así que van densas como Configuración: texto de 15px,
+       controles de 40px y filas de tabla de 52px. No se toca .pr-cfg —es de
+       Configuración— sino una clase propia sobre las dos secciones. */
+    .pr-of { font-size: 0.9375rem; }
+    .pr-of .pr-input, .pr-of .pr-select { min-height: 40px; font-size: 0.9375rem; }
+    .pr-of .pr-btn { min-height: 40px; font-size: 0.9375rem; padding: 0 1rem; }
+    .pr-of .pr-titulo { font-size: 1.375rem; }
+    .pr-of .pr-subtitulo { font-size: 1.0625rem; margin: 1.25rem 0 0.5rem; }
+    .pr-of .pr-campo__rotulo, .pr-of .pr-dato__rotulo {
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .pr-of .pr-dato__valor { font-size: 1rem; }
+    .pr-of .pr-lista__item { font-size: 0.9375rem; padding: 0.5rem 0.75rem; }
+    .pr-of .pr-renglon { font-size: 0.9375rem; }
+    .pr-of .pr-chip-origen, .pr-of .pr-chip-choco { font-size: 0.8125rem; padding: 0.15rem 0.625rem; }
+
+    .pr-of-tabla { border: 1px solid var(--color-borde); border-radius: 16px; overflow: hidden; background: #fff; }
+    .pr-of-cab, .pr-of-fila {
+      display: grid; align-items: center; gap: 1rem; padding: 0.5rem 1.25rem;
+      border-left: 4px solid transparent; text-align: left; min-width: 0;
+    }
+    .pr-of-cab {
+      background: var(--color-superficie); border-bottom: 1px solid var(--color-borde);
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .pr-of-fila { min-height: 52px; background: #fff; border-bottom: 1px solid var(--color-borde); }
+    .pr-of-fila:last-child { border-bottom: none; }
+    /* La fila de un turno es un botón que abre su detalle. El hover NO pisa el
+       fondo: si lo pisara, taparía el bordó de una pendiente de completar, que
+       es la variante que tiene que saltar (la trampa de dos reglas hermanas
+       con la misma especificidad, ya documentada). */
+    button.pr-of-fila { width: 100%; font: inherit; color: inherit; cursor: pointer; border-top: none;
+      border-right: none; }
+    button.pr-of-fila:hover, button.pr-of-fila:focus-visible { filter: brightness(0.97); }
+    /* Un turno todavía ABIERTO: franja naranja, que en este módulo es lo que
+       espera una acción. PENDIENTE DE COMPLETAR: bordó, porque lo que produjo
+       todavía no entró al stock. */
+    .pr-of-fila--abierto { border-left-color: var(--naranja); }
+    .pr-of-fila--pendiente { border-left-color: var(--bordo); background: var(--bordo-suave); }
+    .pr-of-turnos { grid-template-columns: 88px 116px 88px minmax(0, 1fr) minmax(0, 1fr) 168px; }
+    .pr-of-stock { grid-template-columns: minmax(0, 1fr) 110px 140px; }
+    .pr-of-num { font-variant-numeric: tabular-nums; text-align: right; }
+    .pr-of-lote { font-size: 1.125rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .pr-of-chip { display: inline-block; border-radius: 999px; padding: 0.15rem 0.625rem;
+      font-size: 0.8125rem; font-weight: 800; }
+    .pr-of-chip--cerrado { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .pr-of-chip--abierto { background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    .pr-of-chip--pendiente { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pr-of-grupo { margin-bottom: 0.875rem; }
+    .pr-of-grupo__cab {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+      padding: 0.625rem 1.25rem; background: var(--color-superficie); border-bottom: 1px solid var(--color-borde);
+    }
+    .pr-of-grupo__titulo { font-size: 1.0625rem; font-weight: 800; margin: 0; }
+    .pr-of-grupo__total { font-size: 1.0625rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    /* Un sublote ANULADO no se esconde: existió, se selló en una caja y su
+       stock entró y salió. Se muestra tachado y no suma. */
+    .pr-of-anulado { opacity: 0.6; }
+    .pr-of-anulado .pr-producido__sublote { text-decoration: line-through; }
+    .pr-of-correccion { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
+    .pr-of-vacio { padding: 1rem 1.25rem; color: var(--color-texto-suave); }
+    /* Una parada que cerró el turno (hasta_fin_de_turno): la máquina no volvió. */
+    .pr-renglon--novolvio .pr-renglon__dato { color: var(--bordo-oscuro); font-weight: 800; }
+
+    @media (max-width: 1100px) {
+      .pr-of-cab { display: none; }
+      .pr-of-turnos, .pr-of-stock { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .pr-of-num { text-align: left; }
+    }
+
     /* LA HOJA DE PINES: se muestra UNA vez y se imprime. Al cerrarla, los
        PINes se borran de la memoria y del DOM. */
     .pr-hoja {
@@ -1642,8 +1716,9 @@
         <div class="pr-tarjeta" id="pr-config-cuerpo"></div>
       </section>
 
-      <!-- B7: historial de turnos (produccion:ver o :configurar). -->
-      <section id="pr-historial" hidden>
+      <!-- B7: historial de turnos (produccion:ver o :configurar). Se mira en
+           la compu, así que va con la densidad de oficina (.pr-of). -->
+      <section id="pr-historial" class="pr-of" hidden>
         <div id="pr-historial-listado">
           <div class="pr-tarjeta">
             <div class="pr-fila-titulo">
@@ -1659,13 +1734,14 @@
                 <select id="pr-historial-estado" class="pr-select">
                   <option value="">Todos</option>
                   <option value="abierto">Abiertos</option>
+                  <option value="pendiente_completar">Pendientes de completar</option>
                   <option value="cerrado">Cerrados</option>
                 </select>
               </label>
             </div>
           </div>
           <div id="pr-historial-aviso"></div>
-          <div class="pr-grilla" id="pr-historial-lista"></div>
+          <div id="pr-historial-lista"></div>
         </div>
         <div class="pr-tarjeta" id="pr-historial-detalle" hidden>
           <div class="pr-fila-titulo">
@@ -1676,8 +1752,8 @@
         </div>
       </section>
 
-      <!-- B7: stock de producto terminado. Solo lectura. -->
-      <section id="pr-stock" hidden>
+      <!-- B7: stock de producto terminado. Solo lectura, y también de oficina. -->
+      <section id="pr-stock" class="pr-of" hidden>
         <div class="pr-tarjeta">
           <div class="pr-fila-titulo">
             <h1 class="pr-titulo">Stock terminado</h1>
@@ -3594,9 +3670,13 @@
             `<span class="pr-renglon__num"><strong>${esc(desde)}</strong> · ${esc(p.motivo)}</span>` +
             `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}</span></div>`
         }
-        return '<div class="pr-renglon">' +
+        // hasta_fin_de_turno lo pone cerrar_turno sobre la parada que quedó
+        // abierta: la máquina NO volvió en todo el turno. En la planilla nunca
+        // llega en true (se escribe al cerrar) y el historial sí lo trae.
+        const novolvio = p.hasta_fin_de_turno ? ' pr-renglon--novolvio' : ''
+        return `<div class="pr-renglon${novolvio}">` +
           `<span class="pr-renglon__num"><strong>${esc(desde)}–${esc(horaArgentina(p.fin) || '—')}</strong> · ${esc(p.motivo)}</span>` +
-          `<span class="pr-renglon__dato">${esc(dur)}</span></div>`
+          `<span class="pr-renglon__dato">${esc(dur)}${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}</span></div>`
       }).join('')
     }
 
@@ -7181,6 +7261,34 @@
 
     // ── Historial de turnos ───────────────────────────────────────────────
 
+    // UN DATO AUSENTE NO SE SUMA COMO SI FUERA CERO. `Number(null)` es 0 y es
+    // finito, así que un acumulador ingenuo convierte "no se pudo leer" en un
+    // total plausible y falso — la familia de bugs más repetida del proyecto.
+    // Acá el total pasa a null y la pantalla muestra una raya: en una pantalla
+    // de totales, decir que no se sabe es mejor que decir un número.
+    function sumarMedido(acumulado, valor) {
+      if (acumulado === null) return null
+      if (valor === null || valor === undefined || valor === '') return null
+      const n = Number(valor)
+      return Number.isFinite(n) ? acumulado + n : null
+    }
+
+    // Enteros para leer: formatearNumeroAr() ya devuelve "—" con null, '' o NaN.
+    function textoEntero(n) {
+      return formatearNumeroAr(n, { decimales: 0 })
+    }
+
+    const ESTADO_TURNO = {
+      abierto: ['abierto', 'Abierto'],
+      pendiente_completar: ['pendiente', 'Pendiente de completar'],
+      cerrado: ['cerrado', 'Cerrado'],
+    }
+
+    function htmlEstadoTurno(estadoTurno) {
+      const [clase, texto] = ESTADO_TURNO[estadoTurno] ?? ['', estadoTurno ?? '—']
+      return `<span class="pr-of-chip pr-of-chip--${clase}">${esc(texto)}</span>`
+    }
+
     async function mostrarHistorial() {
       const unidades = unidadesDeHistorial()
       if (!unidades.length) return
@@ -7236,41 +7344,65 @@
         return
       }
       if (h.turnos.length >= TOPE_FILAS) aviso.innerHTML = `<div class="pr-aviso">Se muestran los primeros ${TOPE_FILAS} turnos: acotá las fechas para ver el resto.</div>`
-      lista.innerHTML = h.turnos.length ? h.turnos.map(t => htmlFilaHistorial(t, h)).join('') : '<p class="pr-texto-suave">No hay turnos con esos filtros.</p>'
+      lista.innerHTML = htmlTablaTurnos(h)
+    }
+
+    function htmlTablaTurnos(h) {
+      if (!h.turnos.length) return '<p class="pr-of-vacio">No hay turnos con esos filtros.</p>'
+      return '<div class="pr-of-tabla"><div class="pr-of-cab pr-of-turnos">' +
+        '<span>Lote</span><span>Fecha</span><span>Turno</span><span>Máquina</span><span>Encargado</span><span>Estado</span></div>' +
+        h.turnos.map(t => htmlFilaHistorial(t, h)).join('') + '</div>'
     }
 
     function htmlFilaHistorial(t, h) {
       const maquina = h.maquinas.find(m => m.id === t.maquina_id)?.nombre ?? 'Máquina'
       const encargado = h.nombres.get(t.encargado_id) ?? '—'
-      return `<button type="button" class="pr-maquina${t.estado === 'abierto' ? ' pr-maquina--abierta' : ''}" data-historial-turno="${esc(t.id)}">` +
-        `<span class="pr-maquina__nombre">Lote ${esc(t.lote)} · ${esc(maquina)}</span>` +
-        `<span class="pr-maquina__estado">${esc(fechaDelDia(t.fecha))} · ${esc(t.turno)} · ${t.estado === 'abierto' ? 'Abierto' : 'Cerrado'} · ${esc(encargado)}</span></button>`
+      const clase = t.estado === 'abierto' ? ' pr-of-fila--abierto'
+        : (t.estado === 'pendiente_completar' ? ' pr-of-fila--pendiente' : '')
+      return `<button type="button" class="pr-of-fila pr-of-turnos${clase}" data-historial-turno="${esc(t.id)}">` +
+        `<span class="pr-of-lote">${esc(t.lote)}</span>` +
+        `<span>${esc(fechaDelDia(t.fecha))}</span>` +
+        `<span>${esc(t.turno)}</span>` +
+        `<span>${esc(maquina)}</span>` +
+        `<span>${esc(encargado)}</span>` +
+        `<span>${htmlEstadoTurno(t.estado)}</span></button>`
     }
 
     async function leerDetalleTurno(turnoId) {
       const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
       const [turno] = await leer(supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones').eq('id', turnoId))
+        .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
       if (!turno) throw new Error('El turno no existe.')
-      const operarios = await leer(supabase.from('turno_operarios').select('empleado_id').eq('turno_id', turnoId))
-      const masas = await leer(supabase.from('masas').select('id, nro, hora, tipo_masa, doble, origen, receta_id, masero_id, anulada, anulada_motivo').eq('turno_id', turnoId).order('nro'))
+      // `desde` y `hasta`, los dos: quitar_operario_turno NO borra la fila, le
+      // pone `hasta`. El que se fue estuvo en el turno y tiene que verse.
+      const operarios = await leer(supabase.from('turno_operarios').select('empleado_id, desde, hasta').eq('turno_id', turnoId).order('desde'))
+      const masas = await leer(supabase.from('masas').select('id, nro, hora, tipo_masa, doble, origen, receta_id, masero_id, anulada, anulada_motivo, es_chocolate').eq('turno_id', turnoId).order('nro'))
       const ids = masas.map(m => m.id)
-      const items = ids.length ? await leer(supabase.from('masa_items').select('masa_id, ingrediente_id, insumo_id, lote, lote_fuera_de_stock, cantidad_simple_kg, cantidad_kg').in('masa_id', ids)) : []
+      const items = ids.length ? await leer(supabase.from('masa_items').select('masa_id, ingrediente_id, ingrediente_libre, insumo_id, lote, lote_fuera_de_stock, cantidad_simple_kg, cantidad_kg').in('masa_id', ids)) : []
       const recetas = [...new Set(masas.map(m => m.receta_id))]
       const recItems = recetas.length ? await leer(supabase.from('receta_items').select('receta_id, ingrediente_id, cantidad_kg').in('receta_id', recetas)) : []
       const ingredientes = await leer(supabase.from('ingredientes').select('id, nombre, orden'))
       const insIds = [...new Set(items.map(i => i.insumo_id).filter(Boolean))]
       const insumos = insIds.length ? await leer(supabase.from('insumos').select('id, nombre, marca').in('id', insIds)) : []
-      const paradas = await leer(supabase.from('paradas_produccion').select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio'))
-      const producido = await leer(supabase.from('produccion_items').select('orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades').eq('turno_id', turnoId).order('orden'))
+      const paradas = await leer(supabase.from('paradas_produccion').select('id, inicio, fin, motivo, hasta_fin_de_turno').eq('turno_id', turnoId).order('inicio'))
+      // ANULAR NO BORRA: le pone `anulado` al renglón. Ese sublote existió, se
+      // selló en una caja y su stock entró y salió, así que se sigue trayendo.
+      const producido = await leer(supabase.from('produccion_items').select('id, orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades, anulado').eq('turno_id', turnoId).order('orden'))
+      const itemIds = producido.map(p => p.id).filter(Boolean)
+      const correcciones = itemIds.length ? await leer(supabase.from('produccion_correcciones')
+        .select('produccion_item_id, tipo, cajas_antes, cajas_despues, motivo, hecha_por, hecha_en').in('produccion_item_id', itemIds).order('hecha_en')) : []
       const presIds = [...new Set(producido.map(p => p.presentacion_id))]
       const presentaciones = presIds.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre').in('id', presIds)) : []
       const prodIds = [...new Set(presentaciones.map(p => p.producto_id))]
       const productos = prodIds.length ? await leer(supabase.from('productos_terminados').select('id, nombre').in('id', prodIds)) : []
       const marcaIds = [...new Set(producido.map(p => p.marca_id).filter(Boolean))]
       const marcas = marcaIds.length ? await leer(supabase.from('marcas_personalizadas').select('id, nombre').in('id', marcaIds)) : []
-      const nombres = await nombresDeEmpleados([turno.encargado_id, ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id)])
-      return { turno, operarios: operarios.map(o => o.empleado_id), masas, items, recItems, ingredientes, insumos, paradas, producido, presentaciones, productos, marcas, nombres }
+      // Los nombres salen de v_empleados_publico y NUNCA de un embed a
+      // empleados: su RLS solo deja leer la fila propia, así que un embed
+      // dejaría todos los nombres en blanco menos el tuyo.
+      const nombres = await nombresDeEmpleados([turno.encargado_id, turno.forzado_por, turno.completado_por,
+        ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id), ...correcciones.map(c => c.hecha_por)])
+      return { turno, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, marcas, nombres }
     }
 
     // Lo consumido por insumo y lote: la suma de lo que descontaron las masas
@@ -7282,7 +7414,8 @@
         if (!it.insumo_id || !vivas.has(it.masa_id)) continue
         const k = `${it.insumo_id}|${it.lote ?? ''}`
         const act = mapa.get(k) ?? { insumo_id: it.insumo_id, lote: it.lote ?? null, kg: 0 }
-        act.kg = redondearKg(act.kg + Number(it.cantidad_kg))
+        const suma = sumarMedido(act.kg, it.cantidad_kg)
+        act.kg = suma === null ? null : redondearKg(suma)
         mapa.set(k, act)
       }
       return [...mapa.values()]
@@ -7293,43 +7426,122 @@
       return i ? i.nombre + (i.marca ? ` · ${i.marca}` : '') : 'Insumo'
     }
 
+    // PostgREST corta en 1000 filas. Si alguna de las listas que alimentan los
+    // totales llegó al tope, los totales están calculados sobre una parte y la
+    // pantalla lo DICE: un número que parece un resultado y no lo es sería
+    // peor que no mostrarlo.
+    function detalleIncompleto(d) {
+      return (d.items?.length ?? 0) >= TOPE_FILAS || (d.correcciones?.length ?? 0) >= TOPE_FILAS
+    }
+
+    // Los operarios del turno CON SUS HORAS. El que se fue sigue en la lista
+    // con su hora de salida: es quién estuvo en ese turno.
+    function htmlOperariosHistorial(d) {
+      const filas = d.operarios ?? []
+      if (!filas.length) return '<p class="pr-texto-suave">Sin operarios cargados.</p>'
+      return filas.map(o => {
+        const desde = horaArgentina(o.desde)
+        const dur = o.hasta ? duracionTexto(o.desde, o.hasta) : ''
+        const rango = o.hasta
+          ? `${desde || '—'} → ${horaArgentina(o.hasta) || '—'}${dur ? ` · ${dur}` : ''}`
+          : (desde ? `desde ${desde} · sigue` : 'sin hora de entrada')
+        return '<div class="pr-renglon">' +
+          `<span class="pr-renglon__num">${esc(d.nombres.get(o.empleado_id) ?? '—')}</span>` +
+          `<span class="pr-renglon__dato">${esc(rango)}</span></div>`
+      }).join('')
+    }
+
+    function nombreIngredienteItem(d, it) {
+      if (it.ingrediente_id) return d.ingredientes.find(g => g.id === it.ingrediente_id)?.nombre ?? 'Ingrediente'
+      return it.ingrediente_libre || 'Otro'
+    }
+
+    function htmlMasaHistorial(m, d) {
+      const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0)
+      const detalle = suyos.map(i => `${nombreIngredienteItem(d, i)} ${textoKg(Number(i.cantidad_kg))}` +
+        (i.insumo_id ? ` (${nombreInsumo(d, i.insumo_id)}${i.lote ? `, lote ${i.lote}` : ''}${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''})` : '')).join(' · ')
+      const dif = textoDiferencias(diferenciaDeMasa(m, d))
+      // El chip de chocolate sale de masas.es_chocolate, que escribe
+      // registrar_masa mirando los ingredientes: no se recalcula acá.
+      const choco = m.es_chocolate ? '<span class="pr-chip-choco">Chocolate</span>' : ''
+      return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
+        `<strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · ${m.doble ? 'Doble' : 'Simple'} · ` +
+        `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(ETIQUETA_ORIGEN[m.origen] ?? m.origen)}</span> ${choco} · masero ${esc(d.nombres.get(m.masero_id) ?? '—')}` +
+        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}` : `<br>${esc(dif)}`) +
+        `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
+    }
+
+    function correccionesDe(d, itemId) {
+      return (d.correcciones ?? []).filter(c => c.produccion_item_id === itemId)
+    }
+
+    const TIPO_CORRECCION = { anulado: 'Anulado', agregado: 'Agregado después del cierre' }
+
+    function htmlCorreccion(c, d) {
+      const que = c.tipo === 'cajas'
+        ? `Cajas ${textoEntero(c.cajas_antes)} → ${textoEntero(c.cajas_despues)}`
+        : (TIPO_CORRECCION[c.tipo] ?? c.tipo)
+      const cuando = [fechaCorta(c.hecha_en), horaArgentina(c.hecha_en)].filter(Boolean).join(' ')
+      return `<div class="pr-of-correccion">${esc(que)} · ${esc(c.motivo)} · ${esc(d.nombres.get(c.hecha_por) ?? '—')}${cuando ? ` · ${esc(cuando)}` : ''}</div>`
+    }
+
+    function htmlSubloteHistorial(p, d) {
+      const pr = d.presentaciones.find(x => x.id === p.presentacion_id)
+      const prod = d.productos.find(x => x.id === pr?.producto_id)
+      const marcaNombre = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Marca') : 'Común'
+      const corr = correccionesDe(d, p.id).map(c => htmlCorreccion(c, d)).join('')
+      return `<li class="pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}">` +
+        `<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(prod?.nombre ?? 'Producto')} · ${esc(pr?.nombre ?? '')} · ${esc(marcaNombre)} · ` +
+        `${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades` +
+        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') + corr + '</li>'
+    }
+
+    // El total del turno: SIN los sublotes anulados, que se siguen viendo pero
+    // ya no están en el stock.
+    function totalSublotes(d) {
+      let cajas = 0, unidades = 0
+      for (const p of d.producido ?? []) {
+        if (p.anulado) continue
+        cajas = sumarMedido(cajas, p.cajas)
+        unidades = sumarMedido(unidades, p.unidades)
+      }
+      return { cajas, unidades }
+    }
+
     function htmlDetalleTurno(d) {
       const t = d.turno
       const nom = (id) => d.nombres.get(id) ?? '—'
-      const ingNombre = (id) => d.ingredientes.find(g => g.id === id)?.nombre ?? 'Ingrediente'
+      const forzado = t.forzado_motivo
+        ? `<div class="pr-aviso pr-aviso--grave">Esta planilla se cerró a la fuerza${t.forzado_por ? ` · ${esc(nom(t.forzado_por))}` : ''}${t.forzado_en ? ` · ${esc(fechaCorta(t.forzado_en))}` : ''}: ${esc(t.forzado_motivo)}` +
+          `${t.estado === 'pendiente_completar' ? ' Lo que produjo todavía no está en el stock.' : ''}</div>`
+        : ''
       const cab = `<div class="pr-datos">` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Fecha y turno</span><span class="pr-dato__valor">${esc(fechaDelDia(t.fecha))} · ${esc(t.turno)}</span></div>` +
+        `<div class="pr-dato"><span class="pr-dato__rotulo">Estado</span><span class="pr-dato__valor">${htmlEstadoTurno(t.estado)}</span></div>` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Encargado</span><span class="pr-dato__valor">${esc(nom(t.encargado_id))}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Operario</span><span class="pr-dato__valor">${esc(d.operarios.length ? d.operarios.map(nom).join(', ') : 'Sin operario')}</span></div>` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Horario</span><span class="pr-dato__valor">${esc(String(t.hora_inicio ?? horaArgentina(t.abierto_en) ?? '').slice(0, 5) || '—')} a ${esc(String(t.hora_apagado ?? '').slice(0, 5) || (t.estado === 'abierto' ? 'sigue abierto' : '—'))}</span></div>` +
         `<div class="pr-dato"><span class="pr-dato__rotulo">Scrap</span><span class="pr-dato__valor">${t.scrap_kg == null ? '—' : esc(textoKg(Number(t.scrap_kg)))}</span></div>` +
         `</div>` + (t.observaciones ? `<p><strong>Observaciones:</strong> ${esc(t.observaciones)}</p>` : '')
-      const masas = d.masas.length ? d.masas.map(m => {
-        const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0)
-        const detalle = suyos.map(i => `${ingNombre(i.ingrediente_id)} ${textoKg(Number(i.cantidad_kg))}` +
-          (i.insumo_id ? ` (${nombreInsumo(d, i.insumo_id)}${i.lote ? `, lote ${i.lote}` : ''}${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''})` : '')).join(' · ')
-        const dif = textoDiferencias(diferenciaDeMasa(m, { items: d.items, recItems: d.recItems, ingredientes: d.ingredientes }))
-        return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}"><strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · ${m.doble ? 'Doble' : 'Simple'} · ` +
-          `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(ETIQUETA_ORIGEN[m.origen] ?? m.origen)}</span> · masero ${esc(nom(m.masero_id))}` +
-          (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}` : `<br>${esc(dif)}`) +
-          `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
-      }).join('') : '<li class="pr-lista__item">Sin masas.</li>'
-      const producido = d.producido.length ? d.producido.map(p => {
-        const pr = d.presentaciones.find(x => x.id === p.presentacion_id)
-        const prod = d.productos.find(x => x.id === pr?.producto_id)
-        const marca = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Marca') : 'Común'
-        return `<li class="pr-lista__item"><span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(prod?.nombre ?? 'Producto')} · ${esc(pr?.nombre ?? '')} · ${esc(marca)} · ` +
-          `${esc(formatearNumeroAr(p.cajas, { decimales: 0 }))} cajas × ${esc(formatearNumeroAr(p.unidades_por_caja, { decimales: 0 }))} = ${esc(formatearNumeroAr(p.unidades, { decimales: 0 }))} unidades</li>`
-      }).join('') : `<li class="pr-lista__item">${t.estado === 'abierto' ? 'Todavía abierto.' : 'No produjo nada.'}</li>`
+      const masas = d.masas.length ? d.masas.map(m => htmlMasaHistorial(m, d)).join('') : '<li class="pr-lista__item">Sin masas.</li>'
+      const tot = totalSublotes(d)
+      const producido = d.producido.length ? d.producido.map(p => htmlSubloteHistorial(p, d)).join('')
+        : `<li class="pr-lista__item">${t.estado === 'cerrado' ? 'No produjo nada.' : 'Todavía no cargó nada producido.'}</li>`
+      const pieProducido = d.producido.length
+        ? `<p class="pr-of-grupo__total">Total del turno: ${esc(textoEntero(tot.cajas))} cajas · ${esc(textoEntero(tot.unidades))} unidades</p>`
+        : ''
       const consumidos = totalesConsumidos(d)
       const totales = consumidos.length ? consumidos.map(c =>
-        `<li class="pr-lista__item">${esc(nombreInsumo(d, c.insumo_id))} · ${c.lote ? `lote ${esc(c.lote)}` : 'sin lote'}: <strong>${esc(textoKg(c.kg))}</strong></li>`).join('') : '<li class="pr-lista__item">Nada descontado del stock.</li>'
-      return cab +
+        `<li class="pr-lista__item">${esc(nombreInsumo(d, c.insumo_id))} · ${c.lote ? `lote ${esc(c.lote)}` : 'sin lote'}: <strong>${c.kg === null ? '—' : esc(textoKg(c.kg))}</strong></li>`).join('') : '<li class="pr-lista__item">Nada descontado del stock.</li>'
+      const incompleto = detalleIncompleto(d)
+        ? `<div class="pr-aviso pr-aviso--grave">Este turno tiene más de ${TOPE_FILAS} renglones y solo se leyeron los primeros: los totales pueden estar incompletos.</div>`
+        : ''
+      return forzado + cab +
+        `<h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}` +
         `<h2 class="pr-subtitulo">Masas</h2><ul class="pr-lista">${masas}</ul>` +
         `<h2 class="pr-subtitulo">Paradas</h2>${htmlParadas(d.paradas)}` +
-        `<h2 class="pr-subtitulo">Lo producido</h2><ul class="pr-lista">${producido}</ul>` +
-        `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2><ul class="pr-lista">${totales}</ul>`
+        `<h2 class="pr-subtitulo">Lo producido</h2><ul class="pr-lista">${producido}</ul>${pieProducido}` +
+        `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2>${incompleto}<ul class="pr-lista">${totales}</ul>`
     }
 
     async function abrirDetalleHistorial(turnoId) {
@@ -7381,37 +7593,44 @@
     }
 
     // Suma por presentación, marca y sublote. Quedan solo los que tienen
-    // cajas: un sublote despachado entero no se lista.
+    // cajas: un sublote despachado entero no se lista. Un total que NO se pudo
+    // sumar queda en null —no en cero— y se lista igual (`null !== 0` es
+    // verdadero, así que el filtro lo deja pasar): "no se sabe" no es lo mismo
+    // que "no queda nada".
     function agruparStockTerminado(movs) {
       const mapa = new Map()
       for (const m of movs) {
         const k = `${m.presentacion_id}|${m.marca_id ?? ''}|${m.lote}`
         const act = mapa.get(k) ?? { presentacion_id: m.presentacion_id, marca_id: m.marca_id ?? null, lote: m.lote, cajas: 0, unidades: 0 }
-        act.cajas += Number(m.cajas) || 0
-        act.unidades += Number(m.unidades) || 0
+        act.cajas = sumarMedido(act.cajas, m.cajas)
+        act.unidades = sumarMedido(act.unidades, m.unidades)
         mapa.set(k, act)
       }
       return [...mapa.values()].filter(x => x.cajas !== 0 || x.unidades !== 0)
     }
 
     function htmlStockTerminado(filas, cat) {
-      if (!filas.length) return '<p class="pr-texto-suave">No hay producto terminado en stock.</p>'
+      if (!filas.length) return '<p class="pr-of-vacio">No hay producto terminado en stock.</p>'
       const grupos = new Map()
       for (const f of filas) {
         const pr = cat.presentaciones.find(x => x.id === f.presentacion_id)
         const prod = cat.productos.find(x => x.id === pr?.producto_id)
-        const marca = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'
-        const clave = `${prod?.nombre ?? 'Producto'} · ${pr?.nombre ?? 'Presentación'} · ${marca}`
+        const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'
+        const clave = `${prod?.nombre ?? 'Producto'} · ${pr?.nombre ?? 'Presentación'} · ${marcaNombre}`
         const g = grupos.get(clave) ?? { titulo: clave, cajas: 0, unidades: 0, sublotes: [] }
-        g.cajas += f.cajas; g.unidades += f.unidades; g.sublotes.push(f)
+        g.cajas = sumarMedido(g.cajas, f.cajas); g.unidades = sumarMedido(g.unidades, f.unidades); g.sublotes.push(f)
         grupos.set(clave, g)
       }
       return [...grupos.values()].sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')).map(g =>
-        `<div class="pr-tarjeta"><h2 class="pr-subtitulo">${esc(g.titulo)}</h2>` +
-        `<p class="pr-dato__valor">${esc(formatearNumeroAr(g.cajas, { decimales: 0 }))} cajas · ${esc(formatearNumeroAr(g.unidades, { decimales: 0 }))} unidades</p>` +
-        `<ul class="pr-lista">` + g.sublotes.sort((a, b) => String(a.lote).localeCompare(String(b.lote), 'es', { numeric: true })).map(s =>
-          `<li class="pr-lista__item"><span class="pr-producido__sublote">${esc(s.lote)}</span> ${esc(formatearNumeroAr(s.cajas, { decimales: 0 }))} cajas · ${esc(formatearNumeroAr(s.unidades, { decimales: 0 }))} unidades</li>`).join('') +
-        `</ul></div>`).join('')
+        `<div class="pr-of-tabla pr-of-grupo"><div class="pr-of-grupo__cab">` +
+        `<h2 class="pr-of-grupo__titulo">${esc(g.titulo)}</h2>` +
+        `<span class="pr-of-grupo__total">${esc(textoEntero(g.cajas))} cajas · ${esc(textoEntero(g.unidades))} unidades</span></div>` +
+        `<div class="pr-of-cab pr-of-stock"><span>Sublote</span><span class="pr-of-num">Cajas</span><span class="pr-of-num">Unidades</span></div>` +
+        g.sublotes.sort((a, b) => String(a.lote).localeCompare(String(b.lote), 'es', { numeric: true })).map(s =>
+          `<div class="pr-of-fila pr-of-stock"><span class="pr-producido__sublote">${esc(s.lote)}</span>` +
+          `<span class="pr-of-num">${esc(textoEntero(s.cajas))}</span>` +
+          `<span class="pr-of-num">${esc(textoEntero(s.unidades))}</span></div>`).join('') +
+        `</div>`).join('')
     }
 
     function conectarHistorial() {

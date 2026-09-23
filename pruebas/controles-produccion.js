@@ -33,6 +33,7 @@ const BASES = [
   'd3f8203', // Rediseño parte 2: tablero de máquinas y abrir turno con varios operarios
   '54a216d', // Rediseño parte 3: la planilla, carga durante el turno y cierre
   '9e178ae', // Rediseño parte 4: la sala de masa y la receta
+  '7865d76', // Rediseño parte 5: la configuración en la compu
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].

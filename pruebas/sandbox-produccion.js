@@ -107,10 +107,13 @@ const FUNCIONES_BASE = [
   'pinValido', 'abrirPanelPin', 'olvidarCampoPin', 'cerrarPanelPin', 'confirmarPinConfig',
   'htmlTiraPin', 'mostrarHojaPines', 'cerrarHojaPines', 'generarPines',
   'abrirPanelTemporal', 'cerrarPanelTemporal', 'parametrosDarTemporal', 'confirmarTemporal', 'revocarTemporal',
-  // B7: historial y stock terminado
+  // B7 + rediseño parte 7: historial de turnos y stock terminado
   'unidadesDeHistorial', 'sumarDias', 'fechaDelDia', 'unidadInicialOficina', 'nombresDeEmpleados', 'mostrarHistorial',
-  'filtrosHistorialValidos', 'cargarHistorial', 'htmlFilaHistorial', 'leerDetalleTurno', 'totalesConsumidos',
-  'nombreInsumo', 'htmlDetalleTurno', 'abrirDetalleHistorial', 'mostrarStockTerminado', 'cargarStockTerminado',
+  'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
+  'sumarMedido', 'textoEntero', 'leerDetalleTurno', 'totalesConsumidos', 'detalleIncompleto',
+  'nombreInsumo', 'nombreIngredienteItem', 'htmlOperariosHistorial', 'htmlMasaHistorial',
+  'correccionesDe', 'htmlCorreccion', 'htmlSubloteHistorial', 'totalSublotes',
+  'htmlDetalleTurno', 'abrirDetalleHistorial', 'mostrarStockTerminado', 'cargarStockTerminado',
   'agruparStockTerminado', 'htmlStockTerminado',
 ]
 
@@ -123,7 +126,7 @@ const CONSTANTES_BASE = [
   'PREFIJO_BORRADOR_MASA', 'PREFIJO_MASA_EN_CURSO', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
   'UMBRAL_ALEJADA', 'MS_BANDA_EXITO',
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
-  'puedeVerHistorial', 'TOPE_FILAS',
+  'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION',
 ]
 
 const PRELUDIO = `

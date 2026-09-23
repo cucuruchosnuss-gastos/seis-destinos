@@ -85,7 +85,10 @@ correrMutaciones({
     { nombre: 'el buscador no filtra', de: '      return personasFiltradas(personas ?? [], texto)', a: '      return (personas ?? [])' },
     { nombre: 'agregar el mismo operario dos veces', de: '      if (!f || !id || f.operarios.includes(id)) return', a: '      if (!f || !id) return' },
     { nombre: 'al tipear se repinta la fila entera (se pierde el foco)', de: "      const cont = document.querySelector(`[data-res-op=\"${i}\"]`)\n      if (!cont) return", a: '      const cont = null\n      pintarAbrir()\n      if (!cont) return' },
-    { nombre: 'la planilla no lee hasta', de: ".select('empleado_id, desde, hasta').eq('turno_id', turnoId)", a: ".select('empleado_id, desde').eq('turno_id', turnoId)" },
+    // Anclada a la consulta de leerPlanilla() y no solo al select: el detalle
+    // del historial (rediseño parte 7) usa el MISMO texto, así que sin el
+    // renglón de arriba esta mutación pegaría en el archivo dos veces.
+    { nombre: 'la planilla no lee hasta', de: "= await supabase.from('turno_operarios')\n        .select('empleado_id, desde, hasta')", a: "= await supabase.from('turno_operarios')\n        .select('empleado_id, desde')" },
     { nombre: 'el que se fue desaparece de la lista', de: '        filas.filter(o => o.hasta).map(o =>\n', a: '        [].map(o =>\n' },
     { nombre: 'el que se fue no dice a qué hora salió', de: "} · salió ${esc(horaArgentina(o.hasta) || '—')}</span>", a: '}</span>' },
     { nombre: 'al que se fue se le ofrece la ×', de: '      const chipsHtml = adentro.map(o =>', a: '      const chipsHtml = filas.map(o =>' },
