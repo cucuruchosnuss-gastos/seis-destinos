@@ -426,6 +426,29 @@
       return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))
     }
 
+    // Una cuenta que SOLO tiene Producción entra derecho a la tablet, sin
+    // pasar por un dashboard de una sola tarjeta.
+    //
+    // Pide ADEMÁS una tarea de producción, y ese requisito no es de más:
+    // produccion.html vuelve al dashboard cuando no hay ninguna (su
+    // sinAcceso()), así que redirigir sin mirarlas sería el bucle de
+    // redirecciones ya documentado, del que no se sale por la UI. Si la
+    // consulta de tareas falló, misTareas queda vacío y no se redirige: se cae
+    // del lado de mostrar el dashboard, que siempre tiene salida.
+    //
+    // `yaFue` es la otra mitad del mismo cuidado: se entra derecho UNA vez por
+    // sesión del navegador. Sin eso, el "Volver al inicio de la app" de la
+    // tablet rebotaría para siempre contra esta redirección. Una tablet que se
+    // enciende abre una sesión nueva, así que el kiosco sigue entrando derecho.
+    const TAREAS_PRODUCCION = ['produccion:cargar', 'produccion:ver', 'produccion:configurar']
+
+    function entraDerechoAProduccion({ esAdmin, esSuperAdmin, modulosVisibles, misTareas, yaFue }) {
+      if (yaFue) return false
+      if (esAdmin || esSuperAdmin) return false
+      if (modulosVisibles.length !== 1 || modulosVisibles[0].clave !== 'produccion') return false
+      return TAREAS_PRODUCCION.some(t => misTareas.has(t))
+    }
+
     const COLORES_MODULO = {
       cyan:      { bg: 'var(--color-acento-suave)', fg: 'var(--color-acento-highlight)' },
       rojo:      { bg: 'var(--rojo-suave)',          fg: 'var(--rojo)' },
@@ -857,6 +880,23 @@
       throw new Error('Usuario sin ningún módulo habilitado en empleado_modulos')
     }
 
+    let yaFueAProduccion = false
+    try { yaFueAProduccion = sessionStorage.getItem('dashboard.directoProduccion') === '1' } catch {}
+    if (entraDerechoAProduccion({ esAdmin, esSuperAdmin, modulosVisibles, misTareas, yaFue: yaFueAProduccion })) {
+      let recordado = false
+      try { sessionStorage.setItem('dashboard.directoProduccion', '1'); recordado = true } catch {}
+      // Solo se entra derecho si se pudo DEJAR CONSTANCIA de que se hizo. Sin
+      // poder recordarlo, la vuelta al inicio quedaría atrapada en un rebote
+      // sin salida, y un dashboard de una sola tarjeta es mucho menos grave.
+      if (recordado) {
+        window.location.replace('modulos/produccion.html')
+        // La navegación ya arrancó: cortar acá evita que el dashboard se
+        // dibuje un instante antes de irse. No se usa `return` porque esto es
+        // un <script type="module"> y ahí el return de nivel superior no vale.
+        await new Promise(() => {})
+      }
+    }
+
     // Renderizar grilla de módulos
     const grilla = document.getElementById('grilla-modulos')
 
@@ -926,6 +966,12 @@
       cuentas_corrientes: 'cuentas-corrientes',
       stock: 'stock',
       caja: 'caja',
+      // "Conos nuevos por revisar" (clave conos_por_revisar): la burbuja va en
+      // la tarjeta de Producción, que es donde se aceptan o se rechazan
+      // (Configuración -> Marcas / Conos). La RPC ya devolvía esta fila desde
+      // que existe la tarjeta; sin esta línea caía en el aviso de "módulo sin
+      // tarjeta" y no se contaba en ningún lado.
+      produccion: 'produccion',
     }
 
     function escDash(texto) {

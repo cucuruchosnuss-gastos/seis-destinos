@@ -49,9 +49,10 @@ const S = new Function(codigo)()
 
 // --- el mapeo de nombres ---------------------------------------------------
 const clavesTarjeta = new Set(S.MODULOS.map(m => m.clave))
-// Los módulos que devuelve la RPC, leídos de su cuerpo el 22/09/2026
-// (pg_get_functiondef de public.mis_pendientes).
-const DE_LA_RPC = ['cobranzas', 'cheques', 'accesos', 'materia_prima', 'gastos', 'cuentas_corrientes', 'stock', 'caja']
+// Los módulos que devuelve la RPC, leídos de su cuerpo el 23/09/2026
+// (pg_get_functiondef de public.mis_pendientes). 'produccion' sale de la rama
+// de conos_por_revisar, que la RPC devuelve a quien tenga produccion:configurar.
+const DE_LA_RPC = ['cobranzas', 'cheques', 'accesos', 'materia_prima', 'gastos', 'cuentas_corrientes', 'stock', 'caja', 'produccion']
 for (const m of DE_LA_RPC) {
   chk(`el módulo «${m}» de la RPC está mapeado`, !!S.MODULO_DE_PENDIENTE[m])
   chk(`«${m}» apunta a una tarjeta que existe`, clavesTarjeta.has(S.MODULO_DE_PENDIENTE[m]), S.MODULO_DE_PENDIENTE[m])
@@ -59,6 +60,14 @@ for (const m of DE_LA_RPC) {
 chk('materia_prima (guión bajo) → materia-prima (guión medio)', S.MODULO_DE_PENDIENTE.materia_prima === 'materia-prima')
 chk('cuentas_corrientes → cuentas-corrientes', S.MODULO_DE_PENDIENTE.cuentas_corrientes === 'cuentas-corrientes')
 chk('cheques (por_vencer) → la tarjeta de Cheques', S.MODULO_DE_PENDIENTE.cheques === 'cheques')
+chk('produccion (conos_por_revisar) → la tarjeta de Producción', S.MODULO_DE_PENDIENTE.produccion === 'produccion')
+
+// La fila de conos llega a la burbuja de Producción y no al aviso de consola.
+{
+  const g = S.agruparPendientes([{ modulo: 'produccion', clave: 'conos_por_revisar', cantidad: 3, texto: 'Conos nuevos por revisar' }])
+  chk('conos_por_revisar suma en la tarjeta produccion', g.get('produccion')?.total === 3)
+  chk('y su detalle lo dice', /3 conos nuevos por revisar/.test(g.get('produccion')?.detalle.join(' ') || ''))
+}
 
 // --- la tarjeta de Cheques: módulo cobranzas Y (ver_todo o procesar) --------
 {

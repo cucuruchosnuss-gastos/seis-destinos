@@ -28,6 +28,8 @@ correrMutaciones({
     { nombre: 'el detalle no dice la cantidad', de: 'return `${fila.cantidad} ${frase}`', a: 'return frase' },
     { nombre: 'el escape no escapa comillas', de: ".replace(/\"/g, '&quot;')", a: '' },
     { nombre: 'cheques sin mapear', de: "      cheques: 'cheques',\n", a: '' },
+    { nombre: 'produccion sin mapear (los conos no llegan a ninguna burbuja)', de: "      produccion: 'produccion',\n", a: '' },
+    { nombre: 'produccion mapeado a otra tarjeta', de: "      produccion: 'produccion',", a: "      produccion: 'stock'," },
     { nombre: 'Cheques no pide tareas', de: "      if (!modulo.requiereTareas) return true\n", a: '      return true\n' },
     { nombre: 'Cheques cuelga de su propia clave y no de cobranzas', de: 'misModulos.includes(modulo.requiereModulo ?? modulo.clave)', a: 'misModulos.includes(modulo.clave)' },
     { nombre: 'super_admin no ve Cheques sin la fila', de: "      return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))", a: "      return modulo.requiereTareas.some(t => misTareas.has(t))" },
