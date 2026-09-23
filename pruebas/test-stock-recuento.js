@@ -90,12 +90,16 @@ const PRELUDIO = `
 
   var __llamadas = { rpc: [], selects: [], programados: 0, errores: [] }
   var __datos = {}
+  // La tabla cuya consulta falla (para probar qué muestra la pantalla cuando
+  // no se pudo leer). null = todo anda.
+  var __errorTabla = null
   function __consulta(tabla) {
     let cols = null
     const q = {
       select: (c) => { cols = c; __llamadas.selects.push([tabla, c]); return q },
       eq: () => q, order: () => q,
       then: (r) => {
+        if (__errorTabla === tabla) return r({ data: null, error: { message: 'sin señal' } })
         // Como PostgREST: devuelve SOLO las columnas pedidas.
         const lista = (__datos[tabla] ?? []).map(f => {
           if (!cols || cols === '*') return f
@@ -141,7 +145,7 @@ const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', 'TOP
 
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
-  retorno: '__setDatos(d){ __datos = d }, estado, __llamadas, document, __lista',
+  retorno: '__setDatos(d){ __datos = d }, __setErrorEn(t){ __errorTabla = t }, estado, __llamadas, document, __lista',
 })
 const el = (id) => S.document.getElementById(id)
 const ultimaRpc = (n) => [...S.__llamadas.rpc].reverse().find(r => r[0] === n)?.[1]
@@ -205,6 +209,32 @@ pendientes.push(async () => {
   await S.cargarItemsRecuento()
   chk('carga: los dos saldos distintos', S.estado.saldos.size === 2 &&
     S.saldoDe(S.estado.itemsRec.find(i => i.id === 'a')) === 250 && S.saldoDe(S.estado.itemsRec.find(i => i.id === 'b')) === 15, [...S.estado.saldos])
+})
+
+// ── 1b. Si la relectura del saldo FALLA, el resumen lo dice ───────────────
+// El cierre real no corre riesgo (el servidor congela el saldo del momento):
+// lo que estaría mal es lo que ve la persona justo cuando decide si cierra.
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1' }
+  S.estado.sucios = new Set()
+  S.estado.itemsRec = [item('a', { insumo_id: 'lec', lote: 'L1', contenido_por_bulto: 25, cantidad_contada: 250, nombre: 'Lecitina' })]
+  S.estado.saldos = new Map([[S.claveSaldo('lec', 'L1', 25), 250]])
+
+  // Primero el camino bueno: el aviso NO se muestra.
+  S.__setErrorEn(null)
+  S.__setDatos({ v_stock_por_lote: [{ insumo_id: 'lec', lote: 'L1', contenido_por_bulto: 25, saldo: 250 }] })
+  await S.abrirModalCerrar()
+  chk('relectura OK: el aviso de saldos viejos queda oculto', el('cierre-aviso-saldos').hidden === true)
+  chk('relectura OK: sin diferencias', el('cierre-difs').textContent === 0, el('cierre-difs').textContent)
+
+  // Ahora falla: el aviso aparece Y los saldos anteriores NO se pisan con un
+  // Map vacío (que haría aparecer una diferencia de 250 kg que no existe).
+  S.__setErrorEn('v_stock_por_lote')
+  await S.abrirModalCerrar()
+  chk('relectura fallida: el resumen avisa que el saldo puede estar viejo', el('cierre-aviso-saldos').hidden === false)
+  chk('relectura fallida: no se pisan los saldos que ya había', S.estado.saldos.size === 1 && S.saldoDe(S.estado.itemsRec[0]) === 250, [...S.estado.saldos])
+  chk('relectura fallida: no inventa una diferencia', el('cierre-difs').textContent === 0, el('cierre-difs').textContent)
+  S.__setErrorEn(null)
 })
 
 // ══════════════════════════════════════════════════════════════════════════

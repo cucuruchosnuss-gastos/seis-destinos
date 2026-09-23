@@ -2589,6 +2589,18 @@
       <h2 class="modal-stock__titulo" id="cierre-titulo">Cerrar el recuento</h2>
 
       <div id="cierre-paso-resumen">
+
+        <!-- La relectura del saldo puede fallar (se cuenta en un depósito, con
+             la señal que hay). Si falla, los números de abajo son los de
+             cuando se abrió la pantalla y HAY QUE DECIRLO: un resumen viejo
+             presentado como fresco es justo lo que se mira para decidir si se
+             cierra. El cierre en sí no corre riesgo — el servidor congela el
+             saldo del momento— y el aviso lo aclara para que nadie frene un
+             cierre legítimo. -->
+        <div class="rec-aviso" id="cierre-aviso-saldos" hidden>
+          <strong>No se pudo releer el stock del sistema.</strong> Las diferencias de abajo están calculadas con el saldo de cuando se abrió esta pantalla y pueden estar desactualizadas. El cierre igual genera los ajustes bien: el servidor usa el saldo de ese instante.
+        </div>
+
         <div class="rec-resumen">
           <div class="rec-resumen__dato">
             <div class="rec-resumen__numero" id="cierre-items">0</div>
@@ -4807,7 +4819,14 @@
       const { data, error } = await supabase.from('v_stock_por_lote')
         .select('insumo_id, lote, contenido_por_bulto, saldo')
         .eq('unidad_negocio_id', estado.recuento.unidad_negocio_id)
-      if (!error) {
+      // UN ERROR ACÁ NO SE COME EN SILENCIO. Antes era un `if (!error)` pelado:
+      // si la consulta fallaba, el modal mostraba las diferencias calculadas
+      // con los saldos VIEJOS —o con el Map vacío, o sea "todo es diferencia"—
+      // sin nada que lo dijera, y es la pantalla donde se decide si se cierra.
+      document.getElementById('cierre-aviso-saldos').hidden = !error
+      if (error) {
+        console.error(error)
+      } else {
         estado.saldos = new Map(
           (data ?? []).map(s => [claveSaldo(s.insumo_id, s.lote, s.contenido_por_bulto), Number(s.saldo) || 0])
         )
