@@ -3,7 +3,11 @@
 // con esc() ni figure acá pone test-produccion-xss.js en rojo nombrándola.
 
 const SEGURAS_PRODUCCION = [
-  ['otra', 'HTML constante del código: htmlBotonPersona() lo arma con un literal o vacío'],
+  // Parte 1 del rediseño: barra de modos, ¿Quién sos? y el PIN
+  ['unidad', 'HTML ya escapado: htmlQuienEnBarra() lo arma arriba con esc() del nombre de la unidad'],
+  ['htmlQuienEnBarra()', 'HTML armado por htmlQuienEnBarra(), que escapa adentro'],
+  ['d', 'número: el dígito del for del teclado, de 1 a 9'],
+  ['off', 'constante del código: " disabled" o vacío'],
   // B3
   ['estadoTxt', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(textoEstadoMaquina(e))'],
   ['parada', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(e.parada.motivo), o vacío'],

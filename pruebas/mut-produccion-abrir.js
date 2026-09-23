@@ -20,7 +20,11 @@ correrMutaciones({
     { nombre: 'la hora sin zona de Argentina', de: "new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour: '2-digit', minute: '2-digit', hour12: false })", a: "new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })" },
     // Anclada al Intl de la hora: fechaCorta() (B6) tiene el mismo renglón del NaN.
     { nombre: 'hora ilegible dice NaN', de: "      if (Number.isNaN(d.getTime())) return ''\n      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour:", a: "      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, hour:" },
-    { nombre: 'no pide la pantalla encendida', de: '      mantenerPantalla(estado.hayTurnoAbierto)\n      if (!estado.tablero.length) {', a: '      if (!estado.tablero.length) {' },
+    // El ancla vieja era «mantenerPantalla(estado.hayTurnoAbierto)» dentro de
+    // mostrarTablero: dejó de existir con el rediseño, que unificó "hay alguna
+    // máquina abierta" en marcarAbiertas() —una sola puerta para el dato, que
+    // además es lo que habilita SALA DE MASA en la barra de modos—.
+    { nombre: 'no pide la pantalla encendida', de: '      mantenerPantalla(hay)\n', a: '' },
     { nombre: 'wake lock sin try', de: "      } catch (err) {\n        bloqueoPantalla = null\n        console.warn('No se pudo mantener la pantalla encendida:', err)\n      }", a: '      } finally {}' },
     { nombre: 'el botón abrir con todas abiertas', de: '      btn.disabled = !estado.tablero.some(e => !e.turno)', a: '      btn.disabled = false' },
     { nombre: 'el formulario ofrece también las abiertas', de: '      const libres = (estado.tablero ?? []).filter(e => !e.turno)', a: '      const libres = estado.tablero ?? []' },

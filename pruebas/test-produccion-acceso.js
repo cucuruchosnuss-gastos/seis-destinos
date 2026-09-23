@@ -70,6 +70,15 @@ function armar(rol, tareas) {
   chk('ningún tamaño en em por debajo de 1', ems.every(r => r >= 1), ems.join(', '))
   chk('el texto base del módulo es de 18 px', /body \{[^}]*font-size: 18px;/.test(css))
   chk('el alto mínimo de los botones es 56 px', /--pr-alto-boton: 56px;/.test(css) && /\.pr-btn \{[^}]*min-height: var\(--pr-alto-boton\)/.test(css))
+
+  // La barra de modos: 64 px con 4 px de padding y botones de 56 px, y los dos
+  // modos repartiéndose el ancho (flex: 1).
+  chk('la barra de modos mide 64 px con 4 px de padding',
+    /\.pr-barra \{[^}]*min-height: 64px/.test(css) && /\.pr-barra \{[^}]*padding: 4px/.test(css))
+  chk('los dos modos se reparten el ancho y miden 56 px',
+    /\.pr-modo \{[^}]*flex: 1 1 0/.test(css) && /\.pr-modo \{[^}]*min-height: 56px/.test(css))
+  chk('el nombre del modo va grande y espaciado, no solo de color',
+    /\.pr-modo \{[^}]*font-size: 1\.375rem/.test(css) && /\.pr-modo \{[^}]*letter-spacing: 0\.1em/.test(css))
 }
 
 fin()

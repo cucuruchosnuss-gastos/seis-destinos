@@ -35,6 +35,24 @@ const BASES = [
 const RENOMBRADOS = [
   ['control:button[data-menu][type=button]', 'control:button#pr-menu-modo[data-menu][type=button]',
     'B6: "Cambiar el modo" ganó un id para ocultarlo a quien no carga desde la tablet; mismo texto y mismo data-menu'],
+  ['control:button#pr-btn-cambiar-persona[type=button]', 'control:button#pr-btn-salir[type=button]',
+    'Rediseño parte 1: el botón que dejaba la tablet sin nadie se llama Salir y vive en la barra de modos; hace lo mismo'],
+]
+
+// Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS
+// de aplicar RENOMBRADOS, así que una que primero se renombró y después se
+// retiró se declara con su nombre nuevo.
+//
+// NINGÚN CONTROL PUEDE DESAPARECER SIN FIGURAR ACÁ CON SU RAZÓN: esa es toda
+// la gracia de este chequeo. Un control que se fue sin explicación es
+// indistinguible de uno que se perdió al mover código.
+const RETIRADOS = [
+  ['control:a#pr-volver-dashboard[href=../dashboard.html]',
+    'Rediseño parte 1: la tablet está en modo kiosco y el diseño no tiene "Volver" (README, barra de modos). ' +
+    'El dashboard se sigue alcanzando desde el menú de la cabecera, que queda para la oficina.'],
+  ['control:button#pr-menu-modo[data-menu][type=button]',
+    'Rediseño parte 1: "Cambiar el modo de esta tablet" no existe más porque el cambio de modo son los dos ' +
+    'botones de la barra, que además dicen en qué modo está la tablet sin abrir ningún menú.'],
 ]
 
 let ok = 0
@@ -49,6 +67,10 @@ try {
   console.log(`ARCHIVO ${ARCHIVO} (${actual.length} bytes)`)
   const A = inventario(actual)
   const renombrada = new Map(RENOMBRADOS.map(([v, n, m]) => { console.log(`RENOMBRADO: ${v} → ${n} (${m})`); return [v, n] }))
+  const retirada = new Map(RETIRADOS.map(([k, m]) => { console.log(`RETIRADO: ${k} (${m})`); return [k, m] }))
+  // Un RETIRADO que ya no hace falta es ruido que tapa el próximo: si el
+  // control sigue en el archivo, la declaración sobra y se dice.
+  for (const [k] of RETIRADOS) chk(`el retirado ${k} ya no está en el archivo`, veces(A, k) === 0, 'sigue estando: sacá la declaración de RETIRADOS')
 
   if (!BASES.length) console.log('Sin baseline todavía: es la primera sub-parte del archivo.')
   for (const base of BASES) {
@@ -58,6 +80,7 @@ try {
     chk(`el baseline ${base} tiene controles (si da cero, no se está leyendo)`, claves.length > 0)
     for (const k of claves) {
       const nueva = renombrada.get(k) || k
+      if (retirada.has(nueva)) continue
       const n = veces(B, k), hay = veces(A, nueva)
       chk(`${base}: ${k} sigue estando`, hay >= n, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
     }

@@ -20,11 +20,24 @@ const { fuenteNumeros } = require('./numeros-comun')
 const FUNCIONES_BASE = [
   'esc', 'tieneTarea', 'unidadesCon',
   // B2: preferencias, ¿Quién sos?, navegación
-  'leerPreferencia', 'guardarPreferencia', 'modoGuardado', 'unidadInicial',
-  'personasParaPuesto', 'htmlBotonPersona', 'htmlAvisoPuestos',
-  'mostrarVista', 'pintarCabecera', 'cerrarMenu', 'alternarMenu', 'siguientePaso',
-  'mostrarElegirUnidad', 'elegirUnidad', 'elegirModo', 'mostrarQuien', 'elegirPersona',
-  'cambiarDePersona', 'accionDelMenu', 'entrarAlModo', 'unidadesDeCarga',
+  'leerPreferencia', 'guardarPreferencia', 'leerSesion', 'guardarSesion',
+  'modoGuardado', 'unidadInicial', 'personaGuardada',
+  'tienePuesto', 'esTemporal', 'personasParaPuesto', 'personasFiltradas',
+  'htmlBotonPersona', 'htmlAvisoPuestos',
+  'mostrarVista', 'enModoTablet', 'pintarCabecera', 'cerrarMenu', 'alternarMenu', 'siguientePaso',
+  'mostrarElegirUnidad', 'elegirUnidad', 'mostrarQuien', 'pintarQuien', 'elegirPersona',
+  'entrar', 'accionDelMenu', 'entrarAlModo', 'unidadesDeCarga',
+  // Parte 1 del rediseño: barra de modos, PIN, maestro, acceso por hoy
+  'salaDeshabilitada', 'htmlQuienEnBarra', 'htmlBarraModos', 'pintarFondoDeModo', 'pintarBarra',
+  'tocarModo', 'olvidarPersona', 'salir', 'tocar', 'vencioPorInactividad', 'revisarInactividad',
+  'nuevoPanelPin', 'primerNombre', 'textoIntentos', 'mensajeDePin', 'cuentaRegresiva',
+  'htmlPuntosPin', 'htmlTecladoPin', 'htmlProgresoPin', 'saludoPin', 'subtituloPin',
+  'htmlMensajePin', 'pintarPin', 'teclaPin', 'cerrarPin', 'aplicarRechazoPin',
+  'enviarPin', 'enviarCambioPin',
+  'abrirMaestro', 'enviarPinMaestro', 'entrarComoMaestro', 'cerrarMaestro', 'pintarMaestro',
+  'hastaDesdeFecha', 'faltanParaAcceso', 'abrirDarAcceso', 'pintarDarAcceso',
+  'confirmarDarAcceso', 'cerrarDarAcceso',
+  'leerHayAbiertas', 'marcarAbiertas', 'refrescarAbiertas',
   // B3: fechas, pantalla encendida, tablero y abrir turno
   'hoyArgentina', 'horaArgentina', 'horaDelDiaAr', 'turnoSegunHora', 'mantenerPantalla',
   'leerTablero', 'estadoMaquinas', 'textoMasas', 'textoEstadoMaquina', 'htmlMaquina', 'mostrarTablero',
@@ -70,7 +83,9 @@ const FUNCIONES_BASE = [
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
-  'CLAVE_MODO', 'CLAVE_UNIDAD', 'PUESTO_DE_MODO', 'TITULO_DE_MODO', 'PLURAL_PUESTO', 'VISTAS',
+  'CLAVE_MODO', 'CLAVE_UNIDAD', 'CLAVE_PERSONA', 'PUESTO_DE_MODO', 'TITULO_DE_MODO',
+  'ROL_DE_MODO', 'PLURAL_PUESTO', 'VISTAS', 'VISTAS_OFICINA',
+  'MINUTOS_INACTIVIDAD', 'LARGO_PIN', 'LARGO_PIN_MAESTRO',
   'ZONA_AR', 'TURNOS', 'SIN_OPERARIO',
   'PREFIJO_BORRADOR_MASA', 'INGREDIENTES_PASO_GRANDE', 'ETIQUETA_ORIGEN',
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
@@ -95,7 +110,9 @@ const PRELUDIO = `
     }
   }
   var __els = new Map()
+  var __body = nuevoEl('body')
   var document = {
+    body: __body,
     getElementById(id) { if (!__els.has(id)) __els.set(id, nuevoEl(id)); return __els.get(id) },
     querySelectorAll: () => [], querySelector: () => null,
     createElement: () => nuevoEl('creado'),
@@ -110,8 +127,18 @@ const PRELUDIO = `
     key(i) { return [...__ls.keys()][i] ?? null },
     get length() { return __ls.size },
   }
+  var __ss = new Map()
+  var sessionStorage = {
+    getItem(k) { return __ss.has(k) ? __ss.get(k) : null },
+    setItem(k, v) { __ss.set(k, String(v)) },
+    removeItem(k) { __ss.delete(k) },
+    key(i) { return [...__ss.keys()][i] ?? null },
+    get length() { return __ss.size },
+  }
   // let del módulo (extraerConst solo toma const).
   var bloqueoPantalla = null
+  // El PIN del acceso maestro: let del módulo, en memoria y nada más.
+  var pinMaestro = null
   var camposCierreEnlazados = false
   var reintentando = false
   var __uuids = 0
@@ -154,6 +181,8 @@ const PRELUDIO = `
     misTareas: new Map([['cargar', { unidades: ['u-cn'] }]]),
     unidades: new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']]),
     unidadId: 'u-cn', unidadesPosibles: ['u-cn'], modo: null, persona: null, personal: [],
+    vista: null, quienBusqueda: '', pin: null, maestro: null, acceso: null,
+    ultimoToque: null, abiertasConocido: false,
     tablero: null, hayTurnoAbierto: false, abrir: null, abrirOperarios: [], abriendo: false,
     planilla: null, catalogo: null, cierre: null, agregar: null, cerrando: false,
     salaTurno: null, masa: null, datosMasa: null, tiposMasa: null, masasTurno: null, enviandoMasa: false, anulando: null,
@@ -167,8 +196,9 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
     preludio: PRELUDIO + preludioExtra,
     funciones: [...FUNCIONES_BASE, ...funciones],
     constantes: todasConst,
-    retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __llamadas, __ls, localStorage,
-      __tablas, __setRpc(f){ __rpc = f }, __uuids(){ return __uuids }, __nav: navigator,
+    retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __body, __llamadas, __ls, localStorage,
+      __ss, sessionStorage, __pinMaestro(){ return pinMaestro }, __tablas, __setRpc(f){ __rpc = f },
+      __uuids(){ return __uuids }, __nav: navigator,
       ponerNumero, leerCampoNumero, enlazarCampoNumero`,
   })
 }

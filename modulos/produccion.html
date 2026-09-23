@@ -38,7 +38,45 @@
          o más, porque se usa de pie, con guantes o harina en las manos. */
       --pr-alto-boton: 56px;
       font-size: 18px;
+
+      /* ── COLORES DE MODO ───────────────────────────────────────────────
+         Los dos modos se separan por LUMINOSIDAD y no por tono: Producción es
+         oscuro con letra blanca y Sala de masa es claro con letra oscura. Así
+         se distinguen en escala de grises, con el reflejo del galpón y para
+         alguien que no distingue colores. El color nunca va solo: siempre
+         acompaña al nombre del modo en mayúsculas grandes.
+
+         Van como variables LOCALES del módulo (el precedente de
+         --borde-tarjeta en stock.html): son valores de una sola pantalla y el
+         :root global se reserva para el acento del módulo, --azul, que ya
+         existe. Donde el hex ya tiene nombre en css/main.css se usa la
+         variable global en vez de repetirlo. */
+      --pr-prod-activo:         #3F4655;   /* botón activo: 9,6:1 con blanco */
+      --pr-prod-letra:          var(--color-fondo);
+      --pr-prod-apagado-borde:  #9AA1AE;
+      --pr-prod-apagado-letra:  #55617d;
+      --pr-prod-fondo:          #E4E7EC;   /* fondo de TODA la pantalla */
+      --pr-masa-activo:         #F3D774;
+      --pr-masa-activo-borde:   #B8961F;
+      --pr-masa-letra:          #3B2E00;   /* 11:1 sobre el amarillo */
+      --pr-masa-apagado-borde:  #D9C476;
+      --pr-masa-apagado-letra:  #6B5A1E;
+      --pr-masa-fondo:          #FBF4D9;
+      --pr-masa-barra-borde:    #EADFAE;
+      /* Deshabilitado: el punteado distingue "no se puede todavía" de
+         "apagado" sin depender del color. */
+      --pr-off-fondo:           #F1F2F4;
+      --pr-off-borde:           #C3C8D1;
+      --pr-borde-control:       #D5D9E0;   /* borde de control de tablet, 2px */
+      --pr-panel-gris:          #F4F5F7;
     }
+
+    /* El fondo de toda la pantalla toma el color del modo: desde la puerta se
+       sabe en qué modo está la tablet aunque no se llegue a leer la barra.
+       Le gana a .pagina-modulo de main.css por especificidad (0,1,1 contra
+       0,1,0) y porque este <style> carga después. */
+    body.pr-modo-produccion { background-color: var(--pr-prod-fondo); }
+    body.pr-modo-masa       { background-color: var(--pr-masa-fondo); }
 
     .pr-app {
       max-width: 1280px;
@@ -115,12 +153,149 @@
     .pr-opcion--modo { min-height: 120px; border-color: var(--azul); }
     .pr-opcion--modo .pr-opcion__titulo { color: var(--azul-oscuro); font-size: 1.45rem; }
 
+    /* ── Barra de modos ───────────────────────────────────────────────────
+       Fija arriba en toda la tablet. Los dos modos se reparten el ancho; a la
+       derecha la persona, la unidad y Salir. NO hay "Volver": la tablet está
+       en modo kiosco y el cambio de modo son estos dos botones. */
+    .pr-barra {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; gap: 0.375rem; padding: 4px; margin: 0 0 1rem;
+      min-height: 64px; align-items: stretch;
+      background: var(--color-fondo); border-radius: 16px;
+      border: 1px solid var(--pr-borde-control); box-shadow: var(--sombra-tarjeta);
+    }
+    .pr-modo {
+      flex: 1 1 0; min-width: 0; min-height: 56px;
+      display: flex; align-items: center; justify-content: center; gap: 0.625rem; flex-wrap: wrap;
+      font: inherit; font-size: 1.375rem; font-weight: 800; letter-spacing: 0.1em;
+      border-radius: 12px; cursor: pointer; touch-action: manipulation; text-align: center;
+      border: 2px solid var(--pr-prod-apagado-borde); background: var(--color-fondo);
+      color: var(--pr-prod-apagado-letra);
+    }
+    .pr-modo--masa { border-color: var(--pr-masa-apagado-borde); color: var(--pr-masa-apagado-letra); }
+    .pr-modo[aria-pressed="true"] {
+      background: var(--pr-prod-activo); border-color: var(--pr-prod-activo);
+      color: var(--pr-prod-letra); font-weight: 900;
+    }
+    .pr-modo--masa[aria-pressed="true"] {
+      background: var(--pr-masa-activo); border: 3px solid var(--pr-masa-activo-borde);
+      color: var(--pr-masa-letra); font-weight: 900;
+    }
+    /* Deshabilitado ≠ apagado: el BORDE PUNTEADO lo dice sin usar color. */
+    .pr-modo:disabled {
+      background: var(--pr-off-fondo); border: 2px dashed var(--pr-off-borde);
+      color: var(--color-texto-suave); cursor: not-allowed; opacity: 1;
+    }
+    .pr-modo__nota { font-size: 1.125rem; font-weight: 600; letter-spacing: normal; }
+    .pr-barra__persona {
+      display: flex; align-items: center; gap: 0.875rem; padding: 0 0.125rem 0 1rem;
+      min-width: 0; flex-wrap: wrap; justify-content: flex-end;
+    }
+    .pr-barra__quien { text-align: right; font-size: 1.125rem; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
+    .pr-barra__rol { font-weight: 600; color: var(--pr-prod-apagado-letra); }
+    .pr-barra__nombre { font-weight: 700; }
+    .pr-barra__unidad { color: var(--color-texto-suave); }
+    .pr-barra__nadie { font-weight: 700; color: var(--color-texto-suave); }
+    .pr-barra .pr-btn { border-color: var(--pr-borde-control); }
+    @media (max-width: 900px) {
+      .pr-barra { flex-wrap: wrap; }
+      .pr-modo { flex: 1 1 45%; }
+      .pr-barra__persona { flex: 1 1 100%; padding: 0.375rem 0.25rem 0; justify-content: space-between; }
+    }
+
+    /* El acceso maestro, mientras está activo, se dice arriba de todo: lo que
+       se haga queda a nombre de esa persona. */
+    .pr-maestro {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+      padding: 0.875rem 1.125rem; margin-bottom: 1rem; border-radius: var(--radio-tarjeta);
+      background: var(--pr-panel-gris); border: 2px solid var(--pr-prod-activo);
+      color: var(--color-texto); font-size: 1.125rem; font-weight: 700; overflow-wrap: anywhere;
+    }
+    .pr-maestro__botones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
     /* La persona que está usando la tablet, siempre a la vista. */
     .pr-persona {
       display: inline-flex; align-items: center; min-height: var(--pr-alto-boton); padding: 0 1rem;
       border-radius: var(--radio-boton); background: var(--azul-suave); color: var(--azul-oscuro);
       font-weight: 700; overflow-wrap: anywhere;
     }
+
+    /* ── "¿Quién sos?" + PIN ──────────────────────────────────────────────
+       Nombres a la izquierda y teclado siempre a la derecha: se elige y se
+       tipea sin cambiar de pantalla. */
+    .pr-quien { display: grid; grid-template-columns: minmax(0, 1fr) 500px; gap: 1.25rem; align-items: start; }
+    .pr-quien__col { display: flex; flex-direction: column; gap: 1.125rem; min-width: 0; }
+    .pr-quien__puesto { font-size: 1.125rem; color: var(--color-texto-suave); }
+    .pr-quien__buscar { min-height: 60px; font-size: 1.25rem; }
+    .pr-quien__nombres { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .pr-quien__nombres .pr-opcion { min-height: 76px; font-size: 1.375rem; padding: 0 1.375rem; }
+    .pr-quien__nombres .pr-opcion[aria-pressed="true"] {
+      border: 3px solid var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro);
+    }
+    .pr-quien__hoy {
+      display: inline-block; margin-left: 0.5rem; padding: 0.1rem 0.625rem; border-radius: 999px;
+      font-size: 1.125rem; font-weight: 700; background: var(--naranja-suave); color: var(--naranja-oscuro);
+    }
+    /* Las salidas discretas de la pantalla, abajo a la izquierda. */
+    .pr-quien__pie { margin-top: auto; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .pr-link {
+      min-height: var(--pr-alto-boton); padding: 0 1.125rem; font: inherit; font-size: 1.125rem; font-weight: 600;
+      border: none; background: none; color: var(--pr-texto-secundario); text-decoration: underline;
+      cursor: pointer; touch-action: manipulation;
+    }
+    @media (max-width: 1000px) {
+      .pr-quien { grid-template-columns: minmax(0, 1fr); }
+      .pr-quien__nombres { grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); }
+    }
+
+    .pr-pin { display: flex; flex-direction: column; gap: 1.125rem; }
+    .pr-pin--maestro { background: var(--pr-panel-gris); }
+    .pr-pin__cab { text-align: center; }
+    .pr-pin__saludo { font-size: 1.625rem; font-weight: 800; overflow-wrap: anywhere; }
+    .pr-pin__sub { font-size: 1.25rem; color: var(--pr-texto-secundario); margin-top: 0.25rem; }
+    .pr-pin__tramos { display: flex; gap: 0.5rem; }
+    .pr-pin__tramo { flex: 1; height: 8px; border-radius: 4px; background: var(--pr-borde-control); }
+    .pr-pin__tramo--hecho { background: var(--color-texto); }
+    .pr-pin__pasos { display: flex; justify-content: space-between; font-size: 1.125rem; font-weight: 700; }
+    .pr-pin__paso--falta { color: var(--color-texto-suave); }
+    /* Los puntos: NUNCA el número tipeado. Son formas, no texto. */
+    .pr-pin__puntos { display: flex; gap: 1.375rem; justify-content: center; padding: 0.5rem 0; flex-wrap: wrap; }
+    .pr-pin__punto { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--pr-prod-apagado-borde); }
+    .pr-pin__punto--lleno { background: var(--color-texto); border-color: var(--color-texto); }
+    .pr-pin__punto--mal { border-color: var(--bordo); background: none; }
+    .pr-pin--maestro .pr-pin__puntos { gap: 0.75rem; }
+    .pr-pin--maestro .pr-pin__punto { width: 22px; height: 22px; }
+    .pr-pin--maestro .pr-pin__punto--lleno { background: var(--pr-prod-activo); border-color: var(--pr-prod-activo); }
+    /* El mensaje va entre los puntos y el teclado: donde está mirando. */
+    .pr-pin__mensaje {
+      background: var(--bordo-suave); border-left: 6px solid var(--bordo); border-radius: var(--radio-input);
+      padding: 0.875rem 1rem; font-size: 1.25rem; font-weight: 700; color: var(--bordo-oscuro); text-align: center;
+      overflow-wrap: anywhere;
+    }
+    .pr-pin__bloqueo {
+      background: var(--bordo-suave); border: 2px solid var(--bordo); border-radius: 16px;
+      padding: 1.375rem; text-align: center; color: var(--bordo-oscuro);
+    }
+    .pr-pin__bloqueo-rotulo { font-size: 1.25rem; font-weight: 700; }
+    .pr-pin__reloj { font-size: 4.5rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; letter-spacing: -0.02em; }
+    .pr-pin__teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: auto; }
+    .pr-pin__teclado--off { opacity: 0.35; }
+    .pr-tecla {
+      min-height: 84px; font: inherit; font-size: 2.25rem; font-weight: 700;
+      border-radius: 14px; border: 2px solid var(--pr-borde-control); background: var(--color-fondo);
+      color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-tecla--texto { font-size: 1.25rem; background: var(--pr-panel-gris); }
+    .pr-tecla--accion { font-size: 1.375rem; font-weight: 800; border: none; background: var(--naranja); color: #fff; }
+    /* El acceso maestro es de excepción: su tecla de acción no compite con el
+       naranja, que en este proyecto significa "la acción de esta pantalla". */
+    .pr-pin--maestro .pr-tecla--accion { background: var(--pr-prod-activo); }
+    .pr-tecla:disabled { cursor: not-allowed; }
+    @media (max-width: 420px) { .pr-tecla { min-height: 72px; } }
+
+    /* El PIN temporal que devuelve otorgar_puesto_temporal: se muestra UNA vez
+       y no se guarda en ningún lado. */
+    .pr-pin-nuevo { font-size: 4.5rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: 0.1em; }
 
     /* El menú de la tablet: un panel que se despliega bajo la cabecera. */
     .pr-menu { display: grid; gap: 0.625rem; }
@@ -284,24 +459,37 @@
 <body class="pagina-modulo">
   <div class="pr-app">
 
-    <header class="pr-header">
-      <a href="../dashboard.html" class="pr-header__volver" id="pr-volver-dashboard" title="Volver al dashboard">&lsaquo; Volver</a>
+    <!-- LA BARRA DE MODOS: fija arriba en toda la tablet, y el único lugar
+         desde donde se cambia de modo. La pinta pintarBarra() con
+         htmlBarraModos(); el fondo de toda la pantalla toma el color del modo.
+         No hay "Volver": la tablet está en modo kiosco. -->
+    <div class="pr-barra" id="pr-barra" hidden></div>
+
+    <!-- Mientras el acceso maestro está activo se dice arriba de todo, porque
+         todo lo que se haga queda a nombre de esa persona. -->
+    <div class="pr-maestro" id="pr-maestro" hidden>
+      <span id="pr-maestro-texto"></span>
+      <div class="pr-maestro__botones">
+        <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-dar-acceso">Dar acceso por hoy</button>
+        <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-cerrar-maestro">Salir del acceso maestro</button>
+      </div>
+    </div>
+
+    <!-- La cabecera vieja queda SOLO para la oficina (quien no carga desde la
+         tablet) y para Configuración, Historial y Stock terminado. En la
+         tablet se esconde: ahí manda la barra de modos. -->
+    <header class="pr-header" id="pr-header" hidden>
       <div class="pr-header__col">
         <span class="pr-header__marca">Seis Destinos</span>
         <span class="pr-header__titulo">Producción <span class="pr-header__punto">&#9679;</span> <span id="pr-header-seccion">Tablet</span></span>
         <span class="pr-header__contexto" id="pr-header-contexto"></span>
       </div>
       <div class="pr-header__acciones" id="pr-header-acciones">
-        <span class="pr-persona" id="pr-persona-actual" hidden></span>
-        <!-- Siempre visible mientras haya alguien elegido: en la fábrica la
-             tablet pasa de mano en mano y no hay contraseña en esta versión. -->
-        <button type="button" class="pr-btn" id="pr-btn-cambiar-persona" hidden>Cambiar de persona</button>
         <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-menu" aria-expanded="false" aria-controls="pr-menu" hidden>Menú</button>
       </div>
     </header>
 
     <nav class="pr-tarjeta pr-menu" id="pr-menu" hidden aria-label="Menú de la tablet">
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="modo" id="pr-menu-modo">Cambiar el modo de esta tablet</button>
       <button type="button" class="pr-btn pr-btn--secundario" data-menu="unidad" id="pr-menu-unidad">Cambiar de unidad</button>
       <button type="button" class="pr-btn pr-btn--secundario" data-menu="historial" id="pr-menu-historial" hidden>Historial de producción</button>
       <button type="button" class="pr-btn pr-btn--secundario" data-menu="stock" id="pr-menu-stock" hidden>Stock terminado</button>
@@ -333,27 +521,64 @@
         <div class="pr-grilla" id="pr-unidades"></div>
       </section>
 
-      <!-- B2: el modo del equipo. Se recuerda en esta tablet y se cambia desde
-           el menú. -->
-      <section class="pr-tarjeta" id="pr-elegir-modo" hidden>
-        <h1 class="pr-titulo">¿Para qué se usa esta tablet?</h1>
-        <div class="pr-grilla">
-          <button type="button" class="pr-opcion pr-opcion--modo" data-modo="produccion">
-            <span class="pr-opcion__titulo">Producción (encargado)</span>
-            <span class="pr-opcion__detalle">Abrir y cerrar turnos, paradas y lo producido</span>
-          </button>
-          <button type="button" class="pr-opcion pr-opcion--modo" data-modo="masa">
-            <span class="pr-opcion__titulo">Sala de masa (masero)</span>
-            <span class="pr-opcion__detalle">Registrar las masas de las máquinas abiertas</span>
-          </button>
+      <!-- "¿Quién sos?" + PIN. Cada vez que alguien empieza a usar la tablet,
+           y cada vez que se toca el modo apagado de la barra. Los nombres a la
+           izquierda y el teclado siempre a la derecha: se elige y se tipea sin
+           cambiar de pantalla. -->
+      <section class="pr-quien" id="pr-quien" hidden>
+        <div class="pr-tarjeta pr-quien__col">
+          <div class="pr-fila-titulo">
+            <h1 class="pr-titulo">¿Quién sos?</h1>
+            <span class="pr-quien__puesto" id="pr-quien-puesto"></span>
+          </div>
+          <input type="search" id="pr-quien-buscar" class="pr-input pr-quien__buscar" placeholder="Buscar por nombre…" autocomplete="off">
+          <div id="pr-quien-aviso"></div>
+          <div class="pr-quien__nombres" id="pr-quien-lista"></div>
+          <div class="pr-quien__pie">
+            <!-- El acceso maestro es de excepción: discreto, pero a la vista. -->
+            <button type="button" class="pr-link" id="pr-btn-maestro">Acceso maestro</button>
+            <!-- La fábrica se elige una vez; solo aparece si esta cuenta puede
+                 cargar en más de una. -->
+            <button type="button" class="pr-link" id="pr-btn-cambiar-unidad" hidden>Cambiar de fábrica</button>
+          </div>
+        </div>
+
+        <!-- El panel del PIN. Los puntos son FORMAS: el número tipeado no entra
+             nunca al DOM, ni a localStorage, ni a sessionStorage. -->
+        <div class="pr-tarjeta pr-pin" id="pr-pin" hidden>
+          <div class="pr-pin__cab">
+            <div class="pr-pin__saludo" id="pr-pin-saludo"></div>
+            <div class="pr-pin__sub" id="pr-pin-sub"></div>
+          </div>
+          <div id="pr-pin-progreso" hidden></div>
+          <div class="pr-pin__puntos" id="pr-pin-puntos"></div>
+          <div id="pr-pin-mensaje"></div>
+          <div class="pr-pin__teclado" id="pr-pin-teclado"></div>
+          <button type="button" class="pr-btn pr-btn--secundario pr-btn--ancho" id="pr-pin-otra" hidden>Elegir otra persona</button>
         </div>
       </section>
 
-      <!-- B2: "¿Quién sos?". Cada vez que alguien empieza a usar la tablet. -->
-      <section class="pr-tarjeta" id="pr-quien" hidden>
-        <h1 class="pr-titulo">¿Quién sos?</h1>
-        <div id="pr-quien-aviso"></div>
-        <div class="pr-grilla" id="pr-quien-lista"></div>
+      <!-- Con el acceso maestro activo: darle a alguien un puesto por hoy. -->
+      <section class="pr-tarjeta" id="pr-acceso" hidden>
+        <h1 class="pr-titulo">Dar acceso por hoy</h1>
+        <p class="pr-texto-suave">El puesto vale hasta el final del día y después se apaga solo. Si la persona todavía no tiene PIN, la base le arma uno y se muestra una sola vez.</p>
+        <label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿A quién?</span>
+          <input type="search" id="pr-acceso-buscar" class="pr-input" placeholder="Buscar por nombre…" autocomplete="off"></label>
+        <div class="pr-grilla pr-espacio-arriba" id="pr-acceso-personas"></div>
+        <div class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿Para qué puesto?</span>
+          <div class="pr-segmento" id="pr-acceso-puestos" role="group" aria-label="Puesto"></div></div>
+        <label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿Hasta el final de qué día?</span>
+          <input type="date" id="pr-acceso-hasta" class="pr-input"></label>
+        <p class="pr-error" id="pr-acceso-error" hidden></p>
+        <div class="pr-acciones">
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-acceso-cancelar">Cancelar</button>
+          <button type="button" class="pr-btn" id="pr-acceso-confirmar">Dar el acceso</button>
+        </div>
+        <div class="pr-aviso" id="pr-acceso-pin" hidden>
+          <p id="pr-acceso-pin-texto"></p>
+          <p class="pr-pin-nuevo" id="pr-acceso-pin-numero"></p>
+          <button type="button" class="pr-btn pr-btn--grande" id="pr-acceso-pin-listo">Ya lo anoté</button>
+        </div>
       </section>
 
       <!-- B3: el inicio del encargado. Cada máquina activa con su estado. -->
@@ -667,8 +892,20 @@
       unidadId: null,
       unidadesPosibles: [],
       modo: null,          // 'produccion' | 'masa'
-      persona: null,       // { id, nombre }
+      persona: null,       // { id, nombre, puesto } — verificada con su PIN
       personal: [],        // lo que devuelve personal_produccion
+      vista: null,         // el id de la pantalla que se está mostrando
+      quienBusqueda: '',
+      // El panel del PIN en curso. Sus dígitos viven acá, EN MEMORIA, y no
+      // llegan nunca al DOM ni a ningún storage.
+      pin: null,
+      maestro: null,       // { id, nombre } mientras el acceso maestro está activo
+      acceso: null,        // el formulario de "Dar acceso por hoy"
+      ultimoToque: null,   // para cerrar sola por inactividad
+      // ¿Hay alguna máquina abierta? Es lo que habilita SALA DE MASA.
+      // `abiertasConocido` dice si se PUDO medir: sin eso, un false de "no se
+      // leyó" se leería igual que un false de "el encargado no abrió nada".
+      abiertasConocido: false,
       // Modo Producción
       tablero: null,       // estadoMaquinas() de la unidad, o null si no se pudo leer
       hayTurnoAbierto: false,
@@ -694,6 +931,13 @@
       historial: null,     // { unidadId, desde, hasta, maquina, estado, turnos, … }
       stockUnidad: null,
     }
+
+    // EL PIN DEL ACCESO MAESTRO, EN MEMORIA Y NADA MÁS. Va acá y no en
+    // `estado` para que se vea de lejos que es volátil y que no se serializa
+    // con el resto: otorgar_puesto_temporal lo vuelve a pedir en cada llamada,
+    // así que tiene que sobrevivir mientras dura la sesión del maestro — y
+    // solo eso. Recargar la tablet lo borra, y con él la sesión del maestro.
+    let pinMaestro = null
 
     // ═══════════════════════════════════════════════════════════════════════
     // HELPERS PROPIOS
@@ -743,10 +987,16 @@
 
     const CLAVE_MODO = 'produccion.modo'
     const CLAVE_UNIDAD = 'produccion.unidad'
+    // La persona verificada, para que recargar la tablet no la eche. Va en
+    // sessionStorage y NUNCA lleva el PIN: lo único que se guarda es quién es
+    // y para qué puesto se verificó.
+    const CLAVE_PERSONA = 'produccion.persona'
 
     // Qué puesto responde "¿Quién sos?" en cada modo.
     const PUESTO_DE_MODO = { produccion: 'encargado', masa: 'masero' }
     const TITULO_DE_MODO = { produccion: 'Producción', masa: 'Sala de masa' }
+    // Cómo se nombra a quien está adentro, en la barra: "Encargado: Federico".
+    const ROL_DE_MODO = { produccion: 'Encargado', masa: 'Masero' }
     const PLURAL_PUESTO = { encargado: 'encargados', masero: 'maseros', operario: 'operarios' }
 
     // En un navegador privado, sin espacio o con el sitio bloqueado,
@@ -759,6 +1009,17 @@
         if (valor == null) localStorage.removeItem(clave)
         else localStorage.setItem(clave, valor)
       } catch { /* sin memoria: se vuelve a preguntar la próxima vez */ }
+    }
+
+    // sessionStorage: dura lo que dura la pestaña. Mismo try/catch.
+    function leerSesion(clave) {
+      try { return sessionStorage.getItem(clave) } catch { return null }
+    }
+    function guardarSesion(clave, valor) {
+      try {
+        if (valor == null) sessionStorage.removeItem(clave)
+        else sessionStorage.setItem(clave, valor)
+      } catch { /* sin memoria: se vuelve a preguntar al recargar */ }
     }
 
     function modoGuardado() {
@@ -778,21 +1039,50 @@
     // "¿QUIÉN SOS?"
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Las personas que pueden responder para un puesto. Si la unidad tiene a
-    // alguien con ese puesto, SOLO esas (la base exige lo mismo: abrir_turnos
-    // rechaza a quien no figure como encargado y registrar_masa a quien no
-    // figure como masero, cuando la unidad los tiene configurados). Si nadie
-    // tiene el puesto, todo el personal activo, con un aviso.
-    function personasParaPuesto(personal, puesto) {
-      const lista = Array.isArray(personal) ? personal : []
-      const conPuesto = lista.filter(p => Array.isArray(p.puestos) && p.puestos.includes(puesto))
-      if (conPuesto.length) return { personas: conPuesto, sinConfigurar: false }
-      return { personas: lista, sinConfigurar: true }
+    // ¿Esta persona tiene el puesto, fijo o temporal? Es la MISMA regla que
+    // tiene_puesto_produccion() en la base (leída con pg_get_functiondef el
+    // 22/09/2026): el puesto fijo de puestos_produccion, o uno temporal
+    // vigente. personal_produccion() devuelve los dos arrays ya resueltos.
+    function tienePuesto(p, puesto) {
+      const fijos = Array.isArray(p?.puestos) ? p.puestos : []
+      const temps = Array.isArray(p?.puestos_temporales) ? p.puestos_temporales : []
+      return fijos.includes(puesto) || temps.includes(puesto)
     }
 
-    function htmlBotonPersona(p) {
-      const otra = p.misma_unidad === false ? '<span class="pr-opcion__detalle">De otra unidad</span>' : ''
-      return `<button type="button" class="pr-opcion" data-persona="${esc(p.id)}"><span>${esc(p.nombre)}</span>${otra}</button>`
+    // Solo temporal: el que lo tiene "por hoy" y no fijo. Se marca en el botón.
+    function esTemporal(p, puesto) {
+      const fijos = Array.isArray(p?.puestos) ? p.puestos : []
+      const temps = Array.isArray(p?.puestos_temporales) ? p.puestos_temporales : []
+      return !fijos.includes(puesto) && temps.includes(puesto)
+    }
+
+    // Las personas que pueden responder para un puesto. La regla es la de la
+    // base, en dos partes: unidad_restringe_puesto() mira si HAY ALGUIEN con
+    // ese puesto FIJO en la unidad, y recién entonces exige el puesto —fijo o
+    // temporal— a quien entra. Si nadie lo tiene fijo, la unidad no restringe
+    // nada y aparece todo el personal activo, con un aviso.
+    function personasParaPuesto(personal, puesto) {
+      const lista = Array.isArray(personal) ? personal : []
+      const restringe = lista.some(p => Array.isArray(p.puestos) && p.puestos.includes(puesto))
+      if (!restringe) return { personas: lista, sinConfigurar: true }
+      return { personas: lista.filter(p => tienePuesto(p, puesto)), sinConfigurar: false }
+    }
+
+    // El buscador de la izquierda: sin mínimo de caracteres y sin acentos, que
+    // en la fábrica se escribe rápido y con una mano. Reusa
+    // normalizarBusqueda() —la del buscador de marcas— en vez de tener su
+    // propia copia: dos normalizaciones conviviendo es exactamente cómo
+    // alguien termina usando la equivocada.
+    function personasFiltradas(personas, busqueda) {
+      const q = normalizarBusqueda(busqueda)
+      if (!q) return personas
+      return personas.filter(p => normalizarBusqueda(p.nombre).includes(q))
+    }
+
+    function htmlBotonPersona(p, puesto, elegidaId) {
+      return `<button type="button" class="pr-opcion" data-persona="${esc(p.id)}" aria-pressed="${p.id === elegidaId ? 'true' : 'false'}">` +
+        `<span>${esc(p.nombre)}${esTemporal(p, puesto) ? '<span class="pr-quien__hoy">hoy</span>' : ''}</span>` +
+        `${p.misma_unidad === false ? '<span class="pr-opcion__detalle">De otra unidad</span>' : ''}</button>`
     }
 
     function htmlAvisoPuestos(sinConfigurar, puesto) {
@@ -801,30 +1091,153 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // BARRA DE MODOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // SALA DE MASA no se habilita hasta que el encargado abre alguna máquina:
+    // antes de eso el masero no tiene dónde registrar una masa.
+    //
+    // OJO CON EL TERCER ESTADO: si todavía NO SE PUDO SABER si hay máquinas
+    // abiertas (no se leyó, o falló la lectura), el botón queda HABILITADO. La
+    // leyenda "El encargado tiene que abrir el turno" afirma algo, y afirmarlo
+    // sin haberlo medido es justo el error de mostrar un dato ausente como si
+    // fuera un dato. Sin saber, se deja pasar: la sala dirá que no hay
+    // máquinas abiertas, que es lo que sí puede comprobar.
+    function salaDeshabilitada() {
+      return estado.abiertasConocido === true && estado.hayTurnoAbierto === false
+    }
+
+    function htmlQuienEnBarra() {
+      const unidad = `<div class="pr-barra__unidad">${esc(estado.unidades.get(estado.unidadId) ?? '')}</div>`
+      if (!estado.persona) {
+        return `<div class="pr-barra__quien"><div class="pr-barra__nadie">Nadie adentro</div>${unidad}</div>`
+      }
+      return `<div class="pr-barra__quien"><div><span class="pr-barra__rol">${esc(ROL_DE_MODO[estado.modo] ?? '')}:</span> ` +
+        `<span class="pr-barra__nombre">${esc(estado.persona.nombre)}</span></div>${unidad}</div>` +
+        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-salir">Salir</button>`
+    }
+
+    // Los dos modos se reparten el ancho. El deshabilitado lleva BORDE
+    // PUNTEADO además del color: así se distingue de "apagado" en escala de
+    // grises y con el reflejo del galpón.
+    function htmlBarraModos() {
+      const off = salaDeshabilitada()
+      return `<button type="button" class="pr-modo" data-modo="produccion" aria-pressed="${estado.modo === 'produccion' ? 'true' : 'false'}">PRODUCCIÓN</button>` +
+        `<button type="button" class="pr-modo pr-modo--masa" data-modo="masa" aria-pressed="${estado.modo === 'masa' ? 'true' : 'false'}"${off ? ' disabled' : ''}>` +
+        `SALA DE MASA${off ? '<span class="pr-modo__nota">· El encargado tiene que abrir el turno</span>' : ''}</button>` +
+        `<div class="pr-barra__persona">${htmlQuienEnBarra()}</div>`
+    }
+
+    // El fondo de TODA la pantalla toma el color del modo.
+    function pintarFondoDeModo(modo) {
+      const cl = document.body?.classList
+      if (!cl) return
+      cl.toggle('pr-modo-produccion', modo === 'produccion')
+      cl.toggle('pr-modo-masa', modo === 'masa')
+    }
+
+    function pintarBarra() {
+      const barra = document.getElementById('pr-barra')
+      const tablet = enModoTablet()
+      barra.hidden = !tablet
+      if (tablet) barra.innerHTML = htmlBarraModos()
+      pintarFondoDeModo(tablet ? estado.modo : null)
+    }
+
+    // Tocar un modo: el activo no hace nada, el apagado cambia y pide el PIN.
+    function tocarModo(modo) {
+      if (!Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo)) return
+      tocar()
+      if (modo === 'masa' && salaDeshabilitada()) return
+      if (estado.modo === modo && estado.persona) return
+      estado.modo = modo
+      guardarPreferencia(CLAVE_MODO, modo)
+      olvidarPersona()
+      // Con el acceso maestro activo se entra sin volver a poner el PIN, y
+      // todo lo que se haga queda a nombre del maestro.
+      if (estado.maestro) return entrarComoMaestro(modo)
+      return mostrarQuien()
+    }
+
+    function olvidarPersona() {
+      estado.persona = null
+      estado.pin = null
+      guardarSesion(CLAVE_PERSONA, null)
+    }
+
+    // Salir: la tablet queda sin nadie adentro y vuelve a preguntar.
+    function salir() {
+      olvidarPersona()
+      return mostrarQuien()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SE CIERRA SOLA POR INACTIVIDAD
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // PRODUCCIÓN se cierra a los 15 minutos sin tocar la pantalla: el
+    // encargado deja la tablet y sigue con lo suyo. SALA DE MASA no, porque el
+    // masero la usa todo el turno y volver a poner el PIN en cada masa sería
+    // insoportable. El acceso maestro también se cierra a los 15 minutos.
+
+    const MINUTOS_INACTIVIDAD = 15
+
+    function tocar() {
+      estado.ultimoToque = Date.now()
+    }
+
+    function vencioPorInactividad(desde, ahora = Date.now()) {
+      return typeof desde === 'number' && (ahora - desde) >= MINUTOS_INACTIVIDAD * 60000
+    }
+
+    function revisarInactividad(ahora = Date.now()) {
+      if (!vencioPorInactividad(estado.ultimoToque, ahora)) return false
+      const habiaMaestro = !!estado.maestro
+      const habiaPersona = estado.modo === 'produccion' && !!estado.persona
+      if (!habiaMaestro && !habiaPersona) return false
+      if (habiaMaestro) cerrarMaestro()
+      tocar()
+      if (habiaPersona) salir()
+      else pintarCabecera()
+      return true
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-elegir-modo', 'pr-quien', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-masa', 'pr-config', 'pr-historial', 'pr-stock']
+    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-quien', 'pr-acceso', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-masa', 'pr-config', 'pr-historial', 'pr-stock']
+
+    // Las pantallas que NO son la tablet: la oficina (quien no carga) y las que
+    // se usan en la compu. Ahí manda la cabecera vieja con su menú; en la
+    // tablet manda la barra de modos y no hay ninguna otra.
+    const VISTAS_OFICINA = ['pr-inicio', 'pr-elegir-unidad', 'pr-config', 'pr-historial', 'pr-stock']
 
     function mostrarVista(id) {
+      estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       cerrarMenu()
       pintarCabecera()
       if (window.scrollTo) window.scrollTo(0, 0)
     }
 
+    // ¿Estamos en la tablet? Con produccion:cargar, una unidad y un modo, y en
+    // una pantalla que no sea de oficina.
+    function enModoTablet() {
+      return tieneTarea('cargar') && !!estado.unidadId && !!estado.modo && !VISTAS_OFICINA.includes(estado.vista)
+    }
+
     function pintarCabecera() {
+      pintarBarra()
+      pintarMaestro()
+      const header = document.getElementById('pr-header')
+      header.hidden = enModoTablet()
       const partes = []
       if (estado.unidadId) partes.push(estado.unidades.get(estado.unidadId) ?? 'Unidad')
       if (estado.modo) partes.push(TITULO_DE_MODO[estado.modo])
       document.getElementById('pr-header-contexto').textContent = partes.join(' · ')
       document.getElementById('pr-header-seccion').textContent = estado.modo ? TITULO_DE_MODO[estado.modo] : 'Tablet'
-      const chip = document.getElementById('pr-persona-actual')
-      chip.textContent = estado.persona ? estado.persona.nombre : ''
-      chip.hidden = !estado.persona
-      document.getElementById('pr-btn-cambiar-persona').hidden = !estado.persona
       document.getElementById('pr-btn-menu').hidden = false
-      document.getElementById('pr-menu-modo').hidden = !tieneTarea('cargar')
       document.getElementById('pr-menu-unidad').hidden = !tieneTarea('cargar') || estado.unidadesPosibles.length < 2
     }
 
@@ -839,10 +1252,13 @@
       document.getElementById('pr-btn-menu').setAttribute('aria-expanded', menu.hidden ? 'false' : 'true')
     }
 
-    // El orden de las preguntas: unidad → modo → persona → el modo.
+    // El orden de las preguntas: unidad → persona → el modo. El MODO ya no se
+    // pregunta en una pantalla propia: son los dos botones de la barra, y una
+    // tablet sin modo guardado arranca en PRODUCCIÓN, que además es el único
+    // modo usable mientras no haya ninguna máquina abierta.
     function siguientePaso() {
       if (!estado.unidadId) return mostrarElegirUnidad()
-      if (!estado.modo) return mostrarVista('pr-elegir-modo')
+      if (!estado.modo) estado.modo = 'produccion'
       if (!estado.persona) return mostrarQuien()
       return entrarAlModo()
     }
@@ -857,26 +1273,35 @@
     function elegirUnidad(id) {
       if (!estado.unidadesPosibles.includes(id)) return
       estado.unidadId = id
-      estado.persona = null
+      estado.abiertasConocido = false
+      olvidarPersona()
       guardarPreferencia(CLAVE_UNIDAD, id)
+      refrescarAbiertas()
       siguientePaso()
     }
 
-    function elegirModo(modo) {
-      if (!Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo)) return
-      estado.modo = modo
-      // Cambiar de modo cambia quién puede responder "¿Quién sos?".
-      estado.persona = null
-      guardarPreferencia(CLAVE_MODO, modo)
-      siguientePaso()
+    // La persona que quedó verificada en esta pestaña. Solo vale para el modo
+    // en el que se verificó: cambiar de modo cambia el puesto, y el puesto es
+    // lo que la base valida.
+    function personaGuardada(modo) {
+      try {
+        const p = JSON.parse(leerSesion(CLAVE_PERSONA) ?? 'null')
+        if (!p || typeof p.id !== 'string' || typeof p.nombre !== 'string') return null
+        if (p.puesto !== PUESTO_DE_MODO[modo]) return null
+        return { id: p.id, nombre: p.nombre, puesto: p.puesto }
+      } catch { return null }
     }
 
     async function mostrarQuien() {
       const lista = document.getElementById('pr-quien-lista')
       const aviso = document.getElementById('pr-quien-aviso')
+      estado.pin = null
+      estado.quienBusqueda = ''
+      document.getElementById('pr-quien-buscar').value = ''
       lista.innerHTML = '<p class="pr-texto-suave">Cargando el personal…</p>'
       aviso.innerHTML = ''
       mostrarVista('pr-quien')
+      pintarPin()
       try {
         const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: estado.unidadId })
         if (error) throw error
@@ -887,34 +1312,49 @@
         aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo cargar el personal. Revisá la conexión.</div>'
         return
       }
-      const puesto = PUESTO_DE_MODO[estado.modo]
-      const { personas, sinConfigurar } = personasParaPuesto(estado.personal, puesto)
-      aviso.innerHTML = htmlAvisoPuestos(sinConfigurar, puesto)
-      lista.innerHTML = personas.length
-        ? personas.map(htmlBotonPersona).join('')
-        : '<p class="pr-texto-suave">No hay personal activo para elegir.</p>'
+      pintarQuien()
     }
 
+    // Se repinta SOLO la lista: el buscador conserva el foco mientras se tipea.
+    function pintarQuien() {
+      const puesto = PUESTO_DE_MODO[estado.modo]
+      const { personas, sinConfigurar } = personasParaPuesto(estado.personal, puesto)
+      const visibles = personasFiltradas(personas, estado.quienBusqueda)
+      document.getElementById('pr-quien-puesto').textContent = PLURAL_PUESTO[puesto] ?? ''
+      document.getElementById('pr-quien-aviso').innerHTML = htmlAvisoPuestos(sinConfigurar, puesto)
+      const elegida = estado.pin?.personaId ?? null
+      document.getElementById('pr-quien-lista').innerHTML = visibles.length
+        ? visibles.map(p => htmlBotonPersona(p, puesto, elegida)).join('')
+        : (personas.length
+          ? '<p class="pr-texto-suave">Ningún nombre coincide con lo que buscaste.</p>'
+          : '<p class="pr-texto-suave">No hay personal activo para elegir.</p>')
+      document.getElementById('pr-btn-cambiar-unidad').hidden = estado.unidadesPosibles.length < 2
+    }
+
+    // Elegir un nombre NO entra: abre el panel del PIN.
     function elegirPersona(id) {
       const p = estado.personal.find(x => x.id === id)
       if (!p) return
-      estado.persona = { id: p.id, nombre: p.nombre }
-      siguientePaso()
+      tocar()
+      estado.pin = nuevoPanelPin('persona', p, PUESTO_DE_MODO[estado.modo])
+      pintarQuien()
+      pintarPin()
     }
 
-    function cambiarDePersona() {
-      estado.persona = null
-      siguientePaso()
+    // La persona verificada queda adentro. El PIN no se guarda en ningún lado.
+    function entrar(persona) {
+      estado.persona = { id: persona.id, nombre: persona.nombre, puesto: persona.puesto ?? null }
+      guardarSesion(CLAVE_PERSONA, JSON.stringify(estado.persona))
+      estado.pin = null
+      tocar()
+      return entrarAlModo()
     }
 
     function accionDelMenu(que) {
-      if (que === 'modo') {
-        estado.modo = null
-        estado.persona = null
-        guardarPreferencia(CLAVE_MODO, null)
-      } else if (que === 'unidad') {
+      if (que === 'unidad') {
         estado.unidadId = null
-        estado.persona = null
+        estado.abiertasConocido = false
+        olvidarPersona()
         guardarPreferencia(CLAVE_UNIDAD, null)
       } else if (que === 'config') {
         return mostrarConfig()
@@ -935,6 +1375,471 @@
       mostrarVista('pr-inicio')
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL PIN
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // EL PIN NO SE GUARDA EN NINGÚN LADO. Vive en estado.pin.digitos, en
+    // memoria, mientras se lo tipea; los puntos de la pantalla son FORMAS, no
+    // el número. Ni el PIN común, ni el maestro, ni el pin_temporal que
+    // devuelve otorgar_puesto_temporal tocan localStorage, sessionStorage ni
+    // el DOM. Por eso también el teclado es propio: un <input> pondría el
+    // número en el DOM y levantaría el teclado del sistema, que en una tablet
+    // con harina en las manos tapa media pantalla.
+    //
+    // Los rechazos de verificar_pin_produccion se DEVUELVEN como jsonb con su
+    // motivo (leído con pg_get_functiondef el 22/09/2026), no se lanzan: se
+    // tratan mirando `motivo`, no el texto del error.
+
+    const LARGO_PIN = 4
+    const LARGO_PIN_MAESTRO = 8
+
+    function nuevoPanelPin(modo, p, puesto) {
+      return {
+        modo,                                   // 'persona' | 'maestro'
+        personaId: p?.id ?? null,
+        personaNombre: p?.nombre ?? '',
+        puesto: puesto ?? null,
+        fase: 'pin',                            // 'pin' | 'nuevo' | 'repetir'
+        largo: modo === 'maestro' ? LARGO_PIN_MAESTRO : LARGO_PIN,
+        digitos: '',                            // EN MEMORIA, nunca en el DOM
+        pinActual: null,                        // el verificado, para cambiar_pin_produccion
+        pinNuevo: null,
+        mal: false,
+        mensaje: null,
+        bloqueadoHasta: null,
+        enviando: false,
+      }
+    }
+
+    function primerNombre(nombre) {
+      return String(nombre ?? '').trim().split(/\s+/)[0] ?? ''
+    }
+
+    // "te quedan N intentos". intentos_restantes lo calcula la base y puede
+    // llegar en 0: ahí el bloqueo YA se aplicó, pero esa respuesta no trae
+    // bloqueado_hasta (lo devuelve recién el intento siguiente). No se inventa
+    // la hora: se dice que quedó bloqueado y listo.
+    function textoIntentos(n) {
+      if (n === 1) return 'PIN incorrecto · te queda 1 intento'
+      if (typeof n === 'number' && n > 1) return `PIN incorrecto · te quedan ${n} intentos`
+      return 'PIN incorrecto · quedó bloqueado unos minutos'
+    }
+
+    // El motivo que devuelve la base, dicho en castellano. NUNCA distingue si
+    // lo que falló fue el nombre o el PIN: el mensaje de pin_incorrecto habla
+    // solo del PIN y no nombra a la persona.
+    function mensajeDePin(res) {
+      const motivo = res?.motivo
+      if (motivo === 'sin_pin') return { texto: 'Todavía no tenés PIN: pedíselo a quien configura producción.' }
+      if (motivo === 'sin_puesto') return { texto: 'No figurás en este puesto en esta fábrica. Pedí que te lo carguen en Configuración → Personal, o que te den acceso por hoy.' }
+      if (motivo === 'pin_vencido') return { texto: 'Tu PIN temporal venció. Pedí uno nuevo a quien configura producción.' }
+      if (motivo === 'pin_repetido') return { texto: 'Elegí uno distinto al que te dieron.' }
+      if (motivo === 'bloqueado') {
+        const hora = horaArgentina(res.bloqueado_hasta)
+        return { texto: hora ? `Probá de nuevo a las ${hora}` : 'Quedó bloqueado unos minutos.', bloqueadoHasta: res.bloqueado_hasta }
+      }
+      if (motivo === 'pin_incorrecto') return { texto: textoIntentos(res.intentos_restantes) }
+      return { texto: 'No se pudo verificar el PIN. Probá de nuevo.' }
+    }
+
+    // m:ss de lo que falta. null cuando ya pasó: el panel se destraba solo.
+    function cuentaRegresiva(hasta, ahora = new Date()) {
+      const ms = new Date(hasta).getTime() - new Date(ahora).getTime()
+      if (!Number.isFinite(ms) || ms <= 0) return null
+      const s = Math.ceil(ms / 1000)
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+    }
+
+    function htmlPuntosPin(largo, puestos, mal) {
+      let out = ''
+      for (let i = 0; i < largo; i++) {
+        const clase = i < puestos ? ' pr-pin__punto--lleno' : (mal ? ' pr-pin__punto--mal' : '')
+        out += `<span class="pr-pin__punto${clase}"></span>`
+      }
+      return out
+    }
+
+    // El teclado propio: 1–9, Borrar, 0 y la tecla de acción. "Borrar" está
+    // también en el panel del maestro, aunque el diseño lo cambiara por
+    // "Cancelar": con 8 números hay que poder corregir un dedazo, y la salida
+    // ya vive en el botón de abajo.
+    function htmlTecladoPin(p, bloqueado) {
+      const off = bloqueado ? ' disabled' : ''
+      let out = ''
+      for (let d = 1; d <= 9; d++) out += `<button type="button" class="pr-tecla" data-tecla="${d}"${off}>${d}</button>`
+      out += `<button type="button" class="pr-tecla pr-tecla--texto" data-tecla="borrar"${off}>Borrar</button>`
+      out += `<button type="button" class="pr-tecla" data-tecla="0"${off}>0</button>`
+      out += `<button type="button" class="pr-tecla pr-tecla--accion" data-tecla="entrar"${off}>${p.fase === 'nuevo' ? 'Seguir' : 'Entrar'}</button>`
+      return out
+    }
+
+    // La barra de dos tramos del cambio obligatorio de PIN.
+    function htmlProgresoPin(fase) {
+      if (fase !== 'nuevo' && fase !== 'repetir') return ''
+      const dos = fase === 'repetir'
+      return `<div class="pr-pin__tramos"><div class="pr-pin__tramo pr-pin__tramo--hecho"></div>` +
+        `<div class="pr-pin__tramo${dos ? ' pr-pin__tramo--hecho' : ''}"></div></div>` +
+        `<div class="pr-pin__pasos"><span class="${dos ? 'pr-pin__paso--falta' : ''}">1 · PIN nuevo</span>` +
+        `<span class="${dos ? '' : 'pr-pin__paso--falta'}">2 · Repetilo</span></div>`
+    }
+
+    function saludoPin(p) {
+      if (p.modo === 'maestro') return 'Acceso maestro'
+      if (p.bloqueadoHasta) return p.personaNombre
+      if (p.fase === 'nuevo' || p.fase === 'repetir') return `Es tu primera vez, ${primerNombre(p.personaNombre)}`
+      return `Hola, ${primerNombre(p.personaNombre)}`
+    }
+
+    function subtituloPin(p) {
+      if (p.bloqueadoHasta) return 'Pusiste mal el PIN demasiadas veces'
+      if (p.modo === 'maestro') return 'Solo para administración · 8 números'
+      if (p.fase === 'nuevo') return 'Elegí un PIN nuevo de 4 números'
+      if (p.fase === 'repetir') return 'Escribilo otra vez'
+      return 'Ingresá tu PIN de 4 números'
+    }
+
+    function htmlMensajePin(p, reloj) {
+      if (p.bloqueadoHasta && reloj) {
+        return `<div class="pr-pin__bloqueo"><div class="pr-pin__bloqueo-rotulo">${esc(p.mensaje?.texto ?? 'Probá de nuevo más tarde')}</div>` +
+          `<div class="pr-pin__reloj">${esc(reloj)}</div></div>`
+      }
+      if (!p.mensaje) return ''
+      return `<div class="pr-pin__mensaje">${esc(p.mensaje.texto)}</div>`
+    }
+
+    function pintarPin() {
+      const panel = document.getElementById('pr-pin')
+      const p = estado.pin
+      panel.hidden = !p
+      if (!p) return
+      panel.className = 'pr-tarjeta pr-pin' + (p.modo === 'maestro' ? ' pr-pin--maestro' : '')
+      const reloj = p.bloqueadoHasta ? cuentaRegresiva(p.bloqueadoHasta) : null
+      document.getElementById('pr-pin-saludo').textContent = saludoPin(p)
+      document.getElementById('pr-pin-sub').textContent = subtituloPin(p)
+      const prog = document.getElementById('pr-pin-progreso')
+      prog.innerHTML = htmlProgresoPin(p.fase)
+      prog.hidden = !prog.innerHTML
+      document.getElementById('pr-pin-puntos').innerHTML = htmlPuntosPin(p.largo, p.digitos.length, p.mal)
+      document.getElementById('pr-pin-mensaje').innerHTML = htmlMensajePin(p, reloj)
+      const teclado = document.getElementById('pr-pin-teclado')
+      teclado.innerHTML = htmlTecladoPin(p, !!reloj)
+      teclado.className = 'pr-pin__teclado' + (reloj ? ' pr-pin__teclado--off' : '')
+      const otra = document.getElementById('pr-pin-otra')
+      otra.textContent = p.modo === 'maestro' ? 'Cancelar' : 'Elegir otra persona'
+      otra.hidden = !(p.modo === 'maestro' || reloj)
+    }
+
+    function teclaPin(t) {
+      const p = estado.pin
+      if (!p || p.enviando) return
+      tocar()
+      if (p.bloqueadoHasta && cuentaRegresiva(p.bloqueadoHasta)) return
+      p.bloqueadoHasta = null
+      if (t === 'entrar') return enviarPin()
+      p.mal = false
+      p.mensaje = null
+      if (t === 'borrar') p.digitos = p.digitos.slice(0, -1)
+      else if (/^[0-9]$/.test(t) && p.digitos.length < p.largo) p.digitos += t
+      pintarPin()
+    }
+
+    function cerrarPin() {
+      estado.pin = null
+      pintarQuien()
+      pintarPin()
+    }
+
+    // Lo que devuelve la base cuando el PIN no sirve, en un solo lugar.
+    function aplicarRechazoPin(res) {
+      const p = estado.pin
+      const m = mensajeDePin(res)
+      p.mensaje = m
+      p.bloqueadoHasta = m.bloqueadoHasta ?? null
+      p.mal = true
+      p.digitos = ''
+    }
+
+    async function enviarPin() {
+      const p = estado.pin
+      if (!p || p.enviando) return
+      if (p.digitos.length !== p.largo) {
+        p.mensaje = { texto: `Faltan números: el PIN es de ${p.largo}.` }
+        return pintarPin()
+      }
+      if (p.modo === 'maestro') return enviarPinMaestro()
+      if (p.fase === 'nuevo') {
+        p.pinNuevo = p.digitos
+        p.fase = 'repetir'
+        p.digitos = ''
+        return pintarPin()
+      }
+      if (p.fase === 'repetir') {
+        if (p.digitos !== p.pinNuevo) {
+          p.fase = 'nuevo'
+          p.pinNuevo = null
+          p.digitos = ''
+          p.mal = true
+          p.mensaje = { texto: 'Los dos no coinciden. Empezá de nuevo.' }
+          return pintarPin()
+        }
+        return enviarCambioPin()
+      }
+      p.enviando = true
+      pintarPin()
+      let res
+      try {
+        const { data, error } = await supabase.rpc('verificar_pin_produccion', {
+          p_empleado_id: p.personaId, p_unidad_negocio_id: estado.unidadId,
+          p_puesto: p.puesto, p_pin: p.digitos,
+        })
+        if (error) throw error
+        res = data
+      } catch (err) {
+        console.error('verificar_pin_produccion:', err)
+        p.enviando = false
+        p.mensaje = { texto: 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }
+        p.digitos = ''
+        return pintarPin()
+      }
+      p.enviando = false
+      if (!res || res.ok !== true) {
+        aplicarRechazoPin(res)
+        return pintarPin()
+      }
+      // ESTE ES EL ÚNICO CAMINO QUE ENTRA, y pasa por debe_cambiar primero: un
+      // PIN que la base marcó para cambiar NO deja entrar hasta que se cambia.
+      if (res.debe_cambiar) {
+        p.pinActual = p.digitos
+        p.fase = 'nuevo'
+        p.digitos = ''
+        p.mensaje = null
+        p.mal = false
+        return pintarPin()
+      }
+      return entrar({ id: p.personaId, nombre: p.personaNombre, puesto: p.puesto })
+    }
+
+    async function enviarCambioPin() {
+      const p = estado.pin
+      p.enviando = true
+      pintarPin()
+      let res
+      try {
+        const { data, error } = await supabase.rpc('cambiar_pin_produccion', {
+          p_empleado_id: p.personaId, p_unidad_negocio_id: estado.unidadId,
+          p_pin_actual: p.pinActual, p_pin_nuevo: p.pinNuevo,
+        })
+        if (error) throw error
+        res = data
+      } catch (err) {
+        // Un PIN nuevo inválido lo LANZA la base, con un mensaje ya escrito
+        // para una persona ("tiene que ser de 4 números y no tan obvio").
+        console.error('cambiar_pin_produccion:', err)
+        p.enviando = false
+        p.fase = 'nuevo'
+        p.pinNuevo = null
+        p.digitos = ''
+        p.mal = true
+        p.mensaje = { texto: err?.message || 'No se pudo cambiar el PIN. Probá de nuevo.' }
+        return pintarPin()
+      }
+      p.enviando = false
+      if (!res || res.ok !== true) {
+        aplicarRechazoPin(res)
+        p.pinNuevo = null
+        // pin_repetido se corrige eligiendo otro; los demás motivos dicen que
+        // el PIN con el que entró dejó de servir, así que se vuelve al primero.
+        p.fase = res?.motivo === 'pin_repetido' ? 'nuevo' : 'pin'
+        return pintarPin()
+      }
+      return entrar({ id: p.personaId, nombre: p.personaNombre, puesto: p.puesto })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ACCESO MAESTRO
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Es la salida de excepción de administración: entra a cualquier modo sin
+    // volver a poner el PIN, y TODO lo que haga queda a SU nombre. Se cierra
+    // solo a los 15 minutos sin uso.
+    //
+    // NO se guarda en sessionStorage, a diferencia de la persona del modo: su
+    // PIN tiene que quedar en memoria para poder llamar a
+    // otorgar_puesto_temporal, así que la sesión del maestro dura exactamente
+    // lo que dura la memoria. Recargar la tablet la cierra, que es lo correcto
+    // para un acceso de excepción.
+
+    function abrirMaestro() {
+      tocar()
+      estado.pin = nuevoPanelPin('maestro', null, null)
+      pintarQuien()
+      pintarPin()
+    }
+
+    async function enviarPinMaestro() {
+      const p = estado.pin
+      // Quién es: la persona elegida a la izquierda, si tiene acceso maestro.
+      const candidatos = (estado.personal ?? []).filter(x => x.es_maestro)
+      if (!p.personaId) {
+        if (candidatos.length !== 1) {
+          p.mensaje = { texto: 'Elegí primero tu nombre en la lista de la izquierda.' }
+          p.digitos = ''
+          return pintarPin()
+        }
+        p.personaId = candidatos[0].id
+        p.personaNombre = candidatos[0].nombre
+      }
+      p.enviando = true
+      pintarPin()
+      let res
+      try {
+        const { data, error } = await supabase.rpc('verificar_pin_maestro', { p_empleado_id: p.personaId, p_pin: p.digitos })
+        if (error) throw error
+        res = data
+      } catch (err) {
+        console.error('verificar_pin_maestro:', err)
+        p.enviando = false
+        p.mensaje = { texto: 'No se pudo verificar el PIN. Revisá la conexión y probá de nuevo.' }
+        p.digitos = ''
+        return pintarPin()
+      }
+      p.enviando = false
+      if (!res || res.ok !== true) {
+        aplicarRechazoPin(res)
+        return pintarPin()
+      }
+      estado.maestro = { id: p.personaId, nombre: p.personaNombre }
+      pinMaestro = p.digitos        // EN MEMORIA: otorgar_puesto_temporal lo pide
+      estado.pin = null
+      tocar()
+      return entrarComoMaestro(estado.modo ?? 'produccion')
+    }
+
+    function entrarComoMaestro(modo) {
+      estado.modo = modo
+      guardarPreferencia(CLAVE_MODO, modo)
+      return entrar({ id: estado.maestro.id, nombre: estado.maestro.nombre, puesto: PUESTO_DE_MODO[modo] })
+    }
+
+    function cerrarMaestro() {
+      estado.maestro = null
+      pinMaestro = null
+      estado.acceso = null
+      olvidarPersona()
+    }
+
+    function pintarMaestro() {
+      const caja = document.getElementById('pr-maestro')
+      caja.hidden = !estado.maestro
+      if (!estado.maestro) return
+      document.getElementById('pr-maestro-texto').textContent =
+        `Acceso maestro · ${estado.maestro.nombre} · todo lo que hagas queda a tu nombre`
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DAR ACCESO POR HOY
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // p_hasta null lo resuelve la base: medianoche de hoy, hora argentina. Para
+    // otro día se manda el comienzo del día siguiente con el huso de Argentina,
+    // que es fijo en -03:00 (no hay horario de verano).
+    function hastaDesdeFecha(fecha, hoy) {
+      if (!fecha || fecha === hoy) return null
+      return `${sumarDias(fecha, 1)}T00:00:00-03:00`
+    }
+
+    function faltanParaAcceso(a, hoy) {
+      const faltan = []
+      if (!a?.personaId) faltan.push('elegí a quién')
+      if (!a?.puesto) faltan.push('elegí el puesto')
+      if (a?.hasta && a.hasta < hoy) faltan.push('la fecha ya pasó')
+      if (a?.hasta && a.hasta > sumarDias(hoy, 6)) faltan.push('como mucho dura 7 días')
+      return faltan
+    }
+
+    function abrirDarAcceso() {
+      tocar()
+      estado.acceso = { personaId: null, puesto: null, hasta: hoyArgentina(), busqueda: '', pin: null }
+      document.getElementById('pr-acceso-buscar').value = ''
+      document.getElementById('pr-acceso-hasta').value = estado.acceso.hasta
+      document.getElementById('pr-acceso-pin').hidden = true
+      mostrarVista('pr-acceso')
+      pintarDarAcceso()
+    }
+
+    function pintarDarAcceso() {
+      const a = estado.acceso
+      if (!a) return
+      const visibles = personasFiltradas(estado.personal ?? [], a.busqueda).slice(0, 12)
+      document.getElementById('pr-acceso-personas').innerHTML = visibles.length
+        ? visibles.map(p => `<button type="button" class="pr-opcion" data-acceso-persona="${esc(p.id)}" aria-pressed="${p.id === a.personaId ? 'true' : 'false'}">${esc(p.nombre)}</button>`).join('')
+        : '<p class="pr-texto-suave">Ningún nombre coincide con lo que buscaste.</p>'
+      document.getElementById('pr-acceso-puestos').innerHTML = PUESTOS
+        .map(([clave, rotulo]) => `<button type="button" class="pr-segmento__opcion" data-acceso-puesto="${esc(clave)}" aria-pressed="${clave === a.puesto ? 'true' : 'false'}">${esc(rotulo)}</button>`).join('')
+      const faltan = faltanParaAcceso(a, hoyArgentina())
+      const btn = document.getElementById('pr-acceso-confirmar')
+      btn.disabled = faltan.length > 0
+      const err = document.getElementById('pr-acceso-error')
+      err.hidden = !faltan.length
+      err.textContent = faltan.length ? `Falta: ${faltan.join(' · ')}.` : ''
+    }
+
+    async function confirmarDarAcceso() {
+      const a = estado.acceso
+      const err = document.getElementById('pr-acceso-error')
+      const faltan = faltanParaAcceso(a, hoyArgentina())
+      if (faltan.length) { err.hidden = false; err.textContent = `Falta: ${faltan.join(' · ')}.`; return }
+      const btn = document.getElementById('pr-acceso-confirmar')
+      btn.disabled = true
+      let res
+      try {
+        const { data, error } = await supabase.rpc('otorgar_puesto_temporal', {
+          p_empleado_id: a.personaId, p_unidad_negocio_id: estado.unidadId, p_puesto: a.puesto,
+          p_hasta: hastaDesdeFecha(a.hasta, hoyArgentina()),
+          p_maestro_id: estado.maestro?.id ?? null, p_maestro_pin: pinMaestro,
+        })
+        if (error) throw error
+        res = data
+      } catch (e) {
+        console.error('otorgar_puesto_temporal:', e)
+        btn.disabled = false
+        err.hidden = false
+        err.textContent = e?.message || 'No se pudo dar el acceso. Probá de nuevo.'
+        return
+      }
+      btn.disabled = false
+      if (!res || res.ok !== true) {
+        // Si el maestro dejó de valer, la base devuelve SU rechazo tal cual.
+        err.hidden = false
+        err.textContent = mensajeDePin(res).texto
+        return
+      }
+      const nombre = (estado.personal ?? []).find(p => p.id === a.personaId)?.nombre ?? ''
+      // pin_temporal viene NULL cuando esa persona ya tenía PIN: ahí no hay
+      // nada que mostrar, y decir "sin PIN" sería mentir.
+      if (res.pin_temporal) {
+        a.pin = String(res.pin_temporal)
+        document.getElementById('pr-acceso-pin-texto').textContent =
+          `Anotalo y pasáselo a ${nombre}. No se va a volver a mostrar.`
+        document.getElementById('pr-acceso-pin-numero').textContent = a.pin
+        document.getElementById('pr-acceso-pin').hidden = false
+      } else {
+        mostrarExito(`${nombre} ya puede entrar con su PIN de siempre.`)
+        cerrarDarAcceso()
+      }
+    }
+
+    // El PIN temporal se borra al cerrar: se muestra UNA vez. Hay que sacarlo
+    // de los DOS lados — de la pantalla y de la memoria—, y soltar
+    // estado.acceso es lo que lo borra de la memoria.
+    function cerrarDarAcceso() {
+      document.getElementById('pr-acceso-pin-numero').textContent = ''
+      document.getElementById('pr-acceso-pin').hidden = true
+      estado.acceso = null
+      return siguientePaso()
+    }
+
     // Las unidades donde esta cuenta carga y que tienen alguna máquina activa.
     // Si ninguna tiene máquinas, todas las de carga (así se ve el aviso de que
     // falta configurarlas, en vez de una pantalla vacía).
@@ -949,18 +1854,79 @@
       return conMaquinas.length ? conMaquinas : permitidas
     }
 
+    // ¿Hay alguna máquina abierta en la unidad? Es lo único que habilita SALA
+    // DE MASA, y hace falta saberlo ANTES de que alguien entre a un modo —o
+    // sea, antes de que se lea el tablero—, así que va en su propia consulta.
+    async function leerHayAbiertas(unidadId) {
+      const { data: maquinas, error: e1 } = await supabase.from('maquinas')
+        .select('id').eq('activa', true).eq('unidad_negocio_id', unidadId)
+      if (e1) throw e1
+      const ids = (maquinas ?? []).map(m => m.id)
+      if (!ids.length) return false
+      const { data: turnos, error: e2 } = await supabase.from('turnos_produccion')
+        .select('id').eq('estado', 'abierto').in('maquina_id', ids)
+      if (e2) throw e2
+      return (turnos ?? []).length > 0
+    }
+
+    // Una sola puerta para el dato: la usan esta lectura y las dos pantallas
+    // que ya leen el tablero, para no consultar dos veces lo mismo.
+    function marcarAbiertas(hay) {
+      estado.hayTurnoAbierto = hay
+      estado.abiertasConocido = true
+      mantenerPantalla(hay)
+      pintarBarra()
+    }
+
+    async function refrescarAbiertas() {
+      if (!estado.unidadId) return
+      try { marcarAbiertas(await leerHayAbiertas(estado.unidadId)) }
+      catch (err) { console.error('máquinas abiertas:', err) }
+    }
+
     function conectarTodo() {
       document.getElementById('pr-unidades').addEventListener('click', ev => {
         const b = ev.target.closest('[data-unidad]'); if (b) elegirUnidad(b.dataset.unidad)
       })
-      document.getElementById('pr-elegir-modo').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-modo]'); if (b) elegirModo(b.dataset.modo)
+      // La barra se repinta entera, así que sus botones se escuchan por
+      // delegación desde el contenedor, que sí es fijo.
+      document.getElementById('pr-barra').addEventListener('click', ev => {
+        if (ev.target.closest('#pr-btn-salir')) { tocar(); salir(); return }
+        const b = ev.target.closest('[data-modo]'); if (b) tocarModo(b.dataset.modo)
       })
       document.getElementById('pr-quien-lista').addEventListener('click', ev => {
         if (ev.target.closest('#pr-quien-reintentar')) { mostrarQuien(); return }
         const b = ev.target.closest('[data-persona]'); if (b) elegirPersona(b.dataset.persona)
       })
-      document.getElementById('pr-btn-cambiar-persona').addEventListener('click', cambiarDePersona)
+      document.getElementById('pr-quien-buscar').addEventListener('input', ev => {
+        estado.quienBusqueda = ev.target.value
+        pintarQuien()
+      })
+      document.getElementById('pr-btn-maestro').addEventListener('click', abrirMaestro)
+      document.getElementById('pr-btn-cambiar-unidad').addEventListener('click', () => accionDelMenu('unidad'))
+      document.getElementById('pr-pin-teclado').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-tecla]'); if (b) teclaPin(b.dataset.tecla)
+      })
+      document.getElementById('pr-pin-otra').addEventListener('click', cerrarPin)
+      document.getElementById('pr-btn-cerrar-maestro').addEventListener('click', () => { cerrarMaestro(); mostrarQuien() })
+      document.getElementById('pr-btn-dar-acceso').addEventListener('click', abrirDarAcceso)
+      document.getElementById('pr-acceso-buscar').addEventListener('input', ev => {
+        estado.acceso.busqueda = ev.target.value; pintarDarAcceso()
+      })
+      document.getElementById('pr-acceso-personas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-acceso-persona]'); if (!b) return
+        estado.acceso.personaId = b.dataset.accesoPersona; pintarDarAcceso()
+      })
+      document.getElementById('pr-acceso-puestos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-acceso-puesto]'); if (!b) return
+        estado.acceso.puesto = b.dataset.accesoPuesto; pintarDarAcceso()
+      })
+      document.getElementById('pr-acceso-hasta').addEventListener('change', ev => {
+        estado.acceso.hasta = ev.target.value; pintarDarAcceso()
+      })
+      document.getElementById('pr-acceso-confirmar').addEventListener('click', confirmarDarAcceso)
+      document.getElementById('pr-acceso-cancelar').addEventListener('click', cerrarDarAcceso)
+      document.getElementById('pr-acceso-pin-listo').addEventListener('click', cerrarDarAcceso)
       document.getElementById('pr-btn-menu').addEventListener('click', alternarMenu)
       document.getElementById('pr-menu').addEventListener('click', ev => {
         const b = ev.target.closest('[data-menu]'); if (b) accionDelMenu(b.dataset.menu)
@@ -973,6 +1939,14 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
       })
+      // Cualquier toque cuenta como uso, para el cierre por inactividad.
+      for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, tocar)
+      // Un solo reloj: el cierre por inactividad y la cuenta regresiva del
+      // bloqueo del PIN, que se destraba sola cuando llega a cero.
+      setInterval(() => {
+        revisarInactividad()
+        if (estado.pin && estado.pin.bloqueadoHasta) pintarPin()
+      }, 1000)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1115,8 +2089,7 @@
         aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer las máquinas. Revisá la conexión y tocá "Actualizar".</div>'
         return
       }
-      estado.hayTurnoAbierto = estado.tablero.some(e => e.turno)
-      mantenerPantalla(estado.hayTurnoAbierto)
+      marcarAbiertas(estado.tablero.some(e => e.turno))
       if (!estado.tablero.length) {
         cont.innerHTML = ''
         aviso.innerHTML = '<div class="pr-aviso">Esta unidad no tiene máquinas activas. Se cargan en Configuración → Máquinas.</div>'
@@ -1862,8 +2835,7 @@
         return
       }
       const abiertas = estado.tablero.filter(e => e.turno)
-      estado.hayTurnoAbierto = abiertas.length > 0
-      mantenerPantalla(estado.hayTurnoAbierto)
+      marcarAbiertas(abiertas.length > 0)
       if (!abiertas.length) {
         cont.innerHTML = ''
         aviso.innerHTML = '<div class="pr-aviso">Todavía no hay máquinas abiertas: el encargado tiene que abrir el turno.</div>'
@@ -3691,7 +4663,14 @@
         return
       }
       estado.unidadId = unidadInicial(estado.unidadesPosibles, leerPreferencia(CLAVE_UNIDAD))
-      estado.modo = modoGuardado()
+      estado.modo = modoGuardado() ?? 'produccion'
+      tocar()
+      // Quién estaba adentro en esta pestaña: recargar la tablet no tiene por
+      // qué echar a nadie, y el PIN no se guardó en ningún lado.
+      estado.persona = personaGuardada(estado.modo)
+      // Antes del primer dibujo de la barra, para no prometer ni negar SALA DE
+      // MASA sin haberlo medido.
+      await refrescarAbiertas()
       siguientePaso()
     }
 
