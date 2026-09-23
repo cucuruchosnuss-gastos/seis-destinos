@@ -1167,6 +1167,17 @@
       cursor: pointer;
     }
     .rec-cero:disabled { opacity: 0.4; cursor: default; }
+    /* Contar en bultos. Va en su propia línea y NO al lado de la cantidad: en
+       375px tres campos y un botón en un renglón no entran. Se lee más chico
+       que la cantidad a propósito — los dos dicen lo mismo, pero el que manda
+       (el que se guarda) es el de la unidad base. */
+    .rec-fila__linea--bultos { margin-top: -0.125rem; }
+    .rec-input--bultos {
+      flex: 1 1 5rem;
+      font-size: 1rem;
+      min-height: 2.75rem;
+      background: var(--color-superficie);
+    }
     .rec-unidad {
       font-size: 0.875rem;
       font-weight: 650;
@@ -1938,14 +1949,9 @@
        lo mismo: es la lectura de apoyo, no el numero. */
     .mov-saldo__bultos { color: var(--color-texto-suave); font-size: 0.8125rem; font-weight: 600; }
     .rec-fila__presentacion { font-weight: 500; }
-    .rec-fila__bultos {
-      font-size: 0.78125rem;
-      font-weight: 650;
-      color: var(--color-texto-suave);
-      overflow-wrap: anywhere;
-      min-width: 0;
-    }
-    .rec-fila__bultos[hidden] { display: none; }
+    /* .rec-fila__bultos —el equivalente en bultos como texto de apoyo— se fue
+       cuando el renglón con presentación pasó a tener su propio CAMPO de
+       bultos: el número ahora se escribe ahí, no se lee al costado. */
   </style>
 </head>
 
@@ -2086,6 +2092,9 @@
         <div class="rec-herramientas">
           <input type="search" class="buscador-stock" id="rec-buscador" placeholder="Buscar por nombre, marca o lote…" autocomplete="off">
           <button type="button" class="btn-stock btn-stock--chico" id="btn-agregar-item">+ Agregar insumo</button>
+          <!-- Dos personas pueden estar contando la misma unidad a la vez: un
+               recuento es de la unidad, no de quien lo abrió. -->
+          <button type="button" class="btn-stock btn-stock--chico" id="btn-refrescar-recuento">Actualizar</button>
         </div>
 
         <div class="fila-chips" id="rec-chips-filtro"></div>
@@ -4020,8 +4029,20 @@
 
     const FILTROS_REC = [
       { id: 'todos',      label: 'Todos' },
-      { id: 'sin-contar', label: 'Sin contar' },
+      { id: 'sin-contar', label: 'Ver solo los que faltan' },
     ]
+
+    // Los bultos SIEMPRE con 3 decimales, sin mirar la unidad del insumo: un
+    // bulto no es la unidad del catálogo, y medio bidón de lecitina es un caso
+    // real. Un insumo en `un` (cajas) no acepta coma en su cantidad, pero sí
+    // en los bultos, y no hay contradicción: lo que se guarda es la unidad
+    // base, y ahí la regla entera se sigue aplicando.
+    //
+    // No confundir con la regla de materia-prima.html, donde los bultos NUNCA
+    // pueden ser fraccionarios: allá `cantidad_bultos` es una columna con un
+    // CHECK contra la cantidad. Acá los bultos no se guardan en ningún lado —
+    // son una forma de ESCRIBIR la cantidad, no un dato.
+    const DECIMALES_BULTOS = 3
 
     // Clave del saldo del sistema. `lote` null y '' son la MISMA cosa acá —
     // igual que en el índice único de la tabla, que usa coalesce(lote,'').
@@ -4123,7 +4144,7 @@
       // FK a esa tabla.
       const [items, saldos] = await Promise.all([
         supabase.from('stock_recuento_items')
-          .select('id, insumo_id, lote, contenido_por_bulto, cantidad_contada, observacion, insumos(nombre, marca, unidad_medida, tipo, aclaracion)')
+          .select('id, insumo_id, lote, contenido_por_bulto, cantidad_contada, observacion, insumos(nombre, marca, unidad_medida, tipo, categoria, aclaracion)')
           .eq('recuento_id', estado.recuento.id),
         // El saldo del sistema es VIVO: cantidad_sistema queda en null hasta
         // que se cierra, así que mientras se cuenta hay que leerlo del libro.
@@ -4145,30 +4166,44 @@
       // El texto que la persona escribió en cada campo sobrevive a la recarga
       // (agregar un ítem vuelve a leer la lista entera): el render lo repone
       // SOLO si todavía dice el mismo número que vino del servidor.
-      const textoAnterior = new Map((estado.itemsRec ?? []).map(x => [x.id, x.textoCantidad]))
-      estado.itemsRec = (items.data ?? []).map(i => ({
-        id: i.id,
-        textoCantidad: textoAnterior.get(i.id) ?? null,
-        insumo_id: i.insumo_id,
-        lote: i.lote,
-        contenido_por_bulto: i.contenido_por_bulto === null ? null : Number(i.contenido_por_bulto),
-        // El guion: null = todavía sin contar. Nunca cero por defecto.
-        cantidad_contada: i.cantidad_contada === null ? null : Number(i.cantidad_contada),
-        observacion: i.observacion ?? '',
-        errorCantidad: null,
-        // OJO — ESTE MAPEO ES UN SÉPTIMO LUGAR DONDE UNA COLUMNA PUEDE NO
-        // LLEGAR, y es el más traicionero: el recuento es la ÚNICA pantalla
-        // que remapea la fila del servidor a un objeto propio en vez de usarla
-        // como viene. `aclaracion` llegaba del embed y se caía acá, con el
-        // .select() correcto y el render correcto — o sea que revisar las dos
-        // puntas no alcanzaba. Todo campo que se pida en el embed de arriba
-        // tiene que copiarse acá.
-        nombre: i.insumos?.nombre ?? '(insumo desconocido)',
-        marca: i.insumos?.marca ?? '',
-        unidad_medida: i.insumos?.unidad_medida ?? '',
-        tipo: i.insumos?.tipo ?? 'insumo',
-        aclaracion: i.insumos?.aclaracion ?? null,
-      }))
+      const anterior = new Map((estado.itemsRec ?? []).map(x => [x.id, x]))
+      // UNA FILA TODAVÍA SUCIA CONSERVA SU VALOR LOCAL. Recargar trae lo que
+      // dice la base, y para una fila cuyo conteo NO llegó a guardarse eso es
+      // más viejo que lo que la persona tiene en pantalla: pisarlo borra lo
+      // que acaba de contar, sin ningún error. Sigue sucia, así que el
+      // autoguardado la reintenta. Es el riesgo que ya tenía agregar un ítem
+      // (recarga la lista entera) y el que abre "Actualizar".
+      estado.itemsRec = (items.data ?? []).map(i => {
+        const prev = anterior.get(i.id)
+        const sucio = prev && estado.sucios.has(i.id) ? prev : null
+        return {
+          id: i.id,
+          textoCantidad: prev?.textoCantidad ?? null,
+          textoEnBultos: prev?.textoEnBultos ?? null,
+          insumo_id: i.insumo_id,
+          lote: i.lote,
+          contenido_por_bulto: i.contenido_por_bulto === null ? null : Number(i.contenido_por_bulto),
+          // El guion: null = todavía sin contar. Nunca cero por defecto.
+          cantidad_contada: sucio ? sucio.cantidad_contada
+            : (i.cantidad_contada === null ? null : Number(i.cantidad_contada)),
+          observacion: sucio ? sucio.observacion : (i.observacion ?? ''),
+          errorCantidad: sucio ? sucio.errorCantidad : null,
+          // OJO — ESTE MAPEO ES UN SÉPTIMO LUGAR DONDE UNA COLUMNA PUEDE NO
+          // LLEGAR, y es el más traicionero: el recuento es la ÚNICA pantalla
+          // que remapea la fila del servidor a un objeto propio en vez de usarla
+          // como viene. `aclaracion` llegaba del embed y se caía acá, con el
+          // .select() correcto y el render correcto — o sea que revisar las dos
+          // puntas no alcanzaba. Todo campo que se pida en el embed de arriba
+          // tiene que copiarse acá. `categoria` entró por este mismo camino
+          // cuando la lista pasó a agruparse por categoría.
+          nombre: i.insumos?.nombre ?? '(insumo desconocido)',
+          marca: i.insumos?.marca ?? '',
+          unidad_medida: i.insumos?.unidad_medida ?? '',
+          tipo: i.insumos?.tipo ?? 'insumo',
+          categoria: i.insumos?.categoria ?? null,
+          aclaracion: i.insumos?.aclaracion ?? null,
+        }
+      })
       ordenarItemsRec()
     }
 
@@ -4191,6 +4226,43 @@
 
     function saldoDe(item) {
       return estado.saldos.get(claveSaldo(item.insumo_id, item.lote, item.contenido_por_bulto)) ?? 0
+    }
+
+    // ── Contar en bultos ───────────────────────────────────────────────────
+    //
+    // OJO CON LOS NOMBRES: `equivalenteEnBultos` va de unidad base a bultos
+    // para MOSTRAR (redondea a la fracción más cercana: ¼ ⅓ ½ ⅔ ¾). Estas dos
+    // son para ESCRIBIR y no redondean a fracciones: convierten el número tal
+    // cual, en los dos sentidos. No unificarlas con aquella — hacen cosas
+    // distintas, y el mismo par ya existe en materia-prima.html con nombres
+    // propios por esta misma razón.
+    //
+    // El redondeo a 6 decimales es solo contra el ruido del punto flotante
+    // (0,3 / 0,1 da 2,9999999999999996). No tapa una diferencia real: 6
+    // decimales es mil veces más fino que los 3 que admite una cantidad.
+    const redondear6 = (n) => Math.round(n * 1e6) / 1e6
+
+    // Los bultos se leen con SU regla y NO con parsearCantidad, que mira la
+    // unidad del catálogo: en un insumo que se cuenta por unidades enteras
+    // (cajas) esa regla rechazaría "3,5", y medio bulto es un caso real. Lo
+    // que sí sigue la regla del insumo es la cantidad base, que es la que se
+    // guarda.
+    const parsearBultos = (texto) => leerNumeroAr(texto, { decimales: DECIMALES_BULTOS })
+
+    function baseDesdeBultosRec(bultos, contenido) {
+      const b = Number(bultos), c = Number(contenido)
+      if (!Number.isFinite(b) || !Number.isFinite(c) || c <= 0) return null
+      return redondear6(b * c)
+    }
+
+    // Cuántos bultos dice el renglón. null cuando no hay presentación o cuando
+    // todavía no se contó: el guion también vale acá, y un 0 en el campo de
+    // bultos NO puede salir de "no hay dato".
+    function bultosDeItem(item) {
+      const c = Number(item?.contenido_por_bulto)
+      if (!Number.isFinite(c) || c <= 0) return null
+      if (!item || item.cantidad_contada === null || item.cantidad_contada === undefined) return null
+      return redondear6(item.cantidad_contada / c)
     }
 
     // ── Render ─────────────────────────────────────────────────────────────
@@ -4269,10 +4341,18 @@
       // anulado no hay nada que contar, y el historial tiene su propio render.
       const abierto = estado.recuento?.estado === 'abierto'
 
-      listaEl.innerHTML = filas.map(i => {
+      // AGRUPADA POR CATEGORÍA, con la MISMA función que las dos listas del
+      // módulo: se cuenta recorriendo el depósito por sector, y una lista
+      // plana de 55 renglones obliga a ir y volver. Las secciones se arman
+      // desde las filas VISIBLES, así que con el buscador o el filtro puesto
+      // las vacías desaparecen solas.
+      //
+      // El ORDEN DE `estado.itemsRec` NO CAMBIA al contar —eso lo decide
+      // ordenarItemsRec y solo corre al cargar—, así que la lista no se
+      // reacomoda bajo el dedo de alguien que camina por el depósito.
+      const htmlDeFila = (i) => {
         const contada = i.cantidad_contada !== null
         const delta = textoDelta(i)
-        const bultos = contada ? textoBultos(i.cantidad_contada, i.contenido_por_bulto, i.unidad_medida) : null
         const obsAbierta = !!i.observacion
         return `
           <div class="tarjeta-lista rec-fila ${contada ? 'rec-fila--contada' : ''}" data-item="${esc(i.id)}">
@@ -4294,15 +4374,24 @@
                       aria-label="No hay: poner 0 en ${esc(i.nombre)}" ${i.cantidad_contada === 0 ? 'disabled' : ''}>0</button>` : ''}
               <span class="rec-delta ${delta?.falta ? 'rec-delta--falta' : ''}" ${delta ? '' : 'hidden'}>${delta ? esc(delta.texto) : ''}</span>
             </div>
-            <div class="rec-fila__bultos" data-bultos="${esc(i.id)}" ${bultos ? '' : 'hidden'}>${esc(bultos || '')}
-            </div>
+            ${i.contenido_por_bulto ? `
+            <div class="rec-fila__linea rec-fila__linea--bultos">
+              <input type="text" class="rec-input rec-input--bultos" inputmode="decimal"
+                     data-bultos="${esc(i.id)}"
+                     placeholder="—"
+                     autocomplete="off"
+                     aria-label="Bultos contados de ${esc(i.nombre)}">
+              <span class="rec-unidad">${esc(textoPresentacion(i.contenido_por_bulto, i.unidad_medida))}</span>
+            </div>` : ''}
             <div class="rec-error" data-error="${esc(i.id)}" ${i.errorCantidad ? '' : 'hidden'}>${esc(i.errorCantidad || '')}</div>
             <button type="button" class="rec-obs-toggle" data-toggle-obs="${esc(i.id)}" ${obsAbierta ? 'hidden' : ''}>+ Observación</button>
             <input type="text" class="rec-obs" data-obs="${esc(i.id)}" value="${esc(i.observacion)}"
                    placeholder="Por qué hay diferencia (opcional)" ${obsAbierta ? '' : 'hidden'}
                    aria-label="Observación de ${esc(i.nombre)}">
           </div>`
-      }).join('')
+      }
+
+      listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, (i) => i.nombre), htmlDeFila)
 
       // LOS CAMPOS DE CANTIDAD SE DIBUJAN SIN value: se enlazan acá (0
       // decimales en las unidades enteras, 3 en el resto) y el número guardado
@@ -4335,6 +4424,29 @@
           try { input.setSelectionRange(input.value.length, input.value.length) } catch {}
         }
       })
+      // EL CAMPO DE BULTOS, en los renglones que tienen presentación. Se
+      // cuenta "3 bultos", no "75 kg": nadie pesa una pila de bolsas. Los dos
+      // campos dicen SIEMPRE lo mismo —tocar uno actualiza el otro— y lo que
+      // se guarda es siempre la unidad base, como hasta ahora.
+      const enfocadoB = document.activeElement?.dataset?.bultos ?? null
+      listaEl.querySelectorAll('[data-bultos]').forEach(input => {
+        const item = estado.itemsRec.find(x => x.id === input.dataset.bultos)
+        enlazarCampoNumero(input, { decimales: DECIMALES_BULTOS })
+        ponerNumero(input, bultosDeItem(item))
+        // Mismo criterio que el campo de cantidad: si el texto que la persona
+        // escribió sigue diciendo el mismo número, se repone tal cual (si no,
+        // "1," volvería como "1" y "0,250" como "0,25" en cada re-render).
+        if (item && item.textoEnBultos != null &&
+            parsearBultos(item.textoEnBultos) === bultosDeItem(item)) {
+          input.value = item.textoEnBultos
+        }
+        input.addEventListener('input', () => anotarBultos(input.dataset.bultos, input.value))
+        input.addEventListener('blur', () => guardarConteoAhora())
+        if (enfocadoB !== null && input.dataset.bultos === enfocadoB) {
+          input.focus()
+          try { input.setSelectionRange(input.value.length, input.value.length) } catch {}
+        }
+      })
       listaEl.querySelectorAll('[data-cero]').forEach(btn => {
         btn.addEventListener('click', () => ponerCeroRec(btn.dataset.cero))
       })
@@ -4357,9 +4469,12 @@
       const total = estado.itemsRec.length
       const faltan = estado.itemsRec.filter(i => i.cantidad_contada === null).length
       const el = document.getElementById('rec-contador')
+      // "Contados 34 de 55" y no "Faltan 21 de 55": es lo mismo, pero uno
+      // mide lo que se avanzó y el otro la deuda. Contar 55 renglones de pie
+      // en un depósito es largo, y el número que conviene ver crece.
       el.textContent = total === 0
         ? 'Sin ítems'
-        : (faltan === 0 ? `Todo contado · ${total} ítems` : `Faltan ${faltan} de ${total}`)
+        : (faltan === 0 ? `Todo contado · ${total} ítems` : `Contados ${total - faltan} de ${total}`)
       el.classList.toggle('rec-barra__contador--listo', total > 0 && faltan === 0)
 
       // El botón se deshabilita, pero el servidor lo revalida igual:
@@ -4399,12 +4514,14 @@
       // deshabilitado (y no se esconde, para que la fila no salte de ancho).
       const cero = fila.querySelector('.rec-cero')
       if (cero) cero.disabled = item.cantidad_contada === 0
-      const bult = fila.querySelector('.rec-fila__bultos')
-      if (bult) {
-        const txt = item.cantidad_contada === null ? null
-          : textoBultos(item.cantidad_contada, item.contenido_por_bulto, item.unidad_medida)
-        bult.hidden = !txt
-        bult.textContent = txt || ''
+      // Los dos campos dicen lo mismo. El que tiene el foco NO se toca: quien
+      // está tipeando "1," en bultos vería su coma desaparecer.
+      const bult = fila.querySelector('.rec-input--bultos')
+      if (bult && document.activeElement !== bult) {
+        ponerNumero(bult, bultosDeItem(item))
+        // El texto viejo ya no describe este número: si no se limpia, el
+        // próximo re-render lo repondría encima del valor nuevo.
+        item.textoEnBultos = null
       }
     }
 
@@ -4432,6 +4549,39 @@
       actualizarContadorRec()
       renderizarChipsFiltroRec()
       programarGuardado()
+    }
+
+    // EL CAMPO DE BULTOS ESCRIBE EL DE CANTIDAD, y de ahí sigue el camino de
+    // siempre: lo que se guarda es la unidad base. Los dos campos dicen lo
+    // mismo, pero solo se reescribe el que NO tiene el foco — si no, el
+    // formateo del otro le movería el cursor a quien está tipeando.
+    function anotarBultos(itemId, valor) {
+      const item = estado.itemsRec.find(i => i.id === itemId)
+      const input = document.querySelector(`#rec-lista [data-cantidad="${CSS.escape(itemId)}"]`)
+      if (!item || !input) return
+      item.textoEnBultos = String(valor)
+      const crudo = String(valor).trim()
+
+      // Vaciar los bultos vuelve al guion, igual que vaciar la cantidad: es
+      // la forma de des-contar un renglón mal cargado.
+      if (crudo === '') {
+        ponerNumero(input, null)
+        anotarCantidad(itemId, '')
+        return
+      }
+      const bultos = parsearBultos(crudo)
+      if (bultos === null) {
+        // Lo ilegible se dice y NO se toca la cantidad: un dedazo en bultos no
+        // puede borrar un conteo que ya estaba bien.
+        item.errorCantidad = 'No se entiende cuántos bultos. Escribilo como 3 o 3,5.'
+        estado.sucios.add(itemId)
+        refrescarFilaRec(itemId)
+        return
+      }
+      const base = baseDesdeBultosRec(bultos, item.contenido_por_bulto)
+      if (base === null) return
+      ponerNumero(input, base)
+      anotarCantidad(itemId, input.value)
     }
 
     // EL BOTÓN "0": "conté y no hay", con un toque. Es una ACCIÓN EXPLÍCITA de
@@ -4536,6 +4686,29 @@
         programarGuardado()
       } else {
         marcarGuardado('guardado')
+      }
+    }
+
+    // ── Actualizar ─────────────────────────────────────────────────────────
+    //
+    // Un recuento es de la UNIDAD, no de quien lo abrió: dos personas pueden
+    // estar contando sectores distintos del mismo depósito y hasta ahora no
+    // había forma de ver lo del otro sin cambiar de unidad y volver.
+    //
+    // PRIMERO SE GUARDA LO PROPIO Y RECIÉN DESPUÉS SE RELEE. Y aunque el
+    // guardado no entre, nada se pierde: cargarItemsRecuento conserva el valor
+    // local de toda fila que siga sucia. Lo que sí se avisa es que quedó algo
+    // sin guardar, para que no se cierre el recuento creyendo que está todo.
+    async function refrescarRecuento() {
+      const btn = document.getElementById('btn-refrescar-recuento')
+      btn.disabled = true
+      await guardarConteoAhora()
+      await cargarItemsRecuento()
+      renderizarChipsFiltroRec()
+      renderizarItemsRecuento()
+      btn.disabled = false
+      if (estado.sucios.size) {
+        mostrarError('Se actualizó, pero quedó avance sin guardar. Revisá la conexión: lo que contaste sigue en la pantalla y se reintenta solo.')
       }
     }
 
@@ -4770,6 +4943,11 @@
         return
       }
 
+      // Agregar recarga la lista ENTERA, así que lo tipeado y todavía sin
+      // guardar tiene que estar en la base antes. Aunque el guardado no entre,
+      // cargarItemsRecuento conserva el valor local de las filas sucias: son
+      // las dos mitades del mismo cuidado.
+      await guardarConteoAhora()
       await cargarItemsRecuento()
       renderizarChipsFiltroRec()
       renderizarItemsRecuento()
@@ -7954,6 +8132,7 @@
       renderizarItemsRecuento()
     })
     document.getElementById('btn-agregar-item').addEventListener('click', abrirModalAgregar)
+    document.getElementById('btn-refrescar-recuento').addEventListener('click', refrescarRecuento)
     document.getElementById('rec-buscar-catalogo').addEventListener('input', () => {
       estado.insumoAgregar = null
       estado.presentacionAgregar = undefined

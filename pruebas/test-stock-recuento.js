@@ -52,7 +52,7 @@ const PRELUDIO = `
   // La lista del recuento: su innerHTML crea inputs, botones "0" y filas,
   // como el navegador.
   var __lista = elemento('rec-lista')
-  __lista.inputs = []; __lista.ceros = []; __lista.filas = []
+  __lista.inputs = []; __lista.ceros = []; __lista.filas = []; __lista.bultos = []
   Object.defineProperty(__lista, 'innerHTML', {
     get() { return this._html || '' },
     set(h) {
@@ -61,19 +61,25 @@ const PRELUDIO = `
       this.inputs = [...s.matchAll(/class="rec-input"[\\s\\S]*?data-cantidad="([^"]+)"/g)].map(m => {
         const e = elemento('rec-input-' + m[1]); e.dataset = { cantidad: m[1] }; return e
       })
+      this.bultos = [...s.matchAll(/class="rec-input rec-input--bultos"[\\s\\S]*?data-bultos="([^"]+)"/g)].map(m => {
+        const e = elemento('rec-bultos-' + m[1]); e.dataset = { bultos: m[1] }; return e
+      })
       this.ceros = [...s.matchAll(/<button type="button" class="rec-cero" data-cero="([^"]+)"([^>]*)>/g)].map(m => {
         const e = elemento('rec-cero-' + m[1]); e.dataset = { cero: m[1] }; e.disabled = /\\bdisabled\\b/.test(m[2]); return e
       })
       this.filas = [...s.matchAll(/data-item="([^"]+)"/g)].map(m => {
         const id = m[1]
-        const partes = { '.rec-delta': elemento('d'), '.rec-error': elemento('e'), '.rec-fila__bultos': elemento('b') }
+        const partes = { '.rec-delta': elemento('d'), '.rec-error': elemento('e') }
         return { id, classList: { toggle(){} }, querySelector: (sel) =>
-          sel === '.rec-cero' ? (__lista.ceros.find(c => c.dataset.cero === id) ?? null) : (partes[sel] ?? null) }
+          sel === '.rec-cero' ? (__lista.ceros.find(c => c.dataset.cero === id) ?? null)
+          : sel === '.rec-input--bultos' ? (__lista.bultos.find(b => b.dataset.bultos === id) ?? null)
+          : (partes[sel] ?? null) }
       })
     },
   })
   __lista.querySelectorAll = (sel) =>
-    sel === '[data-cantidad]' ? __lista.inputs : sel === '[data-cero]' ? __lista.ceros : []
+    sel === '[data-cantidad]' ? __lista.inputs : sel === '[data-cero]' ? __lista.ceros
+    : sel === '[data-bultos]' ? __lista.bultos : []
   __els.set('rec-lista', __lista)
   var document = {
     activeElement: null,
@@ -113,13 +119,19 @@ const PRELUDIO = `
     }
     return q
   }
-  var supabase = { rpc: (n, p) => { __llamadas.rpc.push([n, p]); return Promise.resolve({ data: null, error: null }) }, from: (t) => __consulta(t) }
+  // La RPC que falla (null = todas andan).
+  var __errorRpc = null
+  var supabase = {
+    rpc: (n, p) => {
+      __llamadas.rpc.push([n, p])
+      return Promise.resolve({ data: null, error: __errorRpc === n ? { message: 'sin señal' } : null })
+    },
+    from: (t) => __consulta(t),
+  }
   function mostrarError(m) { __llamadas.errores.push(m) }
   function marcarError(id, m) { __llamadas.errores.push(id + ': ' + m) }
   function marcarGuardado(e) { estado.guardado = e }
   function programarGuardado() { __llamadas.programados++ }
-  function actualizarContadorRec() {}
-  function renderizarChipsFiltroRec() {}
   function renderizarClaseRecuento() {}
   function renderizarSugerenciasCatalogo() {}
   function limpiarErroresAgregar() {}
@@ -140,12 +152,16 @@ const FUNCIONES = [
   'renderizarItemsRecuento', 'refrescarFilaRec', 'anotarCantidad', 'ponerCeroRec', 'huellaItem',
   'guardarConteoAhora', 'abrirModalCerrar', 'cargarItemsRecuento', 'ordenarItemsRec',
   'contenidoAgregar', 'avisoRenglonSinPresentacion', 'confirmarAgregarItem',
+  // Parte 2: contador, filtro, agrupado, "Actualizar" y contar en bultos.
+  'actualizarContadorRec', 'renderizarChipsFiltroRec', 'agruparPorTipoYCategoria', 'htmlAgrupado',
+  'baseDesdeBultosRec', 'bultosDeItem', 'anotarBultos', 'refrescarRecuento',
 ]
-const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', 'TOPE_DIFS_RESUMEN']
+const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', 'TOPE_DIFS_RESUMEN',
+  'FILTROS_REC', 'DECIMALES_BULTOS', 'CATEGORIAS', 'SIN_CATEGORIA', 'ORDEN_TIPO', 'TIPOS', 'ordenDe', 'redondear6', 'parsearBultos']
 
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
-  retorno: '__setDatos(d){ __datos = d }, __setErrorEn(t){ __errorTabla = t }, estado, __llamadas, document, __lista',
+  retorno: '__setDatos(d){ __datos = d }, __setErrorEn(t){ __errorTabla = t }, __setErrorRpc(n){ __errorRpc = n }, estado, __llamadas, document, __lista, FILTROS_REC, DECIMALES_BULTOS',
 })
 const el = (id) => S.document.getElementById(id)
 const ultimaRpc = (n) => [...S.__llamadas.rpc].reverse().find(r => r[0] === n)?.[1]
@@ -153,10 +169,11 @@ const ultimaRpc = (n) => [...S.__llamadas.rpc].reverse().find(r => r[0] === n)?.
 function item(id, extra = {}) {
   return { id, insumo_id: 'ins-' + id, lote: null, contenido_por_bulto: null, cantidad_contada: null,
     observacion: '', errorCantidad: null, nombre: 'Insumo ' + id, marca: '', unidad_medida: 'kg',
-    tipo: 'insumo', aclaracion: null, textoCantidad: null, ...extra }
+    tipo: 'insumo', categoria: null, aclaracion: null, textoCantidad: null, textoEnBultos: null, ...extra }
 }
 const cero = (id) => S.__lista.ceros.find(c => c.dataset.cero === id)
 const input = (id) => S.__lista.inputs.find(i => i.dataset.cantidad === id)
+const bultos = (id) => S.__lista.bultos.find(b => b.dataset.bultos === id)
 
 const pendientes = []
 
@@ -334,6 +351,253 @@ pendientes.push(async () => {
   t = await agregar(null, [filaServidor('otro', 25, null), filaServidor('nuevo', null, null)],
     [item('otro', { insumo_id: 'caja', contenido_por_bulto: 25, nombre: 'Caja capelina', unidad_medida: 'un' })])
   chk('aviso: agregar SIN presentación no avisa', !/sin presentación/.test(t), t)
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// 4. CONTADOR, FILTRO Y AGRUPADO POR CATEGORÍA  (Parte 2 b y c)
+// ══════════════════════════════════════════════════════════════════════════
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1' }
+  S.estado.saldos = new Map()
+  S.estado.sucios = new Set()
+  S.estado.filtroRec = 'todos'
+  S.estado.busquedaRec = ''
+  S.estado.itemsRec = [
+    item('h1', { nombre: 'Harina 000', categoria: 'Harinas', tipo: 'materia_prima', cantidad_contada: 10 }),
+    item('c1', { nombre: 'Caja N°1', categoria: 'Cajas', unidad_medida: 'un' }),
+    item('c2', { nombre: 'Caja capelina', categoria: 'Cajas', unidad_medida: 'un', cantidad_contada: 5 }),
+    item('x1', { nombre: 'Trapo <b>raro</b>', categoria: null, unidad_medida: 'un' }),
+  ]
+  S.renderizarItemsRecuento()
+  const html = S.__lista.innerHTML
+
+  chk('contador: dice cuántos se contaron, no cuántos faltan',
+    el('rec-contador').textContent === 'Contados 2 de 4', el('rec-contador').textContent)
+  S.estado.itemsRec.forEach(i => { if (i.cantidad_contada === null) i.cantidad_contada = 0 })
+  S.actualizarContadorRec()
+  chk('contador: con todo contado lo dice', /Todo contado/.test(el('rec-contador').textContent), el('rec-contador').textContent)
+  S.estado.itemsRec[1].cantidad_contada = null
+  S.estado.itemsRec[3].cantidad_contada = null
+  S.actualizarContadorRec()
+  chk('contador: vuelve a contar los que faltan', el('rec-contador').textContent === 'Contados 2 de 4', el('rec-contador').textContent)
+
+  chk('filtro: el chip dice "Ver solo los que faltan"',
+    S.FILTROS_REC.some(f => f.id === 'sin-contar' && f.label === 'Ver solo los que faltan'), S.FILTROS_REC)
+  S.renderizarChipsFiltroRec()
+  const chips = el('rec-chips-filtro').innerHTML
+  chk('filtro: el chip se dibuja con su contador de los que faltan',
+    /Ver solo los que faltan/.test(chips) && /chip-stock__contador">2</.test(chips), chips)
+
+  chk('agrupado: encabezado de cada categoría', /grupo-cat__nombre">Harinas</.test(html) && /grupo-cat__nombre">Cajas</.test(html), html.slice(0, 400))
+  chk('agrupado: "Sin categoría" para el que no tiene', /grupo-cat__nombre">Sin categoría</.test(html))
+  chk('agrupado: Harinas antes que Cajas (orden del negocio, no alfabético)',
+    html.indexOf('>Harinas<') !== -1 && html.indexOf('>Cajas<') !== -1 && html.indexOf('>Harinas<') < html.indexOf('>Cajas<'))
+  chk('agrupado: "Sin categoría" siempre última',
+    html.indexOf('>Sin categoría<') > html.indexOf('>Cajas<'))
+  chk('agrupado: el contador de la categoría dice cuántas filas tiene', /grupo-cat__contador">2</.test(html), html)
+  chk('agrupado: los 4 renglones siguen dibujándose con su campo y su botón',
+    S.__lista.inputs.length === 4 && S.__lista.ceros.length === 4)
+  chk('agrupado: el nombre de la categoría no puede inyectar (el del insumo tampoco)',
+    !/<b>raro<\/b>/.test(html) && /Trapo &lt;b&gt;raro&lt;\/b&gt;/.test(html))
+
+  // Con el filtro puesto, una categoría sin filas visibles no se dibuja.
+  S.estado.filtroRec = 'sin-contar'
+  S.renderizarItemsRecuento()
+  const filtrado = S.__lista.innerHTML
+  chk('agrupado: con el filtro puesto, la categoría sin filas visibles desaparece',
+    !/>Harinas</.test(filtrado) && /Cajas/.test(filtrado), filtrado.slice(0, 300))
+  chk('agrupado: y quedan solo los que faltan', S.__lista.inputs.length === 2, S.__lista.inputs.length)
+  S.estado.filtroRec = 'todos'
+
+  // LA CATEGORÍA TIENE QUE LLEGAR DESDE EL SERVIDOR, y el recuento es la única
+  // pantalla que remapea la fila a un objeto propio: se puede caer en el
+  // .select() o en el remapeo, y en los dos casos la lista se dibuja entera
+  // bajo "Sin categoría" sin ningún error.
+  S.estado.sucios = new Set()
+  S.estado.itemsRec = []
+  S.__setDatos({
+    stock_recuento_items: [
+      { id: 'h', insumo_id: 'ih', lote: null, contenido_por_bulto: null, cantidad_contada: null, observacion: null,
+        insumos: { nombre: 'Harina 000', marca: '', unidad_medida: 'kg', tipo: 'materia_prima', categoria: 'Harinas', aclaracion: null } },
+    ],
+    v_stock_por_lote: [],
+  })
+  S.__llamadas.selects = []
+  await S.cargarItemsRecuento()
+  const sel = S.__llamadas.selects.find(s => s[0] === 'stock_recuento_items')?.[1] ?? ''
+  chk('agrupado: el embed pide categoria', /insumos\([^)]*categoria/.test(sel), sel)
+  chk('agrupado: la categoría sobrevive al remapeo', S.estado.itemsRec[0].categoria === 'Harinas', S.estado.itemsRec[0].categoria)
+  S.renderizarItemsRecuento()
+  chk('agrupado: y llega al encabezado', /grupo-cat__nombre">Harinas</.test(S.__lista.innerHTML))
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// 5. "ACTUALIZAR"  (Parte 2 d)
+// ══════════════════════════════════════════════════════════════════════════
+function filaRec(id, extra = {}, insumo = {}) {
+  return { id, insumo_id: 'ins-' + id, lote: null, contenido_por_bulto: null,
+    cantidad_contada: null, observacion: null,
+    insumos: { nombre: 'Insumo ' + id, marca: '', unidad_medida: 'kg', tipo: 'insumo', categoria: 'Cajas', aclaracion: null, ...insumo },
+    ...extra }
+}
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1' }
+  S.estado.filtroRec = 'todos'
+  S.estado.busquedaRec = ''
+  S.estado.saldos = new Map()
+  S.estado.sucios = new Set()
+  S.__setErrorEn(null)
+
+  // El otro contó el ítem "b" mientras yo tenía el mío a medio guardar.
+  S.estado.itemsRec = [item('a', { cantidad_contada: 7, textoCantidad: '7' }), item('b')]
+  S.estado.sucios.add('a')
+  S.__setDatos({ stock_recuento_items: [filaRec('a'), filaRec('b', { cantidad_contada: 3 })], v_stock_por_lote: [] })
+  S.__llamadas.rpc = []
+  await S.refrescarRecuento()
+
+  chk('actualizar: guarda lo propio ANTES de releer', (S.__llamadas.rpc[0] ?? [])[0] === 'guardar_conteo', S.__llamadas.rpc.map(r => r[0]))
+  chk('actualizar: trae lo que cargó el otro', S.estado.itemsRec.find(i => i.id === 'b').cantidad_contada === 3)
+  chk('actualizar: se guardó, así que "a" queda con lo que dice la base', S.estado.sucios.size === 0, [...S.estado.sucios])
+  chk('actualizar: el botón queda usable', el('btn-refrescar-recuento').disabled === false)
+  chk('actualizar: no avisa nada si entró todo', !S.__llamadas.errores.length, S.__llamadas.errores)
+
+  // Ahora el guardado NO entra: lo tipeado NO se pierde y se avisa.
+  S.__llamadas.errores = []
+  S.estado.itemsRec = [item('a', { cantidad_contada: 99, observacion: 'contado a mano' }), item('b')]
+  S.estado.sucios = new Set(['a'])
+  S.estado.guardando = false
+  S.__setErrorRpc('guardar_conteo')
+  // La base dice que "a" está sin contar: es lo VIEJO, porque el guardado no entró.
+  S.__setDatos({ stock_recuento_items: [filaRec('a'), filaRec('b', { cantidad_contada: 3 })], v_stock_por_lote: [] })
+  await S.refrescarRecuento()
+  const a = S.estado.itemsRec.find(i => i.id === 'a')
+  chk('actualizar con el guardado caído: la fila sucia conserva lo contado acá',
+    a.cantidad_contada === 99 && a.observacion === 'contado a mano', a)
+  chk('actualizar con el guardado caído: la fila sigue sucia, así que se reintenta', S.estado.sucios.has('a'))
+  chk('actualizar con el guardado caído: las filas limpias sí se releen',
+    S.estado.itemsRec.find(i => i.id === 'b').cantidad_contada === 3)
+  chk('actualizar con el guardado caído: se avisa que quedó algo sin guardar',
+    S.__llamadas.errores.some(m => /sin guardar/.test(m)), S.__llamadas.errores)
+  chk('actualizar con el guardado caído: el botón vuelve a quedar usable', el('btn-refrescar-recuento').disabled === false)
+  S.__setErrorRpc(null)
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// 6. CONTAR EN BULTOS  (Parte 2 e)
+// ══════════════════════════════════════════════════════════════════════════
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1' }
+  S.estado.filtroRec = 'todos'
+  S.estado.busquedaRec = ''
+  S.estado.saldos = new Map()
+  S.estado.sucios = new Set()
+  S.estado.itemsRec = [
+    item('p', { nombre: 'Harina <b>000</b>', contenido_por_bulto: 25, unidad_medida: 'kg', categoria: 'Harinas' }),
+    item('s', { nombre: 'Film', contenido_por_bulto: null, unidad_medida: 'kg', categoria: 'Paletizado' }),
+  ]
+  S.renderizarItemsRecuento()
+
+  chk('bultos: solo el renglón con presentación tiene campo de bultos', S.__lista.bultos.length === 1 && bultos('p') && !bultos('s'))
+  chk('bultos: la etiqueta dice de cuánto es el bulto', /bultos de 25 kg/.test(S.__lista.innerHTML))
+  chk('bultos: el aria-label nombra el insumo, escapado',
+    /aria-label="Bultos contados de Harina &lt;b&gt;000&lt;\/b&gt;"/.test(S.__lista.innerHTML) && !/<b>000/.test(S.__lista.innerHTML))
+  chk('bultos: sin contar arranca en el guion, nunca en 0', bultos('p').value === '' && input('p').value === '')
+
+  // Escribir en bultos escribe la cantidad base, y ESA es la que se guarda.
+  S.__llamadas.programados = 0
+  bultos('p').value = '3'
+  S.anotarBultos('p', '3')
+  const p = S.estado.itemsRec.find(i => i.id === 'p')
+  chk('bultos: 3 bultos de 25 kg son 75 kg', p.cantidad_contada === 75, p.cantidad_contada)
+  chk('bultos: la cantidad base queda escrita en su campo', input('p').value === '75', input('p').value)
+  chk('bultos: marca sucio y entra al autoguardado', S.estado.sucios.has('p') && S.__llamadas.programados === 1)
+
+  // Medio bulto: un bidón a medio usar es un caso real.
+  bultos('p').value = '3,5'
+  S.anotarBultos('p', '3,5')
+  chk('bultos: medio bulto se puede contar', S.estado.itemsRec.find(i => i.id === 'p').cantidad_contada === 87.5, S.estado.itemsRec.find(i => i.id === 'p').cantidad_contada)
+
+  // Y al revés: escribir la cantidad base actualiza el campo de bultos.
+  S.anotarCantidad('p', '50')
+  chk('bultos: escribir 50 kg deja el campo de bultos en 2', bultos('p').value === '2', bultos('p').value)
+  S.anotarCantidad('p', '')
+  chk('bultos: vaciar la cantidad vacía los bultos', bultos('p').value === '' && S.estado.itemsRec.find(i => i.id === 'p').cantidad_contada === null)
+
+  // Vaciar los bultos des-cuenta el renglón (la misma regla que la cantidad).
+  S.anotarBultos('p', '4')
+  S.anotarBultos('p', '')
+  chk('bultos: vaciarlos vuelve al guion', S.estado.itemsRec.find(i => i.id === 'p').cantidad_contada === null && input('p').value === '')
+
+  // Un dedazo en bultos NO borra un conteo que ya estaba bien.
+  S.anotarCantidad('p', '100')
+  S.anotarBultos('p', '3 4')
+  const p2 = S.estado.itemsRec.find(i => i.id === 'p')
+  chk('bultos: lo ilegible se dice y no toca la cantidad', p2.cantidad_contada === 100 && /bultos/.test(p2.errorCantidad || ''), [p2.cantidad_contada, p2.errorCantidad])
+
+  // El botón "0" también actualiza los bultos.
+  S.anotarCantidad('p', '100')
+  cero('p').click()
+  chk('bultos: el botón "0" deja los bultos en 0', bultos('p').value === '0' && S.estado.itemsRec.find(i => i.id === 'p').cantidad_contada === 0, bultos('p').value)
+
+  // Lo que se guarda sigue siendo la unidad base.
+  S.estado.sucios = new Set(['p'])
+  S.estado.guardando = false
+  S.__llamadas.rpc = []
+  S.anotarBultos('p', '2')
+  await S.guardarConteoAhora()
+  const pl = (ultimaRpc('guardar_conteo')?.p_items ?? []).find(x => x.item_id === 'p')
+  chk('bultos: a la base viaja la unidad base (50), no los bultos (2)', pl?.cantidad_contada === '50', pl)
+
+  // EL CAMPO QUE TIENE EL FOCO NO SE PISA: quien está tipeando "1," vería su
+  // coma desaparecer en cuanto el otro campo se sincroniza.
+  bultos('p').focus()
+  bultos('p').value = '1,'
+  S.anotarBultos('p', '1,')
+  chk('bultos: el campo que se está tipeando conserva lo escrito', bultos('p').value === '1,', bultos('p').value)
+  chk('bultos: y el de la cantidad sí se actualiza', input('p').value === '25', input('p').value)
+  S.document.activeElement = null
+
+  // El insumo que se cuenta por unidades enteras igual admite medio bulto: la
+  // regla de "sin decimales" es de la CANTIDAD, no de los bultos.
+  S.estado.itemsRec = [item('u', { nombre: 'Caja', contenido_por_bulto: 10, unidad_medida: 'un', categoria: 'Cajas' })]
+  S.estado.sucios = new Set()
+  S.renderizarItemsRecuento()
+  S.anotarBultos('u', '2,5')
+  const u = S.estado.itemsRec[0]
+  chk('bultos: en un insumo por unidades, medio bulto se lee igual', u.cantidad_contada === 25, [u.cantidad_contada, u.errorCantidad])
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// 7. AGREGAR UN ÍTEM NO PIERDE LO TIPEADO  (recarga la lista entera)
+// ══════════════════════════════════════════════════════════════════════════
+pendientes.push(async () => {
+  S.estado.recuento = { id: 'rec-1', estado: 'abierto', unidad_negocio_id: 'u-1' }
+  S.estado.filtroRec = 'todos'
+  S.estado.busquedaRec = ''
+  S.estado.saldos = new Map()
+  S.estado.guardando = false
+  S.__setErrorRpc(null)
+  S.estado.itemsRec = [item('a', { insumo_id: 'caja', cantidad_contada: 12 })]
+  S.estado.sucios = new Set(['a'])
+  S.estado.insumoAgregar = { id: 'caja2', tipo: 'insumo', unidad_medida: 'un' }
+  S.estado.presentacionAgregar = null
+  S.estado.agregados = 0
+  S.__setDatos({
+    stock_recuento_items: [
+      { id: 'a', insumo_id: 'caja', lote: null, contenido_por_bulto: null, cantidad_contada: 12, observacion: null,
+        insumos: { nombre: 'Insumo a', marca: '', unidad_medida: 'kg', tipo: 'insumo', categoria: 'Cajas', aclaracion: null } },
+      { id: 'n', insumo_id: 'caja2', lote: null, contenido_por_bulto: null, cantidad_contada: null, observacion: null,
+        insumos: { nombre: 'Insumo n', marca: '', unidad_medida: 'un', tipo: 'insumo', categoria: 'Cajas', aclaracion: null } },
+    ],
+    v_stock_por_lote: [],
+  })
+  S.__llamadas.rpc = []
+  await S.confirmarAgregarItem()
+  const orden = S.__llamadas.rpc.map(r => r[0])
+  chk('agregar: guarda lo tipeado ANTES de recargar la lista',
+    orden.indexOf('guardar_conteo') > orden.indexOf('agregar_item_recuento') && orden.includes('guardar_conteo'), orden)
+  chk('agregar: el ítem nuevo aparece', S.estado.itemsRec.some(i => i.id === 'n'))
+  chk('agregar: lo que ya estaba contado no se pierde', S.estado.itemsRec.find(i => i.id === 'a').cantidad_contada === 12)
 })
 
 ;(async () => {

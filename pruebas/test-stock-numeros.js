@@ -161,6 +161,8 @@ const FUNCIONES = [
   'textoDelta',
   // recuento
   'renderizarItemsRecuento', 'anotarCantidad', 'huellaItem', 'guardarConteoAhora',
+  'agruparPorTipoYCategoria', 'htmlAgrupado', 'bultosDeItem', 'baseDesdeBultosRec', 'anotarBultos',
+  'refrescarFilaRec', 'actualizarContadorRec', 'renderizarChipsFiltroRec',
   'contenidoAgregar', 'avisoRenglonSinPresentacion', 'confirmarAgregarItem', 'cargarItemsRecuento', 'ordenarItemsRec',
   // movimiento
   'prepararCantidadMov', 'aplicarModoMov', 'elegirInsumoMov', 'quitarInsumoMov', 'contenidoMov',
@@ -172,7 +174,8 @@ const FUNCIONES = [
   'abrirModalInsumo', 'leerFormularioInsumo', 'pideConfirmacionDeTipo', 'guardarInsumo',
   'parsearTolerancia',
 ]
-const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', '_reglaCampoCantidad', 'limpiarTexto']
+const CONSTANTES = ['DECIMALES_CANTIDAD', 'UNIDADES_ENTERAS', 'FRACCIONES', '_reglaCampoCantidad', 'limpiarTexto',
+  'CATEGORIAS', 'SIN_CATEGORIA', 'ORDEN_TIPO', 'TIPOS', 'ordenDe', 'redondear6', 'parsearBultos', 'DECIMALES_BULTOS', 'FILTROS_REC']
 
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,

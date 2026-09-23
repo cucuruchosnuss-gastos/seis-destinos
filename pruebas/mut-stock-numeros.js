@@ -63,9 +63,10 @@ correrMutaciones({
     { nombre: 're-renderizar el recuento reescribe lo tipeado ("0,300" → "0,30")',
       de: '          input.value = item.textoCantidad\n', a: '' },
     { nombre: 're-renderizar el recuento no recupera el foco',
-      de: '          input.focus()\n', a: '' },
+      de: '        if (enfocado !== null && input.dataset.cantidad === enfocado) {\n          input.focus()\n',
+      a: '        if (false) {\n          input.focus()\n' },
     { nombre: 'recargar los ítems olvida lo tipeado',
-      de: '        textoCantidad: textoAnterior.get(i.id) ?? null,', a: '        textoCantidad: null,' },
+      de: '          textoCantidad: prev?.textoCantidad ?? null,', a: '          textoCantidad: null,' },
     { nombre: 'guardar_conteo deja de mandar la observación',
       de: "          observacion: i.observacion ?? '',\n", a: '' },
     // ── Enlaces, decimales y signo ───────────────────────────────────────────

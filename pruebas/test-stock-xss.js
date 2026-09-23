@@ -515,6 +515,10 @@ const SEGURAS_REGEX = {
     'HTML de htmlAgrupado() (escapa tipo y categoría adentro) con un callback cuyas plantillas tienen HTML propio y revisa el escáner']],
   renderizarStock: [[/^htmlAgrupado\(agruparPorTipoYCategoria\(filas, f => f\.insumo_nombre\), f => \{/,
     'HTML de htmlAgrupado() (escapa tipo y categoría adentro) con un callback cuyas plantillas tienen HTML propio y revisa el escáner']],
+  // El recuento pasa el callback por NOMBRE (htmlDeFila) y no inline, pero es
+  // una const de la misma función: sus plantillas las revisa el escáner igual.
+  renderizarItemsRecuento: [[/^htmlAgrupado\(agruparPorTipoYCategoria\(filas, \(i\) => i\.nombre\), htmlDeFila\)$/,
+    'HTML de htmlAgrupado() (escapa tipo y categoría adentro) con el callback htmlDeFila, cuyas plantillas tienen HTML propio y revisa el escáner']],
 }
 
 const norm = (s) => s.replace(/\s+/g, ' ').trim()
