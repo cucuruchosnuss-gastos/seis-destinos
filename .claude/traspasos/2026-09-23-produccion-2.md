@@ -978,7 +978,7 @@ mutación y a veces en el mismo milisegundo). Medido sobre test-produccion-abrir
 que arma 16 sandboxes: **12 s → 0,83 s**. Todas las suites del repo en verde y
 mut-produccion-abrir sigue detectando sus 92.
 
-## Parte 3 — la planilla · `108f7ef`
+## Parte 3 — la planilla · `54a216d`
 
 `check-scripts` OK · acceso 23/23 · quien 129/129 · pin 144/144 · abrir 162/162 ·
 cierre 249/249 · masa 143/143 · config 104/104 · historial 68/68 · xss 6/6 ·
