@@ -993,3 +993,105 @@ que el mensaje era imposible de ver (la suite estaba verde porque llamaba a
 `intentarCerrar()` directo en vez de simular el clic); y **el `finally` tapaba
 el error de la base**, porque el repintado posterior lo escondía (la suite
 pasaba porque afirmaba sobre `textContent` y no sobre `hidden`).
+
+## Andamio — el NUL del caché del sandbox · `2ac124b`
+
+`e0563b9` metió un **byte NUL literal** (0x00) dentro del string separador de
+`_clave()` en `pruebas/sandbox.js`. El hash salía bien, pero git detecta el NUL
+en los primeros 8000 bytes y pasaba a tratar el archivo como **binario**:
+`git ls-files --eol` daba `-text`, los diffs no se mostraban y **el `eol=lf` del
+`.gitattributes` no se le aplicaba** — justo la trampa de CRLF que ese archivo
+vino a cerrar. Reemplazado por la secuencia de escape escrita como texto
+(`'\u0000'`), que JS parsea al mismo carácter: **el hash es idéntico**
+(verificado calculando los dos y comparando) y el archivo vuelve a ser texto.
+Era el único del repo así (`git ls-files --eol` no marca ningún otro `-text`
+fuera de las imágenes).
+
+Detalle para no confundirse al mirarlo: **el diff de ESE commit sigue
+mostrándose como binario**, porque git marca el par cuando *cualquiera* de los
+dos lados lo es y el blob viejo tiene el NUL. De ahí en adelante es texto
+(verificado: un cambio de prueba se ve como `1 insertion(+)`, no como `Bin`).
+
+## Parte 4 — la sala de masa · `9e178ae`
+
+Máquina abierta → simple/doble → tres botones (original / anterior / modificada)
+→ **la receta completa** → Registrar, **sin pantalla de resumen**. La receta como
+planilla de un renglón de 64 px por ingrediente, todos a la vista incluso los que
+están en cero, con "Queda" y el renglón tintado cuando no alcanza para otra masa.
+Los lotes vienen puestos de la masa anterior en las tres opciones y llegan vacíos
+en la primera masa del día; **no se pregunta "¿mismos lotes?" nunca**. El chip
+"Chocolate" lo pone el cacao, no un botón. "+ Otro" viaja como
+`ingrediente_libre` y no descuenta stock. El uuid es uno por masa, el mismo en
+cada reintento y también después de recargar.
+
+`check-scripts` OK · acceso 23/23 · quien 129/129 · pin 144/144 · abrir 162/162 ·
+cierre 249/249 · **masa 217/217** · config 104/104 · historial 68/68 · xss 6/6 ·
+accesos 19/19 · dashboard 9/9 · **controles 1138/1138**. Las 52 suites del repo
+en verde, verificadas por exit code, no solo las de Producción.
+Mutaciones: acceso 13/13 · quien 57/57 (+2 eq.) · pin 71/71 (+2 eq.) ·
+abrir 92/92 (+2 eq.) · cierre 156/156 (+34 eq.) · **masa 123/123 (+10 eq.)** ·
+config 99/99 (+1 eq.) · historial 50/50 (+12 eq.).
+
+**Tres bugs encontrados revisando, que no estaban en el pedido:**
+
+1. **El desplegable de lote elegía el primer lote solo.** Tiene DOS opciones con
+   `value=""` ("Elegí el lote" y "Se terminó · elegí otro") y `Number('')` es
+   `0`, así que volver a la opción vacía seleccionaba `ops[0]` —un lote que
+   nadie tocó— y **destrababa Registrar**. Es la familia ya documentada del dato
+   ausente presentado como un dato. Arreglado atrapando el vacío **antes** de
+   convertir, con assertion y mutación propias.
+2. **Un "otro" bajado a 0 kg pasaba la validación local**, y `registrar_masa`
+   lanza ahí, así que **sin señal esa masa quedaba esperando un reintento que
+   nunca iba a entrar**. La validación local pide ahora lo mismo que la base.
+3. **El rechazo de una masa quedaba escrito sobre la siguiente**: el error solo
+   se limpiaba al tocar una cantidad o un lote. Se limpia en `mostrarReceta()`,
+   el único punto de entrada.
+
+**Controles.** Renombrados: `#pr-masa-volver` → `#pr-receta-cambiar`,
+`#pr-btn-nueva-masa` → `#pr-masas-nueva`, `[data-registrar]` →
+`#pr-receta-registrar`. Retirados: `[data-ir]`, `[data-partida]`,
+`[data-mismos]` (no se pregunta más por los lotes), `select[data-insumo]`,
+`[data-descartar]` y `[data-reintentar]`. Menos copias: `[data-base]` de 3 a 1.
+`54a216d` sumado a `BASES`.
+
+**Decisiones tomadas sin preguntar:** "Modificar" no pregunta de dónde parte —
+arranca de la última masa de hoy de esa máquina, o de la receta vigente si no
+hay, y el botón lo dice—; el desplegable de lote es **uno solo** y cada opción
+es el par (insumo, lote) con su stock, porque dos desplegables no entran en un
+renglón de 64 px; con la receta en 0 la diferencia se muestra pero **nunca en
+bordó**, o el bordó saltaría en toda masa de chocolate; al registrar la máquina
+se suelta, porque la "anterior" pasó a ser ésta y los lotes tienen menos stock;
+el borrador se guarda bajo su uuid y no bajo el turno, para que la masa
+siguiente no pise a una pendiente sin enviar; y menos de un kilo se lee en
+gramos **solo en texto de lectura**, nunca en un campo editable.
+
+**Un detalle que conviene saber:** el "masa N del turno" que se muestra **antes**
+de registrar es una **estimación** (cuenta las no anuladas + 1, y la base usa
+`max(nro)+1`), así que con una masa anulada en el medio puede decir uno menos.
+El número que vale es el que devuelve la base, y es el que muestra la banda verde.
+
+### Una lección de andamio de esta parte, medida
+
+**Un chequeo de CR escrito como `grep -c $'\r'` puede degradarse a `grep -c ''`
+y devolver la CANTIDAD DE LÍNEAS, que se lee como un desastre de CRLF.** Pasó
+dos veces el mismo día, a dos lectores distintos: el subagente informó que los
+archivos del trabajo a medias "venían enteros en CRLF, 6.897 líneas con CR", y
+la verificación posterior informó 6.916 CR en el blob ya subido. **Los dos
+números eran la cantidad de líneas de esos archivos** — medido con Python sobre
+los bytes, `CR = 0` en el blob, en el árbol y en la copia guardada. Nunca hubo
+CRLF.
+
+- **Por qué se degrada:** con el `$'\r'` anidado adentro de `"$( … )"` la
+  comilla ANSI-C no siempre se procesa y el patrón queda **vacío**, y un patrón
+  vacío matchea todas las líneas. No hay ningún error: `grep` responde un número
+  perfectamente plausible.
+- **Por qué es de la familia ya documentada** ("un comando de verificación que
+  no lee el exit code de lo que verifica"), con una diferencia que conviene
+  anotar: acá el modo de falla **no** produjo el resultado deseado sino uno
+  alarmante, y por eso se miró dos veces. Con el signo al revés —un cero falso—
+  habría pasado derecho.
+- **REGLA: contar CR sobre los BYTES y no con una comilla que el shell puede
+  comerse.** `python -c "d=open(f,'rb').read(); print(d.count(bytes([13])))"`, o
+  `git ls-files --eol`, que lo dice sin ambigüedad.
+- Efecto real: ninguno. La "conversión a LF" que hizo el subagente fue un no-op
+  sobre archivos que ya estaban en LF.
