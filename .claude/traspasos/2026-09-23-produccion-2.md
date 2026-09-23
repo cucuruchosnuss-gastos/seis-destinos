@@ -1095,3 +1095,343 @@ CRLF.
   `git ls-files --eol`, que lo dice sin ambigüedad.
 - Efecto real: ninguno. La "conversión a LF" que hizo el subagente fue un no-op
   sobre archivos que ya estaban en LF.
+
+## Parte 5 — la configuración, en la compu · `7865d76` + `41a1761`
+
+Pestañas Máquinas · Recetas · Ingredientes · Productos · Marcas / Conos (con
+contador de pendientes) · Personal. Personal pasó a **un solo botón "Guardar
+los cambios · N filas"** con las filas tocadas marcadas y aviso al salir sin
+guardar; la hoja de PINes para imprimir (`generar_pines_iniciales`, una tira
+recortable por persona, **se muestra una sola vez y los PINes se borran de la
+memoria al cerrar**); "Asignar / Resetear PIN", los puestos temporales vigentes
+con "Revocar", "Dar acceso temporal" y "Mi PIN maestro"; recetas con historial
+y nota obligatoria; ingredientes con sus insumos y el aviso bordó de los que no
+tienen ninguno; productos con los de chocolate separados; y conos pendientes
+con Aceptar (pudiendo corregir el nombre) y Rechazar.
+
+**Son dos commits y no uno**: la corrida final de mutaciones —posterior al push
+del primero— abortó nombrando una mutación cuya ancla había cambiado con un
+guard agregado al revisar. Reanclarla es un cambio solo de `pruebas/`, y
+juntarlo habría exigido reescribir un commit ya pusheado (force push,
+prohibido).
+
+`check-scripts` OK · acceso 26/26 · quien 129/129 · pin 144/144 · abrir 162/162 ·
+cierre 249/249 · masa 217/217 · **config 208/208** (era 104) · historial 68/68 ·
+xss 6/6 · accesos 19/19 · dashboard 9/9 · **controles 1330/1330**.
+Mutaciones: acceso 13/13 · quien 57/57 (+2 eq.) · pin 71/71 (+2 eq.) ·
+abrir 92/92 (+2 eq.) · cierre 156/156 (+34 eq.) · masa 123/123 (+10 eq.) ·
+**config 181/181 (+8 eq.)** (era 99) · historial 50/50 (+12 eq.).
+
+**DOS PIEZAS DEL DISEÑO QUE NO SE PUDIERON HACER, y se saltearon en vez de
+inventarlas.** Las dos necesitan un cambio de SERVIDOR, que no se hizo porque
+el conector está en solo lectura:
+
+1. **El chip "Bloqueado · 3:10" de la pantalla 7a no existe.**
+   `personal_produccion` devuelve `tiene_pin`, `pin_temporal`,
+   `debe_cambiar_pin` y `es_maestro`, pero **no** si el PIN está bloqueado ni
+   hasta cuándo, y **`pines_produccion.bloqueado_hasta` no tiene policy de
+   lectura**, así que tampoco se puede consultar. Dibujarlo sería inventarlo.
+   Está comentado en `estadoDelPin()` y **hay una assertion que exige que la
+   palabra "Bloqueado" NO aparezca**, para que nadie lo agregue a ojo.
+2. **El "lote 7023-4" de cada cono pendiente (7c) tampoco existe.**
+   `marcas_personalizadas` guarda `creada_por` y `creada_en` pero **no de qué
+   sublote salió**. Se muestra quién lo cargó y cuándo, que es lo que sí hay.
+
+Decisiones tomadas sin preguntar: el aviso de salir sin guardar es **un panel
+propio y no un `confirm()`** (el proyecto ya decidió no usar diálogos nativos),
+y el `beforeunload` queda porque cerrar la pestaña no tiene otra salida; el
+error de una fila puntual **se pega al botón del BLOQUE** y no al de esa fila,
+para no meter ids interpolados sin ganar nada; la máquina y el tipo de masa de
+Recetas siguen siendo `<select>`, porque en la compu un select de tres máquinas
+se opera igual de bien y pasarlos a botones habría retirado dos controles sin
+necesidad; **el PIN va como texto plano, sin `enlazarCampoNumero`**, porque es
+un IDENTIFICADOR; la casilla baja de 56 a 22 px **solo dentro de `.pr-cfg`**,
+que es lo que deja la fila en los 52 px del diseño (en la tablet sigue en 56);
+el ancho sube a 1440 con `:has(#pr-config:not([hidden]))` en vez de tocar
+`.pr-app`; `contarPendientesMarcas` corre en cada pestaña y **devuelve `null` y
+nunca tira si falla** (sin número no se dibuja nada); y `guardar_puestos` se
+llama **una vez por fila tocada y para en la primera que falla**, conservando
+las que no entraron, porque la base no tiene una RPC de varias filas.
+
+Controles: **renombrados** cinco (`[data-maq-agregar]`, `[data-receta-guardar]`,
+`[data-ing-agregar]`, `[data-prod-agregar]` y `[data-marca-agregar]` ganan un
+`id`, porque el error se dibuja pegado a ellos y el foco va a ese id — mismo
+botón, mismo `data-*`, misma acción). **Retirado** uno:
+`button[data-puestos-guardar]`, porque Personal dejó de guardar fila por fila
+(con un botón por fila, cargarle los tres puestos a cinco personas eran quince
+toques y quince viajes al servidor). `9e178ae` sumado a `BASES`.
+
+## Parte 6 — el dashboard y el PIN en Empleados · `c6f035d` + `071bf64`
+
+**Son dos commits a propósito**: `c6f035d` toca `dashboard.html` (territorio
+compartido, lo hizo el chat de arquitectura) y `071bf64` toca
+`modulos/empleados.html` (territorio del subagente de Empleados). Son módulos
+distintos y no se mezclan en un commit.
+
+**`c6f035d` — dashboard.** Dos cosas. (1) **Los conos por revisar entran a la
+burbuja de Producción**: `mis_pendientes()` ya devolvía
+`('produccion','conos_por_revisar',…)` desde que existe la tarjeta, pero
+`MODULO_DE_PENDIENTE` **no tenía esa clave**, así que la fila caía en el aviso
+de "módulo sin tarjeta" y no se contaba en ningún lado. (2) **Entrar derecho a
+la tablet**: una cuenta que solo tiene Producción no pasa más por un dashboard
+de una sola tarjeta.
+
+**Las dos guardas del entrar derecho, que son lo que hay que no romper:**
+
+- **Exige ADEMÁS una tarea de producción.** `produccion.html` vuelve al
+  dashboard cuando no hay ninguna (su `sinAcceso()` con `setTimeout`), así que
+  redirigir sin mirarlas sería **el bucle de redirecciones ya documentado**,
+  del que no se sale por la UI. Si la consulta de tareas falló, `misTareas`
+  queda vacío y **no se redirige**: se cae del lado de mostrar el dashboard,
+  que siempre tiene salida.
+- **Una vez por sesión**, marcado en `sessionStorage`, **y solo si se pudo
+  dejar constancia**. Sin eso el "Volver al inicio de la app" de la tablet
+  rebotaría para siempre contra esta redirección; y si el storage no se puede
+  escribir, no se redirige, porque **un dashboard de una tarjeta de más es
+  mucho menos grave que una vuelta atrapada**. Una tablet que se enciende abre
+  una sesión nueva, así que el kiosco sigue entrando derecho.
+
+`dashboard-produccion` pasó de 9 a **27/27** y estrena
+`mut-dashboard-produccion.js` (**14/14**); `dashboard-pendientes` de 60 a
+**65/65** y sus mutaciones de 20 a **22/22**.
+
+**`071bf64` — el PIN de producción en la ficha de Empleados.** Estado
+("Sin PIN" / "PIN pendiente de cambiar" / "PIN propio") y, con
+`puede_asignar`, "Asignar PIN" / "Resetear PIN". **Con la RPC en `null` la
+sección no se dibuja**, que es el caso "no tenés ni `produccion:configurar` ni
+`empleados:ver_editar`".
+
+- `test-empleados-pin.js` **69/69** (nueva) y `mut-empleados-pin.js` **23/23**
+  (nueva); `test-empleados-xss.js` de 110 a **115/115**, `mut-empleados-xss.js`
+  **36/36**. La suite del PIN **contra el `empleados.html` anterior da rojo**.
+- **Asignar y resetear son la MISMA llamada** (`asignar_pin_produccion` hace
+  upsert con `debe_cambiar = true`), así que el botón solo cambia de rótulo.
+- **El cliente valida solo el largo y NO replica la lista de PINes obvios** que
+  ya tiene `_pin_valido`: una segunda copia se desincroniza en silencio, y el
+  mensaje de la base ya está escrito para una persona. Hay un test que manda
+  `1234` a propósito y verifica que llegue a la base.
+- **Si la RPC falla se dice "No se pudo leer el estado del PIN", nunca un
+  "Sin PIN" inventado** —que llevaría a asignar un PIN que ya existe—, y el
+  caso "no tenés permiso" llega como `null` y no como error, así que los dos no
+  se confunden.
+- **Aparece una dependencia cruzada que antes no existía:** `empleados.html`
+  consume dos RPCs de Producción. Si cambian de firma, esa pantalla se entera.
+
+## Parte 7 — el historial y el stock terminado · `6487dff`
+
+Con el estilo nuevo y una clase propia, **`.pr-of`** — **no reusa `.pr-cfg`**,
+que significa Configuración: usarla en dos pantallas que no lo son invita a que
+un cambio de Configuración se propague sin que nadie lo note. (No se usó
+`.pr-oficina` porque `pr-oficina` ya es un id del archivo.)
+
+Tabla de turnos con filtros, y el filtro de estado ganó **"Pendientes de
+completar"**: el valor existe en la base desde la parte 3 y no se podía elegir.
+El detalle: encargado, **operarios con sus horas** (el que se fue sigue en la
+lista con su rango y su duración), masas con ingredientes, lotes, diferencia
+contra su receta y **chip de chocolate** (de `masas.es_chocolate`, que escribe
+`registrar_masa` — **no se recalcula**), paradas **con la que no volvió
+marcada**, scrap, **sublotes con sus correcciones** (de cuántas a cuántas
+cajas, motivo, quién y cuándo; el anulado se sigue viendo tachado y no suma),
+el cierre forzado con su motivo, y los totales consumidos por insumo y lote. El
+stock terminado por producto · presentación · marca, con el total del grupo y
+la tabla de sublotes.
+
+`check-scripts` OK · acceso 26/26 · quien 129/129 · pin 144/144 · abrir 162/162 ·
+cierre 249/249 · masa 217/217 · config 208/208 · **historial 122/122** (era 68) ·
+xss 6/6 · accesos 19/19 · dashboard 27/27 · **controles 1529/1529**.
+Mutaciones: acceso 13/13 · quien 57/57 (+2 eq.) · pin 71/71 (+2 eq.) ·
+abrir 92/92 (+2 eq.) · cierre 156/156 (+34 eq.) · masa 123/123 (+10 eq.) ·
+config 181/181 (+8 eq.) · **historial 104/104 (+13 eq.)** (era 50).
+
+**Ningún control declarado**: no se perdió ni cambió ninguno. Lo único que
+cambió del inventario es que `#pr-historial-estado` ganó un `<option>` (los
+`<option>` no son controles) y que `#pr-historial-lista` perdió una clase.
+`7865d76` sumado a `BASES`.
+
+**Diez mutaciones escaparon en la primera corrida y se investigaron una por
+una** antes de agregar assertions (ninguna era falso positivo del paralelismo:
+se corrió un runner por vez). **Cinco eran el aprendizaje nuevo** —una mutación
+que le saca una columna a un `.select()` no la puede ver el doble de
+`supabase`, que devuelve la tabla entera— y se cerraron afirmando sobre el
+TEXTO del select. **Una destapó un `filter` con una rama muerta**
+(`x.cajas === null || … || x.cajas !== 0`: `null !== 0` ya es verdadero, así
+que las dos primeras condiciones no podían cambiar el resultado nunca). Tres
+eran huecos reales, y **una era un fixture flojo**: el que corregía era la
+misma persona que el encargado, así que la assertion de "quien corrigió entra
+en la búsqueda de nombres" pasaba por el camino de otro.
+
+Decisiones: el hover de la fila usa **`filter: brightness(.97)` y no un
+fondo**, porque un fondo en `button.pr-of-fila:hover` (0,2,1) le habría ganado
+al `background` de `.pr-of-fila--pendiente` (0,1,0) y **habría tapado justo el
+bordó que tiene que saltar**; las correcciones se leen en consulta aparte y no
+con un embed, porque `produccion_correcciones` tiene FK a `empleados` y el
+nombre se resuelve contra `v_empleados_publico`; el detalle trae además
+`forzado_*` y `completado_*`, porque un `pendiente_completar` sin decir quién
+lo forzó y por qué no se entiende; y `textoEntero()` se apoya en
+`formatearNumeroAr`, que ya devuelve `—` con null/''/NaN, en vez de un helper
+nuevo con su propia regla.
+
+**Y una mutación de otra suite dejó de ser única por culpa de este cambio, y el
+guard la cortó**: `mut-produccion-abrir.js` anclaba "la planilla no lee hasta"
+al `.select('empleado_id, desde, hasta')`, que ahora también usa
+`leerDetalleTurno`. Se reancló al renglón de `leerPlanilla()`. Es la quinta vez
+que ese guard atrapa una mutación que habría pegado en el renglón equivocado.
+
+---
+
+# Cierre del rediseño (23/09/2026)
+
+## Los hashes, en orden
+
+| | |
+|---|---|
+| `2ac124b` | **andamio** — el NUL del caché del sandbox, que volvía binario el archivo |
+| `9e178ae` | parte 4 — la sala de masa |
+| `33a9a22` | doc — registro de la parte 4 y del arreglo del sandbox |
+| `7865d76` + `41a1761` | parte 5 — la configuración |
+| `c6f035d` | parte 6 — dashboard: conos por revisar y entrar derecho |
+| `071bf64` | parte 6 — el PIN de producción en Empleados |
+| `6487dff` | parte 7 — historial y stock terminado |
+
+Las partes 1 a 3 ya estaban: `f502c3d`, `d3f8203`, `e0563b9`, `54a216d`,
+`8a66abe`.
+
+## Números finales, verificados de nuevo desde el chat de arquitectura
+
+`node pruebas/check-scripts.js` **OK**. **Las 55 suites de `pruebas/` en verde,
+verificadas POR EXIT CODE** y no buscando la palabra "verde" (varias no la
+imprimen). **Cero CR y cero NUL** en todos los archivos versionados que no son
+imágenes, medido sobre los bytes.
+
+```
+produccion: acceso 26/26 · quien 129/129 · pin 144/144 · abrir 162/162
+            cierre 249/249 · masa 217/217 · config 208/208 · historial 122/122
+            xss 6/6 · controles 1529/1529
+dashboard:  pendientes 65/65 · produccion 27/27
+empleados:  pin 69/69 · xss 115/115
+accesos:    produccion 19/19
+```
+
+## Lo que se recuperó al arrancar, y una corrección que importa
+
+La sesión anterior se cortó a mitad de la parte 4 y dejó **1.646 líneas sin
+commitear**. Se guardaron enteras en
+`C:\Users\Facu\proyectos\traspasos-pendientes\produccion-parte4-a-medias\`
+(el `.patch`, el `BASE-HEAD.txt` y los 7 archivos completos), se dejó el árbol
+limpio con `git checkout --` —nunca `git stash`— y la parte 4 se rehízo desde
+el árbol limpio **verificando cada pieza** contra el README de diseño y contra
+los cuerpos de las RPCs. Casi todo el trabajo a medias estaba bien y se
+aprovechó; lo que se rehízo fueron tres bugs que la revisión encontró (están en
+la entrada de la parte 4).
+
+**CORRECCIÓN, y conviene que quede escrita porque dos lectores distintos se
+comieron el mismo error el mismo día:** se informó —primero el subagente,
+después la verificación— que esos archivos "venían enteros en CRLF" (6.897 y
+6.916 "CR"). **Era falso: los dos números eran la CANTIDAD DE LÍNEAS.** Medido
+con Python sobre los bytes, `CR = 0` en el blob, en el árbol y en la copia
+guardada. La causa es que `grep -c $'\r'` anidado adentro de `"$( … )"` puede
+quedarse sin el CR y degradarse a `grep -c ''`, que matchea todas las líneas.
+**Nunca hubo CRLF y la "conversión a LF" fue un no-op.** El aprendizaje quedó
+escrito en `CLAUDE.md`.
+
+## Lo que NO se pudo probar — leer antes del guion
+
+- **Nada se probó con una sesión real en el navegador, en ninguna de las siete
+  partes.** Ni la tablet, ni el teclado del PIN en una pantalla táctil, ni el
+  cierre por inactividad, ni el Wake Lock, ni la impresión de la hoja de PINes
+  (`window.print`), ni el circuito sin señal de verdad, ni las medidas a
+  1280×800, 800×1280 y 390 px.
+- **Ninguna RPC se ejecutó.** El conector de Supabase está en **solo lectura**:
+  todos los contratos se leyeron con `pg_get_functiondef` y las suites corren
+  contra un doble. **Cero SQL de escritura en toda la tanda.**
+- **La única excepción** es la parte 7: el Historial y el Stock terminado **sí
+  se miraron renderizados** (una foto estática fuera del repo, con el CSS y los
+  renders reales, midiendo con JS sobre el DOM). Se verificó que la grilla no
+  desborda, los fondos y chips de cada estado, y que los totales cierran sin
+  contar lo anulado. En la parte 5 se midió lo mismo para Personal (filas de
+  52 px, las siete columnas sin desborde a 1440).
+- El **circuito real de punta a punta** —abrir un turno, hacer masas, cargar lo
+  producido, cerrar— **no se corrió nunca contra la base**.
+
+## Guion para Facu
+
+### En la tablet (1280×800, apaisada)
+
+1. **Los modos.** Abrir la app con la cuenta de la tablet. Tiene que arrancar
+   en **PRODUCCIÓN**, con el fondo gris, y **SALA DE MASA punteada** con
+   "El encargado tiene que abrir el turno". Mirá los dos modos **de lejos y de
+   reojo**: la idea es reconocer el modo desde la puerta sin leer.
+2. **El PIN.** Entrar a Producción: elegir tu nombre, tipear el PIN con **el
+   teclado de la pantalla** (no tiene que aparecer el del sistema). Probar un
+   PIN equivocado y mirar que diga cuántos intentos quedan y que **no diga si
+   falló el nombre o el PIN**. Con un PIN de primer uso, tiene que **obligar a
+   elegir uno propio** y no dejar entrar de otra forma.
+3. **Abrir turno.** Fecha con ‹ ›, turno, y **varios operarios por máquina**
+   (antes era uno solo). Mirá que los lotes se lean **desde un metro**.
+4. **La sala de masa.** Ahora se habilita. Entrar, elegir máquina, simple o
+   doble, y los tres botones. **Lo más importante de probar acá:**
+   - que **la receta entre COMPLETA sin scroll**, con todos los ingredientes
+     incluso los que están en cero;
+   - que **los lotes vengan puestos** de la masa anterior en las tres opciones,
+     y **vacíos en la primera masa del día** (ahí Registrar se bloquea y el pie
+     dice qué falta);
+   - que **NO pregunte nunca "¿mismos lotes?"**;
+   - que **el chip "Chocolate" aparezca solo por cargarle cacao**, sin ningún
+     botón de chocolate;
+   - **"Queda"**: bajar un lote hasta que quede menos de lo que lleva una masa
+     y ver el renglón tintado con "no alcanza para otra";
+   - **"+ Otro"**: agregar uno con nombre y cantidad, ver el sello OTRO, y que
+     **no descuente stock**.
+5. **Sin señal.** Poner el celular/tablet en modo avión **antes** de tocar
+   Registrar. Tiene que aparecer la banda bordó *"La masa 13 quedó guardada en
+   esta tablet… No la cargues de nuevo."* Volver la señal y mirar que **se mande
+   sola y quede UNA sola masa**. Después **recargar la tablet con una masa
+   pendiente** y confirmar que sigue esperando y que al enviarse tampoco se
+   duplica.
+6. **Cargar producción durante el turno.** En la planilla, "+ Agregar
+   producto": producto → con cono → presentación → cono → cajas. Que **los de
+   chocolate estén abajo y separados**, que el cálculo de unidades cierre, y
+   que al confirmar aparezca **el sublote que devolvió la base**. Corregir uno
+   con motivo y borrar otro: **el borrado tiene que quedar a la vista, tachado,
+   y el total bajar**.
+7. **Un cono nuevo.** "+ Agregar cono nuevo": tiene que quedar elegido, decir
+   **"nuevo, a revisar"** y **poder usarse igual**.
+8. **Cerrar con una parada abierta.** Parar la máquina y, sin reanudar, tocar
+   **Cerrar planilla**: tiene que **dejar seguir**, avisar que la parada va a
+   quedar como "no volvió en todo el turno" y **pedir confirmar una sola vez**.
+9. **El error pegado al botón.** Cerrar sin poner el scrap: **el botón se tiene
+   que poder tocar** (esto es lo que se arregló), el mensaje aparece **arriba
+   del botón** y el campo del scrap se marca en bordó.
+10. **Cerrar a la fuerza.** Dejar una máquina abierta de un día para el otro.
+    Al otro día tiene que ofrecer **cerrarla a la fuerza**; después la máquina
+    queda **libre** y arriba aparece **"pendiente de completar"**. Entrar por
+    ahí, cargar lo producido y completarla: **el stock entra recién ahí**.
+11. **Una cuenta de solo Producción** (si hay una): al entrar tiene que ir
+    **derecho a la tablet**, sin pasar por el dashboard. Y desde adentro,
+    "Volver al inicio de la app" tiene que **poder llegar al dashboard** y no
+    rebotar.
+
+### En la compu
+
+1. **Configuración → Personal.** Tocar casillas de varias personas: cada fila
+   tocada se marca y el botón tiene que decir **"Guardar los cambios · N
+   filas"**. Intentar salir sin guardar: tiene que avisar.
+2. **La hoja de PINes.** "Generar PIN para los que no tienen" y **mandarla a
+   imprimir de verdad** (esto no se pudo probar acá): que salga **una tira por
+   persona**, recortable, con nombre y PIN. Al cerrar, **los PINes no tienen
+   que poder verse de nuevo**. Si no había nadie sin PIN, tiene que decirlo en
+   vez de abrir una hoja vacía.
+3. **Conos pendientes.** En Marcas / Conos, aceptar uno **corrigiéndole el
+   nombre** y rechazar otro. Después mirá el **dashboard**: la burbuja de
+   Producción tiene que contar los que quedan por revisar.
+4. **Empleados.** Abrir la ficha de una persona: tiene que estar **"PIN de
+   producción"** con su estado y, si tenés `produccion:configurar`, el botón de
+   asignar o resetear. Probá poner **`1234`**: lo tiene que rechazar **la base**
+   con su mensaje.
+5. **Historial.** Filtrar por "Pendientes de completar". Abrir el detalle de un
+   turno con masas, paradas y correcciones: mirá que la **parada que no volvió**
+   esté marcada, que el **sublote anulado se vea tachado y no sume**, y que los
+   **totales por insumo y lote** cierren.
+6. **Cheques** (de la tanda anterior, quedó pendiente de mirar): que los seis
+   colores de estado se distingan **de un vistazo** con la cartera de verdad, y
+   que **la leyenda no ocupe demasiado a 390 px**.
