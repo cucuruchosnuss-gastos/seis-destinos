@@ -215,3 +215,27 @@ Al final de la familia **"EL TEST VERDE QUE MIDE OTRA COSA"**:
 Se va completando a medida que cada parte cierra. Todas las suites y
 `check-scripts` en verde antes de cada commit.
 
+## Parte 1 — barra de modos, colores y acceso · `f502c3d`
+
+Barra fija de 64 px con los dos modos repartiéndose el ancho, fondo de pantalla
+por modo, SALA DE MASA deshabilitada (punteada) sin máquinas abiertas, "¿Quién
+sos?" + PIN con teclado propio, los cinco motivos de PIN, cambio obligatorio,
+acceso maestro de 8 números y "Dar acceso por hoy".
+
+`check-scripts` OK · acceso 23/23 · quien 129/129 · pin 144/144 (nueva) ·
+abrir 59/59 · cierre 104/104 · config 104/104 · historial 68/68 · masa 143/143 ·
+xss 6/6 · accesos 19/19 · dashboard 9/9 · **controles 586/586**.
+Mutaciones: acceso 13/13 · quien 57/57 (+2 eq.) · pin 71/71 (+2 eq.) ·
+abrir 33/33 · cierre 66/66 (+14) · config 99/99 (+1) · historial 50/50 (+12) ·
+masa 92/92 (+12).
+
+Decisiones tomadas sin preguntar: en el quinto error la base todavía devuelve
+`pin_incorrecto` con `intentos_restantes: 0` y el `bloqueado_hasta` llega recién
+en el intento siguiente, así que ese caso dice "quedó bloqueado unos minutos"
+sin inventar una hora; `personasParaPuesto()` estaba mal y ahora mira también
+los puestos temporales vigentes, igual que `tiene_puesto_produccion()`; el PIN
+maestro vive en un `let` del módulo y recargar lo cierra; una tablet sin modo
+guardado arranca en PRODUCCIÓN y se eliminó la pantalla "¿Para qué se usa esta
+tablet?"; se agregó "Cambiar de fábrica" (solo con dos o más unidades), que si
+no quedaba inalcanzable al esconder la cabecera.
+
