@@ -26,6 +26,7 @@ const BASES = [
   '87d3c9d', // Parte 2: la pantalla nueva y los clientes con sus apodos
   'd525f8f', // Parte 3: cargar un pedido, con renglones de producto y de texto libre
   '4062707', // Parte 4: la lista de pedidos con su avance, y el detalle de cada uno
+  '51d3749', // Parte 5: imprimir el pedido para armarlo en el depósito
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
