@@ -1,4 +1,54 @@
-# Traspaso — Producción: producir descuenta el EMPAQUE (24/09/2026)
+# Traspaso — Empaque en Producción y el arreglo de Accesos (24/09/2026)
+
+**Estado: CLAUDE.md YA ESTÁ ACTUALIZADO** (commit de docs de esta tanda) con las
+tablas y RPCs del empaque, el bloque "EL EMPAQUE" del módulo 10, las suites, el
+aprendizaje del default que se come el `undefined`, `consumo_produccion` ya en
+uso en Stock, y el CHECK de 43 claves. La definición del subagente
+`.claude/agents/produccion.md` también suma las RPCs y tablas del empaque.
+Este archivo queda para el guion de Facu y las decisiones; se puede borrar
+cuando Facu lo haya probado.
+
+## Los hashes
+
+| Parte | Hash | Qué |
+|---|---|---|
+| tag | `antes-de-empaque-2026-09-24` | punto de vuelta, en `29b36e4` |
+| 0 | `6072731` | Accesos: sale el aviso de que Pedidos no estaba en el CHECK; suites a 43 claves; se borra el traspaso de permisos |
+| 1 | `b112134` | Elegir la caja y el embolsado al cargar lo producido |
+| 2 | `20f3e83` | Caja y embolsado por renglón, y el empaque consumido del turno |
+| 3 | `e7bea21` | Configuración → Empaque, y "Doble bolsa" por cono |
+| 4 | `71e0691` | Avisos de stock del empaque, sin impedir la carga |
+
+## Parte 0 (la hice yo, no el subagente)
+
+Verificado con `pg_get_constraintdef` y `pg_policy` el 24/09/2026: el CHECK
+tiene 43 claves (las tres de Pedidos incluidas) y las policies de
+`productos_terminados`, `producto_presentaciones`, `marcas_personalizadas` y
+`clientes` aceptan `pedidos:ver` y `pedidos:cargar`. Se sacó el comentario de
+accesos.html; `test-accesos-produccion.js` compara el catálogo contra las 43
+(20/20), `test-accesos-pedidos.js` exige que el aviso NO vuelva (25/25), y la
+mutación correspondiente pasó a "vuelve el aviso" (6/6). Se borró
+`2026-09-23-pedidos-permisos.md` y se ajustó la referencia en
+`2026-09-23-pedidos.md`.
+
+## Lo que conviene que Facu decida
+
+1. **La tablet y `stock:ver`.** Sin esa tarea, la cuenta de la tablet ve "No se
+   puede ver el stock con este usuario" en vez del aviso de faltantes y del
+   empaque consumido. Para que lo vea, dale `stock:ver` en su unidad desde
+   Accesos (no hace falta nada nuevo).
+2. **Si no se puede leer la configuración del empaque, no se deja agregar
+   producto** (decisión del subagente, la dejé). El motivo: agregar sin la caja
+   deja el renglón sin descontar en silencio. Si preferís que la fábrica cargue
+   igual en ese caso, es un cambio chico: avisar y seguir sin caja.
+3. **`cerrar_turno` no valida en la base que la caja esté habilitada** (sí lo
+   hace `registrar_produccion_item`). Hoy la pantalla le manda `p_productos`
+   vacío, así que no importa; si algún día se usa ese camino, conviene que la
+   base lo valide también.
+
+---
+
+# Detalle del subagente de Producción
 
 Prompt para el chat de arquitectura. Autocontenido: quien lo lee no vio nada del trabajo.
 
@@ -15,7 +65,7 @@ Prompt para el chat de arquitectura. Autocontenido: quien lo lee no vio nada del
 | 1 | `b112134` | Elegir la caja y el embolsado al cargar lo producido |
 | 2 | `20f3e83` | La caja y el embolsado de cada renglón, y el empaque consumido del turno |
 | 3 | `e7bea21` | Configurar el empaque de cada presentación y la doble bolsa de los conos |
-| 4 | (el commit que trae este archivo) | Avisos de stock del empaque |
+| 4 | `71e0691` | Avisos de stock del empaque |
 
 ## Lo que se verificó contra la base ANTES de escribir código (24/09/2026, solo lectura)
 
@@ -85,7 +135,7 @@ Prompt para el chat de arquitectura. Autocontenido: quien lo lee no vio nada del
 - Controles: produccion 1541/1541, stock 988/988, pedidos 315/315, cobranzas 327/327, cheques 181/181.
 - Suites tocadas además de la nueva: `sandbox-produccion.js` (funciones nuevas), `seguras-produccion.js` (tres helpers que arman HTML escapado), `test-produccion-cierre.js` (6 pasos y el payload con caja y embolsado, por diseño), y las anclas de `mut-produccion-cierre.js` / `mut-produccion-historial.js` (renglones que cambiaron).
 
-## Qué tocar en CLAUDE.md
+## Qué tocar en CLAUDE.md (YA APLICADO)
 
 1. **Sección de tablas "Producción"**: si todavía no está (la base la armó el chat de arquitectura), sumar `produccion_items.caja_insumo_id` / `embolsado`, `unidades_negocio.caja_predeterminada_id`, `presentacion_cajas`, `presentacion_empaque`, `marcas_personalizadas.doble_bolsa`, `stock_movimientos.produccion_item_id`, las RPCs `guardar_empaque_presentacion` y `marcar_doble_bolsa`, la firma nueva de `registrar_produccion_item` y `_descontar_empaque`. Verificarlo contra la base, no contra este archivo.
 2. **Módulo "10. Producción"**: un bloque nuevo "EL EMPAQUE" con lo de las cuatro partes de arriba (el paso de la caja que se saltea, el embolsado, la doble bolsa, el consumo mostrado, el empaque consumido neto en el historial, la pestaña Empaque, los avisos de stock que no bloquean) y la regla de `stock:ver`: **sin el permiso la pantalla no consulta el libro ni la vista, y lo dice**.

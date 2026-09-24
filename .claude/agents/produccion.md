@@ -10,7 +10,7 @@ Leé CLAUDE.md del repo antes de hacer nada. Es la fuente de verdad del proyecto
 
 ## Tu territorio, y es exclusivo
 - modulos/produccion.html
-- Las RPCs del módulo: abrir_turnos, abrir_turno, datos_para_masa, registrar_masa, anular_masa, iniciar_parada, terminar_parada, cerrar_turno, personal_produccion, puede_ver_produccion, guardar_receta_original, guardar_ingrediente, guardar_ingrediente_insumos, guardar_maquina, guardar_puestos, guardar_producto, guardar_presentacion y guardar_marca; y las internas _masa_anterior, _receta_vigente, _lotes_con_stock y el trigger _masa_item_descontar_stock.
+- Las RPCs del módulo: abrir_turnos, abrir_turno, datos_para_masa, registrar_masa, anular_masa, iniciar_parada, terminar_parada, cerrar_turno, personal_produccion, puede_ver_produccion, guardar_receta_original, guardar_ingrediente, guardar_ingrediente_insumos, guardar_maquina, guardar_puestos, guardar_producto, guardar_presentacion, guardar_marca, registrar_produccion_item, corregir_produccion_item, anular_produccion_item, guardar_empaque_presentacion y marcar_doble_bolsa; y las internas _masa_anterior, _receta_vigente, _lotes_con_stock y el trigger _masa_item_descontar_stock.
 
 ## Tablas que usás
 Verificado contra information_schema, pg_policies y pg_proc el 22/09/2026. Todas tienen SOLO policy de SELECT (puede_ver_produccion(), y algunas además stock:ver): toda escritura pasa por las RPCs.
@@ -19,10 +19,12 @@ Verificado contra information_schema, pg_policies y pg_proc el 22/09/2026. Todas
   - turnos_produccion, turno_operarios, masas, masa_items, paradas_produccion
   - puestos_produccion, productos_terminados, producto_presentaciones, marcas_personalizadas
   - produccion_items y stock_terminado_movimientos (las escribe cerrar_turno)
+  - presentacion_cajas y presentacion_empaque (el empaque de cada presentación, con guardar_empaque_presentacion; 24/09/2026)
 - SOLO LEÉS:
   - unidades_negocio, insumos (el catálogo, que es de Stock), v_empleados_publico / personal_produccion para los nombres
-  - empleados y empleado_tareas (la fila propia y las tareas de produccion, para los permisos de la pantalla)
-- COMPARTIDAS: stock_movimientos es el libro de Stock. Tus masas escriben en él (tipo consumo_sala_masa, con masa_item_id) a través del trigger de masa_items, y anular_masa borra esas filas. Antes de tocar su estructura, sus policies o ese trigger, mirá qué hace el módulo Stock y, si lo afecta, devolvé un traspaso al chat de Stock. marcas_personalizadas, productos_terminados, producto_presentaciones y stock_terminado_movimientos también los lee quien tiene stock:ver.
+  - empleados y empleado_tareas (la fila propia, las tareas de produccion y stock:ver, para los permisos de la pantalla)
+  - v_stock_insumos (el aviso de empaque que no alcanza), solo con stock:ver
+- COMPARTIDAS: stock_movimientos es el libro de Stock. Tus masas escriben en él (tipo consumo_sala_masa, con masa_item_id) a través del trigger de masa_items, y anular_masa borra esas filas. Lo producido también escribe en él: _descontar_empaque (interna, desde registrar/corregir/anular_produccion_item y cerrar_turno) descuenta el empaque como consumo_produccion con produccion_item_id y lo devuelve como ajuste. La pantalla nunca escribe en el libro. Antes de tocar su estructura, sus policies o ese trigger, mirá qué hace el módulo Stock y, si lo afecta, devolvé un traspaso al chat de Stock. marcas_personalizadas, productos_terminados, producto_presentaciones y stock_terminado_movimientos también los lee quien tiene stock:ver.
 
 ## Lo que NO tocás, nunca
 - Ningún otro módulo (modulos/*.html que no sea produccion.html)
