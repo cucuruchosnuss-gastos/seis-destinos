@@ -15,6 +15,6 @@ correrMutaciones({
     { nombre: 'cargar con otra clave', de: "{ modulo: 'pedidos', tarea: 'cargar',", a: "{ modulo: 'pedidos', tarea: 'carga'," },
     { nombre: 'configurar pide ver', de: "label: 'Dar de alta y editar los clientes y sus apodos', conAlcance: true,", a: "label: 'Dar de alta y editar los clientes y sus apodos', conAlcance: true, requiere: ['pedidos:ver']," },
     { nombre: 'la descripción de cargar pierde el "no se elige"', de: 'El estado pendiente / en producción / listo no se elige: lo decide el avance.', a: 'El estado se elige a mano.' },
-    { nombre: 'se va el aviso del CHECK', de: 'estas tres claves todavía NO están en el CHECK', a: 'estas tres claves ya están en el CHECK' },
+    { nombre: 'vuelve el aviso del CHECK', de: '// Las tres están en el CHECK chk_tarea_valida desde el 23/09/2026', a: '// estas tres claves todavía NO están en el CHECK' },
   ],
 })

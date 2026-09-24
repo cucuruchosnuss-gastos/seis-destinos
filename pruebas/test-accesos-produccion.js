@@ -1,9 +1,9 @@
 // Las tres tareas de Producción en el CATALOGO_TAREAS de accesos.html
 // (22/09/2026), en sincronía con el CHECK chk_tarea_valida.
 //
-// El CHECK se leyó con pg_get_constraintdef el 22/09/2026: 40 claves, las 37
-// de antes más produccion:cargar, produccion:ver y produccion:configurar. Si el
-// CHECK cambia, esta lista se actualiza leyendo el constraint real.
+// El CHECK se leyó con pg_get_constraintdef el 24/09/2026: 43 claves, las 37
+// de antes, produccion:cargar/ver/configurar y pedidos:ver/cargar/configurar.
+// Si el CHECK cambia, esta lista se actualiza leyendo el constraint real.
 //
 //   node pruebas/test-accesos-produccion.js
 
@@ -17,7 +17,7 @@ const src = fs.readFileSync(ARCHIVO, 'utf8')
 console.log(`ARCHIVO ${ARCHIVO} (${src.length} bytes)`)
 const { chk, fin } = arnes()
 
-const CHECK_22_09_2026 = [
+const CHECK_24_09_2026 = [
   'gastos:ver_exportar', 'gastos:editar_anular', 'gastos:gastos_empresa', 'gastos:gestionar_proyectos',
   'caja:ver_listado', 'caja:retiros_todos', 'caja:movimientos_todos', 'caja:ingreso_externo_propio',
   'caja:ingreso_externo_empresa', 'caja:ver_empresa', 'caja:egreso_empresa', 'caja:traspaso_empresa',
@@ -29,21 +29,17 @@ const CHECK_22_09_2026 = [
   'stock:enviar_transferencia', 'stock:recibir_transferencia', 'stock:ajustar_inventario', 'cobranzas:cargar',
   'cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:editar_anular',
   'produccion:cargar', 'produccion:ver', 'produccion:configurar',
+  'pedidos:ver', 'pedidos:cargar', 'pedidos:configurar',
 ]
 
 const CATALOGO = new Function(extraerConst(src, 'CATALOGO_TAREAS') + '\nreturn CATALOGO_TAREAS')()
 const tareas = CATALOGO.flatMap(g => g.tareas || [])
 const claves = tareas.map(t => `${t.modulo}:${t.tarea}`)
 
-// Las tres de Pedidos (23/09/2026) entraron al catálogo ANTES que al CHECK:
-// el conector de Supabase de esa sesión era de solo lectura. Son las únicas
-// claves de más que se aceptan; ver test-accesos-pedidos.js.
-const PENDIENTES_DE_CHECK = ['pedidos:ver', 'pedidos:cargar', 'pedidos:configurar']
-chk('el catálogo tiene las 40 claves del CHECK', CHECK_22_09_2026.every(k => claves.includes(k)),
-  `faltan ${CHECK_22_09_2026.filter(k => !claves.includes(k)).join(', ')}`)
-chk('fuera del CHECK, solo las tres de Pedidos', claves.filter(k => !CHECK_22_09_2026.includes(k)).every(k => PENDIENTES_DE_CHECK.includes(k)) &&
-  claves.length === 40 + PENDIENTES_DE_CHECK.length,
-  claves.filter(k => !CHECK_22_09_2026.includes(k)).join(', '))
+chk('el catálogo tiene las 43 claves del CHECK', CHECK_24_09_2026.every(k => claves.includes(k)),
+  `faltan ${CHECK_24_09_2026.filter(k => !claves.includes(k)).join(', ')}`)
+chk('ninguna clave fuera del CHECK', claves.length === 43 && claves.every(k => CHECK_24_09_2026.includes(k)),
+  claves.filter(k => !CHECK_24_09_2026.includes(k)).join(', '))
 chk('ninguna clave repetida', new Set(claves).size === claves.length)
 
 const grupo = CATALOGO.find(g => g.grupo === 'Producción')

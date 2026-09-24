@@ -6,9 +6,9 @@
 // 23/09/2026—, así que el alcance del catálogo tiene su otra mitad en el
 // servidor y no es un selector que no restringe nada.
 //
-// LAS TRES TODAVÍA NO ESTÁN EN chk_tarea_valida (leído con
-// pg_get_constraintdef el 23/09/2026: 40 claves, ninguna de pedidos). Hasta
-// que el chat de permisos las agregue, tildarlas y guardar lo rechaza la base.
+// Las tres están en chk_tarea_valida (leído con pg_get_constraintdef el
+// 24/09/2026: 43 claves); test-accesos-produccion.js compara el catálogo
+// contra esa lista entera.
 //
 //   node pruebas/test-accesos-pedidos.js
 
@@ -40,6 +40,6 @@ const claves = CATALOGO.flatMap(g => g.tareas || []).map(t => `${t.modulo}:${t.t
 chk('ninguna clave de pedidos repetida en otro grupo', claves.filter(k => k.startsWith('pedidos:')).length === 3)
 chk('el label de cargar dice que el estado no se elige', /no se elige/.test((grupo?.tareas || []).find(t => t.tarea === 'cargar')?.descripcion || ''))
 chk('el label de configurar habla de los apodos', /apodos/.test((grupo?.tareas || []).find(t => t.tarea === 'configurar')?.label || ''))
-chk('el aviso de que falta el CHECK está escrito al lado', /todavía NO están en el CHECK/.test(src))
+chk('ya no queda el aviso de que falta el CHECK', !/todavía NO están en el CHECK/.test(src))
 
 fin()
