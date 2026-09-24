@@ -2304,6 +2304,102 @@
       color: var(--verde-oscuro);
     }
 
+    /* ── "Facturas por ingresar" (el circuito inverso) ──────────────────────
+       Facturas de insumos que entraron por Gastos o por Cuentas Corrientes y
+       cuya mercadería nunca pasó por acá. La tarjeta NO es tocable entera:
+       el botón crea una cabecera en la base, y eso tiene que ser una decisión
+       explícita y no un toque al pasar. */
+    .tarjeta-por-ingresar { cursor: default; align-items: flex-start; }
+    .tarjeta-por-ingresar .btn-mp-primario { margin-top: 0.625rem; width: auto; padding-left: 1rem; padding-right: 1rem; }
+    .por-ingresar__importe { font-size: 0.875rem; font-weight: 700; color: var(--color-texto); white-space: nowrap; }
+    .chip-origen-mp {
+      display: inline-block;
+      font-size: 0.65625rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 6px;
+      padding: 0.1875rem 0.4375rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      background: var(--marron-suave);
+      color: var(--marron-oscuro);
+    }
+    /* Las notas de estas tarjetas NO se cortan con "…": avisan que el mismo
+       papel aparece dos veces, y cortadas no se leen. */
+    .nota-por-ingresar {
+      font-size: 0.75rem;
+      color: var(--marron-oscuro);
+      font-weight: 600;
+      margin-top: 0.375rem;
+      overflow-wrap: anywhere;
+    }
+    .por-ingresar__error { color: #B91C1C; font-size: 0.75rem; margin-top: 0.375rem; overflow-wrap: anywhere; }
+    /* "Faltan los renglones": un ingreso creado desde un comprobante al que
+       nunca se le cargó la mercadería. */
+    .ingreso__faltan {
+      font-size: 0.75rem;
+      font-weight: 650;
+      color: var(--marron-oscuro);
+      margin-top: 0.375rem;
+      overflow-wrap: anywhere;
+    }
+    .btn-completar-ingreso { margin-top: 0.5rem; width: auto; padding-left: 1rem; padding-right: 1rem; }
+    /* La foto del comprobante mientras se cargan los renglones de un ingreso
+       ya creado. */
+    .wz-completar-foto {
+      margin-top: 0.875rem;
+      padding: 0.75rem;
+      border-radius: 17px;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      min-width: 0;
+    }
+    .wz-completar-foto[hidden] { display: none; }
+    .wz-completar-foto img { display: block; max-width: 100%; max-height: 320px; margin: 0 auto 0.625rem; border-radius: 12px; }
+    .wz-completar-foto__nota { font-size: 0.8125rem; color: var(--color-texto-suave); overflow-wrap: anywhere; }
+    .wz-completar-foto__acciones { display: flex; justify-content: flex-end; margin-top: 0.5rem; }
+
+    /* ── Burbujas de pendientes (mis_pendientes) ─────────────────────────
+       La receta de .tarjeta-modulo__burbuja de css/main.css, pero EN LÍNEA y
+       no absoluta: acá va al lado de un texto, no en la esquina de una
+       tarjeta. Local para no tocar la global, que es de todos los módulos. */
+    .burbuja-mp {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      padding: 0 0.375rem;
+      margin-left: 0.375rem;
+      border-radius: 999px;
+      background: var(--rojo);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .linea-pendiente-mp {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.375rem;
+      margin-bottom: 0.875rem;
+      padding: 0.625rem 0.875rem;
+      border-radius: 14px;
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      min-width: 0;
+    }
+    .linea-pendiente-mp[hidden] { display: none; }
+    .linea-pendiente-mp .burbuja-mp { margin-left: 0; }
+    .linea-pendiente-mp__link { color: var(--marron-oscuro); font-weight: 700; margin-left: auto; }
+
     /* El aviso al pie del listado cuando falta stock:ver y hay transferencias
        que NO se están mostrando. Un listado incompleto que no lo dice es peor
        que no tener el dato. */
@@ -2419,6 +2515,20 @@
            Gateado por stock:recibir_transferencia. -->
       <button type="button" class="btn-item-secundario" id="btn-abrir-internos"
               style="margin-bottom:0.875rem;" hidden>Ingresos internos</button>
+
+      <!-- FACTURAS POR INGRESAR — el circuito en el otro sentido. Facturas de
+           insumos que se cargaron por Gastos o por Cuentas Corrientes y cuya
+           mercadería nunca pasó por acá (RPC facturas_sin_ingreso). Solo con
+           materia_prima:cargar, y solo si hay alguna: un botón que dice "0"
+           todos los días deja de leerse. -->
+      <button type="button" class="btn-item-secundario" id="btn-abrir-por-ingresar"
+              style="margin-bottom:0.875rem;" hidden>Facturas por ingresar</button>
+
+      <!-- Insumos creados al vuelo que esperan revisión. Caen en la tarjeta de
+           Ingreso del dashboard (mis_pendientes los devuelve como
+           materia_prima) pero se RESUELVEN en Stock → Catálogo: acá solo se
+           dice cuántos hay y a dónde ir. -->
+      <div class="linea-pendiente-mp" id="linea-insumos-revisar" hidden></div>
 
       <!-- Gastos de materia prima YA PAGADOS cuya mercadería todavía no se
            cargó acá (RPC gastos_sin_ingreso). Cuenta desde
@@ -2537,6 +2647,40 @@
     </div><!-- /pantalla-internos -->
 
     <!-- ═══════════════════════════════════════════════════════════════════
+         FACTURAS POR INGRESAR — el circuito inverso
+
+         Una factura de insumos que se cargó desde Gastos o desde Cuentas
+         Corrientes y cuya mercadería nunca entró al stock. "Cargar lo que
+         entró" llama a crear_ingreso_desde_comprobante —que crea SOLO la
+         cabecera, ya vinculada al gasto o a la factura— y abre el wizard en el
+         modo "completar ingreso existente": únicamente los renglones.
+    ════════════════════════════════════════════════════════════════════ -->
+    <div id="pantalla-por-ingresar" hidden>
+
+      <div class="wz-header">
+        <button type="button" class="mp-header__volver" id="btn-por-ingresar-volver">‹ Volver</button>
+        <span class="wz-header__titulo">Facturas por ingresar</span>
+      </div>
+
+      <!-- El texto lo pone el render (AVISO_POR_INGRESAR): solo cuando hay
+           filas. Con la lista vacía no hay nada que advertir. -->
+      <div class="wz-aviso" id="aviso-por-ingresar" hidden></div>
+      <div class="wz-aviso wz-aviso--error" id="por-ingresar-error" hidden></div>
+
+      <div class="lista-contenido" id="lista-por-ingresar" style="margin-top:0.875rem;"></div>
+
+      <div id="por-ingresar-cargando" class="estado-vacio" hidden>
+        <div class="spinner"></div>
+        <p class="estado-vacio__descripcion">Cargando…</p>
+      </div>
+      <div id="por-ingresar-vacio" class="estado-vacio" hidden>
+        <div class="estado-vacio__icono">🧾</div>
+        <div class="estado-vacio__titulo">Nada por ingresar</div>
+        <p class="estado-vacio__descripcion">No hay facturas de insumos sin su ingreso en tus unidades.</p>
+      </div>
+    </div><!-- /pantalla-por-ingresar -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════
          WIZARD DE CARGA (etapa 2)
 
          Drill-down por `hidden`, mismo criterio que el resto del módulo. El
@@ -2547,7 +2691,7 @@
 
       <div class="wz-header">
         <button type="button" class="mp-header__volver" id="btn-wizard-volver">‹ Volver</button>
-        <span class="wz-header__titulo">Nuevo ingreso</span>
+        <span class="wz-header__titulo" id="wz-header-titulo">Nuevo ingreso</span>
       </div>
 
       <div class="wz-progreso" id="wz-progreso"></div>
@@ -2735,6 +2879,12 @@
           <div class="wz-items-contador" id="wz-items-contador"></div>
         </div>
         <div class="wz-subtitulo">Revisá cada producto y cargá el lote.</div>
+
+        <!-- Solo en el modo "completar ingreso existente": la foto del
+             comprobante a la vista mientras se cargan los renglones, y en qué
+             quedó la lectura de esa foto. -->
+        <div class="wz-completar-foto" id="wz-completar-foto" hidden></div>
+        <div class="wz-aviso wz-aviso--neutro" id="wz-completar-ocr" hidden></div>
 
         <div class="wz-aviso wz-aviso--neutro" style="margin-top:0.875rem;">
           Revisá que estén todos los productos del remito. Si falta alguno, agregalo con el botón de abajo.
@@ -2973,6 +3123,22 @@
       // El resultado de la última llamada al circuito, para mostrarlo en el
       // detalle del ingreso recién guardado. { ingresoId, nivel, lineas }
       resultadoCircuito: null,
+
+      // ── Facturas por ingresar (el circuito inverso) ──────────────────
+      porIngresar: [],             // filas de facturas_sin_ingreso()
+      errorPorIngresar: null,
+      cargandoPorIngresar: false,
+      // El error de "Cargar lo que entró", pegado a SU fila: { id, texto }.
+      porIngresarError: null,
+      // Qué facturas ya tienen un remito vinculado (tabla puente o columna
+      // vieja). Una factura así puede no tener renglones a propósito, y no es
+      // un ingreso "al que le faltan los renglones".
+      facturasConRemito: new Set(),
+
+      // ── Pendientes de mis_pendientes() ───────────────────────────────
+      // Map 'modulo:clave' -> { cantidad, texto }, o null si la llamada
+      // falló: con null no se dibuja NINGUNA burbuja.
+      pendientes: null,
     }
 
     // Mismo patrón que los otros módulos: super_admin tiene bypass y falla
@@ -3668,6 +3834,11 @@
 
       await cargarIngresos()
       await cargarPagadoSinIngresar()
+      // DESPUÉS de "Pagado sin ingresar": la lista saca los gastos que ya
+      // están allá.
+      await cargarFacturasPorIngresar()
+      // Las burbujas no frenan nada: se piden sin esperar.
+      cargarPendientesMp()
       // Después de cargarIngresos(): estado.entregas recién existe acá. Y el del
       // gasto va PRIMERO: los dos limpian la URL, y un enlace trae uno solo.
       await abrirGastoDeLaUrl()
@@ -3952,6 +4123,10 @@
       // un remito SIN fusionarse con él (cuando además trae mercadería nueva),
       // así que "tiene un solo comprobante" ya no equivale a "sin facturar".
       estado.remitosFacturados = new Set([...porFactura.values()].flatMap(set => [...set]))
+      // Y desde el lado de la factura: la usa faltanRenglones() para no marcar
+      // "Faltan los renglones" en una factura vinculada a un remito, que de los
+      // datos viejos puede no tener ninguno a propósito.
+      estado.facturasConRemito = new Set(porFactura.keys())
 
       return new Map([...porFactura].map(([k, set]) => [k, [...set]]))
     }
@@ -4181,6 +4356,7 @@
             </div>
             ${e.huerfana ? '<div class="ingreso__nota">Vinculada a un remito que no estás viendo — la mercadería ya la cargó ese remito.</div>' : ''}
             ${(e.noSuma && !e.huerfana) ? '<div class="ingreso__nota">No sumó mercadería: todos sus renglones ya habían entrado con un remito.</div>' : ''}
+            ${htmlFaltanRenglones(e)}
           </div>
           <div class="ingreso__derecha">
             <div class="ingreso__items-num">${e.cantidadItems}</div>
@@ -4192,8 +4368,46 @@
       }).join('')
 
       listaEl.querySelectorAll('.tarjeta-lista').forEach(card => {
-        card.addEventListener('click', () => abrirDetalleIngreso(card.dataset.ingreso))
+        card.addEventListener('click', (ev) => {
+          // "Cargar lo que entró" vive ADENTRO de la tarjeta: sin esto, el
+          // toque abriría además el detalle por debajo del wizard.
+          const completar = ev?.target?.closest?.('[data-completar]')
+          if (completar) { abrirCompletarIngreso(completar.dataset.completar); return }
+          abrirDetalleIngreso(card.dataset.ingreso)
+        })
       })
+    }
+
+    // ── Ingresos a los que les faltan los renglones ─────────────────────────
+    //
+    // "Cargar lo que entró" crea la cabecera en la base ANTES de que se cargue
+    // un solo renglón (crear_ingreso_desde_comprobante). Si la persona abandona
+    // el wizard ahí, la factura desaparece de "Facturas por ingresar" —ya tiene
+    // su ingreso— pero el ingreso quedó vacío. Sin esto, esa mercadería no la
+    // vería nadie más: ni la lista de pendientes ni el stock.
+    //
+    // Se resuelve SIN tocar la base: un ingreso con 0 renglones que tiene
+    // destino contable (gasto_id o factura_pendiente_id) es exactamente ese
+    // caso. Se excluyen los remitos —nunca tienen destino contable— y las
+    // facturas vinculadas a un remito, que en los datos viejos tienen 0
+    // renglones A PROPÓSITO (su mercadería la cargó el remito).
+    //
+    // `cantidadItems` ya viene del listado (el embed de materia_prima_items),
+    // así que no hace falta ninguna consulta nueva. Al 24/09/2026 no hay ningún
+    // ingreso sin renglones en la base (verificado).
+    function faltanRenglones(c) {
+      if (!c || c.tipo_doc === 'remito') return false
+      if (!(c.gasto_id || c.factura_pendiente_id)) return false
+      if (c.remito_vinculado_id || estado.facturasConRemito?.has(c.id)) return false
+      return (c.cantidadItems ?? 0) === 0
+    }
+
+    function htmlFaltanRenglones(entrega) {
+      if (entrega.esTransferencia) return ''
+      const c = entrega.comprobantes.find(faltanRenglones)
+      if (!c) return ''
+      return `<div class="ingreso__faltan">Faltan los renglones: la factura ya está vinculada, pero la mercadería no se cargó.</div>
+        ${puedeCargarMp() ? `<button type="button" class="btn-mp-primario btn-completar-ingreso" data-completar="${esc(c.id)}">Cargar lo que entró</button>` : ''}`
     }
 
     document.getElementById('filtro-busqueda-ingresos').addEventListener('input', (e) => {
@@ -4449,7 +4663,7 @@
             <div class="fila-item-mp__cantidad">${esc(formatearCantidad(item.cantidad, insumo.unidad_medida))}</div>
           </div>
         `
-      }).join('') || '<p class="texto-suave texto-pequeno">Este ingreso no tiene ítems.</p>'
+      }).join('') || htmlFaltanRenglones(entrega) || '<p class="texto-suave texto-pequeno">Este ingreso no tiene ítems.</p>'
     }
 
     // Recepción parcial en el detalle. Es el dato que sirve para reclamarle al
@@ -4478,6 +4692,13 @@
     document.getElementById('btn-cerrar-detalle').addEventListener('click', cerrarDetalleIngreso)
     // "Ver foto →" de cada comprobante: firma al tocar (ver abrirFotoMp).
     document.getElementById('detalle-comprobantes').addEventListener('click', manejarClickFotoMp)
+    // "Cargar lo que entró" de un ingreso al que le faltan los renglones.
+    document.getElementById('detalle-items').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('[data-completar]')
+      if (!btn) return
+      cerrarDetalleIngreso()
+      abrirCompletarIngreso(btn.dataset.completar)
+    })
     document.querySelector('#modal-ingreso .modal-mp__backdrop').addEventListener('click', cerrarDetalleIngreso)
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4492,6 +4713,7 @@
       document.getElementById('pantalla-ingresos').hidden = true
       document.getElementById('pantalla-wizard').removeAttribute('hidden')
 
+      document.getElementById('wz-header-titulo').textContent = 'Nuevo ingreso'
       renderizarTogglesTipoDoc()
       poblarSelectUnidades()
       resetearPaso1()
@@ -4517,14 +4739,26 @@
       // vincular, el paso 2B no se mostró, y volver ahí dejaría al usuario en
       // una pantalla vacía sin salida.
       const hayVinculo = esFactura(w.encabezado.tipoDoc) && w.hayRemitosVinculables
-      const previo = {
-        datos:      'comprobante',
-        vinculo:    'datos',
-        items:      hayVinculo ? 'vinculo' : 'datos',
-        confirmar:  'items',
-      }[w.paso]
+      // En el modo "completar" la cabecera ya existe: no hay comprobante ni
+      // datos a los que volver, y desde los ítems se sale.
+      const previo = w.completar
+        ? { confirmar: 'items' }[w.paso]
+        : {
+            datos:      'comprobante',
+            vinculo:    'datos',
+            items:      hayVinculo ? 'vinculo' : 'datos',
+            confirmar:  'items',
+          }[w.paso]
 
       if (!previo) {
+        if (w.completar) {
+          // La cabecera ya quedó creada y vinculada: salir no la borra. Se dice
+          // qué pasa, y el listado la muestra con "Faltan los renglones".
+          if (w.items.length && !confirm('¿Salir sin guardar los renglones? El ingreso queda creado y vinculado, sin renglones: lo vas a ver en el listado con «Faltan los renglones».')) return
+          cerrarWizard()
+          cargarIngresos()
+          return
+        }
         const hayAlgo = w.foto.archivo || w.items.length || w.encabezado.razonSocial
         if (hayAlgo && !confirm('¿Salir de la carga? Se pierde lo cargado hasta acá.')) return
         cerrarWizard()
@@ -4542,6 +4776,8 @@
       // así se dibuja apenas se detecta, sigue visible hasta confirmar —que es
       // donde se decide guardar— y desaparece solo cuando el wizard se reinicia.
       renderizarAvisoDuplicado()
+      // La foto y la lectura del modo "completar": se ven solo en los ítems.
+      renderizarCompletar()
       window.scrollTo({ top: 0, behavior: 'auto' })
 
       // Volver al paso 1 deshace el camino "sin comprobante": si no, el campo
@@ -8027,6 +8263,9 @@
     async function confirmarIngreso() {
       const w = estado.wizard
       if (w.guardando) return
+      // Un ingreso que YA EXISTE (lo creó crear_ingreso_desde_comprobante): acá
+      // se cargan solo sus renglones, sin otra cabecera ni circuito.
+      if (w.completar) return confirmarCompletarIngreso()
 
       // SIEMPRE se validan los ítems: con el vínculo por renglón, una factura
       // vinculada igual carga ítems (los que no vinieron con el remito).
@@ -8221,7 +8460,9 @@
     // gasto (ahí el importe ya lo tiene el gasto). Un proveedor nuevo nace sin
     // cuenta corriente (default de la columna), así que tampoco se le pide.
     function pideTotalFactura(w) {
-      return esFactura(w.encabezado.tipoDoc) && !w.desdeGasto && w.proveedorMatch?.cuenta_corriente === true
+      // En el modo "completar" la factura ya está en la cuenta corriente o en
+      // un gasto: no hay total que pedir.
+      return !w.completar && esFactura(w.encabezado.tipoDoc) && !w.desdeGasto && w.proveedorMatch?.cuenta_corriente === true
     }
     // El total como NÚMERO: lo que escribió la persona (leído del campo
     // enlazado), o lo que leyó el OCR si no lo tocó. `totalFacturaTocado`
@@ -8243,6 +8484,7 @@
 
     // Qué va a pasar al confirmar, en una línea. null = nada que decir.
     function avisoCircuitoPrevio(w) {
+      if (w.completar) return avisoCircuitoCompletar(w.completar.cabecera)
       const t = w.encabezado.tipoDoc
       const g = w.desdeGasto
       if (g) {
@@ -8504,6 +8746,9 @@
         estado.errorPagadoSinIngresar = null
       }
       renderizarPagadoSinIngresar()
+      // "Facturas por ingresar" saca los gastos que están acá: si esta lista
+      // cambió, su cantidad también.
+      renderizarAccesoPorIngresar()
     }
 
     const puedeDescartarIngreso = () => tieneTarea('materia_prima', 'editar_anular') || tieneTarea('gastos', 'editar_anular')
@@ -8635,6 +8880,580 @@
       estado.descarte = { gastoId: null, texto: '', error: null }
       mostrarExito('Listo: ese gasto quedó marcado como que no lleva ingreso.')
       await cargarPagadoSinIngresar()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FACTURAS POR INGRESAR — el circuito en el otro sentido
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // El circuito Ingreso ↔ Gastos ↔ Cuentas Corrientes corre en los DOS
+    // sentidos:
+    //   · De Ingreso a la plata: se carga la mercadería y la factura pasa a la
+    //     cuenta corriente o espera el gasto (registrar_factura_de_ingreso).
+    //   · De la plata a Ingreso: una factura de insumos que se cargó por Gastos
+    //     o por Cuentas Corrientes y cuya mercadería NUNCA entró al stock. Es
+    //     esta pantalla. facturas_sin_ingreso() la encuentra (SECURITY DEFINER,
+    //     filtra por materia_prima:cargar en la unidad) y
+    //     crear_ingreso_desde_comprobante() crea SOLO la cabecera del ingreso,
+    //     ya vinculada. Los renglones se cargan después, con el wizard en el
+    //     modo "completar ingreso existente".
+    //
+    // Ingreso sigue sin crear gastos: acá se LEEN comprobantes que ya existen.
+
+    // Exacto, pedido así: es la advertencia que evita contar dos veces la
+    // mercadería de las facturas viejas, que ya puede estar en el inventario.
+    const AVISO_POR_INGRESAR = 'Estas son facturas de insumos que todavía no tienen ingreso. Si la mercadería ya está contada en el inventario, no la cargues: quedaría contada dos veces.'
+
+    const ETIQUETA_ORIGEN_POR_INGRESAR = { factura: 'Cuenta corriente', gasto: 'Gasto pagado' }
+
+    const puedeCargarMp = () => tieneTarea('materia_prima', 'cargar')
+
+    // ESPEJO de normalizar_numero_doc() de la base (verificado contra
+    // pg_get_functiondef el 24/09/2026): punto de venta y número sin ceros a la
+    // izquierda. Con dos o más grupos de dígitos, el primero y el último; un
+    // solo grupo de 9 o más se parte en los 8 de la derecha; uno más corto es
+    // solo número; sin dígitos, null. Se usa SOLO para avisar, nunca para
+    // decidir nada: si divergiera, el costo es un aviso de más o de menos.
+    function claveNumeroDocMp(texto) {
+      const grupos = String(texto ?? '').match(/\d+/g)
+      if (!grupos) return null
+      const sinCeros = g => g.replace(/^0+/, '') || '0'
+      if (grupos.length >= 2) return `${sinCeros(grupos[0])}-${sinCeros(grupos[grupos.length - 1])}`
+      const g = grupos[0]
+      if (g.length >= 9) return `${sinCeros(g.slice(0, -8))}-${sinCeros(g.slice(-8))}`
+      return `-${sinCeros(g)}`
+    }
+
+    // Los nombres con los que puede aparecer el proveedor de una fila, ya
+    // normalizados. Vacíos afuera: dos filas sin nombre no son "el mismo".
+    function nombresPorIngresar(f) {
+      return [f.proveedor, f.razon_social].map(normalizarRazonSocial).filter(Boolean)
+    }
+    function nombresIngreso(i) {
+      return [i.proveedores?.razon_social, i.razon_social, i.nombre_fantasia].map(normalizarRazonSocial).filter(Boolean)
+    }
+
+    // Dos avisos por fila, y NINGUNO bloquea:
+    //  · `gemela`: el mismo papel está DOS veces en la lista. Pasa de verdad:
+    //    un gasto de un proveedor con cuenta corriente deja además su factura
+    //    espejo en la cuenta, y facturas_sin_ingreso devuelve las dos (medido
+    //    el 24/09/2026: 5 pares sobre 36 filas). Cargar las dos es contar la
+    //    mercadería dos veces.
+    //  · `yaIngresado`: ya hay un ingreso visible con ese número del mismo
+    //    proveedor —por ejemplo, porque se cargó la gemela—.
+    // Mismo proveedor (por cualquiera de sus nombres) + mismo número
+    // normalizado. Sin número no se compara: "sin número" no identifica nada.
+    function marcasPorIngresar(filas, ingresos = []) {
+      const marcas = new Map()
+      for (const f of filas) {
+        const num = claveNumeroDocMp(f.numero_doc)
+        const nombres = nombresPorIngresar(f)
+        const mismo = (numOtro, nombresOtro) => num && numOtro === num && nombresOtro.some(n => nombres.includes(n))
+        marcas.set(f.id, {
+          gemela: filas.some(o => o !== f && mismo(claveNumeroDocMp(o.numero_doc), nombresPorIngresar(o))),
+          yaIngresado: ingresos.some(i => mismo(claveNumeroDocMp(i.numero_doc), nombresIngreso(i))),
+        })
+      }
+      return marcas
+    }
+
+    // Los gastos que TAMBIÉN están en "Pagado sin ingresar" se sacan de acá:
+    // son la misma factura con otra puerta, y esa puerta ya sabe vincular el
+    // gasto (vincular_ingreso_a_gasto). Dos botones para el mismo papel es
+    // exactamente cómo se carga dos veces.
+    function filasPorIngresarVisibles() {
+      const pagados = new Set((estado.pagadoSinIngresar ?? []).map(g => g.gasto_id))
+      return (estado.porIngresar ?? []).filter(f => !(f.origen === 'gasto' && pagados.has(f.id)))
+    }
+
+    async function cargarFacturasPorIngresar() {
+      if (!puedeCargarMp()) {
+        estado.porIngresar = []
+        estado.errorPorIngresar = null
+        renderizarAccesoPorIngresar()
+        return
+      }
+      estado.cargandoPorIngresar = true
+      renderizarPorIngresar()
+      const { data, error } = await supabase.rpc('facturas_sin_ingreso')
+      estado.cargandoPorIngresar = false
+      if (error) {
+        console.error('facturas_sin_ingreso:', error)
+        estado.porIngresar = []
+        estado.errorPorIngresar = 'No se pudo cargar la lista de facturas por ingresar.'
+      } else {
+        estado.porIngresar = Array.isArray(data) ? data : []
+        estado.errorPorIngresar = null
+      }
+      renderizarAccesoPorIngresar()
+      renderizarPorIngresar()
+    }
+
+    // El acceso desde la pantalla principal, con su cantidad. Solo con
+    // materia_prima:cargar, y solo si hay algo (o si la lista no se pudo leer:
+    // eso también hay que poder verlo).
+    function renderizarAccesoPorIngresar() {
+      const btn = document.getElementById('btn-abrir-por-ingresar')
+      const n = filasPorIngresarVisibles().length
+      btn.hidden = !puedeCargarMp() || (!n && !estado.errorPorIngresar)
+      btn.textContent = n ? `Facturas por ingresar (${n})` : 'Facturas por ingresar'
+    }
+
+    function htmlPorIngresar(filas, { marcas = new Map(), error = null } = {}) {
+      return filas.map(f => {
+        const titulo = f.proveedor || f.razon_social || '(sin proveedor)'
+        const meta = [
+          f.fecha ? formatearFecha(f.fecha) : null,
+          f.numero_doc ? `N° ${f.numero_doc}` : 'Sin número',
+          f.tipo_doc || null,
+          f.unidad || null,
+        ].filter(Boolean).join(' · ')
+        // Un importe AUSENTE dice "—", nunca "$ 0": importeConMoneda devuelve
+        // null para null/undefined/'' antes de convertir.
+        const importe = importeConMoneda(f.importe, f.moneda) ?? '—'
+        const m = marcas.get(f.id) || {}
+        const razonAparte = f.proveedor && f.razon_social && normalizarRazonSocial(f.proveedor) !== normalizarRazonSocial(f.razon_social)
+        return `
+        <div class="tarjeta-lista tarjeta-por-ingresar" data-comprobante="${esc(f.id)}">
+          <div class="tarjeta-lista__avatar" style="background:var(--marron-suave); color:var(--marron-oscuro);">${esc(inicialesEmpresa(f.proveedor || f.razon_social))}</div>
+          <div class="tarjeta-lista__info">
+            <div class="tarjeta-lista__titulo">${esc(titulo)}</div>
+            ${razonAparte ? `<div class="ingreso__nota">${esc(f.razon_social)}</div>` : ''}
+            <div class="ingreso__meta">
+              <span class="chip-origen-mp">${esc(ETIQUETA_ORIGEN_POR_INGRESAR[f.origen] || 'Comprobante')}</span>
+              <span class="ingreso__fecha">${esc(meta)}</span>
+            </div>
+            ${m.gemela ? '<div class="nota-por-ingresar">Este mismo comprobante aparece dos veces en la lista (como gasto y como factura de la cuenta corriente): es el mismo papel. Cargá la mercadería una sola vez.</div>' : ''}
+            ${m.yaIngresado ? '<div class="nota-por-ingresar">Ya hay un ingreso con este número de este proveedor. Revisá que no sea la misma mercadería antes de cargarla.</div>' : ''}
+            ${error && error.id === f.id ? `<div class="por-ingresar__error">${esc(error.texto)}</div>` : ''}
+            <button type="button" class="btn-mp-primario btn-cargar-lo-que-entro" data-comprobante="${esc(f.id)}">Cargar lo que entró</button>
+          </div>
+          <div class="ingreso__derecha">
+            <div class="por-ingresar__importe">${esc(importe)}</div>
+          </div>
+        </div>`
+      }).join('')
+    }
+
+    function renderizarPorIngresar() {
+      const filas = filasPorIngresarVisibles()
+      const aviso = document.getElementById('aviso-por-ingresar')
+      const err = document.getElementById('por-ingresar-error')
+      const lista = document.getElementById('lista-por-ingresar')
+      document.getElementById('por-ingresar-cargando').hidden = !estado.cargandoPorIngresar
+      err.textContent = estado.errorPorIngresar || ''
+      err.hidden = !estado.errorPorIngresar
+      // El aviso SOLO con filas: con la lista vacía no hay nada que advertir, y
+      // un aviso que está siempre deja de leerse.
+      aviso.textContent = filas.length ? AVISO_POR_INGRESAR : ''
+      aviso.hidden = !filas.length
+      document.getElementById('por-ingresar-vacio').hidden =
+        !!(filas.length || estado.cargandoPorIngresar || estado.errorPorIngresar)
+      lista.innerHTML = htmlPorIngresar(filas, {
+        marcas: marcasPorIngresar(filas, estado.listaIngresos),
+        error: estado.porIngresarError,
+      })
+    }
+
+    async function abrirPorIngresar() {
+      document.getElementById('pantalla-ingresos').hidden = true
+      document.getElementById('pantalla-por-ingresar').removeAttribute('hidden')
+      estado.porIngresarError = null
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      renderizarPorIngresar()
+      await cargarFacturasPorIngresar()
+    }
+
+    function cerrarPorIngresar() {
+      document.getElementById('pantalla-por-ingresar').hidden = true
+      document.getElementById('pantalla-ingresos').removeAttribute('hidden')
+      estado.porIngresarError = null
+    }
+
+    // El error de crear_ingreso_desde_comprobante, para una persona. Sus
+    // mensajes propios ya están en castellano ("Esa factura ya tiene un ingreso
+    // cargado.") y van TAL CUAL. Un error crudo de un CHECK no le sirve a nadie
+    // en el depósito: se traduce, y el crudo va a consola.
+    //
+    // HOY ESE CASO ES EL NORMAL, y no es de esta pantalla: la RPC inserta
+    // tipo_doc = coalesce(tipo_documento, 'factura') SIN TRADUCIR ('Factura A',
+    // 'Factura C', 'Otro'…), y el CHECK de materia_prima_ingresos solo admite
+    // remito / factura_a / factura_x / sin_comprobante. Lo arregla la base.
+    function mensajeErrorCrearIngreso(error) {
+      const msg = String(error?.message || '')
+      if (String(error?.code || '') === '23514' || /check constraint|violates/i.test(msg)) {
+        console.error('crear_ingreso_desde_comprobante (constraint):', error)
+        return 'No se pudo crear el ingreso: la base rechazó el tipo de comprobante. Avisale a administración.'
+      }
+      console.error('crear_ingreso_desde_comprobante:', error)
+      return msg || 'No se pudo crear el ingreso. Probá de nuevo en un momento.'
+    }
+
+    async function cargarLoQueEntro(btn) {
+      const id = btn?.dataset?.comprobante
+      const fila = estado.porIngresar.find(f => f.id === id)
+      if (!fila || btn.disabled) return
+      btn.disabled = true
+      btn.textContent = 'Un momento…'
+      estado.porIngresarError = null
+
+      let ingresoId = null
+      try {
+        // Parámetros por NOMBRE, exactamente estos dos.
+        const { data, error } = await supabase.rpc('crear_ingreso_desde_comprobante', {
+          p_origen: fila.origen,
+          p_id: fila.id,
+        })
+        if (error) throw error
+        ingresoId = data?.ingreso_id ?? null
+        if (!ingresoId) throw new Error('La base no devolvió el ingreso creado. Recargá la pantalla antes de reintentar.')
+      } catch (e) {
+        estado.porIngresarError = { id, texto: mensajeErrorCrearIngreso(e) }
+        renderizarPorIngresar()   // redibuja el botón, destrabado
+        return
+      }
+
+      // La factura ya tiene su ingreso: sale de la lista. Y el listado se
+      // recarga antes de abrir el wizard, para que si la persona abandona sin
+      // cargar renglones, el ingreso vacío ya se vea con "Faltan los renglones".
+      await cargarFacturasPorIngresar()
+      await cargarIngresos()
+      document.getElementById('pantalla-por-ingresar').hidden = true
+      await abrirCompletarIngreso(ingresoId)
+    }
+
+    // ── El wizard en modo "completar ingreso existente" ─────────────────────
+    //
+    // No hay pantalla de edición de ingresos, así que el wizard gana un modo:
+    // la cabecera YA EXISTE (la creó la RPC, vinculada a su gasto o a su
+    // factura) y se cargan SOLO los renglones, con las mismas reglas de
+    // siempre —catálogo, alias, presentaciones, lote, categoría obligatoria al
+    // crear, recepción parcial—. Al confirmar:
+    //   · NO se inserta otra cabecera.
+    //   · NO se llama a registrar_factura_de_ingreso ni a
+    //     vincular_ingreso_a_gasto: el vínculo ya está.
+    //   · Si el insert de renglones falla, NO se borra la cabecera (al revés
+    //     que el camino normal): la creó la RPC y quedó vinculada. Se dice, y se
+    //     puede reintentar.
+    //   · La casilla "mercadería que ya estaba" no aplica: sin_stock_motivo se
+    //     fija al crear la cabecera y un trigger impide cambiarlo. El aviso de la
+    //     lista cubre ese caso.
+    async function abrirCompletarIngreso(ingresoId) {
+      estado.wizard = wizardVacio()
+      const w = estado.wizard
+      w.completar = {
+        ingresoId, cabecera: null,
+        foto: { estado: 'cargando', ruta: null, url: null, esPdf: false },
+        ocr: 'esperando', ocrError: null, renglonesLeidos: 0,
+      }
+      w.itemsInicializados = true
+      document.getElementById('pantalla-ingresos').hidden = true
+      document.getElementById('pantalla-por-ingresar').hidden = true
+      document.getElementById('pantalla-wizard').removeAttribute('hidden')
+      document.getElementById('wz-header-titulo').textContent = 'Cargar lo que entró'
+
+      await Promise.all([cargarCatalogoInsumos(), cargarProveedores()])
+      if (estado.wizard !== w) return
+
+      const { data: cab, error } = await supabase
+        .from('materia_prima_ingresos')
+        .select('id, fecha, tipo_doc, numero_doc, razon_social, nombre_fantasia, proveedor_id, unidad_negocio_id, foto_url, gasto_id, factura_pendiente_id, sin_stock_motivo')
+        .eq('id', ingresoId)
+        .maybeSingle()
+      if (estado.wizard !== w) return
+      if (error || !cab) {
+        if (error) console.error('abrirCompletarIngreso:', error)
+        mostrarError('No se pudo abrir el ingreso para cargarle los renglones. Buscalo en el listado: aparece con «Faltan los renglones».')
+        cerrarWizard()
+        await cargarIngresos()
+        return
+      }
+
+      w.completar.cabecera = cab
+      w.encabezado = {
+        tipoDoc: cab.tipo_doc, numeroDoc: cab.numero_doc || '', razonSocial: cab.razon_social || '',
+        nombreFantasia: cab.nombre_fantasia || '', fecha: cab.fecha || '', unidadId: cab.unidad_negocio_id || '',
+      }
+      // El proveedor de la cabecera es el que resuelve alias e historial de
+      // presentaciones. Sin él, se carga a mano como siempre.
+      w.proveedorId = cab.proveedor_id ?? null
+      w.proveedorMatch = estado.proveedores.find(p => p.id === cab.proveedor_id) ?? null
+      // Solo para que las reglas del lote digan lo mismo que la base: el
+      // trigger lee sin_stock_motivo de la cabecera.
+      w.sinStock = !!cab.sin_stock_motivo
+      w.sinStockMotivo = cab.sin_stock_motivo || ''
+
+      irAPasoWz('items')
+      await asegurarAliasProveedor()
+      if (estado.wizard !== w) return
+      await leerComprobanteParaCompletar(w)
+    }
+
+    // Baja la foto del comprobante de Storage. null si no se puede: la policy
+    // del bucket deja leer la raíz de otra persona (las fotos de Gastos) solo
+    // con gastos:ver_exportar o cuentas_corrientes:ver_todo, así que alguien de
+    // depósito puede no tener acceso.
+    async function bajarComprobanteMp(ruta) {
+      try {
+        const { data, error } = await supabase.storage.from(BUCKET_FOTOS_MP).download(ruta)
+        if (error || !data) { console.error('bajarComprobanteMp:', error); return null }
+        const nombre = ruta.split('/').pop() || 'comprobante'
+        const tipo = data.type || (/\.pdf$/i.test(nombre) ? 'application/pdf' : 'image/jpeg')
+        return new File([data], nombre, { type: tipo })
+      } catch (e) {
+        console.error('bajarComprobanteMp:', e)
+        return null
+      }
+    }
+
+    // La foto a la vista y el OCR detallado para PROPONER los renglones. Es el
+    // mismo OCR que el wizard normal (ocr-materia-prima), no el de Gastos: ese
+    // no lee renglones. Lo que no se pueda —sin foto, sin permiso, el OCR
+    // falla— se dice, y los renglones se cargan a mano.
+    async function leerComprobanteParaCompletar(w) {
+      const c = w.completar
+      const guardada = c.cabecera?.foto_url
+      // rutaFotoMp: una ruta del bucket, o la de una URL firmada vieja. Un
+      // `javascript:` o una URL de otro lado dan null y no se bajan ni se
+      // muestran: NADA de la base va a un href/src.
+      const ruta = rutaFotoMp(guardada)
+      if (!ruta) {
+        c.foto = { estado: guardada ? 'invalida' : 'sin_foto', ruta: null, url: null, esPdf: false }
+        c.ocr = 'sin_foto'
+        renderizarCompletar()
+        return
+      }
+      c.foto = { estado: 'cargando', ruta, url: null, esPdf: false }
+      renderizarCompletar()
+
+      const archivo = await bajarComprobanteMp(ruta)
+      if (estado.wizard !== w) return
+      if (!archivo) {
+        c.foto = { estado: 'no_se_pudo', ruta, url: null, esPdf: false }
+        c.ocr = 'sin_foto'
+        renderizarCompletar()
+        return
+      }
+      const esPdf = archivo.type === 'application/pdf'
+      // La miniatura sale del ARCHIVO ya bajado (un blob local): no hace falta
+      // otra firma, y ningún valor de la base llega al src.
+      c.foto = { estado: 'lista', ruta, url: esPdf ? null : URL.createObjectURL(archivo), esPdf }
+      c.ocr = 'leyendo'
+      renderizarCompletar()
+
+      try {
+        const imagen_base64 = await fileABase64(archivo)
+        const { data, error } = await supabase.functions.invoke('ocr-materia-prima', {
+          body: { imagen_base64, mime_type: archivo.type },
+        })
+        // Mismo contrato que leerConIA(): los errores vienen con HTTP 200 y
+        // ok:false, así que hay que mirar data.ok además de error.
+        if (error) throw new Error(error.message)
+        if (!data?.ok) throw new Error(data?.mensaje || 'No se pudo leer el comprobante')
+        if (estado.wizard !== w) return
+        const renglones = Array.isArray(data.datos?.items) ? data.datos.items : []
+        // Se AGREGAN: si la persona ya empezó a cargar a mano mientras se leía,
+        // lo suyo no se pisa.
+        const nuevos = renglones.map(itemDesdeOcr)
+        w.items.push(...nuevos)
+        if (!w.itemAbierto) w.itemAbierto = w.items[0]?.uid ?? null
+        c.renglonesLeidos = nuevos.length
+        c.ocr = nuevos.length ? 'listo' : 'sin_renglones'
+        if (w.paso === 'items') {
+          renderizarItems()
+          cargarHistorialYProponer()
+        }
+      } catch (e) {
+        console.error(e)
+        if (estado.wizard !== w) return
+        c.ocr = 'fallo'
+        c.ocrError = e.message || ''
+      }
+      renderizarCompletar()
+    }
+
+    function htmlFotoCompletar(c) {
+      const f = c?.foto || {}
+      if (f.estado === 'sin_foto') return '<div class="wz-completar-foto__nota">Este comprobante no tiene foto: cargá los renglones mirando el papel.</div>'
+      if (f.estado === 'invalida') return '<div class="wz-completar-foto__nota">No se pudo leer dónde está guardada la foto de este comprobante: cargá los renglones mirando el papel.</div>'
+      if (f.estado === 'cargando') return '<div class="wz-completar-foto__nota">Bajando la foto del comprobante…</div>'
+      if (f.estado === 'no_se_pudo') return '<div class="wz-completar-foto__nota">No se pudo abrir la foto del comprobante (puede que no tengas permiso para verla). Cargá los renglones mirando el papel.</div>'
+      // 'lista': la imagen se dibuja SIN src y el src se pone después, por
+      // propiedad, con la URL local del archivo bajado (renderizarCompletar).
+      return `${f.esPdf ? '<div class="wz-completar-foto__nota">📄 El comprobante es un PDF.</div>' : '<img alt="Comprobante">'}
+        <div class="wz-completar-foto__acciones">
+          <button type="button" data-ruta-foto="${esc(f.ruta)}" class="comprobante-mp__foto">Ver foto →</button>
+        </div>`
+    }
+
+    function textoOcrCompletar(c) {
+      switch (c?.ocr) {
+        case 'leyendo': return 'Leyendo el comprobante para proponer los renglones…'
+        case 'listo': return `Se ${c.renglonesLeidos === 1 ? 'leyó 1 renglón' : `leyeron ${c.renglonesLeidos} renglones`} del comprobante. Revisalos contra el papel.`
+        case 'sin_renglones': return 'No se leyó ningún renglón del comprobante. Cargalos a mano con el botón de abajo.'
+        case 'fallo': return `No se pudo leer el comprobante${c.ocrError ? ` (${c.ocrError})` : ''}. Cargá los renglones a mano.`
+        default: return ''
+      }
+    }
+
+    function renderizarCompletar() {
+      const w = estado.wizard
+      const fotoEl = document.getElementById('wz-completar-foto')
+      const ocrEl = document.getElementById('wz-completar-ocr')
+      if (!w?.completar || w.paso !== 'items') {
+        fotoEl.hidden = true
+        fotoEl.innerHTML = ''
+        ocrEl.hidden = true
+        ocrEl.textContent = ''
+        return
+      }
+      fotoEl.innerHTML = htmlFotoCompletar(w.completar)
+      fotoEl.hidden = false
+      const img = fotoEl.querySelector('img')
+      if (img && w.completar.foto.url) img.src = w.completar.foto.url
+      const texto = textoOcrCompletar(w.completar)
+      ocrEl.textContent = texto
+      ocrEl.hidden = !texto
+    }
+
+    function avisoCircuitoCompletar(cab) {
+      if (cab?.factura_pendiente_id) return 'Este ingreso ya está vinculado a su factura de la cuenta corriente: al confirmar se cargan solo los renglones.'
+      if (cab?.gasto_id) return 'Este ingreso ya está vinculado a su gasto: al confirmar se cargan solo los renglones.'
+      return 'Al confirmar se cargan solo los renglones de este ingreso.'
+    }
+
+    async function confirmarCompletarIngreso() {
+      const w = estado.wizard
+      if (w.guardando) return
+      if (!w.items.length) { avisoGuardado('Agregá al menos un renglón.'); irAPasoWz('items'); return }
+      if (!validarItems()) { irAPasoWz('items'); return }
+      const ingresoId = w.completar.ingresoId
+
+      const btn = document.getElementById('btn-confirmar-ingreso')
+      w.guardando = true
+      btn.disabled = true
+      btn.textContent = 'Guardando…'
+      avisoGuardado('')
+
+      try {
+        // Los productos nuevos. Solo los que todavía NO tienen id: en un
+        // reintento después de un insert fallido ya se crearon, y crearlos de
+        // nuevo chocaría contra el índice único del catálogo.
+        const porCrear = w.items.filter(i => i.esNuevo && i.creando && !i.insumoId)
+        const idsNuevos = await crearInsumosNuevos(porCrear)
+        porCrear.forEach(item => {
+          const id = idsNuevos.get(claveInsumo(item.nombre, item.marca))
+          if (!id) throw new Error(`No se pudo crear el producto "${item.nombre}".`)
+          item.insumoId = id
+        })
+
+        // SOLO los renglones, con el ingreso_id de la cabecera que ya existe.
+        // Mismo payload que el camino normal, y UN solo insert.
+        const filas = w.items.flatMap(item => filasItemParaBase(item, ingresoId))
+        const { error: errorItems } = await supabase.from('materia_prima_items').insert(filas)
+        if (errorItems) throw new Error(mensajeErrorItems(errorItems))
+
+        let avisoAlias = null
+        try { avisoAlias = await guardarAliasNuevos() } catch (e) { console.error(e) }
+        if (avisoAlias) mostrarError(avisoAlias)
+        mostrarExito('Renglones cargados.')
+        cerrarWizard()
+        await cargarIngresos()
+        await cargarPagadoSinIngresar()
+        await cargarFacturasPorIngresar()
+        if (buscarEntrega(ingresoId)) await abrirDetalleIngreso(ingresoId)
+        return
+      } catch (e) {
+        console.error(e)
+        // NO se borra la cabecera: la creó crear_ingreso_desde_comprobante y ya
+        // está vinculada. Borrarla desvincularía la factura sin que nadie lo sepa.
+        avisoGuardado(`${e.message} El ingreso sigue creado y vinculado, todavía sin renglones: corregí y volvé a confirmar.`)
+      }
+      w.guardando = false
+      btn.disabled = false
+      btn.textContent = 'Confirmar ingreso'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PENDIENTES — las burbujas de mis_pendientes() adentro del módulo
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // La misma RPC que el dashboard, con las mismas reglas: si la llamada falla
+    // no se dibuja NINGUNA burbuja (nunca un número viejo o inventado), una
+    // cantidad 0 / null / '' no dibuja nada, y el número es EL DE LA RPC, no un
+    // recuento propio. Filas que se muestran acá:
+    //   · stock:transferencias_por_aceptar → en el botón "Ingresos internos",
+    //     que es donde se reciben (la tarjeta del dashboard es la de Stock).
+    //   · materia_prima:insumos_por_revisar → una línea con link a Stock →
+    //     Catálogo, que es donde se resuelven.
+    //   · materia_prima:pagado_sin_ingresar NO lleva burbuja aparte: el título
+    //     de "Pagado sin ingresar" ya dice "(N)" con N = filas de
+    //     gastos_sin_ingreso(), y la RPC la cuenta como count(*) de esa misma
+    //     función con el mismo usuario: coinciden por construcción. Dos números
+    //     para lo mismo sería el lugar donde algún día digan distinto.
+    const PENDIENTES_DEL_MODULO = ['materia_prima:pagado_sin_ingresar', 'materia_prima:insumos_por_revisar', 'stock:transferencias_por_aceptar']
+
+    function cantidadPendiente(fila) {
+      if (!fila || fila.cantidad === null || fila.cantidad === undefined || fila.cantidad === '') return null
+      const n = Number(fila.cantidad)
+      return Number.isInteger(n) && n > 0 ? n : null
+    }
+
+    function agruparPendientesMp(filas) {
+      const mapa = new Map()
+      for (const f of filas || []) {
+        const clave = `${f?.modulo}:${f?.clave}`
+        if (!PENDIENTES_DEL_MODULO.includes(clave)) continue
+        const n = cantidadPendiente(f)
+        if (n === null) continue
+        mapa.set(clave, { cantidad: n, texto: String(f.texto ?? '').trim() })
+      }
+      return mapa
+    }
+
+    // "Insumos nuevos por revisar" + 3 → "3 insumos nuevos por revisar".
+    function textoPendienteMp(p) {
+      const t = p.texto ? p.texto.charAt(0).toLowerCase() + p.texto.slice(1) : 'pendientes'
+      return `${p.cantidad} ${t}`
+    }
+
+    function htmlBurbujaMp(p) {
+      if (!p || !(p.cantidad > 0)) return ''
+      const detalle = textoPendienteMp(p)
+      const numero = p.cantidad > 99 ? '99+' : String(p.cantidad)
+      return `<span class="burbuja-mp" title="${esc(detalle)}" aria-label="${esc(detalle)}">${esc(numero)}</span>`
+    }
+
+    function pintarPendientesMp() {
+      const p = estado.pendientes   // null = la llamada falló: nada
+      const internos = document.getElementById('btn-abrir-internos')
+      internos.innerHTML = `Ingresos internos${htmlBurbujaMp(p?.get('stock:transferencias_por_aceptar'))}`
+
+      const linea = document.getElementById('linea-insumos-revisar')
+      const ins = p?.get('materia_prima:insumos_por_revisar')
+      if (!ins) { linea.hidden = true; linea.innerHTML = ''; return }
+      const frase = textoPendienteMp(ins).replace(/^\d+\s*/, '')
+      linea.innerHTML = `${htmlBurbujaMp(ins)}<span>${esc(frase)}</span>
+        <a class="linea-pendiente-mp__link" href="stock.html?vista=catalogo">Revisarlos en Stock →</a>`
+      linea.hidden = false
+    }
+
+    // Un turno por llamada: la respuesta de una llamada vieja no pisa la nueva.
+    let turnoPendientesMp = 0
+    async function cargarPendientesMp() {
+      const turno = ++turnoPendientesMp
+      let mapa = null
+      try {
+        const { data, error } = await supabase.rpc('mis_pendientes')
+        if (error) throw error
+        mapa = agruparPendientesMp(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error('mis_pendientes:', err)
+        mapa = null
+      }
+      if (turno !== turnoPendientesMp) return
+      estado.pendientes = mapa
+      pintarPendientesMp()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -9255,6 +10074,23 @@
 
     // ── Ingresos internos ──────────────────────────────────────────────────
     document.getElementById('btn-abrir-internos').addEventListener('click', abrirInternos)
+
+    // ── Facturas por ingresar ──────────────────────────────────────────────
+    document.getElementById('btn-abrir-por-ingresar').addEventListener('click', abrirPorIngresar)
+    document.getElementById('btn-por-ingresar-volver').addEventListener('click', cerrarPorIngresar)
+    document.getElementById('lista-por-ingresar').addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.btn-cargar-lo-que-entro')
+      if (btn) cargarLoQueEntro(btn)
+    })
+    // "Ver foto →" del modo completar: firma al tocar, igual que el detalle.
+    document.getElementById('wz-completar-foto').addEventListener('click', manejarClickFotoMp)
+
+    // ── Pendientes ─────────────────────────────────────────────────────────
+    // Al volver a la pestaña, como el dashboard: con turno, así una respuesta
+    // vieja no pisa la nueva.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && estado.miEmpleadoId) cargarPendientesMp()
+    })
     document.getElementById('btn-internos-volver').addEventListener('click', cerrarInternos)
     document.getElementById('btn-internos-volver-lista').addEventListener('click', () => {
       estado.recepcion = null

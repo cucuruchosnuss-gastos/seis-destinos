@@ -47,6 +47,10 @@ const STUBS = new Set([
   'formatearFecha', 'mostrarError', 'mostrarExito',
   // De una sola línea: extraerFn las rechaza por sospechosas. Copia literal.
   'nuevoUid',
+  // Navegación, no render: la llama el listener de la tarjeta ("Cargar lo que
+  // entró"). Sin stub, la clausura se trae el wizard entero. La prueba
+  // test-materia-prima-por-ingresar.js la ejecuta de verdad.
+  'abrirCompletarIngreso',
 ])
 const CONSTANTES_EXCLUIDAS = new Set(['estado', 'campoTotal', 'listaPagado'])
 
@@ -126,6 +130,7 @@ const PRELUDIO = `
   function actualizarPendientesInternos() {}
   function renderizarBloquesCircuito() {}
   function abrirDetalleInterno() {}
+  async function abrirCompletarIngreso() {}
   var contadorUid = 0
   function nuevoUid() { return 'it' + (++contadorUid) }
   var estado = {
@@ -455,7 +460,22 @@ const SEGURAS = {
 }
 // Asignaciones que llaman a funciones que arman HTML y escapan adentro. Van
 // POR FUNCIÓN igual que las hojas.
+// "Facturas por ingresar" y las burbujas de pendientes (24/09/2026): renders
+// que escapan adentro, EJECUTADOS con HTML malicioso en
+// test-materia-prima-por-ingresar.js y test-materia-prima-pendientes.js.
+const POR_INGRESAR = 'HTML de un render de "Facturas por ingresar" que escapa adentro (ejecutado con HTML malicioso en test-materia-prima-por-ingresar.js)'
+Object.assign(SEGURAS.renderizarListaIngresos, { 'htmlFaltanRenglones(e)': POR_INGRESAR })
+Object.assign(SEGURAS, {
+  renderizarPorIngresar: {
+    'htmlPorIngresar(filas, { marcas: marcasPorIngresar(filas, estado.listaIngresos), error: estado.porIngresarError, })': POR_INGRESAR,
+  },
+  renderizarCompletar: { 'htmlFotoCompletar(w.completar)': POR_INGRESAR },
+  pintarPendientesMp: {
+    'htmlBurbujaMp(ins)': 'HTML de htmlBurbujaMp(), que escapa adentro (ejecutado en test-materia-prima-pendientes.js)',
+  },
+})
 Object.assign(SEGURAS.abrirDetalleIngreso, {
+  'htmlFaltanRenglones(entrega)': POR_INGRESAR,
   'htmlCircuitoDetalle(entrega, { resultado: estado.resultadoCircuito, fechaInicio: estado.fechaInicioCircuito, puedeReintentar: puedePasarAlCircuito(), })':
     'HTML de htmlCircuitoDetalle(), que escapa adentro (verificado también en test-materia-prima-circuito.js)',
 })

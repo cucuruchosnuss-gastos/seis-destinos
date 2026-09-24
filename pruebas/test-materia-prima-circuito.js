@@ -43,6 +43,10 @@ const PRELUDIO = `
   async function ingresarDesdeGasto(f) { __llamadas.ingresar.push(f) }
   function elegirProveedorParecido(id) { __llamadas.elegido.push(id); estado.wizard.proveedorId = id }
   function renderizarAvisoNumeroCorto() {}
+  // cargarPagadoSinIngresar() redibuja además el acceso a "Facturas por
+  // ingresar" (24/09/2026), que saca los gastos que ya están en esta lista.
+  // Ese render lo prueba test-materia-prima-por-ingresar.js; acá es un stub.
+  function renderizarAccesoPorIngresar() {}
   var estado = {
     miRolApp: 'usuario', misTareas: new Set(['materia_prima:cargar']),
     unidades: [{ id: 'u1', nombre: 'Cucuruchos Nuss' }],

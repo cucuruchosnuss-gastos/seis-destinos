@@ -23,7 +23,9 @@ correrMutaciones({
     { nombre: 'el total se pide también con proveedor ocasional',
       de: '!w.desdeGasto && w.proveedorMatch?.cuenta_corriente === true', a: '!w.desdeGasto' },
     { nombre: 'el total se pide aunque venga de un gasto',
-      de: "return esFactura(w.encabezado.tipoDoc) && !w.desdeGasto && w.proveedorMatch", a: "return esFactura(w.encabezado.tipoDoc) && w.proveedorMatch" },
+      // El ancla lleva el `!w.completar &&` que sumó el modo "completar
+      // ingreso existente" (24/09/2026): la condición que se muta es la misma.
+      de: "return !w.completar && esFactura(w.encabezado.tipoDoc) && !w.desdeGasto && w.proveedorMatch", a: "return !w.completar && esFactura(w.encabezado.tipoDoc) && w.proveedorMatch" },
     { nombre: 'validar deja pasar un total en cero',
       de: "if (!(n > 0)) return 'Cargá el total de la factura", a: "if (n == null) return 'Cargá el total de la factura" },
     { nombre: 'validar no exige el motivo de "no suma stock"',
