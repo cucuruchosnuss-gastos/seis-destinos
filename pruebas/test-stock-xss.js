@@ -516,10 +516,16 @@ const SEGURAS = {
     'd.dias_en_transito': 'número: v_stock_en_transito.dias_en_transito es integer (verificado)',
   },
   renderizarItemsTransfDetalle: { 'htmlAclaracion(it.insumos.aclaracion)': H_ACL, dif: HTML_PROPIO },
+  // Burbujas de pendientes: los números salen de cantidadPendiente(), que
+  // devuelve SOLO un entero > 0 o 0 (lo ejecuta test-stock-pendientes.js).
+  htmlBurbujaStock: { n: 'número: entero de cantidadPendiente()' },
+  pintarPendientesStock: { nTransf: 'número: entero de cantidadPendiente()' },
 }
 // Por función y con regex, para las asignaciones largas cuyo texto completo
 // no tiene sentido copiar: el callback que recibe htmlAgrupado().
 const SEGURAS_REGEX = {
+  pintarPendientesStock: [[/^htmlBurbujaStock\(/,
+    'HTML de htmlBurbujaStock(), que escapa el detalle adentro (ejecutado con texto malicioso en test-stock-pendientes.js)']],
   renderizarLista: [[/^htmlAgrupado\(agruparPorTipoYCategoria\(filas, i => i\.nombre\), i => \{/,
     'HTML de htmlAgrupado() (escapa tipo y categoría adentro) con un callback cuyas plantillas tienen HTML propio y revisa el escáner']],
   renderizarStock: [[/^htmlAgrupado\(agruparPorTipoYCategoria\(filas, f => f\.insumo_nombre\), f => \{/,

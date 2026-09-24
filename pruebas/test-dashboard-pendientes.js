@@ -115,6 +115,28 @@ chk('produccion (conos_por_revisar) → la tarjeta de Producción', S.MODULO_DE_
   chk('y se avisa por consola', S.__avisos.some(a => /modulo_inventado/.test(a)))
 }
 
+// --- caja con DOS claves (24/09/2026): la tarjeta dice la SUMA ------------
+// mis_pendientes() devuelve para caja 'solicitudes_mi_caja' y
+// 'solicitudes_empresa'. Antes era una sola y la tarjeta decía 1 cuando había
+// uno en cada caja. La tarjeta tiene que decir lo mismo que se ve adentro:
+// uno en mi caja + uno en la de la empresa = 2.
+{
+  const g = S.agruparPendientes([
+    { modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 1, texto: 'Movimientos por aceptar en mi caja' },
+    { modulo: 'caja', clave: 'solicitudes_empresa', cantidad: '1', texto: 'Movimientos por aceptar en la caja de la empresa' },
+  ])
+  chk('caja: dos claves con 1 cada una → la tarjeta dice 2', g.get('caja')?.total === 2, g.get('caja')?.total)
+  chk('caja: el detalle nombra las dos', g.get('caja')?.detalle.join(' | ') ===
+    '1 movimientos por aceptar en mi caja | 1 movimientos por aceptar en la caja de la empresa', g.get('caja')?.detalle.join(' | '))
+  const h = S.htmlBurbuja(g.get('caja'))
+  chk('caja: la burbuja muestra 2', />2<\/span>$/.test(h), h)
+  const g2 = S.agruparPendientes([
+    { modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 0, texto: 'Movimientos por aceptar en mi caja' },
+    { modulo: 'caja', clave: 'solicitudes_empresa', cantidad: 3, texto: 'Movimientos por aceptar en la caja de la empresa' },
+  ])
+  chk('caja: una clave en 0 no suma ni resta', g2.get('caja')?.total === 3 && g2.get('caja')?.detalle.length === 1)
+}
+
 // --- htmlBurbuja ----------------------------------------------------------
 {
   chk('sin datos → nada', S.htmlBurbuja(undefined) === '')

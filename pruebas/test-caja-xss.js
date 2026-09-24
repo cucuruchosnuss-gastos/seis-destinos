@@ -454,6 +454,17 @@ const SEGURAS = {
   poblarSelectoresTraspaso: { 'opcionesCuenta(cuentasDe(traspasoEmpleadoId), favoritaEfectivoARS(traspasoEmpleadoId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
   actualizarSelectorDestinoTraspaso: { 'opcionesCuenta(candidatas)': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
 }
+const BURBUJA = 'HTML de htmlBurbujaCaja(), que escapa el texto de la RPC por dentro (ejecutada con marcas en test-caja-pendientes.js)'
+Object.assign(SEGURAS, {
+  htmlBurbujaCaja: {
+    detalle: 'esc(p.detalle) armado en la línea de arriba',
+    numero: "'99+' o String() de un entero positivo validado en agruparPendientesCaja()",
+  },
+  pintarBurbujasCaja: { 'htmlBurbujaCaja(tipo)': BURBUJA },
+  renderizarTarjetaPersona: { ...SEGURAS.renderizarTarjetaPersona, "htmlBurbujaCaja('mi')": BURBUJA },
+  renderizarAccionesDetalle: { ...SEGURAS.renderizarAccionesDetalle, "htmlBurbujaCaja('empresa')": BURBUJA },
+  renderizarSolicitudesPendientes: { ...SEGURAS.renderizarSolicitudesPendientes, 'htmlBurbujaCaja(tipoBurbujaDeFicha(estado.personaAbierta))': BURBUJA },
+})
 const SEGURAS_REGEX = {}
 
 const norm = (s) => s.replace(/\s+/g, ' ').trim()

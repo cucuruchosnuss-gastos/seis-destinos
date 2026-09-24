@@ -184,6 +184,30 @@
       box-shadow: none;
     }
 
+    /* Burbuja de pendientes ADENTRO del módulo: la misma de la tarjeta del
+       dashboard (.tarjeta-modulo__burbuja de css/main.css) —rojo, número
+       blanco, píldora— pero EN LÍNEA al lado del texto del botón y no
+       absoluta: en una pestaña con nowrap una burbuja flotante taparía el
+       rótulo. El número sale siempre de mis_pendientes(), igual que en el
+       dashboard, para que los dos digan lo mismo. */
+    .burbuja-stock {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.3125rem;
+      margin-left: 0.375rem;
+      border-radius: 999px;
+      background: var(--rojo);
+      color: #fff;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    .aviso-recibir__link { flex-shrink: 0; text-decoration: none; }
+
     /* ── Encabezados de grupo ────────────────────────────────────────────
        Reusan la receta de .grupo-empleados de empleados.html —punto de color +
        texto chico— en vez de inventar un componente.
@@ -2088,7 +2112,7 @@
          una elección, es ruido. -->
     <div class="pestanas-stock" id="pestanas-stock" hidden>
       <button type="button" class="pestana-stock" data-vista="stock">Stock</button>
-      <button type="button" class="pestana-stock" data-vista="catalogo">Catálogo</button>
+      <button type="button" class="pestana-stock" data-vista="catalogo">Catálogo<span id="burbuja-catalogo"></span></button>
       <button type="button" class="pestana-stock" data-vista="recuento">Recuento</button>
     </div>
 
@@ -2102,7 +2126,7 @@
       <div class="barra-acciones" id="acciones-stock" hidden>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-registrar-movimiento" hidden>Corregir stock</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-enviar-transferencia" hidden>Enviar a otra unidad</button>
-        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-transito">En tránsito</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-transito">En tránsito<span id="burbuja-transito"></span></button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-mermas">Mermas</button>
       </div>
@@ -2288,6 +2312,10 @@
 
       <!-- ── Listado: tránsito + historial ──────────────────────────────── -->
       <div class="rec-paso" id="transito-paso-lista" hidden>
+        <!-- Lo que ESTA persona tiene que recibir, con el número de
+             mis_pendientes() (el mismo de la tarjeta del dashboard). La
+             recepción NO vive en Stock: vive en Ingreso → Ingresos internos. -->
+        <div class="aviso-pendientes" id="transito-aviso-recibir" hidden></div>
         <div class="transf-subtitulo" style="margin-top:0;">En tránsito — salió y todavía no llegó</div>
         <div class="lista-contenido" id="lista-transito"></div>
         <div class="estado-vacio-stock" id="transito-cargando">Cargando…</div>
@@ -8642,6 +8670,125 @@
       el.addEventListener('click', cerrarModalImportar))
 
     // ═══════════════════════════════════════════════════════════════════════
+    // BURBUJAS DE PENDIENTES — las mismas filas de mis_pendientes() que suma la
+    // tarjeta del dashboard, puestas ADENTRO del módulo donde se resuelven.
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Dos filas le importan a esta pantalla, y ninguna se resuelve donde la
+    // cuenta el dashboard:
+    //  - ('stock','transferencias_por_aceptar'): cae en la tarjeta de Stock,
+    //    pero se RECIBE en Ingreso → Ingresos internos. Acá va en "En tránsito"
+    //    y en una línea que lleva a Ingreso.
+    //  - ('materia_prima','insumos_por_revisar'): cae en la tarjeta de Ingreso,
+    //    pero se resuelve ACÁ, en Catálogo → "Sin revisar".
+    //
+    // EL NÚMERO ES EL DE LA RPC, nunca un recuento propio: si la pantalla
+    // contara por su lado, la tarjeta y el botón podrían decir cosas distintas
+    // y ninguno de los dos se podría creer. Si la llamada falla, no se dibuja
+    // ninguna burbuja: nunca un número viejo o inventado.
+
+    // Una cantidad utilizable de la fila (modulo, clave), o 0. null, '', un
+    // texto o un decimal no son un número de pendientes: se rechazan ANTES de
+    // convertir (Number(null) es 0 y Number('') también).
+    function cantidadPendiente(filas, modulo, clave) {
+      const fila = (filas || []).find(f => f?.modulo === modulo && f?.clave === clave)
+      if (!fila) return 0
+      const c = fila.cantidad
+      if (c === null || c === undefined || c === '') return 0
+      const n = typeof c === 'number' ? c : Number(c)
+      return Number.isInteger(n) && n > 0 ? n : 0
+    }
+
+    function textoFilaPendiente(filas, modulo, clave, n) {
+      const fila = (filas || []).find(f => f?.modulo === modulo && f?.clave === clave)
+      const t = String(fila?.texto ?? '').trim()
+      return `${n} ${t ? t.charAt(0).toLowerCase() + t.slice(1) : 'pendientes'}`
+    }
+
+    function htmlBurbujaStock(n, detalle) {
+      if (!(n > 0)) return ''
+      return `<span class="burbuja-stock" title="${esc(detalle)}" aria-label="${esc(detalle)}">${n > 99 ? '99+' : n}</span>`
+    }
+
+    // Con null (la llamada falló) saca todo y no dibuja nada.
+    function pintarPendientesStock(filas) {
+      const nTransf = filas ? cantidadPendiente(filas, 'stock', 'transferencias_por_aceptar') : 0
+      // La del catálogo SOLO con la tarea que lo gestiona: la RPC ya la filtra
+      // por la misma tarea, pero la pestaña es de quien puede resolverlo.
+      const nInsumos = filas && puedeGestionar()
+        ? cantidadPendiente(filas, 'materia_prima', 'insumos_por_revisar') : 0
+
+      document.getElementById('burbuja-transito').innerHTML = htmlBurbujaStock(nTransf,
+        nTransf ? textoFilaPendiente(filas, 'stock', 'transferencias_por_aceptar', nTransf) : '')
+      document.getElementById('burbuja-catalogo').innerHTML = htmlBurbujaStock(nInsumos,
+        nInsumos ? textoFilaPendiente(filas, 'materia_prima', 'insumos_por_revisar', nInsumos) : '')
+
+      // La línea de la vista de tránsito. NO cambia qué muestra la vista: solo
+      // dice dónde se reciben las que esperan a esta persona.
+      const aviso = document.getElementById('transito-aviso-recibir')
+      aviso.hidden = nTransf === 0
+      aviso.innerHTML = nTransf === 0 ? '' : `
+        <div class="aviso-pendientes__texto">
+          <strong>${nTransf}</strong> ${nTransf === 1 ? 'transferencia espera que la recibas' : 'transferencias esperan que las recibas'}: se reciben en <strong>Ingreso → Ingresos internos</strong>.
+        </div>
+        <a class="btn-stock btn-stock--chico aviso-recibir__link" href="materia-prima.html">Ir a Ingreso</a>`
+    }
+
+    // Un turno por llamada: la respuesta de una llamada vieja no pisa la nueva.
+    let turnoPendientesStock = 0
+    async function cargarPendientesStock() {
+      const turno = ++turnoPendientesStock
+      let filas = null
+      try {
+        const { data, error } = await supabase.rpc('mis_pendientes')
+        if (error) throw error
+        filas = Array.isArray(data) ? data : []
+      } catch (err) {
+        console.error('mis_pendientes:', err)
+        filas = null
+      }
+      if (turno !== turnoPendientesStock) return
+      pintarPendientesStock(filas)
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      // Solo después de init: sin las tareas cargadas, puedeGestionar() diría
+      // que no y la burbuja del catálogo se borraría.
+      if (document.visibilityState === 'visible' && estado.miEmpleadoId) cargarPendientesStock()
+    })
+
+    // stock.html?vista=catalogo: materia-prima.html linkea acá para revisar los
+    // insumos nuevos. El valor se valida contra una LISTA CERRADA y además
+    // contra las vistas que esta persona tiene (sin gestionar_catalogo, se
+    // ignora). El parámetro se limpia SIEMPRE, sea válido o no, para que
+    // recargar no vuelva a forzar la vista.
+    const VISTAS_DESDE_URL = ['catalogo']
+    function vistaDesdeUrl(vistas) {
+      let pedida = null
+      try {
+        const params = new URLSearchParams(window.location.search)
+        if (!params.has('vista')) return null
+        pedida = params.get('vista')
+        params.delete('vista')
+        const resto = params.toString()
+        history.replaceState(history.state, '', window.location.pathname + (resto ? '?' + resto : '') + window.location.hash)
+      } catch (err) {
+        console.error(err)
+        return null
+      }
+      return VISTAS_DESDE_URL.includes(pedida) && vistas.includes(pedida) ? pedida : null
+    }
+
+    // Llegando al catálogo por el link, con pendientes el filtro arranca en
+    // "Sin revisar": es lo que se vino a hacer. Sin pendientes, "Todos".
+    function aplicarFiltroDesdeUrl() {
+      if (contarPendientes() === 0) return
+      estado.filtro = 'pendientes'
+      renderizarChips()
+      renderizarLista()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // INIT
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -8713,7 +8860,8 @@
         btn.hidden = !vistas.includes(btn.dataset.vista)
       })
 
-      mostrarVista(vistas[0])
+      const desdeUrl = vistaDesdeUrl(vistas)
+      mostrarVista(desdeUrl ?? vistas[0])
 
       // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
       // consulta volvería vacía por RLS igual, pero no tiene sentido hacerla.
@@ -8760,6 +8908,9 @@
       // la persona ve: alcanza con verStock.
       document.getElementById('btn-ver-transito').hidden = !verStock
       document.getElementById('acciones-stock').hidden = !verStock
+
+      if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()
+      cargarPendientesStock()
     }
 
     init()

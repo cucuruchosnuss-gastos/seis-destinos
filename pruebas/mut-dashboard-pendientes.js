@@ -21,6 +21,7 @@ correrMutaciones({
     { nombre: 'el cero dibuja burbuja', de: "      if (!p || !(p.total > 0)) return ''", a: "      if (!p) return ''" },
     { nombre: 'una cantidad null cuenta', de: "if (fila.cantidad === null || fila.cantidad === undefined || fila.cantidad === '' || !Number.isInteger(n) || n <= 0) continue", a: 'if (!Number.isInteger(n) || n < 0) continue' },
     { nombre: 'un módulo desconocido se usa tal cual', de: "if (!clave) { console.warn('mis_pendientes: módulo sin tarjeta', fila?.modulo); continue }", a: "if (!clave) continue" },
+    { nombre: 'la tarjeta muestra la última clave y no la suma', de: '        actual.total += n\n', a: '        actual.total = n\n' },
     { nombre: 'sin aria-label', de: ' aria-label="${detalle}"', a: '' },
     { nombre: 'sin title', de: ' title="${detalle}"', a: '' },
     { nombre: 'sin tope 99+', de: "p.total > 99 ? '99+' : String(p.total)", a: 'String(p.total)' },

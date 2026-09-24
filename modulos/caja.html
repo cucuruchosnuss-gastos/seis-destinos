@@ -1007,6 +1007,27 @@
 
     .solicitudes-pendientes__lista { margin-top: 0.75rem; }
 
+    /* ── Burbuja de pendientes (mis_pendientes) ───────────────────────────
+       Misma receta que .tarjeta-modulo__burbuja del dashboard (círculo rojo
+       con el número), pero EN LÍNEA y no absoluta: acá va pegada al texto de
+       un botón o de un nombre, no en la esquina de una tarjeta. */
+    .burbuja-caja {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.3125rem;
+      margin-left: 0.375rem;
+      border-radius: 999px;
+      background: var(--rojo);
+      color: #fff;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      line-height: 1;
+      vertical-align: middle;
+    }
+
     /* ── Modal: nueva cuenta (mismo patrón que #modal-movimiento) ─────────── */
 
     #modal-cuenta-nueva {
@@ -1331,8 +1352,8 @@
           <button type="button" class="tabs-cc__opcion" data-tab="retiros" id="tab-btn-retiros" style="display:none;">Retiros socios</button>
           <button type="button" class="tabs-cc__opcion" data-tab="todos-movimientos" id="tab-btn-todos-movimientos" style="display:none;">Todos los movimientos</button>
         </div>
-        <button type="button" class="btn btn--navy-outline" id="btn-mi-caja" style="display:none; width:auto;">Mi caja</button>
-        <button type="button" class="btn btn--amarillo-outline" id="btn-empresa-atajo" style="display:none; width:auto;">Empresa</button>
+        <button type="button" class="btn btn--navy-outline" id="btn-mi-caja" style="display:none; width:auto;">Mi caja<span id="burbuja-btn-mi-caja"></span></button>
+        <button type="button" class="btn btn--amarillo-outline" id="btn-empresa-atajo" style="display:none; width:auto;">Empresa<span id="burbuja-btn-empresa-atajo"></span></button>
         <button type="button" class="btn btn--navy-outline" id="btn-directorio-atajo" style="display:none; width:auto;">📇 Directorio</button>
         <button type="button" class="btn btn--bordo-outline" id="btn-retiro-personal-listado" style="width:auto;">Retiro personal</button>
       </div>
@@ -1800,6 +1821,10 @@
       misTareasCaja:   new Set(), // tareas granulares habilitadas en empleado_tareas
                               // (modulo='caja', habilitado=true) para este empleado —
                               // ver tieneTarea()
+      pendientesCaja:  null, // { mi?: {total, detalle}, empresa?: {total, detalle} } de
+                              // mis_pendientes(); null = no se sabe (todavía no llegó o
+                              // falló) y entonces NO se dibuja ninguna burbuja
+      turnoPendientesCaja: 0, // ver cargarPendientesCaja()
     }
 
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
@@ -1879,6 +1904,110 @@
     // para siempre).
     function puedoResponderSolicitudesDeEmpresa() {
       return !!estado.idEmpresa && estado.miEmpleado?.rol_app === 'super_admin'
+    }
+
+    // La regla por fila (ver renderizarFilaSolicitud), extraída para que el
+    // orden y el <details> abierto de renderizarSolicitudesPendientes digan lo
+    // mismo que los botones.
+    function puedoResponderSolicitud(s) {
+      const miId = estado.miEmpleado?.id
+      const soyParte = miId === s.origen_empleado_id || miId === s.destino_empleado_id
+      return involucraAEmpresa(s)
+        ? puedoResponderSolicitudesDeEmpresa()
+        : soyParte && miId !== s.creado_por
+    }
+
+    // ── Burbujas de pendientes (mis_pendientes) ─────────────────────────────
+    // La tarjeta del dashboard suma lo que devuelve mis_pendientes() para
+    // 'caja'; acá cada clave va en SU lugar, con EL MISMO número (el de la
+    // RPC, nunca un recuento propio), así lo que dice la tarjeta se encuentra
+    // adentro:
+    //   - solicitudes_mi_caja → "Mi caja" (o mi fila del listado si ese botón
+    //     no se muestra) y la sección de solicitudes de MI ficha.
+    //   - solicitudes_empresa → el atajo "Empresa" (las dos ubicaciones) y la
+    //     sección de solicitudes de la ficha de Empresa.
+    const CLAVES_PENDIENTES_CAJA = { solicitudes_mi_caja: 'mi', solicitudes_empresa: 'empresa' }
+
+    // Filas de la RPC → { mi, empresa }. Solo las de modulo='caja'. Una clave
+    // de caja desconocida se ignora y se avisa. Solo cuentan las cantidades
+    // enteras y positivas: un null, un '' o un texto no se vuelven un número.
+    function agruparPendientesCaja(filas) {
+      const res = {}
+      for (const fila of filas || []) {
+        if (fila?.modulo !== 'caja') continue
+        const tipo = CLAVES_PENDIENTES_CAJA[fila.clave]
+        if (!tipo) { console.warn('mis_pendientes: clave de caja desconocida', fila.clave); continue }
+        const c = fila.cantidad
+        const n = typeof c === 'number' ? c : Number(c)
+        if (c === null || c === undefined || c === '' || typeof c === 'boolean' || !Number.isInteger(n) || n <= 0) continue
+        const t = String(fila.texto ?? '').trim()
+        const frase = t ? t.charAt(0).toLowerCase() + t.slice(1) : 'pendientes'
+        const total = (res[tipo]?.total || 0) + n
+        res[tipo] = { total, detalle: `${total} ${frase}` }
+      }
+      return res
+    }
+
+    // La de Empresa solo tiene dónde ir si existe el atajo, que exige
+    // ver_empresa SIN bypass (el mismo gate del botón).
+    function burbujaVisible(tipo) {
+      if (tipo === 'empresa') return !!estado.idEmpresa && tieneTareaExplicita('ver_empresa')
+      return tipo === 'mi'
+    }
+
+    function htmlBurbujaCaja(tipo) {
+      const p = estado.pendientesCaja?.[tipo]
+      if (!p || !(p.total > 0) || !burbujaVisible(tipo)) return ''
+      const detalle = esc(p.detalle)
+      const numero = p.total > 99 ? '99+' : String(p.total)
+      return `<span class="burbuja-caja" title="${detalle}" aria-label="${detalle}">${numero}</span>`
+    }
+
+    // Qué burbuja va en la sección de solicitudes de la ficha abierta.
+    function tipoBurbujaDeFicha(empleadoId) {
+      if (!empleadoId) return null
+      if (empleadoId === estado.miEmpleado?.id) return 'mi'
+      if (empleadoId === estado.idEmpresa) return 'empresa'
+      return null
+    }
+
+    // El mismo criterio que muestra btn-mi-caja en init(). Sin ese botón, la
+    // burbuja de "mi caja" va en mi fila del listado.
+    function miCajaTieneBoton() {
+      return tieneTarea('retiros_todos') || tieneTarea('movimientos_todos')
+    }
+
+    // Repinta los lugares que ya están en pantalla. Los que se dibujan después
+    // (la ficha, el listado) traen su burbuja en la plantilla.
+    function pintarBurbujasCaja() {
+      const poner = (id, tipo) => {
+        const el = document.getElementById(id)
+        if (el) el.innerHTML = tipo ? htmlBurbujaCaja(tipo) : ''
+      }
+      poner('burbuja-btn-mi-caja', 'mi')
+      poner('burbuja-btn-empresa-atajo', 'empresa')
+      poner('burbuja-detalle-empresa-atajo', 'empresa')
+      poner('burbuja-solicitudes', tipoBurbujaDeFicha(estado.personaAbierta))
+      poner('burbuja-tarjeta-propia', miCajaTieneBoton() ? null : 'mi')
+    }
+
+    // Un turno por llamada: una respuesta vieja no pisa la nueva. Si falla,
+    // estado.pendientesCaja queda en null y se borran todas: nunca un número
+    // viejo o inventado.
+    async function cargarPendientesCaja() {
+      const turno = ++estado.turnoPendientesCaja
+      let res = null
+      try {
+        const { data, error } = await supabase.rpc('mis_pendientes')
+        if (error) throw error
+        res = agruparPendientesCaja(Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error('mis_pendientes:', err)
+        res = null
+      }
+      if (turno !== estado.turnoPendientesCaja) return
+      estado.pendientesCaja = res
+      pintarBurbujasCaja()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2589,7 +2718,7 @@
         <div class="tarjeta-lista" data-id="${esc(emp.id)}">
           <div class="tarjeta-lista__avatar">${esc(iniciales(emp.nombre))}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${esc(emp.nombre)}</div>
+            <div class="tarjeta-lista__titulo">${esc(emp.nombre)}${emp.id === estado.miEmpleado?.id ? `<span id="burbuja-tarjeta-propia">${miCajaTieneBoton() ? '' : htmlBurbujaCaja('mi')}</span>` : ''}</div>
             ${empresa ? `<div class="tarjeta-lista__subtitulo">${esc(empresa)}</div>` : ''}
             ${otrasMonedas}
           </div>
@@ -3080,7 +3209,7 @@
       // entrada a operaciones sobre su plata, así que verla ya es un permiso
       // propio y no se hereda por rol.
       if (empleadoId === estado.miEmpleado.id && estado.origenFicha === 'directo' && estado.idEmpresa && tieneTareaExplicita('ver_empresa')) {
-        botones.push(`<button type="button" class="btn btn--amarillo-outline" id="btn-detalle-empresa-atajo" style="flex:1 1 45%;">Empresa</button>`)
+        botones.push(`<button type="button" class="btn btn--amarillo-outline" id="btn-detalle-empresa-atajo" style="flex:1 1 45%;">Empresa<span id="burbuja-detalle-empresa-atajo">${htmlBurbujaCaja('empresa')}</span></button>`)
       }
 
       // Atajo al Directorio — para cualquiera con el módulo Caja habilitado, en
@@ -3368,12 +3497,9 @@
       const importe = importeHtml(s.monto, s.moneda)
 
       const soyOrigen  = miId === s.origen_empleado_id
-      const soyDestino = miId === s.destino_empleado_id
       const soyCreador = miId === s.creado_por
 
-      const puedeResponder = involucraAEmpresa(s)
-        ? puedoResponderSolicitudesDeEmpresa()
-        : (soyOrigen || soyDestino) && !soyCreador
+      const puedeResponder = puedoResponderSolicitud(s)
 
       let acciones = ''
       if (puedeResponder) {
@@ -3425,16 +3551,25 @@
       const cont = document.getElementById('detalle-persona-solicitudes')
       const n = estado.solicitudesPendientes.length
 
+      // Las que YO tengo que responder van arriba (el sort es estable: dentro
+      // de cada grupo queda el orden por fecha de la consulta), y si hay
+      // alguna la sección se abre sola — la burbuja avisa que hay algo, y
+      // tocar para desplegar y después buscar entre las que esperan a otro
+      // era buscarlo a mano.
+      const ordenadas = [...estado.solicitudesPendientes]
+        .sort((a, b) => (puedoResponderSolicitud(b) ? 1 : 0) - (puedoResponderSolicitud(a) ? 1 : 0))
+      const hayQueResponder = ordenadas.some(puedoResponderSolicitud)
+
       const listaHtml = n
-        ? estado.solicitudesPendientes.map(renderizarFilaSolicitud).join('')
+        ? ordenadas.map(renderizarFilaSolicitud).join('')
         : '<p class="etiqueta-opcional">No hay solicitudes pendientes.</p>'
 
-      // Siempre visible (nunca se oculta la sección), colapsado por defecto
-      // sin importar si n es 0 — <details>/<summary>, mismo patrón ya usado
+      // Siempre visible (nunca se oculta la sección), colapsado salvo que
+      // haya algo para responder — <details>/<summary>, mismo patrón ya usado
       // en el desglose por cuenta, sin JS de más para el toggle.
       cont.innerHTML = `
-        <details>
-          <summary class="btn btn--bordo-outline solicitudes-pendientes__boton">Movimientos pendientes (${n})</summary>
+        <details${hayQueResponder ? ' open' : ''}>
+          <summary class="btn btn--bordo-outline solicitudes-pendientes__boton">Movimientos pendientes (${n})<span id="burbuja-solicitudes">${htmlBurbujaCaja(tipoBurbujaDeFicha(estado.personaAbierta))}</span></summary>
           <div class="solicitudes-pendientes__lista">${listaHtml}</div>
         </details>
       `
@@ -3455,6 +3590,10 @@
     // patrón de refresco que guardarMovimiento/guardarTraspaso).
     async function refrescarTrasResolucionSolicitud(cambioSaldo) {
       const empleadoId = estado.personaAbierta
+
+      // Las burbujas: lo que se acaba de resolver ya no está por aceptar. Sin
+      // await: tiene su propio turno y no tiene por qué frenar el resto.
+      cargarPendientesCaja()
 
       if (cambioSaldo) {
         await refrescarSaldosDeFicha(empleadoId)
@@ -4622,6 +4761,12 @@
       // comentario en cargarEmpresa() sobre la carrera con cargarNombresEmpleados().
       await cargarEmpresa()
 
+      // Burbujas de pendientes: después de cargarEmpresa (la de Empresa
+      // necesita idEmpresa) y sin await (no frena la carga de la pantalla;
+      // lo que se dibuje antes de que llegue trae su burbuja cuando se
+      // repinte, y lo que ya esté en pantalla lo repinta ella).
+      cargarPendientesCaja()
+
       // Atajo a la ficha de Empresa — mismo criterio en los dos lugares donde
       // puede aparecer (acá, y en renderizarAccionesDetalle() para quien entra
       // directo a su propia ficha sin pasar por el listado). Gate SIN bypass:
@@ -4665,6 +4810,13 @@
     }
 
     enlazarCamposMonto()
+
+    // Al volver a la pestaña, las burbujas se actualizan (alguien pudo haber
+    // mandado o resuelto una solicitud mientras tanto). Solo si init() ya
+    // resolvió quién soy.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && estado.miEmpleado) cargarPendientesCaja()
+    })
 
     init()
   </script>

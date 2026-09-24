@@ -61,7 +61,7 @@ correrMutaciones({
       de: "    const IDS_CAMPOS_MONTO = ['movimiento-monto', 'traspaso-monto', 'traspaso-monto-destino']",
       a: "    const IDS_CAMPOS_MONTO = ['movimiento-monto', 'traspaso-monto']" },
     { nombre: 'el enlace no corre al iniciar',
-      de: '    enlazarCamposMonto()\n\n    init()', a: '    init()' },
+      de: '    enlazarCamposMonto()\n\n    // Al volver a la pestaña', a: '    // Al volver a la pestaña' },
     { nombre: 'el HTML del monto vuelve a type="number"',
       de: '<input type="text" inputmode="decimal" id="movimiento-monto"', a: '<input type="number" id="movimiento-monto"' },
     // ── Mostrar ──────────────────────────────────────────────────────────────
