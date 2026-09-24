@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Pedidos — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- PEDIDOS (23/09/2026). Los pedidos de los distribuidores.
+
+       Llegan por WhatsApp, son pocos clientes y todos distribuidores. Esta
+       primera versión se carga A MANO. Más adelante un programa va a leer los
+       mensajes y precargar los pedidos: por eso la base ya guarda el mensaje
+       tal cual (pedidos.texto_original), los apodos de cada cliente y los
+       renglones de TEXTO LIBRE —lo que no se pudo interpretar—. La pantalla
+       los respeta: no inventa un texto_original ni lo borra.
+
+       Las reglas de fondo viven en la base y la pantalla no las repite ni las
+       contradice:
+       - el estado pendiente / en producción / listo lo decide el AVANCE
+         (marcar_avance_pedido); a mano solo se marca entregado o anulado
+         (cambiar_estado_pedido), y anular pide motivo;
+       - no se cumplen más cajas que las pedidas;
+       - un pedido con renglones cumplidos no deja reemplazar la lista entera;
+       - un pedido entregado o anulado no se edita. -->
+
+  <style>
+    [hidden] { display: none !important; }
+
+    body {
+      overflow-x: hidden;
+      --borde-tarjeta:  rgba(26, 42, 82, 0.08);
+      --sombra-tarjeta: 0 1px 2px rgba(26, 42, 82, 0.05);
+      --pe-texto-secundario: #4a5670;
+      --pe-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
+    }
+
+    .pe-app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1rem calc(2rem + env(safe-area-inset-bottom));
+      min-width: 0;
+    }
+
+    /* ── Cabecera (la receta de Cobranzas) ──────────────────────────────── */
+    .pe-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      min-width: 0; background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave); padding: 0.875rem 1rem; margin: 1rem 0;
+    }
+    .pe-header__volver {
+      color: var(--color-texto-suave); text-decoration: none; font-size: 0.875rem; font-weight: 600;
+      flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding-right: 0.5rem;
+    }
+    .pe-header__col { display: flex; flex-direction: column; min-width: 0; text-align: right; }
+    .pe-header__marca {
+      font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--color-texto-suave);
+    }
+    .pe-header__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); min-width: 0; overflow-wrap: anywhere; }
+    .pe-header__punto { color: var(--naranja); font-size: 0.875rem; line-height: 1; }
+
+    /* ── Botones ─────────────────────────────────────────────────────────── */
+    .pe-btn {
+      min-height: 44px; padding: 0 1rem; font: inherit; font-size: 0.9375rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--naranja);
+      background: var(--naranja); color: #fff; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+      text-align: center; touch-action: manipulation;
+    }
+    .pe-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pe-btn:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .pe-btn--secundario { background: var(--color-fondo); color: var(--naranja-oscuro); }
+    .pe-btn--suave { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde); }
+    .pe-btn--peligro { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .pe-btn--ancho { width: 100%; }
+    .pe-link {
+      background: none; border: 0; padding: 0 0.25rem; min-height: 44px; font: inherit; font-size: 0.875rem;
+      font-weight: 600; color: var(--color-texto-suave); cursor: pointer; display: inline-flex; align-items: center;
+    }
+
+    /* ── Tarjetas, títulos, avisos ───────────────────────────────────────── */
+    .pe-tarjeta {
+      background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      padding: 1rem; margin-bottom: 0.75rem; min-width: 0;
+    }
+    .pe-titulo { font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--color-texto); overflow-wrap: anywhere; }
+    .pe-subtitulo { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--color-texto-suave); margin: 1rem 0 0.5rem; }
+    .pe-texto-suave { color: var(--pe-texto-secundario); font-size: 0.875rem; }
+    .pe-vacio { padding: 2rem 1rem; text-align: center; color: var(--pe-texto-secundario); }
+
+    /* LA ESCALA DE AVISOS TIENE DOS ESCALONES, como en Cobranzas: .pe-aviso
+       informa (neutro) y .pe-aviso--grave dice que un dato está mal o que no
+       se puede seguir (bordó). El naranja NUNCA marca validez. */
+    .pe-aviso {
+      padding: 0.75rem 0.875rem; border-radius: var(--radio-input); margin: 0.5rem 0;
+      background: var(--color-superficie); border-left: 4px solid var(--color-acento-gris);
+      color: var(--pe-texto-secundario); font-size: 0.875rem; overflow-wrap: anywhere;
+    }
+    .pe-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+    .pe-error-pegado { color: var(--bordo-oscuro); font-weight: 600; font-size: 0.875rem; margin: 0.375rem 0 0; overflow-wrap: anywhere; }
+
+    .pe-barra-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0 0 0.75rem; }
+    .pe-cabecera-vista { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.75rem; }
+    .pe-cabecera-vista .pe-titulo { flex: 1 1 auto; }
+
+    /* ── Segmento (unidades y filtros): el de Cobranzas ─────────────────── */
+    .pe-segmento {
+      display: flex; gap: 2px; padding: 3px; border-radius: 10px;
+      background: var(--pe-segmento-fondo); min-width: 0; overflow-x: auto; margin: 0 0 0.75rem;
+    }
+    .pe-segmento__opcion {
+      flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 0.625rem; border: 0; border-radius: 8px;
+      background: transparent; font: inherit; font-size: 0.8125rem; font-weight: 600;
+      color: var(--naranja-oscuro); white-space: nowrap; cursor: pointer;
+    }
+    .pe-segmento__opcion[aria-pressed="true"] { background: var(--naranja); color: #fff; font-weight: 700; }
+
+    /* ── Campos ──────────────────────────────────────────────────────────── */
+    .pe-campo { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.875rem; min-width: 0; }
+    .pe-campo > label, .pe-campo__rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto); }
+    .pe-campo__ayuda { font-size: 0.8125rem; color: var(--pe-texto-secundario); }
+    .pe-input, .pe-textarea {
+      width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; box-sizing: border-box;
+      font: inherit; font-size: 1rem; color: var(--color-texto); background: var(--color-fondo);
+      border: 1px solid var(--color-borde); border-radius: var(--radio-input);
+    }
+    .pe-textarea { min-height: 72px; resize: vertical; }
+    .pe-input:focus, .pe-textarea:focus { outline: 2px solid var(--naranja); outline-offset: 0; border-color: var(--naranja); }
+    .pe-input--error { border-color: var(--bordo); }
+    .pe-fila-campos { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+    .pe-check { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; font-weight: 600; }
+    .pe-check input { width: 22px; height: 22px; accent-color: var(--naranja); }
+
+    /* ── Clientes ────────────────────────────────────────────────────────── */
+    .pe-lista { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+    .pe-fila {
+      display: flex; align-items: center; gap: 0.75rem; width: 100%; text-align: left;
+      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      border-radius: 17px; padding: 0.8125rem 1rem; font: inherit; color: var(--color-texto); cursor: pointer;
+      min-width: 0; min-height: 56px;
+    }
+    .pe-fila__cuerpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+    .pe-fila__titulo { font-weight: 700; overflow-wrap: anywhere; }
+    .pe-fila__meta { font-size: 0.8125rem; color: var(--pe-texto-secundario); overflow-wrap: anywhere; }
+    .pe-fila--inactiva { opacity: 1; background: var(--color-superficie); }
+    .pe-marca-inactivo {
+      font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--pe-texto-secundario); border: 1px solid var(--color-borde); border-radius: 999px; padding: 0.125rem 0.5rem;
+    }
+    .pe-apodos { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0.25rem 0 0; }
+    .pe-apodo {
+      display: inline-flex; align-items: center; gap: 0.25rem; max-width: 100%;
+      background: var(--naranja-suave); color: var(--naranja-oscuro); border-radius: 999px;
+      padding: 0.125rem 0.625rem; font-size: 0.8125rem; font-weight: 600; overflow-wrap: anywhere;
+    }
+    .pe-apodo__quitar {
+      border: 0; background: transparent; color: var(--naranja-oscuro); font: inherit; font-weight: 800;
+      min-width: 32px; min-height: 32px; cursor: pointer; border-radius: 999px;
+    }
+    .pe-apodo-nuevo { display: flex; gap: 0.5rem; }
+    .pe-apodo-nuevo .pe-input { flex: 1 1 auto; min-width: 0; }
+  </style>
+</head>
+<body class="pagina-modulo">
+  <div class="pe-app" id="pe-app">
+
+    <header class="pe-header">
+      <a href="../dashboard.html" class="pe-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <div class="pe-header__col">
+        <span class="pe-header__marca">Seis Destinos</span>
+        <span class="pe-header__titulo">Pedidos <span class="pe-header__punto">&#9679;</span> <span id="pe-subtitulo">Pedidos</span></span>
+      </div>
+    </header>
+
+    <div class="pe-vacio" id="pe-sin-acceso" hidden></div>
+    <div class="pe-vacio" id="pe-cargando">Cargando…</div>
+
+    <!-- Con más de una unidad, se elige acá. Con una sola no se dibuja. -->
+    <div id="pe-unidades"></div>
+
+    <!-- ══ INICIO ═════════════════════════════════════════════════════════ -->
+    <section id="pe-vista-inicio" hidden>
+      <div class="pe-barra-acciones" id="pe-acciones-inicio">
+        <button type="button" class="pe-btn pe-btn--suave" id="pe-btn-clientes" hidden>Clientes</button>
+      </div>
+      <div id="pe-inicio-cuerpo"></div>
+    </section>
+
+    <!-- ══ CLIENTES ═══════════════════════════════════════════════════════ -->
+    <section id="pe-vista-clientes" hidden>
+      <div class="pe-cabecera-vista">
+        <button type="button" class="pe-link" id="pe-clientes-volver">&lsaquo; Pedidos</button>
+        <h1 class="pe-titulo">Clientes</h1>
+        <button type="button" class="pe-btn" id="pe-btn-cliente-nuevo">+ Cliente nuevo</button>
+      </div>
+      <div class="pe-campo">
+        <label for="pe-clientes-buscar">Buscar por nombre o apodo</label>
+        <input type="search" class="pe-input" id="pe-clientes-buscar" autocomplete="off" maxlength="120" placeholder="Nombre o apodo…">
+      </div>
+      <div class="pe-lista" id="pe-clientes-lista"></div>
+    </section>
+
+    <!-- ══ UN CLIENTE ═════════════════════════════════════════════════════ -->
+    <section id="pe-vista-cliente" hidden>
+      <div class="pe-cabecera-vista">
+        <button type="button" class="pe-link" id="pe-cliente-volver">&lsaquo; Clientes</button>
+        <h1 class="pe-titulo" id="pe-cliente-titulo">Cliente nuevo</h1>
+      </div>
+      <div class="pe-tarjeta">
+        <div class="pe-campo">
+          <label for="pe-cliente-nombre">Nombre</label>
+          <input type="text" class="pe-input" id="pe-cliente-nombre" maxlength="120" autocomplete="off">
+        </div>
+        <div class="pe-fila-campos">
+          <div class="pe-campo">
+            <label for="pe-cliente-localidad">Localidad</label>
+            <input type="text" class="pe-input" id="pe-cliente-localidad" maxlength="120" autocomplete="off">
+          </div>
+          <div class="pe-campo">
+            <label for="pe-cliente-telefono">Teléfono</label>
+            <!-- Un IDENTIFICADOR: va como texto y nunca pasa por el formato de
+                 números (un punto de miles lo volvería irreconocible). -->
+            <input type="tel" class="pe-input" id="pe-cliente-telefono" maxlength="40" autocomplete="off">
+          </div>
+        </div>
+        <div class="pe-campo">
+          <span class="pe-campo__rotulo" id="pe-cliente-apodos-rotulo">Apodos</span>
+          <span class="pe-campo__ayuda">Cómo lo nombran en los mensajes, para reconocerlo después. Por ejemplo "el Turco" o "Distri Norte". Se pueden cargar varios.</span>
+          <div class="pe-apodos" id="pe-cliente-apodos" aria-labelledby="pe-cliente-apodos-rotulo"></div>
+          <div class="pe-apodo-nuevo">
+            <input type="text" class="pe-input" id="pe-cliente-apodo-nuevo" maxlength="60" autocomplete="off" placeholder="Escribí un apodo…" aria-label="Apodo nuevo">
+            <button type="button" class="pe-btn pe-btn--secundario" id="pe-cliente-apodo-agregar">Agregar</button>
+          </div>
+          <p class="pe-error-pegado" id="pe-cliente-apodo-error" hidden></p>
+        </div>
+        <div class="pe-campo">
+          <label for="pe-cliente-observaciones">Observaciones</label>
+          <textarea class="pe-textarea" id="pe-cliente-observaciones" maxlength="500"></textarea>
+        </div>
+        <label class="pe-check"><input type="checkbox" id="pe-cliente-activo" checked> Activo (se ofrece en los pedidos nuevos)</label>
+        <p class="pe-error-pegado" id="pe-cliente-error" hidden></p>
+        <button type="button" class="pe-btn pe-btn--ancho" id="pe-cliente-guardar">Guardar cliente</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      // Tareas de pedidos habilitadas: tarea → alcance (jsonb o null).
+      misTareas: new Map(),
+      // Todas las unidades activas: id → nombre.
+      unidades: new Map(),
+      unidadId: null,
+      vista: null,
+      // Clientes de la unidad elegida (null = todavía no se leyeron).
+      clientes: null,
+      errorClientes: null,
+      clientesBusqueda: '',
+      clienteForm: null,
+      guardandoCliente: false,
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS PROPIOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Escape de TODO texto que venga de una persona o de la base antes de
+    // meterlo en un innerHTML. Cada módulo tiene el suyo.
+    function esc(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    // Minúsculas, sin acentos y con los espacios colapsados: es lo que se
+    // compara en los buscadores. Los mensajes de WhatsApp vienen sin tildes.
+    function normalizar(t) {
+      return String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+    }
+
+    // Un texto de un campo libre, sin los espacios de los bordes y sin
+    // espacios repetidos adentro.
+    function limpio(t) {
+      return String(t ?? '').replace(/\s+/g, ' ').trim()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TAREAS_PEDIDOS = ['ver', 'cargar', 'configurar']
+
+    // Con bypass de super_admin, igual que tiene_tarea() en la base.
+    function tieneTarea(tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(tarea)
+    }
+    const puedeEntrar = () => TAREAS_PEDIDOS.some(tieneTarea)
+
+    // Las unidades donde la persona tiene esa tarea, con la MISMA regla que
+    // tiene_tarea_alcance(): super_admin todas; {"todas": true} todas; si no,
+    // las de {"unidades": [...]}. Solo unidades activas. Si la regla del
+    // servidor cambia, esto tiene que cambiar con ella.
+    function unidadesCon(tarea) {
+      const activas = [...estado.unidades.keys()]
+      if (estado.miRolApp === 'super_admin') return activas
+      if (!estado.misTareas.has(tarea)) return []
+      const alcance = estado.misTareas.get(tarea)
+      if (alcance && alcance.todas === true) return activas
+      const lista = Array.isArray(alcance?.unidades) ? alcance.unidades.map(String) : []
+      return activas.filter(id => lista.includes(id))
+    }
+
+    // ¿Puede hacer esa tarea en la unidad elegida?
+    function puedeEn(tarea, unidadId = estado.unidadId) {
+      return !!unidadId && unidadesCon(tarea).includes(unidadId)
+    }
+
+    // Las unidades donde tiene ALGUNA de las tres, en el orden de la tabla.
+    function unidadesDelModulo() {
+      const set = new Set(TAREAS_PEDIDOS.flatMap(unidadesCon))
+      return [...estado.unidades.keys()].filter(id => set.has(id))
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PREFERENCIAS (localStorage, siempre con try/catch)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const CLAVE_UNIDAD = 'pedidos.unidad'
+
+    function leerPreferencia(clave) {
+      try { return localStorage.getItem(clave) } catch { return null }
+    }
+    function guardarPreferencia(clave, valor) {
+      try {
+        if (valor == null) localStorage.removeItem(clave)
+        else localStorage.setItem(clave, valor)
+      } catch { /* sin memoria: se vuelve a elegir la próxima vez */ }
+    }
+
+    // La que se eligió antes si todavía se puede; si no, la primera.
+    function unidadInicial(candidatas, guardada) {
+      if (guardada && candidatas.includes(guardada)) return guardada
+      return candidatas[0] ?? null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISTAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const VISTAS = ['pe-vista-inicio', 'pe-vista-clientes', 'pe-vista-cliente']
+    const SUBTITULO_DE_VISTA = {
+      'pe-vista-inicio': 'Pedidos',
+      'pe-vista-clientes': 'Clientes',
+      'pe-vista-cliente': 'Cliente',
+    }
+
+    function mostrarVista(id) {
+      for (const v of VISTAS) document.getElementById(v).hidden = v !== id
+      estado.vista = id
+      document.getElementById('pe-subtitulo').textContent = SUBTITULO_DE_VISTA[id] ?? 'Pedidos'
+      window.scrollTo(0, 0)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UNIDADES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Con una sola unidad no hay nada que elegir: no se dibuja.
+    function htmlUnidades() {
+      const ids = unidadesDelModulo()
+      if (ids.length <= 1) return ''
+      const botones = ids.map(id =>
+        `<button type="button" class="pe-segmento__opcion" data-unidad="${esc(id)}" aria-pressed="${id === estado.unidadId ? 'true' : 'false'}">${esc(estado.unidades.get(id))}</button>`).join('')
+      return `<div class="pe-segmento" role="group" aria-label="Unidad de negocio">${botones}</div>`
+    }
+
+    function pintarUnidades() {
+      document.getElementById('pe-unidades').innerHTML = htmlUnidades()
+    }
+
+    function elegirUnidad(id) {
+      if (!unidadesDelModulo().includes(id) || id === estado.unidadId) return
+      estado.unidadId = id
+      guardarPreferencia(CLAVE_UNIDAD, id)
+      estado.clientes = null
+      pintarUnidades()
+      mostrarInicio()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INICIO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function pintarAccionesInicio() {
+      document.getElementById('pe-btn-clientes').hidden = !puedeEn('configurar')
+    }
+
+    function mostrarInicio() {
+      mostrarVista('pe-vista-inicio')
+      pintarAccionesInicio()
+      document.getElementById('pe-inicio-cuerpo').innerHTML =
+        '<div class="pe-vacio">Todavía no hay nada más acá: la lista de pedidos llega con la próxima parte.</div>'
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CLIENTES — con pedidos:configurar
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function leerClientes(unidadId) {
+      const { data, error } = await supabase.from('clientes')
+        .select('id, nombre, apodos, localidad, telefono, observaciones, activo')
+        .eq('unidad_negocio_id', unidadId).order('nombre')
+      if (error) throw error
+      return data ?? []
+    }
+
+    // Por nombre Y por apodo: el mensaje dice "el Turco" y el cliente se
+    // llama "Distribuidora Anatolia".
+    function clientesFiltrados(lista, busqueda) {
+      const q = normalizar(busqueda)
+      const todos = Array.isArray(lista) ? lista : []
+      if (!q) return todos
+      return todos.filter(c => normalizar(c.nombre).includes(q) ||
+        (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))
+    }
+
+    function htmlChipsApodos(apodos) {
+      const lista = Array.isArray(apodos) ? apodos : []
+      if (!lista.length) return ''
+      return `<span class="pe-apodos">${lista.map(a => `<span class="pe-apodo">${esc(a)}</span>`).join('')}</span>`
+    }
+
+    function htmlFilaCliente(c) {
+      const meta = [limpio(c.localidad), limpio(c.telefono)].filter(Boolean).join(' · ')
+      return `<button type="button" class="pe-fila${c.activo === false ? ' pe-fila--inactiva' : ''}" data-cliente="${esc(c.id)}">` +
+        `<span class="pe-fila__cuerpo"><span class="pe-fila__titulo">${esc(c.nombre)}</span>` +
+        `${meta ? `<span class="pe-fila__meta">${esc(meta)}</span>` : ''}${htmlChipsApodos(c.apodos)}</span>` +
+        `${c.activo === false ? '<span class="pe-marca-inactivo">Inactivo</span>' : ''}</button>`
+    }
+
+    function htmlListaClientes() {
+      if (estado.errorClientes) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorClientes)}</div>`
+      if (estado.clientes === null) return '<div class="pe-vacio">Cargando clientes…</div>'
+      if (!estado.clientes.length) return '<div class="pe-vacio">Todavía no hay clientes en esta unidad. Cargá el primero con «+ Cliente nuevo».</div>'
+      const lista = clientesFiltrados(estado.clientes, estado.clientesBusqueda)
+      if (!lista.length) return `<div class="pe-vacio">Ningún cliente coincide con «${esc(limpio(estado.clientesBusqueda))}».</div>`
+      return lista.map(htmlFilaCliente).join('')
+    }
+
+    function pintarClientes() {
+      document.getElementById('pe-clientes-lista').innerHTML = htmlListaClientes()
+    }
+
+    async function mostrarClientes() {
+      if (!puedeEn('configurar')) { mostrarInicio(); return }
+      mostrarVista('pe-vista-clientes')
+      estado.clientes = null
+      estado.errorClientes = null
+      pintarClientes()
+      const unidad = estado.unidadId
+      try {
+        const lista = await leerClientes(unidad)
+        if (unidad !== estado.unidadId) return
+        estado.clientes = lista
+      } catch (err) {
+        console.error('No se pudieron leer los clientes:', err)
+        estado.errorClientes = 'No se pudieron leer los clientes. Revisá la conexión y volvé a entrar.'
+      }
+      pintarClientes()
+    }
+
+    // ── El formulario de un cliente ─────────────────────────────────────────
+
+    function formClienteVacio() {
+      return { id: null, nombre: '', localidad: '', telefono: '', observaciones: '', activo: true, apodos: [], apodoNuevo: '', error: null, errorApodo: null }
+    }
+
+    function formClienteDesde(c) {
+      return {
+        ...formClienteVacio(), id: c.id, nombre: c.nombre ?? '', localidad: c.localidad ?? '',
+        telefono: c.telefono ?? '', observaciones: c.observaciones ?? '', activo: c.activo !== false,
+        apodos: Array.isArray(c.apodos) ? [...c.apodos] : [],
+      }
+    }
+
+    // Agrega un apodo a la lista. No lo agrega si está vacío o si ya está
+    // (sin distinguir mayúsculas ni acentos): dos veces el mismo apodo no
+    // ayuda a reconocer a nadie. Devuelve una lista NUEVA.
+    function agregarApodo(apodos, texto) {
+      const lista = Array.isArray(apodos) ? apodos : []
+      const t = limpio(texto)
+      if (!t) return { apodos: lista, error: 'Escribí el apodo antes de agregarlo.' }
+      if (t.length > 60) return { apodos: lista, error: 'El apodo es muy largo: hasta 60 letras.' }
+      if (lista.some(a => normalizar(a) === normalizar(t))) return { apodos: lista, error: `«${t}» ya está en la lista.` }
+      return { apodos: [...lista, t], error: null }
+    }
+
+    function quitarApodo(apodos, i) {
+      return (Array.isArray(apodos) ? apodos : []).filter((_, k) => k !== i)
+    }
+
+    function htmlApodosForm(apodos) {
+      const lista = Array.isArray(apodos) ? apodos : []
+      if (!lista.length) return '<span class="pe-texto-suave">Sin apodos todavía.</span>'
+      return lista.map((a, i) =>
+        `<span class="pe-apodo">${esc(a)}<button type="button" class="pe-apodo__quitar" data-quitar-apodo="${i}" aria-label="Quitar el apodo ${esc(a)}">&times;</button></span>`).join('')
+    }
+
+    function faltanCliente(form) {
+      const n = limpio(form?.nombre)
+      if (n.length < 2) return 'Poné el nombre del cliente.'
+      if (n.length > 120) return 'El nombre es muy largo: hasta 120 letras.'
+      return null
+    }
+
+    // Los apodos viajan como ARREGLO (text[]), no como un texto con comas.
+    function parametrosGuardarCliente(form, unidadId) {
+      return {
+        p_id: form.id ?? null,
+        p_unidad_negocio_id: unidadId,
+        p_nombre: limpio(form.nombre),
+        p_apodos: [...(form.apodos ?? [])],
+        p_localidad: limpio(form.localidad) || null,
+        p_telefono: limpio(form.telefono) || null,
+        p_observaciones: String(form.observaciones ?? '').trim() || null,
+        p_activo: form.activo !== false,
+      }
+    }
+
+    function abrirCliente(id) {
+      if (!puedeEn('configurar')) return
+      const c = id ? (estado.clientes ?? []).find(x => x.id === id) : null
+      if (id && !c) return
+      estado.clienteForm = c ? formClienteDesde(c) : formClienteVacio()
+      mostrarVista('pe-vista-cliente')
+      pintarFormCliente(true)
+    }
+
+    // `conValores` escribe los campos de texto: solo al abrir. Repintar en
+    // cada tecla movería el cursor al final.
+    function pintarFormCliente(conValores) {
+      const f = estado.clienteForm
+      if (!f) return
+      document.getElementById('pe-cliente-titulo').textContent = f.id ? 'Editar cliente' : 'Cliente nuevo'
+      if (conValores) {
+        document.getElementById('pe-cliente-nombre').value = f.nombre
+        document.getElementById('pe-cliente-localidad').value = f.localidad
+        document.getElementById('pe-cliente-telefono').value = f.telefono
+        document.getElementById('pe-cliente-observaciones').value = f.observaciones
+        document.getElementById('pe-cliente-activo').checked = f.activo
+        document.getElementById('pe-cliente-apodo-nuevo').value = f.apodoNuevo
+      }
+      document.getElementById('pe-cliente-apodos').innerHTML = htmlApodosForm(f.apodos)
+      const ea = document.getElementById('pe-cliente-apodo-error')
+      ea.textContent = f.errorApodo ?? ''
+      ea.hidden = !f.errorApodo
+      const e = document.getElementById('pe-cliente-error')
+      e.textContent = f.error ?? ''
+      e.hidden = !f.error
+      document.getElementById('pe-cliente-nombre').classList.toggle('pe-input--error', !!f.error && !!faltanCliente(f))
+      document.getElementById('pe-cliente-guardar').disabled = estado.guardandoCliente
+    }
+
+    function leerFormCliente() {
+      const f = estado.clienteForm
+      if (!f) return
+      f.nombre = document.getElementById('pe-cliente-nombre').value
+      f.localidad = document.getElementById('pe-cliente-localidad').value
+      f.telefono = document.getElementById('pe-cliente-telefono').value
+      f.observaciones = document.getElementById('pe-cliente-observaciones').value
+      f.activo = !!document.getElementById('pe-cliente-activo').checked
+      f.apodoNuevo = document.getElementById('pe-cliente-apodo-nuevo').value
+    }
+
+    function agregarApodoAlForm() {
+      const f = estado.clienteForm
+      if (!f) return
+      leerFormCliente()
+      const r = agregarApodo(f.apodos, f.apodoNuevo)
+      f.apodos = r.apodos
+      f.errorApodo = r.error
+      if (!r.error) {
+        f.apodoNuevo = ''
+        document.getElementById('pe-cliente-apodo-nuevo').value = ''
+      }
+      pintarFormCliente(false)
+    }
+
+    function quitarApodoDelForm(i) {
+      const f = estado.clienteForm
+      if (!f) return
+      f.apodos = quitarApodo(f.apodos, i)
+      f.errorApodo = null
+      pintarFormCliente(false)
+    }
+
+    async function guardarCliente() {
+      const f = estado.clienteForm
+      if (!f || estado.guardandoCliente) return
+      leerFormCliente()
+      // Un apodo escrito y no agregado se agrega al guardar: tocar "Guardar"
+      // con el apodo en el campo es decir "este también".
+      if (limpio(f.apodoNuevo)) {
+        const r = agregarApodo(f.apodos, f.apodoNuevo)
+        if (r.error && !/ya está/.test(r.error)) { f.errorApodo = r.error; pintarFormCliente(false); return }
+        f.apodos = r.apodos
+        f.apodoNuevo = ''
+        document.getElementById('pe-cliente-apodo-nuevo').value = ''
+      }
+      f.error = faltanCliente(f)
+      if (f.error) { pintarFormCliente(false); return }
+      estado.guardandoCliente = true
+      pintarFormCliente(false)
+      try {
+        const { error } = await supabase.rpc('guardar_cliente', parametrosGuardarCliente(f, estado.unidadId))
+        if (error) throw error
+        mostrarExito(f.id ? 'Cliente actualizado.' : 'Cliente cargado.')
+        estado.guardandoCliente = false
+        await mostrarClientes()
+      } catch (err) {
+        console.error('No se pudo guardar el cliente:', err)
+        // Los mensajes de guardar_cliente ya vienen escritos para una persona
+        // ("Ya hay un cliente con ese nombre en esta unidad."): van tal cual.
+        f.error = err?.message || 'No se pudo guardar el cliente. Probá de nuevo.'
+        estado.guardandoCliente = false
+        pintarFormCliente(false)
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENTOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function conectarTodo() {
+      document.getElementById('pe-unidades').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-unidad]')
+        if (b) elegirUnidad(b.dataset.unidad)
+      })
+      document.getElementById('pe-btn-clientes').addEventListener('click', () => mostrarClientes())
+      document.getElementById('pe-clientes-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('pe-btn-cliente-nuevo').addEventListener('click', () => abrirCliente(null))
+      document.getElementById('pe-clientes-buscar').addEventListener('input', (e) => {
+        estado.clientesBusqueda = e.target.value
+        pintarClientes()
+      })
+      document.getElementById('pe-clientes-lista').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-cliente]')
+        if (b) abrirCliente(b.dataset.cliente)
+      })
+      document.getElementById('pe-cliente-volver').addEventListener('click', () => mostrarClientes())
+      document.getElementById('pe-cliente-apodo-agregar').addEventListener('click', () => agregarApodoAlForm())
+      document.getElementById('pe-cliente-apodo-nuevo').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); agregarApodoAlForm() }
+      })
+      document.getElementById('pe-cliente-apodos').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-quitar-apodo]')
+        if (b) quitarApodoDelForm(Number(b.dataset.quitarApodo))
+      })
+      document.getElementById('pe-cliente-guardar').addEventListener('click', () => guardarCliente())
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARRANQUE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Sin permiso se dice y se vuelve al dashboard: quedarse en una pantalla
+    // vacía no le dice a nadie por qué no ve nada.
+    function sinAcceso(texto) {
+      document.getElementById('pe-cargando').hidden = true
+      const el = document.getElementById('pe-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      mostrarError(texto)
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    async function cargarPermisos() {
+      const { data: emp, error } = await supabase
+        .from('empleados').select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+      if (error || !emp) throw error ?? new Error('sin empleado')
+      estado.miEmpleadoId = emp.id
+      estado.miRolApp = emp.rol_app
+      const { data: tareas, error: e2 } = await supabase
+        .from('empleado_tareas').select('tarea, alcance')
+        .eq('empleado_id', emp.id).eq('modulo', 'pedidos').eq('habilitado', true)
+      if (e2) throw e2
+      estado.misTareas = new Map((tareas ?? []).map(t => [t.tarea, t.alcance ?? null]))
+      const { data: unidades, error: e3 } = await supabase
+        .from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre')
+      if (e3) throw e3
+      estado.unidades = new Map((unidades ?? []).map(u => [u.id, u.nombre]))
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+      try {
+        await cargarPermisos()
+      } catch (err) {
+        console.error('No se pudieron leer los permisos:', err)
+        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        return
+      }
+      if (!puedeEntrar() || !unidadesDelModulo().length) {
+        sinAcceso('No tenés acceso a Pedidos. Te llevamos al inicio…')
+        return
+      }
+      estado.unidadId = unidadInicial(unidadesDelModulo(), leerPreferencia(CLAVE_UNIDAD))
+      document.getElementById('pe-cargando').hidden = true
+      conectarTodo()
+      pintarUnidades()
+      mostrarInicio()
+      if (window.lucide) window.lucide.createIcons()
+    }
+
+    init()
+  </script>
+</body>
+</html>
