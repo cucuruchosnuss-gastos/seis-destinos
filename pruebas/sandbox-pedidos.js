@@ -24,10 +24,23 @@ const FUNCIONES_BASE = [
   'pintarClientes', 'mostrarClientes', 'formClienteVacio', 'formClienteDesde', 'agregarApodo',
   'quitarApodo', 'htmlApodosForm', 'faltanCliente', 'parametrosGuardarCliente', 'abrirCliente',
   'pintarFormCliente', 'leerFormCliente', 'agregarApodoAlForm', 'quitarApodoDelForm', 'guardarCliente',
+  // Parte 3: cargar un pedido
+  'hoyArgentina', 'esFechaIso', 'fechaCorta', 'textoCajas', 'leerCatalogo', 'esProductoChocolate',
+  'productosPorMasa', 'presentacionesDe', 'detallePresentacion', 'marcasFiltradas', 'descripcionRenglon',
+  'renglonProducto', 'renglonTexto', 'formPedidoVacio', 'formPedidoDesde', 'autoPresentacion',
+  'faltanRenglon', 'faltanPedido', 'itemParaBase', 'parametrosGuardarPedido', 'totalCajasForm',
+  'textoResumenForm', 'clienteDelForm', 'htmlClienteElegido', 'htmlResultadosClientes', 'pintarClienteForm',
+  'elegirClienteForm', 'cambiarClienteForm', 'htmlProductosRenglon', 'htmlMarcasRenglon', 'htmlConoRenglon',
+  'htmlPresentacionesRenglon', 'htmlOpcionPresentacion', 'htmlPieRenglon', 'htmlRenglon', 'htmlAvisoCatalogo', 'pintarRenglones',
+  'pintarPieForm', 'renglon', 'elegirProductoRenglon', 'cambiarProductoRenglon', 'elegirConoRenglon',
+  'elegirMarcaRenglon', 'buscarConoRenglon', 'elegirPresentacionRenglon', 'agregarRenglon', 'quitarRenglon',
+  'identificarRenglon', 'asegurarCatalogoYClientes', 'pintarFormEntero', 'abrirPedidoNuevo',
+  'leerCabeceraForm', 'guardarPedido', 'despuesDeGuardarPedido',
 ]
 
 const CONSTANTES_BASE = [
   'TAREAS_PEDIDOS', 'puedeEntrar', 'CLAVE_UNIDAD', 'VISTAS', 'SUBTITULO_DE_VISTA',
+  'ZONA_AR', 'DECIMALES_CAJAS', 'AVISO_CUMPLIDOS',
 ]
 
 const PRELUDIO = `
@@ -65,6 +78,8 @@ const PRELUDIO = `
   var __impresiones = 0
   var window = { location, scrollTo(){}, addEventListener(){}, lucide: null, print(){ __impresiones++ } }
   function setTimeout(f) { return 0 } function clearTimeout(){}
+  // let del módulo (extraerConst solo toma const).
+  var claveRenglon = 0
 
   var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [], foco: [] }
   var __tablas = {}
@@ -99,6 +114,7 @@ const PRELUDIO = `
     unidades: new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']]),
     unidadId: 'u-cn', vista: null,
     clientes: null, errorClientes: null, clientesBusqueda: '', clienteForm: null, guardandoCliente: false,
+    catalogo: null, catalogoUnidad: null, errorCatalogo: null, form: null, guardandoPedido: false,
   }
 `
 

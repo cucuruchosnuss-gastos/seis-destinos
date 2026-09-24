@@ -165,6 +165,58 @@
     }
     .pe-apodo-nuevo { display: flex; gap: 0.5rem; }
     .pe-apodo-nuevo .pe-input { flex: 1 1 auto; min-width: 0; }
+
+    /* ── Cargar un pedido ────────────────────────────────────────────────── */
+    .pe-cliente-elegido {
+      display: flex; align-items: center; gap: 0.5rem; justify-content: space-between;
+      padding: 0.625rem 0.875rem; border-radius: var(--radio-input);
+      background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 700; overflow-wrap: anywhere;
+    }
+    .pe-resultados { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.375rem 0 0; }
+    .pe-resultado {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; width: 100%; text-align: left;
+      min-height: 44px; padding: 0.5rem 0.75rem; border-radius: var(--radio-input); cursor: pointer;
+      border: 1px solid var(--color-borde); background: var(--color-fondo); font: inherit; color: var(--color-texto);
+    }
+    .pe-resultado__nombre { font-weight: 700; overflow-wrap: anywhere; }
+
+    .pe-renglones { display: flex; flex-direction: column; gap: 0.75rem; margin: 0 0 0.75rem; }
+    .pe-renglon {
+      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      border-radius: 17px; padding: 0.875rem; min-width: 0; border-left: 4px solid var(--naranja);
+    }
+    .pe-renglon--error { border-color: var(--bordo); border-left-color: var(--bordo); }
+    /* El renglón de TEXTO LIBRE: lo que no se pudo identificar. Bordó entero,
+       porque es un dato que falta, no una decoración. */
+    .pe-renglon--texto { background: var(--bordo-suave); border-left-color: var(--bordo); }
+    .pe-renglon__cabecera { display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; margin: 0 0 0.5rem; }
+    .pe-renglon__numero { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pe-texto-secundario); }
+    .pe-sello {
+      display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; border-radius: 999px; padding: 0.1875rem 0.5625rem;
+      background: var(--bordo); color: #fff; white-space: nowrap;
+    }
+    .pe-opciones { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0 0 0.625rem; }
+    .pe-opcion {
+      min-height: 44px; padding: 0.375rem 0.75rem; border-radius: var(--radio-input); cursor: pointer;
+      border: 1px solid var(--color-borde); background: var(--color-fondo); font: inherit; font-size: 0.9375rem;
+      color: var(--color-texto); text-align: left; overflow-wrap: anywhere; max-width: 100%;
+      display: inline-flex; flex-direction: column; justify-content: center;
+    }
+    .pe-opcion[aria-pressed="true"] { border: 2px solid var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 700; }
+    .pe-opcion__detalle { font-size: 0.75rem; color: var(--pe-texto-secundario); font-weight: 500; }
+    /* Los productos de chocolate van al final, separados por una línea. */
+    .pe-separador {
+      flex: 1 1 100%; display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0;
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pe-texto-secundario);
+    }
+    .pe-separador::before, .pe-separador::after { content: ""; flex: 1 1 auto; border-top: 1px solid var(--color-borde); }
+    .pe-elegido { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.625rem; }
+    .pe-elegido__texto { font-weight: 700; overflow-wrap: anywhere; }
+    .pe-renglon .pe-segmento { margin: 0 0 0.625rem; }
+    .pe-renglon__pie { display: grid; gap: 0 0.75rem; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); align-items: end; }
+    .pe-renglon__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+    .pe-resumen { font-weight: 700; margin: 0 0 0.5rem; }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -187,6 +239,7 @@
     <!-- ══ INICIO ═════════════════════════════════════════════════════════ -->
     <section id="pe-vista-inicio" hidden>
       <div class="pe-barra-acciones" id="pe-acciones-inicio">
+        <button type="button" class="pe-btn" id="pe-btn-nuevo" hidden>+ Pedido nuevo</button>
         <button type="button" class="pe-btn pe-btn--suave" id="pe-btn-clientes" hidden>Clientes</button>
       </div>
       <div id="pe-inicio-cuerpo"></div>
@@ -249,11 +302,62 @@
       </div>
     </section>
 
+
+    <!-- ══ CARGAR UN PEDIDO ═══════════════════════════════════════════════ -->
+    <section id="pe-vista-form" hidden>
+      <div class="pe-cabecera-vista">
+        <button type="button" class="pe-link" id="pe-form-volver">&lsaquo; Pedidos</button>
+        <h1 class="pe-titulo" id="pe-form-titulo">Pedido nuevo</h1>
+      </div>
+      <div id="pe-form-aviso"></div>
+      <div class="pe-tarjeta">
+        <div class="pe-campo">
+          <span class="pe-campo__rotulo">Cliente</span>
+          <div id="pe-form-cliente-elegido"></div>
+          <div id="pe-form-cliente-buscador">
+            <input type="search" class="pe-input" id="pe-form-cliente-buscar" autocomplete="off" maxlength="120"
+                   placeholder="Buscar por nombre o apodo…" aria-label="Buscar el cliente por nombre o apodo">
+            <div class="pe-resultados" id="pe-form-clientes-resultados"></div>
+          </div>
+        </div>
+        <div class="pe-fila-campos">
+          <div class="pe-campo">
+            <label for="pe-form-fecha">Fecha del pedido</label>
+            <input type="date" class="pe-input" id="pe-form-fecha">
+          </div>
+          <div class="pe-campo">
+            <label for="pe-form-entrega">Entrega (opcional)</label>
+            <input type="date" class="pe-input" id="pe-form-entrega">
+          </div>
+        </div>
+        <div class="pe-campo">
+          <label for="pe-form-observaciones">Observaciones (opcional)</label>
+          <textarea class="pe-textarea" id="pe-form-observaciones" maxlength="1000"></textarea>
+        </div>
+      </div>
+
+      <h2 class="pe-subtitulo">Renglones</h2>
+      <div id="pe-form-catalogo"></div>
+      <div class="pe-renglones" id="pe-form-renglones"></div>
+      <div class="pe-barra-acciones">
+        <button type="button" class="pe-btn pe-btn--secundario" id="pe-form-agregar">+ Agregar producto</button>
+        <button type="button" class="pe-btn pe-btn--suave" id="pe-form-no-se">No sé qué es</button>
+      </div>
+
+      <div class="pe-tarjeta">
+        <p class="pe-resumen" id="pe-form-resumen"></p>
+        <p class="pe-error-pegado" id="pe-form-error" hidden></p>
+        <button type="button" class="pe-btn pe-btn--ancho" id="pe-form-guardar">Guardar pedido</button>
+      </div>
+    </section>
+
   </div>
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import {
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
+    } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -279,6 +383,12 @@
       clientesBusqueda: '',
       clienteForm: null,
       guardandoCliente: false,
+      // Cargar un pedido
+      catalogo: null,        // { productos, presentaciones, marcas } de la unidad
+      catalogoUnidad: null,  // de qué unidad es el catálogo leído
+      errorCatalogo: null,
+      form: null,            // el pedido que se está cargando o corrigiendo
+      guardandoPedido: false,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -371,11 +481,12 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pe-vista-inicio', 'pe-vista-clientes', 'pe-vista-cliente']
+    const VISTAS = ['pe-vista-inicio', 'pe-vista-clientes', 'pe-vista-cliente', 'pe-vista-form']
     const SUBTITULO_DE_VISTA = {
       'pe-vista-inicio': 'Pedidos',
       'pe-vista-clientes': 'Clientes',
       'pe-vista-cliente': 'Cliente',
+      'pe-vista-form': 'Cargar',
     }
 
     function mostrarVista(id) {
@@ -407,6 +518,7 @@
       estado.unidadId = id
       guardarPreferencia(CLAVE_UNIDAD, id)
       estado.clientes = null
+      estado.catalogo = null
       pintarUnidades()
       mostrarInicio()
     }
@@ -416,6 +528,7 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function pintarAccionesInicio() {
+      document.getElementById('pe-btn-nuevo').hidden = !puedeEn('cargar')
       document.getElementById('pe-btn-clientes').hidden = !puedeEn('configurar')
     }
 
@@ -652,6 +765,578 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // FECHAS Y NÚMEROS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+
+    // Hoy en Argentina, AAAA-MM-DD. Supabase y muchos navegadores corren en
+    // UTC: sin la zona, "hoy" se adelanta nueve horas antes de medianoche.
+    function hoyArgentina() {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    }
+
+    function esFechaIso(t) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(t ?? ''))
+    }
+
+    // AAAA-MM-DD → DD/MM/AAAA, sin pasar por Date (que la correría de día).
+    function fechaCorta(iso) {
+      if (!esFechaIso(iso)) return '—'
+      const [a, m, d] = iso.split('-')
+      return `${d}/${m}/${a}`
+    }
+
+    // Cajas: hasta 2 decimales, y sin ",00" cuando son enteras. Un dato
+    // ausente es "—", nunca "0".
+    function textoCajas(n) {
+      if (n === null || n === undefined || n === '') return '—'
+      return formatearNumeroAr(Number(n), { decimales: 2, minimos: 0 })
+    }
+
+    const DECIMALES_CAJAS = 2
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL CATÁLOGO DE PRODUCTOS (de Producción, solo lectura)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Los productos, sus presentaciones y los conos (marcas). Las policies de
+    // SELECT de esas tres tablas son de Producción (puede_ver_produccion() o
+    // stock:ver): alguien con solo tareas de pedidos recibe CERO filas, sin
+    // ningún error. Por eso la pantalla dice qué pasa cuando no llega nada.
+    async function leerCatalogo(unidadId) {
+      const { data: productos, error: e1 } = await supabase.from('productos_terminados')
+        .select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')
+      if (e1) throw e1
+      const ids = (productos ?? []).map(p => p.id)
+      let presentaciones = []
+      if (ids.length) {
+        const r = await supabase.from('producto_presentaciones')
+          .select('id, producto_id, nombre, con_cono, media_caja, empaque, unidades_por_caja, orden')
+          .in('producto_id', ids).eq('activa', true).order('orden')
+        if (r.error) throw r.error
+        presentaciones = r.data ?? []
+      }
+      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas')
+        .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre')
+      if (e3) throw e3
+      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [] }
+    }
+
+    // El de chocolate lo dice el tipo de masa, no el nombre (los valores
+    // reales de productos_terminados.tipo_masa son 'Común' y 'Chocolate').
+    function esProductoChocolate(p) {
+      return normalizar(p?.tipo_masa).includes('chocolate')
+    }
+
+    function productosPorMasa(cat) {
+      const todos = cat?.productos ?? []
+      return { comunes: todos.filter(p => !esProductoChocolate(p)), chocolate: todos.filter(p => esProductoChocolate(p)) }
+    }
+
+    function presentacionesDe(cat, productoId, conCono) {
+      return (cat?.presentaciones ?? []).filter(pr => pr.producto_id === productoId && pr.con_cono === conCono)
+    }
+
+    function detallePresentacion(pr) {
+      const partes = []
+      if (pr.media_caja) partes.push('media caja')
+      if (pr.empaque) partes.push(pr.empaque)
+      if (pr.unidades_por_caja) partes.push(`${pr.unidades_por_caja} por caja`)
+      return partes.join(' · ')
+    }
+
+    function marcasFiltradas(marcas, texto) {
+      const q = normalizar(texto)
+      const lista = Array.isArray(marcas) ? marcas : []
+      if (!q) return lista
+      return lista.filter(m => normalizar(m.nombre).includes(q))
+    }
+
+    // "Cucurucho grande · Caja x 100 · con cono LOLO": cómo se nombra un
+    // renglón de producto en la lista, el detalle y la impresión.
+    function descripcionRenglon(cat, it) {
+      if (!it?.presentacion_id) return limpio(it?.texto_libre)
+      const pr = (cat?.presentaciones ?? []).find(x => x.id === it.presentacion_id)
+      const prod = pr ? (cat?.productos ?? []).find(x => x.id === pr.producto_id) : null
+      if (!pr || !prod) return 'Producto (no se pudo leer el catálogo)'
+      const partes = [prod.nombre, pr.nombre]
+      if (pr.con_cono) {
+        const m = it.marca_id ? (cat?.marcas ?? []).find(x => x.id === it.marca_id) : null
+        partes.push(m ? `cono ${m.nombre}` : (it.marca_id ? 'cono (marca que no se pudo leer)' : 'cono común'))
+      } else {
+        partes.push('sin cono')
+      }
+      return partes.join(' · ')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CARGAR UN PEDIDO — con pedidos:cargar
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let claveRenglon = 0
+
+    // SIN CONO VIENE PUESTO: es lo más pedido. Con cono está a un toque.
+    function renglonProducto() {
+      claveRenglon++
+      return { clave: claveRenglon, tipo: 'producto', productoId: null, conCono: false, marcaId: null,
+        marcaBusqueda: '', presentacionId: null, cajas: null, texto: '', observacion: '' }
+    }
+
+    // "No sé qué es": un renglón de TEXTO LIBRE, lo que dice el mensaje tal
+    // cual. Queda marcado "Falta identificar" hasta que alguien lo corrija.
+    function renglonTexto(texto = '') {
+      claveRenglon++
+      return { clave: claveRenglon, tipo: 'texto', productoId: null, conCono: false, marcaId: null,
+        marcaBusqueda: '', presentacionId: null, cajas: null, texto, observacion: '' }
+    }
+
+    function formPedidoVacio() {
+      return { id: null, clienteId: null, clienteBusqueda: '', fecha: hoyArgentina(), entrega: '', observaciones: '',
+        textoOriginal: null, renglones: [renglonProducto()], tieneCumplidos: false, error: null, intentado: false }
+    }
+
+    // Para editar: los renglones del pedido tal como están en la base.
+    function formPedidoDesde(p, items, cat) {
+      const renglones = (items ?? []).map(it => {
+        if (!it.presentacion_id) {
+          const r = renglonTexto(it.texto_libre ?? '')
+          r.cajas = it.cajas == null ? null : Number(it.cajas)
+          r.observacion = it.observacion ?? ''
+          return r
+        }
+        const pr = (cat?.presentaciones ?? []).find(x => x.id === it.presentacion_id)
+        const r = renglonProducto()
+        r.productoId = pr?.producto_id ?? null
+        r.conCono = !!pr?.con_cono
+        r.marcaId = it.marca_id ?? null
+        r.presentacionId = it.presentacion_id
+        r.cajas = it.cajas == null ? null : Number(it.cajas)
+        r.observacion = it.observacion ?? ''
+        return r
+      })
+      return {
+        id: p.id, clienteId: p.cliente_id, clienteBusqueda: '', fecha: p.fecha, entrega: p.fecha_entrega ?? '',
+        observaciones: p.observaciones ?? '', textoOriginal: p.texto_original ?? null,
+        renglones: renglones.length ? renglones : [renglonProducto()],
+        tieneCumplidos: (items ?? []).some(it => Number(it.cajas_cumplidas) > 0),
+        error: null, intentado: false,
+      }
+    }
+
+    // Lo más usado viene puesto: si el producto tiene UNA sola presentación
+    // con esa elección de cono, se elige sola.
+    function autoPresentacion(r, cat) {
+      if (r.tipo !== 'producto' || !r.productoId) return
+      // Quien la llama ya soltó la presentación anterior (cambió el producto
+      // o el cono), así que acá solo se decide si hay UNA para elegir sola.
+      const lista = presentacionesDe(cat, r.productoId, r.conCono)
+      if (!r.presentacionId && lista.length === 1) r.presentacionId = lista[0].id
+    }
+
+    // Qué le falta a CADA renglón, en el orden del papel.
+    function faltanRenglon(r) {
+      if (r.tipo === 'texto') {
+        return limpio(r.texto).length < 2 ? 'escribí lo que dice el mensaje' : null
+      }
+      if (!r.productoId) return 'elegí el producto'
+      if (!r.presentacionId) return 'elegí la presentación'
+      if (r.cajas === null || r.cajas === undefined || !(Number(r.cajas) > 0)) return 'poné las cajas'
+      return null
+    }
+
+    function faltanPedido(f) {
+      const faltan = []
+      if (!f.clienteId) faltan.push('Elegí el cliente.')
+      if (!esFechaIso(f.fecha)) faltan.push('Poné la fecha del pedido.')
+      if (f.entrega && !esFechaIso(f.entrega)) faltan.push('La fecha de entrega no es válida.')
+      if (esFechaIso(f.fecha) && esFechaIso(f.entrega) && f.entrega < f.fecha) faltan.push('La entrega no puede ser anterior al pedido.')
+      if (!f.renglones.length) faltan.push('Agregá al menos un renglón.')
+      f.renglones.forEach((r, i) => {
+        const x = faltanRenglon(r)
+        if (x) faltan.push(`Renglón ${i + 1}: ${x}.`)
+      })
+      return faltan
+    }
+
+    // UN RENGLÓN ES UNA DE DOS COSAS, NUNCA LAS DOS: un producto
+    // (presentacion_id) o un texto que no se pudo interpretar (texto_libre).
+    // Cada rama arma su objeto con SUS claves y nada más.
+    function itemParaBase(r) {
+      const observacion = limpio(r.observacion) || null
+      if (r.tipo === 'texto') {
+        return { texto_libre: limpio(r.texto), cajas: r.cajas ?? null, observacion }
+      }
+      return { presentacion_id: r.presentacionId, marca_id: r.conCono ? (r.marcaId ?? null) : null, cajas: r.cajas, observacion }
+    }
+
+    // UNA sola llamada con todos los renglones: todo o nada.
+    function parametrosGuardarPedido(f, unidadId) {
+      return {
+        p_id: f.id ?? null,
+        p_unidad_negocio_id: unidadId,
+        p_cliente_id: f.clienteId,
+        p_fecha: f.fecha,
+        p_fecha_entrega: f.entrega || null,
+        p_observaciones: String(f.observaciones ?? '').trim() || null,
+        p_items: f.renglones.map(itemParaBase),
+        // El mensaje de WhatsApp tal cual, para cuando un programa precargue
+        // los pedidos. La pantalla no lo inventa ni lo borra.
+        p_texto_original: f.textoOriginal ?? null,
+      }
+    }
+
+    function totalCajasForm(f) {
+      return f.renglones.reduce((s, r) => s + (Number(r.cajas) > 0 ? Number(r.cajas) : 0), 0)
+    }
+
+    function textoResumenForm(f) {
+      const n = f.renglones.length
+      const sinId = f.renglones.filter(r => r.tipo === 'texto').length
+      let t = `${n} ${n === 1 ? 'renglón' : 'renglones'} · ${textoCajas(totalCajasForm(f))} cajas`
+      if (sinId) t += ` · ${sinId} sin identificar`
+      return t
+    }
+
+    const AVISO_CUMPLIDOS = 'Este pedido ya tiene renglones cumplidos, así que la lista no se puede reemplazar entera. Corregí el avance de cada renglón de a uno desde el pedido.'
+
+    // ── el cliente ─────────────────────────────────────────────────────────
+
+    function clienteDelForm(f) {
+      return f?.clienteId ? (estado.clientes ?? []).find(c => c.id === f.clienteId) ?? null : null
+    }
+
+    function htmlClienteElegido(f) {
+      if (!f?.clienteId) return ''
+      const c = clienteDelForm(f)
+      const nombre = c ? c.nombre : 'Cliente (no se pudo leer)'
+      return `<div class="pe-cliente-elegido"><span>${esc(nombre)}</span>` +
+        `<button type="button" class="pe-btn pe-btn--suave" id="pe-form-cliente-cambiar">Cambiar</button></div>`
+    }
+
+    // Los activos de la unidad, por nombre o por apodo. Hasta 8: con más de
+    // eso conviene seguir escribiendo.
+    function htmlResultadosClientes(busqueda) {
+      if (estado.errorClientes) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorClientes)}</div>`
+      if (estado.clientes === null) return '<div class="pe-texto-suave">Cargando clientes…</div>'
+      const activos = estado.clientes.filter(c => c.activo !== false)
+      if (!activos.length) return '<div class="pe-aviso">Esta unidad todavía no tiene clientes activos. Los carga quien tiene permiso de configurar Pedidos, en «Clientes».</div>'
+      const lista = clientesFiltrados(activos, busqueda).slice(0, 8)
+      if (!lista.length) return `<div class="pe-texto-suave">Ningún cliente coincide con «${esc(limpio(busqueda))}».</div>`
+      return lista.map(c => `<button type="button" class="pe-resultado" data-form-cliente="${esc(c.id)}">` +
+        `<span class="pe-resultado__nombre">${esc(c.nombre)}</span>${htmlChipsApodos(c.apodos)}</button>`).join('')
+    }
+
+    function pintarClienteForm() {
+      const f = estado.form
+      if (!f) return
+      document.getElementById('pe-form-cliente-elegido').innerHTML = htmlClienteElegido(f)
+      document.getElementById('pe-form-cliente-buscador').hidden = !!f.clienteId
+      document.getElementById('pe-form-clientes-resultados').innerHTML = f.clienteId ? '' : htmlResultadosClientes(f.clienteBusqueda)
+    }
+
+    function elegirClienteForm(id) {
+      const f = estado.form
+      if (!f || !(estado.clientes ?? []).some(c => c.id === id)) return
+      f.clienteId = id
+      pintarClienteForm()
+      pintarPieForm()
+    }
+
+    function cambiarClienteForm() {
+      const f = estado.form
+      if (!f) return
+      f.clienteId = null
+      f.clienteBusqueda = ''
+      document.getElementById('pe-form-cliente-buscar').value = ''
+      pintarClienteForm()
+      pintarPieForm()
+    }
+
+    // ── los renglones ──────────────────────────────────────────────────────
+
+    function htmlProductosRenglon(i, cat) {
+      const { comunes, chocolate } = productosPorMasa(cat)
+      const boton = (p) => `<button type="button" class="pe-opcion" data-r-producto="${i}" data-id="${esc(p.id)}">${esc(p.nombre)}</button>`
+      const choco = chocolate.length ? `<div class="pe-separador">Chocolate</div>${chocolate.map(boton).join('')}` : ''
+      return `<div class="pe-opciones" role="group" aria-label="Producto">${comunes.map(boton).join('')}${choco}</div>`
+    }
+
+    function htmlMarcasRenglon(r, i, cat) {
+      const lista = marcasFiltradas(cat?.marcas, r.marcaBusqueda).slice(0, 10)
+      const comun = `<button type="button" class="pe-opcion" data-r-marca="${i}" data-id="" aria-pressed="${r.marcaId ? 'false' : 'true'}">Cono común</button>`
+      const botones = lista.map(m => `<button type="button" class="pe-opcion" data-r-marca="${i}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+      const vacio = !lista.length && limpio(r.marcaBusqueda) ? `<span class="pe-texto-suave">Ningún cono coincide con «${esc(limpio(r.marcaBusqueda))}».</span>` : ''
+      return `${comun}${botones}${vacio}`
+    }
+
+    // El buscador de conos aparece RECIÉN al elegir "con cono".
+    function htmlConoRenglon(r, i, cat) {
+      const seg = `<div class="pe-segmento" role="group" aria-label="Con cono o sin cono">` +
+        `<button type="button" class="pe-segmento__opcion" data-r-cono="${i}" data-valor="no" aria-pressed="${r.conCono ? 'false' : 'true'}">Sin cono</button>` +
+        `<button type="button" class="pe-segmento__opcion" data-r-cono="${i}" data-valor="si" aria-pressed="${r.conCono ? 'true' : 'false'}">Con cono</button></div>`
+      if (!r.conCono) return seg
+      const buscador = `<div class="pe-campo"><label for="pe-r-cono-${i}">Cono</label>` +
+        `<input type="search" class="pe-input" id="pe-r-cono-${i}" data-r-cono-buscar="${i}" value="${esc(r.marcaBusqueda)}" autocomplete="off" maxlength="60" placeholder="Buscar el cono…">` +
+        `<div class="pe-opciones" data-r-marcas="${i}">${htmlMarcasRenglon(r, i, cat)}</div></div>`
+      return seg + buscador
+    }
+
+    function htmlPresentacionesRenglon(r, i, cat) {
+      const lista = presentacionesDe(cat, r.productoId, r.conCono)
+      if (!lista.length) return `<div class="pe-aviso">Este producto no tiene presentaciones ${r.conCono ? 'con cono' : 'sin cono'}.</div>`
+      return `<div class="pe-opciones" role="group" aria-label="Presentación">${lista.map(pr => htmlOpcionPresentacion(pr, i, r)).join('')}</div>`
+    }
+
+    function htmlOpcionPresentacion(pr, i, r) {
+      const d = detallePresentacion(pr)
+      return `<button type="button" class="pe-opcion" data-r-presentacion="${i}" data-id="${esc(pr.id)}" aria-pressed="${pr.id === r.presentacionId ? 'true' : 'false'}">` +
+        `<span>${esc(pr.nombre)}</span>${d ? `<span class="pe-opcion__detalle">${esc(d)}</span>` : ''}</button>`
+    }
+
+    function htmlPieRenglon(r, i, opcional) {
+      return `<div class="pe-renglon__pie"><div class="pe-campo"><label for="pe-r-cajas-${i}">Cajas${opcional ? ' (si lo dice)' : ''}</label>` +
+        `<input type="text" class="pe-input" id="pe-r-cajas-${i}" data-r-cajas="${i}" autocomplete="off"></div>` +
+        `<div class="pe-campo"><label for="pe-r-obs-${i}">Nota (opcional)</label>` +
+        `<input type="text" class="pe-input" id="pe-r-obs-${i}" data-r-obs="${i}" value="${esc(r.observacion)}" maxlength="200" autocomplete="off"></div></div>`
+    }
+
+    function htmlRenglon(r, i, cat, conErrores) {
+      const falta = conErrores ? faltanRenglon(r) : null
+      const quitar = `<button type="button" class="pe-link" data-r-quitar="${i}" aria-label="Quitar el renglón ${i + 1}">Quitar</button>`
+      const error = falta ? `<p class="pe-error-pegado">Falta: ${esc(falta)}.</p>` : ''
+      if (r.tipo === 'texto') {
+        return `<div class="pe-renglon pe-renglon--texto${falta ? ' pe-renglon--error' : ''}" data-renglon="${i}">` +
+          `<div class="pe-renglon__cabecera"><span class="pe-renglon__numero">Renglón ${i + 1}</span><span class="pe-sello">Falta identificar</span></div>` +
+          `<div class="pe-campo"><label for="pe-r-texto-${i}">Lo que dice el mensaje</label>` +
+          `<textarea class="pe-textarea" id="pe-r-texto-${i}" data-r-texto="${i}" maxlength="300">${esc(r.texto)}</textarea></div>` +
+          `${htmlPieRenglon(r, i, true)}${error}` +
+          `<div class="pe-renglon__acciones"><button type="button" class="pe-btn pe-btn--suave" data-r-identificar="${i}">Ya sé qué es</button>${quitar}</div></div>`
+      }
+      let cuerpo
+      if (!r.productoId) {
+        cuerpo = htmlProductosRenglon(i, cat)
+      } else {
+        const prod = (cat?.productos ?? []).find(p => p.id === r.productoId)
+        cuerpo = `<div class="pe-elegido"><span class="pe-elegido__texto">${esc(prod ? prod.nombre : 'Producto (no se pudo leer)')}</span>` +
+          `<button type="button" class="pe-link" data-r-cambiar-producto="${i}">Cambiar</button></div>` +
+          htmlConoRenglon(r, i, cat) + htmlPresentacionesRenglon(r, i, cat)
+      }
+      return `<div class="pe-renglon${falta ? ' pe-renglon--error' : ''}" data-renglon="${i}">` +
+        `<div class="pe-renglon__cabecera"><span class="pe-renglon__numero">Renglón ${i + 1}</span>${quitar}</div>` +
+        `${cuerpo}${htmlPieRenglon(r, i, false)}${error}</div>`
+    }
+
+    function htmlAvisoCatalogo() {
+      if (estado.errorCatalogo) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorCatalogo)}</div>`
+      if (estado.catalogo && !estado.catalogo.productos.length) {
+        return '<div class="pe-aviso">No se ve ningún producto de esta unidad. Los productos los carga Producción, y para verlos hace falta un permiso de Producción o de Stock. Mientras tanto, cargá cada renglón con «No sé qué es».</div>'
+      }
+      return ''
+    }
+
+    function pintarRenglones() {
+      const f = estado.form
+      if (!f) return
+      const cont = document.getElementById('pe-form-renglones')
+      cont.innerHTML = f.renglones.map((r, i) => htmlRenglon(r, i, estado.catalogo, f.intentado)).join('')
+      // Los campos de cajas se enlazan DESPUÉS de dibujarlos y el valor se
+      // escribe con ponerNumero(): nunca un número en un value="…".
+      for (const input of cont.querySelectorAll('[data-r-cajas]')) {
+        enlazarCampoNumero(input, { decimales: DECIMALES_CAJAS })
+        const r = f.renglones[Number(input.dataset.rCajas)]
+        if (r) ponerNumero(input, r.cajas)
+      }
+      document.getElementById('pe-form-catalogo').innerHTML = htmlAvisoCatalogo()
+      pintarPieForm()
+    }
+
+    function pintarPieForm() {
+      const f = estado.form
+      if (!f) return
+      document.getElementById('pe-form-resumen').textContent = textoResumenForm(f)
+      const faltan = f.intentado ? faltanPedido(f) : []
+      const e = document.getElementById('pe-form-error')
+      const texto = f.error || (faltan.length ? faltan.join(' ') : '')
+      e.textContent = texto
+      e.hidden = !texto
+      // El botón se traba SOLO mientras se manda: lo que falta se dice al
+      // tocarlo. Deshabilitado por lo que falta, el error pegado a él no se
+      // vería nunca.
+      document.getElementById('pe-form-guardar').disabled = estado.guardandoPedido
+    }
+
+    function renglon(i) {
+      return estado.form?.renglones[Number(i)] ?? null
+    }
+
+    function elegirProductoRenglon(i, id) {
+      const r = renglon(i)
+      if (!r || !(estado.catalogo?.productos ?? []).some(p => p.id === id)) return
+      r.productoId = id
+      r.presentacionId = null
+      autoPresentacion(r, estado.catalogo)
+      pintarRenglones()
+    }
+
+    function cambiarProductoRenglon(i) {
+      const r = renglon(i)
+      if (!r) return
+      r.productoId = null
+      r.presentacionId = null
+      pintarRenglones()
+    }
+
+    function elegirConoRenglon(i, conCono) {
+      const r = renglon(i)
+      if (!r || r.conCono === conCono) return
+      r.conCono = conCono
+      if (!conCono) { r.marcaId = null; r.marcaBusqueda = '' }
+      r.presentacionId = null
+      autoPresentacion(r, estado.catalogo)
+      pintarRenglones()
+    }
+
+    function elegirMarcaRenglon(i, id) {
+      const r = renglon(i)
+      if (!r || !r.conCono) return
+      if (id && !(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return
+      r.marcaId = id || null
+      pintarRenglones()
+    }
+
+    // Buscar un cono redibuja SOLO su lista: redibujar el renglón entero le
+    // sacaría el foco al buscador en cada tecla.
+    function buscarConoRenglon(i, texto) {
+      const r = renglon(i)
+      if (!r) return
+      r.marcaBusqueda = texto
+      const cont = document.getElementById('pe-form-renglones').querySelector(`[data-r-marcas="${Number(i)}"]`)
+      if (cont) cont.innerHTML = htmlMarcasRenglon(r, Number(i), estado.catalogo)
+    }
+
+    function elegirPresentacionRenglon(i, id) {
+      const r = renglon(i)
+      if (!r || !presentacionesDe(estado.catalogo, r.productoId, r.conCono).some(p => p.id === id)) return
+      r.presentacionId = id
+      pintarRenglones()
+    }
+
+    function agregarRenglon(tipo) {
+      const f = estado.form
+      if (!f) return
+      f.renglones.push(tipo === 'texto' ? renglonTexto() : renglonProducto())
+      pintarRenglones()
+    }
+
+    function quitarRenglon(i) {
+      const f = estado.form
+      if (!f) return
+      f.renglones.splice(Number(i), 1)
+      pintarRenglones()
+    }
+
+    // "Ya sé qué es": el renglón de texto pasa a producto, y lo que decía el
+    // mensaje queda como nota para no perderlo.
+    function identificarRenglon(i) {
+      const f = estado.form
+      const r = renglon(i)
+      if (!f || !r || r.tipo !== 'texto') return
+      const nuevo = renglonProducto()
+      nuevo.cajas = r.cajas
+      nuevo.observacion = limpio([r.observacion, r.texto].filter(x => limpio(x)).join(' · ')).slice(0, 200)
+      f.renglones[Number(i)] = nuevo
+      pintarRenglones()
+    }
+
+    // ── abrir, leer y guardar ──────────────────────────────────────────────
+
+    async function asegurarCatalogoYClientes() {
+      const unidad = estado.unidadId
+      const tareas = []
+      if (estado.catalogoUnidad !== unidad || !estado.catalogo) {
+        estado.catalogo = null
+        estado.errorCatalogo = null
+        tareas.push(leerCatalogo(unidad).then(c => { if (unidad === estado.unidadId) { estado.catalogo = c; estado.catalogoUnidad = unidad } })
+          .catch(err => { console.error('No se pudo leer el catálogo:', err); estado.errorCatalogo = 'No se pudieron leer los productos. Revisá la conexión y volvé a entrar.' }))
+      }
+      if (estado.clientes === null) {
+        estado.errorClientes = null
+        tareas.push(leerClientes(unidad).then(c => { if (unidad === estado.unidadId) estado.clientes = c })
+          .catch(err => { console.error('No se pudieron leer los clientes:', err); estado.errorClientes = 'No se pudieron leer los clientes. Revisá la conexión y volvé a entrar.' }))
+      }
+      await Promise.all(tareas)
+    }
+
+    function pintarFormEntero() {
+      const f = estado.form
+      if (!f) return
+      document.getElementById('pe-form-titulo').textContent = f.id ? 'Corregir el pedido' : 'Pedido nuevo'
+      document.getElementById('pe-form-fecha').value = f.fecha
+      document.getElementById('pe-form-entrega').value = f.entrega
+      document.getElementById('pe-form-observaciones').value = f.observaciones
+      document.getElementById('pe-form-cliente-buscar').value = f.clienteBusqueda
+      document.getElementById('pe-form-aviso').innerHTML = f.tieneCumplidos ? `<div class="pe-aviso pe-aviso--grave">${esc(AVISO_CUMPLIDOS)}</div>` : ''
+      pintarClienteForm()
+      pintarRenglones()
+    }
+
+    async function abrirPedidoNuevo() {
+      if (!puedeEn('cargar')) return
+      estado.form = formPedidoVacio()
+      mostrarVista('pe-vista-form')
+      pintarFormEntero()
+      await asegurarCatalogoYClientes()
+      if (estado.vista === 'pe-vista-form') pintarFormEntero()
+    }
+
+    function leerCabeceraForm() {
+      const f = estado.form
+      if (!f) return
+      f.fecha = document.getElementById('pe-form-fecha').value
+      f.entrega = document.getElementById('pe-form-entrega').value
+      f.observaciones = document.getElementById('pe-form-observaciones').value
+    }
+
+    async function guardarPedido() {
+      const f = estado.form
+      if (!f || estado.guardandoPedido) return
+      leerCabeceraForm()
+      // Con renglones cumplidos la base no deja reemplazar la lista: se avisa
+      // y NO se manda nada.
+      if (f.tieneCumplidos) {
+        f.error = AVISO_CUMPLIDOS
+        pintarPieForm()
+        return
+      }
+      f.intentado = true
+      f.error = null
+      if (faltanPedido(f).length) { pintarRenglones(); return }
+      estado.guardandoPedido = true
+      pintarPieForm()
+      try {
+        const { data, error } = await supabase.rpc('guardar_pedido', parametrosGuardarPedido(f, estado.unidadId))
+        if (error) throw error
+        estado.guardandoPedido = false
+        const numero = data?.numero
+        mostrarExito(numero ? `Pedido Nº ${numero} guardado.` : 'Pedido guardado.')
+        estado.form = null
+        await despuesDeGuardarPedido(data?.pedido_id ?? f.id)
+      } catch (err) {
+        console.error('No se pudo guardar el pedido:', err)
+        // Los mensajes de guardar_pedido ya vienen escritos para una persona
+        // ("El renglón 3 está vacío."): van tal cual.
+        f.error = err?.message || 'No se pudo guardar el pedido. Probá de nuevo: no quedó nada a medias.'
+        estado.guardandoPedido = false
+        pintarPieForm()
+      }
+    }
+
+    async function despuesDeGuardarPedido(pedidoId) {
+      mostrarInicio()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // EVENTOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -681,6 +1366,51 @@
         if (b) quitarApodoDelForm(Number(b.dataset.quitarApodo))
       })
       document.getElementById('pe-cliente-guardar').addEventListener('click', () => guardarCliente())
+
+      // Cargar un pedido
+      document.getElementById('pe-btn-nuevo').addEventListener('click', () => abrirPedidoNuevo())
+      document.getElementById('pe-form-volver').addEventListener('click', () => { estado.form = null; mostrarInicio() })
+      document.getElementById('pe-form-cliente-buscar').addEventListener('input', (e) => {
+        if (!estado.form) return
+        estado.form.clienteBusqueda = e.target.value
+        document.getElementById('pe-form-clientes-resultados').innerHTML = htmlResultadosClientes(e.target.value)
+      })
+      document.getElementById('pe-form-clientes-resultados').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-form-cliente]')
+        if (b) elegirClienteForm(b.dataset.formCliente)
+      })
+      document.getElementById('pe-form-cliente-elegido').addEventListener('click', (e) => {
+        if (e.target.closest('#pe-form-cliente-cambiar')) cambiarClienteForm()
+      })
+      document.getElementById('pe-form-agregar').addEventListener('click', () => agregarRenglon('producto'))
+      document.getElementById('pe-form-no-se').addEventListener('click', () => agregarRenglon('texto'))
+      document.getElementById('pe-form-guardar').addEventListener('click', () => guardarPedido())
+      const renglones = document.getElementById('pe-form-renglones')
+      renglones.addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-r-producto]'))) elegirProductoRenglon(b.dataset.rProducto, b.dataset.id)
+        else if ((b = e.target.closest('[data-r-cambiar-producto]'))) cambiarProductoRenglon(b.dataset.rCambiarProducto)
+        else if ((b = e.target.closest('[data-r-cono]'))) elegirConoRenglon(b.dataset.rCono, b.dataset.valor === 'si')
+        else if ((b = e.target.closest('[data-r-marca]'))) elegirMarcaRenglon(b.dataset.rMarca, b.dataset.id)
+        else if ((b = e.target.closest('[data-r-presentacion]'))) elegirPresentacionRenglon(b.dataset.rPresentacion, b.dataset.id)
+        else if ((b = e.target.closest('[data-r-quitar]'))) quitarRenglon(b.dataset.rQuitar)
+        else if ((b = e.target.closest('[data-r-identificar]'))) identificarRenglon(b.dataset.rIdentificar)
+      })
+      renglones.addEventListener('input', (e) => {
+        const t = e.target
+        if (t.dataset.rCajas !== undefined) {
+          const r = renglon(t.dataset.rCajas)
+          if (r) { r.cajas = leerCampoNumero(t); pintarPieForm() }
+        } else if (t.dataset.rTexto !== undefined) {
+          const r = renglon(t.dataset.rTexto)
+          if (r) { r.texto = t.value; pintarPieForm() }
+        } else if (t.dataset.rObs !== undefined) {
+          const r = renglon(t.dataset.rObs)
+          if (r) r.observacion = t.value
+        } else if (t.dataset.rConoBuscar !== undefined) {
+          buscarConoRenglon(t.dataset.rConoBuscar, t.value)
+        }
+      })
     }
 
     // ═══════════════════════════════════════════════════════════════════════

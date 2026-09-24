@@ -23,6 +23,7 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/pedidos.htm
 
 // Un commit por parte ya cerrada, en orden.
 const BASES = [
+  '87d3c9d', // Parte 2: la pantalla nueva y los clientes con sus apodos
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
