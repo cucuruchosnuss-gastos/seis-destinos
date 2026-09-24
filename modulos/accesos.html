@@ -1154,20 +1154,50 @@
     // CARGA DE DATOS
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Cuál de las consultas de la carga falló y por qué. Antes las cuatro se
+    // juntaban en un solo "No se pudieron cargar los datos" y un problema de
+    // la base se buscaba a ciegas.
+    function fallasDeCarga(resultados) {
+      return resultados
+        .filter(([, res]) => res && res.error)
+        .map(([que, res]) => ({ que, error: res.error }))
+    }
+
+    function textoFallasDeCarga(fallas) {
+      const partes = fallas.map(({ que, error }) => {
+        const codigo = error.code ? `${error.code}: ` : ''
+        const msj = error.message || 'error desconocido'
+        return `${que} (${codigo}${msj})`
+      })
+      return `No se pudieron cargar ${partes.join('; ')}.`
+    }
+
     async function cargarTodo() {
       document.getElementById('estado-cargando').hidden = false
 
+      // El embed de unidades_negocio NOMBRA la FK: entre empleados y
+      // unidades_negocio hay más de un camino (la FK directa y, muchos a
+      // muchos, puestos_produccion; cualquier tabla nueva con FK a las dos
+      // suma otro), y sin el nombre
+      // PostgREST contesta HTTP 300 (PGRST201) y la pantalla no carga.
       const [solRes, empRes, modRes, unidRes] = await Promise.all([
         supabase.from('solicitudes_acceso').select('*').eq('estado', 'pendiente').order('fecha_solicitud', { ascending: false }),
-        supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, unidades_negocio (nombre)'),
+        supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, unidades_negocio!empleados_unidad_negocio_id_fkey (nombre)'),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
       ])
 
       document.getElementById('estado-cargando').hidden = true
 
-      if (solRes.error || empRes.error || modRes.error || unidRes.error) {
-        mostrarError('No se pudieron cargar los datos de Accesos.')
+      const fallas = fallasDeCarga([
+        ['las solicitudes de acceso', solRes],
+        ['los empleados', empRes],
+        ['los módulos de cada persona', modRes],
+        ['las unidades de negocio', unidRes],
+      ])
+      if (fallas.length) {
+        for (const f of fallas) console.error(`Accesos: no se pudieron cargar ${f.que}.`, f.error)
+        mostrarError(textoFallasDeCarga(fallas))
         return
       }
 
