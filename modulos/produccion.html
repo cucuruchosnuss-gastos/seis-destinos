@@ -707,6 +707,26 @@
     .pr-calculo__cuenta { font-size: 1.125rem; color: var(--pr-texto-secundario); }
     .pr-calculo__total { font-size: 2.5rem; font-weight: 900; font-variant-numeric: tabular-nums; }
     .pr-ag__confirmar { margin-top: auto; min-height: 72px; }
+    /* ── La caja y el embolsado (empaque) ─────────────────────────────────
+       La caja viene puesta (la de la unidad, o la única habilitada) y el
+       paso se saltea: cambiarla es un toque sobre el resumen. Lo que va a
+       consumir el renglón va en gris y chico: es informativo, lo descuenta
+       la base. */
+    .pr-ag__subtitulo { font-size: 1.25rem; font-weight: 800; margin-top: 0.25rem; }
+    .pr-ag__grilla--emb { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+    .pr-ag__grilla--emb .pr-ag__opcion { min-height: 64px; font-size: 1.25rem; }
+    .pr-ag__consumo { font-size: 1.125rem; color: var(--pr-texto-secundario); margin: 0; overflow-wrap: anywhere; }
+    .pr-ag__seguir { min-height: 64px; margin-top: auto; }
+    .pr-ag__caja {
+      min-height: 56px; width: 100%; border-radius: 14px; border: 2px solid var(--pr-borde-control);
+      background: var(--color-fondo); color: var(--color-texto); font: inherit; font-size: 1.125rem; font-weight: 700;
+      text-align: left; padding: 0.375rem 1rem; cursor: pointer; touch-action: manipulation; overflow-wrap: anywhere;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    }
+    .pr-ag__caja-cambiar { color: var(--naranja-oscuro); font-weight: 800; white-space: nowrap; }
+    .pr-ag__caja--falta { border-color: var(--bordo); background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pr-ag__empaque { display: flex; flex-direction: column; gap: 0.5rem; }
+    .pr-ag__empaque .pr-aviso { margin: 0; font-size: 1.125rem; }
 
     /* ── Cerrar planilla ──────────────────────────────────────────────────
        El error va PEGADO al botón y el campo que falta se marca; nunca un
@@ -1519,6 +1539,8 @@
               <div class="pr-calculo__cuenta" id="pr-agregar-cuenta"></div>
               <div class="pr-calculo__total" id="pr-agregar-unidades"></div>
             </div>
+            <!-- La caja elegida (un toque la cambia) y lo que va a consumir. -->
+            <div class="pr-ag__empaque" id="pr-agregar-empaque"></div>
             <p class="pr-error" id="pr-agregar-error" hidden></p>
             <button type="button" class="pr-btn pr-btn--accion pr-ag__confirmar" id="pr-agregar-confirmar">Agregar a lo producido</button>
           </div>
@@ -4136,9 +4158,194 @@
         presentaciones = r.data ?? []
       }
       const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas')
-        .select('id, nombre, estado_alta').eq('activa', true).order('nombre')
+        .select('id, nombre, estado_alta, doble_bolsa').eq('activa', true).order('nombre')
       if (e3) throw e3
-      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [] }
+      // El EMPAQUE: qué cajas admite cada presentación y qué consume una caja
+      // armada. Si esto no se puede leer, el catálogo entero falla y no se
+      // puede agregar nada: agregar SIN la caja la dejaría sin descontar en
+      // silencio, que es peor que no poder cargar.
+      const presIds = presentaciones.map(pr => pr.id)
+      let cajas = [], empaque = [], insumos = []
+      if (presIds.length) {
+        const rc = await supabase.from('presentacion_cajas')
+          .select('presentacion_id, insumo_id, embolsado_sugerido').in('presentacion_id', presIds)
+        if (rc.error) throw rc.error
+        cajas = rc.data ?? []
+        const re = await supabase.from('presentacion_empaque')
+          .select('presentacion_id, insumo_id, cantidad, condicion').in('presentacion_id', presIds)
+        if (re.error) throw re.error
+        empaque = re.data ?? []
+      }
+      const { data: unidad, error: e4 } = await supabase.from('unidades_negocio')
+        .select('id, caja_predeterminada_id').eq('id', unidadId).maybeSingle()
+      if (e4) throw e4
+      const insIds = [...new Set([...cajas.map(c => c.insumo_id), ...empaque.map(e => e.insumo_id)])]
+      if (insIds.length) {
+        const ri = await supabase.from('insumos').select('id, nombre, marca').in('id', insIds)
+        if (ri.error) throw ri.error
+        insumos = ri.data ?? []
+      }
+      return {
+        productos: productos ?? [], presentaciones, marcas: marcas ?? [],
+        cajas, empaque, insumos, cajaPredeterminadaId: unidad?.caja_predeterminada_id ?? null,
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL EMPAQUE — la caja, el embolsado y lo que consume un renglón
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // La pantalla NO descuenta nada: lo hace registrar_produccion_item con
+    // _descontar_empaque. Lo de acá es para ELEGIR (la caja y el embolsado) y
+    // para DECIR lo que se va a consumir, con la MISMA regla de la base:
+    // 1 caja de cartón por caja producida, y cada renglón de
+    // presentacion_empaque 'siempre', o 'bolsa_grande' si el embolsado es
+    // grande o doble, o 'bolsa_individual' si es individual o doble.
+
+    const EMBOLSADOS = [
+      { valor: 'grande', texto: 'Bolsa grande' },
+      { valor: 'individual', texto: 'Bolsitas individuales' },
+      { valor: 'doble', texto: 'Las dos' },
+      { valor: 'ninguno', texto: 'Sin bolsa' },
+    ]
+    const TEXTO_EMBOLSADO = { grande: 'bolsa grande', individual: 'bolsitas individuales', doble: 'doble bolsa', ninguno: 'sin bolsa' }
+
+    function insumoDe(cat, id) {
+      return (cat?.insumos ?? []).find(i => i.id === id) ?? null
+    }
+
+    // "Caja N°1 Nuss": nombre y marca, que es lo que distingue las tres Caja N°1.
+    function textoInsumoEmpaque(ins) {
+      if (!ins) return 'insumo sin nombre'
+      return ins.marca ? `${ins.nombre} ${ins.marca}` : String(ins.nombre ?? '')
+    }
+
+    // Las cajas HABILITADAS para esa presentación. Una que no está acá no se
+    // ofrece nunca.
+    function cajasDe(cat, presentacionId) {
+      return (cat?.cajas ?? []).filter(c => c.presentacion_id === presentacionId)
+    }
+
+    // La caja con la que arranca un renglón: la de la unidad si está
+    // habilitada; si no, la única habilitada; si no, ninguna y hay que elegir.
+    // Una presentación sin cajas configuradas sigue SIN caja (y lo dice).
+    function cajaInicial(cat, presentacionId) {
+      const cajas = cajasDe(cat, presentacionId)
+      if (!cajas.length) return { cajaId: null, cajaElegida: true }
+      const pred = cat?.cajaPredeterminadaId
+      if (pred && cajas.some(c => c.insumo_id === pred)) return { cajaId: pred, cajaElegida: true }
+      if (cajas.length === 1) return { cajaId: cajas[0].insumo_id, cajaElegida: true }
+      return { cajaId: null, cajaElegida: false }
+    }
+
+    // El embolsado que sugiere la caja. Sin caja no hay sugerencia: 'ninguno',
+    // igual que la base.
+    function embolsadoSugerido(cat, presentacionId, cajaId) {
+      if (!cajaId) return 'ninguno'
+      return cajasDe(cat, presentacionId).find(c => c.insumo_id === cajaId)?.embolsado_sugerido ?? 'ninguno'
+    }
+
+    function conoDobleBolsa(cat, marcaId) {
+      return !!marcaId && (cat?.marcas ?? []).find(m => m.id === marcaId)?.doble_bolsa === true
+    }
+
+    // El que viaja a la base. Un cono con doble bolsa manda: la pantalla nunca
+    // puede terminar con menos bolsas que las que corresponden.
+    function embolsadoEfectivo(a, cat) {
+      if (conoDobleBolsa(cat, a?.marcaId)) return 'doble'
+      return a?.embolsado ?? 'ninguno'
+    }
+
+    // "Sin bolsa" solo aparece si la caja no sugiere ninguna bolsa.
+    function opcionesEmbolsado(a, cat) {
+      const sug = embolsadoSugerido(cat, a?.presentacionId, a?.cajaId)
+      return EMBOLSADOS.filter(o => o.valor !== 'ninguno' || sug === 'ninguno')
+    }
+
+    // Lo que consume UNA caja armada: [{ insumoId, cantidad }], la caja primero.
+    function consumoPorCaja(cat, presentacionId, cajaId, embolsado) {
+      const filas = []
+      const sumar = (insumoId, cantidad) => {
+        const f = filas.find(x => x.insumoId === insumoId)
+        if (f) f.cantidad += cantidad
+        else filas.push({ insumoId, cantidad })
+      }
+      if (cajaId) sumar(cajaId, 1)
+      const emb = embolsado ?? 'ninguno'
+      for (const e of (cat?.empaque ?? []).filter(x => x.presentacion_id === presentacionId)) {
+        if (e.condicion === 'bolsa_grande' && emb !== 'grande' && emb !== 'doble') continue
+        if (e.condicion === 'bolsa_individual' && emb !== 'individual' && emb !== 'doble') continue
+        sumar(e.insumo_id, Number(e.cantidad))
+      }
+      return filas
+    }
+
+    // Por N cajas, redondeado a 3 decimales (hay medias planchas).
+    function consumoTotal(filas, cajas) {
+      return (filas ?? []).map(f => ({ insumoId: f.insumoId, cantidad: Math.round(f.cantidad * cajas * 1000) / 1000 }))
+    }
+
+    // Texto plano: "10 Caja N°1 Nuss · 10 Bolsa 100x80 · 5 Tiras x4". Quien lo
+    // meta en HTML lo escapa.
+    function textoConsumo(cat, filas) {
+      return (filas ?? []).map(f => `${formatearNumeroAr(f.cantidad, { decimales: 3, minimos: 0 })} ${textoInsumoEmpaque(insumoDe(cat, f.insumoId))}`).join(' · ')
+    }
+
+    function textoCajaElegida(a, cat) {
+      const caja = a.cajaId ? textoInsumoEmpaque(insumoDe(cat, a.cajaId)) : 'Sin caja'
+      return `${caja} · ${TEXTO_EMBOLSADO[embolsadoEfectivo(a, cat)] ?? ''}`
+    }
+
+    function htmlEmbolsado(a, cat) {
+      const forzado = conoDobleBolsa(cat, a.marcaId)
+      const efectivo = embolsadoEfectivo(a, cat)
+      const botones = opcionesEmbolsado(a, cat).map(o =>
+        `<button type="button" class="pr-ag__opcion" data-ag-embolsado="${esc(o.valor)}" aria-pressed="${o.valor === efectivo ? 'true' : 'false'}"` +
+        `${forzado && o.valor !== 'doble' ? ' disabled' : ''}>${esc(o.texto)}</button>`).join('')
+      return '<span class="pr-ag__subtitulo">¿Cómo se embolsa?</span>' +
+        `<div class="pr-ag__grilla pr-ag__grilla--emb">${botones}</div>` +
+        (forzado ? '<div class="pr-aviso">Este cono va con doble bolsa: van la bolsa grande y las bolsitas individuales.</div>' : '')
+    }
+
+    // El paso de la caja: las habilitadas, el embolsado y lo que consume una caja.
+    function htmlPasoCaja(a, cat) {
+      const cajas = cajasDe(cat, a.presentacionId)
+      let h = '<span class="pr-ag__titulo">¿En qué caja?</span>'
+      if (!cajas.length) {
+        h += '<div class="pr-aviso pr-aviso--grave">Esta presentación no tiene cajas configuradas: no se va a descontar la caja.</div>'
+      } else {
+        h += '<div class="pr-ag__grilla">' + cajas.map(c => {
+          const ins = insumoDe(cat, c.insumo_id)
+          const nota = [ins?.marca || 'sin marca', c.insumo_id === cat?.cajaPredeterminadaId ? 'la de la unidad' : ''].filter(Boolean).join(' · ')
+          return `<button type="button" class="pr-ag__opcion" data-ag-caja="${esc(c.insumo_id)}" aria-pressed="${c.insumo_id === a.cajaId ? 'true' : 'false'}">` +
+            `${esc(ins?.nombre ?? 'Caja')}<span class="pr-ag__opcion-nota">${esc(nota)}</span></button>`
+        }).join('') + '</div>'
+      }
+      h += htmlEmbolsado(a, cat)
+      const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
+      h += !a.cajaElegida
+        ? (a.faltaCaja ? '<p class="pr-error">Elegí una caja.</p>' : '<p class="pr-ag__consumo">Elegí la caja para ver lo que consume.</p>')
+        : `<p class="pr-ag__consumo">${porCaja.length ? `Por caja: ${esc(textoConsumo(cat, porCaja))}` : 'No descuenta empaque.'}</p>`
+      return h + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
+    }
+
+    // En el panel de las cajas: la caja elegida (un toque vuelve a su paso) y
+    // lo que va a consumir el renglón con el número de cajas, en vivo.
+    function htmlEmpaqueAgregar(a, cat) {
+      if (!a?.presentacionId) return ''
+      if (!a.cajaElegida) {
+        return '<button type="button" class="pr-ag__caja pr-ag__caja--falta" data-paso-ag="caja">Falta elegir la caja<span class="pr-ag__caja-cambiar">Elegir</span></button>'
+      }
+      const sinCajas = !cajasDe(cat, a.presentacionId).length
+      let h = `<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>${esc(textoCajaElegida(a, cat))}</span><span class="pr-ag__caja-cambiar">Cambiar</span></button>`
+      if (sinCajas) h += '<div class="pr-aviso pr-aviso--grave">Esta presentación no tiene cajas configuradas: no se va a descontar la caja.</div>'
+      const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
+      if (!porCaja.length) return h + '<p class="pr-ag__consumo">No descuenta empaque.</p>'
+      const cajas = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0
+      h += cajas
+        ? `<p class="pr-ag__consumo">${esc(formatearNumeroAr(cajas, { decimales: 0 }))} ${cajas === 1 ? 'caja' : 'cajas'} = ${esc(textoConsumo(cat, consumoTotal(porCaja, cajas)))}</p>`
+        : `<p class="pr-ag__consumo">Por caja: ${esc(textoConsumo(cat, porCaja))}</p>`
+      return h
     }
 
     // La normalización de TODOS los buscadores del módulo: sin acentos y en
@@ -4186,10 +4393,12 @@
         { clave: 'cono_si_no', titulo: 'Con o sin cono', valor: a.conCono === null ? '' : (a.conCono ? 'Con cono' : 'Sin cono') },
         { clave: 'presentacion', titulo: 'Presentación', valor: pres ? pres.nombre : '' },
       ]
-      // Mientras no se sepa si lleva cono, el paso se muestra igual: son los
-      // 5 del diseño. Recién al contestar "Sin cono" desaparece y Cajas pasa
-      // a ser el 4.
+      // Mientras no se sepa si lleva cono, el paso se muestra igual: son 6.
+      // Recién al contestar "Sin cono" desaparece y Cajas pasa a ser el 5.
       if (a.conCono !== false) pasos.push({ clave: 'cono', titulo: 'Cono', valor: a.marcaElegida ? (marca ? marca.nombre : 'Común') : '' })
+      // La caja va DESPUÉS del cono (o de la presentación) y ANTES de las
+      // cajas. Casi siempre viene puesta, así que figura hecha y se saltea.
+      pasos.push({ clave: 'caja', titulo: 'Caja', valor: a.presentacionId && a.cajaElegida ? textoCajaElegida(a, cat) : '' })
       pasos.push({ clave: 'cajas', titulo: 'Cajas', valor: a.cajas ? formatearNumeroAr(a.cajas, { decimales: 0 }) : '' })
       return pasos.map((x, i) => ({ ...x, n: i + 1, estado: x.clave === a.paso ? 'actual' : (x.valor ? 'hecho' : 'falta') }))
     }
@@ -4286,6 +4495,7 @@
       estado.agregar = {
         paso: 'producto', productoId: '', conCono: null, presentacionId: '',
         marcaId: null, marcaElegida: false, busqueda: '', cajas: null, guardando: false,
+        cajaId: null, cajaElegida: false, embolsado: null, faltaCaja: false,
       }
       document.getElementById('pr-agregar-marca-buscar').value = ''
       document.getElementById('pr-agregar-cono-form').hidden = true
@@ -4308,7 +4518,7 @@
     function elegirProductoAgregar(id) {
       const a = estado.agregar
       if (!a) return
-      if (a.productoId !== id) { a.conCono = null; a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false }
+      if (a.productoId !== id) { a.conCono = null; a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }
       a.productoId = id
       a.paso = 'cono_si_no'
       pintarAgregar()
@@ -4317,19 +4527,36 @@
     function elegirConoSiNo(v) {
       const a = estado.agregar
       if (!a) return
-      if (a.conCono !== v) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false }
+      if (a.conCono !== v) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }
       a.conCono = v
       a.paso = 'presentacion'
       pintarAgregar()
     }
 
+    // Otra presentación son otras cajas: la caja y el embolsado se vuelven a
+    // resolver. La misma presentación NO pisa lo que ya se eligió.
     function elegirPresentacionAgregar(id) {
       const a = estado.agregar
       if (!a) return
-      a.presentacionId = id
-      // Con cono hay que elegirlo; sin cono se va derecho a las cajas.
-      a.paso = a.conCono ? 'cono' : 'cajas'
+      if (a.presentacionId !== id || !a.cajaElegida) {
+        a.presentacionId = id
+        const ini = cajaInicial(estado.catalogo, id)
+        a.cajaId = ini.cajaId
+        a.cajaElegida = ini.cajaElegida
+        a.embolsado = embolsadoSugerido(estado.catalogo, id, a.cajaId)
+        a.faltaCaja = false
+      }
+      // Con cono hay que elegirlo; sin cono se va a la caja, y si la caja ya
+      // vino puesta, derecho a las cajas.
+      a.paso = a.conCono ? 'cono' : (a.cajaElegida ? 'cajas' : 'caja')
       pintarAgregar()
+    }
+
+    function soltarCaja(a) {
+      a.cajaId = null
+      a.cajaElegida = false
+      a.embolsado = null
+      a.faltaCaja = false
     }
 
     function elegirCono(id) {
@@ -4337,6 +4564,37 @@
       if (!a) return
       a.marcaId = id || null
       a.marcaElegida = true
+      a.paso = a.cajaElegida ? 'cajas' : 'caja'
+      pintarAgregar()
+    }
+
+    // Cambiar la caja trae el embolsado que ELLA sugiere, aunque se haya
+    // tocado a mano antes: el embolsado es de la caja. Una caja que no está
+    // habilitada no se puede elegir.
+    function elegirCaja(id) {
+      const a = estado.agregar
+      if (!a || !cajasDe(estado.catalogo, a.presentacionId).some(c => c.insumo_id === id)) return
+      a.cajaId = id
+      a.cajaElegida = true
+      a.faltaCaja = false
+      a.embolsado = embolsadoSugerido(estado.catalogo, a.presentacionId, id)
+      pintarAgregar()
+    }
+
+    // Con un cono de doble bolsa no se puede bajar: las otras opciones están
+    // deshabilitadas y, por las dudas, esto tampoco las acepta.
+    function elegirEmbolsado(v) {
+      const a = estado.agregar
+      if (!a || conoDobleBolsa(estado.catalogo, a.marcaId)) return
+      if (!opcionesEmbolsado(a, estado.catalogo).some(o => o.valor === v)) return
+      a.embolsado = v
+      pintarAgregar()
+    }
+
+    function seguirConCajas() {
+      const a = estado.agregar
+      if (!a) return
+      if (!a.cajaElegida) { a.faltaCaja = true; return pintarAgregar() }
       a.paso = 'cajas'
       pintarAgregar()
     }
@@ -4373,6 +4631,7 @@
       if (!panel.hidden) {
         panel.innerHTML = a.paso === 'producto' ? htmlPasoProducto(cat)
           : a.paso === 'cono_si_no' ? htmlPasoConoSiNo(a, cat)
+          : a.paso === 'caja' ? htmlPasoCaja(a, cat)
           : htmlPasoPresentacion(a, cat)
       }
       // El cono y las cajas COMPARTEN pantalla: se llega al cono con las cajas
@@ -4385,11 +4644,17 @@
       document.getElementById('pr-agregar-cajas-panel').hidden = !enFinal
       document.getElementById('pr-ag-grilla').className = 'pr-ag' + (cono.hidden ? '' : ' pr-ag--cono-cajas')
       pintarCajasAgregar()
+      document.getElementById('pr-agregar-empaque').innerHTML = enFinal ? htmlEmpaqueAgregar(a, cat) : ''
       document.getElementById('pr-agregar-confirmar').disabled = !!a.guardando
     }
 
-    function parametrosRegistrarProducido(turnoId, a) {
-      return { p_turno_id: turnoId, p_presentacion_id: a.presentacionId, p_marca_id: a.marcaId ?? null, p_cajas: a.cajas }
+    // La caja y el embolsado viajan SIEMPRE: el embolsado es el efectivo (con
+    // un cono de doble bolsa, 'doble'), y la base descuenta el empaque sola.
+    function parametrosRegistrarProducido(turnoId, a, cat = estado.catalogo) {
+      return {
+        p_turno_id: turnoId, p_presentacion_id: a.presentacionId, p_marca_id: a.marcaId ?? null, p_cajas: a.cajas,
+        p_caja_insumo_id: a.cajaId ?? null, p_embolsado: embolsadoEfectivo(a, cat),
+      }
     }
 
     // registrar_produccion_item SUMA EL STOCK TERMINADO EN EL ACTO y devuelve
@@ -4400,6 +4665,7 @@
       const err = document.getElementById('pr-agregar-error')
       err.hidden = true
       if (!a.presentacionId) { err.textContent = 'Elegí el producto y la presentación.'; err.hidden = false; return }
+      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }
       if (!Number.isInteger(a.cajas) || a.cajas <= 0) { err.textContent = 'Poné cuántas cajas (un número entero mayor a cero).'; err.hidden = false; return }
       a.guardando = true
       pintarAgregar()
@@ -4784,6 +5050,11 @@
         if (cono && !cono.disabled) return elegirConoSiNo(cono.dataset.agCono === '1')
         const pres = ev.target.closest('[data-ag-presentacion]')
         if (pres) return elegirPresentacionAgregar(pres.dataset.agPresentacion)
+        const caja = ev.target.closest('[data-ag-caja]')
+        if (caja) return elegirCaja(caja.dataset.agCaja)
+        const emb = ev.target.closest('[data-ag-embolsado]')
+        if (emb && !emb.disabled) return elegirEmbolsado(emb.dataset.agEmbolsado)
+        if (ev.target.closest('[data-ag-seguir]')) return seguirConCajas()
       })
       document.getElementById('pr-agregar-marca-buscar').addEventListener('input', ev => {
         estado.agregar.busqueda = ev.target.value
@@ -4800,7 +5071,8 @@
       })
       document.getElementById('pr-agregar-cono-confirmar').addEventListener('click', crearConoNuevo)
       document.getElementById('pr-agregar-cajas-panel').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-cajas-paso]'); if (b) cambiarCajas(Number(b.dataset.cajasPaso))
+        const b = ev.target.closest('[data-cajas-paso]'); if (b) return cambiarCajas(Number(b.dataset.cajasPaso))
+        const p = ev.target.closest('[data-paso-ag]'); if (p) irAPasoAgregar(p.dataset.pasoAg)
       })
       document.getElementById('pr-agregar-cajas').addEventListener('input', () => {
         estado.agregar.cajas = leerCampoNumero(document.getElementById('pr-agregar-cajas'))

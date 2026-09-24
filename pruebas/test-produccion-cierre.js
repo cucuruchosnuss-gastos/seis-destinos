@@ -306,7 +306,7 @@ esperas.push((async () => {
 
   // Los pasos de la izquierda.
   let pasos = S.pasosAgregar(S.estado.agregar, cat())
-  chk('pasos: son 5 y el primero es el actual', pasos.length === 5 && pasos[0].estado === 'actual' && pasos[0].n === 1)
+  chk('pasos: son 6 y el primero es el actual', pasos.length === 6 && pasos[0].estado === 'actual' && pasos[0].n === 1)
   chk('… los que faltan están apagados', pasos.slice(1).every(x => x.estado === 'falta'))
   chk('… y un paso que falta NO muestra ningún valor',
     !/Elegí uno/.test(S.htmlPasosAgregar([{ n: 2, titulo: 'Presentación', valor: '', estado: 'falta' }])))
@@ -387,7 +387,7 @@ esperas.push((async () => {
   await S.confirmarAgregar()
   chk('registrar_produccion_item con el turno, la presentación, el cono y las cajas',
     JSON.stringify(rpcs(S, 'registrar_produccion_item')[0]?.[1]) ===
-    '{"p_turno_id":"t1","p_presentacion_id":"pr-mini-600","p_marca_id":"mk-caserato","p_cajas":35}',
+    '{"p_turno_id":"t1","p_presentacion_id":"pr-mini-600","p_marca_id":"mk-caserato","p_cajas":35,"p_caja_insumo_id":null,"p_embolsado":"ninguno"}',
     JSON.stringify(rpcs(S, 'registrar_produccion_item')[0]))
   chk('… y se vuelve a la planilla, diciendo el sublote que devolvió la base',
     S.__doc.getElementById('pr-planilla').hidden === false && S.__llamadas.exitos.some(t => /7023-3/.test(t)))
@@ -403,7 +403,7 @@ esperas.push((async () => {
   chk('… el panel del cono no aparece', N.__doc.getElementById('pr-agregar-cono').hidden === true)
   chk('… y las cajas quedan en el centro', N.__doc.getElementById('pr-ag-grilla').className === 'pr-ag')
   const pn = N.pasosAgregar(N.estado.agregar, cat())
-  chk('… los pasos son 4 y Cajas es el 4', pn.length === 4 && pn[3].clave === 'cajas' && pn[3].n === 4)
+  chk('… los pasos son 5 y Cajas es el 5', pn.length === 5 && pn[4].clave === 'cajas' && pn[4].n === 5)
   N.estado.agregar.cajas = 7
   await N.confirmarAgregar()
   chk('sin cono, el cono viaja en null', rpcs(N, 'registrar_produccion_item')[0]?.[1].p_marca_id === null)

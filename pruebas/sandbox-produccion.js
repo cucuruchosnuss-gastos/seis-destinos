@@ -64,6 +64,10 @@ const FUNCIONES_BASE = [
   'htmlPasoPresentacion', 'conoAnterior', 'marcasFiltradas', 'htmlMarcas', 'abrirAgregar', 'irAPasoAgregar',
   'elegirProductoAgregar', 'elegirConoSiNo', 'elegirPresentacionAgregar', 'elegirCono', 'cambiarCajas',
   'pintarCajasAgregar', 'pintarAgregar', 'parametrosRegistrarProducido', 'confirmarAgregar', 'crearConoNuevo',
+  // Empaque (24/09/2026): la caja, el embolsado y lo que consume un renglón
+  'insumoDe', 'textoInsumoEmpaque', 'cajasDe', 'cajaInicial', 'embolsadoSugerido', 'conoDobleBolsa', 'embolsadoEfectivo',
+  'opcionesEmbolsado', 'consumoPorCaja', 'consumoTotal', 'textoConsumo', 'textoCajaElegida', 'htmlEmbolsado', 'htmlPasoCaja',
+  'htmlEmpaqueAgregar', 'soltarCaja', 'elegirCaja', 'elegirEmbolsado', 'seguirConCajas',
   'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre', 'guardarBorradorCierre',
   'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
   'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',
@@ -127,6 +131,7 @@ const CONSTANTES_BASE = [
   'UMBRAL_ALEJADA', 'MS_BANDA_EXITO',
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION',
+  'EMBOLSADOS', 'TEXTO_EMBOLSADO',
 ]
 
 const PRELUDIO = `
