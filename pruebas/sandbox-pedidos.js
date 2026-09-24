@@ -44,6 +44,8 @@ const FUNCIONES_BASE = [
   'pintarAccionesDetalle', 'abrirDetalle', 'recargarDetalle', 'marcarAvance', 'guardarAvanceDesdeCampo',
   'marcarCumplido', 'pedirCambioEstado', 'cancelarCambioEstado', 'faltaMotivo', 'parametrosCambiarEstado',
   'confirmarCambioEstado', 'abrirCorregirPedido',
+  // Parte 5: imprimir
+  'htmlImpresion', 'imprimirPedido',
 ]
 
 const CONSTANTES_BASE = [

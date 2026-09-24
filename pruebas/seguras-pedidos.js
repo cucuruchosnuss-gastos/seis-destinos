@@ -30,6 +30,8 @@ const SEGURAS_PEDIDOS = [
   ['anulado', 'HTML ya escapado: htmlDetalle() lo arma arriba con esc() del motivo, o vacío'],
   ['mensaje', 'HTML ya escapado: htmlDetalle() lo arma arriba con esc() del texto_original, o vacío'],
   ['avisoSinId', 'HTML ya escapado: htmlDetalle() lo arma arriba con esc() de la cuenta, o vacío'],
+  // Parte 5: imprimir
+  ['filas', 'HTML ya escapado: htmlImpresion() arma cada fila arriba con esc() de las cajas, la descripción, lo hecho y la nota'],
   ["items.map(it => htmlItem(it, p, cat, d.errores?.[it.id])).join('')", 'HTML armado por htmlItem(), que escapa la descripción, la nota, el id y el error'],
 ]
 

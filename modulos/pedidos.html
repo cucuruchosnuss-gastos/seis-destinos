@@ -115,7 +115,9 @@
       background: var(--pe-segmento-fondo); min-width: 0; overflow-x: auto; margin: 0 0 0.75rem;
     }
     .pe-segmento__opcion {
-      flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 0.625rem; border: 0; border-radius: 8px;
+      /* No se achica por debajo de su texto: con seis estados en 375px la
+         fila scrollea de costado adentro del segmento, no se pisa. */
+      flex: 1 0 auto; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: 8px;
       background: transparent; font: inherit; font-size: 0.8125rem; font-weight: 600;
       color: var(--naranja-oscuro); white-space: nowrap; cursor: pointer;
     }
@@ -274,6 +276,27 @@
     }
     .pe-panel--peligro { border-color: var(--bordo); }
     .pe-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0; }
+
+    /* ── Imprimir el pedido ──────────────────────────────────────────────────
+       La hoja que baja al depósito para armarlo. En pantalla no se ve; al
+       imprimir, es lo ÚNICO que se ve. */
+    .pe-impresion { display: none; }
+    @media print {
+      body { background: #fff !important; }
+      body > *:not(#pe-impresion) { display: none !important; }
+      .pe-impresion { display: block !important; color: #000; font-size: 12pt; }
+      .pe-impresion h1 { font-size: 18pt; margin: 0 0 4pt; }
+      .pe-impresion__datos { margin: 0 0 10pt; line-height: 1.4; }
+      .pe-impresion table { width: 100%; border-collapse: collapse; }
+      .pe-impresion th, .pe-impresion td { border: 1px solid #000; padding: 6pt; text-align: left; vertical-align: top; }
+      .pe-impresion th { font-size: 10pt; }
+      .pe-impresion tr { page-break-inside: avoid; }
+      .pe-impresion__cajas { width: 12%; text-align: right; font-weight: 700; font-size: 14pt; }
+      .pe-impresion__tilde { width: 8%; }
+      .pe-casillero { display: inline-block; width: 16pt; height: 16pt; border: 2px solid #000; }
+      .pe-impresion__falta { font-weight: 800; }
+      .pe-impresion__nota { font-size: 10pt; }
+    }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -283,7 +306,7 @@
       <a href="../dashboard.html" class="pe-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
       <div class="pe-header__col">
         <span class="pe-header__marca">Seis Destinos</span>
-        <span class="pe-header__titulo">Pedidos <span class="pe-header__punto">&#9679;</span> <span id="pe-subtitulo">Pedidos</span></span>
+        <span class="pe-header__titulo">Pedidos <span class="pe-header__punto">&#9679;</span> <span id="pe-subtitulo">Lista</span></span>
       </div>
     </header>
 
@@ -376,8 +399,10 @@
         <h1 class="pe-titulo" id="pe-detalle-titulo">Pedido</h1>
       </div>
       <div id="pe-detalle-aviso"></div>
-      <div id="pe-detalle-cuerpo"></div>
+      <!-- Las acciones van ARRIBA de los renglones: con un pedido largo, abajo
+           quedarían a varias pantallas de distancia. -->
       <div class="pe-barra-acciones" id="pe-detalle-acciones">
+        <button type="button" class="pe-btn" id="pe-btn-imprimir" hidden>Imprimir el pedido</button>
         <button type="button" class="pe-btn pe-btn--suave" id="pe-btn-corregir" hidden>Corregir el pedido</button>
         <button type="button" class="pe-btn pe-btn--secundario" id="pe-btn-entregado" hidden>Marcar entregado</button>
         <button type="button" class="pe-btn pe-btn--suave" id="pe-btn-anular" hidden>Anular</button>
@@ -403,6 +428,7 @@
           <button type="button" class="pe-btn pe-btn--suave" id="pe-anular-no">Cancelar</button>
         </div>
       </div>
+      <div id="pe-detalle-cuerpo"></div>
     </section>
 
     <!-- ══ CARGAR UN PEDIDO ═══════════════════════════════════════════════ -->
@@ -454,6 +480,9 @@
     </section>
 
   </div>
+
+  <!-- La hoja para imprimir: la arma htmlImpresion() justo antes de imprimir. -->
+  <div class="pe-impresion" id="pe-impresion"></div>
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
@@ -592,7 +621,7 @@
 
     const VISTAS = ['pe-vista-inicio', 'pe-vista-clientes', 'pe-vista-cliente', 'pe-vista-form', 'pe-vista-detalle']
     const SUBTITULO_DE_VISTA = {
-      'pe-vista-inicio': 'Pedidos',
+      'pe-vista-inicio': 'Lista',
       'pe-vista-clientes': 'Clientes',
       'pe-vista-cliente': 'Cliente',
       'pe-vista-form': 'Cargar',
@@ -1195,7 +1224,8 @@
     function htmlPresentacionesRenglon(r, i, cat) {
       const lista = presentacionesDe(cat, r.productoId, r.conCono)
       if (!lista.length) return `<div class="pe-aviso">Este producto no tiene presentaciones ${r.conCono ? 'con cono' : 'sin cono'}.</div>`
-      return `<div class="pe-opciones" role="group" aria-label="Presentación">${lista.map(pr => htmlOpcionPresentacion(pr, i, r)).join('')}</div>`
+      return `<span class="pe-campo__rotulo">Presentación</span>` +
+        `<div class="pe-opciones" role="group" aria-label="Presentación">${lista.map(pr => htmlOpcionPresentacion(pr, i, r)).join('')}</div>`
     }
 
     function htmlOpcionPresentacion(pr, i, r) {
@@ -1697,6 +1727,7 @@
     function pintarAccionesDetalle() {
       const p = estado.detalle?.pedido
       const cargar = !!p && puedeEn('cargar', p.unidad_negocio_id)
+      document.getElementById('pe-btn-imprimir').hidden = !p
       document.getElementById('pe-btn-corregir').hidden = !(cargar && !pedidoCerrado(p))
       document.getElementById('pe-btn-entregado').hidden = !(cargar && !pedidoCerrado(p))
       document.getElementById('pe-btn-anular').hidden = !(cargar && p.estado !== 'anulado')
@@ -1836,6 +1867,41 @@
       }
     }
 
+    // ── imprimir ───────────────────────────────────────────────────────────
+
+    // La hoja que baja al depósito: cliente, fecha, entrega y los renglones
+    // con un casillero para tildar. Las cajas van a la izquierda de la
+    // descripción y en grande: es lo que se cuenta al armar.
+    function htmlImpresion(d, cat) {
+      const p = d.pedido
+      const c = p.clientes ?? {}
+      const cliente = [c.nombre ?? 'Cliente (no se pudo leer)', c.localidad, c.telefono].filter(Boolean).join(' · ')
+      const filas = (d.items ?? []).map(it => {
+        const texto = !it.presentacion_id
+        const desc = descripcionRenglon(cat, it)
+        const hechas = Number(it.cajas_cumplidas) > 0 ? ` (ya hay ${textoCajas(it.cajas_cumplidas)})` : ''
+        return `<tr><td class="pe-impresion__tilde"><span class="pe-casillero"></span></td>` +
+          `<td class="pe-impresion__cajas">${esc(textoCajas(it.cajas))}</td>` +
+          `<td>${texto ? '<span class="pe-impresion__falta">FALTA IDENTIFICAR: </span>' : ''}${esc(desc)}${esc(hechas)}` +
+          `${it.observacion ? `<div class="pe-impresion__nota">Nota: ${esc(it.observacion)}</div>` : ''}</td></tr>`
+      }).join('')
+      const total = (d.items ?? []).reduce((s, it) => s + (Number(it.cajas) || 0), 0)
+      return `<h1>Pedido Nº ${esc(p.numero)}</h1>` +
+        `<div class="pe-impresion__datos"><div><strong>Cliente:</strong> ${esc(cliente)}</div>` +
+        `<div><strong>Fecha:</strong> ${esc(fechaCorta(p.fecha))} · <strong>Entrega:</strong> ${esc(p.fecha_entrega ? fechaCorta(p.fecha_entrega) : 'sin fecha')}</div>` +
+        `${p.observaciones ? `<div><strong>Observaciones:</strong> ${esc(p.observaciones)}</div>` : ''}` +
+        `${p.estado === 'anulado' ? '<div><strong>ANULADO</strong></div>' : ''}</div>` +
+        `<table><thead><tr><th>Listo</th><th>Cajas</th><th>Producto</th></tr></thead><tbody>${filas}</tbody>` +
+        `<tfoot><tr><td></td><td class="pe-impresion__cajas">${esc(textoCajas(total))}</td><td>Total de cajas</td></tr></tfoot></table>`
+    }
+
+    function imprimirPedido() {
+      const d = estado.detalle
+      if (!d?.pedido) return
+      document.getElementById('pe-impresion').innerHTML = htmlImpresion(d, estado.catalogo)
+      window.print()
+    }
+
     // ── corregir el pedido entero ──────────────────────────────────────────
 
     // Con renglones cumplidos la base no deja reemplazar la lista: ni se abre
@@ -1941,6 +2007,7 @@
       cuerpo.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && e.target.dataset?.avance !== undefined) { e.preventDefault(); guardarAvanceDesdeCampo(e.target.dataset.avance) }
       })
+      document.getElementById('pe-btn-imprimir').addEventListener('click', () => imprimirPedido())
       document.getElementById('pe-btn-corregir').addEventListener('click', () => abrirCorregirPedido())
       document.getElementById('pe-btn-entregado').addEventListener('click', () => pedirCambioEstado('entregado'))
       document.getElementById('pe-btn-anular').addEventListener('click', () => pedirCambioEstado('anulado'))

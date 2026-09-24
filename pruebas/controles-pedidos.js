@@ -25,6 +25,7 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/pedidos.htm
 const BASES = [
   '87d3c9d', // Parte 2: la pantalla nueva y los clientes con sus apodos
   'd525f8f', // Parte 3: cargar un pedido, con renglones de producto y de texto libre
+  '4062707', // Parte 4: la lista de pedidos con su avance, y el detalle de cada uno
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].

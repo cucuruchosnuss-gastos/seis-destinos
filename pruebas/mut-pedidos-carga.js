@@ -66,7 +66,7 @@ correrMutaciones({
     { nombre: 'la fecha del campo no se lee', de: "      f.fecha = document.getElementById('pe-form-fecha').value\n", a: '' },
     { nombre: 'el renglón incompleto no se marca', de: "      return `<div class=\"pe-renglon${falta ? ' pe-renglon--error' : ''}\" data-renglon=\"${i}\">` +", a: "      return `<div class=\"pe-renglon\" data-renglon=\"${i}\">` +" },
     // Texto libre
-    { nombre: 'el texto libre sin sello', de: '<span class="pe-sello">Falta identificar</span>', a: '' },
+    { nombre: 'el texto libre sin sello', de: 'Renglón ${i + 1}</span><span class="pe-sello">Falta identificar</span>', a: 'Renglón ${i + 1}</span>' },
     { nombre: 'el texto libre no va en bordó', de: '        return `<div class="pe-renglon pe-renglon--texto${falta', a: '        return `<div class="pe-renglon${falta' },
     { nombre: '"Ya sé qué es" pierde el texto', de: '      nuevo.observacion = limpio([r.observacion, r.texto].filter(x => limpio(x)).join(\' · \')).slice(0, 200)', a: '      nuevo.observacion = limpio(r.observacion)' },
     { nombre: 'formPedidoDesde pierde el texto libre', de: "          const r = renglonTexto(it.texto_libre ?? '')", a: "          const r = renglonTexto('')" },
