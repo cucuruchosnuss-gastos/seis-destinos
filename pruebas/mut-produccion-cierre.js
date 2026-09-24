@@ -17,6 +17,7 @@ correrMutaciones({
     'htmlPendientesCompletar', 'mostrarFormParada',
   ],
   equivalentes: [
+    { expr: 'esc(textoSinCaja(it))', motivo: 'textoSinCaja() devuelve texto constante del código (solo mira si el embolsado es ninguno): ningún dato de la base llega a la salida' },
     { expr: 'esc(p.turno.lote)', motivo: 'el lote es un integer de la base (nextval de una secuencia)' },
     { expr: "esc(horaArgentina(p.turno.abierto_en) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
     { expr: 'esc(lista.length)', motivo: 'un conteo' },

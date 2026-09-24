@@ -73,6 +73,10 @@ const FUNCIONES_BASE = [
   'sincronizarCantidadesEmpaque', 'insumoPorTexto', 'parametrosGuardarEmpaque', 'valorEmpaque', 'accionEmpaque',
   'cambiarSelectEmpaque', 'cambiarDobleBolsa',
   'leerStockEmpaque', 'cargarStockAgregar', 'faltantesEmpaque', 'htmlAvisoStockEmpaque',
+  // Sin empaque legible (24/09/2026): se carga igual, sin caja, y se marca
+  'leerEmpaqueCatalogo', 'htmlAvisoSinEmpaque', 'sinCajaDescontada', 'textoSinCaja',
+  // La burbuja de conos por revisar en los accesos a Configuración
+  'cargarBurbujaConos', 'textoConosPendientes', 'htmlBotonConfig', 'pintarBurbujaConos', 'abrirConfigDesdeAcceso',
   'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre', 'guardarBorradorCierre',
   'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
   'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',
@@ -189,6 +193,7 @@ const PRELUDIO = `
   var camposPlanillaEnlazados = false
   var reintentando = false
   var relojBandaExito = null
+  var turnoBurbujaConos = 0
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }

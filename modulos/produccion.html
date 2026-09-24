@@ -607,6 +607,10 @@
     .pr-producido--anulado { opacity: 0.55; }
     .pr-producido--anulado .pr-producido__sublote { text-decoration: line-through; }
     .pr-producido--invalido { border-top-color: var(--bordo); background: var(--bordo-suave); }
+    /* Un renglón que entró SIN CAJA: la caja no se descontó. En bordó, porque
+       es un faltante de stock que alguien tiene que corregir a mano. */
+    .pr-producido--sin-caja { border-top-color: var(--bordo); background: var(--bordo-suave); }
+    .pr-sin-caja { color: var(--bordo-oscuro); font-weight: 700; }
     .pr-producido__sublote { font-size: 1.375rem; font-weight: 900; font-variant-numeric: tabular-nums; }
     .pr-producido__desc { min-width: 0; line-height: 1.25; overflow-wrap: anywhere; }
     .pr-producido__nombre { font-size: 1.25rem; font-weight: 800; }
@@ -1029,6 +1033,14 @@
     }
     .pr-cfg-tab--activa { color: var(--color-texto); font-weight: 800; border-bottom-color: var(--naranja); }
     /* El contador de pendientes: solo se dibuja si la cuenta se pudo leer. */
+    /* La burbuja de conos por revisar en los accesos a Configuración: la misma
+       receta que .tarjeta-modulo__burbuja del dashboard, pero en línea, al
+       lado del texto del botón (acá el botón no es posicionado). */
+    .pr-burbuja {
+      display: inline-flex; align-items: center; justify-content: center; margin-left: 0.5rem;
+      min-width: 1.75rem; height: 1.75rem; padding: 0 0.4rem; border-radius: 999px;
+      background: var(--rojo); color: #fff; font-size: 0.9375rem; font-weight: 700; line-height: 1; vertical-align: middle;
+    }
     .pr-cfg-tab__pend { background: var(--naranja); color: #fff; border-radius: 999px; padding: 0.05rem 0.45rem;
       font-size: 0.75rem; font-weight: 800; }
 
@@ -1149,6 +1161,7 @@
     /* Un sublote ANULADO no se esconde: existió, se selló en una caja y su
        stock entró y salió. Se muestra tachado y no suma. */
     .pr-of-anulado { opacity: 0.6; }
+    .pr-of-sin-caja { background: var(--bordo-suave); border-left: 4px solid var(--bordo); padding-left: 0.5rem; }
     .pr-of-anulado .pr-producido__sublote { text-decoration: line-through; }
     .pr-of-correccion { font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.125rem; }
     .pr-of-vacio { padding: 1rem 1.25rem; color: var(--color-texto-suave); }
@@ -2352,7 +2365,7 @@
         olvidarPersona()
         guardarPreferencia(CLAVE_UNIDAD, null)
       } else if (que === 'config') {
-        return mostrarConfig()
+        return abrirConfigDesdeAcceso()
       } else if (que === 'historial') {
         return mostrarHistorial()
       } else if (que === 'stock') {
@@ -2932,7 +2945,10 @@
       conectarConfig()
       conectarHistorial()
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
+        if (document.visibilityState === 'visible') {
+          mantenerPantalla(estado.hayTurnoAbierto)
+          cargarBurbujaConos()
+        }
       })
       // Cualquier toque cuenta como uso, para el cierre por inactividad.
       for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, tocar)
@@ -3648,11 +3664,18 @@
       // una caja que después se deshabilitó para esa presentación ya no está
       // en el catálogo, y el renglón tiene que seguir diciendo cuál fue.
       const cajaIds = [...new Set((items ?? []).map(it => it.caja_insumo_id).filter(Boolean))]
+      // Si no se puede leer, NO se voltea la planilla: es solo el nombre de la
+      // caja, y sin él el renglón dice "caja sin nombre" (la planilla sigue
+      // sirviendo para cargar y cerrar).
       let insumosCaja = []
       if (cajaIds.length) {
-        const { data: ins, error: e6 } = await supabase.from('insumos').select('id, nombre, marca').in('id', cajaIds)
-        if (e6) throw e6
-        insumosCaja = ins ?? []
+        try {
+          const { data: ins, error: e6 } = await supabase.from('insumos').select('id, nombre, marca').in('id', cajaIds)
+          if (e6) throw e6
+          insumosCaja = ins ?? []
+        } catch (err) {
+          console.error('nombres de las cajas:', err)
+        }
       }
       return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja }
     }
@@ -3853,9 +3876,30 @@
       return partes.join(' · ')
     }
 
+    // Un renglón que entró SIN CAJA: la caja no se descontó del stock.
+    // El criterio sale de los datos del propio renglón, no del catálogo:
+    // desde el empaque (24/09/2026) la base guarda SIEMPRE el embolsado
+    // (registrar_produccion_item y cerrar_turno ponen 'ninguno' como mínimo),
+    // así que `caja_insumo_id` null CON embolsado es un renglón posterior al
+    // empaque que no descontó caja. Los anteriores tienen los dos en null y
+    // no se marcan: no es un error, el empaque no existía. Un anulado
+    // tampoco: su empaque ya se devolvió.
+    // Entra también el de una presentación SIN cajas configuradas: ahí la caja
+    // tampoco se descontó, y es verdad decirlo.
+    function sinCajaDescontada(it) {
+      return !!it && !it.anulado && !it.caja_insumo_id && !!it.embolsado
+    }
+
+    // Texto plano. Las bolsas no se descuentan si el embolsado quedó en
+    // 'ninguno'; con 'doble' sí.
+    function textoSinCaja(it) {
+      return 'Sin empaque descontado: no se descontó la caja' + (it.embolsado === 'ninguno' ? ' ni las bolsas' : '')
+    }
+
     function htmlProducido(it, cat, insumosCaja = estado.planilla?.insumosCaja) {
       const d = describirProducido(it, cat)
-      const clases = 'pr-producido' + (it.anulado ? ' pr-producido--anulado' : '') + (d ? '' : ' pr-producido--invalido')
+      const sinCaja = sinCajaDescontada(it)
+      const clases = 'pr-producido' + (it.anulado ? ' pr-producido--anulado' : '') + (d ? '' : ' pr-producido--invalido') + (sinCaja ? ' pr-producido--sin-caja' : '')
       const empaque = textoEmpaqueItem(it, [...(insumosCaja ?? []), ...(cat?.insumos ?? [])])
       const desc = d
         ? `<div class="pr-producido__nombre">${esc(d.producto)}</div>` +
@@ -3872,7 +3916,7 @@
           `<button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${esc(it.id)}">Borrar</button>`
       return `<div class="${clases}">` +
         `<span class="pr-producido__sublote">${esc(it.sublote)}</span>` +
-        `<div class="pr-producido__desc">${desc}</div>` +
+        `<div class="pr-producido__desc">${desc}${sinCaja ? `<div class="pr-producido__detalle pr-sin-caja">${esc(textoSinCaja(it))}</div>` : ''}</div>` +
         `<span class="pr-producido__cajas">${esc(formatearNumeroAr(it.cajas, { decimales: 0 }))} cajas</span>` +
         `<span class="pr-producido__unidades">${esc(formatearNumeroAr(it.unidades, { decimales: 0 }))} u</span>` +
         `<div class="pr-producido__botones">${botones}</div>` +
@@ -4227,10 +4271,23 @@
         .select('id, nombre, estado_alta, doble_bolsa').eq('activa', true).order('nombre')
       if (e3) throw e3
       // El EMPAQUE: qué cajas admite cada presentación y qué consume una caja
-      // armada. Si esto no se puede leer, el catálogo entero falla y no se
-      // puede agregar nada: agregar SIN la caja la dejaría sin descontar en
-      // silencio, que es peor que no poder cargar.
+      // armada. Si esto no se puede leer, NO se frena la carga: la fábrica ya
+      // produjo, y lo producido tiene que entrar al stock terminado igual. El
+      // catálogo vuelve con `empaqueError: true` y las listas vacías, y cada
+      // renglón se carga SIN caja, diciéndolo (ver htmlAvisoSinEmpaque).
       const presIds = presentaciones.map(pr => pr.id)
+      let emp
+      try {
+        emp = await leerEmpaqueCatalogo(unidadId, presIds)
+      } catch (err) {
+        console.error('empaque del catálogo:', err)
+        emp = { cajas: [], empaque: [], insumos: [], cajaPredeterminadaId: null, empaqueError: true }
+      }
+      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [], ...emp }
+    }
+
+    // El empaque de las presentaciones, aparte: si falla, falla SOLO esto.
+    async function leerEmpaqueCatalogo(unidadId, presIds) {
       let cajas = [], empaque = [], insumos = []
       if (presIds.length) {
         const rc = await supabase.from('presentacion_cajas')
@@ -4251,10 +4308,21 @@
         if (ri.error) throw ri.error
         insumos = ri.data ?? []
       }
-      return {
-        productos: productos ?? [], presentaciones, marcas: marcas ?? [],
-        cajas, empaque, insumos, cajaPredeterminadaId: unidad?.caja_predeterminada_id ?? null,
-      }
+      return { cajas, empaque, insumos, cajaPredeterminadaId: unidad?.caja_predeterminada_id ?? null, empaqueError: false }
+    }
+
+    // El aviso de cuando no se pudo leer el empaque, en el paso de la caja y
+    // al lado de las cajas: el renglón se carga igual, sin caja.
+    // registrar_produccion_item, sin caja y sin embolsado, guarda 'ninguno'
+    // (o 'doble' si el cono va con doble bolsa) y _descontar_empaque no
+    // descuenta la caja ni las bolsas; los renglones "siempre" de la
+    // presentación (tiras, separadores) sí se descuentan.
+    // corregir_produccion_item cambia solo el NÚMERO de cajas, no la caja, y
+    // anular y volver a cargar le cambia el número al sublote, que ya está
+    // sellado en la caja. Por eso la corrección es de stock, a mano.
+    function htmlAvisoSinEmpaque() {
+      return '<div class="pr-aviso pr-aviso--grave">No se pudo leer la configuración del empaque: este renglón se carga sin caja, ' +
+        'así que no se va a descontar la caja ni las bolsas. Corregilo después: avisale a quien lleva el stock para que las descuente a mano.</div>'
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4358,6 +4426,7 @@
     }
 
     function textoCajaElegida(a, cat) {
+      if (cat?.empaqueError) return 'Sin caja · no se pudo leer el empaque'
       const caja = a.cajaId ? textoInsumoEmpaque(insumoDe(cat, a.cajaId)) : 'Sin caja'
       return `${caja} · ${TEXTO_EMBOLSADO[embolsadoEfectivo(a, cat)] ?? ''}`
     }
@@ -4445,6 +4514,9 @@
     function htmlPasoCaja(a, cat) {
       const cajas = cajasDe(cat, a.presentacionId)
       let h = '<span class="pr-ag__titulo">¿En qué caja?</span>'
+      if (cat?.empaqueError) {
+        return h + htmlAvisoSinEmpaque() + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
+      }
       if (!cajas.length) {
         h += '<div class="pr-aviso pr-aviso--grave">Esta presentación no tiene cajas configuradas: no se va a descontar la caja.</div>'
       } else {
@@ -4469,6 +4541,9 @@
       if (!a?.presentacionId) return ''
       if (!a.cajaElegida) {
         return '<button type="button" class="pr-ag__caja pr-ag__caja--falta" data-paso-ag="caja">Falta elegir la caja<span class="pr-ag__caja-cambiar">Elegir</span></button>'
+      }
+      if (cat?.empaqueError) {
+        return '<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>Sin caja · no se pudo leer el empaque</span><span class="pr-ag__caja-cambiar">Ver</span></button>' + htmlAvisoSinEmpaque()
       }
       const sinCajas = !cajasDe(cat, a.presentacionId).length
       let h = `<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>${esc(textoCajaElegida(a, cat))}</span><span class="pr-ag__caja-cambiar">Cambiar</span></button>`
@@ -4791,10 +4866,13 @@
 
     // La caja y el embolsado viajan SIEMPRE: el embolsado es el efectivo (con
     // un cono de doble bolsa, 'doble'), y la base descuenta el empaque sola.
+    // Sin empaque legible, van los dos en null: la base pone 'ninguno' (o
+    // 'doble' si el cono va con doble bolsa) y no descuenta la caja.
     function parametrosRegistrarProducido(turnoId, a, cat = estado.catalogo) {
+      const sinEmpaque = !!cat?.empaqueError
       return {
         p_turno_id: turnoId, p_presentacion_id: a.presentacionId, p_marca_id: a.marcaId ?? null, p_cajas: a.cajas,
-        p_caja_insumo_id: a.cajaId ?? null, p_embolsado: embolsadoEfectivo(a, cat),
+        p_caja_insumo_id: sinEmpaque ? null : (a.cajaId ?? null), p_embolsado: sinEmpaque ? null : embolsadoEfectivo(a, cat),
       }
     }
 
@@ -5884,7 +5962,15 @@
       const { data, error } = await supabase.rpc('datos_para_masa', { p_turno_id: estado.salaTurno.id, p_tipo_masa: estado.tipoMasa })
       if (error) throw error
       estado.datosMasa = { original: data.original, anterior: data.anterior ?? null, insumos: data.insumos ?? [] }
-      estado.defineChocolate = await leerDefineChocolate()
+      // Qué ingredientes definen el chocolate es configuración y solo sirve
+      // para MOSTRAR el chip: si no se puede leer, la masa se carga igual (la
+      // base calcula es_chocolate sola) y el chip no aparece.
+      try {
+        estado.defineChocolate = await leerDefineChocolate()
+      } catch (err) {
+        console.error('ingredientes que definen el chocolate:', err)
+        estado.defineChocolate = null
+      }
     }
 
     async function elegirTipoMasa(tipo) {
@@ -6488,6 +6574,65 @@
 
     const puedeVerHistorial = () => tieneTarea('ver') || tieneTarea('configurar')
 
+    // ── La burbuja de conos por revisar (la misma cifra del dashboard) ────
+    //
+    // Sale de mis_pendientes() —('produccion', 'conos_por_revisar')—, que ya
+    // filtra por produccion:configurar. Se pide al abrir y al volver a la
+    // pestaña, con un turno para que una respuesta vieja no pise la nueva.
+    // Si la llamada falla, o da 0, no se dibuja nada: nunca un número viejo
+    // ni inventado. `estado.conosPendientes`: un entero > 0, o null.
+    let turnoBurbujaConos = 0
+
+    async function cargarBurbujaConos() {
+      const turno = ++turnoBurbujaConos
+      if (!tieneTarea('configurar')) {
+        estado.conosPendientes = null
+        return pintarBurbujaConos()
+      }
+      let n = null
+      try {
+        const { data, error } = await supabase.rpc('mis_pendientes')
+        if (error) throw error
+        const fila = (data ?? []).find(f => f?.modulo === 'produccion' && f?.clave === 'conos_por_revisar')
+        const c = fila && fila.cantidad !== null && fila.cantidad !== '' ? Number(fila.cantidad) : NaN
+        n = Number.isInteger(c) && c > 0 ? c : null
+      } catch (err) {
+        console.error('conos por revisar:', err)
+        n = null
+      }
+      if (turno !== turnoBurbujaConos) return
+      estado.conosPendientes = n
+      pintarBurbujaConos()
+    }
+
+    function textoConosPendientes(n) {
+      return `${n} ${n === 1 ? 'cono nuevo por revisar' : 'conos nuevos por revisar'}`
+    }
+
+    // El contenido del botón: "Configuración" y, si hay, la burbuja.
+    function htmlBotonConfig(n) {
+      if (!(Number.isInteger(n) && n > 0)) return 'Configuración'
+      const texto = textoConosPendientes(n)
+      return `Configuración<span class="pr-burbuja" title="${esc(texto)}" aria-label="${esc(texto)}">${esc(n > 99 ? '99+' : n)}</span>`
+    }
+
+    function pintarBurbujaConos() {
+      const n = tieneTarea('configurar') ? estado.conosPendientes : null
+      for (const id of ['pr-btn-ir-config', 'pr-menu-config']) {
+        const b = document.getElementById(id)
+        if (!b) continue
+        b.innerHTML = htmlBotonConfig(n)
+        if (Number.isInteger(n) && n > 0) b.setAttribute('aria-label', `Configuración: ${textoConosPendientes(n)}`)
+        else b.removeAttribute('aria-label')
+      }
+    }
+
+    // Tocar un acceso a Configuración: con conos por revisar, derecho a la
+    // pestaña donde se aceptan o se rechazan.
+    function abrirConfigDesdeAcceso() {
+      return mostrarConfig(estado.conosPendientes > 0 ? 'marcas' : undefined)
+    }
+
     function pintarAccesosOficina() {
       document.getElementById('pr-btn-ir-config').hidden = !tieneTarea('configurar')
       document.getElementById('pr-btn-ir-historial').hidden = !puedeVerHistorial()
@@ -6508,13 +6653,16 @@
       sel.closest?.('.pr-campo')?.toggleAttribute?.('hidden', unidades.length < 2)
     }
 
-    async function mostrarConfig() {
+    // `tabPedida`: la pestaña con la que abre. La usan los accesos con la
+    // burbuja de conos por revisar, que abren derecho en "Marcas / Conos".
+    async function mostrarConfig(tabPedida) {
       const unidades = unidadesDeConfig()
       if (!unidades.length) return
       const actual = estado.config?.unidadId
+      const tab = PESTANAS_CONFIG.some(([k]) => k === tabPedida) ? tabPedida : (estado.config?.tab ?? 'maquinas')
       estado.config = {
         unidadId: unidades.includes(actual) ? actual : (unidades.includes(estado.unidadId) ? estado.unidadId : unidades[0]),
-        tab: estado.config?.tab ?? 'maquinas',
+        tab,
         busqueda: '', datos: null, recetaMaquina: null, recetaTipo: null,
         // Lo que se tocó en Personal y todavía no se guardó: id → puestos.
         cambios: new Map(),
@@ -7443,7 +7591,8 @@
         const nombre = aprobar ? valorDe('data-pend-nombre', id) : null
         const r = await guardarEnConfig('revisar_marca', parametrosRevisarMarca(id, aprobar, nombre),
           aprobar ? 'Cono aceptado.' : 'Cono rechazado.', 'pr-cfg-pendientes')
-        if (r.ok) await cargarPestanaConfig()
+        // La burbuja de los accesos también baja: se vuelve a pedir la cifra.
+        if (r.ok) { cargarBurbujaConos(); await cargarPestanaConfig() }
         return
       }
       const m = c.datos.marcas.find(x => x.id === ds.marcaActiva)
@@ -7755,7 +7904,7 @@
     }
 
     function conectarConfig() {
-      document.getElementById('pr-btn-ir-config').addEventListener('click', mostrarConfig)
+      document.getElementById('pr-btn-ir-config').addEventListener('click', abrirConfigDesdeAcceso)
       document.getElementById('pr-config-volver').addEventListener('click', () => {
         if (pedirSalida(estado.config, { volver: true })) volverDeOficina()
       })
@@ -8170,11 +8319,13 @@
       const marcaNombre = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Marca') : 'Común'
       const corr = correccionesDe(d, p.id).map(c => htmlCorreccion(c, d)).join('')
       const empaque = textoEmpaqueItem(p, d.insumosEmpaque)
-      return `<li class="pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}">` +
+      const sinCaja = sinCajaDescontada(p)
+      return `<li class="pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}${sinCaja ? ' pr-of-sin-caja' : ''}">` +
         `<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(prod?.nombre ?? 'Producto')} · ${esc(pr?.nombre ?? '')} · ${esc(marcaNombre)} · ` +
         (empaque ? `${esc(empaque)} · ` : '') +
         `${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades` +
-        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') + corr + '</li>'
+        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') +
+        (sinCaja ? ` <strong class="pr-sin-caja">· ${esc(textoSinCaja(p))}</strong>` : '') + corr + '</li>'
     }
 
     // El total del turno: SIN los sublotes anulados, que se siguen viendo pero
@@ -8392,6 +8543,7 @@
       // Sin produccion:cargar no es una tablet: es alguien de la oficina que
       // mira el historial o configura.
       pintarAccesosOficina()
+      cargarBurbujaConos()
       if (!tieneTarea('cargar')) {
         mostrarInicioOficina()
         return

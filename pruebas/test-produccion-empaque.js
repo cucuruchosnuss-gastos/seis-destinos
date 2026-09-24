@@ -128,11 +128,13 @@ esperas.push((async () => {
     S.__llamadas.consultas.some(([t, f]) => t === 'unidades_negocio' && JSON.stringify(f).includes('["eq","id","u-cn"]')))
   chk('el catálogo guarda la caja predeterminada', S.estado.catalogo.cajaPredeterminadaId === 'i-nuss')
 
-  // Si el empaque no se puede leer, NO se puede agregar: agregar sin la caja
-  // la dejaría sin descontar en silencio.
+  // Si el empaque no se puede leer, el catálogo NO se cae (24/09/2026, a
+  // pedido): los productos siguen y el empaque queda marcado como ilegible,
+  // sin cajas a medias. El detalle está en test-produccion-sin-empaque.js.
   const E = armar({ tablas: { presentacion_empaque: () => ({ data: null, error: { message: 'sin red' } }) } })
   await E.abrirPlanilla('t1')
-  chk('sin el empaque, el catálogo no queda a medias', E.estado.catalogo === null)
+  chk('sin el empaque, el catálogo sigue pero sin cajas a medias',
+    E.estado.catalogo?.empaqueError === true && E.estado.catalogo.cajas.length === 0 && E.estado.catalogo.productos.length === 2)
 })())
 
 // ── La caja predeterminada viene puesta, y se cambia de un toque ─────────

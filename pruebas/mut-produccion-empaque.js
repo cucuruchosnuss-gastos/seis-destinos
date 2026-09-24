@@ -70,8 +70,8 @@ correrMutaciones({
     { nombre: 'la unidad sin su caja', de: ".select('id, caja_predeterminada_id')", a: ".select('id')" },
     { nombre: 'la caja predeterminada de otra unidad', de: ".select('id, caja_predeterminada_id').eq('id', unidadId)", a: ".select('id, caja_predeterminada_id')" },
     { nombre: 'sin el empaque se agrega igual', de: '        if (re.error) throw re.error\n', a: '' },
-    { nombre: 'la caja no viaja', de: 'p_caja_insumo_id: a.cajaId ?? null, p_embolsado', a: 'p_caja_insumo_id: null, p_embolsado' },
-    { nombre: 'viaja el embolsado sin el cono', de: 'p_embolsado: embolsadoEfectivo(a, cat),', a: 'p_embolsado: a.embolsado,' },
+    { nombre: 'la caja no viaja', de: 'p_caja_insumo_id: sinEmpaque ? null : (a.cajaId ?? null),', a: 'p_caja_insumo_id: null,' },
+    { nombre: 'viaja el embolsado sin el cono', de: 'p_embolsado: sinEmpaque ? null : embolsadoEfectivo(a, cat),', a: 'p_embolsado: sinEmpaque ? null : a.embolsado,' },
     // ── Parte 2: verlo después ──────────────────────────────────────────
     { nombre: 'la planilla no trae la caja', de: "unidades, anulado, caja_insumo_id, embolsado')\n        .eq('turno_id', turnoId).order('orden')", a: "unidades, anulado')\n        .eq('turno_id', turnoId).order('orden')" },
     { nombre: 'el historial no trae la caja', de: "unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))", a: "unidades, anulado').eq('turno_id', turnoId).order('orden'))" },

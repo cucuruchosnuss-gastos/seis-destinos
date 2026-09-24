@@ -17,6 +17,7 @@ correrMutaciones({
     'htmlOperariosHistorial', 'htmlMasaHistorial', 'htmlCorreccion', 'htmlSubloteHistorial',
     'htmlDetalleTurno', 'htmlStockTerminado'],
   equivalentes: [
+    { expr: 'esc(textoSinCaja(p))', motivo: 'textoSinCaja() devuelve texto constante del código (solo mira si el embolsado es ninguno): ningún dato de la base llega a la salida' },
     { expr: 'esc(fechaDelDia(t.fecha))', motivo: 'una fecha dd/mm/aaaa formateada por Intl' },
     { expr: 'esc(fechaCorta(t.forzado_en))', motivo: 'una fecha dd/mm/aaaa formateada por Intl' },
     { expr: "esc(horaArgentina(m.hora) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
@@ -76,8 +77,8 @@ correrMutaciones({
     { nombre: 'las paradas no traen hasta_fin_de_turno', de: "select('id, inicio, fin, motivo, hasta_fin_de_turno')", a: "select('id, inicio, fin, motivo')" },
     { nombre: 'la parada que no volvió no se marca', de: "${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}", a: '' },
     { nombre: 'los sublotes no traen anulado', de: "unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))", a: "unidades, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))" },
-    { nombre: 'el sublote anulado no se distingue', de: "      return `<li class=\"pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}\">` +", a: '      return `<li class="pr-lista__item">` +' },
-    { nombre: 'el sublote anulado no dice que no suma', de: "        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') + corr + '</li>'", a: "        corr + '</li>'" },
+    { nombre: 'el sublote anulado no se distingue', de: "<li class=\"pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}", a: '<li class="pr-lista__item' },
+    { nombre: 'el sublote anulado no dice que no suma', de: "        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') +\n", a: '' },
     { nombre: 'el total del turno suma los anulados', de: '        if (p.anulado) continue\n', a: '' },
     { nombre: 'el total del turno no se muestra', de: "        ? `<p class=\"pr-of-grupo__total\">Total del turno: ${esc(textoEntero(tot.cajas))} cajas · ${esc(textoEntero(tot.unidades))} unidades</p>`", a: "        ? ''" },
     { nombre: 'las correcciones no se leen', de: '      const correcciones = itemIds.length ? await leer(supabase.from(\'produccion_correcciones\')', a: '      const correcciones = false ? await leer(supabase.from(\'produccion_correcciones\')' },
