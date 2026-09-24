@@ -1935,6 +1935,37 @@
       return activas.filter(id => lista.includes(id))
     }
 
+    // stock:ver, que es lo que deja leer stock_movimientos y v_stock_insumos
+    // (su RLS es tiene_tarea_alcance('stock','ver', unidad)). Hace falta
+    // saberlo ANTES de leer: una consulta vacía por RLS no se distingue de
+    // "no hay nada", y la pantalla diría un cero que no es cierto.
+    // estado.stockVer: undefined = no se pudo leer; null = no la tiene; si no,
+    // su alcance ({} cuando la fila no trae alcance).
+    async function cargarPermisoStock() {
+      try {
+        const { data, error } = await supabase.from('empleado_tareas').select('tarea, alcance')
+          .eq('empleado_id', estado.miEmpleadoId).eq('modulo', 'stock').eq('tarea', 'ver').eq('habilitado', true)
+        if (error) throw error
+        const fila = (data ?? []).find(t => t.tarea === 'ver')
+        estado.stockVer = fila ? (fila.alcance ?? {}) : null
+      } catch (err) {
+        console.error('permiso de stock:', err)
+        estado.stockVer = undefined
+      }
+    }
+
+    // true / false, o null si no se sabe (no se pudo leer el permiso). Misma
+    // regla que tiene_tarea_alcance(): super_admin siempre; {"todas": true};
+    // o la unidad en {"unidades": [...]}.
+    function puedeVerStockEn(unidadId) {
+      if (estado.miRolApp === 'super_admin') return true
+      if (estado.stockVer === undefined) return null
+      if (estado.stockVer === null) return false
+      if (estado.stockVer.todas === true) return true
+      const lista = Array.isArray(estado.stockVer.unidades) ? estado.stockVer.unidades.map(String) : []
+      return lista.includes(String(unidadId))
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // PREFERENCIAS DE ESTA TABLET (localStorage, siempre con try/catch)
     // ═══════════════════════════════════════════════════════════════════════
@@ -3600,10 +3631,20 @@
       // terminado ya entró. Los ANULADOS vienen también, a propósito: se
       // muestran anulados, no se esconden.
       const { data: items, error: e5 } = await supabase.from('produccion_items')
-        .select('id, orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades, anulado')
+        .select('id, orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades, anulado, caja_insumo_id, embolsado')
         .eq('turno_id', turnoId).order('orden')
       if (e5) throw e5
-      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [] }
+      // El nombre de la caja de cada renglón. Se lee aparte y no del catálogo:
+      // una caja que después se deshabilitó para esa presentación ya no está
+      // en el catálogo, y el renglón tiene que seguir diciendo cuál fue.
+      const cajaIds = [...new Set((items ?? []).map(it => it.caja_insumo_id).filter(Boolean))]
+      let insumosCaja = []
+      if (cajaIds.length) {
+        const { data: ins, error: e6 } = await supabase.from('insumos').select('id, nombre, marca').in('id', cajaIds)
+        if (e6) throw e6
+        insumosCaja = ins ?? []
+      }
+      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja }
     }
 
     function paradaEnCurso(paradas) {
@@ -3789,12 +3830,27 @@
     // Un renglón de lo producido. Un ANULADO no se esconde: se muestra
     // anulado, porque ese sublote existió, se selló en una caja y su stock
     // entró y salió.
-    function htmlProducido(it, cat) {
+    // La caja y el embolsado de un renglón ya cargado: "Caja N°1 Nuss · bolsa
+    // grande". Un renglón anterior al empaque (los dos en null) no dice nada.
+    // Texto plano: quien lo meta en HTML lo escapa.
+    function textoEmpaqueItem(it, insumos) {
+      const partes = []
+      if (it?.caja_insumo_id) {
+        const ins = (insumos ?? []).find(i => i.id === it.caja_insumo_id)
+        partes.push(ins ? textoInsumoEmpaque(ins) : 'caja sin nombre')
+      }
+      if (it?.embolsado) partes.push(TEXTO_EMBOLSADO[it.embolsado] ?? it.embolsado)
+      return partes.join(' · ')
+    }
+
+    function htmlProducido(it, cat, insumosCaja = estado.planilla?.insumosCaja) {
       const d = describirProducido(it, cat)
       const clases = 'pr-producido' + (it.anulado ? ' pr-producido--anulado' : '') + (d ? '' : ' pr-producido--invalido')
+      const empaque = textoEmpaqueItem(it, [...(insumosCaja ?? []), ...(cat?.insumos ?? [])])
       const desc = d
         ? `<div class="pr-producido__nombre">${esc(d.producto)}</div>` +
-          `<div class="pr-producido__detalle">${esc([d.presentacion, d.detalle, d.marca].filter(Boolean).join(' · '))} · caja ×${esc(formatearNumeroAr(d.unidadesPorCaja, { decimales: 0 }))}</div>`
+          `<div class="pr-producido__detalle">${esc([d.presentacion, d.detalle, d.marca].filter(Boolean).join(' · '))} · caja ×${esc(formatearNumeroAr(d.unidadesPorCaja, { decimales: 0 }))}</div>` +
+          (empaque ? `<div class="pr-producido__detalle">${esc(empaque)}</div>` : '')
         : (cat
           ? '<div class="pr-producido__nombre">Un producto que ya no está en el catálogo</div>' +
             '<div class="pr-producido__detalle">El sublote quedó cargado igual y su stock ya entró.</div>'
@@ -7643,7 +7699,7 @@
     async function leerDetalleTurno(turnoId) {
       const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
       const [turno] = await leer(supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
+        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
       if (!turno) throw new Error('El turno no existe.')
       // `desde` y `hasta`, los dos: quitar_operario_turno NO borra la fila, le
       // pone `hasta`. El que se fue estuvo en el turno y tiene que verse.
@@ -7659,8 +7715,11 @@
       const paradas = await leer(supabase.from('paradas_produccion').select('id, inicio, fin, motivo, hasta_fin_de_turno').eq('turno_id', turnoId).order('inicio'))
       // ANULAR NO BORRA: le pone `anulado` al renglón. Ese sublote existió, se
       // selló en una caja y su stock entró y salió, así que se sigue trayendo.
-      const producido = await leer(supabase.from('produccion_items').select('id, orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades, anulado').eq('turno_id', turnoId).order('orden'))
+      const producido = await leer(supabase.from('produccion_items').select('id, orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))
       const itemIds = producido.map(p => p.id).filter(Boolean)
+      const empaque = await leerEmpaqueTurno(turno.unidad_negocio_id, itemIds)
+      const insEmpIds = [...new Set([...producido.map(p => p.caja_insumo_id), ...(empaque.movimientos ?? []).map(m => m.insumo_id)].filter(Boolean))]
+      const insumosEmpaque = insEmpIds.length ? await leer(supabase.from('insumos').select('id, nombre, marca').in('id', insEmpIds)) : []
       const correcciones = itemIds.length ? await leer(supabase.from('produccion_correcciones')
         .select('produccion_item_id, tipo, cajas_antes, cajas_despues, motivo, hecha_por, hecha_en').in('produccion_item_id', itemIds).order('hecha_en')) : []
       const presIds = [...new Set(producido.map(p => p.presentacion_id))]
@@ -7674,7 +7733,61 @@
       // dejaría todos los nombres en blanco menos el tuyo.
       const nombres = await nombresDeEmpleados([turno.encargado_id, turno.forzado_por, turno.completado_por,
         ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id), ...correcciones.map(c => c.hecha_por)])
-      return { turno, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, marcas, nombres }
+      return { turno, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, marcas, nombres, empaque, insumosEmpaque }
+    }
+
+    // El empaque que descontó el turno: los movimientos de stock_movimientos
+    // con produccion_item_id de sus sublotes. Solo con stock:ver en la unidad
+    // del turno —es el RLS de la tabla—; sin eso NO se consulta, porque la
+    // respuesta vacía se leería como "no se descontó nada".
+    // → { estado: 'ok' | 'sin_permiso' | 'desconocido' | 'error', movimientos }
+    async function leerEmpaqueTurno(unidadId, itemIds) {
+      const permiso = puedeVerStockEn(unidadId)
+      if (permiso === false) return { estado: 'sin_permiso', movimientos: [] }
+      if (permiso === null) return { estado: 'desconocido', movimientos: [] }
+      if (!itemIds.length) return { estado: 'ok', movimientos: [] }
+      try {
+        const { data, error } = await supabase.from('stock_movimientos')
+          .select('insumo_id, cantidad, produccion_item_id').in('produccion_item_id', itemIds)
+        if (error) throw error
+        return { estado: 'ok', movimientos: data ?? [] }
+      } catch (err) {
+        console.error('empaque del turno:', err)
+        return { estado: 'error', movimientos: [] }
+      }
+    }
+
+    // Lo consumido por insumo, NETO: las devoluciones (corregir hacia abajo,
+    // anular) son positivas y se restan solas. Lo que se consumió es −suma.
+    // Un insumo que quedó en cero (se devolvió entero) no se lista.
+    function empaqueConsumido(movimientos) {
+      const mapa = new Map()
+      for (const m of movimientos ?? []) {
+        const n = Number(m.cantidad)
+        if (!Number.isFinite(n)) continue
+        mapa.set(m.insumo_id, (mapa.get(m.insumo_id) ?? 0) + n)
+      }
+      return [...mapa.entries()]
+        .map(([insumoId, suma]) => ({ insumoId, cantidad: Math.round(-suma * 1000) / 1000 }))
+        .filter(f => f.cantidad !== 0)
+    }
+
+    function htmlEmpaqueTurno(d) {
+      const e = d.empaque ?? { estado: 'desconocido', movimientos: [] }
+      if (e.estado === 'sin_permiso') return '<div class="pr-aviso">No se puede ver el stock con este usuario: el empaque consumido lo ve quien tiene permiso de ver el stock de esta unidad.</div>'
+      if (e.estado === 'desconocido') return '<div class="pr-aviso">No se pudo saber si este usuario puede ver el stock, así que el empaque consumido no se muestra.</div>'
+      if (e.estado === 'error') return '<div class="pr-aviso pr-aviso--grave">No se pudo leer el empaque consumido. Revisá la conexión.</div>'
+      if (!e.movimientos.length) return '<p class="pr-texto-suave">No se descontó empaque en este turno.</p>'
+      const filas = empaqueConsumido(e.movimientos)
+      if (!filas.length) return '<p class="pr-texto-suave">Todo el empaque que se descontó se devolvió (sublotes corregidos o anulados).</p>'
+      const tope = e.movimientos.length >= TOPE_FILAS
+        ? `<div class="pr-aviso pr-aviso--grave">Este turno tiene más de ${TOPE_FILAS} movimientos de empaque y solo se leyeron los primeros: los totales pueden estar incompletos.</div>`
+        : ''
+      const nombre = id => { const i = (d.insumosEmpaque ?? []).find(x => x.id === id); return i ? textoInsumoEmpaque(i) : 'Insumo' }
+      return tope + '<ul class="pr-lista">' + filas
+        .sort((a, b) => nombre(a.insumoId).localeCompare(nombre(b.insumoId), 'es'))
+        .map(f => `<li class="pr-lista__item">${esc(nombre(f.insumoId))}: <strong>${esc(formatearNumeroAr(f.cantidad, { decimales: 3, minimos: 0 }))}</strong></li>`)
+        .join('') + '</ul>'
     }
 
     // Lo consumido por insumo y lote: la suma de lo que descontaron las masas
@@ -7762,8 +7875,10 @@
       const prod = d.productos.find(x => x.id === pr?.producto_id)
       const marcaNombre = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Marca') : 'Común'
       const corr = correccionesDe(d, p.id).map(c => htmlCorreccion(c, d)).join('')
+      const empaque = textoEmpaqueItem(p, d.insumosEmpaque)
       return `<li class="pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}">` +
         `<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(prod?.nombre ?? 'Producto')} · ${esc(pr?.nombre ?? '')} · ${esc(marcaNombre)} · ` +
+        (empaque ? `${esc(empaque)} · ` : '') +
         `${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades` +
         (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') + corr + '</li>'
     }
@@ -7813,7 +7928,8 @@
         `<h2 class="pr-subtitulo">Masas</h2><ul class="pr-lista">${masas}</ul>` +
         `<h2 class="pr-subtitulo">Paradas</h2>${htmlParadas(d.paradas)}` +
         `<h2 class="pr-subtitulo">Lo producido</h2><ul class="pr-lista">${producido}</ul>${pieProducido}` +
-        `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2>${incompleto}<ul class="pr-lista">${totales}</ul>`
+        `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2>${incompleto}<ul class="pr-lista">${totales}</ul>` +
+        `<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}`
     }
 
     async function abrirDetalleHistorial(turnoId) {
@@ -7973,6 +8089,7 @@
         sinAcceso('No tenés acceso a Producción. Te llevamos al inicio…')
         return
       }
+      await cargarPermisoStock()
       document.getElementById('pr-cargando').hidden = true
       document.getElementById('pr-vista').hidden = false
       conectarTodo()

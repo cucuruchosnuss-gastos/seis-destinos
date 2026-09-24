@@ -75,7 +75,7 @@ correrMutaciones({
     { nombre: 'el detalle no muestra la anulada', de: "        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}` : `<br>${esc(dif)}`) +", a: '        `<br>${esc(dif)}` +' },
     { nombre: 'las paradas no traen hasta_fin_de_turno', de: "select('id, inicio, fin, motivo, hasta_fin_de_turno')", a: "select('id, inicio, fin, motivo')" },
     { nombre: 'la parada que no volvió no se marca', de: "${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}", a: '' },
-    { nombre: 'los sublotes no traen anulado', de: "unidades, anulado').eq('turno_id', turnoId).order('orden'))", a: "unidades').eq('turno_id', turnoId).order('orden'))" },
+    { nombre: 'los sublotes no traen anulado', de: "unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))", a: "unidades, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))" },
     { nombre: 'el sublote anulado no se distingue', de: "      return `<li class=\"pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}\">` +", a: '      return `<li class="pr-lista__item">` +' },
     { nombre: 'el sublote anulado no dice que no suma', de: "        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') + corr + '</li>'", a: "        corr + '</li>'" },
     { nombre: 'el total del turno suma los anulados', de: '        if (p.anulado) continue\n', a: '' },

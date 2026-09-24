@@ -362,6 +362,139 @@ esperas.push((async () => {
   chk('ninguna RPC de stock', rpcNombres.length > 0 && !rpcNombres.some(n => /stock/.test(n)), rpcNombres.filter(n => /stock/.test(n)).join(','))
 }
 
+// ── Parte 2: la caja y el embolsado de cada renglón ya cargado ───────────
+const ITEMS_EMP = [
+  { id: 'it-1', orden: 1, sublote: '7023-1', presentacion_id: 'pr-caja', marca_id: 'mk-grido', cajas: 10, unidades_por_caja: 600, unidades: 6000, anulado: false, caja_insumo_id: 'i-nuss', embolsado: 'grande' },
+  { id: 'it-2', orden: 2, sublote: '7023-2', presentacion_id: 'pr-caja', marca_id: 'mk-norte', cajas: 2, unidades_por_caja: 600, unidades: 1200, anulado: false, caja_insumo_id: 'i-dolce', embolsado: 'doble' },
+  { id: 'it-3', orden: 3, sublote: '7023-3', presentacion_id: 'pr-sin', marca_id: null, cajas: 4, unidades_por_caja: 400, unidades: 1600, anulado: false, caja_insumo_id: null, embolsado: 'ninguno' },
+  { id: 'it-4', orden: 4, sublote: '7023-4', presentacion_id: 'pr-caja', marca_id: null, cajas: 5, unidades_por_caja: 600, unidades: 3000, anulado: false, caja_insumo_id: null, embolsado: null },
+  { id: 'it-5', orden: 5, sublote: '7023-5', presentacion_id: 'pr-caja', marca_id: null, cajas: 1, unidades_por_caja: 600, unidades: 600, anulado: false, caja_insumo_id: 'i-vieja', embolsado: 'individual' },
+]
+
+esperas.push((async () => {
+  const S = armar({ tablas: { produccion_items: ITEMS_EMP, insumos: [...INSUMOS, { id: 'i-vieja', nombre: 'Caja vieja', marca: 'Ex' }] } })
+  await S.abrirPlanilla('t1')
+  chk('la planilla trae la caja y el embolsado de cada renglón',
+    /\bcaja_insumo_id\b/.test(select(S, 'produccion_items')) && /\bembolsado\b/.test(select(S, 'produccion_items')), select(S, 'produccion_items'))
+  const lista = html(S, 'pr-planilla-producido')
+  const renglon = sub => { const i = lista.indexOf(`>${sub}<`); return lista.slice(i, lista.indexOf('pr-producido__botones', i)) }
+  chk('un renglón dice su caja y su embolsado', /Caja N°1 Nuss · bolsa grande/.test(renglon('7023-1')), renglon('7023-1'))
+  chk('… "doble bolsa"', /Caja N°1 Dolce Pasta · doble bolsa/.test(renglon('7023-2')))
+  chk('… sin caja, solo "sin bolsa"', /pr-producido__detalle">sin bolsa</.test(renglon('7023-3')), renglon('7023-3'))
+  chk('… uno anterior al empaque no dice nada de más', (renglon('7023-4').match(/pr-producido__detalle/g) || []).length === 1, renglon('7023-4'))
+  chk('… y una caja que ya no está en el catálogo se nombra igual', /Caja vieja Ex · bolsitas individuales/.test(renglon('7023-5')), renglon('7023-5'))
+  chk('el nombre de esa caja se lee aparte, por id',
+    S.__llamadas.consultas.some(([t, f]) => t === 'insumos' && JSON.stringify(f).includes('i-vieja')))
+  chk('una caja cuyo nombre no llegó no queda muda', S.textoEmpaqueItem({ caja_insumo_id: 'x', embolsado: null }, []) === 'caja sin nombre')
+})())
+
+// ── Parte 2: el permiso de stock ─────────────────────────────────────────
+esperas.push((async () => {
+  const S = armar({ tablas: { empleado_tareas: [{ tarea: 'ver', alcance: { unidades: ['u-cn'] } }] } })
+  await S.cargarPermisoStock()
+  const c = S.__llamadas.consultas.find(([t]) => t === 'empleado_tareas')
+  const f = JSON.stringify(c?.[1])
+  chk('el permiso de stock se lee de empleado_tareas: stock / ver / habilitado',
+    f.includes('["eq","modulo","stock"]') && f.includes('["eq","tarea","ver"]') && f.includes('["eq","habilitado",true]') && f.includes('["eq","empleado_id","emp-tablet"]'), f)
+  chk('con alcance en la unidad, puede', S.puedeVerStockEn('u-cn') === true)
+  chk('… en otra, no', S.puedeVerStockEn('u-dp') === false)
+  S.estado.stockVer = { todas: true }
+  chk('con todas, en cualquiera', S.puedeVerStockEn('u-dp') === true)
+  S.estado.stockVer = {}
+  chk('una fila sin alcance no alcanza (igual que la base)', S.puedeVerStockEn('u-cn') === false)
+  S.estado.stockVer = null
+  chk('sin la tarea, no', S.puedeVerStockEn('u-cn') === false)
+  S.estado.stockVer = undefined
+  chk('sin saberlo, null (no un "no")', S.puedeVerStockEn('u-cn') === null)
+  S.estado.miRolApp = 'super_admin'
+  chk('super_admin siempre', S.puedeVerStockEn('u-cn') === true)
+
+  const N = armar({ tablas: { empleado_tareas: [] } })
+  await N.cargarPermisoStock()
+  chk('sin fila: no la tiene', N.estado.stockVer === null)
+  const E = armar({ tablas: { empleado_tareas: () => ({ data: null, error: { message: 'x' } }) } })
+  await E.cargarPermisoStock()
+  chk('si falla la lectura: no se sabe', E.estado.stockVer === undefined)
+  chk('el permiso se carga al entrar', /await cargarPermisoStock\(\)/.test(FUENTE))
+})())
+
+// ── Parte 2: el empaque consumido del turno, en el historial ─────────────
+const MOVS = [
+  { produccion_item_id: 'it-1', insumo_id: 'i-nuss', cantidad: -10 },
+  { produccion_item_id: 'it-1', insumo_id: 'i-tiras', cantidad: -10 },
+  { produccion_item_id: 'it-1', insumo_id: 'i-sep', cantidad: -30 },
+  { produccion_item_id: 'it-1', insumo_id: 'i-bolsa', cantidad: -10 },
+  { produccion_item_id: 'it-1', insumo_id: 'i-sep', cantidad: 6 },
+  { produccion_item_id: 'it-2', insumo_id: 'i-tiras', cantidad: -0.5 },
+  { produccion_item_id: 'it-2', insumo_id: 'i-ppp', cantidad: -32 },
+  { produccion_item_id: 'it-2', insumo_id: 'i-ppp', cantidad: 32 },
+]
+function armarDetalle({ stockVer = { unidades: ['u-cn'] }, movs = MOVS, items = ITEMS_EMP, unidad = 'u-cn' } = {}) {
+  const S = armar({ tablas: {
+    turnos_produccion: [{ ...TURNO, unidad_negocio_id: unidad, cerrado_en: null, hora_inicio: null, hora_apagado: null, scrap_kg: null, observaciones: null, completado_por: null, completado_en: null }],
+    produccion_items: items, stock_movimientos: movs, produccion_correcciones: [], receta_items: [], ingredientes: [], masa_items: [],
+    v_empleados_publico: [], insumos: [...INSUMOS, { id: 'i-vieja', nombre: 'Caja vieja', marca: 'Ex' }],
+  } })
+  // undefined no se puede pasar: el default del parámetro se lo come.
+  S.estado.stockVer = stockVer === 'desconocido' ? undefined : stockVer
+  return S
+}
+
+esperas.push((async () => {
+  const S = armarDetalle()
+  const d = await S.leerDetalleTurno('t1')
+  chk('el detalle trae la unidad del turno', /\bunidad_negocio_id\b/.test(select(S, 'turnos_produccion')))
+  chk('… y la caja y el embolsado de cada sublote',
+    /\bcaja_insumo_id\b/.test(select(S, 'produccion_items')) && /\bembolsado\b/.test(select(S, 'produccion_items')))
+  const c = S.__llamadas.consultas.find(([t]) => t === 'stock_movimientos')
+  chk('los movimientos se piden por los sublotes del turno',
+    c && JSON.stringify(c[1]).includes('["in","produccion_item_id",["it-1","it-2","it-3","it-4","it-5"]]'), JSON.stringify(c?.[1]))
+  chk('… con insumo y cantidad', /\binsumo_id\b/.test(select(S, 'stock_movimientos')) && /\bcantidad\b/.test(select(S, 'stock_movimientos')))
+  const h = S.htmlDetalleTurno(d)
+  chk('el sublote dice su caja y embolsado en el historial', /GRIDO · Caja N°1 Nuss · bolsa grande · 10 cajas/.test(h), (h.match(/7023-1.{0,200}/) || [''])[0])
+  const emp = h.slice(h.indexOf('Empaque consumido'))
+  chk('el empaque consumido del turno tiene su sección', h.includes('<h2 class="pr-subtitulo">Empaque consumido</h2>'))
+  chk('… neto: la devolución de 6 separadores se resta', /Separador N°1: <strong>24<\/strong>/.test(emp), emp)
+  chk('… la caja, en positivo', /Caja N°1 Nuss: <strong>10<\/strong>/.test(emp))
+  chk('… con hasta 3 decimales', /Tiras x4: <strong>10,5<\/strong>/.test(emp))
+  chk('… lo devuelto entero no se lista', !/Bolsa PPP/.test(emp))
+  chk('… ordenado por nombre', emp.indexOf('Bolsa 100x80') < emp.indexOf('Caja N°1 Nuss') && emp.indexOf('Caja N°1 Nuss') < emp.indexOf('Separador'))
+
+  const sp = armarDetalle({ stockVer: null })
+  const hsp = sp.htmlDetalleTurno(await sp.leerDetalleTurno('t1'))
+  chk('sin stock:ver en la unidad: lo dice', /No se puede ver el stock con este usuario/.test(hsp))
+  chk('… y NO consulta el libro (una respuesta vacía mentiría)', !sp.__llamadas.consultas.some(([t]) => t === 'stock_movimientos'))
+  chk('… ni dice "no se descontó"', !/No se descontó empaque/.test(hsp))
+  const otra = armarDetalle({ stockVer: { unidades: ['u-dp'] } })
+  chk('con stock:ver en OTRA unidad, tampoco', /No se puede ver el stock con este usuario/.test(otra.htmlDetalleTurno(await otra.leerDetalleTurno('t1'))))
+  // El permiso se mira contra la unidad DEL TURNO, no la de la tablet.
+  const ajeno = armarDetalle({ unidad: 'u-dp' })
+  chk('un turno de otra unidad se mira con el permiso de ESA unidad',
+    /No se puede ver el stock con este usuario/.test(ajeno.htmlDetalleTurno(await ajeno.leerDetalleTurno('t1'))))
+  const ds = armarDetalle({ stockVer: 'desconocido' })
+  const hds = ds.htmlDetalleTurno(await ds.leerDetalleTurno('t1'))
+  chk('sin saber el permiso: lo dice, sin consultar', /No se pudo saber si este usuario puede ver el stock/.test(hds) &&
+    !ds.__llamadas.consultas.some(([t]) => t === 'stock_movimientos'))
+  const vacio = armarDetalle({ movs: [] })
+  chk('sin movimientos: "No se descontó empaque en este turno"',
+    /No se descontó empaque en este turno\./.test(vacio.htmlDetalleTurno(await vacio.leerDetalleTurno('t1'))))
+  const cero = armarDetalle({ movs: [{ produccion_item_id: 'it-1', insumo_id: 'i-sep', cantidad: -3 }, { produccion_item_id: 'it-1', insumo_id: 'i-sep', cantidad: 3 }] })
+  chk('todo devuelto: se dice', /se devolvió/.test(cero.htmlDetalleTurno(await cero.leerDetalleTurno('t1'))))
+  const err = armarDetalle({ movs: () => ({ data: null, error: { message: 'x' } }) })
+  const herr = err.htmlDetalleTurno(await err.leerDetalleTurno('t1'))
+  chk('si falla la lectura del libro, lo dice y el resto del turno se ve igual',
+    /No se pudo leer el empaque consumido/.test(herr) && /Lo producido/.test(herr))
+  const sinItems = armarDetalle({ items: [] })
+  chk('sin sublotes no se consulta el libro', await (async () => {
+    await sinItems.leerDetalleTurno('t1')
+    return !sinItems.__llamadas.consultas.some(([t]) => t === 'stock_movimientos')
+  })())
+  chk('el neto redondea a 3 decimales', S.empaqueConsumido([{ insumo_id: 'a', cantidad: -0.1 }, { insumo_id: 'a', cantidad: -0.2 }])[0].cantidad === 0.3)
+  const tope = armarDetalle({ movs: Array.from({ length: 1000 }, () => ({ produccion_item_id: 'it-1', insumo_id: 'i-sep', cantidad: -1 })) })
+  chk('con 1000 movimientos avisa que puede estar incompleto',
+    /solo se leyeron los primeros/.test(tope.htmlEmpaqueTurno(await tope.leerDetalleTurno('t1'))))
+})())
+
 // ── XSS: cada render nuevo con HTML malicioso ────────────────────────────
 esperas.push((async () => {
   const X = armar()
@@ -384,6 +517,14 @@ esperas.push((async () => {
   chequearMarcas(chk, 'pasos con la caja', X.htmlPasosAgregar(X.pasosAgregar(a, catMalo)), ['cajaNombre', 'cajaMarca'])
   const conIdMalo = { ...catMalo, cajas: [{ presentacion_id: 'pr-caja', insumo_id: marca('cajaId'), embolsado_sugerido: 'grande' }] }
   chequearMarcas(chk, 'id de la caja en el atributo', X.htmlPasoCaja({ ...a, cajaId: null }, conIdMalo), ['cajaId'])
+  // Parte 2: el renglón ya cargado y el empaque del turno.
+  const itemMalo = { id: 'it-x', sublote: '7023-9', presentacion_id: 'pr-caja', marca_id: null, cajas: 1, unidades: 600, caja_insumo_id: 'i-malo', embolsado: marca('embolsado') }
+  chequearMarcas(chk, 'renglón de la planilla con su caja', X.htmlProducido(itemMalo, catMalo, []), ['cajaNombre', 'cajaMarca', 'embolsado'])
+  const dMalo = { turno: { ...TURNO, estado: 'cerrado' }, operarios: [], masas: [], items: [], recItems: [], ingredientes: [], insumos: [], paradas: [],
+    producido: [itemMalo], correcciones: [], presentaciones: [], productos: [], marcas: [], nombres: new Map(),
+    empaque: { estado: 'ok', movimientos: [{ insumo_id: 'i-malo', cantidad: -1 }] }, insumosEmpaque: catMalo.insumos }
+  chequearMarcas(chk, 'detalle del turno con su empaque', X.htmlDetalleTurno(dMalo), ['cajaNombre', 'cajaMarca', 'embolsado'])
+  chequearMarcas(chk, 'empaque consumido', X.htmlEmpaqueTurno(dMalo), ['cajaNombre', 'cajaMarca'])
 })())
 
 fin()

@@ -769,9 +769,9 @@ esperas.push((async () => {
     presentaciones: [{ id: marca('presId'), producto_id: marca('prodId'), nombre: marca('presentacion'), con_cono: true, empaque: marca('empaque'), unidades_por_caja: 1 }],
     marcas: [{ id: marca('marcaId'), nombre: marca('cono'), estado_alta: 'pendiente_revision' }],
   }
-  const itemMalo = { id: marca('itemId'), sublote: marca('sublote'), presentacion_id: marca('presId'), marca_id: marca('marcaId'), cajas: 1, unidades: 1 }
+  const itemMalo = { id: marca('itemId'), sublote: marca('sublote'), presentacion_id: marca('presId'), marca_id: marca('marcaId'), cajas: 1, unidades: 1, embolsado: marca('embolsado') }
   chequearMarcas(chk, 'renglón producido', X.htmlProducido(itemMalo, catMalo),
-    ['itemId', 'sublote', 'producto', 'presentacion', 'empaque', 'cono'])
+    ['itemId', 'sublote', 'producto', 'presentacion', 'empaque', 'cono', 'embolsado'])
   chequearMarcas(chk, 'renglón que ya no está',
     X.htmlProducido({ id: marca('idViejo'), sublote: marca('subViejo'), presentacion_id: 'nada', cajas: 1, unidades: 1 }, catMalo), ['subViejo'])
   chequearMarcas(chk, 'pasos de agregar',

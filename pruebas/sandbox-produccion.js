@@ -68,6 +68,7 @@ const FUNCIONES_BASE = [
   'insumoDe', 'textoInsumoEmpaque', 'cajasDe', 'cajaInicial', 'embolsadoSugerido', 'conoDobleBolsa', 'embolsadoEfectivo',
   'opcionesEmbolsado', 'consumoPorCaja', 'consumoTotal', 'textoConsumo', 'textoCajaElegida', 'htmlEmbolsado', 'htmlPasoCaja',
   'htmlEmpaqueAgregar', 'soltarCaja', 'elegirCaja', 'elegirEmbolsado', 'seguirConCajas',
+  'cargarPermisoStock', 'puedeVerStockEn', 'textoEmpaqueItem', 'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno',
   'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre', 'guardarBorradorCierre',
   'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
   'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',

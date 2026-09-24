@@ -69,7 +69,7 @@ correrMutaciones({
     { nombre: 'el panel se cierra aunque la base rechace', de: '        guardado = true\n        await recargarPlanilla()\n        cerrarCorregir()', a: '        cerrarCorregir()\n        guardado = true\n        await recargarPlanilla()' },
 
     // ── Registrar un producto ───────────────────────────────────────────
-    { nombre: 'registrar pierde el cono', de: "      return { p_turno_id: turnoId, p_presentacion_id: a.presentacionId, p_marca_id: a.marcaId ?? null, p_cajas: a.cajas }", a: '      return { p_turno_id: turnoId, p_presentacion_id: a.presentacionId, p_marca_id: null, p_cajas: a.cajas }' },
+    { nombre: 'registrar pierde el cono', de: "p_presentacion_id: a.presentacionId, p_marca_id: a.marcaId ?? null, p_cajas: a.cajas,", a: 'p_presentacion_id: a.presentacionId, p_marca_id: null, p_cajas: a.cajas,' },
     { nombre: 'registrar sin cajas', de: '      if (!Number.isInteger(a.cajas) || a.cajas <= 0) { err.textContent', a: '      if (false) { err.textContent' },
     { nombre: 'no se dice el sublote que devolvió la base', de: "        mostrarExito(`Sublote ${data?.sublote ?? ''} cargado.`)", a: "        mostrarExito('Listo.')" },
     { nombre: 'no se vuelve a la planilla después de cargar', de: "        await recargarPlanilla()\n        mostrarVista('pr-planilla')", a: '        await recargarPlanilla()' },
@@ -78,9 +78,9 @@ correrMutaciones({
     { nombre: 'sin cono el paso del cono aparece igual', de: "      if (a.conCono !== false) pasos.push({ clave: 'cono'", a: "      if (true) pasos.push({ clave: 'cono'" },
     { nombre: 'un paso que falta ya muestra un valor', de: "        return `<div class=\"pr-paso-bloque pr-paso-bloque--falta\">${esc(x.n)} · ${esc(x.titulo)}</div>`", a: '        return `<div class="pr-paso-bloque pr-paso-bloque--falta">${cab}${valor}</div>`' },
     { nombre: 'los pasos hechos no se pueden tocar', de: "        if (x.estado === 'hecho') return `<button type=\"button\" class=\"pr-paso-bloque\" data-paso-ag=\"${esc(x.clave)}\">${cab}${valor}</button>`", a: "        if (x.estado === 'hecho') return `<div class=\"pr-paso-bloque\">${cab}${valor}</div>`" },
-    { nombre: 'elegir otro producto deja la presentación del anterior', de: "      if (a.productoId !== id) { a.conCono = null; a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false }", a: '      if (false) { a.conCono = null }' },
-    { nombre: 'volver a contestar lo mismo borra lo de abajo', de: "      if (a.conCono !== v) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false }", a: "      if (true) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false }" },
-    { nombre: 'con cono se saltea el paso del cono', de: "      a.paso = a.conCono ? 'cono' : 'cajas'", a: "      a.paso = 'cajas'" },
+    { nombre: 'elegir otro producto deja la presentación del anterior', de: "      if (a.productoId !== id) { a.conCono = null; a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }", a: '      if (false) { a.conCono = null }' },
+    { nombre: 'volver a contestar lo mismo borra lo de abajo', de: "      if (a.conCono !== v) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }", a: "      if (true) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }" },
+    { nombre: 'con cono se saltea el paso del cono', de: "      a.paso = a.conCono ? 'cono' : (a.cajaElegida ? 'cajas' : 'caja')", a: "      a.paso = 'cajas'" },
     { nombre: 'elegir "Común" no cuenta como elegir', de: '      a.marcaId = id || null\n      a.marcaElegida = true', a: '      a.marcaId = id || null\n      a.marcaElegida = !!id' },
     { nombre: 'sin cono igual se muestra el panel del cono', de: '      cono.hidden = !(a.conCono && enFinal)', a: '      cono.hidden = !enFinal' },
     { nombre: 'la grilla no se ensancha con el cono', de: "      document.getElementById('pr-ag-grilla').className = 'pr-ag' + (cono.hidden ? '' : ' pr-ag--cono-cajas')", a: "      document.getElementById('pr-ag-grilla').className = 'pr-ag'" },

@@ -11,11 +11,15 @@ correrMutaciones({
   suite: path.join(__dirname, 'test-produccion-empaque.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
-  funciones: ['htmlEmbolsado', 'htmlPasoCaja', 'htmlEmpaqueAgregar'],
+  // htmlProducido y htmlSubloteHistorial NO van acá: sus escapes viejos los
+  // cubren test-produccion-cierre y test-produccion-historial. Lo nuevo de
+  // ellas (el empaque del renglón) va en mutaciones a mano.
+  funciones: ['htmlEmbolsado', 'htmlPasoCaja', 'htmlEmpaqueAgregar', 'htmlEmpaqueTurno'],
   equivalentes: [
     { expr: 'esc(o.valor)', motivo: "constante del código: 'grande' | 'individual' | 'doble' | 'ninguno'" },
     { expr: 'esc(o.texto)', motivo: 'constante del código: el rótulo de cada embolsado' },
     { expr: 'esc(formatearNumeroAr(cajas, { decimales: 0 }))', motivo: 'formatearNumeroAr() devuelve dígitos, puntos y comas' },
+    { expr: 'esc(formatearNumeroAr(f.cantidad, { decimales: 3, minimos: 0 }))', motivo: 'formatearNumeroAr() devuelve dígitos, puntos y comas' },
   ],
   manuales: [
     // ── La caja inicial ─────────────────────────────────────────────────
@@ -63,5 +67,31 @@ correrMutaciones({
     { nombre: 'sin el empaque se agrega igual', de: '        if (re.error) throw re.error\n', a: '' },
     { nombre: 'la caja no viaja', de: 'p_caja_insumo_id: a.cajaId ?? null, p_embolsado', a: 'p_caja_insumo_id: null, p_embolsado' },
     { nombre: 'viaja el embolsado sin el cono', de: 'p_embolsado: embolsadoEfectivo(a, cat),', a: 'p_embolsado: a.embolsado,' },
+    // ── Parte 2: verlo después ──────────────────────────────────────────
+    { nombre: 'la planilla no trae la caja', de: "unidades, anulado, caja_insumo_id, embolsado')\n        .eq('turno_id', turnoId).order('orden')", a: "unidades, anulado')\n        .eq('turno_id', turnoId).order('orden')" },
+    { nombre: 'el historial no trae la caja', de: "unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))", a: "unidades, anulado').eq('turno_id', turnoId).order('orden'))" },
+    { nombre: 'el renglón de la planilla no dice su empaque', de: "          (empaque ? `<div class=\"pr-producido__detalle\">${esc(empaque)}</div>` : '')", a: "          ''" },
+    { nombre: 'el sublote del historial no dice su empaque', de: "        (empaque ? `${esc(empaque)} · ` : '') +", a: "        '' +" },
+    { nombre: 'la caja del renglón no se nombra', de: "        partes.push(ins ? textoInsumoEmpaque(ins) : 'caja sin nombre')", a: "        partes.push('caja')" },
+    { nombre: 'el embolsado del renglón no se dice', de: "      if (it?.embolsado) partes.push(TEXTO_EMBOLSADO[it.embolsado] ?? it.embolsado)\n", a: '' },
+    { nombre: 'la caja de un renglón viejo no se busca aparte', de: "        const { data: ins, error: e6 } = await supabase.from('insumos').select('id, nombre, marca').in('id', cajaIds)", a: "        const { data: ins, error: e6 } = { data: [], error: null }" },
+    { nombre: 'el permiso de stock mira otro módulo', de: ".eq('modulo', 'stock').eq('tarea', 'ver')", a: ".eq('modulo', 'produccion').eq('tarea', 'ver')" },
+    { nombre: 'sin leer el permiso se asume que no hay', de: "        estado.stockVer = undefined\n", a: "        estado.stockVer = null\n" },
+    { nombre: 'super_admin no ve el stock', de: "      if (estado.miRolApp === 'super_admin') return true\n      if (estado.stockVer === undefined) return null", a: "      if (estado.stockVer === undefined) return null" },
+    { nombre: 'el alcance todas no alcanza', de: "      if (estado.stockVer.todas === true) return true\n", a: '' },
+    { nombre: 'el alcance no mira la unidad', de: "      return lista.includes(String(unidadId))\n    }", a: "      return lista.length > 0\n    }" },
+    { nombre: 'sin permiso se consulta igual', de: "      if (permiso === false) return { estado: 'sin_permiso', movimientos: [] }", a: '' },
+    { nombre: 'sin saber el permiso se consulta igual', de: "      if (permiso === null) return { estado: 'desconocido', movimientos: [] }", a: '' },
+    { nombre: 'el empaque se lee de la unidad equivocada', de: 'const empaque = await leerEmpaqueTurno(turno.unidad_negocio_id, itemIds)', a: 'const empaque = await leerEmpaqueTurno(estado.unidadId, itemIds)' },
+    { nombre: 'sin permiso se dice "no se descontó"', de: "      if (e.estado === 'sin_permiso') return", a: "      if (false) return" },
+    { nombre: 'un error del libro tira el turno entero', de: "        console.error('empaque del turno:', err)\n        return { estado: 'error', movimientos: [] }", a: '        throw err' },
+    { nombre: 'el consumido no es neto (solo los descuentos)', de: '        if (!Number.isFinite(n)) continue', a: '        if (!Number.isFinite(n) || n > 0) continue' },
+    { nombre: 'el consumido con el signo del libro', de: 'cantidad: Math.round(-suma * 1000) / 1000', a: 'cantidad: Math.round(suma * 1000) / 1000' },
+    { nombre: 'lo devuelto entero se lista en cero', de: '        .filter(f => f.cantidad !== 0)', a: '' },
+    { nombre: 'sin movimientos se dice otra cosa', de: "      if (!e.movimientos.length) return '<p class=\"pr-texto-suave\">No se descontó empaque en este turno.</p>'", a: '' },
+    { nombre: 'el tope de 1000 no se avisa', de: '      const tope = e.movimientos.length >= TOPE_FILAS', a: '      const tope = false' },
+    { nombre: 'el empaque del renglón de la planilla sin escapar', de: '<div class="pr-producido__detalle">${esc(empaque)}</div>', a: '<div class="pr-producido__detalle">${empaque}</div>' },
+    { nombre: 'el empaque del sublote del historial sin escapar', de: '(empaque ? `${esc(empaque)} · `', a: '(empaque ? `${empaque} · `' },
+    { nombre: 'la sección del empaque no se dibuja', de: '        `<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}`', a: "        ''" },
   ],
 })

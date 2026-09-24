@@ -96,6 +96,7 @@ const SEGURAS_PRODUCCION = [
   ['incompleto', 'HTML constante del código: el aviso de que se llegó al tope de filas, o vacío'],
   ['masas', 'HTML ya escapado: htmlDetalleTurno() arma cada masa con esc() de cada dato'],
   ['htmlParadas(d.paradas)', 'HTML armado por htmlParadas(), que escapa adentro'],
+  ['htmlEmpaqueTurno(d)', 'HTML armado por htmlEmpaqueTurno(), que escapa el nombre de cada insumo y la cantidad'],
   ['producido', 'HTML ya escapado: htmlDetalleTurno() y htmlResumenCierre() arman cada sublote con esc() de cada dato'],
   ['totales', 'HTML ya escapado: htmlDetalleTurno() arma cada total con esc() del insumo, el lote y los kilos'],
   // Rediseño parte 4: la sala, la receta y las masas del turno
