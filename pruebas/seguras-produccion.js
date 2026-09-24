@@ -97,6 +97,9 @@ const SEGURAS_PRODUCCION = [
   ['masas', 'HTML ya escapado: htmlDetalleTurno() arma cada masa con esc() de cada dato'],
   ['htmlParadas(d.paradas)', 'HTML armado por htmlParadas(), que escapa adentro'],
   ['htmlEmpaqueTurno(d)', 'HTML armado por htmlEmpaqueTurno(), que escapa el nombre de cada insumo y la cantidad'],
+  ['opcionesSug(x.embolsado_sugerido)', 'HTML armado por opcionesSug() de htmlEmpaquePresentacion: <option> con valor y rótulo escapados'],
+  ['opcionesInsumos', 'HTML armado en htmlConfigEmpaque: <option> del datalist con el nombre del insumo escapado'],
+  ['opcionesCond(x.condicion)', 'HTML armado por opcionesCond() de htmlEmpaquePresentacion: <option> con valor y rótulo escapados'],
   ['producido', 'HTML ya escapado: htmlDetalleTurno() y htmlResumenCierre() arman cada sublote con esc() de cada dato'],
   ['totales', 'HTML ya escapado: htmlDetalleTurno() arma cada total con esc() del insumo, el lote y los kilos'],
   // Rediseño parte 4: la sala, la receta y las masas del turno

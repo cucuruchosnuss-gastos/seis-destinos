@@ -495,6 +495,197 @@ esperas.push((async () => {
     /solo se leyeron los primeros/.test(tope.htmlEmpaqueTurno(await tope.leerDetalleTurno('t1'))))
 })())
 
+// ── Parte 3: Configuración → Empaque, y el tilde "Doble bolsa" ───────────
+const INSUMOS_CFG = [
+  { id: 'i-nuss', nombre: 'Caja N°1', marca: 'Nuss', categoria: 'Cajas', activo: true },
+  { id: 'i-dolce', nombre: 'Caja N°1', marca: 'Dolce Pasta', categoria: 'Cajas', activo: true },
+  { id: 'i-sinimp', nombre: 'Caja N°1', marca: 'Sin impresión', categoria: 'Cajas', activo: true },
+  { id: 'i-baja', nombre: 'Caja vieja', marca: null, categoria: 'Cajas', activo: false },
+  { id: 'i-tiras', nombre: 'Tiras x4', marca: null, categoria: 'Separadores y tiras', activo: true },
+  { id: 'i-sep', nombre: 'Separador N°1', marca: null, categoria: 'Separadores y tiras', activo: true },
+  { id: 'i-sep2', nombre: 'Separador N°2', marca: null, categoria: 'Separadores y tiras', activo: true },
+  { id: 'i-bolsa', nombre: 'Bolsa 100x80', marca: null, categoria: 'Bolsas', activo: true },
+]
+function armarConfig() {
+  const S = construirProduccion(ARCHIVO)
+  S.estado.misTareas = new Map([['configurar', { unidades: ['u-cn'] }]])
+  Object.assign(S.__tablas, {
+    productos_terminados: [
+      { id: 'p-mini', nombre: 'Cucuruchón Mini', tipo_masa: 'Común', activo: true, orden: 1 },
+      { id: 'p-choco', nombre: 'Cucuruchón Mini Chocolate', tipo_masa: 'Chocolate', activo: true, orden: 2 },
+    ],
+    producto_presentaciones: [
+      { id: 'pr-caja', producto_id: 'p-mini', nombre: 'Caja', media_caja: false, activa: true, orden: 1 },
+      { id: 'pr-media', producto_id: 'p-mini', nombre: 'Media caja', media_caja: true, activa: true, orden: 2 },
+      { id: 'pr-std', producto_id: 'p-mini', nombre: 'Standard media', media_caja: true, activa: false, orden: 3 },
+      { id: 'pr-choco', producto_id: 'p-choco', nombre: 'Caja choco', media_caja: false, activa: true, orden: 1 },
+    ],
+    presentacion_cajas: [
+      { presentacion_id: 'pr-caja', insumo_id: 'i-nuss', embolsado_sugerido: 'grande' },
+      { presentacion_id: 'pr-caja', insumo_id: 'i-dolce', embolsado_sugerido: 'individual' },
+      { presentacion_id: 'pr-choco', insumo_id: 'i-nuss', embolsado_sugerido: 'grande' },
+    ],
+    presentacion_empaque: [
+      { id: 'e1', presentacion_id: 'pr-caja', insumo_id: 'i-tiras', cantidad: 1, condicion: 'siempre' },
+      { id: 'e2', presentacion_id: 'pr-caja', insumo_id: 'i-bolsa', cantidad: 1, condicion: 'bolsa_grande' },
+      { id: 'e3', presentacion_id: 'pr-media', insumo_id: 'i-tiras', cantidad: 0.5, condicion: 'siempre' },
+    ],
+    insumos: INSUMOS_CFG,
+    marcas_personalizadas: [
+      { id: 'mk-grido', nombre: 'GRIDO', activa: true, estado_alta: 'aprobada', doble_bolsa: false },
+      { id: 'mk-norte', nombre: 'HELADOS DEL NORTE', activa: true, estado_alta: 'aprobada', doble_bolsa: true },
+    ],
+  })
+  S.__setRpc(async () => ({ data: null, error: null }))
+  return S
+}
+// Campos falsos del cuerpo de Configuración (el DOM falso no tiene
+// querySelectorAll): cada uno responde a su atributo.
+function camposCfg(S, campos) {
+  S.__doc.getElementById('pr-config-cuerpo').querySelectorAll = (sel) => {
+    const attr = (sel.match(/\[([a-z-]+)/) || [])[1]
+    return campos.filter(i => attr in i.atributos)
+  }
+}
+function campo(atributos, value = '') {
+  const dataset = {}
+  for (const [k, v] of Object.entries(atributos)) if (k.startsWith('data-')) dataset[k.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = v
+  return { atributos, dataset, getAttribute: (k) => atributos[k] ?? null, value }
+}
+const cuerpoCfg = S => S.__doc.getElementById('pr-config-cuerpo').innerHTML
+async function abrirEmpaque(S) {
+  await S.mostrarConfig()
+  S.estado.config.tab = 'empaque'
+  await S.cargarPestanaConfig()
+}
+// La tarjeta de UNA presentación dentro del cuerpo.
+const tarjeta = (h, presId) => {
+  const i = h.indexOf(`data-emp-guardar="${presId}"`)
+  const ini = h.lastIndexOf('<div class="pr-config-sub pr-emp', i)
+  return h.slice(ini, i)
+}
+
+esperas.push((async () => {
+  const S = armarConfig()
+  chk('Configuración tiene la pestaña Empaque, después de Productos',
+    S.PESTANAS_CONFIG.map(([k]) => k).join(',') === 'maquinas,recetas,ingredientes,productos,empaque,marcas,personal')
+  await abrirEmpaque(S)
+  chk('la pestaña se lee y se dibuja', S.estado.config.datos?.borradores instanceof Map && /Guardar empaque/.test(cuerpoCfg(S)), cuerpoCfg(S).slice(0, 300))
+  chk('las cajas se leen con su embolsado sugerido', /\bembolsado_sugerido\b/.test(select(S, 'presentacion_cajas')))
+  chk('el empaque, con cantidad y condición', /\bcantidad\b/.test(select(S, 'presentacion_empaque')) && /\bcondicion\b/.test(select(S, 'presentacion_empaque')))
+  chk('los insumos, con categoría y si están activos', /\bcategoria\b/.test(select(S, 'insumos')) && /\bactivo\b/.test(select(S, 'insumos')))
+  chk('los productos son los de la unidad elegida',
+    S.__llamadas.consultas.some(([t, f]) => t === 'productos_terminados' && JSON.stringify(f).includes('["eq","unidad_negocio_id","u-cn"]')))
+  const h = cuerpoCfg(S)
+  chk('agrupadas por producto, con los de chocolate abajo', h.indexOf('Cucuruchón Mini<') < h.indexOf('pr-ag__corte') && h.indexOf('pr-ag__corte') < h.indexOf('Caja choco'))
+  const caja = tarjeta(h, 'pr-caja')
+  chk('cada caja habilitada con su embolsado sugerido elegido',
+    /Caja N°1 Nuss/.test(caja) && /Caja N°1 Dolce Pasta/.test(caja) && /value="individual" selected/.test(caja), caja.slice(0, 600))
+  chk('… el alta ofrece SOLO cajas activas del rubro Cajas que no están',
+    /data-emp-caja-nueva="pr-caja"/.test(caja) && /<option value="i-sinimp">/.test(caja) && !/<option value="i-nuss">/.test(caja) &&
+    !/<option value="i-baja">/.test(caja) && !/<option value="i-tiras">/.test(caja))
+  chk('… los renglones con su cantidad (3 decimales) y su condición',
+    /data-emp-cant="pr-caja\|0" data-numero="1" data-decimales="3"/.test(caja) && /value="bolsa_grande" selected/.test(caja))
+  chk('una presentación completa no avisa nada', !/Produce sin descontar/.test(caja))
+  chk('una activa sin cajas: "Produce sin descontar la caja"', /Produce sin descontar la caja: no tiene ninguna caja/.test(tarjeta(h, 'pr-media')))
+  chk('una activa sin renglones: "Produce sin descontar el empaque"', /Produce sin descontar el empaque/.test(tarjeta(h, 'pr-choco')))
+  chk('las dos cosas juntas', S.faltaEmpaque({ cajas: [], empaque: [] }, 'x') === 'Produce sin descontar la caja ni el empaque.')
+  chk('una INACTIVA no avisa (no produce)', !/Produce sin descontar/.test(tarjeta(h, 'pr-std')) && /inactiva/.test(tarjeta(h, 'pr-std')))
+  chk('el buscador de insumos ofrece solo los activos', /<datalist id="pr-emp-insumos">/.test(h) && /value="Separador N°2"/.test(h) && !/value="Caja vieja"/.test(h))
+
+  // Editar el borrador: agregar y quitar, sin llamar a la base.
+  camposCfg(S, [
+    campo({ 'data-emp-caja-nueva': 'pr-caja' }, 'i-sinimp'),
+    campo({ 'data-emp-insumo-nuevo': 'pr-caja' }, 'separador n°2'),
+    campo({ 'data-emp-cant': 'pr-caja|0' }, '2'),
+    campo({ 'data-emp-cant': 'pr-caja|1' }, '1'),
+  ])
+  await S.accionEmpaque({ empAgregarCaja: 'pr-caja' })
+  const b = () => S.estado.config.datos.borradores.get('pr-caja')
+  chk('agregar una caja la suma al borrador (sugiere bolsa grande)', b().cajas.map(x => x.insumo_id).join(',') === 'i-nuss,i-dolce,i-sinimp' && b().cajas[2].embolsado_sugerido === 'grande')
+  chk('… las cantidades tipeadas se pasan al borrador antes de redibujar', b().empaque[0].cantidad === 2)
+  chk('… y la tarjeta queda marcada sin guardar', /sin guardar/.test(tarjeta(cuerpoCfg(S), 'pr-caja')))
+  chk('… sin llamar a la base', S.__llamadas.rpc.length === 0)
+  await S.accionEmpaque({ empAgregar: 'pr-caja' })
+  chk('agregar un insumo por su nombre (sin acentos ni mayúsculas)', b().empaque.map(x => x.insumo_id).join(',') === 'i-tiras,i-bolsa,i-sep2' && b().empaque[2].condicion === 'siempre' && b().empaque[2].cantidad === null)
+  chk('insumoPorTexto: el único que contiene el texto', S.insumoPorTexto(S.estado.config.datos, 'tiras')?.id === 'i-tiras')
+  chk('… con dos que lo contienen, ninguno', S.insumoPorTexto(S.estado.config.datos, 'separador') === null)
+  chk('… uno desactivado no se ofrece', S.insumoPorTexto(S.estado.config.datos, 'caja vieja') === null)
+  camposCfg(S, [campo({ 'data-emp-insumo-nuevo': 'pr-caja' }, 'separador')])
+  await S.accionEmpaque({ empAgregar: 'pr-caja' })
+  chk('un texto que no es un insumo de la lista: lo dice, pegado', /pr-cfg-error" role="alert">Elegí un insumo de la lista\./.test(tarjeta(cuerpoCfg(S), 'pr-caja')) && b().empaque.length === 3)
+  // Lo agregado al borrador NO apaga el aviso: el aviso es de lo guardado,
+  // que es con lo que produce la base.
+  camposCfg(S, [campo({ 'data-emp-caja-nueva': 'pr-media' }, 'i-nuss'), campo({ 'data-emp-cant': 'pr-media|0' }, '0,5')])
+  await S.accionEmpaque({ empAgregarCaja: 'pr-media' })
+  const media = tarjeta(cuerpoCfg(S), 'pr-media')
+  chk('agregar una caja sin guardar marca la tarjeta', /sin guardar/.test(media) && S.estado.config.datos.borradores.get('pr-media').tocado === true)
+  chk('… y el aviso sigue hasta que se guarde', /Produce sin descontar la caja/.test(media))
+  camposCfg(S, [])
+  await S.accionEmpaque({ empQuitarCaja: 'pr-caja|1' })
+  chk('quitar una caja', b().cajas.map(x => x.insumo_id).join(',') === 'i-nuss,i-sinimp')
+  await S.accionEmpaque({ empQuitar: 'pr-caja|1' })
+  chk('quitar un renglón', b().empaque.map(x => x.insumo_id).join(',') === 'i-tiras,i-sep2')
+  S.cambiarSelectEmpaque({ dataset: { empCond: 'pr-caja|1' }, value: 'bolsa_individual' })
+  chk('cambiar la condición', b().empaque[1].condicion === 'bolsa_individual')
+  S.cambiarSelectEmpaque({ dataset: { empSug: 'pr-caja|1' }, value: 'ninguno' })
+  chk('cambiar el embolsado sugerido de una caja', b().cajas[1].embolsado_sugerido === 'ninguno')
+
+  // Guardar: sin cantidad no se manda; con todo, UNA llamada con las dos listas.
+  await S.accionEmpaque({ empGuardar: 'pr-caja' })
+  chk('un renglón sin cantidad no se manda', S.__llamadas.rpc.length === 0 &&
+    /Las cantidades tienen que ser mayores a cero\./.test(tarjeta(cuerpoCfg(S), 'pr-caja')))
+  camposCfg(S, [campo({ 'data-emp-cant': 'pr-caja|0' }, '1'), campo({ 'data-emp-cant': 'pr-caja|1' }, '0,5')])
+  await S.accionEmpaque({ empGuardar: 'pr-caja' })
+  const llamadas = S.__llamadas.rpc.filter(([n]) => n === 'guardar_empaque_presentacion')
+  chk('guardar: UNA sola llamada con las dos listas', llamadas.length === 1 && S.__llamadas.rpc.length === 1)
+  chk('… con las cajas y el empaque completos',
+    JSON.stringify(llamadas[0]?.[1]) === JSON.stringify({
+      p_presentacion_id: 'pr-caja',
+      p_cajas: [{ insumo_id: 'i-nuss', embolsado_sugerido: 'grande' }, { insumo_id: 'i-sinimp', embolsado_sugerido: 'ninguno' }],
+      p_empaque: [{ insumo_id: 'i-tiras', cantidad: 1, condicion: 'siempre' }, { insumo_id: 'i-sep2', cantidad: 0.5, condicion: 'bolsa_individual' }],
+    }), JSON.stringify(llamadas[0]?.[1]))
+  chk('… y relee lo guardado (el borrador vuelve a la base)', S.estado.config.datos.borradores.get('pr-caja').tocado === false)
+  chk('repetido con la misma condición: no se manda',
+    S.parametrosGuardarEmpaque('x', { cajas: [], empaque: [{ insumo_id: 'a', cantidad: 1, condicion: 'siempre' }, { insumo_id: 'a', cantidad: 2, condicion: 'siempre' }] }).error)
+  chk('… con distinta condición, sí',
+    !S.parametrosGuardarEmpaque('x', { cajas: [], empaque: [{ insumo_id: 'a', cantidad: 1, condicion: 'bolsa_grande' }, { insumo_id: 'a', cantidad: 2, condicion: 'bolsa_individual' }] }).error)
+  chk('una presentación sin nada se puede guardar vacía', JSON.stringify(S.parametrosGuardarEmpaque('x', { cajas: [], empaque: [] })) === '{"p_presentacion_id":"x","p_cajas":[],"p_empaque":[]}')
+
+  // El error de la base, tal cual y pegado al botón de ESA presentación.
+  S.__setRpc(async () => ({ data: null, error: { message: 'Una de las cajas no existe o no es del rubro Cajas.' } }))
+  camposCfg(S, [campo({ 'data-emp-cant': 'pr-caja|0' }, '1'), campo({ 'data-emp-cant': 'pr-caja|1' }, '1')])
+  await S.accionEmpaque({ empGuardar: 'pr-caja' })
+  const t = tarjeta(cuerpoCfg(S), 'pr-caja')
+  chk('el error de la base, tal cual, pegado a su botón', /pr-cfg-error" role="alert">Una de las cajas no existe o no es del rubro Cajas\.<\/div><button type="button" class="pr-btn" id="pr-cfg-emp-pr-caja"/.test(t), t.slice(-400))
+  chk('… y no en otra presentación', !/Una de las cajas/.test(tarjeta(cuerpoCfg(S), 'pr-media')))
+
+  // El despacho de los eventos.
+  chk('los botones de la pestaña van a accionEmpaque', /else if \(tab === 'empaque'\) accionEmpaque\(ds\)/.test(FUENTE))
+  chk('los selects, a cambiarSelectEmpaque', /if \(t\.dataset\?\.empSug !== undefined \|\| t\.dataset\?\.empCond !== undefined\) return cambiarSelectEmpaque\(t\)/.test(FUENTE))
+  chk('el tilde de doble bolsa, a cambiarDobleBolsa', /if \(t\.dataset\?\.marcaDoble !== undefined\) return cambiarDobleBolsa\(t\.dataset\.marcaDoble, t\.checked\)/.test(FUENTE))
+})())
+
+esperas.push((async () => {
+  const S = armarConfig()
+  await S.mostrarConfig()
+  S.estado.config.tab = 'marcas'
+  await S.cargarPestanaConfig()
+  chk('las marcas se leen con doble_bolsa', S.__llamadas.consultas.some(([t, f]) => t === 'marcas_personalizadas' && f.some(x => x[0] === 'select' && /\bdoble_bolsa\b/.test(x[1]))))
+  const h = cuerpoCfg(S)
+  chk('cada cono tiene su tilde "Doble bolsa"', /data-marca-doble="mk-grido">/.test(h) && /data-marca-doble="mk-norte" checked>/.test(h), h.slice(0, 800))
+  chk('… con la explicación del norte y la humedad', /van al norte, por la humedad/.test(h))
+  await S.cambiarDobleBolsa('mk-grido', true)
+  const ll = S.__llamadas.rpc.filter(([n]) => n === 'marcar_doble_bolsa')
+  chk('tildarlo llama a marcar_doble_bolsa', ll.length === 1 && JSON.stringify(ll[0][1]) === '{"p_marca_id":"mk-grido","p_doble":true}', JSON.stringify(ll))
+  await S.cambiarDobleBolsa('mk-norte', false)
+  chk('destildarlo manda false', S.__llamadas.rpc.filter(([n]) => n === 'marcar_doble_bolsa')[1]?.[1].p_doble === false)
+  S.__setRpc(async () => ({ data: null, error: { message: 'No tenés permiso.' } }))
+  await S.cambiarDobleBolsa('mk-grido', true)
+  chk('el error de la base, tal cual, pegado a la lista', /pr-cfg-marcas-lista"[^>]*>[^<]*<\/p><div class="pr-cfg-error" role="alert">No tenés permiso\./.test(cuerpoCfg(S)))
+  chk('… y el tilde vuelve a lo guardado', /data-marca-doble="mk-grido">/.test(cuerpoCfg(S)))
+})())
+
 // ── XSS: cada render nuevo con HTML malicioso ────────────────────────────
 esperas.push((async () => {
   const X = armar()
@@ -525,6 +716,23 @@ esperas.push((async () => {
     empaque: { estado: 'ok', movimientos: [{ insumo_id: 'i-malo', cantidad: -1 }] }, insumosEmpaque: catMalo.insumos }
   chequearMarcas(chk, 'detalle del turno con su empaque', X.htmlDetalleTurno(dMalo), ['cajaNombre', 'cajaMarca', 'embolsado'])
   chequearMarcas(chk, 'empaque consumido', X.htmlEmpaqueTurno(dMalo), ['cajaNombre', 'cajaMarca'])
+  // Parte 3: la pestaña Empaque.
+  const cfgMalo = {
+    productos: [{ id: marca('prodIdCfg'), nombre: marca('prodCfg'), tipo_masa: 'Común', activo: true, orden: 1 }],
+    presentaciones: [{ id: marca('presIdCfg'), producto_id: marca('prodIdCfg'), nombre: marca('presCfg'), activa: true, orden: 1 }],
+    cajas: [], empaque: [],
+    insumos: [
+      { id: marca('insIdCfg'), nombre: marca('insCfg'), marca: marca('insMarcaCfg'), categoria: 'Cajas', activo: true },
+      { id: marca('insId2Cfg'), nombre: marca('ins2Cfg'), marca: null, categoria: 'Cajas', activo: true },
+    ],
+  }
+  cfgMalo.borradores = new Map([[marca('presIdCfg'), {
+    cajas: [{ insumo_id: marca('insIdCfg'), embolsado_sugerido: 'grande' }],
+    empaque: [{ insumo_id: marca('insIdCfg'), cantidad: 1, condicion: 'siempre' }], tocado: true }]])
+  const cMalo = { datos: cfgMalo, error: { texto: marca('errorCfg'), donde: 'pr-cfg-emp-' + marca('presIdCfg') } }
+  chequearMarcas(chk, 'pestaña Empaque', X.htmlConfigEmpaque(cMalo), ['prodCfg', 'presCfg', 'presIdCfg', 'insCfg', 'insMarcaCfg', 'insId2Cfg', 'ins2Cfg', 'errorCfg'])
+  const marcasMalo = { datos: { marcas: [{ id: marca('marcaIdCfg'), nombre: marca('marcaCfg'), activa: true, estado_alta: 'aprobada', doble_bolsa: true }], nombres: new Map() }, busqueda: '', error: null }
+  chequearMarcas(chk, 'marcas con su tilde de doble bolsa', X.htmlConfigMarcas(marcasMalo), ['marcaIdCfg', 'marcaCfg'])
 })())
 
 fin()

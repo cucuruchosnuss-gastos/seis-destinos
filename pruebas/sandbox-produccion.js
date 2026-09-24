@@ -69,6 +69,9 @@ const FUNCIONES_BASE = [
   'opcionesEmbolsado', 'consumoPorCaja', 'consumoTotal', 'textoConsumo', 'textoCajaElegida', 'htmlEmbolsado', 'htmlPasoCaja',
   'htmlEmpaqueAgregar', 'soltarCaja', 'elegirCaja', 'elegirEmbolsado', 'seguirConCajas',
   'cargarPermisoStock', 'puedeVerStockEn', 'textoEmpaqueItem', 'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno',
+  'leerEmpaqueConfig', 'faltaEmpaque', 'nombreInsumoConfig', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque',
+  'sincronizarCantidadesEmpaque', 'insumoPorTexto', 'parametrosGuardarEmpaque', 'valorEmpaque', 'accionEmpaque',
+  'cambiarSelectEmpaque', 'cambiarDobleBolsa',
   'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre', 'guardarBorradorCierre',
   'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
   'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',
@@ -132,7 +135,7 @@ const CONSTANTES_BASE = [
   'UMBRAL_ALEJADA', 'MS_BANDA_EXITO',
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION',
-  'EMBOLSADOS', 'TEXTO_EMBOLSADO',
+  'EMBOLSADOS', 'TEXTO_EMBOLSADO', 'CONDICIONES_EMPAQUE',
 ]
 
 const PRELUDIO = `

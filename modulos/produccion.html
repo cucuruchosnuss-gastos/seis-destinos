@@ -990,6 +990,16 @@
       border: 2px dashed var(--azul); border-radius: var(--radio-input); }
     .pr-check { display: flex; align-items: center; gap: 0.625rem; min-height: var(--pr-alto-boton); font-size: 1.125rem; overflow-wrap: anywhere; }
     .pr-config-marca { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    /* Empaque de cada presentación: sus cajas y lo que consume una caja. */
+    .pr-emp__producto { font-size: 1.125rem; }
+    .pr-emp__titulo { font-weight: 800; }
+    .pr-emp--tocado { border-left-color: var(--naranja); }
+    .pr-emp__sin-guardar { font-weight: 700; color: var(--naranja-oscuro); background: var(--naranja-suave); border-radius: 999px; padding: 0.05rem 0.5rem; }
+    .pr-emp-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 0.5rem; align-items: center; min-width: 0; }
+    .pr-emp-fila__nombre { overflow-wrap: anywhere; }
+    .pr-emp-fila__campo { display: flex; align-items: center; gap: 0.5rem; }
+    .pr-emp-fila__cant { width: 7rem; text-align: right; }
+    @media (max-width: 700px) { .pr-emp-fila { grid-template-columns: minmax(0, 1fr); } .pr-emp-fila__cant { width: 100%; } }
 
     /* ── Configuración: LA EXCEPCIÓN DEL MÓDULO ───────────────────────────
        Todo lo demás se usa en la tablet, de pie y con harina en las manos.
@@ -6382,7 +6392,7 @@
 
     const PESTANAS_CONFIG = [
       ['maquinas', 'Máquinas'], ['recetas', 'Recetas'], ['ingredientes', 'Ingredientes'],
-      ['productos', 'Productos'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal'],
+      ['productos', 'Productos'], ['empaque', 'Empaque'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal'],
     ]
     const PUESTOS = [['encargado', 'Encargado'], ['masero', 'Masero'], ['operario', 'Operario']]
     const CLAVE_AVISO_PRODUCTOS = 'produccion.aviso-productos-revisado'
@@ -7076,11 +7086,214 @@
       }
     }
 
+    // ── Empaque de cada presentación ──────────────────────────────────────
+    //
+    // Qué cajas admite cada presentación (con su embolsado sugerido) y qué
+    // consume UNA caja armada. Se edita en un BORRADOR por presentación y se
+    // guarda con UNA llamada a guardar_empaque_presentacion, que borra y
+    // reinserta las dos listas: todo o nada. El descuento lo hace la base al
+    // cargar lo producido; acá no se toca el stock.
+
+    const CONDICIONES_EMPAQUE = [
+      ['siempre', 'Siempre'], ['bolsa_grande', 'Solo con bolsa grande'], ['bolsa_individual', 'Solo con bolsa individual'],
+    ]
+
+    async function leerEmpaqueConfig(c) {
+      const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
+      const productos = await leer(supabase.from('productos_terminados').select('id, nombre, tipo_masa, activo, orden')
+        .eq('unidad_negocio_id', c.unidadId).order('orden').order('nombre'))
+      const ids = productos.map(p => p.id)
+      const presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones')
+        .select('id, producto_id, nombre, media_caja, activa, orden').in('producto_id', ids).order('orden')) : []
+      const presIds = presentaciones.map(p => p.id)
+      const cajas = presIds.length ? await leer(supabase.from('presentacion_cajas')
+        .select('presentacion_id, insumo_id, embolsado_sugerido').in('presentacion_id', presIds)) : []
+      const empaque = presIds.length ? await leer(supabase.from('presentacion_empaque')
+        .select('id, presentacion_id, insumo_id, cantidad, condicion').in('presentacion_id', presIds)) : []
+      // TODOS los insumos (el catálogo es chico): los activos para ofrecer, y
+      // cualquiera para nombrar lo que ya está configurado aunque se haya
+      // desactivado después.
+      const insumos = await leer(supabase.from('insumos').select('id, nombre, marca, categoria, activo').order('nombre'))
+      // El borrador arranca igual a lo guardado.
+      const borradores = new Map(presentaciones.map(pr => [pr.id, {
+        cajas: cajas.filter(x => x.presentacion_id === pr.id).map(x => ({ insumo_id: x.insumo_id, embolsado_sugerido: x.embolsado_sugerido })),
+        empaque: empaque.filter(x => x.presentacion_id === pr.id).map(x => ({ insumo_id: x.insumo_id, cantidad: Number(x.cantidad), condicion: x.condicion })),
+        tocado: false,
+      }]))
+      return { productos, presentaciones, cajas, empaque, insumos, borradores }
+    }
+
+    // Lo que falta en lo GUARDADO (que es con lo que produce la base).
+    function faltaEmpaque(d, presId) {
+      const sinCaja = !(d.cajas ?? []).some(x => x.presentacion_id === presId)
+      const sinEmpaque = !(d.empaque ?? []).some(x => x.presentacion_id === presId)
+      if (sinCaja && sinEmpaque) return 'Produce sin descontar la caja ni el empaque.'
+      if (sinCaja) return 'Produce sin descontar la caja: no tiene ninguna caja habilitada.'
+      if (sinEmpaque) return 'Produce sin descontar el empaque: no tiene ningún renglón.'
+      return ''
+    }
+
+    function nombreInsumoConfig(d, id) {
+      const i = (d.insumos ?? []).find(x => x.id === id)
+      return i ? textoInsumoEmpaque(i) + (i.activo === false ? ' (desactivado)' : '') : 'Insumo que ya no está'
+    }
+
+    function htmlEmpaquePresentacion(pr, c) {
+      const d = c.datos
+      const b = d.borradores.get(pr.id) ?? { cajas: [], empaque: [], tocado: false }
+      const falta = pr.activa ? faltaEmpaque(d, pr.id) : ''
+      const opcionesSug = (v) => EMBOLSADOS.map(o => `<option value="${esc(o.valor)}"${o.valor === v ? ' selected' : ''}>${esc(o.texto)}</option>`).join('')
+      const filasCajas = b.cajas.map((x, i) => `<div class="pr-emp-fila">` +
+        `<span class="pr-emp-fila__nombre">${esc(nombreInsumoConfig(d, x.insumo_id))}</span>` +
+        `<label class="pr-emp-fila__campo">Embolsado sugerido <select class="pr-input" data-emp-sug="${esc(pr.id)}|${esc(i)}">${opcionesSug(x.embolsado_sugerido)}</select></label>` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-emp-quitar-caja="${esc(pr.id)}|${esc(i)}">Quitar</button></div>`).join('')
+      const cajasLibres = (d.insumos ?? []).filter(i => i.activo !== false && i.categoria === 'Cajas' && !b.cajas.some(x => x.insumo_id === i.id))
+      const altaCaja = cajasLibres.length
+        ? `<div class="pr-config-alta"><select class="pr-input" data-emp-caja-nueva="${esc(pr.id)}" aria-label="Caja para agregar"><option value="">Elegí una caja…</option>` +
+          cajasLibres.map(i => `<option value="${esc(i.id)}">${esc(textoInsumoEmpaque(i))}</option>`).join('') + `</select>` +
+          `<button type="button" class="pr-btn pr-btn--secundario" data-emp-agregar-caja="${esc(pr.id)}">Agregar caja</button></div>`
+        : ''
+      const opcionesCond = (v) => CONDICIONES_EMPAQUE.map(([k, t]) => `<option value="${esc(k)}"${k === v ? ' selected' : ''}>${esc(t)}</option>`).join('')
+      const filasEmp = b.empaque.map((x, i) => `<div class="pr-emp-fila">` +
+        `<span class="pr-emp-fila__nombre">${esc(nombreInsumoConfig(d, x.insumo_id))}</span>` +
+        `<input type="text" class="pr-input pr-emp-fila__cant" data-emp-cant="${esc(pr.id)}|${esc(i)}" data-numero="${x.cantidad == null ? '' : esc(x.cantidad)}" data-decimales="3" aria-label="Cantidad por caja">` +
+        `<select class="pr-input" data-emp-cond="${esc(pr.id)}|${esc(i)}" aria-label="Cuándo se descuenta">${opcionesCond(x.condicion)}</select>` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-emp-quitar="${esc(pr.id)}|${esc(i)}">Quitar</button></div>`).join('')
+      const donde = `pr-cfg-emp-${pr.id}`
+      return `<div class="pr-config-sub pr-emp${pr.activa ? '' : ' pr-config-fila--inactiva'}${b.tocado ? ' pr-emp--tocado' : ''}">` +
+        `<div class="pr-emp__titulo">${esc(pr.nombre)}${pr.activa ? '' : ' · inactiva'}${b.tocado ? ' <span class="pr-emp__sin-guardar">sin guardar</span>' : ''}</div>` +
+        (falta ? `<div class="pr-aviso pr-aviso--grave">${esc(falta)}</div>` : '') +
+        `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Cajas que admite</p>` +
+        (filasCajas || '<p class="pr-texto-suave">Ninguna caja habilitada.</p>') + altaCaja +
+        `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Lo que consume una caja</p>` +
+        (filasEmp || '<p class="pr-texto-suave">Ningún renglón.</p>') +
+        `<div class="pr-config-alta"><input type="text" class="pr-input" list="pr-emp-insumos" data-emp-insumo-nuevo="${esc(pr.id)}" placeholder="Buscar un insumo…" aria-label="Insumo para agregar" autocomplete="off">` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-emp-agregar="${esc(pr.id)}">Agregar insumo</button></div>` +
+        htmlErrorPegado(c, donde) +
+        `<button type="button" class="pr-btn" id="${esc(donde)}" data-emp-guardar="${esc(pr.id)}">Guardar empaque</button></div>`
+    }
+
+    function htmlConfigEmpaque(c) {
+      const d = c.datos
+      const nota = '<p class="pr-texto-suave">Lo que consume UNA caja armada de cada presentación: la caja de cartón (1 por caja producida, también en media caja) y el resto. Se descuenta solo al cargar lo producido.</p>'
+      if (!d.productos.length) return nota + '<p class="pr-texto-suave">Esta unidad no tiene productos cargados.</p>'
+      // El buscador de insumos es un datalist: la pestaña es de oficina, y así
+      // no se redibuja nada mientras se escribe.
+      const opcionesInsumos = (d.insumos ?? []).filter(i => i.activo !== false)
+        .map(i => `<option value="${esc(textoInsumoEmpaque(i))}"></option>`).join('')
+      const lista = `<datalist id="pr-emp-insumos">${opcionesInsumos}</datalist>`
+      const { comunes, chocolate } = productosPorMasa(d)
+      const bloque = p => `<div class="pr-config-fila${p.activo ? '' : ' pr-config-fila--inactiva'}"><strong class="pr-emp__producto">${esc(p.nombre)}</strong>` +
+        (d.presentaciones.filter(pr => pr.producto_id === p.id).map(pr => htmlEmpaquePresentacion(pr, c)).join('') || '<p class="pr-texto-suave">Sin presentaciones.</p>') + `</div>`
+      const corte = `<div class="pr-ag__corte"><span class="pr-ag__corte-texto">Chocolate</span><span class="pr-ag__corte-linea"></span></div>`
+      return nota + lista + comunes.map(bloque).join('') + (chocolate.length ? corte + chocolate.map(bloque).join('') : '')
+    }
+
+    // Las cantidades tipeadas viven en los campos hasta que algo redibuja: se
+    // pasan al borrador ANTES de cualquier cambio, o se perderían.
+    function sincronizarCantidadesEmpaque(c) {
+      const cuerpo = document.getElementById('pr-config-cuerpo')
+      for (const input of cuerpo.querySelectorAll('[data-emp-cant]')) {
+        const [presId, i] = input.dataset.empCant.split('|')
+        const fila = c.datos.borradores.get(presId)?.empaque[Number(i)]
+        if (fila) {
+          const v = leerCampoNumero(input)
+          if (v !== fila.cantidad) { fila.cantidad = v; c.datos.borradores.get(presId).tocado = true }
+        }
+      }
+    }
+
+    // El texto del buscador contra el catálogo: igual (sin acentos ni
+    // mayúsculas) a "nombre marca"; si no, el ÚNICO que lo contiene.
+    function insumoPorTexto(d, texto) {
+      const q = normalizarBusqueda(texto)
+      if (!q) return null
+      const activos = (d.insumos ?? []).filter(i => i.activo !== false)
+      const exacto = activos.find(i => normalizarBusqueda(textoInsumoEmpaque(i)) === q)
+      if (exacto) return exacto
+      const parecidos = activos.filter(i => normalizarBusqueda(textoInsumoEmpaque(i)).includes(q))
+      return parecidos.length === 1 ? parecidos[0] : null
+    }
+
+    // Lo que viaja: las dos listas completas. null si algo no se puede mandar,
+    // con el texto de por qué.
+    function parametrosGuardarEmpaque(presId, b) {
+      for (const x of b.empaque) {
+        if (!(typeof x.cantidad === 'number' && x.cantidad > 0)) return { error: 'Las cantidades tienen que ser mayores a cero.' }
+      }
+      const claves = b.empaque.map(x => `${x.insumo_id}|${x.condicion}`)
+      if (new Set(claves).size !== claves.length) return { error: 'Hay un insumo repetido con la misma condición: dejalo una sola vez.' }
+      return {
+        p_presentacion_id: presId,
+        p_cajas: b.cajas.map(x => ({ insumo_id: x.insumo_id, embolsado_sugerido: x.embolsado_sugerido })),
+        p_empaque: b.empaque.map(x => ({ insumo_id: x.insumo_id, cantidad: x.cantidad, condicion: x.condicion })),
+      }
+    }
+
+    function valorEmpaque(atributo, presId) {
+      const el = [...document.getElementById('pr-config-cuerpo').querySelectorAll(`[${atributo}]`)].find(x => x.getAttribute(atributo) === presId)
+      return el ? el.value : ''
+    }
+
+    async function accionEmpaque(ds) {
+      const c = estado.config, d = c.datos
+      if (!d?.borradores) return
+      sincronizarCantidadesEmpaque(c)
+      const clave = ds.empGuardar ?? ds.empAgregar ?? ds.empAgregarCaja
+        ?? (ds.empQuitar ?? ds.empQuitarCaja ?? '').split('|')[0]
+      const b = d.borradores.get(clave)
+      if (!b) return
+      const donde = `pr-cfg-emp-${clave}`
+      if (ds.empGuardar !== undefined) {
+        const params = parametrosGuardarEmpaque(clave, b)
+        if (params.error) { errorConfig(params.error, donde); return }
+        const r = await guardarEnConfig('guardar_empaque_presentacion', params, 'Empaque guardado.', donde)
+        if (r.ok) await cargarPestanaConfig()
+        return
+      }
+      if (ds.empAgregarCaja !== undefined) {
+        const id = valorEmpaque('data-emp-caja-nueva', clave)
+        if (!id) { errorConfig('Elegí la caja para agregar.', donde); return }
+        b.cajas.push({ insumo_id: id, embolsado_sugerido: 'grande' })
+      } else if (ds.empAgregar !== undefined) {
+        const ins = insumoPorTexto(d, valorEmpaque('data-emp-insumo-nuevo', clave))
+        if (!ins) { errorConfig('Elegí un insumo de la lista.', donde); return }
+        b.empaque.push({ insumo_id: ins.id, cantidad: null, condicion: 'siempre' })
+      } else if (ds.empQuitarCaja !== undefined) {
+        b.cajas.splice(Number(ds.empQuitarCaja.split('|')[1]), 1)
+      } else if (ds.empQuitar !== undefined) {
+        b.empaque.splice(Number(ds.empQuitar.split('|')[1]), 1)
+      }
+      b.tocado = true
+      errorConfig(null)
+      pintarPestanaConfig()
+    }
+
+    function cambiarSelectEmpaque(t) {
+      const c = estado.config
+      if (!c?.datos?.borradores) return
+      sincronizarCantidadesEmpaque(c)
+      const [presId, i] = (t.dataset.empSug ?? t.dataset.empCond).split('|')
+      const b = c.datos.borradores.get(presId)
+      if (!b) return
+      if (t.dataset.empSug !== undefined) { if (b.cajas[Number(i)]) b.cajas[Number(i)].embolsado_sugerido = t.value }
+      else if (b.empaque[Number(i)]) b.empaque[Number(i)].condicion = t.value
+      b.tocado = true
+      pintarPestanaConfig()
+    }
+
+    // El tilde "Doble bolsa" de un cono: se guarda en el acto.
+    async function cambiarDobleBolsa(marcaId, doble) {
+      const r = await guardarEnConfig('marcar_doble_bolsa', { p_marca_id: marcaId, p_doble: !!doble },
+        doble ? 'Ese cono va con doble bolsa.' : 'Ese cono ya no va con doble bolsa.', 'pr-cfg-marcas-lista')
+      if (r.ok) await cargarPestanaConfig()
+    }
+
     // ── Marcas / Conos ────────────────────────────────────────────────────
 
     async function leerMarcasConfig() {
       const { data, error } = await supabase.from('marcas_personalizadas')
-        .select('id, nombre, activa, estado_alta, creada_por, creada_en').order('nombre')
+        .select('id, nombre, activa, estado_alta, creada_por, creada_en, doble_bolsa').order('nombre')
       if (error) throw error
       const marcas = data ?? []
       const nombres = await nombresDeEmpleados(marcasPendientes({ marcas }).map(m => m.creada_por))
@@ -7126,8 +7339,11 @@
       const lista = marcasFiltradas(marcasDelCatalogo(d), c.busqueda)
       return arriba + `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Catálogo · ${esc(marcasDelCatalogo(d).length)} conos</p>` +
         `<input type="text" class="pr-input" id="pr-config-marca-buscar" placeholder="Buscar marca" aria-label="Buscar marca" value="${esc(c.busqueda)}">` +
+        `<p class="pr-texto-suave" id="pr-cfg-marcas-lista" tabindex="-1">"Doble bolsa" es para los conos que van al norte, por la humedad: llevan siempre la bolsa grande y las bolsitas individuales, y en la tablet no se puede bajar.</p>` +
+        htmlErrorPegado(c, 'pr-cfg-marcas-lista') +
         `<ul class="pr-lista pr-espacio-arriba">` + (lista.length ? lista.map(m =>
           `<li class="pr-lista__item pr-config-marca${m.activa ? '' : ' pr-config-fila--inactiva'}"><strong>${esc(m.nombre)}</strong>${m.activa ? '' : ' (dada de baja)'} ` +
+          `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-marca-doble="${esc(m.id)}"${m.doble_bolsa ? ' checked' : ''}> Doble bolsa</label> ` +
           `<button type="button" class="pr-btn pr-btn--secundario" data-marca-activa="${esc(m.id)}">${m.activa ? 'Dar de baja' : 'Reactivar'}</button></li>`).join('')
           : `<li class="pr-lista__item">Ninguna marca coincide.</li>`) + `</ul>` +
         `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-marca-nueva" maxlength="80" placeholder="Marca nueva" aria-label="Marca nueva">` +
@@ -7456,11 +7672,11 @@
 
     const LECTORES_CONFIG = {
       maquinas: leerMaquinasConfig, recetas: leerRecetasConfig, ingredientes: leerIngredientesConfig,
-      productos: leerProductosConfig, marcas: leerMarcasConfig, personal: leerPersonalConfig,
+      productos: leerProductosConfig, empaque: leerEmpaqueConfig, marcas: leerMarcasConfig, personal: leerPersonalConfig,
     }
     const RENDERS_CONFIG = {
       maquinas: htmlConfigMaquinas, recetas: htmlConfigRecetas, ingredientes: htmlConfigIngredientes,
-      productos: htmlConfigProductos, marcas: htmlConfigMarcas, personal: htmlConfigPersonal,
+      productos: htmlConfigProductos, empaque: htmlConfigEmpaque, marcas: htmlConfigMarcas, personal: htmlConfigPersonal,
     }
 
     function conectarConfig() {
@@ -7514,10 +7730,13 @@
         else if (tab === 'recetas' && ds.recetaGuardar !== undefined) guardarReceta()
         else if (tab === 'ingredientes') accionIngrediente(ds)
         else if (tab === 'productos') accionProducto(ds)
+        else if (tab === 'empaque') accionEmpaque(ds)
         else if (tab === 'marcas') accionMarca(ds)
       })
       cuerpo.addEventListener('change', ev => {
         const t = ev.target, c = estado.config
+        if (t.dataset?.empSug !== undefined || t.dataset?.empCond !== undefined) return cambiarSelectEmpaque(t)
+        if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)
         if (t.dataset?.recetaMaquina !== undefined) { c.recetaMaquina = t.value; c.recetaTipo = null; cargarPestanaConfig() }
         else if (t.dataset?.recetaTipo !== undefined) { c.recetaTipo = t.value; pintarPestanaConfig() }
         else if (t.dataset?.recetaPartida !== undefined) { c.recetaPartida = t.value; pintarPestanaConfig() }
