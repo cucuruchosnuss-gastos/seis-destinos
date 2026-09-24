@@ -4362,6 +4362,74 @@
       return `${caja} · ${TEXTO_EMBOLSADO[embolsadoEfectivo(a, cat)] ?? ''}`
     }
 
+    // ── El stock del empaque: avisar si no alcanza, SIN impedir la carga ──
+    //
+    // Sale de v_stock_insumos (security_invoker: su RLS es stock:ver en la
+    // unidad). Sin ese permiso NO se consulta: la respuesta vacía se leería
+    // como "no hay nada" y el aviso diría faltantes que no son. Con permiso,
+    // un insumo sin fila es un cero de verdad (la vista trae solo saldo ≠ 0).
+    // → { estado: 'ok' | 'sin_permiso' | 'desconocido' | 'error', saldos }
+    async function leerStockEmpaque(unidadId, insumoIds) {
+      const permiso = puedeVerStockEn(unidadId)
+      if (permiso === false) return { estado: 'sin_permiso', saldos: new Map() }
+      if (permiso === null) return { estado: 'desconocido', saldos: new Map() }
+      if (!insumoIds.length) return { estado: 'ok', saldos: new Map() }
+      try {
+        const { data, error } = await supabase.from('v_stock_insumos')
+          .select('insumo_id, cantidad_total').eq('unidad_negocio_id', unidadId).in('insumo_id', insumoIds)
+        if (error) throw error
+        const saldos = new Map()
+        for (const r of data ?? []) saldos.set(r.insumo_id, (saldos.get(r.insumo_id) ?? 0) + Number(r.cantidad_total))
+        return { estado: 'ok', saldos }
+      } catch (err) {
+        console.error('stock del empaque:', err)
+        return { estado: 'error', saldos: new Map() }
+      }
+    }
+
+    // Se lee UNA vez al abrir "Agregar producto", para todos los insumos de
+    // empaque de la unidad. Si mientras tanto se cerró o se abrió otro, la
+    // respuesta vieja no pisa nada.
+    async function cargarStockAgregar(a = estado.agregar) {
+      if (!a) return
+      const cat = estado.catalogo
+      const ids = [...new Set([...(cat?.cajas ?? []).map(c => c.insumo_id), ...(cat?.empaque ?? []).map(e => e.insumo_id)])]
+      a.stock = { estado: 'cargando', saldos: new Map() }
+      const r = await leerStockEmpaque(estado.unidadId, ids)
+      if (estado.agregar !== a) return
+      a.stock = r
+      pintarAgregar()
+    }
+
+    // Los insumos que no alcanzan para N cajas (N = las cargadas, o 1 si
+    // todavía no se escribió el número). null si no se puede saber.
+    function faltantesEmpaque(a, cat) {
+      if (a?.stock?.estado !== 'ok' || !a.cajaElegida) return null
+      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 1
+      const necesita = consumoTotal(consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat)), n)
+      return necesita
+        .map(f => ({ insumoId: f.insumoId, necesita: f.cantidad, hay: a.stock.saldos.get(f.insumoId) ?? 0 }))
+        .filter(f => f.hay < f.necesita)
+        .map(f => ({ ...f, falta: Math.round((f.necesita - f.hay) * 1000) / 1000 }))
+    }
+
+    // El aviso, en bordó, uno por insumo. NUNCA bloquea: se carga igual (la
+    // producción ya pasó; lo que falta es papeleo de stock).
+    function htmlAvisoStockEmpaque(a, cat) {
+      const st = a?.stock?.estado
+      if (!a?.cajaElegida || !consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat)).length) return ''
+      if (st === 'sin_permiso') return '<div class="pr-aviso">No se puede ver el stock con este usuario: no se sabe si alcanza el empaque.</div>'
+      if (st === 'desconocido') return '<div class="pr-aviso">No se pudo saber si este usuario puede ver el stock: no se sabe si alcanza el empaque.</div>'
+      if (st === 'error') return '<div class="pr-aviso pr-aviso--grave">No se pudo leer el stock.</div>'
+      if (st !== 'ok') return ''
+      const f = faltantesEmpaque(a, cat) ?? []
+      if (!f.length) return ''
+      const num = x => formatearNumeroAr(x, { decimales: 3, minimos: 0 })
+      return '<div class="pr-aviso pr-aviso--grave">' + f.map(x =>
+        `${x.falta <= 1 ? 'Falta' : 'Faltan'} ${esc(num(x.falta))} ${esc(textoInsumoEmpaque(insumoDe(cat, x.insumoId)))}: hay ${esc(num(x.hay))}, se necesitan ${esc(num(x.necesita))}`).join('<br>') +
+        '<br>Se puede cargar igual.</div>'
+    }
+
     function htmlEmbolsado(a, cat) {
       const forzado = conoDobleBolsa(cat, a.marcaId)
       const efectivo = embolsadoEfectivo(a, cat)
@@ -4392,7 +4460,7 @@
       h += !a.cajaElegida
         ? (a.faltaCaja ? '<p class="pr-error">Elegí una caja.</p>' : '<p class="pr-ag__consumo">Elegí la caja para ver lo que consume.</p>')
         : `<p class="pr-ag__consumo">${porCaja.length ? `Por caja: ${esc(textoConsumo(cat, porCaja))}` : 'No descuenta empaque.'}</p>`
-      return h + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
+      return h + htmlAvisoStockEmpaque(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
     }
 
     // En el panel de las cajas: la caja elegida (un toque vuelve a su paso) y
@@ -4408,10 +4476,15 @@
       const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
       if (!porCaja.length) return h + '<p class="pr-ag__consumo">No descuenta empaque.</p>'
       const cajas = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0
+      // Con faltantes, el aviso REEMPLAZA a la línea del consumo: ya dice lo
+      // que se necesita de cada insumo que no alcanza, y las dos juntas no
+      // entran en la columna a 1280×800. Lo que consume una caja completa se
+      // sigue viendo en el paso de la caja.
+      if ((faltantesEmpaque(a, cat) ?? []).length) return h + htmlAvisoStockEmpaque(a, cat)
       h += cajas
         ? `<p class="pr-ag__consumo">${esc(formatearNumeroAr(cajas, { decimales: 0 }))} ${cajas === 1 ? 'caja' : 'cajas'} = ${esc(textoConsumo(cat, consumoTotal(porCaja, cajas)))}</p>`
         : `<p class="pr-ag__consumo">Por caja: ${esc(textoConsumo(cat, porCaja))}</p>`
-      return h
+      return h + htmlAvisoStockEmpaque(a, cat)
     }
 
     // La normalización de TODOS los buscadores del módulo: sin acentos y en
@@ -4561,7 +4634,7 @@
       estado.agregar = {
         paso: 'producto', productoId: '', conCono: null, presentacionId: '',
         marcaId: null, marcaElegida: false, busqueda: '', cajas: null, guardando: false,
-        cajaId: null, cajaElegida: false, embolsado: null, faltaCaja: false,
+        cajaId: null, cajaElegida: false, embolsado: null, faltaCaja: false, stock: null,
       }
       document.getElementById('pr-agregar-marca-buscar').value = ''
       document.getElementById('pr-agregar-cono-form').hidden = true
@@ -4571,6 +4644,8 @@
       ponerNumero(document.getElementById('pr-agregar-cajas'), null)
       mostrarVista('pr-agregar-prod')
       pintarAgregar()
+      // El stock del empaque llega después: la pantalla no lo espera.
+      return cargarStockAgregar(estado.agregar)
     }
 
     function irAPasoAgregar(clave) {

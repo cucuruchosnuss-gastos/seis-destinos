@@ -72,6 +72,7 @@ const FUNCIONES_BASE = [
   'leerEmpaqueConfig', 'faltaEmpaque', 'nombreInsumoConfig', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque',
   'sincronizarCantidadesEmpaque', 'insumoPorTexto', 'parametrosGuardarEmpaque', 'valorEmpaque', 'accionEmpaque',
   'cambiarSelectEmpaque', 'cambiarDobleBolsa',
+  'leerStockEmpaque', 'cargarStockAgregar', 'faltantesEmpaque', 'htmlAvisoStockEmpaque',
   'claveBorradorCierre', 'borradorCierreVacio', 'leerBorradorCierre', 'guardarBorradorCierre',
   'normalizarHora', 'horaConPaso', 'faltanParaCerrar', 'parametrosCerrarTurno', 'avisosDeCierre',
   'htmlAvisosCierre', 'htmlResumenCierre', 'enlazarCamposPlanilla', 'mostrarCierre', 'pintarCierre', 'cambioEnCierre', 'alternarRota',

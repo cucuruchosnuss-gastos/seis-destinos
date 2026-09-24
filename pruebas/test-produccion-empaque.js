@@ -686,6 +686,104 @@ esperas.push((async () => {
   chk('… y el tilde vuelve a lo guardado', /data-marca-doble="mk-grido">/.test(cuerpoCfg(S)))
 })())
 
+// ── Parte 4: avisos de stock del empaque, que NO bloquean ────────────────
+const STOCK = [
+  { insumo_id: 'i-nuss', cantidad_total: 5 },
+  { insumo_id: 'i-tiras', cantidad_total: 100 },
+  { insumo_id: 'i-sep', cantidad_total: 18 },
+  { insumo_id: 'i-bolsa', cantidad_total: 100 },
+]
+async function conStock({ stockVer = { unidades: ['u-cn'] }, stock = STOCK, presentacion = 'pr-caja' } = {}) {
+  const S = armar({ tablas: { v_stock_insumos: stock } })
+  S.estado.stockVer = stockVer === 'desconocido' ? undefined : stockVer
+  await hastaCajas(S, { presentacion })
+  await S.cargarStockAgregar()
+  return S
+}
+const conCajas = (S, n) => { S.ponerNumero(S.__doc.getElementById('pr-agregar-cajas'), n); S.estado.agregar.cajas = n; S.pintarAgregar() }
+
+esperas.push((async () => {
+  const S = await conStock()
+  const c = S.__llamadas.consultas.find(([t]) => t === 'v_stock_insumos')
+  chk('el stock se lee de v_stock_insumos, de la unidad', c && JSON.stringify(c[1]).includes('["eq","unidad_negocio_id","u-cn"]'), JSON.stringify(c?.[1]))
+  chk('… solo de los insumos del empaque', c && JSON.stringify(c[1]).includes('["in","insumo_id",["i-nuss","i-dolce","i-sinimp","i-otra","i-tiras","i-sep","i-bolsa","i-ppp"]]'), JSON.stringify(c?.[1]))
+  chk('… con insumo y cantidad', /\binsumo_id\b/.test(select(S, 'v_stock_insumos')) && /\bcantidad_total\b/.test(select(S, 'v_stock_insumos')))
+  chk('abrir agregar lee el stock solo', /return cargarStockAgregar\(estado\.agregar\)/.test(FUENTE))
+
+  chk('con stock de sobra para una caja, no se avisa nada', !/Falta/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
+  conCajas(S, 10)
+  const h = html(S, 'pr-agregar-empaque')
+  chk('con 10 cajas: faltan cajas de cartón', h.includes('Faltan 5 Caja N°1 Nuss: hay 5, se necesitan 10'), h)
+  chk('… y separadores', h.includes('Faltan 12 Separador N°1: hay 18, se necesitan 30'))
+  chk('… en bordó', /pr-aviso pr-aviso--grave">Faltan 5/.test(h))
+  chk('… sin nombrar lo que alcanza', !/Tiras x4: hay/.test(h) && !/Bolsa 100x80: hay/.test(h))
+  const J = await conStock({ stock: [...STOCK.filter(r => r.insumo_id !== 'i-sep'), { insumo_id: 'i-sep', cantidad_total: 30 }] })
+  conCajas(J, 10)
+  chk('lo justo alcanza: no es un faltante', !/Separador N°1: hay/.test(html(J, 'pr-agregar-empaque')), html(J, 'pr-agregar-empaque'))
+  chk('… y dice que se puede cargar igual', /Se puede cargar igual\./.test(h))
+  chk('… y reemplaza a la línea del consumo (las dos no entran a 1280×800)', !/10 cajas = /.test(h))
+  chk('el aviso NO deshabilita el botón', S.__doc.getElementById('pr-agregar-confirmar').disabled === false)
+  S.__setRpc(async () => ({ data: { sublote: '7023-1' }, error: null }))
+  await S.confirmarAgregar()
+  chk('… y agregar anda igual', S.__llamadas.rpc.filter(([n]) => n === 'registrar_produccion_item').length === 1)
+
+  // Un insumo sin fila en la vista es un cero de verdad (con stock:ver).
+  const Z = await conStock({ stock: STOCK.filter(r => r.insumo_id !== 'i-bolsa') })
+  conCajas(Z, 10)
+  chk('sin fila en la vista: hay 0', html(Z, 'pr-agregar-empaque').includes('Faltan 10 Bolsa 100x80: hay 0, se necesitan 10'))
+
+  // Medias planchas y singular.
+  const M = await conStock({ presentacion: 'pr-media', stock: [...STOCK.filter(r => r.insumo_id !== 'i-tiras'), { insumo_id: 'i-tiras', cantidad_total: 1 }] })
+  conCajas(M, 3)
+  chk('media caja: falta media plancha', html(M, 'pr-agregar-empaque').includes('Falta 0,5 Tiras x4: hay 1, se necesitan 1,5'), html(M, 'pr-agregar-empaque'))
+
+  // En el paso de la caja, contra UNA caja si todavía no hay número.
+  const P = await conStock({ stock: STOCK.filter(r => r.insumo_id !== 'i-nuss') })
+  P.irAPasoAgregar('caja')
+  chk('al elegir la caja, avisa si no hay ni una', html(P, 'pr-agregar-panel').includes('Falta 1 Caja N°1 Nuss: hay 0, se necesitan 1'), html(P, 'pr-agregar-panel'))
+  P.elegirCaja('i-dolce')
+  chk('… y cambia con la caja', !/Caja N°1 Nuss: hay/.test(html(P, 'pr-agregar-panel')) && /Caja N°1 Dolce Pasta: hay 0/.test(html(P, 'pr-agregar-panel')))
+  chk('faltantes sin stock leído: null (no se inventa)', P.faltantesEmpaque({ ...P.estado.agregar, stock: { estado: 'error' } }, P.estado.catalogo) === null)
+})())
+
+esperas.push((async () => {
+  const S = await conStock({ stockVer: null })
+  chk('sin stock:ver: no se consulta la vista', !S.__llamadas.consultas.some(([t]) => t === 'v_stock_insumos'))
+  conCajas(S, 10)
+  chk('… y se dice, en vez de un faltante inventado',
+    /No se puede ver el stock con este usuario/.test(html(S, 'pr-agregar-empaque')) && !/Falta/.test(html(S, 'pr-agregar-empaque')))
+  chk('… tampoco en el paso de la caja', (() => { S.irAPasoAgregar('caja'); return /No se puede ver el stock con este usuario/.test(html(S, 'pr-agregar-panel')) })())
+  const D = await conStock({ stockVer: 'desconocido' })
+  chk('sin saber el permiso: se dice, sin consultar', /No se pudo saber si este usuario puede ver el stock/.test(html(D, 'pr-agregar-empaque')) &&
+    !D.__llamadas.consultas.some(([t]) => t === 'v_stock_insumos'))
+  const E = await conStock({ stock: () => ({ data: null, error: { message: 'x' } }) })
+  chk('si falla la lectura: "No se pudo leer el stock"', /No se pudo leer el stock\./.test(html(E, 'pr-agregar-empaque')))
+  chk('… y agregar sigue andando', E.__doc.getElementById('pr-agregar-confirmar').disabled === false)
+  // Sin nada que consuma, no se dice nada del stock.
+  const N = armar()
+  N.estado.stockVer = null
+  await N.abrirPlanilla('t1')
+  N.abrirAgregar()
+  N.elegirProductoAgregar('p-std'); N.elegirConoSiNo(false); N.elegirPresentacionAgregar('pr-sin')
+  await N.cargarStockAgregar()
+  chk('sin empaque que consumir, ningún aviso de stock', !/stock/.test(html(N, 'pr-agregar-empaque')))
+  N.irAPasoAgregar('caja')
+  chk('… tampoco en el paso de la caja', !/stock/.test(html(N, 'pr-agregar-panel')), html(N, 'pr-agregar-panel'))
+  // Una respuesta que llega tarde no pisa otro "Agregar".
+  // La PRIMERA lectura llega tarde (después de la segunda).
+  let llamada = 0
+  const T = armar({ tablas: { v_stock_insumos: () => (++llamada === 1
+    ? new Promise(r => setTimeout(() => r({ data: [{ insumo_id: 'i-nuss', cantidad_total: 5 }], error: null }), 20))
+    : { data: [{ insumo_id: 'i-nuss', cantidad_total: 999 }], error: null }) } })
+  T.estado.stockVer = { todas: true }
+  await T.abrirPlanilla('t1')
+  const p1 = T.abrirAgregar()
+  const p2 = T.abrirAgregar()
+  const nuevo = T.estado.agregar
+  await Promise.all([p1, p2])
+  chk('cada Agregar se queda con SU lectura del stock, aunque la anterior llegue tarde', nuevo.stock.saldos.get('i-nuss') === 999, JSON.stringify([...(nuevo.stock.saldos ?? new Map())]))
+})())
+
 // ── XSS: cada render nuevo con HTML malicioso ────────────────────────────
 esperas.push((async () => {
   const X = armar()
@@ -732,6 +830,8 @@ esperas.push((async () => {
   const cMalo = { datos: cfgMalo, error: { texto: marca('errorCfg'), donde: 'pr-cfg-emp-' + marca('presIdCfg') } }
   chequearMarcas(chk, 'pestaña Empaque', X.htmlConfigEmpaque(cMalo), ['prodCfg', 'presCfg', 'presIdCfg', 'insCfg', 'insMarcaCfg', 'insId2Cfg', 'ins2Cfg', 'errorCfg'])
   const marcasMalo = { datos: { marcas: [{ id: marca('marcaIdCfg'), nombre: marca('marcaCfg'), activa: true, estado_alta: 'aprobada', doble_bolsa: true }], nombres: new Map() }, busqueda: '', error: null }
+  // Parte 4: el aviso de stock.
+  chequearMarcas(chk, 'aviso de faltante', X.htmlAvisoStockEmpaque({ ...a, cajas: 5, stock: { estado: 'ok', saldos: new Map() } }, catMalo), ['cajaNombre', 'cajaMarca', 'insumoEmpaque'])
   chequearMarcas(chk, 'marcas con su tilde de doble bolsa', X.htmlConfigMarcas(marcasMalo), ['marcaIdCfg', 'marcaCfg'])
 })())
 

@@ -14,7 +14,7 @@ correrMutaciones({
   // htmlProducido y htmlSubloteHistorial NO van acá: sus escapes viejos los
   // cubren test-produccion-cierre y test-produccion-historial. Lo nuevo de
   // ellas (el empaque del renglón) va en mutaciones a mano.
-  funciones: ['htmlEmbolsado', 'htmlPasoCaja', 'htmlEmpaqueAgregar', 'htmlEmpaqueTurno', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque'],
+  funciones: ['htmlEmbolsado', 'htmlPasoCaja', 'htmlEmpaqueAgregar', 'htmlEmpaqueTurno', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque', 'htmlAvisoStockEmpaque'],
   equivalentes: [
     { expr: 'esc(o.valor)', motivo: "constante del código: 'grande' | 'individual' | 'doble' | 'ninguno'" },
     { expr: 'esc(o.texto)', motivo: 'constante del código: el rótulo de cada embolsado' },
@@ -132,6 +132,27 @@ correrMutaciones({
     { nombre: 'el error del tilde no va pegado', de: "doble ? 'Ese cono va con doble bolsa.' : 'Ese cono ya no va con doble bolsa.', 'pr-cfg-marcas-lista')", a: "doble ? 'Ese cono va con doble bolsa.' : 'Ese cono ya no va con doble bolsa.')" },
     { nombre: 'no se explica para qué es la doble bolsa', de: 'es para los conos que van al norte, por la humedad', a: 'es para algunos conos' },
     { nombre: 'el id de la marca del tilde sin escapar', de: 'data-marca-doble="${esc(m.id)}"', a: 'data-marca-doble="${m.id}"' },
+    // ── Parte 4: avisos de stock ────────────────────────────────────────
+    { nombre: 'sin stock:ver se consulta la vista igual', de: "      if (permiso === false) return { estado: 'sin_permiso', saldos: new Map() }", a: '' },
+    { nombre: 'sin saber el permiso se consulta la vista igual', de: "      if (permiso === null) return { estado: 'desconocido', saldos: new Map() }", a: '' },
+    { nombre: 'el stock de otra unidad', de: ".select('insumo_id, cantidad_total').eq('unidad_negocio_id', unidadId).in('insumo_id', insumoIds)", a: ".select('insumo_id, cantidad_total').in('insumo_id', insumoIds)" },
+    { nombre: 'un error de la vista se lee como cero', de: "        console.error('stock del empaque:', err)\n        return { estado: 'error', saldos: new Map() }", a: "        return { estado: 'ok', saldos: new Map() }" },
+    { nombre: 'abrir agregar no lee el stock', de: '      return cargarStockAgregar(estado.agregar)\n', a: '' },
+    { nombre: 'el faltante no cuenta las cajas cargadas', de: '      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 1', a: '      const n = 1' },
+    { nombre: 'el faltante sin cajas escritas no mira ninguna', de: '      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 1', a: '      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0' },
+    { nombre: 'el faltante ignora el embolsado', de: '      const necesita = consumoTotal(consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat)), n)', a: "      const necesita = consumoTotal(consumoPorCaja(cat, a.presentacionId, a.cajaId, 'ninguno'), n)" },
+    { nombre: 'un insumo sin fila se toma como que alcanza', de: '.map(f => ({ insumoId: f.insumoId, necesita: f.cantidad, hay: a.stock.saldos.get(f.insumoId) ?? 0 }))', a: '.map(f => ({ insumoId: f.insumoId, necesita: f.cantidad, hay: a.stock.saldos.get(f.insumoId) ?? Infinity }))' },
+    { nombre: 'justo lo necesario se toma como faltante', de: '        .filter(f => f.hay < f.necesita)', a: '        .filter(f => f.hay <= f.necesita)' },
+    { nombre: 'el faltante sin redondear', de: 'falta: Math.round((f.necesita - f.hay) * 1000) / 1000', a: 'falta: f.necesita' },
+    { nombre: 'sin permiso se dice nada', de: "      if (st === 'sin_permiso') return '<div class=\"pr-aviso\">No se puede ver el stock con este usuario", a: "      if (false) return '<div class=\"pr-aviso\">No se puede ver el stock con este usuario" },
+    { nombre: 'sin saber el permiso no se dice', de: "      if (st === 'desconocido') return", a: '      if (false) return' },
+    { nombre: 'un error de lectura no se dice', de: "      if (st === 'error') return '<div class=\"pr-aviso pr-aviso--grave\">No se pudo leer el stock.</div>'", a: '' },
+    { nombre: 'el aviso de stock sin nada que consumir', de: "      if (!a?.cajaElegida || !consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat)).length) return ''", a: "      if (!a?.cajaElegida) return ''" },
+    { nombre: 'el aviso no está en el paso de la caja', de: "      return h + htmlAvisoStockEmpaque(a, cat) + '<button", a: "      return h + '<button" },
+    { nombre: 'el aviso no está al lado de las cajas', de: '      return h + htmlAvisoStockEmpaque(a, cat)\n    }', a: '      return h\n    }' },
+    { nombre: 'con faltantes se dibujan el consumo y el aviso', de: '      if ((faltantesEmpaque(a, cat) ?? []).length) return h + htmlAvisoStockEmpaque(a, cat)\n', a: '' },
+    { nombre: 'no dice que se puede cargar igual', de: "        '<br>Se puede cargar igual.</div>'", a: "        '</div>'" },
+    { nombre: 'el aviso bloquea la carga', de: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }", a: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }\n      if ((faltantesEmpaque(a, estado.catalogo) ?? []).length) { err.textContent = 'Falta empaque.'; err.hidden = false; return }" },
     { nombre: 'la sección del empaque no se dibuja', de: '        `<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}`', a: "        ''" },
   ],
 })
