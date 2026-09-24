@@ -35,8 +35,15 @@ const CATALOGO = new Function(extraerConst(src, 'CATALOGO_TAREAS') + '\nreturn C
 const tareas = CATALOGO.flatMap(g => g.tareas || [])
 const claves = tareas.map(t => `${t.modulo}:${t.tarea}`)
 
-chk('el catálogo tiene exactamente las 40 claves del CHECK', claves.length === 40 && CHECK_22_09_2026.every(k => claves.includes(k)),
-  `${claves.length}; faltan ${CHECK_22_09_2026.filter(k => !claves.includes(k)).join(', ')}`)
+// Las tres de Pedidos (23/09/2026) entraron al catálogo ANTES que al CHECK:
+// el conector de Supabase de esa sesión era de solo lectura. Son las únicas
+// claves de más que se aceptan; ver test-accesos-pedidos.js.
+const PENDIENTES_DE_CHECK = ['pedidos:ver', 'pedidos:cargar', 'pedidos:configurar']
+chk('el catálogo tiene las 40 claves del CHECK', CHECK_22_09_2026.every(k => claves.includes(k)),
+  `faltan ${CHECK_22_09_2026.filter(k => !claves.includes(k)).join(', ')}`)
+chk('fuera del CHECK, solo las tres de Pedidos', claves.filter(k => !CHECK_22_09_2026.includes(k)).every(k => PENDIENTES_DE_CHECK.includes(k)) &&
+  claves.length === 40 + PENDIENTES_DE_CHECK.length,
+  claves.filter(k => !CHECK_22_09_2026.includes(k)).join(', '))
 chk('ninguna clave repetida', new Set(claves).size === claves.length)
 
 const grupo = CATALOGO.find(g => g.grupo === 'Producción')

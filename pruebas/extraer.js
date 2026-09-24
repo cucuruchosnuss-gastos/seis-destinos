@@ -87,7 +87,9 @@ function extraerConst(src, nombre) {
   // propia salida en vez de devolver un pedazo que rompe doscientas líneas
   // después.
   let fin = i
-  for (let intento = 0; intento < 200; intento++) {
+  // El tope es de LÍNEAS: CATALOGO_TAREAS de accesos.html pasó de 200 con el
+  // grupo de Pedidos (23/09/2026) y el extractor dejó de poder leerlo.
+  for (let intento = 0; intento < 600; intento++) {
     const salto = src.indexOf('\n', fin)
     fin = salto === -1 ? src.length : salto
     const texto = src.slice(i, fin)

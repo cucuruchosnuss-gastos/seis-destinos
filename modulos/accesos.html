@@ -906,6 +906,27 @@
         ],
       },
       {
+        grupo: 'Pedidos',
+        // Igual que 'stock' y 'produccion', la clave es la misma en los dos
+        // namespaces. Las tres CON alcance por unidad: las RPCs del módulo
+        // gatean con tiene_tarea_alcance() sobre la unidad del pedido o del
+        // cliente (guardar_pedido, marcar_avance_pedido, cambiar_estado_pedido
+        // y pedidos_de; guardar_cliente con configurar), y las policies de
+        // SELECT de clientes, pedidos y pedido_items leen 'ver' con alcance.
+        // OJO (23/09/2026): estas tres claves todavía NO están en el CHECK
+        // chk_tarea_valida; hasta que se agreguen, tildarlas y guardar lo
+        // rechaza la base. Ver .claude/traspasos/2026-09-23-pedidos.md.
+        modulos: ['pedidos'],
+        tareas: [
+          { modulo: 'pedidos', tarea: 'ver',        label: 'Ver los pedidos de los clientes y su avance', conAlcance: true,
+            descripcion: 'Muestra la lista de pedidos de las unidades del alcance, con sus renglones, cuántas cajas se pidieron y cuántas ya están cumplidas. También deja imprimir un pedido para armarlo en el depósito. Solo lectura.' },
+          { modulo: 'pedidos', tarea: 'cargar',     label: 'Cargar pedidos, marcar su avance y entregarlos o anularlos', conAlcance: true,
+            descripcion: 'Permite cargar un pedido que llegó (por WhatsApp o por teléfono) con sus renglones, corregirlo mientras no tenga nada cumplido, anotar cuántas cajas de cada renglón ya están listas y marcarlo entregado. También anularlo, con motivo obligatorio. El estado pendiente / en producción / listo no se elige: lo decide el avance. En las unidades del alcance.' },
+          { modulo: 'pedidos', tarea: 'configurar', label: 'Dar de alta y editar los clientes y sus apodos', conAlcance: true,
+            descripcion: 'Permite cargar y corregir los clientes (distribuidores) de cada unidad: nombre, localidad, teléfono, observaciones y los apodos con que los nombran en los mensajes, que sirven para reconocerlos después. También darlos de baja: un cliente inactivo no se ofrece en un pedido nuevo.' },
+        ],
+      },
+      {
         grupo: 'Facturas pendientes',
         // Los DOS módulos, con semántica "any": es la misma tarea operada
         // desde dos pantallas, así que con cualquiera de los dos habilitado
