@@ -36,11 +36,21 @@ const FUNCIONES_BASE = [
   'elegirMarcaRenglon', 'buscarConoRenglon', 'elegirPresentacionRenglon', 'agregarRenglon', 'quitarRenglon',
   'identificarRenglon', 'asegurarCatalogoYClientes', 'pintarFormEntero', 'abrirPedidoNuevo',
   'leerCabeceraForm', 'guardarPedido', 'despuesDeGuardarPedido',
+  // Parte 4: la lista y el detalle
+  'htmlEstado', 'porcentajeAvance', 'textoAvance', 'htmlAvance', 'pedidosVisibles', 'htmlFilaPedido',
+  'htmlFiltroEstado', 'htmlListaPedidos', 'textoCuenta', 'pintarListaPedidos', 'parametrosPedidosDe',
+  'cargarPedidos', 'elegirFiltroEstado', 'cambiarFechasFiltro', 'cambiarSinIdentificar', 'leerPedido',
+  'puedeAvanzar', 'validarAvance', 'htmlItem', 'htmlDato', 'htmlDetalle', 'pintarDetalle',
+  'pintarAccionesDetalle', 'abrirDetalle', 'recargarDetalle', 'marcarAvance', 'guardarAvanceDesdeCampo',
+  'marcarCumplido', 'pedirCambioEstado', 'cancelarCambioEstado', 'faltaMotivo', 'parametrosCambiarEstado',
+  'confirmarCambioEstado', 'abrirCorregirPedido',
 ]
 
 const CONSTANTES_BASE = [
   'TAREAS_PEDIDOS', 'puedeEntrar', 'CLAVE_UNIDAD', 'VISTAS', 'SUBTITULO_DE_VISTA',
   'ZONA_AR', 'DECIMALES_CAJAS', 'AVISO_CUMPLIDOS',
+  'ETIQUETA_ESTADO', 'FILTROS_ESTADO', 'ESTADOS_A_MANO', 'LARGO_MINIMO_MOTIVO',
+  'pedidoCerrado', 'renglonCumplido', 'tieneCumplidos',
 ]
 
 const PRELUDIO = `
@@ -80,6 +90,8 @@ const PRELUDIO = `
   function setTimeout(f) { return 0 } function clearTimeout(){}
   // let del módulo (extraerConst solo toma const).
   var claveRenglon = 0
+  var turnoPedidos = 0
+  var turnoDetalle = 0
 
   var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [], foco: [] }
   var __tablas = {}
@@ -115,6 +127,8 @@ const PRELUDIO = `
     unidadId: 'u-cn', vista: null,
     clientes: null, errorClientes: null, clientesBusqueda: '', clienteForm: null, guardandoCliente: false,
     catalogo: null, catalogoUnidad: null, errorCatalogo: null, form: null, guardandoPedido: false,
+    pedidos: null, errorPedidos: null, filtros: { estado: '', desde: '', hasta: '', sinIdentificar: false },
+    detalle: null, enviandoAvance: false, cambiandoEstado: false,
   }
 `
 

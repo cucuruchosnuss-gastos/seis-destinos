@@ -217,6 +217,63 @@
     .pe-renglon__pie { display: grid; gap: 0 0.75rem; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); align-items: end; }
     .pe-renglon__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
     .pe-resumen { font-weight: 700; margin: 0 0 0.5rem; }
+
+    /* ── La lista de pedidos ─────────────────────────────────────────────── */
+    .pe-filtros { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.75rem; }
+    .pe-filtros__fechas { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pe-filtros__fechas .pe-campo { margin: 0; }
+    .pe-cuenta { font-size: 0.8125rem; color: var(--pe-texto-secundario); margin: 0 0 0.5rem; }
+    .pe-fila--pedido { flex-direction: column; align-items: stretch; gap: 0.375rem; }
+    .pe-fila__linea { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
+    .pe-fila__numero { font-size: 0.8125rem; font-weight: 800; color: var(--pe-texto-secundario); white-space: nowrap; }
+
+    /* El estado del pedido. El verde es "listo" y el bordó "anulado": los dos
+       dicen algo del dato. El naranja de "en producción" es el color del
+       módulo, no una validez. */
+    .pe-estado {
+      display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; border-radius: 999px; padding: 0.1875rem 0.5625rem; white-space: nowrap;
+      background: var(--color-superficie); color: var(--pe-texto-secundario); border: 1px solid var(--color-borde);
+    }
+    .pe-estado--en_produccion { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: transparent; }
+    .pe-estado--listo { background: var(--verde); color: #fff; border-color: var(--verde); }
+    .pe-estado--entregado { background: var(--verde-suave); color: var(--verde-oscuro); border-color: transparent; }
+    .pe-estado--anulado { background: var(--bordo); color: #fff; border-color: var(--bordo); }
+    .pe-fila--anulada { background: var(--bordo-suave); }
+    .pe-sello--suave { background: var(--bordo-suave); color: var(--bordo-oscuro); border: 1px solid var(--bordo); }
+
+    /* La barra de avance: "22 de 40 cajas". */
+    .pe-avance { display: flex; align-items: center; gap: 0.625rem; min-width: 0; }
+    .pe-avance__pista { flex: 1 1 auto; height: 10px; border-radius: 999px; background: var(--color-superficie); overflow: hidden; min-width: 4rem; }
+    .pe-avance__barra { height: 100%; border-radius: 999px; background: var(--naranja); }
+    .pe-avance--completo .pe-avance__barra { background: var(--verde); }
+    .pe-avance__texto { font-size: 0.8125rem; font-weight: 700; white-space: nowrap; color: var(--color-texto); }
+
+    /* ── El detalle de un pedido ─────────────────────────────────────────── */
+    .pe-datos { display: grid; gap: 0.25rem 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin: 0 0 0.5rem; }
+    .pe-dato { display: flex; flex-direction: column; min-width: 0; }
+    .pe-dato__rotulo { font-size: 0.75rem; font-weight: 700; color: var(--pe-texto-secundario); }
+    .pe-dato__valor { font-weight: 600; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .pe-mensaje { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.875rem; background: var(--color-superficie);
+      border-radius: var(--radio-input); padding: 0.625rem 0.75rem; margin: 0.25rem 0 0; }
+    .pe-item {
+      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      border-radius: 17px; padding: 0.875rem; min-width: 0; display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .pe-item--texto { background: var(--bordo-suave); border-left: 4px solid var(--bordo); }
+    .pe-item__cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+    .pe-item__desc { font-weight: 700; overflow-wrap: anywhere; }
+    /* Un renglón cumplido se ve TACHADO: ya está, no hay que armarlo. */
+    .pe-item--cumplido .pe-item__desc { text-decoration: line-through; color: var(--pe-texto-secundario); }
+    .pe-item__nota { font-size: 0.8125rem; color: var(--pe-texto-secundario); overflow-wrap: anywhere; }
+    .pe-item__control { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end; }
+    .pe-item__control .pe-campo { margin: 0; flex: 0 1 9rem; }
+    .pe-panel {
+      border: 2px solid var(--naranja); border-radius: var(--radio-tarjeta); padding: 1rem; margin: 0.75rem 0;
+      background: var(--color-fondo);
+    }
+    .pe-panel--peligro { border-color: var(--bordo); }
+    .pe-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0; }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -242,7 +299,16 @@
         <button type="button" class="pe-btn" id="pe-btn-nuevo" hidden>+ Pedido nuevo</button>
         <button type="button" class="pe-btn pe-btn--suave" id="pe-btn-clientes" hidden>Clientes</button>
       </div>
-      <div id="pe-inicio-cuerpo"></div>
+      <div class="pe-filtros" id="pe-filtros">
+        <div class="pe-segmento" id="pe-filtro-estado" role="group" aria-label="Filtrar por estado"></div>
+        <div class="pe-filtros__fechas">
+          <div class="pe-campo"><label for="pe-filtro-desde">Desde</label><input type="date" class="pe-input" id="pe-filtro-desde"></div>
+          <div class="pe-campo"><label for="pe-filtro-hasta">Hasta</label><input type="date" class="pe-input" id="pe-filtro-hasta"></div>
+        </div>
+        <label class="pe-check"><input type="checkbox" id="pe-filtro-sin-id"> Solo los que tienen renglones sin identificar</label>
+      </div>
+      <p class="pe-cuenta" id="pe-cuenta"></p>
+      <div class="pe-lista" id="pe-lista"></div>
     </section>
 
     <!-- ══ CLIENTES ═══════════════════════════════════════════════════════ -->
@@ -302,6 +368,42 @@
       </div>
     </section>
 
+
+    <!-- ══ UN PEDIDO ══════════════════════════════════════════════════════ -->
+    <section id="pe-vista-detalle" hidden>
+      <div class="pe-cabecera-vista">
+        <button type="button" class="pe-link" id="pe-detalle-volver">&lsaquo; Pedidos</button>
+        <h1 class="pe-titulo" id="pe-detalle-titulo">Pedido</h1>
+      </div>
+      <div id="pe-detalle-aviso"></div>
+      <div id="pe-detalle-cuerpo"></div>
+      <div class="pe-barra-acciones" id="pe-detalle-acciones">
+        <button type="button" class="pe-btn pe-btn--suave" id="pe-btn-corregir" hidden>Corregir el pedido</button>
+        <button type="button" class="pe-btn pe-btn--secundario" id="pe-btn-entregado" hidden>Marcar entregado</button>
+        <button type="button" class="pe-btn pe-btn--suave" id="pe-btn-anular" hidden>Anular</button>
+      </div>
+      <!-- Entregado y anulado son los ÚNICOS estados que se eligen a mano: el
+           resto lo decide el avance. -->
+      <div class="pe-panel" id="pe-panel-entregado" hidden>
+        <p id="pe-panel-entregado-texto">¿Marcar el pedido como entregado? Después ya no se va a poder corregir.</p>
+        <p class="pe-error-pegado" id="pe-panel-entregado-error" hidden></p>
+        <div class="pe-panel__acciones">
+          <button type="button" class="pe-btn" id="pe-entregado-si">Sí, está entregado</button>
+          <button type="button" class="pe-btn pe-btn--suave" id="pe-entregado-no">Cancelar</button>
+        </div>
+      </div>
+      <div class="pe-panel pe-panel--peligro" id="pe-panel-anular" hidden>
+        <div class="pe-campo">
+          <label for="pe-anular-motivo">¿Por qué se anula? (obligatorio)</label>
+          <textarea class="pe-textarea" id="pe-anular-motivo" maxlength="300"></textarea>
+        </div>
+        <p class="pe-error-pegado" id="pe-panel-anular-error" hidden></p>
+        <div class="pe-panel__acciones">
+          <button type="button" class="pe-btn pe-btn--peligro" id="pe-anular-si">Anular el pedido</button>
+          <button type="button" class="pe-btn pe-btn--suave" id="pe-anular-no">Cancelar</button>
+        </div>
+      </div>
+    </section>
 
     <!-- ══ CARGAR UN PEDIDO ═══════════════════════════════════════════════ -->
     <section id="pe-vista-form" hidden>
@@ -389,6 +491,13 @@
       errorCatalogo: null,
       form: null,            // el pedido que se está cargando o corrigiendo
       guardandoPedido: false,
+      // La lista y el detalle
+      pedidos: null,         // lo que devolvió pedidos_de (null = todavía no)
+      errorPedidos: null,
+      filtros: { estado: '', desde: '', hasta: '', sinIdentificar: false },
+      detalle: null,         // { id, pedido, items, error, aviso, errores, accion }
+      enviandoAvance: false,
+      cambiandoEstado: false,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -481,12 +590,13 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pe-vista-inicio', 'pe-vista-clientes', 'pe-vista-cliente', 'pe-vista-form']
+    const VISTAS = ['pe-vista-inicio', 'pe-vista-clientes', 'pe-vista-cliente', 'pe-vista-form', 'pe-vista-detalle']
     const SUBTITULO_DE_VISTA = {
       'pe-vista-inicio': 'Pedidos',
       'pe-vista-clientes': 'Clientes',
       'pe-vista-cliente': 'Cliente',
       'pe-vista-form': 'Cargar',
+      'pe-vista-detalle': 'Pedido',
     }
 
     function mostrarVista(id) {
@@ -519,6 +629,7 @@
       guardarPreferencia(CLAVE_UNIDAD, id)
       estado.clientes = null
       estado.catalogo = null
+      estado.pedidos = null
       pintarUnidades()
       mostrarInicio()
     }
@@ -535,8 +646,7 @@
     function mostrarInicio() {
       mostrarVista('pe-vista-inicio')
       pintarAccionesInicio()
-      document.getElementById('pe-inicio-cuerpo').innerHTML =
-        '<div class="pe-vacio">Todavía no hay nada más acá: la lista de pedidos llega con la próxima parte.</div>'
+      cargarPedidos()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1332,8 +1442,415 @@
       }
     }
 
+    // Guardado el pedido, se abre: es lo que se quiere ver (y ahí se imprime).
     async function despuesDeGuardarPedido(pedidoId) {
-      mostrarInicio()
+      estado.pedidos = null
+      if (pedidoId && puedeEn('ver')) await abrirDetalle(pedidoId)
+      else mostrarInicio()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA LISTA DE PEDIDOS — la pantalla principal, con pedidos:ver
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const ETIQUETA_ESTADO = {
+      pendiente: 'Pendiente',
+      en_produccion: 'En producción',
+      listo: 'Listo',
+      entregado: 'Entregado',
+      anulado: 'Anulado',
+    }
+    // El filtro de estado: '' es "todos".
+    const FILTROS_ESTADO = [
+      ['', 'Todos'], ['pendiente', 'Pendientes'], ['en_produccion', 'En producción'],
+      ['listo', 'Listos'], ['entregado', 'Entregados'], ['anulado', 'Anulados'],
+    ]
+    // A mano solo se marca entregado o anulado: el resto lo decide el avance.
+    const ESTADOS_A_MANO = ['entregado', 'anulado']
+    const LARGO_MINIMO_MOTIVO = 3
+
+    function htmlEstado(estadoPedido) {
+      const clave = Object.prototype.hasOwnProperty.call(ETIQUETA_ESTADO, estadoPedido) ? estadoPedido : null
+      return `<span class="pe-estado${clave ? ` pe-estado--${clave}` : ''}">${esc(clave ? ETIQUETA_ESTADO[clave] : (estadoPedido || '—'))}</span>`
+    }
+
+    // Qué parte de las cajas pedidas ya está cumplida, de 0 a 100.
+    function porcentajeAvance(cumplidas, pedidas) {
+      const p = Number(pedidas), c = Number(cumplidas)
+      if (!(p > 0) || !Number.isFinite(c)) return 0
+      return Math.max(0, Math.min(100, Math.round((c / p) * 100)))
+    }
+
+    function textoAvance(cumplidas, pedidas) {
+      return `${textoCajas(cumplidas)} de ${textoCajas(pedidas)} cajas`
+    }
+
+    function htmlAvance(cumplidas, pedidas) {
+      const pct = porcentajeAvance(cumplidas, pedidas)
+      const completo = Number(pedidas) > 0 && Number(cumplidas) >= Number(pedidas)
+      return `<div class="pe-avance${completo ? ' pe-avance--completo' : ''}">` +
+        `<div class="pe-avance__pista" role="progressbar" aria-label="Avance" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">` +
+        `<div class="pe-avance__barra" style="width: ${pct}%"></div></div>` +
+        `<span class="pe-avance__texto">${esc(textoAvance(cumplidas, pedidas))}</span></div>`
+    }
+
+    // "Solo los que tienen renglones sin identificar" se filtra acá: el
+    // resto lo filtra pedidos_de().
+    function pedidosVisibles(lista, filtros) {
+      const todos = Array.isArray(lista) ? lista : []
+      if (!filtros?.sinIdentificar) return todos
+      return todos.filter(p => Number(p.sin_interpretar) > 0)
+    }
+
+    function htmlFilaPedido(p) {
+      const sinId = Number(p.sin_interpretar) || 0
+      const fechas = `Pedido ${fechaCorta(p.fecha)}${p.fecha_entrega ? ` · Entrega ${fechaCorta(p.fecha_entrega)}` : ''}`
+      return `<button type="button" class="pe-fila pe-fila--pedido${p.estado === 'anulado' ? ' pe-fila--anulada' : ''}" data-pedido="${esc(p.id)}">` +
+        `<span class="pe-fila__linea"><span class="pe-fila__titulo">${esc(p.cliente)}</span>${htmlEstado(p.estado)}</span>` +
+        `<span class="pe-fila__linea"><span class="pe-fila__meta"><span class="pe-fila__numero">Nº ${esc(p.numero)}</span> · ${esc(fechas)}</span>` +
+        `${sinId ? `<span class="pe-sello">${esc(sinId)} sin identificar</span>` : ''}</span>` +
+        `${htmlAvance(p.cajas_cumplidas, p.cajas_pedidas)}</button>`
+    }
+
+    function htmlFiltroEstado() {
+      return FILTROS_ESTADO.map(([valor, texto]) =>
+        `<button type="button" class="pe-segmento__opcion" data-filtro-estado="${esc(valor)}" aria-pressed="${estado.filtros.estado === valor ? 'true' : 'false'}">${esc(texto)}</button>`).join('')
+    }
+
+    function htmlListaPedidos() {
+      if (!puedeEn('ver')) return '<div class="pe-aviso">No tenés permiso para ver los pedidos de esta unidad. Podés cargar uno nuevo con «+ Pedido nuevo».</div>'
+      if (estado.errorPedidos) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorPedidos)}</div>`
+      if (estado.pedidos === null) return '<div class="pe-vacio">Cargando pedidos…</div>'
+      const lista = pedidosVisibles(estado.pedidos, estado.filtros)
+      if (!lista.length) {
+        const hayFiltros = estado.filtros.estado || estado.filtros.desde || estado.filtros.hasta || estado.filtros.sinIdentificar
+        return `<div class="pe-vacio">${hayFiltros ? 'Ningún pedido con esos filtros.' : 'Todavía no hay pedidos en esta unidad.'}</div>`
+      }
+      return lista.map(htmlFilaPedido).join('')
+    }
+
+    function textoCuenta() {
+      if (!puedeEn('ver') || estado.pedidos === null || estado.errorPedidos) return ''
+      const n = pedidosVisibles(estado.pedidos, estado.filtros).length
+      return `${n} ${n === 1 ? 'pedido' : 'pedidos'}`
+    }
+
+    function pintarListaPedidos() {
+      document.getElementById('pe-filtro-estado').innerHTML = htmlFiltroEstado()
+      document.getElementById('pe-filtros').hidden = !puedeEn('ver')
+      document.getElementById('pe-lista').innerHTML = htmlListaPedidos()
+      document.getElementById('pe-cuenta').textContent = textoCuenta()
+    }
+
+    // Los mismos filtros, por nombre. '' viaja null: "sin filtro".
+    function parametrosPedidosDe(unidadId, filtros) {
+      return {
+        p_unidad_negocio_id: unidadId,
+        p_desde: esFechaIso(filtros.desde) ? filtros.desde : null,
+        p_hasta: esFechaIso(filtros.hasta) ? filtros.hasta : null,
+        p_estado: filtros.estado || null,
+      }
+    }
+
+    let turnoPedidos = 0
+
+    async function cargarPedidos() {
+      if (!puedeEn('ver')) { estado.pedidos = null; pintarListaPedidos(); return }
+      const turno = ++turnoPedidos
+      estado.pedidos = null
+      estado.errorPedidos = null
+      pintarListaPedidos()
+      try {
+        const { data, error } = await supabase.rpc('pedidos_de', parametrosPedidosDe(estado.unidadId, estado.filtros))
+        if (error) throw error
+        if (turno !== turnoPedidos) return
+        estado.pedidos = data ?? []
+      } catch (err) {
+        if (turno !== turnoPedidos) return
+        console.error('No se pudieron leer los pedidos:', err)
+        estado.errorPedidos = 'No se pudieron leer los pedidos. Revisá la conexión y volvé a entrar.'
+      }
+      pintarListaPedidos()
+    }
+
+    function elegirFiltroEstado(valor) {
+      if (!FILTROS_ESTADO.some(([v]) => v === valor)) return
+      estado.filtros.estado = valor
+      cargarPedidos()
+    }
+
+    function cambiarFechasFiltro() {
+      estado.filtros.desde = document.getElementById('pe-filtro-desde').value
+      estado.filtros.hasta = document.getElementById('pe-filtro-hasta').value
+      cargarPedidos()
+    }
+
+    function cambiarSinIdentificar(valor) {
+      estado.filtros.sinIdentificar = !!valor
+      pintarListaPedidos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UN PEDIDO: sus renglones y su avance
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function leerPedido(id) {
+      const { data: p, error } = await supabase.from('pedidos')
+        .select('id, numero, fecha, fecha_entrega, estado, observaciones, texto_original, anulado_motivo, cliente_id, unidad_negocio_id, clientes(nombre, localidad, telefono)')
+        .eq('id', id).maybeSingle()
+      if (error) throw error
+      if (!p) return null
+      const { data: items, error: e2 } = await supabase.from('pedido_items')
+        .select('id, orden, presentacion_id, marca_id, cajas, cajas_cumplidas, texto_libre, observacion')
+        .eq('pedido_id', id).order('orden')
+      if (e2) throw e2
+      return { pedido: p, items: items ?? [] }
+    }
+
+    const pedidoCerrado = (p) => p?.estado === 'entregado' || p?.estado === 'anulado'
+    const renglonCumplido = (it) => Number(it.cajas) > 0 && Number(it.cajas_cumplidas) >= Number(it.cajas)
+    const tieneCumplidos = (items) => (items ?? []).some(it => Number(it.cajas_cumplidas) > 0)
+
+    // Lo que se puede tocar del avance: con cargar, y mientras el pedido no
+    // esté entregado ni anulado (marcar_avance_pedido lo rechaza igual).
+    function puedeAvanzar(p) {
+      return !!p && puedeEn('cargar', p.unidad_negocio_id) && !pedidoCerrado(p)
+    }
+
+    // No se cumplen más cajas que las pedidas: la base lo rechaza, y la
+    // pantalla lo dice ANTES de mandar.
+    function validarAvance(valor, cajas) {
+      if (valor === null || valor === undefined || !Number.isFinite(Number(valor))) return 'Escribí cuántas cajas están cumplidas.'
+      if (Number(valor) < 0) return 'Las cajas cumplidas no pueden ser negativas.'
+      if (Number(valor) > Number(cajas)) return `No se pueden cumplir más de ${textoCajas(cajas)} cajas: son las pedidas.`
+      return null
+    }
+
+    function htmlItem(it, p, cat, error) {
+      const texto = !it.presentacion_id
+      const cumplido = renglonCumplido(it)
+      const desc = descripcionRenglon(cat, it)
+      const sello = texto ? '<span class="pe-sello">Falta identificar</span>' : ''
+      const control = puedeAvanzar(p)
+        ? `<div class="pe-item__control"><div class="pe-campo"><label for="pe-avance-${esc(it.id)}">Cajas cumplidas</label>` +
+          `<input type="text" class="pe-input" id="pe-avance-${esc(it.id)}" data-avance="${esc(it.id)}" autocomplete="off"></div>` +
+          `<button type="button" class="pe-btn pe-btn--secundario" data-avance-guardar="${esc(it.id)}">Guardar avance</button>` +
+          `<button type="button" class="pe-btn" data-avance-cumplido="${esc(it.id)}"${cumplido ? ' disabled' : ''}>Cumplido</button></div>`
+        : ''
+      return `<div class="pe-item${texto ? ' pe-item--texto' : ''}${cumplido ? ' pe-item--cumplido' : ''}" data-item="${esc(it.id)}">` +
+        `<div class="pe-item__cabecera"><span class="pe-item__desc">${esc(desc)}</span>${sello}</div>` +
+        `${it.observacion ? `<span class="pe-item__nota">Nota: ${esc(it.observacion)}</span>` : ''}` +
+        `${htmlAvance(it.cajas_cumplidas, it.cajas)}${control}` +
+        `${error ? `<p class="pe-error-pegado">${esc(error)}</p>` : ''}</div>`
+    }
+
+    function htmlDato(rotulo, valor) {
+      return `<div class="pe-dato"><span class="pe-dato__rotulo">${esc(rotulo)}</span><span class="pe-dato__valor">${esc(valor)}</span></div>`
+    }
+
+    function htmlDetalle(d, cat) {
+      const p = d.pedido
+      const items = d.items ?? []
+      const pedidas = items.reduce((s, it) => s + (Number(it.cajas) || 0), 0)
+      const cumplidas = items.reduce((s, it) => s + (Number(it.cajas_cumplidas) || 0), 0)
+      const cliente = p.clientes?.nombre ?? 'Cliente (no se pudo leer)'
+      const datos = [
+        htmlDato('Cliente', cliente),
+        htmlDato('Fecha del pedido', fechaCorta(p.fecha)),
+        htmlDato('Entrega', p.fecha_entrega ? fechaCorta(p.fecha_entrega) : 'Sin fecha'),
+      ]
+      if (p.observaciones) datos.push(htmlDato('Observaciones', p.observaciones))
+      const anulado = p.estado === 'anulado'
+        ? `<div class="pe-aviso pe-aviso--grave">Anulado. Motivo: ${esc(p.anulado_motivo || '—')}</div>` : ''
+      const mensaje = p.texto_original
+        ? `<details><summary class="pe-texto-suave">El mensaje original</summary><div class="pe-mensaje">${esc(p.texto_original)}</div></details>` : ''
+      const sinId = items.filter(it => !it.presentacion_id).length
+      const avisoSinId = sinId
+        ? `<div class="pe-aviso pe-aviso--grave">${esc(sinId)} ${sinId === 1 ? 'renglón falta' : 'renglones faltan'} identificar.</div>` : ''
+      return `<div class="pe-tarjeta"><div class="pe-fila__linea">${htmlEstado(p.estado)}${htmlAvance(cumplidas, pedidas)}</div>` +
+        `<div class="pe-datos">${datos.join('')}</div>${anulado}${mensaje}</div>` +
+        `${avisoSinId}<h2 class="pe-subtitulo">Renglones</h2>` +
+        `<div class="pe-lista">${items.map(it => htmlItem(it, p, cat, d.errores?.[it.id])).join('') || '<div class="pe-vacio">Sin renglones.</div>'}</div>`
+    }
+
+    function pintarDetalle() {
+      const d = estado.detalle
+      if (!d) return
+      document.getElementById('pe-detalle-titulo').textContent = d.pedido ? `Pedido Nº ${d.pedido.numero}` : 'Pedido'
+      const cuerpo = document.getElementById('pe-detalle-cuerpo')
+      if (d.error) {
+        cuerpo.innerHTML = `<div class="pe-aviso pe-aviso--grave">${esc(d.error)}</div>`
+      } else if (!d.pedido) {
+        cuerpo.innerHTML = '<div class="pe-vacio">Cargando el pedido…</div>'
+      } else {
+        cuerpo.innerHTML = htmlDetalle(d, estado.catalogo)
+        for (const input of cuerpo.querySelectorAll('[data-avance]')) {
+          const it = d.items.find(x => x.id === input.dataset.avance)
+          enlazarCampoNumero(input, { decimales: DECIMALES_CAJAS, max: it ? Number(it.cajas) : null })
+          if (it) ponerNumero(input, Number(it.cajas_cumplidas))
+        }
+      }
+      document.getElementById('pe-detalle-aviso').innerHTML = d.aviso ? `<div class="pe-aviso pe-aviso--grave">${esc(d.aviso)}</div>` : ''
+      pintarAccionesDetalle()
+    }
+
+    function pintarAccionesDetalle() {
+      const p = estado.detalle?.pedido
+      const cargar = !!p && puedeEn('cargar', p.unidad_negocio_id)
+      document.getElementById('pe-btn-corregir').hidden = !(cargar && !pedidoCerrado(p))
+      document.getElementById('pe-btn-entregado').hidden = !(cargar && !pedidoCerrado(p))
+      document.getElementById('pe-btn-anular').hidden = !(cargar && p.estado !== 'anulado')
+      const accion = estado.detalle?.accion
+      document.getElementById('pe-panel-entregado').hidden = accion?.tipo !== 'entregado'
+      document.getElementById('pe-panel-anular').hidden = accion?.tipo !== 'anulado'
+      const ee = document.getElementById('pe-panel-entregado-error')
+      ee.textContent = accion?.tipo === 'entregado' ? (accion.error ?? '') : ''
+      ee.hidden = !(accion?.tipo === 'entregado' && accion.error)
+      const ea = document.getElementById('pe-panel-anular-error')
+      ea.textContent = accion?.tipo === 'anulado' ? (accion.error ?? '') : ''
+      ea.hidden = !(accion?.tipo === 'anulado' && accion.error)
+      document.getElementById('pe-entregado-si').disabled = !!estado.cambiandoEstado
+      document.getElementById('pe-anular-si').disabled = !!estado.cambiandoEstado
+    }
+
+    let turnoDetalle = 0
+
+    async function abrirDetalle(id) {
+      const turno = ++turnoDetalle
+      estado.detalle = { id, pedido: null, items: [], error: null, aviso: null, errores: {}, accion: null }
+      mostrarVista('pe-vista-detalle')
+      pintarDetalle()
+      try {
+        await asegurarCatalogoYClientes()
+        const r = await leerPedido(id)
+        if (turno !== turnoDetalle) return
+        if (!r) estado.detalle.error = 'No se encontró el pedido: puede ser de una unidad que no ves.'
+        else { estado.detalle.pedido = r.pedido; estado.detalle.items = r.items }
+      } catch (err) {
+        if (turno !== turnoDetalle) return
+        console.error('No se pudo leer el pedido:', err)
+        estado.detalle.error = 'No se pudo leer el pedido. Revisá la conexión y volvé a entrar.'
+      }
+      pintarDetalle()
+    }
+
+    // Volver a leer el pedido abierto después de un cambio, sin perder el
+    // aviso de lo que pasó.
+    async function recargarDetalle() {
+      const d = estado.detalle
+      if (!d?.id) return
+      const turno = ++turnoDetalle
+      try {
+        const r = await leerPedido(d.id)
+        if (turno !== turnoDetalle || estado.detalle !== d) return
+        if (r) { d.pedido = r.pedido; d.items = r.items }
+      } catch (err) {
+        console.error('No se pudo volver a leer el pedido:', err)
+      }
+      pintarDetalle()
+    }
+
+    async function marcarAvance(itemId, valor) {
+      const d = estado.detalle
+      const it = d?.items.find(x => x.id === itemId)
+      if (!d || !it || !puedeAvanzar(d.pedido) || estado.enviandoAvance) return
+      d.errores = { ...d.errores, [itemId]: validarAvance(valor, it.cajas) }
+      if (d.errores[itemId]) { pintarDetalle(); return }
+      estado.enviandoAvance = true
+      try {
+        const { data, error } = await supabase.rpc('marcar_avance_pedido', { p_item_id: itemId, p_cajas_cumplidas: Number(valor) })
+        if (error) throw error
+        it.cajas_cumplidas = Number(valor)
+        // El estado lo decidió la base con el avance: se muestra el suyo.
+        if (data?.estado) d.pedido.estado = data.estado
+        mostrarExito(renglonCumplido(it) ? 'Renglón cumplido.' : 'Avance guardado.')
+      } catch (err) {
+        console.error('No se pudo guardar el avance:', err)
+        // Los mensajes de marcar_avance_pedido ya vienen escritos para una
+        // persona ("No podés cumplir más cajas que las pedidas (10)."): tal cual.
+        d.errores = { ...d.errores, [itemId]: err?.message || 'No se pudo guardar el avance. Probá de nuevo.' }
+      } finally {
+        estado.enviandoAvance = false
+      }
+      pintarDetalle()
+      await recargarDetalle()
+    }
+
+    function guardarAvanceDesdeCampo(itemId) {
+      const input = [...document.getElementById('pe-detalle-cuerpo').querySelectorAll('[data-avance]')].find(x => x.dataset.avance === itemId)
+      marcarAvance(itemId, input ? leerCampoNumero(input) : null)
+    }
+
+    // "Cumplido" deja el renglón en el total pedido.
+    function marcarCumplido(itemId) {
+      const it = estado.detalle?.items.find(x => x.id === itemId)
+      if (it) marcarAvance(itemId, Number(it.cajas))
+    }
+
+    // ── entregado y anulado: los ÚNICOS estados que se eligen a mano ────────
+
+    function pedirCambioEstado(tipo) {
+      const d = estado.detalle
+      if (!d?.pedido || !ESTADOS_A_MANO.includes(tipo)) return
+      d.accion = { tipo, error: null }
+      if (tipo === 'anulado') document.getElementById('pe-anular-motivo').value = ''
+      pintarAccionesDetalle()
+    }
+
+    function cancelarCambioEstado() {
+      if (estado.detalle) estado.detalle.accion = null
+      pintarAccionesDetalle()
+    }
+
+    function faltaMotivo(motivo) {
+      return limpio(motivo).length < LARGO_MINIMO_MOTIVO ? 'Escribí por qué se anula el pedido.' : null
+    }
+
+    function parametrosCambiarEstado(pedidoId, tipo, motivo) {
+      return { p_pedido_id: pedidoId, p_estado: tipo, p_motivo: tipo === 'anulado' ? limpio(motivo) : null }
+    }
+
+    async function confirmarCambioEstado() {
+      const d = estado.detalle
+      const accion = d?.accion
+      if (!d?.pedido || !accion || !ESTADOS_A_MANO.includes(accion.tipo) || estado.cambiandoEstado) return
+      const motivo = accion.tipo === 'anulado' ? document.getElementById('pe-anular-motivo').value : null
+      if (accion.tipo === 'anulado') {
+        accion.error = faltaMotivo(motivo)
+        if (accion.error) { pintarAccionesDetalle(); return }
+      }
+      estado.cambiandoEstado = true
+      pintarAccionesDetalle()
+      try {
+        const { error } = await supabase.rpc('cambiar_estado_pedido', parametrosCambiarEstado(d.pedido.id, accion.tipo, motivo))
+        if (error) throw error
+        mostrarExito(accion.tipo === 'anulado' ? 'Pedido anulado.' : 'Pedido marcado como entregado.')
+        d.accion = null
+        estado.cambiandoEstado = false
+        await recargarDetalle()
+      } catch (err) {
+        console.error('No se pudo cambiar el estado:', err)
+        accion.error = err?.message || 'No se pudo cambiar el estado. Probá de nuevo.'
+        estado.cambiandoEstado = false
+        pintarAccionesDetalle()
+      }
+    }
+
+    // ── corregir el pedido entero ──────────────────────────────────────────
+
+    // Con renglones cumplidos la base no deja reemplazar la lista: ni se abre
+    // el formulario, se avisa acá.
+    function abrirCorregirPedido() {
+      const d = estado.detalle
+      if (!d?.pedido || !puedeEn('cargar', d.pedido.unidad_negocio_id) || pedidoCerrado(d.pedido)) return
+      if (tieneCumplidos(d.items)) {
+        d.aviso = AVISO_CUMPLIDOS
+        pintarDetalle()
+        return
+      }
+      estado.form = formPedidoDesde(d.pedido, d.items, estado.catalogo)
+      mostrarVista('pe-vista-form')
+      pintarFormEntero()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1369,7 +1886,12 @@
 
       // Cargar un pedido
       document.getElementById('pe-btn-nuevo').addEventListener('click', () => abrirPedidoNuevo())
-      document.getElementById('pe-form-volver').addEventListener('click', () => { estado.form = null; mostrarInicio() })
+      document.getElementById('pe-form-volver').addEventListener('click', () => {
+        const id = estado.form?.id
+        estado.form = null
+        if (id) abrirDetalle(id)
+        else mostrarInicio()
+      })
       document.getElementById('pe-form-cliente-buscar').addEventListener('input', (e) => {
         if (!estado.form) return
         estado.form.clienteBusqueda = e.target.value
@@ -1396,6 +1918,37 @@
         else if ((b = e.target.closest('[data-r-quitar]'))) quitarRenglon(b.dataset.rQuitar)
         else if ((b = e.target.closest('[data-r-identificar]'))) identificarRenglon(b.dataset.rIdentificar)
       })
+      // La lista
+      document.getElementById('pe-filtro-estado').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-filtro-estado]')
+        if (b) elegirFiltroEstado(b.dataset.filtroEstado)
+      })
+      document.getElementById('pe-filtro-desde').addEventListener('change', () => cambiarFechasFiltro())
+      document.getElementById('pe-filtro-hasta').addEventListener('change', () => cambiarFechasFiltro())
+      document.getElementById('pe-filtro-sin-id').addEventListener('change', (e) => cambiarSinIdentificar(e.target.checked))
+      document.getElementById('pe-lista').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-pedido]')
+        if (b) abrirDetalle(b.dataset.pedido)
+      })
+      // El detalle
+      document.getElementById('pe-detalle-volver').addEventListener('click', () => mostrarInicio())
+      const cuerpo = document.getElementById('pe-detalle-cuerpo')
+      cuerpo.addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-avance-guardar]'))) guardarAvanceDesdeCampo(b.dataset.avanceGuardar)
+        else if ((b = e.target.closest('[data-avance-cumplido]'))) marcarCumplido(b.dataset.avanceCumplido)
+      })
+      cuerpo.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.target.dataset?.avance !== undefined) { e.preventDefault(); guardarAvanceDesdeCampo(e.target.dataset.avance) }
+      })
+      document.getElementById('pe-btn-corregir').addEventListener('click', () => abrirCorregirPedido())
+      document.getElementById('pe-btn-entregado').addEventListener('click', () => pedirCambioEstado('entregado'))
+      document.getElementById('pe-btn-anular').addEventListener('click', () => pedirCambioEstado('anulado'))
+      document.getElementById('pe-entregado-si').addEventListener('click', () => confirmarCambioEstado())
+      document.getElementById('pe-entregado-no').addEventListener('click', () => cancelarCambioEstado())
+      document.getElementById('pe-anular-si').addEventListener('click', () => confirmarCambioEstado())
+      document.getElementById('pe-anular-no').addEventListener('click', () => cancelarCambioEstado())
+
       renglones.addEventListener('input', (e) => {
         const t = e.target
         if (t.dataset.rCajas !== undefined) {

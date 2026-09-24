@@ -19,6 +19,18 @@ const SEGURAS_PEDIDOS = [
   ['htmlPieRenglon(r, i, false)', 'HTML armado por htmlPieRenglon(), que escapa la nota del renglón'],
   ['htmlPieRenglon(r, i, true)', 'HTML armado por htmlPieRenglon(), que escapa la nota del renglón'],
   ['error', 'HTML ya escapado: htmlRenglon() lo arma arriba con esc() de lo que falta, o vacío'],
+  // Parte 4: la lista y el detalle
+  ['clave', 'constante del código: htmlEstado() solo la usa si es una clave de ETIQUETA_ESTADO (hasOwnProperty)'],
+  ['pct', 'número: porcentajeAvance() devuelve un entero de 0 a 100'],
+  ['htmlEstado(p.estado)', 'HTML armado por htmlEstado(), que escapa la etiqueta y solo pone una clase de la lista'],
+  ['htmlAvance(p.cajas_cumplidas, p.cajas_pedidas)', 'HTML armado por htmlAvance(), que escapa el texto del avance'],
+  ['htmlAvance(cumplidas, pedidas)', 'HTML armado por htmlAvance(), que escapa el texto del avance'],
+  ['sello', "HTML constante del código: el sello 'Falta identificar', o vacío"],
+  ["datos.join('')", 'HTML armado por htmlDato(), que escapa rótulo y valor'],
+  ['anulado', 'HTML ya escapado: htmlDetalle() lo arma arriba con esc() del motivo, o vacío'],
+  ['mensaje', 'HTML ya escapado: htmlDetalle() lo arma arriba con esc() del texto_original, o vacío'],
+  ['avisoSinId', 'HTML ya escapado: htmlDetalle() lo arma arriba con esc() de la cuenta, o vacío'],
+  ["items.map(it => htmlItem(it, p, cat, d.errores?.[it.id])).join('')", 'HTML armado por htmlItem(), que escapa la descripción, la nota, el id y el error'],
 ]
 
 const SEGURAS_REGEX_PEDIDOS = [
