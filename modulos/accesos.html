@@ -281,6 +281,17 @@
 
     /* ── Chips de rol / módulo (Vista 2) ──────────────────────────────────────── */
 
+    .chip-tablet {
+      display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px;
+      font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.02em;
+      background: var(--color-superficie); color: var(--color-texto);
+      border: 1px solid var(--color-borde);
+    }
+    .grupo-tablets__titulo {
+      margin: 1.25rem 0 0.5rem; font-size: 0.8125rem; font-weight: 700;
+      color: var(--color-texto-suave); text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .grupo-tablets__contador { font-weight: 500; }
     .chip-rol {
       display: inline-flex;
       align-items: center;
@@ -1146,6 +1157,14 @@
       return estado.empleados.filter(e => e.auth_user_id)
     }
 
+    // Las cuentas de las tablets de la fábrica (empleados.es_dispositivo)
+    // tienen login y permisos —por eso siguen en "Usuarios y roles", para
+    // poder editarlos— pero NO son personas: van en un grupo aparte con la
+    // etiqueta "Tablet" y no cuentan como usuarios activos.
+    function esDispositivo(emp) {
+      return emp?.es_dispositivo === true
+    }
+
     function modulosDeEmpleado(empleadoId) {
       return estado.empleadoModulos.filter(m => m.empleado_id === empleadoId).map(m => m.modulo)
     }
@@ -1182,7 +1201,7 @@
       // PostgREST contesta HTTP 300 (PGRST201) y la pantalla no carga.
       const [solRes, empRes, modRes, unidRes] = await Promise.all([
         supabase.from('solicitudes_acceso').select('*').eq('estado', 'pendiente').order('fecha_solicitud', { ascending: false }),
-        supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, unidades_negocio!empleados_unidad_negocio_id_fkey (nombre)'),
+        supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, es_dispositivo, unidades_negocio!empleados_unidad_negocio_id_fkey (nombre)'),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
       ])
@@ -1217,7 +1236,7 @@
 
     function renderizarStats() {
       const pendientes  = estado.solicitudes.length
-      const conAcceso   = empleadosConAcceso()
+      const conAcceso   = empleadosConAcceso().filter(e => !esDispositivo(e))
       const activos     = conAcceso.length
       const superAdmins = conAcceso.filter(e => e.rol_app === 'super_admin').length
 
@@ -1348,9 +1367,25 @@
       }
       vacio.hidden = true
 
+      const personas = lista.filter(e => !esDispositivo(e))
+      const tablets  = lista.filter(esDispositivo)
+      cont.innerHTML = personas.map(htmlTarjetaUsuario).join('') + (tablets.length ? `
+          <div class="grupo-tablets__titulo">Tablets de la fábrica <span class="grupo-tablets__contador">· ${tablets.length}</span></div>
+          ${tablets.map(htmlTarjetaUsuario).join('')}
+        ` : '')
+
+      cont.querySelectorAll('.btn-editar-usuario').forEach(btn => {
+        btn.addEventListener('click', () => abrirModalEditar(btn.dataset.id))
+      })
+      cont.querySelectorAll('.btn-quitar-mfa').forEach(btn => {
+        btn.addEventListener('click', () => confirmarQuitarMfa(btn.dataset.id))
+      })
+    }
+
+    function htmlTarjetaUsuario(emp) {
       // El viewer siempre es super_admin acá (init() ya lo exige) — la única
       // restricción real que queda es no poder editar a otro super_admin.
-      cont.innerHTML = lista.map(emp => {
+      {
         const puedeEditar = emp.rol_app !== 'super_admin'
 
         // Condición APARTE de puedeEditar, a propósito: el rescate de MFA sí
@@ -1371,6 +1406,13 @@
         // vs. usuario (cualquier otro valor legado cae en Usuario).
         const esSuperAdmin = emp.rol_app === 'super_admin'
         const etiquetaRol  = esSuperAdmin ? 'Super admin' : 'Usuario'
+        const tablet       = esDispositivo(emp)
+        const chip = tablet
+          ? '<span class="chip-tablet">Tablet</span>'
+          : `<span class="chip-rol chip-rol--${esSuperAdmin ? 'super_admin' : 'usuario'}">${etiquetaRol}</span>`
+        const segundaLinea = tablet
+          ? `Cuenta de la tablet de la fábrica${emp.unidades_negocio?.nombre ? ' · ' + esc(emp.unidades_negocio.nombre) : ''}`
+          : esc(formatearCuil(emp.cuil))
 
         return `
           <div class="tarjeta-acceso" data-id="${esc(emp.id)}">
@@ -1378,9 +1420,9 @@
             <div class="acceso__cuerpo">
               <div class="acceso__fila1">
                 <span class="acceso__nombre">${esc(emp.nombre)}</span>
-                <span class="chip-rol chip-rol--${esSuperAdmin ? 'super_admin' : 'usuario'}">${etiquetaRol}</span>
+                ${chip}
               </div>
-              <div class="acceso__email">${esc(formatearCuil(emp.cuil))}</div>
+              <div class="acceso__email">${segundaLinea}</div>
               <div class="acceso__acciones" style="margin-top:0.5rem;">${chipsModulos}</div>
               ${(puedeEditar || puedeQuitarMfa) ? `
                 <div class="acceso__acciones">
@@ -1391,14 +1433,7 @@
             </div>
           </div>
         `
-      }).join('')
-
-      cont.querySelectorAll('.btn-editar-usuario').forEach(btn => {
-        btn.addEventListener('click', () => abrirModalEditar(btn.dataset.id))
-      })
-      cont.querySelectorAll('.btn-quitar-mfa').forEach(btn => {
-        btn.addEventListener('click', () => confirmarQuitarMfa(btn.dataset.id))
-      })
+      }
     }
 
     // Rescate de alguien que perdió su dispositivo. Supabase no tiene códigos

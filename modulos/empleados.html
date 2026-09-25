@@ -433,6 +433,14 @@
       font-weight: 600;
     }
 
+    .chip-tablet {
+      display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;
+      background: var(--color-superficie); color: var(--color-texto);
+      border: 1px solid var(--color-borde);
+    }
+    .tarjeta-empleado__avatar-tablet { background: var(--color-texto); color: #fff; }
+    .tarjeta-empleado__avatar-tablet svg { width: 1.125rem; height: 1.125rem; }
     .chip-pin--gris   { background: var(--color-superficie);  color: var(--color-texto-suave); }
     .chip-pin--alerta { background: var(--amarillo-suave);    color: var(--amarillo-oscuro); }
     .chip-pin--ok     { background: var(--verde-suave);       color: var(--verde-oscuro); }
@@ -717,7 +725,7 @@
 
       const [empRes, modRes, unidRes] = await Promise.all([
         supabase.from('empleados')
-          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono, contacto_emergencia_nombre, contacto_emergencia_telefono')
+          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono, contacto_emergencia_nombre, contacto_emergencia_telefono, es_dispositivo')
           .eq('activo', true),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
@@ -743,10 +751,20 @@
     // RENDER — Stats
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Las cuentas de las tablets de la fábrica (empleados.es_dispositivo) NO
+    // son personas: tienen login y una unidad, pero no son personal. Van en un
+    // grupo aparte con la etiqueta "Tablet", no cuentan en las cifras de
+    // personas y su ficha no ofrece PIN de producción (un PIN identifica a
+    // una persona que usa la tablet, no a la tablet).
+    function esDispositivo(emp) {
+      return emp?.es_dispositivo === true
+    }
+
     function renderizarStats() {
-      const total     = estado.empleados.length
-      const conAcceso = estado.empleados.filter(e => e.auth_user_id).length
-      const empresas  = new Set(estado.empleados.filter(e => e.unidad_negocio_id).map(e => e.unidad_negocio_id)).size
+      const personas  = estado.empleados.filter(e => !esDispositivo(e))
+      const total     = personas.length
+      const conAcceso = personas.filter(e => e.auth_user_id).length
+      const empresas  = new Set(personas.filter(e => e.unidad_negocio_id).map(e => e.unidad_negocio_id)).size
 
       document.getElementById('empleados-stats').innerHTML = `
         <div class="stat-card stat-card--principal">
@@ -795,9 +813,12 @@
       estado.maestros.unidadesNegocio.forEach(u => porUnidad.set(u.id, { nombre: u.nombre, lista: [] }))
       const sinEmpresaConAcceso = []
       const sinEmpresaSinAcceso = []
+      const tablets = []
 
       estado.empleados.forEach(emp => {
-        if (emp.unidad_negocio_id && porUnidad.has(emp.unidad_negocio_id)) {
+        if (esDispositivo(emp)) {
+          tablets.push(emp)
+        } else if (emp.unidad_negocio_id && porUnidad.has(emp.unidad_negocio_id)) {
           porUnidad.get(emp.unidad_negocio_id).lista.push(emp)
         } else if (emp.auth_user_id) {
           sinEmpresaConAcceso.push(emp)
@@ -809,12 +830,29 @@
       const grupos = [...porUnidad.values()].filter(g => g.lista.length)
       if (sinEmpresaConAcceso.length) grupos.push({ nombre: 'Con acceso a la app, sin empresa asignada', lista: sinEmpresaConAcceso })
       if (sinEmpresaSinAcceso.length) grupos.push({ nombre: 'Sin empresa asignada', lista: sinEmpresaSinAcceso })
+      // Siempre al final: no es personal de ninguna empresa.
+      if (tablets.length) grupos.push({ nombre: 'Tablets de la fábrica', lista: tablets })
 
       grupos.forEach(g => { g.lista = ordenarGrupo(g.lista) })
       return grupos
     }
 
     function renderizarFilaEmpleado(emp) {
+      if (esDispositivo(emp)) {
+        const unidad = estado.maestros.unidadesNegocio.find(u => u.id === emp.unidad_negocio_id)?.nombre
+        return `
+        <div class="tarjeta-lista tarjeta-empleado--tablet" data-id="${esc(emp.id)}">
+          <div class="tarjeta-lista__avatar tarjeta-empleado__avatar-tablet"><i data-lucide="tablet"></i></div>
+          <div class="tarjeta-lista__info">
+            <div class="acceso__fila1">
+              <span class="tarjeta-lista__titulo">${esc(emp.nombre)}</span>
+              <span class="chip-tablet">Tablet</span>
+            </div>
+            <div class="tarjeta-lista__subtitulo">Cuenta de la tablet de la fábrica${unidad ? ' · ' + esc(unidad) : ''}</div>
+          </div>
+        </div>
+      `
+      }
       const tieneAcceso = !!emp.auth_user_id
       const incompleto  = emp.origen === 'app_registro' && !emp.rol
       const etiquetaRol = emp.rol_app === 'super_admin' ? 'Super admin' : emp.rol_app === 'admin' ? 'Admin' : 'Usuario'
@@ -887,6 +925,8 @@
       reiniciarPin(empleadoId)
       renderizarFicha()
       document.getElementById('modal-ficha').hidden = false
+      // Una tablet no tiene PIN de producción: ni se pregunta a la base.
+      if (esDispositivo(emp)) return
       // Arranca sin await: la ficha se abre ya y la sección del PIN aparece
       // cuando la base contesta. Hasta entonces no se dibuja NADA, para no
       // mostrar un título que después puede tener que desaparecer.
@@ -959,7 +999,11 @@
 
       const unidadNombre = estado.maestros.unidadesNegocio.find(u => u.id === emp.unidad_negocio_id)?.nombre || '—'
 
-      document.getElementById('ficha-datos-naaloo').innerHTML = `
+      document.getElementById('ficha-datos-naaloo').innerHTML = esDispositivo(emp) ? `
+        <div class="ficha-campo"><span>Tipo</span><span><span class="chip-tablet">Tablet</span></span></div>
+        <div class="ficha-campo"><span>Unidad</span><span>${esc(unidadNombre)}</span></div>
+        <div class="ficha-sin-acceso">Es la cuenta de una tablet de la fábrica, no una persona: no tiene legajo, puesto ni PIN.</div>
+      ` : `
         <div class="ficha-campo"><span>Legajo</span><span>${esc(emp.legajo || '—')}</span></div>
         <div class="ficha-campo"><span>CUIL</span><span>${esc(formatearCuil(emp.cuil))}</span></div>
         <div class="ficha-campo"><span>Domicilio</span><span>${esc(emp.domicilio || '—')}</span></div>
@@ -1109,6 +1153,7 @@
       // Mientras se espera la respuesta no se dibuja NADA: un título que
       // después puede tener que desaparecer es peor que uno que aparece tarde.
       if (p.cargando) return ''
+      if (esDispositivo(estado.empleados.find(e => e.id === p.empleadoId))) return ''
       if (p.error) return TITULO_PIN + '<div class="ficha-sin-acceso">No se pudo leer el estado del PIN.</div>'
       // null = la base dice que quien mira no puede ver esto. Sección entera fuera.
       if (!p.datos) return ''
