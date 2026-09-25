@@ -108,7 +108,7 @@ correrMutaciones({
     { nombre: 'un cono nuevo no queda elegido', de: "        elegirCono(id)\n      } catch (e) {\n        console.error('proponer_marca:', e)", a: "        pintarAgregar()\n      } catch (e) {\n        console.error('proponer_marca:', e)" },
     { nombre: 'el cono nuevo viaja sin recortar', de: '      const nombre = campo.value.trim()', a: '      const nombre = campo.value' },
     { nombre: 'un cono sin nombre igual se manda', de: "      if (!nombre) { err.textContent = 'Escribí el nombre del cono.'; err.hidden = false; return }", a: '' },
-    { nombre: 'un cono que ya existía se marca como a revisar', de: "estado_alta: data?.ya_existia ? null : 'pendiente_revision' }]", a: "estado_alta: 'pendiente_revision' }]" },
+    { nombre: 'un cono que ya existía y no está activo se agrega igual', de: "          if (data?.ya_existia) throw new Error(", a: "          if (false) throw new Error(" },
     { nombre: 'el error de proponer_marca se tapa', de: "        err.textContent = e?.message || 'No se pudo agregar el cono.'", a: "        err.textContent = 'No se pudo agregar el cono.'" },
 
     { nombre: 'los campos se enlazan recién al cerrar', de: '      enlazarCamposPlanilla()\n      estado.planilla = null', a: '      estado.planilla = null' },
@@ -134,8 +134,8 @@ correrMutaciones({
 
     // ── Masas ───────────────────────────────────────────────────────────
     { nombre: 'las masas muestran las dos primeras', de: '      const ultimas = lista.slice(-2).reverse()', a: '      const ultimas = lista.slice(0, 2)' },
-    { nombre: 'las masas anuladas también cuentan', de: "        .select('id, nro, hora, doble, origen').eq('turno_id', turnoId).eq('anulada', false).order('nro')", a: "        .select('id, nro, hora, doble, origen').eq('turno_id', turnoId).order('nro')" },
-    { nombre: 'el chip de origen no se dibuja', de: '          `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(origen)}</span></div>`', a: '          \'</div>\'' },
+    { nombre: 'las masas anuladas también cuentan', de: "        .select('id, nro, hora, doble, origen, es_chocolate').eq('turno_id', turnoId).eq('anulada', false).order('nro')", a: "        .select('id, nro, hora, doble, origen, es_chocolate').eq('turno_id', turnoId).order('nro')" },
+    { nombre: 'los chips de la masa no se dibujan', de: '        `${chipsDeMasa(m)}</div>`).join(\'\')', a: '        \'</div>\').join(\'\')' },
     { nombre: 'las masas se pueden editar desde la planilla', de: '      return \'<div class="pr-masas__cuenta">\' +', a: '      return \'<button type="button" class="pr-masas__cuenta">\' +' },
 
     // ── El total parado ─────────────────────────────────────────────────

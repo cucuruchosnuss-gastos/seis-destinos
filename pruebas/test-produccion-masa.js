@@ -519,9 +519,11 @@ esperas.push((async () => {
   chk('… y va PRIMERO', lista.includes('ma1') && lista.indexOf('pr-masa-fila--espera') < lista.indexOf('ma1'))
   chk('… y dice "Esperando conexión" en bordó', /pr-masa-fila__espera">Esperando conexión/.test(lista))
   chk('las enviadas dicen "✓ Enviada" en verde', (lista.match(/pr-masa-fila__ok">✓ Enviada/g) || []).length === 2)
-  chk('los tres chips de origen, cada uno con su clase', /pr-chip-origen--modificada">Modificada/.test(lista) && /pr-chip-origen--original">Original/.test(lista) && /pr-chip-origen--anterior">Anterior/.test(lista))
+  // Terminar la tablet, parte 5: chip SOLO "Modificada" (bordó); Original y Anterior son lo normal y no llevan.
+  chk('"Modificada" con su chip bordó; Original y Anterior sin chip', /pr-chip-modificada">Modificada/.test(lista) && !/pr-chip-origen|>Original<|>Anterior</.test(lista), lista)
+  chk('SIMPLE / DOBLE en grande', /pr-masa-fila__tam pr-masa-tam">(SIMPLE|DOBLE)</.test(lista) && !/>Simple<|>Doble</.test(lista))
   chk('las enviadas van de la más nueva a la más vieja', lista.indexOf('>2<') < lista.indexOf('>1<'))
-  chk('una de chocolate lo dice', /Simple · choc\./.test(lista))
+  chk('una de chocolate lo dice con su chip', (lista.match(/pr-chip-choco">Chocolate</g) || []).length === 1 && !/choc\./.test(lista), lista)
   chk('la anulada se ve anulada, con su motivo y sin "Anular"', /pr-masa-fila--anulada/.test(lista) && /Anulada: Se quemó/.test(lista) && !/data-anular-masa="ma3"/.test(lista))
   chk('sin produccion:cargar no hay botón de anular', !/data-anular-masa/.test(T.htmlFilaMasaTurno({ id: 'ma1', nro: 1, turno_id: 't1', hora: null, doble: false, origen: 'original', anulada: false }, false)))
   // Una máquina LIBRE tiene turno null: una masa sin turno_id no puede
@@ -565,8 +567,8 @@ esperas.push((async () => {
   chequearMarcas(chk, 'masa pendiente en 6d', X.htmlFilaMasaPendiente({ nro: marca('pendNro'), maquinaNombre: marca('pendMaq'), lote: marca('pendLote'), doble: false }), ['pendNro', 'pendMaq', 'pendLote'])
   X.estado.tablero = [{ maquina: { nombre: marca('maqTablero') }, turno: { id: 't9', lote: marca('loteTablero') }, masas: 0, ultimaMasa: null, parada: null }]
   chequearMarcas(chk, 'la máquina y el lote en 6d', X.htmlFilaMasaTurno({ id: 'x', nro: 1, turno_id: 't9', hora: null, doble: false, origen: 'original', anulada: false }, true), ['maqTablero', 'loteTablero'])
-  chequearMarcas(chk, 'masa enviada en 6d', X.htmlFilaMasaTurno({ id: marca('masaId'), nro: marca('nro'), hora: null, doble: false, origen: marca('origen'), anulada: false }, true) +
-    X.htmlFilaMasaTurno({ id: 'x', nro: 1, hora: null, doble: false, origen: 'original', anulada: true, anulada_motivo: marca('motivoAnul') }, true), ['masaId', 'nro', 'origen', 'motivoAnul'])
+  chequearMarcas(chk, 'masa enviada en 6d', X.htmlFilaMasaTurno({ id: marca('masaId'), nro: marca('nro'), hora: null, doble: false, origen: 'modificada', es_chocolate: true, anulada: false }, true) +
+    X.htmlFilaMasaTurno({ id: 'x', nro: 1, hora: null, doble: false, origen: 'original', anulada: true, anulada_motivo: marca('motivoAnul') }, true), ['masaId', 'nro', 'motivoAnul'])
   const Y = armar({ turnos: [{ id: marca('turnoY'), lote: marca('loteY'), maquina_id: 'm1', fecha: '2026-09-23', abierto_en: null }], masas: [] })
   Y.__tablas.maquinas = [{ id: 'm1', nombre: marca('maqY'), orden: 1 }]
   await Y.mostrarSala()

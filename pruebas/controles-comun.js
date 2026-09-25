@@ -37,6 +37,10 @@ function fragmentos(html) {
   for (const b of bloques) { estatico += html.slice(desde, b.ini) + '\n'; desde = b.fin }
   estatico += html.slice(desde)
   estatico = estatico.replace(/<!--[\s\S]*?-->/g, '')
+  // El CSS no tiene controles, pero sus COMENTARIOS pueden nombrar uno
+  // ("ya no es un <select> del sistema") y el inventario lo tomaba como una
+  // etiqueta: un control fantasma que después "faltaba". Se saca el <style>.
+  estatico = estatico.replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
 
   const markup = [estatico]
   const referencias = []   // { codigo, strings } por bloque

@@ -114,8 +114,10 @@ esperas.push((async () => {
   chk('masas: la cantidad en grande', /pr-masas__numero">2</.test(masas), masas)
   chk('… y la hora de la última', /última 10:18/.test(masas), masas)
   chk('… las dos últimas, de la más nueva a la más vieja, con hora y tamaño', masas.indexOf('>12<') < masas.indexOf('>11<') &&
-    /<strong>12<\/strong> · 10:18 · doble/.test(masas) && /<strong>11<\/strong> · 09:51 · simple/.test(masas), masas)
-  chk('… con su chip de origen', /pr-chip-origen--modificada">Modificada</.test(masas) && /pr-chip-origen--anterior">Anterior</.test(masas))
+    /<strong>12<\/strong> · 10:18 · <span class="pr-masa-tam">DOBLE<\/span>/.test(masas) && /<strong>11<\/strong> · 09:51 · <span class="pr-masa-tam">SIMPLE<\/span>/.test(masas), masas)
+  // Terminar la tablet, parte 5: chip SOLO para la modificada (en bordó); la anterior no lleva.
+  chk('… "Modificada" solo en la que lo es, y ningún chip de origen', (masas.match(/pr-chip-modificada">Modificada</g) ?? []).length === 1 &&
+    !/Anterior|pr-chip-origen/.test(masas), masas)
   // Las carga el masero: desde la planilla NO se editan.
   chk('… y NINGÚN control para editarlas', !/<button|<input|<select/.test(masas), masas)
   chk('sin masas todavía, se dice', /Todavía no hay masas/.test(S.htmlMasasPlanilla([])))
@@ -195,10 +197,10 @@ esperas.push((async () => {
   chk('… en el orden de la base (orden 1, 2)', prod.indexOf('7023-1') < prod.indexOf('7023-2'))
   chk('… se pide por turno y ordenado por orden',
     S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('["eq","turno_id","t1"]')))
-  chk('… el renglón dice producto, presentación, cono, cajas y unidades',
-    /Cucuruchón Mini/.test(prod) && /Caja x600/.test(prod) && /CASERATO/.test(prod) &&
+  chk('… el renglón dice producto, cono, caja, cajas y unidades',
+    /Cucuruchón Mini/.test(prod) && /pr-producido__detalle">con cono · CASERATO · caja x600</.test(prod) &&
     /35 cajas/.test(prod) && /21\.000 u/.test(prod), prod)
-  chk('… sin cono dice "Común"', /Común/.test(prod))
+  chk('… sin cono no nombra ningún cono', !/Común/.test(prod) && /pr-producido__detalle">caja x200</.test(prod), prod)
   chk('… y cada uno se puede corregir y borrar', /data-corregir="it-1"/.test(prod) && /data-borrar="it-1"/.test(prod))
   chk('el total del turno suma cajas y unidades',
     /55 cajas · 25\.000 u/.test(html(S, 'pr-planilla-total')), html(S, 'pr-planilla-total'))
@@ -469,8 +471,10 @@ esperas.push((async () => {
   Y.__doc.getElementById('pr-agregar-cono-nombre').value = 'Grido'
   Y.__setRpc(async () => ({ data: { marca_id: 'mk-otro', ya_existia: true }, error: null }))
   await Y.crearConoNuevo()
-  chk('un cono que ya existía no se marca como "a revisar"',
-    Y.estado.catalogo.marcas.find(m => m.id === 'mk-otro').estado_alta === null)
+  // Terminar la tablet, parte 5: si ya existía y no está en el catálogo
+  // (que trae todos los activos), está dado de baja y no se ofrece.
+  chk('un cono que ya existía y no está activo no se agrega: se dice',
+    !Y.estado.catalogo.marcas.some(m => m.id === 'mk-otro') && /dado de baja/.test(Y.__doc.getElementById('pr-agregar-cono-error').textContent))
 
   // Un nombre ya rechazado: la base LANZA y el mensaje ya está escrito.
   const R = armar()
@@ -759,7 +763,7 @@ esperas.push((async () => {
     X.htmlEstadoPlanilla({ turno: { estado: 'pendiente_completar', fecha: '2026-09-21', forzado_por: 'e-x', forzado_motivo: marca('motivoForzado') } }, '2026-09-22'),
     ['quien', 'motivoForzado'])
   chequearMarcas(chk, 'masas de la planilla',
-    X.htmlMasasPlanilla([{ nro: marca('nro'), hora: null, doble: false, origen: marca('origen') }]), ['nro', 'origen'])
+    X.htmlMasasPlanilla([{ nro: marca('nro'), hora: null, doble: false, origen: 'modificada', es_chocolate: true }]), ['nro'])
   chequearMarcas(chk, 'paradas',
     X.htmlParadas([{ motivo: marca('motivoParada'), inicio: null, fin: null }, { motivo: marca('motivoVieja'), inicio: null, fin: '2026-09-22T10:00:00Z' }]),
     ['motivoParada', 'motivoVieja'])
@@ -771,7 +775,7 @@ esperas.push((async () => {
   }
   const itemMalo = { id: marca('itemId'), sublote: marca('sublote'), presentacion_id: marca('presId'), marca_id: marca('marcaId'), cajas: 1, unidades: 1, embolsado: marca('embolsado') }
   chequearMarcas(chk, 'renglón producido', X.htmlProducido(itemMalo, catMalo),
-    ['itemId', 'sublote', 'producto', 'presentacion', 'empaque', 'cono', 'embolsado'])
+    ['itemId', 'sublote', 'producto', 'presentacion', 'cono', 'embolsado'])
   chequearMarcas(chk, 'renglón que ya no está',
     X.htmlProducido({ id: marca('idViejo'), sublote: marca('subViejo'), presentacion_id: 'nada', cajas: 1, unidades: 1 }, catMalo), ['subViejo'])
   chequearMarcas(chk, 'pasos de agregar',

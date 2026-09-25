@@ -39,7 +39,7 @@ correrMutaciones({
     { nombre: 'elegir una tarjeta no cierra', de: "      elegirOpcionLote(pl.ingredienteId, String(indice))\n      cerrarPanelLote(o.manual ? 'manual' : 'renglon')", a: '      elegirOpcionLote(pl.ingredienteId, String(indice))' },
     { nombre: 'elegir una tarjeta no elige', de: "      elegirOpcionLote(pl.ingredienteId, String(indice))\n      cerrarPanelLote(", a: "      cerrarPanelLote(" },
     { nombre: 'Escape no cierra', de: "      if (ev.key === 'Escape') { ev.preventDefault(); cerrarPanelLote(); return }\n", a: '' },
-    { nombre: 'el foco no da la vuelta', de: '      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }\n', a: '' },
+    { nombre: 'el foco no da la vuelta', de: "      const focos = [...panel.querySelectorAll('button:not([disabled])')]\n      if (!focos.length) return\n      const i = focos.indexOf(document.activeElement)\n      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }\n", a: "      const focos = [...panel.querySelectorAll('button:not([disabled])')]\n      if (!focos.length) return\n      const i = focos.indexOf(document.activeElement)\n" },
     { nombre: 'el foco no vuelve al renglón', de: '`[data-lote="${pl.ingredienteId}"]`', a: "'body'" },
     { nombre: 'el renglón no abre el panel', de: "const b = ev.target.closest('[data-lote]'); if (b) abrirPanelLote(b.dataset.lote)", a: "const b = ev.target.closest('[data-lote]'); void b" },
     { nombre: 'sin mensaje cuando no hay lotes', de: "'<p class=\"pr-lp__vacio\">No hay lotes con stock cargado de este insumo.</p>'", a: "''" },

@@ -182,7 +182,10 @@ esperas.push((async () => {
   chk('… scrap y observaciones', /3,5 kg/.test(hd) && /Se cortó la luz/.test(hd))
   chk('… los operarios con sus horas', /Ramón Díaz<\/span><span class="pr-renglon__dato">desde 06:02 · sigue/.test(hd), hd.slice(hd.indexOf('Ramón') - 60, hd.indexOf('Ramón') + 200))
   chk('… y el que se fue sigue en la lista, con su rango y su duración', /Marcos Vera<\/span><span class="pr-renglon__dato">06:02 → 08:40 · 2 h 38 min/.test(hd))
-  chk('… cada masa con su masero y su origen', /Masa 1<\/strong> · 06:30 · Común · Doble/.test(hd) && /masero Juan Masero/.test(hd) && /pr-chip-origen--modificada/.test(hd))
+  // Terminar la tablet, parte 5: SIMPLE / DOBLE en grande; "Modificada" solo en la que lo es; original sin chip.
+  chk('… cada masa con su tamaño, su masero y "Modificada" solo si lo es', /Masa 1<\/strong> · 06:30 · Común · <span class="pr-masa-tam">DOBLE<\/span>/.test(hd) &&
+    /Masa 2<\/strong> · 07:30 · Común · <span class="pr-masa-tam">SIMPLE<\/span> · masero/.test(hd) &&
+    /masero Juan Masero/.test(hd) && (hd.match(/pr-chip-modificada">Modificada</g) ?? []).length === 1 && !/pr-chip-origen|>Original</.test(hd), hd.slice(hd.indexOf('Masa 1') - 20, hd.indexOf('Masa 3')))
   chk('… el chip de chocolate solo en la masa que lo es', (hd.match(/pr-chip-choco/g) ?? []).length === 1 &&
     hd.indexOf('pr-chip-choco') > hd.indexOf('Masa 1') && hd.indexOf('pr-chip-choco') < hd.indexOf('Masa 2'))
   chk('… con ingredientes, insumo y lote', /Harina 50,4 kg \(Harina 000 · Jupiter, lote L-100\)/.test(hd))
@@ -195,7 +198,7 @@ esperas.push((async () => {
   chk('… las paradas con su duración', /09:00–09:45<\/strong> · Cambio de molde[\s\S]*45 min/.test(hd), hd.slice(hd.indexOf('Cambio de molde') - 200, hd.indexOf('Cambio de molde') + 80))
   chk('… y la que no volvió, marcada', /pr-renglon--novolvio[\s\S]*Se rompió el pulpo[\s\S]*4 h 00 min · no volvió en todo el turno/.test(hd),
     hd.slice(hd.indexOf('pulpo') - 220, hd.indexOf('pulpo') + 180))
-  chk('… los sublotes producidos con cajas y unidades', /7023-1<\/span> Cucuruchón Mini · Caja x600 · Común · 12 cajas × 600 = 7\.200 unidades/.test(hd))
+  chk('… los sublotes producidos con cajas y unidades', /7023-1<\/span> Cucuruchón Mini · caja x600 · 12 cajas = 7\.200 unidades/.test(hd), (hd.match(/7023-1.{0,160}/) || [''])[0])
   chk('… el anulado se sigue viendo, tachado y diciendo que no suma', /pr-of-anulado[\s\S]*7023-2[\s\S]*anulado, no suma/.test(hd))
   chk('… con sus correcciones, con motivo, quién y cuándo', /Cajas 15 → 12 · Se contaron mal · Ana Admin · 22\/09\/2026 11:00/.test(hd) &&
     /Anulado · Se cargó dos veces · Ana Admin/.test(hd), hd.slice(hd.indexOf('Se contaron mal') - 200, hd.indexOf('Se contaron mal') + 120))
@@ -284,7 +287,7 @@ esperas.push((async () => {
     turno: { lote: marca('loteT'), fecha: '2026-09-22', turno: marca('turnoT'), encargado_id: 'e', estado: 'cerrado', hora_inicio: '<i>x', hora_apagado: '<u>y', scrap_kg: 1, observaciones: marca('obs'),
       forzado_por: 'e', forzado_en: '2026-09-23T10:00:00Z', forzado_motivo: marca('forzado') },
     operarios: [{ empleado_id: 'e', desde: '2026-09-22T09:00:00Z', hasta: null }], nombres: new Map([['e', marca('persona')]]),
-    masas: [{ id: 'm1', nro: marca('nro'), hora: null, tipo_masa: marca('tipo'), doble: false, origen: marca('origen'), receta_id: 'r', masero_id: 'e', anulada: false, es_chocolate: true },
+    masas: [{ id: 'm1', nro: marca('nro'), hora: null, tipo_masa: marca('tipo'), doble: false, origen: 'modificada', receta_id: 'r', masero_id: 'e', anulada: false, es_chocolate: true },
       { id: 'm2', nro: 2, hora: null, tipo_masa: 'x', doble: false, origen: 'original', receta_id: 'r', masero_id: 'e', anulada: true, anulada_motivo: marca('motivo') }],
     items: [{ masa_id: 'm1', ingrediente_id: 'i', insumo_id: 'ins', lote: marca('loteIns'), cantidad_kg: 1 },
       { masa_id: 'm1', ingrediente_id: null, ingrediente_libre: marca('libre'), insumo_id: null, cantidad_kg: 2 }],
@@ -292,9 +295,9 @@ esperas.push((async () => {
     paradas: [{ motivo: marca('parada'), inicio: null, fin: null }],
     producido: [{ id: 'pi', sublote: marca('sublote'), presentacion_id: 'pr', marca_id: 'mk', cajas: 1, unidades_por_caja: 1, unidades: 1, anulado: false }],
     correcciones: [{ produccion_item_id: 'pi', tipo: marca('tipoCorr'), cajas_antes: 1, cajas_despues: 2, motivo: marca('motivoCorr'), hecha_por: 'e', hecha_en: '2026-09-22T14:00:00Z' }],
-    presentaciones: [{ id: 'pr', producto_id: 'p', nombre: marca('presentacion') }], productos: [{ id: 'p', nombre: marca('producto') }], marcas: [{ id: 'mk', nombre: marca('marcaProd') }],
+    presentaciones: [{ id: 'pr', producto_id: 'p', nombre: marca('presentacion'), con_cono: true }], productos: [{ id: 'p', nombre: marca('producto') }], marcas: [{ id: 'mk', nombre: marca('marcaProd') }],
   }
-  chequearMarcas(chk, 'detalle del turno', X.htmlDetalleTurno(dm), ['loteT', 'turnoT', 'persona', 'obs', 'forzado', 'nro', 'tipo', 'origen', 'motivo', 'loteIns', 'libre',
+  chequearMarcas(chk, 'detalle del turno', X.htmlDetalleTurno(dm), ['loteT', 'turnoT', 'persona', 'obs', 'forzado', 'nro', 'tipo', 'motivo', 'loteIns', 'libre',
     'ingrediente', 'insumo', 'marcaIns', 'parada', 'sublote', 'presentacion', 'producto', 'marcaProd', 'tipoCorr', 'motivoCorr'])
   const hh = X.htmlDetalleTurno(dm)
   chk('las horas se recortan a HH:MM y salen escapadas', hh.includes('&lt;i&gt;x') && hh.includes('&lt;u&gt;y') && !hh.includes('<i>x') && !hh.includes('<u>y'))

@@ -34,6 +34,10 @@ const BASES = [
   '54a216d', // Rediseño parte 3: la planilla, carga durante el turno y cierre
   '9e178ae', // Rediseño parte 4: la sala de masa y la receta
   '7865d76', // Rediseño parte 5: la configuración en la compu
+  'fe90f24', // Terminar la tablet, parte 1: acento naranja
+  '672cf2b', // Terminar la tablet, parte 2: la sesión de cada modo
+  '7bf9846', // Terminar la tablet, parte 3: el lote en tarjetas
+  '3918fd8', // Terminar la tablet, parte 4: las paradas con horarios
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].

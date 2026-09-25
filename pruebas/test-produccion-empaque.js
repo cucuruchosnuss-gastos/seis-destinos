@@ -382,12 +382,13 @@ esperas.push((async () => {
   const renglon = sub => { const i = lista.indexOf(`>${sub}<`); return lista.slice(i, lista.indexOf('pr-producido__botones', i)) }
   chk('un renglón dice su caja y su embolsado', /Caja N°1 Nuss · bolsa grande/.test(renglon('7023-1')), renglon('7023-1'))
   chk('… "doble bolsa"', /Caja N°1 Dolce Pasta · doble bolsa/.test(renglon('7023-2')))
-  chk('… sin caja, solo "sin bolsa"', /pr-producido__detalle">sin bolsa</.test(renglon('7023-3')), renglon('7023-3'))
+  // Terminar la tablet, parte 5: el embolsado 'ninguno' no se nombra (sin bolsa es lo que no se consumió).
+  chk('… sin caja y sin bolsa, no nombra ni caja ni bolsa', /pr-producido__detalle">sin configurar ×400</.test(renglon('7023-3')) && !/sin bolsa/.test(renglon('7023-3')), renglon('7023-3'))
   chk('… uno anterior al empaque no dice nada de más', (renglon('7023-4').match(/pr-producido__detalle/g) || []).length === 1, renglon('7023-4'))
   chk('… y una caja que ya no está en el catálogo se nombra igual', /Caja vieja Ex · bolsitas individuales/.test(renglon('7023-5')), renglon('7023-5'))
   chk('el nombre de esa caja se lee aparte, por id',
     S.__llamadas.consultas.some(([t, f]) => t === 'insumos' && JSON.stringify(f).includes('i-vieja')))
-  chk('una caja cuyo nombre no llegó no queda muda', S.textoEmpaqueItem({ caja_insumo_id: 'x', embolsado: null }, []) === 'caja sin nombre')
+  chk('una caja cuyo nombre no llegó no queda muda', S.nombreCajaItem({ caja_insumo_id: 'x', embolsado: null }, []) === 'caja sin nombre')
 })())
 
 // ── Parte 2: el permiso de stock ─────────────────────────────────────────
@@ -453,7 +454,7 @@ esperas.push((async () => {
     c && JSON.stringify(c[1]).includes('["in","produccion_item_id",["it-1","it-2","it-3","it-4","it-5"]]'), JSON.stringify(c?.[1]))
   chk('… con insumo y cantidad', /\binsumo_id\b/.test(select(S, 'stock_movimientos')) && /\bcantidad\b/.test(select(S, 'stock_movimientos')))
   const h = S.htmlDetalleTurno(d)
-  chk('el sublote dice su caja y embolsado en el historial', /GRIDO · Caja N°1 Nuss · bolsa grande · 10 cajas/.test(h), (h.match(/7023-1.{0,200}/) || [''])[0])
+  chk('el sublote dice su caja y embolsado en el historial', /Cucuruchón Mini · con cono · GRIDO · caja ×600 · Caja N°1 Nuss · bolsa grande · 10 cajas = 6\.000 unidades/.test(h), (h.match(/7023-1.{0,200}/) || [''])[0])
   const emp = h.slice(h.indexOf('Empaque consumido'))
   chk('el empaque consumido del turno tiene su sección', h.includes('<h2 class="pr-subtitulo">Empaque consumido</h2>'))
   chk('… neto: la devolución de 6 separadores se resta', /Separador N°1: <strong>24<\/strong>/.test(emp), emp)

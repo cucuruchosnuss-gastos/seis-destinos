@@ -116,6 +116,12 @@ const SEGURAS_PRODUCCION = [
   ['conAcc', 'clase CSS constante del código (" pr-renglon--acc") o vacío'],
   ['abre', 'HTML constante del código (la apertura de .pr-renglon__texto) o vacío'],
   ['cierra', 'HTML armado en htmlParadas: el cierre constante del span más el botón de htmlAccionesParada(), que escapa el id adentro, o vacío'],
+  // Terminar la tablet, parte 5: las listas de masas
+  ['chips', 'HTML constante del código: htmlChipsMasa() arma "Modificada" / "Chocolate" sin datos de nadie, o vacío'],
+  ['textoTamanoMasa(m)', 'constante del código: "SIMPLE" o "DOBLE"'],
+  ['textoTamanoMasa(b)', 'constante del código: "SIMPLE" o "DOBLE"'],
+  ['chipsDeMasa(m)', 'HTML constante del código (htmlChipsMasa): "Modificada" / "Chocolate" según banderas, sin datos de nadie'],
+  ['htmlChipsMasa({ modificada: !!b.cambiada, chocolate: esChocolate(b, estado.defineChocolate) })', 'HTML constante del código: los chips salen de dos booleanos'],
   ['htmlParadas(d.paradas, accionesParadaHistorial(t))', 'HTML armado por htmlParadas(), que escapa el motivo, las horas y el id adentro'],
   ['manual', 'HTML ya escapado: htmlCeldaLote() lo arma arriba con esc() del ingrediente, o vacío'],
   ["clases.join(' ')", 'clases CSS constantes del código, armadas con banderas de la fila'],

@@ -1104,13 +1104,21 @@
     .pr-masa-fila__estado { text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 0.625rem; flex-wrap: wrap; }
     .pr-masa-fila__espera { font-size: 1.125rem; font-weight: 800; color: var(--bordo-oscuro); }
     .pr-masa-fila__ok { font-size: 1.125rem; font-weight: 700; color: var(--verde-oscuro); }
-    /* Los tres chips de origen se distinguen TAMBIÉN sin color: borde, lleno
-       gris y lleno naranja. */
+    /* Los chips de origen quedan SOLO en la cabecera de la receta que se está
+       armando (ahí dicen de dónde sale esa masa). En las LISTAS de masas el
+       criterio es otro desde la parte 5 de terminar la tablet: ver
+       htmlChipsMasa(). "Modificada" va en bordó en los dos lugares. */
     .pr-chip-origen { display: inline-block; padding: 0.2rem 0.75rem; border-radius: 999px; font-size: 1.125rem; font-weight: 800;
       background: var(--pr-prod-fondo); color: var(--pr-prod-activo); }
     .pr-chip-origen--original { background: var(--color-fondo); border: 2px solid var(--pr-prod-apagado-borde);
       color: var(--pr-prod-activo); padding: 0.1rem 0.75rem; }
-    .pr-chip-origen--modificada { background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    .pr-chip-origen--modificada { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    /* Las listas de masas (planilla, sala e historial): lo grande es SIMPLE o
+       DOBLE; "Modificada" en bordó y "Chocolate" solo cuando lo son. */
+    .pr-masa-tam { font-size: 1.375rem; font-weight: 900; letter-spacing: 0.03em; }
+    .pr-chip-modificada { display: inline-block; padding: 0.2rem 0.75rem; border-radius: 999px; font-size: 1.125rem; font-weight: 800;
+      background: var(--bordo-suave); color: var(--bordo-oscuro); border: 2px solid var(--bordo); }
+    .pr-masa-chips { display: inline-flex; gap: 0.375rem; flex-wrap: wrap; align-items: center; }
 
     @media (max-width: 1100px) {
       .pr-sala { grid-template-columns: minmax(0, 1fr); }
@@ -1127,8 +1135,10 @@
       .pr-rec__cant { grid-column: 1 / -1; }
       .pr-rec__lote-celda { grid-column: 1 / -1; }
       .pr-rec__queda { grid-column: 1 / -1; text-align: left; }
-      .pr-masas__cab, .pr-masa-fila { grid-template-columns: 60px 80px minmax(0, 1fr) 150px; }
-      .pr-masas__cab span:nth-child(4), .pr-masa-fila__tam { display: none; }
+      /* Tablet vertical: se va la HORA, no el tamaño (SIMPLE / DOBLE es lo
+         grande de la fila). */
+      .pr-masas__cab, .pr-masa-fila { grid-template-columns: 60px minmax(0, 1fr) 110px minmax(0, auto) 150px; }
+      .pr-masas__cab span:nth-child(2), .pr-masa-fila__hora { display: none; }
     }
     @media (max-width: 760px) {
       .pr-receta__registrar { width: 100%; }
@@ -1272,7 +1282,8 @@
     .pr-of .pr-dato__valor { font-size: 1rem; }
     .pr-of .pr-lista__item { font-size: 0.9375rem; padding: 0.5rem 0.75rem; }
     .pr-of .pr-renglon { font-size: 0.9375rem; }
-    .pr-of .pr-chip-origen, .pr-of .pr-chip-choco { font-size: 0.8125rem; padding: 0.15rem 0.625rem; }
+    .pr-of .pr-chip-origen, .pr-of .pr-chip-choco, .pr-of .pr-chip-modificada { font-size: 0.8125rem; padding: 0.15rem 0.625rem; }
+    .pr-of .pr-masa-tam { font-size: 1rem; }
 
     .pr-of-tabla { border: 1px solid var(--color-borde); border-radius: 16px; overflow: hidden; background: #fff; }
     .pr-of-cab, .pr-of-fila {
@@ -1942,7 +1953,7 @@
         </div>
         <div class="pr-tarjeta pr-masas">
           <div class="pr-masas__cab">
-            <span>Masa</span><span>Hora</span><span>Máquina</span><span>Tamaño</span><span>Origen</span><span class="pr-masas__der">Estado</span>
+            <span>Masa</span><span>Hora</span><span>Máquina</span><span>Tamaño</span><span>Detalle</span><span class="pr-masas__der">Estado</span>
           </div>
           <div id="pr-masas-lista"></div>
         </div>
@@ -4004,7 +4015,7 @@
       // Las masas se MIRAN: cuántas van y cómo fueron las dos últimas. Las
       // carga el masero y desde acá no se editan.
       const { data: masas, error: e3 } = await supabase.from('masas')
-        .select('id, nro, hora, doble, origen').eq('turno_id', turnoId).eq('anulada', false).order('nro')
+        .select('id, nro, hora, doble, origen, es_chocolate').eq('turno_id', turnoId).eq('anulada', false).order('nro')
       if (e3) throw e3
       const { data: paradas, error: e4 } = await supabase.from('paradas_produccion')
         .select('id, inicio, fin, motivo').eq('turno_id', turnoId).order('inicio')
@@ -4033,7 +4044,22 @@
           console.error('nombres de las cajas:', err)
         }
       }
-      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja }
+      // Los conos de lo ya cargado, por id: el catálogo trae solo los ACTIVOS
+      // y un sublote puede tener uno que después se desactivó (hay 325 conos
+      // inactivos). Mismo criterio que la caja: si no se puede leer, no se
+      // voltea la planilla; el renglón dice "Cono que ya no está".
+      const marcaIds = [...new Set((items ?? []).map(it => it.marca_id).filter(Boolean))]
+      let marcasItems = []
+      if (marcaIds.length) {
+        try {
+          const { data: mk, error: e7 } = await supabase.from('marcas_personalizadas').select('id, nombre').in('id', marcaIds)
+          if (e7) throw e7
+          marcasItems = mk ?? []
+        } catch (err) {
+          console.error('nombres de los conos:', err)
+        }
+      }
+      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja, marcasItems }
     }
 
     function paradaEnCurso(paradas) {
@@ -4091,18 +4117,37 @@
 
     // ── La columna de la izquierda: lo que se MIRA ────────────────────────
 
+    // LAS LISTAS DE MASAS (planilla, sala e historial), terminar la tablet,
+    // parte 5: lo GRANDE es SIMPLE o DOBLE, que es lo que se controla. Los
+    // chips aparecen SOLO cuando dicen algo fuera de lo normal: "Modificada"
+    // en bordó cuando la masa se apartó de la receta, y "Chocolate" cuando
+    // lleva cacao (masas.es_chocolate, que escribe la base; en una masa que
+    // todavía no se mandó, la misma regla de la sala: esChocolate()).
+    // Original y Anterior NO llevan chip: son lo normal. Esto REEMPLAZA el
+    // criterio anterior de un chip por origen (blanco / gris / naranja).
+    function textoTamanoMasa(m) {
+      return m?.doble ? 'DOBLE' : 'SIMPLE'
+    }
+
+    function htmlChipsMasa({ modificada = false, chocolate = false } = {}) {
+      const chips = (modificada ? '<span class="pr-chip-modificada">Modificada</span>' : '') +
+        (chocolate ? '<span class="pr-chip-choco">Chocolate</span>' : '')
+      return chips ? `<span class="pr-masa-chips">${chips}</span>` : ''
+    }
+
+    function chipsDeMasa(m) {
+      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: !!m?.es_chocolate })
+    }
+
     // Las masas, en solo lectura: cuántas van y cómo fueron las dos últimas.
     function htmlMasasPlanilla(masas) {
       const lista = masas ?? []
       if (!lista.length) return '<p class="pr-texto-suave">Todavía no hay masas en esta máquina.</p>'
       const ultimas = lista.slice(-2).reverse()
       const hora = horaArgentina(ultimas[0].hora)
-      const filas = ultimas.map(m => {
-        const origen = ETIQUETA_ORIGEN[m.origen] ?? m.origen
-        return '<div class="pr-renglon">' +
-          `<span class="pr-renglon__num"><strong>${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${m.doble ? 'doble' : 'simple'}</span>` +
-          `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(origen)}</span></div>`
-      }).join('')
+      const filas = ultimas.map(m => '<div class="pr-renglon">' +
+        `<span class="pr-renglon__num"><strong>${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · <span class="pr-masa-tam">${textoTamanoMasa(m)}</span></span>` +
+        `${chipsDeMasa(m)}</div>`).join('')
       return '<div class="pr-masas__cuenta">' +
         `<span class="pr-masas__numero">${esc(lista.length)}</span>` +
         `<span class="pr-masas__ultima">${lista.length === 1 ? 'masa' : 'masas'}${hora ? ` · última ${esc(hora)}` : ''}</span></div>${filas}`
@@ -4203,18 +4248,28 @@
     // Todo lo que hace falta para mostrar un renglón, o null si su
     // presentación no está en el catálogo (se desactivó, o el catálogo no se
     // pudo leer).
-    function describirProducido(item, cat) {
+    //
+    // `marcasExtra`: los conos de lo ya cargado que NO están en el catálogo
+    // (el catálogo trae solo los activos, y un sublote viejo puede tener un
+    // cono que después se desactivó). Se leen por id en leerPlanilla().
+    function describirProducido(item, cat, marcasExtra = estado.planilla?.marcasItems) {
       const pr = (cat?.presentaciones ?? []).find(x => x.id === item.presentacion_id)
       if (!pr) return null
       const prod = (cat?.productos ?? []).find(x => x.id === pr.producto_id)
-      const marca = item.marca_id ? (cat?.marcas ?? []).find(m => m.id === item.marca_id) : null
+      const marca = item.marca_id ? [...(cat?.marcas ?? []), ...(marcasExtra ?? [])].find(m => m.id === item.marca_id) : null
+      const producto = prod?.nombre ?? 'Producto'
+      const marcaNombre = item.marca_id ? (marca?.nombre ?? 'Cono que ya no está') : null
+      // Las unidades por caja GUARDADAS en el renglón: cambiar la presentación
+      // no toca lo ya producido.
+      const unidadesPorCaja = item.unidades_por_caja ?? pr.unidades_por_caja
+      const conConoEnProducto = (cat?.presentaciones ?? []).some(x => x.producto_id === pr.producto_id && x.con_cono)
       return {
-        producto: prod?.nombre ?? 'Producto',
+        producto,
         presentacion: pr.nombre,
-        detalle: detallePresentacion(pr),
-        marca: item.marca_id ? (marca?.nombre ?? 'Marca que ya no está') : 'Común',
-        unidadesPorCaja: pr.unidades_por_caja,
-        unidades: item.cajas * pr.unidades_por_caja,
+        marca: marcaNombre ?? 'Común',
+        unidadesPorCaja,
+        unidades: item.cajas * unidadesPorCaja,
+        pr, conConoEnProducto, marcaNombre,
       }
     }
 
@@ -4238,17 +4293,68 @@
     // Un renglón de lo producido. Un ANULADO no se esconde: se muestra
     // anulado, porque ese sublote existió, se selló en una caja y su stock
     // entró y salió.
-    // La caja y el embolsado de un renglón ya cargado: "Caja N°1 Nuss · bolsa
-    // grande". Un renglón anterior al empaque (los dos en null) no dice nada.
-    // Texto plano: quien lo meta en HTML lo escapa.
-    function textoEmpaqueItem(it, insumos) {
+    // La caja de empaque de un renglón ya cargado ("Caja N°1 Nuss"), o '' si
+    // no tiene. Una caja cuyo nombre no llegó no queda muda. Texto plano.
+    function nombreCajaItem(it, insumos) {
+      if (!it?.caja_insumo_id) return ''
+      const ins = (insumos ?? []).find(i => i.id === it.caja_insumo_id)
+      return ins ? textoInsumoEmpaque(ins) : 'caja sin nombre'
+    }
+
+    // ── QUÉ ES UN RENGLÓN DE LO PRODUCIDO, DICHO UNA SOLA VEZ (terminar la
+    // tablet, parte 5). Antes decía "Caja con cono · con cono · Común · caja
+    // ×320": el nombre de la presentación, su detalle y el cono repetían lo
+    // mismo. Ahora, en este orden y sin nada repetido:
+    //
+    //   producto · con cono / sin cono · cono · caja ×N · caja de empaque · embolsado
+    //
+    //  - "con cono" si la presentación es con cono, y ahí el CONO: su marca, o
+    //    "Común" si no tiene. Sin cono, el cono no se nombra.
+    //  - "sin cono" SOLO si ese producto tiene alguna presentación con cono: en
+    //    un Vaso o una Oblea no hay nada que distinguir y sería ruido.
+    //  - El envase sale del nombre de la presentación SIN el "con cono" / "sin
+    //    cono" (que ya se dijo): "Caja con cono" → "caja", "Media caja" →
+    //    "media caja", "Caja N°2" → "caja N°2". Con las unidades por caja.
+    //  - La caja de empaque si tiene, y el embolsado en palabras si no es
+    //    'ninguno' (sin bolsa no se dice: es lo que no se consumió).
+    //  - Una parte cuyo texto (sin acentos ni mayúsculas) ya apareció, o que
+    //    es el nombre del producto, no se repite.
+    // La usan la planilla y el historial: una regla, un lugar. Devuelve texto
+    // plano; quien lo mete en HTML lo escapa.
+    function envasePresentacion(pr, producto) {
+      let t = String(pr?.nombre ?? '').replace(/(^|\s)(con|sin)\s+cono(?=\s|$)/gi, ' ').replace(/\s+/g, ' ').trim()
+      const k = normalizarBusqueda(t)
+      if (!k || k === 'caja' || normalizarBusqueda(producto).includes(k)) t = pr?.media_caja ? 'media caja' : 'caja'
+      return t.charAt(0).toLocaleLowerCase('es') + t.slice(1)
+    }
+
+    function partesProducido({ producto, pr, conConoEnProducto = false, marcaNombre = null, unidadesPorCaja, caja = '', embolsado = null }) {
       const partes = []
-      if (it?.caja_insumo_id) {
-        const ins = (insumos ?? []).find(i => i.id === it.caja_insumo_id)
-        partes.push(ins ? textoInsumoEmpaque(ins) : 'caja sin nombre')
+      const vistos = new Set([normalizarBusqueda(producto)])
+      const sumar = (t) => {
+        const k = normalizarBusqueda(t)
+        if (!k || vistos.has(k)) return
+        vistos.add(k)
+        partes.push(String(t))
       }
-      if (it?.embolsado) partes.push(TEXTO_EMBOLSADO[it.embolsado] ?? it.embolsado)
-      return partes.join(' · ')
+      if (pr?.con_cono) {
+        sumar('con cono')
+        sumar(marcaNombre ?? 'Común')
+      } else if (conConoEnProducto) {
+        sumar('sin cono')
+      }
+      // Si el nombre del envase ya trae las unidades ("Caja x600"), no se
+      // vuelven a poner.
+      const envase = envasePresentacion(pr, producto)
+      const cuantas = formatearNumeroAr(unidadesPorCaja, { decimales: 0 })
+      const yaLasDice = new RegExp(`[x×]\\s*${String(cuantas).replace(/\./g, '\\.?')}(?!\\d)`, 'i').test(envase)
+      sumar(yaLasDice ? envase : `${envase} ×${cuantas}`)
+      // Una caja de empaque que se llama como el envase ("Caja capelina" de la
+      // presentación y el insumo "Caja capelina") ya está dicha.
+      vistos.add(normalizarBusqueda(envase))
+      sumar(caja)
+      if (embolsado && embolsado !== 'ninguno') sumar(TEXTO_EMBOLSADO[embolsado] ?? embolsado)
+      return partes
     }
 
     // Un renglón que entró SIN CAJA: la caja no se descontó del stock.
@@ -4275,11 +4381,11 @@
       const d = describirProducido(it, cat)
       const sinCaja = sinCajaDescontada(it)
       const clases = 'pr-producido' + (it.anulado ? ' pr-producido--anulado' : '') + (d ? '' : ' pr-producido--invalido') + (sinCaja ? ' pr-producido--sin-caja' : '')
-      const empaque = textoEmpaqueItem(it, [...(insumosCaja ?? []), ...(cat?.insumos ?? [])])
+      const caja = nombreCajaItem(it, [...(insumosCaja ?? []), ...(cat?.insumos ?? [])])
+      const partes = d ? partesProducido({ ...d, caja, embolsado: it.embolsado }) : []
       const desc = d
         ? `<div class="pr-producido__nombre">${esc(d.producto)}</div>` +
-          `<div class="pr-producido__detalle">${esc([d.presentacion, d.detalle, d.marca].filter(Boolean).join(' · '))} · caja ×${esc(formatearNumeroAr(d.unidadesPorCaja, { decimales: 0 }))}</div>` +
-          (empaque ? `<div class="pr-producido__detalle">${esc(empaque)}</div>` : '')
+          `<div class="pr-producido__detalle">${esc(partes.join(' · '))}</div>`
         : (cat
           ? '<div class="pr-producido__nombre">Un producto que ya no está en el catálogo</div>' +
             '<div class="pr-producido__detalle">El sublote quedó cargado igual y su stock ya entró.</div>'
@@ -5428,10 +5534,28 @@
       return ult ? { marcaId: ult.marca_id, sublote: ult.sublote } : null
     }
 
+    // El buscador de conos (terminar la tablet, parte 5): filtra en CADA
+    // tecla desde la primera letra, sin acentos ni mayúsculas. Se ofrecen los
+    // ACTIVOS: los aprobados y los pendientes de revisar (recién propuestos,
+    // que llevan su chip "nuevo, a revisar"). Los rechazados y los inactivos
+    // NUNCA, aunque llegaran: el catálogo ya los pide con activa = true
+    // (revisar_marca pone activa = false al rechazar), y este filtro lo
+    // vuelve a exigir para no depender de cómo se leyó. Al 25/09/2026 hay 351
+    // conos: 26 activos y 325 inactivos.
+    function conoOfrecible(m) {
+      return !!m && m.activa !== false && (m.estado_alta === 'aprobada' || m.estado_alta === 'pendiente_revision')
+    }
+
+    // Genérica: la usan también las listas de Configuración (conos e
+    // insumos), que tienen sus propios criterios. No filtra estados.
     function marcasFiltradas(marcas, texto) {
       const q = normalizarBusqueda(texto)
       if (!q) return marcas ?? []
       return (marcas ?? []).filter(m => normalizarBusqueda(m.nombre).includes(q))
+    }
+
+    function conosParaElegir(marcas, texto) {
+      return marcasFiltradas((marcas ?? []).filter(conoOfrecible), texto)
     }
 
     // La lista de conos. "Común" va primera y es un caso real —un cono sin
@@ -5441,7 +5565,7 @@
       const elegida = a?.marcaId ?? null
       const comun = `<button type="button" class="pr-cono" data-marca="" aria-pressed="${a?.marcaElegida && !elegida ? 'true' : 'false'}">` +
         'Común<span class="pr-cono__nota">sin marca</span></button>'
-      const lista = marcasFiltradas(marcas, texto)
+      const lista = conosParaElegir(marcas, texto)
       const botones = lista.map(m => {
         const notas = (anterior && anterior.marcaId === m.id ? `<span class="pr-cono__nota">el de ${esc(anterior.sublote)}</span>` : '') +
           (m.estado_alta === 'pendiente_revision' ? '<span class="pr-cono__pendiente">nuevo, a revisar</span>' : '')
@@ -5677,10 +5801,14 @@
         const id = data?.marca_id
         if (!id) throw new Error('No se pudo agregar el cono.')
         if (!estado.catalogo.marcas.some(m => m.id === id)) {
-          // Si YA existía no se sabe en qué estado está, así que no se le pone
-          // ninguno: afirmar "a revisar" sobre un cono aprobado sería mentir.
+          // Si YA existía y no está en el catálogo (que trae todos los
+          // activos), está DADO DE BAJA: un cono inactivo no se ofrece nunca
+          // (parte 5), así que se dice en vez de agregarlo.
+          if (data?.ya_existia) throw new Error('Ese cono existe pero está dado de baja. Pedile a quien configura producción que lo reactive, o elegí otro.')
+          // Uno nuevo lo guarda la base como aprobado si quien lo propone
+          // configura producción, y si no, pendiente de revisar.
           estado.catalogo.marcas = [...estado.catalogo.marcas,
-            { id, nombre: nombre.toUpperCase(), estado_alta: data?.ya_existia ? null : 'pendiente_revision' }]
+            { id, nombre: nombre.toUpperCase(), estado_alta: tieneTarea('configurar') ? 'aprobada' : 'pendiente_revision' }]
             .sort((x, y) => String(x.nombre).localeCompare(String(y.nombre), 'es'))
         }
         document.getElementById('pr-agregar-cono-form').hidden = true
@@ -7393,14 +7521,13 @@
         `<span class="pr-masa-fila__nro">${esc(b.nro ?? '—')}</span>` +
         '<span class="pr-masa-fila__hora">—</span>' +
         `<span class="pr-masa-fila__maq">${esc(b.maquinaNombre ?? '')} · ${esc(b.lote ?? '')}</span>` +
-        `<span class="pr-masa-fila__tam">${b.doble ? 'Doble' : 'Simple'}</span>` +
-        '<span class="pr-masa-fila__origen"></span>' +
+        `<span class="pr-masa-fila__tam pr-masa-tam">${textoTamanoMasa(b)}</span>` +
+        `<span class="pr-masa-fila__origen">${htmlChipsMasa({ modificada: !!b.cambiada, chocolate: esChocolate(b, estado.defineChocolate) })}</span>` +
         '<span class="pr-masa-fila__estado"><span class="pr-masa-fila__espera">Esperando conexión</span></span>' +
         '</div>'
     }
 
     function htmlFilaMasaTurno(m, puedeAnular) {
-      const origen = ETIQUETA_ORIGEN[m.origen] ?? m.origen ?? ''
       const estadoHtml = m.anulada
         ? `<span class="pr-masa-fila__espera">Anulada${m.anulada_motivo ? `: ${esc(m.anulada_motivo)}` : ''}</span>`
         : '<span class="pr-masa-fila__ok">✓ Enviada</span>' +
@@ -7409,8 +7536,8 @@
         `<span class="pr-masa-fila__nro">${esc(m.nro)}</span>` +
         `<span class="pr-masa-fila__hora">${esc(horaArgentina(m.hora) || '—')}</span>` +
         `<span class="pr-masa-fila__maq">${esc(nombreDeTurno(m.turno_id))}</span>` +
-        `<span class="pr-masa-fila__tam">${m.doble ? 'Doble' : 'Simple'}${m.es_chocolate ? ' · choc.' : ''}</span>` +
-        `<span class="pr-masa-fila__origen"><span class="pr-chip-origen pr-chip-origen--${esc(m.origen ?? '')}">${esc(origen)}</span></span>` +
+        `<span class="pr-masa-fila__tam pr-masa-tam">${textoTamanoMasa(m)}</span>` +
+        `<span class="pr-masa-fila__origen">${chipsDeMasa(m)}</span>` +
         `<span class="pr-masa-fila__estado">${estadoHtml}</span></div>`
     }
 
@@ -9169,9 +9296,13 @@
       const correcciones = itemIds.length ? await leer(supabase.from('produccion_correcciones')
         .select('produccion_item_id, tipo, cajas_antes, cajas_despues, motivo, hecha_por, hecha_en').in('produccion_item_id', itemIds).order('hecha_en')) : []
       const presIds = [...new Set(producido.map(p => p.presentacion_id))]
-      const presentaciones = presIds.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre').in('id', presIds)) : []
+      const presentaciones = presIds.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, con_cono, media_caja').in('id', presIds)) : []
       const prodIds = [...new Set(presentaciones.map(p => p.producto_id))]
       const productos = prodIds.length ? await leer(supabase.from('productos_terminados').select('id, nombre').in('id', prodIds)) : []
+      // Qué productos tienen alguna presentación con cono: es lo que decide si
+      // un renglón dice "sin cono" (partesProducido).
+      const conCono = prodIds.length ? await leer(supabase.from('producto_presentaciones').select('producto_id, con_cono').in('producto_id', prodIds).eq('con_cono', true)) : []
+      const productosConCono = [...new Set(conCono.filter(x => x.con_cono === true).map(x => x.producto_id))]
       const marcaIds = [...new Set(producido.map(p => p.marca_id).filter(Boolean))]
       const marcas = marcaIds.length ? await leer(supabase.from('marcas_personalizadas').select('id, nombre').in('id', marcaIds)) : []
       // Los nombres salen de v_empleados_publico y NUNCA de un embed a
@@ -9179,7 +9310,7 @@
       // dejaría todos los nombres en blanco menos el tuyo.
       const nombres = await nombresDeEmpleados([turno.encargado_id, turno.forzado_por, turno.completado_por,
         ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id), ...correcciones.map(c => c.hecha_por)])
-      return { turno, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, marcas, nombres, empaque, insumosEmpaque }
+      return { turno, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque }
     }
 
     // El empaque que descontó el turno: los movimientos de stock_movimientos
@@ -9293,11 +9424,12 @@
         (i.insumo_id ? ` (${nombreInsumo(d, i.insumo_id)}${i.lote ? `, lote ${i.lote}` : ''}${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''})` : '')).join(' · ')
       const dif = textoDiferencias(diferenciaDeMasa(m, d))
       // El chip de chocolate sale de masas.es_chocolate, que escribe
-      // registrar_masa mirando los ingredientes: no se recalcula acá.
-      const choco = m.es_chocolate ? '<span class="pr-chip-choco">Chocolate</span>' : ''
+      // registrar_masa mirando los ingredientes: no se recalcula acá. Los
+      // chips, con el criterio de las listas (chipsDeMasa).
+      const chips = chipsDeMasa(m)
       return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
-        `<strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · ${m.doble ? 'Doble' : 'Simple'} · ` +
-        `<span class="pr-chip-origen pr-chip-origen--${esc(m.origen)}">${esc(ETIQUETA_ORIGEN[m.origen] ?? m.origen)}</span> ${choco} · masero ${esc(d.nombres.get(m.masero_id) ?? '—')}` +
+        `<strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · <span class="pr-masa-tam">${textoTamanoMasa(m)}</span>` +
+        `${chips ? ` ${chips}` : ''} · masero ${esc(d.nombres.get(m.masero_id) ?? '—')}` +
         (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}` : `<br>${esc(dif)}`) +
         `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
     }
@@ -9316,17 +9448,24 @@
       return `<div class="pr-of-correccion">${esc(que)} · ${esc(c.motivo)} · ${esc(d.nombres.get(c.hecha_por) ?? '—')}${cuando ? ` · ${esc(cuando)}` : ''}</div>`
     }
 
+    // El renglón dice qué es con la MISMA regla que la planilla
+    // (partesProducido), y después las cajas y las unidades. Las unidades por
+    // caja ya están en "caja ×N": no se repiten en la cuenta.
     function htmlSubloteHistorial(p, d) {
       const pr = d.presentaciones.find(x => x.id === p.presentacion_id)
       const prod = d.productos.find(x => x.id === pr?.producto_id)
-      const marcaNombre = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Marca') : 'Común'
+      const producto = prod?.nombre ?? 'Producto'
+      const marcaNombre = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Cono que ya no está') : null
       const corr = correccionesDe(d, p.id).map(c => htmlCorreccion(c, d)).join('')
-      const empaque = textoEmpaqueItem(p, d.insumosEmpaque)
       const sinCaja = sinCajaDescontada(p)
+      const que = [producto, ...partesProducido({
+        producto, pr, marcaNombre, unidadesPorCaja: p.unidades_por_caja,
+        conConoEnProducto: (d.productosConCono ?? []).includes(pr?.producto_id),
+        caja: nombreCajaItem(p, d.insumosEmpaque), embolsado: p.embolsado,
+      })].join(' · ')
       return `<li class="pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}${sinCaja ? ' pr-of-sin-caja' : ''}">` +
-        `<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(prod?.nombre ?? 'Producto')} · ${esc(pr?.nombre ?? '')} · ${esc(marcaNombre)} · ` +
-        (empaque ? `${esc(empaque)} · ` : '') +
-        `${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades` +
+        `<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(que)} · ` +
+        `${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades` +
         (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') +
         (sinCaja ? ` <strong class="pr-sin-caja">· ${esc(textoSinCaja(p))}</strong>` : '') + corr + '</li>'
     }
