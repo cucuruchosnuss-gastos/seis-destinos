@@ -2397,10 +2397,29 @@
     // CARGA DE DATOS — comunes a todos los roles
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Las cuentas de las tablets de la fábrica (una por unidad, "Tablet
+    // Producción · …") tienen login, así que la vista las marca con
+    // tiene_acceso=true y aparecían como PERSONAS: en el listado, el
+    // Directorio, los filtros y el selector de contraparte. No son personas y
+    // una solicitud a una tablet no la acepta nadie.
+    //
+    // La regla de fondo es empleados.es_dispositivo, pero v_empleados_publico
+    // NO expone esa columna (lista fija; ver CLAUDE.md). Hoy las tablets son
+    // exactamente las filas con tipo='sistema' (verificado el 25/09/2026:
+    // tipo sistema <=> es_dispositivo). Si la vista suma es_dispositivo, este
+    // filtro tiene que pasar a mirarla.
+    //
+    // Se filtra en el CLIENTE y no con .neq('tipo','sistema') en la consulta:
+    // en SQL `tipo <> 'sistema'` da NULL para tipo null y esa fila se
+    // descartaría en silencio. Acá una fila con tipo null se queda.
+    function esCuentaDeTablet(e) {
+      return e?.tipo === 'sistema'
+    }
+
     async function cargarSuperAdmins() {
-      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, caja_raiz, oculto_como_contraparte').eq('rol_app', 'super_admin')
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, tipo, caja_raiz, oculto_como_contraparte').eq('rol_app', 'super_admin')
       if (error) { mostrarError('No se pudieron cargar los super admins.'); return }
-      estado.superAdmins = data || []
+      estado.superAdmins = (data || []).filter(e => !esCuentaDeTablet(e))
     }
 
     // activo=true a propósito: no queremos que ex-empleados reales
@@ -2530,10 +2549,11 @@
     // poder aceptar nunca.
     async function cargarPersonasConAcceso() {
       const { data, error } = await supabase.from('v_empleados_publico')
-        .select('id, nombre, unidad_negocio_id, rol_app, caja_raiz, oculto_como_contraparte')
+        .select('id, nombre, tipo, unidad_negocio_id, rol_app, caja_raiz, oculto_como_contraparte')
         .eq('tiene_acceso', true).eq('activo', true).order('nombre')
       if (error) { mostrarError('No se pudieron cargar las personas.'); return false }
-      estado.empleados = data || []
+      // Las tablets tienen acceso pero no son personas: ver esCuentaDeTablet().
+      estado.empleados = (data || []).filter(e => !esCuentaDeTablet(e))
       asegurarEmpresaEnEmpleados()
       return true
     }
@@ -4275,7 +4295,8 @@
       // columna, y una de ellas lee v_empleados_publico, que es una vista con
       // lista fija de columnas. Si falta, esto no filtra nada y no da ningún
       // error. Ver cargarSuperAdmins() y cargarPersonasConAcceso().
-      candidatos = candidatos.filter(c => !c.oculto_como_contraparte)
+      // Y ninguna tablet, aunque una lista llegara sin filtrar al cargar.
+      candidatos = candidatos.filter(c => !c.oculto_como_contraparte && !esCuentaDeTablet(c))
 
       // Empresa como contraparte solo cuando NO es ya mi lado.
       if (!desdeEmpresa && estado.idEmpresa && !candidatos.some(c => c.id === estado.idEmpresa)) {
