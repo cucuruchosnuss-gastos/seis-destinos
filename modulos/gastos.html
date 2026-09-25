@@ -3535,7 +3535,7 @@
 
     console.log('[empleados] Ejecutando consulta a Supabase — tabla: empleados, filtro: activo = true')
     const { data: empleadosInicial, error: errorEmpleados } = await supabase
-      .from('v_empleados_publico').select('id, nombre').eq('activo', true).order('nombre')
+      .from('v_empleados_publico').select('id, nombre, tipo').eq('activo', true).order('nombre')
     console.log('[empleados] Resultado de Supabase — data:', empleadosInicial, '| error:', errorEmpleados)
     if (errorEmpleados) {
       console.error('[empleados] Error al cargar — message:', errorEmpleados.message,
@@ -4564,8 +4564,33 @@
     // WIZARD — SELECT EMPLEADOS
     // ═══════════════════════════════════════════════════════════════════════
 
+    // ── Cuentas de las tablets de la fábrica ───────────────────────────────
+    // Las tablets de Producción tienen una fila en `empleados` para poder
+    // loguearse, pero NO son personas: no se les atribuye un gasto ni se
+    // ofrecen en ninguna lista de personas de este módulo.
+    //
+    // LA REGLA DE FONDO ES `empleados.es_dispositivo = true`. v_empleados_publico
+    // no expone esa columna, así que se usa `tipo = 'sistema'`, que hoy coincide
+    // exactamente con las tablets (verificado el 25/09/2026: 3 filas, las 3
+    // con es_dispositivo). Si la vista suma `es_dispositivo`, este filtro
+    // tiene que pasar a mirarla.
+    //
+    // Se filtra EN EL CLIENTE y no con .neq('tipo', 'sistema') en la consulta:
+    // en SQL `tipo <> 'sistema'` da NULL para las filas con tipo null y las
+    // descarta en silencio — desaparecería gente de verdad.
+    //
+    // estado.maestros.empleados queda COMPLETO a propósito: también se usa
+    // para resolver un nombre por id, y ahí no hay nada que filtrar.
+    function esCuentaDeTablet(e) {
+      return e?.tipo === 'sistema'
+    }
+
+    function personasElegibles() {
+      return (estado.maestros.empleados ?? []).filter(e => !esCuentaDeTablet(e))
+    }
+
     function poblarSelectEmpleados(unidadId) {
-      const todos   = estado.maestros.empleados
+      const todos   = personasElegibles()
       const naaloo  = todos.filter(e => e.tipo !== 'admin')
       const admins  = todos.filter(e => e.tipo === 'admin')
 
@@ -5641,6 +5666,20 @@
       document.getElementById('modal-detalle-gasto').removeAttribute('hidden')
     }
 
+    // Personas del selector de la edición: las elegibles, MÁS la del propio
+    // gasto si justo es una cuenta de tablet (hoy ninguno lo es). Sin esa
+    // excepción el select no la encontraría, quedaría en "— Ninguno —" y el
+    // guardado le borraría la persona al gasto sin ningún aviso — el mismo
+    // caso que el proyecto dado de baja. No se ofrece para elegirla: solo
+    // no se pierde la que ya estaba.
+    function personasParaEditar(g) {
+      const lista = personasElegibles()
+      const idActual = g?.empleados?.id ?? g?.empleado_id
+      const actual = idActual ? estado.maestros.empleados.find(e => e.id === idActual) : null
+      if (actual && esCuentaDeTablet(actual)) lista.push(actual)
+      return lista
+    }
+
     function mostrarFormularioEdicionGasto(id) {
       const g = estado.listaGastos.find(x => x.id === id)
       if (!g) return
@@ -5671,7 +5710,7 @@
       const selectEmpleado = `
         <select id="edit-empleado">
           <option value="">— Ninguno —</option>
-          ${estado.maestros.empleados.map(e => `<option value="${esc(e.id)}" ${g.empleados?.id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}
+          ${personasParaEditar(g).map(e => `<option value="${esc(e.id)}" ${g.empleados?.id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}
         </select>`
 
       // estado.maestros.proyectos trae solo los ACTIVOS. Si el proyecto de este

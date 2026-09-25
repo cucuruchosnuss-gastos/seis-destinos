@@ -156,6 +156,7 @@ const FUNCIONES = [
   'esc', 'formatearImporte', 'formatearImporteDuplicado', 'fechaAPeriodo', 'opcionesProyectoEdicion', 'diasEntre',
   'enlazarCamposNumeroWizard', 'importeDelWizard', 'kilometrajeDelWizard',
   'validarSubpaso', 'armarGasto', 'armarFacturaPendiente', 'prellenarPaso2', 'importeDeOcr', 'cargarGastoDesdeIngreso',
+  'esCuentaDeTablet', 'personasElegibles', 'personasParaEditar',
   'mostrarFormularioEdicionGasto', 'mostrarFormularioEdicionFactura', 'mostrarFormularioInteres',
 ]
 
