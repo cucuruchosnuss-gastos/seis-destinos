@@ -1015,6 +1015,55 @@
     .pr-lp__otros { display: flex; flex-direction: column; gap: 0.625rem; padding-top: 0.875rem; border-top: 2px dashed var(--pr-borde-boton); }
     .pr-lp__pie { display: flex; gap: 0.625rem; flex-wrap: wrap; }
     .pr-lp__pie .pr-btn { flex: 1 1 12rem; }
+
+    /* ── Anotar / corregir / borrar una parada (terminar la tablet, parte 4)
+       Reusa la caja del panel de lotes. Las horas NUNCA van en un input del
+       sistema: − / + de a 5 minutos, y tocando el número se abre el teclado
+       propio de abajo. */
+    /* El editor tiene su propio scroll: con el teclado de horas abierto, en una
+       pantalla chica, "Guardar" tiene que seguir alcanzándose sin mover la página. */
+    #pr-parada-editor .pr-lp__caja { overflow-y: auto; }
+    .pr-hp { display: flex; flex-direction: column; gap: 0.5rem; }
+    .pr-hp__fila { display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap; }
+    .pr-hp__rotulo { font-size: 1.125rem; font-weight: 700; min-width: 8.5rem; }
+    .pr-hp__paso {
+      width: 64px; min-height: 64px; flex-shrink: 0; font: inherit; font-size: 1.75rem; font-weight: 700;
+      border-radius: 14px; border: 2px solid var(--pr-borde-boton); background: var(--color-fondo);
+      color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-hp__num {
+      min-width: 8rem; min-height: 64px; font: inherit; font-size: 1.75rem; font-weight: 900;
+      font-variant-numeric: tabular-nums; border-radius: 14px; border: 2px solid var(--pr-borde-boton);
+      background: var(--color-fondo); color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-hp__num[aria-pressed="true"] { border: 3px solid var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    .pr-hp__paso:focus-visible, .pr-hp__num:focus-visible, .pr-hp__tecla:focus-visible, .pr-hp__sigue:focus-visible {
+      outline: 3px solid var(--naranja); outline-offset: 2px;
+    }
+    .pr-hp__dia { font-size: 1.125rem; color: var(--pr-texto-secundario); }
+    .pr-hp__sigue {
+      min-height: var(--pr-alto-boton); padding: 0 1.125rem; font: inherit; font-size: 1.125rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--pr-borde-boton); background: var(--color-fondo);
+      color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-hp__sigue[aria-pressed="true"] { border: 3px solid var(--bordo); background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pr-hp__teclado { display: grid; grid-template-columns: repeat(3, minmax(0, 88px)); gap: 0.5rem; }
+    .pr-hp__tecla {
+      min-height: 60px; font: inherit; font-size: 1.5rem; font-weight: 800; border-radius: 14px;
+      border: 2px solid var(--pr-borde-boton); background: var(--color-fondo); color: var(--color-texto);
+      cursor: pointer; touch-action: manipulation;
+    }
+    .pr-hp__tecla--accion { background: var(--naranja); border-color: var(--naranja); color: #fff; }
+    .pr-hp__resumen { font-size: 1.25rem; font-weight: 700; overflow-wrap: anywhere; }
+    /* Corregir y borrar, en el renglón de cada parada. */
+    /* Corregir, en el renglón de cada parada: UN botón a la derecha (borrar
+       está adentro del editor). Dos botones no entran al lado del texto en
+       la columna de la planilla y cada parada pasaba a ocupar dos renglones. */
+    .pr-renglon--acc { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.625rem; }
+    .pr-renglon__texto { display: flex; flex-direction: column; min-width: 0; }
+    .pr-bloque__cab--boton { align-items: center; }
+    .pr-bloque__cab--boton .pr-btn { font-size: 1.125rem; padding: 0 1rem; }
+    .pr-renglon__accion { min-height: var(--pr-alto-boton); font-size: 1.125rem; padding: 0 1rem; }
     .pr-rec__manual { margin-top: 0.375rem; width: 100%; min-height: var(--pr-alto-boton); font-size: 1.125rem; }
     .pr-rec__queda { font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
     .pr-rec__queda--poco { color: var(--bordo-oscuro); font-weight: 900; }
@@ -1540,7 +1589,7 @@
           <div class="pr-planilla-cab__que" id="pr-planilla-que"></div>
           <div class="pr-planilla-cab__botones">
             <button type="button" class="pr-btn pr-btn--secundario" id="pr-planilla-volver">&lsaquo; Máquinas</button>
-            <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-parada">Parada</button>
+            <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-parada">Paró ahora</button>
             <span class="pr-planilla-cab__sep" aria-hidden="true"></span>
             <button type="button" class="pr-btn pr-btn--accion pr-planilla-cab__cerrar" id="pr-btn-cerrar-planilla">Cerrar planilla</button>
           </div>
@@ -1567,7 +1616,12 @@
               <div id="pr-planilla-masas"></div>
             </div>
             <div class="pr-tarjeta">
-              <div class="pr-bloque__cab"><span class="pr-bloque__titulo">Paradas</span></div>
+              <!-- En la fábrica primero se arregla la máquina y se anota
+                   después: "Paró ahora" no puede ser la única forma. El botón
+                   va en la cabecera del bloque y no abajo a lo ancho: así la
+                   planilla crece 26 px y no 72 (1280×800 sin scroll). -->
+              <div class="pr-bloque__cab pr-bloque__cab--boton"><span class="pr-bloque__titulo">Paradas</span>
+                <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-anotar-parada">Anotar una parada</button></div>
               <div id="pr-planilla-paradas"></div>
             </div>
           </div>
@@ -1784,6 +1838,27 @@
           <div class="pr-tarjeta pr-sala__der" id="pr-sala-panel"></div>
         </div>
       </section>
+
+      <!-- Anotar, corregir o borrar una parada. Lo abren la planilla y el
+           detalle del historial. Las horas se cargan con − / + y el teclado
+           propio: nada de input type=time. -->
+      <div class="pr-lp" id="pr-parada-editor" hidden role="dialog" aria-modal="true" aria-labelledby="pr-parada-editor-titulo">
+        <div class="pr-lp__caja">
+          <h2 class="pr-lp__titulo" id="pr-parada-editor-titulo" tabindex="-1"></h2>
+          <div id="pr-parada-editor-resumen"></div>
+          <label class="pr-campo" id="pr-parada-editor-campo-motivo">
+            <span class="pr-campo__rotulo" id="pr-parada-editor-motivo-rotulo">Motivo</span>
+            <input type="text" id="pr-parada-editor-motivo" class="pr-input" maxlength="300" autocomplete="off">
+          </label>
+          <div id="pr-parada-editor-horas"></div>
+          <p class="pr-error" id="pr-parada-editor-error" hidden></p>
+          <div class="pr-acciones">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-parada-editor-cancelar">Cancelar</button>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-parada-editor-a-borrar" hidden>Borrar esta parada</button>
+            <button type="button" class="pr-btn pr-btn--accion" id="pr-parada-editor-guardar">Guardar</button>
+          </div>
+        </div>
+      </div>
 
       <!-- El panel de lotes de un renglón de la receta. Foco atrapado, Escape
            cierra y el foco vuelve al renglón. -->
@@ -4035,25 +4110,44 @@
 
     // Las paradas: la EN CURSO primero y en bordó, porque es la única que
     // sigue pasando; las terminadas con su rango y su duración.
-    function htmlParadas(paradas) {
+    //
+    // Con `acciones` ({ editar, borrar }), cada renglón lleva UN botón
+    // (terminar la tablet, parte 4): "Corregir" si se puede corregir —y ahí
+    // adentro está "Borrar esta parada" si también se puede borrar—, o
+    // "Borrar" si solo se puede borrar (configurar sin cargar, en el
+    // historial). Qué se ofrece lo decide quien llama, según dónde está y qué
+    // permisos hay.
+    function htmlAccionesParada(p, acciones) {
+      if (acciones?.editar) return `<button type="button" class="pr-btn pr-btn--secundario pr-renglon__accion" data-parada-editar="${esc(p.id)}">Corregir</button>`
+      if (acciones?.borrar) return `<button type="button" class="pr-btn pr-btn--secundario pr-renglon__accion" data-parada-borrar="${esc(p.id)}">Borrar</button>`
+      return ''
+    }
+
+    function htmlParadas(paradas, acciones = null) {
       const lista = paradas ?? []
       if (!lista.length) return '<p class="pr-texto-suave">Sin paradas en este turno.</p>'
       const orden = [...lista.filter(p => !p.fin), ...lista.filter(p => p.fin)]
       return orden.map(p => {
         const desde = horaArgentina(p.inicio) || '—'
         const dur = duracionTexto(p.inicio, p.fin)
+        // Con botón, el texto va en su propia columna y el botón a la derecha;
+        // sin botón, el renglón es el de siempre.
+        const acc = htmlAccionesParada(p, acciones)
+        const conAcc = acc ? ' pr-renglon--acc' : ''
+        const abre = acc ? '<span class="pr-renglon__texto">' : ''
+        const cierra = acc ? `</span>${acc}` : ''
         if (!p.fin) {
-          return '<div class="pr-renglon pr-renglon--curso">' +
+          return `<div class="pr-renglon pr-renglon--curso${conAcc}">${abre}` +
             `<span class="pr-renglon__num"><strong>${esc(desde)}</strong> · ${esc(p.motivo)}</span>` +
-            `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}</span></div>`
+            `<span class="pr-renglon__dato">en curso${dur ? ` · ${esc(dur)}` : ''}</span>${cierra}</div>`
         }
         // hasta_fin_de_turno lo pone cerrar_turno sobre la parada que quedó
         // abierta: la máquina NO volvió en todo el turno. En la planilla nunca
         // llega en true (se escribe al cerrar) y el historial sí lo trae.
         const novolvio = p.hasta_fin_de_turno ? ' pr-renglon--novolvio' : ''
-        return `<div class="pr-renglon${novolvio}">` +
+        return `<div class="pr-renglon${novolvio}${conAcc}">${abre}` +
           `<span class="pr-renglon__num"><strong>${esc(desde)}–${esc(horaArgentina(p.fin) || '—')}</strong> · ${esc(p.motivo)}</span>` +
-          `<span class="pr-renglon__dato">${esc(dur)}${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}</span></div>`
+          `<span class="pr-renglon__dato">${esc(dur)}${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}</span>${cierra}</div>`
       }).join('')
     }
 
@@ -4327,7 +4421,9 @@
       document.getElementById('pr-planilla-estado').innerHTML = htmlEstadoPlanilla(p, hoyArgentina())
       pintarOperariosPlanilla()
       document.getElementById('pr-planilla-masas').innerHTML = htmlMasasPlanilla(p.masas)
-      document.getElementById('pr-planilla-paradas').innerHTML = htmlParadas(p.paradas)
+      // En la planilla (abierta o pendiente de completar) se corrige y se
+      // borra con produccion:cargar, que es lo que piden las RPCs ahí.
+      document.getElementById('pr-planilla-paradas').innerHTML = htmlParadas(p.paradas, { editar: true, borrar: true })
       pintarProducido()
       const enCurso = paradaEnCurso(p.paradas)
       document.getElementById('pr-parada-activa').hidden = !enCurso
@@ -4338,7 +4434,10 @@
       pintarBotonesPlanilla()
     }
 
-    // "Parada" solo aparece SIN parada en curso: la base rechaza una segunda.
+    // "Paró ahora" solo aparece SIN parada en curso (la base rechaza una
+    // segunda) y con el turno ABIERTO: iniciar_parada rechaza cualquier otro
+    // estado, y en una planilla pendiente de completar "ahora" no es una hora
+    // del turno. Ahí queda "Anotar una parada", con sus dos horas.
     //
     // "Cerrar planilla" SIEMPRE se puede, y eso cambió a propósito: cerrar_turno
     // da por terminada la parada que quedó abierta y la marca como que la
@@ -4348,7 +4447,8 @@
     function pintarBotonesPlanilla() {
       const p = estado.planilla
       const enCurso = p ? paradaEnCurso(p.paradas) : null
-      document.getElementById('pr-btn-parada').hidden = !p || !!enCurso
+      document.getElementById('pr-btn-parada').hidden = !p || !!enCurso || p.turno.estado !== 'abierto'
+      document.getElementById('pr-btn-anotar-parada').hidden = !p
       const cerrar = document.getElementById('pr-btn-cerrar-planilla')
       cerrar.disabled = !p
       cerrar.textContent = p && p.turno.estado === 'pendiente_completar' ? 'Completar la planilla' : 'Cerrar planilla'
@@ -4425,6 +4525,372 @@
       } finally {
         btn.disabled = false
       }
+    }
+
+    // ── Anotar, corregir y borrar una parada (terminar la tablet, parte 4)
+    //
+    // "PARÓ AHORA" SIGUE CON iniciar_parada, a propósito: la hora la pone el
+    // now() del servidor (un reloj de tablet atrasado no la corre) y la RPC solo
+    // vale con el turno 'abierto', que es justo cuando "ahora" tiene sentido.
+    // Por eso el botón se esconde en una planilla pendiente de completar.
+    // "Anotar una parada" es para después de arreglar la máquina:
+    // registrar_parada con las dos horas, o sin la de vuelta si sigue parada.
+    //
+    // OJO — las RPCs nuevas (registrar/editar/borrar_parada) solo tratan
+    // 'cerrado' como cerrado: una planilla 'pendiente_completar' entra por la
+    // rama de abierta (alcanza con produccion:cargar y borrar no pide motivo).
+    // La pantalla hace lo mismo: 'pendiente_completar' se maneja desde la
+    // planilla, como una abierta, salvo que ahí NO se ofrece "Todavía no
+    // volvió" (la máquina ya no está en marcha).
+    //
+    // A QUÉ DÍA VA CADA HORA. La fecha es la del turno. El huso de Argentina es
+    // fijo (−03:00, sin horario de verano), así que el ISO se arma a mano y da
+    // lo mismo la zona del dispositivo. La hora de PARADA va a la PRIMERA vez
+    // que esa hora cae desde la apertura menos 1 hora (el mismo piso de la
+    // base): en un turno de noche, 23:50 es el día del turno y 02:10 el
+    // siguiente. Si así queda después del tope ("ahora" más los 5 minutos de
+    // la base, o el cierre si la planilla está cerrada) se dice antes de
+    // mandar. La de VUELTA va a la primera vez que esa hora cae DESPUÉS de la
+    // parada: si es menor, es del día siguiente (CRUCE DE MEDIANOCHE), pero
+    // solo si la parada queda en 12 horas o menos —lo que dura un turno—; más
+    // que eso es un error de tipeo ("paró 14:00, volvió 13:55") y se dice.
+
+    // La tolerancia de "no futura" y el piso de 1 hora antes de abrir son los
+    // de registrar_parada. Una parada que cruza medianoche dura como mucho un
+    // turno (12 horas).
+    const MS_DIA = 86400000
+    const TOLERANCIA_FUTURO_MS = 5 * 60000
+    const PISO_APERTURA_MS = 3600000
+    const MAX_CRUCE_MS = 12 * 3600000
+
+    function instanteAr(dia, hhmm) {
+      return new Date(`${dia}T${hhmm}:00-03:00`).getTime()
+    }
+
+    function isoAr(ms) {
+      const d = new Date(ms)
+      return `${hoyArgentina(d)}T${horaArgentina(d)}:00-03:00`
+    }
+
+    // Piso y tope del turno, en milisegundos.
+    function limitesParada(turno, ahora = new Date()) {
+      const piso = turno?.abierto_en ? new Date(turno.abierto_en).getTime() - PISO_APERTURA_MS
+        : instanteAr(turno?.fecha ?? hoyArgentina(ahora), '00:00')
+      const cerrado = turno?.estado === 'cerrado' && !!turno?.cerrado_en
+      const tope = Math.min(new Date(ahora).getTime(), cerrado ? new Date(turno.cerrado_en).getTime() : Infinity) + TOLERANCIA_FUTURO_MS
+      return { piso, tope, cerrado }
+    }
+
+    // { inicio, fin } en ISO con −03:00, o { error } en palabras.
+    function resolverHorasParada(f, turno, ahora = new Date()) {
+      const h1 = normalizarHora(f.inicio)
+      if (!h1) return { error: 'Poné la hora en que paró.' }
+      const { piso, tope, cerrado } = limitesParada(turno, ahora)
+      let ini = instanteAr(hoyArgentina(new Date(piso)), h1)
+      if (ini < piso) ini += MS_DIA
+      if (ini > tope) return { error: 'La hora en que paró no entra en el turno.' }
+      if (f.sigue) return { inicio: isoAr(ini), fin: null }
+      const h2 = normalizarHora(f.fin)
+      if (!h2) return { error: 'Poné la hora en que volvió, o marcá que todavía no volvió.' }
+      let fin = instanteAr(hoyArgentina(new Date(ini)), h2)
+      if (fin <= ini) fin += MS_DIA
+      if (h2 <= h1 && fin - ini > MAX_CRUCE_MS) return { error: 'La hora de vuelta tiene que ser después de la de parada.' }
+      if (fin > tope) return { error: cerrado ? 'La hora de vuelta es posterior al cierre de la planilla.' : 'La hora de vuelta no puede ser futura.' }
+      return { inicio: isoAr(ini), fin: isoAr(fin) }
+    }
+
+    // Lo que falta, en palabras. Lista vacía = se puede mandar.
+    function faltanParaParada(f, ahora = new Date()) {
+      const faltan = []
+      const motivo = String(f.motivo ?? '').trim()
+      if (f.modo === 'borrar') {
+        if (f.turno.estado === 'cerrado' && motivo.length < 3) faltan.push('Escribí por qué se borra, con tres letras por lo menos.')
+        return faltan
+      }
+      if (motivo.length < 2) faltan.push('Escribí el motivo de la parada.')
+      const h = resolverHorasParada(f, f.turno, ahora)
+      if (h.error) faltan.push(h.error)
+      // editar_parada NO valida que queden dos abiertas: lo ataja la pantalla.
+      if (f.sigue && (f.paradas ?? []).some(p => !p.fin && p.id !== f.paradaId)) {
+        faltan.push('Ya hay una parada sin terminar en esta planilla: terminala primero.')
+      }
+      return faltan
+    }
+
+    // Una hora de a 5 minutos, redondeada para abajo.
+    function horaRedondeada(fecha = new Date()) {
+      const h = horaArgentina(fecha)
+      if (!h) return ''
+      const min = Number(h.slice(3))
+      return `${h.slice(0, 3)}${String(min - (min % 5)).padStart(2, '0')}`
+    }
+
+    // La hora "de ahora" para arrancar el formulario: el cierre si la planilla
+    // está cerrada, cuándo se la cerró a la fuerza si quedó pendiente de
+    // completar (puede estar completándose días después), si no ahora mismo.
+    function horaDeReferencia(turno, ahora = new Date()) {
+      if (turno?.estado === 'cerrado' && turno.cerrado_en) return horaRedondeada(new Date(turno.cerrado_en))
+      if (turno?.estado === 'pendiente_completar' && turno.forzado_en) return horaRedondeada(new Date(turno.forzado_en))
+      return horaRedondeada(ahora)
+    }
+
+    function abrirEditorParada({ modo, turno, paradas, parada = null, contexto, puedeBorrar = false }) {
+      tocar()
+      const ref = horaDeReferencia(turno)
+      estado.paradaForm = {
+        modo, contexto, turno, paradas: paradas ?? [], puedeBorrar: !!puedeBorrar,
+        paradaId: parada?.id ?? null,
+        motivo: modo === 'borrar' ? '' : (parada?.motivo ?? ''),
+        inicio: parada ? (horaArgentina(parada.inicio) || '') : horaConPaso(ref, -15),
+        fin: parada ? (parada.fin ? (horaArgentina(parada.fin) || '') : ref) : ref,
+        // Una parada abierta arranca "todavía no volvió" SOLO si el turno está
+        // abierto: en otro estado el botón no se dibuja y la vuelta tiene que
+        // poder escribirse.
+        sigue: !!parada && !parada.fin && turno?.estado === 'abierto',
+        parada,
+        teclado: null, buffer: '',
+        intentado: false, enviando: false, errorBase: '',
+      }
+      document.getElementById('pr-parada-editor-motivo').value = estado.paradaForm.motivo
+      pintarEditorParada()
+      document.getElementById('pr-parada-editor').hidden = false
+      // El foco va al título y NO al motivo: en la tablet, enfocar el campo
+      // de texto abre el teclado del sistema y tapa las horas.
+      document.getElementById('pr-parada-editor-titulo').focus()
+    }
+
+    function cerrarEditorParada() {
+      estado.paradaForm = null
+      document.getElementById('pr-parada-editor').hidden = true
+    }
+
+    // "Borrar esta parada", desde el editor: el MISMO panel pasa a ser la
+    // confirmación (qué parada es, y el motivo si la planilla está cerrada).
+    // Nada se borra hasta tocar "Borrar la parada".
+    function pasarABorrarParada() {
+      const f = estado.paradaForm
+      if (!f || f.modo !== 'editar' || !f.puedeBorrar) return
+      tocar()
+      Object.assign(f, { modo: 'borrar', motivo: '', teclado: null, buffer: '', intentado: false, errorBase: '' })
+      document.getElementById('pr-parada-editor-motivo').value = ''
+      pintarEditorParada()
+      document.getElementById('pr-parada-editor-titulo').focus()
+    }
+
+    // "Todavía no volvió" solo tiene sentido con el turno ABIERTO: una
+    // planilla cerrada o pendiente de completar ya no tiene la máquina parada.
+    function puedeSeguirParada(f) {
+      return f.turno.estado === 'abierto'
+    }
+
+    function htmlCampoHora(clave, rotulo, valor, f) {
+      const activo = f.teclado === clave
+      const muestra = activo ? (f.buffer ? f.buffer.padEnd(4, '·').replace(/^(..)(..)$/, '$1:$2') : '··:··') : (normalizarHora(valor) || '—')
+      return `<div class="pr-hp__fila"><span class="pr-hp__rotulo">${esc(rotulo)}</span>` +
+        `<button type="button" class="pr-hp__paso" data-hora-paso="${esc(clave)}" data-minutos="-5" aria-label="${esc(rotulo)}: 5 minutos menos">−</button>` +
+        `<button type="button" class="pr-hp__num" data-hora-tocar="${esc(clave)}" aria-pressed="${activo ? 'true' : 'false'}" aria-label="${esc(rotulo)}: ${esc(normalizarHora(valor) || 'sin hora')}. Tocá para escribirla">${esc(muestra)}</button>` +
+        `<button type="button" class="pr-hp__paso" data-hora-paso="${esc(clave)}" data-minutos="5" aria-label="${esc(rotulo)}: 5 minutos más">+</button></div>`
+    }
+
+    // El teclado propio de las horas: nunca el del sistema.
+    function htmlTecladoHora() {
+      let out = '<div class="pr-hp__teclado" role="group" aria-label="Teclado de la hora">'
+      for (let d = 1; d <= 9; d++) out += `<button type="button" class="pr-hp__tecla" data-hora-tecla="${d}">${d}</button>`
+      out += '<button type="button" class="pr-hp__tecla" data-hora-tecla="borrar">Borrar</button>'
+      out += '<button type="button" class="pr-hp__tecla" data-hora-tecla="0">0</button>'
+      out += '<button type="button" class="pr-hp__tecla pr-hp__tecla--accion" data-hora-tecla="listo">Listo</button>'
+      return out + '</div>'
+    }
+
+    // En qué día cae lo que está escrito, para que se vea cuando no es el del
+    // turno (una parada de la noche que siguió después de medianoche).
+    function textoDiaParada(f) {
+      const h = resolverHorasParada(f, f.turno)
+      if (h.error) return ''
+      const dIni = h.inicio.slice(0, 10), dFin = h.fin ? h.fin.slice(0, 10) : dIni
+      const diaTurno = f.turno.fecha
+      if (dIni === diaTurno && dFin === diaTurno) return ''
+      return `Paró el ${fechaDelDia(dIni)}${h.fin ? ` y volvió el ${fechaDelDia(dFin)}` : ''}.`
+    }
+
+    function htmlHorasParada(f) {
+      if (f.modo === 'borrar') return ''
+      const sigue = puedeSeguirParada(f)
+        ? `<button type="button" class="pr-hp__sigue" data-hora-sigue="1" aria-pressed="${f.sigue ? 'true' : 'false'}">Todavía no volvió</button>`
+        : ''
+      const vuelta = f.sigue ? '' : htmlCampoHora('fin', 'Volvió a las', f.fin, f)
+      const dia = textoDiaParada(f)
+      return '<div class="pr-hp">' + htmlCampoHora('inicio', 'Paró a las', f.inicio, f) + vuelta + sigue +
+        (dia ? `<p class="pr-hp__dia">${esc(dia)}</p>` : '') +
+        (f.teclado ? htmlTecladoHora() : '') + '</div>'
+    }
+
+    function tituloEditorParada(f) {
+      if (f.modo === 'anotar') return 'Anotar una parada'
+      if (f.modo === 'editar') return 'Corregir la parada'
+      return 'Borrar la parada'
+    }
+
+    // EL ERROR VA AL ESTADO, NO AL DOM: el único que escribe el mensaje es este
+    // render, que decide entre lo que falta y lo que contestó la base. Así un
+    // repintado no tapa el error de la base (lo que pasó en el cierre).
+    function pintarEditorParada() {
+      const f = estado.paradaForm
+      if (!f) return
+      document.getElementById('pr-parada-editor-titulo').textContent = tituloEditorParada(f)
+      const resumen = document.getElementById('pr-parada-editor-resumen')
+      if (f.modo === 'borrar' && f.parada) {
+        const desde = horaArgentina(f.parada.inicio) || '—'
+        const hasta = f.parada.fin ? (horaArgentina(f.parada.fin) || '—') : 'sigue'
+        resumen.innerHTML = `<p class="pr-hp__resumen">${esc(desde)}–${esc(hasta)} · ${esc(f.parada.motivo)}</p>`
+      } else {
+        resumen.innerHTML = ''
+      }
+      const cerrada = f.turno.estado === 'cerrado'
+      document.getElementById('pr-parada-editor-campo-motivo').hidden = f.modo === 'borrar' && !cerrada
+      document.getElementById('pr-parada-editor-motivo-rotulo').textContent = f.modo === 'borrar'
+        ? '¿Por qué se borra? (la planilla ya está cerrada)' : 'Motivo'
+      document.getElementById('pr-parada-editor-horas').innerHTML = htmlHorasParada(f)
+      const faltan = faltanParaParada(f)
+      const texto = f.errorBase || (f.intentado && faltan.length ? faltan[0] : '')
+      const errEditor = document.getElementById('pr-parada-editor-error')
+      errEditor.textContent = texto
+      errEditor.hidden = !texto
+      const btn = document.getElementById('pr-parada-editor-guardar')
+      btn.textContent = f.modo === 'borrar' ? 'Borrar la parada' : 'Guardar'
+      document.getElementById('pr-parada-editor-a-borrar').hidden = !(f.modo === 'editar' && f.puedeBorrar)
+      btn.className = f.modo === 'borrar' ? 'pr-btn pr-btn--peligro' : 'pr-btn pr-btn--accion'
+      // El botón se traba SOLO mientras se manda: lo que falta se dice al
+      // tocarlo. Deshabilitarlo por lo que falta haría inalcanzable el error.
+      btn.disabled = !!f.enviando
+    }
+
+    function cambiarHoraParada(clave, minutos) {
+      const f = estado.paradaForm
+      if (!f || f.modo === 'borrar') return
+      tocar()
+      f[clave] = horaConPaso(normalizarHora(f[clave]) || horaDeReferencia(f.turno), minutos)
+      f.teclado = null
+      f.errorBase = ''
+      pintarEditorParada()
+    }
+
+    function tocarHoraParada(clave) {
+      const f = estado.paradaForm
+      if (!f) return
+      tocar()
+      f.teclado = f.teclado === clave ? null : clave
+      f.buffer = ''
+      pintarEditorParada()
+    }
+
+    // 3 o 4 números: "930" es 09:30 y "1745" es 17:45. Lo que no es una hora
+    // de verdad no se escribe.
+    function teclaHoraParada(t) {
+      const f = estado.paradaForm
+      if (!f || !f.teclado) return
+      tocar()
+      if (t === 'borrar') f.buffer = f.buffer.slice(0, -1)
+      else if (t === 'listo') {
+        if (f.buffer) {
+          const h = normalizarHora(f.buffer)   // "930" ya es 09:30 para normalizarHora
+          if (h) { f[f.teclado] = h; f.errorBase = '' }
+          else { f.errorBase = 'Esa hora no existe. Escribila con 4 números, por ejemplo 0930.' }
+        }
+        f.teclado = null
+        f.buffer = ''
+      } else if (/^[0-9]$/.test(t) && f.buffer.length < 4) f.buffer += t
+      pintarEditorParada()
+    }
+
+    function alternarSigueParada() {
+      const f = estado.paradaForm
+      if (!f || !puedeSeguirParada(f)) return
+      tocar()
+      f.sigue = !f.sigue
+      if (f.teclado === 'fin') f.teclado = null
+      f.errorBase = ''
+      pintarEditorParada()
+    }
+
+    function parametrosParada(f, horas) {
+      const motivo = String(f.motivo ?? '').trim()
+      if (f.modo === 'anotar') return ['registrar_parada', { p_turno_id: f.turno.id, p_motivo: motivo, p_inicio: horas.inicio, p_fin: horas.fin }]
+      if (f.modo === 'editar') return ['editar_parada', { p_parada_id: f.paradaId, p_motivo: motivo, p_inicio: horas.inicio, p_fin: horas.fin }]
+      return ['borrar_parada', { p_parada_id: f.paradaId, p_motivo: f.turno.estado === 'cerrado' ? motivo : null }]
+    }
+
+    async function guardarParada() {
+      const f = estado.paradaForm
+      if (!f || f.enviando) return
+      f.motivo = document.getElementById('pr-parada-editor-motivo').value
+      f.intentado = true
+      f.errorBase = ''
+      const faltan = faltanParaParada(f)
+      if (faltan.length) return pintarEditorParada()
+      const horas = f.modo === 'borrar' ? null : resolverHorasParada(f, f.turno)
+      const [rpc, params] = parametrosParada(f, horas)
+      f.enviando = true
+      pintarEditorParada()
+      try {
+        const { error } = await supabase.rpc(rpc, params)
+        if (error) throw error
+      } catch (e) {
+        console.error(rpc + ':', e)
+        f.enviando = false
+        // El mensaje de la base TAL CUAL: ya viene escrito para una persona.
+        f.errorBase = e?.message || 'No se pudo guardar la parada. Revisá la conexión y probá de nuevo.'
+        return pintarEditorParada()
+      }
+      const { contexto, turno, modo } = f
+      cerrarEditorParada()
+      mostrarExito(modo === 'borrar' ? 'Parada borrada.' : 'Parada guardada.')
+      if (contexto === 'historial') return abrirDetalleHistorial(turno.id)
+      return abrirPlanilla(turno.id)
+    }
+
+    function abrirEditorDesdePlanilla(modo, paradaId = null) {
+      const p = estado.planilla
+      if (!p) return
+      const parada = paradaId ? (p.paradas ?? []).find(x => x.id === paradaId) ?? null : null
+      if (paradaId && !parada) return
+      // En la planilla (abierta o pendiente) borrar pide lo mismo que corregir: cargar.
+      abrirEditorParada({ modo, turno: p.turno, paradas: p.paradas, parada, contexto: 'planilla', puedeBorrar: true })
+    }
+
+    // En el historial, SOLO en una planilla CERRADA y con los permisos que
+    // piden las RPCs en esa unidad: corregir o anotar exige cargar Y
+    // configurar (editar_parada y registrar_parada piden cargar siempre, y
+    // configurar si está cerrada); borrar, configurar. Las abiertas se
+    // manejan desde la planilla.
+    function accionesParadaHistorial(turno) {
+      if (!turno || turno.estado !== 'cerrado') return { editar: false, borrar: false }
+      const u = turno.unidad_negocio_id
+      const configura = unidadesCon('configurar').includes(u)
+      const carga = unidadesCon('cargar').includes(u)
+      return { editar: configura && carga, borrar: configura }
+    }
+
+    function abrirEditorDesdeHistorial(modo, paradaId = null) {
+      const d = estado.detalleHistorial
+      if (!d) return
+      const acc = accionesParadaHistorial(d.turno)
+      if (modo === 'borrar' ? !acc.borrar : !acc.editar) return
+      const parada = paradaId ? (d.paradas ?? []).find(x => x.id === paradaId) ?? null : null
+      if (paradaId && !parada) return
+      abrirEditorParada({ modo, turno: d.turno, paradas: d.paradas, parada, contexto: 'historial', puedeBorrar: acc.borrar })
+    }
+
+    function teclaEditorParada(ev) {
+      if (!estado.paradaForm) return
+      if (ev.key === 'Escape') { ev.preventDefault(); cerrarEditorParada(); return }
+      if (ev.key !== 'Tab') return
+      const panel = document.getElementById('pr-parada-editor')
+      const focos = [...panel.querySelectorAll('button:not([disabled]), input:not([disabled])')]
+      if (!focos.length) return
+      const i = focos.indexOf(document.activeElement)
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }
+      else if (!ev.shiftKey && i === focos.length - 1) { ev.preventDefault(); focos[0].focus() }
     }
 
     // ── Cerrar a la fuerza ────────────────────────────────────────────────
@@ -5495,6 +5961,25 @@
       document.getElementById('pr-planilla-volver').addEventListener('click', mostrarTablero)
       document.getElementById('pr-btn-parada').addEventListener('click', mostrarFormParada)
       document.getElementById('pr-parada-cancelar').addEventListener('click', () => { document.getElementById('pr-parada-form').hidden = true })
+      document.getElementById('pr-btn-anotar-parada').addEventListener('click', () => abrirEditorDesdePlanilla('anotar'))
+      document.getElementById('pr-planilla-paradas').addEventListener('click', ev => {
+        const e = ev.target.closest('[data-parada-editar]'); if (e) return abrirEditorDesdePlanilla('editar', e.dataset.paradaEditar)
+        const b = ev.target.closest('[data-parada-borrar]'); if (b) abrirEditorDesdePlanilla('borrar', b.dataset.paradaBorrar)
+      })
+      const editor = document.getElementById('pr-parada-editor')
+      editor.addEventListener('click', ev => {
+        if (ev.target === editor || ev.target.closest('#pr-parada-editor-cancelar')) return cerrarEditorParada()
+        if (ev.target.closest('#pr-parada-editor-guardar')) return guardarParada()
+        if (ev.target.closest('#pr-parada-editor-a-borrar')) return pasarABorrarParada()
+        const paso = ev.target.closest('[data-hora-paso]'); if (paso) return cambiarHoraParada(paso.dataset.horaPaso, Number(paso.dataset.minutos))
+        const num = ev.target.closest('[data-hora-tocar]'); if (num) return tocarHoraParada(num.dataset.horaTocar)
+        const tecla = ev.target.closest('[data-hora-tecla]'); if (tecla) return teclaHoraParada(tecla.dataset.horaTecla)
+        if (ev.target.closest('[data-hora-sigue]')) return alternarSigueParada()
+      })
+      editor.addEventListener('keydown', teclaEditorParada)
+      document.getElementById('pr-parada-editor-motivo').addEventListener('input', ev => {
+        if (estado.paradaForm) { estado.paradaForm.motivo = ev.target.value; estado.paradaForm.errorBase = '' }
+      })
       document.getElementById('pr-parada-confirmar').addEventListener('click', confirmarParada)
       document.getElementById('pr-parada-sugerencias').addEventListener('click', ev => {
         const b = ev.target.closest('[data-sugerencia]'); if (b) document.getElementById('pr-parada-motivo').value = b.dataset.sugerencia
@@ -8889,7 +9374,8 @@
       return forzado + cab +
         `<h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}` +
         `<h2 class="pr-subtitulo">Masas</h2><ul class="pr-lista">${masas}</ul>` +
-        `<h2 class="pr-subtitulo">Paradas</h2>${htmlParadas(d.paradas)}` +
+        `<h2 class="pr-subtitulo">Paradas</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t))}` +
+        (accionesParadaHistorial(t).editar ? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada</button>' : '') +
         `<h2 class="pr-subtitulo">Lo producido</h2><ul class="pr-lista">${producido}</ul>${pieProducido}` +
         `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2>${incompleto}<ul class="pr-lista">${totales}</ul>` +
         `<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}`
@@ -8901,8 +9387,10 @@
       document.getElementById('pr-historial-detalle').hidden = false
       cont.innerHTML = '<p class="pr-texto-suave">Cargando el turno…</p>'
       try {
-        cont.innerHTML = htmlDetalleTurno(await leerDetalleTurno(turnoId))
+        estado.detalleHistorial = await leerDetalleTurno(turnoId)
+        cont.innerHTML = htmlDetalleTurno(estado.detalleHistorial)
       } catch (err) {
+        estado.detalleHistorial = null
         console.error('detalle del turno:', err)
         cont.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer el turno. Revisá la conexión.</div>'
       }
@@ -9001,6 +9489,12 @@
       document.getElementById('pr-historial-estado').addEventListener('change', cambio('estado'))
       document.getElementById('pr-historial-lista').addEventListener('click', ev => {
         const b = ev.target.closest('[data-historial-turno]'); if (b) abrirDetalleHistorial(b.dataset.historialTurno)
+      })
+      // Corregir, borrar y anotar paradas de una planilla CERRADA.
+      document.getElementById('pr-historial-detalle-cuerpo').addEventListener('click', ev => {
+        if (ev.target.closest('#pr-historial-anotar-parada')) return abrirEditorDesdeHistorial('anotar')
+        const e = ev.target.closest('[data-parada-editar]'); if (e) return abrirEditorDesdeHistorial('editar', e.dataset.paradaEditar)
+        const b = ev.target.closest('[data-parada-borrar]'); if (b) abrirEditorDesdeHistorial('borrar', b.dataset.paradaBorrar)
       })
       document.getElementById('pr-stock-unidad').addEventListener('change', ev => { estado.stockUnidad = ev.target.value; cargarStockTerminado() })
     }

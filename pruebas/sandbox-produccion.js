@@ -36,6 +36,12 @@ const FUNCIONES_BASE = [
   // Terminar la tablet, parte 3: el panel de lotes
   'textoVacioLote', 'marcarLoteTerminado', 'leerFechasLotes', 'textoFechaLote', 'fechaLote', 'htmlTarjetaLote',
   'htmlPanelLote', 'pintarPanelLote', 'abrirPanelLote', 'cerrarPanelLote', 'elegirTarjetaLote', 'teclaPanelLote',
+  // Terminar la tablet, parte 4: anotar, corregir y borrar paradas
+  'htmlAccionesParada', 'instanteAr', 'isoAr', 'limitesParada', 'resolverHorasParada', 'faltanParaParada', 'horaRedondeada',
+  'horaDeReferencia', 'abrirEditorParada', 'cerrarEditorParada', 'puedeSeguirParada', 'htmlCampoHora', 'htmlTecladoHora',
+  'textoDiaParada', 'htmlHorasParada', 'tituloEditorParada', 'pintarEditorParada', 'cambiarHoraParada', 'tocarHoraParada',
+  'teclaHoraParada', 'alternarSigueParada', 'parametrosParada', 'guardarParada', 'abrirEditorDesdePlanilla',
+  'accionesParadaHistorial', 'abrirEditorDesdeHistorial', 'teclaEditorParada', 'pasarABorrarParada',
   'nuevoPanelPin', 'primerNombre', 'textoIntentos', 'mensajeDePin', 'cuentaRegresiva',
   'htmlPuntosPin', 'htmlTecladoPin', 'htmlProgresoPin', 'saludoPin', 'subtituloPin',
   'htmlMensajePin', 'pintarPin', 'teclaPin', 'cerrarPin', 'aplicarRechazoPin',
@@ -148,6 +154,7 @@ const CONSTANTES_BASE = [
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION',
   'EMBOLSADOS', 'TEXTO_EMBOLSADO', 'CONDICIONES_EMPAQUE',
   'AVISO_SALA_REINTENTAR',
+  'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS',
 ]
 
 const PRELUDIO = `

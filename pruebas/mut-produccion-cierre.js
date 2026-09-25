@@ -124,7 +124,8 @@ correrMutaciones({
     { nombre: 'cerrar se bloquea con una parada en curso', de: '      cerrar.disabled = !p\n', a: '      cerrar.disabled = !p || !!enCurso\n' },
     { nombre: 'el cierre no se abre con una parada en curso', de: '    async function mostrarCierre() {\n      const p = estado.planilla\n      if (!p) return', a: '    async function mostrarCierre() {\n      const p = estado.planilla\n      if (!p || paradaEnCurso(p.paradas)) return' },
     { nombre: 'la parada en curso no va primera', de: '      const orden = [...lista.filter(p => !p.fin), ...lista.filter(p => p.fin)]', a: '      const orden = [...lista]' },
-    { nombre: 'la parada en curso no se marca', de: "          return '<div class=\"pr-renglon pr-renglon--curso\">' +", a: "          return '<div class=\"pr-renglon\">' +" },
+    // Terminar la tablet, parte 4: el renglón suma la clase del botón de corregir (conAcc/abre).
+    { nombre: 'la parada en curso no se marca', de: '          return `<div class="pr-renglon pr-renglon--curso${conAcc}">${abre}` +', a: '          return `<div class="pr-renglon${conAcc}">${abre}` +' },
     { nombre: 'la franja de parada no aparece', de: "      document.getElementById('pr-parada-activa').hidden = !enCurso", a: "      document.getElementById('pr-parada-activa').hidden = true" },
     { nombre: 'la franja no dice hace cuánto', de: "      document.getElementById('pr-parada-activa-hace').textContent = enCurso", a: "      document.getElementById('pr-parada-activa-hace').textContent = false" },
     { nombre: 'motivo de parada de una letra', de: "      if (motivo.length < 2) { err.textContent", a: "      if (motivo.length < 1) { err.textContent" },
