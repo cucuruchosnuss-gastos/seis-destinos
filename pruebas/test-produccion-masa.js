@@ -249,12 +249,28 @@ esperas.push((async () => {
   // "Queda": lo que queda DESPUÉS de esta masa.
   chk('queda = stock − lo que consume esta masa', /pr-rec__queda">75 kg/.test(filas), filas.slice(0, 200))
   chk('cuando no alcanza para otra, en bordó y con el aviso', /pr-rec__queda pr-rec__queda--poco">90 g/.test(filas) && /no alcanza para otra/.test(filas), filas.slice(0, 200))
-  chk('menos de un kilo se lee en gramos, como se habla en la sala', /Lote 3310 · 240 g/.test(filas) && /Lote 24518 · Harina 000 · Júpiter · 200 kg/.test(filas))
+  // Terminar la tablet, parte 3: lo que queda de cada lote ya no va en una
+  // opción del <select> sino en la tarjeta del panel.
+  R.abrirPanelLote('i-lecitina')
+  const tarjetasLec = R.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
+  R.cerrarPanelLote()
+  R.abrirPanelLote('i-harina')
+  const tarjetasHar = R.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
+  R.cerrarPanelLote()
+  chk('menos de un kilo se lee en gramos, como se habla en la sala', /pr-lp__queda-num">240 g</.test(tarjetasLec) && /pr-lp__queda-num">200 kg</.test(tarjetasHar), tarjetasLec)
   chk('… y el renglón entero se tinta', /pr-rec pr-rec--floja/.test(filas))
   const DOB = await hastaLaReceta(armar(), { como: 'anterior', doble: true })
   chk('en una doble, "Queda" descuenta el doble', /pr-rec__queda">50 kg/.test(DOB.__doc.getElementById('pr-receta-filas').innerHTML),
     DOB.__doc.getElementById('pr-receta-filas').innerHTML.slice(0, 200))
-  chk('el lote que se terminó: el desplegable en bordó lo dice', /pr-rec__lote pr-rec__lote--terminado" data-lote="i-sal"/.test(filas) && /Se terminó · elegí otro/.test(filas))
+  // Terminar la tablet, parte 3: el lote de la anterior que NO figura con
+  // stock (S-VIEJO) ya no se da por terminado solo: la base no distingue "se
+  // agotó" de "nunca tuvo ingreso". Queda elegido, con "sin ingreso cargado".
+  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span>Lote S-VIEJO<\/span><span class="pr-rec__lote-nota">sin ingreso cargado<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
+  chk('… y NO bloquea Registrar', R.__doc.getElementById('pr-receta-registrar').disabled === false)
+  // Recién cuando la persona dice que se terminó se pide otro.
+  R.marcarLoteTerminado('i-sal')
+  const filasTerm = R.__doc.getElementById('pr-receta-filas').innerHTML
+  chk('el lote que se terminó: el botón en bordó lo dice', /pr-rec__lote pr-rec__lote--terminado" data-lote="i-sal"/.test(filasTerm) && /Se terminó · elegí otro/.test(filasTerm))
   chk('… Registrar bloqueado y el pie dice cuál', R.__doc.getElementById('pr-receta-registrar').disabled === true &&
     R.__doc.getElementById('pr-receta-error').textContent === 'Falta elegir otro lote de sal: el que estaba se terminó.', R.__doc.getElementById('pr-receta-error').textContent)
   chk('la cabecera: máquina, lote, número de masa y los chips', /Máquina 1<\/span><span class="pr-receta__sub">Lote 7023 · masa 3<\/span>/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) &&
@@ -272,9 +288,8 @@ esperas.push((async () => {
   R.elegirOpcionLote('i-sal', 0)
   chk('elegir un lote de la lista: insumo Y lote juntos', R.estado.masa.lotes['i-sal'].insumo_id === 'ins-sal' && R.estado.masa.lotes['i-sal'].lote === 'S-2')
   chk('… y el pie se destraba', R.__doc.getElementById('pr-receta-registrar').disabled === false && R.__doc.getElementById('pr-receta-error').hidden === true)
-  // El desplegable tiene DOS opciones con value="" ("Elegí el lote" y, cuando
-  // se terminó, "Se terminó · elegí otro"). Number('') es 0, así que sin el
-  // guard volver a la vacía elegiría el PRIMER lote sin que nadie lo tocara.
+  // Un índice vacío no elige nada. Number('') es 0, así que sin el guard un
+  // índice vacío elegiría el PRIMER lote sin que nadie lo tocara.
   R.elegirOpcionLote('i-sal', '')
   chk('volver a la opción vacía NO elige el primer lote de la lista', R.estado.masa.lotes['i-sal'].insumo_id === '' && R.estado.masa.lotes['i-sal'].lote === null)
   chk('… y Registrar vuelve a bloquearse, diciendo cuál falta', R.__doc.getElementById('pr-receta-registrar').disabled === true &&

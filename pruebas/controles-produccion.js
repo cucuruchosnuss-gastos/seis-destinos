@@ -151,6 +151,12 @@ const RETIRADOS = [
     'Rediseño parte 4: el "Reintentar ahora" del asistente se fue con el asistente. El reintento sigue estando —y es ' +
     'el mismo: reintentarPendientes()— en el botón de la banda bordó de pendientes, #pr-sala-reintentar, que ya ' +
     'existía y ahora es el único. Además se reintenta solo al volver la conexión, cada 30 s y al entrar a la sala.'],
+  ['control:select[data-lote]',
+    'Terminar la tablet, parte 3: el desplegable del sistema para el lote se reemplazó por un BOTÓN del renglón ' +
+    '(button[data-lote], mismo data-lote, misma celda) que abre un panel propio con una tarjeta por lote —marca ' +
+    'grande, lote, fecha si se sabe y cuánto queda— para tocar con las manos sucias. Elegir es data-lote-op, "Se ' +
+    'terminó" es #pr-lote-panel-se-termino y cerrar es #pr-lote-panel-cerrar. El <select> tenía además DOS opciones ' +
+    'vacías que decían cosas distintas ("Elegí el lote" y "Se terminó · elegí otro"); el botón dice una sola.'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

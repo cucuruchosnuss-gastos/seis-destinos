@@ -108,7 +108,10 @@ const SEGURAS_PRODUCCION = [
   ['detalleHtml', 'HTML armado por detalleAnterior() —que escapa el número, la hora, el lote y las diferencias— o texto ya escapado en el call site'],
   ['apagado', 'clase CSS constante del código (" pr-sala__apagado"), o vacía'],
   ['tipo', 'HTML ya escapado: htmlCabeceraReceta() lo arma arriba con esc(b.tipo), o vacío'],
-  ['opciones', 'HTML armado por htmlOpcionesLote(), que escapa la etiqueta de cada opción, más la de "Se terminó", constante'],
+  // Terminar la tablet, parte 3: el <select> del lote se fue (y con él htmlOpcionesLote y sus "opciones").
+  ['nota', 'HTML constante del código (el "sin ingreso cargado" del lote), o vacío'],
+  ['queda', 'HTML ya escapado: htmlTarjetaLote() lo arma arriba con esc(textoCantidad()), o vacío'],
+  ['i', 'el índice numérico de la opción de lote (forEach), no un dato de la base'],
   ['manual', 'HTML ya escapado: htmlCeldaLote() lo arma arriba con esc() del ingrediente, o vacío'],
   ["clases.join(' ')", 'clases CSS constantes del código, armadas con banderas de la fila'],
   ['htmlCeldaLote(it, b, e)', 'HTML armado por htmlCeldaLote(), que escapa adentro'],

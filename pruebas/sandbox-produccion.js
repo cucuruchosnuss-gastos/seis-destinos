@@ -33,6 +33,9 @@ const FUNCIONES_BASE = [
   // Terminar la tablet, parte 2: una persona por modo, sacar al masero, la sala que no queda vacía
   'clavePersona', 'olvidarTodas', 'puedeSacarMasero', 'maseroAdentro', 'htmlMaseroAdentro', 'pintarMaseroAdentro',
   'sacarMasero', 'pintarQuienFija', 'soyOtraPersona', 'maquinaCerrada', 'sacarMaseroPorCierre',
+  // Terminar la tablet, parte 3: el panel de lotes
+  'textoVacioLote', 'marcarLoteTerminado', 'leerFechasLotes', 'textoFechaLote', 'fechaLote', 'htmlTarjetaLote',
+  'htmlPanelLote', 'pintarPanelLote', 'abrirPanelLote', 'cerrarPanelLote', 'elegirTarjetaLote', 'teclaPanelLote',
   'nuevoPanelPin', 'primerNombre', 'textoIntentos', 'mensajeDePin', 'cuentaRegresiva',
   'htmlPuntosPin', 'htmlTecladoPin', 'htmlProgresoPin', 'saludoPin', 'subtituloPin',
   'htmlMensajePin', 'pintarPin', 'teclaPin', 'cerrarPin', 'aplicarRechazoPin',
@@ -95,7 +98,7 @@ const FUNCIONES_BASE = [
   'faltanParaRegistrar', 'leerDefineChocolate', 'esChocolate',
   'parametrosRegistrarMasa', 'esErrorDeRed', 'enviarMasa', 'reintentarPendientes', 'textoPendientes', 'pintarPendientes',
   'elegirMaquinaSala', 'cargarTiposMasa', 'cargarDatosMasa', 'elegirTipoMasa', 'elegirTamano', 'elegirComo',
-  'mostrarReceta', 'etiquetaBorrador', 'htmlCabeceraReceta', 'htmlOpcionesLote', 'htmlCeldaLote', 'htmlCeldaQueda',
+  'mostrarReceta', 'etiquetaBorrador', 'htmlCabeceraReceta', 'htmlCeldaLote', 'htmlCeldaQueda',
   'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilasReceta', 'pintarReceta', 'pintarPieReceta',
   'cambiarCantidad', 'sumarPaso', 'elegirOpcionLote', 'escribirLoteManual',
   'abrirOtro', 'cerrarOtro', 'faltaParaOtro', 'agregarOtro', 'quitarOtro', 'cambiarCantidadOtro', 'sumarPasoOtro',

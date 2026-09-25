@@ -966,12 +966,55 @@
       font-weight: 900; color: var(--bordo-oscuro); background: var(--bordo-suave);
       border-radius: 8px; padding: 0.2rem 0.5rem; justify-self: start;
     }
+    /* El lote del renglón ya no es un <select> del sistema: es un botón que
+       abre el panel de lotes (terminar la tablet, parte 3). */
     .pr-rec__lote {
-      min-height: var(--pr-alto-boton); border-radius: 12px; border: 2px solid var(--pr-borde-control);
+      min-height: var(--pr-alto-boton); border-radius: 12px; border: 2px solid var(--pr-borde-boton);
       background: var(--color-fondo); color: var(--color-texto); font: inherit; font-size: 1.125rem;
-      font-weight: 700; padding: 0 0.75rem; min-width: 0; width: 100%;
+      font-weight: 700; padding: 0.25rem 0.75rem; min-width: 0; width: 100%; text-align: left; cursor: pointer;
+      touch-action: manipulation; display: flex; flex-direction: column; justify-content: center; line-height: 1.15;
+      overflow-wrap: anywhere;
     }
+    .pr-rec__lote:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    .pr-rec__lote--vacio { border-style: dashed; color: var(--pr-texto-secundario); }
     .pr-rec__lote--terminado { border: 3px solid var(--bordo); background: var(--bordo-suave); color: var(--bordo-oscuro); font-weight: 800; }
+    .pr-rec__lote-nota { font-size: 1.125rem; font-weight: 600; color: var(--pr-texto-secundario); }
+
+    /* ── El panel de lotes ───────────────────────────────────────────────
+       UNA TARJETA POR LOTE, separadas (10 px) y de 88 px de alto, para tocar
+       con las manos sucias: la marca grande, el lote, la fecha si se sabe y
+       cuánto queda bien a la vista. Abajo de todo, apartado, "Otro lote de
+       este insumo". Tiene su propio scroll: la página no se mueve. */
+    .pr-lp {
+      position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+      padding: 1rem; background: rgba(17, 17, 17, 0.45);
+    }
+    .pr-lp__caja {
+      width: min(760px, 100%); max-height: calc(100vh - 2rem); display: flex; flex-direction: column; gap: 0.875rem;
+      background: var(--color-fondo); border-radius: 18px; padding: 1.25rem; box-shadow: 0 12px 40px rgba(17, 17, 17, 0.25);
+      min-width: 0;
+    }
+    .pr-lp__cab { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    .pr-lp__titulo { font-size: 1.5rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; }
+    .pr-lp__tarjetas { display: flex; flex-direction: column; gap: 0.625rem; overflow-y: auto; min-height: 0; padding: 0.25rem; }
+    .pr-lp__tarjeta {
+      min-height: 88px; display: flex; align-items: center; gap: 1rem; text-align: left; padding: 0.625rem 1.125rem;
+      border-radius: 14px; border: 2px solid var(--pr-borde-boton); background: var(--color-fondo); color: var(--color-texto);
+      font: inherit; cursor: pointer; touch-action: manipulation; min-width: 0; flex-shrink: 0;
+    }
+    .pr-lp__tarjeta[aria-pressed="true"] { border: 3px solid var(--naranja); background: var(--naranja-suave); }
+    .pr-lp__tarjeta:focus-visible, .pr-lp .pr-btn:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    .pr-lp__izq { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; overflow-wrap: anywhere; }
+    .pr-lp__marca { font-size: 1.5rem; font-weight: 900; }
+    .pr-lp__insumo, .pr-lp__fecha { font-size: 1.125rem; color: var(--pr-texto-secundario); }
+    .pr-lp__lote { font-size: 1.25rem; font-weight: 700; }
+    .pr-lp__queda { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; line-height: 1.1; }
+    .pr-lp__queda-rotulo { font-size: 1.125rem; color: var(--pr-texto-secundario); }
+    .pr-lp__queda-num { font-size: 1.625rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .pr-lp__vacio { font-size: 1.125rem; color: var(--pr-texto-secundario); padding: 0.5rem 0; }
+    .pr-lp__otros { display: flex; flex-direction: column; gap: 0.625rem; padding-top: 0.875rem; border-top: 2px dashed var(--pr-borde-boton); }
+    .pr-lp__pie { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+    .pr-lp__pie .pr-btn { flex: 1 1 12rem; }
     .pr-rec__manual { margin-top: 0.375rem; width: 100%; min-height: var(--pr-alto-boton); font-size: 1.125rem; }
     .pr-rec__queda { font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
     .pr-rec__queda--poco { color: var(--bordo-oscuro); font-weight: 900; }
@@ -1741,6 +1784,20 @@
           <div class="pr-tarjeta pr-sala__der" id="pr-sala-panel"></div>
         </div>
       </section>
+
+      <!-- El panel de lotes de un renglón de la receta. Foco atrapado, Escape
+           cierra y el foco vuelve al renglón. -->
+      <div class="pr-lp" id="pr-lote-panel" hidden role="dialog" aria-modal="true" aria-labelledby="pr-lote-panel-titulo">
+        <div class="pr-lp__caja">
+          <div class="pr-lp__cab">
+            <h2 class="pr-lp__titulo" id="pr-lote-panel-titulo"></h2>
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-lote-panel-cerrar">Cerrar</button>
+          </div>
+          <div id="pr-lote-panel-terminado"></div>
+          <div class="pr-lp__tarjetas" id="pr-lote-panel-tarjetas"></div>
+          <div class="pr-lp__otros" id="pr-lote-panel-otros"></div>
+        </div>
+      </div>
 
       <!-- B5 · 6c: LA RECETA. Una planilla, un renglón de 64px por ingrediente,
            TODOS a la vista sin scroll incluso los que están en cero. Registrar
@@ -5996,7 +6053,7 @@
         }
         out.push({
           insumo_id: ins.insumo_id, lote: null, manual: true, sinLote: false, stock: null,
-          etiqueta: varios && quien ? `Otro lote de ${quien}` : 'El lote no está en la lista',
+          etiqueta: varios && quien ? `Otro lote de ${quien}` : 'Otro lote de este insumo',
         })
       }
       return out
@@ -6017,19 +6074,32 @@
     //  - queda / alcanza: lo que queda de ese lote DESPUÉS de esta masa, y si
     //    alcanza para otra igual. Se mide contra lo que consume la masa
     //    entera: en una doble la base descuenta el doble.
+    //
+    // TERMINAR LA TABLET, PARTE 3: un lote que NO figura con stock ya no se
+    // da por terminado solo. La base no distingue "se agotó" de "nunca tuvo
+    // ingreso cargado" (_lotes_con_stock trae solo los de saldo > 0), y el
+    // caso que rompía era el segundo: el lote escrito a mano de un insumo sin
+    // ingreso no pasaba a la masa siguiente. Ahora queda elegido, con "sin
+    // ingreso cargado" (sinIngreso), y la base lo marca con
+    // lote_fuera_de_stock. Se pide otro SOLO cuando la persona dice que se
+    // terminó (l.terminado, desde el panel).
     function estadoLote(it, b, datos) {
       const pide = pideLote(datos, b.cantidades, it.ingrediente_id)
       const l = b.lotes[it.ingrediente_id] ?? null
       const ops = opcionesLote(datos, it.ingrediente_id)
       const ins = l && l.insumo_id ? insumosDe(datos, it.ingrediente_id).find(x => x.insumo_id === l.insumo_id) ?? null : null
       const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))
-      const base = { pide, l, ops, ins, consumo, terminado: false, falta: false, queda: null, alcanza: true }
+      const base = { pide, l, ops, ins, consumo, terminado: false, falta: false, sinIngreso: false, queda: null, alcanza: true }
       if (!pide) return base
+      if (l && l.terminado) return { ...base, terminado: true, falta: true }
       if (!l || !ins) return { ...base, falta: true }
-      if (l.manual) return { ...base, falta: !String(l.lote ?? '').trim() }
+      if (l.manual) {
+        const texto = String(l.lote ?? '').trim()
+        return { ...base, falta: !texto, sinIngreso: !!texto && !(ins.lotes ?? []).some(x => x.lote === texto) }
+      }
       if (l.sinLote) return base
       const enLista = (ins.lotes ?? []).find(x => x.lote === l.lote)
-      if (!enLista) return { ...base, terminado: true }
+      if (!enLista) return { ...base, sinIngreso: true }
       const queda = redondearKg(Number(enLista.stock) - consumo)
       return { ...base, queda, alcanza: queda >= consumo }
     }
@@ -6234,6 +6304,7 @@
       const { data, error } = await supabase.rpc('datos_para_masa', { p_turno_id: estado.salaTurno.id, p_tipo_masa: estado.tipoMasa })
       if (error) throw error
       estado.datosMasa = { original: data.original, anterior: data.anterior ?? null, insumos: data.insumos ?? [] }
+      await leerFechasLotes(estado.datosMasa)
       // Qué ingredientes definen el chocolate es configuración y solo sirve
       // para MOSTRAR el chip: si no se puede leer, la masa se carga igual (la
       // base calcula es_chocolate sola) y el chip no aparece.
@@ -6330,18 +6401,16 @@
         chips.join('')
     }
 
-    function htmlOpcionesLote(ops, elegido) {
-      const out = [`<option value="">Elegí el lote</option>`]
-      ops.forEach((o, i) => {
-        out.push(`<option value="${i}"${i === elegido ? ' selected' : ''}>${esc(o.etiqueta)}</option>`)
-      })
-      return out.join('')
+    // La celda del lote: un BOTÓN que abre el panel. Sin lote elegido dice UNA
+    // sola cosa, nunca las dos: "Se terminó · elegí otro" si la persona dijo
+    // que el que estaba se terminó (en bordó), y "Elegí el lote" en cualquier
+    // otro caso —la primera masa del día, o un ingrediente que recién empieza
+    // a llevar cantidad—. "Otro lote de este insumo" deja escribirlo a mano
+    // abajo del botón.
+    function textoVacioLote(e) {
+      return e.terminado ? 'Se terminó · elegí otro' : 'Elegí el lote'
     }
 
-    // La celda del lote. Tres estados que se ven sin tocar nada: el normal, el
-    // que se terminó (en bordó, "Se terminó · elegí otro") y el que no lleva
-    // lote. "El lote no está en la lista" abre el campo para escribirlo y la
-    // base lo marca con lote_fuera_de_stock.
     function htmlCeldaLote(it, b, e) {
       if (!e.pide) {
         if (!insumosDe(estado.datosMasa ?? { insumos: [] }, it.ingrediente_id).length) {
@@ -6350,16 +6419,23 @@
         if (estado.defineChocolate?.has(it.ingrediente_id)) return '<span class="pr-rec__nota">solo en chocolate</span>'
         return '<span class="pr-rec__nota">—</span>'
       }
-      const elegido = e.terminado ? -1 : indiceLote(e.ops, e.l)
-      const clase = e.terminado ? 'pr-rec__lote pr-rec__lote--terminado' : 'pr-rec__lote'
-      const primera = e.terminado
-        ? `<option value="" selected>Se terminó · elegí otro</option>`
-        : ''
-      const opciones = primera + htmlOpcionesLote(e.ops, elegido)
+      const manualVacio = !!e.l?.manual && e.falta
+      const vacio = e.terminado || (e.falta && !e.l?.manual)
+      let texto
+      if (vacio) texto = textoVacioLote(e)
+      else if (e.l.sinLote) texto = 'Sin lote'
+      else if (e.l.manual) texto = manualVacio ? 'Otro lote · escribilo abajo' : `Lote ${String(e.l.lote ?? '').trim()}`
+      else texto = `Lote ${e.l.lote}`
+      const clases = ['pr-rec__lote']
+      if (e.terminado) clases.push('pr-rec__lote--terminado')
+      else if (vacio) clases.push('pr-rec__lote--vacio')
+      const nota = e.sinIngreso ? '<span class="pr-rec__lote-nota">sin ingreso cargado</span>' : ''
       const manual = e.l?.manual
         ? `<input type="text" class="pr-input pr-rec__manual" data-lote-manual="${esc(it.ingrediente_id)}" maxlength="80" autocomplete="off" aria-label="Lote de ${esc(it.ingrediente)}">`
         : ''
-      return `<select class="${clase}" data-lote="${esc(it.ingrediente_id)}" aria-label="Lote de ${esc(it.ingrediente)}">${opciones}</select>${manual}`
+      return `<button type="button" class="${clases.join(' ')}" data-lote="${esc(it.ingrediente_id)}" aria-haspopup="dialog" ` +
+        `aria-label="Lote de ${esc(it.ingrediente)}: ${esc(texto)}${e.sinIngreso ? ', sin ingreso cargado' : ''}">` +
+        `<span>${esc(texto)}</span>${nota}</button>${manual}`
     }
 
     // "Queda" es lo que queda de ESE lote DESPUÉS de esta masa. En bordó, con
@@ -6474,11 +6550,10 @@
       pintarReceta()
     }
 
-    // El desplegable tiene DOS opciones con value="": "Elegí el lote" y, cuando
-    // el lote se terminó, "Se terminó · elegí otro". Las dos significan NADA
-    // ELEGIDO, así que el vacío se atrapa ANTES de convertir: Number('') es 0 y
-    // sin este guard volver a la opción vacía elegiría el PRIMER lote de la
-    // lista, sin que nadie lo haya tocado y con Registrar destrabándose solo.
+    // El índice llega del panel como TEXTO (data-lote-op). El vacío se atrapa
+    // ANTES de convertir: Number('') es 0 y sin este guard un índice vacío
+    // elegiría el PRIMER lote de la lista, sin que nadie lo haya tocado y con
+    // Registrar destrabándose solo.
     function elegirOpcionLote(ingredienteId, indice) {
       const b = estado.masa, d = estado.datosMasa
       if (!b || !d) return
@@ -6492,6 +6567,159 @@
       estado.errorReceta = null
       guardarBorradorMasa(b)
       pintarReceta()
+    }
+
+    // "Se terminó": la persona dice que el lote que venía se acabó. Recién ahí
+    // se pide otro. Queda "Se terminó · elegí otro" hasta que elija.
+    function marcarLoteTerminado(ingredienteId) {
+      const b = estado.masa
+      if (!b) return
+      b.lotes[ingredienteId] = { insumo_id: '', lote: null, manual: false, sinLote: false, terminado: true }
+      b.payload = null
+      estado.errorReceta = null
+      guardarBorradorMasa(b)
+      pintarReceta()
+    }
+
+    // ── El panel de lotes ──────────────────────────────────────────────
+    //
+    // La FECHA de cada lote no viene en datos_para_masa (_lotes_con_stock
+    // devuelve solo {lote, stock}). Sale de v_stock_por_lote.desde —el primer
+    // ingreso del lote en la unidad—, que es security_invoker con stock:ver:
+    // solo se lee si la cuenta PUEDE (puedeVerStockEn === true). Si no puede
+    // o la lectura falla, las tarjetas van sin fecha: no se inventa ninguna.
+    async function leerFechasLotes(datos) {
+      estado.lotesDesde = null
+      if (puedeVerStockEn(estado.unidadId) !== true) return
+      const ids = [...new Set((datos?.insumos ?? []).map(i => i.insumo_id).filter(Boolean))]
+      if (!ids.length) return
+      try {
+        const { data, error } = await supabase.from('v_stock_por_lote').select('insumo_id, lote, desde')
+          .eq('unidad_negocio_id', estado.unidadId).in('insumo_id', ids)
+        if (error) throw error
+        const m = new Map()
+        for (const r of data ?? []) {
+          if (!r.lote || !r.desde) continue
+          const k = `${r.insumo_id}|${r.lote}`
+          if (!m.has(k) || String(r.desde) < String(m.get(k))) m.set(k, r.desde)
+        }
+        estado.lotesDesde = m
+      } catch (err) {
+        console.error('fechas de los lotes:', err)
+        estado.lotesDesde = null
+      }
+    }
+
+    // 'dd/mm/aaaa', o '' si no se puede leer (nunca "NaN").
+    function textoFechaLote(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''))
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
+    }
+
+    function fechaLote(insumoId, lote) {
+      return estado.lotesDesde?.get(`${insumoId}|${lote}`) ?? null
+    }
+
+    function htmlTarjetaLote(o, i, elegido, datos, ingredienteId) {
+      const ins = insumosDe(datos, ingredienteId).find(x => x.insumo_id === o.insumo_id) ?? null
+      const marca = ins ? (ins.marca || ins.nombre || '') : ''
+      const nombre = ins && ins.marca ? (ins.nombre ?? '') : ''
+      const fecha = o.lote ? textoFechaLote(fechaLote(o.insumo_id, o.lote)) : ''
+      const queda = o.stock != null && Number.isFinite(o.stock)
+        ? `<span class="pr-lp__queda"><span class="pr-lp__queda-rotulo">Queda</span><span class="pr-lp__queda-num">${esc(textoCantidad(o.stock))}</span></span>`
+        : ''
+      return `<button type="button" class="pr-lp__tarjeta" data-lote-op="${i}" aria-pressed="${elegido ? 'true' : 'false'}">` +
+        `<span class="pr-lp__izq"><span class="pr-lp__marca">${esc(marca)}</span>` +
+        (nombre ? `<span class="pr-lp__insumo">${esc(nombre)}</span>` : '') +
+        `<span class="pr-lp__lote">${o.sinLote ? 'Sin lote' : `Lote ${esc(o.lote)}`}</span>` +
+        (fecha ? `<span class="pr-lp__fecha">desde ${esc(fecha)}</span>` : '') +
+        `</span>${queda}</button>`
+    }
+
+    // Las tres partes del panel: arriba "Se terminó" si hay un lote elegido,
+    // en el medio una tarjeta por lote con stock (y "Sin lote" en lo que no es
+    // materia prima), y abajo, apartado, "Otro lote de este insumo".
+    function htmlPanelLote(ingredienteId) {
+      const b = estado.masa, d = estado.datosMasa
+      const it = d?.original.items.find(x => x.ingrediente_id === ingredienteId)
+      if (!b || !d || !it) return null
+      const e = estadoLote(it, b, d)
+      const elegido = e.terminado ? -1 : indiceLote(e.ops, e.l)
+      const tarjetas = [], otros = []
+      e.ops.forEach((o, i) => {
+        if (o.manual) {
+          otros.push(`<button type="button" class="pr-btn pr-btn--secundario pr-btn--ancho" data-lote-op="${i}">${esc(o.etiqueta)}</button>`)
+        } else {
+          tarjetas.push(htmlTarjetaLote(o, i, i === elegido, d, ingredienteId))
+        }
+      })
+      const hayElegido = !e.terminado && !e.falta && !!e.l && !e.l.sinLote
+      return {
+        titulo: `Lote de ${it.ingrediente}`,
+        terminado: hayElegido
+          ? '<div class="pr-lp__pie"><button type="button" class="pr-btn pr-btn--peligro" id="pr-lote-panel-se-termino">Se terminó</button></div>'
+          : '',
+        tarjetas: tarjetas.length ? tarjetas.join('') : '<p class="pr-lp__vacio">No hay lotes con stock cargado de este insumo.</p>',
+        otros: otros.join(''),
+      }
+    }
+
+    function pintarPanelLote() {
+      const pl = estado.panelLote
+      if (!pl) return
+      const h = htmlPanelLote(pl.ingredienteId)
+      if (!h) return cerrarPanelLote()
+      document.getElementById('pr-lote-panel-titulo').textContent = h.titulo
+      document.getElementById('pr-lote-panel-terminado').innerHTML = h.terminado
+      document.getElementById('pr-lote-panel-tarjetas').innerHTML = h.tarjetas
+      document.getElementById('pr-lote-panel-otros').innerHTML = h.otros
+    }
+
+    function abrirPanelLote(ingredienteId) {
+      if (!estado.masa || !estado.datosMasa) return
+      tocar()
+      estado.panelLote = { ingredienteId }
+      pintarPanelLote()
+      const panel = document.getElementById('pr-lote-panel')
+      panel.hidden = false
+      const primero = panel.querySelector('.pr-lp__tarjeta[aria-pressed="true"]') ?? panel.querySelector('.pr-lp__tarjeta, [data-lote-op]')
+      if (primero) primero.focus()
+    }
+
+    // El foco vuelve al renglón que abrió el panel; con "Otro lote", al campo
+    // donde se escribe.
+    function cerrarPanelLote(foco = 'renglon') {
+      const pl = estado.panelLote
+      estado.panelLote = null
+      document.getElementById('pr-lote-panel').hidden = true
+      if (!pl) return
+      const filas = document.getElementById('pr-receta-filas')
+      const sel = foco === 'manual' ? `[data-lote-manual="${pl.ingredienteId}"]` : `[data-lote="${pl.ingredienteId}"]`
+      const el = filas.querySelector(sel)
+      if (el) el.focus()
+    }
+
+    function elegirTarjetaLote(indice) {
+      const pl = estado.panelLote
+      if (!pl) return
+      const ops = opcionesLote(estado.datosMasa, pl.ingredienteId)
+      const o = ops[Number(indice)]
+      if (!o) return
+      elegirOpcionLote(pl.ingredienteId, String(indice))
+      cerrarPanelLote(o.manual ? 'manual' : 'renglon')
+    }
+
+    // Foco atrapado: Tab y Shift+Tab dan la vuelta adentro del panel.
+    function teclaPanelLote(ev) {
+      if (!estado.panelLote) return
+      if (ev.key === 'Escape') { ev.preventDefault(); cerrarPanelLote(); return }
+      if (ev.key !== 'Tab') return
+      const panel = document.getElementById('pr-lote-panel')
+      const focos = [...panel.querySelectorAll('button:not([disabled])')]
+      if (!focos.length) return
+      const i = focos.indexOf(document.activeElement)
+      if (ev.shiftKey && i <= 0) { ev.preventDefault(); focos[focos.length - 1].focus() }
+      else if (!ev.shiftKey && i === focos.length - 1) { ev.preventDefault(); focos[0].focus() }
     }
 
     function escribirLoteManual(ingredienteId, texto) {
@@ -6797,6 +7025,23 @@
         else if (ds.masOtro !== undefined) sumarPasoOtro(ds.masOtro, +1)
         else if (ds.quitarOtro !== undefined) quitarOtro(ds.quitarOtro)
       })
+      // El lote: el botón del renglón abre el panel.
+      filas.addEventListener('click', ev => {
+        const b = ev.target.closest('[data-lote]'); if (b) abrirPanelLote(b.dataset.lote)
+      })
+      const panelLote = document.getElementById('pr-lote-panel')
+      panelLote.addEventListener('click', ev => {
+        if (ev.target === panelLote || ev.target.closest('#pr-lote-panel-cerrar')) { cerrarPanelLote(); return }
+        if (ev.target.closest('#pr-lote-panel-se-termino')) {
+          marcarLoteTerminado(estado.panelLote.ingredienteId)
+          pintarPanelLote()
+          const primera = panelLote.querySelector('.pr-lp__tarjeta, [data-lote-op]')
+          if (primera) primera.focus()
+          return
+        }
+        const t = ev.target.closest('[data-lote-op]'); if (t) elegirTarjetaLote(t.dataset.loteOp)
+      })
+      panelLote.addEventListener('keydown', teclaPanelLote)
       // El número tipeado se guarda al salir del campo y la fila se repinta
       // con su diferencia contra la receta.
       filas.addEventListener('change', ev => {
@@ -6804,8 +7049,6 @@
         if (cant) { cambiarCantidad(cant.dataset.cant, leerCampoNumero(cant)); pintarReceta(); return }
         const otro = ev.target.closest('[data-cant-otro]')
         if (otro) { cambiarCantidadOtro(otro.dataset.cantOtro, leerCampoNumero(otro)); pintarReceta(); return }
-        const lote = ev.target.closest('[data-lote]')
-        if (lote) elegirOpcionLote(lote.dataset.lote, lote.value)
       })
       filas.addEventListener('input', ev => {
         const m = ev.target.closest('[data-lote-manual]')

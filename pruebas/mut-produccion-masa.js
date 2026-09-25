@@ -10,7 +10,7 @@ correrMutaciones({
   suite: path.join(__dirname, 'test-produccion-masa.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
-  funciones: ['htmlFilaSala', 'detalleAnterior', 'htmlComo', 'htmlCabeceraReceta', 'htmlOpcionesLote',
+  funciones: ['htmlFilaSala', 'detalleAnterior', 'htmlComo', 'htmlCabeceraReceta',
     'htmlCeldaLote', 'htmlCeldaQueda', 'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilaMasaPendiente', 'htmlFilaMasaTurno'],
   equivalentes: [
     { expr: 'esc(textoMasas(e.masas))', motivo: 'un conteo con "masa"/"masas"' },
@@ -59,13 +59,14 @@ correrMutaciones({
     { nombre: 'queda no descuenta esta masa', de: '      const queda = redondearKg(Number(enLista.stock) - consumo)', a: '      const queda = redondearKg(Number(enLista.stock))' },
     { nombre: 'una doble descuenta como una simple', de: "      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))", a: '      const consumo = redondearKg(b.cantidades[it.ingrediente_id] ?? 0)' },
     { nombre: 'nunca avisa que no alcanza para otra', de: '      return { ...base, queda, alcanza: queda >= consumo }', a: '      return { ...base, queda, alcanza: true }' },
-    { nombre: 'un lote que se terminó pasa como bueno', de: '      if (!enLista) return { ...base, terminado: true }', a: '      if (!enLista) return { ...base }' },
+    // Terminar la tablet, parte 3: "terminado" ya no lo deduce la pantalla (un lote que no está en stock queda elegido con "sin ingreso cargado"); lo dice la persona con "Se terminó".
+    { nombre: 'un lote que se terminó pasa como bueno', de: '      if (l && l.terminado) return { ...base, terminado: true, falta: true }', a: '      if (l && l.terminado) return base' },
     { nombre: 'un lote sin elegir no bloquea', de: '      if (!l || !ins) return { ...base, falta: true }', a: '      if (!l || !ins) return { ...base }' },
-    { nombre: 'un lote escrito a mano vacío no bloquea', de: "      if (l.manual) return { ...base, falta: !String(l.lote ?? '').trim() }", a: '      if (l.manual) return { ...base }' },
+    { nombre: 'un lote escrito a mano vacío no bloquea', de: '        return { ...base, falta: !texto, sinIngreso:', a: '        return { ...base, falta: false, sinIngreso:' },
     { nombre: 'Registrar no se bloquea con lo que falta', de: "      btn.disabled = !!pendiente.length || !!estado.enviandoMasa", a: '      btn.disabled = !!estado.enviandoMasa' },
     { nombre: 'se manda igual con lotes sin elegir', de: '        const faltan = faltanParaRegistrar(b, d)\n        if (faltan.length) { pintarPieReceta(); return }', a: '        const faltan = faltanParaRegistrar(b, d)' },
     { nombre: 'el renglón flojo no se tinta', de: '      if (!e.alcanza || e.terminado) clases.push(\'pr-rec--floja\')', a: '' },
-    { nombre: 'el desplegable del lote terminado no se marca', de: "      const clase = e.terminado ? 'pr-rec__lote pr-rec__lote--terminado' : 'pr-rec__lote'", a: "      const clase = 'pr-rec__lote'" },
+    { nombre: 'el botón del lote terminado no se marca', de: "      if (e.terminado) clases.push('pr-rec__lote--terminado')\n      else if (vacio)", a: '      if (vacio)' },
 
     // ── El payload ───────────────────────────────────────────────────────
     { nombre: 'se manda la cantidad ya multiplicada por 2', de: '          cantidad_simple_kg: redondearKg(b.cantidades[it.ingrediente_id] ?? 0),\n          insumo_id: l?.insumo_id || null,', a: '          cantidad_simple_kg: redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1)),\n          insumo_id: l?.insumo_id || null,' },
