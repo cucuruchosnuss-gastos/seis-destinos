@@ -46,10 +46,11 @@ correrMutaciones({
 
     // ── Tocar un modo ──────────────────────────────────────────────────────
     { nombre: 'tocar SALA DE MASA deshabilitada igual cambia el modo', de: "      if (modo === 'masa' && salaDeshabilitada()) return\n", a: '' },
-    { nombre: 'cambiar de modo conserva a la persona', de: '      olvidarPersona()\n      // Con el acceso maestro activo', a: '      // Con el acceso maestro activo' },
+    // Terminar la tablet, parte 2: cambiar de modo ya no borra a nadie guardado, pero el modo NUEVO arranca sin nadie adentro hasta el PIN.
+    { nombre: 'cambiar de modo conserva a la persona', de: '      estado.persona = null\n      estado.pin = null\n      estado.quienOtra = false\n      // Con el acceso maestro activo', a: '      estado.pin = null\n      estado.quienOtra = false\n      // Con el acceso maestro activo' },
     { nombre: 'un modo inválido se elige', de: '      if (!Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo)) return\n      tocar()', a: '      tocar()' },
     { nombre: 'tocar el modo activo vuelve a pedir el PIN', de: '      if (estado.modo === modo && estado.persona) return\n', a: '' },
-    { nombre: 'no guarda el modo', de: '      estado.modo = modo\n      guardarPreferencia(CLAVE_MODO, modo)\n      olvidarPersona()', a: '      estado.modo = modo\n      olvidarPersona()' },
+    { nombre: 'no guarda el modo', de: '      estado.modo = modo\n      guardarPreferencia(CLAVE_MODO, modo)\n      // Cambiar de modo NO borra a nadie', a: '      estado.modo = modo\n      // Cambiar de modo NO borra a nadie' },
 
     // ── Qué se recuerda y qué no ───────────────────────────────────────────
     { nombre: 'el modo guardado acepta cualquier cosa', de: "      return Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, m ?? '') ? m : null", a: '      return m' },
@@ -60,10 +61,10 @@ correrMutaciones({
     { nombre: 'sin modo guardado no arranca en ningún modo', de: "      if (!estado.modo) estado.modo = 'produccion'\n", a: '' },
     { nombre: 'la persona guardada vale para cualquier puesto', de: '        if (p.puesto !== PUESTO_DE_MODO[modo]) return null\n', a: '' },
     { nombre: 'la persona guardada no se valida', de: "        if (!p || typeof p.id !== 'string' || typeof p.nombre !== 'string') return null\n", a: '' },
-    { nombre: 'personaGuardada sin try: un sessionStorage corrupto rompe', de: '      try {\n        const p = JSON.parse(leerSesion(CLAVE_PERSONA) ?? \'null\')', a: '      {\n        const p = JSON.parse(leerSesion(CLAVE_PERSONA) ?? \'null\')' },
-    { nombre: 'entrar no guarda a la persona en sessionStorage', de: '      guardarSesion(CLAVE_PERSONA, JSON.stringify(estado.persona))\n', a: '' },
-    { nombre: 'entrar la guarda en localStorage', de: '      guardarSesion(CLAVE_PERSONA, JSON.stringify(estado.persona))', a: '      guardarPreferencia(CLAVE_PERSONA, JSON.stringify(estado.persona))' },
-    { nombre: 'Salir no borra a la persona', de: '      estado.persona = null\n      estado.pin = null\n      guardarSesion(CLAVE_PERSONA, null)', a: '      estado.pin = null' },
+    { nombre: 'personaGuardada sin try: un sessionStorage corrupto rompe', de: '      try {\n        const p = JSON.parse(leerSesion(clavePersona(modo)) ?? \'null\')', a: '      {\n        const p = JSON.parse(leerSesion(clavePersona(modo)) ?? \'null\')' },
+    { nombre: 'entrar no guarda a la persona en sessionStorage', de: '      if (!esMaestro) guardarSesion(clavePersona(estado.modo), JSON.stringify(estado.persona))\n', a: '' },
+    { nombre: 'entrar la guarda en localStorage', de: '      if (!esMaestro) guardarSesion(clavePersona(estado.modo), JSON.stringify(estado.persona))', a: '      if (!esMaestro) guardarPreferencia(clavePersona(estado.modo), JSON.stringify(estado.persona))' },
+    { nombre: 'Salir no borra a la persona', de: '      if (Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo ?? \'\')) guardarSesion(clavePersona(modo), null)\n      if (modo === estado.modo) {\n        estado.persona = null\n        estado.pin = null', a: '      if (modo === estado.modo) {\n        estado.pin = null' },
     { nombre: 'leer preferencia sin try', de: '      try { return localStorage.getItem(clave) } catch { return null }', a: '      return localStorage.getItem(clave)' },
     { nombre: 'leer sesión sin try', de: '      try { return sessionStorage.getItem(clave) } catch { return null }', a: '      return sessionStorage.getItem(clave)' },
     { nombre: 'guardar en sesión sin try', de: '      try {\n        if (valor == null) sessionStorage.removeItem(clave)\n        else sessionStorage.setItem(clave, valor)\n      } catch { /* sin memoria: se vuelve a preguntar al recargar */ }', a: '        if (valor == null) sessionStorage.removeItem(clave)\n        else sessionStorage.setItem(clave, valor)' },

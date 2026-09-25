@@ -81,7 +81,7 @@ correrMutaciones({
     { nombre: 'lo que hace el maestro no queda a su nombre', de: '      return entrar({ id: estado.maestro.id, nombre: estado.maestro.nombre, puesto: PUESTO_DE_MODO[modo] })', a: '      return entrar({ id: estado.maestro.id, nombre: estado.maestro.nombre, puesto: null })' },
     { nombre: 'con el maestro activo igual se pide el PIN', de: '      if (estado.maestro) return entrarComoMaestro(modo)\n', a: '' },
     { nombre: 'cerrar el maestro le deja el PIN en memoria', de: '      estado.maestro = null\n      pinMaestro = null', a: '      estado.maestro = null' },
-    { nombre: 'cerrar el maestro deja a la persona adentro', de: '      estado.acceso = null\n      olvidarPersona()\n    }', a: '      estado.acceso = null\n    }' },
+    { nombre: 'cerrar el maestro deja a la persona adentro', de: '      if (estado.persona && estado.persona.id === id) {\n        estado.persona = null\n        estado.pin = null\n      }\n    }', a: '    }' },
     { nombre: 'el cartel del maestro no dice a nombre de quién queda', de: '        `Acceso maestro · ${estado.maestro.nombre} · todo lo que hagas queda a tu nombre`', a: '        `Acceso maestro`' },
     { nombre: 'el panel del maestro no se marca como tal', de: "      panel.className = 'pr-tarjeta pr-pin' + (p.modo === 'maestro' ? ' pr-pin--maestro' : '')", a: "      panel.className = 'pr-tarjeta pr-pin'" },
 

@@ -193,7 +193,9 @@ correrMutaciones({
     { nombre: 'forzar con un motivo de dos letras', de: "      if (motivo.length < 3) { err.textContent = 'Escribí por qué, con tres letras por lo menos.'; err.hidden = false; return }\n      // p_persona_id", a: "      if (motivo.length < 1) { err.textContent = 'x'; err.hidden = false; return }\n      // p_persona_id" },
     { nombre: 'forzar manda el motivo sin recortar', de: "      const motivo = document.getElementById('pr-forzar-motivo').value.trim()", a: "      const motivo = document.getElementById('pr-forzar-motivo').value" },
     { nombre: 'forzar no manda la persona de la tablet', de: "        const { error } = await supabase.rpc('forzar_cierre_turno', { p_turno_id: p.turno.id, p_persona_id: persona, p_motivo: motivo })", a: "        const { error } = await supabase.rpc('forzar_cierre_turno', { p_turno_id: p.turno.id, p_persona_id: estado.miEmpleadoId, p_motivo: motivo })" },
-    { nombre: 'forzar no vuelve al tablero', de: "        mostrarExito('La máquina quedó libre. La planilla quedó pendiente de completar.')\n        await mostrarTablero()", a: "        mostrarExito('La máquina quedó libre. La planilla quedó pendiente de completar.')" },
+    // Terminar la tablet, parte 2: entre el éxito y el tablero ahora va
+    // maquinaCerrada(), que saca la máquina de Sala de masa.
+    { nombre: 'forzar no vuelve al tablero', de: "        await maquinaCerrada(p.turno.id)\n        await mostrarTablero()", a: '        await maquinaCerrada(p.turno.id)' },
     { nombre: 'una planilla de otro día no se dice', de: "      if (t.estado === 'abierto' && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(t.fecha ?? '')) && String(t.fecha) < String(hoy)) {", a: '      if (false) {' },
     { nombre: 'una planilla de hoy también ofrece cerrar a la fuerza', de: "&& String(t.fecha) < String(hoy)) {", a: '&& true) {' },
     { nombre: 'la pendiente de completar no se dice', de: "      if (t.estado === 'pendiente_completar') {", a: '      if (false) {' },

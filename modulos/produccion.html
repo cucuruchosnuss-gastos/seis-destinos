@@ -247,7 +247,22 @@
     .pr-barra__rol { font-weight: 600; color: var(--pr-prod-apagado-letra); }
     .pr-barra__nombre { font-weight: 700; }
     .pr-barra__unidad { color: var(--color-texto-suave); }
-    .pr-barra__nadie { font-weight: 700; color: var(--color-texto-suave); }
+    /* "Tocá para entrar": un botón de verdad, con el alto de la tablet. */
+    .pr-barra__entrar {
+      min-height: var(--pr-alto-boton); padding: 0 1.25rem; font: inherit; font-size: 1.125rem; font-weight: 800;
+      border-radius: var(--radio-boton); border: 2px solid var(--naranja); background: var(--naranja-suave);
+      color: var(--naranja-oscuro); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-barra__entrar:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    /* ¿Quién sos? con la persona del modo ya guardada. */
+    .pr-quien__fija { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+    .pr-quien__fija-texto { font-size: 1.75rem; font-weight: 800; overflow-wrap: anywhere; }
+    /* En el tablero: quién está adentro de Sala de masa, y sacarlo. */
+    .pr-masero-adentro {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+      padding: 0.625rem 1rem; margin: 0.75rem 0; border-radius: var(--radio-input);
+      background: var(--pr-panel-gris); font-size: 1.125rem; overflow-wrap: anywhere;
+    }
     @media (max-width: 900px) {
       .pr-barra { flex-wrap: wrap; }
       .pr-modo { flex: 1 1 45%; }
@@ -1324,8 +1339,13 @@
       <section class="pr-quien" id="pr-quien" hidden>
         <div class="pr-tarjeta pr-quien__col">
           <div class="pr-fila-titulo">
-            <h1 class="pr-titulo">¿Quién sos?</h1>
+            <h1 class="pr-titulo" id="pr-quien-titulo">¿Quién sos?</h1>
             <span class="pr-quien__puesto" id="pr-quien-puesto"></span>
+          </div>
+          <!-- El modo ya tenía a alguien: su rol y su nombre, y solo el PIN. -->
+          <div class="pr-quien__fija" id="pr-quien-fija" hidden>
+            <div class="pr-quien__fija-texto" id="pr-quien-fija-texto"></div>
+            <button type="button" class="pr-link" id="pr-btn-otra-persona">Soy otra persona</button>
           </div>
           <input type="search" id="pr-quien-buscar" class="pr-input pr-quien__buscar" placeholder="Buscar por nombre…" autocomplete="off">
           <div id="pr-quien-aviso"></div>
@@ -1394,6 +1414,9 @@
             </div>
           </div>
           <div id="pr-tablero-aviso"></div>
+          <!-- Quién está adentro de Sala de masa y "Sacar al masero": lo ve el
+               encargado verificado o el acceso maestro. -->
+          <div id="pr-tablero-masero"></div>
           <div class="pr-tablero" id="pr-tablero"></div>
         </div>
       </section>
@@ -2050,7 +2073,17 @@
     // La persona verificada, para que recargar la tablet no la eche. Va en
     // sessionStorage y NUNCA lleva el PIN: lo único que se guarda es quién es
     // y para qué puesto se verificó.
+    //
+    // UNA POR MODO (parte 2 de "terminar la tablet"): produccion.persona.produccion
+    // y produccion.persona.masa. Con una sola clave, pasar de Sala de masa a
+    // Producción borraba a las DOS personas: el masero quedaba afuera porque
+    // el encargado había tocado un botón. Ahora cada modo recuerda la suya y
+    // cambiar de modo no pisa la del otro. La clave vieja, sin modo, se borra
+    // al arrancar.
     const CLAVE_PERSONA = 'produccion.persona'
+    function clavePersona(modo) {
+      return `${CLAVE_PERSONA}.${modo}`
+    }
 
     // Qué puesto responde "¿Quién sos?" en cada modo.
     const PUESTO_DE_MODO = { produccion: 'encargado', masa: 'masero' }
@@ -2169,8 +2202,10 @@
 
     function htmlQuienEnBarra() {
       const unidad = `<div class="pr-barra__unidad">${esc(estado.unidades.get(estado.unidadId) ?? '')}</div>`
+      // Sin nadie adentro: una invitación a entrar, tocable. Abre el "¿Quién
+      // sos?" del modo activo.
       if (!estado.persona) {
-        return `<div class="pr-barra__quien"><div class="pr-barra__nadie">Nadie adentro</div>${unidad}</div>`
+        return `<div class="pr-barra__quien"><button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar</button>${unidad}</div>`
       }
       return `<div class="pr-barra__quien"><div><span class="pr-barra__rol">${esc(ROL_DE_MODO[estado.modo] ?? '')}:</span> ` +
         `<span class="pr-barra__nombre">${esc(estado.persona.nombre)}</span></div>${unidad}</div>` +
@@ -2212,23 +2247,82 @@
       if (estado.modo === modo && estado.persona) return
       estado.modo = modo
       guardarPreferencia(CLAVE_MODO, modo)
-      olvidarPersona()
+      // Cambiar de modo NO borra a nadie: la persona del otro modo sigue
+      // guardada, y la de ESTE modo, si hay, se vuelve a verificar con su PIN
+      // (mostrarQuien la trae puesta, sin la lista).
+      estado.persona = null
+      estado.pin = null
+      estado.quienOtra = false
       // Con el acceso maestro activo se entra sin volver a poner el PIN, y
       // todo lo que se haga queda a nombre del maestro.
       if (estado.maestro) return entrarComoMaestro(modo)
       return mostrarQuien()
     }
 
-    function olvidarPersona() {
-      estado.persona = null
-      estado.pin = null
-      guardarSesion(CLAVE_PERSONA, null)
+    // Olvida a la persona de UN modo (por defecto, el activo). Si es el
+    // activo, además la tablet queda sin nadie adentro.
+    function olvidarPersona(modo = estado.modo) {
+      if (Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo ?? '')) guardarSesion(clavePersona(modo), null)
+      if (modo === estado.modo) {
+        estado.persona = null
+        estado.pin = null
+      }
     }
 
-    // Salir: la tablet queda sin nadie adentro y vuelve a preguntar.
+    // Las dos: al cambiar de fábrica nadie sigue adentro de la anterior.
+    function olvidarTodas() {
+      for (const modo of Object.keys(PUESTO_DE_MODO)) olvidarPersona(modo)
+      estado.persona = null
+      estado.pin = null
+    }
+
+    // Salir: la persona de ESTE modo sale y se vuelve a preguntar. La del
+    // otro modo no se toca.
     function salir() {
-      olvidarPersona()
+      olvidarPersona(estado.modo)
+      estado.quienOtra = false
       return mostrarQuien()
+    }
+
+    // "Sacar al masero": el encargado adentro de Producción (verificado con su
+    // PIN) o el acceso maestro pueden sacar de la tablet al masero que se fue
+    // sin saber su PIN. Solo borra la persona guardada de Sala de masa: no hay
+    // ninguna RPC de por medio, porque "quién está adentro" vive en esta
+    // tablet y no en la base.
+    function puedeSacarMasero() {
+      return !!estado.maestro || (estado.modo === 'produccion' && !!estado.persona)
+    }
+
+    function maseroAdentro() {
+      const m = personaGuardada('masa')
+      if (!m) return null
+      // El maestro que entró a Sala de masa no se guarda (ver entrar()): lo
+      // que quede acá es un masero de verdad.
+      return m
+    }
+
+    function htmlMaseroAdentro() {
+      const m = maseroAdentro()
+      if (!m || !puedeSacarMasero()) return ''
+      return `<div class="pr-masero-adentro"><span>En Sala de masa está adentro <strong>${esc(m.nombre)}</strong>.</span>` +
+        '<button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-sacar-masero">Sacar al masero</button></div>'
+    }
+
+    function pintarMaseroAdentro() {
+      const caja = document.getElementById('pr-tablero-masero')
+      if (caja) caja.innerHTML = htmlMaseroAdentro()
+    }
+
+    function sacarMasero() {
+      tocar()
+      if (!puedeSacarMasero()) return false
+      const m = maseroAdentro()
+      if (!m) return false
+      olvidarPersona('masa')
+      pintarMaseroAdentro()
+      pintarCabecera()
+      mostrarExito(`${m.nombre} salió de Sala de masa.`)
+      return true
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2250,16 +2344,22 @@
       return typeof desde === 'number' && (ahora - desde) >= MINUTOS_INACTIVIDAD * 60000
     }
 
+    // Saca SOLO a la persona de Producción, esté la tablet en el modo que
+    // esté: si la tablet quedó en Sala de masa, el encargado guardado también
+    // se olvida (volver a Producción pide la lista, no su PIN), y el masero
+    // sigue adentro.
     function revisarInactividad(ahora = Date.now()) {
       if (!vencioPorInactividad(estado.ultimoToque, ahora)) return false
       const habiaMaestro = !!estado.maestro
       const habiaPersona = estado.modo === 'produccion' && !!estado.persona
-      if (!habiaMaestro && !habiaPersona) return false
+      const habiaGuardada = !!personaGuardada('produccion')
+      if (!habiaMaestro && !habiaPersona && !habiaGuardada) return false
       if (habiaMaestro) cerrarMaestro()
       tocar()
+      olvidarPersona('produccion')
       if (habiaPersona) salir()
       else pintarCabecera()
-      return true
+      return habiaMaestro || habiaPersona
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2326,6 +2426,8 @@
     }
 
     function mostrarElegirUnidad() {
+      // Con UNA sola unidad no hay nada que preguntar: se entra a esa.
+      if (estado.unidadesPosibles.length === 1) return elegirUnidad(estado.unidadesPosibles[0])
       document.getElementById('pr-unidades').innerHTML = estado.unidadesPosibles
         .map(id => `<button type="button" class="pr-opcion" data-unidad="${esc(id)}">${esc(estado.unidades.get(id) ?? id)}</button>`)
         .join('')
@@ -2336,7 +2438,7 @@
       if (!estado.unidadesPosibles.includes(id)) return
       estado.unidadId = id
       estado.abiertasConocido = false
-      olvidarPersona()
+      olvidarTodas()
       guardarPreferencia(CLAVE_UNIDAD, id)
       refrescarAbiertas()
       siguientePaso()
@@ -2346,20 +2448,36 @@
     // en el que se verificó: cambiar de modo cambia el puesto, y el puesto es
     // lo que la base valida.
     function personaGuardada(modo) {
+      if (!Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo ?? '')) return null
       try {
-        const p = JSON.parse(leerSesion(CLAVE_PERSONA) ?? 'null')
+        const p = JSON.parse(leerSesion(clavePersona(modo)) ?? 'null')
         if (!p || typeof p.id !== 'string' || typeof p.nombre !== 'string') return null
         if (p.puesto !== PUESTO_DE_MODO[modo]) return null
         return { id: p.id, nombre: p.nombre, puesto: p.puesto }
       } catch { return null }
     }
 
+    // "¿Quién sos?". Si el modo YA tiene a alguien guardado (se fue a otro
+    // modo y volvió), no se muestra la lista: "Masero: Juan Masero" y el
+    // teclado del PIN de ESA persona, verificado con la misma RPC de siempre.
+    // "Soy otra persona" vuelve a la lista, para cuando rota el puesto.
     async function mostrarQuien() {
       const lista = document.getElementById('pr-quien-lista')
       const aviso = document.getElementById('pr-quien-aviso')
       estado.pin = null
       estado.quienBusqueda = ''
       document.getElementById('pr-quien-buscar').value = ''
+      const guardada = estado.quienOtra ? null : personaGuardada(estado.modo)
+      estado.quienFija = guardada
+      pintarQuienFija()
+      if (guardada) {
+        lista.innerHTML = ''
+        aviso.innerHTML = ''
+        mostrarVista('pr-quien')
+        estado.pin = nuevoPanelPin('persona', guardada, PUESTO_DE_MODO[estado.modo])
+        pintarPin()
+        return
+      }
       lista.innerHTML = '<p class="pr-texto-suave">Cargando el personal…</p>'
       aviso.innerHTML = ''
       mostrarVista('pr-quien')
@@ -2375,6 +2493,23 @@
         return
       }
       pintarQuien()
+    }
+
+    // Con una persona guardada: su rol y su nombre, sin buscador ni lista.
+    function pintarQuienFija() {
+      const f = estado.quienFija
+      document.getElementById('pr-quien-fija').hidden = !f
+      document.getElementById('pr-quien-fija-texto').textContent = f ? `${ROL_DE_MODO[estado.modo] ?? ''}: ${f.nombre}` : ''
+      for (const id of ['pr-quien-buscar', 'pr-quien-aviso', 'pr-quien-lista', 'pr-quien-puesto', 'pr-btn-maestro']) {
+        document.getElementById(id).hidden = !!f
+      }
+      document.getElementById('pr-quien-titulo').textContent = f ? 'Entrá con tu PIN' : '¿Quién sos?'
+    }
+
+    function soyOtraPersona() {
+      tocar()
+      estado.quienOtra = true
+      return mostrarQuien()
     }
 
     // Se repinta SOLO la lista: el buscador conserva el foco mientras se tipea.
@@ -2406,7 +2541,14 @@
     // La persona verificada queda adentro. El PIN no se guarda en ningún lado.
     function entrar(persona) {
       estado.persona = { id: persona.id, nombre: persona.nombre, puesto: persona.puesto ?? null }
-      guardarSesion(CLAVE_PERSONA, JSON.stringify(estado.persona))
+      // El acceso maestro NO se guarda: dura lo que dura la memoria, y
+      // guardarlo lo dejaría adentro del modo después de recargar, sin el
+      // maestro activo. Guardarlo además pisaría al masero o al encargado que
+      // el modo tenía recordado.
+      const esMaestro = !!estado.maestro && estado.maestro.id === persona.id
+      if (!esMaestro) guardarSesion(clavePersona(estado.modo), JSON.stringify(estado.persona))
+      estado.quienOtra = false
+      estado.quienFija = null
       estado.pin = null
       tocar()
       return entrarAlModo()
@@ -2414,9 +2556,11 @@
 
     function accionDelMenu(que) {
       if (que === 'unidad') {
+        // Con una sola unidad no hay a cuál cambiar.
+        if (estado.unidadesPosibles.length < 2) return siguientePaso()
         estado.unidadId = null
         estado.abiertasConocido = false
-        olvidarPersona()
+        olvidarTodas()
         guardarPreferencia(CLAVE_UNIDAD, null)
       } else if (que === 'config') {
         return abrirConfigDesdeAcceso()
@@ -2607,6 +2751,7 @@
     }
 
     function cerrarPin() {
+      if (estado.quienFija) return soyOtraPersona()
       estado.pin = null
       pintarQuien()
       pintarPin()
@@ -2785,10 +2930,15 @@
     }
 
     function cerrarMaestro() {
+      const id = estado.maestro?.id ?? null
       estado.maestro = null
       pinMaestro = null
       estado.acceso = null
-      olvidarPersona()
+      // Sale el maestro, no las personas guardadas de cada modo.
+      if (estado.persona && estado.persona.id === id) {
+        estado.persona = null
+        estado.pin = null
+      }
     }
 
     function pintarMaestro() {
@@ -2933,9 +3083,23 @@
 
     // Una sola puerta para el dato: la usan esta lectura y las dos pantallas
     // que ya leen el tablero, para no consultar dos veces lo mismo.
+    // El masero guardado sale; si la tablet está en Sala de masa, sale también
+    // de la pantalla. El acceso maestro NO es el masero: sigue adentro.
+    function sacarMaseroPorCierre() {
+      guardarSesion(clavePersona('masa'), null)
+      if (estado.modo === 'masa' && estado.persona && estado.persona.id !== estado.maestro?.id) {
+        estado.persona = null
+        estado.pin = null
+      }
+    }
+
+    // Sin ninguna máquina abierta (MEDIDO, no supuesto: esto solo lo llama
+    // quien leyó la base) Sala de masa se apaga y el masero queda afuera solo:
+    // no tiene dónde registrar una masa.
     function marcarAbiertas(hay) {
       estado.hayTurnoAbierto = hay
       estado.abiertasConocido = true
+      if (hay === false) sacarMaseroPorCierre()
       mantenerPantalla(hay)
       pintarBarra()
     }
@@ -2954,6 +3118,7 @@
       // delegación desde el contenedor, que sí es fijo.
       document.getElementById('pr-barra').addEventListener('click', ev => {
         if (ev.target.closest('#pr-btn-salir')) { tocar(); salir(); return }
+        if (ev.target.closest('#pr-btn-entrar')) { tocar(); estado.quienOtra = false; mostrarQuien(); return }
         const b = ev.target.closest('[data-modo]'); if (b) tocarModo(b.dataset.modo)
       })
       document.getElementById('pr-quien-lista').addEventListener('click', ev => {
@@ -2970,6 +3135,7 @@
         const b = ev.target.closest('[data-tecla]'); if (b) teclaPin(b.dataset.tecla)
       })
       document.getElementById('pr-pin-otra').addEventListener('click', cerrarPin)
+      document.getElementById('pr-btn-otra-persona').addEventListener('click', soyOtraPersona)
       document.getElementById('pr-btn-cerrar-maestro').addEventListener('click', () => { cerrarMaestro(); mostrarQuien() })
       document.getElementById('pr-btn-dar-acceso').addEventListener('click', abrirDarAcceso)
       document.getElementById('pr-acceso-buscar').addEventListener('input', ev => {
@@ -3242,6 +3408,7 @@
         return
       }
       marcarAbiertas(estado.tablero.some(e => e.turno))
+      pintarMaseroAdentro()
       if (!estado.tablero.length) {
         cont.innerHTML = ''
         aviso.innerHTML = '<div class="pr-aviso">Esta unidad no tiene máquinas activas. Se cargan en Configuración → Máquinas.</div>'
@@ -3619,6 +3786,9 @@
 
     function conectarProduccion() {
       document.getElementById('pr-btn-actualizar').addEventListener('click', mostrarTablero)
+      document.getElementById('pr-tablero-masero').addEventListener('click', ev => {
+        if (ev.target.closest('#pr-btn-sacar-masero')) sacarMasero()
+      })
       document.getElementById('pr-btn-abrir-turno').addEventListener('click', mostrarAbrir)
       document.getElementById('pr-abrir-cancelar').addEventListener('click', mostrarTablero)
       document.getElementById('pr-abiertos-volver').addEventListener('click', mostrarTablero)
@@ -4230,6 +4400,7 @@
         if (error) throw error
         document.getElementById('pr-forzar-form').hidden = true
         mostrarExito('La máquina quedó libre. La planilla quedó pendiente de completar.')
+        await maquinaCerrada(p.turno.id)
         await mostrarTablero()
       } catch (e) {
         console.error('forzar_cierre_turno:', e)
@@ -5241,6 +5412,7 @@
         document.getElementById('pr-cerrado-lista').innerHTML = htmlSublotesDefinitivos(data, estado.planilla.items)
         mostrarVista('pr-cerrado')
         mostrarExito('Planilla cerrada.')
+        await maquinaCerrada(turnoId)
       } catch (e) {
         // El borrador queda en la tablet: no se pierde nada.
         estado.cierre.errorBase = e?.message || 'No se pudo cerrar la planilla. Lo que cargaste quedó guardado en esta tablet.'
@@ -5382,7 +5554,29 @@
     // SALA DE MASA — 6a + 6b: las máquinas abiertas y de dónde sale la masa
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Cuando el encargado cierra la planilla de una máquina (cerrar_turno o
+    // forzar_cierre_turno), esa máquina sale de Sala de masa, y se vuelve a
+    // MEDIR si queda alguna abierta. Si no queda ninguna, marcarAbiertas(false)
+    // apaga el modo y saca al masero. Si la medición falla, no se apaga nada:
+    // el tercer estado, igual que en la barra.
+    async function maquinaCerrada(turnoId) {
+      for (const e of estado.tablero ?? []) {
+        if (e.turno && e.turno.id === turnoId) e.turno = null
+      }
+      if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()
+      await refrescarAbiertas()
+    }
+
+    const AVISO_SALA_REINTENTAR = '<button type="button" class="pr-btn pr-btn--secundario" id="pr-sala-volver-intentar">Volver a intentar</button>'
+
+    // LA PANTALLA NUNCA QUEDA VACÍA CUANDO LA BASE TIENE DATOS. Si la barra
+    // dice que hay máquinas abiertas y la lectura no trajo ninguna, se vuelve
+    // a pedir UNA vez; si sigue sin llegar ninguna, se vuelve a medir si hay
+    // abiertas: la base dice que no → el aviso de siempre; dice que sí o no se
+    // pudo saber → un aviso con "Volver a intentar". Nunca una lista muda.
+    // Cada pedido lleva su TURNO: uno viejo que llega tarde no pisa al nuevo.
     async function mostrarSala() {
+      const turno = (estado.salaPedido = (estado.salaPedido ?? 0) + 1)
       mostrarVista('pr-sala')
       const cont = document.getElementById('pr-sala-maquinas')
       const aviso = document.getElementById('pr-sala-aviso')
@@ -5390,22 +5584,46 @@
       aviso.innerHTML = ''
       pintarPendientes()
       reintentarPendientes()
+      const barraDiceQueHay = estado.abiertasConocido === true && estado.hayTurnoAbierto === true
+      let tablero
       try {
-        estado.tablero = estadoMaquinas(await leerTablero(estado.unidadId))
+        tablero = estadoMaquinas(await leerTablero(estado.unidadId))
+        if (turno !== estado.salaPedido) return
+        if (!tablero.some(e => e.turno) && barraDiceQueHay) {
+          tablero = estadoMaquinas(await leerTablero(estado.unidadId))
+          if (turno !== estado.salaPedido) return
+          if (!tablero.some(e => e.turno)) {
+            let hay = null
+            try { hay = await leerHayAbiertas(estado.unidadId) } catch (err) { console.error('sala, máquinas abiertas:', err) }
+            if (turno !== estado.salaPedido) return
+            if (hay !== false) {
+              estado.tablero = tablero
+              cont.innerHTML = ''
+              aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">Hay máquinas abiertas pero no llegaron a esta pantalla. ' +
+                AVISO_SALA_REINTENTAR + '</div>'
+              document.getElementById('pr-sala-panel').innerHTML = ''
+              return
+            }
+          }
+        }
       } catch (err) {
+        if (turno !== estado.salaPedido) return
         console.error('sala:', err)
         estado.tablero = null
         cont.innerHTML = ''
-        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer las máquinas. Revisá la conexión y tocá "Actualizar".</div>'
+        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudieron leer las máquinas. Revisá la conexión. ' + AVISO_SALA_REINTENTAR + '</div>'
         document.getElementById('pr-sala-panel').innerHTML = ''
         return
       }
+      estado.tablero = tablero
       const abiertas = maquinasAbiertas()
       marcarAbiertas(abiertas.length > 0)
       // Una máquina que dejó de estar abierta no puede quedar elegida: lo que
       // se vería a la derecha sería la receta de un turno que ya se cerró.
       if (estado.salaTurno && !abiertas.some(e => e.turno.id === estado.salaTurno.id)) soltarMaquinaSala()
       pintarSala()
+      // UNA sola máquina abierta: no hay nada que elegir, se entra derecho.
+      if (abiertas.length === 1 && !estado.salaTurno) await elegirMaquinaSala(abiertas[0].turno.id)
     }
 
     function maquinasAbiertas() {
@@ -5514,7 +5732,7 @@
       const aviso = document.getElementById('pr-sala-aviso')
       if (!abiertas.length) {
         cont.innerHTML = ''
-        aviso.innerHTML = '<div class="pr-aviso">Todavía no hay máquinas abiertas: el encargado tiene que abrir el turno.</div>'
+        aviso.innerHTML = '<div class="pr-aviso">Todavía no hay máquinas abiertas: el encargado tiene que abrir el turno. ' + AVISO_SALA_REINTENTAR + '</div>'
       } else {
         aviso.innerHTML = ''
         cont.innerHTML = abiertas.map(e => htmlFilaSala(e, e.turno.id === elegido)).join('')
@@ -6546,6 +6764,9 @@
 
     function conectarSala() {
       document.getElementById('pr-sala-actualizar').addEventListener('click', mostrarSala)
+      document.getElementById('pr-sala-aviso').addEventListener('click', ev => {
+        if (ev.target.closest('#pr-sala-volver-intentar')) mostrarSala()
+      })
       document.getElementById('pr-sala-reintentar').addEventListener('click', reintentarPendientes)
       document.getElementById('pr-sala-masas').addEventListener('click', mostrarMasasTurno)
       document.getElementById('pr-sala-maquinas').addEventListener('click', ev => {
@@ -8616,6 +8837,8 @@
       // Quién estaba adentro en esta pestaña: recargar la tablet no tiene por
       // qué echar a nadie, y el PIN no se guardó en ningún lado.
       estado.persona = personaGuardada(estado.modo)
+      // La clave vieja, de cuando había una sola persona para los dos modos.
+      guardarSesion(CLAVE_PERSONA, null)
       // Antes del primer dibujo de la barra, para no prometer ni negar SALA DE
       // MASA sin haberlo medido.
       await refrescarAbiertas()

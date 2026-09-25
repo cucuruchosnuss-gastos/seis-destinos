@@ -30,6 +30,9 @@ const FUNCIONES_BASE = [
   // Parte 1 del rediseño: barra de modos, PIN, maestro, acceso por hoy
   'salaDeshabilitada', 'htmlQuienEnBarra', 'htmlBarraModos', 'pintarFondoDeModo', 'pintarBarra',
   'tocarModo', 'olvidarPersona', 'salir', 'tocar', 'vencioPorInactividad', 'revisarInactividad',
+  // Terminar la tablet, parte 2: una persona por modo, sacar al masero, la sala que no queda vacía
+  'clavePersona', 'olvidarTodas', 'puedeSacarMasero', 'maseroAdentro', 'htmlMaseroAdentro', 'pintarMaseroAdentro',
+  'sacarMasero', 'pintarQuienFija', 'soyOtraPersona', 'maquinaCerrada', 'sacarMaseroPorCierre',
   'nuevoPanelPin', 'primerNombre', 'textoIntentos', 'mensajeDePin', 'cuentaRegresiva',
   'htmlPuntosPin', 'htmlTecladoPin', 'htmlProgresoPin', 'saludoPin', 'subtituloPin',
   'htmlMensajePin', 'pintarPin', 'teclaPin', 'cerrarPin', 'aplicarRechazoPin',
@@ -141,6 +144,7 @@ const CONSTANTES_BASE = [
   'PESTANAS_CONFIG', 'PUESTOS', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION',
   'EMBOLSADOS', 'TEXTO_EMBOLSADO', 'CONDICIONES_EMPAQUE',
+  'AVISO_SALA_REINTENTAR',
 ]
 
 const PRELUDIO = `

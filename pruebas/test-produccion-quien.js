@@ -117,10 +117,12 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   S.estado.modo = 'masa'
   chk('cambia el marcado con el modo', /data-modo="masa" aria-pressed="true"/.test(S.htmlBarraModos()))
 
-  // Sin nadie adentro no hay Salir.
+  // Sin nadie adentro no hay Salir: hay una invitación a entrar, tocable
+  // (terminar la tablet, parte 2: "Nadie adentro" no invitaba a nada).
   S.estado.persona = null
-  chk('sin nadie adentro: "Nadie adentro" y sin Salir',
-    /Nadie adentro/.test(S.htmlBarraModos()) && !/pr-btn-salir/.test(S.htmlBarraModos()))
+  chk('sin nadie adentro: "Tocá para entrar", tocable, y sin Salir',
+    /<button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar<\/button>/.test(S.htmlBarraModos()) &&
+    !/Nadie adentro/.test(S.htmlBarraModos()) && !/pr-btn-salir/.test(S.htmlBarraModos()))
   S.estado.persona = { id: 'e-masero', nombre: 'Juan Masero', puesto: 'masero' }
   const conNadie = S.htmlBarraModos()
   chk('con alguien adentro: el rol y el nombre', /Masero:/.test(conNadie) && /Juan Masero/.test(conNadie))
@@ -255,7 +257,7 @@ esperas.push((async () => {
 
   const Y = construirProduccion(ARCHIVO)
   Y.estado.unidades = new Map([[marca('unidadId'), marca('unidadNombre')]])
-  Y.estado.unidadesPosibles = [marca('unidadId')]
+  Y.estado.unidadesPosibles = [marca('unidadId'), 'u-otra']
   Y.mostrarElegirUnidad()
   chequearMarcas(chk, 'elegir unidad', Y.__doc.getElementById('pr-unidades').innerHTML, ['unidadId', 'unidadNombre'])
 
@@ -339,22 +341,27 @@ esperas.push((async () => {
   S.__setRpc(async () => ({ data: [], error: null }))
   await S.entrar({ id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' })
   chk('entrar deja a la persona adentro', S.estado.persona?.id === 'e-fede')
-  chk('… y la guarda en sessionStorage', /e-fede/.test(S.sessionStorage.getItem('produccion.persona') ?? ''))
+  chk('… y la guarda en sessionStorage, en la clave de SU modo', /e-fede/.test(S.sessionStorage.getItem('produccion.persona.produccion') ?? '') &&
+    S.sessionStorage.getItem('produccion.persona.masa') === null)
   chk('… NO en localStorage', !JSON.stringify([...S.__ls]).includes('e-fede'))
   chk('la guardada vuelve para SU modo', S.personaGuardada('produccion')?.id === 'e-fede')
   chk('… y NO para el otro modo: el puesto es lo que la base valida', S.personaGuardada('masa') === null)
-  S.__ss.set('produccion.persona', 'no es json')
+  S.__ss.set('produccion.persona.produccion', 'no es json')
   chk('un sessionStorage corrupto no rompe', S.personaGuardada('produccion') === null)
   // JSON VÁLIDO pero con otra forma: acá el try/catch no ataja nada, la forma
   // tiene que validarse. Es el caso que separa las dos defensas.
-  S.__ss.set('produccion.persona', '{"id":123,"puesto":"encargado"}')
+  S.__ss.set('produccion.persona.produccion', '{"id":123,"puesto":"encargado"}')
   chk('un id que no es texto no se acepta', S.personaGuardada('produccion') === null)
-  S.__ss.set('produccion.persona', '"encargado"')
+  S.__ss.set('produccion.persona.produccion', '"encargado"')
   chk('un JSON que no es un objeto tampoco', S.personaGuardada('produccion') === null)
+  // Cada modo tiene su clave, y el puesto se sigue validando: un encargado
+  // escrito en la clave de Sala de masa no entra como masero.
+  S.__ss.set('produccion.persona.masa', '{"id":"e-fede","nombre":"Federico Silva","puesto":"encargado"}')
+  chk('una persona con el puesto de OTRO modo no se acepta', S.personaGuardada('masa') === null)
 
   await S.salir()
   chk('Salir deja la tablet sin nadie', S.estado.persona === null)
-  chk('… lo borra de sessionStorage', S.sessionStorage.getItem('produccion.persona') === null)
+  chk('… lo borra de sessionStorage', S.sessionStorage.getItem('produccion.persona.produccion') === null)
   chk('… y vuelve a preguntar', S.__doc.getElementById('pr-quien').hidden === false)
 })())
 
