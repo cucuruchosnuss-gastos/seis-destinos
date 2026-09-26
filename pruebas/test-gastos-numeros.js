@@ -141,6 +141,7 @@ const PRELUDIO = `
   var estado = {
     wizard: { camposOcr: new Set(), esPendiente: false, fotoUrl: null, desdeIngreso: null },
     listaGastos: [], facturaDetalleActual: null,
+    fabrica: FABRICA_SIN_DATOS, // de utils.js, que fuenteNumeros() ya trae entero
     maestros: {
       unidades: [{ id: 'u1', nombre: 'Cucuruchos Nuss' }], vehiculos: [], empleados: [{ id: 'e1', nombre: 'Ana' }],
       categorias: [{ id: 'cat-1', nombre: 'Insumos - Materia Prima' }], proyectos: [],
@@ -156,7 +157,7 @@ const FUNCIONES = [
   'esc', 'formatearImporte', 'formatearImporteDuplicado', 'fechaAPeriodo', 'opcionesProyectoEdicion', 'diasEntre',
   'enlazarCamposNumeroWizard', 'importeDelWizard', 'kilometrajeDelWizard',
   'validarSubpaso', 'armarGasto', 'armarFacturaPendiente', 'prellenarPaso2', 'importeDeOcr', 'cargarGastoDesdeIngreso',
-  'esCuentaDeTablet', 'personasElegibles', 'personasParaEditar',
+  'esCuentaDeTablet', 'personasNoTablet', 'personasElegibles', 'personasParaEditar', 'unidadesElegibles', 'unidadesParaEditar',
   'mostrarFormularioEdicionGasto', 'mostrarFormularioEdicionFactura', 'mostrarFormularioInteres',
 ]
 

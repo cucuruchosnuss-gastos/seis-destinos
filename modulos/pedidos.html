@@ -488,6 +488,7 @@
     import { verificarSesion } from '../js/auth.js'
     import {
       mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
+      cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
@@ -506,6 +507,10 @@
       misTareas: new Map(),
       // Todas las unidades activas: id → nombre.
       unidades: new Map(),
+      // La fábrica de pruebas (la unidad "Pruebas (robot)"): una cuenta real no
+      // la ve en ninguna lista de unidades. Se lee en paralelo al arrancar y,
+      // si falla, no se saca nada (FABRICA_SIN_DATOS).
+      fabrica: FABRICA_SIN_DATOS,
       unidadId: null,
       vista: null,
       // Clientes de la unidad elegida (null = todavía no se leyeron).
@@ -588,9 +593,13 @@
     }
 
     // Las unidades donde tiene ALGUNA de las tres, en el orden de la tabla.
+    // Sin la unidad de prueba para una cuenta real: de acá salen el segmento,
+    // la unidad inicial (una recordada que sea de prueba no queda elegida) y
+    // elegirUnidad, así que con una sola unidad real el segmento no se dibuja.
     function unidadesDelModulo() {
       const set = new Set(TAREAS_PEDIDOS.flatMap(unidadesCon))
-      return [...estado.unidades.keys()].filter(id => set.has(id))
+      const ids = [...estado.unidades.keys()].filter(id => set.has(id))
+      return sinUnidadesDePrueba(ids, estado.fabrica, id => id)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2069,8 +2078,11 @@
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
+      // La fábrica de pruebas se lee en paralelo y nunca tira.
+      const fabrica = cargarFabricaDePruebas(supabase)
       try {
-        await cargarPermisos()
+        const [, f] = await Promise.all([cargarPermisos(), fabrica])
+        estado.fabrica = f
       } catch (err) {
         console.error('No se pudieron leer los permisos:', err)
         sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')

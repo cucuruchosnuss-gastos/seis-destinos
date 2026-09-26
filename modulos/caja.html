@@ -1759,7 +1759,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito, formatearFecha, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
+    import { mostrarError, mostrarExito, formatearFecha, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1779,6 +1779,10 @@
       directorioPersonaAbierta: null, // empleado_id cuyas cuentas se están mostrando en el Directorio, o null = lista de personas
       filtrosFichaEmpresa: { periodos: [], tipos: [], cuenta_ids: [] }, // ficha de Empresa (CAMBIO 2) — sin empleado_ids, el dueño ya está implícito
       maestros:        { unidadesNegocio: [] },
+      // La fábrica de pruebas (unidad "Pruebas (robot)" y sus personas, que usa
+      // Playwright): ver cargarFabricaDePruebas() en js/utils.js. Hasta que
+      // llega —o si no se puede leer— no se saca nada.
+      fabrica:         FABRICA_SIN_DATOS,
       saldos:          [],   // filas de v_caja_saldos — para admin: de todos los visibles;
                               // para usuario: solo las propias (nunca se piden las de otros)
       cuentasPorId:    {},   // id -> {id, empleado_id, nombre, medio, moneda, favorita, activa,
@@ -2553,7 +2557,12 @@
         .eq('tiene_acceso', true).eq('activo', true).order('nombre')
       if (error) { mostrarError('No se pudieron cargar las personas.'); return false }
       // Las tablets tienen acceso pero no son personas: ver esCuentaDeTablet().
-      estado.empleados = (data || []).filter(e => !esCuentaDeTablet(e))
+      // Y las personas de la fábrica de pruebas (el robot) no aparecen para una
+      // cuenta real: estado.empleados alimenta el listado, el Directorio, los
+      // filtros de Retiros y Movimientos y la contraparte. Se filtra por la
+      // fábrica y NO se confía en que el robot sea tipo 'sistema': eso es hoy,
+      // no una regla.
+      estado.empleados = sinPersonasDePrueba((data || []).filter(e => !esCuentaDeTablet(e)), estado.fabrica)
       asegurarEmpresaEnEmpleados()
       return true
     }
@@ -2687,7 +2696,10 @@
 
     function agruparPersonas() {
       const porUnidad = new Map()
-      estado.maestros.unidadesNegocio.forEach(u => porUnidad.set(u.id, { id: u.id, nombre: u.nombre, lista: [] }))
+      // Sin la unidad de la fábrica de pruebas (salvo para una cuenta de prueba).
+      // estado.maestros.unidadesNegocio queda completa: resolver un nombre por id
+      // (nombreUnidad) no se filtra.
+      sinUnidadesDePrueba(estado.maestros.unidadesNegocio, estado.fabrica).forEach(u => porUnidad.set(u.id, { id: u.id, nombre: u.nombre, lista: [] }))
       const sinEmpresa = []
 
       estado.empleados.forEach(emp => {
@@ -3890,7 +3902,7 @@
       grupoUnidad.hidden = !esParaEmpresa
       if (esParaEmpresa) {
         document.getElementById('cuenta-unidad-negocio').innerHTML = '<option value="">— Sin asignar —</option>' +
-          estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+          sinUnidadesDePrueba(estado.maestros.unidadesNegocio, estado.fabrica).map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
       }
 
       document.getElementById('modal-cuenta-nueva').hidden = false
@@ -4296,7 +4308,10 @@
       // lista fija de columnas. Si falta, esto no filtra nada y no da ningún
       // error. Ver cargarSuperAdmins() y cargarPersonasConAcceso().
       // Y ninguna tablet, aunque una lista llegara sin filtrar al cargar.
-      candidatos = candidatos.filter(c => !c.oculto_como_contraparte && !esCuentaDeTablet(c))
+      // Ni las personas de la fábrica de pruebas: acá también porque la rama
+      // del usuario común sale de estado.superAdmins, que no pasa por
+      // cargarPersonasConAcceso().
+      candidatos = sinPersonasDePrueba(candidatos.filter(c => !c.oculto_como_contraparte && !esCuentaDeTablet(c)), estado.fabrica)
 
       // Empresa como contraparte solo cuando NO es ya mi lado.
       if (!desdeEmpresa && estado.idEmpresa && !candidatos.some(c => c.id === estado.idEmpresa)) {
@@ -4750,6 +4765,11 @@
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
 
+      // La fábrica de pruebas arranca YA, en paralelo con todo lo que sigue, y
+      // se espera junto con el Promise.all de abajo: las listas de personas y
+      // de unidades se arman después. Nunca tira (si falla, no se saca nada).
+      const promesaFabrica = cargarFabricaDePruebas(supabase).then(f => { estado.fabrica = f })
+
       const { data: emp, error } = await supabase
         .from('empleados')
         .select('id, nombre, rol_app, caja_raiz')
@@ -4776,7 +4796,7 @@
 
       // Comunes a todos los roles: hacen falta tanto en el listado (admin)
       // como en la ficha propia (usuario) para el modal de "Añadir ingreso".
-      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas(), cargarUnidadesNegocio()])
+      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas(), cargarUnidadesNegocio(), promesaFabrica])
 
       // Secuencial y después del Promise.all de arriba a propósito — ver el
       // comentario en cargarEmpresa() sobre la carrera con cargarNombresEmpleados().

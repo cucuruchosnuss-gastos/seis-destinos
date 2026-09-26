@@ -40,6 +40,8 @@ function armar(estado) {
     const MODULOS_INFO = [{ key: 'produccion', label: 'Producción' }, { key: 'stock', label: 'Stock' }]
     function abrirModalEditar() {}
     function confirmarQuitarMfa() {}
+    // La fábrica de pruebas se prueba en test-accesos-fabrica-pruebas.js; acá no saca nada.
+    const sinPersonasDePrueba = (filas) => filas
     ${codigo}
     const falta = (n) => () => { throw new Error('no existe ' + n) }
     return {

@@ -1308,7 +1308,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito, leerNumeroAr, enlazarCampoNumero, ponerNumero } from '../js/utils.js'
+    import { mostrarError, mostrarExito, leerNumeroAr, enlazarCampoNumero, ponerNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     // Los helpers que Cobranzas comparte con Cheques (modulos/cheques.html):
     // una sola copia, en js/cobranzas-comun.js (22/09/2026).
     import {
@@ -1340,6 +1340,10 @@
       // asentar y para leer el historial. Todas, activas o no: una unidad dada
       // de baja igual tiene que poder nombrarse en una cobranza vieja.
       unidades: [],
+      // La fábrica de pruebas (la unidad "Pruebas (robot)" y sus personas):
+      // no se ofrece nunca a una cuenta real. Arranca sin datos —los filtros
+      // no sacan nada— hasta que llega cargarFabricaDePruebas.
+      fabrica: FABRICA_SIN_DATOS,
 
       // Listado
       cobranzas: [],
@@ -1677,8 +1681,26 @@
     // Las que se pueden ELEGIR: las activas, más la que la cobranza ya tiene
     // aunque se haya dado de baja (si no, "Cambiar" mostraría un select que
     // no contiene el valor actual).
-    function unidadesParaElegir(unidades, actual) {
-      return (unidades ?? []).filter(u => u.activo !== false || u.id === actual)
+    // La unidad de la fábrica de pruebas no se ofrece a una cuenta real (sí
+    // a una de prueba). La actual se conserva igual: si no, "Cambiar" sobre
+    // una cobranza que ya la tiene mostraría un select sin su valor.
+    function unidadesParaElegir(unidades, actual, fabrica) {
+      const activas = (unidades ?? []).filter(u => u.activo !== false || u.id === actual)
+      return sinUnidadesDePrueba(activas, fabrica, u => (u?.id === actual ? null : u?.id))
+    }
+
+    // Una sola carga de la fábrica de pruebas, en vuelo desde el init. Nunca
+    // falla: si no se pudo leer, queda FABRICA_SIN_DATOS y no se saca nada.
+    let promesaFabrica = null
+    function asegurarFabrica() {
+      if (!promesaFabrica) {
+        promesaFabrica = cargarFabricaDePruebas(supabase).then(f => {
+          estado.fabrica = f ?? FABRICA_SIN_DATOS
+          pintarRepartidores()
+          return estado.fabrica
+        })
+      }
+      return promesaFabrica
     }
 
     // Las opciones del filtro salen de la tabla de personas, NUNCA de las
@@ -1689,18 +1711,29 @@
       try {
         const { data, error } = await supabase
           .from('v_empleados_publico')
-          .select('id, nombre')
+          .select('id, nombre, unidad_negocio_id')
           .eq('tiene_acceso', true)
           .order('nombre')
         if (error) throw error
         estado.repartidores = data ?? []
-        const sel = document.getElementById('cob-filtro-repartidor')
-        sel.innerHTML = '<option value="">Todos</option>' +
-          estado.repartidores.map(r => `<option value="${escCob(r.id)}">${escCob(r.nombre)}</option>`).join('')
-        document.getElementById('cob-campo-repartidor').hidden = false
+        pintarRepartidores()
       } catch (err) {
         console.error('No se pudieron cargar los repartidores:', err)
       }
+    }
+
+    // Arma el selector desde estado.repartidores, sin las personas de la
+    // fábrica de pruebas (salvo para una cuenta de prueba). Se vuelve a
+    // pintar cuando llega la fábrica, conservando lo elegido si sigue.
+    function pintarRepartidores() {
+      if (!puedeVerTodo() || !estado.repartidores.length) return
+      const visibles = sinPersonasDePrueba(estado.repartidores, estado.fabrica)
+      const sel = document.getElementById('cob-filtro-repartidor')
+      const antes = sel.value
+      sel.innerHTML = '<option value="">Todos</option>' +
+        visibles.map(r => `<option value="${escCob(r.id)}">${escCob(r.nombre)}</option>`).join('')
+      if (antes && visibles.some(r => r.id === antes)) sel.value = antes
+      document.getElementById('cob-campo-repartidor').hidden = false
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2445,7 +2478,10 @@
     // preselecciona nada, salvo la unidad que la cobranza ya tiene ("Cambiar")
     // o la única que haya: con una sola, preguntar sería ruido.
     async function elegirUnidadConDialogo({ titulo, texto, textoSi, actual }) {
-      const opciones = unidadesParaElegir(await asegurarUnidades(), actual)
+      // Se espera también la fábrica de pruebas: si alguien asienta antes de
+      // que llegue, la unidad del robot aparecería en el diálogo.
+      const [unidades, fabrica] = await Promise.all([asegurarUnidades(), asegurarFabrica()])
+      const opciones = unidadesParaElegir(unidades, actual, fabrica)
       if (!opciones.length) {
         mostrarError('No se pudo cargar la lista de unidades de negocio. Revisá la señal y volvé a intentar.')
         return null
@@ -4518,6 +4554,7 @@
 
       // Si el link directo ya dibujó el detalle, se redibuja cuando llegan
       // las unidades: el historial nombra la unidad a partir de su id.
+      asegurarFabrica()
       asegurarUnidades().then(() => {
         if (estado.detalle?.historial?.some(h => h.accion === 'unidad_asignada')) renderizarDetalle()
       })

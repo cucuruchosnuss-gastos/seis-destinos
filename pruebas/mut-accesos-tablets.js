@@ -15,7 +15,7 @@ correrMutaciones({
     { nombre: 'esDispositivo acepta cualquier valor verdadero',
       de: 'return emp?.es_dispositivo === true', a: 'return !!emp?.es_dispositivo' },
     { nombre: 'la consulta no trae es_dispositivo',
-      de: 'rol_app, es_dispositivo, unidades_negocio', a: 'rol_app, unidades_negocio' },
+      de: 'rol_app, es_dispositivo, unidad_negocio_id, unidades_negocio', a: 'rol_app, unidad_negocio_id, unidades_negocio' },
     { nombre: 'las tablets se mezclan con las personas',
       de: 'const personas = lista.filter(e => !esDispositivo(e))', a: 'const personas = lista' },
     { nombre: 'las tablets no se dibujan',

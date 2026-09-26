@@ -126,6 +126,7 @@ const PRELUDIO = `
     miEmpleadoId: 'emp-1', miRolApp: 'usuario',
     misTareas: new Map([['ver', { unidades: ['u-cn'] }], ['cargar', { unidades: ['u-cn'] }], ['configurar', { unidades: ['u-cn'] }]]),
     unidades: new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']]),
+    fabrica: FABRICA_SIN_DATOS,
     unidadId: 'u-cn', vista: null,
     clientes: null, errorClientes: null, clientesBusqueda: '', clienteForm: null, guardandoCliente: false,
     catalogo: null, catalogoUnidad: null, errorCatalogo: null, form: null, guardandoPedido: false,

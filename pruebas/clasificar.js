@@ -181,6 +181,7 @@ const SEGURAS_REGEX = [
   [/^f\.cheques\.map\(ch => htmlTarjetaCheque\(ch, f\)\)\.join\(''\)$/s, 'HTML armado por htmlTarjetaCheque(), que escapa adentro'],
   [/^ESTADOS_COBRANZA\.map\(e =>/s, 'HTML de una plantilla anidada, verificada aparte'],
   [/^estado\.repartidores\.map\(r =>/s, 'HTML de una plantilla anidada, verificada aparte'],
+  [/^visibles\.map\(r =>/s, 'HTML de una plantilla anidada (pintarRepartidores), verificada aparte'],
   [/^htmlDetalle\(d\)$/s, 'HTML armado por htmlDetalle(), que escapa adentro'],
   // Vista de cheques
   [/^filas\.map\(ch => htmlFilaCheque\(ch, cobranzas\.get\(ch\.cobranza_id\)\)\)\.join\(''\)$/s, 'HTML armado por htmlFilaCheque(), que escapa adentro'],

@@ -30,7 +30,7 @@ correrMutaciones({
       de: '<span class="chip-tablet">Tablet</span>\n            </div>\n            <div class="tarjeta-lista__subtitulo">Cuenta',
       a: '<span class="chip-tablet"></span>\n            </div>\n            <div class="tarjeta-lista__subtitulo">Cuenta' },
     { nombre: 'las cifras cuentan las tablets',
-      de: 'const personas  = estado.empleados.filter(e => !esDispositivo(e))', a: 'const personas  = estado.empleados' },
+      de: 'const personas  = personasVisibles().filter(e => !esDispositivo(e))', a: 'const personas  = personasVisibles()' },
     { nombre: 'la ficha de la tablet pide el PIN igual',
       de: '      if (esDispositivo(emp)) return\n', a: '' },
     { nombre: 'la sección del PIN se dibuja para una tablet',

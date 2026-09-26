@@ -41,6 +41,7 @@ const { arnes, marca, escapada, chequearMarcas, leer } = require('./circuito-com
 const { interpolaciones, analizar } = require('./escaner-interpolaciones')
 const { clasificar, partirTopLevel } = require('./clasificar')
 const { extraerFn, cuerpoDesde } = require('./extraer')
+const { preludioFabrica } = require('./fabrica-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/empleados.html')
@@ -101,6 +102,7 @@ function clausura(src) {
 }
 
 const PRELUDIO = `
+${preludioFabrica()}
   var console = { log(){}, warn(){}, error(){} }
   function nuevoEl(id) {
     const el = {
@@ -357,6 +359,9 @@ const SEGURAS = {
     boton: HTML_PROPIO,
     'htmlPanelPin(emp)': 'HTML armado por htmlPanelPin(), que escapa adentro (sus interpolaciones las revisa el escáner)',
   },
+  init: {
+    'htmlOpcionesEmpresaImport()': 'HTML armado por htmlOpcionesEmpresaImport(), que escapa adentro (sus interpolaciones las revisa el escáner)',
+  },
   renderizarPin: {
     'htmlSeccionPin()': 'HTML armado por htmlSeccionPin(), que escapa adentro (sus interpolaciones las revisa el escáner)',
   },
@@ -571,8 +576,9 @@ if (SOLO !== 'render') {
 
   // Empleados NO importa funciones de números de utils.js (por eso el preludio
   // no lleva fuenteNumeros()): si mañana las importa, esta suite hay que revisarla.
-  chk('estático: de js/utils.js importa solo mostrarError, mostrarExito y formatearFecha',
-    /import \{ mostrarError, mostrarExito, formatearFecha \} from '\.\.\/js\/utils\.js'/.test(script) &&
+  // Desde el 26/09/2026 importa además la fábrica de pruebas (que no arma HTML).
+  chk('estático: de js/utils.js importa solo mostrarError, mostrarExito, formatearFecha y la fábrica de pruebas',
+    /import \{ mostrarError, mostrarExito, formatearFecha, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS \} from '\.\.\/js\/utils\.js'/.test(script) &&
     (script.match(/from '\.\.\/js\/utils\.js'/g) || []).length === 1)
 
   chk('control: los toasts de js/utils.js usan textContent y no innerHTML',

@@ -2132,7 +2132,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -2168,6 +2168,11 @@
       // Qué pasó con el último gasto guardado (cuenta corriente y mercadería).
       // Lo dibuja renderizarAvisoPostGasto() en la lista, hasta "Entendido".
       postGasto: null,
+      // La fábrica de pruebas (la unidad "Pruebas (robot)" y sus personas),
+      // que usa Playwright. Se carga UNA vez en el init y nunca tira: si falla
+      // queda FABRICA_SIN_DATOS y los filtros no sacan nada. Ver
+      // unidadesElegibles() y personasElegibles().
+      fabrica: FABRICA_SIN_DATOS,
       maestros: {
         categorias:  [],
         empleados:   [],
@@ -2428,6 +2433,10 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     estado.sesion = await verificarSesion()
+
+    // En paralelo con el resto del arranque: no lo frena, y nunca tira.
+    // Se espera recién antes de dibujar la primera lista.
+    const promesaFabrica = cargarFabricaDePruebas(supabase)
 
     const { data: emp } = await supabase
       .from('empleados')
@@ -2882,7 +2891,7 @@
         estado.filtros.periodos.length = 0
       }
 
-      renderizarFiltros(estado.maestros.unidades)
+      renderizarFiltros(unidadesElegibles())
       actualizarSegmentedRango()
       cargarLista()
     }
@@ -3558,6 +3567,7 @@
     estado.maestros.proveedores = proveedoresInicial ?? []
 
     estado.maestros.unidades = unidadesInicial ?? []
+    estado.fabrica = await promesaFabrica
 
     await cargarMonedasDisponibles()
     poblarSelectMoneda('campo-moneda')
@@ -4222,7 +4232,7 @@
         `
       }
 
-      const empresasHtml = estado.maestros.unidades.map(u =>
+      const empresasHtml = unidadesElegibles().map(u =>
         tarjetaEmpresa(u.id, u.nombre, !viaVehiculos && u.id === unidadSeleccionada)
       ).join('')
 
@@ -4585,8 +4595,37 @@
       return e?.tipo === 'sistema'
     }
 
+    // Sin tablets y sin las personas de la fábrica de pruebas (salvo para una
+    // cuenta de prueba). La fábrica se filtra EXPLÍCITO y no se deja caer por
+    // esCuentaDeTablet: que hoy las personas del robot tengan tipo='sistema'
+    // es una casualidad, no una regla.
     function personasElegibles() {
+      return sinPersonasDePrueba(personasNoTablet(), estado.fabrica)
+    }
+
+    function personasNoTablet() {
       return (estado.maestros.empleados ?? []).filter(e => !esCuentaDeTablet(e))
+    }
+
+    // ── Unidades de la fábrica de pruebas ──────────────────────────────────
+    // La unidad "Pruebas (robot)" no se ofrece en ninguna lista de unidades
+    // (filtros, grilla del wizard, edición), salvo a una cuenta de prueba.
+    // estado.maestros.unidades queda COMPLETO a propósito: se usa también para
+    // resolver un nombre por id, y ahí no hay nada que filtrar.
+    function unidadesElegibles() {
+      return sinUnidadesDePrueba(estado.maestros.unidades ?? [], estado.fabrica)
+    }
+
+    // En la EDICIÓN se conserva la unidad del propio registro aunque fuera de
+    // prueba: sin ella el select caería en otra y el guardado se la cambiaría
+    // sin aviso. Mismo criterio que personasParaEditar().
+    function unidadesParaEditar(idActual) {
+      const lista = unidadesElegibles()
+      if (idActual && !lista.some(u => u.id === idActual)) {
+        const actual = (estado.maestros.unidades ?? []).find(u => u.id === idActual)
+        if (actual) return [...lista, actual]
+      }
+      return lista
     }
 
     function poblarSelectEmpleados(unidadId) {
@@ -5667,7 +5706,8 @@
     }
 
     // Personas del selector de la edición: las elegibles, MÁS la del propio
-    // gasto si justo es una cuenta de tablet (hoy ninguno lo es). Sin esa
+    // gasto si justo es una cuenta de tablet o una persona de la fábrica de
+    // pruebas (hoy ninguno lo es). Sin esa
     // excepción el select no la encontraría, quedaría en "— Ninguno —" y el
     // guardado le borraría la persona al gasto sin ningún aviso — el mismo
     // caso que el proyecto dado de baja. No se ofrece para elegirla: solo
@@ -5676,7 +5716,7 @@
       const lista = personasElegibles()
       const idActual = g?.empleados?.id ?? g?.empleado_id
       const actual = idActual ? estado.maestros.empleados.find(e => e.id === idActual) : null
-      if (actual && esCuentaDeTablet(actual)) lista.push(actual)
+      if (actual && !lista.some(e => e.id === actual.id)) lista.push(actual)
       return lista
     }
 
@@ -5689,7 +5729,7 @@
       const selectEmpresa = `
         <select id="edit-unidad">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.unidades.map(u => `<option value="${esc(u.id)}" ${g.unidades_negocio?.id === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
+          ${unidadesParaEditar(g.unidades_negocio?.id).map(u => `<option value="${esc(u.id)}" ${g.unidades_negocio?.id === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
         </select>`
 
       const selectVehiculo = `
@@ -6050,7 +6090,7 @@
       const selectUnidad = `
         <select id="edit-factura-unidad">
           <option value="">— Ninguna —</option>
-          ${estado.maestros.unidades.map(u => `<option value="${esc(u.id)}" ${f.unidades_negocio?.id === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
+          ${unidadesParaEditar(f.unidades_negocio?.id).map(u => `<option value="${esc(u.id)}" ${f.unidades_negocio?.id === u.id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
         </select>`
 
       const selectCategoria = `

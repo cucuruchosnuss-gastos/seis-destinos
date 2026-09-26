@@ -2963,7 +2963,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -3099,6 +3099,10 @@
       // v_mis_unidades_recepcion, que resuelve recibir_transferencia con la
       // misma tiene_tarea_alcance que la RPC: el alcance no se reimplementa acá.
       unidadesRecepcion: [],
+      // La FÁBRICA DE PRUEBAS (unidad "Pruebas (robot)" y sus personas): se
+      // carga una vez en init() con cargarFabricaDePruebas() de utils.js. Hasta
+      // entonces —o si falla— no se filtra nada.
+      fabrica: FABRICA_SIN_DATOS,
       transito: [],                // filas de v_stock_en_transito hacia mis unidades
       recepcion: null,             // { cabecera, items } de la que se está recibiendo
 
@@ -3311,6 +3315,12 @@
     // bulto no es una unidad de medida del catálogo. Ausente: "—".
     function formatearNumero(n) {
       return formatearNumeroAr(n, { decimales: 2, minimos: 0 })
+    }
+
+    // Las unidades que se OFRECEN (chips del listado, selector del wizard): sin
+    // la unidad de la fábrica de pruebas, salvo para una cuenta de prueba.
+    function unidadesParaElegir() {
+      return sinUnidadesDePrueba(estado.unidades, estado.fabrica)
     }
 
     function nombreUnidad(id) {
@@ -3771,6 +3781,11 @@
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
 
+      // La fábrica de pruebas se pide YA y en paralelo con lo que sigue; se
+      // espera recién antes de dibujar la primera lista de unidades. No tira
+      // nunca: si falla, no se filtra nada.
+      const fabricaPrometida = cargarFabricaDePruebas(supabase)
+
       const { data: emp, error } = await supabase
         .from('empleados')
         .select('id, rol_app')
@@ -3818,7 +3833,11 @@
         .select('id, nombre')
         .eq('activo', true)
         .order('nombre')
+      // estado.unidades queda COMPLETA a propósito: nombreUnidad() resuelve
+      // nombres por id y no se filtra. Las listas para ELEGIR una unidad pasan
+      // por unidadesParaElegir().
       estado.unidades = unids ?? []
+      estado.fabrica = await fabricaPrometida
 
       renderizarChipsUnidadIngresos()
       renderizarChipsVinculoIngresos()
@@ -3907,7 +3926,7 @@
 
     function renderizarChipsUnidadIngresos() {
       const cont = document.getElementById('chips-unidad-ingresos')
-      const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidades]
+      const chips = [{ id: '', nombre: 'Todas' }, ...unidadesParaElegir()]
       cont.innerHTML = chips.map(u => `
         <button type="button" class="chip-unidad ${estado.filtros.ingresos.unidadId === u.id ? 'chip-unidad--activa' : ''}" data-unidad="${esc(u.id)}">${esc(u.nombre)}</button>
       `).join('')
@@ -4004,7 +4023,9 @@
       // Un error acá no puede voltear el listado: se pierden las transferencias,
       // no los ingresos. Y con la lista vacía el aviso del pie lo dice.
       if (error) { console.error(error); estado.unidadesStockVisibles = []; return }
-      estado.unidadesStockVisibles = data ?? []
+      // Sin la unidad de prueba: una transferencia hacia el robot no aparece
+      // en el listado de una cuenta real.
+      estado.unidadesStockVisibles = sinUnidadesDePrueba(data ?? [], estado.fabrica)
     }
 
     // Las transferencias RECIBIDAS. Van al listado principal porque la pantalla
@@ -4244,7 +4265,10 @@
     function renderizarAvisoSinStock() {
       const el = document.getElementById('aviso-sin-stock')
       const visibles = new Set(estado.unidadesStockVisibles.map(u => u.id))
-      const faltantes = [...new Set(estado.listaIngresos.map(i => i.unidad_negocio_id))]
+      // La unidad de prueba se saca de visibles (cargarUnidadesStockVisibles),
+      // así que se saca también de acá: si no, un ingreso del robot haría
+      // avisar un "falta permiso" falso nombrando la unidad de prueba.
+      const faltantes = sinUnidadesDePrueba([...new Set(estado.listaIngresos.map(i => i.unidad_negocio_id))], estado.fabrica, id => id)
         .filter(id => id && !visibles.has(id))
 
       if (!faltantes.length) { el.hidden = true; return }
@@ -4708,7 +4732,8 @@
     async function abrirWizard() {
       estado.wizard = wizardVacio()
       // Una sola unidad: se preselecciona, no tiene sentido preguntar.
-      if (estado.unidades.length === 1) estado.wizard.encabezado.unidadId = estado.unidades[0].id
+      const elegibles = unidadesParaElegir()
+      if (elegibles.length === 1) estado.wizard.encabezado.unidadId = elegibles[0].id
 
       document.getElementById('pantalla-ingresos').hidden = true
       document.getElementById('pantalla-wizard').removeAttribute('hidden')
@@ -5016,7 +5041,7 @@
     function poblarSelectUnidades() {
       const sel = document.getElementById('campo-unidad-negocio')
       sel.innerHTML = `<option value="">Elegí una unidad</option>` +
-        estado.unidades.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+        unidadesParaElegir().map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
       sel.value = estado.wizard.encabezado.unidadId || ''
     }
 
@@ -9541,7 +9566,8 @@
       const { data, error } = await supabase
         .from('v_mis_unidades_recepcion').select('id, nombre').order('nombre')
       if (error) { console.error(error); return }
-      estado.unidadesRecepcion = data ?? []
+      // Sin la unidad de prueba: ni el botón, ni la lista, ni el agrupado.
+      estado.unidadesRecepcion = sinUnidadesDePrueba(data ?? [], estado.fabrica)
     }
 
     async function abrirInternos() {

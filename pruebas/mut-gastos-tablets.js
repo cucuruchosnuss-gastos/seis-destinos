@@ -25,7 +25,7 @@ correrMutaciones({
     { nombre: 'el selector de la edición vuelve a la lista cruda',
       de: '${personasParaEditar(g).map(e =>', a: '${estado.maestros.empleados.map(e =>' },
     { nombre: 'la edición pierde la persona del gasto si es tablet',
-      de: '      if (actual && esCuentaDeTablet(actual)) lista.push(actual)\n', a: '' },
+      de: '      if (actual && !lista.some(e => e.id === actual.id)) lista.push(actual)\n', a: '' },
     { nombre: 'la edición ofrece TODAS las tablets',
       de: '      const lista = personasElegibles()\n', a: '      const lista = [...estado.maestros.empleados]\n' },
     { nombre: 'la edición ignora empleado_id sin embed',

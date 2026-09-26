@@ -145,6 +145,8 @@ const FUNCIONES_BASE = [
   'correccionesDe', 'htmlCorreccion', 'htmlSubloteHistorial', 'totalSublotes',
   'htmlDetalleTurno', 'abrirDetalleHistorial', 'mostrarStockTerminado', 'cargarStockTerminado',
   'agruparStockTerminado', 'htmlStockTerminado',
+  // La fábrica de pruebas (26/09/2026): la unidad y las personas del robot no se muestran
+  'mapaDeUnidades', 'personalSinPruebas',
 ]
 
 // Lo que está en los DOS archivos (cada uno con su copia: en este proyecto
@@ -161,7 +163,7 @@ const EN_AMBOS = [
   'cargarPermisoStock', 'puedeVerStockEn', 'nombreCajaItem', 'envasePresentacion', 'partesProducido',
   'textoTamanoMasa', 'htmlChipsMasa', 'chipsDeMasa', 'sinCajaDescontada', 'textoSinCaja', 'normalizarHora',
   'horaConPaso', 'redondearKg', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'fechaCorta',
-  'sumarDias', 'fechaDelDia',
+  'sumarDias', 'fechaDelDia', 'mapaDeUnidades', 'personalSinPruebas',
 ]
 const SOLO_GESTION = [
   'cerrarMenu', 'alternarMenu', 'accionDelMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',

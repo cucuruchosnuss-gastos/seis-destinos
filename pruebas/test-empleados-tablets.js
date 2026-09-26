@@ -17,6 +17,7 @@
 const path = require('path')
 const { arnes, marca, chequearMarcas, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
+const { preludioFabrica } = require('./fabrica-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/empleados.html')
@@ -26,7 +27,7 @@ const { chk, fin } = arnes()
 // no un corte de la suite: así la mutación se lee como rojo por una razón.
 function bloque(fn) { try { fn() } catch (e) { chk('bloque sin excepción', false, String(e && e.message || e)) } }
 
-const FNS = ['esc', 'iniciales', 'colorAvatar', 'formatearCuil', 'esDispositivo', 'ordenarGrupo', 'agruparEmpleados', 'renderizarFilaEmpleado', 'renderizarStats', 'htmlSeccionPin', 'abrirFicha']
+const FNS = ['esc', 'iniciales', 'colorAvatar', 'formatearCuil', 'esDispositivo', 'unidadesVisibles', 'personasVisibles', 'ordenarGrupo', 'agruparEmpleados', 'renderizarFilaEmpleado', 'renderizarStats', 'htmlSeccionPin', 'abrirFicha']
 let codigo = ''
 for (const n of FNS) {
   try { codigo += extraerFn(FUENTE, n) + '\n' } catch (e) { chk(`existe la función ${n}`, false, e.message) }
@@ -38,6 +39,7 @@ function armar(estado) {
   const llamadas = { pin: [], ficha: 0 }
   const document = { getElementById: el }
   const f = new Function('estado', 'document', 'llamadas', `
+    ${preludioFabrica()}
     const TITULO_PIN = '<h3>PIN de producción</h3>'
     const PALETA_AVATAR = ['#111']
     function estadoDelPin(p) { return { texto: p.tiene_pin ? 'PIN propio' : 'Sin PIN', clase: 'x' } }

@@ -606,7 +606,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito, formatearFecha } from '../js/utils.js'
+    import { mostrarError, mostrarExito, formatearFecha, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -627,6 +627,10 @@
       modoEdicionContacto: false,
       filtros:         { busqueda: '' },
       misTareasEmpleados: new Set(), // tareas granulares en empleado_tareas (modulo='empleados')
+      // La fábrica de pruebas (unidad "Pruebas (robot)" y sus personas). Ver
+      // unidadesVisibles() / personasVisibles(). Arranca sin datos: si no se
+      // pudo leer, los filtros no sacan nada.
+      fabrica:         FABRICA_SIN_DATOS,
       // PIN de producción de la persona de la ficha. `datos` es lo que
       // devolvió estado_pin_produccion(): null = no hay nada que mostrar.
       pin: { empleadoId: null, cargando: false, datos: null, error: false, panel: false, guardando: false, error_texto: null },
@@ -725,7 +729,7 @@
 
       const [empRes, modRes, unidRes] = await Promise.all([
         supabase.from('empleados')
-          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono, contacto_emergencia_nombre, contacto_emergencia_telefono, es_dispositivo')
+          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono, contacto_emergencia_nombre, contacto_emergencia_telefono, es_dispositivo, es_prueba')
           .eq('activo', true),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
@@ -760,8 +764,26 @@
       return emp?.es_dispositivo === true
     }
 
+    // La FÁBRICA DE PRUEBAS (26/09/2026): la unidad "Pruebas (robot)" y sus
+    // personas existen para Playwright y NO se muestran a una cuenta real, ni
+    // como grupo ni como opción de unidad ni en la lista (tampoco en el grupo
+    // de tablets). Una cuenta de la fábrica de pruebas sí las ve. Se filtra
+    // donde se ARMA cada lista, no en la consulta ni en estado.*: las
+    // búsquedas por id (el nombre de la unidad de una ficha) usan los datos
+    // completos. Además de la regla compartida (por unidad), una fila marcada
+    // es_prueba tampoco se muestra — pero solo si la fábrica se pudo leer:
+    // sin saber si la cuenta es de prueba, no se saca nada.
+    function unidadesVisibles() {
+      return sinUnidadesDePrueba(estado.maestros.unidadesNegocio, estado.fabrica)
+    }
+    function personasVisibles() {
+      const f = estado.fabrica
+      const lista = sinPersonasDePrueba(estado.empleados, f)
+      return (f?.ok && !f.soyDePrueba) ? lista.filter(e => e?.es_prueba !== true) : lista
+    }
+
     function renderizarStats() {
-      const personas  = estado.empleados.filter(e => !esDispositivo(e))
+      const personas  = personasVisibles().filter(e => !esDispositivo(e))
       const total     = personas.length
       const conAcceso = personas.filter(e => e.auth_user_id).length
       const empresas  = new Set(personas.filter(e => e.unidad_negocio_id).map(e => e.unidad_negocio_id)).size
@@ -810,12 +832,12 @@
 
     function agruparEmpleados() {
       const porUnidad = new Map()
-      estado.maestros.unidadesNegocio.forEach(u => porUnidad.set(u.id, { nombre: u.nombre, lista: [] }))
+      unidadesVisibles().forEach(u => porUnidad.set(u.id, { nombre: u.nombre, lista: [] }))
       const sinEmpresaConAcceso = []
       const sinEmpresaSinAcceso = []
       const tablets = []
 
-      estado.empleados.forEach(emp => {
+      personasVisibles().forEach(emp => {
         if (esDispositivo(emp)) {
           tablets.push(emp)
         } else if (emp.unidad_negocio_id && porUnidad.has(emp.unidad_negocio_id)) {
@@ -943,7 +965,7 @@
           <label for="edit-unidad">Unidad de negocio</label>
           <select id="edit-unidad" ${tieneTarea('empleados', 'reasignar_unidad') ? '' : 'disabled title="Solo quien tiene permiso para reasignar unidad puede cambiar este campo"'}>
             <option value="">Elegí una unidad de negocio…</option>
-            ${estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}" ${u.id === emp.unidad_negocio_id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
+            ${unidadesVisibles().map(u => `<option value="${esc(u.id)}" ${u.id === emp.unidad_negocio_id ? 'selected' : ''}>${esc(u.nombre)}</option>`).join('')}
           </select>
         </div>
         <div class="grupo-campo">
@@ -1392,6 +1414,12 @@
       }, 250)
     })
 
+    // Las opciones del selector de empresa de la importación de Naaloo.
+    function htmlOpcionesEmpresaImport() {
+      return `<option value="">Elegí una empresa…</option>` +
+        unidadesVisibles().map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // INIT
     // ═══════════════════════════════════════════════════════════════════════
@@ -1399,6 +1427,10 @@
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
+
+      // La fábrica de pruebas se lee en paralelo con el resto del arranque;
+      // nunca tira (si falla, FABRICA_SIN_DATOS y no se filtra nada).
+      const fabricaP = cargarFabricaDePruebas(supabase)
 
       const { data: emp, error } = await supabase
         .from('empleados')
@@ -1425,6 +1457,7 @@
 
       lucide.createIcons()
 
+      estado.fabrica = await fabricaP
       await cargarTodo()
 
       // Las 3 tareas del módulo son independientes entre sí — dos gates
@@ -1435,9 +1468,7 @@
       // permite así).
       if (tieneTarea('empleados', 'importar_naaloo')) {
         document.getElementById('bloque-importar').hidden = false
-        document.getElementById('select-empresa-import').innerHTML =
-          `<option value="">Elegí una empresa…</option>` +
-          estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+        document.getElementById('select-empresa-import').innerHTML = htmlOpcionesEmpresaImport()
       }
 
       // Sin 'ver_editar' la consulta de cargarTodo() ya vuelve acotada por

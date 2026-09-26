@@ -36,7 +36,16 @@ const EMPLEADOS = [
   { id: 't-dp',   nombre: 'Tablet Producción · Dolce Pasta',     tipo: 'sistema' },
 ]
 
-const PRELUDIO = `
+// Los filtros de la fábrica de pruebas son de js/utils.js: se pega su código
+// REAL en el preludio (sin el `export`). La fábrica queda en FABRICA_SIN_DATOS,
+// así que acá no sacan nada: lo suyo se prueba en test-gastos-fabrica-pruebas.js.
+const UTILS = require('fs').readFileSync(path.join(RAIZ, 'js/utils.js'), 'utf8')
+const iFab = UTILS.indexOf('export const FABRICA_SIN_DATOS')
+const iFin = UTILS.indexOf('\n}\n', UTILS.indexOf('export function sinPersonasDePrueba'))
+if (iFab < 0 || iFin < 0) throw new Error('no se encontraron los filtros de la fábrica en js/utils.js')
+const FUENTE_FABRICA = UTILS.slice(iFab, iFin + 3).replace(/^export /gm, '')
+
+const PRELUDIO = FUENTE_FABRICA + `
   function nuevoEl(id) {
     return { id, innerHTML: '', textContent: '', value: '', hidden: false, disabled: false, style: {}, dataset: {}, addEventListener(){} }
   }
@@ -46,11 +55,12 @@ const PRELUDIO = `
   var estado = {
     miRolApp: 'usuario', miEmpleadoId: 'e-ana', misTareas: new Set(['gastos:ver_exportar']),
     maestros: { empleados: [], unidades: [{ id: 'u1', nombre: 'Cucuruchos Nuss' }] },
+    fabrica: FABRICA_SIN_DATOS,
   }
 `
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO,
-  funciones: ['esc', 'tieneTarea', 'esCuentaDeTablet', 'personasElegibles', 'personasParaEditar', 'poblarSelectEmpleados'],
+  funciones: ['esc', 'tieneTarea', 'esCuentaDeTablet', 'personasNoTablet', 'personasElegibles', 'personasParaEditar', 'poblarSelectEmpleados'],
   retorno: 'estado, __els',
 })
 S.estado.maestros.empleados = EMPLEADOS.map(e => ({ ...e }))

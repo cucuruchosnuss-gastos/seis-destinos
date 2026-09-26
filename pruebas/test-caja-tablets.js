@@ -18,6 +18,9 @@
 const path = require('path')
 const { construirCon } = require('./sandbox')
 const { arnes, leer } = require('./circuito-comun')
+// El código REAL de js/utils.js (números y fábrica de pruebas): caja.html
+// importa sinPersonasDePrueba desde el 26/09/2026.
+const { fuenteNumeros } = require('./numeros-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/caja.html')
@@ -31,6 +34,7 @@ const FUNCIONES = [
 ]
 
 const PRELUDIO = `
+  ${fuenteNumeros()}
   var __errores = []
   function mostrarError(m) { __errores.push(m) }
   var __els = new Map()

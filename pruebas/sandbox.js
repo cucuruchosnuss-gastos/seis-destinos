@@ -8,6 +8,9 @@ const { extraerFn, extraerConst } = require('./extraer')
 // con su código REAL: el módulo las importa desde el 21/09/2026.
 const { fuenteNumeros } = require('./numeros-comun')
 const { fuenteConComun } = require('./fuente-cobranzas')
+// Los helpers de la fábrica de pruebas de js/utils.js (FABRICA_SIN_DATOS,
+// sinUnidadesDePrueba, sinPersonasDePrueba…) llegan con fuenteNumeros(), que
+// carga utils.js desde la sección de números hasta el final (26/09/2026).
 
 const FUNCIONES = [
   'escCob', 'dvBcra', 'escribirImporteEnCampo', 'formatearImporte',
@@ -19,7 +22,7 @@ const FUNCIONES = [
   'textoOpcional', 'origenDatosDe', 'estadoRenglon', 'aplicarRenglones', 'chequeVacio',
   'pintarEstadoFotos', 'pintarBotonChequeMano', 'htmlAvisoFoto', 'fotoLeidaSinProblemas', 'fotoSinSenal', 'textoLecturaFoto',
   'textoChequesLeidos', 'hayFotosLeyendo', 'asegurarContadorLecturas', 'detenerContadorLecturas', 'tickLecturas',
-  'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores',
+  'pintarBannerLocal', 'renderizarChipsEstado', 'cargarRepartidores', 'pintarRepartidores',
   'pintarTotalYGuardado', 'motivosParaNoGuardar', 'efectivoDelFormulario', 'totalDelFormulario',
   'renglonComoImpreso', 'chequeDesdeBase', 'chequeDesdeOcr',
   // La cartera de cheques se mudó a modulos/cheques.html (22/09/2026): acá
@@ -112,6 +115,7 @@ const PRELUDIO = `
     filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
     detalle: null, form: null, locales: [], urlsFirmadas: new Map(), sincronizando: false,
     linkDirecto: null, cobranzaSeleccionadaId: null,
+    fabrica: FABRICA_SIN_DATOS,
   }
 `
 

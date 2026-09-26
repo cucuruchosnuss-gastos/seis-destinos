@@ -399,3 +399,66 @@ export function leerCampoNumero(input, opciones) {
   const cfg = opciones || _configCampoNumero.get(input) || { decimales: 2, negativos: false }
   return leerNumeroAr(input.value, cfg)
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FÁBRICA DE PRUEBAS — cuarta excepción consciente a la regla de duplicar
+// (26/09/2026). La unidad "Pruebas (robot)" (unidades_negocio.es_prueba) y sus
+// personas existen para que Playwright recorra la app sin tocar las fábricas
+// reales. NO pueden aparecer en ninguna pantalla para una cuenta real: ni en
+// un selector de unidad ni en una lista de personas. Solo las ve una cuenta
+// que es de la fábrica de pruebas.
+//
+// Vive UNA sola vez porque es exactamente el tipo de regla que, copiada en
+// once archivos, diverge en silencio: un módulo que se olvida el filtro no da
+// ningún error, simplemente le muestra "Robot Encargado" a un encargado real.
+//
+// El servidor no lo filtra (ni personal_produccion, ni las v_mis_unidades_*,
+// ni v_empleados_publico, que no expone es_prueba): por eso se resuelve acá,
+// por unidad. Una persona es "de prueba" si su unidad es de prueba.
+//
+// Si las consultas fallan NO se frena nada: se devuelve { ok: false } y los
+// filtros no sacan nada. Mostrar de más la unidad del robot es cosmético;
+// trabar una pantalla por no poder leerla, no.
+// ═══════════════════════════════════════════════════════════════════════════
+export const FABRICA_SIN_DATOS = Object.freeze({ ok: false, unidades: new Set(), personas: new Set(), soyDePrueba: false })
+
+export async function cargarFabricaDePruebas(supabase) {
+  try {
+    const { data: un, error } = await supabase.from('unidades_negocio').select('id').eq('es_prueba', true)
+    if (error) throw error
+    const unidades = new Set((un ?? []).map(u => u.id))
+    if (!unidades.size) return { ok: true, unidades, personas: new Set(), soyDePrueba: false }
+    const { data: ses } = await supabase.auth.getSession()
+    const uid = ses?.session?.user?.id ?? null
+    const [per, yo] = await Promise.all([
+      supabase.from('v_empleados_publico').select('id').in('unidad_negocio_id', [...unidades]),
+      uid
+        ? supabase.from('empleados').select('unidad_negocio_id, es_prueba').eq('auth_user_id', uid).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ])
+    if (per.error) throw per.error
+    if (yo.error) throw yo.error
+    const personas = new Set((per.data ?? []).map(p => p.id))
+    const soyDePrueba = yo.data?.es_prueba === true || unidades.has(yo.data?.unidad_negocio_id)
+    return { ok: true, unidades, personas, soyDePrueba }
+  } catch (e) {
+    console.warn('No se pudo leer la fábrica de pruebas; no se filtra nada.', e)
+    return FABRICA_SIN_DATOS
+  }
+}
+
+// Saca las UNIDADES de prueba de una lista, salvo para una cuenta de prueba.
+// `clave` dice dónde está el id de la unidad en cada fila (por defecto `id`).
+export function sinUnidadesDePrueba(filas, fabrica, clave = f => f?.id) {
+  if (!Array.isArray(filas) || !fabrica || fabrica.soyDePrueba || !fabrica.unidades?.size) return filas ?? []
+  return filas.filter(f => !fabrica.unidades.has(clave(f)))
+}
+
+// Saca las PERSONAS de prueba de una lista, salvo para una cuenta de prueba.
+// Una persona es de prueba si su id está en `fabrica.personas` o si su unidad
+// (cuando la fila la trae) es de prueba.
+export function sinPersonasDePrueba(filas, fabrica, clave = f => f?.id, claveUnidad = f => f?.unidad_negocio_id) {
+  if (!Array.isArray(filas) || !fabrica || fabrica.soyDePrueba) return filas ?? []
+  if (!fabrica.personas?.size && !fabrica.unidades?.size) return filas
+  return filas.filter(f => !fabrica.personas.has(clave(f)) && !fabrica.unidades.has(claveUnidad(f)))
+}

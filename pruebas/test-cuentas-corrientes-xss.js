@@ -211,8 +211,10 @@ async function correrRenders(S) {
   S.poblarSelect('filtro-unidad-proveedores', E.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
   chequearMarcas(chk, 'filtro de unidad (init)', html('filtro-unidad-proveedores'), ['u1_nombre', 'u2_nombre'])
   chk('estático: init() arma los dos filtros de unidad con poblarSelect()',
-    FUENTE.includes("poblarSelect('filtro-unidad-proveedores', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')") &&
-    FUENTE.includes("poblarSelect('filtro-unidad-historial', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')"))
+    // (desde el 26/09/2026 vía poblarFiltrosUnidad(), con la lista ya sin la
+    // unidad de la fábrica de pruebas: ver test-cuentas-corrientes-fabrica-pruebas.js)
+    FUENTE.includes("poblarSelect('filtro-unidad-proveedores', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')") &&
+    FUENTE.includes("poblarSelect('filtro-unidad-historial', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')"))
 
   // ── Lista de saldos + resumen ────────────────────────────────────────────
   E.listaSaldos = [

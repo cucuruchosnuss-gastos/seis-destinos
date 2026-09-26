@@ -657,7 +657,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { mostrarError, mostrarExito, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -674,6 +674,9 @@
       empleados:   [],
       empleadoModulos: [],
       maestros: { unidadesNegocio: [] },
+      // La fábrica de pruebas (unidad "Pruebas (robot)" y sus personas), ver
+      // cargarFabricaDePruebas en js/utils.js. Hasta que llegue, no se saca nada.
+      fabrica: FABRICA_SIN_DATOS,
       tabActiva:   'solicitudes',
       filtrosUsuarios: { texto: '', rol: '', modulo: '' },
       modal: null, // { modo: 'aprobar' | 'editar', solicitud?, empleado, esNuevoEmpleado,
@@ -1153,8 +1156,19 @@
       return { tipo: 'match', empleado }
     }
 
+    // Las personas de la fábrica de pruebas (las usa Playwright) no se
+    // muestran a una cuenta real: ni en "Usuarios y roles" ni en las cifras.
+    // Solo las ve una cuenta que es de la fábrica de pruebas.
     function empleadosConAcceso() {
-      return estado.empleados.filter(e => e.auth_user_id)
+      return sinPersonasDePrueba(estado.empleados.filter(e => e.auth_user_id), estado.fabrica)
+    }
+
+    // Las unidades que se ofrecen para elegir (la unidad de un empleado nuevo
+    // al aprobar, y el alcance de las tareas conAlcance), sin la de pruebas.
+    // Un alcance ya guardado que la incluya NO la pierde: el Set del modal
+    // conserva el id y el payload lo reenvía; solo no se dibuja su casilla.
+    function unidadesElegibles() {
+      return sinUnidadesDePrueba(estado.maestros.unidadesNegocio, estado.fabrica)
     }
 
     // Las cuentas de las tablets de la fábrica (empleados.es_dispositivo)
@@ -1201,7 +1215,7 @@
       // PostgREST contesta HTTP 300 (PGRST201) y la pantalla no carga.
       const [solRes, empRes, modRes, unidRes] = await Promise.all([
         supabase.from('solicitudes_acceso').select('*').eq('estado', 'pendiente').order('fecha_solicitud', { ascending: false }),
-        supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, es_dispositivo, unidades_negocio!empleados_unidad_negocio_id_fkey (nombre)'),
+        supabase.from('empleados').select('id, nombre, rol, cuil, activo, auth_user_id, rol_app, es_dispositivo, unidad_negocio_id, unidades_negocio!empleados_unidad_negocio_id_fkey (nombre)'),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
       ])
@@ -1517,7 +1531,7 @@
                     <input type="checkbox" data-alcance-todas="${clave}" ${a.todas ? 'checked' : ''}>
                     <span>Todas las unidades de negocio</span>
                   </label>
-                  ${a.todas ? '' : estado.maestros.unidadesNegocio.map(u => `
+                  ${a.todas ? '' : unidadesElegibles().map(u => `
                     <label class="fila-tarea">
                       <input type="checkbox" data-alcance-clave="${clave}" data-alcance-unidad="${esc(u.id)}" ${a.unidades.has(u.id) ? 'checked' : ''}>
                       <span>${esc(u.nombre)}</span>
@@ -1711,7 +1725,7 @@
       titulo.hidden = false
       select.hidden = false
       select.innerHTML = `<option value="">Elegí una unidad de negocio…</option>` +
-        estado.maestros.unidadesNegocio.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+        unidadesElegibles().map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
       select.value = estado.modal.unidadElegida || ''
     }
 
@@ -1991,6 +2005,9 @@
 
       estado.miEmpleado = emp
 
+      // En paralelo con lo que sigue; nunca tira (si falla, no se filtra nada).
+      const fabricaPromesa = cargarFabricaDePruebas(supabase)
+
       const { data: modulosData, error: errorModulos } = await supabase
         .from('modulos')
         .select('*')
@@ -2013,6 +2030,7 @@
         ${MODULOS_INFO.filter(m => !m.proximamente).map(m => `<option value="${esc(m.key)}">${esc(m.label)}</option>`).join('')}
       `
 
+      estado.fabrica = await fabricaPromesa
       await cargarTodo()
     }
 

@@ -1499,7 +1499,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1533,6 +1533,9 @@
                             // (modulos 'cuentas_corrientes' y 'facturas_pendientes')
       tabActiva: 'proveedores',
       maestros: { unidades: [], proveedores: [] }, // proveedores: solo activo=true y estado_alta='activo'
+      // La fábrica de pruebas (unidad "Pruebas (robot)"): ver
+      // unidadesParaElegir(). Arranca sin datos, que no saca nada.
+      fabrica: FABRICA_SIN_DATOS,
       // Cuentas del selector del modal "Registrar pago". Se cargan una sola
       // vez, bajo demanda. Van separadas por grupo y no en una sola lista
       // porque el <optgroup> del selector necesita distinguirlas: tiene que
@@ -1702,6 +1705,26 @@
       return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length]
     }
 
+    // Las unidades que se OFRECEN para elegir (selectores y filtros): sin la
+    // unidad de la fábrica de pruebas, salvo para una cuenta de prueba. Las
+    // búsquedas de un nombre por id siguen usando estado.maestros.unidades.
+    function unidadesParaElegir(lista) {
+      return sinUnidadesDePrueba(lista ?? [], estado.fabrica)
+    }
+
+    function poblarFiltrosUnidad() {
+      const unidades = unidadesParaElegir(estado.maestros.unidades)
+      poblarSelect('filtro-unidad-proveedores', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
+      poblarSelect('filtro-unidad-historial', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
+    }
+
+    // Las unidades del selector de la ficha, en el orden de los ids.
+    function unidadesDeFicha(ids) {
+      return unidadesParaElegir((ids ?? [])
+        .map(id => estado.maestros.unidades.find(u => u.id === id))
+        .filter(Boolean))
+    }
+
     // Escapa por dentro placeholder, value y label: los call sites pasan
     // texto crudo (no escapar antes, o sale doble escapado).
     function poblarSelect(idCampo, items, mapFn, placeholder) {
@@ -1781,14 +1804,18 @@
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
 
-      const [unids] = await Promise.all([
+      // cargarFabricaDePruebas nunca tira: si falla, no saca nada.
+      const [unids, , fabrica] = await Promise.all([
         supabase.from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre'),
         recargarProveedoresMaestros(),
+        cargarFabricaDePruebas(supabase),
       ])
+      // maestros.unidades queda COMPLETA a propósito: también resuelve el
+      // nombre de una unidad por id (nombreUnidad), y eso no se filtra.
       estado.maestros.unidades = unids.data ?? []
+      estado.fabrica = fabrica ?? FABRICA_SIN_DATOS
 
-      poblarSelect('filtro-unidad-proveedores', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
-      poblarSelect('filtro-unidad-historial', estado.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
+      poblarFiltrosUnidad()
 
       // Gates de UI por tarea. Sin ver_todo se esconden los saldos generales
       // y el listado por proveedor (la RLS ya acota los datos igual — esto
@@ -2972,9 +2999,7 @@
       sincronizarUrlFicha(true)
 
       const ids = unidadesConocidas ?? (await unidadesDelProveedor(proveedorId)) ?? []
-      estado.ficha.unidades = ids
-        .map(id => estado.maestros.unidades.find(u => u.id === id))
-        .filter(Boolean)
+      estado.ficha.unidades = unidadesDeFicha(ids)
       renderizarSelectorUnidadFicha()
 
       await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos()])

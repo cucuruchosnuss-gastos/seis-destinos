@@ -32,6 +32,7 @@ const path = require('path')
 const { construirCon, scriptModulo } = require('./sandbox')
 const { arnes, marca, chequearMarcas, leer } = require('./circuito-comun')
 const { extraerFn } = require('./extraer')
+const { preludioFabrica } = require('./fabrica-comun')
 
 const RAIZ = path.join(__dirname, '..')
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/empleados.html')
@@ -78,6 +79,7 @@ function clausura(src) {
 // El document falso guarda los handlers, así se puede TOCAR el botón en vez de
 // llamar a la función por su nombre: lo que se prueba es el camino real.
 const PRELUDIO = `
+${preludioFabrica()}
   var console = { log(){}, warn(){}, error(){} }
   var __focos = []
   var __els = new Map()

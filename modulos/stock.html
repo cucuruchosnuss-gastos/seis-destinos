@@ -3121,7 +3121,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero } from '../js/utils.js'
+    import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -3173,6 +3173,14 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     const estado = {
+      // La fábrica de pruebas (unidad "Pruebas (robot)"): se carga UNA vez en
+      // init() y con ella se sacan sus unidades de cada lista de unidades y sus
+      // filas de cada listado, salvo para una cuenta de prueba. El servidor no
+      // filtra nada (las v_mis_unidades_* le devuelven la unidad del robot a un
+      // super_admin por el bypass de tiene_tarea_alcance). Mientras no cargó, o
+      // si falló, FABRICA_SIN_DATOS: no se saca nada.
+      fabrica: FABRICA_SIN_DATOS,
+
       sesion: null,
       miEmpleadoId: null,
       miRolApp: null,
@@ -3910,8 +3918,8 @@
         return
       }
 
-      estado.unidadesStock = unidades.data ?? []
-      estado.stock = filas.data ?? []
+      estado.unidadesStock = sinUnidadesDePrueba(unidades.data ?? [], estado.fabrica)
+      estado.stock = sinUnidadesDePrueba(filas.data ?? [], estado.fabrica, f => f?.unidad_negocio_id)
 
       // Con una sola unidad no hay nada que elegir: se filtra por ella y los
       // chips no se dibujan.
@@ -4250,7 +4258,7 @@
         mostrarError('No se pudieron cargar las unidades para el recuento.')
         return
       }
-      estado.unidadesAjuste = data ?? []
+      estado.unidadesAjuste = sinUnidadesDePrueba(data ?? [], estado.fabrica)
       if (estado.unidadesAjuste.length && !estado.unidadRecuento) {
         estado.unidadRecuento = estado.unidadesAjuste[0].id
       }
@@ -5574,7 +5582,7 @@
         mostrarError('No se pudo cargar el historial de recuentos.')
         return
       }
-      estado.recuentos = data ?? []
+      estado.recuentos = sinUnidadesDePrueba(data ?? [], estado.fabrica, r => r?.unidad_negocio_id)
       renderizarChipsUnidadHistorial()
       renderizarHistorial()
     }
@@ -7001,7 +7009,7 @@
         mostrarError('No se pudieron cargar las mermas.')
         return
       }
-      estado.mermas = data ?? []
+      estado.mermas = sinUnidadesDePrueba(data ?? [], estado.fabrica, m => m?.unidad_negocio_id)
       renderizarChipsUnidadMerma()
       renderizarChipsOrigenMerma()
       renderizarMermas()
@@ -7740,7 +7748,7 @@
       const { data, error } = await supabase
         .from('v_mis_unidades_envio').select('id, nombre').order('nombre')
       if (error) { console.error(error); return }
-      estado.unidadesEnvio = data ?? []
+      estado.unidadesEnvio = sinUnidadesDePrueba(data ?? [], estado.fabrica)
     }
 
     // Todas las unidades activas. El RLS de unidades_negocio es `true` para
@@ -7750,7 +7758,7 @@
       const { data, error } = await supabase
         .from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre')
       if (error) { console.error(error); return }
-      estado.destinos = data ?? []
+      estado.destinos = sinUnidadesDePrueba(data ?? [], estado.fabrica)
     }
 
     // ── El modal de envío ────────────────────────────────────────────────────
@@ -8251,7 +8259,7 @@
           .select('id, unidad_origen_id, origen_nombre, unidad_destino_id, destino_nombre, fecha, creado_por, dias_en_transito, items')
           .order('fecha'),
         supabase.from('v_transferencias')
-          .select('id, estado, fecha, origen_nombre, destino_nombre, motivo_rechazo, respondido_en, creado_por_nombre, respondido_por_nombre, items, items_con_diferencia')
+          .select('id, estado, fecha, unidad_origen_id, origen_nombre, unidad_destino_id, destino_nombre, motivo_rechazo, respondido_en, creado_por_nombre, respondido_por_nombre, items, items_con_diferencia')
           .order('fecha', { ascending: false }),
       ])
       document.getElementById('transito-cargando').hidden = true
@@ -8264,10 +8272,15 @@
       // El tránsito le importa a las DOS puntas: el de origen quiere ver qué
       // mandó y no llegó; el de destino, qué le viene. Se filtra por las
       // unidades que la persona ve, por origen O destino.
+      // Y una transferencia con la fábrica de pruebas en CUALQUIERA de las dos
+      // puntas no se le muestra a una cuenta real (un filtro por punta).
       const mias = new Set(estado.unidadesStock.map(u => u.id))
-      estado.transito = (transito.data ?? []).filter(x =>
+      const sinPrueba = xs => sinUnidadesDePrueba(
+        sinUnidadesDePrueba(xs, estado.fabrica, x => x?.unidad_origen_id),
+        estado.fabrica, x => x?.unidad_destino_id)
+      estado.transito = sinPrueba(transito.data ?? []).filter(x =>
         mias.has(x.unidad_origen_id) || mias.has(x.unidad_destino_id))
-      estado.transferencias = hist.data ?? []
+      estado.transferencias = sinPrueba(hist.data ?? [])
       renderizarTransito()
       renderizarTransfHistorial()
     }
@@ -8792,9 +8805,24 @@
     // INIT
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Las unidades de BAJA salen de su propia vista: dar_baja tiene un alcance
+    // distinto del de ajustar_inventario, y sacarlas de la de ajuste ofrecería
+    // unidades donde registrar_baja_stock va a rechazar. (Vivía adentro de
+    // init(); salió afuera para poder ejecutarla en las pruebas.)
+    async function cargarUnidadesBaja() {
+      const { data, error } = await supabase
+        .from('v_mis_unidades_baja').select('id, nombre').order('nombre')
+      if (error) { console.error(error); return }
+      estado.unidadesBaja = sinUnidadesDePrueba(data ?? [], estado.fabrica)
+    }
+
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
+
+      // En paralelo con lo que sigue: no frena el arranque, y se espera recién
+      // antes de la primera carga que arma una lista. Nunca tira.
+      const fabricaP = cargarFabricaDePruebas(supabase)
 
       const { data: emp, error } = await supabase
         .from('empleados')
@@ -8860,20 +8888,13 @@
         btn.hidden = !vistas.includes(btn.dataset.vista)
       })
 
+      estado.fabrica = await fabricaP
+
       const desdeUrl = vistaDesdeUrl(vistas)
       mostrarVista(desdeUrl ?? vistas[0])
 
       // Cada vista carga lo suyo, y solo si corresponde: sin la tarea, la
       // consulta volvería vacía por RLS igual, pero no tiene sentido hacerla.
-      // Las unidades de BAJA salen de su propia vista: dar_baja tiene un
-      // alcance distinto del de ajustar_inventario, y sacarlas de la de ajuste
-      // ofrecería unidades donde registrar_baja_stock va a rechazar.
-      const cargarUnidadesBaja = async () => {
-        const { data, error } = await supabase
-          .from('v_mis_unidades_baja').select('id, nombre').order('nombre')
-        if (error) { console.error(error); return }
-        estado.unidadesBaja = data ?? []
-      }
 
       await Promise.all([
         verStock ? cargarStock() : Promise.resolve(),

@@ -129,6 +129,9 @@ const PRELUDIO = `
   function hoyArgentina(){ return '2026-09-22' }
   var dialogoAbierto = null
   var promesaUnidades = null
+  // La fábrica de pruebas ya resuelta y vacía: esta suite prueba la unidad,
+  // no el filtro (ese es test-cobranzas-fabrica-pruebas.js).
+  var promesaFabrica = Promise.resolve(FABRICA_SIN_DATOS)
 
   var estado = {
     miEmpleadoId: 'emp-1', miRolApp: 'usuario',
@@ -146,7 +149,7 @@ const FUNCIONES = [
   // diálogos
   'enfocablesDe', 'teclaEnDialogo', 'abrirDialogo', 'cerrarDialogo', 'conectarDialogos', 'pintarBotonUnidad',
   // unidad
-  'cargarUnidades', 'asegurarUnidades', 'unidadesParaElegir', 'elegirUnidadConDialogo',
+  'cargarUnidades', 'asegurarUnidades', 'asegurarFabrica', 'unidadesParaElegir', 'elegirUnidadConDialogo',
   'asentarConUnidad', 'asignarUnidad',
 ]
 const CONSTANTES = [

@@ -1623,6 +1623,7 @@
     import { verificarSesion } from '../js/auth.js'
     import {
       mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
+      cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
@@ -1646,7 +1647,10 @@
       unidadesPosibles: [],
       modo: null,          // 'produccion' | 'masa'
       persona: null,       // { id, nombre, puesto } — verificada con su PIN
-      personal: [],        // lo que devuelve personal_produccion
+      personal: [],        // lo que devuelve personal_produccion, sin las personas de prueba
+      // La fábrica de pruebas (la unidad "Pruebas (robot)" y sus personas):
+      // no se le muestra a una cuenta real. Si no se pudo leer, no se saca nada.
+      fabrica: FABRICA_SIN_DATOS,
       vista: null,         // el id de la pantalla que se está mostrando
       quienBusqueda: '',
       // El panel del PIN en curso. Sus dígitos viven acá, EN MEMORIA, y no
@@ -3875,9 +3879,10 @@
       if (t.error) throw t.error
       // Vigentes: el vencimiento se mira acá porque `hasta` es un timestamptz
       // y la consulta no puede compararlo contra el "ahora" del servidor.
-      const temporales = (t.data ?? []).filter(x => temporalVigente(x))
+      // Una persona de prueba tampoco aparece entre los accesos temporales.
+      const temporales = sinPersonasDePrueba((t.data ?? []).filter(x => temporalVigente(x)), estado.fabrica, x => x.empleado_id)
       const nombres = await nombresDeEmpleados(temporales.map(x => x.otorgado_por))
-      return { personal: data ?? [], temporales, nombres }
+      return { personal: personalSinPruebas(data), temporales, nombres }
     }
 
     function temporalVigente(t, ahora = Date.now()) {
@@ -4790,7 +4795,20 @@
       setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
     }
 
-    async function cargarPermisos() {
+    // La fábrica de pruebas NO aparece para una cuenta real: ni su unidad en
+    // ninguna lista de unidades, ni sus personas en ninguna lista de personas.
+    // El servidor no lo filtra (personal_produccion trae a todo el personal
+    // activo, sin unidad), así que se filtra acá, donde se ARMAN las listas.
+    // Una cuenta de la fábrica de pruebas (la tablet y la gestión del robot)
+    // las ve igual: sinUnidadesDePrueba / sinPersonasDePrueba no sacan nada.
+    function mapaDeUnidades(filas, fabrica) {
+      return new Map(sinUnidadesDePrueba(filas ?? [], fabrica).map(u => [u.id, u.nombre]))
+    }
+    function personalSinPruebas(filas) {
+      return sinPersonasDePrueba(filas ?? [], estado.fabrica)
+    }
+
+    async function cargarPermisos(pFabrica = Promise.resolve(FABRICA_SIN_DATOS)) {
       const { data: emp, error } = await supabase
         .from('empleados').select('id, rol_app')
         .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
@@ -4805,14 +4823,18 @@
       const { data: unidades, error: e3 } = await supabase
         .from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre')
       if (e3) throw e3
-      estado.unidades = new Map((unidades ?? []).map(u => [u.id, u.nombre]))
+      // cargarFabricaDePruebas nunca tira: si falla, no se saca nada.
+      estado.fabrica = await pFabrica
+      estado.unidades = mapaDeUnidades(unidades, estado.fabrica)
     }
 
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
+      // En paralelo con los permisos: no frena el arranque.
+      const pFabrica = cargarFabricaDePruebas(supabase)
       try {
-        await cargarPermisos()
+        await cargarPermisos(pFabrica)
       } catch (err) {
         console.error('No se pudieron leer los permisos:', err)
         sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
