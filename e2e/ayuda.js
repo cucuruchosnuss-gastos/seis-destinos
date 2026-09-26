@@ -18,11 +18,14 @@ const CAPTURAS = path.join(__dirname, 'resultados', 'capturas');
 // del robot, canjeado en el acto. Eso necesita la clave de servicio
 // (E2E_SERVICE_ROLE_KEY) y, como guarda, SOLO funciona si la cuenta es de un
 // empleado marcado es_prueba: nunca abre la sesión de una persona real.
+// El email de cada cuenta del robot. 'retiros' (26/09/2026) es una cuenta de
+// la fábrica de pruebas con retiros:cargar, ver, precios y anular en esa
+// unidad: todavía no existe; hasta que se cree y se cargue E2E_RETIROS_EMAIL,
+// su recorrido se saltea.
+const EMAIL_DE = { planta: 'E2E_PLANTA_EMAIL', gestion: 'E2E_GESTION_EMAIL', retiros: 'E2E_RETIROS_EMAIL' };
+
 function faltantes(cuenta) {
-  const v = cuenta === 'planta'
-    ? ['E2E_PLANTA_EMAIL', 'E2E_SERVICE_ROLE_KEY']
-    : ['E2E_GESTION_EMAIL', 'E2E_SERVICE_ROLE_KEY'];
-  return v.filter(n => !process.env[n]);
+  return [EMAIL_DE[cuenta] ?? 'E2E_GESTION_EMAIL', 'E2E_SERVICE_ROLE_KEY'].filter(n => !process.env[n]);
 }
 
 function avisoSinCredenciales(cuenta) {
@@ -36,7 +39,7 @@ async function json(res) {
 }
 
 async function sesionDelRobot(cuenta) {
-  const email = process.env[cuenta === 'planta' ? 'E2E_PLANTA_EMAIL' : 'E2E_GESTION_EMAIL'];
+  const email = process.env[EMAIL_DE[cuenta] ?? 'E2E_GESTION_EMAIL'];
   const service = process.env.E2E_SERVICE_ROLE_KEY;
   const adm = { apikey: service, Authorization: `Bearer ${service}`, 'Content-Type': 'application/json' };
 
