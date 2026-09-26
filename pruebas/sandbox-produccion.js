@@ -194,8 +194,14 @@ const SOLO_GESTION = [
   'cargarStockTerminado', 'agruparStockTerminado', 'htmlStockTerminado',
 ]
 // Nuevas de la gestión (se suman a su lista).
-const NUEVAS_GESTION = []
-const CONST_NUEVAS_GESTION = ['puedeVerGestion']
+const NUEVAS_GESTION = [
+  // Parte 2 (25/09/2026): la unidad de la gestión y los indicadores
+  'unidadesDeGestion', 'unidadGestionInicial', 'pintarSelectorGestion', 'elegirUnidadGestion',
+  'numeroInd', 'enteroInd', 'diferenciaInd', 'horasMinutosInd', 'porcentajeScrapInd', 'htmlDatoInd',
+  'renderAhora', 'renderHoy', 'renderSemana', 'renderRendimiento', 'renderPendientes',
+  'htmlTarjetaIndicador', 'htmlIndicadores', 'cargarIndicadores', 'irDesdeIndicador',
+]
+const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',
@@ -278,6 +284,7 @@ const PRELUDIO = `
   var reintentando = false
   var relojBandaExito = null
   var turnoBurbujaConos = 0
+  var turnoIndicadores = 0
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }
   var navigator = { onLine: true, wakeLock: null }

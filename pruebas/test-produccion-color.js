@@ -129,7 +129,7 @@ function regla(selector) {
   const header = (FUENTE_G.match(/<header class="pr-header"[\s\S]*?<\/header>/) || [''])[0]
   const veces = (header.match(/Producción/g) ?? []).length
   chk('la cabecera de la gestión dice "Producción" UNA vez', veces === 1, veces)
-  chk('el título de la pantalla de inicio no repite "Producción"', /<section class="pr-tarjeta" id="pr-inicio">\s*<h1 class="pr-titulo">¿Qué querés ver\?<\/h1>/.test(FUENTE_G))
+  chk('el título de la pantalla de inicio no repite "Producción"', /<section id="pr-inicio">\s*<div class="pr-gestion-cab">\s*<h1 class="pr-titulo">¿Qué querés ver\?<\/h1>/.test(FUENTE_G))
   chk('ya no hay sección que repita el modo', !/pr-header-seccion/.test(FUENTE) && !/pr-header-seccion/.test(FUENTE_G))
 
   const S = construirProduccion(ARCHIVO_G)

@@ -31,6 +31,19 @@ Producción era un solo archivo (`modulos/produccion.html`, ~9.700 líneas) que 
 
 Es la pantalla de oficina que ya existía (quien no carga desde la tablet): el inicio con los accesos, el menú, y las tres pantallas. Una cuenta de **dispositivo** que llega se manda a la planta (`location.replace('produccion.html')`); si `mi_sesion_produccion` falla, se sigue y deciden los permisos. Sin `ver` ni `configurar` → "No tenés acceso…" y vuelta al dashboard; **con solo `cargar` (una cuenta personal) → "Tu usuario carga desde la tablet de la planta: acá no hay nada que ver"** y vuelta al dashboard.
 
+### Parte 2 — la gestión con indicadores
+
+1. **Diseño de la app** (compu y celular): un bloque `/* ── LA GESTIÓN: TAMAÑOS DE LA APP` al final del `<style>` (texto 15 px, controles de 44 px; las reglas de tablet que vinieron con las pantallas quedan pisadas). La cabecera tiene **"‹ Volver"** al dashboard (`#pr-gestion-volver`) y el menú de siempre. Medido en un navegador a 390 px: ningún elemento se sale del ancho.
+2. **La unidad de toda la gestión**: selector arriba (`#pr-gestion-unidad`, solo con más de una), con las unidades de `produccion:ver` ∪ `produccion:configurar` (misma regla que `tiene_tarea_alcance`, vía `unidadesCon`). Se recuerda en `localStorage` (`produccion.gestion.unidad`, con try/catch: sin storage, la primera). Elegirla recarga los indicadores y hace que el historial, el stock terminado y la configuración (si no tiene cambios sin guardar) abran en esa unidad.
+3. **La pantalla principal son los INDICADORES** de `indicadores_produccion(p_unidad_negocio_id)` (leída con `pg_get_functiondef` el 25/09/2026; pide `ver` o `configurar` en la unidad). **Una tarjeta por bloque**, desde el arreglo `TARJETAS_INDICADORES = [{ id, titulo, render(datos) }]`: una tarjeta nueva es una entrada más. `render` devuelve null si su bloque vino null o con otra forma → esa tarjeta dice "No se pudo leer este dato" y las otras se ven; un `render` que tira también se ataja por tarjeta; si la RPC entera falla, cada tarjeta dice el error. Con un turno, para que la respuesta de una unidad vieja no pise la nueva.
+   - **Ahora**: cada máquina abierta con lote, turno, encargado, masas y cajas; la parada en curso en bordó con motivo, "desde las HH:MM" (hora de Argentina) y hace cuánto; la `pendiente_completar` con su chip.
+   - **Hoy contra la semana pasada**: cajas por producto, con la diferencia (+N / −N / 0, y "—" si falta cualquiera de los dos: **nunca un 0 de un null**).
+   - **Últimos 7 días**: turnos, cajas, unidades, masas (con cuántas modificadas y de chocolate), scrap en kg y en % de la masa (masa en 0 → "—"), minutos de parada en h y min, y el motivo más común.
+   - **Rendimiento de la harina**: unidades por kg por lote, del peor al mejor (los sin dato al final) y el peor en bordó.
+   - **Para resolver**: planillas por completar (→ historial filtrado por "Pendientes de completar"), turnos abiertos de otro día (→ historial filtrado por "Abiertos"; la planta es de la tablet) y conos por revisar (→ Configuración → Marcas / Conos, solo con `configurar`; sin ella se dice quién los revisa). Botón solo cuando hay alguno.
+   - Números con `formatearNumeroAr`; cada tarjeta tiene su texto propio cuando está vacía.
+4. **Accesos** debajo de los indicadores: Historial, Planillas pendientes de completar, Stock terminado, Configuración, y derecho a Personal y PINes, Recetas, Ingredientes, Productos, Empaque y Marcas / Conos (`data-ir-config`, solo con `configurar`). `mostrarHistorial(filtro)` acepta ahora un filtro `{ estado, desde }`.
+
 ## Verificación (pruebas/)
 
 - `check-scripts.js` verde (los dos archivos parsean; sin identificadores pisados).
@@ -38,7 +51,7 @@ Es la pantalla de oficina que ya existía (quien no carga desde la tablet): el i
 - Suites que prueban la gestión leen `ARCHIVO_GESTION` (config e historial por defecto; empaque, legible, paradas, sin-empaque, color y acceso, las dos puntas).
 - **Mutaciones sobre dos archivos**: `mutar.js` ganó `variable` y `salir` (compatible con los 66 runners que ya lo usan) y `correrMutacionesEnVarios`; `mutar-produccion.js` reparte cada mutación en el archivo donde está lo que muta (una función que está en los dos se muta en los dos; una mutación de texto que está en los dos va a la planta salvo `archivo: 'gestion' | 'ambos'`), y solo usa la gestión si la suite la lee.
 - **Controles**: `controles-produccion-movidos.js` (103 claves, cada una con su destino y motivo), `controles-produccion.js` (suma el baseline `5ca92bb`, declara los tres RETIRADOS y los dos "Atrás" en RENOMBRADOS, y exige que ningún movido quede en la planta) y el NUEVO `controles-produccion-gestion.js` (exige cada movido en la gestión, al menos las mismas veces que en el último baseline que lo tenía, y que cada referencia del JS tenga destino).
-- Suites nuevas: `test-produccion-planta.js` + `mut-produccion-planta.js`.
+- Suites nuevas: `test-produccion-planta.js` + `mut-produccion-planta.js` (parte 1) y `test-produccion-gestion.js` + `mut-produccion-gestion.js` (parte 2). `controles-produccion-gestion.js` suma la parte 1 (`f7554f7`) como baseline de la gestión.
 
 ## Lo que NO se probó
 

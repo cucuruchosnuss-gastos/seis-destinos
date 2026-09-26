@@ -5,6 +5,8 @@
 const SEGURAS_PRODUCCION = [
   // Planta y gestión (25/09/2026)
   ['linksHtml', 'HTML constante del código: LINKS_SIN_SESION (dos links fijos) o vacío'],
+  ['accionHtml', 'HTML constante del código: el botón (data-ind-ir fijo) o el texto de quién revisa los conos, que arma renderPendientes()'],
+  ['dif.clase', 'clase CSS constante del código: diferenciaInd() devuelve "pr-ind-mas", "pr-ind-menos" o vacío'],
   // Parte 1 del rediseño: barra de modos, ¿Quién sos? y el PIN
   ['unidad', 'HTML ya escapado: htmlQuienEnBarra() lo arma arriba con esc() del nombre de la unidad'],
   ['htmlQuienEnBarra()', 'HTML armado por htmlQuienEnBarra(), que escapa adentro'],
