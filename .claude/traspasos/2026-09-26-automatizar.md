@@ -27,6 +27,10 @@ Tag de antes de empezar: `antes-de-automatizar-2026-09-26`. Todo está en `main`
 6. La cuarta excepción volvió falsa una afirmación de CLAUDE.md: **`tipo='sistema'` ya no equivale a `es_dispositivo`** (los robots son `sistema` sin ser tablets). Caja y Gastos siguen reconociendo las tablets por `tipo`, y ahora esconden a los robots por los dos caminos.
 7. `CLAUDE.md` decía 100/100 mutaciones de XSS en Cuentas Corrientes; son **98/98** también sobre el archivo anterior a la tanda (medido en un worktree de HEAD): el número estaba viejo, no se relajó nada.
 
+## Un hallazgo del cierre
+
+Los subagentes de la Parte 4 corrieron las mutaciones de SU suite nueva y algunas de las viejas, pero no todas: el de Producción envolvió una línea de `produccion-gestion.html` con el filtro de la fábrica y **`mut-produccion-config.js` quedó abortando** (su ancla ya no existía; en el tag de antes daba 182/182). Se arregló el ancla, sin cambiar la mutación: vuelve a **182/182**. Y `mut-produccion-quien.js` necesitó un comentario en `produccion.html` para que su ancla siguiera siendo única (el código nuevo de Asignar PIN repetía `if (!p) return`). Las 19 `mut-produccion-*.js`, corridas de a una al cerrar, dan todas en verde. **Es el motivo de fondo para correr el workflow *Mutaciones* después de cada tanda grande.**
+
 ## Lo que NO se probó
 
 - **Los recorridos de planta, gestión y la mitad de Accesos NUNCA corrieron contra la base**: faltan los secretos, y yo no puedo crear cuentas ni entrar con contraseñas. Se escribieron leyendo `produccion.html` y `produccion-gestion.html`; **es esperable que el primer intento pida ajustar algún selector o una espera.** Las capturas del recorrido todavía no existen: la única es la del login (humo).

@@ -146,7 +146,7 @@ correrMutaciones({
     // ── Accesos temporales ─────────────────────────────────────────────
     { nombre: 'se listan también los temporales vencidos', de: '      const hasta = new Date(t?.hasta ?? \'\').getTime()\n      return Number.isFinite(hasta) && hasta > ahora', a: '      return true' },
     { nombre: 'un temporal sin fecha se da por vigente', de: "      return Number.isFinite(hasta) && hasta > ahora", a: '      return hasta > ahora || !Number.isFinite(hasta)' },
-    { nombre: 'los vencidos llegan igual al render', de: '      const temporales = (t.data ?? []).filter(x => temporalVigente(x))', a: '      const temporales = (t.data ?? [])' },
+    { nombre: 'los vencidos llegan igual al render', de: 'sinPersonasDePrueba((t.data ?? []).filter(x => temporalVigente(x)), estado.fabrica', a: 'sinPersonasDePrueba((t.data ?? []), estado.fabrica' },
     { nombre: 'no se dice quién dio el acceso', de: '`<div class="pr-texto-suave">Lo dio ${esc(c.datos.nombres.get(t.otorgado_por) ?? \'—\')} · hasta ${esc(fechaCorta(t.hasta))} ${esc(horaArgentina(t.hasta))}</div></span>`', a: '`</span>`' },
     { nombre: 'el acceso temporal va a la unidad de la tablet', de: '        p_unidad_negocio_id: c.unidadId,\n        p_puesto: c.temporal?.puesto ?? null,', a: '        p_unidad_negocio_id: estado.unidadId,\n        p_puesto: c.temporal?.puesto ?? null,' },
     { nombre: 'se da el acceso sin elegir nada', de: "      if (faltan.length) { errorConfig(`Falta: ${faltan.join(' · ')}.`, DONDE); return }", a: '' },
