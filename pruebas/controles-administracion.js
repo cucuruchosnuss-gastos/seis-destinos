@@ -23,6 +23,7 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/administrac
 
 // Un commit por parte ya cerrada, en orden.
 const BASES = [
+  'e8c0905', // Parte 1: la portada y las órdenes de retiro
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].

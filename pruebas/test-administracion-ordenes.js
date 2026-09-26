@@ -118,7 +118,10 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   }))
   const T = nuevo()
   T.__tablas.ordenes_retiro = () => ({ data: null, error: { message: 'x' } })
-  esperas.push(T.mostrarInicio().then(() => chk('si no se puede contar, lo dice (nunca un 0)', /No se pudo contar/.test(T.__els.get('ad-secciones').innerHTML) && !/numero[^>]*>0</.test(T.__els.get('ad-secciones').innerHTML))))
+  esperas.push(T.mostrarInicio().then(() => {
+    const tarjeta = (T.__els.get('ad-secciones').innerHTML.match(/<button[^>]*data-seccion="ordenes"[\s\S]*?<\/button>/) || [''])[0]
+    chk('si no se pueden contar las órdenes, esa tarjeta lo dice (nunca un 0)', /No se pudo contar/.test(tarjeta) && /numero">—</.test(tarjeta))
+  }))
   const U = nuevo()
   U.estado.misTareas = new Map([['retiros:precios', { unidades: ['u-n'] }]])
   esperas.push(U.mostrarInicio().then(() => chk('sin retiros:ver no se consulta nada de órdenes', !U.__llamadas.consultas.some(c => c[0] === 'ordenes_retiro'))))

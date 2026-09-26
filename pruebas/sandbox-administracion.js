@@ -23,6 +23,13 @@ const FUNCIONES_BASE = [
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
   'guardarValorizacion', 'cancelarValorizar', 'pedirAnular', 'cancelarAnular', 'confirmarAnular',
   'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
+  // Clientes
+  'leerSaldos', 'pasaLimite', 'limiteDe', 'contarSobreLimite', 'clientesFiltrados', 'htmlFilaCliente', 'htmlListaClientes',
+  'pintarClientes', 'mostrarClientes', 'abrirAlta', 'parametrosAlta', 'guardarAlta', 'leerCuenta', 'detalleMovimiento',
+  'tieneSaldoInicial', 'htmlCuenta', 'pintarCliente', 'abrirCliente', 'abrirPanelCliente', 'cerrarPanelCliente', 'guardarPanelCliente',
+  'leerFicha', 'asegurarListas', 'asegurarProveedores', 'valorComparable', 'cambiosFicha', 'leerFormFicha', 'htmlOpcionesListas',
+  'proveedoresFiltrados', 'htmlProveedorElegido', 'htmlResultadosProveedores', 'pintarProveedorFicha', 'textoCambiosFicha',
+  'pintarPieFicha', 'llenarFicha', 'abrirFicha', 'elegirProveedorFicha', 'guardarFicha',
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes',
@@ -32,7 +39,7 @@ const FUNCIONES_BASE = [
 
 const CONSTANTES_BASE = [
   'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
-  'ETIQUETA_VALORIZACION',
+  'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
 
@@ -74,6 +81,8 @@ const PRELUDIO = `
   var turnoPortada = 0
   var turnoOrdenes = 0
   var turnoOrden = 0
+  var turnoClientes = 0
+  var turnoCliente = 0
 
   var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [], clicks: [] }
   var __tablas = {}
@@ -117,6 +126,7 @@ const PRELUDIO = `
     portada: null, ordenes: null, errorOrdenes: null,
     filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false },
     orden: null, trabajando: false,
+    saldos: null, errorSaldos: null, busquedaClientes: '', alta: null, cliente: null, ficha: null, listas: null, proveedores: null,
   }
 `
 
