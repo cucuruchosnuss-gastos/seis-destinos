@@ -1,5 +1,4 @@
-// NINGÚN CONTROL SE PIERDE en modulos/retiros.html (la CARGA de órdenes de
-// retiro).
+// NINGÚN CONTROL SE PIERDE en modulos/administracion.html.
 //
 // El archivo nació el 26/09/2026 y crece de a una parte por commit. Cada parte
 // commiteada se suma a BASES: la siguiente tiene que conservar TODOS los
@@ -11,8 +10,8 @@
 // Además, sobre el archivo actual: cada getElementById('x'), querySelector con
 // '#x' o '[data-x]' y cada `.dataset.x` literal apunta a algo que existe.
 //
-//   node pruebas/controles-retiros.js
-// Overrides: ARCHIVO_TEST (el retiros.html bajo prueba). LISTAR=1 muestra el
+//   node pruebas/controles-administracion.js
+// Overrides: ARCHIVO_TEST (el administracion.html bajo prueba). LISTAR=1 muestra el
 // inventario.
 
 const fs = require('fs')
@@ -20,11 +19,10 @@ const path = require('path')
 const { execFileSync } = require('child_process')
 const { RAIZ, inventario, referenciasDelJs, veces } = require('./controles-comun')
 
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/retiros.html')
+const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/administracion.html')
 
 // Un commit por parte ya cerrada, en orden.
 const BASES = [
-  'b03cd8e', // Parte 1: la carga, Mis retiros y la hoja
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
@@ -72,7 +70,7 @@ try {
 
   if (!BASES.length) console.log('Sin baseline todavía: es la primera sub-parte del archivo.')
   for (const base of BASES) {
-    const html = execFileSync('git', ['show', `${base}:modulos/retiros.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    const html = execFileSync('git', ['show', `${base}:modulos/administracion.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     const B = inventario(html)
     const claves = [...B.cuenta.keys()].filter(k => k.startsWith('control:'))
     chk(`el baseline ${base} tiene controles (si da cero, no se está leyendo)`, claves.length > 0)

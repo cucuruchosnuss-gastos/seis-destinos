@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Administración — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- ADMINISTRACIÓN (26/09/2026). La casa de todo lo que es plata y cuentas.
+
+       Igual que Producción se separó en planta y gestión: el que OPERA (carga
+       un retiro en el depósito, modulos/retiros.html) no ve plata; todo lo que
+       es plata, cuentas y decisiones vive acá, y cada persona ve SOLO las
+       secciones para las que tiene permiso.
+
+       Hoy nace con las secciones de las órdenes de retiro: Órdenes (valorizar,
+       corregir, anular, imprimir con precios), Clientes (su cuenta corriente y
+       su ficha) y Listas de precios. Las que ya existen —Cheques, Cuentas
+       Corrientes de proveedores y el asentado de Cobranzas— se mudan adentro
+       más adelante, de a una; mientras tanto la portada tiene links.
+
+       PERMISOS: no existe todavía un módulo 'administracion' en la base. Las
+       secciones de esta tanda usan las tareas del módulo 'retiros': ver (ver
+       todo con plata), precios (valorizar, precios y fichas) y anular. Cuando
+       el chat de arquitectura arme las tareas propias de Administración, cada
+       sección pasa a su tarea.
+
+       Las reglas viven en la base y la pantalla no las repite:
+       - valorizar_orden_retiro pone el precio de cada renglón (los de la lista
+         del cliente vigentes a la fecha del retiro, o los que se manden) y
+         RECIÉN AHÍ nace la deuda; si ya estaba valorizada, la corrección entra
+         como ajuste por la diferencia;
+       - anular_orden_retiro devuelve cada caja a su lote y cancela la deuda;
+       - el código (N-0012) lo arma la base: en pantalla va SIEMPRE el código. -->
+
+  <style>
+    [hidden] { display: none !important; }
+
+    body {
+      overflow-x: hidden;
+      --borde-tarjeta:  rgba(26, 42, 82, 0.08);
+      --sombra-tarjeta: 0 1px 2px rgba(26, 42, 82, 0.05);
+      --ad-texto-secundario: #4a5670;
+      --ad-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
+    }
+
+    .ad-app { max-width: 1100px; margin: 0 auto; padding: 0 1rem calc(2rem + env(safe-area-inset-bottom)); min-width: 0; }
+
+    .ad-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      min-width: 0; background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave); padding: 0.875rem 1rem; margin: 1rem 0;
+    }
+    .ad-header__volver {
+      color: var(--color-texto-suave); text-decoration: none; font-size: 0.875rem; font-weight: 600;
+      flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding-right: 0.5rem;
+    }
+    .ad-header__col { display: flex; flex-direction: column; min-width: 0; text-align: right; }
+    .ad-header__marca { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .ad-header__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); min-width: 0; overflow-wrap: anywhere; }
+    .ad-header__punto { color: var(--naranja); font-size: 0.875rem; line-height: 1; }
+
+    .ad-btn {
+      min-height: 44px; padding: 0 1rem; font: inherit; font-size: 0.9375rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--naranja);
+      background: var(--naranja); color: #fff; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+      text-align: center; touch-action: manipulation; text-decoration: none;
+    }
+    .ad-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ad-btn:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .ad-btn--secundario { background: var(--color-fondo); color: var(--naranja-oscuro); }
+    .ad-btn--suave { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde); }
+    .ad-btn--peligro { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .ad-btn--ancho { width: 100%; }
+    .ad-link {
+      background: none; border: 0; padding: 0 0.25rem; min-height: 44px; font: inherit; font-size: 0.875rem;
+      font-weight: 600; color: var(--color-texto-suave); cursor: pointer; display: inline-flex; align-items: center;
+    }
+
+    .ad-tarjeta {
+      background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      padding: 1rem; margin-bottom: 0.75rem; min-width: 0;
+    }
+    .ad-titulo { font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--color-texto); overflow-wrap: anywhere; }
+    .ad-subtitulo { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); margin: 1rem 0 0.5rem; }
+    .ad-texto-suave { color: var(--ad-texto-secundario); font-size: 0.875rem; }
+    .ad-vacio { padding: 2rem 1rem; text-align: center; color: var(--ad-texto-secundario); }
+
+    /* Dos escalones: .ad-aviso informa (neutro) y .ad-aviso--grave dice que
+       algo está mal o hay que prestar atención (bordó). El naranja nunca marca
+       validez. */
+    .ad-aviso {
+      padding: 0.75rem 0.875rem; border-radius: var(--radio-input); margin: 0.5rem 0;
+      background: var(--color-superficie); border-left: 4px solid var(--color-acento-gris);
+      color: var(--ad-texto-secundario); font-size: 0.875rem; overflow-wrap: anywhere;
+    }
+    .ad-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+    .ad-error-pegado { color: var(--bordo-oscuro); font-weight: 600; font-size: 0.875rem; margin: 0.375rem 0 0; overflow-wrap: anywhere; }
+    .ad-barra-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0 0 0.75rem; }
+    .ad-cabecera-vista { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.75rem; }
+    .ad-cabecera-vista .ad-titulo { flex: 1 1 auto; }
+
+    .ad-segmento { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--ad-segmento-fondo); min-width: 0; overflow-x: auto; margin: 0 0 0.75rem; }
+    .ad-segmento__opcion {
+      flex: 1 0 auto; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: 8px;
+      background: transparent; font: inherit; font-size: 0.8125rem; font-weight: 600;
+      color: var(--naranja-oscuro); white-space: nowrap; cursor: pointer;
+    }
+    .ad-segmento__opcion[aria-pressed="true"] { background: var(--naranja); color: #fff; font-weight: 700; }
+
+    .ad-campo { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.875rem; min-width: 0; }
+    .ad-campo > label, .ad-campo__rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto); }
+    .ad-campo__ayuda { font-size: 0.8125rem; color: var(--ad-texto-secundario); }
+    .ad-input, .ad-textarea, .ad-select {
+      width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; box-sizing: border-box;
+      font: inherit; font-size: 1rem; color: var(--color-texto); background: var(--color-fondo);
+      border: 1px solid var(--color-borde); border-radius: var(--radio-input);
+    }
+    .ad-textarea { min-height: 72px; resize: vertical; }
+    .ad-input:focus, .ad-textarea:focus, .ad-select:focus { outline: 2px solid var(--naranja); outline-offset: 0; border-color: var(--naranja); }
+    .ad-fila-campos { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+    .ad-check { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; font-weight: 600; }
+    .ad-check input { width: 22px; height: 22px; accent-color: var(--naranja); }
+
+    /* ── Portada ──────────────────────────────────────────────────────── */
+    .ad-secciones { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); margin: 0 0 1rem; }
+    .ad-seccion {
+      display: flex; flex-direction: column; gap: 0.375rem; text-align: left; min-height: 112px;
+      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      border-radius: var(--radio-tarjeta); padding: 1rem 1.125rem; font: inherit; color: var(--color-texto);
+      cursor: pointer; text-decoration: none; min-width: 0;
+    }
+    .ad-seccion__titulo { font-weight: 800; font-size: 1.0625rem; }
+    .ad-seccion__detalle { font-size: 0.875rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    .ad-seccion__numero { font-size: 1.75rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+    .ad-seccion__numero--atencion { color: var(--bordo); }
+    .ad-seccion--link { min-height: 72px; }
+    .ad-empresa-actual { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 0.75rem; min-width: 0; }
+    .ad-logo { max-height: 36px; max-width: 80px; width: auto; height: auto; object-fit: contain; }
+
+    /* ── Listas ───────────────────────────────────────────────────────── */
+    .ad-lista { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+    .ad-fila {
+      display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left;
+      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      border-radius: 17px; padding: 0.75rem 1rem; font: inherit; color: var(--color-texto); cursor: pointer;
+      min-width: 0; min-height: 56px;
+    }
+    .ad-fila--anulada { background: var(--bordo-suave); }
+    .ad-fila--atencion { border-left: 4px solid var(--bordo); }
+    .ad-fila__linea { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; flex-wrap: wrap; }
+    .ad-fila__codigo { font-weight: 900; font-variant-numeric: tabular-nums; }
+    .ad-fila__meta { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    .ad-fila__importe { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    /* "sin valorizar" en bordó: es plata que todavía no se le cobra a nadie. */
+    .ad-fila__importe--pendiente { color: var(--bordo-oscuro); }
+    .ad-sello {
+      display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; border-radius: 999px; padding: 0.1875rem 0.5625rem; white-space: nowrap;
+      background: var(--color-superficie); color: var(--ad-texto-secundario); border: 1px solid var(--color-borde);
+    }
+    .ad-sello--pendiente { background: var(--bordo-suave); color: var(--bordo-oscuro); border-color: var(--bordo); }
+    .ad-sello--valorizada { background: var(--verde-suave); color: var(--verde-oscuro); border-color: transparent; }
+    .ad-sello--anulada { background: var(--bordo); color: #fff; border-color: var(--bordo); }
+    .ad-sello--proveedor { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: transparent; }
+    .ad-filtros { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); align-items: end; }
+    .ad-cuenta { font-size: 0.8125rem; color: var(--ad-texto-secundario); margin: 0 0 0.5rem; }
+
+    /* ── El detalle de una orden ──────────────────────────────────────── */
+    .ad-datos { display: grid; gap: 0.25rem 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin: 0 0 0.5rem; }
+    .ad-dato { display: flex; flex-direction: column; min-width: 0; }
+    .ad-dato__rotulo { font-size: 0.75rem; font-weight: 700; color: var(--ad-texto-secundario); }
+    .ad-dato__valor { font-weight: 600; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .ad-renglon { display: grid; gap: 0.25rem 0.75rem; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+      padding: 0.625rem 0; border-bottom: 1px solid var(--color-borde); min-width: 0; }
+    .ad-renglon:last-child { border-bottom: 0; }
+    .ad-renglon__desc { font-weight: 700; overflow-wrap: anywhere; }
+    .ad-renglon__lotes { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    .ad-renglon__plata { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ad-renglon__precio { width: 9rem; }
+    /* En el celular el precio va DEBAJO del renglón: al costado no entra. */
+    @media (max-width: 599px) {
+      .ad-renglon { grid-template-columns: minmax(0, 1fr); }
+      .ad-renglon__plata { text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+    }
+    .ad-total { font-weight: 900; font-size: 1.25rem; text-align: right; margin: 0.5rem 0 0; font-variant-numeric: tabular-nums; }
+    .ad-panel { border: 2px solid var(--naranja); border-radius: var(--radio-tarjeta); padding: 1rem; margin: 0 0 0.75rem; background: var(--color-fondo); }
+    .ad-panel--peligro { border-color: var(--bordo); }
+    .ad-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0; }
+
+    /* ── Imprimir: la hoja de js/retiros-comun.js, CON precios ────────── */
+    .ad-impresion { display: none; }
+    @media print {
+      body { background: #fff !important; }
+      body > *:not(#ad-impresion) { display: none !important; }
+      .ad-impresion { display: block !important; }
+    }
+  </style>
+</head>
+<body class="pagina-modulo">
+  <div class="ad-app" id="ad-app">
+
+    <header class="ad-header">
+      <a href="../dashboard.html" class="ad-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <div class="ad-header__col">
+        <span class="ad-header__marca">Seis Destinos</span>
+        <span class="ad-header__titulo">Administración <span class="ad-header__punto">&#9679;</span> <span id="ad-subtitulo">Portada</span></span>
+      </div>
+    </header>
+
+    <div class="ad-vacio" id="ad-sin-acceso" hidden></div>
+    <div class="ad-vacio" id="ad-cargando">Cargando…</div>
+
+    <!-- Con más de una empresa, se elige acá. Con una sola no se dibuja. -->
+    <div id="ad-empresas"></div>
+
+    <!-- ══ PORTADA ════════════════════════════════════════════════════════ -->
+    <section id="ad-vista-inicio" hidden>
+      <div class="ad-secciones" id="ad-secciones"></div>
+      <h2 class="ad-subtitulo" id="ad-links-titulo" hidden>Accesos directos</h2>
+      <div class="ad-secciones" id="ad-links"></div>
+    </section>
+
+    <!-- ══ ÓRDENES DE RETIRO ══════════════════════════════════════════════ -->
+    <section id="ad-vista-ordenes" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-ordenes-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Órdenes de retiro</h1>
+      </div>
+      <div class="ad-tarjeta">
+        <div class="ad-filtros">
+          <div class="ad-campo"><label for="ad-filtro-desde">Desde</label><input type="date" class="ad-input" id="ad-filtro-desde"></div>
+          <div class="ad-campo"><label for="ad-filtro-hasta">Hasta</label><input type="date" class="ad-input" id="ad-filtro-hasta"></div>
+          <div class="ad-campo"><label for="ad-filtro-cliente">Cliente</label><select class="ad-select" id="ad-filtro-cliente"></select></div>
+          <div class="ad-campo"><label for="ad-filtro-estado">Estado</label>
+            <select class="ad-select" id="ad-filtro-estado">
+              <option value="">Todas</option>
+              <option value="confirmada">Confirmadas</option>
+              <option value="anulada">Anuladas</option>
+            </select></div>
+        </div>
+        <label class="ad-check"><input type="checkbox" id="ad-filtro-sin-valorizar"> Solo las que falta valorizar</label>
+      </div>
+      <p class="ad-cuenta" id="ad-ordenes-cuenta"></p>
+      <div class="ad-lista" id="ad-ordenes-lista"></div>
+    </section>
+
+    <!-- ══ UNA ORDEN ══════════════════════════════════════════════════════ -->
+    <section id="ad-vista-orden" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-orden-volver">&lsaquo; Órdenes</button>
+        <h1 class="ad-titulo" id="ad-orden-titulo">Orden</h1>
+      </div>
+      <div class="ad-barra-acciones" id="ad-orden-acciones">
+        <button type="button" class="ad-btn" id="ad-btn-valorizar" hidden>Valorizar</button>
+        <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-corregir-valor" hidden>Corregir valorización</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-imprimir" hidden>Imprimir</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-enviar" hidden>Enviar</button>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-anular" hidden>Anular</button>
+      </div>
+      <p class="ad-error-pegado" id="ad-orden-hoja-error" hidden></p>
+      <p class="ad-aviso" id="ad-orden-hoja-aviso" hidden></p>
+      <div class="ad-panel ad-panel--peligro" id="ad-panel-anular" hidden>
+        <div class="ad-campo">
+          <label for="ad-anular-motivo">¿Por qué se anula? (obligatorio)</label>
+          <textarea class="ad-textarea" id="ad-anular-motivo" maxlength="300"></textarea>
+          <span class="ad-campo__ayuda">Cada caja vuelve a su lote y, si estaba valorizada, se cancela la deuda del cliente.</span>
+        </div>
+        <p class="ad-error-pegado" id="ad-anular-error" hidden></p>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn ad-btn--peligro" id="ad-anular-si">Anular la orden</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-anular-no">Cancelar</button>
+        </div>
+      </div>
+      <div id="ad-orden-cuerpo"></div>
+    </section>
+
+  </div>
+
+  <!-- La hoja para imprimir, CON precios: la arma htmlHoja() de
+       js/retiros-comun.js justo antes de imprimir. -->
+  <div class="ad-impresion" id="ad-impresion"></div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import {
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero,
+      cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
+    } from '../js/utils.js'
+    import {
+      htmlHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
+      enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
+    } from '../js/retiros-comun.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      // 'modulo:tarea' → alcance (jsonb o null), de retiros, pedidos, stock,
+      // producción y cobranzas.
+      misTareas: new Map(),
+      // Los módulos habilitados (para los accesos directos).
+      misModulos: new Set(),
+      // Las empresas activas, con sus datos para la hoja.
+      empresas: [],
+      fabrica: FABRICA_SIN_DATOS,
+      empresaId: null,
+      vista: null,
+      // Lo que se lee por empresa
+      clientes: null,        // la tabla clientes (id → fila), para nombres y límites
+      catalogo: null,
+      catalogoEmpresa: null,
+      nombres: new Map(),    // empleado_id → nombre (v_empleados_publico)
+      portada: null,         // { sinValorizar, sobreLimite, error }
+      ordenes: null,
+      errorOrdenes: null,
+      filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false },
+      orden: null,           // { id, orden, items, lotes, error, valorizar, anular, aviso, errorHoja }
+      trabajando: false,
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS PROPIOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function esc(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    function normalizar(t) {
+      return String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+    }
+
+    function limpio(t) {
+      return String(t ?? '').replace(/\s+/g, ' ').trim()
+    }
+
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+
+    function hoyArgentina() {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+    }
+
+    function esFechaIso(t) {
+      return /^\d{4}-\d{2}-\d{2}$/.test(String(t ?? ''))
+    }
+
+    function fechaCorta(iso) {
+      if (!esFechaIso(iso)) return '—'
+      const [a, m, d] = iso.split('-')
+      return `${d}/${m}/${a}`
+    }
+
+    // Los precios: 2 decimales.
+    const DECIMALES_PRECIO = 2
+    const LARGO_MINIMO_MOTIVO = 3
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function tieneTarea(modulo, tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
+    }
+
+    // La MISMA regla que tiene_tarea_alcance().
+    function puedeEn(modulo, tarea, unidadId = estado.empresaId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      const clave = `${modulo}:${tarea}`
+      if (!estado.misTareas.has(clave)) return false
+      const alcance = estado.misTareas.get(clave)
+      if (alcance && alcance.todas === true) return true
+      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
+    }
+
+    // Las secciones de esta tanda, con su permiso. Una sección nueva es una
+    // entrada más; cuando exista el módulo Administración con sus tareas,
+    // cada una cambia su permiso acá.
+    const SECCIONES = [
+      { id: 'ordenes', titulo: 'Órdenes de retiro', permiso: ['retiros', 'ver'] },
+    ]
+
+    function seccionesVisibles(unidadId = estado.empresaId) {
+      return SECCIONES.filter(s => puedeEn(s.permiso[0], s.permiso[1], unidadId))
+    }
+
+    // Las empresas donde ve alguna sección, sin la fábrica de pruebas para una
+    // cuenta real.
+    function empresasDeAdministracion() {
+      const lista = (estado.empresas ?? []).filter(e =>
+        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id))
+      return sinUnidadesDePrueba(lista, estado.fabrica)
+    }
+
+    function empresaActual() {
+      return empresasDeAdministracion().find(e => e.id === estado.empresaId) ?? null
+    }
+
+    // Los lotes de cada renglón salen de stock_terminado_movimientos, que se
+    // lee con Producción o stock:ver. Sin eso, las filas no llegan y la
+    // pantalla lo dice.
+    function puedeVerLotes() {
+      return tieneTarea('stock', 'ver') || ['cargar', 'ver', 'configurar'].some(t => tieneTarea('produccion', t))
+    }
+
+    // Los accesos directos a lo que todavía vive afuera. Con las mismas reglas
+    // que el dashboard: el módulo habilitado (y, Cheques, además una de las
+    // dos tareas que dejan ver la cartera).
+    const LINKS = [
+      { clave: 'cheques', titulo: 'Cheques', detalle: 'La cartera de cheques', url: 'cheques.html', modulo: 'cobranzas', tareas: ['cobranzas:ver_todo', 'cobranzas:procesar'] },
+      { clave: 'cuentas-corrientes', titulo: 'Cuentas corrientes', detalle: 'Proveedores: saldos, facturas y pagos', url: 'cuentas-corrientes.html', modulo: 'cuentas-corrientes' },
+      { clave: 'cobranzas', titulo: 'Cobranzas', detalle: 'Controlar y asentar las cobranzas', url: 'cobranzas.html', modulo: 'cobranzas' },
+    ]
+
+    function linksVisibles() {
+      const sa = estado.miRolApp === 'super_admin'
+      return LINKS.filter(l => (sa || estado.misModulos.has(l.modulo)) &&
+        (!l.tareas || sa || l.tareas.some(t => estado.misTareas.has(t))))
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PREFERENCIAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const CLAVE_EMPRESA = 'administracion.empresa'
+
+    function leerPreferencia(clave) {
+      try { return localStorage.getItem(clave) } catch { return null }
+    }
+    function guardarPreferencia(clave, valor) {
+      try {
+        if (valor == null) localStorage.removeItem(clave)
+        else localStorage.setItem(clave, valor)
+      } catch { /* nada */ }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISTAS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden']
+    const SUBTITULO_DE_VISTA = {
+      'ad-vista-inicio': 'Portada',
+      'ad-vista-ordenes': 'Órdenes',
+      'ad-vista-orden': 'Orden',
+    }
+
+    function mostrarVista(id) {
+      for (const v of VISTAS) document.getElementById(v).hidden = v !== id
+      estado.vista = id
+      document.getElementById('ad-subtitulo').textContent = SUBTITULO_DE_VISTA[id] ?? 'Administración'
+      window.scrollTo(0, 0)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA EMPRESA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function htmlLogo(emp) {
+      const logo = logoSeguro(emp?.logo_url)
+      return logo ? `<img class="ad-logo" src="../${encodeURIComponent(logo)}" alt="">` : ''
+    }
+
+    function htmlEmpresas() {
+      const lista = empresasDeAdministracion()
+      if (lista.length <= 1) return ''
+      return `<div class="ad-segmento" role="group" aria-label="Empresa">` + lista.map(e =>
+        `<button type="button" class="ad-segmento__opcion" data-empresa="${esc(e.id)}" aria-pressed="${e.id === estado.empresaId ? 'true' : 'false'}">${esc(e.nombre)}</button>`).join('') + `</div>`
+    }
+
+    function pintarEmpresas() {
+      document.getElementById('ad-empresas').innerHTML = htmlEmpresas()
+    }
+
+    function elegirEmpresa(id) {
+      if (!empresasDeAdministracion().some(e => e.id === id) || id === estado.empresaId) return
+      estado.empresaId = id
+      guardarPreferencia(CLAVE_EMPRESA, id)
+      estado.clientes = null
+      estado.catalogo = null
+      estado.ordenes = null
+      estado.portada = null
+      estado.filtros.clienteId = ''
+      pintarEmpresas()
+      mostrarInicio()
+    }
+
+    function empresaInicial(lista, guardada) {
+      if (guardada && lista.some(e => e.id === guardada)) return guardada
+      return lista[0]?.id ?? null
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LO QUE SE LEE POR EMPRESA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function leerClientes(unidadId) {
+      const { data, error } = await supabase.from('clientes')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo')
+        .eq('unidad_negocio_id', unidadId).order('nombre')
+      if (error) throw error
+      return data ?? []
+    }
+
+    async function leerCatalogo(unidadId) {
+      const { data: productos, error: e1 } = await supabase.from('productos_terminados')
+        .select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId).order('orden').order('nombre')
+      if (e1) throw e1
+      const ids = (productos ?? []).map(p => p.id)
+      let presentaciones = []
+      if (ids.length) {
+        const r = await supabase.from('producto_presentaciones')
+          .select('id, producto_id, nombre, con_cono, unidades_por_caja, activa, orden').in('producto_id', ids).order('orden')
+        if (r.error) throw r.error
+        presentaciones = r.data ?? []
+      }
+      const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
+      if (e3) throw e3
+      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [] }
+    }
+
+    async function asegurarDatosEmpresa() {
+      const unidad = estado.empresaId
+      const tareas = []
+      if (estado.clientes === null) tareas.push(leerClientes(unidad).then(c => { if (unidad === estado.empresaId) estado.clientes = c }))
+      if (!estado.catalogo || estado.catalogoEmpresa !== unidad) {
+        tareas.push(leerCatalogo(unidad).then(c => { if (unidad === estado.empresaId) { estado.catalogo = c; estado.catalogoEmpresa = unidad } }))
+      }
+      await Promise.all(tareas)
+    }
+
+    function clienteDe(id) {
+      return (estado.clientes ?? []).find(c => c.id === id) ?? null
+    }
+
+    // Los nombres de quien cargó: contra v_empleados_publico, NUNCA con un
+    // embed a empleados (su RLS solo deja leer la fila propia).
+    async function asegurarNombres(ids) {
+      const faltan = [...new Set((ids ?? []).filter(id => id && !estado.nombres.has(id)))]
+      if (!faltan.length) return
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre').in('id', faltan)
+      if (error) { console.error('No se pudieron leer los nombres:', error); return }
+      for (const e of data ?? []) estado.nombres.set(e.id, e.nombre)
+    }
+
+    // "Cucurucho grande · Caja x 100 · LOLO"
+    function partesRenglon(cat, it) {
+      const pr = (cat?.presentaciones ?? []).find(x => x.id === it.presentacion_id)
+      const prod = pr ? (cat?.productos ?? []).find(x => x.id === pr.producto_id) : null
+      let cono = '—'
+      if (pr) cono = !pr.con_cono ? 'Sin cono' : (it.marca_id ? ((cat?.marcas ?? []).find(m => m.id === it.marca_id)?.nombre ?? 'Cono que no se pudo leer') : 'Común')
+      return { producto: prod?.nombre ?? 'Producto (no se pudo leer)', presentacion: pr?.nombre ?? '—', cono }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PORTADA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Cuántas órdenes confirmadas falta valorizar en la empresa.
+    async function contarSinValorizar(unidadId) {
+      const { data, error } = await supabase.from('ordenes_retiro').select('id')
+        .eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')
+      if (error) throw error
+      return (data ?? []).length
+    }
+
+    function textoNumeroSeccion(n) {
+      return n === null || n === undefined ? '—' : String(n)
+    }
+
+    function htmlSeccion(s, portada) {
+      let numero = null, detalle = ''
+      if (s.id === 'ordenes') {
+        numero = portada?.sinValorizar ?? null
+        detalle = portada?.error ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'orden sin valorizar' : 'órdenes sin valorizar'))
+      }
+      const atencion = Number(numero) > 0
+      return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
+        `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
+        `<span class="ad-seccion__numero${atencion ? ' ad-seccion__numero--atencion' : ''}">${esc(textoNumeroSeccion(numero))}</span>` +
+        `<span class="ad-seccion__detalle">${esc(detalle)}</span></button>`
+    }
+
+    function htmlLink(l) {
+      // La url es una constante de LINKS (un archivo de modulos/); igual va
+      // con encodeURIComponent, como todo lo que entra a un href.
+      return `<a class="ad-seccion ad-seccion--link" href="${encodeURIComponent(l.url)}" data-link="${esc(l.clave)}">` +
+        `<span class="ad-seccion__titulo">${esc(l.titulo)} ›</span><span class="ad-seccion__detalle">${esc(l.detalle)}</span></a>`
+    }
+
+    function pintarPortada() {
+      const secciones = seccionesVisibles()
+      document.getElementById('ad-secciones').innerHTML = secciones.length
+        ? secciones.map(s => htmlSeccion(s, estado.portada)).join('')
+        : '<div class="ad-aviso">En esta empresa no tenés ninguna sección de Administración.</div>'
+      const links = linksVisibles()
+      document.getElementById('ad-links').innerHTML = links.map(htmlLink).join('')
+      document.getElementById('ad-links-titulo').hidden = !links.length
+    }
+
+    let turnoPortada = 0
+
+    async function mostrarInicio() {
+      mostrarVista('ad-vista-inicio')
+      estado.portada = { sinValorizar: null, error: null }
+      pintarPortada()
+      const turno = ++turnoPortada
+      const unidad = estado.empresaId
+      if (!puedeEn('retiros', 'ver', unidad)) return
+      try {
+        const n = await contarSinValorizar(unidad)
+        if (turno !== turnoPortada) return
+        estado.portada.sinValorizar = n
+      } catch (err) {
+        if (turno !== turnoPortada) return
+        console.error('No se pudo contar la portada:', err)
+        estado.portada.error = 'No se pudo contar.'
+      }
+      pintarPortada()
+    }
+
+    function abrirSeccion(id) {
+      const s = seccionesVisibles().find(x => x.id === id)
+      if (!s) return
+      if (id === 'ordenes') mostrarOrdenes()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ÓRDENES DE RETIRO — con retiros:ver
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const ETIQUETA_VALORIZACION = { pendiente: 'Sin valorizar', valorizada: 'Valorizada' }
+
+    function htmlSelloOrden(o) {
+      if (o.estado === 'anulada') return '<span class="ad-sello ad-sello--anulada">Anulada</span>'
+      return o.estado_valorizacion === 'valorizada'
+        ? '<span class="ad-sello ad-sello--valorizada">Valorizada</span>'
+        : '<span class="ad-sello ad-sello--pendiente">Sin valorizar</span>'
+    }
+
+    // Los filtros de fecha, cliente y estado van a la consulta; "solo sin
+    // valorizar" también (confirmadas y pendientes).
+    async function leerOrdenes(unidadId, filtros) {
+      let q = supabase.from('ordenes_retiro')
+        .select('id, numero, codigo, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en')
+        .eq('unidad_negocio_id', unidadId)
+      if (esFechaIso(filtros.desde)) q = q.gte('fecha', filtros.desde)
+      if (esFechaIso(filtros.hasta)) q = q.lte('fecha', filtros.hasta)
+      if (filtros.clienteId) q = q.eq('cliente_id', filtros.clienteId)
+      if (filtros.estado) q = q.eq('estado', filtros.estado)
+      if (filtros.sinValorizar) q = q.eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')
+      const { data, error } = await q.order('fecha', { ascending: false }).order('numero', { ascending: false })
+      if (error) throw error
+      const ordenes = data ?? []
+      // Las cajas de cada orden, en una sola consulta.
+      const cajas = new Map()
+      if (ordenes.length) {
+        const r = await supabase.from('orden_retiro_items').select('orden_id, cajas').in('orden_id', ordenes.map(o => o.id))
+        if (r.error) throw r.error
+        for (const it of r.data ?? []) cajas.set(it.orden_id, (cajas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))
+      }
+      return ordenes.map(o => ({ ...o, cajas: cajas.has(o.id) ? cajas.get(o.id) : null }))
+    }
+
+    function htmlFilaOrden(o) {
+      const cli = clienteDe(o.cliente_id)
+      const meta = fechaCorta(o.fecha) + ' · ' + (cli?.nombre ?? 'Cliente') + ' · ' + enteroHoja(o.cajas) + ' cajas'
+      const valor = o.estado_valorizacion === 'valorizada' ? importeHoja(o.total, o.moneda) : 'sin valorizar'
+      const pendiente = o.estado === 'confirmada' && o.estado_valorizacion !== 'valorizada'
+      return `<button type="button" class="ad-fila${o.estado === 'anulada' ? ' ad-fila--anulada' : ''}${pendiente ? ' ad-fila--atencion' : ''}" data-orden="${esc(o.id)}">` +
+        `<span class="ad-fila__linea"><span class="ad-fila__codigo">${esc(o.codigo || '—')}</span>${htmlSelloOrden(o)}</span>` +
+        `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta)}</span>` +
+        `<span class="ad-fila__importe${pendiente ? ' ad-fila__importe--pendiente' : ''}">${esc(valor)}</span></span></button>`
+    }
+
+    function htmlListaOrdenes() {
+      if (estado.errorOrdenes) return `<div class="ad-aviso ad-aviso--grave">${esc(estado.errorOrdenes)}</div>`
+      if (estado.ordenes === null) return '<div class="ad-vacio">Cargando las órdenes…</div>'
+      if (!estado.ordenes.length) return '<div class="ad-vacio">No hay órdenes con esos filtros.</div>'
+      return estado.ordenes.map(htmlFilaOrden).join('')
+    }
+
+    function htmlOpcionesClientes(lista, elegido) {
+      return '<option value="">Todos</option>' + (lista ?? []).map(c =>
+        `<option value="${esc(c.id)}"${c.id === elegido ? ' selected' : ''}>${esc(c.nombre)}</option>`).join('')
+    }
+
+    function pintarOrdenes() {
+      document.getElementById('ad-ordenes-lista').innerHTML = htmlListaOrdenes()
+      const n = estado.ordenes?.length ?? 0
+      document.getElementById('ad-ordenes-cuenta').textContent = estado.ordenes ? `${n} ${n === 1 ? 'orden' : 'órdenes'}` : ''
+    }
+
+    let turnoOrdenes = 0
+
+    async function cargarOrdenes() {
+      const turno = ++turnoOrdenes
+      estado.ordenes = null
+      estado.errorOrdenes = null
+      pintarOrdenes()
+      try {
+        const lista = await leerOrdenes(estado.empresaId, estado.filtros)
+        if (turno !== turnoOrdenes) return
+        estado.ordenes = lista
+      } catch (err) {
+        if (turno !== turnoOrdenes) return
+        console.error('No se pudieron leer las órdenes:', err)
+        estado.errorOrdenes = 'No se pudieron leer las órdenes. Revisá la conexión y volvé a entrar.'
+      }
+      pintarOrdenes()
+    }
+
+    async function mostrarOrdenes() {
+      if (!puedeEn('retiros', 'ver')) { mostrarInicio(); return }
+      mostrarVista('ad-vista-ordenes')
+      try { await asegurarDatosEmpresa() } catch (err) { console.error('No se pudieron leer los clientes o el catálogo:', err) }
+      document.getElementById('ad-filtro-cliente').innerHTML = htmlOpcionesClientes(estado.clientes, estado.filtros.clienteId)
+      document.getElementById('ad-filtro-desde').value = estado.filtros.desde
+      document.getElementById('ad-filtro-hasta').value = estado.filtros.hasta
+      document.getElementById('ad-filtro-estado').value = estado.filtros.estado
+      document.getElementById('ad-filtro-sin-valorizar').checked = estado.filtros.sinValorizar
+      await cargarOrdenes()
+    }
+
+    function leerFiltros() {
+      estado.filtros.desde = document.getElementById('ad-filtro-desde').value
+      estado.filtros.hasta = document.getElementById('ad-filtro-hasta').value
+      estado.filtros.clienteId = document.getElementById('ad-filtro-cliente').value
+      estado.filtros.estado = document.getElementById('ad-filtro-estado').value
+      estado.filtros.sinValorizar = !!document.getElementById('ad-filtro-sin-valorizar').checked
+      cargarOrdenes()
+    }
+
+    // ── Una orden ──────────────────────────────────────────────────────────
+
+    async function leerOrden(id) {
+      const { data: o, error } = await supabase.from('ordenes_retiro')
+        .select('id, numero, codigo, unidad_negocio_id, fecha, estado, estado_valorizacion, total, moneda, cliente_id, cargada_por, cargada_en, transporte, observaciones, anulada_motivo, anulada_en, valorizada_en')
+        .eq('id', id).maybeSingle()
+      if (error) throw error
+      if (!o) return null
+      const { data: items, error: e2 } = await supabase.from('orden_retiro_items')
+        .select('id, orden, presentacion_id, marca_id, cajas, unidades, precio_caja, subtotal, lote')
+        .eq('orden_id', id).order('orden')
+      if (e2) throw e2
+      let lotes = null
+      if (puedeVerLotes()) {
+        const r = await supabase.from('stock_terminado_movimientos')
+          .select('presentacion_id, marca_id, lote, cajas').eq('orden_retiro_id', id).eq('tipo', 'despacho')
+        if (!r.error) lotes = r.data ?? []
+      }
+      return { orden: o, items: items ?? [], lotes }
+    }
+
+    // Los lotes de un renglón: los movimientos 'despacho' de esa presentación
+    // y ese cono. null = no se pudieron ver (no "sin lotes").
+    function lotesDeRenglon(lotes, it) {
+      if (!Array.isArray(lotes)) return null
+      return lotes.filter(l => l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))
+        .map(l => ({ lote: l.lote, cajas: -Number(l.cajas) }))
+    }
+
+    function htmlDatoAd(rotulo, valor) {
+      return `<div class="ad-dato"><span class="ad-dato__rotulo">${esc(rotulo)}</span><span class="ad-dato__valor">${esc(valor)}</span></div>`
+    }
+
+    function htmlRenglonOrden(it, d, cat) {
+      const p = partesRenglon(cat, it)
+      const lotes = lotesDeRenglon(d.lotes, it)
+      const desc = enteroHoja(it.cajas) + ' cajas · ' + [p.producto, p.presentacion, p.cono].join(' · ')
+      const detalle = enteroHoja(it.unidades) + ' unidades · ' + (lotes === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotes))
+      const moneda = d.orden.moneda || 'ARS'
+      let plata = ''
+      if (d.valorizar) {
+        plata = `<div class="ad-renglon__plata"><label class="ad-dato__rotulo" for="ad-precio-${esc(it.id)}">Precio x caja</label>` +
+          `<input type="text" class="ad-input ad-renglon__precio" id="ad-precio-${esc(it.id)}" data-precio="${esc(it.id)}" autocomplete="off">` +
+          `<div class="ad-texto-suave" data-subtotal="${esc(it.id)}">${esc(importeHoja(subtotalValorizar(d, it), moneda))}</div></div>`
+      } else if (d.orden.estado_valorizacion === 'valorizada') {
+        plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(it.precio_caja, moneda))} x caja</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div></div>`
+      }
+      return `<div class="ad-renglon"><div><div class="ad-renglon__desc">${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div></div>${plata}</div>`
+    }
+
+    function htmlDetalleOrden(d, cat) {
+      const o = d.orden
+      const cli = clienteDe(o.cliente_id)
+      const datos = [
+        htmlDatoAd('Cliente', cli ? [cli.nombre, limpio(cli.razon_social) && limpio(cli.razon_social) !== limpio(cli.nombre) ? cli.razon_social : null].filter(Boolean).join(' · ') : 'Cliente'),
+        htmlDatoAd('Fecha del retiro', fechaHoraHoja(o.cargada_en)),
+        htmlDatoAd('Cargó', estado.nombres.get(o.cargada_por) ?? '—'),
+        htmlDatoAd('Transporte', limpio(o.transporte) || '—'),
+      ]
+      if (limpio(o.observaciones)) datos.push(htmlDatoAd('Observaciones', o.observaciones))
+      const anulada = o.estado === 'anulada' ? `<div class="ad-aviso ad-aviso--grave">${esc('Anulada. Motivo: ' + (o.anulada_motivo || '—'))}</div>` : ''
+      const sinLotes = d.lotes === null ? '<div class="ad-aviso">Con tu usuario no se pueden ver los lotes de cada renglón (hace falta un permiso de Producción o de Stock).</div>' : ''
+      const renglones = d.items.map(it => htmlRenglonOrden(it, d, cat)).join('')
+      let total = ''
+      if (d.valorizar) total = `<p class="ad-total" id="ad-valorizar-total">${esc(textoTotalValorizar(d))}</p>`
+      else if (o.estado_valorizacion === 'valorizada') total = `<p class="ad-total">Total ${esc(importeHoja(o.total, o.moneda))}</p>`
+      return `<div class="ad-tarjeta"><div class="ad-fila__linea">${htmlSelloOrden(o)}</div><div class="ad-datos">${datos.join('')}</div>${anulada}</div>` +
+        `${sinLotes}<div class="ad-tarjeta">${renglones || '<div class="ad-vacio">Sin renglones.</div>'}${total}${htmlValorizar(d)}</div>`
+    }
+
+    function pintarOrden() {
+      const d = estado.orden
+      if (!d) return
+      document.getElementById('ad-orden-titulo').textContent = d.orden ? `Orden ${d.orden.codigo || ''}`.trim() : 'Orden'
+      const cuerpo = document.getElementById('ad-orden-cuerpo')
+      if (d.error) cuerpo.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(d.error)}</div>`
+      else if (!d.orden) cuerpo.innerHTML = '<div class="ad-vacio">Cargando la orden…</div>'
+      else {
+        cuerpo.innerHTML = htmlDetalleOrden(d, estado.catalogo)
+        if (d.valorizar) {
+          for (const input of cuerpo.querySelectorAll('[data-precio]')) {
+            enlazarCampoNumero(input, { decimales: DECIMALES_PRECIO })
+            ponerNumero(input, d.valorizar.precios[input.dataset.precio] ?? null)
+          }
+        }
+      }
+      pintarAccionesOrden()
+    }
+
+    function pintarAccionesOrden() {
+      const d = estado.orden
+      const o = d?.orden
+      const u = o?.unidad_negocio_id
+      const activa = !!o && o.estado !== 'anulada'
+      const precios = activa && puedeEn('retiros', 'precios', u)
+      document.getElementById('ad-btn-valorizar').hidden = !(precios && o.estado_valorizacion !== 'valorizada' && !d.valorizar)
+      document.getElementById('ad-btn-corregir-valor').hidden = !(precios && o.estado_valorizacion === 'valorizada' && !d.valorizar)
+      document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))
+      document.getElementById('ad-btn-imprimir').hidden = !o
+      document.getElementById('ad-btn-enviar').hidden = !o
+      document.getElementById('ad-btn-enviar').disabled = estado.trabajando
+      document.getElementById('ad-panel-anular').hidden = !d?.anular
+      const ea = document.getElementById('ad-anular-error')
+      ea.textContent = d?.anular?.error ?? ''
+      ea.hidden = !d?.anular?.error
+      document.getElementById('ad-anular-si').disabled = estado.trabajando
+      const eh = document.getElementById('ad-orden-hoja-error')
+      eh.textContent = d?.errorHoja ?? ''
+      eh.hidden = !d?.errorHoja
+      const ah = document.getElementById('ad-orden-hoja-aviso')
+      ah.textContent = d?.aviso ?? ''
+      ah.hidden = !d?.aviso
+    }
+
+    let turnoOrden = 0
+
+    async function abrirOrden(id) {
+      const turno = ++turnoOrden
+      estado.orden = { id, orden: null, items: [], lotes: null, error: null, valorizar: null, anular: null, aviso: null, errorHoja: null }
+      mostrarVista('ad-vista-orden')
+      pintarOrden()
+      try {
+        await asegurarDatosEmpresa()
+        const r = await leerOrden(id)
+        if (turno !== turnoOrden) return
+        if (!r) estado.orden.error = 'No se encontró la orden: puede ser de una empresa que no ves.'
+        else {
+          Object.assign(estado.orden, r)
+          await asegurarNombres([r.orden.cargada_por])
+        }
+      } catch (err) {
+        if (turno !== turnoOrden) return
+        console.error('No se pudo leer la orden:', err)
+        estado.orden.error = 'No se pudo leer la orden. Revisá la conexión y volvé a entrar.'
+      }
+      pintarOrden()
+    }
+
+    // ── Valorizar ─────────────────────────────────────────────────────────
+
+    // Los precios de la lista del cliente vigentes a la fecha del retiro: por
+    // presentación, el de fecha más nueva que no sea posterior. La MISMA
+    // regla que precio_vigente() en la base.
+    function preciosVigentes(items, fecha) {
+      const porPresentacion = new Map()
+      for (const x of Array.isArray(items) ? items : []) {
+        if (!esFechaIso(x.vigente_desde) || x.vigente_desde > fecha) continue
+        const a = porPresentacion.get(x.presentacion_id)
+        if (!a || x.vigente_desde > a.vigente_desde) porPresentacion.set(x.presentacion_id, x)
+      }
+      return new Map([...porPresentacion].map(([k, v]) => [k, Number(v.precio_caja)]))
+    }
+
+    async function leerSaldoCliente(clienteId) {
+      const { data, error } = await supabase.from('cliente_movimientos').select('importe').eq('cliente_id', clienteId)
+      if (error) throw error
+      return (data ?? []).reduce((s, m) => s + (Number(m.importe) || 0), 0)
+    }
+
+    // Arma el panel de valorizar: los precios de la lista (o los que ya tenía
+    // si se corrige), el saldo del cliente y su límite, para avisar ANTES.
+    async function abrirValorizar() {
+      const d = estado.orden
+      const o = d?.orden
+      if (!o || o.estado === 'anulada' || !puedeEn('retiros', 'precios', o.unidad_negocio_id) || estado.trabajando) return
+      const cli = clienteDe(o.cliente_id)
+      const v = { precios: {}, desdeLista: new Set(), sinLista: !cli?.lista_precio_id, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
+      d.valorizar = v
+      pintarOrden()
+      try {
+        let vigentes = new Map()
+        if (cli?.lista_precio_id) {
+          const { data, error } = await supabase.from('lista_precios_items')
+            .select('presentacion_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)
+          if (error) throw error
+          vigentes = preciosVigentes(data, o.fecha)
+        }
+        for (const it of d.items) {
+          if (o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined) v.precios[it.id] = Number(it.precio_caja)
+          else if (vigentes.has(it.presentacion_id)) { v.precios[it.id] = vigentes.get(it.presentacion_id); v.desdeLista.add(it.id) }
+          else v.precios[it.id] = null
+        }
+        v.saldo = await leerSaldoCliente(o.cliente_id)
+      } catch (err) {
+        console.error('No se pudieron traer los precios:', err)
+        v.error = 'No se pudieron traer los precios de la lista. Podés cargarlos a mano.'
+      }
+      v.cargando = false
+      if (estado.orden === d) pintarOrden()
+    }
+
+    function subtotalValorizar(d, it) {
+      const p = d?.valorizar?.precios?.[it.id]
+      return p === null || p === undefined ? null : Math.round(p * Number(it.cajas) * 100) / 100
+    }
+
+    function totalValorizar(d) {
+      const subs = (d?.items ?? []).map(it => subtotalValorizar(d, it))
+      if (subs.some(s => s === null)) return null
+      return Math.round(subs.reduce((s, x) => s + x, 0) * 100) / 100
+    }
+
+    function textoTotalValorizar(d) {
+      const t = totalValorizar(d)
+      return t === null ? 'Total: faltan precios' : 'Total ' + importeHoja(t, d.orden.moneda)
+    }
+
+    // El saldo que le quedaría al cliente con esta valorización. Si ya estaba
+    // valorizada, la corrección entra por la diferencia.
+    function saldoProyectado(d) {
+      const v = d?.valorizar
+      const t = totalValorizar(d)
+      if (!v || v.saldo === null || t === null) return null
+      const anterior = d.orden.estado_valorizacion === 'valorizada' ? Number(d.orden.total) || 0 : 0
+      return Math.round((v.saldo - anterior + t) * 100) / 100
+    }
+
+    // El aviso del límite de crédito: AVISA, no bloquea (la mercadería ya se
+    // llevó; la deuda existe igual).
+    function avisoLimite(saldo, limite, moneda) {
+      if (saldo === null || saldo === undefined || limite === null || limite === undefined) return null
+      if (!(Number(saldo) > Number(limite))) return null
+      return `El cliente pasa su límite de crédito: quedaría debiendo ${importeHoja(saldo, moneda)} y su límite es ${importeHoja(limite, moneda)}.`
+    }
+
+    function faltanPrecios(d) {
+      return (d?.items ?? []).filter(it => d.valorizar?.precios?.[it.id] === null || d.valorizar?.precios?.[it.id] === undefined).length
+    }
+
+    function htmlValorizar(d) {
+      const v = d.valorizar
+      if (!v) return ''
+      if (v.cargando) return '<p class="ad-texto-suave">Trayendo los precios de la lista del cliente…</p>'
+      const partes = []
+      if (v.error) partes.push(`<div class="ad-aviso ad-aviso--grave">${esc(v.error)}</div>`)
+      if (v.sinLista) partes.push('<div class="ad-aviso">Este cliente no tiene una lista de precios asignada: cargá cada precio.</div>')
+      else if (d.items.some(it => !v.desdeLista.has(it.id)) && d.orden.estado_valorizacion !== 'valorizada') partes.push('<div class="ad-aviso">Algunos productos no están en la lista del cliente: cargá su precio.</div>')
+      const aviso = avisoLimite(saldoProyectado(d), v.limite, d.orden.moneda)
+      partes.push(`<div id="ad-valorizar-limite">${aviso ? `<div class="ad-aviso ad-aviso--grave">${esc(aviso)}</div>` : ''}</div>`)
+      partes.push(`<p class="ad-error-pegado" id="ad-valorizar-error"${v.errorGuardar ? '' : ' hidden'}>${esc(v.errorGuardar ?? '')}</p>`)
+      partes.push(`<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-valorizar-guardar">${d.orden.estado_valorizacion === 'valorizada' ? 'Guardar la corrección' : 'Valorizar'}</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" id="ad-valorizar-cancelar">Cancelar</button></div>`)
+      return partes.join('')
+    }
+
+    // Tipear un precio recalcula el subtotal, el total y el aviso SIN
+    // redibujar (redibujar le sacaría el foco al campo).
+    function cambiarPrecio(itemId, valor) {
+      const d = estado.orden
+      if (!d?.valorizar) return
+      d.valorizar.precios[itemId] = valor
+      d.valorizar.desdeLista.delete(itemId)
+      const it = d.items.find(x => x.id === itemId)
+      const cuerpo = document.getElementById('ad-orden-cuerpo')
+      const sub = cuerpo.querySelector(`[data-subtotal="${itemId}"]`)
+      if (sub && it) sub.textContent = importeHoja(subtotalValorizar(d, it), d.orden.moneda)
+      const tot = document.getElementById('ad-valorizar-total')
+      if (tot) tot.textContent = textoTotalValorizar(d)
+      const lim = document.getElementById('ad-valorizar-limite')
+      const aviso = avisoLimite(saldoProyectado(d), d.valorizar.limite, d.orden.moneda)
+      if (lim) lim.innerHTML = aviso ? `<div class="ad-aviso ad-aviso--grave">${esc(aviso)}</div>` : ''
+    }
+
+    // Se mandan TODOS los precios que se ven: los de la lista y los
+    // corregidos. Así la base valoriza exactamente lo que está en pantalla.
+    function parametrosValorizar(d) {
+      const precios = {}
+      for (const it of d.items) precios[it.id] = d.valorizar.precios[it.id]
+      return { p_orden_id: d.orden.id, p_precios: precios }
+    }
+
+    async function guardarValorizacion() {
+      const d = estado.orden
+      const v = d?.valorizar
+      if (!v || v.cargando || estado.trabajando) return
+      const n = faltanPrecios(d)
+      if (n) { v.errorGuardar = `Faltan precios en ${n} ${n === 1 ? 'renglón' : 'renglones'}.`; pintarOrden(); return }
+      if (Object.values(v.precios).some(p => Number(p) < 0)) { v.errorGuardar = 'Un precio no puede ser negativo.'; pintarOrden(); return }
+      estado.trabajando = true
+      v.errorGuardar = null
+      try {
+        const { data, error } = await supabase.rpc('valorizar_orden_retiro', parametrosValorizar(d))
+        if (error) throw error
+        const aviso = data?.supera_limite ? avisoLimite(data.saldo_cliente, data.limite_credito, data.moneda) : null
+        mostrarExito(`Orden ${d.orden.codigo} valorizada: ${importeHoja(data?.total, data?.moneda)}.`)
+        estado.trabajando = false
+        estado.ordenes = null
+        await abrirOrden(d.orden.id)
+        if (aviso && estado.orden) { estado.orden.aviso = aviso; pintarAccionesOrden() }
+      } catch (err) {
+        console.error('No se pudo valorizar:', err)
+        // Los mensajes de valorizar_orden_retiro ya vienen escritos para una
+        // persona ("Faltan precios en 2 renglón(es)…"): van tal cual.
+        v.errorGuardar = err?.message || 'No se pudo valorizar. Probá de nuevo.'
+        estado.trabajando = false
+        pintarOrden()
+      }
+    }
+
+    function cancelarValorizar() {
+      if (estado.orden) estado.orden.valorizar = null
+      pintarOrden()
+    }
+
+    // ── Anular ────────────────────────────────────────────────────────────
+
+    function pedirAnular() {
+      const d = estado.orden
+      if (!d?.orden || !puedeEn('retiros', 'anular', d.orden.unidad_negocio_id)) return
+      d.anular = { error: null }
+      document.getElementById('ad-anular-motivo').value = ''
+      pintarAccionesOrden()
+    }
+
+    function cancelarAnular() {
+      if (estado.orden) estado.orden.anular = null
+      pintarAccionesOrden()
+    }
+
+    async function confirmarAnular() {
+      const d = estado.orden
+      if (!d?.anular || estado.trabajando) return
+      const motivo = limpio(document.getElementById('ad-anular-motivo').value)
+      if (motivo.length < LARGO_MINIMO_MOTIVO) { d.anular.error = 'Escribí por qué se anula la orden.'; pintarAccionesOrden(); return }
+      estado.trabajando = true
+      pintarAccionesOrden()
+      try {
+        const { error } = await supabase.rpc('anular_orden_retiro', { p_orden_id: d.orden.id, p_motivo: motivo })
+        if (error) throw error
+        mostrarExito(`Orden ${d.orden.codigo} anulada.`)
+        estado.trabajando = false
+        estado.ordenes = null
+        await abrirOrden(d.orden.id)
+      } catch (err) {
+        console.error('No se pudo anular:', err)
+        d.anular.error = err?.message || 'No se pudo anular. Probá de nuevo.'
+        estado.trabajando = false
+        pintarAccionesOrden()
+      }
+    }
+
+    // ── Imprimir y enviar, CON precios ─────────────────────────────────────
+
+    function ordenParaHoja(d) {
+      const o = d.orden
+      const cli = clienteDe(o.cliente_id) ?? { nombre: 'Cliente' }
+      return {
+        codigo: o.codigo, estado: o.estado, fecha: o.fecha, cargadaEn: o.cargada_en,
+        cargadaPor: estado.nombres.get(o.cargada_por) ?? '', transporte: o.transporte, observaciones: o.observaciones,
+        moneda: o.moneda || 'ARS',
+        total: o.estado_valorizacion === 'valorizada' ? o.total : null,
+        empresa: (estado.empresas ?? []).find(e => e.id === o.unidad_negocio_id) ?? empresaActual(),
+        cliente: cli,
+        renglones: d.items.map(it => {
+          const p = partesRenglon(estado.catalogo, it)
+          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],
+            precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,
+            subtotal: o.estado_valorizacion === 'valorizada' ? it.subtotal : null }
+        }),
+      }
+    }
+
+    function imprimirOrden() {
+      const d = estado.orden
+      if (!d?.orden) return
+      asegurarEstilosHoja()
+      document.getElementById('ad-impresion').innerHTML = htmlHoja(ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })
+      window.print()
+    }
+
+    function textoResultadoEnvio(r) {
+      if (!r || r.modo === 'cancelado') return null
+      if (r.modo === 'compartido') return 'Listo: se compartió el PDF.'
+      if (r.modo === 'descargado') return r.conMail
+        ? `Se descargó «${r.nombre}» y se abrió el mail al cliente. Adjuntá el PDF antes de mandarlo.`
+        : `Se descargó «${r.nombre}». El cliente no tiene un mail cargado: se abrió el mail sin destinatario. Adjuntá el PDF.`
+      return null
+    }
+
+    async function enviarOrdenAd() {
+      const d = estado.orden
+      if (!d?.orden || estado.trabajando) return
+      estado.trabajando = true
+      d.errorHoja = null
+      d.aviso = null
+      pintarAccionesOrden()
+      try {
+        const hoja = ordenParaHoja(d)
+        d.aviso = textoResultadoEnvio(await enviarOrden(hoja, { conPrecios: true, email: hoja.cliente?.email ?? null }))
+      } catch (err) {
+        console.error('No se pudo enviar la orden:', err)
+        d.errorHoja = err?.message ? `No se pudo armar el PDF: ${err.message}` : 'No se pudo armar el PDF. Probá de nuevo.'
+      } finally {
+        estado.trabajando = false
+      }
+      pintarAccionesOrden()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENTOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function conectarTodo() {
+      document.getElementById('ad-empresas').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-empresa]')
+        if (b) elegirEmpresa(b.dataset.empresa)
+      })
+      document.getElementById('ad-secciones').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-seccion]')
+        if (b) abrirSeccion(b.dataset.seccion)
+      })
+      document.getElementById('ad-ordenes-volver').addEventListener('click', () => mostrarInicio())
+      for (const id of ['ad-filtro-desde', 'ad-filtro-hasta', 'ad-filtro-cliente', 'ad-filtro-estado', 'ad-filtro-sin-valorizar']) {
+        document.getElementById(id).addEventListener('change', () => leerFiltros())
+      }
+      document.getElementById('ad-ordenes-lista').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-orden]')
+        if (b) abrirOrden(b.dataset.orden)
+      })
+      document.getElementById('ad-orden-volver').addEventListener('click', () => mostrarOrdenes())
+      document.getElementById('ad-btn-valorizar').addEventListener('click', () => abrirValorizar())
+      document.getElementById('ad-btn-corregir-valor').addEventListener('click', () => abrirValorizar())
+      document.getElementById('ad-btn-imprimir').addEventListener('click', () => imprimirOrden())
+      document.getElementById('ad-btn-enviar').addEventListener('click', () => enviarOrdenAd())
+      document.getElementById('ad-btn-anular').addEventListener('click', () => pedirAnular())
+      document.getElementById('ad-anular-si').addEventListener('click', () => confirmarAnular())
+      document.getElementById('ad-anular-no').addEventListener('click', () => cancelarAnular())
+      const cuerpo = document.getElementById('ad-orden-cuerpo')
+      cuerpo.addEventListener('input', (e) => {
+        const t = e.target
+        if (t.dataset?.precio !== undefined) cambiarPrecio(t.dataset.precio, leerCampoNumero(t))
+      })
+      cuerpo.addEventListener('click', (e) => {
+        if (e.target.closest('#ad-valorizar-guardar')) guardarValorizacion()
+        else if (e.target.closest('#ad-valorizar-cancelar')) cancelarValorizar()
+      })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARRANQUE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function sinAcceso(texto) {
+      document.getElementById('ad-cargando').hidden = true
+      const el = document.getElementById('ad-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      mostrarError(texto)
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    async function cargarPermisos() {
+      const { data: emp, error } = await supabase
+        .from('empleados').select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+      if (error || !emp) throw error ?? new Error('sin empleado')
+      estado.miEmpleadoId = emp.id
+      estado.miRolApp = emp.rol_app
+      const [t, m, u] = await Promise.all([
+        supabase.from('empleado_tareas').select('modulo, tarea, alcance')
+          .eq('empleado_id', emp.id).in('modulo', ['retiros', 'pedidos', 'stock', 'produccion', 'cobranzas']).eq('habilitado', true),
+        supabase.from('empleado_modulos').select('modulo').eq('empleado_id', emp.id).eq('habilitado', true),
+        supabase.from('unidades_negocio').select('id, nombre, prefijo, razon_social, cuit, domicilio, telefono, logo_url').eq('activo', true).order('nombre'),
+      ])
+      if (t.error) throw t.error
+      if (u.error) throw u.error
+      estado.misTareas = new Map((t.data ?? []).map(x => [`${x.modulo}:${x.tarea}`, x.alcance ?? null]))
+      estado.misModulos = new Set((m.data ?? []).map(x => x.modulo))
+      estado.empresas = u.data ?? []
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+      const fabrica = cargarFabricaDePruebas(supabase)
+      try {
+        const [, f] = await Promise.all([cargarPermisos(), fabrica])
+        estado.fabrica = f
+      } catch (err) {
+        console.error('No se pudieron leer los permisos:', err)
+        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        return
+      }
+      const lista = empresasDeAdministracion()
+      if (!lista.length) {
+        sinAcceso('No tenés acceso a Administración. Te llevamos al inicio…')
+        return
+      }
+      estado.empresaId = empresaInicial(lista, leerPreferencia(CLAVE_EMPRESA))
+      document.getElementById('ad-cargando').hidden = true
+      conectarTodo()
+      pintarEmpresas()
+      mostrarInicio()
+      if (window.lucide) window.lucide.createIcons()
+    }
+
+    init()
+  </script>
+</body>
+</html>
