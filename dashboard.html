@@ -396,14 +396,18 @@
         requiereTareas: ['cobranzas:ver_todo', 'cobranzas:procesar'],
       },
       {
-        // Producción (22/09/2026): la tablet de la fábrica. Fila propia en
-        // modulos/empleado_modulos ('produccion'); adentro, cualquiera de sus
-        // tres tareas abre la pantalla.
+        // Producción (22/09/2026). Fila propia en modulos/empleado_modulos
+        // ('produccion'). Desde el 25/09/2026 son DOS pantallas: la PLANTA
+        // (produccion.html, solo para las cuentas de las tablets) y la GESTIÓN
+        // (produccion-gestion.html, para las cuentas personales). La tarjeta
+        // lleva a la gestión; una tablet ni ve el dashboard (entra derecho a
+        // la planta), y si igual llega acá, urlDispositivo la manda a la planta.
         clave: 'produccion',
         nombre: 'Producción',
         icono: 'factory',
-        descripcion: 'Turnos, masas y lo producido',
-        url: 'modulos/produccion.html',
+        descripcion: 'Indicadores, configuración e historial',
+        url: 'modulos/produccion-gestion.html',
+        urlDispositivo: 'modulos/produccion.html',
         proximamente: false,
         color: 'azul'
       },
@@ -439,26 +443,28 @@
       return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))
     }
 
-    // Una cuenta que SOLO tiene Producción entra derecho a la tablet, sin
-    // pasar por un dashboard de una sola tarjeta.
+    // La cuenta de una TABLET de la fábrica (empleados.es_dispositivo) entra
+    // derecho a la planta, sin pasar por el dashboard (25/09/2026). Reemplaza
+    // a la regla vieja de "una cuenta que solo tiene Producción": desde que la
+    // planta y la gestión son dos pantallas, lo que decide es QUÉ ES la
+    // cuenta, no cuántas tarjetas ve. Una persona con solo Producción ve el
+    // dashboard con su tarjeta, que la lleva a la gestión.
     //
-    // Pide ADEMÁS una tarea de producción, y ese requisito no es de más:
-    // produccion.html vuelve al dashboard cuando no hay ninguna (su
-    // sinAcceso()), así que redirigir sin mirarlas sería el bucle de
-    // redirecciones ya documentado, del que no se sale por la UI. Si la
-    // consulta de tareas falló, misTareas queda vacío y no se redirige: se cae
-    // del lado de mostrar el dashboard, que siempre tiene salida.
+    // Pide ADEMÁS una tarea de producción, y ese requisito no es de más: la
+    // planta vuelve al dashboard cuando no hay ninguna (su sinAcceso()), así
+    // que redirigir sin mirarlas sería el bucle de redirecciones ya
+    // documentado, del que no se sale por la UI. Si la consulta de tareas
+    // falló, misTareas queda vacío y no se redirige: se cae del lado de
+    // mostrar el dashboard, que siempre tiene salida.
     //
-    // `yaFue` es la otra mitad del mismo cuidado: se entra derecho UNA vez por
-    // sesión del navegador. Sin eso, el "Volver al inicio de la app" de la
-    // tablet rebotaría para siempre contra esta redirección. Una tablet que se
-    // enciende abre una sesión nueva, así que el kiosco sigue entrando derecho.
+    // No hace falta el "una vez por sesión" de antes: la planta, para una
+    // tablet, no tiene ningún link al dashboard, así que no hay vuelta que
+    // pueda rebotar. Y solo `=== true` es una tablet: un valor raro de la
+    // columna nunca manda a una persona a la tablet.
     const TAREAS_PRODUCCION = ['produccion:cargar', 'produccion:ver', 'produccion:configurar']
 
-    function entraDerechoAProduccion({ esAdmin, esSuperAdmin, modulosVisibles, misTareas, yaFue }) {
-      if (yaFue) return false
-      if (esAdmin || esSuperAdmin) return false
-      if (modulosVisibles.length !== 1 || modulosVisibles[0].clave !== 'produccion') return false
+    function entraDerechoAProduccion({ esDispositivo, misTareas }) {
+      if (esDispositivo !== true) return false
       return TAREAS_PRODUCCION.some(t => misTareas.has(t))
     }
 
@@ -801,7 +807,7 @@
     // ningún módulo — ni siquiera los que no son admin-only.
     const { data: miEmpleado } = await supabase
       .from('empleados')
-      .select('id, rol_app')
+      .select('id, rol_app, es_dispositivo')
       .eq('auth_user_id', sesion.user.id)
       .maybeSingle()
 
@@ -893,21 +899,13 @@
       throw new Error('Usuario sin ningún módulo habilitado en empleado_modulos')
     }
 
-    let yaFueAProduccion = false
-    try { yaFueAProduccion = sessionStorage.getItem('dashboard.directoProduccion') === '1' } catch {}
-    if (entraDerechoAProduccion({ esAdmin, esSuperAdmin, modulosVisibles, misTareas, yaFue: yaFueAProduccion })) {
-      let recordado = false
-      try { sessionStorage.setItem('dashboard.directoProduccion', '1'); recordado = true } catch {}
-      // Solo se entra derecho si se pudo DEJAR CONSTANCIA de que se hizo. Sin
-      // poder recordarlo, la vuelta al inicio quedaría atrapada en un rebote
-      // sin salida, y un dashboard de una sola tarjeta es mucho menos grave.
-      if (recordado) {
-        window.location.replace('modulos/produccion.html')
-        // La navegación ya arrancó: cortar acá evita que el dashboard se
-        // dibuje un instante antes de irse. No se usa `return` porque esto es
-        // un <script type="module"> y ahí el return de nivel superior no vale.
-        await new Promise(() => {})
-      }
+    const esDispositivo = miEmpleado.es_dispositivo === true
+    if (entraDerechoAProduccion({ esDispositivo, misTareas })) {
+      window.location.replace('modulos/produccion.html')
+      // La navegación ya arrancó: cortar acá evita que el dashboard se
+      // dibuje un instante antes de irse. No se usa `return` porque esto es
+      // un <script type="module"> y ahí el return de nivel superior no vale.
+      await new Promise(() => {})
     }
 
     // Renderizar grilla de módulos
@@ -931,7 +929,7 @@
         `
       }
       return `
-        <a href="${modulo.url}" class="tarjeta-modulo" data-clave="${modulo.clave}">
+        <a href="${(esDispositivo && modulo.urlDispositivo) || modulo.url}" class="tarjeta-modulo" data-clave="${modulo.clave}">
           <span class="tarjeta-modulo__icono-contenedor" style="background:${colores.bg}; color:${colores.fg};">
             <i data-lucide="${modulo.icono}"></i>
           </span>

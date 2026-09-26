@@ -13,31 +13,28 @@ correrMutaciones({
   // Esta suite no dibuja HTML: no hay esc() que sacar. Todo va a mano.
   funciones: [],
   manuales: [
-    // La tarjeta (parte 1 del módulo, ya cubierta).
-    { nombre: 'la tarjeta de Producción abre otra pantalla', de: "url: 'modulos/produccion.html',\n        proximamente: false,\n        color: 'azul'", a: "url: 'modulos/stock.html',\n        proximamente: false,\n        color: 'azul'" },
-    { nombre: 'la tarjeta deja de ser azul', de: "        url: 'modulos/produccion.html',\n        proximamente: false,\n        color: 'azul'", a: "        url: 'modulos/produccion.html',\n        proximamente: false,\n        color: 'verde'" },
+    // La tarjeta.
+    { nombre: 'la tarjeta de Producción abre otra pantalla', de: "url: 'modulos/produccion-gestion.html',", a: "url: 'modulos/stock.html'," },
+    { nombre: 'la tarjeta de una persona abre la planta', de: "url: 'modulos/produccion-gestion.html',", a: "url: 'modulos/produccion.html'," },
+    { nombre: 'la tarjeta no sabe a dónde llevar a una tablet', de: "        urlDispositivo: 'modulos/produccion.html',\n", a: '' },
+    { nombre: 'el enlace ignora urlDispositivo', de: 'href="${(esDispositivo && modulo.urlDispositivo) || modulo.url}"', a: 'href="${modulo.url}"' },
+    { nombre: 'la tarjeta deja de ser azul', de: "        proximamente: false,\n        color: 'azul'", a: "        proximamente: false,\n        color: 'verde'" },
 
     // ── Entrar derecho: el guard del BUCLE ───────────────────────────────
-    // El más importante de esta lista. Sin la exigencia de una tarea, una
-    // cuenta con el módulo y sin tareas rebota entre el dashboard y
-    // produccion.html (que vuelve con su sinAcceso()) sin salida por la UI.
+    // Sin la exigencia de una tarea, una tablet sin tareas rebota entre el
+    // dashboard y la planta (que vuelve con su sinAcceso()) sin salida.
     { nombre: 'entra derecho sin mirar las tareas (el bucle)', de: "      return TAREAS_PRODUCCION.some(t => misTareas.has(t))", a: '      return true' },
     { nombre: 'le alcanza una tarea de cualquier módulo', de: "      return TAREAS_PRODUCCION.some(t => misTareas.has(t))", a: '      return misTareas.size > 0' },
     { nombre: 'falta una de las tres tareas', de: "const TAREAS_PRODUCCION = ['produccion:cargar', 'produccion:ver', 'produccion:configurar']", a: "const TAREAS_PRODUCCION = ['produccion:cargar', 'produccion:ver']" },
 
-    // ── Entrar derecho: la marca de una vez por sesión ───────────────────
-    { nombre: 'se entra derecho siempre, no una vez por sesión', de: "      if (yaFue) return false\n", a: '' },
-    { nombre: 'redirige aunque no haya podido dejar constancia', de: '      if (recordado) {', a: '      if (true) {' },
-    { nombre: 'no deja constancia de que entró derecho', de: "      try { sessionStorage.setItem('dashboard.directoProduccion', '1'); recordado = true } catch {}", a: '      try { recordado = true } catch {}' },
-
-    // ── Entrar derecho: cuándo ───────────────────────────────────────────
-    { nombre: 'entra derecho con más de un módulo visible', de: "      if (modulosVisibles.length !== 1 || modulosVisibles[0].clave !== 'produccion') return false", a: "      if (!modulosVisibles.length || modulosVisibles[0].clave !== 'produccion') return false" },
-    { nombre: 'entra derecho con cualquier módulo único', de: "      if (modulosVisibles.length !== 1 || modulosVisibles[0].clave !== 'produccion') return false", a: '      if (modulosVisibles.length !== 1) return false' },
-    { nombre: 'un admin entra derecho', de: '      if (esAdmin || esSuperAdmin) return false\n', a: '' },
-    { nombre: 'un super_admin entra derecho', de: '      if (esAdmin || esSuperAdmin) return false', a: '      if (esAdmin) return false' },
+    // ── Entrar derecho: quién ────────────────────────────────────────────
+    { nombre: 'una persona también entra derecho a la planta', de: '      if (esDispositivo !== true) return false\n', a: '' },
+    { nombre: 'cualquier valor verdadero es una tablet', de: '      if (esDispositivo !== true) return false', a: '      if (!esDispositivo) return false' },
+    { nombre: 'la consulta no trae es_dispositivo', de: ".select('id, rol_app, es_dispositivo')", a: ".select('id, rol_app')" },
+    { nombre: 'esDispositivo se decide con un valor verdadero cualquiera', de: 'const esDispositivo = miEmpleado.es_dispositivo === true', a: 'const esDispositivo = !!miEmpleado.es_dispositivo' },
 
     // ── Entrar derecho: cómo se navega ───────────────────────────────────
-    { nombre: 'deja el dashboard en el historial (href y no replace)', de: "        window.location.replace('modulos/produccion.html')", a: "        window.location.href = 'modulos/produccion.html'" },
-    { nombre: 'sigue dibujando el dashboard mientras navega', de: '        await new Promise(() => {})\n', a: '' },
+    { nombre: 'deja el dashboard en el historial (href y no replace)', de: "      window.location.replace('modulos/produccion.html')", a: "      window.location.href = 'modulos/produccion.html'" },
+    { nombre: 'sigue dibujando el dashboard mientras navega', de: '      await new Promise(() => {})\n', a: '' },
   ],
 })
