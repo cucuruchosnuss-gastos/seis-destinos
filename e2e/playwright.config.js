@@ -31,9 +31,17 @@ module.exports = defineConfig({
     trace: 'retain-on-failure',
     serviceWorkers: 'block',
   },
-  webServer: {
-    command: `node ${__dirname}/servidor.js ${PUERTO}`,
-    url: `http://localhost:${PUERTO}/login.html`,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: `node ${__dirname}/servidor.js ${PUERTO}`,
+      url: `http://localhost:${PUERTO}/login.html`,
+      reuseExistingServer: !process.env.CI,
+    },
+    // La maqueta (Supabase falso con datos fijos) para 5-maqueta.spec.js.
+    {
+      command: `node ${__dirname}/maqueta/servir.js 4180`,
+      url: 'http://localhost:4180/login.html',
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });
