@@ -11,7 +11,8 @@ const SEGURAS_ADMINISTRACION = [
   ['renglones', 'HTML armado por htmlRenglonOrden(), que escapa cada dato'],
   ['total', 'HTML ya escapado: htmlDetalleOrden() lo arma con esc() del total, o vacío'],
   ['htmlValorizar(d)', 'HTML armado por htmlValorizar(), que escapa los errores y el aviso del límite'],
-  ['filas', 'HTML ya escapado: htmlCuenta() arma cada movimiento con esc() del detalle, la fecha y los importes'],
+  ['filas', 'HTML ya escapado: htmlCuenta() / htmlHistorial() arman cada fila con esc() del texto y los importes'],
+  ["partes.join('')", 'HTML armado por htmlFilaPrecio(), que escapa cada dato, y el separador "Chocolate", constante'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

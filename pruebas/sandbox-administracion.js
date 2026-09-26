@@ -30,6 +30,11 @@ const FUNCIONES_BASE = [
   'leerFicha', 'asegurarListas', 'asegurarProveedores', 'valorComparable', 'cambiosFicha', 'leerFormFicha', 'htmlOpcionesListas',
   'proveedoresFiltrados', 'htmlProveedorElegido', 'htmlResultadosProveedores', 'pintarProveedorFicha', 'textoCambiosFicha',
   'pintarPieFicha', 'llenarFicha', 'abrirFicha', 'elegirProveedorFicha', 'guardarFicha',
+  // Listas de precios
+  'htmlFilaLista', 'pintarListas', 'mostrarListas', 'abrirListaNueva', 'guardarListaNueva', 'listaDe', 'leerPreciosLista',
+  'versionesDe', 'vigenteYProximo', 'filasGrilla', 'preciosAGuardar', 'calcularAumento', 'htmlFilaPrecio', 'htmlGrilla',
+  'htmlHistorial', 'textoPendientes', 'pintarLista', 'abrirLista', 'enlazarPorcentaje', 'cambiarPrecioLista', 'aplicarAumento',
+  'descartarCambios', 'pedirGuardarPrecios', 'confirmarGuardarPrecios', 'cambiarActivaLista',
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes',
@@ -83,6 +88,7 @@ const PRELUDIO = `
   var turnoOrden = 0
   var turnoClientes = 0
   var turnoCliente = 0
+  var turnoLista = 0
 
   var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [], clicks: [] }
   var __tablas = {}
@@ -126,7 +132,7 @@ const PRELUDIO = `
     portada: null, ordenes: null, errorOrdenes: null,
     filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false },
     orden: null, trabajando: false,
-    saldos: null, errorSaldos: null, busquedaClientes: '', alta: null, cliente: null, ficha: null, listas: null, proveedores: null,
+    saldos: null, errorSaldos: null, busquedaClientes: '', alta: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
   }
 `
 

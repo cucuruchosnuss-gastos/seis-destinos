@@ -51,7 +51,7 @@ correrMutaciones({
     { nombre: 'la portada no cuenta las sin valorizar', de: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')\n      if (error) throw error\n      return (data ?? []).length", a: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada')\n      if (error) throw error\n      return (data ?? []).length" },
     { nombre: 'la portada inventa un cero', de: "p.error = 'No se pudo contar.' })", a: 'p.sinValorizar = 0 })' },
     { nombre: 'el número sin valorizar no se marca', de: '      const atencion = Number(numero) > 0', a: '      const atencion = false' },
-    { nombre: 'sin ver se cuenta igual', de: "      if (!puedeEn('retiros', 'ver', unidad)) return\n      const p = estado.portada", a: '      const p = estado.portada' },
+    { nombre: 'sin ver se cuenta igual', de: "      if (!puedeEn('retiros', 'ver', unidad)) return\n      await Promise.all([", a: '      await Promise.all([' },
     // Lista y filtros
     { nombre: 'no filtra por fecha desde', de: "      if (esFechaIso(filtros.desde)) q = q.gte('fecha', filtros.desde)\n", a: '' },
     { nombre: 'no filtra por cliente', de: "      if (filtros.clienteId) q = q.eq('cliente_id', filtros.clienteId)\n", a: '' },

@@ -183,6 +183,14 @@
     .ad-renglon__lotes { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
     .ad-renglon__plata { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .ad-renglon__precio { width: 9rem; }
+    /* Una fila de la grilla de precios. La que tiene un precio nuevo sin
+       guardar lleva el fondo naranja suave: es lo elegido/editado, no una
+       validez. */
+    .ad-precio { display: grid; gap: 0.25rem 0.75rem; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+      padding: 0.625rem 0.5rem; border-bottom: 1px solid var(--color-borde); min-width: 0; border-radius: 8px; }
+    .ad-precio--pendiente { background: var(--naranja-suave); }
+    .ad-precio__acciones { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+    .ad-separador-grilla { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ad-texto-secundario); margin: 0.75rem 0 0.25rem; }
     /* En el celular el precio va DEBAJO del renglón: al costado no entra. */
     @media (max-width: 599px) {
       .ad-renglon { grid-template-columns: minmax(0, 1fr); }
@@ -410,6 +418,63 @@
       </div>
     </section>
 
+    <!-- ══ LISTAS DE PRECIOS ══════════════════════════════════════════════ -->
+    <section id="ad-vista-listas" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-listas-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Listas de precios</h1>
+        <button type="button" class="ad-btn" id="ad-btn-lista-nueva">+ Lista nueva</button>
+      </div>
+      <div class="ad-panel" id="ad-panel-lista-nueva" hidden>
+        <div class="ad-fila-campos">
+          <div class="ad-campo"><label for="ad-lista-nombre">Nombre</label><input type="text" class="ad-input" id="ad-lista-nombre" maxlength="80" autocomplete="off" placeholder="Por ejemplo: Mayoristas"></div>
+          <div class="ad-campo"><label for="ad-lista-moneda">Moneda</label>
+            <select class="ad-select" id="ad-lista-moneda"><option value="ARS">Pesos</option><option value="USD">Dólares</option></select></div>
+        </div>
+        <p class="ad-error-pegado" id="ad-lista-nueva-error" hidden></p>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn" id="ad-lista-nueva-guardar">Crear la lista</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-lista-nueva-cancelar">Cancelar</button>
+        </div>
+      </div>
+      <div class="ad-lista" id="ad-listas-lista"></div>
+    </section>
+
+    <!-- ══ UNA LISTA: su grilla de precios ════════════════════════════════ -->
+    <section id="ad-vista-lista" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-lista-volver">&lsaquo; Listas</button>
+        <h1 class="ad-titulo" id="ad-lista-titulo">Lista</h1>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-lista-activa">Desactivar</button>
+      </div>
+      <div class="ad-tarjeta">
+        <div class="ad-fila-campos">
+          <div class="ad-campo"><label for="ad-lista-desde">Los precios nuevos rigen desde</label><input type="date" class="ad-input" id="ad-lista-desde"></div>
+          <div class="ad-campo"><label for="ad-lista-porcentaje">Aumentar todo un (%)</label><input type="text" class="ad-input" id="ad-lista-porcentaje" autocomplete="off"></div>
+          <div class="ad-campo"><span class="ad-campo__rotulo">&nbsp;</span><button type="button" class="ad-btn ad-btn--secundario" id="ad-lista-calcular">Calcular el aumento</button></div>
+        </div>
+        <p class="ad-texto-suave" id="ad-lista-desde-aviso" hidden></p>
+        <p class="ad-error-pegado" id="ad-lista-porcentaje-error" hidden></p>
+      </div>
+      <div id="ad-lista-grilla"></div>
+      <div class="ad-panel" id="ad-panel-historial" hidden></div>
+      <div class="ad-panel" id="ad-panel-confirmar-precios" hidden>
+        <p id="ad-confirmar-precios-texto"></p>
+        <p class="ad-error-pegado" id="ad-confirmar-precios-error" hidden></p>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn" id="ad-confirmar-precios-si">Confirmar y guardar</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-confirmar-precios-no">Volver a revisar</button>
+        </div>
+      </div>
+      <div class="ad-tarjeta">
+        <p class="ad-texto-suave" id="ad-lista-pendientes"></p>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn" id="ad-lista-guardar">Guardar los precios nuevos</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-lista-descartar">Descartar los cambios</button>
+        </div>
+      </div>
+    </section>
+
   </div>
 
   <!-- La hoja para imprimir, CON precios: la arma htmlHoja() de
@@ -467,7 +532,9 @@
       alta: null,            // { error } mientras el panel de alta está abierto
       cliente: null,         // { id, cuenta, codigos, error, panel, errorPanel }
       ficha: null,           // { id, original, proveedorId, busquedaProveedor, error }
-      listas: null,          // las listas de precios de la empresa
+      listas: null,          // las listas de precios de la empresa: { unidad, filas }
+      listaNueva: null,      // { error } mientras el panel de lista nueva está abierto
+      lista: null,           // { id, precios, pendientes, historial, confirmar, error }
       proveedores: null,     // el padrón de proveedores, para "también es proveedor"
     }
 
@@ -537,6 +604,7 @@
     const SECCIONES = [
       { id: 'ordenes', titulo: 'Órdenes de retiro', permiso: ['retiros', 'ver'] },
       { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'] },
+      { id: 'listas', titulo: 'Listas de precios', permiso: ['retiros', 'precios'] },
     ]
 
     function seccionesVisibles(unidadId = estado.empresaId) {
@@ -597,7 +665,7 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista']
     const SUBTITULO_DE_VISTA = {
       'ad-vista-inicio': 'Portada',
       'ad-vista-ordenes': 'Órdenes',
@@ -605,6 +673,8 @@
       'ad-vista-clientes': 'Clientes',
       'ad-vista-cliente': 'Cliente',
       'ad-vista-ficha': 'Ficha',
+      'ad-vista-listas': 'Listas de precios',
+      'ad-vista-lista': 'Lista',
     }
 
     function mostrarVista(id) {
@@ -642,6 +712,7 @@
       estado.catalogo = null
       estado.ordenes = null
       estado.portada = null
+      estado.listas = null
       estado.filtros.clienteId = ''
       pintarEmpresas()
       mostrarInicio()
@@ -735,6 +806,13 @@
       if (s.id === 'ordenes') {
         numero = portada?.sinValorizar ?? null
         detalle = portada?.error ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'orden sin valorizar' : 'órdenes sin valorizar'))
+      } else if (s.id === 'listas') {
+        numero = portada?.listas ?? null
+        detalle = portada?.errorListas ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'lista' : 'listas'))
+        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
+          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
+          `<span class="ad-seccion__numero">${esc(textoNumeroSeccion(numero))}</span>` +
+          `<span class="ad-seccion__detalle">${esc(detalle)}</span></button>`
       } else if (s.id === 'clientes') {
         numero = portada?.sobreLimite ?? null
         detalle = portada?.errorClientes ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'cliente pasa su límite' : 'clientes pasan su límite'))
@@ -767,12 +845,16 @@
 
     async function mostrarInicio() {
       mostrarVista('ad-vista-inicio')
-      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null }
+      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null }
       pintarPortada()
       const turno = ++turnoPortada
       const unidad = estado.empresaId
-      if (!puedeEn('retiros', 'ver', unidad)) return
       const p = estado.portada
+      if (puedeEn('retiros', 'precios', unidad)) {
+        asegurarListas(unidad).then(() => { p.listas = estado.listas.filas.length }).catch(err => { console.error('No se pudieron contar las listas:', err); p.errorListas = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
+      }
+      if (!puedeEn('retiros', 'ver', unidad)) return
       await Promise.all([
         contarSinValorizar(unidad).then(n => { p.sinValorizar = n }).catch(err => { console.error('No se pudo contar la portada:', err); p.error = 'No se pudo contar.' }),
         contarSobreLimite(unidad).then(n => { p.sobreLimite = n }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
@@ -786,6 +868,7 @@
       if (!s) return
       if (id === 'ordenes') mostrarOrdenes()
       else if (id === 'clientes') mostrarClientes()
+      else if (id === 'listas') mostrarListas()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1782,6 +1865,337 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // LISTAS DE PRECIOS — con retiros:precios
+    //
+    // UN PRECIO NUNCA SE PISA: guardar_precios agrega una VERSIÓN con su
+    // fecha de vigencia, y la base valoriza cada retiro con el precio vigente
+    // a la fecha del retiro. Por eso editar pide desde qué fecha rigen.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function htmlFilaLista(l) {
+      const meta = (l.moneda === 'USD' ? 'En dólares' : 'En pesos') + (l.activa === false ? ' · inactiva' : '')
+      return `<button type="button" class="ad-fila" data-lista="${esc(l.id)}">` +
+        `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(l.nombre)}</span>` +
+        `${l.activa === false ? '<span class="ad-sello">Inactiva</span>' : ''}</span>` +
+        `<span class="ad-fila__meta">${esc(meta)}</span></button>`
+    }
+
+    function pintarListas() {
+      const filas = estado.listas?.filas
+      document.getElementById('ad-listas-lista').innerHTML = !filas
+        ? '<div class="ad-vacio">Cargando las listas…</div>'
+        : (filas.length ? filas.map(htmlFilaLista).join('') : '<div class="ad-vacio">Esta empresa todavía no tiene listas de precios.</div>')
+      document.getElementById('ad-panel-lista-nueva').hidden = !estado.listaNueva
+      const e = document.getElementById('ad-lista-nueva-error')
+      e.textContent = estado.listaNueva?.error ?? ''
+      e.hidden = !estado.listaNueva?.error
+      document.getElementById('ad-lista-nueva-guardar').disabled = estado.trabajando
+    }
+
+    async function mostrarListas() {
+      if (!puedeEn('retiros', 'precios')) { mostrarInicio(); return }
+      mostrarVista('ad-vista-listas')
+      estado.listas = null
+      pintarListas()
+      try {
+        await asegurarListas(estado.empresaId)
+      } catch (err) {
+        console.error('No se pudieron leer las listas:', err)
+        document.getElementById('ad-listas-lista').innerHTML = '<div class="ad-aviso ad-aviso--grave">No se pudieron leer las listas. Revisá la conexión y volvé a entrar.</div>'
+        return
+      }
+      pintarListas()
+    }
+
+    function abrirListaNueva() {
+      estado.listaNueva = { error: null }
+      document.getElementById('ad-lista-nombre').value = ''
+      document.getElementById('ad-lista-moneda').value = 'ARS'
+      pintarListas()
+    }
+
+    async function guardarListaNueva() {
+      if (!estado.listaNueva || estado.trabajando) return
+      const nombre = limpio(document.getElementById('ad-lista-nombre').value)
+      const moneda = document.getElementById('ad-lista-moneda').value === 'USD' ? 'USD' : 'ARS'
+      if (!nombre) { estado.listaNueva.error = 'Poné el nombre de la lista.'; pintarListas(); return }
+      estado.trabajando = true
+      pintarListas()
+      try {
+        const { data, error } = await supabase.rpc('guardar_lista_precios', { p_id: null, p_unidad_negocio_id: estado.empresaId, p_nombre: nombre, p_moneda: moneda, p_activa: true })
+        if (error) throw error
+        mostrarExito('Lista creada.')
+        estado.listaNueva = null
+        estado.trabajando = false
+        estado.listas = null
+        await asegurarListas(estado.empresaId)
+        if (data) await abrirLista(data)
+        else await mostrarListas()
+      } catch (err) {
+        console.error('No se pudo crear la lista:', err)
+        estado.listaNueva.error = err?.message || 'No se pudo crear la lista. Probá de nuevo.'
+        estado.trabajando = false
+        pintarListas()
+      }
+    }
+
+    // ── Una lista ──────────────────────────────────────────────────────────
+
+    function listaDe(id) {
+      return (estado.listas?.filas ?? []).find(l => l.id === id) ?? null
+    }
+
+    async function leerPreciosLista(listaId) {
+      const { data, error } = await supabase.from('lista_precios_items')
+        .select('presentacion_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)
+      if (error) throw error
+      return data ?? []
+    }
+
+    // Las versiones de UNA presentación, la más nueva primero.
+    function versionesDe(precios, presentacionId) {
+      return (precios ?? []).filter(p => p.presentacion_id === presentacionId)
+        .sort((a, b) => String(b.vigente_desde).localeCompare(String(a.vigente_desde)) || String(b.cargado_en ?? '').localeCompare(String(a.cargado_en ?? '')))
+    }
+
+    // El precio que rige HOY (la misma regla que precio_vigente() en la base)
+    // y, si hay, el próximo ya cargado con fecha futura.
+    function vigenteYProximo(precios, presentacionId, hoy) {
+      const v = versionesDe(precios, presentacionId)
+      return { vigente: v.find(x => x.vigente_desde <= hoy) ?? null, proximo: [...v].reverse().find(x => x.vigente_desde > hoy) ?? null }
+    }
+
+    // Las filas de la grilla: los productos de la empresa, con sus
+    // presentaciones; los de chocolate al final.
+    function filasGrilla(cat) {
+      const productos = [...(cat?.productos ?? [])].sort((a, b) =>
+        (normalizar(a.tipo_masa).includes('chocolate') - normalizar(b.tipo_masa).includes('chocolate')) || 0)
+      const filas = []
+      for (const p of productos) {
+        for (const pr of (cat?.presentaciones ?? []).filter(x => x.producto_id === p.id && x.activa !== false)) {
+          filas.push({ presentacionId: pr.id, producto: p.nombre, presentacion: pr.nombre, chocolate: normalizar(p.tipo_masa).includes('chocolate') })
+        }
+      }
+      return filas
+    }
+
+    // Lo que se va a guardar: las filas con un precio nuevo distinto del que
+    // rige hoy. Nada más.
+    function preciosAGuardar(l, hoy) {
+      const items = []
+      for (const [presentacionId, precio] of l.pendientes) {
+        if (precio === null || precio === undefined) continue
+        const actual = vigenteYProximo(l.precios, presentacionId, hoy).vigente
+        if (actual && Number(actual.precio_caja) === Number(precio)) continue
+        items.push({ presentacion_id: presentacionId, precio_caja: Number(precio) })
+      }
+      return items
+    }
+
+    // "Aumentar todo un X%": calcula en PANTALLA, sobre el precio que rige hoy
+    // de cada fila, redondeado a centavos. No guarda nada: eso pide confirmar.
+    function calcularAumento(l, porcentaje, hoy) {
+      const nuevos = new Map(l.pendientes)
+      for (const f of l.filas) {
+        const v = vigenteYProximo(l.precios, f.presentacionId, hoy).vigente
+        if (!v) continue
+        nuevos.set(f.presentacionId, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)
+      }
+      return nuevos
+    }
+
+    function htmlFilaPrecio(f, l, hoy) {
+      const { vigente, proximo } = vigenteYProximo(l.precios, f.presentacionId, hoy)
+      const moneda = listaDe(l.id)?.moneda || 'ARS'
+      const pendiente = l.pendientes.has(f.presentacionId) && l.pendientes.get(f.presentacionId) !== null
+      const actual = vigente ? importeHoja(vigente.precio_caja, moneda) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
+      const prox = proximo ? ' · próximo ' + importeHoja(proximo.precio_caja, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
+      return `<div class="ad-precio${pendiente ? ' ad-precio--pendiente' : ''}" data-fila-precio="${esc(f.presentacionId)}">` +
+        `<div><div class="ad-renglon__desc">${esc(f.producto + ' · ' + f.presentacion)}</div>` +
+        `<div class="ad-renglon__lotes">${esc(actual + prox)}</div></div>` +
+        `<div class="ad-precio__acciones"><input type="text" class="ad-input ad-renglon__precio" data-precio-lista="${esc(f.presentacionId)}" aria-label="${esc('Precio nuevo de ' + f.producto + ' ' + f.presentacion)}" autocomplete="off">` +
+        `<button type="button" class="ad-link" data-historial="${esc(f.presentacionId)}">Historial</button></div></div>`
+    }
+
+    function htmlGrilla(l, hoy) {
+      if (l.error) return `<div class="ad-aviso ad-aviso--grave">${esc(l.error)}</div>`
+      if (!l.precios) return '<div class="ad-vacio">Cargando los precios…</div>'
+      if (!l.filas.length) return '<div class="ad-aviso">Esta empresa no tiene productos cargados en Producción.</div>'
+      let choco = false
+      const partes = l.filas.map(f => {
+        const sep = f.chocolate && !choco ? '<div class="ad-separador-grilla">Chocolate</div>' : ''
+        if (f.chocolate) choco = true
+        return sep + htmlFilaPrecio(f, l, hoy)
+      })
+      return `<div class="ad-tarjeta">${partes.join('')}</div>`
+    }
+
+    function htmlHistorial(l, presentacionId, hoy) {
+      const f = l.filas.find(x => x.presentacionId === presentacionId)
+      const moneda = listaDe(l.id)?.moneda || 'ARS'
+      const vigente = vigenteYProximo(l.precios, presentacionId, hoy).vigente
+      const versiones = versionesDe(l.precios, presentacionId)
+      const filas = versiones.length ? versiones.map(v =>
+        `<div class="ad-renglon"><div class="ad-renglon__desc">${esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))}</div>` +
+        `<div class="ad-renglon__plata">${esc(importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
+      return `<h2 class="ad-subtitulo">${esc('Historial · ' + (f ? f.producto + ' · ' + f.presentacion : ''))}</h2>${filas}` +
+        `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" id="ad-historial-cerrar">Cerrar</button></div>`
+    }
+
+    function textoPendientes(n) {
+      return n ? `${n} ${n === 1 ? 'precio nuevo' : 'precios nuevos'} sin guardar.` : 'Sin precios nuevos.'
+    }
+
+    function pintarLista(conValores) {
+      const l = estado.lista
+      if (!l) return
+      const hoy = hoyArgentina()
+      const meta = listaDe(l.id)
+      document.getElementById('ad-lista-titulo').textContent = meta ? meta.nombre : 'Lista'
+      document.getElementById('ad-btn-lista-activa').textContent = meta?.activa === false ? 'Activar' : 'Desactivar'
+      const grilla = document.getElementById('ad-lista-grilla')
+      if (conValores) {
+        grilla.innerHTML = htmlGrilla(l, hoy)
+        for (const input of grilla.querySelectorAll('[data-precio-lista]')) {
+          enlazarCampoNumero(input, { decimales: DECIMALES_PRECIO })
+          ponerNumero(input, l.pendientes.get(input.dataset.precioLista) ?? null)
+        }
+      }
+      const n = preciosAGuardar(l, hoy).length
+      document.getElementById('ad-lista-pendientes').textContent = textoPendientes(n)
+      document.getElementById('ad-lista-guardar').disabled = estado.trabajando
+      const desde = document.getElementById('ad-lista-desde').value
+      const aviso = document.getElementById('ad-lista-desde-aviso')
+      aviso.textContent = esFechaIso(desde) && desde < hoy ? 'Rigen desde una fecha pasada: una orden de esos días que se valorice (o se corrija) va a tomar este precio.' : ''
+      aviso.hidden = !aviso.textContent
+      const ep = document.getElementById('ad-lista-porcentaje-error')
+      ep.textContent = l.errorPorcentaje ?? ''
+      ep.hidden = !l.errorPorcentaje
+      const hist = document.getElementById('ad-panel-historial')
+      hist.hidden = !l.historial
+      hist.innerHTML = l.historial ? htmlHistorial(l, l.historial, hoy) : ''
+      document.getElementById('ad-panel-confirmar-precios').hidden = !l.confirmar
+      if (l.confirmar) document.getElementById('ad-confirmar-precios-texto').textContent =
+        `Vas a guardar ${textoPendientes(l.confirmar.items.length).replace(' sin guardar.', '')} que rigen desde el ${fechaCorta(l.confirmar.desde)}. Los precios anteriores quedan en el historial.`
+      const ec = document.getElementById('ad-confirmar-precios-error')
+      ec.textContent = l.confirmar?.error ?? ''
+      ec.hidden = !l.confirmar?.error
+      document.getElementById('ad-confirmar-precios-si').disabled = estado.trabajando
+    }
+
+    let turnoLista = 0
+
+    async function abrirLista(id) {
+      if (!puedeEn('retiros', 'precios')) return
+      const turno = ++turnoLista
+      estado.lista = { id, precios: null, filas: [], pendientes: new Map(), historial: null, confirmar: null, error: null, errorPorcentaje: null }
+      mostrarVista('ad-vista-lista')
+      document.getElementById('ad-lista-desde').value = hoyArgentina()
+      ponerNumero(enlazarPorcentaje(), null)
+      pintarLista(true)
+      try {
+        await Promise.all([asegurarDatosEmpresa(), asegurarListas(estado.empresaId)])
+        const precios = await leerPreciosLista(id)
+        if (turno !== turnoLista) return
+        estado.lista.precios = precios
+        estado.lista.filas = filasGrilla(estado.catalogo)
+      } catch (err) {
+        if (turno !== turnoLista) return
+        console.error('No se pudieron leer los precios:', err)
+        estado.lista.error = 'No se pudieron leer los precios. Revisá la conexión y volvé a entrar.'
+      }
+      pintarLista(true)
+    }
+
+    function enlazarPorcentaje() {
+      const el = document.getElementById('ad-lista-porcentaje')
+      enlazarCampoNumero(el, { decimales: 2, negativos: true })
+      return el
+    }
+
+    function cambiarPrecioLista(presentacionId, valor) {
+      const l = estado.lista
+      if (!l) return
+      if (valor === null || valor === undefined) l.pendientes.delete(presentacionId)
+      else l.pendientes.set(presentacionId, valor)
+      l.confirmar = null
+      pintarLista(false)
+    }
+
+    function aplicarAumento() {
+      const l = estado.lista
+      if (!l?.precios) return
+      const pct = leerCampoNumero(document.getElementById('ad-lista-porcentaje'))
+      if (pct === null || pct === 0) { l.errorPorcentaje = 'Escribí el porcentaje (por ejemplo 12,5).'; pintarLista(false); return }
+      if (pct <= -100) { l.errorPorcentaje = 'Un porcentaje de -100 o menos dejaría los precios en cero.'; pintarLista(false); return }
+      l.errorPorcentaje = null
+      l.pendientes = calcularAumento(l, pct, hoyArgentina())
+      l.confirmar = null
+      pintarLista(true)
+    }
+
+    function descartarCambios() {
+      const l = estado.lista
+      if (!l) return
+      l.pendientes = new Map()
+      l.confirmar = null
+      pintarLista(true)
+    }
+
+    // Guardar pide CONFIRMAR: el aumento se calcula en pantalla y recién acá
+    // se manda.
+    function pedirGuardarPrecios() {
+      const l = estado.lista
+      if (!l?.precios) return
+      const desde = document.getElementById('ad-lista-desde').value
+      if (!esFechaIso(desde)) { l.errorPorcentaje = 'Poné desde qué fecha rigen los precios nuevos.'; pintarLista(false); return }
+      const items = preciosAGuardar(l, hoyArgentina())
+      if (!items.length) { l.errorPorcentaje = 'No hay precios nuevos para guardar.'; pintarLista(false); return }
+      if (items.some(x => x.precio_caja < 0)) { l.errorPorcentaje = 'Un precio no puede ser negativo.'; pintarLista(false); return }
+      l.errorPorcentaje = null
+      l.confirmar = { items, desde, error: null }
+      pintarLista(false)
+    }
+
+    async function confirmarGuardarPrecios() {
+      const l = estado.lista
+      if (!l?.confirmar || estado.trabajando) return
+      estado.trabajando = true
+      pintarLista(false)
+      try {
+        const { error } = await supabase.rpc('guardar_precios', { p_lista_id: l.id, p_vigente_desde: l.confirmar.desde, p_items: l.confirmar.items })
+        if (error) throw error
+        mostrarExito(`${textoPendientes(l.confirmar.items.length).replace(' sin guardar.', '')} guardados.`)
+        estado.trabajando = false
+        await abrirLista(l.id)
+      } catch (err) {
+        console.error('No se pudieron guardar los precios:', err)
+        l.confirmar.error = err?.message || 'No se pudieron guardar los precios. Probá de nuevo.'
+        estado.trabajando = false
+        pintarLista(false)
+      }
+    }
+
+    async function cambiarActivaLista() {
+      const l = estado.lista
+      const meta = l ? listaDe(l.id) : null
+      if (!meta || estado.trabajando) return
+      estado.trabajando = true
+      try {
+        const { error } = await supabase.rpc('guardar_lista_precios', { p_id: meta.id, p_unidad_negocio_id: estado.empresaId, p_nombre: meta.nombre, p_moneda: meta.moneda, p_activa: meta.activa === false })
+        if (error) throw error
+        mostrarExito(meta.activa === false ? 'Lista activada.' : 'Lista desactivada.')
+        estado.listas = null
+        await asegurarListas(estado.empresaId)
+      } catch (err) {
+        console.error('No se pudo cambiar la lista:', err)
+        mostrarError(err?.message || 'No se pudo cambiar la lista.')
+      }
+      estado.trabajando = false
+      pintarLista(false)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // EVENTOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -1851,6 +2265,34 @@
         let b
         if ((b = e.target.closest('[data-proveedor]'))) elegirProveedorFicha(b.dataset.proveedor)
         else if (e.target.closest('#ad-f-proveedor-quitar')) elegirProveedorFicha(null)
+      })
+      // Listas de precios
+      document.getElementById('ad-listas-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-btn-lista-nueva').addEventListener('click', () => abrirListaNueva())
+      document.getElementById('ad-lista-nueva-guardar').addEventListener('click', () => guardarListaNueva())
+      document.getElementById('ad-lista-nueva-cancelar').addEventListener('click', () => { estado.listaNueva = null; pintarListas() })
+      document.getElementById('ad-listas-lista').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-lista]')
+        if (b) abrirLista(b.dataset.lista)
+      })
+      document.getElementById('ad-lista-volver').addEventListener('click', () => mostrarListas())
+      document.getElementById('ad-btn-lista-activa').addEventListener('click', () => cambiarActivaLista())
+      document.getElementById('ad-lista-calcular').addEventListener('click', () => aplicarAumento())
+      document.getElementById('ad-lista-desde').addEventListener('change', () => { if (estado.lista) { estado.lista.confirmar = null; pintarLista(false) } })
+      document.getElementById('ad-lista-guardar').addEventListener('click', () => pedirGuardarPrecios())
+      document.getElementById('ad-lista-descartar').addEventListener('click', () => descartarCambios())
+      document.getElementById('ad-confirmar-precios-si').addEventListener('click', () => confirmarGuardarPrecios())
+      document.getElementById('ad-confirmar-precios-no').addEventListener('click', () => { if (estado.lista) { estado.lista.confirmar = null; pintarLista(false) } })
+      const grilla = document.getElementById('ad-lista-grilla')
+      grilla.addEventListener('input', (e) => {
+        if (e.target.dataset?.precioLista !== undefined) cambiarPrecioLista(e.target.dataset.precioLista, leerCampoNumero(e.target))
+      })
+      grilla.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-historial]')
+        if (b && estado.lista) { estado.lista.historial = b.dataset.historial; pintarLista(false) }
+      })
+      document.getElementById('ad-panel-historial').addEventListener('click', (e) => {
+        if (e.target.closest('#ad-historial-cerrar') && estado.lista) { estado.lista.historial = null; pintarLista(false) }
       })
     }
 
