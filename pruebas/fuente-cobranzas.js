@@ -14,10 +14,14 @@ const fs = require('fs')
 const path = require('path')
 
 const RUTA_COMUN = process.env.ARCHIVO_COMUN || path.join(__dirname, '..', 'js', 'cobranzas-comun.js')
+// La hoja de las órdenes de retiro (26/09/2026): la comparten la Carga
+// (retiros.html) y Administración (administracion.html). Se pega SOLO si el
+// script la importa. ARCHIVO_COMUN_RETIROS la reemplaza (para mutarla).
+const RUTA_COMUN_RETIROS = process.env.ARCHIVO_COMUN_RETIROS || path.join(__dirname, '..', 'js', 'retiros-comun.js')
 
-// El archivo común sin imports y sin la palabra `export`.
-function fuenteComun() {
-  return fs.readFileSync(RUTA_COMUN, 'utf8')
+// Un archivo común sin imports y sin la palabra `export`.
+function fuenteComun(ruta = RUTA_COMUN) {
+  return fs.readFileSync(ruta, 'utf8')
     .replace(/^import .*$/gm, '')
     .replace(/^export (?=(async )?function |const )/gm, '')
 }
@@ -30,8 +34,8 @@ function nombresDeclarados(src) {
 }
 
 // Cada declaración top-level del común, con su nombre y su texto.
-function declaracionesComun() {
-  const src = fuenteComun()
+function declaracionesComun(ruta = RUTA_COMUN) {
+  const src = fuenteComun(ruta)
   const lineas = src.split('\n')
   const out = []
   let actual = null
@@ -56,7 +60,13 @@ function fuenteConComun(htmlOScript) {
   const script = htmlOScript.includes('</script>') ? scriptDe(htmlOScript) : htmlOScript
   const propios = nombresDeclarados(script)
   const agregados = declaracionesComun().filter(d => !propios.has(d.nombre))
-  return script + '\n// ── js/cobranzas-comun.js ──\n' + agregados.map(d => d.texto).join('\n')
+  let fuente = script + '\n// ── js/cobranzas-comun.js ──\n' + agregados.map(d => d.texto).join('\n')
+  if (script.includes("from '../js/retiros-comun.js'")) {
+    const deRetiros = declaracionesComun(RUTA_COMUN_RETIROS)
+      .filter(d => !propios.has(d.nombre) && !agregados.some(a => a.nombre === d.nombre))
+    fuente += '\n// ── js/retiros-comun.js ──\n' + deRetiros.map(d => d.texto).join('\n')
+  }
+  return fuente
 }
 
-module.exports = { fuenteComun, fuenteConComun, declaracionesComun, RUTA_COMUN }
+module.exports = { fuenteComun, fuenteConComun, declaracionesComun, RUTA_COMUN, RUTA_COMUN_RETIROS }

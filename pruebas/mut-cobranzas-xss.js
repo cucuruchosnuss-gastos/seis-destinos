@@ -291,7 +291,7 @@ if (ambiguas.length) {
 let detectadas = 0
 const escapadas = [], equivalentes = []
 for (const m of mutaciones) {
-  const mutado = src.replace(m.ancla, m.reemplazo)
+  const mutado = src.replace(m.ancla, () => m.reemplazo)   // con función: "$'", "$&" y "$$" no se expanden
   if (mutado === src) { console.log('ERROR DEL TEST: la mutación no cambió nada → ' + m.nombre); process.exit(3) }
   fs.writeFileSync(TMP, mutado)
   const r = correr(TMP)

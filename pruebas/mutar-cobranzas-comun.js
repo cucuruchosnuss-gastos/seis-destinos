@@ -53,7 +53,7 @@ function correrMutacionesComun({ suite, manuales }) {
   let detectadas = 0
   const escaparon = [], errores = []
   for (const m of manuales) {
-    const mutado = src.replace(m.de, m.a)
+    const mutado = src.replace(m.de, () => m.a)   // con función: "$'", "$&" y "$$" no se expanden
     if (mutado === src) { errores.push(`${m.nombre}: la mutación no cambió nada`); continue }
     fs.writeFileSync(TMP, mutado)
     const r = correr(TMP)

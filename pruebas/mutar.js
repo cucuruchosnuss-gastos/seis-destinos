@@ -82,7 +82,10 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
     const eq = equivalentes.find(e => e.expr === x.expr.trim())
     mutaciones.push({
       nombre: `línea ${x.linea}: sin ${escape}() en ${x.expr.trim().slice(0, 70)}`,
-      mutado: src.replace(ancla, ancla.replace(aguja, sinEsc)),
+      // Con función: un texto de reemplazo con "$'", "$&" o "$$" NO se
+      // interpreta (String.replace con un string los expande y la mutación
+      // pasa a ser otra, que casi siempre rompe el archivo y "se detecta").
+      mutado: src.replace(ancla, () => ancla.replace(aguja, () => sinEsc)),
       equivalente: eq?.motivo,
     })
   }
@@ -90,7 +93,7 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
   // ── A mano ──────────────────────────────────────────────────────────────
   for (const m of manuales) {
     if (!unica(src, m.de)) { ambiguas.push(`«${m.nombre}»: el texto a reemplazar ${src.includes(m.de) ? 'NO ES ÚNICO' : 'NO EXISTE'}`); continue }
-    mutaciones.push({ nombre: m.nombre, mutado: src.replace(m.de, m.a) })
+    mutaciones.push({ nombre: m.nombre, mutado: src.replace(m.de, () => m.a) })
   }
 
   if (ambiguas.length) {

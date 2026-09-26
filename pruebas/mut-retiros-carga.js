@@ -1,0 +1,89 @@
+// Mutaciones de test-retiros-carga.js (la CARGA de órdenes de retiro). Ver
+// mutar.js.
+//
+//   node pruebas/mut-retiros-carga.js
+//
+// UN RUNNER POR VEZ: dos corridas en paralelo se pisan el mut-tmp-*.html.
+
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-retiros-carga.js'),
+  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/retiros.html'),
+  escape: 'esc',
+  funciones: ['htmlEmpresas', 'htmlEmpresaActual', 'htmlClienteElegido', 'htmlResultadosClientes', 'htmlProductosRenglon',
+    'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon', 'htmlRenglon',
+    'htmlResumen', 'htmlDatoRt', 'htmlFaltantes', 'htmlHecho'],
+  equivalentes: [
+    { expr: 'esc(estado.errorCatalogo)', motivo: 'texto constante del código: lo pone asegurarDatosEmpresa()' },
+    { expr: 'esc(falta)', motivo: 'texto constante del código que devuelve faltanRenglon()' },
+    { expr: 'esc(enteroHoja(r.cajas))', motivo: 'número formateado por enteroHoja(): solo dígitos y puntos' },
+    { expr: 'esc(enteroHoja(pr.unidades_por_caja))', motivo: 'número formateado por enteroHoja(): solo dígitos y puntos' },
+    { expr: 'esc(enteroHoja(l.saldo))', motivo: 'número formateado por enteroHoja(): solo dígitos y puntos' },
+    { expr: 'esc(fechaCorta(l.desde))', motivo: 'fechaCorta() devuelve dd/mm/aaaa o "—"' },
+    { expr: 'esc(enteroHoja(totalCajasForm(f)))', motivo: 'número formateado por enteroHoja(): solo dígitos y puntos' },
+    { expr: 'esc(p.id)', motivo: 'el id de un producto va a un data-id entre comillas; la marca del test está en el nombre (ids uuid de la base)' },
+    { expr: 'esc(pr.id)', motivo: 'el id de una presentación va a un data-id entre comillas (uuid de la base)' },
+    { expr: 'esc(m.id)', motivo: 'el id de un cono va a un data-id entre comillas (uuid de la base)' },
+    { expr: 'esc(c.id)', motivo: 'el id de un cliente va a un data-cliente entre comillas (uuid de la base)' },
+    { expr: 'esc(e.id)', motivo: 'el id de una empresa va a un data-empresa entre comillas (uuid de la base)' },
+    { expr: "esc(r.conCono ? 'con cono' : 'sin cono')", motivo: 'texto constante del código' },
+    { expr: 'esc(info.error)', motivo: 'texto constante del código: lo pone asegurarLotes()' },
+    { expr: 'esc(rotulo)', motivo: 'htmlDatoRt() recibe rótulos constantes del código ("Empresa", "Cliente"…)' },
+  ],
+  manuales: [
+    // La empresa
+    { nombre: 'una sola empresa también pregunta', de: '      if (lista.length === 1) { aplicarEmpresa(lista[0].id); return }\n', a: '' },
+    { nombre: 'cambiar con la orden a medio cargar no pide confirmación', de: '      if (estado.empresaId && id !== estado.empresaId && formTieneDatos(estado.form)) {', a: '      if (false) {' },
+    { nombre: 'formTieneDatos no mira el cliente', de: '      return !!f.clienteId || !!limpio(f.observaciones)', a: '      return !!limpio(f.observaciones)' },
+    { nombre: 'cancelar el cambio no suelta la pendiente', de: '    function cancelarCambioEmpresa() {\n      estado.empresaPendiente = null', a: '    function cancelarCambioEmpresa() {\n      estado.empresaPendiente = estado.empresaPendiente' },
+    { nombre: 'la última no va primera', de: '.sort((a, b) => (b.id === ultima) - (a.id === ultima))', a: '' },
+    { nombre: 'no se recuerda la empresa', de: '      guardarPreferencia(CLAVE_EMPRESA, id)\n', a: '' },
+    { nombre: 'cargan también las empresas de ver', de: "      const lista = (estado.empresas ?? []).filter(e => puedeCargarEn(e.id))", a: "      const lista = (estado.empresas ?? []).filter(e => true)" },
+    { nombre: 'la fábrica de pruebas se ve', de: '      return sinUnidadesDePrueba(lista, estado.fabrica)', a: '      return lista' },
+    { nombre: 'el banner se esconde con empresa elegida', de: "      el.hidden = !empresaActual() || estado.vista === 'rt-vista-empresa'", a: '      el.hidden = true' },
+    // El cliente
+    { nombre: 'no busca por apodo', de: '        (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))', a: '        false)' },
+    { nombre: 'no busca por razón social', de: ' || normalizar(c.razon_social).includes(q) ||', a: ' ||' },
+    { nombre: 'el transporte habitual pisa lo escrito', de: '      if (!limpio(f.transporte) || f.transporte === f.transporteAuto) {', a: '      if (true) {' },
+    { nombre: 'no trae el transporte habitual', de: '        f.transporte = limpio(c.transporte_habitual)\n', a: '' },
+    { nombre: 'los clientes se leen con el límite de crédito', de: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo')", a: "        .select('id, nombre, razon_social, apodos, cuit, domicilio, localidad, email, transporte_habitual, activo, limite_credito')" },
+    // Los renglones
+    { nombre: 'las cajas con decimales', de: '    const DECIMALES_CAJAS = 0', a: '    const DECIMALES_CAJAS = 2' },
+    { nombre: 'media caja pasa', de: " || !Number.isInteger(Number(r.cajas))) return 'poné las cajas'", a: ") return 'poné las cajas'" },
+    { nombre: 'con cono viene puesto', de: '      return { clave: claveRenglon, productoId: null, conCono: false,', a: '      return { clave: claveRenglon, productoId: null, conCono: true,' },
+    { nombre: 'el chocolate va primero', de: '${comunes.map(boton).join(\'\')}${choco}</div>', a: '${choco}${comunes.map(boton).join(\'\')}</div>' },
+    // Los lotes
+    { nombre: '"SIN STOCK" se ofrece como lote', de: "        if (!lote || lote === 'SIN STOCK') continue", a: '        if (!lote) continue' },
+    { nombre: 'los lotes más nuevos primero', de: "        .sort((a, b) => String(a.desde ?? '').localeCompare(String(b.desde ?? '')) ||", a: "        .sort((a, b) => String(b.desde ?? '').localeCompare(String(a.desde ?? '')) ||" },
+    { nombre: 'se ofrecen los lotes agotados', de: '      return [...porLote.values()].filter(l => l.saldo > 0)', a: '      return [...porLote.values()]' },
+    { nombre: 'sin cono no filtra por marca null', de: "      q = marcaId ? q.eq('marca_id', marcaId) : q.is('marca_id', null)", a: '      q = marcaId ? q.eq(\'marca_id\', marcaId) : q' },
+    { nombre: 'se elige un lote que no está en la lista', de: '      if (!info?.lista?.some(l => l.lote === lote)) return\n', a: '' },
+    { nombre: 'cambiar el cono no suelta el lote', de: '      // El lote es del stock de ESE cono: cambiar el cono lo suelta.\n      r.lote = null\n', a: '' },
+    { nombre: 'sin permiso de lotes consulta igual', de: '      if (puedeVerLotes()) asegurarLotes(r.presentacionId, r.conCono ? r.marcaId : null)\n    }', a: '      asegurarLotes(r.presentacionId, r.conCono ? r.marcaId : null)\n    }' },
+    { nombre: 'retiros:cargar alcanza para ver lotes', de: "      return tieneTarea('stock', 'ver') ||", a: "      return true ||" },
+    // El payload
+    { nombre: 'el lote vacío viaja null', de: '      if (r.lote) item.lote = r.lote', a: '      item.lote = r.lote ?? null' },
+    { nombre: 'la marca viaja sin cono', de: 'marca_id: r.conCono ? (r.marcaId ?? null) : null, cajas: Number(r.cajas) }', a: 'marca_id: r.marcaId ?? null, cajas: Number(r.cajas) }' },
+    { nombre: 'un precio en el renglón', de: 'marca_id: r.conCono ? (r.marcaId ?? null) : null, cajas: Number(r.cajas) }', a: 'marca_id: r.conCono ? (r.marcaId ?? null) : null, cajas: Number(r.cajas), precio_caja: null }' },
+    { nombre: 'un uuid nuevo en cada intento', de: '        p_client_uuid: f.uuid,', a: '        p_client_uuid: nuevoUuid(),' },
+    { nombre: 'sin transporte', de: '        p_transporte: limpio(f.transporte) || null,', a: '        p_transporte: null,' },
+    { nombre: 'la fecha sin la zona argentina', de: "new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year:", a: "new Intl.DateTimeFormat('en-CA', { year:" },
+    { nombre: 'solo el primer renglón', de: '        p_items: f.renglones.map(itemParaBase),', a: '        p_items: f.renglones.slice(0, 1).map(itemParaBase),' },
+    // Confirmar
+    { nombre: 'confirmar con faltas manda igual', de: "      if (faltanOrden(f).length) { mostrarVista('rt-vista-form'); pintarRenglones(); return }\n", a: '' },
+    { nombre: 'revisar avanza con faltas', de: '      if (faltanOrden(f).length) { pintarRenglones(); return }\n      mostrarVista(\'rt-vista-resumen\')', a: "      mostrarVista('rt-vista-resumen')" },
+    { nombre: 'el error de la base se tapa', de: "          : (err?.message || 'No se pudo confirmar la orden. Probá de nuevo.'))", a: "          : 'No se pudo confirmar la orden. Probá de nuevo.')" },
+    { nombre: 'un corte de red no dice que no duplica', de: 'Tocá «Confirmar la orden» de nuevo: si ya había entrado, no se duplica.', a: 'Probá de nuevo.' },
+    { nombre: 'el botón queda trabado después del error', de: "        console.error('No se pudo confirmar la orden:', err)\n        estado.confirmando = false", a: "        console.error('No se pudo confirmar la orden:', err)" },
+    { nombre: 'la orden no se limpia al confirmar', de: '        estado.form = null\n        estado.mis = null\n        guardarBorrador()', a: '        estado.mis = null' },
+    // Lo que faltó
+    { nombre: 'lo que faltó no se muestra', de: "      if (!Array.isArray(lista) || !lista.length) return ''\n      const renglones = lista.map(x => {", a: "      return ''\n      const renglones = lista.map(x => {" },
+    { nombre: 'lo que faltó no se toma de la base', de: "faltantes: Array.isArray(data?.stock_insuficiente) ? data.stock_insuficiente : null,", a: 'faltantes: null,' },
+    { nombre: 'en un reintento no se deduce del lote SIN STOCK', de: "        const falta = (r.lotes ?? []).filter(l => l.lote === 'SIN STOCK')", a: "        const falta = (r.lotes ?? []).filter(l => l.lote === 'X')" },
+    // El borrador
+    { nombre: 'el borrador no guarda el uuid', de: '        const { error, intentado, ...resto } = f', a: '        const { error, intentado, uuid, ...resto } = f' },
+    { nombre: 'el borrador de otra empresa se retoma', de: '      if (!b || !empresasDeCarga().some(e => e.id === b.empresaId)) return false', a: '      if (!b) return false' },
+  ],
+})

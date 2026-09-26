@@ -23,8 +23,10 @@ chk('abre modulos/pedidos.html', p?.url === 'modulos/pedidos.html')
 chk('no está marcada "próximamente"', p?.proximamente === false)
 chk('tiene ícono', typeof p?.icono === 'string' && p.icono.length > 2)
 chk('es naranja, el acento del módulo', p?.color === 'naranja' && /var\(--naranja\)/.test(S.COLORES_MODULO[p?.color]?.fg || ''))
-chk('va última, después de Producción', S.MODULOS.indexOf(p) === S.MODULOS.length - 1 &&
-  S.MODULOS.indexOf(p) > S.MODULOS.findIndex(m => m.clave === 'produccion'))
+// Iba "última" hasta el 26/09/2026: después se sumaron las tarjetas de
+// Órdenes de retiro y Administración. Lo que importa es el orden respecto de
+// Producción, y eso se sigue exigiendo.
+chk('va después de Producción', S.MODULOS.indexOf(p) > S.MODULOS.findIndex(m => m.clave === 'produccion'))
 const ver = (ctx) => S.moduloVisible(p, { esAdmin: false, esSuperAdmin: false, misModulos: [], misTareas: new Set(), ...ctx })
 chk('se ve con el módulo pedidos habilitado', ver({ misModulos: ['pedidos'] }))
 chk('no se ve sin el módulo', !ver({ misModulos: ['produccion'] }))

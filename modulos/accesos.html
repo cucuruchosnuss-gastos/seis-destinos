@@ -940,6 +940,34 @@
         ],
       },
       {
+        grupo: 'Órdenes de retiro',
+        // El módulo 'retiros' (fila de la tabla modulos, orden 11). La misma
+        // clave en los dos namespaces. Las cuatro CON alcance por unidad: las
+        // RPCs gatean con tiene_tarea_alcance() sobre la empresa de la orden o
+        // del cliente (registrar_orden_retiro y mis_ordenes_retiro con cargar;
+        // clientes_con_saldo y cuenta_cliente con ver; anular_orden_retiro con
+        // anular; valorizar_orden_retiro, guardar_ficha_cliente,
+        // guardar_lista_precios, guardar_precios, registrar_saldo_inicial_cliente
+        // y ajustar_cuenta_cliente con precios), y las policies de SELECT de
+        // ordenes_retiro y orden_retiro_items leen 'ver' con alcance. Las cuatro
+        // están en el CHECK chk_tarea_valida (leído con pg_get_constraintdef el
+        // 26/09/2026: 47 claves).
+        //
+        // 'cargar' es el DEPÓSITO (modulos/retiros.html, sin nada de plata); las
+        // otras tres son ADMINISTRACIÓN (modulos/administracion.html).
+        modulos: ['retiros'],
+        tareas: [
+          { modulo: 'retiros', tarea: 'cargar',  label: 'Cargar órdenes de retiro en el depósito (sin precios)', conAlcance: true,
+            descripcion: 'Para el depósito: cargar la orden cuando un cliente retira producto terminado (cliente, productos, cajas y, si hace falta, el lote), imprimirla con dos copias y mandarla en PDF. Baja el stock terminado. No muestra ni pide precios, saldos ni cuentas, y cada persona ve solo las órdenes que cargó ella. En las empresas del alcance.' },
+          { modulo: 'retiros', tarea: 'ver',     label: 'Ver todas las órdenes y las cuentas de los clientes (Administración)', conAlcance: true,
+            descripcion: 'En Administración: ver todas las órdenes de retiro de la empresa, con su valorización, y la lista de clientes con su saldo y su cuenta corriente. Solo lectura. En las empresas del alcance.' },
+          { modulo: 'retiros', tarea: 'anular',  label: 'Anular órdenes de retiro', conAlcance: true,
+            descripcion: 'En Administración: anular una orden de retiro con motivo obligatorio. Devuelve cada caja a su lote y, si la orden ya estaba valorizada, cancela la deuda que había generado en la cuenta del cliente. En las empresas del alcance.' },
+          { modulo: 'retiros', tarea: 'precios', label: 'Valorizar órdenes, manejar precios y las fichas de los clientes', conAlcance: true,
+            descripcion: 'En Administración: ponerle precio a una orden de retiro (recién ahí nace la deuda del cliente), corregir una valorización, manejar las listas de precios con su historia, editar la ficha completa de un cliente (datos, dirección, contacto, banco y condiciones comerciales) y cargar su saldo inicial o un ajuste con motivo. En las empresas del alcance.' },
+        ],
+      },
+      {
         grupo: 'Facturas pendientes',
         // Los DOS módulos, con semántica "any": es la misma tarea operada
         // desde dos pantallas, así que con cualquiera de los dos habilitado
