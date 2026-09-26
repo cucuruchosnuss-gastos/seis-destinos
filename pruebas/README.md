@@ -28,6 +28,17 @@ Las mutaciones se corren aparte, y tardan bastante porque cada una levanta la su
 node pruebas/mut-cobranzas-xss.js
 ```
 
+## Todo junto, y en GitHub
+
+```bash
+node pruebas/check-bytes.js      # ningún archivo de texto con CR ni NUL, medido en bytes
+node pruebas/correr-todo.js      # check-scripts + todas las test-*.js + todos los controles-*.js
+node pruebas/correr-todo.js mut  # todas las mut-*.js, de a una (tarda)
+FILTRO=produccion node pruebas/correr-todo.js   # solo las que contienen "produccion"
+```
+
+`correr-todo.js` imprime una línea por archivo y al final `N/N en verde` o cuáles fallaron. Las dos primeras corren solas en GitHub en cada push a `main` y en cada pull request (`.github/workflows/pruebas.yml`); las mutaciones, a mano (`.github/workflows/mutaciones.yml`, una máquina por módulo y de a una mutación por máquina). **Una suite nueva no hay que registrarla en ningún lado**: alcanza con que se llame `test-*.js`, `controles-*.js` o `mut-*.js`.
+
 ## El archivo entero, como lo ve el navegador
 
 ```bash

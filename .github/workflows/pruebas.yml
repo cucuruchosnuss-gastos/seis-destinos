@@ -1,0 +1,31 @@
+# Las pruebas de cada commit: check-scripts, los bytes, TODAS las suites test-*.js
+# y TODOS los controles-*.js. Falla si falla cualquiera.
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Los controles-*.js comparan contra commits FIJOS con `git show`:
+          # hace falta la historia entera.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Sin CR ni NUL (medido en bytes)
+        run: node pruebas/check-bytes.js
+      - name: check-scripts, suites y controles
+        run: node pruebas/correr-todo.js

@@ -1,0 +1,33 @@
+# Las mutaciones tardan: se corren a mano (Actions → Mutaciones → Run workflow).
+# Un trabajo por módulo, en máquinas separadas; ADENTRO de cada una, de a una
+# mutación por vez (dos runners en la misma máquina se pisan el archivo temporal).
+name: Mutaciones
+
+on:
+  workflow_dispatch:
+    inputs:
+      filtro:
+        description: 'Solo las mut-*.js que contengan este texto (vacío = todas las del módulo)'
+        required: false
+        default: ''
+
+jobs:
+  mutaciones:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        modulo: [accesos, caja, cheques, cobranzas, cuentas-corrientes, dashboard, embeds,
+                 empleados, gastos, materia-prima, numeros, pedidos, produccion, stock, toast]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: mut-${{ matrix.modulo }}-*
+        env:
+          FILTRO: mut-${{ matrix.modulo }}${{ github.event.inputs.filtro && format('-{0}', github.event.inputs.filtro) || '' }}
+        run: node pruebas/correr-todo.js mut
