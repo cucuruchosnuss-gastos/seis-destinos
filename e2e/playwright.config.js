@@ -12,7 +12,11 @@ module.exports = defineConfig({
   // Los recorridos comparten la fábrica de pruebas: nunca en paralelo.
   workers: 1,
   fullyParallel: false,
-  retries: 0,
+  // Un reintento en CI: la red hacia el CDN y la base falla de vez en cuando
+  // (pasó una vez el 26/09/2026, con el mismo código que después pasó). El
+  // reporter 'github' deja anotado como "flaky" lo que pasó al segundo intento,
+  // así el ruido se ve en vez de taparse.
+  retries: process.env.CI ? 1 : 0,
   timeout: 5 * 60 * 1000,
   expect: { timeout: 15000 },
   // En CI, además, el reporter 'github': cada falla queda como ANOTACIÓN de la

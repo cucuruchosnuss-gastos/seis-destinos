@@ -1437,6 +1437,9 @@
     .pr-sala-maq__cuenta { font-size: 1.125rem; }
     .pr-sala-maq__sub, .pr-sala-maq__ultima { font-size: 1rem; }
     .pr-sala__masas { min-height: 52px; font-size: 1.125rem; }
+    /* Asignar PIN (acceso maestro): el panel con los puntos y el teclado. */
+    .pr-asignar__panel { display: flex; flex-direction: column; gap: 0.75rem; max-width: 28rem; margin-top: 1rem; }
+    .pr-asignar__panel[hidden] { display: none; }
   </style>
 </head>
 
@@ -1455,6 +1458,7 @@
       <span id="pr-maestro-texto"></span>
       <div class="pr-maestro__botones">
         <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-dar-acceso">Dar acceso por hoy</button>
+        <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-asignar-pin">Asignar PIN</button>
         <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-cerrar-maestro">Salir del acceso maestro</button>
       </div>
     </div>
@@ -1537,6 +1541,29 @@
           <p id="pr-acceso-pin-texto"></p>
           <p class="pr-pin-nuevo" id="pr-acceso-pin-numero"></p>
           <button type="button" class="pr-btn pr-btn--grande" id="pr-acceso-pin-listo">Ya lo anoté</button>
+        </div>
+      </section>
+
+      <!-- Con el acceso maestro activo: asignarle o resetearle el PIN a alguien
+           de esta fábrica (asignar_pin_con_maestro). El PIN nuevo se tipea en
+           el teclado propio: los puntos son FORMAS y el número no entra nunca
+           al DOM, ni a localStorage, ni a sessionStorage. -->
+      <section class="pr-tarjeta" id="pr-asignar" hidden>
+        <div class="pr-fila-titulo">
+          <h1 class="pr-titulo" id="pr-asignar-titulo">Asignar PIN</h1>
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-asignar-volver">‹ Volver</button>
+        </div>
+        <div id="pr-asignar-lista">
+          <label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿A quién?</span>
+            <input type="search" id="pr-asignar-buscar" class="pr-input" placeholder="Buscar por nombre…" autocomplete="off"></label>
+          <div class="pr-grilla pr-espacio-arriba" id="pr-asignar-personas"></div>
+        </div>
+        <div class="pr-asignar__panel" id="pr-asignar-panel" hidden>
+          <p class="pr-aviso" id="pr-asignar-aviso">El PIN nuevo es de un solo uso: la primera vez que entre va a tener que elegir uno propio.</p>
+          <div class="pr-pin__puntos" id="pr-asignar-puntos"></div>
+          <div class="pr-pin__teclado" id="pr-asignar-teclado"></div>
+          <p class="pr-error" id="pr-asignar-error" hidden></p>
+          <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho" id="pr-asignar-confirmar">Guardar el PIN</button>
         </div>
       </section>
 
@@ -2048,6 +2075,9 @@
       pin: null,
       maestro: null,       // { id, nombre } mientras el acceso maestro está activo
       acceso: null,        // el formulario de "Dar acceso por hoy"
+      // "Asignar PIN" con el acceso maestro: { busqueda, personaId, digitos,
+      // error, enviando }. Los dígitos del PIN nuevo viven ACÁ, en memoria.
+      asignar: null,
       ultimoToque: null,   // para cerrar sola por inactividad
       // ¿Hay alguna máquina abierta? Es lo que habilita SALA DE MASA.
       // `abiertasConocido` dice si se PUDO medir: sin eso, un false de "no se
@@ -2445,6 +2475,8 @@
       tocar()
       olvidarPersona('produccion')
       if (habiaPersona) salir()
+      // Las dos pantallas del maestro no se pueden quedar abiertas sin él.
+      else if (habiaMaestro && (estado.vista === 'pr-asignar' || estado.vista === 'pr-acceso')) siguientePaso()
       else pintarCabecera()
       return habiaMaestro || habiaPersona
     }
@@ -2453,13 +2485,16 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-quien', 'pr-acceso', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-agregar-prod', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-receta', 'pr-masas']
+    const VISTAS = ['pr-inicio', 'pr-quien', 'pr-acceso', 'pr-asignar', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-agregar-prod', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-receta', 'pr-masas']
 
     // Las pantallas de oficina se fueron a produccion-gestion.html (25/09/2026):
     // en la planta todo es tablet y manda la barra de modos.
     const VISTAS_OFICINA = []
 
     function mostrarVista(id) {
+      // Irse de "Asignar PIN" por cualquier camino (otro modo, Salir, el
+      // cierre por inactividad) borra el PIN a medio tipear de la memoria.
+      if (id !== 'pr-asignar') estado.asignar = null
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       pintarCabecera()
@@ -3041,6 +3076,7 @@
       estado.maestro = null
       pinMaestro = null
       estado.acceso = null
+      estado.asignar = null   // el PIN nuevo a medio tipear también se va
       // Sale el maestro, no las personas guardadas de cada modo.
       if (estado.persona && estado.persona.id === id) {
         estado.persona = null
@@ -3204,6 +3240,179 @@
       return siguientePaso()
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // ASIGNAR PIN (con el acceso maestro)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // asignar_pin_con_maestro(p_empleado_id, p_pin, p_maestro_id, p_maestro_pin)
+    // (leída con pg_get_functiondef el 26/09/2026): verifica el PIN maestro y,
+    // si no vale, DEVUELVE su rechazo ({ok:false, motivo}) sin lanzar —se
+    // trata con mensajeDePin, igual que otorgar_puesto_temporal—. Lo demás
+    // (persona inactiva, PIN obvio) lo LANZA con un mensaje ya escrito para
+    // una persona, y se muestra tal cual. La lista de PINes obvios NO se
+    // repite acá: vive en _pin_valido y una copia se desincroniza en silencio.
+    // Deja el PIN con debe_cambiar = true: es de un solo uso.
+    //
+    // EL PIN NUEVO NO SE GUARDA EN NINGÚN LADO fuera de estado.asignar.digitos:
+    // ni en el DOM (los puntos son formas), ni en ningún storage. Se borra al
+    // guardar, al volver, al irse de la pantalla y al cerrar el maestro.
+
+    // El estado del PIN de cada persona, dicho en texto. El temporal va antes
+    // que "pendiente de cambiar" porque un PIN de un día también lleva
+    // debe_cambiar.
+    function estadoPinPlanta(p) {
+      if (!p?.tiene_pin) return 'Sin PIN'
+      if (p.pin_temporal) return 'PIN de un día'
+      if (p.debe_cambiar_pin) return 'Pendiente de cambiar'
+      return 'PIN propio'
+    }
+
+    // Solo el personal de ESTA fábrica: personal_produccion trae a todos.
+    function personasParaAsignar(personal, busqueda) {
+      const lista = (Array.isArray(personal) ? personal : []).filter(p => p.misma_unidad === true)
+      return personasFiltradas(lista, busqueda)
+    }
+
+    function htmlPersonaAsignar(p) {
+      const accion = p?.tiene_pin ? 'Resetear' : 'Asignar'
+      return `<button type="button" class="pr-opcion" data-asignar-persona="${esc(p.id)}">` +
+        `<span>${esc(p.nombre)}<span class="pr-acceso__detalle${p?.tiene_pin ? '' : ' pr-acceso__detalle--sin'}">${esc(estadoPinPlanta(p))} · ${esc(accion)}</span></span></button>`
+    }
+
+    function htmlTecladoAsignar(bloqueado) {
+      const apagado = bloqueado ? ' disabled' : ''
+      let out = ''
+      for (let d = 1; d <= 9; d++) out += `<button type="button" class="pr-tecla" data-asignar-tecla="${d}"${apagado}>${d}</button>`
+      out += `<button type="button" class="pr-tecla pr-tecla--texto" data-asignar-tecla="borrar"${apagado}>Borrar</button>`
+      out += `<button type="button" class="pr-tecla" data-asignar-tecla="0"${apagado}>0</button>`
+      return out
+    }
+
+    function abrirAsignarPin() {
+      if (!estado.maestro) return
+      tocar()
+      mostrarVista('pr-asignar')
+      estado.asignar = { busqueda: '', personaId: null, digitos: '', error: null, enviando: false }
+      document.getElementById('pr-asignar-buscar').value = ''
+      pintarAsignarPin()
+    }
+
+    // Se repinta la lista y el panel; el buscador conserva lo tipeado.
+    function pintarAsignarPin() {
+      const a = estado.asignar
+      if (!a) return
+      const persona = (estado.personal ?? []).find(p => p.id === a.personaId) ?? null
+      document.getElementById('pr-asignar-lista').hidden = !!persona
+      document.getElementById('pr-asignar-panel').hidden = !persona
+      document.getElementById('pr-asignar-titulo').textContent = persona
+        ? `${persona.tiene_pin ? 'Resetear el PIN de' : 'Asignar PIN a'} ${persona.nombre}`
+        : 'Asignar PIN'
+      // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.
+      const btn = document.getElementById('pr-asignar-confirmar')
+      btn.disabled = !!a.enviando
+      btn.textContent = a.enviando ? 'Guardando…' : 'Guardar el PIN'
+      const err = document.getElementById('pr-asignar-error')
+      err.hidden = !a.error
+      err.textContent = a.error ?? ''
+      if (!persona) {
+        const visibles = personasParaAsignar(estado.personal ?? [], a.busqueda)
+        document.getElementById('pr-asignar-personas').innerHTML = visibles.length
+          ? visibles.map(htmlPersonaAsignar).join('')
+          : '<p class="pr-texto-suave">Ningún nombre coincide con lo que buscaste.</p>'
+        return
+      }
+      document.getElementById('pr-asignar-puntos').innerHTML = htmlPuntosPin(LARGO_PIN, a.digitos.length, false)
+      document.getElementById('pr-asignar-teclado').innerHTML = htmlTecladoAsignar(a.enviando)
+    }
+
+    function elegirPersonaAsignar(id) {
+      const a = estado.asignar
+      if (!a) return
+      const p = personasParaAsignar(estado.personal ?? [], '').find(x => x.id === id)
+      if (!p) return
+      tocar()
+      a.personaId = p.id
+      a.digitos = ''
+      a.error = null
+      pintarAsignarPin()
+    }
+
+    function teclaAsignar(t) {
+      const a = estado.asignar
+      if (!a || !a.personaId || a.enviando) return
+      tocar()
+      a.error = null
+      if (t === 'borrar') a.digitos = a.digitos.slice(0, -1)
+      else if (/^[0-9]$/.test(t) && a.digitos.length < LARGO_PIN) a.digitos += t
+      pintarAsignarPin()
+    }
+
+    // "‹ Volver": del panel a la lista (borra lo tipeado); de la lista, afuera.
+    function volverAsignarPin() {
+      const a = estado.asignar
+      if (a && a.personaId && !a.enviando) {
+        a.personaId = null
+        a.digitos = ''
+        a.error = null
+        return pintarAsignarPin()
+      }
+      return cerrarAsignarPin()
+    }
+
+    function cerrarAsignarPin() {
+      estado.asignar = null
+      return siguientePaso()
+    }
+
+    async function confirmarAsignarPin() {
+      const a = estado.asignar
+      if (!a || !a.personaId || a.enviando) return
+      if (!estado.maestro) { a.error = 'El acceso maestro se cerró: volvé a entrar con tu PIN maestro.'; return pintarAsignarPin() }
+      if (!new RegExp(`^[0-9]{${LARGO_PIN}}$`).test(a.digitos)) {
+        a.error = `Faltan números: el PIN es de ${LARGO_PIN}.`
+        return pintarAsignarPin()
+      }
+      const personaId = a.personaId
+      const nombre = (estado.personal ?? []).find(p => p.id === personaId)?.nombre ?? ''
+      a.enviando = true
+      a.error = null
+      pintarAsignarPin()
+      let res
+      try {
+        const { data, error } = await supabase.rpc('asignar_pin_con_maestro', {
+          p_empleado_id: personaId, p_pin: a.digitos,
+          p_maestro_id: estado.maestro.id, p_maestro_pin: pinMaestro,
+        })
+        if (error) throw error
+        res = data
+      } catch (e) {
+        console.error('asignar_pin_con_maestro:', e)
+        a.enviando = false
+        a.digitos = ''
+        a.error = e?.message || 'No se pudo guardar el PIN. Probá de nuevo.'
+        return pintarAsignarPin()
+      }
+      a.enviando = false
+      if (!res || res.ok !== true) {
+        // El PIN maestro dejó de valer (o se bloqueó): su rechazo, tal cual.
+        a.digitos = ''
+        a.error = mensajeDePin(res).texto
+        return pintarAsignarPin()
+      }
+      a.digitos = ''
+      a.personaId = null
+      mostrarExito(`PIN guardado para ${nombre}. La primera vez que entre va a elegir uno propio.`)
+      // Se relee el personal para que el estado del PIN se vea al día.
+      try {
+        const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: estado.unidadId })
+        if (error) throw error
+        estado.personal = personalSinPruebas(data)
+      } catch (err) {
+        console.error('personal_produccion (asignar PIN):', err)
+      }
+      pintarAsignarPin()
+    }
+
     // ¿Hay alguna máquina abierta en la unidad? Es lo único que habilita SALA
     // DE MASA, y hace falta saberlo ANTES de que alguien entre a un modo —o
     // sea, antes de que se lea el tablero—, así que va en su propia consulta.
@@ -3293,6 +3502,19 @@
       document.getElementById('pr-acceso-confirmar').addEventListener('click', confirmarDarAcceso)
       document.getElementById('pr-acceso-cancelar').addEventListener('click', cerrarDarAcceso)
       document.getElementById('pr-acceso-pin-listo').addEventListener('click', cerrarDarAcceso)
+      document.getElementById('pr-btn-asignar-pin').addEventListener('click', abrirAsignarPin)
+      document.getElementById('pr-asignar-buscar').addEventListener('input', ev => {
+        if (!estado.asignar) return
+        estado.asignar.busqueda = ev.target.value; pintarAsignarPin()
+      })
+      document.getElementById('pr-asignar-personas').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-asignar-persona]'); if (b) elegirPersonaAsignar(b.dataset.asignarPersona)
+      })
+      document.getElementById('pr-asignar-teclado').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-asignar-tecla]'); if (b) teclaAsignar(b.dataset.asignarTecla)
+      })
+      document.getElementById('pr-asignar-confirmar').addEventListener('click', confirmarAsignarPin)
+      document.getElementById('pr-asignar-volver').addEventListener('click', volverAsignarPin)
       conectarProduccion()
       conectarPlanilla()
       conectarSala()

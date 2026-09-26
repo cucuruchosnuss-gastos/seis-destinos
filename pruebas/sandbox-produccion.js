@@ -213,6 +213,10 @@ const NUEVAS_PLANTA = [
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
   'elegirMaestro', 'personasParaAcceso', 'detallePersonaAcceso', 'htmlPersonaAcceso', 'htmlNotaAcceso',
   'sinAcceso', 'leerMiSesion', 'destinoDeSesion',
+  // Asignar PIN con el acceso maestro (26/09/2026)
+  'estadoPinPlanta', 'personasParaAsignar', 'htmlPersonaAsignar', 'htmlTecladoAsignar', 'abrirAsignarPin',
+  'pintarAsignarPin', 'elegirPersonaAsignar', 'teclaAsignar', 'volverAsignarPin', 'cerrarAsignarPin',
+  'confirmarAsignarPin',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
