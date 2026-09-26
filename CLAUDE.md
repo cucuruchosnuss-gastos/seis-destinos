@@ -1,5 +1,15 @@
 # Seis Destinos — Guía del proyecto
 
+## PRINCIPIO CENTRAL: automatizar lo que ya está automatizado y eficientizar lo que ya es eficiente
+
+Es la forma de pensar de Grupo Nuss. En la fábrica pasamos de una máquina de 1.000 unidades con 4 personas, a 1.000 con 2, a 2.500 con 2; lo próximo es 2.500 con una sola persona, y después 4.000 con una. Cada paso hace el trabajo más rápido, con menos carga y menos horas.
+
+Con el software es igual. El costo a bajar es el tiempo de Facu y el tiempo de trabajo de Claude. Por eso:
+- **Toda tarea que se repite dos veces se convierte en skill, script o prueba automática.** No esperes a que Facu lo pida: proponelo.
+- **Cada traspaso termina con una sección "Qué automatizaría ahora"**, con la tarea repetida más cara que viste y cómo sacarla.
+- **Buscá siempre la mejor tecnología del momento que sea gratuita o barata.**
+- **Facu deja trabajando tandas largas de noche: el trabajo tiene que poder avanzar horas sin él, publicando parte por parte.**
+
 ## Objetivo
 Sistema de gestión de fábrica de Grupo Nuss sobre una única base de datos central en Supabase (nuss-central), con datos maestros compartidos y módulos separados. Nombre de la app: Seis Destinos. Las empresas del grupo son: Cucuruchos Nuss (Córdoba), Dolce Pasta (Rosario), Taller (Córdoba), Mengui/Heladitos Orly (Córdoba).
 
