@@ -182,4 +182,42 @@ test.describe('planta', () => {
 
     expect(errores, errores.join('\n')).toEqual([]);
   });
+
+  // "Asignar PIN" con el acceso maestro. NO cambia ningún PIN: intenta 1234,
+  // que la base rechaza DESPUÉS de verificar el maestro (asignar_pin_con_maestro
+  // verifica el maestro primero y el PIN obvio después), así que el recorrido
+  // prueba la cadena entera sin tocar datos. Necesita un maestro: los secretos
+  // opcionales E2E_MAESTRO_NOMBRE y E2E_MAESTRO_PIN (8 dígitos).
+  test('asignar PIN con el acceso maestro (sin cambiar nada)', async ({ page, context }, info) => {
+    test.skip(!process.env.E2E_MAESTRO_NOMBRE || !process.env.E2E_MAESTRO_PIN,
+      'Faltan E2E_MAESTRO_NOMBRE y E2E_MAESTRO_PIN: se saltea el paso de Asignar PIN.');
+    const errores = vigilarErrores(page);
+    await entrarComo(context, 'planta');
+    await page.goto('/modulos/produccion.html');
+    await expect(page.locator('#pr-barra')).toBeVisible();
+
+    await page.locator('#pr-btn-barra-maestro, #pr-btn-maestro').first().click();
+    const elegir = page.locator('[data-maestro]', { hasText: process.env.E2E_MAESTRO_NOMBRE });
+    if (await elegir.count()) await elegir.first().click();
+    await marcarPin(page, process.env.E2E_MAESTRO_PIN);
+    await expect(page.locator('#pr-maestro')).toBeVisible();
+
+    await page.locator('#pr-btn-asignar-pin').click();
+    await expect(page.locator('#pr-asignar')).toBeVisible();
+    const robot = page.locator('#pr-asignar-personas [data-asignar-persona]', { hasText: 'Robot Masero' });
+    await expect(robot).toContainText(/PIN propio|Pendiente de cambiar|PIN de un día|Sin PIN/);
+    await captura(page, 'asignar-pin-lista', info);
+    await robot.click();
+    for (const d of '1234') await page.locator(`#pr-asignar-teclado [data-asignar-tecla="${d}"]`).click();
+    // Los dígitos no se muestran: solo los puntos.
+    await expect(page.locator('#pr-asignar')).not.toContainText('1234');
+    await page.locator('#pr-asignar-confirmar').click();
+    await expect(page.locator('#pr-asignar-error')).toContainText('no tan obvio');
+    await captura(page, 'asignar-pin-rechazado', info);
+    const guardado = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
+    expect(guardado).not.toContain('1234');
+    await page.locator('#pr-btn-cerrar-maestro').click();
+    await expect(page.locator('#pr-maestro')).toBeHidden();
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
 });

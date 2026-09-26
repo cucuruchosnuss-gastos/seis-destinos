@@ -15,7 +15,9 @@ module.exports = defineConfig({
   retries: 0,
   timeout: 5 * 60 * 1000,
   expect: { timeout: 15000 },
-  reporter: [['list'], ['html', { outputFolder: `${__dirname}/informe`, open: 'never' }]],
+  // En CI, además, el reporter 'github': cada falla queda como ANOTACIÓN de la
+  // corrida, que se lee sin credenciales (el log del job y los artefactos no).
+  reporter: [['list'], ['html', { outputFolder: `${__dirname}/informe`, open: 'never' }], ...(process.env.CI ? [['github']] : [])],
   use: {
     baseURL: `http://localhost:${PUERTO}`,
     browserName: 'chromium',
