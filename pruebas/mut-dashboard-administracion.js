@@ -10,6 +10,8 @@ correrMutaciones({
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'dashboard.html'),
   funciones: [],
   manuales: [
+    { nombre: 'la burbuja de administración no va a su tarjeta', de: "      administracion: 'administracion',\n    }", a: '    }' },
+    { nombre: 'la burbuja de administración va a otra tarjeta', de: "      administracion: 'administracion',\n    }", a: "      administracion: 'retiros',\n    }" },
     { nombre: 'otra url', de: "        url: 'modulos/administracion.html',", a: "        url: 'modulos/retiros.html'," },
     { nombre: 'sin el módulo requerido', de: "        requiereModulo: 'retiros',\n        requiereTareas: ['retiros:ver', 'retiros:precios'],", a: "        requiereTareas: ['retiros:ver', 'retiros:precios']," },
     { nombre: 'alcanza con cargar', de: "        requiereTareas: ['retiros:ver', 'retiros:precios'],", a: "        requiereTareas: ['retiros:ver', 'retiros:precios', 'retiros:cargar']," },

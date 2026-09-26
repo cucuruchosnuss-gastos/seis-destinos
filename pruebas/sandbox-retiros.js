@@ -16,37 +16,38 @@ const { fuenteNumeros } = require('./numeros-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'fechaCorta', 'nuevoUuid',
-  'tieneTarea', 'puedeCargarEn', 'puedeVerLotes', 'empresasDeCarga', 'empresaActual',
+  'tieneTarea', 'puedeCargarEn', 'puedeVerLotesInsumo', 'empresasDeCarga', 'empresaActual',
   'leerPreferencia', 'guardarPreferencia', 'guardarBorrador', 'leerBorrador', 'mostrarVista',
   'htmlLogo', 'htmlEmpresas', 'htmlEmpresaActual', 'pintarEmpresaActual', 'mostrarEleccionEmpresa',
   'formTieneDatos', 'elegirEmpresa', 'aplicarEmpresa', 'confirmarCambioEmpresa', 'cancelarCambioEmpresa', 'pedirCambioEmpresa',
-  'leerClientes', 'clientesFiltrados', 'leerCatalogo', 'esProductoChocolate', 'productosPorMasa', 'presentacionesDe',
+  'leerClientes', 'clientesFiltrados', 'leerCatalogo', 'catalogoDesdeRpc', 'insumoDe', 'stockProducto', 'gruposCatalogo', 'presentacionesDe',
   'marcasFiltradas', 'textoCono', 'descripcionRenglon', 'asegurarDatosEmpresa',
-  'lotesConStock', 'leerLotes', 'asegurarLotes',
+  'claveLotesRenglon', 'lotesDeRetiro', 'lotesDeInsumo', 'leerLotes', 'leerLotesInsumo', 'asegurarLotes',
   'renglonNuevo', 'formVacio', 'autoPresentacion', 'faltanRenglon', 'faltanOrden', 'itemParaBase', 'parametrosRegistrar',
   'totalCajasForm', 'textoCuentaForm', 'clienteDe', 'detalleCliente', 'htmlClienteElegido', 'htmlResultadosClientes',
   'pintarCliente', 'elegirCliente', 'cambiarCliente',
-  'htmlProductosRenglon', 'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon',
+  'htmlProductosRenglon', 'htmlEleccionRenglon', 'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon',
   'htmlRenglon', 'htmlAvisoCatalogo', 'pintarRenglones', 'pintarPie', 'renglon', 'tocarRenglon',
-  'elegirProductoRenglon', 'cambiarProductoRenglon', 'elegirConoRenglon', 'elegirMarcaRenglon', 'buscarConoRenglon',
+  'elegirProductoRenglon', 'cambiarProductoRenglon', 'elegirInsumoRenglon', 'buscarCatalogoRenglon', 'elegirConoRenglon', 'elegirMarcaRenglon', 'buscarConoRenglon',
   'elegirPresentacionRenglon', 'abrirLotes', 'cerrarLotes', 'elegirLote', 'quitarLote', 'agregarRenglon', 'quitarRenglon',
-  'pintarFormEntero', 'abrirFormulario', 'leerCabecera', 'htmlDatoRt', 'htmlResumen', 'revisar', 'pintarConfirmar',
+  'pintarFormEntero', 'abrirFormulario', 'reconciliarRenglones', 'leerCabecera', 'htmlDatoRt', 'htmlResumen', 'textoInsumosForm', 'revisar', 'pintarConfirmar',
   'esErrorDeRed', 'confirmar',
   'htmlFaltantes', 'htmlHecho', 'pintarHecho', 'mostrarHecho', 'cargarOrdenHecha', 'faltantesDeLotes', 'htmlAvisoEmpresa',
-  'conoDeRenglonMio', 'clienteDeOrden', 'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'pintarAccionesHoja',
+  'conoDeRenglonMio', 'clienteDeOrden', 'leerMemoriaInsumos', 'recordarInsumosDeOrden', 'renglonesParaHoja', 'faltanInsumosEnHoja', 'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'pintarAccionesHoja',
   'enviarDesde', 'compartirDesde', 'imprimirDesde',
   'leerMisOrdenes', 'cajasDeOrden', 'htmlFilaMia', 'htmlMisRetiros', 'mostrarMisRetiros', 'htmlDetalleMio', 'abrirMia',
   'empezarOrden', 'retomarBorrador',
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
-  'enteroHoja', 'importeHoja', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes',
-  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
+  'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
+  'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf',
   'enviarOrden', 'compartirTextoOrden',
 ]
 
 const CONSTANTES_BASE = [
-  'ZONA_AR', 'DECIMALES_CAJAS', 'CLAVE_EMPRESA', 'CLAVE_BORRADOR', 'VISTAS', 'SUBTITULO_DE_VISTA', 'claveLotes',
+  'ZONA_AR', 'DECIMALES_CAJAS', 'CLAVE_EMPRESA', 'CLAVE_BORRADOR', 'VISTAS', 'SUBTITULO_DE_VISTA', 'claveLotes', 'claveLotesInsumo',
+  'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'CLAVE_INSUMOS_ORDENES', 'DIAS_MEMORIA_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
 

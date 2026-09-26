@@ -31,6 +31,7 @@ const CAT = {
     { id: 'pr2', producto_id: 'p1', nombre: 'Caja x 100 con cono', con_cono: true, unidades_por_caja: 100 },
   ],
   marcas: [{ id: 'm1', nombre: 'LOLO' }],
+  insumos: [{ id: 'ins-h', nombre: 'Harina 000', marca: 'Molino', unidad_medida: 'kg', activo: true }],
 }
 const ORDEN = { id: 'o1', numero: 12, codigo: 'N-0012', unidad_negocio_id: 'u-n', fecha: '2026-09-20', estado: 'confirmada', estado_valorizacion: 'pendiente',
   total: 0, moneda: 'ARS', cliente_id: 'c1', cargada_por: 'emp-9', cargada_en: '2026-09-20T15:00:00Z', transporte: 'Expreso Norte', observaciones: null }
@@ -341,6 +342,66 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   chequearMarcas(chk, 'selector de empresas', S.htmlEmpresas(), ['empresa'])
   d.valorizar = { precios: {}, desdeLista: new Set(), sinLista: false, saldo: 0, limite: null, cargando: false, error: marca('error-v'), errorGuardar: marca('error-g') }
   chequearMarcas(chk, 'valorizar', S.htmlValorizar(d), ['error-v', 'error-g'])
+}
+
+
+// ── Una orden con un renglón de INSUMO (materia prima de reventa) ───────────
+const ITEMS_INS = [
+  ITEMS[0],
+  { id: 'i3', orden: 2, presentacion_id: null, marca_id: null, cajas: null, unidades: null, insumo_id: 'ins-h', cantidad: 25.5, precio_caja: null, subtotal: null, lote: null },
+]
+const LISTA_INS = [...LISTA, { presentacion_id: null, insumo_id: 'ins-h', precio_caja: 100, vigente_desde: '2026-09-01' }]
+{
+  const S = nuevo()
+  preparar(S, { items: ITEMS_INS })
+  S.__tablas.lista_precios_items = LISTA_INS
+  S.estado.misTareas = new Map([['retiros:ver', { todas: true }], ['retiros:precios', { todas: true }], ['stock:ver', { todas: true }]])
+  S.__tablas.stock_movimientos = [{ insumo_id: 'ins-h', lote: 'H-10', cantidad: -25.5 }]
+  esperas.push(S.abrirOrden('o1').then(() => {
+    const h = S.__els.get('ad-orden-cuerpo').innerHTML
+    chk('el renglón de insumo muestra su cantidad y unidad', /25,5 kg · Harina 000 · Molino/.test(h))
+    chk('los lotes del insumo salen de stock_movimientos, con stock:ver', /lotes H-10 \(25,5 kg\)/.test(h) &&
+      S.__llamadas.consultas.some(c => c[0] === 'stock_movimientos' && c[1].some(f => f[0] === 'eq' && f[1] === 'orden_retiro_id' && f[2] === 'o1')))
+    return S.abrirValorizar()
+  }).then(() => {
+    const v = S.estado.orden.valorizar
+    const selDe = (tabla) => ((S.__llamadas.consultas.find(c => c[0] === tabla) || [null, []])[1].find(f => f[0] === 'select') || [null, ''])[1]
+    chk('los renglones se leen con el insumo y su cantidad (se afirma sobre el select)', /insumo_id/.test(selDe('orden_retiro_items')) && /cantidad/.test(selDe('orden_retiro_items')))
+    chk('los precios de la lista se leen con el insumo', /insumo_id/.test(selDe('lista_precios_items')))
+    chk('valorizar trae el precio del insumo de la lista del cliente', v.precios.i3 === 100 && v.desdeLista.has('i3'))
+    chk('el subtotal del insumo es precio por CANTIDAD', S.subtotalValorizar(S.estado.orden, ITEMS_INS[1]) === 2550)
+    chk('el total suma cajas y cantidad', S.totalValorizar(S.estado.orden) === 30000 + 2550)
+    const h = S.__els.get('ad-orden-cuerpo').innerHTML
+    chk('el precio del insumo se pide "x kg"', /Precio x kg/.test(h) && /Precio x caja/.test(h))
+    const pv = S.parametrosValorizar(S.estado.orden)
+    chk('se manda el precio de cada renglón, también el del insumo', pv.p_precios.i1 === 3000 && pv.p_precios.i3 === 100)
+    const hoja = S.htmlHoja(S.ordenParaHoja(S.estado.orden), { conPrecios: true })
+    chk('la hoja con precios lleva el insumo con su cantidad', /Harina 000 · Molino/.test(hoja) && /25,5 kg/.test(hoja))
+  }))
+}
+{
+  const S = nuevo()
+  preparar(S, { items: ITEMS_INS })
+  S.estado.misTareas = new Map([['retiros:ver', { todas: true }], ['produccion:ver', null]])
+  esperas.push(S.abrirOrden('o1').then(() => {
+    chk('sin stock:ver no se consultan los lotes de los insumos', !S.__llamadas.consultas.some(c => c[0] === 'stock_movimientos'))
+    chk('y el renglón lo dice', /Insumo · lotes: no se pueden ver con tu usuario/.test(S.__els.get('ad-orden-cuerpo').innerHTML))
+  }))
+}
+{
+  const S = nuevo()
+  chk('la cantidad valorizable: cajas o cantidad del insumo', S.cantidadValorizable(ITEMS[0]) === 10 && S.cantidadValorizable(ITEMS_INS[1]) === 25.5)
+  chk('el precio vigente de un insumo por su clave', S.preciosVigentes(LISTA_INS, '2026-09-20').get('ins:ins-h') === 100)
+  const S2 = nuevo()
+  S2.estado.catalogo = { ...CAT, insumos: [{ id: 'ins-x', nombre: marca('ins-nombre'), marca: marca('ins-marca'), unidad_medida: marca('ins-unidad') }] }
+  S2.estado.clientes = CLIENTES
+  const d = { orden: ORDEN, items: [{ id: 'ix', insumo_id: 'ins-x', cantidad: 2, precio_caja: 1, subtotal: 2 }], lotes: [], lotesInsumos: [{ insumo_id: 'ins-x', lote: marca('ins-lote'), cantidad: -2 }], valorizar: null }
+  chequearMarcas(chk, 'detalle con un insumo', S2.htmlDetalleOrden(d, S2.estado.catalogo), ['ins-nombre', 'ins-marca', 'ins-unidad', 'ins-lote'])
+  d.valorizar = { precios: { ix: 1 }, desdeLista: new Set(), sinLista: false, saldo: null, limite: null }
+  chequearMarcas(chk, 'valorizar un insumo', S2.htmlDetalleOrden(d, S2.estado.catalogo), ['ins-unidad'])
+  const valorizada = { ...d, valorizar: null, orden: { ...ORDEN, estado_valorizacion: 'valorizada', total: 2 } }
+  chequearMarcas(chk, 'insumo valorizado', S2.htmlDetalleOrden(valorizada, S2.estado.catalogo), ['ins-unidad'])
+  chequearMarcas(chk, 'fila de orden con insumos', S2.htmlFilaOrden({ ...ORDEN, cliente_id: 'c1', cajas: 0, insumos: 2, codigo: marca('codigo-ins') }), ['codigo-ins'])
 }
 
 fin()

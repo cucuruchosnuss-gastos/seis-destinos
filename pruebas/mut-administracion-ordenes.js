@@ -64,7 +64,15 @@ correrMutaciones({
     { nombre: 'los lotes de otro cono', de: "      return lotes.filter(l => l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))", a: '      return lotes.filter(l => l.presentacion_id === it.presentacion_id)' },
     // Valorizar
     { nombre: 'vale un precio posterior al retiro', de: "        if (!esFechaIso(x.vigente_desde) || x.vigente_desde > fecha) continue", a: '        if (!esFechaIso(x.vigente_desde)) continue' },
-    { nombre: 'toma el precio más viejo', de: '        if (!a || x.vigente_desde > a.vigente_desde) porPresentacion.set(x.presentacion_id, x)', a: '        if (!a) porPresentacion.set(x.presentacion_id, x)' },
+    { nombre: 'toma el precio más viejo', de: '        if (!a || x.vigente_desde > a.vigente_desde) porClave.set(k, x)', a: '        if (!a) porClave.set(k, x)' },
+    { nombre: 'el precio de un insumo se busca por presentación', de: "      return x?.insumo_id ? 'ins:' + x.insumo_id : x?.presentacion_id", a: '      return x?.presentacion_id' },
+    { nombre: 'los precios de la lista sin los insumos', de: ".select('presentacion_id, insumo_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)", a: ".select('presentacion_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)" },
+    { nombre: 'el insumo se valoriza por cajas', de: '      return it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)', a: '      return Number(it?.cajas)' },
+    { nombre: 'los renglones se leen sin la cantidad', de: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote')", a: ".select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, precio_caja, subtotal, lote')" },
+    { nombre: 'los lotes de los insumos sin stock:ver', de: "      if ((items ?? []).some(it => it.insumo_id) && puedeEn('stock', 'ver', o.unidad_negocio_id)) {", a: "      if ((items ?? []).some(it => it.insumo_id)) {" },
+    { nombre: 'el insumo se dibuja como producto', de: '      if (it.insumo_id) {\n        // Un INSUMO de reventa', a: '      if (false) {\n        // Un INSUMO de reventa' },
+    { nombre: 'el precio del insumo se pide x caja', de: "        porQue = unidadHoja(pi.unidad) || 'unidad'", a: "        porQue = 'caja'" },
+    { nombre: 'la hoja dibuja el insumo como producto', de: '          if (it.insumo_id) {\n            const pi = partesInsumo(estado.catalogo, it)', a: '          if (false) {\n            const pi = partesInsumo(estado.catalogo, it)' },
     { nombre: 'corregir arranca de la lista', de: "          if (o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined) v.precios[it.id] = Number(it.precio_caja)\n          else if", a: '          if' },
     { nombre: 'la corrección no descuenta lo anterior', de: "      const anterior = d.orden.estado_valorizacion === 'valorizada' ? Number(d.orden.total) || 0 : 0", a: '      const anterior = 0' },
     { nombre: 'el aviso del límite con >=', de: '      if (!(Number(saldo) > Number(limite))) return null', a: '      if (!(Number(saldo) >= Number(limite) - 1000000)) return null' },
@@ -74,13 +82,13 @@ correrMutaciones({
     { nombre: 'se mandan solo los corregidos', de: '      for (const it of d.items) precios[it.id] = d.valorizar.precios[it.id]', a: '      for (const it of d.items) if (!d.valorizar.desdeLista.has(it.id)) precios[it.id] = d.valorizar.precios[it.id]' },
     { nombre: 'el error de valorizar se tapa', de: "        v.errorGuardar = err?.message || 'No se pudo valorizar. Probá de nuevo.'", a: "        v.errorGuardar = 'No se pudo valorizar. Probá de nuevo.'" },
     { nombre: 'supera el límite y no se avisa', de: '        const aviso = data?.supera_limite ? avisoLimite(data.saldo_cliente, data.limite_credito, data.moneda) : null', a: '        const aviso = null' },
-    { nombre: 'el subtotal no multiplica las cajas', de: '      return p === null || p === undefined ? null : Math.round(p * Number(it.cajas) * 100) / 100', a: '      return p === null || p === undefined ? null : p' },
+    { nombre: 'el subtotal no multiplica las cajas', de: '      return p === null || p === undefined ? null : Math.round(p * cantidadValorizable(it) * 100) / 100', a: '      return p === null || p === undefined ? null : p' },
     // Anular
     { nombre: 'anular sin motivo', de: "      if (motivo.length < LARGO_MINIMO_MOTIVO) { d.anular.error = 'Escribí por qué se anula la orden.'; pintarAccionesOrden(); return }\n", a: '' },
     { nombre: 'el motivo sin limpiar', de: "      const motivo = limpio(document.getElementById('ad-anular-motivo').value)", a: "      const motivo = document.getElementById('ad-anular-motivo').value" },
     // La hoja
     { nombre: 'imprimir sin precios', de: "htmlHoja(ordenParaHoja(d), { conPrecios: true, copias: COPIAS_IMPRESION })", a: "htmlHoja(ordenParaHoja(d), { conPrecios: false, copias: COPIAS_IMPRESION })" },
-    { nombre: 'sin valorizar la hoja inventa precios', de: "            precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,", a: '            precio: it.precio_caja ?? 0,' },
+    { nombre: 'sin valorizar la hoja inventa precios', de: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,", a: "          return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],\n            precio: it.precio_caja ?? 0," },
     { nombre: 'la hoja sin quién cargó', de: "        cargadaPor: estado.nombres.get(o.cargada_por) ?? '',", a: "        cargadaPor: ''," },
   ],
 })

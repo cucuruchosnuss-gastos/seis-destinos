@@ -199,6 +199,42 @@ function conPdfFalso(S) {
   esperas.push(T.compartirTextoOrden(ORDEN).then(r => chk('sin share, se copia', r.modo === 'copiado' && copiado === T.textoOrden(ORDEN))))
 }
 
+// ── Los renglones de INSUMOS (materia prima, cajas, bolsas de reventa) ─────
+const MIXTA = {
+  ...ORDEN, total: 47500,
+  renglones: [
+    ORDEN.renglones[0],
+    { esInsumo: true, producto: 'Harina 000', marca: 'Molino Cañuelas', cantidad: 25.5, unidad: 'kg', lotes: [{ lote: 'H-10', cantidad: 25.5 }], precio: 100, subtotal: 2550 },
+    { esInsumo: true, producto: 'Caja N°1', marca: null, cantidad: 300, unidad: 'un', lotes: [], precio: null, subtotal: null },
+  ],
+}
+{
+  const S = nuevo()
+  const h = S.htmlHoja(MIXTA, { conPrecios: false })
+  chk('la hoja muestra el insumo con su nombre y marca', /Harina 000 · Molino Cañuelas/.test(h))
+  chk('con su cantidad y su unidad, no en cajas', /rh-num rh-cajas">25,5 kg</.test(h) && /rh-num rh-cajas">300 un\.</.test(h))
+  chk('los decimales de los kilos con coma y las unidades enteras', !/25\.5/.test(h))
+  chk('el encabezado dice que la columna lleva cajas o cantidad', /Cajas \/ cant\./.test(h))
+  chk('los insumos no suman al total de cajas', /Total de cajas<\/td><td class="rh-num rh-cajas">10</.test(h))
+  chk('el lote del insumo con su cantidad', /H-10 \(25,5 kg\)/.test(h))
+  chk('un insumo no tiene unidades de producto', /<tr class="rh-insumo">(?:(?!<\/tr>).)*<td class="rh-num">—<\/td>/.test(h))
+  chk('sin precios aunque el insumo los traiga', !/Precio|Subtotal|\$|2\.550/.test(h))
+  const hp = S.htmlHoja(MIXTA, { conPrecios: true })
+  chk('con precios, el insumo va por su unidad', /\$\s100,00 \/ kg/.test(hp) && /\$\s2\.550,00/.test(hp))
+  chk('un insumo sin precio dice "—", nunca $ 0,00', /<tr class="rh-insumo"><td>Caja N°1<\/td>(?:(?!<\/tr>).)*<td class="rh-num">—<\/td><td class="rh-num">—<\/td><\/tr>/.test(hp) && !/\$\s0,00/.test(hp))
+  chk('con insumos, el encabezado del precio es genérico', /<th class="rh-num">Precio<\/th>/.test(hp))
+  const sinInsumos = S.htmlHoja(ORDEN, { conPrecios: true })
+  chk('sin insumos la hoja queda como antes', /Precio x caja/.test(sinInsumos) && !/Cajas \/ cant\./.test(sinInsumos) && /<td colspan="3">Total<\/td>/.test(sinInsumos))
+  chk('el total de unidades cuenta solo los productos', S.totalUnidadesOrden(MIXTA) === 1000)
+  const t = S.textoOrden(MIXTA)
+  chk('el texto para compartir lleva el insumo con su cantidad', /- 25,5 kg · Harina 000 · Molino Cañuelas \(lotes H-10 \(25,5 kg\)\)/.test(t) && /- 300 un\. · Caja N°1/.test(t))
+  chk('y el total dice cuántos renglones de insumos', /Total: 10 cajas y 2 renglones de materia prima e insumos/.test(t))
+  chk('el texto nunca lleva precios', !/\$|100,00|2\.550/.test(t))
+  chk('una cantidad ausente es "—", nunca "0 kg"', S.cantidadInsumoHoja(null, 'kg') === '—' && S.cantidadInsumoHoja('', 'kg') === '—')
+  chk('lo que se cuenta de a unidades va sin decimales', S.decimalesDeUnidad('un') === 0 && S.cantidadInsumoHoja(12.4, 'un') === '12 un.' && S.decimalesDeUnidad('lt') === 3)
+  chk('kilos hasta 3 decimales', S.cantidadInsumoHoja(1.2346, 'kg') === '1,235 kg' && S.cantidadInsumoHoja(1500, 'kg') === '1.500 kg')
+}
+
 // ── HTML malicioso en la hoja y en el texto ─────────────────────────────────
 {
   const S = nuevo()
@@ -211,6 +247,8 @@ function conPdfFalso(S) {
   }
   chequearMarcas(chk, 'hoja con precios', S.htmlHoja(mala, { conPrecios: true }),
     ['codigo', 'cargo', 'transporte', 'obs', 'emp-nombre', 'emp-rs', 'emp-cuit', 'emp-dom', 'emp-tel', 'cli-nombre', 'cli-rs', 'cli-cuit', 'cli-dom', 'cli-loc', 'producto', 'presentacion', 'cono', 'lote'])
+  const malaInsumo = { ...mala, renglones: [{ esInsumo: true, producto: marca('ins-nombre'), marca: marca('ins-marca'), cantidad: 3, unidad: marca('ins-unidad'), lotes: [{ lote: marca('ins-lote'), cantidad: 1 }], precio: 1, subtotal: 1 }] }
+  chequearMarcas(chk, 'hoja con un insumo', S.htmlHoja(malaInsumo, { conPrecios: true }), ['ins-nombre', 'ins-marca', 'ins-unidad', 'ins-lote'])
   chk('el rótulo de la copia también se escapa', /&lt;b data-xss=&quot;rotulo&quot;&gt;/.test(S.htmlHoja(mala, { copias: [marca('rotulo')] })))
 }
 

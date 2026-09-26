@@ -20,20 +20,26 @@ console.log(`ARCHIVO ${ARCHIVO} (${src.length} bytes)`)
 const { chk, esperas, fin } = arnes()
 const nuevo = () => construirRetiros(ARCHIVO)
 
+// El catálogo como lo arma catalogoDesdeRpc(): productos con su categoría,
+// presentaciones con su stock en cajas, y los insumos con stock.
 const CAT = {
   productos: [
-    { id: 'p-cuc', nombre: 'Cucurucho grande', tipo_masa: 'Común', orden: 1 },
-    { id: 'p-cho', nombre: 'Cucurucho choco', tipo_masa: 'Chocolate', orden: 2 },
-    { id: 'p-cap', nombre: 'Capelina', tipo_masa: 'Común', orden: 3 },
+    { id: 'p-cuc', nombre: 'Cucurucho grande', categoria: 'cucuruchones' },
+    { id: 'p-cap', nombre: 'Capelina', categoria: 'barquillos' },
+    { id: 'p-cho', nombre: 'Cannoli', categoria: 'especiales' },
   ],
   presentaciones: [
-    { id: 'pr-cuc-sin', producto_id: 'p-cuc', nombre: 'Caja x 100', con_cono: false, unidades_por_caja: 100 },
-    { id: 'pr-cuc-con', producto_id: 'p-cuc', nombre: 'Caja x 100 con cono', con_cono: true, unidades_por_caja: 100 },
-    { id: 'pr-cho-sin', producto_id: 'p-cho', nombre: 'Caja x 50', con_cono: false, unidades_por_caja: 50 },
-    { id: 'pr-cap-a', producto_id: 'p-cap', nombre: 'Caja x 200', con_cono: false, unidades_por_caja: 200 },
-    { id: 'pr-cap-b', producto_id: 'p-cap', nombre: 'Media caja', con_cono: false, unidades_por_caja: 100 },
+    { id: 'pr-cuc-sin', producto_id: 'p-cuc', nombre: 'Caja x 100', con_cono: false, unidades_por_caja: 100, stock_cajas: 40 },
+    { id: 'pr-cuc-con', producto_id: 'p-cuc', nombre: 'Caja x 100 con cono', con_cono: true, unidades_por_caja: 100, stock_cajas: 5 },
+    { id: 'pr-cho-sin', producto_id: 'p-cho', nombre: 'Caja x 50', con_cono: false, unidades_por_caja: 50, stock_cajas: 0 },
+    { id: 'pr-cap-a', producto_id: 'p-cap', nombre: 'Caja x 200', con_cono: false, unidades_por_caja: 200, stock_cajas: 12 },
+    { id: 'pr-cap-b', producto_id: 'p-cap', nombre: 'Media caja', con_cono: false, unidades_por_caja: 100, stock_cajas: 3 },
   ],
   marcas: [{ id: 'm-lolo', nombre: 'LOLO', estado_alta: 'aprobada' }],
+  insumos: [
+    { id: 'i-har', nombre: 'Harina 000', marca: 'Molino Cañuelas', categoria: 'Harinas', unidad_medida: 'kg', stock: 250 },
+    { id: 'i-caj', nombre: 'Caja N°1', marca: 'Nuss', categoria: 'Cajas', unidad_medida: 'un', stock: 300 },
+  ],
 }
 const CLIENTES = [
   { id: 'c1', nombre: 'Distribuidora Anatolia', razon_social: 'ANATOLIA SRL', apodos: ['el Turco'], cuit: '30712345678', domicilio: 'Av. Siempreviva 742', localidad: 'Córdoba', email: 'compras@anatolia.com', transporte_habitual: 'Expreso Norte', activo: true },
@@ -168,8 +174,13 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   S.elegirConoRenglon(0, false)
   chk('volver a sin cono olvida el cono', r.marcaId === null)
   const hp = S.htmlProductosRenglon(0, CAT)
-  chk('el chocolate va abajo, separado por una línea', hp.indexOf('p-cho') > hp.indexOf('rt-separador') && hp.indexOf('rt-separador') > hp.indexOf('p-cap'))
-  chk('lo decide el tipo de masa', S.esProductoChocolate({ tipo_masa: 'Chocolate' }) && !S.esProductoChocolate({ nombre: 'Chocolatoso', tipo_masa: 'Común' }))
+  const pos = (t) => hp.indexOf(t)
+  chk('los productos van por categoría: Cucuruchones, Barquillos, Especiales', pos('>Cucuruchones<') !== -1 && pos('>Cucuruchones<') < pos('p-cuc') &&
+    pos('p-cuc') < pos('>Barquillos<') && pos('>Barquillos<') < pos('p-cap') && pos('p-cap') < pos('>Especiales<') && pos('>Especiales<') < pos('p-cho'))
+  chk('los insumos van AL FINAL, separados', pos('>Materia prima e insumos<') > pos('p-cho') && pos('>Materia prima e insumos<') < pos('data-r-insumo="0" data-id="i-har"'))
+  chk('un grupo sin productos no dibuja su encabezado', !/>Pasta</.test(hp))
+  chk('cada producto dice su stock en cajas', /hay 45 cajas/.test(hp))
+  chk('cada insumo dice su marca y su stock en su unidad', /Molino Cañuelas · hay 250 kg/.test(hp) && /hay 300 un\./.test(hp))
   S.elegirProductoRenglon(0, 'p-cap')
   chk('con dos presentaciones no se elige sola', r.presentacionId === null)
   S.elegirPresentacionRenglon(0, 'pr-cuc-sin')
@@ -199,38 +210,44 @@ function cargarRenglon(S, i = 0, cajas = 10) {
 // ── Los lotes: opcionales, los más viejos primero ───────────────────────────
 {
   const S = nuevo()
-  const movs = [
-    { lote: '7030-1', cajas: 20, fecha: '2026-09-20', created_at: '2026-09-20T10:00:00Z' },
-    { lote: '7030-1', cajas: -5, fecha: '2026-09-21', created_at: '2026-09-21T10:00:00Z' },
-    { lote: '7010-2', cajas: 8, fecha: '2026-09-10', created_at: '2026-09-10T10:00:00Z' },
-    { lote: '7001-1', cajas: 4, fecha: '2026-09-01', created_at: '2026-09-01T10:00:00Z' },
-    { lote: '7001-1', cajas: -4, fecha: '2026-09-02', created_at: '2026-09-02T10:00:00Z' },
-    { lote: 'SIN STOCK', cajas: -3, fecha: '2026-09-22', created_at: '2026-09-22T10:00:00Z' },
-    // Aunque quedara con saldo (una anulación que devuelve), no es un lote.
-    { lote: 'SIN STOCK', cajas: 5, fecha: '2026-09-23', created_at: '2026-09-23T10:00:00Z' },
+  // Lo que devuelve lotes_para_retiro(): ya con stock y en el orden de la base.
+  const filas = [
+    { lote: '7010-2', cajas: 8, desde: '2026-09-10' },
+    { lote: 'SIN STOCK', cajas: 2, desde: '2026-09-11' },
+    { lote: '7030-1', cajas: 15, desde: '2026-09-20' },
+    { lote: '7031-1', cajas: 0, desde: '2026-09-21' },
   ]
-  const l = S.lotesConStock(movs)
-  chk('solo los lotes con stock (sin el agotado)', l.map(x => x.lote).join() === '7010-2,7030-1')
-  chk('los más viejos primero', l[0].lote === '7010-2')
-  chk('con su saldo', l.find(x => x.lote === '7030-1').saldo === 15)
+  const l = S.lotesDeRetiro(filas)
+  chk('los lotes de producto respetan el orden de la base (los más viejos primero)', l.map(x => x.lote).join() === '7010-2,7030-1')
+  chk('con su saldo en cajas', l.find(x => x.lote === '7030-1').saldo === 15)
   chk('"SIN STOCK" no es un lote para elegir', !l.some(x => x.lote === 'SIN STOCK'))
+  chk('un lote sin cajas no se ofrece', !l.some(x => x.lote === '7031-1'))
+  // v_stock_por_lote: una fila por (lote, presentación).
+  const li = S.lotesDeInsumo([
+    { lote: 'H-20', saldo: 100, desde: '2026-09-20' },
+    { lote: 'H-10', saldo: 25, desde: '2026-09-10' },
+    { lote: 'H-20', saldo: 50, desde: '2026-09-22' },
+    { lote: null, saldo: 30, desde: '2026-09-01' },
+    { lote: 'H-05', saldo: -5, desde: '2026-09-05' },
+  ])
+  chk('los lotes de un insumo se suman por lote', li.find(x => x.lote === 'H-20').saldo === 150)
+  chk('y van los más viejos primero, sin los agotados ni los sin lote', li.map(x => x.lote).join() === 'H-10,H-20')
 }
 {
   const S = nuevo()
-  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', { unidades: ['u-n'] }]])
+  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }]])
   const f = conEmpresa(S)
   cargarRenglon(S)
-  let filtros = null
-  S.__tablas.stock_terminado_movimientos = (fl) => { filtros = fl; return { data: [
-    { lote: '7010-2', cajas: 8, fecha: '2026-09-10', created_at: '2026-09-10T10:00:00Z' },
-    { lote: '7030-1', cajas: 15, fecha: '2026-09-20', created_at: '2026-09-20T10:00:00Z' }], error: null } }
-  chk('con stock:ver se pueden ver los lotes', S.puedeVerLotes() === true)
+  let params = null
+  S.__setRpc(async (n, p) => {
+    if (n === 'lotes_para_retiro') { params = p; return { data: [{ lote: '7010-2', cajas: 8, desde: '2026-09-10' }, { lote: '7030-1', cajas: 15, desde: '2026-09-20' }], error: null } }
+    return { data: null, error: null }
+  })
   S.abrirLotes(0)
   esperas.push(new Promise(r => setTimeout(r, 0)).then(() => {
-    chk('los lotes se leen de esa empresa, presentación y cono (sin cono = marca null)', filtros &&
-      filtros.some(x => x[0] === 'eq' && x[1] === 'unidad_negocio_id' && x[2] === 'u-n') &&
-      filtros.some(x => x[0] === 'eq' && x[1] === 'presentacion_id' && x[2] === 'pr-cuc-sin') &&
-      filtros.some(x => x[0] === 'is' && x[1] === 'marca_id' && x[2] === null))
+    chk('SOLO con retiros:cargar, los lotes de producto se leen con lotes_para_retiro()', !!params)
+    chk('de esa empresa, presentación y cono (sin cono = marca null)', params && params.p_unidad_negocio_id === 'u-n' && params.p_presentacion_id === 'pr-cuc-sin' && params.p_marca_id === null)
+    chk('sin tocar la tabla stock_terminado_movimientos', !S.__llamadas.consultas.some(c => c[0] === 'stock_terminado_movimientos'))
     const h = S.htmlLoteRenglon(f.renglones[0], 0)
     chk('se ofrecen los lotes con su saldo', /data-lote="7010-2"/.test(h) && /data-lote="7030-1"/.test(h) && /15 cajas/.test(h))
     S.elegirLote(0, 'no-existe')
@@ -250,17 +267,170 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   }))
 }
 {
+  // Un INSUMO sin stock:ver: los lotes no se pueden ver y se dice.
   const S = nuevo()
   S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }]])
   const f = conEmpresa(S)
-  cargarRenglon(S)
-  chk('solo con retiros:cargar NO se pueden ver los lotes', S.puedeVerLotes() === false)
+  S.elegirInsumoRenglon(0, 'i-har')
+  chk('solo con retiros:cargar NO se ven los lotes de un insumo', S.puedeVerLotesInsumo() === false)
   S.abrirLotes(0)
-  chk('y "Elegir lote" lo dice en vez de mostrar una lista vacía', /no se pueden ver los lotes/.test(S.htmlLoteRenglon(f.renglones[0], 0)))
+  chk('y "Elegir lote" lo dice en vez de mostrar una lista vacía', /no se pueden ver los lotes de materia prima e insumos/.test(S.htmlLoteRenglon(f.renglones[0], 0)))
   esperas.push(new Promise(r => setTimeout(r, 0)).then(() =>
-    chk('sin consultar la tabla (las filas no llegarían y se leería "no hay")', !S.__llamadas.consultas.some(c => c[0] === 'stock_terminado_movimientos'))))
-  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['produccion:ver', null]])
-  chk('con una tarea de Producción sí', S.puedeVerLotes() === true)
+    chk('sin consultar v_stock_por_lote (las filas no llegarían y se leería "no hay")', !S.__llamadas.consultas.some(c => c[0] === 'v_stock_por_lote'))))
+  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', { unidades: ['u-d'] }]])
+  chk('stock:ver en OTRA empresa no alcanza', S.puedeVerLotesInsumo() === false)
+  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', null]])
+  chk('stock:ver sin alcance no alcanza (la misma regla que tiene_tarea_alcance)', S.puedeVerLotesInsumo() === false)
+}
+{
+  // Un INSUMO con stock:ver en la empresa: los lotes de v_stock_por_lote.
+  const S = nuevo()
+  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', { unidades: ['u-n'] }]])
+  const f = conEmpresa(S)
+  S.elegirInsumoRenglon(0, 'i-har')
+  f.renglones[0].cantidad = 30
+  let filtros = null
+  S.__tablas.v_stock_por_lote = (fl) => { filtros = fl; return { data: [
+    { lote: 'H-10', saldo: 25, desde: '2026-09-10' }, { lote: 'H-20', saldo: 150, desde: '2026-09-20' }], error: null } }
+  S.abrirLotes(0)
+  esperas.push(new Promise(r => setTimeout(r, 0)).then(() => {
+    chk('los lotes de un insumo se leen de v_stock_por_lote, de esa empresa y ese insumo', filtros &&
+      filtros.some(x => x[0] === 'eq' && x[1] === 'unidad_negocio_id' && x[2] === 'u-n') &&
+      filtros.some(x => x[0] === 'eq' && x[1] === 'insumo_id' && x[2] === 'i-har'))
+    chk('sin llamar a lotes_para_retiro (esa es de producto)', !S.__llamadas.rpc.some(x => x[0] === 'lotes_para_retiro'))
+    const h = S.htmlLoteRenglon(f.renglones[0], 0)
+    chk('se ofrecen con su saldo en la unidad del insumo', /data-lote="H-10"/.test(h) && /150 kg/.test(h))
+    S.elegirLote(0, 'H-20')
+    chk('el payload del insumo lleva el lote elegido', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"insumo_id":"i-har","cantidad":30,"lote":"H-20"}')
+  }))
+}
+
+// ── Los renglones de INSUMO (materia prima, cajas, bolsas de reventa) ───────
+{
+  const S = nuevo()
+  const f = conEmpresa(S)
+  S.elegirCliente('c1')
+  cargarRenglon(S, 0, 10)
+  S.agregarRenglon()
+  S.elegirInsumoRenglon(1, 'i-har')
+  const r = f.renglones[1]
+  chk('elegir un insumo lo guarda con su nombre, marca y unidad', r.insumoId === 'i-har' && r.insumoNombre === 'Harina 000' && r.insumoMarca === 'Molino Cañuelas' && r.unidad === 'kg')
+  chk('un insumo sin cantidad falta', S.faltanRenglon(r) === 'poné la cantidad')
+  r.cantidad = 12.5
+  chk('kilos con decimales pasan', S.faltanRenglon(r) === null)
+  const h = S.htmlRenglon(r, 1, CAT, false)
+  chk('el renglón de insumo pide la CANTIDAD con su unidad, no cajas', /data-r-cantidad="1"/.test(h) && /Cantidad \(kg\)/.test(h) && !/data-r-cajas/.test(h))
+  chk('y no ofrece cono ni presentación', !/data-r-cono/.test(h) && !/data-r-presentacion/.test(h))
+  chk('dice que es un insumo', /rt-sello--insumo/.test(h))
+  const p = S.parametrosRegistrar(f)
+  chk('el renglón de insumo viaja con insumo_id y cantidad', JSON.stringify(p.p_items[1]) === '{"insumo_id":"i-har","cantidad":12.5}')
+  chk('SIN cajas ni presentación ni cono', !('cajas' in p.p_items[1]) && !('presentacion_id' in p.p_items[1]) && !('marca_id' in p.p_items[1]))
+  chk('y el de producto sigue igual', JSON.stringify(p.p_items[0]) === '{"presentacion_id":"pr-cuc-sin","marca_id":null,"cajas":10}')
+  chk('NINGÚN dato de plata en el payload con insumos', !/precio|importe|total|saldo|subtotal|credito|lista/i.test(JSON.stringify(p)))
+  chk('los insumos no suman cajas', S.totalCajasForm(f) === 10)
+  chk('la cuenta dice los productos, las cajas y los insumos', S.textoCuentaForm(f) === '1 producto · 10 cajas · 1 de materia prima e insumos')
+  S.revisar()
+  const res = S.__els.get('rt-resumen').innerHTML
+  chk('el resumen muestra el insumo con su cantidad y unidad', /Harina 000 · Molino Cañuelas/.test(res) && /12,5 kg/.test(res))
+  chk('y el total dice las cajas y los insumos', /Total: 10 cajas · 1 de materia prima e insumos/.test(res))
+  // Unidades enteras
+  S.estado.vista = 'rt-vista-form'
+  S.elegirInsumoRenglon(1, 'i-caj')
+  chk('elegir otro insumo resetea la cantidad', f.renglones[1].cantidad === null && f.renglones[1].unidad === 'un')
+  f.renglones[1].cantidad = 2.5
+  chk('lo que se cuenta de a unidades no admite decimales', S.faltanRenglon(f.renglones[1]) === 'poné la cantidad en unidades enteras')
+  f.renglones[1].cantidad = 300
+  chk('trescientas unidades pasan', S.faltanRenglon(f.renglones[1]) === null)
+  S.cambiarProductoRenglon(1)
+  chk('"Cambiar" suelta el insumo', f.renglones[1].insumoId === null && f.renglones[1].unidad === null && f.renglones[1].cantidad === null)
+  S.elegirInsumoRenglon(1, 'no-existe')
+  chk('un insumo que no está en el catálogo no se elige', f.renglones[1].insumoId === null)
+}
+{
+  // El buscador filtra TODO junto.
+  const S = nuevo()
+  const f = conEmpresa(S)
+  chk('sin búsqueda, todos los grupos', S.gruposCatalogo(CAT, '').map(g => g.titulo).join() === 'Cucuruchones,Barquillos,Especiales,Materia prima e insumos')
+  chk('"harina" encuentra el insumo (sin acentos ni mayúsculas)', S.gruposCatalogo(CAT, 'HARÍNA').map(g => g.titulo).join() === 'Materia prima e insumos')
+  chk('por marca del insumo', S.gruposCatalogo(CAT, 'cañuelas')[0].lista.map(x => x.id).join() === 'i-har')
+  chk('por nombre de una presentación', S.gruposCatalogo(CAT, 'media caja').map(g => g.lista.map(x => x.id).join()).join() === 'p-cap')
+  chk('"caja" encuentra productos Y el insumo Caja N°1', S.gruposCatalogo(CAT, 'caja').some(g => g.tipo === 'insumos' && g.lista.some(x => x.id === 'i-caj')) &&
+    S.gruposCatalogo(CAT, 'caja').some(g => g.tipo === 'productos'))
+  chk('lo que no coincide lo dice', /Nada coincide con «zzz»/.test(S.htmlProductosRenglon(0, CAT, 'zzz')))
+  const h = S.htmlRenglon(f.renglones[0], 0, CAT, false)
+  chk('un renglón sin elegir tiene el buscador', /data-r-buscar="0"/.test(h) && /data-r-opciones="0"/.test(h))
+  // Tipear redibuja SOLO las opciones (no se pierde el foco).
+  S.buscarCatalogoRenglon(0, 'harina')
+  chk('buscar guarda lo tipeado en el renglón', f.renglones[0].busqueda === 'harina')
+}
+{
+  // catalogoDesdeRpc(): lo que devuelve catalogo_para_retiro().
+  const S = nuevo()
+  const c = S.catalogoDesdeRpc({
+    productos: [
+      { presentacion_id: 'pp1', producto: 'Cucurucho Mini', presentacion: 'Caja x 600', categoria: 'cucuruchones', con_cono: false, unidades_por_caja: 600, stock_cajas: 12 },
+      { presentacion_id: 'pp2', producto: 'Cucurucho Mini', presentacion: 'Caja x 600 con cono', categoria: 'cucuruchones', con_cono: true, unidades_por_caja: 600, stock_cajas: 3 },
+      { presentacion_id: 'pp3', producto: 'Oblea', presentacion: 'Caja', categoria: 'rara', con_cono: false, unidades_por_caja: 10, stock_cajas: 0 },
+    ],
+    insumos: [{ insumo_id: 'ii1', nombre: 'Bolsa', marca: null, categoria: 'Bolsas', unidad_medida: 'un', stock: 5000 }],
+  }, [{ id: 'm1', nombre: 'LOLO' }])
+  chk('una fila por presentación arma UN producto con sus presentaciones', c.productos.length === 2 && c.presentaciones.filter(x => x.producto_id === c.productos[0].id).length === 2)
+  chk('una categoría que no es de la lista va a "Otros productos"', c.productos[1].categoria === null && S.gruposCatalogo(c, '').some(g => g.titulo === 'Otros productos'))
+  chk('los insumos vienen con su unidad y stock', c.insumos[0].id === 'ii1' && c.insumos[0].unidad_medida === 'un' && c.insumos[0].stock === 5000)
+  chk('los conos vienen de marcas_personalizadas', c.marcas[0].id === 'm1')
+  const v = S.catalogoDesdeRpc(null, null)
+  chk('sin permiso (null) da listas vacías, sin error', v.productos.length === 0 && v.insumos.length === 0 && v.marcas.length === 0)
+  const T = nuevo()
+  let pedido = null
+  T.__setRpc(async (n, p) => { if (n === 'catalogo_para_retiro') pedido = p; return { data: { productos: [], insumos: [] }, error: null } })
+  esperas.push(T.leerCatalogo('u-n').then(() => chk('el catálogo sale de catalogo_para_retiro() de la empresa', pedido && pedido.p_unidad_negocio_id === 'u-n')))
+}
+{
+  // Un borrador viejo (el id del producto en el formato anterior) se reconcilia.
+  const S = nuevo()
+  const f = conEmpresa(S)
+  f.renglones[0].productoId = '9f1c-uuid-viejo'
+  f.renglones[0].presentacionId = 'pr-cap-a'
+  S.reconciliarRenglones(f, CAT)
+  chk('un renglón de un borrador viejo toma el producto de su presentación', f.renglones[0].productoId === 'p-cap')
+}
+{
+  // Lo que faltó de un insumo.
+  const S = nuevo()
+  const h = S.htmlFaltantes([{ renglon: 2, insumo: 'Harina 000', pedidas: 30, faltaron: 5, unidad: 'kg' }])
+  chk('lo que faltó de un insumo se dice en su unidad', /Renglón 2: Harina 000 — faltaron 5 kg de 30 kg/.test(h))
+}
+{
+  // La hoja con insumos: los recuerda el celular y los intercala en su lugar.
+  const S = nuevo()
+  const f = conEmpresa(S)
+  S.elegirCliente('c1')
+  cargarRenglon(S, 0, 10)
+  S.agregarRenglon()
+  S.elegirInsumoRenglon(1, 'i-har')
+  f.renglones[1].cantidad = 30
+  S.agregarRenglon()
+  S.elegirProductoRenglon(2, 'p-cap')
+  S.elegirPresentacionRenglon(2, 'pr-cap-a')
+  f.renglones[2].cajas = 2
+  S.recordarInsumosDeOrden('o-9', f.renglones)
+  const mem = S.leerMemoriaInsumos()
+  chk('al confirmar se recuerdan los insumos de la orden, con su posición', mem['o-9'] && mem['o-9'].total === 3 && mem['o-9'].insumos[0].posicion === 1 && mem['o-9'].insumos[0].cantidad === 30)
+  const o = { orden_id: 'o-9', codigo: 'N-0009', fecha: '2026-09-26', cliente: 'Distribuidora Anatolia', renglones: [
+    { producto: 'Cucurucho grande', presentacion: 'Caja x 100', marca: null, cajas: 10, unidades: 1000, lotes: [] },
+    { producto: 'Capelina', presentacion: 'Caja x 200', marca: null, cajas: 2, unidades: 400, lotes: [] }] }
+  const rs = S.renglonesParaHoja(o, mem)
+  chk('la hoja intercala el insumo en su lugar', rs.length === 3 && !rs[0].esInsumo && rs[1].esInsumo && rs[1].cantidad === 30 && rs[1].unidad === 'kg' && rs[2].producto === 'Capelina')
+  const hoja = S.htmlHoja(S.ordenParaHoja(o), { conPrecios: false, copias: S.COPIAS_IMPRESION })
+  chk('la hoja impresa muestra el insumo con su cantidad y unidad', /Harina 000 · Molino Cañuelas/.test(hoja) && /30 kg/.test(hoja))
+  chk('la hoja sin precios sigue sin columnas de plata', !/Precio|Subtotal|\$/.test(hoja))
+  const texto = S.textoOrden(S.ordenParaHoja(o))
+  chk('el texto para compartir lleva el insumo', /- 30 kg · Harina 000 · Molino Cañuelas/.test(texto) && /y 1 renglón de materia prima e insumos/.test(texto))
+  chk('sin memoria de esa orden, solo los renglones de producto', S.renglonesParaHoja({ ...o, orden_id: 'o-otra' }, mem).length === 2)
+  chk('y "Mis retiros" avisa si la empresa vende insumos', S.faltanInsumosEnHoja({ orden_id: 'o-otra' }, mem) === true && S.faltanInsumosEnHoja(o, mem) === false)
+  S.estado.catalogo = { ...CAT, insumos: [] }
+  chk('una empresa sin insumos no avisa', S.faltanInsumosEnHoja({ orden_id: 'o-otra' }, mem) === false)
+  chk('una orden sin insumos no se recuerda', (S.recordarInsumosDeOrden('o-10', [f.renglones[0]]), !S.leerMemoriaInsumos()['o-10']))
 }
 
 // ── El payload, SIN PLATA, y el mismo uuid en cada reintento ─────────────────
@@ -332,6 +502,22 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     const err = S.__els.get('rt-confirmar-error')
     chk('un error de la base se muestra TAL CUAL, pegado al botón', err.textContent === 'Poné las cajas del renglón 1.' && err.hidden === false)
     chk('y la orden sigue', S.estado.form === f)
+  }))
+}
+
+{
+  // Confirmar una orden con insumos los deja recordados en el celular.
+  const S = nuevo()
+  const f = conEmpresa(S)
+  S.elegirCliente('c1')
+  S.elegirInsumoRenglon(0, 'i-har')
+  f.renglones[0].cantidad = 40
+  S.__setRpc(async (n) => n === 'registrar_orden_retiro'
+    ? { data: { orden_id: 'o-ins', numero: 20, codigo: 'N-0020', stock_insuficiente: [] }, error: null }
+    : { data: [], error: null })
+  esperas.push(S.confirmar().then(() => {
+    const m = S.leerMemoriaInsumos()['o-ins']
+    chk('al confirmar, los insumos de la orden quedan recordados para la hoja', !!m && m.insumos.length === 1 && m.insumos[0].nombre === 'Harina 000' && m.insumos[0].cantidad === 40)
   }))
 }
 
@@ -439,6 +625,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     productos: [{ id: 'p1', nombre: marca('producto'), tipo_masa: 'Común' }, { id: 'p2', nombre: marca('producto-choco'), tipo_masa: 'Chocolate' }],
     presentaciones: [{ id: 'pr1', producto_id: 'p1', nombre: marca('presentacion'), con_cono: true, unidades_por_caja: 10 }],
     marcas: [{ id: 'm1', nombre: marca('cono') }],
+    insumos: [{ id: 'i1', nombre: marca('insumo'), marca: marca('insumo-marca'), unidad_medida: 'kg', stock: 10 }],
   }
   S.estado.catalogo = cat
   S.estado.form = S.formVacio()
@@ -450,7 +637,20 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   S.estado.form.clienteId = 'c1'
   chequearMarcas(chk, 'cliente elegido', S.htmlClienteElegido(S.estado.form), ['cliente', 'razon'])
   const r = S.estado.form.renglones[0]
-  chequearMarcas(chk, 'productos', S.htmlProductosRenglon(0, cat), ['producto', 'producto-choco'])
+  chequearMarcas(chk, 'productos', S.htmlProductosRenglon(0, cat), ['producto', 'producto-choco', 'insumo', 'insumo-marca'])
+  chequearMarcas(chk, 'búsqueda sin resultados', S.htmlProductosRenglon(0, cat, marca('busca-cat')), ['busca-cat'])
+  S.estado.form.renglones[0].busqueda = marca('busqueda-renglon')
+  chequearMarcas(chk, 'buscador del renglón', S.htmlEleccionRenglon(S.estado.form.renglones[0], 0, cat), ['busqueda-renglon'])
+  S.estado.form.renglones[0].busqueda = ''
+  const ri = { ...S.renglonNuevo(), insumoId: 'i1', insumoNombre: marca('insumo'), insumoMarca: marca('insumo-marca'), unidad: marca('unidad'), cantidad: 3 }
+  chequearMarcas(chk, 'renglón de insumo', S.htmlRenglon(ri, 1, cat, true), ['insumo', 'insumo-marca', 'unidad'])
+  S.estado.misTareas = new Map([['retiros:cargar', { todas: true }], ['stock:ver', { todas: true }]])
+  S.estado.lotes.set(S.claveLotesInsumo('i1'), { cargando: false, error: null, lista: [{ lote: marca('lote-insumo'), saldo: 4, desde: '2026-09-01' }] })
+  ri.eligiendoLote = true
+  chequearMarcas(chk, 'lotes de un insumo', S.htmlLoteRenglon(ri, 1), ['lote-insumo', 'unidad'])
+  ri.eligiendoLote = false
+  chequearMarcas(chk, 'resumen con un insumo', S.htmlResumen({ ...S.estado.form, renglones: [ri] }, cat), ['insumo', 'insumo-marca', 'unidad'])
+  chequearMarcas(chk, 'faltantes de insumo', S.htmlFaltantes([{ renglon: 2, insumo: marca('f-insumo'), pedidas: 3, faltaron: 1, unidad: 'kg' }]), ['f-insumo'])
   r.productoId = 'p1'; r.conCono = true; r.presentacionId = 'pr1'; r.marcaBusqueda = marca('cono-buscado')
   chequearMarcas(chk, 'renglón con cono', S.htmlRenglon(r, 0, cat, true), ['producto', 'presentacion', 'cono-buscado'])
   r.marcaBusqueda = ''

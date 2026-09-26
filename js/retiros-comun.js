@@ -90,21 +90,65 @@ export function importeHoja(n, moneda = 'ARS') {
   return `${simbolo} ${formatearNumeroAr(Number(n), { decimales: 2 })}`
 }
 
-export function totalCajasOrden(orden) {
-  return (orden?.renglones ?? []).reduce((s, r) => s + (Number(r.cajas) || 0), 0)
+// ── Los renglones de INSUMOS (26/09/2026) ──────────────────────────────────
+// Una orden puede llevar, además de producto terminado (por cajas), insumos de
+// reventa —materia prima, cajas, bolsas— por CANTIDAD en su unidad de medida.
+// Un renglón de insumo lleva `esInsumo: true`, `cantidad` y `unidad`, y NO
+// tiene cajas ni unidades: no suma al total de cajas.
+export const NOMBRE_UNIDAD_HOJA = { kg: 'kg', lt: 'lt', un: 'un.' }
+
+// Kilos y litros hasta 3 decimales; lo que se cuenta de a unidades, enteros.
+export function decimalesDeUnidad(unidad) {
+  return unidad === 'un' ? 0 : 3
 }
 
+export function unidadHoja(unidad) {
+  const u = String(unidad ?? '').trim()
+  return NOMBRE_UNIDAD_HOJA[u] ?? u
+}
+
+// "25 kg", "12,5 kg", "300 un.". Ausente → "—", nunca "0 kg".
+export function cantidadInsumoHoja(n, unidad) {
+  if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'
+  const texto = formatearNumeroAr(Number(n), { decimales: decimalesDeUnidad(unidad), minimos: 0 })
+  const u = unidadHoja(unidad)
+  return u ? `${texto} ${u}` : texto
+}
+
+export function tieneInsumos(orden) {
+  return (orden?.renglones ?? []).some(r => r?.esInsumo === true)
+}
+
+export function totalCajasOrden(orden) {
+  return (orden?.renglones ?? []).reduce((s, r) => s + (r?.esInsumo ? 0 : (Number(r.cajas) || 0)), 0)
+}
+
+// Las unidades de los renglones de PRODUCTO (los de insumo no tienen).
 export function totalUnidadesOrden(orden) {
-  const rs = orden?.renglones ?? []
+  const rs = (orden?.renglones ?? []).filter(r => !r?.esInsumo)
   if (rs.some(r => r.unidades === null || r.unidades === undefined || r.unidades === '')) return null
   return rs.reduce((s, r) => s + (Number(r.unidades) || 0), 0)
 }
 
-// "7023-1 (6) · 7024-2 (4)". Los lotes son IDENTIFICADORES: van tal cual.
-export function textoLotes(lotes) {
+// "7023-1 (6) · 7024-2 (4)". Los lotes son IDENTIFICADORES: van tal cual. Con
+// `unidad` (un renglón de insumo) lo que va entre paréntesis es la cantidad en
+// esa unidad; un lote sin cantidad conocida va solo.
+export function textoLotes(lotes, unidad = null) {
   const lista = Array.isArray(lotes) ? lotes : []
   if (!lista.length) return '—'
-  return lista.map(l => `${String(l?.lote ?? '—')} (${enteroHoja(l?.cajas)})`).join(' · ')
+  return lista.map(l => {
+    const lote = String(l?.lote ?? '—')
+    if (unidad) {
+      const c = l?.cantidad
+      return c === null || c === undefined || c === '' ? lote : `${lote} (${cantidadInsumoHoja(c, unidad)})`
+    }
+    return `${lote} (${enteroHoja(l?.cajas)})`
+  }).join(' · ')
+}
+
+// El nombre de un insumo en la hoja: "Harina 000 · Molino Cañuelas".
+export function nombreInsumoHoja(r) {
+  return [r?.producto, r?.marca].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ') || 'Insumo'
 }
 
 // ── LA HOJA ────────────────────────────────────────────────────────────────
@@ -144,17 +188,33 @@ function htmlClienteHoja(cli, transporte) {
     `<div><span class="rh-rotulo">Transporte</span> ${escHoja(String(transporte ?? '').trim() || '—')}</div></div>`
 }
 
-function htmlTablaHoja(orden, conPrecios) {
-  const moneda = orden?.moneda || 'ARS'
-  const filas = (orden?.renglones ?? []).map(r =>
-    `<tr><td>${escHoja(r.producto || '—')}</td><td>${escHoja(r.cono || '—')}</td><td>${escHoja(r.presentacion || '—')}</td>` +
+function htmlFilaHoja(r, conPrecios, moneda) {
+  if (r?.esInsumo) {
+    const u = unidadHoja(r.unidad)
+    const precio = importeHoja(r.precio, moneda)
+    const precioPorUnidad = precio === '—' || !u ? precio : precio + ' / ' + u
+    return `<tr class="rh-insumo"><td>${escHoja(nombreInsumoHoja(r))}</td><td>—</td><td>Insumo</td>` +
+      `<td class="rh-num rh-cajas">${escHoja(cantidadInsumoHoja(r.cantidad, r.unidad))}</td><td class="rh-num">—</td>` +
+      `<td class="rh-lotes">${escHoja(textoLotes(r.lotes, r.unidad))}</td>` +
+      (conPrecios ? `<td class="rh-num">${escHoja(precioPorUnidad)}</td><td class="rh-num">${escHoja(importeHoja(r.subtotal, moneda))}</td>` : '') +
+      `</tr>`
+  }
+  return `<tr><td>${escHoja(r.producto || '—')}</td><td>${escHoja(r.cono || '—')}</td><td>${escHoja(r.presentacion || '—')}</td>` +
     `<td class="rh-num rh-cajas">${escHoja(enteroHoja(r.cajas))}</td><td class="rh-num">${escHoja(enteroHoja(r.unidades))}</td>` +
     `<td class="rh-lotes">${escHoja(textoLotes(r.lotes))}</td>` +
     (conPrecios ? `<td class="rh-num">${escHoja(importeHoja(r.precio, moneda))}</td><td class="rh-num">${escHoja(importeHoja(r.subtotal, moneda))}</td>` : '') +
-    `</tr>`).join('')
-  const cab = `<tr><th>Producto</th><th>Cono</th><th>Presentación</th><th class="rh-num">Cajas</th><th class="rh-num">Unidades</th><th>Lotes</th>` +
-    (conPrecios ? '<th class="rh-num">Precio x caja</th><th class="rh-num">Subtotal</th>' : '') + '</tr>'
-  const pie = `<tr><td colspan="3">Total</td><td class="rh-num rh-cajas">${escHoja(enteroHoja(totalCajasOrden(orden)))}</td>` +
+    `</tr>`
+}
+
+function htmlTablaHoja(orden, conPrecios) {
+  const moneda = orden?.moneda || 'ARS'
+  const conInsumos = tieneInsumos(orden)
+  const filas = (orden?.renglones ?? []).map(r => htmlFilaHoja(r, conPrecios, moneda)).join('')
+  // Con insumos, la columna de las cajas lleva también su cantidad ("25 kg")
+  // y el encabezado lo dice. El precio de un insumo es por su unidad.
+  const cab = `<tr><th>Producto</th><th>Cono</th><th>Presentación</th><th class="rh-num">${conInsumos ? 'Cajas / cant.' : 'Cajas'}</th><th class="rh-num">Unidades</th><th>Lotes</th>` +
+    (conPrecios ? `<th class="rh-num">${conInsumos ? 'Precio' : 'Precio x caja'}</th><th class="rh-num">Subtotal</th>` : '') + '</tr>'
+  const pie = `<tr><td colspan="3">${conInsumos ? 'Total de cajas' : 'Total'}</td><td class="rh-num rh-cajas">${escHoja(enteroHoja(totalCajasOrden(orden)))}</td>` +
     `<td class="rh-num">${escHoja(enteroHoja(totalUnidadesOrden(orden)))}</td><td></td>` +
     (conPrecios ? `<td></td><td class="rh-num rh-total">${escHoja(importeHoja(orden?.total, moneda))}</td>` : '') + '</tr>'
   return `<table class="rh-tabla"><thead>${cab}</thead><tbody>${filas}</tbody><tfoot>${pie}</tfoot></table>`
@@ -250,12 +310,20 @@ export function textoOrden(orden) {
   if (String(orden?.transporte ?? '').trim()) lineas.push(`Transporte: ${String(orden.transporte).trim()}`)
   if (orden?.estado === 'anulada') lineas.push('ANULADA')
   lineas.push('')
+  let insumos = 0
   for (const r of orden?.renglones ?? []) {
+    if (r?.esInsumo) {
+      insumos++
+      const lotesI = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes, r.unidad)})` : ''
+      lineas.push(`- ${cantidadInsumoHoja(r.cantidad, r.unidad)} · ${nombreInsumoHoja(r)}${lotesI}`)
+      continue
+    }
     const desc = [r.producto, r.presentacion, r.cono].map(x => String(x ?? '').trim()).filter(Boolean).join(' · ')
     const lotes = Array.isArray(r.lotes) && r.lotes.length ? ` (lotes ${textoLotes(r.lotes)})` : ''
     lineas.push(`- ${enteroHoja(r.cajas)} cajas · ${desc}${lotes}`)
   }
-  lineas.push('', `Total: ${enteroHoja(totalCajasOrden(orden))} cajas`)
+  lineas.push('', `Total: ${enteroHoja(totalCajasOrden(orden))} cajas` +
+    (insumos ? ` y ${insumos} ${insumos === 1 ? 'renglón' : 'renglones'} de materia prima e insumos` : ''))
   if (String(orden?.observaciones ?? '').trim()) lineas.push(`Observaciones: ${String(orden.observaciones).trim()}`)
   return lineas.join('\n')
 }

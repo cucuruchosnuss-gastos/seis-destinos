@@ -15,7 +15,8 @@ correrMutaciones({
   equivalentes: [
     { expr: 'esc(l.id)', motivo: 'el id de una lista va a un data-lista entre comillas (uuid de la base)' },
     { expr: 'esc(meta)', motivo: 'texto constante del código ("En pesos" / "En dólares" / "inactiva")' },
-    { expr: 'esc(f.presentacionId)', motivo: 'el id de una presentación va a atributos entre comillas (uuid de la base)' },
+    { expr: 'esc(f.clave)', motivo: "la clave de una fila (el uuid de la presentación, o 'ins:' + el uuid del insumo) va a atributos entre comillas" },
+    { expr: 'esc(f.grupo)', motivo: 'el grupo es una constante del código (CATEGORIAS_PRODUCTO, TITULO_OTROS_PRODUCTOS, TITULO_INSUMOS)' },
     { expr: 'esc(actual + prox)', motivo: 'importes formateados y fechas dd/mm/aaaa' },
     { expr: 'esc(importeHoja(v.precio_caja, moneda))', motivo: 'un importe formateado por importeHoja()' },
     { expr: "esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))", motivo: 'una fecha dd/mm/aaaa y texto constante' },
@@ -27,7 +28,12 @@ correrMutaciones({
     { nombre: 'rige un precio futuro', de: '      return { vigente: v.find(x => x.vigente_desde <= hoy) ?? null,', a: '      return { vigente: v[0] ?? null,' },
     { nombre: 'las versiones sin ordenar', de: "        .sort((a, b) => String(b.vigente_desde).localeCompare(String(a.vigente_desde)) || String(b.cargado_en ?? '').localeCompare(String(a.cargado_en ?? '')))", a: '' },
     { nombre: 'la grilla incluye las presentaciones inactivas', de: '.filter(x => x.producto_id === p.id && x.activa !== false)', a: '.filter(x => x.producto_id === p.id)' },
-    { nombre: 'el chocolate no va al final', de: "        (normalizar(a.tipo_masa).includes('chocolate') - normalizar(b.tipo_masa).includes('chocolate')) || 0)", a: '        0)' },
+    { nombre: 'las categorías en otro orden', de: "      { clave: 'cucuruchones', titulo: 'Cucuruchones' },\n      { clave: 'barquillos', titulo: 'Barquillos' },\n      { clave: 'especiales', titulo: 'Especiales' },", a: "      { clave: 'especiales', titulo: 'Especiales' },\n      { clave: 'barquillos', titulo: 'Barquillos' },\n      { clave: 'cucuruchones', titulo: 'Cucuruchones' }," },
+    { nombre: 'la grilla sin los insumos', de: "      for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {", a: "      for (const i of []) {" },
+    { nombre: 'la grilla con los insumos inactivos', de: "      for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {", a: "      for (const i of (cat?.insumos ?? [])) {" },
+    { nombre: 'el precio del insumo viaja como presentación', de: "        items.push(String(clave).startsWith('ins:')", a: "        items.push(false" },
+    { nombre: 'los precios de la lista sin los insumos', de: ".select('presentacion_id, insumo_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)", a: ".select('presentacion_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)" },
+    { nombre: 'sin encabezado por grupo', de: "        const sep = f.grupo !== grupo ? `<div class=\"ad-separador-grilla\">${esc(f.grupo)}</div>` : ''", a: "        const sep = ''" },
     // Guardar
     { nombre: 'un precio igual al vigente cuenta como nuevo', de: '        if (actual && Number(actual.precio_caja) === Number(precio)) continue\n', a: '' },
     { nombre: 'guardar sin confirmar', de: '      l.confirmar = { items, desde, error: null }\n      pintarLista(false)\n    }', a: '      l.confirmar = { items, desde, error: null }\n      confirmarGuardarPrecios()\n    }' },
@@ -39,9 +45,9 @@ correrMutaciones({
     { nombre: 'la fecha pasada no se avisa', de: "      aviso.textContent = esFechaIso(desde) && desde < hoy ?", a: '      aviso.textContent = false ?' },
     // Aumento
     { nombre: 'el aumento guarda solo', de: '      l.pendientes = calcularAumento(l, pct, hoyArgentina())\n      l.confirmar = null\n      pintarLista(true)', a: '      l.pendientes = calcularAumento(l, pct, hoyArgentina())\n      l.confirmar = { items: preciosAGuardar(l, hoyArgentina()), desde: hoyArgentina(), error: null }\n      confirmarGuardarPrecios()' },
-    { nombre: 'el aumento sin redondear', de: '        nuevos.set(f.presentacionId, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)', a: '        nuevos.set(f.presentacionId, Number(v.precio_caja) * (1 + porcentaje / 100) + 0.001)' },
+    { nombre: 'el aumento sin redondear', de: '        nuevos.set(f.clave, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)', a: '        nuevos.set(f.clave, Number(v.precio_caja) * (1 + porcentaje / 100) + 0.001)' },
     { nombre: 'el aumento inventa precio donde no había', de: '        if (!v) continue\n        nuevos.set', a: '        if (!v) { nuevos.set(f.presentacionId, 0); continue }\n        nuevos.set' },
-    { nombre: 'el aumento sobre el precio futuro', de: '        const v = vigenteYProximo(l.precios, f.presentacionId, hoy).vigente\n        if (!v) continue', a: '        const v = vigenteYProximo(l.precios, f.presentacionId, hoy).proximo ?? vigenteYProximo(l.precios, f.presentacionId, hoy).vigente\n        if (!v) continue' },
+    { nombre: 'el aumento sobre el precio futuro', de: '        const v = vigenteYProximo(l.precios, f.clave, hoy).vigente\n        if (!v) continue', a: '        const v = vigenteYProximo(l.precios, f.clave, hoy).proximo ?? vigenteYProximo(l.precios, f.clave, hoy).vigente\n        if (!v) continue' },
     { nombre: 'sin porcentaje se aplica igual', de: "      if (pct === null || pct === 0) { l.errorPorcentaje = 'Escribí el porcentaje (por ejemplo 12,5).'; pintarLista(false); return }\n", a: '' },
     { nombre: 'descartar no descarta', de: '      l.pendientes = new Map()\n      l.confirmar = null\n      pintarLista(true)', a: '      l.confirmar = null\n      pintarLista(true)' },
     // Lista nueva y activar

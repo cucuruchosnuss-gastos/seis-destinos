@@ -490,6 +490,7 @@
     import {
       htmlHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
       enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
+      cantidadInsumoHoja, unidadHoja,
     } from '../js/retiros-comun.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
@@ -735,9 +736,13 @@
       return data ?? []
     }
 
+    // El catálogo de la empresa: productos (con su categoría) y presentaciones,
+    // los conos, y los INSUMOS (el catálogo de insumos es único para las
+    // cuatro empresas: se leen todos, activos o no, para poder nombrar el de
+    // una orden vieja; la grilla de precios muestra solo los activos).
     async function leerCatalogo(unidadId) {
       const { data: productos, error: e1 } = await supabase.from('productos_terminados')
-        .select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId).order('orden').order('nombre')
+        .select('id, nombre, tipo_masa, categoria, orden').eq('unidad_negocio_id', unidadId).order('orden').order('nombre')
       if (e1) throw e1
       const ids = (productos ?? []).map(p => p.id)
       let presentaciones = []
@@ -749,7 +754,23 @@
       }
       const { data: marcas, error: e3 } = await supabase.from('marcas_personalizadas').select('id, nombre')
       if (e3) throw e3
-      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [] }
+      const { data: insumos, error: e4 } = await supabase.from('insumos')
+        .select('id, nombre, marca, unidad_medida, categoria, activo').order('categoria').order('nombre')
+      if (e4) throw e4
+      return { productos: productos ?? [], presentaciones, marcas: marcas ?? [], insumos: insumos ?? [] }
+    }
+
+    function insumoDe(cat, id) {
+      return id ? (cat?.insumos ?? []).find(i => i.id === id) ?? null : null
+    }
+
+    // "Harina 000 · Molino Cañuelas" y su unidad, para un renglón de insumo.
+    function partesInsumo(cat, it) {
+      const ins = insumoDe(cat, it.insumo_id)
+      return {
+        nombre: ins?.nombre ?? 'Insumo (no se pudo leer)', marca: ins?.marca ?? null,
+        unidad: ins?.unidad_medida ?? null,
+      }
     }
 
     async function asegurarDatosEmpresa() {
@@ -898,19 +919,25 @@
       const { data, error } = await q.order('fecha', { ascending: false }).order('numero', { ascending: false })
       if (error) throw error
       const ordenes = data ?? []
-      // Las cajas de cada orden, en una sola consulta.
+      // Las cajas de cada orden (y cuántos renglones de insumos lleva), en
+      // una sola consulta.
       const cajas = new Map()
+      const insumos = new Map()
       if (ordenes.length) {
-        const r = await supabase.from('orden_retiro_items').select('orden_id, cajas').in('orden_id', ordenes.map(o => o.id))
+        const r = await supabase.from('orden_retiro_items').select('orden_id, cajas, insumo_id').in('orden_id', ordenes.map(o => o.id))
         if (r.error) throw r.error
-        for (const it of r.data ?? []) cajas.set(it.orden_id, (cajas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))
+        for (const it of r.data ?? []) {
+          if (it.insumo_id) insumos.set(it.orden_id, (insumos.get(it.orden_id) ?? 0) + 1)
+          else cajas.set(it.orden_id, (cajas.get(it.orden_id) ?? 0) + (Number(it.cajas) || 0))
+        }
       }
-      return ordenes.map(o => ({ ...o, cajas: cajas.has(o.id) ? cajas.get(o.id) : null }))
+      return ordenes.map(o => ({ ...o, cajas: cajas.has(o.id) ? cajas.get(o.id) : (insumos.has(o.id) ? 0 : null), insumos: insumos.get(o.id) ?? 0 }))
     }
 
     function htmlFilaOrden(o) {
       const cli = clienteDe(o.cliente_id)
-      const meta = fechaCorta(o.fecha) + ' · ' + (cli?.nombre ?? 'Cliente') + ' · ' + enteroHoja(o.cajas) + ' cajas'
+      const meta = fechaCorta(o.fecha) + ' · ' + (cli?.nombre ?? 'Cliente') + ' · ' + enteroHoja(o.cajas) + ' cajas' +
+        (o.insumos ? ` · ${o.insumos} de materia prima e insumos` : '')
       const valor = o.estado_valorizacion === 'valorizada' ? importeHoja(o.total, o.moneda) : 'sin valorizar'
       const pendiente = o.estado === 'confirmada' && o.estado_valorizacion !== 'valorizada'
       return `<button type="button" class="ad-fila${o.estado === 'anulada' ? ' ad-fila--anulada' : ''}${pendiente ? ' ad-fila--atencion' : ''}" data-orden="${esc(o.id)}">` +
@@ -986,7 +1013,7 @@
       if (error) throw error
       if (!o) return null
       const { data: items, error: e2 } = await supabase.from('orden_retiro_items')
-        .select('id, orden, presentacion_id, marca_id, cajas, unidades, precio_caja, subtotal, lote')
+        .select('id, orden, presentacion_id, marca_id, cajas, unidades, insumo_id, cantidad, precio_caja, subtotal, lote')
         .eq('orden_id', id).order('orden')
       if (e2) throw e2
       let lotes = null
@@ -995,15 +1022,34 @@
           .select('presentacion_id, marca_id, lote, cajas').eq('orden_retiro_id', id).eq('tipo', 'despacho')
         if (!r.error) lotes = r.data ?? []
       }
-      return { orden: o, items: items ?? [], lotes }
+      // Los lotes de los INSUMOS salen de stock_movimientos, que se lee con
+      // stock:ver en la empresa (no con Producción).
+      let lotesInsumos = null
+      if ((items ?? []).some(it => it.insumo_id) && puedeEn('stock', 'ver', o.unidad_negocio_id)) {
+        const r = await supabase.from('stock_movimientos')
+          .select('insumo_id, lote, cantidad').eq('orden_retiro_id', id).eq('tipo', 'despacho')
+        if (!r.error) lotesInsumos = r.data ?? []
+      }
+      return { orden: o, items: items ?? [], lotes, lotesInsumos }
     }
 
     // Los lotes de un renglón: los movimientos 'despacho' de esa presentación
-    // y ese cono. null = no se pudieron ver (no "sin lotes").
-    function lotesDeRenglon(lotes, it) {
+    // y ese cono (o de ese insumo). null = no se pudieron ver (no "sin lotes").
+    function lotesDeRenglon(lotes, it, lotesInsumos = null) {
+      if (it?.insumo_id) {
+        if (!Array.isArray(lotesInsumos)) return null
+        return lotesInsumos.filter(l => l.insumo_id === it.insumo_id)
+          .map(l => ({ lote: l.lote ?? 'sin lote', cantidad: -Number(l.cantidad) }))
+      }
       if (!Array.isArray(lotes)) return null
       return lotes.filter(l => l.presentacion_id === it.presentacion_id && (l.marca_id ?? null) === (it.marca_id ?? null))
         .map(l => ({ lote: l.lote, cajas: -Number(l.cajas) }))
+    }
+
+    // La cantidad que se valoriza de un renglón: las cajas, o la cantidad de
+    // un insumo (en su unidad). La base hace lo mismo en valorizar_orden_retiro.
+    function cantidadValorizable(it) {
+      return it?.insumo_id ? Number(it.cantidad) : Number(it?.cajas)
     }
 
     function htmlDatoAd(rotulo, valor) {
@@ -1011,18 +1057,30 @@
     }
 
     function htmlRenglonOrden(it, d, cat) {
-      const p = partesRenglon(cat, it)
-      const lotes = lotesDeRenglon(d.lotes, it)
-      const desc = enteroHoja(it.cajas) + ' cajas · ' + [p.producto, p.presentacion, p.cono].join(' · ')
-      const detalle = enteroHoja(it.unidades) + ' unidades · ' + (lotes === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotes))
+      let desc, detalle, porQue
+      if (it.insumo_id) {
+        // Un INSUMO de reventa: por cantidad en su unidad, y su precio es por
+        // esa unidad ("Precio x kg").
+        const pi = partesInsumo(cat, it)
+        const lotesI = lotesDeRenglon(d.lotes, it, d.lotesInsumos)
+        desc = cantidadInsumoHoja(it.cantidad, pi.unidad) + ' · ' + [pi.nombre, pi.marca].map(limpio).filter(Boolean).join(' · ')
+        detalle = 'Insumo · ' + (lotesI === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotesI, pi.unidad))
+        porQue = unidadHoja(pi.unidad) || 'unidad'
+      } else {
+        const p = partesRenglon(cat, it)
+        const lotes = lotesDeRenglon(d.lotes, it)
+        desc = enteroHoja(it.cajas) + ' cajas · ' + [p.producto, p.presentacion, p.cono].join(' · ')
+        detalle = enteroHoja(it.unidades) + ' unidades · ' + (lotes === null ? 'lotes: no se pueden ver con tu usuario' : 'lotes ' + textoLotes(lotes))
+        porQue = 'caja'
+      }
       const moneda = d.orden.moneda || 'ARS'
       let plata = ''
       if (d.valorizar) {
-        plata = `<div class="ad-renglon__plata"><label class="ad-dato__rotulo" for="ad-precio-${esc(it.id)}">Precio x caja</label>` +
+        plata = `<div class="ad-renglon__plata"><label class="ad-dato__rotulo" for="ad-precio-${esc(it.id)}">${esc('Precio x ' + porQue)}</label>` +
           `<input type="text" class="ad-input ad-renglon__precio" id="ad-precio-${esc(it.id)}" data-precio="${esc(it.id)}" autocomplete="off">` +
           `<div class="ad-texto-suave" data-subtotal="${esc(it.id)}">${esc(importeHoja(subtotalValorizar(d, it), moneda))}</div></div>`
       } else if (d.orden.estado_valorizacion === 'valorizada') {
-        plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(it.precio_caja, moneda))} x caja</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div></div>`
+        plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(it.precio_caja, moneda) + ' x ' + porQue)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div></div>`
       }
       return `<div class="ad-renglon"><div><div class="ad-renglon__desc">${esc(desc)}</div><div class="ad-renglon__lotes">${esc(detalle)}</div></div>${plata}</div>`
     }
@@ -1038,7 +1096,10 @@
       ]
       if (limpio(o.observaciones)) datos.push(htmlDatoAd('Observaciones', o.observaciones))
       const anulada = o.estado === 'anulada' ? `<div class="ad-aviso ad-aviso--grave">${esc('Anulada. Motivo: ' + (o.anulada_motivo || '—'))}</div>` : ''
-      const sinLotes = d.lotes === null ? '<div class="ad-aviso">Con tu usuario no se pueden ver los lotes de cada renglón (hace falta un permiso de Producción o de Stock).</div>' : ''
+      const hayProductos = d.items.some(it => !it.insumo_id)
+      const hayInsumos = d.items.some(it => it.insumo_id)
+      const sinLotes = (hayProductos && d.lotes === null) || (hayInsumos && d.lotesInsumos === null)
+        ? `<div class="ad-aviso">Con tu usuario no se pueden ver los lotes de cada renglón (hace falta un permiso de ${hayInsumos && !(hayProductos && d.lotes === null) ? 'Stock' : 'Producción o de Stock'}).</div>` : ''
       const renglones = d.items.map(it => htmlRenglonOrden(it, d, cat)).join('')
       let total = ''
       if (d.valorizar) total = `<p class="ad-total" id="ad-valorizar-total">${esc(textoTotalValorizar(d))}</p>`
@@ -1095,7 +1156,7 @@
 
     async function abrirOrden(id) {
       const turno = ++turnoOrden
-      estado.orden = { id, orden: null, items: [], lotes: null, error: null, valorizar: null, anular: null, aviso: null, errorHoja: null }
+      estado.orden = { id, orden: null, items: [], lotes: null, lotesInsumos: null, error: null, valorizar: null, anular: null, aviso: null, errorHoja: null }
       mostrarVista('ad-vista-orden')
       pintarOrden()
       try {
@@ -1120,14 +1181,23 @@
     // Los precios de la lista del cliente vigentes a la fecha del retiro: por
     // presentación, el de fecha más nueva que no sea posterior. La MISMA
     // regla que precio_vigente() en la base.
+    // La clave de un precio: la presentación, o el insumo con 'ins:' adelante
+    // (un precio de lista es de UNA de las dos cosas).
+    function clavePrecio(x) {
+      return x?.insumo_id ? 'ins:' + x.insumo_id : x?.presentacion_id
+    }
+
+    // Los precios vigentes por presentación o por insumo (precio_vigente() y
+    // precio_vigente_insumo() en la base hacen lo mismo).
     function preciosVigentes(items, fecha) {
-      const porPresentacion = new Map()
+      const porClave = new Map()
       for (const x of Array.isArray(items) ? items : []) {
         if (!esFechaIso(x.vigente_desde) || x.vigente_desde > fecha) continue
-        const a = porPresentacion.get(x.presentacion_id)
-        if (!a || x.vigente_desde > a.vigente_desde) porPresentacion.set(x.presentacion_id, x)
+        const k = clavePrecio(x)
+        const a = porClave.get(k)
+        if (!a || x.vigente_desde > a.vigente_desde) porClave.set(k, x)
       }
-      return new Map([...porPresentacion].map(([k, v]) => [k, Number(v.precio_caja)]))
+      return new Map([...porClave].map(([k, v]) => [k, Number(v.precio_caja)]))
     }
 
     async function leerSaldoCliente(clienteId) {
@@ -1150,13 +1220,14 @@
         let vigentes = new Map()
         if (cli?.lista_precio_id) {
           const { data, error } = await supabase.from('lista_precios_items')
-            .select('presentacion_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)
+            .select('presentacion_id, insumo_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)
           if (error) throw error
           vigentes = preciosVigentes(data, o.fecha)
         }
         for (const it of d.items) {
+          const k = clavePrecio(it)
           if (o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined) v.precios[it.id] = Number(it.precio_caja)
-          else if (vigentes.has(it.presentacion_id)) { v.precios[it.id] = vigentes.get(it.presentacion_id); v.desdeLista.add(it.id) }
+          else if (vigentes.has(k)) { v.precios[it.id] = vigentes.get(k); v.desdeLista.add(it.id) }
           else v.precios[it.id] = null
         }
         v.saldo = await leerSaldoCliente(o.cliente_id)
@@ -1170,7 +1241,7 @@
 
     function subtotalValorizar(d, it) {
       const p = d?.valorizar?.precios?.[it.id]
-      return p === null || p === undefined ? null : Math.round(p * Number(it.cajas) * 100) / 100
+      return p === null || p === undefined ? null : Math.round(p * cantidadValorizable(it) * 100) / 100
     }
 
     function totalValorizar(d) {
@@ -1331,6 +1402,13 @@
         empresa: (estado.empresas ?? []).find(e => e.id === o.unidad_negocio_id) ?? empresaActual(),
         cliente: cli,
         renglones: d.items.map(it => {
+          if (it.insumo_id) {
+            const pi = partesInsumo(estado.catalogo, it)
+            return { esInsumo: true, producto: pi.nombre, marca: pi.marca, cantidad: it.cantidad, unidad: pi.unidad,
+              lotes: lotesDeRenglon(d.lotes, it, d.lotesInsumos) ?? [],
+              precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,
+              subtotal: o.estado_valorizacion === 'valorizada' ? it.subtotal : null }
+          }
           const p = partesRenglon(estado.catalogo, it)
           return { ...p, cajas: it.cajas, unidades: it.unidades, lotes: lotesDeRenglon(d.lotes, it) ?? [],
             precio: o.estado_valorizacion === 'valorizada' ? it.precio_caja : null,
@@ -1947,47 +2025,72 @@
 
     async function leerPreciosLista(listaId) {
       const { data, error } = await supabase.from('lista_precios_items')
-        .select('presentacion_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)
+        .select('presentacion_id, insumo_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)
       if (error) throw error
       return data ?? []
     }
 
-    // Las versiones de UNA presentación, la más nueva primero.
-    function versionesDe(precios, presentacionId) {
-      return (precios ?? []).filter(p => p.presentacion_id === presentacionId)
+    // Las versiones de UNA fila (una presentación o un insumo, por su clave
+    // de clavePrecio()), la más nueva primero.
+    function versionesDe(precios, clave) {
+      return (precios ?? []).filter(p => clavePrecio(p) === clave)
         .sort((a, b) => String(b.vigente_desde).localeCompare(String(a.vigente_desde)) || String(b.cargado_en ?? '').localeCompare(String(a.cargado_en ?? '')))
     }
 
-    // El precio que rige HOY (la misma regla que precio_vigente() en la base)
-    // y, si hay, el próximo ya cargado con fecha futura.
-    function vigenteYProximo(precios, presentacionId, hoy) {
-      const v = versionesDe(precios, presentacionId)
+    // El precio que rige HOY (la misma regla que precio_vigente() y
+    // precio_vigente_insumo() en la base) y, si hay, el próximo ya cargado.
+    function vigenteYProximo(precios, clave, hoy) {
+      const v = versionesDe(precios, clave)
       return { vigente: v.find(x => x.vigente_desde <= hoy) ?? null, proximo: [...v].reverse().find(x => x.vigente_desde > hoy) ?? null }
     }
 
-    // Las filas de la grilla: los productos de la empresa, con sus
-    // presentaciones; los de chocolate al final.
+    // Las categorías del producto terminado, en el orden en que se muestran
+    // (el mismo de la carga de retiros): después, lo que no tiene categoría,
+    // y al final la materia prima e insumos.
+    const CATEGORIAS_PRODUCTO = [
+      { clave: 'cucuruchones', titulo: 'Cucuruchones' },
+      { clave: 'barquillos', titulo: 'Barquillos' },
+      { clave: 'especiales', titulo: 'Especiales' },
+      { clave: 'pasta', titulo: 'Pasta' },
+    ]
+    const TITULO_OTROS_PRODUCTOS = 'Otros productos'
+    const TITULO_INSUMOS = 'Materia prima e insumos'
+
+    // Las filas de la grilla: los productos de la empresa por categoría, con
+    // sus presentaciones activas, y al final los insumos ACTIVOS del catálogo
+    // (el catálogo de insumos es uno para las cuatro empresas: cualquiera se
+    // puede revender). Cada fila tiene su clave: la presentación, o 'ins:' +
+    // el insumo.
     function filasGrilla(cat) {
-      const productos = [...(cat?.productos ?? [])].sort((a, b) =>
-        (normalizar(a.tipo_masa).includes('chocolate') - normalizar(b.tipo_masa).includes('chocolate')) || 0)
       const filas = []
-      for (const p of productos) {
-        for (const pr of (cat?.presentaciones ?? []).filter(x => x.producto_id === p.id && x.activa !== false)) {
-          filas.push({ presentacionId: pr.id, producto: p.nombre, presentacion: pr.nombre, chocolate: normalizar(p.tipo_masa).includes('chocolate') })
+      const grupos = [...CATEGORIAS_PRODUCTO, { clave: null, titulo: TITULO_OTROS_PRODUCTOS }]
+      const categoriaDe = (p) => CATEGORIAS_PRODUCTO.some(c => c.clave === p.categoria) ? p.categoria : null
+      for (const g of grupos) {
+        for (const p of (cat?.productos ?? []).filter(x => categoriaDe(x) === g.clave)) {
+          for (const pr of (cat?.presentaciones ?? []).filter(x => x.producto_id === p.id && x.activa !== false)) {
+            filas.push({ clave: pr.id, presentacionId: pr.id, insumoId: null, producto: p.nombre, presentacion: pr.nombre, grupo: g.titulo })
+          }
         }
+      }
+      for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {
+        filas.push({ clave: 'ins:' + i.id, presentacionId: null, insumoId: i.id, producto: i.nombre,
+          presentacion: [i.marca, 'por ' + (unidadHoja(i.unidad_medida) || 'unidad')].map(limpio).filter(Boolean).join(' · '),
+          grupo: TITULO_INSUMOS, unidad: i.unidad_medida })
       }
       return filas
     }
 
     // Lo que se va a guardar: las filas con un precio nuevo distinto del que
-    // rige hoy. Nada más.
+    // rige hoy. Nada más. Un renglón lleva presentacion_id O insumo_id.
     function preciosAGuardar(l, hoy) {
       const items = []
-      for (const [presentacionId, precio] of l.pendientes) {
+      for (const [clave, precio] of l.pendientes) {
         if (precio === null || precio === undefined) continue
-        const actual = vigenteYProximo(l.precios, presentacionId, hoy).vigente
+        const actual = vigenteYProximo(l.precios, clave, hoy).vigente
         if (actual && Number(actual.precio_caja) === Number(precio)) continue
-        items.push({ presentacion_id: presentacionId, precio_caja: Number(precio) })
+        items.push(String(clave).startsWith('ins:')
+          ? { insumo_id: String(clave).slice(4), precio_caja: Number(precio) }
+          : { presentacion_id: clave, precio_caja: Number(precio) })
       }
       return items
     }
@@ -1997,44 +2100,45 @@
     function calcularAumento(l, porcentaje, hoy) {
       const nuevos = new Map(l.pendientes)
       for (const f of l.filas) {
-        const v = vigenteYProximo(l.precios, f.presentacionId, hoy).vigente
+        const v = vigenteYProximo(l.precios, f.clave, hoy).vigente
         if (!v) continue
-        nuevos.set(f.presentacionId, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)
+        nuevos.set(f.clave, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)
       }
       return nuevos
     }
 
     function htmlFilaPrecio(f, l, hoy) {
-      const { vigente, proximo } = vigenteYProximo(l.precios, f.presentacionId, hoy)
+      const { vigente, proximo } = vigenteYProximo(l.precios, f.clave, hoy)
       const moneda = listaDe(l.id)?.moneda || 'ARS'
-      const pendiente = l.pendientes.has(f.presentacionId) && l.pendientes.get(f.presentacionId) !== null
+      const pendiente = l.pendientes.has(f.clave) && l.pendientes.get(f.clave) !== null
       const actual = vigente ? importeHoja(vigente.precio_caja, moneda) + ' desde ' + fechaCorta(vigente.vigente_desde) : 'Sin precio'
       const prox = proximo ? ' · próximo ' + importeHoja(proximo.precio_caja, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : ''
-      return `<div class="ad-precio${pendiente ? ' ad-precio--pendiente' : ''}" data-fila-precio="${esc(f.presentacionId)}">` +
+      return `<div class="ad-precio${pendiente ? ' ad-precio--pendiente' : ''}" data-fila-precio="${esc(f.clave)}">` +
         `<div><div class="ad-renglon__desc">${esc(f.producto + ' · ' + f.presentacion)}</div>` +
         `<div class="ad-renglon__lotes">${esc(actual + prox)}</div></div>` +
-        `<div class="ad-precio__acciones"><input type="text" class="ad-input ad-renglon__precio" data-precio-lista="${esc(f.presentacionId)}" aria-label="${esc('Precio nuevo de ' + f.producto + ' ' + f.presentacion)}" autocomplete="off">` +
-        `<button type="button" class="ad-link" data-historial="${esc(f.presentacionId)}">Historial</button></div></div>`
+        `<div class="ad-precio__acciones"><input type="text" class="ad-input ad-renglon__precio" data-precio-lista="${esc(f.clave)}" aria-label="${esc('Precio nuevo de ' + f.producto + ' ' + f.presentacion)}" autocomplete="off">` +
+        `<button type="button" class="ad-link" data-historial="${esc(f.clave)}">Historial</button></div></div>`
     }
 
+    // Un encabezado por grupo (categoría, y al final los insumos).
     function htmlGrilla(l, hoy) {
       if (l.error) return `<div class="ad-aviso ad-aviso--grave">${esc(l.error)}</div>`
       if (!l.precios) return '<div class="ad-vacio">Cargando los precios…</div>'
       if (!l.filas.length) return '<div class="ad-aviso">Esta empresa no tiene productos cargados en Producción.</div>'
-      let choco = false
+      let grupo = null
       const partes = l.filas.map(f => {
-        const sep = f.chocolate && !choco ? '<div class="ad-separador-grilla">Chocolate</div>' : ''
-        if (f.chocolate) choco = true
+        const sep = f.grupo !== grupo ? `<div class="ad-separador-grilla">${esc(f.grupo)}</div>` : ''
+        grupo = f.grupo
         return sep + htmlFilaPrecio(f, l, hoy)
       })
       return `<div class="ad-tarjeta">${partes.join('')}</div>`
     }
 
-    function htmlHistorial(l, presentacionId, hoy) {
-      const f = l.filas.find(x => x.presentacionId === presentacionId)
+    function htmlHistorial(l, clave, hoy) {
+      const f = l.filas.find(x => x.clave === clave)
       const moneda = listaDe(l.id)?.moneda || 'ARS'
-      const vigente = vigenteYProximo(l.precios, presentacionId, hoy).vigente
-      const versiones = versionesDe(l.precios, presentacionId)
+      const vigente = vigenteYProximo(l.precios, clave, hoy).vigente
+      const versiones = versionesDe(l.precios, clave)
       const filas = versiones.length ? versiones.map(v =>
         `<div class="ad-renglon"><div class="ad-renglon__desc">${esc('Desde ' + fechaCorta(v.vigente_desde) + (v === vigente ? ' · rige hoy' : (v.vigente_desde > hoy ? ' · todavía no rige' : '')))}</div>` +
         `<div class="ad-renglon__plata">${esc(importeHoja(v.precio_caja, moneda))}</div></div>`).join('') : '<p class="ad-texto-suave">Todavía no tiene precios en esta lista.</p>'
@@ -2113,11 +2217,11 @@
       return el
     }
 
-    function cambiarPrecioLista(presentacionId, valor) {
+    function cambiarPrecioLista(clave, valor) {
       const l = estado.lista
       if (!l) return
-      if (valor === null || valor === undefined) l.pendientes.delete(presentacionId)
-      else l.pendientes.set(presentacionId, valor)
+      if (valor === null || valor === undefined) l.pendientes.delete(clave)
+      else l.pendientes.set(clave, valor)
       l.confirmar = null
       pintarLista(false)
     }

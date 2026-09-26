@@ -20,8 +20,8 @@ const nuevo = () => construirAdministracion(ARCHIVO)
 
 const CAT = {
   productos: [
-    { id: 'p2', nombre: 'Cucurucho choco', tipo_masa: 'Chocolate' },
-    { id: 'p1', nombre: 'Cucurucho grande', tipo_masa: 'Común' },
+    { id: 'p2', nombre: 'Cannoli', tipo_masa: 'Chocolate', categoria: 'especiales' },
+    { id: 'p1', nombre: 'Cucurucho grande', tipo_masa: 'Común', categoria: 'cucuruchones' },
   ],
   presentaciones: [
     { id: 'pr1', producto_id: 'p1', nombre: 'Caja x 100', activa: true },
@@ -30,6 +30,10 @@ const CAT = {
     { id: 'pr2', producto_id: 'p2', nombre: 'Caja x 50', activa: true },
   ],
   marcas: [],
+  insumos: [
+    { id: 'i1', nombre: 'Harina 000', marca: 'Molino', unidad_medida: 'kg', categoria: 'Harinas', activo: true },
+    { id: 'i2', nombre: 'Vieja', marca: null, unidad_medida: 'un', categoria: 'Cajas', activo: false },
+  ],
 }
 const HOY_LEJOS = '2030-01-01'
 const PRECIOS = [
@@ -37,6 +41,7 @@ const PRECIOS = [
   { presentacion_id: 'pr1', precio_caja: 3000, vigente_desde: '2026-09-01', cargado_en: '2026-09-01T10:00:00Z' },
   { presentacion_id: 'pr1', precio_caja: 3500, vigente_desde: '2099-01-01', cargado_en: '2026-09-20T10:00:00Z' },
   { presentacion_id: 'pr2', precio_caja: 5500, vigente_desde: '2026-09-01', cargado_en: '2026-09-01T10:00:00Z' },
+  { presentacion_id: null, insumo_id: 'i1', precio_caja: 120, vigente_desde: '2026-09-01', cargado_en: '2026-09-01T10:00:00Z' },
 ]
 
 function preparar(S) {
@@ -93,8 +98,12 @@ function preparar(S) {
   chk('antes del 01/09 regía el de agosto', S.vigenteYProximo(PRECIOS, 'pr1', '2026-08-15').vigente.precio_caja === 2800)
   chk('sin precio: null (no 0)', S.vigenteYProximo(PRECIOS, 'pr1c', '2026-09-26').vigente === null)
   const filas = S.filasGrilla(CAT)
-  chk('la grilla tiene las presentaciones activas', filas.map(f => f.presentacionId).join() === 'pr1,pr1c,pr2')
-  chk('los de chocolate al final', filas[filas.length - 1].chocolate === true && filas[0].chocolate === false)
+  chk('la grilla tiene las presentaciones activas, por categoría, y los insumos activos al final', filas.map(f => f.clave).join() === 'pr1,pr1c,pr2,ins:i1')
+  chk('cada fila dice su grupo: la categoría o "Materia prima e insumos"', filas.map(f => f.grupo).join() === 'Cucuruchones,Cucuruchones,Especiales,Materia prima e insumos')
+  chk('un insumo inactivo no va a la grilla', !filas.some(f => f.clave === 'ins:i2'))
+  chk('el insumo dice su marca y su unidad', filas[3].producto === 'Harina 000' && filas[3].presentacion === 'Molino · por kg')
+  chk('el precio vigente de un insumo sale por su clave', S.vigenteYProximo(PRECIOS, 'ins:i1', '2026-09-26').vigente.precio_caja === 120)
+  chk('la clave de un precio: presentación, o "ins:" + insumo', S.clavePrecio({ presentacion_id: 'pr1' }) === 'pr1' && S.clavePrecio({ presentacion_id: null, insumo_id: 'i1' }) === 'ins:i1')
 }
 {
   const S = nuevo()
@@ -104,7 +113,11 @@ function preparar(S) {
     chk('la grilla muestra el precio vigente con su fecha', /\$ 3\.000,00 desde 01\/09\/2026/.test(h))
     chk('y el próximo', /próximo \$ 3\.500,00 desde 01\/01\/2099/.test(h))
     chk('una presentación sin precio lo dice', /Sin precio/.test(h))
-    chk('el separador de chocolate', /ad-separador-grilla">Chocolate</.test(h))
+    chk('un encabezado por categoría', /ad-separador-grilla">Cucuruchones</.test(h) && /ad-separador-grilla">Especiales</.test(h) && h.indexOf('>Cucuruchones<') < h.indexOf('>Especiales<'))
+    chk('y la sección "Materia prima e insumos" al final', h.indexOf('>Materia prima e insumos<') > h.indexOf('>Especiales<') && /data-precio-lista="ins:i1"/.test(h))
+    const sel = (S.__llamadas.consultas.find(c => c[0] === 'lista_precios_items') || [null, []])[1].find(f => f[0] === 'select')
+    chk('los precios de la lista se leen CON el insumo (el doble ignora el select: se afirma sobre su texto)', !!sel && /insumo_id/.test(sel[1]))
+    chk('con el precio vigente del insumo', /\$\s120,00 desde 01\/09\/2026/.test(h))
     chk('"desde" viene en hoy', S.__els.get('ad-lista-desde').value === S.hoyArgentina())
     chk('sin cambios no hay nada que guardar', S.__els.get('ad-lista-pendientes').textContent === 'Sin precios nuevos.')
   }))
@@ -123,6 +136,9 @@ function preparar(S) {
     S.cambiarPrecioLista('pr1c', null)
     chk('borrar el campo lo saca de lo pendiente', S.preciosAGuardar(l, S.hoyArgentina()).length === 0)
     S.cambiarPrecioLista('pr1c', 4200)
+    S.cambiarPrecioLista('ins:i1', 130)
+    chk('el precio de un insumo se guarda con insumo_id, sin presentación', JSON.stringify(S.preciosAGuardar(l, S.hoyArgentina())) === JSON.stringify([{ presentacion_id: 'pr1c', precio_caja: 4200 }, { insumo_id: 'i1', precio_caja: 130 }]))
+    S.cambiarPrecioLista('ins:i1', null)
     S.__els.get('ad-lista-desde').value = '2026-10-01'
     S.pedirGuardarPrecios()
     chk('guardar pide CONFIRMAR antes de mandar', !!l.confirmar && !S.__llamadas.rpc.some(x => x[0] === 'guardar_precios'))
@@ -165,7 +181,8 @@ function preparar(S) {
     chk('calcula sobre el precio que rige hoy, redondeado a centavos', l.pendientes.get('pr1') === 3300 && l.pendientes.get('pr2') === 6050)
     chk('no inventa precio donde no había', !l.pendientes.has('pr1c'))
     chk('y NO guardó nada', !S.__llamadas.rpc.some(x => x[0] === 'guardar_precios'))
-    chk('dice cuántos quedan sin guardar', S.__els.get('ad-lista-pendientes').textContent === '2 precios nuevos sin guardar.')
+    chk('el aumento también sube los insumos que tienen precio', l.pendientes.get('ins:i1') === 132)
+    chk('dice cuántos quedan sin guardar', S.__els.get('ad-lista-pendientes').textContent === '3 precios nuevos sin guardar.')
     S.descartarCambios()
     chk('descartar vuelve todo atrás', l.pendientes.size === 0)
     S.ponerNumero(S.__els.get('ad-lista-porcentaje'), 12.5)
@@ -184,7 +201,8 @@ function preparar(S) {
     let p = null
     S.__setRpc(async (n, q) => { if (n === 'guardar_precios') p = q; return { data: { precios: 2 }, error: null } })
     await S.confirmarGuardarPrecios()
-    chk('recién al confirmar, guardar_precios con los dos', p && p.p_items.length === 2 && p.p_items.some(x => x.presentacion_id === 'pr2' && x.precio_caja === 6187.5))
+    chk('recién al confirmar, guardar_precios con los dos productos y el insumo', p && p.p_items.length === 3 && p.p_items.some(x => x.presentacion_id === 'pr2' && x.precio_caja === 6187.5) &&
+      p.p_items.some(x => x.insumo_id === 'i1' && !('presentacion_id' in x)))
   }))
   chk('el aumento acepta negativos (una rebaja) en el campo', /enlazarCampoNumero\(el, \{ decimales: 2, negativos: true \}\)/.test(src))
 }
@@ -220,7 +238,9 @@ function preparar(S) {
   const S = nuevo()
   S.estado.listas = { unidad: 'u-n', filas: [{ id: 'l1', nombre: marca('lista'), moneda: 'ARS', activa: false }] }
   chequearMarcas(chk, 'fila de lista', S.htmlFilaLista(S.estado.listas.filas[0]), ['lista'])
-  const l = { id: 'l1', precios: [{ presentacion_id: 'x', precio_caja: 1, vigente_desde: '2026-01-01' }], filas: [{ presentacionId: 'x', producto: marca('producto'), presentacion: marca('presentacion'), chocolate: false }], pendientes: new Map() }
+  const l = { id: 'l1', precios: [{ presentacion_id: 'x', precio_caja: 1, vigente_desde: '2026-01-01' }], filas: [{ clave: 'x', presentacionId: 'x', producto: marca('producto'), presentacion: marca('presentacion'), grupo: 'Cucuruchones' }], pendientes: new Map() }
+  const filasIns = S.filasGrilla({ productos: [], presentaciones: [], insumos: [{ id: 'i9', nombre: marca('ins-nombre'), marca: marca('ins-marca'), unidad_medida: marca('ins-unidad'), activo: true }] })
+  chequearMarcas(chk, 'grilla con un insumo', S.htmlGrilla({ ...l, filas: filasIns }, '2026-09-26'), ['ins-nombre', 'ins-marca', 'ins-unidad'])
   chequearMarcas(chk, 'grilla', S.htmlGrilla(l, '2026-09-26'), ['producto', 'presentacion'])
   chequearMarcas(chk, 'historial', S.htmlHistorial(l, 'x', '2026-09-26'), ['producto', 'presentacion'])
   chequearMarcas(chk, 'error de la grilla', S.htmlGrilla({ ...l, error: marca('error') }, '2026-09-26'), ['error'])

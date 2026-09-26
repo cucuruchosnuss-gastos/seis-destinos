@@ -139,6 +139,10 @@ function preparar(S) {
     renglones: [{ producto: marca('producto'), presentacion: marca('presentacion'), marca: marca('cono'), cajas: 1, unidades: 1, lotes: [{ lote: marca('lote'), cajas: 1 }] }] }
   chequearMarcas(chk, 'fila de mis retiros', S.htmlFilaMia(mala), ['id', 'codigo', 'cliente'])
   chequearMarcas(chk, 'detalle mío', S.htmlDetalleMio(mala), ['cliente', 'transporte', 'obs', 'producto', 'presentacion', 'cono', 'lote'])
+  // Un insumo recordado en el celular, con texto malicioso.
+  S.__ls.set(S.CLAVE_INSUMOS_ORDENES, JSON.stringify({ [mala.orden_id]: { fecha: S.hoyArgentina(), total: 2,
+    insumos: [{ posicion: 1, nombre: marca('ins-nombre'), marca: marca('ins-marca'), cantidad: 3, unidad: marca('ins-unidad'), lote: marca('ins-lote') }] } }))
+  chequearMarcas(chk, 'detalle mío con un insumo', S.htmlDetalleMio(mala), ['ins-nombre', 'ins-marca', 'ins-unidad', 'ins-lote'])
   S.estado.errorMis = marca('error')
   chequearMarcas(chk, 'error de mis retiros', S.htmlMisRetiros(), ['error'])
 }
