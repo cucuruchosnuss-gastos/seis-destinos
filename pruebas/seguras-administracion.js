@@ -12,7 +12,12 @@ const SEGURAS_ADMINISTRACION = [
   ['total', 'HTML ya escapado: htmlDetalleOrden() lo arma con esc() del total, o vacío'],
   ['htmlValorizar(d)', 'HTML armado por htmlValorizar(), que escapa los errores y el aviso del límite'],
   ['filas', 'HTML ya escapado: htmlCuenta() / htmlHistorial() arman cada fila con esc() del texto y los importes'],
-  ["partes.join('')", 'HTML armado por htmlFilaPrecio(), que escapa cada dato, y el separador "Chocolate", constante'],
+  ["partes.join('')", 'HTML armado por htmlFilaPrecio(), que escapa cada dato, y el separador de cada grupo, escapado'],
+  ['sello', 'HTML armado en htmlFilaImportar(): el sello con esc() de su etiqueta, o uno constante (Guardada / No se guardó)'],
+  ['errores', 'HTML ya escapado: htmlFilaImportar() arma cada error con esc()'],
+  ['avisos', 'HTML ya escapado: htmlFilaImportar() arma cada aviso con esc()'],
+  ['resultado', 'HTML ya escapado: htmlFilaImportar() arma el resultado con esc() del mensaje, o vacío'],
+  ["im.filas.map(htmlFilaImportar).join('')", 'HTML armado por htmlFilaImportar(), que escapa cada dato de la fila'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

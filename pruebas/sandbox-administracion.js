@@ -25,7 +25,7 @@ const FUNCIONES_BASE = [
   'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
   // Clientes
   'leerSaldos', 'pasaLimite', 'limiteDe', 'contarSobreLimite', 'clientesFiltrados', 'htmlFilaCliente', 'htmlListaClientes',
-  'pintarClientes', 'mostrarClientes', 'abrirAlta', 'parametrosAlta', 'guardarAlta', 'leerCuenta', 'detalleMovimiento',
+  'pintarClientes', 'mostrarClientes', 'abrirAlta', 'puedeDarAlta', 'parametrosAlta', 'guardarAlta', 'leerCuenta', 'detalleMovimiento',
   'tieneSaldoInicial', 'htmlCuenta', 'pintarCliente', 'abrirCliente', 'abrirPanelCliente', 'cerrarPanelCliente', 'guardarPanelCliente',
   'leerFicha', 'asegurarListas', 'asegurarProveedores', 'valorComparable', 'cambiosFicha', 'leerFormFicha', 'htmlOpcionesListas',
   'proveedoresFiltrados', 'htmlProveedorElegido', 'htmlResultadosProveedores', 'pintarProveedorFicha', 'textoCambiosFicha',
@@ -40,11 +40,22 @@ const FUNCIONES_BASE = [
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
   'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf', 'enviarOrden',
+  // Importar (26/09/2026)
+  'normalizarEncabezado', 'mapearColumnas', 'textoCelda', 'fechaIsoLocal', 'numeroCelda', 'fechaCelda', 'cuitValido', 'cbuValido',
+  'condicionIvaDe', 'claveNombreCliente', 'filasDeHoja', 'estadoFila', 'filaPrevia', 'marcarRepetidas', 'textoFilas',
+  'validarClientes', 'parametrosCliente', 'validarPrecios', 'validarSaldos', 'validarImportacion',
+  'plantillaClientes', 'instruccionesClientes', 'plantillaPrecios', 'plantillaSaldos', 'filasResumen',
+  'cargarXlsx', 'textoDeCsv', 'esCsv', 'leerArchivoPlanilla', 'descargarPlanilla', 'nombreArchivoImportar',
+  'importarVacio', 'cuentaImportar', 'textoCuentaImportar', 'htmlFilaImportar', 'htmlVistaPrevia', 'textoConfirmarImportar',
+  'pintarImportar', 'mostrarImportar', 'elegirTipoImportar', 'contextoImportar', 'procesarFilasImportar', 'subirArchivoImportar',
+  'bajarPlantillaImportar', 'pedirGuardarImportacion', 'confirmarImportacion', 'bajarResumenImportar', 'descartarImportacion',
 ]
 
 const CONSTANTES_BASE = [
   'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
+  'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
+  'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
 

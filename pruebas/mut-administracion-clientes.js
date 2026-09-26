@@ -61,8 +61,10 @@ correrMutaciones({
     { nombre: 'la ficha se abre sin precios', de: "    async function abrirFicha(clienteId) {\n      if (!puedeEn('retiros', 'precios')) return", a: '    async function abrirFicha(clienteId) {' },
     { nombre: 'el proveedor no busca por CUIT', de: "        (digitos.length >= 3 && String(p.cuit ?? '').includes(digitos))).slice(0, 8)", a: '        false).slice(0, 8)' },
     // El alta
-    { nombre: 'el alta sin pedidos:configurar', de: "      if (!puedeEn('pedidos', 'configurar')) return\n      estado.alta = { error: null }", a: '      estado.alta = { error: null }' },
-    { nombre: 'sin aviso del permiso del alta', de: "      document.getElementById('ad-clientes-alta-aviso').hidden = alta || !puedeEn('retiros', 'precios')", a: "      document.getElementById('ad-clientes-alta-aviso').hidden = true" },
+    { nombre: 'el alta sin permiso', de: "      if (!puedeDarAlta()) return\n      estado.alta = { error: null }", a: '      estado.alta = { error: null }' },
+    { nombre: 'el alta solo con pedidos:configurar', de: "      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId)", a: "      return puedeEn('pedidos', 'configurar', unidadId)" },
+    { nombre: 'el alta sin alcance', de: "      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId)", a: "      return tieneTarea('pedidos', 'configurar') || tieneTarea('retiros', 'precios')" },
+    { nombre: 'el aviso viejo del alta se muestra', de: "      document.getElementById('ad-clientes-alta-aviso').hidden = true", a: "      document.getElementById('ad-clientes-alta-aviso').hidden = false" },
     { nombre: 'el alta sin nombre se manda', de: "      if (p.p_nombre.length < 2) { estado.alta.error = 'Poné el nombre del cliente.'; pintarClientes(); return }\n", a: '' },
     { nombre: 'el alta no abre la ficha', de: '        if (data) await abrirFicha(data)', a: '' },
   ],

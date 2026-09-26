@@ -208,6 +208,18 @@
       body > *:not(#ad-impresion) { display: none !important; }
       .ad-impresion { display: block !important; }
     }
+    /* ── Importar ─────────────────────────────────────────────────────────
+       Cada fila de la vista previa: verde bien, bordó con errores, neutra la
+       que se ignora. El color acompaña al texto del sello, nunca va solo. */
+    .ad-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .ad-imp-fila { border: 1px solid var(--borde-tarjeta); border-left: 4px solid var(--verde); border-radius: 12px; padding: 0.625rem 0.75rem; min-width: 0; background: var(--color-fondo); }
+    .ad-imp-fila--error { border-left-color: var(--bordo); background: var(--bordo-suave); }
+    .ad-imp-fila--ignorada { border-left-color: var(--color-acento-gris); }
+    .ad-imp-errores { margin: 0.375rem 0 0; padding-left: 1.125rem; color: var(--bordo-oscuro); font-weight: 600; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .ad-imp-avisos { margin: 0.375rem 0 0; padding-left: 1.125rem; color: var(--ad-texto-secundario); font-size: 0.8125rem; overflow-wrap: anywhere; }
+    .ad-sello--imp-ok { background: var(--verde-suave); color: var(--verde-oscuro); border-color: transparent; }
+    .ad-sello--imp-error { background: var(--bordo); color: #fff; border-color: var(--bordo); }
+    .ad-imp-pie { position: sticky; bottom: 0; z-index: 5; }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -475,6 +487,50 @@
       </div>
     </section>
 
+    <!-- ══ IMPORTAR (la carga inicial) ═════════════════════════════════════ -->
+    <section id="ad-vista-importar" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-importar-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Importar</h1>
+      </div>
+      <p class="ad-texto-suave">Para la carga inicial de <strong id="ad-importar-empresa"></strong>: desde un Excel o un CSV. Nada se guarda hasta que lo confirmás, y se guardan solo las filas buenas.</p>
+      <div class="ad-segmento" role="group" aria-label="Qué importar">
+        <button type="button" class="ad-segmento__opcion" data-importar-tipo="clientes" aria-pressed="true">Clientes</button>
+        <button type="button" class="ad-segmento__opcion" data-importar-tipo="precios" aria-pressed="false">Precios</button>
+        <button type="button" class="ad-segmento__opcion" data-importar-tipo="saldos" aria-pressed="false">Saldos iniciales</button>
+      </div>
+      <div class="ad-tarjeta">
+        <p id="ad-importar-explica"></p>
+        <div class="ad-fila-campos" id="ad-importar-opciones-precios" hidden>
+          <div class="ad-campo"><label for="ad-importar-lista">Lista de precios</label><select class="ad-select" id="ad-importar-lista"></select></div>
+          <div class="ad-campo"><label for="ad-importar-desde">Los precios rigen desde</label><input type="date" class="ad-input" id="ad-importar-desde"></div>
+        </div>
+        <div class="ad-barra-acciones">
+          <button type="button" class="ad-btn ad-btn--secundario" id="ad-importar-plantilla">Descargar la plantilla</button>
+          <button type="button" class="ad-btn" id="ad-importar-subir">Subir el archivo</button>
+          <input type="file" id="ad-importar-archivo" class="ad-oculto" accept=".xlsx,.xls,.csv" aria-label="Archivo para importar">
+        </div>
+        <p class="ad-error-pegado" id="ad-importar-error" hidden></p>
+      </div>
+      <div id="ad-importar-vista-previa"></div>
+      <div class="ad-panel" id="ad-importar-confirmar" hidden>
+        <p id="ad-importar-confirmar-texto"></p>
+        <div class="ad-panel__acciones">
+          <button type="button" class="ad-btn" id="ad-importar-confirmar-si">Confirmar y guardar</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-importar-confirmar-no">Volver a revisar</button>
+        </div>
+      </div>
+      <div class="ad-tarjeta ad-imp-pie" id="ad-importar-pie" hidden>
+        <p class="ad-cuenta" id="ad-importar-cuenta"></p>
+        <p class="ad-texto-suave" id="ad-importar-avance" role="status"></p>
+        <div class="ad-barra-acciones">
+          <button type="button" class="ad-btn" id="ad-importar-guardar">Guardar las filas buenas</button>
+          <button type="button" class="ad-btn ad-btn--secundario" id="ad-importar-resumen" hidden>Descargar el resumen</button>
+          <button type="button" class="ad-btn ad-btn--suave" id="ad-importar-descartar">Descartar el archivo</button>
+        </div>
+      </div>
+    </section>
+
   </div>
 
   <!-- La hoja para imprimir, CON precios: la arma htmlHoja() de
@@ -484,13 +540,13 @@
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import {
-      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero,
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, leerNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import {
       htmlHoja, asegurarEstilosHoja, textoFaltantesEmpresa, logoSeguro, enviarOrden,
       enteroHoja, importeHoja, textoLotes, fechaHoraHoja, COPIAS_IMPRESION,
-      cantidadInsumoHoja, unidadHoja,
+      cantidadInsumoHoja, unidadHoja, cargarScript,
     } from '../js/retiros-comun.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
@@ -537,6 +593,7 @@
       listaNueva: null,      // { error } mientras el panel de lista nueva está abierto
       lista: null,           // { id, precios, pendientes, historial, confirmar, error }
       proveedores: null,     // el padrón de proveedores, para "también es proveedor"
+      importar: null,        // { tipo, archivo, filas, error, confirmar, guardando, avance, terminado, listaId, desde }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -606,6 +663,7 @@
       { id: 'ordenes', titulo: 'Órdenes de retiro', permiso: ['retiros', 'ver'] },
       { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'] },
       { id: 'listas', titulo: 'Listas de precios', permiso: ['retiros', 'precios'] },
+      { id: 'importar', titulo: 'Importar', permiso: ['retiros', 'precios'] },
     ]
 
     function seccionesVisibles(unidadId = estado.empresaId) {
@@ -666,7 +724,7 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar']
     const SUBTITULO_DE_VISTA = {
       'ad-vista-inicio': 'Portada',
       'ad-vista-ordenes': 'Órdenes',
@@ -676,6 +734,7 @@
       'ad-vista-ficha': 'Ficha',
       'ad-vista-listas': 'Listas de precios',
       'ad-vista-lista': 'Lista',
+      'ad-vista-importar': 'Importar',
     }
 
     function mostrarVista(id) {
@@ -714,6 +773,7 @@
       estado.ordenes = null
       estado.portada = null
       estado.listas = null
+      estado.importar = null
       estado.filtros.clienteId = ''
       pintarEmpresas()
       mostrarInicio()
@@ -834,6 +894,10 @@
           `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
           `<span class="ad-seccion__numero">${esc(textoNumeroSeccion(numero))}</span>` +
           `<span class="ad-seccion__detalle">${esc(detalle)}</span></button>`
+      } else if (s.id === 'importar') {
+        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
+          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
+          `<span class="ad-seccion__detalle">Clientes, precios y saldos iniciales desde un Excel</span></button>`
       } else if (s.id === 'clientes') {
         numero = portada?.sobreLimite ?? null
         detalle = portada?.errorClientes ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'cliente pasa su límite' : 'clientes pasan su límite'))
@@ -890,6 +954,7 @@
       if (id === 'ordenes') mostrarOrdenes()
       else if (id === 'clientes') mostrarClientes()
       else if (id === 'listas') mostrarListas()
+      else if (id === 'importar') mostrarImportar()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1522,9 +1587,11 @@
       document.getElementById('ad-clientes-lista').innerHTML = htmlListaClientes()
       const n = estado.saldos ? clientesFiltrados(estado.saldos, estado.busquedaClientes).length : null
       document.getElementById('ad-clientes-cuenta').textContent = n === null ? '' : `${n} ${n === 1 ? 'cliente' : 'clientes'}`
-      const alta = puedeEn('pedidos', 'configurar')
+      const alta = puedeDarAlta()
       document.getElementById('ad-btn-cliente-nuevo').hidden = !alta
-      document.getElementById('ad-clientes-alta-aviso').hidden = alta || !puedeEn('retiros', 'precios')
+      // guardar_cliente acepta retiros:precios desde el 26/09/2026: el aviso
+      // de que el alta pedía el permiso de Pedidos ya no tiene a quién decírselo.
+      document.getElementById('ad-clientes-alta-aviso').hidden = true
       document.getElementById('ad-panel-alta').hidden = !estado.alta
       const e = document.getElementById('ad-alta-error')
       e.textContent = estado.alta?.error ?? ''
@@ -1557,10 +1624,16 @@
     // ── El alta: guardar_cliente (pide pedidos:configurar) ─────────────────
 
     function abrirAlta() {
-      if (!puedeEn('pedidos', 'configurar')) return
+      if (!puedeDarAlta()) return
       estado.alta = { error: null }
       for (const id of ['ad-alta-nombre', 'ad-alta-localidad', 'ad-alta-telefono']) document.getElementById(id).value = ''
       pintarClientes()
+    }
+
+    // El alta de un cliente: guardar_cliente la acepta con pedidos:configurar
+    // o con retiros:precios (la misma regla, con alcance, que en la base).
+    function puedeDarAlta(unidadId = estado.empresaId) {
+      return puedeEn('pedidos', 'configurar', unidadId) || puedeEn('retiros', 'precios', unidadId)
     }
 
     function parametrosAlta(unidadId) {
@@ -2300,6 +2373,816 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // IMPORTAR — la carga inicial, con retiros:precios (26/09/2026)
+    //
+    // El día del arranque se cargan de una vez los clientes, los precios y los
+    // saldos iniciales de la empresa, desde un Excel o un CSV. Tres reglas:
+    //  - NADA SE GUARDA HASTA CONFIRMAR: subir el archivo solo arma la vista
+    //    previa, fila por fila, con lo que está bien y cada error con su motivo;
+    //  - se guardan SOLO las filas buenas (las que tienen errores no se tocan);
+    //  - cada importación deja un resumen descargable: qué se guardó y qué no.
+    // Las validaciones de acá repiten las de la base (guardar_ficha_cliente,
+    // guardar_precios, registrar_saldo_inicial_cliente) y suman los dígitos
+    // verificadores del CUIT y del CBU: una fila que acá sale bien no se come
+    // un rechazo de la base por un dato mal escrito.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // SheetJS, de cdnjs, cargado recién al usarlo.
+    const LIBRERIA_XLSX = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    const TIPOS_IMPORTAR = [
+      { id: 'clientes', titulo: 'Clientes' },
+      { id: 'precios', titulo: 'Precios' },
+      { id: 'saldos', titulo: 'Saldos iniciales' },
+    ]
+    const EXPLICA_IMPORTAR = {
+      clientes: 'Bajá la plantilla, completá una fila por cliente (el nombre es obligatorio; el resto, lo que tengas) y subila. Los nombres no se pueden repetir en la empresa.',
+      precios: 'Elegí la lista y desde cuándo rigen. La plantilla trae todos los productos y la materia prima e insumos, con el precio que rige hoy en esa lista: completá la columna «Precio nuevo» (lo que quede vacío no se toca) y subila.',
+      saldos: 'La plantilla trae los clientes de la empresa: completá lo que cada uno debía antes de empezar (negativo si tiene saldo a favor) y subila. Un saldo inicial se carga una sola vez.',
+    }
+
+    // La columna del identificador interno: la plantilla la trae y NO se toca.
+    const TITULO_CODIGO = 'Código (no tocar)'
+
+    const COLUMNAS_CLIENTES = [
+      { clave: 'nombre', titulo: 'Nombre', obligatoria: true },
+      { clave: 'razon_social', titulo: 'Razón social' },
+      { clave: 'cuit', titulo: 'CUIT', alias: ['cuit cuil', 'cuil'], texto: true },
+      { clave: 'condicion_iva', titulo: 'Condición IVA', alias: ['condicion frente al iva', 'iva'] },
+      { clave: 'domicilio', titulo: 'Domicilio', alias: ['direccion'] },
+      { clave: 'localidad', titulo: 'Localidad', alias: ['ciudad'] },
+      { clave: 'provincia', titulo: 'Provincia' },
+      { clave: 'codigo_postal', titulo: 'Código postal', alias: ['cp'], texto: true },
+      { clave: 'telefono', titulo: 'Teléfono', alias: ['telefono del cliente'], texto: true },
+      { clave: 'email', titulo: 'Mail', alias: ['email', 'e mail', 'correo'] },
+      { clave: 'contacto_nombre', titulo: 'Contacto' },
+      { clave: 'contacto_telefono', titulo: 'Teléfono del contacto', texto: true },
+      { clave: 'transporte_habitual', titulo: 'Transporte habitual', alias: ['transporte'] },
+      { clave: 'banco', titulo: 'Banco' },
+      { clave: 'cbu', titulo: 'CBU', texto: true },
+      { clave: 'alias_cbu', titulo: 'Alias', alias: ['alias cbu'] },
+      { clave: 'lista', titulo: 'Lista de precios', alias: ['lista'] },
+      { clave: 'limite_credito', titulo: 'Límite de crédito', alias: ['limite'] },
+      { clave: 'plazo_pago_dias', titulo: 'Plazo de pago', alias: ['plazo de pago dias', 'plazo'] },
+      { clave: 'observaciones', titulo: 'Observaciones' },
+    ]
+    const COLUMNAS_PRECIOS = [
+      { clave: 'codigo', titulo: TITULO_CODIGO, obligatoria: true, alias: ['codigo'] },
+      { clave: 'tipo', titulo: 'Tipo' },
+      { clave: 'grupo', titulo: 'Grupo' },
+      { clave: 'producto', titulo: 'Producto' },
+      { clave: 'detalle', titulo: 'Presentación / detalle' },
+      { clave: 'actual', titulo: 'Precio actual' },
+      { clave: 'precio', titulo: 'Precio nuevo', obligatoria: true },
+    ]
+    const COLUMNAS_SALDOS = [
+      { clave: 'codigo', titulo: TITULO_CODIGO, obligatoria: true, alias: ['codigo'] },
+      { clave: 'nombre', titulo: 'Nombre' },
+      { clave: 'razon_social', titulo: 'Razón social' },
+      { clave: 'cuit', titulo: 'CUIT', texto: true },
+      { clave: 'saldo', titulo: 'Saldo inicial', obligatoria: true, alias: ['saldo'] },
+      { clave: 'fecha', titulo: 'Fecha' },
+      { clave: 'observacion', titulo: 'Observación', alias: ['observaciones'] },
+    ]
+    const COLUMNAS_DE = { clientes: COLUMNAS_CLIENTES, precios: COLUMNAS_PRECIOS, saldos: COLUMNAS_SALDOS }
+
+    // Los valores de condicion_iva que acepta la base, y cómo se escriben.
+    const CONDICIONES_IVA = [
+      { valor: 'responsable_inscripto', titulo: 'Responsable inscripto', alias: ['responsable inscripto', 'ri', 'resp inscripto', 'inscripto'] },
+      { valor: 'monotributo', titulo: 'Monotributo', alias: ['monotributo', 'monotributista', 'mt'] },
+      { valor: 'consumidor_final', titulo: 'Consumidor final', alias: ['consumidor final', 'cf'] },
+      { valor: 'exento', titulo: 'Exento', alias: ['exento', 'iva exento'] },
+    ]
+
+    function normalizarEncabezado(t) {
+      return normalizar(t).replace(/[^a-z0-9]+/g, ' ').trim()
+    }
+
+    // Qué columna de la planilla es cada campo, por su encabezado (sin
+    // acentos ni mayúsculas, o por un alias). Las que faltan y son
+    // obligatorias se dicen; las que sobran se ignoran.
+    function mapearColumnas(encabezados, columnas) {
+      const norm = (encabezados ?? []).map(normalizarEncabezado)
+      const indice = {}
+      for (const c of columnas) {
+        const nombres = [c.titulo, ...(c.alias ?? [])].map(normalizarEncabezado)
+        const i = norm.findIndex(h => h && nombres.includes(h))
+        if (i !== -1) indice[c.clave] = i
+      }
+      return { indice, faltan: columnas.filter(c => c.obligatoria && indice[c.clave] === undefined).map(c => c.titulo) }
+    }
+
+    // Una celda como texto. Un número entero va sin exponente ni separador
+    // (un CUIT de 11 dígitos guardado como número sigue siendo el CUIT).
+    function textoCelda(v) {
+      if (v === null || v === undefined) return ''
+      if (typeof v === 'number') return Number.isFinite(v) ? (Number.isInteger(v) ? v.toLocaleString('fullwide', { useGrouping: false }) : String(v)) : ''
+      if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : fechaIsoLocal(v)
+      return String(v).replace(/\s+/g, ' ').trim()
+    }
+
+    function fechaIsoLocal(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+
+    // Un número de la planilla: un número de Excel tal cual; un texto, con el
+    // formato argentino (punto de miles, coma decimal). null = ilegible o vacío.
+    function numeroCelda(v, { decimales = 2, negativos = false } = {}) {
+      if (typeof v === 'number') {
+        if (!Number.isFinite(v) || (!negativos && v < 0)) return null
+        return Math.round(v * 10 ** decimales) / 10 ** decimales
+      }
+      const t = textoCelda(v).replace(/^\$\s*/, '')
+      if (!t) return null
+      return leerNumeroAr(t, { decimales, negativos })
+    }
+
+    // Una fecha de la planilla: una fecha de Excel, "dd/mm/aaaa" o
+    // "aaaa-mm-dd". null = ilegible.
+    function fechaCelda(v) {
+      if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : fechaIsoLocal(v)
+      const t = textoCelda(v)
+      let a, m, d
+      let x = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t)
+      if (x) { d = +x[1]; m = +x[2]; a = +x[3] }
+      else if ((x = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t))) { a = +x[1]; m = +x[2]; d = +x[3] }
+      else return null
+      const f = new Date(Date.UTC(a, m - 1, d))
+      if (f.getUTCFullYear() !== a || f.getUTCMonth() !== m - 1 || f.getUTCDate() !== d) return null
+      return `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    }
+
+    // CUIT / CUIL: 11 números y el dígito verificador de la AFIP (ponderador
+    // 5432765432; si da 11 es 0, si da 10 es 9).
+    function cuitValido(digitos) {
+      if (!/^\d{11}$/.test(String(digitos ?? ''))) return false
+      const d = [...String(digitos)].map(Number)
+      const peso = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
+      const s = peso.reduce((a, p, i) => a + p * d[i], 0)
+      const r = 11 - (s % 11)
+      return (r === 11 ? 0 : r === 10 ? 9 : r) === d[10]
+    }
+
+    // CBU: 22 números en dos bloques, cada uno con su dígito verificador
+    // (BCRA: 7139713 el primero, 3971397139713 el segundo).
+    function cbuValido(digitos) {
+      if (!/^\d{22}$/.test(String(digitos ?? ''))) return false
+      const d = [...String(digitos)].map(Number)
+      const dv = (desde, pesos) => (10 - pesos.reduce((a, p, i) => a + p * d[desde + i], 0) % 10) % 10
+      return dv(0, [7, 1, 3, 9, 7, 1, 3]) === d[7] && dv(8, [3, 9, 7, 1, 3, 9, 7, 1, 3, 9, 7, 1, 3]) === d[21]
+    }
+
+    function condicionIvaDe(t) {
+      const n = normalizarEncabezado(t)
+      if (!n) return { valor: null }
+      const c = CONDICIONES_IVA.find(x => normalizarEncabezado(x.valor) === n || normalizarEncabezado(x.titulo) === n || x.alias.includes(n))
+      return c ? { valor: c.valor } : { error: `La condición de IVA «${limpio(t)}» no es una de estas: ${CONDICIONES_IVA.map(x => x.titulo).join(', ')}.` }
+    }
+
+    // La clave con la que un nombre de cliente choca en la base (índice único
+    // sobre lower(btrim(nombre))). Acá además se colapsan los espacios de
+    // adentro: el nombre se manda así, limpio.
+    function claveNombreCliente(n) {
+      return limpio(n).toLowerCase()
+    }
+
+    // Las filas de la hoja: la primera fila con algo es el encabezado; las
+    // vacías se saltean. `numero` es la fila de la planilla (1 = la primera).
+    function filasDeHoja(aoa) {
+      const filas = Array.isArray(aoa) ? aoa : []
+      const vacia = (f) => !Array.isArray(f) || f.every(c => textoCelda(c) === '')
+      const cab = filas.findIndex(f => !vacia(f))
+      if (cab === -1) return { encabezados: [], filas: [] }
+      const out = []
+      for (let i = cab + 1; i < filas.length; i++) if (!vacia(filas[i])) out.push({ numero: i + 1, celdas: filas[i] })
+      return { encabezados: filas[cab].map(textoCelda), filas: out }
+    }
+
+    // El estado de una fila de la vista previa.
+    function estadoFila(f) {
+      if (f.errores.length) return 'error'
+      if (f.ignorada) return 'ignorada'
+      return 'ok'
+    }
+
+    function filaPrevia(numero, titulo) {
+      return { numero, titulo, datos: {}, errores: [], avisos: [], ignorada: false, estado: 'ok', resultado: null }
+    }
+
+    // Marca con error TODAS las filas que repiten una clave: con dos iguales
+    // no hay forma de saber cuál es la buena.
+    function marcarRepetidas(filas, claveDe, texto) {
+      const por = new Map()
+      for (const f of filas) {
+        const k = claveDe(f)
+        if (!k) continue
+        if (!por.has(k)) por.set(k, [])
+        por.get(k).push(f)
+      }
+      for (const grupo of por.values()) {
+        if (grupo.length < 2) continue
+        const numeros = grupo.map(f => f.numero)
+        for (const f of grupo) f.errores.push(texto(numeros.filter(n => n !== f.numero)))
+      }
+    }
+
+    function textoFilas(numeros) {
+      return numeros.length === 1 ? `la fila ${numeros[0]}` : `las filas ${numeros.slice(0, -1).join(', ')} y ${numeros[numeros.length - 1]}`
+    }
+
+    // ── Clientes ─────────────────────────────────────────────────────────
+    // ctx: { clientes: los de la empresa, listas: las listas de la empresa }
+    function validarClientes(aoa, ctx) {
+      const hoja = filasDeHoja(aoa)
+      const m = mapearColumnas(hoja.encabezados, COLUMNAS_CLIENTES)
+      if (!hoja.filas.length) return { error: 'El archivo no tiene filas con datos.', filas: [] }
+      if (m.faltan.length) return { error: `A la planilla le falta la columna «${m.faltan.join('», «')}». Usá la plantilla.`, filas: [] }
+      const existentes = new Map((ctx?.clientes ?? []).map(c => [claveNombreCliente(c.nombre), c]))
+      const cuits = new Map((ctx?.clientes ?? []).filter(c => c.cuit).map(c => [String(c.cuit).replace(/\D/g, ''), c]))
+      const listas = ctx?.listas ?? []
+      const filas = hoja.filas.map(({ numero, celdas }) => {
+        const v = (clave) => m.indice[clave] === undefined ? undefined : celdas[m.indice[clave]]
+        const t = (clave) => textoCelda(v(clave))
+        const nombre = limpio(t('nombre'))
+        const f = filaPrevia(numero, nombre || '(sin nombre)')
+        const d = f.datos
+        if (nombre.length < 2) f.errores.push('Falta el nombre del cliente.')
+        else if (nombre.length > 120) f.errores.push('El nombre tiene más de 120 letras.')
+        else if (existentes.has(claveNombreCliente(nombre))) f.errores.push(`Ya hay un cliente «${existentes.get(claveNombreCliente(nombre)).nombre}» en esta empresa.`)
+        d.nombre = nombre
+        for (const c of ['razon_social', 'domicilio', 'localidad', 'provincia', 'codigo_postal', 'telefono', 'contacto_nombre', 'contacto_telefono', 'transporte_habitual', 'banco']) {
+          const x = limpio(t(c))
+          if (x) d[c] = x
+        }
+        const obs = String(textoCelda(v('observaciones')) ?? '').trim()
+        if (obs) d.observaciones = obs
+        const cuitTexto = t('cuit')
+        if (cuitTexto) {
+          const dig = cuitTexto.replace(/\D/g, '')
+          if (dig.length !== 11) f.errores.push(`El CUIT «${cuitTexto}» no tiene 11 números.`)
+          else if (!cuitValido(dig)) f.errores.push(`El CUIT ${dig} no es válido: el dígito verificador no cierra.`)
+          else {
+            d.cuit = dig
+            if (cuits.has(dig)) f.avisos.push(`Ese CUIT ya lo tiene «${cuits.get(dig).nombre}».`)
+          }
+        }
+        const iva = condicionIvaDe(t('condicion_iva'))
+        if (iva.error) f.errores.push(iva.error)
+        else if (iva.valor) d.condicion_iva = iva.valor
+        const mail = t('email').toLowerCase()
+        if (mail) {
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) f.errores.push(`El mail «${t('email')}» está mal escrito.`)
+          else d.email = mail
+        }
+        const cbuTexto = t('cbu')
+        if (cbuTexto) {
+          const dig = cbuTexto.replace(/\D/g, '')
+          if (dig.length !== 22) f.errores.push(`El CBU tiene ${dig.length} números y tiene que tener 22. Si Excel lo cambió, escribilo con un apóstrofo adelante (').`)
+          else if (!cbuValido(dig)) f.errores.push(`El CBU ${dig} no es válido: un dígito verificador no cierra.`)
+          else d.cbu = dig
+        }
+        const alias = t('alias_cbu')
+        if (alias) {
+          if (!/^[A-Za-z0-9.-]{6,20}$/.test(alias)) f.errores.push(`El alias «${alias}» tiene que tener entre 6 y 20 letras, números, puntos o guiones.`)
+          else d.alias_cbu = alias
+        }
+        const lista = t('lista')
+        if (lista) {
+          const l = listas.find(x => normalizar(x.nombre) === normalizar(lista))
+          if (!l) f.errores.push(`No hay una lista de precios «${lista}» en esta empresa.`)
+          else d.lista_precio_id = l.id
+        }
+        if (t('limite_credito')) {
+          const n = numeroCelda(v('limite_credito'), { decimales: 2, negativos: true })
+          if (n === null) f.errores.push(`El límite de crédito «${t('limite_credito')}» no es un número.`)
+          else if (n < 0) f.errores.push('El límite de crédito no puede ser negativo.')
+          else d.limite_credito = n
+        }
+        if (t('plazo_pago_dias')) {
+          const n = numeroCelda(v('plazo_pago_dias'), { decimales: 0 })
+          if (n === null || n > 365) f.errores.push(`El plazo de pago «${t('plazo_pago_dias')}» tiene que ser un número de días de 0 a 365.`)
+          else d.plazo_pago_dias = n
+        }
+        return f
+      })
+      marcarRepetidas(filas, f => f.datos.nombre ? claveNombreCliente(f.datos.nombre) : null,
+        (otras) => `El nombre está repetido en el archivo (también en ${textoFilas(otras)}).`)
+      for (const f of filas) f.estado = estadoFila(f)
+      return { error: null, filas }
+    }
+
+    // Lo que va a guardar_cliente y lo que va a guardar_ficha_cliente: la
+    // ficha SOLO con los datos que vinieron (guardar_ficha_cliente toca
+    // únicamente las claves que recibe).
+    function parametrosCliente(f, unidadId) {
+      const d = f.datos
+      const cliente = {
+        p_id: null, p_unidad_negocio_id: unidadId, p_nombre: d.nombre, p_apodos: [],
+        p_localidad: d.localidad ?? null, p_telefono: d.telefono ?? null, p_observaciones: d.observaciones ?? null, p_activo: true,
+      }
+      const ficha = {}
+      for (const c of ['razon_social', 'cuit', 'condicion_iva', 'domicilio', 'provincia', 'codigo_postal', 'email', 'contacto_nombre',
+        'contacto_telefono', 'transporte_habitual', 'banco', 'cbu', 'alias_cbu', 'lista_precio_id', 'limite_credito', 'plazo_pago_dias']) {
+        if (d[c] !== undefined && d[c] !== null && d[c] !== '') ficha[c] = d[c]
+      }
+      return { cliente, ficha }
+    }
+
+    // ── Precios ─────────────────────────────────────────────────────────
+    // ctx: { filas: las de la grilla (filasGrilla), precios: los de la lista, hoy }
+    function validarPrecios(aoa, ctx) {
+      const hoja = filasDeHoja(aoa)
+      const m = mapearColumnas(hoja.encabezados, COLUMNAS_PRECIOS)
+      if (!hoja.filas.length) return { error: 'El archivo no tiene filas con datos.', filas: [] }
+      if (m.faltan.length) return { error: `A la planilla le falta la columna «${m.faltan.join('», «')}». Usá la plantilla.`, filas: [] }
+      const porClave = new Map((ctx?.filas ?? []).map(x => [x.clave, x]))
+      const filas = hoja.filas.map(({ numero, celdas }) => {
+        const v = (clave) => m.indice[clave] === undefined ? undefined : celdas[m.indice[clave]]
+        const codigo = textoCelda(v('codigo'))
+        const g = porClave.get(codigo)
+        const f = filaPrevia(numero, g ? `${g.producto} · ${g.presentacion}` : (limpio(textoCelda(v('producto'))) || codigo || '(sin código)'))
+        const precioTexto = textoCelda(v('precio'))
+        if (!codigo) f.errores.push('Falta el código: no toques esa columna de la plantilla.')
+        else if (!g) f.errores.push('El código no es de un producto ni de un insumo de esta empresa: bajá la plantilla de nuevo.')
+        f.codigo = codigo
+        f.conPrecio = !!precioTexto
+        if (!precioTexto) { f.ignorada = true; f.avisos.push('Sin precio nuevo: no se toca.') }
+        else {
+          const n = numeroCelda(v('precio'), { decimales: 2, negativos: true })
+          if (n === null) f.errores.push(`El precio «${precioTexto}» no es un número.`)
+          else if (n < 0) f.errores.push('El precio no puede ser negativo.')
+          else if (g) {
+            f.datos = g.insumoId ? { insumo_id: g.insumoId, precio_caja: n } : { presentacion_id: g.presentacionId, precio_caja: n }
+            const vig = vigenteYProximo(ctx?.precios ?? [], g.clave, ctx?.hoy ?? hoyArgentina()).vigente
+            if (vig && Number(vig.precio_caja) === n) { f.ignorada = true; f.avisos.push('Es igual al que rige hoy: no cambia.') }
+          }
+        }
+        return f
+      })
+      // Una fila sin precio nuevo no cuenta como repetida: no toca nada.
+      marcarRepetidas(filas, f => f.conPrecio ? (f.codigo || null) : null,
+        (otras) => `El mismo producto está en ${textoFilas(otras)}.`)
+      for (const f of filas) f.estado = estadoFila(f)
+      return { error: null, filas }
+    }
+
+    // ── Saldos iniciales ────────────────────────────────────────────────
+    // ctx: { clientes, conSaldo: Set de clientes que ya tienen (null = no se sabe), hoy }
+    function validarSaldos(aoa, ctx) {
+      const hoja = filasDeHoja(aoa)
+      const m = mapearColumnas(hoja.encabezados, COLUMNAS_SALDOS)
+      if (!hoja.filas.length) return { error: 'El archivo no tiene filas con datos.', filas: [] }
+      if (m.faltan.length) return { error: `A la planilla le falta la columna «${m.faltan.join('», «')}». Usá la plantilla.`, filas: [] }
+      const porId = new Map((ctx?.clientes ?? []).map(c => [c.id, c]))
+      const hoy = ctx?.hoy ?? hoyArgentina()
+      const filas = hoja.filas.map(({ numero, celdas }) => {
+        const v = (clave) => m.indice[clave] === undefined ? undefined : celdas[m.indice[clave]]
+        const codigo = textoCelda(v('codigo'))
+        const c = porId.get(codigo)
+        const f = filaPrevia(numero, c ? c.nombre : (limpio(textoCelda(v('nombre'))) || codigo || '(sin código)'))
+        if (!codigo) f.errores.push('Falta el código: no toques esa columna de la plantilla.')
+        else if (!c) f.errores.push('El código no es de un cliente de esta empresa: bajá la plantilla de nuevo.')
+        const saldoTexto = textoCelda(v('saldo'))
+        if (!saldoTexto) { f.ignorada = true; f.avisos.push('Sin saldo: no se carga nada.') }
+        else {
+          const n = numeroCelda(v('saldo'), { decimales: 2, negativos: true })
+          if (n === null) f.errores.push(`El saldo «${saldoTexto}» no es un número.`)
+          else if (n === 0) { f.ignorada = true; f.avisos.push('En cero: si no debe nada, no hace falta cargarlo.') }
+          else f.datos.importe = n
+        }
+        const fechaTexto = textoCelda(v('fecha'))
+        if (fechaTexto) {
+          const fe = fechaCelda(v('fecha'))
+          if (!fe) f.errores.push(`La fecha «${fechaTexto}» no se entiende: escribila dd/mm/aaaa.`)
+          else if (fe > hoy) f.errores.push('La fecha no puede ser posterior a hoy.')
+          else f.datos.fecha = fe
+        }
+        f.datos.fecha = f.datos.fecha ?? hoy
+        const obs = limpio(textoCelda(v('observacion')))
+        if (obs) f.datos.observacion = obs
+        if (c && !f.ignorada && ctx?.conSaldo instanceof Set && ctx.conSaldo.has(c.id)) {
+          f.errores.push('Ya tiene saldo inicial: la base no deja cargar otro (se corrige con un ajuste desde su cuenta).')
+        }
+        f.datos.clienteId = c?.id ?? null
+        return f
+      })
+      marcarRepetidas(filas, f => f.ignorada ? null : f.datos.clienteId,
+        (otras) => `El mismo cliente está en ${textoFilas(otras)}.`)
+      for (const f of filas) f.estado = estadoFila(f)
+      return { error: null, filas }
+    }
+
+    function validarImportacion(tipo, aoa, ctx) {
+      if (tipo === 'precios') return validarPrecios(aoa, ctx)
+      if (tipo === 'saldos') return validarSaldos(aoa, ctx)
+      return validarClientes(aoa, ctx)
+    }
+
+    // ── Las plantillas (arreglos de filas; el .xlsx lo arma SheetJS) ──────
+    function plantillaClientes() {
+      return [COLUMNAS_CLIENTES.map(c => c.titulo)]
+    }
+
+    function instruccionesClientes(listas) {
+      return [
+        ['Cómo completar la planilla de clientes'],
+        ['Una fila por cliente. El nombre es obligatorio y no se puede repetir en la empresa.'],
+        ['CUIT: 11 números (con o sin guiones). CBU: 22 números. Si Excel los cambia, escribilos con un apóstrofo adelante (\').'],
+        ['Límite de crédito: en pesos, por ejemplo 150.000 o 150000. Plazo de pago: días, de 0 a 365.'],
+        [],
+        ['Condición IVA (una de estas)'],
+        ...CONDICIONES_IVA.map(c => [c.titulo]),
+        [],
+        ['Lista de precios (una de estas, o vacía)'],
+        ...(listas ?? []).map(l => [l.nombre]),
+      ]
+    }
+
+    function plantillaPrecios(filas, precios, hoy) {
+      return [COLUMNAS_PRECIOS.map(c => c.titulo), ...(filas ?? []).map(f => {
+        const vig = vigenteYProximo(precios ?? [], f.clave, hoy).vigente
+        return [f.clave, f.insumoId ? 'Insumo' : 'Producto', f.grupo, f.producto, f.presentacion, vig ? Number(vig.precio_caja) : '', '']
+      })]
+    }
+
+    function plantillaSaldos(clientes) {
+      return [COLUMNAS_SALDOS.map(c => c.titulo), ...(clientes ?? []).filter(c => c.activo !== false).map(c =>
+        [c.id, c.nombre ?? '', c.razon_social ?? '', c.cuit ?? '', '', '', ''])]
+    }
+
+    // El resumen: qué se guardó y qué no, fila por fila.
+    function filasResumen(filas) {
+      const out = [['Fila', 'Nombre', 'Resultado', 'Detalle']]
+      for (const f of filas ?? []) {
+        let resultado, detalle
+        if (f.resultado?.ok === true) { resultado = 'Guardada'; detalle = f.resultado.mensaje ?? '' }
+        else if (f.resultado?.ok === false) { resultado = 'No se guardó'; detalle = f.resultado.mensaje ?? '' }
+        else if (f.estado === 'error') { resultado = 'Con errores: no se intentó'; detalle = f.errores.join(' ') }
+        else if (f.estado === 'ignorada') { resultado = 'Se ignoró'; detalle = f.avisos.join(' ') }
+        else { resultado = 'Sin guardar'; detalle = '' }
+        out.push([f.numero, f.titulo, resultado, detalle])
+      }
+      return out
+    }
+
+    // ── SheetJS ─────────────────────────────────────────────────────────
+    async function cargarXlsx() {
+      try { await cargarScript(LIBRERIA_XLSX) } catch { throw new Error('No se pudo bajar la librería de Excel: revisá la conexión.') }
+      if (!window.XLSX) throw new Error('No se pudo cargar la librería de Excel.')
+      return window.XLSX
+    }
+
+    // La primera hoja del archivo como arreglo de filas. Los números quedan
+    // como números y las fechas como fechas (cellDates).
+    // UN CSV SE LEE COMO TEXTO Y SIN INTERPRETAR (raw): si no, SheetJS
+    // convierte un CBU de 22 dígitos en número y se come los últimos
+    // (visto en la maqueta el 26/09/2026). Y el texto se decodifica acá:
+    // UTF-8 si lo es (el "CSV UTF-8" de Excel) y si no Windows-1252 (el "CSV"
+    // a secas de Excel en Windows); sin eso "Almacén" llega como "AlmacÃ©n".
+    function textoDeCsv(bytes) {
+      // TextDecoder ya saca el BOM del principio (ignoreBOM es false).
+      try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes) }
+      catch { return new TextDecoder('windows-1252').decode(bytes) }
+    }
+
+    function esCsv(archivo) {
+      return /\.csv$/i.test(String(archivo?.name ?? '')) || /csv/i.test(String(archivo?.type ?? ''))
+    }
+
+    async function leerArchivoPlanilla(archivo) {
+      const XLSX = await cargarXlsx()
+      const libro = esCsv(archivo)
+        ? XLSX.read(textoDeCsv(new Uint8Array(await archivo.arrayBuffer())), { type: 'string', raw: true })
+        : XLSX.read(await archivo.arrayBuffer(), { type: 'array', cellDates: true })
+      const hoja = libro.Sheets[libro.SheetNames[0]]
+      if (!hoja) throw new Error('El archivo no tiene ninguna hoja.')
+      return XLSX.utils.sheet_to_json(hoja, { header: 1, raw: true, defval: '' })
+    }
+
+    // Arma y descarga un .xlsx. Las columnas `texto` (CUIT, CBU, teléfonos)
+    // van con formato de texto para que Excel no las convierta en número.
+    async function descargarPlanilla(nombre, hojas) {
+      const XLSX = await cargarXlsx()
+      const libro = XLSX.utils.book_new()
+      for (const h of hojas) {
+        const ws = XLSX.utils.aoa_to_sheet(h.filas)
+        ws['!cols'] = (h.filas[0] ?? []).map((t, i) => ({ wch: Math.min(40, Math.max(12, String(t ?? '').length + 2, ...h.filas.slice(1, 50).map(f => String(f[i] ?? '').length + 2))) }))
+        for (const col of h.columnasTexto ?? []) {
+          for (let r = 1; r <= Math.max(h.filas.length + 200, 300); r++) {
+            const ref = XLSX.utils.encode_cell({ r, c: col })
+            if (!ws[ref]) ws[ref] = { t: 's', v: '' }
+            ws[ref].z = '@'
+          }
+          ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(h.filas.length + 200, 300), c: Math.max(0, (h.filas[0] ?? []).length - 1) } })
+        }
+        XLSX.utils.book_append_sheet(libro, ws, h.nombre)
+      }
+      XLSX.writeFile(libro, nombre)
+    }
+
+    function nombreArchivoImportar(tipo, extra = '') {
+      const emp = String(empresaActual()?.nombre ?? 'empresa').replace(/[\\/:*?"<>|]/g, ' ').trim()
+      return `${TIPOS_IMPORTAR.find(t => t.id === tipo)?.titulo ?? 'Importar'}${extra ? ' ' + extra : ''} - ${emp}.xlsx`
+    }
+
+    // ── La pantalla ─────────────────────────────────────────────────────
+    function importarVacio(tipo = 'clientes') {
+      return { tipo, archivo: null, filas: null, error: null, confirmar: false, guardando: false, avance: null, terminado: false,
+        listaId: '', desde: hoyArgentina(), conSaldo: null }
+    }
+
+    function cuentaImportar(filas) {
+      const c = { ok: 0, error: 0, ignorada: 0 }
+      for (const f of filas ?? []) c[f.estado] = (c[f.estado] ?? 0) + 1
+      return c
+    }
+
+    function textoCuentaImportar(filas) {
+      const c = cuentaImportar(filas)
+      const n = (filas ?? []).length
+      return `${n} ${n === 1 ? 'fila' : 'filas'}: ${c.ok} bien, ${c.error} con errores, ${c.ignorada} se ignoran.`
+    }
+
+    const ETIQUETA_FILA = { ok: 'Bien', error: 'Con errores', ignorada: 'Se ignora' }
+
+    function htmlFilaImportar(f) {
+      let sello = `<span class="ad-sello ad-sello--imp-${esc(f.estado)}">${esc(ETIQUETA_FILA[f.estado] ?? '')}</span>`
+      if (f.resultado?.ok === true) sello = '<span class="ad-sello ad-sello--valorizada">Guardada</span>'
+      else if (f.resultado?.ok === false) sello = '<span class="ad-sello ad-sello--anulada">No se guardó</span>'
+      const errores = f.errores.map(e => `<li>${esc(e)}</li>`).join('')
+      const avisos = f.avisos.map(a => `<li>${esc(a)}</li>`).join('')
+      const resultado = f.resultado?.mensaje ? `<p class="${f.resultado.ok ? 'ad-texto-suave' : 'ad-error-pegado'}">${esc(f.resultado.mensaje)}</p>` : ''
+      return `<div class="ad-imp-fila ad-imp-fila--${esc(f.estado)}"><div class="ad-fila__linea">` +
+        `<span class="ad-renglon__desc">${esc('Fila ' + f.numero + ' · ' + f.titulo)}</span>${sello}</div>` +
+        (errores ? `<ul class="ad-imp-errores">${errores}</ul>` : '') +
+        (avisos ? `<ul class="ad-imp-avisos">${avisos}</ul>` : '') + resultado + `</div>`
+    }
+
+    function htmlVistaPrevia(im) {
+      if (!im?.filas) return ''
+      if (!im.filas.length) return '<div class="ad-aviso">El archivo no tiene filas.</div>'
+      return `<div class="ad-tarjeta"><h2 class="ad-subtitulo">${esc('Vista previa · ' + (im.archivo ?? ''))}</h2>` +
+        `<div class="ad-lista">${im.filas.map(htmlFilaImportar).join('')}</div></div>`
+    }
+
+    function textoConfirmarImportar(im) {
+      const c = cuentaImportar(im.filas)
+      const emp = empresaActual()?.nombre ?? 'la empresa'
+      const que = im.tipo === 'clientes' ? (c.ok === 1 ? 'cliente' : 'clientes') : im.tipo === 'precios' ? (c.ok === 1 ? 'precio' : 'precios') : (c.ok === 1 ? 'saldo inicial' : 'saldos iniciales')
+      const lista = im.tipo === 'precios' ? ` en la lista «${listaDe(im.listaId)?.nombre ?? ''}», que rigen desde el ${fechaCorta(im.desde)}` : ''
+      return `Vas a guardar ${c.ok} ${que} en ${emp}${lista}.` + (c.error ? ` Las ${c.error} filas con errores no se guardan.` : '')
+    }
+
+    function pintarImportar() {
+      const im = estado.importar
+      if (!im) return
+      for (const b of document.querySelectorAll('[data-importar-tipo]')) b.setAttribute('aria-pressed', b.dataset.importarTipo === im.tipo ? 'true' : 'false')
+      document.getElementById('ad-importar-empresa').textContent = empresaActual()?.nombre ?? ''
+      document.getElementById('ad-importar-explica').textContent = EXPLICA_IMPORTAR[im.tipo] ?? ''
+      document.getElementById('ad-importar-opciones-precios').hidden = im.tipo !== 'precios'
+      if (im.tipo === 'precios') {
+        const sel = document.getElementById('ad-importar-lista')
+        sel.innerHTML = '<option value="">Elegí la lista</option>' + (estado.listas?.filas ?? []).map(l =>
+          `<option value="${esc(l.id)}"${l.id === im.listaId ? ' selected' : ''}>${esc(l.nombre + (l.activa === false ? ' — inactiva' : ''))}</option>`).join('')
+        document.getElementById('ad-importar-desde').value = im.desde
+      }
+      const err = document.getElementById('ad-importar-error')
+      err.textContent = im.error ?? ''
+      err.hidden = !im.error
+      document.getElementById('ad-importar-vista-previa').innerHTML = htmlVistaPrevia(im)
+      const hay = Array.isArray(im.filas) && im.filas.length > 0
+      document.getElementById('ad-importar-pie').hidden = !hay
+      if (hay) {
+        const c = cuentaImportar(im.filas)
+        document.getElementById('ad-importar-cuenta').textContent = textoCuentaImportar(im.filas)
+        const g = document.getElementById('ad-importar-guardar')
+        g.textContent = c.ok ? `Guardar ${c.ok === 1 ? 'la fila buena' : 'las ' + c.ok + ' filas buenas'}` : 'No hay filas buenas para guardar'
+        g.disabled = !c.ok || im.guardando || im.terminado
+        g.hidden = im.terminado
+        document.getElementById('ad-importar-resumen').hidden = !im.terminado
+        document.getElementById('ad-importar-descartar').textContent = im.terminado ? 'Importar otro archivo' : 'Descartar el archivo'
+        document.getElementById('ad-importar-descartar').disabled = im.guardando
+      }
+      document.getElementById('ad-importar-avance').textContent = im.avance ?? ''
+      document.getElementById('ad-importar-confirmar').hidden = !im.confirmar
+      if (im.confirmar) document.getElementById('ad-importar-confirmar-texto').textContent = textoConfirmarImportar(im)
+      document.getElementById('ad-importar-confirmar-si').disabled = im.guardando
+      document.getElementById('ad-importar-subir').disabled = im.guardando
+      document.getElementById('ad-importar-plantilla').disabled = im.guardando
+    }
+
+    async function mostrarImportar() {
+      if (!puedeEn('retiros', 'precios')) { mostrarInicio(); return }
+      if (!estado.importar) estado.importar = importarVacio()
+      mostrarVista('ad-vista-importar')
+      pintarImportar()
+      try {
+        await Promise.all([asegurarDatosEmpresa(), asegurarListas(estado.empresaId)])
+      } catch (err) {
+        console.error('No se pudieron leer los datos de la empresa:', err)
+        estado.importar.error = 'No se pudieron leer los clientes, los productos o las listas de la empresa. Revisá la conexión y volvé a entrar.'
+      }
+      pintarImportar()
+    }
+
+    function elegirTipoImportar(tipo) {
+      if (!TIPOS_IMPORTAR.some(t => t.id === tipo) || estado.importar?.guardando) return
+      estado.importar = importarVacio(tipo)
+      pintarImportar()
+    }
+
+    // Lo que hace falta para validar cada tipo.
+    async function contextoImportar(im) {
+      const hoy = hoyArgentina()
+      if (im.tipo === 'precios') {
+        const precios = im.listaId ? await leerPreciosLista(im.listaId) : []
+        return { filas: filasGrilla(estado.catalogo), precios, hoy }
+      }
+      if (im.tipo === 'saldos') {
+        // Quién ya tiene saldo inicial: cliente_movimientos se lee con
+        // retiros:ver. Sin ese permiso no se sabe, y la base los rechaza.
+        let conSaldo = null
+        const ids = (estado.clientes ?? []).map(c => c.id)
+        if (puedeEn('retiros', 'ver') && ids.length) {
+          const { data, error } = await supabase.from('cliente_movimientos').select('cliente_id').eq('tipo', 'saldo_inicial').in('cliente_id', ids)
+          if (error) throw error
+          conSaldo = new Set((data ?? []).map(x => x.cliente_id))
+        } else if (!ids.length) conSaldo = new Set()
+        im.conSaldo = conSaldo
+        return { clientes: estado.clientes ?? [], conSaldo, hoy }
+      }
+      return { clientes: estado.clientes ?? [], listas: estado.listas?.filas ?? [], hoy }
+    }
+
+    // Arma la vista previa con las filas ya leídas. NO GUARDA NADA.
+    async function procesarFilasImportar(aoa, nombreArchivo) {
+      const im = estado.importar
+      if (!im || im.guardando) return
+      if (im.tipo === 'precios' && !im.listaId) { im.error = 'Elegí primero la lista de precios.'; pintarImportar(); return }
+      im.error = null
+      im.confirmar = false
+      im.terminado = false
+      im.avance = null
+      try {
+        await Promise.all([asegurarDatosEmpresa(), asegurarListas(estado.empresaId)])
+        const r = validarImportacion(im.tipo, aoa, await contextoImportar(im))
+        im.archivo = nombreArchivo
+        im.filas = r.error ? null : r.filas
+        im.error = r.error
+        if (!r.error && im.tipo === 'saldos' && im.conSaldo === null) {
+          im.error = 'Con tu usuario no se puede ver quién ya tiene saldo inicial: si alguno ya lo tiene, la base lo va a rechazar y se va a ver en el resumen.'
+        }
+      } catch (err) {
+        console.error('No se pudo armar la vista previa:', err)
+        im.filas = null
+        im.error = 'No se pudo armar la vista previa. Revisá la conexión y probá de nuevo.'
+      }
+      pintarImportar()
+    }
+
+    async function subirArchivoImportar(archivo) {
+      const im = estado.importar
+      if (!im || !archivo || im.guardando) return
+      if (im.tipo === 'precios' && !im.listaId) { im.error = 'Elegí primero la lista de precios.'; pintarImportar(); return }
+      let aoa
+      try {
+        aoa = await leerArchivoPlanilla(archivo)
+      } catch (err) {
+        console.error('No se pudo leer el archivo:', err)
+        im.error = err?.message && /librería/.test(err.message) ? err.message : 'No se pudo leer el archivo: tiene que ser un Excel (.xlsx) o un CSV.'
+        im.filas = null
+        pintarImportar()
+        return
+      }
+      await procesarFilasImportar(aoa, archivo.name)
+    }
+
+    async function bajarPlantillaImportar() {
+      const im = estado.importar
+      if (!im) return
+      try {
+        await Promise.all([asegurarDatosEmpresa(), asegurarListas(estado.empresaId)])
+        if (im.tipo === 'clientes') {
+          const texto = ['cuit', 'codigo_postal', 'telefono', 'contacto_telefono', 'cbu'].map(k => COLUMNAS_CLIENTES.findIndex(c => c.clave === k))
+          await descargarPlanilla(nombreArchivoImportar('clientes', 'plantilla'), [
+            { nombre: 'Clientes', filas: plantillaClientes(), columnasTexto: texto },
+            { nombre: 'Cómo llenarla', filas: instruccionesClientes(estado.listas?.filas) },
+          ])
+        } else if (im.tipo === 'precios') {
+          if (!im.listaId) { im.error = 'Elegí primero la lista de precios: la plantilla trae el precio que rige hoy en esa lista.'; pintarImportar(); return }
+          const precios = await leerPreciosLista(im.listaId)
+          await descargarPlanilla(nombreArchivoImportar('precios', listaDe(im.listaId)?.nombre ?? ''), [
+            { nombre: 'Precios', filas: plantillaPrecios(filasGrilla(estado.catalogo), precios, hoyArgentina()) },
+          ])
+        } else {
+          await descargarPlanilla(nombreArchivoImportar('saldos', 'plantilla'), [
+            { nombre: 'Saldos iniciales', filas: plantillaSaldos(estado.clientes), columnasTexto: [3] },
+          ])
+        }
+        im.error = null
+      } catch (err) {
+        console.error('No se pudo armar la plantilla:', err)
+        im.error = err?.message && /librería/.test(err.message) ? err.message : 'No se pudo armar la plantilla. Probá de nuevo.'
+      }
+      pintarImportar()
+    }
+
+    // Guardar pide CONFIRMAR: hasta acá no se mandó nada.
+    function pedirGuardarImportacion() {
+      const im = estado.importar
+      if (!im?.filas || im.guardando || im.terminado) return
+      if (!cuentaImportar(im.filas).ok) return
+      if (im.tipo === 'precios' && (!im.listaId || !esFechaIso(im.desde))) { im.error = 'Elegí la lista y desde cuándo rigen los precios.'; pintarImportar(); return }
+      im.confirmar = true
+      pintarImportar()
+    }
+
+    // Guarda SOLO las filas buenas: clientes y saldos de a una (con el
+    // avance a la vista), precios en una sola llamada.
+    async function confirmarImportacion() {
+      const im = estado.importar
+      if (!im?.confirmar || im.guardando || im.terminado) return
+      const buenas = im.filas.filter(f => f.estado === 'ok')
+      if (!buenas.length) return
+      im.guardando = true
+      im.confirmar = false
+      pintarImportar()
+      const unidad = estado.empresaId
+      if (im.tipo === 'precios') {
+        im.avance = `Guardando ${buenas.length} ${buenas.length === 1 ? 'precio' : 'precios'}…`
+        pintarImportar()
+        try {
+          const { error } = await supabase.rpc('guardar_precios', { p_lista_id: im.listaId, p_vigente_desde: im.desde, p_items: buenas.map(f => f.datos) })
+          if (error) throw error
+          for (const f of buenas) f.resultado = { ok: true, mensaje: null }
+        } catch (err) {
+          console.error('No se pudieron guardar los precios:', err)
+          // guardar_precios es todo o nada: si falla, no se guardó ninguno.
+          for (const f of buenas) f.resultado = { ok: false, mensaje: err?.message || 'No se pudo guardar.' }
+        }
+      } else {
+        let i = 0
+        for (const f of buenas) {
+          i++
+          im.avance = `Guardando ${i} de ${buenas.length}…`
+          pintarImportar()
+          try {
+            if (im.tipo === 'clientes') {
+              const p = parametrosCliente(f, unidad)
+              const { data: id, error } = await supabase.rpc('guardar_cliente', p.cliente)
+              if (error) throw error
+              if (Object.keys(p.ficha).length) {
+                const r = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: id, p_datos: p.ficha })
+                if (r.error) { f.resultado = { ok: false, mensaje: `Se creó el cliente pero la ficha no se guardó: ${r.error.message || 'error'}. Completala desde su ficha.` }; continue }
+              }
+            } else {
+              const { error } = await supabase.rpc('registrar_saldo_inicial_cliente', {
+                p_cliente_id: f.datos.clienteId, p_importe: f.datos.importe, p_fecha: f.datos.fecha, p_observacion: f.datos.observacion ?? null,
+              })
+              if (error) throw error
+            }
+            f.resultado = { ok: true, mensaje: null }
+          } catch (err) {
+            console.error('No se pudo guardar la fila', f.numero, err)
+            // Los mensajes de las RPCs ya vienen escritos para una persona.
+            f.resultado = { ok: false, mensaje: err?.message || 'No se pudo guardar.' }
+          }
+        }
+      }
+      const ok = buenas.filter(f => f.resultado?.ok).length
+      const mal = buenas.length - ok
+      im.avance = `Listo: se guardaron ${ok} de ${buenas.length}.` + (mal ? ` ${mal} no se ${mal === 1 ? 'pudo' : 'pudieron'} guardar: están marcadas abajo.` : '')
+      im.guardando = false
+      im.terminado = true
+      if (ok) {
+        estado.clientes = null
+        estado.saldos = null
+        if (im.tipo === 'clientes') mostrarExito(`${ok} ${ok === 1 ? 'cliente guardado' : 'clientes guardados'}.`)
+        else mostrarExito(`${ok} ${im.tipo === 'precios' ? (ok === 1 ? 'precio guardado' : 'precios guardados') : (ok === 1 ? 'saldo inicial guardado' : 'saldos iniciales guardados')}.`)
+      }
+      pintarImportar()
+    }
+
+    async function bajarResumenImportar() {
+      const im = estado.importar
+      if (!im?.filas) return
+      try {
+        await descargarPlanilla(nombreArchivoImportar(im.tipo, 'resumen'), [{ nombre: 'Resumen', filas: filasResumen(im.filas) }])
+      } catch (err) {
+        console.error('No se pudo armar el resumen:', err)
+        im.error = 'No se pudo armar el resumen. Probá de nuevo.'
+        pintarImportar()
+      }
+    }
+
+    function descartarImportacion() {
+      const im = estado.importar
+      if (!im || im.guardando) return
+      estado.importar = { ...importarVacio(im.tipo), listaId: im.listaId, desde: im.desde }
+      document.getElementById('ad-importar-archivo').value = ''
+      pintarImportar()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // EVENTOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -2398,6 +3281,26 @@
       document.getElementById('ad-panel-historial').addEventListener('click', (e) => {
         if (e.target.closest('#ad-historial-cerrar') && estado.lista) { estado.lista.historial = null; pintarLista(false) }
       })
+      // Importar
+      document.getElementById('ad-importar-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-vista-importar').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-importar-tipo]')
+        if (b) elegirTipoImportar(b.dataset.importarTipo)
+      })
+      document.getElementById('ad-importar-plantilla').addEventListener('click', () => bajarPlantillaImportar())
+      document.getElementById('ad-importar-subir').addEventListener('click', () => document.getElementById('ad-importar-archivo').click())
+      document.getElementById('ad-importar-archivo').addEventListener('change', (e) => { const f = e.target.files?.[0]; if (f) subirArchivoImportar(f); e.target.value = '' })
+      document.getElementById('ad-importar-lista').addEventListener('change', (e) => {
+        if (estado.importar) { estado.importar = { ...importarVacio('precios'), listaId: e.target.value, desde: estado.importar.desde }; pintarImportar() }
+      })
+      document.getElementById('ad-importar-desde').addEventListener('change', (e) => {
+        if (estado.importar) { estado.importar.desde = e.target.value; estado.importar.confirmar = false; pintarImportar() }
+      })
+      document.getElementById('ad-importar-guardar').addEventListener('click', () => pedirGuardarImportacion())
+      document.getElementById('ad-importar-confirmar-si').addEventListener('click', () => confirmarImportacion())
+      document.getElementById('ad-importar-confirmar-no').addEventListener('click', () => { if (estado.importar) { estado.importar.confirmar = false; pintarImportar() } })
+      document.getElementById('ad-importar-resumen').addEventListener('click', () => bajarResumenImportar())
+      document.getElementById('ad-importar-descartar').addEventListener('click', () => descartarImportacion())
     }
 
     // ═══════════════════════════════════════════════════════════════════════
