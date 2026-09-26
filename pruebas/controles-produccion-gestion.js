@@ -34,7 +34,7 @@ const BASES = [...bloque.matchAll(/'([0-9a-f]{7,})'/g)].map(m => m[1])
 const RENOMBRADOS = [...fuenteChequeo.matchAll(/\['(control:[^']+)', '(control:[^']+)',/g)].map(m => [m[1], m[2]])
 
 // Commits de la gestión ya cerrados: lo que tenían tiene que seguir estando.
-const BASES_GESTION = ['f7554f7'] // Planta y gestión, parte 1
+const BASES_GESTION = ['f7554f7', '4005c90'] // Planta y gestión, parte 1; el diseño "Producción · Gestión"
 
 // Controles de la gestión RETIRADOS a propósito: [clave, motivo]. Uno que
 // sigue estando en el archivo pone la prueba en rojo (la declaración sobra),

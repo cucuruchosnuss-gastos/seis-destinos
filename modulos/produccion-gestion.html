@@ -1803,6 +1803,11 @@
     @media print {
       .pg-menu, .pg-contenido { display: none !important; }
     }
+    /* Lo que salió por retiros (26/09/2026). */
+    .pr-of-retiro { grid-template-columns: 6.5rem minmax(0, 1.4fr) minmax(0, 2fr) 7rem 8.5rem; }
+    @media (max-width: 899px) {
+      .pr-of-retiro { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    }
   </style>
 </head>
 
@@ -1976,6 +1981,8 @@
         </div>
         <div id="pr-stock-aviso"></div>
         <div id="pr-stock-lista"></div>
+        <!-- Lo que salió por retiros (26/09/2026): cada orden con su CÓDIGO. -->
+        <div id="pr-stock-retiros"></div>
       </section>
 
     </main>
@@ -2159,6 +2166,35 @@
       if (estado.stockVer === null) return false
       if (estado.stockVer.todas === true) return true
       const lista = Array.isArray(estado.stockVer.unidades) ? estado.stockVer.unidades.map(String) : []
+      return lista.includes(String(unidadId))
+    }
+
+    // retiros:ver, que es lo que deja leer ordenes_retiro (su policy de SELECT
+    // es tiene_tarea_alcance('retiros','ver', unidad), con bypass de
+    // super_admin). Hace falta para mostrar el CÓDIGO de cada retiro en el
+    // stock terminado: sin él no se consulta, y la pantalla lo dice en vez de
+    // inventar un código. Mismo criterio que cargarPermisoStock():
+    // estado.retirosVer undefined = no se pudo leer; null = no la tiene.
+    async function cargarPermisoRetiros() {
+      try {
+        const { data, error } = await supabase.from('empleado_tareas').select('tarea, alcance')
+          .eq('empleado_id', estado.miEmpleadoId).eq('modulo', 'retiros').eq('tarea', 'ver').eq('habilitado', true)
+        if (error) throw error
+        const fila = (data ?? []).find(t => t.tarea === 'ver')
+        estado.retirosVer = fila ? (fila.alcance ?? {}) : null
+      } catch (err) {
+        console.error('permiso de retiros:', err)
+        estado.retirosVer = undefined
+      }
+    }
+
+    // true / false, o null si no se sabe. La misma regla que tiene_tarea_alcance().
+    function puedeVerRetirosEn(unidadId) {
+      if (estado.miRolApp === 'super_admin') return true
+      if (estado.retirosVer === undefined) return null
+      if (estado.retirosVer === null) return false
+      if (estado.retirosVer.todas === true) return true
+      const lista = Array.isArray(estado.retirosVer.unidades) ? estado.retirosVer.unidades.map(String) : []
       return lista.includes(String(unidadId))
     }
 
@@ -5658,12 +5694,14 @@
     async function cargarStockTerminado() {
       const cont = document.getElementById('pr-stock-lista')
       const aviso = document.getElementById('pr-stock-aviso')
+      const cajaRetiros = document.getElementById('pr-stock-retiros')
       aviso.innerHTML = ''
+      cajaRetiros.innerHTML = ''
       cont.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
       let movs, productos, presentaciones, marcas
+      const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
       try {
-        const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
-        movs = await leer(supabase.from('stock_terminado_movimientos').select('presentacion_id, marca_id, lote, cajas, unidades').eq('unidad_negocio_id', estado.stockUnidad))
+        movs = await leer(supabase.from('stock_terminado_movimientos').select('presentacion_id, marca_id, lote, cajas, unidades, tipo, orden_retiro_id, fecha, motivo, created_at').eq('unidad_negocio_id', estado.stockUnidad))
         productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden').eq('unidad_negocio_id', estado.stockUnidad))
         const ids = productos.map(p => p.id)
         presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, orden').in('producto_id', ids)) : []
@@ -5675,7 +5713,73 @@
         return
       }
       if (movs.length >= TOPE_FILAS) aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">Hay más de 1000 movimientos y solo se leyeron los primeros: los totales pueden estar incompletos.</div>'
-      cont.innerHTML = htmlStockTerminado(agruparStockTerminado(movs), { productos, presentaciones, marcas })
+      const cat = { productos, presentaciones, marcas }
+      cont.innerHTML = htmlStockTerminado(agruparStockTerminado(movs), cat)
+      // Lo que salió por retiros, con el CÓDIGO de cada orden. Sin retiros:ver
+      // en esta unidad no se consulta ordenes_retiro (su RLS devolvería vacío
+      // y un vacío no se distingue de "no existe"): se dice que no hay permiso.
+      const salidas = salidasPorRetiro(movs)
+      if (!salidas.length) return
+      const unidad = estado.stockUnidad
+      const permiso = puedeVerRetirosEn(unidad)
+      let ordenes = [], error = false
+      if (permiso !== false) {
+        try {
+          ordenes = await leer(supabase.from('ordenes_retiro').select('id, codigo, estado').in('id', [...new Set(salidas.map(m => m.orden_retiro_id))]))
+        } catch (err) {
+          console.error('órdenes de retiro:', err)
+          error = true
+        }
+      }
+      if (estado.stockUnidad !== unidad) return
+      cajaRetiros.innerHTML = htmlRetirosStock(salidas, cat, { permiso, ordenes, error })
+    }
+
+    // Los movimientos de un retiro: el despacho (salió) y, si la orden se
+    // anuló, el ajuste que lo devolvió. Lo más nuevo primero.
+    function salidasPorRetiro(movs) {
+      return (movs ?? []).filter(m => m.orden_retiro_id && (m.tipo === 'despacho' || m.tipo === 'ajuste'))
+        .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)) || String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')))
+    }
+
+    // El nombre de un retiro: el CÓDIGO de la orden ("N-0001") y nunca el
+    // número suelto. Sin permiso, o si no se pudo leer, lo dice.
+    function codigoRetiro(id, info) {
+      if (info.permiso === false) return { codigo: null, nota: 'sin permiso para ver el código' }
+      if (info.error) return { codigo: null, nota: 'no se pudo leer el código' }
+      const o = (info.ordenes ?? []).find(x => x.id === id)
+      if (o?.codigo) return { codigo: o.codigo, anulada: o.estado === 'anulada', nota: '' }
+      return { codigo: null, nota: 'no se pudo leer el código' }
+    }
+
+    function htmlRetirosStock(salidas, cat, info) {
+      if (!salidas.length) return ''
+      const avisoPermisoRetiros = info.permiso === false
+        ? '<p class="pr-texto-suave">Con este usuario no se ven los códigos de los retiros: hace falta retiros:ver en esta unidad.</p>' : ''
+      const filas = salidas.map(m => {
+        const pr = cat.presentaciones.find(x => x.id === m.presentacion_id)
+        const prod = cat.productos.find(x => x.id === pr?.producto_id)
+        const cono = m.marca_id ? (cat.marcas.find(x => x.id === m.marca_id)?.nombre ?? 'Marca') : 'Común'
+        const queRetiro = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].join(' · ')
+        const r = codigoRetiro(m.orden_retiro_id, info)
+        const vuelve = m.tipo === 'ajuste'
+        const titulo = vuelve
+          ? (r.codigo ? `Anulación del retiro ${r.codigo}` : 'Anulación de un retiro')
+          : (r.codigo ? `Retiro ${r.codigo}${r.anulada ? ' · anulado' : ''}` : 'Retiro')
+        const n = numeroInd(m.cajas)
+        const cuenta = `${vuelve ? 'volvieron' : 'salieron'} ${n === null ? '—' : textoEntero(Math.abs(n))} ${n !== null && Math.abs(n) === 1 ? 'caja' : 'cajas'}`
+        const notaRetiro = r.nota ? `<span class="pr-texto-suave"> · ${esc(r.nota)}</span>` : ''
+        const motivoRetiro = vuelve && m.motivo ? `<div class="pr-texto-suave">${esc(m.motivo)}</div>` : ''
+        return `<div class="pr-of-fila pr-of-retiro">` +
+          `<span>${esc(fechaDelDia(m.fecha))}</span>` +
+          `<span><strong>${esc(titulo)}</strong>${notaRetiro}${motivoRetiro}</span>` +
+          `<span>${esc(queRetiro)}</span>` +
+          `<span class="pr-producido__sublote">${esc(m.lote)}</span>` +
+          `<span class="pr-of-num">${esc(cuenta)}</span></div>`
+      }).join('')
+      return `<h2 class="pr-subtitulo">Lo que salió por retiros</h2>${avisoPermisoRetiros}` +
+        `<div class="pr-of-tabla pr-of-grupo"><div class="pr-of-cab pr-of-retiro"><span>Fecha</span><span>Retiro</span><span>Producto</span><span>Sublote</span><span class="pr-of-num">Cajas</span></div>` +
+        filas + '</div>'
     }
 
     // Suma por presentación, marca y sublote. Quedan solo los que tienen
@@ -5834,6 +5938,7 @@
         return
       }
       await cargarPermisoStock()
+      await cargarPermisoRetiros()
       document.getElementById('pr-cargando').hidden = true
       document.getElementById('pr-vista').hidden = false
       conectarTodo()

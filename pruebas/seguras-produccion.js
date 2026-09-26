@@ -141,6 +141,9 @@ const SEGURAS_PRODUCCION = [
   ['segConos', 'HTML armado en htmlConfigMarcas(): la clave y el rótulo salen de FILTROS_CONOS (constante del código) y la cuenta va con esc()'],
   ['campoCajas', 'HTML ya escapado: htmlEditorSublote() lo arma arriba con esc() de las cajas y del sublote, o vacío'],
   ['botonesSublote', 'HTML ya escapado: htmlSubloteHistorial() lo arma arriba con esc(p.id), o vacío'],
+  ['notaRetiro', 'HTML ya escapado: htmlRetirosStock() lo arma arriba con esc(r.nota), o vacío'],
+  ['motivoRetiro', 'HTML ya escapado: htmlRetirosStock() lo arma arriba con esc(m.motivo), o vacío'],
+  ['avisoPermisoRetiros', 'HTML constante del código (el aviso de que falta retiros:ver), o vacío'],
   ['chip', 'HTML armado en renderAhora(): el chip PARADA y "Pendiente de completar" son constantes, y las cajas van con esc(textoCajas)'],
 ]
 

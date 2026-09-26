@@ -212,6 +212,8 @@ const NUEVAS_GESTION = [
   'sinPinEnUnidad', 'rolesDe', 'deQuienHoja', 'pedirCerrarHoja', 'volverAHojaPines',
   'puedeCorregirSublote', 'htmlEditorSublote', 'horarioTurno', 'minutosParadasTurno', 'pintarDetalleHistorial',
   'abrirCorreccionSublote', 'cerrarCorreccionSublote', 'faltaEnCorreccion', 'guardarCorreccionSublote',
+  // Lo que salió por retiros en el stock terminado (26/09/2026)
+  'cargarPermisoRetiros', 'puedeVerRetirosEn', 'salidasPorRetiro', 'codigoRetiro', 'htmlRetirosStock',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS']
