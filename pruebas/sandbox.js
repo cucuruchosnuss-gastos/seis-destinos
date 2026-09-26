@@ -130,8 +130,12 @@ function scriptDe(html) {
   return html.slice(ini, fin)
 }
 
-function scriptModulo(rutaHtml) {
-  return fuenteConComun(scriptDe(fs.readFileSync(rutaHtml, 'utf8')))
+// `recortar` (opcional): una función que achica el archivo antes de buscar el
+// script. La cartera de cheques vive en una REGIÓN de administracion.html
+// (fuente-cheques.js): su script es el que está adentro de la región.
+function scriptModulo(rutaHtml, recortar = null) {
+  const contenido = fs.readFileSync(rutaHtml, 'utf8')
+  return fuenteConComun(scriptDe(recortar ? recortar(contenido) : contenido))
 }
 
 // Extraer las funciones de un HTML de miles de líneas y compilarlas cuesta, y
@@ -154,8 +158,9 @@ function _clave(contenido, config) {
 // La variante GENÉRICA, para cualquier módulo: el preludio (el document falso y
 // los stubs), las funciones y las constantes las pone cada suite. `retorno` se
 // suma al objeto que devuelve el sandbox, además de las funciones.
-function construirCon(rutaHtml, { preludio, funciones, constantes = [], retorno = '' }) {
-  const contenido = fs.readFileSync(rutaHtml, 'utf8')
+function construirCon(rutaHtml, { preludio, funciones, constantes = [], retorno = '', recortar = null }) {
+  const leido = fs.readFileSync(rutaHtml, 'utf8')
+  const contenido = recortar ? recortar(leido) : leido
   const config = JSON.stringify([preludio, funciones, constantes, retorno])
   const clave = _clave(contenido, config)
   let compilada = _compiladas.get(clave)

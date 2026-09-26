@@ -14,11 +14,12 @@
 const fs = require('fs')
 const path = require('path')
 const { construirCheques } = require('./sandbox-cheques')
+const { ARCHIVO_CHEQUES, leerCheques } = require('./fuente-cheques')
 
 const RAIZ = path.join(__dirname, '..')
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cheques.html')
-const FUENTE = fs.readFileSync(ARCHIVO, 'utf8')
-console.log(`ARCHIVO ${ARCHIVO} (${FUENTE.length} bytes)`)
+const ARCHIVO = process.env.ARCHIVO_TEST || ARCHIVO_CHEQUES
+// La cartera vive en una región de administracion.html: FUENTE es esa región.
+const FUENTE = leerCheques(ARCHIVO)
 const CSS = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
 
 let ok = 0

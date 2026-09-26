@@ -137,13 +137,16 @@ const PRELUDIO = `
 
 function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [] } = {}) {
   const { scriptModulo } = require('./sandbox')
-  const src = scriptModulo(ruta)
+  // La cartera vive en una región de administracion.html (26/09/2026).
+  const { regionCheques } = require('./fuente-cheques')
+  const src = scriptModulo(ruta, regionCheques)
   const existe = (n) => new RegExp(`(?:^|\\n)\\s*(?:async\\s+)?function\\s+${n}\\s*\\(`).test(src)
   const existeC = (n) => new RegExp(`(?:^|\\n)\\s*const\\s+${n}\\s*=`).test(src)
   // Una función que el preludio STUBEA no se extrae: el stub la reemplaza.
   const fns = [...FUNCIONES, ...OPCIONALES.filter(existe), ...funciones].filter(f => !stubs.includes(f))
   const cts = [...CONSTANTES, ...CONSTANTES_OPCIONALES.filter(existeC), ...constantes]
   return construirCon(ruta, {
+    recortar: regionCheques,
     preludio: PRELUDIO + preludioExtra,
     funciones: [...new Set(fns)],
     constantes: [...new Set(cts)],

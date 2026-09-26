@@ -15,12 +15,13 @@
 const fs = require('fs')
 const path = require('path')
 const { construirCheques } = require('./sandbox-cheques')
+const { ARCHIVO_CHEQUES, leerCheques } = require('./fuente-cheques')
 const { interpolaciones } = require('./escaner-interpolaciones')
 const { clasificar } = require('./clasificar')
 const { SEGURAS_CHEQUES, SEGURAS_REGEX_CHEQUES } = require('./seguras-cheques')
 
 const RAIZ = path.join(__dirname, '..')
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cheques.html')
+const ARCHIVO = process.env.ARCHIVO_TEST || ARCHIVO_CHEQUES
 const SOLO = process.env.SOLO || ''
 
 let ok = 0
@@ -31,8 +32,8 @@ function chk(nombre, cond, detalle) {
   else fallas.push(nombre + (detalle !== undefined ? ` — ${detalle}` : ''))
 }
 
-const FUENTE = fs.readFileSync(ARCHIVO, 'utf8')
-console.log(`ARCHIVO ${ARCHIVO} (${FUENTE.length} bytes)`)
+// La cartera vive en una región de administracion.html: FUENTE es esa región.
+const FUENTE = leerCheques(ARCHIVO)
 
 const marca = (campo) => `"><b data-xss="${campo}">`
 const escapada = (campo) => `&lt;b data-xss=&quot;${campo}&quot;&gt;`
@@ -474,7 +475,16 @@ if (SOLO !== 'estatico') {
 // ══════════════════════════════════════════════════════════════════════════
 
 if (SOLO !== 'render') {
-  const r = interpolaciones(ARCHIVO)
+  const todo = interpolaciones(ARCHIVO)
+  // Solo las líneas de la REGIÓN de la cartera: el resto de
+  // administracion.html lo revisan las suites de Administración.
+  const { limitesCheques } = require('./fuente-cheques')
+  const texto = fs.readFileSync(ARCHIVO, 'utf8')
+  const lim = limitesCheques(texto)
+  const desde = lim ? texto.slice(0, lim.ini).split(String.fromCharCode(10)).length : 1
+  const hasta = lim ? texto.slice(0, lim.fin).split(String.fromCharCode(10)).length : Infinity
+  const enRegion = (x) => x.linea >= desde && x.linea <= hasta
+  const r = { interpolaciones: todo.interpolaciones.filter(enRegion), asignaciones: todo.asignaciones.filter(enRegion) }
   const enHtml = r.interpolaciones.filter(i => i.html)
   const aRevisar = enHtml.concat(r.asignaciones.map(a => ({ ...a, html: true, sink: true })))
   const malas = []

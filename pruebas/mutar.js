@@ -29,8 +29,20 @@ const { rangosDeFunciones } = require('./circuito-comun')
 // (ARCHIVO_TEST por defecto; una suite que lee DOS archivos recibe el otro por
 // otra). `salir: false` devuelve el resultado en vez de terminar el proceso,
 // para correr las mutaciones de dos archivos en un solo runner.
-function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales = [], equivalentes = [], variable = 'ARCHIVO_TEST', salir = true }) {
+// `region` (opcional): una función texto → { ini, fin } que acota las
+// mutaciones a un pedazo del archivo (la cartera de cheques vive en una región
+// de administracion.html: fuente-cheques.js). Las funciones se buscan, el
+// ancla se exige única y el reemplazo se aplica SOLO adentro de la región.
+function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales = [], equivalentes = [], variable = 'ARCHIVO_TEST', salir = true, region = null }) {
   const src = fs.readFileSync(original, 'utf8')
+  const lim = region ? region(src) : null
+  if (region && !lim) { console.log('ABORTADO: no se encontró la región en ' + original); process.exit(2) }
+  const RI = lim ? lim.ini : 0
+  const RF = lim ? lim.fin : src.length
+  const zona = src.slice(RI, RF)
+  // La región con saltos de línea adelante: los números de línea del archivo.
+  const zonaConLineas = '\n'.repeat(src.slice(0, RI).split('\n').length - 1) + zona
+  const enZona = (zonaMutada) => src.slice(0, RI) + zonaMutada + src.slice(RF)
   const TMP = path.join(__dirname, `mut-tmp-${path.basename(suite, '.js')}${variable === 'ARCHIVO_TEST' ? '' : '-' + variable.toLowerCase()}.html`)
 
   function correr(archivo) {
@@ -60,7 +72,7 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
   }
 
   // ── Automáticas: sacar cada esc() de las funciones nuevas ───────────────
-  const rangos = rangosDeFunciones(src, funciones, (n, ok, det) => { if (!ok) { console.log('ABORTADO:', n, det); process.exit(2) } })
+  const rangos = rangosDeFunciones(zonaConLineas, funciones, (n, ok, det) => { if (!ok) { console.log('ABORTADO:', n, det); process.exit(2) } })
   const { interpolaciones: todas } = interpolaciones(original)
   const lineas = src.split('\n')
   const mutaciones = []
@@ -70,12 +82,12 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
     if (!x.expr.trim().startsWith(escape + '(')) continue
     const aguja = '${' + x.expr + '}'
     const offsetLinea = lineas.slice(0, x.linea - 1).join('\n').length + (x.linea > 1 ? 1 : 0)
-    const idx = src.indexOf(aguja, Math.max(0, offsetLinea - 200))
-    if (idx === -1) { ambiguas.push(`línea ${x.linea}: no se encontró «${aguja.slice(0, 60)}»`); continue }
+    const idx = src.indexOf(aguja, Math.max(RI, offsetLinea - 200))
+    if (idx === -1 || idx >= RF) { ambiguas.push(`línea ${x.linea}: no se encontró «${aguja.slice(0, 60)}»`); continue }
     let ancla = null
     for (let extra = 0; extra < 400 && !ancla; extra += 10) {
-      const t = src.slice(Math.max(0, idx - extra), Math.min(src.length, idx + aguja.length + extra))
-      if (unica(src, t)) ancla = t
+      const t = src.slice(Math.max(RI, idx - extra), Math.min(RF, idx + aguja.length + extra))
+      if (unica(zona, t)) ancla = t
     }
     if (!ancla) { ambiguas.push(`línea ${x.linea}: sin ancla única`); continue }
     const sinEsc = '${' + x.expr.trim().replace(new RegExp('^' + escape + '\\('), '(') + '}'
@@ -85,15 +97,15 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
       // Con función: un texto de reemplazo con "$'", "$&" o "$$" NO se
       // interpreta (String.replace con un string los expande y la mutación
       // pasa a ser otra, que casi siempre rompe el archivo y "se detecta").
-      mutado: src.replace(ancla, () => ancla.replace(aguja, () => sinEsc)),
+      mutado: enZona(zona.replace(ancla, () => ancla.replace(aguja, () => sinEsc))),
       equivalente: eq?.motivo,
     })
   }
 
   // ── A mano ──────────────────────────────────────────────────────────────
   for (const m of manuales) {
-    if (!unica(src, m.de)) { ambiguas.push(`«${m.nombre}»: el texto a reemplazar ${src.includes(m.de) ? 'NO ES ÚNICO' : 'NO EXISTE'}`); continue }
-    mutaciones.push({ nombre: m.nombre, mutado: src.replace(m.de, () => m.a) })
+    if (!unica(zona, m.de)) { ambiguas.push(`«${m.nombre}»: el texto a reemplazar ${zona.includes(m.de) ? 'NO ES ÚNICO' : 'NO EXISTE'}`); continue }
+    mutaciones.push({ nombre: m.nombre, mutado: enZona(zona.replace(m.de, () => m.a)) })
   }
 
   if (ambiguas.length) {

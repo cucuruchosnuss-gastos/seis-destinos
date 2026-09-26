@@ -1,4 +1,11 @@
-// NINGÚN CONTROL MUDADO SE PIERDE en modulos/cheques.html.
+// NINGÚN CONTROL MUDADO SE PIERDE en la cartera de cheques.
+//
+// DOS MUDANZAS: (1) el 22/09/2026 la cartera salió de cobranzas.html a
+// cheques.html; (2) el 26/09/2026 se mudó ENTERA a administracion.html, a una
+// región entre dos marcas (fuente-cheques.js), y cheques.html quedó como una
+// redirección. Este chequeo exige las dos: cada control MOVIDO de cobranzas
+// (controles-movidos.js) y CADA control que tenía cheques.html en su último
+// commit antes de la segunda mudanza (BASE_CHEQUES) están en la región.
 //
 // La cartera de cheques salió de modulos/cobranzas.html el 22/09/2026. Cada
 // control que se fue de allá está en controles-movidos.js con su clave nueva.
@@ -17,9 +24,21 @@
 const fs = require('fs')
 const path = require('path')
 const { BASE_COMMIT, RAIZ, leerBaseline, inventario, referenciasDelJs, veces } = require('./controles-comun')
+const { execFileSync } = require('child_process')
 const { MOVIDOS } = require('./controles-movidos')
+const { ARCHIVO_CHEQUES, regionCheques } = require('./fuente-cheques')
 
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/cheques.html')
+const ARCHIVO = process.env.ARCHIVO_TEST || ARCHIVO_CHEQUES
+
+// El último commit con la cartera en cheques.html: un commit FIJO, nunca HEAD.
+const BASE_CHEQUES = '4435cdc'
+
+// Controles de cheques.html que NO se mudaron, a propósito y con su motivo. Si
+// uno vuelve a aparecer, la declaración sobra y se dice.
+const RETIRADOS_CHEQUES = [
+  { clave: 'control:a[href=../dashboard.html]{&lsaquo; Volver}',
+    motivo: 'el encabezado propio de cheques.html: adentro de Administración vuelven su "‹ Volver" al dashboard y el "‹ Portada" de la sección (#ad-cheques-volver)' },
+]
 
 // RENOMBRADOS: controles que además de mudarse cambiaron de TEXTO o de LUGAR a
 // propósito. Se listan en la salida y se verifica el texto y el lugar nuevos
@@ -45,9 +64,11 @@ function chk(nombre, cond, detalle) {
 }
 
 try {
-  const actual = fs.readFileSync(ARCHIVO, 'utf8')
-  console.log(`LEIDO:${actual.length} de ${ARCHIVO}`)
-  console.log(`ARCHIVO ${ARCHIVO} (${actual.length} bytes)`)
+  const todo = fs.readFileSync(ARCHIVO, 'utf8')
+  console.log(`LEIDO:${todo.length} de ${ARCHIVO}`)
+  console.log(`ARCHIVO ${ARCHIVO} (${todo.length} bytes)`)
+  // La región de la cartera (el archivo entero si no tiene las marcas).
+  const actual = regionCheques(todo)
   const base = leerBaseline()
   console.log(`BASELINE:${base.length} de ${process.env.ARCHIVO_BASE || BASE_COMMIT + ':modulos/cobranzas.html'}`)
 
@@ -69,6 +90,28 @@ try {
     chk(`${r.nueva}: el texto nuevo está en el código`, r.texto.test(actual))
     chk(`${r.nueva}: y en su lugar nuevo`, r.lugarRe.test(actual))
   }
+
+  // La segunda mudanza: cada control de cheques.html está en la región.
+  const viejo = process.env.ARCHIVO_BASE_CHEQUES
+    ? fs.readFileSync(process.env.ARCHIVO_BASE_CHEQUES, 'utf8')
+    : execFileSync('git', ['show', `${BASE_CHEQUES}:modulos/cheques.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  const V = inventario(viejo)
+  const controlesViejos = [...V.cuenta.keys()].filter(k => k.startsWith('control:'))
+  chk('cheques.html tenía controles (si da cero, el baseline no se está leyendo)', controlesViejos.length > 20, controlesViejos.length)
+  for (const k of controlesViejos) {
+    const ret = RETIRADOS_CHEQUES.find(r => r.clave === k)
+    const n = veces(V, k), hay = veces(A, k)
+    if (ret) {
+      console.log(`RETIRADO: ${k} (${ret.motivo})`)
+      chk(`${k}: declarado retirado y de verdad no está (si volvió, sacá la declaración)`, hay === 0)
+      continue
+    }
+    chk(`${k} → se mudó a administracion.html`, hay >= n, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
+  }
+  for (const id of V.ids) chk(`el id #${id} de cheques.html está en la región`, A.ids.has(id))
+  for (const d of V.datas) chk(`el data-${d} de cheques.html está en la región`, A.datas.has(d))
+  for (const r of RETIRADOS_CHEQUES) chk(`la declaración de ${r.clave} apunta a un control que existía`, veces(V, r.clave) > 0)
+  chk('la región tiene el "‹ Portada" que reemplaza al encabezado', A.ids.has('ad-cheques-volver'))
 
   for (const r of referenciasDelJs(A.referencias)) {
     const existe = r.tipo === 'id' ? A.ids.has(r.valor) : A.datas.has(r.valor)

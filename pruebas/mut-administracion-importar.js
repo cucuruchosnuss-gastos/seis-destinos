@@ -7,8 +7,12 @@
 
 const path = require('path')
 const { correrMutaciones } = require('./mutar')
+// Solo la parte de Administración: la cartera de cheques (una región al
+// final del archivo) la mutan las suites de Cheques.
+const { limitesAdministracion } = require('./fuente-cheques')
 
 correrMutaciones({
+  region: limitesAdministracion,
   suite: path.join(__dirname, 'test-administracion-importar.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/administracion.html'),
   escape: 'esc',

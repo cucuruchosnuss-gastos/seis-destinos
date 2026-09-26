@@ -72,7 +72,7 @@ chk('produccion (conos_por_revisar) → la tarjeta de Producción', S.MODULO_DE_
 // --- la tarjeta de Cheques: módulo cobranzas Y (ver_todo o procesar) --------
 {
   const cheques = S.MODULOS.find(m => m.clave === 'cheques')
-  chk('hay tarjeta de Cheques que abre modulos/cheques.html', cheques && cheques.url === 'modulos/cheques.html')
+  chk('hay tarjeta de Cheques que abre la sección Cheques de Administración (se mudó el 26/09/2026)', cheques && cheques.url === 'modulos/administracion.html?seccion=cheques')
   const ver = (ctx) => S.moduloVisible(cheques, { esAdmin: false, esSuperAdmin: false, misModulos: [], misTareas: new Set(), ...ctx })
   chk('Cheques: sin el módulo cobranzas no se ve, aunque tenga la tarea',
     !ver({ misTareas: new Set(['cobranzas:procesar']) }))

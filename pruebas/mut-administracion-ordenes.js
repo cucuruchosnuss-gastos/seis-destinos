@@ -7,8 +7,12 @@
 
 const path = require('path')
 const { correrMutaciones } = require('./mutar')
+// Solo la parte de Administración: la cartera de cheques (una región al
+// final del archivo) la mutan las suites de Cheques.
+const { limitesAdministracion } = require('./fuente-cheques')
 
 correrMutaciones({
+  region: limitesAdministracion,
   suite: path.join(__dirname, 'test-administracion-ordenes.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/administracion.html'),
   escape: 'esc',
@@ -42,7 +46,7 @@ correrMutaciones({
     { nombre: 'el alcance no se mira', de: "      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))\n    }\n\n    // Las secciones", a: "      return true\n    }\n\n    // Las secciones" },
     { nombre: 'cargar abre Administración', de: "        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id))", a: "        puedeEn('retiros', 'ver', e.id) || puedeEn('retiros', 'cargar', e.id) || puedeEn('retiros', 'precios', e.id) || puedeEn('retiros', 'anular', e.id))" },
     { nombre: 'la fábrica de pruebas se ve', de: '      return sinUnidadesDePrueba(lista, estado.fabrica)', a: '      return lista' },
-    { nombre: 'Cheques sin pedir tarea', de: "url: 'cheques.html', modulo: 'cobranzas', tareas: ['cobranzas:ver_todo', 'cobranzas:procesar'] },", a: "url: 'cheques.html', modulo: 'cobranzas' }," },
+    { nombre: 'Cheques vuelve a ser un acceso directo', de: "    const LINKS = [\n", a: "    const LINKS = [\n      { clave: 'cheques', titulo: 'Cheques', detalle: 'x', url: 'cheques.html', modulo: 'cobranzas', tareas: ['cobranzas:procesar'] },\n" },
     { nombre: 'los links sin mirar el módulo', de: '      return LINKS.filter(l => (sa || estado.misModulos.has(l.modulo)) &&', a: '      return LINKS.filter(l => true &&' },
     { nombre: 'solo lectura ve Valorizar', de: "      const precios = activa && puedeEn('retiros', 'precios', u)", a: '      const precios = activa' },
     { nombre: 'Anular sin permiso', de: "      document.getElementById('ad-btn-anular').hidden = !(activa && puedeEn('retiros', 'anular', u))", a: "      document.getElementById('ad-btn-anular').hidden = !activa" },

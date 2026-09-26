@@ -11,8 +11,8 @@ const { fuenteNumeros } = require('./numeros-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
-  'tieneTarea', 'puedeEn', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles',
-  'leerPreferencia', 'guardarPreferencia', 'mostrarVista',
+  'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles',
+  'leerPreferencia', 'guardarPreferencia', 'mostrarVista', 'mostrarCheques',
   'htmlLogo', 'htmlEmpresas', 'pintarEmpresas', 'elegirEmpresa', 'empresaInicial',
   'leerClientes', 'leerCatalogo', 'insumoDe', 'partesInsumo', 'asegurarDatosEmpresa', 'clienteDe', 'asegurarNombres', 'partesRenglon',
   'contarSinValorizar', 'textoNumeroSeccion', 'htmlSeccion', 'htmlLink', 'pintarPortada', 'mostrarInicio', 'abrirSeccion',

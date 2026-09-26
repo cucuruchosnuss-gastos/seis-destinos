@@ -14,7 +14,9 @@ const { arnes, leer, estaticoAcotado } = require('./circuito-comun')
 const { SEGURAS_ADMINISTRACION, SEGURAS_REGEX_ADMINISTRACION } = require('./seguras-administracion')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/administracion.html')
-const FUENTE = leer(ARCHIVO)
+// Sin la región de la cartera de cheques: la revisa test-cheques-vista.js.
+const { sinCheques } = require('./fuente-cheques')
+const FUENTE = sinCheques(leer(ARCHIVO))
 const { chk, fin } = arnes()
 
 function funcionesDe(texto) {

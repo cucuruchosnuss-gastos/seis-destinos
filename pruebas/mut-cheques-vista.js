@@ -5,12 +5,15 @@
 
 const path = require('path')
 const { correrMutaciones } = require('./mutar')
+// La cartera vive en una región de administracion.html: se muta SOLO ahí.
+const { ARCHIVO_CHEQUES, limitesCheques } = require('./fuente-cheques')
 
 const RAIZ = path.join(__dirname, '..')
 
 correrMutaciones({
+  region: limitesCheques,
   suite: path.join(__dirname, 'test-cheques-vista.js'),
-  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/cheques.html'),
+  original: process.env.ARCHIVO_BASE || ARCHIVO_CHEQUES,
   escape: 'esc',
   // Automáticas: cada ${esc(...)} de estas funciones pierde su esc().
   funciones: ['htmlCartera', 'pintarSelectorBancos', 'pintarFiltrosCheques', 'htmlFilaCheque', 'htmlSalidaCheque'],

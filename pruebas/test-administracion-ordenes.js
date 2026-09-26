@@ -96,13 +96,13 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   chk('sin esos módulos no hay accesos directos', S.linksVisibles().length === 0)
   S.estado.misModulos = new Set(['cobranzas', 'cuentas-corrientes'])
   let l = S.linksVisibles().map(x => x.clave)
-  chk('con cobranzas y cuentas corrientes: esos dos (Cheques pide además una tarea)', l.join() === 'cuentas-corrientes,cobranzas')
+  chk('con cobranzas y cuentas corrientes: esos dos', l.join() === 'cuentas-corrientes,cobranzas')
   S.estado.misTareas.set('cobranzas:procesar', null)
   l = S.linksVisibles().map(x => x.clave)
-  chk('con cobranzas:procesar aparece Cheques', l.includes('cheques'))
+  chk('Cheques ya NO es un acceso directo: es una sección (se mudó el 26/09/2026)', !l.includes('cheques') && !S.LINKS.some(x => x.clave === 'cheques'))
   chk('los links van a las pantallas que ya existen, sin moverlas', S.LINKS.every(x => fs.existsSync(path.join(__dirname, '..', 'modulos', x.url))))
   const h = S.htmlLink(S.LINKS[0])
-  chk('un link es un <a> con su url', /<a class="ad-seccion ad-seccion--link" href="cheques\.html"/.test(h))
+  chk('un link es un <a> con su url', /<a class="ad-seccion ad-seccion--link" href="cuentas-corrientes\.html"/.test(h))
 }
 
 // ── La portada ─────────────────────────────────────────────────────────────
