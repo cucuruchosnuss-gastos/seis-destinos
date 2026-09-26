@@ -1,0 +1,63 @@
+# Pruebas en un navegador real (Chromium con Playwright) contra un servidor
+# estático con el repo tal cual y la base real. Cada push a main y todas las
+# noches a las 5 de la mañana de Argentina (08:00 UTC).
+#
+# Los recorridos de la planta, la gestión y Accesos necesitan los secretos
+# E2E_PLANTA_EMAIL, E2E_GESTION_EMAIL y E2E_SERVICE_ROLE_KEY (Settings →
+# Secrets and variables → Actions). Sin ellos se saltean con un aviso y corre
+# solo el humo, que no necesita nada.
+name: Navegador
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+concurrency:
+  # La fábrica de pruebas es UNA: dos corridas a la vez se pisarían los turnos.
+  group: navegador
+  cancel-in-progress: false
+
+jobs:
+  navegador:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      E2E_PLANTA_EMAIL: ${{ secrets.E2E_PLANTA_EMAIL }}
+      E2E_GESTION_EMAIL: ${{ secrets.E2E_GESTION_EMAIL }}
+      E2E_SERVICE_ROLE_KEY: ${{ secrets.E2E_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: ¿Están las credenciales del robot?
+        run: |
+          faltan=""
+          for v in E2E_PLANTA_EMAIL E2E_GESTION_EMAIL E2E_SERVICE_ROLE_KEY; do
+            [ -z "${!v}" ] && faltan="$faltan $v"
+          done
+          if [ -n "$faltan" ]; then
+            echo "::warning::Faltan los secretos:$faltan. Los recorridos de planta, gestión y Accesos se saltean; corre solo el humo."
+            echo "### ⚠️ Faltan los secretos:$faltan — corrió solo el humo" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Playwright
+        run: npm run e2e
+      - name: Resumen
+        if: always()
+        run: |
+          n=$(ls e2e/resultados/capturas 2>/dev/null | wc -l)
+          echo "### Capturas del recorrido: $n (artefacto \"capturas\")" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas
+          path: |
+            e2e/resultados/
+            e2e/informe/
+          retention-days: 14
