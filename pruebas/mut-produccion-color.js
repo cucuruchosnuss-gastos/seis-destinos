@@ -54,7 +54,8 @@ correrMutacionesProduccion({
     { nombre: 'la cabecera de la gestión repite el módulo', de: "textContent = estado.unidadId ? (estado.unidades.get(estado.unidadId) ?? '') : ''", a: "textContent = 'Producción · ' + (estado.unidadId ? (estado.unidades.get(estado.unidadId) ?? '') : '')" },
     { nombre: 'la cabecera de la gestión queda escondida', de: "document.getElementById('pr-header').hidden = false", a: "document.getElementById('pr-header').hidden = true" },
     { nombre: 'la cabecera dice Producción dos veces', de: '          <span class="pr-header__titulo">Producción</span>', a: '          <span class="pr-header__titulo">Producción · Producción</span>' },
-    { nombre: 'la oficina vuelve a titular "Producción"', de: '        <h1 class="pr-titulo">¿Qué querés ver?</h1>', a: '        <h1 class="pr-titulo">Producción</h1>' },
+    // Desde el diseño de la gestión (26/09/2026) la pantalla de inicio no tiene título propio.
+    { nombre: 'la oficina vuelve a titular "Producción"', de: '      <section id="pr-inicio">\n', a: '      <section id="pr-inicio">\n        <h1 class="pr-titulo">Producción</h1>\n' },
     // Las grillas.
     { nombre: 'el tablero vuelve a auto-fill', de: '    .pr-tablero { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit,', a: '    .pr-tablero { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill,' },
     { nombre: 'una sola tarjeta se estira', de: '    .pr-tablero:not(:has(> :nth-child(2))) { max-width: 36rem; margin-inline: auto; }\n', a: '' },

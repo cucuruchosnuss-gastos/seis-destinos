@@ -218,8 +218,8 @@ esperas.push((async () => {
   const d = await S.leerDetalleTurno('t1')
   const h = S.htmlDetalleTurno(d)
   const li = sub => { const i = h.indexOf(`>${sub}</span>`); return h.slice(h.lastIndexOf('<li', i), h.indexOf('</li>', i)) }
-  chk('en el historial: el renglón sin caja va en bordó', /pr-lista__item pr-of-sin-caja/.test(li('7023-1')), li('7023-1'))
-  chk('… y lo dice', li('7023-1').includes('pr-sin-caja">· Sin empaque descontado: no se descontó la caja ni las bolsas'))
+  chk('en el historial: el renglón sin caja va en bordó', /pr-lista__item pg-sub pr-of-sin-caja/.test(li('7023-1')), li('7023-1'))
+  chk('… y lo dice', li('7023-1').includes('pr-sin-caja">Sin empaque descontado: no se descontó la caja ni las bolsas'))
   chk('… el anterior al empaque, no', !/sin-caja|Sin empaque/.test(li('7023-2')), li('7023-2'))
   chk('… el que tiene caja, no', !/sin-caja|Sin empaque/.test(li('7023-3')))
 })())
@@ -252,37 +252,32 @@ const pendientes = n => async nombre => nombre === 'mis_pendientes'
   ? { data: [{ modulo: 'cobranzas', clave: 'por_controlar', cantidad: 9, texto: 'Otra cosa' },
       { modulo: 'produccion', clave: 'conos_por_revisar', cantidad: n, texto: 'Conos nuevos por revisar' }], error: null }
   : { data: null, error: null }
-const BOTONES = ['pr-btn-ir-config', 'pr-menu-config']
+// Desde el diseño de la gestión (26/09/2026) no hay botón "Configuración":
+// el número va al lado de "Marcas / Conos", el renglón del menú que lleva
+// derecho a revisarlos. Antes, con pendientes, "Configuración" abría en
+// Marcas; ahora el renglón ya ES Marcas, así que eso no hace falta.
+const numConos = S => S.__doc.getElementById('pr-menu-n-conos')
 
 esperas.push((async () => {
   const S = armarBurbuja({ rpc: pendientes(3) })
   await S.cargarBurbujaConos()
   chk('se pide a mis_pendientes, sin parámetros', rpcs(S, 'mis_pendientes').length === 1 && rpcs(S, 'mis_pendientes')[0][1] === undefined)
-  for (const id of BOTONES) {
-    const b = S.__doc.getElementById(id)
-    chk(`${id}: la burbuja con el número de la base`, /^Configuración<span class="pr-burbuja"[^>]*>3<\/span>$/.test(b.innerHTML), b.innerHTML)
-    chk(`${id}: dice qué es en title y aria-label`,
-      b.innerHTML.includes('title="3 conos nuevos por revisar"') && b.innerHTML.includes('aria-label="3 conos nuevos por revisar"'))
-    chk(`${id}: el botón entero también lo dice`, b.getAttribute('aria-label') === 'Configuración: 3 conos nuevos por revisar')
-  }
-  chk('toma la fila de producción, no la de otro módulo', !/>9</.test(S.__doc.getElementById('pr-btn-ir-config').innerHTML))
-
-  // Con pendientes, tocar el acceso abre derecho en Marcas / Conos.
-  await S.abrirConfigDesdeAcceso()
-  chk('con pendientes, Configuración abre en "Marcas / Conos"', S.estado.config?.tab === 'marcas', S.estado.config?.tab)
-  const M = armarBurbuja({ rpc: pendientes(2) })
-  await M.cargarBurbujaConos()
-  await M.accionDelMenu('config')
-  chk('… también desde el Menú', M.estado.config?.tab === 'marcas')
-  chk('el acceso de la pantalla de inicio usa ese camino', /getElementById\('pr-btn-ir-config'\)\.addEventListener\('click', abrirConfigDesdeAcceso\)/.test(FUENTE_G))
-
+  const n = numConos(S)
+  chk('el número de la base, al lado de "Marcas / Conos"', n.hidden === false && n.textContent === '3', `${n.hidden} ${n.textContent}`)
+  chk('dice qué es en title y aria-label', n.getAttribute('title') === '3 conos nuevos por revisar' && n.getAttribute('aria-label') === '3 conos nuevos por revisar')
+  chk('toma la fila de producción, no la de otro módulo', n.textContent !== '9')
+  chk('el número vive adentro del renglón que lleva a Marcas / Conos', /data-ir-config="marcas"[^>]*>[^]*?id="pr-menu-n-conos"[^]*?<\/button>/.test(FUENTE_G) &&
+    FUENTE_G.indexOf('id="pr-menu-n-conos"') < FUENTE_G.indexOf('</button>', FUENTE_G.indexOf('data-ir-config="marcas"')))
+  // El renglón abre Configuración en Marcas / Conos.
+  await S.irA('config:marcas')
+  chk('el renglón abre Configuración en "Marcas / Conos"', S.estado.config?.tab === 'marcas', S.estado.config?.tab)
   const U = armarBurbuja({ rpc: pendientes(1) })
   await U.cargarBurbujaConos()
-  chk('uno solo, en singular', U.__doc.getElementById('pr-btn-ir-config').innerHTML.includes('title="1 cono nuevo por revisar"'))
+  chk('uno solo, en singular', numConos(U).getAttribute('title') === '1 cono nuevo por revisar')
   const G = armarBurbuja({ rpc: pendientes(150) })
   await G.cargarBurbujaConos()
-  chk('más de 99: "99+"', />99\+<\/span>/.test(G.__doc.getElementById('pr-menu-config').innerHTML))
-  chk('… y el title dice el número de verdad', G.__doc.getElementById('pr-menu-config').innerHTML.includes('title="150 conos nuevos por revisar"'))
+  chk('más de 99: "99+"', numConos(G).textContent === '99+')
+  chk('… y el title dice el número de verdad', numConos(G).getAttribute('title') === '150 conos nuevos por revisar')
 })())
 
 esperas.push((async () => {
@@ -295,12 +290,9 @@ esperas.push((async () => {
   ]) {
     const S = armarBurbuja({ rpc })
     await S.cargarBurbujaConos()
-    chk(`${n}: sin burbuja`, BOTONES.every(id => S.__doc.getElementById(id).innerHTML === 'Configuración'),
-      S.__doc.getElementById('pr-btn-ir-config').innerHTML)
-    chk(`${n}: sin aria-label de pendientes`, S.__doc.getElementById('pr-btn-ir-config').getAttribute('aria-label') === null)
+    chk(`${n}: sin número`, numConos(S).hidden === true && numConos(S).textContent === '', numConos(S).textContent)
+    chk(`${n}: sin aria-label de pendientes`, numConos(S).getAttribute('aria-label') === null)
     chk(`${n}: la cifra queda en null, no en un cero`, S.estado.conosPendientes === null, String(S.estado.conosPendientes))
-    await S.abrirConfigDesdeAcceso()
-    chk(`${n}: Configuración abre donde estaba (Máquinas)`, S.estado.config?.tab === 'maquinas')
   }
   // Había 3 y la segunda llamada falla: no queda un número viejo.
   let r = pendientes(3)
@@ -308,9 +300,8 @@ esperas.push((async () => {
   await V.cargarBurbujaConos()
   r = async () => ({ data: null, error: { message: 'x' } })
   await V.cargarBurbujaConos()
-  chk('si falla después de haber mostrado 3, se borra (nunca un número viejo)', V.__doc.getElementById('pr-btn-ir-config').innerHTML === 'Configuración')
-  chk('… y el botón deja de decir que hay pendientes', BOTONES.every(id => V.__doc.getElementById(id).getAttribute('aria-label') === null))
-  chk('… y ya no abre en Marcas', (await V.abrirConfigDesdeAcceso(), V.estado.config.tab === 'maquinas'))
+  chk('si falla después de haber mostrado 3, se borra (nunca un número viejo)', numConos(V).hidden === true && numConos(V).textContent === '')
+  chk('… y deja de decir que hay pendientes', numConos(V).getAttribute('aria-label') === null)
 })())
 
 esperas.push((async () => {
@@ -318,7 +309,7 @@ esperas.push((async () => {
   const S = armarBurbuja({ tareas: [['cargar', { unidades: ['u-cn'] }]], rpc: pendientes(3) })
   await S.cargarBurbujaConos()
   chk('sin configurar: no se llama a mis_pendientes', rpcs(S, 'mis_pendientes').length === 0)
-  chk('… ni hay burbuja', BOTONES.every(id => !/pr-burbuja/.test(S.__doc.getElementById(id).innerHTML)))
+  chk('… ni hay número', numConos(S).hidden === true)
 
   // Una respuesta vieja no pisa la nueva.
   let soltar
@@ -329,7 +320,7 @@ esperas.push((async () => {
   await T.cargarBurbujaConos()
   soltar({ data: [{ modulo: 'produccion', clave: 'conos_por_revisar', cantidad: 8 }], error: null })
   await p1
-  chk('la respuesta que llega tarde no pisa la nueva', />5<\/span>/.test(T.__doc.getElementById('pr-btn-ir-config').innerHTML), T.__doc.getElementById('pr-btn-ir-config').innerHTML)
+  chk('la respuesta que llega tarde no pisa la nueva', numConos(T).textContent === '5', numConos(T).textContent)
 
   // Cuándo se pide.
   chk('se pide al entrar', /pintarAccesosOficina\(\)\n\s+cargarBurbujaConos\(\)/.test(FUENTE_G))

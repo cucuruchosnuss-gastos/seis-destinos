@@ -84,8 +84,8 @@ const SEGURAS_PRODUCCION = [
   ['temp', 'HTML constante del código (el chip "temporal"), o vacío'],
   ['largo', 'número: LARGO_PIN (4) o LARGO_PIN_MAESTRO (8)'],
   ["'0'.repeat(largo)", 'ceros: el placeholder del campo del PIN'],
-  ['k', 'constante del código: la clave de PUESTOS (encargado / masero / operario)'],
-  ['r', 'constante del código: el rótulo de PUESTOS'],
+  ['k', 'constante del código: la clave de PUESTOS (encargado / masero / operario) o de FILTROS_CONOS'],
+  ['r', 'constante del código: el rótulo de PUESTOS o de FILTROS_CONOS'],
   ['cab', 'HTML constante del código: la cabecera de la tabla de Personal, con los rótulos de PUESTOS'],
   ['htmlPanelPin(c)', 'HTML armado por htmlPanelPin(), que escapa adentro, o vacío'],
   ['htmlPanelTemporal(c)', 'HTML armado por htmlPanelTemporal(), que escapa adentro, o vacío'],
@@ -131,9 +131,24 @@ const SEGURAS_PRODUCCION = [
   ["clases.join(' ')", 'clases CSS constantes del código, armadas con banderas de la fila'],
   ['htmlCeldaLote(it, b, e)', 'HTML armado por htmlCeldaLote(), que escapa adentro'],
   ['estadoHtml', 'HTML ya escapado: htmlFilaMasaTurno() lo arma arriba con esc(m.anulada_motivo) y esc(m.id), o texto constante'],
+  // El diseño "Producción · Gestión" (26/09/2026)
+  ['dato', 'HTML ya escapado: renderAhora() lo arma con esc() del turno, el encargado, las masas y las cajas'],
+  ['htmlDiferenciaInd(total)', 'HTML armado por htmlDiferenciaInd(), que escapa el texto; la clase sale de diferenciaInd(), constante del código'],
+  ['htmlDiferenciaInd(diferenciaInd(f.hoy, f.antes))', 'HTML armado por htmlDiferenciaInd(), que escapa el texto; la clase sale de diferenciaInd(), constante del código'],
+  ['ancho', 'número: el ancho de la barra en % (Math.round), no un dato de la base'],
+  ['fraseRinde', 'HTML ya escapado: renderRendimiento() lo arma arriba con esc() del % y del producto, o vacío'],
+  ['destinoInd', "constante del código: renderPendientes() lo llama con 'abiertos', 'pendientes' o 'conos'"],
+  ['segConos', 'HTML armado en htmlConfigMarcas(): la clave y el rótulo salen de FILTROS_CONOS (constante del código) y la cuenta va con esc()'],
+  ['campoCajas', 'HTML ya escapado: htmlEditorSublote() lo arma arriba con esc() de las cajas y del sublote, o vacío'],
+  ['botonesSublote', 'HTML ya escapado: htmlSubloteHistorial() lo arma arriba con esc(p.id), o vacío'],
+  ['chip', 'HTML armado en renderAhora(): el chip PARADA y "Pendiente de completar" son constantes, y las cajas van con esc(textoCajas)'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [
+  // El diseño "Producción · Gestión" (26/09/2026): el error va pegado a cada
+  // cono por revisar; htmlErrorPegado() escapa el texto y el id solo se compara.
+  [/^cuerpoPend\((null|n|conos), /, 'HTML armado por cuerpoPend() de renderPendientes(), que escapa el número y los dos textos'],
+  [/^htmlErrorPegado\(c, 'pend-' \+ m\.id\)$/,'HTML armado por htmlErrorPegado(), que escapa el texto del error; el id del cono solo se compara, no se imprime'],
 ]
 
 module.exports = { SEGURAS_PRODUCCION, SEGURAS_REGEX_PRODUCCION }

@@ -38,17 +38,23 @@ test.describe('gestión', () => {
         await captura(page, `gestion-indicadores-${ancho}`, info);
       });
 
+      // Desde el diseño de la gestión (26/09/2026) cada sección es un renglón
+      // del menú: en la compu una barra lateral siempre a la vista; en el
+      // celular se abre con "Menú" y cada sección tiene "‹ Menú".
+      const abrirMenuSiCelular = async () => { if (ancho < 900) await page.locator('#pr-btn-menu').click(); };
+
       await test.step('Personal y PINes', async () => {
+        await abrirMenuSiCelular();
         await page.locator('[data-ir-config="personal"]').click();
         await expect(page.locator('#pr-config')).toBeVisible();
         await expect(page.locator('#pr-config-cuerpo')).toContainText('Robot Encargado');
         await expect(page.locator('#pr-config-cuerpo')).toContainText('Robot Masero');
         await captura(page, `gestion-personal-${ancho}`, info);
-        await page.locator('#pr-config-volver').click();
       });
 
       await test.step('el historial muestra el turno recién cerrado', async () => {
-        await page.locator('#pr-btn-ir-historial').click();
+        if (ancho < 900) await page.locator('#pr-config-volver').click();
+        await page.locator('#pr-menu-historial').click();
         await expect(page.locator('#pr-historial')).toBeVisible();
         const lote = loteDeLaPlanta();
         if (lote) {

@@ -74,7 +74,9 @@ const D = {
 }
 const hist = (extra) => {
   const h = G.htmlSubloteHistorial(item(extra), D)
-  return h.slice(h.indexOf('</span> ') + 8, h.indexOf(' · 10 cajas'))
+  // Diseño 2a: el renglón y la cuenta de cajas van en dos celdas.
+  const fin = h.indexOf('</span><span class="pg-sub__cajas">10 cajas')
+  return fin === -1 ? '' : h.slice(h.indexOf('</span> ') + 8, fin)
 }
 
 // ── a) el renglón de lo producido ─────────────────────────────────────────

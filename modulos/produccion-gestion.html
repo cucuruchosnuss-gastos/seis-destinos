@@ -1442,14 +1442,412 @@
     @media (max-width: 520px) {
       .pr-header__acciones { flex: 1 1 100%; justify-content: space-between; }
     }
+    /* ══ LA GESTIÓN · DISEÑO "PRODUCCIÓN · GESTIÓN" (26/09/2026) ═════════════
+       Va AL FINAL del <style>: pisa por orden a todo lo de arriba.
+
+       TOKENS. Los del diseño que ya existen se usan por su variable global
+       (fondo #eef1f6 = --color-superficie, tarjeta = --color-fondo, borde
+       #E5E7EB = --color-borde, texto #111 = --color-texto, suave #8a94ab =
+       --color-texto-suave, el naranja, el verde y el bordó con sus tres tonos,
+       y los radios 20/14/12). Los que NO existen van acá, locales:
+         --pg-texto-2   #55617d  texto secundario: 6,19:1 sobre blanco
+         --pg-texto-menu #3a4256 texto del menú: 10,03:1 sobre blanco
+         --pg-divisor   #EEF0F3  el divisor interno de una tarjeta
+         --pg-tabla-cab #f8f9fb  el encabezado de una tabla
+         --pg-fila-tocada #FFF8F3 la fila tocada (texto naranja oscuro 7,75:1)
+         --pg-bordo-borde #E8CDD5 el borde suave del bloque bordó
+       La barra neutra (#9AA1AE) y su pista (#F4F5F7) ya tienen nombre en este
+       archivo (--pr-prod-apagado-borde, --pr-panel-gris): 2,38:1 entre ellas,
+       pero el valor va SIEMPRE escrito al lado; la barra acompaña.
+       Sin azules. El naranja nunca marca validez: bien/mal lo dicen verde y
+       bordó, y la dirección la dicen ▲ ▼ =. */
+    body.pg-gestion {
+      --pg-texto-2: #55617d;
+      --pg-texto-menu: #3a4256;
+      --pg-divisor: #EEF0F3;
+      --pg-tabla-cab: #f8f9fb;
+      --pg-fila-tocada: #FFF8F3;
+      --pg-bordo-borde: #E8CDD5;
+      --pg-barra: var(--pr-prod-apagado-borde);
+      --pg-pista: var(--pr-panel-gris);
+      background: var(--color-superficie);
+      font-size: 15px;
+      /* clip y no hidden: con hidden el body pasa a ser un contenedor de
+         scroll y nada "sticky" (la cabecera, el pie de Personal) se pega. */
+      overflow-x: clip;
+    }
+    .pg-gestion, .pg-gestion .pr-ind, .pg-gestion .pr-of, .pg-gestion .pr-cfg { font-variant-numeric: tabular-nums; }
+
+    /* ── El marco: menú a la izquierda (248 px) y el contenido ─────────── */
+    .pg-app { max-width: 1440px; padding: 0; }
+    .pg-contenido { min-width: 0; padding: 0 1rem calc(2rem + env(safe-area-inset-bottom)); }
+    .pg-menu {
+      display: flex; flex-direction: column; gap: 2px; background: var(--color-fondo);
+      border-right: 1px solid var(--color-borde); padding: 20px 14px;
+    }
+    .pg-menu__cab { display: flex; align-items: center; justify-content: space-between; padding: 0 10px 16px; }
+    .pg-menu__titulo { font-size: 17px; font-weight: 800; }
+    .pg-menu__cerrar { display: none; }
+    .pg-menu__grupo { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--color-texto-suave); padding: 16px 10px 6px; margin: 0; }
+    .pg-menu__bloque { display: flex; flex-direction: column; gap: 2px; }
+    .pg-menu__item {
+      min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      padding: 0 10px; border-radius: 10px; border: none; background: none; font: inherit; font-size: 15px;
+      color: var(--pg-texto-menu); cursor: pointer; text-align: left; width: 100%;
+    }
+    .pg-menu__item:hover { background: var(--color-superficie); }
+    .pg-menu__item:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; }
+    .pg-menu__item[aria-current="page"] { background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 700; }
+    .pg-menu__item--inicio { font-weight: 700; }
+    .pg-menu__txt { flex: 1 1 auto; }
+    .pg-menu__n { font-size: 12px; font-weight: 800; background: var(--naranja); color: #fff; border-radius: 999px;
+      padding: 1px 8px; font-variant-numeric: tabular-nums; }
+    .pg-menu__n--grave { background: var(--bordo); }
+    .pg-menu__pie { margin-top: auto; padding: 16px 10px 0; color: var(--pg-texto-2); font-size: 14px; }
+
+    /* Compu: el menú fijo a la izquierda. Solo con la clase del body, que se
+       pone cuando ya se sabe qué puede ver esta cuenta. */
+    @media (min-width: 900px) {
+      body.pg-con-menu .pg-app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100vh; }
+      body.pg-con-menu .pg-menu { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+      .pg-contenido { padding: 0 28px calc(2rem + env(safe-area-inset-bottom)); }
+      .pg-btn-menu, .pg-volver-menu { display: none !important; }
+    }
+    /* Celular: "Menú" lo abre a pantalla completa (2b); los tres bloques como
+       tarjetas y renglones de 52 px con "›". */
+    @media (max-width: 899px) {
+      .pg-menu { display: none; }
+      body.pg-menu-abierto .pg-menu {
+        display: flex; position: fixed; inset: 0; z-index: 50; overflow-y: auto; border-right: none;
+        background: var(--color-superficie); padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); gap: 12px;
+      }
+      body.pg-menu-abierto { overflow: hidden; }
+      .pg-menu__cerrar {
+        display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: var(--radio-boton);
+        border: 1px solid var(--pr-borde-boton); background: var(--color-fondo); font: inherit; font-weight: 700; cursor: pointer;
+      }
+      .pg-menu__bloque { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: var(--radio-tarjeta); padding: 4px 8px 8px; }
+      .pg-menu__item { min-height: 52px; font-size: 16px; }
+      .pg-menu__item:not(.pg-menu__item--inicio)::after { content: '›'; color: var(--color-texto-suave); font-size: 20px; margin-left: 4px; }
+      .pg-menu__item--inicio { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 14px; }
+    }
+
+    /* ── La cabecera ────────────────────────────────────────────────────── */
+    .pg-cab { margin: 16px 0; padding: 0.5rem 0.75rem; }
+    .pg-unidad { display: flex; align-items: center; gap: 0.5rem; }
+    .pg-seg { display: inline-flex; gap: 3px; padding: 3px; border-radius: var(--radio-boton);
+      background: var(--color-superficie); border: 1px solid var(--color-borde); flex-wrap: wrap; }
+    .pg-seg__op { min-height: 40px; padding: 0 14px; border: none; border-radius: 11px; background: none;
+      font: inherit; font-size: 14px; font-weight: 700; color: var(--pg-texto-2); cursor: pointer; }
+    .pg-seg__op[aria-pressed="true"] { background: var(--naranja); color: #fff; }
+    .pg-seg__op:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; }
+    .pg-unidad__seg { display: none; }
+    @media (min-width: 900px) {
+      .pg-unidad__seg { display: inline-flex; }
+      .pg-unidad__select { display: none !important; }
+      .pg-cab .pr-header__col { display: none; }
+    }
+    @media (max-width: 899px) {
+      .pg-cab { position: sticky; top: 0; z-index: 20; margin: 0 -1rem 12px; border-radius: 0; border-left: none; border-right: none; }
+      .pg-cab .pr-header__volver, .pg-cab .pr-header__marca { display: none; }
+      .pg-cab .pr-header__col { display: none; }
+      .pg-unidad .pr-gestion-unidad__rotulo { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .pg-cab .pr-header__acciones { flex: 1 1 auto; justify-content: flex-end; flex-wrap: nowrap; }
+      .pg-unidad { flex: 1 1 auto; min-width: 0; }
+      .pg-unidad__select { flex: 1 1 auto; min-width: 0; }
+      .pg-unidad .pr-select { font-weight: 700; width: 100%; }
+    }
+
+    /* ── La fecha de los indicadores ───────────────────────────────────── */
+    .pg-dia { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 14px; }
+    .pg-dia__paso { width: 44px; height: 44px; border-radius: var(--radio-boton); border: 1px solid var(--pr-borde-boton);
+      background: var(--color-fondo); font-size: 22px; font-weight: 700; cursor: pointer; color: var(--color-texto); }
+    .pg-dia__paso:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pg-dia__texto { font-size: 16px; font-weight: 800; min-width: 10rem; text-align: center; }
+
+    /* ── Las tarjetas de indicadores ───────────────────────────────────── */
+    .pg-gestion .pr-indicadores { display: grid; gap: 16px; align-items: start; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pg-gestion .pr-ind { padding: 18px 20px; margin: 0; border: 1px solid var(--color-borde); box-shadow: none; min-height: 11rem; }
+    .pg-ind--ancha { grid-column: span 2; }
+    @media (max-width: 1199px) { .pg-gestion .pr-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 899px) {
+      .pg-gestion .pr-indicadores { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+      .pg-ind--ancha { grid-column: auto; }
+      .pg-gestion .pr-ind { min-height: 0; padding: 14px 16px; }
+    }
+    .pg-ind__cab { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; margin-bottom: 10px; flex-wrap: wrap; }
+    .pg-gestion .pr-ind__titulo { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--color-texto-suave); margin: 0; }
+    .pg-ind__ctx { font-size: 13px; color: var(--pg-texto-2); }
+    .pg-ind-sin__que { font-size: 18px; font-weight: 800; margin: 0 0 4px; }
+    .pg-ind-sin__ctx { font-size: 14px; color: var(--pg-texto-2); margin: 0; }
+    .pg-ind-falla__que { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+    .pg-ind-falla__pie { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .pg-ind-falla__pie .pr-ind__error { flex: 1 1 12rem; font-size: 13px; }
+
+    /* Ahora: la parada primero, en bordó, con el chip PARADA. */
+    .pg-gestion .pr-ind-maq { border-left: none; padding: 10px 0; border-top: 1px solid var(--pg-divisor); }
+    .pg-gestion .pr-ind-maq:first-child { border-top: none; padding-top: 0; }
+    .pg-gestion .pr-ind-maq--parada { background: var(--bordo-suave); border-left: 4px solid var(--bordo); border-radius: 12px; padding: 10px 12px; border-top: none; margin-bottom: 4px; }
+    .pg-gestion .pr-ind-maq--pendiente .pr-ind-maq__que { color: var(--bordo-oscuro); }
+    .pg-maq__fila { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .pg-gestion .pr-ind-maq__que { font-size: 16px; font-weight: 800; }
+    .pg-maq__cajas { font-size: 16px; font-weight: 800; white-space: nowrap; }
+    .pg-gestion .pr-ind-maq__dato { font-size: 14px; color: var(--pg-texto-2); }
+    .pg-gestion .pr-ind-parada { background: none; color: var(--bordo-oscuro); font-size: 15px; font-weight: 700; padding: 2px 0; }
+    .pg-chip { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; }
+    .pg-chip--parada { background: var(--bordo); color: #fff; }
+
+    /* Hoy: el total grande con su pastilla, y un renglón por producto. */
+    .pg-total { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+    .pg-total__n { font-size: 34px; font-weight: 900; line-height: 1; }
+    .pg-total__u { font-size: 15px; color: var(--pg-texto-2); }
+    .pg-dif { font-size: 14px; font-weight: 800; color: var(--pg-texto-2); white-space: nowrap; }
+    .pg-total .pg-dif { border-radius: 999px; padding: 2px 9px; background: var(--color-superficie); align-self: center; }
+    .pg-gestion .pr-ind-mas { color: var(--verde-oscuro); }
+    .pg-gestion .pr-ind-menos { color: var(--bordo-oscuro); }
+    .pg-total .pr-ind-mas { background: var(--verde-suave); }
+    .pg-total .pr-ind-menos { background: var(--bordo-suave); }
+    .pg-prods, .pg-renglones, .pg-rend__lista { list-style: none; margin: 0; padding: 0; }
+    .pg-prod { display: grid; grid-template-columns: minmax(0, 1fr) auto 4.5rem; gap: 10px; align-items: baseline;
+      padding: 7px 0; border-top: 1px solid var(--pg-divisor); font-size: 15px; }
+    .pg-prod__nombre { overflow-wrap: anywhere; }
+    .pg-prod__cajas { font-weight: 700; text-align: right; }
+    .pg-prod .pg-dif { text-align: right; }
+
+    /* Semana */
+    .pg-grande { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 8px; color: var(--pg-texto-2); }
+    .pg-grande__n { font-size: 30px; font-weight: 900; color: var(--color-texto); }
+    .pg-renglon { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--pg-divisor); font-size: 14px; color: var(--pg-texto-2); }
+    .pg-renglon__rot { min-width: 4.5rem; font-weight: 700; color: var(--color-texto); }
+    .pg-renglon__val strong { color: var(--color-texto); }
+
+    /* Rendimiento y scrap: barras de 24 px, el valor a la derecha. */
+    .pg-rend__explica { font-size: 14px; color: var(--pg-texto-2); margin: 0 0 10px; }
+    .pg-rend__grupo + .pg-rend__grupo { margin-top: 14px; }
+    .pg-rend__prod { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-size: 15px; }
+    .pg-rend__prom { font-size: 13px; color: var(--pg-texto-2); }
+    .pg-rend { display: grid; grid-template-columns: 9rem minmax(0, 1fr) 6.5rem; gap: 10px; align-items: center; padding: 5px 0; }
+    .pr-ind:not(.pg-ind--ancha) .pg-rend { grid-template-columns: minmax(0, 7.5rem) minmax(3rem, 1fr) auto; }
+    .pg-rend__lote { font-size: 14px; overflow-wrap: anywhere; }
+    .pg-rend__barra { height: 24px; border-radius: 6px; background: var(--pg-pista); overflow: hidden; }
+    .pg-rend__relleno { display: block; height: 100%; background: var(--pg-barra); border-radius: 6px; }
+    .pg-rend__valor { font-size: 14px; font-weight: 700; text-align: right; white-space: nowrap; }
+    .pg-rend--bajo .pg-rend__lote, .pg-rend--bajo .pg-rend__valor { color: var(--bordo-oscuro); font-weight: 800; }
+    .pg-rend--bajo .pg-rend__relleno { background: var(--bordo); }
+    .pg-rend--mejor .pg-rend__lote, .pg-rend--mejor .pg-rend__valor { color: var(--verde-oscuro); font-weight: 800; }
+    .pg-rend--mejor .pg-rend__relleno { background: var(--verde); }
+    .pg-rend__frase { grid-column: 1 / -1; margin: 0; font-size: 13px; font-weight: 700; color: var(--bordo-oscuro); }
+    @media (max-width: 899px) {
+      /* La etiqueta y el valor ARRIBA de la barra (1c): la barra usa todo el ancho. */
+      .pg-rend, .pr-ind:not(.pg-ind--ancha) .pg-rend { grid-template-columns: minmax(0, 1fr) auto; row-gap: 4px; }
+      .pg-rend__barra { grid-column: 1 / -1; grid-row: 2; height: 16px; }
+    }
+
+    /* Pendientes: botones de 52 px; el turno de otro día en bordó. */
+    .pg-pends { display: flex; flex-direction: column; gap: 8px; }
+    .pg-pend { min-height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 14px; border-radius: var(--radio-boton);
+      border: 1px solid var(--color-borde); background: var(--color-fondo); font: inherit; color: var(--color-texto);
+      text-align: left; cursor: pointer; width: 100%; }
+    button.pg-pend:hover { border-color: var(--pr-borde-boton); }
+    .pg-pend--grave { background: var(--bordo-suave); border-color: var(--pg-bordo-borde); color: var(--bordo-oscuro); }
+    .pg-pend--nose { cursor: default; color: var(--pg-texto-2); }
+    .pg-pend__n { font-size: 22px; font-weight: 900; min-width: 1.75rem; }
+    .pg-pend__que { flex: 1 1 auto; font-size: 15px; font-weight: 700; }
+    .pg-pend__ir { font-size: 20px; color: var(--color-texto-suave); }
+    .pg-corto { display: none; }
+    .pg-nada { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: var(--radio-boton);
+      background: var(--verde-suave); color: var(--verde-oscuro); }
+    .pg-nada__ok { font-size: 22px; font-weight: 900; }
+    .pg-nada__ctx { font-size: 14px; }
+    @media (max-width: 899px) {
+      /* 1b: tres botones de 48 px en fila, con el texto corto. */
+      .pg-pends { flex-direction: row; }
+      .pg-pend { min-height: 48px; flex: 1 1 0; flex-direction: column; justify-content: center; gap: 0; padding: 6px 8px; text-align: center; }
+      .pg-pend__n { font-size: 20px; min-width: 0; }
+      .pg-pend__que { font-size: 13px; }
+      .pg-pend__ir { display: none; }
+      .pg-largo { display: none; }
+      .pg-corto { display: inline; }
+      .pg-prods .pg-prod__u { display: none; }
+    }
+
+    /* ── Configuración: título con "‹ Menú", y el texto de apoyo ───────── */
+    .pg-gestion .pr-fila-titulo { justify-content: flex-start; gap: 12px; }
+    .pg-sub { font-size: 14px; color: var(--pg-texto-2); margin: 0 0 10px; }
+    .pg-gestion .pr-tarjeta { border: 1px solid var(--color-borde); box-shadow: none; }
+
+    /* Personal y PINes (3a/3b). La fila tocada: franja naranja de 4 px, fondo
+       #FFF8F3 y "Cambiada" (tres señales, ninguna solo de color). */
+    .pg-gestion .pr-cfg-cab { background: var(--pg-tabla-cab); }
+    .pg-gestion .pr-cfg-fila--tocada { background: var(--pg-fila-tocada); border-left-color: var(--naranja); }
+    .pg-per__roles { display: contents; }
+    .pg-rol { display: flex; justify-content: center; align-items: center; min-height: 44px; }
+    .pg-rol__txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .pg-gestion .pr-cfg-personal { grid-template-columns: minmax(0, 1fr) 96px 96px 96px 200px 150px 90px; }
+    .pg-gestion .pr-cfg .pr-casilla { width: 24px; height: 24px; }
+    .pg-per__pie { justify-content: space-between; }
+    .pg-per__pie-lado { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .pg-per__pie-lado--der { justify-content: flex-end; }
+    @media (max-width: 1100px) {
+      /* Cada persona es una TARJETA: nombre y chip arriba, los tres roles como
+         botones de 44 px que se prenden, y abajo la acción y "Cambiada". */
+      .pg-per .pr-cfg-cab { display: none; }
+      .pg-gestion .pr-cfg-personal {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "nombre pin" "roles roles" "accion aviso";
+        gap: 8px; padding: 12px 14px; }
+      .pg-gestion .pr-cfg-personal > :nth-child(n+5) { grid-column: auto; justify-self: auto; }
+      .pg-per__nombre { grid-area: nombre; align-self: center; }
+      .pg-per__pin { grid-area: pin; justify-self: end; }
+      .pg-per__roles { grid-area: roles; display: flex; gap: 6px; }
+      .pg-per__accion { grid-area: accion; justify-self: start; }
+      .pg-gestion .pr-cfg-personal .pr-cfg-fila__aviso { grid-area: aviso; align-self: center; }
+      /* El rol es el botón entero: la casilla queda encima, invisible pero
+         tocable y leída por el lector de pantalla; el ✓ va como texto. */
+      .pg-rol { position: relative; flex: 1 1 0; min-width: 0; border: 1.5px solid var(--pr-borde-boton); border-radius: 12px;
+        background: var(--color-fondo); font-size: 13px; font-weight: 700; padding: 0 2px; cursor: pointer; }
+      .pg-rol:has(input:checked) { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
+      .pg-rol:has(input:focus-visible) { outline: 2px solid var(--naranja); outline-offset: 1px; }
+      .pg-rol__txt { position: static; width: auto; height: auto; overflow: hidden; clip: auto; text-overflow: ellipsis; }
+      .pg-rol:has(input:checked) .pg-rol__txt::before { content: '✓ '; }
+      .pg-gestion .pr-cfg .pg-rol .pr-casilla { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+      .pg-per__accion { white-space: nowrap; }
+      /* "Generar PIN…" y "Guardar los cambios" quedan FIJOS abajo. */
+      .pg-per__pie { position: sticky; bottom: 0; z-index: 5; background: var(--color-fondo); margin: 12px -1rem 0;
+        padding: 10px 1rem calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06); }
+      .pg-per__pie-lado { flex: 1 1 100%; }
+      .pg-per__pie-lado .pr-btn { flex: 1 1 auto; }
+    }
+
+    /* Marcas / Conos (5): por revisar arriba, segmentado, tabla con interruptor. */
+    .pg-conos-rev { background: var(--naranja-suave); border-radius: var(--radio-tarjeta); padding: 4px 14px 10px; margin-bottom: 14px; }
+    .pg-conos-rev .pr-cfg-pendiente { background: var(--color-fondo); }
+    .pg-pend-acc { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+    .pg-conos__barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+    .pg-conos__barra .pr-input { flex: 1 1 14rem; }
+    .pg-cono { grid-template-columns: minmax(0, 1fr) 110px 90px; }
+    .pg-cono__centro { text-align: center; }
+    .pg-cono__doble, .pg-switch { justify-self: center; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; }
+    .pg-cono__doble-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .pg-cono--apagado .pg-cono__nombre { color: var(--pg-texto-2); }
+    .pg-cono__estado { font-size: 12px; font-weight: 700; color: var(--pg-texto-2); }
+    .pg-cono__error { grid-column: 1 / -1; margin-bottom: 8px; }
+    .pg-conos__mostrando { margin: 6px 0 0; }
+    /* El interruptor: 52×30, prendido en naranja. */
+    .pg-switch__input { position: absolute; opacity: 0; width: 52px; height: 30px; margin: 0; cursor: pointer; }
+    .pg-switch { position: relative; }
+    .pg-switch__pista { width: 52px; height: 30px; border-radius: 999px; background: var(--pr-prod-apagado-borde); position: relative; transition: background var(--transicion); }
+    .pg-switch__pista::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); transition: left var(--transicion); }
+    .pg-switch__input:checked + .pg-switch__pista { background: var(--naranja); }
+    .pg-switch__input:checked + .pg-switch__pista::after { left: 25px; }
+    .pg-switch__input:focus-visible + .pg-switch__pista { outline: 2px solid var(--naranja); outline-offset: 2px; }
+    .pg-switch__input:disabled + .pg-switch__pista { opacity: 0.5; }
+    @media (max-width: 700px) {
+      /* Cada cono: una fila de dos líneas con el interruptor a la derecha. */
+      .pg-conos .pr-cfg-cab { display: none; }
+      .pg-cono { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nombre switch" "doble switch"; gap: 2px 10px; padding: 8px 14px; }
+      .pg-cono__nombre { grid-area: nombre; }
+      .pg-cono__doble { grid-area: doble; justify-self: start; min-height: 36px; font-size: 13px; }
+      .pg-cono__doble-txt { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+      .pg-switch { grid-area: switch; }
+    }
+
+    /* ── Historial de un turno (4) ──────────────────────────────────────── */
+    .pg-turno__cab { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding-bottom: 14px;
+      border-bottom: 1px solid var(--pg-divisor); margin-bottom: 14px; }
+    .pg-turno__lote { display: flex; flex-direction: column; }
+    .pg-gestion .pg-turno__lote .pr-lote { font-size: 36px; }
+    .pg-turno__datos { flex: 1 1 18rem; min-width: 0; }
+    .pg-turno__maq { font-size: 16px; }
+    .pg-turno__enc { margin-top: 4px; }
+    .pg-turno__grilla { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+    @media (max-width: 1099px) { .pg-turno__grilla { grid-template-columns: minmax(0, 1fr); } }
+    .pg-caja { border: 1px solid var(--color-borde); border-radius: 16px; padding: 12px 16px; min-width: 0; }
+    .pg-caja--ancha { margin-top: 14px; }
+    .pg-gestion .pg-caja .pr-subtitulo { margin-top: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .pg-caja__ctx { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--pg-texto-2); margin-left: 6px; }
+    .pg-turno__totales { display: flex; gap: 20px; margin: 10px 0 0; }
+    .pg-turno__totales dt { font-size: 12px; font-weight: 800; color: var(--color-texto-suave); text-transform: uppercase; letter-spacing: 0.05em; }
+    .pg-turno__totales dd { margin: 0; font-size: 16px; font-weight: 800; }
+    .pg-turno__obs { margin: 8px 0 0; font-size: 14px; }
+    .pg-sub__fila { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; }
+    .pg-sub__que { overflow-wrap: anywhere; }
+    .pg-sub__cajas { font-weight: 700; white-space: nowrap; }
+    .pg-sub-acc { display: flex; gap: 6px; }
+    .pg-gestion .pr-of-anulado { opacity: 1; }
+    .pg-gestion .pr-of-anulado .pg-sub__que, .pg-gestion .pr-of-anulado .pg-sub__cajas { text-decoration: line-through; color: var(--pg-texto-2); }
+    .pg-sub--editando { background: var(--pg-fila-tocada); border-left: 4px solid var(--naranja); }
+    .pg-corr { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-top: 10px; }
+    .pg-corr__cajas { flex: 0 0 8rem; }
+    .pg-corr__motivo { flex: 1 1 16rem; }
+    .pg-corr__acc { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    @media (max-width: 899px) {
+      /* Cada renglón de lo producido pasa a dos líneas. */
+      .pg-sub__fila { grid-template-columns: minmax(0, 1fr) auto; }
+      .pg-sub__que { grid-column: 1 / -1; }
+    }
+
+    /* La hoja de PINes (3c) */
+    .pg-hoja__cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .pg-hoja__aviso { background: var(--bordo-suave); border-left: 4px solid var(--bordo); color: var(--bordo-oscuro);
+      font-weight: 700; border-radius: 10px; padding: 0.625rem 0.875rem; }
+    .pg-hoja__confirma { border: 2px solid var(--bordo); background: var(--bordo-suave); color: var(--bordo-oscuro);
+      border-radius: 14px; padding: 0.875rem 1rem; margin-bottom: 0.75rem; }
+    .pg-hoja__confirma p { margin: 0 0 0.625rem; }
+    .pg-gestion .pr-tira { border-style: dashed; }
+    .pg-gestion .pr-tira__pin { font-size: 40px; font-weight: 900; letter-spacing: 0.25em; }
+
+    @media print {
+      .pg-menu, .pg-contenido { display: none !important; }
+    }
   </style>
 </head>
 
-<body class="pagina-modulo">
-  <div class="pr-app">
+<body class="pagina-modulo pg-gestion">
+  <div class="pr-app pg-app">
 
-    <!-- La cabecera de la gestión, con el menú para ir a cada pantalla. -->
-    <header class="pr-header" id="pr-header" hidden>
+    <!-- EL MENÚ (26/09/2026, diseño "Producción · Gestión", pantallas 2a y
+         2b). En la compu es la barra de la izquierda, fija; en el celular
+         "Menú" lo abre a pantalla completa y cada sección tiene "‹ Menú". No
+         hay fila de pestañas: cada sección de Configuración es un renglón de
+         acá. Los números: planillas pendientes (de indicadores_produccion) y
+         conos por revisar (de mis_pendientes(), la misma cifra del dashboard).
+         Queda oculto hasta saber qué puede ver esta cuenta. -->
+    <nav class="pg-menu" id="pr-menu" hidden aria-label="Secciones de producción">
+      <div class="pg-menu__cab">
+        <span class="pg-menu__titulo">Producción</span>
+        <button type="button" class="pg-menu__cerrar" id="pr-menu-cerrar">Cerrar</button>
+      </div>
+      <button type="button" class="pg-menu__item pg-menu__item--inicio" data-menu="inicio" id="pr-menu-inicio">Indicadores</button>
+      <div class="pg-menu__bloque" id="pr-menu-bloque-control">
+        <p class="pg-menu__grupo">Control</p>
+        <button type="button" class="pg-menu__item" data-ir-pendientes id="pr-btn-ir-pendientes" hidden><span class="pg-menu__txt">Planillas pendientes</span><span class="pg-menu__n pg-menu__n--grave" id="pr-menu-n-pendientes" hidden></span></button>
+        <button type="button" class="pg-menu__item" data-menu="historial" id="pr-menu-historial" hidden><span class="pg-menu__txt">Historial</span></button>
+        <button type="button" class="pg-menu__item" data-menu="stock" id="pr-menu-stock" hidden><span class="pg-menu__txt">Stock terminado</span></button>
+      </div>
+      <div class="pg-menu__bloque" id="pr-menu-bloque-catalogo">
+        <p class="pg-menu__grupo">Catálogo</p>
+        <button type="button" class="pg-menu__item" data-ir-config="maquinas" hidden><span class="pg-menu__txt">Máquinas</span></button>
+        <button type="button" class="pg-menu__item" data-ir-config="recetas" hidden><span class="pg-menu__txt">Recetas</span></button>
+        <button type="button" class="pg-menu__item" data-ir-config="ingredientes" hidden><span class="pg-menu__txt">Ingredientes</span></button>
+        <button type="button" class="pg-menu__item" data-ir-config="productos" hidden><span class="pg-menu__txt">Productos</span></button>
+        <button type="button" class="pg-menu__item" data-ir-config="empaque" hidden><span class="pg-menu__txt">Empaque</span></button>
+        <button type="button" class="pg-menu__item" data-ir-config="marcas" hidden><span class="pg-menu__txt">Marcas / Conos</span><span class="pg-menu__n" id="pr-menu-n-conos" hidden></span></button>
+      </div>
+      <div class="pg-menu__bloque" id="pr-menu-bloque-personas">
+        <p class="pg-menu__grupo">Personas</p>
+        <button type="button" class="pg-menu__item" data-ir-config="personal" hidden><span class="pg-menu__txt">Personal y PINes</span></button>
+      </div>
+      <a class="pg-menu__pie" href="../dashboard.html" id="pr-menu-dashboard">Volver al inicio de la app</a>
+    </nav>
+
+    <div class="pg-contenido">
+    <!-- La cabecera: la unidad de TODA la gestión (en la compu un segmentado,
+         en el celular "Cucuruchos Nuss ▾"), y "Menú" en el celular. -->
+    <header class="pr-header pg-cab" id="pr-header" hidden>
       <a href="../dashboard.html" class="pr-header__volver" id="pr-gestion-volver" title="Volver al inicio de la app">&lsaquo; Volver</a>
       <div class="pr-header__col">
         <span class="pr-header__marca">Seis Destinos</span>
@@ -1460,21 +1858,17 @@
       </div>
       <div class="pr-header__acciones" id="pr-header-acciones">
         <!-- La unidad de TODA la gestión: los indicadores, y lo que abre cada
-             acceso. Solo con más de una; se recuerda en este navegador. -->
-        <label class="pr-gestion-unidad" id="pr-gestion-unidad-campo" hidden>
-          <span class="pr-gestion-unidad__rotulo">Unidad</span>
-          <select id="pr-gestion-unidad" class="pr-select"></select>
-        </label>
-        <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-menu" aria-expanded="false" aria-controls="pr-menu" hidden>Menú</button>
+             sección. Solo con más de una; se recuerda en este navegador. -->
+        <div class="pg-unidad" id="pr-gestion-unidad-campo" hidden>
+          <label class="pr-gestion-unidad pg-unidad__select">
+            <span class="pr-gestion-unidad__rotulo">Unidad</span>
+            <select id="pr-gestion-unidad" class="pr-select"></select>
+          </label>
+          <div class="pg-seg pg-unidad__seg" id="pr-gestion-unidad-seg" role="group" aria-label="Unidad"></div>
+        </div>
+        <button type="button" class="pr-btn pr-btn--secundario pg-btn-menu" id="pr-btn-menu" aria-expanded="false" aria-controls="pr-menu" hidden>Menú</button>
       </div>
     </header>
-
-    <nav class="pr-tarjeta pr-menu" id="pr-menu" hidden aria-label="Menú de producción">
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="historial" id="pr-menu-historial" hidden>Historial de producción</button>
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="stock" id="pr-menu-stock" hidden>Stock terminado</button>
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="config" id="pr-menu-config" hidden>Configuración</button>
-      <a class="pr-btn pr-btn--secundario" href="../dashboard.html" id="pr-menu-dashboard">Volver al inicio de la app</a>
-    </nav>
 
     <!-- Sin ninguna de las tres tareas no hay nada que mostrar: se dice y se
          vuelve al dashboard. El frontend solo oculta: la barrera real son las
@@ -1483,31 +1877,17 @@
     <div class="pr-vacio" id="pr-cargando">Cargando…</div>
 
     <main id="pr-vista" hidden>
-      <!-- EL INICIO DE LA GESTIÓN: los indicadores de la unidad y, debajo, los
-           accesos a cada pantalla. Cada indicador es una tarjeta INDEPENDIENTE
-           (TARJETAS_INDICADORES): si un bloque viene mal, esa tarjeta dice "No
-           se pudo leer" y las otras se ven. -->
+      <!-- LOS INDICADORES (pantallas 1a a 1d): la fecha con ‹ › y una
+           tarjeta INDEPENDIENTE por bloque (TARJETAS_INDICADORES): si un
+           bloque viene mal, esa tarjeta lo dice con "Reintentar" y las otras
+           se ven. -->
       <section id="pr-inicio">
-        <div class="pr-gestion-cab">
-          <h1 class="pr-titulo">¿Qué querés ver?</h1>
-          <p class="pr-texto-suave" id="pr-inicio-texto"></p>
+        <div class="pg-dia" id="pr-ind-dia">
+          <button type="button" class="pg-dia__paso" id="pr-ind-dia-antes" aria-label="Día anterior">&lsaquo;</button>
+          <span class="pg-dia__texto" id="pr-ind-dia-texto"></span>
+          <button type="button" class="pg-dia__paso" id="pr-ind-dia-despues" aria-label="Día siguiente">&rsaquo;</button>
         </div>
         <div class="pr-indicadores" id="pr-indicadores"></div>
-        <div class="pr-tarjeta pr-gestion-accesos">
-          <h2 class="pr-subtitulo">Ir a</h2>
-          <div class="pr-grilla" id="pr-oficina">
-            <button type="button" class="pr-opcion" id="pr-btn-ir-historial" hidden>Historial de producción</button>
-            <button type="button" class="pr-opcion" data-ir-pendientes id="pr-btn-ir-pendientes" hidden>Planillas pendientes de completar</button>
-            <button type="button" class="pr-opcion" id="pr-btn-ir-stock" hidden>Stock terminado</button>
-            <button type="button" class="pr-opcion" id="pr-btn-ir-config" hidden>Configuración</button>
-            <button type="button" class="pr-opcion" data-ir-config="personal" hidden>Personal y PINes</button>
-            <button type="button" class="pr-opcion" data-ir-config="recetas" hidden>Recetas</button>
-            <button type="button" class="pr-opcion" data-ir-config="ingredientes" hidden>Ingredientes</button>
-            <button type="button" class="pr-opcion" data-ir-config="productos" hidden>Productos</button>
-            <button type="button" class="pr-opcion" data-ir-config="empaque" hidden>Empaque</button>
-            <button type="button" class="pr-opcion" data-ir-config="marcas" hidden>Marcas / Conos</button>
-          </div>
-        </div>
       </section>
 
       <!-- Anotar, corregir o borrar una parada. Lo abren la planilla y el
@@ -1538,14 +1918,13 @@
       <section id="pr-config" class="pr-cfg" hidden>
         <div class="pr-tarjeta">
           <div class="pr-fila-titulo">
-            <h1 class="pr-titulo">Configuración</h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-config-volver">‹ Volver</button>
+            <button type="button" class="pr-btn pr-btn--secundario pg-volver-menu" id="pr-config-volver">‹ Menú</button>
+            <h1 class="pr-titulo" id="pr-config-titulo">Configuración</h1>
           </div>
           <label class="pr-campo">
             <span class="pr-campo__rotulo">Unidad</span>
             <select id="pr-config-unidad" class="pr-select"></select>
           </label>
-          <div class="pr-cfg-tabs" id="pr-config-tabs" role="group" aria-label="Qué configurar"></div>
           <p class="pr-error" id="pr-config-error" hidden></p>
         </div>
         <div class="pr-tarjeta" id="pr-config-cuerpo"></div>
@@ -1557,8 +1936,8 @@
         <div id="pr-historial-listado">
           <div class="pr-tarjeta">
             <div class="pr-fila-titulo">
+              <button type="button" class="pr-btn pr-btn--secundario pg-volver-menu" id="pr-historial-volver">‹ Menú</button>
               <h1 class="pr-titulo">Historial de producción</h1>
-              <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-volver">‹ Volver</button>
             </div>
             <div class="pr-campos">
               <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-historial-unidad" class="pr-select"></select></label>
@@ -1580,7 +1959,6 @@
         </div>
         <div class="pr-tarjeta" id="pr-historial-detalle" hidden>
           <div class="pr-fila-titulo">
-            <h1 class="pr-titulo">Turno</h1>
             <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-detalle-volver">‹ Historial</button>
           </div>
           <div id="pr-historial-detalle-cuerpo"></div>
@@ -1591,8 +1969,8 @@
       <section id="pr-stock" class="pr-of" hidden>
         <div class="pr-tarjeta">
           <div class="pr-fila-titulo">
+            <button type="button" class="pr-btn pr-btn--secundario pg-volver-menu" id="pr-stock-volver">‹ Menú</button>
             <h1 class="pr-titulo">Stock terminado</h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-stock-volver">‹ Volver</button>
           </div>
           <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-stock-unidad" class="pr-select"></select></label>
         </div>
@@ -1601,20 +1979,33 @@
       </section>
 
     </main>
+    </div>
 
     <!-- LA HOJA DE PINES. Los PINes que devuelve generar_pines_iniciales se
          muestran UNA sola vez: se imprime, se recorta y se reparte. Al cerrar,
          se borran de la memoria (estado.config.hoja) y del DOM. Vive fuera de
          <main> para que @media print pueda esconder todo lo demás. -->
     <div class="pr-hoja" id="pr-cfg-hoja" hidden>
-      <div class="pr-fila-titulo pr-hoja__botones">
-        <h1 class="pr-titulo">PINes para repartir</h1>
-        <div class="pr-config-fila__botones">
+      <div class="pg-hoja__cab">
+        <div>
+          <h1 class="pr-titulo" id="pr-cfg-hoja-titulo">PINes nuevos</h1>
+          <p class="pr-texto-suave" id="pr-cfg-hoja-de"></p>
+        </div>
+        <div class="pr-config-fila__botones pr-hoja__botones" id="pr-cfg-hoja-acciones">
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-hoja-cerrar">Ya la imprimí, cerrar</button>
           <button type="button" class="pr-btn" id="pr-cfg-hoja-imprimir">Imprimir</button>
-          <button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-hoja-cerrar">Cerrar</button>
         </div>
       </div>
-      <p class="pr-hoja__botones pr-texto-suave" id="pr-cfg-hoja-aviso"></p>
+      <!-- Cerrar la hoja la borra para siempre: antes se pregunta, en un panel
+           propio (no un confirm()). -->
+      <div class="pg-hoja__confirma pr-hoja__botones" id="pr-cfg-hoja-confirma" role="alertdialog" aria-labelledby="pr-cfg-hoja-confirma-texto" hidden>
+        <p id="pr-cfg-hoja-confirma-texto"><strong>¿Ya la imprimiste?</strong> No se va a volver a mostrar.</p>
+        <div class="pr-config-fila__botones">
+          <button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-hoja-cerrar-no">Volver a la hoja</button>
+          <button type="button" class="pr-btn pr-btn--peligro" id="pr-cfg-hoja-cerrar-si">Sí, ya la imprimí: cerrar</button>
+        </div>
+      </div>
+      <p class="pg-hoja__aviso pr-hoja__botones" id="pr-cfg-hoja-aviso"></p>
       <div id="pr-cfg-hoja-tiras"></div>
     </div>
   </div>
@@ -1695,6 +2086,12 @@
       // Historial y stock terminado
       historial: null,     // { unidadId, desde, hasta, maquina, estado, turnos, … }
       stockUnidad: null,
+      corrigeHist: null,   // el sublote que se está corrigiendo o anulando en el historial
+      // Indicadores: el día que se mira (null = hoy, lo pone la base) y lo
+      // último que devolvió la RPC, con su unidad.
+      fechaInd: null,
+      indicadores: null,
+      miNombre: null,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1793,6 +2190,7 @@
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       cerrarMenu()
       pintarCabecera()
+      pintarMenuActivo()
       if (window.scrollTo) window.scrollTo(0, 0)
     }
 
@@ -1803,21 +2201,81 @@
       document.getElementById('pr-btn-menu').hidden = false
     }
 
+    // EL MENÚ. En la compu está siempre a la izquierda (lo decide el CSS);
+    // en el celular "Menú" lo abre a pantalla completa con la clase del body.
+    // No se usa `hidden` para abrirlo: el [hidden] global con !important lo
+    // escondería también en la compu.
     function cerrarMenu() {
-      document.getElementById('pr-menu').hidden = true
+      document.body.classList.remove('pg-menu-abierto')
       document.getElementById('pr-btn-menu').setAttribute('aria-expanded', 'false')
     }
 
-    function alternarMenu() {
-      const menu = document.getElementById('pr-menu')
-      menu.hidden = !menu.hidden
-      document.getElementById('pr-btn-menu').setAttribute('aria-expanded', menu.hidden ? 'false' : 'true')
+    function abrirMenu() {
+      document.body.classList.add('pg-menu-abierto')
+      document.getElementById('pr-btn-menu').setAttribute('aria-expanded', 'true')
+      document.getElementById('pr-menu-cerrar').focus?.()
     }
 
-    function accionDelMenu(que) {
-      if (que === 'config') return abrirConfigDesdeAcceso()
-      if (que === 'historial') return mostrarHistorial()
-      if (que === 'stock') return mostrarStockTerminado()
+    function alternarMenu() {
+      if (document.body.classList.contains('pg-menu-abierto')) cerrarMenu()
+      else abrirMenu()
+    }
+
+    // Dónde está parada la persona, para marcar su renglón del menú:
+    // 'inicio', 'historial', 'stock' o 'config:<pestaña>'.
+    function seccionActual() {
+      if (estado.vista === 'pr-config') return `config:${estado.config?.tab ?? ''}`
+      if (estado.vista === 'pr-historial') return estado.historial?.estado === 'pendiente_completar' && estado.historial?.desdePendientes ? 'pendientes' : 'historial'
+      if (estado.vista === 'pr-stock') return 'stock'
+      return 'inicio'
+    }
+
+    function destinoDeItem(el) {
+      if (el.dataset?.irConfig) return `config:${el.dataset.irConfig}`
+      if (el.dataset?.irPendientes !== undefined) return 'pendientes'
+      return el.dataset?.menu ?? 'inicio'
+    }
+
+    function pintarMenuActivo() {
+      const actual = seccionActual()
+      const items = [...document.querySelectorAll('.pg-menu__item')]
+      for (const id of ['pr-menu-inicio', 'pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) {
+        const el = document.getElementById(id)
+        if (!items.includes(el)) items.push(el)
+      }
+      for (const el of items) {
+        if (destinoDeItem(el) === actual) el.setAttribute('aria-current', 'page')
+        else el.removeAttribute('aria-current')
+      }
+    }
+
+    // Toda navegación pasa por acá: con cambios sin guardar en Personal, se
+    // pregunta antes de irse (pedirSalida). Dentro de Configuración, cambiar
+    // de sección no reabre nada: cambia la pestaña.
+    function irA(destino) {
+      cerrarMenu()
+      const c = estado.config
+      if (estado.vista === 'pr-config' && c) {
+        if (destino.startsWith('config:')) {
+          const tab = destino.slice(7)
+          if (tab === c.tab) return
+          if (!pedirSalida(c, { tab })) return
+          c.tab = tab
+          c.busqueda = ''
+          pintarTituloConfig()
+          pintarMenuActivo()
+          return cargarPestanaConfig()
+        }
+        if (!pedirSalida(c, { ir: destino })) return
+      }
+      return navegar(destino)
+    }
+
+    function navegar(destino) {
+      if (destino === 'historial') return mostrarHistorial()
+      if (destino === 'stock') return mostrarStockTerminado()
+      if (destino === 'pendientes') return irDesdeIndicador('pendientes')
+      if (destino.startsWith('config:')) return mostrarConfig(destino.slice(7))
       return mostrarInicioOficina()
     }
 
@@ -1863,16 +2321,22 @@
 
     function conectarTodo() {
       document.getElementById('pr-gestion-unidad').addEventListener('change', ev => elegirUnidadGestion(ev.target.value))
+      document.getElementById('pr-gestion-unidad-seg').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-gestion-unidad]'); if (b) elegirUnidadGestion(b.dataset.gestionUnidad)
+      })
       document.getElementById('pr-indicadores').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-ind-ir]'); if (b) irDesdeIndicador(b.dataset.indIr)
+        const b = ev.target.closest('[data-ind-ir]'); if (b) return irDesdeIndicador(b.dataset.indIr)
+        if (ev.target.closest('[data-ind-reintentar]')) return cargarIndicadores()
       })
-      document.getElementById('pr-oficina').addEventListener('click', ev => {
-        if (ev.target.closest('[data-ir-pendientes]')) return irDesdeIndicador('pendientes')
-        const c = ev.target.closest('[data-ir-config]'); if (c) mostrarConfig(c.dataset.irConfig)
-      })
+      document.getElementById('pr-ind-dia-antes').addEventListener('click', () => cambiarDiaIndicadores(-1))
+      document.getElementById('pr-ind-dia-despues').addEventListener('click', () => cambiarDiaIndicadores(1))
       document.getElementById('pr-btn-menu').addEventListener('click', alternarMenu)
+      document.getElementById('pr-menu-cerrar').addEventListener('click', cerrarMenu)
       document.getElementById('pr-menu').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-menu]'); if (b) accionDelMenu(b.dataset.menu)
+        const b = ev.target.closest('.pg-menu__item'); if (b) irA(destinoDeItem(b))
+      })
+      document.addEventListener('keydown', ev => {
+        if (ev.key === 'Escape' && document.body.classList.contains('pg-menu-abierto')) cerrarMenu()
       })
       conectarEditorParada()
       conectarConfig()
@@ -2582,7 +3046,7 @@
 
     const PESTANAS_CONFIG = [
       ['maquinas', 'Máquinas'], ['recetas', 'Recetas'], ['ingredientes', 'Ingredientes'],
-      ['productos', 'Productos'], ['empaque', 'Empaque'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal'],
+      ['productos', 'Productos'], ['empaque', 'Empaque'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal y PINes'],
     ]
     const PUESTOS = [['encargado', 'Encargado'], ['masero', 'Masero'], ['operario', 'Operario']]
     const CLAVE_AVISO_PRODUCTOS = 'produccion.aviso-productos-revisado'
@@ -2610,6 +3074,10 @@
       const sel = document.getElementById('pr-gestion-unidad')
       sel.innerHTML = unidades.map(id => `<option value="${esc(id)}"${id === estado.unidadId ? ' selected' : ''}>${esc(estado.unidades.get(id) ?? id)}</option>`).join('')
       sel.value = estado.unidadId ?? ''
+      // En la compu, un segmentado (diseño 1a); en el celular, el select
+      // ("Cucuruchos Nuss ▾", 1b). Los dos dicen lo mismo y lo decide el CSS.
+      document.getElementById('pr-gestion-unidad-seg').innerHTML = unidades.map(id =>
+        `<button type="button" class="pg-seg__op" data-gestion-unidad="${esc(id)}" aria-pressed="${id === estado.unidadId ? 'true' : 'false'}">${esc(estado.unidades.get(id) ?? id)}</button>`).join('')
       document.getElementById('pr-gestion-unidad-campo').hidden = unidades.length < 2
     }
 
@@ -2620,22 +3088,46 @@
       // Lo que se abra después, abre en esta unidad. La configuración con
       // cambios sin guardar se queda donde está: esos cambios son de su unidad.
       if (estado.historial) estado.historial.unidadId = id
-      if (estado.config && !cambiosSinGuardar(estado.config)) estado.config.unidadId = id
+      const configEnOtra = estado.config && estado.config.unidadId !== id && !cambiosSinGuardar(estado.config) && unidadesDeConfig().includes(id)
+      if (configEnOtra) { estado.config.unidadId = id; estado.config.recetaMaquina = null }
       estado.stockUnidad = id
+      // El número de planillas pendientes del menú era de la otra unidad.
+      estado.indicadores = null
+      pintarNumerosMenu()
       pintarSelectorGestion()
       pintarCabecera()
+      // La sección que se está mirando pasa a la unidad nueva en el acto.
       if (estado.vista === 'pr-inicio') cargarIndicadores()
+      else if (estado.vista === 'pr-historial') {
+        pintarSelectorUnidad('pr-historial-unidad', unidadesDeHistorial(), id)
+        document.getElementById('pr-historial-detalle').hidden = true
+        document.getElementById('pr-historial-listado').hidden = false
+        cargarHistorial()
+      } else if (estado.vista === 'pr-stock') {
+        pintarSelectorUnidad('pr-stock-unidad', unidadesDeHistorial(), id)
+        cargarStockTerminado()
+      } else if (estado.vista === 'pr-config' && configEnOtra) {
+        pintarSelectorUnidad('pr-config-unidad', unidadesDeConfig(), id)
+        cargarPestanaConfig()
+      }
       return true
     }
 
     // ── Los indicadores (indicadores_produccion) ─────────────────────────
     //
     // UNA TARJETA POR BLOQUE, y cada una se dibuja sola: TARJETAS_INDICADORES
-    // es un arreglo de { id, titulo, render(datos) } que se recorre, así que
-    // una tarjeta nueva es UNA entrada más. render() devuelve el HTML de su
-    // bloque, o null si el bloque vino null o con otra forma: esa tarjeta dice
-    // "No se pudo leer" y las demás se ven igual. Si la RPC entera falla,
-    // cada tarjeta dice el error, sin romper la página.
+    // es un arreglo de { id, titulo, render(datos), contexto(datos), ancha }
+    // que se recorre, así que una tarjeta nueva es UNA entrada más. render()
+    // devuelve el HTML de su bloque, o null si el bloque vino null o con otra
+    // forma: esa tarjeta dice "Esta tarjeta no se pudo cargar" con Reintentar
+    // y las demás se ven igual. Si la RPC entera falla, cada tarjeta dice el
+    // error, pegado a su Reintentar.
+    //
+    // EL ORDEN DEL ARREGLO ES EL DEL CELULAR (decisión de Facu, 26/09/2026):
+    // primero lo que se mira varias veces por día — Ahora · Hoy · Pendientes
+    // · Semana · Rendimiento — y después el scrap. En la compu la grilla de 3
+    // columnas pone las mismas tarjetas en ese orden de izquierda a derecha,
+    // que es el orden del diseño (1a): no hay un `order` por CSS.
     //
     // NUNCA un cero de un null: un dato que falta dice "—".
 
@@ -2649,13 +3141,14 @@
       return formatearNumeroAr(numeroInd(v), { decimales: 0 })
     }
 
-    // "+3", "−2", "0" o "—" si falta cualquiera de los dos.
+    // La diferencia con su flecha, así la dirección no depende del color:
+    // "▲ +7", "▼ −3", "= 0", o "—" si falta cualquiera de los dos.
     function diferenciaInd(hoy, antes) {
       const a = numeroInd(hoy), b = numeroInd(antes)
       if (a === null || b === null) return { texto: '—', clase: '' }
       const d = a - b
-      if (d === 0) return { texto: '0', clase: '' }
-      return { texto: `${d > 0 ? '+' : '−'}${formatearNumeroAr(Math.abs(d), { decimales: 0 })}`, clase: d > 0 ? 'pr-ind-mas' : 'pr-ind-menos' }
+      if (d === 0) return { texto: '= 0', clase: 'pr-ind-igual' }
+      return { texto: `${d > 0 ? '▲ +' : '▼ −'}${formatearNumeroAr(Math.abs(d), { decimales: 0 })}`, clase: d > 0 ? 'pr-ind-mas' : 'pr-ind-menos' }
     }
 
     // Minutos → "2 h 15 min" / "40 min"; null → "—".
@@ -2674,165 +3167,382 @@
       return `${formatearNumeroAr((s / m) * 100, { decimales: 1 })} %`
     }
 
-    function htmlDatoInd(rotulo, valor, nota = '') {
-      return `<div class="pr-ind-dato"><dt>${esc(rotulo)}</dt><dd>${esc(valor)}${nota ? `<span class="pr-ind-dato__nota">${esc(nota)}</span>` : ''}</dd></div>`
+    // Una tarjeta sin datos mantiene su título y dice qué pasó, en una línea
+    // grande y una de contexto. Sin ceros ni barras vacías (diseño 1d).
+    function htmlSinDatosInd(que, contexto = '') {
+      return `<div class="pg-ind-sin"><p class="pg-ind-sin__que">${esc(que)}</p>${contexto ? `<p class="pg-ind-sin__ctx">${esc(contexto)}</p>` : ''}</div>`
     }
 
-    // AHORA: las máquinas abiertas (y las pendientes de completar).
+    const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+    // El día de la semana de un 'aaaa-mm-dd', o null.
+    function diaSemanaInd(iso) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso ?? ''))) return null
+      const d = new Date(`${iso}T12:00:00Z`)
+      return Number.isNaN(d.getTime()) ? null : DIAS_SEMANA[d.getUTCDay()]
+    }
+
+    // "Jueves 25/09" (con mayúscula) de un 'aaaa-mm-dd'.
+    function textoDiaInd(iso) {
+      const dia = diaSemanaInd(iso)
+      if (!dia) return ''
+      return `${dia[0].toUpperCase()}${dia.slice(1)} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+    }
+
+    // "lun 22" de un 'aaaa-mm-dd'.
+    function diaCortoInd(iso) {
+      const dia = diaSemanaInd(iso)
+      return dia ? `${dia.slice(0, 3)} ${iso.slice(8, 10)}` : ''
+    }
+
+    // La fecha de los indicadores: la que devolvió la base, o la elegida, o hoy.
+    function fechaInd(d) {
+      return d?.fecha ?? estado.fechaInd ?? hoyArgentina()
+    }
+
+    // AHORA: las máquinas abiertas (y las pendientes de completar). LAS
+    // PARADAS PRIMERO, en bordó, con el chip PARADA: el color no va solo.
+    function tieneParadaInd(m) {
+      return !!(m?.parada_en_curso && typeof m.parada_en_curso === 'object')
+    }
+
     function renderAhora(d) {
       const lista = d?.ahora
       if (!Array.isArray(lista)) return null
-      if (!lista.length) return '<p class="pr-ind__vacio">No hay ninguna máquina abierta ahora.</p>'
+      if (!lista.length) return htmlSinDatosInd('Ninguna máquina abierta', 'Cuando el encargado abra un turno en la tablet de la planta, aparece acá.')
       const ahora = new Date()
-      return '<ul class="pr-ind__lista">' + lista.map(m => {
-        const p = m?.parada_en_curso && typeof m.parada_en_curso === 'object' ? m.parada_en_curso : null
+      const orden = [...lista.filter(tieneParadaInd), ...lista.filter(m => !tieneParadaInd(m))]
+      return '<ul class="pr-ind__lista">' + orden.map(m => {
+        const p = tieneParadaInd(m) ? m.parada_en_curso : null
         const pendiente = m?.estado === 'pendiente_completar'
         const clase = p ? 'parada' : (pendiente ? 'pendiente' : 'abierta')
         const masas = numeroInd(m?.masas), cajas = numeroInd(m?.cajas)
-        const cuenta = `${enteroInd(masas)} ${masas === 1 ? 'masa' : 'masas'} · ${enteroInd(cajas)} ${cajas === 1 ? 'caja' : 'cajas'}`
+        const textoMasas = `${enteroInd(masas)} ${masas === 1 ? 'masa' : 'masas'}`
+        const textoCajas = `${enteroInd(cajas)} ${cajas === 1 ? 'caja' : 'cajas'}`
+        const quien = [m?.turno, m?.encargado].filter(Boolean).map(esc).join(' · ')
+        const hace = p ? duracionTexto(p.desde, null, ahora) : ''
         const parada = p
-          ? `<div class="pr-ind-parada">Parada desde las ${esc(horaArgentina(p.desde) || '—')}${duracionTexto(p.desde, null, ahora) ? ` (hace ${esc(duracionTexto(p.desde, null, ahora))})` : ''} · ${esc(p.motivo ?? '')}</div>`
+          ? `<div class="pr-ind-parada">${hace ? `Hace ${esc(hace)} · ` : ''}desde las ${esc(horaArgentina(p.desde) || '—')} · ${esc(p.motivo ?? '')}</div>`
           : ''
+        const chip = p ? '<span class="pg-chip pg-chip--parada">PARADA</span>'
+          : (pendiente ? '<span class="pr-ind-chip">Pendiente de completar</span>' : `<span class="pg-maq__cajas">${esc(textoCajas)}</span>`)
+        const dato = [quien, esc(textoMasas), p || pendiente ? esc(textoCajas) : ''].filter(Boolean).join(' · ')
         return `<li class="pr-ind-maq pr-ind-maq--${clase}">` +
-          `<div class="pr-ind-maq__que">${esc(m?.maquina ?? 'Máquina')} · lote ${esc(m?.lote ?? '—')}` +
-          `${pendiente ? '<span class="pr-ind-chip">Pendiente de completar</span>' : ''}</div>` +
-          `<div class="pr-ind-maq__dato">${esc(m?.turno ?? '')}${m?.encargado ? ` · ${esc(m.encargado)}` : ''} · ${esc(cuenta)}</div>` +
-          parada + '</li>'
+          `<div class="pg-maq__fila"><span class="pr-ind-maq__que">${esc(m?.maquina ?? 'Máquina')} · lote ${esc(m?.lote ?? '—')}</span>${chip}</div>` +
+          parada + `<div class="pr-ind-maq__dato">${dato}</div></li>`
       }).join('') + '</ul>'
     }
 
-    // HOY: cajas por producto contra el mismo día de la semana pasada.
+    function contextoAhora(d) {
+      const lista = Array.isArray(d?.ahora) ? d.ahora : null
+      if (!lista || !lista.length) return ''
+      const abiertas = lista.filter(m => m?.estado !== 'pendiente_completar').length
+      const pend = lista.length - abiertas
+      return [abiertas ? `${abiertas} ${abiertas === 1 ? 'máquina abierta' : 'máquinas abiertas'}` : '',
+        pend ? `${pend} ${pend === 1 ? 'pendiente' : 'pendientes'}` : ''].filter(Boolean).join(' · ')
+    }
+
+    // HOY contra el mismo día de la semana pasada. En cajas_por_producto un
+    // null NO es "no se sabe": la base suma con `sum(...) filter (where ...)`
+    // sobre los renglones de ESE día (pg_get_functiondef, 26/09/2026), y sin
+    // ningún renglón la suma da null — o sea, ese día ese producto no salió.
+    // Por eso acá (y solo acá) null cuenta como cero cajas: se muestra "—" en
+    // las cajas y la diferencia se calcula (diseño 1a: "Barquillo — ▼ −2").
+    // Un valor que no es un número sigue siendo "no se sabe": "—".
+    function cajasDelDiaInd(v) {
+      if (v === null || v === undefined) return 0
+      return numeroInd(v)
+    }
+
+    function sumaInd(valores) {
+      let t = 0
+      for (const v of valores) { if (v === null) return null; t += v }
+      return t
+    }
+
+    function htmlDiferenciaInd(dif) {
+      return `<span class="pg-dif${dif.clase ? ` ${dif.clase}` : ''}">${esc(dif.texto)}</span>`
+    }
+
     function renderHoy(d) {
       const lista = d?.cajas_por_producto
       if (!Array.isArray(lista)) return null
-      if (!lista.length) return '<p class="pr-ind__vacio">Ni hoy ni el mismo día de la semana pasada se produjo nada.</p>'
-      return '<table class="pr-ind-tabla"><thead><tr><th>Producto</th><th>Hoy</th><th>Semana pasada</th><th>Diferencia</th></tr></thead><tbody>' +
-        lista.map(f => {
-          const dif = diferenciaInd(f?.hoy, f?.semana_pasada)
-          return `<tr><td>${esc(f?.producto ?? '—')}</td><td>${esc(enteroInd(f?.hoy))}</td><td>${esc(enteroInd(f?.semana_pasada))}</td>` +
-            `<td${dif.clase ? ` class="${dif.clase}"` : ''}>${esc(dif.texto)}</td></tr>`
-        }).join('') + '</tbody></table>'
+      const filas = lista.map(f => ({ producto: f?.producto, hoy: cajasDelDiaInd(f?.hoy), antes: cajasDelDiaInd(f?.semana_pasada), salio: f?.hoy != null }))
+      const totalHoy = sumaInd(filas.map(f => f.hoy)), totalAntes = sumaInd(filas.map(f => f.antes))
+      const dia = diaSemanaInd(fechaInd(d)) ?? 'mismo día'
+      const esHoy = fechaInd(d) === hoyArgentina()
+      if (!filas.some(f => f.salio)) {
+        const antes = totalAntes === null ? '' : (totalAntes > 0
+          ? `El ${dia} pasado salieron ${formatearNumeroAr(totalAntes, { decimales: 0 })} ${totalAntes === 1 ? 'caja' : 'cajas'}.`
+          : `El ${dia} pasado tampoco.`)
+        return htmlSinDatosInd(esHoy ? 'Hoy no se produjo' : 'Ese día no se produjo', antes)
+      }
+      const total = diferenciaInd(totalHoy, totalAntes)
+      return `<div class="pg-total"><span class="pg-total__n">${esc(enteroInd(totalHoy))}</span><span class="pg-total__u">cajas</span>${htmlDiferenciaInd(total)}</div>` +
+        '<ul class="pg-prods">' + filas.map(f =>
+          `<li class="pg-prod"><span class="pg-prod__nombre">${esc(f.producto ?? '—')}</span>` +
+          `<span class="pg-prod__cajas">${f.salio ? `${esc(enteroInd(f.hoy))}<span class="pg-prod__u"> cajas</span>` : '—'}</span>` +
+          `${htmlDiferenciaInd(diferenciaInd(f.hoy, f.antes))}</li>`).join('') + '</ul>'
+    }
+
+    function contextoHoy(d) {
+      const dia = diaSemanaInd(fechaInd(d))
+      return dia ? `vs. ${dia} pasado` : ''
     }
 
     // SEMANA: los últimos 7 días.
     function renderSemana(d) {
       const s = d?.semana
       if (!s || typeof s !== 'object' || Array.isArray(s)) return null
+      if (numeroInd(s.turnos) === 0) return htmlSinDatosInd('Sin producción esta semana', 'En los últimos 7 días no se abrió ningún turno.')
       const masas = numeroInd(s.masas)
-      const notaMasas = masas === null ? '' : `${enteroInd(s.masas_modificadas)} modificadas · ${enteroInd(s.masas_chocolate)} de chocolate`
+      const mod = numeroInd(s.masas_modificadas), choco = numeroInd(s.masas_chocolate)
+      const notaMasas = masas === null ? '' : `${enteroInd(mod)} ${mod === 1 ? 'modificada' : 'modificadas'} · ${enteroInd(choco)} de chocolate`
       const scrap = numeroInd(s.scrap_kg)
-      return '<dl class="pr-ind-datos">' +
-        htmlDatoInd('Turnos', enteroInd(s.turnos)) +
-        htmlDatoInd('Cajas', enteroInd(s.cajas)) +
-        htmlDatoInd('Unidades', enteroInd(s.unidades)) +
-        htmlDatoInd('Masas', enteroInd(s.masas), notaMasas) +
-        htmlDatoInd('Scrap', scrap === null ? '—' : `${formatearNumeroAr(scrap, { decimales: 1 })} kg`, `${porcentajeScrapInd(s.scrap_kg, s.masa_kg)} de la masa`) +
-        htmlDatoInd('Paradas', horasMinutosInd(s.minutos_parada), s.motivo_parada_mas_comun ? `La más común: ${s.motivo_parada_mas_comun}` : 'Sin un motivo que se repita') +
-        '</dl>'
+      const renglon = (rotulo, valor, nota) => `<li class="pg-renglon"><span class="pg-renglon__rot">${esc(rotulo)}</span>` +
+        `<span class="pg-renglon__val"><strong>${esc(valor)}</strong>${nota ? ` · ${esc(nota)}` : ''}</span></li>`
+      return `<div class="pg-grande"><div><span class="pg-grande__n">${esc(enteroInd(s.cajas))}</span> cajas</div>` +
+        `<div><span class="pg-grande__n">${esc(enteroInd(s.unidades))}</span> unidades</div></div>` +
+        '<ul class="pg-renglones">' +
+        renglon('Turnos', enteroInd(s.turnos), '') +
+        renglon('Masas', enteroInd(s.masas), notaMasas) +
+        renglon('Scrap', scrap === null ? '—' : `${formatearNumeroAr(scrap, { decimales: 1, minimos: 0 })} kg`, `${porcentajeScrapInd(s.scrap_kg, s.masa_kg)} de la masa`) +
+        renglon('Paradas', horasMinutosInd(s.minutos_parada), s.motivo_parada_mas_comun ? `más común: ${s.motivo_parada_mas_comun}` : 'sin un motivo que se repita') +
+        '</ul>'
     }
 
-    // RENDIMIENTO: unidades por kilo de harina, por lote, del peor al mejor.
+    function contextoSemana(d) {
+      const s = d?.semana
+      if (!s || typeof s !== 'object') return ''
+      const desde = diaCortoInd(s.desde), hasta = diaCortoInd(s.hasta)
+      return desde && hasta ? `${desde} – ${hasta}/${String(s.hasta).slice(5, 7)}` : ''
+    }
+
+    // RENDIMIENTO DE LA HARINA, POR PRODUCTO. La base (26/09/2026) devuelve
+    // cada lote con las unidades por kilo DE UN PRODUCTO y el promedio de ese
+    // producto: un lote se compara SOLO contra su producto — comparar un Mini
+    // contra un Grande no dice nada del lote.
+    //
+    // "RINDE POCO" (decisión de Facu, 26/09/2026): MÁS DE 10% por debajo del
+    // promedio de SU producto, o sea diferencia_pct < −10, estricto. Nunca un
+    // número fijo. Un diferencia_pct null (el promedio da 0 o no se pudo
+    // calcular) no se marca y nunca se pinta como 0.
+    const UMBRAL_RINDE_POCO = -10
+
+    function rindePoco(f) {
+      const dif = numeroInd(f?.diferencia_pct)
+      return dif !== null && dif < UMBRAL_RINDE_POCO
+    }
+
+    // Agrupa por producto (en el orden en que llegan) y ordena cada grupo de
+    // peor a mejor, con los lotes sin dato al final.
+    function gruposRendimiento(lista) {
+      const grupos = new Map()
+      for (const f of lista) {
+        const k = f?.producto ?? '—'
+        if (!grupos.has(k)) grupos.set(k, [])
+        grupos.get(k).push(f)
+      }
+      return [...grupos.entries()].map(([producto, filas]) => ({
+        producto,
+        promedio: numeroInd(filas.find(f => numeroInd(f?.promedio_del_producto) !== null)?.promedio_del_producto),
+        filas: [...filas].sort((a, b) => {
+          const x = numeroInd(a?.unidades_por_kg), y = numeroInd(b?.unidades_por_kg)
+          if (x === null && y === null) return 0
+          if (x === null) return 1
+          if (y === null) return -1
+          return x - y
+        }),
+      }))
+    }
+
     function renderRendimiento(d) {
       const lista = d?.rendimiento_harina
       if (!Array.isArray(lista)) return null
-      if (!lista.length) return '<p class="pr-ind__vacio">Todavía no hay turnos cerrados con harina en los últimos 30 días.</p>'
-      const orden = [...lista].sort((a, b) => {
-        const x = numeroInd(a?.unidades_por_kg), y = numeroInd(b?.unidades_por_kg)
-        if (x === null && y === null) return 0
-        if (x === null) return 1
-        if (y === null) return -1
-        return x - y
-      })
-      const peor = orden.findIndex(f => numeroInd(f?.unidades_por_kg) !== null)
-      return '<table class="pr-ind-tabla"><thead><tr><th>Lote de harina</th><th>Kg</th><th>Unidades</th><th>Unid./kg</th></tr></thead><tbody>' +
-        orden.map((f, i) => `<tr${i === peor ? ' class="pr-ind--peor"' : ''}><td>${esc(f?.lote ?? 'Sin lote')}</td>` +
-          `<td>${esc(formatearNumeroAr(numeroInd(f?.kg_harina), { decimales: 3, minimos: 0 }))}</td><td>${esc(enteroInd(f?.unidades))}</td>` +
-          `<td>${esc(formatearNumeroAr(numeroInd(f?.unidades_por_kg), { decimales: 1 }))}</td></tr>`).join('') + '</tbody></table>'
+      if (!lista.length) return htmlSinDatosInd('Sin turnos cerrados con harina', 'En los últimos 30 días no hay turnos cerrados de un solo producto con la harina cargada.')
+      const explica = '<p class="pg-rend__explica">Cuántos cucuruchos salen de cada kilo de harina, por lote. <strong>Más es mejor.</strong> ' +
+        'Cada lote se compara con el promedio de su producto; en bordó, los que rinden más de 10 % menos.</p>'
+      return explica + gruposRendimiento(lista).map(g => {
+        const valores = g.filas.map(f => numeroInd(f?.unidades_por_kg)).filter(v => v !== null)
+        const max = valores.length ? Math.max(...valores) : null
+        const mejor = valores.length >= 2 ? max : null
+        const promedio = g.promedio === null ? '—' : `${formatearNumeroAr(g.promedio, { decimales: 1, minimos: 0 })} u/kg`
+        return `<div class="pg-rend__grupo"><div class="pg-rend__prod"><strong>${esc(g.producto)}</strong>` +
+          `<span class="pg-rend__prom">promedio ${esc(promedio)}</span></div><ul class="pg-rend__lista">` +
+          g.filas.map(f => {
+            const v = numeroInd(f?.unidades_por_kg)
+            const bajo = rindePoco(f)
+            const clase = bajo ? 'bajo' : (v !== null && v === mejor ? 'mejor' : 'medio')
+            const ancho = v !== null && max > 0 ? Math.max(2, Math.round((v / max) * 100)) : 0
+            const fraseRinde = bajo
+              ? `<p class="pg-rend__frase">Rinde ${esc(formatearNumeroAr(Math.abs(numeroInd(f.diferencia_pct)), { decimales: 1 }))} % menos que el promedio de ${esc(g.producto)}.</p>`
+              : ''
+            return `<li class="pg-rend pg-rend--${clase}"><span class="pg-rend__lote">Lote ${esc(f?.lote ?? 'sin lote')}</span>` +
+              `<span class="pg-rend__barra">${ancho ? `<span class="pg-rend__relleno" style="width: ${ancho}%"></span>` : ''}</span>` +
+              `<span class="pg-rend__valor">${v === null ? '—' : `${esc(formatearNumeroAr(v, { decimales: 1, minimos: 0 }))} u/kg`}</span>${fraseRinde}</li>`
+          }).join('') + '</ul></div>'
+      }).join('')
     }
 
-    // PENDIENTES: cada uno con el botón que lleva a donde se resuelve.
+    // SCRAP POR LOTE DE HARINA: el % de la masa que terminó en scrap en los
+    // turnos que usaron ese lote (30 días). Neutro: no hay un umbral decidido
+    // para marcarlo, y un color sin regla sería inventar un juicio.
+    function renderScrap(d) {
+      const lista = d?.scrap_por_lote
+      if (!Array.isArray(lista)) return null
+      if (!lista.length) return htmlSinDatosInd('Sin turnos cerrados con harina', 'En los últimos 30 días no hay scrap que repartir por lote.')
+      const valores = lista.map(f => numeroInd(f?.scrap_pct)).filter(v => v !== null)
+      const max = valores.length ? Math.max(...valores) : null
+      return '<ul class="pg-rend__lista">' + lista.map(f => {
+        const v = numeroInd(f?.scrap_pct)
+        const ancho = v !== null && max > 0 ? Math.max(2, Math.round((v / max) * 100)) : 0
+        return `<li class="pg-rend pg-rend--medio"><span class="pg-rend__lote">Lote ${esc(f?.lote ?? 'sin lote')}</span>` +
+          `<span class="pg-rend__barra">${ancho ? `<span class="pg-rend__relleno" style="width: ${ancho}%"></span>` : ''}</span>` +
+          `<span class="pg-rend__valor">${v === null ? '—' : `${esc(formatearNumeroAr(v, { decimales: 1, minimos: 0 }))} %`}</span></li>`
+      }).join('') + '</ul>'
+    }
+
+    // PENDIENTES: un botón por tipo, con su número, que lleva a resolverlo.
+    // "Turno abierto de otro día" va primero y en bordó: es lo más urgente.
+    // Sin nada pendiente, un bloque verde tranquilo.
     function renderPendientes(d) {
       const p = d?.pendientes
       if (!p || typeof p !== 'object' || Array.isArray(p)) return null
-      const fila = (n, que, accionHtml) => {
-        const k = numeroInd(n)
-        return `<div class="pr-ind-pend"><span class="pr-ind-pend__n${k > 0 ? ' pr-ind-pend__n--hay' : ''}">${esc(enteroInd(n))}</span>` +
-          `<span class="pr-ind-pend__que">${esc(que)}</span>${k > 0 ? accionHtml : ''}</div>`
+      const turnos = numeroInd(p.turnos_abiertos_de_otro_dia), planillas = numeroInd(p.planillas_por_completar), conos = numeroInd(p.conos_por_revisar)
+      if (turnos === 0 && planillas === 0 && conos === 0) {
+        return '<div class="pg-nada"><span class="pg-nada__ok" aria-hidden="true">✓</span><div><strong>Nada pendiente</strong>' +
+          '<div class="pg-nada__ctx">Planillas, turnos y conos al día.</div></div></div>'
       }
-      const conos = tieneTarea('configurar')
-        ? '<button type="button" class="pr-btn pr-btn--secundario" data-ind-ir="conos">Revisar los conos</button>'
-        : '<span class="pr-ind-dato__nota">Los revisa quien configura producción.</span>'
-      return fila(p.planillas_por_completar, 'Planillas pendientes de completar',
-        '<button type="button" class="pr-btn pr-btn--secundario" data-ind-ir="pendientes">Ver en el historial</button>') +
-        fila(p.turnos_abiertos_de_otro_dia, 'Turnos abiertos de otro día',
-          '<button type="button" class="pr-btn pr-btn--secundario" data-ind-ir="abiertos">Ver en el historial</button>') +
-        fila(p.conos_por_revisar, 'Conos nuevos por revisar', conos)
+      const cuerpoPend = (n, largo, corto) => `<span class="pg-pend__n">${esc(enteroInd(n))}</span>` +
+        `<span class="pg-pend__que"><span class="pg-largo">${esc(largo)}</span><span class="pg-corto">${esc(corto)}</span></span>`
+      // `destinoInd` es una constante del código: 'abiertos', 'pendientes' o 'conos'.
+      const boton = (n, destinoInd, largo, corto, grave) => {
+        if (n === 0) return ''
+        if (n === null) return `<div class="pg-pend pg-pend--nose">${cuerpoPend(null, largo, corto)}</div>`
+        return `<button type="button" class="pg-pend${grave ? ' pg-pend--grave' : ''}" data-ind-ir="${destinoInd}">${cuerpoPend(n, largo, corto)}<span class="pg-pend__ir" aria-hidden="true">›</span></button>`
+      }
+      const botonConos = () => {
+        if (tieneTarea('configurar')) return boton(conos, 'conos', 'Conos nuevos por revisar', conos === 1 ? 'cono' : 'conos', false)
+        if (!conos) return ''
+        return `<div class="pg-pend pg-pend--nose">${cuerpoPend(conos, 'Conos nuevos por revisar · los revisa quien configura producción', conos === 1 ? 'cono' : 'conos')}</div>`
+      }
+      return '<div class="pg-pends">' +
+        boton(turnos, 'abiertos', turnos === 1 ? 'Turno abierto de otro día' : 'Turnos abiertos de otro día', turnos === 1 ? 'turno de otro día' : 'turnos de otro día', true) +
+        boton(planillas, 'pendientes', planillas === 1 ? 'Planilla por completar' : 'Planillas por completar', planillas === 1 ? 'planilla' : 'planillas', false) +
+        botonConos() + '</div>'
     }
 
     const TARJETAS_INDICADORES = [
-      { id: 'ahora', titulo: 'Ahora', render: renderAhora },
-      { id: 'hoy', titulo: 'Hoy contra la semana pasada', render: renderHoy },
-      { id: 'semana', titulo: 'Últimos 7 días', render: renderSemana },
-      { id: 'rendimiento', titulo: 'Rendimiento de la harina (30 días)', render: renderRendimiento },
-      { id: 'pendientes', titulo: 'Para resolver', render: renderPendientes },
+      { id: 'ahora', titulo: 'Ahora', render: renderAhora, contexto: contextoAhora },
+      { id: 'hoy', titulo: 'Hoy', render: renderHoy, contexto: contextoHoy },
+      { id: 'pendientes', titulo: 'Pendientes', render: renderPendientes },
+      { id: 'semana', titulo: 'Semana', render: renderSemana, contexto: contextoSemana },
+      { id: 'rendimiento', titulo: 'Rendimiento de la harina', render: renderRendimiento, contexto: () => 'unidades por kilo · de peor a mejor', ancha: true },
+      { id: 'scrap', titulo: 'Scrap por lote de harina', render: renderScrap, contexto: () => '% de la masa · 30 días' },
     ]
 
+    // La falla de una tarjeta: el texto, y el detalle PEGADO a "Reintentar".
+    function htmlFallaInd(que, detalle) {
+      const hora = horaArgentina(new Date())
+      return `<div class="pg-ind-falla"><p class="pg-ind-falla__que">${esc(que)}</p><div class="pg-ind-falla__pie">` +
+        `<div class="pr-ind__error" role="alert">${esc(detalle)}${hora ? ` (${esc(hora)})` : ''}</div>` +
+        `<button type="button" class="pr-btn pr-btn--secundario" data-ind-reintentar="1">Reintentar</button></div></div>`
+    }
+
     function htmlTarjetaIndicador(t, datos, error, cargando) {
-      let cuerpo
+      let cuerpo, ctx = ''
       if (cargando) cuerpo = '<p class="pr-ind__vacio">Cargando…</p>'
-      else if (error) cuerpo = `<div class="pr-ind__error" role="alert">${esc(error)}</div>`
+      else if (error) cuerpo = htmlFallaInd('No se pudieron cargar los indicadores.', error)
       else {
-        try { cuerpo = t.render(datos) } catch (err) { console.error(`indicador ${t.id}:`, err); cuerpo = null }
-        if (cuerpo == null) cuerpo = '<div class="pr-ind__error">No se pudo leer este dato.</div>'
+        try { cuerpo = t.render(datos); ctx = t.contexto ? t.contexto(datos) : '' } catch (err) { console.error(`indicador ${t.id}:`, err); cuerpo = null }
+        if (cuerpo == null) cuerpo = htmlFallaInd('Esta tarjeta no se pudo cargar. Las demás están bien.', 'Vino un dato que la pantalla no entiende.')
       }
-      return `<section class="pr-tarjeta pr-ind" id="pr-ind-${esc(t.id)}"><h2 class="pr-ind__titulo">${esc(t.titulo)}</h2>${cuerpo}</section>`
+      return `<section class="pr-tarjeta pr-ind${t.ancha ? ' pg-ind--ancha' : ''}" id="pr-ind-${esc(t.id)}">` +
+        `<div class="pg-ind__cab"><h2 class="pr-ind__titulo">${esc(t.titulo)}</h2>${ctx ? `<span class="pg-ind__ctx">${esc(ctx)}</span>` : ''}</div>${cuerpo}</section>`
     }
 
     function htmlIndicadores(datos, error, cargando = false) {
       return TARJETAS_INDICADORES.map(t => htmlTarjetaIndicador(t, datos, error, cargando)).join('')
     }
 
-    // Con un turno: la respuesta de una unidad que ya no está elegida no pisa
-    // la de la nueva.
+    // La fecha: ‹ un día antes, › uno después, que no pasa de hoy. Hoy se
+    // pide SIN p_fecha (la base usa la fecha de Argentina); otro día, con él.
+    function pintarDiaIndicadores() {
+      const hoy = hoyArgentina()
+      const f = estado.fechaInd ?? hoy
+      document.getElementById('pr-ind-dia-texto').textContent = `${textoDiaInd(f)}${f === hoy ? ' · hoy' : ''}`
+      document.getElementById('pr-ind-dia-despues').disabled = f >= hoy
+    }
+
+    function cambiarDiaIndicadores(delta) {
+      const hoy = hoyArgentina()
+      const nueva = sumarDias(estado.fechaInd ?? hoy, delta)
+      if (nueva > hoy) return false
+      estado.fechaInd = nueva === hoy ? null : nueva
+      cargarIndicadores()
+      return true
+    }
+
+    // Con un turno: la respuesta de una unidad (o de un día) que ya no está
+    // elegida no pisa la de la nueva.
     let turnoIndicadores = 0
     async function cargarIndicadores() {
       const turno = ++turnoIndicadores
       const cont = document.getElementById('pr-indicadores')
+      pintarDiaIndicadores()
       if (!estado.unidadId) { cont.innerHTML = ''; return }
       cont.innerHTML = htmlIndicadores(null, null, true)
       let datos = null, error = null
+      const params = { p_unidad_negocio_id: estado.unidadId }
+      if (estado.fechaInd) params.p_fecha = estado.fechaInd
       try {
-        const { data, error: e } = await supabase.rpc('indicadores_produccion', { p_unidad_negocio_id: estado.unidadId })
+        const { data, error: e } = await supabase.rpc('indicadores_produccion', params)
         if (e) throw e
         datos = data
       } catch (err) {
         console.error('indicadores_produccion:', err)
-        error = err?.message || 'No se pudieron leer los indicadores. Revisá la conexión.'
+        error = err?.message || 'No hubo respuesta del servidor. Revisá la conexión.'
       }
       if (turno !== turnoIndicadores) return
-      estado.indicadores = { datos, error }
+      estado.indicadores = { unidadId: params.p_unidad_negocio_id, datos, error }
       cont.innerHTML = htmlIndicadores(datos, error)
+      pintarNumerosMenu()
+    }
+
+    // Los números del menú. Planillas pendientes sale de los indicadores de
+    // la unidad elegida (no depende del día); si no se pudieron leer, no se
+    // dibuja ninguno: nunca un número viejo ni inventado.
+    function htmlNumeroMenu(el, n, texto) {
+      const ok = Number.isInteger(n) && n > 0
+      el.hidden = !ok
+      el.textContent = ok ? (n > 99 ? '99+' : String(n)) : ''
+      if (ok) { el.setAttribute('title', texto); el.setAttribute('aria-label', texto) }
+      else { el.removeAttribute('title'); el.removeAttribute('aria-label') }
+    }
+
+    function pintarNumerosMenu() {
+      const i = estado.indicadores
+      const n = i && !i.error && i.unidadId === estado.unidadId ? numeroInd(i.datos?.pendientes?.planillas_por_completar) : null
+      htmlNumeroMenu(document.getElementById('pr-menu-n-pendientes'), n,
+        n === 1 ? '1 planilla por completar' : `${n} planillas por completar`)
     }
 
     // A dónde lleva cada pendiente. Los turnos abiertos de otro día se ven en
     // el historial (la planta es de la tablet).
     function irDesdeIndicador(que) {
       const hoy = hoyArgentina()
-      if (que === 'pendientes') return mostrarHistorial({ estado: 'pendiente_completar', desde: sumarDias(hoy, -365) })
+      if (que === 'pendientes') return mostrarHistorial({ estado: 'pendiente_completar', desde: sumarDias(hoy, -365), desdePendientes: true })
       if (que === 'abiertos') return mostrarHistorial({ estado: 'abierto', desde: sumarDias(hoy, -365) })
       if (que === 'conos') return mostrarConfig('marcas')
     }
 
-    // A dónde vuelve "‹ Volver" desde Configuración, Historial o Stock: al
-    // inicio de la gestión. La tablet vive en produccion.html.
+    // A dónde vuelve "Salir sin guardar" sin otro destino: al inicio.
     function volverDeOficina() {
       mostrarInicioOficina()
     }
 
-    // El inicio de la gestión: los indicadores de la unidad y los accesos a
-    // lo que esta cuenta puede ver.
+    // El inicio de la gestión: los indicadores de la unidad.
     function mostrarInicioOficina() {
-      document.getElementById('pr-inicio-texto').textContent = 'La carga de turnos, masas y lo producido se hace en la tablet de la planta.'
       pintarAccesosOficina()
       mostrarVista('pr-inicio')
       cargarIndicadores()
@@ -2840,13 +3550,14 @@
 
     const puedeVerHistorial = () => tieneTarea('ver') || tieneTarea('configurar')
 
-    // ── La burbuja de conos por revisar (la misma cifra del dashboard) ────
+    // ── El número de conos por revisar (la misma cifra del dashboard) ─────
     //
     // Sale de mis_pendientes() —('produccion', 'conos_por_revisar')—, que ya
     // filtra por produccion:configurar. Se pide al abrir y al volver a la
     // pestaña, con un turno para que una respuesta vieja no pise la nueva.
-    // Si la llamada falla, o da 0, no se dibuja nada: nunca un número viejo
-    // ni inventado. `estado.conosPendientes`: un entero > 0, o null.
+    // Va al lado de "Marcas / Conos" en el menú. Si la llamada falla, o da 0,
+    // no se dibuja nada: nunca un número viejo ni inventado.
+    // `estado.conosPendientes`: un entero > 0, o null.
     let turnoBurbujaConos = 0
 
     async function cargarBurbujaConos() {
@@ -2875,39 +3586,23 @@
       return `${n} ${n === 1 ? 'cono nuevo por revisar' : 'conos nuevos por revisar'}`
     }
 
-    // El contenido del botón: "Configuración" y, si hay, la burbuja.
-    function htmlBotonConfig(n) {
-      if (!(Number.isInteger(n) && n > 0)) return 'Configuración'
-      const texto = textoConosPendientes(n)
-      return `Configuración<span class="pr-burbuja" title="${esc(texto)}" aria-label="${esc(texto)}">${esc(n > 99 ? '99+' : n)}</span>`
-    }
-
     function pintarBurbujaConos() {
       const n = tieneTarea('configurar') ? estado.conosPendientes : null
-      for (const id of ['pr-btn-ir-config', 'pr-menu-config']) {
-        const b = document.getElementById(id)
-        if (!b) continue
-        b.innerHTML = htmlBotonConfig(n)
-        if (Number.isInteger(n) && n > 0) b.setAttribute('aria-label', `Configuración: ${textoConosPendientes(n)}`)
-        else b.removeAttribute('aria-label')
-      }
+      htmlNumeroMenu(document.getElementById('pr-menu-n-conos'), n, Number.isInteger(n) ? textoConosPendientes(n) : '')
     }
 
-    // Tocar un acceso a Configuración: con conos por revisar, derecho a la
-    // pestaña donde se aceptan o se rechazan.
-    function abrirConfigDesdeAcceso() {
-      return mostrarConfig(estado.conosPendientes > 0 ? 'marcas' : undefined)
-    }
-
+    // Qué secciones del menú ve esta cuenta: Control con ver o configurar;
+    // Catálogo y Personas solo con configurar. Un bloque sin renglones no se
+    // dibuja.
     function pintarAccesosOficina() {
-      document.getElementById('pr-btn-ir-config').hidden = !tieneTarea('configurar')
-      document.getElementById('pr-btn-ir-historial').hidden = !puedeVerHistorial()
-      document.getElementById('pr-btn-ir-pendientes').hidden = !puedeVerHistorial()
+      const ver = puedeVerHistorial(), conf = tieneTarea('configurar')
+      document.getElementById('pr-menu').hidden = false
+      document.body.classList.add('pg-con-menu')
+      for (const id of ['pr-btn-ir-pendientes', 'pr-menu-historial', 'pr-menu-stock']) document.getElementById(id).hidden = !ver
       for (const b of document.querySelectorAll('[data-ir-config]')) b.hidden = !tieneTarea('configurar')
-      document.getElementById('pr-btn-ir-stock').hidden = !puedeVerHistorial()
-      document.getElementById('pr-menu-config').hidden = !tieneTarea('configurar')
-      document.getElementById('pr-menu-historial').hidden = !puedeVerHistorial()
-      document.getElementById('pr-menu-stock').hidden = !puedeVerHistorial()
+      document.getElementById('pr-menu-bloque-control').hidden = !ver
+      document.getElementById('pr-menu-bloque-catalogo').hidden = !conf
+      document.getElementById('pr-menu-bloque-personas').hidden = !conf
     }
 
     function unidadesDeConfig() {
@@ -2921,8 +3616,8 @@
       sel.closest?.('.pr-campo')?.toggleAttribute?.('hidden', unidades.length < 2)
     }
 
-    // `tabPedida`: la pestaña con la que abre. La usan los accesos con la
-    // burbuja de conos por revisar, que abren derecho en "Marcas / Conos".
+    // `tabPedida`: la sección con la que abre (Máquinas, Recetas, … Personal
+    // y PINes): cada una es un renglón del menú. No hay fila de pestañas.
     async function mostrarConfig(tabPedida) {
       const unidades = unidadesDeConfig()
       if (!unidades.length) return
@@ -2935,23 +3630,24 @@
         // Lo que se tocó en Personal y todavía no se guardó: id → puestos.
         cambios: new Map(),
         error: null,          // { texto, donde } — el error vive en el ESTADO
-        pendientes: null,     // conos por revisar; null = no se pudo contar
         hoja: null,           // los PINes recién generados, SOLO en memoria
+        hojaConfirma: false,  // "¿Ya la imprimiste?" abierto
         salida: null,         // a dónde se quería ir con cambios sin guardar
         pinPara: null, temporal: null, guardando: false,
+        // Marcas / Conos: el filtro, y el error y los conos que se están
+        // guardando (cada interruptor se guarda al tocarlo).
+        filtroConos: 'activos', errorCono: null, conosOcupados: new Set(), listaConos: null,
       }
       pintarSelectorUnidad('pr-config-unidad', unidades, estado.config.unidadId)
+      pintarTituloConfig()
       mostrarVista('pr-config')
       await cargarPestanaConfig()
     }
 
-    // El contador de conos por revisar de la pestaña "Marcas / Conos". Va como
-    // número o como null: un contador inventado es peor que ninguno.
-    function htmlPestanasConfig(tab, pendientes) {
-      return PESTANAS_CONFIG.map(([claveTab, tituloTab]) => {
-        const chapa = claveTab === 'marcas' && pendientes > 0 ? ` <span class="pr-cfg-tab__pend">${esc(pendientes)}</span>` : ''
-        return `<button type="button" class="pr-cfg-tab${claveTab === tab ? ' pr-cfg-tab--activa' : ''}" data-config-tab="${claveTab}" aria-pressed="${claveTab === tab ? 'true' : 'false'}">${tituloTab}${chapa}</button>`
-      }).join('')
+    // El título de la sección de Configuración: el mismo nombre del menú.
+    function pintarTituloConfig() {
+      const tab = estado.config?.tab
+      document.getElementById('pr-config-titulo').textContent = PESTANAS_CONFIG.find(([k]) => k === tab)?.[1] ?? 'Configuración'
     }
 
     // EL ERROR VA AL ESTADO, NO AL DOM: el catch guarda el mensaje y el único
@@ -2975,40 +3671,27 @@
       return c?.error && c.error.donde === donde ? `<div class="pr-cfg-error" role="alert">${esc(c.error.texto)}</div>` : ''
     }
 
-    // Los conos pendientes de revisar: una consulta chica que corre en cada
-    // pestaña, para que el contador esté al día sin importar dónde se esté.
-    // Devuelve null si no se pudo contar, y nunca tira: que falle el contador
-    // no puede voltear la pestaña que la persona vino a mirar.
-    async function contarPendientesMarcas() {
-      try {
-        const { data, error } = await supabase.from('marcas_personalizadas').select('id').eq('estado_alta', 'pendiente_revision')
-        if (error) return null
-        return (data ?? []).length
-      } catch { return null }
-    }
-
     async function cargarPestanaConfig() {
       const c = estado.config
       const cuerpo = document.getElementById('pr-config-cuerpo')
       cuerpo.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
       c.error = null
+      c.errorCono = null
+      c.listaConos = null
       document.getElementById('pr-config-error').hidden = true
       try {
         c.datos = await LECTORES_CONFIG[c.tab](c)
       } catch (err) {
         console.error('configuración:', err)
         c.datos = null
-        document.getElementById('pr-config-tabs').innerHTML = htmlPestanasConfig(c.tab, c.pendientes)
         cuerpo.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer la configuración. Revisá la conexión.</div>'
         return
       }
-      c.pendientes = await contarPendientesMarcas()
       pintarPestanaConfig()
     }
 
     function pintarPestanaConfig() {
       const c = estado.config
-      document.getElementById('pr-config-tabs').innerHTML = htmlPestanasConfig(c.tab, c.pendientes)
       const cuerpo = document.getElementById('pr-config-cuerpo')
       cuerpo.innerHTML = c.salida ? htmlSalirSinGuardar(c) : RENDERS_CONFIG[c.tab](c)
       // Los números se escriben con ponerNumero, nunca con value=.
@@ -3037,7 +3720,7 @@
 
     function htmlSalirSinGuardar(c) {
       const n = cambiosSinGuardar(c)
-      return `<div class="pr-aviso pr-aviso--grave">Tenés ${esc(n)} ${n === 1 ? 'fila cambiada' : 'filas cambiadas'} sin guardar en Personal. Si salís de acá, se pierden.</div>` +
+      return `<div class="pr-aviso pr-aviso--grave">Tenés ${esc(n)} ${n === 1 ? 'fila cambiada' : 'filas cambiadas'} sin guardar en Personal y PINes. Si salís de acá, se pierden.</div>` +
         `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-salir-no">Seguir acá</button>` +
         `<button type="button" class="pr-btn pr-btn--peligro" id="pr-cfg-salir-si">Salir sin guardar</button></div>`
     }
@@ -3054,8 +3737,9 @@
       c.cambios = new Map()
       if (!accion) return pintarPestanaConfig()
       if (accion.volver) return volverDeOficina()
+      if (accion.ir) return navegar(accion.ir)
       if (accion.unidad) { c.unidadId = accion.unidad; c.recetaMaquina = null }
-      if (accion.tab) { c.tab = accion.tab; c.busqueda = '' }
+      if (accion.tab) { c.tab = accion.tab; c.busqueda = ''; pintarTituloConfig(); pintarMenuActivo() }
       await cargarPestanaConfig()
     }
 
@@ -3773,14 +4457,58 @@
       pintarPestanaConfig()
     }
 
-    // El tilde "Doble bolsa" de un cono: se guarda en el acto.
-    async function cambiarDobleBolsa(marcaId, doble) {
-      const r = await guardarEnConfig('marcar_doble_bolsa', { p_marca_id: marcaId, p_doble: !!doble },
-        doble ? 'Ese cono va con doble bolsa.' : 'Ese cono ya no va con doble bolsa.', 'pr-cfg-marcas-lista')
-      if (r.ok) await cargarPestanaConfig()
+    // ── Marcas / Conos (diseño 5) ─────────────────────────────────────────
+    //
+    // "Activo" y "Doble bolsa" SE GUARDAN AL TOCARLOS, uno por uno, sin un
+    // "Guardar" general (decisión de Facu, 26/09/2026: acá cada cambio es
+    // independiente, a diferencia de Personal). Mientras se guarda, el control
+    // ya muestra el valor nuevo y queda trabado; si la base lo rechaza, VUELVE
+    // a su valor anterior y el error queda PEGADO a ese renglón.
+    //
+    // Las RPCs (pg_get_functiondef, 26/09/2026):
+    //  - marcar_doble_bolsa(p_marca_id, p_doble): cambia SOLO doble_bolsa.
+    //  - guardar_marca(p_id, p_nombre, p_activa): no hay una RPC que cambie
+    //    solo `activa`; esta REESCRIBE el nombre con upper(btrim(p_nombre)).
+    //    Se le manda el nombre que ya tiene: hoy los 351 nombres ya están en
+    //    mayúsculas y sin espacios en los bordes, así que no cambia nada.
+    async function tocarCono(marcaId, campo, valor) {
+      const c = estado.config
+      const m = c?.datos?.marcas?.find(x => x.id === marcaId)
+      if (!m) return false
+      c.conosOcupados = c.conosOcupados ?? new Set()
+      if (c.conosOcupados.has(marcaId)) return false
+      const anterior = m[campo]
+      m[campo] = !!valor
+      c.errorCono = null
+      c.conosOcupados.add(marcaId)
+      pintarPestanaConfig()
+      let error = null
+      try {
+        const { error: e } = campo === 'activa'
+          ? await supabase.rpc('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !!valor })
+          : await supabase.rpc('marcar_doble_bolsa', { p_marca_id: m.id, p_doble: !!valor })
+        if (e) throw e
+      } catch (err) {
+        console.error('cono:', err)
+        error = err?.message || 'No hubo respuesta del servidor. Revisá la conexión.'
+      }
+      c.conosOcupados.delete(marcaId)
+      if (error) {
+        m[campo] = anterior
+        const que = campo === 'activa' ? (valor ? 'No se pudo prender' : 'No se pudo apagar') : 'No se pudo cambiar la doble bolsa'
+        c.errorCono = { id: marcaId, texto: `${que}: ${error}` }
+      } else {
+        mostrarExito(campo === 'activa' ? (valor ? `${m.nombre}: activo.` : `${m.nombre}: apagado.`)
+          : (valor ? `${m.nombre} va con doble bolsa.` : `${m.nombre} ya no va con doble bolsa.`))
+      }
+      if (estado.config === c && c.tab === 'marcas') pintarPestanaConfig()
+      return !error
     }
 
-    // ── Marcas / Conos ────────────────────────────────────────────────────
+    // El tilde "Doble bolsa" de un cono: se guarda en el acto.
+    function cambiarDobleBolsa(marcaId, doble) {
+      return tocarCono(marcaId, 'doble_bolsa', !!doble)
+    }
 
     async function leerMarcasConfig() {
       const { data, error } = await supabase.from('marcas_personalizadas')
@@ -3806,49 +4534,95 @@
       return { p_marca_id: id, p_aprobar: aprobar, p_nombre: n === '' ? null : n }
     }
 
-    // Quién lo cargó y cuándo. El sublote del diseño (7c) no se puede decir:
+    // Quién lo cargó y cuándo. El sublote del diseño no se puede decir:
     // marcas_personalizadas no guarda de qué producción salió.
-    function htmlPendienteMarca(m, nombres) {
+    function htmlPendienteMarca(m, nombres, c) {
       const quien = nombres?.get(m.creada_por)
       const cuando = [fechaCorta(m.creada_en), horaArgentina(m.creada_en)].filter(Boolean).join(' ')
-      const pie = [quien ? `Lo cargó ${quien}` : null, cuando || null].filter(Boolean).join(' · ')
+      const pie = [quien ? `Lo cargó ${quien} en la tablet` : null, cuando || null].filter(Boolean).join(' · ')
       return `<div class="pr-cfg-pendiente"><div class="pr-cfg-pendiente__datos">` +
         `<input type="text" class="pr-input" data-pend-nombre="${esc(m.id)}" value="${esc(m.nombre)}" maxlength="80" aria-label="Nombre del cono">` +
         (pie ? `<div class="pr-texto-suave">${esc(pie)}</div>` : '') + `</div>` +
+        `<div class="pg-pend-acc">${htmlErrorPegado(c, 'pend-' + m.id)}` +
         `<button type="button" class="pr-btn pr-btn--secundario" data-pend-no="${esc(m.id)}">Rechazar</button>` +
-        `<button type="button" class="pr-btn" data-pend-si="${esc(m.id)}">Aceptar</button></div>`
+        `<button type="button" class="pr-btn" data-pend-si="${esc(m.id)}">Aceptar</button></div></div>`
+    }
+
+    // Qué conos entran en el filtro. La lista se arma al abrir, al filtrar o
+    // al buscar, y NO al tocar un interruptor: si se recalculara, apagar un
+    // cono con el filtro "Activos" lo haría desaparecer bajo el dedo.
+    const FILTROS_CONOS = [['activos', 'Activos'], ['apagados', 'Apagados'], ['revisar', 'Por revisar']]
+
+    function conosDelFiltro(d, filtro) {
+      if (filtro === 'revisar') return marcasPendientes(d)
+      return marcasDelCatalogo(d).filter(m => filtro === 'apagados' ? !m.activa : m.activa)
+    }
+
+    function listaConosVisible(c) {
+      if (!c.listaConos) c.listaConos = marcasFiltradas(conosDelFiltro(c.datos, c.filtroConos ?? 'activos'), c.busqueda).map(m => m.id)
+      const porId = new Map((c.datos?.marcas ?? []).map(m => [m.id, m]))
+      return c.listaConos.map(id => porId.get(id)).filter(Boolean)
+    }
+
+    function htmlFilaCono(c, m) {
+      const ocupado = !!c.conosOcupados?.has(m.id)
+      const err = c.errorCono?.id === m.id ? `<div class="pr-cfg-error pg-cono__error" role="alert">${esc(c.errorCono.texto)}</div>` : ''
+      return `<div class="pr-cfg-fila pg-cono${m.activa ? '' : ' pg-cono--apagado'}">` +
+        `<span class="pg-cono__nombre"><strong>${esc(m.nombre)}</strong>${m.activa ? '' : ' <span class="pg-cono__estado">apagado</span>'}</span>` +
+        `<label class="pg-cono__doble"><input type="checkbox" class="pr-casilla" data-marca-doble="${esc(m.id)}"${m.doble_bolsa ? ' checked' : ''}${ocupado ? ' disabled' : ''} aria-label="Doble bolsa: ${esc(m.nombre)}"><span class="pg-cono__doble-txt">Doble bolsa</span></label>` +
+        `<label class="pg-switch"><input type="checkbox" role="switch" class="pg-switch__input" data-marca-activo="${esc(m.id)}"${m.activa ? ' checked' : ''}${ocupado ? ' disabled' : ''} aria-label="Activo: ${esc(m.nombre)}"><span class="pg-switch__pista" aria-hidden="true"></span></label>` +
+        err + '</div>'
     }
 
     function htmlConfigMarcas(c) {
       const d = c.datos
+      c.filtroConos = c.filtroConos ?? 'activos'
       const pend = marcasPendientes(d)
+      const cat = marcasDelCatalogo(d)
+      const activos = cat.filter(m => m.activa).length
+      const cuenta = { activos, apagados: cat.length - activos, revisar: pend.length }
       const arriba = pend.length
-        ? `<div id="pr-cfg-pendientes" tabindex="-1"><p class="pr-cfg-rotulo">Pendientes de revisar · ${esc(pend.length)}</p>` +
+        ? `<div id="pr-cfg-pendientes" class="pg-conos-rev" tabindex="-1"><p class="pr-cfg-rotulo">Por revisar · ${esc(pend.length)}</p>` +
           htmlErrorPegado(c, 'pr-cfg-pendientes') +
           `<p class="pr-texto-suave">Se pueden usar igual mientras tanto. Al aceptar podés corregirle el nombre.</p>` +
-          pend.map(m => htmlPendienteMarca(m, d.nombres)).join('') + `</div>` : ''
-      const lista = marcasFiltradas(marcasDelCatalogo(d), c.busqueda)
-      return arriba + `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Catálogo · ${esc(marcasDelCatalogo(d).length)} conos</p>` +
-        `<input type="text" class="pr-input" id="pr-config-marca-buscar" placeholder="Buscar marca" aria-label="Buscar marca" value="${esc(c.busqueda)}">` +
-        `<p class="pr-texto-suave" id="pr-cfg-marcas-lista" tabindex="-1">"Doble bolsa" es para los conos que van al norte, por la humedad: llevan siempre la bolsa grande y las bolsitas individuales, y en la tablet no se puede bajar.</p>` +
-        htmlErrorPegado(c, 'pr-cfg-marcas-lista') +
-        `<ul class="pr-lista pr-espacio-arriba">` + (lista.length ? lista.map(m =>
-          `<li class="pr-lista__item pr-config-marca${m.activa ? '' : ' pr-config-fila--inactiva'}"><strong>${esc(m.nombre)}</strong>${m.activa ? '' : ' (dada de baja)'} ` +
-          `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-marca-doble="${esc(m.id)}"${m.doble_bolsa ? ' checked' : ''}> Doble bolsa</label> ` +
-          `<button type="button" class="pr-btn pr-btn--secundario" data-marca-activa="${esc(m.id)}">${m.activa ? 'Dar de baja' : 'Reactivar'}</button></li>`).join('')
-          : `<li class="pr-lista__item">Ninguna marca coincide.</li>`) + `</ul>` +
-        `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-marca-nueva" maxlength="80" placeholder="Marca nueva" aria-label="Marca nueva">` +
+          pend.map(m => htmlPendienteMarca(m, d.nombres, c)).join('') + `</div>` : ''
+      const segConos = '<div class="pg-seg" role="group" aria-label="Qué conos mostrar">' + FILTROS_CONOS.map(([k, r]) =>
+        `<button type="button" class="pg-seg__op" data-conos-filtro="${k}" aria-pressed="${k === c.filtroConos ? 'true' : 'false'}">${r} · ${esc(cuenta[k])}</button>`).join('') + '</div>'
+      const lista = listaConosVisible(c)
+      const total = conosDelFiltro(d, c.filtroConos).length
+      const cab = '<div class="pr-cfg-cab pg-cono"><span>Cono</span><span class="pg-cono__centro">Doble bolsa</span><span class="pg-cono__centro">Activo</span></div>'
+      const filas = c.filtroConos === 'revisar'
+        ? '<div class="pr-cfg-fila pg-cono"><span>Los conos por revisar están arriba, con Aceptar y Rechazar.</span></div>'
+        : (lista.length ? lista.map(m => htmlFilaCono(c, m)).join('')
+          : `<div class="pr-cfg-fila pg-cono"><span>${c.busqueda ? 'Ningún cono coincide con la búsqueda.' : 'No hay conos acá.'}</span></div>`)
+      const nombreFiltro = FILTROS_CONOS.find(([k]) => k === c.filtroConos)?.[1].toLowerCase() ?? ''
+      const mostrando = c.busqueda && c.filtroConos !== 'revisar' ? `<p class="pr-texto-suave pg-conos__mostrando">Mostrando ${esc(lista.length)} de ${esc(total)} ${esc(nombreFiltro)}</p>` : ''
+      return `<p class="pg-sub">${esc(cat.length)} conos · ${esc(activos)} activos</p>` + arriba +
+        `<div class="pg-conos__barra"><input type="text" class="pr-input" id="pr-config-marca-buscar" placeholder="Buscar cono" aria-label="Buscar cono" value="${esc(c.busqueda)}">${segConos}</div>` +
+        `<p class="pr-texto-suave">"Doble bolsa" es para los conos que van al norte, por la humedad: llevan siempre la bolsa grande y las bolsitas individuales, y en la tablet no se puede bajar. Cada tilde se guarda al tocarlo.</p>` +
+        `<div class="pr-cfg-tabla pg-conos" id="pr-cfg-marcas-lista" tabindex="-1">${cab}${filas}</div>` + mostrando +
+        `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-marca-nueva" maxlength="80" placeholder="Cono nuevo" aria-label="Cono nuevo">` +
         htmlErrorPegado(c, 'pr-cfg-marca-agregar') +
-        `<button type="button" class="pr-btn" id="pr-cfg-marca-agregar" data-marca-agregar="1">Agregar marca</button></div>`
+        `<button type="button" class="pr-btn" id="pr-cfg-marca-agregar" data-marca-agregar="1">Agregar cono</button></div>`
+    }
+
+    function elegirFiltroConos(filtro) {
+      const c = estado.config
+      if (!FILTROS_CONOS.some(([k]) => k === filtro)) return
+      c.filtroConos = filtro
+      c.listaConos = null
+      c.errorCono = null
+      pintarPestanaConfig()
+      if (filtro === 'revisar') document.getElementById('pr-cfg-pendientes')?.focus?.()
     }
 
     async function accionMarca(ds) {
-      const c = estado.config
       const DONDE = 'pr-cfg-marca-agregar'
+      if (ds.conosFiltro !== undefined) return elegirFiltroConos(ds.conosFiltro)
       if (ds.marcaAgregar !== undefined) {
         const nombre = document.getElementById('pr-config-marca-nueva').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre de la marca.', DONDE); return }
-        const r = await guardarEnConfig('guardar_marca', { p_id: null, p_nombre: nombre, p_activa: true }, 'Marca agregada.', DONDE)
+        if (!nombre) { errorConfig('Escribí el nombre del cono.', DONDE); return }
+        const r = await guardarEnConfig('guardar_marca', { p_id: null, p_nombre: nombre, p_activa: true }, 'Cono agregado.', DONDE)
         if (r.ok) await cargarPestanaConfig()
         return
       }
@@ -3858,15 +4632,14 @@
         // Al aceptar se manda el nombre del campo, que puede estar corregido.
         const nombre = aprobar ? valorDe('data-pend-nombre', id) : null
         const r = await guardarEnConfig('revisar_marca', parametrosRevisarMarca(id, aprobar, nombre),
-          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', 'pr-cfg-pendientes')
-        // La burbuja de los accesos también baja: se vuelve a pedir la cifra.
+          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', `pend-${id}`)
+        if (!r.ok && estado.config?.error?.donde === `pend-${id}`) {
+          estado.config.error.texto = `${aprobar ? 'No se pudo aceptar' : 'No se pudo rechazar'}: ${estado.config.error.texto}`
+          pintarPestanaConfig()
+        }
+        // El número del menú también baja: se vuelve a pedir la cifra.
         if (r.ok) { cargarBurbujaConos(); await cargarPestanaConfig() }
-        return
       }
-      const m = c.datos.marcas.find(x => x.id === ds.marcaActiva)
-      if (!m) return
-      const r = await guardarEnConfig('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !m.activa }, m.activa ? 'Marca dada de baja.' : 'Marca reactivada.', DONDE)
-      if (r.ok) await cargarPestanaConfig()
     }
 
     // ── Personal: puestos, PINes y accesos temporales ─────────────────────
@@ -3897,10 +4670,11 @@
 
     // El estado del PIN, tal como lo devuelve personal_produccion(). No hay
     // "Bloqueado": la RPC no lo dice, y un chip que no se puede saber sería
-    // inventarlo.
+    // inventarlo. Diseño 3a: PIN propio en verde, pendiente de cambiar en gris
+    // y Sin PIN en bordó (es lo que hay que resolver). El texto va siempre.
     function estadoDelPin(p) {
-      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--gris' }
-      if (p.debe_cambiar_pin) return { texto: 'PIN pendiente de cambiar', clase: 'pr-cfg-chip--alerta' }
+      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--alerta' }
+      if (p.debe_cambiar_pin) return { texto: 'PIN pendiente de cambiar', clase: 'pr-cfg-chip--gris' }
       return { texto: 'PIN propio', clase: 'pr-cfg-chip--ok' }
     }
 
@@ -3932,10 +4706,15 @@
       const tocada = c.cambios.has(p.id)
       const pin = estadoDelPin(p)
       const temp = p.pin_temporal ? ` <span class="pr-cfg-chip pr-cfg-chip--gris">temporal</span>` : ''
-      return `<div class="pr-cfg-fila pr-cfg-personal${tocada ? ' pr-cfg-fila--tocada' : ''}"><strong>${esc(p.nombre)}</strong>` +
-        PUESTOS.map(([puestoClave, puestoRotulo]) => `<input type="checkbox" class="pr-casilla pr-cfg-centro" data-puesto="${puestoClave}" data-persona-puesto="${esc(p.id)}"${puestos.includes(puestoClave) ? ' checked' : ''} aria-label="${puestoRotulo}: ${esc(p.nombre)}">`).join('') +
-        `<span><span class="pr-cfg-chip ${pin.clase}">${esc(pin.texto)}</span>${temp}</span>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-pin-asignar="${esc(p.id)}">${p.tiene_pin ? 'Resetear PIN' : 'Asignar PIN'}</button>` +
+      // En la compu es una fila de tabla (3a); en el celular una tarjeta (3b)
+      // con los tres roles como botones de 44 px que se prenden. Es el MISMO
+      // HTML: cada casilla va adentro de su <label>, que en la compu esconde
+      // el texto (la columna ya lo dice) y en el celular es el botón.
+      return `<div class="pr-cfg-fila pr-cfg-personal${tocada ? ' pr-cfg-fila--tocada' : ''}"><strong class="pg-per__nombre">${esc(p.nombre)}</strong>` +
+        `<div class="pg-per__roles">` +
+        PUESTOS.map(([puestoClave, puestoRotulo]) => `<label class="pg-rol"><input type="checkbox" class="pr-casilla pr-cfg-centro" data-puesto="${puestoClave}" data-persona-puesto="${esc(p.id)}"${puestos.includes(puestoClave) ? ' checked' : ''} aria-label="${puestoRotulo}: ${esc(p.nombre)}"><span class="pg-rol__txt">${puestoRotulo}</span></label>`).join('') +
+        `</div><span class="pg-per__pin"><span class="pr-cfg-chip ${pin.clase}">${esc(pin.texto)}</span>${temp}</span>` +
+        `<button type="button" class="pr-btn pr-btn--secundario pg-per__accion" data-pin-asignar="${esc(p.id)}">${p.tiene_pin ? 'Resetear PIN' : 'Asignar PIN'}</button>` +
         `<span class="pr-cfg-fila__aviso">${tocada ? 'Cambiada' : ''}</span></div>`
     }
 
@@ -3980,22 +4759,39 @@
         `<button type="button" class="pr-btn pr-btn--secundario" data-temporal-revocar="${esc(t.id)}">Revocar</button></div>`).join('')
     }
 
+    // A cuántos alcanza "Generar PIN para los que no tienen": las personas de
+    // ESTA unidad sin PIN vigente, con la misma regla de personal_produccion
+    // (tiene_pin). OJO: generar_pines_iniciales recorre `empleados` de la
+    // unidad sin excluir es_dispositivo, así que si la cuenta de la tablet no
+    // tiene PIN, también le genera uno (hueco de la base, anotado en el
+    // traspaso del 26/09/2026): la hoja lo va a mostrar.
+    function sinPinEnUnidad(personal) {
+      return (personal ?? []).filter(p => p.misma_unidad && !p.tiene_pin).length
+    }
+
     function htmlConfigPersonal(c) {
       const lista = personalVisible(c.datos.personal, c.busqueda, c.todoElPersonal)
       const n = cambiosSinGuardar(c)
+      const deLaUnidad = (c.datos.personal ?? []).filter(p => p.misma_unidad).length
+      const sinPin = sinPinEnUnidad(c.datos.personal)
       const cab = `<div class="pr-cfg-cab pr-cfg-personal"><span>Persona</span>` +
-        PUESTOS.map(([, r]) => `<span class="pr-cfg-centro">${r}</span>`).join('') +
+        `<div class="pg-per__roles">` + PUESTOS.map(([, r]) => `<span class="pr-cfg-centro">${r}</span>`).join('') + `</div>` +
         `<span>PIN</span><span></span><span></span></div>`
-      return `<input type="text" class="pr-input" id="pr-config-personal-buscar" placeholder="Buscar por nombre…" aria-label="Buscar persona" value="${esc(c.busqueda)}">` +
+      return `<p class="pg-sub">${esc(estado.unidades.get(c.unidadId) ?? '')} · ${esc(deLaUnidad)} ${deLaUnidad === 1 ? 'persona' : 'personas'}</p>` +
+        `<input type="text" class="pr-input" id="pr-config-personal-buscar" placeholder="Buscar por nombre…" aria-label="Buscar persona" value="${esc(c.busqueda)}">` +
         `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-personal-todos="1"${c.todoElPersonal ? ' checked' : ''}> Mostrar también el personal de otras unidades</label>` +
-        `<div class="pr-cfg-tabla pr-espacio-arriba">${cab}` +
+        `<div class="pr-cfg-tabla pr-espacio-arriba pg-per">${cab}` +
         (lista.length ? lista.map(p => htmlFilaPersonal(c, p)).join('') : '<div class="pr-cfg-fila pr-cfg-personal"><span>Nadie coincide con la búsqueda.</span></div>') +
         `</div>` +
-        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-personal-guardar')}` +
-        `<button type="button" class="pr-btn" id="pr-cfg-personal-guardar"${c.guardando ? ' disabled' : ''}>${esc(textoBotonPersonal(n))}</button></div>` +
-        `<h3 class="pr-subtitulo">PINes</h3>` +
-        `<div class="pr-config-fila__botones">${htmlErrorPegado(c, 'pr-cfg-generar-pines')}` +
-        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-generar-pines">Generar PIN para los que no tienen</button>` +
+        // El pie: "Generar PIN…" a la izquierda y UN solo "Guardar los
+        // cambios · N filas" a la derecha, cada uno con su error pegado. En el
+        // celular queda fijo abajo.
+        `<div class="pr-cfg-pie pg-per__pie"><div class="pg-per__pie-lado">${htmlErrorPegado(c, 'pr-cfg-generar-pines')}` +
+        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-generar-pines">Generar PIN para los que no tienen · ${esc(sinPin)}</button></div>` +
+        `<div class="pg-per__pie-lado pg-per__pie-lado--der">${htmlErrorPegado(c, 'pr-cfg-personal-guardar')}` +
+        `<button type="button" class="pr-btn" id="pr-cfg-personal-guardar"${c.guardando ? ' disabled' : ''}>${esc(textoBotonPersonal(n))}</button></div></div>` +
+        `<h3 class="pr-subtitulo">Mi PIN maestro</h3>` +
+        `<div class="pr-config-fila__botones">` +
         (tieneTarea('configurar') ? `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-abrir-maestro">Mi PIN maestro</button>` : '') +
         `</div>${htmlPanelPin(c)}` +
         `<h3 class="pr-subtitulo">Accesos temporales</h3>${htmlTemporales(c)}` +
@@ -4079,25 +4875,68 @@
 
     // ── La hoja de PINes: se ve UNA vez, se imprime y se borra ────────────
 
+    // Una tira recortable por persona (diseño 3c): nombre, roles, para qué es
+    // y el PIN grande.
     function htmlTiraPin(t) {
+      const nota = [t.roles, t.nota ?? 'lo cambiás la primera vez que entrás'].filter(Boolean).join(' · ')
       return `<div class="pr-tira"><div><strong>${esc(t.nombre)}</strong>` +
-        `<div class="pr-tira__nota">PIN de un solo uso: la primera vez vas a elegir uno tuyo.</div></div>` +
+        `<div class="pr-tira__nota">${esc(nota)}</div></div>` +
         `<div class="pr-tira__pin">${esc(t.pin)}</div></div>`
     }
 
-    function mostrarHojaPines(lista, aviso) {
+    // Los roles de una persona en la unidad, en palabras: "Masero · Operario".
+    function rolesDe(personal, id) {
+      const p = (personal ?? []).find(x => x.id === id)
+      return PUESTOS.filter(([k]) => (p?.puestos ?? []).includes(k)).map(([, r]) => r).join(' · ')
+    }
+
+    // "Cucuruchos Nuss · generados el 25/09 a las 11:20 por Federico Silva"
+    function deQuienHoja(unidadId, verbo, ahora = new Date()) {
+      const fecha = hoyArgentina(ahora)
+      return [estado.unidades.get(unidadId) ?? '', `${verbo} el ${fecha.slice(8, 10)}/${fecha.slice(5, 7)} a las ${horaArgentina(ahora)}` +
+        (estado.miNombre ? ` por ${estado.miNombre}` : '')].filter(Boolean).join(' · ')
+    }
+
+    function mostrarHojaPines(lista, aviso, { titulo = null, de = '' } = {}) {
       estado.config.hoja = lista
+      estado.config.hojaConfirma = false
+      document.getElementById('pr-cfg-hoja-titulo').textContent = titulo ?? `${lista.length} ${lista.length === 1 ? 'PIN nuevo' : 'PINes nuevos'}`
+      document.getElementById('pr-cfg-hoja-de').textContent = de
       document.getElementById('pr-cfg-hoja-aviso').textContent = aviso
       document.getElementById('pr-cfg-hoja-tiras').innerHTML = lista.map(htmlTiraPin).join('')
+      document.getElementById('pr-cfg-hoja-confirma').hidden = true
+      document.getElementById('pr-cfg-hoja-acciones').hidden = false
       document.getElementById('pr-cfg-hoja').hidden = false
+    }
+
+    // "Ya la imprimí, cerrar" NO cierra de una (decisión de Facu, 26/09/2026):
+    // pregunta "¿Ya la imprimiste? No se va a volver a mostrar." en un panel
+    // propio. Recién "Sí, cerrar" borra los PINes; "Volver a la hoja" no toca
+    // nada.
+    function pedirCerrarHoja() {
+      if (!estado.config?.hoja) return cerrarHojaPines()
+      estado.config.hojaConfirma = true
+      document.getElementById('pr-cfg-hoja-acciones').hidden = true
+      document.getElementById('pr-cfg-hoja-confirma').hidden = false
+      document.getElementById('pr-cfg-hoja-cerrar-no').focus?.()
+    }
+
+    function volverAHojaPines() {
+      if (estado.config) estado.config.hojaConfirma = false
+      document.getElementById('pr-cfg-hoja-confirma').hidden = true
+      document.getElementById('pr-cfg-hoja-acciones').hidden = false
+      document.getElementById('pr-cfg-hoja-cerrar').focus?.()
     }
 
     // Al cerrar, los PINes se van de la memoria Y del DOM. Nunca estuvieron en
     // localStorage ni en sessionStorage, y no tienen que quedar en ningún lado.
     function cerrarHojaPines() {
-      if (estado.config) estado.config.hoja = null
+      if (estado.config) { estado.config.hoja = null; estado.config.hojaConfirma = false }
       document.getElementById('pr-cfg-hoja-tiras').innerHTML = ''
       document.getElementById('pr-cfg-hoja-aviso').textContent = ''
+      document.getElementById('pr-cfg-hoja-de').textContent = ''
+      document.getElementById('pr-cfg-hoja-confirma').hidden = true
+      document.getElementById('pr-cfg-hoja-acciones').hidden = false
       document.getElementById('pr-cfg-hoja').hidden = true
     }
 
@@ -4106,12 +4945,14 @@
       const DONDE = 'pr-cfg-generar-pines'
       const r = await guardarEnConfig('generar_pines_iniciales', { p_unidad_negocio_id: c.unidadId }, null, DONDE)
       if (!r.ok) return
-      const lista = (r.data ?? []).map(x => ({ nombre: x.nombre, pin: x.pin }))
+      const personal = c.datos?.personal
+      const lista = (r.data ?? []).map(x => ({ nombre: x.nombre, pin: x.pin, roles: rolesDe(personal, x.empleado_id) }))
       // Sin nadie sin PIN no se abre una hoja vacía: se dice.
       if (!lista.length) { errorConfig('Ya todos tienen PIN: no hizo falta generar ninguno.', DONDE); return }
       mostrarExito(`${lista.length} ${lista.length === 1 ? 'PIN generado' : 'PINes generados'}.`)
+      const de = deQuienHoja(c.unidadId, 'generados')
       await cargarPestanaConfig()
-      mostrarHojaPines(lista, 'Se muestran UNA sola vez. Imprimí, recortá y repartí antes de cerrar.')
+      mostrarHojaPines(lista, 'Solo se ven ahora. Imprimí la hoja antes de cerrar.', { de })
     }
 
     // ── Accesos temporales ────────────────────────────────────────────────
@@ -4153,8 +4994,8 @@
       await cargarPestanaConfig()
       // El PIN temporal viene en null cuando esa persona ya tenía el suyo.
       if (r.data?.pin_temporal) {
-        mostrarHojaPines([{ nombre: persona?.nombre ?? '', pin: r.data.pin_temporal }],
-          'Se muestra UNA sola vez. Anotalo y pasáselo antes de cerrar.')
+        mostrarHojaPines([{ nombre: persona?.nombre ?? '', pin: r.data.pin_temporal, nota: 'PIN temporal: vence solo' }],
+          'Solo se ve ahora. Anotalo y pasáselo antes de cerrar.', { titulo: '1 PIN temporal', de: deQuienHoja(c.unidadId, 'generado') })
       }
     }
 
@@ -4173,10 +5014,9 @@
     }
 
     function conectarConfig() {
-      document.getElementById('pr-btn-ir-config').addEventListener('click', abrirConfigDesdeAcceso)
-      document.getElementById('pr-config-volver').addEventListener('click', () => {
-        if (pedirSalida(estado.config, { volver: true })) volverDeOficina()
-      })
+      // "‹ Menú" (celular) abre el menú: no se va de la sección, así que no
+      // hay nada que preguntar. Irse lo pregunta irA().
+      document.getElementById('pr-config-volver').addEventListener('click', abrirMenu)
       document.getElementById('pr-config-unidad').addEventListener('change', ev => {
         const unidad = ev.target.value
         if (!pedirSalida(estado.config, { unidad })) return
@@ -4184,16 +5024,9 @@
         estado.config.recetaMaquina = null
         cargarPestanaConfig()
       })
-      document.getElementById('pr-config-tabs').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-config-tab]'); if (!b) return
-        const tab = b.dataset.configTab
-        if (tab === estado.config.tab) return
-        if (!pedirSalida(estado.config, { tab })) return
-        estado.config.tab = tab
-        estado.config.busqueda = ''
-        cargarPestanaConfig()
-      })
-      document.getElementById('pr-cfg-hoja-cerrar').addEventListener('click', cerrarHojaPines)
+      document.getElementById('pr-cfg-hoja-cerrar').addEventListener('click', pedirCerrarHoja)
+      document.getElementById('pr-cfg-hoja-cerrar-no').addEventListener('click', volverAHojaPines)
+      document.getElementById('pr-cfg-hoja-cerrar-si').addEventListener('click', cerrarHojaPines)
       document.getElementById('pr-cfg-hoja-imprimir').addEventListener('click', () => window.print?.())
       // Cerrar la pestaña del navegador con cambios sin guardar: lo único que
       // se puede hacer ahí es el aviso del propio navegador.
@@ -4230,6 +5063,7 @@
         const t = ev.target, c = estado.config
         if (t.dataset?.empSug !== undefined || t.dataset?.empCond !== undefined) return cambiarSelectEmpaque(t)
         if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)
+        if (t.dataset?.marcaActivo !== undefined) return tocarCono(t.dataset.marcaActivo, 'activa', t.checked)
         if (t.dataset?.recetaMaquina !== undefined) { c.recetaMaquina = t.value; c.recetaTipo = null; cargarPestanaConfig() }
         else if (t.dataset?.recetaTipo !== undefined) { c.recetaTipo = t.value; pintarPestanaConfig() }
         else if (t.dataset?.recetaPartida !== undefined) { c.recetaPartida = t.value; pintarPestanaConfig() }
@@ -4245,6 +5079,7 @@
         if (t.dataset?.recetaKg !== undefined) return marcarCambioReceta(t)
         if (['pr-config-marca-buscar', 'pr-config-personal-buscar', 'pr-config-insumo-buscar'].includes(t.id)) {
           c.busqueda = t.value
+          c.listaConos = null
           pintarPestanaConfig()
           const nuevo = document.getElementById(t.id)
           nuevo.focus?.()
@@ -4336,6 +5171,9 @@
       if (!unidades.length) return
       const hoy = hoyArgentina()
       estado.historial = estado.historial ?? { desde: sumarDias(hoy, -7), hasta: hoy, maquina: '', estado: '' }
+      // "Planillas pendientes" del menú es este mismo historial, filtrado: el
+      // menú lo marca como su renglón mientras no se cambie el filtro.
+      estado.historial.desdePendientes = false
       if (filtro) Object.assign(estado.historial, { hasta: hoy, maquina: '' }, filtro)
       estado.historial.unidadId = unidades.includes(estado.historial.unidadId) ? estado.historial.unidadId : unidadInicialOficina(unidades)
       pintarSelectorUnidad('pr-historial-unidad', unidades, estado.historial.unidadId)
@@ -4416,6 +5254,7 @@
       const [turno] = await leer(supabase.from('turnos_produccion')
         .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
       if (!turno) throw new Error('El turno no existe.')
+      const maquina = (await leer(supabase.from('maquinas').select('id, nombre').eq('id', turno.maquina_id))).find(m => m.id === turno.maquina_id) ?? null
       // `desde` y `hasta`, los dos: quitar_operario_turno NO borra la fila, le
       // pone `hasta`. El que se fue estuvo en el turno y tiene que verse.
       const operarios = await leer(supabase.from('turno_operarios').select('empleado_id, desde, hasta').eq('turno_id', turnoId).order('desde'))
@@ -4452,7 +5291,7 @@
       // dejaría todos los nombres en blanco menos el tuyo.
       const nombres = await nombresDeEmpleados([turno.encargado_id, turno.forzado_por, turno.completado_por,
         ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id), ...correcciones.map(c => c.hecha_por)])
-      return { turno, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque }
+      return { turno, maquina, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque }
     }
 
     // El empaque que descontó el turno: los movimientos de stock_movimientos
@@ -4593,6 +5432,33 @@
     // El renglón dice qué es con la MISMA regla que la planilla
     // (partesProducido), y después las cajas y las unidades. Las unidades por
     // caja ya están en "caja ×N": no se repiten en la cuenta.
+    //
+    // CORREGIR Y ANULAR (diseño 4). Las dos piden motivo, y la corrección se
+    // abre EN EL MISMO RENGLÓN con el error pegado a su botón. Quién puede lo
+    // dice la base (corregir_produccion_item / anular_produccion_item,
+    // pg_get_functiondef 26/09/2026): en una planilla CERRADA, produccion:
+    // configurar en la unidad; en una abierta o pendiente de completar,
+    // produccion:cargar (la de la tablet). La pantalla ofrece el botón con esa
+    // misma regla; la barrera es la base.
+    function puedeCorregirSublote(turno, p) {
+      if (!turno || !p || p.anulado) return false
+      const tarea = turno.estado === 'cerrado' ? 'configurar' : 'cargar'
+      return unidadesCon(tarea).includes(turno.unidad_negocio_id)
+    }
+
+    function htmlEditorSublote(p) {
+      const e = estado.corrigeHist
+      const anular = e.modo === 'anular'
+      const campoCajas = anular ? '' : `<label class="pr-campo pg-corr__cajas"><span class="pr-campo__rotulo">Cajas</span>` +
+        `<input type="text" class="pr-input" id="pr-hist-corr-cajas" data-numero="${esc(e.cajas ?? p.cajas ?? '')}" data-decimales="0" aria-label="Cajas del sublote ${esc(p.sublote)}"></label>`
+      return `<div class="pg-corr" id="pr-hist-corr">${campoCajas}` +
+        `<label class="pr-campo pg-corr__motivo"><span class="pr-campo__rotulo">Motivo <span class="pr-obligatorio">· obligatorio</span></span>` +
+        `<input type="text" class="pr-input" id="pr-hist-corr-motivo" maxlength="300" autocomplete="off" value="${esc(e.motivo ?? '')}"></label>` +
+        `<div class="pg-corr__acc"><button type="button" class="pr-btn pr-btn--secundario" id="pr-hist-corr-cancelar">Cancelar</button>` +
+        (e.error ? `<div class="pr-cfg-error" role="alert">${esc(e.error)}</div>` : '') +
+        `<button type="button" class="pr-btn${anular ? ' pr-btn--peligro' : ''}" id="pr-hist-corr-guardar"${e.enviando ? ' disabled' : ''}>${anular ? 'Anular el sublote' : 'Guardar corrección'}</button></div></div>`
+    }
+
     function htmlSubloteHistorial(p, d) {
       const pr = d.presentaciones.find(x => x.id === p.presentacion_id)
       const prod = d.productos.find(x => x.id === pr?.producto_id)
@@ -4605,11 +5471,18 @@
         conConoEnProducto: (d.productosConCono ?? []).includes(pr?.producto_id),
         caja: nombreCajaItem(p, d.insumosEmpaque), embolsado: p.embolsado,
       })].join(' · ')
-      return `<li class="pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}${sinCaja ? ' pr-of-sin-caja' : ''}">` +
-        `<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(que)} · ` +
-        `${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades` +
-        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') +
-        (sinCaja ? ` <strong class="pr-sin-caja">· ${esc(textoSinCaja(p))}</strong>` : '') + corr + '</li>'
+      const editando = estado.corrigeHist?.itemId === p.id
+      const botonesSublote = !editando && puedeCorregirSublote(d.turno, p)
+        ? `<span class="pg-sub-acc"><button type="button" class="pr-btn pr-btn--secundario" data-sublote-corregir="${esc(p.id)}">Corregir</button>` +
+          `<button type="button" class="pr-btn pr-btn--secundario" data-sublote-anular="${esc(p.id)}">Anular</button></span>`
+        : ''
+      return `<li class="pr-lista__item pg-sub${p.anulado ? ' pr-of-anulado' : ''}${sinCaja ? ' pr-of-sin-caja' : ''}${editando ? ' pg-sub--editando' : ''}">` +
+        `<div class="pg-sub__fila"><span class="pg-sub__que"><span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(que)}` +
+        (p.anulado ? ' <span class="pr-of-chip pr-of-chip--pendiente">Anulado</span>' : '') + `</span>` +
+        `<span class="pg-sub__cajas">${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades` +
+        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') + `</span>${botonesSublote}</div>` +
+        (sinCaja ? `<strong class="pr-sin-caja">${esc(textoSinCaja(p))}</strong>` : '') + corr +
+        (editando ? htmlEditorSublote(p) : '') + '</li>'
     }
 
     // El total del turno: SIN los sublotes anulados, que se siguen viendo pero
@@ -4624,6 +5497,24 @@
       return { cajas, unidades }
     }
 
+    // "Miércoles 24/09 · 06:02 a 14:10 · fuego apagado 13:55"
+    function horarioTurno(t) {
+      const desde = String(t.hora_inicio ?? '').slice(0, 5) || horaArgentina(t.abierto_en) || '—'
+      const hasta = t.estado === 'abierto' ? 'sigue abierto' : (horaArgentina(t.cerrado_en) || '—')
+      const fuego = String(t.hora_apagado ?? '').slice(0, 5)
+      return [textoDiaInd(t.fecha), `${desde} a ${hasta}`, fuego ? `fuego apagado ${fuego}` : ''].filter(Boolean).join(' · ')
+    }
+
+    // El minutero de las paradas: el total de lo que se sabe (las cerradas).
+    function minutosParadasTurno(paradas) {
+      let t = 0
+      for (const p of paradas ?? []) {
+        const a = new Date(p.inicio).getTime(), b = new Date(p.fin ?? '').getTime()
+        if (Number.isFinite(a) && Number.isFinite(b) && b > a) t += (b - a) / 60000
+      }
+      return t
+    }
+
     function htmlDetalleTurno(d) {
       const t = d.turno
       const nom = (id) => d.nombres.get(id) ?? '—'
@@ -4631,16 +5522,16 @@
         ? `<div class="pr-aviso pr-aviso--grave">Esta planilla se cerró a la fuerza${t.forzado_por ? ` · ${esc(nom(t.forzado_por))}` : ''}${t.forzado_en ? ` · ${esc(fechaCorta(t.forzado_en))}` : ''}: ${esc(t.forzado_motivo)}` +
           `${t.estado === 'pendiente_completar' ? ' Lo que produjo todavía no está en el stock.' : ''}</div>`
         : ''
-      const cab = `<div class="pr-datos">` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Fecha y turno</span><span class="pr-dato__valor">${esc(fechaDelDia(t.fecha))} · ${esc(t.turno)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Estado</span><span class="pr-dato__valor">${htmlEstadoTurno(t.estado)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Encargado</span><span class="pr-dato__valor">${esc(nom(t.encargado_id))}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Horario</span><span class="pr-dato__valor">${esc(String(t.hora_inicio ?? horaArgentina(t.abierto_en) ?? '').slice(0, 5) || '—')} a ${esc(String(t.hora_apagado ?? '').slice(0, 5) || (t.estado === 'abierto' ? 'sigue abierto' : '—'))}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Scrap</span><span class="pr-dato__valor">${t.scrap_kg == null ? '—' : esc(textoKg(Number(t.scrap_kg)))}</span></div>` +
-        `</div>` + (t.observaciones ? `<p><strong>Observaciones:</strong> ${esc(t.observaciones)}</p>` : '')
+      const cab = `<div class="pg-turno__cab">` +
+        `<div class="pg-turno__lote"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
+        `<div class="pg-turno__datos"><div class="pg-turno__maq"><strong>${esc(d.maquina?.nombre ?? 'Máquina')}</strong> · turno ${esc(t.turno)}</div>` +
+        `<div class="pr-texto-suave">${esc(horarioTurno(t))}</div>` +
+        `<div class="pg-turno__enc"><span class="pr-dato__rotulo">Encargado</span> <strong>${esc(nom(t.encargado_id))}</strong></div></div>` +
+        `<div class="pg-turno__estado">${htmlEstadoTurno(t.estado)}</div></div>`
       const masas = d.masas.length ? d.masas.map(m => htmlMasaHistorial(m, d)).join('') : '<li class="pr-lista__item">Sin masas.</li>'
+      const vivas = d.masas.filter(m => !m.anulada).length
       const tot = totalSublotes(d)
+      const anulados = d.producido.filter(p => p.anulado).length
       const producido = d.producido.length ? d.producido.map(p => htmlSubloteHistorial(p, d)).join('')
         : `<li class="pr-lista__item">${t.estado === 'cerrado' ? 'No produjo nada.' : 'Todavía no cargó nada producido.'}</li>`
       const pieProducido = d.producido.length
@@ -4652,24 +5543,99 @@
       const incompleto = detalleIncompleto(d)
         ? `<div class="pr-aviso pr-aviso--grave">Este turno tiene más de ${TOPE_FILAS} renglones y solo se leyeron los primeros: los totales pueden estar incompletos.</div>`
         : ''
+      const minParada = minutosParadasTurno(d.paradas)
+      const scrapPie = `<dl class="pg-turno__totales"><div><dt>Total parada</dt><dd>${esc(horasMinutosInd(minParada))}</dd></div>` +
+        `<div><dt>Scrap</dt><dd>${t.scrap_kg == null ? '—' : esc(textoKg(Number(t.scrap_kg)))}</dd></div></dl>` +
+        (t.observaciones ? `<p class="pg-turno__obs"><strong>Observaciones:</strong> “${esc(t.observaciones)}”</p>` : '')
+      const cantidad = `${d.producido.length} ${d.producido.length === 1 ? 'renglón' : 'renglones'}${anulados ? ` · ${anulados} ${anulados === 1 ? 'anulado' : 'anulados'}` : ''}`
       return forzado + cab +
-        `<h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}` +
-        `<h2 class="pr-subtitulo">Masas</h2><ul class="pr-lista">${masas}</ul>` +
-        `<h2 class="pr-subtitulo">Paradas</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t))}` +
+        `<div class="pg-turno__grilla">` +
+        `<section class="pg-caja"><h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}</section>` +
+        `<section class="pg-caja"><h2 class="pr-subtitulo">Masas <span class="pg-caja__ctx">${esc(vivas)}</span></h2><ul class="pr-lista">${masas}</ul></section>` +
+        `<section class="pg-caja"><h2 class="pr-subtitulo">Paradas y scrap</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t))}` +
         (accionesParadaHistorial(t).editar ? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada</button>' : '') +
-        `<h2 class="pr-subtitulo">Lo producido</h2><ul class="pr-lista">${producido}</ul>${pieProducido}` +
-        `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2>${incompleto}<ul class="pr-lista">${totales}</ul>` +
-        `<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}`
+        scrapPie + `</section></div>` +
+        `<section class="pg-caja pg-caja--ancha"><h2 class="pr-subtitulo">Lo producido <span class="pg-caja__ctx">${esc(cantidad)}</span></h2><ul class="pr-lista pg-producido">${producido}</ul>${pieProducido}</section>` +
+        `<section class="pg-caja pg-caja--ancha"><h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}</section>` +
+        `<section class="pg-caja pg-caja--ancha"><h2 class="pr-subtitulo">Consumido por insumo y lote</h2>${incompleto}<ul class="pr-lista">${totales}</ul></section>`
+    }
+
+    // Dibuja el detalle y conecta el campo de cajas del renglón que se está
+    // corrigiendo (los números se escriben con ponerNumero, nunca con value=).
+    function pintarDetalleHistorial() {
+      const cont = document.getElementById('pr-historial-detalle-cuerpo')
+      if (!estado.detalleHistorial) return
+      cont.innerHTML = htmlDetalleTurno(estado.detalleHistorial)
+      const campo = document.getElementById('pr-hist-corr-cajas')
+      if (estado.corrigeHist && estado.corrigeHist.modo === 'corregir' && campo && campo.dataset) {
+        enlazarCampoNumero(campo, { decimales: 0 })
+        ponerNumero(campo, estado.corrigeHist.cajas ?? null)
+      }
+    }
+
+    function abrirCorreccionSublote(itemId, modo) {
+      const d = estado.detalleHistorial
+      const p = d?.producido?.find(x => x.id === itemId)
+      if (!p || !puedeCorregirSublote(d.turno, p)) return false
+      estado.corrigeHist = { itemId, modo, cajas: modo === 'corregir' ? numeroInd(p.cajas) : null, motivo: '', error: null, enviando: false }
+      pintarDetalleHistorial()
+      document.getElementById(modo === 'corregir' ? 'pr-hist-corr-cajas' : 'pr-hist-corr-motivo')?.focus?.()
+      return true
+    }
+
+    function cerrarCorreccionSublote() {
+      estado.corrigeHist = null
+      pintarDetalleHistorial()
+    }
+
+    // Lo que falta, dicho ANTES de mandar y pegado al botón. El botón no se
+    // traba por lo que falta (si no, este error no se vería nunca).
+    function faltaEnCorreccion(e, p) {
+      if (String(e.motivo ?? '').trim().length < 3) return 'Escribí el motivo para guardar.'
+      if (e.modo === 'anular') return null
+      if (!Number.isInteger(e.cajas) || e.cajas <= 0) return 'Poné las cajas: un número entero mayor a cero. Para sacarlo, anulalo.'
+      if (e.cajas === numeroInd(p.cajas)) return 'Tiene esas mismas cajas: poné la cantidad corregida.'
+      return null
+    }
+
+    async function guardarCorreccionSublote() {
+      const e = estado.corrigeHist, d = estado.detalleHistorial
+      const p = d?.producido?.find(x => x.id === e?.itemId)
+      if (!e || !p || e.enviando) return false
+      const falta = faltaEnCorreccion(e, p)
+      if (falta) { e.error = falta; pintarDetalleHistorial(); return false }
+      e.enviando = true
+      e.error = null
+      pintarDetalleHistorial()
+      const motivo = String(e.motivo).trim()
+      let error = null
+      try {
+        const { error: err } = e.modo === 'anular'
+          ? await supabase.rpc('anular_produccion_item', { p_item_id: p.id, p_motivo: motivo })
+          : await supabase.rpc('corregir_produccion_item', { p_item_id: p.id, p_cajas: e.cajas, p_motivo: motivo })
+        if (err) throw err
+      } catch (err) {
+        console.error('corregir sublote:', err)
+        error = err?.message || 'No hubo respuesta del servidor. Revisá la conexión.'
+      }
+      if (estado.corrigeHist !== e) return false
+      e.enviando = false
+      if (error) { e.error = error; pintarDetalleHistorial(); return false }
+      mostrarExito(e.modo === 'anular' ? `Sublote ${p.sublote} anulado.` : `Sublote ${p.sublote} corregido.`)
+      estado.corrigeHist = null
+      await abrirDetalleHistorial(d.turno.id)
+      return true
     }
 
     async function abrirDetalleHistorial(turnoId) {
       const cont = document.getElementById('pr-historial-detalle-cuerpo')
       document.getElementById('pr-historial-listado').hidden = true
       document.getElementById('pr-historial-detalle').hidden = false
+      if (estado.detalleHistorial?.turno?.id !== turnoId) estado.corrigeHist = null
       cont.innerHTML = '<p class="pr-texto-suave">Cargando el turno…</p>'
       try {
         estado.detalleHistorial = await leerDetalleTurno(turnoId)
-        cont.innerHTML = htmlDetalleTurno(estado.detalleHistorial)
+        pintarDetalleHistorial()
       } catch (err) {
         estado.detalleHistorial = null
         console.error('detalle del turno:', err)
@@ -4754,15 +5720,13 @@
     }
 
     function conectarHistorial() {
-      document.getElementById('pr-btn-ir-historial').addEventListener('click', () => mostrarHistorial())
-      document.getElementById('pr-btn-ir-stock').addEventListener('click', mostrarStockTerminado)
-      document.getElementById('pr-historial-volver').addEventListener('click', volverDeOficina)
-      document.getElementById('pr-stock-volver').addEventListener('click', volverDeOficina)
+      document.getElementById('pr-historial-volver').addEventListener('click', abrirMenu)
+      document.getElementById('pr-stock-volver').addEventListener('click', abrirMenu)
       document.getElementById('pr-historial-detalle-volver').addEventListener('click', () => {
         document.getElementById('pr-historial-detalle').hidden = true
         document.getElementById('pr-historial-listado').hidden = false
       })
-      const cambio = (campo) => (ev) => { estado.historial[campo] = ev.target.value; cargarHistorial() }
+      const cambio = (campo) => (ev) => { estado.historial[campo] = ev.target.value; estado.historial.desdePendientes = false; pintarMenuActivo(); cargarHistorial() }
       document.getElementById('pr-historial-unidad').addEventListener('change', cambio('unidadId'))
       document.getElementById('pr-historial-desde').addEventListener('change', cambio('desde'))
       document.getElementById('pr-historial-hasta').addEventListener('change', cambio('hasta'))
@@ -4775,7 +5739,18 @@
       document.getElementById('pr-historial-detalle-cuerpo').addEventListener('click', ev => {
         if (ev.target.closest('#pr-historial-anotar-parada')) return abrirEditorDesdeHistorial('anotar')
         const e = ev.target.closest('[data-parada-editar]'); if (e) return abrirEditorDesdeHistorial('editar', e.dataset.paradaEditar)
-        const b = ev.target.closest('[data-parada-borrar]'); if (b) abrirEditorDesdeHistorial('borrar', b.dataset.paradaBorrar)
+        const b = ev.target.closest('[data-parada-borrar]'); if (b) return abrirEditorDesdeHistorial('borrar', b.dataset.paradaBorrar)
+        const sc = ev.target.closest('[data-sublote-corregir]'); if (sc) return abrirCorreccionSublote(sc.dataset.subloteCorregir, 'corregir')
+        const sa = ev.target.closest('[data-sublote-anular]'); if (sa) return abrirCorreccionSublote(sa.dataset.subloteAnular, 'anular')
+        if (ev.target.closest('#pr-hist-corr-cancelar')) return cerrarCorreccionSublote()
+        if (ev.target.closest('#pr-hist-corr-guardar')) return guardarCorreccionSublote()
+      })
+      // Lo que se escribe en la corrección va al ESTADO en cada tecla: un
+      // repintado (el error, "Guardando…") no lo pierde.
+      document.getElementById('pr-historial-detalle-cuerpo').addEventListener('input', ev => {
+        const e = estado.corrigeHist; if (!e) return
+        if (ev.target.id === 'pr-hist-corr-motivo') e.motivo = ev.target.value
+        if (ev.target.id === 'pr-hist-corr-cajas') e.cajas = leerCampoNumero(ev.target)
       })
       document.getElementById('pr-stock-unidad').addEventListener('change', ev => { estado.stockUnidad = ev.target.value; cargarStockTerminado() })
     }
@@ -4810,11 +5785,13 @@
 
     async function cargarPermisos(pFabrica = Promise.resolve(FABRICA_SIN_DATOS)) {
       const { data: emp, error } = await supabase
-        .from('empleados').select('id, rol_app')
+        .from('empleados').select('id, rol_app, nombre')
         .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
       if (error || !emp) throw error ?? new Error('sin empleado')
       estado.miEmpleadoId = emp.id
       estado.miRolApp = emp.rol_app
+      // Para la hoja de PINes: "generados … por Federico Silva".
+      estado.miNombre = emp.nombre ?? null
       const { data: tareas, error: e2 } = await supabase
         .from('empleado_tareas').select('tarea, alcance')
         .eq('empleado_id', emp.id).eq('modulo', 'produccion').eq('habilitado', true)

@@ -92,12 +92,14 @@ esperas.push((async () => {
   // ── Acceso ────────────────────────────────────────────────────────────
   const Sin = armar([['cargar', { unidades: ['u-cn'] }]])
   Sin.pintarAccesosOficina()
-  chk('sin configurar: no hay acceso a Configuración', Sin.__doc.getElementById('pr-btn-ir-config').hidden === true && Sin.__doc.getElementById('pr-menu-config').hidden === true)
+  // Desde el diseño de la gestión (26/09/2026) no hay botón "Configuración":
+  // cada sección es un renglón del menú, en los bloques Catálogo y Personas.
+  chk('sin configurar: no hay acceso a Configuración', Sin.__doc.getElementById('pr-menu-bloque-catalogo').hidden === true && Sin.__doc.getElementById('pr-menu-bloque-personas').hidden === true)
   await Sin.mostrarConfig()
   chk('… y mostrarConfig no abre nada', Sin.estado.config === null)
   const Con = armar()
   Con.pintarAccesosOficina()
-  chk('con configurar: hay acceso', Con.__doc.getElementById('pr-btn-ir-config').hidden === false && Con.__doc.getElementById('pr-menu-config').hidden === false)
+  chk('con configurar: hay acceso', Con.__doc.getElementById('pr-menu-bloque-catalogo').hidden === false && Con.__doc.getElementById('pr-menu-bloque-personas').hidden === false)
 
   // ── Máquinas ──────────────────────────────────────────────────────────
   const M = armar()
@@ -135,26 +137,29 @@ esperas.push((async () => {
   await M.accionMaquina({ maqGuardar: 'm1' })
   chk('renombrar: el nombre nuevo recortado', rpcs(M, 'guardar_maquina').at(-1).p_nombre === 'Horno A' && rpcs(M, 'guardar_maquina').at(-1).p_activa === true)
 
-  // ── Pestañas ──────────────────────────────────────────────────────────
+  // ── Las secciones (antes pestañas; desde el 26/09/2026, renglones del menú) ─
   const T = armar()
-  // Como función, para que el doble APLIQUE el .eq() y el contador tenga que
-  // pedir de verdad solo los pendientes.
-  T.__tablas.marcas_personalizadas = (filtros) => {
-    const todas = [{ id: 'k1', nombre: 'A', activa: true, estado_alta: 'pendiente_revision' }, { id: 'k2', nombre: 'B', activa: true, estado_alta: 'aprobada' }]
-    const eq = filtros.filter(f => f[0] === 'eq')
-    return { data: todas.filter(m => eq.every(([, col, val]) => m[col] === val)), error: null }
-  }
-  await T.mostrarConfig()
-  const ht = T.__doc.getElementById('pr-config-tabs').innerHTML
-  chk('las seis pestañas del diseño', ['Máquinas', 'Recetas', 'Ingredientes', 'Productos', 'Marcas / Conos', 'Personal'].every(x => ht.includes(x)))
-  chk('la de Marcas / Conos lleva el contador de pendientes', /Marcas \/ Conos <span class="pr-cfg-tab__pend">1<\/span>/.test(ht), ht)
-  chk('la pestaña abierta se marca', /pr-cfg-tab--activa[^>]*data-config-tab="maquinas"/.test(ht))
-  T.estado.config.pendientes = null
-  T.pintarPestanaConfig()
-  chk('sin poder contar, no se dibuja ningún contador (nunca un número inventado)', !/pr-cfg-tab__pend/.test(T.__doc.getElementById('pr-config-tabs').innerHTML))
-  T.estado.config.pendientes = 0
-  T.pintarPestanaConfig()
-  chk('con cero pendientes tampoco', !/pr-cfg-tab__pend/.test(T.__doc.getElementById('pr-config-tabs').innerHTML))
+  const menu = leer(ARCHIVO).slice(leer(ARCHIVO).indexOf('<nav class="pg-menu"'), leer(ARCHIVO).indexOf('</nav>'))
+  chk('las siete secciones del diseño, cada una un renglón del menú',
+    ['maquinas', 'recetas', 'ingredientes', 'productos', 'empaque', 'marcas', 'personal'].every(k => menu.includes(`data-ir-config="${k}"`)) &&
+    ['Máquinas', 'Recetas', 'Ingredientes', 'Productos', 'Empaque', 'Marcas / Conos', 'Personal y PINes'].every(x => menu.includes(x)))
+  chk('no queda ninguna fila de pestañas', !leer(ARCHIVO).includes('data-config-tab') && !leer(ARCHIVO).includes('id="pr-config-tabs"'))
+  await T.mostrarConfig('marcas')
+  chk('mostrarConfig abre la sección pedida, y el título dice cuál es', T.estado.config.tab === 'marcas' && T.__doc.getElementById('pr-config-titulo').textContent === 'Marcas / Conos')
+  await T.mostrarConfig('no-existe')
+  chk('una sección que no existe no se inventa', T.estado.config.tab === 'marcas')
+  // El número de conos por revisar va en el renglón del menú y sale de
+  // mis_pendientes() (la misma cifra del dashboard), nunca de un conteo propio.
+  const nConos = T.__doc.getElementById('pr-menu-n-conos')
+  T.estado.conosPendientes = 1
+  T.pintarBurbujaConos()
+  chk('Marcas / Conos lleva el número de pendientes', nConos.hidden === false && nConos.textContent === '1')
+  T.estado.conosPendientes = null
+  T.pintarBurbujaConos()
+  chk('sin poder contar, no se dibuja ningún número (nunca uno inventado)', nConos.hidden === true && nConos.textContent === '')
+  T.estado.conosPendientes = 0
+  T.pintarBurbujaConos()
+  chk('con cero pendientes tampoco', nConos.hidden === true)
 
   // ── Recetas ───────────────────────────────────────────────────────────
   const R = armar()
@@ -318,12 +323,12 @@ esperas.push((async () => {
   K.estado.config.tab = 'marcas'
   await K.cargarPestanaConfig()
   let hk = cuerpo(K)
-  chk('los pendientes de revisar van ARRIBA del catálogo', hk.indexOf('Pendientes de revisar · 1') >= 0 && hk.indexOf('Pendientes de revisar') < hk.indexOf('Catálogo'))
-  chk('cada pendiente dice quién lo cargó y cuándo', /Lo cargó Laura Méndez · 22\/09\/2026 16:40/.test(hk), hk.slice(hk.indexOf('Lo cargó') - 20, hk.indexOf('Lo cargó') + 80))
+  chk('los pendientes de revisar van ARRIBA de la lista de conos', hk.indexOf('Por revisar · 1</p>') >= 0 && hk.indexOf('Por revisar · 1</p>') < hk.indexOf('id="pr-cfg-marcas-lista"'))
+  chk('cada pendiente dice quién lo cargó y cuándo', /Lo cargó Laura Méndez en la tablet · 22\/09\/2026 16:40/.test(hk), hk.slice(hk.indexOf('Lo cargó') - 20, hk.indexOf('Lo cargó') + 80))
   chk('el nombre del pendiente se puede corregir antes de aceptar', /data-pend-nombre="mk3" value="CASERATO 2"/.test(hk))
   chk('con Aceptar y Rechazar', /data-pend-no="mk3">Rechazar/.test(hk) && /data-pend-si="mk3">Aceptar/.test(hk))
   chk('dice que se pueden usar igual mientras tanto', /Se pueden usar igual mientras tanto/.test(hk))
-  chk('el catálogo no lista ni los pendientes ni los rechazados', !/>CASERATO 2</.test(hk.slice(hk.indexOf('Catálogo'))) && !/NO VA/.test(hk))
+  chk('la lista de conos no lista ni los pendientes ni los rechazados', !/>CASERATO 2</.test(hk.slice(hk.indexOf('id="pr-cfg-marcas-lista"'))) && !/NO VA/.test(hk))
   chk('marcasPendientes y marcasDelCatalogo separan por estado_alta',
     K.marcasPendientes(K.estado.config.datos).length === 1 && K.marcasDelCatalogo(K.estado.config.datos).length === 2)
   conInputs(K, [input({ 'data-pend-nombre': 'mk3' }, { value: ' Caserato 2 ' })])
@@ -336,13 +341,16 @@ esperas.push((async () => {
   chk('rechazar: aprobar=false y sin tocar el nombre', JSON.stringify(rpcs(K, 'revisar_marca').at(-1)) === '{"p_marca_id":"mk3","p_aprobar":false,"p_nombre":null}')
   K.__setRpc(async () => ({ data: null, error: { message: 'No tenés permiso para revisar conos.' } }))
   await K.accionMarca({ pendSi: 'mk3' })
-  chk('el rechazo de la base va pegado al bloque de pendientes', K.estado.config.error.donde === 'pr-cfg-pendientes' && cuerpo(K).includes('No tenés permiso para revisar conos.'))
+  chk('el rechazo de la base va pegado a ESE pendiente, y dice qué no se pudo', K.estado.config.error.donde === 'pend-mk3' &&
+    cuerpo(K).includes('No se pudo aceptar: No tenés permiso para revisar conos.') &&
+    /No se pudo aceptar: No tenés permiso[\s\S]{0,400}data-pend-si="mk3"/.test(cuerpo(K)))
   K.__setRpc(async () => ({ data: 'x', error: null }))
   K.estado.config.busqueda = 'frí'
   K.pintarPestanaConfig()
   hk = cuerpo(K)
   chk('el buscador filtra el catálogo (sin acentos ni mayúsculas)', /FRIGOR/.test(hk) && !/GRIDO/.test(hk))
-  await K.accionMarca({ marcaActiva: 'mk1' })
+  // Apagar un cono es el interruptor "Activo", que se guarda al tocarlo.
+  await K.tocarCono('mk1', 'activa', false)
   chk('dar de baja una marca: activa=false con su nombre', JSON.stringify(rpcs(K, 'guardar_marca')[0]) === '{"p_id":"mk1","p_nombre":"FRIGOR","p_activa":false}')
   K.__doc.getElementById('pr-config-marca-nueva').value = 'Heladería Sol'
   await K.accionMarca({ marcaAgregar: '1' })
@@ -355,7 +363,9 @@ esperas.push((async () => {
   chk('los tres puestos por persona, con los que tiene marcados', /data-puesto="encargado" data-persona-puesto="e1" checked/.test(he) && /data-puesto="masero" data-persona-puesto="e1"[^>]*aria-label/.test(he) && !/data-puesto="masero" data-persona-puesto="e1" checked/.test(he))
   chk('un solo botón de guardar al pie', (he.match(/id="pr-cfg-personal-guardar"/g) || []).length === 1 && !/data-puestos-guardar/.test(he))
   chk('… que arranca sin contar filas', /id="pr-cfg-personal-guardar"[^>]*>Guardar los cambios</.test(he))
-  chk('el estado del PIN de cada persona', /pr-cfg-chip--ok">PIN propio/.test(he) && /pr-cfg-chip--gris">Sin PIN/.test(he) && /pr-cfg-chip--alerta">PIN pendiente de cambiar/.test(he))
+  // Diseño 3a: PIN propio en verde, pendiente de cambiar en gris y Sin PIN
+  // en bordó (es lo que hay que resolver). El texto va siempre.
+  chk('el estado del PIN de cada persona', /pr-cfg-chip--ok">PIN propio/.test(he) && /pr-cfg-chip--alerta">Sin PIN/.test(he) && /pr-cfg-chip--gris">PIN pendiente de cambiar/.test(he))
   chk('… y el PIN que vence se dice aparte', /pr-cfg-chip--gris">temporal/.test(he))
   chk('estadoDelPin sale de personal_produccion, sin inventar "bloqueado"',
     E.estadoDelPin({ tiene_pin: false }).texto === 'Sin PIN' && E.estadoDelPin({ tiene_pin: true, debe_cambiar_pin: true }).texto === 'PIN pendiente de cambiar' &&
@@ -368,7 +378,7 @@ esperas.push((async () => {
   E.tocarPuestoPersonal('e1', 'masero', true)
   he = cuerpo(E)
   chk('tocar una casilla no manda nada todavía', rpcs(E, 'guardar_puestos').length === 0)
-  chk('… la fila queda marcada (franja, fondo y la palabra)', /pr-cfg-fila--tocada[\s\S]{0,700}Cambiada/.test(he) && E.estado.config.cambios.get('e1').join(',') === 'encargado,masero')
+  chk('… la fila queda marcada (franja, fondo y la palabra)', /pr-cfg-fila--tocada[\s\S]{0,1600}Cambiada/.test(he) && E.estado.config.cambios.get('e1').join(',') === 'encargado,masero')
   chk('… y el botón dice cuántas filas se tocaron', /id="pr-cfg-personal-guardar"[^>]*>Guardar los cambios · 1 fila</.test(he))
   E.tocarPuestoPersonal('e1', 'masero', false)
   chk('destildar y volver al estado de la base deja de contar como cambio', E.estado.config.cambios.size === 0 && /Guardar los cambios<\/button>/.test(cuerpo(E)))
@@ -429,8 +439,8 @@ esperas.push((async () => {
     (G.__doc.getElementById('pr-cfg-hoja-tiras').innerHTML.match(/class="pr-tira"/g) || []).length === 2)
   chk('cada tira: nombre, PIN y para qué sirve', /Mariela Soto/.test(G.__doc.getElementById('pr-cfg-hoja-tiras').innerHTML) &&
     /pr-tira__pin">7390/.test(G.__doc.getElementById('pr-cfg-hoja-tiras').innerHTML) &&
-    /PIN de un solo uso: la primera vez vas a elegir uno tuyo/.test(G.__doc.getElementById('pr-cfg-hoja-tiras').innerHTML))
-  chk('… y dice que se ven una sola vez', /UNA sola vez/.test(G.__doc.getElementById('pr-cfg-hoja-aviso').textContent))
+    /lo cambiás la primera vez que entrás/.test(G.__doc.getElementById('pr-cfg-hoja-tiras').innerHTML))
+  chk('… y dice que se ven una sola vez', /Solo se ven ahora\. Imprimí la hoja antes de cerrar\./.test(G.__doc.getElementById('pr-cfg-hoja-aviso').textContent))
   // Los PINes no quedan en ningún storage, ni en el resto del DOM.
   const enStorage = [...G.__ls.values(), ...G.__ss.values()].join('|')
   chk('los PINes NO quedan en localStorage ni en sessionStorage', !/4821|7390/.test(enStorage), enStorage)

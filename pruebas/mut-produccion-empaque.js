@@ -95,7 +95,7 @@ correrMutacionesProduccion({
     { nombre: 'sin movimientos se dice otra cosa', de: "      if (!e.movimientos.length) return '<p class=\"pr-texto-suave\">No se descontó empaque en este turno.</p>'", a: '' },
     { nombre: 'el tope de 1000 no se avisa', de: '      const tope = e.movimientos.length >= TOPE_FILAS', a: '      const tope = false' },
     { nombre: 'el empaque del renglón de la planilla sin escapar', de: "<div class=\"pr-producido__detalle\">${esc(partes.join(' · '))}</div>", a: "<div class=\"pr-producido__detalle\">${partes.join(' · ')}</div>" },
-    { nombre: 'el empaque del sublote del historial sin escapar', de: '</span> ${esc(que)} · `', a: '</span> ${que} · `' },
+    { nombre: 'el empaque del sublote del historial sin escapar', de: '<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(que)}`', a: '<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${que}`' },
     // ── Parte 3: configuración ──────────────────────────────────────────
     { nombre: 'la pestaña Empaque no está', de: "['productos', 'Productos'], ['empaque', 'Empaque'],", a: "['productos', 'Productos']," },
     { nombre: 'los botones de Empaque no se despachan', de: "        else if (tab === 'empaque') accionEmpaque(ds)\n", a: '' },
@@ -127,8 +127,8 @@ correrMutacionesProduccion({
     { nombre: 'la caja nueva sin sugerencia', de: "        b.cajas.push({ insumo_id: id, embolsado_sugerido: 'grande' })", a: "        b.cajas.push({ insumo_id: id, embolsado_sugerido: null })" },
     { nombre: 'las marcas sin doble_bolsa en config', de: "creada_por, creada_en, doble_bolsa').order('nombre')", a: "creada_por, creada_en').order('nombre')" },
     { nombre: 'el tilde no refleja lo guardado', de: 'data-marca-doble="${esc(m.id)}"${m.doble_bolsa ? \' checked\' : \'\'}', a: 'data-marca-doble="${esc(m.id)}"' },
-    { nombre: 'el tilde manda al revés', de: "{ p_marca_id: marcaId, p_doble: !!doble }", a: "{ p_marca_id: marcaId, p_doble: !doble }" },
-    { nombre: 'el error del tilde no va pegado', de: "doble ? 'Ese cono va con doble bolsa.' : 'Ese cono ya no va con doble bolsa.', 'pr-cfg-marcas-lista')", a: "doble ? 'Ese cono va con doble bolsa.' : 'Ese cono ya no va con doble bolsa.')" },
+    { nombre: 'el tilde manda al revés', de: "await supabase.rpc('marcar_doble_bolsa', { p_marca_id: m.id, p_doble: !!valor })", a: "await supabase.rpc('marcar_doble_bolsa', { p_marca_id: m.id, p_doble: !valor })" },
+    { nombre: 'el error del tilde no va pegado', de: "        c.errorCono = { id: marcaId, texto: `${que}: ${error}` }", a: "        c.errorCono = null" },
     { nombre: 'no se explica para qué es la doble bolsa', de: 'es para los conos que van al norte, por la humedad', a: 'es para algunos conos' },
     { nombre: 'el id de la marca del tilde sin escapar', de: 'data-marca-doble="${esc(m.id)}"', a: 'data-marca-doble="${m.id}"' },
     // ── Parte 4: avisos de stock ────────────────────────────────────────
@@ -152,6 +152,6 @@ correrMutacionesProduccion({
     { nombre: 'con faltantes se dibujan el consumo y el aviso', de: '      if ((faltantesEmpaque(a, cat) ?? []).length) return h + htmlAvisoStockEmpaque(a, cat)\n', a: '' },
     { nombre: 'no dice que se puede cargar igual', de: "        '<br>Se puede cargar igual.</div>'", a: "        '</div>'" },
     { nombre: 'el aviso bloquea la carga', de: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }", a: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }\n      if ((faltantesEmpaque(a, estado.catalogo) ?? []).length) { err.textContent = 'Falta empaque.'; err.hidden = false; return }" },
-    { nombre: 'la sección del empaque no se dibuja', de: '        `<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}`', a: "        ''" },
+    { nombre: 'la sección del empaque no se dibuja', de: '<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}</section>`', a: '<h2 class="pr-subtitulo">Empaque consumido</h2></section>`' },
   ],
 })

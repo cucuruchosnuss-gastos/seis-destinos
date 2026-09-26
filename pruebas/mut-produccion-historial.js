@@ -77,8 +77,8 @@ correrMutaciones({
     { nombre: 'las paradas no traen hasta_fin_de_turno', de: "select('id, inicio, fin, motivo, hasta_fin_de_turno')", a: "select('id, inicio, fin, motivo')" },
     { nombre: 'la parada que no volvió no se marca', de: "${p.hasta_fin_de_turno ? ' · no volvió en todo el turno' : ''}", a: '' },
     { nombre: 'los sublotes no traen anulado', de: "unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))", a: "unidades, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))" },
-    { nombre: 'el sublote anulado no se distingue', de: "<li class=\"pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}", a: '<li class="pr-lista__item' },
-    { nombre: 'el sublote anulado no dice que no suma', de: "        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') +\n", a: '' },
+    { nombre: 'el sublote anulado no se distingue', de: "<li class=\"pr-lista__item pg-sub${p.anulado ? ' pr-of-anulado' : ''}", a: '<li class="pr-lista__item pg-sub' },
+    { nombre: 'el sublote anulado no dice que no suma', de: "(p.anulado ? ' <strong>· anulado, no suma</strong>' : '') + `</span>${botonesSublote}</div>`", a: "`</span>${botonesSublote}</div>`" },
     { nombre: 'el total del turno suma los anulados', de: '        if (p.anulado) continue\n', a: '' },
     { nombre: 'el total del turno no se muestra', de: "        ? `<p class=\"pr-of-grupo__total\">Total del turno: ${esc(textoEntero(tot.cajas))} cajas · ${esc(textoEntero(tot.unidades))} unidades</p>`", a: "        ? ''" },
     { nombre: 'las correcciones no se leen', de: '      const correcciones = itemIds.length ? await leer(supabase.from(\'produccion_correcciones\')', a: '      const correcciones = false ? await leer(supabase.from(\'produccion_correcciones\')' },
@@ -98,8 +98,8 @@ correrMutaciones({
     { nombre: 'el detalle avisa del tope aunque no haya llegado', de: '      const incompleto = detalleIncompleto(d)', a: '      const incompleto = true' },
     { nombre: 'un cierre forzado no se dice', de: '      const forzado = t.forzado_motivo\n', a: '      const forzado = false\n' },
     { nombre: 'un cierre forzado no dice que el stock no entró', de: "`${t.estado === 'pendiente_completar' ? ' Lo que produjo todavía no está en el stock.' : ''}</div>`", a: '`</div>`' },
-    { nombre: 'el detalle no muestra el estado del turno', de: '<span class="pr-dato__rotulo">Estado</span><span class="pr-dato__valor">${htmlEstadoTurno(t.estado)}</span>', a: '<span class="pr-dato__rotulo">Estado</span><span class="pr-dato__valor"></span>' },
-    { nombre: 'el detalle no muestra los operarios', de: '        `<h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}` +', a: '        `` +' },
+    { nombre: 'el detalle no muestra el estado del turno', de: '`<div class="pg-turno__estado">${htmlEstadoTurno(t.estado)}</div></div>`', a: '`<div class="pg-turno__estado"></div></div>`' },
+    { nombre: 'el detalle no muestra los operarios', de: '`<section class="pg-caja"><h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}</section>`', a: '`<section class="pg-caja"><h2 class="pr-subtitulo">Operarios</h2></section>`' },
 
     // ── El stock terminado ──────────────────────────────────────────────
     { nombre: 'sin marca no dice Común', de: "        const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'", a: "        const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : ''" },

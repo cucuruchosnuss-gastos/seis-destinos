@@ -36,6 +36,18 @@ const RENOMBRADOS = [...fuenteChequeo.matchAll(/\['(control:[^']+)', '(control:[
 // Commits de la gestión ya cerrados: lo que tenían tiene que seguir estando.
 const BASES_GESTION = ['f7554f7'] // Planta y gestión, parte 1
 
+// Controles de la gestión RETIRADOS a propósito: [clave, motivo]. Uno que
+// sigue estando en el archivo pone la prueba en rojo (la declaración sobra),
+// así la lista no se llena de declaraciones muertas que tapen la próxima.
+const RETIRADOS = [
+  ['control:button#pr-btn-ir-config[type=button]', 'Diseño "Producción · Gestión" (26/09/2026): no hay botón "Configuración". Cada sección es un renglón del menú (data-ir-config), y el número de conos va al lado de "Marcas / Conos" (#pr-menu-n-conos)'],
+  ['control:button#pr-menu-config[data-menu][type=button]', 'Diseño "Producción · Gestión" (26/09/2026): el "Menú" viejo con "Configuración" se reemplazó por el menú de secciones; cada una es su renglón (data-ir-config)'],
+  ['control:button#pr-btn-ir-historial[type=button]', 'Diseño "Producción · Gestión" (26/09/2026): la grilla "Ir a" se fue; el historial es el renglón #pr-menu-historial del menú'],
+  ['control:button#pr-btn-ir-stock[type=button]', 'Diseño "Producción · Gestión" (26/09/2026): la grilla "Ir a" se fue; el stock terminado es el renglón #pr-menu-stock del menú'],
+  ['control:button[data-config-tab][type=button]', 'Diseño "Producción · Gestión" (26/09/2026): no hay fila de pestañas en Configuración; cada sección es un renglón del menú (data-ir-config) y la pantalla dice cuál es en su título'],
+  ['control:button[data-marca-activa][type=button]', 'Diseño "Producción · Gestión" (26/09/2026): el botón Activar/Desactivar de cada cono pasó a ser el interruptor "Activo" (input[data-marca-activo], role=switch), que se guarda al tocarlo'],
+]
+
 let ok = 0
 const fallas = []
 function chk(nombre, cond, detalle) {
@@ -50,6 +62,8 @@ try {
   chk('se leyeron los baselines de controles-produccion.js (si da cero, no se está leyendo)', BASES.length > 10, BASES.length)
   chk('hay controles movidos a la gestión (si da cero, el mapa no se está leyendo)', Object.keys(MOVIDOS).length > 50, Object.keys(MOVIDOS).length)
   const renombrada = new Map(RENOMBRADOS)
+  const retirada = new Map(RETIRADOS.map(([k, m]) => { console.log(`RETIRADO: ${k} (${m})`); return [k, m] }))
+  for (const [k] of RETIRADOS) chk(`el retirado ${k} ya no está en la gestión`, veces(A, k) === 0, 'sigue estando: sacá la declaración de RETIRADOS')
 
   // Cuántas veces estaba cada clave movida en el ÚLTIMO baseline que la tenía
   // (el orden de BASES es cronológico).
@@ -67,6 +81,7 @@ try {
     console.log(`MOVIDO: ${vieja} → ${m.nueva} (${m.motivo})`)
     const n = maximo.get(vieja) || 0
     chk(`la clave movida ${vieja} existía en algún baseline (si no, la entrada del mapa está mal)`, n > 0)
+    if (retirada.has(m.nueva)) continue
     const hay = veces(A, m.nueva)
     chk(`${vieja} → está en la gestión como ${m.nueva}`, hay > 0 && hay >= n, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
   }
@@ -74,7 +89,7 @@ try {
   for (const base of BASES_GESTION) {
     const html = execFileSync('git', ['show', `${base}:modulos/produccion-gestion.html`], { cwd: RAIZ, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
     const B = inventario(html)
-    for (const k of [...B.cuenta.keys()].filter(k => k.startsWith('control:'))) {
+    for (const k of [...B.cuenta.keys()].filter(k => k.startsWith('control:') && !retirada.has(k))) {
       chk(`${base}: ${k} sigue estando en la gestión`, veces(A, k) > 0, 'FALTA')
     }
   }

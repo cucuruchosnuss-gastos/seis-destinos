@@ -457,7 +457,7 @@ esperas.push((async () => {
     c && JSON.stringify(c[1]).includes('["in","produccion_item_id",["it-1","it-2","it-3","it-4","it-5"]]'), JSON.stringify(c?.[1]))
   chk('… con insumo y cantidad', /\binsumo_id\b/.test(select(S, 'stock_movimientos')) && /\bcantidad\b/.test(select(S, 'stock_movimientos')))
   const h = S.htmlDetalleTurno(d)
-  chk('el sublote dice su caja y embolsado en el historial', /Cucuruchón Mini · con cono · GRIDO · caja ×600 · Caja N°1 Nuss · bolsa grande · 10 cajas = 6\.000 unidades/.test(h), (h.match(/7023-1.{0,200}/) || [''])[0])
+  chk('el sublote dice su caja y embolsado en el historial', /Cucuruchón Mini · con cono · GRIDO · caja ×600 · Caja N°1 Nuss · bolsa grande<\/span><span class="pg-sub__cajas">10 cajas = 6\.000 unidades/.test(h), (h.match(/7023-1.{0,200}/) || [''])[0])
   const emp = h.slice(h.indexOf('Empaque consumido'))
   chk('el empaque consumido del turno tiene su sección', h.includes('<h2 class="pr-subtitulo">Empaque consumido</h2>'))
   chk('… neto: la devolución de 6 separadores se resta', /Separador N°1: <strong>24<\/strong>/.test(emp), emp)
@@ -679,7 +679,7 @@ esperas.push((async () => {
   await S.cargarPestanaConfig()
   chk('las marcas se leen con doble_bolsa', S.__llamadas.consultas.some(([t, f]) => t === 'marcas_personalizadas' && f.some(x => x[0] === 'select' && /\bdoble_bolsa\b/.test(x[1]))))
   const h = cuerpoCfg(S)
-  chk('cada cono tiene su tilde "Doble bolsa"', /data-marca-doble="mk-grido">/.test(h) && /data-marca-doble="mk-norte" checked>/.test(h), h.slice(0, 800))
+  chk('cada cono tiene su tilde "Doble bolsa"', /data-marca-doble="mk-grido"(?![^>]*checked)[^>]*>/.test(h) && /data-marca-doble="mk-norte" checked[^>]*>/.test(h), h.slice(0, 800))
   chk('… con la explicación del norte y la humedad', /van al norte, por la humedad/.test(h))
   await S.cambiarDobleBolsa('mk-grido', true)
   const ll = S.__llamadas.rpc.filter(([n]) => n === 'marcar_doble_bolsa')
@@ -687,9 +687,14 @@ esperas.push((async () => {
   await S.cambiarDobleBolsa('mk-norte', false)
   chk('destildarlo manda false', S.__llamadas.rpc.filter(([n]) => n === 'marcar_doble_bolsa')[1]?.[1].p_doble === false)
   S.__setRpc(async () => ({ data: null, error: { message: 'No tenés permiso.' } }))
-  await S.cambiarDobleBolsa('mk-grido', true)
-  chk('el error de la base, tal cual, pegado a la lista', /pr-cfg-marcas-lista"[^>]*>[^<]*<\/p><div class="pr-cfg-error" role="alert">No tenés permiso\./.test(cuerpoCfg(S)))
-  chk('… y el tilde vuelve a lo guardado', /data-marca-doble="mk-grido">/.test(cuerpoCfg(S)))
+  // Desde el diseño de la gestión (26/09/2026) el tilde se guarda al tocarlo
+  // y el error va PEGADO a la fila de ESE cono, no arriba de la lista.
+  // mk-grido quedó con doble bolsa: se intenta sacársela y la base lo rechaza.
+  await S.cambiarDobleBolsa('mk-grido', false)
+  chk('se intentó sacarle la doble bolsa', S.__llamadas.rpc.filter(([n]) => n === 'marcar_doble_bolsa').at(-1)?.[1].p_doble === false)
+  chk('el error de la base, tal cual, pegado a la fila de ese cono',
+    /data-marca-doble="mk-grido"[\s\S]{0,700}class="pr-cfg-error pg-cono__error" role="alert">No se pudo cambiar la doble bolsa: No tenés permiso\./.test(cuerpoCfg(S)))
+  chk('… y el tilde vuelve a lo guardado', /data-marca-doble="mk-grido" checked/.test(cuerpoCfg(S)))
 })())
 
 // ── Parte 4: avisos de stock del empaque, que NO bloquean ────────────────

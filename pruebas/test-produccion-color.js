@@ -126,10 +126,14 @@ function regla(selector) {
   const ARCHIVO_G = process.env.ARCHIVO_GESTION || GESTION
   const FUENTE_G = leer(ARCHIVO_G)
   chk('la planta no tiene cabecera de oficina', !/<header class="pr-header"/.test(FUENTE))
-  const header = (FUENTE_G.match(/<header class="pr-header"[\s\S]*?<\/header>/) || [''])[0]
+  // La cabecera lleva además la clase del diseño de la gestión (pg-cab).
+  const header = (FUENTE_G.match(/<header class="pr-header[ "][\s\S]*?<\/header>/) || [''])[0]
   const veces = (header.match(/Producción/g) ?? []).length
   chk('la cabecera de la gestión dice "Producción" UNA vez', veces === 1, veces)
-  chk('el título de la pantalla de inicio no repite "Producción"', /<section id="pr-inicio">\s*<div class="pr-gestion-cab">\s*<h1 class="pr-titulo">¿Qué querés ver\?<\/h1>/.test(FUENTE_G))
+  // Desde el diseño de la gestión (26/09/2026) la pantalla de inicio no tiene
+  // título propio: arranca con el día y los indicadores.
+  const inicio = (FUENTE_G.match(/<section id="pr-inicio">[\s\S]*?<\/section>/) || [''])[0]
+  chk('el título de la pantalla de inicio no repite "Producción"', inicio !== '' && !/Producción/.test(inicio) && /id="pr-indicadores"/.test(inicio))
   chk('ya no hay sección que repita el modo', !/pr-header-seccion/.test(FUENTE) && !/pr-header-seccion/.test(FUENTE_G))
 
   const S = construirProduccion(ARCHIVO_G)

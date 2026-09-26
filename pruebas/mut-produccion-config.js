@@ -18,21 +18,22 @@ correrMutaciones({
     { expr: 'esc(fechaCorta(t.hasta))', motivo: 'una fecha dd/mm/aaaa formateada por Intl, o vacía' },
     { expr: 'esc(horaArgentina(t.hasta))', motivo: 'una hora HH:MM formateada por Intl, o vacía' },
     { expr: 'esc(pend.length)', motivo: 'un número: la cantidad de pendientes' },
-    { expr: 'esc(marcasDelCatalogo(d).length)', motivo: 'un número: la cantidad de conos del catálogo' },
     { expr: 'esc(version)', motivo: 'un número: la versión que va a crear guardar_receta_original' },
     { expr: 'esc(textoBotonPersonal(n))', motivo: 'texto constante del código con un número adentro' },
     { expr: 'esc(pin.texto)', motivo: 'texto constante del código: el que devuelve estadoDelPin() ("Sin PIN", "PIN propio", "PIN pendiente de cambiar")' },
   ],
   manuales: [
     // ── Acceso ─────────────────────────────────────────────────────────
-    { nombre: 'Configuración visible sin la tarea', de: "      document.getElementById('pr-btn-ir-config').hidden = !tieneTarea('configurar')", a: "      document.getElementById('pr-btn-ir-config').hidden = false" },
+    { nombre: 'Catálogo visible sin la tarea', de: "      document.getElementById('pr-menu-bloque-catalogo').hidden = !conf", a: "      document.getElementById('pr-menu-bloque-catalogo').hidden = false" },
+    { nombre: 'Personas visible sin la tarea', de: "      document.getElementById('pr-menu-bloque-personas').hidden = !conf", a: "      document.getElementById('pr-menu-bloque-personas').hidden = false" },
     { nombre: 'mostrarConfig sin unidades igual abre', de: '      const unidades = unidadesDeConfig()\n      if (!unidades.length) return\n      const actual', a: '      const unidades = unidadesDeConfig()\n      const actual' },
     { nombre: 'las unidades de config salen de cargar', de: "      return unidadesCon('configurar')", a: "      return unidadesCon('cargar')" },
 
-    // ── Pestañas y el contador de conos por revisar ────────────────────
-    { nombre: 'el contador cuenta TODAS las marcas, no las pendientes', de: "      const { data, error } = await supabase.from('marcas_personalizadas').select('id').eq('estado_alta', 'pendiente_revision')", a: "      const { data, error } = await supabase.from('marcas_personalizadas').select('id')" },
-    { nombre: 'un contador inventado cuando no se pudo contar', de: "        const chapa = claveTab === 'marcas' && pendientes > 0 ?", a: "        const chapa = claveTab === 'marcas' && pendientes >= 0 ?" },
-    { nombre: 'la pestaña abierta no se marca', de: `class="pr-cfg-tab\${claveTab === tab ? ' pr-cfg-tab--activa' : ''}"`, a: 'class="pr-cfg-tab"' },
+    // ── Las secciones (renglones del menú) y el número de conos ────────
+    { nombre: 'mostrarConfig no abre la sección pedida', de: '      const tab = PESTANAS_CONFIG.some(([k]) => k === tabPedida) ? tabPedida :', a: '      const tab = false ? tabPedida :' },
+    { nombre: 'mostrarConfig acepta una sección que no existe', de: '      const tab = PESTANAS_CONFIG.some(([k]) => k === tabPedida) ? tabPedida :', a: '      const tab = tabPedida ? tabPedida :' },
+    { nombre: 'el título no dice la sección', de: "      document.getElementById('pr-config-titulo').textContent = PESTANAS_CONFIG.find(([k]) => k === tab)?.[1] ?? 'Configuración'", a: "      document.getElementById('pr-config-titulo').textContent = 'Configuración'" },
+    { nombre: 'un número de conos inventado cuando no se pudo contar', de: "      const n = tieneTarea('configurar') ? estado.conosPendientes : null", a: "      const n = tieneTarea('configurar') ? (estado.conosPendientes ?? 0) + 1 : null" },
 
     // ── El error PEGADO al botón ───────────────────────────────────────
     { nombre: 'el error no se dibuja pegado a ningún botón', de: "      return c?.error && c.error.donde === donde ? `<div class=\"pr-cfg-error\" role=\"alert\">${esc(c.error.texto)}</div>` : ''", a: "      return ''" },
@@ -87,15 +88,16 @@ correrMutaciones({
     { nombre: 'la línea de chocolate se dibuja siempre', de: "        (chocolate.length ? corte + chocolate.map(bloque).join('') : '')", a: "        corte + chocolate.map(bloque).join('')" },
 
     // ── Marcas / Conos ─────────────────────────────────────────────────
-    { nombre: 'dar de baja no invierte', de: '{ p_id: m.id, p_nombre: m.nombre, p_activa: !m.activa }', a: '{ p_id: m.id, p_nombre: m.nombre, p_activa: m.activa }' },
-    { nombre: 'el buscador de marcas no filtra', de: '      const lista = marcasFiltradas(marcasDelCatalogo(d), c.busqueda)', a: '      const lista = marcasDelCatalogo(d)' },
+    { nombre: 'dar de baja no manda lo tocado', de: "await supabase.rpc('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !!valor })", a: "await supabase.rpc('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: true })" },
+    { nombre: 'el buscador de marcas no filtra', de: "      if (!c.listaConos) c.listaConos = marcasFiltradas(conosDelFiltro(c.datos, c.filtroConos ?? 'activos'), c.busqueda).map(m => m.id)", a: "      if (!c.listaConos) c.listaConos = conosDelFiltro(c.datos, c.filtroConos ?? 'activos').map(m => m.id)" },
     { nombre: 'no se separan los pendientes de revisar', de: "      return (d?.marcas ?? []).filter(m => m.estado_alta === 'pendiente_revision')", a: '      return []' },
     { nombre: 'el catálogo lista también los pendientes y los rechazados', de: "      return (d?.marcas ?? []).filter(m => m.estado_alta !== 'pendiente_revision' && m.estado_alta !== 'rechazada')", a: '      return (d?.marcas ?? [])' },
     { nombre: 'aceptar no manda el nombre corregido', de: "        const nombre = aprobar ? valorDe('data-pend-nombre', id) : null", a: '        const nombre = null' },
     { nombre: 'rechazar aprueba igual', de: '        const aprobar = ds.pendSi !== undefined', a: '        const aprobar = true' },
     { nombre: 'un nombre vacío pisa el que tenía', de: "      return { p_marca_id: id, p_aprobar: aprobar, p_nombre: n === '' ? null : n }", a: '      return { p_marca_id: id, p_aprobar: aprobar, p_nombre: n }' },
-    { nombre: 'el error de revisar un cono no se pega a los pendientes', de: "          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', 'pr-cfg-pendientes')", a: "          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', DONDE)" },
-    { nombre: 'no se dice quién cargó el cono', de: '      const pie = [quien ? `Lo cargó ${quien}` : null, cuando || null].filter(Boolean).join(\' · \')', a: "      const pie = ''" },
+    { nombre: 'el error de revisar un cono no se pega a ese pendiente', de: "          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', `pend-${id}`)", a: "          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', DONDE)" },
+    { nombre: 'el error de revisar no dice qué no se pudo', de: "          estado.config.error.texto = `${aprobar ? 'No se pudo aceptar' : 'No se pudo rechazar'}: ${estado.config.error.texto}`", a: '' },
+    { nombre: 'no se dice quién cargó el cono', de: "      const pie = [quien ? `Lo cargó ${quien} en la tablet` : null, cuando || null].filter(Boolean).join(' · ')", a: "      const pie = ''" },
 
     // ── Personal: el guardado de a muchos ──────────────────────────────
     { nombre: 'se mandan TODAS las filas, no solo las tocadas', de: '        for (const id of ids) {', a: '        for (const id of c.datos.personal.map(x => x.id)) {' },
@@ -121,18 +123,19 @@ correrMutaciones({
     { nombre: 'el aviso de salida no se dibuja', de: '      cuerpo.innerHTML = c.salida ? htmlSalirSinGuardar(c) : RENDERS_CONFIG[c.tab](c)', a: '      cuerpo.innerHTML = RENDERS_CONFIG[c.tab](c)' },
 
     // ── El estado del PIN ──────────────────────────────────────────────
-    { nombre: 'sin PIN igual dice que tiene uno propio', de: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--gris' }\n", a: '' },
-    { nombre: 'no se distingue el PIN que hay que cambiar', de: "      if (p.debe_cambiar_pin) return { texto: 'PIN pendiente de cambiar', clase: 'pr-cfg-chip--alerta' }\n", a: '' },
+    { nombre: 'sin PIN igual dice que tiene uno propio', de: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--alerta' }\n", a: '' },
+    { nombre: 'sin PIN no va en bordó', de: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--alerta' }", a: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--gris' }" },
+    { nombre: 'no se distingue el PIN que hay que cambiar', de: "      if (p.debe_cambiar_pin) return { texto: 'PIN pendiente de cambiar', clase: 'pr-cfg-chip--gris' }\n", a: '' },
     { nombre: 'no se dice cuál es un PIN temporal', de: "      const temp = p.pin_temporal ? ` <span class=\"pr-cfg-chip pr-cfg-chip--gris\">temporal</span>` : ''", a: "      const temp = ''" },
     { nombre: 'el botón dice siempre lo mismo tenga o no PIN', de: `>\${p.tiene_pin ? 'Resetear PIN' : 'Asignar PIN'}</button>`, a: '>Resetear PIN</button>' },
 
     // ── La hoja de PINes ───────────────────────────────────────────────
     { nombre: 'se abre una hoja vacía cuando no había nadie sin PIN', de: "      if (!lista.length) { errorConfig('Ya todos tienen PIN: no hizo falta generar ninguno.', DONDE); return }", a: '' },
     { nombre: 'los PINes quedan en el DOM al cerrar la hoja', de: "      document.getElementById('pr-cfg-hoja-tiras').innerHTML = ''", a: '' },
-    { nombre: 'los PINes quedan en la memoria al cerrar la hoja', de: '      if (estado.config) estado.config.hoja = null', a: '' },
+    { nombre: 'los PINes quedan en la memoria al cerrar la hoja', de: '      if (estado.config) { estado.config.hoja = null; estado.config.hojaConfirma = false }', a: '      if (estado.config) { estado.config.hojaConfirma = false }' },
     { nombre: 'la hoja no se cierra', de: "      document.getElementById('pr-cfg-hoja').hidden = true\n    }\n\n    async function generarPines()", a: "      document.getElementById('pr-cfg-hoja').hidden = false\n    }\n\n    async function generarPines()" },
     { nombre: 'los PINes se guardan en la tablet', de: '      estado.config.hoja = lista\n', a: "      estado.config.hoja = lista\n      guardarPreferencia('produccion.pines', JSON.stringify(lista))\n" },
-    { nombre: 'la tira no dice que el PIN es de un solo uso', de: '`<div class="pr-tira__nota">PIN de un solo uso: la primera vez vas a elegir uno tuyo.</div>', a: '`<div class="pr-tira__nota"></div>' },
+    { nombre: 'la tira no dice que el PIN se cambia la primera vez', de: "      const nota = [t.roles, t.nota ?? 'lo cambiás la primera vez que entrás'].filter(Boolean).join(' · ')", a: '      const nota = t.roles' },
     { nombre: 'generar PINes en otra unidad', de: "      const r = await guardarEnConfig('generar_pines_iniciales', { p_unidad_negocio_id: c.unidadId }, null, DONDE)", a: "      const r = await guardarEnConfig('generar_pines_iniciales', { p_unidad_negocio_id: estado.unidadId }, null, DONDE)" },
 
     // ── Asignar el PIN ─────────────────────────────────────────────────

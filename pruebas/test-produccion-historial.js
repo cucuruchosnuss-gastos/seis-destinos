@@ -90,9 +90,10 @@ esperas.push((async () => {
   const Nada = armar([['cargar', { unidades: ['u-cn'] }]])
   chk('solo con cargar no hay historial', Nada.unidadesDeHistorial().length === 0)
   Nada.pintarAccesosOficina()
-  chk('… ni botones de historial y stock', Nada.__doc.getElementById('pr-btn-ir-historial').hidden === true && Nada.__doc.getElementById('pr-btn-ir-stock').hidden === true)
+  chk('… ni renglones de historial y stock en el menú', Nada.__doc.getElementById('pr-menu-historial').hidden === true && Nada.__doc.getElementById('pr-menu-stock').hidden === true &&
+    Nada.__doc.getElementById('pr-menu-bloque-control').hidden === true)
   U.pintarAccesosOficina()
-  chk('con ver: los botones aparecen', U.__doc.getElementById('pr-btn-ir-historial').hidden === false && U.__doc.getElementById('pr-menu-stock').hidden === false)
+  chk('con ver: los renglones aparecen', U.__doc.getElementById('pr-menu-historial').hidden === false && U.__doc.getElementById('pr-menu-stock').hidden === false)
   chk('sumarDias cruza de mes', U.sumarDias('2026-10-02', -7) === '2026-09-25')
 
   // ── Un dato ausente NO se muestra como un número ───────────────────────
@@ -177,7 +178,10 @@ esperas.push((async () => {
 
   await D.abrirDetalleHistorial('t1')
   const hd = D.__doc.getElementById('pr-historial-detalle-cuerpo').innerHTML
-  chk('detalle: lote, encargado y horario', /class="pr-lote">7023</.test(hd) && /Federico Silva/.test(hd) && /06:02 a 16:10/.test(hd))
+  chk('detalle: lote, encargado y horario', /class="pr-lote">7023</.test(hd) && /Federico Silva/.test(hd) && /06:02 a 16:00 · fuego apagado 16:10/.test(hd), hd.slice(0, 900))
+  // Diseño 2a: arriba el lote grande, la máquina y el turno, el horario con el
+  // día (abrió → cerró) y a qué hora se apagó el fuego, y el estado.
+  chk('… el día del turno en el horario', /Martes 22\/09 · 06:02 a 16:00/.test(hd))
   chk('… el estado del turno, con su chip', /pr-of-chip--cerrado">Cerrado/.test(hd))
   chk('… scrap y observaciones', /3,5 kg/.test(hd) && /Se cortó la luz/.test(hd))
   chk('… los operarios con sus horas', /Ramón Díaz<\/span><span class="pr-renglon__dato">desde 06:02 · sigue/.test(hd), hd.slice(hd.indexOf('Ramón') - 60, hd.indexOf('Ramón') + 200))
@@ -198,7 +202,7 @@ esperas.push((async () => {
   chk('… las paradas con su duración', /09:00–09:45<\/strong> · Cambio de molde[\s\S]*45 min/.test(hd), hd.slice(hd.indexOf('Cambio de molde') - 200, hd.indexOf('Cambio de molde') + 80))
   chk('… y la que no volvió, marcada', /pr-renglon--novolvio[\s\S]*Se rompió el pulpo[\s\S]*4 h 00 min · no volvió en todo el turno/.test(hd),
     hd.slice(hd.indexOf('pulpo') - 220, hd.indexOf('pulpo') + 180))
-  chk('… los sublotes producidos con cajas y unidades', /7023-1<\/span> Cucuruchón Mini · caja x600 · 12 cajas = 7\.200 unidades/.test(hd), (hd.match(/7023-1.{0,160}/) || [''])[0])
+  chk('… los sublotes producidos con cajas y unidades', /7023-1<\/span> Cucuruchón Mini · caja x600<\/span><span class="pg-sub__cajas">12 cajas = 7\.200 unidades<\/span>/.test(hd), (hd.match(/7023-1.{0,160}/) || [''])[0])
   chk('… el anulado se sigue viendo, tachado y diciendo que no suma', /pr-of-anulado[\s\S]*7023-2[\s\S]*anulado, no suma/.test(hd))
   chk('… con sus correcciones, con motivo, quién y cuándo', /Cajas 15 → 12 · Se contaron mal · Ana Admin · 22\/09\/2026 11:00/.test(hd) &&
     /Anulado · Se cargó dos veces · Ana Admin/.test(hd), hd.slice(hd.indexOf('Se contaron mal') - 200, hd.indexOf('Se contaron mal') + 120))

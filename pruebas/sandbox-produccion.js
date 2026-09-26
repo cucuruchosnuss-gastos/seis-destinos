@@ -166,7 +166,7 @@ const EN_AMBOS = [
   'sumarDias', 'fechaDelDia', 'mapaDeUnidades', 'personalSinPruebas',
 ]
 const SOLO_GESTION = [
-  'cerrarMenu', 'alternarMenu', 'accionDelMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',
+  'cerrarMenu', 'alternarMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',
   'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno', 'leerEmpaqueConfig', 'faltaEmpaque',
   'nombreInsumoConfig', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque', 'sincronizarCantidadesEmpaque',
   'insumoPorTexto', 'parametrosGuardarEmpaque', 'valorEmpaque', 'accionEmpaque', 'cambiarSelectEmpaque',
@@ -199,15 +199,31 @@ const SOLO_GESTION = [
 const NUEVAS_GESTION = [
   // Parte 2 (25/09/2026): la unidad de la gestión y los indicadores
   'unidadesDeGestion', 'unidadGestionInicial', 'pintarSelectorGestion', 'elegirUnidadGestion',
-  'numeroInd', 'enteroInd', 'diferenciaInd', 'horasMinutosInd', 'porcentajeScrapInd', 'htmlDatoInd',
+  'numeroInd', 'enteroInd', 'diferenciaInd', 'horasMinutosInd', 'porcentajeScrapInd',
   'renderAhora', 'renderHoy', 'renderSemana', 'renderRendimiento', 'renderPendientes',
   'htmlTarjetaIndicador', 'htmlIndicadores', 'cargarIndicadores', 'irDesdeIndicador',
+  // El diseño "Producción · Gestión" (26/09/2026): el menú, los indicadores
+  // nuevos, Personal y PINes, la hoja, los conos y el historial de un turno
+  'abrirMenu', 'seccionActual', 'destinoDeItem', 'pintarMenuActivo', 'irA', 'navegar',
+  'htmlSinDatosInd', 'diaSemanaInd', 'textoDiaInd', 'diaCortoInd', 'fechaInd', 'tieneParadaInd', 'contextoAhora',
+  'cajasDelDiaInd', 'sumaInd', 'htmlDiferenciaInd', 'contextoHoy', 'contextoSemana', 'rindePoco', 'gruposRendimiento',
+  'renderScrap', 'htmlFallaInd', 'pintarDiaIndicadores', 'cambiarDiaIndicadores', 'htmlNumeroMenu', 'pintarNumerosMenu',
+  'pintarTituloConfig', 'tocarCono', 'conosDelFiltro', 'listaConosVisible', 'htmlFilaCono', 'elegirFiltroConos',
+  'sinPinEnUnidad', 'rolesDe', 'deQuienHoja', 'pedirCerrarHoja', 'volverAHojaPines',
+  'puedeCorregirSublote', 'htmlEditorSublote', 'horarioTurno', 'minutosParadasTurno', 'pintarDetalleHistorial',
+  'abrirCorreccionSublote', 'cerrarCorreccionSublote', 'faltaEnCorreccion', 'guardarCorreccionSublote',
 ]
-const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES']
+const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
+  'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',
-  'TAREAS_PRODUCCION', 'puedeEntrar', 'CLAVE_UNIDAD']
+  'TAREAS_PRODUCCION', 'puedeEntrar', 'CLAVE_UNIDAD',
+  // Se fueron de la gestión con su diseño (26/09/2026): el botón
+  // "Configuración" con su burbuja y la fila de pestañas (el menú nombra
+  // cada sección y lleva el número de conos al lado de "Marcas / Conos").
+  // accionDelMenu era el "Menú" viejo: cada renglón nuevo lleva a su sección.
+  'htmlBotonConfig', 'abrirConfigDesdeAcceso', 'htmlPestanasConfig', 'contarPendientesMarcas', 'accionDelMenu']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',

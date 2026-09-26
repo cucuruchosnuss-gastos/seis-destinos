@@ -53,7 +53,7 @@ correrMutacionesProduccion({
     { nombre: 'los conos de lo ya cargado no se usan', de: "[...(cat?.marcas ?? []), ...(marcasExtra ?? [])]", a: '[...(cat?.marcas ?? [])]' },
     { nombre: 'la planilla no lee los conos por id', de: "const { data: mk, error: e7 } = await supabase.from('marcas_personalizadas').select('id, nombre').in('id', marcaIds)", a: "const { data: mk, error: e7 } = { data: [], error: null }" },
     { nombre: 'el historial no sabe qué productos van con cono', de: "(d.productosConCono ?? []).includes(pr?.producto_id)", a: 'false' },
-    { nombre: 'el historial repite las unidades por caja', de: '`${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades`', a: '`${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades`' },
+    { nombre: 'el historial repite las unidades por caja', de: '`<span class="pg-sub__cajas">${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades`', a: '`<span class="pg-sub__cajas">${esc(textoEntero(p.cajas))} cajas × ${esc(textoEntero(p.unidades_por_caja))} = ${esc(textoEntero(p.unidades))} unidades`' },
     { nombre: 'la planilla vuelve a dos renglones', de: "          `<div class=\"pr-producido__detalle\">${esc(partes.join(' · '))}</div>`", a: "          `<div class=\"pr-producido__detalle\">${esc(partes.slice(0, 1).join(' · '))}</div><div class=\"pr-producido__detalle\">${esc(partes.slice(1).join(' · '))}</div>`" },
     // b) las masas
     { nombre: 'toda masa lleva chip "Modificada"', de: "      return htmlChipsMasa({ modificada: m?.origen === 'modificada', chocolate: !!m?.es_chocolate })", a: "      return htmlChipsMasa({ modificada: true, chocolate: !!m?.es_chocolate })" },
