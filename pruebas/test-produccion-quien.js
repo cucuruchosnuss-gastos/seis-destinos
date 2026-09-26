@@ -145,9 +145,11 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   chk('modo Sala de masa: el body toma la otra',
     S.__body.classList.contains('pr-modo-masa') && !S.__body.classList.contains('pr-modo-produccion'))
   chk('la barra se ve en la tablet', S.__doc.getElementById('pr-barra').hidden === false)
-  S.estado.vista = 'pr-config'
+  // Las pantallas de oficina se fueron a la gestión (25/09/2026). En la
+  // planta, sin fábrica no hay tablet: ni barra ni color de modo.
+  S.estado.unidadId = null
   S.pintarBarra()
-  chk('en una pantalla de oficina no hay barra ni color de modo',
+  chk('sin fábrica no hay barra ni color de modo',
     S.__doc.getElementById('pr-barra').hidden === true &&
     !S.__body.classList.contains('pr-modo-masa') && !S.__body.classList.contains('pr-modo-produccion'))
 
@@ -255,11 +257,9 @@ esperas.push((async () => {
   X.estado.persona = { id: 'e', nombre: marca('personaNombre'), puesto: 'encargado' }
   chequearMarcas(chk, 'barra de modos', X.htmlBarraModos(), ['unidadNombre', 'personaNombre'])
 
-  const Y = construirProduccion(ARCHIVO)
-  Y.estado.unidades = new Map([[marca('unidadId'), marca('unidadNombre')]])
-  Y.estado.unidadesPosibles = [marca('unidadId'), 'u-otra']
-  Y.mostrarElegirUnidad()
-  chequearMarcas(chk, 'elegir unidad', Y.__doc.getElementById('pr-unidades').innerHTML, ['unidadId', 'unidadNombre'])
+  // "¿En qué fábrica está esta tablet?" no existe más (25/09/2026): la cuenta
+  // del dispositivo trae SU fábrica.
+  chk('la planta no tiene la pantalla de elegir fábrica', !/id="pr-elegir-unidad"/.test(FUENTE) && !/data-unidad=/.test(FUENTE))
 
   // ELEGIR UN NOMBRE NO ENTRA: abre el PIN.
   S.elegirPersona('e-agus')
@@ -280,22 +280,14 @@ esperas.push((async () => {
   S.localStorage.setItem('produccion.modo', 'toString')
   chk('una clave del prototipo no se acepta', S.modoGuardado() === null)
 
-  chk('una sola unidad: esa', S.unidadInicial(['u-cn'], null) === 'u-cn')
-  chk('varias y la guardada es posible: la guardada', S.unidadInicial(['u-cn', 'u-dp'], 'u-dp') === 'u-dp')
-  chk('varias y la guardada ya no es posible: preguntar', S.unidadInicial(['u-cn', 'u-dp'], 'u-ta') === null)
-  chk('varias sin guardada: preguntar', S.unidadInicial(['u-cn', 'u-dp'], null) === null)
-
-  S.estado.unidadesPosibles = ['u-cn', 'u-dp']
+  // La fábrica la trae la cuenta del dispositivo: sin ella no se pregunta
+  // nada, se dice.
+  S.estado.unidadesPosibles = []
   S.estado.unidadId = null
   S.estado.modo = null
   S.siguientePaso()
-  chk('sin unidad: se pide la unidad primero', S.__doc.getElementById('pr-elegir-unidad').hidden === false)
-  chk('… con un botón por unidad', (S.__doc.getElementById('pr-unidades').innerHTML.match(/data-unidad=/g) || []).length === 2)
-  S.elegirUnidad('u-dp')
-  chk('elegir unidad la guarda', S.localStorage.getItem('produccion.unidad') === 'u-dp' && S.estado.unidadId === 'u-dp')
-  chk('… y vuelve a preguntar si hay máquinas abiertas', S.estado.abiertasConocido === false || S.estado.hayTurnoAbierto === false)
-  S.elegirUnidad('u-ajena')
-  chk('una unidad que no es posible no se elige', S.estado.unidadId === 'u-dp')
+  chk('sin fábrica: se dice, sin pantalla de elegir', S.estado.vista === 'pr-inicio' &&
+    /no tiene una fábrica asignada/.test(S.__doc.getElementById('pr-inicio-texto').textContent))
 
   // SIN pantalla de modo: una tablet sin modo guardado arranca en Producción.
   const T = armar()
@@ -323,15 +315,9 @@ esperas.push((async () => {
   try { V.guardarSesion('produccion.persona', '{}') } catch { tiro2 = true }
   chk('sessionStorage bloqueado: guardar no tira', !tiro2)
 
-  // Unidades de carga: las que tienen máquinas activas.
-  esperas.push((async () => {
-    const W = armar()
-    W.estado.misTareas = new Map([['cargar', { unidades: ['u-cn', 'u-dp'] }]])
-    W.__tablas.maquinas = [{ unidad_negocio_id: 'u-cn' }, { unidad_negocio_id: 'u-cn' }]
-    chk('unidades de carga: solo las que tienen máquinas', JSON.stringify(await W.unidadesDeCarga()) === '["u-cn"]')
-    W.__tablas.maquinas = []
-    chk('ninguna con máquinas: todas las de carga', JSON.stringify(await W.unidadesDeCarga()) === '["u-cn","u-dp"]')
-  })())
+  // Unidades de carga: ya no existen (25/09/2026). La tablet está en UNA
+  // fábrica, la de su cuenta de dispositivo.
+  chk('no queda unidadesDeCarga en la planta', !/function unidadesDeCarga/.test(FUENTE))
 }
 
 // ── Quién queda adentro: en sessionStorage, y atado a SU puesto ───────────

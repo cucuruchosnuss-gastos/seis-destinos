@@ -20,7 +20,7 @@ process.env.TZ = 'UTC'
 
 const path = require('path')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
-const { construirProduccion } = require('./sandbox-produccion')
+const { construirProduccion, GESTION } = require('./sandbox-produccion')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion.html')
 const FUENTE = leer(ARCHIVO)
@@ -40,8 +40,12 @@ const CATALOGO = {
 const TURNO = { id: 't1', lote: 7023, maquina_id: 'm1', fecha: '2026-09-24', turno: 'Mañana', encargado_id: 'e-fede', abierto_en: '2026-09-24T09:02:00Z', estado: 'abierto', forzado_por: null, forzado_en: null, forzado_motivo: null }
 const falla = () => ({ data: null, error: { message: 'sin red' } })
 
-function armar({ tablas = {} } = {}) {
-  const S = construirProduccion(ARCHIVO)
+// El historial y la burbuja de conos (Configuración) viven en la gestión
+// desde el 25/09/2026.
+const ARCHIVO_G = process.env.ARCHIVO_GESTION || GESTION
+const FUENTE_G = leer(ARCHIVO_G)
+function armar({ tablas = {}, archivo = ARCHIVO } = {}) {
+  const S = construirProduccion(archivo)
   Object.assign(S.__tablas, {
     ...CATALOGO,
     turnos_produccion: filtros => filtros.some(f => f[1] === 'estado' && f[2] === 'pendiente_completar')
@@ -202,7 +206,7 @@ esperas.push((async () => {
 
 // ── La marca en el historial ────────────────────────────────────────────
 esperas.push((async () => {
-  const S = armar({ tablas: {
+  const S = armar({ archivo: ARCHIVO_G, tablas: {
     turnos_produccion: [{ ...TURNO, unidad_negocio_id: 'u-cn', cerrado_en: null, hora_inicio: null, hora_apagado: null, scrap_kg: null, observaciones: null, completado_por: null, completado_en: null }],
     produccion_items: [
       { ...base, caja_insumo_id: null, embolsado: 'ninguno' },
@@ -239,7 +243,7 @@ esperas.push((async () => {
 
 // ── La burbuja de conos por revisar ─────────────────────────────────────
 function armarBurbuja({ tareas = [['configurar', { unidades: ['u-cn'] }]], rpc } = {}) {
-  const S = armar({ tablas: { marcas_personalizadas: [] } })
+  const S = armar({ archivo: ARCHIVO_G, tablas: { marcas_personalizadas: [] } })
   S.estado.misTareas = new Map(tareas)
   if (rpc) S.__setRpc(rpc)
   return S
@@ -270,7 +274,7 @@ esperas.push((async () => {
   await M.cargarBurbujaConos()
   await M.accionDelMenu('config')
   chk('… también desde el Menú', M.estado.config?.tab === 'marcas')
-  chk('el acceso de la pantalla de inicio usa ese camino', /getElementById\('pr-btn-ir-config'\)\.addEventListener\('click', abrirConfigDesdeAcceso\)/.test(FUENTE))
+  chk('el acceso de la pantalla de inicio usa ese camino', /getElementById\('pr-btn-ir-config'\)\.addEventListener\('click', abrirConfigDesdeAcceso\)/.test(FUENTE_G))
 
   const U = armarBurbuja({ rpc: pendientes(1) })
   await U.cargarBurbujaConos()
@@ -328,9 +332,9 @@ esperas.push((async () => {
   chk('la respuesta que llega tarde no pisa la nueva', />5<\/span>/.test(T.__doc.getElementById('pr-btn-ir-config').innerHTML), T.__doc.getElementById('pr-btn-ir-config').innerHTML)
 
   // Cuándo se pide.
-  chk('se pide al entrar', /pintarAccesosOficina\(\)\n\s+cargarBurbujaConos\(\)/.test(FUENTE))
-  chk('… y al volver a la pestaña', /visibilityState === 'visible'\) \{[\s\S]{0,120}cargarBurbujaConos\(\)/.test(FUENTE))
-  chk('… y después de aceptar o rechazar un cono', /if \(r\.ok\) \{ cargarBurbujaConos\(\); await cargarPestanaConfig\(\) \}/.test(FUENTE))
+  chk('se pide al entrar', /pintarAccesosOficina\(\)\n\s+cargarBurbujaConos\(\)/.test(FUENTE_G))
+  chk('… y al volver a la pestaña', /visibilityState === 'visible'\) \{[\s\S]{0,120}cargarBurbujaConos\(\)/.test(FUENTE_G))
+  chk('… y después de aceptar o rechazar un cono', /if \(r\.ok\) \{ cargarBurbujaConos\(\); await cargarPestanaConfig\(\) \}/.test(FUENTE_G))
 })())
 
 // ── Texto de la base en los renders nuevos ──────────────────────────────
@@ -340,7 +344,7 @@ esperas.push((async () => {
   chequearMarcas(chk, 'renglón sin caja en la planilla', S.htmlProducido(it, null), ['sublote'])
   const d = { presentaciones: [{ id: 'pr-caja', producto_id: 'p-mini', nombre: marca('pres') }], productos: [{ id: 'p-mini', nombre: marca('prod') }],
     marcas: [], insumosEmpaque: [], correcciones: [], nombres: new Map() }
-  chequearMarcas(chk, 'renglón sin caja en el historial', S.htmlSubloteHistorial(it, d), ['sublote', 'pres', 'prod'])
+  chequearMarcas(chk, 'renglón sin caja en el historial', armar({ archivo: ARCHIVO_G }).htmlSubloteHistorial(it, d), ['sublote', 'pres', 'prod'])
   const cat = { empaqueError: true, cajas: [], empaque: [], insumos: [], marcas: [], presentaciones: [], productos: [] }
   const a = { presentacionId: marca('pres'), cajaId: null, cajaElegida: true, embolsado: 'ninguno', marcaId: null }
   chequearMarcas(chk, 'paso de la caja sin empaque', S.htmlPasoCaja(a, cat), [])

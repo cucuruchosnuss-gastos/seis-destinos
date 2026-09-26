@@ -8,7 +8,7 @@ const { correrMutaciones } = require('./mutar')
 
 correrMutaciones({
   suite: path.join(__dirname, 'test-produccion-config.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
+  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion-gestion.html'),
   escape: 'esc',
   funciones: ['pintarSelectorUnidad', 'htmlConfigMaquinas', 'htmlConfigRecetas', 'htmlConfigIngredientes', 'htmlPresentacionConfig',
     'htmlConfigProductos', 'htmlPendienteMarca', 'htmlConfigMarcas', 'htmlFilaPersonal', 'htmlPanelPin', 'htmlPanelTemporal',

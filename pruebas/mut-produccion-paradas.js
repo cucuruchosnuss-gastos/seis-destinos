@@ -3,11 +3,12 @@
 //   node pruebas/mut-produccion-paradas.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
-correrMutaciones({
+// Las del editor de paradas que solo se ejercitan en una planilla CERRADA
+// (el historial) van a la gestión: archivo: 'gestion'.
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-paradas.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
   funciones: ['htmlAccionesParada', 'htmlParadas', 'htmlCampoHora', 'htmlHorasParada'],
   equivalentes: [
@@ -46,20 +47,20 @@ correrMutaciones({
     // Lo que falta.
     { nombre: 'editar puede dejar dos abiertas', de: "      if (f.sigue && (f.paradas ?? []).some(p => !p.fin && p.id !== f.paradaId)) {", a: '      if (false) {' },
     { nombre: 'la misma abierta cuenta como otra', de: 'p => !p.fin && p.id !== f.paradaId', a: 'p => !p.fin' },
-    { nombre: 'borrar una cerrada sin motivo', de: "        if (f.turno.estado === 'cerrado' && motivo.length < 3)", a: '        if (false)' },
-    { nombre: 'el motivo de la parada no se pide', de: "      if (motivo.length < 2) faltan.push('Escribí el motivo de la parada.')\n", a: '' },
+    { nombre: 'borrar una cerrada sin motivo', de: "        if (f.turno.estado === 'cerrado' && motivo.length < 3)", a: '        if (false)', archivo: 'gestion' },
+    { nombre: 'el motivo de la parada no se pide', de: "      if (motivo.length < 2) faltan.push('Escribí el motivo de la parada.')\n", a: '', archivo: 'gestion' },
     // Los payloads.
-    { nombre: 'registrar_parada sin la hora de vuelta', de: "p_turno_id: f.turno.id, p_motivo: motivo, p_inicio: horas.inicio, p_fin: horas.fin }]", a: "p_turno_id: f.turno.id, p_motivo: motivo, p_inicio: horas.inicio, p_fin: null }]" },
-    { nombre: 'el motivo va sin recortar', de: "      const motivo = String(f.motivo ?? '').trim()\n      if (f.modo === 'anotar')", a: "      const motivo = String(f.motivo ?? '')\n      if (f.modo === 'anotar')" },
+    { nombre: 'registrar_parada sin la hora de vuelta', de: "p_turno_id: f.turno.id, p_motivo: motivo, p_inicio: horas.inicio, p_fin: horas.fin }]", a: "p_turno_id: f.turno.id, p_motivo: motivo, p_inicio: horas.inicio, p_fin: null }]", archivo: 'gestion' },
+    { nombre: 'el motivo va sin recortar', de: "      const motivo = String(f.motivo ?? '').trim()\n      if (f.modo === 'anotar')", a: "      const motivo = String(f.motivo ?? '')\n      if (f.modo === 'anotar')", archivo: 'gestion' },
     { nombre: 'editar_parada con el id equivocado', de: "p_parada_id: f.paradaId, p_motivo: motivo, p_inicio: horas.inicio", a: "p_parada_id: f.turno.id, p_motivo: motivo, p_inicio: horas.inicio" },
     { nombre: 'borrar manda el motivo también abierta', de: "p_motivo: f.turno.estado === 'cerrado' ? motivo : null }]", a: 'p_motivo: motivo }]' },
-    { nombre: 'borrar una cerrada sin mandar el motivo', de: "p_motivo: f.turno.estado === 'cerrado' ? motivo : null }]", a: 'p_motivo: null }]' },
+    { nombre: 'borrar una cerrada sin mandar el motivo', de: "p_motivo: f.turno.estado === 'cerrado' ? motivo : null }]", a: 'p_motivo: null }]', archivo: 'gestion' },
     { nombre: 'se manda aunque falte algo', de: '      if (faltan.length) return pintarEditorParada()\n', a: '' },
     // El error de la base.
-    { nombre: 'el error de la base no se muestra', de: "      const texto = f.errorBase || (f.intentado && faltan.length ? faltan[0] : '')", a: "      const texto = f.intentado && faltan.length ? faltan[0] : ''" },
-    { nombre: 'el error de la base se cambia por uno genérico', de: "        f.errorBase = e?.message || 'No se pudo guardar la parada.", a: "        f.errorBase = 'No se pudo guardar la parada." },
+    { nombre: 'el error de la base no se muestra', de: "      const texto = f.errorBase || (f.intentado && faltan.length ? faltan[0] : '')", a: "      const texto = f.intentado && faltan.length ? faltan[0] : ''", archivo: 'gestion' },
+    { nombre: 'el error de la base se cambia por uno genérico', de: "        f.errorBase = e?.message || 'No se pudo guardar la parada.", a: "        f.errorBase = 'No se pudo guardar la parada.", archivo: 'gestion' },
     { nombre: 'el botón se deshabilita por lo que falta', de: '      btn.disabled = !!f.enviando\n', a: '      btn.disabled = !!f.enviando || !!faltan.length\n' },
-    { nombre: 'guardar no cierra el editor', de: "      const { contexto, turno, modo } = f\n      cerrarEditorParada()", a: '      const { contexto, turno, modo } = f' },
+    { nombre: 'guardar no cierra el editor', de: "      const { contexto, turno, modo } = f\n      cerrarEditorParada()", a: '      const { contexto, turno, modo } = f', archivo: 'gestion' },
     // Permisos.
     { nombre: 'el historial ofrece corregir sin cargar', de: '      return { editar: configura && carga, borrar: configura }', a: '      return { editar: configura, borrar: configura }' },
     { nombre: 'el historial deja borrar sin configurar', de: '      return { editar: configura && carga, borrar: configura }', a: '      return { editar: configura && carga, borrar: true }' },
@@ -77,7 +78,7 @@ correrMutaciones({
     { nombre: 'el error del editor no se ve', de: '      errEditor.textContent = texto\n      errEditor.hidden = !texto', a: "      errEditor.textContent = ''\n      errEditor.hidden = true" },
     { nombre: 'el foco va al motivo y abre el teclado del sistema', de: "de texto abre el teclado del sistema y tapa las horas.\n      document.getElementById('pr-parada-editor-titulo').focus()", a: "de texto abre el teclado del sistema y tapa las horas.\n      document.getElementById('pr-parada-editor-motivo').focus()" },
     { nombre: 'el editor no ofrece "Borrar esta parada"', de: "document.getElementById('pr-parada-editor-a-borrar').hidden = !(f.modo === 'editar' && f.puedeBorrar)", a: "document.getElementById('pr-parada-editor-a-borrar').hidden = true" },
-    { nombre: 'pasar a borrar arrastra el motivo de la parada', de: "      Object.assign(f, { modo: 'borrar', motivo: '',", a: "      Object.assign(f, { modo: 'borrar'," },
+    { nombre: 'pasar a borrar arrastra el motivo de la parada', de: "      Object.assign(f, { modo: 'borrar', motivo: '',", a: "      Object.assign(f, { modo: 'borrar',", archivo: 'gestion' },
     { nombre: 'la planilla pone dos botones por parada', de: "      if (acciones?.editar) return `<button", a: "      if (false) return `<button" },
     { nombre: 'solo borrar no dibuja el botón', de: "      if (acciones?.borrar) return `<button", a: "      if (false) return `<button" },
     { nombre: '"Paró ahora" deja de usar iniciar_parada', de: "supabase.rpc('iniciar_parada',", a: "supabase.rpc('registrar_parada'," },

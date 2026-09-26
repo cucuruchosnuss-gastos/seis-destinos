@@ -384,25 +384,14 @@ esperas.push((async () => {
   S.estado.unidadId = null
   S.estado.modo = 'produccion'
   S.siguientePaso()
-  chk('una sola unidad: entra a esa sin preguntar', S.estado.unidadId === 'u-cn' && S.estado.vista !== 'pr-elegir-unidad')
-  S.sessionStorage.setItem('produccion.persona.masa', JSON.stringify(JUAN))
-  S.sessionStorage.setItem('produccion.persona.produccion', JSON.stringify(FEDE))
-  S.accionDelMenu('unidad')
-  chk('… "Cambiar de unidad" no tiene a dónde ir', S.estado.unidadId === 'u-cn' && S.estado.vista !== 'pr-elegir-unidad')
-  chk('… y no saca a nadie de la tablet', /e-masero/.test(guardada(S, 'masa') ?? '') && /e-fede/.test(guardada(S, 'produccion') ?? ''))
-
-  const T = armar()
-  T.estado.unidades = new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']])
-  T.estado.unidadesPosibles = ['u-cn', 'u-dp']
-  T.estado.unidadId = null
-  T.siguientePaso()
-  chk('dos unidades: se pregunta', T.estado.vista === 'pr-elegir-unidad' &&
-    (T.__doc.getElementById('pr-unidades').innerHTML.match(/data-unidad=/g) || []).length === 2)
-  T.sessionStorage.setItem('produccion.persona.masa', JSON.stringify(JUAN))
-  T.sessionStorage.setItem('produccion.persona.produccion', JSON.stringify(FEDE))
-  T.elegirUnidad('u-dp')
-  chk('… elegida, queda guardada', T.localStorage.getItem('produccion.unidad') === 'u-dp')
-  chk('… y cambiar de fábrica saca a las personas de los dos modos', guardada(T, 'masa') === null && guardada(T, 'produccion') === null)
+  chk('sin fábrica no se pregunta: se dice', S.estado.vista === 'pr-inicio')
+  // Desde el 25/09/2026 la tablet NO elige fábrica: la trae la cuenta del
+  // dispositivo (mi_sesion_produccion). Ni "Cambiar de fábrica" ni "Cambiar
+  // de unidad" existen en la planta.
+  chk('la planta no tiene "Cambiar de fábrica" ni el menú de la tablet',
+    !/pr-btn-cambiar-unidad/.test(FUENTE) && !/pr-menu-unidad/.test(FUENTE) && !/id="pr-menu"/.test(FUENTE))
+  chk('el arranque toma la fábrica de la cuenta del dispositivo',
+    /estado\.unidadesPosibles = \[String\(estado\.sesionPlanta\.unidad_negocio_id\)\]\s*\n\s*estado\.unidadId = estado\.unidadesPosibles\[0\]/.test(FUENTE))
 }
 
 // ── El acceso maestro no se guarda como persona de un modo ───────────────

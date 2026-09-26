@@ -326,7 +326,7 @@ esperas.push((async () => {
   await tipear(M, '48271936')
   chk('con varios maestros hay que elegir el nombre primero', M.estado.maestro === null)
   chk('… y se pide sin mandar nada', !M.__llamadas.rpc.some(l => l[0] === 'verificar_pin_maestro') &&
-    /Elegí primero tu nombre/.test(M.__doc.getElementById('pr-pin-mensaje').innerHTML))
+    /Tocá primero tu nombre/.test(M.__doc.getElementById('pr-pin-mensaje').innerHTML))
 
   const T = armar({ verificar_pin_maestro: { ok: true } })
   T.abrirMaestro()

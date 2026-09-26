@@ -4,11 +4,10 @@
 //   node pruebas/mut-produccion-pin.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
-correrMutaciones({
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-pin.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
   funciones: ['htmlMensajePin', 'htmlTecladoPin', 'htmlPuntosPin', 'pintarDarAcceso'],
   equivalentes: [

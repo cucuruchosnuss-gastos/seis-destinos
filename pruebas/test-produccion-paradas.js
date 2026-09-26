@@ -26,7 +26,7 @@ process.env.TZ = 'UTC'
 
 const path = require('path')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
-const { construirProduccion } = require('./sandbox-produccion')
+const { construirProduccion, GESTION } = require('./sandbox-produccion')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion.html')
 const FUENTE = leer(ARCHIVO)
@@ -41,8 +41,13 @@ const A_LAS_5 = new Date('2026-09-25T08:00:00Z')         // 05:00 del 25 en Arge
 // Uno cerrado: abrió a las 06:00 y se cerró a las 14:00 de Argentina.
 const CERRADO = { id: 't3', lote: 7021, fecha: '2026-09-23', estado: 'cerrado', abierto_en: '2026-09-23T09:00:00Z', cerrado_en: '2026-09-23T17:00:00Z', unidad_negocio_id: 'u-cn' }
 
-function armar({ tareas = [['cargar', { todas: true }]] } = {}) {
-  const S = construirProduccion(ARCHIVO)
+// El historial vive en la gestión desde el 25/09/2026: lo de las planillas
+// CERRADAS se prueba en ese archivo, con su copia del editor.
+const ARCHIVO_G = process.env.ARCHIVO_GESTION || GESTION
+const FUENTE_G = leer(ARCHIVO_G)
+function armarG(o = {}) { return armar({ ...o, archivo: ARCHIVO_G }) }
+function armar({ tareas = [['cargar', { todas: true }]], archivo = ARCHIVO } = {}) {
+  const S = construirProduccion(archivo)
   S.estado.unidades = new Map([['u-cn', 'Cucuruchos Nuss']])
   S.estado.unidadId = 'u-cn'
   S.estado.misTareas = new Map(tareas)
@@ -140,7 +145,7 @@ const ms = (iso) => new Date(iso).getTime()
 esperas.push((async () => {
   // ── Anotar: el payload de registrar_parada ──────────────────────────
   // En una planilla cerrada (el historial) las horas no dependen del reloj.
-  const H = armar({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
+  const H = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
   H.estado.detalleHistorial = { turno: CERRADO, paradas: [] }
   H.abrirEditorDesdeHistorial('anotar')
   Object.assign(H.estado.paradaForm, { inicio: '10:05', fin: '10:40' })
@@ -197,7 +202,7 @@ esperas.push((async () => {
   chk('abierta y sin parada en curso: "Paró ahora" a la vista', QA.__doc.getElementById('pr-btn-parada').hidden === false)
 
   // Sin motivo no se manda.
-  const SM = armar({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
+  const SM = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
   SM.estado.detalleHistorial = { turno: CERRADO, paradas: [] }
   SM.abrirEditorDesdeHistorial('anotar')
   Object.assign(SM.estado.paradaForm, { inicio: '10:05', fin: '10:40' })
@@ -230,7 +235,7 @@ esperas.push((async () => {
   chk('editar_parada con su id, el motivo y las horas', e1 && e1.p_parada_id === 'p-abierta' && e1.p_motivo === 'Se cortó la luz general' &&
     e1.p_inicio.endsWith('T10:30:00-03:00') && e1.p_fin === null, JSON.stringify(e1))
   // Editar una cerrada con sus horas.
-  const E2 = armar({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
+  const E2 = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
   E2.estado.detalleHistorial = { turno: CERRADO, paradas: [{ id: 'p-h', inicio: '2026-09-23T15:00:00Z', fin: '2026-09-23T15:30:00Z', motivo: 'Rotura' }] }
   E2.abrirEditorDesdeHistorial('editar', 'p-h')
   E2.cambiarHoraParada('fin', 5)
@@ -239,7 +244,7 @@ esperas.push((async () => {
   chk('editar_parada en el historial: horas de ese día', e2 && e2.p_inicio === '2026-09-23T12:00:00-03:00' && e2.p_fin === '2026-09-23T12:35:00-03:00', JSON.stringify(e2))
 
   // ── Borrar ─────────────────────────────────────────────────────────
-  const B = armar({ tareas: [['configurar', { todas: true }]] })
+  const B = armarG({ tareas: [['configurar', { todas: true }]] })
   B.estado.detalleHistorial = { turno: CERRADO, paradas: [{ id: 'p-h', inicio: '2026-09-23T15:00:00Z', fin: '2026-09-23T15:30:00Z', motivo: 'Rotura' }] }
   B.abrirEditorDesdeHistorial('borrar', 'p-h')
   chk('borrar en una cerrada pide el motivo', B.__doc.getElementById('pr-parada-editor-campo-motivo').hidden === false)
@@ -267,7 +272,7 @@ esperas.push((async () => {
   await B2.guardarParada()
   chk('… y manda p_motivo null', JSON.stringify(llamadas(B2, 'borrar_parada')[0]) === '{"p_parada_id":"p-vieja","p_motivo":null}')
   // Cerrada, desde "Corregir" del historial: la confirmación pide el motivo.
-  const B3 = armar({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
+  const B3 = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
   B3.estado.detalleHistorial = { turno: CERRADO, paradas: [{ id: 'p-h', inicio: '2026-09-23T15:00:00Z', fin: '2026-09-23T15:30:00Z', motivo: 'Rotura' }] }
   B3.abrirEditorDesdeHistorial('editar', 'p-h')
   B3.pasarABorrarParada()
@@ -277,24 +282,24 @@ esperas.push((async () => {
   chk('… y sin motivo no se manda', llamadas(B3, 'borrar_parada').length === 0)
 
   // ── Permisos en el historial ────────────────────────────────────────
-  const sinConf = armar()
+  const sinConf = armarG()
   chk('sin configurar, una cerrada no ofrece corregir ni borrar', JSON.stringify(sinConf.accionesParadaHistorial(CERRADO)) === '{"editar":false,"borrar":false}')
   sinConf.estado.detalleHistorial = { turno: CERRADO, paradas: [{ id: 'p-h', inicio: CERRADO.abierto_en, fin: CERRADO.cerrado_en, motivo: 'x' }] }
   sinConf.abrirEditorDesdeHistorial('borrar', 'p-h')
   chk('… ni se abre aunque se llame', sinConf.estado.paradaForm == null)
   chk('… y el renglón no lleva los botones', !/data-parada-(editar|borrar)/.test(sinConf.htmlParadas(sinConf.estado.detalleHistorial.paradas, sinConf.accionesParadaHistorial(CERRADO))))
-  const soloConf = armar({ tareas: [['configurar', { todas: true }]] })
+  const soloConf = armarG({ tareas: [['configurar', { todas: true }]] })
   chk('con configurar sin cargar: solo borrar (editar_parada pide cargar)', JSON.stringify(soloConf.accionesParadaHistorial(CERRADO)) === '{"editar":false,"borrar":true}')
-  const conDos = armar({ tareas: [['cargar', { todas: true }], ['configurar', { unidades: ['u-cn'] }]] })
+  const conDos = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { unidades: ['u-cn'] }]] })
   chk('con las dos en la unidad: corregir y borrar', JSON.stringify(conDos.accionesParadaHistorial(CERRADO)) === '{"editar":true,"borrar":true}')
-  chk('configurar en OTRA unidad no alcanza', JSON.stringify(armar({ tareas: [['cargar', { todas: true }], ['configurar', { unidades: ['u-dp'] }]] }).accionesParadaHistorial(CERRADO)) === '{"editar":false,"borrar":false}')
+  chk('configurar en OTRA unidad no alcanza', JSON.stringify(armarG({ tareas: [['cargar', { todas: true }], ['configurar', { unidades: ['u-dp'] }]] }).accionesParadaHistorial(CERRADO)) === '{"editar":false,"borrar":false}')
   chk('en el historial, una planilla abierta no se toca (se maneja desde la planilla)', JSON.stringify(conDos.accionesParadaHistorial(DIA)) === '{"editar":false,"borrar":false}')
-  chk('el detalle usa esos permisos', /htmlParadas\(d\.paradas, accionesParadaHistorial\(t\)\)/.test(FUENTE) &&
-    /accionesParadaHistorial\(t\)\.editar \? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada<\/button>'/.test(FUENTE))
+  chk('el detalle usa esos permisos', /htmlParadas\(d\.paradas, accionesParadaHistorial\(t\)\)/.test(FUENTE_G) &&
+    /accionesParadaHistorial\(t\)\.editar \? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada<\/button>'/.test(FUENTE_G))
   chk('una cerrada no ofrece "Todavía no volvió"', !/data-hora-sigue/.test((() => { conDos.estado.detalleHistorial = { turno: CERRADO, paradas: [] }; conDos.abrirEditorDesdeHistorial('anotar'); return conDos.__doc.getElementById('pr-parada-editor-horas').innerHTML })()))
 
   // ── El mensaje de la base, tal cual y pegado al botón ───────────────
-  const M = armar({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
+  const M = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
   M.__setRpc(async () => ({ data: null, error: { message: 'La parada no puede ser anterior a la apertura del turno.', code: 'P0001' } }))
   M.estado.detalleHistorial = { turno: CERRADO, paradas: [] }
   M.abrirEditorDesdeHistorial('anotar')
@@ -315,7 +320,7 @@ esperas.push((async () => {
   chequearMarcas(chk, 'paradas del historial', X.htmlParadas(mala, { editar: false, borrar: true }), ['id', 'motivo'])
   // El detalle del historial ENTERO, de una cerrada y con configurar: los
   // botones de corregir y borrar llevan el id escapado.
-  const XH = armar({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
+  const XH = armarG({ tareas: [['cargar', { todas: true }], ['configurar', { todas: true }]] })
   const dm = {
     turno: { ...CERRADO, turno: 'Mañana', encargado_id: 'e', hora_inicio: '06:00', hora_apagado: '14:00', scrap_kg: 1, observaciones: null },
     operarios: [], nombres: new Map([['e', 'Fede']]), masas: [], items: [], recItems: [], ingredientes: [], insumos: [],
@@ -324,10 +329,10 @@ esperas.push((async () => {
   const hd = XH.htmlDetalleTurno(dm)
   chequearMarcas(chk, 'detalle del historial con corregir y borrar', hd, ['id', 'motivo', 'motivoCurso'])
   chk('… y los botones están (con configurar, en una cerrada)', /data-parada-editar=/.test(hd) && /id="pr-historial-anotar-parada"/.test(hd))
-  const hdSolo = armar({ tareas: [['configurar', { todas: true }]] }).htmlDetalleTurno(dm)
+  const hdSolo = armarG({ tareas: [['configurar', { todas: true }]] }).htmlDetalleTurno(dm)
   chequearMarcas(chk, 'detalle del historial con solo borrar', hdSolo, ['id', 'motivo', 'motivoCurso'])
   chk('… configurar sin cargar: "Borrar" en el renglón, ni corregir ni anotar', /data-parada-borrar=[^>]*>Borrar</.test(hdSolo) && !/data-parada-editar/.test(hdSolo) && !/pr-historial-anotar-parada/.test(hdSolo))
-  const hdSin = armar().htmlDetalleTurno(dm)
+  const hdSin = armarG().htmlDetalleTurno(dm)
   chk('sin configurar, el detalle de una cerrada no tiene ni corregir, ni borrar, ni anotar', !/data-parada-(editar|borrar)=/.test(hdSin) && !/pr-historial-anotar-parada/.test(hdSin))
   X.estado.planilla = { turno: turnoHoy, paradas: mala }
   X.abrirEditorDesdePlanilla('borrar', mala[0].id)
@@ -350,7 +355,8 @@ esperas.push((async () => {
   chk('se escucha el teclado del editor', /editor\.addEventListener\('keydown', teclaEditorParada\)/.test(FUENTE))
   chk('los botones de la planilla abren el editor', /closest\('\[data-parada-editar\]'\); if \(e\) return abrirEditorDesdePlanilla\('editar'/.test(FUENTE) &&
     /closest\('\[data-parada-borrar\]'\); if \(b\) abrirEditorDesdePlanilla\('borrar'/.test(FUENTE))
-  chk('y los del historial', /abrirEditorDesdeHistorial\('editar', e\.dataset\.paradaEditar\)/.test(FUENTE) && /abrirEditorDesdeHistorial\('borrar', b\.dataset\.paradaBorrar\)/.test(FUENTE))
+  chk('y los del historial (en la gestión)', /abrirEditorDesdeHistorial\('editar', e\.dataset\.paradaEditar\)/.test(FUENTE_G) && /abrirEditorDesdeHistorial\('borrar', b\.dataset\.paradaBorrar\)/.test(FUENTE_G))
+  chk('la gestión conecta el editor de paradas (Escape y teclado incluidos)', /editor\.addEventListener\('keydown', teclaEditorParada\)/.test(FUENTE_G) && /function conectarEditorParada\(\)/.test(FUENTE_G))
   chk('la planilla ofrece corregir y borrar', /htmlParadas\(p\.paradas, \{ editar: true, borrar: true \}\)/.test(FUENTE))
 }
 

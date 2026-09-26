@@ -38,7 +38,12 @@ const BASES = [
   '672cf2b', // Terminar la tablet, parte 2: la sesión de cada modo
   '7bf9846', // Terminar la tablet, parte 3: el lote en tarjetas
   '3918fd8', // Terminar la tablet, parte 4: las paradas con horarios
+  '5ca92bb', // Terminar la tablet, parte 5: lo que se leía mal (el último archivo entero, antes de partirlo)
 ]
+
+// La mudanza a la gestión (25/09/2026): lo que salió de acá está en
+// controles-produccion-movidos.js y lo exige controles-produccion-gestion.js.
+const { MOVIDOS } = require('./controles-produccion-movidos')
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
 const RENOMBRADOS = [
@@ -82,6 +87,14 @@ const RENOMBRADOS = [
     'Rediseño parte 4: "Registrar masa" dejó de estar adentro del paso del resumen —que ya no existe— y pasó al pie ' +
     'fijo de la receta, con el error pegado al lado. Mismo botón y misma acción (registrar_masa), ahora con id propio ' +
     'porque el pie es HTML estático.'],
+  // Planta y gestión (25/09/2026): "‹ Máquinas" pasó a "← Atrás", arriba a la
+  // izquierda de la planilla y de las masas del turno. Mismo id, mismo destino
+  // (el tablero y la sala); la clave del inventario es la misma porque el
+  // control se nombra por su id.
+  ['control:button#pr-planilla-volver[type=button]', 'control:button#pr-planilla-volver[type=button]',
+    'Planta y gestión: el texto pasó de "‹ Máquinas" a "← Atrás" y el botón se mudó arriba a la izquierda de la cabecera de la planilla.'],
+  ['control:button#pr-masas-volver[type=button]', 'control:button#pr-masas-volver[type=button]',
+    'Planta y gestión: el texto pasó de "‹ Máquinas" a "← Atrás" y el botón se mudó arriba a la izquierda, antes del título "Masas del turno".'],
 ]
 
 // Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS
@@ -161,6 +174,16 @@ const RETIRADOS = [
     'grande, lote, fecha si se sabe y cuánto queda— para tocar con las manos sucias. Elegir es data-lote-op, "Se ' +
     'terminó" es #pr-lote-panel-se-termino y cerrar es #pr-lote-panel-cerrar. El <select> tenía además DOS opciones ' +
     'vacías que decían cosas distintas ("Elegí el lote" y "Se terminó · elegí otro"); el botón dice una sola.'],
+  ['control:button#pr-btn-cambiar-unidad[type=button]',
+    'Planta y gestión (25/09/2026): a la planta entra SOLO una cuenta de dispositivo, y cada una es de UNA fábrica ' +
+    '(su alcance de produccion:cargar y mi_sesion_produccion().unidad_negocio_id). No hay fábrica que cambiar. La ' +
+    'gestión elige la unidad en cada pantalla.'],
+  ['control:button#pr-menu-unidad[data-menu][type=button]',
+    'Planta y gestión (25/09/2026): el menú se fue a la gestión, y "Cambiar de unidad" era de la tablet que cargaba en ' +
+    'varias fábricas; hoy cada tablet es de una sola. La gestión tiene su selector de unidad en cada pantalla.'],
+  ['control:button[data-unidad][type=button]',
+    'Planta y gestión (25/09/2026): la pantalla "¿En qué fábrica está esta tablet?" no existe más: la fábrica sale de la ' +
+    'cuenta del dispositivo (mi_sesion_produccion).'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:
@@ -209,11 +232,15 @@ try {
     for (const k of claves) {
       const nueva = renombrada.get(k) || k
       if (retirada.has(nueva)) continue
+      if (MOVIDOS[nueva]) continue   // lo exige controles-produccion-gestion.js
       const n = veces(B, k), hay = veces(A, nueva)
       const pide = copias.has(nueva) ? Math.min(n, copias.get(nueva)) : n
       chk(`${base}: ${k} sigue estando`, hay >= pide && hay > 0, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
     }
   }
+
+  // Un MOVIDO que sigue acá es una mudanza a medias o una declaración que sobra.
+  for (const k of Object.keys(MOVIDOS)) chk(`el movido ${k} ya no está en la planta`, veces(A, k) === 0, 'sigue estando: sacalo de controles-produccion-movidos.js o de la planta')
 
   const refs = referenciasDelJs(A.referencias)
   chk('el JS apunta a algún id (si da cero, no se están leyendo las referencias)', refs.length > 0)

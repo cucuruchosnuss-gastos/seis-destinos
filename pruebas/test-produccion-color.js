@@ -35,9 +35,12 @@ chk('se encontró el <style> del módulo', CSS.length > 20000, CSS.length)
 // hay dos con la misma especificidad), y su posición. Anclada al principio del
 // renglón y con su sangría: la misma regla adentro de un @media va más
 // sangrada y es OTRA regla (la de pantallas angostas).
+// El bloque compacto de la planta (25/09/2026) va al final y solo achica
+// tamaños: no cuenta como "la regla" de color de un selector.
+const FIN_COLOR = CSS.indexOf('/* ── LA PLANTA MÁS COMPACTA') > 0 ? CSS.indexOf('/* ── LA PLANTA MÁS COMPACTA') : CSS.length
 function regla(selector) {
   const aguja = '\n' + selector + ' {'
-  const i = CSS.lastIndexOf(aguja)
+  const i = CSS.lastIndexOf(aguja, FIN_COLOR)
   if (i === -1) return { i: -1, cuerpo: '' }
   const j = CSS.indexOf('}', i)
   return { i, cuerpo: CSS.slice(i + aguja.length, j) }
@@ -116,32 +119,31 @@ function regla(selector) {
 }
 
 // ── 5. La cabecera: el nombre del módulo una sola vez ───────────────────
+// Desde el 25/09/2026 la cabecera vive SOLO en la gestión: la planta es toda
+// tablet y manda la barra de modos.
 {
-  const header = (FUENTE.match(/<header class="pr-header"[\s\S]*?<\/header>/) || [''])[0]
+  const { GESTION } = require('./sandbox-produccion')
+  const ARCHIVO_G = process.env.ARCHIVO_GESTION || GESTION
+  const FUENTE_G = leer(ARCHIVO_G)
+  chk('la planta no tiene cabecera de oficina', !/<header class="pr-header"/.test(FUENTE))
+  const header = (FUENTE_G.match(/<header class="pr-header"[\s\S]*?<\/header>/) || [''])[0]
   const veces = (header.match(/Producción/g) ?? []).length
-  chk('la cabecera dice "Producción" UNA vez', veces === 1, veces)
-  chk('ya no hay sección que repita el modo', !/pr-header-seccion/.test(FUENTE))
-  chk('el título de la pantalla de oficina no repite "Producción"',
-    !/<section class="pr-tarjeta" id="pr-inicio">\s*<h1 class="pr-titulo">Producción<\/h1>/.test(FUENTE))
+  chk('la cabecera de la gestión dice "Producción" UNA vez', veces === 1, veces)
+  chk('el título de la pantalla de inicio no repite "Producción"', /<section class="pr-tarjeta" id="pr-inicio">\s*<h1 class="pr-titulo">¿Qué querés ver\?<\/h1>/.test(FUENTE_G))
+  chk('ya no hay sección que repita el modo', !/pr-header-seccion/.test(FUENTE) && !/pr-header-seccion/.test(FUENTE_G))
 
-  const S = construirProduccion(ARCHIVO)
+  const S = construirProduccion(ARCHIVO_G)
   S.estado.unidades = new Map([['u-cn', 'Cucuruchos Nuss']])
   S.estado.unidadId = 'u-cn'
-  S.estado.modo = 'produccion'
-  S.estado.persona = { id: 'p1', nombre: 'Federico Silva', puesto: 'encargado' }
   S.pintarCabecera()
   const ctx = S.__doc.getElementById('pr-header-contexto').textContent
-  chk('al lado: la unidad y la persona activa', ctx === 'Cucuruchos Nuss · Federico Silva', ctx)
+  chk('gestión: al lado, la unidad', ctx === 'Cucuruchos Nuss', ctx)
   chk('… y no el nombre del modo', !/Producción/.test(ctx), ctx)
-
-  const T = construirProduccion(ARCHIVO)
-  T.estado.unidades = new Map([['u-cn', 'Cucuruchos Nuss']])
-  T.estado.unidadId = 'u-cn'
-  T.estado.modo = 'masa'
-  T.estado.persona = null
+  chk('… la cabecera se ve', S.__doc.getElementById('pr-header').hidden === false)
+  const T = construirProduccion(ARCHIVO_G)
+  T.estado.unidadId = null
   T.pintarCabecera()
-  const ctx2 = T.__doc.getElementById('pr-header-contexto').textContent
-  chk('sin nadie adentro: solo la unidad', ctx2 === 'Cucuruchos Nuss', ctx2)
+  chk('gestión sin unidad elegida: nada al lado', T.__doc.getElementById('pr-header-contexto').textContent === '')
 }
 
 // ── 6. Las grillas se centran y aprovechan el ancho ─────────────────────

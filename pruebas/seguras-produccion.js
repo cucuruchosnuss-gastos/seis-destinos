@@ -3,6 +3,8 @@
 // con esc() ni figure acá pone test-produccion-xss.js en rojo nombrándola.
 
 const SEGURAS_PRODUCCION = [
+  // Planta y gestión (25/09/2026)
+  ['linksHtml', 'HTML constante del código: LINKS_SIN_SESION (dos links fijos) o vacío'],
   // Parte 1 del rediseño: barra de modos, ¿Quién sos? y el PIN
   ['unidad', 'HTML ya escapado: htmlQuienEnBarra() lo arma arriba con esc() del nombre de la unidad'],
   ['htmlQuienEnBarra()', 'HTML armado por htmlQuienEnBarra(), que escapa adentro'],

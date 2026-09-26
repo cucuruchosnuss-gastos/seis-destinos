@@ -3,11 +3,10 @@
 //   node pruebas/mut-produccion-lotes.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
-correrMutaciones({
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-lotes.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
   funciones: ['htmlTarjetaLote', 'htmlPanelLote', 'htmlCeldaLote'],
   equivalentes: [

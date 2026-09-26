@@ -1,4 +1,8 @@
-// Arma un sandbox con las funciones REALES de modulos/produccion.html.
+// Arma un sandbox con las funciones REALES de modulos/produccion.html (la
+// planta) o de modulos/produccion-gestion.html (la gestión): lo decide la
+// ruta. Desde el 25/09/2026 Producción está partida en esos dos archivos, y
+// cada uno tiene SU lista de funciones — escrita a mano, para que una que
+// falte siga tirando ReferenceError acá y no en la pantalla.
 // Se EJECUTAN: una assertion sobre el call site no dice nada del callee, y el
 // único test que prueba que un helper existe es correr el código.
 //
@@ -143,6 +147,71 @@ const FUNCIONES_BASE = [
   'agruparStockTerminado', 'htmlStockTerminado',
 ]
 
+// Lo que está en los DOS archivos (cada uno con su copia: en este proyecto
+// los módulos duplican sus helpers), y lo que se fue a la gestión.
+const EN_AMBOS = [
+  'esc', 'tieneTarea', 'unidadesCon', 'leerPreferencia', 'guardarPreferencia', 'mostrarVista', 'pintarCabecera',
+  'tocar', 'htmlAccionesParada', 'instanteAr', 'isoAr', 'limitesParada', 'resolverHorasParada', 'faltanParaParada',
+  'horaRedondeada', 'horaDeReferencia', 'abrirEditorParada', 'cerrarEditorParada', 'puedeSeguirParada',
+  'htmlCampoHora', 'htmlTecladoHora', 'textoDiaParada', 'htmlHorasParada', 'tituloEditorParada',
+  'pintarEditorParada', 'cambiarHoraParada', 'tocarHoraParada', 'teclaHoraParada', 'alternarSigueParada',
+  'parametrosParada', 'guardarParada', 'teclaEditorParada', 'pasarABorrarParada', 'hastaDesdeFecha',
+  'faltanParaAcceso', 'hoyArgentina', 'horaArgentina', 'textoMinutos', 'duracionTexto', 'htmlParadas', 'textoPlano',
+  'normalizarBusqueda', 'esProductoChocolate', 'productosPorMasa', 'marcasFiltradas', 'textoInsumoEmpaque',
+  'cargarPermisoStock', 'puedeVerStockEn', 'nombreCajaItem', 'envasePresentacion', 'partesProducido',
+  'textoTamanoMasa', 'htmlChipsMasa', 'chipsDeMasa', 'sinCajaDescontada', 'textoSinCaja', 'normalizarHora',
+  'horaConPaso', 'redondearKg', 'diferencias', 'textoGramos', 'textoDiferencias', 'textoKg', 'fechaCorta',
+  'sumarDias', 'fechaDelDia',
+]
+const SOLO_GESTION = [
+  'cerrarMenu', 'alternarMenu', 'accionDelMenu', 'accionesParadaHistorial', 'abrirEditorDesdeHistorial',
+  'leerEmpaqueTurno', 'empaqueConsumido', 'htmlEmpaqueTurno', 'leerEmpaqueConfig', 'faltaEmpaque',
+  'nombreInsumoConfig', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque', 'sincronizarCantidadesEmpaque',
+  'insumoPorTexto', 'parametrosGuardarEmpaque', 'valorEmpaque', 'accionEmpaque', 'cambiarSelectEmpaque',
+  'cambiarDobleBolsa', 'cargarBurbujaConos', 'textoConosPendientes', 'htmlBotonConfig', 'pintarBurbujaConos',
+  'abrirConfigDesdeAcceso', 'diferenciaDeMasa', 'volverDeOficina', 'mostrarInicioOficina', 'pintarAccesosOficina',
+  'unidadesDeConfig', 'pintarSelectorUnidad', 'mostrarConfig', 'htmlPestanasConfig', 'errorConfig',
+  'htmlErrorPegado', 'contarPendientesMarcas', 'cargarPestanaConfig', 'pintarPestanaConfig', 'cambiosSinGuardar',
+  'pedirSalida', 'htmlSalirSinGuardar', 'cancelarSalida', 'confirmarSalida', 'leerMaquinasConfig',
+  'htmlConfigMaquinas', 'moverProducto', 'ordenTrasMover', 'parametrosGuardarMaquina', 'guardarEnConfig',
+  'accionMaquina', 'leerRecetasConfig', 'leerInsumosDeIngredientes', 'recetaVigente', 'recetaParaRevisar',
+  'filasEditorReceta', 'parametrosGuardarReceta', 'faltanEnReceta', 'proximaVersion', 'textoAntes',
+  'htmlConfigRecetas', 'leerEditorReceta', 'marcarCambioReceta', 'guardarReceta', 'leerIngredientesConfig',
+  'ingredientesSinInsumo', 'htmlConfigIngredientes', 'parametrosGuardarIngrediente', 'valorDe', 'accionIngrediente',
+  'leerProductosConfig', 'avisoProductosRevisado', 'htmlPresentacionConfig', 'htmlConfigProductos',
+  'parametrosGuardarProducto', 'parametrosGuardarPresentacion', 'campoNumero', 'accionProducto', 'leerMarcasConfig',
+  'marcasPendientes', 'marcasDelCatalogo', 'parametrosRevisarMarca', 'htmlPendienteMarca', 'htmlConfigMarcas',
+  'accionMarca', 'leerPersonalConfig', 'temporalVigente', 'personalVisible', 'estadoDelPin', 'puestosDe',
+  'alternarPuesto', 'textoBotonPersonal', 'htmlFilaPersonal', 'htmlPanelPin', 'htmlPanelTemporal', 'htmlTemporales',
+  'htmlConfigPersonal', 'guardarCambiosPersonal', 'tocarPuestoPersonal', 'pinValido', 'abrirPanelPin',
+  'olvidarCampoPin', 'cerrarPanelPin', 'confirmarPinConfig', 'htmlTiraPin', 'mostrarHojaPines', 'cerrarHojaPines',
+  'generarPines', 'abrirPanelTemporal', 'cerrarPanelTemporal', 'parametrosDarTemporal', 'confirmarTemporal',
+  'revocarTemporal', 'unidadesDeHistorial', 'unidadInicialOficina', 'nombresDeEmpleados', 'mostrarHistorial',
+  'filtrosHistorialValidos', 'cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
+  'sumarMedido', 'textoEntero', 'leerDetalleTurno', 'totalesConsumidos', 'detalleIncompleto', 'nombreInsumo',
+  'nombreIngredienteItem', 'htmlOperariosHistorial', 'htmlMasaHistorial', 'correccionesDe', 'htmlCorreccion',
+  'htmlSubloteHistorial', 'totalSublotes', 'htmlDetalleTurno', 'abrirDetalleHistorial', 'mostrarStockTerminado',
+  'cargarStockTerminado', 'agruparStockTerminado', 'htmlStockTerminado',
+]
+// Nuevas de la gestión (se suman a su lista).
+const NUEVAS_GESTION = []
+const CONST_NUEVAS_GESTION = ['puedeVerGestion']
+// Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
+// (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
+const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',
+  'TAREAS_PRODUCCION', 'puedeEntrar', 'CLAVE_UNIDAD']
+// Nuevas de la planta
+const NUEVAS_PLANTA = [
+  'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
+  'elegirMaestro', 'personasParaAcceso', 'detallePersonaAcceso', 'htmlPersonaAcceso', 'htmlNotaAcceso',
+  'sinAcceso', 'leerMiSesion', 'destinoDeSesion',
+]
+const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
+  'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
+const CONST_SOLO_GESTION = ['PESTANAS_CONFIG', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
+  'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION', 'CONDICIONES_EMPAQUE']
+const CONST_NUEVAS_PLANTA = ['LINKS_SIN_SESION']
+
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
   'CLAVE_MODO', 'CLAVE_UNIDAD', 'CLAVE_PERSONA', 'PUESTO_DE_MODO', 'TITULO_DE_MODO',
@@ -261,11 +330,31 @@ const PRELUDIO = `
   }
 `
 
+const esGestion = (ruta) => /produccion-gestion/.test(String(ruta))
+
+function listas(ruta) {
+  const fuera = new Set(RETIRADAS)
+  if (esGestion(ruta)) {
+    const f = new Set([...EN_AMBOS, ...SOLO_GESTION, ...NUEVAS_GESTION])
+    const c = new Set([...CONST_EN_AMBOS, ...CONST_SOLO_GESTION, ...CONST_NUEVAS_GESTION])
+    return {
+      funciones: [...FUNCIONES_BASE, ...NUEVAS_GESTION].filter(n => f.has(n) && !fuera.has(n)),
+      constantes: [...CONSTANTES_BASE, ...CONST_NUEVAS_GESTION].filter(n => c.has(n) && !fuera.has(n)),
+    }
+  }
+  const g = new Set([...SOLO_GESTION, ...CONST_SOLO_GESTION])
+  return {
+    funciones: [...FUNCIONES_BASE, ...NUEVAS_PLANTA].filter(n => !g.has(n) && !fuera.has(n)),
+    constantes: [...CONSTANTES_BASE, ...CONST_NUEVAS_PLANTA].filter(n => !g.has(n) && !fuera.has(n)),
+  }
+}
+
 function construirProduccion(ruta, { funciones = [], constantes = [], preludioExtra = '' } = {}) {
-  const todasConst = [...CONSTANTES_BASE, ...constantes]
+  const base = listas(ruta)
+  const todasConst = [...new Set([...base.constantes, ...constantes])]
   return construirCon(ruta, {
     preludio: PRELUDIO + preludioExtra,
-    funciones: [...FUNCIONES_BASE, ...funciones],
+    funciones: [...new Set([...base.funciones, ...funciones])],
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __body, __llamadas, __ls, localStorage,
       __ss, sessionStorage, __pinMaestro(){ return pinMaestro }, __tablas, __setRpc(f){ __rpc = f },
@@ -274,4 +363,7 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
   })
 }
 
-module.exports = { construirProduccion, FUNCIONES_BASE, CONSTANTES_BASE }
+// La gestión, para las suites que prueban las dos puntas.
+const GESTION = require('path').join(__dirname, '..', 'modulos/produccion-gestion.html')
+
+module.exports = { construirProduccion, FUNCIONES_BASE, CONSTANTES_BASE, EN_AMBOS, SOLO_GESTION, GESTION, esGestion }

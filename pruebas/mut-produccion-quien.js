@@ -4,13 +4,12 @@
 //   node pruebas/mut-produccion-quien.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
-correrMutaciones({
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-quien.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
-  funciones: ['htmlBotonPersona', 'htmlAvisoPuestos', 'mostrarElegirUnidad', 'htmlQuienEnBarra', 'htmlBarraModos'],
+  funciones: ['htmlBotonPersona', 'htmlAvisoPuestos', 'htmlQuienEnBarra', 'htmlBarraModos'],
   equivalentes: [
     { expr: 'esc(PLURAL_PUESTO[puesto] ?? puesto)', motivo: 'PLURAL_PUESTO y el puesto salen de constantes del código (PUESTO_DE_MODO): ninguna salida posible tiene un carácter escapable' },
     { expr: "esc(ROL_DE_MODO[estado.modo] ?? '')", motivo: 'ROL_DE_MODO son dos literales del código ("Encargado" / "Masero") y el modo está validado contra PUESTO_DE_MODO: ninguna salida posible tiene un carácter escapable' },
@@ -42,7 +41,9 @@ correrMutaciones({
     { nombre: 'el rol no sale del modo', de: '${esc(ROL_DE_MODO[estado.modo] ?? \'\')}:', a: 'Persona:' },
     { nombre: 'marcarAbiertas no marca el dato como conocido', de: '      estado.abiertasConocido = true\n', a: '' },
     { nombre: 'el fondo del body no cambia con el modo', de: "      cl.toggle('pr-modo-produccion', modo === 'produccion')", a: "      cl.toggle('pr-modo-produccion', false)" },
-    { nombre: 'la barra se ve también en las pantallas de oficina', de: '      return tieneTarea(\'cargar\') && !!estado.unidadId && !!estado.modo && !VISTAS_OFICINA.includes(estado.vista)', a: '      return tieneTarea(\'cargar\') && !!estado.unidadId && !!estado.modo' },
+    // (25/09/2026) Las pantallas de oficina se fueron a la gestión: en la
+    // planta lo que esconde la barra es no tener fábrica.
+    { nombre: 'la barra se ve sin fábrica', de: '      return tieneTarea(\'cargar\') && !!estado.unidadId && !!estado.modo && !VISTAS_OFICINA.includes(estado.vista)', a: '      return tieneTarea(\'cargar\') && !!estado.modo && !VISTAS_OFICINA.includes(estado.vista)' },
 
     // ── Tocar un modo ──────────────────────────────────────────────────────
     { nombre: 'tocar SALA DE MASA deshabilitada igual cambia el modo', de: "      if (modo === 'masa' && salaDeshabilitada()) return\n", a: '' },
@@ -54,10 +55,9 @@ correrMutaciones({
 
     // ── Qué se recuerda y qué no ───────────────────────────────────────────
     { nombre: 'el modo guardado acepta cualquier cosa', de: "      return Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, m ?? '') ? m : null", a: '      return m' },
-    { nombre: 'la unidad guardada no se valida', de: '      if (guardada && candidatas.includes(guardada)) return guardada', a: '      if (guardada) return guardada' },
-    { nombre: 'una sola unidad igual pregunta', de: '      if (candidatas.length === 1) return candidatas[0]\n', a: '' },
-    { nombre: 'elegir unidad ajena', de: '      if (!estado.unidadesPosibles.includes(id)) return\n', a: '' },
-    { nombre: 'no guarda la unidad', de: '      guardarPreferencia(CLAVE_UNIDAD, id)\n', a: '' },
+    // (25/09/2026) Las de elegir fábrica se fueron con la pantalla: la tablet
+    // trae SU fábrica de la cuenta del dispositivo.
+    { nombre: 'sin fábrica se pregunta en vez de decirlo', de: '      if (!estado.unidadId) return mostrarSinFabrica()', a: '      if (!estado.unidadId) return mostrarQuien()' },
     { nombre: 'sin modo guardado no arranca en ningún modo', de: "      if (!estado.modo) estado.modo = 'produccion'\n", a: '' },
     { nombre: 'la persona guardada vale para cualquier puesto', de: '        if (p.puesto !== PUESTO_DE_MODO[modo]) return null\n', a: '' },
     { nombre: 'la persona guardada no se valida', de: "        if (!p || typeof p.id !== 'string' || typeof p.nombre !== 'string') return null\n", a: '' },
@@ -73,7 +73,7 @@ correrMutaciones({
     { nombre: 'elegir un nombre entra sin PIN', de: "      estado.pin = nuevoPanelPin('persona', p, PUESTO_DE_MODO[estado.modo])", a: "      return entrar({ id: p.id, nombre: p.nombre, puesto: PUESTO_DE_MODO[estado.modo] })" },
     { nombre: 'un id que no está igual abre el PIN', de: '      if (!p) return\n      tocar()', a: '      tocar()' },
     { nombre: 'el nombre elegido no se marca', de: '      const elegida = estado.pin?.personaId ?? null', a: '      const elegida = null' },
-    { nombre: 'personal_produccion sin la unidad', de: "supabase.rpc('personal_produccion', { p_unidad_negocio_id: estado.unidadId })", a: "supabase.rpc('personal_produccion', { p_unidad_negocio_id: null })" },
+    { nombre: 'personal_produccion sin la unidad', de: "      pintarPin()\n      try {\n        const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: estado.unidadId })", a: "      pintarPin()\n      try {\n        const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: null })" },
     { nombre: 'si falla deja la lista de antes', de: '        lista.innerHTML = \'<button type="button" class="pr-btn" id="pr-quien-reintentar">Reintentar</button>\'', a: '' },
     { nombre: 'sin coincidencias dice que no hay personal', de: "          ? '<p class=\"pr-texto-suave\">Ningún nombre coincide con lo que buscaste.</p>'", a: "          ? '<p class=\"pr-texto-suave\">No hay personal activo para elegir.</p>'" },
 

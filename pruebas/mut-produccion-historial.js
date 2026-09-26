@@ -11,7 +11,7 @@ const { correrMutaciones } = require('./mutar')
 
 correrMutaciones({
   suite: path.join(__dirname, 'test-produccion-historial.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
+  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion-gestion.html'),
   escape: 'esc',
   funciones: ['cargarHistorial', 'htmlTablaTurnos', 'htmlFilaHistorial', 'htmlEstadoTurno',
     'htmlOperariosHistorial', 'htmlMasaHistorial', 'htmlCorreccion', 'htmlSubloteHistorial',

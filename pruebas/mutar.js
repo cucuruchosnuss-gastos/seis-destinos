@@ -25,14 +25,18 @@ const { execFileSync } = require('child_process')
 const { interpolaciones } = require('./escaner-interpolaciones')
 const { rangosDeFunciones } = require('./circuito-comun')
 
-function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales = [], equivalentes = [] }) {
+// `variable`: la variable de entorno por la que la suite recibe el archivo
+// (ARCHIVO_TEST por defecto; una suite que lee DOS archivos recibe el otro por
+// otra). `salir: false` devuelve el resultado en vez de terminar el proceso,
+// para correr las mutaciones de dos archivos en un solo runner.
+function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales = [], equivalentes = [], variable = 'ARCHIVO_TEST', salir = true }) {
   const src = fs.readFileSync(original, 'utf8')
-  const TMP = path.join(__dirname, `mut-tmp-${path.basename(suite, '.js')}.html`)
+  const TMP = path.join(__dirname, `mut-tmp-${path.basename(suite, '.js')}${variable === 'ARCHIVO_TEST' ? '' : '-' + variable.toLowerCase()}.html`)
 
   function correr(archivo) {
     try {
       const salida = execFileSync(process.execPath, [suite], {
-        encoding: 'utf8', env: { ...process.env, ARCHIVO_TEST: archivo }, stdio: ['ignore', 'pipe', 'pipe'],
+        encoding: 'utf8', env: { ...process.env, [variable]: archivo }, stdio: ['ignore', 'pipe', 'pipe'],
       })
       return { rojo: false, salida }
     } catch (err) {
@@ -102,7 +106,10 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
     if (m.mutado === src) { errores.push(`${m.nombre}: la mutación no cambió nada`); continue }
     fs.writeFileSync(TMP, m.mutado)
     const r = correr(TMP)
-    const leido = (r.salida.match(/ARCHIVO .* \((\d+) bytes\)/) || [])[1]
+    // Lo que leyó el sub-proceso DE ESTE archivo (una suite puede leer dos).
+    const lineasSalida = r.salida.split(/\r?\n/)
+    const lineaLeida = lineasSalida.find(l => l.startsWith('ARCHIVO ') && l.includes(TMP)) ?? lineasSalida.find(l => l.startsWith('ARCHIVO ')) ?? ''
+    const leido = (lineaLeida.match(/ARCHIVO .* \((\d+) bytes\)/) || [])[1]
     if (Number(leido) !== m.mutado.length) { errores.push(`${m.nombre}: el sub-proceso leyó ${leido} y se escribieron ${m.mutado.length}`); continue }
     if (m.equivalente) { equivs.push(`${m.nombre} — ${m.equivalente}${r.rojo ? ' (igual dio rojo)' : ''}`); continue }
     if (r.rojo) detectadas++
@@ -115,7 +122,23 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
   for (const e of errores) console.log('  ERROR DEL TEST: ' + e)
   for (const e of equivs) console.log('  equivalente: ' + e)
   console.log(`${detectadas}/${total} mutaciones detectadas${equivs.length ? ` (+${equivs.length} equivalentes, aparte)` : ''}`)
+  const res = { detectadas, total, equivalentes: equivs.length, fallas: escaparon.length + errores.length }
+  if (!salir) return res
   process.exit(escaparon.length || errores.length ? 1 : 0)
 }
 
-module.exports = { correrMutaciones }
+// Una suite que prueba DOS archivos (la planta y la gestión de Producción, por
+// ejemplo): cada tanda de mutaciones va sobre su archivo y por su variable.
+// Termina el proceso con el total.
+function correrMutacionesEnVarios(tandas) {
+  let det = 0, tot = 0, eq = 0, mal = 0
+  for (const t of tandas) {
+    console.log(`── ${path.basename(t.original)} (${t.variable ?? 'ARCHIVO_TEST'}) ──`)
+    const r = correrMutaciones({ ...t, salir: false })
+    det += r.detectadas; tot += r.total; eq += r.equivalentes; mal += r.fallas
+  }
+  console.log(`TOTAL: ${det}/${tot} mutaciones detectadas${eq ? ` (+${eq} equivalentes, aparte)` : ''}`)
+  process.exit(mal ? 1 : 0)
+}
+
+module.exports = { correrMutaciones, correrMutacionesEnVarios }

@@ -3,11 +3,10 @@
 //   node pruebas/mut-produccion-sesion.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
-correrMutaciones({
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-sesion.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
   funciones: ['htmlMaseroAdentro', 'htmlQuienEnBarra'],
   equivalentes: [
@@ -56,9 +55,9 @@ correrMutaciones({
     { nombre: 'vuelve "Nadie adentro"', de: '<button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar</button>', a: '<div class="pr-barra__nadie">Nadie adentro</div>' },
     { nombre: 'Tocá para entrar no abre nada', de: "        if (ev.target.closest('#pr-btn-entrar')) { tocar(); estado.quienOtra = false; mostrarQuien(); return }\n", a: '' },
     // h) Unidad.
-    { nombre: 'una sola unidad se pregunta', de: '      if (estado.unidadesPosibles.length === 1) return elegirUnidad(estado.unidadesPosibles[0])\n', a: '' },
-    { nombre: '"Cambiar de unidad" con una sola la borra', de: '        if (estado.unidadesPosibles.length < 2) return siguientePaso()\n', a: '' },
-    { nombre: 'cambiar de fábrica deja a las personas', de: '      olvidarTodas()\n      guardarPreferencia(CLAVE_UNIDAD, id)', a: '      olvidarPersona()\n      guardarPreferencia(CLAVE_UNIDAD, id)' },
+    // (25/09/2026) Las de elegir y cambiar de fábrica se fueron: la tablet trae
+    // SU fábrica (mi_sesion_produccion). La que queda: el arranque la toma de ahí.
+    { nombre: 'el arranque no toma la fábrica de la cuenta', de: '      estado.unidadId = estado.unidadesPosibles[0]', a: '      estado.unidadId = null' },
     // El maestro.
     { nombre: 'el maestro se guarda y pisa al encargado', de: '      if (!esMaestro) guardarSesion(', a: '      if (true) guardarSesion(' },
   ],

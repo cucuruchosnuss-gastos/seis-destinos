@@ -3,13 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Producción — Seis Destinos</title>
+  <title>Planta — Seis Destinos</title>
   <link rel="stylesheet" href="../css/main.css">
-  <link rel="manifest" href="../manifest.json">
-  <meta name="theme-color" content="#1a2a52">
+  <!-- La planta se instala como su propia app ("Planta"), en pantalla
+       completa y apaisada: su manifest es ../manifest.webmanifest y NO el
+       de la app entera (../manifest.json), que abre el dashboard. -->
+  <link rel="manifest" href="../manifest.webmanifest">
+  <meta name="theme-color" content="#3F4655">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Planta">
+  <link rel="apple-touch-icon" href="../icons/planta-192.png">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
-  <!-- PRODUCCIÓN (22/09/2026). La tablet de la fábrica, en modo kiosco.
+  <!-- LA PLANTA (25/09/2026): la tablet de la fábrica, en modo kiosco. Desde
+       ese día acá entra SOLO una cuenta de dispositivo (empleados.es_dispositivo,
+       leído con mi_sesion_produccion()); una cuenta personal se va a
+       produccion-gestion.html, donde viven la configuración, el historial, el
+       stock terminado y los indicadores.
+
+       PRODUCCIÓN (22/09/2026). La tablet de la fábrica, en modo kiosco.
 
        Cómo trabaja la fábrica, y es lo que manda sobre el diseño:
        1. El ENCARGADO abre el turno: quién es, qué turno, qué máquinas
@@ -298,6 +311,18 @@
     }
     /* Las salidas discretas de la pantalla, abajo a la izquierda. */
     .pr-quien__pie { margin-top: auto; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    /* El acceso maestro: solo el teclado, sin la lista de personas. */
+    .pr-quien--maestro { grid-template-columns: minmax(0, 500px); justify-content: center; }
+    .pr-pin__maestros { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 0.75rem; }
+    .pr-pin__maestros .pr-chip-maestro { min-height: 48px; padding: 0 1rem; border-radius: 999px; border: 2px solid var(--pr-borde-boton);
+      background: var(--color-fondo); font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    .pr-pin__maestros .pr-chip-maestro[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
+    .pr-barra__maestro { background: none; border: none; font: inherit; font-size: 1rem; font-weight: 700; color: inherit;
+      text-decoration: underline; cursor: pointer; min-height: 48px; padding: 0 0.5rem; }
+    .pr-atras { gap: 0.375rem; }
+    /* "Dar acceso por hoy": el puesto fijo y si tiene PIN, en cada persona. */
+    .pr-acceso__detalle { display: block; font-size: 1rem; font-weight: 600; color: var(--color-texto-suave); }
+    .pr-acceso__detalle--sin { color: var(--bordo); }
     .pr-link {
       min-height: var(--pr-alto-boton); padding: 0 1.125rem; font: inherit; font-size: 1.125rem; font-weight: 600;
       border: none; background: none; color: var(--pr-texto-secundario); text-decoration: underline;
@@ -1365,6 +1390,53 @@
       .pr-header__acciones { width: 100%; }
       .pr-header__acciones .pr-btn { flex: 1 1 auto; }
     }
+    /* ── LA PLANTA MÁS COMPACTA (25/09/2026) ─────────────────────────────
+       Va AL FINAL del <style> a propósito: pisa por orden (misma
+       especificidad) a las reglas de arriba, que quedan como estaban.
+       La meta, MEDIDA en un navegador: el tablero muestra CINCO máquinas sin
+       scroll en 1280×800 apaisado, con las cinco abiertas, el aviso de
+       planillas pendientes y "Sacar al masero" a la vista.
+       Se achican las pantallas de NAVEGACIÓN (la barra, el tablero, abrir
+       turno, la planilla y la lista de máquinas de la sala): texto de 16 px
+       como mínimo y botones de 48 px como mínimo, que se tocan bien de pie.
+       Quedan GRANDES lo que se toca con las manos en la masa: los renglones
+       de la receta (64 px) con sus − / +, el panel de lotes, "+ Otro" y el
+       teclado del PIN (84 px). Por eso esos contenedores vuelven a
+       --pr-alto-boton: 56px. */
+    body { --pr-alto-boton: 48px; font-size: 16px; }
+    #pr-receta, #pr-otro, #pr-lote-panel, #pr-pin { --pr-alto-boton: 56px; }
+    .pr-app { padding-inline: 0.75rem; }
+    .pr-btn { font-size: 1rem; padding: 0 1rem; }
+    .pr-btn--accion { min-height: 52px; font-size: 1.125rem; }
+    .pr-btn--grande { min-height: 64px; font-size: 1.25rem; }
+    .pr-tarjeta { padding: 0.875rem 1rem; margin-bottom: 0.75rem; }
+    .pr-titulo { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .pr-aviso { padding: 0.5rem 0.875rem; margin: 0.5rem 0; font-size: 1rem; }
+    .pr-aviso .pr-chips { margin-top: 0.375rem; }
+    .pr-barra { min-height: 56px; margin-bottom: 0.625rem; }
+    .pr-modo { min-height: 48px; font-size: 1.125rem; }
+    .pr-masero-adentro { padding: 0.375rem 0.875rem; margin: 0.5rem 0; font-size: 1rem; }
+    /* El tablero: cuatro columnas en 1280 y tarjetas bajas. El LOTE sigue
+       siendo lo más grande de la tarjeta: se copia a la planilla de papel. */
+    #pr-produccion .pr-titulo { font-size: 1.5rem; }
+    .pr-tablero { gap: 0.625rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+    .pr-tablero .pr-maquina { min-height: 112px; padding: 0.625rem 0.875rem; gap: 0.125rem; }
+    .pr-tablero .pr-maquina__nombre { font-size: 1.25rem; }
+    .pr-tablero .pr-maquina__estado { font-size: 1rem; }
+    .pr-maquina__lote { font-size: 2.5rem; }
+    .pr-maquina__cuenta { font-size: 1rem; }
+    .pr-maquina__libre { font-size: 1.75rem; }
+    .pr-maquina--ayer .pr-maquina__lote { font-size: 2rem; }
+    /* Abrir turno: filas más bajas. La casilla sigue de 56×56. */
+    .pr-abrir-fila { padding: 0.5rem 0; }
+    .pr-abrir-fila__nombre { font-size: 1.125rem; }
+    .pr-segmento--columna .pr-segmento__opcion { min-height: 52px; font-size: 1.125rem; }
+    /* La lista de máquinas de la sala. */
+    .pr-sala-maq { min-height: 64px; }
+    .pr-sala-maq__nombre { font-size: 1.25rem; }
+    .pr-sala-maq__cuenta { font-size: 1.125rem; }
+    .pr-sala-maq__sub, .pr-sala-maq__ultima { font-size: 1rem; }
+    .pr-sala__masas { min-height: 52px; font-size: 1.125rem; }
   </style>
 </head>
 
@@ -1387,52 +1459,18 @@
       </div>
     </div>
 
-    <!-- La cabecera vieja queda SOLO para la oficina (quien no carga desde la
-         tablet) y para Configuración, Historial y Stock terminado. En la
-         tablet se esconde: ahí manda la barra de modos. -->
-    <header class="pr-header" id="pr-header" hidden>
-      <div class="pr-header__col">
-        <span class="pr-header__marca">Seis Destinos</span>
-        <div class="pr-header__fila">
-          <span class="pr-header__titulo">Producción</span>
-          <span class="pr-header__contexto" id="pr-header-contexto"></span>
-        </div>
-      </div>
-      <div class="pr-header__acciones" id="pr-header-acciones">
-        <button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-menu" aria-expanded="false" aria-controls="pr-menu" hidden>Menú</button>
-      </div>
-    </header>
-
-    <nav class="pr-tarjeta pr-menu" id="pr-menu" hidden aria-label="Menú de la tablet">
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="unidad" id="pr-menu-unidad">Cambiar de unidad</button>
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="historial" id="pr-menu-historial" hidden>Historial de producción</button>
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="stock" id="pr-menu-stock" hidden>Stock terminado</button>
-      <button type="button" class="pr-btn pr-btn--secundario" data-menu="config" id="pr-menu-config" hidden>Configuración</button>
-      <a class="pr-btn pr-btn--secundario" href="../dashboard.html" id="pr-menu-dashboard">Volver al inicio de la app</a>
-    </nav>
-
-    <!-- Sin ninguna de las tres tareas no hay nada que mostrar: se dice y se
-         vuelve al dashboard. El frontend solo oculta: la barrera real son las
+    <!-- Si esta cuenta no es un dispositivo con produccion:cargar en su
+         fábrica, se dice acá. En la planta NO se vuelve al dashboard: la
+         cuenta de la tablet no tiene nada que hacer ahí, y el dashboard la
+         mandaría de vuelta. El frontend solo oculta: la barrera real son las
          policies y las RPCs. -->
     <div class="pr-vacio" id="pr-sin-acceso" hidden></div>
     <div class="pr-vacio" id="pr-cargando">Cargando…</div>
 
     <main id="pr-vista" hidden>
       <section class="pr-tarjeta" id="pr-inicio">
-        <h1 class="pr-titulo">¿Qué querés ver?</h1>
+        <h1 class="pr-titulo">Planta</h1>
         <p class="pr-texto-suave" id="pr-inicio-texto"></p>
-        <div class="pr-grilla pr-espacio-arriba" id="pr-oficina">
-          <button type="button" class="pr-opcion" id="pr-btn-ir-historial" hidden>Historial de producción</button>
-          <button type="button" class="pr-opcion" id="pr-btn-ir-stock" hidden>Stock terminado</button>
-          <button type="button" class="pr-opcion" id="pr-btn-ir-config" hidden>Configuración</button>
-        </div>
-      </section>
-
-      <!-- B2: la unidad, si la cuenta puede cargar en más de una. Se elige una
-           vez y se recuerda en esta tablet. -->
-      <section class="pr-tarjeta" id="pr-elegir-unidad" hidden>
-        <h1 class="pr-titulo">¿En qué fábrica está esta tablet?</h1>
-        <div class="pr-grilla" id="pr-unidades"></div>
       </section>
 
       <!-- "¿Quién sos?" + PIN. Cada vez que alguien empieza a usar la tablet,
@@ -1440,7 +1478,7 @@
            izquierda y el teclado siempre a la derecha: se elige y se tipea sin
            cambiar de pantalla. -->
       <section class="pr-quien" id="pr-quien" hidden>
-        <div class="pr-tarjeta pr-quien__col">
+        <div class="pr-tarjeta pr-quien__col" id="pr-quien-col">
           <div class="pr-fila-titulo">
             <h1 class="pr-titulo" id="pr-quien-titulo">¿Quién sos?</h1>
             <span class="pr-quien__puesto" id="pr-quien-puesto"></span>
@@ -1456,9 +1494,6 @@
           <div class="pr-quien__pie">
             <!-- El acceso maestro es de excepción: discreto, pero a la vista. -->
             <button type="button" class="pr-link" id="pr-btn-maestro">Acceso maestro</button>
-            <!-- La fábrica se elige una vez; solo aparece si esta cuenta puede
-                 cargar en más de una. -->
-            <button type="button" class="pr-link" id="pr-btn-cambiar-unidad" hidden>Cambiar de fábrica</button>
           </div>
         </div>
 
@@ -1470,6 +1505,10 @@
             <div class="pr-pin__sub" id="pr-pin-sub"></div>
           </div>
           <div id="pr-pin-progreso" hidden></div>
+          <!-- Con más de un acceso maestro: SOLO sus nombres, chiquitos. Con uno
+               solo no hace falta elegir. Nunca se prueba el PIN contra todos:
+               a cada uno le sumaría un intento fallido. -->
+          <div class="pr-pin__maestros" id="pr-pin-maestros" hidden></div>
           <div class="pr-pin__puntos" id="pr-pin-puntos"></div>
           <div id="pr-pin-mensaje"></div>
           <div class="pr-pin__teclado" id="pr-pin-teclado"></div>
@@ -1488,6 +1527,7 @@
           <div class="pr-segmento" id="pr-acceso-puestos" role="group" aria-label="Puesto"></div></div>
         <label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿Hasta el final de qué día?</span>
           <input type="date" id="pr-acceso-hasta" class="pr-input"></label>
+        <div id="pr-acceso-nota"></div>
         <p class="pr-error" id="pr-acceso-error" hidden></p>
         <div class="pr-acciones">
           <button type="button" class="pr-btn pr-btn--secundario" id="pr-acceso-cancelar">Cancelar</button>
@@ -1596,10 +1636,10 @@
         </div>
 
         <div class="pr-planilla-cab">
+          <button type="button" class="pr-btn pr-btn--secundario pr-atras" id="pr-planilla-volver"><span aria-hidden="true">←</span> Atrás</button>
           <div class="pr-planilla-cab__lote" id="pr-planilla-lote"></div>
           <div class="pr-planilla-cab__que" id="pr-planilla-que"></div>
           <div class="pr-planilla-cab__botones">
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-planilla-volver">&lsaquo; Máquinas</button>
             <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-parada">Paró ahora</button>
             <span class="pr-planilla-cab__sep" aria-hidden="true"></span>
             <button type="button" class="pr-btn pr-btn--accion pr-planilla-cab__cerrar" id="pr-btn-cerrar-planilla">Cerrar planilla</button>
@@ -1931,9 +1971,9 @@
           <span class="pr-banda__detalle" id="pr-masas-sin-texto"></span>
         </div>
         <div class="pr-fila-titulo pr-masas__titulo">
+          <button type="button" class="pr-btn pr-btn--secundario pr-atras" id="pr-masas-volver"><span aria-hidden="true">←</span> Atrás</button>
           <h1 class="pr-titulo">Masas del turno</h1>
           <div class="pr-fila-titulo__botones">
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-masas-volver">‹ Máquinas</button>
             <button type="button" class="pr-btn pr-btn--accion" id="pr-masas-nueva">+ Nueva masa</button>
           </div>
         </div>
@@ -1959,75 +1999,6 @@
         </div>
       </section>
 
-      <!-- B6: configuración (produccion:configurar), por unidad.
-           Es la ÚNICA pantalla del módulo que se usa en la compu y no en la
-           tablet, así que sube la densidad (.pr-cfg): texto de 15 px, filas de
-           52 px y controles de 40 px. -->
-      <section id="pr-config" class="pr-cfg" hidden>
-        <div class="pr-tarjeta">
-          <div class="pr-fila-titulo">
-            <h1 class="pr-titulo">Configuración</h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-config-volver">‹ Volver</button>
-          </div>
-          <label class="pr-campo">
-            <span class="pr-campo__rotulo">Unidad</span>
-            <select id="pr-config-unidad" class="pr-select"></select>
-          </label>
-          <div class="pr-cfg-tabs" id="pr-config-tabs" role="group" aria-label="Qué configurar"></div>
-          <p class="pr-error" id="pr-config-error" hidden></p>
-        </div>
-        <div class="pr-tarjeta" id="pr-config-cuerpo"></div>
-      </section>
-
-      <!-- B7: historial de turnos (produccion:ver o :configurar). Se mira en
-           la compu, así que va con la densidad de oficina (.pr-of). -->
-      <section id="pr-historial" class="pr-of" hidden>
-        <div id="pr-historial-listado">
-          <div class="pr-tarjeta">
-            <div class="pr-fila-titulo">
-              <h1 class="pr-titulo">Historial de producción</h1>
-              <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-volver">‹ Volver</button>
-            </div>
-            <div class="pr-campos">
-              <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-historial-unidad" class="pr-select"></select></label>
-              <label class="pr-campo"><span class="pr-campo__rotulo">Desde</span><input type="date" id="pr-historial-desde" class="pr-input"></label>
-              <label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" id="pr-historial-hasta" class="pr-input"></label>
-              <label class="pr-campo"><span class="pr-campo__rotulo">Máquina</span><select id="pr-historial-maquina" class="pr-select"></select></label>
-              <label class="pr-campo"><span class="pr-campo__rotulo">Estado</span>
-                <select id="pr-historial-estado" class="pr-select">
-                  <option value="">Todos</option>
-                  <option value="abierto">Abiertos</option>
-                  <option value="pendiente_completar">Pendientes de completar</option>
-                  <option value="cerrado">Cerrados</option>
-                </select>
-              </label>
-            </div>
-          </div>
-          <div id="pr-historial-aviso"></div>
-          <div id="pr-historial-lista"></div>
-        </div>
-        <div class="pr-tarjeta" id="pr-historial-detalle" hidden>
-          <div class="pr-fila-titulo">
-            <h1 class="pr-titulo">Turno</h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-detalle-volver">‹ Historial</button>
-          </div>
-          <div id="pr-historial-detalle-cuerpo"></div>
-        </div>
-      </section>
-
-      <!-- B7: stock de producto terminado. Solo lectura, y también de oficina. -->
-      <section id="pr-stock" class="pr-of" hidden>
-        <div class="pr-tarjeta">
-          <div class="pr-fila-titulo">
-            <h1 class="pr-titulo">Stock terminado</h1>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-stock-volver">‹ Volver</button>
-          </div>
-          <label class="pr-campo"><span class="pr-campo__rotulo">Unidad</span><select id="pr-stock-unidad" class="pr-select"></select></label>
-        </div>
-        <div id="pr-stock-aviso"></div>
-        <div id="pr-stock-lista"></div>
-      </section>
-
       <!-- B4: la planilla cerrada, con los sublotes que devolvió la base. -->
       <section class="pr-tarjeta" id="pr-cerrado" hidden>
         <h1 class="pr-titulo">Planilla cerrada</h1>
@@ -2036,21 +2007,6 @@
       </section>
     </main>
 
-    <!-- LA HOJA DE PINES. Los PINes que devuelve generar_pines_iniciales se
-         muestran UNA sola vez: se imprime, se recorta y se reparte. Al cerrar,
-         se borran de la memoria (estado.config.hoja) y del DOM. Vive fuera de
-         <main> para que @media print pueda esconder todo lo demás. -->
-    <div class="pr-hoja" id="pr-cfg-hoja" hidden>
-      <div class="pr-fila-titulo pr-hoja__botones">
-        <h1 class="pr-titulo">PINes para repartir</h1>
-        <div class="pr-config-fila__botones">
-          <button type="button" class="pr-btn" id="pr-cfg-hoja-imprimir">Imprimir</button>
-          <button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-hoja-cerrar">Cerrar</button>
-        </div>
-      </div>
-      <p class="pr-hoja__botones pr-texto-suave" id="pr-cfg-hoja-aviso"></p>
-      <div id="pr-cfg-hoja-tiras"></div>
-    </div>
   </div>
 
   <script type="module">
@@ -2149,18 +2105,10 @@
         .replace(/'/g, '&#39;')
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
-    // ═══════════════════════════════════════════════════════════════════════
-
-    const TAREAS_PRODUCCION = ['cargar', 'ver', 'configurar']
-
     // Con bypass de super_admin, igual que tiene_tarea() en la base.
     function tieneTarea(tarea) {
       return estado.miRolApp === 'super_admin' || estado.misTareas.has(tarea)
     }
-    const puedeEntrar = () => TAREAS_PRODUCCION.some(tieneTarea)
-
     // Las unidades donde la persona tiene esa tarea, con la MISMA regla que
     // tiene_tarea_alcance(): super_admin todas; {"todas": true} todas; si no,
     // las de {"unidades": [...]}. Solo unidades activas. No hay una vista
@@ -2212,7 +2160,6 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     const CLAVE_MODO = 'produccion.modo'
-    const CLAVE_UNIDAD = 'produccion.unidad'
     // La persona verificada, para que recargar la tablet no la eche. Va en
     // sessionStorage y NUNCA lleva el PIN: lo único que se guarda es quién es
     // y para qué puesto se verificó.
@@ -2261,14 +2208,6 @@
     function modoGuardado() {
       const m = leerPreferencia(CLAVE_MODO)
       return Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, m ?? '') ? m : null
-    }
-
-    // Con una sola unidad posible no se pregunta nada. Con varias, la que se
-    // eligió antes en esta tablet si todavía es posible; si no, hay que elegir.
-    function unidadInicial(candidatas, guardada) {
-      if (candidatas.length === 1) return candidatas[0]
-      if (guardada && candidatas.includes(guardada)) return guardada
-      return null
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2348,11 +2287,19 @@
       // Sin nadie adentro: una invitación a entrar, tocable. Abre el "¿Quién
       // sos?" del modo activo.
       if (!estado.persona) {
-        return `<div class="pr-barra__quien"><button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar</button>${unidad}</div>`
+        return `<div class="pr-barra__quien"><button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar</button>${unidad}</div>` +
+          htmlMaestroEnBarra()
       }
       return `<div class="pr-barra__quien"><div><span class="pr-barra__rol">${esc(ROL_DE_MODO[estado.modo] ?? '')}:</span> ` +
         `<span class="pr-barra__nombre">${esc(estado.persona.nombre)}</span></div>${unidad}</div>` +
         `<button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-salir">Salir</button>`
+    }
+
+    // "Acceso maestro" directo desde la barra: sin pasar por la lista de
+    // "¿Quién sos?". No se ofrece con el maestro ya activo.
+    function htmlMaestroEnBarra() {
+      if (estado.maestro) return ''
+      return '<button type="button" class="pr-barra__maestro" id="pr-btn-barra-maestro">Acceso maestro</button>'
     }
 
     // Los dos modos se reparten el ancho. El deshabilitado lleva BORDE
@@ -2410,13 +2357,6 @@
         estado.persona = null
         estado.pin = null
       }
-    }
-
-    // Las dos: al cambiar de fábrica nadie sigue adentro de la anterior.
-    function olvidarTodas() {
-      for (const modo of Object.keys(PUESTO_DE_MODO)) olvidarPersona(modo)
-      estado.persona = null
-      estado.pin = null
     }
 
     // Salir: la persona de ESTE modo sale y se vuelve a preguntar. La del
@@ -2509,52 +2449,30 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-elegir-unidad', 'pr-quien', 'pr-acceso', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-agregar-prod', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-receta', 'pr-masas', 'pr-config', 'pr-historial', 'pr-stock']
+    const VISTAS = ['pr-inicio', 'pr-quien', 'pr-acceso', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-agregar-prod', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-receta', 'pr-masas']
 
-    // Las pantallas que NO son la tablet: la oficina (quien no carga) y las que
-    // se usan en la compu. Ahí manda la cabecera vieja con su menú; en la
-    // tablet manda la barra de modos y no hay ninguna otra.
-    const VISTAS_OFICINA = ['pr-inicio', 'pr-elegir-unidad', 'pr-config', 'pr-historial', 'pr-stock']
+    // Las pantallas de oficina se fueron a produccion-gestion.html (25/09/2026):
+    // en la planta todo es tablet y manda la barra de modos.
+    const VISTAS_OFICINA = []
 
     function mostrarVista(id) {
       estado.vista = id
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
-      cerrarMenu()
       pintarCabecera()
       if (window.scrollTo) window.scrollTo(0, 0)
     }
 
-    // ¿Estamos en la tablet? Con produccion:cargar, una unidad y un modo, y en
-    // una pantalla que no sea de oficina.
+    // ¿Estamos en la tablet? Con produccion:cargar, la fábrica y un modo. En la
+    // planta es casi siempre: solo entra una cuenta de dispositivo.
     function enModoTablet() {
       return tieneTarea('cargar') && !!estado.unidadId && !!estado.modo && !VISTAS_OFICINA.includes(estado.vista)
     }
 
+    // En la planta no hay cabecera ni menú (se fueron con la oficina a la
+    // gestión): la barra de modos y el cartel del acceso maestro.
     function pintarCabecera() {
       pintarBarra()
       pintarMaestro()
-      const header = document.getElementById('pr-header')
-      header.hidden = enModoTablet()
-      // Al lado del nombre del módulo, en chico: la unidad y la persona activa.
-      // NO el modo: "Producción" es a la vez el módulo y un modo, y repetirlo
-      // era lo que dejaba "Producción • Producción".
-      const partes = []
-      if (estado.unidadId) partes.push(estado.unidades.get(estado.unidadId) ?? 'Unidad')
-      if (estado.persona?.nombre) partes.push(estado.persona.nombre)
-      document.getElementById('pr-header-contexto').textContent = partes.join(' · ')
-      document.getElementById('pr-btn-menu').hidden = false
-      document.getElementById('pr-menu-unidad').hidden = !tieneTarea('cargar') || estado.unidadesPosibles.length < 2
-    }
-
-    function cerrarMenu() {
-      document.getElementById('pr-menu').hidden = true
-      document.getElementById('pr-btn-menu').setAttribute('aria-expanded', 'false')
-    }
-
-    function alternarMenu() {
-      const menu = document.getElementById('pr-menu')
-      menu.hidden = !menu.hidden
-      document.getElementById('pr-btn-menu').setAttribute('aria-expanded', menu.hidden ? 'false' : 'true')
     }
 
     // El orden de las preguntas: unidad → persona → el modo. El MODO ya no se
@@ -2562,29 +2480,18 @@
     // tablet sin modo guardado arranca en PRODUCCIÓN, que además es el único
     // modo usable mientras no haya ninguna máquina abierta.
     function siguientePaso() {
-      if (!estado.unidadId) return mostrarElegirUnidad()
+      // La cuenta de la tablet trae SU fábrica (mi_sesion_produccion): sin
+      // ella no hay nada que preguntar ni elegir.
+      if (!estado.unidadId) return mostrarSinFabrica()
       if (!estado.modo) estado.modo = 'produccion'
       if (!estado.persona) return mostrarQuien()
       return entrarAlModo()
     }
 
-    function mostrarElegirUnidad() {
-      // Con UNA sola unidad no hay nada que preguntar: se entra a esa.
-      if (estado.unidadesPosibles.length === 1) return elegirUnidad(estado.unidadesPosibles[0])
-      document.getElementById('pr-unidades').innerHTML = estado.unidadesPosibles
-        .map(id => `<button type="button" class="pr-opcion" data-unidad="${esc(id)}">${esc(estado.unidades.get(id) ?? id)}</button>`)
-        .join('')
-      mostrarVista('pr-elegir-unidad')
-    }
-
-    function elegirUnidad(id) {
-      if (!estado.unidadesPosibles.includes(id)) return
-      estado.unidadId = id
-      estado.abiertasConocido = false
-      olvidarTodas()
-      guardarPreferencia(CLAVE_UNIDAD, id)
-      refrescarAbiertas()
-      siguientePaso()
+    function mostrarSinFabrica() {
+      document.getElementById('pr-inicio-texto').textContent =
+        'Esta tablet no tiene una fábrica asignada. Pedí que la configuren desde Empleados.'
+      mostrarVista('pr-inicio')
     }
 
     // La persona que quedó verificada en esta pestaña. Solo vale para el modo
@@ -2608,6 +2515,7 @@
       const lista = document.getElementById('pr-quien-lista')
       const aviso = document.getElementById('pr-quien-aviso')
       estado.pin = null
+      estado.quienMaestro = false
       estado.quienBusqueda = ''
       document.getElementById('pr-quien-buscar').value = ''
       const guardada = estado.quienOtra ? null : personaGuardada(estado.modo)
@@ -2668,7 +2576,6 @@
         : (personas.length
           ? '<p class="pr-texto-suave">Ningún nombre coincide con lo que buscaste.</p>'
           : '<p class="pr-texto-suave">No hay personal activo para elegir.</p>')
-      document.getElementById('pr-btn-cambiar-unidad').hidden = estado.unidadesPosibles.length < 2
     }
 
     // Elegir un nombre NO entra: abre el panel del PIN.
@@ -2695,24 +2602,6 @@
       estado.pin = null
       tocar()
       return entrarAlModo()
-    }
-
-    function accionDelMenu(que) {
-      if (que === 'unidad') {
-        // Con una sola unidad no hay a cuál cambiar.
-        if (estado.unidadesPosibles.length < 2) return siguientePaso()
-        estado.unidadId = null
-        estado.abiertasConocido = false
-        olvidarTodas()
-        guardarPreferencia(CLAVE_UNIDAD, null)
-      } else if (que === 'config') {
-        return abrirConfigDesdeAcceso()
-      } else if (que === 'historial') {
-        return mostrarHistorial()
-      } else if (que === 'stock') {
-        return mostrarStockTerminado()
-      }
-      siguientePaso()
     }
 
     // Lo que se ve una vez que se sabe unidad, modo y persona.
@@ -2861,6 +2750,7 @@
       const panel = document.getElementById('pr-pin')
       const p = estado.pin
       panel.hidden = !p
+      pintarQuienMaestro()
       if (!p) return
       panel.className = 'pr-tarjeta pr-pin' + (p.modo === 'maestro' ? ' pr-pin--maestro' : '')
       const reloj = p.bloqueadoHasta ? cuentaRegresiva(p.bloqueadoHasta) : null
@@ -2874,6 +2764,9 @@
       const teclado = document.getElementById('pr-pin-teclado')
       teclado.innerHTML = htmlTecladoPin(p, !!reloj)
       teclado.className = 'pr-pin__teclado' + (reloj ? ' pr-pin__teclado--off' : '')
+      const maestros = document.getElementById('pr-pin-maestros')
+      maestros.innerHTML = htmlMaestrosPin(p)
+      maestros.hidden = !maestros.innerHTML
       const otra = document.getElementById('pr-pin-otra')
       otra.textContent = p.modo === 'maestro' ? 'Cancelar' : 'Elegir otra persona'
       otra.hidden = !(p.modo === 'maestro' || reloj)
@@ -2894,6 +2787,15 @@
     }
 
     function cerrarPin() {
+      // Cancelar el acceso maestro vuelve a donde se estaba: al modo si había
+      // alguien adentro, o a "¿Quién sos?".
+      if (estado.pin?.modo === 'maestro') {
+        estado.pin = null
+        estado.quienMaestro = false
+        pintarQuienMaestro()
+        if (estado.persona) return entrarAlModo()
+        return mostrarQuien()
+      }
       if (estado.quienFija) return soyOtraPersona()
       estado.pin = null
       pintarQuien()
@@ -3020,10 +2922,66 @@
     // lo que dura la memoria. Recargar la tablet la cierra, que es lo correcto
     // para un acceso de excepción.
 
-    function abrirMaestro() {
+    // Se abre desde la barra o desde el pie de "¿Quién sos?", y en los dos
+    // casos muestra SOLO el teclado de 8 números: la lista de personas se
+    // esconde. Quién es sale de personal_produccion (es_maestro): con UNO
+    // solo no se pregunta; con varios, una fila chica con sus nombres adentro
+    // del mismo panel. NO se prueba el PIN contra cada maestro: a los otros
+    // les sumaría intentos fallidos y los bloquearía 15 minutos.
+    async function abrirMaestro() {
       tocar()
       estado.pin = nuevoPanelPin('maestro', null, null)
-      pintarQuien()
+      estado.quienMaestro = true
+      if (estado.vista !== 'pr-quien') mostrarVista('pr-quien')
+      pintarQuienMaestro()
+      pintarPin()
+      if (!Array.isArray(estado.personal) || !estado.personal.length) {
+        try {
+          const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: estado.unidadId })
+          if (error) throw error
+          estado.personal = data ?? []
+        } catch (err) {
+          console.error('personal_produccion (maestro):', err)
+          if (estado.pin?.modo === 'maestro') {
+            estado.pin.mensaje = { texto: 'No se pudo leer quién tiene acceso maestro. Revisá la conexión.' }
+          }
+        }
+      }
+      const p = estado.pin
+      if (p?.modo === 'maestro' && !p.personaId) {
+        const maestros = maestrosDisponibles()
+        if (maestros.length === 1) { p.personaId = maestros[0].id; p.personaNombre = maestros[0].nombre }
+      }
+      pintarPin()
+    }
+
+    function maestrosDisponibles() {
+      return (Array.isArray(estado.personal) ? estado.personal : []).filter(x => x.es_maestro === true)
+    }
+
+    // Con el panel del maestro, la columna de la lista se esconde entera.
+    function pintarQuienMaestro() {
+      const enMaestro = estado.pin?.modo === 'maestro'
+      document.getElementById('pr-quien-col').hidden = enMaestro
+      document.getElementById('pr-quien')?.classList?.toggle('pr-quien--maestro', enMaestro)
+    }
+
+    function htmlMaestrosPin(p) {
+      if (p?.modo !== 'maestro') return ''
+      const maestros = maestrosDisponibles()
+      if (maestros.length < 2) return ''
+      return maestros.map(m => `<button type="button" class="pr-chip-maestro" data-maestro="${esc(m.id)}" aria-pressed="${m.id === p.personaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+    }
+
+    function elegirMaestro(id) {
+      const p = estado.pin
+      if (p?.modo !== 'maestro') return
+      const m = maestrosDisponibles().find(x => x.id === id)
+      if (!m) return
+      tocar()
+      p.personaId = m.id
+      p.personaNombre = m.nombre
+      p.mensaje = null
       pintarPin()
     }
 
@@ -3033,7 +2991,7 @@
       const candidatos = (estado.personal ?? []).filter(x => x.es_maestro)
       if (!p.personaId) {
         if (candidatos.length !== 1) {
-          p.mensaje = { texto: 'Elegí primero tu nombre en la lista de la izquierda.' }
+          p.mensaje = { texto: candidatos.length ? 'Tocá primero tu nombre, arriba de los puntos.' : 'No hay ningún acceso maestro configurado.' }
           p.digitos = ''
           return pintarPin()
         }
@@ -3062,6 +3020,8 @@
       estado.maestro = { id: p.personaId, nombre: p.personaNombre }
       pinMaestro = p.digitos        // EN MEMORIA: otorgar_puesto_temporal lo pide
       estado.pin = null
+      estado.quienMaestro = false
+      pintarQuienMaestro()
       tocar()
       return entrarComoMaestro(estado.modo ?? 'produccion')
     }
@@ -3123,13 +3083,58 @@
       pintarDarAcceso()
     }
 
+    // Aparece TODO el personal, también quien ya tiene ese puesto fijo: a un
+    // masero fijo SIN PIN, darle "acceso por hoy" le genera un PIN de un día
+    // (otorgar_puesto_temporal arma pin_temporal si la persona no tiene PIN,
+    // tenga o no el puesto; leído con pg_get_functiondef el 25/09/2026). Es
+    // la única forma de que un masero sin PIN entre desde la tablet: asignar
+    // un PIN definitivo (asignar_pin_produccion) pide produccion:configurar a
+    // la CUENTA que llama, y la de la tablet no la tiene.
+    // Con un puesto elegido, primero los que lo tienen fijo y no tienen PIN
+    // (el caso que se viene a resolver), después el resto; el orden de la base
+    // se respeta adentro de cada grupo.
+    function personasParaAcceso(personal, busqueda, puesto) {
+      const lista = personasFiltradas(Array.isArray(personal) ? personal : [], busqueda)
+      if (!puesto) return lista
+      const primero = p => Array.isArray(p.puestos) && p.puestos.includes(puesto) && p.tiene_pin === false
+      return [...lista.filter(primero), ...lista.filter(p => !primero(p))]
+    }
+
+    function detallePersonaAcceso(p) {
+      const puestos = (Array.isArray(p?.puestos) ? p.puestos : []).map(x => PUESTOS.find(([k]) => k === x)?.[1] ?? x)
+      const partes = []
+      if (puestos.length) partes.push(puestos.join(' · '))
+      if (p?.tiene_pin === false) partes.push('sin PIN')
+      return partes.join(' · ')
+    }
+
+    function htmlPersonaAcceso(p, elegidaId) {
+      const det = detallePersonaAcceso(p)
+      const sin = p?.tiene_pin === false
+      return `<button type="button" class="pr-opcion" data-acceso-persona="${esc(p.id)}" aria-pressed="${p.id === elegidaId ? 'true' : 'false'}">` +
+        `<span>${esc(p.nombre)}${det ? `<span class="pr-acceso__detalle${sin ? ' pr-acceso__detalle--sin' : ''}">${esc(det)}</span>` : ''}</span></button>`
+    }
+
+    // Lo que va a pasar con la persona elegida, dicho antes de tocar "Dar".
+    function htmlNotaAcceso(personal, a) {
+      const p = (Array.isArray(personal) ? personal : []).find(x => x.id === a?.personaId)
+      if (!p) return ''
+      const fijo = a.puesto && Array.isArray(p.puestos) && p.puestos.includes(a.puesto)
+      if (p.tiene_pin === false) {
+        return `<div class="pr-aviso">${esc(p.nombre)} no tiene PIN: al darle el acceso se arma uno de un día y se muestra una sola vez.${fijo ? ' Ya tiene el puesto fijo: el acceso por hoy le sirve para entrar con ese PIN.' : ''}</div>`
+      }
+      if (fijo) return `<div class="pr-aviso">${esc(p.nombre)} ya tiene este puesto fijo y tiene PIN: puede entrar con su PIN de siempre.</div>`
+      return ''
+    }
+
     function pintarDarAcceso() {
       const a = estado.acceso
       if (!a) return
-      const visibles = personasFiltradas(estado.personal ?? [], a.busqueda).slice(0, 12)
+      const visibles = personasParaAcceso(estado.personal ?? [], a.busqueda, a.puesto).slice(0, 12)
       document.getElementById('pr-acceso-personas').innerHTML = visibles.length
-        ? visibles.map(p => `<button type="button" class="pr-opcion" data-acceso-persona="${esc(p.id)}" aria-pressed="${p.id === a.personaId ? 'true' : 'false'}">${esc(p.nombre)}</button>`).join('')
+        ? visibles.map(p => htmlPersonaAcceso(p, a.personaId)).join('')
         : '<p class="pr-texto-suave">Ningún nombre coincide con lo que buscaste.</p>'
+      document.getElementById('pr-acceso-nota').innerHTML = htmlNotaAcceso(estado.personal ?? [], a)
       document.getElementById('pr-acceso-puestos').innerHTML = PUESTOS
         .map(([clave, rotulo]) => `<button type="button" class="pr-segmento__opcion" data-acceso-puesto="${esc(clave)}" aria-pressed="${clave === a.puesto ? 'true' : 'false'}">${esc(rotulo)}</button>`).join('')
       const faltan = faltanParaAcceso(a, hoyArgentina())
@@ -3195,20 +3200,6 @@
       return siguientePaso()
     }
 
-    // Las unidades donde esta cuenta carga y que tienen alguna máquina activa.
-    // Si ninguna tiene máquinas, todas las de carga (así se ve el aviso de que
-    // falta configurarlas, en vez de una pantalla vacía).
-    async function unidadesDeCarga() {
-      const permitidas = unidadesCon('cargar')
-      if (!permitidas.length) return []
-      const { data, error } = await supabase.from('maquinas').select('unidad_negocio_id')
-        .eq('activa', true).in('unidad_negocio_id', permitidas)
-      if (error) throw error
-      const con = new Set((data ?? []).map(m => m.unidad_negocio_id))
-      const conMaquinas = permitidas.filter(id => con.has(id))
-      return conMaquinas.length ? conMaquinas : permitidas
-    }
-
     // ¿Hay alguna máquina abierta en la unidad? Es lo único que habilita SALA
     // DE MASA, y hace falta saberlo ANTES de que alguien entre a un modo —o
     // sea, antes de que se lea el tablero—, así que va en su propia consulta.
@@ -3254,14 +3245,12 @@
     }
 
     function conectarTodo() {
-      document.getElementById('pr-unidades').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-unidad]'); if (b) elegirUnidad(b.dataset.unidad)
-      })
       // La barra se repinta entera, así que sus botones se escuchan por
       // delegación desde el contenedor, que sí es fijo.
       document.getElementById('pr-barra').addEventListener('click', ev => {
         if (ev.target.closest('#pr-btn-salir')) { tocar(); salir(); return }
         if (ev.target.closest('#pr-btn-entrar')) { tocar(); estado.quienOtra = false; mostrarQuien(); return }
+        if (ev.target.closest('#pr-btn-barra-maestro')) { abrirMaestro(); return }
         const b = ev.target.closest('[data-modo]'); if (b) tocarModo(b.dataset.modo)
       })
       document.getElementById('pr-quien-lista').addEventListener('click', ev => {
@@ -3273,7 +3262,9 @@
         pintarQuien()
       })
       document.getElementById('pr-btn-maestro').addEventListener('click', abrirMaestro)
-      document.getElementById('pr-btn-cambiar-unidad').addEventListener('click', () => accionDelMenu('unidad'))
+      document.getElementById('pr-pin-maestros').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-maestro]'); if (b) elegirMaestro(b.dataset.maestro)
+      })
       document.getElementById('pr-pin-teclado').addEventListener('click', ev => {
         const b = ev.target.closest('[data-tecla]'); if (b) teclaPin(b.dataset.tecla)
       })
@@ -3298,20 +3289,11 @@
       document.getElementById('pr-acceso-confirmar').addEventListener('click', confirmarDarAcceso)
       document.getElementById('pr-acceso-cancelar').addEventListener('click', cerrarDarAcceso)
       document.getElementById('pr-acceso-pin-listo').addEventListener('click', cerrarDarAcceso)
-      document.getElementById('pr-btn-menu').addEventListener('click', alternarMenu)
-      document.getElementById('pr-menu').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-menu]'); if (b) accionDelMenu(b.dataset.menu)
-      })
       conectarProduccion()
       conectarPlanilla()
       conectarSala()
-      conectarConfig()
-      conectarHistorial()
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          mantenerPantalla(estado.hayTurnoAbierto)
-          cargarBurbujaConos()
-        }
+        if (document.visibilityState === 'visible') mantenerPantalla(estado.hayTurnoAbierto)
       })
       // Cualquier toque cuenta como uso, para el cierre por inactividad.
       for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, tocar)
@@ -4951,7 +4933,9 @@
       const { contexto, turno, modo } = f
       cerrarEditorParada()
       mostrarExito(modo === 'borrar' ? 'Parada borrada.' : 'Parada guardada.')
-      if (contexto === 'historial') return abrirDetalleHistorial(turno.id)
+      // Las paradas de una planilla CERRADA se corrigen desde el historial,
+      // que vive en produccion-gestion.html.
+      if (contexto !== 'planilla') return
       return abrirPlanilla(turno.id)
     }
 
@@ -4962,29 +4946,6 @@
       if (paradaId && !parada) return
       // En la planilla (abierta o pendiente) borrar pide lo mismo que corregir: cargar.
       abrirEditorParada({ modo, turno: p.turno, paradas: p.paradas, parada, contexto: 'planilla', puedeBorrar: true })
-    }
-
-    // En el historial, SOLO en una planilla CERRADA y con los permisos que
-    // piden las RPCs en esa unidad: corregir o anotar exige cargar Y
-    // configurar (editar_parada y registrar_parada piden cargar siempre, y
-    // configurar si está cerrada); borrar, configurar. Las abiertas se
-    // manejan desde la planilla.
-    function accionesParadaHistorial(turno) {
-      if (!turno || turno.estado !== 'cerrado') return { editar: false, borrar: false }
-      const u = turno.unidad_negocio_id
-      const configura = unidadesCon('configurar').includes(u)
-      const carga = unidadesCon('cargar').includes(u)
-      return { editar: configura && carga, borrar: configura }
-    }
-
-    function abrirEditorDesdeHistorial(modo, paradaId = null) {
-      const d = estado.detalleHistorial
-      if (!d) return
-      const acc = accionesParadaHistorial(d.turno)
-      if (modo === 'borrar' ? !acc.borrar : !acc.editar) return
-      const parada = paradaId ? (d.paradas ?? []).find(x => x.id === paradaId) ?? null : null
-      if (paradaId && !parada) return
-      abrirEditorParada({ modo, turno: d.turno, paradas: d.paradas, parada, contexto: 'historial', puedeBorrar: acc.borrar })
     }
 
     function teclaEditorParada(ev) {
@@ -6573,20 +6534,6 @@
       return textoKg(n)
     }
 
-    // La diferencia de una masa YA REGISTRADA contra SU receta (la versión con
-    // la que se hizo, no la vigente de hoy). La usa el detalle del turno en el
-    // historial.
-    function diferenciaDeMasa(masa, datos) {
-      const nombres = new Map(datos.ingredientes.map(i => [i.id, i.nombre]))
-      const original = {
-        items: datos.recItems.filter(r => r.receta_id === masa.receta_id)
-          .map(r => ({ ingrediente_id: r.ingrediente_id, ingrediente: nombres.get(r.ingrediente_id) ?? 'ingrediente', cantidad_kg: r.cantidad_kg })),
-      }
-      const cantidades = {}
-      for (const it of datos.items.filter(x => x.masa_id === masa.id)) cantidades[it.ingrediente_id] = Number(it.cantidad_simple_kg)
-      return diferencias(cantidades, original)
-    }
-
     // CUALQUIER diferencia contra la receta se MUESTRA; el bordó aparece recién
     // pasado el 10% de lo que dice la receta original PARA ESE INGREDIENTE.
     //
@@ -7677,1463 +7624,13 @@
       setInterval(() => { if (borradoresPendientes().length) reintentarPendientes() }, 30000)
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // CONFIGURACIÓN (produccion:configurar), por unidad
-    // ═══════════════════════════════════════════════════════════════════════
-
-    const PESTANAS_CONFIG = [
-      ['maquinas', 'Máquinas'], ['recetas', 'Recetas'], ['ingredientes', 'Ingredientes'],
-      ['productos', 'Productos'], ['empaque', 'Empaque'], ['marcas', 'Marcas / Conos'], ['personal', 'Personal'],
-    ]
     const PUESTOS = [['encargado', 'Encargado'], ['masero', 'Masero'], ['operario', 'Operario']]
-    const CLAVE_AVISO_PRODUCTOS = 'produccion.aviso-productos-revisado'
-
-    // A dónde vuelve "‹ Volver" desde Configuración, Historial o Stock: a la
-    // tablet si esta cuenta carga, o al inicio de la oficina si no.
-    function volverDeOficina() {
-      if (tieneTarea('cargar')) return siguientePaso()
-      mostrarInicioOficina()
-    }
-
-    // Sin produccion:cargar, el inicio son los accesos a lo que sí puede ver.
-    function mostrarInicioOficina() {
-      document.getElementById('pr-inicio-texto').textContent = 'Tu usuario puede ver o configurar Producción, pero no cargar desde la tablet.'
-      pintarAccesosOficina()
-      mostrarVista('pr-inicio')
-    }
-
-    const puedeVerHistorial = () => tieneTarea('ver') || tieneTarea('configurar')
-
-    // ── La burbuja de conos por revisar (la misma cifra del dashboard) ────
-    //
-    // Sale de mis_pendientes() —('produccion', 'conos_por_revisar')—, que ya
-    // filtra por produccion:configurar. Se pide al abrir y al volver a la
-    // pestaña, con un turno para que una respuesta vieja no pise la nueva.
-    // Si la llamada falla, o da 0, no se dibuja nada: nunca un número viejo
-    // ni inventado. `estado.conosPendientes`: un entero > 0, o null.
-    let turnoBurbujaConos = 0
-
-    async function cargarBurbujaConos() {
-      const turno = ++turnoBurbujaConos
-      if (!tieneTarea('configurar')) {
-        estado.conosPendientes = null
-        return pintarBurbujaConos()
-      }
-      let n = null
-      try {
-        const { data, error } = await supabase.rpc('mis_pendientes')
-        if (error) throw error
-        const fila = (data ?? []).find(f => f?.modulo === 'produccion' && f?.clave === 'conos_por_revisar')
-        const c = fila && fila.cantidad !== null && fila.cantidad !== '' ? Number(fila.cantidad) : NaN
-        n = Number.isInteger(c) && c > 0 ? c : null
-      } catch (err) {
-        console.error('conos por revisar:', err)
-        n = null
-      }
-      if (turno !== turnoBurbujaConos) return
-      estado.conosPendientes = n
-      pintarBurbujaConos()
-    }
-
-    function textoConosPendientes(n) {
-      return `${n} ${n === 1 ? 'cono nuevo por revisar' : 'conos nuevos por revisar'}`
-    }
-
-    // El contenido del botón: "Configuración" y, si hay, la burbuja.
-    function htmlBotonConfig(n) {
-      if (!(Number.isInteger(n) && n > 0)) return 'Configuración'
-      const texto = textoConosPendientes(n)
-      return `Configuración<span class="pr-burbuja" title="${esc(texto)}" aria-label="${esc(texto)}">${esc(n > 99 ? '99+' : n)}</span>`
-    }
-
-    function pintarBurbujaConos() {
-      const n = tieneTarea('configurar') ? estado.conosPendientes : null
-      for (const id of ['pr-btn-ir-config', 'pr-menu-config']) {
-        const b = document.getElementById(id)
-        if (!b) continue
-        b.innerHTML = htmlBotonConfig(n)
-        if (Number.isInteger(n) && n > 0) b.setAttribute('aria-label', `Configuración: ${textoConosPendientes(n)}`)
-        else b.removeAttribute('aria-label')
-      }
-    }
-
-    // Tocar un acceso a Configuración: con conos por revisar, derecho a la
-    // pestaña donde se aceptan o se rechazan.
-    function abrirConfigDesdeAcceso() {
-      return mostrarConfig(estado.conosPendientes > 0 ? 'marcas' : undefined)
-    }
-
-    function pintarAccesosOficina() {
-      document.getElementById('pr-btn-ir-config').hidden = !tieneTarea('configurar')
-      document.getElementById('pr-btn-ir-historial').hidden = !puedeVerHistorial()
-      document.getElementById('pr-btn-ir-stock').hidden = !puedeVerHistorial()
-      document.getElementById('pr-menu-config').hidden = !tieneTarea('configurar')
-      document.getElementById('pr-menu-historial').hidden = !puedeVerHistorial()
-      document.getElementById('pr-menu-stock').hidden = !puedeVerHistorial()
-    }
-
-    function unidadesDeConfig() {
-      return unidadesCon('configurar')
-    }
-
-    function pintarSelectorUnidad(selectId, unidades, elegida) {
-      const sel = document.getElementById(selectId)
-      sel.innerHTML = unidades.map(id => `<option value="${esc(id)}"${id === elegida ? ' selected' : ''}>${esc(estado.unidades.get(id) ?? id)}</option>`).join('')
-      sel.value = elegida ?? ''
-      sel.closest?.('.pr-campo')?.toggleAttribute?.('hidden', unidades.length < 2)
-    }
-
-    // `tabPedida`: la pestaña con la que abre. La usan los accesos con la
-    // burbuja de conos por revisar, que abren derecho en "Marcas / Conos".
-    async function mostrarConfig(tabPedida) {
-      const unidades = unidadesDeConfig()
-      if (!unidades.length) return
-      const actual = estado.config?.unidadId
-      const tab = PESTANAS_CONFIG.some(([k]) => k === tabPedida) ? tabPedida : (estado.config?.tab ?? 'maquinas')
-      estado.config = {
-        unidadId: unidades.includes(actual) ? actual : (unidades.includes(estado.unidadId) ? estado.unidadId : unidades[0]),
-        tab,
-        busqueda: '', datos: null, recetaMaquina: null, recetaTipo: null,
-        // Lo que se tocó en Personal y todavía no se guardó: id → puestos.
-        cambios: new Map(),
-        error: null,          // { texto, donde } — el error vive en el ESTADO
-        pendientes: null,     // conos por revisar; null = no se pudo contar
-        hoja: null,           // los PINes recién generados, SOLO en memoria
-        salida: null,         // a dónde se quería ir con cambios sin guardar
-        pinPara: null, temporal: null, guardando: false,
-      }
-      pintarSelectorUnidad('pr-config-unidad', unidades, estado.config.unidadId)
-      mostrarVista('pr-config')
-      await cargarPestanaConfig()
-    }
-
-    // El contador de conos por revisar de la pestaña "Marcas / Conos". Va como
-    // número o como null: un contador inventado es peor que ninguno.
-    function htmlPestanasConfig(tab, pendientes) {
-      return PESTANAS_CONFIG.map(([claveTab, tituloTab]) => {
-        const chapa = claveTab === 'marcas' && pendientes > 0 ? ` <span class="pr-cfg-tab__pend">${esc(pendientes)}</span>` : ''
-        return `<button type="button" class="pr-cfg-tab${claveTab === tab ? ' pr-cfg-tab--activa' : ''}" data-config-tab="${claveTab}" aria-pressed="${claveTab === tab ? 'true' : 'false'}">${tituloTab}${chapa}</button>`
-      }).join('')
-    }
-
-    // EL ERROR VA AL ESTADO, NO AL DOM: el catch guarda el mensaje y el único
-    // que escribe en el DOM es el render, que lo dibuja PEGADO a su botón.
-    // `donde` es el id de ese botón, y ahí va también el foco.
-    function errorConfig(texto, donde = null) {
-      const c = estado.config
-      const habia = !!c?.error
-      if (c) c.error = texto ? { texto: String(texto), donde } : null
-      // Sin pestaña dibujada (falló la lectura) no hay botón al que pegarlo.
-      const suelto = !!texto && !c?.datos
-      const arriba = document.getElementById('pr-config-error')
-      arriba.textContent = suelto ? texto : ''
-      arriba.hidden = !suelto
-      if (c?.datos && (texto || habia)) pintarPestanaConfig()
-      if (texto && donde) document.getElementById(donde)?.focus?.()
-    }
-
-    // El error de ESTE botón, justo al lado del botón. Nunca arriba de todo.
-    function htmlErrorPegado(c, donde) {
-      return c?.error && c.error.donde === donde ? `<div class="pr-cfg-error" role="alert">${esc(c.error.texto)}</div>` : ''
-    }
-
-    // Los conos pendientes de revisar: una consulta chica que corre en cada
-    // pestaña, para que el contador esté al día sin importar dónde se esté.
-    // Devuelve null si no se pudo contar, y nunca tira: que falle el contador
-    // no puede voltear la pestaña que la persona vino a mirar.
-    async function contarPendientesMarcas() {
-      try {
-        const { data, error } = await supabase.from('marcas_personalizadas').select('id').eq('estado_alta', 'pendiente_revision')
-        if (error) return null
-        return (data ?? []).length
-      } catch { return null }
-    }
-
-    async function cargarPestanaConfig() {
-      const c = estado.config
-      const cuerpo = document.getElementById('pr-config-cuerpo')
-      cuerpo.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
-      c.error = null
-      document.getElementById('pr-config-error').hidden = true
-      try {
-        c.datos = await LECTORES_CONFIG[c.tab](c)
-      } catch (err) {
-        console.error('configuración:', err)
-        c.datos = null
-        document.getElementById('pr-config-tabs').innerHTML = htmlPestanasConfig(c.tab, c.pendientes)
-        cuerpo.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer la configuración. Revisá la conexión.</div>'
-        return
-      }
-      c.pendientes = await contarPendientesMarcas()
-      pintarPestanaConfig()
-    }
-
-    function pintarPestanaConfig() {
-      const c = estado.config
-      document.getElementById('pr-config-tabs').innerHTML = htmlPestanasConfig(c.tab, c.pendientes)
-      const cuerpo = document.getElementById('pr-config-cuerpo')
-      cuerpo.innerHTML = c.salida ? htmlSalirSinGuardar(c) : RENDERS_CONFIG[c.tab](c)
-      // Los números se escriben con ponerNumero, nunca con value=.
-      for (const input of cuerpo.querySelectorAll('[data-numero]')) {
-        enlazarCampoNumero(input, { decimales: Number(input.dataset.decimales ?? 3) })
-        ponerNumero(input, input.dataset.numero === '' ? null : Number(input.dataset.numero))
-      }
-    }
-
-    // ── Salir con cambios sin guardar ─────────────────────────────────────
-
-    // Hoy solo Personal acumula cambios sin guardar (un solo botón al pie).
-    function cambiosSinGuardar(c) {
-      return c?.cambios instanceof Map ? c.cambios.size : 0
-    }
-
-    // Devuelve true si se puede seguir; si no, deja pedida la confirmación.
-    // Sin datos dibujados no hay dónde preguntar, así que deja salir: los
-    // cambios de Personal solo existen cuando su pestaña se pudo leer.
-    function pedirSalida(c, accion) {
-      if (!cambiosSinGuardar(c) || !c.datos) return true
-      c.salida = accion
-      pintarPestanaConfig()
-      return false
-    }
-
-    function htmlSalirSinGuardar(c) {
-      const n = cambiosSinGuardar(c)
-      return `<div class="pr-aviso pr-aviso--grave">Tenés ${esc(n)} ${n === 1 ? 'fila cambiada' : 'filas cambiadas'} sin guardar en Personal. Si salís de acá, se pierden.</div>` +
-        `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-salir-no">Seguir acá</button>` +
-        `<button type="button" class="pr-btn pr-btn--peligro" id="pr-cfg-salir-si">Salir sin guardar</button></div>`
-    }
-
-    function cancelarSalida() {
-      estado.config.salida = null
-      pintarPestanaConfig()
-    }
-
-    async function confirmarSalida() {
-      const c = estado.config
-      const accion = c.salida
-      c.salida = null
-      c.cambios = new Map()
-      if (!accion) return pintarPestanaConfig()
-      if (accion.volver) return volverDeOficina()
-      if (accion.unidad) { c.unidadId = accion.unidad; c.recetaMaquina = null }
-      if (accion.tab) { c.tab = accion.tab; c.busqueda = '' }
-      await cargarPestanaConfig()
-    }
-
-    // ── Máquinas ──────────────────────────────────────────────────────────
-
-    async function leerMaquinasConfig(c) {
-      const { data, error } = await supabase.from('maquinas').select('id, nombre, activa, orden')
-        .eq('unidad_negocio_id', c.unidadId).order('orden').order('nombre')
-      if (error) throw error
-      return { maquinas: data ?? [] }
-    }
-
-    function htmlConfigMaquinas(c) {
-      const lista = c.datos.maquinas
-      const filas = lista.map((m, i) => `<div class="pr-config-fila${m.activa ? '' : ' pr-config-fila--inactiva'}">` +
-        `<input type="text" class="pr-input" data-maq-nombre="${esc(m.id)}" value="${esc(m.nombre)}" maxlength="60" aria-label="Nombre de la máquina">` +
-        `<div class="pr-config-fila__botones">` +
-        `<button type="button" class="pr-btn-icono" data-maq-subir="${i}" aria-label="Subir ${esc(m.nombre)}"${i === 0 ? ' disabled' : ''}>▲</button>` +
-        `<button type="button" class="pr-btn-icono" data-maq-bajar="${i}" aria-label="Bajar ${esc(m.nombre)}"${i === lista.length - 1 ? ' disabled' : ''}>▼</button>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-maq-guardar="${esc(m.id)}">Guardar nombre</button>` +
-        `<button type="button" class="pr-btn ${m.activa ? 'pr-btn--peligro' : 'pr-btn--secundario'}" data-maq-activa="${esc(m.id)}">${m.activa ? 'Desactivar' : 'Activar'}</button>` +
-        `</div></div>`).join('')
-      return (filas || '<p class="pr-texto-suave">Esta unidad todavía no tiene máquinas.</p>') +
-        `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-maq-nueva" maxlength="60" placeholder="Nombre de la máquina nueva" aria-label="Nombre de la máquina nueva">` +
-        htmlErrorPegado(c, 'pr-cfg-maq-agregar') +
-        `<button type="button" class="pr-btn" id="pr-cfg-maq-agregar" data-maq-agregar="1">Agregar máquina</button></div>`
-    }
-
-    // El orden que quedaría al mover una máquina: 1, 2, 3… en el orden de la
-    // lista. Devuelve SOLO las que cambian de número, para mandar lo mínimo.
-    // Mover un renglón una posición arriba (-1) o abajo (+1). Devuelve una
-    // lista nueva; fuera de rango, la MISMA (y de eso se apoya ordenTrasMover
-    // para no mandar nada).
-    function moverProducto(lista, i, delta) {
-      const j = i + delta
-      if (i < 0 || i >= lista.length || j < 0 || j >= lista.length) return lista
-      const nueva = [...lista]
-      ;[nueva[i], nueva[j]] = [nueva[j], nueva[i]]
-      return nueva
-    }
-
-    function ordenTrasMover(lista, i, delta) {
-      const nueva = moverProducto(lista, i, delta)
-      if (nueva === lista) return []
-      return nueva.map((m, k) => ({ ...m, orden: k + 1 })).filter((m, k) => lista.find(x => x.id === m.id).orden !== k + 1)
-    }
-
-    function parametrosGuardarMaquina(m, unidadId, cambios = {}) {
-      return {
-        p_id: m?.id ?? null,
-        p_unidad_negocio_id: unidadId,
-        p_nombre: (cambios.nombre ?? m?.nombre ?? '').trim(),
-        p_activa: cambios.activa ?? m?.activa ?? true,
-        p_orden: cambios.orden ?? m?.orden ?? 0,
-      }
-    }
-
-    async function guardarEnConfig(rpc, params, exito, donde = null) {
-      errorConfig(null)
-      const { data, error } = await supabase.rpc(rpc, params)
-      if (error) {
-        // El mensaje de la base TAL CUAL ("La máquina tiene un turno abierto:
-        // cerralo antes de desactivarla.", "Puesto inválido."), pegado al botón.
-        errorConfig(error.message || 'No se pudo guardar.', donde)
-        return { ok: false }
-      }
-      if (exito) mostrarExito(exito)
-      return { ok: true, data }
-    }
-
-    async function accionMaquina(ds) {
-      const c = estado.config, lista = c.datos.maquinas
-      const DONDE = 'pr-cfg-maq-agregar'
-      if (ds.maqAgregar !== undefined) {
-        const nombre = document.getElementById('pr-config-maq-nueva').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre de la máquina.', DONDE); return }
-        const orden = lista.reduce((mx, m) => Math.max(mx, m.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(null, c.unidadId, { nombre, activa: true, orden }), 'Máquina agregada.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-        return
-      }
-      if (ds.maqSubir !== undefined || ds.maqBajar !== undefined) {
-        const i = Number(ds.maqSubir ?? ds.maqBajar)
-        for (const m of ordenTrasMover(lista, i, ds.maqSubir !== undefined ? -1 : +1)) {
-          const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { orden: m.orden }), null, DONDE)
-          if (!r.ok) break
-        }
-        await cargarPestanaConfig()
-        return
-      }
-      const id = ds.maqGuardar ?? ds.maqActiva
-      const m = lista.find(x => x.id === id)
-      if (!m) return
-      if (ds.maqGuardar !== undefined) {
-        const input = [...document.getElementById('pr-config-cuerpo').querySelectorAll('[data-maq-nombre]')].find(x => x.dataset.maqNombre === id)
-        const nombre = (input?.value ?? '').trim()
-        if (!nombre) { errorConfig('El nombre no puede quedar vacío.', DONDE); return }
-        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { nombre }), 'Nombre guardado.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-      } else {
-        const r = await guardarEnConfig('guardar_maquina', parametrosGuardarMaquina(m, c.unidadId, { activa: !m.activa }), m.activa ? 'Máquina desactivada.' : 'Máquina activada.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-      }
-    }
-
-    // ── Recetas ───────────────────────────────────────────────────────────
-
-    async function leerRecetasConfig(c) {
-      const { data: maquinas, error: e1 } = await supabase.from('maquinas').select('id, nombre')
-        .eq('unidad_negocio_id', c.unidadId).eq('activa', true).order('orden').order('nombre')
-      if (e1) throw e1
-      const maquinaId = (maquinas ?? []).some(m => m.id === c.recetaMaquina) ? c.recetaMaquina : (maquinas?.[0]?.id ?? null)
-      c.recetaMaquina = maquinaId
-      let recetas = [], items = [], nombres = new Map()
-      if (maquinaId) {
-        const r = await supabase.from('recetas').select('id, tipo_masa, version, nota, creada_por, created_at').eq('maquina_id', maquinaId).order('version', { ascending: false })
-        if (r.error) throw r.error
-        recetas = r.data ?? []
-        const ids = recetas.map(x => x.id)
-        if (ids.length) {
-          const ri = await supabase.from('receta_items').select('receta_id, ingrediente_id, cantidad_kg, insumo_preferido_id').in('receta_id', ids)
-          if (ri.error) throw ri.error
-          items = ri.data ?? []
-          const autores = [...new Set(recetas.map(x => x.creada_por).filter(Boolean))]
-          if (autores.length) {
-            const pe = await supabase.from('v_empleados_publico').select('id, nombre').in('id', autores)
-            if (pe.error) throw pe.error
-            nombres = new Map((pe.data ?? []).map(p => [p.id, p.nombre]))
-          }
-        }
-      }
-      const { data: ingredientes, error: e2 } = await supabase.from('ingredientes').select('id, nombre, descuenta_stock, orden, activo').order('orden')
-      if (e2) throw e2
-      const cat = await leerInsumosDeIngredientes()
-      const tipos = [...new Set(recetas.map(r => r.tipo_masa))].sort((a, b) => a.localeCompare(b, 'es'))
-      if (!tipos.includes(c.recetaTipo) && c.recetaTipo !== NUEVO_TIPO) c.recetaTipo = tipos[0] ?? NUEVO_TIPO
-      return { maquinas: maquinas ?? [], recetas, items, nombres, ingredientes: ingredientes ?? [], tipos, ...cat }
-    }
-
-    const NUEVO_TIPO = '__nuevo__'
-
-    async function leerInsumosDeIngredientes() {
-      const { data: rel, error: e1 } = await supabase.from('ingrediente_insumos').select('ingrediente_id, insumo_id')
-      if (e1) throw e1
-      const { data: insumos, error: e2 } = await supabase.from('insumos').select('id, nombre, marca, tipo').eq('activo', true).order('nombre')
-      if (e2) throw e2
-      return { relaciones: rel ?? [], insumos: insumos ?? [] }
-    }
-
-    // La versión vigente de un tipo: la de número más alto (igual que
-    // _receta_vigente() en la base).
-    function recetaVigente(recetas, tipo) {
-      return recetas.filter(r => r.tipo_masa === tipo).sort((a, b) => b.version - a.version)[0] ?? null
-    }
-
-    // La receta vino del prototipo si su nota lo dice: hay que revisarla.
-    function recetaParaRevisar(receta) {
-      return !!receta && /prototipo|revisar/i.test(receta.nota ?? '')
-    }
-
-    // Las filas del editor: cada ingrediente activo, con la cantidad y el
-    // insumo preferido de la receta de partida (vacío si no lo lleva).
-    function filasEditorReceta(ingredientes, itemsPartida) {
-      return ingredientes.filter(g => g.activo).map(g => {
-        const it = itemsPartida.find(x => x.ingrediente_id === g.id)
-        return { ingrediente_id: g.id, nombre: g.nombre, kg: it ? Number(it.cantidad_kg) : null, preferido: it?.insumo_preferido_id ?? '' }
-      })
-    }
-
-    // El payload de guardar_receta_original: los ingredientes con número
-    // (0 incluido: "lleva 0" es un dato); los vacíos no van.
-    function parametrosGuardarReceta(maquinaId, tipo, filas, nota) {
-      return {
-        p_maquina_id: maquinaId,
-        p_tipo_masa: String(tipo ?? '').trim(),
-        p_items: filas.filter(f => f.kg != null).map(f => ({ ingrediente_id: f.ingrediente_id, cantidad_kg: f.kg, insumo_preferido_id: f.preferido || null })),
-        p_nota: String(nota ?? '').trim() === '' ? null : String(nota).trim(),
-      }
-    }
-
-    // La nota es OBLIGATORIA acá, aunque guardar_receta_original la acepte en
-    // null: una versión sin decir qué cambió deja un historial que no explica
-    // nada, que es justo para lo que existe el historial.
-    function faltanEnReceta(p) {
-      const faltan = []
-      if (!p.p_maquina_id) faltan.push('la máquina')
-      if (!p.p_tipo_masa) faltan.push('el tipo de masa')
-      else if (p.p_tipo_masa.length > 40) faltan.push('un tipo de masa de hasta 40 letras')
-      if (!p.p_items.length) faltan.push('al menos un ingrediente con cantidad')
-      if (!p.p_nota) faltan.push('una nota que diga qué cambió')
-      return faltan
-    }
-
-    // El número que va a tener la versión que se está por guardar.
-    function proximaVersion(recetas, tipo) {
-      return (recetaVigente(recetas, tipo)?.version ?? 0) + 1
-    }
-
-    // "antes 2,5" al lado de una cantidad que se cambió. Null si no cambió.
-    function textoAntes(original, actual) {
-      if (original == null || actual == null) return null
-      if (Math.abs(Number(original) - Number(actual)) < 1e-9) return null
-      return `antes ${formatearNumeroAr(Number(original), { decimales: 3, minimos: 0 })}`
-    }
-
-    function htmlConfigRecetas(c) {
-      const d = c.datos
-      if (!d.maquinas.length) return '<p class="pr-texto-suave">Esta unidad no tiene máquinas activas.</p>'
-      const selMaq = `<label class="pr-campo"><span class="pr-campo__rotulo">Máquina</span><select class="pr-select" data-receta-maquina="1">` +
-        d.maquinas.map(m => `<option value="${esc(m.id)}"${m.id === c.recetaMaquina ? ' selected' : ''}>${esc(m.nombre)}</option>`).join('') + `</select></label>`
-      const selTipo = `<label class="pr-campo"><span class="pr-campo__rotulo">Tipo de masa</span><select class="pr-select" data-receta-tipo="1">` +
-        d.tipos.map(t => `<option value="${esc(t)}"${t === c.recetaTipo ? ' selected' : ''}>${esc(t)}</option>`).join('') +
-        `<option value="${NUEVO_TIPO}"${c.recetaTipo === NUEVO_TIPO ? ' selected' : ''}>Tipo nuevo…</option></select></label>`
-      const nuevo = c.recetaTipo === NUEVO_TIPO
-      const vigente = nuevo ? null : recetaVigente(d.recetas, c.recetaTipo)
-      const partida = nuevo ? recetaVigente(d.recetas, c.recetaPartida ?? d.tipos[0]) : vigente
-      const itemsPartida = partida ? d.items.filter(i => i.receta_id === partida.id) : []
-      const filas = filasEditorReceta(d.ingredientes, itemsPartida)
-      const aviso = recetaParaRevisar(vigente)
-        ? `<div class="pr-aviso pr-aviso--grave">Revisar: esta receta vino del prototipo. Confirmá las cantidades con la fábrica y guardá una versión nueva.</div>` : ''
-      const cabNuevo = nuevo
-        ? `<div class="pr-campos"><label class="pr-campo"><span class="pr-campo__rotulo">Nombre del tipo nuevo</span><input type="text" class="pr-input" id="pr-config-tipo-nuevo" maxlength="40" placeholder="Ej.: Chocolate"></label>` +
-          (d.tipos.length ? `<label class="pr-campo"><span class="pr-campo__rotulo">Partir de</span><select class="pr-select" data-receta-partida="1">` +
-            d.tipos.map(t => `<option value="${esc(t)}"${t === (c.recetaPartida ?? d.tipos[0]) ? ' selected' : ''}>${esc(t)}</option>`).join('') + `</select></label>` : '') + `</div>`
-        : `<p class="pr-texto-suave">Vigente: versión ${esc(vigente?.version ?? '—')}. Guardar crea una versión NUEVA; las masas ya hechas no cambian.</p>`
-      const editor = filas.map(f => {
-        const opciones = d.relaciones.filter(r => r.ingrediente_id === f.ingrediente_id)
-          .map(r => d.insumos.find(i => i.id === r.insumo_id)).filter(Boolean)
-        return `<div class="pr-config-fila"><span class="pr-ing__nombre">${esc(f.nombre)}</span>` +
-          `<label class="pr-campo"><span class="pr-campo__rotulo">kg por masa simple</span><input type="text" class="pr-input" data-receta-kg="${esc(f.ingrediente_id)}" data-numero="${f.kg == null ? '' : esc(f.kg)}" data-decimales="3" aria-label="Kilos de ${esc(f.nombre)}"></label>` +
-          `<span class="pr-cfg-antes" data-receta-antes="${esc(f.ingrediente_id)}" hidden></span>` +
-          (opciones.length ? `<label class="pr-campo"><span class="pr-campo__rotulo">Insumo preferido</span><select class="pr-select" data-receta-pref="${esc(f.ingrediente_id)}"><option value="">Ninguno</option>` +
-            opciones.map(o => `<option value="${esc(o.id)}"${o.id === f.preferido ? ' selected' : ''}>${esc(o.nombre)}${o.marca ? ` · ${esc(o.marca)}` : ''}</option>`).join('') + `</select></label>` : '') +
-          `</div>`
-      }).join('')
-      const historial = nuevo ? '' : '<h3 class="pr-subtitulo">Versiones</h3>' +
-        d.recetas.filter(r => r.tipo_masa === c.recetaTipo).map((r, i) =>
-          `<div class="pr-cfg-version${i === 0 ? ' pr-cfg-version--vigente' : ''}"><strong>Versión ${esc(r.version)}${i === 0 ? ' · vigente' : ''}</strong> · ${esc(fechaCorta(r.created_at))} · ${esc(d.nombres.get(r.creada_por) ?? '—')}` +
-          `<div class="pr-texto-suave">${esc(r.nota ?? 'Sin nota')}</div></div>`).join('')
-      const version = nuevo ? 1 : proximaVersion(d.recetas, c.recetaTipo)
-      return `<div class="pr-cfg-recetas"><div>${selMaq}${selTipo}</div>` +
-        `<div>${aviso}${cabNuevo}${editor}` +
-        `<label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">Nota (qué cambió y por qué) <span class="pr-obligatorio">· obligatoria</span></span><textarea class="pr-textarea" id="pr-config-receta-nota" maxlength="300"></textarea></label>` +
-        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-receta-guardar')}` +
-        `<button type="button" class="pr-btn" id="pr-cfg-receta-guardar" data-receta-guardar="1">Guardar versión ${esc(version)}</button></div></div>` +
-        `<div>${historial}</div></div>`
-    }
-
     // dd/mm/aaaa de un timestamp, en Argentina; '' si no se puede leer.
     function fechaCorta(momento) {
       if (!momento) return ''
       const d = new Date(momento)
       if (Number.isNaN(d.getTime())) return ''
       return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d)
-    }
-
-    function leerEditorReceta() {
-      const cuerpo = document.getElementById('pr-config-cuerpo')
-      const prefs = new Map([...cuerpo.querySelectorAll('[data-receta-pref]')].map(s => [s.dataset.recetaPref, s.value]))
-      return [...cuerpo.querySelectorAll('[data-receta-kg]')].map(i => ({
-        ingrediente_id: i.dataset.recetaKg, kg: leerCampoNumero(i), preferido: prefs.get(i.dataset.recetaKg) ?? '',
-      }))
-    }
-
-    // Al tocar una cantidad se marca contra la de la versión vigente. Se
-    // escribe DIRECTO en el DOM y no con un re-render, porque re-renderizar
-    // mientras se escribe le saca el foco al campo.
-    function marcarCambioReceta(input) {
-      const cuerpo = document.getElementById('pr-config-cuerpo')
-      const antes = [...cuerpo.querySelectorAll('[data-receta-antes]')].find(x => x.dataset.recetaAntes === input.dataset.recetaKg)
-      if (!antes) return
-      const original = input.dataset.numero === '' ? null : Number(input.dataset.numero)
-      const texto = textoAntes(original, leerCampoNumero(input))
-      antes.textContent = texto ?? ''
-      antes.hidden = !texto
-    }
-
-    async function guardarReceta() {
-      const c = estado.config
-      const DONDE = 'pr-cfg-receta-guardar'
-      const tipo = c.recetaTipo === NUEVO_TIPO ? document.getElementById('pr-config-tipo-nuevo')?.value : c.recetaTipo
-      const p = parametrosGuardarReceta(c.recetaMaquina, tipo, leerEditorReceta(), document.getElementById('pr-config-receta-nota').value)
-      const faltan = faltanEnReceta(p)
-      if (faltan.length) { errorConfig(`Falta ${faltan.join(', ')}.`, DONDE); return }
-      const r = await guardarEnConfig('guardar_receta_original', p, null, DONDE)
-      if (r.ok) {
-        mostrarExito(`Receta guardada: ${p.p_tipo_masa}, versión ${r.data?.version ?? ''}.`)
-        c.recetaTipo = p.p_tipo_masa
-        await cargarPestanaConfig()
-      }
-    }
-
-    // ── Ingredientes ──────────────────────────────────────────────────────
-
-    async function leerIngredientesConfig() {
-      const { data, error } = await supabase.from('ingredientes').select('id, nombre, descuenta_stock, orden, activo').order('orden')
-      if (error) throw error
-      return { ingredientes: data ?? [], ...(await leerInsumosDeIngredientes()) }
-    }
-
-    // Los que descuentan stock pero no tienen ningún insumo del catálogo: sus
-    // masas no descuentan nada (hoy grasa, fécula y colorante).
-    function ingredientesSinInsumo(d) {
-      return d.ingredientes.filter(g => g.activo && g.descuenta_stock && !d.relaciones.some(r => r.ingrediente_id === g.id))
-    }
-
-    function htmlConfigIngredientes(c) {
-      const d = c.datos
-      const sin = ingredientesSinInsumo(d)
-      const aviso = sin.length
-        ? `<div class="pr-aviso pr-aviso--grave">No descuentan stock porque no tienen ningún insumo del catálogo: ${esc(sin.map(g => g.nombre).join(', '))}. Asignales el insumo que corresponde.</div>` : ''
-      const filas = d.ingredientes.map(g => {
-        const suyos = d.relaciones.filter(r => r.ingrediente_id === g.id).map(r => d.insumos.find(i => i.id === r.insumo_id)).filter(Boolean)
-        const abierto = c.ingredienteAbierto === g.id
-        const panelInsumos = abierto ? `<div class="pr-config-insumos">` +
-          `<input type="text" class="pr-input" id="pr-config-insumo-buscar" placeholder="Buscar en el catálogo" aria-label="Buscar insumo" value="${esc(c.busqueda)}">` +
-          marcasFiltradas(d.insumos.map(i => ({ ...i, nombre: i.nombre + (i.marca ? ' ' + i.marca : '') })), c.busqueda).slice(0, 60).map(i =>
-            `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-ing-insumo="${esc(i.id)}"${c.insumosElegidos?.has(i.id) ? ' checked' : ''}> ${esc(i.nombre)}</label>`).join('') +
-          `<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario" data-ing-cerrar="1">Cancelar</button>` +
-          `<button type="button" class="pr-btn" data-ing-guardar-insumos="${esc(g.id)}">Guardar insumos</button></div></div>` : ''
-        return `<div class="pr-config-fila${g.activo ? '' : ' pr-config-fila--inactiva'}">` +
-          `<input type="text" class="pr-input" data-ing-nombre="${esc(g.id)}" value="${esc(g.nombre)}" maxlength="60" aria-label="Nombre del ingrediente">` +
-          `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-ing-descuenta="${esc(g.id)}"${g.descuenta_stock ? ' checked' : ''}> Descuenta stock</label>` +
-          `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-ing-activo="${esc(g.id)}"${g.activo ? ' checked' : ''}> Activo</label>` +
-          `<p class="pr-texto-suave">Insumos: ${suyos.length ? esc(suyos.map(i => i.nombre + (i.marca ? ' · ' + i.marca : '')).join(', ')) : 'ninguno'}</p>` +
-          `<div class="pr-config-fila__botones"><button type="button" class="pr-btn pr-btn--secundario" data-ing-guardar="${esc(g.id)}">Guardar</button>` +
-          `<button type="button" class="pr-btn pr-btn--secundario" data-ing-insumos="${esc(g.id)}">Elegir insumos</button></div>${panelInsumos}</div>`
-      }).join('')
-      return aviso + filas +
-        `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-ing-nuevo" maxlength="60" placeholder="Ingrediente nuevo" aria-label="Ingrediente nuevo">` +
-        htmlErrorPegado(c, 'pr-cfg-ing-agregar') +
-        `<button type="button" class="pr-btn" id="pr-cfg-ing-agregar" data-ing-agregar="1">Agregar ingrediente</button></div>`
-    }
-
-    function parametrosGuardarIngrediente(g, cambios = {}) {
-      return {
-        p_id: g?.id ?? null,
-        p_nombre: (cambios.nombre ?? g?.nombre ?? '').trim(),
-        p_descuenta_stock: cambios.descuenta_stock ?? g?.descuenta_stock ?? true,
-        p_orden: g?.orden ?? cambios.orden ?? 0,
-        p_activo: cambios.activo ?? g?.activo ?? true,
-      }
-    }
-
-    function valorDe(selector, id, prop = 'value') {
-      const el = [...document.getElementById('pr-config-cuerpo').querySelectorAll(`[${selector}]`)]
-        .find(x => x.getAttribute(selector) === id)
-      return el ? el[prop] : undefined
-    }
-
-    async function accionIngrediente(ds) {
-      const c = estado.config, d = c.datos
-      const DONDE = 'pr-cfg-ing-agregar'
-      if (ds.ingAgregar !== undefined) {
-        const nombre = document.getElementById('pr-config-ing-nuevo').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre del ingrediente.', DONDE); return }
-        const orden = d.ingredientes.reduce((mx, g) => Math.max(mx, g.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_ingrediente', parametrosGuardarIngrediente(null, { nombre, orden }), 'Ingrediente agregado.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-        return
-      }
-      if (ds.ingCerrar !== undefined) { c.ingredienteAbierto = null; c.busqueda = ''; pintarPestanaConfig(); return }
-      if (ds.ingInsumos !== undefined) {
-        c.ingredienteAbierto = ds.ingInsumos
-        c.busqueda = ''
-        c.insumosElegidos = new Set(d.relaciones.filter(r => r.ingrediente_id === ds.ingInsumos).map(r => r.insumo_id))
-        pintarPestanaConfig()
-        return
-      }
-      if (ds.ingGuardarInsumos !== undefined) {
-        const r = await guardarEnConfig('guardar_ingrediente_insumos',
-          { p_ingrediente_id: ds.ingGuardarInsumos, p_insumo_ids: [...(c.insumosElegidos ?? [])] }, 'Insumos guardados.', DONDE)
-        if (r.ok) { c.ingredienteAbierto = null; await cargarPestanaConfig() }
-        return
-      }
-      if (ds.ingGuardar !== undefined) {
-        const g = d.ingredientes.find(x => x.id === ds.ingGuardar)
-        if (!g) return
-        const nombre = String(valorDe('data-ing-nombre', g.id) ?? g.nombre).trim()
-        if (!nombre) { errorConfig('El nombre no puede quedar vacío.', DONDE); return }
-        const r = await guardarEnConfig('guardar_ingrediente', parametrosGuardarIngrediente(g, {
-          nombre, descuenta_stock: valorDe('data-ing-descuenta', g.id, 'checked') ?? g.descuenta_stock, activo: valorDe('data-ing-activo', g.id, 'checked') ?? g.activo,
-        }), 'Ingrediente guardado.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-      }
-    }
-
-    // ── Productos y presentaciones ────────────────────────────────────────
-
-    async function leerProductosConfig(c) {
-      const { data: productos, error: e1 } = await supabase.from('productos_terminados').select('id, nombre, tipo_masa, activo, orden')
-        .eq('unidad_negocio_id', c.unidadId).order('orden').order('nombre')
-      if (e1) throw e1
-      const ids = (productos ?? []).map(p => p.id)
-      let presentaciones = []
-      if (ids.length) {
-        const r = await supabase.from('producto_presentaciones')
-          .select('id, producto_id, nombre, con_cono, media_caja, empaque, unidades_por_caja, activa, orden').in('producto_id', ids).order('orden')
-        if (r.error) throw r.error
-        presentaciones = r.data ?? []
-      }
-      return { productos: productos ?? [], presentaciones }
-    }
-
-    function avisoProductosRevisado() {
-      return leerPreferencia(CLAVE_AVISO_PRODUCTOS) === '1'
-    }
-
-    function htmlPresentacionConfig(pr) {
-      return `<div class="pr-config-sub${pr.activa ? '' : ' pr-config-fila--inactiva'}">` +
-        `<input type="text" class="pr-input" data-pres-nombre="${esc(pr.id)}" value="${esc(pr.nombre)}" maxlength="80" aria-label="Nombre de la presentación">` +
-        `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-pres-cono="${esc(pr.id)}"${pr.con_cono ? ' checked' : ''}> Con cono</label>` +
-        `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-pres-media="${esc(pr.id)}"${pr.media_caja ? ' checked' : ''}> Media caja</label>` +
-        `<input type="text" class="pr-input" data-pres-empaque="${esc(pr.id)}" value="${esc(pr.empaque ?? '')}" maxlength="80" placeholder="Empaque (ej. bolsa granel)" aria-label="Empaque">` +
-        `<label class="pr-campo"><span class="pr-campo__rotulo">Unidades por caja</span><input type="text" class="pr-input" data-pres-unidades="${esc(pr.id)}" data-numero="${esc(pr.unidades_por_caja)}" data-decimales="0"></label>` +
-        `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-pres-activa="${esc(pr.id)}"${pr.activa ? ' checked' : ''}> Activa</label>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-pres-guardar="${esc(pr.id)}">Guardar presentación</button></div>`
-    }
-
-    function htmlConfigProductos(c) {
-      const d = c.datos
-      const aviso = d.productos.length && !avisoProductosRevisado()
-        ? `<div class="pr-aviso pr-aviso--grave">Los productos que ya están cargados vinieron del prototipo: revisá nombres, presentaciones y unidades por caja.` +
-          ` <button type="button" class="pr-btn pr-btn--secundario" data-productos-revisados="1">Ya los revisé</button></div>` : ''
-      const nota = '<p class="pr-texto-suave">Cambiar las unidades por caja no toca lo ya producido: cada sublote guardó las suyas.</p>'
-      const bloque = (p) => `<div class="pr-config-fila${p.activo ? '' : ' pr-config-fila--inactiva'}">` +
-        `<input type="text" class="pr-input" data-prod-nombre="${esc(p.id)}" value="${esc(p.nombre)}" maxlength="80" aria-label="Nombre del producto">` +
-        `<input type="text" class="pr-input" data-prod-tipo="${esc(p.id)}" value="${esc(p.tipo_masa ?? '')}" maxlength="40" placeholder="Tipo de masa" aria-label="Tipo de masa">` +
-        `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-prod-activo="${esc(p.id)}"${p.activo ? ' checked' : ''}> Activo</label>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-prod-guardar="${esc(p.id)}">Guardar producto</button>` +
-        d.presentaciones.filter(pr => pr.producto_id === p.id).map(htmlPresentacionConfig).join('') +
-        `<div class="pr-config-alta"><input type="text" class="pr-input" data-pres-nueva="${esc(p.id)}" maxlength="80" placeholder="Presentación nueva" aria-label="Presentación nueva">` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-pres-agregar="${esc(p.id)}">Agregar presentación</button></div></div>`
-      // Los de chocolate abajo y separados, igual que en la carga (P5b). Lo
-      // decide tipo_masa, no el nombre: es el mismo dato con el que la sala
-      // elige la receta.
-      const { comunes, chocolate } = productosPorMasa(d)
-      const corte = `<div class="pr-ag__corte"><span class="pr-ag__corte-texto">Chocolate</span><span class="pr-ag__corte-linea"></span></div>`
-      const bloques = comunes.map(bloque).join('') +
-        (chocolate.length ? corte + chocolate.map(bloque).join('') : '')
-      return aviso + nota + bloques +
-        `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-prod-nuevo" maxlength="80" placeholder="Producto nuevo" aria-label="Producto nuevo">` +
-        htmlErrorPegado(c, 'pr-cfg-prod-agregar') +
-        `<button type="button" class="pr-btn" id="pr-cfg-prod-agregar" data-prod-agregar="1">Agregar producto</button></div>`
-    }
-
-    function parametrosGuardarProducto(p, unidadId, cambios = {}) {
-      const tipo = String(cambios.tipo_masa ?? p?.tipo_masa ?? '').trim()
-      return {
-        p_id: p?.id ?? null, p_unidad_negocio_id: unidadId,
-        p_nombre: String(cambios.nombre ?? p?.nombre ?? '').trim(),
-        p_tipo_masa: tipo === '' ? null : tipo,
-        p_activo: cambios.activo ?? p?.activo ?? true,
-        p_orden: p?.orden ?? cambios.orden ?? 0,
-      }
-    }
-
-    function parametrosGuardarPresentacion(pr, productoId, cambios = {}) {
-      const empaque = String(cambios.empaque ?? pr?.empaque ?? '').trim()
-      return {
-        p_id: pr?.id ?? null, p_producto_id: productoId,
-        p_nombre: String(cambios.nombre ?? pr?.nombre ?? '').trim(),
-        p_con_cono: cambios.con_cono ?? pr?.con_cono ?? false,
-        p_media_caja: cambios.media_caja ?? pr?.media_caja ?? false,
-        p_empaque: empaque === '' ? null : empaque,
-        p_unidades_por_caja: cambios.unidades_por_caja ?? pr?.unidades_por_caja ?? null,
-        p_activa: cambios.activa ?? pr?.activa ?? true,
-        p_orden: pr?.orden ?? cambios.orden ?? 0,
-      }
-    }
-
-    function campoNumero(selector, id) {
-      const el = [...document.getElementById('pr-config-cuerpo').querySelectorAll(`[${selector}]`)].find(x => x.getAttribute(selector) === id)
-      return el ? leerCampoNumero(el) : undefined
-    }
-
-    async function accionProducto(ds) {
-      const c = estado.config, d = c.datos
-      const DONDE = 'pr-cfg-prod-agregar'
-      if (ds.productosRevisados !== undefined) { guardarPreferencia(CLAVE_AVISO_PRODUCTOS, '1'); pintarPestanaConfig(); return }
-      if (ds.prodAgregar !== undefined) {
-        const nombre = document.getElementById('pr-config-prod-nuevo').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre del producto.', DONDE); return }
-        const orden = d.productos.reduce((mx, p) => Math.max(mx, p.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_producto', parametrosGuardarProducto(null, c.unidadId, { nombre, orden }), 'Producto agregado.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-        return
-      }
-      if (ds.prodGuardar !== undefined) {
-        const p = d.productos.find(x => x.id === ds.prodGuardar)
-        if (!p) return
-        const r = await guardarEnConfig('guardar_producto', parametrosGuardarProducto(p, c.unidadId, {
-          nombre: valorDe('data-prod-nombre', p.id) ?? p.nombre, tipo_masa: valorDe('data-prod-tipo', p.id) ?? p.tipo_masa,
-          activo: valorDe('data-prod-activo', p.id, 'checked') ?? p.activo,
-        }), 'Producto guardado.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-        return
-      }
-      if (ds.presAgregar !== undefined) {
-        const nombre = String(valorDe('data-pres-nueva', ds.presAgregar) ?? '').trim()
-        if (!nombre) { errorConfig('Escribí el nombre de la presentación.', DONDE); return }
-        // Una presentación nueva arranca con 1 por caja: se corrige al lado.
-        const orden = d.presentaciones.filter(x => x.producto_id === ds.presAgregar).reduce((mx, x) => Math.max(mx, x.orden ?? 0), 0) + 1
-        const r = await guardarEnConfig('guardar_presentacion', parametrosGuardarPresentacion(null, ds.presAgregar, { nombre, unidades_por_caja: 1, orden }), 'Presentación agregada: revisá sus unidades por caja.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-        return
-      }
-      if (ds.presGuardar !== undefined) {
-        const pr = d.presentaciones.find(x => x.id === ds.presGuardar)
-        if (!pr) return
-        const upc = campoNumero('data-pres-unidades', pr.id)
-        if (upc !== undefined && (!Number.isInteger(upc) || upc <= 0)) { errorConfig('Las unidades por caja tienen que ser un número entero mayor a cero.', DONDE); return }
-        const r = await guardarEnConfig('guardar_presentacion', parametrosGuardarPresentacion(pr, pr.producto_id, {
-          nombre: valorDe('data-pres-nombre', pr.id) ?? pr.nombre, con_cono: valorDe('data-pres-cono', pr.id, 'checked') ?? pr.con_cono,
-          media_caja: valorDe('data-pres-media', pr.id, 'checked') ?? pr.media_caja, empaque: valorDe('data-pres-empaque', pr.id) ?? pr.empaque,
-          unidades_por_caja: upc ?? pr.unidades_por_caja, activa: valorDe('data-pres-activa', pr.id, 'checked') ?? pr.activa,
-        }), 'Presentación guardada.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-      }
-    }
-
-    // ── Empaque de cada presentación ──────────────────────────────────────
-    //
-    // Qué cajas admite cada presentación (con su embolsado sugerido) y qué
-    // consume UNA caja armada. Se edita en un BORRADOR por presentación y se
-    // guarda con UNA llamada a guardar_empaque_presentacion, que borra y
-    // reinserta las dos listas: todo o nada. El descuento lo hace la base al
-    // cargar lo producido; acá no se toca el stock.
-
-    const CONDICIONES_EMPAQUE = [
-      ['siempre', 'Siempre'], ['bolsa_grande', 'Solo con bolsa grande'], ['bolsa_individual', 'Solo con bolsa individual'],
-    ]
-
-    async function leerEmpaqueConfig(c) {
-      const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
-      const productos = await leer(supabase.from('productos_terminados').select('id, nombre, tipo_masa, activo, orden')
-        .eq('unidad_negocio_id', c.unidadId).order('orden').order('nombre'))
-      const ids = productos.map(p => p.id)
-      const presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones')
-        .select('id, producto_id, nombre, media_caja, activa, orden').in('producto_id', ids).order('orden')) : []
-      const presIds = presentaciones.map(p => p.id)
-      const cajas = presIds.length ? await leer(supabase.from('presentacion_cajas')
-        .select('presentacion_id, insumo_id, embolsado_sugerido').in('presentacion_id', presIds)) : []
-      const empaque = presIds.length ? await leer(supabase.from('presentacion_empaque')
-        .select('id, presentacion_id, insumo_id, cantidad, condicion').in('presentacion_id', presIds)) : []
-      // TODOS los insumos (el catálogo es chico): los activos para ofrecer, y
-      // cualquiera para nombrar lo que ya está configurado aunque se haya
-      // desactivado después.
-      const insumos = await leer(supabase.from('insumos').select('id, nombre, marca, categoria, activo').order('nombre'))
-      // El borrador arranca igual a lo guardado.
-      const borradores = new Map(presentaciones.map(pr => [pr.id, {
-        cajas: cajas.filter(x => x.presentacion_id === pr.id).map(x => ({ insumo_id: x.insumo_id, embolsado_sugerido: x.embolsado_sugerido })),
-        empaque: empaque.filter(x => x.presentacion_id === pr.id).map(x => ({ insumo_id: x.insumo_id, cantidad: Number(x.cantidad), condicion: x.condicion })),
-        tocado: false,
-      }]))
-      return { productos, presentaciones, cajas, empaque, insumos, borradores }
-    }
-
-    // Lo que falta en lo GUARDADO (que es con lo que produce la base).
-    function faltaEmpaque(d, presId) {
-      const sinCaja = !(d.cajas ?? []).some(x => x.presentacion_id === presId)
-      const sinEmpaque = !(d.empaque ?? []).some(x => x.presentacion_id === presId)
-      if (sinCaja && sinEmpaque) return 'Produce sin descontar la caja ni el empaque.'
-      if (sinCaja) return 'Produce sin descontar la caja: no tiene ninguna caja habilitada.'
-      if (sinEmpaque) return 'Produce sin descontar el empaque: no tiene ningún renglón.'
-      return ''
-    }
-
-    function nombreInsumoConfig(d, id) {
-      const i = (d.insumos ?? []).find(x => x.id === id)
-      return i ? textoInsumoEmpaque(i) + (i.activo === false ? ' (desactivado)' : '') : 'Insumo que ya no está'
-    }
-
-    function htmlEmpaquePresentacion(pr, c) {
-      const d = c.datos
-      const b = d.borradores.get(pr.id) ?? { cajas: [], empaque: [], tocado: false }
-      const falta = pr.activa ? faltaEmpaque(d, pr.id) : ''
-      const opcionesSug = (v) => EMBOLSADOS.map(o => `<option value="${esc(o.valor)}"${o.valor === v ? ' selected' : ''}>${esc(o.texto)}</option>`).join('')
-      const filasCajas = b.cajas.map((x, i) => `<div class="pr-emp-fila">` +
-        `<span class="pr-emp-fila__nombre">${esc(nombreInsumoConfig(d, x.insumo_id))}</span>` +
-        `<label class="pr-emp-fila__campo">Embolsado sugerido <select class="pr-input" data-emp-sug="${esc(pr.id)}|${esc(i)}">${opcionesSug(x.embolsado_sugerido)}</select></label>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-emp-quitar-caja="${esc(pr.id)}|${esc(i)}">Quitar</button></div>`).join('')
-      const cajasLibres = (d.insumos ?? []).filter(i => i.activo !== false && i.categoria === 'Cajas' && !b.cajas.some(x => x.insumo_id === i.id))
-      const altaCaja = cajasLibres.length
-        ? `<div class="pr-config-alta"><select class="pr-input" data-emp-caja-nueva="${esc(pr.id)}" aria-label="Caja para agregar"><option value="">Elegí una caja…</option>` +
-          cajasLibres.map(i => `<option value="${esc(i.id)}">${esc(textoInsumoEmpaque(i))}</option>`).join('') + `</select>` +
-          `<button type="button" class="pr-btn pr-btn--secundario" data-emp-agregar-caja="${esc(pr.id)}">Agregar caja</button></div>`
-        : ''
-      const opcionesCond = (v) => CONDICIONES_EMPAQUE.map(([k, t]) => `<option value="${esc(k)}"${k === v ? ' selected' : ''}>${esc(t)}</option>`).join('')
-      const filasEmp = b.empaque.map((x, i) => `<div class="pr-emp-fila">` +
-        `<span class="pr-emp-fila__nombre">${esc(nombreInsumoConfig(d, x.insumo_id))}</span>` +
-        `<input type="text" class="pr-input pr-emp-fila__cant" data-emp-cant="${esc(pr.id)}|${esc(i)}" data-numero="${x.cantidad == null ? '' : esc(x.cantidad)}" data-decimales="3" aria-label="Cantidad por caja">` +
-        `<select class="pr-input" data-emp-cond="${esc(pr.id)}|${esc(i)}" aria-label="Cuándo se descuenta">${opcionesCond(x.condicion)}</select>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-emp-quitar="${esc(pr.id)}|${esc(i)}">Quitar</button></div>`).join('')
-      const donde = `pr-cfg-emp-${pr.id}`
-      return `<div class="pr-config-sub pr-emp${pr.activa ? '' : ' pr-config-fila--inactiva'}${b.tocado ? ' pr-emp--tocado' : ''}">` +
-        `<div class="pr-emp__titulo">${esc(pr.nombre)}${pr.activa ? '' : ' · inactiva'}${b.tocado ? ' <span class="pr-emp__sin-guardar">sin guardar</span>' : ''}</div>` +
-        (falta ? `<div class="pr-aviso pr-aviso--grave">${esc(falta)}</div>` : '') +
-        `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Cajas que admite</p>` +
-        (filasCajas || '<p class="pr-texto-suave">Ninguna caja habilitada.</p>') + altaCaja +
-        `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Lo que consume una caja</p>` +
-        (filasEmp || '<p class="pr-texto-suave">Ningún renglón.</p>') +
-        `<div class="pr-config-alta"><input type="text" class="pr-input" list="pr-emp-insumos" data-emp-insumo-nuevo="${esc(pr.id)}" placeholder="Buscar un insumo…" aria-label="Insumo para agregar" autocomplete="off">` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-emp-agregar="${esc(pr.id)}">Agregar insumo</button></div>` +
-        htmlErrorPegado(c, donde) +
-        `<button type="button" class="pr-btn" id="${esc(donde)}" data-emp-guardar="${esc(pr.id)}">Guardar empaque</button></div>`
-    }
-
-    function htmlConfigEmpaque(c) {
-      const d = c.datos
-      const nota = '<p class="pr-texto-suave">Lo que consume UNA caja armada de cada presentación: la caja de cartón (1 por caja producida, también en media caja) y el resto. Se descuenta solo al cargar lo producido.</p>'
-      if (!d.productos.length) return nota + '<p class="pr-texto-suave">Esta unidad no tiene productos cargados.</p>'
-      // El buscador de insumos es un datalist: la pestaña es de oficina, y así
-      // no se redibuja nada mientras se escribe.
-      const opcionesInsumos = (d.insumos ?? []).filter(i => i.activo !== false)
-        .map(i => `<option value="${esc(textoInsumoEmpaque(i))}"></option>`).join('')
-      const lista = `<datalist id="pr-emp-insumos">${opcionesInsumos}</datalist>`
-      const { comunes, chocolate } = productosPorMasa(d)
-      const bloque = p => `<div class="pr-config-fila${p.activo ? '' : ' pr-config-fila--inactiva'}"><strong class="pr-emp__producto">${esc(p.nombre)}</strong>` +
-        (d.presentaciones.filter(pr => pr.producto_id === p.id).map(pr => htmlEmpaquePresentacion(pr, c)).join('') || '<p class="pr-texto-suave">Sin presentaciones.</p>') + `</div>`
-      const corte = `<div class="pr-ag__corte"><span class="pr-ag__corte-texto">Chocolate</span><span class="pr-ag__corte-linea"></span></div>`
-      return nota + lista + comunes.map(bloque).join('') + (chocolate.length ? corte + chocolate.map(bloque).join('') : '')
-    }
-
-    // Las cantidades tipeadas viven en los campos hasta que algo redibuja: se
-    // pasan al borrador ANTES de cualquier cambio, o se perderían.
-    function sincronizarCantidadesEmpaque(c) {
-      const cuerpo = document.getElementById('pr-config-cuerpo')
-      for (const input of cuerpo.querySelectorAll('[data-emp-cant]')) {
-        const [presId, i] = input.dataset.empCant.split('|')
-        const fila = c.datos.borradores.get(presId)?.empaque[Number(i)]
-        if (fila) {
-          const v = leerCampoNumero(input)
-          if (v !== fila.cantidad) { fila.cantidad = v; c.datos.borradores.get(presId).tocado = true }
-        }
-      }
-    }
-
-    // El texto del buscador contra el catálogo: igual (sin acentos ni
-    // mayúsculas) a "nombre marca"; si no, el ÚNICO que lo contiene.
-    function insumoPorTexto(d, texto) {
-      const q = normalizarBusqueda(texto)
-      if (!q) return null
-      const activos = (d.insumos ?? []).filter(i => i.activo !== false)
-      const exacto = activos.find(i => normalizarBusqueda(textoInsumoEmpaque(i)) === q)
-      if (exacto) return exacto
-      const parecidos = activos.filter(i => normalizarBusqueda(textoInsumoEmpaque(i)).includes(q))
-      return parecidos.length === 1 ? parecidos[0] : null
-    }
-
-    // Lo que viaja: las dos listas completas. null si algo no se puede mandar,
-    // con el texto de por qué.
-    function parametrosGuardarEmpaque(presId, b) {
-      for (const x of b.empaque) {
-        if (!(typeof x.cantidad === 'number' && x.cantidad > 0)) return { error: 'Las cantidades tienen que ser mayores a cero.' }
-      }
-      const claves = b.empaque.map(x => `${x.insumo_id}|${x.condicion}`)
-      if (new Set(claves).size !== claves.length) return { error: 'Hay un insumo repetido con la misma condición: dejalo una sola vez.' }
-      return {
-        p_presentacion_id: presId,
-        p_cajas: b.cajas.map(x => ({ insumo_id: x.insumo_id, embolsado_sugerido: x.embolsado_sugerido })),
-        p_empaque: b.empaque.map(x => ({ insumo_id: x.insumo_id, cantidad: x.cantidad, condicion: x.condicion })),
-      }
-    }
-
-    function valorEmpaque(atributo, presId) {
-      const el = [...document.getElementById('pr-config-cuerpo').querySelectorAll(`[${atributo}]`)].find(x => x.getAttribute(atributo) === presId)
-      return el ? el.value : ''
-    }
-
-    async function accionEmpaque(ds) {
-      const c = estado.config, d = c.datos
-      if (!d?.borradores) return
-      sincronizarCantidadesEmpaque(c)
-      const clave = ds.empGuardar ?? ds.empAgregar ?? ds.empAgregarCaja
-        ?? (ds.empQuitar ?? ds.empQuitarCaja ?? '').split('|')[0]
-      const b = d.borradores.get(clave)
-      if (!b) return
-      const donde = `pr-cfg-emp-${clave}`
-      if (ds.empGuardar !== undefined) {
-        const params = parametrosGuardarEmpaque(clave, b)
-        if (params.error) { errorConfig(params.error, donde); return }
-        const r = await guardarEnConfig('guardar_empaque_presentacion', params, 'Empaque guardado.', donde)
-        if (r.ok) await cargarPestanaConfig()
-        return
-      }
-      if (ds.empAgregarCaja !== undefined) {
-        const id = valorEmpaque('data-emp-caja-nueva', clave)
-        if (!id) { errorConfig('Elegí la caja para agregar.', donde); return }
-        b.cajas.push({ insumo_id: id, embolsado_sugerido: 'grande' })
-      } else if (ds.empAgregar !== undefined) {
-        const ins = insumoPorTexto(d, valorEmpaque('data-emp-insumo-nuevo', clave))
-        if (!ins) { errorConfig('Elegí un insumo de la lista.', donde); return }
-        b.empaque.push({ insumo_id: ins.id, cantidad: null, condicion: 'siempre' })
-      } else if (ds.empQuitarCaja !== undefined) {
-        b.cajas.splice(Number(ds.empQuitarCaja.split('|')[1]), 1)
-      } else if (ds.empQuitar !== undefined) {
-        b.empaque.splice(Number(ds.empQuitar.split('|')[1]), 1)
-      }
-      b.tocado = true
-      errorConfig(null)
-      pintarPestanaConfig()
-    }
-
-    function cambiarSelectEmpaque(t) {
-      const c = estado.config
-      if (!c?.datos?.borradores) return
-      sincronizarCantidadesEmpaque(c)
-      const [presId, i] = (t.dataset.empSug ?? t.dataset.empCond).split('|')
-      const b = c.datos.borradores.get(presId)
-      if (!b) return
-      if (t.dataset.empSug !== undefined) { if (b.cajas[Number(i)]) b.cajas[Number(i)].embolsado_sugerido = t.value }
-      else if (b.empaque[Number(i)]) b.empaque[Number(i)].condicion = t.value
-      b.tocado = true
-      pintarPestanaConfig()
-    }
-
-    // El tilde "Doble bolsa" de un cono: se guarda en el acto.
-    async function cambiarDobleBolsa(marcaId, doble) {
-      const r = await guardarEnConfig('marcar_doble_bolsa', { p_marca_id: marcaId, p_doble: !!doble },
-        doble ? 'Ese cono va con doble bolsa.' : 'Ese cono ya no va con doble bolsa.', 'pr-cfg-marcas-lista')
-      if (r.ok) await cargarPestanaConfig()
-    }
-
-    // ── Marcas / Conos ────────────────────────────────────────────────────
-
-    async function leerMarcasConfig() {
-      const { data, error } = await supabase.from('marcas_personalizadas')
-        .select('id, nombre, activa, estado_alta, creada_por, creada_en, doble_bolsa').order('nombre')
-      if (error) throw error
-      const marcas = data ?? []
-      const nombres = await nombresDeEmpleados(marcasPendientes({ marcas }).map(m => m.creada_por))
-      return { marcas, nombres }
-    }
-
-    // Los conos que propuso alguien desde la tablet y todavía nadie revisó.
-    function marcasPendientes(d) {
-      return (d?.marcas ?? []).filter(m => m.estado_alta === 'pendiente_revision')
-    }
-
-    // El catálogo: todo lo que no está pendiente ni rechazado.
-    function marcasDelCatalogo(d) {
-      return (d?.marcas ?? []).filter(m => m.estado_alta !== 'pendiente_revision' && m.estado_alta !== 'rechazada')
-    }
-
-    function parametrosRevisarMarca(id, aprobar, nombre) {
-      const n = String(nombre ?? '').trim()
-      return { p_marca_id: id, p_aprobar: aprobar, p_nombre: n === '' ? null : n }
-    }
-
-    // Quién lo cargó y cuándo. El sublote del diseño (7c) no se puede decir:
-    // marcas_personalizadas no guarda de qué producción salió.
-    function htmlPendienteMarca(m, nombres) {
-      const quien = nombres?.get(m.creada_por)
-      const cuando = [fechaCorta(m.creada_en), horaArgentina(m.creada_en)].filter(Boolean).join(' ')
-      const pie = [quien ? `Lo cargó ${quien}` : null, cuando || null].filter(Boolean).join(' · ')
-      return `<div class="pr-cfg-pendiente"><div class="pr-cfg-pendiente__datos">` +
-        `<input type="text" class="pr-input" data-pend-nombre="${esc(m.id)}" value="${esc(m.nombre)}" maxlength="80" aria-label="Nombre del cono">` +
-        (pie ? `<div class="pr-texto-suave">${esc(pie)}</div>` : '') + `</div>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-pend-no="${esc(m.id)}">Rechazar</button>` +
-        `<button type="button" class="pr-btn" data-pend-si="${esc(m.id)}">Aceptar</button></div>`
-    }
-
-    function htmlConfigMarcas(c) {
-      const d = c.datos
-      const pend = marcasPendientes(d)
-      const arriba = pend.length
-        ? `<div id="pr-cfg-pendientes" tabindex="-1"><p class="pr-cfg-rotulo">Pendientes de revisar · ${esc(pend.length)}</p>` +
-          htmlErrorPegado(c, 'pr-cfg-pendientes') +
-          `<p class="pr-texto-suave">Se pueden usar igual mientras tanto. Al aceptar podés corregirle el nombre.</p>` +
-          pend.map(m => htmlPendienteMarca(m, d.nombres)).join('') + `</div>` : ''
-      const lista = marcasFiltradas(marcasDelCatalogo(d), c.busqueda)
-      return arriba + `<p class="pr-cfg-rotulo pr-cfg-rotulo--gris">Catálogo · ${esc(marcasDelCatalogo(d).length)} conos</p>` +
-        `<input type="text" class="pr-input" id="pr-config-marca-buscar" placeholder="Buscar marca" aria-label="Buscar marca" value="${esc(c.busqueda)}">` +
-        `<p class="pr-texto-suave" id="pr-cfg-marcas-lista" tabindex="-1">"Doble bolsa" es para los conos que van al norte, por la humedad: llevan siempre la bolsa grande y las bolsitas individuales, y en la tablet no se puede bajar.</p>` +
-        htmlErrorPegado(c, 'pr-cfg-marcas-lista') +
-        `<ul class="pr-lista pr-espacio-arriba">` + (lista.length ? lista.map(m =>
-          `<li class="pr-lista__item pr-config-marca${m.activa ? '' : ' pr-config-fila--inactiva'}"><strong>${esc(m.nombre)}</strong>${m.activa ? '' : ' (dada de baja)'} ` +
-          `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-marca-doble="${esc(m.id)}"${m.doble_bolsa ? ' checked' : ''}> Doble bolsa</label> ` +
-          `<button type="button" class="pr-btn pr-btn--secundario" data-marca-activa="${esc(m.id)}">${m.activa ? 'Dar de baja' : 'Reactivar'}</button></li>`).join('')
-          : `<li class="pr-lista__item">Ninguna marca coincide.</li>`) + `</ul>` +
-        `<div class="pr-config-alta"><input type="text" class="pr-input" id="pr-config-marca-nueva" maxlength="80" placeholder="Marca nueva" aria-label="Marca nueva">` +
-        htmlErrorPegado(c, 'pr-cfg-marca-agregar') +
-        `<button type="button" class="pr-btn" id="pr-cfg-marca-agregar" data-marca-agregar="1">Agregar marca</button></div>`
-    }
-
-    async function accionMarca(ds) {
-      const c = estado.config
-      const DONDE = 'pr-cfg-marca-agregar'
-      if (ds.marcaAgregar !== undefined) {
-        const nombre = document.getElementById('pr-config-marca-nueva').value.trim()
-        if (!nombre) { errorConfig('Escribí el nombre de la marca.', DONDE); return }
-        const r = await guardarEnConfig('guardar_marca', { p_id: null, p_nombre: nombre, p_activa: true }, 'Marca agregada.', DONDE)
-        if (r.ok) await cargarPestanaConfig()
-        return
-      }
-      if (ds.pendSi !== undefined || ds.pendNo !== undefined) {
-        const id = ds.pendSi ?? ds.pendNo
-        const aprobar = ds.pendSi !== undefined
-        // Al aceptar se manda el nombre del campo, que puede estar corregido.
-        const nombre = aprobar ? valorDe('data-pend-nombre', id) : null
-        const r = await guardarEnConfig('revisar_marca', parametrosRevisarMarca(id, aprobar, nombre),
-          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', 'pr-cfg-pendientes')
-        // La burbuja de los accesos también baja: se vuelve a pedir la cifra.
-        if (r.ok) { cargarBurbujaConos(); await cargarPestanaConfig() }
-        return
-      }
-      const m = c.datos.marcas.find(x => x.id === ds.marcaActiva)
-      if (!m) return
-      const r = await guardarEnConfig('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !m.activa }, m.activa ? 'Marca dada de baja.' : 'Marca reactivada.', DONDE)
-      if (r.ok) await cargarPestanaConfig()
-    }
-
-    // ── Personal: puestos, PINes y accesos temporales ─────────────────────
-
-    async function leerPersonalConfig(c) {
-      const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: c.unidadId })
-      if (error) throw error
-      const t = await supabase.from('puestos_temporales').select('id, empleado_id, puesto, desde, hasta, otorgado_por')
-        .eq('unidad_negocio_id', c.unidadId).is('revocado_en', null).order('hasta')
-      if (t.error) throw t.error
-      // Vigentes: el vencimiento se mira acá porque `hasta` es un timestamptz
-      // y la consulta no puede compararlo contra el "ahora" del servidor.
-      const temporales = (t.data ?? []).filter(x => temporalVigente(x))
-      const nombres = await nombresDeEmpleados(temporales.map(x => x.otorgado_por))
-      return { personal: data ?? [], temporales, nombres }
-    }
-
-    function temporalVigente(t, ahora = Date.now()) {
-      const hasta = new Date(t?.hasta ?? '').getTime()
-      return Number.isFinite(hasta) && hasta > ahora
-    }
-
-    function personalVisible(personal, busqueda, todos) {
-      const base = todos ? personal : personal.filter(p => p.misma_unidad || (p.puestos ?? []).length)
-      return marcasFiltradas(base, busqueda)
-    }
-
-    // El estado del PIN, tal como lo devuelve personal_produccion(). No hay
-    // "Bloqueado": la RPC no lo dice, y un chip que no se puede saber sería
-    // inventarlo.
-    function estadoDelPin(p) {
-      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--gris' }
-      if (p.debe_cambiar_pin) return { texto: 'PIN pendiente de cambiar', clase: 'pr-cfg-chip--alerta' }
-      return { texto: 'PIN propio', clase: 'pr-cfg-chip--ok' }
-    }
-
-    // Los puestos que muestra la fila: los tocados si se tocó, los de la base
-    // si no.
-    function puestosDe(c, p) {
-      return c.cambios.get(p.id) ?? (p.puestos ?? [])
-    }
-
-    // Marcar o desmarcar un puesto. Si la fila vuelve a quedar como está en la
-    // base deja de contar como cambiada: el número del botón tiene que decir
-    // cuántas filas se van a mandar, ni una más.
-    function alternarPuesto(c, persona, puesto, marcado) {
-      const set = new Set(puestosDe(c, persona))
-      if (marcado) set.add(puesto)
-      else set.delete(puesto)
-      const nuevos = PUESTOS.map(([k]) => k).filter(k => set.has(k))
-      const antes = [...(persona.puestos ?? [])].sort().join(',')
-      if (nuevos.slice().sort().join(',') === antes) c.cambios.delete(persona.id)
-      else c.cambios.set(persona.id, nuevos)
-    }
-
-    function textoBotonPersonal(n) {
-      return n ? `Guardar los cambios · ${n} ${n === 1 ? 'fila' : 'filas'}` : 'Guardar los cambios'
-    }
-
-    function htmlFilaPersonal(c, p) {
-      const puestos = puestosDe(c, p)
-      const tocada = c.cambios.has(p.id)
-      const pin = estadoDelPin(p)
-      const temp = p.pin_temporal ? ` <span class="pr-cfg-chip pr-cfg-chip--gris">temporal</span>` : ''
-      return `<div class="pr-cfg-fila pr-cfg-personal${tocada ? ' pr-cfg-fila--tocada' : ''}"><strong>${esc(p.nombre)}</strong>` +
-        PUESTOS.map(([puestoClave, puestoRotulo]) => `<input type="checkbox" class="pr-casilla pr-cfg-centro" data-puesto="${puestoClave}" data-persona-puesto="${esc(p.id)}"${puestos.includes(puestoClave) ? ' checked' : ''} aria-label="${puestoRotulo}: ${esc(p.nombre)}">`).join('') +
-        `<span><span class="pr-cfg-chip ${pin.clase}">${esc(pin.texto)}</span>${temp}</span>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-pin-asignar="${esc(p.id)}">${p.tiene_pin ? 'Resetear PIN' : 'Asignar PIN'}</button>` +
-        `<span class="pr-cfg-fila__aviso">${tocada ? 'Cambiada' : ''}</span></div>`
-    }
-
-    // El panel del PIN. Un PIN es un IDENTIFICADOR, no una cantidad: va como
-    // texto y NUNCA por enlazarCampoNumero, que le metería separador de miles.
-    function htmlPanelPin(c) {
-      if (!c.pinPara) return ''
-      const maestro = c.pinPara.maestro
-      const largo = maestro ? LARGO_PIN_MAESTRO : LARGO_PIN
-      return `<div class="pr-cfg-panel"><strong>${maestro ? 'Mi PIN maestro' : `PIN para ${esc(c.pinPara.nombre)}`}</strong>` +
-        `<p class="pr-texto-suave">${maestro ? `${largo} números. Con él se entra a cualquier modo y se dan accesos por hoy.` : `${largo} números. Se los pasás a mano; la primera vez que entre va a tener que elegir uno suyo.`}</p>` +
-        `<input type="text" class="pr-input" id="pr-cfg-pin-valor" inputmode="numeric" autocomplete="off" maxlength="${largo}" placeholder="${'0'.repeat(largo)}" aria-label="PIN">` +
-        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-pin-guardar')}` +
-        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-pin-cancelar">Cancelar</button>` +
-        `<button type="button" class="pr-btn" id="pr-cfg-pin-guardar">Guardar el PIN</button></div></div>`
-    }
-
-    function htmlPanelTemporal(c) {
-      if (!c.temporal) return ''
-      const personas = personalVisible(c.datos.personal, '', true)
-      return `<div class="pr-cfg-panel"><strong>Dar acceso temporal</strong>` +
-        `<p class="pr-texto-suave">Dura como mucho 7 días. Si esa persona todavía no tiene PIN, se le genera uno y se muestra una sola vez.</p>` +
-        `<label class="pr-campo"><span class="pr-campo__rotulo">Quién</span><select class="pr-select" id="pr-cfg-temporal-persona">` +
-        `<option value="">Elegí a quién</option>` +
-        personas.map(p => `<option value="${esc(p.id)}"${p.id === c.temporal.personaId ? ' selected' : ''}>${esc(p.nombre)}</option>`).join('') + `</select></label>` +
-        `<label class="pr-campo"><span class="pr-campo__rotulo">Puesto</span><select class="pr-select" id="pr-cfg-temporal-puesto">` +
-        `<option value="">Elegí el puesto</option>` +
-        PUESTOS.map(([k, r]) => `<option value="${k}"${k === c.temporal.puesto ? ' selected' : ''}>${r}</option>`).join('') + `</select></label>` +
-        `<label class="pr-campo"><span class="pr-campo__rotulo">Hasta</span><input type="date" class="pr-input" id="pr-cfg-temporal-hasta" value="${esc(c.temporal.hasta ?? '')}"></label>` +
-        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-temporal-dar')}` +
-        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-temporal-cancelar">Cancelar</button>` +
-        `<button type="button" class="pr-btn" id="pr-cfg-temporal-dar">Dar el acceso</button></div></div>`
-    }
-
-    // Los puestos temporales vigentes: quién los dio, hasta cuándo, y Revocar.
-    function htmlTemporales(c) {
-      const lista = c.datos.temporales ?? []
-      if (!lista.length) return '<p class="pr-texto-suave">No hay ningún acceso temporal vigente.</p>'
-      const nombre = (id) => c.datos.personal.find(p => p.id === id)?.nombre ?? '—'
-      return lista.map(t => `<div class="pr-cfg-temporal"><span><strong>${esc(nombre(t.empleado_id))}</strong> · ${esc(t.puesto)}` +
-        `<div class="pr-texto-suave">Lo dio ${esc(c.datos.nombres.get(t.otorgado_por) ?? '—')} · hasta ${esc(fechaCorta(t.hasta))} ${esc(horaArgentina(t.hasta))}</div></span>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" data-temporal-revocar="${esc(t.id)}">Revocar</button></div>`).join('')
-    }
-
-    function htmlConfigPersonal(c) {
-      const lista = personalVisible(c.datos.personal, c.busqueda, c.todoElPersonal)
-      const n = cambiosSinGuardar(c)
-      const cab = `<div class="pr-cfg-cab pr-cfg-personal"><span>Persona</span>` +
-        PUESTOS.map(([, r]) => `<span class="pr-cfg-centro">${r}</span>`).join('') +
-        `<span>PIN</span><span></span><span></span></div>`
-      return `<input type="text" class="pr-input" id="pr-config-personal-buscar" placeholder="Buscar por nombre…" aria-label="Buscar persona" value="${esc(c.busqueda)}">` +
-        `<label class="pr-check"><input type="checkbox" class="pr-casilla" data-personal-todos="1"${c.todoElPersonal ? ' checked' : ''}> Mostrar también el personal de otras unidades</label>` +
-        `<div class="pr-cfg-tabla pr-espacio-arriba">${cab}` +
-        (lista.length ? lista.map(p => htmlFilaPersonal(c, p)).join('') : '<div class="pr-cfg-fila pr-cfg-personal"><span>Nadie coincide con la búsqueda.</span></div>') +
-        `</div>` +
-        `<div class="pr-cfg-pie">${htmlErrorPegado(c, 'pr-cfg-personal-guardar')}` +
-        `<button type="button" class="pr-btn" id="pr-cfg-personal-guardar"${c.guardando ? ' disabled' : ''}>${esc(textoBotonPersonal(n))}</button></div>` +
-        `<h3 class="pr-subtitulo">PINes</h3>` +
-        `<div class="pr-config-fila__botones">${htmlErrorPegado(c, 'pr-cfg-generar-pines')}` +
-        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-generar-pines">Generar PIN para los que no tienen</button>` +
-        (tieneTarea('configurar') ? `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-abrir-maestro">Mi PIN maestro</button>` : '') +
-        `</div>${htmlPanelPin(c)}` +
-        `<h3 class="pr-subtitulo">Accesos temporales</h3>${htmlTemporales(c)}` +
-        `<div class="pr-config-fila__botones pr-espacio-arriba">${htmlErrorPegado(c, 'pr-cfg-abrir-temporal')}` +
-        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-cfg-abrir-temporal">Dar acceso temporal</button></div>${htmlPanelTemporal(c)}`
-    }
-
-    // Manda SOLO las filas tocadas, de a una, y para en la primera que falla.
-    // El botón se traba mientras manda, nunca por lo que falta: si no, el
-    // error que cuelga de él sería imposible de ver.
-    async function guardarCambiosPersonal() {
-      const c = estado.config
-      const DONDE = 'pr-cfg-personal-guardar'
-      if (c.guardando) return
-      const ids = [...c.cambios.keys()]
-      if (!ids.length) { errorConfig('No cambiaste nada todavía.', DONDE); return }
-      c.guardando = true
-      pintarPestanaConfig()
-      let hechas = 0
-      try {
-        for (const id of ids) {
-          const r = await guardarEnConfig('guardar_puestos', { p_empleado_id: id, p_unidad_negocio_id: c.unidadId, p_puestos: c.cambios.get(id) }, null, DONDE)
-          if (!r.ok) break
-          c.cambios.delete(id)
-          hechas++
-        }
-      } finally {
-        c.guardando = false
-      }
-      if (hechas) mostrarExito(`${hechas} ${hechas === 1 ? 'fila guardada' : 'filas guardadas'}.`)
-      // Con algo sin guardar no se recarga: la recarga traería los puestos de
-      // la base y borraría lo que todavía no entró.
-      if (c.cambios.size) pintarPestanaConfig()
-      else await cargarPestanaConfig()
-    }
-
-    // ── PINes ─────────────────────────────────────────────────────────────
-
-    function pinValido(texto, largo) {
-      return new RegExp(`^[0-9]{${largo}}$`).test(String(texto ?? ''))
-    }
-
-    function abrirPanelPin(persona, maestro = false) {
-      const c = estado.config
-      c.pinPara = { id: persona?.id ?? null, nombre: persona?.nombre ?? '', maestro }
-      errorConfig(null)
-      pintarPestanaConfig()
-      document.getElementById('pr-cfg-pin-valor')?.focus?.()
-    }
-
-    // El campo se vacía a mano antes de soltarlo. El re-render lo reemplaza
-    // igual, pero un PIN tipeado no tiene que sobrevivir ni un instante de más.
-    function olvidarCampoPin() {
-      const el = document.getElementById('pr-cfg-pin-valor')
-      if (el) el.value = ''
-    }
-
-    function cerrarPanelPin() {
-      olvidarCampoPin()
-      estado.config.pinPara = null
-      errorConfig(null)
-      pintarPestanaConfig()
-    }
-
-    async function confirmarPinConfig() {
-      const c = estado.config
-      const DONDE = 'pr-cfg-pin-guardar'
-      if (!c.pinPara) return
-      const maestro = c.pinPara.maestro
-      const largo = maestro ? LARGO_PIN_MAESTRO : LARGO_PIN
-      const pin = String(document.getElementById('pr-cfg-pin-valor')?.value ?? '').trim()
-      if (!pinValido(pin, largo)) { errorConfig(`El PIN tiene que ser de ${largo} números.`, DONDE); return }
-      const r = maestro
-        ? await guardarEnConfig('asignar_mi_pin_maestro', { p_pin: pin }, 'PIN maestro guardado.', DONDE)
-        : await guardarEnConfig('asignar_pin_produccion', { p_empleado_id: c.pinPara.id, p_pin: pin }, 'PIN asignado.', DONDE)
-      if (!r.ok) return
-      olvidarCampoPin()
-      c.pinPara = null
-      await cargarPestanaConfig()
-    }
-
-    // ── La hoja de PINes: se ve UNA vez, se imprime y se borra ────────────
-
-    function htmlTiraPin(t) {
-      return `<div class="pr-tira"><div><strong>${esc(t.nombre)}</strong>` +
-        `<div class="pr-tira__nota">PIN de un solo uso: la primera vez vas a elegir uno tuyo.</div></div>` +
-        `<div class="pr-tira__pin">${esc(t.pin)}</div></div>`
-    }
-
-    function mostrarHojaPines(lista, aviso) {
-      estado.config.hoja = lista
-      document.getElementById('pr-cfg-hoja-aviso').textContent = aviso
-      document.getElementById('pr-cfg-hoja-tiras').innerHTML = lista.map(htmlTiraPin).join('')
-      document.getElementById('pr-cfg-hoja').hidden = false
-    }
-
-    // Al cerrar, los PINes se van de la memoria Y del DOM. Nunca estuvieron en
-    // localStorage ni en sessionStorage, y no tienen que quedar en ningún lado.
-    function cerrarHojaPines() {
-      if (estado.config) estado.config.hoja = null
-      document.getElementById('pr-cfg-hoja-tiras').innerHTML = ''
-      document.getElementById('pr-cfg-hoja-aviso').textContent = ''
-      document.getElementById('pr-cfg-hoja').hidden = true
-    }
-
-    async function generarPines() {
-      const c = estado.config
-      const DONDE = 'pr-cfg-generar-pines'
-      const r = await guardarEnConfig('generar_pines_iniciales', { p_unidad_negocio_id: c.unidadId }, null, DONDE)
-      if (!r.ok) return
-      const lista = (r.data ?? []).map(x => ({ nombre: x.nombre, pin: x.pin }))
-      // Sin nadie sin PIN no se abre una hoja vacía: se dice.
-      if (!lista.length) { errorConfig('Ya todos tienen PIN: no hizo falta generar ninguno.', DONDE); return }
-      mostrarExito(`${lista.length} ${lista.length === 1 ? 'PIN generado' : 'PINes generados'}.`)
-      await cargarPestanaConfig()
-      mostrarHojaPines(lista, 'Se muestran UNA sola vez. Imprimí, recortá y repartí antes de cerrar.')
-    }
-
-    // ── Accesos temporales ────────────────────────────────────────────────
-
-    function abrirPanelTemporal() {
-      const c = estado.config
-      c.temporal = { personaId: null, puesto: null, hasta: hoyArgentina() }
-      errorConfig(null)
-      pintarPestanaConfig()
-    }
-
-    function cerrarPanelTemporal() {
-      estado.config.temporal = null
-      errorConfig(null)
-      pintarPestanaConfig()
-    }
-
-    function parametrosDarTemporal(c, hoy) {
-      return {
-        p_empleado_id: c.temporal?.personaId ?? null,
-        p_unidad_negocio_id: c.unidadId,
-        p_puesto: c.temporal?.puesto ?? null,
-        p_hasta: hastaDesdeFecha(c.temporal?.hasta, hoy),
-      }
-    }
-
-    async function confirmarTemporal() {
-      const c = estado.config
-      const DONDE = 'pr-cfg-temporal-dar'
-      const hoy = hoyArgentina()
-      const faltan = faltanParaAcceso(c.temporal, hoy)
-      if (faltan.length) { errorConfig(`Falta: ${faltan.join(' · ')}.`, DONDE); return }
-      const persona = c.datos.personal.find(p => p.id === c.temporal.personaId)
-      const r = await guardarEnConfig('otorgar_puesto_temporal', parametrosDarTemporal(c, hoy), null, DONDE)
-      if (!r.ok) return
-      if (r.data && r.data.ok === false) { errorConfig(r.data.motivo ?? 'No se pudo dar el acceso.', DONDE); return }
-      mostrarExito('Acceso dado.')
-      c.temporal = null
-      await cargarPestanaConfig()
-      // El PIN temporal viene en null cuando esa persona ya tenía el suyo.
-      if (r.data?.pin_temporal) {
-        mostrarHojaPines([{ nombre: persona?.nombre ?? '', pin: r.data.pin_temporal }],
-          'Se muestra UNA sola vez. Anotalo y pasáselo antes de cerrar.')
-      }
-    }
-
-    async function revocarTemporal(id) {
-      const r = await guardarEnConfig('revocar_puesto_temporal', { p_id: id }, 'Acceso revocado.', 'pr-cfg-abrir-temporal')
-      if (r.ok) await cargarPestanaConfig()
-    }
-
-    const LECTORES_CONFIG = {
-      maquinas: leerMaquinasConfig, recetas: leerRecetasConfig, ingredientes: leerIngredientesConfig,
-      productos: leerProductosConfig, empaque: leerEmpaqueConfig, marcas: leerMarcasConfig, personal: leerPersonalConfig,
-    }
-    const RENDERS_CONFIG = {
-      maquinas: htmlConfigMaquinas, recetas: htmlConfigRecetas, ingredientes: htmlConfigIngredientes,
-      productos: htmlConfigProductos, empaque: htmlConfigEmpaque, marcas: htmlConfigMarcas, personal: htmlConfigPersonal,
-    }
-
-    function conectarConfig() {
-      document.getElementById('pr-btn-ir-config').addEventListener('click', abrirConfigDesdeAcceso)
-      document.getElementById('pr-config-volver').addEventListener('click', () => {
-        if (pedirSalida(estado.config, { volver: true })) volverDeOficina()
-      })
-      document.getElementById('pr-config-unidad').addEventListener('change', ev => {
-        const unidad = ev.target.value
-        if (!pedirSalida(estado.config, { unidad })) return
-        estado.config.unidadId = unidad
-        estado.config.recetaMaquina = null
-        cargarPestanaConfig()
-      })
-      document.getElementById('pr-config-tabs').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-config-tab]'); if (!b) return
-        const tab = b.dataset.configTab
-        if (tab === estado.config.tab) return
-        if (!pedirSalida(estado.config, { tab })) return
-        estado.config.tab = tab
-        estado.config.busqueda = ''
-        cargarPestanaConfig()
-      })
-      document.getElementById('pr-cfg-hoja-cerrar').addEventListener('click', cerrarHojaPines)
-      document.getElementById('pr-cfg-hoja-imprimir').addEventListener('click', () => window.print?.())
-      // Cerrar la pestaña del navegador con cambios sin guardar: lo único que
-      // se puede hacer ahí es el aviso del propio navegador.
-      window.addEventListener('beforeunload', ev => {
-        if (!cambiosSinGuardar(estado.config)) return
-        ev.preventDefault()
-        ev.returnValue = ''
-      })
-      const cuerpo = document.getElementById('pr-config-cuerpo')
-      cuerpo.addEventListener('click', ev => {
-        const b = ev.target.closest('button'); if (!b || b.disabled) return
-        const ds = b.dataset
-        if (b.id === 'pr-cfg-salir-si') return confirmarSalida()
-        if (b.id === 'pr-cfg-salir-no') return cancelarSalida()
-        if (b.id === 'pr-cfg-personal-guardar') return guardarCambiosPersonal()
-        if (b.id === 'pr-cfg-generar-pines') return generarPines()
-        if (b.id === 'pr-cfg-abrir-maestro') return abrirPanelPin(null, true)
-        if (b.id === 'pr-cfg-pin-cancelar') return cerrarPanelPin()
-        if (b.id === 'pr-cfg-pin-guardar') return confirmarPinConfig()
-        if (b.id === 'pr-cfg-abrir-temporal') return abrirPanelTemporal()
-        if (b.id === 'pr-cfg-temporal-cancelar') return cerrarPanelTemporal()
-        if (b.id === 'pr-cfg-temporal-dar') return confirmarTemporal()
-        if (ds.pinAsignar !== undefined) return abrirPanelPin(estado.config.datos.personal.find(p => p.id === ds.pinAsignar))
-        if (ds.temporalRevocar !== undefined) return revocarTemporal(ds.temporalRevocar)
-        const tab = estado.config.tab
-        if (tab === 'maquinas') accionMaquina(ds)
-        else if (tab === 'recetas' && ds.recetaGuardar !== undefined) guardarReceta()
-        else if (tab === 'ingredientes') accionIngrediente(ds)
-        else if (tab === 'productos') accionProducto(ds)
-        else if (tab === 'empaque') accionEmpaque(ds)
-        else if (tab === 'marcas') accionMarca(ds)
-      })
-      cuerpo.addEventListener('change', ev => {
-        const t = ev.target, c = estado.config
-        if (t.dataset?.empSug !== undefined || t.dataset?.empCond !== undefined) return cambiarSelectEmpaque(t)
-        if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)
-        if (t.dataset?.recetaMaquina !== undefined) { c.recetaMaquina = t.value; c.recetaTipo = null; cargarPestanaConfig() }
-        else if (t.dataset?.recetaTipo !== undefined) { c.recetaTipo = t.value; pintarPestanaConfig() }
-        else if (t.dataset?.recetaPartida !== undefined) { c.recetaPartida = t.value; pintarPestanaConfig() }
-        else if (t.dataset?.ingInsumo !== undefined) { t.checked ? c.insumosElegidos.add(t.dataset.ingInsumo) : c.insumosElegidos.delete(t.dataset.ingInsumo) }
-        else if (t.dataset?.personalTodos !== undefined) { c.todoElPersonal = t.checked; pintarPestanaConfig() }
-        else if (t.dataset?.personaPuesto !== undefined) { tocarPuestoPersonal(t.dataset.personaPuesto, t.dataset.puesto, t.checked) }
-        else if (t.id === 'pr-cfg-temporal-persona') { c.temporal.personaId = t.value || null }
-        else if (t.id === 'pr-cfg-temporal-puesto') { c.temporal.puesto = t.value || null }
-        else if (t.id === 'pr-cfg-temporal-hasta') { c.temporal.hasta = t.value }
-      })
-      cuerpo.addEventListener('input', ev => {
-        const t = ev.target, c = estado.config
-        if (t.dataset?.recetaKg !== undefined) return marcarCambioReceta(t)
-        if (['pr-config-marca-buscar', 'pr-config-personal-buscar', 'pr-config-insumo-buscar'].includes(t.id)) {
-          c.busqueda = t.value
-          pintarPestanaConfig()
-          const nuevo = document.getElementById(t.id)
-          nuevo.focus?.()
-          nuevo.setSelectionRange?.(nuevo.value.length, nuevo.value.length)
-        }
-      })
-    }
-
-    // Tocar una casilla de puesto NO guarda: deja la fila marcada como
-    // cambiada y la manda el botón del pie, todas juntas.
-    function tocarPuestoPersonal(personaId, puesto, marcado) {
-      const c = estado.config
-      const p = c.datos?.personal?.find(x => x.id === personaId)
-      if (!p) return
-      alternarPuesto(c, p, puesto, marcado)
-      pintarPestanaConfig()
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // HISTORIAL Y STOCK TERMINADO (produccion:ver o produccion:configurar)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    const TOPE_FILAS = 1000   // PostgREST corta ahí: si se llega, se avisa.
-
-    // Las unidades que la persona puede mirar: las de ver y las de configurar.
-    function unidadesDeHistorial() {
-      const set = new Set([...unidadesCon('ver'), ...unidadesCon('configurar')])
-      return [...estado.unidades.keys()].filter(id => set.has(id))
     }
 
     function sumarDias(iso, dias) {
@@ -9147,510 +7644,40 @@
       return fechaCorta(`${iso}T12:00:00Z`)
     }
 
-    function unidadInicialOficina(unidades) {
-      if (unidades.includes(estado.unidadId)) return estado.unidadId
-      return unidades[0] ?? null
-    }
-
-    async function nombresDeEmpleados(ids) {
-      const unicos = [...new Set(ids.filter(Boolean))]
-      if (!unicos.length) return new Map()
-      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre').in('id', unicos)
-      if (error) throw error
-      return new Map((data ?? []).map(p => [p.id, p.nombre]))
-    }
-
-    // ── Historial de turnos ───────────────────────────────────────────────
-
-    // UN DATO AUSENTE NO SE SUMA COMO SI FUERA CERO. `Number(null)` es 0 y es
-    // finito, así que un acumulador ingenuo convierte "no se pudo leer" en un
-    // total plausible y falso — la familia de bugs más repetida del proyecto.
-    // Acá el total pasa a null y la pantalla muestra una raya: en una pantalla
-    // de totales, decir que no se sabe es mejor que decir un número.
-    function sumarMedido(acumulado, valor) {
-      if (acumulado === null) return null
-      if (valor === null || valor === undefined || valor === '') return null
-      const n = Number(valor)
-      return Number.isFinite(n) ? acumulado + n : null
-    }
-
-    // Enteros para leer: formatearNumeroAr() ya devuelve "—" con null, '' o NaN.
-    function textoEntero(n) {
-      return formatearNumeroAr(n, { decimales: 0 })
-    }
-
-    const ESTADO_TURNO = {
-      abierto: ['abierto', 'Abierto'],
-      pendiente_completar: ['pendiente', 'Pendiente de completar'],
-      cerrado: ['cerrado', 'Cerrado'],
-    }
-
-    function htmlEstadoTurno(estadoTurno) {
-      const [clase, texto] = ESTADO_TURNO[estadoTurno] ?? ['', estadoTurno ?? '—']
-      return `<span class="pr-of-chip pr-of-chip--${clase}">${esc(texto)}</span>`
-    }
-
-    async function mostrarHistorial() {
-      const unidades = unidadesDeHistorial()
-      if (!unidades.length) return
-      const hoy = hoyArgentina()
-      estado.historial = estado.historial ?? { desde: sumarDias(hoy, -7), hasta: hoy, maquina: '', estado: '' }
-      estado.historial.unidadId = unidades.includes(estado.historial.unidadId) ? estado.historial.unidadId : unidadInicialOficina(unidades)
-      pintarSelectorUnidad('pr-historial-unidad', unidades, estado.historial.unidadId)
-      document.getElementById('pr-historial-desde').value = estado.historial.desde
-      document.getElementById('pr-historial-hasta').value = estado.historial.hasta
-      document.getElementById('pr-historial-estado').value = estado.historial.estado
-      document.getElementById('pr-historial-detalle').hidden = true
-      document.getElementById('pr-historial-listado').hidden = false
-      mostrarVista('pr-historial')
-      await cargarHistorial()
-    }
-
-    function filtrosHistorialValidos(h) {
-      return /^\d{4}-\d{2}-\d{2}$/.test(h.desde ?? '') && /^\d{4}-\d{2}-\d{2}$/.test(h.hasta ?? '') && h.desde <= h.hasta
-    }
-
-    async function cargarHistorial() {
-      const h = estado.historial
-      const lista = document.getElementById('pr-historial-lista')
-      const aviso = document.getElementById('pr-historial-aviso')
-      aviso.innerHTML = ''
-      if (!filtrosHistorialValidos(h)) {
-        lista.innerHTML = ''
-        aviso.innerHTML = '<div class="pr-aviso">Elegí un "desde" que no sea posterior al "hasta".</div>'
-        return
-      }
-      lista.innerHTML = '<p class="pr-texto-suave">Buscando…</p>'
-      try {
-        const { data: maquinas, error: e1 } = await supabase.from('maquinas').select('id, nombre').eq('unidad_negocio_id', h.unidadId).order('orden').order('nombre')
-        if (e1) throw e1
-        h.maquinas = maquinas ?? []
-        const sel = document.getElementById('pr-historial-maquina')
-        sel.innerHTML = '<option value="">Todas las máquinas</option>' + h.maquinas.map(m => `<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join('')
-        if (!h.maquinas.some(m => m.id === h.maquina)) h.maquina = ''
-        sel.value = h.maquina
-        let q = supabase.from('turnos_produccion')
-          .select('id, lote, maquina_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en')
-          .eq('unidad_negocio_id', h.unidadId).gte('fecha', h.desde).lte('fecha', h.hasta)
-        if (h.maquina) q = q.eq('maquina_id', h.maquina)
-        if (h.estado) q = q.eq('estado', h.estado)
-        const { data: turnos, error: e2 } = await q.order('fecha', { ascending: false }).order('abierto_en', { ascending: false })
-        if (e2) throw e2
-        h.turnos = turnos ?? []
-        h.nombres = await nombresDeEmpleados(h.turnos.map(t => t.encargado_id))
-      } catch (err) {
-        console.error('historial:', err)
-        lista.innerHTML = ''
-        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer el historial. Revisá la conexión.</div>'
-        return
-      }
-      if (h.turnos.length >= TOPE_FILAS) aviso.innerHTML = `<div class="pr-aviso">Se muestran los primeros ${TOPE_FILAS} turnos: acotá las fechas para ver el resto.</div>`
-      lista.innerHTML = htmlTablaTurnos(h)
-    }
-
-    function htmlTablaTurnos(h) {
-      if (!h.turnos.length) return '<p class="pr-of-vacio">No hay turnos con esos filtros.</p>'
-      return '<div class="pr-of-tabla"><div class="pr-of-cab pr-of-turnos">' +
-        '<span>Lote</span><span>Fecha</span><span>Turno</span><span>Máquina</span><span>Encargado</span><span>Estado</span></div>' +
-        h.turnos.map(t => htmlFilaHistorial(t, h)).join('') + '</div>'
-    }
-
-    function htmlFilaHistorial(t, h) {
-      const maquina = h.maquinas.find(m => m.id === t.maquina_id)?.nombre ?? 'Máquina'
-      const encargado = h.nombres.get(t.encargado_id) ?? '—'
-      const clase = t.estado === 'abierto' ? ' pr-of-fila--abierto'
-        : (t.estado === 'pendiente_completar' ? ' pr-of-fila--pendiente' : '')
-      return `<button type="button" class="pr-of-fila pr-of-turnos${clase}" data-historial-turno="${esc(t.id)}">` +
-        `<span class="pr-of-lote">${esc(t.lote)}</span>` +
-        `<span>${esc(fechaDelDia(t.fecha))}</span>` +
-        `<span>${esc(t.turno)}</span>` +
-        `<span>${esc(maquina)}</span>` +
-        `<span>${esc(encargado)}</span>` +
-        `<span>${htmlEstadoTurno(t.estado)}</span></button>`
-    }
-
-    async function leerDetalleTurno(turnoId) {
-      const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
-      const [turno] = await leer(supabase.from('turnos_produccion')
-        .select('id, lote, maquina_id, unidad_negocio_id, fecha, turno, encargado_id, estado, abierto_en, cerrado_en, hora_inicio, hora_apagado, scrap_kg, observaciones, forzado_por, forzado_en, forzado_motivo, completado_por, completado_en').eq('id', turnoId))
-      if (!turno) throw new Error('El turno no existe.')
-      // `desde` y `hasta`, los dos: quitar_operario_turno NO borra la fila, le
-      // pone `hasta`. El que se fue estuvo en el turno y tiene que verse.
-      const operarios = await leer(supabase.from('turno_operarios').select('empleado_id, desde, hasta').eq('turno_id', turnoId).order('desde'))
-      const masas = await leer(supabase.from('masas').select('id, nro, hora, tipo_masa, doble, origen, receta_id, masero_id, anulada, anulada_motivo, es_chocolate').eq('turno_id', turnoId).order('nro'))
-      const ids = masas.map(m => m.id)
-      const items = ids.length ? await leer(supabase.from('masa_items').select('masa_id, ingrediente_id, ingrediente_libre, insumo_id, lote, lote_fuera_de_stock, cantidad_simple_kg, cantidad_kg').in('masa_id', ids)) : []
-      const recetas = [...new Set(masas.map(m => m.receta_id))]
-      const recItems = recetas.length ? await leer(supabase.from('receta_items').select('receta_id, ingrediente_id, cantidad_kg').in('receta_id', recetas)) : []
-      const ingredientes = await leer(supabase.from('ingredientes').select('id, nombre, orden'))
-      const insIds = [...new Set(items.map(i => i.insumo_id).filter(Boolean))]
-      const insumos = insIds.length ? await leer(supabase.from('insumos').select('id, nombre, marca').in('id', insIds)) : []
-      const paradas = await leer(supabase.from('paradas_produccion').select('id, inicio, fin, motivo, hasta_fin_de_turno').eq('turno_id', turnoId).order('inicio'))
-      // ANULAR NO BORRA: le pone `anulado` al renglón. Ese sublote existió, se
-      // selló en una caja y su stock entró y salió, así que se sigue trayendo.
-      const producido = await leer(supabase.from('produccion_items').select('id, orden, sublote, presentacion_id, marca_id, cajas, unidades_por_caja, unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))
-      const itemIds = producido.map(p => p.id).filter(Boolean)
-      const empaque = await leerEmpaqueTurno(turno.unidad_negocio_id, itemIds)
-      const insEmpIds = [...new Set([...producido.map(p => p.caja_insumo_id), ...(empaque.movimientos ?? []).map(m => m.insumo_id)].filter(Boolean))]
-      const insumosEmpaque = insEmpIds.length ? await leer(supabase.from('insumos').select('id, nombre, marca').in('id', insEmpIds)) : []
-      const correcciones = itemIds.length ? await leer(supabase.from('produccion_correcciones')
-        .select('produccion_item_id, tipo, cajas_antes, cajas_despues, motivo, hecha_por, hecha_en').in('produccion_item_id', itemIds).order('hecha_en')) : []
-      const presIds = [...new Set(producido.map(p => p.presentacion_id))]
-      const presentaciones = presIds.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, con_cono, media_caja').in('id', presIds)) : []
-      const prodIds = [...new Set(presentaciones.map(p => p.producto_id))]
-      const productos = prodIds.length ? await leer(supabase.from('productos_terminados').select('id, nombre').in('id', prodIds)) : []
-      // Qué productos tienen alguna presentación con cono: es lo que decide si
-      // un renglón dice "sin cono" (partesProducido).
-      const conCono = prodIds.length ? await leer(supabase.from('producto_presentaciones').select('producto_id, con_cono').in('producto_id', prodIds).eq('con_cono', true)) : []
-      const productosConCono = [...new Set(conCono.filter(x => x.con_cono === true).map(x => x.producto_id))]
-      const marcaIds = [...new Set(producido.map(p => p.marca_id).filter(Boolean))]
-      const marcas = marcaIds.length ? await leer(supabase.from('marcas_personalizadas').select('id, nombre').in('id', marcaIds)) : []
-      // Los nombres salen de v_empleados_publico y NUNCA de un embed a
-      // empleados: su RLS solo deja leer la fila propia, así que un embed
-      // dejaría todos los nombres en blanco menos el tuyo.
-      const nombres = await nombresDeEmpleados([turno.encargado_id, turno.forzado_por, turno.completado_por,
-        ...operarios.map(o => o.empleado_id), ...masas.map(m => m.masero_id), ...correcciones.map(c => c.hecha_por)])
-      return { turno, operarios, masas, items, recItems, ingredientes, insumos, paradas, producido, correcciones, presentaciones, productos, productosConCono, marcas, nombres, empaque, insumosEmpaque }
-    }
-
-    // El empaque que descontó el turno: los movimientos de stock_movimientos
-    // con produccion_item_id de sus sublotes. Solo con stock:ver en la unidad
-    // del turno —es el RLS de la tabla—; sin eso NO se consulta, porque la
-    // respuesta vacía se leería como "no se descontó nada".
-    // → { estado: 'ok' | 'sin_permiso' | 'desconocido' | 'error', movimientos }
-    async function leerEmpaqueTurno(unidadId, itemIds) {
-      const permiso = puedeVerStockEn(unidadId)
-      if (permiso === false) return { estado: 'sin_permiso', movimientos: [] }
-      if (permiso === null) return { estado: 'desconocido', movimientos: [] }
-      if (!itemIds.length) return { estado: 'ok', movimientos: [] }
-      try {
-        const { data, error } = await supabase.from('stock_movimientos')
-          .select('insumo_id, cantidad, produccion_item_id').in('produccion_item_id', itemIds)
-        if (error) throw error
-        return { estado: 'ok', movimientos: data ?? [] }
-      } catch (err) {
-        console.error('empaque del turno:', err)
-        return { estado: 'error', movimientos: [] }
-      }
-    }
-
-    // Lo consumido por insumo, NETO: las devoluciones (corregir hacia abajo,
-    // anular) son positivas y se restan solas. Lo que se consumió es −suma.
-    // Un insumo que quedó en cero (se devolvió entero) no se lista.
-    function empaqueConsumido(movimientos) {
-      const mapa = new Map()
-      for (const m of movimientos ?? []) {
-        const n = Number(m.cantidad)
-        if (!Number.isFinite(n)) continue
-        mapa.set(m.insumo_id, (mapa.get(m.insumo_id) ?? 0) + n)
-      }
-      return [...mapa.entries()]
-        .map(([insumoId, suma]) => ({ insumoId, cantidad: Math.round(-suma * 1000) / 1000 }))
-        .filter(f => f.cantidad !== 0)
-    }
-
-    function htmlEmpaqueTurno(d) {
-      const e = d.empaque ?? { estado: 'desconocido', movimientos: [] }
-      if (e.estado === 'sin_permiso') return '<div class="pr-aviso">No se puede ver el stock con este usuario: el empaque consumido lo ve quien tiene permiso de ver el stock de esta unidad.</div>'
-      if (e.estado === 'desconocido') return '<div class="pr-aviso">No se pudo saber si este usuario puede ver el stock, así que el empaque consumido no se muestra.</div>'
-      if (e.estado === 'error') return '<div class="pr-aviso pr-aviso--grave">No se pudo leer el empaque consumido. Revisá la conexión.</div>'
-      if (!e.movimientos.length) return '<p class="pr-texto-suave">No se descontó empaque en este turno.</p>'
-      const filas = empaqueConsumido(e.movimientos)
-      if (!filas.length) return '<p class="pr-texto-suave">Todo el empaque que se descontó se devolvió (sublotes corregidos o anulados).</p>'
-      const tope = e.movimientos.length >= TOPE_FILAS
-        ? `<div class="pr-aviso pr-aviso--grave">Este turno tiene más de ${TOPE_FILAS} movimientos de empaque y solo se leyeron los primeros: los totales pueden estar incompletos.</div>`
-        : ''
-      const nombre = id => { const i = (d.insumosEmpaque ?? []).find(x => x.id === id); return i ? textoInsumoEmpaque(i) : 'Insumo' }
-      return tope + '<ul class="pr-lista">' + filas
-        .sort((a, b) => nombre(a.insumoId).localeCompare(nombre(b.insumoId), 'es'))
-        .map(f => `<li class="pr-lista__item">${esc(nombre(f.insumoId))}: <strong>${esc(formatearNumeroAr(f.cantidad, { decimales: 3, minimos: 0 }))}</strong></li>`)
-        .join('') + '</ul>'
-    }
-
-    // Lo consumido por insumo y lote: la suma de lo que descontaron las masas
-    // NO anuladas (cantidad_kg ya es la doble ×2 cuando corresponde).
-    function totalesConsumidos(d) {
-      const vivas = new Set(d.masas.filter(m => !m.anulada).map(m => m.id))
-      const mapa = new Map()
-      for (const it of d.items) {
-        if (!it.insumo_id || !vivas.has(it.masa_id)) continue
-        const k = `${it.insumo_id}|${it.lote ?? ''}`
-        const act = mapa.get(k) ?? { insumo_id: it.insumo_id, lote: it.lote ?? null, kg: 0 }
-        const suma = sumarMedido(act.kg, it.cantidad_kg)
-        act.kg = suma === null ? null : redondearKg(suma)
-        mapa.set(k, act)
-      }
-      return [...mapa.values()]
-    }
-
-    function nombreInsumo(d, id) {
-      const i = d.insumos.find(x => x.id === id)
-      return i ? i.nombre + (i.marca ? ` · ${i.marca}` : '') : 'Insumo'
-    }
-
-    // PostgREST corta en 1000 filas. Si alguna de las listas que alimentan los
-    // totales llegó al tope, los totales están calculados sobre una parte y la
-    // pantalla lo DICE: un número que parece un resultado y no lo es sería
-    // peor que no mostrarlo.
-    function detalleIncompleto(d) {
-      return (d.items?.length ?? 0) >= TOPE_FILAS || (d.correcciones?.length ?? 0) >= TOPE_FILAS
-    }
-
-    // Los operarios del turno CON SUS HORAS. El que se fue sigue en la lista
-    // con su hora de salida: es quién estuvo en ese turno.
-    function htmlOperariosHistorial(d) {
-      const filas = d.operarios ?? []
-      if (!filas.length) return '<p class="pr-texto-suave">Sin operarios cargados.</p>'
-      return filas.map(o => {
-        const desde = horaArgentina(o.desde)
-        const dur = o.hasta ? duracionTexto(o.desde, o.hasta) : ''
-        const rango = o.hasta
-          ? `${desde || '—'} → ${horaArgentina(o.hasta) || '—'}${dur ? ` · ${dur}` : ''}`
-          : (desde ? `desde ${desde} · sigue` : 'sin hora de entrada')
-        return '<div class="pr-renglon">' +
-          `<span class="pr-renglon__num">${esc(d.nombres.get(o.empleado_id) ?? '—')}</span>` +
-          `<span class="pr-renglon__dato">${esc(rango)}</span></div>`
-      }).join('')
-    }
-
-    function nombreIngredienteItem(d, it) {
-      if (it.ingrediente_id) return d.ingredientes.find(g => g.id === it.ingrediente_id)?.nombre ?? 'Ingrediente'
-      return it.ingrediente_libre || 'Otro'
-    }
-
-    function htmlMasaHistorial(m, d) {
-      const suyos = d.items.filter(i => i.masa_id === m.id && Number(i.cantidad_kg) > 0)
-      const detalle = suyos.map(i => `${nombreIngredienteItem(d, i)} ${textoKg(Number(i.cantidad_kg))}` +
-        (i.insumo_id ? ` (${nombreInsumo(d, i.insumo_id)}${i.lote ? `, lote ${i.lote}` : ''}${i.lote_fuera_de_stock ? ', lote fuera de stock' : ''})` : '')).join(' · ')
-      const dif = textoDiferencias(diferenciaDeMasa(m, d))
-      // El chip de chocolate sale de masas.es_chocolate, que escribe
-      // registrar_masa mirando los ingredientes: no se recalcula acá. Los
-      // chips, con el criterio de las listas (chipsDeMasa).
-      const chips = chipsDeMasa(m)
-      return `<li class="pr-lista__item${m.anulada ? ' pr-masa-fila--anulada' : ''}">` +
-        `<strong>Masa ${esc(m.nro)}</strong> · ${esc(horaArgentina(m.hora) || '—')} · ${esc(m.tipo_masa)} · <span class="pr-masa-tam">${textoTamanoMasa(m)}</span>` +
-        `${chips ? ` ${chips}` : ''} · masero ${esc(d.nombres.get(m.masero_id) ?? '—')}` +
-        (m.anulada ? `<br><strong>Anulada:</strong> ${esc(m.anulada_motivo ?? '')}` : `<br>${esc(dif)}`) +
-        `<br><span class="pr-texto-suave">${esc(detalle || 'Sin ingredientes')}</span></li>`
-    }
-
-    function correccionesDe(d, itemId) {
-      return (d.correcciones ?? []).filter(c => c.produccion_item_id === itemId)
-    }
-
-    const TIPO_CORRECCION = { anulado: 'Anulado', agregado: 'Agregado después del cierre' }
-
-    function htmlCorreccion(c, d) {
-      const que = c.tipo === 'cajas'
-        ? `Cajas ${textoEntero(c.cajas_antes)} → ${textoEntero(c.cajas_despues)}`
-        : (TIPO_CORRECCION[c.tipo] ?? c.tipo)
-      const cuando = [fechaCorta(c.hecha_en), horaArgentina(c.hecha_en)].filter(Boolean).join(' ')
-      return `<div class="pr-of-correccion">${esc(que)} · ${esc(c.motivo)} · ${esc(d.nombres.get(c.hecha_por) ?? '—')}${cuando ? ` · ${esc(cuando)}` : ''}</div>`
-    }
-
-    // El renglón dice qué es con la MISMA regla que la planilla
-    // (partesProducido), y después las cajas y las unidades. Las unidades por
-    // caja ya están en "caja ×N": no se repiten en la cuenta.
-    function htmlSubloteHistorial(p, d) {
-      const pr = d.presentaciones.find(x => x.id === p.presentacion_id)
-      const prod = d.productos.find(x => x.id === pr?.producto_id)
-      const producto = prod?.nombre ?? 'Producto'
-      const marcaNombre = p.marca_id ? (d.marcas.find(x => x.id === p.marca_id)?.nombre ?? 'Cono que ya no está') : null
-      const corr = correccionesDe(d, p.id).map(c => htmlCorreccion(c, d)).join('')
-      const sinCaja = sinCajaDescontada(p)
-      const que = [producto, ...partesProducido({
-        producto, pr, marcaNombre, unidadesPorCaja: p.unidades_por_caja,
-        conConoEnProducto: (d.productosConCono ?? []).includes(pr?.producto_id),
-        caja: nombreCajaItem(p, d.insumosEmpaque), embolsado: p.embolsado,
-      })].join(' · ')
-      return `<li class="pr-lista__item${p.anulado ? ' pr-of-anulado' : ''}${sinCaja ? ' pr-of-sin-caja' : ''}">` +
-        `<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(que)} · ` +
-        `${esc(textoEntero(p.cajas))} cajas = ${esc(textoEntero(p.unidades))} unidades` +
-        (p.anulado ? ' <strong>· anulado, no suma</strong>' : '') +
-        (sinCaja ? ` <strong class="pr-sin-caja">· ${esc(textoSinCaja(p))}</strong>` : '') + corr + '</li>'
-    }
-
-    // El total del turno: SIN los sublotes anulados, que se siguen viendo pero
-    // ya no están en el stock.
-    function totalSublotes(d) {
-      let cajas = 0, unidades = 0
-      for (const p of d.producido ?? []) {
-        if (p.anulado) continue
-        cajas = sumarMedido(cajas, p.cajas)
-        unidades = sumarMedido(unidades, p.unidades)
-      }
-      return { cajas, unidades }
-    }
-
-    function htmlDetalleTurno(d) {
-      const t = d.turno
-      const nom = (id) => d.nombres.get(id) ?? '—'
-      const forzado = t.forzado_motivo
-        ? `<div class="pr-aviso pr-aviso--grave">Esta planilla se cerró a la fuerza${t.forzado_por ? ` · ${esc(nom(t.forzado_por))}` : ''}${t.forzado_en ? ` · ${esc(fechaCorta(t.forzado_en))}` : ''}: ${esc(t.forzado_motivo)}` +
-          `${t.estado === 'pendiente_completar' ? ' Lo que produjo todavía no está en el stock.' : ''}</div>`
-        : ''
-      const cab = `<div class="pr-datos">` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Lote</span><span class="pr-lote">${esc(t.lote)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Fecha y turno</span><span class="pr-dato__valor">${esc(fechaDelDia(t.fecha))} · ${esc(t.turno)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Estado</span><span class="pr-dato__valor">${htmlEstadoTurno(t.estado)}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Encargado</span><span class="pr-dato__valor">${esc(nom(t.encargado_id))}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Horario</span><span class="pr-dato__valor">${esc(String(t.hora_inicio ?? horaArgentina(t.abierto_en) ?? '').slice(0, 5) || '—')} a ${esc(String(t.hora_apagado ?? '').slice(0, 5) || (t.estado === 'abierto' ? 'sigue abierto' : '—'))}</span></div>` +
-        `<div class="pr-dato"><span class="pr-dato__rotulo">Scrap</span><span class="pr-dato__valor">${t.scrap_kg == null ? '—' : esc(textoKg(Number(t.scrap_kg)))}</span></div>` +
-        `</div>` + (t.observaciones ? `<p><strong>Observaciones:</strong> ${esc(t.observaciones)}</p>` : '')
-      const masas = d.masas.length ? d.masas.map(m => htmlMasaHistorial(m, d)).join('') : '<li class="pr-lista__item">Sin masas.</li>'
-      const tot = totalSublotes(d)
-      const producido = d.producido.length ? d.producido.map(p => htmlSubloteHistorial(p, d)).join('')
-        : `<li class="pr-lista__item">${t.estado === 'cerrado' ? 'No produjo nada.' : 'Todavía no cargó nada producido.'}</li>`
-      const pieProducido = d.producido.length
-        ? `<p class="pr-of-grupo__total">Total del turno: ${esc(textoEntero(tot.cajas))} cajas · ${esc(textoEntero(tot.unidades))} unidades</p>`
-        : ''
-      const consumidos = totalesConsumidos(d)
-      const totales = consumidos.length ? consumidos.map(c =>
-        `<li class="pr-lista__item">${esc(nombreInsumo(d, c.insumo_id))} · ${c.lote ? `lote ${esc(c.lote)}` : 'sin lote'}: <strong>${c.kg === null ? '—' : esc(textoKg(c.kg))}</strong></li>`).join('') : '<li class="pr-lista__item">Nada descontado del stock.</li>'
-      const incompleto = detalleIncompleto(d)
-        ? `<div class="pr-aviso pr-aviso--grave">Este turno tiene más de ${TOPE_FILAS} renglones y solo se leyeron los primeros: los totales pueden estar incompletos.</div>`
-        : ''
-      return forzado + cab +
-        `<h2 class="pr-subtitulo">Operarios</h2>${htmlOperariosHistorial(d)}` +
-        `<h2 class="pr-subtitulo">Masas</h2><ul class="pr-lista">${masas}</ul>` +
-        `<h2 class="pr-subtitulo">Paradas</h2>${htmlParadas(d.paradas, accionesParadaHistorial(t))}` +
-        (accionesParadaHistorial(t).editar ? '<button type="button" class="pr-btn pr-btn--secundario" id="pr-historial-anotar-parada">Anotar una parada</button>' : '') +
-        `<h2 class="pr-subtitulo">Lo producido</h2><ul class="pr-lista">${producido}</ul>${pieProducido}` +
-        `<h2 class="pr-subtitulo">Consumido por insumo y lote</h2>${incompleto}<ul class="pr-lista">${totales}</ul>` +
-        `<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}`
-    }
-
-    async function abrirDetalleHistorial(turnoId) {
-      const cont = document.getElementById('pr-historial-detalle-cuerpo')
-      document.getElementById('pr-historial-listado').hidden = true
-      document.getElementById('pr-historial-detalle').hidden = false
-      cont.innerHTML = '<p class="pr-texto-suave">Cargando el turno…</p>'
-      try {
-        estado.detalleHistorial = await leerDetalleTurno(turnoId)
-        cont.innerHTML = htmlDetalleTurno(estado.detalleHistorial)
-      } catch (err) {
-        estado.detalleHistorial = null
-        console.error('detalle del turno:', err)
-        cont.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer el turno. Revisá la conexión.</div>'
-      }
-      if (window.scrollTo) window.scrollTo(0, 0)
-    }
-
-    // ── Stock de producto terminado ───────────────────────────────────────
-
-    async function mostrarStockTerminado() {
-      const unidades = unidadesDeHistorial()
-      if (!unidades.length) return
-      estado.stockUnidad = unidades.includes(estado.stockUnidad) ? estado.stockUnidad : unidadInicialOficina(unidades)
-      pintarSelectorUnidad('pr-stock-unidad', unidades, estado.stockUnidad)
-      mostrarVista('pr-stock')
-      await cargarStockTerminado()
-    }
-
-    async function cargarStockTerminado() {
-      const cont = document.getElementById('pr-stock-lista')
-      const aviso = document.getElementById('pr-stock-aviso')
-      aviso.innerHTML = ''
-      cont.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
-      let movs, productos, presentaciones, marcas
-      try {
-        const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
-        movs = await leer(supabase.from('stock_terminado_movimientos').select('presentacion_id, marca_id, lote, cajas, unidades').eq('unidad_negocio_id', estado.stockUnidad))
-        productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden').eq('unidad_negocio_id', estado.stockUnidad))
-        const ids = productos.map(p => p.id)
-        presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, orden').in('producto_id', ids)) : []
-        marcas = await leer(supabase.from('marcas_personalizadas').select('id, nombre'))
-      } catch (err) {
-        console.error('stock terminado:', err)
-        cont.innerHTML = ''
-        aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer el stock terminado. Revisá la conexión.</div>'
-        return
-      }
-      if (movs.length >= TOPE_FILAS) aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">Hay más de 1000 movimientos y solo se leyeron los primeros: los totales pueden estar incompletos.</div>'
-      cont.innerHTML = htmlStockTerminado(agruparStockTerminado(movs), { productos, presentaciones, marcas })
-    }
-
-    // Suma por presentación, marca y sublote. Quedan solo los que tienen
-    // cajas: un sublote despachado entero no se lista. Un total que NO se pudo
-    // sumar queda en null —no en cero— y se lista igual (`null !== 0` es
-    // verdadero, así que el filtro lo deja pasar): "no se sabe" no es lo mismo
-    // que "no queda nada".
-    function agruparStockTerminado(movs) {
-      const mapa = new Map()
-      for (const m of movs) {
-        const k = `${m.presentacion_id}|${m.marca_id ?? ''}|${m.lote}`
-        const act = mapa.get(k) ?? { presentacion_id: m.presentacion_id, marca_id: m.marca_id ?? null, lote: m.lote, cajas: 0, unidades: 0 }
-        act.cajas = sumarMedido(act.cajas, m.cajas)
-        act.unidades = sumarMedido(act.unidades, m.unidades)
-        mapa.set(k, act)
-      }
-      return [...mapa.values()].filter(x => x.cajas !== 0 || x.unidades !== 0)
-    }
-
-    function htmlStockTerminado(filas, cat) {
-      if (!filas.length) return '<p class="pr-of-vacio">No hay producto terminado en stock.</p>'
-      const grupos = new Map()
-      for (const f of filas) {
-        const pr = cat.presentaciones.find(x => x.id === f.presentacion_id)
-        const prod = cat.productos.find(x => x.id === pr?.producto_id)
-        const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'
-        const clave = `${prod?.nombre ?? 'Producto'} · ${pr?.nombre ?? 'Presentación'} · ${marcaNombre}`
-        const g = grupos.get(clave) ?? { titulo: clave, cajas: 0, unidades: 0, sublotes: [] }
-        g.cajas = sumarMedido(g.cajas, f.cajas); g.unidades = sumarMedido(g.unidades, f.unidades); g.sublotes.push(f)
-        grupos.set(clave, g)
-      }
-      return [...grupos.values()].sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')).map(g =>
-        `<div class="pr-of-tabla pr-of-grupo"><div class="pr-of-grupo__cab">` +
-        `<h2 class="pr-of-grupo__titulo">${esc(g.titulo)}</h2>` +
-        `<span class="pr-of-grupo__total">${esc(textoEntero(g.cajas))} cajas · ${esc(textoEntero(g.unidades))} unidades</span></div>` +
-        `<div class="pr-of-cab pr-of-stock"><span>Sublote</span><span class="pr-of-num">Cajas</span><span class="pr-of-num">Unidades</span></div>` +
-        g.sublotes.sort((a, b) => String(a.lote).localeCompare(String(b.lote), 'es', { numeric: true })).map(s =>
-          `<div class="pr-of-fila pr-of-stock"><span class="pr-producido__sublote">${esc(s.lote)}</span>` +
-          `<span class="pr-of-num">${esc(textoEntero(s.cajas))}</span>` +
-          `<span class="pr-of-num">${esc(textoEntero(s.unidades))}</span></div>`).join('') +
-        `</div>`).join('')
-    }
-
-    function conectarHistorial() {
-      document.getElementById('pr-btn-ir-historial').addEventListener('click', mostrarHistorial)
-      document.getElementById('pr-btn-ir-stock').addEventListener('click', mostrarStockTerminado)
-      document.getElementById('pr-historial-volver').addEventListener('click', volverDeOficina)
-      document.getElementById('pr-stock-volver').addEventListener('click', volverDeOficina)
-      document.getElementById('pr-historial-detalle-volver').addEventListener('click', () => {
-        document.getElementById('pr-historial-detalle').hidden = true
-        document.getElementById('pr-historial-listado').hidden = false
-      })
-      const cambio = (campo) => (ev) => { estado.historial[campo] = ev.target.value; cargarHistorial() }
-      document.getElementById('pr-historial-unidad').addEventListener('change', cambio('unidadId'))
-      document.getElementById('pr-historial-desde').addEventListener('change', cambio('desde'))
-      document.getElementById('pr-historial-hasta').addEventListener('change', cambio('hasta'))
-      document.getElementById('pr-historial-maquina').addEventListener('change', cambio('maquina'))
-      document.getElementById('pr-historial-estado').addEventListener('change', cambio('estado'))
-      document.getElementById('pr-historial-lista').addEventListener('click', ev => {
-        const b = ev.target.closest('[data-historial-turno]'); if (b) abrirDetalleHistorial(b.dataset.historialTurno)
-      })
-      // Corregir, borrar y anotar paradas de una planilla CERRADA.
-      document.getElementById('pr-historial-detalle-cuerpo').addEventListener('click', ev => {
-        if (ev.target.closest('#pr-historial-anotar-parada')) return abrirEditorDesdeHistorial('anotar')
-        const e = ev.target.closest('[data-parada-editar]'); if (e) return abrirEditorDesdeHistorial('editar', e.dataset.paradaEditar)
-        const b = ev.target.closest('[data-parada-borrar]'); if (b) abrirEditorDesdeHistorial('borrar', b.dataset.paradaBorrar)
-      })
-      document.getElementById('pr-stock-unidad').addEventListener('change', ev => { estado.stockUnidad = ev.target.value; cargarStockTerminado() })
-    }
-
     // ═══════════════════════════════════════════════════════════════════════
     // ARRANQUE
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Sin permiso se dice y se vuelve al dashboard: quedarse en una pantalla
-    // vacía no le dice a nadie por qué no ve nada.
-    function sinAcceso(texto) {
+    // Sin acceso se DICE, y la planta NO manda al dashboard: la cuenta de la
+    // tablet no tiene nada que hacer ahí (y el dashboard la manda de vuelta
+    // acá: sería un bucle). `linksHtml` son solo links fijos del código.
+    function sinAcceso(texto, linksHtml = '') {
       document.getElementById('pr-cargando').hidden = true
       const el = document.getElementById('pr-sin-acceso')
-      el.textContent = texto
+      el.innerHTML = `<p>${esc(texto)}</p>${linksHtml}`
       el.hidden = false
-      mostrarError(texto)
-      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    const LINKS_SIN_SESION = '<p class="pr-sin-acceso__links"><a class="pr-btn pr-btn--secundario" href="produccion.html" id="pr-sin-sesion-reintentar">Volver a intentar</a> ' +
+      '<a class="pr-btn pr-btn--secundario" href="produccion-gestion.html" id="pr-sin-sesion-gestion">Soy de la oficina: ir a la gestión</a></p>'
+
+    // mi_sesion_produccion() → { empleado_id, nombre, es_dispositivo,
+    // unidad_negocio_id }, o null si la cuenta no tiene empleado.
+    async function leerMiSesion() {
+      const { data, error } = await supabase.rpc('mi_sesion_produccion')
+      if (error) throw error
+      return data ?? null
+    }
+
+    // Qué hace el arranque con lo que devolvió mi_sesion_produccion():
+    // 'gestion' (una cuenta personal: se va a la gestión), 'sin_fabrica',
+    // 'sin_permiso' o 'planta'. La barrera real es la base; esto decide
+    // qué pantalla mostrar.
+    function destinoDeSesion(ses) {
+      if (!ses || ses.es_dispositivo !== true) return 'gestion'
+      if (!ses.unidad_negocio_id) return 'sin_fabrica'
+      if (!unidadesCon('cargar').includes(String(ses.unidad_negocio_id))) return 'sin_permiso'
+      return 'planta'
     }
 
     async function cargarPermisos() {
@@ -9678,36 +7705,34 @@
         await cargarPermisos()
       } catch (err) {
         console.error('No se pudieron leer los permisos:', err)
-        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        sinAcceso('No pudimos identificar esta cuenta. Revisá la conexión.', LINKS_SIN_SESION)
         return
       }
-      if (!puedeEntrar()) {
-        sinAcceso('No tenés acceso a Producción. Te llevamos al inicio…')
+      // SOLO una cuenta de dispositivo entra a la planta. Si no se pudo saber
+      // qué cuenta es, no se redirige a ciegas: se dice y se ofrecen los dos
+      // caminos.
+      let ses
+      try {
+        ses = await leerMiSesion()
+      } catch (err) {
+        console.error('mi_sesion_produccion:', err)
+        sinAcceso('No se pudo saber qué cuenta es esta. Revisá la conexión.', LINKS_SIN_SESION)
         return
       }
+      const destino = destinoDeSesion(ses)
+      if (destino === 'gestion') { window.location.replace('produccion-gestion.html'); return }
+      if (destino === 'sin_fabrica') { sinAcceso('Esta tablet no tiene una fábrica asignada. Pedí que la configuren desde Empleados.'); return }
+      if (destino === 'sin_permiso') { sinAcceso('Esta tablet no tiene permiso para cargar la producción de su fábrica. Pedí que se lo den en Accesos.'); return }
+      estado.sesionPlanta = ses
       await cargarPermisoStock()
       document.getElementById('pr-cargando').hidden = true
       document.getElementById('pr-vista').hidden = false
       conectarTodo()
       if (window.lucide) window.lucide.createIcons()
 
-      // Sin produccion:cargar no es una tablet: es alguien de la oficina que
-      // mira el historial o configura.
-      pintarAccesosOficina()
-      cargarBurbujaConos()
-      if (!tieneTarea('cargar')) {
-        mostrarInicioOficina()
-        return
-      }
-      try {
-        estado.unidadesPosibles = await unidadesDeCarga()
-      } catch (err) {
-        console.error('No se pudieron leer las máquinas:', err)
-        document.getElementById('pr-inicio-texto').textContent = 'No se pudieron leer las máquinas. Revisá la conexión y recargá la página.'
-        mostrarVista('pr-inicio')
-        return
-      }
-      estado.unidadId = unidadInicial(estado.unidadesPosibles, leerPreferencia(CLAVE_UNIDAD))
+      // La tablet está en UNA fábrica: la de su cuenta. No se pregunta.
+      estado.unidadesPosibles = [String(estado.sesionPlanta.unidad_negocio_id)]
+      estado.unidadId = estado.unidadesPosibles[0]
       estado.modo = modoGuardado() ?? 'produccion'
       tocar()
       // Quién estaba adentro en esta pestaña: recargar la tablet no tiene por

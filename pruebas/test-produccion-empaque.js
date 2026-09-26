@@ -22,10 +22,13 @@ process.env.TZ = 'UTC'
 
 const path = require('path')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
-const { construirProduccion } = require('./sandbox-produccion')
+const { construirProduccion, GESTION } = require('./sandbox-produccion')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion.html')
 const FUENTE = leer(ARCHIVO)
+// La configuración y el historial viven en la gestión desde el 25/09/2026.
+const ARCHIVO_G = process.env.ARCHIVO_GESTION || GESTION
+const FUENTE_G = leer(ARCHIVO_G)
 const { chk, esperas, fin } = arnes()
 
 // Los datos reales de Cucuruchos Nuss, recortados.
@@ -80,8 +83,8 @@ const CATALOGO = {
 
 const TURNO = { id: 't1', lote: 7023, maquina_id: 'm1', fecha: '2026-09-24', turno: 'Mañana', encargado_id: 'e-fede', abierto_en: '2026-09-24T09:02:00Z', estado: 'abierto', forzado_por: null, forzado_en: null, forzado_motivo: null }
 
-function armar({ tablas = {} } = {}) {
-  const S = construirProduccion(ARCHIVO)
+function armar({ tablas = {}, archivo = ARCHIVO } = {}) {
+  const S = construirProduccion(archivo)
   Object.assign(S.__tablas, {
     ...CATALOGO,
     turnos_produccion: filtros => filtros.some(f => f[1] === 'estado' && f[2] === 'pendiente_completar')
@@ -433,7 +436,7 @@ const MOVS = [
   { produccion_item_id: 'it-2', insumo_id: 'i-ppp', cantidad: 32 },
 ]
 function armarDetalle({ stockVer = { unidades: ['u-cn'] }, movs = MOVS, items = ITEMS_EMP, unidad = 'u-cn' } = {}) {
-  const S = armar({ tablas: {
+  const S = armar({ archivo: ARCHIVO_G, tablas: {
     turnos_produccion: [{ ...TURNO, unidad_negocio_id: unidad, cerrado_en: null, hora_inicio: null, hora_apagado: null, scrap_kg: null, observaciones: null, completado_por: null, completado_en: null }],
     produccion_items: items, stock_movimientos: movs, produccion_correcciones: [], receta_items: [], ingredientes: [], masa_items: [],
     v_empleados_publico: [], insumos: [...INSUMOS, { id: 'i-vieja', nombre: 'Caja vieja', marca: 'Ex' }],
@@ -510,7 +513,7 @@ const INSUMOS_CFG = [
   { id: 'i-bolsa', nombre: 'Bolsa 100x80', marca: null, categoria: 'Bolsas', activo: true },
 ]
 function armarConfig() {
-  const S = construirProduccion(ARCHIVO)
+  const S = construirProduccion(ARCHIVO_G)
   S.estado.misTareas = new Map([['configurar', { unidades: ['u-cn'] }]])
   Object.assign(S.__tablas, {
     productos_terminados: [
@@ -664,9 +667,9 @@ esperas.push((async () => {
   chk('… y no en otra presentación', !/Una de las cajas/.test(tarjeta(cuerpoCfg(S), 'pr-media')))
 
   // El despacho de los eventos.
-  chk('los botones de la pestaña van a accionEmpaque', /else if \(tab === 'empaque'\) accionEmpaque\(ds\)/.test(FUENTE))
-  chk('los selects, a cambiarSelectEmpaque', /if \(t\.dataset\?\.empSug !== undefined \|\| t\.dataset\?\.empCond !== undefined\) return cambiarSelectEmpaque\(t\)/.test(FUENTE))
-  chk('el tilde de doble bolsa, a cambiarDobleBolsa', /if \(t\.dataset\?\.marcaDoble !== undefined\) return cambiarDobleBolsa\(t\.dataset\.marcaDoble, t\.checked\)/.test(FUENTE))
+  chk('los botones de la pestaña van a accionEmpaque', /else if \(tab === 'empaque'\) accionEmpaque\(ds\)/.test(FUENTE_G))
+  chk('los selects, a cambiarSelectEmpaque', /if \(t\.dataset\?\.empSug !== undefined \|\| t\.dataset\?\.empCond !== undefined\) return cambiarSelectEmpaque\(t\)/.test(FUENTE_G))
+  chk('el tilde de doble bolsa, a cambiarDobleBolsa', /if \(t\.dataset\?\.marcaDoble !== undefined\) return cambiarDobleBolsa\(t\.dataset\.marcaDoble, t\.checked\)/.test(FUENTE_G))
 })())
 
 esperas.push((async () => {
@@ -815,8 +818,9 @@ esperas.push((async () => {
   const dMalo = { turno: { ...TURNO, estado: 'cerrado' }, operarios: [], masas: [], items: [], recItems: [], ingredientes: [], insumos: [], paradas: [],
     producido: [itemMalo], correcciones: [], presentaciones: [], productos: [], marcas: [], nombres: new Map(),
     empaque: { estado: 'ok', movimientos: [{ insumo_id: 'i-malo', cantidad: -1 }] }, insumosEmpaque: catMalo.insumos }
-  chequearMarcas(chk, 'detalle del turno con su empaque', X.htmlDetalleTurno(dMalo), ['cajaNombre', 'cajaMarca', 'embolsado'])
-  chequearMarcas(chk, 'empaque consumido', X.htmlEmpaqueTurno(dMalo), ['cajaNombre', 'cajaMarca'])
+  const XG = armar({ archivo: ARCHIVO_G })
+  chequearMarcas(chk, 'detalle del turno con su empaque', XG.htmlDetalleTurno(dMalo), ['cajaNombre', 'cajaMarca', 'embolsado'])
+  chequearMarcas(chk, 'empaque consumido', XG.htmlEmpaqueTurno(dMalo), ['cajaNombre', 'cajaMarca'])
   // Parte 3: la pestaña Empaque.
   const cfgMalo = {
     productos: [{ id: marca('prodIdCfg'), nombre: marca('prodCfg'), tipo_masa: 'Común', activo: true, orden: 1 }],
@@ -831,11 +835,11 @@ esperas.push((async () => {
     cajas: [{ insumo_id: marca('insIdCfg'), embolsado_sugerido: 'grande' }],
     empaque: [{ insumo_id: marca('insIdCfg'), cantidad: 1, condicion: 'siempre' }], tocado: true }]])
   const cMalo = { datos: cfgMalo, error: { texto: marca('errorCfg'), donde: 'pr-cfg-emp-' + marca('presIdCfg') } }
-  chequearMarcas(chk, 'pestaña Empaque', X.htmlConfigEmpaque(cMalo), ['prodCfg', 'presCfg', 'presIdCfg', 'insCfg', 'insMarcaCfg', 'insId2Cfg', 'ins2Cfg', 'errorCfg'])
+  chequearMarcas(chk, 'pestaña Empaque', XG.htmlConfigEmpaque(cMalo), ['prodCfg', 'presCfg', 'presIdCfg', 'insCfg', 'insMarcaCfg', 'insId2Cfg', 'ins2Cfg', 'errorCfg'])
   const marcasMalo = { datos: { marcas: [{ id: marca('marcaIdCfg'), nombre: marca('marcaCfg'), activa: true, estado_alta: 'aprobada', doble_bolsa: true }], nombres: new Map() }, busqueda: '', error: null }
   // Parte 4: el aviso de stock.
   chequearMarcas(chk, 'aviso de faltante', X.htmlAvisoStockEmpaque({ ...a, cajas: 5, stock: { estado: 'ok', saldos: new Map() } }, catMalo), ['cajaNombre', 'cajaMarca', 'insumoEmpaque'])
-  chequearMarcas(chk, 'marcas con su tilde de doble bolsa', X.htmlConfigMarcas(marcasMalo), ['marcaIdCfg', 'marcaCfg'])
+  chequearMarcas(chk, 'marcas con su tilde de doble bolsa', XG.htmlConfigMarcas(marcasMalo), ['marcaIdCfg', 'marcaCfg'])
 })())
 
 fin()

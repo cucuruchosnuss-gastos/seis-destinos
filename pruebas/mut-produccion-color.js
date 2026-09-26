@@ -3,7 +3,7 @@
 //   node pruebas/mut-produccion-color.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
 const fs = require('fs')
 const ORIGINAL = process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html')
@@ -20,9 +20,8 @@ function ordenInvertido() {
   return { nombre: 'la regla genérica pasa DESPUÉS y pisa a Cerrar planilla', de: bloque, a: bloque.slice(GEN.length) + GEN }
 }
 
-correrMutaciones({
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-color.js'),
-  original: ORIGINAL,
   escape: 'esc',
   funciones: [],
   manuales: [
@@ -52,7 +51,8 @@ correrMutaciones({
     { nombre: 'Cerrar planilla igual de ancho', de: '      min-width: 16rem; padding: 0 2rem;', a: '      padding: 0 2rem;' },
     ordenInvertido(),
     // La cabecera.
-    { nombre: 'la cabecera repite el modo', de: '      if (estado.persona?.nombre) partes.push(estado.persona.nombre)', a: '      if (estado.modo) partes.push(TITULO_DE_MODO[estado.modo])' },
+    { nombre: 'la cabecera de la gestión repite el módulo', de: "textContent = estado.unidadId ? (estado.unidades.get(estado.unidadId) ?? '') : ''", a: "textContent = 'Producción · ' + (estado.unidadId ? (estado.unidades.get(estado.unidadId) ?? '') : '')" },
+    { nombre: 'la cabecera de la gestión queda escondida', de: "document.getElementById('pr-header').hidden = false", a: "document.getElementById('pr-header').hidden = true" },
     { nombre: 'la cabecera dice Producción dos veces', de: '          <span class="pr-header__titulo">Producción</span>', a: '          <span class="pr-header__titulo">Producción · Producción</span>' },
     { nombre: 'la oficina vuelve a titular "Producción"', de: '        <h1 class="pr-titulo">¿Qué querés ver?</h1>', a: '        <h1 class="pr-titulo">Producción</h1>' },
     // Las grillas.

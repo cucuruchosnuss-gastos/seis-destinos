@@ -8,11 +8,10 @@
 //   node pruebas/mut-produccion-sin-empaque.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
-correrMutaciones({
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-sin-empaque.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
   funciones: [],
   manuales: [
@@ -67,10 +66,10 @@ correrMutaciones({
     { nombre: 'con pendientes no abre en Marcas', de: "      return mostrarConfig(estado.conosPendientes > 0 ? 'marcas' : undefined)", a: "      return mostrarConfig()" },
     { nombre: 'siempre abre en Marcas', de: "      return mostrarConfig(estado.conosPendientes > 0 ? 'marcas' : undefined)", a: "      return mostrarConfig('marcas')" },
     { nombre: 'mostrarConfig ignora la pestaña pedida', de: "      const tab = PESTANAS_CONFIG.some(([k]) => k === tabPedida) ? tabPedida : (estado.config?.tab ?? 'maquinas')", a: "      const tab = estado.config?.tab ?? 'maquinas'" },
-    { nombre: 'el Menú no usa el acceso de la burbuja', de: "      } else if (que === 'config') {\n        return abrirConfigDesdeAcceso()", a: "      } else if (que === 'config') {\n        return mostrarConfig()" },
+    { nombre: 'el Menú no usa el acceso de la burbuja', de: "      if (que === 'config') return abrirConfigDesdeAcceso()", a: "      if (que === 'config') return mostrarConfig()" },
     { nombre: 'el botón de inicio no usa el acceso de la burbuja', de: "addEventListener('click', abrirConfigDesdeAcceso)", a: "addEventListener('click', mostrarConfig)" },
     { nombre: 'no se pide al entrar', de: "      pintarAccesosOficina()\n      cargarBurbujaConos()\n", a: "      pintarAccesosOficina()\n" },
-    { nombre: 'no se pide al volver a la pestaña', de: "          mantenerPantalla(estado.hayTurnoAbierto)\n          cargarBurbujaConos()\n", a: "          mantenerPantalla(estado.hayTurnoAbierto)\n" },
+    { nombre: 'no se pide al volver a la pestaña', de: "        if (document.visibilityState === 'visible') {\n          cargarBurbujaConos()\n", a: "        if (document.visibilityState === 'visible') {\n" },
     { nombre: 'no se pide después de revisar un cono', de: "        if (r.ok) { cargarBurbujaConos(); await cargarPestanaConfig() }", a: "        if (r.ok) await cargarPestanaConfig()" },
   ],
 })

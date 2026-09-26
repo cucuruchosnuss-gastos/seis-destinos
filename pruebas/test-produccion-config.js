@@ -37,7 +37,7 @@ const path = require('path')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
 const { construirProduccion } = require('./sandbox-produccion')
 
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion.html')
+const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion-gestion.html')
 leer(ARCHIVO)
 const { chk, esperas, fin } = arnes()
 

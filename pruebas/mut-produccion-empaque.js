@@ -5,11 +5,10 @@
 //   node pruebas/mut-produccion-empaque.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+const { correrMutacionesProduccion } = require('./mutar-produccion')
 
-correrMutaciones({
+correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-empaque.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion.html'),
   escape: 'esc',
   // htmlProducido y htmlSubloteHistorial NO van acá: sus escapes viejos los
   // cubren test-produccion-cierre y test-produccion-historial. Lo nuevo de

@@ -19,7 +19,7 @@ process.env.TZ = 'UTC'
 
 const path = require('path')
 const { arnes, leer, marca, chequearMarcas } = require('./circuito-comun')
-const { construirProduccion } = require('./sandbox-produccion')
+const { construirProduccion, GESTION } = require('./sandbox-produccion')
 const { extraerFn } = require('./extraer')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion.html')
@@ -51,14 +51,19 @@ const CAT = {
 }
 const INSUMOS = [{ id: 'i-nuss', nombre: 'Caja N°1', marca: 'Nuss' }]
 
-function armar() {
-  const S = construirProduccion(ARCHIVO)
+// El historial vive en la gestión desde el 25/09/2026: sus renders se prueban
+// en ese archivo, con la MISMA regla de la planilla.
+const ARCHIVO_G = process.env.ARCHIVO_GESTION || GESTION
+const FUENTE_G = leer(ARCHIVO_G)
+function armar(archivo = ARCHIVO) {
+  const S = construirProduccion(archivo)
   S.estado.unidades = new Map([['u', 'Cucuruchos Nuss']])
   S.estado.unidadId = 'u'
   S.estado.misTareas = new Map([['cargar', { todas: true }]])
   return S
 }
 const S = armar()
+const G = armar(ARCHIVO_G)
 const item = (extra) => ({ id: 'it', sublote: '7023-1', cajas: 10, unidades: 3200, anulado: false, marca_id: null, caja_insumo_id: null, embolsado: null, ...extra })
 const detalle = (html) => (html.match(/pr-producido__detalle">([^<]*)</) || [])[1]
 const renglon = (extra) => detalle(S.htmlProducido(item(extra), CAT, INSUMOS))
@@ -68,7 +73,7 @@ const D = {
   productosConCono: ['p-mini', 'p-cono40'], correcciones: [], nombres: new Map(),
 }
 const hist = (extra) => {
-  const h = S.htmlSubloteHistorial(item(extra), D)
+  const h = G.htmlSubloteHistorial(item(extra), D)
   return h.slice(h.indexOf('</span> ') + 8, h.indexOf(' · 10 cajas'))
 }
 
@@ -127,13 +132,13 @@ const hist = (extra) => {
   chk('el anulado se sigue marcando', /pr-producido--anulado/.test(anul) && />Anulado</.test(anul))
   const sinCaja = S.htmlProducido(item({ presentacion_id: 'pr-sin', unidades_por_caja: 320, embolsado: 'grande' }), CAT, INSUMOS)
   chk('"Sin empaque descontado" sigue', /pr-producido--sin-caja/.test(sinCaja) && /Sin empaque descontado/.test(sinCaja))
-  const hAnul = S.htmlSubloteHistorial(item({ presentacion_id: 'pr-con', unidades_por_caja: 320, anulado: true }), {
+  const hAnul = G.htmlSubloteHistorial(item({ presentacion_id: 'pr-con', unidades_por_caja: 320, anulado: true }), {
     ...D, correcciones: [{ produccion_item_id: 'it', tipo: 'anulado', motivo: 'Se cargó dos veces', hecha_por: 'e', hecha_en: '2026-09-22T14:00:00Z' }], nombres: new Map([['e', 'Ana']]) })
   chk('historial: anulado tachado, "no suma" y su corrección', /pr-of-anulado/.test(hAnul) && /anulado, no suma/.test(hAnul) && /Anulado · Se cargó dos veces · Ana/.test(hAnul), hAnul)
-  chk('historial: la cuenta no repite las unidades por caja', /10 cajas = 3\.200 unidades/.test(S.htmlSubloteHistorial(item({ presentacion_id: 'pr-con', unidades_por_caja: 320 }), D)))
+  chk('historial: la cuenta no repite las unidades por caja', /10 cajas = 3\.200 unidades/.test(G.htmlSubloteHistorial(item({ presentacion_id: 'pr-con', unidades_por_caja: 320 }), D)))
   // UNA sola regla: las dos pantallas llaman a partesProducido.
-  chk('planilla e historial usan partesProducido', /partesProducido\(/.test(extraerFn(FUENTE, 'htmlProducido')) && /partesProducido\(/.test(extraerFn(FUENTE, 'htmlSubloteHistorial')))
-  chk('el historial lee con_cono y media_caja de sus presentaciones', /from\('producto_presentaciones'\)\.select\('id, producto_id, nombre, con_cono, media_caja'\)/.test(FUENTE))
+  chk('planilla e historial usan partesProducido', /partesProducido\(/.test(extraerFn(FUENTE, 'htmlProducido')) && /partesProducido\(/.test(extraerFn(FUENTE_G, 'htmlSubloteHistorial')))
+  chk('el historial lee con_cono y media_caja de sus presentaciones', /from\('producto_presentaciones'\)\.select\('id, producto_id, nombre, con_cono, media_caja'\)/.test(FUENTE_G))
   chk('la planilla lee los conos de lo ya cargado por id', /from\('marcas_personalizadas'\)\.select\('id, nombre'\)\.in\('id', marcaIds\)/.test(extraerFn(FUENTE, 'leerPlanilla')))
 }
 
@@ -160,7 +165,7 @@ const hist = (extra) => {
   chk('planilla: un solo chip "Modificada" y ninguno de origen', (pl.match(/pr-chip-modificada/g) || []).length === 1 && !/pr-chip-origen|Anterior|Original/.test(pl), pl)
   chk('planilla: chocolate solo en la de cacao', (pl.match(/pr-chip-choco/g) || []).length === 1)
   const d = { items: [], recItems: [], ingredientes: [], insumos: [], nombres: new Map([['e', 'Juan']]) }
-  const hm = (m) => S.htmlMasaHistorial({ ...m, tipo_masa: 'Común', receta_id: 'r', masero_id: 'e' }, d)
+  const hm = (m) => G.htmlMasaHistorial({ ...m, tipo_masa: 'Común', receta_id: 'r', masero_id: 'e' }, d)
   chk('historial: original y anterior sin chip', !/pr-chip/.test(hm(M[0]) + hm(M[1])))
   chk('historial: modificada y chocolate con su chip', /pr-chip-modificada/.test(hm(M[2])) && /pr-chip-choco/.test(hm(M[2])))
   chk('historial: SIMPLE / DOBLE', /pr-masa-tam">SIMPLE</.test(hm(M[0])) && /pr-masa-tam">DOBLE</.test(hm(M[1])))
@@ -225,13 +230,13 @@ esperas.push((async () => {
   const insMalo = [{ id: 'ci', nombre: marca('caja'), marca: marca('cajaMarca') }]
   const it = item({ presentacion_id: 'pr', marca_id: 'mk', unidades_por_caja: 1, caja_insumo_id: 'ci', embolsado: marca('embolsado') })
   chequearMarcas(chk, 'renglón de la planilla', S.htmlProducido(it, catMalo, insMalo), ['producto', 'presentacion', 'cono', 'caja', 'cajaMarca', 'embolsado'])
-  chequearMarcas(chk, 'renglón del historial', S.htmlSubloteHistorial(it, {
+  chequearMarcas(chk, 'renglón del historial', G.htmlSubloteHistorial(it, {
     presentaciones: catMalo.presentaciones, productos: catMalo.productos, marcas: catMalo.marcas, insumosEmpaque: insMalo,
     productosConCono: ['p'], correcciones: [{ produccion_item_id: 'it', tipo: 'cajas', cajas_antes: 1, cajas_despues: 2, motivo: marca('motivoCorr'), hecha_por: 'e', hecha_en: null }], nombres: new Map(),
   }), ['producto', 'presentacion', 'cono', 'caja', 'cajaMarca', 'embolsado', 'motivoCorr'])
   chequearMarcas(chk, 'lista de conos', S.htmlMarcas(catMalo.marcas, '', {}, null), ['cono'])
   chequearMarcas(chk, 'masa anulada en la sala', S.htmlFilaMasaTurno({ id: 'x', nro: 1, doble: false, origen: 'modificada', es_chocolate: true, anulada: true, anulada_motivo: marca('motivoMasa') }, true), ['motivoMasa'])
-  chequearMarcas(chk, 'masa anulada en el historial', S.htmlMasaHistorial({ id: 'x', nro: 1, doble: true, origen: 'modificada', es_chocolate: true, anulada: true, anulada_motivo: marca('motivoHist'), tipo_masa: marca('tipoMasa'), masero_id: 'e' },
+  chequearMarcas(chk, 'masa anulada en el historial', G.htmlMasaHistorial({ id: 'x', nro: 1, doble: true, origen: 'modificada', es_chocolate: true, anulada: true, anulada_motivo: marca('motivoHist'), tipo_masa: marca('tipoMasa'), masero_id: 'e' },
     { items: [], recItems: [], ingredientes: [], insumos: [], nombres: new Map([['e', marca('masero')]]) }), ['motivoHist', 'tipoMasa', 'masero'])
 }
 
