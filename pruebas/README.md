@@ -202,3 +202,17 @@ atributos que el inventario no puede ver porque el HTML que los escribe vive en
 una plantilla anidada dentro de una interpolación —hoy solo `data-insumo`—. **No
 es un perdón en blanco:** la excepción exige igual que el atributo aparezca
 literalmente en el archivo, y da rojo si la declaración deja de hacer falta.
+
+## Comillas, datos de la maqueta y la foto del esquema (27/09/2026)
+
+- `comillas.js` + `test-comillas.js` / `mut-comillas.js`: un texto entre comillas
+  que no cierra en su misma línea, en los `.js` y en los `<script>` de los
+  `.html`. Corre adentro de `check-bytes.js`, que es lo primero de todo: es el
+  rastro típico de un script de edición corrido por heredoc (skill `editar-archivos`).
+- `datos-maqueta/`: los datos de la maqueta **y** de las suites nuevas, un módulo
+  por pantalla más `comun.js`. `npm run maqueta:datos` genera
+  `e2e/maqueta/datos/*.json`, y `test-maqueta-datos.js` da rojo si un `.json`
+  no coincide con su módulo.
+- `mutar.js` sin funciones no escanea interpolaciones (un `.js` que dice
+  `<script` rompía el escáner).
+- La foto del esquema de la base vive en `supabase/esquema.md` (`npm run esquema`).

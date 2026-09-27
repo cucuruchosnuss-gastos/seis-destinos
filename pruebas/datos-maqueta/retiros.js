@@ -1,0 +1,512 @@
+// Datos de la maqueta y de las pruebas: retiros (ver pruebas/datos-maqueta/README.md).
+// Se generan a e2e/maqueta/datos/retiros.json con `npm run maqueta:datos`.
+'use strict';
+
+module.exports = {
+  "tablas": {
+    "empleados": [
+      {
+        "id": "emp-1",
+        "rol_app": "usuario",
+        "nombre": "Emanuel Romero",
+        "auth_user_id": "uid-maqueta",
+        "unidad_negocio_id": "u-n",
+        "es_prueba": false
+      }
+    ],
+    "empleado_tareas": [
+      {
+        "empleado_id": "emp-1",
+        "modulo": "retiros",
+        "tarea": "cargar",
+        "alcance": {
+          "todas": true
+        },
+        "habilitado": true
+      },
+      {
+        "empleado_id": "emp-1",
+        "modulo": "stock",
+        "tarea": "ver",
+        "alcance": {
+          "todas": true
+        },
+        "habilitado": true
+      }
+    ],
+    "unidades_negocio": [
+      {
+        "id": "u-n",
+        "es_prueba": false
+      },
+      {
+        "id": "u-d",
+        "es_prueba": false
+      }
+    ],
+    "clientes": [
+      {
+        "id": "c1",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Distribuidora Anatolia",
+        "razon_social": "ANATOLIA SRL",
+        "apodos": [
+          "el Turco"
+        ],
+        "cuit": "30712345678",
+        "domicilio": "Av. Siempreviva 742",
+        "localidad": "Córdoba",
+        "email": "compras@anatolia.com",
+        "transporte_habitual": "Expreso Norte",
+        "activo": true
+      },
+      {
+        "id": "c2",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Kiosco Pepe",
+        "razon_social": null,
+        "apodos": [],
+        "activo": true
+      }
+    ],
+    "productos_terminados": [
+      {
+        "id": "p1",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Cucurucho grande",
+        "tipo_masa": "Común",
+        "activo": true
+      },
+      {
+        "id": "p2",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Cucurucho chico",
+        "tipo_masa": "Común",
+        "activo": true
+      },
+      {
+        "id": "p3",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Cucurucho choco",
+        "tipo_masa": "Chocolate",
+        "activo": true
+      }
+    ],
+    "producto_presentaciones": [
+      {
+        "id": "pr1",
+        "producto_id": "p1",
+        "nombre": "Caja x 100",
+        "con_cono": false,
+        "unidades_por_caja": 100,
+        "activa": true
+      },
+      {
+        "id": "pr1c",
+        "producto_id": "p1",
+        "nombre": "Caja x 100 con cono",
+        "con_cono": true,
+        "unidades_por_caja": 100,
+        "activa": true
+      },
+      {
+        "id": "pr2",
+        "producto_id": "p2",
+        "nombre": "Caja x 320",
+        "con_cono": false,
+        "unidades_por_caja": 320,
+        "activa": true
+      },
+      {
+        "id": "pr3",
+        "producto_id": "p3",
+        "nombre": "Caja x 50",
+        "con_cono": false,
+        "unidades_por_caja": 50,
+        "activa": true
+      }
+    ],
+    "marcas_personalizadas": [
+      {
+        "id": "m1",
+        "nombre": "LOLO",
+        "estado_alta": "aprobada",
+        "activa": true
+      },
+      {
+        "id": "m2",
+        "nombre": "CASERATO",
+        "estado_alta": "aprobada",
+        "activa": true
+      }
+    ],
+    "stock_terminado_movimientos": [
+      {
+        "unidad_negocio_id": "u-n",
+        "presentacion_id": "pr1",
+        "marca_id": null,
+        "lote": "7030-1",
+        "cajas": 20,
+        "fecha": "2026-09-20",
+        "created_at": "2026-09-20T10:00:00Z"
+      },
+      {
+        "unidad_negocio_id": "u-n",
+        "presentacion_id": "pr1",
+        "marca_id": null,
+        "lote": "7010-2",
+        "cajas": 8,
+        "fecha": "2026-09-10",
+        "created_at": "2026-09-10T10:00:00Z"
+      }
+    ]
+  },
+  "rpc": {
+    "mis_unidades_retiro": [
+      {
+        "id": "u-n",
+        "nombre": "Cucuruchos Nuss",
+        "prefijo": "N",
+        "razon_social": null,
+        "cuit": null,
+        "domicilio": null,
+        "telefono": null,
+        "logo_url": "logo-cucuruchos-nuss.png"
+      },
+      {
+        "id": "u-d",
+        "nombre": "Dolce Pasta",
+        "prefijo": "D",
+        "logo_url": "logo-dolce-pasta.png"
+      }
+    ],
+    "registrar_orden_retiro": {
+      "orden_id": "o-1",
+      "numero": 12,
+      "codigo": "N-0012",
+      "stock_insuficiente": [
+        {
+          "renglon": 2,
+          "producto": "Cucurucho chico",
+          "presentacion": "Caja x 320",
+          "pedidas": 10,
+          "faltaron": 3
+        }
+      ]
+    },
+    "mis_ordenes_retiro": [
+      {
+        "orden_id": "o-1",
+        "codigo": "N-0012",
+        "fecha": "2026-09-26",
+        "estado": "confirmada",
+        "cliente": "Distribuidora Anatolia",
+        "transporte": "Expreso Norte",
+        "observaciones": "Frágil, no apilar más de 5. Retira el transporte de la tarde; avisar antes de cargar la harina.",
+        "cargada_en": "2026-09-26T17:32:00Z",
+        "renglones": [
+          {
+            "producto": "Cucurucho grande",
+            "presentacion": "Caja x 100",
+            "marca": null,
+            "cajas": 5,
+            "unidades": 500,
+            "lotes": [
+              {
+                "lote": "7010-1",
+                "cajas": 3
+              },
+              {
+                "lote": "7030-1",
+                "cajas": 2
+              }
+            ]
+          },
+          {
+            "producto": "Cucurucho chico",
+            "presentacion": "Caja x 320",
+            "marca": null,
+            "cajas": 6,
+            "unidades": 600,
+            "lotes": [
+              {
+                "lote": "7011-2",
+                "cajas": 3
+              },
+              {
+                "lote": "7031-1",
+                "cajas": 3
+              }
+            ]
+          },
+          {
+            "producto": "Barquillo",
+            "presentacion": "Caja x 200",
+            "marca": null,
+            "cajas": 7,
+            "unidades": 700,
+            "lotes": [
+              {
+                "lote": "7012-3",
+                "cajas": 3
+              },
+              {
+                "lote": "7032-1",
+                "cajas": 4
+              }
+            ]
+          },
+          {
+            "producto": "Cannoli",
+            "presentacion": "Caja x 60",
+            "marca": null,
+            "cajas": 8,
+            "unidades": 800,
+            "lotes": [
+              {
+                "lote": "7013-1",
+                "cajas": 3
+              },
+              {
+                "lote": "7033-1",
+                "cajas": 5
+              }
+            ]
+          },
+          {
+            "producto": "Oblea",
+            "presentacion": "Caja x 500",
+            "marca": null,
+            "cajas": 9,
+            "unidades": 900,
+            "lotes": [
+              {
+                "lote": "7014-2",
+                "cajas": 3
+              },
+              {
+                "lote": "7034-1",
+                "cajas": 6
+              }
+            ]
+          },
+          {
+            "producto": "Cucurucho choco",
+            "presentacion": "Caja x 100",
+            "marca": null,
+            "cajas": 10,
+            "unidades": 1000,
+            "lotes": [
+              {
+                "lote": "7015-3",
+                "cajas": 3
+              },
+              {
+                "lote": "7035-1",
+                "cajas": 7
+              }
+            ]
+          },
+          {
+            "producto": "Cucurucho grande",
+            "presentacion": "Caja x 100 con cono",
+            "marca": "LOLO",
+            "cajas": 11,
+            "unidades": 1100,
+            "lotes": [
+              {
+                "lote": "7016-1",
+                "cajas": 3
+              },
+              {
+                "lote": "7036-1",
+                "cajas": 8
+              }
+            ]
+          },
+          {
+            "producto": "Barquillo",
+            "presentacion": "Media caja x 100",
+            "marca": null,
+            "cajas": 12,
+            "unidades": 1200,
+            "lotes": [
+              {
+                "lote": "7017-2",
+                "cajas": 3
+              },
+              {
+                "lote": "7037-1",
+                "cajas": 9
+              }
+            ]
+          },
+          {
+            "producto": "Cucurucho chico",
+            "presentacion": "Media caja x 160",
+            "marca": null,
+            "cajas": 13,
+            "unidades": 1300,
+            "lotes": [
+              {
+                "lote": "7018-3",
+                "cajas": 3
+              },
+              {
+                "lote": "7038-1",
+                "cajas": 10
+              }
+            ]
+          },
+          {
+            "producto": "Soft",
+            "presentacion": "Caja x 400",
+            "marca": null,
+            "cajas": 14,
+            "unidades": 1400,
+            "lotes": [
+              {
+                "lote": "7019-1",
+                "cajas": 3
+              },
+              {
+                "lote": "7039-1",
+                "cajas": 11
+              }
+            ]
+          },
+          {
+            "producto": "Vaso",
+            "presentacion": "Caja x 250",
+            "marca": null,
+            "cajas": 15,
+            "unidades": 1500,
+            "lotes": [
+              {
+                "lote": "7020-2",
+                "cajas": 3
+              },
+              {
+                "lote": "7040-1",
+                "cajas": 12
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "catalogo_para_retiro": {
+      "productos": [
+        {
+          "presentacion_id": "pr1",
+          "producto": "Cucurucho grande",
+          "presentacion": "Caja x 100",
+          "categoria": "cucuruchones",
+          "con_cono": false,
+          "media_caja": false,
+          "unidades_por_caja": 100,
+          "stock_cajas": 40
+        },
+        {
+          "presentacion_id": "pr1c",
+          "producto": "Cucurucho grande",
+          "presentacion": "Caja x 100 con cono",
+          "categoria": "cucuruchones",
+          "con_cono": true,
+          "media_caja": false,
+          "unidades_por_caja": 100,
+          "stock_cajas": 12
+        },
+        {
+          "presentacion_id": "pr2",
+          "producto": "Cucurucho chico",
+          "presentacion": "Caja x 320",
+          "categoria": "cucuruchones",
+          "con_cono": false,
+          "media_caja": false,
+          "unidades_por_caja": 320,
+          "stock_cajas": 25
+        },
+        {
+          "presentacion_id": "pr-bq",
+          "producto": "Barquillo",
+          "presentacion": "Caja x 200",
+          "categoria": "barquillos",
+          "con_cono": false,
+          "media_caja": false,
+          "unidades_por_caja": 200,
+          "stock_cajas": 8
+        },
+        {
+          "presentacion_id": "pr-can",
+          "producto": "Cannoli",
+          "presentacion": "Caja x 60",
+          "categoria": "especiales",
+          "con_cono": false,
+          "media_caja": false,
+          "unidades_por_caja": 60,
+          "stock_cajas": 5
+        },
+        {
+          "presentacion_id": "pr-obl",
+          "producto": "Oblea",
+          "presentacion": "Caja x 500",
+          "categoria": "especiales",
+          "con_cono": false,
+          "media_caja": false,
+          "unidades_por_caja": 500,
+          "stock_cajas": 3
+        },
+        {
+          "presentacion_id": "pr3",
+          "producto": "Cucurucho choco",
+          "presentacion": "Caja x 100",
+          "categoria": "especiales",
+          "con_cono": false,
+          "media_caja": false,
+          "unidades_por_caja": 100,
+          "stock_cajas": 0
+        }
+      ],
+      "insumos": [
+        {
+          "insumo_id": "ins-1",
+          "nombre": "Harina 000",
+          "marca": "Molino Cañuelas",
+          "categoria": "Harinas",
+          "unidad_medida": "kg",
+          "stock": 1250
+        },
+        {
+          "insumo_id": "ins-2",
+          "nombre": "Caja N°1",
+          "marca": "Nuss",
+          "categoria": "Cajas",
+          "unidad_medida": "un",
+          "stock": 380
+        },
+        {
+          "insumo_id": "ins-3",
+          "nombre": "Bolsa PPP 15x60",
+          "marca": null,
+          "categoria": "Bolsas",
+          "unidad_medida": "un",
+          "stock": 12000
+        }
+      ]
+    },
+    "lotes_para_retiro": [
+      {
+        "lote": "7010-2",
+        "cajas": 8,
+        "desde": "2026-09-10"
+      },
+      {
+        "lote": "7030-1",
+        "cajas": 15,
+        "desde": "2026-09-20"
+      }
+    ]
+  },
+  "uid": "uid-maqueta"
+};

@@ -73,7 +73,8 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
 
   // ── Automáticas: sacar cada esc() de las funciones nuevas ───────────────
   const rangos = rangosDeFunciones(zonaConLineas, funciones, (n, ok, det) => { if (!ok) { console.log('ABORTADO:', n, det); process.exit(2) } })
-  const { interpolaciones: todas } = interpolaciones(original)
+  // Sin funciones no hay automáticas: no se escanea (un .js que menciona "<script" rompería el escáner).
+  const { interpolaciones: todas } = funciones.length ? interpolaciones(original) : { interpolaciones: [] }
   const lineas = src.split('\n')
   const mutaciones = []
   const ambiguas = []

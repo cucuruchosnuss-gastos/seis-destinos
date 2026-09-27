@@ -34,13 +34,15 @@ Una tanda no está terminada hasta que está en `origin/main`, Actions está en 
    ```
    Para esperar sin bloquear, correr ese curl en un bucle en segundo plano. Si algo da rojo, se arregla antes de seguir.
 
-4. **CLAUDE.md al día**: cada decisión, tabla, RPC, suite o regla nueva, en su sección. Todo dato de la base se verifica con un SELECT antes de escribirlo, con fecha.
+4. **La foto del esquema, si la tanda tocó la base** (o si la base cambió desde la última foto): `npm run esquema` regenera `supabase/esquema.md` (una sola consulta de solo lectura; con el CLI de Supabase logueado o con `SUPABASE_ACCESS_TOKEN`) y va en el mismo commit que el CLAUDE.md. Sin token ni CLI: `node supabase/esquema.js --sql`, correr la consulta por el MCP y `node supabase/esquema.js --desde <resultado.json>`.
 
-5. **El traspaso**, en `.claude/traspasos/<AAAA-MM-DD>-<tema>.md`:
+5. **CLAUDE.md al día**: cada decisión, tabla, RPC, suite o regla nueva, en su sección. Todo dato de la base se verifica con un SELECT antes de escribirlo, con fecha.
+
+6. **El traspaso**, en `.claude/traspasos/<AAAA-MM-DD>-<tema>.md`:
    - **Qué se hizo**, con los hashes y los links a las corridas de Actions.
    - **Decisiones** tomadas y por qué, y las que quedan para Facu.
    - **Lo que NO se probó**, sin maquillar ("nada con sesión real" si es así).
    - **Guion para Facu**: pasos numerados para probarlo en la app y qué tiene que ver en cada uno.
    - **Qué automatizaría ahora**: la tarea repetida más cara que se vio y cómo sacarla (skill, script o prueba).
 
-6. **Commit y push del CLAUDE.md y el traspaso**, y otra vez el paso 3.
+7. **Commit y push del CLAUDE.md, la foto del esquema y el traspaso**, y otra vez el paso 3.
