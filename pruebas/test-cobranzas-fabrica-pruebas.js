@@ -1,20 +1,20 @@
 // La fábrica de pruebas no ensucia Cobranzas — modulos/cobranzas.html (26/09/2026).
 //
 // La unidad "Pruebas (robot)" y sus personas existen para Playwright. En
-// Cobranzas hay DOS listas que podrían mostrarlas a una cuenta real:
-//  - el diálogo de la unidad de negocio (asentar / "Asignar unidad" / "Cambiar"),
-//    que arma unidadesParaElegir;
-//  - el selector "Repartidor" del listado, que arma pintarRepartidores.
+// Cobranzas hay UNA lista que podría mostrarlas a una cuenta real: el
+// selector "Repartidor" del listado, que arma pintarRepartidores. (Había una
+// segunda, el diálogo de la unidad al asentar: desde el 27/09/2026 asentar es
+// en Administración, donde se elige el CLIENTE, y el filtro de la fábrica de
+// pruebas está en su buscador — test-administracion-cobranzas.js.)
 //
 // Se EJECUTAN las funciones reales —asegurarFabrica (que llama al
-// cargarFabricaDePruebas REAL de js/utils.js), unidadesParaElegir,
-// elegirUnidadConDialogo, cargarRepartidores y pintarRepartidores— con un
+// cargarFabricaDePruebas REAL de js/utils.js), cargarUnidades,
+// cargarRepartidores y pintarRepartidores— con un
 // supabase falso que contesta como la base. Lo que se afirma:
 //  - cuenta real: ni la unidad ni el robot aparecen;
 //  - cuenta de prueba (soyDePrueba): aparecen los dos;
 //  - la fábrica no se pudo leer (FABRICA_SIN_DATOS): no se saca nada;
-//  - "Cambiar" sobre una cobranza que ya tiene la unidad de prueba la conserva;
-//  - si solo queda UNA unidad real, se elige sola (como con una sola unidad);
+//  - el catálogo de unidades queda COMPLETO (el historial nombra cualquiera);
 //  - el selector de repartidores se vuelve a pintar cuando la fábrica llega
 //    después, conservando lo elegido.
 //
@@ -102,8 +102,8 @@ const PRELUDIO = `
 `
 
 const FUNCIONES = [
-  'escCob', 'tieneTarea', 'cargarUnidades', 'asegurarUnidades', 'unidadesParaElegir', 'asegurarFabrica',
-  'elegirUnidadConDialogo', 'cargarRepartidores', 'pintarRepartidores',
+  'escCob', 'tieneTarea', 'cargarUnidades', 'asegurarUnidades', 'asegurarFabrica',
+  'cargarRepartidores', 'pintarRepartidores',
 ]
 const CONSTANTES = ['puedeCargar', 'puedeVerTodo', 'puedeProcesar']
 
@@ -137,57 +137,15 @@ function sandbox({ cuenta = 'real', unidades = UNIDADES, fallar = null } = {}) {
 const opcionesDe = (S, id) => [...S.__els.get(id).innerHTML.matchAll(/<option value="([^"]*)">([^<]*)</g)].map(m => m[1])
 
 async function pruebas() {
-  // ══ 1. EL DIÁLOGO DE LA UNIDAD ═════════════════════════════════════════════
+  // ══ 1. EL CATÁLOGO DE UNIDADES, COMPLETO ════════════════════════════════
   {
     const S = sandbox({ cuenta: 'real' })
-    await S.elegirUnidadConDialogo({ titulo: 't', texto: 'x', textoSi: 'Asentar', actual: null })
-    const op = opcionesDe(S, 'cob-dlg-unidad-select')
-    chk('cuenta real: el diálogo NO ofrece la unidad de prueba', !op.includes(PRUEBA), op)
-    chk('cuenta real: el diálogo ofrece las reales', op.includes('u-cn') && op.includes('u-dp'), op)
+    await S.asegurarFabrica()
+    await S.asegurarUnidades()
     chk('cuenta real: la fábrica quedó leída en el estado', S.estado.fabrica.ok === true && S.estado.fabrica.soyDePrueba === false)
     // Catálogo completo intacto: el historial nombra cualquier unidad por id.
     chk('el catálogo (estado.unidades) conserva la de prueba para nombrarla', S.estado.unidades.some(u => u.id === PRUEBA))
-  }
-  {
-    const S = sandbox({ cuenta: 'prueba' })
-    await S.elegirUnidadConDialogo({ titulo: 't', texto: 'x', textoSi: 'Asentar', actual: null })
-    const op = opcionesDe(S, 'cob-dlg-unidad-select')
-    chk('cuenta de prueba: el diálogo SÍ ofrece la unidad de prueba', op.includes(PRUEBA), op)
-    chk('cuenta de prueba: soyDePrueba', S.estado.fabrica.soyDePrueba === true)
-  }
-  {
-    const S = sandbox({ cuenta: 'real', fallar: 'empleados' })
-    await S.elegirUnidadConDialogo({ titulo: 't', texto: 'x', textoSi: 'Asentar', actual: null })
-    const op = opcionesDe(S, 'cob-dlg-unidad-select')
-    chk('fábrica sin datos: el diálogo no saca nada', op.includes(PRUEBA) && op.length === 4, op)
-    chk('fábrica sin datos: estado.fabrica es FABRICA_SIN_DATOS', S.estado.fabrica.ok === false)
-  }
-  {
-    // "Cambiar" sobre una cobranza que ya tiene la unidad de prueba.
-    const S = sandbox({ cuenta: 'real' })
-    await S.elegirUnidadConDialogo({ titulo: 't', texto: 'x', textoSi: 'Guardar', actual: PRUEBA })
-    const op = opcionesDe(S, 'cob-dlg-unidad-select')
-    chk('Cambiar: la unidad actual se conserva aunque sea la de prueba', op.includes(PRUEBA), op)
-    chk('Cambiar: queda preseleccionada', S.__els.get('cob-dlg-unidad-select').value === PRUEBA)
-  }
-  {
-    // Una sola unidad real + la de prueba: con el filtro queda una y se elige sola.
-    const S = sandbox({ cuenta: 'real', unidades: [UNIDADES[0], UNIDADES[2]] })
-    await S.elegirUnidadConDialogo({ titulo: 't', texto: 'x', textoSi: 'Asentar', actual: null })
-    const op = opcionesDe(S, 'cob-dlg-unidad-select')
-    chk('una sola real: sin el "Elegí una unidad…" (se elige sola)', op.length === 1 && op[0] === 'u-cn', op)
-    chk('una sola real: queda elegida', S.__els.get('cob-dlg-unidad-select').value === 'u-cn')
-  }
-  {
-    // La función pura, con los tres estados de la fábrica.
-    const S = sandbox()
-    const real = { ok: true, unidades: new Set([PRUEBA]), personas: new Set([ROBOT]), soyDePrueba: false }
-    const ids = (f, actual = null) => S.unidadesParaElegir(UNIDADES, actual, f).map(u => u.id)
-    chk('unidadesParaElegir cuenta real: sin la de prueba', !ids(real).includes(PRUEBA))
-    chk('unidadesParaElegir cuenta de prueba: con la de prueba', ids({ ...real, soyDePrueba: true }).includes(PRUEBA))
-    chk('unidadesParaElegir sin datos: no saca nada', ids(S.estado.fabrica).length === 3)
-    chk('unidadesParaElegir sigue sacando las inactivas',
-      !S.unidadesParaElegir([...UNIDADES, { id: 'u-x', nombre: 'X', activo: false }], null, real).some(u => u.id === 'u-x'))
+    chk('ya no hay diálogo de la unidad en el fuente (asentar es en Administración)', !/cob-dialogo-unidad|unidadesParaElegir|elegirUnidadConDialogo/.test(FUENTE))
   }
 
   // ══ 2. EL SELECTOR DE REPARTIDORES ═════════════════════════════════════════

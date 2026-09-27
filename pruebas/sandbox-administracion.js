@@ -49,6 +49,15 @@ const FUNCIONES_BASE = [
   'importarVacio', 'cuentaImportar', 'textoCuentaImportar', 'htmlFilaImportar', 'htmlVistaPrevia', 'textoConfirmarImportar',
   'pintarImportar', 'mostrarImportar', 'elegirTipoImportar', 'contextoImportar', 'procesarFilasImportar', 'subirArchivoImportar',
   'bajarPlantillaImportar', 'pedirGuardarImportacion', 'confirmarImportacion', 'bajarResumenImportar', 'descartarImportacion',
+  // Cobranzas por asentar (27/09/2026)
+  'puedeVerLaCobranza', 'aparearCobranzas',
+  'puedeAsentar', 'puedeVerTodasLasCobranzas', 'cobranzasVacio', 'datosCobranza', 'leerPorAsentar', 'leerChequesDe', 'asegurarBancos',
+  'nombreBanco', 'asegurarClientesAsentar', 'nombreEmpresa', 'clientesParaAsentar', 'importeCob', 'textoSaldoCliente', 'htmlChequeCob',
+  'htmlChequesCob', 'htmlOpcionCliente', 'htmlResultadosAsentar', 'htmlPanelAsentar', 'htmlHechoCob', 'htmlTarjetaCobranza',
+  'htmlListaCobranzas', 'porAsentarPendientes', 'pintarCobranzas', 'enfocarBuscadorAsentar', 'mostrarCobranzas', 'abrirAsentar',
+  'repintarAsentar', 'repintarResultadosAsentar', 'buscarClienteAsentar', 'elegirClienteAsentar', 'cancelarAsentar', 'parametrosAsentar',
+  'confirmarAsentar', 'quitarHecho', 'leerCobranza', 'htmlCobranzaAbierta', 'pintarCobranza', 'abrirCobranza', 'recargarCobranza',
+  'volverDeCobranza', 'pedirReabrir', 'cancelarReabrir', 'confirmarReabrir', 'verFotoCobranza', 'cerrarVisorCobranza',
 ]
 
 const CONSTANTES_BASE = [
@@ -56,6 +65,7 @@ const CONSTANTES_BASE = [
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
+  'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'ETIQUETA_ESTADO_COBRANZA',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
 
@@ -100,6 +110,10 @@ const PRELUDIO = `
   var turnoClientes = 0
   var turnoCliente = 0
   var turnoLista = 0
+  var turnoCobranzas = 0
+  var turnoCobranza = 0
+  var history = { replaceState() {} }
+  var __urlsFirmadas = []
 
   var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [], clicks: [] }
   var __tablas = {}
@@ -124,6 +138,7 @@ const PRELUDIO = `
       return q
     },
     rpc(nombre, params) { __llamadas.rpc.push([nombre, JSON.parse(JSON.stringify(params ?? null))]); return Promise.resolve(__rpc(nombre, params)) },
+    storage: { from(b) { return { createSignedUrl(ruta, seg) { __urlsFirmadas.push([b, ruta, seg]); return Promise.resolve({ data: { signedUrl: 'https://firmada/' + ruta }, error: null }) } } } },
   }
   function mostrarError(m) { __llamadas.errores.push(m) }
   function mostrarExito(m) { __llamadas.exitos.push(m) }
@@ -144,6 +159,8 @@ const PRELUDIO = `
     filtros: { desde: '', hasta: '', clienteId: '', estado: '', sinValorizar: false },
     orden: null, trabajando: false,
     saldos: null, errorSaldos: null, busquedaClientes: '', alta: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
+    cobranzas: { lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null, clientes: null, errorClientes: null, asentando: null, hechos: new Map() },
+    cobranza: null, bancos: null,
   }
 `
 
@@ -154,7 +171,7 @@ function construirAdministracion(ruta, { funciones = [], constantes = [], prelud
     funciones: [...FUNCIONES_BASE, ...funciones],
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __llamadas, __ls, __tablas, __win: window,
-      __setRpc(f){ __rpc = f }, __impresiones(){ return __impresiones }, __setNav(n){ navigator = n },
+      __setRpc(f){ __rpc = f }, __impresiones(){ return __impresiones }, __setNav(n){ navigator = n }, __urlsFirmadas(){ return __urlsFirmadas },
       ponerNumero, leerCampoNumero, enlazarCampoNumero, leerNumeroAr, formatearNumeroAr`,
   })
 }

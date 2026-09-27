@@ -18,6 +18,17 @@ const SEGURAS_ADMINISTRACION = [
   ['avisos', 'HTML ya escapado: htmlFilaImportar() arma cada aviso con esc()'],
   ['resultado', 'HTML ya escapado: htmlFilaImportar() arma el resultado con esc() del mensaje, o vacío'],
   ["im.filas.map(htmlFilaImportar).join('')", 'HTML armado por htmlFilaImportar(), que escapa cada dato de la fila'],
+  // Cobranzas por asentar (27/09/2026)
+  ['foto', 'HTML armado en htmlChequeCob(): el botón con esc() del id de la foto, o vacío'],
+  ["lista.map(htmlChequeCob).join('')", 'HTML armado por htmlChequeCob(), que escapa la línea del cheque y el id de la foto'],
+  ["lista.slice(0, MAX_RESULTADOS_CLIENTES).map(c => htmlOpcionCliente(c, a.cliente?.id, false)).join('')", 'HTML armado por htmlOpcionCliente(), que escapa id, nombre y detalle'],
+  ["a.sugeridos.map(s => htmlOpcionCliente(s, a.cliente?.id, true)).join('')", 'HTML armado por htmlOpcionCliente(), que escapa id, nombre y detalle'],
+  ['sugeridos', 'HTML armado en htmlPanelAsentar() con esc() del texto y htmlOpcionCliente()'],
+  ['htmlResultadosAsentar(a)', 'HTML armado por htmlResultadosAsentar(), que escapa los textos y usa htmlOpcionCliente()'],
+  ['elegido', 'HTML ya escapado: htmlPanelAsentar() lo arma con esc() del texto, o vacío'],
+  ["datos.map(([k, v]) => htmlDatoAd(k, v)).join('')", 'HTML armado por htmlDatoAd(), que escapa rótulo y valor'],
+  ['htmlChequesCob(c, cheques)', 'HTML armado por htmlChequesCob(), que escapa los avisos y usa htmlChequeCob()'],
+  ['pie', 'HTML armado en htmlTarjetaCobranza(): htmlHechoCob() / htmlPanelAsentar() (escapan) o un botón con esc() del id'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

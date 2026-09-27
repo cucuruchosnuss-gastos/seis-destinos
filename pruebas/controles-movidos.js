@@ -15,8 +15,19 @@ const MUDANZA = 'La cartera de cheques se mudó a modulos/cheques.html (22/09/20
 
 const cheques = (nueva, motivo = MUDANZA) => ({ a: 'cheques', nueva, motivo })
 const cobranzas = (nueva, motivo) => ({ a: 'cobranzas', nueva, motivo })
+// La SEGUNDA mudanza (27/09/2026): asentar y reabrir se mudaron a
+// modulos/administracion.html (Cobranzas por asentar). `enCobranzas` es el
+// link que quedó en su lugar en cobranzas.html, y se exige también.
+const MUDANZA_ASENTAR = 'Asentar (elegir el cliente) y reabrir se mudaron a Administración → Cobranzas por asentar (27/09/2026).'
+const administracion = (nueva, enCobranzas, motivo = MUDANZA_ASENTAR) => ({ a: 'administracion', nueva, enCobranzas, motivo })
 
 const MOVIDOS = {
+  // ── Asentar y reabrir, a Administración (27/09/2026) ──
+  'id:cob-btn-procesar': administracion('id:ad-asentar-confirmar', 'id:cob-link-asentar'),
+  'control:button#cob-btn-procesar[type=button]': administracion('control:button[data-asentar][type=button]', 'control:a#cob-link-asentar'),
+  'id:cob-btn-reabrir': administracion('id:ad-cobranza-reabrir', 'id:cob-link-reabrir'),
+  'control:button#cob-btn-reabrir[type=button]': administracion('control:button#ad-cobranza-reabrir[type=button]', 'control:a#cob-link-reabrir'),
+
   // ── La vista entera ──
   'id:cob-vista-cheques': cheques('id:chq-vista'),
   'id:cob-cartera': cheques('id:chq-cartera'),

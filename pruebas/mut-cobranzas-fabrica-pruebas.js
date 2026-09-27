@@ -16,15 +16,9 @@ correrMutaciones({
   escape: 'escCob',
   manuales: [
     // ── Cada llamada al filtro ─────────────────────────────────────────────
-    { nombre: 'el diálogo de la unidad sin el filtro de la fábrica',
-      de: 'return sinUnidadesDePrueba(activas, fabrica, u => (u?.id === actual ? null : u?.id))', a: 'return activas' },
     { nombre: 'el selector de repartidores sin el filtro de la fábrica',
       de: 'const visibles = sinPersonasDePrueba(estado.repartidores, estado.fabrica)', a: 'const visibles = estado.repartidores' },
     // ── Cómo se aplica ─────────────────────────────────────────────────────
-    { nombre: 'el filtro de unidades no conserva la actual',
-      de: 'u => (u?.id === actual ? null : u?.id))', a: 'u => u?.id)' },
-    { nombre: 'el diálogo no espera la fábrica (le pasa FABRICA_SIN_DATOS)',
-      de: 'const opciones = unidadesParaElegir(unidades, actual, fabrica)', a: 'const opciones = unidadesParaElegir(unidades, actual, FABRICA_SIN_DATOS)' },
     { nombre: 'la fábrica no queda en el estado',
       de: '          estado.fabrica = f ?? FABRICA_SIN_DATOS\n', a: '' },
     { nombre: 'al llegar la fábrica no se repintan los repartidores',

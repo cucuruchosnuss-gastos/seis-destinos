@@ -55,7 +55,7 @@ function nuevo() {
 // El agrupado REAL del dashboard: la tarjeta de Ingreso suma las filas de
 // materia_prima.
 const DASH = fs.readFileSync(path.join(RAIZ, 'dashboard.html'), 'utf8')
-const dash = new Function(`var console = { warn() {} }\n${extraerConst(DASH, 'MODULO_DE_PENDIENTE')}\n${extraerFn(DASH, 'textoPendiente')}\n${extraerFn(DASH, 'agruparPendientes')}\nreturn { agruparPendientes }`)()
+const dash = new Function(`var console = { warn() {} }\n${extraerConst(DASH, 'MODULO_DE_PENDIENTE')}\n${extraerConst(DASH, 'TAMBIEN_EN_TARJETA')}\n${extraerFn(DASH, 'textoPendiente')}\n${extraerFn(DASH, 'agruparPendientes')}\nreturn { agruparPendientes }`)()
 
 let S0
 try { S0 = nuevo() } catch (e) {

@@ -1020,6 +1020,14 @@
       administracion: 'administracion',
     }
 
+    // Un pendiente que ADEMÁS se muestra en otra tarjeta (27/09/2026): las
+    // cobranzas por controlar se asientan en Administración → Cobranzas por
+    // asentar, así que también suman en su tarjeta. Clave 'modulo:clave' →
+    // claves de MODULOS extra. La tarjeta propia (Cobranzas) sigue contándolas.
+    const TAMBIEN_EN_TARJETA = {
+      'cobranzas:por_controlar': ['administracion'],
+    }
+
     function escDash(texto) {
       return String(texto ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1043,10 +1051,12 @@
         if (!clave) { console.warn('mis_pendientes: módulo sin tarjeta', fila?.modulo); continue }
         const n = typeof fila.cantidad === 'number' ? fila.cantidad : Number(fila.cantidad)
         if (fila.cantidad === null || fila.cantidad === undefined || fila.cantidad === '' || !Number.isInteger(n) || n <= 0) continue
-        const actual = porModulo.get(clave) || { total: 0, detalle: [] }
-        actual.total += n
-        actual.detalle.push(textoPendiente({ ...fila, cantidad: n }))
-        porModulo.set(clave, actual)
+        for (const c of [clave, ...(TAMBIEN_EN_TARJETA[`${fila.modulo}:${fila.clave}`] ?? [])]) {
+          const actual = porModulo.get(c) || { total: 0, detalle: [] }
+          actual.total += n
+          actual.detalle.push(textoPendiente({ ...fila, cantidad: n }))
+          porModulo.set(c, actual)
+        }
       }
       return porModulo
     }

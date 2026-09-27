@@ -220,6 +220,41 @@
     .ad-sello--imp-ok { background: var(--verde-suave); color: var(--verde-oscuro); border-color: transparent; }
     .ad-sello--imp-error { background: var(--bordo); color: #fff; border-color: var(--bordo); }
     .ad-imp-pie { position: sticky; bottom: 0; z-index: 5; }
+
+    /* ── Cobranzas por asentar (27/09/2026) ─────────────────────────────
+       Lo que escribió el chofer va BIEN GRANDE: es lo que hay que reconocer
+       para elegir el cliente. */
+    .ad-cob__rotulo { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ad-texto-secundario); }
+    .ad-cob__escrito { font-size: 1.625rem; font-weight: 900; line-height: 1.15; color: var(--color-texto); overflow-wrap: anywhere; margin: 0.125rem 0 0.25rem; }
+    .ad-cob__cheques { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.5rem 0 0; min-width: 0; }
+    .ad-cob__cheque { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;
+      padding: 0.5rem 0.625rem; border-radius: 10px; background: var(--color-superficie); min-width: 0; }
+    .ad-cob__cheque-texto { font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
+    .ad-cob__foto { min-height: 44px; }
+    .ad-cob__hecho { border-left-color: var(--verde); background: var(--verde-suave); color: var(--verde-oscuro); }
+    .ad-opciones-clientes { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.25rem 0 0.5rem; min-width: 0; }
+    .ad-opcion-cliente {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; width: 100%; min-height: 48px;
+      padding: 0.5rem 0.75rem; text-align: left; font: inherit; color: var(--color-texto); cursor: pointer; min-width: 0;
+      background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 10px;
+    }
+    .ad-opcion-cliente__nombre { font-weight: 800; overflow-wrap: anywhere; }
+    .ad-opcion-cliente__detalle { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    /* Los sugeridos van primero y destacados. El naranja es "lo elegido /
+       lo que la pantalla propone", nunca una validez. */
+    .ad-opcion-cliente--sugerido { border: 2px solid var(--naranja); background: var(--naranja-suave); }
+    .ad-opcion-cliente[aria-pressed="true"] { border: 2px solid var(--naranja-oscuro); background: var(--naranja); color: #fff; }
+    .ad-opcion-cliente[aria-pressed="true"] .ad-opcion-cliente__detalle { color: #fff; }
+    .ad-renglon--boton { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--color-borde); font: inherit; color: inherit; text-align: left; cursor: pointer; min-height: 56px; }
+    .ad-renglon--boton:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 6px; }
+    .ad-renglon__ver { font-size: 0.8125rem; font-weight: 700; color: var(--naranja-oscuro); }
+    /* El visor de la foto de un cheque, a pantalla completa. */
+    .ad-visor { position: fixed; inset: 0; z-index: 90; background: rgba(12, 16, 28, 0.94); display: flex; flex-direction: column; min-width: 0; }
+    .ad-visor__barra { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; color: #fff;
+      padding: calc(0.625rem + env(safe-area-inset-top, 0px)) 0.875rem 0.625rem; font-size: 0.875rem; }
+    .ad-visor__cerrar { min-height: 44px; min-width: 44px; background: none; border: 0; color: #fff; font-size: 1.5rem; cursor: pointer; }
+    .ad-visor__lienzo { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; }
+    .ad-visor__img { max-width: 100%; max-height: 100%; object-fit: contain; }
   </style>
 </head>
 <body class="pagina-modulo">
@@ -531,6 +566,38 @@
       </div>
     </section>
 
+    <!-- ══ COBRANZAS POR ASENTAR (27/09/2026) ═════════════════════════════
+         El chofer cargó el nombre del cliente como él lo llama; acá se elige
+         a qué cliente corresponde y se asienta: recién ahí baja la deuda. -->
+    <section id="ad-vista-cobranzas" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-cobranzas-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Cobranzas por asentar</h1>
+      </div>
+      <p class="ad-texto-suave">Las cargan los choferes con el nombre que ellos le dan al cliente. Elegí a qué cliente corresponde cada una y asentala: recién ahí baja la deuda del cliente.</p>
+      <div id="ad-cobranzas-aviso"></div>
+      <p class="ad-cuenta" id="ad-cobranzas-cuenta"></p>
+      <div class="ad-lista" id="ad-cobranzas-lista"></div>
+    </section>
+
+    <!-- ══ UNA COBRANZA (desde la cuenta de un cliente o un link) ══════════ -->
+    <section id="ad-vista-cobranza" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-cobranza-volver">&lsaquo; Cobranzas por asentar</button>
+        <h1 class="ad-titulo" id="ad-cobranza-titulo">Cobranza</h1>
+      </div>
+      <div id="ad-cobranza-cuerpo"></div>
+    </section>
+
+  </div>
+
+  <!-- El visor de la foto de un cheque (firmada por 300 segundos al tocarla). -->
+  <div class="ad-visor" id="ad-visor" hidden role="dialog" aria-modal="true" aria-label="Foto de los cheques">
+    <div class="ad-visor__barra">
+      <span>Foto de los cheques</span>
+      <button type="button" class="ad-visor__cerrar" id="ad-visor-cerrar" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="ad-visor__lienzo"><img class="ad-visor__img" id="ad-visor-img" alt="Foto de los cheques"></div>
   </div>
 
   <!-- La hoja para imprimir, CON precios: la arma htmlHoja() de
@@ -594,6 +661,10 @@
       lista: null,           // { id, precios, pendientes, historial, confirmar, error }
       proveedores: null,     // el padrón de proveedores, para "también es proveedor"
       importar: null,        // { tipo, archivo, filas, error, confirmar, guardando, avance, terminado, listaId, desde }
+      // Cobranzas por asentar (27/09/2026)
+      cobranzas: { lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null, clientes: null, errorClientes: null, asentando: null, hechos: new Map() },
+      cobranza: null,        // la abierta: { id, origen, clienteOrigen, fila, cheques, fotos, cliente, clienteId, error, reabriendo, hecho }
+      bancos: null,          // codigo → nombre (bancos_bcra)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -668,6 +739,11 @@
       // de una empresa. La ve quien hoy puede ver Cheques: cobranzas:ver_todo
       // o cobranzas:procesar, con bypass de super_admin.
       { id: 'cheques', titulo: 'Cheques', global: true, tareas: ['cobranzas:ver_todo', 'cobranzas:procesar'] },
+      // Las cobranzas que cargaron los choferes, para elegir el cliente y
+      // asentarlas (27/09/2026). Tampoco es de una empresa: cada cobranza toma
+      // la empresa del cliente al asentarse. Pide cobranzas:procesar (con
+      // bypass de super_admin), la misma tarea que exige asentar_cobranza().
+      { id: 'cobranzas', titulo: 'Cobranzas por asentar', global: true, tareas: ['cobranzas:procesar'] },
     ]
 
     function seccionVisible(s, unidadId = estado.empresaId) {
@@ -708,7 +784,7 @@
     // dos tareas que dejan ver la cartera).
     const LINKS = [
       { clave: 'cuentas-corrientes', titulo: 'Cuentas corrientes', detalle: 'Proveedores: saldos, facturas y pagos', url: 'cuentas-corrientes.html', modulo: 'cuentas-corrientes' },
-      { clave: 'cobranzas', titulo: 'Cobranzas', detalle: 'Controlar y asentar las cobranzas', url: 'cobranzas.html', modulo: 'cobranzas' },
+      { clave: 'cobranzas', titulo: 'Cobranzas', detalle: 'Lo que cargaron los choferes, con sus cheques', url: 'cobranzas.html', modulo: 'cobranzas' },
     ]
 
     function linksVisibles() {
@@ -737,7 +813,9 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza']
+    // Las vistas que no son de una empresa: el selector de empresa se esconde.
+    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza']
     const SUBTITULO_DE_VISTA = {
       'ad-vista-inicio': 'Portada',
       'ad-vista-ordenes': 'Órdenes',
@@ -749,14 +827,17 @@
       'ad-vista-lista': 'Lista',
       'ad-vista-importar': 'Importar',
       'ad-vista-cheques': 'Cheques',
+      'ad-vista-cobranzas': 'Cobranzas por asentar',
+      'ad-vista-cobranza': 'Cobranza',
     }
 
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       estado.vista = id
       document.getElementById('ad-subtitulo').textContent = SUBTITULO_DE_VISTA[id] ?? 'Administración'
-      // La cartera de cheques no es de una empresa: el selector se esconde.
-      document.getElementById('ad-empresas').hidden = id === 'ad-vista-cheques'
+      // La cartera de cheques y las cobranzas no son de una empresa: el
+      // selector se esconde.
+      document.getElementById('ad-empresas').hidden = VISTAS_GLOBALES.includes(id)
       // Fuera de Cheques, la dirección deja de decir ?seccion=cheques (si no,
       // recargar la pantalla volvería a abrirla).
       if (id !== 'ad-vista-cheques' && /[?&]seccion=cheques/.test(window.location.search)) history.replaceState(null, '', window.location.pathname)
@@ -926,6 +1007,9 @@
         return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
           `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
           `<span class="ad-seccion__detalle">La cartera: en cartera, salidos, vencimientos y dar salida</span></button>`
+      } else if (s.id === 'cobranzas') {
+        numero = portada?.porAsentar ?? null
+        detalle = portada?.errorCobranzas ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'cobranza para elegir el cliente y asentar' : 'cobranzas para elegir el cliente y asentar'))
       } else if (s.id === 'importar') {
         return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
           `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
@@ -962,11 +1046,17 @@
 
     async function mostrarInicio() {
       mostrarVista('ad-vista-inicio')
-      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null }
+      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null, porAsentar: null, errorCobranzas: null }
       pintarPortada()
       const turno = ++turnoPortada
       const unidad = estado.empresaId
       const p = estado.portada
+      // Las cobranzas por asentar no son de una empresa: se cuentan antes de
+      // mirar los permisos de la empresa.
+      if (SECCIONES.some(s => s.id === 'cobranzas' && seccionVisible(s))) {
+        leerPorAsentar().then(l => { p.porAsentar = l.length }).catch(err => { console.error('No se pudieron contar las cobranzas:', err); p.errorCobranzas = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
+      }
       if (puedeEn('retiros', 'precios', unidad)) {
         asegurarListas(unidad).then(() => { p.listas = estado.listas.filas.length }).catch(err => { console.error('No se pudieron contar las listas:', err); p.errorListas = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
@@ -988,6 +1078,7 @@
       else if (id === 'listas') mostrarListas()
       else if (id === 'importar') mostrarImportar()
       else if (id === 'cheques') mostrarCheques()
+      else if (id === 'cobranzas') mostrarCobranzas()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1708,7 +1799,16 @@
     async function leerCuenta(clienteId) {
       const { data, error } = await supabase.rpc('cuenta_cliente', { p_cliente_id: clienteId })
       if (error) throw error
-      const cuenta = Array.isArray(data) ? data : []
+      let cuenta = Array.isArray(data) ? data : []
+      // De qué cobranza es cada movimiento de cobranza: cuenta_cliente() no lo
+      // devuelve, así que sale de cliente_movimientos (la misma policy,
+      // retiros:ver) y se aparea en el MISMO orden (fecha, cargado_en). Si algo
+      // no cierra, no se abre ninguna: nunca se abre la cobranza equivocada.
+      if (cuenta.some(m => m.tipo === 'cobranza') && puedeVerLaCobranza()) {
+        const r = await supabase.from('cliente_movimientos').select('fecha, tipo, importe, cobranza_id, cargado_en')
+          .eq('cliente_id', clienteId).order('fecha').order('cargado_en')
+        if (!r.error) cuenta = aparearCobranzas(cuenta, r.data ?? [])
+      }
       // El detalle de la base dice el NÚMERO de la orden; en pantalla va
       // SIEMPRE el código (N-0012): se busca por el id de la orden.
       const ids = [...new Set(cuenta.map(m => m.orden_retiro_id).filter(Boolean))]
@@ -1718,6 +1818,19 @@
         if (!r.error) for (const o of r.data ?? []) codigos.set(o.id, o.codigo)
       }
       return { cuenta, codigos }
+    }
+
+    function puedeVerLaCobranza() {
+      return tieneTarea('cobranzas', 'procesar') || tieneTarea('cobranzas', 'ver_todo')
+    }
+
+    // Devuelve una copia: con cobranza_id en los movimientos de cobranza si
+    // los dos listados cierran uno a uno, o la cuenta tal cual si no.
+    function aparearCobranzas(cuenta, movs) {
+      if (!Array.isArray(movs) || movs.length !== cuenta.length) return cuenta
+      const iguales = cuenta.every((m, i) => movs[i] && movs[i].tipo === m.tipo && movs[i].fecha === m.fecha && Number(movs[i].importe) === Number(m.importe))
+      if (!iguales) return cuenta
+      return cuenta.map((m, i) => m.tipo === 'cobranza' && movs[i].cobranza_id ? { ...m, cobranza_id: movs[i].cobranza_id } : m)
     }
 
     // "Orden de retiro N° 12 · motivo" → "Orden de retiro N-0012 · motivo".
@@ -1745,11 +1858,15 @@
         `${limite !== null ? `<p class="ad-texto-suave">${esc('Límite de crédito ' + importeHoja(limite))}</p>` : ''}` +
         `${pasa ? '<div class="ad-aviso ad-aviso--grave">Pasa su límite de crédito.</div>' : ''}</div>`
       if (!c.cuenta.length) return cabecera + '<div class="ad-vacio">Todavía no tiene movimientos.</div>'
-      const filas = [...c.cuenta].reverse().map(m =>
-        `<div class="ad-renglon"><div><div class="ad-renglon__desc">${esc(detalleMovimiento(m, c.codigos))}</div>` +
-        `<div class="ad-renglon__lotes">${esc(fechaCorta(m.fecha) + ' · ' + (ETIQUETA_MOVIMIENTO[m.tipo] ?? m.tipo))}</div></div>` +
-        `<div class="ad-renglon__plata"><div class="ad-fila__importe">${esc(importeHoja(m.importe))}</div>` +
-        `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div></div>`).join('')
+      // Una cobranza asentada se abre (su detalle, con "Reabrir").
+      const filas = [...c.cuenta].reverse().map(m => {
+        const abre = m.tipo === 'cobranza' && m.cobranza_id && puedeVerLaCobranza()
+        const inicio = abre ? `<button type="button" class="ad-renglon ad-renglon--boton" data-cuenta-cobranza="${esc(m.cobranza_id)}">` : '<div class="ad-renglon">'
+        return inicio + `<div><div class="ad-renglon__desc">${esc(detalleMovimiento(m, c.codigos))}</div>` +
+          `<div class="ad-renglon__lotes">${esc(fechaCorta(m.fecha) + ' · ' + (ETIQUETA_MOVIMIENTO[m.tipo] ?? m.tipo))}${abre ? ' · <span class="ad-renglon__ver">Ver la cobranza ›</span>' : ''}</div></div>` +
+          `<div class="ad-renglon__plata"><div class="ad-fila__importe">${esc(importeHoja(m.importe))}</div>` +
+          `<div class="ad-texto-suave">${esc('saldo ' + importeHoja(m.saldo))}</div></div>${abre ? '</button>' : '</div>'}`
+      }).join('')
       return cabecera + `<div class="ad-tarjeta">${filas}</div>`
     }
 
@@ -3216,6 +3333,572 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // COBRANZAS POR ASENTAR — con cobranzas:procesar (27/09/2026)
+    //
+    // El CHOFER carga la cobranza en modulos/cobranzas.html escribiendo el
+    // nombre del cliente como él lo llama ("Caserato"): NO ve ninguna lista de
+    // clientes ni de cuentas, y su pantalla no cambió. Acá, quien controla
+    // (cobranzas:procesar) elige a qué cliente corresponde y la asienta con
+    // asentar_cobranza(): recién ahí baja la deuda del cliente, y lo que
+    // escribió el chofer queda como apodo de ese cliente, así la próxima vez
+    // aparece sugerido solo.
+    //
+    // Las reglas viven en la base y la pantalla no las repite:
+    // - cobranzas_por_asentar() trae SOLO las "registrada", con los clientes
+    //   'sugeridos' (nombre, razón social o apodo iguales a lo que escribió el
+    //   chofer; sin la fábrica de pruebas);
+    // - asentar_cobranza(p_id, p_cliente_id) la asienta, le pone el cliente y
+    //   su empresa, descuenta el total y devuelve { importe, saldo_cliente };
+    // - reabrir_cobranza(p_id, p_motivo) la vuelve a "por asentar" y devuelve
+    //   la deuda al cliente con un movimiento que compensa.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    // El buscador de todos los clientes muestra hasta estos; el resto se
+    // encuentra escribiendo.
+    const MAX_RESULTADOS_CLIENTES = 30
+    const ETIQUETA_ESTADO_COBRANZA = { registrada: 'Por asentar', procesada: 'Asentada', anulada: 'Anulada' }
+
+    function puedeAsentar() {
+      return tieneTarea('cobranzas', 'procesar')
+    }
+
+    // Ver una cobranza (sus cheques y sus fotos): la base la deja ver a quien
+    // la cargó o a quien tiene cobranzas:ver_todo. Con procesar sin ver_todo
+    // las filas de otros no llegan, y la pantalla lo dice.
+    function puedeVerTodasLasCobranzas() {
+      return tieneTarea('cobranzas', 'ver_todo')
+    }
+
+    function cobranzasVacio() {
+      return {
+        lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null,
+        clientes: null, errorClientes: null, asentando: null, hechos: new Map(),
+      }
+    }
+
+    // La tarjeta sale de una fila de cobranzas_por_asentar() (o de la cobranza
+    // abierta, con la misma forma).
+    function datosCobranza(fila) {
+      return {
+        id: fila?.cobranza_id ?? fila?.id ?? null,
+        fecha: fila?.fecha ?? null,
+        escrito: fila?.cliente_escrito ?? fila?.cliente ?? '',
+        cargadaPor: fila?.cargada_por ?? fila?.cargada_por_nombre ?? null,
+        efectivo: fila?.efectivo ?? null,
+        cheques: fila?.cheques ?? fila?.cantidad_cheques ?? 0,
+        total: fila?.total ?? null,
+        moneda: fila?.moneda ?? 'ARS',
+        observaciones: fila?.observaciones ?? null,
+        sugeridos: Array.isArray(fila?.sugeridos) ? fila.sugeridos : [],
+        estado: fila?.estado ?? 'registrada',
+      }
+    }
+
+    async function leerPorAsentar() {
+      const { data, error } = await supabase.rpc('cobranzas_por_asentar')
+      if (error) throw error
+      // null = la base dice que no tiene el permiso: no hay nada para mostrar.
+      return Array.isArray(data) ? data : []
+    }
+
+    // Los cheques y las fotos de varias cobranzas, en dos consultas y sin
+    // embeds (estas tablas tienen FKs que vuelven ambiguos los embeds).
+    async function leerChequesDe(ids) {
+      const cheques = new Map(), fotos = new Map()
+      if (!ids.length) return { cheques, fotos }
+      const [ch, fo] = await Promise.all([
+        supabase.from('cobranza_cheques')
+          .select('id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado')
+          .in('cobranza_id', ids).order('created_at'),
+        supabase.from('cobranza_fotos').select('id, cobranza_id, storage_path').in('cobranza_id', ids),
+      ])
+      if (ch.error) throw ch.error
+      if (fo.error) throw fo.error
+      for (const x of ch.data ?? []) cheques.set(x.cobranza_id, [...(cheques.get(x.cobranza_id) ?? []), x])
+      for (const x of fo.data ?? []) fotos.set(x.id, x)
+      return { cheques, fotos }
+    }
+
+    // El nombre de cada banco (bancos_bcra). Si no se puede leer, el cheque
+    // muestra el código: un banco que falta no frena nada.
+    async function asegurarBancos() {
+      if (estado.bancos) return
+      const { data, error } = await supabase.from('bancos_bcra').select('codigo, denominacion')
+      if (error) { console.error('No se pudieron leer los bancos:', error); estado.bancos = new Map(); return }
+      estado.bancos = new Map((data ?? []).map(b => [b.codigo, b.denominacion]))
+    }
+
+    function nombreBanco(codigo) {
+      return estado.bancos?.get(codigo) ?? (codigo ? 'Banco ' + codigo : 'Banco')
+    }
+
+    // TODOS los clientes activos de las empresas de quien asienta: la tabla
+    // clientes solo le da los de las empresas donde tiene Retiros o Pedidos
+    // (su policy). Sin la fábrica de pruebas para una cuenta real.
+    async function asegurarClientesAsentar() {
+      const cb = estado.cobranzas
+      if (cb.clientes) return
+      const { data, error } = await supabase.from('clientes')
+        .select('id, nombre, razon_social, apodos, unidad_negocio_id').eq('activo', true).order('nombre')
+      if (error) throw error
+      cb.clientes = sinUnidadesDePrueba(data ?? [], estado.fabrica, c => c.unidad_negocio_id)
+    }
+
+    function nombreEmpresa(unidadId) {
+      return (estado.empresas ?? []).find(e => e.id === unidadId)?.nombre ?? ''
+    }
+
+    // El buscador: nombre, razón social y apodos, sin acentos ni mayúsculas.
+    function clientesParaAsentar(lista, busqueda) {
+      const q = normalizar(busqueda)
+      const todos = Array.isArray(lista) ? lista : []
+      const ok = !q ? todos : todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
+        (Array.isArray(c.apodos) && c.apodos.some(a => normalizar(a).includes(q))))
+      return [...ok].sort((a, b) => normalizar(a.nombre).localeCompare(normalizar(b.nombre)))
+    }
+
+    function importeCob(n, moneda = 'ARS') {
+      return importeHoja(n, moneda)
+    }
+
+    // "Le queda un saldo de $ 12.000,00" / "a favor" / "en cero".
+    function textoSaldoCliente(saldo) {
+      if (saldo === null || saldo === undefined || saldo === '' || !Number.isFinite(Number(saldo))) return 'No se pudo leer el saldo que le queda.'
+      const n = Number(saldo)
+      if (n === 0) return 'Su cuenta queda en cero.'
+      if (n < 0) return `Le queda un saldo a favor de ${importeCob(-n)}.`
+      return `Le queda un saldo de ${importeCob(n)}.`
+    }
+
+    function htmlChequeCob(ch) {
+      const pago = ch.tipo === 'diferido' ? 'paga el ' + fechaCorta(ch.fecha_pago) : 'a la vista'
+      const linea = `${importeCob(ch.importe)} · ${nombreBanco(ch.banco_codigo)} · Nº ${ch.numero ?? '—'} · ${pago}`
+      const foto = ch.foto_id ? `<button type="button" class="ad-btn ad-btn--suave ad-cob__foto" data-cob-foto="${esc(ch.foto_id)}">Ver la foto</button>` : ''
+      return `<div class="ad-cob__cheque"><span class="ad-cob__cheque-texto">${esc(linea)}</span>${foto}</div>`
+    }
+
+    function htmlChequesCob(c, cheques) {
+      const n = Number(c.cheques) || 0
+      if (!n) return ''
+      if (estado.cobranzas.errorCheques) return `<div class="ad-aviso">${esc(estado.cobranzas.errorCheques)}</div>`
+      const lista = cheques ?? []
+      if (!lista.length) {
+        return `<div class="ad-aviso">${esc(n === 1 ? 'Tiene 1 cheque' : 'Tiene ' + n + ' cheques')}, pero con tu usuario no se pueden ver (la cargó otra persona y hace falta el permiso de ver todas las cobranzas).</div>`
+      }
+      return `<div class="ad-cob__cheques">${lista.map(htmlChequeCob).join('')}</div>`
+    }
+
+    // Un cliente para elegir: nombre, razón social si es otra, y la empresa.
+    function htmlOpcionCliente(cl, elegidoId, sugerido) {
+      const empresa = cl.empresa ?? nombreEmpresa(cl.unidad_negocio_id)
+      const razon = limpio(cl.razon_social) && normalizar(cl.razon_social) !== normalizar(cl.nombre) ? cl.razon_social : ''
+      const detalle = [razon, empresa].filter(Boolean).join(' · ')
+      return `<button type="button" class="ad-opcion-cliente${sugerido ? ' ad-opcion-cliente--sugerido' : ''}" data-asentar-cliente="${esc(cl.cliente_id ?? cl.id)}" data-asentar-sugerido="${sugerido ? '1' : '0'}" aria-pressed="${(cl.cliente_id ?? cl.id) === elegidoId ? 'true' : 'false'}">` +
+        `<span class="ad-opcion-cliente__nombre">${esc(cl.nombre)}</span>` +
+        `${detalle ? `<span class="ad-opcion-cliente__detalle">${esc(detalle)}</span>` : ''}</button>`
+    }
+
+    // Los resultados del buscador. Se dibujan SOLOS (no la tarjeta entera):
+    // redibujar la tarjeta en cada tecla le sacaría el foco al campo.
+    function htmlResultadosAsentar(a) {
+      const cb = estado.cobranzas
+      if (cb.errorClientes) return `<div class="ad-aviso ad-aviso--grave">${esc(cb.errorClientes)}</div>`
+      if (cb.clientes === null) return '<div class="ad-texto-suave">Cargando los clientes…</div>'
+      if (!cb.clientes.length) {
+        return '<div class="ad-aviso">Con tu usuario no se ve la lista de clientes de ninguna empresa (la da el permiso de Órdenes de retiro o de Pedidos en cada empresa)' +
+          (a.sugeridos.length ? ': elegí uno de los sugeridos.' : '. Pedile a quien administra los permisos que te lo dé.') + '</div>'
+      }
+      const sugeridosIds = new Set(a.sugeridos.map(s => s.cliente_id))
+      const lista = clientesParaAsentar(cb.clientes, a.busqueda).filter(c => !sugeridosIds.has(c.id))
+      if (!lista.length) return `<div class="ad-texto-suave">${esc(limpio(a.busqueda) ? 'Ningún cliente coincide con «' + limpio(a.busqueda) + '».' : 'No hay otros clientes.')}</div>`
+      const mas = lista.length - MAX_RESULTADOS_CLIENTES
+      return `<div class="ad-opciones-clientes">${lista.slice(0, MAX_RESULTADOS_CLIENTES).map(c => htmlOpcionCliente(c, a.cliente?.id, false)).join('')}</div>` +
+        (mas > 0 ? `<p class="ad-texto-suave">${esc(mas === 1 ? 'Y 1 cliente más: seguí escribiendo.' : 'Y ' + mas + ' clientes más: seguí escribiendo.')}</p>` : '')
+    }
+
+    function htmlPanelAsentar(c, a) {
+      const sugeridos = a.sugeridos.length
+        ? `<p class="ad-texto-suave">${esc(a.sugeridos.length === 1 ? 'Sugerido por lo que escribió el chofer:' : 'Sugeridos por lo que escribió el chofer:')}</p>` +
+          `<div class="ad-opciones-clientes">${a.sugeridos.map(s => htmlOpcionCliente(s, a.cliente?.id, true)).join('')}</div>`
+        : `<p class="ad-texto-suave">${esc('Ningún cliente se llama «' + limpio(c.escrito) + '» ni tiene ese apodo. Buscalo:')}</p>`
+      const elegido = a.cliente
+        ? `<div class="ad-aviso">${esc('Se va a asentar en la cuenta de ' + a.cliente.nombre + (a.cliente.empresa ? ' (' + a.cliente.empresa + ')' : '') + ': baja su deuda en ' + importeCob(c.total, c.moneda) + '.')}</div>`
+        : ''
+      return `<div class="ad-panel" id="ad-asentar-panel">` +
+        `<h3 class="ad-subtitulo" style="margin-top:0">¿De qué cliente es?</h3>${sugeridos}` +
+        `<div class="ad-campo" style="margin-top:0.75rem"><label for="ad-asentar-buscar">${a.sugeridos.length ? '¿Es otro? Buscalo entre todos los clientes' : 'Buscar entre todos los clientes'} (nombre, razón social o apodo)</label>` +
+        `<input type="search" class="ad-input" id="ad-asentar-buscar" autocomplete="off" maxlength="120" value="${esc(a.busqueda)}"></div>` +
+        `<div id="ad-asentar-resultados">${htmlResultadosAsentar(a)}</div>${elegido}` +
+        `${a.error ? `<p class="ad-error-pegado">${esc(a.error)}</p>` : ''}` +
+        `<div class="ad-panel__acciones">` +
+        `<button type="button" class="ad-btn" id="ad-asentar-confirmar"${a.enviando ? ' disabled' : ''}>${a.enviando ? 'Asentando…' : 'Asentar en esa cuenta'}</button>` +
+        `<button type="button" class="ad-btn ad-btn--suave" id="ad-asentar-cancelar">Cancelar</button></div></div>`
+    }
+
+    function htmlHechoCob(h) {
+      const cuenta = h.cliente.nombre + (h.cliente.empresa ? ' (' + h.cliente.empresa + ')' : '')
+      return `<div class="ad-aviso ad-cob__hecho" role="status"><strong>Asentada.</strong> ` +
+        `${esc('Se descontaron ' + importeCob(h.importe) + ' de la cuenta de ' + cuenta + '. ' + textoSaldoCliente(h.saldo))}</div>`
+    }
+
+    // La tarjeta de una cobranza: lo que escribió el chofer bien grande, quién
+    // la cargó y cuándo, efectivo, cheques (con su foto), total y
+    // observaciones. `conAcciones`: en la lista, el botón Asentar.
+    function htmlTarjetaCobranza(c, { cheques = null, asentando = null, hecho = null, conAcciones = true } = {}) {
+      const datos = [
+        ['Efectivo', Number(c.efectivo) > 0 ? importeCob(c.efectivo, c.moneda) : 'Sin efectivo'],
+        ['Cheques', String(Number(c.cheques) || 0)],
+        ['Total', importeCob(c.total, c.moneda)],
+      ]
+      if (limpio(c.observaciones)) datos.push(['Observaciones', limpio(c.observaciones)])
+      const meta = 'Lo cargó ' + (c.cargadaPor || 'alguien') + ' · ' + fechaCorta(c.fecha)
+      let pie = ''
+      if (hecho) pie = htmlHechoCob(hecho) + `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--suave" data-cobranza-listo="${esc(c.id)}">Listo</button></div>`
+      else if (asentando) pie = htmlPanelAsentar(c, asentando)
+      else if (conAcciones && puedeAsentar() && c.estado === 'registrada') {
+        pie = `<div class="ad-panel__acciones"><button type="button" class="ad-btn" data-asentar="${esc(c.id)}">Asentar</button></div>`
+      }
+      return `<article class="ad-tarjeta ad-cob${hecho ? ' ad-cob--hecha' : ''}" data-cobranza="${esc(c.id)}">` +
+        `<div class="ad-cob__rotulo">Lo que escribió el chofer</div>` +
+        `<div class="ad-cob__escrito">${esc('«' + (limpio(c.escrito) || '—') + '»')}</div>` +
+        `<div class="ad-fila__meta">${esc(meta)}</div>` +
+        `<div class="ad-datos" style="margin-top:0.625rem">${datos.map(([k, v]) => htmlDatoAd(k, v)).join('')}</div>` +
+        `${htmlChequesCob(c, cheques)}${pie}</article>`
+    }
+
+    function htmlListaCobranzas() {
+      const cb = estado.cobranzas
+      if (cb.error) return `<div class="ad-aviso ad-aviso--grave">${esc(cb.error)}</div>`
+      if (cb.lista === null) return '<div class="ad-vacio">Cargando las cobranzas…</div>'
+      if (!cb.lista.length) return '<div class="ad-vacio">No hay cobranzas por asentar.</div>'
+      return cb.lista.map(f => {
+        const c = datosCobranza(f)
+        return htmlTarjetaCobranza(c, {
+          cheques: cb.cheques.get(c.id) ?? [],
+          asentando: cb.asentando?.id === c.id ? cb.asentando : null,
+          hecho: cb.hechos.get(c.id) ?? null,
+        })
+      }).join('')
+    }
+
+    function porAsentarPendientes() {
+      const cb = estado.cobranzas
+      return (cb.lista ?? []).filter(f => !cb.hechos.has(f.cobranza_id)).length
+    }
+
+    function pintarCobranzas() {
+      document.getElementById('ad-cobranzas-lista').innerHTML = htmlListaCobranzas()
+      const cb = estado.cobranzas
+      const n = cb.lista ? porAsentarPendientes() : null
+      document.getElementById('ad-cobranzas-cuenta').textContent = n === null ? '' : `${n} por asentar`
+      document.getElementById('ad-cobranzas-aviso').innerHTML = cb.lista && !puedeVerTodasLasCobranzas()
+        ? '<div class="ad-aviso">Sin el permiso de ver todas las cobranzas, los cheques de las que cargaron otras personas no se ven. Se pueden asentar igual.</div>' : ''
+      enfocarBuscadorAsentar()
+    }
+
+    // Al abrir el panel de asentar, el foco va al buscador si no hay
+    // sugeridos (lo único que hay para hacer es buscar).
+    function enfocarBuscadorAsentar() {
+      const a = estado.cobranzas.asentando
+      if (!a || !a.enfocar) return
+      a.enfocar = false
+      document.getElementById('ad-asentar-buscar')?.focus()
+    }
+
+    let turnoCobranzas = 0
+
+    async function mostrarCobranzas() {
+      if (!puedeAsentar()) { mostrarInicio(); return }
+      mostrarVista('ad-vista-cobranzas')
+      const turno = ++turnoCobranzas
+      const clientes = estado.cobranzas.clientes
+      estado.cobranzas = { ...cobranzasVacio(), clientes }
+      pintarCobranzas()
+      try {
+        const [lista] = await Promise.all([leerPorAsentar(), asegurarBancos()])
+        if (turno !== turnoCobranzas) return
+        estado.cobranzas.lista = lista
+        try {
+          const r = await leerChequesDe(lista.map(f => f.cobranza_id))
+          if (turno !== turnoCobranzas) return
+          estado.cobranzas.cheques = r.cheques
+          estado.cobranzas.fotos = r.fotos
+        } catch (err) {
+          console.error('No se pudieron leer los cheques:', err)
+          estado.cobranzas.errorCheques = 'No se pudieron leer los cheques. Revisá la conexión.'
+        }
+      } catch (err) {
+        if (turno !== turnoCobranzas) return
+        console.error('No se pudieron leer las cobranzas por asentar:', err)
+        estado.cobranzas.error = 'No se pudieron leer las cobranzas por asentar. Revisá la conexión y volvé a entrar.'
+      }
+      pintarCobranzas()
+    }
+
+    // ── Asentar ──────────────────────────────────────────────────────────
+
+    // Abre el panel de una cobranza (de la lista, o la abierta en su detalle).
+    async function abrirAsentar(id) {
+      if (!puedeAsentar()) return
+      const cb = estado.cobranzas
+      const fila = (cb.lista ?? []).find(f => f.cobranza_id === id) ?? (estado.cobranza?.fila?.cobranza_id === id ? estado.cobranza.fila : null)
+      if (!fila) return
+      const c = datosCobranza(fila)
+      cb.asentando = { id, sugeridos: c.sugeridos, busqueda: '', cliente: null, error: null, enviando: false, enfocar: !c.sugeridos.length }
+      repintarAsentar()
+      if (cb.clientes === null) {
+        try { await asegurarClientesAsentar() } catch (err) {
+          console.error('No se pudieron leer los clientes:', err)
+          cb.errorClientes = 'No se pudo leer la lista de clientes. Revisá la conexión.'
+        }
+        repintarResultadosAsentar()
+      }
+    }
+
+    // Redibuja donde esté el panel: la lista o el detalle de una cobranza.
+    function repintarAsentar() {
+      if (estado.vista === 'ad-vista-cobranza') pintarCobranza()
+      else pintarCobranzas()
+    }
+
+    function repintarResultadosAsentar() {
+      const a = estado.cobranzas.asentando
+      const el = document.getElementById('ad-asentar-resultados')
+      if (a && el) el.innerHTML = htmlResultadosAsentar(a)
+    }
+
+    function buscarClienteAsentar(texto) {
+      const a = estado.cobranzas.asentando
+      if (!a) return
+      a.busqueda = texto
+      repintarResultadosAsentar()
+    }
+
+    function elegirClienteAsentar(id) {
+      const cb = estado.cobranzas
+      const a = cb.asentando
+      if (!a) return
+      const sug = a.sugeridos.find(s => s.cliente_id === id)
+      const cl = sug ? { id, nombre: sug.nombre, empresa: sug.empresa ?? '' }
+        : (() => { const x = (cb.clientes ?? []).find(y => y.id === id); return x ? { id, nombre: x.nombre, empresa: nombreEmpresa(x.unidad_negocio_id) } : null })()
+      if (!cl) return
+      a.cliente = cl
+      a.error = null
+      repintarAsentar()
+    }
+
+    function cancelarAsentar() {
+      estado.cobranzas.asentando = null
+      repintarAsentar()
+    }
+
+    function parametrosAsentar(a) {
+      return { p_id: a.id, p_cliente_id: a.cliente.id }
+    }
+
+    async function confirmarAsentar() {
+      const cb = estado.cobranzas
+      const a = cb.asentando
+      if (!a || a.enviando) return
+      if (!a.cliente) { a.error = 'Elegí el cliente: un sugerido o uno del buscador.'; repintarAsentar(); return }
+      a.enviando = true
+      a.error = null
+      repintarAsentar()
+      try {
+        const { data, error } = await supabase.rpc('asentar_cobranza', parametrosAsentar(a))
+        if (error) throw error
+        const hecho = { importe: data?.importe ?? null, saldo: data?.saldo_cliente ?? null, cliente: a.cliente }
+        cb.asentando = null
+        cb.hechos.set(a.id, hecho)
+        mostrarExito('Cobranza asentada.')
+        if (estado.vista === 'ad-vista-cobranza' && estado.cobranza) { estado.cobranza.hecho = hecho; await recargarCobranza() }
+        else pintarCobranzas()
+      } catch (err) {
+        console.error('No se pudo asentar:', err)
+        // Los mensajes de la base ya vienen escritos para una persona.
+        a.enviando = false
+        a.error = err?.message || 'No se pudo asentar la cobranza. Probá de nuevo.'
+        repintarAsentar()
+      }
+    }
+
+    function quitarHecho(id) {
+      const cb = estado.cobranzas
+      cb.hechos.delete(id)
+      cb.lista = (cb.lista ?? []).filter(f => f.cobranza_id !== id)
+      pintarCobranzas()
+    }
+
+    // ── Una cobranza (desde la cuenta de un cliente o desde un link) ─────────
+
+    async function leerCobranza(id) {
+      const [v, t] = await Promise.all([
+        supabase.from('v_cobranzas')
+          .select('id, cliente, fecha, efectivo, cantidad_cheques, total, moneda, observaciones, estado, cargada_por_nombre, procesada_por_nombre, procesada_en, unidad_negocio_id, unidad_negocio_nombre')
+          .eq('id', id).maybeSingle(),
+        supabase.from('cobranzas').select('id, cliente_id').eq('id', id).maybeSingle(),
+      ])
+      if (v.error) throw v.error
+      if (!v.data) return null
+      const clienteId = t.error ? null : (t.data?.cliente_id ?? null)
+      let cliente = null
+      if (clienteId) {
+        const r = await supabase.from('clientes').select('id, nombre, unidad_negocio_id').eq('id', clienteId).maybeSingle()
+        if (!r.error && r.data) cliente = { id: r.data.id, nombre: r.data.nombre, empresa: nombreEmpresa(r.data.unidad_negocio_id) }
+      }
+      // Si está por asentar, los sugeridos salen de cobranzas_por_asentar().
+      let sugeridos = []
+      if (v.data.estado === 'registrada' && puedeAsentar()) {
+        try { sugeridos = (await leerPorAsentar()).find(f => f.cobranza_id === id)?.sugeridos ?? [] } catch (err) { console.error('No se pudieron leer los sugeridos:', err) }
+      }
+      const { cheques, fotos } = await leerChequesDe([id])
+      return { fila: { ...v.data, cobranza_id: id, sugeridos }, clienteId, cliente, cheques: cheques.get(id) ?? [], fotos }
+    }
+
+    function htmlCobranzaAbierta(d) {
+      if (d.error) return `<div class="ad-aviso ad-aviso--grave">${esc(d.error)}</div>`
+      if (!d.fila) return '<div class="ad-vacio">Cargando la cobranza…</div>'
+      const c = datosCobranza(d.fila)
+      const cb = estado.cobranzas
+      let estadoTxt = ETIQUETA_ESTADO_COBRANZA[c.estado] ?? c.estado
+      if (c.estado === 'procesada') {
+        const quien = [d.fila.procesada_por_nombre ? 'por ' + d.fila.procesada_por_nombre : null, d.cliente ? 'en la cuenta de ' + d.cliente.nombre + (d.cliente.empresa ? ' (' + d.cliente.empresa + ')' : '') : (d.clienteId ? 'en la cuenta de un cliente que no podés ver' : 'sin cliente (se asentó antes de que existieran las cuentas de clientes)')].filter(Boolean).join(' ')
+        estadoTxt += ' ' + quien
+      }
+      const cabecera = `<div class="ad-aviso${c.estado === 'anulada' ? ' ad-aviso--grave' : ''}">${esc(estadoTxt + '.')}</div>`
+      const tarjeta = htmlTarjetaCobranza(c, {
+        cheques: d.cheques, conAcciones: true,
+        asentando: cb.asentando?.id === c.id ? cb.asentando : null,
+        hecho: d.hecho ?? null,
+      })
+      let reabrir = ''
+      if (c.estado === 'procesada' && puedeAsentar()) {
+        reabrir = d.reabriendo
+          ? `<div class="ad-panel ad-panel--peligro" id="ad-reabrir-panel"><div class="ad-campo"><label for="ad-reabrir-motivo">¿Por qué se reabre? (obligatorio)</label>` +
+            `<textarea class="ad-textarea" id="ad-reabrir-motivo" maxlength="300">${esc(d.reabriendo.motivo)}</textarea>` +
+            `<span class="ad-campo__ayuda">La cobranza vuelve a estar por asentar y ${esc(d.clienteId ? 'la deuda vuelve a la cuenta del cliente' : 'no tiene cuenta de cliente que tocar')}.</span></div>` +
+            `${d.reabriendo.error ? `<p class="ad-error-pegado">${esc(d.reabriendo.error)}</p>` : ''}` +
+            `<div class="ad-panel__acciones"><button type="button" class="ad-btn ad-btn--peligro" id="ad-reabrir-si"${d.reabriendo.enviando ? ' disabled' : ''}>Reabrir la cobranza</button>` +
+            `<button type="button" class="ad-btn ad-btn--suave" id="ad-reabrir-no">Cancelar</button></div></div>`
+          : `<div class="ad-barra-acciones"><button type="button" class="ad-btn ad-btn--secundario" id="ad-cobranza-reabrir">Reabrir</button></div>`
+      }
+      return cabecera + reabrir + tarjeta
+    }
+
+    function pintarCobranza() {
+      const d = estado.cobranza
+      if (!d) return
+      document.getElementById('ad-cobranza-titulo').textContent = d.fila ? `Cobranza del ${fechaCorta(d.fila.fecha)}` : 'Cobranza'
+      document.getElementById('ad-cobranza-cuerpo').innerHTML = htmlCobranzaAbierta(d)
+      document.getElementById('ad-cobranza-volver').textContent = d.origen === 'cuenta' ? '‹ Cuenta del cliente' : '‹ Cobranzas por asentar'
+      enfocarBuscadorAsentar()
+    }
+
+    let turnoCobranza = 0
+
+    // origen: 'cuenta' (la cuenta del cliente `clienteOrigen`), 'lista' o 'link'.
+    async function abrirCobranza(id, { origen = 'lista', clienteOrigen = null } = {}) {
+      if (!RE_UUID.test(String(id ?? ''))) return
+      const turno = ++turnoCobranza
+      estado.cobranzas.asentando = null
+      estado.cobranza = { id, origen, clienteOrigen, fila: null, cheques: [], fotos: new Map(), cliente: null, clienteId: null, error: null, reabriendo: null, hecho: null }
+      mostrarVista('ad-vista-cobranza')
+      pintarCobranza()
+      await recargarCobranza(turno)
+    }
+
+    async function recargarCobranza(turno = ++turnoCobranza) {
+      const d = estado.cobranza
+      if (!d) return
+      try {
+        await asegurarBancos()
+        const r = await leerCobranza(d.id)
+        if (turno !== turnoCobranza || estado.cobranza !== d) return
+        if (!r) d.error = 'No se encontró la cobranza. Puede que no exista o que no tengas permiso para verla.'
+        else Object.assign(d, r)
+      } catch (err) {
+        if (turno !== turnoCobranza || estado.cobranza !== d) return
+        console.error('No se pudo leer la cobranza:', err)
+        d.error = 'No se pudo leer la cobranza. Revisá la conexión y volvé a entrar.'
+      }
+      pintarCobranza()
+    }
+
+    function volverDeCobranza() {
+      const d = estado.cobranza
+      estado.cobranza = null
+      estado.cobranzas.asentando = null
+      if (d?.origen === 'cuenta' && d.clienteOrigen) abrirCliente(d.clienteOrigen)
+      else if (puedeAsentar()) mostrarCobranzas()
+      else mostrarInicio()
+    }
+
+    // ── Reabrir (con motivo) ─────────────────────────────────────────────────
+
+    function pedirReabrir() {
+      const d = estado.cobranza
+      if (!d || !puedeAsentar()) return
+      d.reabriendo = { motivo: '', error: null, enviando: false }
+      pintarCobranza()
+      document.getElementById('ad-reabrir-motivo')?.focus()
+    }
+
+    function cancelarReabrir() {
+      if (estado.cobranza) estado.cobranza.reabriendo = null
+      pintarCobranza()
+    }
+
+    async function confirmarReabrir() {
+      const d = estado.cobranza
+      const r = d?.reabriendo
+      if (!r || r.enviando) return
+      r.motivo = document.getElementById('ad-reabrir-motivo')?.value ?? r.motivo
+      const motivo = limpio(r.motivo)
+      if (motivo.length < LARGO_MINIMO_MOTIVO) { r.error = 'Escribí por qué se reabre.'; pintarCobranza(); return }
+      r.enviando = true
+      r.error = null
+      pintarCobranza()
+      try {
+        const { error } = await supabase.rpc('reabrir_cobranza', { p_id: d.id, p_motivo: motivo })
+        if (error) throw error
+        mostrarExito(d.clienteId ? 'Cobranza reabierta: la deuda volvió a la cuenta del cliente.' : 'Cobranza reabierta.')
+        d.reabriendo = null
+        d.hecho = null
+        estado.saldos = null
+        await recargarCobranza()
+      } catch (err) {
+        console.error('No se pudo reabrir:', err)
+        r.enviando = false
+        r.error = err?.message || 'No se pudo reabrir la cobranza. Probá de nuevo.'
+        pintarCobranza()
+      }
+    }
+
+    // ── La foto de un cheque ─────────────────────────────────────────────────
+    // Firmada por 300 segundos al tocarla: nunca un link largo guardado.
+
+    async function verFotoCobranza(fotoId) {
+      const foto = estado.cobranzas.fotos.get(fotoId) ?? estado.cobranza?.fotos?.get?.(fotoId) ?? null
+      if (!foto?.storage_path) { mostrarError('Ese cheque no tiene una foto que se pueda ver.'); return }
+      try {
+        const { data, error } = await supabase.storage.from('cobranzas').createSignedUrl(foto.storage_path, 300)
+        if (error) throw error
+        document.getElementById('ad-visor-img').src = data.signedUrl
+        document.getElementById('ad-visor').hidden = false
+        document.getElementById('ad-visor-cerrar').focus()
+      } catch (err) {
+        console.error('No se pudo abrir la foto:', err)
+        mostrarError('No se pudo abrir la foto. Revisá la conexión.')
+      }
+    }
+
+    function cerrarVisorCobranza() {
+      document.getElementById('ad-visor').hidden = true
+      document.getElementById('ad-visor-img').src = ''
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // EVENTOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -3264,6 +3947,10 @@
       document.getElementById('ad-alta-guardar').addEventListener('click', () => guardarAlta())
       document.getElementById('ad-alta-cancelar').addEventListener('click', () => { estado.alta = null; pintarClientes() })
       document.getElementById('ad-cliente-volver').addEventListener('click', () => mostrarClientes())
+      document.getElementById('ad-cliente-cuerpo').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-cuenta-cobranza]')
+        if (b && estado.cliente) abrirCobranza(b.dataset.cuentaCobranza, { origen: 'cuenta', clienteOrigen: estado.cliente.id })
+      })
       document.getElementById('ad-btn-ficha').addEventListener('click', () => { if (estado.cliente) abrirFicha(estado.cliente.id) })
       document.getElementById('ad-btn-saldo-inicial').addEventListener('click', () => abrirPanelCliente('saldo'))
       document.getElementById('ad-btn-ajuste').addEventListener('click', () => abrirPanelCliente('ajuste'))
@@ -3317,6 +4004,31 @@
       // Importar
       document.getElementById('ad-importar-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-cheques-volver').addEventListener('click', () => mostrarInicio())
+      // Cobranzas por asentar: la lista y el detalle comparten el panel de
+      // asentar (un solo panel abierto a la vez: ids únicos).
+      document.getElementById('ad-cobranzas-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-cobranza-volver').addEventListener('click', () => volverDeCobranza())
+      for (const cont of ['ad-cobranzas-lista', 'ad-cobranza-cuerpo']) {
+        const el = document.getElementById(cont)
+        el.addEventListener('click', (e) => {
+          let b
+          if ((b = e.target.closest('[data-asentar]'))) abrirAsentar(b.dataset.asentar)
+          else if ((b = e.target.closest('[data-asentar-cliente]'))) elegirClienteAsentar(b.dataset.asentarCliente)
+          else if (e.target.closest('#ad-asentar-confirmar')) confirmarAsentar()
+          else if (e.target.closest('#ad-asentar-cancelar')) cancelarAsentar()
+          else if ((b = e.target.closest('[data-cobranza-listo]'))) quitarHecho(b.dataset.cobranzaListo)
+          else if ((b = e.target.closest('[data-cob-foto]'))) verFotoCobranza(b.dataset.cobFoto)
+          else if (e.target.closest('#ad-cobranza-reabrir')) pedirReabrir()
+          else if (e.target.closest('#ad-reabrir-si')) confirmarReabrir()
+          else if (e.target.closest('#ad-reabrir-no')) cancelarReabrir()
+        })
+        el.addEventListener('input', (e) => {
+          if (e.target.id === 'ad-asentar-buscar') buscarClienteAsentar(e.target.value)
+          else if (e.target.id === 'ad-reabrir-motivo' && estado.cobranza?.reabriendo) estado.cobranza.reabriendo.motivo = e.target.value
+        })
+      }
+      document.getElementById('ad-visor-cerrar').addEventListener('click', () => cerrarVisorCobranza())
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('ad-visor').hidden) cerrarVisorCobranza() })
       document.getElementById('ad-vista-importar').addEventListener('click', (e) => {
         const b = e.target.closest('[data-importar-tipo]')
         if (b) elegirTipoImportar(b.dataset.importarTipo)
@@ -3394,9 +4106,17 @@
       pintarEmpresas()
       // ?seccion=cheques (el link que deja cheques.html, con ?cheque= si se
       // pidió uno): abre la cartera. Cualquier otra cosa, la portada.
-      const pedida = new URLSearchParams(window.location.search).get('seccion')
+      const params = new URLSearchParams(window.location.search)
+      const pedida = params.get('seccion')
       if (pedida === 'cheques' && seccionesVisibles().some(s => s.id === 'cheques')) mostrarCheques()
-      else mostrarInicio()
+      else if (pedida === 'cobranzas' && seccionesVisibles().some(s => s.id === 'cobranzas')) {
+        // El link que deja cobranzas.html: ?seccion=cobranzas&cobranza=<uuid>.
+        // Se limpia la dirección antes de abrir, para que recargar no la reabra.
+        const id = params.get('cobranza')
+        history.replaceState(null, '', window.location.pathname)
+        if (id && RE_UUID.test(id)) abrirCobranza(id, { origen: 'link' })
+        else mostrarCobranzas()
+      } else mostrarInicio()
       if (window.lucide) window.lucide.createIcons()
     }
 

@@ -41,6 +41,7 @@ let codigo = `
   var turnoPendientes = 0
 `
 codigo += extraerConst(src, 'MODULO_DE_PENDIENTE')
+codigo += extraerConst(src, 'TAMBIEN_EN_TARJETA')
 codigo += extraerConst(src, 'MODULOS')
 for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
 codigo += `return { ${FUNCIONES.join(', ')}, MODULO_DE_PENDIENTE, MODULOS,
@@ -111,7 +112,10 @@ chk('produccion (conos_por_revisar) → la tarjeta de Producción', S.MODULO_DE_
   chk('caja con 0 no tiene burbuja', !g.has('caja'))
   chk('una cantidad null no se vuelve 0 ni un número', !g.has('gastos'))
   chk('bigint como texto "4" (PostgREST) se lee', g.get('stock')?.total === 4)
-  chk('un módulo que no existe se ignora', ![...g.keys()].some(k => /inventado/.test(k)) && g.size === 3)
+  // Cuatro: las tres de siempre más Administración, donde también se asientan
+  // las cobranzas por controlar (TAMBIEN_EN_TARJETA, 27/09/2026).
+  chk('un módulo que no existe se ignora', ![...g.keys()].some(k => /inventado/.test(k)) && g.size === 4, [...g.keys()].join())
+  chk('las cobranzas por controlar suman también en Administración', g.get('administracion')?.total === 5)
   chk('y se avisa por consola', S.__avisos.some(a => /modulo_inventado/.test(a)))
 }
 

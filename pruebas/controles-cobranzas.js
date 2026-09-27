@@ -87,6 +87,13 @@ try {
     const mov = MOVIDOS[k]
     if (mov && (A.cuenta.get(k) || 0) < n) {
       if (mov.a === 'cheques') { movidos.push(`${k} → cheques.html ${mov.nueva}`); ok++; continue }
+      // A Administración: lo exige controles-administracion.js; acá, el link
+      // que quedó en su lugar.
+      if (mov.a === 'administracion') {
+        movidos.push(`${k} → administracion.html ${mov.nueva} (acá queda ${mov.enCobranzas})`)
+        chk(`sigue estando ${mov.enCobranzas} (el link que reemplaza a ${k})`, (A.cuenta.get(mov.enCobranzas) || 0) >= 1, 'FALTA')
+        continue
+      }
       clave = mov.nueva
       movidos.push(`${k} → cobranzas.html ${clave} (${mov.motivo})`)
       const m2 = A.cuenta.get(clave) || 0

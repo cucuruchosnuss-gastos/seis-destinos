@@ -873,14 +873,15 @@ if (SOLO !== 'render') {
       const nombreAttr = (tramo.match(/([\w-]+)\s*=\s*"[^"]*$/) || [])[1] || ''
       if (/^on/i.test(nombreAttr)) enEvento.push(`${x.linea} (${nombreAttr})`)
       if (/^(href|src|action|formaction|xlink:href)$/i.test(nombreAttr)) {
-        // LA ÚNICA EXCEPCIÓN (22/09/2026): un link RELATIVO a otra página del
-        // módulo con el esquema fijado por el literal ("cheques.html?cheque=")
-        // y SOLO un encodeURIComponent(...) interpolado como valor. Ahí el
-        // valor no puede cambiar a dónde apunta el link ni cerrar el atributo
-        // (encodeURIComponent codifica la comilla doble). Cualquier otra forma
-        // sigue en rojo.
+        // LA ÚNICA EXCEPCIÓN (22/09/2026): un link RELATIVO a otra página con
+        // el esquema y los parámetros fijados por el literal
+        // ("cheques.html?cheque=", "administracion.html?seccion=cobranzas&amp;cobranza=")
+        // y SOLO un encodeURIComponent(...) interpolado como último valor. Ahí
+        // el valor no puede cambiar a dónde apunta el link ni cerrar el
+        // atributo (encodeURIComponent codifica la comilla doble). Cualquier
+        // otra forma sigue en rojo.
         const valorHastaAca = (tramo.match(/[\w-]+\s*=\s*"([^"]*)$/) || [])[1]
-        if (/^href$/i.test(nombreAttr) && /^[a-z-]+\.html\?[a-z_]+=$/.test(valorHastaAca) &&
+        if (/^href$/i.test(nombreAttr) && /^[a-z-]+\.html\?(?:[a-z_]+=[a-z_]+&amp;)*[a-z_]+=$/.test(valorHastaAca) &&
             /^encodeURIComponent\([^()]*\)$/.test(x.expr.trim())) urlsPermitidas.push(`${x.linea}: ${valorHastaAca}\${${x.expr.trim()}}`)
         else enUrl.push(`${x.linea} (${nombreAttr})`)
       }
@@ -892,8 +893,13 @@ if (SOLO !== 'render') {
     enEvento.length === 0, enEvento.join(', '))
   chk('estático: ninguna interpolación cae dentro de un href/src (ahí escapar HTML no alcanza)',
     enUrl.length === 0, enUrl.join(', '))
-  chk('estático: el único href interpolado es el "Ver en Cheques", con encodeURIComponent',
-    urlsPermitidas.length === 1 && /cheques\.html\?cheque=\$\{encodeURIComponent\(ch\.id\)\}$/.test(urlsPermitidas[0]), urlsPermitidas.join(' | '))
+  // Los hrefs interpolados son TRES, y ninguno más: "Ver en Cheques" y los dos
+  // links a Administración (asentar / reabrir, 27/09/2026).
+  chk('estático: los únicos href interpolados son "Ver en Cheques" y los dos de Administración, con encodeURIComponent',
+    urlsPermitidas.length === 3 &&
+    urlsPermitidas.filter(u => /cheques\.html\?cheque=\$\{encodeURIComponent\(ch\.id\)\}$/.test(u)).length === 1 &&
+    urlsPermitidas.filter(u => /administracion\.html\?seccion=cobranzas&amp;cobranza=\$\{encodeURIComponent\(c\.id\)\}$/.test(u)).length === 2,
+    urlsPermitidas.join(' | '))
 }
 
 // ══════════════════════════════════════════════════════════════════════════

@@ -1,26 +1,21 @@
 // Unidad de negocio de cada cobranza — modulos/cobranzas.html (22/09/2026).
 //
-// El repartidor no sabe de qué unidad es la plata: se decide AL ASENTAR.
-// "Controlada, asentar" abre un diálogo propio que pide la unidad y llama a
-// marcar_cobranza_asentada; en una asentada, "Asignar unidad" / "Cambiar"
-// llama a asignar_unidad_cobranza (que deja historial 'unidad_asignada').
+// El repartidor no sabe de qué unidad es la plata. Desde el 27/09/2026 la
+// unidad sale del CLIENTE que se elige al asentar, y asentar vive en
+// Administración (Cobranzas por asentar, asentar_cobranza): acá la unidad
+// SOLO SE MUESTRA. Ya no hay diálogo de la unidad, ni "Controlada, asentar",
+// ni "Asignar unidad" / "Cambiar".
 //
-// Se EJECUTAN las funciones reales —htmlDetalle, htmlHistorial,
-// htmlFilaCobranza, conectarDetalle, conectarDialogos, abrirDialogo,
-// elegirUnidadConDialogo, asentarConUnidad, asignarUnidad, accionSimple,
-// asegurarUnidades— con un document falso que sigue el foco y un supabase
-// falso que anota cada llamada. Lo que se afirma:
+// Se EJECUTAN las funciones reales —htmlDetalle, htmlAccionesDetalle,
+// htmlHistorial, htmlFilaCobranza, conectarDetalle— con un document falso y
+// un supabase falso que anota cada llamada. Lo que se afirma:
 //  - el detalle muestra la unidad escapada; "Sin unidad" en una asentada sin
-//    unidad; el botón "Asignar unidad" / "Cambiar" solo con cobranzas:procesar
-//    y solo en una asentada;
-//  - el historial 'unidad_asignada' nombra la unidad nueva, resuelta contra el
-//    catálogo ("unidad desconocida" si no está), escapada;
-//  - asentar llama a marcar_cobranza_asentada con p_id y p_unidad_negocio_id,
-//    y NUNCA a marcar_cobranza_procesada; cancelar o Escape no llaman nada;
-//  - el diálogo: sin preselección, confirmar deshabilitado hasta elegir, solo
-//    unidades activas (más la actual aunque esté inactiva), una sola se elige
-//    sola, foco adentro y de vuelta al botón;
-//  - el error de la RPC se muestra TAL CUAL.
+//    unidad; NINGÚN botón para cambiarla, con o sin permiso;
+//  - el historial 'unidad_asignada' (de antes) nombra la unidad nueva,
+//    resuelta contra el catálogo ("unidad desconocida" si no está), escapada;
+//  - la fila de una asentada muestra la unidad;
+//  - el fuente no llama a marcar_cobranza_asentada ni a asignar_unidad_cobranza,
+//    ni tiene el diálogo de la unidad.
 //
 // Archivo bajo prueba: ARCHIVO_TEST, o modulos/cobranzas.html.
 
@@ -89,13 +84,8 @@ const PRELUDIO = `
     for (const f of [...(__listenersDoc.get('keydown') ?? [])]) f(ev)
     return ev
   }
-  function __prepararDom() {
-    document.getElementById('cob-dialogo-unidad').querySelectorAll = () =>
-      ['cob-dlg-unidad-select', 'cob-dlg-unidad-cancelar', 'cob-dlg-unidad-si']
-        .map(id => document.getElementById(id)).filter(x => !x.disabled)
-    for (const id of ['cob-dialogo-unidad', 'cob-dialogo-foto', 'cob-dialogo-confirmar']) document.getElementById(id).hidden = true
-    conectarDialogos()
-  }
+  // Sin el diálogo de la unidad (se fue con el asentado a Administración).
+  function __prepararDom() {}
 
   // --- supabase falso --------------------------------------------------------
   var __rpcs = []
@@ -146,11 +136,8 @@ const FUNCIONES = [
   'htmlFilaCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
   'htmlChequeDetalle', 'htmlDatosCheque', 'textoDiasHastaPago', 'textoSalidaCheque', 'textoHistorialCheque',
   'resumirCambios', 'htmlLinkChequeEnCartera', 'conectarDetalle', 'accionSimple',
-  // diálogos
-  'enfocablesDe', 'teclaEnDialogo', 'abrirDialogo', 'cerrarDialogo', 'conectarDialogos', 'pintarBotonUnidad',
-  // unidad
-  'cargarUnidades', 'asegurarUnidades', 'asegurarFabrica', 'unidadesParaElegir', 'elegirUnidadConDialogo',
-  'asentarConUnidad', 'asignarUnidad',
+  // unidad (el catálogo, para nombrarla en el historial)
+  'cargarUnidades', 'asegurarUnidades',
 ]
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ETIQUETA_ESTADO_COBRANZA', 'ETIQUETA_ESTADO_CHEQUE',
@@ -199,18 +186,18 @@ async function pruebas() {
     const hDp = S.htmlDetalle(detalleDe({ ...base, estado: 'procesada', unidad_negocio_id: 'u-dp', unidad_negocio_nombre: 'Dolce Pasta' }))
     chk('detalle con unidad: "Unidad de negocio · Dolce Pasta"',
       /cob-dato__k">Unidad de negocio<\/span>\s*<span class="cob-dato__v">Dolce Pasta/.test(hDp), hDp)
-    chk('detalle asentada con unidad y permiso: botón "Cambiar"', /id="cob-btn-unidad"[^>]*>Cambiar<\/button>/.test(hDp))
+    chk('detalle asentada con unidad y procesar: SIN botón "Cambiar" (la unidad sale del cliente, en Administración)', !/cob-btn-unidad|>Cambiar</.test(hDp))
     chk('detalle asentada con unidad: no dice "Sin unidad"', !/Sin unidad/.test(hDp))
-    chk('el botón de la unidad mide 44px', /id="cob-btn-unidad" style="min-height:44px/.test(hDp))
 
     const hSin = S.htmlDetalle(detalleDe({ ...base, estado: 'procesada', unidad_negocio_id: null, unidad_negocio_nombre: null }))
     chk('asentada sin unidad: "Sin unidad" en gris', /<span style="color:var\(--color-texto-suave\)[^"]*" data-sin-unidad>Sin unidad<\/span>/.test(hSin), hSin)
-    chk('asentada sin unidad con permiso: botón "Asignar unidad"', /id="cob-btn-unidad"[^>]*>Asignar unidad<\/button>/.test(hSin))
+    chk('asentada sin unidad con procesar: SIN botón "Asignar unidad"', !/cob-btn-unidad|Asignar unidad/.test(hSin))
+    chk('asentada con procesar: "Reabrir en Administración" es un link', /id="cob-link-reabrir" href="administracion\.html\?seccion=cobranzas&amp;cobranza=c1"/.test(hSin))
 
     const hReg = S.htmlDetalle(detalleDe({ ...base, estado: 'registrada', unidad_negocio_id: null }))
     chk('por controlar sin unidad: no muestra la fila de la unidad', !/Unidad de negocio/.test(hReg) && !/Sin unidad/.test(hReg))
     chk('por controlar: sin botón de unidad (se elige al asentar)', !/cob-btn-unidad/.test(hReg))
-    chk('por controlar: el botón "Controlada, asentar" conserva su id', /id="cob-btn-procesar">Controlada, asentar<\/button>/.test(hReg))
+    chk('por controlar: "Asentar en Administración" es un link', /id="cob-link-asentar" href="administracion\.html\?seccion=cobranzas&amp;cobranza=c1">Asentar en Administración/.test(hReg))
 
     const hAnu = S.htmlDetalle(detalleDe({ ...base, estado: 'anulada', unidad_negocio_id: 'u-dp', unidad_negocio_nombre: 'Dolce Pasta' }))
     chk('anulada con unidad: se ve la unidad', /Dolce Pasta/.test(hAnu))
@@ -230,8 +217,9 @@ async function pruebas() {
   {
     const S = sandbox({ tareas: [] })
     S.estado.miRolApp = 'super_admin'
-    chk('super_admin sin la fila: tiene el botón (tiene_tarea con bypass)',
-      /cob-btn-unidad/.test(S.htmlDetalle(detalleDe({ ...base, estado: 'procesada', unidad_negocio_id: null }))))
+    const hSa = S.htmlDetalle(detalleDe({ ...base, estado: 'procesada', unidad_negocio_id: null }))
+    chk('super_admin sin la fila: tampoco hay botón de unidad, y sí el link a Administración (tiene_tarea con bypass)',
+      !/cob-btn-unidad/.test(hSa) && /cob-link-reabrir/.test(hSa))
   }
 
   // ══ 2. HISTORIAL ═══════════════════════════════════════════════════════════
@@ -271,163 +259,6 @@ async function pruebas() {
       (f.match(/class="cob-celda/g) || []).length === 7)
   }
 
-  // ══ 4. ASENTAR ═════════════════════════════════════════════════════════════
-  async function abrirAsentar(S, extra = {}) {
-    const c = { ...base, estado: 'registrada', unidad_negocio_id: null, ...extra }
-    S.estado.detalle = detalleDe(c)
-    S.conectarDetalle()
-    const btn = S.__els.get('cob-btn-procesar')
-    btn.focus()
-    const p = btn.__disparar('click')
-    await esperar()
-    return { btn, c }
-  }
-  {
-    const S = sandbox()
-    const { btn } = await abrirAsentar(S)
-    const dlg = S.__els.get('cob-dialogo-unidad')
-    const sel = S.__els.get('cob-dlg-unidad-select')
-    const si = S.__els.get('cob-dlg-unidad-si')
-    chk('asentar: se abre el diálogo de la unidad', dlg.hidden === false && S.__abierto() !== null)
-    chk('asentar: todavía no se llamó a ninguna RPC', S.__rpcs().length === 0, JSON.stringify(S.__rpcs()))
-    const ops = opcionesDe(S)
-    chk('asentar: placeholder + las 4 activas (la inactiva no se ofrece)',
-      ops.map(o => o[0]).join('|') === '|u-cn|u-dp|u-ta|u-me', JSON.stringify(ops))
-    chk('asentar: SIN preselección', sel.value === '')
-    chk('asentar: confirmar deshabilitado hasta elegir', si.disabled === true)
-    chk('asentar: el botón dice "Asentar"', si.textContent === 'Asentar')
-    chk('asentar: el foco va al select', S.__doc.activeElement === sel)
-    chk('asentar: Tab desde el último vuelve al primero (foco atrapado)', (() => {
-      S.__els.get('cob-dlg-unidad-cancelar').focus(); return S.__tecla('Tab').prevenido && S.__doc.activeElement === sel
-    })())
-    si.click()
-    await esperar()
-    chk('asentar: con el botón deshabilitado el clic no hace nada', S.__rpcs().length === 0 && S.__abierto() !== null)
-    // La red detrás del disabled: aunque el clic llegara con el select vacío,
-    // no se resuelve nada.
-    si.disabled = false
-    si.click()
-    await esperar()
-    chk('asentar: confirmar con el select vacío no resuelve (guarda)', S.__rpcs().length === 0 && S.__abierto() !== null)
-    si.disabled = true
-    sel.value = 'u-dp'
-    sel.__disparar('change')
-    chk('asentar: al elegir se habilita confirmar', si.disabled === false)
-    si.click()
-    await esperar()
-    const r = S.__rpcs()
-    chk('asentar: llama UNA vez a marcar_cobranza_asentada con p_id y p_unidad_negocio_id',
-      r.length === 1 && r[0].nombre === 'marcar_cobranza_asentada' && r[0].params.p_id === 'c1' &&
-      r[0].params.p_unidad_negocio_id === 'u-dp' && Object.keys(r[0].params).length === 2, JSON.stringify(r))
-    chk('asentar: NUNCA marcar_cobranza_procesada', !r.some(x => x.nombre === 'marcar_cobranza_procesada'))
-    chk('asentar: "Cobranza asentada." y se recarga', S.__llamadas.exitos.includes('Cobranza asentada.') &&
-      S.__llamadas.abrirDetalle.includes('c1') && S.__llamadas.refrescar === 1)
-    chk('asentar: el diálogo se cierra y el foco vuelve al botón', dlg.hidden === true && S.__doc.activeElement === btn)
-  }
-  for (const como of ['cancelar', 'escape']) {
-    const S = sandbox()
-    const { btn } = await abrirAsentar(S)
-    S.__els.get('cob-dlg-unidad-select').value = 'u-dp'
-    if (como === 'cancelar') S.__els.get('cob-dlg-unidad-cancelar').click()
-    else chk('escape: se consume la tecla', S.__tecla('Escape').prevenido)
-    await esperar()
-    chk(`${como}: no se llama a ninguna RPC`, S.__rpcs().length === 0, JSON.stringify(S.__rpcs()))
-    chk(`${como}: el diálogo se cierra y el foco vuelve al botón`, S.__els.get('cob-dialogo-unidad').hidden === true && S.__doc.activeElement === btn)
-    chk(`${como}: sin mensajes`, !S.__llamadas.errores.length && !S.__llamadas.exitos.length)
-  }
-  {
-    const S = sandbox({ unidades: [{ id: 'u-sola', nombre: 'Única', activo: true }, { id: 'u-baja', nombre: 'Baja', activo: false }] })
-    await abrirAsentar(S)
-    chk('una sola activa: se elige sola, sin placeholder', S.__els.get('cob-dlg-unidad-select').value === 'u-sola' &&
-      opcionesDe(S).length === 1, JSON.stringify(opcionesDe(S)))
-    chk('una sola activa: confirmar habilitado', S.__els.get('cob-dlg-unidad-si').disabled === false)
-    S.__els.get('cob-dlg-unidad-si').click()
-    await esperar()
-    chk('una sola activa: asienta con esa', S.__rpcs()[0]?.params?.p_unidad_negocio_id === 'u-sola')
-  }
-  {
-    const S = sandbox()
-    S.__setRpc(async () => ({ data: null, error: { message: 'Elegí a qué unidad de negocio pertenece esta cobranza.' } }))
-    await abrirAsentar(S)
-    S.__els.get('cob-dlg-unidad-select').value = 'u-cn'
-    S.__els.get('cob-dlg-unidad-select').__disparar('change')
-    S.__els.get('cob-dlg-unidad-si').click()
-    await esperar()
-    chk('error de la RPC: se muestra TAL CUAL', S.__llamadas.errores[0] === 'Elegí a qué unidad de negocio pertenece esta cobranza.', JSON.stringify(S.__llamadas.errores))
-    chk('error de la RPC: sin mensaje de éxito', !S.__llamadas.exitos.length)
-  }
-  {
-    const S = sandbox()
-    S.__setErrorUnidades(new Error('sin red'))
-    await abrirAsentar(S)
-    chk('sin unidades (falló la carga): no se abre el diálogo', S.__abierto() === null && S.__els.get('cob-dialogo-unidad').hidden === true)
-    chk('sin unidades: se avisa', /No se pudo cargar la lista de unidades/.test(S.__llamadas.errores[0] ?? ''), JSON.stringify(S.__llamadas.errores))
-    chk('sin unidades: no se llama a ninguna RPC', S.__rpcs().length === 0)
-    S.__setErrorUnidades(null)
-    const antes = S.__consultasUnidades()
-    await abrirAsentar(S)
-    chk('sin unidades: el siguiente intento vuelve a consultar', S.__consultasUnidades() === antes + 1 && S.__abierto() !== null)
-    S.__tecla('Escape'); await esperar()
-    await abrirAsentar(S)
-    chk('con unidades ya cargadas: no se vuelve a consultar', S.__consultasUnidades() === antes + 1)
-    S.__tecla('Escape'); await esperar()
-  }
-
-  // ══ 5. ASIGNAR / CAMBIAR ════════════════════════════════════════════════════
-  async function abrirUnidad(S, c) {
-    S.estado.detalle = detalleDe(c)
-    S.conectarDetalle()
-    const btn = S.__els.get('cob-btn-unidad')
-    btn.focus()
-    btn.__disparar('click')
-    await esperar()
-    return btn
-  }
-  {
-    const S = sandbox()
-    await abrirUnidad(S, { ...base, estado: 'procesada', unidad_negocio_id: null })
-    chk('asignar: sin preselección y confirmar deshabilitado', S.__els.get('cob-dlg-unidad-select').value === '' && S.__els.get('cob-dlg-unidad-si').disabled === true)
-    S.__els.get('cob-dlg-unidad-select').value = 'u-me'
-    S.__els.get('cob-dlg-unidad-select').__disparar('change')
-    S.__els.get('cob-dlg-unidad-si').click()
-    await esperar()
-    const r = S.__rpcs()
-    chk('asignar: llama a asignar_unidad_cobranza con p_id y p_unidad_negocio_id',
-      r.length === 1 && r[0].nombre === 'asignar_unidad_cobranza' && r[0].params.p_id === 'c1' && r[0].params.p_unidad_negocio_id === 'u-me', JSON.stringify(r))
-    chk('asignar: nunca a las de asentar', !r.some(x => /marcar_cobranza/.test(x.nombre)))
-  }
-  {
-    const S = sandbox()
-    await abrirUnidad(S, { ...base, estado: 'procesada', unidad_negocio_id: 'u-dp', unidad_negocio_nombre: 'Dolce Pasta' })
-    chk('cambiar: la actual viene preseleccionada', S.__els.get('cob-dlg-unidad-select').value === 'u-dp' && S.__els.get('cob-dlg-unidad-si').disabled === false)
-    S.__els.get('cob-dlg-unidad-si').click()
-    await esperar()
-    chk('cambiar a la misma: no se llama a nada', S.__rpcs().length === 0, JSON.stringify(S.__rpcs()))
-  }
-  {
-    const S = sandbox()
-    await abrirUnidad(S, { ...base, estado: 'procesada', unidad_negocio_id: 'u-dp', unidad_negocio_nombre: 'Dolce Pasta' })
-    S.__els.get('cob-dlg-unidad-select').value = 'u-ta'
-    S.__els.get('cob-dlg-unidad-select').__disparar('change')
-    S.__els.get('cob-dlg-unidad-si').click()
-    await esperar()
-    chk('cambiar a otra: asignar_unidad_cobranza con la nueva', S.__rpcs()[0]?.nombre === 'asignar_unidad_cobranza' && S.__rpcs()[0]?.params?.p_unidad_negocio_id === 'u-ta', JSON.stringify(S.__rpcs()))
-  }
-  {
-    const S = sandbox()
-    await abrirUnidad(S, { ...base, estado: 'procesada', unidad_negocio_id: 'u-vieja', unidad_negocio_nombre: 'Unidad dada de baja' })
-    const ids = opcionesDe(S).map(o => o[0])
-    chk('cambiar desde una unidad dada de baja: se ofrece también la actual', ids.includes('u-vieja') && S.__els.get('cob-dlg-unidad-select').value === 'u-vieja', JSON.stringify(ids))
-    S.__tecla('Escape'); await esperar()
-  }
-  {
-    const S = sandbox({ unidades: [...UNIDADES, { id: 'u-mal', nombre: MAL, activo: true }] })
-    await abrirUnidad(S, { ...base, estado: 'procesada', unidad_negocio_id: null })
-    const html = S.__els.get('cob-dlg-unidad-select').innerHTML
-    chk('diálogo: el nombre de la unidad va escapado en la opción', html.includes(MAL_ESC) && !html.includes(MAL))
-    S.__tecla('Escape'); await esperar()
-  }
-
   // ══ 6. EL FUENTE ═══════════════════════════════════════════════════════════
   {
     // Ningún string del <script> (no los comentarios: los rangos de analizar()
@@ -442,11 +273,14 @@ async function pruebas() {
     const froms = [...FUENTE.matchAll(/\.from\('v_cobranzas'\)\s*\.select\(([^)]*)\)/g)].map(m => m[1])
     chk('fuente: TODO .select de v_cobranzas trae la unidad (* o las dos columnas)',
       froms.length >= 3 && froms.every(s => s === "'*'" || (/unidad_negocio_id/.test(s) && /unidad_negocio_nombre/.test(s))), JSON.stringify(froms))
-    chk('fuente: el diálogo de la unidad es un role="dialog" aria-modal',
-      /<div class="cob-modal" id="cob-dialogo-unidad" hidden role="dialog" aria-modal="true" aria-labelledby="cob-dlg-unidad-titulo">/.test(FUENTE))
-    chk('fuente: el disabled del confirmar NO es atributo del HTML (va desde JS)',
-      /<button type="button" class="cob-btn cob-btn--primario" id="cob-dlg-unidad-si">/.test(FUENTE))
-    chk('fuente: las unidades se cargan en el init', /asegurarUnidades\(\)\.then\(/.test(FUENTE))
+    let viejas = false
+    for (const b of bloquesScript(FUENTE)) {
+      const r = analizar(b.codigo, b.ini, FUENTE)
+      for (const [a, z] of r.rangos) if (["'", '"', '`'].includes(b.codigo[a]) && /marcar_cobranza_asentada|asignar_unidad_cobranza/.test(b.codigo.slice(a, z))) viejas = true
+    }
+    chk('fuente: ningún string llama a marcar_cobranza_asentada ni a asignar_unidad_cobranza (asentar es en Administración)', !viejas)
+    chk('fuente: ya no está el diálogo de la unidad', !/cob-dialogo-unidad|cob-dlg-unidad/.test(FUENTE))
+    chk('fuente: las unidades se cargan en el init (para el historial)', /asegurarUnidades\(\)\.then\(/.test(FUENTE))
   }
 }
 

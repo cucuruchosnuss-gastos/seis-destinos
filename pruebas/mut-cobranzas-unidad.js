@@ -4,20 +4,13 @@
 //
 //   node pruebas/mut-cobranzas-unidad.js
 //
-// Sin automáticas: los escCob() nuevos que importan se sacan acá, de a uno,
-// con nombre. (El escCob(u.id) de la opción del diálogo no se muta: los ids
-// son uuids y sacarle el escape no cambia ninguna salida posible.)
+// Desde el 27/09/2026 la unidad solo se MUESTRA en Cobranzas: asentar (y con
+// eso la unidad, que sale del cliente) vive en Administración.
 
 const path = require('path')
 const { correrMutaciones } = require('./mutar')
 
 const RAIZ = path.join(__dirname, '..')
-
-// Los tres renglones de poblar el select y asignarle el value, tal cual están
-// en el fuente (strings comunes: el ${ va literal).
-const POBLAR_1 = "      sel.innerHTML = (opciones.length === 1 ? '' : '<option value=\"\">Elegí una unidad…</option>') +"
-const POBLAR_2 = "        opciones.map(u => `<option value=\"${escCob(u.id)}\">${escCob(u.nombre)}</option>`).join('')"
-const ASIGNAR = '      sel.value = elegida'
 
 correrMutaciones({
   suite: path.join(__dirname, 'test-cobranzas-unidad.js'),
@@ -25,75 +18,20 @@ correrMutaciones({
   funciones: [],
   escape: 'escCob',
   manuales: [
-    // ── Qué RPC se llama y con qué ─────────────────────────────────────────
-    { nombre: 'asentar vuelve a marcar_cobranza_procesada (sin unidad)',
-      de: "accionSimple('marcar_cobranza_asentada', { p_id: c.id, p_unidad_negocio_id: unidad }",
-      a: "accionSimple('marcar_cobranza_procesada', { p_id: c.id }" },
-    { nombre: 'asentar no manda la unidad',
-      de: "{ p_id: c.id, p_unidad_negocio_id: unidad }, 'Cobranza asentada.'", a: "{ p_id: c.id }, 'Cobranza asentada.'" },
-    { nombre: 'el botón "Controlada, asentar" vuelve a la RPC vieja sin diálogo',
-      de: "btnProcesar.addEventListener('click', () => asentarConUnidad(c))",
-      a: "btnProcesar.addEventListener('click', () => accionSimple('marcar_cobranza_procesada', { p_id: c.id }, 'Cobranza asentada.'))" },
-    { nombre: 'asignar llama a la RPC de asentar',
-      de: "accionSimple('asignar_unidad_cobranza',", a: "accionSimple('marcar_cobranza_asentada'," },
-    { nombre: 'asignar manda la unidad vieja',
-      de: "{ p_id: c.id, p_unidad_negocio_id: unidad }, 'Unidad de negocio guardada.'", a: "{ p_id: c.id, p_unidad_negocio_id: actual }, 'Unidad de negocio guardada.'" },
-    { nombre: 'cancelar asienta igual (sin el return)',
-      de: "      if (!unidad) return\n      await accionSimple('marcar_cobranza_asentada'", a: "      await accionSimple('marcar_cobranza_asentada'" },
-    { nombre: 'elegir la misma unidad llama igual',
-      de: 'if (!unidad || unidad === actual) return', a: 'if (!unidad) return' },
-    { nombre: 'sin el listener del botón de la unidad',
-      de: "      if (btnUnidad) btnUnidad.addEventListener('click', () => asignarUnidad(c))\n", a: '' },
-    // ── El diálogo ─────────────────────────────────────────────────────────
-    { nombre: 'preselecciona la primera unidad',
-      de: ": (opciones.some(u => u.id === actual) ? actual : '')", a: ': opciones[0].id' },
-    { nombre: 'Cambiar no preselecciona la actual',
-      de: ": (opciones.some(u => u.id === actual) ? actual : '')", a: ": ''" },
-    { nombre: 'con una sola unidad no se elige sola',
-      de: 'const elegida = opciones.length === 1\n        ? opciones[0].id', a: 'const elegida = false\n        ? opciones[0].id' },
-    { nombre: 'confirmar habilitado desde el arranque',
-      de: "document.getElementById('cob-dlg-unidad-si').disabled = !document.getElementById('cob-dlg-unidad-select').value",
-      a: "document.getElementById('cob-dlg-unidad-si').disabled = false" },
-    { nombre: 'no se pinta el botón al abrir',
-      de: "      pintarBotonUnidad()\n      return abrirDialogo('cob-dialogo-unidad', null)", a: "      return abrirDialogo('cob-dialogo-unidad', null)" },
-    { nombre: 'elegir una unidad no habilita confirmar (sin el change)',
-      de: "      selUnidad.addEventListener('change', pintarBotonUnidad)\n", a: '' },
-    { nombre: 'confirmar con el select vacío resuelve (sin la guarda)',
-      de: "        if (!selUnidad.value) return\n        cerrarDialogo(selUnidad.value)", a: "        cerrarDialogo(selUnidad.value || 'u-cn')" },
-    { nombre: 'Escape asienta con una unidad fija',
-      de: "return abrirDialogo('cob-dialogo-unidad', null)", a: "return abrirDialogo('cob-dialogo-unidad', 'u-dp')" },
-    { nombre: 'Cancelar resuelve con una unidad',
-      de: "getElementById('cob-dlg-unidad-cancelar').addEventListener('click', () => cerrarDialogo(null))",
-      a: "getElementById('cob-dlg-unidad-cancelar').addEventListener('click', () => cerrarDialogo('u-cn'))" },
-    { nombre: 'se ofrecen también las unidades inactivas',
-      de: 'filter(u => u.activo !== false || u.id === actual)', a: 'filter(u => true)' },
-    { nombre: 'la actual inactiva no se ofrece',
-      de: 'filter(u => u.activo !== false || u.id === actual)', a: 'filter(u => u.activo !== false)' },
-    // Se MUEVE la asignación (no se duplica): el value queda antes del innerHTML.
-    { nombre: 'el value se asigna ANTES de poblar el select',
-      de: [POBLAR_1, POBLAR_2, ASIGNAR].join('\n'), a: [ASIGNAR, POBLAR_1, POBLAR_2].join('\n') },
-    { nombre: 'el value no se asigna nunca',
-      de: "      sel.value = elegida\n      document.getElementById('cob-dlg-unidad-titulo')",
-      a: "      document.getElementById('cob-dlg-unidad-titulo')" },
-    { nombre: 'sin unidades para elegir abre igual el diálogo',
-      de: '      if (!opciones.length) {', a: '      if (false) {' },
-    { nombre: 'una carga fallida no se reintenta',
-      de: '          if (!ok) promesaUnidades = null\n', a: '' },
-    { nombre: 'se consulta el catálogo en cada apertura (sin memo)',
-      de: '      if (!promesaUnidades) {\n        promesaUnidades = cargarUnidades()', a: '      if (true) {\n        promesaUnidades = cargarUnidades()' },
-    { nombre: 'el nombre de la opción sin escape',
-      de: '<option value="${escCob(u.id)}">${escCob(u.nombre)}</option>', a: '<option value="${escCob(u.id)}">${u.nombre}</option>' },
-    { nombre: 'el confirmar nace disabled en el HTML',
-      de: 'id="cob-dlg-unidad-si">Asentar', a: 'id="cob-dlg-unidad-si" disabled>Asentar' },
+    // ── El asentado ya no vive acá ─────────────────────────────────────────
+    { nombre: 'vuelve el botón "Controlada, asentar" con la RPC vieja',
+      de: '<a class="cob-btn cob-btn--primario" id="cob-link-asentar"',
+      a: '<button type="button" class="cob-btn cob-btn--primario" id="cob-btn-procesar" data-rpc="marcar_cobranza_asentada">Controlada, asentar</button><a class="cob-btn cob-btn--primario" id="cob-link-asentar"' },
+    { nombre: 'vuelve un botón de unidad en el detalle',
+      de: "                : '<span style=\"color:var(--color-texto-suave);font-weight:500\" data-sin-unidad>Sin unidad</span>'}</span>",
+      a: "                : '<span style=\"color:var(--color-texto-suave);font-weight:500\" data-sin-unidad>Sin unidad</span>'}<button type=\"button\" id=\"cob-btn-unidad\">Cambiar</button></span>" },
+    { nombre: 'el link de reabrir apunta a otra cobranza',
+      de: 'id="cob-link-reabrir" href="administracion.html?seccion=cobranzas&amp;cobranza=${encodeURIComponent(c.id)}"',
+      a: 'id="cob-link-reabrir" href="administracion.html?seccion=cobranzas&amp;cobranza=x"' },
+    { nombre: 'el link de asentar pierde la cobranza',
+      de: 'id="cob-link-asentar" href="administracion.html?seccion=cobranzas&amp;cobranza=${encodeURIComponent(c.id)}"',
+      a: 'id="cob-link-asentar" href="administracion.html?seccion=cobranzas"' },
     // ── Detalle ────────────────────────────────────────────────────────────
-    { nombre: 'botón de la unidad sin pedir procesar',
-      de: 'const botonUnidad = asentada && puedeProcesar()', a: 'const botonUnidad = asentada' },
-    { nombre: 'botón de la unidad en cualquier estado',
-      de: 'const botonUnidad = asentada && puedeProcesar()', a: 'const botonUnidad = puedeProcesar()' },
-    { nombre: 'el botón siempre dice "Asignar unidad"',
-      de: "${tieneUnidad ? 'Cambiar' : 'Asignar unidad'}", a: "${'Asignar unidad'}" },
-    { nombre: 'el botón de la unidad baja de 44px',
-      de: 'id="cob-btn-unidad" style="min-height:44px;', a: 'id="cob-btn-unidad" style="' },
     { nombre: '"Sin unidad" desaparece',
       de: 'data-sin-unidad>Sin unidad</span>', a: 'data-sin-unidad></span>' },
     { nombre: 'la fila de la unidad solo si tiene unidad',

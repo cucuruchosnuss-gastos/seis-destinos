@@ -112,6 +112,30 @@ const PANTALLAS = [
       await expect(page.locator('#ad-empresas')).toBeHidden()
     }],
     ['cheques-salidos', async (page) => { await page.locator('#chq-chips-estado button', { hasText: 'Salidos' }).click(); await expect(page.locator('#chq-leyenda')).toBeVisible() }],
+    // Cobranzas por asentar (27/09/2026): la tarjeta, asentar con el sugerido,
+    // y una cobranza asentada desde la cuenta del cliente, con "Reabrir".
+    ['cobranzas', async (page) => {
+      await page.locator('#ad-cheques-volver').click(); await page.locator('[data-seccion="cobranzas"]').click()
+      await expect(page.locator('.ad-cob__escrito').first()).toHaveText('«Caserato»')
+      await expect(page.locator('#ad-empresas')).toBeHidden()
+    }],
+    ['asentar', async (page) => {
+      await page.locator('[data-asentar]').first().click()
+      await expect(page.locator('.ad-opcion-cliente--sugerido')).toBeVisible()
+      await page.locator('#ad-asentar-buscar').fill('pepe de la')
+      await expect(page.locator('#ad-asentar-resultados')).toContainText('Kiosco Pepe')
+      await page.locator('.ad-opcion-cliente--sugerido').click()
+      await page.locator('#ad-asentar-confirmar').click()
+      await expect(page.locator('.ad-cob__hecho')).toContainText('Le queda un saldo a favor')
+    }],
+    ['cobranza-en-la-cuenta', async (page) => {
+      await page.locator('#ad-cobranzas-volver').click(); await page.locator('[data-seccion="clientes"]').click()
+      await page.locator('[data-cliente="c1"]').click()
+      await page.locator('[data-cuenta-cobranza]').click()
+      await expect(page.locator('#ad-cobranza-cuerpo')).toContainText('Asentada por Yanina Godoy')
+      await page.locator('#ad-cobranza-reabrir').click()
+      await expect(page.locator('#ad-reabrir-motivo')).toBeVisible()
+    }],
   ]],
   ['modulos/pedidos.html', 'pedidos', [
     ['lista', async (page) => { await expect(page.locator('[data-pedido]').first()).toBeVisible() }],

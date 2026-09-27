@@ -108,9 +108,6 @@ const PRELUDIO = `
   async function abrirDetalle(){ __llamadas.abrirDetalle++ }
   function renderizarListado(){}
   async function urlDeFoto(){ return null } function abrirVisor(){}
-  // El diálogo de la unidad (test-cobranzas-unidad.js lo ejecuta de verdad):
-  // acá responde siempre la misma unidad.
-  async function elegirUnidadConDialogo(){ return 'u-elegida' }
   var turnoResumen = 0
 
   var estado = {
@@ -131,9 +128,6 @@ const FUNCIONES = [
   'renderizarChipsEstado', 'htmlFilaCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
   'htmlChequeDetalle', 'htmlDatosCheque', 'textoDiasHastaPago', 'textoSalidaCheque', 'textoHistorialCheque',
   'resumirCambios', 'htmlLinkChequeEnCartera', 'conectarDetalle', 'accionSimple',
-  // Asentar pide la unidad (22/09/2026): el diálogo va stubeado en el
-  // preludio; lo prueba de verdad test-cobranzas-unidad.js.
-  'asentarConUnidad',
   // cabecera
   'parametrosResumen', 'cargarResumen', 'pintarResumen', 'numeroDeResumen', 'htmlResumen',
   'cargarCobranzas', 'refrescarListado',
@@ -220,28 +214,32 @@ async function pruebas() {
       /class="cob-estado cob-estado--procesada">Asentada</.test(dAsentada) &&
       /cob-dato__k">Asentada por<\/span>\s*<span class="cob-dato__v">Emanuel/.test(dAsentada))
 
+    // Desde el 27/09/2026 asentar (elegir el CLIENTE y descontar su cuenta) y
+    // reabrir se hacen en Administración: acá quedan dos LINKS, y ningún botón
+    // llama a una RPC de asentar.
     const acciones = S.htmlAccionesDetalle({ ...base, estado: 'registrada' })
-    chk('acciones: el botón dice "Controlada, asentar" y conserva su id',
-      /<button type="button" class="cob-btn cob-btn--primario" id="cob-btn-procesar">Controlada, asentar<\/button>/.test(acciones), acciones)
-
-    // Tocar "Controlada, asentar" llama a la RPC de la BASE con el id, y el
-    // mensaje de éxito habla de asentar.
+    chk('acciones: "Asentar en Administración" es un link a la cobranza en Administración',
+      /<a class="cob-btn cob-btn--primario" id="cob-link-asentar" href="administracion\.html\?seccion=cobranzas&amp;cobranza=c1">Asentar en Administración &rsaquo;<\/a>/.test(acciones), acciones)
+    chk('acciones: ya no está el botón "Controlada, asentar"', !/cob-btn-procesar|Controlada, asentar/.test(acciones))
+    const accAsentada = S.htmlAccionesDetalle({ ...base, estado: 'procesada' })
+    chk('acciones: una asentada tiene "Reabrir en Administración" (un link, no un botón con motivo)',
+      /<a class="cob-btn" id="cob-link-reabrir" href="administracion\.html\?seccion=cobranzas&amp;cobranza=c1">Reabrir en Administración &rsaquo;<\/a>/.test(accAsentada) && !/cob-btn-reabrir/.test(accAsentada), accAsentada)
+    const accRaro = S.htmlAccionesDetalle({ ...base, id: 'x"><b>', estado: 'registrada' })
+    chk('acciones: el id del link va con encodeURIComponent (no cierra el atributo)', accRaro.includes('cobranza=x%22%3E%3Cb%3E"') && !accRaro.includes('<b>'))
+    // El CHOFER (solo cargar) no ve ninguna de las dos: su pantalla no cambió.
+    S.estado.misTareas = new Set(['cobranzas:cargar'])
+    const accChofer = S.htmlAccionesDetalle({ ...base, estado: 'registrada', empleado_id: 'emp-1' })
+    chk('el chofer no ve "Asentar" ni "Reabrir"', !/cob-link-asentar|cob-link-reabrir|administracion\.html/.test(accChofer), accChofer)
+    S.estado.misTareas = new Set(['cobranzas:cargar', 'cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:editar_anular'])
+    // Tocar el detalle no llama a ninguna RPC de asentar.
     S.estado.detalle = { cabecera: { ...base, estado: 'registrada' }, cheques: [], fotos: [], historial: [], nombres }
-    S.conectarDetalle()
-    const btn = S.__els.get('cob-btn-procesar')
-    chk('acciones: el botón tiene su listener', btn && btn.__clicks.length === 1)
     S.__limpiarRpcs()
-    await btn.__clicks[0]()
+    S.conectarDetalle()
     await esperar()
-    const rpcAsentar = S.__rpcs().find(r => r.nombre !== 'resumen_cobranzas')
-    // Desde el 22/09/2026 asentar pide la unidad de negocio y llama a
-    // marcar_cobranza_asentada (que adentro llama a marcar_cobranza_procesada).
-    chk('asentar: llama a marcar_cobranza_asentada con p_id y la unidad elegida',
-      rpcAsentar && rpcAsentar.nombre === 'marcar_cobranza_asentada' && rpcAsentar.params.p_id === 'c1' &&
-      rpcAsentar.params.p_unidad_negocio_id === 'u-elegida', JSON.stringify(S.__rpcs()))
-    chk('asentar: el mensaje dice "Cobranza asentada."', S.__llamadas.exitos.includes('Cobranza asentada.'), JSON.stringify(S.__llamadas.exitos))
-    chk('asentar: después se recalculan las cifras de cabecera',
-      S.__rpcs().some(r => r.nombre === 'resumen_cobranzas'), JSON.stringify(S.__rpcs().map(r => r.nombre)))
+    chk('el detalle no llama a marcar_cobranza_asentada ni a asentar_cobranza',
+      !S.__rpcs().some(r => /asentad|asentar|asignar_unidad/.test(r.nombre)), JSON.stringify(S.__rpcs()))
+    chk('ni el fuente: ninguna llamada a marcar_cobranza_asentada, asignar_unidad_cobranza ni reabrir_cobranza',
+      !/rpc\('(marcar_cobranza_asentada|asignar_unidad_cobranza|reabrir_cobranza)'|accionSimple\('(marcar_cobranza_asentada|asignar_unidad_cobranza|reabrir_cobranza)'/.test(FUENTE))
 
     // "Dar salida" y "Volver a cartera" se mudaron a cheques.html
     // (22/09/2026): ni una cobranza asentada con un cheque en cartera tiene
@@ -466,7 +464,6 @@ async function pruebas() {
     await S.refrescarListado()
     chk('recalcula: después de guardar / reabrir / anular (refrescarListado) sí', S.__rpcs().length > n1)
     for (const [rpc, params, msg] of [
-      ['reabrir_cobranza', { p_id: 'c1', p_motivo: 'x' }, 'Cobranza reabierta.'],
       ['anular_cobranza', { p_id: 'c1', p_motivo: 'x' }, 'Cobranza anulada.'],
     ]) {
       S.__limpiarRpcs()

@@ -17,9 +17,9 @@ correrMutacionesEnVarios([
     manuales: [
       { nombre: 'Cheques con cualquier tarea', de: "      if (s.global) return estado.miRolApp === 'super_admin' || s.tareas.some(t => estado.misTareas.has(t))", a: '      if (s.global) return true' },
       { nombre: 'Cheques sin el bypass de super_admin', de: "      if (s.global) return estado.miRolApp === 'super_admin' || s.tareas.some(t => estado.misTareas.has(t))", a: '      if (s.global) return s.tareas.some(t => estado.misTareas.has(t))' },
-      { nombre: 'Cheques también con cobranzas:cargar', de: "tareas: ['cobranzas:ver_todo', 'cobranzas:procesar'] },\n    ]", a: "tareas: ['cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:cargar'] },\n    ]" },
+      { nombre: 'Cheques también con cobranzas:cargar', de: "{ id: 'cheques', titulo: 'Cheques', global: true, tareas: ['cobranzas:ver_todo', 'cobranzas:procesar'] },", a: "{ id: 'cheques', titulo: 'Cheques', global: true, tareas: ['cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:cargar'] }," },
       { nombre: 'sin empresas no se entra aunque vea Cheques', de: '      if (!lista.length && !hayGlobales()) {', a: '      if (!lista.length) {' },
-      { nombre: 'el selector de empresa no se esconde en Cheques', de: "      document.getElementById('ad-empresas').hidden = id === 'ad-vista-cheques'", a: '' },
+      { nombre: 'el selector de empresa no se esconde en Cheques', de: "const VISTAS_GLOBALES = ['ad-vista-cheques', ", a: "const VISTAS_GLOBALES = [" },
       { nombre: 'abrir Cheques no avisa a la cartera', de: "      document.dispatchEvent(new CustomEvent('administracion:cheques'))\n", a: '' },
       { nombre: 'abrir Cheques no deja la dirección', de: "      if (!/[?&]seccion=cheques/.test(window.location.search)) history.replaceState(null, '', window.location.pathname + '?seccion=cheques')", a: '' },
       { nombre: 'abrir Cheques sin permiso igual la muestra', de: "      if (!SECCIONES.some(s => s.id === 'cheques' && seccionVisible(s))) { mostrarInicio(); return }", a: '' },

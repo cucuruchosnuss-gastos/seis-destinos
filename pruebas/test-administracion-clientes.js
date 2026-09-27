@@ -279,7 +279,10 @@ function preparar(S) {
   const fila = { cliente_id: 'c1', nombre: marca('nombre'), razon_social: marca('razon'), lista: marca('lista'), saldo: 5, retiros_mes: 1, es_tambien_proveedor: true }
   chequearMarcas(chk, 'fila de cliente', S.htmlFilaCliente(fila), ['nombre', 'razon', 'lista'])
   chequearMarcas(chk, 'cuenta', S.htmlCuenta({ id: 'c1', cuenta: [{ fecha: '2026-09-01', tipo: marca('tipo'), detalle: marca('detalle'), importe: 1, saldo: 1, orden_retiro_id: null }], codigos: new Map() }), ['tipo', 'detalle'])
-  chequearMarcas(chk, 'cuenta con código', S.htmlCuenta({ id: 'c1', cuenta: [{ fecha: '2026-09-01', tipo: 'retiro', detalle: 'Orden de retiro N° 1', importe: 1, saldo: 1, orden_retiro_id: 'o' }], codigos: new Map([['o', marca('codigo')]]) }), ['codigo'])
+  // Una cobranza asentada se abre (27/09/2026): su id va escapado.
+  S.estado.misTareas = new Map([...S.estado.misTareas, ['cobranzas:procesar', null]])
+  chequearMarcas(chk, 'cuenta con una cobranza que se abre', S.htmlCuenta({ id: 'c1', cuenta: [{ fecha: '2026-09-22', tipo: 'cobranza', detalle: 'Cobranza', importe: -1, saldo: 1, orden_retiro_id: null, cobranza_id: marca('cob-id') }], codigos: new Map() }), ['cob-id'])
+  chequearMarcas(chk, 'cuenta con código',S.htmlCuenta({ id: 'c1', cuenta: [{ fecha: '2026-09-01', tipo: 'retiro', detalle: 'Orden de retiro N° 1', importe: 1, saldo: 1, orden_retiro_id: 'o' }], codigos: new Map([['o', marca('codigo')]]) }), ['codigo'])
   S.estado.proveedores = [{ id: 'p1', razon_social: marca('prov'), nombre_fantasia: marca('fantasia'), cuit: marca('cuit') }]
   chequearMarcas(chk, 'proveedores', S.htmlResultadosProveedores('x') + S.htmlProveedorElegido('p1'), ['prov', 'fantasia', 'cuit'])
   chequearMarcas(chk, 'proveedor buscado sin resultados', S.htmlResultadosProveedores(marca('prov-buscado') + 'zzqq'), ['prov-buscado'])

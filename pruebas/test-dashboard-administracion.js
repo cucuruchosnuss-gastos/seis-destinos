@@ -31,7 +31,7 @@ chk('NO se ve sin el módulo retiros', !ver({ misModulos: ['pedidos'], misTareas
 chk('super_admin la ve', ver({ esAdmin: true, esSuperAdmin: true }))
 // La burbuja: mis_pendientes() devuelve 'administracion' con dos claves y la
 // tarjeta muestra la SUMA (agruparPendientes ya suma por módulo).
-const P = new Function(extraerConst(src, 'MODULO_DE_PENDIENTE') + '\n' + extraerFn(src, 'escDash') + '\n' + extraerFn(src, 'textoPendiente') + '\n' +
+const P = new Function(extraerConst(src, 'MODULO_DE_PENDIENTE') + '\n' + extraerConst(src, 'TAMBIEN_EN_TARJETA') + '\n' + extraerFn(src, 'escDash') + '\n' + extraerFn(src, 'textoPendiente') + '\n' +
   extraerFn(src, 'agruparPendientes') + '\nreturn { MODULO_DE_PENDIENTE, agruparPendientes }')()
 chk('los pendientes de administracion van a la tarjeta Administración', P.MODULO_DE_PENDIENTE.administracion === 'administracion')
 const g = P.agruparPendientes([
@@ -40,6 +40,17 @@ const g = P.agruparPendientes([
 ])
 chk('la tarjeta dice la suma de sus pendientes (3 + 2 = 5)', g.get('administracion')?.total === 5)
 chk('y el detalle nombra los dos', g.get('administracion')?.detalle.length === 2)
+// Las cobranzas por controlar se asientan en Administración (27/09/2026):
+// suman en su tarjeta Y en la de Cobranzas, que las sigue contando.
+const g2 = P.agruparPendientes([
+  { modulo: 'administracion', clave: 'ordenes_sin_valorizar', cantidad: 3, texto: 'Órdenes de retiro sin valorizar' },
+  { modulo: 'cobranzas', clave: 'por_controlar', cantidad: 4, texto: 'Cobranzas por controlar' },
+  { modulo: 'cheques', clave: 'por_vencer', cantidad: 2, texto: 'Cheques que vencen esta semana' },
+])
+chk('las cobranzas por controlar suman en Administración (3 + 4 = 7)', g2.get('administracion')?.total === 7, g2.get('administracion')?.total)
+chk('y siguen en la tarjeta de Cobranzas', g2.get('cobranzas')?.total === 4)
+chk('los cheques por vencer NO suman en Administración', !g2.get('administracion')?.detalle.some(t => /Cheques/.test(t)))
+chk('el detalle de Administración nombra las cobranzas', g2.get('administracion')?.detalle.some(t => /4 cobranzas por controlar/i.test(t)), JSON.stringify(g2.get('administracion')?.detalle))
 chk('el archivo existe', fs.existsSync(path.join(__dirname, '..', 'modulos', 'administracion.html')))
 
 fin()

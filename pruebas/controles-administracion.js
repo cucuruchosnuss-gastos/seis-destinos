@@ -18,6 +18,8 @@ const fs = require('fs')
 const path = require('path')
 const { execFileSync } = require('child_process')
 const { RAIZ, inventario, referenciasDelJs, veces } = require('./controles-comun')
+// Lo que se mudó de cobranzas.html a acá (asentar y reabrir, 27/09/2026).
+const { MOVIDOS } = require('./controles-movidos')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/administracion.html')
 
@@ -83,6 +85,14 @@ try {
       const pide = copias.has(nueva) ? Math.min(n, copias.get(nueva)) : n
       chk(`${base}: ${k} sigue estando`, hay >= pide && hay > 0, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
     }
+  }
+
+  // Lo que salió de cobranzas.html (asentar y reabrir, 27/09/2026) está acá.
+  const aAdministracion = Object.entries(MOVIDOS).filter(([, m]) => m.a === 'administracion')
+  chk('hay controles movidos a administracion.html (si da cero, el mapa no se está leyendo)', aAdministracion.length >= 4, aAdministracion.length)
+  for (const [vieja, m] of aAdministracion) {
+    console.log(`MOVIDO desde cobranzas.html: ${vieja} → ${m.nueva}`)
+    chk(`llegó ${m.nueva} (reemplaza a ${vieja} de cobranzas.html)`, veces(A, m.nueva) > 0, 'FALTA')
   }
 
   const refs = referenciasDelJs(A.referencias)
