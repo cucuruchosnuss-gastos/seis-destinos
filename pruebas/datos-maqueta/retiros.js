@@ -206,6 +206,8 @@ module.exports = {
         "cargada_en": "2026-09-26T17:32:00Z",
         "renglones": [
           {
+            "orden": 1,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100",
             "marca": null,
@@ -223,6 +225,22 @@ module.exports = {
             ]
           },
           {
+            "orden": 2,
+            "tipo": "insumo",
+            "insumo": "Harina 000",
+            "marca_insumo": "Molino Cañuelas",
+            "cantidad": 25.5,
+            "unidad_medida": "kg",
+            "lotes": [
+              {
+                "lote": "H-0910",
+                "cantidad": 25.5
+              }
+            ]
+          },
+          {
+            "orden": 3,
+            "tipo": "producto",
             "producto": "Cucurucho chico",
             "presentacion": "Caja x 320",
             "marca": null,
@@ -240,6 +258,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 4,
+            "tipo": "producto",
             "producto": "Barquillo",
             "presentacion": "Caja x 200",
             "marca": null,
@@ -257,6 +277,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 5,
+            "tipo": "producto",
             "producto": "Cannoli",
             "presentacion": "Caja x 60",
             "marca": null,
@@ -274,6 +296,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 6,
+            "tipo": "producto",
             "producto": "Oblea",
             "presentacion": "Caja x 500",
             "marca": null,
@@ -291,6 +315,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 7,
+            "tipo": "producto",
             "producto": "Cucurucho choco",
             "presentacion": "Caja x 100",
             "marca": null,
@@ -308,6 +334,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 8,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100 con cono",
             "marca": "LOLO",
@@ -325,6 +353,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 9,
+            "tipo": "producto",
             "producto": "Barquillo",
             "presentacion": "Media caja x 100",
             "marca": null,
@@ -342,6 +372,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 10,
+            "tipo": "producto",
             "producto": "Cucurucho chico",
             "presentacion": "Media caja x 160",
             "marca": null,
@@ -359,6 +391,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 11,
+            "tipo": "producto",
             "producto": "Soft",
             "presentacion": "Caja x 400",
             "marca": null,
@@ -376,6 +410,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 12,
+            "tipo": "producto",
             "producto": "Vaso",
             "presentacion": "Caja x 250",
             "marca": null,
@@ -504,6 +540,18 @@ module.exports = {
       {
         "lote": "7030-1",
         "cajas": 15,
+        "desde": "2026-09-20"
+      }
+    ],
+    "lotes_insumo_para_retiro": [
+      {
+        "lote": "H-0910",
+        "cantidad": 400,
+        "desde": "2026-09-10"
+      },
+      {
+        "lote": "H-0920",
+        "cantidad": 850,
         "desde": "2026-09-20"
       }
     ]

@@ -500,20 +500,10 @@
       return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
     }
 
-    // Los lotes de PRODUCTO salen de lotes_para_retiro(), que la base deja
-    // leer con retiros:cargar: el depósito los ve sin permisos de Producción.
-    // Los de INSUMOS salen de v_stock_por_lote, que respeta la policy de
-    // stock_movimientos (stock:ver en esa empresa). Sin eso las filas no
-    // llegan —sin ningún error—, así que la pantalla lo sabe ANTES de
-    // preguntar y lo dice. La MISMA regla que tiene_tarea_alcance().
-    function puedeVerLotesInsumo(unidadId = estado.empresaId) {
-      if (!unidadId) return false
-      if (estado.miRolApp === 'super_admin') return true
-      if (!estado.misTareas.has('stock:ver')) return false
-      const alcance = estado.misTareas.get('stock:ver')
-      if (alcance && alcance.todas === true) return true
-      return Array.isArray(alcance?.unidades) && alcance.unidades.map(String).includes(String(unidadId))
-    }
+    // Los lotes de PRODUCTO salen de lotes_para_retiro() y los de INSUMO de
+    // lotes_insumo_para_retiro() (27/09/2026): la base deja leer los dos con
+    // retiros:cargar o retiros:ver, así que el depósito elige lote sin
+    // permisos de Producción ni de Stock.
 
     // Las empresas de la carga: las de mis_unidades_retiro() donde carga, sin
     // la fábrica de pruebas para una cuenta real (la base ya la saca; esto es
@@ -860,16 +850,17 @@
         .map(l => ({ lote: String(l.lote), saldo: Number(l.cajas), desde: l.desde ?? null }))
     }
 
-    // Los lotes de un insumo, de v_stock_por_lote: una fila por (lote,
-    // presentación), así que se suman por lote. Sin lote no se puede elegir
-    // (la base descuenta un lote pedido por su nombre). Los más viejos primero.
+    // Los lotes de un insumo, de lotes_insumo_para_retiro(): (lote, cantidad,
+    // desde), uno por lote y los más viejos primero. Igual se suman por lote y
+    // se ordenan acá, por si la base algún día devuelve el lote partido. Sin
+    // lote no se puede elegir (la base descuenta un lote pedido por su nombre).
     function lotesDeInsumo(filas) {
       const porLote = new Map()
       for (const f of Array.isArray(filas) ? filas : []) {
         const lote = String(f?.lote ?? '')
         if (!lote) continue
         const a = porLote.get(lote) ?? { lote, saldo: 0, desde: null }
-        a.saldo += Number(f.saldo) || 0
+        a.saldo += Number(f.cantidad) || 0
         if (f.desde && (!a.desde || f.desde < a.desde)) a.desde = f.desde
         porLote.set(lote, a)
       }
@@ -886,8 +877,9 @@
     }
 
     async function leerLotesInsumo(unidadId, insumoId) {
-      const { data, error } = await supabase.from('v_stock_por_lote')
-        .select('lote, saldo, desde').eq('unidad_negocio_id', unidadId).eq('insumo_id', insumoId)
+      const { data, error } = await supabase.rpc('lotes_insumo_para_retiro', {
+        p_unidad_negocio_id: unidadId, p_insumo_id: insumoId,
+      })
       if (error) throw error
       return lotesDeInsumo(data)
     }
@@ -1142,12 +1134,6 @@
         return `<div class="rt-lote"><div class="rt-elegido">${elegido}` +
           `<button type="button" class="rt-btn rt-btn--suave" data-r-lote-abrir="${i}">Elegir lote</button></div></div>`
       }
-      // Los lotes de un INSUMO piden stock:ver en la empresa; los de producto
-      // los deja ver la base con retiros:cargar (lotes_para_retiro).
-      if (r.insumoId && !puedeVerLotesInsumo()) {
-        return `<div class="rt-lote"><div class="rt-aviso">Con tu usuario no se pueden ver los lotes de materia prima e insumos. La orden descuenta de los más viejos.</div>` +
-          `<button type="button" class="rt-link" data-r-lote-cerrar="${i}">Cerrar</button></div>`
-      }
       const info = estado.lotes.get(claveLotesRenglon(r))
       const cantidadLote = (l) => r.insumoId ? cantidadInsumoHoja(l.saldo, r.unidad) : `${enteroHoja(l.saldo)} cajas`
       let cuerpo
@@ -1353,7 +1339,7 @@
       if (!r || (!r.presentacionId && !r.insumoId)) return
       r.eligiendoLote = true
       pintarRenglones()
-      if (r.insumoId) { if (puedeVerLotesInsumo()) asegurarLotes(null, null, r.insumoId) }
+      if (r.insumoId) asegurarLotes(null, null, r.insumoId)
       else asegurarLotes(r.presentacionId, r.conCono ? r.marcaId : null)
     }
 
@@ -1503,9 +1489,6 @@
         const { data, error } = await supabase.rpc('registrar_orden_retiro', parametrosRegistrar(f))
         if (error) throw error
         estado.confirmando = false
-        // Los renglones de insumos se recuerdan en ESTE celular: la hoja los
-        // necesita y mis_ordenes_retiro() todavía no los devuelve.
-        recordarInsumosDeOrden(data?.orden_id, f.renglones)
         estado.hecho = { ordenId: data?.orden_id ?? null, codigo: data?.codigo ?? null, faltantes: Array.isArray(data?.stock_insuficiente) ? data.stock_insuficiente : null,
           reintento: data?.reintento === true, orden: null, error: null, aviso: null, cliente: clienteDe(f.clienteId) }
         estado.form = null
@@ -1587,12 +1570,17 @@
       pintarHecho()
     }
 
-    // "SIN STOCK" es el lote que la base anota para lo que faltó.
+    // "SIN STOCK" es el lote que la base anota para lo que faltó: en cajas en
+    // un renglón de producto y en su unidad en uno de insumo.
     function faltantesDeLotes(o) {
       const out = []
       ;(o?.renglones ?? []).forEach((r, i) => {
-        const falta = (r.lotes ?? []).filter(l => l.lote === 'SIN STOCK').reduce((s, l) => s + (Number(l.cajas) || 0), 0)
-        if (falta > 0) out.push({ renglon: i + 1, producto: r.producto, presentacion: r.presentacion, pedidas: r.cajas, faltaron: falta })
+        const insumo = r?.tipo === 'insumo'
+        const falta = (r.lotes ?? []).filter(l => l.lote === 'SIN STOCK')
+          .reduce((s, l) => s + (Number(insumo ? l.cantidad : l.cajas) || 0), 0)
+        if (falta <= 0) return
+        if (insumo) out.push({ renglon: i + 1, insumo: r.insumo, unidad: r.unidad_medida, pedidas: r.cantidad, faltaron: falta })
+        else out.push({ renglon: i + 1, producto: r.producto, presentacion: r.presentacion, pedidas: r.cajas, faltaron: falta })
       })
       return out
     }
@@ -1623,64 +1611,22 @@
       return (estado.clientes ?? []).find(c => normalizar(c.nombre) === n) ?? { nombre: o?.cliente ?? 'Cliente' }
     }
 
-    // ── Los renglones de insumos, recordados en el celular ────────────────
-    // mis_ordenes_retiro() todavía devuelve SOLO los renglones de producto
-    // (hueco de la base, anotado en el traspaso del 26/09/2026). Para que la
-    // hoja no salga sin los insumos, al confirmar se recuerdan acá, con su
-    // posición en la orden, y se intercalan al armar la hoja. Se guardan 40
-    // días (lo que muestra "Mis retiros" es de 30).
-    const CLAVE_INSUMOS_ORDENES = 'retiros.insumos'
-    const DIAS_MEMORIA_INSUMOS = 40
-
-    function leerMemoriaInsumos() {
-      try {
-        const m = JSON.parse(leerPreferencia(CLAVE_INSUMOS_ORDENES) || '{}')
-        return m && typeof m === 'object' && !Array.isArray(m) ? m : {}
-      } catch { return {} }
+    // Los renglones de la orden para la hoja, en el orden de la orden. Desde el
+    // 27/09/2026 mis_ordenes_retiro() devuelve TODOS los renglones, cada uno
+    // con su 'tipo': 'producto' (cajas, presentación, cono y lotes en cajas) o
+    // 'insumo' (insumo, marca_insumo, cantidad, unidad_medida y lotes en su
+    // unidad). Antes solo traía los de producto y la pantalla recordaba los de
+    // insumo en el celular: eso ya no existe.
+    function renglonesParaHoja(o) {
+      return (o?.renglones ?? []).map(r => r?.tipo === 'insumo'
+        ? { esInsumo: true, producto: r.insumo, marca: r.marca_insumo, cantidad: r.cantidad, unidad: r.unidad_medida, lotes: r.lotes ?? [] }
+        : { producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo),
+            cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [] })
     }
 
-    function recordarInsumosDeOrden(ordenId, renglones) {
-      const insumos = (renglones ?? []).map((r, posicion) => r.insumoId ? {
-        posicion, nombre: r.insumoNombre, marca: r.insumoMarca, cantidad: Number(r.cantidad), unidad: r.unidad, lote: r.lote ?? null,
-      } : null).filter(Boolean)
-      if (!ordenId || !insumos.length) return
-      const m = leerMemoriaInsumos()
-      const hoy = hoyArgentina()
-      const limite = new Date(Date.parse(hoy + 'T12:00:00Z') - DIAS_MEMORIA_INSUMOS * 86400000).toISOString().slice(0, 10)
-      for (const [k, v] of Object.entries(m)) if (!v || String(v.fecha ?? '') < limite) delete m[k]
-      m[ordenId] = { fecha: hoy, total: renglones.length, insumos }
-      try { guardarPreferencia(CLAVE_INSUMOS_ORDENES, JSON.stringify(m)) } catch { /* sin memoria */ }
-    }
-
-    // Los renglones de la orden para la hoja: los de producto como vienen de
-    // mis_ordenes_retiro() y los de insumo intercalados en su posición. Sin
-    // memoria de esa orden, solo los de producto.
-    function renglonesParaHoja(o, memoria) {
-      const productos = (o?.renglones ?? []).map(r => ({
-        producto: r.producto, presentacion: r.presentacion, cono: conoDeRenglonMio(r, estado.catalogo),
-        cajas: r.cajas, unidades: r.unidades, lotes: r.lotes ?? [],
-      }))
-      const m = memoria?.[o?.orden_id]
-      if (!m || !Array.isArray(m.insumos) || !m.insumos.length) return productos
-      const insumo = (x) => ({ esInsumo: true, producto: x.nombre, marca: x.marca, cantidad: x.cantidad, unidad: x.unidad,
-        lotes: x.lote ? [{ lote: x.lote }] : [] })
-      const out = []
-      let p = 0
-      const total = Math.max(Number(m.total) || 0, productos.length + m.insumos.length)
-      for (let pos = 0; pos < total; pos++) {
-        const x = m.insumos.find(y => y.posicion === pos)
-        if (x) out.push(insumo(x))
-        else if (p < productos.length) out.push(productos[p++])
-      }
-      while (p < productos.length) out.push(productos[p++])
-      return out
-    }
-
-    // ¿Esta orden puede tener insumos que esta pantalla no ve? Solo si la
-    // empresa vende insumos y el celular no la recuerda.
-    function faltanInsumosEnHoja(o, memoria) {
-      return (estado.catalogo?.insumos ?? []).length > 0 && !memoria?.[o?.orden_id]
-    }
+    // La memoria vieja de los insumos (clave 'retiros.insumos', hasta el
+    // 26/09/2026) ya no se usa: se borra del celular una vez.
+    guardarPreferencia('retiros.insumos', null)
 
     // El objeto que dibuja la hoja. SIN precios: la carga nunca los tiene.
     function ordenParaHoja(o, { cliente = null } = {}) {
@@ -1688,7 +1634,7 @@
         codigo: o.codigo, estado: o.estado, fecha: o.fecha, cargadaEn: o.cargada_en,
         cargadaPor: estado.miNombre, transporte: o.transporte, observaciones: o.observaciones,
         empresa: empresaActual(), cliente: clienteDeOrden(o, cliente),
-        renglones: renglonesParaHoja(o, leerMemoriaInsumos()),
+        renglones: renglonesParaHoja(o),
       }
     }
 
@@ -1779,7 +1725,7 @@
 
     function htmlFilaMia(o) {
       const anulada = o.estado === 'anulada'
-      const insumos = leerMemoriaInsumos()[o.orden_id]?.insumos?.length ?? 0
+      const insumos = (o.renglones ?? []).filter(r => r?.tipo === 'insumo').length
       const meta = fechaCorta(o.fecha) + ' · ' + (o.cliente ?? '—') + ' · ' + enteroHoja(cajasDeOrden(o)) + ' cajas' +
         (insumos ? ` · ${insumos} de materia prima e insumos` : '')
       return `<button type="button" class="rt-fila${anulada ? ' rt-fila--anulada' : ''}" data-mia="${esc(o.orden_id)}">` +
@@ -1817,8 +1763,7 @@
     }
 
     function htmlDetalleMio(o) {
-      const memoria = leerMemoriaInsumos()
-      const renglones = renglonesParaHoja(o, memoria).map(r => {
+      const renglones = renglonesParaHoja(o).map(r => {
         if (r.esInsumo) {
           const desc = cantidadInsumoHoja(r.cantidad, r.unidad) + ' · ' + [r.producto, r.marca].map(limpio).filter(Boolean).join(' · ')
           const lotes = 'Insumo · ' + (r.lotes.length ? 'lote ' + textoLotes(r.lotes, r.unidad) : 'de los lotes más viejos')
@@ -1828,9 +1773,7 @@
         const lotes = enteroHoja(r.unidades) + ' unidades · lotes ' + textoLotes(r.lotes)
         return `<div class="rt-item"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes">${esc(lotes)}</div></div>`
       }).join('')
-      const aviso = faltanInsumosEnHoja(o, memoria)
-        ? '<div class="rt-aviso">Si esta orden llevaba materia prima o insumos, acá no se ven (se cargó desde otro celular): la hoja completa la saca Administración.</div>' : ''
-      return `${aviso}<div class="rt-tarjeta">${o.estado === 'anulada' ? '<div class="rt-aviso rt-aviso--grave">Anulada.</div>' : ''}` +
+      return `<div class="rt-tarjeta">${o.estado === 'anulada' ? '<div class="rt-aviso rt-aviso--grave">Anulada.</div>' : ''}` +
         htmlDatoRt('Fecha', fechaHoraHoja(o.cargada_en)) + htmlDatoRt('Cliente', o.cliente ?? '—') +
         htmlDatoRt('Transporte', limpio(o.transporte) || '—') +
         (String(o.observaciones ?? '').trim() ? htmlDatoRt('Observaciones', String(o.observaciones).trim()) : '') +

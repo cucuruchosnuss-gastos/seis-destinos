@@ -810,6 +810,8 @@ module.exports = {
         "cargada_en": "2026-09-26T17:32:00Z",
         "renglones": [
           {
+            "orden": 1,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100",
             "marca": null,
@@ -827,6 +829,22 @@ module.exports = {
             ]
           },
           {
+            "orden": 2,
+            "tipo": "insumo",
+            "insumo": "Harina 000",
+            "marca_insumo": "Molino Cañuelas",
+            "cantidad": 25.5,
+            "unidad_medida": "kg",
+            "lotes": [
+              {
+                "lote": "H-0910",
+                "cantidad": 25.5
+              }
+            ]
+          },
+          {
+            "orden": 3,
+            "tipo": "producto",
             "producto": "Cucurucho chico",
             "presentacion": "Caja x 320",
             "marca": null,
@@ -844,6 +862,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 4,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100 con cono",
             "marca": "LOLO",
@@ -857,6 +877,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 5,
+            "tipo": "producto",
             "producto": "Cucurucho choco",
             "presentacion": "Caja x 50",
             "marca": null,
@@ -870,6 +892,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 6,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100",
             "marca": null,
@@ -883,6 +907,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 7,
+            "tipo": "producto",
             "producto": "Cucurucho chico",
             "presentacion": "Caja x 320",
             "marca": null,
@@ -896,6 +922,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 8,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100 con cono",
             "marca": "CASERATO",
@@ -909,6 +937,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 9,
+            "tipo": "producto",
             "producto": "Cucurucho choco",
             "presentacion": "Caja x 50",
             "marca": null,
@@ -922,6 +952,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 10,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100",
             "marca": null,
@@ -935,6 +967,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 11,
+            "tipo": "producto",
             "producto": "Cucurucho chico",
             "presentacion": "Caja x 320",
             "marca": null,
@@ -948,6 +982,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 12,
+            "tipo": "producto",
             "producto": "Cucurucho grande",
             "presentacion": "Caja x 100 con cono",
             "marca": "LOLO",
@@ -965,6 +1001,8 @@ module.exports = {
             ]
           },
           {
+            "orden": 13,
+            "tipo": "producto",
             "producto": "Cucurucho choco",
             "presentacion": "Caja x 50",
             "marca": null,

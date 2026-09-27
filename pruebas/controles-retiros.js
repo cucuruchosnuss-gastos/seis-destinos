@@ -46,6 +46,7 @@ const RETIRADOS = [
 // clave tiene que seguir existiendo— y si aparece más veces que lo declarado,
 // la declaración sobra y se dice.
 const MENOS_COPIAS = [
+  ['control:button[data-r-lote-cerrar][type=button]', 1, 'el "Cerrar" del aviso de que sin stock:ver no se veían los lotes de un insumo: desde el 27/09/2026 lotes_insumo_para_retiro() los da con retiros:cargar (queda el "Cerrar" de la lista de lotes)'],
 ]
 
 let ok = 0

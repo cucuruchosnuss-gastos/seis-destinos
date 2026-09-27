@@ -16,7 +16,7 @@ const { fuenteNumeros } = require('./numeros-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'fechaCorta', 'nuevoUuid',
-  'tieneTarea', 'puedeCargarEn', 'puedeVerLotesInsumo', 'empresasDeCarga', 'empresaActual',
+  'tieneTarea', 'puedeCargarEn', 'empresasDeCarga', 'empresaActual',
   'leerPreferencia', 'guardarPreferencia', 'guardarBorrador', 'leerBorrador', 'mostrarVista',
   'htmlLogo', 'htmlEmpresas', 'htmlEmpresaActual', 'pintarEmpresaActual', 'mostrarEleccionEmpresa',
   'formTieneDatos', 'elegirEmpresa', 'aplicarEmpresa', 'confirmarCambioEmpresa', 'cancelarCambioEmpresa', 'pedirCambioEmpresa',
@@ -33,7 +33,7 @@ const FUNCIONES_BASE = [
   'pintarFormEntero', 'abrirFormulario', 'reconciliarRenglones', 'leerCabecera', 'htmlDatoRt', 'htmlResumen', 'textoInsumosForm', 'revisar', 'pintarConfirmar',
   'esErrorDeRed', 'confirmar',
   'htmlFaltantes', 'htmlHecho', 'pintarHecho', 'mostrarHecho', 'cargarOrdenHecha', 'faltantesDeLotes', 'htmlAvisoEmpresa',
-  'conoDeRenglonMio', 'clienteDeOrden', 'leerMemoriaInsumos', 'recordarInsumosDeOrden', 'renglonesParaHoja', 'faltanInsumosEnHoja', 'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'pintarAccionesHoja',
+  'conoDeRenglonMio', 'clienteDeOrden', 'renglonesParaHoja', 'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'pintarAccionesHoja',
   'enviarDesde', 'compartirDesde', 'imprimirDesde',
   'leerMisOrdenes', 'cajasDeOrden', 'htmlFilaMia', 'htmlMisRetiros', 'mostrarMisRetiros', 'htmlDetalleMio', 'abrirMia',
   'empezarOrden', 'retomarBorrador',
@@ -47,7 +47,7 @@ const FUNCIONES_BASE = [
 
 const CONSTANTES_BASE = [
   'ZONA_AR', 'DECIMALES_CAJAS', 'CLAVE_EMPRESA', 'CLAVE_BORRADOR', 'VISTAS', 'SUBTITULO_DE_VISTA', 'claveLotes', 'claveLotesInsumo',
-  'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'CLAVE_INSUMOS_ORDENES', 'DIAS_MEMORIA_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
+  'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
 

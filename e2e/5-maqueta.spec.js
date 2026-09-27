@@ -71,6 +71,10 @@ const PANTALLAS = [
       await page.locator('[data-r-insumo="1"]').first().click()
       await page.locator('[data-r-cantidad="1"]').fill('25,5')
       await expect(page.locator('.rt-sello--insumo').first()).toBeVisible()
+      // El lote de un insumo, de lotes_insumo_para_retiro() (sin permiso de Stock).
+      await page.locator('[data-r-lote-abrir="1"]').click()
+      await expect(page.locator('[data-r-lote="1"][data-lote="H-0910"]')).toBeVisible()
+      await page.locator('[data-r-lote="1"][data-lote="H-0910"]').click()
     }],
     ['resumen', async (page) => { await page.locator('#rt-revisar').click(); await expect(page.locator('#rt-resumen')).toContainText('25,5 kg') }],
     ['hecho', async (page) => { await page.locator('#rt-confirmar').click(); await expect(page.locator('.rt-codigo-grande')).toBeVisible() }],

@@ -222,15 +222,15 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chk('con su saldo en cajas', l.find(x => x.lote === '7030-1').saldo === 15)
   chk('"SIN STOCK" no es un lote para elegir', !l.some(x => x.lote === 'SIN STOCK'))
   chk('un lote sin cajas no se ofrece', !l.some(x => x.lote === '7031-1'))
-  // v_stock_por_lote: una fila por (lote, presentación).
+  // lotes_insumo_para_retiro(): (lote, cantidad, desde). Si viniera partido, se suma.
   const li = S.lotesDeInsumo([
-    { lote: 'H-20', saldo: 100, desde: '2026-09-20' },
-    { lote: 'H-10', saldo: 25, desde: '2026-09-10' },
-    { lote: 'H-20', saldo: 50, desde: '2026-09-22' },
-    { lote: null, saldo: 30, desde: '2026-09-01' },
-    { lote: 'H-05', saldo: -5, desde: '2026-09-05' },
+    { lote: 'H-20', cantidad: 100, desde: '2026-09-20' },
+    { lote: 'H-10', cantidad: 25, desde: '2026-09-10' },
+    { lote: 'H-20', cantidad: 50, desde: '2026-09-22' },
+    { lote: null, cantidad: 30, desde: '2026-09-01' },
+    { lote: 'H-05', cantidad: -5, desde: '2026-09-05' },
   ])
-  chk('los lotes de un insumo se suman por lote', li.find(x => x.lote === 'H-20').saldo === 150)
+  chk('los lotes de un insumo se suman por lote, con la CANTIDAD que da la base', li.find(x => x.lote === 'H-20').saldo === 150)
   chk('y van los más viejos primero, sin los agotados ni los sin lote', li.map(x => x.lote).join() === 'H-10,H-20')
 }
 {
@@ -267,36 +267,26 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   }))
 }
 {
-  // Un INSUMO sin stock:ver: los lotes no se pueden ver y se dice.
+  // Un INSUMO con SOLO retiros:cargar (sin stock:ver): desde el 27/09/2026 los
+  // lotes los da lotes_insumo_para_retiro(), sin permiso de Stock.
   const S = nuevo()
   S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }]])
   const f = conEmpresa(S)
   S.elegirInsumoRenglon(0, 'i-har')
-  chk('solo con retiros:cargar NO se ven los lotes de un insumo', S.puedeVerLotesInsumo() === false)
-  S.abrirLotes(0)
-  chk('y "Elegir lote" lo dice en vez de mostrar una lista vacía', /no se pueden ver los lotes de materia prima e insumos/.test(S.htmlLoteRenglon(f.renglones[0], 0)))
-  esperas.push(new Promise(r => setTimeout(r, 0)).then(() =>
-    chk('sin consultar v_stock_por_lote (las filas no llegarían y se leería "no hay")', !S.__llamadas.consultas.some(c => c[0] === 'v_stock_por_lote'))))
-  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', { unidades: ['u-d'] }]])
-  chk('stock:ver en OTRA empresa no alcanza', S.puedeVerLotesInsumo() === false)
-  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', null]])
-  chk('stock:ver sin alcance no alcanza (la misma regla que tiene_tarea_alcance)', S.puedeVerLotesInsumo() === false)
-}
-{
-  // Un INSUMO con stock:ver en la empresa: los lotes de v_stock_por_lote.
-  const S = nuevo()
-  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', { unidades: ['u-n'] }]])
-  const f = conEmpresa(S)
-  S.elegirInsumoRenglon(0, 'i-har')
   f.renglones[0].cantidad = 30
-  let filtros = null
-  S.__tablas.v_stock_por_lote = (fl) => { filtros = fl; return { data: [
-    { lote: 'H-10', saldo: 25, desde: '2026-09-10' }, { lote: 'H-20', saldo: 150, desde: '2026-09-20' }], error: null } }
+  let params = null
+  S.__tablas.v_stock_por_lote = () => ({ data: [{ lote: 'NO-VA', saldo: 999, desde: '2026-01-01' }], error: null })
+  S.__setRpc(async (n, p) => {
+    if (n === 'lotes_insumo_para_retiro') { params = p; return { data: [
+      { lote: 'H-10', cantidad: 25, desde: '2026-09-10' }, { lote: 'H-20', cantidad: 150, desde: '2026-09-20' }], error: null } }
+    return { data: null, error: null }
+  })
   S.abrirLotes(0)
+  chk('sin stock:ver, "Elegir lote" NO dice que no se pueden ver', !/no se pueden ver los lotes/.test(S.htmlLoteRenglon(f.renglones[0], 0)))
   esperas.push(new Promise(r => setTimeout(r, 0)).then(() => {
-    chk('los lotes de un insumo se leen de v_stock_por_lote, de esa empresa y ese insumo', filtros &&
-      filtros.some(x => x[0] === 'eq' && x[1] === 'unidad_negocio_id' && x[2] === 'u-n') &&
-      filtros.some(x => x[0] === 'eq' && x[1] === 'insumo_id' && x[2] === 'i-har'))
+    chk('los lotes de un insumo se leen con lotes_insumo_para_retiro(), de esa empresa y ese insumo', !!params &&
+      params.p_unidad_negocio_id === 'u-n' && params.p_insumo_id === 'i-har' && Object.keys(params).length === 2)
+    chk('sin consultar v_stock_por_lote (pide stock:ver)', !S.__llamadas.consultas.some(c => c[0] === 'v_stock_por_lote'))
     chk('sin llamar a lotes_para_retiro (esa es de producto)', !S.__llamadas.rpc.some(x => x[0] === 'lotes_para_retiro'))
     const h = S.htmlLoteRenglon(f.renglones[0], 0)
     chk('se ofrecen con su saldo en la unidad del insumo', /data-lote="H-10"/.test(h) && /150 kg/.test(h))
@@ -401,36 +391,29 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chk('lo que faltó de un insumo se dice en su unidad', /Renglón 2: Harina 000 — faltaron 5 kg de 30 kg/.test(h))
 }
 {
-  // La hoja con insumos: los recuerda el celular y los intercala en su lugar.
+  // La hoja con insumos: desde el 27/09/2026 mis_ordenes_retiro() trae TODOS los
+  // renglones, cada uno con su 'tipo', en el orden de la orden.
   const S = nuevo()
-  const f = conEmpresa(S)
-  S.elegirCliente('c1')
-  cargarRenglon(S, 0, 10)
-  S.agregarRenglon()
-  S.elegirInsumoRenglon(1, 'i-har')
-  f.renglones[1].cantidad = 30
-  S.agregarRenglon()
-  S.elegirProductoRenglon(2, 'p-cap')
-  S.elegirPresentacionRenglon(2, 'pr-cap-a')
-  f.renglones[2].cajas = 2
-  S.recordarInsumosDeOrden('o-9', f.renglones)
-  const mem = S.leerMemoriaInsumos()
-  chk('al confirmar se recuerdan los insumos de la orden, con su posición', mem['o-9'] && mem['o-9'].total === 3 && mem['o-9'].insumos[0].posicion === 1 && mem['o-9'].insumos[0].cantidad === 30)
+  conEmpresa(S)
   const o = { orden_id: 'o-9', codigo: 'N-0009', fecha: '2026-09-26', cliente: 'Distribuidora Anatolia', renglones: [
-    { producto: 'Cucurucho grande', presentacion: 'Caja x 100', marca: null, cajas: 10, unidades: 1000, lotes: [] },
-    { producto: 'Capelina', presentacion: 'Caja x 200', marca: null, cajas: 2, unidades: 400, lotes: [] }] }
-  const rs = S.renglonesParaHoja(o, mem)
-  chk('la hoja intercala el insumo en su lugar', rs.length === 3 && !rs[0].esInsumo && rs[1].esInsumo && rs[1].cantidad === 30 && rs[1].unidad === 'kg' && rs[2].producto === 'Capelina')
+    { orden: 1, tipo: 'producto', producto: 'Cucurucho grande', presentacion: 'Caja x 100', marca: null, cajas: 10, unidades: 1000, lotes: [] },
+    { orden: 2, tipo: 'insumo', insumo: 'Harina 000', marca_insumo: 'Molino Cañuelas', cantidad: 30, unidad_medida: 'kg', lotes: [{ lote: 'H-10', cantidad: 30 }] },
+    { orden: 3, tipo: 'producto', producto: 'Capelina', presentacion: 'Caja x 200', marca: null, cajas: 2, unidades: 400, lotes: [] }] }
+  const rs = S.renglonesParaHoja(o)
+  chk('la hoja trae el insumo de la base, en su lugar', rs.length === 3 && !rs[0].esInsumo && rs[1].esInsumo && rs[1].cantidad === 30 && rs[1].unidad === 'kg' && rs[2].producto === 'Capelina')
+  chk('el insumo lleva su nombre, su marca y sus lotes con cantidad', rs[1].producto === 'Harina 000' && rs[1].marca === 'Molino Cañuelas' && rs[1].lotes[0].lote === 'H-10' && rs[1].lotes[0].cantidad === 30)
+  chk('un renglón sin tipo se toma como producto (como antes)', !S.renglonesParaHoja({ renglones: [{ producto: 'X', cajas: 1 }] })[0].esInsumo)
   const hoja = S.htmlHoja(S.ordenParaHoja(o), { conPrecios: false, copias: S.COPIAS_IMPRESION })
   chk('la hoja impresa muestra el insumo con su cantidad y unidad', /Harina 000 · Molino Cañuelas/.test(hoja) && /30 kg/.test(hoja))
   chk('la hoja sin precios sigue sin columnas de plata', !/Precio|Subtotal|\$/.test(hoja))
   const texto = S.textoOrden(S.ordenParaHoja(o))
   chk('el texto para compartir lleva el insumo', /- 30 kg · Harina 000 · Molino Cañuelas/.test(texto) && /y 1 renglón de materia prima e insumos/.test(texto))
-  chk('sin memoria de esa orden, solo los renglones de producto', S.renglonesParaHoja({ ...o, orden_id: 'o-otra' }, mem).length === 2)
-  chk('y "Mis retiros" avisa si la empresa vende insumos', S.faltanInsumosEnHoja({ orden_id: 'o-otra' }, mem) === true && S.faltanInsumosEnHoja(o, mem) === false)
-  S.estado.catalogo = { ...CAT, insumos: [] }
-  chk('una empresa sin insumos no avisa', S.faltanInsumosEnHoja({ orden_id: 'o-otra' }, mem) === false)
-  chk('una orden sin insumos no se recuerda', (S.recordarInsumosDeOrden('o-10', [f.renglones[0]]), !S.leerMemoriaInsumos()['o-10']))
+  const det = S.htmlDetalleMio(o)
+  chk('"Mis retiros" muestra el insumo con su lote y NO avisa que puedan faltar', /30 kg · Harina 000 · Molino Cañuelas/.test(det) && /lote H-10/.test(det) && !/acá no se ven/.test(det))
+  chk('la fila cuenta los renglones de insumo que trae la base', /1 de materia prima e insumos/.test(S.htmlFilaMia(o)))
+  const falt = S.faltantesDeLotes({ renglones: [o.renglones[0],
+    { tipo: 'insumo', insumo: 'Harina 000', cantidad: 30, unidad_medida: 'kg', lotes: [{ lote: 'H-10', cantidad: 20 }, { lote: 'SIN STOCK', cantidad: 10 }] }] })
+  chk('lo que faltó de un insumo se deduce de su lote "SIN STOCK", en su unidad', falt.length === 1 && falt[0].insumo === 'Harina 000' && falt[0].faltaron === 10 && falt[0].pedidas === 30 && falt[0].unidad === 'kg' && falt[0].renglon === 2)
 }
 
 // ── El payload, SIN PLATA, y el mismo uuid en cada reintento ─────────────────
@@ -506,7 +489,8 @@ function cargarRenglon(S, i = 0, cajas = 10) {
 }
 
 {
-  // Confirmar una orden con insumos los deja recordados en el celular.
+  // Confirmar una orden con insumos ya NO guarda nada de la orden en el celular:
+  // la base devuelve los renglones de insumo (27/09/2026).
   const S = nuevo()
   const f = conEmpresa(S)
   S.elegirCliente('c1')
@@ -516,9 +500,11 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     ? { data: { orden_id: 'o-ins', numero: 20, codigo: 'N-0020', stock_insuficiente: [] }, error: null }
     : { data: [], error: null })
   esperas.push(S.confirmar().then(() => {
-    const m = S.leerMemoriaInsumos()['o-ins']
-    chk('al confirmar, los insumos de la orden quedan recordados para la hoja', !!m && m.insumos.length === 1 && m.insumos[0].nombre === 'Harina 000' && m.insumos[0].cantidad === 40)
+    chk('al confirmar no queda ninguna memoria de insumos en el celular', !S.__ls.has('retiros.insumos'))
   }))
+  const src = require('fs').readFileSync(ARCHIVO, 'utf8')
+  chk('la memoria vieja (retiros.insumos) se borra del celular al abrir', /\n    guardarPreferencia\('retiros\.insumos', null\)\n/.test(src))
+  chk('ya no hay ninguna función de memoria de insumos', !/recordarInsumosDeOrden|leerMemoriaInsumos|faltanInsumosEnHoja|puedeVerLotesInsumo/.test(src))
 }
 
 // ── El aviso de stock, que NO bloquea ───────────────────────────────────────
