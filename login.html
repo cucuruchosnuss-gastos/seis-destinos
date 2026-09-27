@@ -73,6 +73,7 @@
 
   <script type="module">
     import { verificarSesion, iniciarSesion } from './js/auth.js'
+    import { tomarAvisoLogin } from './js/salud.js'
     import { mostrarBannerVersion } from './js/version-banner.js'
 
     mostrarBannerVersion()
@@ -113,6 +114,12 @@
     // script es un módulo (sus funciones NO quedan en window). Sin esta
     // asignación explícita, el callback no se dispara nunca.
     window.onTurnstileOk = () => ocultarAlertaError()
+
+    // "Tu sesión fue cerrada. Volvé a iniciar sesión." (js/salud.js): la
+    // sesión se cortó (un super_admin cerró las sesiones, o la cuenta fue dada
+    // de baja). Se muestra una vez.
+    const avisoSesion = tomarAvisoLogin()
+    if (avisoSesion) mostrarAlertaError(avisoSesion)
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault()

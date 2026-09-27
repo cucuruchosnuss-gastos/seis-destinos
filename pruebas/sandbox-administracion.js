@@ -58,6 +58,8 @@ const FUNCIONES_BASE = [
   'repintarAsentar', 'repintarResultadosAsentar', 'buscarClienteAsentar', 'elegirClienteAsentar', 'cancelarAsentar', 'parametrosAsentar',
   'confirmarAsentar', 'quitarHecho', 'leerCobranza', 'htmlCobranzaAbierta', 'pintarCobranza', 'abrirCobranza', 'recargarCobranza',
   'volverDeCobranza', 'pedirReabrir', 'cancelarReabrir', 'confirmarReabrir', 'verFotoCobranza', 'cerrarVisorCobranza',
+  // Errores de la app (27/09/2026)
+  'etiquetaDispositivo', 'leerErrores', 'erroresFiltrados', 'htmlOpcionesFiltro', 'momentoAr', 'htmlFilaError', 'pintarErrores', 'mostrarErrores',
 ]
 
 const CONSTANTES_BASE = [
@@ -65,7 +67,7 @@ const CONSTANTES_BASE = [
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
-  'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'ETIQUETA_ESTADO_COBRANZA',
+  'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'ETIQUETA_ESTADO_COBRANZA', 'MAX_ERRORES', 'ETIQUETA_EVENTO_ERROR',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
 
@@ -112,6 +114,7 @@ const PRELUDIO = `
   var turnoLista = 0
   var turnoCobranzas = 0
   var turnoCobranza = 0
+  var turnoErrores = 0
   var history = { replaceState() {} }
   var __urlsFirmadas = []
 
@@ -161,6 +164,7 @@ const PRELUDIO = `
     saldos: null, errorSaldos: null, busquedaClientes: '', alta: null, cliente: null, ficha: null, listas: null, proveedores: null, listaNueva: null, lista: null,
     cobranzas: { lista: null, error: null, cheques: new Map(), fotos: new Map(), errorCheques: null, clientes: null, errorClientes: null, asentando: null, hechos: new Map() },
     cobranza: null, bancos: null,
+    errores: { filas: null, error: null, pantalla: '', dispositivo: '', evento: '' },
   }
 `
 

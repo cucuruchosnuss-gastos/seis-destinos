@@ -40,7 +40,10 @@ test('humo: el login se dibuja con su formulario', async ({ page }, info) => {
   expect(errores).toEqual([]);
 });
 
-test('humo: la planta sin sesión manda al login', async ({ page }) => {
+// Desde el 27/09/2026 la planta sin sesión NO va a login.html (queda fuera del
+// alcance de su app instalada): pide entrar ahí mismo.
+test('humo: la planta sin sesión pide entrar ahí mismo, sin salir de su página', async ({ page }) => {
   await page.goto('/modulos/produccion.html');
-  await page.waitForURL(/login\.html/, { timeout: 20000 });
+  await expect(page.locator('#pr-entrar')).toBeVisible({ timeout: 20000 });
+  expect(new URL(page.url()).pathname).toMatch(/\/modulos\/produccion\.html$/);
 });

@@ -6,9 +6,16 @@
   <title>Planta — Seis Destinos</title>
   <link rel="stylesheet" href="../css/main.css">
   <!-- La planta se instala como su propia app ("Planta"), en pantalla
-       completa y apaisada: su manifest es ../manifest.webmanifest y NO el
-       de la app entera (../manifest.json), que abre el dashboard. -->
+       completa: su manifest es ../manifest.webmanifest y NO el de la app
+       entera (../manifest.json), que abre el dashboard. Desde el 27/09/2026
+       su ALCANCE es SOLO esta página (scope modulos/produccion.html): con el
+       mismo alcance que la app general, Chrome en Android no sabía de cuál
+       de las dos era la página (ver el traspaso 2026-09-27). -->
   <link rel="manifest" href="../manifest.webmanifest">
+  <!-- El login de la tablet es esta misma página (la vista pr-entrar): así
+       ninguna navegación de la planta sale del alcance de su app. js/salud.js
+       y verificarSesion() mandan acá cuando la sesión se corta. -->
+  <meta name="sd-login" content="produccion.html">
   <meta name="theme-color" content="#3F4655">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -193,6 +200,14 @@
     .pr-subtitulo { font-size: 1.2rem; font-weight: 700; margin: 1rem 0 0.5rem; color: var(--color-texto); }
     .pr-texto-suave { color: var(--pr-texto-secundario); }
     .pr-vacio { padding: 2rem 1rem; text-align: center; font-size: 1.2rem; color: var(--pr-texto-secundario); }
+    /* El login de la tablet (27/09/2026), adentro de la planta. */
+    .pr-entrar { max-width: 28rem; margin: 2rem auto; padding: 1.5rem; background: var(--color-fondo); border-radius: var(--radio-tarjeta); box-shadow: var(--sombra-suave); }
+    .pr-entrar__titulo { font-size: 1.5rem; font-weight: 800; margin: 0 0 1rem; }
+    .pr-entrar__campo { display: flex; flex-direction: column; gap: 0.375rem; margin: 0 0 1rem; }
+    .pr-entrar__campo label { font-weight: 700; font-size: 1.0625rem; }
+    .pr-entrar__campo input { min-height: 56px; font: inherit; font-size: 1.125rem; padding: 0 0.875rem; border: 1px solid var(--pr-borde-control, #D5D9E0); border-radius: var(--radio-input); box-sizing: border-box; width: 100%; }
+    .pr-entrar__aviso { background: var(--color-superficie); border-left: 4px solid var(--color-acento-gris); padding: 0.75rem 0.875rem; border-radius: var(--radio-input); margin: 0 0 1rem; font-size: 1.0625rem; }
+    .pr-entrar__error { color: var(--bordo-oscuro); font-weight: 700; margin: 0 0 1rem; }
     .pr-aviso {
       padding: 0.875rem 1rem; border-radius: var(--radio-input); margin: 0.75rem 0;
       background: var(--color-superficie); border-left: 5px solid var(--color-acento-gris);
@@ -1471,6 +1486,22 @@
     <div class="pr-vacio" id="pr-sin-acceso" hidden></div>
     <div class="pr-vacio" id="pr-cargando">Cargando…</div>
 
+    <!-- EL LOGIN DE LA TABLET (27/09/2026): sin sesión, la planta pide el
+         mail y la contraseña de la tablet ACÁ, sin ir a login.html (que queda
+         fuera del alcance de la app de la planta). Mismo Turnstile y misma
+         iniciarSesion() que login.html. -->
+    <form class="pr-entrar" id="pr-entrar" hidden novalidate>
+      <h1 class="pr-entrar__titulo">Entrar a la planta</h1>
+      <p class="pr-entrar__aviso" id="pr-entrar-aviso" hidden></p>
+      <div class="pr-entrar__campo"><label for="pr-entrar-email">Mail de la tablet</label>
+        <input type="email" id="pr-entrar-email" autocomplete="username" required></div>
+      <div class="pr-entrar__campo"><label for="pr-entrar-contrasena">Contraseña</label>
+        <input type="password" id="pr-entrar-contrasena" autocomplete="current-password" required></div>
+      <div id="pr-entrar-turnstile" style="margin:0 0 1rem"></div>
+      <p class="pr-entrar__error" id="pr-entrar-error" role="alert" hidden></p>
+      <button type="submit" class="pr-btn pr-btn--accion pr-btn--ancho" id="pr-entrar-btn">Entrar</button>
+    </form>
+
     <main id="pr-vista" hidden>
       <section class="pr-tarjeta" id="pr-inicio">
         <h1 class="pr-titulo">Planta</h1>
@@ -2037,7 +2068,8 @@
   </div>
 
   <script type="module">
-    import { verificarSesion } from '../js/auth.js'
+    import { verificarSesion, iniciarSesion } from '../js/auth.js'
+    import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion } from '../js/salud.js'
     import {
       mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
@@ -7939,13 +7971,107 @@
       estado.unidades = mapaDeUnidades(unidades, estado.fabrica)
     }
 
+    // ── EL LOGIN DE LA TABLET, adentro de la planta (27/09/2026) ───────────
+    const SITEKEY_TURNSTILE = '0x4AAAAAAEJjFW7fQjfhZCTy'
+    let widgetEntrar = null
+
+    function mostrarEntrar() {
+      document.getElementById('pr-cargando').hidden = true
+      document.getElementById('pr-entrar').hidden = false
+      const aviso = tomarAvisoLogin()
+      const el = document.getElementById('pr-entrar-aviso')
+      el.textContent = aviso ?? ''
+      el.hidden = !aviso
+      // Turnstile se carga recién acá: la planta con sesión no lo necesita.
+      const dibujar = () => {
+        if (widgetEntrar !== null || !window.turnstile) return
+        try { widgetEntrar = window.turnstile.render('#pr-entrar-turnstile', { sitekey: SITEKEY_TURNSTILE }) } catch (e) { console.error('Turnstile:', e) }
+      }
+      if (window.turnstile) dibujar()
+      else if (!document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')) {
+        const sc = document.createElement('script')
+        sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+        sc.async = true
+        sc.onload = dibujar
+        document.head.appendChild(sc)
+      }
+      document.getElementById('pr-entrar-email').focus?.()
+    }
+
+    function errorEntrar(texto) {
+      const el = document.getElementById('pr-entrar-error')
+      el.textContent = texto ?? ''
+      el.hidden = !texto
+    }
+
+    async function enviarEntrar(ev) {
+      ev?.preventDefault?.()
+      errorEntrar(null)
+      const email = document.getElementById('pr-entrar-email').value.trim()
+      const contrasena = document.getElementById('pr-entrar-contrasena').value
+      if (!email || !contrasena) { errorEntrar('Completá el mail y la contraseña de la tablet.'); return }
+      const token = widgetEntrar !== null ? (window.turnstile?.getResponse(widgetEntrar) ?? '') : ''
+      if (!token) { errorEntrar('Esperá a que termine la verificación de seguridad.'); return }
+      const btn = document.getElementById('pr-entrar-btn')
+      btn.disabled = true
+      try {
+        await iniciarSesion(email, contrasena, token)
+        // La misma página, ya con sesión: nunca sale del alcance de la app.
+        window.location.replace('produccion.html')
+      } catch (err) {
+        errorEntrar(err?.message || 'No se pudo entrar. Probá de nuevo.')
+        try { window.turnstile?.reset(widgetEntrar) } catch { /* nada */ }
+        btn.disabled = false
+      }
+    }
+
+    // Sin red al arrancar (la tablet recién desbloqueada, el wifi que todavía
+    // no volvió): no se dice "no pudimos identificar esta cuenta" —que se lee
+    // como un problema de la cuenta— sino "Sin conexión, reintentando…", y se
+    // reintenta solo. Un error que NO es de red se dice como siempre.
+    async function conReintento(fn) {
+      for (let intento = 0; ; intento++) {
+        try {
+          const r = await fn()
+          ocultarSinConexion()
+          return r
+        } catch (err) {
+          if (!esErrorDeRedSalud(err)) throw err
+          mostrarSinConexion()
+          await new Promise(res => setTimeout(res, Math.min(30000, 2000 * 2 ** Math.min(intento, 4))))
+        }
+      }
+    }
+
+    // Al volver de estar bloqueada (js/salud.js ya revisó la sesión): se
+    // redibuja EN EL MISMO LUGAR, sin navegar. Solo las vistas que muestran
+    // datos vivos se vuelven a leer; las demás (el PIN a medio tipear, una
+    // masa a medio armar) quedan como estaban.
+    async function alReanudar() {
+      if (!estado.sesionPlanta) return
+      await refrescarAbiertas()
+      reintentarPendientes()
+      try {
+        if (estado.vista === 'pr-produccion') await mostrarTablero()
+        else if (estado.vista === 'pr-planilla') await recargarPlanilla()
+        else if (estado.vista === 'pr-sala') await mostrarSala()
+      } catch (err) { console.error('al reanudar:', err) }
+    }
+
     async function init() {
-      estado.sesion = await verificarSesion()
-      if (!estado.sesion) return
+      document.getElementById('pr-entrar').addEventListener('submit', enviarEntrar)
+      window.addEventListener('app:reanudada', () => { alReanudar() })
+      // Sin sesión: el login de la tablet, acá mismo (no login.html).
+      estado.sesion = await verificarSesion({ redirigirSiNoHay: false })
+      if (!estado.sesion) {
+        // verificarSesion() pudo haber mandado al segundo factor: no se tapa.
+        if (/produccion\.html$/.test(window.location.pathname)) mostrarEntrar()
+        return
+      }
       // En paralelo con los permisos: no frena el arranque.
       const pFabrica = cargarFabricaDePruebas(supabase)
       try {
-        await cargarPermisos(pFabrica)
+        await conReintento(() => cargarPermisos(pFabrica))
       } catch (err) {
         console.error('No se pudieron leer los permisos:', err)
         sinAcceso('No pudimos identificar esta cuenta. Revisá la conexión.', LINKS_SIN_SESION)
@@ -7956,7 +8082,7 @@
       // caminos.
       let ses
       try {
-        ses = await leerMiSesion()
+        ses = await conReintento(() => leerMiSesion())
       } catch (err) {
         console.error('mi_sesion_produccion:', err)
         sinAcceso('No se pudo saber qué cuenta es esta. Revisá la conexión.', LINKS_SIN_SESION)

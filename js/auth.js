@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js'
+import { mostrarSinConexion, ocultarSinConexion, rutaLogin } from './salud.js'
 
 const RAIZ_SITIO = new URL('..', import.meta.url).href
-const RUTA_LOGIN = new URL('login.html', RAIZ_SITIO).href
 const RUTA_DASHBOARD = new URL('dashboard.html', RAIZ_SITIO).href
 const RUTA_RESTABLECER_CONTRASENA = new URL('restablecer-contrasena.html', RAIZ_SITIO).href
 const RUTA_MFA = new URL('mfa.html', RAIZ_SITIO).href
@@ -21,6 +21,9 @@ const RUTA_MFA = new URL('mfa.html', RAIZ_SITIO).href
 // siempre, así protege automáticamente cualquier página que la llame.
 const BANDERA_RECUPERACION = 'sd_recuperacion_pendiente'
 
+// Cuánto se espera la sesión antes de decir "Sin conexión, reintentando…".
+const ESPERA_AVISO_MS = 4000
+
 export function marcarSesionRecuperacion() {
   localStorage.setItem(BANDERA_RECUPERACION, '1')
 }
@@ -32,13 +35,25 @@ export function limpiarSesionRecuperacion() {
 // Verifica sesión activa.
 // redirigirSiNoHay: redirige a login si no hay sesión (default: true)
 // redirigirSiHay: redirige al dashboard si ya hay sesión (default: false)
+//
+// El login al que se manda es el de la pantalla (<meta name="sd-login">, la
+// planta tiene el suyo dentro del alcance de su app) o login.html.
+//
+// Si revisar la sesión tarda (un token vencido y la red que todavía no volvió
+// después de desbloquear la tablet: el SDK reintenta solo), la pantalla NO se
+// queda muda en "Cargando…": a los pocos segundos dice "Sin conexión,
+// reintentando…" y sigue esperando (27/09/2026).
 export async function verificarSesion({ redirigirSiNoHay = true, redirigirSiHay = false } = {}) {
   if (localStorage.getItem(BANDERA_RECUPERACION)) {
     await supabase.auth.signOut()
     limpiarSesionRecuperacion()
   }
 
-  const { data: { session }, error } = await supabase.auth.getSession()
+  const aviso = setTimeout(() => mostrarSinConexion(), ESPERA_AVISO_MS)
+  let resultado
+  try { resultado = await supabase.auth.getSession() } finally { clearTimeout(aviso) }
+  ocultarSinConexion()
+  const { data: { session }, error } = resultado
 
   if (error) console.error('Error al verificar sesión:', error.message)
 
@@ -79,7 +94,7 @@ export async function verificarSesion({ redirigirSiNoHay = true, redirigirSiHay 
   }
 
   if (!session && redirigirSiNoHay) {
-    window.location.replace(RUTA_LOGIN)
+    window.location.replace(rutaLogin())
     return null
   }
 
@@ -108,7 +123,7 @@ export async function iniciarSesion(email, contrasena, captchaToken) {
 
 export async function cerrarSesion() {
   await supabase.auth.signOut()
-  window.location.replace(RUTA_LOGIN)
+  window.location.replace(rutaLogin())
 }
 
 // ── Verificación en dos pasos (MFA / TOTP) ───────────────────────────────────

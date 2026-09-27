@@ -163,7 +163,7 @@ esperas.push((async () => {
 for (const [src, nombre] of [[FUENTE_P, 'planta'], [FUENTE_G, 'gestión']]) {
   chk(`${nombre}: importa el helper de utils.js`, /cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,\n    \} from '\.\.\/js\/utils\.js'/.test(src))
   chk(`${nombre}: el init la carga en paralelo y se la pasa a cargarPermisos`,
-    /const pFabrica = cargarFabricaDePruebas\(supabase\)\s*\n\s*try \{\s*\n\s*await cargarPermisos\(pFabrica\)/.test(src))
+    /const pFabrica = cargarFabricaDePruebas\(supabase\)\s*\n\s*try \{\s*\n\s*await (?:conReintento\(\(\) => )?cargarPermisos\(pFabrica\)/.test(src))
   chk(`${nombre}: no filtra en la consulta (un .neq de es_prueba descartaría nulls y a la cuenta de prueba)`, !/es_prueba/.test(src.replace(/\/\/.*$/gm, '')))
 }
 

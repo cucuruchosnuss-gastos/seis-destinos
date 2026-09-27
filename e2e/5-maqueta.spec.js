@@ -137,6 +137,15 @@ const PANTALLAS = [
       await expect(page.locator('#ad-reabrir-motivo')).toBeVisible()
     }],
   ]],
+  // Un super_admin (27/09/2026): los errores de la app.
+  ['modulos/administracion.html', 'administracion-super', [
+    ['errores', async (page) => {
+      await page.locator('[data-seccion="errores"]').click()
+      await expect(page.locator('#ad-errores-lista')).toContainText('SM-X135 · Android 14 · app instalada')
+      await page.locator('#ad-errores-pantalla').selectOption('produccion')
+      await expect(page.locator('#ad-errores-cuenta')).toHaveText('1 de 2')
+    }],
+  ]],
   ['modulos/pedidos.html', 'pedidos', [
     ['lista', async (page) => { await expect(page.locator('[data-pedido]').first()).toBeVisible() }],
     ['detalle', async (page) => { await page.locator('[data-pedido="pe1"]').click(); await expect(page.locator('#pe-btn-imprimir')).toBeVisible() }],
@@ -161,7 +170,9 @@ const PANTALLAS = [
 
 for (const [archivo, datos, pasos] of PANTALLAS) {
   for (const ancho of [390, 1280]) {
-    test(`maqueta: ${archivo} a ${ancho} px, sin scroll horizontal ni errores`, async ({ page }, info) => {
+    // Con otro juego de datos para la misma pantalla, el título lo nombra.
+    const conDatos = archivo.endsWith(`/${datos}.html`) ? '' : ` (${datos})`;
+    test(`maqueta: ${archivo}${conDatos} a ${ancho} px, sin scroll horizontal ni errores`, async ({ page }, info) => {
       await page.setViewportSize({ width: ancho, height: ancho < 800 ? 844 : 900 });
       const errores = vigilarErrores(page);
       await page.goto(`${MAQUETA}/${archivo}?maqueta=${datos}`);
