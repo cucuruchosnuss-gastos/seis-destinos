@@ -3,11 +3,11 @@
 //   node pruebas/mut-dashboard-administracion.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+// Reparte cada mutación entre dashboard.html y js/modulos.js: ver mutar-dashboard.js.
+const { correrMutacionesDashboard } = require('./mutar-dashboard')
 
-correrMutaciones({
+correrMutacionesDashboard({
   suite: path.join(__dirname, 'test-dashboard-administracion.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'dashboard.html'),
   funciones: [],
   manuales: [
     { nombre: 'la burbuja de administración no va a su tarjeta', de: "      administracion: 'administracion',\n    }", a: '    }' },

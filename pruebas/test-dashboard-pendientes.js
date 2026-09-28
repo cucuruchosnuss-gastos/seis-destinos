@@ -8,12 +8,8 @@ const fs = require('fs')
 const path = require('path')
 const { extraerFn, extraerConst } = require('./extraer')
 
-const RUTA = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'dashboard.html')
-const html = fs.readFileSync(RUTA, 'utf8')
-console.log(`LEIDO:${html.length} de ${RUTA}`)
-console.log(`ARCHIVO ${RUTA} (${html.length} bytes)`)
-const ini = html.indexOf('<script type="module">')
-const src = html.slice(ini, html.indexOf('</script>', ini))
+// El script del dashboard + js/modulos.js (el catálogo se mudó ahí el 27/09/2026).
+const src = require('./fuente-dashboard').scriptDashboard()
 
 let ok = 0
 const fallas = []

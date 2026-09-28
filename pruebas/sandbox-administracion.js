@@ -11,7 +11,7 @@ const { fuenteNumeros } = require('./numeros-comun')
 
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'hoyArgentina', 'esFechaIso', 'fechaCorta',
-  'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles',
+  'tieneTarea', 'puedeEn', 'seccionVisible', 'hayGlobales', 'seccionesVisibles', 'empresasDeAdministracion', 'empresaActual', 'puedeVerLotes', 'linksVisibles', 'moduloVisible',
   'leerPreferencia', 'guardarPreferencia', 'mostrarVista', 'mostrarCheques',
   'htmlLogo', 'htmlEmpresas', 'pintarEmpresas', 'elegirEmpresa', 'empresaInicial',
   'leerClientes', 'leerCatalogo', 'insumoDe', 'partesInsumo', 'asegurarDatosEmpresa', 'clienteDe', 'asegurarNombres', 'partesRenglon',
@@ -63,7 +63,8 @@ const FUNCIONES_BASE = [
 ]
 
 const CONSTANTES_BASE = [
-  'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
+  // MODULOS (js/modulos.js) antes de LINKS, que se arma con él.
+  'MODULOS', 'ZONA_AR', 'DECIMALES_PRECIO', 'LARGO_MINIMO_MOTIVO', 'SECCIONES', 'CLAVES_ACCESOS', 'LINKS', 'CLAVE_EMPRESA', 'VISTAS', 'SUBTITULO_DE_VISTA',
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',

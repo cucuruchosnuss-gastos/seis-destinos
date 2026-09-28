@@ -3,11 +3,11 @@
 //   node pruebas/mut-dashboard-pedidos.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+// Reparte cada mutación entre dashboard.html y js/modulos.js: ver mutar-dashboard.js.
+const { correrMutacionesDashboard } = require('./mutar-dashboard')
 
-correrMutaciones({
+correrMutacionesDashboard({
   suite: path.join(__dirname, 'test-dashboard-pedidos.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'dashboard.html'),
   funciones: [],
   manuales: [
     { nombre: 'otra clave', de: "        clave: 'pedidos',", a: "        clave: 'pedido'," },

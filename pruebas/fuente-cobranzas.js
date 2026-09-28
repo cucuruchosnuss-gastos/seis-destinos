@@ -18,6 +18,7 @@ const RUTA_COMUN = process.env.ARCHIVO_COMUN || path.join(__dirname, '..', 'js',
 // (retiros.html) y Administración (administracion.html). Se pega SOLO si el
 // script la importa. ARCHIVO_COMUN_RETIROS la reemplaza (para mutarla).
 const RUTA_COMUN_RETIROS = process.env.ARCHIVO_COMUN_RETIROS || path.join(__dirname, '..', 'js', 'retiros-comun.js')
+const RUTA_MODULOS = process.env.ARCHIVO_MODULOS || path.join(__dirname, '..', 'js', 'modulos.js')
 
 // Un archivo común sin imports y sin la palabra `export`.
 function fuenteComun(ruta = RUTA_COMUN) {
@@ -65,6 +66,13 @@ function fuenteConComun(htmlOScript) {
     const deRetiros = declaracionesComun(RUTA_COMUN_RETIROS)
       .filter(d => !propios.has(d.nombre) && !agregados.some(a => a.nombre === d.nombre))
     fuente += '\n// ── js/retiros-comun.js ──\n' + deRetiros.map(d => d.texto).join('\n')
+  }
+  // El catálogo de módulos (27/09/2026): Administración lo importa para sus
+  // accesos directos. ARCHIVO_MODULOS lo reemplaza (para mutarlo).
+  if (script.includes("from '../js/modulos.js'")) {
+    const yaEstan = new Set([...propios, ...agregados.map(a => a.nombre)])
+    const deModulos = declaracionesComun(RUTA_MODULOS).filter(d => !yaEstan.has(d.nombre))
+    fuente += '\n// ── js/modulos.js ──\n' + deModulos.map(d => d.texto).join('\n')
   }
   return fuente
 }

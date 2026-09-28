@@ -7,9 +7,8 @@ const path = require('path')
 const { extraerConst, extraerFn } = require('./extraer')
 const { arnes } = require('./circuito-comun')
 
-const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'dashboard.html')
-const src = fs.readFileSync(ARCHIVO, 'utf8')
-console.log(`ARCHIVO ${ARCHIVO} (${src.length} bytes)`)
+// dashboard.html + js/modulos.js (el catálogo se mudó ahí el 27/09/2026).
+const src = require('./fuente-dashboard').fuenteDashboard()
 const { chk, fin } = arnes()
 
 const S = new Function(extraerConst(src, 'MODULOS') + '\n' + extraerConst(src, 'COLORES_MODULO') + '\n' +

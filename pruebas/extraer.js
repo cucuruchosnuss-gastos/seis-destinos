@@ -50,7 +50,7 @@ function cuerpoDesde(src, inicioLlave) {
 }
 
 function extraerFn(src, nombre) {
-  const re = new RegExp(`(?:^|\\n)\\s*(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'm')
+  const re = new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'm')
   const m = re.exec(src)
   if (!m) throw new Error(`extraerFn: NO EXISTE la función ${nombre}`)
   // El `async` es parte de la declaración: arrancar en `function` lo perdería
@@ -68,15 +68,16 @@ function extraerFn(src, nombre) {
   // líneas después con un error que no habla de esto.
   if (!texto.trimEnd().endsWith('}')) throw new Error(`extraerFn: ${nombre} quedó truncada`)
   if (texto.split('\n').length < 2) throw new Error(`extraerFn: ${nombre} quedó en una línea, sospechoso`)
-  if (new RegExp(`(?:^|\\n)\\s*(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'gm').exec(src) && src.match(new RegExp(`(?:^|\\n)\\s*(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'gm')).length > 1) {
+  if (new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'gm').exec(src) && src.match(new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'gm')).length > 1) {
     throw new Error(`extraerFn: ${nombre} está declarada más de una vez`)
   }
   return texto
 }
 
-// Constante top-level. Se devuelve como `var` para que sobreviva al eval.
+// Constante top-level (con o sin `export`, desde el 27/09/2026: js/modulos.js).
+// Se devuelve como `var` para que sobreviva al eval.
 function extraerConst(src, nombre) {
-  const re = new RegExp(`(?:^|\\n)\\s*const\\s+${nombre}\\s*=`, 'm')
+  const re = new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?const\\s+${nombre}\\s*=`, 'm')
   const m = re.exec(src)
   if (!m) throw new Error(`extraerConst: NO EXISTE la constante ${nombre}`)
   const igual = src.indexOf('=', m.index + m[0].indexOf(nombre))

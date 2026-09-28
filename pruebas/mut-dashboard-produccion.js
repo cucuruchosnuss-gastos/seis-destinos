@@ -5,11 +5,11 @@
 //   node pruebas/mut-dashboard-produccion.js
 
 const path = require('path')
-const { correrMutaciones } = require('./mutar')
+// Reparte cada mutación entre dashboard.html y js/modulos.js: ver mutar-dashboard.js.
+const { correrMutacionesDashboard } = require('./mutar-dashboard')
 
-correrMutaciones({
+correrMutacionesDashboard({
   suite: path.join(__dirname, 'test-dashboard-produccion.js'),
-  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'dashboard.html'),
   // Esta suite no dibuja HTML: no hay esc() que sacar. Todo va a mano.
   funciones: [],
   manuales: [

@@ -18,6 +18,8 @@ const SEGURAS_ADMINISTRACION = [
   ['avisos', 'HTML ya escapado: htmlFilaImportar() arma cada aviso con esc()'],
   ['resultado', 'HTML ya escapado: htmlFilaImportar() arma el resultado con esc() del mensaje, o vacío'],
   ["im.filas.map(htmlFilaImportar).join('')", 'HTML armado por htmlFilaImportar(), que escapa cada dato de la fila'],
+  // La fila de accesos directos (27/09/2026)
+  ['contenido', 'HTML armado en htmlLink() con esc() del ícono y del nombre (constantes de js/modulos.js)'],
   // Cobranzas por asentar (27/09/2026)
   ['foto', 'HTML armado en htmlChequeCob(): el botón con esc() del id de la foto, o vacío'],
   ["lista.map(htmlChequeCob).join('')", 'HTML armado por htmlChequeCob(), que escapa la línea del cheque y el id de la foto'],

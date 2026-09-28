@@ -190,3 +190,41 @@ for (const [archivo, datos, pasos] of PANTALLAS) {
     });
   }
 }
+
+// La barra lateral de la compu (27/09/2026): en cada pantalla de la maqueta,
+// a 1280 px está a la vista con el módulo actual marcado y la página no se
+// mete debajo; a 390 px no existe a la vista. La planta no la carga.
+const conBarra = [...new Map(PANTALLAS.map(([archivo, datos]) => [`${archivo}|${datos}`, [archivo, datos]])).values()];
+for (const [archivo, datos] of conBarra) {
+  test(`maqueta: la barra lateral en ${archivo} (${datos}) — a la vista en la compu, no en el celular`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${MAQUETA}/${archivo}?maqueta=${datos}`);
+    const barra = page.locator('nav.barra-lateral');
+    await expect(barra).toBeVisible();
+    await expect(barra.locator('[aria-current="page"]')).toHaveCount(1);
+    const { izquierda, ancho } = await page.evaluate(() => ({
+      izquierda: parseFloat(getComputedStyle(document.body).marginLeft),
+      ancho: document.querySelector('nav.barra-lateral').getBoundingClientRect().width,
+    }));
+    expect(izquierda, 'la página se corre lo que mide la barra').toBeCloseTo(ancho, 0);
+    // Achicar y recordar.
+    await page.locator('#barra-lateral-plegar').click();
+    await expect(page.locator('body')).toHaveClass(/barra-lateral-colapsada/);
+    await page.reload();
+    await expect(page.locator('body')).toHaveClass(/barra-lateral-colapsada/);
+    await expect(page.locator('nav.barra-lateral .barra-lateral__nombre').first()).toBeHidden();
+    // El celular.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(barra).toBeHidden();
+    expect(parseFloat(await page.evaluate(() => getComputedStyle(document.body).marginLeft))).toBe(0);
+  });
+}
+
+test('maqueta: la planta no carga la barra lateral', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`${MAQUETA}/modulos/produccion.html`);
+  await page.waitForTimeout(1500);
+  await expect(page.locator('nav.barra-lateral')).toHaveCount(0);
+  const html = await (await page.request.get(`${MAQUETA}/modulos/produccion.html`)).text();
+  expect(html).not.toContain('barra-lateral.js');
+});

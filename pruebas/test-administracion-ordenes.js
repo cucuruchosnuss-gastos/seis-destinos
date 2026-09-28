@@ -90,19 +90,37 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   chk('la empresa recordada se usa si todavía se puede', S.empresaInicial(S.empresasDeAdministracion(), 'u-d') === 'u-d' && S.empresaInicial(S.empresasDeAdministracion(), 'zzz') === 'u-n')
 }
 
-// ── Los accesos directos ────────────────────────────────────────────────────
+// ── Los accesos directos (la fila, 27/09/2026) ─────────────────────────────
+// Cheques, Cobranzas, Cuentas corrientes, Gastos y Caja, del catálogo
+// compartido (js/modulos.js), con la MISMA regla que el dashboard.
 {
   const S = nuevo()
+  chk('los cinco, en este orden', S.LINKS.map(x => x.clave).join() === 'cheques,cobranzas,cuentas-corrientes,gastos,caja')
   chk('sin esos módulos no hay accesos directos', S.linksVisibles().length === 0)
-  S.estado.misModulos = new Set(['cobranzas', 'cuentas-corrientes'])
+  S.estado.misModulos = new Set(['cobranzas', 'cuentas-corrientes', 'gastos', 'caja'])
   let l = S.linksVisibles().map(x => x.clave)
-  chk('con cobranzas y cuentas corrientes: esos dos', l.join() === 'cuentas-corrientes,cobranzas')
+  chk('con los módulos: cobranzas, cuentas corrientes, gastos y caja', l.join() === 'cobranzas,cuentas-corrientes,gastos,caja', l.join())
+  chk('Cheques necesita además ver_todo o procesar (la regla del dashboard)', !l.includes('cheques'))
   S.estado.misTareas.set('cobranzas:procesar', null)
   l = S.linksVisibles().map(x => x.clave)
-  chk('Cheques ya NO es un acceso directo: es una sección (se mudó el 26/09/2026)', !l.includes('cheques') && !S.LINKS.some(x => x.clave === 'cheques'))
-  chk('los links van a las pantallas que ya existen, sin moverlas', S.LINKS.every(x => fs.existsSync(path.join(__dirname, '..', 'modulos', x.url))))
-  const h = S.htmlLink(S.LINKS[0])
-  chk('un link es un <a> con su url', /<a class="ad-seccion ad-seccion--link" href="cuentas-corrientes\.html"/.test(h))
+  chk('con cobranzas:procesar aparece Cheques, primero', l[0] === 'cheques', l.join())
+  S.estado.misModulos = new Set(['gastos'])
+  chk('sin el módulo cobranzas, ni Cobranzas ni Cheques', S.linksVisibles().map(x => x.clave).join() === 'gastos')
+  const S2 = nuevo()
+  S2.estado.miRolApp = 'super_admin'
+  chk('un super_admin ve los cinco', S2.linksVisibles().length === 5)
+  chk('los links van a pantallas que existen', S.LINKS.every(x => fs.existsSync(path.join(__dirname, '..', x.url.split('?')[0]))))
+  const h = S.htmlLink(S.LINKS.find(x => x.clave === 'gastos'))
+  chk('un link es un <a> a su pantalla (la misma carpeta modulos/)', /<a class="ad-acceso" href="gastos\.html" data-link="gastos">/.test(h), h)
+  chk('lleva su ícono y su nombre', /data-lucide="credit-card"/.test(h) && />Gastos<\/span>/.test(h))
+  const hc = S.htmlLink(S.LINKS.find(x => x.clave === 'cheques'))
+  chk('Cheques es un botón de esta misma pantalla (no recarga)', /^<button type="button" class="ad-acceso" data-link="cheques">/.test(hc) && !hc.includes('href'), hc)
+  S2.pintarPortada()
+  chk('la portada dibuja la fila y muestra su título', /data-link="caja"/.test(S2.__doc.getElementById('ad-links').innerHTML) && S2.__doc.getElementById('ad-links-titulo').hidden === false)
+  const S3 = nuevo()
+  S3.pintarPortada()
+  chk('sin accesos, el título se esconde', S3.__doc.getElementById('ad-links-titulo').hidden === true && S3.__doc.getElementById('ad-links').innerHTML === '')
+  chk('Cheques se abre sin recargar (el click va a mostrarCheques)', /closest\('button\[data-link="cheques"\]'\)\) mostrarCheques\(\)/.test(src))
 }
 
 // ── La portada ─────────────────────────────────────────────────────────────

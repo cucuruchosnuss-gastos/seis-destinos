@@ -17,6 +17,11 @@ module.exports = {
         "es_dispositivo": false
       }
     ],
+    // Los módulos habilitados: la barra lateral los lee (27/09/2026).
+    "empleado_modulos": [
+      { "empleado_id": "emp-1", "modulo": "produccion", "habilitado": true },
+      { "empleado_id": "emp-1", "modulo": "stock", "habilitado": true }
+    ],
     "empleado_tareas": [
       {
         "empleado_id": "emp-1",
