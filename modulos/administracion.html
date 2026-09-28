@@ -675,6 +675,7 @@
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible } from '../js/modulos.js'
+    import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
 
@@ -695,6 +696,8 @@
       empresas: [],
       fabrica: FABRICA_SIN_DATOS,
       empresaId: null,
+      // La unidad elegida en la barra de arriba (28/09/2026): null = Todas.
+      unidadBarra: null,
       vista: null,
       // Lo que se lee por empresa
       clientes: null,        // la tabla clientes (id → fila), para nombres y límites
@@ -932,10 +935,28 @@
       return logo ? `<img class="ad-logo" src="../${encodeURIComponent(logo)}" alt="">` : ''
     }
 
+    // LA BARRA DE UNIDAD (28/09/2026). La empresa de Administración la decide
+    // la barra de arriba: nunca dos lugares para lo mismo. Con una unidad
+    // elegida en la que hay Administración, es esa y el selector de acá no se
+    // dibuja; con una en la que NO hay, se dice (y quedan solo las secciones
+    // que no son de una empresa: Cheques, Cobranzas por asentar). Con "Todas",
+    // como órdenes, clientes, listas e importar necesitan UNA empresa, se pide
+    // elegirla acá mismo (regla f), sin cambiar la barra.
+    function empresaSegunBarra(lista = empresasDeAdministracion(), elegida = estado.unidadBarra) {
+      if (!elegida) return undefined                    // Todas: se elige acá
+      return lista.some(e => e.id === elegida) ? elegida : null
+    }
+
     function htmlEmpresas() {
       const lista = empresasDeAdministracion()
+      if (estado.unidadBarra) {
+        if (empresaSegunBarra(lista) !== null) return ''
+        const nombre = (estado.empresas ?? []).find(e => e.id === estado.unidadBarra)?.nombre ?? 'esa unidad'
+        return `<div class="ad-aviso">${esc('Con ' + nombre + ' elegida arriba no tenés órdenes, clientes ni precios en Administración. Elegí otra unidad o "Todas".')}</div>`
+      }
       if (lista.length <= 1) return ''
-      return `<div class="ad-segmento" role="group" aria-label="Empresa">` + lista.map(e =>
+      return `<p class="ad-texto-suave">Con "Todas" elegido arriba, elegí acá de qué empresa querés ver las órdenes, los clientes y los precios:</p>` +
+        `<div class="ad-segmento" role="group" aria-label="Empresa">` + lista.map(e =>
         `<button type="button" class="ad-segmento__opcion" data-empresa="${esc(e.id)}" aria-pressed="${e.id === estado.empresaId ? 'true' : 'false'}">${esc(e.nombre)}</button>`).join('') + `</div>`
     }
 
@@ -4392,13 +4413,34 @@
       estado.empresas = u.data ?? []
     }
 
+    // La barra cambió de unidad: la empresa la sigue (y se vuelve a la
+    // portada, como al elegirla acá). Las vistas globales no se tocan.
+    function alCambiarLaBarra(elegida) {
+      estado.unidadBarra = elegida ?? null
+      const segun = empresaSegunBarra()
+      if (segun === undefined) { pintarEmpresas(); return }
+      if (segun === estado.empresaId) { pintarEmpresas(); return }
+      estado.empresaId = segun
+      estado.clientes = null
+      estado.catalogo = null
+      estado.ordenes = null
+      estado.portada = null
+      estado.listas = null
+      estado.importar = null
+      estado.filtros.clienteId = ''
+      pintarEmpresas()
+      if (!VISTAS_GLOBALES.includes(estado.vista)) mostrarInicio()
+    }
+
     async function init() {
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
       const fabrica = cargarFabricaDePruebas(supabase)
+      const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
       try {
-        const [, f] = await Promise.all([cargarPermisos(), fabrica])
+        const [, f, b] = await Promise.all([cargarPermisos(), fabrica, barra])
         estado.fabrica = f
+        estado.unidadBarra = b?.elegida ?? null
       } catch (err) {
         console.error('No se pudieron leer los permisos:', err)
         sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
@@ -4410,9 +4452,11 @@
         sinAcceso('No tenés acceso a Administración. Te llevamos al inicio…')
         return
       }
-      estado.empresaId = empresaInicial(lista, leerPreferencia(CLAVE_EMPRESA))
+      const segun = empresaSegunBarra(lista)
+      estado.empresaId = segun === undefined ? empresaInicial(lista, leerPreferencia(CLAVE_EMPRESA)) : segun
       document.getElementById('ad-cargando').hidden = true
       conectarTodo()
+      alCambiarUnidad(({ elegida }) => alCambiarLaBarra(elegida))
       pintarEmpresas()
       // ?seccion=cheques (el link que deja cheques.html, con ?cheque= si se
       // pidió uno): abre la cartera. Cualquier otra cosa, la portada.

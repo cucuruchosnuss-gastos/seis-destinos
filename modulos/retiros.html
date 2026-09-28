@@ -393,6 +393,7 @@
       cantidadInsumoHoja, unidadHoja, decimalesDeUnidad,
     } from '../js/retiros-comun.js'
     import { supabase } from '../js/supabase.js'
+    import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
     mostrarBannerVersion()
@@ -412,6 +413,8 @@
       empresas: [],
       fabrica: FABRICA_SIN_DATOS,
       empresaId: null,
+      // La unidad elegida en la barra de arriba (28/09/2026): null = Todas.
+      unidadBarra: null,
       // Una empresa que se quiere elegir con la orden a medio cargar: espera
       // la confirmación de vaciarla.
       empresaPendiente: null,
@@ -670,6 +673,16 @@
     function cancelarCambioEmpresa() {
       estado.empresaPendiente = null
       pintarEmpresaActual()
+    }
+
+    // La barra cambió: si no hay nada cargado, la orden pasa a esa empresa (si
+    // se puede cargar ahí). Una orden a medio cargar NO se toca: su empresa la
+    // decidió quien la está cargando.
+    function alCambiarLaBarra(elegida) {
+      estado.unidadBarra = elegida ?? null
+      const deBarra = empresaDeLaBarra()
+      if (!deBarra || deBarra.id === estado.empresaId || formTieneDatos(estado.form)) return
+      if (estado.vista === 'rt-vista-empresa' || estado.vista === 'rt-vista-form') aplicarEmpresa(deBarra.id)
     }
 
     // "Cambiar" arriba: con varias empresas, vuelve a la pregunta (la orden
@@ -1907,9 +1920,19 @@
 
     // Una orden nueva. Con UNA empresa no se pregunta nada; con varias se
     // pregunta primero, siempre, con la última marcada.
+    // LA BARRA DE UNIDAD (28/09/2026): la empresa de una orden es la de un
+    // registro NUEVO, así que la pregunta queda, pero con una unidad elegida
+    // arriba en la que se puede cargar, la orden arranca con esa (sin
+    // preguntar). "Cambiar" sigue dejando elegir otra.
+    function empresaDeLaBarra(lista = empresasDeCarga(), elegida = estado.unidadBarra) {
+      return elegida ? (lista.find(e => e.id === elegida) ?? null) : null
+    }
+
     function empezarOrden() {
       estado.form = null
       const lista = empresasDeCarga()
+      const deBarra = empresaDeLaBarra(lista)
+      if (deBarra) { aplicarEmpresa(deBarra.id); return }
       if (lista.length === 1) { aplicarEmpresa(lista[0].id); return }
       estado.empresaId = null
       mostrarEleccionEmpresa()
@@ -1931,9 +1954,11 @@
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
       const fabrica = cargarFabricaDePruebas(supabase)
+      const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
       try {
-        const [, f] = await Promise.all([cargarPermisos(), fabrica])
+        const [, f, b] = await Promise.all([cargarPermisos(), fabrica, barra])
         estado.fabrica = f
+        estado.unidadBarra = b?.elegida ?? null
       } catch (err) {
         console.error('No se pudieron leer los permisos:', err)
         sinAcceso('No pudimos identificar tu usuario o tus empresas. Te llevamos al inicio…')
@@ -1945,6 +1970,7 @@
       }
       document.getElementById('rt-cargando').hidden = true
       conectarTodo()
+      alCambiarUnidad(({ elegida }) => alCambiarLaBarra(elegida))
       if (!retomarBorrador()) empezarOrden()
       if (window.lucide) window.lucide.createIcons()
     }

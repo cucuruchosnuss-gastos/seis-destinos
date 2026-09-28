@@ -36,7 +36,7 @@ const FUNCIONES_BASE = [
   'conoDeRenglonMio', 'clienteDeOrden', 'renglonesParaHoja', 'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'pintarAccionesHoja',
   'enviarDesde', 'compartirDesde', 'imprimirDesde',
   'leerMisOrdenes', 'cajasDeOrden', 'htmlFilaMia', 'htmlMisRetiros', 'mostrarMisRetiros', 'htmlDetalleMio', 'abrirMia',
-  'empezarOrden', 'retomarBorrador',
+  'empresaDeLaBarra', 'empezarOrden', 'alCambiarLaBarra', 'retomarBorrador',
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
@@ -132,7 +132,7 @@ const PRELUDIO = `
       { id: 'u-d', nombre: 'Dolce Pasta', prefijo: 'D', razon_social: null, cuit: null, domicilio: null, telefono: null, logo_url: 'logo-dolce-pasta.png' },
     ],
     fabrica: FABRICA_SIN_DATOS,
-    empresaId: null, empresaPendiente: null, vista: null,
+    empresaId: null, empresaPendiente: null, vista: null, unidadBarra: null,
     clientes: null, errorClientes: null, catalogo: null, catalogoEmpresa: null, errorCatalogo: null,
     lotes: new Map(), form: null, confirmando: false, hecho: null, mis: null, errorMis: null, mio: null, enviando: false,
   }
