@@ -29,6 +29,7 @@ const { construirProduccion } = require('./sandbox-produccion')
 
 const ARCHIVO = process.env.ARCHIVO_TEST || path.join(__dirname, '..', 'modulos/produccion.html')
 leer(ARCHIVO)
+const FUENTE = require('fs').readFileSync(ARCHIVO, 'utf8')
 const { chk, esperas, fin } = arnes()
 
 // 06:02 de Argentina = 09:02 UTC.
@@ -38,7 +39,7 @@ const TABLAS = {
   turnos_produccion: [{ id: 't1', lote: 7023, maquina_id: 'm1', fecha: HOY, turno: 'Mañana', encargado_id: 'e-fede', abierto_en: '2026-09-22T09:02:00Z' }],
   masas: [{ turno_id: 't1' }, { turno_id: 't1' }, { turno_id: 't1' }, { turno_id: 't1' }, { turno_id: 't1' }],
   paradas_produccion: [],
-  produccion_items: [{ turno_id: 't1' }, { turno_id: 't1' }],
+  produccion_items: [{ turno_id: 't1', cajas: 12 }, { turno_id: 't1', cajas: 30 }],
 }
 
 function armar(tablas = TABLAS) {
@@ -97,13 +98,14 @@ function conHoy(S, tablas) {
   chk('… y sin fecha legible no se afirma nada', S.esDeAyer({ turno: { fecha: null } }, HOY) === false &&
     S.esDeAyer({ turno: { fecha: 'basura' } }, HOY) === false)
 
-  chk('rangos: de ayer 0, parada 1, abierta 2, libre 3',
-    [S.rangoTablero(ayer, HOY), S.rangoTablero(parada, HOY), S.rangoTablero(hoyAbierta, HOY), S.rangoTablero(libre, HOY)].join() === '0,1,2,3')
+  // La planta con dos modos: orden FIJO por número; solo la de ayer se adelanta.
+  chk('rangos: de ayer 0; parada, abierta y libre 1 (el mismo lugar)',
+    [S.rangoTablero(ayer, HOY), S.rangoTablero(parada, HOY), S.rangoTablero(hoyAbierta, HOY), S.rangoTablero(libre, HOY)].join() === '0,1,1,1')
 
   const n = (nombre, e) => ({ ...e, maquina: { id: nombre, nombre } })
   const desordenado = [n('libre1', libre), n('abierta1', hoyAbierta), n('ayer1', ayer), n('parada1', parada), n('libre2', libre), n('abierta2', hoyAbierta)]
-  chk('el orden es de ayer → paradas → abiertas → libres',
-    S.ordenTablero(desordenado, HOY).map(e => e.maquina.nombre).join() === 'ayer1,parada1,abierta1,abierta2,libre1,libre2',
+  chk('el orden: la de ayer primero y después el orden FIJO de las máquinas',
+    S.ordenTablero(desordenado, HOY).map(e => e.maquina.nombre).join() === 'ayer1,libre1,abierta1,parada1,libre2,abierta2',
     S.ordenTablero(desordenado, HOY).map(e => e.maquina.nombre).join())
   chk('… y es ESTABLE dentro de cada grupo (no reordena las máquinas)',
     S.ordenTablero([n('b', libre), n('a', libre)], HOY).map(e => e.maquina.nombre).join() === 'b,a')
@@ -150,12 +152,25 @@ esperas.push((async () => {
   await S.mostrarTablero()
   const html = S.__doc.getElementById('pr-tablero').innerHTML
   chk('una tarjeta por máquina activa', (html.match(/class="pr-maquina[ "]/g) || []).length === 3, html.match(/class="pr-maquina[ "]/g))
-  chk('la abierta lleva a su planilla', /data-planilla="t1"/.test(html) && (html.match(/data-planilla=/g) || []).length === 1)
-  chk('la abierta dice su lote grande, la hora, las masas y los sublotes',
-    /class="pr-maquina__lote">7023</.test(html) && /abierta 06:02/.test(html) && /5 masas · 2 sublotes/.test(html), html)
-  chk('… con el chip "Abierta" y la franja del modo', /pr-maquina--activa/.test(html) && />Abierta</.test(html))
-  chk('las libres dicen "Libre" y no son botones',
-    (html.match(/pr-maquina__libre">Libre</g) || []).length === 2 && (html.match(/pr-maquina--libre/g) || []).length === 2)
+  chk('tocar la andando lleva a Lo producido (no a la planilla)', /data-producido="t1"/.test(html) && !/data-planilla=/.test(html))
+  chk('la andando: "Andando", LOTE grande, el encargado, las masas y las CAJAS',
+    /pr-maquina__chip">Andando</.test(html) && /pr-maquina__rotulo">LOTE</.test(html) && /class="pr-maquina__lote">7023</.test(html) &&
+    /pr-maquina__estado">Federico Silva</.test(html) && /5 masas · 42 cajas/.test(html), html)
+  chk('… con la franja del modo', /pr-maquina--activa/.test(html))
+  chk('las sin turno: gris punteada, "Sin turno" y su "Abrir turno"',
+    (html.match(/pr-maquina__libre">Sin turno</g) || []).length === 2 && (html.match(/pr-maquina--libre/g) || []).length === 2 &&
+    /data-abrir-libre="m2">Abrir turno</.test(html) && /data-abrir-libre="m3">Abrir turno</.test(html))
+  chk('las cajas se leen de lo producido', S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('turno_id, cajas')))
+  chk('mil cajas con su punto de miles', S.textoCajasTablero(1234) === '1.234 cajas' && S.textoCajasTablero(1) === '1 caja' && S.textoCajasTablero(0) === '0 cajas')
+  // "Abrir turno" desde la tarjeta: esa máquina ya viene elegida.
+  S.mostrarAbrir('m3')
+  chk('"Abrir turno" desde la tarjeta: la máquina viene elegida', S.estado.vista === 'pr-abrir' &&
+    S.estado.abrir.filas.find(x => x.maquinaId === 'm3')?.elegida === true && S.estado.abrir.filas.find(x => x.maquinaId === 'm2')?.elegida === false)
+  S.mostrarAbrir({ type: 'click' })
+  chk('… y desde el botón (llega el evento) no viene ninguna elegida', S.estado.abrir.filas.every(x => !x.elegida))
+  chk('el tablero escucha la tarjeta andando y la sin turno',
+    /const p = ev\.target\.closest\('\[data-producido\]'\); if \(p\) \{ tocar\(\); abrirLoProducido\(p\.dataset\.producido\); return \}/.test(FUENTE) &&
+    /const a = ev\.target\.closest\('\[data-abrir-libre\]'\); if \(a\) \{ tocar\(\); mostrarAbrir\(a\.dataset\.abrirLibre\) \}/.test(FUENTE))
   chk('el encabezado dice el turno y la fecha', /Turno Mañana · /.test(S.__doc.getElementById('pr-tablero-cuando').textContent),
     S.__doc.getElementById('pr-tablero-cuando').textContent)
   chk('lee las máquinas activas de la unidad', S.__llamadas.consultas.some(([t, f]) => t === 'maquinas' && JSON.stringify(f).includes('["eq","unidad_negocio_id","u-cn"]') && JSON.stringify(f).includes('["eq","activa",true]')))
@@ -214,19 +229,27 @@ esperas.push((async () => {
     /ABIERTA DE AYER/.test(hy) && /Lote 7019/.test(hy) && /Hay que cerrarla antes de volver a usarla/.test(hy))
   chk('… diciendo cuándo se abrió y cuánto lleva', /Abierta el domingo 05\/01 a las 14:10 · 1 masa · 0 sublotes/.test(hy), hy)
   chk('… y con su botón para cerrar la planilla', /data-planilla="t-ayer"[^>]*>Cerrar planilla de ayer</.test(hy))
-  chk('la parada va en bordó, con el chip y desde cuándo',
-    /pr-maquina--parada/.test(hy) && />Parada</.test(hy) && /Parada desde 10:32 · pulpo/.test(hy), hy)
-  chk('la parada va antes que las libres', hy.indexOf('pr-maquina--parada') < hy.indexOf('pr-maquina--libre'))
+  chk('la parada: la tarjeta entera en bordó con "PARADA" y el motivo',
+    /pr-maquina pr-maquina--parada/.test(hy) && /pr-maquina__chip">PARADA</.test(hy) && /pulpo/.test(hy), hy)
+  const eParada = Y.estado.tablero.find(e => e.parada)
+  const tParada = Y.htmlMaquina(eParada, HOY, new Date(new Date(eParada.parada.inicio).getTime() + 12 * 60000))
+  chk('… con "Hace 12 min · pulpo"', /pr-maquina__estado">Hace 12 min · pulpo</.test(tParada), tParada)
+  chk('… y NO cambia de lugar: va en su orden (m1 antes que m9)', hy.indexOf('pr-maquina--parada') < hy.indexOf('pr-maquina--libre'))
+  chk('la parada es la ÚNICA tarjeta oscura (bordó entero, letra blanca)',
+    /\.pr-tablero \.pr-maquina--parada \{ background: var\(--bordo\); border-color: var\(--bordo\); color: #fff; \}/.test(FUENTE))
 
   // HTML malicioso en la tarjeta.
   const Z = armar({
-    maquinas: [{ id: 'm1', nombre: marca('maquina'), orden: 1 }, { id: 'm9', nombre: marca('maquinaLibre'), orden: 2 }],
-    turnos_produccion: [{ id: marca('turnoId'), lote: marca('lote'), maquina_id: 'm1', fecha: HOY, abierto_en: null }],
+    maquinas: [{ id: 'm1', nombre: marca('maquina'), orden: 1 }, { id: marca('libreId'), nombre: marca('maquinaLibre'), orden: 2 },
+      { id: 'm5', nombre: 'Andando', orden: 3 }],
+    turnos_produccion: [{ id: marca('turnoId'), lote: marca('lote'), maquina_id: 'm1', fecha: HOY, abierto_en: null },
+      { id: 't5', lote: 5, maquina_id: 'm5', fecha: HOY, encargado_id: 'e-malo', abierto_en: null }],
     masas: [], produccion_items: [],
     paradas_produccion: [{ id: 'p', turno_id: marca('turnoId'), motivo: marca('motivo'), inicio: null }],
   })
+  Z.estado.personal = [{ id: 'e-malo', nombre: marca('encargado'), misma_unidad: true, puestos: ['encargado'] }]
   await Z.mostrarTablero()
-  chequearMarcas(chk, 'tablero', Z.__doc.getElementById('pr-tablero').innerHTML, ['maquina', 'maquinaLibre', 'turnoId', 'lote', 'motivo'])
+  chequearMarcas(chk, 'tablero', Z.__doc.getElementById('pr-tablero').innerHTML, ['maquina', 'maquinaLibre', 'libreId', 'turnoId', 'lote', 'motivo', 'encargado'])
   chequearMarcas(chk, 'tarjeta de ayer', Z.htmlMaquina({
     maquina: { nombre: marca('mAyer') }, masas: 0, sublotes: 0,
     turno: { id: marca('idAyer'), lote: marca('loteAyer'), fecha: '2020-01-05', abierto_en: null },

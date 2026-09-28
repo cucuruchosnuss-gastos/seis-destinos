@@ -1518,6 +1518,23 @@
     .pr-banda-modo__nota { font-size: 1rem; font-weight: 600; }
     .pr-quien__nota { margin: 0; font-size: 1rem; color: var(--pr-texto-secundario); flex: 1 1 100%; }
 
+    /* ══ Producción (la planta con dos modos) ══════════════════════════
+       2 · El inicio: las máquinas en orden fijo, en una grilla de 3. La
+       parada es la ÚNICA tarjeta oscura (bordó entero, letra blanca), así se
+       ve de lejos aunque no cambie de lugar. La sin turno, gris punteada con
+       "Abrir turno". */
+    .pr-tablero { grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); }
+    @media (min-width: 1100px) { .pr-tablero { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .pr-maquina__rotulo { font-size: 1rem; font-weight: 800; letter-spacing: 0.08em; color: var(--pr-texto-secundario); }
+    .pr-maquina__lote { font-size: 2.875rem; }
+    .pr-tablero .pr-maquina--parada { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .pr-tablero .pr-maquina--parada .pr-maquina__nombre,
+    .pr-tablero .pr-maquina--parada .pr-maquina__rotulo,
+    .pr-tablero .pr-maquina--parada .pr-maquina__estado,
+    .pr-tablero .pr-maquina--parada .pr-maquina__cuenta { color: #fff; }
+    .pr-tablero .pr-maquina--parada .pr-maquina__chip { background: #fff; color: var(--bordo-oscuro); }
+    .pr-maquina__abrir { margin-top: auto; min-height: 52px; }
+
     /* ══ Sala de masa (la planta con dos modos) ══════════════════════════
        4a: una tarjeta grande por máquina, en grilla de dos. 4b: la receta
        con su columna derecha de 300 px (las masas del turno). */
@@ -2904,7 +2921,8 @@
       if (estado.planilla?.turno?.id === turnoId) return abrirAgregar()
     }
 
-    // Tocar una máquina en la barra de Sala de masa: se trabaja con ella.
+    // 4h · Tocar una máquina en la barra de Sala de masa abre su historial:
+    // las masas de ese turno y el detalle de la elegida.
     async function mostrarHistorialMaquina(turnoId) {
       tocar()
       const e = maquinasAbiertas().find(x => x.turno.id === turnoId)
@@ -4384,7 +4402,7 @@
         const r2 = await supabase.from('paradas_produccion').select('id, turno_id, motivo, inicio').in('turno_id', ids).is('fin', null)
         if (r2.error) throw r2.error
         paradas = r2.data ?? []
-        const r3 = await supabase.from('produccion_items').select('turno_id').in('turno_id', ids).eq('anulado', false)
+        const r3 = await supabase.from('produccion_items').select('turno_id, cajas').in('turno_id', ids).eq('anulado', false)
         if (r3.error) throw r3.error
         sublotes = r3.data ?? []
       }
@@ -4404,6 +4422,8 @@
           // La hora de la última masa: la sala la muestra al lado de la cuenta.
           ultimaMasa: mias.reduce((a, x) => (a == null || String(x.hora ?? '') > String(a) ? x.hora : a), null),
           sublotes: turno ? (sublotes ?? []).filter(x => x.turno_id === turno.id).length : 0,
+          // Las cajas producidas (lo que dice la tarjeta de Producción).
+          cajas: turno ? (sublotes ?? []).filter(x => x.turno_id === turno.id).reduce((a, x) => a + (Number(x.cajas) || 0), 0) : 0,
           parada: turno ? (paradas.find(p => p.turno_id === turno.id) ?? null) : null,
         }
       })
@@ -4415,6 +4435,10 @@
 
     function textoSublotes(n) {
       return n === 1 ? '1 sublote' : `${n} sublotes`
+    }
+
+    function textoCajasTablero(n) {
+      return n === 1 ? '1 caja' : `${formatearNumeroAr(n, { decimales: 0 })} cajas`
     }
 
     // "martes", en la zona de Argentina. Con una fecha ilegible devuelve ''.
@@ -4444,14 +4468,14 @@
 
     // 0 de ayer · 1 parada · 2 abierta · 3 libre.
     function rangoTablero(e, hoy) {
-      if (!e.turno) return 3
-      if (esDeAyer(e, hoy)) return 0
-      return e.parada ? 1 : 2
+      return e.turno && esDeAyer(e, hoy) ? 0 : 1
     }
 
-    // El orden del tablero: la de ayer primero, después las paradas, las
-    // abiertas y las libres. ESTABLE: dentro de cada grupo se conserva el
-    // orden de las máquinas (el `orden` de la tabla y después el nombre).
+    // El orden del tablero (la planta con dos modos, decisión de Facu): las
+    // máquinas en su orden FIJO por número (el `orden` de la tabla y después
+    // el nombre); la parada salta a la vista por el color, no por el lugar.
+    // La única que se adelanta es la abierta de AYER: hay que cerrarla antes
+    // de volver a usar esa máquina, así que no se puede pasar por alto.
     function ordenTablero(entradas, hoy) {
       return (entradas ?? []).map((e, i) => [e, i])
         .sort((a, b) => (rangoTablero(a[0], hoy) - rangoTablero(b[0], hoy)) || (a[1] - b[1]))
@@ -4470,16 +4494,19 @@
     // (lo decide ordenTablero): esa máquina no se puede volver a abrir hasta
     // cerrarla, así que no se puede pasar por alto. Una abierta es un botón
     // que lleva a su planilla; una libre, no.
-    function htmlMaquina(e, hoy) {
+    function htmlMaquina(e, hoy, ahora = new Date()) {
       const nombreEsc = esc(e.maquina.nombre)
       if (!e.turno) {
+        // Sin turno: gris punteada, con "Abrir turno" (lleva a Abrir turno con
+        // esa máquina ya elegida).
         return `<div class="pr-maquina pr-maquina--libre">` +
           `<div class="pr-maquina__cab"><span class="pr-maquina__nombre">${nombreEsc}</span></div>` +
-          `<span class="pr-maquina__libre">Libre</span></div>`
+          `<span class="pr-maquina__libre">Sin turno</span>` +
+          `<button type="button" class="pr-btn pr-btn--secundario pr-maquina__abrir" data-abrir-libre="${esc(e.maquina.id)}">Abrir turno</button></div>`
       }
       const hora = horaArgentina(e.turno.abierto_en)
-      const cuentaHtml = `${esc(textoMasas(e.masas))} · ${esc(textoSublotes(e.sublotes ?? 0))}`
       if (esDeAyer(e, hoy)) {
+        const cuentaAyer = `${esc(textoMasas(e.masas))} · ${esc(textoSublotes(e.sublotes ?? 0))}`
         const dia = diaDeLaSemana(e.turno.fecha), dm = diaMes(e.turno.fecha)
         const cuando = [dia && dm ? `Abierta el ${dia} ${dm}` : 'Abierta', hora ? `a las ${hora}` : ''].filter(Boolean).join(' ')
         return `<div class="pr-maquina pr-maquina--ayer">` +
@@ -4487,20 +4514,28 @@
           `<div class="pr-maquina__cuerpo">` +
           `<div class="pr-maquina__cab"><span class="pr-maquina__nombre">${nombreEsc}</span>` +
           `<span class="pr-maquina__lote">Lote ${esc(e.turno.lote)}</span></div>` +
-          `<div class="pr-maquina__estado">${esc(cuando)} · ${cuentaHtml}. Hay que cerrarla antes de volver a usarla.</div>` +
+          `<div class="pr-maquina__estado">${esc(cuando)} · ${cuentaAyer}. Hay que cerrarla antes de volver a usarla.</div>` +
           `</div>` +
           `<button type="button" class="pr-btn pr-btn--peligro pr-btn--accion" data-planilla="${esc(e.turno.id)}">Cerrar planilla de ayer</button>` +
           `</div>`
       }
+      // Andando o parada: tocarla elige la máquina y lleva a Lo producido.
+      const cuentaHtml = `${esc(textoMasas(e.masas))} · ${esc(textoCajasTablero(e.cajas ?? 0))}`
       const parado = !!e.parada
-      const pieHtml = parado
-        ? `Parada desde ${esc(horaArgentina(e.parada.inicio) || '—')} · ${esc(e.parada.motivo)}`
-        : `abierta ${esc(hora || '—')}`
-      return `<button type="button" class="pr-maquina pr-maquina--${parado ? 'parada' : 'activa'}" data-planilla="${esc(e.turno.id)}">` +
+      let medio
+      if (parado) {
+        const hace = duracionTexto(e.parada.inicio, null, ahora)
+        medio = `<span class="pr-maquina__estado">${hace ? `Hace ${esc(hace)} · ` : ''}${esc(e.parada.motivo)}</span>`
+      } else {
+        const encargadoTablero = e.turno.encargado_id ? nombrePersona(e.turno.encargado_id) : '—'
+        medio = encargadoTablero !== '—' ? `<span class="pr-maquina__estado">${esc(encargadoTablero)}</span>` : ''
+      }
+      return `<button type="button" class="pr-maquina pr-maquina--${parado ? 'parada' : 'activa'}" data-producido="${esc(e.turno.id)}">` +
         `<div class="pr-maquina__cab"><span class="pr-maquina__nombre">${nombreEsc}</span>` +
-        `<span class="pr-maquina__chip">${parado ? 'Parada' : 'Abierta'}</span></div>` +
+        `<span class="pr-maquina__chip">${parado ? 'PARADA' : 'Andando'}</span></div>` +
+        `<span class="pr-maquina__rotulo">LOTE</span>` +
         `<span class="pr-maquina__lote">${esc(e.turno.lote)}</span>` +
-        `<span class="pr-maquina__estado">${pieHtml}</span>` +
+        medio +
         `<span class="pr-maquina__cuenta">${cuentaHtml}</span>` +
         `</button>`
     }
@@ -4754,13 +4789,18 @@
       }
     }
 
-    function mostrarAbrir() {
+    function mostrarAbrir(maquinaId) {
       const hoy = hoyArgentina()
       // Las libres, para abrir; y las abiertas de OTRO día, que aparecen al
       // final bloqueadas porque hay que cerrarlas antes de volver a usarlas.
       const ofrecibles = (estado.tablero ?? []).filter(e => !e.turno || esDeAyer(e, hoy))
       if (!ofrecibles.some(e => !e.turno)) return
       estado.abrir = formularioAbrirVacio(ofrecibles, horaDelDiaAr(), hoy)
+      // Desde la tarjeta "Sin turno": esa máquina ya viene elegida. (Desde el
+      // botón llega el evento del clic, que no es un id.)
+      if (typeof maquinaId === 'string') {
+        for (const f of estado.abrir.filas) if (f.maquinaId === maquinaId && !f.bloqueada) f.elegida = true
+      }
       document.getElementById('pr-abrir-encargado').textContent = `Encargado: ${estado.persona?.nombre ?? ''}`
       const { personas, sinConfigurar } = personasParaPuesto(estado.personal, 'operario')
       estado.operarios = personas
@@ -4947,7 +4987,10 @@
       })
       for (const id of ['pr-tablero', 'pr-tablero-aviso']) {
         document.getElementById(id).addEventListener('click', ev => {
-          const b = ev.target.closest('[data-planilla]'); if (b) abrirPlanilla(b.dataset.planilla)
+          const b = ev.target.closest('[data-planilla]'); if (b) { abrirPlanilla(b.dataset.planilla); return }
+          // Tocar una máquina andando o parada: queda elegida y va a Lo producido.
+          const p = ev.target.closest('[data-producido]'); if (p) { tocar(); abrirLoProducido(p.dataset.producido); return }
+          const a = ev.target.closest('[data-abrir-libre]'); if (a) { tocar(); mostrarAbrir(a.dataset.abrirLibre) }
         })
       }
     }

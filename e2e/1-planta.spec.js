@@ -81,7 +81,8 @@ test.describe('planta', () => {
       expect(Number(lote)).toBeGreaterThanOrEqual(900001);
       await captura(page, 'lote-asignado', info);
       await page.locator('#pr-abiertos-volver').click();
-      await expect(page.locator('#pr-tablero [data-planilla]', { hasText: 'Máquina robot' })).toContainText(lote);
+      // La tarjeta andando lleva a Lo producido (data-producido).
+      await expect(page.locator('#pr-tablero [data-producido]', { hasText: 'Máquina robot' })).toContainText(lote);
     });
 
     await test.step('Sala de masa: Robot Masero con su PIN', async () => {
@@ -144,10 +145,9 @@ test.describe('planta', () => {
     });
 
     await test.step('cargar lo producido con su caja', async () => {
-      await page.locator('#pr-tablero [data-planilla]', { hasText: 'Máquina robot' }).click();
-      await expect(page.locator('#pr-planilla-lote')).toContainText(lote);
-      await expect(page.locator('#pr-planilla-masas')).toContainText(/simple/i);
-      await page.locator('#pr-btn-agregar-producto').click();
+      // Tocar la máquina la elige y lleva derecho a Lo producido.
+      await page.locator('#pr-tablero [data-producido]', { hasText: 'Máquina robot' }).click();
+      await expect(page.locator('#pr-agregar-prod')).toBeVisible();
       await page.locator('[data-ag-producto]', { hasText: 'Cucuruchón Mini' }).click();
       await page.locator('[data-ag-cono="0"]').click();
       const pres = page.locator('[data-ag-presentacion]').first();
@@ -159,6 +159,8 @@ test.describe('planta', () => {
       await expect(page.locator('#pr-agregar-empaque')).toContainText('Caja');
       await captura(page, 'agregar-producido', info);
       await page.locator('#pr-agregar-confirmar').click();
+      await expect(page.locator('#pr-planilla-lote')).toContainText(lote);
+      await expect(page.locator('#pr-planilla-masas')).toContainText(/simple/i);
       await expect(page.locator('#pr-planilla-producido')).toContainText(`${lote}-1`);
       await expect(page.locator('#pr-planilla-producido')).toContainText('Caja');
       await captura(page, 'planilla-producido', info);

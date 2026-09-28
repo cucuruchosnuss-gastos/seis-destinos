@@ -31,7 +31,9 @@ const SEGURAS_PRODUCCION = [
   ['i', 'número: índice del .map()'],
   // Rediseño parte 2: tablero, abrir turno y los operarios del turno
   ['nombreEsc', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(e.maquina.nombre)'],
-  ['cuentaHtml', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(textoMasas()) y esc(textoSublotes())'],
+  ['cuentaHtml', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(textoMasas()) y esc(textoCajasTablero())'],
+  ['cuentaAyer', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc(textoMasas()) y esc(textoSublotes())'],
+  ['medio', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc() del motivo o del encargado, o vacío'],
   ['pieHtml', 'HTML ya escapado: htmlMaquina() lo arma arriba con esc() de la hora y del motivo de la parada'],
   ['htmlResaltado(c.nombre, texto)', 'HTML armado por htmlResaltado(), que escapa los tres pedazos del nombre por separado'],
   ['htmlResultadosOperario(cands, texto, ctx)', 'HTML armado por htmlResultadosOperario(), que escapa adentro'],
