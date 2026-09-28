@@ -16,6 +16,8 @@ const PANTALLAS = [
   ['modulos/materia-prima.html', 'materia-prima'],
   ['modulos/cobranzas.html', 'cobranzas'],
   ['modulos/caja.html', 'caja'],
+  ['modulos/gastos.html', 'gastos'],
+  ['modulos/stock.html', 'stock'],
 ];
 
 for (const [archivo, datos] of PANTALLAS) {
