@@ -79,7 +79,7 @@ correrMutaciones({
     { nombre: 'los remitos se consultan sin permiso',
       de: "if (!(tieneTarea('cuentas_corrientes', 'ver_todo') || tieneTarea('cuentas_corrientes', 'registrar_pago'))) {", a: 'if (false) {' },
     { nombre: 'los remitos no se filtran por unidad',
-      de: 'const filas = (remitos ?? []).filter(r => !unidadId || r.unidad_negocio_id === unidadId)', a: 'const filas = (remitos ?? [])' },
+      de: 'const filas = (remitos ?? []).filter(r => pasaFiltroUnidad(r.unidad_negocio_id, unidadId))', a: 'const filas = (remitos ?? [])' },
     { nombre: 'los remitos dan NaN con items null',
       de: 'const items = Number(r.items) || 0', a: 'const items = Number(r.items)' },
     { nombre: 'si la consulta de descargas falla no se avisa',

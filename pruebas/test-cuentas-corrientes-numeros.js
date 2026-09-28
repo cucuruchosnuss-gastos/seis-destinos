@@ -186,7 +186,7 @@ const PRELUDIO = `
     miRolApp: 'usuario', miEmpleadoId: 'yo',
     misTareas: new Set(['cuentas_corrientes:registrar_pago', 'cuentas_corrientes:ver_todo']),
     maestros: { unidades: [{ id: 'u1', nombre: 'Cucuruchos Nuss' }] },
-    ficha: null, fichaSaldos: [{ moneda: 'ARS', deuda_pendiente: 100 }],
+    ficha: null, fichaSaldos: [{ unidad_negocio_id: 'u1', moneda: 'ARS', deuda_pendiente: 100 }],
   }
   var listaMovFicha = document.getElementById('lista-movimientos-ficha')
   ${LISTENERS}
@@ -198,6 +198,9 @@ const FUNCIONES = [
   'htmlFilaSinImporte', 'renderizarFichaMovimientos', 'enlazarCampoImporteSin', 'confirmarImporteSinImporte',
   'actualizarSugerenciasPago', 'renderizarFilasFifo', 'actualizarResumenAplicacion', 'confirmarPago',
   'abrirModalPago', 'fechaISO', 'seleccionarCreditoParaAplicar', 'cerrarModalAplicarCredito', 'confirmarAplicarCredito',
+  // La barra de unidad (28/09/2026): el modal de pago usa los saldos DE la
+  // unidad de la ficha y la lista de movimientos la filtra por unidad.
+  'saldosFichaDeUnidad', 'pasaFiltroUnidad', 'etiquetaUnidad',
 ]
 
 function sandbox() {

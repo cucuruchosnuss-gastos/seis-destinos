@@ -75,11 +75,14 @@ const RENDERS = [
   'esc', 'importeHtml', 'formatearImporte', 'formatearImporteCentavosSuaves', 'inicialesEmpresa', 'poblarSelect',
   'badgeEstadoFactura', 'renderizarListaSaldos', 'renderizarResumenCC', 'renderizarListaSinProveedor',
   'renderizarSugerenciasAsignar', 'abrirModalDetallePago', 'cargarPendientesAceptacion', 'renderizarPadron',
-  'renderizarListaHistorial', 'renderizarSelectorUnidadFicha', 'sincronizarUrlFicha', 'renderizarFichaBanner',
+  'renderizarListaHistorial', 'renderizarFichaUnidad', 'htmlFichaUnidad', 'htmlDesgloseResumen', 'sincronizarUrlFicha', 'renderizarFichaBanner',
   'renderizarFichaMovimientos', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'crearSelectorOrdenFicha', 'abrirModalAplicarCreditoDesdeFicha', 'seleccionarCreditoParaAplicar',
   'actualizarSelectorCuentaPago', 'renderizarFilasFifo', 'actualizarResumenAplicacion',
   'renderizarPreviewImportacion', 'mostrarErroresImportacion',
+  // La barra de unidad (28/09/2026): viene de js/barra-unidad.js por el import
+  // del módulo (extraer.js la encuentra ahí), con su código real.
+  'pasaFiltroUnidad',
 ]
 
 function clausura(src) {
@@ -207,14 +210,11 @@ async function correrRenders(S) {
   E.maestros.proveedores = [P1, P2]
   E.sinImporte = [{ id: 'fs', proveedor_id: 'p1', unidad_negocio_id: 'u1', moneda: 'ARS' }]
 
-  // init() arma los dos filtros de unidad con poblarSelect(), igual que acá.
-  S.poblarSelect('filtro-unidad-proveedores', E.maestros.unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
-  chequearMarcas(chk, 'filtro de unidad (init)', html('filtro-unidad-proveedores'), ['u1_nombre', 'u2_nombre'])
-  chk('estático: init() arma los dos filtros de unidad con poblarSelect()',
-    // (desde el 26/09/2026 vía poblarFiltrosUnidad(), con la lista ya sin la
-    // unidad de la fábrica de pruebas: ver test-cuentas-corrientes-fabrica-pruebas.js)
-    FUENTE.includes("poblarSelect('filtro-unidad-proveedores', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')") &&
-    FUENTE.includes("poblarSelect('filtro-unidad-historial', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')"))
+  // Los tres selectores de unidad (la lista, el historial y la ficha) se
+  // retiraron el 28/09/2026: lo decide la barra de unidad de arriba
+  // (js/barra-unidad.js). Ver test-cuentas-corrientes-barra-unidad.js.
+  chk('estático: ya no quedan los selectores de unidad del módulo',
+    !/filtro-unidad-(proveedores|historial|ficha)/.test(FUENTE) && !FUENTE.includes('poblarFiltrosUnidad'))
 
   // ── Lista de saldos + resumen ────────────────────────────────────────────
   E.listaSaldos = [
@@ -231,16 +231,27 @@ async function correrRenders(S) {
   chequearMarcas(chk, 'resumen de arriba (deuda)', html('resumen-cc-deuda'), ['g_moneda'])
   chequearMarcas(chk, 'resumen de arriba (crédito)', html('resumen-cc-credito'), ['g_moneda2'])
   chk('resumen: el innerHTML += suma solo el aviso numérico', /\+ 1 descarga sin importe<\/div>$/.test(html('resumen-cc-deuda')))
+  // Con "Todas" en la barra, el total de cada unidad (28/09/2026).
+  const listaGuardada = E.listaSaldos
+  E.unidadElegida = null
+  E.listaSaldos = [
+    { proveedor_id: 'p1', unidad_negocio_id: 'u1', proveedor: P1, saldos: [{ moneda: marca('dz_moneda'), deuda: 5, credito: 2 }] },
+    { proveedor_id: 'p1', unidad_negocio_id: 'u2', proveedor: P1, saldos: [{ moneda: 'ARS', deuda: 7, credito: 3 }] },
+  ]
+  S.renderizarResumenCC()
+  chequearMarcas(chk, 'resumen: el total por unidad (deuda)', html('resumen-cc-deuda'), ['u1_nombre', 'u2_nombre', 'dz_moneda'])
+  chequearMarcas(chk, 'resumen: el total por unidad (crédito)', html('resumen-cc-credito'), ['u1_nombre', 'u2_nombre', 'dz_moneda'])
+  E.listaSaldos = listaGuardada
 
   // ── Facturas sin proveedor ───────────────────────────────────────────────
   const FID = 'id"x\'<y>&z'
   E.listaSinProveedor = [
-    { id: FID, razon_social: marca('sp_razon'), fecha_factura: '2026-09-10', importe: 10, moneda: marca('sp_moneda') },
+    { id: FID, razon_social: marca('sp_razon'), fecha_factura: '2026-09-10', importe: 10, moneda: marca('sp_moneda'), unidad_negocio_id: 'u2' },
     { id: 'f2', razon_social: null, fecha_factura: '2026-09-11', importe: null, moneda: 'ARS' },
   ]
   S.renderizarListaSinProveedor()
   const sp = html('lista-sin-proveedor')
-  chequearMarcas(chk, 'facturas sin proveedor', sp, ['sp_razon', 'sp_moneda'])
+  chequearMarcas(chk, 'facturas sin proveedor', sp, ['sp_razon', 'sp_moneda', 'u2_nombre'])
   const hrefs = [...sp.matchAll(/<a href="([^"]*)"/g)].map(m => m[1])
   chk('facturas sin proveedor: los href (Ver y Editar) arrancan con el prefijo fijo',
     hrefs.length === 4 && hrefs.every(h => h.startsWith('gastos.html?factura=')), hrefs.join(' | '))
@@ -296,8 +307,23 @@ async function correrRenders(S) {
     filtros: { tipo: 'todos', orden: 'fecha_desc' }, movimientosRaw: [], estadoPorFactura: {},
     remitos: [], errorRemitos: null,
   }
-  S.renderizarSelectorUnidadFicha()
-  chequearMarcas(chk, 'selector de unidad de la ficha', html('filtro-unidad-ficha'), ['u1_nombre', 'u2_nombre'])
+  // La unidad de la ficha (28/09/2026): con la barra en Todas y la ficha en
+  // la del &unidad= marcado, se dice qué muestra; el id de la URL no llega.
+  E.unidadElegida = null
+  S.renderizarFichaUnidad()
+  chk('unidad de la ficha: el &unidad= de la URL no llega al HTML', !html('ficha-unidad-operar').includes('unidad_url'), html('ficha-unidad-operar'))
+  const guardadaUnidad = E.ficha.unidadId
+  E.ficha.unidadId = null
+  S.renderizarFichaUnidad()
+  chequearMarcas(chk, 'unidad de la ficha: para operar se elige (Todas)', html('ficha-unidad-operar'), ['u1_nombre', 'u2_nombre'])
+  chequearMarcas(chk, 'unidad de la ficha: ids y nombres marcados', S.htmlFichaUnidad({ fichaUnidad: null, barraUnidad: null,
+    unidades: [{ id: marca('fu_id'), nombre: marca('fu_nombre') }], puedeOperar: true }), ['fu_id', 'fu_nombre'])
+  E.ficha.unidadId = 'u1'
+  E.unidadElegida = 'u2'
+  S.renderizarFichaUnidad()
+  chequearMarcas(chk, 'unidad de la ficha: muestra otra que la barra', html('ficha-unidad-operar'), ['u1_nombre', 'u2_nombre'])
+  E.unidadElegida = null
+  E.ficha.unidadId = guardadaUnidad
   S.sincronizarUrlFicha(true)
   S.sincronizarUrlFicha(false)
   chk('&unidad= de la URL: solo va a history, con una URL relativa que empieza en "?" (mismo documento)',
@@ -305,8 +331,13 @@ async function correrRenders(S) {
   E.fichaSaldos = [{ unidad_negocio_id: 'u1', moneda: marca('fb_moneda'), deuda_pendiente: 5, credito_disponible: 0 }]
   E.fichaCreditos = []
   S.renderizarFichaBanner()
-  chequearMarcas(chk, 'banner de la ficha (una unidad)', html('ficha-banner'), ['fb_moneda'])
   chk('banner de la ficha: el &unidad= de la URL no llega al HTML', !html('ficha-banner').includes('unidad_url'))
+  // Desde el 28/09/2026 la ficha filtra lo cargado por su unidad: una unidad
+  // que no es ninguna no muestra nada; con u1, el saldo de u1.
+  E.ficha.unidadId = 'u1'
+  S.renderizarFichaBanner()
+  chequearMarcas(chk, 'banner de la ficha (una unidad)', html('ficha-banner'), ['fb_moneda'])
+  E.ficha.unidadId = UNIDAD_URL
 
   // Banner en "todas las unidades": nombre de cada unidad + moneda.
   E.ficha.unidadId = null
@@ -342,13 +373,20 @@ async function correrRenders(S) {
   chk('movimientos: los href (Ver y Editar) son prefijo fijo + id codificado + location.href codificado',
     hrefsF.length === 2 && hrefsF.every(h => h === 'gastos.html?factura=' + encodeURIComponent(MID) + '&volver=' + encodeURIComponent(URL_PAGINA)), hrefsF.join(' | '))
   chk('movimientos: la descarga sin importe ofrece precio por unidad', /Precio por /.test(movs))
-  // Con una unidad elegida (la marcada del &unidad=): saldo corrido visible.
+  // Con la unidad marcada del &unidad=: no llega al HTML (y como no es
+  // ninguna unidad, no muestra ningún movimiento).
   E.ficha.unidadId = UNIDAD_URL
   S.renderizarFichaMovimientos()
+  chk('movimientos: el &unidad= de la URL no llega al HTML', !html('lista-movimientos-ficha').includes('unidad_url'))
+  // Con una unidad (u1 y u2, desde el 28/09/2026 se filtra lo cargado): saldo corrido visible.
+  E.ficha.unidadId = 'u1'
+  S.renderizarFichaMovimientos()
   movs = html('lista-movimientos-ficha')
-  chequearMarcas(chk, 'movimientos de la ficha (una unidad, con saldo corrido)', movs, ['fm_ref', 'fm_moneda', 'fm_moneda2', 'si_ref'])
+  chequearMarcas(chk, 'movimientos de la ficha (u1, con saldo corrido)', movs, ['fm_ref2', 'fm_moneda2', 'si_ref'])
   chk('movimientos: con una unidad se dibuja el saldo corrido', /fila-movimiento__saldo/.test(movs))
-  chk('movimientos: el &unidad= de la URL no llega al HTML', !movs.includes('unidad_url'))
+  E.ficha.unidadId = 'u2'
+  S.renderizarFichaMovimientos()
+  chequearMarcas(chk, 'movimientos de la ficha (u2, con saldo corrido)', html('lista-movimientos-ficha'), ['fm_ref', 'fm_moneda'])
   // La fila sin importe sola, con varios productos (una cantidad null) y un id marcado.
   chequearMarcas(chk, 'descarga sin importe (varios productos)', S.htmlFilaSinImporte(
     { factura_pendiente_id: marca('si_id'), referencia: marca('si_ref'), fecha: '2026-09-13', moneda: 'ARS', unidad_negocio_id: 'u2' },
@@ -369,7 +407,7 @@ async function correrRenders(S) {
   const orden = html('ms-orden-ficha-panel')
   chk('selector de orden: solo las opciones literales', /Monto \(mayor primero\)/.test(orden) && !/data-xss/.test(orden))
   E.ficha.unidadId = 'u1'
-  E.fichaCreditos = [{ id: marca('cr_id'), monto_disponible: 5, monto_original: 9, moneda: marca('cr_moneda') }, { id: 'cr2', monto_disponible: 1, monto_original: 2, moneda: 'ARS' }]
+  E.fichaCreditos = [{ id: marca('cr_id'), unidad_negocio_id: 'u1', monto_disponible: 5, monto_original: 9, moneda: marca('cr_moneda') }, { id: 'cr2', unidad_negocio_id: 'u1', monto_disponible: 1, monto_original: 2, moneda: 'ARS' }]
   S.abrirModalAplicarCreditoDesdeFicha()
   chequearMarcas(chk, 'créditos para elegir', html('lista-creditos-para-elegir'), ['cr_id', 'cr_moneda'])
   S.__setDatos('facturas_pendientes', [{ id: marca('fc_id'), numero_comprobante: marca('fc_num'), fecha_factura: '2026-09-01', saldo_pendiente: 7 }])
@@ -451,6 +489,7 @@ const SEGURAS = {
   },
   renderizarListaSinProveedor: {
     'colorAvatar(razon)': 'colorAvatar(): un elemento de PALETA_AVATAR (hex literales del código), nunca el nombre',
+    chipUnidad: HTML_PROPIO,
     'formatearFecha(f.fecha_factura)': fecha('facturas_pendientes.fecha_factura'), 'importeHtml(f.importe, f.moneda)': IMPORTE,
   },
   abrirModalDetallePago: {
@@ -467,6 +506,11 @@ const SEGURAS = {
     sufijo: "' · ' + esc(l.moneda), armado arriba", 'importeHtml(l.neto, l.moneda)': IMPORTE, 'importeHtml(-l.neto, l.moneda)': IMPORTE,
     'colorAvatar(p.razon_social)': 'colorAvatar(): un elemento de PALETA_AVATAR (hex literales del código), nunca el nombre',
     saldoHtml: HTML_PROPIO, 'htmlSinImporte(sinImporte)': SIN_IMPORTE,
+  },
+  htmlDesgloseResumen: { 'importeHtml(f.monto, f.moneda)': IMPORTE },
+  renderizarFichaUnidad: {
+    "htmlFichaUnidad({ fichaUnidad: estado.ficha.unidadId, barraUnidad: estado.unidadElegida, unidades: estado.ficha.unidades ?? [], puedeOperar: tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'aplicar_credito'), })":
+      'htmlFichaUnidad() escapa adentro (ejecutada con ids y nombres marcados)',
   },
   renderizarListaHistorial: {
     claseMonto: CLASE, 'importeHtml(Math.abs(monto), m.moneda)': IMPORTE, badgeEstado: BADGE,
@@ -673,12 +717,15 @@ if (SOLO !== 'render') {
   chk('estático: colorAvatar() devuelve un elemento de PALETA_AVATAR', /return PALETA_AVATAR\[Math\.abs\(hash\) % PALETA_AVATAR\.length\]\s*\}$/.test(cuerpoDe('colorAvatar')))
   chk('estático: PALETA_AVATAR son hex literales', /const PALETA_AVATAR = \[('#[0-9A-F]{6}'(, )?)+\]\n/.test(FUENTE))
 
-  // El único `innerHTML +=` del archivo: el aviso numérico del resumen.
+  // Los `innerHTML +=` del archivo, todos del resumen: el total por unidad
+  // (htmlDesgloseResumen escapa adentro: ejecutada con marcas) y el aviso
+  // numérico de las descargas sin importe.
   const masIgual = [...scriptModulo(ARCHIVO).matchAll(/innerHTML\s*\+=\s*([^\n]*)/g)].map(m => m[1].trim())
-  chk('estático: el único innerHTML += es htmlSinImporte(sinImporte) de un conteo',
-    masIgual.length === 1 && masIgual[0] === 'htmlSinImporte(sinImporte)' &&
+  chk('estático: los innerHTML += son el desglose por unidad y htmlSinImporte(sinImporte) de un conteo',
+    masIgual.join(' | ') === "htmlDesgloseResumen('deuda') | htmlDesgloseResumen('credito') | htmlSinImporte(sinImporte)" &&
     cuerpoDe('renderizarResumenCC').includes('const sinImporte = estado.listaSaldos.reduce((n, g) => n + contarSinImporte(g.proveedor_id, g.unidad_negocio_id), 0)'),
     masIgual.join(' | '))
+  chk('estático: htmlDesgloseResumen() escapa el nombre de la unidad', cuerpoDe('htmlDesgloseResumen').includes('<span>${esc(etiquetaUnidad(f.unidad))}</span>'))
   chk('estático: htmlSinImporte() corta si n no es > 0', cuerpoDe('htmlSinImporte').includes("if (!(n > 0)) return ''"))
 
   // ── Contexto ─────────────────────────────────────────────────────────────

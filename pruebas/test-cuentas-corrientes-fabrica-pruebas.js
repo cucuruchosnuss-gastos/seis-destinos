@@ -6,9 +6,12 @@
 // Se EJECUTA el código real: las funciones del módulo se extraen del <script>
 // y los helpers de la fábrica salen del js/utils.js real (sin los `export`).
 //
-// Listas de unidades del módulo (las tres que hay):
-//  - filtro-unidad-proveedores y filtro-unidad-historial (poblarFiltrosUnidad)
-//  - filtro-unidad-ficha (unidadesDeFicha + renderizarSelectorUnidadFicha)
+// Listas de unidades del módulo. Desde el 28/09/2026 los tres filtros de
+// unidad (la lista, el historial y la ficha) ya no existen: lo decide la barra
+// de unidad de arriba (js/barra-unidad.js), que saca la fábrica de pruebas
+// por su cuenta (test-barra-unidad.js). Queda UNA lista propia:
+//  - las unidades para elegir en la ficha, para operar con la barra en
+//    "Todas" (unidadesDeFicha + htmlFichaUnidad / renderizarFichaUnidad)
 // El módulo no tiene listas de PERSONAS: la Cuenta de Empresa se busca por
 // tipo='empresa' (no es de prueba) y el selector de cuentas es de cuentas.
 // Las búsquedas de un nombre por id (nombreUnidad) NO se filtran.
@@ -50,10 +53,11 @@ const PREL = `
   function nuevoEl(id) { return { id, innerHTML: '', value: '', hidden: false } }
   var __els = new Map()
   var document = { getElementById(id) { if (!__els.has(id)) __els.set(id, nuevoEl(id)); return __els.get(id) } }
-  var estado = { maestros: { unidades: [], proveedores: [] }, fabrica: FABRICA_SIN_DATOS, ficha: { unidades: [], unidadId: null } }
+  var estado = { maestros: { unidades: [], proveedores: [] }, fabrica: FABRICA_SIN_DATOS, ficha: { unidades: [], unidadId: null },
+    unidadElegida: null, miRolApp: 'usuario', misTareas: new Set(['cuentas_corrientes:registrar_pago']) }
 `
 
-const FUNCIONES = ['esc', 'poblarSelect', 'unidadesParaElegir', 'poblarFiltrosUnidad', 'unidadesDeFicha', 'renderizarSelectorUnidadFicha', 'nombreUnidad']
+const FUNCIONES = ['esc', 'tieneTarea', 'unidadesParaElegir', 'unidadesDeFicha', 'htmlFichaUnidad', 'renderizarFichaUnidad', 'nombreUnidad']
 
 function sandbox() {
   return construirCon(ARCHIVO, { preludio: PREL, funciones: FUNCIONES, retorno: 'estado, __els, FABRICA_SIN_DATOS' })
@@ -77,27 +81,19 @@ function caso(nombre, fabrica, esperaRobot) {
   S.estado.maestros.unidades = UNIDADES.map(u => ({ ...u }))
   S.estado.fabrica = fabrica === 'SIN' ? S.FABRICA_SIN_DATOS : fabrica
 
-  // 1 y 2. Los dos filtros de la pantalla principal.
-  S.poblarFiltrosUnidad()
-  for (const id of ['filtro-unidad-proveedores', 'filtro-unidad-historial']) {
-    const html = S.__els.get(id)?.innerHTML ?? ''
-    chk(`${nombre}: ${id} ${esperaRobot ? 'MUESTRA' : 'NO muestra'} la unidad de prueba`, tieneRobot(html) === esperaRobot, html)
-    chk(`${nombre}: ${id} sigue mostrando las reales`, tieneReales(html), html)
-  }
-
-  // 3. El selector de la ficha de un proveedor con movimientos en las tres.
+  // Las unidades para elegir en la ficha de un proveedor con movimientos en las tres.
   S.estado.ficha.unidades = S.unidadesDeFicha([CN, PRUEBA, DP])
   chk(`${nombre}: la ficha ${esperaRobot ? 'incluye' : 'excluye'} la unidad de prueba`,
     S.estado.ficha.unidades.some(u => u.id === PRUEBA) === esperaRobot, S.estado.ficha.unidades)
   chk(`${nombre}: la ficha conserva el orden de los ids`,
     S.estado.ficha.unidades.filter(u => u.id !== PRUEBA).map(u => u.id).join() === [CN, DP].join())
-  S.renderizarSelectorUnidadFicha()
-  const htmlFicha = S.__els.get('filtro-unidad-ficha').innerHTML
-  chk(`${nombre}: filtro-unidad-ficha ${esperaRobot ? 'MUESTRA' : 'NO muestra'} la unidad de prueba`, tieneRobot(htmlFicha) === esperaRobot, htmlFicha)
-  chk(`${nombre}: filtro-unidad-ficha sigue con "Todas las unidades"`, htmlFicha.includes('Todas las unidades'))
+  S.renderizarFichaUnidad()
+  const htmlFicha = S.__els.get('ficha-unidad-operar').innerHTML
+  chk(`${nombre}: la elección de unidad de la ficha ${esperaRobot ? 'MUESTRA' : 'NO muestra'} la unidad de prueba`, tieneRobot(htmlFicha) === esperaRobot, htmlFicha)
+  chk(`${nombre}: la elección de unidad de la ficha sigue con las reales`, tieneReales(htmlFicha), htmlFicha)
 
   // Un proveedor con movimientos SOLO en la unidad de prueba: para una cuenta
-  // real el selector queda solo con "Todas", como cualquier ficha sin unidades.
+  // real no hay ninguna unidad para elegir, como cualquier ficha sin unidades.
   const soloRobot = S.unidadesDeFicha([PRUEBA])
   chk(`${nombre}: ficha con solo la unidad de prueba → ${esperaRobot ? '1' : '0'} unidades`, soloRobot.length === (esperaRobot ? 1 : 0), soloRobot)
 
@@ -127,11 +123,9 @@ caso('sin datos de la fábrica', 'SIN', true)
   chk('init carga la fábrica dentro del Promise.all', /cargarFabricaDePruebas\(supabase\)/.test(dentro), dentro)
   chk('init carga la fábrica una sola vez', (init.match(/cargarFabricaDePruebas\(/g) || []).length === 1)
   const iGuarda = init.indexOf('estado.fabrica = fabrica')
-  const iPobla = init.indexOf('poblarFiltrosUnidad()')
   chk('init guarda la fábrica en el estado', iGuarda !== -1)
-  chk('init puebla los filtros DESPUÉS de guardar la fábrica', iGuarda !== -1 && iPobla !== -1 && iGuarda < iPobla, [iGuarda, iPobla])
-  chk('init ya no puebla los filtros con la lista maestra directa',
-    !/poblarSelect\('filtro-unidad-(proveedores|historial)', estado\.maestros\.unidades/.test(init))
+  chk('init ya no puebla filtros de unidad propios (los reemplaza la barra de arriba)',
+    !/filtro-unidad-|poblarFiltrosUnidad/.test(init))
   chk('estado.maestros.unidades se guarda sin filtrar', /estado\.maestros\.unidades = unids\.data \?\? \[\]/.test(init))
 }
 

@@ -547,6 +547,47 @@
     }
     .banner-ficha-cc--secundaria .banner-ficha-cc__monto { font-size: 1.25rem; }
 
+    /* La unidad de la cuenta que se está mirando (28/09/2026). Con la barra
+       de arriba en "Todas", acá se elige la unidad en la que se opera; si la
+       cuenta muestra otra cosa que la barra, se dice y se ofrece volver. */
+    .ficha-unidad-cc {
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.875rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+    }
+    .ficha-unidad-cc__texto { flex: 1 1 14rem; min-width: 0; font-size: 0.8125rem; color: var(--color-texto); }
+    .ficha-unidad-cc__chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .ficha-unidad-cc__chip {
+      min-height: 44px;
+      padding: 0 1rem;
+      border-radius: 999px;
+      border: 1px solid var(--turquesa);
+      background: #fff;
+      color: var(--turquesa-oscuro);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .ficha-unidad-cc__chip:hover { background: var(--turquesa-suave); }
+    .ficha-unidad-cc__chip:focus-visible { outline: 3px solid var(--turquesa); outline-offset: 2px; }
+
+    /* Una línea chica que dice qué muestra la pantalla con la barra de
+       unidad elegida, o que algo no se puede filtrar por unidad. */
+    .nota-unidad-cc { font-size: 0.78125rem; color: var(--color-texto-suave); margin: 0.25rem 0 0.75rem; }
+
+    /* "Todas las unidades" en el resumen de arriba: el total por unidad. */
+    .resumen-cc-card__desglose { display: grid; gap: 0.125rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--color-texto-suave); }
+    .resumen-cc-card--navy .resumen-cc-card__desglose { color: rgba(255,255,255,0.85); }
+    .resumen-cc-card__desglose-fila { display: flex; justify-content: space-between; gap: 0.5rem; }
+    .resumen-cc-card__desglose-fila span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
     /* .fila-movimiento se combina con la clase global .tarjeta-lista (fondo,
        borde, border-radius, padding — css/main.css) en vez de reinventar el
        estilo de tarjeta; acá solo lo que .tarjeta-lista no cubre. No es
@@ -1035,7 +1076,6 @@
           <div class="filtros-cc__buscar" id="filtros-proveedores-buscar">
             <input type="text" id="filtro-busqueda-proveedores" placeholder="🔍 Buscar proveedor" style="width:100%;">
           </div>
-          <select id="filtro-unidad-proveedores"></select>
           <button type="button" class="btn-filtro-cc" id="btn-agregar-proveedor">+ Agregar proveedor</button>
           <div class="grupo-importar-excel" id="grupo-importar-excel">
             <button type="button" class="btn-filtro-cc" id="btn-cargar-excel-proveedores">Cargar Excel proveedores</button>
@@ -1079,7 +1119,6 @@
           <div class="filtros-cc__buscar">
             <input type="text" id="filtro-busqueda-historial" placeholder="🔍 Buscar proveedor" style="width:100%;">
           </div>
-          <select id="filtro-unidad-historial"></select>
           <input type="date" id="filtro-fecha-desde-historial">
           <input type="date" id="filtro-fecha-hasta-historial">
           <button type="button" id="btn-exportar-excel-historial" class="btn btn--secundario" style="width:auto; background:var(--turquesa); color:#fff; border-color:var(--turquesa);">📥 Descargar Excel</button>
@@ -1101,6 +1140,9 @@
 
       <!-- ── Tab: Pendientes de aceptación ────────────────────────────────── -->
       <div id="tab-pendientes" hidden>
+        <!-- Un proveedor no es de una unidad de negocio: esta lista no se
+             puede filtrar por la barra de arriba, y lo dice (regla h). -->
+        <p class="nota-unidad-cc" id="nota-unidad-pendientes" hidden>Los proveedores no son de una unidad de negocio: esta lista es la misma en todas.</p>
         <div class="lista-contenido" id="lista-pendientes-aceptacion"></div>
 
         <div id="estado-vacio-pendientes" class="estado-vacio" hidden>
@@ -1124,6 +1166,12 @@
 
       <div id="ficha-banner"></div>
 
+      <!-- La unidad de esta cuenta (28/09/2026). La que se MIRA la decide la
+           barra de unidad de arriba (js/barra-unidad.js); acá solo se elige
+           la unidad para OPERAR cuando la barra está en "Todas", sin cambiar
+           la barra (regla f). La arma renderizarFichaUnidad(). -->
+      <div id="ficha-unidad-operar"></div>
+
       <h3 class="titulo-seccion-cc" style="display:flex; align-items:baseline; justify-content:space-between;">
         <span>Movimientos</span>
         <span style="font-size:0.8125rem; font-weight:600; color:var(--color-texto-suave);" id="contador-movimientos-ficha"></span>
@@ -1135,7 +1183,6 @@
       </div>
 
       <div class="filtros-cc" style="margin-top:0.875rem;">
-        <select id="filtro-unidad-ficha"></select>
         <input type="date" id="filtro-fecha-desde-ficha">
         <input type="date" id="filtro-fecha-hasta-ficha">
         <div class="grilla-tipo-mov" id="grilla-tipo-mov-ficha">
@@ -1193,6 +1240,7 @@
         <h3 class="titulo-seccion-cc" style="margin:0;">Padrón</h3>
         <span class="padron-cabecera__contador" id="contador-padron"></span>
       </div>
+      <p class="nota-unidad-cc" id="nota-unidad-padron"></p>
 
       <div id="estado-cargando-padron" class="estado-vacio" hidden>
         <div class="spinner"></div>
@@ -1507,6 +1555,9 @@
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    // La barra de unidad de negocio de arriba (js/barra-unidad.js): la unidad
+    // elegida filtra todo lo que se MIRA; los permisos siguen en la base.
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad, estadoUnidad } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
 
@@ -1546,15 +1597,24 @@
       // porque el <optgroup> del selector necesita distinguirlas: tiene que
       // verse de qué caja sale la plata.
       cuentasPago: null,        // { propias: [], empresa: [] }
+      // La unidad de la barra de arriba: un id, o null = Todas. La pone
+      // cambiarUnidad() (alCambiarUnidad) y se lee con veUnidad().
+      unidadElegida: null,
       filtros: {
-        proveedores: { busqueda: '', unidadId: '' },
-        historial:   { busqueda: '', unidadId: '', fechaDesde: '', fechaHasta: '', rangoRapido: null },
+        proveedores: { busqueda: '' },
+        historial:   { busqueda: '', fechaDesde: '', fechaHasta: '', rangoRapido: null },
         padron:      { busqueda: '' },
       },
       // Saldos del padrón: Map proveedor_id -> Map moneda -> {deuda, credito},
       // agregados entre TODAS las unidades (el padrón es por proveedor, la
       // lista de saldos de la pestaña es por proveedor+unidad).
       padronSaldos: new Map(),
+      // Lo que devolvió la base, SIN filtrar por unidad: la unidad y la
+      // búsqueda se aplican al armar cada lista, así cambiar la barra repinta
+      // sin volver a consultar (y una fila sin unidad no se pierde en un .eq).
+      padronSaldosCrudos: [],
+      saldosCrudos: [],
+      historialCrudo: [],
       listaSaldos: [],
       listaSinProveedor: [],
       listaHistorial: [],
@@ -1717,10 +1777,44 @@
       return sinUnidadesDePrueba(lista ?? [], estado.fabrica)
     }
 
-    function poblarFiltrosUnidad() {
-      const unidades = unidadesParaElegir(estado.maestros.unidades)
-      poblarSelect('filtro-unidad-proveedores', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
-      poblarSelect('filtro-unidad-historial', unidades, u => ({ value: u.id, label: u.nombre }), 'Todas las unidades')
+    // LA BARRA DE UNIDAD (28/09/2026). Los tres selectores de unidad que tenía
+    // este módulo (la lista de proveedores, el historial y la ficha) se
+    // retiraron: lo decide la barra de unidad de arriba. ¿Esta fila se ve con
+    // la unidad elegida? Una fila SIN unidad se ve siempre (pasaFiltroUnidad).
+    function veUnidad(unidadId) {
+      return pasaFiltroUnidad(unidadId, estado.unidadElegida)
+    }
+
+    // El nombre de la unidad de una fila, o "Sin unidad": lo que no tiene
+    // unidad todavía no desaparece, se muestra marcado.
+    function etiquetaUnidad(id) {
+      return id ? nombreUnidad(id) : 'Sin unidad'
+    }
+
+    // La barra cambió con la pantalla abierta: se repinta todo con los datos
+    // que ya están (no hay consultas nuevas, así que no hay nada en vuelo que
+    // pueda pisar lo nuevo: cada carga arma su lista con la unidad del
+    // momento en que termina). La ficha abierta pasa a la unidad nueva.
+    function cambiarUnidad(elegida) {
+      estado.unidadElegida = elegida || null
+      armarListaSaldos()
+      renderizarListaSinProveedor()
+      armarHistorial()
+      armarPadronSaldos()
+      renderizarPadron()
+      renderizarNotasUnidad()
+      if (estado.ficha) {
+        estado.ficha.unidadId = estado.unidadElegida
+        estado.ficha.formImporte = null
+        sincronizarUrlFicha()
+        renderizarFicha()
+      }
+    }
+
+    // Las líneas chicas que dicen qué muestra cada pantalla con la barra.
+    function renderizarNotasUnidad() {
+      const pend = document.getElementById('nota-unidad-pendientes')
+      if (pend) pend.hidden = !estado.unidadElegida
     }
 
     // Las unidades del selector de la ficha, en el orden de los ids.
@@ -1809,18 +1903,26 @@
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
 
+      // La barra de unidad de arriba: se escucha ANTES de esperarla, así un
+      // cambio mientras carga no se pierde. Esperarla va en paralelo con lo
+      // demás (la barra hace sus propias consultas).
+      alCambiarUnidad(({ elegida }) => cambiarUnidad(elegida))
+
       // cargarFabricaDePruebas nunca tira: si falla, no saca nada.
       const [unids, , fabrica] = await Promise.all([
         supabase.from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre'),
         recargarProveedoresMaestros(),
         cargarFabricaDePruebas(supabase),
+        unidadesDeLaBarra().catch(() => null),
       ])
       // maestros.unidades queda COMPLETA a propósito: también resuelve el
       // nombre de una unidad por id (nombreUnidad), y eso no se filtra.
       estado.maestros.unidades = unids.data ?? []
       estado.fabrica = fabrica ?? FABRICA_SIN_DATOS
-
-      poblarFiltrosUnidad()
+      // Lo que la barra tiene elegido AHORA (si cambió mientras se cargaba,
+      // cambiarUnidad ya lo puso; esto lee lo mismo).
+      estado.unidadElegida = estadoUnidad().elegida || null
+      renderizarNotasUnidad()
 
       // Gates de UI por tarea. Sin ver_todo se esconden los saldos generales
       // y el listado por proveedor (la RLS ya acota los datos igual — esto
@@ -1830,7 +1932,6 @@
       if (!tieneTarea('cuentas_corrientes', 'ver_todo')) {
         document.querySelector('.grilla-resumen-cc').hidden = true
         document.getElementById('filtros-proveedores-buscar').hidden = true
-        document.getElementById('filtro-unidad-proveedores').hidden = true
         document.getElementById('lista-proveedores').hidden = true
         // El padrón muestra el saldo de cada proveedor de toda la empresa —
         // exactamente lo que gobierna ver_todo.
@@ -1861,8 +1962,8 @@
       const params = new URLSearchParams(location.search)
       const proveedorURL = params.get('proveedor')
       const unidadURL = params.get('unidad')
-      // Sin &unidad= abre en "todas las unidades" — antes esta guarda exigía
-      // las dos y un ?proveedor= solo no hacía nada.
+      // Sin &unidad= abre en la unidad de la barra (o en "todas las
+      // unidades" si la barra está en Todas); con &unidad= abre en esa.
       if (proveedorURL) {
         const prov = estado.maestros.proveedores.find(p => p.id === proveedorURL)
         if (prov) await abrirFicha(proveedorURL, unidadURL, prov.razon_social)
@@ -1883,15 +1984,20 @@
       return [...mapa.values()]
     }
 
+    // Turno: una respuesta vieja (dos cargas seguidas) no pisa a la nueva.
+    let turnoSaldos = 0
     async function cargarSaldos() {
       const cargandoEl = document.getElementById('estado-cargando-proveedores')
       const vacioEl     = document.getElementById('estado-vacio-proveedores')
       cargandoEl.hidden = false
       vacioEl.hidden     = true
 
-      let query = supabase.from('v_saldo_proveedor').select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible')
-      if (estado.filtros.proveedores.unidadId) query = query.eq('unidad_negocio_id', estado.filtros.proveedores.unidadId)
-      const { data, error } = await query
+      // SIN filtrar por unidad en la consulta: la unidad de la barra se aplica
+      // al armar la lista (armarListaSaldos), así cambiarla no vuelve a
+      // consultar y una fila sin unidad no se pierde.
+      const turno = ++turnoSaldos
+      const { data, error } = await supabase.from('v_saldo_proveedor').select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible')
+      if (turno !== turnoSaldos) return
       cargandoEl.hidden = true
 
       if (error) {
@@ -1900,14 +2006,21 @@
         return
       }
 
+      estado.saldosCrudos = data ?? []
+      armarListaSaldos()
+    }
+
+    // La lista de trabajo con la unidad de la barra y la búsqueda, sobre los
+    // saldos ya cargados.
+    function armarListaSaldos() {
       // Un proveedor que SOLO tiene descargas sin importe no aparece en
       // v_saldo_proveedor (esa vista suma pendiente y parcial). Se le arma un
       // grupo vacío para que la lista de trabajo lo muestre igual: es alguien
       // a quien se le debe algo que todavía no tiene precio.
-      const filasSaldo = [...(data ?? [])]
+      const filasSaldo = (estado.saldosCrudos ?? []).filter(f => veUnidad(f.unidad_negocio_id))
       const claves = new Set(filasSaldo.map(f => `${f.proveedor_id}__${f.unidad_negocio_id}`))
       for (const f of estado.sinImporte) {
-        if (estado.filtros.proveedores.unidadId && f.unidad_negocio_id !== estado.filtros.proveedores.unidadId) continue
+        if (!veUnidad(f.unidad_negocio_id)) continue
         const clave = `${f.proveedor_id}__${f.unidad_negocio_id}`
         if (claves.has(clave)) continue
         claves.add(clave)
@@ -1941,7 +2054,7 @@
       vacioEl.hidden = true
 
       listaEl.innerHTML = estado.listaSaldos.map(g => {
-        const unidadNombre = estado.maestros.unidades.find(u => u.id === g.unidad_negocio_id)?.nombre || ''
+        const unidadNombre = etiquetaUnidad(g.unidad_negocio_id)
         const saldosVisibles = g.saldos.filter(s => s.deuda > 0 || s.credito > 0)
         const multiMoneda = saldosVisibles.length > 1
 
@@ -2023,11 +2136,38 @@
         `).join('')
       }
 
+      // Con "Todas" en la barra, debajo de cada total va el de cada unidad.
+      contDeuda.innerHTML += htmlDesgloseResumen('deuda')
+      contCredito.innerHTML += htmlDesgloseResumen('credito')
+
       // El total a pagar no incluye las descargas sin importe: se dice al lado.
       const sinImporte = estado.listaSaldos.reduce((n, g) => n + contarSinImporte(g.proveedor_id, g.unidad_negocio_id), 0)
       if (sinImporte) contDeuda.innerHTML += htmlSinImporte(sinImporte)
 
       document.getElementById('resumen-cc-proveedores').textContent = `${estado.listaSaldos.length} activos`
+    }
+
+    // El total de cada unidad debajo de una tarjeta del resumen, solo con la
+    // barra en "Todas" y si hay más de una unidad con algo en ese campo
+    // ('deuda' o 'credito'). Con una unidad elegida no se dibuja: el total de
+    // arriba ya es el de esa unidad.
+    function htmlDesgloseResumen(campo) {
+      if (estado.unidadElegida) return ''
+      const porUnidad = new Map()
+      for (const g of estado.listaSaldos) {
+        for (const s of g.saldos) {
+          if (!(s[campo] > 0)) continue
+          const clave = `${g.unidad_negocio_id ?? ''}__${s.moneda}`
+          const acum = porUnidad.get(clave) || { unidad: g.unidad_negocio_id, moneda: s.moneda, monto: 0 }
+          acum.monto += s[campo]
+          porUnidad.set(clave, acum)
+        }
+      }
+      const filas = [...porUnidad.values()]
+      if (new Set(filas.map(f => f.unidad ?? '')).size < 2) return ''
+      filas.sort((a, b) => etiquetaUnidad(a.unidad).localeCompare(etiquetaUnidad(b.unidad), 'es') || String(a.moneda).localeCompare(String(b.moneda)))
+      return `<div class="resumen-cc-card__desglose">${filas.map(f =>
+        `<div class="resumen-cc-card__desglose-fila"><span>${esc(etiquetaUnidad(f.unidad))}</span><span>${importeHtml(f.monto, f.moneda)}</span></div>`).join('')}</div>`
     }
 
     async function cargarSinProveedor() {
@@ -2051,8 +2191,10 @@
     function renderizarListaSinProveedor() {
       const listaEl = document.getElementById('lista-sin-proveedor')
       const vacioEl = document.getElementById('estado-vacio-sin-proveedor')
+      // La unidad de la barra; una factura sin unidad se ve siempre.
+      const visibles = estado.listaSinProveedor.filter(f => veUnidad(f.unidad_negocio_id))
 
-      if (!estado.listaSinProveedor.length) {
+      if (!visibles.length) {
         listaEl.innerHTML = ''
         vacioEl.hidden = false
         return
@@ -2066,8 +2208,12 @@
       const puedeAsignar   = tieneTarea('cuentas_corrientes', 'asignar_proveedor_legado')
       const puedeAnularFP  = tieneTarea('cuentas_corrientes', 'anular_factura')
 
-      listaEl.innerHTML = estado.listaSinProveedor.map(f => {
+      listaEl.innerHTML = visibles.map(f => {
         const razon = f.razon_social || '(sin razón social)'
+        // La unidad se dice con "Todas" en la barra, o si no tiene.
+        const chipUnidad = (!estado.unidadElegida || !f.unidad_negocio_id)
+          ? `<span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${esc(etiquetaUnidad(f.unidad_negocio_id))}</span>`
+          : ''
         // Los href de abajo son seguros por encodeURIComponent + comillas
         // DOBLES en el atributo. encodeURIComponent NO escapa la comilla
         // simple: no cambiar el delimitador a comillas simples.
@@ -2079,6 +2225,7 @@
               <div class="tarjeta-lista__titulo">${esc(razon)}</div>
               <div class="gasto__meta">
                 <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${formatearFecha(f.fecha_factura)}</span>
+                ${chipUnidad}
               </div>
             </div>
             <div class="gasto__derecha" style="align-items:flex-end; gap:0.375rem;">
@@ -2410,7 +2557,7 @@
       cargandoEl.hidden = false
 
       const { data, error } = await supabase.from('v_saldo_proveedor')
-        .select('proveedor_id, moneda, deuda_pendiente, credito_disponible')
+        .select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible')
       cargandoEl.hidden = true
 
       if (error) {
@@ -2419,8 +2566,16 @@
         return
       }
 
+      estado.padronSaldosCrudos = data ?? []
+      armarPadronSaldos()
+      renderizarPadron()
+    }
+
+    // Los saldos del padrón con la unidad de la barra: con una unidad, los de
+    // esa unidad; con "Todas", sumando todas (el padrón es por proveedor).
+    function armarPadronSaldos() {
       const porProveedor = new Map()
-      ;(data ?? []).forEach(f => {
+      ;(estado.padronSaldosCrudos ?? []).filter(f => veUnidad(f.unidad_negocio_id)).forEach(f => {
         if (!porProveedor.has(f.proveedor_id)) porProveedor.set(f.proveedor_id, new Map())
         const porMoneda = porProveedor.get(f.proveedor_id)
         const acum = porMoneda.get(f.moneda) || { deuda: 0, credito: 0 }
@@ -2429,7 +2584,6 @@
         porMoneda.set(f.moneda, acum)
       })
       estado.padronSaldos = porProveedor
-      renderizarPadron()
     }
 
     function filtrarPadron() {
@@ -2450,6 +2604,13 @@
       const vacioEl = document.getElementById('estado-vacio-padron')
       const provs   = filtrarPadron()
       const total   = estado.maestros.proveedores.length
+
+      // Qué saldos muestra: los proveedores no son de una unidad, pero sus
+      // saldos sí (regla h: se dice en chico).
+      const nota = document.getElementById('nota-unidad-padron')
+      if (nota) nota.textContent = estado.unidadElegida
+        ? `Saldos de ${nombreUnidad(estado.unidadElegida)}. La lista de proveedores es la misma en todas las unidades.`
+        : 'Saldos sumando todas las unidades.'
 
       document.getElementById('contador-padron').textContent =
         provs.length === total
@@ -2475,8 +2636,9 @@
         const lineas = [...(estado.padronSaldos.get(p.id)?.entries() ?? [])]
           .map(([moneda, s]) => ({ moneda, neto: s.deuda - s.credito }))
           .filter(l => Math.abs(l.neto) >= 0.005)
-        // Descargas sin importe en todas sus unidades: el saldo no las incluye.
-        const sinImporte = contarSinImporte(p.id)
+        // Descargas sin importe de la unidad de la barra (o de todas): el
+        // saldo no las incluye.
+        const sinImporte = contarSinImporteVisible(p.id, estado.unidadElegida)
         const multiMoneda = lineas.length > 1
 
         const saldoHtml = lineas.length
@@ -2564,6 +2726,7 @@
         mostrarError('Este proveedor todavía no tiene movimientos en cuenta corriente.')
         return
       }
+      // Sin unidad: la ficha abre en la de la barra (o en todas).
       await abrirFicha(prov.id, null, prov.razon_social, 'padron', ids)
     }
 
@@ -2870,23 +3033,27 @@
       })
     }
 
+    let turnoHistorial = 0
     async function cargarHistorial() {
       const cargandoEl = document.getElementById('estado-cargando-historial')
       const vacioEl     = document.getElementById('estado-vacio-historial')
       cargandoEl.hidden = false
       vacioEl.hidden     = true
+      const turno = ++turnoHistorial
 
       let query = supabase.from('v_cuenta_corriente_movimientos')
         .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, orden_desempate')
         .order('fecha', { ascending: false })
         .order('orden_desempate', { ascending: false })
 
+      // La unidad NO va en la consulta: la de la barra se aplica al armar la
+      // lista (armarHistorial), así cambiarla no vuelve a consultar.
       const f = estado.filtros.historial
-      if (f.unidadId)    query = query.eq('unidad_negocio_id', f.unidadId)
       if (f.fechaDesde)  query = query.gte('fecha', f.fechaDesde)
       if (f.fechaHasta)  query = query.lte('fecha', f.fechaHasta)
 
       const { data, error } = await query
+      if (turno !== turnoHistorial) return
 
       if (error) {
         cargandoEl.hidden = true
@@ -2895,20 +3062,28 @@
         return
       }
 
-      let filas = (data ?? []).map(m => ({ ...m, proveedorNombre: nombreProveedor(m.proveedor_id) }))
-      if (f.busqueda) {
-        const t = f.busqueda.trim().toLowerCase()
-        filas = filas.filter(m => m.proveedorNombre.toLowerCase().includes(t))
-      }
+      const filas = (data ?? []).map(m => ({ ...m, proveedorNombre: nombreProveedor(m.proveedor_id) }))
 
       // v_cuenta_corriente_movimientos no trae el estado de la factura — se
       // consulta aparte para el badge de cobro, una vez para todas las filas
-      // (ver cargarEstadosDeFacturas). Se juntan los ids DESPUÉS del filtro de
-      // búsqueda: no tiene sentido pedir estados de filas que no se muestran.
+      // del rango (ver cargarEstadosDeFacturas): la búsqueda y la unidad se
+      // aplican después, sin volver a consultar.
       const idsFactura = [...new Set(filas.filter(m => m.tipo === 'factura' && m.factura_pendiente_id).map(m => m.factura_pendiente_id))]
-      estado.estadoPorFacturaHistorial = idsFactura.length ? await cargarEstadosDeFacturas(idsFactura) : {}
+      const estados = idsFactura.length ? await cargarEstadosDeFacturas(idsFactura) : {}
+      if (turno !== turnoHistorial) return
+      estado.estadoPorFacturaHistorial = estados
 
       cargandoEl.hidden = true
+      estado.historialCrudo = filas
+      armarHistorial()
+    }
+
+    // El historial con la búsqueda y la unidad de la barra, sobre lo cargado.
+    // Una fila sin unidad se ve siempre.
+    function armarHistorial() {
+      let filas = (estado.historialCrudo ?? []).filter(m => veUnidad(m.unidad_negocio_id))
+      const t = (estado.filtros.historial.busqueda || '').trim().toLowerCase()
+      if (t) filas = filas.filter(m => m.proveedorNombre.toLowerCase().includes(t))
       estado.listaHistorial = filas
       renderizarListaHistorial()
     }
@@ -2931,7 +3106,7 @@
         const montoHtml = m.monto == null
           ? '<div class="fila-movimiento__monto fila-movimiento__monto--falta">Falta importe</div>'
           : `<div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>`
-        const unidadNombre = estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || ''
+        const unidadNombre = etiquetaUnidad(m.unidad_negocio_id)
         const referencia = m.referencia || ''
         const badgeEstado = m.tipo === 'factura'
           ? badgeEstadoFactura(estado.estadoPorFacturaHistorial[m.factura_pendiente_id])
@@ -2956,7 +3131,7 @@
       }
       const filas = estado.listaHistorial.map(m => ({
         'Proveedor':  m.proveedorNombre,
-        'Unidad':     estado.maestros.unidades.find(u => u.id === m.unidad_negocio_id)?.nombre || '',
+        'Unidad':     etiquetaUnidad(m.unidad_negocio_id),
         'Fecha':      formatearFecha(m.fecha),
         'Tipo':       TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo,
         'Referencia': m.referencia || '',
@@ -2987,10 +3162,14 @@
     // `unidadesConocidas` lo pasa el padrón, que ya consultó las unidades
     // para decidir si abrir; los demás call sites no las tienen y se
     // consultan acá.
+    //
+    // LA UNIDAD (28/09/2026): la que se pasa (la tarjeta de la lista, o el
+    // &unidad= del link) o, si no, la de la barra de arriba; con la barra en
+    // "Todas", "todas las unidades".
     async function abrirFicha(proveedorId, unidadId, nombre, origen = 'lista', unidadesConocidas = null) {
       fichaOrigen = origen
       estado.ficha = {
-        proveedorId, unidadId: unidadId || null, nombre,
+        proveedorId, unidadId: unidadId || estado.unidadElegida || null, nombre,
         unidades: [],
         filtros: { rangoRapido: null, fechaDesde: '', fechaHasta: '', tipo: 'todos', orden: 'fecha_desc' },
         movimientosRaw: [],
@@ -3003,12 +3182,88 @@
       document.getElementById('vista-ficha').removeAttribute('hidden')
       sincronizarUrlFicha(true)
 
+      const ficha = estado.ficha
       const ids = unidadesConocidas ?? (await unidadesDelProveedor(proveedorId)) ?? []
+      if (estado.ficha !== ficha) return
       estado.ficha.unidades = unidadesDeFicha(ids)
-      renderizarSelectorUnidadFicha()
+      renderizarFichaUnidad()
 
       await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos(), cargarFichaRemitos()])
+      if (estado.ficha !== ficha) return
       renderizarFichaBanner()
+    }
+
+    // Todo lo de la ficha con la unidad que tiene ahora, sobre lo ya cargado
+    // (las consultas traen todas las unidades del proveedor).
+    function renderizarFicha() {
+      if (!estado.ficha) return
+      renderizarFichaUnidad()
+      renderizarFichaBanner()
+      renderizarFichaMovimientos()
+      renderizarFichaRemitos()
+    }
+
+    // La ficha pasa a otra unidad (o a todas, con null) SIN cambiar la barra.
+    function cambiarUnidadFicha(unidadId) {
+      if (!estado.ficha) return
+      estado.ficha.unidadId = unidadId || null
+      estado.ficha.formImporte = null
+      sincronizarUrlFicha()
+      renderizarFicha()
+    }
+
+    // REGLA f (28/09/2026): registrar un pago o aplicar un crédito necesitan
+    // UNA unidad. Con la barra en "Todas" y la ficha en todas las unidades, se
+    // pide acá mismo y NO se cambia la barra: elegir una unidad para pagarle a
+    // un proveedor no tiene por qué cambiar lo que se ve en toda la app.
+    // Si la ficha muestra otra cosa que la barra (se eligió acá, o vino por un
+    // link), se dice y se ofrece volver a lo de la barra.
+    function htmlFichaUnidad({ fichaUnidad, barraUnidad, unidades, puedeOperar }) {
+      if ((fichaUnidad || null) === (barraUnidad || null)) {
+        if (fichaUnidad || !unidades.length) return ''
+        const texto = puedeOperar
+          ? 'Para registrar un pago o aplicar un crédito, elegí de qué unidad es la cuenta (la barra de arriba no cambia):'
+          : 'Para ver la cuenta de una sola unidad, con el saldo corrido, elegila (la barra de arriba no cambia):'
+        return `<div class="ficha-unidad-cc">
+          <div class="ficha-unidad-cc__texto">${esc(texto)}</div>
+          <div class="ficha-unidad-cc__chips">${unidades.map(u =>
+            `<button type="button" class="ficha-unidad-cc__chip" data-ficha-unidad="${esc(u.id)}">${esc(u.nombre)}</button>`).join('')}</div>
+        </div>`
+      }
+      const mira = fichaUnidad ? nombreUnidad(fichaUnidad) : 'todas las unidades'
+      const arriba = barraUnidad ? `arriba está elegida ${nombreUnidad(barraUnidad)}` : 'arriba están todas las unidades'
+      const volver = barraUnidad ? `Ver ${nombreUnidad(barraUnidad)}` : 'Ver todas las unidades'
+      return `<div class="ficha-unidad-cc">
+        <div class="ficha-unidad-cc__texto">Esta cuenta muestra ${esc(mira)}; ${esc(arriba)}.</div>
+        <div class="ficha-unidad-cc__chips"><button type="button" class="ficha-unidad-cc__chip" data-ficha-unidad="${esc(barraUnidad || '')}">${esc(volver)}</button></div>
+      </div>`
+    }
+
+    function renderizarFichaUnidad() {
+      const cont = document.getElementById('ficha-unidad-operar')
+      if (!cont) return
+      if (!estado.ficha) { cont.innerHTML = ''; return }
+      cont.innerHTML = htmlFichaUnidad({
+        fichaUnidad: estado.ficha.unidadId,
+        barraUnidad: estado.unidadElegida,
+        unidades: estado.ficha.unidades ?? [],
+        puedeOperar: tieneTarea('cuentas_corrientes', 'registrar_pago') || tieneTarea('cuentas_corrientes', 'aplicar_credito'),
+      })
+    }
+
+    // Lo de la ficha que se MIRA con su unidad (una fila sin unidad se ve
+    // siempre) y lo que se usa para OPERAR (solo la unidad, estricto: un pago
+    // no se aplica a algo sin unidad).
+    function saldosFichaVisibles() {
+      return (estado.fichaSaldos ?? []).filter(s => pasaFiltroUnidad(s.unidad_negocio_id, estado.ficha?.unidadId))
+    }
+    function saldosFichaDeUnidad() {
+      const u = estado.ficha?.unidadId
+      return u ? (estado.fichaSaldos ?? []).filter(s => s.unidad_negocio_id === u) : []
+    }
+    function creditosFichaDeUnidad() {
+      const u = estado.ficha?.unidadId
+      return u ? (estado.fichaCreditos ?? []).filter(c => c.unidad_negocio_id === u) : []
     }
 
     // Deja la URL deep-linkeable mientras la ficha está abierta — de ahí toma
@@ -3026,13 +3281,6 @@
       else history.replaceState(null, '', qs)
     }
 
-    function renderizarSelectorUnidadFicha() {
-      const sel = document.getElementById('filtro-unidad-ficha')
-      sel.innerHTML = `<option value="">Todas las unidades</option>` +
-        estado.ficha.unidades.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
-      sel.value = estado.ficha.unidadId || ''
-    }
-
     function nombreUnidad(id) {
       return estado.maestros.unidades.find(u => u.id === id)?.nombre || '—'
     }
@@ -3043,18 +3291,19 @@
       const destino = fichaOrigen === 'padron' ? 'vista-padron' : 'vista-lista'
       document.getElementById(destino).removeAttribute('hidden')
       estado.ficha = null
+      renderizarFichaUnidad()
       history.replaceState(null, '', location.pathname)
     }
 
+    // Trae TODAS las unidades del proveedor: la vista devuelve una fila por
+    // unidad + moneda, y la unidad de la ficha se aplica al mostrar
+    // (saldosFichaVisibles) y al operar (saldosFichaDeUnidad).
     async function cargarFichaSaldos() {
-      let query = supabase.from('v_saldo_proveedor')
+      const ficha = estado.ficha
+      const { data, error } = await supabase.from('v_saldo_proveedor')
         .select('proveedor_id, unidad_negocio_id, moneda, deuda_pendiente, credito_disponible')
-        .eq('proveedor_id', estado.ficha.proveedorId)
-      // Sin unidad la vista ya devuelve una fila por unidad + moneda, así que
-      // el desglose del banner sale solo: no hay nada que sumar.
-      if (estado.ficha.unidadId) query = query.eq('unidad_negocio_id', estado.ficha.unidadId)
-
-      const { data, error } = await query
+        .eq('proveedor_id', ficha.proveedorId)
+      if (estado.ficha !== ficha) return
       if (error) { console.error(error); mostrarError('Error al cargar el saldo.'); return }
 
       estado.fichaSaldos = data ?? []
@@ -3070,7 +3319,7 @@
     // los botones, el resto son banners secundarios más chicos sin botones.
     function renderizarFichaBanner() {
       const cont = document.getElementById('ficha-banner')
-      const monedasConSaldo = estado.fichaSaldos.filter(s => (Number(s.deuda_pendiente) || 0) > 0 || (Number(s.credito_disponible) || 0) > 0)
+      const monedasConSaldo = saldosFichaVisibles().filter(s => (Number(s.deuda_pendiente) || 0) > 0 || (Number(s.credito_disponible) || 0) > 0)
       // Cada botón depende de su tarea; "Aplicar crédito" además mantiene
       // la condición de siempre (solo si hay créditos disponibles).
       // En "todas las unidades" los botones se DESHABILITAN, no se esconden:
@@ -3078,15 +3327,18 @@
       // de una empresa concreta, así que no se puede registrar sin saber cuál.
       const todas = !estado.ficha.unidadId
       const dis = todas ? 'disabled' : ''
+      // Con todas las unidades el botón se ve si hay algún crédito (y queda
+      // deshabilitado); con una unidad, si hay créditos DE esa unidad.
+      const hayCreditos = (todas ? (estado.fichaCreditos ?? []) : creditosFichaDeUnidad()).length > 0
       const acciones = `
         <div class="banner-ficha-cc__acciones">
           ${tieneTarea('cuentas_corrientes', 'registrar_pago') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--primario" id="btn-registrar-pago" ${dis}>Registrar pago</button>` : ''}
-          ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${estado.fichaCreditos.length ? '' : 'hidden'} ${dis}>Aplicar crédito</button>` : ''}
+          ${tieneTarea('cuentas_corrientes', 'aplicar_credito') ? `<button type="button" class="banner-ficha-cc__btn banner-ficha-cc__btn--secundario" id="btn-aplicar-credito-ficha" ${hayCreditos ? '' : 'hidden'} ${dis}>Aplicar crédito</button>` : ''}
         </div>
-        ${todas ? `<div class="banner-ficha-cc__ayuda">Elegí una unidad de negocio para registrar un pago</div>` : ''}`
+        ${todas ? `<div class="banner-ficha-cc__ayuda">Registrar un pago o aplicar un crédito es de una unidad: elegila abajo.</div>` : ''}`
 
       // Las descargas sin importe no entran al saldo: se cuentan y se dice.
-      const sinImporte = contarSinImporte(estado.ficha.proveedorId, estado.ficha.unidadId)
+      const sinImporte = contarSinImporteVisible(estado.ficha.proveedorId, estado.ficha.unidadId)
       const avisoSinImporte = sinImporte
         ? `${htmlSinImporte(sinImporte)}<div class="banner-ficha-cc__ayuda">Este saldo está incompleto: no incluye las descargas que todavía no tienen precio.</div>`
         : ''
@@ -3111,7 +3363,7 @@
           return `
             <div class="banner-ficha-cc${i > 0 ? ' banner-ficha-cc--secundaria' : ''}">
               <div>
-                ${todas ? `<div class="banner-ficha-cc__unidad">${esc(nombreUnidad(s.unidad_negocio_id))}</div>` : ''}
+                ${todas || !s.unidad_negocio_id ? `<div class="banner-ficha-cc__unidad">${esc(etiquetaUnidad(s.unidad_negocio_id))}</div>` : ''}
                 <div class="banner-ficha-cc__etiqueta">${etiqueta}</div>
                 <div class="banner-ficha-cc__monto">${importeHtml(monto, s.moneda)}</div>
                 ${i === 0 ? avisoSinImporte : ''}
@@ -3131,10 +3383,12 @@
       cargandoEl.hidden = false
       vacioEl.hidden     = true
 
+      // Todas las unidades del proveedor: la de la ficha se aplica al mostrar
+      // (renderizarFichaMovimientos), así cambiarla no vuelve a consultar.
+      const ficha = estado.ficha
       let query = supabase.from('v_cuenta_corriente_movimientos')
         .select('proveedor_id, unidad_negocio_id, moneda, fecha, tipo, monto, factura_pendiente_id, gasto_id, credito_id, referencia, saldo_acumulado, orden_desempate')
-        .eq('proveedor_id', estado.ficha.proveedorId)
-      if (estado.ficha.unidadId) query = query.eq('unidad_negocio_id', estado.ficha.unidadId)
+        .eq('proveedor_id', ficha.proveedorId)
 
       const f = estado.ficha.filtros
       if (f.fechaDesde) query = query.gte('fecha', f.fechaDesde)
@@ -3144,6 +3398,7 @@
         .order('fecha', { ascending: false })
         .order('orden_desempate', { ascending: false })
 
+      if (estado.ficha !== ficha) return
       if (error) { console.error(error); cargandoEl.hidden = true; mostrarError('Error al cargar los movimientos.'); return }
 
       // v_cuenta_corriente_movimientos no trae el estado de la factura — se
@@ -3162,6 +3417,7 @@
       // único que hay para ponerle precio.
       const idsSinImporte = idsFactura.filter(id => estadoPorFactura[id] === 'sin_importe')
       const cantidades = idsSinImporte.length ? await cargarCantidadesSinImporte(idsSinImporte) : new Map()
+      if (estado.ficha !== ficha) return
 
       cargandoEl.hidden = true
 
@@ -3182,7 +3438,8 @@
       const f = estado.ficha.filtros
       const todas = !estado.ficha.unidadId
 
-      let filas = estado.ficha.movimientosRaw
+      // La unidad de la ficha; un movimiento sin unidad se ve siempre.
+      let filas = estado.ficha.movimientosRaw.filter(m => pasaFiltroUnidad(m.unidad_negocio_id, estado.ficha.unidadId))
       if (f.tipo === 'factura')    filas = filas.filter(m => ['factura', 'interes'].includes(m.tipo))
       else if (f.tipo === 'pago')  filas = filas.filter(m => ['pago', 'credito_aplicado'].includes(m.tipo))
 
@@ -3236,7 +3493,9 @@
         // intercaladas dan una secuencia que no cierra con nada. Serían
         // números correctos en un contexto que los hace parecer un error.
         const saldoAcum = Number(m.saldo_acumulado) || 0
-        const lineaSaldo = (!todas && saldoAcum !== 0)
+        // Uno sin unidad tampoco: su corrido es el de "sin unidad", no el de
+        // la unidad que se está mirando.
+        const lineaSaldo = (!todas && m.unidad_negocio_id && saldoAcum !== 0)
           ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${importeHtml(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
         const referencia = m.referencia || '—'
@@ -3249,7 +3508,7 @@
             <div style="flex:1; min-width:0;">
               <div class="fila-movimiento__tipo">${esc(TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo)}</div>
               <div class="fila-movimiento__referencia">${esc(referencia)}${badgeEstado}</div>
-              <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas ? ` · ${esc(nombreUnidad(m.unidad_negocio_id))}` : ''}</div>
+              <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:flex-end;">
               <div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>
@@ -3323,6 +3582,14 @@
     function contarSinImporte(proveedorId, unidadId = null) {
       return (estado.sinImporte ?? []).filter(f =>
         f.proveedor_id === proveedorId && (!unidadId || f.unidad_negocio_id === unidadId)).length
+    }
+
+    // Lo mismo con la regla de la barra, para lo que se MIRA (el padrón, el
+    // banner de la ficha): con una unidad, las de esa unidad y las que no
+    // tienen unidad; sin unidad, todas.
+    function contarSinImporteVisible(proveedorId, unidadId = null) {
+      return (estado.sinImporte ?? []).filter(f =>
+        f.proveedor_id === proveedorId && pasaFiltroUnidad(f.unidad_negocio_id, unidadId)).length
     }
 
     function htmlSinImporte(n) {
@@ -3465,7 +3732,7 @@
           <div style="flex:1; min-width:0;">
             <div class="fila-movimiento__tipo">Descarga sin comprobante</div>
             <div class="fila-movimiento__referencia">${esc(m.referencia || 'Sin número')}${badgeEstadoFactura('sin_importe')}</div>
-            <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas ? ` · ${esc(nombreUnidad(m.unidad_negocio_id))}` : ''}</div>
+            <div class="fila-movimiento__fecha">${formatearFecha(m.fecha)}${todas || !m.unidad_negocio_id ? ` · ${esc(etiquetaUnidad(m.unidad_negocio_id))}` : ''}</div>
             ${cantidadesHtml}
             ${formHtml}
           </div>
@@ -3531,7 +3798,8 @@
       if (error) {
         return `<div class="remitos-cc"><h3 class="titulo-seccion-cc">Remitos sin facturar</h3><div class="cargar-importe-cc__error">${esc(error)}</div></div>`
       }
-      const filas = (remitos ?? []).filter(r => !unidadId || r.unidad_negocio_id === unidadId)
+      // Un remito sin unidad se ve siempre (pasaFiltroUnidad).
+      const filas = (remitos ?? []).filter(r => pasaFiltroUnidad(r.unidad_negocio_id, unidadId))
       if (!filas.length) return ''
       return `
         <div class="remitos-cc">
@@ -3541,7 +3809,7 @@
             const items = Number(r.items) || 0
             return `
             <div class="remito-cc">
-              <div class="remito-cc__info">${esc(r.numero_doc || 'Sin número')} · ${formatearFecha(r.fecha)}${unidadId ? '' : ` · ${esc(nombreUnidad(r.unidad_negocio_id))}`}</div>
+              <div class="remito-cc__info">${esc(r.numero_doc || 'Sin número')} · ${formatearFecha(r.fecha)}${unidadId && r.unidad_negocio_id ? '' : ` · ${esc(etiquetaUnidad(r.unidad_negocio_id))}`}</div>
               <div class="remito-cc__items">${items} ${items === 1 ? 'ítem' : 'ítems'}</div>
             </div>`
           }).join('')}
@@ -3616,14 +3884,15 @@
       actualizarSelectorOrdenFicha()
     }
 
+    // Todas las unidades del proveedor; la de la ficha se aplica al operar
+    // (creditosFichaDeUnidad). creditos_proveedor.unidad_negocio_id es NOT NULL.
     async function cargarFichaCreditos() {
-      let query = supabase.from('creditos_proveedor')
+      const ficha = estado.ficha
+      const { data, error } = await supabase.from('creditos_proveedor')
         .select('id, proveedor_id, unidad_negocio_id, moneda, monto_original, monto_disponible, estado')
-        .eq('proveedor_id', estado.ficha.proveedorId)
+        .eq('proveedor_id', ficha.proveedorId)
         .eq('estado', 'disponible')
-      if (estado.ficha.unidadId) query = query.eq('unidad_negocio_id', estado.ficha.unidadId)
-
-      const { data, error } = await query
+      if (estado.ficha !== ficha) return
       if (error) { console.error(error); return }
 
       estado.fichaCreditos = data ?? []
@@ -3645,12 +3914,18 @@
         mostrarError('Elegí una unidad de negocio para aplicar un crédito.')
         return
       }
-      if (estado.fichaCreditos.length === 1) {
-        seleccionarCreditoParaAplicar(estado.fichaCreditos[0])
+      // Solo los créditos de la unidad de la ficha.
+      const creditos = creditosFichaDeUnidad()
+      if (!creditos.length) {
+        mostrarError('No hay créditos a favor en esta unidad.')
+        return
+      }
+      if (creditos.length === 1) {
+        seleccionarCreditoParaAplicar(creditos[0])
         return
       }
 
-      document.getElementById('lista-creditos-para-elegir').innerHTML = estado.fichaCreditos.map(c => `
+      document.getElementById('lista-creditos-para-elegir').innerHTML = creditos.map(c => `
         <div class="tarjeta-lista btn-elegir-credito" data-id="${esc(c.id)}" style="margin-bottom:0.5rem;">
           <div class="tarjeta-lista__info">
             <div class="tarjeta-lista__titulo">${importeHtml(c.monto_disponible, c.moneda)}</div>
@@ -3660,7 +3935,7 @@
       `).join('')
       document.querySelectorAll('.btn-elegir-credito').forEach(el => {
         el.addEventListener('click', () => {
-          const c = estado.fichaCreditos.find(x => x.id === el.dataset.id)
+          const c = creditos.find(x => x.id === el.dataset.id)
           if (c) seleccionarCreditoParaAplicar(c)
         })
       })
@@ -3826,7 +4101,8 @@
       }
       await cargarCuentasParaPago()
 
-      const monedasConDeuda = estado.fichaSaldos.filter(s => Number(s.deuda_pendiente) > 0)
+      // Solo los saldos de la unidad de la ficha: se paga en UNA unidad.
+      const monedasConDeuda = saldosFichaDeUnidad().filter(s => Number(s.deuda_pendiente) > 0)
       const grupoMoneda = document.getElementById('grupo-moneda-pago')
       if (monedasConDeuda.length > 1) {
         grupoMoneda.style.display = 'block'
@@ -4071,11 +4347,8 @@
     document.getElementById('filtro-busqueda-proveedores').addEventListener('input', (e) => {
       estado.filtros.proveedores.busqueda = e.target.value
       clearTimeout(debounceBusquedaProv)
-      debounceBusquedaProv = setTimeout(cargarSaldos, 300)
-    })
-    document.getElementById('filtro-unidad-proveedores').addEventListener('change', (e) => {
-      estado.filtros.proveedores.unidadId = e.target.value
-      cargarSaldos()
+      // Filtra lo ya cargado: la búsqueda no cambia la consulta.
+      debounceBusquedaProv = setTimeout(armarListaSaldos, 300)
     })
 
     // ── Filtros: Historial ────────────────────────────────────────────────
@@ -4083,11 +4356,8 @@
     document.getElementById('filtro-busqueda-historial').addEventListener('input', (e) => {
       estado.filtros.historial.busqueda = e.target.value
       clearTimeout(debounceBusquedaHist)
-      debounceBusquedaHist = setTimeout(cargarHistorial, 300)
-    })
-    document.getElementById('filtro-unidad-historial').addEventListener('change', (e) => {
-      estado.filtros.historial.unidadId = e.target.value
-      cargarHistorial()
+      // Filtra lo ya cargado: la búsqueda no cambia la consulta.
+      debounceBusquedaHist = setTimeout(armarHistorial, 300)
     })
     document.getElementById('filtro-fecha-desde-historial').addEventListener('change', (e) => {
       estado.filtros.historial.fechaDesde = e.target.value
@@ -4208,9 +4478,6 @@
     document.querySelector('#modal-editar-proveedor .modal-cc__backdrop').addEventListener('click', cerrarModalEditarProveedor)
     document.getElementById('btn-confirmar-editar-proveedor').addEventListener('click', confirmarEditarProveedor)
 
-    // Filtro de unidad de la ficha. Recarga las tres consultas porque las
-    // tres cambian con la unidad, y re-sincroniza la URL para que el
-    // `volver=` de los links a gastos.html apunte a lo que se está mirando.
     // ── Cargar importe de una descarga sin importe (delegado: se redibuja) ─
     const listaMovFicha = document.getElementById('lista-movimientos-ficha')
     listaMovFicha.addEventListener('click', (ev) => {
@@ -4248,15 +4515,13 @@
       if (linea) linea.innerHTML = total != null ? `Total a cargar: ${importeHtml(total, moneda)}` : 'Escribí un importe mayor a cero.'
     })
 
-    document.getElementById('filtro-unidad-ficha').addEventListener('change', async (e) => {
-      if (!estado.ficha) return
-      estado.ficha.unidadId = e.target.value || null
-      estado.ficha.formImporte = null
-      sincronizarUrlFicha()
-      await Promise.all([cargarFichaSaldos(), cargarFichaMovimientos(), cargarFichaCreditos()])
-      renderizarFichaBanner()
-      // Los remitos ya están cargados para todas las unidades: solo se filtran.
-      renderizarFichaRemitos()
+    // La unidad de la ficha, elegida acá sin cambiar la barra (regla f). Los
+    // datos ya están cargados para todas las unidades: solo se repinta, y la
+    // URL se re-sincroniza para que el `volver=` de los links a gastos.html
+    // apunte a lo que se está mirando.
+    document.getElementById('ficha-unidad-operar').addEventListener('click', (ev) => {
+      const b = ev.target.closest?.('[data-ficha-unidad]')
+      if (b) cambiarUnidadFicha(b.dataset.fichaUnidad)
     })
 
     // ── Importar proveedores desde Excel ──────────────────────────────────

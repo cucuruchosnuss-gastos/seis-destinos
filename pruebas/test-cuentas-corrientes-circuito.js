@@ -64,6 +64,9 @@ const FUNCIONES = [
   'decimalesImporteSin', 'totalImporteFormulario', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'confirmarImporteSinImporte', 'cargarSinImporte', 'cargarFichaRemitos', 'renderizarListaSaldos',
   'renderizarResumenCC', 'renderizarPadron', 'renderizarFichaBanner', 'renderizarListaHistorial',
+  // La barra de unidad (28/09/2026): lo que usan los renders de arriba.
+  'pasaFiltroUnidad', 'veUnidad', 'etiquetaUnidad', 'contarSinImporteVisible', 'htmlDesgloseResumen',
+  'saldosFichaVisibles', 'creditosFichaDeUnidad',
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR']
 
@@ -332,11 +335,14 @@ const ramaAsync = async () => {
 // ══════════════════════════════════════════════════════════════════════════
 {
   const { extraerFn } = require('./extraer')
-  const cs = extraerFn(FUENTE, 'cargarSaldos')
+  const cs = extraerFn(FUENTE, 'armarListaSaldos')
   chk('lista: los proveedores con SOLO descargas sin importe entran igual',
     /\|\| contarSinImporte\(g\.proveedor_id, g\.unidad_negocio_id\) > 0\)/.test(cs) && /for \(const f of estado\.sinImporte\)/.test(cs))
-  chk('lista: respeta el filtro de unidad al sumarlos',
-    /if \(estado\.filtros\.proveedores\.unidadId && f\.unidad_negocio_id !== estado\.filtros\.proveedores\.unidadId\) continue/.test(cs))
+  // Desde el 28/09/2026 la lista se ARMA en armarListaSaldos, con la unidad
+  // de la barra de arriba (veUnidad).
+  const al = extraerFn(FUENTE, 'armarListaSaldos')
+  chk('lista: respeta la unidad de la barra al sumarlos',
+    /if \(!veUnidad\(f\.unidad_negocio_id\)\) continue/.test(al), al)
   const cc = extraerFn(FUENTE, 'cargarCantidadesSinImporte')
   chk('mercadería: sale de la RPC items_de_factura_pendiente', /supabase\.rpc\('items_de_factura_pendiente', \{ p_factura_id: id \}\)/.test(cc))
   chk('mercadería: el archivo ya no lee materia_prima_ingresos ni materia_prima_items', !/from\('materia_prima_ingresos'\)|from\('materia_prima_items'\)|materia_prima_items\(/.test(FUENTE))
