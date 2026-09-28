@@ -166,6 +166,8 @@ const SEGURAS_PRODUCCION = [
   ['difReceta', 'HTML ya escapado: htmlFilaReceta() lo arma arriba con esc(textoGramos(g)), o vacío'],
   ['accionRenglon', 'HTML ya escapado: htmlFilaReceta() lo arma arriba con esc() del id del ingrediente, o vacío'],
   ['htmlCeldaQueda(e)', 'HTML armado por htmlCeldaQueda(), que escapa la cantidad adentro, o vacío'],
+  ['cambioReceta', 'HTML constante ("agregado") o la diferencia en gramos escapada con esc(), o vacío: htmlIngredientesHist()'],
+  ["filasIngHist.join('')", 'renglones que arma htmlIngredientesHist() con cada dato escapado con esc()'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

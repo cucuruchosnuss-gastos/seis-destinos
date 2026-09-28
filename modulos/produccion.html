@@ -1591,6 +1591,34 @@
       border: 2px solid var(--bordo); background: var(--bordo-suave); }
     .pr-rm__anular-titulo { margin: 0; font-size: 1.125rem; font-weight: 900; color: var(--bordo-oscuro); }
     .pr-rm__anular-nota { margin: 0; font-size: 1rem; }
+    /* 4h · El historial de una máquina: la lista en el centro y el detalle
+       de la masa elegida a la derecha (360 px). */
+    .pr-hm-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+    .pr-hm { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .pr-hm__titulo { margin: 0; font-size: 1.75rem; font-weight: 900; overflow-wrap: anywhere; }
+    .pr-hm__lista { display: flex; flex-direction: column; gap: 8px; }
+    .pr-hm__masa { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 72px; padding: 8px 16px;
+      text-align: left; border: 2px solid var(--pr-borde-control); border-radius: 14px; background: var(--color-fondo);
+      color: inherit; font: inherit; cursor: pointer; }
+    .pr-hm__masa[aria-pressed="true"] { border: 3px solid var(--naranja); background: var(--naranja-suave); }
+    .pr-hm__masa--anulada { background: var(--bordo-suave); }
+    .pr-hm__masa:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    .pr-hm__masa-l1 { font-size: 1.25rem; font-weight: 900; }
+    .pr-hm__masa-l2 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 1rem; color: var(--pr-texto-secundario); }
+    .pr-hm__nota, .pr-hm__nota-cant { margin: 0; font-size: 1rem; color: var(--pr-texto-secundario); }
+    .pr-hm__nueva { width: 100%; min-height: 68px; font-size: 1.375rem; }
+    .pr-hm__detalle { display: flex; flex-direction: column; gap: 10px; margin: 0; min-width: 0; }
+    .pr-hm__det-titulo { margin: 0; font-size: 1.5rem; font-weight: 900; }
+    .pr-hm__det-sub, .pr-hm__det-chips, .pr-hm__motivo { margin: 0; font-size: 1rem; }
+    .pr-hm__rotulo { font-weight: 800; }
+    .pr-hm__ings { display: flex; flex-direction: column; }
+    .pr-hm__ing { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 8px 0; border-bottom: 1px solid var(--color-borde); }
+    .pr-hm__ing-nombre { font-weight: 800; overflow-wrap: anywhere; }
+    .pr-hm__ing-cant { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .pr-hm__ing-marca, .pr-hm__ing-lote { font-size: 1rem; color: var(--pr-texto-secundario); overflow-wrap: anywhere; }
+    .pr-hm__ing-lote { text-align: right; }
+    .pr-hm__anular-btn { width: 100%; min-height: 56px; }
+    @media (max-width: 1100px) { .pr-hm-grid { grid-template-columns: minmax(0, 1fr); } }
     @media (max-width: 1100px) {
       .pr-receta-grid { grid-template-columns: minmax(0, 1fr); }
       .pr-receta__comos { grid-template-columns: minmax(0, 1fr); }
@@ -2232,6 +2260,20 @@
 
       <!-- B5 · 6d: las masas del turno, de TODAS las máquinas abiertas, con el
            estado de envío de cada una. -->
+      <!-- 4h · El historial de una máquina: se abre tocándola en la barra de
+           Sala de masa. Centro: las masas del turno; derecha: la elegida. -->
+      <section id="pr-hist-maq" hidden>
+        <div class="pr-hm-grid">
+          <div class="pr-tarjeta pr-hm">
+            <h1 class="pr-hm__titulo" id="pr-hm-titulo"></h1>
+            <div class="pr-hm__lista" id="pr-hm-lista"></div>
+            <p class="pr-hm__nota" id="pr-hm-nota" hidden></p>
+            <button type="button" class="pr-btn pr-btn--accion pr-hm__nueva" id="pr-hm-nueva">+ Nueva masa</button>
+          </div>
+          <aside class="pr-tarjeta pr-hm__detalle" id="pr-hm-detalle" aria-label="Detalle de la masa"></aside>
+        </div>
+      </section>
+
       <section id="pr-masas" hidden>
         <div class="pr-banda pr-banda--mal" id="pr-masas-sin" hidden>
           <span class="pr-sello-sin">SIN CONEXIÓN</span>
@@ -2667,7 +2709,8 @@
     function htmlLatSala() {
       const abiertas = maquinasAbiertas()
       const enInicio = estado.vista === 'pr-sala'
-      const marcada = estado.salaTurno?.id ?? null
+      // En el historial (4h) queda marcada la máquina que se está mirando.
+      const marcada = estado.vista === 'pr-hist-maq' ? (estado.histMaq?.turnoId ?? null) : (estado.salaTurno?.id ?? null)
       const filas = abiertas.map(e => {
         const actual = !enInicio && e.turno.id === marcada
         return `<button type="button" class="pr-lat__maq-fila${e.parada ? ' pr-lat__maq-fila--parada' : ''}" data-lateral-turno="${esc(e.turno.id)}"${actual ? ' aria-current="true"' : ''}>` +
@@ -2862,9 +2905,224 @@
     }
 
     // Tocar una máquina en la barra de Sala de masa: se trabaja con ella.
-    function mostrarHistorialMaquina(turnoId) {
+    async function mostrarHistorialMaquina(turnoId) {
       tocar()
-      return elegirMaquinaSala(turnoId)
+      const e = maquinasAbiertas().find(x => x.turno.id === turnoId)
+      if (!e) return mostrarSala()
+      const pedido = (estado.pedidoHistMaq = (estado.pedidoHistMaq ?? 0) + 1)
+      estado.histMaq = { turnoId, maquinaNombre: e.maquina.nombre, lote: e.turno.lote, turno: e.turno.turno ?? null,
+        masas: null, error: false, elegida: null, detalle: null, anular: null }
+      mostrarVista('pr-hist-maq')
+      pintarHistMaq()
+      try {
+        const masas = await leerMasasSala([turnoId])
+        if (pedido !== estado.pedidoHistMaq) return
+        estado.histMaq.masas = masas
+      } catch (err) {
+        if (pedido !== estado.pedidoHistMaq) return
+        console.error('historial de la máquina:', err)
+        estado.histMaq.error = true
+      }
+      const h = estado.histMaq
+      // Arranca elegida la última: es la que se puede anular y la que se mira.
+      const ultima = ultimaMasaAnulable(h.masas)
+      const masAlta = (h.masas ?? []).reduce((a, m) => (a == null || Number(m.nro) > Number(a.nro) ? m : a), null)
+      h.elegida = (ultima ?? masAlta)?.id ?? null
+      pintarHistMaq()
+      if (h.elegida) await cargarDetalleHist(h.elegida)
+    }
+
+    // 4h · El detalle de una masa: sus renglones (masa_items, con el nombre del
+    // ingrediente y la marca del insumo) y la receta con la que se hizo, para
+    // decir qué se agregó y qué cambió. Sin receta conocida no se compara:
+    // nunca se inventa una diferencia.
+    async function cargarDetalleHist(masaId) {
+      const h = estado.histMaq
+      if (!h) return
+      const m = (h.masas ?? []).find(x => x.id === masaId)
+      if (!m) return
+      const pedido = (estado.pedidoDetalleHist = (estado.pedidoDetalleHist ?? 0) + 1)
+      h.detalle = { masaId, items: null, receta: null, error: false }
+      pintarHistMaq()
+      try {
+        const [it, rec] = await Promise.all([
+          supabase.from('masa_items')
+            .select('ingrediente_id, insumo_id, lote, cantidad_simple_kg, ingrediente_libre, ingredientes(nombre, orden), insumos(nombre, marca)')
+            .eq('masa_id', masaId),
+          m.receta_id
+            ? supabase.from('receta_items').select('ingrediente_id, cantidad_kg').eq('receta_id', m.receta_id)
+            : Promise.resolve({ data: null, error: null }),
+        ])
+        if (it.error) throw it.error
+        if (rec.error) throw rec.error
+        if (pedido !== estado.pedidoDetalleHist || estado.histMaq !== h) return
+        h.detalle.items = it.data ?? []
+        h.detalle.receta = rec.data ? new Map(rec.data.map(r => [r.ingrediente_id, Number(r.cantidad_kg ?? 0)])) : null
+      } catch (err) {
+        if (pedido !== estado.pedidoDetalleHist || estado.histMaq !== h) return
+        console.error('detalle de la masa:', err)
+        h.detalle.error = true
+      }
+      pintarHistMaq()
+    }
+
+    function htmlMasaHist(m, elegida) {
+      const origenHist = m.origen ? (ETIQUETA_ORIGEN[m.origen] ?? m.origen) : ''
+      return `<button type="button" class="pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}" data-hm-masa="${esc(m.id)}" aria-pressed="${elegida ? 'true' : 'false'}">` +
+        `<span class="pr-hm__masa-l1">Masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'}</span>` +
+        `<span class="pr-hm__masa-l2">${esc(horaArgentina(m.hora) || '—')}${origenHist ? ` · ${esc(origenHist)}` : ''}` +
+        `${m.anulada ? ' · <span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)}</span></button>`
+    }
+
+    // Cada ingrediente con su marca, cantidad y lote. Lo agregado (la receta
+    // lo tenía en 0) dice "agregado"; lo que cambió muestra la diferencia en
+    // bordó. Las cantidades son de UNA masa simple, como en la receta.
+    function htmlIngredientesHist(d, m) {
+      const filasIngHist = [...d.items]
+        .filter(x => Number(x.cantidad_simple_kg ?? 0) > 0 || (!!d.receta && (d.receta.get(x.ingrediente_id) ?? 0) > 0))
+        .sort((a, z) => (a.ingredientes?.orden ?? 999) - (z.ingredientes?.orden ?? 999))
+        .map(x => {
+          const kg = Number(x.cantidad_simple_kg ?? 0)
+          const nombreIng = x.ingrediente_id ? (x.ingredientes?.nombre ?? 'Ingrediente') : (x.ingrediente_libre ?? 'Otro')
+          const marcaIng = x.insumos ? (x.insumos.marca || x.insumos.nombre || '') : (x.ingrediente_id ? '' : 'escrito a mano')
+          let cambioReceta = ''
+          if (d.receta && x.ingrediente_id) {
+            const rec = d.receta.get(x.ingrediente_id) ?? 0
+            if (!(rec > 0)) cambioReceta = ' <span class="pr-rec__agregado">agregado</span>'
+            else {
+              const g = Math.round((kg - rec) * 1000)
+              if (g !== 0) cambioReceta = ` <span class="pr-rec__dif pr-rec__dif--aleja">${esc(textoGramos(g))}</span>`
+            }
+          }
+          return '<div class="pr-hm__ing">' +
+            `<span class="pr-hm__ing-nombre">${esc(nombreIng)}${cambioReceta}</span>` +
+            `<span class="pr-hm__ing-cant">${esc(textoCantidad(kg))}</span>` +
+            `<span class="pr-hm__ing-marca">${esc(marcaIng)}</span>` +
+            `<span class="pr-hm__ing-lote">${x.lote ? `lote ${esc(x.lote)}` : 'sin lote'}</span></div>`
+        })
+      if (!filasIngHist.length) return '<p class="pr-texto-suave">Esta masa no tiene ingredientes cargados.</p>'
+      return `<p class="pr-hm__nota-cant">Cantidades de una masa simple${m.doble ? ': esta fue doble, lleva el doble de todo' : ''}.</p>` +
+        `<div class="pr-hm__ings">${filasIngHist.join('')}</div>`
+    }
+
+    function htmlAnularHist(m, a) {
+      return '<div class="pr-rm__anular">' +
+        `<p class="pr-rm__anular-titulo">Anular la masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'} · ${esc(horaArgentina(m.hora) || '—')}</p>` +
+        '<p class="pr-rm__anular-nota">Anularla devuelve al stock lo que había descontado.</p>' +
+        '<label class="pr-campo"><span class="pr-campo__rotulo">¿Por qué?</span>' +
+        '<input type="text" id="pr-hm-anular-motivo" class="pr-input" maxlength="300" autocomplete="off"></label>' +
+        `<p class="pr-error-pegado" id="pr-hm-anular-error"${a.error ? '' : ' hidden'}>${esc(a.error ?? '')}</p>` +
+        '<div class="pr-acciones"><button type="button" class="pr-btn pr-btn--secundario" id="pr-hm-anular-cancelar">Cancelar</button>' +
+        `<button type="button" class="pr-btn pr-btn--peligro" id="pr-hm-anular-confirmar">Anular masa ${esc(m.nro)}</button></div></div>`
+    }
+
+    function htmlDetalleHist(h) {
+      const m = (h.masas ?? []).find(x => x.id === h.elegida)
+      if (!m) return '<p class="pr-texto-suave">Tocá una masa para ver su detalle.</p>'
+      const quien = (estado.personal ?? []).find(x => x.id === m.masero_id)?.nombre ?? ''
+      const chips = m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)
+      let html = `<h2 class="pr-hm__det-titulo">Masa ${esc(m.nro)} · ${esc(horaArgentina(m.hora) || '—')}</h2>` +
+        `<p class="pr-hm__det-sub">${m.doble ? 'Doble' : 'Simple'}${quien ? ` · la hizo ${esc(quien)}` : ''}</p>` +
+        (chips ? `<p class="pr-hm__det-chips">${chips}</p>` : '')
+      if (m.motivo) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Motivo:</span> ${esc(m.motivo)}</p>`
+      if (m.anulada && m.anulada_motivo) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se anuló:</span> ${esc(m.anulada_motivo)}</p>`
+      const d = h.detalle && h.detalle.masaId === m.id ? h.detalle : null
+      if (d && d.error) html += '<p class="pr-aviso pr-aviso--grave">No se pudo leer el detalle de esta masa.</p>'
+      else if (!d || d.items == null) html += '<p class="pr-texto-suave">Cargando…</p>'
+      else html += htmlIngredientesHist(d, m)
+      // Solo la ÚLTIMA se anula, y con produccion:cargar.
+      const ultima = ultimaMasaAnulable(h.masas)
+      if (ultima && ultima.id === m.id && tieneTarea('cargar')) {
+        html += h.anular ? htmlAnularHist(m, h.anular)
+          : '<button type="button" class="pr-btn pr-btn--secundario pr-hm__anular-btn" id="pr-hm-anular">Anular esta masa</button>'
+      }
+      return html
+    }
+
+    function pintarHistMaq() {
+      const h = estado.histMaq
+      if (!h) return
+      const vivas = (h.masas ?? []).filter(x => !x.anulada).length
+      document.getElementById('pr-hm-titulo').textContent = [h.maquinaNombre, h.turno ? `Turno ${String(h.turno).toLowerCase()}` : '',
+        `lote ${h.lote}`, h.masas ? textoMasas(vivas) : ''].filter(Boolean).join(' · ')
+      const lista = document.getElementById('pr-hm-lista')
+      const pend = borradoresPendientes().filter(b => b.turnoId === h.turnoId)
+      if (h.error) lista.innerHTML = '<p class="pr-aviso pr-aviso--grave">No se pudieron leer las masas de esta máquina.</p>'
+      else if (h.masas == null) lista.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
+      else {
+        const orden = [...h.masas].sort((a, z) => Number(a.nro) - Number(z.nro))
+        const filas = orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('') + pend.map(htmlMasaRecetaPendiente).join('')
+        lista.innerHTML = filas || '<p class="pr-texto-suave">Todavía no hay masas en este turno.</p>'
+      }
+      const ultima = ultimaMasaAnulable(h.masas)
+      const nota = document.getElementById('pr-hm-nota')
+      nota.textContent = ultima ? `Solo se puede anular la última masa (la ${ultima.nro}).` : ''
+      nota.hidden = !ultima
+      document.getElementById('pr-hm-nueva').textContent = `+ Nueva masa para ${h.maquinaNombre}`
+      document.getElementById('pr-hm-detalle').innerHTML = htmlDetalleHist(h)
+      const input = document.getElementById('pr-hm-anular-motivo')
+      if (input) input.value = h.anular?.motivo ?? ''
+    }
+
+    function elegirMasaHist(masaId) {
+      const h = estado.histMaq
+      if (!h || !(h.masas ?? []).some(x => x.id === masaId)) return
+      tocar()
+      h.elegida = masaId
+      h.anular = null
+      return cargarDetalleHist(masaId)
+    }
+
+    function pedirAnularHist() {
+      const h = estado.histMaq
+      if (!h) return
+      const ultima = ultimaMasaAnulable(h.masas)
+      if (!ultima || ultima.id !== h.elegida || !tieneTarea('cargar')) return
+      tocar()
+      h.anular = { motivo: '', error: null }
+      pintarHistMaq()
+      const input = document.getElementById('pr-hm-anular-motivo')
+      if (input) input.focus()
+    }
+
+    function cancelarAnularHist() {
+      if (!estado.histMaq) return
+      estado.histMaq.anular = null
+      pintarHistMaq()
+    }
+
+    async function confirmarAnularHist() {
+      const h = estado.histMaq, a = h?.anular
+      if (!a || a.enviando) return
+      const ultima = ultimaMasaAnulable(h.masas)
+      if (!ultima || ultima.id !== h.elegida) return
+      const motivo = String(a.motivo ?? '').trim()
+      if (motivo.length < 3) { a.error = 'Escribí por qué (al menos 3 letras).'; return pintarHistMaq() }
+      a.enviando = true
+      const btn = document.getElementById('pr-hm-anular-confirmar')
+      if (btn) btn.disabled = true
+      try {
+        const { error } = await supabase.rpc('anular_masa', { p_masa_id: ultima.id, p_motivo: motivo })
+        if (error) throw error
+        mostrarExito('Masa anulada: se devolvió al stock lo que había descontado.')
+        await mostrarHistorialMaquina(h.turnoId)
+      } catch (e) {
+        a.enviando = false
+        a.error = e?.message || 'No se pudo anular la masa.'
+        pintarHistMaq()
+      }
+    }
+
+    // "+ Nueva masa para Máquina 1": la masa nueva de ESA máquina (4b).
+    async function nuevaMasaDesdeHist() {
+      const h = estado.histMaq
+      if (!h) return
+      tocar()
+      const turnoId = h.turnoId
+      estado.histMaq = null
+      mostrarVista('pr-sala')
+      pintarSala()
+      await elegirMaquinaSala(turnoId)
     }
 
     // "Sacar al masero": el encargado adentro de Producción (verificado con su
@@ -2971,7 +3229,7 @@
     // NAVEGACIÓN
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['pr-inicio', 'pr-quien', 'pr-acceso', 'pr-asignar', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-agregar-prod', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-receta', 'pr-masas']
+    const VISTAS = ['pr-inicio', 'pr-quien', 'pr-acceso', 'pr-asignar', 'pr-produccion', 'pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-agregar-prod', 'pr-cierre', 'pr-cerrado', 'pr-sala', 'pr-receta', 'pr-hist-maq', 'pr-masas']
 
     // Las pantallas de oficina se fueron a produccion-gestion.html (25/09/2026):
     // en la planta todo es tablet y manda la barra de modos.
@@ -8660,7 +8918,7 @@
     async function leerMasasSala(turnoIds) {
       if (!turnoIds.length) return []
       const { data, error } = await supabase.from('masas')
-        .select('id, turno_id, nro, hora, tipo_masa, doble, origen, es_chocolate, anulada, anulada_motivo')
+        .select('id, turno_id, nro, hora, tipo_masa, doble, origen, es_chocolate, anulada, anulada_motivo, masero_id, motivo, receta_id')
         .in('turno_id', turnoIds).order('hora')
       if (error) throw error
       return data ?? []
@@ -8818,6 +9076,19 @@
       })
       masasReceta.addEventListener('input', ev => {
         if (ev.target.id === 'pr-rm-anular-motivo' && estado.anularUltima) estado.anularUltima.motivo = ev.target.value
+      })
+      // 4h · El historial de una máquina.
+      const histMaq = document.getElementById('pr-hist-maq')
+      histMaq.addEventListener('click', ev => {
+        const m = ev.target.closest('[data-hm-masa]')
+        if (m) { elegirMasaHist(m.dataset.hmMasa); return }
+        if (ev.target.closest('#pr-hm-nueva')) { nuevaMasaDesdeHist(); return }
+        if (ev.target.closest('#pr-hm-anular')) { pedirAnularHist(); return }
+        if (ev.target.closest('#pr-hm-anular-cancelar')) { cancelarAnularHist(); return }
+        if (ev.target.closest('#pr-hm-anular-confirmar')) { confirmarAnularHist(); return }
+      })
+      histMaq.addEventListener('input', ev => {
+        if (ev.target.id === 'pr-hm-anular-motivo' && estado.histMaq?.anular) estado.histMaq.anular.motivo = ev.target.value
       })
       document.getElementById('pr-otro-cancelar').addEventListener('click', cerrarOtro)
       document.getElementById('pr-otro-agregar').addEventListener('click', agregarOtro)
