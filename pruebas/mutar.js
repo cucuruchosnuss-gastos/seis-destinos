@@ -33,7 +33,7 @@ const { rangosDeFunciones } = require('./circuito-comun')
 // mutaciones a un pedazo del archivo (la cartera de cheques vive en una región
 // de administracion.html: fuente-cheques.js). Las funciones se buscan, el
 // ancla se exige única y el reemplazo se aplica SOLO adentro de la región.
-function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales = [], equivalentes = [], variable = 'ARCHIVO_TEST', salir = true, region = null }) {
+function correrMutacionesEn({ suite, original, funciones, escape = 'esc', manuales = [], equivalentes = [], variable = 'ARCHIVO_TEST', salir = true, region = null }) {
   const src = fs.readFileSync(original, 'utf8')
   const lim = region ? region(src) : null
   if (region && !lim) { console.log('ABORTADO: no se encontró la región en ' + original); process.exit(2) }
@@ -124,8 +124,8 @@ function correrMutaciones({ suite, original, funciones, escape = 'esc', manuales
     const r = correr(TMP)
     // Lo que leyó el sub-proceso DE ESTE archivo (una suite puede leer dos).
     const lineasSalida = r.salida.split(/\r?\n/)
-    const lineaLeida = lineasSalida.find(l => l.startsWith('ARCHIVO ') && l.includes(TMP)) ?? lineasSalida.find(l => l.startsWith('ARCHIVO ')) ?? ''
-    const leido = (lineaLeida.match(/ARCHIVO .* \((\d+) bytes\)/) || [])[1]
+    const lineaLeida = lineasSalida.find(l => /^(ARCHIVO|COMUN) /.test(l) && l.includes(TMP)) ?? lineasSalida.find(l => l.startsWith('ARCHIVO ')) ?? ''
+    const leido = (lineaLeida.match(/(?:ARCHIVO|COMUN) .* \((\d+) bytes\)/) || [])[1]
     if (Number(leido) !== m.mutado.length) { errores.push(`${m.nombre}: el sub-proceso leyó ${leido} y se escribieron ${m.mutado.length}`); continue }
     if (m.equivalente) { equivs.push(`${m.nombre} — ${m.equivalente}${r.rojo ? ' (igual dio rojo)' : ''}`); continue }
     if (r.rojo) detectadas++
@@ -150,11 +150,118 @@ function correrMutacionesEnVarios(tandas) {
   let det = 0, tot = 0, eq = 0, mal = 0
   for (const t of tandas) {
     console.log(`── ${path.basename(t.original)} (${t.variable ?? 'ARCHIVO_TEST'}) ──`)
-    const r = correrMutaciones({ ...t, salir: false })
+    const r = correrMutacionesEn({ ...t, salir: false })
     det += r.detectadas; tot += r.total; eq += r.equivalentes; mal += r.fallas
   }
   console.log(`TOTAL: ${det}/${tot} mutaciones detectadas${eq ? ` (+${eq} equivalentes, aparte)` : ''}`)
   process.exit(mal ? 1 : 0)
 }
 
-module.exports = { correrMutaciones, correrMutacionesEnVarios }
+// ── Cada mutación, al archivo donde está su código (28/09/2026) ──────────────
+// Una función o un texto que el HTML ya no tiene porque se mudó a js/ (y el
+// HTML lo importa) se muta en ESE archivo, pasándoselo a la suite por su
+// variable (imports.js: ARCHIVO_JS_<NOMBRE>, o el alias viejo). Así mudar código
+// a js/ no obliga a tocar ningún mut-*.js. Lo que sigue en el HTML se muta ahí,
+// igual que siempre; sin nada que derivar, el runner hace exactamente lo de antes.
+
+function declaraFuncion(texto, nombre) {
+  return new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+${nombre}\\s*\\(`).test(texto)
+}
+
+// El texto de una mutación a mano puede venir con la sangría del <script>
+// (4 espacios, a veces 2 o 6): se prueba sin ella.
+function variantesSinSangria(t) {
+  const out = []
+  for (const n of [4, 2, 6, 8]) {
+    const pre = ' '.repeat(n)
+    const v = t.split('\n').map(l => l.startsWith(pre) ? l.slice(n) : l).join('\n')
+    if (v !== t && !out.includes(v)) out.push(v)
+  }
+  return out
+}
+
+// Las mutaciones automáticas (sacar el escape) de una función que vive en un
+// .js: el escáner de interpolaciones es para HTML, así que acá se buscan los
+// `${esc(` de la función a mano, con el paréntesis balanceado.
+function automaticasEnJs(texto, funcion, escape) {
+  const { extraerFn, cuerpoDesde } = require('./extraer')
+  const cuerpo = extraerFn(texto, funcion)
+  const base = texto.indexOf(cuerpo)
+  const out = []
+  let d = 0, k
+  const abre = '${' + escape + '('
+  while ((k = cuerpo.indexOf(abre, d)) !== -1) {
+    d = k + 1
+    const paren = k + 2 + escape.length
+    let dentro
+    try { dentro = cuerpoDesde(cuerpo, paren) } catch { continue }
+    if (cuerpo[paren + dentro.length] !== '}') continue
+    const aguja = cuerpo.slice(k, paren + dentro.length + 1)
+    const sinEsc = '${' + dentro + '}'
+    const pos = base + k
+    let ancla = null
+    for (let extra = 0; extra < 400 && !ancla; extra += 10) {
+      const t = texto.slice(Math.max(0, pos - extra), pos + aguja.length + extra)
+      if (texto.split(t).length === 2) ancla = t
+    }
+    if (!ancla) continue
+    out.push({ nombre: `${funcion}: sin ${escape}() en ${aguja.slice(2, 72)}`, de: ancla, a: ancla.replace(aguja, () => sinEsc) })
+  }
+  return out
+}
+
+// Devuelve las tandas (una por archivo) o null si no hay nada que derivar.
+function planificarMutaciones(opts) {
+  const { original, funciones = [], manuales = [], equivalentes = [], escape = 'esc', region = null, variable = 'ARCHIVO_TEST' } = opts
+  // Una región (la cartera de cheques) o un archivo que no es HTML: tal cual.
+  if (region || !/\.html$/i.test(original)) return null
+  const src = fs.readFileSync(original, 'utf8')
+  const imps = [...require('./imports').archivosDe(original)]
+  if (!imps.length) return null
+  const locales = { f: [], m: [] }
+  const porArchivo = new Map()
+  const destino = (a) => {
+    if (!porArchivo.has(a.ruta)) porArchivo.set(a.ruta, { archivo: a, manuales: [] })
+    return porArchivo.get(a.ruta)
+  }
+  for (const f of funciones) {
+    if (declaraFuncion(src, f)) { locales.f.push(f); continue }
+    const a = imps.find(x => declaraFuncion(x.texto, f))
+    if (!a) { locales.f.push(f); continue }   // que aborte como siempre, nombrándola
+    destino(a).manuales.push(...automaticasEnJs(a.texto, f, escape))
+  }
+  for (const m of manuales) {
+    if (src.includes(m.de)) { locales.m.push(m); continue }
+    let hecho = false
+    for (const a of imps) {
+      if (a.texto.includes(m.de)) { destino(a).manuales.push(m); hecho = true; break }
+      const v = variantesSinSangria(m.de).find(x => a.texto.includes(x))
+      if (v) {
+        const i = variantesSinSangria(m.de).indexOf(v)
+        const va = variantesSinSangria(m.a)[i] ?? m.a
+        destino(a).manuales.push({ ...m, de: v, a: va }); hecho = true; break
+      }
+    }
+    if (!hecho) locales.m.push(m)                // que aborte como siempre
+  }
+  if (!porArchivo.size) return null
+  const tandas = []
+  if (locales.f.length || locales.m.length) tandas.push({ ...opts, funciones: locales.f, manuales: locales.m, variable })
+  for (const { archivo, manuales: ms } of porArchivo.values()) {
+    tandas.push({ suite: opts.suite, original: archivo.ruta, funciones: [], manuales: ms, equivalentes, escape, variable: archivo.variable })
+  }
+  return tandas
+}
+
+function correrMutaciones(opts) {
+  const tandas = planificarMutaciones(opts)
+  if (!tandas) return correrMutacionesEn(opts)
+  if (opts.salir === false) {
+    let det = 0, tot = 0, eq = 0, mal = 0
+    for (const t of tandas) { const r = correrMutacionesEn({ ...t, salir: false }); det += r.detectadas; tot += r.total; eq += r.equivalentes; mal += r.fallas }
+    return { detectadas: det, total: tot, equivalentes: eq, fallas: mal }
+  }
+  correrMutacionesEnVarios(tandas)
+}
+
+module.exports = { correrMutaciones, correrMutacionesEn, correrMutacionesEnVarios, planificarMutaciones, automaticasEnJs, variantesSinSangria }

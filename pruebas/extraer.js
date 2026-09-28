@@ -49,10 +49,23 @@ function cuerpoDesde(src, inicioLlave) {
   throw new Error('no se cerró el bloque que empieza en ' + inicioLlave)
 }
 
+// Si no está en el texto, se busca en lo que ese texto IMPORTA de js/
+// (imports.js, 28/09/2026): mudar una función a js/ no obliga a tocar la suite.
+function reFn(nombre) {
+  return new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'm')
+}
+function reConst(nombre) {
+  return new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?const\\s+${nombre}\\s*=`, 'm')
+}
+
 function extraerFn(src, nombre) {
-  const re = new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+${nombre}\\s*\\(`, 'm')
+  const re = reFn(nombre)
   const m = re.exec(src)
-  if (!m) throw new Error(`extraerFn: NO EXISTE la función ${nombre}`)
+  if (!m) {
+    const a = require('./imports').buscarEnImports(src, t => reFn(nombre).test(t))
+    if (a) return extraerFn(a.texto, nombre)
+    throw new Error(`extraerFn: NO EXISTE la función ${nombre}`)
+  }
   // El `async` es parte de la declaración: arrancar en `function` lo perdería
   // y el cuerpo con `await` no parsearía.
   const inicio = m.index + m[0].search(/(?:async\s+)?function/)
@@ -77,9 +90,13 @@ function extraerFn(src, nombre) {
 // Constante top-level (con o sin `export`, desde el 27/09/2026: js/modulos.js).
 // Se devuelve como `var` para que sobreviva al eval.
 function extraerConst(src, nombre) {
-  const re = new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?const\\s+${nombre}\\s*=`, 'm')
+  const re = reConst(nombre)
   const m = re.exec(src)
-  if (!m) throw new Error(`extraerConst: NO EXISTE la constante ${nombre}`)
+  if (!m) {
+    const a = require('./imports').buscarEnImports(src, t => reConst(nombre).test(t))
+    if (a) return extraerConst(a.texto, nombre)
+    throw new Error(`extraerConst: NO EXISTE la constante ${nombre}`)
+  }
   const igual = src.indexOf('=', m.index + m[0].indexOf(nombre))
   let i = igual + 1
   while (/\s/.test(src[i])) i++

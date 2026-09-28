@@ -20,9 +20,14 @@ const RUTA_COMUN = process.env.ARCHIVO_COMUN || path.join(__dirname, '..', 'js',
 const RUTA_COMUN_RETIROS = process.env.ARCHIVO_COMUN_RETIROS || path.join(__dirname, '..', 'js', 'retiros-comun.js')
 const RUTA_MODULOS = process.env.ARCHIVO_MODULOS || path.join(__dirname, '..', 'js', 'modulos.js')
 
-// Un archivo común sin imports y sin la palabra `export`.
+// Un archivo común sin imports y sin la palabra `export`. Se informa lo leído
+// ("ARCHIVO <ruta> (N bytes)"), una vez por archivo: el runner de mutaciones
+// deriva a js/ lo que se mudó ahí (mutar.js, 28/09/2026) y lo confirma con eso.
+const _informados = new Set()
 function fuenteComun(ruta = RUTA_COMUN) {
-  return fs.readFileSync(ruta, 'utf8')
+  const t = fs.readFileSync(ruta, 'utf8')
+  if (!_informados.has(ruta)) { _informados.add(ruta); console.log(`ARCHIVO ${ruta} (${t.length} bytes)`) }
+  return t
     .replace(/^import .*$/gm, '')
     .replace(/^export (?=(async )?function |const )/gm, '')
 }
