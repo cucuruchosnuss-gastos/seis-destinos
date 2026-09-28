@@ -835,6 +835,7 @@ if (SOLO !== 'render') {
     ['htmlLinkChequeEnCartera(ch)', 'HTML armado por htmlLinkChequeEnCartera(): literal del código + encodeURIComponent(ch.id) entre comillas dobles'],
     ['botonUnidad', 'HTML armado en htmlDetalle(): un <button> con textos literales del código ("Cambiar" / "Asignar unidad")'],
     ['filaUnidad', 'HTML armado en htmlDetalle(): literales del código + escCob(c.unidad_negocio_nombre) + botonUnidad'],
+    ['unidadTabla', 'HTML armado en htmlFilaCobranza(): un <span> literal con escCob(nombreUni), o el literal "sin unidad" (barra de unidad, 28/09/2026)'],
   ])
   const malas = []
   for (const x of aRevisar) {

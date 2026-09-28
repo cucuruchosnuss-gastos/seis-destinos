@@ -53,9 +53,10 @@ correrMutaciones({
       de: "const titulo = h.accion === 'unidad_asignada'", a: "const titulo = h.accion === 'unidad_asignada_no'" },
     // ── Listado ────────────────────────────────────────────────────────────
     { nombre: 'la fila muestra la unidad también por controlar',
-      de: "if (c.estado === 'procesada' && c.unidad_negocio_nombre) partes.push", a: 'if (c.unidad_negocio_nombre) partes.push' },
+      // Desde la barra de unidad (28/09/2026) la regla vive en unidadDeCobranza.
+      de: "if (!c || c.estado === 'registrada') return null", a: 'if (!c) return null' },
     { nombre: 'la unidad de la fila sin escape',
-      de: '<span class="cob-fila__unidad">${escCob(c.unidad_negocio_nombre)}</span>', a: '<span class="cob-fila__unidad">${c.unidad_negocio_nombre}</span>' },
+      de: '<span class="cob-fila__unidad">${escCob(nombreUni)}</span>', a: '<span class="cob-fila__unidad">${nombreUni}</span>' },
     // ── Carga y consultas ──────────────────────────────────────────────────
     { nombre: 'el init no carga las unidades',
       de: 'asegurarUnidades().then(() => {', a: 'Promise.resolve().then(() => {' },

@@ -16,7 +16,7 @@ const FUNCIONES = [
   'escCob', 'dvBcra', 'escribirImporteEnCampo', 'formatearImporte',
   'normalizarCliente', 'hoyArgentina', 'esFechaIso', 'diasEntre', 'formatearFechaCob',
   'momentoArgentina', 'fechaDeMomentoAr', 'erroresDeCheque', 'nombreBanco', 'nombreBancoDe', 'tieneTarea',
-  'htmlFilaCobranza', 'htmlDetalle', 'htmlChequeDetalle', 'htmlAccionesDetalle',
+  'htmlFilaCobranza', 'unidadDeCobranza', 'htmlDetalle', 'htmlChequeDetalle', 'htmlAccionesDetalle',
   'htmlHistorial', 'resumirCambios', 'htmlTarjetaCheque', 'chequeParaBase',
   'textoDiasHastaPago', 'htmlDatosCheque',
   'textoOpcional', 'origenDatosDe', 'estadoRenglon', 'aplicarRenglones', 'chequeVacio',

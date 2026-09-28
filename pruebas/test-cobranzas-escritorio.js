@@ -145,6 +145,8 @@ const PRELUDIO = `
 const FUNCIONES = [
   'escCob', 'formatearImporte', 'esFechaIso', 'formatearFechaCob', 'momentoArgentina', 'fechaDeMomentoAr',
   'normalizarCliente', 'hayFiltrosPuestos', 'htmlFilaCobranza', 'renderizarListado',
+  // La barra de unidad (28/09/2026): el listado se arma con lo que se ve.
+  'unidadDeCobranza', 'cobranzasVisibles', 'pasaFiltroUnidad', 'nombreUnidadElegida', 'pintarNotaUnidad',
   'soltarSeleccionFueraDelListado', 'esEscritorio', 'enModoMaestro', 'pintarPanelVacio',
   'marcarFilaSeleccionada', 'mostrarVistaCob', 'abrirDetalle',
   'volverDelDetalle', 'pintarBotonVolver',
@@ -448,7 +450,8 @@ async function pruebas() {
     } catch (e) { base = '' }
     chk('baseline f3633ba: se pudo leer (si no, esta verificación no mide nada)', base.length > 100000 && base.includes('<style>'), base.length)
     const SALIERON = /cob-pestana|cob-cartera|cob-tabla|cob-btn--elegido/
-    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn/
+    // cob-unidad-: la nota y la marca "Sin unidad" de la barra de unidad (28/09/2026).
+    const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^\.cob-unidad-/
     const antes = reglasFuera(pelar(base)).filter(r => !SALIERON.test(r))
     const hoy = reglasFuera(pelar(FUENTE)).filter(r => !ENTRARON.test(r))
     chk('abajo de 1100px: se fueron las reglas de la cartera', reglasFuera(pelar(base)).some(r => SALIERON.test(r)) &&

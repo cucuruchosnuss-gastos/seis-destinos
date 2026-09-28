@@ -61,7 +61,7 @@ correrMutaciones({
     { nombre: 'soltar la selección también en celular (detalle de pantalla entera)',
       de: '      if (!id || !enModoMaestro()) return', a: '      if (!id) return' },
     { nombre: 'la selección nunca se suelta',
-      de: '      if (estado.cobranzas.some(c => c.id === id)) return', a: '      return' },
+      de: '      if (cobranzasVisibles().some(c => c.id === id)) return', a: '      return' },
     { nombre: 'el panel vacío no se dibuja',
       de: "        if (estado.cobranzaSeleccionadaId) abrirDetalle(estado.cobranzaSeleccionadaId)\n        else pintarPanelVacio()",
       a: '        if (estado.cobranzaSeleccionadaId) abrirDetalle(estado.cobranzaSeleccionadaId)' },

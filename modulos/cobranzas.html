@@ -1041,6 +1041,17 @@
       .cob-maestro--activo .cob-fila--anulada .cob-celda--total { color: var(--bordo-oscuro); text-decoration: line-through; }
       .cob-maestro--activo .cob-fila--anulada .cob-celda--fecha,
       .cob-maestro--activo .cob-fila--anulada .cob-celda--quien { color: var(--color-texto-suave); }
+      /* La unidad debajo del cliente, en su propio renglón chico (barra de
+         unidad, 28/09/2026): al lado se comía el nombre del cliente. */
+      .cob-maestro--activo .cob-unidad-tabla {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--cob-texto-secundario);
+      }
+      .cob-maestro--activo .cob-unidad-tabla--sin { font-style: italic; }
     }
     /* Entre 1100 y 1399px las siete columnas no entran al lado del panel de
        468px: el cliente quedaba con cero de ancho (a 1280px de viewport, con
@@ -1054,6 +1065,18 @@
       .cob-maestro--activo .cob-fila__tabla > :nth-child(4),
       .cob-maestro--activo .cob-fila__tabla > :nth-child(6) { display: none; }
     }
+    /* La barra de unidad de negocio (28/09/2026). La nota dice por qué se
+       ven cobranzas sin unidad; "Sin unidad" es texto, en gris como el resto
+       de la línea chica. */
+    .cob-unidad-nota {
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      color: var(--cob-texto-secundario);
+      margin: -0.25rem 0 0.75rem;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .cob-unidad-sin { font-style: italic; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -1128,6 +1151,9 @@
            filtros del listado, NUNCA de sumar las filas cargadas: el listado
            pagina de a 50 y esa suma daría un total falso. -->
       <div class="cob-resumen" id="cob-resumen"></div>
+      <!-- Con una unidad elegida en la barra de arriba: por qué se ven
+           cobranzas sin unidad. La pinta pintarNotaUnidad(). -->
+      <div class="cob-unidad-nota" id="cob-nota-unidad" hidden></div>
 
       <!-- Encabezado de la tabla de escritorio. En celular no se dibuja. -->
       <div class="cob-lista-cabecera">
@@ -1306,6 +1332,10 @@
       dvBcra, formatearImporte, ZONA_AR, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
       ETIQUETA_ESTADO_CHEQUE, nombreBancoDe, textoSalidaCheque,
     } from '../js/cobranzas-comun.js'
+    // La barra de unidad de negocio de arriba (js/barra-unidad.js, 28/09/2026):
+    // la elección de la fábrica y el aviso cuando cambia. Es el mismo módulo que
+    // carga el <script> del <head>: el navegador lo ejecuta una sola vez.
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
@@ -1340,6 +1370,15 @@
       cobranzas: [],
       hayMas: false,
       filtros: { texto: '', desde: '', hasta: '', estado: '', repartidor: '' },
+      // La unidad elegida en la barra de arriba (uuid, o null = Todas) y las
+      // unidades que la barra ofrece ([{ id, nombre, prefijo, … }]), para
+      // nombrarla. La barra SOLO FILTRA LO QUE SE MUESTRA: los permisos siguen
+      // en la base.
+      unidadElegida: null,
+      unidadesBarra: [],
+      // Si el listado ya se pidió una vez: recién ahí un cambio de la barra
+      // tiene algo que recargar.
+      listadoPedido: false,
       // Cifras de cabecera del listado (resumen_cobranzas). Arranca cargando:
       // nunca se muestra un número que no vino de la base.
       resumen: { cargando: true, etiqueta: 'Total del mes' },
@@ -1752,10 +1791,15 @@
       // que terminó (guardar, asentar, reabrir, anular): las
       // cifras de cabecera se recalculan con los filtros de AHORA. "Cargar
       // más" no las toca: los filtros son los mismos.
+      // El TURNO: un listado que arranca de cero (un filtro o la unidad de la
+      // barra cambiaron) invalida cualquier página que esté en vuelo, así una
+      // respuesta vieja no se suma a la lista nueva.
       if (reiniciar) {
+        turnoListado++
         estado.cobranzas = []
         cargarResumen()
       }
+      const turno = turnoListado
       const desde = estado.cobranzas.length
 
       let q = supabase
@@ -1776,15 +1820,25 @@
       if (esFechaIso(f.hasta)) q = q.lte('fecha', f.hasta)
       if (f.estado) q = q.eq('estado', f.estado)
       if (f.repartidor) q = q.eq('empleado_id', f.repartidor)
+      // La unidad de la barra va TAMBIÉN en la consulta, porque el listado
+      // pagina de a 50: filtrar solo en la pantalla dejaría páginas cortas o
+      // vacías. El filtro NO descarta lo que no tiene unidad (un .eq() pelado
+      // lo haría): pasan la unidad elegida, las sin unidad y todas las por
+      // controlar. La pantalla vuelve a filtrar al armar la lista.
+      const filtroUnidad = filtroUnidadDeConsulta(estado.unidadElegida)
+      if (filtroUnidad) q = q.or(filtroUnidad)
 
       try {
         const { data, error } = await q
         if (error) throw error
+        // Mientras llegaba, otro filtro o la barra pidieron otra lista.
+        if (turno !== turnoListado) return
         const filas = data ?? []
         estado.cobranzas = estado.cobranzas.concat(filas)
         estado.hayMas = filas.length === PAGINA
         renderizarListado()
       } catch (err) {
+        if (turno !== turnoListado) return
         console.error('No se pudo cargar el listado:', err)
         // Sin señal el listado del servidor no llega, pero lo local sí: se
         // avisa sin borrar lo que ya estaba en pantalla.
@@ -1796,16 +1850,22 @@
     function renderizarListado() {
       const cont = document.getElementById('cob-lista')
       const vacio = document.getElementById('cob-lista-vacia')
-      const filas = estado.cobranzas
+      // Se filtra DONDE SE ARMA LA LISTA por la unidad de la barra (la
+      // consulta ya viene filtrada; esto repinta en el acto al cambiarla).
+      const filas = cobranzasVisibles()
 
       document.getElementById('cob-btn-mas').hidden = !estado.hayMas
+      pintarNotaUnidad()
 
       if (!filas.length) {
         cont.innerHTML = ''
         vacio.hidden = false
-        vacio.textContent = hayFiltrosPuestos()
-          ? 'No hay cobranzas con esos filtros.'
-          : 'Todavía no se cargó ninguna cobranza. Tocá "Nueva cobranza" para cargar la primera.'
+        const unidad = nombreUnidadElegida()
+        vacio.textContent = unidad
+          ? `No hay cobranzas de ${unidad} ni sin unidad${hayFiltrosPuestos() ? ' con esos filtros' : ''}.`
+          : hayFiltrosPuestos()
+            ? 'No hay cobranzas con esos filtros.'
+            : 'Todavía no se cargó ninguna cobranza. Tocá "Nueva cobranza" para cargar la primera.'
         // Un filtro que no deja NINGUNA fila también deja afuera la elegida.
         soltarSeleccionFueraDelListado()
         return
@@ -1873,7 +1933,10 @@
     async function cargarResumen() {
       const turno = ++turnoResumen
       const p = parametrosResumen(estado.filtros, hoyArgentina())
-      const meta = { etiqueta: p.etiqueta, estadoFiltro: p.estadoFiltro, desdeMes: p.desdeMes }
+      // resumen_cobranzas() no recibe unidad (verificado el 28/09/2026): con
+      // una unidad elegida el TOTAL es de todas y lo dice. "Por controlar" sí
+      // coincide: las por controlar se ven en cualquier unidad.
+      const meta = { etiqueta: p.etiqueta, estadoFiltro: p.estadoFiltro, desdeMes: p.desdeMes, todasLasUnidades: !!estado.unidadElegida }
       // Mientras carga NO queda el número viejo: sería la cifra de otros
       // filtros al lado de un listado que ya cambió.
       estado.resumen = { ...meta, cargando: true }
@@ -1948,7 +2011,8 @@
       const cuantas = `${cantidad} ${cantidad === 1 ? 'cobranza' : 'cobranzas'}${cantidad === 1 ? cuales.replace(/s$/, '') : cuales}`
       const periodo = r.desdeMes ? ` del ${formatearFechaCob(r.desdeMes).slice(0, 5)} a hoy` : ''
       const sinAnuladas = r.estadoFiltro ? '' : ', sin las anuladas'
-      return htmlPendientes + cifra(etiqueta, formatearImporte(total), `${cuantas}${periodo}${sinAnuladas}`)
+      const deTodas = r.todasLasUnidades ? ' · de todas las unidades' : ''
+      return htmlPendientes + cifra(etiqueta, formatearImporte(total), `${cuantas}${periodo}${sinAnuladas}${deTodas}`)
     }
 
     // ESCRITORIO: si los filtros dejan afuera la cobranza abierta en el panel,
@@ -1961,7 +2025,7 @@
     function soltarSeleccionFueraDelListado() {
       const id = estado.cobranzaSeleccionadaId
       if (!id || !enModoMaestro()) return
-      if (estado.cobranzas.some(c => c.id === id)) return
+      if (cobranzasVisibles().some(c => c.id === id)) return
       if (estado.linkDirecto?.cobranzaId === id) return
       estado.cobranzaSeleccionadaId = null
       estado.detalle = null
@@ -1971,6 +2035,83 @@
     function hayFiltrosPuestos() {
       const f = estado.filtros
       return !!(normalizarCliente(f.texto) || f.desde || f.hasta || f.estado || f.repartidor)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA BARRA DE UNIDAD DE NEGOCIO (js/barra-unidad.js, 28/09/2026)
+    //
+    // Una cobranza recién tiene unidad cuando se ASIENTA (en Administración,
+    // la del cliente). Con una unidad elegida se ven sus asentadas (y sus
+    // anuladas) y TODO lo que no tiene unidad —las por controlar, las
+    // asentadas viejas sin unidad—, marcado "Sin unidad": nada desaparece por
+    // no tener unidad todavía. La carga no pide unidad: el chofer no la sabe.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    let turnoListado = 0
+    // Cuánto espera el primer listado a que la barra sepa la unidad elegida
+    // antes de salir sin filtro (si llega después, el listado se recarga).
+    const MS_ESPERA_BARRA = 3000
+
+    // La unidad que CUENTA para filtrar y mostrar. Una por controlar no tiene
+    // unidad aunque la columna diga una: reabrir_cobranza deja la de antes
+    // (verificado con pg_get_functiondef el 28/09/2026) y la que vale es la
+    // del cliente con que se vuelva a asentar. Pura, para la suite.
+    function unidadDeCobranza(c) {
+      if (!c || c.estado === 'registrada') return null
+      return c.unidad_negocio_id || null
+    }
+
+    // Lo que se ve del listado con la unidad elegida.
+    function cobranzasVisibles() {
+      return estado.cobranzas.filter(c => pasaFiltroUnidad(unidadDeCobranza(c), estado.unidadElegida))
+    }
+
+    // El filtro de PostgREST para la unidad elegida, o null. La misma regla
+    // que unidadDeCobranza: la unidad elegida, la columna en null, o por
+    // controlar. Un id que no es un uuid no se mete en el filtro (la pantalla
+    // igual filtra al armar la lista). Pura, para la suite.
+    function filtroUnidadDeConsulta(elegida) {
+      if (!elegida || !UUID_COB.test(String(elegida))) return null
+      return `unidad_negocio_id.eq.${elegida},unidad_negocio_id.is.null,estado.eq.registrada`
+    }
+
+    // El nombre de la unidad elegida, o '' con Todas.
+    function nombreUnidadElegida() {
+      const id = estado.unidadElegida
+      if (!id) return ''
+      const u = (estado.unidadesBarra ?? []).find(x => x.id === id)
+      return u?.nombre || 'la unidad elegida'
+    }
+
+    // La línea chica arriba del listado, solo con una unidad elegida: dice
+    // por qué aparecen cobranzas sin unidad.
+    function pintarNotaUnidad() {
+      const el = document.getElementById('cob-nota-unidad')
+      if (!el) return
+      const unidad = nombreUnidadElegida()
+      el.hidden = !unidad
+      el.textContent = unidad
+        ? `Se ven las cobranzas de ${unidad} y las que todavía no tienen unidad (las por controlar la toman al asentarlas).`
+        : ''
+    }
+
+    // Guarda lo que dice la barra. Devuelve true si la unidad elegida cambió.
+    function aplicarUnidadBarra(e) {
+      const nueva = e?.elegida ?? null
+      estado.unidadesBarra = Array.isArray(e?.unidades) ? e.unidades : []
+      const cambio = nueva !== estado.unidadElegida
+      estado.unidadElegida = nueva
+      return cambio
+    }
+
+    // La barra cambió (o llegó tarde): se repinta en el acto con lo que ya
+    // estaba y se pide la lista nueva (con turno). Antes del primer listado no
+    // hay nada que recargar: ese listado ya sale con la unidad.
+    function alCambiarUnidadCob(e) {
+      if (!aplicarUnidadBarra(e)) return
+      if (!estado.listadoPedido) return
+      renderizarListado()
+      cargarCobranzas({ reiniciar: true })
     }
 
     // La tarjeta del listado. Se exporta como función pura de la fila para
@@ -1993,7 +2134,19 @@
       if (!partes.length) partes.push('<span>Sin cheques ni efectivo</span>')
       // La unidad, solo en la asentada que la tiene: va en la misma línea
       // chica, que ya es texto corrido y se parte sola en dos renglones.
-      if (c.estado === 'procesada' && c.unidad_negocio_nombre) partes.push(`<span class="cob-fila__unidad">${escCob(c.unidad_negocio_nombre)}</span>`)
+      // Desde la barra de unidad (28/09/2026) también en la anulada que la
+      // tenía, y con una unidad elegida lo que no tiene dice "Sin unidad".
+      // La por controlar nunca muestra unidad: unidadDeCobranza.
+      const uni = unidadDeCobranza(c)
+      const nombreUni = uni ? (c.unidad_negocio_nombre || '') : ''
+      const sinUnidad = !uni && !!estado.unidadElegida
+      if (nombreUni) partes.push(`<span class="cob-fila__unidad">${escCob(nombreUni)}</span>`)
+      else if (sinUnidad) partes.push('<span class="cob-unidad-sin" data-sin-unidad="fila">Sin unidad</span>')
+      // En la tabla de escritorio va debajo del cliente, en la misma celda
+      // (no hay columna de unidad: las siete ya no entran a 1280 px).
+      const unidadTabla = nombreUni
+        ? `<span class="cob-unidad-tabla">${escCob(nombreUni)}</span>`
+        : sinUnidad ? '<span class="cob-unidad-tabla cob-unidad-tabla--sin" data-sin-unidad="tabla">sin unidad</span>' : ''
 
       // La fecha de la cobranza es cuándo se COBRÓ; created_at es cuándo se
       // cargó. Se muestran juntas solo si difieren: en el caso normal —se carga
@@ -2028,7 +2181,7 @@
           ${c.editada ? '<div class="cob-fila__meta"><span>Editada después de cargarla</span></div>' : ''}
           <div class="cob-fila__tabla">
             <span class="cob-celda cob-celda--fecha">${escCob(fechaCorta)}</span>
-            <span class="cob-celda cob-celda--cliente">${escCob(c.cliente)}</span>
+            <span class="cob-celda cob-celda--cliente">${escCob(c.cliente)}${unidadTabla}</span>
             <span class="cob-celda cob-celda--num cob-celda--cheques${cantidad > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoCantidad)}</span>
             <span class="cob-celda cob-celda--num${efectivo > 0 ? '' : ' cob-celda--vacia'}">${escCob(textoEfectivoCelda)}</span>
             <span class="cob-celda cob-celda--num cob-celda--total">${escCob(formatearImporte(c.total))}</span>
@@ -4407,6 +4560,13 @@
       estado.sesion = await verificarSesion()
       if (!estado.sesion) return
 
+      // La barra de unidad se pide EN PARALELO con el resto de las cargas;
+      // cada cambio posterior repinta sin recargar la página.
+      const promesaBarra = unidadesDeLaBarra()
+        .then(alCambiarUnidadCob)
+        .catch(err => console.error('No se pudo leer la barra de unidad:', err))
+      alCambiarUnidad(alCambiarUnidadCob)
+
       // Que el navegador no borre los borradores por falta de espacio: son lo
       // único que sostiene el trabajo de un día sin señal.
       try {
@@ -4463,6 +4623,10 @@
         if (estado.detalle?.historial?.some(h => h.accion === 'unidad_asignada')) renderizarDetalle()
       })
       await Promise.all([cargarBancos(), cargarRepartidores()])
+      // El primer listado espera a la barra (ya venía cargando en paralelo),
+      // pero no para siempre: si tarda, sale sin filtro y se recarga al llegar.
+      await Promise.race([promesaBarra, new Promise(r => setTimeout(r, MS_ESPERA_BARRA))])
+      estado.listadoPedido = true
       await Promise.all([refrescarListado(), refrescarLocales()])
       sincronizar()
     }

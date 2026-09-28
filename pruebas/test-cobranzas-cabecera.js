@@ -109,6 +109,8 @@ const PRELUDIO = `
   function renderizarListado(){}
   async function urlDeFoto(){ return null } function abrirVisor(){}
   var turnoResumen = 0
+  // El turno del listado (un let del módulo: extraerConst solo toma const).
+  var turnoListado = 0
 
   var estado = {
     miEmpleadoId: 'emp-1', miRolApp: 'usuario',
@@ -125,12 +127,12 @@ const FUNCIONES = [
   'escCob', 'formatearImporte', 'esFechaIso', 'formatearFechaCob', 'momentoArgentina', 'fechaDeMomentoAr',
   'normalizarCliente', 'nombreBanco', 'nombreBancoDe', 'tieneTarea', 'diasEntre',
   // estados
-  'renderizarChipsEstado', 'htmlFilaCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
+  'renderizarChipsEstado', 'htmlFilaCobranza', 'unidadDeCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
   'htmlChequeDetalle', 'htmlDatosCheque', 'textoDiasHastaPago', 'textoSalidaCheque', 'textoHistorialCheque',
   'resumirCambios', 'htmlLinkChequeEnCartera', 'conectarDetalle', 'accionSimple',
   // cabecera
   'parametrosResumen', 'cargarResumen', 'pintarResumen', 'numeroDeResumen', 'htmlResumen',
-  'cargarCobranzas', 'refrescarListado',
+  'cargarCobranzas', 'refrescarListado', 'filtroUnidadDeConsulta',
   // tarjeta
   'htmlTarjetaCheque', 'escribirImporteEnCampo', 'estadoRenglon', 'erroresDeCheque', 'chequeParaBase', 'dvBcra',
   'textoOpcional', 'origenDatosDe',
@@ -138,7 +140,7 @@ const FUNCIONES = [
 const CONSTANTES = [
   'ZONA_AR', 'ACENTOS_COB', 'SIN_ACENTOS_COB', 'ETIQUETA_ESTADO_COBRANZA', 'ESTADOS_COBRANZA', 'PAGINA',
   'ETIQUETA_ESTADO_CHEQUE', 'DIAS_MAXIMO_DIFERIDO', 'puedeCargar', 'puedeVerTodo', 'puedeProcesar', 'puedeEditarAnular', 'esPropia',
-  'puedeVerCartera',
+  'puedeVerCartera', 'UUID_COB',
 ]
 
 function sandbox() {
@@ -261,6 +263,7 @@ async function pruebas() {
       ['procesar', 'clave de la tarea cobranzas:procesar'],
       ['marcar_cobranza_procesada', 'nombre de la RPC'],
       ['cob-btn-procesar', 'id del botón (no se ve); el control test exige que no cambie'],
+      ['unidad_negocio_id.eq. ,unidad_negocio_id.is.null,estado.eq.registrada', 'filtro de PostgREST de la barra de unidad (filtroUnidadDeConsulta): valor de la base, no se ve'],
     ])
     // Un string o template que arma HTML se mira por su texto VISIBLE: el id
     // "cob-btn-procesar" de un botón no es algo que alguien lea.

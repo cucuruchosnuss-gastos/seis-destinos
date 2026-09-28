@@ -133,7 +133,7 @@ const PRELUDIO = `
 const FUNCIONES = [
   'escCob', 'formatearImporte', 'esFechaIso', 'formatearFechaCob', 'momentoArgentina', 'fechaDeMomentoAr',
   'normalizarCliente', 'nombreBanco', 'nombreBancoDe', 'tieneTarea', 'diasEntre',
-  'htmlFilaCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
+  'htmlFilaCobranza', 'unidadDeCobranza', 'htmlDetalle', 'htmlAccionesDetalle', 'htmlHistorial',
   'htmlChequeDetalle', 'htmlDatosCheque', 'textoDiasHastaPago', 'textoSalidaCheque', 'textoHistorialCheque',
   'resumirCambios', 'htmlLinkChequeEnCartera', 'conectarDetalle', 'accionSimple',
   // unidad (el catálogo, para nombrarla en el historial)
