@@ -198,7 +198,7 @@ const SOLO_GESTION = [
 // Nuevas de la gestión (se suman a su lista).
 const NUEVAS_GESTION = [
   // Parte 2 (25/09/2026): la unidad de la gestión y los indicadores
-  'unidadesDeGestion', 'unidadGestionInicial', 'pintarSelectorGestion', 'elegirUnidadGestion',
+  'unidadesDeGestion', 'unidadSegunBarra', 'textoSinProduccionEnBarra', 'sinUnidadPorBarra', 'unidadGestionInicial', 'pintarSelectorGestion', 'elegirUnidadGestion', 'alCambiarLaBarra',
   'numeroInd', 'enteroInd', 'diferenciaInd', 'horasMinutosInd', 'porcentajeScrapInd',
   'renderAhora', 'renderHoy', 'renderSemana', 'renderRendimiento', 'renderPendientes',
   'htmlTarjetaIndicador', 'htmlIndicadores', 'cargarIndicadores', 'irDesdeIndicador',

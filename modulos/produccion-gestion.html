@@ -2030,6 +2030,7 @@
     } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
 
@@ -2047,6 +2048,8 @@
       unidades: new Map(),
       // La tablet: en qué unidad está, en qué modo, y quién la está usando.
       unidadId: null,
+      // La unidad elegida en la barra de arriba (28/09/2026): null = Todas.
+      unidadBarra: null,
       unidadesPosibles: [],
       modo: null,          // 'produccion' | 'masa'
       persona: null,       // { id, nombre, puesto } — verificada con su PIN
@@ -3105,6 +3108,28 @@
       return unidadesDeHistorial()
     }
 
+    // LA BARRA DE UNIDAD (28/09/2026). La unidad de toda la gestión la decide
+    // la barra de arriba: nunca dos lugares para lo mismo. Con una unidad
+    // elegida donde la persona ve Producción, es esa y los selectores de acá
+    // no se dibujan; con una donde NO ve Producción, se dice y nada se abre.
+    // Con "Todas", todo en la gestión es de UNA unidad (los indicadores, el
+    // historial, el stock terminado y la configuración), así que se elige acá
+    // mismo (regla f), sin cambiar la barra.
+    function unidadSegunBarra(unidades = unidadesDeGestion(), elegida = estado.unidadBarra) {
+      if (!elegida) return undefined                    // Todas: se elige acá
+      return unidades.includes(elegida) ? elegida : null
+    }
+
+    function textoSinProduccionEnBarra() {
+      const nombre = estado.unidades.get(estado.unidadBarra) ?? 'esa unidad'
+      return `Con ${nombre} elegida arriba no tenés Producción. Elegí otra unidad o "Todas".`
+    }
+
+    // Con una unidad de la barra que no es de la gestión, ninguna sección abre.
+    function sinUnidadPorBarra() {
+      return !!estado.unidadBarra && unidadSegunBarra() === null
+    }
+
     function unidadGestionInicial(unidades, guardada) {
       if (guardada && unidades.includes(guardada)) return guardada
       return unidades[0] ?? null
@@ -3119,7 +3144,7 @@
       // ("Cucuruchos Nuss ▾", 1b). Los dos dicen lo mismo y lo decide el CSS.
       document.getElementById('pr-gestion-unidad-seg').innerHTML = unidades.map(id =>
         `<button type="button" class="pg-seg__op" data-gestion-unidad="${esc(id)}" aria-pressed="${id === estado.unidadId ? 'true' : 'false'}">${esc(estado.unidades.get(id) ?? id)}</button>`).join('')
-      document.getElementById('pr-gestion-unidad-campo').hidden = unidades.length < 2
+      document.getElementById('pr-gestion-unidad-campo').hidden = unidades.length < 2 || !!estado.unidadBarra
     }
 
     function elegirUnidadGestion(id) {
@@ -3152,6 +3177,27 @@
         cargarPestanaConfig()
       }
       return true
+    }
+
+    // La barra cambió de unidad: la gestión la sigue (lo que se está mirando
+    // pasa a esa unidad, como al elegirla acá). Con "Todas", el selector de
+    // arriba vuelve a aparecer para elegir una.
+    function alCambiarLaBarra(elegida) {
+      estado.unidadBarra = elegida ?? null
+      const segun = unidadSegunBarra()
+      if (segun === undefined) { pintarSelectorGestion(); return }
+      if (segun === null) {
+        estado.unidadId = null
+        estado.indicadores = null
+        pintarSelectorGestion()
+        pintarCabecera()
+        pintarNumerosMenu()
+        if (estado.vista !== 'pr-inicio') mostrarInicioOficina()
+        else cargarIndicadores()
+        return
+      }
+      if (segun === estado.unidadId) { pintarSelectorGestion(); return }
+      elegirUnidadGestion(segun)
     }
 
     // ── Los indicadores (indicadores_produccion) ─────────────────────────
@@ -3531,7 +3577,7 @@
       const turno = ++turnoIndicadores
       const cont = document.getElementById('pr-indicadores')
       pintarDiaIndicadores()
-      if (!estado.unidadId) { cont.innerHTML = ''; return }
+      if (!estado.unidadId) { cont.innerHTML = sinUnidadPorBarra() ? `<div class="pr-aviso">${esc(textoSinProduccionEnBarra())}</div>` : ''; return }
       cont.innerHTML = htmlIndicadores(null, null, true)
       let datos = null, error = null
       const params = { p_unidad_negocio_id: estado.unidadId }
@@ -3654,12 +3700,13 @@
       const sel = document.getElementById(selectId)
       sel.innerHTML = unidades.map(id => `<option value="${esc(id)}"${id === elegida ? ' selected' : ''}>${esc(estado.unidades.get(id) ?? id)}</option>`).join('')
       sel.value = elegida ?? ''
-      sel.closest?.('.pr-campo')?.toggleAttribute?.('hidden', unidades.length < 2)
+      sel.closest?.('.pr-campo')?.toggleAttribute?.('hidden', unidades.length < 2 || !!estado.unidadBarra)
     }
 
     // `tabPedida`: la sección con la que abre (Máquinas, Recetas, … Personal
     // y PINes): cada una es un renglón del menú. No hay fila de pestañas.
     async function mostrarConfig(tabPedida) {
+      if (sinUnidadPorBarra()) { mostrarError(textoSinProduccionEnBarra()); return }
       const unidades = unidadesDeConfig()
       if (!unidades.length) return
       const actual = estado.config?.unidadId
@@ -5208,6 +5255,7 @@
     // `filtro`: lo que se pisa de los filtros al entrar ({ estado, desde }).
     // Lo usan los pendientes de los indicadores.
     async function mostrarHistorial(filtro = null) {
+      if (sinUnidadPorBarra()) { mostrarError(textoSinProduccionEnBarra()); return }
       const unidades = unidadesDeHistorial()
       if (!unidades.length) return
       const hoy = hoyArgentina()
@@ -5688,6 +5736,7 @@
     // ── Stock de producto terminado ───────────────────────────────────────
 
     async function mostrarStockTerminado() {
+      if (sinUnidadPorBarra()) { mostrarError(textoSinProduccionEnBarra()); return }
       const unidades = unidadesDeHistorial()
       if (!unidades.length) return
       estado.stockUnidad = unidades.includes(estado.stockUnidad) ? estado.stockUnidad : unidadInicialOficina(unidades)
@@ -5942,15 +5991,20 @@
           : 'No tenés acceso a Producción. Te llevamos al inicio…')
         return
       }
+      const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
       await cargarPermisoStock()
       await cargarPermisoRetiros()
+      estado.unidadBarra = (await barra)?.elegida ?? null
       document.getElementById('pr-cargando').hidden = true
       document.getElementById('pr-vista').hidden = false
       conectarTodo()
       if (window.lucide) window.lucide.createIcons()
 
-      // La unidad de la gestión: la guardada si todavía se puede, si no la primera.
-      estado.unidadId = unidadGestionInicial(unidadesDeGestion(), leerPreferencia(CLAVE_UNIDAD_GESTION))
+      // La unidad de la gestión: la de la barra si hay una elegida; con
+      // "Todas", la guardada si todavía se puede, si no la primera.
+      const segun = unidadSegunBarra()
+      estado.unidadId = segun === undefined ? unidadGestionInicial(unidadesDeGestion(), leerPreferencia(CLAVE_UNIDAD_GESTION)) : segun
+      alCambiarUnidad(({ elegida }) => alCambiarLaBarra(elegida))
       pintarSelectorGestion()
       pintarAccesosOficina()
       cargarBurbujaConos()

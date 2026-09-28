@@ -326,7 +326,7 @@ esperas.push((async () => {
   let tiro = false
   try { L.elegirUnidadGestion('u-dp') } catch { tiro = true }
   chk('localStorage bloqueado: elegir no tira', !tiro && L.estado.unidadId === 'u-dp')
-  chk('el arranque toma la guardada con leerPreferencia (try/catch)', /estado\.unidadId = unidadGestionInicial\(unidadesDeGestion\(\), leerPreferencia\(CLAVE_UNIDAD_GESTION\)\)/.test(FUENTE))
+  chk('el arranque toma la guardada con leerPreferencia (try/catch), si la barra no elige otra', /estado\.unidadId = segun === undefined \? unidadGestionInicial\(unidadesDeGestion\(\), leerPreferencia\(CLAVE_UNIDAD_GESTION\)\) : segun/.test(FUENTE))
   // La unidad elegida manda en lo que se abre después.
   const H = armar()
   H.estado.historial = { unidadId: 'u-cn' }

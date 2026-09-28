@@ -93,7 +93,7 @@ correrMutacionesProduccion({
     { nombre: 'semana null no se detecta', de: "      if (!s || typeof s !== 'object' || Array.isArray(s)) return null", a: '      if (!s) return null' },
     { nombre: 'el error de la RPC se ignora', de: '        if (e) throw e\n        datos = data', a: '        datos = data' },
     { nombre: 'la respuesta vieja pisa a la nueva', de: '      if (turno !== turnoIndicadores) return\n', a: '' },
-    { nombre: 'sin unidad se pide igual', de: "      if (!estado.unidadId) { cont.innerHTML = ''; return }\n", a: '' },
+    { nombre: 'sin unidad se pide igual', de: "      if (!estado.unidadId) { cont.innerHTML = sinUnidadPorBarra() ? `<div class=\"pr-aviso\">${esc(textoSinProduccionEnBarra())}</div>` : ''; return }\n", a: '' },
     // El orden de las tarjetas (el del celular)
     { nombre: 'pendientes va al final', de: "      { id: 'pendientes', titulo: 'Pendientes', render: renderPendientes },\n", a: '', archivo: 'gestion' },
     { nombre: 'semana antes que pendientes', de: "      { id: 'pendientes', titulo: 'Pendientes', render: renderPendientes },\n      { id: 'semana', titulo: 'Semana', render: renderSemana, contexto: contextoSemana },", a: "      { id: 'semana', titulo: 'Semana', render: renderSemana, contexto: contextoSemana },\n      { id: 'pendientes', titulo: 'Pendientes', render: renderPendientes }," },
