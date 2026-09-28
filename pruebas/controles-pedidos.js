@@ -41,6 +41,7 @@ const RENOMBRADOS = [
 // la gracia de este chequeo. Un control que se fue sin explicación es
 // indistinguible de uno que se perdió al mover código.
 const RETIRADOS = [
+  ['control:button[data-unidad][type=button]', 'el segmento de unidades de arriba (htmlUnidades): lo decide la barra de unidad de arriba (js/barra-unidad.js, 28/09/2026). Nunca dos lugares para lo mismo'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

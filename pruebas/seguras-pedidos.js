@@ -4,7 +4,9 @@
 
 const SEGURAS_PEDIDOS = [
   // Parte 2: unidades y clientes
-  ['botones', 'HTML ya escapado: htmlUnidades() lo arma arriba con esc() del id y del nombre de cada unidad'],
+  // El segmento de unidades (htmlUnidades) se retiró el 28/09/2026: lo decide la barra de unidad.
+  ['botones', 'HTML ya escapado: htmlMarcasRenglon() lo arma arriba con esc() del id y del nombre de cada cono'],
+  ['botonesUnidad', 'HTML ya escapado: htmlUnidadForm() / htmlUnidadCliente() lo arman arriba con esc() del id y del nombre de cada unidad'],
   ["lista.map(a => `<span class=\"pe-apodo\">${esc(a)}</span>`).join('')", 'HTML armado en el mismo renglón con esc() de cada apodo'],
   ['htmlChipsApodos(c.apodos)', 'HTML armado por htmlChipsApodos(), que escapa cada apodo'],
   ['i', 'número: índice del .map()'],

@@ -17,8 +17,13 @@ const { fuenteNumeros } = require('./numeros-comun')
 // TODAS las funciones que las suites ejecutan. Crece con cada parte.
 const FUNCIONES_BASE = [
   'esc', 'normalizar', 'limpio', 'tieneTarea', 'unidadesCon', 'puedeEn', 'unidadesDelModulo',
-  'leerPreferencia', 'guardarPreferencia', 'unidadInicial', 'mostrarVista',
-  'htmlUnidades', 'pintarUnidades', 'elegirUnidad', 'pintarAccionesInicio', 'mostrarInicio',
+  'mostrarVista', 'pintarAccionesInicio', 'mostrarInicio',
+  // La barra de unidad de arriba (28/09/2026). pasaFiltroUnidad es la REAL de
+  // js/barra-unidad.js (extraer.js la encuentra por el import).
+  'pasaFiltroUnidad', 'unidadesVistas', 'unidadUnica', 'unidadesVistasCon', 'puedeEnAlguna',
+  'unidadSinTareas', 'hayVariasUnidades', 'nombreUnidad', 'aplicarUnidadDeLaBarra',
+  'leerClientesDe', 'htmlUnidadCliente', 'elegirUnidadCliente', 'htmlUnidadForm', 'elegirUnidadForm',
+  'leerPedidosDe', 'juntarPedidos',
   // Parte 2: clientes
   'leerClientes', 'clientesFiltrados', 'htmlChipsApodos', 'htmlFilaCliente', 'htmlListaClientes',
   'pintarClientes', 'mostrarClientes', 'formClienteVacio', 'formClienteDesde', 'agregarApodo',
@@ -49,7 +54,7 @@ const FUNCIONES_BASE = [
 ]
 
 const CONSTANTES_BASE = [
-  'TAREAS_PEDIDOS', 'puedeEntrar', 'CLAVE_UNIDAD', 'VISTAS', 'SUBTITULO_DE_VISTA',
+  'TAREAS_PEDIDOS', 'puedeEntrar', 'VISTAS', 'SUBTITULO_DE_VISTA',
   'ZONA_AR', 'DECIMALES_CAJAS', 'AVISO_CUMPLIDOS',
   'ETIQUETA_ESTADO', 'FILTROS_ESTADO', 'ESTADOS_A_MANO', 'LARGO_MINIMO_MOTIVO',
   'pedidoCerrado', 'renglonCumplido', 'tieneCumplidos',
@@ -94,6 +99,15 @@ const PRELUDIO = `
   var claveRenglon = 0
   var turnoPedidos = 0
   var turnoDetalle = 0
+  var turnoClientes = 0
+
+  // La barra de unidad (js/barra-unidad.js) depende del estado de su módulo:
+  // acá es un doble. __setBarra() dice qué elegida devuelve al arrancar, y
+  // __cambiarBarra() avisa a los suscriptores como cuando se toca un chip.
+  var __barra = { elegida: null, unidades: [], mostrar: false, listo: true }
+  var __alCambiar = []
+  function unidadesDeLaBarra() { return Promise.resolve({ ...__barra }) }
+  function alCambiarUnidad(fn) { __alCambiar.push(fn); return () => {} }
 
   var __llamadas = { rpc: [], errores: [], exitos: [], consultas: [], foco: [] }
   var __tablas = {}
@@ -127,10 +141,10 @@ const PRELUDIO = `
     misTareas: new Map([['ver', { unidades: ['u-cn'] }], ['cargar', { unidades: ['u-cn'] }], ['configurar', { unidades: ['u-cn'] }]]),
     unidades: new Map([['u-cn', 'Cucuruchos Nuss'], ['u-dp', 'Dolce Pasta']]),
     fabrica: FABRICA_SIN_DATOS,
-    unidadId: 'u-cn', vista: null,
-    clientes: null, errorClientes: null, clientesBusqueda: '', clienteForm: null, guardandoCliente: false,
+    unidadBarra: null, unidadId: 'u-cn', vista: null,
+    clientes: null, clientesDe: null, errorClientes: null, avisoClientes: null, clientesBusqueda: '', clienteForm: null, guardandoCliente: false,
     catalogo: null, catalogoUnidad: null, errorCatalogo: null, form: null, guardandoPedido: false,
-    pedidos: null, errorPedidos: null, filtros: { estado: '', desde: '', hasta: '', sinIdentificar: false },
+    pedidos: null, errorPedidos: null, avisoPedidos: null, filtros: { estado: '', desde: '', hasta: '', sinIdentificar: false },
     detalle: null, enviandoAvance: false, cambiandoEstado: false,
   }
 `
@@ -143,6 +157,8 @@ function construirPedidos(ruta, { funciones = [], constantes = [], preludioExtra
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __llamadas, __ls, __tablas,
       __setRpc(f){ __rpc = f }, __impresiones(){ return __impresiones },
+      __setBarra(b){ __barra = { ...__barra, ...b } }, __cambiarBarra(elegida){ for (const f of __alCambiar) f({ elegida }) },
+      __suscriptos(){ return __alCambiar.length },
       ponerNumero, leerCampoNumero, enlazarCampoNumero, leerNumeroAr, formatearNumeroAr`,
   })
 }

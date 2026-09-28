@@ -4,8 +4,11 @@
 //
 // Pedidos no tiene listas de PERSONAS (los clientes no son empleados), así que
 // lo único que se filtra son las unidades: unidadesDelModulo(), de donde salen
-// el segmento, la unidad inicial (la recordada en `pedidos.unidad`) y
-// elegirUnidad(). Se EJECUTA el código real, init() incluido.
+// las unidades que se miran con "Todas" en la barra de arriba (las llamadas a
+// pedidos_de, los clientes, la unidad de un pedido nuevo). El segmento propio
+// de unidades se retiró el 28/09/2026: la barra (js/barra-unidad.js) ya saca
+// la fábrica de pruebas de sus chips (test-barra-unidad.js). Se EJECUTA el
+// código real, init() incluido.
 //
 //   node pruebas/test-pedidos-fabrica-pruebas.js
 
@@ -53,7 +56,8 @@ function preparar(S, { rol = 'usuario', alcance = { todas: true }, yo = { unidad
   S.estado.unidades = new Map()
   S.estado.misTareas = new Map()
   S.estado.unidadId = null
-  if (recordada) S.__ls.set('pedidos.unidad', recordada)
+  // Lo que diga la barra de arriba (null = "Todas").
+  S.__setBarra({ elegida: recordada })
 }
 
 async function arrancar(op) {
@@ -66,20 +70,20 @@ async function arrancar(op) {
   return S
 }
 
-const segmento = (S) => (S.__els.get('pe-unidades') || {}).innerHTML || ''
+// A qué unidades se le pidió la lista (pedidos_de, una llamada por unidad).
+const pedidas = (S) => S.__llamadas.rpc.filter(r => r[0] === 'pedidos_de').map(r => r[1].p_unidad_negocio_id).sort()
 
 // ── Cuenta REAL con alcance en todas (tres unidades, una de prueba) ──────────
 esperas.push((async () => {
-  const S = await arrancar({ recordada: ROBOT })
+  const S = await arrancar()
   chk('real: la fábrica se leyó', S.estado.fabrica.ok === true && S.estado.fabrica.unidades.has(ROBOT))
   chk('real: no es de prueba', S.estado.fabrica.soyDePrueba === false)
   const ids = S.unidadesDelModulo()
   chk('real: unidadesDelModulo sin la de prueba', !ids.includes(ROBOT) && ids.length === 2, JSON.stringify(ids))
-  chk('real: el segmento no dibuja la de prueba', !segmento(S).includes(ROBOT) && !segmento(S).includes('Pruebas (robot)'), segmento(S))
-  chk('real: el segmento dibuja las dos reales', segmento(S).includes('u-cn') && segmento(S).includes('u-dp'))
-  chk('real: la recordada de prueba NO queda elegida', S.estado.unidadId === 'u-cn', S.estado.unidadId)
-  S.elegirUnidad(ROBOT)
-  chk('real: elegirUnidad no acepta la de prueba', S.estado.unidadId === 'u-cn', S.estado.unidadId)
+  chk('real: con "Todas" se miran las dos reales', JSON.stringify(S.unidadesVistas().slice().sort()) === '["u-cn","u-dp"]', JSON.stringify(S.unidadesVistas()))
+  chk('real: la lista se pide a las dos reales y NO a la de prueba', JSON.stringify(pedidas(S)) === '["u-cn","u-dp"]', JSON.stringify(pedidas(S)))
+  chk('real: un pedido nuevo no ofrece la de prueba', !S.htmlUnidadForm({ id: null, unidadId: null }).includes(ROBOT))
+  chk('real: el cliente nuevo no ofrece la de prueba', !S.htmlUnidadCliente({ id: null, unidadId: null }).includes(ROBOT))
 })())
 
 // ── Super admin real: también sin la de prueba ───────────────────────────────
@@ -91,10 +95,10 @@ esperas.push((async () => {
 
 // ── Real con la de prueba + una sola real: igual que con una sola unidad ─────
 esperas.push((async () => {
-  const S = await arrancar({ alcance: { unidades: ['u-dp', ROBOT] }, recordada: ROBOT })
+  const S = await arrancar({ alcance: { unidades: ['u-dp', ROBOT] } })
   chk('una sola real: queda una unidad', JSON.stringify(S.unidadesDelModulo()) === '["u-dp"]', JSON.stringify(S.unidadesDelModulo()))
-  chk('una sola real: el segmento no se dibuja', segmento(S) === '', segmento(S))
-  chk('una sola real: queda elegida la real', S.estado.unidadId === 'u-dp', S.estado.unidadId)
+  chk('una sola real: no se pregunta la unidad de un pedido nuevo', !/data-form-unidad=/.test(S.htmlUnidadForm({ id: null, unidadId: 'u-dp' })))
+  chk('una sola real: queda como la unidad de la pantalla', S.estado.unidadId === 'u-dp', S.estado.unidadId)
   chk('una sola real: entra (no sinAcceso)', S.__llamadas.errores.length === 0, JSON.stringify(S.__llamadas.errores))
 })())
 
@@ -103,8 +107,8 @@ esperas.push((async () => {
   const S = await arrancar({ yo: { unidad_negocio_id: ROBOT, es_prueba: true }, recordada: ROBOT })
   chk('prueba: soyDePrueba', S.estado.fabrica.soyDePrueba === true)
   chk('prueba: unidadesDelModulo trae la de prueba', S.unidadesDelModulo().includes(ROBOT) && S.unidadesDelModulo().length === 3)
-  chk('prueba: el segmento la dibuja', segmento(S).includes(ROBOT))
-  chk('prueba: la recordada de prueba queda elegida', S.estado.unidadId === ROBOT, S.estado.unidadId)
+  chk('prueba: la lista se pide también a la de prueba', pedidas(S).includes(ROBOT))
+  chk('prueba: elegida en la barra, queda como la unidad de la pantalla', S.estado.unidadId === ROBOT, S.estado.unidadId)
 })())
 
 // ── La fábrica no se pudo leer: no se saca nada ──────────────────────────────
@@ -122,8 +126,7 @@ esperas.push((async () => {
   S.estado.misTareas = new Map([['ver', { todas: true }]])
   S.estado.fabrica = { ok: true, unidades: new Set([ROBOT]), personas: new Set(), soyDePrueba: false }
   chk('directo real: sin la de prueba', !S.unidadesDelModulo().includes(ROBOT))
-  chk('directo real: htmlUnidades sin la de prueba', !S.htmlUnidades().includes(ROBOT))
-  chk('directo real: unidadInicial no la elige', S.unidadInicial(S.unidadesDelModulo(), ROBOT) === 'u-cn')
+  chk('directo real: con "Todas" no se mira la de prueba', !S.unidadesVistas().includes(ROBOT))
   S.estado.fabrica = { ...S.estado.fabrica, soyDePrueba: true }
   chk('directo prueba: la trae', S.unidadesDelModulo().includes(ROBOT))
 }

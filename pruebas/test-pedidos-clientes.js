@@ -157,9 +157,13 @@ esperas.push((async () => {
   chk('sin configurar, mostrarClientes no abre la vista', S.estado.vista !== 'pe-vista-clientes')
   S.abrirCliente(null)
   chk('sin configurar, no se abre el formulario', S.estado.vista !== 'pe-vista-cliente')
+  // La unidad que se mira la elige la barra de arriba: con Nuss elegida,
+  // configurar en Dolce Pasta no alcanza.
   S.estado.misTareas = new Map([['configurar', { unidades: ['u-dp'] }]])
+  S.estado.unidadBarra = 'u-cn'
   S.pintarAccionesInicio()
   chk('configurar en OTRA unidad no alcanza', S.__els.get('pe-btn-clientes').hidden === true)
+  S.estado.unidadBarra = null
   S.estado.misTareas = new Map([['configurar', { todas: true }]])
   S.pintarAccionesInicio()
   chk('con configurar {todas: true} se ve', S.__els.get('pe-btn-clientes').hidden === false)
@@ -185,31 +189,36 @@ esperas.push((async () => {
   chk('si falla la lectura se dice', /No se pudieron leer los clientes/.test(S2.__els.get('pe-clientes-lista').innerHTML))
 })())
 
-// ── unidades ──────────────────────────────────────────────────────────────
-{
-  const S = nuevo()
-  chk('con una sola unidad no se dibuja el selector', S.htmlUnidades() === '')
-  S.estado.misTareas = new Map([['ver', { todas: true }]])
-  const h = S.htmlUnidades()
-  chk('con dos unidades se dibuja', (h.match(/data-unidad=/g) || []).length === 2)
-  chk('la elegida va marcada', /data-unidad="u-cn" aria-pressed="true"/.test(h))
-  S.estado.clientes = [{ id: 'x' }]
-  S.elegirUnidad('u-dp')
-  chk('elegir otra unidad la guarda', S.estado.unidadId === 'u-dp' && S.__ls.get('pedidos.unidad') === 'u-dp')
-  chk('y olvida los clientes de la otra', S.estado.clientes === null)
-  S.elegirUnidad('u-nada')
-  chk('una unidad fuera del alcance no se elige', S.estado.unidadId === 'u-dp')
-  chk('unidadInicial: la guardada si se puede', S.unidadInicial(['a', 'b'], 'b') === 'b')
-  chk('unidadInicial: la primera si la guardada ya no', S.unidadInicial(['a', 'b'], 'z') === 'a')
-}
-
+// ── la unidad del cliente ─────────────────────────────────────────────────
+// El segmento de unidades de arriba se retiró el 28/09/2026: la unidad la
+// elige la barra de unidad (js/barra-unidad.js). Lo que protegía ese segmento
+// (elegir, recargar, olvidar lo de la otra unidad) lo prueba ahora
+// test-pedidos-barra-unidad.js. Acá, el escapado del selector de unidad del
+// cliente nuevo, que es donde los nombres de unidad entran al HTML.
 {
   const S = nuevo()
   S.estado.miRolApp = 'super_admin'
   S.estado.unidades = new Map([[marca('uid1'), marca('unombre1')], ['u2', 'Dos']])
-  S.estado.unidadId = 'u2'
-  chequearMarcas(chk, 'selector de unidades', S.htmlUnidades(), ['uid1', 'unombre1'])
+  S.estado.unidadBarra = null
+  const h = S.htmlUnidadCliente({ id: null, unidadId: 'u2' })
+  chequearMarcas(chk, 'selector de unidad del cliente', h, ['uid1', 'unombre1'])
+  chk('la del formulario va marcada', /data-cliente-unidad="u2" aria-pressed="true"/.test(h))
+  chk('al editar no se elige unidad', !/data-cliente-unidad=/.test(S.htmlUnidadCliente({ id: 'c1', unidadId: 'u2' })))
 }
+
+esperas.push((async () => {
+  const S = nuevo()
+  S.estado.clienteForm = { ...S.formClienteVacio(null), nombre: 'Distri Norte' }
+  S.__doc.getElementById('pe-cliente-nombre').value = 'Distri Norte'
+  S.estado.vista = 'pe-vista-cliente'
+  await S.guardarCliente()
+  chk('sin unidad NO se guarda el cliente', S.__llamadas.rpc.length === 0)
+  chk('y se dice', /unidad/.test(S.__els.get('pe-cliente-error').textContent) && S.__els.get('pe-cliente-error').hidden === false)
+  S.estado.clienteForm.unidadId = 'u-cn'
+  S.__setRpc(() => ({ data: 'c9', error: null }))
+  await S.guardarCliente()
+  chk('con la unidad del formulario viaja esa', S.__llamadas.rpc[0]?.[1]?.p_unidad_negocio_id === 'u-cn')
+})())
 
 // ── el HTML estático ──────────────────────────────────────────────────────
 chk('la ayuda de los apodos dice para qué sirven', /Cómo lo nombran en los mensajes, para reconocerlo después/.test(src))

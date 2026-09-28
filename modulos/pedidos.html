@@ -318,8 +318,8 @@
     <div class="pe-vacio" id="pe-sin-acceso" hidden></div>
     <div class="pe-vacio" id="pe-cargando">Cargando…</div>
 
-    <!-- Con más de una unidad, se elige acá. Con una sola no se dibuja. -->
-    <div id="pe-unidades"></div>
+    <!-- La unidad la elige la barra de unidad de arriba (js/barra-unidad.js,
+         28/09/2026): el segmento de unidades que había acá se retiró. -->
 
     <!-- ══ INICIO ═════════════════════════════════════════════════════════ -->
     <section id="pe-vista-inicio" hidden>
@@ -360,6 +360,8 @@
         <h1 class="pe-titulo" id="pe-cliente-titulo">Cliente nuevo</h1>
       </div>
       <div class="pe-tarjeta">
+        <!-- De qué unidad es el cliente (al darlo de alta con "Todas" arriba). -->
+        <div id="pe-cliente-unidad"></div>
         <div class="pe-campo">
           <label for="pe-cliente-nombre">Nombre</label>
           <input type="text" class="pe-input" id="pe-cliente-nombre" maxlength="120" autocomplete="off">
@@ -444,6 +446,8 @@
       </div>
       <div id="pe-form-aviso"></div>
       <div class="pe-tarjeta">
+        <!-- De qué unidad es el pedido (con "Todas" arriba se elige acá). -->
+        <div id="pe-form-unidad"></div>
         <div class="pe-campo">
           <span class="pe-campo__rotulo">Cliente</span>
           <div id="pe-form-cliente-elegido"></div>
@@ -496,6 +500,7 @@
       cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
     mostrarBannerVersion()
@@ -516,11 +521,20 @@
       // la ve en ninguna lista de unidades. Se lee en paralelo al arrancar y,
       // si falla, no se saca nada (FABRICA_SIN_DATOS).
       fabrica: FABRICA_SIN_DATOS,
+      // La unidad de la barra de arriba (js/barra-unidad.js): null = "Todas",
+      // o la barra no aparece porque la persona tiene una sola. La elige la
+      // barra, nunca esta pantalla.
+      unidadBarra: null,
+      // La unidad de la pantalla cuando es UNA sola (la de la barra, o la
+      // única de la persona); null con "Todas". La calcula unidadUnica().
       unidadId: null,
       vista: null,
       // Clientes de la unidad elegida (null = todavía no se leyeron).
       clientes: null,
+      // De qué unidades son los clientes leídos (sus ids unidos con "|").
+      clientesDe: null,
       errorClientes: null,
+      avisoClientes: null,
       clientesBusqueda: '',
       clienteForm: null,
       guardandoCliente: false,
@@ -533,6 +547,8 @@
       // La lista y el detalle
       pedidos: null,         // lo que devolvió pedidos_de (null = todavía no)
       errorPedidos: null,
+      // Con "Todas": qué unidades no se pudieron leer (las otras se muestran).
+      avisoPedidos: null,
       filtros: { estado: '', desde: '', hasta: '', sinIdentificar: false },
       detalle: null,         // { id, pedido, items, error, aviso, errores, accion }
       enviandoAvance: false,
@@ -608,28 +624,6 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // PREFERENCIAS (localStorage, siempre con try/catch)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    const CLAVE_UNIDAD = 'pedidos.unidad'
-
-    function leerPreferencia(clave) {
-      try { return localStorage.getItem(clave) } catch { return null }
-    }
-    function guardarPreferencia(clave, valor) {
-      try {
-        if (valor == null) localStorage.removeItem(clave)
-        else localStorage.setItem(clave, valor)
-      } catch { /* sin memoria: se vuelve a elegir la próxima vez */ }
-    }
-
-    // La que se eligió antes si todavía se puede; si no, la primera.
-    function unidadInicial(candidatas, guardada) {
-      if (guardada && candidatas.includes(guardada)) return guardada
-      return candidatas[0] ?? null
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -650,31 +644,64 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // UNIDADES
+    // UNIDADES — las elige la barra de unidad de arriba (js/barra-unidad.js)
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Con una sola unidad no hay nada que elegir: no se dibuja.
-    function htmlUnidades() {
-      const ids = unidadesDelModulo()
-      if (ids.length <= 1) return ''
-      const botones = ids.map(id =>
-        `<button type="button" class="pe-segmento__opcion" data-unidad="${esc(id)}" aria-pressed="${id === estado.unidadId ? 'true' : 'false'}">${esc(estado.unidades.get(id))}</button>`).join('')
-      return `<div class="pe-segmento" role="group" aria-label="Unidad de negocio">${botones}</div>`
+    // La barra SOLO FILTRA LO QUE SE MUESTRA: qué se puede hacer en cada
+    // unidad lo siguen diciendo las tareas (y la base). Con "Todas" la
+    // pantalla junta lo de todas las unidades del módulo; con una elegida,
+    // solo lo de esa. pedidos_de() y los clientes se piden de a UNA unidad.
+
+    // Las unidades que se MIRAN: la elegida en la barra, o las del módulo.
+    function unidadesVistas() {
+      return estado.unidadBarra ? [estado.unidadBarra] : unidadesDelModulo()
     }
 
-    function pintarUnidades() {
-      document.getElementById('pe-unidades').innerHTML = htmlUnidades()
+    // La unidad de la pantalla cuando es UNA sola; null con "Todas".
+    function unidadUnica() {
+      const v = unidadesVistas()
+      return v.length === 1 ? v[0] : null
     }
 
-    function elegirUnidad(id) {
-      if (!unidadesDelModulo().includes(id) || id === estado.unidadId) return
-      estado.unidadId = id
-      guardarPreferencia(CLAVE_UNIDAD, id)
-      estado.clientes = null
-      estado.catalogo = null
-      estado.pedidos = null
-      pintarUnidades()
-      mostrarInicio()
+    // Las que se miran y donde tiene esa tarea.
+    function unidadesVistasCon(tarea) {
+      const con = unidadesCon(tarea)
+      return unidadesVistas().filter(u => con.includes(u))
+    }
+
+    function puedeEnAlguna(tarea) {
+      return unidadesVistasCon(tarea).length > 0
+    }
+
+    // Una unidad elegida en la barra donde la persona no tiene ninguna tarea
+    // de Pedidos (la barra ofrece todas sus unidades, no solo las de este
+    // módulo): se dice, en vez de mostrar una lista vacía.
+    function unidadSinTareas() {
+      return !!estado.unidadBarra && !unidadesDelModulo().includes(estado.unidadBarra)
+    }
+
+    // Con más de una unidad a la vista, cada fila dice de cuál es.
+    function hayVariasUnidades(tarea) {
+      return unidadesVistasCon(tarea).length > 1
+    }
+
+    function nombreUnidad(id) {
+      return estado.unidades.get(id) || 'Unidad sin nombre'
+    }
+
+    // La barra cambió con la pantalla abierta: se repinta sin recargar. El
+    // formulario de un pedido o de un cliente tiene SU unidad y no se toca.
+    function aplicarUnidadDeLaBarra(elegida) {
+      const nueva = elegida || null
+      if (nueva === estado.unidadBarra) return
+      estado.unidadBarra = nueva
+      estado.unidadId = unidadUnica()
+      if (estado.vista === 'pe-vista-inicio') mostrarInicio()
+      else if (estado.vista === 'pe-vista-clientes') mostrarClientes()
+      else if (estado.vista === 'pe-vista-detalle') {
+        const u = estado.detalle?.pedido?.unidad_negocio_id
+        if (u && !pasaFiltroUnidad(u, nueva)) mostrarInicio()
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -682,8 +709,8 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function pintarAccionesInicio() {
-      document.getElementById('pe-btn-nuevo').hidden = !puedeEn('cargar')
-      document.getElementById('pe-btn-clientes').hidden = !puedeEn('configurar')
+      document.getElementById('pe-btn-nuevo').hidden = !puedeEnAlguna('cargar')
+      document.getElementById('pe-btn-clientes').hidden = !puedeEnAlguna('configurar')
     }
 
     function mostrarInicio() {
@@ -698,7 +725,7 @@
 
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, apodos, localidad, telefono, observaciones, activo')
+        .select('id, nombre, apodos, localidad, telefono, observaciones, activo, unidad_negocio_id')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -720,8 +747,9 @@
       return `<span class="pe-apodos">${lista.map(a => `<span class="pe-apodo">${esc(a)}</span>`).join('')}</span>`
     }
 
-    function htmlFilaCliente(c) {
-      const meta = [limpio(c.localidad), limpio(c.telefono)].filter(Boolean).join(' · ')
+    // Con "Todas" arriba, la fila dice de qué unidad es el cliente.
+    function htmlFilaCliente(c, conUnidad = false) {
+      const meta = [conUnidad ? nombreUnidad(c.unidad_negocio_id) : '', limpio(c.localidad), limpio(c.telefono)].filter(Boolean).join(' · ')
       return `<button type="button" class="pe-fila${c.activo === false ? ' pe-fila--inactiva' : ''}" data-cliente="${esc(c.id)}">` +
         `<span class="pe-fila__cuerpo"><span class="pe-fila__titulo">${esc(c.nombre)}</span>` +
         `${meta ? `<span class="pe-fila__meta">${esc(meta)}</span>` : ''}${htmlChipsApodos(c.apodos)}</span>` +
@@ -731,43 +759,67 @@
     function htmlListaClientes() {
       if (estado.errorClientes) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorClientes)}</div>`
       if (estado.clientes === null) return '<div class="pe-vacio">Cargando clientes…</div>'
-      if (!estado.clientes.length) return '<div class="pe-vacio">Todavía no hay clientes en esta unidad. Cargá el primero con «+ Cliente nuevo».</div>'
+      const varias = hayVariasUnidades('configurar')
+      const aviso = estado.avisoClientes ? `<div class="pe-aviso pe-aviso--grave">${esc(estado.avisoClientes)}</div>` : ''
+      if (!estado.clientes.length) return aviso + `<div class="pe-vacio">${varias ? 'Todavía no hay clientes en tus unidades.' : 'Todavía no hay clientes en esta unidad.'} Cargá el primero con «+ Cliente nuevo».</div>`
       const lista = clientesFiltrados(estado.clientes, estado.clientesBusqueda)
-      if (!lista.length) return `<div class="pe-vacio">Ningún cliente coincide con «${esc(limpio(estado.clientesBusqueda))}».</div>`
-      return lista.map(htmlFilaCliente).join('')
+      if (!lista.length) return aviso + `<div class="pe-vacio">Ningún cliente coincide con «${esc(limpio(estado.clientesBusqueda))}».</div>`
+      return aviso + lista.map(c => htmlFilaCliente(c, varias)).join('')
     }
 
     function pintarClientes() {
       document.getElementById('pe-clientes-lista').innerHTML = htmlListaClientes()
     }
 
+    let turnoClientes = 0
+
+    // Los clientes de las unidades que se miran (con "Todas", de todas las
+    // unidades donde puede configurar; cada fila dice de cuál es).
     async function mostrarClientes() {
-      if (!puedeEn('configurar')) { mostrarInicio(); return }
+      const unidades = unidadesVistasCon('configurar')
+      if (!unidades.length) { mostrarInicio(); return }
       mostrarVista('pe-vista-clientes')
+      const turno = ++turnoClientes
       estado.clientes = null
+      estado.clientesDe = null
       estado.errorClientes = null
+      estado.avisoClientes = null
       pintarClientes()
-      const unidad = estado.unidadId
-      try {
-        const lista = await leerClientes(unidad)
-        if (unidad !== estado.unidadId) return
-        estado.clientes = lista
-      } catch (err) {
-        console.error('No se pudieron leer los clientes:', err)
+      const r = await leerClientesDe(unidades)
+      if (turno !== turnoClientes) return
+      if (r.ok) {
+        estado.clientes = r.clientes
+        estado.clientesDe = unidades.join('|')
+        if (r.fallaron.length) estado.avisoClientes = `No se pudieron leer los clientes de ${r.fallaron.map(u => nombreUnidad(u)).join(', ')}. Revisá la conexión y volvé a entrar: abajo están los de las otras unidades.`
+      } else {
         estado.errorClientes = 'No se pudieron leer los clientes. Revisá la conexión y volvé a entrar.'
       }
       pintarClientes()
     }
 
+    // Una lectura por unidad, en paralelo. Cada fila lleva su unidad. Si una
+    // falla, las otras se muestran igual y se dice cuál faltó.
+    async function leerClientesDe(unidades) {
+      const res = await Promise.all(unidades.map(u => leerClientes(u)
+        .then(filas => ({ u, filas: filas.map(c => ({ ...c, unidad_negocio_id: c.unidad_negocio_id ?? u })) }))
+        .catch(err => { console.error('No se pudieron leer los clientes:', err); return { u, error: err } })))
+      const bien = res.filter(x => !x.error)
+      const clientes = bien.flatMap(x => x.filas)
+      if (bien.length > 1) clientes.sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es'))
+      return { ok: bien.length > 0, clientes, fallaron: res.filter(x => x.error).map(x => x.u) }
+    }
+
     // ── El formulario de un cliente ─────────────────────────────────────────
 
-    function formClienteVacio() {
-      return { id: null, nombre: '', localidad: '', telefono: '', observaciones: '', activo: true, apodos: [], apodoNuevo: '', error: null, errorApodo: null }
+    // La unidad de un cliente NUEVO viene puesta con la de la pantalla si es
+    // una sola; con "Todas" se elige en el formulario.
+    function formClienteVacio(unidadId = unidadUnica()) {
+      return { id: null, unidadId, nombre: '', localidad: '', telefono: '', observaciones: '', activo: true, apodos: [], apodoNuevo: '', error: null, errorApodo: null }
     }
 
     function formClienteDesde(c) {
       return {
-        ...formClienteVacio(), id: c.id, nombre: c.nombre ?? '', localidad: c.localidad ?? '',
+        ...formClienteVacio(), id: c.id, unidadId: c.unidad_negocio_id ?? unidadUnica(), nombre: c.nombre ?? '', localidad: c.localidad ?? '',
         telefono: c.telefono ?? '', observaciones: c.observaciones ?? '', activo: c.activo !== false,
         apodos: Array.isArray(c.apodos) ? [...c.apodos] : [],
       }
@@ -818,10 +870,12 @@
     }
 
     function abrirCliente(id) {
-      if (!puedeEn('configurar')) return
+      const unidades = unidadesVistasCon('configurar')
+      if (!unidades.length) return
       const c = id ? (estado.clientes ?? []).find(x => x.id === id) : null
       if (id && !c) return
-      estado.clienteForm = c ? formClienteDesde(c) : formClienteVacio()
+      if (c && !puedeEn('configurar', c.unidad_negocio_id ?? unidadUnica())) return
+      estado.clienteForm = c ? formClienteDesde(c) : formClienteVacio(unidades.length === 1 ? unidades[0] : null)
       mostrarVista('pe-vista-cliente')
       pintarFormCliente(true)
     }
@@ -840,6 +894,7 @@
         document.getElementById('pe-cliente-activo').checked = f.activo
         document.getElementById('pe-cliente-apodo-nuevo').value = f.apodoNuevo
       }
+      document.getElementById('pe-cliente-unidad').innerHTML = htmlUnidadCliente(f)
       document.getElementById('pe-cliente-apodos').innerHTML = htmlApodosForm(f.apodos)
       const ea = document.getElementById('pe-cliente-apodo-error')
       ea.textContent = f.errorApodo ?? ''
@@ -849,6 +904,29 @@
       e.hidden = !f.error
       document.getElementById('pe-cliente-nombre').classList.toggle('pe-input--error', !!f.error && !!faltanCliente(f))
       document.getElementById('pe-cliente-guardar').disabled = estado.guardandoCliente
+    }
+
+    // De qué unidad es el cliente: la suya al editar (no se muda de unidad);
+    // al darlo de alta con "Todas" arriba, se elige acá, sin cambiar la barra.
+    function htmlUnidadCliente(f) {
+      if (!f) return ''
+      const opciones = f.id ? [] : unidadesVistasCon('configurar')
+      if (opciones.length > 1) {
+        const botonesUnidad = opciones.map(u => `<button type="button" class="pe-segmento__opcion" data-cliente-unidad="${esc(u)}" aria-pressed="${u === f.unidadId ? 'true' : 'false'}">${esc(nombreUnidad(u))}</button>`).join('')
+        return `<div class="pe-campo"><span class="pe-campo__rotulo">¿De qué unidad es el cliente?</span>` +
+          `<div class="pe-segmento" role="group" aria-label="Unidad del cliente">${botonesUnidad}</div></div>`
+      }
+      if (unidadesDelModulo().length > 1 && f.unidadId) return `<p class="pe-texto-suave">Unidad: ${esc(nombreUnidad(f.unidadId))}</p>`
+      return ''
+    }
+
+    function elegirUnidadCliente(u) {
+      const f = estado.clienteForm
+      if (!f || f.id || !unidadesVistasCon('configurar').includes(u)) return
+      leerFormCliente()
+      f.unidadId = u
+      f.error = null
+      pintarFormCliente(false)
     }
 
     function leerFormCliente() {
@@ -897,12 +975,12 @@
         f.apodoNuevo = ''
         document.getElementById('pe-cliente-apodo-nuevo').value = ''
       }
-      f.error = faltanCliente(f)
+      f.error = f.unidadId ? faltanCliente(f) : 'Elegí de qué unidad es el cliente.'
       if (f.error) { pintarFormCliente(false); return }
       estado.guardandoCliente = true
       pintarFormCliente(false)
       try {
-        const { error } = await supabase.rpc('guardar_cliente', parametrosGuardarCliente(f, estado.unidadId))
+        const { error } = await supabase.rpc('guardar_cliente', parametrosGuardarCliente(f, f.unidadId))
         if (error) throw error
         mostrarExito(f.id ? 'Cliente actualizado.' : 'Cliente cargado.')
         estado.guardandoCliente = false
@@ -1044,8 +1122,10 @@
         marcaBusqueda: '', presentacionId: null, cajas: null, texto, observacion: '' }
     }
 
-    function formPedidoVacio() {
-      return { id: null, clienteId: null, clienteBusqueda: '', fecha: hoyArgentina(), entrega: '', observaciones: '',
+    // La unidad de un pedido NUEVO viene puesta con la de la pantalla si es
+    // una sola; con "Todas" se elige en el formulario, sin cambiar la barra.
+    function formPedidoVacio(unidadId = unidadUnica()) {
+      return { id: null, unidadId, clienteId: null, clienteBusqueda: '', fecha: hoyArgentina(), entrega: '', observaciones: '',
         textoOriginal: null, renglones: [renglonProducto()], tieneCumplidos: false, error: null, intentado: false }
     }
 
@@ -1069,7 +1149,7 @@
         return r
       })
       return {
-        id: p.id, clienteId: p.cliente_id, clienteBusqueda: '', fecha: p.fecha, entrega: p.fecha_entrega ?? '',
+        id: p.id, unidadId: p.unidad_negocio_id ?? null, clienteId: p.cliente_id, clienteBusqueda: '', fecha: p.fecha, entrega: p.fecha_entrega ?? '',
         observaciones: p.observaciones ?? '', textoOriginal: p.texto_original ?? null,
         renglones: renglones.length ? renglones : [renglonProducto()],
         tieneCumplidos: (items ?? []).some(it => Number(it.cajas_cumplidas) > 0),
@@ -1100,6 +1180,7 @@
 
     function faltanPedido(f) {
       const faltan = []
+      if (!f.unidadId) faltan.push('Elegí de qué unidad es el pedido.')
       if (!f.clienteId) faltan.push('Elegí el cliente.')
       if (!esFechaIso(f.fecha)) faltan.push('Poné la fecha del pedido.')
       if (f.entrega && !esFechaIso(f.entrega)) faltan.push('La fecha de entrega no es válida.')
@@ -1170,6 +1251,7 @@
     // Los activos de la unidad, por nombre o por apodo. Hasta 8: con más de
     // eso conviene seguir escribiendo.
     function htmlResultadosClientes(busqueda) {
+      if (estado.form && !estado.form.unidadId) return '<div class="pe-texto-suave">Elegí primero de qué unidad es el pedido.</div>'
       if (estado.errorClientes) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorClientes)}</div>`
       if (estado.clientes === null) return '<div class="pe-texto-suave">Cargando clientes…</div>'
       const activos = estado.clientes.filter(c => c.activo !== false)
@@ -1405,27 +1487,66 @@
 
     // ── abrir, leer y guardar ──────────────────────────────────────────────
 
-    async function asegurarCatalogoYClientes() {
-      const unidad = estado.unidadId
+    // El catálogo y los clientes de UNA unidad (la del pedido que se carga o
+    // se mira). Una respuesta de otra unidad que llega tarde no pisa nada.
+    async function asegurarCatalogoYClientes(unidad = estado.unidadId) {
+      if (!unidad) return
       const tareas = []
       if (estado.catalogoUnidad !== unidad || !estado.catalogo) {
         estado.catalogo = null
+        estado.catalogoUnidad = unidad
         estado.errorCatalogo = null
-        tareas.push(leerCatalogo(unidad).then(c => { if (unidad === estado.unidadId) { estado.catalogo = c; estado.catalogoUnidad = unidad } })
-          .catch(err => { console.error('No se pudo leer el catálogo:', err); estado.errorCatalogo = 'No se pudieron leer los productos. Revisá la conexión y volvé a entrar.' }))
+        tareas.push(leerCatalogo(unidad).then(c => { if (estado.catalogoUnidad === unidad) estado.catalogo = c })
+          .catch(err => { console.error('No se pudo leer el catálogo:', err); if (estado.catalogoUnidad === unidad) estado.errorCatalogo = 'No se pudieron leer los productos. Revisá la conexión y volvé a entrar.' }))
       }
-      if (estado.clientes === null) {
+      if (estado.clientes === null || estado.clientesDe !== unidad) {
+        estado.clientes = null
+        estado.clientesDe = unidad
         estado.errorClientes = null
-        tareas.push(leerClientes(unidad).then(c => { if (unidad === estado.unidadId) estado.clientes = c })
-          .catch(err => { console.error('No se pudieron leer los clientes:', err); estado.errorClientes = 'No se pudieron leer los clientes. Revisá la conexión y volvé a entrar.' }))
+        estado.avisoClientes = null
+        tareas.push(leerClientes(unidad).then(c => { if (estado.clientesDe === unidad) estado.clientes = c.map(x => ({ ...x, unidad_negocio_id: x.unidad_negocio_id ?? unidad })) })
+          .catch(err => { console.error('No se pudieron leer los clientes:', err); if (estado.clientesDe === unidad) estado.errorClientes = 'No se pudieron leer los clientes. Revisá la conexión y volvé a entrar.' }))
       }
       await Promise.all(tareas)
+    }
+
+    // De qué unidad es el pedido. Con "Todas" arriba y más de una unidad donde
+    // puede cargar, se elige acá (sin cambiar la barra); al corregir un pedido
+    // es la suya y no se cambia.
+    function htmlUnidadForm(f) {
+      if (!f) return ''
+      const opciones = f.id ? [] : unidadesVistasCon('cargar')
+      if (opciones.length > 1) {
+        const botonesUnidad = opciones.map(u => `<button type="button" class="pe-segmento__opcion" data-form-unidad="${esc(u)}" aria-pressed="${u === f.unidadId ? 'true' : 'false'}">${esc(nombreUnidad(u))}</button>`).join('')
+        return `<div class="pe-campo"><span class="pe-campo__rotulo">¿De qué unidad es el pedido?</span>` +
+          `<div class="pe-segmento" role="group" aria-label="Unidad del pedido">${botonesUnidad}</div>` +
+          `${f.unidadId ? '' : '<p class="pe-texto-suave">Elegí la unidad: sus clientes y sus productos aparecen después.</p>'}</div>`
+      }
+      if (unidadesDelModulo().length > 1 && f.unidadId) return `<p class="pe-texto-suave">Unidad: ${esc(nombreUnidad(f.unidadId))}</p>`
+      return ''
+    }
+
+    // Elegir (o cambiar) la unidad de un pedido NUEVO. Los productos y los
+    // clientes son de cada unidad: el cliente se suelta y los renglones de
+    // producto vuelven a empezar (sus cajas y su nota quedan; los de texto
+    // libre quedan enteros).
+    async function elegirUnidadForm(u) {
+      const f = estado.form
+      if (!f || f.id || f.unidadId === u || !unidadesVistasCon('cargar').includes(u)) return
+      leerCabeceraForm()
+      f.unidadId = u
+      f.clienteId = null
+      f.renglones = f.renglones.map(r => r.tipo === 'texto' ? r : Object.assign(renglonProducto(), { cajas: r.cajas, observacion: r.observacion }))
+      pintarFormEntero()
+      await asegurarCatalogoYClientes(u)
+      if (estado.form === f && f.unidadId === u && estado.vista === 'pe-vista-form') pintarFormEntero()
     }
 
     function pintarFormEntero() {
       const f = estado.form
       if (!f) return
       document.getElementById('pe-form-titulo').textContent = f.id ? 'Corregir el pedido' : 'Pedido nuevo'
+      document.getElementById('pe-form-unidad').innerHTML = htmlUnidadForm(f)
       document.getElementById('pe-form-fecha').value = f.fecha
       document.getElementById('pe-form-entrega').value = f.entrega
       document.getElementById('pe-form-observaciones').value = f.observaciones
@@ -1436,12 +1557,15 @@
     }
 
     async function abrirPedidoNuevo() {
-      if (!puedeEn('cargar')) return
-      estado.form = formPedidoVacio()
+      const unidades = unidadesVistasCon('cargar')
+      if (!unidades.length) return
+      const f = formPedidoVacio(unidades.length === 1 ? unidades[0] : null)
+      estado.form = f
       mostrarVista('pe-vista-form')
       pintarFormEntero()
-      await asegurarCatalogoYClientes()
-      if (estado.vista === 'pe-vista-form') pintarFormEntero()
+      if (!f.unidadId) return
+      await asegurarCatalogoYClientes(f.unidadId)
+      if (estado.vista === 'pe-vista-form' && estado.form === f) pintarFormEntero()
     }
 
     function leerCabeceraForm() {
@@ -1469,13 +1593,13 @@
       estado.guardandoPedido = true
       pintarPieForm()
       try {
-        const { data, error } = await supabase.rpc('guardar_pedido', parametrosGuardarPedido(f, estado.unidadId))
+        const { data, error } = await supabase.rpc('guardar_pedido', parametrosGuardarPedido(f, f.unidadId))
         if (error) throw error
         estado.guardandoPedido = false
         const numero = data?.numero
         mostrarExito(numero ? `Pedido Nº ${numero} guardado.` : 'Pedido guardado.')
         estado.form = null
-        await despuesDeGuardarPedido(data?.pedido_id ?? f.id)
+        await despuesDeGuardarPedido(data?.pedido_id ?? f.id, f.unidadId)
       } catch (err) {
         console.error('No se pudo guardar el pedido:', err)
         // Los mensajes de guardar_pedido ya vienen escritos para una persona
@@ -1487,9 +1611,9 @@
     }
 
     // Guardado el pedido, se abre: es lo que se quiere ver (y ahí se imprime).
-    async function despuesDeGuardarPedido(pedidoId) {
+    async function despuesDeGuardarPedido(pedidoId, unidad = estado.unidadId) {
       estado.pedidos = null
-      if (pedidoId && puedeEn('ver')) await abrirDetalle(pedidoId)
+      if (pedidoId && puedeEn('ver', unidad)) await abrirDetalle(pedidoId)
       else mostrarInicio()
     }
 
@@ -1540,18 +1664,21 @@
 
     // "Solo los que tienen renglones sin identificar" se filtra acá: el
     // resto lo filtra pedidos_de().
+    // Una fila de otra unidad que la elegida en la barra no se muestra (no
+    // debería llegar: se pide de a una unidad).
     function pedidosVisibles(lista, filtros) {
-      const todos = Array.isArray(lista) ? lista : []
+      const todos = (Array.isArray(lista) ? lista : []).filter(p => pasaFiltroUnidad(p.unidad_negocio_id, estado.unidadBarra))
       if (!filtros?.sinIdentificar) return todos
       return todos.filter(p => Number(p.sin_interpretar) > 0)
     }
 
-    function htmlFilaPedido(p) {
+    // Con "Todas" arriba, la fila dice de qué unidad es el pedido.
+    function htmlFilaPedido(p, conUnidad = false) {
       const sinId = Number(p.sin_interpretar) || 0
       const fechas = `Pedido ${fechaCorta(p.fecha)}${p.fecha_entrega ? ` · Entrega ${fechaCorta(p.fecha_entrega)}` : ''}`
       return `<button type="button" class="pe-fila pe-fila--pedido${p.estado === 'anulado' ? ' pe-fila--anulada' : ''}" data-pedido="${esc(p.id)}">` +
         `<span class="pe-fila__linea"><span class="pe-fila__titulo">${esc(p.cliente)}</span>${htmlEstado(p.estado)}</span>` +
-        `<span class="pe-fila__linea"><span class="pe-fila__meta"><span class="pe-fila__numero">Nº ${esc(p.numero)}</span> · ${esc(fechas)}</span>` +
+        `<span class="pe-fila__linea"><span class="pe-fila__meta"><span class="pe-fila__numero">Nº ${esc(p.numero)}</span>${conUnidad ? ` · ${esc(nombreUnidad(p.unidad_negocio_id))}` : ''} · ${esc(fechas)}</span>` +
         `${sinId ? `<span class="pe-sello">${esc(sinId)} sin identificar</span>` : ''}</span>` +
         `${htmlAvance(p.cajas_cumplidas, p.cajas_pedidas)}</button>`
     }
@@ -1562,26 +1689,39 @@
     }
 
     function htmlListaPedidos() {
-      if (!puedeEn('ver')) return '<div class="pe-aviso">No tenés permiso para ver los pedidos de esta unidad. Podés cargar uno nuevo con «+ Pedido nuevo».</div>'
+      if (unidadSinTareas()) return `<div class="pe-aviso">En ${esc(nombreUnidad(estado.unidadBarra))} no tenés ninguna tarea de Pedidos. Elegí otra unidad arriba, o «Todas».</div>`
+      const conVer = unidadesVistasCon('ver')
+      if (!conVer.length) return `<div class="pe-aviso">${unidadUnica() ? 'No tenés permiso para ver los pedidos de esta unidad.' : 'No tenés permiso para ver los pedidos de tus unidades.'}${puedeEnAlguna('cargar') ? ' Podés cargar uno nuevo con «+ Pedido nuevo».' : ''}</div>`
       if (estado.errorPedidos) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorPedidos)}</div>`
       if (estado.pedidos === null) return '<div class="pe-vacio">Cargando pedidos…</div>'
+      const varias = conVer.length > 1
+      // Lo que NO está en la lista se dice en chico: una unidad sin permiso de
+      // ver, o una que no se pudo leer.
+      const sinVer = unidadesVistas().filter(u => unidadesDelModulo().includes(u) && !conVer.includes(u))
+      const avisoLectura = estado.avisoPedidos ? `<div class="pe-aviso pe-aviso--grave">${esc(estado.avisoPedidos)}</div>` : ''
+      const avisoSinVer = sinVer.length ? `<p class="pe-texto-suave">En ${esc(sinVer.map(u => nombreUnidad(u)).join(', '))} no tenés permiso para ver los pedidos: no están en la lista.</p>` : ''
       const lista = pedidosVisibles(estado.pedidos, estado.filtros)
       if (!lista.length) {
         const hayFiltros = estado.filtros.estado || estado.filtros.desde || estado.filtros.hasta || estado.filtros.sinIdentificar
-        return `<div class="pe-vacio">${hayFiltros ? 'Ningún pedido con esos filtros.' : 'Todavía no hay pedidos en esta unidad.'}</div>`
+        return avisoLectura + avisoSinVer + `<div class="pe-vacio">${hayFiltros ? 'Ningún pedido con esos filtros.' : (varias ? 'Todavía no hay pedidos en tus unidades.' : 'Todavía no hay pedidos en esta unidad.')}</div>`
       }
-      return lista.map(htmlFilaPedido).join('')
+      return avisoLectura + avisoSinVer + lista.map(p => htmlFilaPedido(p, varias)).join('')
     }
 
+    // Con "Todas", la suma y cuántos de cada unidad.
     function textoCuenta() {
-      if (!puedeEn('ver') || estado.pedidos === null || estado.errorPedidos) return ''
-      const n = pedidosVisibles(estado.pedidos, estado.filtros).length
-      return `${n} ${n === 1 ? 'pedido' : 'pedidos'}`
+      if (!puedeEnAlguna('ver') || estado.pedidos === null || estado.errorPedidos) return ''
+      const lista = pedidosVisibles(estado.pedidos, estado.filtros)
+      const n = lista.length
+      let texto = `${n} ${n === 1 ? 'pedido' : 'pedidos'}`
+      const unidades = unidadesVistasCon('ver')
+      if (unidades.length > 1 && n) texto += ' · ' + unidades.map(u => `${nombreUnidad(u)}: ${lista.filter(p => p.unidad_negocio_id === u).length}`).join(' · ')
+      return texto
     }
 
     function pintarListaPedidos() {
       document.getElementById('pe-filtro-estado').innerHTML = htmlFiltroEstado()
-      document.getElementById('pe-filtros').hidden = !puedeEn('ver')
+      document.getElementById('pe-filtros').hidden = !puedeEnAlguna('ver')
       document.getElementById('pe-lista').innerHTML = htmlListaPedidos()
       document.getElementById('pe-cuenta').textContent = textoCuenta()
     }
@@ -1598,23 +1738,57 @@
 
     let turnoPedidos = 0
 
+    // pedidos_de() pide UNA unidad: con "Todas", una llamada por unidad, en
+    // paralelo, con turno. Si una falla, las otras se muestran igual y se
+    // dice cuál faltó.
     async function cargarPedidos() {
-      if (!puedeEn('ver')) { estado.pedidos = null; pintarListaPedidos(); return }
       const turno = ++turnoPedidos
+      const unidades = unidadesVistasCon('ver')
       estado.pedidos = null
       estado.errorPedidos = null
+      estado.avisoPedidos = null
       pintarListaPedidos()
-      try {
-        const { data, error } = await supabase.rpc('pedidos_de', parametrosPedidosDe(estado.unidadId, estado.filtros))
-        if (error) throw error
-        if (turno !== turnoPedidos) return
-        estado.pedidos = data ?? []
-      } catch (err) {
-        if (turno !== turnoPedidos) return
-        console.error('No se pudieron leer los pedidos:', err)
+      if (!unidades.length) return
+      const resultados = await Promise.all(unidades.map(u => leerPedidosDe(u)))
+      if (turno !== turnoPedidos) return
+      const bien = resultados.filter(r => !r.error)
+      const mal = resultados.filter(r => r.error)
+      if (!bien.length) {
         estado.errorPedidos = 'No se pudieron leer los pedidos. Revisá la conexión y volvé a entrar.'
+      } else {
+        estado.pedidos = juntarPedidos(bien)
+        if (mal.length) estado.avisoPedidos = `No se pudieron leer los pedidos de ${mal.map(r => nombreUnidad(r.u)).join(', ')}. Revisá la conexión y volvé a entrar: abajo están los de las otras unidades.`
       }
       pintarListaPedidos()
+    }
+
+    async function leerPedidosDe(u) {
+      try {
+        const { data, error } = await supabase.rpc('pedidos_de', parametrosPedidosDe(u, estado.filtros))
+        if (error) throw error
+        return { u, filas: Array.isArray(data) ? data : [] }
+      } catch (err) {
+        console.error('No se pudieron leer los pedidos:', err)
+        return { u, error: err }
+      }
+    }
+
+    // Junta lo de cada unidad: cada fila lleva su unidad. Un pedido es de UNA
+    // sola unidad, así que uno repetido (no debería pasar) se muestra una vez.
+    // Con más de una unidad, el mismo orden que pedidos_de(): fecha y número,
+    // del más nuevo al más viejo.
+    function juntarPedidos(resultados) {
+      const vistos = new Set()
+      const todos = []
+      for (const { u, filas } of resultados) {
+        for (const p of filas) {
+          if (vistos.has(p.id)) continue
+          vistos.add(p.id)
+          todos.push({ ...p, unidad_negocio_id: p.unidad_negocio_id ?? u })
+        }
+      }
+      if (resultados.length > 1) todos.sort((a, b) => String(b.fecha ?? '').localeCompare(String(a.fecha ?? '')) || Number(b.numero) - Number(a.numero))
+      return todos
     }
 
     function elegirFiltroEstado(valor) {
@@ -1700,6 +1874,7 @@
       const cliente = p.clientes?.nombre ?? 'Cliente (no se pudo leer)'
       const datos = [
         htmlDato('Cliente', cliente),
+        ...(unidadesDelModulo().length > 1 ? [htmlDato('Unidad', nombreUnidad(p.unidad_negocio_id))] : []),
         htmlDato('Fecha del pedido', fechaCorta(p.fecha)),
         htmlDato('Entrega', p.fecha_entrega ? fechaCorta(p.fecha_entrega) : 'Sin fecha'),
       ]
@@ -1766,11 +1941,16 @@
       mostrarVista('pe-vista-detalle')
       pintarDetalle()
       try {
-        await asegurarCatalogoYClientes()
         const r = await leerPedido(id)
         if (turno !== turnoDetalle) return
         if (!r) estado.detalle.error = 'No se encontró el pedido: puede ser de una unidad que no ves.'
-        else { estado.detalle.pedido = r.pedido; estado.detalle.items = r.items }
+        else {
+          // El catálogo y los clientes de la unidad DEL PEDIDO (con "Todas"
+          // arriba puede ser cualquiera de las de la persona).
+          await asegurarCatalogoYClientes(r.pedido.unidad_negocio_id)
+          if (turno !== turnoDetalle) return
+          estado.detalle.pedido = r.pedido; estado.detalle.items = r.items
+        }
       } catch (err) {
         if (turno !== turnoDetalle) return
         console.error('No se pudo leer el pedido:', err)
@@ -1938,9 +2118,13 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     function conectarTodo() {
-      document.getElementById('pe-unidades').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-unidad]')
-        if (b) elegirUnidad(b.dataset.unidad)
+      document.getElementById('pe-cliente-unidad').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-cliente-unidad]')
+        if (b) elegirUnidadCliente(b.dataset.clienteUnidad)
+      })
+      document.getElementById('pe-form-unidad').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-form-unidad]')
+        if (b) elegirUnidadForm(b.dataset.formUnidad)
       })
       document.getElementById('pe-btn-clientes').addEventListener('click', () => mostrarClientes())
       document.getElementById('pe-clientes-volver').addEventListener('click', () => mostrarInicio())
@@ -2085,6 +2269,9 @@
       if (!estado.sesion) return
       // La fábrica de pruebas se lee en paralelo y nunca tira.
       const fabrica = cargarFabricaDePruebas(supabase)
+      // La unidad de la barra de arriba, también en paralelo: si la barra no
+      // pudo cargar, la pantalla sigue sin filtrar ("Todas").
+      const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
       try {
         const [, f] = await Promise.all([cargarPermisos(), fabrica])
         estado.fabrica = f
@@ -2097,10 +2284,13 @@
         sinAcceso('No tenés acceso a Pedidos. Te llevamos al inicio…')
         return
       }
-      estado.unidadId = unidadInicial(unidadesDelModulo(), leerPreferencia(CLAVE_UNIDAD))
+      const { elegida } = (await barra) ?? {}
+      estado.unidadBarra = elegida || null
+      estado.unidadId = unidadUnica()
       document.getElementById('pe-cargando').hidden = true
       conectarTodo()
-      pintarUnidades()
+      // Cambiar la barra con la pantalla abierta repinta sin recargar.
+      alCambiarUnidad((e) => aplicarUnidadDeLaBarra(e?.elegida))
       mostrarInicio()
       if (window.lucide) window.lucide.createIcons()
     }
