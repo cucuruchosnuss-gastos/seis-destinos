@@ -19,10 +19,10 @@ correrMutacionesProduccion({
     { nombre: 'nunca dice "Se terminó"', de: "      return e.terminado ? 'Se terminó · elegí otro' : 'Elegí el lote'", a: "      return 'Elegí el lote'" },
     { nombre: 'el terminado no va en bordó', de: "      if (e.terminado) clases.push('pr-rec__lote--terminado')\n      else if (vacio)", a: "      if (vacio)" },
     // c) El lote sin ingreso cargado.
-    { nombre: 'vuelve el bug: el lote que no está en stock se da por terminado', de: '      if (!enLista) return { ...base, sinIngreso: true }', a: '      if (!enLista) return { ...base, terminado: true, falta: true }' },
+    { nombre: 'vuelve el bug: el lote que no está en stock se da por terminado', de: '      if (!enLista) return conQuedan({ ...base, sinIngreso: true }, ins.insumo_id, l.lote)', a: '      if (!enLista) return { ...base, terminado: true, falta: true }' },
     { nombre: 'sin la nota "sin ingreso cargado"', de: "      const nota = e.sinIngreso ? '<span class=\"pr-rec__lote-nota\">sin ingreso cargado</span>' : ''", a: "      const nota = ''" },
-    { nombre: 'el escrito a mano no dice "sin ingreso cargado"', de: "sinIngreso: !!texto && !(ins.lotes ?? []).some(x => x.lote === texto) }", a: 'sinIngreso: false }' },
-    { nombre: 'el lote de la anterior no viaja en el payload', de: "        const lote = l && !l.sinLote ? String(l.lote ?? '').trim() : ''", a: "        const lote = l && !l.sinLote && !l.manual && false ? String(l.lote ?? '').trim() : ''" },
+    { nombre: 'el escrito a mano no dice "sin ingreso cargado"', de: "sinIngreso: !(ins.lotes ?? []).some(x => x.lote === texto) }", a: 'sinIngreso: false }' },
+    { nombre: 'el lote de la anterior no viaja en el payload', de: "? b.lotes[it.ingrediente_id] : null\n        const lote = l && !l.sinLote ? String(l.lote ?? '').trim() : ''", a: "? b.lotes[it.ingrediente_id] : null\n        const lote = l && !l.sinLote && !l.manual && false ? String(l.lote ?? '').trim() : ''" },
     // "Se terminó".
     { nombre: '"Se terminó" no suelta el lote', de: "      b.lotes[ingredienteId] = { insumo_id: '', lote: null, manual: false, sinLote: false, terminado: true }", a: '      void ingredienteId' },
     { nombre: '"Se terminó" no marca terminado', de: "      b.lotes[ingredienteId] = { insumo_id: '', lote: null, manual: false, sinLote: false, terminado: true }", a: "      b.lotes[ingredienteId] = { insumo_id: '', lote: null, manual: false, sinLote: false }" },
@@ -46,11 +46,12 @@ correrMutacionesProduccion({
     { nombre: 'tarjetas pegadas', de: '    .pr-lp__tarjetas { display: flex; flex-direction: column; gap: 0.625rem;', a: '    .pr-lp__tarjetas { display: flex; flex-direction: column; gap: 0;' },
     { nombre: 'tarjetas chicas', de: '      min-height: 88px; display: flex; align-items: center; gap: 1rem;', a: '      min-height: 40px; display: flex; align-items: center; gap: 1rem;' },
     { nombre: 'sin scroll interno', de: 'gap: 0.625rem; overflow-y: auto; min-height: 0;', a: 'gap: 0.625rem; min-height: 0;' },
-    // La fecha.
-    { nombre: 'la fecha se consulta sin stock:ver', de: '      if (puedeVerStockEn(estado.unidadId) !== true) return\n', a: '' },
-    { nombre: 'la fecha no toma la más vieja', de: "          if (!m.has(k) || String(r.desde) < String(m.get(k))) m.set(k, r.desde)", a: '          m.set(k, r.desde)' },
+    // La fecha (desde la planta con dos modos sale de stock_para_masa, sin stock:ver).
+    { nombre: 'la fecha vuelve a pedir stock:ver', de: "      estado.lotesDesde = null\n      try {\n        const { data, error } = await supabase.rpc('stock_para_masa'", a: "      estado.lotesDesde = null\n      if (puedeVerStockEn(estado.unidadId) !== true) return\n      try {\n        const { data, error } = await supabase.rpc('stock_para_masa'" },
+    { nombre: 'la fecha se guarda con la clave equivocada', de: "m.set(`${ins.insumo_id}|${l.lote}`, l.desde)", a: "m.set(`${l.lote}`, l.desde)" },
     { nombre: 'la fecha no se muestra', de: "        (fecha ? `<span class=\"pr-lp__fecha\">desde ${esc(fecha)}</span>` : '') +", a: '' },
-    { nombre: 'las fechas no se leen', de: '      await leerFechasLotes(estado.datosMasa)\n', a: '' },
-    { nombre: 'la lectura de fechas que falla rompe la masa', de: "        console.error('fechas de los lotes:', err)\n        estado.lotesDesde = null", a: '        throw err' },
+    { nombre: 'las fechas no se leen', de: '      await leerStockMasa()\n', a: '' },
+    { nombre: 'la lectura del stock que falla rompe la masa', de: "        console.error('stock para la masa:', err)\n        estado.stockMasa = null", a: '        throw err' },
+    { nombre: 'la lectura del stock que falla no avisa', de: '        estado.stockMasaError = true\n', a: '' },
   ],
 })

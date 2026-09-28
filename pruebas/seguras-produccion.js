@@ -159,6 +159,13 @@ const SEGURAS_PRODUCCION = [
   ['motivoRetiro', 'HTML ya escapado: htmlRetirosStock() lo arma arriba con esc(m.motivo), o vacío'],
   ['avisoPermisoRetiros', 'HTML constante del código (el aviso de que falta retiros:ver), o vacío'],
   ['chip', 'HTML armado en renderAhora(): el chip PARADA y "Pendiente de completar" son constantes, y las cajas van con esc(textoCajas)'],
+  // La planta con dos modos, Sala de masa (28/09/2026)
+  ['turnoTarjetaSala', 'HTML ya escapado: htmlFilaSala() lo arma arriba con esc() del turno, o vacío'],
+  ['tamanoReceta', 'HTML armado en htmlOpcionesReceta(): los dos botones Simple / Doble son constantes y aria-pressed sale de un booleano'],
+  ['tiposReceta', 'HTML ya escapado: htmlOpcionesReceta() lo arma arriba con esc() de cada tipo de masa, o vacío'],
+  ['difReceta', 'HTML ya escapado: htmlFilaReceta() lo arma arriba con esc(textoGramos(g)), o vacío'],
+  ['accionRenglon', 'HTML ya escapado: htmlFilaReceta() lo arma arriba con esc() del id del ingrediente, o vacío'],
+  ['htmlCeldaQueda(e)', 'HTML armado por htmlCeldaQueda(), que escapa la cantidad adentro, o vacío'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

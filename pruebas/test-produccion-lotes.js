@@ -15,8 +15,10 @@
 //    con "sin ingreso cargado", viaja en el payload y registrar_masa lo marca
 //    con lote_fuera_de_stock. Se pide otro solo cuando la persona toca "Se
 //    terminó".
-//  - La fecha de cada lote no viene en datos_para_masa: sale de
-//    v_stock_por_lote.desde, solo si la cuenta tiene stock:ver en la unidad.
+//  - La fecha de cada lote no viene en datos_para_masa. Desde la planta con
+//    dos modos (28/09/2026) sale de stock_para_masa(p_turno_id) —lotes con
+//    saldo, cuánto queda y desde cuándo—, que la tablet lee con
+//    produccion:cargar: ya no hace falta stock:ver ni v_stock_por_lote.
 //
 //   node pruebas/test-produccion-lotes.js
 
@@ -57,7 +59,7 @@ const copia = (x) => JSON.parse(JSON.stringify(x))
 const MAQUINAS = [{ id: 'm1', nombre: 'Máquina 1', orden: 1 }]
 const TURNOS = [{ id: 't1', lote: 7023, maquina_id: 'm1', fecha: '2026-09-25', turno: 'Tarde', encargado_id: 'e1', abierto_en: null }]
 
-function armar({ anterior = ANTERIOR, insumos = INSUMOS, stockVer = false, fechas = [], original = ORIGINAL } = {}) {
+function armar({ anterior = ANTERIOR, insumos = INSUMOS, stockVer = false, fechas = [], original = ORIGINAL, stock = [], stockError = null } = {}) {
   const S = construirProduccion(ARCHIVO)
   S.estado.modo = 'masa'
   S.estado.persona = { id: 'e-mas', nombre: 'Juan Masero', puesto: 'masero' }
@@ -71,7 +73,11 @@ function armar({ anterior = ANTERIOR, insumos = INSUMOS, stockVer = false, fecha
   })
   S.__consultasFecha = () => consultasFecha
   const datos = { original, anterior, insumos }
-  S.__setRpc(async (n) => n === 'datos_para_masa' ? { data: copia(datos), error: null } : { data: { masa_id: 'm-nueva', nro: 10 }, error: null })
+  S.__setRpc(async (n) => {
+    if (n === 'datos_para_masa') return { data: copia(datos), error: null }
+    if (n === 'stock_para_masa') return stockError ? { data: null, error: stockError } : { data: copia(stock), error: null }
+    return { data: { masa_id: 'm-nueva', nro: 10 }, error: null }
+  })
   return S
 }
 async function hastaLaReceta(S, como = 'anterior') {
@@ -109,7 +115,7 @@ esperas.push((async () => {
   chk('… en bordó', /pr-rec__lote--terminado/.test(bT))
   chk('… el pie dice cuál', T.__doc.getElementById('pr-receta-error').textContent === 'Falta elegir otro lote de harina: el que estaba se terminó.',
     T.__doc.getElementById('pr-receta-error').textContent)
-  chk('… Registrar bloqueado', T.__doc.getElementById('pr-receta-registrar').disabled === true)
+  chk('… y Registrar sigue tocable: el error se ve pegado', T.__doc.getElementById('pr-receta-registrar').disabled === false)
   chk('el texto sale de UN lugar', T.textoVacioLote({ terminado: true }) === 'Se terminó · elegí otro' && T.textoVacioLote({ terminado: false }) === 'Elegí el lote')
 
   // ── c) El lote sin ingreso cargado pasa a la masa siguiente ───────────
@@ -158,7 +164,7 @@ esperas.push((async () => {
   chk('… el lote', /pr-lp__lote">Lote 24518</.test(tar) && /pr-lp__lote">Lote W-9</.test(tar))
   chk('… y cuánto queda', /pr-lp__queda-num">200 kg</.test(tar) && /pr-lp__queda-num">250,5 kg</.test(tar), tar)
   chk('… el elegido marcado', /data-lote-op="3" aria-pressed="true"/.test(tar) && (tar.match(/aria-pressed="true"/g) || []).length === 1)
-  chk('sin stock:ver no hay fecha y no se consulta', !/pr-lp__fecha/.test(tar) && A.__consultasFecha() === 0)
+  chk('sin fechas en stock_para_masa no hay fecha, y v_stock_por_lote no se consulta', !/pr-lp__fecha/.test(tar) && A.__consultasFecha() === 0)
   const otros = A.__doc.getElementById('pr-lote-panel-otros').innerHTML
   chk('"Otro lote" va APARTE de las tarjetas', !/Otro lote/.test(tar) && /Otro lote de Harina 000 · Júpiter/.test(otros) && /Otro lote de Harina 000 · Wali/.test(otros))
   chk('… en su propio bloque, abajo', FUENTE.indexOf('id="pr-lote-panel-tarjetas"') < FUENTE.indexOf('id="pr-lote-panel-otros"') &&
@@ -182,27 +188,29 @@ esperas.push((async () => {
   chk('lo que no es materia prima ofrece "Sin lote" como tarjeta', /pr-lp__lote">Sin lote</.test(tLec) && /pr-lp__queda-num">240 g</.test(tLec))
   A.cerrarPanelLote()
 
-  // Con stock:ver: la fecha de cada lote (la más vieja si hay varias filas).
-  const F = await hastaLaReceta(armar({ stockVer: true, fechas: [
-    // La vieja PRIMERO: "la última gana" daría 10/09 y la prueba lo vería.
-    { insumo_id: 'ins-h1', lote: '24518', desde: '2026-09-02' },
-    { insumo_id: 'ins-h1', lote: '24518', desde: '2026-09-10' },
-    { insumo_id: 'ins-h2', lote: 'W-9', desde: '2026-08-30' },
+  // La fecha de cada lote sale de stock_para_masa (desde), sin stock:ver.
+  const F = await hastaLaReceta(armar({ stock: [
+    { insumo_id: 'ins-h1', lotes: [{ lote: '24518', queda: 200, desde: '2026-09-02' }] },
+    { insumo_id: 'ins-h2', lotes: [{ lote: 'W-9', queda: 100, desde: '2026-08-30' }] },
   ] }))
   F.abrirPanelLote('i-harina')
   const tF = F.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
-  chk('con stock:ver: la fecha del lote', /pr-lp__fecha">desde 02\/09\/2026</.test(tF) && /pr-lp__fecha">desde 30\/08\/2026</.test(tF), tF)
+  chk('la fecha del lote sale de stock_para_masa', /pr-lp__fecha">desde 02\/09\/2026</.test(tF) && /pr-lp__fecha">desde 30\/08\/2026</.test(tF), tF)
   chk('… y el que no tiene fecha no inventa una', (tF.match(/pr-lp__fecha/g) || []).length === 2)
-  chk('… se consultó v_stock_por_lote UNA vez', F.__consultasFecha() === 1)
+  chk('… sin stock:ver ni v_stock_por_lote', F.__consultasFecha() === 0 && !F.estado.stockVer)
   chk('una fecha ilegible no dibuja nada', F.textoFechaLote('ayer') === '' && F.textoFechaLote(null) === '')
 
-  // Si la lectura de fechas falla, la masa se carga igual, sin fechas.
-  const E = armar({ stockVer: true })
-  E.__tablas.v_stock_por_lote = () => ({ data: null, error: { message: 'sin red' } })
-  await hastaLaReceta(E)
+  // Si stock_para_masa falla, la masa se carga igual: sin fechas, sin
+  // "quedan" y con el aviso.
+  const E = await hastaLaReceta(armar({ stockError: { message: 'sin red' } }))
   E.abrirPanelLote('i-harina')
-  chk('si las fechas no llegan, la masa sigue y no hay fechas', !!E.estado.masa && !!E.estado.datosMasa && !E.estado.errorSala &&
+  chk('si stock_para_masa no llega, la masa sigue y no hay fechas', !!E.estado.masa && !!E.estado.datosMasa && !E.estado.errorSala &&
     !/pr-lp__fecha/.test(E.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML), E.estado.errorSala)
+  chk('… ni "quedan" en la receta', !/pr-rec__queda/.test(filas(E)))
+  chk('… y el aviso dice que se registra igual', E.__doc.getElementById('pr-receta-aviso-stock').hidden === false)
+  E.cerrarPanelLote()
+  await E.registrarMasa()
+  chk('… y la masa se registra igual', llamadasMasa(E).length === 1)
 
   // ── HTML malicioso en marca, lote e insumo ────────────────────────────
   const ING = marca('ingId')
@@ -241,7 +249,7 @@ esperas.push((async () => {
   chk('scroll interno del panel, no de la página', /overflow-y: auto/.test(reg('.pr-lp__tarjetas')) && /max-height: calc\(100vh - 2rem\)/.test(reg('.pr-lp__caja')))
   chk('"Otro lote" apartado con una línea', /border-top: 2px dashed/.test(reg('.pr-lp__otros')))
   chk('el botón del renglón mide lo de la tablet', /min-height: var\(--pr-alto-boton\)/.test(reg('.pr-rec__lote')))
-  chk('la fecha solo con stock:ver', /if \(puedeVerStockEn\(estado\.unidadId\) !== true\) return/.test(FUENTE))
+  chk('la fecha y lo que queda salen de stock_para_masa', /rpc\('stock_para_masa', \{ p_turno_id: estado\.salaTurno\.id \}\)/.test(FUENTE) && !/from\('v_stock_por_lote'\)/.test(FUENTE))
 }
 
 fin()

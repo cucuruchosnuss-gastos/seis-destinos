@@ -121,7 +121,14 @@ function armar(rol, tareas, archivo = ARCHIVO) {
   chk('la barra lateral: renglones de 52 px y el botón al otro modo de 64',
     /\.pr-lat__item \{[^}]*min-height: 52px;/.test(css) && /\.pr-lat__otro \{[^}]*min-height: 64px;/.test(css))
   chk('el bloque compacto ya no achica la barra vieja', !/\.pr-barra[\s{,[:]|\.pr-modo[\s{,[:]/.test(compacto))
-  chk('los renglones de la receta siguen de 64 px', /\.pr-rec, \.pr-rec--cab \{[^}]*min-height: 64px;/.test(css) && !/\.pr-rec\b[^{]*\{[^}]*min-height/.test(compacto))
+  // (28/09/2026) Handoff "Planta · Dos modos": el renglón de la receta mide
+  // 58 px (columnas 140 / cantidad / lote / Otro). Lo pone el bloque de la
+  // Sala de masa, que va DESPUÉS del compacto; el compacto no lo toca.
+  const salaDosModos = css.slice(css.indexOf('/* ══ Sala de masa (la planta con dos modos)'))
+  const soloCompacto = compacto.slice(0, compacto.indexOf('/* ══ LA PLANTA CON DOS MODOS'))
+  chk('los renglones de la receta: 58 px, puestos por el bloque de la Sala de masa',
+    css.indexOf('/* ══ Sala de masa (la planta con dos modos)') > 0 &&
+    /\.pr-rec, \.pr-rec--cab \{[^}]*min-height: 58px;/.test(salaDosModos) && !/\.pr-rec\b[^{]*\{[^}]*min-height/.test(soloCompacto))
   chk('el teclado del PIN sigue de 84 px', /\.pr-tecla \{\s*min-height: 84px;/.test(css) && !/\.pr-tecla/.test(compacto))
   chk('la barra lateral mide 240 px y la página se corre lo mismo',
     /\.pr-lateral \{[^}]*width: 240px;/.test(css) && /body\.pr-con-lateral \.pr-app \{[^}]*margin-left: 240px;/.test(css))

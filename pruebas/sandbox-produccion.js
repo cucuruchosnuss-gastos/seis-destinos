@@ -229,7 +229,10 @@ const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unid
   // Se fueron con la planta con dos modos (28/09/2026): la barra de modos de
   // arriba la reemplazó la barra lateral; el acceso maestro quedó solo en el
   // pie de "¿Quién sos?" de Producción.
-  'htmlQuienEnBarra', 'htmlBarraModos', 'pintarBarra', 'htmlMaestroEnBarra']
+  'htmlQuienEnBarra', 'htmlBarraModos', 'pintarBarra', 'htmlMaestroEnBarra',
+  // Sala de masa (parte 2): el panel de la derecha pasó arriba de la receta
+  // (htmlOpcionesReceta) y la fecha de cada lote sale de stock_para_masa.
+  'htmlPanelSala', 'leerFechasLotes']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
@@ -245,6 +248,15 @@ const NUEVAS_PLANTA = [
   'htmlLatMaquina', 'htmlLatSecciones', 'htmlLatSala', 'htmlLatConexion', 'htmlLateral', 'lateralVisible',
   'pintarLateral', 'htmlBandaQuien', 'pintarBandaQuien', 'cancelarOtroModo', 'cambiarDePersona',
   'irASeccion', 'abrirLoProducido', 'mostrarHistorialMaquina',
+  // Sala de masa con dos modos (28/09/2026): la masa nueva, lo que queda de
+  // cada lote, agregar un ingrediente, otro insumo y las masas del turno.
+  'quedaDelLote', 'conQuedan', 'avisosDeLotes', 'comoInicial', 'htmlOpcionesReceta', 'leerStockMasa',
+  'renglonesVisibles', 'siguienteMasa', 'anteriorDesdeBorrador', 'opcionesAgregar', 'opcionesAgregarFiltradas',
+  'htmlOpcionAgregar', 'pintarAgregarIngrediente', 'abrirAgregarIngrediente', 'cerrarAgregarIngrediente',
+  'elegirOpcionAgregar', 'sumarPasoAgregar', 'confirmarAgregarIngrediente', 'quitarAgregado', 'escribirOtroIngrediente',
+  'cargarMasasReceta', 'ultimaMasaAnulable', 'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima',
+  'pintarMasasReceta', 'pedirAnularUltima', 'cancelarAnularUltima', 'confirmarAnularUltima',
+  'opcionesOtroInsumo', 'htmlPanelOtroInsumo', 'elegirInsumoOtro',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']

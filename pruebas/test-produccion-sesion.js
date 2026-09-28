@@ -275,7 +275,9 @@ esperas.push((async () => {
   S.estado.persona = JUAN
   await S.mostrarSala()
   chk('una sola abierta: queda elegida sin tocar nada', S.estado.salaTurno?.id === 't1')
-  chk('… y la derecha ya dice la máquina', /Máquina 1/.test(S.__doc.getElementById('pr-sala-panel').innerHTML))
+  // (28/09/2026) Planta con dos modos: se entra derecho a la masa nueva (4b).
+  chk('… y entra derecho a la masa de esa máquina', S.estado.vista === 'pr-receta' &&
+    /Máquina 1/.test(S.__doc.getElementById('pr-receta-cambiar').textContent))
   chk('… pidió los datos de la masa', S.__llamadas.rpc.some(([n]) => n === 'datos_para_masa'))
 
   const T = armar()

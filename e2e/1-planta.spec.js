@@ -94,15 +94,16 @@ test.describe('planta', () => {
       await elegirPersona(page, 'Robot Masero');
       await marcarPin(page, PIN_MASERO);
       await expect(page.locator('#pr-barra')).toContainText('Robot Masero');
-      // Con una sola máquina abierta lleva derecho a ella.
-      await expect(page.locator('#pr-sala')).toBeVisible();
+      // Con una sola máquina abierta lleva derecho a su masa nueva (4b).
+      await expect(page.locator('#pr-receta')).toBeVisible();
+      await expect(page.locator('#pr-receta-cambiar')).toContainText('Máquina robot');
       await captura(page, 'sala', info);
     });
 
     await test.step('primera masa: con los lotes vacíos no deja registrar', async () => {
-      const simple = page.locator('[data-doble="no"]');
-      if (await simple.isVisible().catch(() => false)) await simple.click();
-      await page.locator('[data-base="original"]').click();
+      // Arriba de la receta: Simple y Original (sin anterior de hoy, ya viene).
+      await page.locator('#pr-receta-opciones [data-doble="no"]').click();
+      await page.locator('#pr-receta-opciones [data-base="original"]').click();
       await expect(page.locator('#pr-receta')).toBeVisible();
       const vacios = page.locator('#pr-receta-filas [data-lote].pr-rec__lote--vacio');
       expect(await vacios.count(), 'la primera masa del día tiene que llegar con lotes vacíos').toBeGreaterThan(0);
@@ -128,6 +129,9 @@ test.describe('planta', () => {
       await page.locator('#pr-receta-registrar').click();
       await expect(page.locator('#pr-sala-exito')).toBeVisible();
       await expect(page.locator('#pr-sala-exito-titulo')).toContainText(/masa/i);
+      // Registrar deja lista la masa SIGUIENTE de la misma máquina.
+      await expect(page.locator('#pr-receta')).toBeVisible();
+      await expect(page.locator('#pr-receta-masas')).toContainText(/Masas del turno/);
       await captura(page, 'masa-registrada', info);
     });
 

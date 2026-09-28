@@ -1,5 +1,7 @@
-// Mutaciones de test-produccion-masa.js (B5 de Producción · rediseño parte 4:
-// la sala de masa, la receta y las masas del turno). Ver mutar.js.
+// Mutaciones de test-produccion-masa.js (B5 de Producción · rediseño parte 4,
+// y LA PLANTA CON DOS MODOS, 28/09/2026: la sala de masa, la receta, el
+// motivo, "+ Agregar ingrediente", "Otro", los avisos de lote y la columna
+// de las masas del turno con "Anular la última masa"). Ver mutar.js.
 //
 //   node pruebas/mut-produccion-masa.js
 
@@ -9,8 +11,9 @@ const { correrMutacionesProduccion } = require('./mutar-produccion')
 correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-masa.js'),
   escape: 'esc',
-  funciones: ['htmlFilaSala', 'detalleAnterior', 'htmlComo', 'htmlCabeceraReceta',
-    'htmlCeldaLote', 'htmlCeldaQueda', 'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilaMasaPendiente', 'htmlFilaMasaTurno'],
+  funciones: ['htmlFilaSala', 'detalleAnterior', 'htmlComo', 'htmlCabeceraReceta', 'htmlOpcionesReceta',
+    'htmlCeldaLote', 'htmlCeldaQueda', 'htmlFilaReceta', 'htmlFilaOtro', 'htmlFilaMasaPendiente', 'htmlFilaMasaTurno',
+    'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima', 'htmlOpcionAgregar', 'htmlPanelOtroInsumo'],
   equivalentes: [
     { expr: 'esc(textoMasas(e.masas))', motivo: 'un conteo con "masa"/"masas"' },
     { expr: "esc(horaArgentina(e.ultimaMasa) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
@@ -25,6 +28,12 @@ correrMutacionesProduccion({
     { expr: 'esc(clave)', motivo: 'constante del código: etiquetaBorrador() devuelve original / anterior / modificada y nada más' },
     { expr: 'esc(d.original.version)', motivo: 'el número de versión de la receta vigente, que sale de datos_para_masa' },
     { expr: 'esc(dePartida(d))', motivo: 'texto constante más el número de la masa anterior, que ya se prueba escapado en detalleAnterior' },
+    { expr: 'esc(hace)', motivo: 'duracionTexto(): dígitos y "min" / "h"' },
+    { expr: 'esc(haceParada)', motivo: 'duracionTexto(): dígitos y "min" / "h"' },
+    { expr: 'esc(e.masas)', motivo: 'un conteo de masas que arma leerTablero()' },
+    { expr: 'esc(textoCantidad(e.quedaAntes))', motivo: 'formatearNumeroAr() + " kg" o " g" de un número finito' },
+    { expr: 'esc(textoCantidad(kg))', motivo: 'formatearNumeroAr() + " kg" o " g" de un número finito' },
+    { expr: "esc(notas.join(' · '))", motivo: 'constantes del código: "el de la receta", "se terminó", "no alcanza"' },
   ],
   manuales: [
     // ── LA REGLA DEL UUID ────────────────────────────────────────────────
@@ -45,32 +54,32 @@ correrMutacionesProduccion({
     { nombre: 'el borrador se guarda bajo el turno y la siguiente lo pisa', de: '      return PREFIJO_BORRADOR_MASA + uuid', a: '      return PREFIJO_BORRADOR_MASA' },
 
     // ── LOS LOTES VIENEN PUESTOS ─────────────────────────────────────────
-    { nombre: 'los lotes NO vienen de la anterior', de: '      b.lotes = lotesIniciales(d)', a: '      b.lotes = {}' },
+    { nombre: "los lotes NO vienen de la anterior", de: "      if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d)", a: "      if (primeraVez || !b.lotes) b.lotes = {}" },
     { nombre: 'la primera masa del día igual copia los lotes de otro día', de: '      if (!ant || ant.es_de_hoy === false) return {}', a: '      if (!ant) return {}' },
 
     // ── El 10% ───────────────────────────────────────────────────────────
     { nombre: 'cualquier diferencia va en bordó', de: '      if (!(base > 0)) return false\n      return Math.abs(Number(kg ?? 0) - base) > base * UMBRAL_ALEJADA + 1e-9', a: '      return Math.abs(Number(kg ?? 0) - base) > 0' },
     { nombre: 'el umbral es un número fijo y no el 10% de ese ingrediente', de: '      return Math.abs(Number(kg ?? 0) - base) > base * UMBRAL_ALEJADA + 1e-9', a: '      return Math.abs(Number(kg ?? 0) - base) > 0.25' },
     { nombre: 'con la receta en 0 cualquier cantidad va en bordó', de: '      if (!(base > 0)) return false', a: '' },
-    { nombre: 'la diferencia no se muestra si no pasa el umbral', de: "      const dif = g === 0\n        ? '<span class=\"pr-rec__igual\">=</span>'", a: "      const dif = g === 0 || !aleja\n        ? '<span class=\"pr-rec__igual\">=</span>'" },
+    { nombre: "la diferencia no se muestra si no pasa el umbral", de: "      const difReceta = g === 0 ? ''", a: "      const difReceta = g === 0 || !aleja ? ''" },
 
     // ── "Queda" y el bloqueo de Registrar ────────────────────────────────
-    { nombre: 'queda no descuenta esta masa', de: '      const queda = redondearKg(Number(enLista.stock) - consumo)', a: '      const queda = redondearKg(Number(enLista.stock))' },
+    { nombre: "\"quedan\" descuenta esta masa (tiene que ser lo que hay ANTES)", de: "      return { ...e, quedaAntes: q, noAlcanza:", a: "      return { ...e, quedaAntes: q == null ? null : redondearKg(q - e.consumo), noAlcanza:" },
     { nombre: 'una doble descuenta como una simple', de: "      const consumo = redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1))", a: '      const consumo = redondearKg(b.cantidades[it.ingrediente_id] ?? 0)' },
-    { nombre: 'nunca avisa que no alcanza para otra', de: '      return { ...base, queda, alcanza: queda >= consumo }', a: '      return { ...base, queda, alcanza: true }' },
+    { nombre: "nunca avisa que el lote no alcanza", de: "noAlcanza: q != null && q + 1e-9 < e.consumo }", a: "noAlcanza: false }" },
     // Terminar la tablet, parte 3: "terminado" ya no lo deduce la pantalla (un lote que no está en stock queda elegido con "sin ingreso cargado"); lo dice la persona con "Se terminó".
     { nombre: 'un lote que se terminó pasa como bueno', de: '      if (l && l.terminado) return { ...base, terminado: true, falta: true }', a: '      if (l && l.terminado) return base' },
     { nombre: 'un lote sin elegir no bloquea', de: '      if (!l || !ins) return { ...base, falta: true }', a: '      if (!l || !ins) return { ...base }' },
-    { nombre: 'un lote escrito a mano vacío no bloquea', de: '        return { ...base, falta: !texto, sinIngreso:', a: '        return { ...base, falta: false, sinIngreso:' },
-    { nombre: 'Registrar no se bloquea con lo que falta', de: "      btn.disabled = !!pendiente.length || !!estado.enviandoMasa", a: '      btn.disabled = !!estado.enviandoMasa' },
+    { nombre: "un lote escrito a mano vacío no bloquea", de: "        if (!texto) return { ...base, falta: true }", a: "        if (!texto) return base" },
+    { nombre: "Registrar se deshabilita por lo que falta (el error pegado no se vería)", de: "      btn.disabled = !!estado.enviandoMasa\n", a: "      btn.disabled = !!estado.enviandoMasa || !!pendiente.length\n" },
     { nombre: 'se manda igual con lotes sin elegir', de: '        const faltan = faltanParaRegistrar(b, d)\n        if (faltan.length) { pintarPieReceta(); return }', a: '        const faltan = faltanParaRegistrar(b, d)' },
-    { nombre: 'el renglón flojo no se tinta', de: '      if (!e.alcanza || e.terminado) clases.push(\'pr-rec--floja\')', a: '' },
+    { nombre: "el renglón flojo no se tinta", de: "      if (e.noAlcanza || e.terminado) clases.push('pr-rec--floja')\n", a: "" },
     { nombre: 'el botón del lote terminado no se marca', de: "      if (e.terminado) clases.push('pr-rec__lote--terminado')\n      else if (vacio)", a: '      if (vacio)' },
 
     // ── El payload ───────────────────────────────────────────────────────
     { nombre: 'se manda la cantidad ya multiplicada por 2', de: '          cantidad_simple_kg: redondearKg(b.cantidades[it.ingrediente_id] ?? 0),\n          insumo_id: l?.insumo_id || null,', a: '          cantidad_simple_kg: redondearKg((b.cantidades[it.ingrediente_id] ?? 0) * (b.doble ? 2 : 1)),\n          insumo_id: l?.insumo_id || null,' },
     { nombre: 'los ingredientes en cero no viajan', de: '      const items = datos.original.items.map(it => {', a: '      const items = datos.original.items.filter(it => (b.cantidades[it.ingrediente_id] ?? 0) > 0).map(it => {' },
-    { nombre: 'se manda el origen calculado en la pantalla', de: '        p_client_uuid: b.client_uuid,\n      }\n    }', a: '        p_client_uuid: b.client_uuid,\n        p_origen: etiquetaBorrador(b),\n      }\n    }' },
+    { nombre: "se manda el origen calculado en la pantalla", de: "        p_client_uuid: b.client_uuid,\n        p_motivo:", a: "        p_client_uuid: b.client_uuid,\n        p_origen: etiquetaBorrador(b),\n        p_motivo:" },
     { nombre: 'un "otro" viaja con ingrediente_id', de: "          ingrediente_id: null,\n          ingrediente_libre: String(o.nombre ?? '').trim(),", a: "          ingrediente_id: o.id,\n          ingrediente_libre: String(o.nombre ?? '').trim()," },
     { nombre: 'un "otro" viaja con insumo y lote', de: "          cantidad_simple_kg: redondearKg(o.kg ?? 0),\n        })", a: "          cantidad_simple_kg: redondearKg(o.kg ?? 0),\n          insumo_id: null, lote: null,\n        })" },
     // Anclada al items.push() y no al `for` solo: desde que faltanParaRegistrar
@@ -94,25 +103,25 @@ correrMutacionesProduccion({
 
     // ── 6a / 6b ──────────────────────────────────────────────────────────
     { nombre: 'la sala muestra también las máquinas libres', de: '      return (estado.tablero ?? []).filter(e => e.turno)', a: '      return (estado.tablero ?? []).filter(e => e.turno || true)' },
-    { nombre: 'la máquina sin masas no avisa que hay que cargar los lotes', de: "        : '<div class=\"pr-sala-maq__cuenta pr-sala-maq__primera\">Primera masa</div>' +", a: "        : '<div class=\"pr-sala-maq__cuenta\">Sin masas</div>' +" },
-    { nombre: 'la parada no se ve en la fila', de: "      const parada = e.parada ? ' · <span class=\"pr-sala-maq__parada\">parada</span>' : ''", a: "      const parada = ''" },
-    { nombre: 'el tipo de masa se pregunta aunque haya una sola receta', de: '      const tipoHtml = tipos.length > 1', a: '      const tipoHtml = tipos.length > 0' },
-    { nombre: 'el panel se habilita sin máquina elegida', de: "      const off = listo ? '' : ' disabled'", a: "      const off = ''" },
-    { nombre: '"Usar la anterior" se ofrece sin anterior', de: "        htmlComo('anterior', 'Usar la anterior', listo ? detalleAnterior(d) : 'Igual a la última masa de esa máquina.', listo && hayAnterior) +", a: "        htmlComo('anterior', 'Usar la anterior', listo ? detalleAnterior(d) : 'Igual a la última masa de esa máquina.', listo) +" },
+    { nombre: "la máquina sin masas no avisa que hay que cargar los lotes", de: "'<span class=\"pr-sala-maq__ultima pr-sala-maq__primera\">Primera masa · cargá los lotes</span>'", a: "'<span class=\"pr-sala-maq__ultima\">Sin masas</span>'" },
+    { nombre: "la parada no se ve en la tarjeta", de: "      const parada = e.parada\n        ? `<span class=\"pr-sala-maq__parada\">", a: "      const parada = false\n        ? `<span class=\"pr-sala-maq__parada\">" },
+    { nombre: "el tipo de masa se pregunta aunque haya una sola receta", de: "      const tiposReceta = tipos.length > 1", a: "      const tiposReceta = tipos.length > 0" },
+    { nombre: "con UNA máquina abierta no se entra derecho", de: "      if (abiertas.length === 1 && !estado.salaTurno) await elegirMaquinaSala(abiertas[0].turno.id)", a: "      void abiertas" },
+    { nombre: "\"Anterior\" se ofrece sin anterior", de: "'no hay una masa anterior en esta máquina', hayAnterior, como === 'anterior')", a: "'no hay una masa anterior en esta máquina', true, como === 'anterior')" },
     { nombre: 'no se avisa que la anterior era de chocolate', de: "      const choco = a.es_chocolate ? ' <span class=\"pr-como__choco\">Era de CHOCOLATE.</span>' : ''", a: "      const choco = ''" },
-    { nombre: '"Modificar" siempre parte de la original', de: "      return d?.anterior && d.anterior.es_de_hoy !== false ? 'anterior' : 'original'", a: "      return 'original'" },
+    { nombre: "\"Modificar\" siempre parte de la original", de: "    function partidaDeModificar(d) {\n      return d?.anterior && d.anterior.es_de_hoy !== false ? 'anterior' : 'original'", a: "    function partidaDeModificar(d) {\n      return 'original'" },
     { nombre: '"Usar la anterior" trae las cantidades de la original', de: "      b.partida = como === 'modificar' ? partidaDeModificar(d) : como", a: "      b.partida = 'original'" },
     { nombre: 'los tipos se repiten', de: "      return [...new Set((data ?? []).map(r => r.tipo_masa))].sort((a, b) => a.localeCompare(b, 'es'))", a: '      return (data ?? []).map(r => r.tipo_masa)' },
     { nombre: 'datos_para_masa sin el tipo', de: "supabase.rpc('datos_para_masa', { p_turno_id: estado.salaTurno.id, p_tipo_masa: estado.tipoMasa })", a: "supabase.rpc('datos_para_masa', { p_turno_id: estado.salaTurno.id, p_tipo_masa: null })" },
 
     // ── 6c: la cabecera y los renglones ──────────────────────────────────
-    { nombre: 'la cabecera no dice si quedó modificada', de: '      if (b.cambiada) return \'modificada\'', a: '' },
+    { nombre: "la cabecera no dice si quedó modificada", de: "      if (b.como === 'modificar' || b.cambiada) return 'modificada'\n", a: "" },
     { nombre: 'tocar una cantidad no marca la masa como cambiada', de: '      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))\n      b.cambiada = true', a: '      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))' },
     { nombre: 'una cantidad negativa queda negativa', de: '      b.cantidades[ingredienteId] = redondearKg(Math.max(0, kg))', a: '      b.cantidades[ingredienteId] = redondearKg(kg)' },
-    { nombre: 'un número ilegible borra la cantidad', de: '      if (!b || kg == null || !Number.isFinite(kg)) return', a: '      if (!b) return' },
+    { nombre: "un número ilegible borra la cantidad", de: "      if (!b || b.como !== 'modificar' || kg == null || !Number.isFinite(kg)) return", a: "      if (!b || b.como !== 'modificar') return" },
     { nombre: 'el paso es siempre el chico', de: "      return INGREDIENTES_PASO_GRANDE.includes(normalizarBusqueda(nombreIngrediente)) ? 0.1 : 0.01", a: '      return 0.01' },
     { nombre: 'el ingrediente en cero no se ve apagado', de: "      if (kg <= 0) clases.push('pr-rec--cero')", a: '' },
-    { nombre: 'el "+" del ingrediente en cero se deshabilita', de: 'aria-label="Más ${esc(it.ingrediente)}">+</button>`', a: 'aria-label="Más ${esc(it.ingrediente)}"${kg <= 0 ? \' disabled\' : \'\'}>+</button>`' },
+    { nombre: "el \"+\" del ingrediente en cero se deshabilita", de: "aria-label=\"Más ${esc(it.ingrediente)}\">+</button></span>`", a: "aria-label=\"Más ${esc(it.ingrediente)}\"${kg <= 0 ? ' disabled' : ''}>+</button></span>`" },
     { nombre: 'la columna Marca queda vacía', de: "      const marca = e.ins ? (e.ins.marca || e.ins.nombre || '') : ''", a: "      const marca = ''" },
     { nombre: 'el ingrediente sin insumo igual pide lote', de: "        if (!insumosDe(estado.datosMasa ?? { insumos: [] }, it.ingrediente_id).length) {\n          return '<span class=\"pr-rec__nota\">no lleva lote</span>'\n        }", a: '' },
     { nombre: 'un insumo de materia prima ofrece "Sin lote"', de: "        if (ins.tipo !== 'materia_prima') {", a: '        if (true) {' },
@@ -122,12 +131,16 @@ correrMutacionesProduccion({
     { nombre: 'el rechazo de una masa queda escrito sobre la siguiente', de: "    function mostrarReceta() {\n      estado.errorReceta = null", a: '    function mostrarReceta() {' },
     // Number('') es 0: sin el guard, volver a la opción vacía del desplegable
     // elige el PRIMER lote de la lista sin que nadie lo haya tocado.
-    { nombre: 'la opción vacía del desplegable elige el primer lote', de: "      const i = indice === '' || indice == null ? -1 : Number(indice)\n      const o = Number.isInteger(i) && i >= 0 ? ops[i] : undefined", a: '      const o = ops[Number(indice)]' },
+    { nombre: "la opción vacía del desplegable elige el primer lote", de: "      const ops = opcionesLote(d, ingredienteId)\n      const i = indice === '' || indice == null ? -1 : Number(indice)\n      const o = Number.isInteger(i) && i >= 0 ? ops[i] : undefined", a: "      const ops = opcionesLote(d, ingredienteId)\n      const o = ops[Number(indice)]" },
+    { nombre: "al abrir la sala sale Original aunque haya anterior de hoy", de: "    function comoInicial(d) {\n      return d?.anterior && d.anterior.es_de_hoy !== false ? 'anterior' : 'original'", a: "    function comoInicial(d) {\n      return 'original'" },
     { nombre: 'menos de un kilo se lee en kilos', de: "      if (n !== 0 && Math.abs(n) < 1) return `${formatearNumeroAr(Math.round(n * 1000000) / 1000, { decimales: 3, minimos: 0 })} g`", a: '' },
 
     // ── Registrar, la banda y 6d ─────────────────────────────────────────
     { nombre: 'un rechazo de la base se muestra genérico', de: "        estado.errorReceta = r.error?.message || 'La base no aceptó la masa.'", a: "        estado.errorReceta = 'La base no aceptó la masa.'" },
-    { nombre: 'la máquina queda elegida con datos viejos después de registrar', de: '      soltarMaquinaSala()\n      await mostrarSala()', a: '      await mostrarSala()' },
+    { nombre: "la masa siguiente no relee los datos (la anterior queda vieja)", de: "      try { await cargarDatosMasa(); leida = true } catch", a: "      try { leida = true } catch" },
+    { nombre: "la masa siguiente no suma el número", de: "      t.nro = (Number(res?.nro ?? prev.nro) || 0) + 1", a: "      t.nro = Number(res?.nro ?? prev.nro) || 0" },
+    { nombre: "después de una modificada la siguiente vuelve a Modificar", de: "      const como = prev.como === 'modificar' ? 'anterior' : (prev.como ?? 'original')", a: "      const como = prev.como ?? 'original'" },
+    { nombre: "sin señal la anterior no se arma desde la tablet", de: "      if (!leida) estado.datosMasa.anterior = anteriorDesdeBorrador(prev)\n", a: "" },
     { nombre: 'un rechazo se lleva la masa puesta', de: "      if (r.resultado === 'rechazo') {", a: '      if (false) {' },
     { nombre: 'la banda verde muestra el origen del borrador y no el de la base', de: '      if (res.origen) partes.push((ETIQUETA_ORIGEN[res.origen] ?? res.origen).toLowerCase())', a: '      partes.push(etiquetaBorrador(b))' },
     { nombre: 'la banda verde no se puede apagar', de: '      estado.exitoMasa = null\n      pintarBandaExito()', a: '      pintarBandaExito()' },
@@ -140,5 +153,36 @@ correrMutacionesProduccion({
     { nombre: 'una masa sin turno se cuelga de una máquina libre', de: "      if (!turnoId) return '—'\n      const e = (estado.tablero ?? []).find(x => x.turno && x.turno.id === turnoId)", a: "      const e = (estado.tablero ?? []).find(x => x.turno?.id === turnoId)" },
     { nombre: 'anular sin motivo', de: "      if (motivo.length < 3) { err.textContent = 'Escribí el motivo (al menos 3 letras).'", a: "      if (motivo.length < 0) { err.textContent = 'Escribí el motivo (al menos 3 letras).'" },
     { nombre: 'anular manda otra masa', de: "supabase.rpc('anular_masa', { p_masa_id: estado.anulando, p_motivo: motivo })", a: "supabase.rpc('anular_masa', { p_masa_id: null, p_motivo: motivo })" },
+    // ── LA PLANTA CON DOS MODOS (28/09/2026) ────────────────────────────
+    // Original / Anterior: las cantidades no se tocan.
+    { nombre: "con Original las cantidades se editan", de: "      const editable = b.como === 'modificar'", a: "      const editable = true" },
+    { nombre: "con Original se puede cambiar una cantidad", de: "      if (!b || b.como !== 'modificar' || kg == null || !Number.isFinite(kg)) return", a: "      if (!b || kg == null || !Number.isFinite(kg)) return" },
+    { nombre: "Modificar sin motivo se manda", de: "      if (b.como === 'modificar' && String(b.motivo ?? '').trim().length < 3) {", a: "      if (false) {" },
+    { nombre: "el motivo no viaja", de: "        p_motivo: motivo === '' ? null : motivo,", a: "        p_motivo: null," },
+    { nombre: "el motivo viaja también con Original", de: "      const motivo = b.como === 'modificar' ? String(b.motivo ?? '').trim() : ''", a: "      const motivo = String(b.motivo ?? '').trim()" },
+    { nombre: "el motivo se pierde al pasar de Original a Modificar y vuelta", de: "      b.motivo = como === 'modificar' ? (b.motivo ?? '') : ''", a: "      b.motivo = ''" },
+    { nombre: "la fila del motivo se ve con Original", de: "      document.getElementById('pr-receta-motivo-fila').hidden = !modif", a: "      document.getElementById('pr-receta-motivo-fila').hidden = false" },
+    { nombre: "el lote que no alcanza no se avisa antes de mandar", de: "        if (avisos && estado.avisoLotes !== avisos) { estado.avisoLotes = avisos; pintarPieReceta(); return }\n", a: "" },
+    { nombre: "\"Registrar igual\" nunca aparece", de: "      btn.textContent = confirmar ? 'Registrar igual' : 'Registrar masa'", a: "      btn.textContent = 'Registrar masa'" },
+    { nombre: "\"quedan\" no se muestra", de: "      if (e.quedaAntes == null) return ''\n", a: "      return ''\n" },
+    { nombre: "sin stock_para_masa no se avisa", de: "      document.getElementById('pr-receta-aviso-stock').hidden = !estado.stockMasaError", a: "      document.getElementById('pr-receta-aviso-stock').hidden = true" },
+    { nombre: "los renglones en 0 se muestran", de: "        return (b.base?.[id] ?? 0) > 0 ||", a: "        return true ||" },
+    { nombre: "\"+ Agregar ingrediente\" se abre con Original", de: "      if (!b || b.como !== 'modificar' || !estado.datosMasa) return\n      tocar()\n      estado.agregarIng", a: "      if (!b || !estado.datosMasa) return\n      tocar()\n      estado.agregarIng" },
+    { nombre: "lo agregado no queda en la receta", de: "      b.agregados = [...new Set([...(b.agregados ?? []), o.ingredienteId])]\n", a: "" },
+    { nombre: "lo agregado no trae su lote", de: "        b.lotes[o.ingredienteId] = o.lote\n          ? { insumo_id: o.insumo_id, lote: o.lote, manual: false, sinLote: false }", a: "        b.lotes[o.ingredienteId] = false\n          ? { insumo_id: o.insumo_id, lote: o.lote, manual: false, sinLote: false }" },
+    { nombre: "se agrega con 0 kg", de: "      if (kg == null || !Number.isFinite(kg) || kg <= 0) { a.error = 'Poné cuánto le agregás, en kilos.'", a: "      if (kg == null || !Number.isFinite(kg) || kg < 0) { a.error = 'Poné cuánto le agregás, en kilos.'" },
+    { nombre: "la lista de agregar ofrece lo que ya está en la masa", de: "        if (visibles.has(it.ingrediente_id)) continue\n", a: "" },
+    { nombre: "la guía del chocolate sale siempre", de: "      document.getElementById('pr-agregar-ing-guia').hidden = !choco", a: "      document.getElementById('pr-agregar-ing-guia').hidden = false" },
+    { nombre: "\"Quitar\" no saca lo agregado", de: "      b.agregados = (b.agregados ?? []).filter(x => x !== ingredienteId)", a: "      void ingredienteId" },
+    { nombre: "\"Otro\" deja elegir un insumo que se terminó", de: "      if (!o || o.seTermino) return\n", a: "      if (!o) return\n" },
+    { nombre: "\"Otro\" no marca el insumo que no alcanza", de: "seTermino: !l, noAlcanza: q != null && q + 1e-9 < consumo,", a: "seTermino: !l, noAlcanza: false," },
+    { nombre: "\"Otro\" no cambia el insumo", de: "      b.lotes[pl.ingredienteId] = { insumo_id: o.insumo_id, lote: o.lote, manual: false, sinLote: false }", a: "      void o" },
+    { nombre: "se puede anular una que no es la última", de: "      return vivas.reduce((a, m) => (a == null || Number(m.nro) > Number(a.nro) ? m : a), null)", a: "      return vivas[0] ?? null" },
+    { nombre: "una anulada se ofrece para anular", de: "      const vivas = (masas ?? []).filter(m => !m.anulada)", a: "      const vivas = masas ?? []" },
+    { nombre: "\"Anular la última\" sin permiso de cargar", de: "      if (ultima && tieneTarea('cargar')) {", a: "      if (ultima) {" },
+    { nombre: "anular la última sin motivo", de: "      if (motivo.length < 3) { a.error = 'Escribí por qué (al menos 3 letras).'", a: "      if (motivo.length < 0) { a.error = 'Escribí por qué (al menos 3 letras).'" },
+    { nombre: "anular la última manda otra masa", de: "await supabase.rpc('anular_masa', { p_masa_id: a.masaId, p_motivo: motivo })", a: "await supabase.rpc('anular_masa', { p_masa_id: null, p_motivo: motivo })" },
+    { nombre: "el centro no se atenúa al anular", de: "      if (centro) centro.classList.toggle('pr-receta-centro--atenuado', !!estado.anularUltima)", a: "      void centro" },
+    { nombre: "las masas del turno son de todas las máquinas", de: "        const filas = await leerMasasSala([t.id])", a: "        const filas = await leerMasasSala(maquinasAbiertas().map(e => e.turno.id))" },
   ],
 })

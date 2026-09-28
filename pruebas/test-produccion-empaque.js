@@ -364,7 +364,10 @@ esperas.push((async () => {
   chk('ningún .insert( en el módulo', !/\.insert\(/.test(codigo))
   chk('ningún .update( ni .delete( sobre stock_movimientos', !/from\('stock_movimientos'\)\s*\.(insert|update|delete|upsert)/.test(codigo))
   const rpcNombres = [...codigo.matchAll(/rpc\('([a-z_]+)'/g)].map(m => m[1])
-  chk('ninguna RPC de stock', rpcNombres.length > 0 && !rpcNombres.some(n => /stock/.test(n)), rpcNombres.filter(n => /stock/.test(n)).join(','))
+  // stock_para_masa (28/09/2026) es de Producción y SOLO LEE: cuánto queda de
+  // cada lote en la Sala de masa. No escribe stock.
+  const rpcStock = rpcNombres.filter(n => /stock/.test(n) && n !== 'stock_para_masa')
+  chk('ninguna RPC de stock (salvo stock_para_masa, que solo lee)', rpcNombres.length > 0 && !rpcStock.length, rpcStock.join(','))
 }
 
 // ── Parte 2: la caja y el embolsado de cada renglón ya cargado ───────────
