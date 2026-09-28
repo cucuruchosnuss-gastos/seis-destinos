@@ -20,7 +20,7 @@ Al integrar: `correr-todo` **143/143** en verde, `check-bytes` verde, y las prue
 
 ## Lo que NO está terminado
 
-1. **La planta con dos modos (Parte 2).** La tiene el subagente de Producción en su rama (`worktree-agent-a0c2b41813e37175a`); se cortó dos veces por el límite de uso y se retomó. **No está en main.** Al terminar, hay que integrarla por cherry-pick (reescribiendo los baselines de controles al hash nuevo si los fijó en su rama) y correr `e2e/6-planta-reanudar.spec.js`.
+1. **La planta con dos modos (Parte 2): HECHA e integrada** en `9488cc3` (traspaso propio `2026-09-28-planta-dos-modos.md`); 144/144 suites y los e2e sin credenciales en verde, incluido `6-planta-reanudar`.
 2. **La barra de unidad en la gestión de Producción** (`produccion-gestion.html`): espera a la planta, porque las dos pantallas comparten `sandbox-produccion.js`, `mutar-produccion.js` y los controles.
 
 ## Decisiones
