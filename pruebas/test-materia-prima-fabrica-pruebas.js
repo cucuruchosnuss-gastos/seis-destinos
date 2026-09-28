@@ -1,7 +1,9 @@
 // La FÁBRICA DE PRUEBAS en modulos/materia-prima.html (26/09/2026): la unidad
 // "Pruebas (robot)" no puede aparecer para una cuenta real en ninguna lista de
 // UNIDADES del módulo. Las listas que se tocaron:
-//   · los chips de unidad del listado       (renderizarChipsUnidadIngresos)
+//   · (los chips de unidad del listado se retiraron el 28/09/2026: los
+//     reemplaza la barra de unidad de arriba, js/barra-unidad.js, que saca la
+//     fábrica de pruebas por su cuenta y tiene su propia suite)
 //   · el selector de unidad del wizard       (poblarSelectUnidades)
 //   · la preselección con una sola unidad    (abrirWizard)
 //   · v_mis_unidades_stock → transferencias recibidas y el aviso del pie
@@ -63,7 +65,7 @@ const PRELUDIO = HELPERS + `
   function abrirDetalleInterno() {}
 `
 
-const FUNCIONES = ['esc', 'unidadesParaElegir', 'nombreUnidad', 'renderizarChipsUnidadIngresos', 'poblarSelectUnidades',
+const FUNCIONES = ['esc', 'unidadesParaElegir', 'nombreUnidad', 'poblarSelectUnidades',
   'abrirWizard', 'cargarUnidadesStockVisibles', 'cargarUnidadesRecepcion', 'cargarTransferenciasRecibidas',
   'renderizarAvisoSinStock', 'renderizarInternos']
 
@@ -90,14 +92,11 @@ const casos = [
   ['sin datos', undefined, true],
 ]
 
-// ── Chips de unidad del listado ───────────────────────────────────────────
-for (const [nombre, fab, ve] of casos) {
-  const S = nuevo(fab)
-  S.renderizarChipsUnidadIngresos()
-  const html = S.__el('chips-unidad-ingresos').innerHTML
-  chk(`chips (${nombre}): Cucuruchos está`, html.includes('Cucuruchos Nuss'))
-  chk(`chips (${nombre}): la unidad de prueba ${ve ? 'SÍ' : 'NO'} aparece`, html.includes('Pruebas (robot)') === ve)
-}
+// ── Los chips de unidad del listado ya no existen ─────────────────────────
+// Los reemplaza la barra de unidad de arriba. Si volvieran, tendrían que
+// volver con su filtro de la fábrica de pruebas: que falle acá lo obliga.
+chk('chips: ya no está la función de los chips de unidad', !/function renderizarChipsUnidadIngresos\b/.test(SCRIPT))
+chk('chips: ya no está el contenedor #chips-unidad-ingresos', !/id="chips-unidad-ingresos"/.test(fs.readFileSync(ARCHIVO, 'utf8')))
 
 // ── Selector de unidad del wizard ────────────────────────────────────────
 for (const [nombre, fab, ve] of casos) {
@@ -177,12 +176,10 @@ esperas.push((async () => {
   const iCarga = init.indexOf('cargarFabricaDePruebas(supabase)')
   const iEmp = init.indexOf(".from('empleados')")
   const iAsig = init.indexOf('estado.fabrica = await fabricaPrometida')
-  const iChips = init.indexOf('renderizarChipsUnidadIngresos()')
   const iRec = init.indexOf('await cargarUnidadesRecepcion()')
   const iIng = init.indexOf('await cargarIngresos()')
-  chk('init: existen la carga, la asignación y los renders', [iCarga, iEmp, iAsig, iChips, iRec, iIng].every(i => i >= 0))
+  chk('init: existen la carga, la asignación y los renders', [iCarga, iEmp, iAsig, iRec, iIng].every(i => i >= 0))
   chk('init: la fábrica se pide antes que el empleado (en paralelo)', iCarga >= 0 && iEmp >= 0 && iCarga < iEmp)
-  chk('init: se asigna antes de dibujar los chips', iAsig >= 0 && iChips >= 0 && iAsig < iChips)
   chk('init: se asigna antes de cargar recepción e ingresos', iAsig >= 0 && iAsig < iRec && iAsig < iIng)
   chk('import: cargarFabricaDePruebas y sinUnidadesDePrueba desde utils.js',
     /import \{[^}]*cargarFabricaDePruebas[^}]*\} from '\.\.\/js\/utils\.js'/.test(SCRIPT) &&

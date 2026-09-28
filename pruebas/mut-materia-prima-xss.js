@@ -20,7 +20,7 @@ correrMutaciones({
   suite: path.join(__dirname, 'test-materia-prima-xss.js'),
   original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/materia-prima.html'),
   funciones: [
-    'chipTipoDoc', 'renderizarChipsUnidadIngresos', 'renderizarListaIngresos',
+    'chipTipoDoc', 'renderizarBannerIngresos', 'renderizarListaIngresos',
     'abrirDetalleTransferenciaRecibida', 'abrirDetalleIngreso', 'htmlDiferenciaDetalle',
     'poblarSelectUnidades', 'renderizarSugerenciasProveedor', 'renderizarProveedorParecidos',
     'renderizarAvisoDuplicado', 'renderizarProveedorDetectado', 'renderizarRemitos',

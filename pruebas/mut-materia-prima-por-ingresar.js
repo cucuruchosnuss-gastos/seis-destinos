@@ -28,7 +28,7 @@ correrMutaciones({
     { nombre: 'la tarea que habilita pasa a ser ver_todo', de: "const puedeCargarMp = () => tieneTarea('materia_prima', 'cargar')", a: "const puedeCargarMp = () => tieneTarea('materia_prima', 'ver_todo')" },
     // ── La lista ──
     { nombre: 'un importe null deja de decir "—"', de: "const importe = importeConMoneda(f.importe, f.moneda) ?? '—'", a: "const importe = importeConMoneda(f.importe ?? 0, f.moneda) ?? '—'" },
-    { nombre: 'los gastos de "Pagado sin ingresar" no se sacan', de: "return (estado.porIngresar ?? []).filter(f => !(f.origen === 'gasto' && pagados.has(f.id)))", a: 'return (estado.porIngresar ?? [])' },
+    { nombre: 'los gastos de "Pagado sin ingresar" no se sacan', de: "const filas = (estado.porIngresar ?? []).filter(f => !(f.origen === 'gasto' && pagados.has(f.id)))", a: 'const filas = (estado.porIngresar ?? [])' },
     { nombre: 'las gemelas no se marcan', de: '          gemela: filas.some(o => o !== f && mismo(', a: '          gemela: false && filas.some(o => o !== f && mismo(' },
     { nombre: 'claveNumeroDocMp deja de partir un grupo largo', de: '      if (g.length >= 9) return', a: '      if (g.length >= 99) return' },
     { nombre: 'la fila sin proveedor no cae a la razón social', de: "const titulo = f.proveedor || f.razon_social || '(sin proveedor)'", a: "const titulo = f.proveedor || '(sin proveedor)'" },

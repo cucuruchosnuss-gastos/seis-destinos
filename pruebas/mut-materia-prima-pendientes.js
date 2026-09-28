@@ -22,7 +22,7 @@ correrMutaciones({
     // y el `n > 0` de abajo los rechaza igual). Se deja por claridad: dice que
     // un dato ausente no es un número.
     { nombre: 'se aceptan filas de cualquier módulo', de: '        if (!PENDIENTES_DEL_MODULO.includes(clave)) continue\n', a: '' },
-    { nombre: 'la burbuja de internos lee la clave equivocada', de: "htmlBurbujaMp(p?.get('stock:transferencias_por_aceptar'))", a: "htmlBurbujaMp(p?.get('materia_prima:pagado_sin_ingresar'))" },
+    { nombre: 'la burbuja de internos lee la clave equivocada', de: "htmlBurbujaMp(p?.get('stock:transferencias_por_aceptar'), { nota: notaTodas })", a: "htmlBurbujaMp(p?.get('materia_prima:pagado_sin_ingresar'), { nota: notaTodas })" },
     { nombre: 'la línea de insumos lee la clave equivocada', de: "const ins = p?.get('materia_prima:insumos_por_revisar')", a: "const ins = p?.get('stock:transferencias_por_aceptar')" },
     { nombre: 'la línea no se oculta sin insumos', de: "      if (!ins) { linea.hidden = true; linea.innerHTML = ''; return }", a: "      if (!ins) { linea.innerHTML = ''; return }" },
     { nombre: 'la línea no se muestra con insumos', de: '        <a class="linea-pendiente-mp__link" href="stock.html?vista=catalogo">Revisarlos en Stock →</a>`\n      linea.hidden = false', a: '        <a class="linea-pendiente-mp__link" href="stock.html?vista=catalogo">Revisarlos en Stock →</a>`' },

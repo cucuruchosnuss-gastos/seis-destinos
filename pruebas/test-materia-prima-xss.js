@@ -55,7 +55,7 @@ const STUBS = new Set([
 const CONSTANTES_EXCLUIDAS = new Set(['estado', 'campoTotal', 'listaPagado'])
 
 const RENDERS = [
-  'chipTipoDoc', 'renderizarChipsUnidadIngresos', 'renderizarChipsVinculoIngresos',
+  'chipTipoDoc', 'renderizarBannerIngresos', 'renderizarChipsVinculoIngresos',
   'renderizarListaIngresos', 'abrirDetalleTransferenciaRecibida', 'abrirDetalleIngreso',
   'renderizarSugerenciasProveedor', 'renderizarProveedorParecidos', 'renderizarProveedorDetectado',
   'renderizarAvisoDuplicado', 'renderizarRemitos', 'htmlSugerenciasCatalogo', 'htmlCategoriaNueva',
@@ -178,10 +178,23 @@ function correrRenders(S) {
   // ── chipTipoDoc con un tipo que no está en TIPOS_DOC ─────────────────────
   chequearMarcas(chk, 'chipTipoDoc (tipo desconocido)', S.chipTipoDoc(marca('tipo_doc')), ['tipo_doc'])
 
-  // ── Chips de unidad del listado ──────────────────────────────────────────
+  // ── El detalle por unidad del banner (con "Todas" en la barra de unidad) ─
+  // Los chips de unidad del listado se retiraron el 28/09/2026 (los reemplaza
+  // la barra de unidad de arriba, js/barra-unidad.js, que tiene su propia
+  // suite de escapado): el nombre de la unidad ahora entra a HTML acá.
   E.unidades = [{ id: marca('unidad_id'), nombre: marca('unidad_nombre') }, { id: 'u-dest', nombre: marca('unidad_destino') }]
-  S.renderizarChipsUnidadIngresos()
-  chequearMarcas(chk, 'renderizarChipsUnidadIngresos', el('chips-unidad-ingresos').innerHTML, ['unidad_id', 'unidad_nombre'])
+  {
+    const hoy = new Date()
+    const delMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-05`
+    E.barra = { elegida: null, mostrar: true, unidades: [] }
+    E.entregas = [
+      { base: { id: 'b1', unidad_negocio_id: marca('unidad_id'), fecha: delMes }, cantidadItems: 1 },
+      { base: { id: 'b2', unidad_negocio_id: 'u-dest', fecha: delMes }, cantidadItems: 2 },
+    ]
+    S.renderizarBannerIngresos()
+    chequearMarcas(chk, 'renderizarBannerIngresos (detalle por unidad)', el('banner-por-unidad').innerHTML, ['unidad_nombre', 'unidad_destino'])
+    E.barra = { elegida: null, mostrar: false, unidades: [] }
+  }
 
   // ── Listado ──────────────────────────────────────────────────────────────
   E.entregas = [
@@ -380,6 +393,8 @@ const SEGURAS = {
     't.bg': 'constante: color de TIPOS_DOC o literal del fallback',
     't.fg': 'constante: color de TIPOS_DOC o literal del fallback',
   },
+  // El detalle por unidad del banner (barra de unidad, 28/09/2026).
+  renderizarBannerIngresos: { 'g.n': 'número: conteo de entregas del mes calculado en la función' },
   renderizarChipsVinculoIngresos: {
     'f.id': 'constante FILTROS_VINCULO', 'f.label': 'constante FILTROS_VINCULO',
   },
@@ -467,7 +482,7 @@ const POR_INGRESAR = 'HTML de un render de "Facturas por ingresar" que escapa ad
 Object.assign(SEGURAS.renderizarListaIngresos, { 'htmlFaltanRenglones(e)': POR_INGRESAR })
 Object.assign(SEGURAS, {
   renderizarPorIngresar: {
-    'htmlPorIngresar(filas, { marcas: marcasPorIngresar(filas, estado.listaIngresos), error: estado.porIngresarError, })': POR_INGRESAR,
+    'htmlPorIngresar(filas, { marcas: marcasPorIngresar(filasPorIngresarVisibles({ todasLasUnidades: true }), estado.listaIngresos), error: estado.porIngresarError, })': POR_INGRESAR,
   },
   renderizarCompletar: { 'htmlFotoCompletar(w.completar)': POR_INGRESAR },
   pintarPendientesMp: {

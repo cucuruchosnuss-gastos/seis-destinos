@@ -123,6 +123,20 @@
       font-weight: 600;
     }
     .banner-mp__stat-valor { font-size: 1rem; font-weight: 700; margin-top: 0.125rem; }
+    /* Con "Todas" en la barra de unidad de arriba: cuántos ingresos del mes
+       tuvo cada unidad. Texto chico: es el detalle de la cifra grande. */
+    .banner-mp__unidades {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.875rem;
+      margin-top: 0.5rem;
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      min-width: 0;
+    }
+    .banner-mp__unidad strong { color: var(--color-texto); font-weight: 700; }
+    /* "N en otras unidades", en el vacío de una lista filtrada por la barra. */
+    .nota-otras-unidades { font-size: 0.8125rem; color: var(--color-texto-suave); }
 
     /* ══════════════════════════════════════════════════════════════════════
        CRITERIO DE COLOR DEL MÓDULO
@@ -2507,6 +2521,7 @@
             <div class="banner-mp__stat-valor" id="banner-items-mes">—</div>
           </div>
         </div>
+        <div class="banner-mp__unidades" id="banner-por-unidad" hidden></div>
       </div>
 
       <button type="button" class="btn-mp-primario" id="btn-abrir-wizard" style="margin-bottom:0.875rem;">
@@ -2547,7 +2562,11 @@
       <div class="buscador-mp">
         <input type="text" id="filtro-busqueda-ingresos" placeholder="🔍 Buscar proveedor o número de documento">
       </div>
-      <div class="chips-unidad" id="chips-unidad-ingresos"></div>
+      <!-- La UNIDAD que se mira la decide la barra de unidad de arriba
+           (js/barra-unidad.js), en toda la app. Acá había una fila de chips
+           de unidad (#chips-unidad-ingresos) y se retiró: dos lugares para
+           elegir lo mismo terminan diciendo cosas distintas. El filtro de
+           vínculo con remito sí queda: no es una unidad. -->
       <div class="chips-unidad" id="chips-vinculo-ingresos"></div>
 
       <div id="estado-cargando-ingresos" class="estado-vacio" hidden>
@@ -2601,7 +2620,7 @@
         <div id="internos-vacio" class="estado-vacio" hidden>
           <div class="estado-vacio__icono">🚚</div>
           <div class="estado-vacio__titulo">Nada para recibir</div>
-          <p class="estado-vacio__descripcion">No hay mercadería en tránsito hacia tus unidades.</p>
+          <p class="estado-vacio__descripcion" id="internos-vacio-desc">No hay mercadería en tránsito hacia tus unidades.</p>
         </div>
       </div>
 
@@ -2970,6 +2989,7 @@
     import { verificarSesion } from '../js/auth.js'
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
+    import { unidadesDeLaBarra, alCambiarUnidad, filtrarPorUnidad } from '../js/barra-unidad.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
 
     mostrarBannerVersion()
@@ -3084,8 +3104,22 @@
       // aunque el listado todavía no se haya cargado.
       remitosFacturados: new Set(),
       filtros: {
-        ingresos: { busqueda: '', unidadId: '', vinculo: '' },  // '' = Todas / Todos
+        // La unidad NO está acá: la decide la barra de unidad de arriba
+        // (estado.barra). '' = Todos.
+        ingresos: { busqueda: '', vinculo: '' },
       },
+      // ── La BARRA DE UNIDAD de arriba (js/barra-unidad.js) ─────────────
+      // elegida: el id de la unidad que se mira, o null (= Todas: sin filtro).
+      // mostrar: la barra está en pantalla (la persona tiene más de una
+      // unidad). La barra SOLO FILTRA LO QUE SE MUESTRA: los permisos siguen
+      // en la base, y las consultas no cambian.
+      barra: { elegida: null, mostrar: false, unidades: [] },
+      // Ya hay un listado dibujado: recién ahí un cambio de la barra repinta.
+      listadoCargado: false,
+      // alcance (jsonb) de cada tarea 'modulo:tarea', para saber dónde puede
+      // CARGAR la persona (la unidad de la barra viene puesta en el wizard
+      // solo si puede cargar ahí). Misma regla que tiene_tarea_alcance().
+      alcances: new Map(),
       // Catálogo completo de insumos, para el matching del paso 3. Se carga al
       // abrir el wizard, no al entrar al módulo.
       catalogoInsumos: [],
@@ -3162,6 +3196,53 @@
       return estado.miRolApp === 'super_admin' || estado.misTareas.has(`${modulo}:${tarea}`)
     }
     const puedeRecibirTransferencia = () => tieneTarea('stock', 'recibir_transferencia')
+
+    // ¿Puede CARGAR ingresos en esa unidad? La MISMA regla que
+    // tiene_tarea_alcance('materia_prima','cargar', unidad) (verificada contra
+    // pg_get_functiondef el 28/09/2026): super_admin sí; si no, la fila
+    // habilitada con alcance {"todas": true} o con la unidad en "unidades". Un
+    // alcance null NO habilita ninguna unidad. Es cosmético: la base revalida.
+    function puedeCargarEn(unidadId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      const a = estado.alcances?.get('materia_prima:cargar')
+      if (!a || typeof a !== 'object') return false
+      return a.todas === true || (Array.isArray(a.unidades) && a.unidades.includes(unidadId))
+    }
+
+    // Lo que dice la barra de unidad, en estado.barra. Si cambió y ya hay un
+    // listado dibujado, se repinta todo lo que filtra por unidad. No hay
+    // consultas en el medio (se filtra lo que ya está en memoria), así que no
+    // hace falta turno: el último cambio es el que queda pintado.
+    function aplicarBarraUnidad(e) {
+      const nueva = {
+        elegida: e?.elegida || null,
+        mostrar: e?.mostrar === true,
+        unidades: Array.isArray(e?.unidades) ? e.unidades : [],
+      }
+      const cambio = nueva.elegida !== estado.barra.elegida || nueva.mostrar !== estado.barra.mostrar
+      estado.barra = nueva
+      if (cambio && estado.listadoCargado) repintarPorUnidad()
+    }
+
+    function repintarPorUnidad() {
+      renderizarBannerIngresos()
+      renderizarAvisoSinStock()
+      renderizarListaIngresos()
+      renderizarPagadoSinIngresar()
+      renderizarAccesoPorIngresar()
+      renderizarPorIngresar()
+      renderizarInternos()
+      pintarPendientesMp()
+    }
+
+    // "Hay N en otras unidades", para el vacío de una lista que la barra dejó
+    // sin filas. Solo con una unidad elegida y si de verdad hay algo afuera:
+    // un aviso que está siempre deja de leerse.
+    function textoOtrasUnidades(n, { singular, plural }) {
+      if (!(n > 0)) return ''
+      return `Hay ${n} ${n === 1 ? singular : plural} en otras unidades: elegí «Todas» arriba para ${n === 1 ? 'verlo' : 'verlos'}.`
+    }
 
     function wizardVacio() {
       return {
@@ -3322,8 +3403,10 @@
       return formatearNumeroAr(n, { decimales: 2, minimos: 0 })
     }
 
-    // Las unidades que se OFRECEN (chips del listado, selector del wizard): sin
-    // la unidad de la fábrica de pruebas, salvo para una cuenta de prueba.
+    // Las unidades que se OFRECEN (el selector de unidad del wizard): sin la
+    // unidad de la fábrica de pruebas, salvo para una cuenta de prueba. Los
+    // chips de unidad del listado se retiraron: los reemplaza la barra de
+    // unidad de arriba, que hace su propio filtro de la fábrica de pruebas.
     function unidadesParaElegir() {
       return sinUnidadesDePrueba(estado.unidades, estado.fabrica)
     }
@@ -3791,6 +3874,15 @@
       // nunca: si falla, no se filtra nada.
       const fabricaPrometida = cargarFabricaDePruebas(supabase)
 
+      // La BARRA DE UNIDAD de arriba se pide YA, en paralelo con lo que sigue,
+      // y se oye desde ahora: si la persona la cambia, se repinta sin recargar.
+      // Se espera (con tope) antes del primer listado, para no dibujar todas
+      // las unidades y un instante después solo una; si llega más tarde se
+      // aplica igual. Si falla, no se filtra nada.
+      const barraPrometida = unidadesDeLaBarra()
+      barraPrometida.then(aplicarBarraUnidad).catch(err => console.error('barra de unidad:', err))
+      alCambiarUnidad(aplicarBarraUnidad)
+
       const { data: emp, error } = await supabase
         .from('empleados')
         .select('id, rol_app')
@@ -3809,11 +3901,12 @@
       // filas sin filtrar reporta permisos que en la práctica no están.
       const { data: tareas } = await supabase
         .from('empleado_tareas')
-        .select('modulo, tarea')
+        .select('modulo, tarea, alcance')
         .eq('empleado_id', emp.id)
         .in('modulo', ['materia_prima', 'stock', 'gastos'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(x => `${x.modulo}:${x.tarea}`))
+      estado.alcances = new Map((tareas ?? []).map(x => [`${x.modulo}:${x.tarea}`, x.alcance]))
 
       // Desde cuándo cuenta el circuito con Gastos y Cuentas Corrientes. Vive
       // en la base (una sola fuente) y no hardcodeada acá.
@@ -3843,8 +3936,8 @@
       // por unidadesParaElegir().
       estado.unidades = unids ?? []
       estado.fabrica = await fabricaPrometida
+      await Promise.race([barraPrometida.catch(() => null), new Promise(r => setTimeout(r, 3000))])
 
-      renderizarChipsUnidadIngresos()
       renderizarChipsVinculoIngresos()
 
       // El botón de ingresos internos solo si puede recibir en algún lado. Se
@@ -3929,21 +4022,6 @@
     // LISTADO DE INGRESOS
     // ═══════════════════════════════════════════════════════════════════════
 
-    function renderizarChipsUnidadIngresos() {
-      const cont = document.getElementById('chips-unidad-ingresos')
-      const chips = [{ id: '', nombre: 'Todas' }, ...unidadesParaElegir()]
-      cont.innerHTML = chips.map(u => `
-        <button type="button" class="chip-unidad ${estado.filtros.ingresos.unidadId === u.id ? 'chip-unidad--activa' : ''}" data-unidad="${esc(u.id)}">${esc(u.nombre)}</button>
-      `).join('')
-      cont.querySelectorAll('.chip-unidad').forEach(btn => {
-        btn.addEventListener('click', () => {
-          estado.filtros.ingresos.unidadId = btn.dataset.unidad
-          renderizarChipsUnidadIngresos()
-          renderizarListaIngresos()
-        })
-      })
-    }
-
     function renderizarChipsVinculoIngresos() {
       const cont = document.getElementById('chips-vinculo-ingresos')
       cont.innerHTML = FILTROS_VINCULO.map(f => `
@@ -4017,6 +4095,7 @@
           String(b.base.fecha || '').localeCompare(String(a.base.fecha || '')) ||
           String(b.base.created_at || '').localeCompare(String(a.base.created_at || '')))
 
+      estado.listadoCargado = true
       renderizarBannerIngresos()
       renderizarAvisoSinStock()
       renderizarListaIngresos()
@@ -4273,8 +4352,13 @@
       // La unidad de prueba se saca de visibles (cargarUnidadesStockVisibles),
       // así que se saca también de acá: si no, un ingreso del robot haría
       // avisar un "falta permiso" falso nombrando la unidad de prueba.
+      // Con una unidad elegida en la barra, se avisa solo por ESA unidad: las
+      // otras no se están mirando. (materia_prima_ingresos.unidad_negocio_id
+      // es NOT NULL, así que no hay "sin unidad" que dejar pasar.)
+      const elegida = estado.barra?.elegida || null
       const faltantes = sinUnidadesDePrueba([...new Set(estado.listaIngresos.map(i => i.unidad_negocio_id))], estado.fabrica, id => id)
         .filter(id => id && !visibles.has(id))
+        .filter(id => !elegida || id === elegida)
 
       if (!faltantes.length) { el.hidden = true; return }
       el.hidden = false
@@ -4294,31 +4378,63 @@
       // mercadería del mes; excluirla haría que el número no cuadre con la lista
       // que está justo debajo, que es la peor forma de tener un contador. Sale
       // gratis: estado.entregas ya las trae.
+      //
+      // CUENTA LO QUE SE VE: la unidad elegida en la barra de arriba (con
+      // "Todas", todas). Sin el buscador ni el filtro de vínculo, que miran
+      // otra cosa. Con "Todas" y más de una unidad, abajo va cuántos tuvo cada
+      // una: la suma y su detalle.
       const hoy = new Date()
       const prefijoMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
-      const delMes = estado.entregas.filter(e => (e.base.fecha || '').startsWith(prefijoMes))
+      const elegida = estado.barra?.elegida || null
+      const entregas = elegida ? filtrarPorUnidad(estado.entregas, elegida, e => e.base.unidad_negocio_id) : estado.entregas
+      const delMes = entregas.filter(e => (e.base.fecha || '').startsWith(prefijoMes))
       document.getElementById('banner-ingresos-mes').textContent = delMes.length
       document.getElementById('banner-items-mes').textContent = delMes.reduce((acc, e) => acc + e.cantidadItems, 0)
+
+      const porUnidadEl = document.getElementById('banner-por-unidad')
+      const grupos = new Map()
+      if (!elegida && estado.barra?.mostrar) {
+        for (const e of delMes) {
+          const k = e.base.unidad_negocio_id || ''
+          grupos.set(k, (grupos.get(k) || 0) + 1)
+        }
+      }
+      if (grupos.size > 1) {
+        porUnidadEl.innerHTML = [...grupos.entries()]
+          .map(([id, n]) => ({ nombre: nombreUnidad(id) || 'Sin unidad', n }))
+          .sort((a, b) => b.n - a.n || a.nombre.localeCompare(b.nombre, 'es'))
+          .map(g => `<span class="banner-mp__unidad">${esc(g.nombre)} <strong>${g.n}</strong></span>`)
+          .join('')
+        porUnidadEl.hidden = false
+      } else {
+        porUnidadEl.innerHTML = ''
+        porUnidadEl.hidden = true
+      }
     }
 
     function renderizarListaIngresos() {
       const listaEl = document.getElementById('lista-ingresos')
       const vacioEl = document.getElementById('estado-vacio-ingresos')
 
-      // Los tres filtros se encadenan, no se reemplazan.
+      // Los filtros se encadenan, no se reemplazan. La UNIDAD la decide la
+      // barra de unidad de arriba (estado.barra), y se aplica ÚLTIMA para poder
+      // decir, si la lista queda vacía, cuántos hay en otras unidades.
       let filas = estado.entregas
-      const { busqueda, unidadId, vinculo } = estado.filtros.ingresos
-      if (unidadId) filas = filas.filter(e => e.base.unidad_negocio_id === unidadId)
+      const { busqueda, vinculo } = estado.filtros.ingresos
       if (vinculo)  filas = filas.filter(e => entregaPasaVinculo(e, vinculo))
       const termino = busqueda.trim().toLowerCase()
       if (termino) filas = filas.filter(e => entregaCoincide(e, termino))
+      const elegida = estado.barra?.elegida || null
+      const antesDeLaUnidad = filas.length
+      if (elegida) filas = filtrarPorUnidad(filas, elegida, e => e.base.unidad_negocio_id)
 
       filas = ordenarEntregasParaFiltro(filas, vinculo)
 
       if (!filas.length) {
         const msg = VACIO_POR_VINCULO[vinculo] ?? VACIO_POR_VINCULO['']
         document.getElementById('vacio-ingresos-titulo').textContent = msg.titulo
-        document.getElementById('vacio-ingresos-desc').textContent = msg.desc
+        const otras = elegida ? textoOtrasUnidades(antesDeLaUnidad - filas.length, { singular: 'ingreso', plural: 'ingresos' }) : ''
+        document.getElementById('vacio-ingresos-desc').textContent = otras ? `${msg.desc} ${otras}` : msg.desc
         listaEl.innerHTML = ''
         vacioEl.hidden = false
         return
@@ -4739,6 +4855,16 @@
       // Una sola unidad: se preselecciona, no tiene sentido preguntar.
       const elegibles = unidadesParaElegir()
       if (elegibles.length === 1) estado.wizard.encabezado.unidadId = elegibles[0].id
+      else {
+        // La unidad de la BARRA de arriba viene puesta, si la persona puede
+        // cargar ahí. Es un registro NUEVO: el selector queda y se puede
+        // cambiar. Con "Todas" no viene nada y se pide elegir acá mismo, sin
+        // tocar la barra.
+        const deLaBarra = estado.barra?.elegida || null
+        if (deLaBarra && elegibles.some(u => u.id === deLaBarra) && puedeCargarEn(deLaBarra)) {
+          estado.wizard.encabezado.unidadId = deLaBarra
+        }
+      }
 
       document.getElementById('pantalla-ingresos').hidden = true
       document.getElementById('pantalla-wizard').removeAttribute('hidden')
@@ -8789,7 +8915,9 @@
           f.fecha ? formatearFecha(f.fecha) : null,
           f.numero_doc ? `N° ${f.numero_doc}` : 'Sin número',
           importeConMoneda(f.importe, f.moneda),
-          nombreUnidad(f.unidad_negocio_id) || null,
+          // Un gasto SIN unidad no desaparece por la barra: se ve siempre y
+          // lo dice.
+          nombreUnidad(f.unidad_negocio_id) || (f.unidad_negocio_id ? null : 'Sin unidad'),
         ].filter(Boolean).join(' · ')
         const descartando = descarte.gastoId === f.gasto_id
         return `
@@ -8813,7 +8941,9 @@
 
     function renderizarPagadoSinIngresar() {
       const seccion = document.getElementById('seccion-pagado-sin-ingresar')
-      const filas = estado.pagadoSinIngresar
+      // Solo la unidad elegida en la barra (los gastos sin unidad, siempre).
+      const elegida = estado.barra?.elegida || null
+      const filas = elegida ? filtrarPorUnidad(estado.pagadoSinIngresar, elegida) : estado.pagadoSinIngresar
       const lista = document.getElementById('lista-pagado-sin-ingresar')
       if (estado.errorPagadoSinIngresar) {
         seccion.hidden = false
@@ -8991,9 +9121,16 @@
     // son la misma factura con otra puerta, y esa puerta ya sabe vincular el
     // gasto (vincular_ingreso_a_gasto). Dos botones para el mismo papel es
     // exactamente cómo se carga dos veces.
-    function filasPorIngresarVisibles() {
+    //
+    // Y la UNIDAD elegida en la barra de arriba (una factura sin unidad se ve
+    // siempre). `todasLasUnidades` la ignora: las marcas de gemela y de "ya
+    // ingresado" se calculan sobre la lista entera, para que el aviso no se
+    // pierda porque la gemela quedó en otra unidad.
+    function filasPorIngresarVisibles({ todasLasUnidades = false } = {}) {
       const pagados = new Set((estado.pagadoSinIngresar ?? []).map(g => g.gasto_id))
-      return (estado.porIngresar ?? []).filter(f => !(f.origen === 'gasto' && pagados.has(f.id)))
+      const filas = (estado.porIngresar ?? []).filter(f => !(f.origen === 'gasto' && pagados.has(f.id)))
+      const elegida = todasLasUnidades ? null : (estado.barra?.elegida || null)
+      return elegida ? filtrarPorUnidad(filas, elegida) : filas
     }
 
     async function cargarFacturasPorIngresar() {
@@ -9036,7 +9173,7 @@
           f.fecha ? formatearFecha(f.fecha) : null,
           f.numero_doc ? `N° ${f.numero_doc}` : 'Sin número',
           f.tipo_doc || null,
-          f.unidad || null,
+          f.unidad || (f.unidad_negocio_id ? null : 'Sin unidad'),
         ].filter(Boolean).join(' · ')
         // Un importe AUSENTE dice "—", nunca "$ 0": importeConMoneda devuelve
         // null para null/undefined/'' antes de convertir.
@@ -9080,7 +9217,7 @@
       document.getElementById('por-ingresar-vacio').hidden =
         !!(filas.length || estado.cargandoPorIngresar || estado.errorPorIngresar)
       lista.innerHTML = htmlPorIngresar(filas, {
-        marcas: marcasPorIngresar(filas, estado.listaIngresos),
+        marcas: marcasPorIngresar(filasPorIngresarVisibles({ todasLasUnidades: true }), estado.listaIngresos),
         error: estado.porIngresarError,
       })
     }
@@ -9447,9 +9584,11 @@
       return `${p.cantidad} ${t}`
     }
 
-    function htmlBurbujaMp(p) {
+    // `nota`: lo que se le suma al detalle (el título), por ejemplo que el
+    // número cuenta todas las unidades aunque la barra mire una.
+    function htmlBurbujaMp(p, { nota = '' } = {}) {
       if (!p || !(p.cantidad > 0)) return ''
-      const detalle = textoPendienteMp(p)
+      const detalle = nota ? `${textoPendienteMp(p)} ${nota}` : textoPendienteMp(p)
       const numero = p.cantidad > 99 ? '99+' : String(p.cantidad)
       return `<span class="burbuja-mp" title="${esc(detalle)}" aria-label="${esc(detalle)}">${esc(numero)}</span>`
     }
@@ -9457,7 +9596,11 @@
     function pintarPendientesMp() {
       const p = estado.pendientes   // null = la llamada falló: nada
       const internos = document.getElementById('btn-abrir-internos')
-      internos.innerHTML = `Ingresos internos${htmlBurbujaMp(p?.get('stock:transferencias_por_aceptar'))}`
+      // El número es el de mis_pendientes(), que cuenta TODAS las unidades de
+      // la persona: no se puede filtrar por la barra (no devuelve la unidad).
+      // Con una unidad elegida, el título lo dice.
+      const notaTodas = estado.barra?.elegida ? '(en todas tus unidades)' : ''
+      internos.innerHTML = `Ingresos internos${htmlBurbujaMp(p?.get('stock:transferencias_por_aceptar'), { nota: notaTodas })}`
 
       const linea = document.getElementById('linea-insumos-revisar')
       const ins = p?.get('materia_prima:insumos_por_revisar')
@@ -9615,18 +9758,26 @@
     function renderizarInternos() {
       const listaEl = document.getElementById('lista-internos')
       const vacioEl = document.getElementById('internos-vacio')
-      if (!estado.transito.length) {
+      // Solo lo que va a la unidad elegida en la barra de arriba.
+      const elegida = estado.barra?.elegida || null
+      const transito = elegida ? filtrarPorUnidad(estado.transito, elegida, x => x.unidad_destino_id) : estado.transito
+      if (!transito.length) {
         listaEl.innerHTML = ''
+        const otras = elegida ? estado.transito.length : 0
+        document.getElementById('internos-vacio-desc').textContent = otras
+          ? `No hay mercadería en tránsito hacia ${nombreUnidad(elegida) || 'esta unidad'}. ${textoOtrasUnidades(otras, { singular: 'envío', plural: 'envíos' })}`
+          : 'No hay mercadería en tránsito hacia tus unidades.'
         vacioEl.removeAttribute('hidden')
         return
       }
       vacioEl.hidden = true
 
       // Agrupado por unidad destino SOLO si la persona puede recibir en más de
-      // una: con una sola, el encabezado repetiría lo único posible.
-      const agrupar = estado.unidadesRecepcion.length > 1
+      // una Y la barra mira "Todas": con una sola, el encabezado repetiría lo
+      // único posible.
+      const agrupar = !elegida && estado.unidadesRecepcion.length > 1
       const grupos = new Map()
-      estado.transito.forEach(x => {
+      transito.forEach(x => {
         const k = agrupar ? (x.destino_nombre || '') : ''
         if (!grupos.has(k)) grupos.set(k, [])
         grupos.get(k).push(x)
