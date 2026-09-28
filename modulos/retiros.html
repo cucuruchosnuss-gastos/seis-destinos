@@ -37,7 +37,17 @@
        catalogo_para_retiro(): primero los productos, por categoría
        (cucuruchones, barquillos, especiales, pasta) y al final, separados,
        los insumos con stock en esa empresa. La base descuenta los insumos de
-       su stock por lote, los más viejos primero, igual que el producto. -->
+       su stock por lote, los más viejos primero, igual que el producto.
+
+       VARIOS LOTES POR RENGLÓN Y FALTANTES (28/09/2026): lo que se ofrece va
+       en TRES grupos —SIN CONO, CON CONO (cada cono con su stock) y Materia
+       prima e insumos—; lo que no tiene stock aparece al buscar, marcado "sin
+       stock". Elegido algo, sus lotes van en lista (los más viejos primero)
+       con un campo por lote: el renglón viaja con 'lotes' [{lote, cajas}] o
+       [{lote, cantidad}] y la base descuenta de cada uno. Sin asignar, sale
+       sola de los más viejos. Lo que no está en stock se puede confirmar
+       igual: la base lo deja 'pendiente' y Administración lo revisa. -->
+
 
   <style>
     [hidden] { display: none !important; }
@@ -230,6 +240,37 @@
     .rt-sello--insumo { background: var(--color-superficie); color: var(--rt-texto-secundario); border: 1px solid var(--color-borde); }
     /* El separador de los insumos pesa más que el de una categoría: son otra cosa. */
     .rt-separador--insumos { color: var(--naranja-oscuro); margin-top: 0.75rem; }
+    /* ── Los TRES grupos del catálogo (28/09/2026) ───────────────────────
+       Cada uno con su encabezado y su color, para no confundir un Mini sin
+       cono con un Mini con cono: SIN CONO en grafito, CON CONO en amarillo
+       (el cono) y la materia prima en marrón (el color de Ingreso). El texto
+       va siempre en el tono oscuro sobre el suave (más de 4,5:1). El naranja
+       sigue siendo solo "lo elegido". */
+    .rt-grupo {
+      flex: 1 1 100%; display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0 0.125rem;
+      padding: 0.375rem 0.625rem; border-radius: var(--radio-input); border-left: 4px solid;
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .rt-grupo--sin-cono { background: var(--grafito-suave); border-left-color: var(--grafito); color: var(--grafito-oscuro); }
+    .rt-grupo--con-cono { background: var(--amarillo-suave); border-left-color: var(--amarillo); color: var(--amarillo-oscuro); }
+    .rt-grupo--insumos  { background: var(--marron-suave); border-left-color: var(--marron); color: var(--marron-oscuro); }
+    .rt-opcion--sin-cono { border-left: 4px solid var(--grafito); }
+    .rt-opcion--con-cono { border-left: 4px solid var(--amarillo); }
+    .rt-opcion--insumos  { border-left: 4px solid var(--marron); }
+    .rt-opcion__sin-stock { color: var(--bordo-oscuro); font-weight: 700; }
+    .rt-pista { flex: 1 1 100%; font-size: 0.8125rem; color: var(--rt-texto-secundario); margin: 0.25rem 0 0; }
+
+    /* ── Varios lotes por renglón ──────────────────────────────────────── */
+    .rt-lotes { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.25rem 0 0.5rem; min-width: 0; }
+    .rt-lote-fila {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 7rem); gap: 0.5rem; align-items: center;
+      padding: 0.375rem 0.5rem; border: 1px solid var(--color-borde); border-radius: var(--radio-input); min-width: 0;
+    }
+    .rt-lote-fila__nombre { font-weight: 700; overflow-wrap: anywhere; }
+    .rt-lote-fila__detalle { display: block; font-size: 0.75rem; color: var(--rt-texto-secundario); font-weight: 500; }
+    .rt-lotes__resumen { font-size: 0.875rem; font-weight: 600; color: var(--color-texto); overflow-wrap: anywhere; }
+    .rt-lotes__resumen strong { font-variant-numeric: tabular-nums; }
+    .rt-lotes__falta { color: var(--bordo-oscuro); }
     .rt-item { background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); border-radius: 17px; padding: 0.75rem 0.875rem; }
     .rt-item__desc { font-weight: 700; overflow-wrap: anywhere; }
     .rt-item__lotes { font-size: 0.8125rem; color: var(--rt-texto-secundario); overflow-wrap: anywhere; }
@@ -424,6 +465,10 @@
       catalogo: null,
       catalogoEmpresa: null,
       errorCatalogo: null,
+      // El stock de cada presentación con cono, cono por cono
+      // ('presentacion|marca' → cajas): undefined = no se leyó; null = no se
+      // puede saber (sin permiso o falló).
+      stockConos: undefined,
       // Los lotes con stock por 'presentacion|marca' (producto) o
       // 'ins|insumo' (insumo): { cargando, error, lista }
       lotes: new Map(),
@@ -655,6 +700,7 @@
       if (cambio) {
         estado.clientes = null
         estado.catalogo = null
+        estado.stockConos = undefined
         estado.lotes = new Map()
         estado.mis = null
         estado.form = null
@@ -716,15 +762,61 @@
     // El catálogo de la carga sale de catalogo_para_retiro(): los productos
     // (una fila por presentación, ya ordenados por categoría) y los insumos
     // con stock en la empresa. Los conos, de marcas_personalizadas.
+    // Los insumos SIN stock no vienen en catalogo_para_retiro() (trae solo los
+    // que tienen): salen del catálogo de insumos, que lee cualquier usuario,
+    // para poder buscarlos y elegirlos marcados "sin stock". Si esa lectura
+    // falla, la carga sigue con los que tienen stock (no se frena por eso).
     async function leerCatalogo(unidadId) {
-      const [c, m] = await Promise.all([
+      const [c, m, t] = await Promise.all([
         supabase.rpc('catalogo_para_retiro', { p_unidad_negocio_id: unidadId }),
         supabase.from('marcas_personalizadas')
           .select('id, nombre, estado_alta').eq('activa', true).neq('estado_alta', 'rechazada').order('nombre'),
+        supabase.from('insumos').select('id, nombre, marca, categoria, unidad_medida').eq('activo', true).order('nombre'),
       ])
       if (c.error) throw c.error
       if (m.error) throw m.error
-      return catalogoDesdeRpc(c.data, m.data)
+      if (t.error) console.error('No se pudieron leer los insumos sin stock:', t.error)
+      return catalogoDesdeRpc(c.data, m.data, t.error ? [] : t.data)
+    }
+
+    // El stock de cada PRESENTACIÓN CON CONO, cono por cono. catalogo_para_retiro()
+    // da el stock de la presentación sumando todos los conos, así que para
+    // mostrar "Mini con cono · LOLO · hay 12 cajas" se lee el libro del
+    // stock terminado, que pide stock:ver o Producción en la empresa (el
+    // depósito tiene stock:ver). Sin permiso, o si falla, o si llega al tope
+    // de 1000 filas, devuelve null: la pantalla muestra el stock de la
+    // presentación entre todos los conos y el cono se elige después. Nunca un
+    // número de menos.
+    const TOPE_FILAS = 1000
+    function puedeVerStockTerminado(unidadId) {
+      if (!unidadId) return false
+      if (estado.miRolApp === 'super_admin') return true
+      return ['stock:ver', 'produccion:ver', 'produccion:cargar', 'produccion:configurar'].some(k => {
+        if (!estado.misTareas.has(k)) return false
+        const a = estado.misTareas.get(k)
+        return (a && a.todas === true) || (Array.isArray(a?.unidades) && a.unidades.map(String).includes(String(unidadId)))
+      })
+    }
+
+    async function leerStockConos(unidadId) {
+      if (!puedeVerStockTerminado(unidadId)) return null
+      const { data, error } = await supabase.from('stock_terminado_movimientos')
+        .select('presentacion_id, marca_id, cajas').eq('unidad_negocio_id', unidadId)
+      if (error) { console.error('No se pudo leer el stock por cono:', error); return null }
+      const filas = Array.isArray(data) ? data : []
+      if (filas.length >= TOPE_FILAS) { console.warn('El stock por cono llegó al tope de filas: se muestra por presentación.'); return null }
+      return stockPorCono(filas)
+    }
+
+    // 'presentacion|marca' (marca '' = cono común) → cajas.
+    function stockPorCono(filas) {
+      const m = new Map()
+      for (const f of Array.isArray(filas) ? filas : []) {
+        if (!f?.presentacion_id) continue
+        const k = claveLotes(f.presentacion_id, f.marca_id ?? null)
+        m.set(k, (m.get(k) ?? 0) + (Number(f.cajas) || 0))
+      }
+      return m
     }
 
     // Las categorías del producto terminado, en el orden en que se muestran.
@@ -744,7 +836,7 @@
     // nombre del producto: el producto se arma agrupando por nombre y
     // categoría, en el orden en que vino. Un null (sin permiso) da listas
     // vacías, nunca un error.
-    function catalogoDesdeRpc(data, marcas) {
+    function catalogoDesdeRpc(data, marcas, todosInsumos = []) {
       const productos = []
       const presentaciones = []
       const porClave = new Map()
@@ -768,6 +860,13 @@
         id: i.insumo_id, nombre: i.nombre, marca: i.marca ?? null, categoria: i.categoria ?? null,
         unidad_medida: i.unidad_medida, stock: i.stock ?? null,
       }))
+      // Los que no tienen stock en la empresa, con stock 0: se ofrecen solo
+      // al buscar, marcados "sin stock".
+      const conStock = new Set(insumos.map(i => i.id))
+      for (const i of Array.isArray(todosInsumos) ? todosInsumos : []) {
+        if (!i?.id || conStock.has(i.id)) continue
+        insumos.push({ id: i.id, nombre: i.nombre, marca: i.marca ?? null, categoria: i.categoria ?? null, unidad_medida: i.unidad_medida, stock: 0 })
+      }
       return { productos, presentaciones, marcas: marcas ?? [], insumos }
     }
 
@@ -782,22 +881,76 @@
       return lista.reduce((s, pr) => s + (Number(pr.stock_cajas) || 0), 0)
     }
 
-    // Lo que se ofrece en un renglón sin elegir: primero los productos, un
-    // grupo por categoría en su orden, y al final los insumos. El buscador
-    // filtra TODO junto: nombre del producto o de sus presentaciones, nombre
-    // o marca del insumo, sin acentos ni mayúsculas.
-    function gruposCatalogo(cat, busqueda) {
-      const q = normalizar(busqueda)
-      const coincide = (...textos) => !q || textos.some(t => normalizar(t).includes(q))
-      const grupos = []
-      for (const c of [...CATEGORIAS_RETIRO, { clave: null, titulo: TITULO_SIN_CATEGORIA }]) {
-        const lista = (cat?.productos ?? []).filter(p => (p.categoria ?? null) === c.clave &&
-          (coincide(p.nombre) || (cat?.presentaciones ?? []).some(pr => pr.producto_id === p.id && coincide(pr.nombre))))
-        if (lista.length) grupos.push({ tipo: 'productos', titulo: c.titulo, lista })
+    // Lo que se ofrece en un renglón sin elegir, en TRES grupos (28/09/2026):
+    //   · "Producto terminado · SIN CONO": una opción por presentación sin cono;
+    //   · "Producto terminado · CON CONO": una por presentación Y cono con
+    //     stock (el cono de cada uno); sin el stock por cono, una por
+    //     presentación con el stock entre todos los conos, y el cono se elige
+    //     después;
+    //   · "Materia prima e insumos".
+    // Cada opción dice cuánto hay. Sin buscar, solo lo que tiene stock; al
+    // buscar, también lo que no tiene, marcado "sin stock" (se puede elegir:
+    // sale igual y queda para revisar). Las categorías de producto ordenan
+    // adentro de cada grupo (el orden en que vino el catálogo).
+    // Cada opción: { grupo, productoId, presentacionId, conCono, marcaId
+    // (null = cono común; undefined = el cono se elige después), insumoId,
+    // nombre, detalle, stock (null = no se sabe) }.
+    function opcionesCatalogo(cat, stockConos = null) {
+      const productos = new Map((cat?.productos ?? []).map(p => [p.id, p]))
+      const sin = []
+      const con = []
+      for (const pr of cat?.presentaciones ?? []) {
+        const prod = productos.get(pr.producto_id)
+        if (!prod) continue
+        const base = { productoId: prod.id, presentacionId: pr.id, conCono: pr.con_cono === true, categoria: prod.categoria ?? null,
+          nombre: `${limpio(prod.nombre)} · ${limpio(pr.nombre)}`, textos: [prod.nombre, pr.nombre] }
+        const stockPres = pr.stock_cajas === null || pr.stock_cajas === undefined ? null : Number(pr.stock_cajas)
+        if (!base.conCono) { sin.push({ ...base, grupo: 'sin_cono', marcaId: null, stock: stockPres }); continue }
+        if (stockConos instanceof Map) {
+          const deEsta = [...stockConos.entries()].filter(([k, v]) => k.startsWith(pr.id + '|') && v > 0)
+          for (const [k, v] of deEsta) {
+            const marcaId = k.slice(pr.id.length + 1) || null
+            const cono = textoCono(cat, true, marcaId)
+            con.push({ ...base, grupo: 'con_cono', marcaId, stock: v, nombre: `${base.nombre} · ${cono}`, textos: [...base.textos, cono] })
+          }
+          // La presentación sin ningún cono con stock: una sola opción, y el
+          // cono se elige después.
+          if (!deEsta.length) con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: 0 })
+        } else {
+          con.push({ ...base, grupo: 'con_cono', marcaId: undefined, stock: stockPres, entreConos: true })
+        }
       }
-      const insumos = (cat?.insumos ?? []).filter(i => coincide(i.nombre, i.marca))
-      if (insumos.length) grupos.push({ tipo: 'insumos', titulo: TITULO_INSUMOS, lista: insumos })
-      return grupos
+      const orden = (a, b) => ordenCategoria(a.categoria) - ordenCategoria(b.categoria)
+      const insumos = (cat?.insumos ?? []).map(i => ({ grupo: 'insumos', insumoId: i.id, nombre: limpio(i.nombre),
+        marca: i.marca ?? null, unidad: i.unidad_medida, stock: i.stock === null || i.stock === undefined ? null : Number(i.stock),
+        textos: [i.nombre, i.marca] }))
+      return { sin_cono: [...sin].sort(orden), con_cono: [...con].sort(orden), insumos }
+    }
+
+    // El orden de las categorías (cucuruchones, barquillos, especiales, pasta,
+    // y al final lo sin categoría). sort() es estable: adentro de cada
+    // categoría queda el orden del catálogo.
+    function ordenCategoria(c) {
+      const i = CATEGORIAS_RETIRO.findIndex(x => x.clave === c)
+      return i === -1 ? CATEGORIAS_RETIRO.length : i
+    }
+
+    const GRUPOS_RETIRO = [
+      { tipo: 'sin_cono', titulo: 'Producto terminado · SIN CONO' },
+      { tipo: 'con_cono', titulo: 'Producto terminado · CON CONO' },
+      { tipo: 'insumos', titulo: TITULO_INSUMOS },
+    ]
+
+    // ¿Hay stock? null (no se sabe) cuenta como que sí: no se esconde nada
+    // por no poder medirlo.
+    const hayStock = (o) => o.stock === null || o.stock === undefined || o.stock > 0
+
+    function gruposCatalogo(cat, busqueda, stockConos = null) {
+      const q = normalizar(busqueda)
+      const coincide = (o) => !q || (o.textos ?? []).some(t => normalizar(t).includes(q))
+      const todas = opcionesCatalogo(cat, stockConos)
+      return GRUPOS_RETIRO.map(g => ({ ...g, lista: todas[g.tipo].filter(o => coincide(o) && (q ? true : hayStock(o))) }))
+        .filter(g => g.lista.length)
     }
 
     function presentacionesDe(cat, productoId, conCono) {
@@ -838,6 +991,10 @@
         tareas.push(leerCatalogo(unidad).then(c => { if (unidad === estado.empresaId) { estado.catalogo = c; estado.catalogoEmpresa = unidad } })
           .catch(err => { console.error('No se pudo leer el catálogo:', err); estado.errorCatalogo = 'No se pudieron leer los productos. Revisá la conexión y volvé a entrar.' }))
       }
+      if (estado.stockConos === undefined) {
+        tareas.push(leerStockConos(unidad).then(m => { if (unidad === estado.empresaId) estado.stockConos = m })
+          .catch(err => { console.error('No se pudo leer el stock por cono:', err); if (unidad === estado.empresaId) estado.stockConos = null }))
+      }
       if (estado.clientes === null) {
         estado.errorClientes = null
         tareas.push(leerClientes(unidad).then(c => { if (unidad === estado.empresaId) estado.clientes = c })
@@ -870,13 +1027,16 @@
 
     // Los lotes de un insumo, de lotes_insumo_para_retiro(): (lote, cantidad,
     // desde), uno por lote y los más viejos primero. Igual se suman por lote y
-    // se ordenan acá, por si la base algún día devuelve el lote partido. Sin
-    // lote no se puede elegir (la base descuenta un lote pedido por su nombre).
+    // se ordenan acá, por si la base algún día devuelve el lote partido.
+    // El stock SIN LOTE (las cajas, las bolsas: lo que no lleva lote) va con
+    // lote '' y se llama "Sin lote": registrar_orden_retiro() lo toma como
+    // el lote null (nullif(lote, '')). Antes se descartaba, y un insumo que
+    // no lleva lote parecía no tener stock.
     function lotesDeInsumo(filas) {
       const porLote = new Map()
       for (const f of Array.isArray(filas) ? filas : []) {
         const lote = String(f?.lote ?? '')
-        if (!lote) continue
+        if (lote === LOTE_FALTANTE) continue
         const a = porLote.get(lote) ?? { lote, saldo: 0, desde: null }
         a.saldo += Number(f.cantidad) || 0
         if (f.desde && (!a.desde || f.desde < a.desde)) a.desde = f.desde
@@ -884,6 +1044,99 @@
       }
       return [...porLote.values()].filter(l => l.saldo > 0)
         .sort((a, b) => String(a.desde ?? '').localeCompare(String(b.desde ?? '')) || a.lote.localeCompare(b.lote))
+    }
+
+    // El lote que la base usa para lo que no estaba en stock.
+    const LOTE_FALTANTE = 'SIN STOCK'
+
+    // Cómo se nombra un lote en pantalla.
+    const nombreLote = (lote) => lote ? `Lote ${lote}` : 'Sin lote'
+
+    // Lo pedido en el renglón: cajas (producto) o cantidad (insumo). null si
+    // no hay un número positivo.
+    function cantidadPedida(r) {
+      const v = r?.insumoId ? r.cantidad : r?.cajas
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) && n > 0 ? n : null
+    }
+
+    // Redondeo a 3 decimales: kilos y litros. Sin esto, 0,1 + 0,2 no da 0,3
+    // y "falta asignar" diría 0,0000000001.
+    const r3 = (x) => Math.round(x * 1000) / 1000
+
+    // Cómo quedó repartido lo pedido entre los lotes. 'lista' = los lotes con
+    // stock (los más viejos primero); null si todavía no se leyeron o no se
+    // pudieron leer.
+    //   pedido, asignado, falta (pedido − asignado; negativo = de más),
+    //   sinLugar  = ningún lote tiene lugar para más (todo asignado a su stock),
+    //   porLote   = [{ lote, saldo, q, excede }],
+    //   faltante  = lo que NO está en stock y va a quedar pendiente de revisión
+    //               (null si no se puede saber).
+    function asignacion(r, lista) {
+      const pedido = cantidadPedida(r)
+      const asignados = r?.lotes && typeof r.lotes === 'object' ? r.lotes : {}
+      const porLote = (Array.isArray(lista) ? lista : []).map(l => {
+        const q = Number(asignados[l.lote]) > 0 ? Number(asignados[l.lote]) : 0
+        return { lote: l.lote, saldo: l.saldo, desde: l.desde ?? null, q, excede: r3(Math.max(q - l.saldo, 0)) }
+      })
+      const asignado = r3(porLote.reduce((s, l) => s + l.q, 0))
+      const falta = pedido === null ? null : r3(pedido - asignado)
+      const sinLugar = porLote.every(l => l.q >= l.saldo)
+      let faltante = null
+      if (Array.isArray(lista) && pedido !== null) {
+        if (asignado === 0) faltante = r3(Math.max(pedido - porLote.reduce((s, l) => s + l.saldo, 0), 0))
+        else faltante = r3(porLote.reduce((s, l) => s + l.excede, 0) + (falta > 0 && sinLugar ? falta : 0))
+      }
+      return { pedido, asignado, falta, sinLugar, porLote, faltante }
+    }
+
+    // "Completar con los más viejos": reparte lo pedido desde el lote más
+    // viejo, cada uno hasta su stock. Arranca de cero (lo asignado a mano se
+    // reemplaza). Lo que no entra queda sin asignar: es lo que falta en stock.
+    function completarConLosMasViejos(lista, pedido) {
+      const out = {}
+      let resta = Number(pedido) > 0 ? Number(pedido) : 0
+      for (const l of Array.isArray(lista) ? lista : []) {
+        if (resta <= 0) break
+        const toma = r3(Math.min(resta, l.saldo))
+        if (toma > 0) out[l.lote] = toma
+        resta = r3(resta - toma)
+      }
+      return out
+    }
+
+    // Los lotes que viajan a la base, o null si no se asignó ninguno (y la
+    // base descuenta sola de los más viejos). Lo que queda sin asignar cuando
+    // ya no hay lugar en ningún lote va al lote "SIN STOCK": es el faltante
+    // que la base deja pendiente de revisión. Con cajas en un producto y con
+    // cantidad en un insumo; el stock sin lote de un insumo va con lote ''.
+    function lotesParaBase(r, lista) {
+      const a = asignacion(r, lista)
+      if (!(a.asignado > 0)) return null
+      const clave = r.insumoId ? 'cantidad' : 'cajas'
+      const out = a.porLote.filter(l => l.q > 0).map(l => ({ lote: l.lote, [clave]: l.q }))
+      if (a.falta > 0 && a.sinLugar) out.push({ lote: LOTE_FALTANTE, [clave]: a.falta })
+      return out
+    }
+
+    // Los lotes leídos de un renglón (la lista) o null.
+    function listaLotesDe(r) {
+      const info = estado.lotes.get(claveLotesRenglon(r))
+      return info && !info.cargando && !info.error ? info.lista : null
+    }
+
+    // ¿El renglón ya sabe qué es (para leer sus lotes)?
+    const renglonConLotes = (r) => !!(r?.insumoId || r?.presentacionId)
+
+    // Lee los lotes de los renglones que ya saben qué son y todavía no los
+    // tienen. asegurarLotes() no vuelve a leer lo que ya está.
+    function asegurarLotesDeRenglones() {
+      for (const r of estado.form?.renglones ?? []) {
+        if (!renglonConLotes(r)) continue
+        if (r.insumoId) asegurarLotes(null, null, r.insumoId)
+        else asegurarLotes(r.presentacionId, r.conCono ? r.marcaId : null)
+      }
     }
 
     async function leerLotes(unidadId, presentacionId, marcaId) {
@@ -925,8 +1178,8 @@
 
     let claveRenglon = 0
 
-    // SIN CONO viene puesto: con cono está a un toque. Sin lote elegido: la
-    // base descuenta de los más viejos.
+    // SIN CONO viene puesto: con cono está a un toque. Sin lotes repartidos:
+    // la base descuenta de los más viejos. 'lotes' es { lote: cantidad }.
     // Un renglón es UNA de dos cosas: un producto (productoId → presentación
     // y cajas) o un insumo (insumoId y cantidad en su unidad). Del insumo se
     // guardan el nombre, la marca y la unidad al elegirlo: el borrador y la
@@ -935,7 +1188,7 @@
       claveRenglon++
       return { clave: claveRenglon, busqueda: '', productoId: null, conCono: false, marcaId: null, marcaBusqueda: '',
         presentacionId: null, cajas: null, insumoId: null, insumoNombre: null, insumoMarca: null, unidad: null,
-        cantidad: null, lote: null, eligiendoLote: false }
+        cantidad: null, lotes: {} }
     }
 
     function formVacio() {
@@ -954,11 +1207,23 @@
         const n = Number(r.cantidad)
         if (r.cantidad === null || r.cantidad === undefined || r.cantidad === '' || !(n > 0)) return 'poné la cantidad'
         if (decimalesDeUnidad(r.unidad) === 0 && !Number.isInteger(n)) return 'poné la cantidad en unidades enteras'
-        return null
+        return faltaEnLotes(r)
       }
       if (!r.productoId) return 'elegí el producto'
       if (!r.presentacionId) return 'elegí la presentación'
       if (r.cajas === null || r.cajas === undefined || !(Number(r.cajas) > 0) || !Number.isInteger(Number(r.cajas))) return 'poné las cajas'
+      return faltaEnLotes(r)
+    }
+
+    // Lo repartido entre los lotes: nada (sale sola de los más viejos) o
+    // todo lo pedido. Lo que queda sin repartir SOLO se acepta cuando ya no
+    // hay lugar en ningún lote: es lo que falta en stock (sale igual). Pedir
+    // de más en un lote también sale igual: es un faltante, no un error.
+    function faltaEnLotes(r) {
+      const a = asignacion(r, listaLotesDe(r))
+      if (!(a.asignado > 0) || a.falta === null) return null
+      if (a.falta < 0) return `asignaste ${cantidadRenglon(r, -a.falta)} de más a los lotes`
+      if (a.falta > 0 && !a.sinLugar) return `faltan asignar ${cantidadRenglon(r, a.falta)} a los lotes (tocá «Completar con los más viejos»)`
       return null
     }
 
@@ -974,16 +1239,19 @@
     }
 
     // Un renglón para la base: el producto, el cono (null sin cono), las cajas
-    // y, SOLO si se eligió, el lote. Un insumo: insumo_id y cantidad (en su
-    // unidad), SIN cajas ni presentación. NADA de precio: la carga no lo tiene.
+    // y, SOLO si se repartió entre lotes, 'lotes' [{lote, cajas}]. Un insumo:
+    // insumo_id y cantidad (en su unidad), SIN cajas ni presentación, y sus
+    // 'lotes' [{lote, cantidad}]. Sin 'lotes', la base descuenta sola de los
+    // más viejos. NADA de precio: la carga no lo tiene.
     function itemParaBase(r) {
+      const lotes = lotesParaBase(r, listaLotesDe(r))
       if (r.insumoId) {
         const ins = { insumo_id: r.insumoId, cantidad: Number(r.cantidad) }
-        if (r.lote) ins.lote = r.lote
+        if (lotes) ins.lotes = lotes
         return ins
       }
       const item = { presentacion_id: r.presentacionId, marca_id: r.conCono ? (r.marcaId ?? null) : null, cajas: Number(r.cajas) }
-      if (r.lote) item.lote = r.lote
+      if (lotes) item.lotes = lotes
       return item
     }
 
@@ -1086,25 +1354,43 @@
 
     // Las opciones de un renglón sin elegir: un encabezado por categoría y,
     // al final y separados, los insumos con su stock en la empresa.
-    function htmlProductosRenglon(i, cat, busqueda = '') {
-      const grupos = gruposCatalogo(cat, busqueda)
+    const CLASE_GRUPO = { sin_cono: 'sin-cono', con_cono: 'con-cono', insumos: 'insumos' }
+    // Un id de cono es un uuid: esta palabra no puede ser uno.
+    const MARCA_A_ELEGIR = 'elegir'
+
+    // Cuánto hay, dicho para una opción: "hay 12 cajas", "hay 250 kg",
+    // "sin stock" (en bordó), o nada si no se sabe.
+    function textoStockOpcion(o) {
+      if (o.stock === null || o.stock === undefined) return ''
+      if (!(o.stock > 0)) return 'sin stock'
+      const cuanto = o.grupo === 'insumos' ? cantidadInsumoHoja(o.stock, o.unidad) : `${enteroHoja(o.stock)} cajas`
+      return `hay ${cuanto}${o.entreConos ? ' entre todos los conos' : ''}`
+    }
+
+    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = estado.stockConos) {
+      const grupos = gruposCatalogo(cat, busqueda, stockConos)
+      const q = limpio(busqueda)
+      // Sin buscar se ven solo los que tienen stock: se dice cómo encontrar el resto.
+      const pista = q ? '' : '<p class="rt-pista">Escribí para buscar también lo que no tiene stock.</p>'
       if (!grupos.length) {
-        return limpio(busqueda)
-          ? `<span class="rt-texto-suave">Nada coincide con «${esc(limpio(busqueda))}».</span>`
-          : ''
+        return q ? `<span class="rt-texto-suave">Nada coincide con «${esc(q)}».</span>` : pista
       }
-      const botonProducto = (p) => {
-        const stock = stockProducto(cat, p.id)
-        return `<button type="button" class="rt-opcion" data-r-producto="${i}" data-id="${esc(p.id)}"><span>${esc(p.nombre)}</span>` +
-          `${stock !== null ? `<span class="rt-opcion__detalle">hay ${esc(enteroHoja(stock))} cajas</span>` : ''}</button>`
+      const boton = (o) => {
+        const clase = `rt-opcion rt-opcion--${CLASE_GRUPO[o.grupo]}`
+        const stock = textoStockOpcion(o)
+        const sinStock = stock === 'sin stock'
+        const detalle = [o.grupo === 'insumos' ? limpio(o.marca) : '', o.grupo === 'con_cono' && o.marcaId === undefined && !o.entreConos ? 'elegí el cono' : '']
+          .filter(Boolean).join(' · ')
+        const partes = `<span>${esc(o.nombre)}</span>` +
+          (detalle || stock ? `<span class="rt-opcion__detalle">${esc(detalle)}${detalle && stock ? ' · ' : ''}` +
+            `${stock ? `<span${sinStock ? ' class="rt-opcion__sin-stock"' : ''}>${esc(stock)}</span>` : ''}</span>` : '')
+        if (o.grupo === 'insumos') return `<button type="button" class="${clase}" data-r-insumo="${i}" data-id="${esc(o.insumoId)}">${partes}</button>`
+        // data-marca: el id del cono, "" = cono común (o sin cono), y
+        // MARCA_A_ELEGIR = el cono se elige después.
+        const marca = o.conCono && o.marcaId === undefined ? MARCA_A_ELEGIR : (o.marcaId ?? '')
+        return `<button type="button" class="${clase}" data-r-producto="${i}" data-id="${esc(o.productoId)}" data-presentacion="${esc(o.presentacionId)}" data-marca="${esc(marca)}">${partes}</button>`
       }
-      const botonInsumo = (x) => {
-        const detalle = [limpio(x.marca), x.stock !== null && x.stock !== undefined ? 'hay ' + cantidadInsumoHoja(x.stock, x.unidad_medida) : null].filter(Boolean).join(' · ')
-        return `<button type="button" class="rt-opcion" data-r-insumo="${i}" data-id="${esc(x.id)}"><span>${esc(x.nombre)}</span>` +
-          `${detalle ? `<span class="rt-opcion__detalle">${esc(detalle)}</span>` : ''}</button>`
-      }
-      return grupos.map(g => `<div class="rt-separador${g.tipo === 'insumos' ? ' rt-separador--insumos' : ''}">${esc(g.titulo)}</div>` +
-        (g.tipo === 'insumos' ? g.lista.map(botonInsumo) : g.lista.map(botonProducto)).join('')).join('')
+      return grupos.map(g => `<div class="rt-grupo rt-grupo--${CLASE_GRUPO[g.tipo]}">${esc(g.titulo)}</div>` + g.lista.map(boton).join('')).join('') + pista
     }
 
     // El buscador y las opciones de un renglón sin elegir. Tipear filtra solo
@@ -1142,27 +1428,60 @@
         `</div>`
     }
 
-    // "Elegir lote": opcional. Sin elegir, la base descuenta de los más viejos.
+    // Una cantidad en la unidad del renglón: "12 cajas" o "25,5 kg".
+    function cantidadRenglon(r, n) {
+      return r?.insumoId ? cantidadInsumoHoja(n, r.unidad) : `${enteroHoja(n)} cajas`
+    }
+
+    // EL AVISO DE FALTANTE, que NO bloquea: la orden sale igual y el renglón
+    // queda pendiente de revisión en Administración (la base lo marca).
+    const TEXTO_FALTANTE = 'Esto no está en stock: la orden sale igual y queda pendiente de revisión en Administración'
+
+    function htmlAvisoFaltante(r, a) {
+      if (!(a?.faltante > 0)) return ''
+      return `<div class="rt-aviso rt-aviso--grave" data-r-faltante>${esc(TEXTO_FALTANTE)} (faltan ${esc(cantidadRenglon(r, a.faltante))}).</div>`
+    }
+
+    // El resumen de los lotes del renglón: lo pedido, lo asignado y cuánto
+    // falta asignar. Se redibuja solo (sin tocar los campos) al tipear.
+    function htmlResumenLotes(r, lista) {
+      const a = asignacion(r, lista)
+      if (a.pedido === null) return `<span class="rt-texto-suave">Poné ${r.insumoId ? 'la cantidad' : 'las cajas'} y repartila entre los lotes, o dejala sin repartir: sale sola de los más viejos.</span>`
+      let linea
+      if (!(a.asignado > 0)) linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · sin repartir: sale sola de los lotes más viejos.`
+      else if (a.falta > 0) {
+        linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · asignado: <strong>${esc(cantidadRenglon(r, a.asignado))}</strong> · ` +
+          `<span class="rt-lotes__falta">falta asignar: <strong>${esc(cantidadRenglon(r, a.falta))}</strong>${a.sinLugar ? ' (no hay más en stock)' : ''}</span>`
+      } else if (a.falta < 0) {
+        linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · asignado: <strong>${esc(cantidadRenglon(r, a.asignado))}</strong> · ` +
+          `<span class="rt-lotes__falta">asignaste ${esc(cantidadRenglon(r, -a.falta))} de más</span>`
+      } else linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · asignado todo.`
+      const excedidos = a.porLote.filter(l => l.excede > 0)
+        .map(l => `<br><span class="rt-lotes__falta">${esc(nombreLote(l.lote))}: pusiste ${esc(cantidadRenglon(r, l.q))} y hay ${esc(cantidadRenglon(r, l.saldo))}.</span>`).join('')
+      return `<span class="rt-lotes__resumen">${linea}${excedidos}</span>${htmlAvisoFaltante(r, a)}`
+    }
+
+    // Los lotes del renglón, en lista (los más viejos primero), con un campo
+    // de cantidad por lote. Sin repartir, la base descuenta sola de los más
+    // viejos.
     function htmlLoteRenglon(r, i) {
-      if (!r.presentacionId && !r.insumoId) return ''
-      const elegido = r.lote
-        ? `<span class="rt-lote__elegido">Lote ${esc(r.lote)}</span><button type="button" class="rt-link" data-r-lote-quitar="${i}">Usar los más viejos</button>`
-        : `<span class="rt-texto-suave">Sale de los lotes más viejos.</span>`
-      if (!r.eligiendoLote) {
-        return `<div class="rt-lote"><div class="rt-elegido">${elegido}` +
-          `<button type="button" class="rt-btn rt-btn--suave" data-r-lote-abrir="${i}">Elegir lote</button></div></div>`
-      }
+      if (!renglonConLotes(r)) return ''
       const info = estado.lotes.get(claveLotesRenglon(r))
-      const cantidadLote = (l) => r.insumoId ? cantidadInsumoHoja(l.saldo, r.unidad) : `${enteroHoja(l.saldo)} cajas`
       let cuerpo
       if (!info || info.cargando) cuerpo = '<span class="rt-texto-suave">Buscando los lotes…</span>'
       else if (info.error) cuerpo = `<div class="rt-aviso rt-aviso--grave">${esc(info.error)}</div>`
-      else if (!info.lista.length) cuerpo = `<div class="rt-aviso">No hay lotes con stock de ${r.insumoId ? 'este insumo' : 'este producto'}. La orden sale igual y se avisa lo que falte.</div>`
-      else cuerpo = `<div class="rt-opciones" role="group" aria-label="Lote">` + info.lista.map(l =>
-        `<button type="button" class="rt-opcion" data-r-lote="${i}" data-lote="${esc(l.lote)}" aria-pressed="${l.lote === r.lote ? 'true' : 'false'}">` +
-        `<span>Lote ${esc(l.lote)}</span><span class="rt-opcion__detalle">${esc(cantidadLote(l))}${l.desde ? ` · desde ${esc(fechaCorta(l.desde))}` : ''}</span></button>`).join('') + `</div>`
-      return `<div class="rt-lote"><span class="rt-campo__rotulo">Lote (los más viejos primero)</span>${cuerpo}` +
-        `<button type="button" class="rt-link" data-r-lote-cerrar="${i}">${r.lote ? 'Listo' : 'Cerrar, que salga de los más viejos'}</button></div>`
+      else if (!info.lista.length) cuerpo = `<div class="rt-aviso">No hay lotes con stock de ${r.insumoId ? 'este insumo' : 'este producto'}.</div>`
+      else {
+        cuerpo = `<div class="rt-lotes" role="group" aria-label="Cuánto sale de cada lote">` + info.lista.map((l, k) =>
+          `<div class="rt-lote-fila"><label class="rt-lote-fila__nombre" for="rt-r-${i}-lote-${k}">${esc(nombreLote(l.lote))}` +
+          `<span class="rt-lote-fila__detalle">queda ${esc(cantidadRenglon(r, l.saldo))}${l.desde ? ` · desde ${esc(fechaCorta(l.desde))}` : ''}</span></label>` +
+          `<input type="text" class="rt-input" id="rt-r-${i}-lote-${k}" data-r-lote-cant="${i}" data-lote="${esc(l.lote)}" autocomplete="off"></div>`).join('') + `</div>` +
+          `<div class="rt-barra-acciones"><button type="button" class="rt-btn rt-btn--suave" data-r-completar="${i}">Completar con los más viejos</button>` +
+          `<button type="button" class="rt-link" data-r-lotes-limpiar="${i}">Que salga sola de los más viejos</button></div>`
+      }
+      const lista = info && !info.cargando && !info.error ? info.lista : null
+      return `<div class="rt-lote"><span class="rt-campo__rotulo">Lotes (los más viejos primero)</span>${cuerpo}` +
+        `<div data-r-lotes-resumen="${i}">${htmlResumenLotes(r, lista)}</div></div>`
     }
 
     function htmlRenglon(r, i, cat, conErrores) {
@@ -1229,6 +1548,13 @@
         enlazarCampoNumero(input, { decimales: decimalesDeUnidad(r?.unidad) })
         if (r) ponerNumero(input, r.cantidad)
       }
+      // Lo que sale de cada lote, con los decimales del renglón.
+      for (const input of cont.querySelectorAll('[data-r-lote-cant]')) {
+        const r = f.renglones[Number(input.dataset.rLoteCant)]
+        enlazarCampoNumero(input, { decimales: r?.insumoId ? decimalesDeUnidad(r.unidad) : DECIMALES_CAJAS })
+        const q = r?.lotes?.[input.dataset.lote]
+        if (r && Number(q) > 0) ponerNumero(input, Number(q))
+      }
       document.getElementById('rt-catalogo-aviso').innerHTML = htmlAvisoCatalogo()
       pintarPie()
     }
@@ -1251,16 +1577,61 @@
     function tocarRenglon() {
       pintarRenglones()
       guardarBorrador()
+      asegurarLotesDeRenglones()
     }
 
-    function elegirProductoRenglon(i, id) {
+    // Al tipear lo pedido o lo de un lote se redibuja SOLO el resumen de los
+    // lotes (redibujar el renglón le sacaría el foco al campo).
+    function pintarResumenLotes(i) {
+      const r = renglon(i)
+      const cont = document.getElementById('rt-renglones').querySelector(`[data-r-lotes-resumen="${Number(i)}"]`)
+      if (r && cont) cont.innerHTML = htmlResumenLotes(r, listaLotesDe(r))
+    }
+
+    function ponerCantidadLote(i, lote, valor) {
+      const r = renglon(i)
+      if (!r) return
+      if (!r.lotes || typeof r.lotes !== 'object') r.lotes = {}
+      if (Number(valor) > 0) r.lotes[lote] = Number(valor)
+      else delete r.lotes[lote]
+      pintarResumenLotes(i)
+      pintarPie()
+      guardarBorrador()
+    }
+
+    function completarLotes(i) {
+      const r = renglon(i)
+      const lista = r ? listaLotesDe(r) : null
+      if (!r || !lista) return
+      r.lotes = completarConLosMasViejos(lista, cantidadPedida(r))
+      tocarRenglon()
+    }
+
+    function limpiarLotes(i) {
+      const r = renglon(i)
+      if (!r) return
+      r.lotes = {}
+      tocarRenglon()
+    }
+
+    // Elegir una opción del catálogo: el producto y, si la opción la trae, su
+    // presentación (con o sin cono) y su cono (marcaId null = común;
+    // undefined = el cono se elige después). Los lotes se leen solos.
+    function elegirProductoRenglon(i, id, presentacionId = null, marcaId = undefined) {
       const r = renglon(i)
       if (!r || !(estado.catalogo?.productos ?? []).some(p => p.id === id)) return
+      const pr = presentacionId ? (estado.catalogo?.presentaciones ?? []).find(x => x.id === presentacionId && x.producto_id === id) : null
       r.productoId = id
       r.presentacionId = null
-      r.lote = null
-      r.eligiendoLote = false
-      autoPresentacion(r, estado.catalogo)
+      r.lotes = {}
+      if (pr) {
+        r.presentacionId = pr.id
+        r.conCono = pr.con_cono === true
+        r.marcaId = r.conCono && marcaId && marcaId !== MARCA_A_ELEGIR ? marcaId : null
+        r.marcaBusqueda = ''
+      } else {
+        autoPresentacion(r, estado.catalogo)
+      }
       tocarRenglon()
     }
 
@@ -1275,8 +1646,7 @@
       r.insumoMarca = null
       r.unidad = null
       r.cantidad = null
-      r.lote = null
-      r.eligiendoLote = false
+      r.lotes = {}
       tocarRenglon()
     }
 
@@ -1297,8 +1667,7 @@
       r.insumoMarca = ins.marca ?? null
       r.unidad = ins.unidad_medida ?? null
       r.cantidad = null
-      r.lote = null
-      r.eligiendoLote = false
+      r.lotes = {}
       tocarRenglon()
     }
 
@@ -1318,8 +1687,7 @@
       r.conCono = conCono
       if (!conCono) { r.marcaId = null; r.marcaBusqueda = '' }
       r.presentacionId = null
-      r.lote = null
-      r.eligiendoLote = false
+      r.lotes = {}
       autoPresentacion(r, estado.catalogo)
       tocarRenglon()
     }
@@ -1329,9 +1697,8 @@
       if (!r || !r.conCono) return
       if (id && !(estado.catalogo?.marcas ?? []).some(m => m.id === id)) return
       r.marcaId = id || null
-      // El lote es del stock de ESE cono: cambiar el cono lo suelta.
-      r.lote = null
-      if (r.eligiendoLote && r.presentacionId) asegurarLotes(r.presentacionId, r.marcaId)
+      // Los lotes son del stock de ESE cono: cambiar el cono los suelta.
+      r.lotes = {}
       tocarRenglon()
     }
 
@@ -1346,43 +1713,8 @@
     function elegirPresentacionRenglon(i, id) {
       const r = renglon(i)
       if (!r || !presentacionesDe(estado.catalogo, r.productoId, r.conCono).some(p => p.id === id)) return
-      if (r.presentacionId !== id) r.lote = null
+      if (r.presentacionId !== id) r.lotes = {}
       r.presentacionId = id
-      if (r.eligiendoLote) asegurarLotes(id, r.conCono ? r.marcaId : null)
-      tocarRenglon()
-    }
-
-    function abrirLotes(i) {
-      const r = renglon(i)
-      if (!r || (!r.presentacionId && !r.insumoId)) return
-      r.eligiendoLote = true
-      pintarRenglones()
-      if (r.insumoId) asegurarLotes(null, null, r.insumoId)
-      else asegurarLotes(r.presentacionId, r.conCono ? r.marcaId : null)
-    }
-
-    function cerrarLotes(i) {
-      const r = renglon(i)
-      if (!r) return
-      r.eligiendoLote = false
-      pintarRenglones()
-    }
-
-    // Solo se elige un lote que está en la lista de los que tienen stock.
-    function elegirLote(i, lote) {
-      const r = renglon(i)
-      if (!r) return
-      const info = estado.lotes.get(claveLotesRenglon(r))
-      if (!info?.lista?.some(l => l.lote === lote)) return
-      r.lote = lote
-      r.eligiendoLote = false
-      tocarRenglon()
-    }
-
-    function quitarLote(i) {
-      const r = renglon(i)
-      if (!r) return
-      r.lote = null
       tocarRenglon()
     }
 
@@ -1420,6 +1752,7 @@
       await asegurarDatosEmpresa()
       reconciliarRenglones(estado.form, estado.catalogo)
       if (estado.vista === 'rt-vista-form') pintarFormEntero()
+      asegurarLotesDeRenglones()
     }
 
     // Un borrador guardado antes de que el catálogo saliera de
@@ -1427,7 +1760,16 @@
     // presentación sigue en el catálogo, el producto se toma de ahí en vez de
     // dejar el renglón en "Producto (no se pudo leer)".
     function reconciliarRenglones(f, cat) {
-      if (!f || !cat) return
+      if (!f) return
+      // Un borrador de antes del 28/09/2026 traía UN lote elegido ('lote'):
+      // pasa a la forma nueva, con todo lo pedido en ese lote.
+      for (const r of f.renglones) {
+        if (!r.lotes || typeof r.lotes !== 'object' || Array.isArray(r.lotes)) r.lotes = {}
+        if (r.lote && !Object.keys(r.lotes).length && cantidadPedida(r) !== null) r.lotes[r.lote] = cantidadPedida(r)
+        delete r.lote
+        delete r.eligiendoLote
+      }
+      if (!cat) return
       for (const r of f.renglones) {
         if (!r.productoId || r.insumoId || (cat.productos ?? []).some(p => p.id === r.productoId)) continue
         const pr = (cat.presentaciones ?? []).find(x => x.id === r.presentacionId)
@@ -1451,11 +1793,14 @@
     function htmlResumen(f, cat) {
       const c = clienteDe(f.clienteId)
       const filas = f.renglones.map(r => {
-        const lote = r.lote ? 'Lote ' + r.lote : 'De los lotes más viejos'
+        const a = asignacion(r, listaLotesDe(r))
+        const lote = a.asignado > 0
+          ? a.porLote.filter(l => l.q > 0).map(l => `${nombreLote(l.lote)}: ${cantidadRenglon(r, l.q)}`).join(' · ')
+          : 'De los lotes más viejos'
         const cuanto = r.insumoId ? cantidadInsumoHoja(r.cantidad, r.unidad) : `${enteroHoja(r.cajas)} cajas`
         return `<div class="rt-resumen-fila"><span class="rt-resumen-fila__desc">${esc(descripcionRenglon(cat, r))}` +
           `${r.insumoId ? ' <span class="rt-sello rt-sello--insumo">Insumo</span>' : ''}` +
-          `<br><span class="rt-texto-suave">${esc(lote)}</span></span>` +
+          `<br><span class="rt-texto-suave">${esc(lote)}</span>${htmlAvisoFaltante(r, a)}</span>` +
           `<span class="rt-resumen-fila__cajas">${esc(cuanto)}</span></div>`
       }).join('')
       return htmlDatoRt('Empresa', empresaActual()?.nombre ?? '—') +
@@ -1541,9 +1886,10 @@
             ' — faltaron ' + enteroHoja(x.faltaron) + ' de ' + enteroHoja(x.pedidas) + ' cajas'
         return `<li>${esc(texto)}</li>`
       }).join('')
-      const hayInsumos = lista.some(x => x.insumo)
-      return `<div class="rt-aviso rt-aviso--grave"><strong>No había stock de todo.</strong> La orden salió igual: ` +
-        `avisale a ${hayInsumos ? 'quien lleva el stock' : 'Producción'} para que lo revise.<ul>${renglones}</ul></div>`
+      // La base deja esos renglones 'pendiente': los revisa Administración
+      // (Retiros por revisar), no hace falta avisarle a nadie más.
+      return `<div class="rt-aviso rt-aviso--grave"><strong>No había stock de todo.</strong> La orden salió igual ` +
+        `y lo que faltó quedó pendiente de revisión en Administración.<ul>${renglones}</ul></div>`
     }
 
     function htmlHecho(h) {
@@ -1844,26 +2190,26 @@
       const renglones = document.getElementById('rt-renglones')
       renglones.addEventListener('click', (e) => {
         let b
-        if ((b = e.target.closest('[data-r-producto]'))) elegirProductoRenglon(b.dataset.rProducto, b.dataset.id)
+        if ((b = e.target.closest('[data-r-producto]'))) elegirProductoRenglon(b.dataset.rProducto, b.dataset.id, b.dataset.presentacion ?? null, b.dataset.marca)
         else if ((b = e.target.closest('[data-r-insumo]'))) elegirInsumoRenglon(b.dataset.rInsumo, b.dataset.id)
         else if ((b = e.target.closest('[data-r-cambiar-producto]'))) cambiarProductoRenglon(b.dataset.rCambiarProducto)
         else if ((b = e.target.closest('[data-r-cono]'))) elegirConoRenglon(b.dataset.rCono, b.dataset.valor === 'si')
         else if ((b = e.target.closest('[data-r-marca]'))) elegirMarcaRenglon(b.dataset.rMarca, b.dataset.id)
         else if ((b = e.target.closest('[data-r-presentacion]'))) elegirPresentacionRenglon(b.dataset.rPresentacion, b.dataset.id)
-        else if ((b = e.target.closest('[data-r-lote-abrir]'))) abrirLotes(b.dataset.rLoteAbrir)
-        else if ((b = e.target.closest('[data-r-lote-cerrar]'))) cerrarLotes(b.dataset.rLoteCerrar)
-        else if ((b = e.target.closest('[data-r-lote-quitar]'))) quitarLote(b.dataset.rLoteQuitar)
-        else if ((b = e.target.closest('[data-r-lote]'))) elegirLote(b.dataset.rLote, b.dataset.lote)
+        else if ((b = e.target.closest('[data-r-completar]'))) completarLotes(b.dataset.rCompletar)
+        else if ((b = e.target.closest('[data-r-lotes-limpiar]'))) limpiarLotes(b.dataset.rLotesLimpiar)
         else if ((b = e.target.closest('[data-r-quitar]'))) quitarRenglon(b.dataset.rQuitar)
       })
       renglones.addEventListener('input', (e) => {
         const t = e.target
         if (t.dataset.rCajas !== undefined) {
           const r = renglon(t.dataset.rCajas)
-          if (r) { r.cajas = leerCampoNumero(t); pintarPie(); guardarBorrador() }
+          if (r) { r.cajas = leerCampoNumero(t); pintarResumenLotes(t.dataset.rCajas); pintarPie(); guardarBorrador() }
         } else if (t.dataset.rCantidad !== undefined) {
           const r = renglon(t.dataset.rCantidad)
-          if (r) { r.cantidad = leerCampoNumero(t); pintarPie(); guardarBorrador() }
+          if (r) { r.cantidad = leerCampoNumero(t); pintarResumenLotes(t.dataset.rCantidad); pintarPie(); guardarBorrador() }
+        } else if (t.dataset.rLoteCant !== undefined) {
+          ponerCantidadLote(t.dataset.rLoteCant, t.dataset.lote, leerCampoNumero(t))
         } else if (t.dataset.rBuscar !== undefined) {
           buscarCatalogoRenglon(t.dataset.rBuscar, t.value)
         } else if (t.dataset.rConoBuscar !== undefined) {
@@ -1945,6 +2291,7 @@
       if (!b || !empresasDeCarga().some(e => e.id === b.empresaId)) return false
       estado.empresaId = b.empresaId
       estado.form = { ...formVacio(), ...b.form, intentado: false, error: null }
+      reconciliarRenglones(estado.form, null)
       claveRenglon = Math.max(claveRenglon, ...estado.form.renglones.map(r => Number(r.clave) || 0))
       abrirFormulario()
       return true

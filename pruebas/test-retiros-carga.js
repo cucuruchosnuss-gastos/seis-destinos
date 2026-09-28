@@ -6,6 +6,8 @@
 // apodo, renglones producto → cono → presentación → cajas → lote opcional,
 // resumen sin precios, una sola llamada a registrar_orden_retiro con el MISMO
 // uuid en cada reintento, y el aviso de stock que no bloquea.
+// Los TRES grupos del catálogo, VARIOS lotes por renglón y el faltante, en
+// detalle, en test-retiros-lotes.js (28/09/2026).
 //
 //   node pruebas/test-retiros-carga.js
 
@@ -173,16 +175,18 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chk('el cono se nombra', S.textoCono(CAT, true, 'm-lolo') === 'LOLO' && S.textoCono(CAT, true, null) === 'Común' && S.textoCono(CAT, false, 'm-lolo') === 'Sin cono')
   S.elegirConoRenglon(0, false)
   chk('volver a sin cono olvida el cono', r.marcaId === null)
-  const hp = S.htmlProductosRenglon(0, CAT)
+  const hp = S.htmlProductosRenglon(0, CAT, '', null)
   const pos = (t) => hp.indexOf(t)
-  chk('los productos van por categoría: Cucuruchones, Barquillos, Especiales', pos('>Cucuruchones<') !== -1 && pos('>Cucuruchones<') < pos('p-cuc') &&
-    pos('p-cuc') < pos('>Barquillos<') && pos('>Barquillos<') < pos('p-cap') && pos('p-cap') < pos('>Especiales<') && pos('>Especiales<') < pos('p-cho'))
-  chk('los insumos van AL FINAL, separados', pos('>Materia prima e insumos<') > pos('p-cho') && pos('>Materia prima e insumos<') < pos('data-r-insumo="0" data-id="i-har"'))
-  chk('un grupo sin productos no dibuja su encabezado', !/>Pasta</.test(hp))
-  chk('cada producto dice su stock en cajas', /hay 45 cajas/.test(hp))
-  chk('cada insumo dice su marca y su stock en su unidad', /Molino Cañuelas · hay 250 kg/.test(hp) && /hay 300 un\./.test(hp))
+  chk('TRES grupos: SIN CONO, CON CONO y los insumos, en ese orden', pos('>Producto terminado · SIN CONO<') !== -1 &&
+    pos('>Producto terminado · SIN CONO<') < pos('>Producto terminado · CON CONO<') && pos('>Producto terminado · CON CONO<') < pos('>Materia prima e insumos<'))
+  chk('adentro de SIN CONO, por categoría: cucuruchones antes que barquillos', pos('data-presentacion="pr-cuc-sin"') < pos('data-presentacion="pr-cap-a"') &&
+    pos('data-presentacion="pr-cap-a"') < pos('>Producto terminado · CON CONO<'))
+  chk('los insumos van AL FINAL, separados', pos('>Materia prima e insumos<') < pos('data-r-insumo="0" data-id="i-har"'))
+  chk('sin buscar, lo que no tiene stock no se ofrece', !/pr-cho-sin/.test(hp) && /Escribí para buscar también lo que no tiene stock/.test(hp))
+  chk('cada presentación dice su stock en cajas', /Cucurucho grande · Caja x 100<\/span><span class="rt-opcion__detalle"><span>hay 40 cajas/.test(hp))
+  chk('cada insumo dice su marca y su stock en su unidad', /Molino Cañuelas · <span>hay 250 kg/.test(hp) && /hay 300 un\./.test(hp))
   S.elegirProductoRenglon(0, 'p-cap')
-  chk('con dos presentaciones no se elige sola', r.presentacionId === null)
+  chk('eligiendo solo el producto, con dos presentaciones no se elige sola', r.presentacionId === null)
   S.elegirPresentacionRenglon(0, 'pr-cuc-sin')
   chk('una presentación de otro producto no se elige', r.presentacionId === null)
   S.elegirPresentacionRenglon(0, 'pr-cap-b')
@@ -207,7 +211,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chk('quitar lo saca', f.renglones.length === 1)
 }
 
-// ── Los lotes: opcionales, los más viejos primero ───────────────────────────
+// ── Los lotes: los más viejos primero ───────────────────────────────────────
 {
   const S = nuevo()
   // Lo que devuelve lotes_para_retiro(): ya con stock y en el orden de la base.
@@ -229,51 +233,44 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     { lote: 'H-20', cantidad: 50, desde: '2026-09-22' },
     { lote: null, cantidad: 30, desde: '2026-09-01' },
     { lote: 'H-05', cantidad: -5, desde: '2026-09-05' },
+    { lote: 'SIN STOCK', cantidad: 3, desde: '2026-09-02' },
   ])
   chk('los lotes de un insumo se suman por lote, con la CANTIDAD que da la base', li.find(x => x.lote === 'H-20').saldo === 150)
-  chk('y van los más viejos primero, sin los agotados ni los sin lote', li.map(x => x.lote).join() === 'H-10,H-20')
+  chk('el stock SIN LOTE de un insumo se ofrece (lote ""), los más viejos primero, sin agotados ni SIN STOCK', li.map(x => x.lote).join() === ',H-10,H-20')
 }
 {
   const S = nuevo()
   S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }]])
   const f = conEmpresa(S)
-  cargarRenglon(S)
   let params = null
   S.__setRpc(async (n, p) => {
     if (n === 'lotes_para_retiro') { params = p; return { data: [{ lote: '7010-2', cajas: 8, desde: '2026-09-10' }, { lote: '7030-1', cajas: 15, desde: '2026-09-20' }], error: null } }
     return { data: null, error: null }
   })
-  S.abrirLotes(0)
+  cargarRenglon(S)
   esperas.push(new Promise(r => setTimeout(r, 0)).then(() => {
-    chk('SOLO con retiros:cargar, los lotes de producto se leen con lotes_para_retiro()', !!params)
+    chk('elegido el producto, los lotes se leen SOLOS con lotes_para_retiro() (solo con retiros:cargar)', !!params)
     chk('de esa empresa, presentación y cono (sin cono = marca null)', params && params.p_unidad_negocio_id === 'u-n' && params.p_presentacion_id === 'pr-cuc-sin' && params.p_marca_id === null)
     chk('sin tocar la tabla stock_terminado_movimientos', !S.__llamadas.consultas.some(c => c[0] === 'stock_terminado_movimientos'))
     const h = S.htmlLoteRenglon(f.renglones[0], 0)
-    chk('se ofrecen los lotes con su saldo', /data-lote="7010-2"/.test(h) && /data-lote="7030-1"/.test(h) && /15 cajas/.test(h))
-    S.elegirLote(0, 'no-existe')
-    chk('un lote que no está en la lista no se elige', f.renglones[0].lote === null)
-    S.elegirLote(0, '7030-1')
-    chk('elegir un lote', f.renglones[0].lote === '7030-1' && f.renglones[0].eligiendoLote === false)
-    chk('el payload lleva el lote elegido', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"presentacion_id":"pr-cuc-sin","marca_id":null,"cajas":10,"lote":"7030-1"}')
-    S.quitarLote(0)
-    chk('"Usar los más viejos" lo suelta', f.renglones[0].lote === null)
-    chk('sin lote el payload NO lleva la clave lote', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"presentacion_id":"pr-cuc-sin","marca_id":null,"cajas":10}')
-    S.elegirLote(0, '7010-2')
+    chk('se listan los lotes con lo que queda y un campo por lote', /data-r-lote-cant="0" data-lote="7010-2"/.test(h) && /data-lote="7030-1"/.test(h) && /queda 15 cajas/.test(h))
+    chk('el más viejo primero', h.indexOf('7010-2') < h.indexOf('7030-1'))
+    chk('sin repartir el payload NO lleva lotes (sale sola de los más viejos)', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"presentacion_id":"pr-cuc-sin","marca_id":null,"cajas":10}')
+    S.ponerCantidadLote(0, '7030-1', 10)
+    chk('lo puesto en un lote viaja en "lotes"', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"presentacion_id":"pr-cuc-sin","marca_id":null,"cajas":10,"lotes":[{"lote":"7030-1","cajas":10}]}')
     S.elegirConoRenglon(0, true)
-    chk('pasar a "con cono" suelta el lote (es stock de otro cono)', f.renglones[0].lote === null)
-    f.renglones[0].lote = '7010-2'
+    chk('pasar a "con cono" suelta los lotes (es stock de otro cono)', Object.keys(f.renglones[0].lotes).length === 0)
+    f.renglones[0].lotes = { '7010-2': 2 }
     S.elegirMarcaRenglon(0, 'm-lolo')
-    chk('cambiar de cono suelta el lote', f.renglones[0].lote === null)
+    chk('cambiar de cono suelta los lotes', Object.keys(f.renglones[0].lotes).length === 0)
   }))
 }
 {
-  // Un INSUMO con SOLO retiros:cargar (sin stock:ver): desde el 27/09/2026 los
-  // lotes los da lotes_insumo_para_retiro(), sin permiso de Stock.
+  // Un INSUMO con SOLO retiros:cargar (sin stock:ver): los lotes los da
+  // lotes_insumo_para_retiro(), sin permiso de Stock.
   const S = nuevo()
   S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }]])
   const f = conEmpresa(S)
-  S.elegirInsumoRenglon(0, 'i-har')
-  f.renglones[0].cantidad = 30
   let params = null
   S.__tablas.v_stock_por_lote = () => ({ data: [{ lote: 'NO-VA', saldo: 999, desde: '2026-01-01' }], error: null })
   S.__setRpc(async (n, p) => {
@@ -281,17 +278,17 @@ function cargarRenglon(S, i = 0, cajas = 10) {
       { lote: 'H-10', cantidad: 25, desde: '2026-09-10' }, { lote: 'H-20', cantidad: 150, desde: '2026-09-20' }], error: null } }
     return { data: null, error: null }
   })
-  S.abrirLotes(0)
-  chk('sin stock:ver, "Elegir lote" NO dice que no se pueden ver', !/no se pueden ver los lotes/.test(S.htmlLoteRenglon(f.renglones[0], 0)))
+  S.elegirInsumoRenglon(0, 'i-har')
+  f.renglones[0].cantidad = 30
   esperas.push(new Promise(r => setTimeout(r, 0)).then(() => {
     chk('los lotes de un insumo se leen con lotes_insumo_para_retiro(), de esa empresa y ese insumo', !!params &&
       params.p_unidad_negocio_id === 'u-n' && params.p_insumo_id === 'i-har' && Object.keys(params).length === 2)
     chk('sin consultar v_stock_por_lote (pide stock:ver)', !S.__llamadas.consultas.some(c => c[0] === 'v_stock_por_lote'))
     chk('sin llamar a lotes_para_retiro (esa es de producto)', !S.__llamadas.rpc.some(x => x[0] === 'lotes_para_retiro'))
     const h = S.htmlLoteRenglon(f.renglones[0], 0)
-    chk('se ofrecen con su saldo en la unidad del insumo', /data-lote="H-10"/.test(h) && /150 kg/.test(h))
-    S.elegirLote(0, 'H-20')
-    chk('el payload del insumo lleva el lote elegido', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"insumo_id":"i-har","cantidad":30,"lote":"H-20"}')
+    chk('se listan con lo que queda en la unidad del insumo', /data-lote="H-10"/.test(h) && /queda 150 kg/.test(h))
+    S.ponerCantidadLote(0, 'H-20', 30)
+    chk('el payload del insumo lleva sus lotes con CANTIDAD', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"insumo_id":"i-har","cantidad":30,"lotes":[{"lote":"H-20","cantidad":30}]}')
   }))
 }
 
@@ -340,12 +337,12 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   // El buscador filtra TODO junto.
   const S = nuevo()
   const f = conEmpresa(S)
-  chk('sin búsqueda, todos los grupos', S.gruposCatalogo(CAT, '').map(g => g.titulo).join() === 'Cucuruchones,Barquillos,Especiales,Materia prima e insumos')
+  chk('sin búsqueda, los tres grupos', S.gruposCatalogo(CAT, '').map(g => g.titulo).join() === 'Producto terminado · SIN CONO,Producto terminado · CON CONO,Materia prima e insumos')
   chk('"harina" encuentra el insumo (sin acentos ni mayúsculas)', S.gruposCatalogo(CAT, 'HARÍNA').map(g => g.titulo).join() === 'Materia prima e insumos')
-  chk('por marca del insumo', S.gruposCatalogo(CAT, 'cañuelas')[0].lista.map(x => x.id).join() === 'i-har')
-  chk('por nombre de una presentación', S.gruposCatalogo(CAT, 'media caja').map(g => g.lista.map(x => x.id).join()).join() === 'p-cap')
-  chk('"caja" encuentra productos Y el insumo Caja N°1', S.gruposCatalogo(CAT, 'caja').some(g => g.tipo === 'insumos' && g.lista.some(x => x.id === 'i-caj')) &&
-    S.gruposCatalogo(CAT, 'caja').some(g => g.tipo === 'productos'))
+  chk('por marca del insumo', S.gruposCatalogo(CAT, 'cañuelas')[0].lista.map(x => x.insumoId).join() === 'i-har')
+  chk('por nombre de una presentación', S.gruposCatalogo(CAT, 'media caja').map(g => g.lista.map(x => x.presentacionId).join()).join() === 'pr-cap-b')
+  chk('"caja" encuentra productos Y el insumo Caja N°1', S.gruposCatalogo(CAT, 'caja').some(g => g.tipo === 'insumos' && g.lista.some(x => x.insumoId === 'i-caj')) &&
+    S.gruposCatalogo(CAT, 'caja').some(g => g.tipo === 'sin_cono'))
   chk('lo que no coincide lo dice', /Nada coincide con «zzz»/.test(S.htmlProductosRenglon(0, CAT, 'zzz')))
   const h = S.htmlRenglon(f.renglones[0], 0, CAT, false)
   chk('un renglón sin elegir tiene el buscador', /data-r-buscar="0"/.test(h) && /data-r-opciones="0"/.test(h))
@@ -365,7 +362,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     insumos: [{ insumo_id: 'ii1', nombre: 'Bolsa', marca: null, categoria: 'Bolsas', unidad_medida: 'un', stock: 5000 }],
   }, [{ id: 'm1', nombre: 'LOLO' }])
   chk('una fila por presentación arma UN producto con sus presentaciones', c.productos.length === 2 && c.presentaciones.filter(x => x.producto_id === c.productos[0].id).length === 2)
-  chk('una categoría que no es de la lista va a "Otros productos"', c.productos[1].categoria === null && S.gruposCatalogo(c, '').some(g => g.titulo === 'Otros productos'))
+  chk('una categoría que no es de la lista queda sin categoría (y va al final de su grupo)', c.productos[1].categoria === null && S.ordenCategoria(null) > S.ordenCategoria('pasta'))
   chk('los insumos vienen con su unidad y stock', c.insumos[0].id === 'ii1' && c.insumos[0].unidad_medida === 'un' && c.insumos[0].stock === 5000)
   chk('los conos vienen de marcas_personalizadas', c.marcas[0].id === 'm1')
   const v = S.catalogoDesdeRpc(null, null)
@@ -440,7 +437,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chk('la fecha usa la zona de Argentina', /timeZone: ZONA_AR/.test(src) && S.ZONA_AR === 'America/Argentina/Buenos_Aires')
   const texto = JSON.stringify(p)
   chk('NINGÚN dato de plata en el payload', !/precio|importe|total|saldo|subtotal|credito|lista/i.test(texto))
-  chk('las claves del renglón son solo producto, cono, cajas (y lote si se eligió)', p.p_items.every(x => Object.keys(x).every(k => ['presentacion_id', 'marca_id', 'cajas', 'lote'].includes(k))))
+  chk('las claves del renglón son solo producto, cono, cajas (y lotes si se repartió)', p.p_items.every(x => Object.keys(x).every(k => ['presentacion_id', 'marca_id', 'cajas', 'lotes'].includes(k))))
 }
 {
   const S = nuevo()
@@ -609,7 +606,8 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   S.estado.clientes = malos
   const cat = {
     productos: [{ id: 'p1', nombre: marca('producto'), tipo_masa: 'Común' }, { id: 'p2', nombre: marca('producto-choco'), tipo_masa: 'Chocolate' }],
-    presentaciones: [{ id: 'pr1', producto_id: 'p1', nombre: marca('presentacion'), con_cono: true, unidades_por_caja: 10 }],
+    presentaciones: [{ id: 'pr1', producto_id: 'p1', nombre: marca('presentacion'), con_cono: true, unidades_por_caja: 10 },
+      { id: 'pr2', producto_id: 'p2', nombre: 'Caja', con_cono: false, unidades_por_caja: 10 }],
     marcas: [{ id: 'm1', nombre: marca('cono') }],
     insumos: [{ id: 'i1', nombre: marca('insumo'), marca: marca('insumo-marca'), unidad_medida: 'kg', stock: 10 }],
   }
@@ -624,6 +622,13 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chequearMarcas(chk, 'cliente elegido', S.htmlClienteElegido(S.estado.form), ['cliente', 'razon'])
   const r = S.estado.form.renglones[0]
   chequearMarcas(chk, 'productos', S.htmlProductosRenglon(0, cat), ['producto', 'producto-choco', 'insumo', 'insumo-marca'])
+  // La unidad de un insumo viene de la base (sin CHECK): va en "hay 10 …".
+  const catUnidad = { ...cat, insumos: [{ ...cat.insumos[0], unidad_medida: marca('unidad-catalogo') }] }
+  chequearMarcas(chk, 'stock de un insumo en el catálogo', S.htmlProductosRenglon(0, catUnidad), ['unidad-catalogo'])
+  // El id interno de un producto lleva su NOMBRE ("prod:" + categoría + nombre):
+  // armado como lo arma la pantalla, el data-id también va escapado.
+  const catRpc = S.catalogoDesdeRpc({ productos: [{ presentacion_id: 'pp1', producto: marca('producto-id'), presentacion: 'Caja', categoria: null, con_cono: false, unidades_por_caja: 1, stock_cajas: 3 }] }, [])
+  chequearMarcas(chk, 'id interno del producto', S.htmlProductosRenglon(0, catRpc), ['producto-id'])
   chequearMarcas(chk, 'búsqueda sin resultados', S.htmlProductosRenglon(0, cat, marca('busca-cat')), ['busca-cat'])
   S.estado.form.renglones[0].busqueda = marca('busqueda-renglon')
   chequearMarcas(chk, 'buscador del renglón', S.htmlEleccionRenglon(S.estado.form.renglones[0], 0, cat), ['busqueda-renglon'])
@@ -632,22 +637,22 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   chequearMarcas(chk, 'renglón de insumo', S.htmlRenglon(ri, 1, cat, true), ['insumo', 'insumo-marca', 'unidad'])
   S.estado.misTareas = new Map([['retiros:cargar', { todas: true }], ['stock:ver', { todas: true }]])
   S.estado.lotes.set(S.claveLotesInsumo('i1'), { cargando: false, error: null, lista: [{ lote: marca('lote-insumo'), saldo: 4, desde: '2026-09-01' }] })
-  ri.eligiendoLote = true
   chequearMarcas(chk, 'lotes de un insumo', S.htmlLoteRenglon(ri, 1), ['lote-insumo', 'unidad'])
-  ri.eligiendoLote = false
-  chequearMarcas(chk, 'resumen con un insumo', S.htmlResumen({ ...S.estado.form, renglones: [ri] }, cat), ['insumo', 'insumo-marca', 'unidad'])
+  ri.lotes = { [marca('lote-insumo')]: 9 }
+  chequearMarcas(chk, 'lotes de un insumo repartidos (y excedidos)', S.htmlLoteRenglon(ri, 1), ['lote-insumo', 'unidad'])
+  chequearMarcas(chk, 'resumen con un insumo', S.htmlResumen({ ...S.estado.form, renglones: [ri] }, cat), ['insumo', 'insumo-marca', 'unidad', 'lote-insumo'])
   chequearMarcas(chk, 'faltantes de insumo', S.htmlFaltantes([{ renglon: 2, insumo: marca('f-insumo'), pedidas: 3, faltaron: 1, unidad: 'kg' }]), ['f-insumo'])
   r.productoId = 'p1'; r.conCono = true; r.presentacionId = 'pr1'; r.marcaBusqueda = marca('cono-buscado')
   chequearMarcas(chk, 'renglón con cono', S.htmlRenglon(r, 0, cat, true), ['producto', 'presentacion', 'cono-buscado'])
   r.marcaBusqueda = ''
   chequearMarcas(chk, 'conos', S.htmlMarcasRenglon(r, 0, cat), ['cono'])
-  S.estado.lotes.set(S.claveLotes('pr1', null), { cargando: false, error: null, lista: [{ lote: marca('lote'), saldo: 3, desde: '2026-09-01' }] })
-  r.eligiendoLote = true
-  chequearMarcas(chk, 'lotes', S.htmlLoteRenglon(r, 0), ['lote'])
-  r.eligiendoLote = false; r.lote = marca('lote-elegido')
-  chequearMarcas(chk, 'lote elegido', S.htmlLoteRenglon(r, 0), ['lote-elegido'])
+  S.estado.lotes.set(S.claveLotes('pr1', null), { cargando: false, error: null, lista: [{ lote: marca('lote'), saldo: 3, desde: '2026-09-01' }, { lote: marca('lote-elegido'), saldo: 5, desde: '2026-09-02' }] })
+  chequearMarcas(chk, 'lotes', S.htmlLoteRenglon(r, 0), ['lote', 'lote-elegido'])
+  r.cajas = 2; r.lotes = { [marca('lote-elegido')]: 2 }
+  chequearMarcas(chk, 'lote repartido', S.htmlLoteRenglon(r, 0), ['lote-elegido'])
   S.estado.form.transporte = marca('transporte'); S.estado.form.observaciones = marca('obs')
   r.marcaId = 'm1'
+  S.estado.lotes.set(S.claveLotes('pr1', 'm1'), S.estado.lotes.get(S.claveLotes('pr1', null)))
   chequearMarcas(chk, 'resumen', S.htmlResumen(S.estado.form, cat), ['empresa', 'cliente', 'transporte', 'obs', 'producto', 'presentacion', 'cono', 'lote-elegido'])
   chequearMarcas(chk, 'faltantes', S.htmlFaltantes([{ renglon: 1, producto: marca('f-prod'), presentacion: marca('f-pres'), pedidas: 3, faltaron: 1 }]), ['f-prod', 'f-pres'])
   chequearMarcas(chk, 'hecho', S.htmlHecho({ codigo: marca('codigo'), cliente: { nombre: marca('h-cliente') }, faltantes: [] }), ['codigo', 'h-cliente'])

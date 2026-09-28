@@ -18,6 +18,15 @@ const SEGURAS_RETIROS = [
   ['error', 'HTML ya escapado: htmlRenglon() lo arma con esc() de lo que falta, o vacío'],
   ['filas', 'HTML ya escapado: htmlResumen() arma cada fila con esc() de la descripción, el lote y las cajas'],
   ['renglones', 'HTML ya escapado: htmlFaltantes() / htmlDetalleMio() arman cada renglón con esc()'],
+  // 28/09/2026: los tres grupos del catálogo y varios lotes por renglón.
+  ['clase', 'texto constante del código: "rt-opcion rt-opcion--" + CLASE_GRUPO[grupo] (un mapa fijo)'],
+  ['CLASE_GRUPO[g.tipo]', 'texto constante del código: CLASE_GRUPO es un mapa fijo de tres clases'],
+  ['partes', 'HTML ya escapado: htmlProductosRenglon() arma el nombre, el detalle y el stock de cada opción con esc()'],
+  ['k', 'número: índice del lote en el .map(), para el id del campo'],
+  ['linea', 'HTML ya escapado: htmlResumenLotes() arma lo pedido, lo asignado y lo que falta con esc() de cada cantidad'],
+  ['excedidos', 'HTML ya escapado: htmlResumenLotes() arma cada lote excedido con esc() del lote y las cantidades'],
+  ['htmlAvisoFaltante(r, a)', 'HTML armado por htmlAvisoFaltante(), que escapa el texto y la cantidad que falta'],
+  ['htmlResumenLotes(r, lista)', 'HTML armado por htmlResumenLotes(), que escapa cada cantidad y cada lote'],
 ]
 
 const SEGURAS_REGEX_RETIROS = [

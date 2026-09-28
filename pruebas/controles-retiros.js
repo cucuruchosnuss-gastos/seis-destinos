@@ -25,10 +25,13 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/retiros.htm
 // Un commit por parte ya cerrada, en orden.
 const BASES = [
   'b03cd8e', // Parte 1: la carga, Mis retiros y la hoja
+  'c82d7b6', // antes de varios lotes por renglón (28/09/2026): insumos, categorías y la barra de unidad
 ]
 
 // Controles que cambiaron de texto a propósito: [clave vieja, clave nueva, motivo].
 const RENOMBRADOS = [
+  ['control:button[data-id][data-r-producto][type=button]', 'control:button[data-id][data-marca][data-presentacion][data-r-producto][type=button]',
+    '28/09/2026: la opción del catálogo ya no es el producto solo sino la presentación (y el cono): suma data-presentacion y data-marca'],
 ]
 
 // Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS
@@ -39,6 +42,14 @@ const RENOMBRADOS = [
 // la gracia de este chequeo. Un control que se fue sin explicación es
 // indistinguible de uno que se perdió al mover código.
 const RETIRADOS = [
+  // 28/09/2026: VARIOS LOTES POR RENGLÓN. El "Elegir lote" de UN lote se
+  // reemplazó por la lista de lotes con un campo de cantidad por lote
+  // (data-r-lote-cant), "Completar con los más viejos" (data-r-completar) y
+  // "Que salga sola de los más viejos" (data-r-lotes-limpiar).
+  ['control:button[data-r-lote-abrir][type=button]', 'la lista de lotes se ve siempre al elegir el producto: no hay que abrirla'],
+  ['control:button[data-r-lote-cerrar][type=button]', 'la lista de lotes no se cierra: sin repartir, sale sola de los más viejos'],
+  ['control:button[data-r-lote-quitar][type=button]', 'lo reemplaza "Que salga sola de los más viejos" (data-r-lotes-limpiar), que suelta TODO lo repartido'],
+  ['control:button[data-lote][data-r-lote][type=button]', 'elegir UN lote pasó a poner la cantidad de cada lote (input data-r-lote-cant)'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:
@@ -46,7 +57,6 @@ const RETIRADOS = [
 // clave tiene que seguir existiendo— y si aparece más veces que lo declarado,
 // la declaración sobra y se dice.
 const MENOS_COPIAS = [
-  ['control:button[data-r-lote-cerrar][type=button]', 1, 'el "Cerrar" del aviso de que sin stock:ver no se veían los lotes de un insumo: desde el 27/09/2026 lotes_insumo_para_retiro() los da con retiros:cargar (queda el "Cerrar" de la lista de lotes)'],
 ]
 
 let ok = 0

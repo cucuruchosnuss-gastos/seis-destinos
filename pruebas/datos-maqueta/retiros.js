@@ -163,7 +163,15 @@ module.exports = {
         "cajas": 8,
         "fecha": "2026-09-10",
         "created_at": "2026-09-10T10:00:00Z"
-      }
+      },
+      // El stock por cono (28/09/2026): la presentación con cono, con LOLO y con el común.
+      { "unidad_negocio_id": "u-n", "presentacion_id": "pr1c", "marca_id": "m1", "lote": "7031-1", "cajas": 12, "fecha": "2026-09-21", "created_at": "2026-09-21T10:00:00Z" },
+      { "unidad_negocio_id": "u-n", "presentacion_id": "pr1c", "marca_id": null, "lote": "7032-1", "cajas": 5, "fecha": "2026-09-22", "created_at": "2026-09-22T10:00:00Z" }
+    ],
+    // El catálogo de insumos (todos): los que no tienen stock se ofrecen al buscar.
+    "insumos": [
+      { "id": "ins-1", "nombre": "Harina 000", "marca": "Molino Cañuelas", "categoria": "Harinas", "unidad_medida": "kg", "activo": true },
+      { "id": "ins-9", "nombre": "Film stretch", "marca": null, "categoria": "Paletizado", "unidad_medida": "kg", "activo": true }
     ]
   },
   "rpc": {

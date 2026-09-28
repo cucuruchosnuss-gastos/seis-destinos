@@ -62,19 +62,26 @@ const PANTALLAS = [
     ['cargar', async (page) => {
       await page.locator('#rt-cliente-buscar').fill('turco')
       await page.locator('[data-cliente]').first().click()
+      // Los tres grupos (28/09/2026): SIN CONO, CON CONO con el cono de cada uno, insumos.
+      await expect(page.locator('.rt-grupo--con-cono')).toContainText('CON CONO')
+      await expect(page.locator('[data-r-producto="0"][data-marca="m1"]')).toContainText('LOLO')
       await page.locator('[data-r-producto]').first().click()
-      await page.locator('[data-r-cajas="0"]').fill('3')
-      await page.locator('[data-r-lote-abrir="0"]').click()
+      await page.locator('[data-r-cajas="0"]').fill('30')
+      // Varios lotes: "Completar con los más viejos" reparte las 30 entre los dos
+      // lotes (8 + 15 = 23) y lo que falta queda como faltante, en bordó.
+      await page.locator('[data-r-completar="0"]').click()
+      await expect(page.locator('[data-r-lotes-resumen="0"]')).toContainText('falta asignar')
+      await expect(page.locator('[data-r-lotes-resumen="0"] [data-r-faltante]')).toContainText('queda pendiente de revisión en Administración')
       // Un renglón de insumo, buscado por el buscador que filtra todo junto.
       await page.locator('#rt-agregar').click()
       await page.locator('[data-r-buscar="1"]').fill('harina')
       await page.locator('[data-r-insumo="1"]').first().click()
       await page.locator('[data-r-cantidad="1"]').fill('25,5')
       await expect(page.locator('.rt-sello--insumo').first()).toBeVisible()
-      // El lote de un insumo, de lotes_insumo_para_retiro() (sin permiso de Stock).
-      await page.locator('[data-r-lote-abrir="1"]').click()
-      await expect(page.locator('[data-r-lote="1"][data-lote="H-0910"]')).toBeVisible()
-      await page.locator('[data-r-lote="1"][data-lote="H-0910"]').click()
+      // Los lotes de un insumo, de lotes_insumo_para_retiro() (sin permiso de Stock).
+      await expect(page.locator('[data-r-lote-cant="1"][data-lote="H-0910"]')).toBeVisible()
+      await page.locator('[data-r-lote-cant="1"][data-lote="H-0910"]').fill('25,5')
+      await expect(page.locator('[data-r-lotes-resumen="1"]')).toContainText('asignado todo')
     }],
     ['resumen', async (page) => { await page.locator('#rt-revisar').click(); await expect(page.locator('#rt-resumen')).toContainText('25,5 kg') }],
     ['hecho', async (page) => { await page.locator('#rt-confirmar').click(); await expect(page.locator('.rt-codigo-grande')).toBeVisible() }],
