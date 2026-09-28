@@ -4885,6 +4885,10 @@
     /* Cada dato se corta con puntos suspensivos; el separador " · " sale del
        CSS, así un dato vacío no deja dos puntos seguidos. */
     .chq-tarjeta__dato { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* Con una unidad elegida en la barra de arriba: la marca de un cheque SIN
+       unidad, primera en el renglón y sin cortarse (va después de la regla
+       de .chq-tarjeta__dato, que tiene la misma especificidad). */
+    .chq-tarjeta__sin-unidad { font-weight: 600; flex-shrink: 0; }
     .chq-tarjeta__dato + .chq-tarjeta__dato::before { content: ' · '; }
     .chq-tarjeta__num,
     .chq-tarjeta__salida { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
@@ -5172,13 +5176,9 @@
             <label for="chq-filtro-banco">Banco</label>
             <select id="chq-filtro-banco"></select>
           </div>
-          <!-- La unidad de negocio de la cobranza de cada cheque. Las opciones
-               salen de TODOS los cheques, como las de banco; el filtro se
-               aplica en la pantalla (la unidad no es columna del cheque). -->
-          <div class="chq-campo" id="chq-campo-unidad" style="margin-bottom:0" hidden>
-            <label for="chq-filtro-unidad">Unidad</label>
-            <select id="chq-filtro-unidad"></select>
-          </div>
+          <!-- La unidad de negocio YA NO SE ELIGE ACÁ (28/09/2026): la decide la
+               barra de unidad de arriba (js/barra-unidad.js), que es la misma
+               para toda la app. Nunca dos lugares para lo mismo. -->
           <!-- En el celular no hay encabezados que tocar: el orden se elige acá,
                columna y sentido en UN solo select, en la misma fila que los
                filtros (cada renglón de más es un cheque menos en pantalla). En
@@ -5285,6 +5285,9 @@
       dvBcra, formatearImporte, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
       ETIQUETA_ESTADO_CHEQUE, nombreBancoDe,
     } from '../js/cobranzas-comun.js'
+    // La barra de unidad de negocio de arriba (28/09/2026): la MISMA elección
+    // para toda la app. Acá solo se lee y se escucha; la barra la dibuja sola.
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
 
     // La cartera de cheques, ADENTRO DE ADMINISTRACIÓN (26/09/2026): se mudó
     // de modulos/cheques.html tal cual —mismas RPCs, misma lógica, mismos
@@ -5305,8 +5308,22 @@
       bancos: new Map(),
       // Los filtros arrancan en "en cartera". soloVencen: el recorte "los que
       // vencen esta semana" del aviso de arriba (Parte 6).
-      // unidad: '' = todas, SIN_UNIDAD, o el id de una unidad de negocio.
-      filtros: { estado: 'en_cartera', numero: '', banco: '', unidad: '', soloVencen: false },
+      // La unidad NO es un filtro de esta pantalla: la decide la barra de
+      // unidad de arriba (estado.unidadElegida).
+      filtros: { estado: 'en_cartera', numero: '', banco: '', soloVencen: false },
+      // La unidad elegida en la barra de arriba: su id, o null = Todas (o la
+      // persona tiene una sola unidad y no hay nada que filtrar).
+      unidadElegida: null,
+      // Las unidades de la barra ({ id, nombre, … }), para nombrar la elegida.
+      unidadesBarra: [],
+      // Las filas del resumen (TODOS los cheques, sin filtros); null = no se
+      // pudo cargar. Con ellas se calculan cartera y vencimientos.
+      filasResumen: null,
+      // Ya llegaron las cobranzas (y con ellas la unidad de cada cheque):
+      // antes de eso, el total de UNA unidad no se puede calcular.
+      cobranzasListas: false,
+      // Lo que acompaña al total: la unidad, los sin unidad, el desglose.
+      carteraDetalle: null,
       // { cantidad, vencidos, total } de toda la cartera; null = no se pudo saber.
       vencimientos: null,
       // El orden de la lista: por defecto, lo que se cobra primero arriba.
@@ -5319,9 +5336,6 @@
       error: null,
       // Los códigos de banco que de verdad tienen algún cheque a la vista.
       bancosDeCheques: [],
-      // Las cobranzas que tienen algún cheque (de TODOS, sin filtros): de ahí
-      // sale la lista de unidades del filtro, igual que la de bancos.
-      cobranzaIdsDeCheques: [],
       // El cheque que se pidió ver desde una cobranza (?cheque=).
       destacado: null,
       // La selección (Parte 7): { activa, ids: Set de ids de cheque, ultimo }.
@@ -5407,7 +5421,7 @@
 
     const AVISO_CARTERA_PARCIAL = 'Ves solo los cheques de las cobranzas que cargaste vos. Para ver toda la cartera hace falta la tarea «Ver las cobranzas de todas las personas».'
 
-    const FILTROS_CHEQUES_DEFECTO = { estado: 'en_cartera', numero: '', banco: '', unidad: '' }
+    const FILTROS_CHEQUES_DEFECTO = { estado: 'en_cartera', numero: '', banco: '' }
 
     const ESTADOS_FILTRO_CHEQUES = [
       { id: 'en_cartera', nombre: 'En cartera' },
@@ -5481,7 +5495,9 @@
 
     function hayFiltrosCheques() {
       const f = estado.filtros
-      return f.estado !== FILTROS_CHEQUES_DEFECTO.estado || String(f.numero ?? '').trim() !== '' || !!f.banco || !!f.unidad || !!f.soloVencen
+      // La unidad de la barra NO cuenta: no es un filtro de esta pantalla, y
+      // "Limpiar filtros" no la toca.
+      return f.estado !== FILTROS_CHEQUES_DEFECTO.estado || String(f.numero ?? '').trim() !== '' || !!f.banco || !!f.soloVencen
     }
 
     // ── Vencimiento del plazo para depositar (Parte 6) ───────────────────
@@ -5551,10 +5567,12 @@
       return { cantidad, vencidos, total: centavos / 100 }
     }
 
-    // Lo que se ve: lo que trajo la consulta, recortado por los dos filtros
-    // que se aplican EN LA PANTALLA —la unidad y "solo los que vencen"—.
+    // Lo que se ve: lo que trajo la consulta, recortado por lo que se aplica
+    // EN LA PANTALLA —la unidad de la barra de arriba y "solo los que
+    // vencen"—. El cheque que se pidió ver (?cheque=) se muestra aunque sea
+    // de otra unidad: renderizarCheques() lo dice.
     function filasVisibles() {
-      return filtrarPorUnidad(filasPorPlazo(), estado.filtros.unidad, estado.cobranzas)
+      return chequesDeLaUnidad(filasPorPlazo(), estado.unidadElegida, estado.cobranzas, estado.destacado)
     }
 
     // Con "solo los que vencen" puesto, se filtra acá lo que ya trajo la
@@ -5572,6 +5590,12 @@
     // La unidad NO es columna de cobranza_cheques, así que el filtro se
     // aplica en la pantalla sobre lo que ya trajo la consulta, igual que
     // "solo los que vencen".
+    //
+    // DESDE EL 28/09/2026 LA UNIDAD LA ELIGE LA BARRA DE ARRIBA
+    // (js/barra-unidad.js), la misma de toda la app: el selector "Unidad" que
+    // había acá se retiró —nunca dos lugares para lo mismo—. Un cheque SIN
+    // unidad (su cobranza todavía no se asentó) no desaparece: se ve en
+    // cualquier unidad elegida, marcado "Sin unidad" (pasaFiltroUnidad).
     const SIN_UNIDAD = 'sin_unidad'
     const TEXTO_SIN_UNIDAD = 'Sin unidad'
 
@@ -5584,50 +5608,100 @@
       return { id: String(cob.unidad_negocio_id), nombre: nombre || 'Unidad sin nombre' }
     }
 
-    // '' = todas; SIN_UNIDAD = las que no tienen; si no, el id de la unidad.
-    function filtrarPorUnidad(filas, filtro, cobranzas) {
-      if (!filtro) return filas
-      return filas.filter(ch => {
-        const u = unidadDeCheque(ch, cobranzas)
-        return filtro === SIN_UNIDAD ? !u : u?.id === filtro
-      })
+    // Los cheques de la unidad elegida en la barra (null = Todas: todos). Un
+    // cheque SIN unidad —su cobranza no se asentó, o no se ve— pasa SIEMPRE
+    // (pasaFiltroUnidad de js/barra-unidad.js): no desaparece por no tener
+    // unidad todavía, y la pantalla lo marca "Sin unidad". "mantener" es el
+    // id de un cheque que se muestra igual (el que se pidió con ?cheque=).
+    function chequesDeLaUnidad(filas, elegida, cobranzas, mantener = null) {
+      if (!Array.isArray(filas)) return []
+      if (!elegida) return filas
+      return filas.filter(ch => (mantener && ch.id === mantener) ||
+        pasaFiltroUnidad(unidadDeCheque(ch, cobranzas)?.id ?? null, elegida))
     }
 
-    // Las unidades que tienen algún cheque, por nombre, y si hay alguno sin
-    // unidad. Recibe los ids de cobranza de TODOS los cheques (no de los
-    // filtrados): filtrar no tiene que borrar opciones del selector.
-    function unidadesDeCheques(cobranzaIds, cobranzas) {
-      const porId = new Map()
-      let sinUnidad = false
-      for (const id of cobranzaIds) {
-        const u = unidadDeCheque({ cobranza_id: id }, cobranzas)
-        if (u) porId.set(u.id, u)
-        else sinUnidad = true
-      }
-      const unidades = [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
-      return { unidades, sinUnidad }
+    // El nombre de la unidad elegida en la barra, para decirlo en la pantalla.
+    // Sale de la barra (las unidades de la persona) y, si no está ahí, de las
+    // cobranzas; si no aparece en ningún lado, "la unidad elegida".
+    function nombreDeLaElegida() {
+      const id = estado.unidadElegida
+      if (!id) return ''
+      const u = (estado.unidadesBarra ?? []).find(x => x?.id === id)
+      if (u?.nombre) return String(u.nombre)
+      const cob = [...(estado.cobranzas?.values?.() ?? [])].find(c => String(c.unidad_negocio_id ?? '') === id)
+      return cob?.unidad_negocio_nombre ? String(cob.unidad_negocio_nombre) : 'la unidad elegida'
     }
 
-    function pintarSelectorUnidades() {
-      const sel = document.getElementById('chq-filtro-unidad')
-      const elegido = estado.filtros.unidad
-      const { unidades, sinUnidad } = unidadesDeCheques(estado.cobranzaIdsDeCheques ?? [], estado.cobranzas)
-      // Si la unidad elegida ya no tiene cheques, queda como opción igual: si
-      // no, el selector diría "Todas" con el filtro puesto.
-      if (elegido && elegido !== SIN_UNIDAD && !unidades.some(u => u.id === elegido)) {
-        const cob = [...(estado.cobranzas?.values?.() ?? [])].find(c => String(c.unidad_negocio_id ?? '') === elegido)
-        unidades.push({ id: elegido, nombre: cob?.unidad_negocio_nombre ? String(cob.unidad_negocio_nombre) : 'La unidad elegida' })
+    // El total en cartera y los que vencen, de lo que se ve con la unidad de
+    // la barra, y lo que los acompaña (estado.carteraDetalle):
+    //   - Todas: la suma de todo, con el desglose por unidad cuando hay más de
+    //     un grupo (la unidad de cada cheque ya se conoce).
+    //   - Una unidad: el total es SOLO el de esa unidad —es su plata—, y los
+    //     cheques sin unidad, que también se ven en la lista, van en una línea
+    //     aparte. "Vencen esta semana" cuenta lo que muestra la lista al
+    //     tocarlo: los de la unidad y los sin unidad (dicho cuántos).
+    //   - Una unidad antes de que lleguen las cobranzas: no se sabe de quién es
+    //     cada cheque, así que se dice "calculando" y NO se muestra el total de
+    //     todas como si fuera el de la unidad.
+    function recalcularResumen() {
+      const filas = estado.filasResumen
+      const hoy = hoyArgentina()
+      const elegida = estado.unidadElegida
+      if (!filas) {
+        estado.cartera = null
+        estado.vencimientos = null
+        estado.carteraDetalle = null
+        return
       }
-      sel.innerHTML = '<option value="">Todas las unidades</option>' +
-        unidades.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('') +
-        `<option value="${esc(SIN_UNIDAD)}">${esc(TEXTO_SIN_UNIDAD)}</option>`
-      sel.value = elegido || ''
-      // Con una sola opción real (todos los cheques en la misma unidad, o
-      // todos sin unidad) el selector no filtra nada: es ruido, y en el
-      // celular es un renglón de filtros de más. Con un filtro puesto se
-      // muestra igual, para poder sacarlo.
-      const grupos = unidades.length + (sinUnidad ? 1 : 0)
-      document.getElementById('chq-campo-unidad').hidden = grupos < 2 && !elegido
+      if (!elegida) {
+        estado.cartera = resumenCartera(filas)
+        estado.vencimientos = resumenVencimientos(filas, hoy)
+        const desglose = estado.cobranzasListas
+          ? desgloseUnidades(filas.filter(ch => ch.estado === 'en_cartera'), estado.cobranzas)
+          : []
+        estado.carteraDetalle = desglose.length > 1 ? { desglose } : null
+        return
+      }
+      const nombre = nombreDeLaElegida()
+      if (!estado.cobranzasListas) {
+        estado.cartera = null
+        estado.vencimientos = null
+        // Si la carga de las cobranzas ya falló, no está "calculando": no se
+        // pudo (htmlCartera lo dice con la cartera en null).
+        estado.carteraDetalle = estado.error ? null : { unidad: nombre, cargando: true }
+        return
+      }
+      const deLaUnidad = [], sinUnidad = []
+      for (const ch of filas) {
+        const u = unidadDeCheque(ch, estado.cobranzas)
+        if (!u) sinUnidad.push(ch)
+        else if (u.id === elegida) deLaUnidad.push(ch)
+      }
+      estado.cartera = resumenCartera(deLaUnidad)
+      const venc = resumenVencimientos([...deLaUnidad, ...sinUnidad], hoy)
+      venc.sinUnidad = resumenVencimientos(sinUnidad, hoy).cantidad
+      estado.vencimientos = venc
+      estado.carteraDetalle = { unidad: nombre, sinUnidad: resumenCartera(sinUnidad) }
+    }
+
+    // Lo que dice la barra: la unidad elegida y las unidades (para el nombre).
+    function aplicarEleccionBarra(e) {
+      estado.unidadElegida = e?.elegida ? String(e.elegida) : null
+      estado.unidadesBarra = Array.isArray(e?.unidades) ? e.unidades : []
+    }
+
+    // Cambió la unidad de la barra con la pantalla abierta: se repinta con lo
+    // que ya está cargado —la unidad se filtra en la pantalla, no hace falta
+    // volver a consultar— y la selección se limpia (lo elegido podría quedar
+    // escondido y seguir contando).
+    function alCambiarLaBarra(e) {
+      const antes = estado.unidadElegida
+      aplicarEleccionBarra(e)
+      if (estado.unidadElegida === antes) return
+      soltarSeleccionPorFiltro()
+      recalcularResumen()
+      pintarFiltrosCheques()
+      renderizarCheques()
     }
 
     // De qué unidad son los cheques elegidos: una entrada por unidad (la sin
@@ -6051,20 +6125,22 @@
           .from('cobranza_cheques').select('id, cobranza_id, banco_codigo, estado, importe, tipo, fecha_emision, fecha_pago')
         if (error) throw error
         const filas = data ?? []
-        estado.cartera = resumenCartera(filas)
-        estado.vencimientos = resumenVencimientos(filas, hoyArgentina())
+        // Se guardan las filas: el total y los que vencen se calculan con la
+        // unidad de la barra (recalcularResumen), que puede cambiar después.
+        estado.filasResumen = filas
+        recalcularResumen()
         estado.topeResumen = filas.length >= TOPE_FILAS_POSTGREST
         const codigos = [...new Set(filas.map(x => String(x.banco_codigo ?? '')).filter(Boolean))]
         estado.bancosDeCheques = codigos.sort((a, b) => nombreBanco(a).localeCompare(nombreBanco(b), 'es'))
-        estado.cobranzaIdsDeCheques = [...new Set(filas.map(x => String(x.cobranza_id ?? '')).filter(Boolean))]
       } catch (err) {
         console.error('No se pudo calcular la cartera de cheques:', err)
         // null y NO cero: un total que no se pudo calcular no es "$ 0,00".
+        estado.filasResumen = null
         estado.cartera = null
         estado.vencimientos = null
+        estado.carteraDetalle = null
       }
       pintarSelectorBancos()
-      pintarSelectorUnidades()
       pintarCartera()
     }
 
@@ -6084,7 +6160,7 @@
 
     function pintarCartera() {
       const caja = document.getElementById('chq-cartera')
-      caja.innerHTML = htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen) +
+      caja.innerHTML = htmlCartera(estado.cartera, hayFiltrosCheques(), estado.topeResumen, estado.carteraDetalle) +
         htmlAvisoVencimientos(estado.vencimientos, !!estado.filtros.soloVencen)
       const btn = caja.querySelector('[data-ver-vencen]')
       if (btn) btn.addEventListener('click', alternarSoloVencen)
@@ -6097,25 +6173,45 @@
       if (!v || (!v.cantidad && !activo)) return ''
       const cheques = v.cantidad === 1 ? '1 cheque vence' : `${v.cantidad} cheques vencen`
       const vencidos = v.vencidos ? ` (${v.vencidos === 1 ? '1 ya vencido' : `${v.vencidos} ya vencidos`})` : ''
-      const texto = `${cheques} esta semana${vencidos} · ${formatearImporte(v.total)}`
+      // Con una unidad elegida en la barra cuenta también los sin unidad (se
+      // ven en la lista al tocarlo), y lo dice.
+      const sinUnidad = v.sinUnidad ? ` · ${v.sinUnidad === 1 ? '1 sin unidad' : `${v.sinUnidad} sin unidad`}` : ''
+      const texto = `${cheques} esta semana${vencidos}${sinUnidad} · ${formatearImporte(v.total)}`
       return `<button type="button" class="chq-vencen${v.vencidos ? ' chq-vencen--vencido' : ''}" data-ver-vencen aria-pressed="${activo ? 'true' : 'false'}">
           <span class="chq-vencen__texto">${esc(texto)}</span>
           <span class="chq-vencen__accion">${activo ? 'Ver todos' : 'Ver solo esos'}</span>
         </button>`
     }
 
-    // Función pura, para ejecutarla en la suite.
-    function htmlCartera(cartera, conFiltros, tope) {
+    // Función pura, para ejecutarla en la suite. `detalle` (de
+    // recalcularResumen) dice la unidad de la barra, los sin unidad y el
+    // desglose por unidad; null = Todas sin desglose, como siempre.
+    function htmlCartera(cartera, conFiltros, tope, detalle = null) {
+      const unidad = detalle?.unidad ? String(detalle.unidad) : ''
+      const titulo = unidad ? `En cartera · ${unidad}` : 'En cartera'
+      if (detalle?.cargando) {
+        return `<div class="chq-cartera__k">${esc(titulo)}</div><div class="chq-cartera__sub">Calculando el total de la unidad…</div>`
+      }
       if (!cartera) {
         return '<div class="chq-cartera__sub">No se pudo calcular el total en cartera. Revisá la señal.</div>'
       }
       const cantidadCartera = cartera.cantidad
       const notas = []
+      // Con una unidad elegida, los cheques sin unidad se ven en la lista pero
+      // NO suman al total de la unidad: no son su plata. Se dicen aparte.
+      const sinU = detalle?.sinUnidad
+      if (sinU?.cantidad) {
+        notas.push(`Además se ven ${sinU.cantidad === 1 ? '1 cheque sin unidad' : `${sinU.cantidad} cheques sin unidad`} (${formatearImporte(sinU.total)}), que no suman acá: su cobranza todavía no tiene unidad.`)
+      }
+      // Con Todas, el detalle por unidad (texto plano: va escapado abajo).
+      if (Array.isArray(detalle?.desglose) && detalle.desglose.length > 1) {
+        notas.push(detalle.desglose.map(g => `${g.nombre} ${formatearImporte(g.total)}`).join(' · '))
+      }
       // El total NO sigue a los filtros: responde "cuánto tengo en cartera".
-      if (conFiltros) notas.push('Es el total de toda la cartera, no de los filtros de abajo.')
+      if (conFiltros) notas.push(unidad ? `Es el total de toda la cartera de ${unidad}, no de los filtros de abajo.` : 'Es el total de toda la cartera, no de los filtros de abajo.')
       if (tope) notas.push(`Se sumaron los primeros ${TOPE_FILAS_POSTGREST} cheques: el total puede estar incompleto.`)
       return `
-        <div class="chq-cartera__k">En cartera</div>
+        <div class="chq-cartera__k">${esc(titulo)}</div>
         <div class="chq-cartera__v">${esc(formatearImporte(cartera.total))}</div>
         <div class="chq-cartera__sub">${cantidadCartera} ${cantidadCartera === 1 ? 'cheque' : 'cheques'}</div>
         ${notas.map(t => `<div class="chq-cartera__sub">${esc(t)}</div>`).join('')}`
@@ -6156,7 +6252,6 @@
       estado.filtros = { ...FILTROS_CHEQUES_DEFECTO, soloVencen: false }
       document.getElementById('chq-filtro-numero').value = ''
       document.getElementById('chq-filtro-banco').value = ''
-      document.getElementById('chq-filtro-unidad').value = ''
       guardarPreferencias()
       soltarSeleccionPorFiltro()
       cargarCheques()
@@ -6202,8 +6297,11 @@
         estado.cobranzas = new Map(cobs.map(x => [x.id, x]))
         estado.tope = filas.length >= TOPE_FILAS_POSTGREST || cobs.length >= TOPE_FILAS_POSTGREST
         estado.error = null
-        // Las cobranzas (y con ellas los nombres de las unidades) cambiaron.
-        pintarSelectorUnidades()
+        // Las cobranzas (y con ellas la unidad de cada cheque) cambiaron: el
+        // total de la unidad de la barra se puede calcular recién ahora.
+        estado.cobranzasListas = true
+        recalcularResumen()
+        pintarCartera()
       } catch (err) {
         if (turno !== turnoCheques) return
         console.error('No se pudieron cargar los cheques:', err)
@@ -6212,6 +6310,10 @@
         estado.filas = []
         estado.error = 'No se pudieron cargar los cheques. Revisá la señal.'
         estado.tope = false
+        // Sin las cobranzas no se sabe de qué unidad es cada cheque: el total
+        // de una unidad pasa de "calculando" a "no se pudo" (nunca el de todas).
+        recalcularResumen()
+        pintarCartera()
       }
       renderizarCheques()
     }
@@ -6227,6 +6329,10 @@
       // `procesar` vería nada más que los cheques de lo que cargó. Un listado
       // incompleto que no se declara es peor que no tener el dato.
       if (!tieneTarea('ver_todo')) lineas.push(AVISO_CARTERA_PARCIAL)
+      // El cheque que se pidió ver (?cheque=) es de OTRA unidad que la de la
+      // barra: se muestra igual, y se dice por qué está ahí.
+      const aviDestacado = avisoDestacadoOtraUnidad()
+      if (aviDestacado) lineas.push(aviDestacado)
       aviso.textContent = lineas.join('\n')
       aviso.hidden = lineas.length === 0
 
@@ -6242,8 +6348,12 @@
         lista.innerHTML = ''
         pintarLeyendaEstados([])
         vacio.hidden = !!estado.error
-        vacio.textContent = estado.filtros.soloVencen ? 'No hay cheques en cartera que venzan esta semana.'
+        const base = estado.filtros.soloVencen ? 'No hay cheques en cartera que venzan esta semana.'
           : hayFiltrosCheques() ? 'No hay cheques con esos filtros.' : 'No hay cheques en cartera.'
+        // Con una unidad elegida arriba, se dice: puede haber cheques de otra.
+        vacio.textContent = estado.unidadElegida
+          ? `${base} Arriba está elegida ${nombreDeLaElegida()}: con «Todas» se ven los de todas las unidades.`
+          : base
         return
       }
       vacio.hidden = true
@@ -6270,6 +6380,16 @@
         const fila = [...candidatas].find(el => el.offsetParent !== null)
         if (fila && typeof fila.scrollIntoView === 'function') fila.scrollIntoView({ block: 'center' })
       }
+    }
+
+    // Texto PLANO (va por textContent). '' si no hay nada que decir.
+    function avisoDestacadoOtraUnidad() {
+      const elegida = estado.unidadElegida
+      if (!elegida || !estado.destacado) return ''
+      const ch = estado.filas.find(x => x.id === estado.destacado)
+      const u = ch ? unidadDeCheque(ch, estado.cobranzas) : null
+      if (!u || u.id === elegida) return ''
+      return `El cheque que abriste es de ${u.nombre}: se muestra aunque arriba esté elegida ${nombreDeLaElegida()}.`
     }
 
     function htmlListaCheques(filas, cobranzas) {
@@ -6562,7 +6682,14 @@
       // más le dejaba ~20px a cada uno —ninguno se leía—. Va en el title de
       // la tarjeta y como texto oculto para el lector de pantalla; en el
       // celular se ve filtrando por unidad o en el resumen de la selección.
-      const textoUnidad = 'Unidad: ' + (unidadDeCheque(ch, new Map([[ch.cobranza_id, cob]]))?.nombre ?? TEXTO_SIN_UNIDAD)
+      const unidadCh = unidadDeCheque(ch, new Map([[ch.cobranza_id, cob]]))
+      const textoUnidad = 'Unidad: ' + (unidadCh?.nombre ?? TEXTO_SIN_UNIDAD)
+      // CON UNA UNIDAD ELEGIDA EN LA BARRA, un cheque sin unidad se ve igual y
+      // se MARCA a la vista (en la tabla lo dice su columna): si no, en el
+      // celular parecería de la unidad elegida. Es el único caso en que el
+      // renglón de abajo lleva la unidad, y es corto.
+      const marcaSinUnidad = estado.unidadElegida && !unidadCh
+        ? `<span class="chq-tarjeta__dato chq-tarjeta__sin-unidad">${esc(TEXTO_SIN_UNIDAD)}</span>` : ''
       return `
         <div class="${esc(clases)}" data-cheque-fila="${esc(ch.id)}" data-cheque-cobranza="${esc(ch.cobranza_id)}" tabindex="0" title="${esc(textoUnidad)}"${htmlAriaElegido(ch)}>
           ${estado.seleccion.activa ? `<div class="chq-tarjeta__elegir">${htmlCasillaElegir(ch)}</div>` : ''}
@@ -6571,7 +6698,7 @@
               <span class="chq-tarjeta__importe">${esc(formatearImporte(ch.importe))}</span>
               <span class="chq-tarjeta__pago">${esc(pago)}</span>
             </div>
-            <div class="chq-tarjeta__l2">${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
+            <div class="chq-tarjeta__l2">${marcaSinUnidad}${venc ? `<span class="chq-tarjeta__dato chq-vence__etiqueta" title="${esc(textoVencimiento(venc))}">${esc(textoVencimientoCorto(venc))}</span>` : ''}${salida ? `<span class="chq-tarjeta__dato chq-tarjeta__salida" title="${esc(salida)}">${esc(salida)}</span>` : ''}<span class="chq-tarjeta__dato chq-tarjeta__num">Nº ${esc(ch.numero ?? '—')}</span><span class="chq-tarjeta__dato chq-tarjeta__banco" title="${esc(banco)}">${esc(banco)}</span>${salido ? '' : `<span class="chq-tarjeta__dato chq-tarjeta__cliente" title="${esc(cliente)}">${esc(cliente)}</span>`}<span class="chq-estado chq-estado--${esc(ch.estado)} chq-tarjeta__estado">${esc(etiqueta)}</span></div>
             <span class="chq-oculto">${esc(textoUnidad)}</span>
           </div>
           ${accion ? `<div class="chq-tarjeta__lado">${accion}</div>` : ''}
@@ -6770,9 +6897,8 @@
         if (ESTADOS_FILTRO_CHEQUES.some(e => e.id === f.estado)) estado.filtros.estado = f.estado
         estado.filtros.numero = typeof f.numero === 'string' ? f.numero : ''
         estado.filtros.banco = typeof f.banco === 'string' && /^[0-9]{3}$/.test(f.banco) ? f.banco : ''
-        // Un uuid o "sin unidad"; cualquier otra cosa se descarta.
-        estado.filtros.unidad = typeof f.unidad === 'string' &&
-          (f.unidad === SIN_UNIDAD || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(f.unidad)) ? f.unidad : ''
+        // Una "unidad" guardada por la versión anterior (el selector que se
+        // retiró el 28/09/2026) se IGNORA: la unidad la decide la barra.
         estado.filtros.soloVencen = f.soloVencen === true
       } catch { /* datos viejos o ilegibles: se ignoran */ }
     }
@@ -6797,14 +6923,6 @@
         guardarPreferencias()
         soltarSeleccionPorFiltro()
         cargarCheques()
-      })
-      // La unidad se filtra en la pantalla: no hace falta volver a consultar.
-      document.getElementById('chq-filtro-unidad').addEventListener('change', (ev) => {
-        estado.filtros.unidad = ev.target.value
-        guardarPreferencias()
-        soltarSeleccionPorFiltro()
-        pintarFiltrosCheques()
-        renderizarCheques()
       })
       document.getElementById('chq-orden-campo').addEventListener('change', (ev) => {
         const [campo, sentido] = String(ev.target.value).split(':')
@@ -6927,7 +7045,13 @@
       pintarOrdenMovil()
       conectarTodo()
 
-      await cargarBancos()
+      // La unidad de la barra de arriba: se pide EN PARALELO con el catálogo
+      // de bancos (no frena la carga), y antes de la primera consulta, así la
+      // lista no aparece un instante con los cheques de todas las unidades.
+      // unidadesDeLaBarra() no falla (si la barra no pudo, dice null = Todas).
+      alCambiarUnidad(alCambiarLaBarra)
+      const [eleccion] = await Promise.all([unidadesDeLaBarra().catch(() => null), cargarBancos()])
+      aplicarEleccionBarra(eleccion)
       await refrescarTodo()
     }
 

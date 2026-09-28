@@ -38,6 +38,13 @@ const BASE_CHEQUES = '4435cdc'
 const RETIRADOS_CHEQUES = [
   { clave: 'control:a[href=../dashboard.html]{&lsaquo; Volver}',
     motivo: 'el encabezado propio de cheques.html: adentro de Administración vuelven su "‹ Volver" al dashboard y el "‹ Portada" de la sección (#ad-cheques-volver)' },
+  { clave: 'control:select#chq-filtro-unidad',
+    motivo: 'el filtro "Unidad" (28/09/2026): lo decide la barra de unidad de arriba (js/barra-unidad.js), la misma de toda la app — nunca dos lugares para lo mismo' },
+]
+// Los ids que se fueron con esos controles, con su motivo (mismo criterio).
+const RETIRADOS_IDS_CHEQUES = [
+  { id: 'chq-filtro-unidad', motivo: 'el <select> del filtro "Unidad": lo decide la barra de unidad de arriba' },
+  { id: 'chq-campo-unidad', motivo: 'la cajita del filtro "Unidad" (label + select): lo decide la barra de unidad de arriba' },
 ]
 
 // RENOMBRADOS: controles que además de mudarse cambiaron de TEXTO o de LUGAR a
@@ -108,7 +115,16 @@ try {
     }
     chk(`${k} → se mudó a administracion.html`, hay >= n, hay === 0 ? 'FALTA' : `aparece ${hay} y estaba ${n}`)
   }
-  for (const id of V.ids) chk(`el id #${id} de cheques.html está en la región`, A.ids.has(id))
+  for (const id of V.ids) {
+    const ret = RETIRADOS_IDS_CHEQUES.find(r => r.id === id)
+    if (ret) {
+      console.log(`RETIRADO: #${id} (${ret.motivo})`)
+      chk(`#${id}: declarado retirado y de verdad no está (si volvió, sacá la declaración)`, !A.ids.has(id))
+      continue
+    }
+    chk(`el id #${id} de cheques.html está en la región`, A.ids.has(id))
+  }
+  for (const r of RETIRADOS_IDS_CHEQUES) chk(`la declaración de #${r.id} apunta a un id que existía`, V.ids.has(r.id))
   for (const d of V.datas) chk(`el data-${d} de cheques.html está en la región`, A.datas.has(d))
   for (const r of RETIRADOS_CHEQUES) chk(`la declaración de ${r.clave} apunta a un control que existía`, veces(V, r.clave) > 0)
   chk('la región tiene el "‹ Portada" que reemplaza al encabezado', A.ids.has('ad-cheques-volver'))

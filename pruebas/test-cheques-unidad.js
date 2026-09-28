@@ -5,8 +5,8 @@
 //
 //   - la columna "Unidad", ordenable, con "Sin unidad" en gris y lo sin dato
 //     al final en los dos sentidos;
-//   - el filtro por unidad (Todas / cada unidad / Sin unidad), que se aplica
-//     en la pantalla, se guarda en sessionStorage y limpia la selección;
+//   - (el filtro por unidad se fue el 28/09/2026: lo decide la barra de
+//     unidad de arriba y lo prueba test-cheques-barra-unidad.js);
 //   - en la barra de la selección, el desglose por unidad si los elegidos son
 //     de más de una, o solo el nombre si son de una;
 //   - en el celular, la unidad va en el title de la tarjeta y como texto
@@ -113,131 +113,11 @@ const filas = [
   chk('valorDeOrden: sin unidad es null (el dato falta), no el texto "Sin unidad"', S.valorDeOrden(filas[1], 'unidad', cobs) === null)
 }
 
-// ── El filtro: se aplica en la pantalla ───────────────────────────────────
-{
-  const S = nuevo()
-  S.estado.filas = filas
-  S.estado.cobranzas = cobs
-  const vis = () => S.filasVisibles().map(x => x.id).join('')
-  chk('sin filtro: todos', vis() === 'abcde', vis())
-  S.estado.filtros.unidad = U1
-  chk('una unidad: solo sus cheques', vis() === 'ae', vis())
-  S.estado.filtros.unidad = S.SIN_UNIDAD
-  chk('"Sin unidad": los sin unidad y los de una cobranza que no se ve', vis() === 'bd', vis())
-  chk('con el filtro puesto, cuenta como filtro (aparece "Limpiar filtros")', S.hayFiltrosCheques() === true)
-  S.estado.filtros.unidad = U1
-  S.estado.filtros.soloVencen = true
-  S.estado.filas = [
-    { ...base, id: 'v1', cobranza_id: 'c1', numero: '7', fecha_emision: '2026-01-01', importe: 1 },
-    { ...base, id: 'v2', cobranza_id: 'c2', numero: '8', fecha_emision: '2026-01-01', importe: 1 },
-    { ...base, id: 'n1', cobranza_id: 'c1', numero: '6', fecha_emision: S.hoyArgentina(), importe: 1 },
-  ]
-  chk('se combina con "solo los que vencen"', vis() === 'v1', vis())
-  S.renderizarCheques()
-  const tabla = S.__doc.getElementById('chq-tabla').innerHTML
-  chk('la tabla dibuja solo lo filtrado', /data-cheque-fila="v1"/.test(tabla) && !/data-cheque-fila="v2"/.test(tabla) && !/data-cheque-fila="n1"/.test(tabla))
-  chk('la lista del celular también', /data-cheque-fila="v1"/.test(S.__doc.getElementById('chq-lista').innerHTML) && !/data-cheque-fila="v2"/.test(S.__doc.getElementById('chq-lista').innerHTML))
-  S.estado.filtros.soloVencen = false
-  S.estado.filtros.unidad = UX
-  S.estado.filas = filas
-  S.renderizarCheques()
-  chk('ninguno de esa unidad: "No hay cheques con esos filtros."', S.__doc.getElementById('chq-vacio').textContent === 'No hay cheques con esos filtros.' && S.__doc.getElementById('chq-vacio').hidden === false)
-
-  // Limpiar filtros: el estado Y el select.
-  S.__doc.getElementById('chq-filtro-unidad').value = UX
-  S.limpiarFiltrosCheques()
-  chk('limpiar filtros saca la unidad, en el estado y en el select', S.estado.filtros.unidad === '' && S.__doc.getElementById('chq-filtro-unidad').value === '')
-  chk('y hayFiltrosCheques vuelve a false', S.hayFiltrosCheques() === false)
-}
-
-// ── Las opciones del selector: de TODOS los cheques ──────────────────────
-{
-  const S = nuevo()
-  S.estado.cobranzas = cobs
-  // Los ids de cobranza vienen del resumen (todos los cheques, sin filtros),
-  // NO de estado.filas (lo filtrado).
-  S.estado.cobranzaIdsDeCheques = ['c1', 'c2', 'c3', 'cx', 'c1']
-  S.estado.filas = [filas[0]]
-  S.pintarSelectorUnidades()
-  const sel = S.__doc.getElementById('chq-filtro-unidad')
-  const opciones = [...sel.innerHTML.matchAll(/<option value="([^"]*)">([^<]*)<\/option>/g)].map(m => [m[1], m[2]])
-  chk('primero "Todas las unidades" (valor vacío)', opciones[0] && opciones[0][0] === '' && opciones[0][1] === 'Todas las unidades', JSON.stringify(opciones))
-  chk('último "Sin unidad"', opciones.at(-1) && opciones.at(-1)[0] === S.SIN_UNIDAD && opciones.at(-1)[1] === 'Sin unidad')
-  const nombres = opciones.slice(1, -1).map(o => o[1])
-  chk('una opción por unidad, sin repetir, por nombre, aunque lo filtrado tenga una sola',
-    nombres.length === 3 && nombres[1] === 'Cucuruchos Nuss' && nombres[2] === 'Dolce Pasta' && nombres[0] === S.esc(marca('unidad_nombre')), JSON.stringify(nombres))
-  chk('el nombre va ESCAPADO en la opción', sel.innerHTML.includes(escapada('unidad_nombre')) && !/<b data-xss=/.test(sel.innerHTML))
-  chk('el valor de cada opción es el id de la unidad', opciones.some(o => o[0] === U1 && o[1] === 'Dolce Pasta'))
-  // Un id raro (la base lo da como uuid, pero la pantalla no lo supone).
-  const Sy = nuevo()
-  Sy.estado.cobranzas = new Map([['cy', { id: 'cy', unidad_negocio_id: marca('unidad_id'), unidad_negocio_nombre: 'Y' }], ['c3', cobs.get('c3')]])
-  Sy.estado.cobranzaIdsDeCheques = ['cy', 'c3']
-  Sy.pintarSelectorUnidades()
-  chk('el id de la unidad va ESCAPADO en el value', Sy.__doc.getElementById('chq-filtro-unidad').innerHTML.includes(`value="${Sy.esc(marca('unidad_id'))}"`) &&
-    !/<b data-xss=/.test(Sy.__doc.getElementById('chq-filtro-unidad').innerHTML))
-  chk('con dos o más grupos, el campo se ve', S.__doc.getElementById('chq-campo-unidad').hidden === false)
-
-  const S2 = nuevo()
-  S2.estado.cobranzas = cobs
-  S2.estado.cobranzaIdsDeCheques = ['c3']
-  S2.pintarSelectorUnidades()
-  chk('todos sin unidad (un solo grupo): el campo no se dibuja (no filtra nada)', S2.__doc.getElementById('chq-campo-unidad').hidden === true)
-  S2.estado.filtros.unidad = S2.SIN_UNIDAD
-  S2.pintarSelectorUnidades()
-  chk('pero con el filtro puesto se ve, para poder sacarlo', S2.__doc.getElementById('chq-campo-unidad').hidden === false &&
-    S2.__doc.getElementById('chq-filtro-unidad').value === S2.SIN_UNIDAD)
-  S2.estado.filtros.unidad = U2
-  S2.pintarSelectorUnidades()
-  chk('una unidad elegida que ya no tiene cheques sigue como opción, con su nombre', /<option value="22222222-2222-4222-8222-222222222222">Cucuruchos Nuss<\/option>/.test(S2.__doc.getElementById('chq-filtro-unidad').innerHTML) &&
-    S2.__doc.getElementById('chq-filtro-unidad').value === U2)
-  const S3 = nuevo()
-  S3.estado.cobranzaIdsDeCheques = []
-  S3.pintarSelectorUnidades()
-  chk('sin ningún cheque: el campo no se dibuja', S3.__doc.getElementById('chq-campo-unidad').hidden === true)
-}
-
-// ── El cambio del selector: guarda, limpia la selección, no consulta ──────
-{
-  const S = nuevo({ funciones: ['conectarTodo'] })
-  S.estado.filas = filas
-  S.estado.cobranzas = cobs
-  S.conectarTodo()
-  S.estado.seleccion = { activa: true, ids: new Set(['a', 'b']), ultimo: 'b', noPueden: new Set() }
-  const antes = S.__llamadas.cargarCheques
-  const sel = S.__doc.getElementById('chq-filtro-unidad')
-  const handlers = sel.__l?.change || []
-  chk('el selector de unidad tiene su "change"', handlers.length === 1, handlers.length)
-  handlers.forEach(f => f({ target: { value: U1 } }))
-  chk('cambiarlo pone el filtro', S.estado.filtros.unidad === U1)
-  chk('y se guarda en sessionStorage', JSON.parse(S.__almacen.get('cheques-preferencias') || '{}').filtros?.unidad === U1)
-  chk('limpia la selección', S.estado.seleccion.ids.size === 0)
-  chk('con el aviso de que se limpió', S.__doc.getElementById('chq-aviso-seleccion').hidden === false &&
-    /Se limpió la selección/.test(S.__doc.getElementById('chq-aviso-seleccion').textContent))
-  chk('redibuja con el filtro (no vuelve a consultar)', /data-cheque-fila="a"/.test(S.__doc.getElementById('chq-tabla').innerHTML) &&
-    !/data-cheque-fila="c"/.test(S.__doc.getElementById('chq-tabla').innerHTML) && S.__llamadas.cargarCheques === antes)
-  chk('aparece "Limpiar filtros"', S.__doc.getElementById('chq-btn-limpiar').hidden === false)
-}
-
-// ── Preferencias ─────────────────────────────────────────────────────────
-{
-  const S = nuevo()
-  S.estado.filtros.unidad = U2
-  S.guardarPreferencias()
-  const S2 = nuevo()
-  S2.__almacen.set('cheques-preferencias', S.__almacen.get('cheques-preferencias'))
-  S2.leerPreferencias()
-  chk('preferencias: la unidad vuelve', S2.estado.filtros.unidad === U2, S2.estado.filtros.unidad)
-  const S3 = nuevo()
-  S3.__almacen.set('cheques-preferencias', JSON.stringify({ filtros: { estado: 'todos', unidad: S3.SIN_UNIDAD } }))
-  S3.leerPreferencias()
-  chk('preferencias: "Sin unidad" vuelve', S3.estado.filtros.unidad === S3.SIN_UNIDAD)
-  for (const raro of ['"><b>', 'u1', 42, '11111111-1111-4111-8111-11111111111Z']) {
-    const S4 = nuevo()
-    S4.__almacen.set('cheques-preferencias', JSON.stringify({ filtros: { estado: 'todos', unidad: raro } }))
-    S4.leerPreferencias()
-    chk(`preferencias: una unidad rara guardada (${JSON.stringify(raro)}) NO entra`, S4.estado.filtros.unidad === '', S4.estado.filtros.unidad)
-  }
-}
+// ── El filtro por unidad ─────────────────────────────────────────────────
+// Desde el 28/09/2026 lo decide la barra de unidad de arriba: el selector de
+// acá se retiró. Lo que estas pruebas exigían del filtro (en la pantalla, sin
+// volver a consultar, lo sin unidad, limpiar la selección) lo exige ahora
+// pruebas/test-cheques-barra-unidad.js, con la barra.
 
 // ── La consulta ──────────────────────────────────────────────────────────
 {
@@ -256,8 +136,7 @@ const filas = [
     const q = R.__consultas.find(c => c.tabla === 'cobranza_cheques')
     const sel = q && q.llamadas.find(l => l[0] === 'select')
     chk('el resumen (TODOS los cheques) trae cobranza_id', sel && /\bcobranza_id\b/.test(sel[1]), sel && sel[1])
-    chk('y arma la lista de cobranzas con cheques, sin repetir', JSON.stringify(R.estado.cobranzaIdsDeCheques) === JSON.stringify(['c1', 'c3', 'c2', 'c-invisible']), JSON.stringify(R.estado.cobranzaIdsDeCheques))
-    chk('y pinta el selector de unidades', /Todas las unidades/.test(R.__doc.getElementById('chq-filtro-unidad').innerHTML))
+    chk('y guarda las filas para calcular el total con la unidad de la barra', Array.isArray(R.estado.filasResumen) && R.estado.filasResumen.length === filas.length)
   }))
 }
 

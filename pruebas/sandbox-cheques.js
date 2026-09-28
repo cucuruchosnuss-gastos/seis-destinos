@@ -47,8 +47,11 @@ const CONSTANTES = [
 // depende de las otras.
 const OPCIONALES = [
   // unidad de negocio (22/09/2026, tarea A2)
-  'filasPorPlazo', 'unidadDeCheque', 'filtrarPorUnidad', 'unidadesDeCheques', 'pintarSelectorUnidades',
+  'filasPorPlazo', 'unidadDeCheque',
   'desgloseUnidades', 'textoUnidadesSeleccion', 'htmlCeldaUnidad',
+  // la barra de unidad de arriba (28/09/2026)
+  'chequesDeLaUnidad', 'nombreDeLaElegida', 'recalcularResumen', 'aplicarEleccionBarra', 'alCambiarLaBarra',
+  'avisoDestacadoOtraUnidad',
   // color por estado y leyenda (22/09/2026)
   'esPorControlar', 'clavesEstadoCheque', 'leyendaDeCheques', 'htmlLeyendaEstados', 'pintarLeyendaEstados',
 ]
@@ -123,13 +126,22 @@ const PRELUDIO = `
     miEmpleadoId: 'emp-1', miRolApp: 'usuario',
     misTareas: new Set(['cobranzas:ver_todo', 'cobranzas:procesar']),
     bancos: new Map(),
-    filtros: { estado: 'en_cartera', numero: '', banco: '', unidad: '', soloVencen: false },
+    filtros: { estado: 'en_cartera', numero: '', banco: '', soloVencen: false },
+    unidadElegida: null, unidadesBarra: [], filasResumen: null, cobranzasListas: false, carteraDetalle: null,
     vencimientos: null,
     orden: { campo: 'pago', sentido: 'asc' },
     filas: [], cobranzas: new Map(), cartera: null, tope: false, topeResumen: false, error: null,
-    bancosDeCheques: [], cobranzaIdsDeCheques: [], destacado: null, salida: null,
+    bancosDeCheques: [], destacado: null, salida: null,
     seleccion: { activa: false, ids: new Set(), ultimo: null },
   }
+  // Lo que la región importa de js/barra-unidad.js y tiene estado de módulo:
+  // un doble que la prueba maneja. pasaFiltroUnidad es la REAL (llega por el
+  // import, ver construirCheques).
+  var __barra = { elegida: null, unidades: [], mostrar: false, listo: true }
+  var __oyentesBarra = []
+  function unidadesDeLaBarra() { return Promise.resolve({ ...__barra, unidades: [...__barra.unidades] }) }
+  function alCambiarUnidad(fn) { __oyentesBarra.push(fn); return () => {} }
+  function __elegirEnBarra(id) { __barra.elegida = id; for (const f of __oyentesBarra) f({ ...__barra, unidades: [...__barra.unidades] }) }
   var accionDelMotivo = null
   var turnoCheques = 0
   var temporizadorAvisoSeleccion = null
@@ -143,7 +155,10 @@ function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes
   const existe = (n) => new RegExp(`(?:^|\\n)\\s*(?:async\\s+)?function\\s+${n}\\s*\\(`).test(src)
   const existeC = (n) => new RegExp(`(?:^|\\n)\\s*const\\s+${n}\\s*=`).test(src)
   // Una función que el preludio STUBEA no se extrae: el stub la reemplaza.
-  const fns = [...FUNCIONES, ...OPCIONALES.filter(existe), ...funciones].filter(f => !stubs.includes(f))
+  // pasaFiltroUnidad es de js/barra-unidad.js: si la región la importa, se
+  // trae la función REAL por el import (extraer.js la busca ahí).
+  const importadas = /\bpasaFiltroUnidad\b[^\n]*from\s+'\.\.\/js\/barra-unidad\.js'/.test(src) ? ['pasaFiltroUnidad'] : []
+  const fns = [...FUNCIONES, ...OPCIONALES.filter(existe), ...importadas, ...funciones].filter(f => !stubs.includes(f))
   const cts = [...CONSTANTES, ...CONSTANTES_OPCIONALES.filter(existeC), ...constantes]
   return construirCon(ruta, {
     recortar: regionCheques,
@@ -152,7 +167,8 @@ function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes
     constantes: [...new Set(cts)],
     retorno: `${[...new Set(cts)].join(", ")}, estado, __els, __doc: document, __llamadas, __consultas, __almacen, window,
       __set(d){ __datos = d }, __setError(e){ __errorFalso = e }, __setRpc(f){ __rpc = f },
-      __accionMotivo(){ return accionDelMotivo }`,
+      __accionMotivo(){ return accionDelMotivo },
+      __barra, __oyentesBarra, __elegirEnBarra`,
   })
 }
 
