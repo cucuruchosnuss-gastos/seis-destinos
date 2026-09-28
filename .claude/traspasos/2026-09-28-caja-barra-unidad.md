@@ -6,7 +6,7 @@ Prompt para el chat de arquitectura (dueño de CLAUDE.md). Quien lo recibe no vi
 
 Tanda nocturna 27-28/09/2026, parte 4. La barra de unidad de arriba (`js/barra-unidad.js`, commit `5592f5a`) ya la cargaba `modulos/caja.html`, pero Caja no filtraba nada. Ahora Caja muestra solo lo de la unidad elegida. **Solo cambió `modulos/caja.html` (presentación y filtrado en el cliente) y sus suites. Cero SQL, cero cambios de base, de RPCs, de policies o de permisos.** No se tocó `js/barra-unidad.js` ni `css/main.css`.
 
-Rama del subagente: `worktree-agent-a60759cc8e4a5f205` (commits: ver el final).
+Rama del subagente: `worktree-agent-a60759cc8e4a5f205`. Commits: `7f59556` (el trabajo, sobre la base `5592f5a`) y el que anota este hash en el traspaso.
 
 ## Las reglas que quedaron (y por qué)
 
