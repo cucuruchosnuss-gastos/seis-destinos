@@ -6,7 +6,7 @@ Para el chat de arquitectura (dueño de CLAUDE.md). Autocontenido: quien lo lea 
 
 Tanda nocturna 27-28/09/2026, Parte 4 ("la barra de unidad de negocio arriba, en toda la app"), en `modulos/cobranzas.html`. La barra (`js/barra-unidad.js`, commit `5592f5a`) ya la cargaba la pantalla; faltaba que el listado la obedeciera. **Cero SQL corrido, cero cambios de base, cero RPCs nuevas, cero tareas nuevas** (Supabase en solo lectura). No se tocó `js/barra-unidad.js`, `css/main.css`, `js/cobranzas-comun.js` ni `modulos/administracion.html`.
 
-Rama: `worktree-agent-a3509154895262562` (sin push). Commits: ver el final de este archivo.
+Rama: `worktree-agent-a3509154895262562` (sin push). Commits: `5d2cf9b` (el trabajo, las suites y los datos de maqueta) y el que anota este hash en el traspaso. Al cerrar, `check-bytes` verde y `correr-todo` **126/126**; las mutaciones de Cobranzas corridas de a una.
 
 ### El listado filtra por la unidad de la barra
 
