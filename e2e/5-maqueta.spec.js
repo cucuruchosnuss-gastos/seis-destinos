@@ -143,6 +143,17 @@ const PANTALLAS = [
       await page.locator('#ad-cobranza-reabrir').click()
       await expect(page.locator('#ad-reabrir-motivo')).toBeVisible()
     }],
+    // Retiros por revisar (28/09/2026): el número en la portada, la lista y "Aceptar".
+    ['revisar', async (page) => {
+      await page.locator('#ad-cobranza-volver').click(); await page.locator('#ad-cliente-volver').click(); await page.locator('#ad-clientes-volver').click()
+      await expect(page.locator('[data-seccion="revisar"] .ad-seccion__numero')).toHaveText('2')
+      await page.locator('[data-seccion="revisar"]').click()
+      await expect(page.locator('#ad-revisar-lista')).toContainText('faltaban 10,5 kg en stock')
+      await page.locator('[data-revisar-aceptar="it-1"]').click()
+      await page.locator('#ad-revisar-motivo').fill('se compró y no se cargó el ingreso')
+      await page.locator('#ad-revisar-si').click()
+      await expect(page.locator('#ad-revisar-lista')).toContainText('Aceptado: N-0042')
+    }],
   ]],
   // Un super_admin (27/09/2026): los errores de la app.
   ['modulos/administracion.html', 'administracion-super', [

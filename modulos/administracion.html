@@ -603,6 +603,22 @@
       <div class="ad-lista" id="ad-cobranzas-lista"></div>
     </section>
 
+    <!-- ══ RETIROS POR REVISAR (28/09/2026, retiros:precios) ═══════════════
+         Los renglones de órdenes de retiro que salieron SIN estar en stock:
+         registrar_orden_retiro() los deja con revision = 'pendiente'. Se
+         aceptan con un motivo (resolver_faltante_retiro), que deja el stock
+         de esos lotes en cero con un ajuste. -->
+    <section id="ad-vista-revisar" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-revisar-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Retiros por revisar</h1>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-revisar-actualizar">Actualizar</button>
+      </div>
+      <p class="ad-texto-suave">Mercadería que salió en una orden de retiro sin estar en el stock del sistema. Revisá qué pasó (se compró y no se cargó el ingreso, se produjo y no se cargó la planilla…) y aceptala con el motivo: el stock de esos lotes vuelve a cero.</p>
+      <p class="ad-cuenta" id="ad-revisar-cuenta"></p>
+      <div class="ad-lista" id="ad-revisar-lista"></div>
+    </section>
+
     <!-- ══ ERRORES DE LA APP (27/09/2026, solo super_admin) ═════════════════
          Lo que anota js/salud.js en errores_app desde TODAS las pantallas: un
          error de JavaScript, una promesa rechazada, una RPC que falló, la
@@ -728,6 +744,9 @@
       bancos: null,          // codigo → nombre (bancos_bcra)
       errores: { filas: null, error: null, pantalla: '', dispositivo: '', evento: '' },
       seguridad: { filas: null, error: null },
+      // Retiros por revisar (28/09/2026): lo que devolvió retiros_por_revisar()
+      // y el renglón que se está aceptando: { itemId, motivo, error, enviando }.
+      revisar: { filas: null, error: null, aceptando: null, hechos: [] },
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -798,6 +817,10 @@
       { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'] },
       { id: 'listas', titulo: 'Listas de precios', permiso: ['retiros', 'precios'] },
       { id: 'importar', titulo: 'Importar', permiso: ['retiros', 'precios'] },
+      // Los renglones de retiros que salieron sin stock (28/09/2026): los
+      // acepta quien pone los precios, la misma tarea que exige
+      // resolver_faltante_retiro().
+      { id: 'revisar', titulo: 'Retiros por revisar', permiso: ['retiros', 'precios'] },
       // La cartera de cheques (mudada de cheques.html el 26/09/2026): NO es
       // de una empresa. La ve quien hoy puede ver Cheques: cobranzas:ver_todo
       // o cobranzas:procesar, con bypass de super_admin.
@@ -884,7 +907,7 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad', 'ad-vista-revisar']
     // Las vistas que no son de una empresa: el selector de empresa se esconde.
     const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad']
     const SUBTITULO_DE_VISTA = {
@@ -902,6 +925,7 @@
       'ad-vista-cobranza': 'Cobranza',
       'ad-vista-errores': 'Errores de la app',
       'ad-vista-seguridad': 'Seguridad',
+      'ad-vista-revisar': 'Retiros por revisar',
     }
 
     function mostrarVista(id) {
@@ -1113,6 +1137,9 @@
         return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
           `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
           `<span class="ad-seccion__detalle">Clientes, precios y saldos iniciales desde un Excel</span></button>`
+      } else if (s.id === 'revisar') {
+        numero = portada?.porRevisar ?? null
+        detalle = portada?.errorRevisar ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'renglón salió sin estar en stock' : 'renglones salieron sin estar en stock'))
       } else if (s.id === 'clientes') {
         numero = portada?.sobreLimite ?? null
         detalle = portada?.errorClientes ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'cliente pasa su límite' : 'clientes pasan su límite'))
@@ -1151,7 +1178,7 @@
 
     async function mostrarInicio() {
       mostrarVista('ad-vista-inicio')
-      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null, porAsentar: null, errorCobranzas: null }
+      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null, porAsentar: null, errorCobranzas: null, porRevisar: null, errorRevisar: null }
       pintarPortada()
       const turno = ++turnoPortada
       const unidad = estado.empresaId
@@ -1163,6 +1190,8 @@
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
       if (puedeEn('retiros', 'precios', unidad)) {
+        leerPorRevisar(unidad).then(l => { p.porRevisar = l.length }).catch(err => { console.error('No se pudieron contar los retiros por revisar:', err); p.errorRevisar = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
         asegurarListas(unidad).then(() => { p.listas = estado.listas.filas.length }).catch(err => { console.error('No se pudieron contar las listas:', err); p.errorListas = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
@@ -1186,6 +1215,7 @@
       else if (id === 'cobranzas') mostrarCobranzas()
       else if (id === 'errores') mostrarErrores()
       else if (id === 'seguridad') mostrarSeguridad()
+      else if (id === 'revisar') mostrarRevisar()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4216,6 +4246,127 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // RETIROS POR REVISAR — con retiros:precios (28/09/2026)
+    //
+    // retiros_por_revisar(p_unidad) devuelve los renglones que salieron sin
+    // estar en stock ('pendiente'), con la orden (código, nunca el número),
+    // el cliente, qué se llevó, cuánto se pidió y cuánto faltaba. "Aceptar"
+    // pide el motivo (3 letras o más, como la base) y llama a
+    // resolver_faltante_retiro(p_item_id, p_motivo). El error de la base va
+    // TAL CUAL, pegado al botón.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const LARGO_MINIMO_MOTIVO_REVISAR = 3
+
+    async function leerPorRevisar(unidadId) {
+      const { data, error } = await supabase.rpc('retiros_por_revisar', { p_unidad_negocio_id: unidadId })
+      if (error) throw error
+      return Array.isArray(data) ? data : []
+    }
+
+    // Una cantidad del renglón: en cajas (producto) o en su unidad (insumo).
+    function cantidadRevisar(n, unidad) {
+      return !unidad || unidad === 'cajas' ? `${enteroHoja(n)} cajas` : cantidadInsumoHoja(n, unidad)
+    }
+
+    function htmlFilaRevisar(f, rv) {
+      const abierto = rv.aceptando?.itemId === f.item_id ? rv.aceptando : null
+      const meta = [fechaCorta(f.fecha), f.cliente, f.cargada_por ? 'cargó ' + f.cargada_por : null].filter(Boolean).join(' · ')
+      const cuanto = `Se llevó ${cantidadRevisar(f.pedidas, f.unidad)} · faltaban ${cantidadRevisar(f.faltante, f.unidad)} en stock`
+      const acciones = abierto
+        ? `<div class="ad-panel"><div class="ad-campo"><label for="ad-revisar-motivo">¿Qué pasó? (obligatorio)</label>` +
+          `<textarea class="ad-textarea" id="ad-revisar-motivo" maxlength="300" placeholder="Por ejemplo: se compró y no se cargó el ingreso">${esc(abierto.motivo)}</textarea>` +
+          `<span class="ad-campo__ayuda">Al aceptar, el stock de los lotes que quedaron en negativo vuelve a cero con un ajuste.</span></div>` +
+          `${abierto.error ? `<p class="ad-error-pegado">${esc(abierto.error)}</p>` : ''}` +
+          `<div class="ad-panel__acciones"><button type="button" class="ad-btn" id="ad-revisar-si"${abierto.enviando ? ' disabled' : ''}>Aceptar con este motivo</button>` +
+          `<button type="button" class="ad-btn ad-btn--suave" id="ad-revisar-no">Cancelar</button></div></div>`
+        : `<div class="ad-barra-acciones"><button type="button" class="ad-btn ad-btn--secundario" data-revisar-aceptar="${esc(f.item_id)}">Aceptar</button></div>`
+      return `<div class="ad-tarjeta ad-fila--atencion" data-revisar="${esc(f.item_id)}">` +
+        `<div class="ad-fila__linea"><span class="ad-fila__codigo">${esc(f.codigo || '—')}</span><span class="ad-sello ad-sello--anulada">Sin stock</span></div>` +
+        `<div class="ad-fila__meta">${esc(meta)}</div>` +
+        `<div class="ad-error-app__mensaje">${esc(f.que || '—')}</div>` +
+        `<p class="ad-error-pegado">${esc(cuanto)}</p>${acciones}</div>`
+    }
+
+    function pintarRevisar() {
+      const rv = estado.revisar
+      const lista = document.getElementById('ad-revisar-lista')
+      const cuenta = document.getElementById('ad-revisar-cuenta')
+      const hechos = rv.hechos.map(t => `<div class="ad-aviso">${esc(t)}</div>`).join('')
+      if (rv.error) { lista.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(rv.error)}</div>`; cuenta.textContent = ''; return }
+      if (rv.filas === null) { lista.innerHTML = '<div class="ad-vacio">Cargando…</div>'; cuenta.textContent = ''; return }
+      cuenta.textContent = rv.filas.length === 1 ? '1 renglón por revisar' : `${rv.filas.length} renglones por revisar`
+      lista.innerHTML = hechos + (rv.filas.length ? rv.filas.map(f => htmlFilaRevisar(f, rv)).join('')
+        : '<div class="ad-vacio">No hay nada por revisar en esta empresa: todo lo que salió estaba en stock.</div>')
+    }
+
+    let turnoRevisar = 0
+
+    async function mostrarRevisar() {
+      if (!puedeEn('retiros', 'precios', estado.empresaId)) { mostrarInicio(); return }
+      mostrarVista('ad-vista-revisar')
+      const turno = ++turnoRevisar
+      const unidad = estado.empresaId
+      estado.revisar = { filas: null, error: null, aceptando: null, hechos: estado.revisar?.hechos ?? [] }
+      pintarRevisar()
+      try {
+        const filas = await leerPorRevisar(unidad)
+        if (turno !== turnoRevisar) return
+        estado.revisar.filas = filas
+      } catch (err) {
+        if (turno !== turnoRevisar) return
+        console.error('No se pudieron leer los retiros por revisar:', err)
+        estado.revisar.error = 'No se pudieron leer los retiros por revisar. Revisá la conexión y volvé a entrar.'
+      }
+      pintarRevisar()
+    }
+
+    function abrirAceptarRevisar(itemId) {
+      const rv = estado.revisar
+      if (!rv.filas?.some(f => f.item_id === itemId)) return
+      rv.aceptando = { itemId, motivo: '', error: null, enviando: false }
+      pintarRevisar()
+      document.getElementById('ad-revisar-motivo')?.focus()
+    }
+
+    function cancelarAceptarRevisar() {
+      estado.revisar.aceptando = null
+      pintarRevisar()
+    }
+
+    async function confirmarAceptarRevisar() {
+      const rv = estado.revisar
+      const a = rv.aceptando
+      if (!a || a.enviando) return
+      a.motivo = document.getElementById('ad-revisar-motivo')?.value ?? a.motivo
+      if (limpio(a.motivo).length < LARGO_MINIMO_MOTIVO_REVISAR) {
+        a.error = 'Escribí qué pasó (por ejemplo: "se compró y no se cargó el ingreso").'
+        pintarRevisar()
+        return
+      }
+      a.enviando = true
+      a.error = null
+      pintarRevisar()
+      try {
+        const { error } = await supabase.rpc('resolver_faltante_retiro', { p_item_id: a.itemId, p_motivo: limpio(a.motivo) })
+        if (error) throw error
+        const f = rv.filas.find(x => x.item_id === a.itemId)
+        rv.filas = rv.filas.filter(x => x.item_id !== a.itemId)
+        rv.aceptando = null
+        rv.hechos = [`Aceptado: ${f?.codigo ?? 'la orden'} · ${f?.que ?? ''}. El stock de esos lotes quedó en cero.`]
+        mostrarExito('Renglón aceptado.')
+        if (estado.portada) estado.portada.porRevisar = rv.filas.length
+      } catch (err) {
+        console.error('No se pudo aceptar el renglón:', err)
+        a.enviando = false
+        // Los mensajes de resolver_faltante_retiro ya vienen escritos para
+        // una persona: van tal cual.
+        a.error = err?.message || 'No se pudo aceptar. Probá de nuevo.'
+      }
+      pintarRevisar()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // EVENTOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -4356,6 +4507,19 @@
       document.getElementById('ad-errores-actualizar').addEventListener('click', () => mostrarErrores())
       document.getElementById('ad-seguridad-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-seguridad-actualizar').addEventListener('click', () => mostrarSeguridad())
+      document.getElementById('ad-revisar-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-revisar-actualizar').addEventListener('click', () => { estado.revisar.hechos = []; mostrarRevisar() })
+      const revisar = document.getElementById('ad-revisar-lista')
+      revisar.addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-revisar-aceptar]'))) abrirAceptarRevisar(b.dataset.revisarAceptar)
+        else if (e.target.closest('#ad-revisar-si')) confirmarAceptarRevisar()
+        else if (e.target.closest('#ad-revisar-no')) cancelarAceptarRevisar()
+      })
+      // El motivo se guarda al tipear, sin redibujar (no se pierde el foco).
+      revisar.addEventListener('input', (e) => {
+        if (e.target.id === 'ad-revisar-motivo' && estado.revisar.aceptando) estado.revisar.aceptando.motivo = e.target.value
+      })
       for (const [id, clave] of [['ad-errores-pantalla', 'pantalla'], ['ad-errores-dispositivo', 'dispositivo'], ['ad-errores-evento', 'evento']]) {
         document.getElementById(id).addEventListener('change', (e) => { estado.errores[clave] = e.target.value; pintarErrores() })
       }

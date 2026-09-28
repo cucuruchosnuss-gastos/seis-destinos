@@ -904,6 +904,12 @@ module.exports = {
     ]
   },
   "rpc": {
+    // Retiros por revisar (28/09/2026): renglones que salieron sin estar en stock.
+    "retiros_por_revisar": [
+      { "item_id": "it-1", "orden_id": "o1", "codigo": "N-0042", "fecha": "2026-09-27", "cliente": "Distribuidora Anatolia", "que": "Cucurucho Mini · Caja x 600 · LOLO", "pedidas": 42, "faltante": 5, "unidad": "cajas", "cargada_por": "Emanuel Romero" },
+      { "item_id": "it-2", "orden_id": "o12", "codigo": "N-0043", "fecha": "2026-09-28", "cliente": "Kiosco Pepe", "que": "Harina 000 Molino Cañuelas", "pedidas": 250.5, "faltante": 10.5, "unidad": "kg", "cargada_por": "Franco" }
+    ],
+    "resolver_faltante_retiro": null,
     "mis_unidades_retiro": [
       {
         "id": "u-n",
