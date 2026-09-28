@@ -38,7 +38,8 @@ correrMutaciones({
   original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/gastos.html'),
   funciones: [
     'poblarSelect', 'poblarSelectMoneda', 'crearMultiselect', 'crearSelectorOrden', 'renderizarFiltros',
-    'renderizarCardGasto', 'htmlFilasProyectos', 'htmlSeccionComprobante', 'htmlAvisoDuplicado',
+    // htmlFilasProyectos se fue con "Proyectos del Taller" a taller.html (28/09/2026).
+    'renderizarCardGasto', 'htmlSeccionComprobante', 'htmlAvisoDuplicado', 'htmlTotalesPorUnidad', 'htmlSelectProyectoEdicion',
     'actualizarBreadcrumb', 'renderizarGrillaDestino', 'renderizarGrillaVehiculos', 'renderizarGrillaCategorias',
     'poblarSelectEmpleados', 'mostrarEstadoOcr', 'htmlAvisoPostGasto', 'htmlIngresosSinGasto',
     'renderizarIngresosSinGasto', 'renderizarSugerenciasProveedorEn',

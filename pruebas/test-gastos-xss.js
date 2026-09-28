@@ -9,8 +9,10 @@
 //     el listado, los filtros, el total, el detalle y los dos formularios de
 //     edición (gasto y factura), el resumen del wizard (normal y pendiente),
 //     las grillas, los selects, el aviso de duplicados, el aviso de después
-//     de guardar, "Facturas ingresadas sin gasto", Proyectos del Taller, el
+//     de guardar, "Facturas ingresadas sin gasto", el detalle por unidad de
+//     las cifras (barra de unidad), el selector de proyecto del Taller, el
 //     buscador de proveedor y la sección del comprobante (foto firmada).
+//     ("Proyectos del Taller" se mudó a modulos/taller.html el 28/09/2026.)
 //     Es lo único que prueba que esc() existe, que se llama y que escapa el
 //     argumento correcto.
 //  2. CHEQUEO ESTÁTICO sobre TODO el <script>: cada ${...} de una plantilla que
@@ -74,7 +76,9 @@ const EJECUTAR_TAMBIEN = [
 const RENDERS = [
   'esc', 'poblarSelect', 'poblarSelectMoneda', 'poblarSelectProyecto', 'crearMultiselect', 'crearSelectorOrden',
   'renderizarFiltros', 'renderizarTotalGastos', 'renderizarCardGasto',
-  'htmlFilasProyectos', 'renderizarProyectos', 'htmlSeccionComprobante',
+  'htmlSeccionComprobante', 'htmlTotalesPorUnidad', 'htmlSelectProyectoEdicion',
+  // De js/barra-unidad.js (lo encuentra extraer.js por el import).
+  'pasaFiltroUnidad',
   'htmlAvisoDuplicado', 'pintarAvisoDuplicado', 'renderizarAvisoDuplicado', 'volverOrigenSiCorresponde',
   'actualizarBreadcrumb', 'renderizarGrillaDestino', 'renderizarGrillaVehiculos', 'renderizarGrillaCategorias',
   'poblarSelectEmpleados', 'actualizarSelectorCuentaGasto', 'actualizarSelectorCuentaEdicion',
@@ -180,7 +184,7 @@ const PRELUDIO = `
   var gastoAAnularId = null, turnoDuplicadoEdicion = 0, detectorEdicionFactura = null, turnoFoto = 0
 `
 
-const RETORNO = 'estado, proyectosAdmin, MEDIOS_PAGO_LABEL, __els, __el(id){ return document.getElementById(id) }, __llamadas, __navegacion, ' +
+const RETORNO = 'estado, MEDIOS_PAGO_LABEL, __els, __el(id){ return document.getElementById(id) }, __llamadas, __navegacion, ' +
   '__setDatos(t, d){ __datos[t] = d }, __setRpc(n, r){ __rpc[n] = r }, __setVar(k, v){ eval(k + " = v") }, __setSearch(s){ location.search = s }'
 
 if (SOLO !== 'estatico') {
@@ -228,6 +232,7 @@ async function correrRenders(S) {
   chequearMarcas(chk, 'selector de moneda', html('campo-moneda'), ['moneda', 'moneda_actual'])
   S.poblarSelectProyecto()
   chequearMarcas(chk, 'selector de proyecto del wizard', html('campo-proyecto'), ['proy_id', 'proy_nombre'])
+  chk('selector de proyecto del wizard: ofrece "Gasto general del taller"', html('campo-proyecto').includes('Gasto general del taller'))
   S.poblarSelectEmpleados('u1')
   chequearMarcas(chk, 'selector de empleado del wizard', html('campo-empleado'), ['emp_id', 'emp_nombre', 'adm_id', 'adm_nombre'])
 
@@ -255,15 +260,16 @@ async function correrRenders(S) {
   // crearMultiselect escribe en el panel.querySelector('.multiselect__opciones'):
   // se capturan todos los hijos que devuelve.
   const opcionesMs = []
-  for (const id of ['ms-periodo-panel', 'ms-unidad-panel', 'ms-categoria-panel', 'ms-vehiculo-panel', 'ms-medio-pago-panel']) {
+  for (const id of ['ms-periodo-panel', 'ms-categoria-panel', 'ms-vehiculo-panel', 'ms-medio-pago-panel']) {
     const p = el(id)
     p.querySelector = () => { const h = { innerHTML: '' }; opcionesMs.push(h); return Object.assign(h, { addEventListener(){} }) }
     el(id.replace('-panel', '-boton')).closest = () => el('contenedor-ms')
   }
-  S.renderizarFiltros([{ id: marca('fu_id'), nombre: marca('fu_nombre') }])
+  S.renderizarFiltros()
   chequearMarcas(chk, 'barra de filtros', html('contenedor-filtros'), ['filtro_busqueda', 'filtro_desde', 'filtro_hasta'])
   const htmlMs = opcionesMs.map(h => h.innerHTML).join('\n')
-  chequearMarcas(chk, 'opciones de los multiselect de filtro', htmlMs, ['fu_id', 'fu_nombre', 'cat_id', 'cat_nombre', 'veh_id', 'veh_nombre'])
+  chequearMarcas(chk, 'opciones de los multiselect de filtro', htmlMs, ['cat_id', 'cat_nombre', 'veh_id', 'veh_nombre'])
+  chk('filtros: el filtro "Unidad" ya no está (lo decide la barra de unidad)', !html('contenedor-filtros').includes('ms-unidad'))
   chk('multiselect: se dibujaron opciones (si no, el chequeo no mira nada)', /multiselect__opcion/.test(htmlMs))
 
   // ── Total y listado ──────────────────────────────────────────────────────
@@ -296,17 +302,25 @@ async function correrRenders(S) {
   const card4 = S.renderizarCardGasto({ ...gasto, unidades_negocio: { nombre: 'Cucuruchos Nuss' } })
   chk('tarjeta: con logo, el src es la ruta del código', /<img src="\.\.\/logo-[a-z-]+\.png" alt="Cucuruchos Nuss"/.test(card4))
 
-  // ── Proyectos del Taller ─────────────────────────────────────────────────
-  S.proyectosAdmin.lista = [
-    { id: marca('pa_id'), nombre: marca('pa_nombre'), activo: true },
-    { id: marca('pc_id'), nombre: marca('pc_nombre'), activo: true },
-    { id: marca('pb_id'), nombre: marca('pb_nombre'), activo: false },
-  ]
-  S.proyectosAdmin.aConfirmar = marca('pc_id')
-  S.proyectosAdmin.enCurso = false
-  S.renderizarProyectos()
-  chequearMarcas(chk, 'Proyectos del Taller', html('proyectos-lista'), ['pa_id', 'pa_nombre', 'pc_id', 'pc_nombre', 'pb_id', 'pb_nombre'])
-  chk('Proyectos: se dibujó la confirmación de baja', /¿Dar de baja/.test(html('proyectos-lista')))
+  // ── Detalle por unidad de las cifras (barra de unidad) ────────────────────
+  // El id de la unidad va a un data-*: la marca en el id tiene que salir escapada.
+  const unidadesAntes = E.maestros.unidades
+  E.maestros.unidades = [{ id: marca('tu_id'), nombre: marca('tu_nombre') }, { id: 'tu2', nombre: marca('tu2_nombre') }]
+  const porUnidad = S.htmlTotalesPorUnidad([
+    { ...gasto, unidad_negocio_id: marca('tu_id'), unidades_negocio: null, importe: 10, moneda: 'ARS' },
+    { ...gasto, unidad_negocio_id: 'tu2', unidades_negocio: null, importe: 20, moneda: 'ARS' },
+  ])
+  chequearMarcas(chk, 'detalle por unidad de las cifras', porUnidad, ['tu_id', 'tu_nombre', 'tu2_nombre'])
+  E.maestros.unidades = unidadesAntes
+
+  // ── Select de proyecto de la EDICIÓN (Taller) ────────────────────────────
+  const unidadesAntes2 = E.maestros.unidades
+  E.maestros.unidades = [{ id: 'u-t', nombre: 'Taller', prefijo: 'T' }]
+  E.maestros.proyectos = [{ id: marca('pe_id'), nombre: marca('pe_nombre'), activo: true, estado: 'en_curso' }]
+  const selEd = S.htmlSelectProyectoEdicion({ unidad_negocio_id: 'u-t', proyectos: { id: marca('pc_id'), nombre: marca('pc_nombre'), activo: true, estado: 'entregado' } })
+  chequearMarcas(chk, 'select de proyecto de la edición', selEd, ['pe_id', 'pe_nombre', 'pc_id', 'pc_nombre'])
+  E.maestros.unidades = unidadesAntes2
+  E.maestros.proyectos = [{ id: marca('proy_id'), nombre: marca('proy_nombre') }]
 
   // ── Sección del comprobante (foto firmada al mirar) ──────────────────────
   E.misTareas = new Set()
@@ -394,6 +408,8 @@ async function correrRenders(S) {
   S.__setVar('categoriaSeleccionada', marca('cat_id'))
   S.__setVar('proveedorSeleccionado', marca('prov_id'))
   E.wizard.fotoArchivo = { name: marca('w_foto'), type: 'image/jpeg' }
+  // El proyecto se guarda y se muestra SOLO en un gasto del Taller.
+  E.maestros.unidades[0].prefijo = 'T'
   S.renderizarResumen()
   const res = html('resumen-contenido')
   chequearMarcas(chk, 'resumen del wizard', res,
@@ -505,24 +521,18 @@ const SEGURAS = {
     "formatearImporte(totalARS, 'ARS')": "número sumado en el código con moneda 'ARS' fija",
     'gastos.length': NUM,
     tarjetaTotal: HTML_PROPIO, tarjetaRegistros: HTML_PROPIO,
+    'htmlTotalesPorUnidad(gastos)': 'HTML de htmlTotalesPorUnidad(), que escapa adentro (ejecutada con marcas)',
   },
+  htmlTotalesPorUnidad: { filas: HTML_PROPIO, 'x.registros': NUM },
+  htmlSelectProyectoEdicion: { primera: HTML_PROPIO },
   renderizarCardGasto: {
     'iconoCategoriaHtml(categoria)': ICONO,
     'colorAvatar(razonSocial)': 'colorAvatar(): el texto solo elige un color de PALETA_AVATAR (constante)',
     puntoOBadge: HTML_PROPIO, categoriaChip: HTML_PROPIO,
+    sinUnidad: "literal '<span class=\"gasto__sin-unidad\">Sin unidad</span>' o ''",
     metaSecundaria: 'esc([fecha, empleado].filter(Boolean).join(" · ")) armado arriba',
   },
   aplicarBusquedaLocal: { "filtrados.map(renderizarCardGasto).join('')": 'HTML de renderizarCardGasto(), que escapa adentro (ejecutada con marcas)' },
-  cargarLista: { "gastos.map(renderizarCardGasto).join('')": 'HTML de renderizarCardGasto(), que escapa adentro (ejecutada con marcas)' },
-  htmlFilasProyectos: {
-    dis: "literal ' disabled' o ''",
-    'activos.length': NUM, 'bajas.length': NUM,
-    "activos.map(filaActiva).join('')": 'HTML de la flecha filaActiva de esta función, cuyas interpolaciones revisa el escáner',
-    "bajas.map(filaBaja).join('')": 'HTML de la flecha filaBaja de esta función, cuyas interpolaciones revisa el escáner',
-  },
-  renderizarProyectos: {
-    'htmlFilasProyectos(proyectosAdmin.lista, proyectosAdmin.aConfirmar, proyectosAdmin.enCurso)': 'HTML de htmlFilasProyectos(), que escapa adentro (ejecutada con marcas)',
-  },
   htmlSeccionComprobante: { cuerpo: HTML_PROPIO },
   htmlAvisoDuplicado: {
     'o.chip': "clase CSS de la constante ORIGENES_DUPLICADO o del objeto 'desconocido' (literal)",
@@ -745,7 +755,9 @@ if (SOLO !== 'render') {
     !RE_CAMPO[0].test("campo(`${g.x}`, h)") && !RE_CAMPO[0].test("campo(g.label, h)") && RE_CAMPO[0].test("campo('Lugar', h)"))
 
   chk('estático: el escáner encontró interpolaciones en HTML', enHtml.length > 250, `solo ${enHtml.length}`)
-  chk('estático: el escáner encontró las asignaciones a innerHTML', r.asignaciones.length >= 45, `solo ${r.asignaciones.length}`)
+  // Eran >= 45: "Proyectos del Taller" se mudó a taller.html (28/09/2026) y
+  // se llevó sus asignaciones. Es un control de que el escáner lee, no un tope.
+  chk('estático: el escáner encontró las asignaciones a innerHTML', r.asignaciones.length >= 40, `solo ${r.asignaciones.length}`)
   chk('estático: hay escapes de verdad, no todo justificado por lista', enHtml.filter(i => /^esc\(/.test(i.expr.trim())).length > 90,
     `${enHtml.filter(i => /^esc\(/.test(i.expr.trim())).length}`)
   const huerfanas = [

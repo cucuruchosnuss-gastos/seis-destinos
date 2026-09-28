@@ -83,11 +83,10 @@ const PRELUDIO = FUENTE_FABRICA + `
   function exportarExcel() {}
   function mostrarDetalleGasto() {}
   function mostrarDetalleFactura() {}
-  function cerrarProyectoNuevoWizard() {}
   var estado = {
     miRolApp: 'usuario', miEmpleadoId: 'e-ana', misTareas: new Set(['gastos:ver_exportar']),
     fabrica: FABRICA_SIN_DATOS,
-    filtros: { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], busqueda: '' },
+    filtros: { periodos: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], busqueda: '' },
     maestros: { empleados: [], unidades: [], categorias: [], vehiculos: [], proyectos: [] },
     listaGastos: [], facturaDetalleActual: null,
   }
@@ -97,7 +96,12 @@ const S = construirCon(ARCHIVO, {
   funciones: ['esc', 'tieneTarea', 'configEmpresa', 'esCuentaDeTablet', 'personasNoTablet', 'personasElegibles',
     'unidadesElegibles', 'unidadesParaEditar', 'personasParaEditar', 'poblarSelectEmpleados',
     'renderizarFiltros', 'activarFiltroFecha', 'renderizarGrillaDestino',
-    'mostrarFormularioEdicionGasto', 'mostrarFormularioEdicionFactura'],
+    'mostrarFormularioEdicionGasto', 'mostrarFormularioEdicionFactura',
+    // Lo que esas listas llaman desde el 28/09/2026 (barra de unidad y
+    // proyecto del Taller).
+    'actualizarBotonDestinoSiguiente', 'actualizarGrupoProyecto', 'esUnidadTaller', 'mostrarErrorProyecto',
+    'htmlSelectProyectoEdicion', 'unidadDeGasto'],
+  constantes: ['VALOR_GASTO_GENERAL', 'TEXTO_GASTO_GENERAL'],
   retorno: 'estado, __els, __multiselects, FABRICA_SIN_DATOS',
 })
 
@@ -108,7 +112,7 @@ function preparar(fabrica) {
   S.estado.fabrica = fabrica
   S.estado.maestros.unidades = UNIDADES.map(u => ({ ...u }))
   S.estado.maestros.empleados = EMPLEADOS.map(e => ({ ...e }))
-  S.estado.filtros = { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], busqueda: '' }
+  S.estado.filtros = { periodos: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], busqueda: '' }
   for (const k of Object.keys(S.__multiselects)) delete S.__multiselects[k]
   S.__els.clear()
 }
@@ -124,6 +128,7 @@ function listasSinLog() {
   // Filtros de la lista, por su call site real.
   S.activarFiltroFecha('hoy')
   r.filtroUnidades = (S.__multiselects['ms-unidad']?.opciones ?? []).map(o => o.value)
+  r.barraFiltros = S.__els.get('contenedor-filtros').innerHTML
   // Grilla de destino del wizard.
   S.renderizarGrillaDestino()
   r.grilla = S.__els.get('grilla-destino').innerHTML
@@ -150,9 +155,10 @@ const seccion = (html, idSelect) => {
 // ── Cuenta REAL ──────────────────────────────────────────────────────────
 preparar(FAB_REAL)
 let L = listas()
-chk('real: el filtro de unidades de la lista se armó', L.filtroUnidades.length > 0, L.filtroUnidades.join(','))
-chk('real: el filtro de unidades NO ofrece la unidad del robot', !L.filtroUnidades.includes(ROBOT), L.filtroUnidades.join(','))
-chk('real: el filtro de unidades ofrece las reales', L.filtroUnidades.includes('u-cn') && L.filtroUnidades.includes('u-dp'))
+chk('real: la barra de filtros se dibujó', L.barraFiltros.includes('ms-periodo'), L.barraFiltros.slice(0, 120))
+chk('real: el filtro "Unidad" de la lista ya no existe (lo decide la barra de unidad)',
+  L.filtroUnidades.length === 0 && !L.barraFiltros.includes('ms-unidad'), L.filtroUnidades.join(','))
+chk('real: la barra de filtros no ofrece la unidad del robot', !L.barraFiltros.includes(ROBOT) && !L.barraFiltros.includes('Pruebas (robot)'))
 chk('real: la grilla de destino NO tiene la unidad del robot', !tiene(L.grilla, ROBOT) && !L.grilla.includes('Pruebas (robot)'), L.grilla.slice(0, 200))
 chk('real: la grilla de destino tiene las reales', tiene(L.grilla, 'u-cn') && tiene(L.grilla, 'u-dp'))
 for (const id of ROBOTS) chk(`real: el selector del wizard NO ofrece ${id}`, !tiene(L.wizardEmpleados, id), L.wizardEmpleados)
@@ -191,7 +197,7 @@ chk('real: con una sola unidad real, la grilla muestra solo esa', tiene(g1, 'u-c
 // ── Cuenta DE PRUEBA ─────────────────────────────────────────────────────
 preparar(FAB_PRUEBA)
 L = listas()
-chk('prueba: el filtro de unidades ofrece la del robot', L.filtroUnidades.includes(ROBOT), L.filtroUnidades.join(','))
+chk('prueba: tampoco hay filtro "Unidad" (lo decide la barra)', L.filtroUnidades.length === 0)
 chk('prueba: la grilla de destino tiene la unidad del robot', tiene(L.grilla, ROBOT))
 for (const id of ROBOTS) chk(`prueba: el selector del wizard ofrece ${id}`, tiene(L.wizardEmpleados, id))
 chk('prueba: la edición del gasto ofrece la unidad del robot', tiene(seccion(L.edicionGasto, 'edit-unidad'), ROBOT))
@@ -201,7 +207,6 @@ chk('prueba: la edición de la factura ofrece la unidad del robot', tiene(seccio
 // ── FABRICA_SIN_DATOS: no se saca nada ───────────────────────────────────
 preparar(S.FABRICA_SIN_DATOS)
 L = listas()
-chk('sin datos: el filtro de unidades ofrece las tres', ['u-cn', 'u-dp', ROBOT].every(u => L.filtroUnidades.includes(u)))
 chk('sin datos: la grilla tiene las tres', ['u-cn', 'u-dp', ROBOT].every(u => tiene(L.grilla, u)))
 for (const id of [...ROBOTS, ...REALES]) chk(`sin datos: el selector del wizard ofrece ${id}`, tiene(L.wizardEmpleados, id))
 chk('sin datos: la tablet igual NO aparece (esa regla es otra)', !tiene(L.wizardEmpleados, 't-cn'))

@@ -18,8 +18,8 @@ correrMutaciones({
       de: 'return sinPersonasDePrueba(personasNoTablet(), estado.fabrica)', a: 'return personasNoTablet()' },
     { nombre: 'unidadesElegibles deja de filtrar la fábrica',
       de: 'return sinUnidadesDePrueba(estado.maestros.unidades ?? [], estado.fabrica)', a: 'return estado.maestros.unidades ?? []' },
-    { nombre: 'los filtros de la lista vuelven a las unidades crudas',
-      de: 'renderizarFiltros(unidadesElegibles())', a: 'renderizarFiltros(estado.maestros.unidades)' },
+    // El filtro "Unidad" de la lista se retiró (28/09/2026): lo decide la barra
+    // de unidad, que saca la fábrica de pruebas por su cuenta (mut-barra-unidad.js).
     { nombre: 'la grilla de destino vuelve a las unidades crudas',
       de: 'const empresasHtml = unidadesElegibles().map(u =>', a: 'const empresasHtml = estado.maestros.unidades.map(u =>' },
     { nombre: 'la edición del gasto vuelve a las unidades crudas',

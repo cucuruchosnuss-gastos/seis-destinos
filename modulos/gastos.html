@@ -164,15 +164,23 @@
     }
     .btn-link-proveedor--pedir:hover { background: #D6F5EE; }
 
-    /* ── Proyectos del Taller (gastos:gestionar_proyectos) ────────────────
-       El link del wizard NO es un botón primario y aparece solo si se cumplen
-       las dos: el destino es Taller (es cuando existe el select) y la persona
-       tiene la tarea. Tocarlo sin querer no crea nada: abre un campo que
-       exige escribir un nombre y confirmar. Es la lección de "Pedir alta de
-       proveedor": un botón siempre visible en medio del wizard invita al
-       toque accidental. */
+    /* ── Proyecto del Taller en el wizard (28/09/2026) ─────────────────────
+       La GESTIÓN de proyectos se mudó a modulos/taller.html. Acá solo se
+       ELIGE: el select es obligatorio en un gasto del Taller, con la opción
+       "Gasto general del taller" para lo que no es de ningún proyecto. El
+       link abre Proyectos Taller en otra pestaña (el wizard a medio cargar no
+       se pierde) y "Actualizar la lista" relee los proyectos sin tocar lo
+       cargado. Los dos son links, no botones primarios: el primario de la
+       pantalla es "Siguiente". */
+    .proyecto-taller__acciones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 1rem;
+      margin-top: 0.25rem;
+    }
     .btn-link-proyecto {
-      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
       min-height: 2.75rem;
       padding: 0.5rem 0.25rem;
       border: none;
@@ -181,57 +189,28 @@
       font-family: var(--fuente);
       font-size: 0.875rem;
       font-weight: 600;
+      text-decoration: none;
       cursor: pointer;
     }
     .btn-link-proyecto:hover { text-decoration: underline; }
-
-    .proyecto-nuevo {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      margin-top: 0.25rem;
-      padding: 0.875rem;
-      border: 1.5px solid var(--color-borde);
-      border-radius: 12px;
-      background: var(--color-fondo);
-      min-width: 0;
-    }
-    .proyecto-nuevo input {
-      width: 100%;
-      min-width: 0;
-      box-sizing: border-box;
-      padding: 0.6875rem 0.875rem;
-      border: 1.5px solid var(--color-borde);
-      border-radius: var(--radio-input);
-      background: var(--color-fondo);
-      font-family: var(--fuente);
-      font-size: 0.9375rem;
-      color: var(--color-texto);
-    }
-    .proyecto-nuevo__acciones {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .proyecto-nuevo__acciones .btn { flex: 1 1 8rem; min-height: 2.75rem; }
-    /* En el wizard el primario de la pantalla es "Siguiente": este no puede
-       competir con él (un solo primario por pantalla), así que va con borde. */
-    .btn-proyecto-crear {
-      background: var(--color-acento-suave);
-      border: 1.5px solid var(--color-acento-highlight);
-      color: var(--celeste-oscuro);
-      font-weight: 600;
-    }
-    .btn-proyecto-crear:disabled { opacity: 0.55; cursor: not-allowed; }
-    .proyecto-nuevo__error {
-      margin: 0;
-      color: var(--color-error);
-      font-size: 0.8125rem;
+    .btn-link-proyecto:disabled { opacity: 0.55; cursor: not-allowed; }
+    .proyecto-taller__ayuda {
+      margin: 0.25rem 0 0;
+      font-size: 0.78125rem;
+      color: var(--color-texto-suave);
       line-height: 1.35;
     }
+    /* El error va PEGADO al campo, y el botón "Siguiente" no se deshabilita:
+       si se deshabilitara, este mensaje no se vería nunca. */
+    .campo-error-pegado {
+      margin: 0.25rem 0 0;
+      color: var(--color-error);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    select.campo--con-error { border-color: var(--color-error); }
 
-    /* Botón de la lista que abre la pantalla. Neutro y no turquesa: no lleva
-       a otro módulo, es administración dentro de Gastos. */
     .acciones-lista {
       display: flex;
       flex-wrap: wrap;
@@ -239,61 +218,51 @@
       gap: 0.5rem;
       margin: 0.875rem 0 0;
     }
-    .btn-proyectos {
-      width: auto;
-      background: var(--color-fondo);
-      border: 1.5px solid var(--color-borde);
-      color: var(--color-texto);
-    }
-    .btn-proyectos:hover { background: var(--color-superficie); }
 
-    .proyectos-seccion__titulo {
-      margin: 1.25rem 0 0.5rem;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--color-texto-suave);
-    }
-    .proyecto-fila {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      padding: 0.75rem 0.875rem;
-      margin-bottom: 0.5rem;
+    /* ── Barra de unidad: detalle por unidad y "sin unidad" (28/09/2026) ── */
+    .grilla-totales__card--unidades {
+      grid-column: 1 / -1;
+      border-radius: 18px;
+      padding: 0.875rem 1.25rem;
       background: var(--color-fondo);
       border: 1px solid var(--color-borde);
-      border-radius: 12px;
-      min-width: 0;
     }
-    .proyecto-fila__linea {
+    .totales-unidad__titulo {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-texto-suave);
+      margin-bottom: 0.375rem;
+    }
+    .totales-unidad__fila {
       display: flex;
-      align-items: center;
+      justify-content: space-between;
+      align-items: baseline;
       gap: 0.75rem;
+      padding: 0.3125rem 0;
+      border-top: 1px solid var(--color-borde);
+      font-size: 0.875rem;
       min-width: 0;
     }
-    .proyecto-fila__nombre {
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow-wrap: anywhere;
+    .totales-unidad__fila:first-of-type { border-top: none; }
+    .totales-unidad__nombre { min-width: 0; overflow-wrap: anywhere; font-weight: 600; color: var(--color-texto); }
+    .totales-unidad__cifra { flex-shrink: 0; text-align: right; color: var(--color-texto); white-space: nowrap; }
+    .totales-unidad__cifra small { color: var(--color-texto-suave); font-weight: 500; }
+    .gasto__sin-unidad {
+      display: inline-block;
+      margin-left: 0.375rem;
+      padding: 0 0.4375rem;
+      border-radius: 999px;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      color: var(--color-texto-suave);
+      font-size: 0.6875rem;
       font-weight: 600;
-      color: var(--color-texto);
+      vertical-align: middle;
+      white-space: nowrap;
     }
-    .proyecto-fila__accion {
-      flex: 0 0 auto;
-      width: auto;
-      min-height: 2.75rem;
-      padding: 0.5rem 0.875rem;
-      font-size: 0.8125rem;
-    }
-    .proyecto-fila__confirmar {
-      font-size: 0.8125rem;
-      line-height: 1.4;
-      color: var(--color-texto);
-    }
-    /* Variantes DESPUÉS de su base (bug recurrente del proyecto). */
-    .proyecto-fila--baja .proyecto-fila__nombre { color: var(--color-texto-suave); font-weight: 500; }
-    .proyecto-fila__accion--baja { color: var(--color-error); border-color: var(--color-error); }
+    .pendientes-gasto__nota { font-size: 0.75rem; color: var(--color-texto-suave); margin: 0 0 0.5rem; }
 
     /* ── Comprobante ya cargado ──────────────────────────────────────────
        ÁMBAR y NO rojo: es una advertencia, no un error. Cargar el mismo papel
@@ -599,8 +568,7 @@
     }
 
     #modal-detalle-gasto:not([hidden]),
-    #modal-detalle-factura:not([hidden]),
-    #modal-proyectos:not([hidden]) {
+    #modal-detalle-factura:not([hidden]) {
       position: fixed;
       inset: 0;
       z-index: 60;
@@ -1690,10 +1658,7 @@
       </header>
 
       <div class="acciones-lista">
-        <!-- Visible solo con gastos:gestionar_proyectos: se habilita desde JS
-             al cargar las tareas, así que sin tarea (o si el script falla)
-             no aparece. -->
-        <button type="button" class="btn btn-proyectos" id="btn-abrir-proyectos" hidden>🛠 Proyectos del Taller</button>
+        <!-- "Proyectos del Taller" se mudó a modulos/taller.html (28/09/2026). -->
         <a href="cuentas-corrientes.html" class="btn btn-cuentas-corrientes">🧾 Ver cuentas corrientes</a>
       </div>
 
@@ -1916,6 +1881,9 @@
       </div>
       <div class="wizard-nav">
         <button class="btn btn--secundario" id="btn-destino-atras">← Atrás</button>
+        <!-- Solo cuando ya hay un destino elegido (la unidad de la barra de
+             arriba viene puesta): sin esto habría que volver a tocarla. -->
+        <button class="btn btn--primario" id="btn-destino-siguiente" hidden>Siguiente →</button>
       </div>
     </div>
 
@@ -1949,7 +1917,7 @@
     <div class="paso" id="sp-detalles">
       <div class="paso__contenido">
         <h2 class="paso__titulo">Detalles del gasto</h2>
-        <p class="paso__subtitulo">Todos los campos son opcionales excepto Empleado.</p>
+        <p class="paso__subtitulo">Todos los campos son opcionales excepto Empleado (y Proyecto en un gasto del Taller).</p>
 
         <div class="formulario">
           <div class="grupo-campo">
@@ -1967,20 +1935,20 @@
             <p class="etiqueta-opcional" id="campo-cuenta-vacio" hidden></p>
           </div>
 
+          <!-- PROYECTO DEL TALLER: OBLIGATORIO en un gasto del Taller (28/09/2026).
+               De 26 gastos del Taller solo 1 tenía proyecto: que no vuelvan a
+               quedar sueltos. "Gasto general del taller" guarda proyecto_id
+               null. La gestión de proyectos vive en modulos/taller.html. -->
           <div class="grupo-campo" id="grupo-proyecto">
-            <label for="campo-proyecto">Proyecto <span class="etiqueta-opcional">opcional</span></label>
+            <label for="campo-proyecto">Proyecto</label>
             <select id="campo-proyecto" name="proyecto_id">
-              <option value="">— Sin proyecto —</option>
+              <option value="">— Elegí el proyecto —</option>
             </select>
-            <button type="button" class="btn-link-proyecto" id="btn-proyecto-nuevo" hidden>+ Proyecto nuevo</button>
-            <div class="proyecto-nuevo" id="proyecto-nuevo" hidden>
-              <label for="campo-proyecto-nombre">Nombre del proyecto nuevo</label>
-              <input type="text" id="campo-proyecto-nombre" maxlength="100" autocomplete="off" placeholder="Ej: Maq Barquillo 26">
-              <p class="proyecto-nuevo__error" id="proyecto-nuevo-error" hidden></p>
-              <div class="proyecto-nuevo__acciones">
-                <button type="button" class="btn btn--secundario" id="btn-proyecto-nuevo-cancelar">Cancelar</button>
-                <button type="button" class="btn btn-proyecto-crear" id="btn-proyecto-nuevo-crear">Crear proyecto</button>
-              </div>
+            <p class="campo-error-pegado" id="proyecto-error" role="alert" hidden></p>
+            <p class="proyecto-taller__ayuda" id="proyecto-ayuda">Si no es de ningún proyecto, elegí «Gasto general del taller».</p>
+            <div class="proyecto-taller__acciones">
+              <a class="btn-link-proyecto" id="link-crear-proyecto" href="taller.html" target="_blank" rel="noopener">¿No está? Crealo en Proyectos Taller</a>
+              <button type="button" class="btn-link-proyecto" id="btn-actualizar-proyectos">Actualizar la lista</button>
             </div>
           </div>
 
@@ -2047,34 +2015,7 @@
     <div style="padding: 1rem; overflow-y: auto;" id="detalle-factura-contenido"></div>
   </div><!-- /modal-detalle-factura -->
 
-  <!-- ═══════════════════════════════════════════════════════════════════════
-       VISTA E — PROYECTOS DEL TALLER (gastos:gestionar_proyectos)
-  ══════════════════════════════════════════════════════════════════════════ -->
-  <div id="modal-proyectos" hidden>
-    <header class="header">
-      <button type="button" class="btn btn--icono" id="btn-cerrar-proyectos">← Volver</button>
-      <span class="header__nombre-app">Proyectos del Taller</span>
-      <div style="width:5rem;"></div>
-    </header>
-    <div style="padding: 1rem; overflow-y: auto;">
-      <div style="max-width: 640px; margin: 0 auto;">
-        <p style="margin:0 0 0.75rem; color:var(--color-texto-suave); font-size:0.875rem; line-height:1.45;">
-          Los proyectos activos se ofrecen al cargar un gasto del Taller. Dar de baja
-          uno no lo borra: los gastos que ya lo tienen lo conservan, y se puede
-          reactivar cuando haga falta.
-        </p>
-        <div class="proyecto-nuevo" id="proyectos-alta">
-          <label for="campo-proyectos-alta-nombre">Proyecto nuevo</label>
-          <input type="text" id="campo-proyectos-alta-nombre" maxlength="100" autocomplete="off" placeholder="Ej: Maq Barquillo 26">
-          <p class="proyecto-nuevo__error" id="proyectos-alta-error" hidden></p>
-          <div class="proyecto-nuevo__acciones">
-            <button type="button" class="btn btn--primario" id="btn-proyectos-alta-crear">Crear proyecto</button>
-          </div>
-        </div>
-        <div id="proyectos-lista"></div>
-      </div>
-    </div>
-  </div><!-- /modal-proyectos -->
+  <!-- La VISTA E ("Proyectos del Taller") se mudó a modulos/taller.html (28/09/2026). -->
 
   <!-- Modal: cargar un proveedor nuevo desde el wizard de "pendiente" cuando
        no aparece en el buscador. Llama a crear_proveedor_pendiente(); el
@@ -2140,6 +2081,11 @@
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    // La barra de unidad de negocio, arriba (28/09/2026): es el mismo archivo
+    // que carga el <head>, así que el navegador lo ejecuta UNA vez y acá se
+    // lee su elección. Solo filtra lo que se MUESTRA: los permisos siguen en
+    // la base.
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
 
@@ -2178,6 +2124,10 @@
       // queda FABRICA_SIN_DATOS y los filtros no sacan nada. Ver
       // unidadesElegibles() y personasElegibles().
       fabrica: FABRICA_SIN_DATOS,
+      // La unidad elegida en la barra de arriba (js/barra-unidad.js). null =
+      // "Todas" (o una persona con una sola unidad: la barra no aparece y no
+      // se filtra nada). La actualizan unidadesDeLaBarra() y alCambiarUnidad().
+      unidadBarra: { elegida: null, unidades: [], mostrar: false },
       maestros: {
         categorias:  [],
         empleados:   [],
@@ -2188,7 +2138,6 @@
       },
       filtros: {
         periodos:           [],
-        unidad_negocio_ids: [],
         categoria_ids:      [],
         vehiculo_ids:       [],
         medios_pago:        [],
@@ -2475,9 +2424,6 @@
       if (errorInicio) console.error('fecha_inicio_circuito_stock:', errorInicio)
       estado.fechaInicioCircuito = inicio ?? null
     }
-    // Arranca hidden en el HTML: sin tarea, o si esto no llega a correr, no
-    // aparece.
-    document.getElementById('btn-abrir-proyectos').hidden = !puedeGestionarProyectos()
 
     // Los botones de detalle-gasto-header-derecha (Editar/Anular) se generan
     // por gasto dentro de mostrarDetalleGasto() — cada uno tiene su propio
@@ -2610,7 +2556,10 @@
       actualizarBoton()
     }
 
-    function renderizarFiltros(unidades = []) {
+    // El filtro "Unidad" se RETIRÓ (28/09/2026): lo decide la barra de unidad
+    // de arriba, y dos lugares para lo mismo terminan diciendo cosas distintas.
+    // Su opción "🚚 Vehículos" la cubre el filtro Vehículo (todos los vehículos).
+    function renderizarFiltros() {
       const contenedor = document.getElementById('contenedor-filtros')
       document.querySelectorAll('body > .multiselect__panel').forEach(p => p.remove())
 
@@ -2627,13 +2576,8 @@
         </div>
       `
 
-      if (tieneTarea('gastos', 'ver_exportar') && unidades.length) {
+      if (tieneTarea('gastos', 'ver_exportar')) {
         html += `
-          <div class="multiselect" id="ms-unidad">
-            <button type="button" class="multiselect__boton" id="ms-unidad-boton">Todas las unidades</button>
-            <div class="multiselect__panel" id="ms-unidad-panel" hidden></div>
-          </div>
-
           <div style="display:flex; align-items:center; gap:0.375rem; flex-shrink:0;">
             <span style="font-size:0.75rem; color:var(--color-texto-suave); white-space:nowrap;">Desde</span>
             <input type="date" id="filtro-fecha-desde" value="${esc(estado.filtros.fecha_desde)}">
@@ -2671,7 +2615,6 @@
       contenedor.innerHTML = html
 
       estado.filtros.periodos           = estado.filtros.periodos           || []
-      estado.filtros.unidad_negocio_ids = estado.filtros.unidad_negocio_ids || []
       estado.filtros.categoria_ids      = estado.filtros.categoria_ids      || []
       estado.filtros.vehiculo_ids       = estado.filtros.vehiculo_ids       || []
       estado.filtros.medios_pago        = estado.filtros.medios_pago        || []
@@ -2694,15 +2637,7 @@
         }, 250)
       })
 
-      if (tieneTarea('gastos', 'ver_exportar') && unidades.length) {
-        crearMultiselect({
-          idBase: 'ms-unidad',
-          opciones: [...unidades.map(u => ({ value: u.id, label: u.nombre })), { value: '__vehiculos__', label: '🚚 Vehículos' }],
-          seleccionados: estado.filtros.unidad_negocio_ids,
-          etiquetaTodos: etiquetaResponsive('Todas las unidades', 'Unidad'),
-          onChange: () => cargarLista()
-        })
-
+      if (tieneTarea('gastos', 'ver_exportar')) {
         const NOMBRES_VEHICULO = ['Mantenimiento', 'Repuestos', 'Service', 'Seguros-Patente']
         const catsEmpresa  = estado.maestros.categorias.filter(c => !NOMBRES_VEHICULO.includes(c.nombre))
         const catsVehiculo = estado.maestros.categorias.filter(c => NOMBRES_VEHICULO.includes(c.nombre))
@@ -2743,31 +2678,33 @@
           activarFiltroFecha('manual', { fecha_hasta: e.target.value })
         })
         document.getElementById('btn-borrar-filtros')?.addEventListener('click', () => {
-          estado.filtros = { periodos: [], unidad_negocio_ids: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], fecha_desde: '', fecha_hasta: '', orden: 'fecha_desc' }
+          estado.filtros = { periodos: [], categoria_ids: [], vehiculo_ids: [], medios_pago: [], fecha_desde: '', fecha_hasta: '', orden: 'fecha_desc' }
           activarFiltroFecha('hoy')
         })
         document.getElementById('btn-exportar-excel')?.addEventListener('click', exportarExcel)
       }
     }
 
+    // Exporta LO QUE SE VE: la unidad de la barra y el buscador incluidos.
     function exportarExcel() {
-      if (!estado.listaGastos || !estado.listaGastos.length) {
+      const visibles = gastosVisibles()
+      if (!visibles.length) {
         mostrarError('No hay gastos para exportar con los filtros actuales.')
         return
       }
 
-      const filas = estado.listaGastos.map(g => ({
+      const filas = visibles.map(g => ({
         'Fecha de pago':   formatearFecha(g.fecha_pago),
         'Fecha de factura': formatearFecha(g.fecha),
         'Tipo doc':       g.tipo_doc || '',
         'Número':         g.numero_doc || '',
         'Razón social':   g.razon_social || '',
-        'Empresa':        g.unidades_negocio?.nombre || '',
+        'Empresa':        g.unidades_negocio?.nombre || 'Sin unidad',
         'Vehículo':       g.vehiculos ? `${g.vehiculos.nombre} (${g.vehiculos.patente})` : '',
         'Kilometraje':    g.kilometraje ?? '',
         'Categoría':      g.categorias?.nombre || '',
         'Empleado':       g.empleados?.nombre || '',
-        'Proyecto':       g.proyectos?.nombre || '',
+        'Proyecto':       etiquetaProyectoGasto(g) || '',
         'Lugar':          g.lugar_servicio || '',
         'Descripción':    g.descripcion || '',
         'Observaciones':  g.observaciones || '',
@@ -2831,25 +2768,95 @@
           </div>
         </div>`
 
-      totalEl.innerHTML = tarjetaTotal + tarjetaRegistros
+      totalEl.innerHTML = tarjetaTotal + tarjetaRegistros + htmlTotalesPorUnidad(gastos)
 
       totalEl.hidden = false
     }
 
-    function aplicarBusquedaLocal() {
+    // ── La barra de unidad en la lista ─────────────────────────────────────
+    // La unidad de un gasto: la columna o, si la consulta no la trajo, el embed.
+    function unidadDeGasto(g) {
+      return g?.unidad_negocio_id ?? g?.unidades_negocio?.id ?? null
+    }
+
+    // Nombre de una unidad por id. "Sin unidad" para lo que no tiene (hoy: los
+    // gastos de vehículos, que se guardan sin unidad).
+    function nombreUnidadDe(id) {
+      if (!id) return 'Sin unidad'
+      return (estado.maestros.unidades ?? []).find(u => u.id === id)?.nombre || 'Unidad'
+    }
+
+    // Los gastos que se ven: la unidad de la barra y el buscador. Lo que no
+    // tiene unidad NO desaparece: pasaFiltroUnidad lo deja pasar siempre y la
+    // tarjeta lo marca "Sin unidad".
+    function gastosVisibles() {
+      const elegida = estado.unidadBarra?.elegida ?? null
       const termino = (estado.filtros.busqueda || '').trim().toLowerCase()
+      const puedeBuscarPorEmpleado = tieneTarea('gastos', 'ver_exportar')
+      return (estado.listaGastos ?? [])
+        .filter(g => pasaFiltroUnidad(unidadDeGasto(g), elegida))
+        .filter(g => !termino ||
+          (g.razon_social || '').toLowerCase().includes(termino) ||
+          (g.categorias?.nombre || '').toLowerCase().includes(termino) ||
+          (puedeBuscarPorEmpleado && (g.empleados?.nombre || '').toLowerCase().includes(termino)))
+    }
+
+    // Suma (ARS, sin anulados — mismo criterio que el total) y registros por
+    // unidad, en orden de nombre y "Sin unidad" al final.
+    function totalesPorUnidad(gastos) {
+      const grupos = new Map()
+      for (const g of gastos) {
+        const id = unidadDeGasto(g)
+        if (!grupos.has(id)) grupos.set(id, { id, nombre: nombreUnidadDe(id), total: 0, registros: 0 })
+        const x = grupos.get(id)
+        x.registros++
+        if ((g.moneda || 'ARS') === 'ARS' && g.estado !== 'anulado') x.total += Number(g.importe) || 0
+      }
+      return [...grupos.values()].sort((a, b) =>
+        (a.id == null) - (b.id == null) || String(a.nombre).localeCompare(String(b.nombre), 'es'))
+    }
+
+    // El detalle por unidad: solo cuando lo que se ve es de más de una
+    // (con "Todas", o una unidad más gastos sin unidad). Con una sola no dice
+    // nada que el total no diga ya.
+    function htmlTotalesPorUnidad(gastos) {
+      const grupos = totalesPorUnidad(gastos)
+      if (grupos.length < 2) return ''
+      const filas = grupos.map(x => `
+          <div class="totales-unidad__fila" data-unidad-total="${esc(x.id ?? 'sin-unidad')}">
+            <span class="totales-unidad__nombre">${esc(x.nombre)}</span>
+            <span class="totales-unidad__cifra">${esc(formatearImporte(x.total, 'ARS'))} <small>· ${x.registros} ${x.registros === 1 ? 'gasto' : 'gastos'}</small></span>
+          </div>`).join('')
+      return `
+        <div class="grilla-totales__card grilla-totales__card--unidades" id="totales-por-unidad">
+          <div class="totales-unidad__titulo">Por unidad</div>
+          ${filas}
+        </div>`
+    }
+
+    // Cambiar la barra repinta sin recargar: la consulta no depende de la
+    // unidad (se filtra donde se arma la lista), así que no hay nada en vuelo
+    // que pueda pisar lo nuevo: una carga que termina después pinta con la
+    // elección de ese momento.
+    function repintarPorUnidad() {
+      if (estado.listaGastos) aplicarBusquedaLocal()
+      renderizarIngresosSinGasto()
+    }
+
+    // La unidad con la que arranca un gasto nuevo: la de la barra, si es una
+    // de las que se ofrecen en la grilla del wizard.
+    function unidadDeLaBarraParaWizard() {
+      const id = estado.unidadBarra?.elegida ?? null
+      return id && unidadesElegibles().some(u => u.id === id) ? id : null
+    }
+
+    // Pinta la lista, las cifras y el detalle por unidad con LO QUE SE VE
+    // (gastosVisibles: la unidad de la barra y el buscador).
+    function aplicarBusquedaLocal() {
       const listaEl = document.getElementById('lista-gastos')
       const vaciEl  = document.getElementById('estado-vacio')
 
-      const puedeBuscarPorEmpleado = tieneTarea('gastos', 'ver_exportar')
-
-      const filtrados = !termino
-        ? estado.listaGastos
-        : estado.listaGastos.filter(g =>
-            (g.razon_social || '').toLowerCase().includes(termino) ||
-            (g.categorias?.nombre || '').toLowerCase().includes(termino) ||
-            (puedeBuscarPorEmpleado && (g.empleados?.nombre || '').toLowerCase().includes(termino))
-          )
+      const filtrados = gastosVisibles()
 
       if (!filtrados.length) {
         listaEl.hidden = true
@@ -2896,7 +2903,7 @@
         estado.filtros.periodos.length = 0
       }
 
-      renderizarFiltros(unidadesElegibles())
+      renderizarFiltros()
       actualizarSegmentedRango()
       cargarLista()
     }
@@ -2915,14 +2922,14 @@
         .from('gastos')
         .select(`
           id, fecha, fecha_pago, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
-          proveedor_id,
+          proveedor_id, unidad_negocio_id,
           medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
           cuenta_id, anulado_por, anulado_en, motivo_anulacion,
           categorias (id, nombre, icon),
           empleados  (id, nombre),
           unidades_negocio (id, nombre),
           vehiculos  (id, nombre, marca, patente),
-          proyectos  (id, nombre)
+          proyectos  (${COLUMNAS_PROYECTO})
         `)
 
       if (!tieneTarea('gastos', 'ver_exportar')) {
@@ -2935,21 +2942,9 @@
       }
 
       if (estado.filtros.periodos?.length)           query = query.in('periodo', estado.filtros.periodos)
-      if (estado.filtros.unidad_negocio_ids?.length) {
-        const incluyeVehiculos = estado.filtros.unidad_negocio_ids.includes('__vehiculos__')
-        const idsReales = estado.filtros.unidad_negocio_ids.filter(id => id !== '__vehiculos__')
-
-        if (incluyeVehiculos && idsReales.length) {
-          // Empresas seleccionadas Y también "Vehículos": cualquiera de las dos condiciones vale
-          query = query.or(`unidad_negocio_id.in.(${idsReales.join(',')}),vehiculo_id.not.is.null`)
-        } else if (incluyeVehiculos) {
-          // Solo "Vehículos" seleccionado
-          query = query.not('vehiculo_id', 'is', null)
-        } else {
-          // Solo empresas reales seleccionadas, comportamiento de siempre
-          query = query.in('unidad_negocio_id', idsReales)
-        }
-      }
+      // La unidad NO se filtra en la consulta: la decide la barra de arriba y
+      // se filtra donde se arma la lista (gastosVisibles), así un gasto sin
+      // unidad no se descarta en silencio.
       if (estado.filtros.categoria_ids?.length)       query = query.in('categoria_id', estado.filtros.categoria_ids)
       if (estado.filtros.vehiculo_ids?.length)        query = query.in('vehiculo_id', estado.filtros.vehiculo_ids)
       if (estado.filtros.medios_pago?.length)         query = query.in('medio_pago', estado.filtros.medios_pago)
@@ -2978,20 +2973,9 @@
         return
       }
 
-      if (!gastos?.length) {
-        vaciEl.hidden = false
-        renderizarTotalGastos([])
-        return
-      }
-
-      listaEl.hidden    = false
-      listaEl.innerHTML = gastos.map(renderizarCardGasto).join('')
-      lucide.createIcons()
-      renderizarTotalGastos(gastos)
-
-      listaEl.querySelectorAll('.tarjeta-lista').forEach(card => {
-        card.addEventListener('click', () => mostrarDetalleGasto(card.dataset.id))
-      })
+      // La lista, las cifras y el detalle por unidad los pinta
+      // aplicarBusquedaLocal() con lo que se ve (unidad de la barra y buscador).
+      aplicarBusquedaLocal()
     }
 
     function renderizarCardGasto(g) {
@@ -3014,6 +2998,10 @@
       const puntoOBadge = esAnulado
         ? `<span class="badge-estado badge-estado--anulado">Anulado</span>`
         : `<span class="gasto__punto-estado" title="${esc(g.estado === 'registrado' ? 'Registrado' : g.estado)}"></span>`
+      // Con una unidad elegida arriba, lo que no tiene unidad se ve igual pero
+      // marcado: si no, parecería de esa unidad.
+      const sinUnidad = estado.unidadBarra?.elegida && !unidadDeGasto(g)
+        ? '<span class="gasto__sin-unidad">Sin unidad</span>' : ''
 
       return `
         <div class="tarjeta-lista${esAnulado ? ' tarjeta-lista--anulado' : ''}" data-id="${esc(g.id)}">
@@ -3023,7 +3011,7 @@
               : `<span class="gasto__avatar-iniciales" style="background:${colorAvatar(razonSocial)};">${esc(inicialesEmpresa(razonSocial))}</span>`}
           </div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${esc(razonSocial)}${puntoOBadge}</div>
+            <div class="tarjeta-lista__titulo">${esc(razonSocial)}${puntoOBadge}${sinUnidad}</div>
             <div class="gasto__meta">
               ${categoriaChip}
               <span class="gasto__meta-secundaria gasto__meta-secundaria--chip">${metaSecundaria}</span>
@@ -3053,311 +3041,162 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // PROYECTOS DEL TALLER — alta, baja y reactivación
+    // PROYECTOS DEL TALLER — solo ELEGIR (28/09/2026)
     // ═══════════════════════════════════════════════════════════════════════
-    // Tarea gastos:gestionar_proyectos, CON bypass de super_admin (tieneTarea,
-    // no una variante explícita) y SIN alcance: la tabla proyectos no tiene
-    // unidad_negocio_id. La barrera real está adentro de las tres RPCs
-    // (crear_proyecto, dar_de_baja_proyecto, reactivar_proyecto): esto solo
-    // decide qué se dibuja.
+    // La GESTIÓN (alta, baja, reactivar) se mudó a modulos/taller.html: el
+    // Taller tiene su propio módulo. Las RPCs crear_proyecto /
+    // dar_de_baja_proyecto / reactivar_proyecto siguen en la base; Gastos
+    // dejó de llamarlas.
     //
-    // DAR DE BAJA ES activo = false, NUNCA un DELETE: gastos.proyecto_id y
-    // facturas_pendientes.proyecto_id tienen FK a proyectos, y los gastos ya
-    // imputados conservan su proyecto. Por eso existe REACTIVAR: una baja por
-    // error tiene que poder deshacerse desde la app, no con SQL.
+    // En un gasto del Taller el proyecto es OBLIGATORIO (de 26 gastos del
+    // Taller, 1 tenía proyecto): se elige un proyecto abierto o "Gasto general
+    // del taller", que guarda proyecto_id null.
     //
-    // El nombre es ÚNICO sobre TODAS las filas (uq_proyectos_nombre, sobre
-    // normalizar_texto(nombre)): si un proyecto dado de baja vuelve, se
-    // reactiva la misma fila en vez de crear otra con el mismo nombre, que
-    // partiría su historia en dos.
+    // LA TABLA proyectos DEJA LEER SOLO ESTAS COLUMNAS a authenticated
+    // (verificado con has_column_privilege el 27/09/2026): id, nombre, activo,
+    // created_at, destino, categoria y estado. Un select('*') o de otra columna
+    // da "permission denied" y la lista quedaría vacía: se piden solo estas.
+    const COLUMNAS_PROYECTO = 'id, nombre, activo, estado'
+    // Un proyecto ABIERTO: activo y sin estado de cerrado (CHECK
+    // proyectos_estado_check: presupuestado, aprobado, en_curso, terminado,
+    // entregado, cancelado).
+    const ESTADOS_PROYECTO_CERRADOS = ['entregado', 'cancelado']
+    const VALOR_GASTO_GENERAL = '__general__'
+    const TEXTO_GASTO_GENERAL = 'Gasto general del taller'
 
-    const LARGO_MAXIMO_PROYECTO = 100
-
-    // Los mensajes que las tres RPCs lanzan con raise exception, TAL CUAL. Ya
-    // están escritos para una persona, así que se muestran. Cualquier otro
-    // error —un nombre de constraint, una negativa de RLS, la red— cae al
-    // genérico y el crudo va a consola: pasar error.message a ciegas es cómo
-    // un constraint termina en pantalla.
-    const MENSAJES_RPC_PROYECTO = new Set([
-      'No tenés permiso para crear proyectos.',
-      'No tenés permiso para dar de baja proyectos.',
-      'No tenés permiso para reactivar proyectos.',
-      'Falta el nombre del proyecto.',
-      'El nombre es demasiado largo (máximo 100 caracteres).',
-      'Ya existe un proyecto con ese nombre.',
-      'Ya existe un proyecto con ese nombre, dado de baja. Reactivalo en vez de crear otro.',
-      'El proyecto no existe.',
-      'El proyecto ya estaba dado de baja.',
-      'El proyecto ya está activo.',
-    ])
-
-    function puedeGestionarProyectos() {
-      return tieneTarea('gastos', 'gestionar_proyectos')
-    }
-
-    function mensajeErrorProyecto(error) {
-      const texto = String(error?.message ?? '')
-      if (MENSAJES_RPC_PROYECTO.has(texto)) return texto
-      console.error('[proyectos] error no reconocido:', error)
-      // Cierto en los tres casos: cada RPC es una sola sentencia y un raise la
-      // revierte entera.
-      return 'No se pudo guardar el cambio del proyecto. No quedó nada a medias: probá de nuevo.'
-    }
-
-    // Misma regla que crear_proyecto, validada ANTES de llamar. El largo se
-    // cuenta en CARACTERES como Postgres (length()), no en unidades UTF-16:
-    // con String.length un emoji cuenta 2 y la pantalla rechazaría un nombre
-    // que la base acepta.
-    function validarNombreProyecto(crudo) {
-      const nombre = String(crudo ?? '').trim()
-      if (!nombre) return { nombre: null, error: 'Escribí el nombre del proyecto.' }
-      if ([...nombre].length > LARGO_MAXIMO_PROYECTO) {
-        return { nombre: null, error: `El nombre es demasiado largo (máximo ${LARGO_MAXIMO_PROYECTO} caracteres).` }
-      }
-      return { nombre, error: null }
+    function proyectosAbiertos(lista) {
+      return (lista ?? []).filter(p => p && p.activo === true && !ESTADOS_PROYECTO_CERRADOS.includes(p.estado))
     }
 
     function ordenarProyectos(lista) {
       return [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
     }
 
-    // Los nombres los escribe una persona desde esta pantalla. Los escapa
-    // poblarSelect(): escaparlos también acá los mostraría dos veces
-    // escapados ("A &amp;amp; B").
-    function poblarSelectProyecto(valorElegido = '') {
-      poblarSelect('campo-proyecto', estado.maestros.proyectos,
-        p => ({ value: p.id, label: p.nombre }),
-        '— Sin proyecto —')
-      document.getElementById('campo-proyecto').value = valorElegido
+    // ¿Es la unidad del Taller? Por su prefijo (unidades_negocio.prefijo 'T')
+    // o, si no vino, por el nombre, como siempre.
+    function esUnidadTaller(unidadId) {
+      if (!unidadId) return false
+      const u = (estado.maestros.unidades ?? []).find(x => x.id === unidadId)
+      if (!u) return false
+      return u.prefijo === 'T' || String(u.nombre || '').trim().toLowerCase() === 'taller'
     }
 
-    // Opciones del select de EDICIÓN de un gasto: los activos, más el proyecto
-    // actual del gasto si ya no está entre ellos (dado de baja), marcado.
+    // El valor del select a lo que se guarda: "Gasto general" y vacío → null.
+    function valorAProyectoId(valor) {
+      return !valor || valor === VALOR_GASTO_GENERAL ? null : valor
+    }
+
+    // El select del wizard: "Elegí" (vacío, no pasa la validación), "Gasto
+    // general del taller" y los proyectos abiertos. Conserva lo elegido si
+    // sigue estando. Escapa todo: los nombres los escribe una persona.
+    function poblarSelectProyecto(valorElegido = '') {
+      const sel = document.getElementById('campo-proyecto')
+      if (!sel) return
+      sel.innerHTML =
+        `<option value="">— Elegí el proyecto —</option>` +
+        `<option value="${esc(VALOR_GASTO_GENERAL)}">${esc(TEXTO_GASTO_GENERAL)}</option>` +
+        (estado.maestros.proyectos ?? []).map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')
+      const sigue = valorElegido === VALOR_GASTO_GENERAL || (estado.maestros.proyectos ?? []).some(p => p.id === valorElegido)
+      sel.value = sigue ? valorElegido : ''
+    }
+
+    // El proyecto que se guarda desde el wizard: solo en un gasto del Taller.
+    function proyectoIdDeWizard() {
+      if (!esUnidadTaller(unidadSeleccionada)) return null
+      return valorAProyectoId(document.getElementById('campo-proyecto')?.value)
+    }
+
+    // Para el resumen del wizard: el proyecto elegido, o "Gasto general del
+    // taller" si es del Taller y no tiene.
+    function proyectoParaResumen(proyectoId) {
+      if (proyectoId) return (estado.maestros.proyectos ?? []).find(p => p.id === proyectoId) ?? null
+      return esUnidadTaller(unidadSeleccionada) ? { nombre: TEXTO_GASTO_GENERAL } : null
+    }
+
+    // Lo que dicen el detalle y el Excel: el proyecto, o "Gasto general del
+    // taller" en un gasto del Taller sin proyecto (en vez de vacío).
+    function etiquetaProyectoGasto(g) {
+      if (g?.proyectos?.nombre) return g.proyectos.nombre
+      return esUnidadTaller(unidadDeGasto(g)) ? TEXTO_GASTO_GENERAL : null
+    }
+
+    function mostrarErrorProyecto(texto) {
+      const el = document.getElementById('proyecto-error')
+      if (el) { el.textContent = texto || ''; el.hidden = !texto }
+      // Con el error a la vista, la ayuda diría lo mismo dos veces.
+      const ayuda = document.getElementById('proyecto-ayuda')
+      if (ayuda) ayuda.hidden = !!texto
+      document.getElementById('campo-proyecto')?.classList?.toggle('campo--con-error', !!texto)
+    }
+
+    // El grupo del proyecto se ve SOLO en un gasto del Taller.
+    function actualizarGrupoProyecto(unidadId) {
+      const taller = esUnidadTaller(unidadId)
+      const grupo = document.getElementById('grupo-proyecto')
+      if (grupo) grupo.style.display = taller ? 'block' : 'none'
+      if (!taller) {
+        const sel = document.getElementById('campo-proyecto')
+        if (sel) sel.value = ''
+        mostrarErrorProyecto('')
+      }
+    }
+
+    // "Actualizar la lista": relee los proyectos (por ejemplo, después de
+    // crear uno en Proyectos Taller, en otra pestaña) sin tocar nada de lo
+    // cargado. Lo elegido se conserva si sigue abierto.
+    async function recargarProyectosWizard() {
+      const boton = document.getElementById('btn-actualizar-proyectos')
+      const sel = document.getElementById('campo-proyecto')
+      const valor = sel?.value ?? ''
+      if (boton) boton.disabled = true
+      try {
+        const { data, error } = await supabase
+          .from('proyectos').select(COLUMNAS_PROYECTO).eq('activo', true).order('nombre')
+        if (error) throw error
+        estado.maestros.proyectos = ordenarProyectos(proyectosAbiertos(data))
+        poblarSelectProyecto(valor)
+        if (valor && valor !== VALOR_GASTO_GENERAL && sel && sel.value !== valor) {
+          mostrarErrorProyecto('El proyecto que habías elegido ya no está abierto: elegí otro.')
+        } else {
+          mostrarErrorProyecto('')
+          mostrarExito('Lista de proyectos actualizada.')
+        }
+      } catch (e) {
+        console.error('[proyectos] no se pudo actualizar la lista:', e)
+        mostrarErrorProyecto('No se pudo actualizar la lista de proyectos. Probá de nuevo.')
+      } finally {
+        if (boton) boton.disabled = false
+      }
+    }
+
+    // Opciones del select de EDICIÓN de un gasto: los abiertos, más el
+    // proyecto actual del gasto si ya no está entre ellos (dado de baja,
+    // entregado o cancelado), marcado. Se conserva, pero no se ofrece para otro.
     function opcionesProyectoEdicion(activos, proyectoActual) {
       const opciones = activos.map(p => ({ id: p.id, etiqueta: p.nombre }))
       if (proyectoActual?.id && !activos.some(p => p.id === proyectoActual.id)) {
-        opciones.push({ id: proyectoActual.id, etiqueta: `${proyectoActual.nombre ?? 'Proyecto'} (dado de baja)` })
+        const motivo = proyectoActual.activo === false ? 'dado de baja'
+          : proyectoActual.estado === 'entregado' ? 'entregado'
+          : proyectoActual.estado === 'cancelado' ? 'cancelado'
+          : 'dado de baja'
+        opciones.push({ id: proyectoActual.id, etiqueta: `${proyectoActual.nombre ?? 'Proyecto'} (${motivo})` })
       }
       return opciones
     }
 
-    async function crearProyectoRpc(nombre) {
-      const { data, error } = await supabase.rpc('crear_proyecto', { p_nombre: nombre })
-      if (error) throw new Error(mensajeErrorProyecto(error))
-      return data
-    }
-
-    // ── En el wizard ──────────────────────────────────────────────────────
-
-    function abrirProyectoNuevoWizard() {
-      document.getElementById('btn-proyecto-nuevo').hidden = true
-      document.getElementById('proyecto-nuevo').hidden = false
-      document.getElementById('campo-proyecto-nombre').focus()
-    }
-
-    function cerrarProyectoNuevoWizard() {
-      document.getElementById('proyecto-nuevo').hidden = true
-      document.getElementById('campo-proyecto-nombre').value = ''
-      const err = document.getElementById('proyecto-nuevo-error')
-      err.textContent = ''
-      err.hidden = true
-      document.getElementById('btn-proyecto-nuevo-crear').disabled = false
-      document.getElementById('btn-proyecto-nuevo').hidden = !puedeGestionarProyectos()
-    }
-
-    async function confirmarProyectoNuevoWizard() {
-      const boton = document.getElementById('btn-proyecto-nuevo-crear')
-      const err   = document.getElementById('proyecto-nuevo-error')
-      const { nombre, error } = validarNombreProyecto(document.getElementById('campo-proyecto-nombre').value)
-      if (error) { err.textContent = error; err.hidden = false; return }
-
-      boton.disabled = true
-      try {
-        const id = await crearProyectoRpc(nombre)
-        estado.maestros.proyectos = ordenarProyectos([...estado.maestros.proyectos, { id, nombre }])
-        cerrarProyectoNuevoWizard()
-        // Queda ELEGIDO: la persona lo creó para imputarle este gasto.
-        poblarSelectProyecto(id)
-        mostrarExito(`Proyecto "${nombre}" creado.`)
-      } catch (e) {
-        err.textContent = mensajeProyectoEnWizard(e.message)
-        err.hidden = false
-        boton.disabled = false
-      }
-    }
-
-    // La RPC dice "Reactivalo", pero desde el wizard no se puede: se dice dónde.
-    function mensajeProyectoEnWizard(texto) {
-      return texto === 'Ya existe un proyecto con ese nombre, dado de baja. Reactivalo en vez de crear otro.'
-        ? 'Ya existe un proyecto con ese nombre, dado de baja. Se reactiva desde "Proyectos del Taller", en la pantalla principal de Gastos.'
-        : texto
-    }
-
-    // ── Pantalla "Proyectos del Taller" ───────────────────────────────────
-
-    const proyectosAdmin = {
-      lista: [],          // todas las filas, activas y dadas de baja
-      aConfirmar: null,   // id del proyecto cuya baja se está confirmando
-      enCurso: false,     // una RPC en vuelo: los botones quedan deshabilitados
-    }
-
-    async function abrirProyectos() {
-      if (!puedeGestionarProyectos()) return
-      document.getElementById('campo-proyectos-alta-nombre').value = ''
-      mostrarErrorAltaProyectos('')
-      document.getElementById('vista-lista').hidden = true
-      document.getElementById('modal-proyectos').removeAttribute('hidden')
-      await cargarProyectos()
-    }
-
-    function cerrarProyectos() {
-      document.getElementById('modal-proyectos').hidden = true
-      document.getElementById('vista-lista').removeAttribute('hidden')
-    }
-
-    function mostrarErrorAltaProyectos(texto) {
-      const el = document.getElementById('proyectos-alta-error')
-      el.textContent = texto
-      el.hidden = !texto
-    }
-
-    async function cargarProyectos() {
-      const cont = document.getElementById('proyectos-lista')
-      cont.innerHTML = '<p class="proyecto-fila__confirmar">Cargando proyectos…</p>'
-      // Sin filtro por activo: esta pantalla es la única que muestra los
-      // dados de baja, que es desde donde se reactivan.
-      const { data, error } = await supabase
-        .from('proyectos').select('id, nombre, activo').order('nombre')
-      if (error) {
-        console.error('[proyectos] no se pudo cargar la lista:', error)
-        cont.innerHTML = '<p class="proyecto-nuevo__error">No se pudo cargar la lista de proyectos. Cerrá y volvé a abrir.</p>'
-        return
-      }
-      proyectosAdmin.lista = ordenarProyectos(data ?? [])
-      proyectosAdmin.aConfirmar = null
-      // El wizard y el formulario de edición leen de acá: que vean lo mismo que
-      // esta pantalla sin esperar a la próxima carga de maestros.
-      estado.maestros.proyectos = proyectosAdmin.lista
-        .filter(p => p.activo).map(p => ({ id: p.id, nombre: p.nombre }))
-      renderizarProyectos()
-    }
-
-    // NO se muestra cuántos gastos tiene cada proyecto, y es a propósito: el
-    // RLS de gastos deja ver solo los propios a quien no tiene
-    // gastos:ver_exportar, y esta tarea no la exige. El número saldría
-    // incompleto según quién mire, sin ningún error.
-    function htmlFilasProyectos(lista, aConfirmar, enCurso) {
-      const activos = lista.filter(p => p.activo)
-      const bajas   = lista.filter(p => !p.activo)
-      const dis = enCurso ? ' disabled' : ''
-
-      const filaActiva = p => {
-        if (p.id === aConfirmar) {
-          return `
-          <div class="proyecto-fila" data-id="${esc(p.id)}">
-            <div class="proyecto-fila__linea"><span class="proyecto-fila__nombre">${esc(p.nombre)}</span></div>
-            <p class="proyecto-fila__confirmar">¿Dar de baja <strong>${esc(p.nombre)}</strong>? Deja de ofrecerse al cargar gastos nuevos. Los gastos que ya lo tienen lo conservan, y se puede reactivar.</p>
-            <div class="proyecto-nuevo__acciones">
-              <button type="button" class="btn btn--secundario" data-accion="cancelar-baja"${dis}>Cancelar</button>
-              <button type="button" class="btn btn--peligro" data-accion="confirmar-baja" data-id="${esc(p.id)}"${dis}>Sí, dar de baja</button>
-            </div>
-          </div>`
-        }
-        return `
-          <div class="proyecto-fila" data-id="${esc(p.id)}">
-            <div class="proyecto-fila__linea">
-              <span class="proyecto-fila__nombre">${esc(p.nombre)}</span>
-              <button type="button" class="btn btn--secundario proyecto-fila__accion proyecto-fila__accion--baja" data-accion="pedir-baja" data-id="${esc(p.id)}"${dis}>Dar de baja</button>
-            </div>
-          </div>`
-      }
-      // Reactivar va sin paso de confirmación: su deshacer es una baja, que sí
-      // lo tiene, y no esconde nada ni cambia gastos.
-      const filaBaja = p => `
-          <div class="proyecto-fila proyecto-fila--baja" data-id="${esc(p.id)}">
-            <div class="proyecto-fila__linea">
-              <span class="proyecto-fila__nombre">${esc(p.nombre)}</span>
-              <button type="button" class="btn btn--secundario proyecto-fila__accion" data-accion="reactivar" data-id="${esc(p.id)}"${dis}>Reactivar</button>
-            </div>
-          </div>`
-
+    // El select de la EDICIÓN. En un gasto del Taller no hay "Ninguno": sin
+    // proyecto abre con "Gasto general del taller" elegido (que guarda null).
+    function htmlSelectProyectoEdicion(g) {
+      const opciones = opcionesProyectoEdicion(estado.maestros.proyectos ?? [], g.proyectos)
+      const actualId = g.proyectos?.id ?? null
+      const primera = esUnidadTaller(unidadDeGasto(g))
+        ? `<option value="${esc(VALOR_GASTO_GENERAL)}" ${actualId ? '' : 'selected'}>${esc(TEXTO_GASTO_GENERAL)}</option>`
+        : '<option value="">— Ninguno —</option>'
       return `
-        <h2 class="proyectos-seccion__titulo">Activos (${activos.length})</h2>
-        ${activos.length
-          ? activos.map(filaActiva).join('')
-          : '<p class="proyecto-fila__confirmar">No hay proyectos activos. Creá uno arriba para poder imputarle gastos.</p>'}
-        ${bajas.length ? `
-        <h2 class="proyectos-seccion__titulo">Dados de baja (${bajas.length})</h2>
-        ${bajas.map(filaBaja).join('')}` : ''}
-      `
-    }
-
-    function renderizarProyectos() {
-      document.getElementById('proyectos-lista').innerHTML =
-        htmlFilasProyectos(proyectosAdmin.lista, proyectosAdmin.aConfirmar, proyectosAdmin.enCurso)
-      document.getElementById('btn-proyectos-alta-crear').disabled = proyectosAdmin.enCurso
-    }
-
-    async function ejecutarAccionProyecto(nombreRpc, id, textoExito) {
-      if (proyectosAdmin.enCurso) return
-      proyectosAdmin.enCurso = true
-      renderizarProyectos()
-      try {
-        const { error } = await supabase.rpc(nombreRpc, { p_proyecto_id: id })
-        if (error) throw new Error(mensajeErrorProyecto(error))
-        mostrarExito(textoExito)
-      } catch (e) {
-        mostrarError(e.message)
-      } finally {
-        proyectosAdmin.enCurso = false
-        // Se recarga siempre, también ante error: si otra persona cambió el
-        // proyecto mientras tanto, la lista vieja es la que llevó al error.
-        await cargarProyectos()
-      }
-    }
-
-    async function crearProyectoDesdePantalla() {
-      if (proyectosAdmin.enCurso) return
-      const input = document.getElementById('campo-proyectos-alta-nombre')
-      const { nombre, error } = validarNombreProyecto(input.value)
-      if (error) { mostrarErrorAltaProyectos(error); return }
-      mostrarErrorAltaProyectos('')
-      proyectosAdmin.enCurso = true
-      renderizarProyectos()
-      try {
-        await crearProyectoRpc(nombre)
-        input.value = ''
-        mostrarExito(`Proyecto "${nombre}" creado.`)
-      } catch (e) {
-        mostrarErrorAltaProyectos(e.message)
-      } finally {
-        proyectosAdmin.enCurso = false
-        await cargarProyectos()
-      }
-    }
-
-    function manejarClickProyectos(e) {
-      const boton = e.target.closest('button[data-accion]')
-      if (!boton || boton.disabled) return
-      const nombreDe = id => proyectosAdmin.lista.find(p => p.id === id)?.nombre ?? 'el proyecto'
-      switch (boton.dataset.accion) {
-        case 'pedir-baja':
-          proyectosAdmin.aConfirmar = boton.dataset.id
-          renderizarProyectos()
-          break
-        case 'cancelar-baja':
-          proyectosAdmin.aConfirmar = null
-          renderizarProyectos()
-          break
-        case 'confirmar-baja':
-          ejecutarAccionProyecto('dar_de_baja_proyecto', boton.dataset.id,
-            `"${nombreDe(boton.dataset.id)}" dado de baja.`)
-          break
-        case 'reactivar':
-          ejecutarAccionProyecto('reactivar_proyecto', boton.dataset.id,
-            `"${nombreDe(boton.dataset.id)}" reactivado.`)
-          break
-      }
+        <select id="edit-proyecto">
+          ${primera}
+          ${opciones.map(p => `<option value="${esc(p.id)}" ${actualId === p.id ? 'selected' : ''}>${esc(p.etiqueta)}</option>`).join('')}
+        </select>`
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3499,21 +3338,8 @@
     document.getElementById('btn-cerrar-detalle-gasto').addEventListener('click', cerrarDetalleGasto)
     document.getElementById('btn-cerrar-detalle-factura').addEventListener('click', cerrarDetalleFactura)
 
-    document.getElementById('btn-proyecto-nuevo').addEventListener('click', abrirProyectoNuevoWizard)
-    document.getElementById('btn-proyecto-nuevo-cancelar').addEventListener('click', cerrarProyectoNuevoWizard)
-    document.getElementById('btn-proyecto-nuevo-crear').addEventListener('click', confirmarProyectoNuevoWizard)
-    document.getElementById('campo-proyecto-nombre').addEventListener('keydown', (e) => {
-      // Enter crea, y no envía nada más: el wizard no es un <form>, pero así
-      // no depende de que nunca llegue a serlo.
-      if (e.key === 'Enter') { e.preventDefault(); confirmarProyectoNuevoWizard() }
-    })
-    document.getElementById('btn-abrir-proyectos').addEventListener('click', abrirProyectos)
-    document.getElementById('btn-cerrar-proyectos').addEventListener('click', cerrarProyectos)
-    document.getElementById('btn-proyectos-alta-crear').addEventListener('click', crearProyectoDesdePantalla)
-    document.getElementById('campo-proyectos-alta-nombre').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); crearProyectoDesdePantalla() }
-    })
-    document.getElementById('proyectos-lista').addEventListener('click', manejarClickProyectos)
+    document.getElementById('btn-actualizar-proyectos').addEventListener('click', recargarProyectosWizard)
+    document.getElementById('campo-proyecto').addEventListener('change', () => mostrarErrorProyecto(''))
     document.getElementById('detalle-gasto-contenido').addEventListener('click', manejarClickComprobante)
     document.getElementById('detalle-factura-contenido').addEventListener('click', manejarClickComprobante)
 
@@ -3535,7 +3361,7 @@
 
     const { data: unidadesInicial } = await supabase
       .from('unidades_negocio')
-      .select('id, nombre')
+      .select('id, nombre, prefijo')
       .eq('activo', true)
       .order('nombre')
 
@@ -3561,8 +3387,8 @@
     console.log('[empleados] Cargados en estado.maestros.empleados:', estado.maestros.empleados.length)
 
     const { data: proyectosInicial } = await supabase
-      .from('proyectos').select('id, nombre').eq('activo', true).order('nombre')
-    estado.maestros.proyectos = proyectosInicial ?? []
+      .from('proyectos').select(COLUMNAS_PROYECTO).eq('activo', true).order('nombre')
+    estado.maestros.proyectos = ordenarProyectos(proyectosAbiertos(proyectosInicial))
 
     // Necesario a nivel de página (no solo dentro del wizard) para que el
     // combobox de proveedor del formulario de edición de factura funcione
@@ -3573,6 +3399,18 @@
 
     estado.maestros.unidades = unidadesInicial ?? []
     estado.fabrica = await promesaFabrica
+
+    // La barra de unidad: se pide en paralelo (no frena el arranque) y cada
+    // cambio repinta sin recargar. Si la barra falla, queda "Todas": no se
+    // filtra nada.
+    alCambiarUnidad(({ elegida, unidades, mostrar }) => {
+      estado.unidadBarra = { elegida: elegida ?? null, unidades: unidades ?? [], mostrar: !!mostrar }
+      repintarPorUnidad()
+    })
+    unidadesDeLaBarra().then(({ elegida, unidades, mostrar }) => {
+      estado.unidadBarra = { elegida: elegida ?? null, unidades: unidades ?? [], mostrar: !!mostrar }
+      repintarPorUnidad()
+    }).catch(e => console.error('barra de unidad:', e))
 
     await cargarMonedasDisponibles()
     poblarSelectMoneda('campo-moneda')
@@ -3632,7 +3470,7 @@
         // cuenta_corriente: decide si el aviso de después de guardar dice que
         // el gasto quedó en la cuenta corriente (un ocasional nunca pasa por ahí).
         supabase.from('proveedores').select('id, razon_social, nombre_fantasia, cuit, cuenta_corriente').eq('activo', true).eq('estado_alta', 'activo').order('razon_social'),
-        supabase.from('proyectos')  .select('id, nombre').eq('activo', true).order('nombre'),
+        supabase.from('proyectos')  .select(COLUMNAS_PROYECTO).eq('activo', true).order('nombre'),
       ])
 
       console.log('[maestros] categorias  ->', 'data:', cats, '| error:', catsError)
@@ -3658,7 +3496,7 @@
       estado.maestros.empleados   = emps.data  ?? []
       estado.maestros.vehiculos   = vehs.data  ?? []
       estado.maestros.proveedores = provs.data ?? []
-      estado.maestros.proyectos   = projs.data ?? []
+      estado.maestros.proyectos   = ordenarProyectos(proyectosAbiertos(projs.data))
 
       console.log('[maestros] cargados → categorias:', estado.maestros.categorias.length,
         '| empleados:', estado.maestros.empleados.length,
@@ -3700,7 +3538,10 @@
       categoriaSeleccionada = null
       tipDocSeleccionado    = null
       medioPagoSeleccionado = null
-      unidadSeleccionada    = null
+      // Un gasto nuevo arranca con la unidad elegida en la barra de arriba (si
+      // hay una). La grilla del wizard QUEDA: es la unidad de ESTE gasto y se
+      // puede cambiar ahí mismo.
+      unidadSeleccionada    = unidadDeLaBarraParaWizard()
       vehiculoSeleccionado  = null
       vehiculoFueElegido    = false
       // Seguro de resetear: viaVehiculos se elige DENTRO del wizard, en el paso
@@ -3734,7 +3575,7 @@
 
       resetearZonaFoto()
       document.getElementById('btn-cambiar-foto').style.display = 'none'
-      cerrarProyectoNuevoWizard()
+      mostrarErrorProyecto('')
     }
 
     async function iniciarWizard() {
@@ -3760,8 +3601,6 @@
 
       // Poblar selects estáticos (proyecto)
       poblarSelectProyecto()
-      // También decide si el link "+ Proyecto nuevo" se ve (según la tarea).
-      cerrarProyectoNuevoWizard()
 
       // Renderizar grillas
       renderizarGrillaDestino()
@@ -4258,6 +4097,20 @@
       grilla.querySelectorAll('.tarjeta-destino').forEach(btn => {
         btn.addEventListener('click', () => seleccionarDestino(btn))
       })
+      actualizarBotonDestinoSiguiente()
+    }
+
+    // "Siguiente" del paso Destino: solo cuando ya hay un destino elegido
+    // (la unidad de la barra viene puesta). Tocar una tarjeta sigue avanzando
+    // solo, como siempre.
+    function actualizarBotonDestinoSiguiente() {
+      const b = document.getElementById('btn-destino-siguiente')
+      if (b) b.hidden = !(viaVehiculos || unidadSeleccionada)
+    }
+
+    function avanzarDesdeDestino() {
+      if (viaVehiculos) irASubpaso('vehiculo-destino')
+      else if (unidadSeleccionada) irASubpaso('categoria')
     }
 
     function seleccionarDestino(btn) {
@@ -4665,17 +4518,7 @@
         }
       }
 
-      const unidadObj = estado.maestros.unidades.find(u => u.id === unidadId)
-      const esTaller = (unidadObj?.nombre || '').trim().toLowerCase() === 'taller'
-      const grupoProyecto = document.getElementById('grupo-proyecto')
-      if (grupoProyecto) grupoProyecto.style.display = esTaller ? 'block' : 'none'
-      if (!esTaller) {
-        const selProyecto = document.getElementById('campo-proyecto')
-        if (selProyecto) selProyecto.value = ''
-        // El campo de alta vive adentro del grupo: si se oculta el grupo con el
-        // campo abierto, al volver a Taller reaparecería con un nombre a medias.
-        cerrarProyectoNuevoWizard()
-      }
+      actualizarGrupoProyecto(unidadId)
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4699,6 +4542,13 @@
       if (id === 'detalles') {
         if (!document.getElementById('campo-empleado').value)
           return mostrarError('Seleccioná el empleado.'), false
+        // PROYECTO OBLIGATORIO EN EL TALLER. El error va PEGADO al campo y el
+        // botón no se deshabilita (si no, el mensaje no se vería nunca).
+        if (esUnidadTaller(unidadSeleccionada) && !document.getElementById('campo-proyecto')?.value) {
+          mostrarErrorProyecto('Elegí el proyecto de este gasto, o «Gasto general del taller» si no es de ningún proyecto.')
+          document.getElementById('campo-proyecto')?.focus?.()
+          return false
+        }
         if (viaVehiculos && kilometrajeDelWizard() == null)
           return mostrarError('Ingresá el kilometraje del vehículo.'), false
         if ((medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') && !document.getElementById('campo-cuenta').value)
@@ -5024,7 +4874,8 @@
           f.fecha ? formatearFecha(f.fecha) : null,
           f.numero_doc ? `N° ${f.numero_doc}` : 'Sin número',
           importe != null ? `${formatearImporte(importe)} (leído de la factura)` : null,
-          estado.maestros.unidades.find(u => u.id === f.unidad_negocio_id)?.nombre || null,
+          estado.maestros.unidades.find(u => u.id === f.unidad_negocio_id)?.nombre
+            || (f.unidad_negocio_id ? null : (estado.unidadBarra?.elegida ? 'Sin unidad' : null)),
         ].filter(Boolean).join(' · ')
         return `
         <div class="pendiente-gasto">
@@ -5045,12 +4896,19 @@
         lista.innerHTML = `<div class="pendientes-gasto__error">${esc(estado.errorIngresosSinGasto)}</div>`
         return
       }
-      const filas = estado.ingresosSinGasto ?? []
+      // Solo las de la unidad elegida en la barra (y las que no tienen unidad).
+      const todas = estado.ingresosSinGasto ?? []
+      const filas = todas.filter(f => pasaFiltroUnidad(f.unidad_negocio_id, estado.unidadBarra?.elegida ?? null))
+      const deOtras = todas.length - filas.length
       // Sin nada pendiente no se dibuja: un aviso que está siempre deja de leerse.
       seccion.hidden = !filas.length
       document.getElementById('ingresos-sin-gasto-titulo').textContent = filas.length
         ? `Facturas ingresadas sin gasto (${filas.length})` : 'Facturas ingresadas sin gasto'
-      lista.innerHTML = htmlIngresosSinGasto(filas)
+      const nota = deOtras === 1 ? 'Hay 1 más de otra unidad: elegí «Todas» arriba para verla.'
+        : `Hay ${deOtras} más de otras unidades: elegí «Todas» arriba para verlas.`
+      lista.innerHTML = (deOtras > 0
+        ? `<p class="pendientes-gasto__nota" id="ingresos-sin-gasto-otras">${esc(nota)}</p>`
+        : '') + htmlIngresosSinGasto(filas)
     }
 
     function renderizarAvisoDesdeIngreso(sinFoto = false) {
@@ -5171,7 +5029,7 @@
         cuenta_id:         (medioPagoSeleccionado === 'efectivo' || medioPagoSeleccionado === 'transferencia') ? toStr('campo-cuenta') : null,
         categoria_id:      categoriaSeleccionada,
         proveedor_id:      proveedorSeleccionado,
-        proyecto_id:       toStr('campo-proyecto'),
+        proyecto_id:       proyectoIdDeWizard(),
         lugar_servicio:    toStr('campo-lugar'),
         unidad_negocio_id: unidadSeleccionada,
         empleado_id:       toStr('campo-empleado'),
@@ -5426,7 +5284,7 @@
         empleado_id:        toStr('campo-empleado'),
         proveedor_id:       proveedorSeleccionado,
         fecha_factura:      document.getElementById('campo-fecha').value,
-        proyecto_id:        toStr('campo-proyecto'),
+        proyecto_id:        proyectoIdDeWizard(),
         vehiculo_id:        vehiculoSeleccionado,
         kilometraje:        kilometrajeDelWizard(),
         lugar:              toStr('campo-lugar'),
@@ -5442,7 +5300,7 @@
       const empObj  = estado.maestros.empleados  .find(e => e.id === g.empleado_id)
       const unidObj = estado.maestros.unidades   .find(u => u.id === unidadSeleccionada)
       const vehObj  = estado.maestros.vehiculos  .find(v => v.id === vehiculoSeleccionado)
-      const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
+      const proyObj = proyectoParaResumen(g.proyecto_id)
 
       // fila() ESCAPA SIEMPRE: casi todo lo que muestra es texto libre que
       // tipeó un usuario o leyó el OCR. filaHtml() es la única que deja pasar
@@ -5506,7 +5364,7 @@
       const empObj  = estado.maestros.empleados  .find(e => e.id === g.empleado_id)
       const unidObj = estado.maestros.unidades   .find(u => u.id === g.unidad_negocio_id)
       const vehObj  = estado.maestros.vehiculos  .find(v => v.id === g.vehiculo_id)
-      const proyObj = estado.maestros.proyectos  .find(p => p.id === g.proyecto_id)
+      const proyObj = proyectoParaResumen(g.proyecto_id)
       const provObj = estado.maestros.proveedores.find(p => p.id === g.proveedor_id)
 
       // fila() ESCAPA SIEMPRE: casi todo lo que muestra es texto libre que
@@ -5573,12 +5431,12 @@
           .select(`
             id, fecha, fecha_pago, periodo, tipo_doc, numero_doc, razon_social, importe, moneda,
             medio_pago, estado, lugar_servicio, descripcion, observaciones, kilometraje, foto_url,
-            cuenta_id, anulado_por, anulado_en, motivo_anulacion,
+            cuenta_id, anulado_por, anulado_en, motivo_anulacion, unidad_negocio_id, proveedor_id,
             categorias (id, nombre, icon),
             empleados  (id, nombre),
             unidades_negocio (id, nombre),
             vehiculos  (id, nombre, marca, patente),
-            proyectos  (id, nombre)
+            proyectos  (${COLUMNAS_PROYECTO})
           `)
           .eq('id', id)
           .maybeSingle()
@@ -5674,7 +5532,7 @@
         <div class="resumen-seccion">
           <div class="resumen-seccion__titulo">Detalles</div>
           ${fila('Empleado',      g.empleados?.nombre)}
-          ${fila('Proyecto',      g.proyectos?.nombre)}
+          ${fila('Proyecto',      etiquetaProyectoGasto(g))}
           ${fila('Lugar',         g.lugar_servicio)}
           ${fila('Descripción',   g.descripcion)}
           ${fila('Observaciones', g.observaciones)}
@@ -5758,17 +5616,10 @@
           ${personasParaEditar(g).map(e => `<option value="${esc(e.id)}" ${g.empleados?.id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}
         </select>`
 
-      // estado.maestros.proyectos trae solo los ACTIVOS. Si el proyecto de este
-      // gasto se dio de baja, sin esta opción extra el select no lo encuentra,
-      // queda en "— Ninguno —" y el UPDATE guarda proyecto_id = null: el gasto
-      // pierde su proyecto por haberlo editado, sin ningún aviso. Se agrega
-      // marcado, así se puede conservar pero no elegir para otro gasto.
-      const opcionesProyecto = opcionesProyectoEdicion(estado.maestros.proyectos, g.proyectos)
-      const selectProyecto = `
-        <select id="edit-proyecto">
-          <option value="">— Ninguno —</option>
-          ${opcionesProyecto.map(p => `<option value="${esc(p.id)}" ${g.proyectos?.id === p.id ? 'selected' : ''}>${esc(p.etiqueta)}</option>`).join('')}
-        </select>`
+      // estado.maestros.proyectos trae solo los ABIERTOS. Si el proyecto de este
+      // gasto se cerró, sin la opción extra de opcionesProyectoEdicion() el
+      // select no lo encuentra y el UPDATE le borraría el proyecto sin aviso.
+      const selectProyecto = htmlSelectProyectoEdicion(g)
 
       const selectMedioPago = `
         <select id="edit-medio-pago">
@@ -5903,7 +5754,7 @@
           kilometraje:       leerCampoNumero(document.getElementById('edit-kilometraje')),
           categoria_id:      document.getElementById('edit-categoria').value || null,
           empleado_id:       document.getElementById('edit-empleado').value || null,
-          proyecto_id:       document.getElementById('edit-proyecto').value || null,
+          proyecto_id:       valorAProyectoId(document.getElementById('edit-proyecto').value),
           lugar_servicio:    document.getElementById('edit-lugar').value || null,
           observaciones:     document.getElementById('edit-observaciones').value || null,
         }
@@ -6744,6 +6595,7 @@
 
     // ── Sub-paso DESTINO ───────────────────────────────────────────────────
     document.getElementById('btn-destino-atras').addEventListener('click', () => irASubpaso('datos'))
+    document.getElementById('btn-destino-siguiente').addEventListener('click', avanzarDesdeDestino)
 
     // ── Sub-paso VEHICULO-DESTINO ──────────────────────────────────────────
     document.getElementById('btn-vehiculo-atras').addEventListener('click',     () => irASubpaso('destino'))

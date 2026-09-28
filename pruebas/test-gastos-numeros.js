@@ -159,11 +159,16 @@ const FUNCIONES = [
   'validarSubpaso', 'armarGasto', 'armarFacturaPendiente', 'prellenarPaso2', 'importeDeOcr', 'cargarGastoDesdeIngreso',
   'esCuentaDeTablet', 'personasNoTablet', 'personasElegibles', 'personasParaEditar', 'unidadesElegibles', 'unidadesParaEditar',
   'mostrarFormularioEdicionGasto', 'mostrarFormularioEdicionFactura', 'mostrarFormularioInteres',
+  // El proyecto del Taller (28/09/2026): lo leen armarGasto(), la validación
+  // y la edición.
+  'proyectoIdDeWizard', 'esUnidadTaller', 'valorAProyectoId', 'mostrarErrorProyecto',
+  'htmlSelectProyectoEdicion', 'unidadDeGasto',
 ]
+const CONSTANTES = ['VALOR_GASTO_GENERAL', 'TEXTO_GASTO_GENERAL']
 
 function sandbox() {
   return construirCon(ARCHIVO, {
-    preludio: PRELUDIO, funciones: FUNCIONES,
+    preludio: PRELUDIO, funciones: FUNCIONES, constantes: CONSTANTES,
     retorno: `estado, __els, __errores, __clases, __llamadas(){ return __llamadas }, __limpiar(){ __llamadas = []; __errores.length = 0 },
       __doc: document, __set(k, v){ eval(k + ' = v') }, __subpaso(){ return __subpaso }`,
   })

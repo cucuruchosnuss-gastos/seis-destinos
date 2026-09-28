@@ -51,7 +51,6 @@ const PRELUDIO = FUENTE_FABRICA + `
   }
   var __els = new Map()
   var document = { getElementById(id) { if (!__els.has(id)) __els.set(id, nuevoEl(id)); return __els.get(id) } }
-  function cerrarProyectoNuevoWizard() {}
   var estado = {
     miRolApp: 'usuario', miEmpleadoId: 'e-ana', misTareas: new Set(['gastos:ver_exportar']),
     maestros: { empleados: [], unidades: [{ id: 'u1', nombre: 'Cucuruchos Nuss' }] },
@@ -60,7 +59,9 @@ const PRELUDIO = FUENTE_FABRICA + `
 `
 const S = construirCon(ARCHIVO, {
   preludio: PRELUDIO,
-  funciones: ['esc', 'tieneTarea', 'esCuentaDeTablet', 'personasNoTablet', 'personasElegibles', 'personasParaEditar', 'poblarSelectEmpleados'],
+  funciones: ['esc', 'tieneTarea', 'esCuentaDeTablet', 'personasNoTablet', 'personasElegibles', 'personasParaEditar', 'poblarSelectEmpleados',
+    // poblarSelectEmpleados decide también si se ve el proyecto del Taller.
+    'actualizarGrupoProyecto', 'esUnidadTaller', 'mostrarErrorProyecto'],
   retorno: 'estado, __els',
 })
 S.estado.maestros.empleados = EMPLEADOS.map(e => ({ ...e }))
