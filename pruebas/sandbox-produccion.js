@@ -262,13 +262,18 @@ const NUEVAS_PLANTA = [
   'elegirMasaHist', 'pedirAnularHist', 'cancelarAnularHist', 'confirmarAnularHist', 'nuevaMasaDesdeHist',
   // Producción con dos modos: el inicio y lo que falta para cerrar.
   'textoCajasTablero', 'htmlFaltaCierre',
+  // Arreglos en la tablet real (28/09/2026): el personal se asegura en cada camino.
+  'asegurarPersonal',
+  // Tiempo real y el tamaño de la pantalla (28/09/2026)
+  'leerTurnosVivos', 'filtrosTiempoReal', 'cambioEsDeMiFabrica', 'conectarTiempoReal', 'programarReconexionVivo',
+  'alCambioVivo', 'refrescarVivo', 'textoPantalla', 'registrarPantalla', 'alReanudar',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
 const CONST_SOLO_GESTION = ['PESTANAS_CONFIG', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION', 'CONDICIONES_EMPAQUE']
 const CONST_NUEVAS_PLANTA = ['LINKS_SIN_SESION',
-  'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR']
+  'TABLAS_VIVAS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
@@ -333,6 +338,11 @@ const PRELUDIO = `
   // El PIN del acceso maestro: let del módulo, en memoria y nada más.
   var pinMaestro = null
   var camposPlanillaEnlazados = false
+  var lecturaPersonal = null
+  var canalVivo = null, claveCanalVivo = '', relojVivo = null, reconexionVivo = null
+  var __registros = []
+  function registrarError(r) { __registros.push(r) }
+  var __canales = []
   var reintentando = false
   var relojBandaExito = null
   var turnoBurbujaConos = 0
@@ -367,6 +377,16 @@ const PRELUDIO = `
       return q
     },
     rpc(nombre, params) { __llamadas.rpc.push([nombre, params]); return Promise.resolve(__rpc(nombre, params)) },
+    // Un canal de tiempo real simulado: guarda cada .on() y el callback de
+    // .subscribe(), así la suite dispara cambios y estados a mano.
+    channel(nombre) {
+      const c = { nombre, ons: [], estadoCb: null, quitado: false,
+        on(tipo, cfg, cb) { this.ons.push({ tipo, cfg, cb }); return this },
+        subscribe(cb) { this.estadoCb = cb; return this } }
+      __canales.push(c)
+      return c
+    },
+    removeChannel(c) { c.quitado = true },
   }
   function mostrarError(m) { __llamadas.errores.push(m) }
   function mostrarExito(m) { __llamadas.exitos.push(m) }
@@ -417,7 +437,7 @@ function construirProduccion(ruta, { funciones = [], constantes = [], preludioEx
     constantes: todasConst,
     retorno: `${todasConst.join(', ')}, estado, __els, __doc: document, __body, __llamadas, __ls, localStorage,
       __ss, sessionStorage, __pinMaestro(){ return pinMaestro }, __tablas, __setRpc(f){ __rpc = f },
-      __uuids(){ return __uuids }, __nav: navigator,
+      __uuids(){ return __uuids }, __nav: navigator, __canales, __registros, __canalVivo(){ return canalVivo },
       ponerNumero, leerCampoNumero, enlazarCampoNumero`,
   })
 }

@@ -163,10 +163,10 @@ esperas.push((async () => {
   chk('las cajas se leen de lo producido', S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('turno_id, cajas')))
   chk('mil cajas con su punto de miles', S.textoCajasTablero(1234) === '1.234 cajas' && S.textoCajasTablero(1) === '1 caja' && S.textoCajasTablero(0) === '0 cajas')
   // "Abrir turno" desde la tarjeta: esa máquina ya viene elegida.
-  S.mostrarAbrir('m3')
+  await S.mostrarAbrir('m3')
   chk('"Abrir turno" desde la tarjeta: la máquina viene elegida', S.estado.vista === 'pr-abrir' &&
     S.estado.abrir.filas.find(x => x.maquinaId === 'm3')?.elegida === true && S.estado.abrir.filas.find(x => x.maquinaId === 'm2')?.elegida === false)
-  S.mostrarAbrir({ type: 'click' })
+  await S.mostrarAbrir({ type: 'click' })
   chk('… y desde el botón (llega el evento) no viene ninguna elegida', S.estado.abrir.filas.every(x => !x.elegida))
   chk('el tablero escucha la tarjeta andando y la sin turno',
     /const p = ev\.target\.closest\('\[data-producido\]'\); if \(p\) \{ tocar\(\); abrirLoProducido\(p\.dataset\.producido\); return \}/.test(FUENTE) &&
@@ -256,7 +256,7 @@ esperas.push((async () => {
   }, HOY), ['mAyer', 'idAyer', 'loteAyer'])
 
   // ── Abrir turno ─────────────────────────────────────────────────────────
-  S.mostrarAbrir()
+  await S.mostrarAbrir()
   const form = S.estado.abrir
   chk('el formulario ofrece las libres', form.filas.map(f => f.maquinaId).join() === 'm2,m3')
   chk('la fecha arranca en hoy', form.fecha === S.hoyArgentina() &&
@@ -379,7 +379,7 @@ esperas.push((async () => {
   const H = armar({ ...TABLAS, turnos_produccion: [], masas: [], produccion_items: [] })
   await H.mostrarTablero()
   chk('sin máquinas abiertas, SALA DE MASA arranca deshabilitada', H.salaDeshabilitada() === true)
-  H.mostrarAbrir()
+  await H.mostrarAbrir()
   H.estado.abrir.filas[0].elegida = true
   H.__setRpc(async () => ({ data: [{ maquina_id: H.estado.abrir.filas[0].maquinaId, maquina: 'M', turno_id: 'z', lote: 1 }], error: null }))
   await H.confirmarAbrir()
@@ -395,7 +395,7 @@ esperas.push((async () => {
     masas: [], produccion_items: [], paradas_produccion: [],
   })
   await A.mostrarTablero()
-  A.mostrarAbrir()
+  await A.mostrarAbrir()
   chk('la abierta de ayer también aparece en Abrir turno', A.estado.abrir.filas.length === 2)
   chk('… y va ÚLTIMA aunque su máquina venga primera',
     A.estado.abrir.filas.map(f => f.maquinaId).join() === 'm2,m1' && A.estado.abrir.filas[1].bloqueada === true,
@@ -419,13 +419,13 @@ esperas.push((async () => {
   })
   await B.mostrarTablero()
   B.estado.abrir = null
-  B.mostrarAbrir()
+  await B.mostrarAbrir()
   chk('con una sola máquina y abierta de ayer, no hay nada que abrir', B.estado.abrir === null)
 
   // El error de la base, tal cual.
   const E = armar()
   await E.mostrarTablero()
-  E.mostrarAbrir()
+  await E.mostrarAbrir()
   E.estado.abrir.filas[0].elegida = true
   E.__setRpc(async () => ({ data: null, error: { message: 'Esa persona no figura como encargado de esta unidad.' } }))
   await E.confirmarAbrir()

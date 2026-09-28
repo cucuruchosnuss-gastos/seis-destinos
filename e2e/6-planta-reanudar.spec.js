@@ -174,3 +174,24 @@ test('sin sesión guardada, la planta pide entrar ahí mismo (no va a login.html
   await page.locator('#pr-entrar-btn').click();
   await expect(page.locator('#pr-entrar-error')).toHaveText('Completá el mail y la contraseña de la tablet.');
 });
+
+// La tablet real (28/09/2026): el registro de errores estaba vacío después de
+// una mañana de pruebas. Esto prueba que js/salud.js carga en la planta y que
+// llega a registrar_error_app: al abrir, UN evento 'pantalla' con el tamaño.
+test('al abrir, registra UNA vez el tamaño de la pantalla (evento "pantalla")', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 540 });
+  const registros = [];
+  const datos = { ...DATOS_PLANTA, rpc: { ...DATOS_PLANTA.rpc, registrar_error_app: (cuerpo) => { registros.push(cuerpo); return null } } };
+  await backendSimulado(page, datos);
+  await sembrarSesion(page, { venceEn: 3600 });
+  await page.goto(URL_PLANTA);
+  await expect(page.locator('#pr-quien-lista')).toContainText('Federico Silva');
+  await expect.poll(() => registros.filter(r => r?.p_evento === 'pantalla').length).toBe(1);
+  const r = registros.find(x => x.p_evento === 'pantalla');
+  expect(r.p_mensaje).toMatch(/^1000px × 540px · DPR 1 · landscape/);
+  expect(r.p_pantalla).toBe('produccion');
+  await page.reload();
+  await expect(page.locator('#pr-quien-lista')).toContainText('Federico Silva');
+  await page.waitForTimeout(800);
+  expect(registros.filter(x => x.p_evento === 'pantalla').length, 'una sola vez por sesión').toBe(1);
+});

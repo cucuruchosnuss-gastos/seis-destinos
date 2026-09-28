@@ -2380,7 +2380,7 @@
 
   <script type="module">
     import { verificarSesion, iniciarSesion } from '../js/auth.js'
-    import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion } from '../js/salud.js'
+    import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion, registrarError } from '../js/salud.js'
     import {
       mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
@@ -3459,6 +3459,9 @@
 
     // Lo que se ve una vez que se sabe unidad, modo y persona.
     function entrarAlModo() {
+      // Sin esperar: el tablero y la sala no lo necesitan para dibujarse, y
+      // la planilla y Abrir turno lo esperan por su cuenta.
+      asegurarPersonal()
       if (estado.modo === 'produccion') return mostrarTablero()
       if (estado.modo === 'masa') return mostrarSala()
       document.getElementById('pr-inicio-texto').textContent =
@@ -4763,6 +4766,7 @@
     // sobre su propio contenedor, los mismos nombres no se pisan.
     function htmlResultadosOperario(cands, texto, ctx) {
       if (!cands.length) {
+        if (estado.personalError && !texto) return '<span class="pr-op__nada">No se pudo cargar el personal. Revisá la conexión y volvé a abrir esta pantalla.</span>'
         return `<span class="pr-op__nada">${texto ? `Nadie coincide con "${esc(texto)}".` : 'No hay operarios para agregar.'}</span>`
       }
       return cands.map(c => `<button type="button" class="pr-op" data-elegir-op="${esc(ctx)}" data-op-id="${esc(c.id)}"${c.apagado ? ' disabled' : ''}>` +
@@ -4853,7 +4857,8 @@
       }
     }
 
-    function mostrarAbrir(maquinaId) {
+    async function mostrarAbrir(maquinaId) {
+      await asegurarPersonal()
       const hoy = hoyArgentina()
       // Las libres, para abrir; y las abiertas de OTRO día, que aparecen al
       // final bloqueadas porque hay que cerrarlas antes de volver a usarlas.
@@ -5065,7 +5070,38 @@
 
     function nombrePersona(id) {
       if (!id) return '—'
-      return estado.personal.find(p => p.id === id)?.nombre ?? '—'
+      return (estado.personal ?? []).find(p => p.id === id)?.nombre ?? '—'
+    }
+
+    // EL PERSONAL SE LEE ACÁ, UNA SOLA VEZ, Y NO SOLO EN "¿QUIÉN SOS?".
+    // Antes lo leía únicamente la lista de "¿Quién sos?", así que cuando la
+    // tablet entraba con la persona ya guardada —al recargar, o al volver a un
+    // modo, donde solo se pide el PIN— estado.personal quedaba vacío: la
+    // planilla mostraba "—" en vez de los operarios y "No hay operarios para
+    // agregar", con los datos en la base (medido en Nuss el 28/09/2026). Lo
+    // llaman entrarAlModo(), la planilla y Abrir turno. Con una lectura en
+    // vuelo, los demás esperan la misma promesa. Si falla, no tira: deja
+    // estado.personalError y la pantalla lo dice.
+    let lecturaPersonal = null
+    function asegurarPersonal({ forzar = false } = {}) {
+      if (!forzar && Array.isArray(estado.personal) && estado.personal.length) return Promise.resolve(true)
+      if (lecturaPersonal) return lecturaPersonal
+      lecturaPersonal = (async () => {
+        try {
+          const { data, error } = await supabase.rpc('personal_produccion', { p_unidad_negocio_id: estado.unidadId })
+          if (error) throw error
+          estado.personal = personalSinPruebas(data)
+          estado.personalError = false
+          return true
+        } catch (err) {
+          console.error('personal_produccion (asegurar):', err)
+          estado.personalError = true
+          return false
+        } finally {
+          lecturaPersonal = null
+        }
+      })()
+      return lecturaPersonal
     }
 
     // Duración legible entre dos momentos: "1 h 05 min", "12 min". Sin fin,
@@ -5140,7 +5176,19 @@
           console.error('nombres de los conos:', err)
         }
       }
-      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja, marcasItems }
+      // El nombre de la máquina sale de la base y no solo del tablero: a la
+      // planilla se llega también sin tablero cargado, y ahí el título decía
+      // "Cerrar Máquina · lote 7036" en vez de "Cerrar Máquina 1 · lote 7036".
+      // Si no se puede leer, no se voltea la planilla.
+      let maquinaNombre = null
+      try {
+        const { data: maq, error: e8 } = await supabase.from('maquinas').select('nombre').eq('id', turno.maquina_id).maybeSingle()
+        if (e8) throw e8
+        maquinaNombre = maq?.nombre ?? null
+      } catch (err) {
+        console.error('nombre de la máquina:', err)
+      }
+      return { turno, operarios: ops ?? [], masas: masas ?? [], paradas: paradas ?? [], items: items ?? [], insumosCaja, marcasItems, maquinaNombre }
     }
 
     function paradaEnCurso(paradas) {
@@ -5510,7 +5558,7 @@
     async function recargarPlanilla() {
       const p = estado.planilla
       if (!p) return
-      estado.planilla = { ...(await leerPlanilla(p.turno.id)), maquinaNombre: p.maquinaNombre }
+      { const l = await leerPlanilla(p.turno.id); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? p.maquinaNombre } }
       pintarPlanilla()
     }
 
@@ -5561,8 +5609,9 @@
       estado.planilla = null
       estado.opsPlanilla = { buscando: false, busqueda: '', guardando: false }
       estado.corregir = null
-      // A la planilla se puede llegar sin pasar por Abrir turno, así que la
-      // lista de operarios se resuelve también acá.
+      // A la planilla se puede llegar sin pasar por Abrir turno ni por la
+      // lista de "¿Quién sos?", así que el personal se asegura también acá.
+      await asegurarPersonal()
       estado.operarios = personasParaPuesto(estado.personal, 'operario').personas
       document.getElementById('pr-planilla-lote').innerHTML = ''
       document.getElementById('pr-planilla-que').innerHTML = '<span class="pr-texto-suave">Cargando la planilla…</span>'
@@ -5580,9 +5629,10 @@
       mostrarVista('pr-planilla')
       const nombre = (estado.tablero ?? []).find(e => e.turno?.id === turnoId)?.maquina.nombre ?? 'Máquina'
       try {
-        estado.planilla = { ...(await leerPlanilla(turnoId)), maquinaNombre: nombre }
+        { const l = await leerPlanilla(turnoId); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre } }
       } catch (err) {
         console.error('planilla:', err)
+        registrarError({ evento: 'planta', mensaje: 'No se pudo leer la planilla: ' + (err?.message ?? err) })
         document.getElementById('pr-planilla-que').innerHTML = ''
         document.getElementById('pr-planilla-estado').innerHTML = '<div class="pr-aviso pr-aviso--grave">No se pudo leer la planilla. Revisá la conexión y volvé a abrirla.</div>'
         pintarBotonesPlanilla()
@@ -7319,7 +7369,17 @@
         if (e.turno && e.turno.id === turnoId) e.turno = null
       }
       if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()
+      // LA MÁQUINA CERRADA DEJA DE ESTAR ELEGIDA. La barra lateral y las
+      // secciones de UNA máquina (Lo producido, Paradas, Cerrar planilla)
+      // salen de estado.planilla: si quedaba puesta, la tarjeta "Lote 7036"
+      // seguía en la barra y "Cerrar planilla" volvía a ofrecer una planilla
+      // que la base ya había cerrado (visto en Nuss el 28/09/2026).
+      if (estado.planilla?.turno?.id === turnoId) {
+        estado.planilla = null
+        estado.corregir = null
+      }
       await refrescarAbiertas()
+      pintarLateral()
     }
 
     const AVISO_SALA_REINTENTAR = '<button type="button" class="pr-btn pr-btn--secundario" id="pr-sala-volver-intentar">Volver a intentar</button>'
@@ -9452,7 +9512,177 @@
         if (estado.vista === 'pr-produccion') await mostrarTablero()
         else if (estado.vista === 'pr-planilla') await recargarPlanilla()
         else if (estado.vista === 'pr-sala') await mostrarSala()
+        else if (estado.vista === 'pr-receta') await cargarMasasReceta()
       } catch (err) { console.error('al reanudar:', err) }
+      pintarLateral()
+      // El canal de tiempo real pudo haberse caído mientras estaba bloqueada:
+      // se vuelve a armar (la clave vacía obliga).
+      claveCanalVivo = ''
+      conectarTiempoReal()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TIEMPO REAL (28/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // En la tablet real la pantalla no se actualizaba sola: una masa que
+    // cargaba el masero no aparecía en la planilla del encargado hasta
+    // deslizar para abajo. La base publica en supabase_realtime masas,
+    // produccion_items, paradas_produccion, turnos_produccion y
+    // turno_operarios (verificado con pg_publication_tables el 28/09/2026).
+    //
+    // NUNCA UN AVISO DE OTRA FÁBRICA. Las policies de esas cinco tablas son
+    // puede_ver_produccion(), SIN unidad (verificado con pg_policies el mismo
+    // día), así que el servidor le mandaría a la tablet los cambios de las
+    // otras fábricas. Por eso el filtro va DOS veces: en la suscripción
+    // (turnos por unidad_negocio_id, el resto por turno_id de los turnos de
+    // ESTA fábrica) y otra vez al recibir, en cambioEsDeMiFabrica().
+    let canalVivo = null
+    let claveCanalVivo = ''
+    let relojVivo = null
+    let reconexionVivo = null
+    const TABLAS_VIVAS = ['masas', 'produccion_items', 'paradas_produccion', 'turno_operarios']
+
+    // Los turnos vivos de la fábrica: abiertos o pendientes de completar, más
+    // el de la planilla y el de la sala (que pueden no estar en la lista).
+    async function leerTurnosVivos(unidadId) {
+      const { data, error } = await supabase.from('turnos_produccion').select('id')
+        .eq('unidad_negocio_id', unidadId).in('estado', ['abierto', 'pendiente_completar'])
+      if (error) throw error
+      const ids = new Set((data ?? []).map(t => String(t.id)))
+      if (estado.planilla?.turno?.id) ids.add(String(estado.planilla.turno.id))
+      if (estado.salaTurno?.id) ids.add(String(estado.salaTurno.id))
+      return ids
+    }
+
+    function filtrosTiempoReal(unidadId, ids) {
+      const lista = [...ids].sort()
+      const f = [{ tabla: 'turnos_produccion', filtro: `unidad_negocio_id=eq.${unidadId}` }]
+      if (lista.length) for (const tabla of TABLAS_VIVAS) f.push({ tabla, filtro: `turno_id=in.(${lista.join(',')})` })
+      return f
+    }
+
+    function cambioEsDeMiFabrica(tabla, fila, ids, unidadId) {
+      if (!fila || typeof fila !== 'object') return false
+      if (tabla === 'turnos_produccion') return fila.unidad_negocio_id != null && String(fila.unidad_negocio_id) === String(unidadId)
+      if (!TABLAS_VIVAS.includes(tabla)) return false
+      return fila.turno_id != null && ids.has(String(fila.turno_id))
+    }
+
+    async function conectarTiempoReal() {
+      if (!estado.sesionPlanta || !estado.unidadId || typeof supabase.channel !== 'function') return
+      let ids
+      try {
+        ids = await leerTurnosVivos(estado.unidadId)
+      } catch (err) {
+        console.error('tiempo real (turnos):', err)
+        programarReconexionVivo()
+        return
+      }
+      estado.turnosVivos = ids
+      const clave = estado.unidadId + '|' + [...ids].sort().join(',')
+      if (canalVivo && clave === claveCanalVivo) return
+      if (canalVivo) { try { supabase.removeChannel(canalVivo) } catch { /* nada */ } canalVivo = null }
+      claveCanalVivo = clave
+      let ch = supabase.channel('planta-' + estado.unidadId)
+      for (const { tabla, filtro } of filtrosTiempoReal(estado.unidadId, ids)) {
+        ch = ch.on('postgres_changes', { event: '*', schema: 'public', table: tabla, filter: filtro }, pl => alCambioVivo(tabla, pl))
+      }
+      canalVivo = ch
+      ch.subscribe(status => {
+        if (ch !== canalVivo) return
+        estado.vivo = status
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('tiempo real:', status)
+          registrarError({ evento: 'planta', mensaje: 'Tiempo real: ' + status })
+          programarReconexionVivo()
+        }
+      })
+    }
+
+    // Si el canal se cae, reconecta solo: vuelve a armarlo a los 5 segundos.
+    function programarReconexionVivo() {
+      if (reconexionVivo) return
+      reconexionVivo = setTimeout(() => {
+        reconexionVivo = null
+        claveCanalVivo = ''
+        conectarTiempoReal()
+      }, 5000)
+    }
+
+    // Llegó un cambio: se filtra y se redibuja una sola vez por ráfaga (una
+    // masa escribe su fila y sus renglones casi juntos).
+    function alCambioVivo(tabla, payload) {
+      const nueva = payload?.new && Object.keys(payload.new).length ? payload.new : null
+      const fila = nueva ?? payload?.old ?? null
+      if (!cambioEsDeMiFabrica(tabla, fila, estado.turnosVivos ?? new Set(), estado.unidadId)) return false
+      estado.cambiosVivos = [...(estado.cambiosVivos ?? []), { tabla, fila }]
+      clearTimeout(relojVivo)
+      relojVivo = setTimeout(() => { refrescarVivo() }, 400)
+      return true
+    }
+
+    // Redibuja lo que se está viendo con los cambios acumulados. Lo que se
+    // está ESCRIBIENDO (el PIN, una masa a medio armar, un producto a medio
+    // elegir, el cierre) no se toca: solo se leen de nuevo sus datos.
+    async function refrescarVivo() {
+      const cambios = estado.cambiosVivos ?? []
+      estado.cambiosVivos = []
+      if (!cambios.length) return
+      // Un turno que dejó de estar abierto: la máquina se suelta (la planilla
+      // y la sala), como cuando se cierra desde esta tablet.
+      for (const { tabla, fila } of cambios) {
+        if (tabla !== 'turnos_produccion' || !fila?.id || !fila.estado || fila.estado === 'abierto') continue
+        const eraMia = estado.planilla?.turno?.id === fila.id && estado.planilla.turno.estado === 'abierto'
+        const enSala = estado.salaTurno?.id === fila.id
+        if (!eraMia && !enSala) continue
+        const mirandola = eraMia && ['pr-planilla', 'pr-agregar-prod', 'pr-cierre'].includes(estado.vista)
+        await maquinaCerrada(fila.id)
+        if (mirandola) {
+          mostrarError('Esta planilla se cerró desde otra tablet.')
+          await mostrarTablero()
+        }
+      }
+      await refrescarAbiertas()
+      try {
+        if (estado.vista === 'pr-produccion') await mostrarTablero()
+        else if (estado.vista === 'pr-planilla') await recargarPlanilla()
+        else if (estado.vista === 'pr-sala') await mostrarSala()
+        else if (estado.vista === 'pr-receta') await cargarMasasReceta()
+        else if (estado.vista === 'pr-hist-maq' && estado.histMaq?.turnoId) {
+          // Un cambio de otro no cuenta como un toque en esta pantalla.
+          const toque = estado.ultimoToque
+          await mostrarHistorialMaquina(estado.histMaq.turnoId)
+          estado.ultimoToque = toque
+        }
+        else if (estado.planilla && ['pr-agregar-prod', 'pr-cierre'].includes(estado.vista)) {
+          // Se actualizan los datos sin redibujar lo que se está cargando.
+          const l = await leerPlanilla(estado.planilla.turno.id)
+          estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? estado.planilla.maquinaNombre }
+        }
+      } catch (err) { console.error('tiempo real (redibujar):', err) }
+      pintarLateral()
+      conectarTiempoReal()
+    }
+
+    // UNA VEZ POR SESIÓN, al abrir la planta: el tamaño real de la pantalla.
+    // Así se supo que la tablet de Nuss mide 1007 × 604 y no 1280 × 800.
+    function textoPantalla(win = window) {
+      const w = Math.round(win.innerWidth ?? 0), h = Math.round(win.innerHeight ?? 0)
+      const dpr = Number(win.devicePixelRatio ?? 1)
+      const orientacion = win.screen?.orientation?.type ?? (w >= h ? 'landscape' : 'portrait')
+      const instalada = !!win.matchMedia?.('(display-mode: standalone)')?.matches
+      // Con "px" pegado: limpiarTexto() de js/salud.js tapa los números sueltos
+      // de 4 cifras (por los PIN), y "1000" llegaba como "#".
+      return { mensaje: `${w}px × ${h}px · DPR ${Math.round(dpr * 100) / 100} · ${orientacion}`, detalle: JSON.stringify({ ancho: `${w}px`, alto: `${h}px`, dpr, orientacion, instalada }) }
+    }
+
+    function registrarPantalla(win = window) {
+      if (leerSesion('produccion.pantalla') === '1') return false
+      guardarSesion('produccion.pantalla', '1')
+      const t = textoPantalla(win)
+      registrarError({ evento: 'pantalla', mensaje: t.mensaje, detalle: t.detalle })
+      return true
     }
 
     async function init() {
@@ -9510,6 +9740,8 @@
       // MASA sin haberlo medido.
       await refrescarAbiertas()
       siguientePaso()
+      registrarPantalla()
+      conectarTiempoReal()
     }
 
     init()
