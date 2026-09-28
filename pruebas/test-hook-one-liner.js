@@ -29,6 +29,9 @@ const BLOQUEA = [
   ['node -p con renameSync', `node -p "require('fs').renameSync('a','b')"`],
   ['node.exe -e después de un cd', `cd x && node.exe -e "fs.writeFileSync(f, s)"`],
   ['py -c con os.remove', `py -c "import os; os.remove('a')"`],
+  ['python - <<EOF que escribe', "python - <<'EOF'\nopen('a.html','w').write(s)\nEOF"],
+  ['node <<EOF que escribe', "cd x && node <<EOF\nrequire('fs').writeFileSync('a', 'b')\nEOF"],
+  ['python3 -<<EOF que escribe', "python3 -<<\"FIN\"\nfrom pathlib import Path; Path('a').write_text('b')\nFIN"],
 ]
 const DEJA = [
   ['node -e de solo lectura', `node -e "console.log(require('fs').readFileSync('a','utf8').length)"`],
@@ -37,6 +40,8 @@ const DEJA = [
   ['un script de edición en archivo', `node "C:/scratch/editar-x.js"`],
   ['git con writeFileSync en el mensaje', `git commit -m "saca writeFileSync del hook"`],
   ['sin comando', ''],
+  ['un heredoc de python que solo lee', "python - <<'EOF'\nprint(open('a','rb').read().count(bytes([13])))\nEOF"],
+  ['un cat con heredoc (no es un intérprete)', "cat <<EOF > /dev/null\nwriteFileSync\nEOF"],
 ]
 for (const [n, c] of BLOQUEA) {
   const r = bash(c)

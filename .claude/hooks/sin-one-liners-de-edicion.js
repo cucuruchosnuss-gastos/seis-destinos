@@ -13,6 +13,10 @@
 'use strict'
 
 const ONE_LINER = /(?:^|[\s;&|(])(?:node(?:\.exe)?\s+(?:[^\n]*?\s)?(?:-e|--eval|-p|--print)\b|(?:python3?|py)(?:\.exe)?\s+(?:[^\n]*?\s)?-c\b)/i
+// El mismo problema con el script pasado por un heredoc: `python - <<'EOF'`,
+// `node <<EOF`, `python3 -<<EOF` (28/09/2026: un subagente editó así y el hook
+// no lo vio).
+const HEREDOC = /(?:^|[\s;&|(])(?:node|python3?|py)(?:\.exe)?(?:\s+-)?\s*<<-?\s*['"]?\w+/i
 
 const ESCRIBE = [
   /\bwriteFileSync\b/, /\bappendFileSync\b/, /\bwriteFile\s*\(/, /\bappendFile\s*\(/,
@@ -22,7 +26,7 @@ const ESCRIBE = [
 ]
 
 function motivo(comando) {
-  if (typeof comando !== 'string' || !ONE_LINER.test(comando)) return null
+  if (typeof comando !== 'string' || !(ONE_LINER.test(comando) || HEREDOC.test(comando))) return null
   const hit = ESCRIBE.find(re => re.test(comando))
   if (!hit) return null
   return 'Bloqueado por el hook sin-one-liners-de-edicion: este `node -e` / `python -c` escribe un archivo. '

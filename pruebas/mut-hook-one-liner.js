@@ -13,6 +13,8 @@ correrMutaciones({
     { nombre: 'bloquea también lo de solo lectura', de: "  if (!hit) return null\n", a: '' },
     { nombre: 'no reconoce python -c', de: '|(?:python3?|py)(?:\\.exe)?\\s+(?:[^\\n]*?\\s)?-c\\b', a: '' },
     { nombre: 'el mensaje no remite a la skill', de: 'Seguí la skill editar-archivos', a: 'Seguí las reglas' },
+    { nombre: 'no mira los heredocs', de: '!(ONE_LINER.test(comando) || HEREDOC.test(comando))', a: '!ONE_LINER.test(comando)' },
+    { nombre: 'un heredoc de cualquier programa cuenta', de: '(?:node|python3?|py)(?:\\.exe)?(?:\\s+-)?\\s*<<', a: '\\w+(?:\\.exe)?(?:\\s+-)?\\s*<<' },
     { nombre: 'una entrada rota traba la sesión', de: 'try { j = JSON.parse(entrada) } catch { process.exit(0) }', a: 'try { j = JSON.parse(entrada) } catch { process.exit(2) }' },
   ],
 })
