@@ -90,9 +90,12 @@ function regla(selector) {
     chk(`${que}: en naranja`, r.i !== -1 && /var\(--naranja\)/.test(r.cuerpo), sel)
     chk(`${que}: sin el amarillo ni el gris de modo`, r.i !== -1 && !/--pr-masa-|--pr-prod-/.test(r.cuerpo), r.cuerpo)
   }
-  chk('la barra de modos SIGUE con los colores de modo (el fondo se mantiene)',
-    /var\(--pr-masa-activo\)/.test(regla('    .pr-modo--masa[aria-pressed="true"]').cuerpo) &&
-    /var\(--pr-prod-activo\)/.test(regla('    .pr-modo[aria-pressed="true"]').cuerpo))
+  // (28/09/2026) La barra de modos de arriba se fue: el color del modo vive
+  // ahora en el botón de la barra lateral que lleva al OTRO modo.
+  // Ese bloque va DESPUÉS del compacto, así que se busca en todo el CSS.
+  chk('el botón al otro modo SIGUE con los colores de modo',
+    /\n    \.pr-lat__otro--masa \{[^}]*var\(--pr-masa-activo\)/.test(CSS) &&
+    /\n    \.pr-lat__otro--produccion \{[^}]*var\(--pr-prod-activo\)/.test(CSS))
   chk('el fondo de pantalla sigue siendo el del modo',
     /body\.pr-modo-produccion \{ background-color: var\(--pr-prod-fondo\); \}/.test(CSS) &&
     /body\.pr-modo-masa\s+\{ background-color: var\(--pr-masa-fondo\); \}/.test(CSS))

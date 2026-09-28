@@ -8,15 +8,16 @@ const { correrMutacionesProduccion } = require('./mutar-produccion')
 correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-sesion.js'),
   escape: 'esc',
-  funciones: ['htmlMaseroAdentro', 'htmlQuienEnBarra'],
+  funciones: ['htmlMaseroAdentro', 'htmlLatPersona'],
   equivalentes: [
-    { expr: "esc(ROL_DE_MODO[estado.modo] ?? '')", motivo: 'ROL_DE_MODO es una constante del código ("Encargado" / "Masero"): sin esc() sale idéntico' },
+    { expr: "esc(TITULO_DE_MODO[estado.modo] ?? '')", motivo: 'TITULO_DE_MODO es una constante del código ("Producción" / "Sala de masa"): sin esc() sale idéntico' },
+    { expr: 'esc(puestoEnLateral())', motivo: 'puestoEnLateral() devuelve un literal del código ("Acceso maestro" o ROL_DE_MODO): sin esc() sale idéntico' },
   ],
   manuales: [
     // a) Una persona por modo.
     { nombre: 'cambiar de modo borra a las dos (el bug del 24/09)', de: "      estado.quienOtra = false\n      // Con el acceso maestro activo se entra sin volver a poner el PIN, y\n      // todo lo que se haga queda a nombre del maestro.\n      if (estado.maestro) return entrarComoMaestro(modo)", a: "      estado.quienOtra = false\n      olvidarTodas()\n      if (estado.maestro) return entrarComoMaestro(modo)" },
     { nombre: 'una sola clave para los dos modos', de: '      return `${CLAVE_PERSONA}.${modo}`', a: '      return CLAVE_PERSONA' },
-    { nombre: 'Salir saca a las dos', de: '      olvidarPersona(estado.modo)\n      estado.quienOtra = false\n      return mostrarQuien()', a: '      olvidarTodas()\n      estado.quienOtra = false\n      return mostrarQuien()' },
+    { nombre: 'Salir saca a las dos', de: '      olvidarPersona(estado.modo)\n      estado.volverA = null\n      estado.quienOtra = false\n      if (estado.modo', a: "      olvidarPersona(estado.modo)\n      guardarSesion(clavePersona(OTRO_MODO[estado.modo]), null)\n      estado.volverA = null\n      estado.quienOtra = false\n      if (estado.modo" },
     // b) Con persona guardada, solo el PIN.
     { nombre: 'la persona guardada se ignora (vuelve la lista)', de: '      const guardada = estado.quienOtra ? null : personaGuardada(estado.modo)', a: '      const guardada = null' },
     { nombre: 'con persona guardada no se abre su PIN', de: "        estado.pin = nuevoPanelPin('persona', guardada, PUESTO_DE_MODO[estado.modo])\n", a: '' },
@@ -24,8 +25,12 @@ correrMutacionesProduccion({
     { nombre: '"Soy otra persona" no suelta a la guardada', de: '      tocar()\n      estado.quienOtra = true\n      return mostrarQuien()', a: '      tocar()\n      return mostrarQuien()' },
     { nombre: 'el nombre fijo por innerHTML', de: "      document.getElementById('pr-quien-fija-texto').textContent = f ?", a: "      document.getElementById('pr-quien-fija-texto').innerHTML = f ?" },
     // Inactividad.
-    { nombre: 'la inactividad no olvida al encargado guardado', de: "      tocar()\n      olvidarPersona('produccion')\n      if (habiaPersona) salir()", a: "      tocar()\n      if (habiaPersona) salir()" },
-    { nombre: 'la inactividad también saca al masero', de: "      tocar()\n      olvidarPersona('produccion')\n      if (habiaPersona) salir()", a: "      tocar()\n      olvidarPersona('produccion')\n      olvidarPersona('masa')\n      if (habiaPersona) salir()" },
+    // (28/09/2026) Decisión de Facu: Producción deja a la persona ELEGIDA, y
+    // en Sala de masa no se toca nada.
+    { nombre: 'la inactividad en Producción olvida al encargado guardado', de: '      estado.volverA = null\n      estado.persona = null\n      estado.pin = null\n      estado.quienOtra = false\n      // mostrarQuien trae', a: "      estado.volverA = null\n      olvidarPersona('produccion')\n      estado.pin = null\n      estado.quienOtra = false\n      // mostrarQuien trae" },
+    { nombre: 'la inactividad en Producción también saca al masero', de: '      estado.volverA = null\n      estado.persona = null\n      estado.pin = null\n      estado.quienOtra = false\n      // mostrarQuien trae', a: "      estado.volverA = null\n      guardarSesion(clavePersona('masa'), null)\n      estado.persona = null\n      estado.pin = null\n      estado.quienOtra = false\n      // mostrarQuien trae" },
+    { nombre: 'la inactividad en Sala de masa olvida al encargado guardado', de: "        if (!estado.maestro) return false\n        tocar()", a: "        guardarSesion(clavePersona('produccion'), null)\n        if (!estado.maestro) return false\n        tocar()" },
+    { nombre: 'la inactividad en Sala de masa saca al masero', de: "      if (estado.modo === 'masa') {\n        if (!estado.maestro) return false", a: "      if (estado.modo === 'masa') {\n        estado.persona = null\n        if (!estado.maestro) return false" },
     // c) Sacar al masero.
     { nombre: 'cualquiera puede sacar al masero', de: "      return !!estado.maestro || (estado.modo === 'produccion' && !!estado.persona)", a: '      return true' },
     { nombre: 'el maestro no puede sacarlo', de: "      return !!estado.maestro || (estado.modo === 'produccion' && !!estado.persona)", a: "      return estado.modo === 'produccion' && !!estado.persona" },
@@ -51,9 +56,9 @@ correrMutacionesProduccion({
     { nombre: 'el aviso de siempre sin reintentar', de: "el encargado tiene que abrir el turno. ' + AVISO_SALA_REINTENTAR + '</div>'", a: "el encargado tiene que abrir el turno.</div>'" },
     { nombre: 'el error sin reintentar', de: "Revisá la conexión. ' + AVISO_SALA_REINTENTAR + '</div>'", a: "Revisá la conexión.</div>'" },
     { nombre: 'Volver a intentar no se escucha', de: "        if (ev.target.closest('#pr-sala-volver-intentar')) mostrarSala()", a: '        void ev' },
-    // g) Tocá para entrar.
-    { nombre: 'vuelve "Nadie adentro"', de: '<button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar</button>', a: '<div class="pr-barra__nadie">Nadie adentro</div>' },
-    { nombre: 'Tocá para entrar no abre nada', de: "        if (ev.target.closest('#pr-btn-entrar')) { tocar(); estado.quienOtra = false; mostrarQuien(); return }\n", a: '' },
+    // g) Sin nadie adentro: "¿Quién sos?" a pantalla completa, sin barra.
+    { nombre: 'la barra se ve sin nadie adentro', de: "      return enModoTablet() && !!estado.persona && estado.vista", a: '      return enModoTablet() && estado.vista' },
+    { nombre: 'la barra se ve en "¿Quién sos?"', de: " && estado.vista !== 'pr-quien' && estado.vista !== 'pr-inicio'", a: " && estado.vista !== 'pr-inicio'" },
     // h) Unidad.
     // (25/09/2026) Las de elegir y cambiar de fábrica se fueron: la tablet trae
     // SU fábrica (mi_sesion_produccion). La que queda: el arranque la toma de ahí.

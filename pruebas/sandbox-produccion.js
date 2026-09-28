@@ -225,7 +225,11 @@ const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unid
   // "Configuración" con su burbuja y la fila de pestañas (el menú nombra
   // cada sección y lleva el número de conos al lado de "Marcas / Conos").
   // accionDelMenu era el "Menú" viejo: cada renglón nuevo lleva a su sección.
-  'htmlBotonConfig', 'abrirConfigDesdeAcceso', 'htmlPestanasConfig', 'contarPendientesMarcas', 'accionDelMenu']
+  'htmlBotonConfig', 'abrirConfigDesdeAcceso', 'htmlPestanasConfig', 'contarPendientesMarcas', 'accionDelMenu',
+  // Se fueron con la planta con dos modos (28/09/2026): la barra de modos de
+  // arriba la reemplazó la barra lateral; el acceso maestro quedó solo en el
+  // pie de "¿Quién sos?" de Producción.
+  'htmlQuienEnBarra', 'htmlBarraModos', 'pintarBarra', 'htmlMaestroEnBarra']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
@@ -235,12 +239,19 @@ const NUEVAS_PLANTA = [
   'estadoPinPlanta', 'personasParaAsignar', 'htmlPersonaAsignar', 'htmlTecladoAsignar', 'abrirAsignarPin',
   'pintarAsignarPin', 'elegirPersonaAsignar', 'teclaAsignar', 'volverAsignarPin', 'cerrarAsignarPin',
   'confirmarAsignarPin',
+  // La planta con dos modos (28/09/2026): la barra lateral y la banda de
+  // "¿Quién sos?".
+  'puedeCambiarSinPin', 'htmlBotonOtroModo', 'puestoEnLateral', 'htmlLatPersona', 'maquinaElegida',
+  'htmlLatMaquina', 'htmlLatSecciones', 'htmlLatSala', 'htmlLatConexion', 'htmlLateral', 'lateralVisible',
+  'pintarLateral', 'htmlBandaQuien', 'pintarBandaQuien', 'cancelarOtroModo', 'cambiarDePersona',
+  'irASeccion', 'abrirLoProducido', 'mostrarHistorialMaquina',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
 const CONST_SOLO_GESTION = ['PESTANAS_CONFIG', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION', 'CONDICIONES_EMPAQUE']
-const CONST_NUEVAS_PLANTA = ['LINKS_SIN_SESION']
+const CONST_NUEVAS_PLANTA = ['LINKS_SIN_SESION',
+  'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

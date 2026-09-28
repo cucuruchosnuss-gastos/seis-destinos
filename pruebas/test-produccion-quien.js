@@ -79,31 +79,33 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   chk('lo que no coincide no aparece', S.personasFiltradas(PERSONAL, 'zzz').length === 0)
 }
 
-// ── LA BARRA DE MODOS ─────────────────────────────────────────────────────
+// ── LA BARRA LATERAL Y EL BOTÓN AL OTRO MODO (la planta con dos modos) ────
 {
   const S = armar()
   S.estado.modo = 'produccion'
+  S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
 
   // Sin saber todavía si hay máquinas abiertas: NO se deshabilita.
   S.estado.abiertasConocido = false
   S.estado.hayTurnoAbierto = false
   chk('sin haberlo medido, SALA DE MASA no se deshabilita', S.salaDeshabilitada() === false)
-  chk('… y el botón no dice que falta abrir el turno', !/El encargado tiene que abrir el turno/.test(S.htmlBarraModos()))
+  const sinMedir = S.htmlBotonOtroModo()
+  chk('… y el botón no va apagado', !/disabled/.test(sinMedir) && !/abrí una máquina/.test(sinMedir), sinMedir)
 
-  // Medido y sin ninguna abierta: deshabilitada, con la leyenda.
+  // Medido y sin ninguna abierta: apagado, con la leyenda adentro.
   S.estado.abiertasConocido = true
   chk('sin máquinas abiertas: SALA DE MASA deshabilitada', S.salaDeshabilitada() === true)
-  const off = S.htmlBarraModos()
-  chk('… el botón va disabled', /data-modo="masa"[^>]*disabled/.test(off), off)
-  chk('… con la leyenda adentro del mismo botón', /El encargado tiene que abrir el turno/.test(off))
-  chk('… y PRODUCCIÓN sigue habilitada', /data-modo="produccion"[^>]*>PRODUCCIÓN/.test(off) && !/data-modo="produccion"[^>]*disabled/.test(off))
+  const off = S.htmlBotonOtroModo()
+  chk('… el botón al otro modo va disabled', /data-modo="masa" disabled/.test(off), off)
+  chk('… con la leyenda adentro del mismo botón', /abrí una máquina/.test(off))
 
   // Con una abierta: se habilita sola.
   S.marcarAbiertas(true)
   chk('con una máquina abierta se habilita', S.salaDeshabilitada() === false)
-  const on = S.htmlBarraModos()
-  chk('… sin disabled', !/data-modo="masa"[^>]*disabled/.test(on))
-  chk('… y sin la leyenda', !/El encargado tiene que abrir el turno/.test(on))
+  const on = S.htmlBotonOtroModo()
+  chk('… sin disabled', !/disabled/.test(on))
+  chk('… lleva a Sala de masa y dice que pide el PIN del masero', /Ir a Sala de masa/.test(on) && /PIN del masero/.test(on))
+  chk('… con el tono de SALA DE MASA (el modo al que lleva)', /pr-lat__otro--masa/.test(on))
   // En un sandbox NUEVO: si el dato ya viniera puesto, esta assertion no
   // estaría mirando lo que marcarAbiertas() hace.
   const N = armar()
@@ -111,56 +113,142 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   N.marcarAbiertas(true)
   chk('marcarAbiertas deja el dato como conocido', N.estado.abiertasConocido === true && N.estado.hayTurnoAbierto === true)
 
-  // El modo activo se marca con aria-pressed, no solo con color.
-  chk('PRODUCCIÓN activo: aria-pressed true', /data-modo="produccion" aria-pressed="true"/.test(on))
-  chk('SALA DE MASA apagado: aria-pressed false', /data-modo="masa" aria-pressed="false"/.test(on))
+  // El modo en el que se está NO se repite: el botón lleva adonde no estás.
+  chk('en Producción hay UN solo botón de modo y es el de Sala de masa',
+    (on.match(/data-modo=/g) || []).length === 1 && /data-modo="masa"/.test(on))
   S.estado.modo = 'masa'
-  chk('cambia el marcado con el modo', /data-modo="masa" aria-pressed="true"/.test(S.htmlBarraModos()))
+  const aProd = S.htmlBotonOtroModo()
+  chk('en Sala de masa lleva a Producción, con su tono y el PIN del encargado',
+    /data-modo="produccion"/.test(aProd) && /pr-lat__otro--produccion/.test(aProd) && /Ir a Producción/.test(aProd) && /PIN del encargado/.test(aProd))
+  chk('… y nunca va apagado (Producción no depende de las máquinas)', !/disabled/.test(aProd))
 
-  // Sin nadie adentro no hay Salir: hay una invitación a entrar, tocable
-  // (terminar la tablet, parte 2: "Nadie adentro" no invitaba a nada).
-  S.estado.persona = null
-  chk('sin nadie adentro: "Tocá para entrar", tocable, y sin Salir',
-    /<button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar<\/button>/.test(S.htmlBarraModos()) &&
-    !/Nadie adentro/.test(S.htmlBarraModos()) && !/pr-btn-salir/.test(S.htmlBarraModos()))
+  // Quién está adentro, con su puesto y la unidad, y los dos botones del pie.
   S.estado.persona = { id: 'e-masero', nombre: 'Juan Masero', puesto: 'masero' }
-  const conNadie = S.htmlBarraModos()
-  chk('con alguien adentro: el rol y el nombre', /Masero:/.test(conNadie) && /Juan Masero/.test(conNadie))
-  chk('… la unidad debajo', /Cucuruchos Nuss/.test(conNadie))
-  chk('… y el botón Salir', /id="pr-btn-salir"/.test(conNadie))
+  const lat = S.htmlLateral()
+  chk('la barra dice el modo y quién está', /Sala de masa/.test(lat) && /Juan Masero/.test(lat))
+  chk('… el puesto y la unidad', /Masero · Cucuruchos Nuss/.test(lat), lat)
+  chk('… "Cambiar de persona" y "Salir"', /id="pr-lat-cambiar"/.test(lat) && /id="pr-btn-salir"/.test(lat))
   S.estado.modo = 'produccion'
-  chk('el rol sale del modo', /Encargado:/.test(S.htmlBarraModos()))
+  S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
+  chk('el puesto sale del modo', /Encargado · /.test(S.htmlLateral()))
+
+  // Si la persona tiene TAMBIÉN el puesto del otro modo, pasa sin PIN.
+  S.estado.personal = [{ id: 'e-fede', nombre: 'Federico Silva', puestos: ['encargado', 'masero'], puestos_temporales: [] }]
+  chk('el encargado que también es masero pasa sin PIN', S.puedeCambiarSinPin('masa') === true &&
+    /sin volver a poner el PIN/.test(S.htmlBotonOtroModo()))
+  S.estado.personal = [{ id: 'e-fede', nombre: 'Federico Silva', puestos: ['encargado'], puestos_temporales: [] }]
+  chk('… y el que no, pone el PIN del masero', S.puedeCambiarSinPin('masa') === false)
+  S.estado.personal = []
+  chk('… sin saber sus puestos, tampoco se saltea el PIN', S.puedeCambiarSinPin('masa') === false)
 }
 
-// ── El fondo de toda la pantalla cambia con el modo ───────────────────────
+// ── Las secciones de Producción ───────────────────────────────────────────
+{
+  const S = armar()
+  S.estado.modo = 'produccion'
+  S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
+  S.estado.vista = 'pr-produccion'
+  const sinMaq = S.htmlLatSecciones()
+  chk('las cinco secciones, en orden', /Inicio[\s\S]*Abrir turno[\s\S]*Lo producido[\s\S]*Paradas[\s\S]*Cerrar planilla/.test(sinMaq))
+  chk('Inicio marcada en el tablero', /data-seccion="inicio" aria-current="page"/.test(sinMaq))
+  chk('sin máquina elegida las tres de máquina van apagadas',
+    /data-seccion="producido" disabled/.test(sinMaq) && /data-seccion="paradas" disabled/.test(sinMaq) && /data-seccion="cierre" disabled/.test(sinMaq))
+  chk('… y Abrir turno no', !/data-seccion="abrir"[^>]*disabled/.test(sinMaq))
+  chk('sin máquina elegida lo dice en un recuadro', /Tocá una máquina/.test(S.htmlLatMaquina()))
+  S.estado.planilla = { turno: { id: 't1', lote: 7033, turno: 'Mañana' }, maquinaNombre: 'Máquina 1', paradas: [] }
+  S.estado.vista = 'pr-planilla'
+  const conMaq = S.htmlLatSecciones()
+  chk('con máquina, las de máquina se prenden', !/disabled/.test(conMaq))
+  chk('la planilla marca Paradas', /data-seccion="paradas" aria-current="page"/.test(conMaq))
+  const maq = S.htmlLatMaquina()
+  chk('la máquina elegida con su lote y su turno', /Máquina 1/.test(maq) && /Lote 7033/.test(maq) && /Turno Mañana/.test(maq))
+  S.estado.planilla.paradas = [{ id: 'p', inicio: '2026-09-28T10:00:00Z', fin: null, motivo: 'x' }]
+  chk('parada: la máquina en bordó y Paradas dice "en curso"',
+    /pr-lat__maq--parada/.test(S.htmlLatMaquina()) && /en curso/.test(S.htmlLatSecciones()))
+}
+
+// ── Sala de masa: las máquinas abiertas en la barra ───────────────────────
+{
+  const S = armar()
+  S.estado.modo = 'masa'
+  S.estado.vista = 'pr-sala'
+  S.estado.tablero = [
+    { maquina: { id: 'm1', nombre: 'Máquina 1' }, turno: { id: 't1', lote: 7033 }, masas: 4, parada: null },
+    { maquina: { id: 'm2', nombre: 'Máquina 2' }, turno: { id: 't2', lote: 7034 }, masas: 1, parada: { id: 'p' } },
+    { maquina: { id: 'm3', nombre: 'Máquina 3' }, turno: null, masas: 0, parada: null },
+  ]
+  const sala = S.htmlLatSala()
+  chk('Inicio primero, marcado en el inicio de la sala', /data-seccion="sala-inicio" aria-current="page"/.test(sala))
+  chk('una fila por máquina ABIERTA', /data-lateral-turno="t1"/.test(sala) && /data-lateral-turno="t2"/.test(sala) && !/Máquina 3/.test(sala))
+  chk('con su lote y cuántas masas lleva', /Lote 7033/.test(sala) && /aria-label="4 masas">4</.test(sala))
+  chk('la parada dice "Parada" en vez del lote', /pr-lat__maq-fila--parada/.test(sala) && /Parada/.test(sala))
+  S.estado.vista = 'pr-receta'
+  S.estado.salaTurno = { id: 't1' }
+  chk('la máquina con la que se trabaja queda marcada', /data-lateral-turno="t1" aria-current="true"/.test(S.htmlLatSala()))
+  S.estado.tablero = []
+  chk('sin máquinas abiertas lo dice', /Sin máquinas abiertas/.test(S.htmlLatSala()))
+}
+
+// ── La banda de "¿Quién sos?" ─────────────────────────────────────────────
+{
+  const S = armar()
+  S.estado.modo = 'produccion'
+  S.estado.abiertasConocido = true
+  S.estado.hayTurnoAbierto = true
+  const b = S.htmlBandaQuien()
+  chk('Producción: la banda grafito con su nombre', /pr-banda-modo--produccion/.test(b) && /PRODUCCIÓN/.test(b))
+  chk('… y "Ir a Sala de masa" (el masero no necesita al encargado)', /id="pr-quien-ir-masa"/.test(b) && !/id="pr-quien-ir-masa" disabled/.test(b))
+  S.estado.hayTurnoAbierto = false
+  chk('sin máquinas abiertas, "Ir a Sala de masa" va apagado con la leyenda',
+    /id="pr-quien-ir-masa" disabled/.test(S.htmlBandaQuien()) && /todavía no hay máquinas abiertas/.test(S.htmlBandaQuien()))
+  S.estado.abiertasConocido = false
+  chk('sin haberlo medido, va prendido', !/disabled/.test(S.htmlBandaQuien()))
+  S.estado.modo = 'masa'
+  const m = S.htmlBandaQuien()
+  chk('Sala de masa: la banda amarilla con "Cancelar"', /pr-banda-modo--masa/.test(m) && /SALA DE MASA/.test(m) && /id="pr-quien-cancelar"/.test(m))
+  S.estado.pin = { modo: 'maestro' }
+  const x = S.htmlBandaQuien()
+  chk('el acceso maestro trae su banda blanca con "Volver"', /pr-banda-modo--maestro/.test(x) && /ACCESO MAESTRO/.test(x) && /id="pr-quien-volver"/.test(x))
+}
+
+// ── La barra se ve SOLO con alguien adentro, y el fondo es el común ───────
 {
   const S = armar()
   S.estado.modo = 'produccion'
   S.estado.vista = 'pr-quien'
-  S.pintarBarra()
+  S.pintarLateral()
+  chk('en "¿Quién sos?" no hay barra (es pantalla completa)', S.__doc.getElementById('pr-barra').hidden === true)
+  chk('… y la página no se corre', !S.__body.classList.contains('pr-con-lateral'))
   chk('modo Producción: el body toma su clase',
     S.__body.classList.contains('pr-modo-produccion') && !S.__body.classList.contains('pr-modo-masa'))
+  S.estado.vista = 'pr-produccion'
+  S.pintarLateral()
+  chk('sin nadie adentro no hay barra, aunque sea una pantalla del modo', S.__doc.getElementById('pr-barra').hidden === true)
+  S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
+  S.estado.vista = 'pr-quien'
+  S.pintarLateral()
+  chk('con alguien guardado pero en "¿Quién sos?", tampoco', S.__doc.getElementById('pr-barra').hidden === true)
+  S.estado.vista = 'pr-produccion'
+  S.pintarLateral()
+  chk('con alguien adentro la barra se ve', S.__doc.getElementById('pr-barra').hidden === false)
+  chk('… y la página se corre', S.__body.classList.contains('pr-con-lateral'))
   S.estado.modo = 'masa'
-  S.pintarBarra()
+  S.pintarLateral()
   chk('modo Sala de masa: el body toma la otra',
     S.__body.classList.contains('pr-modo-masa') && !S.__body.classList.contains('pr-modo-produccion'))
-  chk('la barra se ve en la tablet', S.__doc.getElementById('pr-barra').hidden === false)
-  // Las pantallas de oficina se fueron a la gestión (25/09/2026). En la
-  // planta, sin fábrica no hay tablet: ni barra ni color de modo.
   S.estado.unidadId = null
-  S.pintarBarra()
-  chk('sin fábrica no hay barra ni color de modo',
+  S.pintarLateral()
+  chk('sin fábrica no hay barra ni clase de modo',
     S.__doc.getElementById('pr-barra').hidden === true &&
     !S.__body.classList.contains('pr-modo-masa') && !S.__body.classList.contains('pr-modo-produccion'))
 
-  // Los dos colores de modo viven como variables del módulo, no como hex sueltos.
   const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
   chk('los colores de modo son variables del body', /--pr-prod-activo:\s*#3F4655/.test(css) && /--pr-masa-activo:\s*#F3D774/.test(css))
-  chk('el fondo de pantalla de cada modo es una variable', /--pr-prod-fondo:\s*#E4E7EC/.test(css) && /--pr-masa-fondo:\s*#FBF4D9/.test(css))
-  chk('el fondo del body cambia con la clase de modo',
-    /body\.pr-modo-produccion\s*\{\s*background-color: var\(--pr-prod-fondo\)/.test(css) &&
-    /body\.pr-modo-masa\s*\{\s*background-color: var\(--pr-masa-fondo\)/.test(css))
-  chk('el deshabilitado va PUNTEADO, no solo de otro color', /\.pr-modo:disabled\s*\{[^}]*dashed var\(--pr-off-borde\)/.test(css))
+  chk('el fondo es el COMÚN de la app en los dos modos (el tono va en la banda y el botón)',
+    /body\.pagina-modulo\.pr-modo-produccion, body\.pagina-modulo\.pr-modo-masa \{ background-color: var\(--color-superficie\); \}/.test(css))
+  chk('el botón apagado va PUNTEADO, no solo de otro color', /\.pr-lat__otro:disabled \{[^}]*dashed/.test(css) && /\.pr-banda-modo__ir:disabled \{[^}]*dashed/.test(css))
+  chk('la barra mide 240 px y la página se corre lo mismo', /\.pr-lateral \{[^}]*width: 240px/.test(css) && /body\.pr-con-lateral \.pr-app \{ margin-left: 240px/.test(css))
+  chk('los ítems de la barra miden 52 px', /\.pr-lat__item \{[^}]*min-height: 52px/.test(css))
   chk('donde el hex ya tiene nombre se usa la variable de main.css',
     /--pr-prod-letra:\s*var\(--color-fondo\)/.test(css) && !/#FDEEE4/.test(css) && !/#7A2E42/.test(css))
 }
@@ -255,7 +343,13 @@ esperas.push((async () => {
   X.estado.unidades = new Map([['u-cn', marca('unidadNombre')]])
   X.estado.modo = 'produccion'
   X.estado.persona = { id: 'e', nombre: marca('personaNombre'), puesto: 'encargado' }
-  chequearMarcas(chk, 'barra de modos', X.htmlBarraModos(), ['unidadNombre', 'personaNombre'])
+  chequearMarcas(chk, 'barra lateral', X.htmlLateral(), ['unidadNombre', 'personaNombre'])
+  // … y el nombre de una máquina y su lote, en la barra de Producción y en la de Sala de masa.
+  X.estado.planilla = { turno: { id: marca('turnoId'), lote: marca('lote'), turno: marca('turno') }, maquinaNombre: marca('maquina'), paradas: [] }
+  chequearMarcas(chk, 'barra: la máquina elegida', X.htmlLatMaquina(), ['lote', 'turno', 'maquina'])
+  X.estado.modo = 'masa'
+  X.estado.tablero = [{ maquina: { id: 'm', nombre: marca('maqSala') }, turno: { id: marca('idSala'), lote: marca('loteSala') }, masas: 2, parada: null }]
+  chequearMarcas(chk, 'barra: las máquinas de la sala', X.htmlLatSala(), ['maqSala', 'idSala', 'loteSala'])
 
   // "¿En qué fábrica está esta tablet?" no existe más (25/09/2026): la cuenta
   // del dispositivo trae SU fábrica.
@@ -352,40 +446,79 @@ esperas.push((async () => {
 })())
 
 // ── Se cierra sola por inactividad: Producción sí, Sala de masa NO ───────
+// Decisión de Facu (28/09/2026): 10 minutos, y Producción OLVIDA a la persona
+// pero la deja elegida (vuelve a "¿Quién sos?" con su nombre puesto, solo el
+// PIN). Sala de masa no se cierra nunca: si a los 10 minutos la tablet está en
+// Sala de masa, no se toca nada.
 esperas.push((async () => {
   const S = armar()
-  chk('el corte son 15 minutos', S.MINUTOS_INACTIVIDAD === 15)
+  chk('el corte son 10 minutos', S.MINUTOS_INACTIVIDAD === 10)
   chk('recién tocada no vence', S.vencioPorInactividad(Date.now()) === false)
-  chk('a los 14 minutos no vence', S.vencioPorInactividad(1000000, 1000000 + 14 * 60000) === false)
-  chk('a los 15 vence', S.vencioPorInactividad(1000000, 1000000 + 15 * 60000) === true)
+  chk('a los 9 minutos no vence', S.vencioPorInactividad(1000000, 1000000 + 9 * 60000) === false)
+  chk('a los 10 vence', S.vencioPorInactividad(1000000, 1000000 + 10 * 60000) === true)
   chk('sin ningún toque registrado no vence', S.vencioPorInactividad(null) === false)
 
+  const fede = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
+  const juan = { id: 'e-masero', nombre: 'Juan Masero', puesto: 'masero' }
   S.estado.modo = 'produccion'
-  S.estado.persona = { id: 'e-fede', nombre: 'F', puesto: 'encargado' }
+  S.guardarSesion(S.clavePersona('produccion'), JSON.stringify(fede))
+  S.guardarSesion(S.clavePersona('masa'), JSON.stringify(juan))
+  S.estado.persona = fede
+  S.estado.vista = 'pr-produccion'
   S.estado.ultimoToque = 1000
-  chk('Producción se cierra sola', S.revisarInactividad(1000 + 16 * 60000) === true)
+  chk('a los 9 minutos Producción NO se cierra', S.revisarInactividad(1000 + 9 * 60000) === false && S.estado.persona?.id === 'e-fede')
+  chk('Producción se cierra sola a los 10', S.revisarInactividad(1000 + 10 * 60000) === true)
   chk('… y echa a la persona', S.estado.persona === null)
+  await new Promise(r => setTimeout(r, 0))
+  chk('… vuelve a "¿Quién sos?" de Producción', S.estado.vista === 'pr-quien' && S.estado.modo === 'produccion')
+  chk('… con la persona YA ELEGIDA: solo pone el PIN', S.estado.quienFija?.id === 'e-fede' && S.estado.pin?.personaId === 'e-fede')
+  chk('… sin la lista de nombres', S.__doc.getElementById('pr-quien-lista').hidden === true)
+  chk('… la persona de Producción NO se borra de la tablet', S.personaGuardada('produccion')?.id === 'e-fede')
+  chk('… y el masero de Sala de masa tampoco', S.personaGuardada('masa')?.id === 'e-masero')
 
   const T = armar()
   T.estado.modo = 'masa'
-  T.estado.persona = { id: 'e-masero', nombre: 'J', puesto: 'masero' }
+  T.guardarSesion(T.clavePersona('produccion'), JSON.stringify(fede))
+  T.guardarSesion(T.clavePersona('masa'), JSON.stringify(juan))
+  T.estado.persona = juan
+  T.estado.vista = 'pr-receta'
   T.estado.ultimoToque = 1000
+  const rpcAntes = T.__llamadas.rpc.length
   chk('Sala de masa NO se cierra sola', T.revisarInactividad(1000 + 60 * 60000) === false)
-  chk('… la persona sigue adentro', T.estado.persona?.id === 'e-masero')
+  chk('… el masero sigue adentro', T.estado.persona?.id === 'e-masero')
+  chk('… la pantalla no cambia', T.estado.vista === 'pr-receta')
+  chk('… no se toca a NADIE: ni el masero ni el encargado guardado',
+    T.personaGuardada('masa')?.id === 'e-masero' && T.personaGuardada('produccion')?.id === 'e-fede')
+  chk('… y no se consulta nada', T.__llamadas.rpc.length === rpcAntes)
 
-  // El maestro sí se cierra, esté en el modo que esté.
+  // El maestro sí se cierra, esté en el modo que esté: es una llave de
+  // administración con su PIN en memoria.
   const U = armar()
   U.estado.modo = 'masa'
+  U.guardarSesion(U.clavePersona('masa'), JSON.stringify(juan))
   U.estado.maestro = { id: 'e-jefe', nombre: 'Jefa' }
   U.estado.persona = { id: 'e-jefe', nombre: 'Jefa', puesto: 'masero' }
   U.estado.ultimoToque = 1000
-  chk('el acceso maestro se cierra a los 15 minutos', U.revisarInactividad(1000 + 16 * 60000) === true)
+  chk('el acceso maestro se cierra a los 10 minutos, también en Sala de masa', U.revisarInactividad(1000 + 10 * 60000) === true)
   chk('… y deja de estar activo', U.estado.maestro === null)
+  chk('… el masero guardado sigue guardado', U.personaGuardada('masa')?.id === 'e-masero')
+  chk('… y la tablet sigue en Sala de masa', U.estado.modo === 'masa')
+
+  const W = armar()
+  W.estado.modo = 'produccion'
+  W.estado.maestro = { id: 'e-jefe', nombre: 'Jefa' }
+  W.estado.persona = { id: 'e-jefe', nombre: 'Jefa', puesto: 'encargado' }
+  W.estado.ultimoToque = 1000
+  chk('en Producción el acceso maestro también se cierra', W.revisarInactividad(1000 + 10 * 60000) === true && W.estado.maestro === null)
 })())
 
 // ── Lo que queda escrito en el archivo ────────────────────────────────────
 {
-  chk('la barra tiene los DOS modos como botones', /data-modo="produccion"/.test(FUENTE) && /data-modo="masa"/.test(FUENTE))
+  chk('los DOS modos son alcanzables: el botón de la barra va al otro', /data-modo="\$\{modoDestino\}"/.test(FUENTE) &&
+    /const OTRO_MODO = \{ produccion: 'masa', masa: 'produccion' \}/.test(FUENTE))
+  chk('la barra de modos de arriba no existe más', !/htmlBarraModos|pintarBarra\(/.test(FUENTE) && !/id="pr-btn-entrar"/.test(FUENTE))
+  chk('el acceso maestro está en UN solo lugar: el pie de "¿Quién sos?"',
+    (FUENTE.match(/abrirMaestro\)|abrirMaestro\(\)/g) || []).length >= 1 && !/pr-btn-barra-maestro/.test(FUENTE))
   chk('ya no hay pantalla de "¿Para qué se usa esta tablet?"', !/pr-elegir-modo/.test(FUENTE))
   chk('ya no hay "Cambiar el modo de esta tablet"', !/Cambiar el modo de esta tablet/.test(FUENTE))
   chk('ya no hay "‹ Volver" a la cabecera', !/pr-volver-dashboard/.test(FUENTE))

@@ -45,13 +45,15 @@ test.describe('planta', () => {
     await test.step('la cuenta de la tablet entra derecho a la planta', async () => {
       await page.goto('/dashboard.html');
       await page.waitForURL(/modulos\/produccion\.html/);
-      await expect(page.locator('#pr-barra')).toBeVisible();
+      // Sin nadie adentro: "¿Quién sos?" de Producción a pantalla completa,
+      // con su banda y sin la barra lateral.
+      await expect(page.locator('#pr-quien')).toBeVisible();
+      await expect(page.locator('#pr-quien-banda')).toContainText('PRODUCCIÓN');
+      await expect(page.locator('#pr-barra')).toBeHidden();
       await captura(page, 'planta-inicio', info);
     });
 
     await test.step('Producción: Robot Encargado con su PIN', async () => {
-      await page.locator('[data-modo="produccion"]').click();
-      if (await page.locator('#pr-btn-entrar').isVisible().catch(() => false)) await page.locator('#pr-btn-entrar').click();
       await elegirPersona(page, 'Robot Encargado');
       await captura(page, 'quien-sos-encargado', info);
       await marcarPin(page, PIN_ENCARGADO);
@@ -83,9 +85,12 @@ test.describe('planta', () => {
     });
 
     await test.step('Sala de masa: Robot Masero con su PIN', async () => {
-      const sala = page.locator('[data-modo="masa"]');
+      const sala = page.locator('#pr-barra [data-modo="masa"]');
       await expect(sala).toBeEnabled();
       await sala.click();
+      // Robot Encargado también es masero: entra sin PIN. Para que la masa
+      // quede a nombre de Robot Masero, "Cambiar de persona".
+      if (await page.locator('#pr-lat-cambiar').isVisible().catch(() => false)) await page.locator('#pr-lat-cambiar').click();
       await elegirPersona(page, 'Robot Masero');
       await marcarPin(page, PIN_MASERO);
       await expect(page.locator('#pr-barra')).toContainText('Robot Masero');
@@ -127,7 +132,7 @@ test.describe('planta', () => {
     });
 
     await test.step('volver a Producción sin perder al masero', async () => {
-      await page.locator('[data-modo="produccion"]').click();
+      await page.locator('#pr-barra [data-modo="produccion"]').click();
       await elegirPersona(page, 'Robot Encargado');
       await marcarPin(page, PIN_ENCARGADO);
       await expect(page.locator('#pr-tablero-masero')).toContainText('Robot Masero');
@@ -194,9 +199,9 @@ test.describe('planta', () => {
     const errores = vigilarErrores(page);
     await entrarComo(context, 'planta');
     await page.goto('/modulos/produccion.html');
-    await expect(page.locator('#pr-barra')).toBeVisible();
+    await expect(page.locator('#pr-quien')).toBeVisible();
 
-    await page.locator('#pr-btn-barra-maestro, #pr-btn-maestro').first().click();
+    await page.locator('#pr-btn-maestro').click();
     const elegir = page.locator('[data-maestro]', { hasText: process.env.E2E_MAESTRO_NOMBRE });
     if (await elegir.count()) await elegir.first().click();
     await marcarPin(page, process.env.E2E_MAESTRO_PIN);

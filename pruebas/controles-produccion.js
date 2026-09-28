@@ -185,6 +185,13 @@ const RETIRADOS = [
   ['control:button[data-unidad][type=button]',
     'Planta y gestión (25/09/2026): la pantalla "¿En qué fábrica está esta tablet?" no existe más: la fábrica sale de la ' +
     'cuenta del dispositivo (mi_sesion_produccion).'],
+  ['control:button#pr-btn-entrar[type=button]',
+    'La planta con dos modos (28/09/2026): el "Tocá para entrar" vivía en la barra de modos de arriba, que ya no existe. ' +
+    'Sin nadie adentro, la tablet MUESTRA "¿Quién sos?" de Producción a pantalla completa (es con lo que arranca y a lo ' +
+    'que vuelven Salir y el cierre por inactividad): no hay una barra desde donde "entrar", se entra eligiendo el nombre.'],
+  ['control:button#pr-btn-barra-maestro[type=button]',
+    'La planta con dos modos (28/09/2026): el handoff deja el acceso maestro en UN solo lugar, abajo de los nombres en ' +
+    '"¿Quién sos?" de Producción (#pr-btn-maestro, que sigue). El atajo de la barra de arriba se fue con esa barra.'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:
@@ -200,6 +207,10 @@ const MENOS_COPIAS = [
     'Rediseño parte 4: los tres botones de "¿Cómo la hacés?" (Usar la original / Usar la anterior / Modificar) ' +
     'estaban escritos uno por uno y ahora los arma htmlComo(), que es una sola plantilla con su título, su ' +
     'explicación y su "›". Los tres siguen estando en la pantalla: lo que hay una sola vez es el molde.'],
+  ['control:button[data-modo][type=button]', 1,
+    'La planta con dos modos (28/09/2026): la barra de arriba tenía los DOS modos (PRODUCCIÓN y SALA DE MASA) escritos ' +
+    'uno por uno; la barra lateral tiene UN solo botón, htmlBotonOtroModo(), que lleva al modo donde no estás con el tono ' +
+    'de ese modo. El modo en el que estás no se repite (README del handoff). Los dos modos siguen alcanzables.'],
 ]
 
 let ok = 0

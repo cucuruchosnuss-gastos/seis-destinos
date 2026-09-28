@@ -136,7 +136,10 @@ esperas.push((async () => {
   chk('… y vuelve a la lista (no a su PIN)', U.__doc.getElementById('pr-quien-lista').hidden === false)
 })())
 
-// ── El cierre por inactividad saca SOLO a la persona de Producción ───────
+// ── El cierre por inactividad (decisión de Facu, 28/09/2026) ──────────────
+// A los 10 minutos, Producción saca a la persona de ADENTRO pero la deja
+// ELEGIDA (sigue guardada: vuelve a poner solo el PIN). Si la tablet está en
+// Sala de masa no se toca NADA: ni el masero ni el encargado guardado.
 {
   const S = armar()
   S.estado.modo = 'masa'
@@ -144,8 +147,8 @@ esperas.push((async () => {
   S.sessionStorage.setItem('produccion.persona.masa', JSON.stringify(JUAN))
   S.sessionStorage.setItem('produccion.persona.produccion', JSON.stringify(FEDE))
   S.estado.ultimoToque = 1000
-  S.revisarInactividad(1000 + 16 * 60000)
-  chk('inactividad en Sala de masa: el encargado guardado se olvida', guardada(S, 'produccion') === null)
+  chk('inactividad en Sala de masa: no pasa nada', S.revisarInactividad(1000 + 16 * 60000) === false)
+  chk('… el encargado guardado NO se olvida', /e-fede/.test(guardada(S, 'produccion') ?? ''))
   chk('… el masero sigue adentro y guardado', S.estado.persona?.id === 'e-masero' && /e-masero/.test(guardada(S, 'masa') ?? ''))
 
   const T = armar()
@@ -155,8 +158,9 @@ esperas.push((async () => {
   T.sessionStorage.setItem('produccion.persona.produccion', JSON.stringify(FEDE))
   T.estado.ultimoToque = 1000
   chk('inactividad en Producción: se cierra', T.revisarInactividad(1000 + 16 * 60000) === true)
-  chk('… saca al encargado', T.estado.persona === null && guardada(T, 'produccion') === null)
-  chk('… y NO al masero', /e-masero/.test(guardada(T, 'masa') ?? ''))
+  chk('… saca al encargado de adentro', T.estado.persona === null)
+  chk('… pero lo deja elegido (sigue guardado para poner solo el PIN)', /e-fede/.test(guardada(T, 'produccion') ?? ''))
+  chk('… y NO toca al masero', /e-masero/.test(guardada(T, 'masa') ?? ''))
 }
 
 // ── c) Sacar al masero ────────────────────────────────────────────────────
@@ -355,26 +359,26 @@ esperas.push((async () => {
   chk('"Volver a intentar" vuelve a pedir', /closest\('#pr-sala-volver-intentar'\)\) mostrarSala\(\)/.test(FUENTE))
 })())
 
-// ── g) "Tocá para entrar" ────────────────────────────────────────────────
+// ── g) Sin nadie adentro: "¿Quién sos?" a pantalla completa ──────────────
+// La planta con dos modos (28/09/2026): el "Tocá para entrar" de la barra de
+// arriba se fue con esa barra. Sin nadie adentro NO hay barra: la tablet está
+// en "¿Quién sos?", que es donde se entra.
 esperas.push((async () => {
   const S = armar()
   S.estado.modo = 'masa'
   S.estado.persona = null
-  const barra = S.htmlBarraModos()
-  chk('"Tocá para entrar" en vez de "Nadie adentro"', /Tocá para entrar/.test(barra) && !/Nadie adentro/.test(barra))
-  chk('… es un botón', /<button type="button" class="pr-barra__entrar" id="pr-btn-entrar">/.test(barra))
-  chk('… que abre el "¿Quién sos?" del modo activo', /closest\('#pr-btn-entrar'\)\) \{ tocar\(\); estado\.quienOtra = false; mostrarQuien\(\)/.test(FUENTE))
-  // HTML malicioso en la unidad, que va al lado.
-  const X = armar()
-  X.estado.unidades = new Map([['u-cn', marca('unidad')]])
-  X.estado.modo = 'produccion'
-  X.estado.persona = null
-  chequearMarcas(chk, 'barra sin nadie', X.htmlBarraModos(), ['unidad'])
+  S.estado.vista = 'pr-sala'
+  chk('sin nadie adentro no hay barra lateral', S.lateralVisible() === false)
+  S.estado.persona = JUAN
+  chk('con alguien adentro, sí', S.lateralVisible() === true)
+  S.estado.vista = 'pr-quien'
+  chk('… salvo en "¿Quién sos?", que es pantalla completa', S.lateralVisible() === false)
+  // HTML malicioso en la unidad y en la persona, que van a la barra.
   const Y = armar()
   Y.estado.unidades = new Map([['u-cn', marca('unidad')]])
   Y.estado.modo = 'masa'
   Y.estado.persona = { id: 'e', nombre: marca('persona'), puesto: 'masero' }
-  chequearMarcas(chk, 'barra con alguien adentro', Y.htmlBarraModos(), ['unidad', 'persona'])
+  chequearMarcas(chk, 'barra con alguien adentro', Y.htmlLateral(), ['unidad', 'persona'])
 })())
 
 // ── h) Una sola unidad no pregunta la fábrica ───────────────────────────

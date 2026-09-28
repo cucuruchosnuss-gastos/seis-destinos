@@ -11,12 +11,13 @@ const { correrMutacionesProduccion } = require('./mutar-produccion')
 correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-planta.js'),
   escape: 'esc',
-  funciones: ['htmlMaestrosPin', 'htmlPersonaAcceso', 'htmlNotaAcceso', 'sinAcceso', 'htmlMaestroEnBarra'],
+  funciones: ['htmlMaestrosPin', 'htmlPersonaAcceso', 'htmlNotaAcceso', 'sinAcceso'],
   soloPlanta: ['sinAcceso'],
   manuales: [
-    // d) el acceso maestro sin "¿Quién sos?"
-    { nombre: 'la barra no ofrece el acceso maestro', de: "      if (estado.maestro) return ''\n      return '<button type=\"button\" class=\"pr-barra__maestro\"", a: "      return ''\n      return '<button type=\"button\" class=\"pr-barra__maestro\"" },
-    { nombre: 'la barra no escucha el acceso maestro', de: "if (ev.target.closest('#pr-btn-barra-maestro')) { abrirMaestro(); return }", a: '' },
+    // d) el acceso maestro sin "¿Quién sos?" (desde el 28/09/2026 en UN solo
+    // lugar: el pie de "¿Quién sos?" de Producción)
+    { nombre: 'el acceso maestro del pie no se escucha', de: "      document.getElementById('pr-btn-maestro').addEventListener('click', abrirMaestro)\n", a: '' },
+    { nombre: 'la barra no dice que es el acceso maestro', de: "      if (p && estado.maestro && p.id === estado.maestro.id) return 'Acceso maestro'\n", a: '' },
     { nombre: 'el maestro ve la lista de ¿Quién sos?', de: "document.getElementById('pr-quien-col').hidden = enMaestro", a: "document.getElementById('pr-quien-col').hidden = false" },
     { nombre: 'con un solo maestro no se elige solo', de: 'if (maestros.length === 1) { p.personaId = maestros[0].id', a: 'if (false) { p.personaId = maestros[0].id' },
     { nombre: 'la fila de nombres aparece con un solo maestro', de: "if (maestros.length < 2) return ''", a: "if (maestros.length < 1) return ''" },

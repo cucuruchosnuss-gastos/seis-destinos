@@ -9,10 +9,13 @@ const { correrMutacionesProduccion } = require('./mutar-produccion')
 correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-quien.js'),
   escape: 'esc',
-  funciones: ['htmlBotonPersona', 'htmlAvisoPuestos', 'htmlQuienEnBarra', 'htmlBarraModos'],
+  funciones: ['htmlBotonPersona', 'htmlAvisoPuestos', 'htmlLatPersona', 'htmlLatMaquina', 'htmlLatSala'],
   equivalentes: [
     { expr: 'esc(PLURAL_PUESTO[puesto] ?? puesto)', motivo: 'PLURAL_PUESTO y el puesto salen de constantes del código (PUESTO_DE_MODO): ninguna salida posible tiene un carácter escapable' },
-    { expr: "esc(ROL_DE_MODO[estado.modo] ?? '')", motivo: 'ROL_DE_MODO son dos literales del código ("Encargado" / "Masero") y el modo está validado contra PUESTO_DE_MODO: ninguna salida posible tiene un carácter escapable' },
+    { expr: "esc(TITULO_DE_MODO[estado.modo] ?? '')", motivo: 'TITULO_DE_MODO son dos literales del código ("Producción" / "Sala de masa"): ninguna salida posible tiene un carácter escapable' },
+    { expr: 'esc(puestoEnLateral())', motivo: 'puestoEnLateral() devuelve un literal del código ("Acceso maestro" o ROL_DE_MODO): ninguna salida posible tiene un carácter escapable' },
+    { expr: 'esc(e.masas)', motivo: 'e.masas es un número que cuenta estadoMaquinas() (mias.length): nunca tiene un carácter escapable' },
+    { expr: 'esc(textoMasas(e.masas))', motivo: 'textoMasas() arma "N masas" con el número de arriba: nunca tiene un carácter escapable' },
   ],
   manuales: [
     // ── La regla de los puestos, que es la de la base ──────────────────────
@@ -31,14 +34,30 @@ correrMutacionesProduccion({
     { nombre: 'el buscador no ignora acentos', de: "      return String(t ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase()", a: "      return String(t ?? '').toLowerCase()" },
     { nombre: 'el buscador no filtra nada', de: '      return personas.filter(p => normalizarBusqueda(p.nombre).includes(q))', a: '      return personas' },
 
-    // ── La barra de modos ──────────────────────────────────────────────────
+    // ── La barra lateral y el botón al otro modo (la planta con dos modos) ──
     { nombre: 'SALA DE MASA se deshabilita sin haberlo medido', de: '      return estado.abiertasConocido === true && estado.hayTurnoAbierto === false', a: '      return estado.hayTurnoAbierto === false' },
     { nombre: 'SALA DE MASA nunca se deshabilita', de: '      return estado.abiertasConocido === true && estado.hayTurnoAbierto === false', a: '      return false' },
-    { nombre: 'el botón deshabilitado no lleva disabled', de: "${off ? ' disabled' : ''}>", a: '>' },
-    { nombre: 'sin la leyenda de por qué está apagada', de: "`SALA DE MASA${off ? '<span class=\"pr-modo__nota\">· El encargado tiene que abrir el turno</span>' : ''}</button>`", a: '`SALA DE MASA</button>`' },
-    { nombre: 'el modo activo no se marca', de: `aria-pressed="\${estado.modo === 'produccion' ? 'true' : 'false'}"`, a: 'aria-pressed="false"' },
-    { nombre: 'sin nadie adentro igual aparece Salir', de: '      if (!estado.persona) {\n', a: '      if (false) {\n' },
-    { nombre: 'el rol no sale del modo', de: '${esc(ROL_DE_MODO[estado.modo] ?? \'\')}:', a: 'Persona:' },
+    { nombre: 'el botón al otro modo apagado no lleva disabled', de: 'data-modo="${modoDestino}"${off ? \' disabled\' : \'\'}>', a: 'data-modo="${modoDestino}">' },
+    { nombre: 'sin la leyenda de por qué está apagado', de: "        ? '· abrí una máquina'", a: "        ? ''" },
+    { nombre: 'el botón lleva al modo donde ya se está', de: "      const modoDestino = OTRO_MODO[estado.modo] ?? 'masa'", a: "      const modoDestino = estado.modo ?? 'masa'" },
+    { nombre: 'el tono del botón es el del modo actual', de: 'pr-lat__otro--${modoDestino}', a: 'pr-lat__otro--${estado.modo}' },
+    { nombre: 'pasa sin PIN sin tener el puesto del otro modo', de: '      return !!fila && tienePuesto(fila, PUESTO_DE_MODO[modo])', a: '      return !!fila' },
+    { nombre: 'pasa sin PIN sin saber sus puestos', de: '      return !!fila && tienePuesto(fila, PUESTO_DE_MODO[modo])', a: '      return !fila || tienePuesto(fila, PUESTO_DE_MODO[modo])' },
+    { nombre: 'el puesto de la barra no sale del modo', de: "      return ROL_DE_MODO[estado.modo] ?? ''\n    }\n\n    function htmlLatPersona", a: "      return 'Encargado'\n    }\n\n    function htmlLatPersona" },
+    { nombre: 'la barra se ve en "¿Quién sos?"', de: " && estado.vista !== 'pr-quien' && estado.vista !== 'pr-inicio'", a: " && estado.vista !== 'pr-inicio'" },
+    { nombre: 'la barra se ve sin nadie adentro', de: "      return enModoTablet() && !!estado.persona && estado.vista", a: '      return enModoTablet() && estado.vista' },
+    { nombre: 'la página no se corre con la barra', de: "      document.body?.classList?.toggle('pr-con-lateral', ver)", a: "      document.body?.classList?.toggle('pr-con-lateral', false)" },
+    { nombre: 'las secciones de máquina no se apagan sin máquina', de: '        const off = sec.deMaquina && !hay', a: '        const off = false' },
+    { nombre: 'la sección activa no se marca', de: "${sec.id === activa ? ' aria-current=\"page\"' : ''}", a: '' },
+    { nombre: 'la parada en curso no se dice en la barra', de: '      const parada = hay && !!paradaEnCurso(estado.planilla.paradas)', a: '      const parada = false' },
+    { nombre: 'la máquina parada no va en bordó', de: "${parada ? ' pr-lat__maq--parada' : ''}", a: '' },
+    { nombre: 'la sala lista también las máquinas libres', de: '      const abiertas = maquinasAbiertas()\n      const enInicio', a: "      const abiertas = (estado.tablero ?? []).map(e => ({ ...e, turno: e.turno ?? { id: '', lote: '' } }))\n      const enInicio" },
+    { nombre: 'la máquina con la que se trabaja no se marca', de: '        const actual = !enInicio && e.turno.id === marcada', a: '        const actual = false' },
+    { nombre: 'la banda de Producción no ofrece ir a la sala', de: "      if (modoBanda === 'produccion' && estado.volverA?.modo !== 'masa') {", a: '      if (false) {' },
+    { nombre: '"Ir a Sala de masa" de la banda no se apaga', de: '        const off = salaDeshabilitada()\n        accionBanda', a: '        const off = false\n        accionBanda' },
+    { nombre: 'el maestro no trae su banda', de: "      if (estado.pin?.modo === 'maestro') {\n        return '<div class=\"pr-banda-modo", a: "      if (false) {\n        return '<div class=\"pr-banda-modo" },
+    { nombre: 'el fondo vuelve al tono del modo', de: '    body.pagina-modulo.pr-modo-produccion, body.pagina-modulo.pr-modo-masa { background-color: var(--color-superficie); }\n', a: '' },
+    { nombre: 'la barra no mide 240 px', de: 'width: 240px; z-index: 20;', a: 'width: 200px; z-index: 20;' },
     { nombre: 'marcarAbiertas no marca el dato como conocido', de: '      estado.abiertasConocido = true\n', a: '' },
     { nombre: 'el fondo del body no cambia con el modo', de: "      cl.toggle('pr-modo-produccion', modo === 'produccion')", a: "      cl.toggle('pr-modo-produccion', false)" },
     // (25/09/2026) Las pantallas de oficina se fueron a la gestión: en la
@@ -51,7 +70,7 @@ correrMutacionesProduccion({
     { nombre: 'cambiar de modo conserva a la persona', de: '      estado.persona = null\n      estado.pin = null\n      estado.quienOtra = false\n      // Con el acceso maestro activo', a: '      estado.pin = null\n      estado.quienOtra = false\n      // Con el acceso maestro activo' },
     { nombre: 'un modo inválido se elige', de: '      if (!Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo)) return\n      tocar()', a: '      tocar()' },
     { nombre: 'tocar el modo activo vuelve a pedir el PIN', de: '      if (estado.modo === modo && estado.persona) return\n', a: '' },
-    { nombre: 'no guarda el modo', de: '      estado.modo = modo\n      guardarPreferencia(CLAVE_MODO, modo)\n      // Cambiar de modo NO borra a nadie', a: '      estado.modo = modo\n      // Cambiar de modo NO borra a nadie' },
+    { nombre: 'no guarda el modo', de: '      estado.modo = modo\n      guardarPreferencia(CLAVE_MODO, modo)\n      estado.persona = null', a: '      estado.modo = modo\n      estado.persona = null' },
 
     // ── Qué se recuerda y qué no ───────────────────────────────────────────
     { nombre: 'el modo guardado acepta cualquier cosa', de: "      return Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, m ?? '') ? m : null", a: '      return m' },
@@ -77,11 +96,16 @@ correrMutacionesProduccion({
     { nombre: 'si falla deja la lista de antes', de: '        lista.innerHTML = \'<button type="button" class="pr-btn" id="pr-quien-reintentar">Reintentar</button>\'', a: '' },
     { nombre: 'sin coincidencias dice que no hay personal', de: "          ? '<p class=\"pr-texto-suave\">Ningún nombre coincide con lo que buscaste.</p>'", a: "          ? '<p class=\"pr-texto-suave\">No hay personal activo para elegir.</p>'" },
 
-    // ── El cierre por inactividad ──────────────────────────────────────────
-    { nombre: 'el corte pasa a ser de 60 minutos', de: '    const MINUTOS_INACTIVIDAD = 15', a: '    const MINUTOS_INACTIVIDAD = 60' },
-    { nombre: 'Sala de masa también se cierra sola', de: "      const habiaPersona = estado.modo === 'produccion' && !!estado.persona", a: '      const habiaPersona = !!estado.persona' },
-    { nombre: 'Producción no se cierra sola', de: "      const habiaPersona = estado.modo === 'produccion' && !!estado.persona", a: '      const habiaPersona = false' },
-    { nombre: 'el maestro no se cierra solo', de: '      if (habiaMaestro) cerrarMaestro()\n', a: '' },
+    // ── El cierre por inactividad (decisión de Facu, 28/09/2026) ───────────
+    { nombre: 'el corte pasa a ser de 60 minutos', de: '    const MINUTOS_INACTIVIDAD = 10', a: '    const MINUTOS_INACTIVIDAD = 60' },
+    { nombre: 'el corte vuelve a los 15 minutos', de: '    const MINUTOS_INACTIVIDAD = 10', a: '    const MINUTOS_INACTIVIDAD = 15' },
+    { nombre: 'Sala de masa también se cierra sola', de: "      if (estado.modo === 'masa') {\n        if (!estado.maestro) return false", a: "      if (estado.modo === 'masa' && false) {\n        if (!estado.maestro) return false" },
+    { nombre: 'en Sala de masa se olvida al encargado guardado', de: "        if (!estado.maestro) return false\n        tocar()", a: "        guardarSesion(clavePersona('produccion'), null)\n        if (!estado.maestro) return false\n        tocar()" },
+    { nombre: 'en Sala de masa el maestro no se cierra', de: "        if (!estado.maestro) return false\n        tocar()", a: "        return false\n        tocar()" },
+    { nombre: 'Producción no se cierra sola', de: '      const habiaPersona = !!estado.persona', a: '      const habiaPersona = false' },
+    { nombre: 'el maestro no se cierra solo en Producción', de: '      if (habiaMaestro) cerrarMaestro()\n', a: '' },
+    { nombre: 'Producción borra a la persona guardada', de: '      estado.volverA = null\n      estado.persona = null\n      estado.pin = null\n      estado.quienOtra = false\n      // mostrarQuien trae', a: "      estado.volverA = null\n      guardarSesion(clavePersona('produccion'), null)\n      estado.persona = null\n      estado.pin = null\n      estado.quienOtra = false\n      // mostrarQuien trae" },
+    { nombre: 'Producción vuelve a la lista en vez de a la persona elegida', de: '      estado.quienOtra = false\n      // mostrarQuien trae', a: '      estado.quienOtra = true\n      // mostrarQuien trae' },
     { nombre: 'sin ningún toque registrado igual vence', de: "      return typeof desde === 'number' && (ahora - desde) >= MINUTOS_INACTIVIDAD * 60000", a: '      return (ahora - desde) >= MINUTOS_INACTIVIDAD * 60000' },
 
     // ── Lo que lee la base ─────────────────────────────────────────────────

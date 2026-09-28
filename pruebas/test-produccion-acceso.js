@@ -115,11 +115,17 @@ function armar(rol, tareas, archivo = ARCHIVO) {
   chk('el tablero entra en cuatro columnas en 1280 (15rem)', /\.pr-tablero \{[^}]*minmax\(min\(100%, 15rem\), 1fr\)/.test(compacto))
   chk('las tarjetas de máquina son bajas (112 px)', /\.pr-tablero \.pr-maquina \{ min-height: 112px;/.test(compacto))
   chk('el LOTE sigue siendo lo más grande de la tarjeta', /\.pr-maquina__lote \{ font-size: 2\.5rem; \}/.test(compacto))
-  chk('la barra de modos: 56 px con modos de 48', /\.pr-barra \{ min-height: 56px;/.test(compacto) && /\.pr-modo \{ min-height: 48px;/.test(compacto))
+  // (28/09/2026) La barra de modos de arriba se fue: ahora es la barra lateral
+  // (handoff "Planta · Dos modos"), con renglones de 52 px y el botón al otro
+  // modo de 64. El bloque compacto ya no la toca.
+  chk('la barra lateral: renglones de 52 px y el botón al otro modo de 64',
+    /\.pr-lat__item \{[^}]*min-height: 52px;/.test(css) && /\.pr-lat__otro \{[^}]*min-height: 64px;/.test(css))
+  chk('el bloque compacto ya no achica la barra vieja', !/\.pr-barra[\s{,[:]|\.pr-modo[\s{,[:]/.test(compacto))
   chk('los renglones de la receta siguen de 64 px', /\.pr-rec, \.pr-rec--cab \{[^}]*min-height: 64px;/.test(css) && !/\.pr-rec\b[^{]*\{[^}]*min-height/.test(compacto))
   chk('el teclado del PIN sigue de 84 px', /\.pr-tecla \{\s*min-height: 84px;/.test(css) && !/\.pr-tecla/.test(compacto))
-  chk('los dos modos se reparten el ancho', /\.pr-modo \{[^}]*flex: 1 1 0/.test(css))
-  chk('el nombre del modo va espaciado, no solo de color', /\.pr-modo \{[^}]*letter-spacing: 0\.1em/.test(css))
+  chk('la barra lateral mide 240 px y la página se corre lo mismo',
+    /\.pr-lateral \{[^}]*width: 240px;/.test(css) && /body\.pr-con-lateral \.pr-app \{[^}]*margin-left: 240px;/.test(css))
+  chk('el nombre del modo va espaciado en la banda, no solo de color', /\.pr-banda-modo__nombre \{[^}]*letter-spacing: 0\.06em/.test(css))
 }
 
 fin()

@@ -53,6 +53,10 @@ correrMutacionesProduccion({
     { nombre: 'el PIN nuevo queda en un data-*', de: "      document.getElementById('pr-asignar-teclado').innerHTML = htmlTecladoAsignar(a.enviando)", a: "      document.getElementById('pr-asignar-teclado').innerHTML = htmlTecladoAsignar(a.enviando)\n      document.getElementById('pr-asignar-teclado').dataset.pin = a.digitos" },
     { nombre: 'cerrar el maestro no borra el PIN a medio tipear', de: '      estado.asignar = null   // el PIN nuevo a medio tipear también se va\n', a: '' },
     { nombre: 'irse de la pantalla no borra el PIN', de: "      if (id !== 'pr-asignar') estado.asignar = null\n", a: '' },
-    { nombre: 'por inactividad la pantalla del maestro queda abierta', de: "      else if (habiaMaestro && (estado.vista === 'pr-asignar' || estado.vista === 'pr-acceso')) siguientePaso()\n", a: '' },
+    // (28/09/2026) La inactividad se reescribió con la planta de dos modos: en
+    // Sala de masa solo se cierra el maestro, y si estaba en sus pantallas se
+    // vuelve a "¿Quién sos?"; en Producción siempre se vuelve ahí.
+    { nombre: 'por inactividad la pantalla del maestro queda abierta (Sala de masa)', de: "        if (eraElMaestro || estado.vista === 'pr-asignar' || estado.vista === 'pr-acceso') mostrarQuien()\n", a: "        if (eraElMaestro) mostrarQuien()\n" },
+    { nombre: 'por inactividad la pantalla del maestro queda abierta (Producción)', de: "      // el teclado del PIN. Las pantallas del maestro se van con él.\n      mostrarQuien()\n", a: "      // el teclado del PIN. Las pantallas del maestro se van con él.\n      if (estado.vista !== 'pr-asignar' && estado.vista !== 'pr-acceso') mostrarQuien()\n" },
   ],
 })

@@ -81,6 +81,9 @@
       --pr-masa-letra:          #3B2E00;   /* 11:1 sobre el amarillo */
       --pr-masa-apagado-borde:  #D9C476;
       --pr-masa-apagado-letra:  #6B5A1E;
+      /* Sala de masa APAGADA en la barra y la banda (sin máquinas abiertas). */
+      --pr-masa-off-fondo:      #FBF6E4;
+      --pr-masa-off-letra:      #8C7A3E;
       --pr-masa-fondo:          #FBF4D9;
       --pr-masa-barra-borde:    #EADFAE;
       /* Deshabilitado: el punteado distingue "no se puede todavía" de
@@ -233,55 +236,6 @@
     .pr-opcion:focus-visible, .pr-btn:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
     .pr-opcion__detalle { font-size: 1.125rem; font-weight: 500; color: var(--pr-texto-secundario); }
 
-    /* ── Barra de modos ───────────────────────────────────────────────────
-       Fija arriba en toda la tablet. Los dos modos se reparten el ancho; a la
-       derecha la persona, la unidad y Salir. NO hay "Volver": la tablet está
-       en modo kiosco y el cambio de modo son estos dos botones. */
-    .pr-barra {
-      position: sticky; top: 0; z-index: 10;
-      display: flex; gap: 0.375rem; padding: 4px; margin: 0 0 1rem;
-      min-height: 64px; align-items: stretch;
-      background: var(--color-fondo); border-radius: 16px;
-      border: 1px solid var(--pr-borde-control); box-shadow: var(--sombra-tarjeta);
-    }
-    .pr-modo {
-      flex: 1 1 0; min-width: 0; min-height: 56px;
-      display: flex; align-items: center; justify-content: center; gap: 0.625rem; flex-wrap: wrap;
-      font: inherit; font-size: 1.375rem; font-weight: 800; letter-spacing: 0.1em;
-      border-radius: 12px; cursor: pointer; touch-action: manipulation; text-align: center;
-      border: 2px solid var(--pr-prod-apagado-borde); background: var(--color-fondo);
-      color: var(--pr-prod-apagado-letra);
-    }
-    .pr-modo--masa { border-color: var(--pr-masa-apagado-borde); color: var(--pr-masa-apagado-letra); }
-    .pr-modo[aria-pressed="true"] {
-      background: var(--pr-prod-activo); border-color: var(--pr-prod-activo);
-      color: var(--pr-prod-letra); font-weight: 900;
-    }
-    .pr-modo--masa[aria-pressed="true"] {
-      background: var(--pr-masa-activo); border: 3px solid var(--pr-masa-activo-borde);
-      color: var(--pr-masa-letra); font-weight: 900;
-    }
-    /* Deshabilitado ≠ apagado: el BORDE PUNTEADO lo dice sin usar color. */
-    .pr-modo:disabled {
-      background: var(--pr-off-fondo); border: 2px dashed var(--pr-off-borde);
-      color: var(--color-texto-suave); cursor: not-allowed; opacity: 1;
-    }
-    .pr-modo__nota { font-size: 1.125rem; font-weight: 600; letter-spacing: normal; }
-    .pr-barra__persona {
-      display: flex; align-items: center; gap: 0.875rem; padding: 0 0.125rem 0 1rem;
-      min-width: 0; flex-wrap: wrap; justify-content: flex-end;
-    }
-    .pr-barra__quien { text-align: right; font-size: 1.125rem; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
-    .pr-barra__rol { font-weight: 600; color: var(--pr-prod-apagado-letra); }
-    .pr-barra__nombre { font-weight: 700; }
-    .pr-barra__unidad { color: var(--color-texto-suave); }
-    /* "Tocá para entrar": un botón de verdad, con el alto de la tablet. */
-    .pr-barra__entrar {
-      min-height: var(--pr-alto-boton); padding: 0 1.25rem; font: inherit; font-size: 1.125rem; font-weight: 800;
-      border-radius: var(--radio-boton); border: 2px solid var(--naranja); background: var(--naranja-suave);
-      color: var(--naranja-oscuro); cursor: pointer; touch-action: manipulation;
-    }
-    .pr-barra__entrar:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
     /* ¿Quién sos? con la persona del modo ya guardada. */
     .pr-quien__fija { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
     .pr-quien__fija-texto { font-size: 1.75rem; font-weight: 800; overflow-wrap: anywhere; }
@@ -290,11 +244,6 @@
       display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
       padding: 0.625rem 1rem; margin: 0.75rem 0; border-radius: var(--radio-input);
       background: var(--pr-panel-gris); font-size: 1.125rem; overflow-wrap: anywhere;
-    }
-    @media (max-width: 900px) {
-      .pr-barra { flex-wrap: wrap; }
-      .pr-modo { flex: 1 1 45%; }
-      .pr-barra__persona { flex: 1 1 100%; padding: 0.375rem 0.25rem 0; justify-content: space-between; }
     }
 
     /* El acceso maestro, mientras está activo, se dice arriba de todo: lo que
@@ -332,8 +281,6 @@
     .pr-pin__maestros .pr-chip-maestro { min-height: 48px; padding: 0 1rem; border-radius: 999px; border: 2px solid var(--pr-borde-boton);
       background: var(--color-fondo); font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer; }
     .pr-pin__maestros .pr-chip-maestro[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); }
-    .pr-barra__maestro { background: none; border: none; font: inherit; font-size: 1rem; font-weight: 700; color: inherit;
-      text-decoration: underline; cursor: pointer; min-height: 48px; padding: 0 0.5rem; }
     .pr-atras { gap: 0.375rem; }
     /* "Dar acceso por hoy": el puesto fijo y si tiene PIN, en cada persona. */
     .pr-acceso__detalle { display: block; font-size: 1rem; font-weight: 600; color: var(--color-texto-suave); }
@@ -1393,7 +1340,7 @@
 
     @media print {
       body { background: #fff !important; }
-      .pr-barra, .pr-maestro, .pr-app > main, .pr-hoja__botones { display: none !important; }
+      .pr-lateral, .pr-maestro, .pr-app > main, .pr-hoja__botones { display: none !important; }
       .pr-hoja { position: static; padding: 0; overflow: visible; }
     }
     /* ── fin de Configuración: de acá para abajo vuelve a mandar la tablet ── */
@@ -1428,8 +1375,6 @@
     .pr-titulo { font-size: 1.25rem; margin-bottom: 0.5rem; }
     .pr-aviso { padding: 0.5rem 0.875rem; margin: 0.5rem 0; font-size: 1rem; }
     .pr-aviso .pr-chips { margin-top: 0.375rem; }
-    .pr-barra { min-height: 56px; margin-bottom: 0.625rem; }
-    .pr-modo { min-height: 48px; font-size: 1.125rem; }
     .pr-masero-adentro { padding: 0.375rem 0.875rem; margin: 0.5rem 0; font-size: 1rem; }
     /* El tablero: cuatro columnas en 1280 y tarjetas bajas. El LOTE sigue
        siendo lo más grande de la tarjeta: se copia a la planilla de papel. */
@@ -1455,17 +1400,143 @@
     /* Asignar PIN (acceso maestro): el panel con los puntos y el teclado. */
     .pr-asignar__panel { display: flex; flex-direction: column; gap: 0.75rem; max-width: 28rem; margin-top: 1rem; }
     .pr-asignar__panel[hidden] { display: none; }
+
+    /* ══ LA PLANTA CON DOS MODOS (28/09/2026) ═══════════════════════════════
+       Handoff "Planta · Dos modos". El fondo es el COMÚN de la app (#eef1f6,
+       --color-superficie): el tono del modo va SOLO en la banda de "¿Quién
+       sos?" y en el botón de arriba de la barra lateral, que lleva al OTRO modo
+       con el tono de ese otro modo. La clase del modo sigue en el body porque
+       la usan los estilos de adentro. */
+    body.pagina-modulo.pr-modo-produccion, body.pagina-modulo.pr-modo-masa { background-color: var(--color-superficie); }
+
+    /* La barra lateral: 240 px fija a la izquierda, y la página se corre. */
+    .pr-lateral {
+      position: fixed; top: 0; bottom: 0; left: 0; width: 240px; z-index: 20;
+      display: flex; flex-direction: column; gap: 12px; padding: 16px 14px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      background: var(--color-fondo); border-right: 1px solid var(--pr-borde-control);
+      overflow-y: auto; box-sizing: border-box;
+    }
+    body.pr-con-lateral .pr-app { margin-left: 240px; max-width: none; padding: 20px 24px calc(2rem + env(safe-area-inset-bottom)); }
+    .pr-icono { width: 22px; height: 22px; flex: 0 0 auto; }
+
+    /* 1 · El botón al otro modo: 64 px, con el tono del modo al que lleva. */
+    .pr-lat__otro {
+      display: flex; align-items: center; gap: 8px; min-height: 64px; width: 100%;
+      padding: 6px 12px; border-radius: 14px; font: inherit; text-align: left;
+      cursor: pointer; touch-action: manipulation;
+    }
+    .pr-lat__otro--masa { background: var(--pr-masa-activo); border: 2px solid var(--pr-masa-activo-borde); color: var(--pr-masa-letra); }
+    .pr-lat__otro--produccion { background: var(--pr-prod-activo); border: 2px solid var(--pr-prod-activo); color: var(--pr-prod-letra); }
+    /* Apagado ≠ otro modo: fondo crema, borde PUNTEADO y la nota adentro. */
+    .pr-lat__otro:disabled { background: var(--pr-masa-off-fondo); border: 2px dashed var(--pr-masa-apagado-borde); color: var(--pr-masa-off-letra); cursor: not-allowed; }
+    .pr-lat__otro:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    .pr-lat__otro-texto { display: flex; flex-direction: column; min-width: 0; }
+    .pr-lat__otro-nombre { font-size: 1.125rem; font-weight: 800; white-space: nowrap; }
+    .pr-lat__otro-nota { font-size: 1rem; font-weight: 600; line-height: 1.2; }
+
+    /* 2 · Dónde estás y quién está. */
+    .pr-lat__donde { display: flex; align-items: center; gap: 8px; }
+    .pr-lat__cuadro { width: 18px; height: 18px; border-radius: 5px; flex: 0 0 auto; }
+    .pr-lat__cuadro--produccion { background: var(--pr-prod-activo); }
+    .pr-lat__cuadro--masa { background: var(--pr-masa-activo); border: 2px solid var(--pr-masa-activo-borde); }
+    .pr-lat__modo { font-size: 1.125rem; font-weight: 800; }
+    .pr-lat__persona { display: flex; flex-direction: column; gap: 4px; }
+    .pr-lat__nombre { font-size: 1.25rem; font-weight: 800; overflow-wrap: anywhere; }
+    .pr-lat__puesto { font-size: 1rem; color: var(--pr-texto-secundario); overflow-wrap: anywhere; }
+    .pr-lat__cambiar { min-height: 56px; margin-top: 6px; width: 100%; }
+
+    /* 3 · Producción: la máquina elegida y las secciones. */
+    .pr-lat__maq {
+      display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px;
+      border: 2px solid var(--pr-borde-control); background: var(--color-fondo);
+    }
+    .pr-lat__maq--vacia { border-style: dashed; color: var(--pr-texto-secundario); font-size: 1rem; }
+    .pr-lat__maq--parada { border-color: var(--bordo); background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .pr-lat__maq-nombre { font-size: 1.125rem; font-weight: 800; overflow-wrap: anywhere; }
+    .pr-lat__maq-lote { font-size: 1.875rem; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .pr-lat__maq-turno { font-size: 1rem; }
+    .pr-lat__cuerpo { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; }
+    .pr-lat__secciones { display: flex; flex-direction: column; gap: 4px; }
+    .pr-lat__item {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      min-height: 52px; width: 100%; padding: 0 12px 0 14px; border-radius: 12px;
+      font: inherit; font-size: 1.125rem; font-weight: 700; text-align: left;
+      border: 0; border-left: 5px solid transparent; background: none; color: var(--color-texto);
+      cursor: pointer; touch-action: manipulation;
+    }
+    .pr-lat__item[aria-current="page"] { background: var(--naranja-suave); border-left-color: var(--naranja); color: var(--naranja-oscuro); }
+    .pr-lat__item:disabled { color: var(--color-texto-suave); cursor: not-allowed; }
+    .pr-lat__item:focus-visible, .pr-lat__maq-fila:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    .pr-lat__pill { font-size: 1rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--bordo); color: #fff; }
+
+    /* 4 · Sala de masa: una fila de 64 px por máquina abierta. */
+    .pr-lat__titulo { font-size: 1rem; font-weight: 800; color: var(--pr-texto-secundario); text-transform: uppercase; letter-spacing: 0.04em; }
+    .pr-lat__maq-fila {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      min-height: 64px; width: 100%; padding: 6px 12px; border-radius: 12px;
+      font: inherit; text-align: left; border: 2px solid var(--pr-borde-control); background: var(--color-fondo);
+      color: var(--color-texto); cursor: pointer; touch-action: manipulation;
+    }
+    .pr-lat__maq-fila[aria-current="true"] { border: 3px solid var(--naranja); background: var(--naranja-suave); }
+    .pr-lat__maq-col { display: flex; flex-direction: column; min-width: 0; }
+    .pr-lat__maq-sub { font-size: 1rem; color: var(--pr-texto-secundario); }
+    .pr-lat__maq-fila--parada .pr-lat__maq-sub { color: var(--bordo); font-weight: 800; }
+    .pr-lat__maq-masas { font-size: 1.375rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .pr-lat__vacio { font-size: 1rem; color: var(--pr-texto-secundario); margin: 0; }
+
+    /* 5 · Sin conexión, y 6 · Salir al pie. */
+    .pr-lat__conexion {
+      display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px;
+      background: var(--bordo-suave); border: 2px solid var(--bordo); color: var(--bordo-oscuro); font-size: 1rem;
+    }
+    .pr-lat__salir { min-height: 56px; width: 100%; }
+
+    /* La banda de "¿Quién sos?": 76 px arriba, con el tono del modo. */
+    .pr-quien__banda { grid-column: 1 / -1; }
+    .pr-quien__banda:empty { display: none; }
+    .pr-banda-modo {
+      display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 8px 12px 8px 20px;
+      border-radius: 20px; flex-wrap: wrap;
+    }
+    .pr-banda-modo .pr-icono { width: 36px; height: 36px; }
+    .pr-banda-modo--produccion { background: var(--pr-prod-activo); color: var(--pr-prod-letra); }
+    .pr-banda-modo--masa { background: var(--pr-masa-activo); border: 2px solid var(--pr-masa-activo-borde); color: var(--pr-masa-letra); }
+    .pr-banda-modo--maestro { background: var(--color-fondo); border: 2px solid var(--pr-borde-control); color: var(--color-texto); }
+    .pr-banda-modo__nombre { font-size: 1.5rem; font-weight: 900; letter-spacing: 0.06em; }
+    .pr-banda-modo__sub { font-size: 1.125rem; font-weight: 600; flex: 1 1 12rem; min-width: 0; }
+    .pr-banda-modo__btn { min-height: 56px; margin-left: auto; }
+    .pr-banda-modo__ir {
+      display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 14px; font: inherit;
+      background: var(--pr-masa-activo); border: 2px solid var(--pr-masa-activo-borde); color: var(--pr-masa-letra);
+      cursor: pointer; touch-action: manipulation; text-align: left;
+    }
+    .pr-banda-modo__ir .pr-icono { width: 22px; height: 22px; }
+    .pr-banda-modo__ir:disabled { background: var(--pr-masa-off-fondo); border: 2px dashed var(--pr-masa-apagado-borde); color: var(--pr-masa-off-letra); cursor: not-allowed; }
+    .pr-banda-modo__ir:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    .pr-banda-modo__ir-texto { display: flex; flex-direction: column; font-size: 1.125rem; font-weight: 800; }
+    .pr-banda-modo__nota { font-size: 1rem; font-weight: 600; }
+    .pr-quien__nota { margin: 0; font-size: 1rem; color: var(--pr-texto-secundario); flex: 1 1 100%; }
+
+    /* La tablet parada (vertical) o angosta: la barra no entra al costado y
+       pasa arriba, sin quedar fija. */
+    @media (max-width: 1000px) {
+      .pr-lateral { position: static; width: auto; border-right: 0; border-bottom: 1px solid var(--pr-borde-control); overflow: visible; }
+      body.pr-con-lateral .pr-app { margin-left: auto; padding: 12px 12px calc(2rem + env(safe-area-inset-bottom)); }
+    }
   </style>
 </head>
 
 <body class="pagina-modulo">
   <div class="pr-app">
 
-    <!-- LA BARRA DE MODOS: fija arriba en toda la tablet, y el único lugar
-         desde donde se cambia de modo. La pinta pintarBarra() con
-         htmlBarraModos(); el fondo de toda la pantalla toma el color del modo.
-         No hay "Volver": la tablet está en modo kiosco. -->
-    <div class="pr-barra" id="pr-barra" hidden></div>
+    <!-- LA BARRA LATERAL DE LA PLANTA (28/09/2026, "la planta con dos
+         modos"): fija a la izquierda mientras hay alguien adentro de un modo.
+         Arriba el botón del OTRO modo, después quién está adentro, las
+         secciones del modo, el aviso de conexión y Salir. La pinta
+         pintarLateral() con htmlLateral(). No hay "Volver": la tablet está en
+         modo kiosco. En "¿Quién sos?" no se dibuja: esa pantalla es completa. -->
+    <aside class="pr-lateral" id="pr-barra" hidden aria-label="Barra de la planta"></aside>
 
     <!-- Mientras el acceso maestro está activo se dice arriba de todo, porque
          todo lo que se haga queda a nombre de esa persona. -->
@@ -1513,6 +1584,10 @@
            izquierda y el teclado siempre a la derecha: se elige y se tipea sin
            cambiar de pantalla. -->
       <section class="pr-quien" id="pr-quien" hidden>
+        <!-- La banda del modo (76 px, con su tono): qué modo es y qué hacer.
+             En Producción, "Ir a Sala de masa"; en Sala de masa, "Cancelar".
+             La pinta pintarBandaQuien(). -->
+        <div class="pr-quien__banda" id="pr-quien-banda"></div>
         <div class="pr-tarjeta pr-quien__col" id="pr-quien-col">
           <div class="pr-fila-titulo">
             <h1 class="pr-titulo" id="pr-quien-titulo">¿Quién sos?</h1>
@@ -1527,6 +1602,7 @@
           <div id="pr-quien-aviso"></div>
           <div class="pr-quien__nombres" id="pr-quien-lista"></div>
           <div class="pr-quien__pie">
+            <p class="pr-quien__nota" id="pr-quien-nota"></p>
             <!-- El acceso maestro es de excepción: discreto, pero a la vista. -->
             <button type="button" class="pr-link" id="pr-btn-maestro">Acceso maestro</button>
           </div>
@@ -2111,6 +2187,11 @@
       // error, enviando }. Los dígitos del PIN nuevo viven ACÁ, en memoria.
       asignar: null,
       ultimoToque: null,   // para cerrar sola por inactividad
+      // Al tocar el otro modo: { modo, persona } de donde se vino, para que
+      // "Cancelar" vuelva sin pedir el PIN. Nunca el acceso maestro.
+      volverA: null,
+      quienOtra: false,    // "Soy otra persona": mostrar la lista aunque haya alguien guardado
+      quienFija: null,     // la persona guardada del modo, si se entra solo con su PIN
       // ¿Hay alguna máquina abierta? Es lo que habilita SALA DE MASA.
       // `abiertasConocido` dice si se PUDO medir: sin eso, un false de "no se
       // leyó" se leería igual que un false de "el encargado no abrió nada".
@@ -2247,6 +2328,8 @@
     // Cómo se nombra a quien está adentro, en la barra: "Encargado: Federico".
     const ROL_DE_MODO = { produccion: 'Encargado', masa: 'Masero' }
     const PLURAL_PUESTO = { encargado: 'encargados', masero: 'maseros', operario: 'operarios' }
+    // Desde cuántas personas aparece el buscador de "¿Quién sos?".
+    const MINIMO_PARA_BUSCAR = 9
 
     // En un navegador privado, sin espacio o con el sitio bloqueado,
     // localStorage puede tirar: la tablet sigue andando, solo que no recuerda.
@@ -2332,54 +2415,164 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // BARRA DE MODOS
+    // LA BARRA LATERAL (la planta con dos modos, 28/09/2026)
     // ═══════════════════════════════════════════════════════════════════════
-
+    //
+    // Reemplaza a la barra de modos de arriba. A la izquierda, 240 px: arriba el
+    // botón que lleva al OTRO modo (con el tono y el ícono de ese otro modo: el
+    // modo en el que se está no se repite), dónde se está y quién está, y
+    // después lo de cada modo: en Producción la máquina elegida y las cinco
+    // secciones; en Sala de masa las máquinas activas. Al pie, sin conexión y
+    // "Salir". Se repinta entera: sus botones se escuchan por delegación.
+    //
     // SALA DE MASA no se habilita hasta que el encargado abre alguna máquina:
     // antes de eso el masero no tiene dónde registrar una masa.
     //
     // OJO CON EL TERCER ESTADO: si todavía NO SE PUDO SABER si hay máquinas
     // abiertas (no se leyó, o falló la lectura), el botón queda HABILITADO. La
-    // leyenda "El encargado tiene que abrir el turno" afirma algo, y afirmarlo
-    // sin haberlo medido es justo el error de mostrar un dato ausente como si
-    // fuera un dato. Sin saber, se deja pasar: la sala dirá que no hay
-    // máquinas abiertas, que es lo que sí puede comprobar.
+    // leyenda afirma algo, y afirmarlo sin haberlo medido es justo el error de
+    // mostrar un dato ausente como si fuera un dato. Sin saber, se deja pasar:
+    // la sala dirá que no hay máquinas abiertas, que es lo que sí puede
+    // comprobar.
     function salaDeshabilitada() {
       return estado.abiertasConocido === true && estado.hayTurnoAbierto === false
     }
 
-    function htmlQuienEnBarra() {
-      const unidad = `<div class="pr-barra__unidad">${esc(estado.unidades.get(estado.unidadId) ?? '')}</div>`
-      // Sin nadie adentro: una invitación a entrar, tocable. Abre el "¿Quién
-      // sos?" del modo activo.
-      if (!estado.persona) {
-        return `<div class="pr-barra__quien"><button type="button" class="pr-barra__entrar" id="pr-btn-entrar">Tocá para entrar</button>${unidad}</div>` +
-          htmlMaestroEnBarra()
-      }
-      return `<div class="pr-barra__quien"><div><span class="pr-barra__rol">${esc(ROL_DE_MODO[estado.modo] ?? '')}:</span> ` +
-        `<span class="pr-barra__nombre">${esc(estado.persona.nombre)}</span></div>${unidad}</div>` +
-        `<button type="button" class="pr-btn pr-btn--secundario" id="pr-btn-salir">Salir</button>`
+    // Los íconos del handoff (línea de 3,5 px): la caja y el bol con batidor.
+    // Van con currentColor: el color lo pone el botón o la banda.
+    const ICONO_MODO = {
+      produccion: '<svg class="pr-icono" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"><path d="M6 15 L24 7 L42 15 L42 33 L24 41 L6 33 Z"/><path d="M6 15 L24 23 L42 15"/><path d="M24 23 L24 41"/><path d="M15 11 L33 19"/></svg>',
+      masa: '<svg class="pr-icono" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"><path d="M5 22 H43 C43 33 35 41 24 41 C13 41 5 33 5 22 Z"/><path d="M26 22 L37 5"/><path d="M32 22 L42 9"/></svg>',
+    }
+    const OTRO_MODO = { produccion: 'masa', masa: 'produccion' }
+    const NOMBRE_MODO = { produccion: 'PRODUCCIÓN', masa: 'SALA DE MASA' }
+
+    // ¿La persona que está adentro tiene TAMBIÉN el puesto del otro modo? Si el
+    // masero es el mismo encargado, el PIN se pone una sola vez (README del
+    // handoff: "después va y viene entre los dos modos sin volver a ponerlo").
+    // Tiene que tener el puesto de verdad —fijo o temporal—: una unidad sin
+    // maseros configurados NO alcanza, porque ahí la lista muestra a todos y
+    // saltearse el PIN sería dejar pasar a cualquiera.
+    function puedeCambiarSinPin(modo) {
+      const p = estado.persona
+      if (!p || (estado.maestro && p.id === estado.maestro.id)) return false
+      const fila = (estado.personal ?? []).find(x => x.id === p.id)
+      return !!fila && tienePuesto(fila, PUESTO_DE_MODO[modo])
     }
 
-    // "Acceso maestro" directo desde la barra: sin pasar por la lista de
-    // "¿Quién sos?". No se ofrece con el maestro ya activo.
-    function htmlMaestroEnBarra() {
-      if (estado.maestro) return ''
-      return '<button type="button" class="pr-barra__maestro" id="pr-btn-barra-maestro">Acceso maestro</button>'
+    function htmlBotonOtroModo() {
+      const modoDestino = OTRO_MODO[estado.modo] ?? 'masa'
+      const off = modoDestino === 'masa' && salaDeshabilitada()
+      const textoOtroModo = modoDestino === 'masa' ? 'Ir a Sala de masa' : 'Ir a Producción'
+      const notaOtroModo = off
+        ? '· abrí una máquina'
+        : (puedeCambiarSinPin(modoDestino) ? 'sin volver a poner el PIN' : (modoDestino === 'masa' ? 'PIN del masero' : 'PIN del encargado'))
+      return `<button type="button" class="pr-lat__otro pr-lat__otro--${modoDestino}" data-modo="${modoDestino}"${off ? ' disabled' : ''}>` +
+        `${ICONO_MODO[modoDestino]}<span class="pr-lat__otro-texto"><span class="pr-lat__otro-nombre">${textoOtroModo}</span>` +
+        `<span class="pr-lat__otro-nota">${notaOtroModo}</span></span></button>`
     }
 
-    // Los dos modos se reparten el ancho. El deshabilitado lleva BORDE
-    // PUNTEADO además del color: así se distingue de "apagado" en escala de
-    // grises y con el reflejo del galpón.
-    function htmlBarraModos() {
-      const off = salaDeshabilitada()
-      return `<button type="button" class="pr-modo" data-modo="produccion" aria-pressed="${estado.modo === 'produccion' ? 'true' : 'false'}">PRODUCCIÓN</button>` +
-        `<button type="button" class="pr-modo pr-modo--masa" data-modo="masa" aria-pressed="${estado.modo === 'masa' ? 'true' : 'false'}"${off ? ' disabled' : ''}>` +
-        `SALA DE MASA${off ? '<span class="pr-modo__nota">· El encargado tiene que abrir el turno</span>' : ''}</button>` +
-        `<div class="pr-barra__persona">${htmlQuienEnBarra()}</div>`
+    function puestoEnLateral() {
+      const p = estado.persona
+      if (p && estado.maestro && p.id === estado.maestro.id) return 'Acceso maestro'
+      return ROL_DE_MODO[estado.modo] ?? ''
     }
 
-    // El fondo de TODA la pantalla toma el color del modo.
+    function htmlLatPersona() {
+      const unidad = estado.unidades.get(estado.unidadId) ?? ''
+      return `<div class="pr-lat__donde"><span class="pr-lat__cuadro pr-lat__cuadro--${estado.modo === 'masa' ? 'masa' : 'produccion'}" aria-hidden="true"></span>` +
+        `<span class="pr-lat__modo">${esc(TITULO_DE_MODO[estado.modo] ?? '')}</span></div>` +
+        `<div class="pr-lat__persona"><div class="pr-lat__nombre">${esc(estado.persona?.nombre ?? '')}</div>` +
+        `<div class="pr-lat__puesto">${esc(puestoEnLateral())}${unidad ? ` · ${esc(unidad)}` : ''}</div>` +
+        '<button type="button" class="pr-btn pr-btn--secundario pr-lat__cambiar" id="pr-lat-cambiar">Cambiar de persona</button></div>'
+    }
+
+    // Las cinco secciones de Producción. Las tres últimas son de UNA máquina:
+    // sin máquina elegida quedan apagadas.
+    const SECCIONES_PRODUCCION = [
+      { id: 'inicio', texto: 'Inicio', deMaquina: false },
+      { id: 'abrir', texto: 'Abrir turno', deMaquina: false },
+      { id: 'producido', texto: 'Lo producido', deMaquina: true },
+      { id: 'paradas', texto: 'Paradas', deMaquina: true },
+      { id: 'cierre', texto: 'Cerrar planilla', deMaquina: true },
+    ]
+    const SECCION_DE_VISTA = {
+      'pr-produccion': 'inicio', 'pr-abrir': 'abrir', 'pr-abiertos': 'abrir',
+      'pr-agregar-prod': 'producido', 'pr-planilla': 'paradas', 'pr-cierre': 'cierre', 'pr-cerrado': 'cierre',
+    }
+
+    // La máquina con la que se está trabajando: la última planilla que se
+    // abrió, hasta que se cierra o se elige otra.
+    function maquinaElegida() {
+      return estado.planilla?.turno ? estado.planilla : null
+    }
+
+    function htmlLatMaquina() {
+      const p = maquinaElegida()
+      if (!p) return '<div class="pr-lat__maq pr-lat__maq--vacia">Tocá una máquina para ver su planilla</div>'
+      const parada = paradaEnCurso(p.paradas)
+      return `<div class="pr-lat__maq${parada ? ' pr-lat__maq--parada' : ''}">` +
+        `<span class="pr-lat__maq-nombre">${esc(p.maquinaNombre ?? 'Máquina')}</span>` +
+        `<span class="pr-lat__maq-lote">Lote ${esc(p.turno.lote)}</span>` +
+        `<span class="pr-lat__maq-turno">${parada ? 'Parada' : `Turno ${esc(p.turno.turno ?? '')}`}</span></div>`
+    }
+
+    function htmlLatSecciones() {
+      const activa = SECCION_DE_VISTA[estado.vista] ?? null
+      const hay = !!maquinaElegida()
+      const parada = hay && !!paradaEnCurso(estado.planilla.paradas)
+      return '<nav class="pr-lat__secciones" aria-label="Secciones">' + SECCIONES_PRODUCCION.map(sec => {
+        const off = sec.deMaquina && !hay
+        const pillParada = sec.id === 'paradas' && parada ? '<span class="pr-lat__pill">en curso</span>' : ''
+        return `<button type="button" class="pr-lat__item" data-seccion="${sec.id}"${sec.id === activa ? ' aria-current="page"' : ''}${off ? ' disabled' : ''}>` +
+          `<span>${sec.texto}</span>${pillParada}</button>`
+      }).join('') + '</nav>'
+    }
+
+    // Sala de masa: "Inicio" y una fila por máquina con turno abierto. Tocar
+    // una máquina abre su historial; la que se está usando queda marcada.
+    function htmlLatSala() {
+      const abiertas = maquinasAbiertas()
+      const enInicio = estado.vista === 'pr-sala'
+      const marcada = estado.salaTurno?.id ?? null
+      const filas = abiertas.map(e => {
+        const actual = !enInicio && e.turno.id === marcada
+        return `<button type="button" class="pr-lat__maq-fila${e.parada ? ' pr-lat__maq-fila--parada' : ''}" data-lateral-turno="${esc(e.turno.id)}"${actual ? ' aria-current="true"' : ''}>` +
+          `<span class="pr-lat__maq-col"><span class="pr-lat__maq-nombre">${esc(e.maquina.nombre)}</span>` +
+          `<span class="pr-lat__maq-sub">${e.parada ? 'Parada' : `Lote ${esc(e.turno.lote)}`}</span></span>` +
+          `<span class="pr-lat__maq-masas" aria-label="${esc(textoMasas(e.masas))}">${esc(e.masas)}</span></button>`
+      }).join('')
+      return '<div class="pr-lat__titulo">Máquinas activas</div>' +
+        `<button type="button" class="pr-lat__item" data-seccion="sala-inicio"${enInicio ? ' aria-current="page"' : ''}><span>Inicio</span></button>` +
+        (filas || '<p class="pr-lat__vacio">Sin máquinas abiertas</p>')
+    }
+
+    // Sin conexión, o con masas guardadas en la tablet esperando: se dice
+    // abajo de todo. Nunca se inventa: sin nada pendiente y con señal, nada.
+    function htmlLatConexion() {
+      const n = borradoresPendientes().length
+      const sinRed = typeof navigator !== 'undefined' && navigator.onLine === false
+      if (!n && !sinRed) return ''
+      const pend = n === 1 ? '1 masa sin enviar' : `${n} masas sin enviar`
+      return `<div class="pr-lat__conexion" role="status"><strong>${sinRed ? 'Sin conexión' : 'Mandando…'}</strong>` +
+        `<span>${n ? esc(pend) : 'lo que cargues se guarda en esta tablet'}</span></div>`
+    }
+
+    function htmlLateral() {
+      const cuerpoLat = estado.modo === 'masa' ? htmlLatSala() : htmlLatMaquina() + htmlLatSecciones()
+      return htmlBotonOtroModo() + htmlLatPersona() + `<div class="pr-lat__cuerpo">${cuerpoLat}</div>` + htmlLatConexion() +
+        '<button type="button" class="pr-btn pr-btn--secundario pr-lat__salir" id="pr-btn-salir">Salir</button>'
+    }
+
+    // "¿Quién sos?" es a pantalla completa: la barra lateral aparece recién
+    // cuando hay alguien adentro de un modo.
+    function lateralVisible() {
+      return enModoTablet() && !!estado.persona && estado.vista !== 'pr-quien' && estado.vista !== 'pr-inicio'
+    }
+
+    // La clase del modo sigue en el body (la usan los estilos de adentro), pero
+    // el fondo es el común de la app: el tono del modo va en la banda de
+    // "¿Quién sos?" y en el botón de arriba de la barra (README del handoff).
     function pintarFondoDeModo(modo) {
       const cl = document.body?.classList
       if (!cl) return
@@ -2387,31 +2580,89 @@
       cl.toggle('pr-modo-masa', modo === 'masa')
     }
 
-    function pintarBarra() {
+    function pintarLateral() {
       const barra = document.getElementById('pr-barra')
-      const tablet = enModoTablet()
-      barra.hidden = !tablet
-      if (tablet) barra.innerHTML = htmlBarraModos()
-      pintarFondoDeModo(tablet ? estado.modo : null)
+      const ver = lateralVisible()
+      barra.hidden = !ver
+      barra.innerHTML = ver ? htmlLateral() : ''
+      document.body?.classList?.toggle('pr-con-lateral', ver)
+      pintarFondoDeModo(enModoTablet() ? estado.modo : null)
+      pintarBandaQuien()
     }
 
-    // Tocar un modo: el activo no hace nada, el apagado cambia y pide el PIN.
+    // ── La banda de "¿Quién sos?" ─────────────────────────────────────────
+    //
+    // 76 px con el tono del modo, su ícono, su nombre y qué hacer. En
+    // Producción, "Ir a Sala de masa" (el masero no necesita a un encargado
+    // para entrar); en Sala de masa, "Cancelar", que vuelve a Producción. Si se
+    // llegó a Producción desde Sala de masa, también "Cancelar", que vuelve.
+    // Con el panel del acceso maestro, la banda blanca de administración.
+    function htmlBandaQuien() {
+      if (estado.pin?.modo === 'maestro') {
+        return '<div class="pr-banda-modo pr-banda-modo--maestro"><span class="pr-banda-modo__nombre">ACCESO MAESTRO</span>' +
+          '<span class="pr-banda-modo__sub">Solo administración</span>' +
+          '<button type="button" class="pr-btn pr-btn--secundario pr-banda-modo__btn" id="pr-quien-volver">Volver</button></div>'
+      }
+      const modoBanda = estado.modo === 'masa' ? 'masa' : 'produccion'
+      const subBanda = estado.quienFija ? 'Poné tu PIN' : 'Elegí tu nombre y poné tu PIN'
+      let accionBanda
+      if (modoBanda === 'produccion' && estado.volverA?.modo !== 'masa') {
+        const off = salaDeshabilitada()
+        accionBanda = `<button type="button" class="pr-banda-modo__btn pr-banda-modo__ir" id="pr-quien-ir-masa"${off ? ' disabled' : ''}>` +
+          `${ICONO_MODO.masa}<span class="pr-banda-modo__ir-texto"><span>Ir a Sala de masa</span>` +
+          `${off ? '<span class="pr-banda-modo__nota">· todavía no hay máquinas abiertas</span>' : ''}</span></button>`
+      } else {
+        accionBanda = '<button type="button" class="pr-btn pr-btn--secundario pr-banda-modo__btn" id="pr-quien-cancelar">Cancelar</button>'
+      }
+      return `<div class="pr-banda-modo pr-banda-modo--${modoBanda}">${ICONO_MODO[modoBanda]}` +
+        `<span class="pr-banda-modo__nombre">${NOMBRE_MODO[modoBanda]}</span><span class="pr-banda-modo__sub">${subBanda}</span>${accionBanda}</div>`
+    }
+
+    function pintarBandaQuien() {
+      const b = document.getElementById('pr-quien-banda')
+      if (b) b.innerHTML = htmlBandaQuien()
+    }
+
+    // Tocar el otro modo: la persona del otro modo no se borra; la de ESE modo,
+    // si hay, se vuelve a verificar con su PIN (mostrarQuien la trae puesta).
     function tocarModo(modo) {
       if (!Object.prototype.hasOwnProperty.call(PUESTO_DE_MODO, modo)) return
       tocar()
       if (modo === 'masa' && salaDeshabilitada()) return
       if (estado.modo === modo && estado.persona) return
+      const quien = estado.persona
+      const sinPin = puedeCambiarSinPin(modo)
+      // "Cancelar" en el "¿Quién sos?" del otro modo vuelve acá, con la misma
+      // persona y sin PIN: nunca se fue, solo miró la otra puerta.
+      estado.volverA = quien && !(estado.maestro && quien.id === estado.maestro.id) ? { modo: estado.modo, persona: quien } : null
       estado.modo = modo
       guardarPreferencia(CLAVE_MODO, modo)
-      // Cambiar de modo NO borra a nadie: la persona del otro modo sigue
-      // guardada, y la de ESTE modo, si hay, se vuelve a verificar con su PIN
-      // (mostrarQuien la trae puesta, sin la lista).
       estado.persona = null
       estado.pin = null
       estado.quienOtra = false
       // Con el acceso maestro activo se entra sin volver a poner el PIN, y
       // todo lo que se haga queda a nombre del maestro.
       if (estado.maestro) return entrarComoMaestro(modo)
+      if (sinPin) return entrar({ id: quien.id, nombre: quien.nombre, puesto: PUESTO_DE_MODO[modo] })
+      return mostrarQuien()
+    }
+
+    // "Cancelar" en la banda: vuelve al modo de donde se vino, con quien
+    // estaba adentro. Sin nadie a quien volver, a "¿Quién sos?" de Producción.
+    function cancelarOtroModo() {
+      tocar()
+      const v = estado.volverA
+      estado.volverA = null
+      const destino = v?.modo && v.modo !== estado.modo ? v.modo : 'produccion'
+      estado.modo = destino
+      guardarPreferencia(CLAVE_MODO, destino)
+      estado.pin = null
+      estado.quienOtra = false
+      estado.persona = null
+      if (v && v.modo === destino && personaGuardada(destino)?.id === v.persona.id) {
+        estado.persona = v.persona
+        return entrarAlModo()
+      }
       return mostrarQuien()
     }
 
@@ -2425,12 +2676,62 @@
       }
     }
 
-    // Salir: la persona de ESTE modo sale y se vuelve a preguntar. La del
-    // otro modo no se toca.
+    // Salir (al pie de la barra): la persona de ESTE modo sale y la tablet
+    // vuelve a "¿Quién sos?" de Producción, donde arranca y donde está el
+    // acceso maestro. La persona del otro modo no se toca.
     function salir() {
       olvidarPersona(estado.modo)
+      estado.volverA = null
       estado.quienOtra = false
+      if (estado.modo !== 'produccion') {
+        estado.modo = 'produccion'
+        guardarPreferencia(CLAVE_MODO, 'produccion')
+        estado.persona = null
+        estado.pin = null
+      }
       return mostrarQuien()
+    }
+
+    // "Cambiar de persona": sale la de este modo y se elige otra en el
+    // "¿Quién sos?" de ESTE mismo modo, con la lista (no la persona puesta).
+    function cambiarDePersona() {
+      olvidarPersona(estado.modo)
+      estado.volverA = null
+      estado.quienOtra = true
+      return mostrarQuien()
+    }
+
+    // Las secciones de la barra. Las de UNA máquina usan la última planilla
+    // abierta (maquinaElegida); sin máquina elegida están apagadas y no hacen
+    // nada aunque se las llame.
+    async function irASeccion(id) {
+      tocar()
+      const p = maquinaElegida()
+      if (id === 'inicio') return mostrarTablero()
+      if (id === 'abrir') return mostrarAbrir()
+      if (id === 'sala-inicio') return mostrarSala()
+      if (!p) return
+      if (id === 'paradas') return abrirPlanilla(p.turno.id)
+      if (id === 'producido') return abrirLoProducido(p.turno.id)
+      if (id === 'cierre') {
+        if (estado.vista === 'pr-planilla' || estado.vista === 'pr-agregar-prod' || estado.vista === 'pr-cierre') return mostrarCierre()
+        await abrirPlanilla(p.turno.id)
+        if (maquinaElegida()?.turno?.id === p.turno.id) return mostrarCierre()
+      }
+    }
+
+    // "Lo producido" de una máquina: su planilla leída de la base y, arriba,
+    // el agregado de un producto. Si la planilla ya está en pantalla no se
+    // vuelve a pedir.
+    async function abrirLoProducido(turnoId) {
+      if (!(estado.planilla?.turno?.id === turnoId && estado.vista === 'pr-planilla')) await abrirPlanilla(turnoId)
+      if (estado.planilla?.turno?.id === turnoId) return abrirAgregar()
+    }
+
+    // Tocar una máquina en la barra de Sala de masa: se trabaja con ella.
+    function mostrarHistorialMaquina(turnoId) {
+      tocar()
+      return elegirMaquinaSala(turnoId)
     }
 
     // "Sacar al masero": el encargado adentro de Producción (verificado con su
@@ -2471,6 +2772,7 @@
       pintarMaseroAdentro()
       pintarCabecera()
       mostrarExito(`${m.nombre} salió de Sala de masa.`)
+      if (estado.volverA?.modo === 'masa') estado.volverA = null
       return true
     }
 
@@ -2478,12 +2780,23 @@
     // SE CIERRA SOLA POR INACTIVIDAD
     // ═══════════════════════════════════════════════════════════════════════
     //
-    // PRODUCCIÓN se cierra a los 15 minutos sin tocar la pantalla: el
-    // encargado deja la tablet y sigue con lo suyo. SALA DE MASA no, porque el
-    // masero la usa todo el turno y volver a poner el PIN en cada masa sería
-    // insoportable. El acceso maestro también se cierra a los 15 minutos.
+    // Decisión de Facu (28/09/2026), que reemplaza a los 15 minutos de antes:
+    //  - PRODUCCIÓN, a los 10 minutos sin tocar la pantalla, OLVIDA a la
+    //    persona pero la deja ELEGIDA: la tablet vuelve a "¿Quién sos?" de
+    //    Producción con su nombre ya puesto, y solo pone el PIN. La persona
+    //    guardada del modo NO se borra: es la que mostrarQuien trae puesta.
+    //  - SALA DE MASA no se cierra NUNCA por inactividad: el masero la usa todo
+    //    el turno. Sale con "Salir", "Cambiar de persona", "Sacar al masero" o
+    //    cuando se cierran todas las planillas.
+    //  - Si a los 10 minutos la tablet está en Sala de masa, NO SE TOCA NADA:
+    //    ni el masero ni el encargado guardado de Producción.
+    //  - El acceso maestro se cierra a los mismos 10 minutos ESTÉ DONDE ESTÉ,
+    //    también en Sala de masa: es una llave de administración con su PIN en
+    //    memoria, y dejarla abierta en una tablet compartida es justo lo que el
+    //    cierre por inactividad existe para evitar. Al cerrarse, en Sala de
+    //    masa, el masero guardado sigue guardado: vuelve a entrar con su PIN.
 
-    const MINUTOS_INACTIVIDAD = 15
+    const MINUTOS_INACTIVIDAD = 10
 
     function tocar() {
       estado.ultimoToque = Date.now()
@@ -2493,24 +2806,32 @@
       return typeof desde === 'number' && (ahora - desde) >= MINUTOS_INACTIVIDAD * 60000
     }
 
-    // Saca SOLO a la persona de Producción, esté la tablet en el modo que
-    // esté: si la tablet quedó en Sala de masa, el encargado guardado también
-    // se olvida (volver a Producción pide la lista, no su PIN), y el masero
-    // sigue adentro.
     function revisarInactividad(ahora = Date.now()) {
       if (!vencioPorInactividad(estado.ultimoToque, ahora)) return false
+      if (estado.modo === 'masa') {
+        if (!estado.maestro) return false
+        tocar()
+        const eraElMaestro = !!estado.persona && estado.persona.id === estado.maestro.id
+        cerrarMaestro()
+        // Si adentro estaba el maestro, la sala queda sin nadie y se vuelve a
+        // "¿Quién sos?" de Sala de masa, con el masero guardado ya puesto.
+        if (eraElMaestro || estado.vista === 'pr-asignar' || estado.vista === 'pr-acceso') mostrarQuien()
+        else pintarCabecera()
+        return true
+      }
       const habiaMaestro = !!estado.maestro
-      const habiaPersona = estado.modo === 'produccion' && !!estado.persona
-      const habiaGuardada = !!personaGuardada('produccion')
-      if (!habiaMaestro && !habiaPersona && !habiaGuardada) return false
-      if (habiaMaestro) cerrarMaestro()
+      const habiaPersona = !!estado.persona
+      if (!habiaMaestro && !habiaPersona) return false
       tocar()
-      olvidarPersona('produccion')
-      if (habiaPersona) salir()
-      // Las dos pantallas del maestro no se pueden quedar abiertas sin él.
-      else if (habiaMaestro && (estado.vista === 'pr-asignar' || estado.vista === 'pr-acceso')) siguientePaso()
-      else pintarCabecera()
-      return habiaMaestro || habiaPersona
+      if (habiaMaestro) cerrarMaestro()
+      estado.volverA = null
+      estado.persona = null
+      estado.pin = null
+      estado.quienOtra = false
+      // mostrarQuien trae a la persona guardada de Producción ya elegida, con
+      // el teclado del PIN. Las pantallas del maestro se van con él.
+      mostrarQuien()
+      return true
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2542,7 +2863,7 @@
     // En la planta no hay cabecera ni menú (se fueron con la oficina a la
     // gestión): la barra de modos y el cartel del acceso maestro.
     function pintarCabecera() {
-      pintarBarra()
+      pintarLateral()
       pintarMaestro()
     }
 
@@ -2622,7 +2943,7 @@
       const f = estado.quienFija
       document.getElementById('pr-quien-fija').hidden = !f
       document.getElementById('pr-quien-fija-texto').textContent = f ? `${ROL_DE_MODO[estado.modo] ?? ''}: ${f.nombre}` : ''
-      for (const id of ['pr-quien-buscar', 'pr-quien-aviso', 'pr-quien-lista', 'pr-quien-puesto', 'pr-btn-maestro']) {
+      for (const id of ['pr-quien-buscar', 'pr-quien-aviso', 'pr-quien-lista', 'pr-quien-puesto', 'pr-quien-nota', 'pr-btn-maestro']) {
         document.getElementById(id).hidden = !!f
       }
       document.getElementById('pr-quien-titulo').textContent = f ? 'Entrá con tu PIN' : '¿Quién sos?'
@@ -2640,6 +2961,15 @@
       const { personas, sinConfigurar } = personasParaPuesto(estado.personal, puesto)
       const visibles = personasFiltradas(personas, estado.quienBusqueda)
       document.getElementById('pr-quien-puesto').textContent = PLURAL_PUESTO[puesto] ?? ''
+      // El buscador aparece desde las 9 personas (decisión de Facu): con menos,
+      // la lista entera entra en la pantalla. Si ya se escribió algo, queda.
+      const buscar = document.getElementById('pr-quien-buscar')
+      buscar.hidden = personas.length < MINIMO_PARA_BUSCAR && !estado.quienBusqueda
+      // A Producción entra quien tiene el puesto de encargado: la base
+      // (verificar_pin_produccion) rechaza a un operario. Se dice, para que
+      // nadie busque un nombre que no va a aparecer.
+      document.getElementById('pr-quien-nota').textContent =
+        puesto === 'encargado' && !sinConfigurar ? 'Solo aparecen los encargados.' : ''
       document.getElementById('pr-quien-aviso').innerHTML = htmlAvisoPuestos(sinConfigurar, puesto)
       const elegida = estado.pin?.personaId ?? null
       document.getElementById('pr-quien-lista').innerHTML = visibles.length
@@ -2822,6 +3152,8 @@
       const p = estado.pin
       panel.hidden = !p
       pintarQuienMaestro()
+      // La banda cambia con el panel: el del acceso maestro trae la suya.
+      pintarBandaQuien()
       if (!p) return
       panel.className = 'pr-tarjeta pr-pin' + (p.modo === 'maestro' ? ' pr-pin--maestro' : '')
       const reloj = p.bloqueadoHasta ? cuentaRegresiva(p.bloqueadoHasta) : null
@@ -2985,7 +3317,8 @@
     //
     // Es la salida de excepción de administración: entra a cualquier modo sin
     // volver a poner el PIN, y TODO lo que haga queda a SU nombre. Se cierra
-    // solo a los 15 minutos sin uso.
+    // solo a los 10 minutos sin uso, con Producción (si la tablet está en Sala
+    // de masa no se toca nada: ver revisarInactividad).
     //
     // NO se guarda en sessionStorage, a diferencia de la persona del modo: su
     // PIN tiene que quedar en memoria para poder llamar a
@@ -3480,7 +3813,7 @@
       estado.abiertasConocido = true
       if (hay === false) sacarMaseroPorCierre()
       mantenerPantalla(hay)
-      pintarBarra()
+      pintarLateral()
     }
 
     async function refrescarAbiertas() {
@@ -3494,9 +3827,19 @@
       // delegación desde el contenedor, que sí es fijo.
       document.getElementById('pr-barra').addEventListener('click', ev => {
         if (ev.target.closest('#pr-btn-salir')) { tocar(); salir(); return }
-        if (ev.target.closest('#pr-btn-entrar')) { tocar(); estado.quienOtra = false; mostrarQuien(); return }
-        if (ev.target.closest('#pr-btn-barra-maestro')) { abrirMaestro(); return }
-        const b = ev.target.closest('[data-modo]'); if (b) tocarModo(b.dataset.modo)
+        if (ev.target.closest('#pr-lat-cambiar')) { tocar(); cambiarDePersona(); return }
+        const s = ev.target.closest('[data-seccion]')
+        if (s) { if (!s.disabled) irASeccion(s.dataset.seccion); return }
+        const t = ev.target.closest('[data-lateral-turno]')
+        if (t) { mostrarHistorialMaquina(t.dataset.lateralTurno); return }
+        const b = ev.target.closest('[data-modo]'); if (b && !b.disabled) tocarModo(b.dataset.modo)
+      })
+      // La banda de "¿Quién sos?" también se repinta entera.
+      document.getElementById('pr-quien-banda').addEventListener('click', ev => {
+        const ir = ev.target.closest('#pr-quien-ir-masa')
+        if (ir) { if (!ir.disabled) tocarModo('masa'); return }
+        if (ev.target.closest('#pr-quien-cancelar')) { cancelarOtroModo(); return }
+        if (ev.target.closest('#pr-quien-volver')) { tocar(); cerrarPin() }
       })
       document.getElementById('pr-quien-lista').addEventListener('click', ev => {
         if (ev.target.closest('#pr-quien-reintentar')) { mostrarQuien(); return }

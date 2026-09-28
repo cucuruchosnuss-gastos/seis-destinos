@@ -61,9 +61,12 @@ async function tipear(S, pin) {
 esperas.push((async () => {
   const S = armar({ respuestas: { verificar_pin_maestro: { ok: true } } })
   S.estado.persona = null
-  const barra = S.htmlBarraModos()
-  chk('la barra ofrece "Acceso maestro" sin nadie adentro', /<button type="button" class="pr-barra__maestro" id="pr-btn-barra-maestro">Acceso maestro<\/button>/.test(barra))
-  chk('… y la barra lo escucha', /closest\('#pr-btn-barra-maestro'\)\) \{ abrirMaestro\(\); return \}/.test(FUENTE))
+  // La planta con dos modos (28/09/2026): el acceso maestro está en UN solo
+  // lugar, abajo de los nombres de "¿Quién sos?" de Producción.
+  chk('el acceso maestro está al pie de "¿Quién sos?"',
+    /<div class="pr-quien__pie">[\s\S]*?<button type="button" class="pr-link" id="pr-btn-maestro">Acceso maestro<\/button>/.test(FUENTE))
+  chk('… y se escucha', /getElementById\('pr-btn-maestro'\)\.addEventListener\('click', abrirMaestro\)/.test(FUENTE))
+  chk('… y no hay otro atajo en la barra', !/pr-btn-barra-maestro/.test(FUENTE))
   await S.abrirMaestro()
   chk('abre SOLO el teclado: la columna de la lista se esconde', S.estado.pin?.modo === 'maestro' && S.__doc.getElementById('pr-quien-col').hidden === true)
   chk('… con la vista de ¿Quién sos? de fondo pero sin pintar la lista', S.estado.vista === 'pr-quien' && S.__doc.getElementById('pr-quien-lista').innerHTML === '')
@@ -75,7 +78,8 @@ esperas.push((async () => {
   chk('se verifica UNA vez, con esa persona', l.length === 1 && l[0][1].p_empleado_id === 'e-jefa' && l[0][1].p_pin === '48271936', JSON.stringify(l))
   chk('verificado, entra DIRECTO al modo como esa persona', S.estado.maestro?.id === 'e-jefa' && S.estado.persona?.id === 'e-jefa' && S.estado.vista === 'pr-produccion', S.estado.vista)
   chk('… la columna de la lista vuelve a verse (para la próxima)', S.__doc.getElementById('pr-quien-col').hidden === false)
-  chk('… y no se ofrece el acceso maestro otra vez en la barra', !/pr-btn-barra-maestro/.test(S.htmlBarraModos()))
+  chk('… la barra lateral dice que es el acceso maestro', /Acceso maestro/.test(S.htmlLateral()))
+  chk('… y no ofrece el acceso maestro otra vez', !/abrirMaestro|pr-btn-maestro/.test(S.htmlLateral()))
   // Cambiar de modo con el maestro activo no pasa por ¿Quién sos?.
   S.estado.abiertasConocido = true
   S.estado.hayTurnoAbierto = true
@@ -180,8 +184,8 @@ esperas.push((async () => {
   S.sinAcceso(marca('texto'))
   chequearMarcas(chk, 'cartel sin acceso', S.__doc.getElementById('pr-sin-acceso').innerHTML, ['texto'])
   S.estado.unidades = new Map([['u-cn', marca('unidad')]])
-  S.estado.persona = null
-  chequearMarcas(chk, 'barra con el acceso maestro', S.htmlBarraModos(), ['unidad'])
+  S.estado.persona = { id: 'e-jefa', nombre: marca('maestra'), puesto: 'encargado' }
+  chequearMarcas(chk, 'barra con el acceso maestro', S.htmlLateral(), ['unidad', 'maestra'])
 })())
 
 // ── Sin fábrica / sin permiso: se dice, sin volver al dashboard ─────────

@@ -296,6 +296,16 @@ esperas.push((async () => {
   chk('… y la pantalla del maestro no queda abierta', V.estado.vista !== 'pr-asignar')
   sinPin(V, 'inactividad')
 
+  // Lo mismo en Producción (28/09/2026: ahí la inactividad vuelve siempre a
+  // "¿Quién sos?", con la persona elegida y solo el PIN).
+  const V2 = armar()
+  V2.abrirAsignarPin(); V2.elegirPersonaAsignar('e-sin'); tipear(V2, PIN)
+  V2.estado.ultimoToque = Date.now() - 16 * 60000
+  V2.revisarInactividad()
+  chk('Producción: por inactividad se cierra el maestro y el PIN se va', V2.estado.maestro === null && V2.estado.asignar === null)
+  chk('Producción: … y vuelve a "¿Quién sos?"', V2.estado.vista === 'pr-quien')
+  sinPin(V2, 'inactividad en Producción')
+
   const W = armar()
   W.abrirAsignarPin(); W.elegirPersonaAsignar('e-sin'); tipear(W, PIN)
   W.estado.maestro = null
