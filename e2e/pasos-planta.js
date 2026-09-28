@@ -91,6 +91,13 @@ const PASOS_PLANTA = [
     await page.locator('[data-lote="i-harina"]').first().click()
     await expect(page.locator('#pr-lote-panel')).toBeVisible()
   }],
+  // Parte 0 (28/09/2026): escribir un lote que no está en la lista, desde la
+  // ventana, y que el campo entre sin scroll.
+  ['lote-escribir', async (page) => {
+    await page.locator('#pr-lote-panel-otros [data-lote-escribir]').click()
+    await expect(page.locator('#pr-lote-panel-escribir')).toBeVisible()
+    await expect(page.locator('#pr-lote-panel-usar')).toBeVisible()
+  }],
   ['historial-maquina', async (page) => {
     await page.locator('#pr-lote-panel-cerrar').click()
     await page.locator('[data-lateral-turno]').first().click()

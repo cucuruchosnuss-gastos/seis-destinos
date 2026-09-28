@@ -104,7 +104,7 @@ esperas.push((async () => {
   const bP = botonLote(P, 'i-harina')
   chk('primera masa del día: "Elegí el lote"', /Elegí el lote/.test(bP), bP)
   chk('… y NUNCA "Se terminó"', !/Se terminó/.test(filas(P)))
-  chk('… en un solo texto visible, no en dos', (bP.match(/<span>Elegí el lote<\/span>/g) || []).length === 1 && !/<option/.test(bP))
+  chk('… en un solo texto visible, no en dos', (bP.match(/<span class="pr-rec__lote-texto">Elegí el lote<\/span>/g) || []).length === 1 && !/<option/.test(bP))
   chk('ya no hay ningún <select> de lote', !/<select[^>]*data-lote/.test(filas(P)) && !/<option/.test(filas(P)))
 
   const T = await hastaLaReceta(armar())
@@ -121,7 +121,7 @@ esperas.push((async () => {
   // ── c) El lote sin ingreso cargado pasa a la masa siguiente ───────────
   const C = await hastaLaReceta(armar())
   const bC = botonLote(C, 'i-azucar')
-  chk('el lote a mano de la anterior queda elegido', /<span>Lote A-MANO-1<\/span>/.test(bC), bC)
+  chk('el lote a mano de la anterior queda elegido', /<span class="pr-rec__lote-texto">Lote A-MANO-1<\/span>/.test(bC), bC)
   chk('… con "sin ingreso cargado"', /pr-rec__lote-nota">sin ingreso cargado</.test(bC))
   chk('… no como terminado ni vacío', !/pr-rec__lote--terminado|pr-rec__lote--vacio/.test(bC))
   chk('… y no bloquea Registrar', C.__doc.getElementById('pr-receta-registrar').disabled === false, C.__doc.getElementById('pr-receta-error').textContent)
@@ -134,11 +134,23 @@ esperas.push((async () => {
   // Escrito a mano en ESTA masa: también "sin ingreso cargado".
   const M = await hastaLaReceta(armar())
   M.abrirPanelLote('i-azucar')
-  const iMan = M.opcionesLote(M.estado.datosMasa, 'i-azucar').findIndex(o => o.manual)
-  M.elegirTarjetaLote(String(iMan))
-  M.escribirLoteManual('i-azucar', 'B-22')
-  M.pintarReceta()
+  // Parte 0 (28/09/2026): el azúcar no tiene lotes con stock, así que la
+  // ventana abre DIRECTO con el campo para escribir el lote.
+  chk('sin lotes con stock, la ventana abre directo con el campo', M.estado.panelLote?.escribir === true &&
+    /id="pr-lote-panel-escribir"/.test(M.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+  chk('… con "Usar este lote" y la nota de que se registra igual', /id="pr-lote-panel-usar">Usar este lote</.test(M.__doc.getElementById('pr-lote-panel-otros').innerHTML) &&
+    /Podés registrar la masa igual/.test(M.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+  chk('… y sin la lista vacía que no dice nada', M.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML === '')
+  M.usarLoteEscrito()
+  chk('"Usar este lote" vacío no pone nada y pide escribirlo', M.estado.panelLote && /Escribí el lote\./.test(M.__doc.getElementById('pr-lote-panel-otros').innerHTML) &&
+    M.estado.masa.lotes['i-azucar'].lote === 'A-MANO-1')
+  M.estado.panelLote.texto = '  B-22 '
+  M.usarLoteEscrito()
+  chk('"Usar este lote" pone el lote escrito, sin espacios en los bordes', M.estado.masa.lotes['i-azucar'].lote === 'B-22' &&
+    M.estado.masa.lotes['i-azucar'].manual === true && M.estado.masa.lotes['i-azucar'].insumo_id === 'ins-az')
+  chk('… y cierra la ventana', M.estado.panelLote === null && M.__doc.getElementById('pr-lote-panel').hidden === true)
   chk('el lote escrito a mano dice "sin ingreso cargado"', /sin ingreso cargado/.test(botonLote(M, 'i-azucar')) && /Lote B-22/.test(botonLote(M, 'i-azucar')))
+  chk('… y el lote va UNA sola vez: sin un campo abajo del botón', (filas(M).match(/>Lote B-22</g) || []).length === 1 && !/data-lote-manual/.test(filas(M)), filas(M))
 
   // "Se terminó" lo suelta y pide otro.
   const S = await hastaLaReceta(armar())
@@ -149,9 +161,62 @@ esperas.push((async () => {
   chk('"Se terminó" suelta el lote', S.estado.masa.lotes['i-azucar'].lote === null && S.estado.masa.lotes['i-azucar'].terminado === true)
   chk('… y pide otro', /Se terminó · elegí otro/.test(botonLote(S, 'i-azucar')))
   chk('… sin volver a ofrecer "Se terminó"', S.__doc.getElementById('pr-lote-panel-terminado').innerHTML === '')
+  // EL BUG DE LA FÁBRICA (28/09/2026): después de "Se terminó" la ventana
+  // abría VACÍA y SIN el link para escribir un lote, y la masa quedaba trabada.
+  chk('después de "Se terminó" la ventana sigue ofreciendo escribir el lote', /id="pr-lote-panel-escribir"/.test(S.__doc.getElementById('pr-lote-panel-otros').innerHTML) ||
+    /data-lote-escribir/.test(S.__doc.getElementById('pr-lote-panel-otros').innerHTML), S.__doc.getElementById('pr-lote-panel-otros').innerHTML)
+  chk('"Se terminó" conserva de qué insumo era', S.estado.masa.lotes['i-azucar'].insumo_id === 'ins-az')
   await S.registrarMasa()
   chk('… y así no se manda nada', llamadasMasa(S).length === 0)
   chk('queda guardado en el borrador', JSON.parse(S.localStorage.getItem('produccion.masa.' + S.estado.masa.client_uuid)).lotes['i-azucar'].terminado === true)
+  S.cerrarPanelLote()
+  S.elegirComo('original')
+  S.abrirPanelLote('i-azucar')
+  chk('… ni cambiando a Original: la ventana abre con el campo', /id="pr-lote-panel-escribir"/.test(S.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+  S.estado.panelLote.texto = 'AZ-7'
+  S.usarLoteEscrito()
+  chk('escribir un lote después de "Se terminó" lo destraba', S.estado.masa.lotes['i-azucar'].lote === 'AZ-7' && !S.estado.masa.lotes['i-azucar'].terminado &&
+    !/elegir otro lote de azúcar/.test(S.__doc.getElementById('pr-receta-error').textContent))
+  await S.registrarMasa()
+  const pmS = llamadasMasa(S)[0]
+  chk('… y la masa se registra con ese lote', !!pmS && pmS.p_items.find(x => x.ingrediente_id === 'i-azucar')?.lote === 'AZ-7', JSON.stringify(pmS?.p_items))
+
+  // Un borrador viejo de "Se terminó" (de antes de la Parte 0) no guardaba
+  // de qué insumo era: igual se puede escribir el lote, del único insumo.
+  const V = await hastaLaReceta(armar())
+  V.estado.masa.lotes['i-azucar'] = { insumo_id: '', lote: null, manual: false, sinLote: false, terminado: true }
+  V.abrirPanelLote('i-azucar')
+  V.estado.panelLote.texto = 'AZ-9'
+  V.usarLoteEscrito()
+  chk('un "Se terminó" viejo sin insumo igual deja escribir el lote', V.estado.masa.lotes['i-azucar'].insumo_id === 'ins-az' && V.estado.masa.lotes['i-azucar'].lote === 'AZ-9',
+    JSON.stringify(V.estado.masa.lotes['i-azucar']))
+
+  // Con lotes con stock (harina): "Se terminó" deja la lista y el link ARRIBA.
+  const H = await hastaLaReceta(armar())
+  H.abrirPanelLote('i-harina')
+  chk('con lotes, la ventana NO abre con el campo', H.estado.panelLote.escribir === false && !/id="pr-lote-panel-escribir"/.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+  H.marcarLoteTerminado('i-harina')
+  H.pintarPanelLote()
+  chk('"Se terminó" con lotes: la lista sigue y el link también', /data-lote-op=/.test(H.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML) &&
+    /data-lote-escribir>El lote no está en la lista: escribirlo</.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+  H.abrirEscribirLote()
+  chk('tocar el link abre el campo en la ventana', H.estado.panelLote.escribir === true && /id="pr-lote-panel-escribir"/.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+  chk('… con los dos insumos para elegir de qué marca es', /data-lote-escribir-insumo="ins-h1"/.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML) &&
+    /data-lote-escribir-insumo="ins-h2" aria-pressed="true"/.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML), H.__doc.getElementById('pr-lote-panel-otros').innerHTML)
+  H.estado.panelLote.insumoEscribir = 'ins-h1'
+  H.estado.panelLote.texto = 'J-1'
+  H.usarLoteEscrito()
+  chk('… y el lote escrito queda del insumo elegido', H.estado.masa.lotes['i-harina'].insumo_id === 'ins-h1' && H.estado.masa.lotes['i-harina'].lote === 'J-1')
+
+  // "Otro": un insumo sin lotes con saldo ya no está deshabilitado; elegirlo
+  // abre el campo para escribir su lote.
+  const O = await hastaLaReceta(armar({ insumos: [...INSUMOS, { ingrediente_id: 'i-harina', insumo_id: 'ins-h3', nombre: 'Harina 000', marca: 'Chacabuco', tipo: 'materia_prima', lotes: [] }] }))
+  O.abrirPanelLote('i-harina', 'otro')
+  const tO = O.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
+  chk('"Otro": el insumo sin lotes no está deshabilitado', !/disabled/.test(tO) && /Chacabuco/.test(tO), tO)
+  O.elegirInsumoOtro(String(O.opcionesOtroInsumo('i-harina').findIndex(x => x.insumo_id === 'ins-h3')))
+  chk('… elegirlo abre el campo para escribir su lote', O.estado.panelLote?.escribir === true && O.estado.panelLote.insumoEscribir === 'ins-h3' &&
+    /id="pr-lote-panel-escribir"/.test(O.__doc.getElementById('pr-lote-panel-otros').innerHTML))
 
   // ── a) El panel ───────────────────────────────────────────────────────
   const A = await hastaLaReceta(armar())
@@ -176,14 +241,17 @@ esperas.push((async () => {
   chk('filtrar por una marca deja solo sus lotes', !/Júpiter<\/strong>/.test(soloWali) && /<strong>Wali<\/strong>/.test(soloWali) &&
     /data-lote-marca="Wali" aria-pressed="true"/.test(soloWali), soloWali)
   chk('… y el filtro se toca en el panel', /const mf = ev\.target\.closest\('\[data-lote-marca\]'\)/.test(FUENTE))
+  chk('el link de escribir se toca en el panel', /if \(ev\.target\.closest\('\[data-lote-escribir\]'\)\) \{ abrirEscribirLote\(\); return \}/.test(FUENTE))
+  chk('"Usar este lote" se toca en el panel', /if \(ev\.target\.closest\('#pr-lote-panel-usar'\)\) \{ usarLoteEscrito\(\); return \}/.test(FUENTE))
+  chk('Enter en el campo usa el lote', /ev\.key === 'Enter' && ev\.target\.closest\('\[data-lote-manual\]'\)\) \{ ev\.preventDefault\(\); usarLoteEscrito\(\) \}/.test(FUENTE))
   A.estado.panelLote.marca = ''
   A.pintarPanelLote()
   chk('sin fechas en stock_para_masa no hay fecha, y v_stock_por_lote no se consulta', !/pr-lp__fila-fecha/.test(tar) && A.__consultasFecha() === 0)
   const otros = A.__doc.getElementById('pr-lote-panel-otros').innerHTML
   chk('ya no hay botones de "Otro lote" por insumo: UN link para escribir uno que no está', !/Otro lote/.test(tar + otros) &&
-    /El lote no está en la lista: escribirlo/.test(otros) && (otros.match(/data-lote-op=/g) || []).length === 1, otros)
-  chk('… en su propio bloque, abajo', FUENTE.indexOf('id="pr-lote-panel-tarjetas"') < FUENTE.indexOf('id="pr-lote-panel-otros"') &&
-    FUENTE.indexOf('id="pr-lote-panel-tarjetas"') > 0)
+    /El lote no está en la lista: escribirlo/.test(otros) && (otros.match(/data-lote-escribir>/g) || []).length === 1, otros)
+  chk('… en su propio bloque, ARRIBA de la lista (Parte 0)', FUENTE.indexOf('id="pr-lote-panel-otros"') < FUENTE.indexOf('id="pr-lote-panel-tarjetas"') &&
+    FUENTE.indexOf('id="pr-lote-panel-otros"') > 0)
   // Elegir una tarjeta pone ese lote en el renglón y cierra.
   A.elegirTarjetaLote('0')
   chk('elegir una tarjeta pone ESE lote', A.estado.masa.lotes['i-harina'].insumo_id === 'ins-h1' && A.estado.masa.lotes['i-harina'].lote === '24518')
@@ -191,8 +259,8 @@ esperas.push((async () => {
   chk('… y cierra el panel', A.__doc.getElementById('pr-lote-panel').hidden === true && A.estado.panelLote === null)
   // Un solo insumo: "Otro lote de este insumo".
   A.abrirPanelLote('i-azucar')
-  chk('con un solo insumo, el mismo link', /El lote no está en la lista: escribirlo/.test(A.__doc.getElementById('pr-lote-panel-otros').innerHTML))
-  chk('sin lotes con stock lo dice', /No hay lotes con stock cargado/.test(A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML))
+  chk('con un solo insumo y sin lotes con stock, directo el campo', /id="pr-lote-panel-escribir"/.test(A.__doc.getElementById('pr-lote-panel-otros').innerHTML) &&
+    !/data-lote-escribir-insumo/.test(A.__doc.getElementById('pr-lote-panel-otros').innerHTML))
   // Escape cierra.
   let prevenido = false
   A.teclaPanelLote({ key: 'Escape', preventDefault() { prevenido = true } })
@@ -237,7 +305,7 @@ esperas.push((async () => {
     original: { receta_id: 'r1', version: 1, items: [{ ingrediente_id: ING, ingrediente: marca('ingrediente'), orden: 1, descuenta_stock: true, cantidad_kg: 25, insumo_preferido_id: null }] },
     insumos: [
       { ingrediente_id: ING, insumo_id: 'ins-x', nombre: marca('insumo'), marca: marca('marca'), tipo: 'materia_prima', lotes: [{ lote: marca('lote'), stock: 10 }] },
-      { ingrediente_id: ING, insumo_id: 'ins-y', nombre: marca('insumo2'), marca: '', tipo: 'insumo', lotes: [] },
+      { ingrediente_id: ING, insumo_id: marca('insId'), nombre: marca('insumo2'), marca: '', tipo: 'insumo', lotes: [] },
     ] }), 'original')
   chequearMarcas(chk, 'el botón del lote vacío', filas(X), ['ingId', 'ingrediente'])
   X.abrirPanelLote(ING)
@@ -249,9 +317,12 @@ esperas.push((async () => {
   // Y el campo del lote escrito a mano, que lleva el id y el nombre del ingrediente.
   X.abrirPanelLote(ING)
   X.elegirTarjetaLote(String(X.opcionesLote(X.estado.datosMasa, ING).findIndex(o => o.manual)))
-  const conManual = filas(X)
-  chk('el campo a mano está en el renglón', /data-lote-manual=/.test(conManual))
-  chequearMarcas(chk, 'el campo del lote a mano', conManual.slice(conManual.indexOf('pr-rec__manual')), ['ingId', 'ingrediente'])
+  const conManual = X.__doc.getElementById('pr-lote-panel-otros').innerHTML
+  chk('el campo a mano está en la ventana, no en el renglón', /data-lote-manual=/.test(conManual) && !/data-lote-manual=/.test(filas(X)))
+  chequearMarcas(chk, 'el campo del lote a mano', conManual, ['ingId', 'marca', 'insumo2', 'insId'])
+  X.estado.panelLote.texto = marca('loteEscrito')
+  X.usarLoteEscrito()
+  chequearMarcas(chk, 'el renglón con el lote escrito', filas(X), ['loteEscrito', 'ingId', 'ingrediente'])
 })())
 
 // ── Lo que queda escrito ──────────────────────────────────────────────────

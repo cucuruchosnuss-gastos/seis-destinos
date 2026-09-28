@@ -123,9 +123,14 @@ test.describe('planta', () => {
         const ing = await boton.getAttribute('data-lote');
         await boton.click();
         await expect(page.locator('#pr-lote-panel')).toBeVisible();
-        // Stock vacío en la fábrica de pruebas: "Otro lote de este insumo".
-        await page.locator('#pr-lote-panel-otros [data-lote-op]').first().click();
-        await page.locator(`[data-lote-manual="${ing}"]`).fill(`ROBOT-${vueltas}`);
+        // Stock vacío en la fábrica de pruebas: la ventana abre directo con el
+        // campo para escribir el lote (Parte 0, 28/09/2026); si hay lotes, el
+        // link "El lote no está en la lista: escribirlo" lo abre.
+        if (!(await page.locator('#pr-lote-panel-escribir').count())) {
+          await page.locator('#pr-lote-panel-otros [data-lote-escribir]').click();
+        }
+        await page.locator(`#pr-lote-panel-escribir[data-lote-manual="${ing}"]`).fill(`ROBOT-${vueltas}`);
+        await page.locator('#pr-lote-panel-usar').click();
       }
       await captura(page, 'masa-con-lotes', info);
       await page.locator('#pr-receta-registrar').click();

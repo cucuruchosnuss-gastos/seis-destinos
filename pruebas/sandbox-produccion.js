@@ -257,6 +257,8 @@ const NUEVAS_PLANTA = [
   'cargarMasasReceta', 'ultimaMasaAnulable', 'htmlMasaReceta', 'htmlMasaRecetaPendiente', 'htmlAnularUltima',
   'pintarMasasReceta', 'pedirAnularUltima', 'cancelarAnularUltima', 'confirmarAnularUltima',
   'opcionesOtroInsumo', 'htmlPanelOtroInsumo', 'elegirInsumoOtro',
+  // Parte 0 (28/09/2026): escribir un lote en la ventana, desde cualquier estado.
+  'insumoParaEscribir', 'htmlEscribirLote', 'usarLoteEscrito', 'enfocarEscribir', 'abrirEscribirLote',
   // 4h · El historial de una máquina.
   'cargarDetalleHist', 'htmlMasaHist', 'htmlIngredientesHist', 'htmlAnularHist', 'htmlDetalleHist', 'pintarHistMaq',
   'elegirMasaHist', 'pedirAnularHist', 'cancelarAnularHist', 'confirmarAnularHist', 'nuevaMasaDesdeHist',

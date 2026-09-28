@@ -96,6 +96,11 @@ const RENOMBRADOS = [
     'Planta y gestión: el texto pasó de "‹ Máquinas" a "← Atrás" y el botón se mudó arriba a la izquierda de la cabecera de la planilla.'],
   ['control:button#pr-masas-volver[type=button]', 'control:button#pr-masas-volver[type=button]',
     'Planta y gestión: el texto pasó de "‹ Máquinas" a "← Atrás" y el botón se mudó arriba a la izquierda, antes del título "Masas del turno".'],
+  ['control:input[data-lote-manual][type=text]', 'control:input#pr-lote-panel-escribir[data-lote-manual][type=text]',
+    'Parte 0 (28/09/2026, la sala trabada): el campo para escribir un lote que no está en la lista se mudó del ' +
+    'renglón de la receta a la VENTANA de lotes, arriba de la lista, con "Usar este lote" (#pr-lote-panel-usar). ' +
+    'Abajo del botón del renglón el lote se veía dos veces y la columna desbordaba; y desde "Se terminó" la ventana ' +
+    'abría vacía y sin forma de llegar al campo. Mismo data-lote-manual (el id del ingrediente), mismo dato.'],
 ]
 
 // Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS
@@ -215,6 +220,10 @@ const MENOS_COPIAS = [
     'La planta con dos modos (28/09/2026): la barra de arriba tenía los DOS modos (PRODUCCIÓN y SALA DE MASA) escritos ' +
     'uno por uno; la barra lateral tiene UN solo botón, htmlBotonOtroModo(), que lleva al modo donde no estás con el tono ' +
     'de ese modo. El modo en el que estás no se repite (README del handoff). Los dos modos siguen alcanzables.'],
+  ['control:button[data-lote-op][type=button]', 1,
+    'Parte 0 (28/09/2026): el link "El lote no está en la lista: escribirlo" era un data-lote-op que apuntaba a la ' +
+    'opción "a mano" de la lista; ahora es data-lote-escribir y abre el campo ADENTRO de la ventana (arriba de la ' +
+    'lista). data-lote-op sigue en cada renglón de lote de la lista.'],
   ['control:button[data-mas-operario][type=button]', 1,
     'La tablet real (28/09/2026): en Abrir turno los operarios pasaron a ser etiquetas chicas, TODAS a la vista, que se ' +
     'tocan para elegir (data-toggle-op), con un buscador que no toma el foco solo: el "+ Operario" que abría el ' +

@@ -306,16 +306,16 @@ esperas.push((async () => {
   chk('no alcanza para ESTA masa: "quedan" en bordó', /pr-rec__queda pr-rec__queda--poco">quedan 240 g/.test(filasDob), filasDob.slice(0, 200))
   chk('… y el renglón entero se tinta', /pr-rec pr-rec--floja/.test(filasDob))
   const pieDob = DOB.__doc.getElementById('pr-receta-error').textContent
-  chk('… y el aviso va pegado a Registrar, como el diseño', pieDob === 'Al lote 3310 de lecitina le quedan 240 g y esta masa lleva 300 g. Elegí otro lote u Otro.', pieDob)
+  chk('… y el aviso va pegado a Registrar ANTES de tocarlo', pieDob === 'Al lote 3310 de lecitina le quedan 240 g y esta masa lleva 300 g. Podés registrar igual.' &&
+    DOB.__doc.getElementById('pr-receta-error').hidden === false, pieDob)
+  chk('… como aviso, no como error', DOB.__doc.getElementById('pr-receta-error').classList.contains('pr-receta__error--aviso'))
+  chk('… y el botón no cambia a "Registrar igual"', DOB.__doc.getElementById('pr-receta-registrar').textContent === 'Registrar masa')
   await DOB.registrarMasa()
-  chk('el primer toque NO manda: muestra el aviso y pide "Registrar igual"', llamadasMasa(DOB).length === 0 &&
-    DOB.__doc.getElementById('pr-receta-registrar').textContent === 'Registrar igual')
-  await DOB.registrarMasa()
-  chk('… el segundo manda igual (la fábrica no se para por el stock)', llamadasMasa(DOB).length === 1)
+  chk('el primer toque registra: un lote que no alcanza es un AVISO, nunca un bloqueo (Parte 0)', llamadasMasa(DOB).length === 1)
 
   // Terminar la tablet, parte 3: el lote de la anterior que NO figura con
   // stock (S-VIEJO) queda elegido, con "sin ingreso cargado".
-  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span>Lote S-VIEJO<\/span><span class="pr-rec__lote-nota">sin ingreso cargado<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
+  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span class="pr-rec__lote-texto">Lote S-VIEJO<\/span><span class="pr-rec__lote-nota">sin ingreso cargado<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
   chk('… y NO frena Registrar', R.__doc.getElementById('pr-receta-error').hidden === true)
   R.marcarLoteTerminado('i-sal')
   const filasTerm = R.__doc.getElementById('pr-receta-filas').innerHTML
@@ -344,8 +344,8 @@ esperas.push((async () => {
   R.elegirOpcionLote('i-sal', 0)
   const iHarina = R.opcionesLote(R.estado.datosMasa, 'i-harina').findIndex(o => o.manual && o.insumo_id === 'ins-h1')
   R.elegirOpcionLote('i-harina', iHarina)
-  chk('"el lote no está en la lista" abre el campo a mano', R.estado.masa.lotes['i-harina'].manual === true &&
-    /data-lote-manual="i-harina"/.test(R.__doc.getElementById('pr-receta-filas').innerHTML))
+  chk('la opción a mano de la lista deja el renglón esperando el lote', R.estado.masa.lotes['i-harina'].manual === true &&
+    !/data-lote-manual/.test(R.__doc.getElementById('pr-receta-filas').innerHTML))
   chk('… y hasta que no se escriba, falta', /Falta elegir el lote de harina\./.test(R.__doc.getElementById('pr-receta-error').textContent))
   R.escribirLoteManual('i-harina', '  X-77 ')
   chk('… escrito, el pie se limpia', R.__doc.getElementById('pr-receta-error').hidden === true)
@@ -807,11 +807,15 @@ esperas.push((async () => {
   O.abrirPanelLote('i-harina', 'otro')
   const tO = O.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
   chk('"Otro": el que no alcanza para esta masa lo dice', /Pureza[\s\S]*no alcanza/.test(tO), tO)
-  chk('"Otro": el que se terminó lo dice y no se puede tocar', /Blancaflor[\s\S]*se terminó/.test(tO) && /data-insumo-op="3" aria-pressed="false" disabled/.test(tO))
+  // Parte 0 (28/09/2026): "se terminó" es un aviso, nunca un bloqueo. El
+  // insumo sin lotes con saldo se puede tocar: abre el campo para escribir
+  // su lote, y hasta que se escriba el renglón no cambia.
+  chk('"Otro": el que se terminó lo dice y se puede tocar', /Blancaflor[\s\S]*se terminó/.test(tO) && /data-insumo-op="3" aria-pressed="false">/.test(tO), tO)
   const opsO = O.opcionesOtroInsumo('i-harina')
   const antesO = JSON.stringify(O.estado.masa.lotes['i-harina'])
   O.elegirInsumoOtro(String(opsO.findIndex(o => o.insumo_id === 'ins-h4')))
-  chk('elegir uno que se terminó no cambia nada', JSON.stringify(O.estado.masa.lotes['i-harina']) === antesO)
+  chk('elegir uno que se terminó abre el campo para escribir su lote', O.estado.panelLote?.escribir === true && O.estado.panelLote.insumoEscribir === 'ins-h4')
+  chk('… y el renglón no cambia hasta escribirlo', JSON.stringify(O.estado.masa.lotes['i-harina']) === antesO)
 
   // "Anular la última masa" pide produccion:cargar.
   const SC = armar()
