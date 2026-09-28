@@ -1219,26 +1219,50 @@
       </section>
 
       <!-- Con el acceso maestro activo: darle a alguien un puesto por hoy. -->
-      <section class="pr-tarjeta" id="pr-acceso" hidden>
-        <h1 class="pr-titulo">Dar acceso por hoy</h1>
-        <p class="pr-texto-suave">El puesto vale hasta el final del día y después se apaga solo. Si la persona todavía no tiene PIN, la base le arma uno y se muestra una sola vez.</p>
-        <label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿A quién?</span>
-          <input type="search" id="pr-acceso-buscar" class="pr-input" placeholder="Buscar por nombre…" autocomplete="off"></label>
-        <div class="pr-grilla pr-espacio-arriba" id="pr-acceso-personas"></div>
-        <div class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿Para qué puesto?</span>
-          <div class="pr-segmento" id="pr-acceso-puestos" role="group" aria-label="Puesto"></div></div>
-        <label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿Hasta el final de qué día?</span>
-          <input type="date" id="pr-acceso-hasta" class="pr-input"></label>
-        <div id="pr-acceso-nota"></div>
-        <p class="pr-error" id="pr-acceso-error" hidden></p>
-        <div class="pr-acciones">
-          <button type="button" class="pr-btn pr-btn--secundario" id="pr-acceso-cancelar">Cancelar</button>
-          <button type="button" class="pr-btn" id="pr-acceso-confirmar">Dar el acceso</button>
+      <!-- 10b · DAR ACCESO POR HOY: a quién (grilla) y qué puesto (tres
+           tarjetas grandes), y el botón que dice qué va a pasar. -->
+      <header class="pr-banda-maestro" id="pr-maestro-banda" hidden>
+        <svg class="pr-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="pr-banda-maestro__titulo">Acceso maestro</span>
+        <span class="pr-banda-maestro__sub">Solo administración</span>
+        <span class="pr-banda-maestro__espacio"></span>
+        <button type="button" class="pr-banda-maestro__btn" data-maestro-modo="produccion">Entrar a Producción</button>
+        <button type="button" class="pr-banda-maestro__btn" data-maestro-modo="masa">Entrar a Sala de masa</button>
+        <span class="pr-banda-maestro__reloj" id="pr-maestro-reloj"></span>
+        <button type="button" class="pr-banda-maestro__btn" id="pr-maestro-salir">Salir del acceso maestro</button>
+      </header>
+      <section class="pr-maestro-sec" id="pr-acceso" hidden>
+        <div class="pr-maestro-grid">
+          <div class="pr-maestro-izq">
+        <div class="pr-maestro-tabs" role="tablist" aria-label="Acceso maestro">
+          <button type="button" class="pr-maestro-tab" role="tab" data-maestro-tab="acceso" aria-selected="true">Dar acceso por hoy</button>
+          <button type="button" class="pr-maestro-tab" role="tab" data-maestro-tab="asignar" aria-selected="false">Asignar PIN</button>
         </div>
-        <div class="pr-aviso" id="pr-acceso-pin" hidden>
-          <p id="pr-acceso-pin-texto"></p>
-          <p class="pr-pin-nuevo" id="pr-acceso-pin-numero"></p>
-          <button type="button" class="pr-btn pr-btn--grande" id="pr-acceso-pin-listo">Ya lo anoté</button>
+            <label class="pr-maestro-buscar"><span class="pr-maestro-rotulo">¿A QUIÉN?</span>
+              <input type="search" id="pr-acceso-buscar" placeholder="Buscar persona" autocomplete="off"></label>
+            <div class="pr-maestro-personas" id="pr-acceso-personas" data-scroll-propio></div>
+          </div>
+          <div class="pr-maestro-der">
+            <div class="pr-maestro-puestos-caja">
+              <span class="pr-maestro-rotulo" id="pr-acceso-puestos-rotulo">¿QUÉ PUESTO?</span>
+              <div class="pr-maestro-puestos" id="pr-acceso-puestos" role="group" aria-label="Puesto"></div>
+              <label class="pr-maestro-hasta"><span>Hasta el final del</span>
+                <input type="date" id="pr-acceso-hasta" class="pr-input"></label>
+            </div>
+            <div id="pr-acceso-nota"></div>
+            <p class="pr-error-pegado" id="pr-acceso-error" hidden></p>
+            <button type="button" class="pr-prim" id="pr-acceso-confirmar">Dar el acceso</button>
+          </div>
+        </div>
+        <!-- 10c · El PIN temporal, una sola vez: al cerrar se borra de la
+             pantalla y de la memoria. -->
+        <div class="pr-pin-temporal" id="pr-acceso-pin" hidden role="dialog" aria-modal="true" aria-labelledby="pr-acceso-pin-texto">
+          <div class="pr-pin-temporal__caja">
+            <p class="pr-pin-temporal__texto" id="pr-acceso-pin-texto"></p>
+            <p class="pr-pin-nuevo" id="pr-acceso-pin-numero"></p>
+            <p class="pr-pin-temporal__nota">Se muestra una sola vez. Dáselo ahora o anotalo.</p>
+            <button type="button" class="pr-prim" id="pr-acceso-pin-listo">Listo, ya se lo di</button>
+          </div>
         </div>
       </section>
 
@@ -1246,15 +1270,16 @@
            de esta fábrica (asignar_pin_con_maestro). El PIN nuevo se tipea en
            el teclado propio: los puntos son FORMAS y el número no entra nunca
            al DOM, ni a localStorage, ni a sessionStorage. -->
-      <section class="pr-tarjeta" id="pr-asignar" hidden>
-        <div class="pr-fila-titulo">
-          <h1 class="pr-titulo" id="pr-asignar-titulo">Asignar PIN</h1>
-          <button type="button" class="pr-btn pr-btn--secundario" id="pr-asignar-volver">‹ Volver</button>
+      <section class="pr-maestro-sec" id="pr-asignar" hidden>
+        <h1 class="pr-solo-lector" id="pr-asignar-titulo">Asignar PIN</h1>
+        <div class="pr-maestro-izq pr-maestro-izq--ancho" id="pr-asignar-lista">
+        <div class="pr-maestro-tabs" role="tablist" aria-label="Acceso maestro">
+          <button type="button" class="pr-maestro-tab" role="tab" data-maestro-tab="acceso" aria-selected="false">Dar acceso por hoy</button>
+          <button type="button" class="pr-maestro-tab" role="tab" data-maestro-tab="asignar" aria-selected="true">Asignar PIN</button>
         </div>
-        <div id="pr-asignar-lista">
-          <label class="pr-campo pr-espacio-arriba"><span class="pr-campo__rotulo">¿A quién?</span>
-            <input type="search" id="pr-asignar-buscar" class="pr-input" placeholder="Buscar por nombre…" autocomplete="off"></label>
-          <div class="pr-grilla pr-espacio-arriba" id="pr-asignar-personas"></div>
+          <label class="pr-maestro-buscar"><span class="pr-maestro-rotulo">¿A QUIÉN?</span>
+            <input type="search" id="pr-asignar-buscar" placeholder="Buscar persona" autocomplete="off"></label>
+          <div class="pr-maestro-personas pr-maestro-personas--4" id="pr-asignar-personas" data-scroll-propio></div>
         </div>
         <div class="pr-pin-fondo" id="pr-asignar-fondo" hidden></div>
         <div class="pr-asignar__panel" id="pr-asignar-panel" hidden role="dialog" aria-modal="true" aria-labelledby="pr-asignar-quien">
@@ -2367,6 +2392,7 @@
       pintarFondoDeModo(enModoTablet() ? estado.modo : null)
       pintarBandaQuien()
       pintarCabeceraVista()
+      pintarMaestro()
     }
 
     // LA CABECERA de cada pantalla: el contexto en naranja (lo elegido: "Lote
@@ -3511,7 +3537,7 @@
       estado.quienMaestro = false
       pintarQuienMaestro()
       tocar()
-      return entrarComoMaestro(estado.modo ?? 'produccion')
+      return abrirDarAcceso()
     }
 
     function entrarComoMaestro(modo) {
@@ -3535,10 +3561,24 @@
 
     function pintarMaestro() {
       const caja = document.getElementById('pr-maestro')
-      caja.hidden = !estado.maestro
+      const enPantallaMaestro = estado.vista === 'pr-acceso' || estado.vista === 'pr-asignar'
+      caja.hidden = !estado.maestro || enPantallaMaestro
+      pintarBandaMaestro()
       if (!estado.maestro) return
       document.getElementById('pr-maestro-texto').textContent =
         `Acceso maestro · ${estado.maestro.nombre} · todo lo que hagas queda a tu nombre`
+    }
+
+    function pintarBandaMaestro() {
+      const banda = document.getElementById('pr-maestro-banda')
+      if (!banda) return
+      banda.hidden = !(estado.vista === 'pr-acceso' || estado.vista === 'pr-asignar')
+      if (banda.hidden) return
+      const ahora = new Date()
+      document.getElementById('pr-maestro-reloj').textContent = `${fechaDelDia(hoyArgentina(ahora))} · ${horaArgentina(ahora)}`
+      for (const t of document.querySelectorAll('[data-maestro-tab]')) {
+        t.setAttribute('aria-selected', String((t.dataset.maestroTab === 'acceso') === (estado.vista === 'pr-acceso')))
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3552,6 +3592,8 @@
       if (!fecha || fecha === hoy) return null
       return `${sumarDias(fecha, 1)}T00:00:00-03:00`
     }
+
+    const QUE_HACE_PUESTO = { encargado: 'abre y cierra planillas', masero: 'hace las masas', operario: 'carga lo producido' }
 
     function faltanParaAcceso(a, hoy) {
       const faltan = []
@@ -3625,10 +3667,17 @@
         : '<p class="pr-texto-suave">Ningún nombre coincide con lo que buscaste.</p>'
       document.getElementById('pr-acceso-nota').innerHTML = htmlNotaAcceso(estado.personal ?? [], a)
       document.getElementById('pr-acceso-puestos').innerHTML = PUESTOS
-        .map(([clave, rotulo]) => `<button type="button" class="pr-segmento__opcion" data-acceso-puesto="${esc(clave)}" aria-pressed="${clave === a.puesto ? 'true' : 'false'}">${esc(rotulo)}</button>`).join('')
+        .map(([clave, rotulo]) => `<button type="button" class="pr-puesto-card pr-puesto-card--${esc(clave)}" data-acceso-puesto="${esc(clave)}" aria-pressed="${clave === a.puesto ? 'true' : 'false'}">` +
+          `<span class="pr-puesto-card__color" aria-hidden="true"></span><span class="pr-puesto-card__nombre">${esc(rotulo)}</span><span class="pr-puesto-card__desc">${esc(QUE_HACE_PUESTO[clave] ?? '')}</span></button>`).join('')
+      const unidadAcceso = estado.unidades?.get?.(estado.unidadId) ?? ''
+      document.getElementById('pr-acceso-puestos-rotulo').textContent = `¿QUÉ PUESTO? · ${a.hasta === hoyArgentina() ? 'SOLO HOY' : `HASTA EL ${diaMes(a.hasta)}`}${unidadAcceso ? `, EN ${String(unidadAcceso).toLocaleUpperCase('es')}` : ''}`
       const faltan = faltanParaAcceso(a, hoyArgentina())
       const btn = document.getElementById('pr-acceso-confirmar')
       btn.disabled = faltan.length > 0
+      const quienAcceso = (estado.personal ?? []).find(p => p.id === a.personaId)?.nombre ?? ''
+      const rotuloAcceso = PUESTOS.find(([k]) => k === a.puesto)?.[1] ?? ''
+      btn.textContent = quienAcceso && rotuloAcceso
+        ? `Dar puesto de ${rotuloAcceso} a ${quienAcceso} ${a.hasta === hoyArgentina() ? 'por hoy' : `hasta el ${diaMes(a.hasta)}`}` : 'Dar el acceso'
       const err = document.getElementById('pr-acceso-error')
       err.hidden = !faltan.length
       err.textContent = faltan.length ? `Falta: ${faltan.join(' · ')}.` : ''
@@ -3669,8 +3718,9 @@
       // nada que mostrar, y decir "sin PIN" sería mentir.
       if (res.pin_temporal) {
         a.pin = String(res.pin_temporal)
-        document.getElementById('pr-acceso-pin-texto').textContent =
-          `Anotalo y pasáselo a ${nombre}. No se va a volver a mostrar.`
+        const rotuloPin = PUESTOS.find(([k]) => k === a.puesto)?.[1] ?? ''
+        document.getElementById('pr-acceso-pin-texto').innerHTML =
+          `PIN temporal de <strong>${esc(nombre)}</strong>${rotuloPin ? ` · ${esc(rotuloPin)} ${a.hasta === hoyArgentina() ? 'por hoy' : `hasta el ${esc(diaMes(a.hasta))}`}` : ''}`
         document.getElementById('pr-acceso-pin-numero').textContent = a.pin
         document.getElementById('pr-acceso-pin').hidden = false
       } else {
@@ -3686,7 +3736,8 @@
       document.getElementById('pr-acceso-pin-numero').textContent = ''
       document.getElementById('pr-acceso-pin').hidden = true
       estado.acceso = null
-      return siguientePaso()
+      document.getElementById('pr-acceso-pin-texto').textContent = ''
+      return estado.maestro ? abrirDarAcceso() : siguientePaso()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3751,7 +3802,6 @@
       const a = estado.asignar
       if (!a) return
       const persona = (estado.personal ?? []).find(p => p.id === a.personaId) ?? null
-      document.getElementById('pr-asignar-lista').hidden = !!persona
       document.getElementById('pr-asignar-panel').hidden = !persona
       document.getElementById('pr-asignar-fondo').hidden = !persona
       document.getElementById('pr-asignar-quien').textContent = persona
@@ -3975,6 +4025,17 @@
       })
       document.getElementById('pr-quien-otra-persona').addEventListener('click', alternarBuscarOtra)
       document.getElementById('pr-btn-cerrar-maestro').addEventListener('click', () => { cerrarMaestro(); mostrarQuien() })
+      document.getElementById('pr-maestro-salir').addEventListener('click', () => { cerrarMaestro(); mostrarQuien() })
+      document.getElementById('pr-maestro-banda').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-maestro-modo]'); if (b && estado.maestro) { tocar(); entrarComoMaestro(b.dataset.maestroModo) }
+      })
+      for (const id of ['pr-acceso', 'pr-asignar']) {
+        document.getElementById(id).addEventListener('click', ev => {
+          const t = ev.target.closest('[data-maestro-tab]'); if (!t || !estado.maestro) return
+          if (t.dataset.maestroTab === 'acceso' && estado.vista !== 'pr-acceso') abrirDarAcceso()
+          if (t.dataset.maestroTab === 'asignar' && estado.vista !== 'pr-asignar') abrirAsignarPin()
+        })
+      }
       document.getElementById('pr-btn-dar-acceso').addEventListener('click', abrirDarAcceso)
       document.getElementById('pr-acceso-buscar').addEventListener('input', ev => {
         estado.acceso.busqueda = ev.target.value; pintarDarAcceso()
@@ -3991,7 +4052,6 @@
         estado.acceso.hasta = ev.target.value; pintarDarAcceso()
       })
       document.getElementById('pr-acceso-confirmar').addEventListener('click', confirmarDarAcceso)
-      document.getElementById('pr-acceso-cancelar').addEventListener('click', cerrarDarAcceso)
       document.getElementById('pr-acceso-pin-listo').addEventListener('click', cerrarDarAcceso)
       document.getElementById('pr-btn-asignar-pin').addEventListener('click', abrirAsignarPin)
       document.getElementById('pr-asignar-buscar').addEventListener('input', ev => {
@@ -4005,7 +4065,6 @@
         const b = ev.target.closest('[data-asignar-tecla]'); if (b) teclaAsignar(b.dataset.asignarTecla)
       })
       document.getElementById('pr-asignar-confirmar').addEventListener('click', confirmarAsignarPin)
-      document.getElementById('pr-asignar-volver').addEventListener('click', volverAsignarPin)
       document.getElementById('pr-asignar-cancelar').addEventListener('click', volverAsignarPin)
       document.getElementById('pr-asignar-fondo').addEventListener('click', volverAsignarPin)
       conectarProduccion()
