@@ -21,7 +21,11 @@ Al integrar: `correr-todo` **143/143** en verde, `check-bytes` verde, y las prue
 ## Lo que NO está terminado
 
 1. **La planta con dos modos (Parte 2): HECHA e integrada** en `9488cc3` (traspaso propio `2026-09-28-planta-dos-modos.md`); 144/144 suites y los e2e sin credenciales en verde, incluido `6-planta-reanudar`.
-2. **La barra de unidad en la gestión de Producción** (`produccion-gestion.html`): espera a la planta, porque las dos pantallas comparten `sandbox-produccion.js`, `mutar-produccion.js` y los controles.
+2. **PENDIENTE — la barra de unidad en la gestión de Producción** (`produccion-gestion.html`). La planta ya está integrada, así que no espera nada. Se le encargó a un subagente de Producción y **se lo paró a pedido de Facu antes de que dejara cambios**: su copia se borró sola al pararlo porque no tenía cambios, así que no hay nada guardado en `traspasos-pendientes`. Hay que hacerlo de cero con las instrucciones de la Parte 4 (las mismas reglas que los otros módulos, ver *La barra de unidad de negocio* en CLAUDE.md):
+   - El selector de unidad de arriba (`localStorage` `produccion.gestion.unidad`) pasa a la barra: retirarlo y declararlo en `controles-produccion-gestion.js`.
+   - `indicadores_produccion()`, el historial, el stock terminado y la configuración son de UNA unidad: con "Todas", elegirla ahí mismo (regla f).
+   - Las suites comparten `sandbox-produccion.js`, `mutar-produccion.js` y los controles con la planta: no romper la planta.
+   - Hoy la barra ya aparece en esa pantalla (la carga el `<head>`) pero la gestión todavía no la obedece: sigue con su propio selector.
 
 ## Decisiones
 

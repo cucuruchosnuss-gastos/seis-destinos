@@ -593,7 +593,7 @@ Facu elige la fábrica UNA vez, arriba, y toda la app muestra solo lo de esa fá
   - **Retiros** (`c9f6923`): la empresa de una orden es un registro nuevo: con una unidad donde se carga, arranca en esa sin preguntar; una orden a medio cargar no cambia.
   - **Administración** (`c9f6923`): la empresa la decide la barra; con Todas se elige ahí (el segmento dice por qué); con una unidad sin Administración, lo dice y quedan las secciones globales.
   - **Proyectos Taller:** con Todas o Taller, todos; con otra fábrica, los trabajos internos para ella.
-  - **La gestión de Producción:** PENDIENTE (espera la integración de la planta, que comparte sus pruebas).
+  - **La gestión de Producción:** PENDIENTE: la barra aparece pero la pantalla todavía usa su propio selector de unidad (ver el traspaso `2026-09-28-planta-taller.md`).
 - Suites `test-barra-unidad.js` (86/86, mut 21/21) y una `test-<modulo>-barra-unidad.js` + mut por módulo; `e2e/7-barra-unidad.spec.js` la mira en cada pantalla a 390 y 1280 px con su maqueta.
 
 ## Login y roles
