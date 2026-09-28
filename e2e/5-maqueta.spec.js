@@ -254,6 +254,81 @@ for (const [archivo, datos] of conBarra) {
   });
 }
 
+// LA PLANTA CON DOS MODOS (28/09/2026): la tablet en horizontal (1280×800) y en
+// vertical (800×1280). Va aparte de PANTALLAS porque la planta no tiene barra
+// lateral, y porque se usa en la tablet y no en el celular ni la compu.
+// Recorre: ¿Quién sos? → PIN → tablero → Lo producido → Sala de masa →
+// la receta (Modificar, + Otro) → el historial de la máquina.
+async function planta_marcarPin(page, pin) {
+  const teclado = page.locator('#pr-pin-teclado');
+  await expect(teclado).toBeVisible();
+  for (const d of pin) await teclado.locator(`[data-tecla="${d}"]`).click();
+  await teclado.locator('[data-tecla="entrar"]').click();
+}
+async function planta_elegir(page, nombre) {
+  const fija = page.locator('#pr-quien-fija');
+  if (await fija.isVisible().catch(() => false)) return;
+  await page.locator('#pr-quien-lista [data-persona]', { hasText: nombre }).click();
+}
+async function planta_sinScroll(page, nombre) {
+  await page.waitForTimeout(150);
+  const { ancho: doc, vista } = await page.evaluate(() => ({ ancho: document.documentElement.scrollWidth, vista: window.innerWidth }));
+  expect(doc, `scroll horizontal en ${nombre}: el documento mide ${doc} px y la pantalla ${vista}`).toBeLessThanOrEqual(vista);
+}
+for (const [ancho, alto] of [[1280, 800], [800, 1280]]) {
+  test(`maqueta: la planta (dos modos) a ${ancho}×${alto}, sin scroll horizontal ni errores`, async ({ page }, info) => {
+    await page.setViewportSize({ width: ancho, height: alto });
+    const errores = vigilarErrores(page);
+    await page.goto(`${MAQUETA}/modulos/produccion.html?maqueta=produccion`);
+    const paso = async (nombre, fn) => test.step(nombre, async () => {
+      await fn();
+      await planta_sinScroll(page, nombre);
+      await captura(page, `maqueta-planta-${nombre}-${ancho}x${alto}`, info);
+    });
+    await paso('quien-sos', async () => { await expect(page.locator('#pr-quien')).toBeVisible() });
+    await paso('tablero', async () => {
+      await planta_elegir(page, 'Federico Silva');
+      await planta_marcarPin(page, '4826');
+      await expect(page.locator('#pr-barra')).toContainText('Federico Silva');
+      await expect(page.locator('[data-producido]').first()).toBeVisible();
+      await expect(page.locator('#pr-tablero')).toContainText('Sin turno');
+      await expect(page.locator('#pr-tablero')).toContainText('Se rompió la cadena');
+    });
+    await paso('lo-producido', async () => {
+      await page.locator('[data-producido]').first().click();
+      await expect(page.locator('#pr-agregar-prod')).toBeVisible();
+    });
+    await paso('sala-de-masa', async () => {
+      await page.locator('#pr-barra [data-modo="masa"]').click();
+      await planta_elegir(page, 'Agustín Barrera');
+      await planta_marcarPin(page, '7391');
+      await expect(page.locator('#pr-sala')).toBeVisible();
+    });
+    await paso('receta', async () => {
+      await page.locator('[data-sala-turno="t1"]').first().click();
+      await expect(page.locator('#pr-receta')).toBeVisible();
+      await expect(page.locator('#pr-receta')).toContainText('Harina');
+      // Adentro de la tarjeta tampoco se sale nada: a 1280 el botón "Otro" de
+      // cada renglón quedaba afuera (la fila pedía 706 px en 642) y el
+      // documento no scrolleaba, así que el chequeo general no lo veía.
+      const afuera = await page.evaluate(() => [...document.querySelectorAll('#pr-receta .pr-rec')]
+        .filter(f => f.scrollWidth > f.clientWidth + 1 || [...f.children].some(c => c.getBoundingClientRect().right > f.getBoundingClientRect().right + 1))
+        .map(f => f.textContent.trim().slice(0, 30)));
+      expect(afuera, `renglones de la receta que se salen de la tarjeta: ${afuera.join(' | ')}`).toEqual([]);
+    });
+    await paso('receta-modificar', async () => {
+      await page.locator('#pr-receta-opciones [data-base="modificar"]').click();
+      await expect(page.locator('#pr-receta')).toContainText('Azúcar');
+    });
+    await paso('historial-maquina', async () => {
+      await page.locator('[data-lateral-turno]').first().click();
+      await expect(page.locator('#pr-hist-maq')).toBeVisible();
+      await expect(page.locator('#pr-hm-lista')).toContainText('Masa 3');
+    });
+    expect(errores, errores.join('\n')).toEqual([]);
+  });
+}
+
 test('maqueta: la planta no carga la barra lateral', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(`${MAQUETA}/modulos/produccion.html`);

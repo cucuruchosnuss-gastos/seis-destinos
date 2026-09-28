@@ -880,8 +880,8 @@
     .pr-como:disabled { border-color: var(--borde-tarjeta); opacity: 0.45; cursor: not-allowed; }
     .pr-como:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
     .pr-como__col { flex: 1; min-width: 0; line-height: 1.3; }
-    .pr-como__titulo { font-size: 1.25rem; font-weight: 800; }
-    .pr-como__detalle { font-size: 1.125rem; color: var(--pr-texto-secundario); overflow-wrap: anywhere; }
+    .pr-como__titulo { display: block; font-size: 1.25rem; font-weight: 800; }
+    .pr-como__detalle { display: block; font-size: 1.125rem; color: var(--pr-texto-secundario); overflow-wrap: anywhere; }
     .pr-como__choco { font-weight: 800; color: var(--bordo-oscuro); }
     .pr-como__flecha { font-size: 1.7rem; font-weight: 700; color: var(--pr-masa-activo-borde); }
     .pr-sala__apagado { opacity: 0.45; }
@@ -1571,7 +1571,7 @@
       background: var(--naranja); color: #fff; font-size: 1.5rem; font-weight: 900;
     }
     .pr-sala__explica { margin: 0; font-size: 1.125rem; color: var(--pr-texto-secundario); }
-    .pr-receta-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+    .pr-receta-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
     .pr-receta-centro { min-width: 0; transition: opacity 0.15s; }
     .pr-receta-centro--atenuado { opacity: 0.35; }
     .pr-receta__opciones { display: flex; flex-direction: column; gap: 10px; }
@@ -1585,7 +1585,10 @@
     .pr-como[aria-pressed="true"] .pr-como__titulo { color: var(--naranja-oscuro); }
     .pr-receta__motivo { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
     .pr-receta__motivo-campo { flex: 1 1 18rem; margin: 0; }
-    .pr-rec, .pr-rec--cab { grid-template-columns: minmax(140px, 1fr) 270px minmax(170px, 1.1fr) 96px; gap: 10px; min-height: 58px; }
+    /* Medido en la maqueta a 1280×800: con 140 + 270 + 170 + 96 la fila pedía
+       706 px en una tarjeta de 642 y el botón "Otro" se salía de la tarjeta.
+       Así suma 634 y entra en los 662 que quedan con la columna de 280. */
+    .pr-rec, .pr-rec--cab { grid-template-columns: minmax(120px, 1fr) 250px minmax(150px, 1.1fr) 84px; gap: 10px; min-height: 58px; }
     .pr-rec__ing { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
     .pr-rec--agregado { background: var(--naranja-suave); }
     .pr-rec__agregado { font-size: 1rem; font-weight: 800; color: var(--naranja-oscuro); }
@@ -1654,7 +1657,9 @@
       .pr-rec { grid-template-columns: minmax(0, 1fr) auto; }
       .pr-rec__ing { grid-column: 1; }
       .pr-rec__accion { grid-column: 2; }
-      .pr-rec__cant, .pr-rec__lote-celda { grid-column: 1 / -1; }
+      /* El lote y su "Otro" en la misma fila (antes "Otro" quedaba solo abajo). */
+      .pr-rec__cant { grid-column: 1 / -1; }
+      .pr-rec__lote-celda { grid-column: 1; }
     }
     @media (max-width: 700px) {
       .pr-sala__maquinas { grid-template-columns: minmax(0, 1fr); }
@@ -1665,6 +1670,28 @@
     @media (max-width: 1000px) {
       .pr-lateral { position: static; width: auto; border-right: 0; border-bottom: 1px solid var(--pr-borde-control); overflow: visible; }
       body.pr-con-lateral .pr-app { margin-left: auto; padding: 12px 12px calc(2rem + env(safe-area-inset-bottom)); }
+      /* Medido en la maqueta a 800×1280: apilada entera, la barra ocupaba 640 px
+         y la receta quedaba debajo del borde. Parada, va COMPACTA: el otro modo
+         y Salir en una fila, quién está en otra, y las secciones o las máquinas
+         como botones que se reparten el ancho. Los mismos botones, más juntos. */
+      .pr-lateral {
+        display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 8px 12px;
+        grid-template-areas: "otro salir" "donde donde" "persona persona" "cuerpo cuerpo" "conexion conexion";
+        padding: 12px;
+      }
+      .pr-lateral > .pr-lat__otro { grid-area: otro; }
+      .pr-lateral > .pr-lat__salir { grid-area: salir; min-height: 64px; }
+      .pr-lateral > .pr-lat__donde { grid-area: donde; }
+      .pr-lateral > .pr-lat__persona { grid-area: persona; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+      .pr-lateral > .pr-lat__cuerpo { grid-area: cuerpo; flex-direction: row; flex-wrap: wrap; }
+      .pr-lateral > .pr-lat__conexion { grid-area: conexion; }
+      .pr-lat__cambiar { width: auto; margin: 0 0 0 auto; padding: 0 16px; }
+      .pr-lat__secciones { flex-direction: row; flex-wrap: wrap; flex: 1 1 100%; }
+      .pr-lat__item { width: auto; flex: 1 1 auto; justify-content: center; }
+      .pr-lat__titulo { flex: 1 1 100%; }
+      .pr-lat__maq-fila { width: auto; flex: 1 1 180px; }
+      .pr-lat__maq { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+      .pr-lat__maq-lote { font-size: 1.5rem; }
     }
   </style>
 </head>
