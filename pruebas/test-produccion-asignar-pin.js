@@ -62,6 +62,9 @@ function armar({ asignar, personalDespues } = {}) {
 const el = (S, id) => S.__doc.getElementById(id)
 const llamadas = (S, n) => S.__llamadas.rpc.filter(([x]) => x === n)
 function tipear(S, pin) { for (const d of String(pin)) S.teclaAsignar(d) }
+// El PIN nuevo se carga DOS veces: la primera "Seguir" (no llama a la base) y
+// la segunda es la que guarda.
+async function primeraVez(S, pin) { tipear(S, pin); await S.confirmarAsignarPin() }
 
 // ── El botón vive en la franja del acceso maestro ──────────────────────────
 {
@@ -193,6 +196,13 @@ esperas.push((async () => {
   chk('el maestro quedó activo', S.estado.maestro?.id === 'e-prop' && S.__pinMaestro() === PIN_MAESTRO)
   S.abrirAsignarPin()
   S.elegirPersonaAsignar('e-pend')
+  chk('primera vez: "Poné el PIN nuevo" y el botón dice "Seguir"', el(S, 'pr-asignar-paso').textContent === 'Poné el PIN nuevo' &&
+    el(S, 'pr-asignar-confirmar').textContent === 'Seguir')
+  await primeraVez(S, PIN)
+  chk('la primera vez NO llama a la base', llamadas(S, 'asignar_pin_con_maestro').length === 0)
+  chk('… pide ponerlo de nuevo y el botón dice "Guardar el PIN"', el(S, 'pr-asignar-paso').textContent === 'Poné el PIN de nuevo, para confirmarlo' &&
+    el(S, 'pr-asignar-confirmar').textContent === 'Guardar el PIN' && S.estado.asignar.digitos === '')
+  sinPin(S, 'entre las dos veces')
   tipear(S, PIN)
   const pendiente = S.confirmarAsignarPin()
   chk('mientras se manda el botón se traba', el(S, 'pr-asignar-confirmar').disabled === true)
@@ -212,6 +222,28 @@ esperas.push((async () => {
   chk('al terminar el botón se destraba', el(S, 'pr-asignar-confirmar').disabled === false)
 })())
 
+// ── Los dos PIN tienen que coincidir ─────────────────────────────────────
+esperas.push((async () => {
+  const S = armar()
+  S.abrirAsignarPin()
+  S.elegirPersonaAsignar('e-sin')
+  await primeraVez(S, PIN)
+  tipear(S, '9021')
+  await S.confirmarAsignarPin()
+  chk('si no coinciden no se manda nada', llamadas(S, 'asignar_pin_con_maestro').length === 0)
+  chk('… lo dice pegado al botón', el(S, 'pr-asignar-error').hidden === false && el(S, 'pr-asignar-error').textContent === 'Los dos PIN no coinciden. Ponelo de nuevo.')
+  chk('… y vuelve a pedirlo desde la primera vez', S.estado.asignar.primero === null && S.estado.asignar.digitos === '' &&
+    el(S, 'pr-asignar-paso').textContent === 'Poné el PIN nuevo')
+  sinPin(S, 'no coinciden')
+  await primeraVez(S, PIN)
+  S.volverAsignarPin()
+  chk('Volver borra también el primero', S.estado.asignar.primero === null)
+  S.elegirPersonaAsignar('e-sin')
+  await primeraVez(S, PIN)
+  S.elegirPersonaAsignar('e-pend')
+  chk('elegir a alguien arranca de cero (sin el primero del anterior)', S.estado.asignar.primero === null && S.estado.asignar.digitos === '')
+})())
+
 // ── {ok:false}: el rechazo del PIN maestro, con mensajeDePin ─────────────
 for (const res of [
   { ok: false, motivo: 'pin_incorrecto', intentos_restantes: 2 },
@@ -221,6 +253,7 @@ for (const res of [
     const S = armar({ asignar: () => ({ data: res, error: null }) })
     S.abrirAsignarPin()
     S.elegirPersonaAsignar('e-sin')
+    await primeraVez(S, PIN)
     tipear(S, PIN)
     await S.confirmarAsignarPin()
     const t = el(S, 'pr-asignar-error').textContent
@@ -239,6 +272,7 @@ esperas.push((async () => {
   const S = armar({ asignar: () => ({ data: null, error: { message: MSJ } }) })
   S.abrirAsignarPin()
   S.elegirPersonaAsignar('e-sin')
+  await primeraVez(S, '1234')
   tipear(S, '1234')
   await S.confirmarAsignarPin()
   chk('un 1234 SÍ llega a la base (la lista de obvios vive allá)', llamadas(S, 'asignar_pin_con_maestro').length === 1)
@@ -254,6 +288,7 @@ esperas.push((async () => {
   const S = armar({ personalDespues: despues })
   S.abrirAsignarPin()
   S.elegirPersonaAsignar('e-sin')
+  await primeraVez(S, PIN)
   tipear(S, PIN)
   await S.confirmarAsignarPin()
   chk('dice el éxito con el nombre',

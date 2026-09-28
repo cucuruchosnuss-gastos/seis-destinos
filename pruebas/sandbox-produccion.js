@@ -260,8 +260,8 @@ const NUEVAS_PLANTA = [
   // 4h · El historial de una máquina.
   'cargarDetalleHist', 'htmlMasaHist', 'htmlIngredientesHist', 'htmlAnularHist', 'htmlDetalleHist', 'pintarHistMaq',
   'elegirMasaHist', 'pedirAnularHist', 'cancelarAnularHist', 'confirmarAnularHist', 'nuevaMasaDesdeHist',
-  // Producción con dos modos: el inicio.
-  'textoCajasTablero',
+  // Producción con dos modos: el inicio y lo que falta para cerrar.
+  'textoCajasTablero', 'htmlFaltaCierre',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']

@@ -13,9 +13,12 @@ correrMutacionesProduccion({
     'htmlLotePlanilla', 'htmlQuePlanilla', 'htmlEstadoPlanilla', 'htmlMasasPlanilla', 'htmlParadas',
     'htmlProducido', 'htmlTotalTurno', 'htmlPasosAgregar', 'htmlPasoProducto', 'htmlPasoConoSiNo',
     'htmlPasoPresentacion', 'htmlMarcas', 'htmlAvisosCierre', 'htmlResumenCierre', 'htmlSublotesDefinitivos',
-    'htmlPendientesCompletar', 'mostrarFormParada',
+    'htmlPendientesCompletar', 'mostrarFormParada', 'htmlFaltaCierre',
   ],
   equivalentes: [
+    { expr: 'esc(x.texto)', motivo: 'htmlFaltaCierre(): textos constantes del código (los errores de faltanParaCerrar y dos avisos fijos)' },
+    { expr: 'esc(x.ir)', motivo: 'htmlFaltaCierre(): "paradas" o "producido", constantes del código' },
+    { expr: 'esc(x.boton)', motivo: 'htmlFaltaCierre(): "Ir a Paradas" o "Ir a Lo producido", constantes del código' },
     { expr: 'esc(textoSinCaja(it))', motivo: 'textoSinCaja() devuelve texto constante del código (solo mira si el embolsado es ninguno): ningún dato de la base llega a la salida' },
     { expr: 'esc(p.turno.lote)', motivo: 'el lote es un integer de la base (nextval de una secuencia)' },
     { expr: "esc(horaArgentina(p.turno.abierto_en) || '—')", motivo: 'una hora HH:MM formateada por Intl, o una raya' },
@@ -212,6 +215,18 @@ correrMutacionesProduccion({
 
     // ── Sin catálogo ────────────────────────────────────────────────────
     { nombre: 'sin catálogo igual se puede agregar', de: '      agregar.disabled = !p || !estado.catalogo', a: '      agregar.disabled = !p' },
+    // ── La planta con dos modos: 6b y 7 ─────────────────────────────────
+    { nombre: "6b sin \"hace cuánto\"", de: "${haceParada ? ` · hace ${haceParada}` : ''}", a: "" },
+    { nombre: "6b sin \"¿Por qué paró?\"", de: "enCurso ? `¿Por qué paró? ${enCurso.motivo}` : ''", a: "enCurso ? enCurso.motivo : ''" },
+    { nombre: "7 sin lo que falta del formulario", de: "      const items = faltanParaCerrar(b).map(f => ({ texto: f.error, ir: '', boton: '' }))", a: "      const items = []" },
+    { nombre: "7 no avisa la parada sin terminar", de: "      if (p && paradaEnCurso(p.paradas)) {", a: "      if (false) {" },
+    { nombre: "7 no avisa que no hay nada producido", de: "      if (p && !itemsVivos(p.items).length) {", a: "      if (false) {" },
+    { nombre: "7 lo del formulario nunca en bordó", de: "${b.intentado && !x.ir ? ' pr-falta__item--mal' : ''}", a: "" },
+    { nombre: "7 en bordó antes de intentar", de: "${b.intentado && !x.ir ? ' pr-falta__item--mal' : ''}", a: "${!x.ir ? ' pr-falta__item--mal' : ''}" },
+    { nombre: "7 sin el botón para ir a la sección", de: "(x.ir ? `<button type=\"button\" class=\"pr-btn pr-btn--secundario\" data-cierre-ir=\"${esc(x.ir)}\">${esc(x.boton)}</button>` : '')", a: "''" },
+    { nombre: "7 dice \"no falta nada\" aunque falte", de: "      if (!items.length) return '<p class=\"pr-falta__listo\">No falta nada: se puede cerrar.</p>'", a: "      return '<p class=\"pr-falta__listo\">No falta nada: se puede cerrar.</p>'" },
+    { nombre: "7 no se pinta", de: "      document.getElementById('pr-cierre-falta').innerHTML = htmlFaltaCierre(b, p)\n", a: "" },
+    { nombre: "7 el botón no lleva a la sección", de: "const b = ev.target.closest('[data-cierre-ir]'); if (b) irASeccion(b.dataset.cierreIr)", a: "const b = ev.target.closest('[data-cierre-ir]'); void b" },
     { nombre: 'abrir agregar sin catálogo', de: '      if (!estado.catalogo || !estado.planilla) return\n      estado.agregar = {', a: '      if (!estado.planilla) return\n      estado.agregar = {' },
   ],
 })

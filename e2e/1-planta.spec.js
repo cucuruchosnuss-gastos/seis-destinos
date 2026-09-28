@@ -222,6 +222,11 @@ test.describe('planta', () => {
     for (const d of '1234') await page.locator(`#pr-asignar-teclado [data-asignar-tecla="${d}"]`).click();
     // Los dígitos no se muestran: solo los puntos.
     await expect(page.locator('#pr-asignar')).not.toContainText('1234');
+    // El PIN nuevo se carga DOS veces: "Seguir" y después "Guardar el PIN".
+    await expect(page.locator('#pr-asignar-confirmar')).toHaveText('Seguir');
+    await page.locator('#pr-asignar-confirmar').click();
+    await expect(page.locator('#pr-asignar-paso')).toContainText('de nuevo');
+    for (const d of '1234') await page.locator(`#pr-asignar-teclado [data-asignar-tecla="${d}"]`).click();
     await page.locator('#pr-asignar-confirmar').click();
     await expect(page.locator('#pr-asignar-error')).toContainText('no tan obvio');
     await captura(page, 'asignar-pin-rechazado', info);

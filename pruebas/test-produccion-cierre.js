@@ -143,9 +143,11 @@ esperas.push((async () => {
 esperas.push((async () => {
   const S = armar({ paradas: [{ id: 'pa2', inicio: '2026-09-22T13:32:00Z', fin: null, motivo: 'pulpo' }] })
   await S.abrirPlanilla('t1')
-  chk('con parada en curso: la franja fija', S.__doc.getElementById('pr-parada-activa').hidden === false &&
-    S.__doc.getElementById('pr-parada-activa-texto').textContent === 'desde 10:32 · pulpo')
-  chk('… con el tiempo transcurrido', /^hace \d/.test(S.__doc.getElementById('pr-parada-activa-hace').textContent))
+  // 6b · "desde 10:32 · hace 14 min" y "¿Por qué paró?".
+  chk('con parada en curso: la franja fija, desde cuándo y hace cuánto', S.__doc.getElementById('pr-parada-activa').hidden === false &&
+    /^desde 10:32 · hace \d/.test(S.__doc.getElementById('pr-parada-activa-texto').textContent), S.__doc.getElementById('pr-parada-activa-texto').textContent)
+  chk('… y por qué paró', S.__doc.getElementById('pr-parada-activa-hace').textContent === '¿Por qué paró? pulpo')
+  chk('… con "Volvió a andar"', /id="pr-btn-reanudar">Volvió a andar</.test(require('fs').readFileSync(ARCHIVO, 'utf8')))
   chk('… "Parada" desaparece (la base rechaza una segunda)', S.__doc.getElementById('pr-btn-parada').hidden === true)
   // LO QUE CAMBIÓ: cerrar_turno cierra sola la parada abierta y la marca como
   // que la máquina no volvió. Antes la pantalla lo bloqueaba.
@@ -799,6 +801,38 @@ esperas.push((async () => {
   X.__tablas.paradas_produccion = [{ motivo: marca('sugerida') }]
   await X.mostrarFormParada()
   chequearMarcas(chk, 'motivos sugeridos', html(X, 'pr-parada-sugerencias'), ['sugerida'])
+})())
+
+// ── 7 · Lo que falta, a la derecha y con cómo resolverlo ───────────────────
+esperas.push((async () => {
+  const S = armar({ paradas: [{ id: 'pa9', inicio: '2026-09-22T13:32:00Z', fin: null, motivo: 'pulpo' }], items: [] })
+  await S.abrirPlanilla('t1')
+  await S.mostrarCierre()
+  S.__doc.getElementById('pr-cierre-hora').value = ''
+  S.ponerNumero(S.__doc.getElementById('pr-cierre-scrap'), null)
+  S.cambioEnCierre()
+  const falta = html(S, 'pr-cierre-falta')
+  chk('"Lo que falta" se ve a la derecha, con cada cosa', /pr-falta__titulo">Lo que falta</.test(falta) &&
+    /Falta la hora en que se apagó el fuego\./.test(falta) && /Falta el scrap\. Si no hubo, poné 0\./.test(falta), falta)
+  chk('… la parada sin terminar, con "Ir a Paradas"', /si cerrás, queda como que no volvió/.test(falta) && /data-cierre-ir="paradas">Ir a Paradas</.test(falta))
+  chk('… nada producido, con "Ir a Lo producido"', /No cargaste nada producido/.test(falta) && /data-cierre-ir="producido">Ir a Lo producido</.test(falta))
+  chk('… sin intentar, nada en bordó', !/pr-falta__item--mal/.test(falta))
+  S.intentarCerrar()
+  await tic()
+  const falta2 = html(S, 'pr-cierre-falta')
+  chk('después de intentar, lo del formulario va en bordó (y lo de otra sección no)',
+    (falta2.match(/pr-falta__item pr-falta__item--mal/g) || []).length === 2 && /pr-falta__item"><span>Hay una parada/.test(falta2), falta2)
+  chk('el listener lleva a la sección', /const b = ev\.target\.closest\('\[data-cierre-ir\]'\); if \(b\) irASeccion\(b\.dataset\.cierreIr\)/.test(require('fs').readFileSync(ARCHIVO, 'utf8')))
+
+  const C = armar()
+  await C.abrirPlanilla('t1')
+  await C.mostrarCierre()
+  C.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  C.ponerNumero(C.__doc.getElementById('pr-cierre-scrap'), 0)
+  C.cambioEnCierre()
+  chk('con todo completo: "No falta nada"', /No falta nada: se puede cerrar\./.test(html(C, 'pr-cierre-falta')), html(C, 'pr-cierre-falta'))
+  const rota = C.htmlFaltaCierre({ hora: '10:00', scrap: 1, rota: true, obs: '' }, C.estado.planilla)
+  chk('rota sin "qué pasó": lo pide', /Falta contar qué pasó con la máquina/.test(rota))
 })())
 
 fin()

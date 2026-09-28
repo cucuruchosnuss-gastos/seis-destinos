@@ -1535,6 +1535,18 @@
     .pr-tablero .pr-maquina--parada .pr-maquina__chip { background: #fff; color: var(--bordo-oscuro); }
     .pr-maquina__abrir { margin-top: auto; min-height: 52px; }
 
+    /* 6b · La franja de la parada; 7 · lo que falta para cerrar; 8b · el paso
+       del PIN nuevo. */
+    .pr-parada-activa__hace { font-weight: 800; }
+    .pr-cierre__falta { margin-top: 12px; }
+    .pr-falta { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 2px solid var(--bordo); border-radius: 14px; }
+    .pr-falta__titulo { font-size: 1.125rem; font-weight: 900; color: var(--bordo-oscuro); }
+    .pr-falta__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .pr-falta__item { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 1rem; }
+    .pr-falta__item--mal { font-weight: 800; color: var(--bordo-oscuro); }
+    .pr-falta__listo { margin: 0; font-size: 1rem; color: var(--pr-texto-secundario); }
+    .pr-asignar__paso { margin: 0; font-size: 1.25rem; font-weight: 800; text-align: center; }
+
     /* ══ Sala de masa (la planta con dos modos) ══════════════════════════
        4a: una tarjeta grande por máquina, en grilla de dos. 4b: la receta
        con su columna derecha de 300 px (las masas del turno). */
@@ -1797,6 +1809,7 @@
         </div>
         <div class="pr-asignar__panel" id="pr-asignar-panel" hidden>
           <p class="pr-aviso" id="pr-asignar-aviso">El PIN nuevo es de un solo uso: la primera vez que entre va a tener que elegir uno propio.</p>
+          <p class="pr-asignar__paso" id="pr-asignar-paso">Poné el PIN nuevo</p>
           <div class="pr-pin__puntos" id="pr-asignar-puntos"></div>
           <div class="pr-pin__teclado" id="pr-asignar-teclado"></div>
           <p class="pr-error" id="pr-asignar-error" hidden></p>
@@ -1891,12 +1904,13 @@
            lo que se CARGA: lo producido. Las masas las carga el masero: acá
            se ven en solo lectura. -->
       <section id="pr-planilla" hidden>
-        <!-- Mientras dura una parada queda fija arriba, con "Reanudar". -->
+        <!-- 6b · Mientras dura una parada queda fija arriba: desde cuándo, hace
+             cuánto, por qué paró y "Volvió a andar". -->
         <div class="pr-parada-activa" id="pr-parada-activa" hidden>
           <span class="pr-parada-activa__sello">PARADA</span>
           <span class="pr-parada-activa__que" id="pr-parada-activa-texto"></span>
           <span class="pr-parada-activa__hace" id="pr-parada-activa-hace"></span>
-          <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-reanudar">Reanudar</button>
+          <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-reanudar">Volvió a andar</button>
         </div>
 
         <div class="pr-planilla-cab">
@@ -2105,6 +2119,8 @@
           <div class="pr-tarjeta">
             <span class="pr-ag__titulo">Resumen</span>
             <div class="pr-resumen" id="pr-cierre-resumen"></div>
+            <!-- 7 · Lo que falta, con cómo resolverlo. -->
+            <div class="pr-cierre__falta" id="pr-cierre-falta"></div>
 
             <div class="pr-cierre__pie">
               <!-- Lo que hay que confirmar antes de mandar: una parada sin
@@ -4066,7 +4082,7 @@
       if (!estado.maestro) return
       tocar()
       mostrarVista('pr-asignar')
-      estado.asignar = { busqueda: '', personaId: null, digitos: '', error: null, enviando: false }
+      estado.asignar = { busqueda: '', personaId: null, digitos: '', primero: null, error: null, enviando: false }
       document.getElementById('pr-asignar-buscar').value = ''
       pintarAsignarPin()
     }
@@ -4084,7 +4100,9 @@
       // Se traba SOLO mientras se manda: lo que falta se dice al tocarlo.
       const btn = document.getElementById('pr-asignar-confirmar')
       btn.disabled = !!a.enviando
-      btn.textContent = a.enviando ? 'Guardando…' : 'Guardar el PIN'
+      // Se carga dos veces: la primera "Seguir", la segunda "Guardar el PIN".
+      btn.textContent = a.enviando ? 'Guardando…' : (a.primero ? 'Guardar el PIN' : 'Seguir')
+      document.getElementById('pr-asignar-paso').textContent = a.primero ? 'Poné el PIN de nuevo, para confirmarlo' : 'Poné el PIN nuevo'
       const err = document.getElementById('pr-asignar-error')
       err.hidden = !a.error
       err.textContent = a.error ?? ''
@@ -4107,6 +4125,7 @@
       tocar()
       a.personaId = p.id
       a.digitos = ''
+      a.primero = null
       a.error = null
       pintarAsignarPin()
     }
@@ -4127,6 +4146,7 @@
       if (a && a.personaId && !a.enviando) {
         a.personaId = null
         a.digitos = ''
+        a.primero = null
         a.error = null
         return pintarAsignarPin()
       }
@@ -4146,6 +4166,20 @@
         a.error = `Faltan números: el PIN es de ${LARGO_PIN}.`
         return pintarAsignarPin()
       }
+      // La primera vez se guarda en la memoria y se pide de nuevo; la segunda
+      // tiene que coincidir. Nunca sale de estado.asignar.
+      if (!a.primero) {
+        a.primero = a.digitos
+        a.digitos = ''
+        a.error = null
+        return pintarAsignarPin()
+      }
+      if (a.digitos !== a.primero) {
+        a.primero = null
+        a.digitos = ''
+        a.error = 'Los dos PIN no coinciden. Ponelo de nuevo.'
+        return pintarAsignarPin()
+      }
       const personaId = a.personaId
       const nombre = (estado.personal ?? []).find(p => p.id === personaId)?.nombre ?? ''
       a.enviando = true
@@ -4163,6 +4197,7 @@
         console.error('asignar_pin_con_maestro:', e)
         a.enviando = false
         a.digitos = ''
+        a.primero = null
         a.error = e?.message || 'No se pudo guardar el PIN. Probá de nuevo.'
         return pintarAsignarPin()
       }
@@ -4170,10 +4205,12 @@
       if (!res || res.ok !== true) {
         // El PIN maestro dejó de valer (o se bloqueó): su rechazo, tal cual.
         a.digitos = ''
+        a.primero = null
         a.error = mensajeDePin(res).texto
         return pintarAsignarPin()
       }
       a.digitos = ''
+      a.primero = null
       a.personaId = null
       mostrarExito(`PIN guardado para ${nombre}. La primera vez que entre va a elegir uno propio.`)
       // Se relee el personal para que el estado del PIN se vea al día.
@@ -5550,10 +5587,10 @@
       pintarProducido()
       const enCurso = paradaEnCurso(p.paradas)
       document.getElementById('pr-parada-activa').hidden = !enCurso
+      const haceParada = enCurso ? duracionTexto(enCurso.inicio, null) : ''
       document.getElementById('pr-parada-activa-texto').textContent = enCurso
-        ? `desde ${horaArgentina(enCurso.inicio) || '—'} · ${enCurso.motivo}` : ''
-      document.getElementById('pr-parada-activa-hace').textContent = enCurso
-        ? (duracionTexto(enCurso.inicio, null) ? `hace ${duracionTexto(enCurso.inicio, null)}` : '') : ''
+        ? `desde ${horaArgentina(enCurso.inicio) || '—'}${haceParada ? ` · hace ${haceParada}` : ''}` : ''
+      document.getElementById('pr-parada-activa-hace').textContent = enCurso ? `¿Por qué paró? ${enCurso.motivo}` : ''
       pintarBotonesPlanilla()
     }
 
@@ -6892,6 +6929,26 @@
     // El payload de cerrar_turno. p_productos va VACÍO: lo producido ya está
     // cargado sublote por sublote durante el turno, y la base continúa la
     // numeración si alguna vez se le mandara algo acá.
+    // 7 · Lo que falta para cerrar, a la derecha y con cómo resolverlo: los
+    // campos de este formulario (hora, scrap, "qué pasó") y lo que se resuelve
+    // en otra sección (una parada sin terminar, nada producido), con su botón.
+    // Lo del formulario va en bordó recién después de intentar cerrar: antes
+    // sería señalar en rojo algo que nadie terminó de llenar.
+    function htmlFaltaCierre(b, p) {
+      const items = faltanParaCerrar(b).map(f => ({ texto: f.error, ir: '', boton: '' }))
+      if (p && paradaEnCurso(p.paradas)) {
+        items.push({ texto: 'Hay una parada sin terminar: si cerrás, queda como que no volvió.', ir: 'paradas', boton: 'Ir a Paradas' })
+      }
+      if (p && !itemsVivos(p.items).length) {
+        items.push({ texto: 'No cargaste nada producido.', ir: 'producido', boton: 'Ir a Lo producido' })
+      }
+      if (!items.length) return '<p class="pr-falta__listo">No falta nada: se puede cerrar.</p>'
+      return '<div class="pr-falta"><span class="pr-falta__titulo">Lo que falta</span><ul class="pr-falta__lista">' +
+        items.map(x => `<li class="pr-falta__item${b.intentado && !x.ir ? ' pr-falta__item--mal' : ''}"><span>${esc(x.texto)}</span>` +
+          (x.ir ? `<button type="button" class="pr-btn pr-btn--secundario" data-cierre-ir="${esc(x.ir)}">${esc(x.boton)}</button>` : '') +
+          '</li>').join('') +
+        '</ul></div>'
+    }
     function parametrosCerrarTurno(turnoId, b) {
       return {
         p_turno_id: turnoId,
@@ -6969,6 +7026,7 @@
       document.getElementById('pr-cierre-obs-rotulo').innerHTML = rota
         ? 'Qué pasó <span class="pr-obligatorio">· obligatorio</span>' : 'Observaciones'
       document.getElementById('pr-cierre-resumen').innerHTML = htmlResumenCierre(p, estado.catalogo)
+      document.getElementById('pr-cierre-falta').innerHTML = htmlFaltaCierre(b, p)
 
       // El campo que falta se marca SOLO después de intentar: marcarlo antes
       // sería señalar en rojo un formulario que nadie terminó de llenar.
@@ -7109,6 +7167,10 @@
         const b = ev.target.closest('[data-sugerencia]'); if (b) document.getElementById('pr-parada-motivo').value = b.dataset.sugerencia
       })
       document.getElementById('pr-btn-reanudar').addEventListener('click', reanudar)
+      // 7 · "Ir a Paradas" / "Ir a Lo producido" desde lo que falta.
+      document.getElementById('pr-cierre-falta').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-cierre-ir]'); if (b) irASeccion(b.dataset.cierreIr)
+      })
       document.getElementById('pr-planilla-estado').addEventListener('click', ev => {
         if (ev.target.closest('[data-forzar]')) abrirForzar()
       })
