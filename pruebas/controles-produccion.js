@@ -39,6 +39,7 @@ const BASES = [
   '7bf9846', // Terminar la tablet, parte 3: el lote en tarjetas
   '3918fd8', // Terminar la tablet, parte 4: las paradas con horarios
   '5ca92bb', // Terminar la tablet, parte 5: lo que se leía mal (el último archivo entero, antes de partirlo)
+  '1867987', // Punto de partida de "La planta con dos modos" (27/09/2026): el login adentro, el acceso maestro y Asignar PIN
 ]
 
 // La mudanza a la gestión (25/09/2026): lo que salió de acá está en
