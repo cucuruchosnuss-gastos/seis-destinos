@@ -1322,6 +1322,50 @@
        perderían el empate de cascada y el color por signo no se vería. */
     .color-negativo { color: var(--bordo); }
     .color-positivo { color: var(--color-exito); }
+
+    /* La barra de unidad de negocio de arriba (js/barra-unidad.js, 28/09/2026).
+       La unidad de una fila con "Todas", lo que no tiene unidad (neutro y con
+       borde punteado: no es un dato mal, es una unidad que falta asignar), y
+       lo que no se puede separar por unidad, dicho en chico. */
+    .chip-unidad-caja {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.0625rem 0.4375rem;
+      margin-left: 0.25rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: var(--color-superficie);
+      color: var(--color-texto-suave);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .chip-unidad-caja--sin {
+      background: var(--color-fondo);
+      border: 1px dashed var(--color-borde);
+    }
+    .nota-unidad-caja {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+    }
+    .detalle-unidad-caja {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.875rem;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+    }
+    .detalle-unidad-caja__nombre {
+      font-weight: 700;
+      color: var(--color-texto);
+    }
+    .stat-card-caja__submetric-nota {
+      font-size: 0.625rem;
+      color: var(--color-texto-suave);
+    }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -1767,6 +1811,9 @@
     import { mostrarError, mostrarExito, formatearFecha, formatearNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    // La barra de unidad de negocio de arriba (28/09/2026): la elige la
+    // persona UNA vez y toda la app muestra solo lo de esa unidad.
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
 
@@ -1803,7 +1850,7 @@
                               // titular sin depender de embeds ambiguos (caja_movimientos
                               // tiene 3 FKs a empleados: empleado_id, contraparte_empleado_id,
                               // creado_por — un embed "empleados(nombre)" sería ambiguo)
-      movimientosDelMes: 0,
+      movimientosDelMes: null, // null = todavía no se sabe (se muestra "—")
       misSolicitudesPendientes: 0, // cantidad de caja_solicitudes_movimiento pendientes
                               // donde estado.miEmpleado.id es origen o destino — badge
                               // del listado general (solo admin/super_admin)
@@ -1834,6 +1881,19 @@
                               // mis_pendientes(); null = no se sabe (todavía no llegó o
                               // falló) y entonces NO se dibuja ninguna burbuja
       turnoPendientesCaja: 0, // ver cargarPendientesCaja()
+      // La barra de unidad de negocio (js/barra-unidad.js, 28/09/2026): la
+      // unidad elegida (uuid, o null = Todas) y si la barra se ve (con UNA sola
+      // unidad no aparece y no se filtra nada). SOLO FILTRA LO QUE SE MUESTRA:
+      // las consultas traen lo mismo que antes y cada lista se recorta donde se
+      // arma (ver pasaUnidad()). Los permisos siguen en la base.
+      unidadElegida:   null,
+      barraUnidadVisible: false,
+      unidadesEmpleados: {}, // id -> unidad_negocio_id (activos, de v_empleados_publico)
+      listadoCargado:  false, // el listado general ya se dibujó (para repintarlo al cambiar la unidad)
+      turnoMovDelMes:  0, // ver contarMovimientosDelMes()
+      turnoMovimientosFicha: 0, // cargarMovimientos() y cargarMovimientosFichaEmpresa()
+      turnoRetiros:    0,
+      turnoTodosMovimientos: 0,
     }
 
     // egreso_transferencia no tiene etiqueta fija — se arma dinámico con el
@@ -2280,7 +2340,9 @@
     //   - gestionable=false (viendo la ficha de otra persona): fila clara
     //     sin acciones (antes era un chip oscuro sobre fondo ámbar — ver
     //     rediseño visual de Caja), CAMBIO 2 lo dejó afuera a propósito.
-    function renderizarDesglosePorCuenta(cuentaIds, { conDueno = false, gestionable = false } = {}) {
+    //   - soloUnidad=true (ficha de Empresa): con una unidad elegida, las
+    //     cuentas SIN unidad se listan (marcadas) pero no se suman.
+    function renderizarDesglosePorCuenta(cuentaIds, { conDueno = false, gestionable = false, soloUnidad = false } = {}) {
       const cuentas = cuentaIds.map(id => estado.cuentasPorId[id]).filter(Boolean)
       if (!cuentas.length) return ''
 
@@ -2289,7 +2351,7 @@
         if (!cuentasDelMedio.length) return ''
 
         const sumaARS = cuentasDelMedio
-          .filter(c => c.moneda === 'ARS')
+          .filter(c => c.moneda === 'ARS' && (!soloUnidad || sumaEnUnidad(unidadDeCuenta(c))))
           .reduce((acc, c) => acc + saldoDeCuenta(c.id), 0)
 
         const favoritaARS = (medio === 'banco' && !conDueno)
@@ -2332,7 +2394,7 @@
         // gestionable=false: fila clara, sin ninguna acción — viendo la
         // ficha de otra persona (no la propia).
         const filas = cuentasDelMedio
-          .map(c => `<div class="desglose-cuenta__fila">${esc(c.nombre)}: ${importeHtml(saldoDeCuenta(c.id), c.moneda)}</div>`)
+          .map(c => `<div class="desglose-cuenta__fila">${esc(c.nombre)}: ${importeHtml(saldoDeCuenta(c.id), c.moneda)}${c.empleado_id === estado.idEmpresa ? htmlUnidadDeFila(unidadDeCuenta(c)) : ''}</div>`)
           .join('')
         return `
           <details class="desglose-medio-pago__chip">
@@ -2347,6 +2409,113 @@
 
     function nombreEmpresa(unidadId) {
       return estado.maestros.unidadesNegocio.find(u => u.id === unidadId)?.nombre || null
+    }
+
+    // ── La unidad de negocio de cada cosa (barra de unidad, 28/09/2026) ─────
+    // Una PERSONA es de su unidad (empleados.unidad_negocio_id). La Empresa no
+    // es de ninguna: sus CUENTAS sí (cuentas_caja.unidad_negocio_id). Una
+    // cuenta es de su propia unidad si la tiene —hoy solo las de Empresa:
+    // verificado el 28/09/2026, las 9 de Empresa tienen unidad y las 20
+    // personales no— y si no, de la unidad de su dueño. Un MOVIMIENTO es de la
+    // unidad de su cuenta (el 28/09/2026 los 313 tienen cuenta_id) y, si la
+    // cuenta no está cargada, de la de su dueño. null = SIN UNIDAD: se ve
+    // siempre, marcado, pero no se suma en el total de una unidad.
+    function unidadDeEmpleado(id) {
+      if (!id || id === estado.idEmpresa) return null
+      const emp = estado.empleados.find(e => e.id === id)
+      if (emp) return emp.unidad_negocio_id || null
+      return estado.unidadesEmpleados[id] || null
+    }
+
+    function unidadDeCuenta(c) {
+      if (!c) return null
+      return c.unidad_negocio_id || unidadDeEmpleado(c.empleado_id)
+    }
+
+    function unidadDeMovimiento(m) {
+      const c = m?.cuenta_id ? estado.cuentasPorId[m.cuenta_id] : null
+      return c ? unidadDeCuenta(c) : unidadDeEmpleado(m?.empleado_id)
+    }
+
+    // ¿Se VE con la unidad de la barra? Con Todas, todo; lo sin unidad, siempre.
+    function pasaUnidad(unidadId) {
+      return pasaFiltroUnidad(unidadId, estado.unidadElegida)
+    }
+
+    // ¿SE SUMA en el total de la unidad elegida? Más estricto que pasaUnidad():
+    // lo sin unidad se muestra, pero no es de esta unidad.
+    function sumaEnUnidad(unidadId) {
+      return !estado.unidadElegida || unidadId === estado.unidadElegida
+    }
+
+    // La etiqueta de unidad de una fila. Con una sola unidad (la barra no se
+    // ve) no hay nada que distinguir. Con Todas, el nombre de la unidad; con
+    // una unidad elegida nada (ya se sabe), salvo lo que no tiene unidad.
+    function htmlUnidadDeFila(unidadId) {
+      if (!estado.barraUnidadVisible) return ''
+      if (!unidadId) return '<span class="chip-unidad-caja chip-unidad-caja--sin">sin unidad</span>'
+      if (estado.unidadElegida) return ''
+      return `<span class="chip-unidad-caja">${esc(nombreEmpresa(unidadId) || 'Unidad')}</span>`
+    }
+
+    // Las cuentas que se OFRECEN (para operar y en los filtros). Las de la
+    // Empresa se recortan por la unidad de la barra —son por unidad—; las
+    // personales no: la caja de una persona no se separa por unidad.
+    function cuentasOperables(empleadoId) {
+      const cuentas = cuentasDe(empleadoId)
+      if (!estado.idEmpresa || empleadoId !== estado.idEmpresa) return cuentas
+      return cuentas.filter(c => pasaUnidad(unidadDeCuenta(c)))
+    }
+
+    // Totales por unidad y moneda: Map(unidadId|null -> { moneda: total }).
+    function sumarPorUnidad(filas, unidadDe, montoDe, monedaDe) {
+      const out = new Map()
+      for (const f of filas) {
+        const u = unidadDe(f) || null
+        const n = Number(montoDe(f))
+        if (!Number.isFinite(n)) continue
+        const t = out.get(u) || {}
+        const moneda = monedaDe(f)
+        t[moneda] = (t[moneda] || 0) + n
+        out.set(u, t)
+      }
+      return out
+    }
+
+    // "Todas" con la barra a la vista: el detalle por unidad de un total. Solo
+    // con dos o más unidades (con una sola, el detalle repetiría el total).
+    function htmlDetallePorUnidad(porUnidad) {
+      if (!estado.barraUnidadVisible || estado.unidadElegida || porUnidad.size < 2) return ''
+      const orden = [...porUnidad.keys()].sort((a, b) => {
+        if (!a) return 1
+        if (!b) return -1
+        return (nombreEmpresa(a) || '').localeCompare(nombreEmpresa(b) || '', 'es', { sensitivity: 'base' })
+      })
+      const items = orden.map(u => {
+        const totales = porUnidad.get(u)
+        const monedas = Object.keys(totales).sort((a, b) => (a === 'ARS' ? -1 : b === 'ARS' ? 1 : a.localeCompare(b)))
+        const montos = monedas.map(m => importeHtml(totales[m], m)).join(' · ')
+        const nombre = u ? (nombreEmpresa(u) || 'Unidad') : 'Sin unidad'
+        return `<span class="detalle-unidad-caja__item"><span class="detalle-unidad-caja__nombre">${esc(nombre)}</span> ${montos}</span>`
+      }).join('')
+      return `<div class="detalle-unidad-caja">${items}</div>`
+    }
+
+    // Saca de un filtro los valores que ya no se ofrecen con la unidad elegida.
+    // Devuelve true si sacó alguno (entonces hay que volver a consultar).
+    function podarFiltro(lista, sigue) {
+      const antes = lista.length
+      const quedan = lista.filter(v => sigue(String(v)))
+      lista.splice(0, lista.length, ...quedan)
+      return quedan.length !== antes
+    }
+
+    // Las personas que ofrecen los filtros (Retiros socios, Todos los
+    // movimientos): las de la unidad elegida y las sin unidad.
+    function personasParaFiltros() {
+      return [...estado.empleados]
+        .filter(p => pasaUnidad(unidadDeEmpleado(p.id)))
+        .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
     }
 
     // Solo hay dos medios posibles — el "otro" es simplemente el que no es este.
@@ -2437,9 +2606,12 @@
     // este diccionario (movimientos, contraparte, solicitudes, excel) — ver
     // cargarEmpresa(), que inyecta su nombre acá aparte.
     async function cargarNombresEmpleados() {
-      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre').eq('activo', true)
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, unidad_negocio_id').eq('activo', true)
       if (error) { mostrarError('No se pudieron cargar los nombres de empleados.'); return }
       estado.nombresEmpleados = Object.fromEntries((data || []).map(e => [e.id, e.nombre]))
+      // La unidad de cada persona, para saber de qué unidad es un movimiento
+      // aunque su dueño no esté en estado.empleados (ver unidadDeEmpleado()).
+      estado.unidadesEmpleados = Object.fromEntries((data || []).map(e => [e.id, e.unidad_negocio_id || null]))
     }
 
     // Empresa es un empleado ficticio (tipo='empresa', activo=false,
@@ -2584,13 +2756,10 @@
 
       const ids = estado.empleados.map(e => e.id)
 
-      const [saldosRes, movRes] = await Promise.all([
+      const [saldosRes] = await Promise.all([
         ids.length
           ? supabase.from('v_caja_saldos').select('empleado_id, moneda, saldo').in('empleado_id', ids)
           : Promise.resolve({ data: [], error: null }),
-        ids.length
-          ? supabase.from('caja_movimientos').select('id', { count: 'exact', head: true }).in('empleado_id', ids).gte('fecha', fechaISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
-          : Promise.resolve({ count: 0, error: null }),
         cargarMisSolicitudesPendientesCount(),
         cargarCuentas(ids),
       ])
@@ -2602,15 +2771,52 @@
         return
       }
       estado.saldos = saldosRes.data || []
-      estado.movimientosDelMes = movRes.count || 0
 
       // Las cuentas de todos los visibles ya están en estado.cuentasPorId
       // (recién cargadas arriba) — ahora sí puedo saber qué cuenta_ids traer.
       const cuentaIds = ids.flatMap(id => cuentasDe(id).map(c => c.id))
       await cargarSaldosPorCuenta(cuentaIds)
 
+      estado.listadoCargado = true
       renderizarStatTotal()
       renderizarListado()
+      // "Mov. del mes" se cuenta aparte: depende de la unidad elegida (y se
+      // vuelve a contar al cambiarla). Necesita las cuentas ya cargadas.
+      await contarMovimientosDelMes()
+    }
+
+    // "Mov. del mes" de la tarjeta del total. Con Todas, el mismo conteo de
+    // siempre (los movimientos del mes de las personas visibles y la Empresa).
+    // Con una unidad: los de las personas de esa unidad MÁS los de las cuentas
+    // de la Empresa de esa unidad (un .or con los dos .in: no descarta nada que
+    // no tenga que descartar, porque todo movimiento tiene dueño y cuenta).
+    // Con turno: una respuesta vieja no pisa la nueva. Si falla, "—".
+    async function contarMovimientosDelMes() {
+      const turno = ++estado.turnoMovDelMes
+      const desde = fechaISO(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+      const elegida = estado.unidadElegida
+      let res = { count: 0, error: null }
+      if (!elegida) {
+        const ids = estado.empleados.map(e => e.id)
+        if (ids.length) {
+          res = await supabase.from('caja_movimientos').select('id', { count: 'exact', head: true })
+            .in('empleado_id', ids).gte('fecha', desde)
+        }
+      } else {
+        const personas = estado.empleados.filter(e => e.id !== estado.idEmpresa && unidadDeEmpleado(e.id) === elegida).map(e => e.id)
+        const cuentasEmpresa = Object.values(estado.cuentasPorId)
+          .filter(c => c.empleado_id === estado.idEmpresa && unidadDeCuenta(c) === elegida).map(c => c.id)
+        const condiciones = []
+        if (personas.length) condiciones.push(`empleado_id.in.(${personas.join(',')})`)
+        if (cuentasEmpresa.length) condiciones.push(`cuenta_id.in.(${cuentasEmpresa.join(',')})`)
+        if (condiciones.length) {
+          res = await supabase.from('caja_movimientos').select('id', { count: 'exact', head: true })
+            .or(condiciones.join(',')).gte('fecha', desde)
+        }
+      }
+      if (turno !== estado.turnoMovDelMes) return
+      estado.movimientosDelMes = res.error ? null : (res.count || 0)
+      renderizarStatTotal()
     }
 
     // Cantidad de solicitudes pendientes donde YO (estado.miEmpleado) soy
@@ -2649,14 +2855,47 @@
     function renderizarStatTotal() {
       const cont = document.getElementById('stat-total-empresa')
 
+      // Con una unidad elegida (barra de unidad, 28/09/2026) cuenta SOLO lo de
+      // esa unidad: las personas de la unidad y las cuentas de la Empresa de la
+      // unidad (la Empresa se suma por sus cuentas, que son por unidad). Lo que
+      // no tiene unidad no se suma, y se dice en chico. Con Todas, lo de siempre
+      // más el detalle por unidad.
+      const elegida = estado.unidadElegida
       const totalesPorMoneda = {}
-      estado.saldos.forEach(s => { totalesPorMoneda[s.moneda] = (totalesPorMoneda[s.moneda] || 0) + Number(s.saldo) })
+      const conSaldo = new Set()
+      let sinUnidad = 0
+      const filasPorUnidad = [] // { unidad, moneda, saldo } para el detalle de Todas
+      estado.saldos.forEach(s => {
+        const esEmpresa = s.empleado_id === estado.idEmpresa
+        if (esEmpresa && elegida) return // va por sus cuentas, abajo
+        if (!esEmpresa) filasPorUnidad.push({ unidad: unidadDeEmpleado(s.empleado_id), moneda: s.moneda, saldo: s.saldo })
+        const u = esEmpresa ? null : unidadDeEmpleado(s.empleado_id)
+        if (elegida && u !== elegida) {
+          if (!u && Number(s.saldo) !== 0) sinUnidad++
+          return
+        }
+        totalesPorMoneda[s.moneda] = (totalesPorMoneda[s.moneda] || 0) + Number(s.saldo)
+        conSaldo.add(s.empleado_id)
+      })
+      const cuentasEmpresa = estado.idEmpresa ? cuentasDe(estado.idEmpresa) : []
+      cuentasEmpresa.forEach(c => {
+        const u = unidadDeCuenta(c)
+        const saldo = saldoDeCuenta(c.id)
+        filasPorUnidad.push({ unidad: u, moneda: c.moneda, saldo })
+        if (!elegida) return
+        if (u !== elegida) {
+          if (!u && saldo !== 0) sinUnidad++
+          return
+        }
+        totalesPorMoneda[c.moneda] = (totalesPorMoneda[c.moneda] || 0) + saldo
+        if (saldo !== 0) conSaldo.add(estado.idEmpresa)
+      })
       // ARS (o la única moneda si no hay ARS) como número grande con
       // centavos suaves; el resto de las monedas como chips ámbar-suave
       // debajo — mismo patrón ya usado en Cuentas Corrientes, sin sumar
       // monedas distintas entre sí.
       const monedas = Object.keys(totalesPorMoneda).sort((a, b) => (a === 'ARS' ? -1 : b === 'ARS' ? 1 : a.localeCompare(b)))
-      const empleadosConSaldo = new Set(estado.saldos.map(s => s.empleado_id)).size
+      const empleadosConSaldo = conSaldo.size
 
       const principal = monedas[0]
       const montoPrincipalHtml = `<span class="stat-card-caja__monto">${formatearImporteCentavosSuaves(principal ? totalesPorMoneda[principal] : 0, principal || 'ARS')}</span>`
@@ -2666,15 +2905,24 @@
 
       // Ya viene envuelto en .desglose-medio-pago (o '' si no hay cuentas) —
       // una sola llamada, ya no una por moneda (ver renderizarDesglosePorCuenta()).
-      const cuentaIdsVisibles = estado.empleados.flatMap(e => cuentasDe(e.id).map(c => c.id))
+      // Con una unidad, solo las cuentas de esa unidad (las sin unidad no se suman).
+      const cuentaIdsVisibles = estado.empleados.flatMap(e => cuentasDe(e.id))
+        .filter(c => sumaEnUnidad(unidadDeCuenta(c))).map(c => c.id)
       const desgloseHtml = renderizarDesglosePorCuenta(cuentaIdsVisibles, { conDueno: true })
+      const detalleUnidadesHtml = htmlDetallePorUnidad(sumarPorUnidad(filasPorUnidad, f => f.unidad, f => f.saldo, f => f.moneda))
+      const notaSinUnidad = (elegida && sinUnidad)
+        ? `<div class="nota-unidad-caja">No incluye ${sinUnidad} ${sinUnidad === 1 ? 'caja o cuenta' : 'cajas o cuentas'} sin unidad.</div>`
+        : ''
+      const etiquetaTotal = elegida ? `Total · ${esc(nombreEmpresa(elegida) || 'Unidad')}` : 'Total de la empresa'
 
       cont.innerHTML = `
         <div class="stat-card-caja">
           <div>
-            <div class="stat-card-caja__label">Total de la empresa</div>
+            <div class="stat-card-caja__label">${etiquetaTotal}</div>
             <div class="stat-card-caja__montos">${montoPrincipalHtml}</div>
             ${chipsExtra ? `<div class="stat-card-caja__chips">${chipsExtra}</div>` : ''}
+            ${detalleUnidadesHtml}
+            ${notaSinUnidad}
             ${desgloseHtml}
           </div>
           <div class="stat-card-caja__submetrics">
@@ -2684,11 +2932,12 @@
             </div>
             <div class="stat-card-caja__submetric">
               <div class="stat-card-caja__submetric-label">Mov. del mes</div>
-              <div class="stat-card-caja__submetric-valor">${estado.movimientosDelMes}</div>
+              <div class="stat-card-caja__submetric-valor">${estado.movimientosDelMes ?? '—'}</div>
             </div>
             <div class="stat-card-caja__submetric">
               <div class="stat-card-caja__submetric-label">Pendientes</div>
               <div class="stat-card-caja__submetric-valor">${estado.misSolicitudesPendientes}</div>
+              ${elegida ? '<div class="stat-card-caja__submetric-nota">tuyos, de todas las unidades</div>' : ''}
             </div>
           </div>
         </div>
@@ -2770,7 +3019,9 @@
 
       // El buscador solo oculta filas/grupos — el agrupamiento y el orden ya
       // calculados en agruparPersonas() no se tocan.
-      let grupos = agruparPersonas()
+      // Con una unidad elegida en la barra: solo su grupo, y el de las
+      // personas sin unidad (lo que no tiene unidad no desaparece).
+      let grupos = agruparPersonas().filter(g => g.id === null || pasaUnidad(g.id))
       grupos = grupos
         .map(g => ({ ...g, lista: termino ? g.lista.filter(e => (e.nombre || '').toLowerCase().includes(termino)) : g.lista }))
         .filter(g => g.lista.length)
@@ -2902,12 +3153,16 @@
         await cargarPersonasConAcceso()
       }
       const cont = document.getElementById('directorio-contenido')
-      const personas = [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
+      // Barra de unidad: las personas de la unidad elegida y las sin unidad; la
+      // Empresa siempre (sus cuentas se recortan al abrirla).
+      const personas = [...estado.empleados]
+        .filter(p => pasaUnidad(unidadDeEmpleado(p.id)))
+        .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
       cont.innerHTML = personas.map(p => `
         <div class="tarjeta-lista" data-id="${esc(p.id)}" style="margin-bottom:0.625rem;">
           <div class="tarjeta-lista__avatar">${esc(iniciales(p.nombre))}</div>
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${esc(p.nombre)}</div>
+            <div class="tarjeta-lista__titulo">${esc(p.nombre)}${p.id === estado.idEmpresa ? '' : htmlUnidadDeFila(unidadDeEmpleado(p.id))}</div>
           </div>
         </div>
       `).join('')
@@ -2928,7 +3183,8 @@
       if (!cuentasDe(empleadoId).length) await cargarCuentasDe(empleadoId)
 
       const cont = document.getElementById('directorio-contenido')
-      const cuentas = cuentasDe(empleadoId)
+      // Las de la Empresa, de la unidad elegida y sin unidad (ver cuentasOperables).
+      const cuentas = cuentasOperables(empleadoId)
       if (!cuentas.length) {
         cont.innerHTML = `<div class="estado-vacio"><div class="estado-vacio__titulo">Sin cuentas activas</div></div>`
         return
@@ -2936,7 +3192,7 @@
       cont.innerHTML = cuentas.map(c => `
         <div class="tarjeta-lista" data-id="${esc(c.id)}" style="margin-bottom:0.625rem;">
           <div class="tarjeta-lista__info">
-            <div class="tarjeta-lista__titulo">${esc(c.nombre)}</div>
+            <div class="tarjeta-lista__titulo">${esc(c.nombre)}${c.empleado_id === estado.idEmpresa ? htmlUnidadDeFila(unidadDeCuenta(c)) : ''}</div>
             <div class="tarjeta-lista__subtitulo">${MEDIO_CUENTA_LABEL[c.medio]} · ${esc(c.moneda)}</div>
           </div>
         </div>
@@ -3127,10 +3383,36 @@
     document.getElementById('btn-guardar-editar-bancarios').addEventListener('click', confirmarEditarBancarios)
 
     function renderizarSaldosDetalle(empleadoId) {
-      const saldos = saldosDe(empleadoId)
       const cont = document.getElementById('detalle-persona-saldos')
-      const lista = saldos.length ? saldos : [{ moneda: 'ARS', saldo: 0 }]
-      const cuentaIds = cuentasDe(empleadoId).map(c => c.id)
+      const esFichaEmpresa = !!estado.idEmpresa && empleadoId === estado.idEmpresa
+      const elegida = estado.unidadElegida
+      // Barra de unidad (28/09/2026). La ficha de Empresa, con una unidad
+      // elegida, muestra las cuentas de esa unidad y las sin unidad (marcadas),
+      // y el saldo es SOLO el de las cuentas de la unidad. La caja de una
+      // persona no se separa por unidad: se ve entera, y si la persona es de
+      // otra unidad (o de ninguna) se dice en chico.
+      let lista, cuentaIds, notaUnidad = ''
+      if (esFichaEmpresa && elegida) {
+        const cuentasEmp = cuentasDe(empleadoId)
+        const deLaUnidad = cuentasEmp.filter(c => unidadDeCuenta(c) === elegida)
+        const sinUnidad = cuentasEmp.filter(c => !unidadDeCuenta(c))
+        const totales = {}
+        deLaUnidad.forEach(c => { totales[c.moneda] = (totales[c.moneda] || 0) + saldoDeCuenta(c.id) })
+        lista = Object.keys(totales).sort((a, b) => (a === 'ARS' ? -1 : b === 'ARS' ? 1 : a.localeCompare(b)))
+          .map(moneda => ({ moneda, saldo: totales[moneda] }))
+        if (!lista.length) lista = [{ moneda: 'ARS', saldo: 0 }]
+        cuentaIds = [...deLaUnidad, ...sinUnidad].map(c => c.id)
+        if (sinUnidad.length) {
+          notaUnidad = `El saldo es el de las cuentas de ${esc(nombreEmpresa(elegida) || 'esta unidad')}: no incluye ${sinUnidad.length === 1 ? 'la cuenta sin unidad (se ve abajo, marcada)' : `las ${sinUnidad.length} cuentas sin unidad (se ven abajo, marcadas)`}.`
+        }
+      } else {
+        const saldos = saldosDe(empleadoId)
+        lista = saldos.length ? saldos : [{ moneda: 'ARS', saldo: 0 }]
+        cuentaIds = cuentasDe(empleadoId).map(c => c.id)
+        if (!esFichaEmpresa && elegida && unidadDeEmpleado(empleadoId) !== elegida) {
+          notaUnidad = 'La caja de una persona no se separa por unidad: se ve entera.'
+        }
+      }
       const esPropia = empleadoId === estado.miEmpleado.id
       // Empresa es gestionable para un super_admin (CAMBIO 3/7) — el resto
       // de las acciones de la ficha (ingreso/egreso/retiro/traspaso) siguen
@@ -3147,7 +3429,7 @@
         const clase = Number(s.saldo) < 0 ? 'color-negativo' : Number(s.saldo) > 0 ? 'color-positivo' : ''
         return `<span class="stat-card-caja__monto ${clase}">${importeHtml(s.saldo, s.moneda)}</span>`
       }).join('')
-      const desgloseHtml = renderizarDesglosePorCuenta(cuentaIds, { gestionable: puedeGestionar })
+      const desgloseHtml = renderizarDesglosePorCuenta(cuentaIds, { gestionable: puedeGestionar, soloUnidad: esFichaEmpresa })
       const botonNuevaCuenta = puedeGestionar
         ? `<button type="button" class="saldo-card__nueva-cuenta" id="btn-saldo-nueva-cuenta" title="Nueva cuenta" aria-label="Nueva cuenta">+</button>`
         : ''
@@ -3163,6 +3445,7 @@
           <div>
             <div class="stat-card-caja__label">Saldo</div>
             <div class="stat-card-caja__montos">${montosHtml}</div>
+            ${notaUnidad ? `<div class="nota-unidad-caja">${notaUnidad}</div>` : ''}
             ${desgloseHtml}
           </div>
         </div>
@@ -3304,6 +3587,7 @@
     }
 
     async function cargarMovimientos(empleadoId) {
+      const turno = ++estado.turnoMovimientosFicha
       document.getElementById('estado-cargando-movimientos').hidden = false
 
       const { data, error } = await supabase
@@ -3316,6 +3600,8 @@
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
+      // Una respuesta vieja (otra ficha, otra carga) no pisa la nueva.
+      if (turno !== estado.turnoMovimientosFicha) return
       document.getElementById('estado-cargando-movimientos').hidden = true
 
       if (error) {
@@ -3362,7 +3648,8 @@
         cargarMovimientosFichaEmpresa()
       })
       document.getElementById('btn-exportar-movimientos-ficha').addEventListener('click', () => {
-        exportarMovimientosExcel(estado.movimientos, 'movimientos_Empresa', { incluirPersona: false })
+        // Lo que se ve (con la unidad de la barra), nunca de más.
+        exportarMovimientosExcel(movimientosVisibles(), 'movimientos_Empresa', { incluirPersona: false })
       })
 
       crearMultiselect({
@@ -3381,7 +3668,8 @@
       })
       crearMultiselect({
         idBase: 'ms-fe-cuenta',
-        opciones: cuentasDe(estado.idEmpresa).map(c => ({ value: c.id, label: c.nombre })),
+        // Las de la unidad de la barra y las sin unidad (ver cuentasOperables).
+        opciones: cuentasOperables(estado.idEmpresa).map(c => ({ value: c.id, label: c.nombre })),
         seleccionados: estado.filtrosFichaEmpresa.cuenta_ids,
         etiquetaTodos: 'Todas las cuentas',
         onChange: () => cargarMovimientosFichaEmpresa(),
@@ -3392,6 +3680,7 @@
     // mismo criterio que ya usa renderizarSaldosDetalle() para el desglose
     // de saldos de esta misma ficha.
     async function cargarMovimientosFichaEmpresa() {
+      const turno = ++estado.turnoMovimientosFicha
       document.getElementById('estado-cargando-movimientos').hidden = false
       document.getElementById('detalle-persona-movimientos').innerHTML = ''
       document.getElementById('detalle-persona-vacio').hidden = true
@@ -3417,6 +3706,7 @@
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
+      if (turno !== estado.turnoMovimientosFicha) return
       document.getElementById('estado-cargando-movimientos').hidden = true
 
       if (error) {
@@ -3427,7 +3717,8 @@
       renderizarMovimientos()
     }
 
-    function renderizarFilaMovimiento(m, { mostrarPersona = false } = {}) {
+    // conUnidad: la etiqueta de unidad de la fila (ver htmlUnidadDeFila).
+    function renderizarFilaMovimiento(m, { mostrarPersona = false, conUnidad = false } = {}) {
       const esPositivo = m.tipo === 'ingreso' || m.tipo === 'ingreso_externo' || m.tipo === 'ingreso_traspaso'
       const signo = esPositivo ? '+' : '−'
 
@@ -3460,7 +3751,7 @@
               ${personaHtml}
               <span class="chip-tipo-movimiento chip-tipo-movimiento--${esc(m.tipo)}">${esc(etiquetaMovimiento(m))}</span>
               ${sublineaContraparte}
-              <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${esc(etiquetaMedio)}</div>
+              <div class="movimiento__fecha">${formatearFecha(m.fecha)} · ${esc(etiquetaMedio)}${conUnidad ? htmlUnidadDeFila(unidadDeMovimiento(m)) : ''}</div>
               ${m.descripcion ? `<div class="movimiento__descripcion">${esc(m.descripcion)}</div>` : ''}
               ${refGasto}
             </div>
@@ -3470,10 +3761,20 @@
       `
     }
 
+    // Los movimientos de la ficha abierta que se ven. La ficha de Empresa se
+    // recorta por la unidad de la barra (sus cuentas son por unidad); la de una
+    // persona no (su caja no se separa por unidad).
+    function movimientosVisibles() {
+      if (!estado.idEmpresa || estado.personaAbierta !== estado.idEmpresa) return estado.movimientos
+      return estado.movimientos.filter(m => pasaUnidad(unidadDeMovimiento(m)))
+    }
+
     function renderizarMovimientos() {
       const cont = document.getElementById('detalle-persona-movimientos')
+      const movimientos = movimientosVisibles()
+      const conUnidad = !!estado.idEmpresa && estado.personaAbierta === estado.idEmpresa
 
-      if (!estado.movimientos.length) {
+      if (!movimientos.length) {
         cont.innerHTML = ''
         document.getElementById('detalle-persona-vacio').hidden = false
         return
@@ -3482,7 +3783,7 @@
       // OJO: no pasar renderizarFilaMovimiento directo a .map() — Array.map
       // manda (elemento, índice, array) y el índice pisaría el parámetro
       // { mostrarPersona } de la función.
-      cont.innerHTML = estado.movimientos.map(m => renderizarFilaMovimiento(m)).join('')
+      cont.innerHTML = movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad })).join('')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -3737,6 +4038,14 @@
         }
       }
 
+      // Barra de unidad (28/09/2026): una cuenta de la Empresa dice su unidad
+      // con Todas y "sin unidad" si no tiene. En la fila gestionable la unidad
+      // ya está en unidadHtml: ahí solo falta la marca de "sin unidad".
+      if (c.empleado_id === estado.idEmpresa) {
+        if (!gestionable) unidadHtml += htmlUnidadDeFila(unidadDeCuenta(c))
+        else if (!c.unidad_negocio_id) unidadHtml += htmlUnidadDeFila(null)
+      }
+
       return `
         <div class="tarjeta-cuenta">
           <div class="tarjeta-cuenta__info">
@@ -3908,6 +4217,9 @@
       if (esParaEmpresa) {
         document.getElementById('cuenta-unidad-negocio').innerHTML = '<option value="">— Sin asignar —</option>' +
           sinUnidadesDePrueba(estado.maestros.unidadesNegocio, estado.fabrica).map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+        // Es la unidad de un registro NUEVO, no un filtro: queda, pero viene
+        // puesta con la unidad de la barra si hay una elegida (se puede cambiar).
+        document.getElementById('cuenta-unidad-negocio').value = estado.unidadElegida || ''
       }
 
       document.getElementById('modal-cuenta-nueva').hidden = false
@@ -3965,12 +4277,21 @@
 
     // Mismo origen y orden que agruparPersonas()/poblarSelectorContraparte():
     // estado.empleados (personas con acceso), alfabético.
+    // Con la unidad de la barra: las personas de esa unidad y las sin unidad.
+    // Si la persona elegida ya no se ofrece, el filtro vuelve a "Todas" y
+    // devuelve true (hay que volver a consultar).
     function poblarSelectorRetirosPersona() {
       const sel = document.getElementById('filtro-retiros-persona')
-      const personas = [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' }))
+      const personas = personasParaFiltros()
+      let cambio = false
+      if (estado.filtrosRetiros.empleado_id && !personas.some(p => p.id === estado.filtrosRetiros.empleado_id)) {
+        estado.filtrosRetiros.empleado_id = ''
+        cambio = true
+      }
       sel.innerHTML = '<option value="">Todas las personas</option>' +
         personas.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join('')
       sel.value = estado.filtrosRetiros.empleado_id
+      return cambio
     }
 
     function renderizarTotalRetiros(retiros) {
@@ -3984,17 +4305,20 @@
       const montosHtml = Object.entries(totales)
         .map(([moneda, total]) => `<span class="stat-card-caja__monto">${importeHtml(total, moneda)}</span>`)
         .join('')
+      const detalle = htmlDetallePorUnidad(sumarPorUnidad(retiros, unidadDeMovimiento, m => m.monto, m => m.moneda))
       cont.innerHTML = `
         <div class="stat-card-caja stat-card-caja--bordo">
           <div>
             <div class="stat-card-caja__label">Total retirado</div>
             <div class="stat-card-caja__montos">${montosHtml}</div>
+            ${detalle}
           </div>
         </div>
       `
     }
 
     async function cargarRetiros() {
+      const turno = ++estado.turnoRetiros
       document.getElementById('estado-cargando-retiros').hidden = false
       document.getElementById('lista-retiros-personales').innerHTML = ''
       document.getElementById('stat-total-retiros').innerHTML = ''
@@ -4014,6 +4338,7 @@
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
+      if (turno !== estado.turnoRetiros) return
       document.getElementById('estado-cargando-retiros').hidden = true
 
       if (error) {
@@ -4021,15 +4346,27 @@
         return
       }
 
-      const retiros = data || []
-      estado.retiros = retiros // para exportarMovimientosExcel() — siempre el último resultado filtrado
+      estado.retiros = data || [] // el último resultado de la consulta; lo que se ve lo recorta la unidad
+      renderizarRetiros()
+    }
+
+    // Los retiros que se ven con la unidad de la barra (el de una persona es
+    // de su unidad; ver unidadDeMovimiento). Lo mismo se exporta.
+    function retirosVisibles() {
+      return estado.retiros.filter(m => pasaUnidad(unidadDeMovimiento(m)))
+    }
+
+    function renderizarRetiros() {
+      const retiros = retirosVisibles()
+      const lista = document.getElementById('lista-retiros-personales')
       renderizarTotalRetiros(retiros)
       if (!retiros.length) {
+        lista.innerHTML = ''
         document.getElementById('estado-vacio-retiros').hidden = false
         return
       }
-      document.getElementById('lista-retiros-personales').innerHTML =
-        retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join('')
+      document.getElementById('estado-vacio-retiros').hidden = true
+      lista.innerHTML = retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join('')
     }
 
     // Se llama una sola vez, la primera vez que se entra a la pestaña
@@ -4056,7 +4393,7 @@
       cargarRetiros()
     })
     document.getElementById('btn-exportar-retiros').addEventListener('click', () => {
-      exportarMovimientosExcel(estado.retiros, 'retiros_socios', { incluirPersona: true })
+      exportarMovimientosExcel(retirosVisibles(), 'retiros_socios', { incluirPersona: true })
     })
     document.getElementById('btn-mi-caja').addEventListener('click', () => abrirDetallePersona(estado.miEmpleado.id, 'listado'))
     document.getElementById('btn-empresa-atajo').addEventListener('click', () => abrirDetallePersona(estado.idEmpresa, 'listado'))
@@ -4072,6 +4409,8 @@
     function opcionesCuentaTodasPersonas() {
       return Object.values(estado.cuentasPorId)
         .filter(c => estado.empleados.some(e => e.id === c.empleado_id))
+        // Barra de unidad: las cuentas de la unidad elegida y las sin unidad.
+        .filter(c => pasaUnidad(unidadDeCuenta(c)))
         .map(c => ({ value: c.id, label: `${estado.nombresEmpleados[c.empleado_id] || '—'} — ${c.nombre}` }))
         .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }))
     }
@@ -4114,7 +4453,7 @@
         cargarTodosMovimientos()
       })
       document.getElementById('btn-exportar-todos-movimientos').addEventListener('click', () => {
-        exportarMovimientosExcel(estado.todosMovimientos, 'todos_los_movimientos', { incluirPersona: true })
+        exportarMovimientosExcel(todosMovimientosVisibles(), 'todos_los_movimientos', { incluirPersona: true })
       })
 
       crearMultiselect({
@@ -4140,7 +4479,7 @@
       })
       crearMultiselect({
         idBase: 'ms-tm-persona',
-        opciones: [...estado.empleados].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' })).map(p => ({ value: p.id, label: p.nombre })),
+        opciones: personasParaFiltros().map(p => ({ value: p.id, label: p.nombre })),
         seleccionados: estado.filtrosTodosMovimientos.empleado_ids,
         etiquetaTodos: 'Todas las personas',
         onChange: () => cargarTodosMovimientos(),
@@ -4160,17 +4499,20 @@
       const montosHtml = Object.entries(totales)
         .map(([moneda, total]) => `<span class="stat-card-caja__monto">${importeHtml(total, moneda)}</span>`)
         .join('')
+      const detalle = htmlDetallePorUnidad(sumarPorUnidad(movimientos, unidadDeMovimiento, m => m.monto, m => m.moneda))
       cont.innerHTML = `
         <div class="stat-card-caja">
           <div>
             <div class="stat-card-caja__label">Total filtrado</div>
             <div class="stat-card-caja__montos">${montosHtml}</div>
+            ${detalle}
           </div>
         </div>
       `
     }
 
     async function cargarTodosMovimientos() {
+      const turno = ++estado.turnoTodosMovimientos
       document.getElementById('estado-cargando-todos-movimientos').hidden = false
       document.getElementById('lista-todos-movimientos').innerHTML = ''
       document.getElementById('stat-total-todos-movimientos').innerHTML = ''
@@ -4188,6 +4530,7 @@
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false })
 
+      if (turno !== estado.turnoTodosMovimientos) return
       document.getElementById('estado-cargando-todos-movimientos').hidden = true
 
       if (error) {
@@ -4196,13 +4539,29 @@
       }
 
       estado.todosMovimientos = data || []
-      renderizarTotalMovimientos(estado.todosMovimientos)
-      if (!estado.todosMovimientos.length) {
+      renderizarTodosMovimientos()
+    }
+
+    // Lo que se ve con la unidad de la barra. DECISIÓN (28/09/2026): un
+    // movimiento es de la unidad de su CUENTA y, si la cuenta no tiene (las
+    // personales), de la unidad de su DUEÑO — ver unidadDeMovimiento(). Así
+    // la plata de la Empresa cae en la unidad de la cuenta donde está, y la de
+    // una persona en su unidad. Lo que no se puede atribuir se ve marcado.
+    function todosMovimientosVisibles() {
+      return estado.todosMovimientos.filter(m => pasaUnidad(unidadDeMovimiento(m)))
+    }
+
+    function renderizarTodosMovimientos() {
+      const movimientos = todosMovimientosVisibles()
+      const lista = document.getElementById('lista-todos-movimientos')
+      renderizarTotalMovimientos(movimientos)
+      if (!movimientos.length) {
+        lista.innerHTML = ''
         document.getElementById('estado-vacio-todos-movimientos').hidden = false
         return
       }
-      document.getElementById('lista-todos-movimientos').innerHTML =
-        estado.todosMovimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join('')
+      document.getElementById('estado-vacio-todos-movimientos').hidden = true
+      lista.innerHTML = movimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join('')
     }
 
     // Carga perezosa de la pestaña "Todos los movimientos" — ver cambiarTabCaja.
@@ -4333,7 +4692,7 @@
     // sites pasan las cuentas crudas.
     function opcionesCuenta(cuentas, favoritaId) {
       return '<option value="">— Seleccioná —</option>' +
-        cuentas.map(c => `<option value="${esc(c.id)}" ${c.id === favoritaId ? 'selected' : ''}>${esc(c.nombre)} (${esc(MEDIO_CUENTA_LABEL[c.medio])} ${esc(c.moneda)})</option>`).join('')
+        cuentas.map(c => `<option value="${esc(c.id)}" ${c.id === favoritaId ? 'selected' : ''}>${esc(c.nombre)} (${esc(MEDIO_CUENTA_LABEL[c.medio])} ${esc(c.moneda)})${(estado.barraUnidadVisible && c.unidad_negocio_id) ? ` · ${esc(nombreEmpresa(c.unidad_negocio_id) || 'Unidad')}` : ''}</option>`).join('')
     }
 
     // La cuenta que se preselecciona por defecto en los selectores "propios"
@@ -4343,12 +4702,12 @@
     // Efectivo+ARS, la combinación más habitual. Si no existe, no preselecciona
     // nada (queda "— Seleccioná —", como siempre).
     function favoritaEfectivoARS(empleadoId) {
-      return cuentasDe(empleadoId).find(c => c.medio === 'efectivo' && c.moneda === 'ARS' && c.favorita)?.id || null
+      return cuentasOperables(empleadoId).find(c => c.medio === 'efectivo' && c.moneda === 'ARS' && c.favorita)?.id || null
     }
 
     // Retiro e Ingreso externo: un solo selector, siempre sobre la propia ficha.
     function poblarSelectorCuentaUnica(empleadoId) {
-      document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasDe(empleadoId), favoritaEfectivoARS(empleadoId))
+      document.getElementById('cuenta-select').innerHTML = opcionesCuenta(cuentasOperables(empleadoId), favoritaEfectivoARS(empleadoId))
     }
 
     // Ingreso propio / Egreso: el lado "mío" del movimiento. Normalmente son mis
@@ -4356,7 +4715,7 @@
     async function poblarSelectorCuentaPropia(empleadoPropioId) {
       await cargarCuentasDe(empleadoPropioId)
       document.getElementById('cuenta-propia-select').innerHTML =
-        opcionesCuenta(cuentasDe(empleadoPropioId), favoritaEfectivoARS(empleadoPropioId))
+        opcionesCuenta(cuentasOperables(empleadoPropioId), favoritaEfectivoARS(empleadoPropioId))
       document.getElementById('label-cuenta-propia').textContent =
         (estado.idEmpresa && empleadoPropioId === estado.idEmpresa)
           ? `Cuenta de ${estado.nombresEmpleados[estado.idEmpresa] || 'Empresa'}`
@@ -4388,12 +4747,16 @@
       const nombreContraparte = estado.nombresEmpleados[contraparteId] || 'Esta persona'
       label.textContent = `Cuenta de ${nombreContraparte}`
 
-      const candidatas = cuentasDe(contraparteId).filter(c => c.medio === cuentaPropia.medio && c.moneda === cuentaPropia.moneda)
+      const candidatas = cuentasOperables(contraparteId).filter(c => c.medio === cuentaPropia.medio && c.moneda === cuentaPropia.moneda)
 
       if (!candidatas.length) {
         sel.hidden = true
         vacio.hidden = false
-        vacio.textContent = `${nombreContraparte} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[cuentaPropia.medio]} en ${cuentaPropia.moneda}.`
+        // La Empresa ofrece solo las cuentas de la unidad de la barra: decirlo.
+        const enUnidad = (contraparteId === estado.idEmpresa && estado.unidadElegida)
+          ? ` en ${nombreEmpresa(estado.unidadElegida) || 'esta unidad'} (cambiá la unidad de arriba para ver las otras)`
+          : ''
+        vacio.textContent = `${nombreContraparte} no tiene ninguna cuenta de ${MEDIO_CUENTA_LABEL[cuentaPropia.medio]} en ${cuentaPropia.moneda}${enUnidad}.`
       } else {
         sel.hidden = false
         vacio.hidden = true
@@ -4638,7 +5001,7 @@
 
     function poblarSelectoresTraspaso() {
       document.getElementById('traspaso-cuenta-origen').innerHTML =
-        opcionesCuenta(cuentasDe(traspasoEmpleadoId), favoritaEfectivoARS(traspasoEmpleadoId))
+        opcionesCuenta(cuentasOperables(traspasoEmpleadoId), favoritaEfectivoARS(traspasoEmpleadoId))
       actualizarSelectorDestinoTraspaso()
     }
 
@@ -4646,7 +5009,7 @@
     // seleccionada la misma cuenta en los dos lados.
     function actualizarSelectorDestinoTraspaso() {
       const origenId = document.getElementById('traspaso-cuenta-origen').value
-      const candidatas = cuentasDe(traspasoEmpleadoId).filter(c => c.id !== origenId)
+      const candidatas = cuentasOperables(traspasoEmpleadoId).filter(c => c.id !== origenId)
       document.getElementById('traspaso-cuenta-destino').innerHTML = opcionesCuenta(candidatas)
       actualizarCampoMontoDestino()
     }
@@ -4763,6 +5126,58 @@
     })
 
     // ═══════════════════════════════════════════════════════════════════════
+    // BARRA DE UNIDAD — cambiar la unidad repinta sin recargar (28/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function alCambiarUnidadCaja({ elegida, mostrar } = {}) {
+      estado.unidadElegida = elegida || null
+      estado.barraUnidadVisible = !!mostrar
+      // Antes de saber quién soy no hay nada dibujado: el init lo toma de acá.
+      if (!estado.miEmpleado) return
+      repintarPorUnidad()
+    }
+
+    // Todo lo que ya está en pantalla se vuelve a dibujar con la unidad nueva.
+    // Las listas se recortan donde se arman, así que casi nada vuelve a la
+    // base: solo "Mov. del mes" (se cuenta en la base, con turno) y un filtro
+    // que tenía elegida una cuenta o una persona que ya no se ofrece.
+    function repintarPorUnidad() {
+      if (estado.listadoCargado) {
+        renderizarStatTotal()
+        renderizarListado()
+        contarMovimientosDelMes()
+      }
+      const abierta = estado.personaAbierta
+      if (abierta) {
+        renderizarSaldosDetalle(abierta)
+        if (abierta === estado.idEmpresa) {
+          const cuentas = new Set(cuentasOperables(estado.idEmpresa).map(c => String(c.id)))
+          const podo = podarFiltro(estado.filtrosFichaEmpresa.cuenta_ids, id => cuentas.has(id))
+          renderizarFiltrosFichaEmpresa()
+          if (podo) cargarMovimientosFichaEmpresa()
+          else renderizarMovimientos()
+        }
+      }
+      if (estado.retirosCargadoUnaVez) {
+        if (poblarSelectorRetirosPersona()) cargarRetiros()
+        else renderizarRetiros()
+      }
+      if (estado.todosMovimientosCargadoUnaVez) {
+        const f = estado.filtrosTodosMovimientos
+        const cuentas = new Set(opcionesCuentaTodasPersonas().map(o => String(o.value)))
+        const personas = new Set(personasParaFiltros().map(p => String(p.id)))
+        const podoCuentas = podarFiltro(f.cuenta_ids, id => cuentas.has(id))
+        const podoPersonas = podarFiltro(f.empleado_ids, id => personas.has(id))
+        renderizarFiltrosTodosMovimientos()
+        if (podoCuentas || podoPersonas) cargarTodosMovimientos()
+        else renderizarTodosMovimientos()
+      }
+      if (!document.getElementById('vista-directorio-caja').hidden) renderizarDirectorio()
+    }
+
+    alCambiarUnidad(alCambiarUnidadCaja)
+
+    // ═══════════════════════════════════════════════════════════════════════
     // INIT
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -4774,6 +5189,11 @@
       // se espera junto con el Promise.all de abajo: las listas de personas y
       // de unidades se arman después. Nunca tira (si falla, no se saca nada).
       const promesaFabrica = cargarFabricaDePruebas(supabase).then(f => { estado.fabrica = f })
+      // La unidad de la barra de arriba, también en paralelo (no frena nada:
+      // la barra carga sus unidades por su cuenta). Nunca tira.
+      const promesaUnidad = unidadesDeLaBarra()
+        .then(r => { estado.unidadElegida = r.elegida || null; estado.barraUnidadVisible = !!r.mostrar })
+        .catch(() => {})
 
       const { data: emp, error } = await supabase
         .from('empleados')
@@ -4801,7 +5221,7 @@
 
       // Comunes a todos los roles: hacen falta tanto en el listado (admin)
       // como en la ficha propia (usuario) para el modal de "Añadir ingreso".
-      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas(), cargarUnidadesNegocio(), promesaFabrica])
+      await Promise.all([cargarSuperAdmins(), cargarNombresEmpleados(), cargarMisCuentas(), cargarUnidadesNegocio(), promesaFabrica, promesaUnidad])
 
       // Secuencial y después del Promise.all de arriba a propósito — ver el
       // comentario en cargarEmpresa() sobre la carrera con cargarNombresEmpleados().

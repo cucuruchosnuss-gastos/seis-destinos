@@ -47,6 +47,11 @@ const ENTRADAS = [
 
 function clausura(src) {
   const nombresFn = new Set([...src.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m => m[1]))
+
+  // Lo que el script importa de js/barra-unidad.js (28/09/2026): extraer.js
+  // lo encuentra por el import.
+  const imp = src.match(/import \{([^}]*)\} from '\.\.\/js\/barra-unidad\.js'/)
+  if (imp) for (const n of imp[1].split(',').map(s => s.trim()).filter(Boolean)) nombresFn.add(n)
   const posConst = new Map([...src.matchAll(/\n {4}const ([A-Za-z_$][\w$]*)\s*=/g)].map(m => [m[1], m.index + 1]))
   const fns = new Set(), consts = []
   const cola = [...ENTRADAS]

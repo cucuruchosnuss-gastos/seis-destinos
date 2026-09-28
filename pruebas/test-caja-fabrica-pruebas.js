@@ -40,6 +40,10 @@ const FUNCIONES = [
   'poblarSelectorContraparte', 'agruparPersonas', 'renderizarListaDirectorio',
   'poblarSelectorRetirosPersona', 'renderizarFiltrosTodosMovimientos',
   'opcionesCuentaTodasPersonas', 'abrirModalCuentaNueva',
+  // La barra de unidad (28/09/2026): las listas también se recortan por la
+  // unidad elegida. Acá la barra está en Todas: no sacan nada.
+  'pasaUnidad', 'pasaFiltroUnidad', 'unidadDeEmpleado', 'unidadDeCuenta', 'personasParaFiltros',
+  'htmlUnidadDeFila', 'nombreEmpresa',
 ]
 
 const U_ROBOT = 'u-robot', U_REAL = 'u-real', U_OTRA = 'u-otra'
@@ -84,6 +88,7 @@ const PRELUDIO = `
     filtrosRetiros: { empleado_id: '' },
     filtrosTodosMovimientos: { periodos: [], tipos: [], cuenta_ids: [], empleado_ids: [] },
     fabrica: FABRICA_SIN_DATOS,
+    unidadElegida: null, barraUnidadVisible: false, unidadesEmpleados: {},
   }
 `
 const RETORNO = 'estado, __errores, __multiselects, FABRICA_SIN_DATOS, __set(r) { __respuestas = r }, __el(id) { return document.getElementById(id) }'

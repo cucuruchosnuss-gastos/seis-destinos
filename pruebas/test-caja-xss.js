@@ -84,6 +84,11 @@ const RENDERS = [
 
 function clausura(src) {
   const nombresFn = new Set([...src.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m => m[1]))
+
+  // Lo que el script importa de js/barra-unidad.js (28/09/2026): extraer.js
+  // lo encuentra por el import.
+  const imp = src.match(/import \{([^}]*)\} from '\.\.\/js\/barra-unidad\.js'/)
+  if (imp) for (const n of imp[1].split(',').map(s => s.trim()).filter(Boolean)) nombresFn.add(n)
   const posConst = new Map([...src.matchAll(/\n {4}const ([A-Za-z_$][\w$]*)\s*=/g)].map(m => [m[1], m.index + 1]))
   const fns = new Set(), consts = []
   const cola = [...RENDERS]
@@ -390,6 +395,8 @@ const IMPORTE = 'importeHtml() = esc(formatearImporte()): escapa por dentro (eje
 const LABEL_MEDIO = "MEDIO_CUENTA_LABEL[x]: lookup en una constante del código (valores 'Efectivo'/'Banco'); con una clave ajena da undefined o el texto de una función nativa, sin < > \" '. Además cuentas_caja.medio tiene CHECK ('efectivo','banco'), verificado el 21/09/2026"
 const FECHA = 'formatearFecha() de una columna DATE (caja_movimientos.fecha / caja_solicitudes_movimiento.fecha, verificado el 21/09/2026): solo dígitos y /'
 const CLASE = 'clase CSS: ternario de literales del código'
+// La etiqueta de unidad de una fila (barra de unidad, 28/09/2026).
+const UNIDAD_FILA = 'HTML de htmlUnidadDeFila(): literal del código o esc(nombre de la unidad) (ejecutada con marcas en test-caja-barra-unidad.js)'
 const SEGURAS = {
   formatearImporteCentavosSuaves: {
     simbolo: "'$' o esc(moneda), armado en la línea de arriba",
@@ -406,12 +413,17 @@ const SEGURAS = {
     lineaFavoritaHtml: HTML_PROPIO,
     'importeHtml(saldoDeCuenta(c.id), c.moneda)': IMPORTE,
     chips: HTML_PROPIO,
+    'htmlUnidadDeFila(unidadDeCuenta(c))': UNIDAD_FILA,
   },
   renderizarStatTotal: {
     "formatearImporteCentavosSuaves(principal ? totalesPorMoneda[principal] : 0, principal || 'ARS')": 'formatearImporteCentavosSuaves(): escapa la moneda por dentro (ejecutada con marca)',
     'importeHtml(totalesPorMoneda[m], m)': IMPORTE,
     montoPrincipalHtml: HTML_PROPIO, chipsExtra: HTML_PROPIO, desgloseHtml: 'HTML de renderizarDesglosePorCuenta(), ejecutada con marcas',
     empleadosConSaldo: NUM, 'estado.movimientosDelMes': NUM, 'estado.misSolicitudesPendientes': NUM,
+    sinUnidad: NUM,
+    etiquetaTotal: "literal 'Total de la empresa' o 'Total · ' + esc(nombre de la unidad), armado arriba",
+    detalleUnidadesHtml: 'HTML de htmlDetallePorUnidad() (escapa adentro, ejecutada con marcas en test-caja-barra-unidad.js)',
+    notaSinUnidad: HTML_PROPIO,
   },
   renderizarTarjetaPersona: {
     'importeHtml(s.saldo, s.moneda)': IMPORTE, 'importeHtml(principal.saldo, principal.moneda)': IMPORTE,
@@ -421,20 +433,27 @@ const SEGURAS = {
     'importeHtml(total, moneda)': IMPORTE, 'g.lista.length': NUM, subtotalHtml: HTML_PROPIO,
     "g.lista.map(renderizarTarjetaPersona).join('')": 'HTML de renderizarTarjetaPersona(), que escapa adentro (ejecutada con marcas)',
   },
-  renderizarCuentasDirectorio: { 'MEDIO_CUENTA_LABEL[c.medio]': LABEL_MEDIO },
+  renderizarCuentasDirectorio: { 'MEDIO_CUENTA_LABEL[c.medio]': LABEL_MEDIO, 'htmlUnidadDeFila(unidadDeCuenta(c))': UNIDAD_FILA },
+  renderizarListaDirectorio: { 'htmlUnidadDeFila(unidadDeEmpleado(p.id))': UNIDAD_FILA },
+  htmlDetallePorUnidad: {
+    montos: 'importeHtml() de cada total, armado arriba',
+    items: 'HTML propio del map de arriba (esc(nombre) e importeHtml())',
+  },
   renderizarSaldosDetalle: {
     clase: CLASE, 'importeHtml(s.saldo, s.moneda)': IMPORTE,
     botonNuevaCuenta: 'botón literal del código o ""', montosHtml: HTML_PROPIO,
     desgloseHtml: 'HTML de renderizarDesglosePorCuenta(), ejecutada con marcas',
+    notaUnidad: 'texto del código con esc(nombre de la unidad), armado arriba',
   },
   renderizarAccionesDetalle: { "botones.join('')": 'botones literales del código' },
   renderizarFilaMovimiento: {
     personaHtml: HTML_PROPIO, sublineaContraparte: HTML_PROPIO, refGasto: HTML_PROPIO,
     'formatearFecha(m.fecha)': FECHA, signo: "literal '+' o '−'", 'importeHtml(m.monto, m.moneda)': IMPORTE,
+    'htmlUnidadDeFila(unidadDeMovimiento(m))': UNIDAD_FILA,
   },
-  renderizarMovimientos: { 'estado.movimientos.map(m => renderizarFilaMovimiento(m)).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
-  cargarRetiros: { 'retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
-  cargarTodosMovimientos: { 'estado.todosMovimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
+  renderizarMovimientos: { 'movimientos.map(m => renderizarFilaMovimiento(m, { conUnidad })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
+  renderizarRetiros: { 'retiros.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
+  renderizarTodosMovimientos: { 'movimientos.map(m => renderizarFilaMovimiento(m, { mostrarPersona: true, conUnidad: true })).join(\'\')': 'HTML de renderizarFilaMovimiento(), ejecutada con marcas' },
   renderizarFilaSolicitud: {
     nota: HTML_PROPIO, botonNegativo: HTML_PROPIO, acciones: HTML_PROPIO,
     importe: 'importeHtml(s.monto, s.moneda) armado arriba', 'formatearFecha(s.fecha)': FECHA,
@@ -446,12 +465,12 @@ const SEGURAS = {
     iconoMedio: "literal '💳' o '💵'",
     unidadHtml: HTML_PROPIO, saldo: 'importeHtml(saldoDeCuenta(c.id), c.moneda) armado arriba', accionesHtml: HTML_PROPIO,
   },
-  renderizarTotalRetiros: { 'importeHtml(total, moneda)': IMPORTE, montosHtml: HTML_PROPIO },
-  renderizarTotalMovimientos: { 'importeHtml(total, moneda)': IMPORTE, montosHtml: HTML_PROPIO },
-  poblarSelectorCuentaUnica: { 'opcionesCuenta(cuentasDe(empleadoId), favoritaEfectivoARS(empleadoId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
-  poblarSelectorCuentaPropia: { 'opcionesCuenta(cuentasDe(empleadoPropioId), favoritaEfectivoARS(empleadoPropioId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
+  renderizarTotalRetiros: { 'importeHtml(total, moneda)': IMPORTE, montosHtml: HTML_PROPIO, detalle: 'HTML de htmlDetallePorUnidad() (escapa adentro)' },
+  renderizarTotalMovimientos: { 'importeHtml(total, moneda)': IMPORTE, montosHtml: HTML_PROPIO, detalle: 'HTML de htmlDetallePorUnidad() (escapa adentro)' },
+  poblarSelectorCuentaUnica: { 'opcionesCuenta(cuentasOperables(empleadoId), favoritaEfectivoARS(empleadoId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
+  poblarSelectorCuentaPropia: { 'opcionesCuenta(cuentasOperables(empleadoPropioId), favoritaEfectivoARS(empleadoPropioId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
   actualizarSelectorCuentaContraparte: { 'opcionesCuenta(candidatas)': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
-  poblarSelectoresTraspaso: { 'opcionesCuenta(cuentasDe(traspasoEmpleadoId), favoritaEfectivoARS(traspasoEmpleadoId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
+  poblarSelectoresTraspaso: { 'opcionesCuenta(cuentasOperables(traspasoEmpleadoId), favoritaEfectivoARS(traspasoEmpleadoId))': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
   actualizarSelectorDestinoTraspaso: { 'opcionesCuenta(candidatas)': 'opcionesCuenta() escapa por dentro (ejecutada con marcas)' },
 }
 const BURBUJA = 'HTML de htmlBurbujaCaja(), que escapa el texto de la RPC por dentro (ejecutada con marcas en test-caja-pendientes.js)'
