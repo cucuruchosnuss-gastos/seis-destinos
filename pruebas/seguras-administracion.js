@@ -34,6 +34,8 @@ const SEGURAS_ADMINISTRACION = [
   // El proyecto del Taller al asentar (28/09/2026)
   ['opciones', 'HTML ya escapado: htmlProyectoAsentar() arma cada <option> con esc() del id y del nombre'],
   ['htmlProyectoAsentar(a)', 'HTML armado por htmlProyectoAsentar(), que escapa id y nombre de cada proyecto'],
+  ['fila', 'HTML ya escapado: htmlFilaCliente() arma el botón de la fila con esc() de cada dato'],
+  ['htmlInterruptor(c)', 'HTML armado por htmlInterruptor(), que escapa el id y el nombre del cliente'],
   ['acciones', 'HTML ya escapado: htmlFilaRevisar() arma el panel del motivo con esc() del motivo y del error, o el botón "Aceptar" con esc() del id'],
 ]
 

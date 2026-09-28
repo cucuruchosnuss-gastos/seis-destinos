@@ -94,7 +94,14 @@ const PANTALLAS = [
     ['hoja', async (page, info) => { await medirHoja(page, '#ad-btn-imprimir', '#ad-impresion', info, 'administracion') }, 'solo1280'],
     ['valorizar', async (page) => { await page.locator('#ad-orden-volver').click(); await page.locator('[data-orden="o1"]').click(); await page.locator('#ad-btn-valorizar').click(); await expect(page.locator('[data-precio]').first()).toBeVisible() }],
     ['clientes', async (page) => { await page.locator('#ad-orden-volver').click(); await page.locator('#ad-ordenes-volver').click(); await page.locator('[data-seccion="clientes"]').click(); await expect(page.locator('[data-cliente]').first()).toBeVisible() }],
-    ['ficha', async (page) => { await page.locator('[data-cliente="c1"]').click(); await page.locator('#ad-btn-ficha').click(); await expect(page.locator('#ad-f-nombre')).toHaveValue(/Anatolia/) }],
+    // El interruptor de cada cliente y "Mostrar apagados" (28/09/2026).
+    ['clientes-apagados', async (page) => {
+      await expect(page.locator('[data-cliente-activo="c1"]')).toHaveAttribute('aria-checked', 'true')
+      await page.locator('#ad-clientes-apagados').check()
+      await expect(page.locator('[data-cliente-activo="c-apagado"]')).toHaveAttribute('aria-checked', 'false')
+      await expect(page.locator('#ad-clientes-lista')).toContainText('cód. 55')
+    }],
+    ['ficha', async (page) => { await page.locator('[data-cliente="c1"]').click(); await expect(page.locator('#ad-cliente-cuerpo')).toContainText('Código en el sistema anterior: 101'); await page.locator('#ad-btn-ficha').click(); await expect(page.locator('#ad-f-nombre')).toHaveValue(/Anatolia/); await expect(page.locator('#ad-ficha-codigo-anterior')).toHaveText('Código en el sistema anterior: 101') }],
     ['listas', async (page) => { await page.locator('#ad-ficha-volver').click(); await page.locator('#ad-cliente-volver').click(); await page.locator('#ad-clientes-volver').click(); await page.locator('[data-seccion="listas"]').click(); await page.locator('[data-lista="l1"]').click(); await expect(page.locator('[data-precio-lista]').first()).toBeVisible(); await expect(page.locator('#ad-lista-grilla')).toContainText('Materia prima e insumos') }],
     ['importar-clientes', async (page) => {
       await page.locator('#ad-lista-volver').click(); await page.locator('#ad-listas-volver').click(); await page.locator('[data-seccion="importar"]').click()

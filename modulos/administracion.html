@@ -162,6 +162,26 @@
       min-width: 0; min-height: 56px;
     }
     .ad-fila--anulada { background: var(--bordo-suave); }
+    /* Un cliente con su interruptor de prendido / apagado (28/09/2026), como
+       los conos: el botón de la fila abre la cuenta y el interruptor, al
+       costado, se guarda al tocarlo. */
+    .ad-fila-cliente { display: flex; gap: 0.5rem; align-items: stretch; min-width: 0; }
+    .ad-fila-cliente > .ad-fila { flex: 1 1 auto; }
+    .ad-fila--apagada { background: var(--color-superficie); }
+    .ad-fila--apagada .ad-renglon__desc { color: var(--ad-texto-secundario); }
+    .ad-interruptor {
+      flex: 0 0 auto; min-width: 88px; min-height: 44px; padding: 0 0.625rem; border-radius: 17px; cursor: pointer;
+      border: 2px solid var(--verde); background: var(--verde-suave); color: var(--verde-oscuro);
+      font: inherit; font-size: 0.8125rem; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.125rem;
+    }
+    .ad-interruptor[aria-checked="false"] { border-color: var(--color-acento-gris); background: var(--color-fondo); color: var(--ad-texto-secundario); }
+    .ad-interruptor:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ad-interruptor__pista { width: 36px; height: 18px; border-radius: 9px; background: var(--verde); position: relative; }
+    .ad-interruptor__pista::after { content: ""; position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+    .ad-interruptor[aria-checked="false"] .ad-interruptor__pista { background: var(--color-acento-gris); }
+    .ad-interruptor[aria-checked="false"] .ad-interruptor__pista::after { right: auto; left: 2px; }
+    .ad-check-apagados { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; font-weight: 600; font-size: 0.9375rem; cursor: pointer; }
+    .ad-check-apagados input { width: 20px; height: 20px; }
     .ad-fila--atencion { border-left: 4px solid var(--bordo); }
     .ad-fila__linea { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; flex-wrap: wrap; }
     .ad-fila__codigo { font-weight: 900; font-variant-numeric: tabular-nums; }
@@ -382,6 +402,9 @@
         <label for="ad-clientes-buscar">Buscar por nombre, razón social o CUIT</label>
         <input type="search" class="ad-input" id="ad-clientes-buscar" autocomplete="off" maxlength="120">
       </div>
+      <!-- Un cliente APAGADO no aparece para cargar retiros, pedidos ni
+           cobranzas, pero sigue acá, con su cuenta corriente (28/09/2026). -->
+      <label class="ad-check-apagados"><input type="checkbox" id="ad-clientes-apagados"> Mostrar apagados</label>
       <p class="ad-cuenta" id="ad-clientes-cuenta"></p>
       <div class="ad-lista" id="ad-clientes-lista"></div>
     </section>
@@ -430,6 +453,9 @@
         <button type="button" class="ad-link" id="ad-ficha-volver">&lsaquo; Cuenta</button>
         <h1 class="ad-titulo" id="ad-ficha-titulo">Ficha</h1>
       </div>
+      <!-- El código del cliente en el sistema viejo (clientes.codigo_anterior):
+           solo para mostrar, no se edita. -->
+      <p class="ad-texto-suave" id="ad-ficha-codigo-anterior" hidden></p>
       <div id="ad-ficha-aviso"></div>
       <div class="ad-tarjeta">
         <h2 class="ad-subtitulo">Datos</h2>
@@ -730,6 +756,14 @@
       saldos: null,          // lo que devolvió clientes_con_saldo (null = todavía no)
       errorSaldos: null,
       busquedaClientes: '',
+      // Los clientes APAGADOS (28/09/2026): clientes_con_saldo() trae solo los
+      // prendidos, así que los apagados salen de la tabla clientes y su saldo
+      // de cliente_movimientos. null = no se pidieron; { filas, error }.
+      mostrarApagados: false,
+      apagados: null,
+      // El interruptor que se está guardando y el error de la base, pegado a
+      // la fila: { id, guardando, error }.
+      interruptor: null,
       alta: null,            // { error } mientras el panel de alta está abierto
       cliente: null,         // { id, cuenta, codigos, error, panel, errorPanel }
       ficha: null,           // { id, original, proveedorId, busquedaProveedor, error }
@@ -1014,7 +1048,7 @@
 
     async function leerClientes(unidadId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo')
+        .select('id, nombre, razon_social, cuit, domicilio, localidad, email, lista_precio_id, limite_credito, activo, codigo_anterior')
         .eq('unidad_negocio_id', unidadId).order('nombre')
       if (error) throw error
       return data ?? []
@@ -1818,35 +1852,102 @@
       if (!q) return todos
       const digitos = String(busqueda ?? '').replace(/\D/g, '')
       return todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
-        (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)))
+        (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)) ||
+        (digitos.length > 0 && digitos === String(c.codigo_anterior ?? clienteDe(c.cliente_id)?.codigo_anterior ?? '')))
+    }
+
+    // El interruptor lo toca quien puede guardar un cliente: guardar_cliente
+    // pide pedidos:configurar o retiros:precios en la empresa (puedeDarAlta).
+    function puedePrenderApagar(unidadId = estado.empresaId) {
+      return puedeDarAlta(unidadId)
+    }
+
+    function htmlInterruptor(c) {
+      if (!puedePrenderApagar()) return ''
+      const prendido = !c.apagado
+      const it = estado.interruptor?.id === c.cliente_id ? estado.interruptor : null
+      return `<button type="button" class="ad-interruptor" role="switch" aria-checked="${prendido ? 'true' : 'false'}" data-cliente-activo="${esc(c.cliente_id)}"` +
+        ` aria-label="${esc((prendido ? 'Apagar a ' : 'Prender a ') + (c.nombre ?? 'este cliente'))}"${it?.guardando ? ' disabled' : ''}>` +
+        `<span class="ad-interruptor__pista" aria-hidden="true"></span>${prendido ? 'Prendido' : 'Apagado'}</button>`
     }
 
     function htmlFilaCliente(c) {
       const limite = limiteDe(c.cliente_id)
-      const pasa = pasaLimite(c.saldo, limite)
+      const pasa = !c.apagado && pasaLimite(c.saldo, limite)
+      const codigo = c.codigo_anterior ?? clienteDe(c.cliente_id)?.codigo_anterior
+      // Un apagado no trae lista ni retiros del mes (no lo devuelve
+      // clientes_con_saldo): no se inventan.
       const meta = [limpio(c.razon_social) && limpio(c.razon_social) !== limpio(c.nombre) ? c.razon_social : null,
-        c.lista ? 'Lista ' + c.lista : 'Sin lista', (Number(c.retiros_mes) || 0) + ' retiros este mes'].filter(Boolean).join(' · ')
+        c.apagado ? null : (c.lista ? 'Lista ' + c.lista : 'Sin lista'), c.apagado ? null : (Number(c.retiros_mes) || 0) + ' retiros este mes',
+        codigo !== null && codigo !== undefined ? 'cód. ' + codigo : null].filter(Boolean).join(' · ')
       const limiteTexto = limite === null ? '' : ' · límite ' + importeHoja(limite)
-      return `<button type="button" class="ad-fila${pasa ? ' ad-fila--atencion' : ''}" data-cliente="${esc(c.cliente_id)}">` +
+      const it = estado.interruptor?.id === c.cliente_id ? estado.interruptor : null
+      const fila = `<button type="button" class="ad-fila${pasa ? ' ad-fila--atencion' : ''}${c.apagado ? ' ad-fila--apagada' : ''}" data-cliente="${esc(c.cliente_id)}">` +
         `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(c.nombre)}</span>` +
         `<span class="ad-fila__importe${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(c.saldo))}</span></span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta + limiteTexto)}</span>` +
+        `${c.apagado ? '<span class="ad-sello">Apagado</span>' : ''}` +
         `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">También proveedor</span>' : ''}` +
-        `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span></button>`
+        `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span>` +
+        `${it?.error ? `<span class="ad-error-pegado">${esc(it.error)}</span>` : ''}</button>`
+      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>`
+    }
+
+    // Los apagados de la empresa, con la forma de clientes_con_saldo(): de la
+    // tabla clientes (la policy la deja leer con retiros:ver) y el saldo
+    // sumado de cliente_movimientos. Si esa suma llega al tope de 1000 filas,
+    // el saldo va en null ("—"): nunca un número de menos.
+    const TOPE_MOVIMIENTOS = 1000
+    async function leerApagados(unidadId) {
+      const { data, error } = await supabase.from('clientes')
+        .select('id, nombre, razon_social, cuit, codigo_anterior, proveedor_id')
+        .eq('unidad_negocio_id', unidadId).eq('activo', false).order('nombre')
+      if (error) throw error
+      const filas = data ?? []
+      const saldos = new Map()
+      let completo = true
+      if (filas.length) {
+        const r = await supabase.from('cliente_movimientos').select('cliente_id, importe').in('cliente_id', filas.map(c => c.id))
+        if (r.error) completo = false
+        else {
+          if ((r.data ?? []).length >= TOPE_MOVIMIENTOS) completo = false
+          for (const m of r.data ?? []) saldos.set(m.cliente_id, (saldos.get(m.cliente_id) ?? 0) + (Number(m.importe) || 0))
+        }
+      }
+      return filas.map(c => ({
+        cliente_id: c.id, nombre: c.nombre, razon_social: c.razon_social, cuit: c.cuit, codigo_anterior: c.codigo_anterior,
+        es_tambien_proveedor: !!c.proveedor_id, apagado: true,
+        saldo: completo ? Math.round((saldos.get(c.id) ?? 0) * 100) / 100 : null,
+      }))
+    }
+
+    // Lo que se ve: los prendidos y, con "Mostrar apagados", los apagados al final.
+    function clientesDeLaLista() {
+      const prendidos = estado.saldos ?? []
+      const apagados = estado.mostrarApagados ? (estado.apagados?.filas ?? []) : []
+      return [...prendidos, ...apagados]
     }
 
     function htmlListaClientes() {
       if (estado.errorSaldos) return `<div class="ad-aviso ad-aviso--grave">${esc(estado.errorSaldos)}</div>`
       if (estado.saldos === null) return '<div class="ad-vacio">Cargando los clientes…</div>'
-      if (!estado.saldos.length) return '<div class="ad-vacio">Esta empresa todavía no tiene clientes.</div>'
-      const lista = clientesFiltrados(estado.saldos, estado.busquedaClientes)
-      if (!lista.length) return `<div class="ad-vacio">${esc('Ningún cliente coincide con «' + limpio(estado.busquedaClientes) + '».')}</div>`
-      return lista.map(htmlFilaCliente).join('')
+      let aviso = ''
+      if (estado.mostrarApagados) {
+        if (estado.apagados?.error) aviso = `<div class="ad-aviso ad-aviso--grave">${esc(estado.apagados.error)}</div>`
+        else if (!estado.apagados?.filas) aviso = '<div class="ad-vacio">Cargando los apagados…</div>'
+        else if (estado.apagados.filas.some(c => c.saldo === null)) aviso = '<div class="ad-aviso">El saldo de los apagados no se pudo sumar: se ve al abrir su cuenta.</div>'
+      }
+      const todos = clientesDeLaLista()
+      if (!todos.length) return aviso + '<div class="ad-vacio">Esta empresa todavía no tiene clientes.</div>'
+      const lista = clientesFiltrados(todos, estado.busquedaClientes)
+      if (!lista.length) return aviso + `<div class="ad-vacio">${esc('Ningún cliente coincide con «' + limpio(estado.busquedaClientes) + '».')}</div>`
+      return aviso + lista.map(htmlFilaCliente).join('')
     }
 
     function pintarClientes() {
       document.getElementById('ad-clientes-lista').innerHTML = htmlListaClientes()
-      const n = estado.saldos ? clientesFiltrados(estado.saldos, estado.busquedaClientes).length : null
+      document.getElementById('ad-clientes-apagados').checked = !!estado.mostrarApagados
+      const n = estado.saldos ? clientesFiltrados(clientesDeLaLista(), estado.busquedaClientes).length : null
       document.getElementById('ad-clientes-cuenta').textContent = n === null ? '' : `${n} ${n === 1 ? 'cliente' : 'clientes'}`
       const alta = puedeDarAlta()
       document.getElementById('ad-btn-cliente-nuevo').hidden = !alta
@@ -1868,18 +1969,94 @@
       const turno = ++turnoClientes
       estado.saldos = null
       estado.errorSaldos = null
+      // Los apagados se vuelven a leer (pueden ser de otra empresa, o haber
+      // cambiado con el interruptor).
+      estado.apagados = null
       pintarClientes()
       try {
         const unidad = estado.empresaId
         const [saldos] = await Promise.all([leerSaldos(unidad), asegurarDatosEmpresa()])
         if (turno !== turnoClientes) return
         estado.saldos = saldos
+        if (estado.mostrarApagados) cargarApagados(turno)
       } catch (err) {
         if (turno !== turnoClientes) return
         console.error('No se pudieron leer los clientes:', err)
         estado.errorSaldos = 'No se pudieron leer los clientes. Revisá la conexión y volvé a entrar.'
       }
       pintarClientes()
+    }
+
+    // "Mostrar apagados": se leen al prenderlo (y al volver a la lista).
+    async function cargarApagados(turno = turnoClientes) {
+      const unidad = estado.empresaId
+      estado.apagados = { filas: null, error: null }
+      pintarClientes()
+      try {
+        const filas = await leerApagados(unidad)
+        if (turno !== turnoClientes) return
+        estado.apagados = { filas, error: null }
+      } catch (err) {
+        if (turno !== turnoClientes) return
+        console.error('No se pudieron leer los clientes apagados:', err)
+        estado.apagados = { filas: null, error: 'No se pudieron leer los clientes apagados. Revisá la conexión y volvé a entrar.' }
+      }
+      pintarClientes()
+    }
+
+    function cambiarMostrarApagados(ver) {
+      estado.mostrarApagados = !!ver
+      if (estado.mostrarApagados && !estado.apagados?.filas) cargarApagados()
+      else pintarClientes()
+    }
+
+    // APAGAR / PRENDER un cliente, como los conos: se guarda al tocarlo con
+    // guardar_cliente(p_activo). OJO: guardar_cliente PISA nombre, apodos,
+    // localidad, teléfono y observaciones con lo que se le mande (no
+    // conserva lo que no viene), así que antes se lee la fila ENTERA y se le
+    // manda tal cual: el interruptor no puede borrar un apodo.
+    async function leerClienteEntero(id) {
+      const { data, error } = await supabase.from('clientes')
+        .select('id, unidad_negocio_id, nombre, apodos, localidad, telefono, observaciones, activo').eq('id', id).maybeSingle()
+      if (error) throw error
+      return data
+    }
+
+    function parametrosActivo(c, activo) {
+      return {
+        p_id: c.id, p_unidad_negocio_id: c.unidad_negocio_id, p_nombre: c.nombre, p_apodos: Array.isArray(c.apodos) ? c.apodos : [],
+        p_localidad: c.localidad ?? null, p_telefono: c.telefono ?? null, p_observaciones: c.observaciones ?? null, p_activo: !!activo,
+      }
+    }
+
+    async function cambiarActivoCliente(id) {
+      if (!puedePrenderApagar() || estado.interruptor?.guardando) return
+      const fila = clientesDeLaLista().find(c => c.cliente_id === id)
+      if (!fila) return
+      const prender = !!fila.apagado
+      estado.interruptor = { id, guardando: true, error: null }
+      pintarClientes()
+      try {
+        const c = await leerClienteEntero(id)
+        if (!c) throw new Error('No se encontró el cliente.')
+        const { error } = await supabase.rpc('guardar_cliente', parametrosActivo(c, prender))
+        if (error) throw error
+        estado.interruptor = null
+        const cli = clienteDe(id)
+        if (cli) cli.activo = prender
+        mostrarExito(prender
+          ? `${c.nombre} está prendido: vuelve a aparecer para cargar retiros, pedidos y cobranzas.`
+          : `${c.nombre} está apagado: ya no aparece para cargar retiros, pedidos ni cobranzas.`)
+        // Pasa de una lista a la otra: se vuelven a leer las dos.
+        estado.apagados = null
+        await mostrarClientes()
+      } catch (err) {
+        console.error('No se pudo cambiar el cliente:', err)
+        // El error de la base va tal cual, pegado a la fila; el interruptor
+        // queda como estaba.
+        estado.interruptor = { id, guardando: false, error: err?.message || 'No se pudo guardar. Probá de nuevo.' }
+        pintarClientes()
+      }
     }
 
     // ── El alta: guardar_cliente (pide pedidos:configurar) ─────────────────
@@ -1990,7 +2167,9 @@
       const saldo = c.cuenta.length ? c.cuenta[c.cuenta.length - 1].saldo : 0
       const limite = cli?.limite_credito ?? null
       const pasa = pasaLimite(saldo, limite)
-      const cabecera = `<div class="ad-tarjeta"><div class="ad-fila__linea"><span class="ad-dato__rotulo">Saldo</span>` +
+      const extras = [cli?.activo === false ? '<div class="ad-aviso">Cliente apagado: no aparece para cargar retiros, pedidos ni cobranzas.</div>' : '',
+        cli && textoCodigoAnterior(cli.codigo_anterior) ? `<p class="ad-texto-suave">${esc(textoCodigoAnterior(cli.codigo_anterior))}</p>` : ''].join('')
+      const cabecera = extras + `<div class="ad-tarjeta"><div class="ad-fila__linea"><span class="ad-dato__rotulo">Saldo</span>` +
         `<span class="ad-total${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(saldo))}</span></div>` +
         `${limite !== null ? `<p class="ad-texto-suave">${esc('Límite de crédito ' + importeHoja(limite))}</p>` : ''}` +
         `${pasa ? '<div class="ad-aviso ad-aviso--grave">Pasa su límite de crédito.</div>' : ''}</div>`
@@ -2128,7 +2307,7 @@
 
     async function leerFicha(clienteId) {
       const { data, error } = await supabase.from('clientes')
-        .select('id, nombre, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, proveedor_id, observaciones, unidad_negocio_id')
+        .select('id, nombre, razon_social, cuit, condicion_iva, domicilio, localidad, provincia, codigo_postal, telefono, email, contacto_nombre, contacto_telefono, transporte_habitual, banco, cbu, alias_cbu, lista_precio_id, limite_credito, plazo_pago_dias, proveedor_id, observaciones, unidad_negocio_id, codigo_anterior')
         .eq('id', clienteId).maybeSingle()
       if (error) throw error
       return data
@@ -2240,6 +2419,15 @@
         else el.value = c[clave] ?? ''
       }
       document.getElementById('ad-f-proveedor-buscar').value = ''
+      const cod = document.getElementById('ad-ficha-codigo-anterior')
+      cod.textContent = textoCodigoAnterior(c.codigo_anterior)
+      cod.hidden = !cod.textContent
+    }
+
+    // "Código en el sistema anterior: 123", o nada.
+    function textoCodigoAnterior(codigo) {
+      if (codigo === null || codigo === undefined || codigo === '') return ''
+      return `Código en el sistema anterior: ${codigo}`
     }
 
     async function abrirFicha(clienteId) {
@@ -4413,9 +4601,12 @@
       document.getElementById('ad-clientes-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-clientes-buscar').addEventListener('input', (e) => { estado.busquedaClientes = e.target.value; pintarClientes() })
       document.getElementById('ad-clientes-lista').addEventListener('click', (e) => {
+        const s = e.target.closest('[data-cliente-activo]')
+        if (s) { cambiarActivoCliente(s.dataset.clienteActivo); return }
         const b = e.target.closest('[data-cliente]')
         if (b) abrirCliente(b.dataset.cliente)
       })
+      document.getElementById('ad-clientes-apagados').addEventListener('change', (e) => cambiarMostrarApagados(e.target.checked))
       document.getElementById('ad-btn-cliente-nuevo').addEventListener('click', () => abrirAlta())
       document.getElementById('ad-alta-guardar').addEventListener('click', () => guardarAlta())
       document.getElementById('ad-alta-cancelar').addEventListener('click', () => { estado.alta = null; pintarClientes() })

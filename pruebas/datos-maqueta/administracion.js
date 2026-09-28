@@ -94,8 +94,13 @@ module.exports = {
       }
     ],
     "clientes": [
+      // Un cliente APAGADO (28/09/2026): no está en clientes_con_saldo, se ve
+      // con "Mostrar apagados".
+      { "id": "c-apagado", "unidad_negocio_id": "u-n", "nombre": "Kiosco Cerrado", "razon_social": null, "apodos": [], "cuit": null,
+        "localidad": "Río Cuarto", "telefono": null, "observaciones": null, "activo": false, "codigo_anterior": 55, "limite_credito": null, "proveedor_id": null },
       {
         "id": "c1",
+        "codigo_anterior": 101,
         "unidad_negocio_id": "u-n",
         "nombre": "Distribuidora Anatolia",
         "razon_social": "ANATOLIA SRL",
@@ -578,6 +583,7 @@ module.exports = {
       }
     ],
     "cliente_movimientos": [
+      { "id": "mov-apagado", "cliente_id": "c-apagado", "tipo": "saldo_inicial", "importe": 12500, "fecha": "2026-09-01", "cargado_en": "2026-09-01T12:00:00Z", "cobranza_id": null },
       {
         "cliente_id": "c1",
         "fecha": "2026-09-01",
