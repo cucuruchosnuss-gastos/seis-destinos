@@ -1,0 +1,70 @@
+// Mutaciones de Proyectos Taller (ver test-taller.js): sacar cada esc() de los
+// renders y romper cada regla de a una.
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-taller.js'),
+  original: path.join(__dirname, '..', 'modulos', 'taller.html'),
+  funciones: ['htmlTarjetaProyecto', 'htmlLista', 'dato', 'cifra', 'htmlSeccionDatos', 'htmlSeccionPlata', 'htmlPanelVenta',
+    'htmlSeccionGastos', 'htmlSeccionHoras', 'htmlPanelHoras', 'htmlSeccionNotas', 'htmlSeccionArchivos', 'htmlFicha', 'htmlValorHora'],
+  // Lo que sale de un FORMATO propio (fechas, importes, horas, porcentajes) o
+  // de una CONSTANTE del código no tiene caracteres escapables: sacarle el
+  // esc() no cambia ninguna salida posible. El texto de la base y de la
+  // persona (y los errores de la base) sí se miden: esos no van acá.
+  equivalentes: [
+    ['esc(porcentaje(avance))', 'porcentaje(): un número formateado o "—"'],
+    ['esc(fechaCorta(p.fecha_entrega_prometida))', 'fechaCorta(): dd/mm/aaaa armado con dígitos, o "—"'],
+    ['esc(importe(p.costo_total))', 'importe(): "$ " + un número formateado, o "—"'],
+    ['esc(importe(p.presupuesto_costo))', 'importe(): "$ " + un número formateado, o "—"'],
+    ['esc(categoria)', 'la etiqueta de ETIQUETA_CATEGORIA (constante) o "Sin categoría"'],
+    ['esc(horasTexto(p.horas_estimadas))', 'horasTexto(): un número formateado + " h", o "—"'],
+    ['esc(horasTexto(p.horas))', 'horasTexto(): un número formateado + " h", o "—"'],
+    ['esc(rotulo)', 'dato()/cifra() reciben rótulos constantes del código'],
+    ['esc(nota)', 'cifra() recibe notas constantes o armadas con horasTexto()'],
+    ['esc(valor)', 'cifra() recibe importe()/porcentaje()/horasTexto() o una constante'],
+    ['esc(titulo)', 'htmlPanelVenta(): "Facturar al cliente" o "Cargar a la fábrica", constantes'],
+    ['esc(fechaCorta(g.fecha))', 'fechaCorta(): dd/mm/aaaa armado con dígitos, o "—"'],
+    ["esc(importe(g.importe, g.moneda || 'ARS'))", 'importe(): el prefijo sale de una comparación (US$ o $), no de la moneda cruda'],
+    ['esc(horasTexto(h.horas))', 'horasTexto(): un número formateado + " h", o "—"'],
+    ['esc(fechaCorta(h.fecha))', 'fechaCorta(): dd/mm/aaaa armado con dígitos, o "—"'],
+    ['esc(hoyArgentina())', 'hoyArgentina(): AAAA-MM-DD de Intl'],
+    ['esc(momentoCorto(n.fecha))', 'momentoCorto(): una fecha y hora de Intl, o "—"'],
+    ["esc(ETIQUETA_TIPO[a.tipo] || 'Otro')", 'la etiqueta de ETIQUETA_TIPO (constante) o "Otro"'],
+    ['esc(momentoCorto(a.fecha))', 'momentoCorto(): una fecha y hora de Intl, o "—"'],
+    ['esc(v)', 'la clave de TIPOS_ARCHIVO, constante del código'],
+    ['esc(t)', 'la etiqueta de TIPOS_ARCHIVO, constante del código'],
+    ['esc(importe(vigente.valor))', 'importe(): "$ " + un número formateado, o "—"'],
+    ['esc(fechaCorta(vigente.vigente_desde))', 'fechaCorta(): dd/mm/aaaa armado con dígitos, o "—"'],
+    ['esc(importe(v.valor))', 'importe(): "$ " + un número formateado, o "—"'],
+    ['esc(fechaCorta(v.vigente_desde))', 'fechaCorta(): dd/mm/aaaa armado con dígitos, o "—"'],
+    ['esc(momentoCorto(v.cargado_en))', 'momentoCorto(): una fecha y hora de Intl, o "—"'],
+  ].map(([expr, motivo]) => ({ expr, motivo })),
+  manuales: [
+    { nombre: 'sin precios se muestra la venta', de: '      if (!ctx.precios) return html\n', a: '' },
+    { nombre: 'el precio de venta viaja sin permiso', de: "if (precios) claves.push('precio_venta')", a: "claves.push('precio_venta')" },
+    { nombre: 'se manda todo, no solo lo que cambió', de: "if (nuevo ? norm(a) === '' : norm(a) === norm(o)) continue", a: "if (nuevo && norm(a) === '') continue" },
+    { nombre: 'nunca falta el valor de la hora', de: "return numero(r?.horas) > 0 && (numero(r?.costo_horas) ?? 0) === 0", a: 'return false' },
+    { nombre: 'un importe ausente sale como $ 0,00', de: "      const n = numero(v)\n      if (n === null) return '—'\n      const signo", a: "      const n = numero(v) ?? 0\n      const signo" },
+    { nombre: 'confirma sin revisar lo que falta', de: 'if (!falta) f.panel.revisar = true', a: 'f.panel.revisar = true' },
+    { nombre: 'confirmar sin permiso de precios llama a la base', de: 'if (f.enviando || !puedePrecios()) return', a: 'if (f.enviando) return' },
+    { nombre: 'abrir facturar sin permiso', de: "        if (!puedePrecios()) return\n        f.panel = { tipo: accion", a: "        f.panel = { tipo: accion" },
+    { nombre: 'facturar y cargar a la fábrica cruzados', de: "const rpc = p.tipo === 'facturar' ? 'facturar_proyecto' : 'cargar_proyecto_a_fabrica'", a: "const rpc = p.tipo === 'facturar' ? 'cargar_proyecto_a_fabrica' : 'facturar_proyecto'" },
+    { nombre: 'horas: más de 24 pasa', de: "      if (p.horas > 24) return 'Las horas van de 0 a 24.'\n", a: '' },
+    { nombre: 'horas: a futuro pasa', de: "if (p.fecha > hoyArgentina()) return 'No se pueden cargar horas a futuro.'", a: 'void 0' },
+    { nombre: 'horas: la tarea sin limpiar', de: 'p_tarea: limpio(p.tarea) || null', a: 'p_tarea: p.tarea || null' },
+    { nombre: 'la barra: el Taller no muestra todo', de: "      if (!unidadId || unidadId === estado.tallerId) return true\n", a: "      if (!unidadId) return true\n" },
+    { nombre: 'la barra: otra fábrica muestra todo', de: "return p.destino === 'interno' && !!nombre && p.fabrica_destino === nombre", a: 'return true' },
+    { nombre: '"Activos" deja los entregados', de: "        if (filtros.estado === 'activos' && CERRADOS.has(p.estado)) return false\n", a: '' },
+    { nombre: 'las tablets entran como personas', de: "p.tipo !== 'sistema' && ", a: '' },
+    { nombre: 'la fábrica de pruebas entra como personas', de: "return sinPersonasDePrueba(reales, fabrica).sort(", a: "return reales.sort(" },
+    { nombre: 'el Taller es fábrica destino', de: '.filter(u => u.id !== estado.tallerId)', a: '' },
+    { nombre: 'el nombre de archivo conserva barras', de: ".replace(/[^A-Za-z0-9._-]+/g, '-')", a: '' },
+    { nombre: 'el valor vigente toma uno futuro', de: '.filter(v => v.vigente_desde <= fecha)', a: '' },
+    { nombre: 'el botón del valor de la hora sin permiso', de: "document.getElementById('tl-acciones-extra').innerHTML = puedePrecios()", a: "document.getElementById('tl-acciones-extra').innerHTML = true" },
+    { nombre: 'hoy en UTC', de: "new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year: 'numeric'", a: "new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC', year: 'numeric'" },
+    { nombre: 'la barra de costo pasa del 100 % de ancho', de: 'const ancho = Math.max(0, Math.min(100, avance))', a: 'const ancho = avance' },
+    { nombre: 'sin cliente, facturar habilitado', de: "data-accion=\"facturar\"${r.cliente ? '' : ' disabled'}", a: 'data-accion="facturar"' },
+    { nombre: 'el link directo acepta cualquier cosa', de: "return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || '') ? id : null", a: 'return id' },
+  ],
+})

@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Proyectos Taller — Seis Destinos</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#1a2a52">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- PROYECTOS TALLER (28/09/2026).
+
+       El Taller es una unidad que VENDE: a clientes de afuera (máquinas,
+       dispositivos, automatizaciones, mantenimientos, horas de trabajo) y a
+       las otras fábricas del grupo (trabajos internos con precio). Cada
+       proyecto tiene su COSTO (los gastos cargados en Gastos con ese proyecto
+       + las horas por el valor de la hora) y su PRECIO, para saber qué rinde
+       cada uno.
+
+       Las reglas viven en la base y la pantalla no las repite ni las
+       contradice: guardar_proyecto recibe SOLO las claves que cambian (una
+       clave con "" borra), precio_venta pide taller:precios, y
+       resumen_proyecto / proyectos_taller solo devuelven los precios, lo
+       facturado, lo cobrado y el margen con taller:precios.
+
+       SIN taller:precios NO HAY NINGÚN PRECIO EN LA PÁGINA, ni escondido: todo
+       lo que habla de plata de venta se arma en JS y solo con ese permiso. Por
+       eso este HTML no nombra precios, márgenes ni facturación (lo exige
+       test-taller-precios.js). -->
+
+  <style>
+    [hidden] { display: none !important; }
+
+    body {
+      overflow-x: hidden;
+      --borde-tarjeta:  rgba(26, 42, 82, 0.08);
+      --sombra-tarjeta: 0 1px 2px rgba(26, 42, 82, 0.05);
+      --tl-texto-secundario: #4a5670;
+      --tl-segmento-fondo: color-mix(in srgb, var(--grafito) 9%, transparent);
+    }
+
+    .tl-app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1rem calc(2rem + env(safe-area-inset-bottom));
+      min-width: 0;
+    }
+
+    /* ── Cabecera (la receta de Pedidos) ─────────────────────────────────── */
+    .tl-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      min-width: 0; background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      box-shadow: var(--sombra-suave); padding: 0.875rem 1rem; margin: 1rem 0;
+    }
+    .tl-header__volver {
+      color: var(--color-texto-suave); text-decoration: none; font-size: 0.875rem; font-weight: 600;
+      flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding-right: 0.5rem;
+    }
+    .tl-header__col { display: flex; flex-direction: column; min-width: 0; text-align: right; }
+    .tl-header__marca { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .tl-header__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); min-width: 0; overflow-wrap: anywhere; }
+    .tl-header__punto { color: var(--grafito); font-size: 0.875rem; line-height: 1; }
+
+    /* ── Botones ─────────────────────────────────────────────────────────── */
+    .tl-btn {
+      min-height: 44px; padding: 0 1rem; font: inherit; font-size: 0.9375rem; font-weight: 700;
+      border-radius: var(--radio-boton); border: 2px solid var(--grafito);
+      background: var(--grafito); color: #fff; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+      text-align: center; touch-action: manipulation;
+    }
+    .tl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .tl-btn:focus-visible { outline: 3px solid var(--color-acento-highlight); outline-offset: 2px; }
+    .tl-btn--secundario { background: var(--color-fondo); color: var(--grafito-oscuro); }
+    .tl-btn--suave { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde); }
+    .tl-btn--peligro { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .tl-btn--chico { min-height: 36px; padding: 0 0.75rem; font-size: 0.8125rem; }
+    .tl-btn--ancho { width: 100%; }
+    .tl-link {
+      background: none; border: 0; padding: 0 0.25rem; min-height: 44px; font: inherit; font-size: 0.875rem;
+      font-weight: 600; color: var(--color-texto-suave); cursor: pointer; display: inline-flex; align-items: center;
+    }
+    .tl-link-texto { color: var(--grafito-oscuro); font-weight: 700; }
+
+    /* ── Tarjetas, títulos, avisos ───────────────────────────────────────── */
+    .tl-tarjeta {
+      background: var(--color-fondo); border-radius: var(--radio-tarjeta);
+      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      padding: 1rem; margin-bottom: 0.75rem; min-width: 0;
+    }
+    .tl-titulo { font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--color-texto); overflow-wrap: anywhere; }
+    .tl-seccion__titulo { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--tl-texto-secundario); margin: 0 0 0.625rem; display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; flex-wrap: wrap; }
+    .tl-texto-suave { color: var(--tl-texto-secundario); font-size: 0.875rem; }
+    .tl-vacio { padding: 2rem 1rem; text-align: center; color: var(--tl-texto-secundario); }
+    /* Dos escalones, como en todo el proyecto: .tl-aviso informa (neutro) y
+       .tl-aviso--grave dice que un dato está mal o que no se puede seguir. */
+    .tl-aviso {
+      padding: 0.75rem 0.875rem; border-radius: var(--radio-input); margin: 0.5rem 0;
+      background: var(--color-superficie); border-left: 4px solid var(--color-acento-gris);
+      color: var(--tl-texto-secundario); font-size: 0.875rem; overflow-wrap: anywhere;
+    }
+    .tl-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
+    .tl-error-pegado { color: var(--bordo-oscuro); font-weight: 600; font-size: 0.875rem; margin: 0.375rem 0 0; overflow-wrap: anywhere; }
+    .tl-nota-unidad { font-size: 0.8125rem; color: var(--tl-texto-secundario); margin: 0 0 0.75rem; }
+
+    .tl-barra-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0 0 0.75rem; }
+    .tl-cabecera-vista { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.75rem; }
+    .tl-cabecera-vista .tl-titulo { flex: 1 1 12rem; }
+
+    /* ── Segmento y filtros ─────────────────────────────────────────────── */
+    .tl-segmento {
+      display: flex; gap: 2px; padding: 3px; border-radius: 10px;
+      background: var(--tl-segmento-fondo); min-width: 0; overflow-x: auto; margin: 0 0 0.5rem;
+    }
+    .tl-segmento__opcion {
+      flex: 1 0 auto; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: 8px;
+      background: transparent; font: inherit; font-size: 0.8125rem; font-weight: 600;
+      color: var(--grafito-oscuro); white-space: nowrap; cursor: pointer;
+    }
+    .tl-segmento__opcion[aria-pressed="true"] { background: var(--grafito); color: #fff; font-weight: 700; }
+    .tl-filtros { display: grid; gap: 0.25rem; margin: 0 0 0.75rem; }
+    .tl-filtros__fila { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: start; }
+
+    /* ── Campos ──────────────────────────────────────────────────────────── */
+    .tl-campo { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.875rem; min-width: 0; }
+    .tl-campo > label, .tl-campo__rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto); }
+    .tl-campo__ayuda { font-size: 0.8125rem; color: var(--tl-texto-secundario); }
+    .tl-input, .tl-select, .tl-textarea {
+      width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; box-sizing: border-box;
+      font: inherit; font-size: 1rem; color: var(--color-texto); background: var(--color-fondo);
+      border: 1px solid var(--color-borde); border-radius: var(--radio-input);
+    }
+    .tl-textarea { min-height: 72px; resize: vertical; }
+    .tl-input:focus, .tl-select:focus, .tl-textarea:focus { outline: 2px solid var(--grafito); outline-offset: 0; border-color: var(--grafito); }
+    .tl-input--error { border-color: var(--bordo); }
+    .tl-fila-campos { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+
+    /* ── La lista ────────────────────────────────────────────────────────── */
+    .tl-lista { display: grid; gap: 0.625rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); }
+    .tl-card {
+      display: flex; flex-direction: column; gap: 0.375rem; text-align: left; width: 100%;
+      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
+      border-radius: var(--radio-tarjeta); padding: 0.875rem 1rem; font: inherit; color: var(--color-texto);
+      cursor: pointer; min-width: 0;
+    }
+    .tl-card:hover { border-color: var(--grafito); }
+    .tl-card:focus-visible { outline: 3px solid var(--color-acento-highlight); outline-offset: 2px; }
+    .tl-card__cab { display: flex; gap: 0.5rem; align-items: flex-start; justify-content: space-between; min-width: 0; }
+    .tl-card__nombre { font-weight: 800; font-size: 1rem; overflow-wrap: anywhere; min-width: 0; }
+    .tl-card__meta { font-size: 0.8125rem; color: var(--tl-texto-secundario); overflow-wrap: anywhere; }
+    .tl-card__entrega { font-size: 0.8125rem; font-weight: 600; color: var(--tl-texto-secundario); }
+    .tl-card__entrega--atrasado { color: var(--bordo-oscuro); }
+    .tl-card__costo { font-size: 0.8125rem; color: var(--color-texto); font-variant-numeric: tabular-nums; }
+    .tl-card__costo--pasado { color: var(--bordo-oscuro); font-weight: 700; }
+
+    .tl-estado { flex: 0 0 auto; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 0.25rem 0.5rem; border-radius: 999px; background: var(--grafito-suave); color: var(--grafito-oscuro); white-space: nowrap; }
+    .tl-estado--entregado { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .tl-estado--cancelado { background: var(--bordo-suave); color: var(--bordo-oscuro); }
+    .tl-chip { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 0.125rem 0.5rem; border-radius: 999px;
+      background: var(--color-superficie); color: var(--tl-texto-secundario); }
+
+    /* La barra de costo contra presupuesto: bordó al pasarse del 100 %. */
+    .tl-barra { height: 8px; border-radius: 999px; background: var(--color-superficie); overflow: hidden; }
+    .tl-barra__lleno { height: 100%; background: var(--grafito); border-radius: 999px; }
+    .tl-barra--pasado .tl-barra__lleno { background: var(--bordo); }
+
+    /* ── La ficha ────────────────────────────────────────────────────────── */
+    .tl-ficha { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 1fr); }
+    @media (min-width: 900px) { .tl-ficha { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .tl-ficha__ancho { grid-column: 1 / -1; } }
+    .tl-datos { display: grid; gap: 0.5rem 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin: 0; }
+    .tl-dato { min-width: 0; }
+    .tl-dato dt { font-size: 0.75rem; font-weight: 700; color: var(--tl-texto-secundario); }
+    .tl-dato dd { margin: 0.125rem 0 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
+    .tl-dato--mal dd { color: var(--bordo-oscuro); font-weight: 700; }
+    .tl-cifras { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); margin: 0 0 0.75rem; }
+    .tl-seccion__titulo .tl-link, .tl-seccion__titulo .tl-btn { text-transform: none; letter-spacing: normal; }
+    .tl-cifra { background: var(--color-superficie); border-radius: var(--radio-input); padding: 0.625rem 0.75rem; min-width: 0; }
+    .tl-cifra__rotulo { font-size: 0.75rem; font-weight: 700; color: var(--tl-texto-secundario); }
+    .tl-cifra__valor { font-size: 1.125rem; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .tl-cifra--mal .tl-cifra__valor { color: var(--bordo-oscuro); }
+    .tl-cifra__nota { font-size: 0.75rem; color: var(--tl-texto-secundario); }
+    .tl-renglones { display: flex; flex-direction: column; }
+    .tl-renglon { display: flex; gap: 0.75rem; align-items: flex-start; justify-content: space-between; padding: 0.5rem 0;
+      border-top: 1px solid var(--color-borde); min-width: 0; }
+    .tl-renglon:first-child { border-top: 0; }
+    .tl-renglon__texto { min-width: 0; overflow-wrap: anywhere; font-size: 0.9375rem; }
+    .tl-renglon__sub { font-size: 0.8125rem; color: var(--tl-texto-secundario); }
+    .tl-renglon__monto { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .tl-panel { border: 1px solid var(--color-borde); border-radius: var(--radio-input); padding: 0.75rem; margin: 0.75rem 0 0; background: var(--color-superficie); }
+    .tl-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+    /* El valor de la hora. */
+    .tl-historia { font-size: 0.875rem; }
+  </style>
+  <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
+       módulo: corre después de armar la página. -->
+  <script type="module" src="../js/barra-lateral.js"></script>
+  <!-- La barra de unidad de negocio, arriba (js/barra-unidad.js, 28/09/2026). -->
+  <script type="module" src="../js/barra-unidad.js"></script>
+</head>
+<body class="pagina-modulo">
+  <div class="tl-app" id="tl-app">
+
+    <header class="tl-header">
+      <a href="../dashboard.html" class="tl-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <div class="tl-header__col">
+        <span class="tl-header__marca">Seis Destinos</span>
+        <span class="tl-header__titulo">Proyectos Taller <span class="tl-header__punto">&#9679;</span> <span id="tl-subtitulo">Lista</span></span>
+      </div>
+    </header>
+
+    <div class="tl-vacio" id="tl-sin-acceso" hidden></div>
+    <div class="tl-vacio" id="tl-cargando">Cargando…</div>
+
+    <!-- ══ LISTA ═════════════════════════════════════════════════════════ -->
+    <section id="tl-vista-lista" hidden>
+      <div class="tl-barra-acciones" id="tl-acciones-lista">
+        <button type="button" class="tl-btn" id="tl-btn-nuevo" hidden>+ Nuevo proyecto</button>
+        <!-- Lo de plata de venta (el valor de la hora) lo agrega el JS, solo con permiso. -->
+        <span id="tl-acciones-extra"></span>
+      </div>
+      <p class="tl-nota-unidad" id="tl-nota-unidad" hidden></p>
+      <div class="tl-filtros">
+        <div class="tl-segmento" id="tl-filtro-estado" role="group" aria-label="Filtrar por estado"></div>
+        <div class="tl-filtros__fila">
+          <div class="tl-segmento" id="tl-filtro-destino" role="group" aria-label="Filtrar por destino"></div>
+          <div class="tl-campo">
+            <label for="tl-filtro-categoria">Categoría</label>
+            <select class="tl-select" id="tl-filtro-categoria"></select>
+          </div>
+        </div>
+      </div>
+      <p class="tl-texto-suave" id="tl-cuenta"></p>
+      <div class="tl-lista" id="tl-lista"></div>
+    </section>
+
+    <!-- ══ UN PROYECTO ═══════════════════════════════════════════════════ -->
+    <section id="tl-vista-ficha" hidden>
+      <div class="tl-cabecera-vista">
+        <button type="button" class="tl-link" id="tl-ficha-volver">&lsaquo; Proyectos</button>
+        <h1 class="tl-titulo" id="tl-ficha-titulo">Proyecto</h1>
+      </div>
+      <!-- Todo lo de adentro lo arma el JS (y lo de plata de venta, solo con permiso). -->
+      <div id="tl-ficha"></div>
+    </section>
+
+    <!-- ══ NUEVO / EDITAR ════════════════════════════════════════════════ -->
+    <section id="tl-vista-editor" hidden>
+      <div class="tl-cabecera-vista">
+        <button type="button" class="tl-link" id="tl-editor-volver">&lsaquo; Volver</button>
+        <h1 class="tl-titulo" id="tl-editor-titulo">Proyecto nuevo</h1>
+      </div>
+      <div class="tl-tarjeta">
+        <div class="tl-campo">
+          <label for="tl-ed-nombre">Nombre del proyecto</label>
+          <input type="text" class="tl-input" id="tl-ed-nombre" maxlength="120" autocomplete="off" placeholder="Ej: Máquina de barquillo 24 para Carrizo">
+        </div>
+        <div class="tl-campo">
+          <span class="tl-campo__rotulo" id="tl-ed-destino-rotulo">¿Para quién es?</span>
+          <div class="tl-segmento" id="tl-ed-destino" role="group" aria-labelledby="tl-ed-destino-rotulo">
+            <button type="button" class="tl-segmento__opcion" data-destino="externo" aria-pressed="true">Un cliente de afuera</button>
+            <button type="button" class="tl-segmento__opcion" data-destino="interno" aria-pressed="false">Otra fábrica del grupo</button>
+          </div>
+        </div>
+        <div id="tl-ed-bloque-cliente">
+          <div class="tl-campo">
+            <label for="tl-ed-cliente">Cliente del Taller</label>
+            <select class="tl-select" id="tl-ed-cliente"></select>
+            <p class="tl-error-pegado" id="tl-ed-clientes-error" hidden></p>
+          </div>
+          <button type="button" class="tl-link tl-link-texto" id="tl-ed-cliente-nuevo">+ Cliente nuevo</button>
+          <div class="tl-panel" id="tl-ed-cliente-form" hidden>
+            <div class="tl-fila-campos">
+              <div class="tl-campo"><label for="tl-ed-cliente-nombre">Nombre del cliente</label>
+                <input type="text" class="tl-input" id="tl-ed-cliente-nombre" maxlength="120" autocomplete="off"></div>
+              <div class="tl-campo"><label for="tl-ed-cliente-telefono">Teléfono</label>
+                <input type="tel" class="tl-input" id="tl-ed-cliente-telefono" maxlength="40" autocomplete="off"></div>
+            </div>
+            <div class="tl-campo"><label for="tl-ed-cliente-localidad">Localidad</label>
+              <input type="text" class="tl-input" id="tl-ed-cliente-localidad" maxlength="120" autocomplete="off"></div>
+            <p class="tl-error-pegado" id="tl-ed-cliente-error" hidden></p>
+            <div class="tl-panel__acciones">
+              <button type="button" class="tl-btn tl-btn--suave" id="tl-ed-cliente-cancelar">Cancelar</button>
+              <button type="button" class="tl-btn" id="tl-ed-cliente-guardar">Dar de alta el cliente</button>
+            </div>
+          </div>
+        </div>
+        <div class="tl-campo" id="tl-ed-bloque-fabrica" hidden>
+          <label for="tl-ed-fabrica">Fábrica que recibe el trabajo</label>
+          <select class="tl-select" id="tl-ed-fabrica"></select>
+        </div>
+        <div class="tl-fila-campos">
+          <div class="tl-campo"><label for="tl-ed-categoria">Categoría</label>
+            <select class="tl-select" id="tl-ed-categoria"></select></div>
+          <div class="tl-campo"><label for="tl-ed-estado">Estado</label>
+            <select class="tl-select" id="tl-ed-estado"></select></div>
+          <div class="tl-campo"><label for="tl-ed-responsable">Responsable</label>
+            <select class="tl-select" id="tl-ed-responsable"></select></div>
+        </div>
+        <div class="tl-fila-campos">
+          <div class="tl-campo"><label for="tl-ed-inicio">Inicio</label>
+            <input type="date" class="tl-input" id="tl-ed-inicio"></div>
+          <div class="tl-campo"><label for="tl-ed-entrega">Entrega prometida</label>
+            <input type="date" class="tl-input" id="tl-ed-entrega"></div>
+          <div class="tl-campo"><label for="tl-ed-entrega-real">Entrega real</label>
+            <input type="date" class="tl-input" id="tl-ed-entrega-real"></div>
+        </div>
+        <div class="tl-fila-campos">
+          <div class="tl-campo"><label for="tl-ed-presupuesto">Presupuesto de costo</label>
+            <input type="text" class="tl-input" id="tl-ed-presupuesto" autocomplete="off">
+            <span class="tl-campo__ayuda">Lo que se calcula que va a costar (materiales, repuestos y horas).</span></div>
+          <div class="tl-campo"><label for="tl-ed-horas">Horas estimadas</label>
+            <input type="text" class="tl-input" id="tl-ed-horas" autocomplete="off"></div>
+          <div class="tl-campo"><label for="tl-ed-moneda">Moneda</label>
+            <select class="tl-select" id="tl-ed-moneda">
+              <option value="ARS">Pesos (ARS)</option>
+              <option value="USD">Dólares (USD)</option>
+            </select></div>
+        </div>
+        <!-- El campo de plata de venta lo agrega el JS, solo con permiso. -->
+        <div id="tl-ed-slot-venta"></div>
+        <div class="tl-campo"><label for="tl-ed-ubicacion">Ubicación</label>
+          <input type="text" class="tl-input" id="tl-ed-ubicacion" maxlength="200" autocomplete="off" placeholder="Dónde está la máquina o dónde se hace el trabajo"></div>
+        <div class="tl-campo"><label for="tl-ed-descripcion">Descripción</label>
+          <textarea class="tl-textarea" id="tl-ed-descripcion" maxlength="2000"></textarea></div>
+        <div class="tl-campo"><label for="tl-ed-observaciones">Observaciones</label>
+          <textarea class="tl-textarea" id="tl-ed-observaciones" maxlength="2000"></textarea></div>
+        <p class="tl-error-pegado" id="tl-ed-error" hidden></p>
+        <button type="button" class="tl-btn tl-btn--ancho" id="tl-ed-guardar">Guardar el proyecto</button>
+      </div>
+    </section>
+
+    <!-- ══ VALOR DE LA HORA (lo arma el JS, solo con permiso) ═════════════ -->
+    <section id="tl-vista-hora" hidden>
+      <div class="tl-cabecera-vista">
+        <button type="button" class="tl-link" id="tl-hora-volver">&lsaquo; Proyectos</button>
+        <h1 class="tl-titulo">Valor de la hora</h1>
+      </div>
+      <div id="tl-hora"></div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { verificarSesion } from '../js/auth.js'
+    import {
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
+      cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
+    } from '../js/utils.js'
+    import { supabase } from '../js/supabase.js'
+    import { mostrarBannerVersion } from '../js/version-banner.js'
+    import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
+
+    mostrarBannerVersion()
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ESTADO
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const estado = {
+      sesion: null,
+      miEmpleadoId: null,
+      miRolApp: null,
+      misTareas: new Set(),       // las tareas de 'taller' habilitadas
+      unidades: new Map(),        // id → { id, nombre }
+      tallerId: null,             // la unidad "Taller"
+      fabrica: FABRICA_SIN_DATOS,
+      unidadBarra: null,          // la unidad elegida arriba (null = Todas)
+      vista: null,
+      proyectos: null,            // proyectos_taller (null = todavía no)
+      errorProyectos: null,
+      turnoLista: 0,
+      filtros: { estado: 'activos', destino: '', categoria: '' },
+      ficha: null,                // { id, r, error, panel, enviando, errores }
+      turnoFicha: 0,
+      personas: null,             // v_empleados_publico, sin tablets ni prueba
+      clientes: null,             // los clientes de la unidad Taller
+      errorClientes: null,
+      valorHora: null,            // { lista, error } (solo con precios)
+      editor: null,               // { id, original, destino, guardando }
+      guardandoHora: false,
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPERS PROPIOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Escape de TODO texto que venga de una persona o de la base antes de
+    // meterlo en un innerHTML o en un atributo.
+    function esc(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    function limpio(t) {
+      return String(t ?? '').replace(/\s+/g, ' ').trim()
+    }
+
+    const ZONA_AR = 'America/Argentina/Buenos_Aires'
+    // "Hoy" en Argentina, AAAA-MM-DD (no UTC: después de las 21 ya sería mañana).
+    function hoyArgentina(ahora = new Date()) {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora)
+    }
+    // AAAA-MM-DD → dd/mm/aaaa, sin pasar por Date (no se corre de día).
+    function fechaCorta(iso) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''))
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : '—'
+    }
+    // Un momento (timestamptz) en hora argentina.
+    function momentoCorto(ts) {
+      const d = new Date(ts)
+      if (!ts || Number.isNaN(d.getTime())) return '—'
+      return new Intl.DateTimeFormat('es-AR', { timeZone: ZONA_AR, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d)
+    }
+
+    // Un número que puede no estar: null / '' / NaN no son un cero.
+    function numero(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+    // Un importe: un dato ausente dice "—", nunca "$ 0,00".
+    function importe(v, moneda = 'ARS') {
+      const n = numero(v)
+      if (n === null) return '—'
+      const signo = moneda === 'USD' ? 'US$' : '$'
+      return `${signo} ${formatearNumeroAr(n, { decimales: 2 })}`
+    }
+    function horasTexto(v) {
+      const n = numero(v)
+      if (n === null) return '—'
+      return `${formatearNumeroAr(n, { decimales: 2, minimos: 0 })} h`
+    }
+    function porcentaje(v) {
+      const n = numero(v)
+      return n === null ? '—' : `${formatearNumeroAr(n, { decimales: 1, minimos: 0 })} %`
+    }
+
+    const ESTADOS = [
+      ['presupuestado', 'Presupuestado'], ['aprobado', 'Aprobado'], ['en_curso', 'En curso'],
+      ['terminado', 'Terminado'], ['entregado', 'Entregado'], ['cancelado', 'Cancelado'],
+    ]
+    const ETIQUETA_ESTADO = Object.fromEntries(ESTADOS)
+    const CATEGORIAS = [
+      ['maquina', 'Máquina'], ['dispositivo', 'Dispositivo'], ['automatizacion', 'Automatización'],
+      ['mantenimiento', 'Mantenimiento'], ['horas', 'Horas de trabajo'], ['otro', 'Otro'],
+    ]
+    const ETIQUETA_CATEGORIA = Object.fromEntries(CATEGORIAS)
+    const TIPOS_ARCHIVO = [['plano', 'Plano'], ['presupuesto', 'Presupuesto'], ['foto', 'Foto'], ['otro', 'Otro']]
+    const ETIQUETA_TIPO = Object.fromEntries(TIPOS_ARCHIVO)
+    const CERRADOS = new Set(['entregado', 'cancelado'])
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERMISOS — el frontend solo oculta; la barrera real está en el servidor
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Con bypass de super_admin, igual que _puede_taller() en la base.
+    function tieneTarea(tarea) {
+      return estado.miRolApp === 'super_admin' || estado.misTareas.has(tarea)
+    }
+    const puedeEntrar = () => ['ver', 'cargar', 'gestionar', 'precios'].some(tieneTarea)
+    const puedeCargar = () => tieneTarea('cargar')
+    const puedeGestionar = () => tieneTarea('gestionar')
+    const puedePrecios = () => tieneTarea('precios')
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA BARRA DE UNIDAD
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Todos los proyectos son del Taller. Con la barra en Todas o en el
+    // Taller se ven todos; con OTRA fábrica elegida se ven los trabajos
+    // internos que el Taller le hace a esa fábrica (los externos no son de
+    // ella). proyectos_taller devuelve el NOMBRE de la fábrica destino, no el
+    // id: se compara contra el nombre de la unidad elegida.
+    function pasaUnidad(p, unidadId = estado.unidadBarra) {
+      if (!unidadId || unidadId === estado.tallerId) return true
+      const nombre = estado.unidades.get(unidadId)?.nombre
+      return p.destino === 'interno' && !!nombre && p.fabrica_destino === nombre
+    }
+    function textoNotaUnidad(unidadId = estado.unidadBarra) {
+      if (!unidadId || unidadId === estado.tallerId) return ''
+      const nombre = estado.unidades.get(unidadId)?.nombre
+      return nombre ? `Mostrando los trabajos que el Taller le hace a ${nombre}. Para ver todos, elegí "Todas" o "Taller" arriba.` : ''
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA LISTA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function filtrarProyectos(lista, filtros = estado.filtros, unidadId = estado.unidadBarra) {
+      return (lista || []).filter(p => {
+        if (filtros.estado && filtros.estado !== 'activos' && filtros.estado !== 'todos' && p.estado !== filtros.estado) return false
+        if (filtros.estado === 'activos' && CERRADOS.has(p.estado)) return false
+        if (filtros.destino && p.destino !== filtros.destino) return false
+        if (filtros.categoria && p.categoria !== filtros.categoria) return false
+        return pasaUnidad(p, unidadId)
+      })
+    }
+
+    // El avance del costo contra el presupuesto (en %), o null sin presupuesto.
+    function avanceCosto(p) {
+      const pres = numero(p.presupuesto_costo), costo = numero(p.costo_total)
+      if (pres === null || pres <= 0 || costo === null) return null
+      return Math.round(1000 * costo / pres) / 10
+    }
+
+    function htmlBarraCosto(avance) {
+      if (avance === null) return ''
+      const ancho = Math.max(0, Math.min(100, avance))
+      return `<div class="tl-barra${avance > 100 ? ' tl-barra--pasado' : ''}" role="img" aria-label="Costo: ${esc(porcentaje(avance))} del presupuesto">` +
+        `<div class="tl-barra__lleno" style="width:${ancho}%"></div></div>`
+    }
+
+    function htmlTarjetaProyecto(p) {
+      const quien = p.destino === 'interno'
+        ? (p.fabrica_destino ? `Para ${p.fabrica_destino}` : 'Trabajo interno, sin fábrica elegida')
+        : (p.cliente ? p.cliente : 'Sin cliente elegido')
+      const categoria = ETIQUETA_CATEGORIA[p.categoria] || 'Sin categoría'
+      const avance = avanceCosto(p)
+      const entrega = p.fecha_entrega_prometida
+        ? `<div class="tl-card__entrega${p.atrasado ? ' tl-card__entrega--atrasado' : ''}">Entrega ${esc(fechaCorta(p.fecha_entrega_prometida))}${p.atrasado ? ' · atrasado' : ''}</div>`
+        : ''
+      const costo = numero(p.presupuesto_costo) > 0
+        ? `<div class="tl-card__costo${avance !== null && avance > 100 ? ' tl-card__costo--pasado' : ''}">${esc(importe(p.costo_total))} de ${esc(importe(p.presupuesto_costo))} (${esc(porcentaje(avance))})</div>`
+        : `<div class="tl-card__costo">${esc(importe(p.costo_total))} gastado · sin presupuesto de costo</div>`
+      return `<button type="button" class="tl-card" data-proyecto="${esc(p.id)}">` +
+        `<div class="tl-card__cab"><span class="tl-card__nombre">${esc(p.nombre)}</span>` +
+        `<span class="tl-estado tl-estado--${esc(p.estado)}">${esc(ETIQUETA_ESTADO[p.estado] || p.estado || 'Sin estado')}</span></div>` +
+        `<div class="tl-card__meta">${esc(quien)} · ${esc(categoria)}</div>` +
+        entrega + htmlBarraCosto(avance) + costo +
+        `<div class="tl-card__meta">${esc(horasTexto(p.horas))}${numero(p.horas_estimadas) ? ` de ${esc(horasTexto(p.horas_estimadas))} estimadas` : ''}</div>` +
+        `</button>`
+    }
+
+    function htmlLista(lista, error) {
+      if (error) return `<div class="tl-aviso tl-aviso--grave">No se pudieron leer los proyectos: ${esc(error)}</div>`
+      if (lista === null) return '<p class="tl-vacio">Cargando…</p>'
+      if (!lista.length) return '<p class="tl-vacio">No hay proyectos con estos filtros.</p>'
+      return lista.map(htmlTarjetaProyecto).join('')
+    }
+
+    function pintarFiltros() {
+      const f = estado.filtros
+      const opcionesEstado = [['activos', 'Activos'], ...ESTADOS.slice(0, 4), ['entregado', 'Entregados'], ['cancelado', 'Cancelados'], ['todos', 'Todos']]
+        .filter(([v], i, a) => a.findIndex(x => x[0] === v) === i)
+      document.getElementById('tl-filtro-estado').innerHTML = opcionesEstado.map(([v, t]) =>
+        `<button type="button" class="tl-segmento__opcion" data-filtro-estado="${esc(v)}" aria-pressed="${f.estado === v ? 'true' : 'false'}">${esc(t)}</button>`).join('')
+      document.getElementById('tl-filtro-destino').innerHTML = [['', 'Todos'], ['externo', 'Clientes de afuera'], ['interno', 'Otras fábricas']].map(([v, t]) =>
+        `<button type="button" class="tl-segmento__opcion" data-filtro-destino="${esc(v)}" aria-pressed="${f.destino === v ? 'true' : 'false'}">${esc(t)}</button>`).join('')
+      const sel = document.getElementById('tl-filtro-categoria')
+      sel.innerHTML = '<option value="">Todas</option>' + CATEGORIAS.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')
+      sel.value = f.categoria
+    }
+
+    function pintarLista() {
+      const lista = estado.proyectos === null ? null : filtrarProyectos(estado.proyectos)
+      document.getElementById('tl-lista').innerHTML = htmlLista(lista, estado.errorProyectos)
+      document.getElementById('tl-cuenta').textContent = lista && !estado.errorProyectos
+        ? `${lista.length} ${lista.length === 1 ? 'proyecto' : 'proyectos'}` : ''
+      const nota = document.getElementById('tl-nota-unidad')
+      nota.textContent = textoNotaUnidad()
+      nota.hidden = !nota.textContent
+    }
+
+    function pintarAccionesLista() {
+      document.getElementById('tl-btn-nuevo').hidden = !puedeGestionar()
+      // El valor de la hora es plata: el botón solo existe con permiso.
+      document.getElementById('tl-acciones-extra').innerHTML = puedePrecios()
+        ? '<button type="button" class="tl-btn tl-btn--secundario" id="tl-btn-valor-hora">Valor de la hora</button>'
+        : ''
+    }
+
+    async function cargarProyectos() {
+      const mio = ++estado.turnoLista
+      estado.proyectos = null
+      estado.errorProyectos = null
+      pintarLista()
+      // "Activos" pide solo los activos; cualquier otro filtro necesita todos.
+      const soloActivos = estado.filtros.estado === 'activos'
+      const { data, error } = await supabase.rpc('proyectos_taller', { p_solo_activos: soloActivos })
+      if (mio !== estado.turnoLista) return
+      if (error) { estado.errorProyectos = error.message || 'error desconocido'; estado.proyectos = []; pintarLista(); return }
+      if (data === null) { estado.errorProyectos = 'No tenés permiso para ver los proyectos del Taller.'; estado.proyectos = []; pintarLista(); return }
+      estado.proyectos = Array.isArray(data) ? data : []
+      pintarLista()
+    }
+
+    function mostrarLista() {
+      mostrarVista('tl-vista-lista', 'Lista')
+      pintarAccionesLista()
+      pintarFiltros()
+      cargarProyectos()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA FICHA
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // ¿Las horas están sin costo porque falta el valor de la hora? Se deduce
+    // del propio resumen (horas cargadas y costo de horas en cero), así vale
+    // también para quien no puede leer la tabla del valor de la hora.
+    function faltaValorHora(r) {
+      return numero(r?.horas) > 0 && (numero(r?.costo_horas) ?? 0) === 0
+    }
+
+    function dato(rotulo, valor, mal = false) {
+      return `<div class="tl-dato${mal ? ' tl-dato--mal' : ''}"><dt>${esc(rotulo)}</dt><dd>${esc(valor)}</dd></div>`
+    }
+    function cifra(rotulo, valor, { mal = false, nota = '' } = {}) {
+      return `<div class="tl-cifra${mal ? ' tl-cifra--mal' : ''}"><div class="tl-cifra__rotulo">${esc(rotulo)}</div>` +
+        `<div class="tl-cifra__valor">${esc(valor)}</div>${nota ? `<div class="tl-cifra__nota">${esc(nota)}</div>` : ''}</div>`
+    }
+
+    function htmlSeccionDatos(r, ctx) {
+      const quien = r.destino === 'interno'
+        ? dato('Fábrica que recibe el trabajo', r.fabrica_destino || 'Sin elegir')
+        : dato('Cliente', r.cliente ? (r.cliente.nombre + (r.cliente.razon_social && r.cliente.razon_social !== r.cliente.nombre ? ` (${r.cliente.razon_social})` : '')) : 'Sin elegir')
+      return `<div class="tl-tarjeta"><div class="tl-seccion__titulo"><span>Datos</span>` +
+        (ctx.gestionar ? '<button type="button" class="tl-btn tl-btn--suave tl-btn--chico" data-accion="editar">Editar</button>' : '') + '</div>' +
+        '<dl class="tl-datos">' +
+        dato('Destino', r.destino === 'interno' ? 'Otra fábrica del grupo' : 'Un cliente de afuera') + quien +
+        dato('Categoría', ETIQUETA_CATEGORIA[r.categoria] || 'Sin categoría') +
+        dato('Estado', ETIQUETA_ESTADO[r.estado] || r.estado || '—') +
+        dato('Responsable', r.responsable || 'Sin elegir') +
+        dato('Inicio', fechaCorta(r.fecha_inicio)) +
+        dato('Entrega prometida', fechaCorta(r.fecha_entrega_prometida) + (r.atrasado ? ' · atrasado' : ''), !!r.atrasado) +
+        dato('Entrega real', fechaCorta(r.fecha_entrega_real)) +
+        (r.ubicacion ? dato('Ubicación', r.ubicacion) : '') +
+        '</dl>' +
+        (r.descripcion ? `<p class="tl-texto-suave">${esc(r.descripcion)}</p>` : '') +
+        (r.observaciones ? `<p class="tl-texto-suave">${esc(r.observaciones)}</p>` : '') +
+        '</div>'
+    }
+
+    // LA PLATA. Sin taller:precios, esta función NO escribe ningún precio de
+    // venta, facturado, cobrado ni margen, aunque el objeto los traiga.
+    function htmlSeccionPlata(r, ctx) {
+      const moneda = r.moneda || 'ARS'
+      const sinHora = faltaValorHora(r)
+      const pres = numero(r.presupuesto_usado_pct)
+      let html = '<div class="tl-tarjeta"><div class="tl-seccion__titulo"><span>Costo</span></div><div class="tl-cifras">' +
+        cifra('Presupuesto de costo', importe(r.presupuesto_costo, moneda)) +
+        cifra('Gastado', importe(r.gastado, moneda), { nota: 'Lo cargado en Gastos con este proyecto' }) +
+        cifra('Costo de las horas', sinHora ? 'sin valor de hora' : importe(r.costo_horas, moneda),
+          { mal: sinHora, nota: `${horasTexto(r.horas)} cargadas` }) +
+        cifra('Costo total', importe(r.costo_total, moneda), { nota: sinHora ? 'No incluye las horas: falta el valor de la hora' : '' }) +
+        cifra('Presupuesto usado', porcentaje(pres), { mal: pres !== null && pres > 100 }) +
+        cifra('Horas usadas', porcentaje(r.horas_usadas_pct), { mal: numero(r.horas_usadas_pct) !== null && numero(r.horas_usadas_pct) > 100, nota: numero(r.horas_estimadas) ? `de ${horasTexto(r.horas_estimadas)} estimadas` : 'sin horas estimadas' }) +
+        '</div>' + htmlBarraCosto(pres) + '</div>'
+      if (!ctx.precios) return html
+      const margen = numero(r.margen)
+      html += '<div class="tl-tarjeta"><div class="tl-seccion__titulo"><span>Venta</span><span class="tl-panel__acciones">'
+      if (r.destino === 'externo') html += `<button type="button" class="tl-btn tl-btn--chico" data-accion="facturar"${r.cliente ? '' : ' disabled'}>Facturar al cliente</button>`
+      else html += `<button type="button" class="tl-btn tl-btn--chico" data-accion="fabrica"${r.fabrica_destino ? '' : ' disabled'}>Cargar a la fábrica</button>`
+      html += '</span></div><div class="tl-cifras">' +
+        cifra('Precio de venta', importe(r.precio_venta, moneda)) +
+        cifra(r.destino === 'externo' ? 'Facturado' : 'Cargado a la fábrica', importe(r.facturado, moneda)) +
+        (r.destino === 'externo' ? cifra('Cobrado', importe(r.cobrado, moneda)) : '') +
+        cifra('Margen', importe(r.margen, moneda), { mal: margen !== null && margen < 0 }) +
+        cifra('Margen %', porcentaje(r.margen_pct), { mal: margen !== null && margen < 0 }) +
+        '</div>'
+      if (r.destino === 'externo' && !r.cliente) html += '<p class="tl-texto-suave">Para facturar, elegí el cliente en Datos.</p>'
+      if (r.destino === 'interno' && !r.fabrica_destino) html += '<p class="tl-texto-suave">Para cargarlo a una fábrica, elegila en Datos.</p>'
+      html += htmlPanelVenta(ctx) + '</div>'
+      return html
+    }
+
+    // El panel de facturar / cargar a la fábrica, en dos pasos (es plata).
+    function htmlPanelVenta(ctx) {
+      const p = ctx.panel
+      if (!p || (p.tipo !== 'facturar' && p.tipo !== 'fabrica')) return ''
+      const titulo = p.tipo === 'facturar' ? 'Facturar al cliente' : 'Cargar a la fábrica'
+      if (p.revisar) {
+        return `<div class="tl-panel"><strong>${esc(titulo)}</strong>` +
+          `<p>${esc(textoConfirmacionVenta(p, ctx.r))}</p>` +
+          (p.error ? `<p class="tl-error-pegado">${esc(p.error)}</p>` : '') +
+          '<div class="tl-panel__acciones"><button type="button" class="tl-btn tl-btn--suave" data-accion="venta-volver">Corregir</button>' +
+          `<button type="button" class="tl-btn" data-accion="venta-confirmar"${ctx.enviando ? ' disabled' : ''}>Confirmar</button></div></div>`
+      }
+      return `<div class="tl-panel"><strong>${esc(titulo)}</strong><div class="tl-fila-campos">` +
+        '<div class="tl-campo"><label for="tl-venta-importe">Importe</label><input type="text" class="tl-input" id="tl-venta-importe" autocomplete="off"></div>' +
+        `<div class="tl-campo"><label for="tl-venta-fecha">Fecha</label><input type="date" class="tl-input" id="tl-venta-fecha" value="${esc(p.fecha || '')}"></div></div>` +
+        `<div class="tl-campo"><label for="tl-venta-concepto">Concepto</label><input type="text" class="tl-input" id="tl-venta-concepto" maxlength="200" autocomplete="off" placeholder="Anticipo, avance, saldo final…" value="${esc(p.concepto || '')}"></div>` +
+        (p.error ? `<p class="tl-error-pegado">${esc(p.error)}</p>` : '') +
+        '<div class="tl-panel__acciones"><button type="button" class="tl-btn tl-btn--suave" data-accion="panel-cerrar">Cancelar</button>' +
+        '<button type="button" class="tl-btn" data-accion="venta-revisar">Revisar</button></div></div>'
+    }
+
+    function textoConfirmacionVenta(p, r) {
+      const monto = importe(p.importe, r?.moneda || 'ARS')
+      return p.tipo === 'facturar'
+        ? `Se le va a facturar ${monto} a ${r?.cliente?.nombre || 'el cliente'} por "${p.concepto}", con fecha ${fechaCorta(p.fecha)}. Queda en su cuenta corriente.`
+        : `Se le va a cargar ${monto} a ${r?.fabrica_destino || 'la fábrica'} por "${p.concepto}", con fecha ${fechaCorta(p.fecha)}. Queda como deuda de esa fábrica con el Taller.`
+    }
+
+    function htmlSeccionGastos(r) {
+      const lista = Array.isArray(r.gastos) ? r.gastos : []
+      return '<div class="tl-tarjeta"><div class="tl-seccion__titulo"><span>Gastos</span>' +
+        '<a class="tl-link tl-link-texto" href="gastos.html">Cargar un gasto</a></div>' +
+        (lista.length ? '<div class="tl-renglones">' + lista.map(g =>
+          `<div class="tl-renglon"><div class="tl-renglon__texto">${esc(g.descripcion || g.razon_social || 'Gasto')}` +
+          `<div class="tl-renglon__sub">${esc(fechaCorta(g.fecha))}${g.razon_social && g.razon_social !== g.descripcion ? ` · ${esc(g.razon_social)}` : ''}</div></div>` +
+          `<span class="tl-renglon__monto">${esc(importe(g.importe, g.moneda || 'ARS'))}</span></div>`).join('') + '</div>'
+          : '<p class="tl-texto-suave">Todavía no hay gastos con este proyecto. Se cargan desde Gastos, eligiendo el proyecto.</p>') +
+        '</div>'
+    }
+
+    function htmlSeccionHoras(r, ctx) {
+      const lista = Array.isArray(r.horas_detalle) ? r.horas_detalle : []
+      const puedeAnular = ctx.cargar || ctx.gestionar
+      let html = '<div class="tl-tarjeta"><div class="tl-seccion__titulo"><span>Horas</span>' +
+        (ctx.cargar ? '<button type="button" class="tl-btn tl-btn--chico" data-accion="horas">Cargar horas</button>' : '') + '</div>'
+      html += lista.length ? '<div class="tl-renglones">' + lista.map(h =>
+        `<div class="tl-renglon"><div class="tl-renglon__texto">${esc(h.persona || 'Sin nombre')} · ${esc(horasTexto(h.horas))}` +
+        `<div class="tl-renglon__sub">${esc(fechaCorta(h.fecha))}${h.tarea ? ` · ${esc(h.tarea)}` : ''}</div></div>` +
+        (puedeAnular ? `<button type="button" class="tl-btn tl-btn--suave tl-btn--chico" data-anular-horas="${esc(h.id)}">Anular</button>` : '') +
+        '</div>').join('') + '</div>'
+        : '<p class="tl-texto-suave">Todavía no hay horas cargadas.</p>'
+      if (ctx.panel?.tipo === 'horas') html += htmlPanelHoras(ctx)
+      if (ctx.panel?.tipo === 'anular-horas') {
+        html += `<div class="tl-panel"><p>¿Anular estas horas? Dejan de sumar al costo del proyecto.</p>` +
+          (ctx.panel.error ? `<p class="tl-error-pegado">${esc(ctx.panel.error)}</p>` : '') +
+          '<div class="tl-panel__acciones"><button type="button" class="tl-btn tl-btn--suave" data-accion="panel-cerrar">Cancelar</button>' +
+          `<button type="button" class="tl-btn tl-btn--peligro" data-accion="anular-horas-confirmar"${ctx.enviando ? ' disabled' : ''}>Anular las horas</button></div></div>`
+      }
+      return html + '</div>'
+    }
+
+    function htmlPanelHoras(ctx) {
+      const p = ctx.panel
+      const personas = ctx.personas || []
+      const opciones = personas.map(x => `<option value="${esc(x.id)}"${x.id === p.personaId ? ' selected' : ''}>${esc(x.nombre)}</option>`).join('')
+      return '<div class="tl-panel"><div class="tl-fila-campos">' +
+        `<div class="tl-campo"><label for="tl-horas-persona">¿Quién trabajó?</label><select class="tl-select" id="tl-horas-persona">${opciones}</select></div>` +
+        `<div class="tl-campo"><label for="tl-horas-fecha">Día</label><input type="date" class="tl-input" id="tl-horas-fecha" max="${esc(hoyArgentina())}" value="${esc(p.fecha || '')}"></div>` +
+        '<div class="tl-campo"><label for="tl-horas-cantidad">Horas</label><input type="text" class="tl-input" id="tl-horas-cantidad" autocomplete="off"></div></div>' +
+        `<div class="tl-campo"><label for="tl-horas-tarea">¿Para qué?</label><input type="text" class="tl-input" id="tl-horas-tarea" maxlength="200" autocomplete="off" value="${esc(p.tarea || '')}" placeholder="Armado del tablero, soldadura…"></div>` +
+        (p.error ? `<p class="tl-error-pegado">${esc(p.error)}</p>` : '') +
+        '<div class="tl-panel__acciones"><button type="button" class="tl-btn tl-btn--suave" data-accion="panel-cerrar">Cancelar</button>' +
+        `<button type="button" class="tl-btn" data-accion="horas-guardar"${ctx.enviando ? ' disabled' : ''}>Guardar las horas</button></div></div>`
+    }
+
+    function htmlSeccionNotas(r, ctx) {
+      const lista = Array.isArray(r.notas) ? r.notas : []
+      return '<div class="tl-tarjeta"><div class="tl-seccion__titulo"><span>Notas</span></div>' +
+        (ctx.cargar
+          ? '<div class="tl-campo"><label for="tl-nota-texto">Escribir en la bitácora</label>' +
+            '<textarea class="tl-textarea" id="tl-nota-texto" maxlength="2000"></textarea></div>' +
+            (ctx.panel?.tipo === 'nota' && ctx.panel.error ? `<p class="tl-error-pegado">${esc(ctx.panel.error)}</p>` : '') +
+            `<button type="button" class="tl-btn tl-btn--chico" data-accion="nota-guardar"${ctx.enviando ? ' disabled' : ''}>Agregar la nota</button>`
+          : '') +
+        (lista.length ? '<div class="tl-renglones">' + lista.map(n =>
+          `<div class="tl-renglon"><div class="tl-renglon__texto">${esc(n.texto)}` +
+          `<div class="tl-renglon__sub">${esc(n.autor || 'Sin nombre')} · ${esc(momentoCorto(n.fecha))}</div></div></div>`).join('') + '</div>'
+          : '<p class="tl-texto-suave">Todavía no hay notas.</p>') +
+        '</div>'
+    }
+
+    function htmlSeccionArchivos(r, ctx) {
+      const lista = Array.isArray(r.archivos) ? r.archivos : []
+      let html = '<div class="tl-tarjeta"><div class="tl-seccion__titulo"><span>Archivos</span></div>'
+      html += lista.length ? '<div class="tl-renglones">' + lista.map(a =>
+        `<div class="tl-renglon"><div class="tl-renglon__texto"><span class="tl-chip">${esc(ETIQUETA_TIPO[a.tipo] || 'Otro')}</span> ${esc(a.nombre || 'Archivo')}` +
+        `<div class="tl-renglon__sub">${esc(momentoCorto(a.fecha))}</div></div>` +
+        `<button type="button" class="tl-btn tl-btn--suave tl-btn--chico" data-ver-archivo="${esc(a.id)}">Ver</button></div>`).join('') + '</div>'
+        : '<p class="tl-texto-suave">Todavía no hay archivos.</p>'
+      if (ctx.cargar) {
+        const tipos = TIPOS_ARCHIVO.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')
+        html += '<div class="tl-panel"><div class="tl-fila-campos">' +
+          '<div class="tl-campo"><label for="tl-archivo-input">Subir un plano, un presupuesto o una foto</label>' +
+          '<input type="file" class="tl-input" id="tl-archivo-input" accept="image/*,application/pdf,.dwg,.dxf,.xlsx,.xls,.docx,.doc"></div>' +
+          `<div class="tl-campo"><label for="tl-archivo-tipo">¿Qué es?</label><select class="tl-select" id="tl-archivo-tipo">${tipos}</select></div></div>` +
+          (ctx.panel?.tipo === 'archivo' && ctx.panel.error ? `<p class="tl-error-pegado">${esc(ctx.panel.error)}</p>` : '') +
+          `<button type="button" class="tl-btn tl-btn--chico" data-accion="archivo-subir"${ctx.enviando ? ' disabled' : ''}>${ctx.enviando && ctx.panel?.tipo === 'archivo' ? 'Subiendo…' : 'Subir'}</button></div>`
+      }
+      return html + '</div>'
+    }
+
+    function htmlFicha(ficha, ctx) {
+      if (ficha.error) return `<div class="tl-aviso tl-aviso--grave">No se pudo leer el proyecto: ${esc(ficha.error)}</div>`
+      if (!ficha.r) return '<p class="tl-vacio">Cargando…</p>'
+      const r = ficha.r
+      const c = { ...ctx, r, panel: ficha.panel, enviando: ficha.enviando }
+      return '<div class="tl-ficha">' +
+        `<div class="tl-ficha__ancho">${htmlSeccionDatos(r, c)}</div>` +
+        `<div class="tl-ficha__ancho">${htmlSeccionPlata(r, c)}</div>` +
+        htmlSeccionHoras(r, c) + htmlSeccionGastos(r) + htmlSeccionNotas(r, c) + htmlSeccionArchivos(r, c) +
+        '</div>'
+    }
+
+    function contextoFicha() {
+      return { precios: puedePrecios(), cargar: puedeCargar(), gestionar: puedeGestionar(), personas: estado.personas || [] }
+    }
+
+    function pintarFicha() {
+      const f = estado.ficha
+      if (!f) return
+      document.getElementById('tl-ficha-titulo').textContent = f.r?.nombre || 'Proyecto'
+      document.getElementById('tl-ficha').innerHTML = htmlFicha(f, contextoFicha())
+      // Los campos de número se enlazan cada vez que se dibujan.
+      const imp = document.getElementById('tl-venta-importe')
+      if (imp) { enlazarCampoNumero(imp, { decimales: 2 }); if (f.panel?.importe != null) ponerNumero(imp, f.panel.importe) }
+      const hs = document.getElementById('tl-horas-cantidad')
+      if (hs) { enlazarCampoNumero(hs, { decimales: 2, max: 24 }); if (f.panel?.horas != null) ponerNumero(hs, f.panel.horas) }
+    }
+
+    async function cargarFicha() {
+      const f = estado.ficha
+      if (!f) return
+      const mio = ++estado.turnoFicha
+      const { data, error } = await supabase.rpc('resumen_proyecto', { p_proyecto_id: f.id })
+      if (mio !== estado.turnoFicha || estado.ficha !== f) return
+      if (error) { f.error = error.message || 'error desconocido'; f.r = null }
+      else { f.error = null; f.r = data }
+      pintarFicha()
+    }
+
+    function abrirFicha(id) {
+      estado.ficha = { id, r: null, error: null, panel: null, enviando: false }
+      mostrarVista('tl-vista-ficha', 'Proyecto')
+      pintarFicha()
+      cargarFicha()
+      asegurarPersonas()
+    }
+
+    // Guarda lo tipeado en el panel abierto antes de redibujar.
+    function leerPanel() {
+      const p = estado.ficha?.panel
+      if (!p) return
+      if (p.tipo === 'facturar' || p.tipo === 'fabrica') {
+        const imp = document.getElementById('tl-venta-importe')
+        if (imp) p.importe = leerCampoNumero(imp)
+        const c = document.getElementById('tl-venta-concepto'); if (c) p.concepto = c.value
+        const fe = document.getElementById('tl-venta-fecha'); if (fe) p.fecha = fe.value
+      }
+      if (p.tipo === 'horas') {
+        const hs = document.getElementById('tl-horas-cantidad'); if (hs) p.horas = leerCampoNumero(hs)
+        const pe = document.getElementById('tl-horas-persona'); if (pe) p.personaId = pe.value
+        const fe = document.getElementById('tl-horas-fecha'); if (fe) p.fecha = fe.value
+        const ta = document.getElementById('tl-horas-tarea'); if (ta) p.tarea = ta.value
+      }
+    }
+
+    // Lo que falta para facturar o cargar a la fábrica (lo mismo que pide la base).
+    function faltaVenta(p) {
+      if (p.importe === null || p.importe === undefined || !(p.importe > 0)) return 'Poné el importe.'
+      if (limpio(p.concepto).length < 3) return 'Poné el concepto (anticipo, avance, saldo final…).'
+      if (!p.fecha) return 'Poné la fecha.'
+      if (p.fecha > hoyArgentina()) return 'La fecha no puede ser futura.'
+      return null
+    }
+    function faltaHoras(p) {
+      if (!p.personaId) return 'Elegí quién trabajó.'
+      if (p.horas === null || p.horas === undefined || !(p.horas > 0)) return 'Poné las horas.'
+      if (p.horas > 24) return 'Las horas van de 0 a 24.'
+      if (!p.fecha) return 'Poné el día.'
+      if (p.fecha > hoyArgentina()) return 'No se pueden cargar horas a futuro.'
+      return null
+    }
+
+    async function accionFicha(accion, boton) {
+      const f = estado.ficha
+      if (!f || !f.r) return
+      leerPanel()
+      if (accion === 'editar') { abrirEditor(f.r); return }
+      if (accion === 'panel-cerrar') { f.panel = null; pintarFicha(); return }
+      if (accion === 'facturar' || accion === 'fabrica') {
+        if (!puedePrecios()) return
+        f.panel = { tipo: accion, importe: null, concepto: '', fecha: hoyArgentina(), error: null }
+        pintarFicha(); return
+      }
+      if (accion === 'venta-revisar') {
+        const falta = faltaVenta(f.panel)
+        f.panel.error = falta
+        if (!falta) f.panel.revisar = true
+        pintarFicha(); return
+      }
+      if (accion === 'venta-volver') { f.panel.revisar = false; f.panel.error = null; pintarFicha(); return }
+      if (accion === 'venta-confirmar') {
+        if (f.enviando || !puedePrecios()) return
+        const p = f.panel
+        f.enviando = true; pintarFicha()
+        const rpc = p.tipo === 'facturar' ? 'facturar_proyecto' : 'cargar_proyecto_a_fabrica'
+        const { error } = await supabase.rpc(rpc, { p_proyecto_id: f.id, p_importe: p.importe, p_concepto: limpio(p.concepto), p_fecha: p.fecha })
+        f.enviando = false
+        if (error) { p.error = error.message || 'No se pudo guardar.'; pintarFicha(); return }
+        f.panel = null
+        mostrarExito(p.tipo === 'facturar' ? 'Facturado. Quedó en la cuenta del cliente.' : 'Cargado a la fábrica.')
+        cargarFicha(); return
+      }
+      if (accion === 'horas') {
+        f.panel = { tipo: 'horas', personaId: estado.miEmpleadoId, fecha: hoyArgentina(), horas: null, tarea: '', error: null }
+        pintarFicha(); return
+      }
+      if (accion === 'horas-guardar') {
+        if (f.enviando) return
+        const p = f.panel
+        const falta = faltaHoras(p)
+        if (falta) { p.error = falta; pintarFicha(); return }
+        f.enviando = true; pintarFicha()
+        const { error } = await supabase.rpc('cargar_horas_proyecto', {
+          p_proyecto_id: f.id, p_empleado_id: p.personaId, p_fecha: p.fecha, p_horas: p.horas, p_tarea: limpio(p.tarea) || null,
+        })
+        f.enviando = false
+        if (error) { p.error = error.message || 'No se pudo guardar.'; pintarFicha(); return }
+        f.panel = null
+        mostrarExito('Horas cargadas.')
+        cargarFicha(); return
+      }
+      if (accion === 'anular-horas-confirmar') {
+        if (f.enviando) return
+        const p = f.panel
+        f.enviando = true; pintarFicha()
+        const { error } = await supabase.rpc('anular_horas_proyecto', { p_horas_id: p.horasId })
+        f.enviando = false
+        if (error) { p.error = error.message || 'No se pudo anular.'; pintarFicha(); return }
+        f.panel = null
+        mostrarExito('Horas anuladas.')
+        cargarFicha(); return
+      }
+      if (accion === 'nota-guardar') {
+        if (f.enviando) return
+        const texto = limpio(document.getElementById('tl-nota-texto')?.value)
+        if (!texto) { f.panel = { tipo: 'nota', error: 'Escribí la nota.' }; pintarFicha(); return }
+        f.enviando = true; f.panel = { tipo: 'nota', error: null }; pintarFicha()
+        const { error } = await supabase.rpc('agregar_nota_proyecto', { p_proyecto_id: f.id, p_texto: texto })
+        f.enviando = false
+        if (error) { f.panel = { tipo: 'nota', error: error.message || 'No se pudo guardar.' }; pintarFicha(); return }
+        f.panel = null
+        cargarFicha(); return
+      }
+      if (accion === 'archivo-subir') { await subirArchivo(); return }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARCHIVOS — se guarda la RUTA y se firma a 300 s al abrir
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const LADO_MAXIMO_FOTO = 2576
+    const CALIDAD_JPEG_FOTO = 0.85
+    const MAXIMO_BYTES = 15 * 1024 * 1024
+
+    // Un nombre de archivo seguro para la ruta: sin acentos, sin espacios,
+    // sin barras ni "..".
+    function nombreSeguro(nombre) {
+      const base = String(nombre || 'archivo').normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^A-Za-z0-9._-]+/g, '-').replace(/\.{2,}/g, '.').replace(/^[-.]+/, '').toLowerCase()
+      return (base || 'archivo').slice(0, 80)
+    }
+    function rutaArchivo(proyectoId, nombre, ahora = Date.now()) {
+      return `${proyectoId}/${ahora}-${nombreSeguro(nombre)}`
+    }
+    function tipoSugerido(archivo) {
+      const t = String(archivo?.type || '')
+      if (t.startsWith('image/')) return 'foto'
+      return 'otro'
+    }
+
+    async function comprimirFoto(archivo) {
+      if (!String(archivo.type || '').startsWith('image/') || typeof createImageBitmap !== 'function') return archivo
+      try {
+        let fuente
+        try { fuente = await createImageBitmap(archivo, { imageOrientation: 'from-image' }) } catch { fuente = await createImageBitmap(archivo) }
+        const lado = Math.max(fuente.width, fuente.height)
+        const escala = lado > LADO_MAXIMO_FOTO ? LADO_MAXIMO_FOTO / lado : 1
+        const lienzo = document.createElement('canvas')
+        lienzo.width = Math.round(fuente.width * escala)
+        lienzo.height = Math.round(fuente.height * escala)
+        lienzo.getContext('2d').drawImage(fuente, 0, 0, lienzo.width, lienzo.height)
+        if (typeof fuente.close === 'function') fuente.close()
+        const blob = await new Promise(r => lienzo.toBlob(r, 'image/jpeg', CALIDAD_JPEG_FOTO))
+        if (!blob) return archivo
+        return new File([blob], String(archivo.name || 'foto').replace(/\.[^.]*$/, '') + '.jpg', { type: 'image/jpeg' })
+      } catch {
+        return archivo   // un HEIC que el navegador no decodifica: va el original
+      }
+    }
+
+    async function subirArchivo() {
+      const f = estado.ficha
+      if (!f || f.enviando || !puedeCargar()) return
+      const input = document.getElementById('tl-archivo-input')
+      const original = input?.files?.[0]
+      const tipo = document.getElementById('tl-archivo-tipo')?.value || 'otro'
+      if (!original) { f.panel = { tipo: 'archivo', error: 'Elegí el archivo.' }; pintarFicha(); return }
+      f.enviando = true; f.panel = { tipo: 'archivo', error: null }; pintarFicha()
+      try {
+        const archivo = await comprimirFoto(original)
+        if (archivo.size > MAXIMO_BYTES) throw new Error('El archivo pesa más de 15 MB.')
+        const ruta = rutaArchivo(f.id, archivo.name)
+        const { error: e1 } = await supabase.storage.from('proyectos').upload(ruta, archivo, { contentType: archivo.type || 'application/octet-stream', upsert: false })
+        if (e1) throw new Error('No se pudo subir el archivo: ' + (e1.message || 'error desconocido'))
+        const { error: e2 } = await supabase.rpc('registrar_archivo_proyecto', { p_proyecto_id: f.id, p_tipo: tipo, p_nombre: original.name || 'archivo', p_ruta: ruta })
+        // El archivo quedó subido y la base no lo registró: queda huérfano en
+        // el bucket (no se borra solo). Se dice.
+        if (e2) throw new Error((e2.message || 'No se pudo registrar el archivo.') + ' El archivo quedó subido pero sin anotarse en el proyecto: volvé a intentar.')
+        f.enviando = false; f.panel = null
+        mostrarExito('Archivo subido.')
+        cargarFicha()
+      } catch (err) {
+        f.enviando = false
+        f.panel = { tipo: 'archivo', error: err.message || 'No se pudo subir.' }
+        pintarFicha()
+      }
+    }
+
+    async function verArchivo(id) {
+      const a = (estado.ficha?.r?.archivos || []).find(x => x.id === id)
+      if (!a?.ruta) return
+      const { data, error } = await supabase.storage.from('proyectos').createSignedUrl(a.ruta, 300)
+      if (error || !data?.signedUrl) { mostrarError('No se pudo abrir el archivo: ' + (error?.message || 'sin permiso o no existe')); return }
+      window.open(data.signedUrl, '_blank', 'noopener')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PERSONAS Y CLIENTES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Las personas que pueden cargar horas o ser responsables: activas, sin
+    // las cuentas de las tablets (tipo 'sistema'), sin la Empresa y sin la
+    // fábrica de pruebas. Una vista sin security_invoker (v_empleados_publico).
+    function personasElegibles(filas, fabrica = estado.fabrica) {
+      const reales = (filas || []).filter(p => p && p.activo !== false && p.tipo !== 'sistema' && p.tipo !== 'empresa')
+      return sinPersonasDePrueba(reales, fabrica).sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'))
+    }
+    async function asegurarPersonas() {
+      if (estado.personas) return estado.personas
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, unidad_negocio_id, tipo, activo')
+      if (error) { console.error('personas:', error); estado.personas = []; return [] }
+      estado.personas = personasElegibles(data)
+      if (estado.ficha?.panel?.tipo === 'horas') pintarFicha()
+      return estado.personas
+    }
+
+    async function cargarClientes() {
+      estado.errorClientes = null
+      if (!estado.tallerId) { estado.clientes = []; estado.errorClientes = 'No se encontró la unidad Taller.'; return }
+      const { data, error } = await supabase.from('clientes').select('id, nombre, razon_social, activo')
+        .eq('unidad_negocio_id', estado.tallerId).order('nombre')
+      if (error) { estado.clientes = []; estado.errorClientes = 'No se pudieron leer los clientes del Taller: ' + (error.message || 'error desconocido'); return }
+      estado.clientes = (data || [])
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL EDITOR (nuevo y editar)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Las fábricas que pueden recibir un trabajo interno: todas menos el
+    // Taller y la de pruebas (para una cuenta real).
+    function fabricasDestino() {
+      const todas = [...estado.unidades.values()].filter(u => u.id !== estado.tallerId)
+      return sinUnidadesDePrueba(todas, estado.fabrica)
+    }
+
+    // Lo que tiene el proyecto hoy, en la forma del editor.
+    function originalDe(r) {
+      if (!r) return { nombre: '', destino: 'externo', cliente_id: '', unidad_destino_id: '', categoria: '', estado: 'presupuestado',
+        responsable_id: '', fecha_inicio: '', fecha_entrega_prometida: '', fecha_entrega_real: '', presupuesto_costo: null,
+        horas_estimadas: null, moneda: 'ARS', precio_venta: null, ubicacion: '', descripcion: '', observaciones: '' }
+      const fab = [...estado.unidades.values()].find(u => u.nombre === r.fabrica_destino)
+      const resp = (estado.personas || []).find(p => p.nombre === r.responsable)
+      return {
+        nombre: r.nombre || '', destino: r.destino || 'externo', cliente_id: r.cliente?.id || '',
+        unidad_destino_id: fab?.id || '', categoria: r.categoria || '', estado: r.estado || 'presupuestado',
+        // El resumen da el nombre del responsable, no su id: si no se encuentra,
+        // queda '' y no se manda (solo va lo que cambia).
+        responsable_id: resp?.id || '',
+        fecha_inicio: r.fecha_inicio || '', fecha_entrega_prometida: r.fecha_entrega_prometida || '', fecha_entrega_real: r.fecha_entrega_real || '',
+        presupuesto_costo: numero(r.presupuesto_costo), horas_estimadas: numero(r.horas_estimadas), moneda: r.moneda || 'ARS',
+        precio_venta: numero(r.precio_venta), ubicacion: r.ubicacion || '', descripcion: r.descripcion || '', observaciones: r.observaciones || '',
+      }
+    }
+
+    // SOLO las claves que cambiaron (guardar_proyecto: una clave presente
+    // con "" borra). precio_venta solo con permiso. En un proyecto nuevo, lo
+    // que no está vacío.
+    function datosCambiados(original, actual, { nuevo = false, precios = false } = {}) {
+      const claves = ['nombre', 'destino', 'cliente_id', 'unidad_destino_id', 'categoria', 'estado', 'responsable_id',
+        'fecha_inicio', 'fecha_entrega_prometida', 'fecha_entrega_real', 'presupuesto_costo', 'horas_estimadas', 'moneda',
+        'ubicacion', 'descripcion', 'observaciones']
+      if (precios) claves.push('precio_venta')
+      const out = {}
+      const norm = v => (v === null || v === undefined) ? '' : String(v)
+      for (const k of claves) {
+        const a = actual[k], o = original[k]
+        if (nuevo ? norm(a) === '' : norm(a) === norm(o)) continue
+        out[k] = (a === null || a === undefined) ? '' : a
+      }
+      // Un trabajo interno no lleva cliente y uno externo no lleva fábrica.
+      if (actual.destino === 'interno' && original.cliente_id && !('cliente_id' in out)) out.cliente_id = ''
+      if (actual.destino === 'externo' && original.unidad_destino_id && !('unidad_destino_id' in out)) out.unidad_destino_id = ''
+      return out
+    }
+
+    function opcionesSelect(lista, valor, vacio) {
+      return (vacio != null ? `<option value="">${esc(vacio)}</option>` : '') +
+        lista.map(([v, t]) => `<option value="${esc(v)}"${String(v) === String(valor ?? '') ? ' selected' : ''}>${esc(t)}</option>`).join('')
+    }
+
+    function pintarDestinoEditor() {
+      const d = estado.editor.destino
+      document.querySelectorAll('#tl-ed-destino [data-destino]').forEach(b => b.setAttribute('aria-pressed', b.dataset.destino === d ? 'true' : 'false'))
+      document.getElementById('tl-ed-bloque-cliente').hidden = d !== 'externo'
+      document.getElementById('tl-ed-bloque-fabrica').hidden = d !== 'interno'
+    }
+
+    function pintarClientesEditor(valor) {
+      const sel = document.getElementById('tl-ed-cliente')
+      const activos = (estado.clientes || []).filter(c => c.activo !== false || c.id === valor)
+      sel.innerHTML = opcionesSelect(activos.map(c => [c.id, c.nombre + (c.razon_social && c.razon_social !== c.nombre ? ` (${c.razon_social})` : '')]), valor, 'Sin elegir')
+      const err = document.getElementById('tl-ed-clientes-error')
+      err.textContent = estado.errorClientes || ''
+      err.hidden = !estado.errorClientes
+    }
+
+    async function abrirEditor(r = null) {
+      if (!puedeGestionar()) return
+      await Promise.all([asegurarPersonas(), estado.clientes ? null : cargarClientes()])
+      const original = originalDe(r)
+      estado.editor = { id: r?.id || null, original, destino: original.destino, guardando: false }
+      mostrarVista('tl-vista-editor', r ? 'Editar' : 'Nuevo')
+      document.getElementById('tl-editor-titulo').textContent = r ? 'Editar el proyecto' : 'Proyecto nuevo'
+      document.getElementById('tl-ed-nombre').value = original.nombre
+      pintarDestinoEditor()
+      pintarClientesEditor(original.cliente_id)
+      document.getElementById('tl-ed-fabrica').innerHTML = opcionesSelect(fabricasDestino().map(u => [u.id, u.nombre]), original.unidad_destino_id, 'Sin elegir')
+      document.getElementById('tl-ed-categoria').innerHTML = opcionesSelect(CATEGORIAS, original.categoria, 'Sin categoría')
+      document.getElementById('tl-ed-estado').innerHTML = opcionesSelect(ESTADOS, original.estado, null)
+      document.getElementById('tl-ed-responsable').innerHTML = opcionesSelect((estado.personas || []).map(p => [p.id, p.nombre]), original.responsable_id, 'Sin elegir')
+      document.getElementById('tl-ed-inicio').value = original.fecha_inicio
+      document.getElementById('tl-ed-entrega').value = original.fecha_entrega_prometida
+      document.getElementById('tl-ed-entrega-real').value = original.fecha_entrega_real
+      ponerNumero(document.getElementById('tl-ed-presupuesto'), original.presupuesto_costo)
+      ponerNumero(document.getElementById('tl-ed-horas'), original.horas_estimadas)
+      document.getElementById('tl-ed-moneda').value = original.moneda
+      document.getElementById('tl-ed-ubicacion').value = original.ubicacion
+      document.getElementById('tl-ed-descripcion').value = original.descripcion
+      document.getElementById('tl-ed-observaciones').value = original.observaciones
+      // El precio de venta: el campo existe SOLO con permiso.
+      const slot = document.getElementById('tl-ed-slot-venta')
+      slot.innerHTML = puedePrecios()
+        ? '<div class="tl-campo"><label for="tl-ed-venta">Precio de venta</label><input type="text" class="tl-input" id="tl-ed-venta" autocomplete="off">' +
+          '<span class="tl-campo__ayuda">Lo que se le cobra al cliente o a la fábrica.</span></div>'
+        : ''
+      const venta = document.getElementById('tl-ed-venta')
+      if (venta) { enlazarCampoNumero(venta, { decimales: 2 }); ponerNumero(venta, original.precio_venta) }
+      document.getElementById('tl-ed-cliente-form').hidden = true
+      mostrarErrorEditor(null)
+    }
+
+    function leerEditor() {
+      const venta = document.getElementById('tl-ed-venta')
+      return {
+        nombre: limpio(document.getElementById('tl-ed-nombre').value),
+        destino: estado.editor.destino,
+        cliente_id: estado.editor.destino === 'externo' ? document.getElementById('tl-ed-cliente').value : '',
+        unidad_destino_id: estado.editor.destino === 'interno' ? document.getElementById('tl-ed-fabrica').value : '',
+        categoria: document.getElementById('tl-ed-categoria').value,
+        estado: document.getElementById('tl-ed-estado').value,
+        responsable_id: document.getElementById('tl-ed-responsable').value,
+        fecha_inicio: document.getElementById('tl-ed-inicio').value,
+        fecha_entrega_prometida: document.getElementById('tl-ed-entrega').value,
+        fecha_entrega_real: document.getElementById('tl-ed-entrega-real').value,
+        presupuesto_costo: leerCampoNumero(document.getElementById('tl-ed-presupuesto')),
+        horas_estimadas: leerCampoNumero(document.getElementById('tl-ed-horas')),
+        moneda: document.getElementById('tl-ed-moneda').value,
+        precio_venta: venta ? leerCampoNumero(venta) : null,
+        ubicacion: limpio(document.getElementById('tl-ed-ubicacion').value),
+        descripcion: String(document.getElementById('tl-ed-descripcion').value || '').trim(),
+        observaciones: String(document.getElementById('tl-ed-observaciones').value || '').trim(),
+      }
+    }
+
+    function faltaEditor(a) {
+      if (a.nombre.length < 2) return 'Poné el nombre del proyecto.'
+      if (a.fecha_entrega_real && a.fecha_inicio && a.fecha_entrega_real < a.fecha_inicio) return 'La entrega real no puede ser anterior al inicio.'
+      return null
+    }
+
+    function mostrarErrorEditor(texto) {
+      const el = document.getElementById('tl-ed-error')
+      el.textContent = texto || ''
+      el.hidden = !texto
+    }
+
+    async function guardarEditor() {
+      const ed = estado.editor
+      if (!ed || ed.guardando) return
+      const actual = leerEditor()
+      const falta = faltaEditor(actual)
+      if (falta) { mostrarErrorEditor(falta); return }
+      const datos = datosCambiados(ed.original, actual, { nuevo: !ed.id, precios: puedePrecios() })
+      if (ed.id && !Object.keys(datos).length) { mostrarErrorEditor(null); abrirFicha(ed.id); return }
+      ed.guardando = true
+      const boton = document.getElementById('tl-ed-guardar')
+      boton.disabled = true
+      const { data, error } = await supabase.rpc('guardar_proyecto', { p_id: ed.id, p_datos: datos })
+      ed.guardando = false
+      boton.disabled = false
+      if (error) { mostrarErrorEditor(error.message || 'No se pudo guardar.'); return }
+      mostrarExito(ed.id ? 'Proyecto guardado.' : 'Proyecto creado.')
+      abrirFicha(data || ed.id)
+    }
+
+    // El alta rápida de un cliente del Taller (guardar_cliente).
+    async function guardarClienteRapido() {
+      const nombre = limpio(document.getElementById('tl-ed-cliente-nombre').value)
+      const err = document.getElementById('tl-ed-cliente-error')
+      if (nombre.length < 2) { err.textContent = 'Poné el nombre del cliente.'; err.hidden = false; return }
+      const boton = document.getElementById('tl-ed-cliente-guardar')
+      boton.disabled = true
+      const { data, error } = await supabase.rpc('guardar_cliente', {
+        p_id: null, p_unidad_negocio_id: estado.tallerId, p_nombre: nombre, p_apodos: [],
+        p_localidad: limpio(document.getElementById('tl-ed-cliente-localidad').value) || null,
+        p_telefono: String(document.getElementById('tl-ed-cliente-telefono').value || '').trim() || null,
+        p_observaciones: null, p_activo: true,
+      })
+      boton.disabled = false
+      if (error) { err.textContent = error.message || 'No se pudo dar de alta el cliente.'; err.hidden = false; return }
+      err.hidden = true
+      await cargarClientes()
+      pintarClientesEditor(data)
+      document.getElementById('tl-ed-cliente').value = data
+      document.getElementById('tl-ed-cliente-form').hidden = true
+      mostrarExito('Cliente dado de alta.')
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL VALOR DE LA HORA (solo con taller:precios)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // El que rige a una fecha: el de vigente_desde más nuevo que no la pase.
+    function valorVigente(lista, fecha = hoyArgentina()) {
+      return [...(lista || [])].filter(v => v.vigente_desde <= fecha).sort((a, b) => b.vigente_desde.localeCompare(a.vigente_desde))[0] ?? null
+    }
+
+    function htmlValorHora(vh, { guardando = false, error = null } = {}) {
+      if (!vh) return '<p class="tl-vacio">Cargando…</p>'
+      if (vh.error) return `<div class="tl-aviso tl-aviso--grave">No se pudo leer el valor de la hora: ${esc(vh.error)}</div>`
+      const vigente = valorVigente(vh.lista)
+      const futuros = (vh.lista || []).filter(v => v.vigente_desde > hoyArgentina())
+      let html = '<div class="tl-tarjeta"><div class="tl-cifras">' +
+        (vigente
+          ? `<div class="tl-cifra"><div class="tl-cifra__rotulo">Hoy rige</div><div class="tl-cifra__valor">${esc(importe(vigente.valor))} la hora</div>` +
+            `<div class="tl-cifra__nota">desde el ${esc(fechaCorta(vigente.vigente_desde))}</div></div>`
+          : '<div class="tl-cifra tl-cifra--mal"><div class="tl-cifra__rotulo">Hoy rige</div><div class="tl-cifra__valor">sin valor de hora</div>' +
+            '<div class="tl-cifra__nota">Las horas cargadas no suman al costo hasta que se cargue uno.</div></div>') +
+        '</div>' +
+        (futuros.length ? `<p class="tl-texto-suave">Ya cargado para más adelante: ${futuros.map(v => `${esc(importe(v.valor))} desde el ${esc(fechaCorta(v.vigente_desde))}`).join(' · ')}</p>` : '') +
+        '<div class="tl-fila-campos">' +
+        '<div class="tl-campo"><label for="tl-hora-valor">Valor nuevo de la hora</label><input type="text" class="tl-input" id="tl-hora-valor" autocomplete="off"></div>' +
+        `<div class="tl-campo"><label for="tl-hora-desde">Rige desde</label><input type="date" class="tl-input" id="tl-hora-desde" value="${esc(hoyArgentina())}"></div></div>` +
+        '<p class="tl-texto-suave">Cambia el costo de las horas cargadas desde esa fecha en todos los proyectos. Si ya hay un valor para ese mismo día, se reemplaza.</p>' +
+        (error ? `<p class="tl-error-pegado">${esc(error)}</p>` : '') +
+        `<button type="button" class="tl-btn" id="tl-hora-guardar"${guardando ? ' disabled' : ''}>Guardar el valor</button></div>`
+      html += '<div class="tl-tarjeta tl-historia"><div class="tl-seccion__titulo"><span>Historia</span></div>' +
+        ((vh.lista || []).length ? '<div class="tl-renglones">' + [...vh.lista].sort((a, b) => b.vigente_desde.localeCompare(a.vigente_desde)).map(v =>
+          `<div class="tl-renglon"><div class="tl-renglon__texto">Desde el ${esc(fechaCorta(v.vigente_desde))}` +
+          `<div class="tl-renglon__sub">cargado el ${esc(momentoCorto(v.cargado_en))}</div></div>` +
+          `<span class="tl-renglon__monto">${esc(importe(v.valor))}</span></div>`).join('') + '</div>'
+          : '<p class="tl-texto-suave">Todavía no se cargó ningún valor.</p>') + '</div>'
+      return html
+    }
+
+    async function cargarValorHora() {
+      const { data, error } = await supabase.from('taller_valor_hora').select('valor, vigente_desde, cargado_en').order('vigente_desde', { ascending: false })
+      estado.valorHora = error ? { lista: [], error: error.message || 'error desconocido' } : { lista: data || [], error: null }
+    }
+
+    function pintarValorHora(opciones = {}) {
+      document.getElementById('tl-hora').innerHTML = htmlValorHora(estado.valorHora, opciones)
+      const v = document.getElementById('tl-hora-valor')
+      if (v) enlazarCampoNumero(v, { decimales: 2 })
+    }
+
+    async function mostrarValorHora() {
+      if (!puedePrecios()) return
+      mostrarVista('tl-vista-hora', 'Valor de la hora')
+      estado.valorHora = null
+      pintarValorHora()
+      await cargarValorHora()
+      pintarValorHora()
+    }
+
+    async function guardarValorHora() {
+      if (estado.guardandoHora || !puedePrecios()) return
+      const valor = leerCampoNumero(document.getElementById('tl-hora-valor'))
+      const desde = document.getElementById('tl-hora-desde').value
+      if (valor === null || !(valor > 0)) { pintarValorHora({ error: 'El valor de la hora tiene que ser mayor a cero.' }); return }
+      if (!desde) { pintarValorHora({ error: 'Poné desde qué fecha rige.' }); return }
+      estado.guardandoHora = true
+      pintarValorHora({ guardando: true })
+      const { error } = await supabase.rpc('guardar_valor_hora', { p_valor: valor, p_vigente_desde: desde })
+      estado.guardandoHora = false
+      if (error) { pintarValorHora({ error: error.message || 'No se pudo guardar.' }); return }
+      mostrarExito('Valor de la hora guardado.')
+      await cargarValorHora()
+      pintarValorHora()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VISTAS Y EVENTOS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const VISTAS = ['tl-vista-lista', 'tl-vista-ficha', 'tl-vista-editor', 'tl-vista-hora']
+    function mostrarVista(id, subtitulo) {
+      estado.vista = id
+      for (const v of VISTAS) document.getElementById(v).hidden = v !== id
+      document.getElementById('tl-subtitulo').textContent = subtitulo
+      window.scrollTo(0, 0)
+    }
+
+    function conectarTodo() {
+      document.getElementById('tl-btn-nuevo').addEventListener('click', () => abrirEditor(null))
+      document.getElementById('tl-acciones-extra').addEventListener('click', ev => {
+        if (ev.target.closest('#tl-btn-valor-hora')) mostrarValorHora()
+      })
+      document.getElementById('tl-filtro-estado').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-filtro-estado]')
+        if (!b) return
+        const antes = estado.filtros.estado
+        estado.filtros.estado = b.dataset.filtroEstado
+        pintarFiltros()
+        // "Activos" y el resto piden cosas distintas a la base.
+        if ((antes === 'activos') !== (estado.filtros.estado === 'activos')) cargarProyectos()
+        else pintarLista()
+      })
+      document.getElementById('tl-filtro-destino').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-filtro-destino]')
+        if (!b) return
+        estado.filtros.destino = b.dataset.filtroDestino
+        pintarFiltros(); pintarLista()
+      })
+      document.getElementById('tl-filtro-categoria').addEventListener('change', ev => {
+        estado.filtros.categoria = ev.target.value
+        pintarLista()
+      })
+      document.getElementById('tl-lista').addEventListener('click', ev => {
+        const c = ev.target.closest('[data-proyecto]')
+        if (c) abrirFicha(c.dataset.proyecto)
+      })
+      document.getElementById('tl-ficha-volver').addEventListener('click', () => { estado.ficha = null; mostrarLista() })
+      document.getElementById('tl-ficha').addEventListener('click', ev => {
+        const anular = ev.target.closest('[data-anular-horas]')
+        if (anular) { leerPanel(); estado.ficha.panel = { tipo: 'anular-horas', horasId: anular.dataset.anularHoras, error: null }; pintarFicha(); return }
+        const ver = ev.target.closest('[data-ver-archivo]')
+        if (ver) { verArchivo(ver.dataset.verArchivo); return }
+        const b = ev.target.closest('[data-accion]')
+        if (b && !b.disabled) accionFicha(b.dataset.accion, b)
+      })
+      document.getElementById('tl-ficha').addEventListener('change', ev => {
+        if (ev.target.id === 'tl-archivo-input') {
+          const t = document.getElementById('tl-archivo-tipo')
+          if (t && ev.target.files?.[0]) t.value = tipoSugerido(ev.target.files[0])
+        }
+      })
+      document.getElementById('tl-editor-volver').addEventListener('click', () => {
+        const id = estado.editor?.id
+        estado.editor = null
+        if (id) abrirFicha(id); else mostrarLista()
+      })
+      document.getElementById('tl-ed-destino').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-destino]')
+        if (!b || !estado.editor) return
+        estado.editor.destino = b.dataset.destino
+        pintarDestinoEditor()
+      })
+      document.getElementById('tl-ed-cliente-nuevo').addEventListener('click', () => {
+        document.getElementById('tl-ed-cliente-form').hidden = false
+        document.getElementById('tl-ed-cliente-nombre').focus()
+      })
+      document.getElementById('tl-ed-cliente-cancelar').addEventListener('click', () => { document.getElementById('tl-ed-cliente-form').hidden = true })
+      document.getElementById('tl-ed-cliente-guardar').addEventListener('click', guardarClienteRapido)
+      document.getElementById('tl-ed-guardar').addEventListener('click', guardarEditor)
+      enlazarCampoNumero(document.getElementById('tl-ed-presupuesto'), { decimales: 2 })
+      enlazarCampoNumero(document.getElementById('tl-ed-horas'), { decimales: 2 })
+      document.getElementById('tl-hora-volver').addEventListener('click', mostrarLista)
+      document.getElementById('tl-hora').addEventListener('click', ev => { if (ev.target.closest('#tl-hora-guardar')) guardarValorHora() })
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ARRANQUE
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async function cargarPermisos() {
+      const { data: emp, error } = await supabase
+        .from('empleados').select('id, rol_app')
+        .eq('auth_user_id', estado.sesion.user.id).maybeSingle()
+      if (error || !emp) throw error ?? new Error('sin empleado')
+      estado.miEmpleadoId = emp.id
+      estado.miRolApp = emp.rol_app
+      const { data: tareas, error: e2 } = await supabase
+        .from('empleado_tareas').select('tarea')
+        .eq('empleado_id', emp.id).eq('modulo', 'taller').eq('habilitado', true)
+      if (e2) throw e2
+      estado.misTareas = new Set((tareas ?? []).map(t => t.tarea))
+      const { data: unidades, error: e3 } = await supabase
+        .from('unidades_negocio').select('id, nombre').eq('activo', true).order('nombre')
+      if (e3) throw e3
+      estado.unidades = new Map((unidades ?? []).map(u => [u.id, u]))
+      // La base identifica al Taller por su nombre (guardar_proyecto,
+      // guardar_cliente): la pantalla usa el mismo criterio.
+      estado.tallerId = [...estado.unidades.values()].find(u => u.nombre === 'Taller')?.id ?? null
+    }
+
+    function sinAcceso(texto) {
+      document.getElementById('tl-cargando').hidden = true
+      const el = document.getElementById('tl-sin-acceso')
+      el.textContent = texto
+      el.hidden = false
+      mostrarError(texto)
+      setTimeout(() => { window.location.href = '../dashboard.html' }, 2500)
+    }
+
+    // ?proyecto=<uuid> abre ese proyecto (y se limpia de la barra).
+    function leerLinkDirecto(search = window.location.search) {
+      const id = new URLSearchParams(search).get('proyecto')
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || '') ? id : null
+    }
+
+    async function init() {
+      estado.sesion = await verificarSesion()
+      if (!estado.sesion) return
+      const fabrica = cargarFabricaDePruebas(supabase)
+      const barra = unidadesDeLaBarra().catch(() => ({ elegida: null }))
+      try {
+        const [, f, b] = await Promise.all([cargarPermisos(), fabrica, barra])
+        estado.fabrica = f
+        estado.unidadBarra = b?.elegida ?? null
+      } catch (err) {
+        console.error('No se pudieron leer los permisos:', err)
+        sinAcceso('No pudimos identificar tu usuario. Te llevamos al inicio…')
+        return
+      }
+      if (!puedeEntrar()) { sinAcceso('No tenés acceso a Proyectos Taller. Te llevamos al inicio…'); return }
+      document.getElementById('tl-cargando').hidden = true
+      conectarTodo()
+      alCambiarUnidad(({ elegida }) => {
+        estado.unidadBarra = elegida ?? null
+        if (estado.vista === 'tl-vista-lista') pintarLista()
+      })
+      const directo = leerLinkDirecto()
+      if (directo) {
+        history.replaceState(null, '', window.location.pathname)
+        mostrarLista()
+        abrirFicha(directo)
+      } else {
+        mostrarLista()
+      }
+      if (window.lucide) window.lucide.createIcons()
+    }
+
+    init()
+  </script>
+</body>
+</html>

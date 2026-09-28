@@ -169,6 +169,23 @@ const PANTALLAS = [
     ['clientes', async (page) => { await page.locator('#pe-detalle-volver').click(); await page.locator('#pe-btn-clientes').click(); await expect(page.locator('#pe-clientes-lista')).toContainText('Anatolia') }],
     ['cargar', async (page) => { await page.locator('#pe-clientes-volver').click(); await page.locator('#pe-btn-nuevo').click() }],
   ]],
+  // Proyectos Taller (28/09/2026): la lista, la ficha con la venta (Tomás
+  // tiene precios), cargar horas, facturar, el editor y el valor de la hora.
+  ['modulos/taller.html', 'taller', [
+    ['lista', async (page) => { await expect(page.locator('[data-proyecto]')).toHaveCount(2); await expect(page.locator('.tl-barra--pasado')).toHaveCount(1) }],
+    ['ficha', async (page) => { await page.locator('[data-proyecto]').first().click(); await expect(page.locator('#tl-ficha')).toContainText('Precio de venta'); await expect(page.locator('#tl-ficha')).toContainText('Soldadura del chasis') }],
+    ['horas', async (page) => { await page.locator('[data-accion="horas"]').click(); await expect(page.locator('#tl-horas-persona')).toBeVisible(); await page.locator('[data-accion="panel-cerrar"]').click() }],
+    ['facturar', async (page) => {
+      await page.locator('[data-accion="facturar"]').click()
+      await page.locator('#tl-venta-importe').fill('300000')
+      await page.locator('#tl-venta-concepto').fill('Avance')
+      await page.locator('[data-accion="venta-revisar"]').click()
+      await expect(page.locator('#tl-ficha')).toContainText('Se le va a facturar $ 300.000,00 a Carrizo')
+      await page.locator('[data-accion="venta-volver"]').click(); await page.locator('[data-accion="panel-cerrar"]').click()
+    }],
+    ['editor', async (page) => { await page.locator('[data-accion="editar"]').click(); await expect(page.locator('#tl-ed-nombre')).toHaveValue(/barquillo/); await expect(page.locator('#tl-ed-venta')).toBeVisible() }],
+    ['valor-hora', async (page) => { await page.locator('#tl-editor-volver').click(); await page.locator('#tl-ficha-volver').click(); await page.locator('#tl-btn-valor-hora').click(); await expect(page.locator('#tl-hora')).toContainText('Hoy rige') }],
+  ]],
   ['modulos/produccion-gestion.html', 'produccion-gestion', [
     ['indicadores', async (page) => { await expect(page.locator('body')).toContainText('lote 7021') }],
     ['personal', async (page) => {

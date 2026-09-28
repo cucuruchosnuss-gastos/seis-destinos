@@ -53,7 +53,7 @@ const FUNCIONES_BASE = [
   'puedeVerLaCobranza', 'aparearCobranzas',
   'puedeAsentar', 'puedeVerTodasLasCobranzas', 'cobranzasVacio', 'datosCobranza', 'leerPorAsentar', 'leerChequesDe', 'asegurarBancos',
   'nombreBanco', 'asegurarClientesAsentar', 'nombreEmpresa', 'clientesParaAsentar', 'importeCob', 'textoSaldoCliente', 'htmlChequeCob',
-  'htmlChequesCob', 'htmlOpcionCliente', 'htmlResultadosAsentar', 'htmlPanelAsentar', 'htmlHechoCob', 'htmlTarjetaCobranza',
+  'htmlChequesCob', 'htmlOpcionCliente', 'htmlResultadosAsentar', 'esClienteDelTaller', 'proyectosDelCliente', 'htmlProyectoAsentar', 'cargarProyectosAsentar', 'htmlPanelAsentar', 'htmlHechoCob', 'htmlTarjetaCobranza',
   'htmlListaCobranzas', 'porAsentarPendientes', 'pintarCobranzas', 'enfocarBuscadorAsentar', 'mostrarCobranzas', 'abrirAsentar',
   'repintarAsentar', 'repintarResultadosAsentar', 'buscarClienteAsentar', 'elegirClienteAsentar', 'cancelarAsentar', 'parametrosAsentar',
   'confirmarAsentar', 'quitarHecho', 'leerCobranza', 'htmlCobranzaAbierta', 'pintarCobranza', 'abrirCobranza', 'recargarCobranza',
@@ -70,7 +70,7 @@ const CONSTANTES_BASE = [
   'ETIQUETA_VALORIZACION', 'ETIQUETA_MOVIMIENTO', 'CAMPOS_FICHA', 'CATEGORIAS_PRODUCTO', 'TITULO_OTROS_PRODUCTOS', 'TITULO_INSUMOS', 'NOMBRE_UNIDAD_HOJA',
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
-  'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'ETIQUETA_ESTADO_COBRANZA', 'MAX_ERRORES', 'ETIQUETA_EVENTO_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD',
+  'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'MAX_ERRORES', 'ETIQUETA_EVENTO_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
 

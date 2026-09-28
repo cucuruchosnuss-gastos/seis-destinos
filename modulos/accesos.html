@@ -771,8 +771,13 @@
             descripcion: 'Permite editar los datos de cualquier gasto y anular gastos de otras personas (la anulación pide motivo, devuelve la plata a la caja correspondiente y reabre facturas pendientes que ese gasto hubiera pagado). Para anular los gastos propios no hace falta esta tarea: eso lo puede hacer cualquiera.' },
           { modulo: 'gastos', tarea: 'gastos_empresa',    label: 'Cargar gastos contra las cuentas de la Empresa',
             descripcion: 'Permite cargar gastos pagados con plata de la Empresa: al cargar se elige una cuenta de la Empresa y el descuento sale de ahí, no de la caja personal de quien lo carga.' },
-          { modulo: 'gastos', tarea: 'gestionar_proyectos', label: 'Dar de alta y baja proyectos del Taller',
-            descripcion: 'Permite crear proyectos nuevos y darlos de baja cuando terminan, para poder imputarles gastos. Hasta ahora los proyectos solo se podían crear tocando la base de datos directamente. No lleva alcance por unidad de negocio porque la tabla de proyectos no distingue unidades: un proyecto es visible desde cualquiera.' },
+          // Desde el 28/09/2026 los proyectos se gestionan en su propio módulo
+          // (Proyectos Taller, tarea taller:gestionar): Gastos ya no tiene la
+          // pantalla ni el "+ Proyecto nuevo". La clave sigue en el CHECK y
+          // en este catálogo (el passthrough conserva a quien la tenga), pero
+          // hoy no habilita ninguna pantalla.
+          { modulo: 'gastos', tarea: 'gestionar_proyectos', label: 'Proyectos del Taller desde Gastos (ya no se usa)',
+            descripcion: 'Antes permitía crear y dar de baja proyectos del Taller desde Gastos. Desde el 28/09/2026 los proyectos se manejan en el módulo Proyectos Taller, con sus propias tareas (ver "Proyectos Taller" más abajo): esta tarea ya no habilita ninguna pantalla. Se conserva para no perder el permiso de quien la tenía.' },
           { modulo: 'caja',   tarea: 'ver_listado',       label: 'Ver el listado completo de cajas de la empresa',
             descripcion: 'Al entrar a Caja muestra el listado completo de la empresa: los saldos de todas las personas, con acceso a la ficha de cada una. Sin esta tarea, la persona entra directo a su propia ficha y no ve a nadie más.' },
           { modulo: 'caja',   tarea: 'retiros_todos',     label: 'Ver los retiros personales de todos',
@@ -973,6 +978,31 @@
             descripcion: 'En Administración: anular una orden de retiro con motivo obligatorio. Devuelve cada caja a su lote y, si la orden ya estaba valorizada, cancela la deuda que había generado en la cuenta del cliente. En las empresas del alcance.' },
           { modulo: 'retiros', tarea: 'precios', label: 'Valorizar órdenes, manejar precios y las fichas de los clientes', conAlcance: true,
             descripcion: 'En Administración: ponerle precio a una orden de retiro (recién ahí nace la deuda del cliente), corregir una valorización, manejar las listas de precios con su historia, editar la ficha completa de un cliente (datos, dirección, contacto, banco y condiciones comerciales) y cargar su saldo inicial o un ajuste con motivo. En las empresas del alcance.' },
+        ],
+      },
+      {
+        grupo: 'Proyectos Taller',
+        // El módulo 'taller' (fila de la tabla modulos, orden 12, 28/09/2026).
+        // La misma clave en los dos namespaces. Las cuatro SIN alcance: los
+        // proyectos son todos del Taller, y las RPCs gatean con
+        // _puede_taller(tarea) = tiene_tarea('taller', …) o super_admin
+        // (guardar_proyecto con gestionar, y precio_venta además con precios;
+        // cargar_horas_proyecto, agregar_nota_proyecto y
+        // registrar_archivo_proyecto con cargar; facturar_proyecto,
+        // cargar_proyecto_a_fabrica y guardar_valor_hora con precios;
+        // resumen_proyecto y proyectos_taller con ver). Las cuatro están en el
+        // CHECK chk_tarea_valida (leído con pg_get_constraintdef el
+        // 28/09/2026: 51 claves).
+        modulos: ['taller'],
+        tareas: [
+          { modulo: 'taller', tarea: 'ver',       label: 'Ver los proyectos del Taller',
+            descripcion: 'Ver la lista de proyectos del Taller y la ficha de cada uno: datos, costo (gastos y horas) contra el presupuesto, horas, notas y archivos. Sin precios de venta ni márgenes: eso pide la tarea de precios.' },
+          { modulo: 'taller', tarea: 'cargar',    label: 'Cargar horas, notas y archivos en los proyectos',
+            descripcion: 'Cargar las horas de trabajo de cada persona en un proyecto, escribir en su bitácora de notas y subir planos, presupuestos y fotos. Quien cargó unas horas las puede anular.' },
+          { modulo: 'taller', tarea: 'gestionar', label: 'Crear y editar proyectos (presupuesto de costo y estado)',
+            descripcion: 'Dar de alta proyectos (para un cliente de afuera o para otra fábrica del grupo), editar sus datos, el presupuesto de costo, las horas estimadas y el estado, dar de alta clientes del Taller, y anular horas de cualquiera. No incluye precios de venta.' },
+          { modulo: 'taller', tarea: 'precios',   label: 'Precios de venta, facturar y márgenes del Taller',
+            descripcion: 'Ver y cargar el precio de venta de cada proyecto, lo facturado, lo cobrado y el margen; facturarle al cliente (anticipo, avance, saldo final), cargarle a una fábrica del grupo un trabajo interno, y actualizar el valor de la hora. Quien no la tiene no ve ningún precio ni margen en ninguna parte.' },
         ],
       },
       {

@@ -3603,6 +3603,43 @@
         (mas > 0 ? `<p class="ad-texto-suave">${esc(mas === 1 ? 'Y 1 cliente más: seguí escribiendo.' : 'Y ' + mas + ' clientes más: seguí escribiendo.')}</p>` : '')
     }
 
+    // ── El proyecto del Taller al que va la plata (28/09/2026) ─────────────
+    // Si el cliente elegido es del Taller y tiene proyectos, se ofrece a cuál
+    // va esa plata (opcional): asentar_cobranza lo recibe en p_proyecto_id.
+    // proyectos_taller() devuelve el NOMBRE del cliente y no su id: como el
+    // nombre es único por empresa (uq_cliente_nombre) y todos son del Taller,
+    // se compara por nombre. Sin taller:ver, la función devuelve null: se dice.
+    function esClienteDelTaller(cl) {
+      return !!cl && normalizar(cl.empresa) === 'taller'
+    }
+    function proyectosDelCliente(lista, cl) {
+      if (!Array.isArray(lista) || !cl) return []
+      return lista.filter(p => p && p.destino === 'externo' && p.estado !== 'cancelado' && normalizar(p.cliente) === normalizar(cl.nombre))
+    }
+    const ETIQUETA_ESTADO_PROYECTO = { presupuestado: 'presupuestado', aprobado: 'aprobado', en_curso: 'en curso', terminado: 'terminado', entregado: 'entregado' }
+    function htmlProyectoAsentar(a) {
+      if (!esClienteDelTaller(a.cliente)) return ''
+      if (a.proyectos === undefined || a.proyectos === 'cargando') return '<div class="ad-texto-suave">Buscando los proyectos del cliente…</div>'
+      if (a.proyectos === null) return '<div class="ad-texto-suave">Con tu usuario no se ven los proyectos del Taller: se asienta sin proyecto.</div>'
+      const lista = proyectosDelCliente(a.proyectos, a.cliente)
+      if (!lista.length) return ''
+      const opciones = lista.map(p => `<option value="${esc(p.id)}"${p.id === a.proyectoId ? ' selected' : ''}>${esc(p.nombre + (ETIQUETA_ESTADO_PROYECTO[p.estado] ? ' (' + ETIQUETA_ESTADO_PROYECTO[p.estado] + ')' : ''))}</option>`).join('')
+      return `<div class="ad-campo" style="margin-top:0.75rem"><label for="ad-asentar-proyecto">¿A qué proyecto del Taller va esta plata? (opcional)</label>` +
+        `<select class="ad-input" id="ad-asentar-proyecto"><option value="">Ninguno en particular</option>${opciones}</select></div>`
+    }
+    async function cargarProyectosAsentar(a) {
+      a.proyectos = 'cargando'
+      try {
+        const { data, error } = await supabase.rpc('proyectos_taller', { p_solo_activos: false })
+        if (error) throw error
+        a.proyectos = data === null ? null : (Array.isArray(data) ? data : [])
+      } catch (err) {
+        console.error('No se pudieron leer los proyectos del Taller:', err)
+        a.proyectos = null
+      }
+      if (estado.cobranzas.asentando === a) repintarAsentar()
+    }
+
     function htmlPanelAsentar(c, a) {
       const sugeridos = a.sugeridos.length
         ? `<p class="ad-texto-suave">${esc(a.sugeridos.length === 1 ? 'Sugerido por lo que escribió el chofer:' : 'Sugeridos por lo que escribió el chofer:')}</p>` +
@@ -3615,7 +3652,7 @@
         `<h3 class="ad-subtitulo" style="margin-top:0">¿De qué cliente es?</h3>${sugeridos}` +
         `<div class="ad-campo" style="margin-top:0.75rem"><label for="ad-asentar-buscar">${a.sugeridos.length ? '¿Es otro? Buscalo entre todos los clientes' : 'Buscar entre todos los clientes'} (nombre, razón social o apodo)</label>` +
         `<input type="search" class="ad-input" id="ad-asentar-buscar" autocomplete="off" maxlength="120" value="${esc(a.busqueda)}"></div>` +
-        `<div id="ad-asentar-resultados">${htmlResultadosAsentar(a)}</div>${elegido}` +
+        `<div id="ad-asentar-resultados">${htmlResultadosAsentar(a)}</div>${elegido}${htmlProyectoAsentar(a)}` +
         `${a.error ? `<p class="ad-error-pegado">${esc(a.error)}</p>` : ''}` +
         `<div class="ad-panel__acciones">` +
         `<button type="button" class="ad-btn" id="ad-asentar-confirmar"${a.enviando ? ' disabled' : ''}>${a.enviando ? 'Asentando…' : 'Asentar en esa cuenta'}</button>` +
@@ -3771,7 +3808,9 @@
       if (!cl) return
       a.cliente = cl
       a.error = null
+      a.proyectoId = ''
       repintarAsentar()
+      if (esClienteDelTaller(cl) && (a.proyectos === undefined)) cargarProyectosAsentar(a)
     }
 
     function cancelarAsentar() {
@@ -3780,7 +3819,7 @@
     }
 
     function parametrosAsentar(a) {
-      return { p_id: a.id, p_cliente_id: a.cliente.id }
+      return { p_id: a.id, p_cliente_id: a.cliente.id, p_proyecto_id: (esClienteDelTaller(a.cliente) && a.proyectoId) ? a.proyectoId : null }
     }
 
     async function confirmarAsentar() {
@@ -4286,6 +4325,7 @@
         })
         el.addEventListener('input', (e) => {
           if (e.target.id === 'ad-asentar-buscar') buscarClienteAsentar(e.target.value)
+          else if (e.target.id === 'ad-asentar-proyecto' && estado.cobranzas.asentando) estado.cobranzas.asentando.proyectoId = e.target.value
           else if (e.target.id === 'ad-reabrir-motivo' && estado.cobranza?.reabriendo) estado.cobranza.reabriendo.motivo = e.target.value
         })
       }

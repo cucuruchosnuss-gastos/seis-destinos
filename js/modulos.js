@@ -158,6 +158,20 @@ export const MODULOS = [
     color: 'naranja',
     requiereModulo: 'retiros',
     requiereTareas: ['retiros:ver', 'retiros:precios'],
+  },
+  {
+    // Proyectos Taller (28/09/2026): lo que el Taller vende a clientes de
+    // afuera y a las otras fábricas, con su costo (gastos + horas) y su
+    // precio. Fila propia en modulos/empleado_modulos ('taller'); adentro,
+    // cualquiera de sus cuatro tareas abre la pantalla (sin alcance). Gris
+    // grafito: el metal del taller (no es un color de validez).
+    clave: 'taller',
+    nombre: 'Proyectos Taller',
+    icono: 'wrench',
+    descripcion: 'Proyectos, horas, costos y precios del Taller',
+    url: 'modulos/taller.html',
+    proximamente: false,
+    color: 'grafito'
   }
 ]
 
@@ -212,7 +226,8 @@ export const COLORES_MODULO = {
   marron:    { bg: 'var(--marron-suave)',        fg: 'var(--marron)' },
   verde:     { bg: 'var(--verde-suave)',         fg: 'var(--verde)' },
   naranja:   { bg: 'var(--naranja-suave)',       fg: 'var(--naranja)' },
-  azul:      { bg: 'var(--azul-suave)',          fg: 'var(--azul)' }
+  azul:      { bg: 'var(--azul-suave)',          fg: 'var(--azul)' },
+  grafito:   { bg: 'var(--grafito-suave)',       fg: 'var(--grafito)' }
 }
 
 // ═══ Pendientes (mis_pendientes) ═════════════════════════════════════════

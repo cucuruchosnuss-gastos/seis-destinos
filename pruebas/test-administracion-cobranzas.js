@@ -143,6 +143,56 @@ async function pruebas() {
     chk('sin procesar no abre la lista (vuelve a la portada)', !S3.__llamadas.rpc.some(r => r[0] === 'cobranzas_por_asentar') && S3.estado.vista === 'ad-vista-inicio')
   }
 
+  // ══ 3b. EL PROYECTO DEL TALLER (28/09/2026) ═════════════════════════════════
+  {
+    const PROY = [
+      { id: 'p1', nombre: 'Máquina barquillo', destino: 'externo', estado: 'en_curso', cliente: 'Carrizo' },
+      { id: 'p2', nombre: 'Viejo', destino: 'externo', estado: 'cancelado', cliente: 'Carrizo' },
+      { id: 'p3', nombre: 'De otro', destino: 'externo', estado: 'aprobado', cliente: 'Otro cliente' },
+      { id: 'p4', nombre: 'Interno', destino: 'interno', estado: 'aprobado', cliente: null },
+      { id: 'p5', nombre: marca('proyecto'), destino: 'externo', estado: 'aprobado', cliente: 'Carrizo' },
+    ]
+    const conTaller = (proyectos) => {
+      const S = nuevo({ rpc: async (n) => {
+        if (n === 'cobranzas_por_asentar') return { data: POR_ASENTAR, error: null }
+        if (n === 'proyectos_taller') return proyectos
+        if (n === 'asentar_cobranza') return { data: DATOS.rpc.asentar_cobranza, error: null }
+        return { data: null, error: null }
+      } })
+      S.estado.empresas = [...S.estado.empresas, { id: 'u-t', nombre: 'Taller' }]
+      S.__tablas.clientes = tabla([...CLIENTES, { id: 'c-taller', nombre: 'Carrizo', razon_social: null, apodos: [], unidad_negocio_id: 'u-t', activo: true }])
+      return S
+    }
+    const S = conTaller({ data: PROY, error: null })
+    await S.mostrarCobranzas(); await esperar()
+    await S.abrirAsentar(COB_A); await esperar()
+    S.elegirClienteAsentar('c-taller'); await esperar()
+    const h = html(S, 'ad-cobranzas-lista')
+    chk('cliente del Taller: busca sus proyectos (proyectos_taller, todos)', S.__llamadas.rpc.some(x => x[0] === 'proyectos_taller' && x[1]?.p_solo_activos === false))
+    chk('ofrece los proyectos de ESE cliente, externos y no cancelados', /id="ad-asentar-proyecto"/.test(h) && /value="p1"/.test(h) && !/value="p2"/.test(h) && !/value="p3"/.test(h) && !/value="p4"/.test(h))
+    chk('es opcional: "Ninguno en particular" primero', /<option value="">Ninguno en particular<\/option>/.test(h))
+    chk('el nombre del proyecto va escapado', !/<b data-xss="proyecto">/.test(h) && /&lt;b data-xss=&quot;proyecto&quot;&gt;/.test(h))
+    S.estado.cobranzas.asentando.proyectoId = 'p1'
+    await S.confirmarAsentar(); await esperar()
+    const r = S.__llamadas.rpc.filter(x => x[0] === 'asentar_cobranza')
+    chk('con proyecto elegido, viaja en p_proyecto_id', r[0]?.[1]?.p_proyecto_id === 'p1' && r[0]?.[1]?.p_cliente_id === 'c-taller', JSON.stringify(r[0]?.[1]))
+
+    const S2 = conTaller({ data: PROY, error: null })
+    await S2.mostrarCobranzas(); await esperar(); await S2.abrirAsentar(COB_A); await esperar()
+    S2.elegirClienteAsentar('c-taller'); await esperar()
+    await S2.confirmarAsentar(); await esperar()
+    chk('sin elegir proyecto, va null', S2.__llamadas.rpc.find(x => x[0] === 'asentar_cobranza')?.[1]?.p_proyecto_id === null)
+
+    const S3 = conTaller({ data: null, error: null })
+    await S3.mostrarCobranzas(); await esperar(); await S3.abrirAsentar(COB_A); await esperar()
+    S3.elegirClienteAsentar('c-taller'); await esperar()
+    chk('sin taller:ver (la función devuelve null) lo dice y se asienta sin proyecto', /no se ven los proyectos del Taller/.test(html(S3, 'ad-cobranzas-lista')))
+    const S4 = conTaller({ data: PROY.filter(p => p.cliente !== 'Carrizo'), error: null })
+    await S4.mostrarCobranzas(); await esperar(); await S4.abrirAsentar(COB_A); await esperar()
+    S4.elegirClienteAsentar('c-taller'); await esperar()
+    chk('un cliente del Taller sin proyectos: no aparece el selector', !/id="ad-asentar-proyecto"/.test(html(S4, 'ad-cobranzas-lista')))
+  }
+
   // ══ 3. ASENTAR: sugeridos primero, después el buscador ══════════════════════
   {
     const S = nuevo()
@@ -189,7 +239,8 @@ async function pruebas() {
     await esperar()
     const r = S.__llamadas.rpc.filter(x => x[0] === 'asentar_cobranza')
     chk('asentar_cobranza UNA vez', r.length === 1)
-    chk('el payload: exactamente { p_id, p_cliente_id }', JSON.stringify(r[0]?.[1]) === JSON.stringify({ p_id: COB_A, p_cliente_id: 'c1' }), JSON.stringify(r[0]?.[1]))
+    chk('el payload: { p_id, p_cliente_id } y sin proyecto (no es del Taller)', JSON.stringify(r[0]?.[1]) === JSON.stringify({ p_id: COB_A, p_cliente_id: 'c1', p_proyecto_id: null }), JSON.stringify(r[0]?.[1]))
+    chk('un cliente que no es del Taller no busca proyectos', !S.__llamadas.rpc.some(x => x[0] === 'proyectos_taller'))
     h = html(S, 'ad-cobranzas-lista')
     chk('muestra en qué cuenta se descontó y el saldo que le queda',
       /Se descontaron \$\s437\.300,50 de la cuenta de Distribuidora Anatolia \(Cucuruchos Nuss\)\. Le queda un saldo a favor de \$\s311\.300,50\./.test(h), h.slice(h.indexOf('Asentada'), h.indexOf('Asentada') + 300))
@@ -335,7 +386,7 @@ async function pruebas() {
     S.elegirClienteAsentar('c1')
     await S.confirmarAsentar()
     await esperar()
-    chk('asentar desde el detalle usa el mismo payload', S.__llamadas.rpc.some(x => x[0] === 'asentar_cobranza' && JSON.stringify(x[1]) === JSON.stringify({ p_id: COB_A, p_cliente_id: 'c1' })))
+    chk('asentar desde el detalle usa el mismo payload', S.__llamadas.rpc.some(x => x[0] === 'asentar_cobranza' && JSON.stringify(x[1]) === JSON.stringify({ p_id: COB_A, p_cliente_id: 'c1', p_proyecto_id: null })))
     chk('y el detalle muestra lo descontado', /Se descontaron \$\s437\.300,50 de la cuenta de Distribuidora Anatolia/.test(html(S, 'ad-cobranza-cuerpo')))
   }
   {

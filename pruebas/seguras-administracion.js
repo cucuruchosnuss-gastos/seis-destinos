@@ -31,6 +31,9 @@ const SEGURAS_ADMINISTRACION = [
   ["datos.map(([k, v]) => htmlDatoAd(k, v)).join('')", 'HTML armado por htmlDatoAd(), que escapa rótulo y valor'],
   ['htmlChequesCob(c, cheques)', 'HTML armado por htmlChequesCob(), que escapa los avisos y usa htmlChequeCob()'],
   ['pie', 'HTML armado en htmlTarjetaCobranza(): htmlHechoCob() / htmlPanelAsentar() (escapan) o un botón con esc() del id'],
+  // El proyecto del Taller al asentar (28/09/2026)
+  ['opciones', 'HTML ya escapado: htmlProyectoAsentar() arma cada <option> con esc() del id y del nombre'],
+  ['htmlProyectoAsentar(a)', 'HTML armado por htmlProyectoAsentar(), que escapa id y nombre de cada proyecto'],
 ]
 
 const SEGURAS_REGEX_ADMINISTRACION = [

@@ -51,8 +51,8 @@ correrMutaciones({
     { nombre: 'sin sugeridos no se dice lo que escribió el chofer', de: "esc('Ningún cliente se llama «' + limpio(c.escrito) + '» ni tiene ese apodo. Buscalo:')", a: "esc('Buscalo:')" },
     { nombre: 'sin sugeridos el foco no va al buscador', de: "enfocar: !c.sugeridos.length }", a: "enfocar: false }" },
     { nombre: 'confirmar sin cliente llama igual', de: "      if (!a.cliente) { a.error = 'Elegí el cliente: un sugerido o uno del buscador.'; repintarAsentar(); return }\n", a: '' },
-    { nombre: 'el payload lleva la empresa', de: "      return { p_id: a.id, p_cliente_id: a.cliente.id }", a: "      return { p_id: a.id, p_cliente_id: a.cliente.id, p_unidad_negocio_id: null }" },
-    { nombre: 'el payload manda otra cobranza', de: "      return { p_id: a.id, p_cliente_id: a.cliente.id }", a: "      return { p_id: estado.cobranzas.lista?.[0]?.cobranza_id, p_cliente_id: a.cliente.id }" },
+    { nombre: 'el payload lleva la empresa', de: "      return { p_id: a.id, p_cliente_id: a.cliente.id, p_proyecto_id:", a: "      return { p_id: a.id, p_cliente_id: a.cliente.id, p_unidad_negocio_id: null, p_proyecto_id:" },
+    { nombre: 'el payload manda otra cobranza', de: "      return { p_id: a.id, p_cliente_id: a.cliente.id, p_proyecto_id:", a: "      return { p_id: estado.cobranzas.lista?.[0]?.cobranza_id, p_cliente_id: a.cliente.id, p_proyecto_id:" },
     { nombre: 'el error de la base se tapa', de: "        a.error = err?.message || 'No se pudo asentar la cobranza. Probá de nuevo.'", a: "        a.error = 'No se pudo asentar la cobranza. Probá de nuevo.'" },
     { nombre: 'después del error queda trabado', de: "        a.enviando = false\n        a.error = err?.message", a: "        a.error = err?.message" },
     { nombre: 'no dice el saldo que le queda', de: "        `${esc('Se descontaron ' + importeCob(h.importe) + ' de la cuenta de ' + cuenta + '. ' + textoSaldoCliente(h.saldo))}</div>`", a: "        `${esc('Se descontaron ' + importeCob(h.importe) + ' de la cuenta de ' + cuenta + '.')}</div>`" },
@@ -75,5 +75,15 @@ correrMutaciones({
     // ── La foto ──
     { nombre: 'la foto se firma por un día', de: "supabase.storage.from('cobranzas').createSignedUrl(foto.storage_path, 300)", a: "supabase.storage.from('cobranzas').createSignedUrl(foto.storage_path, 86400)" },
     { nombre: 'cerrar el visor deja la imagen', de: "      document.getElementById('ad-visor-img').src = ''\n    }", a: "    }" },
+    // ── El proyecto del Taller (28/09/2026) ──
+    { nombre: 'el proyecto no viaja', de: "p_proyecto_id: (esClienteDelTaller(a.cliente) && a.proyectoId) ? a.proyectoId : null", a: 'p_proyecto_id: null' },
+    { nombre: 'sin la clave p_proyecto_id', de: ", p_proyecto_id: (esClienteDelTaller(a.cliente) && a.proyectoId) ? a.proyectoId : null }", a: ' }' },
+    { nombre: 'busca proyectos para cualquier cliente', de: "      return !!cl && normalizar(cl.empresa) === 'taller'", a: '      return !!cl' },
+    { nombre: 'ofrece los cancelados', de: "p.destino === 'externo' && p.estado !== 'cancelado' && ", a: "p.destino === 'externo' && " },
+    { nombre: 'ofrece los de otro cliente', de: " && normalizar(p.cliente) === normalizar(cl.nombre))", a: ')' },
+    { nombre: 'no busca los proyectos', de: '      if (esClienteDelTaller(cl) && (a.proyectos === undefined)) cargarProyectosAsentar(a)\n', a: '' },
+    { nombre: 'sin taller:ver no lo dice', de: "      if (a.proyectos === null) return '<div class=\"ad-texto-suave\">Con tu usuario no se ven los proyectos del Taller: se asienta sin proyecto.</div>'\n", a: '' },
+    { nombre: 'el nombre del proyecto sin escape', de: "${esc(p.nombre + (ETIQUETA_ESTADO_PROYECTO[p.estado] ? ' (' + ETIQUETA_ESTADO_PROYECTO[p.estado] + ')' : ''))}", a: "${p.nombre}" },
+    { nombre: 'pide solo los activos', de: "supabase.rpc('proyectos_taller', { p_solo_activos: false })", a: "supabase.rpc('proyectos_taller', { p_solo_activos: true })" },
   ],
 })
