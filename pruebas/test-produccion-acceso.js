@@ -82,60 +82,43 @@ function armar(rol, tareas, archivo = ARCHIVO) {
   chk('gestión: una cuenta de dispositivo se va a la planta con replace', /es_dispositivo === true\) \{ window\.location\.replace\('produccion\.html'\)/.test(FUENTE_G))
 }
 
-// ── La planta: tamaños (compacta desde el 25/09/2026) ──────────────────────
-// La navegación se achicó para que el tablero muestre CINCO máquinas sin
-// scroll en 1280×800 (medido en un navegador: la quinta tarjeta termina en
-// y=617 con las cinco abiertas, el aviso de pendientes y "Sacar al masero").
-// Los mínimos que no se negocian: texto de 16 px (1rem) y botones de 48 px.
-// Y lo que se toca con las manos en la masa sigue grande: los renglones de
-// la receta (64 px), el teclado del PIN (84 px) y el alto de 56 px adentro de
-// la receta, "+ Otro", el panel de lotes y el PIN.
+// ── La planta: tamaños (la tablet real, 28/09/2026) ───────────────────────
+// La planta se diseñó para 1280×800, pero la tablet de Nuss (Galaxy Tab A11)
+// mide 1007×604 CSS px, y instalada quedan ~1000×540 apaisada y ~600×940
+// parada: casi un tercio menos de ALTO. Todo entra SIN SCROLL a esos tamaños
+// (lo mide e2e/8-planta-tamanos.spec.js en un navegador), así que los mínimos
+// de antes (texto de 16 px, botones de 48) se aflojaron a propósito. Los que
+// quedan: nada por debajo de 11 px (0,6875rem) y nada tocable de menos de
+// 30 px de alto; y el teclado del PIN sigue grande (hasta 72 px).
 {
   const todoElCss = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
-  // Las reglas de Configuración se mudaron a la gestión con sus pantallas.
-  // Si quedara su bloque acá, se mide aparte: es de oficina.
   const iniCfg = todoElCss.indexOf('/* ── Configuración: LA EXCEPCIÓN DEL MÓDULO')
   const finCfg = todoElCss.indexOf('/* ── fin de Configuración')
   const css = iniCfg > 0 && finCfg > iniCfg ? todoElCss.slice(0, iniCfg) + todoElCss.slice(finCfg) : todoElCss
   const rems = [...css.matchAll(/font-size:\s*([0-9.]+)rem/g)].map(m => Number(m[1]))
   chk('hay tamaños de letra en rem (si da cero, no se está leyendo)', rems.length > 5)
-  chk('ningún texto por debajo de 16 px (1rem)', rems.every(r => r >= 1), rems.filter(r => r < 1).join(', '))
+  chk('ningún texto por debajo de 11 px (0,6875rem)', rems.every(r => r >= 0.6875), rems.filter(r => r < 0.6875).join(', '))
   const ems = [...css.matchAll(/font-size:\s*([0-9.]+)em/g)].map(m => Number(m[1]))
   chk('ningún tamaño en em por debajo de 1', ems.every(r => r >= 1), ems.join(', '))
   const pxs = [...css.matchAll(/min-height:\s*([0-9]+)px/g)].map(m => Number(m[1]))
-  chk('ningún alto mínimo en px por debajo de 48 (salvo cero)', pxs.every(n => n === 0 || n >= 48), pxs.filter(n => n && n < 48).join(', '))
+  chk('ningún alto mínimo en px por debajo de 30 (salvo cero)', pxs.every(n => n === 0 || n >= 30), pxs.filter(n => n && n < 30).join(', '))
 
-  const ini = css.indexOf('/* ── LA PLANTA MÁS COMPACTA')
-  chk('el bloque compacto existe', ini > 0)
-  const compacto = css.slice(ini)
-  chk('… y va AL FINAL del <style> (pisa por orden a las de arriba)', ini > 0 && !/\n    \/\* ── (?!LA PLANTA MÁS COMPACTA)/.test(compacto))
-  chk('botones de 48 px y texto base de 16 px', /body \{ --pr-alto-boton: 48px; font-size: 16px; \}/.test(compacto))
-  chk('la receta, "+ Otro", el panel de lotes y el PIN vuelven a 56 px',
-    /#pr-receta, #pr-otro, #pr-lote-panel, #pr-pin \{ --pr-alto-boton: 56px; \}/.test(compacto))
-  // (28/09/2026) El handoff "Planta · Dos modos" pone el tablero en una grilla
-  // de 3 en la compu; por debajo de 1100 px, tarjetas de 15rem. Esas reglas van
-  // DESPUÉS del bloque compacto y le ganan por orden a su "cuatro columnas".
-  chk('el tablero: tarjetas de 15rem por debajo de 1100 px y grilla de 3 desde 1100 (handoff)',
-    /\.pr-tablero \{ grid-template-columns: repeat\(auto-fill, minmax\(min\(100%, 15rem\), 1fr\)\); \}\s*@media \(min-width: 1100px\) \{ \.pr-tablero \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \} \}/.test(compacto))
-  chk('las tarjetas de máquina son bajas (112 px)', /\.pr-tablero \.pr-maquina \{ min-height: 112px;/.test(compacto))
-  chk('el LOTE sigue siendo lo más grande de la tarjeta', /\.pr-maquina__lote \{ font-size: 2\.5rem; \}/.test(compacto))
-  // (28/09/2026) La barra de modos de arriba se fue: ahora es la barra lateral
-  // (handoff "Planta · Dos modos"), con renglones de 52 px y el botón al otro
-  // modo de 64. El bloque compacto ya no la toca.
-  chk('la barra lateral: renglones de 52 px y el botón al otro modo de 64',
-    /\.pr-lat__item \{[^}]*min-height: 52px;/.test(css) && /\.pr-lat__otro \{[^}]*min-height: 64px;/.test(css))
-  chk('el bloque compacto ya no achica la barra vieja', !/\.pr-barra[\s{,[:]|\.pr-modo[\s{,[:]/.test(compacto))
-  // (28/09/2026) Handoff "Planta · Dos modos": el renglón de la receta mide
-  // 58 px (columnas 140 / cantidad / lote / Otro). Lo pone el bloque de la
-  // Sala de masa, que va DESPUÉS del compacto; el compacto no lo toca.
-  const salaDosModos = css.slice(css.indexOf('/* ══ Sala de masa (la planta con dos modos)'))
-  const soloCompacto = compacto.slice(0, compacto.indexOf('/* ══ LA PLANTA CON DOS MODOS'))
-  chk('los renglones de la receta: 58 px, puestos por el bloque de la Sala de masa',
-    css.indexOf('/* ══ Sala de masa (la planta con dos modos)') > 0 &&
-    /\.pr-rec, \.pr-rec--cab \{[^}]*min-height: 58px;/.test(salaDosModos) && !/\.pr-rec\b[^{]*\{[^}]*min-height/.test(soloCompacto))
-  chk('el teclado del PIN sigue de 84 px', /\.pr-tecla \{\s*min-height: 84px;/.test(css) && !/\.pr-tecla/.test(compacto))
-  chk('la barra lateral mide 240 px y la página se corre lo mismo',
-    /\.pr-lateral \{[^}]*width: 240px;/.test(css) && /body\.pr-con-lateral \.pr-app \{[^}]*margin-left: 240px;/.test(css))
+  const iniReal = css.indexOf('/* ══ LA TABLET REAL (28/09/2026)')
+  const iniDos = css.indexOf('/* ══ LA PLANTA CON DOS MODOS')
+  const iniParada = css.indexOf('/* ══ LA TABLET PARADA')
+  chk('el bloque de la tablet real existe y va después del de dos modos', iniReal > 0 && iniDos > 0 && iniReal > iniDos)
+  chk('… y el de la tablet PARADA va último (pisa por orden a todos)', iniParada > iniReal && !/\n    \/\* ══ /.test(css.slice(iniParada + 10)))
+  const real = css.slice(iniReal)
+  chk('botones de 44 px y texto base de 15 px', /body \{ --pr-alto-boton: 44px; font-size: 15px; \}/.test(real))
+  chk('la barra lateral mide 208 px apaisada, y la página se corre lo mismo',
+    /@media \(orientation: landscape\) and \(min-width: 761px\) \{\s*\.pr-lateral \{ width: 208px; \}\s*body\.pr-con-lateral \.pr-app \{ margin-left: 208px; \}/.test(real))
+  chk('la barra pasa arriba solo con la tablet PARADA (o angosta)', /@media \(orientation: portrait\), \(max-width: 760px\) \{\s*\.pr-lateral \{ position: static;/.test(css))
+  chk('el teclado del PIN: grande, de 48 a 72 px según el alto', /\.pr-tecla \{ min-height: clamp\(48px, 9\.5vh, 72px\);/.test(real))
+  chk('el tablero: tres columnas apaisada, dos parada', /\.pr-tablero \{ gap: 0\.5rem; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/.test(real) &&
+    /@media \(orientation: portrait\) \{ \.pr-tablero \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \} \}/.test(real))
+  chk('el LOTE nunca en dos renglones (white-space: nowrap)', /\.pr-maquina__lote \{[^}]*white-space: nowrap;/.test(real) &&
+    /\.pr-lat__maq-lote \{[^}]*white-space: nowrap;/.test(real) && /\.pr-planilla-cab__numero \{[^}]*white-space: nowrap;/.test(real))
+  chk('las palabras no se cortan al medio', /\.pr-app, \.pr-lateral \{ overflow-wrap: normal; word-break: normal; hyphens: manual; \}/.test(real))
   chk('el nombre del modo va espaciado en la banda, no solo de color', /\.pr-banda-modo__nombre \{[^}]*letter-spacing: 0\.06em/.test(css))
 }
 

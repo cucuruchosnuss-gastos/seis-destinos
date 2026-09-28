@@ -215,6 +215,10 @@ const MENOS_COPIAS = [
     'La planta con dos modos (28/09/2026): la barra de arriba tenía los DOS modos (PRODUCCIÓN y SALA DE MASA) escritos ' +
     'uno por uno; la barra lateral tiene UN solo botón, htmlBotonOtroModo(), que lleva al modo donde no estás con el tono ' +
     'de ese modo. El modo en el que estás no se repite (README del handoff). Los dos modos siguen alcanzables.'],
+  ['control:button[data-mas-operario][type=button]', 1,
+    'La tablet real (28/09/2026): en Abrir turno los operarios pasaron a ser etiquetas chicas, TODAS a la vista, que se ' +
+    'tocan para elegir (data-toggle-op), con un buscador que no toma el foco solo: el "+ Operario" que abría el ' +
+    'buscador ya no hace falta ahí. Sigue en la planilla ("+ Sumar"), que es la otra copia.'],
 ]
 
 let ok = 0

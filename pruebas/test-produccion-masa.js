@@ -298,7 +298,7 @@ esperas.push((async () => {
   R.abrirPanelLote('i-harina')
   const tarjetasHar = R.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
   R.cerrarPanelLote()
-  chk('menos de un kilo se lee en gramos, como se habla en la sala', /pr-lp__queda-num">240 g</.test(tarjetasLec) && /pr-lp__queda-num">200 kg</.test(tarjetasHar), tarjetasLec)
+  chk('menos de un kilo se lee en gramos, como se habla en la sala', /quedan 240 g/.test(tarjetasLec) && /quedan 200 kg/.test(tarjetasHar), tarjetasLec)
   chk('la fecha de cada lote sale de stock_para_masa (sin stock:ver)', /desde 05\/09\/2026/.test(tarjetasHar) && !R.__llamadas.consultas.some(([t]) => t === 'v_stock_por_lote'))
   // 4e: en una doble la lecitina no alcanza (0,24 kg y lleva 0,3).
   const DOB = await hastaLaReceta(armar(), { como: 'anterior', doble: true })
@@ -322,7 +322,9 @@ esperas.push((async () => {
   chk('el lote que se terminó: el botón en bordó lo dice', /pr-rec__lote pr-rec__lote--terminado" data-lote="i-sal"/.test(filasTerm) && /Se terminó · elegí otro/.test(filasTerm))
   chk('… y el pie dice cuál', R.__doc.getElementById('pr-receta-error').textContent === 'Falta elegir otro lote de sal: el que estaba se terminó.', R.__doc.getElementById('pr-receta-error').textContent)
   chk('la cabecera: máquina, lote, número de masa y los chips', /Máquina 1<\/span><span class="pr-receta__sub">Lote 7023 · masa 3<\/span>/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) &&
-    /pr-chip-rec">Simple/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) && /pr-chip-origen--anterior">Anterior/.test(R.__doc.getElementById('pr-receta-cab').innerHTML),
+    // (28/09/2026) El origen ya NO va como pastilla aparte: lo dice el botón
+    // apretado de arriba. Queda la clave en la clase del chip del tamaño.
+    /pr-chip-rec pr-chip-rec--anterior">Simple/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) && !/pr-chip-origen/.test(R.__doc.getElementById('pr-receta-cab').innerHTML),
     R.__doc.getElementById('pr-receta-cab').innerHTML)
   chk('sin cacao NO hay chip de chocolate', !/Chocolate/.test(R.__doc.getElementById('pr-receta-cab').innerHTML))
 
@@ -392,7 +394,8 @@ esperas.push((async () => {
   chk('un número ilegible no cambia nada', R.estado.masa.cantidades['i-azucar'] === 2.5)
   chk('tocar una cantidad marca la masa como cambiada', R.estado.masa.cambiada === true)
   R.pintarReceta()
-  chk('la cabecera dice Modificada', /pr-chip-origen--modificada">Modificada/.test(R.__doc.getElementById('pr-receta-cab').innerHTML))
+  chk('la cabecera sabe que es Modificada (sin pastilla aparte)', /pr-chip-rec--modificada"/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) &&
+    /data-base="modificar" aria-pressed="true"/.test(R.__doc.getElementById('pr-receta-opciones').innerHTML), R.__doc.getElementById('pr-receta-opciones').innerHTML)
   chk('el borrador guarda lo tipeado', JSON.parse(R.localStorage.getItem('produccion.masa.' + R.estado.masa.client_uuid)).cantidades['i-azucar'] === 2.5)
 
   // ── 4c2: "+ Agregar ingrediente" (el cacao) ──────────────────────────

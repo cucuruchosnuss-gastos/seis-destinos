@@ -184,7 +184,10 @@ esperas.push((async () => {
   const h = html(P, 'pr-planilla-producido')
   const fila = sub => { const i = h.indexOf(`>${sub}</span>`); const d = h.lastIndexOf('<div class="pr-producido', i); return h.slice(d, h.indexOf('<div class="pr-producido__botones', i)) }
   chk('en la planilla: el renglón sin caja va en bordó', /pr-producido pr-producido--sin-caja/.test(fila('7023-1')), fila('7023-1'))
-  chk('… y lo dice', fila('7023-1').includes('pr-sin-caja">Sin empaque descontado: no se descontó la caja ni las bolsas'))
+  // (28/09/2026) El renglón va en UNA línea: una etiqueta corta "sin
+  // empaque" en bordó, con el texto entero en el title.
+  chk('… y lo dice', fila('7023-1').includes('pr-sin-caja pr-sin-caja--chip" title="Sin empaque descontado: no se descontó la caja ni las bolsas') &&
+    fila('7023-1').includes('>sin empaque</span>'), fila('7023-1'))
   chk('… el anterior al empaque, no', !/sin-caja/.test(fila('7023-2')), fila('7023-2'))
   chk('… el que tiene caja, no', !/sin-caja/.test(fila('7023-3')))
   chk('… y los tres siguen sumando al total', /15 cajas/.test(html(P, 'pr-planilla-total')))

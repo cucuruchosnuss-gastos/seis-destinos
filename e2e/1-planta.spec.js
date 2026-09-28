@@ -69,9 +69,10 @@ test.describe('planta', () => {
       await page.locator('#pr-abrir-turnos [data-turno="Mañana"]').click();
       const fila = page.locator('.pr-abrir-fila', { hasText: 'Máquina robot' });
       await fila.locator('[data-abrir-maquina]').check();
-      await fila.locator('[data-mas-operario]').click();
-      await fila.locator('[data-elegir-op]', { hasText: 'Robot Masero' }).click();
-      await expect(fila.locator('.pr-chip-op', { hasText: 'Robot Masero' })).toBeVisible();
+      // (28/09/2026) Los operarios son etiquetas chicas, todas a la vista:
+      // se tocan para elegir.
+      await fila.locator('[data-toggle-op]', { hasText: 'Robot Masero' }).click();
+      await expect(fila.locator('[data-toggle-op][aria-pressed="true"]', { hasText: 'Robot Masero' })).toBeVisible();
       await captura(page, 'abrir-turno', info);
       await page.locator('#pr-abrir-confirmar').click();
       await expect(page.locator('#pr-abiertos')).toBeVisible();
@@ -152,6 +153,10 @@ test.describe('planta', () => {
       await page.locator('[data-ag-cono="0"]').click();
       const pres = page.locator('[data-ag-presentacion]').first();
       if (await pres.isVisible().catch(() => false)) await pres.click();
+      // Tocar una caja la elige y pasa sola a las cajas; sin cajas
+      // configuradas queda "Seguir con las cajas".
+      const caja = page.locator('[data-ag-caja]').first();
+      if (await caja.isVisible().catch(() => false)) await caja.click();
       const seguir = page.locator('[data-ag-seguir]');
       if (await seguir.isVisible().catch(() => false)) await seguir.click();
       await expect(page.locator('#pr-agregar-cajas-panel')).toBeVisible();

@@ -85,8 +85,9 @@ correrMutacionesProduccion({
     { nombre: 'volver a contestar lo mismo borra lo de abajo', de: "      if (a.conCono !== v) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }", a: "      if (true) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }" },
     { nombre: 'con cono se saltea el paso del cono', de: "      a.paso = a.conCono ? 'cono' : (a.cajaElegida ? 'cajas' : 'caja')", a: "      a.paso = 'cajas'" },
     { nombre: 'elegir "Común" no cuenta como elegir', de: '      a.marcaId = id || null\n      a.marcaElegida = true', a: '      a.marcaId = id || null\n      a.marcaElegida = !!id' },
-    { nombre: 'sin cono igual se muestra el panel del cono', de: '      cono.hidden = !(a.conCono && enFinal)', a: '      cono.hidden = !enFinal' },
-    { nombre: 'la grilla no se ensancha con el cono', de: "      document.getElementById('pr-ag-grilla').className = 'pr-ag' + (cono.hidden ? '' : ' pr-ag--cono-cajas')", a: "      document.getElementById('pr-ag-grilla').className = 'pr-ag'" },
+    // (28/09/2026) Tres columnas: el cono ocupa la columna de las opciones, solo.
+    { nombre: 'el cono se sigue viendo en las cajas', de: "      cono.hidden = !(a.conCono && a.paso === 'cono')", a: '      cono.hidden = !a.conCono' },
+    { nombre: 'la grilla cambia con el cono', de: "      document.getElementById('pr-ag-grilla').className = 'pr-ag'\n", a: "      document.getElementById('pr-ag-grilla').className = 'pr-ag' + (cono.hidden ? '' : ' pr-ag--cono-cajas')\n" },
 
     // ── Chocolate ───────────────────────────────────────────────────────
     { nombre: 'los de chocolate no se separan', de: "      const chocoHtml = chocolate.length\n        ? '<div class=\"pr-ag__corte\">", a: "      const chocoHtml = false\n        ? '<div class=\"pr-ag__corte\">" },

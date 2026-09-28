@@ -281,7 +281,14 @@ esperas.push((async () => {
   form.filas[0].elegida = true
   S.pintarAbrir()
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
-  chk('marcada: aparece "+ Operario"', /data-mas-operario="0"/.test(filas))
+  // (28/09/2026, la tablet real) Marcada: TODOS los operarios a la vista como
+  // etiquetas chicas, y un buscador que NO toma el foco solo.
+  chk('marcada: todos los operarios como etiquetas', /class="pr-op-tags" data-res-op="0"/.test(filas) &&
+    /data-toggle-op="0" data-op-id="e-op1" aria-pressed="false">Ramón Díaz/.test(filas) &&
+    /data-toggle-op="0" data-op-id="e-op2" aria-pressed="false">Marcos Vera/.test(filas), filas)
+  chk('… con el buscador en la fila', /data-buscar-op="0"/.test(filas))
+  chk('… que no toma el foco solo (sin .focus() en el agregado)', !/function agregarOperarioFila[\s\S]{0,500}?\.focus\(\)\s*\n\s*\}/.test(FUENTE))
+  chk('… y sin "+ Operario"', !/data-mas-operario="0"/.test(filas))
   // Una máquina marcada SIN operarios se puede abrir: abrir_turnos no los
   // exige ni valida su puesto (solo agregar_operario_turno lo hace).
   chk('marcada sin operarios: igual se puede abrir', S.faltanParaAbrir(form, S.hoyArgentina()).length === 0)
@@ -290,8 +297,7 @@ esperas.push((async () => {
   // El buscador se abre DENTRO de la fila.
   S.abrirBuscadorOperario(0, true)
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
-  chk('el buscador se abre dentro de la fila', /class="pr-buscador-op"/.test(filas) && /data-buscar-op="0"/.test(filas) && /data-res-op="0"/.test(filas))
-  chk('… y mientras está abierto no se ofrece "+ Operario"', !/data-mas-operario="0"/.test(filas))
+  chk('el buscador está dentro de la fila', /data-buscar-op="0"/.test(filas) && /data-res-op="0"/.test(filas))
   chk('… con los operarios configurados y no el encargado',
     /Ramón Díaz/.test(filas) && /Marcos Vera/.test(filas) && !/Federico Silva/.test(filas))
   form.filas[0].busqueda = 'mar'
@@ -303,12 +309,16 @@ esperas.push((async () => {
   S.agregarOperarioFila(0, 'e-op1')
   S.agregarOperarioFila(0, 'e-op2')
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
-  chk('dos operarios en la misma máquina, como chips con ×',
-    /Ramón Díaz<button[^>]*data-quitar-op="0" data-op-id="e-op1"/.test(filas) &&
-    /Marcos Vera<button[^>]*data-op-id="e-op2"/.test(filas), filas)
-  chk('… el buscador queda abierto y vacío para seguir cargando',
-    form.filas[0].buscando === true && form.filas[0].busqueda === '')
-  chk('… y ya no se ofrece a quien ya está en la fila', !/data-elegir-op="0" data-op-id="e-op1"/.test(filas))
+  chk('dos operarios en la misma máquina, como etiquetas apretadas',
+    /data-toggle-op="0" data-op-id="e-op1" aria-pressed="true">Ramón Díaz/.test(filas) &&
+    /data-toggle-op="0" data-op-id="e-op2" aria-pressed="true">Marcos Vera/.test(filas), filas)
+  chk('… la búsqueda se vacía para seguir eligiendo', form.filas[0].busqueda === '')
+  chk('… y un elegido se ve aunque el filtro no lo nombre', (() => {
+    form.filas[0].busqueda = 'mariela'
+    const h = S.htmlTagsOperarios(form.filas[0], 0, S.estado.operarios, form)
+    form.filas[0].busqueda = ''
+    return /data-op-id="e-op1" aria-pressed="true"/.test(h) && /Mariela Soto/.test(h.replace(/<\/?strong>/g, ''))
+  })())
   chk('el resumen cuenta los operarios', S.__doc.getElementById('pr-abrir-resumen').textContent === '1 máquina · 2 operarios')
 
   // El que ya está en otra máquina aparece APAGADO y diciendo dónde.
@@ -316,8 +326,20 @@ esperas.push((async () => {
   S.abrirBuscadorOperario(1, true)
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
   chk('el que está en otra máquina aparece apagado y dice en cuál',
-    /data-elegir-op="1" data-op-id="e-op1"[^>]*disabled>[^<]*Ramón Díaz · en Máquina 2</.test(filas), filas)
-  chk('… y quien está libre no', /data-elegir-op="1" data-op-id="e-op3">/.test(filas))
+    /data-toggle-op="1" data-op-id="e-op1" aria-pressed="false" disabled>Ramón Díaz <span class="pr-op-tag__nota">· en Máquina 2<\/span>/.test(filas), filas)
+  chk('… y quien está libre no', /data-toggle-op="1" data-op-id="e-op3" aria-pressed="false">/.test(filas))
+  // El buscador de la PLANILLA ("+ Sumar") sigue usando candidatosOperario()
+  // y htmlResultadosOperario(): se prueban directo.
+  chk('planilla: la búsqueda de candidatos filtra', (() => {
+    const c = S.candidatosOperario(S.estado.operarios, 'mar', [], () => '')
+    return c.length > 0 && c.every(x => /mar/i.test(x.nombre))
+  })())
+  chk('planilla: el que está en otra máquina queda apagado', S.candidatosOperario(S.estado.operarios, '', [], id => id === 'e-op3' ? 'en Máquina 9' : '')
+    .find(x => x.id === 'e-op3')?.apagado === true)
+  chk('planilla: "Nadie coincide" escapa lo buscado', /Nadie coincide con "&lt;b&gt;"/.test(S.htmlResultadosOperario([], '<b>', 'p')))
+  chk('tocar una etiqueta la elige y tocarla de nuevo la suelta (lo escucha el click)',
+    /const tag = ev\.target\.closest\('\[data-toggle-op\]'\)/.test(FUENTE) &&
+    /f\.operarios\.includes\(tag\.dataset\.opId\) \? quitarOperarioFila\(i, tag\.dataset\.opId\) : agregarOperarioFila\(i, tag\.dataset\.opId\)/.test(FUENTE))
   S.agregarOperarioFila(1, 'e-op3')
   chk('tres operarios repartidos en dos máquinas',
     form.filas[0].operarios.join() === 'e-op1,e-op2' && form.filas[1].operarios.join() === 'e-op3')

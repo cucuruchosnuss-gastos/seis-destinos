@@ -107,7 +107,11 @@ const hist = (extra) => {
   chk('el renglón viejo ("Caja con cono · con cono · Común") no vuelve', !/Caja con cono · con cono/.test(S.htmlProducido(item({ presentacion_id: 'pr-con', unidades_por_caja: 320 }), CAT, INSUMOS)))
   // El producto va arriba en la planilla y NO se repite en el detalle.
   const h = S.htmlProducido(item({ presentacion_id: 'pr-con', unidades_por_caja: 320 }), CAT, INSUMOS)
-  chk('planilla: el producto una sola vez', (h.match(/Cucuruchón Mini/g) || []).length === 1 && /pr-producido__nombre">Cucuruchón Mini</.test(h), h)
+  // (28/09/2026) El renglón va en UNA línea y el texto entero queda en el
+  // title (por si no entra): se cuenta lo que se VE, sin el title.
+  const visto = h.replace(/ title="[^"]*"/g, '')
+  chk('planilla: el producto una sola vez', (visto.match(/Cucuruchón Mini/g) || []).length === 1 && /pr-producido__nombre">Cucuruchón Mini</.test(h), h)
+  chk('planilla: el renglón en UNA línea, con el texto entero en el title', /pr-producido__linea" title="Cucuruchón Mini · con cono · Común · caja ×320"/.test(h), h)
   chk('planilla: todo en UN renglón de detalle', (h.match(/pr-producido__detalle"/g) || []).length === 1, h)
   // Las unidades por caja GUARDADAS en el renglón, no las del catálogo de hoy.
   chk('las unidades por caja guardadas en el renglón mandan', renglon({ presentacion_id: 'pr-con', unidades_por_caja: 300 }) === 'con cono · Común · caja ×300')

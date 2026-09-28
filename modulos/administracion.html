@@ -3627,15 +3627,15 @@
     // ── El proyecto del Taller al que va la plata (28/09/2026) ─────────────
     // Si el cliente elegido es del Taller y tiene proyectos, se ofrece a cuál
     // va esa plata (opcional): asentar_cobranza lo recibe en p_proyecto_id.
-    // proyectos_taller() devuelve el NOMBRE del cliente y no su id: como el
-    // nombre es único por empresa (uq_cliente_nombre) y todos son del Taller,
-    // se compara por nombre. Sin taller:ver, la función devuelve null: se dice.
+    // proyectos_taller() devuelve cliente_id desde el 28/09/2026 (leído con
+    // pg_get_functiondef ese día): se compara por id, no por nombre. Sin
+    // taller:ver, la función devuelve null: se dice.
     function esClienteDelTaller(cl) {
       return !!cl && normalizar(cl.empresa) === 'taller'
     }
     function proyectosDelCliente(lista, cl) {
-      if (!Array.isArray(lista) || !cl) return []
-      return lista.filter(p => p && p.destino === 'externo' && p.estado !== 'cancelado' && normalizar(p.cliente) === normalizar(cl.nombre))
+      if (!Array.isArray(lista) || !cl || !cl.id) return []
+      return lista.filter(p => p && p.destino === 'externo' && p.estado !== 'cancelado' && p.cliente_id != null && String(p.cliente_id) === String(cl.id))
     }
     const ETIQUETA_ESTADO_PROYECTO = { presupuestado: 'presupuestado', aprobado: 'aprobado', en_curso: 'en curso', terminado: 'terminado', entregado: 'entregado' }
     function htmlProyectoAsentar(a) {

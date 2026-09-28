@@ -146,11 +146,13 @@ async function pruebas() {
   // ══ 3b. EL PROYECTO DEL TALLER (28/09/2026) ═════════════════════════════════
   {
     const PROY = [
-      { id: 'p1', nombre: 'Máquina barquillo', destino: 'externo', estado: 'en_curso', cliente: 'Carrizo' },
-      { id: 'p2', nombre: 'Viejo', destino: 'externo', estado: 'cancelado', cliente: 'Carrizo' },
-      { id: 'p3', nombre: 'De otro', destino: 'externo', estado: 'aprobado', cliente: 'Otro cliente' },
-      { id: 'p4', nombre: 'Interno', destino: 'interno', estado: 'aprobado', cliente: null },
-      { id: 'p5', nombre: marca('proyecto'), destino: 'externo', estado: 'aprobado', cliente: 'Carrizo' },
+      { id: 'p1', nombre: 'Máquina barquillo', destino: 'externo', estado: 'en_curso', cliente: 'Carrizo', cliente_id: 'c-taller' },
+      { id: 'p2', nombre: 'Viejo', destino: 'externo', estado: 'cancelado', cliente: 'Carrizo', cliente_id: 'c-taller' },
+      { id: 'p3', nombre: 'De otro', destino: 'externo', estado: 'aprobado', cliente: 'Otro cliente', cliente_id: 'c-otro' },
+      { id: 'p4', nombre: 'Interno', destino: 'interno', estado: 'aprobado', cliente: null, cliente_id: null },
+      { id: 'p5', nombre: marca('proyecto'), destino: 'externo', estado: 'aprobado', cliente: 'Carrizo', cliente_id: 'c-taller' },
+      // Otro cliente que SE LLAMA igual: el proyecto es de otro id y no se ofrece.
+      { id: 'p6', nombre: 'Homónimo', destino: 'externo', estado: 'aprobado', cliente: 'Carrizo', cliente_id: 'c-otro-carrizo' },
     ]
     const conTaller = (proyectos) => {
       const S = nuevo({ rpc: async (n) => {
@@ -169,7 +171,8 @@ async function pruebas() {
     S.elegirClienteAsentar('c-taller'); await esperar()
     const h = html(S, 'ad-cobranzas-lista')
     chk('cliente del Taller: busca sus proyectos (proyectos_taller, todos)', S.__llamadas.rpc.some(x => x[0] === 'proyectos_taller' && x[1]?.p_solo_activos === false))
-    chk('ofrece los proyectos de ESE cliente, externos y no cancelados', /id="ad-asentar-proyecto"/.test(h) && /value="p1"/.test(h) && !/value="p2"/.test(h) && !/value="p3"/.test(h) && !/value="p4"/.test(h))
+    chk('ofrece los proyectos de ESE cliente, externos y no cancelados', /id="ad-asentar-proyecto"/.test(h) && /value="p1"/.test(h) && !/value="p2"/.test(h) && !/value="p3"/.test(h) && !/value="p4"/.test(h) && !/value="p6"/.test(h))
+    chk('se compara por cliente_id, no por nombre', /proyectosDelCliente[\s\S]{0,300}String\(p\.cliente_id\) === String\(cl\.id\)/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'modulos/administracion.html'), 'utf8')))
     chk('es opcional: "Ninguno en particular" primero', /<option value="">Ninguno en particular<\/option>/.test(h))
     chk('el nombre del proyecto va escapado', !/<b data-xss="proyecto">/.test(h) && /&lt;b data-xss=&quot;proyecto&quot;&gt;/.test(h))
     S.estado.cobranzas.asentando.proyectoId = 'p1'

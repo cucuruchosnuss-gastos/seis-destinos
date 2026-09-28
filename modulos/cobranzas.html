@@ -1906,7 +1906,11 @@
     // Los parámetros, POR NOMBRE, a partir de los filtros del listado. Pura,
     // para poder ejecutarla en la suite. p_estado lleva el valor de la BASE
     // (registrada / procesada / anulada), nunca el nombre de pantalla.
-    function parametrosResumen(f, hoy) {
+    // Con una unidad elegida en la barra, p_unidad (resumen_cobranzas lo
+    // recibe desde el 28/09/2026, leído con pg_get_function_arguments: las
+    // cobranzas sin unidad cuentan en cualquiera, igual que el listado). Con
+    // Todas la clave NO va: la función la tiene en DEFAULT null.
+    function parametrosResumen(f, hoy, unidad = null) {
       const desde = esFechaIso(f.desde) ? f.desde : null
       const hasta = esFechaIso(f.hasta) ? f.hasta : null
       const base = {
@@ -1919,6 +1923,7 @@
         p_estado: f.estado || null,
         p_repartidor: f.repartidor || null,
       }
+      if (unidad && UUID_COB.test(String(unidad))) base.p_unidad = unidad
       const conFecha = !!(desde || hasta)
       const inicioMes = `${String(hoy).slice(0, 7)}-01`
       return {
@@ -1932,11 +1937,8 @@
 
     async function cargarResumen() {
       const turno = ++turnoResumen
-      const p = parametrosResumen(estado.filtros, hoyArgentina())
-      // resumen_cobranzas() no recibe unidad (verificado el 28/09/2026): con
-      // una unidad elegida el TOTAL es de todas y lo dice. "Por controlar" sí
-      // coincide: las por controlar se ven en cualquier unidad.
-      const meta = { etiqueta: p.etiqueta, estadoFiltro: p.estadoFiltro, desdeMes: p.desdeMes, todasLasUnidades: !!estado.unidadElegida }
+      const p = parametrosResumen(estado.filtros, hoyArgentina(), estado.unidadElegida)
+      const meta = { etiqueta: p.etiqueta, estadoFiltro: p.estadoFiltro, desdeMes: p.desdeMes }
       // Mientras carga NO queda el número viejo: sería la cifra de otros
       // filtros al lado de un listado que ya cambió.
       estado.resumen = { ...meta, cargando: true }
@@ -2011,8 +2013,7 @@
       const cuantas = `${cantidad} ${cantidad === 1 ? 'cobranza' : 'cobranzas'}${cantidad === 1 ? cuales.replace(/s$/, '') : cuales}`
       const periodo = r.desdeMes ? ` del ${formatearFechaCob(r.desdeMes).slice(0, 5)} a hoy` : ''
       const sinAnuladas = r.estadoFiltro ? '' : ', sin las anuladas'
-      const deTodas = r.todasLasUnidades ? ' · de todas las unidades' : ''
-      return htmlPendientes + cifra(etiqueta, formatearImporte(total), `${cuantas}${periodo}${sinAnuladas}${deTodas}`)
+      return htmlPendientes + cifra(etiqueta, formatearImporte(total), `${cuantas}${periodo}${sinAnuladas}`)
     }
 
     // ESCRITORIO: si los filtros dejan afuera la cobranza abierta en el panel,

@@ -31,7 +31,7 @@ correrMutacionesProduccion({
     { nombre: 'el aviso no dice que no se descuentan las bolsas', de: "así que no se va a descontar la caja ni las bolsas.", a: "así que no se va a descontar la caja." },
     // ── Lo que viaja ───────────────────────────────────────────────────
     { nombre: 'sin empaque viaja el embolsado de la pantalla', de: "p_embolsado: sinEmpaque ? null : embolsadoEfectivo(a, cat),", a: "p_embolsado: embolsadoEfectivo(a, cat)," },
-    { nombre: 'sin empaque se va por la rama de siempre', de: "      const sinEmpaque = !!cat?.empaqueError", a: "      const sinEmpaque = false" },
+    { nombre: 'sin empaque se va por la rama de siempre', de: "      const sinEmpaque = !!cat?.empaqueError\n      return {\n        p_turno_id", a: "      const sinEmpaque = false\n      return {\n        p_turno_id" },
     { nombre: 'sin empaque se frena la carga', de: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }", a: "      if (!a.cajaElegida || estado.catalogo?.empaqueError) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }" },
     { nombre: 'sin empaque se pierde el cono', de: "p_marca_id: a.marcaId ?? null, p_cajas: a.cajas,", a: "p_marca_id: null, p_cajas: a.cajas," },
     { nombre: 'la chapa al lado de las cajas dice lo de siempre', de: "<span>Sin caja · no se pudo leer el empaque</span>", a: "<span>Sin caja</span>" },
@@ -44,7 +44,7 @@ correrMutacionesProduccion({
     { nombre: 'con doble bolsa dice también las bolsas', de: "(it.embolsado === 'ninguno' ? ' ni las bolsas' : '')", a: "' ni las bolsas'" },
     { nombre: 'sin bolsa no dice las bolsas', de: "(it.embolsado === 'ninguno' ? ' ni las bolsas' : '')", a: "''" },
     { nombre: 'la planilla no pinta en bordó', de: "+ (sinCaja ? ' pr-producido--sin-caja' : '')", a: '' },
-    { nombre: 'la planilla no lo dice', de: "${sinCaja ? `<div class=\"pr-producido__detalle pr-sin-caja\">${esc(textoSinCaja(it))}</div>` : ''}", a: '' },
+    { nombre: 'la planilla no lo dice', de: "${sinCaja ? `<span class=\"pr-sin-caja pr-sin-caja--chip\" title=\"${esc(textoSinCaja(it))}\">sin empaque</span> ` : ''}", a: '' },
     { nombre: 'el historial no pinta en bordó', de: "${sinCaja ? ' pr-of-sin-caja' : ''}", a: '' },
     { nombre: 'el historial no lo dice', de: "        (sinCaja ? `<strong class=\"pr-sin-caja\">${esc(textoSinCaja(p))}</strong>` : '') + corr +", a: "        corr +" },
     { nombre: 'sin los nombres de las cajas la planilla se cae', de: "          console.error('nombres de las cajas:', err)\n", a: "          throw err\n" },

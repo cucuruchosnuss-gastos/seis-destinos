@@ -129,7 +129,7 @@ const SEGURAS_PRODUCCION = [
   ['tipo', 'HTML ya escapado: htmlCabeceraReceta() lo arma arriba con esc(b.tipo), o vacío'],
   // Terminar la tablet, parte 3: el <select> del lote se fue (y con él htmlOpcionesLote y sus "opciones").
   ['nota', 'HTML constante del código (el "sin ingreso cargado" del lote), o vacío'],
-  ['queda', 'HTML ya escapado: htmlTarjetaLote() lo arma arriba con esc(textoCantidad()), o vacío'],
+  ['queda', 'HTML ya escapado: htmlFilaLote() lo arma arriba con esc(textoCantidad()), o vacío'],
   ['i', 'el índice numérico de la opción de lote (forEach), no un dato de la base'],
   // Terminar la tablet, parte 4: las paradas
   ['acc', 'HTML armado por htmlAccionesParada(), que escapa el id de la parada adentro, o vacío'],
@@ -170,6 +170,17 @@ const SEGURAS_PRODUCCION = [
   ['htmlCeldaQueda(e)', 'HTML armado por htmlCeldaQueda(), que escapa la cantidad adentro, o vacío'],
   ['cambioReceta', 'HTML constante ("agregado") o la diferencia en gramos escapada con esc(), o vacío: htmlIngredientesHist()'],
   ["filasIngHist.join('')", 'renglones que arma htmlIngredientesHist() con cada dato escapado con esc()'],
+  // La tablet real (28/09/2026): el reloj, las etiquetas de operarios y la ventana de lotes
+  ["htmlReloj('pr-banda-modo__reloj')", 'HTML armado por htmlReloj(), que escapa la fecha y la hora con esc(); la clase es constante'],
+  ["htmlReloj('pr-lat__reloj')", 'HTML armado por htmlReloj(), que escapa la fecha y la hora con esc(); la clase es constante'],
+  ['n', 'número: cuántos operarios tiene la fila (f.operarios.length)'],
+  ['htmlTagsOperarios(f, i, operarios, form)', 'HTML armado por htmlTagsOperarios(), que escapa el id y la nota y pasa el nombre por htmlResaltado()'],
+  ['htmlResaltado(p.nombre, q)', 'HTML armado por htmlResaltado(), que escapa los tres pedazos del nombre por separado'],
+  ['f.i', 'número: el índice de la opción de lote (e.ops)'],
+  ['lote', "HTML ya escapado: htmlFilaLote() lo arma arriba con 'sin lote' o esc(o.lote)"],
+  ['fecha', 'HTML ya escapado: htmlFilaLote() lo arma arriba con esc(textoFechaLote()), o vacío'],
+  ["filas.map(f => htmlFilaLote(f, f.i === elegido, f.i === viejoI)).join('')", 'renglones que arma htmlFilaLote(), con la marca, el lote, lo que queda y la fecha escapados'],
+  ['manualI', 'número: el índice de la opción "escribir el lote a mano" (e.ops)'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [

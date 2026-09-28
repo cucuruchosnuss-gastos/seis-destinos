@@ -80,10 +80,11 @@ correrMutaciones({
     { nombre: 'sin la clave p_proyecto_id', de: ", p_proyecto_id: (esClienteDelTaller(a.cliente) && a.proyectoId) ? a.proyectoId : null }", a: ' }' },
     { nombre: 'busca proyectos para cualquier cliente', de: "      return !!cl && normalizar(cl.empresa) === 'taller'", a: '      return !!cl' },
     { nombre: 'ofrece los cancelados', de: "p.destino === 'externo' && p.estado !== 'cancelado' && ", a: "p.destino === 'externo' && " },
-    { nombre: 'ofrece los de otro cliente', de: " && normalizar(p.cliente) === normalizar(cl.nombre))", a: ')' },
+    { nombre: 'ofrece los de otro cliente', de: " && p.cliente_id != null && String(p.cliente_id) === String(cl.id))", a: ')' },
     { nombre: 'no busca los proyectos', de: '      if (esClienteDelTaller(cl) && (a.proyectos === undefined)) cargarProyectosAsentar(a)\n', a: '' },
     { nombre: 'sin taller:ver no lo dice', de: "      if (a.proyectos === null) return '<div class=\"ad-texto-suave\">Con tu usuario no se ven los proyectos del Taller: se asienta sin proyecto.</div>'\n", a: '' },
     { nombre: 'el nombre del proyecto sin escape', de: "${esc(p.nombre + (ETIQUETA_ESTADO_PROYECTO[p.estado] ? ' (' + ETIQUETA_ESTADO_PROYECTO[p.estado] + ')' : ''))}", a: "${p.nombre}" },
+    { nombre: 'los proyectos vuelven a compararse por nombre', de: 'p.cliente_id != null && String(p.cliente_id) === String(cl.id)', a: 'normalizar(p.cliente) === normalizar(cl.nombre)' },
     { nombre: 'pide solo los activos', de: "supabase.rpc('proyectos_taller', { p_solo_activos: false })", a: "supabase.rpc('proyectos_taller', { p_solo_activos: true })" },
   ],
 })

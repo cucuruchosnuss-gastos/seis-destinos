@@ -220,9 +220,12 @@ esperas.push((async () => {
   chk('las unidades del total salen de la fila de la base, no del catálogo de hoy',
     A.totalesProducido([{ cajas: 2, unidades: 999, anulado: false }]).unidades === 999)
 
-  // Corregir un renglón DURANTE el turno.
+  // Corregir un renglón DURANTE el turno. (28/09/2026) Con el catálogo
+  // leído, abre los mismos PASOS de la carga (ver test-produccion-tablet.js);
+  // el panel de solo las cajas queda para cuando el catálogo no se pudo leer.
   const C = armar()
   await C.abrirPlanilla('t1')
+  C.estado.catalogo = null
   C.abrirCorregir('it-1', 'corregir')
   chk('corregir: se abre con el sublote y sus cajas',
     /7023-1/.test(C.__doc.getElementById('pr-corregir-titulo').textContent) &&
@@ -298,8 +301,11 @@ esperas.push((async () => {
   // Paso 1: los de chocolate SEPARADOS y abajo.
   const p1 = html(S, 'pr-agregar-panel')
   chk('paso 1: cada producto es un botón', /data-ag-producto="p-mini"/.test(p1) && /data-ag-producto="p-choco"/.test(p1))
-  chk('… los de chocolate van abajo, con su línea', p1.indexOf('Cucuruchón Mini<') < p1.indexOf('pr-ag__corte') &&
-    p1.indexOf('pr-ag__corte') < p1.indexOf('Chocolate</button>'), p1)
+  chk('… los de chocolate van abajo, con su línea', p1.indexOf('data-ag-producto="p-mini"') < p1.indexOf('pr-ag__corte') &&
+    p1.indexOf('pr-ag__corte') < p1.indexOf('data-ag-producto="p-choco"'), p1)
+  chk('… la familia chica arriba y el tamaño grande', /data-ag-producto="p-mini"><span class="pr-ag__familia">Cucuruchón<\/span><span class="pr-ag__tamano">Mini<\/span>/.test(p1), p1)
+  chk('… y la etiqueta ENTERA del de chocolate en marrón', /class="pr-ag__opcion pr-ag__producto pr-ag__opcion--choco" data-ag-producto="p-choco"/.test(p1) &&
+    !/pr-ag__opcion--choco" data-ag-producto="p-mini"/.test(p1), p1)
   chk('… y la palabra "Chocolate" separa las dos grillas', /pr-ag__corte-texto">Chocolate</.test(p1))
   chk('el tipo de masa es lo que decide, no el nombre',
     S.esProductoChocolate({ tipo_masa: 'Chocolate' }) && S.esProductoChocolate({ tipo_masa: 'chocolate' }) &&
@@ -333,10 +339,13 @@ esperas.push((async () => {
 
   S.elegirPresentacionAgregar('pr-mini-600')
   chk('con cono, el paso siguiente es el cono', S.estado.agregar.paso === 'cono')
-  chk('… y el cono y las cajas comparten pantalla', S.__doc.getElementById('pr-agregar-cono').hidden === false &&
-    S.__doc.getElementById('pr-agregar-cajas-panel').hidden === false &&
+  // (28/09/2026) Tres columnas: la barra, los pasos y las opciones del paso
+  // actual. El cono y las cajas ya NO comparten: el cono ocupa la columna.
+  chk('… y el cono ocupa la columna de las opciones, solo', S.__doc.getElementById('pr-agregar-cono').hidden === false &&
+    S.__doc.getElementById('pr-agregar-cajas-panel').hidden === true &&
     S.__doc.getElementById('pr-agregar-panel').hidden === true)
-  chk('… con la grilla de tres columnas', S.__doc.getElementById('pr-ag-grilla').className === 'pr-ag pr-ag--cono-cajas')
+  chk('… la grilla es siempre la misma (pasos + opciones)', S.__doc.getElementById('pr-ag-grilla').className === 'pr-ag')
+  chk('… y la lista de conos scrollea en su recuadro', /id="pr-agregar-marcas" data-scroll-propio/.test(FUENTE))
 
   const conos = html(S, 'pr-agregar-marcas')
   chk('conos: "Común" primero, y es una opción de verdad', conos.indexOf('data-marca=""') === conos.indexOf('data-marca'))
@@ -366,7 +375,8 @@ esperas.push((async () => {
 
   S.elegirCono('mk-caserato')
   chk('elegir el cono lleva a las cajas', S.estado.agregar.paso === 'cajas' && S.estado.agregar.marcaId === 'mk-caserato')
-  chk('… y el cono sigue a la vista para cambiarlo', S.__doc.getElementById('pr-agregar-cono').hidden === false)
+  chk('… y ahí las cajas ocupan la columna (el cono se cambia tocando su paso)',
+    S.__doc.getElementById('pr-agregar-cono').hidden === true && S.__doc.getElementById('pr-agregar-cajas-panel').hidden === false)
   pasos = S.pasosAgregar(S.estado.agregar, cat())
   chk('los pasos hechos se pueden tocar para volver', /data-paso-ag="producto"/.test(S.htmlPasosAgregar(pasos)))
   chk('… mostrando lo elegido', pasos[0].valor === 'Cucuruchón Mini' && pasos[3].valor === 'CASERATO')
@@ -783,7 +793,9 @@ esperas.push((async () => {
   chequearMarcas(chk, 'pasos de agregar',
     X.htmlPasosAgregar(X.pasosAgregar({ paso: 'cajas', productoId: marca('prodId'), conCono: true, presentacionId: marca('presId'), marcaId: marca('marcaId'), marcaElegida: true, cajas: 1 }, catMalo)),
     ['producto', 'presentacion', 'cono'])
-  chequearMarcas(chk, 'paso del producto', X.htmlPasoProducto(catMalo), ['prodId', 'producto'])
+  // (28/09/2026) El nombre del producto se parte en familia (chica) y tamaño
+  // (grande): las dos mitades van escapadas, y juntas dicen el nombre.
+  chequearMarcas(chk, 'paso del producto', X.htmlPasoProducto(catMalo).replace(/<\/span><span class="pr-ag__tamano">/g, ' '), ['prodId', 'producto'])
   chequearMarcas(chk, 'paso de la presentación',
     X.htmlPasoPresentacion({ productoId: marca('prodId'), conCono: true }, catMalo), ['presId', 'presentacion', 'empaque'])
   chequearMarcas(chk, 'lista de conos',

@@ -8,9 +8,10 @@ const { correrMutacionesProduccion } = require('./mutar-produccion')
 correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-lotes.js'),
   escape: 'esc',
-  funciones: ['htmlTarjetaLote', 'htmlPanelLote', 'htmlCeldaLote'],
+  funciones: ['htmlFilaLote', 'htmlPanelLote', 'htmlCeldaLote'],
   equivalentes: [
     { expr: 'esc(textoCantidad(o.stock))', motivo: 'textoCantidad() de un número finito solo produce dígitos, la coma y "kg"/"g": sin esc() sale idéntico' },
+    { expr: 'esc(textoFechaLote(f.desde))', motivo: 'textoFechaLote() solo produce "dd/mm/aaaa" (dígitos y barras) o vacío: sin esc() sale idéntico' },
     { expr: 'esc(fecha)', motivo: 'textoFechaLote() solo produce "dd/mm/aaaa" (dígitos y barras) o vacío: sin esc() sale idéntico' },
   ],
   manuales: [
@@ -31,10 +32,15 @@ correrMutacionesProduccion({
     { nombre: 'el panel no ofrece "Se terminó"', de: "      const hayElegido = !e.terminado && !e.falta && !!e.l && !e.l.sinLote", a: '      const hayElegido = false' },
     { nombre: 'el panel ofrece "Se terminó" también terminado', de: "      const hayElegido = !e.terminado && !e.falta && !!e.l && !e.l.sinLote", a: '      const hayElegido = true' },
     // a) El panel.
-    { nombre: '"Otro lote" mezclado con las tarjetas', de: '        if (o.manual) {\n          otros.push(', a: '        if (false) {\n          otros.push(' },
-    { nombre: 'la tarjeta sin cuánto queda', de: "      const queda = o.stock != null && Number.isFinite(o.stock)", a: '      const queda = false' },
-    { nombre: 'la tarjeta sin la marca', de: "      const marca = ins ? (ins.marca || ins.nombre || '') : ''", a: "      const marca = ''" },
-    { nombre: 'la tarjeta elegida no se marca', de: '      const elegido = e.terminado ? -1 : indiceLote(e.ops, e.l)\n      const tarjetas', a: '      const elegido = -1\n      const tarjetas' },
+    // (28/09/2026) La ventana de lotes: una lista, el más viejo primero, filtros por marca.
+    { nombre: 'el lote a mano entra en la lista', de: '        if (o.manual) return\n', a: '' },
+    { nombre: 'la lista no se ordena por fecha', de: '        if (a.desde && b.desde && a.desde !== b.desde) return a.desde < b.desde ? -1 : 1\n', a: '' },
+    { nombre: 'el filtro por marca no filtra', de: '      const filas = filtro ? todas.filter(f => f.marca === filtro) : todas', a: '      const filas = todas' },
+    { nombre: 'el más viejo no se destaca', de: "(viejo ? '<span class=\"pr-lp__fila-primero\">Usar primero</span>' : '')", a: "''" },
+    { nombre: 'quedan sale del catálogo y no de stock_para_masa', de: '(quedaDelLote(o.insumo_id, o.lote) ?? (Number.isFinite(o.stock) ? o.stock : null))', a: '(Number.isFinite(o.stock) ? o.stock : null)' },
+    { nombre: 'el renglón sin cuánto queda', de: "      const queda = f.queda != null ? ` · quedan ${esc(textoCantidad(f.queda))}` : ''", a: "      const queda = ''" },
+    { nombre: 'el renglón sin la marca', de: '<strong>${esc(f.marca)}</strong> · ${lote}', a: '${lote}' },
+    { nombre: 'la tarjeta elegida no se marca', de: '      const elegido = e.terminado ? -1 : indiceLote(e.ops, e.l)\n      const todas', a: '      const elegido = -1\n      const todas' },
     { nombre: 'elegir una tarjeta no cierra', de: "      elegirOpcionLote(pl.ingredienteId, String(indice))\n      cerrarPanelLote(o.manual ? 'manual' : 'renglon')", a: '      elegirOpcionLote(pl.ingredienteId, String(indice))' },
     { nombre: 'elegir una tarjeta no elige', de: "      elegirOpcionLote(pl.ingredienteId, String(indice))\n      cerrarPanelLote(", a: "      cerrarPanelLote(" },
     { nombre: 'Escape no cierra', de: "      if (ev.key === 'Escape') { ev.preventDefault(); cerrarPanelLote(); return }\n", a: '' },
@@ -42,14 +48,14 @@ correrMutacionesProduccion({
     { nombre: 'el foco no vuelve al renglón', de: '`[data-lote="${pl.ingredienteId}"]`', a: "'body'" },
     { nombre: 'el renglón no abre el panel', de: "const b = ev.target.closest('[data-lote]'); if (b) abrirPanelLote(b.dataset.lote)", a: "const b = ev.target.closest('[data-lote]'); void b" },
     { nombre: 'sin mensaje cuando no hay lotes', de: "'<p class=\"pr-lp__vacio\">No hay lotes con stock cargado de este insumo.</p>'", a: "''" },
-    { nombre: 'la etiqueta vuelve a "El lote no está en la lista"', de: "`Otro lote de ${quien}` : 'Otro lote de este insumo',", a: "`Otro lote de ${quien}` : 'El lote no está en la lista'," },
     { nombre: 'tarjetas pegadas', de: '    .pr-lp__tarjetas { display: flex; flex-direction: column; gap: 0.625rem;', a: '    .pr-lp__tarjetas { display: flex; flex-direction: column; gap: 0;' },
     { nombre: 'tarjetas chicas', de: '      min-height: 88px; display: flex; align-items: center; gap: 1rem;', a: '      min-height: 40px; display: flex; align-items: center; gap: 1rem;' },
     { nombre: 'sin scroll interno', de: 'gap: 0.625rem; overflow-y: auto; min-height: 0;', a: 'gap: 0.625rem; min-height: 0;' },
     // La fecha (desde la planta con dos modos sale de stock_para_masa, sin stock:ver).
     { nombre: 'la fecha vuelve a pedir stock:ver', de: "      estado.lotesDesde = null\n      try {\n        const { data, error } = await supabase.rpc('stock_para_masa'", a: "      estado.lotesDesde = null\n      if (puedeVerStockEn(estado.unidadId) !== true) return\n      try {\n        const { data, error } = await supabase.rpc('stock_para_masa'" },
     { nombre: 'la fecha se guarda con la clave equivocada', de: "m.set(`${ins.insumo_id}|${l.lote}`, l.desde)", a: "m.set(`${l.lote}`, l.desde)" },
-    { nombre: 'la fecha no se muestra', de: "        (fecha ? `<span class=\"pr-lp__fecha\">desde ${esc(fecha)}</span>` : '') +", a: '' },
+    { nombre: 'la fecha no se muestra', de: "      const fecha = f.desde ? `<span class=\"pr-lp__fila-fecha\">desde ${esc(textoFechaLote(f.desde))}</span>` : ''", a: "      const fecha = ''" },
+    { nombre: 'el link del lote a mano se fue', de: "otros: manualI >= 0 ? `<button type=\"button\" class=\"pr-link pr-lp__manual\" data-lote-op=\"${manualI}\">El lote no está en la lista: escribirlo</button>` : '',", a: "otros: ''," },
     { nombre: 'las fechas no se leen', de: '      await leerStockMasa()\n', a: '' },
     { nombre: 'la lectura del stock que falla rompe la masa', de: "        console.error('stock para la masa:', err)\n        estado.stockMasa = null", a: '        throw err' },
     { nombre: 'la lectura del stock que falla no avisa', de: '        estado.stockMasaError = true\n', a: '' },

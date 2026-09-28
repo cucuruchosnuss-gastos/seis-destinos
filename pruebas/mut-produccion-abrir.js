@@ -91,7 +91,12 @@ correrMutacionesProduccion({
     { nombre: 'el resaltado se corre con los acentos', de: '        for (const c of textoPlano(ch)) { plano += c; de.push(k) }\n        k += ch.length', a: '        plano += ch.toLowerCase(); de.push(k)\n        k += ch.length' },
     { nombre: 'se ofrece a quien ya está en la fila', de: '        .filter(p => !puestos.has(p.id))\n', a: '' },
     { nombre: 'el que está en otra máquina no se apaga', de: '          return { id: p.id, nombre: p.nombre, nota: d, apagado: !!d }', a: '          return { id: p.id, nombre: p.nombre, nota: d, apagado: false }' },
-    { nombre: 'el que está en otra máquina no dice en cuál', de: '            return otra ? `en ${otra.nombre}` : \'\'\n          }\n          buscador', a: '            return otra ? \' \' : \'\'\n          }\n          buscador' },
+    // (28/09/2026) Las etiquetas de operarios: htmlTagsOperarios().
+    { nombre: 'el que está en otra máquina no dice en cuál', de: '        return otra ? `en ${otra.nombre}` : \'\'\n      }\n      const q = f.busqueda', a: '        return otra ? \' \' : \'\'\n      }\n      const q = f.busqueda' },
+    { nombre: 'el que está en otra máquina se puede elegir', de: "aria-pressed=\"${en ? 'true' : 'false'}\"${otra ? ' disabled' : ''}>", a: "aria-pressed=\"${en ? 'true' : 'false'}\">" },
+    { nombre: 'el filtro esconde a un elegido', de: '(p => vistos.has(p.id) || f.operarios.includes(p.id))', a: '(p => vistos.has(p.id))' },
+    { nombre: 'tocar una etiqueta no la elige', de: "? quitarOperarioFila(i, tag.dataset.opId) : agregarOperarioFila(i, tag.dataset.opId)", a: "? quitarOperarioFila(i, tag.dataset.opId) : null" },
+    { nombre: 'agregar le da el foco al buscador', de: '      // Sin foco en el buscador: el teclado de Android taparía las etiquetas.\n      f.busqueda = \'\'\n      pintarAbrir()\n', a: '      f.busqueda = \'\'\n      pintarAbrir()\n      document.querySelector(`[data-buscar-op="${i}"]`)?.focus()\n' },
     { nombre: 'el buscador no filtra', de: '      return personasFiltradas(personas ?? [], texto)', a: '      return (personas ?? [])' },
     { nombre: 'agregar el mismo operario dos veces', de: '      if (!f || !id || f.operarios.includes(id)) return', a: '      if (!f || !id) return' },
     { nombre: 'al tipear se repinta la fila entera (se pierde el foco)', de: "      const cont = document.querySelector(`[data-res-op=\"${i}\"]`)\n      if (!cont) return", a: '      const cont = null\n      pintarAbrir()\n      if (!cont) return' },

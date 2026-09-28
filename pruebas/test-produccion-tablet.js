@@ -184,7 +184,7 @@ esperas.push((async () => {
   await R.conectarTiempoReal()
   chk('3. con un turno nuevo, se rearma y se quita el viejo', R.__canales.length === antes + 1 && R.__canales[0].quitado === true)
   chk('3. al volver del bloqueo se rearma el canal', /async function alReanudar\(\) \{[\s\S]{0,1500}?claveCanalVivo = ''\s+conectarTiempoReal\(\)\s+\}\n\n    \/\/ ═══/.test(FUENTE))
-  chk('3. init conecta el tiempo real', /siguientePaso\(\)\s+registrarPantalla\(\)\s+conectarTiempoReal\(\)/.test(FUENTE))
+  chk('3. init conecta el tiempo real', /siguientePaso\(\)\s+iniciarReloj\(\)\s+registrarPantalla\(\)\s+conectarTiempoReal\(\)/.test(FUENTE))
 })())
 
 // ── 4. El evento 'pantalla' ──────────────────────────────────────────────

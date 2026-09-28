@@ -32,6 +32,17 @@ const BLOQUEA = [
   ['python - <<EOF que escribe', "python - <<'EOF'\nopen('a.html','w').write(s)\nEOF"],
   ['node <<EOF que escribe', "cd x && node <<EOF\nrequire('fs').writeFileSync('a', 'b')\nEOF"],
   ['python3 -<<EOF que escribe', "python3 -<<\"FIN\"\nfrom pathlib import Path; Path('a').write_text('b')\nFIN"],
+  // sed y perl que editan (28/09/2026)
+  ['sed -i', "sed -i 's/a/b/' modulos/produccion.html"],
+  ['sed -i combinado (-Ei)', "sed -Ei 's/(a)/b/g' x.js"],
+  ['sed -i.bak', "sed -i.bak 's|a|b|' x.js"],
+  ['sed --in-place', "sed --in-place 's/a/b/' x.js"],
+  ['sed -i después de un cd', "cd /c/x && sed -i \"s/escape/\\//\" a.html"],
+  ['sed con -n y -i', "sed -n -i 's/a/b/p' x"],
+  ['sed con reemplazo a un archivo', "sed 's/a/b/g' x.html > y.html"],
+  ['sed con reemplazo que agrega a un archivo', "sed -e 's|a|b|' x.html >> y.html"],
+  ['perl -pi -e', "perl -pi -e 's/a/b/' x.html"],
+  ['sed.exe -i', "sed.exe -i 's/a/b/' x"],
 ]
 const DEJA = [
   ['node -e de solo lectura', `node -e "console.log(require('fs').readFileSync('a','utf8').length)"`],
@@ -42,6 +53,16 @@ const DEJA = [
   ['sin comando', ''],
   ['un heredoc de python que solo lee', "python - <<'EOF'\nprint(open('a','rb').read().count(bytes([13])))\nEOF"],
   ['un cat con heredoc (no es un intérprete)', "cat <<EOF > /dev/null\nwriteFileSync\nEOF"],
+  ['sed de solo lectura', "sed -n 1,40p modulos/produccion.html"],
+  ['sed de solo lectura con una expresión', "sed -n '/function x/,/^    }/p' a.html | head"],
+  ['sed con reemplazo que solo muestra', "sed 's/a/b/' x.html | head"],
+  ['sed con reemplazo a /dev/null', "sed 's/a/b/' x.html > /dev/null"],
+  ['grep con -i (no es sed)', "grep -in 'hola' x.html"],
+  ['un archivo que se llama sed-i.txt', "cat sed-i.txt"],
+  ['git log (no es sed)', 'git log --oneline -1'],
+  ['un commit cuyo mensaje dice "sed -i"', 'git commit -m "el hook frena sed -i, perl -pi y sed con reemplazo a un archivo"'],
+  ['un echo que nombra sed -i entre comillas simples', "echo 'no usar sed -i' > nota.txt"],
+  ['un sed que solo recorta renglones a un archivo (sin reemplazo)', 'sed -n 1,40p modulos/produccion.html > recorte.txt'],
 ]
 for (const [n, c] of BLOQUEA) {
   const r = bash(c)

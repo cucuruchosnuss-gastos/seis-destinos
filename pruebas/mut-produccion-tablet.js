@@ -46,6 +46,6 @@ correrMutacionesProduccion({
     { nombre: 'la pantalla sin evento', de: "registrarError({ evento: 'pantalla', mensaje: t.mensaje, detalle: t.detalle })", a: "registrarError({ evento: 'error', mensaje: t.mensaje, detalle: t.detalle })" },
     { nombre: 'la pantalla sin DPR', de: "· DPR ${Math.round(dpr * 100) / 100} · ${orientacion}`, detalle", a: "· ${orientacion}`, detalle" },
     { nombre: 'la pantalla no dice si está instalada', de: 'dpr, orientacion, instalada })', a: 'dpr, orientacion })' },
-    { nombre: 'init no registra la pantalla', de: '      siguientePaso()\n      registrarPantalla()\n', a: '      siguientePaso()\n' },
+    { nombre: 'init no registra la pantalla', de: '      iniciarReloj()\n      registrarPantalla()\n', a: '      iniciarReloj()\n' },
   ],
 })

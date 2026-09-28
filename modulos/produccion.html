@@ -1666,8 +1666,9 @@
     }
 
     /* La tablet parada (vertical) o angosta: la barra no entra al costado y
-       pasa arriba, sin quedar fija. */
-    @media (max-width: 1000px) {
+       pasa arriba, sin quedar fija. Apaisada sigue al costado aunque mida
+       1000 px (la tablet real: 1000 × 540 útiles, 28/09/2026). */
+    @media (orientation: portrait), (max-width: 760px) {
       .pr-lateral { position: static; width: auto; border-right: 0; border-bottom: 1px solid var(--pr-borde-control); overflow: visible; }
       body.pr-con-lateral .pr-app { margin-left: auto; padding: 12px 12px calc(2rem + env(safe-area-inset-bottom)); }
       /* Medido en la maqueta a 800×1280: apilada entera, la barra ocupaba 640 px
@@ -1692,6 +1693,533 @@
       .pr-lat__maq-fila { width: auto; flex: 1 1 180px; }
       .pr-lat__maq { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
       .pr-lat__maq-lote { font-size: 1.5rem; }
+    }
+
+    /* ══ LA TABLET REAL (28/09/2026) ═════════════════════════════════════
+       La Samsung Galaxy Tab A11 de Nuss mide 1007 × 604 CSS px (DPR 1,33) e
+       instalada quedan ~1000 × 540 útiles apaisada y ~600 × 940 parada: casi
+       un tercio menos de ALTO que el diseño de 1280 × 800. Todo entra SIN
+       SCROLL a esos dos tamaños (lo mide e2e/8-planta-tamanos.spec.js) y se
+       sigue viendo bien a 1280 × 800. Las listas largas de verdad (conos,
+       personas, lotes) llevan data-scroll-propio y scrollean adentro.
+       Nunca se apila lo que el diseño pone en una fila, nunca se corta una
+       palabra al medio y el lote nunca va en dos renglones. */
+    body { --pr-alto-boton: 44px; font-size: 15px; }
+    #pr-receta, #pr-otro, #pr-lote-panel, #pr-pin { --pr-alto-boton: 48px; }
+    .pr-app { padding-bottom: 0.5rem; }
+    body.pr-con-lateral .pr-app { padding: 10px 12px 8px; }
+    .pr-tarjeta { padding: 0.625rem 0.875rem; margin-bottom: 0.5rem; }
+    .pr-titulo { font-size: 1.125rem; margin-bottom: 0.25rem; }
+    .pr-btn { font-size: 0.9375rem; padding: 0 0.875rem; }
+    .pr-btn--accion { min-height: 44px; font-size: 1rem; }
+    .pr-btn--grande { min-height: 48px; font-size: 1.0625rem; }
+    .pr-aviso { padding: 0.375rem 0.75rem; margin: 0.375rem 0; font-size: 0.9375rem; }
+    .pr-link { font-size: 0.9375rem; min-height: 40px; }
+    /* Las palabras no se cortan: si no entran, se achican o pasan enteras. */
+    .pr-app, .pr-lateral { overflow-wrap: normal; word-break: normal; hyphens: manual; }
+
+    /* El reloj: chico pero legible de lejos, en el espacio que ya existe. */
+    .pr-reloj { font-size: 0.9375rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: 0.01em; }
+    .pr-lat__reloj { display: block; text-align: center; color: var(--pr-texto-secundario); margin: -4px 0 -2px; }
+    .pr-banda-modo__reloj { opacity: 0.9; }
+
+    /* La barra lateral, más angosta y más baja. */
+    .pr-lateral { gap: 4px; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    @media (orientation: landscape) and (min-width: 761px) {
+      .pr-lateral { width: 208px; }
+      body.pr-con-lateral .pr-app { margin-left: 208px; }
+    }
+    .pr-lat__otro { min-height: 48px; padding: 4px 10px; border-radius: 12px; }
+    .pr-lat__otro-nombre { font-size: 1rem; }
+    .pr-lat__otro-nota { font-size: 0.8125rem; }
+    .pr-lat__modo { font-size: 1rem; }
+    .pr-lat__persona { gap: 2px; }
+    .pr-lat__nombre { font-size: 1.0625rem; overflow-wrap: normal; }
+    .pr-lat__puesto { font-size: 0.875rem; }
+    .pr-lat__cambiar { min-height: 38px; margin-top: 2px; font-size: 0.875rem; }
+    .pr-lat__maq { padding: 4px 10px; border-radius: 12px; gap: 0; }
+    .pr-lat__maq--vacia { font-size: 0.875rem; }
+    .pr-lat__maq-nombre { font-size: 0.9375rem; }
+    .pr-lat__maq-lote { font-size: 1.375rem; white-space: nowrap; line-height: 1.05; }
+    .pr-lat__maq-turno { font-size: 0.875rem; }
+    .pr-lat__cuerpo { gap: 6px; }
+    .pr-lat__secciones { gap: 2px; }
+    .pr-lat__item { min-height: 36px; font-size: 0.9375rem; padding: 0 8px 0 10px; }
+    .pr-lat__maq-fila { min-height: 48px; padding: 4px 10px; }
+    .pr-lat__maq-masas { font-size: 1.125rem; }
+    .pr-lat__maq-sub, .pr-lat__titulo, .pr-lat__vacio { font-size: 0.875rem; }
+    .pr-lat__salir { min-height: 40px; }
+    .pr-lat__conexion { padding: 6px 8px; font-size: 0.875rem; }
+
+    /* ¿Quién sos?: la lista ocupa toda la pantalla; el PIN es una ventana. */
+    .pr-quien { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    .pr-quien--maestro { grid-template-columns: minmax(0, 1fr); }
+    .pr-banda-modo { min-height: 52px; padding: 4px 8px 4px 14px; gap: 10px; border-radius: 14px; }
+    .pr-banda-modo .pr-icono { width: 26px; height: 26px; }
+    .pr-banda-modo__nombre { font-size: 1.125rem; }
+    .pr-banda-modo__sub { font-size: 0.9375rem; flex: 1 1 8rem; }
+    .pr-banda-modo__btn { min-height: 44px; }
+    .pr-banda-modo__ir-texto { font-size: 0.9375rem; }
+    .pr-banda-modo__nota { font-size: 0.8125rem; }
+    .pr-quien__col { gap: 0.5rem; }
+    .pr-quien__buscar { min-height: 44px; font-size: 1rem; }
+    .pr-quien__nombres { grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); gap: 0.5rem; }
+    .pr-quien__nombres .pr-opcion { min-height: 52px; font-size: 1.0625rem; padding: 0 0.875rem; }
+    .pr-quien__puesto { font-size: 0.9375rem; }
+    .pr-quien__nota { font-size: 0.875rem; }
+    .pr-pin-fondo { position: fixed; inset: 0; z-index: 60; background: rgba(20, 24, 33, 0.55); }
+    .pr-pin-fondo[hidden] { display: none; }
+    #pr-pin, .pr-asignar__panel {
+      position: fixed; z-index: 61; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: min(400px, calc(100vw - 20px)); max-height: calc(100dvh - 12px); overflow-y: auto; margin: 0;
+      padding: 12px 16px; gap: 8px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); border-radius: 18px;
+      background: var(--color-fondo); box-sizing: border-box;
+    }
+    #pr-pin[hidden], .pr-asignar__panel[hidden] { display: none; }
+    .pr-pin__saludo { font-size: 1.25rem; }
+    .pr-pin__sub { font-size: 0.9375rem; margin-top: 0; }
+    .pr-pin__puntos { gap: 1rem; padding: 0.125rem 0; }
+    .pr-pin__punto { width: 22px; height: 22px; }
+    .pr-pin__mensaje { padding: 0.375rem 0.625rem; font-size: 0.9375rem; }
+    .pr-pin__teclado { gap: 6px; }
+    .pr-tecla { min-height: clamp(48px, 9.5vh, 72px); font-size: 1.625rem; border-radius: 12px; }
+    .pr-tecla--texto, .pr-tecla--accion { font-size: 1rem; }
+    .pr-pin__reloj { font-size: 2.5rem; }
+    .pr-pin__bloqueo { padding: 0.5rem; }
+    #pr-pin-otra { min-height: 40px; }
+    .pr-asignar__quien { margin: 0; font-size: 1.125rem; font-weight: 800; text-align: center; }
+    .pr-asignar__botones { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 8px; }
+    .pr-asignar__panel .pr-aviso { margin: 0; font-size: 0.875rem; }
+    .pr-asignar__paso { font-size: 1rem; }
+    /* Apaisada y baja: la ventana del PIN en dos columnas (los datos a la
+       izquierda, el teclado entero a la derecha), así entra en 540 de alto. */
+    @media (orientation: landscape) and (max-height: 700px) {
+      #pr-pin {
+        width: min(620px, calc(100vw - 20px)); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        grid-auto-flow: row dense; column-gap: 16px; align-items: start;
+      }
+      #pr-pin > .pr-pin__teclado { grid-column: 2; grid-row: 1 / span 6; margin: 0; }
+      #pr-pin > :not(.pr-pin__teclado) { grid-column: 1; }
+      .pr-asignar__panel { width: min(620px, calc(100vw - 20px)); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 16px; }
+      .pr-asignar__panel > .pr-pin__teclado { grid-column: 2; grid-row: 1 / span 6; }
+      .pr-asignar__panel > :not(.pr-pin__teclado) { grid-column: 1; }
+    }
+
+    /* Las paradas en el bordó de la app: la etiqueta, la tarjeta y "Paró ahora". */
+    .pr-planilla-cab #pr-btn-parada { background: var(--bordo); border-color: var(--bordo); color: #fff; }
+    .pr-bloque--paradas { background: var(--bordo-suave); border-color: var(--bordo); }
+    .pr-bloque--paradas .pr-bloque__titulo { color: var(--bordo-oscuro); }
+    .pr-renglon--parada .pr-renglon__dato { color: var(--bordo-oscuro); }
+    .pr-parada-activa { min-height: 48px; padding: 0.375rem 0.75rem 0.375rem 1rem; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .pr-parada-activa__sello { font-size: 0.9375rem; padding: 0.125rem 0.5rem; }
+    .pr-parada-activa__que { font-size: 1.125rem; }
+    .pr-parada-activa__hace { font-size: 0.9375rem; }
+
+    /* ── El tablero: tres columnas y tarjetas bajas. ── */
+    #pr-produccion .pr-titulo { font-size: 1.25rem; }
+    #pr-produccion > .pr-tarjeta { padding: 0.5rem 0.75rem; }
+    .pr-tablero { gap: 0.5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pr-tablero .pr-maquina { min-height: 0; padding: 0.375rem 0.625rem; gap: 0; }
+    .pr-tablero .pr-maquina__nombre { font-size: 1.0625rem; }
+    .pr-tablero .pr-maquina__estado, .pr-maquina__cuenta { font-size: 0.875rem; }
+    .pr-maquina__rotulo { font-size: 0.75rem; }
+    .pr-maquina__lote { font-size: 1.875rem; line-height: 1.05; white-space: nowrap; }
+    .pr-maquina--ayer .pr-maquina__lote { font-size: 1.5rem; }
+    .pr-maquina__libre { font-size: 1.125rem; }
+    .pr-maquina__abrir { min-height: 38px; margin-top: 0.25rem; }
+    .pr-maquina__chip { font-size: 0.8125rem; padding: 0.125rem 0.5rem; }
+    .pr-masero-adentro { padding: 0.25rem 0.625rem; margin: 0.25rem 0; font-size: 0.875rem; }
+    @media (orientation: portrait) { .pr-tablero { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    /* ── Abrir turno: fecha y turno angostos a la izquierda, las máquinas a
+       la derecha; los operarios como etiquetas chicas. ── */
+    .pr-abrir { grid-template-columns: 200px minmax(0, 1fr); gap: 0.5rem; }
+    .pr-abrir > .pr-tarjeta { padding: 0.5rem 0.625rem; }
+    .pr-abrir__panel { gap: 0.5rem; }
+    .pr-fecha__paso { width: 40px; min-height: 44px; font-size: 1.25rem; border-radius: 10px; }
+    .pr-fecha__valor { min-height: 44px; border-radius: 10px; }
+    .pr-fecha__dia { font-size: 0.875rem; }
+    .pr-fecha { gap: 0.25rem; }
+    .pr-fecha__valor { padding: 0 2px; }
+    #pr-abrir .pr-titulo { font-size: 1.125rem; }
+    .pr-fecha__nota { font-size: 0.8125rem; }
+    .pr-segmento--columna .pr-segmento__opcion { min-height: 40px; font-size: 1rem; }
+    .pr-abrir__resumen { font-size: 0.875rem; }
+    .pr-campo__rotulo { font-size: 0.875rem; }
+    .pr-subtitulo { font-size: 1.0625rem; margin: 0; }
+    #pr-abrir .pr-texto-suave { font-size: 0.875rem; margin: 0; }
+    .pr-abrir-fila { padding: 0.25rem 0; }
+    .pr-abrir-fila__cab { gap: 0.5rem; }
+    .pr-casilla { width: 40px; height: 40px; border-radius: 10px; }
+    .pr-casilla::after { font-size: 1.375rem; }
+    .pr-abrir-fila__nombre { width: 110px; font-size: 1rem; overflow-wrap: normal; }
+    .pr-abrir-fila__nota { font-size: 0.875rem; flex: 1 1 6rem; }
+    .pr-op-buscar { flex: 0 1 11rem; min-height: 36px; font-size: 0.9375rem; padding: 0 0.625rem; }
+    .pr-op-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 0.25rem 0 0.125rem 48px; }
+    .pr-op-tag {
+      min-height: 32px; padding: 0 0.625rem; border-radius: 999px; font: inherit; font-size: 0.875rem; font-weight: 700;
+      border: 2px solid var(--pr-borde-control); background: var(--color-fondo); color: var(--color-texto);
+      cursor: pointer; touch-action: manipulation; white-space: nowrap;
+    }
+    .pr-op-tag[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #fff; }
+    .pr-op-tag:disabled { background: var(--pr-panel-gris); color: var(--color-texto-suave); border-style: dashed; cursor: not-allowed; font-weight: 600; }
+    .pr-op-tag__nota { font-weight: 600; }
+    @media (orientation: portrait) {
+      .pr-abrir { grid-template-columns: minmax(0, 1fr); }
+      .pr-abrir__panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+      .pr-abrir__panel > .pr-titulo { grid-column: 1 / -1; }
+      .pr-abrir__pie { grid-column: 1 / -1; }
+      .pr-segmento--columna { flex-direction: row; }
+      .pr-segmento--columna .pr-segmento__opcion { flex: 1 1 0; }
+    }
+
+    /* ── La planilla: todo de un vistazo. ── */
+    .pr-planilla-cab { gap: 0.625rem; padding: 0.25rem 0.5rem 0.25rem 0.75rem; margin-bottom: 0.375rem; flex-wrap: nowrap; }
+    .pr-planilla-cab__rotulo { font-size: 0.8125rem; }
+    .pr-planilla-cab__numero { font-size: 2rem; white-space: nowrap; }
+    .pr-planilla-cab__lote { gap: 0.375rem; }
+    .pr-planilla-cab__que { font-size: 0.875rem; line-height: 1.2; overflow-wrap: normal; }
+    .pr-planilla-cab__botones { gap: 0.375rem; flex-wrap: nowrap; }
+    .pr-planilla-cab .pr-planilla-cab__cerrar { min-width: 0; padding: 0 0.875rem; font-size: 1rem; }
+    .pr-planilla-cab__sep { margin: 0.25rem 0.125rem; }
+    .pr-atras { padding: 0 0.625rem; }
+    .pr-planilla { grid-template-columns: 250px minmax(0, 1fr); gap: 0.5rem; }
+    .pr-col { gap: 0.375rem; }
+    .pr-planilla .pr-tarjeta { padding: 0.375rem 0.625rem; }
+    .pr-bloque__titulo { font-size: 0.9375rem; }
+    .pr-bloque__nota { font-size: 0.8125rem; }
+    .pr-bloque__cab--boton .pr-btn { min-height: 34px; font-size: 0.875rem; padding: 0 0.5rem; }
+    .pr-planilla .pr-chip-op { min-height: 32px; font-size: 0.875rem; padding-left: 0.5rem; border-radius: 999px; }
+    .pr-planilla .pr-chip-op__x { width: 32px; min-height: 32px; font-size: 1.125rem; }
+    .pr-planilla .pr-chip-op--fuera { padding-right: 0.5rem; }
+    .pr-planilla .pr-ops { gap: 4px; }
+    .pr-planilla .pr-ops > .pr-btn { min-height: 32px; font-size: 0.875rem; padding: 0 0.625rem; }
+    .pr-masas__cuenta { margin: 0.125rem 0; gap: 0.375rem; }
+    .pr-masas__numero { font-size: 1.5rem; }
+    .pr-masas__ultima { font-size: 0.875rem; }
+    .pr-renglon { padding: 0.125rem 0; font-size: 0.875rem; gap: 0.25rem; }
+    .pr-renglon .pr-btn, .pr-renglon .pr-btn-icono { min-height: 30px; min-width: 0; font-size: 0.8125rem; padding: 0 0.5rem; }
+    .pr-producido-col .pr-bloque__cab { margin-bottom: 0; }
+    .pr-producido-col .pr-ag__titulo { font-size: 1.0625rem; }
+    .pr-producido-col .pr-bloque__cab .pr-btn { min-height: 38px; }
+    .pr-producido {
+      grid-template-columns: auto minmax(0, 1fr) auto auto auto; gap: 0.5rem; padding: 0.1875rem 0; min-height: 38px;
+    }
+    .pr-producido__sublote { font-size: 1rem; white-space: nowrap; }
+    .pr-producido__desc { line-height: 1.2; overflow-wrap: normal; }
+    .pr-producido__linea { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9375rem; }
+    .pr-producido__nombre { font-size: 0.9375rem; }
+    .pr-producido__detalle { font-size: 0.875rem; }
+    .pr-producido__cajas { font-size: 0.9375rem; white-space: nowrap; }
+    .pr-producido__unidades { font-size: 0.875rem; white-space: nowrap; }
+    .pr-producido__botones { gap: 4px; }
+    .pr-producido .pr-btn-icono { min-height: 32px; min-width: 0; padding: 0 0.5rem; font-size: 0.8125rem; }
+    .pr-total { padding-top: 0.25rem; }
+    .pr-total__rotulo { font-size: 0.9375rem; }
+    .pr-total__valor { font-size: 1.125rem; }
+    .pr-corregir { margin-top: 0.375rem; padding: 0.5rem; }
+    @media (orientation: portrait) {
+      .pr-planilla { grid-template-columns: minmax(0, 1fr); }
+      .pr-planilla-cab { flex-wrap: wrap; }
+    }
+
+    /* ── Lo producido en TRES columnas: la barra, los pasos, las opciones. ── */
+    .pr-ag, .pr-ag--cono-cajas { grid-template-columns: 190px minmax(0, 1fr); gap: 0.5rem; align-items: start; }
+    .pr-ag > .pr-tarjeta { gap: 0.375rem; padding: 0.5rem 0.625rem; }
+    .pr-ag__lote { font-size: 0.8125rem; }
+    .pr-ag .pr-titulo { font-size: 1rem; margin: 0; }
+    .pr-paso-bloque { min-height: 40px; padding: 0.1875rem 0.625rem; border-radius: 10px; gap: 0; overflow-wrap: normal; }
+    .pr-paso-bloque__n { font-size: 0.75rem; }
+    .pr-paso-bloque__valor { font-size: 0.9375rem; }
+    .pr-paso-bloque--falta { font-size: 0.9375rem; }
+    #pr-agregar-pasos { gap: 0.25rem; }
+    .pr-ag__cancelar { min-height: 38px; }
+    .pr-ag__titulo { font-size: 1.125rem; }
+    .pr-ag__subtitulo { font-size: 0.9375rem; margin: 0; }
+    .pr-ag__grilla { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.375rem; }
+    .pr-ag__opcion { min-height: 52px; padding: 0.25rem 0.625rem; font-size: 1rem; border-radius: 12px; overflow-wrap: normal; }
+    .pr-ag__opcion-nota { font-size: 0.8125rem; }
+    .pr-ag__producto { min-height: 56px; }
+    .pr-ag__familia { font-size: 0.75rem; font-weight: 700; color: var(--pr-texto-secundario); line-height: 1.1; }
+    .pr-ag__tamano { font-size: 1.1875rem; font-weight: 900; line-height: 1.1; }
+    /* Chocolate: la etiqueta ENTERA en marrón, con letra blanca. */
+    .pr-ag__opcion--choco { background: var(--marron-oscuro); border-color: var(--marron-oscuro); color: #fff; }
+    .pr-ag__opcion--choco .pr-ag__familia { color: rgba(255, 255, 255, 0.85); }
+    .pr-ag__corte { margin: 0.25rem 0 0; gap: 0.5rem; }
+    .pr-ag__corte-texto { font-size: 0.9375rem; }
+    /* Con cono: de colores; sin cono: blanco. Se distinguen de un vistazo. */
+    .pr-ag__opcion--con-cono {
+      background: linear-gradient(120deg, #F9D56E 0%, #F29E4C 30%, #E86A7A 55%, #8E7CC3 80%, #4FB3BF 100%);
+      border-color: #C2410C; color: #2A1300;
+    }
+    .pr-ag__opcion--con-cono .pr-ag__opcion-nota { color: #2A1300; font-weight: 700; }
+    .pr-ag__opcion--sin-cono { background: #fff; }
+    .pr-ag__grilla:has(.pr-ag__opcion--con-cono) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pr-ag__grilla:has(.pr-ag__opcion--con-cono) .pr-ag__opcion { min-height: 96px; font-size: 1.375rem; }
+    .pr-ag__buscar { min-height: 40px; font-size: 1rem; }
+    #pr-agregar-cono { max-height: calc(100dvh - 20px); overflow: hidden; }
+    .pr-ag__conos { flex: 1 1 auto; min-height: 0; overflow-y: auto; gap: 0.25rem;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); align-content: start; }
+    .pr-cono { min-height: 40px; font-size: 0.9375rem; padding: 0.25rem 0.625rem; border-radius: 10px; overflow-wrap: normal; gap: 0.25rem; }
+    .pr-cono__nota, .pr-cono__pendiente { font-size: 0.75rem; }
+    .pr-ag__nuevo { min-height: 38px; }
+    .pr-ag__nota { font-size: 0.8125rem; margin: 0; }
+    .pr-ag__alta .pr-input { min-height: 40px; font-size: 1rem; }
+    .pr-contador { gap: 0.375rem; }
+    .pr-contador__paso { width: 56px; min-height: 56px; font-size: 1.75rem; border-radius: 12px; }
+    .pr-contador .pr-input { min-height: 56px; font-size: 2rem; }
+    .pr-calculo { padding: 0.25rem 0.5rem; border-radius: 10px; }
+    .pr-calculo__cuenta { font-size: 0.8125rem; }
+    .pr-calculo__total { font-size: 1.375rem; }
+    .pr-ag__confirmar { min-height: 48px; }
+    .pr-ag__caja { min-height: 40px; font-size: 0.9375rem; padding: 0.25rem 0.625rem; border-radius: 10px; overflow-wrap: normal; }
+    .pr-ag__grilla--emb { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
+    .pr-ag__grilla--emb .pr-ag__opcion { min-height: 38px; font-size: 0.9375rem; }
+    .pr-ag__consumo { font-size: 0.8125rem; overflow-wrap: normal; }
+    .pr-ag__empaque { gap: 0.25rem; }
+    .pr-ag__empaque .pr-aviso { font-size: 0.8125rem; }
+    .pr-ag__seguir { min-height: 44px; }
+    .pr-ag__motivo .pr-input { min-height: 40px; }
+    @media (orientation: portrait) {
+      .pr-ag, .pr-ag--cono-cajas { grid-template-columns: 150px minmax(0, 1fr); }
+      .pr-ag__grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #pr-agregar-cono { max-height: calc(100dvh - 240px); }
+    }
+
+    /* ── Cerrar planilla ── */
+    .pr-cierre { grid-template-columns: minmax(0, 1fr) 300px; gap: 0.5rem; }
+    .pr-cierre > .pr-tarjeta { gap: 0.375rem; padding: 0.5rem 0.75rem; }
+    .pr-rota { min-height: 44px; font-size: 1rem; padding: 0.25rem 0.625rem; gap: 0.5rem; border-radius: 12px; overflow-wrap: normal; }
+    .pr-rota__casilla { width: 30px; height: 30px; font-size: 1.125rem; border-radius: 8px; }
+    .pr-cierre__campos { gap: 0.5rem; }
+    .pr-contador--chico .pr-contador__paso { width: 44px; min-height: 44px; font-size: 1.5rem; }
+    .pr-contador--chico .pr-input { min-height: 44px; font-size: 1.375rem; }
+    .pr-cierre__obs .pr-textarea { min-height: 52px; font-size: 1rem; }
+    .pr-campo__nota { font-size: 0.8125rem; margin: 0.125rem 0 0; }
+    .pr-resumen__fila, .pr-resumen__sub { font-size: 0.9375rem; padding: 0.125rem 0; }
+    .pr-falta { padding: 0.5rem; gap: 0.25rem; }
+    .pr-falta__titulo { font-size: 0.9375rem; }
+    .pr-falta__item, .pr-falta__listo { font-size: 0.875rem; }
+    .pr-error-pegado { padding: 0.375rem 0.625rem; font-size: 0.9375rem; }
+    @media (orientation: portrait) { .pr-cierre { grid-template-columns: minmax(0, 1fr); } }
+
+    /* ── Sala de masa: las máquinas, y la receta en UNA fila por ingrediente. ── */
+    .pr-sala { gap: 0.5rem; }
+    .pr-sala__maquinas { gap: 0.5rem; }
+    .pr-sala-card { min-height: 0; padding: 0.625rem 0.875rem 0; gap: 0.25rem; border-radius: 16px; }
+    .pr-sala-card .pr-sala-maq__nombre { font-size: 1.375rem; }
+    .pr-sala-card .pr-sala-maq__cuenta { font-size: 2.25rem; }
+    .pr-sala-card__masas { font-size: 1rem; }
+    .pr-sala-card .pr-sala-maq__ultima, .pr-sala-card .pr-sala-maq__parada { font-size: 0.9375rem; }
+    .pr-sala-card__turno { font-size: 0.875rem; }
+    .pr-sala-card__nueva { margin: 0.25rem -0.875rem 0; min-height: 48px; font-size: 1.125rem; }
+    .pr-sala__explica { font-size: 0.9375rem; }
+    .pr-receta-grid { grid-template-columns: minmax(0, 1fr) 200px; gap: 0.5rem; }
+    #pr-receta .pr-tarjeta { padding: 0.375rem 0.625rem; margin-bottom: 0.375rem; }
+    .pr-receta__opciones { gap: 0.25rem; }
+    .pr-receta__fila { gap: 0.5rem; flex-wrap: nowrap; }
+    .pr-receta__nro { font-size: 1.125rem; white-space: nowrap; }
+    .pr-receta__tamano .pr-segmento__opcion { min-height: 36px; min-width: 72px; font-size: 0.9375rem; }
+    .pr-sala__rotulo { font-size: 0.8125rem; }
+    /* Original, Anterior y Modificar: TRES BOTONES CHICOS EN UNA FILA. */
+    .pr-receta__comos { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.375rem; }
+    .pr-receta__comos .pr-como { min-height: 36px; padding: 0.125rem 0.625rem; border-radius: 10px; justify-content: center; text-align: center; }
+    .pr-receta__comos .pr-como__titulo { font-size: 0.9375rem; }
+    .pr-receta__comos .pr-como__detalle { display: none; }
+    .pr-receta__comos .pr-como__detalle:has(.pr-como__choco) { display: block; font-size: 0.75rem; }
+    .pr-receta__comos .pr-como__flecha { display: none; }
+    .pr-receta__cab { min-height: 0; gap: 0.5rem; }
+    .pr-receta__maq { font-size: 1.125rem; }
+    .pr-receta__sub, .pr-chip-rec, .pr-chip-choco { font-size: 0.875rem; }
+    .pr-chip-rec, .pr-chip-choco { padding: 0.0625rem 0.5rem; }
+    .pr-receta__motivo-campo .pr-input { min-height: 38px; }
+    .pr-rec, .pr-rec--cab {
+      grid-template-columns: minmax(96px, 1fr) 150px minmax(150px, 1.35fr) 56px; gap: 0.375rem; min-height: 36px;
+    }
+    .pr-rec--cab { font-size: 0.75rem; padding: 0; }
+    .pr-rec__ing { line-height: 1.1; }
+    .pr-rec__nombre { font-size: 0.9375rem; overflow-wrap: normal; }
+    .pr-rec__marca, .pr-rec__nota, .pr-rec__dif, .pr-rec__agregado { font-size: 0.75rem; overflow-wrap: normal; }
+    .pr-rec__cant { gap: 0.25rem; }
+    .pr-rec__paso { width: 36px; min-height: 32px; font-size: 1.25rem; border-radius: 8px; }
+    .pr-rec__num { width: 66px; min-height: 32px; font-size: 0.9375rem; border-radius: 8px; padding: 0 0.25rem; }
+    .pr-rec__valor { font-size: 1rem; }
+    .pr-rec__lote-celda { flex-direction: row; align-items: center; gap: 0.25rem; }
+    .pr-rec__lote { min-height: 32px; font-size: 0.875rem; padding: 0.125rem 0.5rem; border-radius: 8px; flex: 1 1 auto; overflow-wrap: normal; }
+    .pr-rec__lote-nota { font-size: 0.6875rem; }
+    .pr-rec__queda { font-size: 0.75rem; white-space: nowrap; flex: 0 0 auto; }
+    .pr-rec__otro, .pr-rec__quitar { min-height: 32px; padding: 0 0.375rem; font-size: 0.8125rem; border-radius: 8px; }
+    .pr-rec__manual { min-height: 32px; font-size: 0.875rem; margin-top: 0.125rem; }
+    .pr-receta__pie .pr-btn, #pr-receta .pr-btn--accion { min-height: 44px; }
+    .pr-rm { gap: 0.25rem; }
+    .pr-rm__titulo { font-size: 0.9375rem; }
+    .pr-rm__fila { padding: 0.125rem 0; gap: 2px 6px; grid-template-columns: 26px minmax(0, 1fr) auto; }
+    .pr-rm__nro { font-size: 0.9375rem; }
+    .pr-rm__hora, .pr-rm__chips { font-size: 0.75rem; }
+    .pr-rm__anular-btn { min-height: 38px; font-size: 0.875rem; }
+    @media (orientation: portrait) {
+      .pr-receta-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 1100px) {
+      /* Ya no se apila la receta: sigue en una fila por ingrediente. */
+      .pr-rec { grid-template-columns: minmax(96px, 1fr) 150px minmax(150px, 1.35fr) 56px; }
+      .pr-rec__ing, .pr-rec__accion, .pr-rec__cant, .pr-rec__lote-celda { grid-column: auto; }
+      .pr-rec--cab { display: grid; }
+    }
+
+    /* ── La ventana de lotes: casi toda la pantalla, un renglón chico por lote. ── */
+    .pr-lp { padding: 0.375rem; }
+    .pr-lp__caja { width: min(760px, 100%); max-height: calc(100dvh - 12px); height: calc(100dvh - 12px); gap: 0.375rem; padding: 0.625rem 0.875rem; }
+    .pr-lp__titulo { font-size: 1.125rem; }
+    .pr-lp__cab .pr-btn { min-height: 38px; }
+    .pr-lp__tarjetas { flex: 1 1 auto; gap: 0.375rem; padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+    .pr-lp__filtros { display: flex; flex-wrap: wrap; gap: 4px; flex: 0 0 auto; }
+    .pr-lp__filtro {
+      min-height: 30px; padding: 0 0.625rem; border-radius: 999px; font: inherit; font-size: 0.8125rem; font-weight: 700;
+      border: 2px solid var(--pr-borde-control); background: var(--color-fondo); color: var(--color-texto); cursor: pointer;
+    }
+    .pr-lp__filtro[aria-pressed="true"] { background: var(--pr-prod-activo); border-color: var(--pr-prod-activo); color: #fff; }
+    .pr-lp__filas { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .pr-lp__fila { min-height: 44px; padding: 0.25rem 0.75rem; gap: 0.5rem; border-radius: 10px; border-width: 2px; flex-wrap: nowrap; }
+    .pr-lp__fila-texto { flex: 1 1 auto; min-width: 0; font-size: 1rem; }
+    .pr-lp__fila-fecha { font-size: 0.8125rem; color: var(--pr-texto-secundario); white-space: nowrap; }
+    .pr-lp__fila--viejo { border-color: var(--verde); background: var(--verde-suave); }
+    .pr-lp__fila-primero { font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em;
+      color: #fff; background: var(--verde-oscuro); border-radius: 999px; padding: 0.0625rem 0.5rem; white-space: nowrap; }
+    .pr-lp__manual { align-self: flex-start; font-size: 0.875rem; min-height: 34px; padding: 0 0.25rem; }
+    .pr-lp__pie .pr-btn { min-height: 38px; }
+    .pr-lp__vacio { margin: 0; font-size: 0.9375rem; }
+
+    /* ── El historial de una máquina ── */
+    .pr-hm-grid { grid-template-columns: minmax(0, 1fr) 300px; gap: 0.5rem; }
+    .pr-hm { gap: 0.375rem; }
+    .pr-hm__titulo { font-size: 1.125rem; }
+    .pr-hm__lista { gap: 4px; }
+    .pr-hm__masa { min-height: 40px; padding: 0.25rem 0.625rem; border-radius: 10px; }
+    .pr-hm__masa-l1 { font-size: 0.9375rem; }
+    .pr-hm__masa-l2, .pr-hm__nota, .pr-hm__nota-cant, .pr-hm__det-sub, .pr-hm__det-chips, .pr-hm__motivo { font-size: 0.8125rem; }
+    .pr-hm__nueva { min-height: 44px; font-size: 1rem; }
+    .pr-hm__detalle { gap: 0.25rem; }
+    .pr-hm__det-titulo { font-size: 1.0625rem; }
+    .pr-hm__ing { padding: 0.125rem 0; font-size: 0.875rem; }
+    .pr-hm__ing-marca, .pr-hm__ing-lote { font-size: 0.75rem; }
+    .pr-hm__anular-btn { min-height: 40px; }
+    @media (orientation: portrait) { .pr-hm-grid { grid-template-columns: minmax(0, 1fr); } }
+
+    /* ── La planilla de un vistazo (28/09/2026): operarios, masas y paradas
+       en UNA fila arriba, y lo producido a todo el ancho abajo, un renglón
+       por sublote en una línea. La lista scrollea adentro si es larga. ── */
+    .pr-planilla { grid-template-columns: minmax(0, 1fr); gap: 0.375rem; }
+    .pr-planilla > .pr-col { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 0.375rem; align-items: stretch; }
+    .pr-planilla > .pr-col > .pr-tarjeta { min-height: 0; max-height: 158px; overflow: hidden; }
+    .pr-planilla .pr-masa-tam { font-size: 0.875rem; letter-spacing: 0; }
+    .pr-producido-lista { max-height: calc(100dvh - 300px); overflow-y: auto; }
+    .pr-sin-caja--chip { font-size: 0.75rem; font-weight: 800; border: 1px solid var(--bordo); border-radius: 999px; padding: 0 0.375rem; white-space: nowrap; }
+    .pr-producido__desc { display: flex; align-items: center; gap: 0.25rem; min-width: 0; }
+    .pr-producido__linea { flex: 1 1 auto; min-width: 0; }
+    .pr-producido__linea .pr-producido__detalle::before { content: '· '; }
+    @media (orientation: portrait) {
+      .pr-planilla > .pr-col { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .pr-planilla > .pr-col > .pr-bloque--paradas { grid-column: 1 / -1; }
+      .pr-producido-lista { max-height: calc(100dvh - 520px); }
+    }
+
+    /* ── La receta de un vistazo (28/09/2026): la máquina, la masa y el
+       tamaño en UNA fila; Original / Anterior / Modificar en la segunda; y
+       un renglón bajo por ingrediente, con la marca al lado del nombre. ── */
+    .pr-receta-grid { grid-template-columns: minmax(0, 1fr) 170px; }
+    .pr-receta { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 0.5rem; row-gap: 0.25rem; align-items: center; }
+    .pr-receta__cab, .pr-receta__opciones { display: contents; }
+    .pr-receta__que { grid-column: 1; grid-row: 1; flex-wrap: nowrap; overflow: hidden; }
+    .pr-receta__opciones > .pr-receta__fila { grid-column: 2; grid-row: 1; }
+    #pr-receta-cambiar { grid-column: 3; grid-row: 1; min-height: 36px; }
+    .pr-receta__opciones > .pr-receta__comos { grid-column: 1 / -1; }
+    .pr-receta > .pr-receta__motivo, .pr-receta > .pr-aviso, .pr-receta > .pr-receta__tabla { grid-column: 1 / -1; }
+    .pr-receta__fila .pr-sala__rotulo { display: none; }
+    .pr-receta__sub { white-space: nowrap; }
+    .pr-rec, .pr-rec--cab { grid-template-columns: minmax(92px, 1fr) 138px minmax(170px, 1.4fr) 50px; min-height: 34px; }
+    .pr-rec__ing { flex-direction: row; align-items: baseline; gap: 0.25rem; flex-wrap: wrap; row-gap: 0; }
+    .pr-rec__marca { white-space: nowrap; }
+    .pr-rec__lote { flex: 0 1 auto; white-space: nowrap; }
+    .pr-rec__lote span { white-space: nowrap; }
+    .pr-receta__pie { margin-top: 0.25rem; }
+    .pr-receta__pie .pr-btn { min-height: 42px; width: 100%; }
+    .pr-receta__pie > * { box-sizing: border-box; max-width: 100%; align-self: stretch; }
+    .pr-rm { max-height: calc(100dvh - 24px); overflow-y: auto; }
+    .pr-rm .pr-masa-tam { font-size: 0.875rem; letter-spacing: 0; }
+    .pr-planilla .pr-ops { flex-direction: row; flex-wrap: wrap; }
+    .pr-planilla .pr-chip-op { max-width: none; }
+    .pr-bloque__cab--boton { flex-wrap: nowrap; align-items: center; }
+    .pr-planilla-cab .pr-btn { min-height: 40px; }
+    @media (orientation: portrait) {
+      .pr-rm { max-height: none; }
+    }
+
+    /* ── Retoques que valen en las dos orientaciones ── */
+    /* El motivo de Modificar y "+ Agregar ingrediente" en UNA fila baja. */
+    .pr-receta__motivo { flex-wrap: nowrap; align-items: center; gap: 0.375rem; }
+    .pr-receta__motivo-campo { display: flex; flex-direction: row; align-items: center; gap: 0.375rem; flex: 1 1 auto; min-width: 0; }
+    .pr-receta__motivo-campo .pr-campo__rotulo { white-space: nowrap; }
+    .pr-receta__motivo-campo .pr-input { flex: 1 1 auto; min-width: 0; min-height: 36px; }
+    .pr-receta__mas { min-height: 36px; white-space: nowrap; font-size: 0.875rem; }
+    .pr-receta__falta { font-size: 0.8125rem; padding: 0.25rem 0.5rem; min-width: 0; min-height: 0; flex: 0 0 auto; }
+    .pr-planilla > .pr-col > .pr-tarjeta { max-height: 140px; }
+    /* Apaisada: "Registrar masa" va a la columna de la derecha, abajo de las
+       masas del turno, así la receta entera queda a la vista. */
+    @media (orientation: landscape) and (min-width: 761px) {
+      .pr-receta-grid { grid-template-rows: minmax(0, 1fr) auto; align-items: stretch; }
+      .pr-receta-centro { display: contents; }
+      .pr-receta-grid > .pr-receta-centro > .pr-tarjeta { grid-column: 1; grid-row: 1 / span 2; margin-bottom: 0; }
+      .pr-receta-grid > .pr-rm { grid-column: 2; grid-row: 1; max-height: none; min-height: 0; margin-bottom: 0; }
+      .pr-receta-grid > .pr-receta-centro > .pr-receta__pie { grid-column: 2; grid-row: 2; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+      .pr-receta-grid > .pr-receta-centro > #pr-otro { grid-column: 1; grid-row: 1; z-index: 2; align-self: end; }
+    }
+    .pr-rec { padding: 1px 0; }
+    .pr-receta__maq { display: none; }          /* "Máquina 1 · Cambiar" ya lo dice */
+    .pr-receta__que .pr-chip-rec { display: none; } /* Simple / Doble ya está apretado al lado */
+    .pr-producido__botones { grid-column: auto; }
+    .pr-planilla-cab .pr-btn { white-space: nowrap; }
+    .pr-lat__maq { column-gap: 8px; }
+
+    /* ══ LA TABLET PARADA (600 × 940 útiles) ═════════════════════════════
+       Va AL FINAL a propósito: pisa por orden a los bloques de arriba. La
+       barra va arriba en TRES renglones bajos: el reloj, el otro modo y
+       Salir; dónde estás y quién; y las secciones (o las máquinas). */
+    @media (orientation: portrait), (max-width: 760px) {
+      .pr-lateral {
+        grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 8px; padding: 6px 10px;
+        grid-template-areas: "reloj otro salir" "donde persona persona" "cuerpo cuerpo cuerpo" "conexion conexion conexion";
+      }
+      .pr-lateral > .pr-lat__reloj { grid-area: reloj; margin: 0; align-self: center; }
+      .pr-lateral > .pr-lat__otro { min-height: 42px; }
+      .pr-lateral > .pr-lat__salir { min-height: 42px; padding: 0 1rem; }
+      .pr-lateral > .pr-lat__persona { gap: 2px 8px; }
+      .pr-lat__nombre { font-size: 1rem; }
+      .pr-lat__cambiar { min-height: 34px; }
+      .pr-lat__item { min-height: 34px; }
+      .pr-lat__maq { padding: 2px 10px; }
+      .pr-lat__maq-lote { font-size: 1.25rem; }
+      .pr-lat__maq-fila { min-height: 40px; flex: 1 1 140px; }
+      .pr-lat__titulo { display: none; }
+      body.pr-con-lateral .pr-app { padding: 6px 8px; }
+
+      .pr-receta-grid { grid-template-columns: minmax(0, 1fr); }
+      .pr-rm { max-height: 150px; }
+      .pr-rec, .pr-rec--cab { grid-template-columns: minmax(84px, 1fr) 128px minmax(150px, 1.4fr) 46px; gap: 0.25rem; }
+      .pr-rec__paso { width: 32px; }
+      .pr-rec__num { width: 58px; }
+      .pr-sala__maquinas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.375rem; }
+      .pr-sala-card { padding: 0.5rem 0.75rem 0; }
+      .pr-sala-card .pr-sala-maq__cuenta { font-size: 1.75rem; }
+      .pr-sala-card .pr-sala-maq__nombre { font-size: 1.125rem; }
+      .pr-sala-card__nueva { margin: 0.25rem -0.75rem 0; min-height: 44px; }
+      .pr-cierre { grid-template-columns: minmax(0, 1fr); }
+      .pr-resumen__fila, .pr-resumen__sub { font-size: 0.875rem; padding: 0; }
+      .pr-planilla-cab { flex-wrap: wrap; row-gap: 0.25rem; }
+      .pr-planilla-cab__botones { margin-left: auto; }
+      .pr-producido-lista { max-height: calc(100dvh - 470px); }
+      .pr-cierre > .pr-tarjeta { gap: 0.25rem; }
+      .pr-cierre__obs .pr-textarea { min-height: 40px; }
     }
   </style>
 </head>
@@ -1778,8 +2306,13 @@
         </div>
 
         <!-- El panel del PIN. Los puntos son FORMAS: el número tipeado no entra
-             nunca al DOM, ni a localStorage, ni a sessionStorage. -->
-        <div class="pr-tarjeta pr-pin" id="pr-pin" hidden>
+             nunca al DOM, ni a localStorage, ni a sessionStorage.
+             Desde el 28/09/2026 es una VENTANA en el centro, con el fondo
+             oscurecido: la lista de personas ocupa toda la pantalla y el
+             teclado aparece recién al tocar a alguien. Tocar el fondo o
+             Escape la cierra. -->
+        <div class="pr-pin-fondo" id="pr-pin-fondo" hidden></div>
+        <div class="pr-tarjeta pr-pin" id="pr-pin" hidden role="dialog" aria-modal="true" aria-labelledby="pr-pin-saludo">
           <div class="pr-pin__cab">
             <div class="pr-pin__saludo" id="pr-pin-saludo"></div>
             <div class="pr-pin__sub" id="pr-pin-sub"></div>
@@ -1834,13 +2367,18 @@
             <input type="search" id="pr-asignar-buscar" class="pr-input" placeholder="Buscar por nombre…" autocomplete="off"></label>
           <div class="pr-grilla pr-espacio-arriba" id="pr-asignar-personas"></div>
         </div>
-        <div class="pr-asignar__panel" id="pr-asignar-panel" hidden>
+        <div class="pr-pin-fondo" id="pr-asignar-fondo" hidden></div>
+        <div class="pr-asignar__panel" id="pr-asignar-panel" hidden role="dialog" aria-modal="true" aria-labelledby="pr-asignar-quien">
+          <p class="pr-asignar__quien" id="pr-asignar-quien"></p>
           <p class="pr-aviso" id="pr-asignar-aviso">El PIN nuevo es de un solo uso: la primera vez que entre va a tener que elegir uno propio.</p>
           <p class="pr-asignar__paso" id="pr-asignar-paso">Poné el PIN nuevo</p>
           <div class="pr-pin__puntos" id="pr-asignar-puntos"></div>
           <div class="pr-pin__teclado" id="pr-asignar-teclado"></div>
           <p class="pr-error" id="pr-asignar-error" hidden></p>
-          <button type="button" class="pr-btn pr-btn--grande pr-btn--ancho" id="pr-asignar-confirmar">Guardar el PIN</button>
+          <div class="pr-asignar__botones">
+            <button type="button" class="pr-btn pr-btn--secundario" id="pr-asignar-cancelar">Cancelar</button>
+            <button type="button" class="pr-btn pr-btn--grande" id="pr-asignar-confirmar">Guardar el PIN</button>
+          </div>
         </div>
       </section>
 
@@ -1971,7 +2509,7 @@
               </div>
               <div id="pr-planilla-masas"></div>
             </div>
-            <div class="pr-tarjeta">
+            <div class="pr-tarjeta pr-bloque--paradas">
               <!-- En la fábrica primero se arregla la máquina y se anota
                    después: "Paró ahora" no puede ser la única forma. El botón
                    va en la cabecera del bloque y no abajo a lo ancho: así la
@@ -1990,7 +2528,7 @@
               <span class="pr-ag__titulo">Lo producido</span>
               <button type="button" class="pr-btn pr-btn--accion" id="pr-btn-agregar-producto">+ Agregar producto</button>
             </div>
-            <div id="pr-planilla-producido"></div>
+            <div class="pr-producido-lista" id="pr-planilla-producido" data-scroll-propio></div>
             <div class="pr-total" id="pr-planilla-total"></div>
 
             <div class="pr-corregir" id="pr-corregir" hidden>
@@ -2055,7 +2593,7 @@
         <div class="pr-ag" id="pr-ag-grilla">
           <div class="pr-tarjeta">
             <span class="pr-ag__lote" id="pr-agregar-lote"></span>
-            <h1 class="pr-titulo">Agregar producto</h1>
+            <h1 class="pr-titulo" id="pr-agregar-titulo">Agregar producto</h1>
             <div class="pr-ag__lista" id="pr-agregar-pasos"></div>
             <button type="button" class="pr-btn pr-btn--secundario pr-ag__cancelar" id="pr-agregar-cancelar">Cancelar</button>
           </div>
@@ -2068,7 +2606,7 @@
           <div class="pr-tarjeta" id="pr-agregar-cono" hidden>
             <span class="pr-ag__titulo">¿Qué cono?</span>
             <input type="text" id="pr-agregar-marca-buscar" class="pr-input pr-ag__buscar" placeholder="Buscar un cono…" autocomplete="off" aria-label="Buscar un cono">
-            <div class="pr-ag__lista" id="pr-agregar-marcas"></div>
+            <div class="pr-ag__lista pr-ag__conos" id="pr-agregar-marcas" data-scroll-propio></div>
             <button type="button" class="pr-btn pr-ag__nuevo" id="pr-agregar-cono-nuevo">+ Agregar cono nuevo</button>
             <div class="pr-ag__alta" id="pr-agregar-cono-form" hidden>
               <input type="text" id="pr-agregar-cono-nombre" class="pr-input" maxlength="80" placeholder="Nombre del cono" autocomplete="off" aria-label="Nombre del cono nuevo">
@@ -2092,6 +2630,11 @@
             </div>
             <!-- La caja elegida (un toque la cambia) y lo que va a consumir. -->
             <div class="pr-ag__empaque" id="pr-agregar-empaque"></div>
+            <!-- Al CORREGIR un renglón: por qué (obligatorio, 3 letras). -->
+            <label class="pr-campo pr-ag__motivo" id="pr-agregar-campo-motivo" hidden>
+              <span class="pr-campo__rotulo">¿Por qué lo corregís?</span>
+              <input type="text" id="pr-agregar-motivo" class="pr-input" maxlength="300" autocomplete="off">
+            </label>
             <p class="pr-error" id="pr-agregar-error" hidden></p>
             <button type="button" class="pr-btn pr-btn--accion pr-ag__confirmar" id="pr-agregar-confirmar">Agregar a lo producido</button>
           </div>
@@ -2794,9 +3337,44 @@
         `<span>${n ? esc(pend) : 'lo que cargues se guarda en esta tablet'}</span></div>`
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL RELOJ (28/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Con la app anclada, Android esconde la hora. Va en chico pero legible de
+    // lejos, arriba de la barra lateral y en la banda de "¿Quién sos?", en el
+    // espacio que ya existe (no empuja nada hacia abajo). Se actualiza solo
+    // cada minuto, sin recargar nada: tocarReloj() reescribe los [data-reloj].
+    function textoReloj(fecha = new Date()) {
+      if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return ''
+      const p = new Intl.DateTimeFormat('en-GB', { timeZone: ZONA_AR, day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(fecha)
+      const v = (t) => p.find(x => x.type === t)?.value ?? ''
+      return `${v('day')}/${v('month')}/${v('year')} · ${v('hour') === '24' ? '00' : v('hour')}:${v('minute')}`
+    }
+
+    function htmlReloj(clase) {
+      return `<span class="pr-reloj ${clase}" data-reloj aria-label="Fecha y hora">${esc(textoReloj())}</span>`
+    }
+
+    function tocarReloj(fecha = new Date()) {
+      const t = textoReloj(fecha)
+      for (const el of document.querySelectorAll('[data-reloj]')) if (el.textContent !== t) el.textContent = t
+      return t
+    }
+
+    // Al minuto justo y después cada 60 s. Un solo reloj por página.
+    let relojPlanta = null
+    function iniciarReloj() {
+      if (relojPlanta !== null) return false
+      tocarReloj()
+      const falta = 60000 - (Date.now() % 60000)
+      relojPlanta = setTimeout(() => { tocarReloj(); relojPlanta = setInterval(tocarReloj, 60000) }, falta + 50)
+      return true
+    }
+
     function htmlLateral() {
       const cuerpoLat = estado.modo === 'masa' ? htmlLatSala() : htmlLatMaquina() + htmlLatSecciones()
-      return htmlBotonOtroModo() + htmlLatPersona() + `<div class="pr-lat__cuerpo">${cuerpoLat}</div>` + htmlLatConexion() +
+      return htmlReloj('pr-lat__reloj') + htmlBotonOtroModo() + htmlLatPersona() + `<div class="pr-lat__cuerpo">${cuerpoLat}</div>` + htmlLatConexion() +
         '<button type="button" class="pr-btn pr-btn--secundario pr-lat__salir" id="pr-btn-salir">Salir</button>'
     }
 
@@ -2836,7 +3414,7 @@
     function htmlBandaQuien() {
       if (estado.pin?.modo === 'maestro') {
         return '<div class="pr-banda-modo pr-banda-modo--maestro"><span class="pr-banda-modo__nombre">ACCESO MAESTRO</span>' +
-          '<span class="pr-banda-modo__sub">Solo administración</span>' +
+          '<span class="pr-banda-modo__sub">Solo administración</span>' + htmlReloj('pr-banda-modo__reloj') +
           '<button type="button" class="pr-btn pr-btn--secundario pr-banda-modo__btn" id="pr-quien-volver">Volver</button></div>'
       }
       const modoBanda = estado.modo === 'masa' ? 'masa' : 'produccion'
@@ -2851,7 +3429,7 @@
         accionBanda = '<button type="button" class="pr-btn pr-btn--secundario pr-banda-modo__btn" id="pr-quien-cancelar">Cancelar</button>'
       }
       return `<div class="pr-banda-modo pr-banda-modo--${modoBanda}">${ICONO_MODO[modoBanda]}` +
-        `<span class="pr-banda-modo__nombre">${NOMBRE_MODO[modoBanda]}</span><span class="pr-banda-modo__sub">${subBanda}</span>${accionBanda}</div>`
+        `<span class="pr-banda-modo__nombre">${NOMBRE_MODO[modoBanda]}</span><span class="pr-banda-modo__sub">${subBanda}</span>${htmlReloj('pr-banda-modo__reloj')}${accionBanda}</div>`
     }
 
     function pintarBandaQuien() {
@@ -3606,6 +4184,7 @@
       const panel = document.getElementById('pr-pin')
       const p = estado.pin
       panel.hidden = !p
+      document.getElementById('pr-pin-fondo').hidden = !p
       pintarQuienMaestro()
       // La banda cambia con el panel: el del acceso maestro trae la suya.
       pintarBandaQuien()
@@ -3626,8 +4205,9 @@
       maestros.innerHTML = htmlMaestrosPin(p)
       maestros.hidden = !maestros.innerHTML
       const otra = document.getElementById('pr-pin-otra')
-      otra.textContent = p.modo === 'maestro' ? 'Cancelar' : 'Elegir otra persona'
-      otra.hidden = !(p.modo === 'maestro' || reloj)
+      otra.textContent = p.modo === 'maestro' ? 'Cancelar' : (estado.quienFija ? 'Soy otra persona' : 'Elegir otra persona')
+      // Es una ventana: siempre tiene salida.
+      otra.hidden = false
     }
 
     function teclaPin(t) {
@@ -4124,6 +4704,9 @@
       const persona = (estado.personal ?? []).find(p => p.id === a.personaId) ?? null
       document.getElementById('pr-asignar-lista').hidden = !!persona
       document.getElementById('pr-asignar-panel').hidden = !persona
+      document.getElementById('pr-asignar-fondo').hidden = !persona
+      document.getElementById('pr-asignar-quien').textContent = persona
+        ? `${persona.tiene_pin ? 'Resetear el PIN de' : 'Asignar PIN a'} ${persona.nombre}` : ''
       document.getElementById('pr-asignar-titulo').textContent = persona
         ? `${persona.tiene_pin ? 'Resetear el PIN de' : 'Asignar PIN a'} ${persona.nombre}`
         : 'Asignar PIN'
@@ -4333,6 +4916,14 @@
         const b = ev.target.closest('[data-tecla]'); if (b) teclaPin(b.dataset.tecla)
       })
       document.getElementById('pr-pin-otra').addEventListener('click', cerrarPin)
+      // El fondo oscurecido y Escape cierran la ventana del PIN (menos
+      // mientras se está mandando).
+      document.getElementById('pr-pin-fondo').addEventListener('click', () => { if (!estado.pin?.enviando) cerrarPin() })
+      document.addEventListener('keydown', ev => {
+        if (ev.key !== 'Escape') return
+        if (estado.vista === 'pr-quien' && estado.pin && !estado.pin.enviando) cerrarPin()
+        else if (estado.vista === 'pr-asignar' && estado.asignar?.personaId && !estado.asignar.enviando) volverAsignarPin()
+      })
       document.getElementById('pr-btn-otra-persona').addEventListener('click', soyOtraPersona)
       document.getElementById('pr-btn-cerrar-maestro').addEventListener('click', () => { cerrarMaestro(); mostrarQuien() })
       document.getElementById('pr-btn-dar-acceso').addEventListener('click', abrirDarAcceso)
@@ -4366,6 +4957,8 @@
       })
       document.getElementById('pr-asignar-confirmar').addEventListener('click', confirmarAsignarPin)
       document.getElementById('pr-asignar-volver').addEventListener('click', volverAsignarPin)
+      document.getElementById('pr-asignar-cancelar').addEventListener('click', volverAsignarPin)
+      document.getElementById('pr-asignar-fondo').addEventListener('click', volverAsignarPin)
       conectarProduccion()
       conectarPlanilla()
       conectarSala()
@@ -4802,16 +5395,13 @@
       let derechaHtml = '<span class="pr-abrir-fila__nota">Sin marcar</span>'
       let buscadorHtml = ''
       if (f.elegida) {
-        const chipsHtml = f.operarios.map(id => htmlChipOperario(nombreOperario(operarios, id), i, id)).join('')
-        derechaHtml = `<div class="pr-ops">${chipsHtml}</div>` +
-          (f.buscando ? '' : `<button type="button" class="pr-btn pr-btn--secundario" data-mas-operario="${i}">+ Operario</button>`)
-        if (f.buscando) {
-          const donde = (id) => {
-            const otra = (form?.filas ?? []).find((x, j) => j !== i && x.elegida && !x.bloqueada && x.operarios.includes(id))
-            return otra ? `en ${otra.nombre}` : ''
-          }
-          buscadorHtml = htmlBuscadorOperarios(candidatosOperario(operarios, f.busqueda, f.operarios, donde), f.busqueda, i)
-        }
+        // TODOS los operarios a la vista, como etiquetas chicas que se tocan
+        // para elegir (28/09/2026). El buscador está, pero NO toma el foco
+        // solo: el teclado de Android tapa media pantalla.
+        const n = f.operarios.length
+        derechaHtml = `<span class="pr-abrir-fila__nota">${n ? `${n} ${n === 1 ? 'operario' : 'operarios'}` : 'Elegí los operarios'}</span>` +
+          `<input type="search" class="pr-input pr-op-buscar" data-buscar-op="${i}" value="${esc(f.busqueda ?? '')}" placeholder="Buscar…" autocomplete="off" aria-label="Buscar un operario para ${esc(f.nombre)}">`
+        buscadorHtml = `<div class="pr-op-tags" data-res-op="${i}">${htmlTagsOperarios(f, i, operarios, form)}</div>`
       }
       // La fila marcada NO se tiñe: lo dice la casilla de 56×56 llena y los
       // chips de sus operarios, que es lo que muestra el diseño. Un fondo de
@@ -4819,6 +5409,29 @@
       return `<div class="pr-abrir-fila"><div class="pr-abrir-fila__cab">` +
         `<input type="checkbox" class="pr-casilla" data-abrir-maquina="${i}" aria-label="Abrir ${esc(f.nombre)}"${f.elegida ? ' checked' : ''}>` +
         `<span class="pr-abrir-fila__nombre">${esc(f.nombre)}</span>${derechaHtml}</div>${buscadorHtml}</div>`
+    }
+
+    // Las etiquetas de los operarios de una máquina en Abrir turno: todos, los
+    // elegidos marcados, y los que ya están en OTRA máquina apagados con su
+    // nota. El filtro del buscador achica la lista pero nunca esconde a un
+    // elegido.
+    function htmlTagsOperarios(f, i, operarios, form) {
+      const donde = (id) => {
+        const otra = (form?.filas ?? []).find((x, j) => j !== i && x.elegida && !x.bloqueada && x.operarios.includes(id))
+        return otra ? `en ${otra.nombre}` : ''
+      }
+      const q = f.busqueda ?? ''
+      const vistos = new Set(personasFiltradas(operarios ?? [], q).map(p => p.id))
+      const lista = (operarios ?? []).filter(p => vistos.has(p.id) || f.operarios.includes(p.id))
+      if (!lista.length) {
+        return `<span class="pr-op__nada">${q ? `Nadie coincide con "${esc(q)}".` : (estado.personalError ? 'No se pudo cargar el personal. Revisá la conexión y volvé a abrir esta pantalla.' : 'No hay operarios cargados.')}</span>`
+      }
+      return lista.map(p => {
+        const en = f.operarios.includes(p.id)
+        const otra = en ? '' : donde(p.id)
+        return `<button type="button" class="pr-op-tag" data-toggle-op="${i}" data-op-id="${esc(p.id)}" aria-pressed="${en ? 'true' : 'false'}"${otra ? ' disabled' : ''}>` +
+          `${htmlResaltado(p.nombre, q)}${otra ? ` <span class="pr-op-tag__nota">· ${esc(otra)}</span>` : ''}</button>`
+      }).join('')
     }
 
     // Qué falta para poder abrir. Lista vacía = se puede.
@@ -4929,11 +5542,9 @@
       const f = estado.abrir?.filas[i]
       if (!f || !id || f.operarios.includes(id)) return
       f.operarios.push(id)
-      // El buscador queda ABIERTO y vacío: casi siempre se cargan dos o tres
-      // operarios seguidos, y cerrarlo obligaría a volver a tocar "+ Operario".
+      // Sin foco en el buscador: el teclado de Android taparía las etiquetas.
       f.busqueda = ''
       pintarAbrir()
-      document.querySelector(`[data-buscar-op="${i}"]`)?.focus()
     }
 
     function quitarOperarioFila(i, id) {
@@ -4955,8 +5566,7 @@
         const otra = form.filas.find((x, j) => j !== i && x.elegida && !x.bloqueada && x.operarios.includes(id))
         return otra ? `en ${otra.nombre}` : ''
       }
-      cont.innerHTML = htmlResultadosOperario(
-        candidatosOperario(estado.operarios ?? [], f.busqueda, f.operarios, donde), f.busqueda, i)
+      cont.innerHTML = htmlTagsOperarios(f, i, estado.operarios ?? [], form)
     }
 
     async function confirmarAbrir() {
@@ -5053,6 +5663,13 @@
         if (eleg) return agregarOperarioFila(Number(eleg.dataset.elegirOp), eleg.dataset.opId)
         const quitar = ev.target.closest('[data-quitar-op]')
         if (quitar) return quitarOperarioFila(Number(quitar.dataset.quitarOp), quitar.dataset.opId)
+        const tag = ev.target.closest('[data-toggle-op]')
+        if (tag && !tag.disabled) {
+          const i = Number(tag.dataset.toggleOp)
+          const f = estado.abrir?.filas[i]
+          if (!f) return
+          return f.operarios.includes(tag.dataset.opId) ? quitarOperarioFila(i, tag.dataset.opId) : agregarOperarioFila(i, tag.dataset.opId)
+        }
       })
       for (const id of ['pr-tablero', 'pr-tablero-aviso']) {
         document.getElementById(id).addEventListener('click', ev => {
@@ -5512,9 +6129,12 @@
       const clases = 'pr-producido' + (it.anulado ? ' pr-producido--anulado' : '') + (d ? '' : ' pr-producido--invalido') + (sinCaja ? ' pr-producido--sin-caja' : '')
       const caja = nombreCajaItem(it, [...(insumosCaja ?? []), ...(cat?.insumos ?? [])])
       const partes = d ? partesProducido({ ...d, caja, embolsado: it.embolsado }) : []
+      // UNA línea a lo ancho (28/09/2026): "Cucuruchón Mini · con cono · FABRI
+      // · Caja N°1 · bolsa grande". Si no entra, se corta con … al final y el
+      // texto entero queda en el title. El "· " antes del detalle lo pone el CSS.
       const desc = d
-        ? `<div class="pr-producido__nombre">${esc(d.producto)}</div>` +
-          `<div class="pr-producido__detalle">${esc(partes.join(' · '))}</div>`
+        ? `<span class="pr-producido__linea" title="${esc([d.producto, ...partes].join(' · '))}"><span class="pr-producido__nombre">${esc(d.producto)}</span>` +
+          ` <span class="pr-producido__detalle">${esc(partes.join(' · '))}</span></span>`
         : (cat
           ? '<div class="pr-producido__nombre">Un producto que ya no está en el catálogo</div>' +
             '<div class="pr-producido__detalle">El sublote quedó cargado igual y su stock ya entró.</div>'
@@ -5523,10 +6143,12 @@
       const botones = it.anulado
         ? '<span class="pr-producido__detalle">Anulado</span>'
         : `<button type="button" class="pr-btn-icono" data-corregir="${esc(it.id)}">Corregir</button>` +
-          `<button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${esc(it.id)}">Borrar</button>`
+          // "Anular" y no "Borrar": el renglón no se borra, queda tachado y
+          // su stock vuelve (anular_produccion_item).
+          `<button type="button" class="pr-btn-icono pr-btn-icono--borrar" data-borrar="${esc(it.id)}">Anular</button>`
       return `<div class="${clases}">` +
         `<span class="pr-producido__sublote">${esc(it.sublote)}</span>` +
-        `<div class="pr-producido__desc">${desc}${sinCaja ? `<div class="pr-producido__detalle pr-sin-caja">${esc(textoSinCaja(it))}</div>` : ''}</div>` +
+        `<div class="pr-producido__desc">${sinCaja ? `<span class="pr-sin-caja pr-sin-caja--chip" title="${esc(textoSinCaja(it))}">sin empaque</span> ` : ''}${desc}</div>` +
         `<span class="pr-producido__cajas">${esc(formatearNumeroAr(it.cajas, { decimales: 0 }))} cajas</span>` +
         `<span class="pr-producido__unidades">${esc(formatearNumeroAr(it.unidades, { decimales: 0 }))} u</span>` +
         `<div class="pr-producido__botones">${botones}</div>` +
@@ -5653,6 +6275,7 @@
     function pintarPlanilla() {
       const p = estado.planilla
       if (!p) return
+      pintarLateral()
       document.getElementById('pr-planilla-lote').innerHTML = htmlLotePlanilla(p)
       document.getElementById('pr-planilla-que').innerHTML = htmlQuePlanilla(p)
       document.getElementById('pr-planilla-estado').innerHTML = htmlEstadoPlanilla(p, hoyArgentina())
@@ -6157,16 +6780,69 @@
     function abrirCorregir(itemId, modo) {
       const it = (estado.planilla?.items ?? []).find(x => x.id === itemId)
       if (!it) return
+      // Corregir abre los mismos pasos de la carga, con lo que ya estaba
+      // elegido (28/09/2026): corregir_produccion_item_completo corrige
+      // producto, cono, caja, embolsado y cajas. Anular sigue acá, con motivo.
+      if (modo === 'corregir' && estado.catalogo) return abrirCorregirCompleto(itemId)
       estado.corregir = { id: itemId, modo, guardando: false }
       document.getElementById('pr-corregir-titulo').textContent = modo === 'anular'
-        ? `Borrar el sublote ${it.sublote}` : `Corregir el sublote ${it.sublote}`
+        ? `Anular el sublote ${it.sublote}` : `Corregir el sublote ${it.sublote}`
       document.getElementById('pr-corregir-campo-cajas').hidden = modo === 'anular'
       ponerNumero(document.getElementById('pr-corregir-cajas'), it.cajas)
       document.getElementById('pr-corregir-motivo').value = ''
       document.getElementById('pr-corregir-error').hidden = true
-      document.getElementById('pr-corregir-confirmar').textContent = modo === 'anular' ? 'Borrarlo' : 'Guardar'
+      document.getElementById('pr-corregir-confirmar').textContent = modo === 'anular' ? 'Anularlo' : 'Guardar'
       document.getElementById('pr-corregir').hidden = false
       document.getElementById('pr-corregir-motivo').focus()
+    }
+
+    // Los pasos de la carga, abiertos sobre un renglón ya cargado: lo que tenía
+    // viene elegido, y se arranca en las cajas (donde está el motivo). Tocar
+    // cualquier paso lo cambia.
+    function abrirCorregirCompleto(itemId) {
+      const it = (estado.planilla?.items ?? []).find(x => x.id === itemId)
+      const cat = estado.catalogo
+      if (!it || !cat || it.anulado) return
+      const pr = (cat.presentaciones ?? []).find(x => x.id === it.presentacion_id) ?? null
+      const antes = { presentacion_id: it.presentacion_id, marca_id: it.marca_id ?? null,
+        caja_insumo_id: it.caja_insumo_id ?? null, embolsado: it.embolsado ?? null, cajas: it.cajas }
+      estado.agregar = {
+        paso: pr ? 'cajas' : 'producto', productoId: pr?.producto_id ?? '', conCono: pr ? !!pr.con_cono : null,
+        presentacionId: pr ? it.presentacion_id : '', marcaId: it.marca_id ?? null, marcaElegida: !!pr,
+        busqueda: '', cajas: it.cajas, guardando: false,
+        cajaId: it.caja_insumo_id ?? null, cajaElegida: !!pr, embolsado: it.embolsado ?? null, faltaCaja: false, stock: null,
+        corrige: { id: it.id, sublote: it.sublote, antes }, motivo: '',
+      }
+      estado.corregir = null
+      document.getElementById('pr-corregir').hidden = true
+      document.getElementById('pr-agregar-marca-buscar').value = ''
+      document.getElementById('pr-agregar-cono-form').hidden = true
+      document.getElementById('pr-agregar-error').hidden = true
+      document.getElementById('pr-agregar-motivo').value = ''
+      ponerNumero(document.getElementById('pr-agregar-cajas'), it.cajas)
+      mostrarVista('pr-agregar-prod')
+      pintarAgregar()
+      return cargarStockAgregar(estado.agregar)
+    }
+
+    // SOLO las claves que cambiaron (corregir_produccion_item_completo deja
+    // como estaba lo que no viene). Sin cono, el cono va en null.
+    function datosCorregirCompleto(a, cat = estado.catalogo) {
+      const antes = a.corrige?.antes ?? {}
+      const pr = (cat?.presentaciones ?? []).find(x => x.id === a.presentacionId) ?? null
+      const sinEmpaque = !!cat?.empaqueError
+      const ahora = {
+        presentacion_id: a.presentacionId,
+        marca_id: pr?.con_cono ? (a.marcaId ?? null) : null,
+        cajas: a.cajas,
+      }
+      if (!sinEmpaque) {
+        ahora.caja_insumo_id = a.cajaId ?? null
+        ahora.embolsado = embolsadoEfectivo(a, cat)
+      }
+      const datos = {}
+      for (const [k, v] of Object.entries(ahora)) if ((antes[k] ?? null) !== (v ?? null)) datos[k] = v
+      return datos
     }
 
     function cerrarCorregir() {
@@ -6491,12 +7167,18 @@
             `${esc(ins?.nombre ?? 'Caja')}<span class="pr-ag__opcion-nota">${esc(nota)}</span></button>`
         }).join('') + '</div>'
       }
-      h += htmlEmbolsado(a, cat)
+      if (!cajas.length) {
+        h += htmlEmbolsado(a, cat)
+        return h + htmlAvisoStockEmpaque(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
+      }
+      if (a.faltaCaja) h += '<p class="pr-error">Elegí una caja.</p>'
+      // Lo que consume una caja y el aviso de stock se siguen viendo acá; el
+      // embolsado se elige al lado de las cajas (tocar una caja ya avanza).
       const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
       h += !a.cajaElegida
-        ? (a.faltaCaja ? '<p class="pr-error">Elegí una caja.</p>' : '<p class="pr-ag__consumo">Elegí la caja para ver lo que consume.</p>')
+        ? '<p class="pr-ag__consumo">Elegí la caja para ver lo que consume.</p>'
         : `<p class="pr-ag__consumo">${porCaja.length ? `Por caja: ${esc(textoConsumo(cat, porCaja))}` : 'No descuenta empaque.'}</p>`
-      return h + htmlAvisoStockEmpaque(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
+      return h + htmlAvisoStockEmpaque(a, cat)
     }
 
     // En el panel de las cajas: la caja elegida (un toque vuelve a su paso) y
@@ -6510,7 +7192,8 @@
         return '<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>Sin caja · no se pudo leer el empaque</span><span class="pr-ag__caja-cambiar">Ver</span></button>' + htmlAvisoSinEmpaque()
       }
       const sinCajas = !cajasDe(cat, a.presentacionId).length
-      let h = `<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>${esc(textoCajaElegida(a, cat))}</span><span class="pr-ag__caja-cambiar">Cambiar</span></button>`
+      let h = `<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>${esc(textoCajaElegida(a, cat))}</span><span class="pr-ag__caja-cambiar">Cambiar</span></button>` +
+        htmlEmbolsado(a, cat)
       if (sinCajas) h += '<div class="pr-aviso pr-aviso--grave">Esta presentación no tiene cajas configuradas: no se va a descontar la caja.</div>'
       const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
       if (!porCaja.length) return h + '<p class="pr-ag__consumo">No descuenta empaque.</p>'
@@ -6594,13 +7277,32 @@
       }).join('')
     }
 
+    // "Cucuruchón Mini Chocolate" → familia "Cucuruchón", tamaño "Mini"; "Cono
+    // dulce 35 x4" → "Cono dulce" / "35 x4". El chocolate lo dice tipo_masa (y
+    // su botón marrón), así que se saca del nombre. Una sola palabra es toda
+    // tamaño. Si no se puede partir, el nombre entero va grande.
+    function partesNombreProducto(nombre) {
+      const base = String(nombre ?? '').replace(/\s+chocolate\s*$/i, '').trim()
+      const t = base.split(/\s+/).filter(Boolean)
+      if (t.length < 2) return { familia: '', tamano: base }
+      const k = t.findIndex((x, i) => i > 0 && /^\d/.test(x))
+      if (k > 0) return { familia: t.slice(0, k).join(' '), tamano: t.slice(k).join(' ') }
+      return { familia: t[0], tamano: t.slice(1).join(' ') }
+    }
+
     function htmlPasoProducto(cat) {
       const { comunes, chocolate } = productosPorMasa(cat)
       if (!comunes.length && !chocolate.length) {
         return '<span class="pr-ag__titulo">¿Qué producto?</span>' +
           '<div class="pr-aviso pr-aviso--grave">Esta unidad no tiene productos cargados. Se cargan en Configuración → Productos.</div>'
       }
-      const boton = p => `<button type="button" class="pr-ag__opcion" data-ag-producto="${esc(p.id)}">${esc(p.nombre)}</button>`
+      const boton = p => {
+        const { familia, tamano } = partesNombreProducto(p.nombre)
+        const choco = esProductoChocolate(p)
+        return `<button type="button" class="pr-ag__opcion pr-ag__producto${choco ? ' pr-ag__opcion--choco' : ''}" data-ag-producto="${esc(p.id)}">` +
+          (familia ? `<span class="pr-ag__familia">${esc(familia)}</span>` : (choco ? '<span class="pr-ag__familia">chocolate</span>' : '')) +
+          `<span class="pr-ag__tamano">${esc(tamano)}</span></button>`
+      }
       const chocoHtml = chocolate.length
         ? '<div class="pr-ag__corte"><span class="pr-ag__corte-texto">Chocolate</span><span class="pr-ag__corte-linea"></span></div>' +
           `<div class="pr-ag__grilla">${chocolate.map(boton).join('')}</div>`
@@ -6615,7 +7317,7 @@
     function htmlPasoConoSiNo(a, cat) {
       const opcion = (v, texto) => {
         const cuantas = presentacionesDe(cat, a.productoId, v).length
-        return `<button type="button" class="pr-ag__opcion" data-ag-cono="${v ? '1' : '0'}"${cuantas ? '' : ' disabled'} aria-pressed="${a.conCono === v ? 'true' : 'false'}">` +
+        return `<button type="button" class="pr-ag__opcion ${v ? 'pr-ag__opcion--con-cono' : 'pr-ag__opcion--sin-cono'}" data-ag-cono="${v ? '1' : '0'}"${cuantas ? '' : ' disabled'} aria-pressed="${a.conCono === v ? 'true' : 'false'}">` +
           `${esc(texto)}<span class="pr-ag__opcion-nota">${cuantas ? `${esc(cuantas)} ${cuantas === 1 ? 'presentación' : 'presentaciones'}` : 'no hay presentaciones'}</span></button>`
       }
       return '<span class="pr-ag__titulo">¿Con cono o sin cono?</span>' +
@@ -6776,6 +7478,9 @@
       a.cajaElegida = true
       a.faltaCaja = false
       a.embolsado = embolsadoSugerido(estado.catalogo, a.presentacionId, id)
+      // Tocar una opción la ELIGE Y PASA SOLA al paso siguiente (28/09/2026).
+      // El embolsado queda al lado de las cajas.
+      a.paso = 'cajas'
       pintarAgregar()
     }
 
@@ -6822,7 +7527,12 @@
       const a = estado.agregar, cat = estado.catalogo, p = estado.planilla
       if (!a || !cat) return
       document.getElementById('pr-agregar-lote').textContent = p ? `Lote ${p.turno.lote} · ${p.maquinaNombre}` : ''
+      document.getElementById('pr-agregar-titulo').textContent = a.corrige ? `Corregir el sublote ${a.corrige.sublote}` : 'Agregar producto'
+      document.getElementById('pr-agregar-campo-motivo').hidden = !a.corrige
       document.getElementById('pr-agregar-pasos').innerHTML = htmlPasosAgregar(pasosAgregar(a, cat))
+      // Tres columnas (28/09/2026): la barra, los pasos y, a la derecha, las
+      // opciones del paso actual. El cono y las cajas ya no comparten: cada
+      // paso ocupa la columna de las opciones.
       const enFinal = a.paso === 'cono' || a.paso === 'cajas'
       const panel = document.getElementById('pr-agregar-panel')
       panel.hidden = enFinal
@@ -6835,15 +7545,17 @@
       // El cono y las cajas COMPARTEN pantalla: se llega al cono con las cajas
       // ya al lado, así que se ahorra un toque.
       const cono = document.getElementById('pr-agregar-cono')
-      cono.hidden = !(a.conCono && enFinal)
+      cono.hidden = !(a.conCono && a.paso === 'cono')
       if (!cono.hidden) {
         document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(cat.marcas, a.busqueda, a, conoAnterior(p?.items))
       }
-      document.getElementById('pr-agregar-cajas-panel').hidden = !enFinal
-      document.getElementById('pr-ag-grilla').className = 'pr-ag' + (cono.hidden ? '' : ' pr-ag--cono-cajas')
+      document.getElementById('pr-agregar-cajas-panel').hidden = a.paso !== 'cajas'
+      document.getElementById('pr-ag-grilla').className = 'pr-ag'
       pintarCajasAgregar()
-      document.getElementById('pr-agregar-empaque').innerHTML = enFinal ? htmlEmpaqueAgregar(a, cat) : ''
-      document.getElementById('pr-agregar-confirmar').disabled = !!a.guardando
+      document.getElementById('pr-agregar-empaque').innerHTML = a.paso === 'cajas' ? htmlEmpaqueAgregar(a, cat) : ''
+      const confirmar = document.getElementById('pr-agregar-confirmar')
+      confirmar.disabled = !!a.guardando
+      confirmar.textContent = a.corrige ? 'Guardar la corrección' : 'Agregar a lo producido'
     }
 
     // La caja y el embolsado viajan SIEMPRE: el embolsado es el efectivo (con
@@ -6860,6 +7572,34 @@
 
     // registrar_produccion_item SUMA EL STOCK TERMINADO EN EL ACTO y devuelve
     // el sublote definitivo: acá no hay sublotes provisorios.
+    async function confirmarCorregirCompleto(a, err) {
+      const motivo = document.getElementById('pr-agregar-motivo').value.trim()
+      if (motivo.length < 3) { err.textContent = 'Escribí por qué lo corregís, con tres letras por lo menos.'; err.hidden = false; return }
+      const datos = datosCorregirCompleto(a)
+      if (!Object.keys(datos).length) { err.textContent = 'No cambiaste nada: tocá el paso que querés corregir.'; err.hidden = false; return }
+      a.guardando = true
+      pintarAgregar()
+      let guardado = false
+      try {
+        const { error } = await supabase.rpc('corregir_produccion_item_completo', { p_item_id: a.corrige.id, p_datos: datos, p_motivo: motivo })
+        if (error) throw error
+        guardado = true
+        const sublote = a.corrige.sublote
+        await recargarPlanilla()
+        estado.agregar = null
+        mostrarVista('pr-planilla')
+        mostrarExito(`Sublote ${sublote} corregido.`)
+      } catch (e) {
+        console.error('corregir_produccion_item_completo:', e)
+        err.textContent = guardado
+          ? 'La corrección se guardó, pero no se pudo actualizar la planilla. Salí de la planilla y volvé a entrar.'
+          : (e?.message || 'No se pudo guardar la corrección.')
+        err.hidden = false
+      } finally {
+        if (estado.agregar) { estado.agregar.guardando = false; pintarAgregar() }
+      }
+    }
+
     async function confirmarAgregar() {
       const a = estado.agregar
       if (!a || a.guardando) return
@@ -6868,6 +7608,7 @@
       if (!a.presentacionId) { err.textContent = 'Elegí el producto y la presentación.'; err.hidden = false; return }
       if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }
       if (!Number.isInteger(a.cajas) || a.cajas <= 0) { err.textContent = 'Poné cuántas cajas (un número entero mayor a cero).'; err.hidden = false; return }
+      if (a.corrige) return confirmarCorregirCompleto(a, err)
       a.guardando = true
       pintarAgregar()
       // Igual que al sumar un operario: si lo que falló fue la RELECTURA, el
@@ -8205,9 +8946,11 @@
 
     function htmlCabeceraReceta(b, datos) {
       const clave = etiquetaBorrador(b)
+      // El origen (Original / Anterior / Modificada) ya lo dice el botón
+      // apretado de arriba: no se repite como pastilla (28/09/2026). La clave
+      // queda en la clase de la cabecera, para quien la quiera mirar.
       const chips = [
-        `<span class="pr-chip-rec">${b.doble ? 'Doble' : 'Simple'}</span>`,
-        `<span class="pr-chip-origen pr-chip-origen--${esc(clave)}">${esc(ETIQUETA_ORIGEN[clave] ?? clave)}</span>`,
+        `<span class="pr-chip-rec pr-chip-rec--${esc(clave)}">${b.doble ? 'Doble' : 'Simple'}</span>`,
       ]
       if (esChocolate(b, estado.defineChocolate)) chips.push('<span class="pr-chip-choco">Chocolate</span>')
       const tipo = (estado.tiposMasa ?? []).length > 1 ? ` · ${esc(b.tipo ?? '')}` : ''
@@ -8468,47 +9211,81 @@
       return estado.lotesDesde?.get(`${insumoId}|${lote}`) ?? null
     }
 
-    function htmlTarjetaLote(o, i, elegido, datos, ingredienteId) {
-      const ins = insumosDe(datos, ingredienteId).find(x => x.insumo_id === o.insumo_id) ?? null
-      const marca = ins ? (ins.marca || ins.nombre || '') : ''
-      const nombre = ins && ins.marca ? (ins.nombre ?? '') : ''
-      const fecha = o.lote ? textoFechaLote(fechaLote(o.insumo_id, o.lote)) : ''
-      const queda = o.stock != null && Number.isFinite(o.stock)
-        ? `<span class="pr-lp__queda"><span class="pr-lp__queda-rotulo">Queda</span><span class="pr-lp__queda-num">${esc(textoCantidad(o.stock))}</span></span>`
-        : ''
-      return `<button type="button" class="pr-lp__tarjeta" data-lote-op="${i}" aria-pressed="${elegido ? 'true' : 'false'}">` +
-        `<span class="pr-lp__izq"><span class="pr-lp__marca">${esc(marca)}</span>` +
-        (nombre ? `<span class="pr-lp__insumo">${esc(nombre)}</span>` : '') +
-        `<span class="pr-lp__lote">${o.sinLote ? 'Sin lote' : `Lote ${esc(o.lote)}`}</span>` +
-        (fecha ? `<span class="pr-lp__fecha">desde ${esc(fecha)}</span>` : '') +
-        `</span>${queda}</button>`
-    }
-
     // Las tres partes del panel: arriba "Se terminó" si hay un lote elegido,
     // en el medio una tarjeta por lote con stock (y "Sin lote" en lo que no es
     // materia prima), y abajo, apartado, "Otro lote de este insumo".
+    // LA VENTANA DE LOTES (28/09/2026): UNA sola lista con todos los lotes de
+    // todos los insumos que cumplen ese ingrediente, de todas las marcas
+    // juntas, un renglón chico cada uno ("La Clásica · lote 08/09/26 · quedan
+    // 2.425 kg"). Arriba y destacado el más viejo, que es el que hay que usar
+    // primero (la fecha sale de stock_para_masa); encima, filtros chiquitos
+    // por marca. Viene marcado el lote de la masa anterior. Los "Otro lote"
+    // de cada insumo se fueron: queda UN link discreto al pie para escribir
+    // un lote que no está en la lista.
+    function marcaDeInsumo(ins) {
+      return ins ? (ins.marca || ins.nombre || '') : ''
+    }
+
+    function filasPanelLote(e, d, ingredienteId) {
+      const insumos = insumosDe(d, ingredienteId)
+      const filas = []
+      e.ops.forEach((o, i) => {
+        if (o.manual) return
+        const ins = insumos.find(x => x.insumo_id === o.insumo_id) ?? null
+        const queda = o.lote != null ? (quedaDelLote(o.insumo_id, o.lote) ?? (Number.isFinite(o.stock) ? o.stock : null)) : null
+        filas.push({ o, i, marca: marcaDeInsumo(ins), desde: o.lote != null ? fechaLote(o.insumo_id, o.lote) : null, queda })
+      })
+      // El más viejo primero; los que no tienen fecha, al final y en el orden
+      // en que vinieron.
+      return filas.sort((a, b) => {
+        if (a.desde && b.desde && a.desde !== b.desde) return a.desde < b.desde ? -1 : 1
+        if (!!a.desde !== !!b.desde) return a.desde ? -1 : 1
+        return a.i - b.i
+      })
+    }
+
+    function htmlFilaLote(f, elegido, viejo) {
+      const o = f.o
+      const lote = o.sinLote ? 'sin lote' : `lote ${esc(o.lote)}`
+      const queda = f.queda != null ? ` · quedan ${esc(textoCantidad(f.queda))}` : ''
+      const fecha = f.desde ? `<span class="pr-lp__fila-fecha">desde ${esc(textoFechaLote(f.desde))}</span>` : ''
+      return `<button type="button" class="pr-lp__tarjeta pr-lp__fila${viejo ? ' pr-lp__fila--viejo' : ''}" data-lote-op="${f.i}" aria-pressed="${elegido ? 'true' : 'false'}">` +
+        (viejo ? '<span class="pr-lp__fila-primero">Usar primero</span>' : '') +
+        `<span class="pr-lp__fila-texto"><strong>${esc(f.marca)}</strong> · ${lote}${queda}</span>${fecha}</button>`
+    }
+
     function htmlPanelLote(ingredienteId) {
       const b = estado.masa, d = estado.datosMasa
       const it = d?.original.items.find(x => x.ingrediente_id === ingredienteId)
       if (!b || !d || !it) return null
       const e = estadoLote(it, b, d)
       const elegido = e.terminado ? -1 : indiceLote(e.ops, e.l)
-      const tarjetas = [], otros = []
-      e.ops.forEach((o, i) => {
-        if (o.manual) {
-          otros.push(`<button type="button" class="pr-btn pr-btn--secundario pr-btn--ancho" data-lote-op="${i}">${esc(o.etiqueta)}</button>`)
-        } else {
-          tarjetas.push(htmlTarjetaLote(o, i, i === elegido, d, ingredienteId))
-        }
-      })
+      const todas = filasPanelLote(e, d, ingredienteId)
+      const marcas = [...new Set(todas.map(f => f.marca).filter(Boolean))]
+      const filtro = marcas.includes(estado.panelLote?.marca) ? estado.panelLote.marca : ''
+      const filas = filtro ? todas.filter(f => f.marca === filtro) : todas
+      const viejoI = (todas.find(f => f.desde && !f.o.sinLote && (f.queda == null || f.queda > 0)) ?? null)?.i ?? null
+      const filtrosHtml = marcas.length > 1
+        ? '<div class="pr-lp__filtros" role="group" aria-label="Marca">' +
+          `<button type="button" class="pr-lp__filtro" data-lote-marca="" aria-pressed="${filtro ? 'false' : 'true'}">Todas</button>` +
+          marcas.map(m => `<button type="button" class="pr-lp__filtro" data-lote-marca="${esc(m)}" aria-pressed="${m === filtro ? 'true' : 'false'}">${esc(m)}</button>`).join('') +
+          '</div>'
+        : ''
+      const listaHtml = filas.length
+        ? `<div class="pr-lp__filas" data-scroll-propio>${filas.map(f => htmlFilaLote(f, f.i === elegido, f.i === viejoI)).join('')}</div>`
+        : '<p class="pr-lp__vacio">No hay lotes con stock cargado de este insumo.</p>'
+      // Un solo link para escribir un lote que no está: del insumo elegido o,
+      // si no hay, del primero.
+      const insElegido = e.l?.insumo_id ?? insumosDe(d, ingredienteId)[0]?.insumo_id ?? null
+      const manualI = e.ops.findIndex(o => o.manual && o.insumo_id === insElegido)
       const hayElegido = !e.terminado && !e.falta && !!e.l && !e.l.sinLote
       return {
         titulo: `Lote de ${it.ingrediente}`,
         terminado: hayElegido
           ? '<div class="pr-lp__pie"><button type="button" class="pr-btn pr-btn--peligro" id="pr-lote-panel-se-termino">Se terminó</button></div>'
           : '',
-        tarjetas: tarjetas.length ? tarjetas.join('') : '<p class="pr-lp__vacio">No hay lotes con stock cargado de este insumo.</p>',
-        otros: otros.join(''),
+        tarjetas: filtrosHtml + listaHtml,
+        otros: manualI >= 0 ? `<button type="button" class="pr-link pr-lp__manual" data-lote-op="${manualI}">El lote no está en la lista: escribirlo</button>` : '',
       }
     }
 
@@ -9313,6 +10090,8 @@
           return
         }
         const io = ev.target.closest('[data-insumo-op]'); if (io) { elegirInsumoOtro(io.dataset.insumoOp); return }
+        const mf = ev.target.closest('[data-lote-marca]')
+        if (mf && estado.panelLote) { estado.panelLote.marca = mf.dataset.loteMarca; pintarPanelLote(); return }
         const t = ev.target.closest('[data-lote-op]'); if (t) elegirTarjetaLote(t.dataset.loteOp)
       })
       panelLote.addEventListener('keydown', teclaPanelLote)
@@ -9740,6 +10519,7 @@
       // MASA sin haberlo medido.
       await refrescarAbiertas()
       siguientePaso()
+      iniciarReloj()
       registrarPantalla()
       conectarTiempoReal()
     }

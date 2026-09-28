@@ -18,8 +18,8 @@
 //  - la consulta lleva un or() que NO descarta los null, y solo con un uuid;
 //  - cambiar la barra repinta en el acto y recarga con turno (una respuesta
 //    vieja no se suma a la lista nueva);
-//  - el total de cabecera dice "de todas las unidades" (resumen_cobranzas no
-//    recibe unidad); "Por controlar" no, porque coincide;
+//  - las cifras de cabecera son de la unidad elegida: resumen_cobranzas
+//    recibe p_unidad desde el 28/09/2026 (con Todas, la clave no va);
 //  - no hay ningún selector de unidad propio, y el formulario de CARGA es
 //    idéntico al del baseline FIJO 5592f5a: el chofer no elige unidad.
 //
@@ -312,20 +312,17 @@ async function pruebas() {
   {
     const S = sandbox()
     const r = { etiqueta: 'Total del mes', estadoFiltro: null, desdeMes: '2026-09-01', porControlar: 2, cantidad: 3, total: 1500 }
-    const todas = S.htmlResumen({ ...r, todasLasUnidades: false })
-    const una = S.htmlResumen({ ...r, todasLasUnidades: true })
-    chk('cifras con Todas: el total no aclara unidades', !/todas las unidades/.test(todas))
-    chk('cifras con una unidad: el total dice "de todas las unidades"', /cob-resumen__sub">[^<]*· de todas las unidades<\/div>/.test(una), una)
-    chk('cifras con una unidad: "Por controlar" NO lo dice (coincide: se ven en cualquier unidad)',
-      (una.match(/todas las unidades/g) || []).length === 1 && /Por controlar[\s\S]*de todas las fechas/.test(una))
+    const h = S.htmlResumen(r)
+    chk('las cifras ya no aclaran "de todas las unidades"', !/todas las unidades/.test(h), h)
     S.estado.unidadElegida = NUSS
     await S.cargarResumen()
-    chk('cargarResumen: con una unidad marca el total como de todas', S.estado.resumen.todasLasUnidades === true)
-    chk('cargarResumen: la llamada no manda unidad (la función no la recibe)',
-      S.__rpcs().every(x => !Object.keys(x.params).some(k => /unidad/.test(k))))
+    chk('cargarResumen: con una unidad, cada llamada manda p_unidad', S.__rpcs().length > 0 && S.__rpcs().every(x => x.params.p_unidad === NUSS),
+      JSON.stringify(S.__rpcs().map(x => x.params)))
+    const antes = S.__rpcs().length
     S.estado.unidadElegida = null
     await S.cargarResumen()
-    chk('cargarResumen: con Todas no', S.estado.resumen.todasLasUnidades === false)
+    chk('cargarResumen: con Todas, sin p_unidad', S.__rpcs().slice(antes).every(x => !('p_unidad' in x.params)))
+    chk('parametrosResumen: algo que no es un uuid no viaja', !('p_unidad' in S.parametrosResumen({}, '2026-09-28', 'todas').base))
   }
 
   // ══ 7. EL FUENTE ═══════════════════════════════════════════════════════════

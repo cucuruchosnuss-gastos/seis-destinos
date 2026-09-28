@@ -158,15 +158,30 @@ esperas.push((async () => {
   A.abrirPanelLote('i-harina')
   chk('tocar el renglón abre el panel', A.__doc.getElementById('pr-lote-panel').hidden === false && A.estado.panelLote?.ingredienteId === 'i-harina')
   chk('… con el ingrediente en el título', A.__doc.getElementById('pr-lote-panel-titulo').textContent === 'Lote de Harina')
+  // (28/09/2026, la tablet real) UNA sola lista con todos los lotes de todas
+  // las marcas, un renglón chico cada uno: "Júpiter · lote 24518 · quedan
+  // 200 kg"; arriba, filtros chiquitos por marca.
   const tar = A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
-  chk('una tarjeta por lote', (tar.match(/class="pr-lp__tarjeta"/g) || []).length === 3, tar)
-  chk('… con la marca grande', /pr-lp__marca">Júpiter</.test(tar) && /pr-lp__marca">Wali</.test(tar))
-  chk('… el lote', /pr-lp__lote">Lote 24518</.test(tar) && /pr-lp__lote">Lote W-9</.test(tar))
-  chk('… y cuánto queda', /pr-lp__queda-num">200 kg</.test(tar) && /pr-lp__queda-num">250,5 kg</.test(tar), tar)
-  chk('… el elegido marcado', /data-lote-op="3" aria-pressed="true"/.test(tar) && (tar.match(/aria-pressed="true"/g) || []).length === 1)
-  chk('sin fechas en stock_para_masa no hay fecha, y v_stock_por_lote no se consulta', !/pr-lp__fecha/.test(tar) && A.__consultasFecha() === 0)
+  const lista = tar.slice(tar.indexOf('pr-lp__filas'))
+  chk('un renglón por lote, en UNA lista', (lista.match(/data-lote-op=/g) || []).length === 3 && /class="pr-lp__filas" data-scroll-propio/.test(tar), tar)
+  chk('… con la marca', /<strong>Júpiter<\/strong>/.test(lista) && /<strong>Wali<\/strong>/.test(lista))
+  chk('… el lote', /lote 24518/.test(lista) && /lote W-9/.test(lista))
+  chk('… y cuánto queda', /quedan 200 kg/.test(lista) && /quedan 250,5 kg/.test(lista), lista)
+  chk('… el de la masa anterior viene marcado', /data-lote-op="3" aria-pressed="true"/.test(lista) && (lista.match(/aria-pressed="true"/g) || []).length === 1)
+  chk('filtros por marca: Todas, Júpiter y Wali', /data-lote-marca="" aria-pressed="true">Todas/.test(tar) &&
+    /data-lote-marca="Júpiter"/.test(tar) && /data-lote-marca="Wali"/.test(tar))
+  A.estado.panelLote.marca = 'Wali'
+  A.pintarPanelLote()
+  const soloWali = A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
+  chk('filtrar por una marca deja solo sus lotes', !/Júpiter<\/strong>/.test(soloWali) && /<strong>Wali<\/strong>/.test(soloWali) &&
+    /data-lote-marca="Wali" aria-pressed="true"/.test(soloWali), soloWali)
+  chk('… y el filtro se toca en el panel', /const mf = ev\.target\.closest\('\[data-lote-marca\]'\)/.test(FUENTE))
+  A.estado.panelLote.marca = ''
+  A.pintarPanelLote()
+  chk('sin fechas en stock_para_masa no hay fecha, y v_stock_por_lote no se consulta', !/pr-lp__fila-fecha/.test(tar) && A.__consultasFecha() === 0)
   const otros = A.__doc.getElementById('pr-lote-panel-otros').innerHTML
-  chk('"Otro lote" va APARTE de las tarjetas', !/Otro lote/.test(tar) && /Otro lote de Harina 000 · Júpiter/.test(otros) && /Otro lote de Harina 000 · Wali/.test(otros))
+  chk('ya no hay botones de "Otro lote" por insumo: UN link para escribir uno que no está', !/Otro lote/.test(tar + otros) &&
+    /El lote no está en la lista: escribirlo/.test(otros) && (otros.match(/data-lote-op=/g) || []).length === 1, otros)
   chk('… en su propio bloque, abajo', FUENTE.indexOf('id="pr-lote-panel-tarjetas"') < FUENTE.indexOf('id="pr-lote-panel-otros"') &&
     FUENTE.indexOf('id="pr-lote-panel-tarjetas"') > 0)
   // Elegir una tarjeta pone ese lote en el renglón y cierra.
@@ -176,7 +191,7 @@ esperas.push((async () => {
   chk('… y cierra el panel', A.__doc.getElementById('pr-lote-panel').hidden === true && A.estado.panelLote === null)
   // Un solo insumo: "Otro lote de este insumo".
   A.abrirPanelLote('i-azucar')
-  chk('con un solo insumo: "Otro lote de este insumo"', /Otro lote de este insumo/.test(A.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+  chk('con un solo insumo, el mismo link', /El lote no está en la lista: escribirlo/.test(A.__doc.getElementById('pr-lote-panel-otros').innerHTML))
   chk('sin lotes con stock lo dice', /No hay lotes con stock cargado/.test(A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML))
   // Escape cierra.
   let prevenido = false
@@ -185,18 +200,22 @@ esperas.push((async () => {
   // No-materia prima: "Sin lote" es una tarjeta más.
   A.abrirPanelLote('i-lecitina')
   const tLec = A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
-  chk('lo que no es materia prima ofrece "Sin lote" como tarjeta', /pr-lp__lote">Sin lote</.test(tLec) && /pr-lp__queda-num">240 g</.test(tLec))
+  chk('lo que no es materia prima ofrece "sin lote" en la lista', /· sin lote/.test(tLec) && /quedan 240 g/.test(tLec), tLec)
   A.cerrarPanelLote()
 
   // La fecha de cada lote sale de stock_para_masa (desde), sin stock:ver.
   const F = await hastaLaReceta(armar({ stock: [
     { insumo_id: 'ins-h1', lotes: [{ lote: '24518', queda: 200, desde: '2026-09-02' }] },
-    { insumo_id: 'ins-h2', lotes: [{ lote: 'W-9', queda: 100, desde: '2026-08-30' }] },
+    { insumo_id: 'ins-h2', lotes: [{ lote: 'W-9', queda: 90, desde: '2026-08-30' }] },
   ] }))
   F.abrirPanelLote('i-harina')
   const tF = F.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
-  chk('la fecha del lote sale de stock_para_masa', /pr-lp__fecha">desde 02\/09\/2026</.test(tF) && /pr-lp__fecha">desde 30\/08\/2026</.test(tF), tF)
-  chk('… y el que no tiene fecha no inventa una', (tF.match(/pr-lp__fecha/g) || []).length === 2)
+  chk('"quedan" sale de stock_para_masa (90) y no de datos_para_masa (100)', /lote W-9 · quedan 90 kg/.test(tF), tF)
+  chk('la fecha del lote sale de stock_para_masa', /pr-lp__fila-fecha">desde 02\/09\/2026</.test(tF) && /pr-lp__fila-fecha">desde 30\/08\/2026</.test(tF), tF)
+  chk('… y el que no tiene fecha no inventa una', (tF.match(/pr-lp__fila-fecha/g) || []).length === 2)
+  chk('el más viejo va arriba y destacado ("Usar primero")', tF.indexOf('lote W-9') < tF.indexOf('lote 24518') &&
+    /pr-lp__fila--viejo" data-lote-op="\d+" aria-pressed="(true|false)"><span class="pr-lp__fila-primero">Usar primero<\/span><span class="pr-lp__fila-texto"><strong>Wali<\/strong> · lote W-9/.test(tF) &&
+    (tF.match(/Usar primero/g) || []).length === 1, tF)
   chk('… sin stock:ver ni v_stock_por_lote', F.__consultasFecha() === 0 && !F.estado.stockVer)
   chk('una fecha ilegible no dibuja nada', F.textoFechaLote('ayer') === '' && F.textoFechaLote(null) === '')
 
@@ -205,7 +224,7 @@ esperas.push((async () => {
   const E = await hastaLaReceta(armar({ stockError: { message: 'sin red' } }))
   E.abrirPanelLote('i-harina')
   chk('si stock_para_masa no llega, la masa sigue y no hay fechas', !!E.estado.masa && !!E.estado.datosMasa && !E.estado.errorSala &&
-    !/pr-lp__fecha/.test(E.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML), E.estado.errorSala)
+    !/pr-lp__fila-fecha/.test(E.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML), E.estado.errorSala)
   chk('… ni "quedan" en la receta', !/pr-rec__queda/.test(filas(E)))
   chk('… y el aviso dice que se registra igual', E.__doc.getElementById('pr-receta-aviso-stock').hidden === false)
   E.cerrarPanelLote()
@@ -222,8 +241,9 @@ esperas.push((async () => {
     ] }), 'original')
   chequearMarcas(chk, 'el botón del lote vacío', filas(X), ['ingId', 'ingrediente'])
   X.abrirPanelLote(ING)
-  chequearMarcas(chk, 'tarjetas de lote', X.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML, ['marca', 'insumo', 'lote'])
-  chequearMarcas(chk, '"Otro lote" del panel', X.__doc.getElementById('pr-lote-panel-otros').innerHTML, ['marca', 'insumo'])
+  // La lista nombra la MARCA (o el insumo cuando no tiene marca) y el lote.
+  chequearMarcas(chk, 'la lista de lotes', X.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML, ['marca', 'lote'])
+  chequearMarcas(chk, 'el link del lote a mano', X.__doc.getElementById('pr-lote-panel-otros').innerHTML, [])
   X.elegirTarjetaLote('0')
   chequearMarcas(chk, 'el renglón con el lote elegido', filas(X), ['lote', 'ingId', 'ingrediente'])
   // Y el campo del lote escrito a mano, que lleva el id y el nombre del ingrediente.

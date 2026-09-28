@@ -38,7 +38,7 @@ const FUNCIONES_BASE = [
   'clavePersona', 'olvidarTodas', 'puedeSacarMasero', 'maseroAdentro', 'htmlMaseroAdentro', 'pintarMaseroAdentro',
   'sacarMasero', 'pintarQuienFija', 'soyOtraPersona', 'maquinaCerrada', 'sacarMaseroPorCierre',
   // Terminar la tablet, parte 3: el panel de lotes
-  'textoVacioLote', 'marcarLoteTerminado', 'leerFechasLotes', 'textoFechaLote', 'fechaLote', 'htmlTarjetaLote',
+  'textoVacioLote', 'marcarLoteTerminado', 'leerFechasLotes', 'textoFechaLote', 'fechaLote',
   'htmlPanelLote', 'pintarPanelLote', 'abrirPanelLote', 'cerrarPanelLote', 'elegirTarjetaLote', 'teclaPanelLote',
   // Terminar la tablet, parte 4: anotar, corregir y borrar paradas
   'htmlAccionesParada', 'instanteAr', 'isoAr', 'limitesParada', 'resolverHorasParada', 'faltanParaParada', 'horaRedondeada',
@@ -267,6 +267,11 @@ const NUEVAS_PLANTA = [
   // Tiempo real y el tamaño de la pantalla (28/09/2026)
   'leerTurnosVivos', 'filtrosTiempoReal', 'cambioEsDeMiFabrica', 'conectarTiempoReal', 'programarReconexionVivo',
   'alCambioVivo', 'refrescarVivo', 'textoPantalla', 'registrarPantalla', 'alReanudar',
+  // La tablet real, parte C (28/09/2026): el reloj, las etiquetas de operarios,
+  // los productos, la ventana de lotes, el renglón en una línea y corregir todo
+  'textoReloj', 'htmlReloj', 'tocarReloj', 'iniciarReloj', 'htmlTagsOperarios', 'partesNombreProducto',
+  'marcaDeInsumo', 'filasPanelLote', 'htmlFilaLote', 'abrirCorregirCompleto',
+  'datosCorregirCompleto', 'confirmarCorregirCompleto',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
@@ -339,6 +344,7 @@ const PRELUDIO = `
   var pinMaestro = null
   var camposPlanillaEnlazados = false
   var lecturaPersonal = null
+  var relojPlanta = null
   var canalVivo = null, claveCanalVivo = '', relojVivo = null, reconexionVivo = null
   var __registros = []
   function registrarError(r) { __registros.push(r) }

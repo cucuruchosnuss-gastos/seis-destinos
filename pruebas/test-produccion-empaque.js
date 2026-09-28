@@ -187,7 +187,11 @@ esperas.push((async () => {
   chk('… y "ninguno" no se puede elegir', S.estado.agregar.embolsado === 'grande')
   S.elegirCaja('i-sinimp')
   chk('con una caja que no sugiere bolsa, aparece "Sin bolsa"', opciones() === 'grande,individual,doble,ninguno', opciones())
-  chk('… y viene elegida', S.estado.agregar.embolsado === 'ninguno' && /data-ag-embolsado="ninguno" aria-pressed="true"/.test(html(S, 'pr-agregar-panel')))
+  // (28/09/2026) Tocar una caja la elige y PASA SOLA a las cajas: el
+  // embolsado se elige ahí, al lado del número.
+  chk('… y viene elegida', S.estado.agregar.embolsado === 'ninguno' && /data-ag-embolsado="ninguno" aria-pressed="true"/.test(html(S, 'pr-agregar-empaque')))
+  chk('elegir la caja avanza solo a las cajas', S.estado.agregar.paso === 'cajas')
+  chk('… y el paso de la caja ya no trae el embolsado', !/data-ag-embolsado/.test(S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)))
 
   S.seguirConCajas()
   chk('"Seguir" lleva a las cajas', S.estado.agregar.paso === 'cajas')
@@ -262,14 +266,16 @@ esperas.push((async () => {
   const S = armar()
   await hastaCajas(S, { cono: 'mk-norte' })
   chk('con un cono de doble bolsa, el embolsado es "las dos"', S.embolsadoEfectivo(S.estado.agregar, S.estado.catalogo) === 'doble')
-  S.irAPasoAgregar('caja')
-  const panel = html(S, 'pr-agregar-panel')
+  // (28/09/2026) El embolsado se elige al lado de las cajas.
+  const panel = html(S, 'pr-agregar-empaque')
   chk('… "Las dos" marcada', /data-ag-embolsado="doble" aria-pressed="true">/.test(panel), panel)
   chk('… las otras deshabilitadas',
     /data-ag-embolsado="grande" aria-pressed="false" disabled>/.test(panel) && /data-ag-embolsado="individual" aria-pressed="false" disabled>/.test(panel))
   chk('… y se explica', /Este cono va con doble bolsa/.test(panel))
   chk('… y lo que consume por caja lleva las dos bolsas',
-    /Por caja: 1 Caja N°1 Nuss · 1 Tiras x4 · 3 Separador N°1 · 1 Bolsa 100x80 · 16 Bolsa PPP 15x60/.test(panel), panel)
+    /1 Caja N°1 Nuss · 1 Tiras x4 · 3 Separador N°1 · 1 Bolsa 100x80 · 16 Bolsa PPP 15x60/.test(panel), panel)
+  chk('… también en el paso de la caja (con el embolsado forzado, no el anotado)',
+    /Por caja: 1 Caja N°1 Nuss · 1 Tiras x4 · 3 Separador N°1 · 1 Bolsa 100x80 · 16 Bolsa PPP 15x60/.test(S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)))
   S.elegirEmbolsado('individual')
   chk('no se puede bajar a una bolsa', S.embolsadoEfectivo(S.estado.agregar, S.estado.catalogo) === 'doble')
   chk('… ni siquiera queda anotada por debajo', S.estado.agregar.embolsado === 'grande')
@@ -756,7 +762,7 @@ esperas.push((async () => {
   P.irAPasoAgregar('caja')
   chk('al elegir la caja, avisa si no hay ni una', html(P, 'pr-agregar-panel').includes('Falta 1 Caja N°1 Nuss: hay 0, se necesitan 1'), html(P, 'pr-agregar-panel'))
   P.elegirCaja('i-dolce')
-  chk('… y cambia con la caja', !/Caja N°1 Nuss: hay/.test(html(P, 'pr-agregar-panel')) && /Caja N°1 Dolce Pasta: hay 0/.test(html(P, 'pr-agregar-panel')))
+  chk('… y cambia con la caja (ya al lado de las cajas)', !/Caja N°1 Nuss: hay/.test(html(P, 'pr-agregar-empaque')) && /Caja N°1 Dolce Pasta: hay 0/.test(html(P, 'pr-agregar-empaque')), html(P, 'pr-agregar-empaque'))
   chk('faltantes sin stock leído: null (no se inventa)', P.faltantesEmpaque({ ...P.estado.agregar, stock: { estado: 'error' } }, P.estado.catalogo) === null)
 })())
 
