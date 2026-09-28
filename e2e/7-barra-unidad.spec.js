@@ -10,6 +10,12 @@ const PANTALLAS = [
   ['modulos/administracion.html', 'administracion'],
   ['modulos/pedidos.html', 'pedidos'],
   ['modulos/produccion-gestion.html', 'produccion-gestion'],
+  ['modulos/taller.html', 'taller'],
+  // Los módulos que filtran por la barra (28/09/2026), con sus datos de maqueta.
+  ['modulos/cuentas-corrientes.html', 'cuentas-corrientes'],
+  ['modulos/materia-prima.html', 'materia-prima'],
+  ['modulos/cobranzas.html', 'cobranzas'],
+  ['modulos/caja.html', 'caja'],
 ];
 
 for (const [archivo, datos] of PANTALLAS) {
