@@ -487,6 +487,127 @@
       margin-top: 0.625rem;
     }
 
+    /* ── Dar de baja / Reactivar (28/09/2026) ─────────────────────────────
+       "Dado de baja" es un ESTADO, no un error: el chip va neutro, igual que
+       el de la tablet. El bordó queda solo para la consecuencia que hay que
+       leer antes de confirmar ("Pierde el acceso a la app al instante"). */
+    .chip-baja {
+      display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;
+      background: var(--color-superficie); color: var(--color-texto);
+      border: 1px solid var(--color-borde); flex-shrink: 0;
+    }
+
+    .empleados-toolbar__bajas {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 44px;
+      padding: 0 0.25rem;
+      font-size: 0.8125rem;
+      color: var(--color-texto);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .empleados-toolbar__bajas input {
+      width: 1.125rem; height: 1.125rem; margin: 0;
+      accent-color: var(--violeta);
+    }
+    .empleados-toolbar__bajas-n { color: var(--color-texto-suave); }
+
+    .ficha-baja__caja {
+      background: var(--color-superficie);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+      margin-bottom: 0.25rem;
+    }
+    .ficha-baja__fila1 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .ficha-baja__fila1 .btn {
+      width: auto;
+      min-height: 44px;
+      padding: 0.375rem 0.875rem;
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+    .ficha-baja__dato {
+      font-size: 0.8125rem;
+      color: var(--color-texto);
+      margin-top: 0.375rem;
+      overflow-wrap: anywhere;
+    }
+    .ficha-baja__dato--suave { color: var(--color-texto-suave); }
+
+    #ficha-baja { margin-top: 1.25rem; }
+    .ficha-baja__boton {
+      width: 100%;
+      min-height: 44px;
+      color: var(--bordo-oscuro);
+      border-color: var(--bordo);
+    }
+    .ficha-baja__panel {
+      margin-top: 0.75rem;
+      background: var(--color-superficie);
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+    }
+    .ficha-baja__titulo {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--color-texto);
+      margin: 0 0 0.375rem;
+      overflow-wrap: anywhere;
+    }
+    .ficha-baja__ayuda {
+      font-size: 0.8125rem;
+      color: var(--color-texto-suave);
+      margin: 0 0 0.625rem;
+    }
+    .ficha-baja__alerta {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--bordo-oscuro);
+      background: var(--bordo-suave);
+      border-left: 3px solid var(--bordo);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      margin: 0 0 0.75rem;
+    }
+    .ficha-baja__panel label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      margin-bottom: 0.375rem;
+    }
+    .ficha-baja__panel input[type="text"] {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.6875rem 0.875rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      color: var(--color-texto);
+      outline: none;
+    }
+    .ficha-baja__panel input[type="text"]:focus { border-color: var(--violeta); }
+    /* El error de la base va PEGADO a los botones, tal cual. */
+    .ficha-baja__error {
+      font-size: 0.8125rem;
+      color: var(--rojo);
+      margin-top: 0.625rem;
+      overflow-wrap: anywhere;
+    }
+    .ficha-baja__panel .modal-ficha__form-acciones { margin-top: 0.75rem; }
+    .ficha-baja__panel .modal-ficha__form-acciones .btn { min-height: 44px; }
+
     #ficha-datos-laborales .grupo-campo { margin-bottom: 0.75rem; }
     #ficha-datos-laborales select {
       width: 100%;
@@ -548,6 +669,13 @@
       <div class="empleados-toolbar__buscar" id="empleados-toolbar-buscar">
         <input type="text" id="filtro-busqueda-empleados" placeholder="🔍 Buscar empleado…">
       </div>
+      <!-- Apagado por defecto: los dados de baja no aparecen salvo que se
+           tilde. Se dibuja solo si hay alguno (ver renderizarListado). -->
+      <label class="empleados-toolbar__bajas" id="empleados-toolbar-bajas" hidden>
+        <input type="checkbox" id="filtro-mostrar-bajas">
+        <span>Mostrar dados de baja</span>
+        <span class="empleados-toolbar__bajas-n" id="contador-bajas"></span>
+      </label>
       <div class="bloque-importar" id="bloque-importar" hidden>
         <span class="bloque-importar__icono" title="Naaloo entrega un Excel por empresa — elegí cuál es antes de subirlo">
           <i data-lucide="upload"></i>
@@ -586,6 +714,10 @@
         </div>
       </div>
 
+      <!-- Si la persona está DADA DE BAJA: cuándo, quién, el motivo y
+           "Reactivar". Vacío para una persona activa (ver renderizarBaja). -->
+      <div id="ficha-estado-baja"></div>
+
       <div class="modal-ficha__seccion-titulo">Datos · Naaloo</div>
       <div id="ficha-datos-naaloo"></div>
 
@@ -608,6 +740,10 @@
       <div id="ficha-pin"></div>
 
       <div id="ficha-acciones"></div>
+
+      <!-- "Dar de baja", al final y separado: es la única acción de la ficha
+           que saca a la persona de todas las listas. Vacío si no corresponde. -->
+      <div id="ficha-baja"></div>
     </div>
   </div>
 
@@ -632,7 +768,18 @@
       fichaAbierta:    null,
       modoEdicionFicha: false,
       modoEdicionContacto: false,
-      filtros:         { busqueda: '' },
+      // mostrarBajas: el interruptor "Mostrar dados de baja", apagado por
+      // defecto (los dados de baja no aparecen salvo que se tilde).
+      filtros:         { busqueda: '', mostrarBajas: false },
+      // Nombres por id de TODAS las personas (activas y dadas de baja), de
+      // v_empleados_publico: para decir quién dio de baja a alguien aunque
+      // esa persona sea de una unidad que quien mira no lee en `empleados`.
+      // Es un mapa para BUSCAR un nombre, nunca una lista para elegir.
+      nombres:         new Map(),
+      // El panel de "Dar de baja" / "Reactivar" de la ficha abierta.
+      // panel: null | 'baja' | 'reactivar'. error: el mensaje de la base TAL
+      // CUAL, que se dibuja pegado a los botones.
+      baja: { empleadoId: null, panel: null, motivo: '', enviando: false, error: null },
       misTareasEmpleados: new Set(), // tareas granulares en empleado_tareas (modulo='empleados')
       // La fábrica de pruebas (unidad "Pruebas (robot)" y sus personas). Ver
       // unidadesVisibles() / personasVisibles(). Arranca sin datos: si no se
@@ -727,6 +874,20 @@
       return null
     }
 
+    // La fecha de una baja: empleados.baja_en es timestamptz, así que no sirve
+    // formatearFecha() de utils.js (que parte un AAAA-MM-DD). El día es el de
+    // Argentina: Supabase guarda en UTC, y una baja a las 22 h saldría con el
+    // día siguiente. Sin dato, o con uno que no es una fecha, devuelve '' y la
+    // pantalla no dice nada — nunca "NaN" ni una fecha inventada.
+    function fechaBajaAr(valor) {
+      if (valor === null || valor === undefined || valor === '') return ''
+      const d = new Date(valor)
+      if (isNaN(d.getTime())) return ''
+      return new Intl.DateTimeFormat('es-AR', {
+        timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric',
+      }).format(d)
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // CARGA DE DATOS
     // ═══════════════════════════════════════════════════════════════════════
@@ -734,12 +895,21 @@
     async function cargarTodo() {
       document.getElementById('estado-cargando').hidden = false
 
-      const [empRes, modRes, unidRes] = await Promise.all([
+      // Trae TAMBIÉN a los dados de baja (activo = false): los necesita el
+      // interruptor "Mostrar dados de baja" y la ficha de cada uno. Se separan
+      // EN EL CLIENTE (personasVisibles / dadosDeBajaVisibles), no en la
+      // consulta. La Cuenta de Empresa (tipo 'empresa', activo = false a
+      // propósito) llega también y no se muestra en ninguna de las dos listas.
+      // Sin empleados:ver_editar el RLS devuelve solo la fila propia, igual que
+      // antes.
+      const [empRes, modRes, unidRes, nomRes] = await Promise.all([
         supabase.from('empleados')
-          .select('id, nombre, cuil, activo, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono, contacto_emergencia_nombre, contacto_emergencia_telefono, es_dispositivo, es_prueba')
-          .eq('activo', true),
+          .select('id, nombre, cuil, activo, baja_en_app, baja_motivo, baja_por, baja_en, auth_user_id, rol_app, tipo, origen, unidad_negocio_id, rol, email, domicilio, legajo, fecha_alta, fecha_nacimiento, telefono, contacto_emergencia_nombre, contacto_emergencia_telefono, es_dispositivo, es_prueba'),
         supabase.from('empleado_modulos').select('empleado_id, modulo, habilitado').eq('habilitado', true),
         supabase.from('unidades_negocio').select('id, nombre').order('nombre'),
+        // Solo para resolver "dado de baja por X": si falla, la ficha no dice
+        // quién y nada más se rompe.
+        supabase.from('v_empleados_publico').select('id, nombre'),
       ])
 
       document.getElementById('estado-cargando').hidden = true
@@ -752,6 +922,7 @@
       estado.empleados       = empRes.data || []
       estado.empleadoModulos = modRes.data || []
       estado.maestros.unidadesNegocio = unidRes.data || []
+      if (nomRes && !nomRes.error) estado.nombres = new Map((nomRes.data || []).map(e => [e.id, e.nombre]))
 
       renderizarStats()
       renderizarListado()
@@ -771,6 +942,59 @@
       return emp?.es_dispositivo === true
     }
 
+    // Una persona DADA DE BAJA: activo = false. La Cuenta de Empresa también
+    // tiene activo = false, a propósito, y NO es una baja; y las cuentas
+    // 'sistema' (las tablets y las personas del robot) no se dan de baja ni se
+    // reactivan desde acá. Exige === false: un valor raro (null, ausente) no
+    // saca a nadie de la lista de activos.
+    function esDadoDeBaja(emp) {
+      return emp?.activo === false && emp?.tipo !== 'empresa' && emp?.tipo !== 'sistema'
+    }
+
+    // "Dar de baja" en la ficha: con empleados:ver_editar, a una persona
+    // ACTIVA que no sea una tablet ni una cuenta 'empresa' / 'sistema', que no
+    // sea quien mira y que no sea super_admin. La base igual rechaza las dos
+    // últimas (dar_de_baja_empleado): no ofrecer el botón evita un error
+    // seguro, no reemplaza a la barrera de la base.
+    function puedeDarDeBaja(emp) {
+      if (!emp || !tieneTarea('empleados', 'ver_editar')) return false
+      if (emp.activo === false || esDispositivo(emp)) return false
+      if (emp.tipo === 'empresa' || emp.tipo === 'sistema') return false
+      if (emp.id === estado.miEmpleado?.id) return false
+      return emp.rol_app !== 'super_admin'
+    }
+
+    function puedeReactivar(emp) {
+      return esDadoDeBaja(emp) && tieneTarea('empleados', 'ver_editar')
+    }
+
+    // El renglón de un dado de baja en el listado: el motivo y la fecha, lo
+    // que haya. TEXTO PLANO: se escapa su resultado. Una baja que vino del
+    // Excel de Naaloo (baja_en_app = false) no tiene motivo ni fecha en la app.
+    function resumenBaja(emp) {
+      const fecha = fechaBajaAr(emp?.baja_en)
+      const partes = [String(emp?.baja_motivo ?? '').trim(), fecha ? `desde el ${fecha}` : ''].filter(Boolean)
+      if (partes.length) return partes.join(' · ')
+      return emp?.baja_en_app === false ? 'Dado de baja en el Excel de Naaloo' : 'Sin motivo registrado'
+    }
+
+    // Quién la dio de baja: primero entre las filas que se leen de `empleados`
+    // y, si no está (otra unidad), en el mapa completo de v_empleados_publico.
+    function nombrePorId(id) {
+      if (!id) return ''
+      return estado.empleados.find(e => e.id === id)?.nombre || estado.nombres?.get?.(id) || ''
+    }
+
+    // "Desde el 28/09/2026 · por Ana Pérez" en la ficha, con lo que haya.
+    // TEXTO PLANO: se escapa su resultado.
+    function detalleBaja(emp) {
+      const fecha = fechaBajaAr(emp?.baja_en)
+      const quien = nombrePorId(emp?.baja_por)
+      const partes = [fecha ? `Desde el ${fecha}` : '', quien ? `por ${quien}` : ''].filter(Boolean)
+      if (partes.length) return partes.join(' · ')
+      return emp?.baja_en_app === false ? 'La baja vino del Excel de Naaloo.' : 'Sin fecha registrada.'
+    }
+
     // La FÁBRICA DE PRUEBAS (26/09/2026): la unidad "Pruebas (robot)" y sus
     // personas existen para Playwright y NO se muestran a una cuenta real, ni
     // como grupo ni como opción de unidad ni en la lista (tampoco en el grupo
@@ -783,17 +1007,30 @@
     function unidadesVisibles() {
       return sinUnidadesDePrueba(estado.maestros.unidadesNegocio, estado.fabrica)
     }
+    // OJO: devuelve TODAS las filas que se pueden mostrar, activas y dadas de
+    // baja (y la Cuenta de Empresa, que no se muestra nunca). Quien la usa
+    // separa: las cifras y los grupos cuentan solo las activas, y el grupo
+    // "Dados de baja" sale de dadosDeBajaVisibles().
     function personasVisibles() {
       const f = estado.fabrica
       const lista = sinPersonasDePrueba(estado.empleados, f)
       return (f?.ok && !f.soyDePrueba) ? lista.filter(e => e?.es_prueba !== true) : lista
     }
 
+    // Los dados de baja que se pueden mostrar: la misma regla de la fábrica de
+    // pruebas que el resto (una persona de prueba dada de baja tampoco se ve).
+    function dadosDeBajaVisibles() {
+      return personasVisibles().filter(esDadoDeBaja)
+    }
+
     function renderizarStats() {
       const personas  = personasVisibles().filter(e => !esDispositivo(e))
-      const total     = personas.length
-      const conAcceso = personas.filter(e => e.auth_user_id).length
-      const empresas  = new Set(personas.filter(e => e.unidad_negocio_id).map(e => e.unidad_negocio_id)).size
+      // Las cifras son de personas ACTIVAS: ni los dados de baja ni la Cuenta
+      // de Empresa cuentan (los dos tienen activo = false).
+      const activas   = personas.filter(e => e?.activo !== false)
+      const total     = activas.length
+      const conAcceso = activas.filter(e => e.auth_user_id).length
+      const empresas  = new Set(activas.filter(e => e.unidad_negocio_id).map(e => e.unidad_negocio_id)).size
 
       document.getElementById('empleados-stats').innerHTML = `
         <div class="stat-card stat-card--principal">
@@ -843,8 +1080,16 @@
       const sinEmpresaConAcceso = []
       const sinEmpresaSinAcceso = []
       const tablets = []
+      const bajas = []
 
       personasVisibles().forEach(emp => {
+        // Una fila inactiva nunca entra a un grupo de personas: si es un dado
+        // de baja va a su grupo (solo con el interruptor prendido); la Cuenta
+        // de Empresa no se muestra.
+        if (emp?.activo === false) {
+          if (esDadoDeBaja(emp)) bajas.push(emp)
+          return
+        }
         if (esDispositivo(emp)) {
           tablets.push(emp)
         } else if (emp.unidad_negocio_id && porUnidad.has(emp.unidad_negocio_id)) {
@@ -859,6 +1104,9 @@
       const grupos = [...porUnidad.values()].filter(g => g.lista.length)
       if (sinEmpresaConAcceso.length) grupos.push({ nombre: 'Con acceso a la app, sin empresa asignada', lista: sinEmpresaConAcceso })
       if (sinEmpresaSinAcceso.length) grupos.push({ nombre: 'Sin empresa asignada', lista: sinEmpresaSinAcceso })
+      // Los dados de baja, después de todas las personas activas y apagados
+      // por defecto: solo con "Mostrar dados de baja".
+      if (bajas.length && estado.filtros?.mostrarBajas === true) grupos.push({ nombre: 'Dados de baja', lista: bajas })
       // Siempre al final: no es personal de ninguna empresa.
       if (tablets.length) grupos.push({ nombre: 'Tablets de la fábrica', lista: tablets })
 
@@ -878,6 +1126,23 @@
               <span class="chip-tablet">Tablet</span>
             </div>
             <div class="tarjeta-lista__subtitulo">Cuenta de la tablet de la fábrica${unidad ? ' · ' + esc(unidad) : ''}</div>
+          </div>
+        </div>
+      `
+      }
+      // Un dado de baja: el chip "Dado de baja" en vez del rol, y debajo el
+      // motivo y la fecha si los hay. El motivo lo tipeó una persona: va
+      // escapado como todo lo demás.
+      if (esDadoDeBaja(emp)) {
+        return `
+        <div class="tarjeta-lista tarjeta-empleado--baja" data-id="${esc(emp.id)}">
+          <div class="tarjeta-lista__avatar" style="background: ${colorAvatar(emp.nombre)};">${esc(iniciales(emp.nombre))}</div>
+          <div class="tarjeta-lista__info">
+            <div class="acceso__fila1">
+              <span class="tarjeta-lista__titulo">${esc(emp.nombre)}</span>
+              <span class="chip-baja">Dado de baja</span>
+            </div>
+            <div class="tarjeta-lista__subtitulo">${esc(resumenBaja(emp))}</div>
           </div>
         </div>
       `
@@ -908,6 +1173,17 @@
     function renderizarListado() {
       const cont  = document.getElementById('lista-empleados')
       const termino = (estado.filtros.busqueda || '').trim().toLowerCase()
+
+      // "Mostrar dados de baja": solo si hay alguno para mostrar (un
+      // interruptor que no cambia nada entrena a ignorarlo), y solo con
+      // empleados:ver_editar (sin esa tarea el RLS ya no los trae).
+      const cantBajas = tieneTarea('empleados', 'ver_editar') ? dadosDeBajaVisibles().length : 0
+      const interruptor = document.getElementById('empleados-toolbar-bajas')
+      if (interruptor) interruptor.hidden = cantBajas === 0
+      const contador = document.getElementById('contador-bajas')
+      if (contador) contador.textContent = cantBajas ? `(${cantBajas})` : ''
+      const casilla = document.getElementById('filtro-mostrar-bajas')
+      if (casilla) casilla.checked = estado.filtros.mostrarBajas === true
 
       // El filtro solo oculta filas que no matchean — el agrupamiento y el
       // orden ya calculados en agruparEmpleados() no se tocan.
@@ -952,10 +1228,14 @@
       estado.modoEdicionFicha = false
       estado.modoEdicionContacto = false
       reiniciarPin(empleadoId)
+      reiniciarBaja(empleadoId)
       renderizarFicha()
       document.getElementById('modal-ficha').hidden = false
       // Una tablet no tiene PIN de producción: ni se pregunta a la base.
       if (esDispositivo(emp)) return
+      // Un dado de baja tampoco: no puede usar la planta (personal_produccion
+      // lo saca). Si se lo reactiva, reactivar vuelve a pedir el estado.
+      if (esDadoDeBaja(emp)) return
       // Arranca sin await: la ficha se abre ya y la sección del PIN aparece
       // cuando la base contesta. Hasta entonces no se dibuja NADA, para no
       // mostrar un título que después puede tener que desaparecer.
@@ -1052,7 +1332,9 @@
         `
       }
 
-      document.getElementById('btn-editar-contacto').hidden = estado.modoEdicionContacto || !tieneTarea('empleados', 'ver_editar')
+      // Un dado de baja se mira, no se edita: primero se lo reactiva.
+      const deBaja = esDadoDeBaja(emp)
+      document.getElementById('btn-editar-contacto').hidden = estado.modoEdicionContacto || !tieneTarea('empleados', 'ver_editar') || deBaja
       if (estado.modoEdicionContacto) {
         renderizarFormularioContacto(emp)
       } else {
@@ -1063,7 +1345,11 @@
       }
 
       const modulos = modulosDeEmpleado(emp.id)
-      if (emp.auth_user_id) {
+      if (emp.auth_user_id && deBaja) {
+        // Tiene cuenta, pero la base ya no lo reconoce (mi_empleado_id exige
+        // activo): decir "Tiene acceso" sería falso.
+        document.getElementById('ficha-acceso').innerHTML = `<div class="ficha-sin-acceso">Tiene cuenta, pero no puede entrar a la app mientras esté dado de baja.</div>`
+      } else if (emp.auth_user_id) {
         const etiquetaRol = emp.rol_app === 'super_admin' ? 'Super admin' : emp.rol_app === 'admin' ? 'Admin' : 'Usuario'
         const chipsModulos = modulos.length
           ? modulos.map(m => {
@@ -1086,15 +1372,18 @@
       }
 
       const acciones = []
-      if (incompleto && !estado.modoEdicionFicha && tieneTarea('empleados', 'ver_editar')) {
+      if (incompleto && !estado.modoEdicionFicha && tieneTarea('empleados', 'ver_editar') && !deBaja) {
         acciones.push(`<button type="button" class="btn btn--secundario" id="btn-completar-datos">Completar datos</button>`)
       }
-      if (emp.auth_user_id) {
+      // Los permisos de un dado de baja quedan guardados pero no sirven
+      // (mi_empleado_id() ya no lo reconoce): no se ofrece editarlos.
+      if (emp.auth_user_id && !deBaja) {
         acciones.push(`<a href="accesos.html" class="btn btn--secundario">Editar permisos de acceso →</a>`)
       }
       document.getElementById('ficha-acciones').innerHTML = acciones.join('')
 
       renderizarPin()
+      renderizarBaja()
 
       const btnCompletar = document.getElementById('btn-completar-datos')
       if (btnCompletar) {
@@ -1183,6 +1472,8 @@
       // después puede tener que desaparecer es peor que uno que aparece tarde.
       if (p.cargando) return ''
       if (esDispositivo(estado.empleados.find(e => e.id === p.empleadoId))) return ''
+      // Un dado de baja no usa la planta: ni el estado ni "Asignar PIN".
+      if (esDadoDeBaja(estado.empleados.find(e => e.id === p.empleadoId))) return ''
       if (p.error) return TITULO_PIN + '<div class="ficha-sin-acceso">No se pudo leer el estado del PIN.</div>'
       // null = la base dice que quien mira no puede ver esto. Sección entera fuera.
       if (!p.datos) return ''
@@ -1252,6 +1543,165 @@
       await cargarEstadoPin(p.empleadoId)
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // DAR DE BAJA / REACTIVAR (28/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Las reglas viven en la base: dar_de_baja_empleado(p_empleado_id,
+    // p_motivo) exige empleados:ver_editar, rechaza darse de baja a uno mismo y
+    // a un super_admin, pone activo = false y guarda baja_motivo / baja_por /
+    // baja_en; si la persona tenía cuenta, pierde el acceso al instante
+    // (mi_empleado_id() exige activo). reactivar_empleado(p_empleado_id) lo
+    // deshace. La pantalla NO repite esas validaciones: solo no ofrece el botón
+    // donde la base va a decir que no, y muestra el mensaje de la base TAL CUAL,
+    // pegado a los botones del panel. El panel ES la confirmación: nada se manda
+    // hasta tocar "Sí, …" (sin window.confirm ni prompt).
+
+    function reiniciarBaja(empleadoId) {
+      estado.baja = { empleadoId, panel: null, motivo: '', enviando: false, error: null }
+    }
+
+    function renderizarBaja() {
+      const arriba = document.getElementById('ficha-estado-baja')
+      const abajo  = document.getElementById('ficha-baja')
+      if (!arriba || !abajo) return
+      const emp = estado.empleados.find(e => e.id === estado.fichaAbierta)
+      const b = estado.baja
+      const deBaja = esDadoDeBaja(emp)
+      const reactivable = deBaja && puedeReactivar(emp)
+
+      // ARRIBA: el estado de un dado de baja (cuándo, quién, el motivo) y
+      // "Reactivar" si se puede.
+      arriba.innerHTML = deBaja ? `
+        <div class="ficha-baja__caja">
+          <div class="ficha-baja__fila1">
+            <span class="chip-baja">Dado de baja</span>
+            ${reactivable && b.panel !== 'reactivar' ? '<button type="button" class="btn btn--secundario" id="btn-reactivar">Reactivar</button>' : ''}
+          </div>
+          <div class="ficha-baja__dato ficha-baja__dato--suave">${esc(detalleBaja(emp))}</div>
+          ${String(emp.baja_motivo ?? '').trim() ? `<div class="ficha-baja__dato">Motivo: ${esc(emp.baja_motivo)}</div>` : ''}
+          ${reactivable && b.panel === 'reactivar' ? `
+          <div class="ficha-baja__panel" role="group" aria-labelledby="reactivar-titulo">
+            <p class="ficha-baja__titulo" id="reactivar-titulo">¿Reactivar a ${esc(emp.nombre)}?</p>
+            <p class="ficha-baja__ayuda">Vuelve a aparecer en las listas de personas${emp.auth_user_id ? ' y puede volver a entrar a la app con los permisos que tenía' : ''}.</p>
+            ${emp.baja_en_app === false ? '<p class="ficha-baja__ayuda">La baja vino del Excel de Naaloo: si ahí sigue de baja, la próxima importación la vuelve a dar de baja.</p>' : ''}
+            ${b.error ? `<div class="ficha-baja__error" role="alert">${esc(b.error)}</div>` : ''}
+            <div class="modal-ficha__form-acciones">
+              <button type="button" class="btn btn--secundario" id="btn-reactivar-cancelar">Cancelar</button>
+              <button type="button" class="btn btn--exito" id="btn-reactivar-confirmar"${b.enviando ? ' disabled' : ''}>Sí, reactivar</button>
+            </div>
+          </div>` : ''}
+        </div>
+      ` : ''
+
+      // ABAJO: "Dar de baja" y, al tocarlo, el panel con el motivo y la
+      // confirmación. Solo donde la base lo va a aceptar (puedeDarDeBaja).
+      abajo.innerHTML = puedeDarDeBaja(emp) ? (b.panel === 'baja' ? `
+        <div class="ficha-baja__panel" role="group" aria-labelledby="baja-titulo">
+          <p class="ficha-baja__titulo" id="baja-titulo">¿Dar de baja a ${esc(emp.nombre)}?</p>
+          <p class="ficha-baja__ayuda">Deja de aparecer en las listas de personas (Producción, Caja, Gastos). Lo que ya cargó queda como está, y se puede reactivar.</p>
+          ${emp.auth_user_id ? '<p class="ficha-baja__alerta">Pierde el acceso a la app al instante.</p>' : ''}
+          <label for="baja-motivo">Motivo (opcional)</label>
+          <input type="text" id="baja-motivo" autocomplete="off" placeholder="Ej.: renunció, terminó el contrato" value="${esc(b.motivo)}">
+          ${b.error ? `<div class="ficha-baja__error" role="alert">${esc(b.error)}</div>` : ''}
+          <div class="modal-ficha__form-acciones">
+            <button type="button" class="btn btn--secundario" id="btn-baja-cancelar">Cancelar</button>
+            <button type="button" class="btn btn--peligro" id="btn-baja-confirmar"${b.enviando ? ' disabled' : ''}>Sí, dar de baja</button>
+          </div>
+        </div>
+      ` : `<button type="button" class="btn btn--secundario ficha-baja__boton" id="btn-dar-baja">Dar de baja</button>`) : ''
+
+      document.getElementById('btn-reactivar')?.addEventListener('click', () => {
+        estado.baja.panel = 'reactivar'
+        estado.baja.error = null
+        renderizarBaja()
+        document.getElementById('btn-reactivar-confirmar')?.focus?.()
+      })
+      document.getElementById('btn-reactivar-cancelar')?.addEventListener('click', () => {
+        estado.baja.panel = null
+        estado.baja.error = null
+        renderizarBaja()
+      })
+      document.getElementById('btn-reactivar-confirmar')?.addEventListener('click', confirmarReactivar)
+      document.getElementById('btn-dar-baja')?.addEventListener('click', () => {
+        estado.baja.panel = 'baja'
+        estado.baja.error = null
+        renderizarBaja()
+        document.getElementById('baja-motivo')?.focus?.()
+      })
+      document.getElementById('btn-baja-cancelar')?.addEventListener('click', () => {
+        estado.baja.panel = null
+        estado.baja.motivo = ''
+        estado.baja.error = null
+        renderizarBaja()
+      })
+      // El motivo se guarda en el estado al tipear: un re-render (un error de
+      // la base) no lo borra.
+      document.getElementById('baja-motivo')?.addEventListener('input', (e) => { estado.baja.motivo = e.target.value })
+      document.getElementById('btn-baja-confirmar')?.addEventListener('click', confirmarBaja)
+    }
+
+    // Una llamada a la base que no tira: una caída de red vuelve como error y
+    // el botón no queda trabado para siempre.
+    async function llamarRpcBaja(nombre, args) {
+      try {
+        return await supabase.rpc(nombre, args)
+      } catch (err) {
+        return { data: null, error: { message: err?.message || 'No se pudo conectar con la base.' } }
+      }
+    }
+
+    async function confirmarBaja() {
+      const b = estado.baja
+      const emp = estado.empleados.find(e => e.id === b.empleadoId)
+      // El botón se traba SOLO mientras se manda, nunca por lo que falta.
+      if (b.enviando || !puedeDarDeBaja(emp)) return
+      const motivo = String(document.getElementById('baja-motivo')?.value ?? b.motivo ?? '').trim()
+      b.motivo = motivo
+      b.enviando = true
+      b.error = null
+      renderizarBaja()
+      const { data, error } = await llamarRpcBaja('dar_de_baja_empleado', { p_empleado_id: emp.id, p_motivo: motivo || null })
+      b.enviando = false
+      // Si mientras tanto se cerró la ficha o se abrió otra, el panel ya no es
+      // este: el error va a un cartel en vez de perderse.
+      const sigue = estado.baja === b
+      if (error) {
+        const texto = error.message || 'No se pudo dar de baja.'
+        if (sigue) { b.error = texto; renderizarBaja() } else mostrarError(texto)
+        return
+      }
+      mostrarExito(data?.tenia_cuenta
+        ? `${emp.nombre} quedó dado de baja y ya no puede entrar a la app.`
+        : `${emp.nombre} quedó dado de baja.`)
+      if (sigue) reiniciarBaja(emp.id)
+      // La ficha queda abierta y se redibuja con el estado nuevo (dado de baja,
+      // con "Reactivar"): se ve que pasó.
+      await cargarTodo()
+    }
+
+    async function confirmarReactivar() {
+      const b = estado.baja
+      const emp = estado.empleados.find(e => e.id === b.empleadoId)
+      if (b.enviando || !puedeReactivar(emp)) return
+      b.enviando = true
+      b.error = null
+      renderizarBaja()
+      const { error } = await llamarRpcBaja('reactivar_empleado', { p_empleado_id: emp.id })
+      b.enviando = false
+      const sigue = estado.baja === b
+      if (error) {
+        const texto = error.message || 'No se pudo reactivar.'
+        if (sigue) { b.error = texto; renderizarBaja() } else mostrarError(texto)
+        return
+      }
+      mostrarExito(`${emp.nombre} volvió a estar activo.`)
+      if (sigue) { reiniciarBaja(emp.id); reiniciarPin(emp.id) }
+      await cargarTodo()
+      // Activo otra vez: la sección del PIN vuelve a preguntarle a la base.
+      if (sigue && estado.fichaAbierta === emp.id && !esDispositivo(emp)) cargarEstadoPin(emp.id)
+    }
+
     async function guardarDatosCompletos(empleadoId) {
       const rol       = document.getElementById('edit-rol').value.trim()
       const unidadId  = document.getElementById('edit-unidad').value
@@ -1317,6 +1767,7 @@
       estado.modoEdicionFicha = false
       estado.modoEdicionContacto = false
       reiniciarPin(null)
+      reiniciarBaja(null)
     }
 
     document.getElementById('btn-cerrar-ficha').addEventListener('click', cerrarFicha)
@@ -1419,6 +1870,13 @@
         estado.filtros.busqueda = valor
         renderizarListado()
       }, 250)
+    })
+
+    // "Mostrar dados de baja": filtra lo que ya está en memoria, sin volver a
+    // consultar (la consulta ya los trae).
+    document.getElementById('filtro-mostrar-bajas').addEventListener('change', (e) => {
+      estado.filtros.mostrarBajas = e.target.checked === true
+      renderizarListado()
     })
 
     // Las opciones del selector de empresa de la importación de Naaloo.

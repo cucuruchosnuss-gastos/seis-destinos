@@ -1225,8 +1225,16 @@
     // Las personas de la fábrica de pruebas (las usa Playwright) no se
     // muestran a una cuenta real: ni en "Usuarios y roles" ni en las cifras.
     // Solo las ve una cuenta que es de la fábrica de pruebas.
+    //
+    // Tampoco quien está DADO DE BAJA (empleados.activo = false, 28/09/2026):
+    // conserva su cuenta de Auth, pero no puede entrar a la app (mi_empleado_id()
+    // devuelve null para un inactivo), así que no es un usuario ni cuenta como
+    // "Activo". Sus permisos siguen en la base; se lo reactiva desde Empleados.
+    // Se filtra acá y no en la consulta: estado.empleados queda completo para
+    // el match de las solicitudes (calcularEstadoMatch mira `activo`).
     function empleadosConAcceso() {
       return sinPersonasDePrueba(estado.empleados.filter(e => e.auth_user_id), estado.fabrica)
+        .filter(e => e?.activo !== false)
     }
 
     // Las unidades que se ofrecen para elegir (la unidad de un empleado nuevo

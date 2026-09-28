@@ -225,6 +225,32 @@ const PANTALLAS = [
       await expect(page.locator('body')).toContainText('Por revisar · 1')
     }],
   ]],
+  // Dar de baja y reactivar (28/09/2026): los dados de baja se ven solo con
+  // "Mostrar dados de baja", su ficha dice la baja y ofrece Reactivar, y la de
+  // alguien activo ofrece "Dar de baja" con su panel (nunca un confirm()).
+  ['modulos/empleados.html', 'empleados', [
+    ['lista', async (page) => {
+      await expect(page.locator('[data-id="emp-2"]')).toBeVisible()
+      await expect(page.locator('[data-id="emp-4"]')).toHaveCount(0)
+    }],
+    ['dados-de-baja', async (page) => {
+      await page.locator('#filtro-mostrar-bajas').check()
+      await expect(page.locator('[data-id="emp-4"]')).toContainText('Dado de baja')
+      await expect(page.locator('[data-id="empresa"]')).toHaveCount(0)
+    }],
+    ['ficha-de-baja', async (page) => {
+      await page.locator('[data-id="emp-4"]').click()
+      await expect(page.locator('#ficha-estado-baja')).toContainText('por Usabarrena Facundo')
+      await page.locator('#btn-reactivar').click()
+      await expect(page.locator('#btn-reactivar-confirmar')).toBeVisible()
+    }],
+    ['panel-dar-de-baja', async (page) => {
+      await page.locator('#btn-cerrar-ficha').click()
+      await page.locator('[data-id="emp-2"]').click()
+      await page.locator('#btn-dar-baja').click()
+      await expect(page.locator('#ficha-baja')).toContainText('Pierde el acceso a la app al instante.')
+    }],
+  ]],
 ];
 
 for (const [archivo, datos, pasos] of PANTALLAS) {

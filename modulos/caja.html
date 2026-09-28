@@ -1845,8 +1845,8 @@
                               // deje una entrada vieja con activa:true colgada en el mapa.
       saldosPorCuenta: [],   // filas de v_caja_saldos_cuenta { cuenta_id, saldo } del alcance
                               // actual (una persona puntual, o todas las visibles del listado)
-      superAdmins:     [],   // { id, nombre, caja_raiz, oculto_como_contraparte } — todos los rol_app='super_admin'
-      nombresEmpleados: {},  // id -> nombre (todos los activos), para resolver contraparte/
+      superAdmins:     [],   // { id, nombre, caja_raiz, oculto_como_contraparte, activo } — todos los rol_app='super_admin'
+      nombresEmpleados: {},  // id -> nombre (TODOS, también los dados de baja), para resolver contraparte/
                               // titular sin depender de embeds ambiguos (caja_movimientos
                               // tiene 3 FKs a empleados: empleado_id, contraparte_empleado_id,
                               // creado_por — un embed "empleados(nombre)" sería ambiguo)
@@ -1888,7 +1888,7 @@
       // arma (ver pasaUnidad()). Los permisos siguen en la base.
       unidadElegida:   null,
       barraUnidadVisible: false,
-      unidadesEmpleados: {}, // id -> unidad_negocio_id (activos, de v_empleados_publico)
+      unidadesEmpleados: {}, // id -> unidad_negocio_id (todos, de v_empleados_publico)
       listadoCargado:  false, // el listado general ya se dibujó (para repintarlo al cambiar la unidad)
       turnoMovDelMes:  0, // ver contarMovimientosDelMes()
       turnoMovimientosFicha: 0, // cargarMovimientos() y cargarMovimientosFichaEmpresa()
@@ -2594,19 +2594,23 @@
       return e?.tipo === 'sistema'
     }
 
+    // Trae `activo`: la contraparte saca a quien esté dado de baja (ver
+    // poblarSelectorContraparte). Se filtra en el cliente, no en la consulta.
     async function cargarSuperAdmins() {
-      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, tipo, caja_raiz, oculto_como_contraparte').eq('rol_app', 'super_admin')
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, tipo, caja_raiz, oculto_como_contraparte, activo').eq('rol_app', 'super_admin')
       if (error) { mostrarError('No se pudieron cargar los super admins.'); return }
       estado.superAdmins = (data || []).filter(e => !esCuentaDeTablet(e))
     }
 
-    // activo=true a propósito: no queremos que ex-empleados reales
-    // atiborren nombres/selectores. Empresa es la única excepción — queda
-    // activo=false pero necesita resolverse igual en todos lados que usan
-    // este diccionario (movimientos, contraparte, solicitudes, excel) — ver
-    // cargarEmpresa(), que inyecta su nombre acá aparte.
+    // TODAS las personas, también las dadas de baja (28/09/2026). Este
+    // diccionario es para BUSCAR un nombre por id —el titular y la contraparte
+    // de un movimiento, una solicitud, el Excel—, nunca una lista para elegir:
+    // los selectores salen de estado.empleados y estado.superAdmins. Antes
+    // filtraba activo = true, y el nombre de alguien dado de baja desaparecía
+    // de sus propios movimientos ("—"). Empresa (activo = false) llega acá
+    // también; cargarEmpresa() igual lo inyecta, por si esta consulta falla.
     async function cargarNombresEmpleados() {
-      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, unidad_negocio_id').eq('activo', true)
+      const { data, error } = await supabase.from('v_empleados_publico').select('id, nombre, unidad_negocio_id')
       if (error) { mostrarError('No se pudieron cargar los nombres de empleados.'); return }
       estado.nombresEmpleados = Object.fromEntries((data || []).map(e => [e.id, e.nombre]))
       // La unidad de cada persona, para saber de qué unidad es un movimiento
@@ -2615,8 +2619,9 @@
     }
 
     // Empresa es un empleado ficticio (tipo='empresa', activo=false,
-    // auth_user_id=null) — excluido a propósito del listado general y de
-    // cargarNombresEmpleados() por esos mismos filtros. Se resuelve acá
+    // auth_user_id=null) — excluido a propósito del listado general por esos
+    // mismos filtros (a cargarNombresEmpleados() llega, pero no se depende de
+    // eso). Se resuelve acá
     // aparte para poder mostrar su ficha (CAMBIO 1) y que su nombre
     // aparezca donde corresponda (contraparte, movimientos). Se llama
     // DESPUÉS del Promise.all de init() a propósito — si corriera en
@@ -4675,6 +4680,10 @@
       // Ni las personas de la fábrica de pruebas: acá también porque la rama
       // del usuario común sale de estado.superAdmins, que no pasa por
       // cargarPersonasConAcceso().
+      // Ni quien está dado de baja (empleados.activo = false): estado.superAdmins
+      // no filtra activos al cargar. Va ANTES de sumar a Empresa, que es
+      // inactiva a propósito y se agrega abajo.
+      candidatos = candidatos.filter(c => c?.activo !== false)
       candidatos = sinPersonasDePrueba(candidatos.filter(c => !c.oculto_como_contraparte && !esCuentaDeTablet(c)), estado.fabrica)
 
       // Empresa como contraparte solo cuando NO es ya mi lado.

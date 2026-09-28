@@ -27,7 +27,9 @@ const { chk, fin } = arnes()
 // no un corte de la suite: así la mutación se lee como rojo por una razón.
 function bloque(fn) { try { fn() } catch (e) { chk('bloque sin excepción', false, String(e && e.message || e)) } }
 
-const FNS = ['esc', 'iniciales', 'colorAvatar', 'formatearCuil', 'esDispositivo', 'unidadesVisibles', 'personasVisibles', 'ordenarGrupo', 'agruparEmpleados', 'renderizarFilaEmpleado', 'renderizarStats', 'htmlSeccionPin', 'abrirFicha']
+// esDadoDeBaja y reiniciarBaja (28/09/2026): la fila, los grupos, la ficha y la
+// sección del PIN los llaman desde la baja de empleados; van reales.
+const FNS = ['esc', 'iniciales', 'colorAvatar', 'formatearCuil', 'esDispositivo', 'esDadoDeBaja', 'reiniciarBaja', 'fechaBajaAr', 'resumenBaja', 'unidadesVisibles', 'personasVisibles', 'ordenarGrupo', 'agruparEmpleados', 'renderizarFilaEmpleado', 'renderizarStats', 'htmlSeccionPin', 'abrirFicha']
 let codigo = ''
 for (const n of FNS) {
   try { codigo += extraerFn(FUENTE, n) + '\n' } catch (e) { chk(`existe la función ${n}`, false, e.message) }
@@ -148,6 +150,14 @@ bloque(() => {
   // Las iniciales son un pedazo del nombre: '<b' da '<B'.
   const hIni = api.renderizarFilaEmpleado({ ...e.empleados[0], nombre: '<b' })
   chk('las iniciales de la persona van escapadas', hIni.includes('&lt;B') && !hIni.includes('><B<'))
+  // Y la tercera rama de la fila (28/09/2026): un dado de baja. El motivo lo
+  // tipea una persona; separar las ramas no puede dejar ninguna sin escapar.
+  const baja = { ...e.empleados[0], activo: false, tipo: 'naaloo', id: 'b' + marca('bid'), nombre: 'Beto' + marca('bnombre'), baja_motivo: 'Renunció' + marca('bmotivo') }
+  const hBaja = api.renderizarFilaEmpleado(baja)
+  chk('la fila del dado de baja se dibujó (si no, el chequeo no mira nada)', /chip-baja/.test(hBaja))
+  chequearMarcas(chk, 'fila de dado de baja', hBaja, ['bid', 'bnombre', 'bmotivo'])
+  const hBajaIni = api.renderizarFilaEmpleado({ ...baja, nombre: '<b' })
+  chk('las iniciales del dado de baja van escapadas', hBajaIni.includes('&lt;B') && !hBajaIni.includes('><B<'))
 })
 
 fin()

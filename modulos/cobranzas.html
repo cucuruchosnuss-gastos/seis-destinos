@@ -1729,7 +1729,7 @@
       try {
         const { data, error } = await supabase
           .from('v_empleados_publico')
-          .select('id, nombre, unidad_negocio_id')
+          .select('id, nombre, unidad_negocio_id, activo')
           .eq('tiene_acceso', true)
           .order('nombre')
         if (error) throw error
@@ -1743,11 +1743,15 @@
     // Arma el selector desde estado.repartidores, sin las personas de la
     // fábrica de pruebas (salvo para una cuenta de prueba). Se vuelve a
     // pintar cuando llega la fábrica, conservando lo elegido si sigue.
+    // Tampoco ofrece a quien está DADO DE BAJA (empleados.activo = false):
+    // se filtra acá y no en la consulta. Si justo estaba elegido, se conserva
+    // (sacarlo cambiaría el filtro puesto sin que nadie lo toque).
     function pintarRepartidores() {
       if (!puedeVerTodo() || !estado.repartidores.length) return
-      const visibles = sinPersonasDePrueba(estado.repartidores, estado.fabrica)
       const sel = document.getElementById('cob-filtro-repartidor')
       const antes = sel.value
+      const visibles = sinPersonasDePrueba(estado.repartidores, estado.fabrica)
+        .filter(r => r?.activo !== false || (antes && r.id === antes))
       sel.innerHTML = '<option value="">Todos</option>' +
         visibles.map(r => `<option value="${escCob(r.id)}">${escCob(r.nombre)}</option>`).join('')
       if (antes && visibles.some(r => r.id === antes)) sel.value = antes
