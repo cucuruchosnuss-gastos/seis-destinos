@@ -35,7 +35,7 @@ correrMutacionesProduccion({
     { nombre: 'botones de 40 px', de: 'body { --pr-alto-boton: 48px; font-size: 16px; }', a: 'body { --pr-alto-boton: 40px; font-size: 16px; }' },
     { nombre: 'texto base de 14 px', de: 'body { --pr-alto-boton: 48px; font-size: 16px; }', a: 'body { --pr-alto-boton: 48px; font-size: 14px; }' },
     { nombre: 'la receta se achica con el resto', de: '#pr-receta, #pr-otro, #pr-lote-panel, #pr-pin { --pr-alto-boton: 56px; }', a: '#pr-otro, #pr-lote-panel, #pr-pin { --pr-alto-boton: 56px; }' },
-    { nombre: 'el tablero vuelve a tres columnas', de: 'minmax(min(100%, 15rem), 1fr)', a: 'minmax(min(100%, 19rem), 1fr)' },
+    { nombre: 'el tablero vuelve a tres columnas', de: '.pr-tablero { grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); }', a: '.pr-tablero { grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); }' },
     { nombre: 'las tarjetas vuelven a 150 px', de: '.pr-tablero .pr-maquina { min-height: 112px;', a: '.pr-tablero .pr-maquina { min-height: 150px;' },
     { nombre: 'los renglones de la barra lateral bajan a 40 px', de: '      min-height: 52px; width: 100%; padding: 0 12px 0 14px;', a: '      min-height: 40px; width: 100%; padding: 0 12px 0 14px;' },
     { nombre: 'la barra lateral se angosta sin correr la página', de: 'body.pr-con-lateral .pr-app { margin-left: 240px;', a: 'body.pr-con-lateral .pr-app { margin-left: 180px;' },

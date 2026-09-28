@@ -112,7 +112,11 @@ function armar(rol, tareas, archivo = ARCHIVO) {
   chk('botones de 48 px y texto base de 16 px', /body \{ --pr-alto-boton: 48px; font-size: 16px; \}/.test(compacto))
   chk('la receta, "+ Otro", el panel de lotes y el PIN vuelven a 56 px',
     /#pr-receta, #pr-otro, #pr-lote-panel, #pr-pin \{ --pr-alto-boton: 56px; \}/.test(compacto))
-  chk('el tablero entra en cuatro columnas en 1280 (15rem)', /\.pr-tablero \{[^}]*minmax\(min\(100%, 15rem\), 1fr\)/.test(compacto))
+  // (28/09/2026) El handoff "Planta · Dos modos" pone el tablero en una grilla
+  // de 3 en la compu; por debajo de 1100 px, tarjetas de 15rem. Esas reglas van
+  // DESPUÉS del bloque compacto y le ganan por orden a su "cuatro columnas".
+  chk('el tablero: tarjetas de 15rem por debajo de 1100 px y grilla de 3 desde 1100 (handoff)',
+    /\.pr-tablero \{ grid-template-columns: repeat\(auto-fill, minmax\(min\(100%, 15rem\), 1fr\)\); \}\s*@media \(min-width: 1100px\) \{ \.pr-tablero \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \} \}/.test(compacto))
   chk('las tarjetas de máquina son bajas (112 px)', /\.pr-tablero \.pr-maquina \{ min-height: 112px;/.test(compacto))
   chk('el LOTE sigue siendo lo más grande de la tarjeta', /\.pr-maquina__lote \{ font-size: 2\.5rem; \}/.test(compacto))
   // (28/09/2026) La barra de modos de arriba se fue: ahora es la barra lateral

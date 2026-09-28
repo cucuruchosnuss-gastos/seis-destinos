@@ -180,7 +180,7 @@ correrMutacionesProduccion({
     { nombre: "se puede anular una que no es la última", de: "      return vivas.reduce((a, m) => (a == null || Number(m.nro) > Number(a.nro) ? m : a), null)", a: "      return vivas[0] ?? null" },
     { nombre: "una anulada se ofrece para anular", de: "      const vivas = (masas ?? []).filter(m => !m.anulada)", a: "      const vivas = masas ?? []" },
     { nombre: "\"Anular la última\" sin permiso de cargar", de: "      if (ultima && tieneTarea('cargar')) {", a: "      if (ultima) {" },
-    { nombre: "anular la última sin motivo", de: "      if (motivo.length < 3) { a.error = 'Escribí por qué (al menos 3 letras).'", a: "      if (motivo.length < 0) { a.error = 'Escribí por qué (al menos 3 letras).'" },
+    { nombre: "anular la última sin motivo", de: "      if (motivo.length < 3) { a.error = 'Escribí por qué (al menos 3 letras).'; return pintarMasasReceta() }", a: "      if (motivo.length < 0) { a.error = 'Escribí por qué (al menos 3 letras).'; return pintarMasasReceta() }" },
     { nombre: "anular la última manda otra masa", de: "await supabase.rpc('anular_masa', { p_masa_id: a.masaId, p_motivo: motivo })", a: "await supabase.rpc('anular_masa', { p_masa_id: null, p_motivo: motivo })" },
     { nombre: "el centro no se atenúa al anular", de: "      if (centro) centro.classList.toggle('pr-receta-centro--atenuado', !!estado.anularUltima)", a: "      void centro" },
     { nombre: "las masas del turno son de todas las máquinas", de: "        const filas = await leerMasasSala([t.id])", a: "        const filas = await leerMasasSala(maquinasAbiertas().map(e => e.turno.id))" },
