@@ -26,7 +26,7 @@ correrMutaciones({
     { nombre: 'un dueño fuera de la lista queda sin unidad',
       de: 'return estado.unidadesEmpleados[id] || null', a: 'return null' },
     { nombre: 'cargarNombresEmpleados no pide la unidad',
-      de: ".select('id, nombre, unidad_negocio_id').eq('activo', true)", a: ".select('id, nombre').eq('activo', true)" },
+      de: ".select('id, nombre, unidad_negocio_id')\n", a: ".select('id, nombre')\n" },
     // ── Listado ───────────────────────────────────────────────────────────
     { nombre: 'el listado no se recorta por unidad',
       de: 'let grupos = agruparPersonas().filter(g => g.id === null || pasaUnidad(g.id))', a: 'let grupos = agruparPersonas()' },

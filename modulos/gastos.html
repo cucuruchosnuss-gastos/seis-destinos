@@ -3373,9 +3373,9 @@
       .from('vehiculos').select('id, nombre, marca, patente').eq('activo', true).order('nombre')
     estado.maestros.vehiculos = vehiculosInicial ?? []
 
-    console.log('[empleados] Ejecutando consulta a Supabase — tabla: empleados, filtro: activo = true')
+    console.log('[empleados] Ejecutando consulta a Supabase — tabla: v_empleados_publico, todas (los dados de baja se filtran en personasElegibles)')
     const { data: empleadosInicial, error: errorEmpleados } = await supabase
-      .from('v_empleados_publico').select('id, nombre, tipo').eq('activo', true).order('nombre')
+      .from('v_empleados_publico').select('id, nombre, tipo, activo').order('nombre')
     console.log('[empleados] Resultado de Supabase — data:', empleadosInicial, '| error:', errorEmpleados)
     if (errorEmpleados) {
       console.error('[empleados] Error al cargar — message:', errorEmpleados.message,
@@ -3465,7 +3465,7 @@
       console.log('[DEBUG-CATS] session:', (await supabase.auth.getSession()).data.session?.user?.email)
 
       const [emps, vehs, provs, projs] = await Promise.all([
-        supabase.from('v_empleados_publico').select('id, nombre, unidad_negocio_id, tipo').eq('activo', true).order('nombre'),
+        supabase.from('v_empleados_publico').select('id, nombre, unidad_negocio_id, tipo, activo').order('nombre'),
         supabase.from('vehiculos')  .select('id, nombre, marca, patente, unidad_negocio_id').eq('activo', true).order('nombre'),
         // cuenta_corriente: decide si el aviso de después de guardar dice que
         // el gasto quedó en la cuenta corriente (un ocasional nunca pasa por ahí).
@@ -4278,9 +4278,10 @@
     }
 
     // ── Cuentas de Empresa ──────────────────────────────────────────────────
-    // El empleado ficticio tiene activo=false, así que NO viene en
-    // estado.maestros.empleados (esas consultas filtran por activo=true):
-    // hay que resolverlo aparte. Se identifica por tipo='empresa', nunca por
+    // El empleado ficticio tiene activo=false. Desde el 28/09/2026 SÍ viene en
+    // estado.maestros.empleados (esas consultas ya no filtran activos, para
+    // que el nombre de alguien dado de baja se siga resolviendo), pero
+    // personasElegibles() lo saca y el id se resuelve igual aparte. Se identifica por tipo='empresa', nunca por
     // un id fijo. Mismo patrón que cargarEmpresa() de caja.html.
     async function resolverEmpresa() {
       if (estado.idEmpresa) return estado.idEmpresa
@@ -4457,8 +4458,16 @@
     // cuenta de prueba). La fábrica se filtra EXPLÍCITO y no se deja caer por
     // esCuentaDeTablet: que hoy las personas del robot tengan tipo='sistema'
     // es una casualidad, no una regla.
+    //
+    // Ni a nadie dado de baja (empleados.activo = false, desde Empleados con
+    // dar_de_baja_empleado): las consultas traen a TODOS para que el mapa de
+    // nombres quede completo, y la baja se filtra acá, en el CLIENTE —nunca
+    // con un .eq('activo', true) en la consulta—. Esto saca también a la
+    // Cuenta de Empresa (activo=false), que no es una persona elegible.
+    // Una fila sin la columna `activo` no se saca.
     function personasElegibles() {
       return sinPersonasDePrueba(personasNoTablet(), estado.fabrica)
+        .filter(e => e?.activo !== false)
     }
 
     function personasNoTablet() {
@@ -5569,8 +5578,8 @@
     }
 
     // Personas del selector de la edición: las elegibles, MÁS la del propio
-    // gasto si justo es una cuenta de tablet o una persona de la fábrica de
-    // pruebas (hoy ninguno lo es). Sin esa
+    // gasto si justo es una cuenta de tablet, una persona de la fábrica de
+    // pruebas o alguien DADO DE BAJA después de cargarlo. Sin esa
     // excepción el select no la encontraría, quedaría en "— Ninguno —" y el
     // guardado le borraría la persona al gasto sin ningún aviso — el mismo
     // caso que el proyecto dado de baja. No se ofrece para elegirla: solo

@@ -123,8 +123,11 @@ chk('el select de la edición NO recorre estado.maestros.empleados crudo',
 chk('poblarSelectEmpleados parte de personasElegibles()',
   /const todos\s+= personasElegibles\(\)/.test(extraerFn(FUENTE, 'poblarSelectEmpleados')))
 
-const consultas = FUENTE.match(/\.from\('v_empleados_publico'\)\s*\.select\('[^']*'\)\s*\.eq\('activo', true\)/g) || []
-chk('hay dos consultas de lista de personas activas', consultas.length === 2, String(consultas.length))
+// Desde el 28/09/2026 las dos consultas traen a TODOS (también a los dados de
+// baja, para el mapa de nombres) y la baja se filtra en personasElegibles():
+// ver test-gastos-baja.js.
+const consultas = FUENTE.match(/\.from\('v_empleados_publico'\)\s*\.select\('[^']*'\)\s*\.order\('nombre'\)/g) || []
+chk('hay dos consultas de lista de personas', consultas.length === 2, String(consultas.length))
 for (const q of consultas) chk(`la consulta trae tipo: ${q.slice(0, 80)}`, /select\('[^']*\btipo\b/.test(q), q)
 // En código la llamada va encadenada a un ')'; el comentario la nombra suelta.
 chk('nunca se filtra la tablet en SQL con .neq(tipo)', !/\)\s*\.neq\(\s*'tipo'/.test(FUENTE))

@@ -1,0 +1,155 @@
+// Mutaciones de test-empleados-baja.js. Ver mutar.js.
+// AUTOMÁTICAS: cada esc() de renderizarBaja pierde su escape (la fila del dado
+// de baja la cubren las automáticas de mut-empleados-tablets.js, que recorre
+// renderizarFilaEmpleado entera). A MANO: cada regla de la baja, rota de a una.
+//
+//   node pruebas/mut-empleados-baja.js
+
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+
+const RAIZ = path.join(__dirname, '..')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-empleados-baja.js'),
+  original: process.env.ARCHIVO_BASE || path.join(RAIZ, 'modulos/empleados.html'),
+  funciones: ['renderizarBaja'],
+  manuales: [
+    // ── Quién es un dado de baja ─────────────────────────────────────────
+    { nombre: 'la Cuenta de Empresa cuenta como dada de baja',
+      de: "return emp?.activo === false && emp?.tipo !== 'empresa' && emp?.tipo !== 'sistema'",
+      a: "return emp?.activo === false && emp?.tipo !== 'sistema'" },
+    { nombre: 'una cuenta sistema inactiva cuenta como dada de baja',
+      de: "return emp?.activo === false && emp?.tipo !== 'empresa' && emp?.tipo !== 'sistema'",
+      a: "return emp?.activo === false && emp?.tipo !== 'empresa'" },
+    { nombre: 'activo null cuenta como de baja',
+      de: "return emp?.activo === false && emp?.tipo !== 'empresa' && emp?.tipo !== 'sistema'",
+      a: "return !emp?.activo && emp?.tipo !== 'empresa' && emp?.tipo !== 'sistema'" },
+
+    // ── Dónde se ofrece ──────────────────────────────────────────────────
+    { nombre: 'dar de baja sin empleados:ver_editar',
+      de: "if (!emp || !tieneTarea('empleados', 'ver_editar')) return false", a: 'if (!emp) return false' },
+    { nombre: 'dar de baja se ofrece en la ficha propia',
+      de: '      if (emp.id === estado.miEmpleado?.id) return false\n', a: '' },
+    { nombre: 'dar de baja se ofrece a un super_admin',
+      de: "      return emp.rol_app !== 'super_admin'", a: '      return true' },
+    { nombre: 'dar de baja se ofrece a una tablet',
+      de: 'if (emp.activo === false || esDispositivo(emp)) return false', a: 'if (emp.activo === false) return false' },
+    { nombre: 'dar de baja se ofrece a alguien ya dado de baja',
+      de: 'if (emp.activo === false || esDispositivo(emp)) return false', a: 'if (esDispositivo(emp)) return false' },
+    { nombre: 'dar de baja se ofrece a la Empresa o a una cuenta sistema',
+      de: "      if (emp.tipo === 'empresa' || emp.tipo === 'sistema') return false\n", a: '' },
+    { nombre: 'reactivar sin empleados:ver_editar',
+      de: "return esDadoDeBaja(emp) && tieneTarea('empleados', 'ver_editar')", a: 'return esDadoDeBaja(emp)' },
+
+    // ── El listado ───────────────────────────────────────────────────────
+    { nombre: 'los inactivos caen en el grupo de su unidad',
+      de: '        if (emp?.activo === false) {\n          if (esDadoDeBaja(emp)) bajas.push(emp)\n          return\n        }\n', a: '' },
+    { nombre: 'el grupo de dados de baja aparece sin el interruptor',
+      de: 'if (bajas.length && estado.filtros?.mostrarBajas === true) grupos.push', a: 'if (bajas.length) grupos.push' },
+    { nombre: 'el interruptor acepta cualquier valor verdadero',
+      de: 'estado.filtros?.mostrarBajas === true) grupos.push', a: 'estado.filtros?.mostrarBajas) grupos.push' },
+    { nombre: 'el grupo de dados de baja va primero',
+      de: "grupos.push({ nombre: 'Dados de baja', lista: bajas })", a: "grupos.unshift({ nombre: 'Dados de baja', lista: bajas })" },
+    { nombre: 'las cifras cuentan a los dados de baja',
+      de: 'const activas   = personas.filter(e => e?.activo !== false)', a: 'const activas   = personas' },
+    { nombre: 'los dados de baja visibles no pasan por la fábrica de pruebas',
+      de: 'return personasVisibles().filter(esDadoDeBaja)', a: 'return estado.empleados.filter(esDadoDeBaja)' },
+    { nombre: 'la fila de un dado de baja es la de una persona',
+      de: '      if (esDadoDeBaja(emp)) {\n        return `', a: '      if (false) {\n        return `' },
+    { nombre: 'el interruptor se dibuja aunque no haya dados de baja',
+      de: 'if (interruptor) interruptor.hidden = cantBajas === 0', a: 'if (interruptor) interruptor.hidden = false' },
+    { nombre: 'el interruptor no mira la tarea',
+      de: "const cantBajas = tieneTarea('empleados', 'ver_editar') ? dadosDeBajaVisibles().length : 0", a: 'const cantBajas = dadosDeBajaVisibles().length' },
+    { nombre: 'el interruptor no dice cuántos hay',
+      de: "if (contador) contador.textContent = cantBajas ? `(${cantBajas})` : ''", a: "if (contador) contador.textContent = ''" },
+    { nombre: 'la casilla no refleja el estado',
+      de: '      if (casilla) casilla.checked = estado.filtros.mostrarBajas === true\n', a: '' },
+
+    // ── La consulta ──────────────────────────────────────────────────────
+    { nombre: 'la consulta vuelve a filtrar activo = true',
+      de: "es_dispositivo, es_prueba'),\n        supabase.from('empleado_modulos')", a: "es_dispositivo, es_prueba').eq('activo', true),\n        supabase.from('empleado_modulos')" },
+    { nombre: 'la consulta no trae el motivo',
+      de: 'baja_en_app, baja_motivo, baja_por, baja_en, auth_user_id', a: 'baja_en_app, baja_por, baja_en, auth_user_id' },
+    { nombre: 'no se arma el mapa de nombres',
+      de: '      if (nomRes && !nomRes.error) estado.nombres = new Map((nomRes.data || []).map(e => [e.id, e.nombre]))\n', a: '' },
+    { nombre: 'el mapa de nombres filtra activos',
+      de: "supabase.from('v_empleados_publico').select('id, nombre'),", a: "supabase.from('v_empleados_publico').select('id, nombre').eq('activo', true)," },
+
+    // ── Los textos de la baja ────────────────────────────────────────────
+    { nombre: 'la fecha sale en UTC y no en Argentina',
+      de: "timeZone: 'America/Argentina/Buenos_Aires', ", a: "timeZone: 'UTC', " },
+    { nombre: 'una fecha inválida no se descarta',
+      de: "      if (isNaN(d.getTime())) return ''\n", a: '' },
+    { nombre: 'la baja de Naaloo no se dice en la fila',
+      de: "return emp?.baja_en_app === false ? 'Dado de baja en el Excel de Naaloo' : 'Sin motivo registrado'", a: "return 'Sin motivo registrado'" },
+    { nombre: 'quién dio de baja no mira el mapa de v_empleados_publico',
+      de: '?.nombre || estado.nombres?.get?.(id) || \'\'', a: "?.nombre || ''" },
+
+    // ── La ficha ─────────────────────────────────────────────────────────
+    { nombre: 'se pide el PIN de un dado de baja',
+      de: '      if (esDadoDeBaja(emp)) return\n', a: '' },
+    { nombre: 'la sección del PIN se dibuja para un dado de baja',
+      de: "      if (esDadoDeBaja(estado.empleados.find(e => e.id === p.empleadoId))) return ''\n", a: '' },
+    { nombre: 'se ofrece editar el contacto de un dado de baja',
+      de: "|| !tieneTarea('empleados', 'ver_editar') || deBaja", a: "|| !tieneTarea('empleados', 'ver_editar')" },
+    { nombre: 'se ofrece editar los permisos de un dado de baja',
+      de: 'if (emp.auth_user_id && !deBaja) {', a: 'if (emp.auth_user_id) {' },
+    { nombre: 'el acceso de un dado de baja dice "Tiene acceso"',
+      de: 'if (emp.auth_user_id && deBaja) {', a: 'if (false) {' },
+    { nombre: 'la ficha no dibuja la baja',
+      de: '      renderizarPin()\n      renderizarBaja()', a: '      renderizarPin()' },
+    { nombre: 'el aviso de acceso nunca aparece',
+      de: "${emp.auth_user_id ? '<p class=\"ficha-baja__alerta\">Pierde el acceso a la app al instante.</p>' : ''}", a: "${''}" },
+    { nombre: 'el aviso de acceso aparece siempre',
+      de: "${emp.auth_user_id ? '<p class=\"ficha-baja__alerta\">Pierde el acceso a la app al instante.</p>' : ''}",
+      a: "${'<p class=\"ficha-baja__alerta\">Pierde el acceso a la app al instante.</p>'}" },
+    { nombre: 'cancelar no cierra el panel',
+      de: "        estado.baja.panel = null\n        estado.baja.motivo = ''", a: "        estado.baja.motivo = ''" },
+    { nombre: 'el motivo tipeado no se guarda en el estado',
+      de: "      document.getElementById('baja-motivo')?.addEventListener('input', (e) => { estado.baja.motivo = e.target.value })\n", a: '' },
+
+    // ── Dar de baja ──────────────────────────────────────────────────────
+    { nombre: 'el motivo viaja con los espacios',
+      de: "const motivo = String(document.getElementById('baja-motivo')?.value ?? b.motivo ?? '').trim()",
+      a: "const motivo = String(document.getElementById('baja-motivo')?.value ?? b.motivo ?? '')" },
+    { nombre: 'un motivo vacío viaja como texto vacío',
+      de: 'p_motivo: motivo || null', a: 'p_motivo: motivo' },
+    { nombre: 'el error de la base se tapa con uno genérico',
+      de: "const texto = error.message || 'No se pudo dar de baja.'", a: "const texto = 'No se pudo dar de baja.'" },
+    { nombre: 'el error de la base va a un cartel y no al panel',
+      de: "const texto = error.message || 'No se pudo dar de baja.'\n        if (sigue) { b.error = texto; renderizarBaja() } else mostrarError(texto)",
+      a: "const texto = error.message || 'No se pudo dar de baja.'\n        mostrarError(texto)" },
+    { nombre: 'un segundo toque manda otra vez',
+      de: 'if (b.enviando || !puedeDarDeBaja(emp)) return', a: 'if (!puedeDarDeBaja(emp)) return' },
+    { nombre: 'confirmar no revisa el permiso',
+      de: 'if (b.enviando || !puedeDarDeBaja(emp)) return', a: 'if (b.enviando) return' },
+    { nombre: 'el botón no se traba mientras se manda',
+      de: "id=\"btn-baja-confirmar\"${b.enviando ? ' disabled' : ''}", a: 'id="btn-baja-confirmar"' },
+    { nombre: 'después de la baja no se recarga',
+      de: '      // con "Reactivar"): se ve que pasó.\n      await cargarTodo()', a: '      // con "Reactivar"): se ve que pasó.' },
+    { nombre: 'después de la baja el panel queda abierto',
+      de: '      if (sigue) reiniciarBaja(emp.id)\n', a: '' },
+    { nombre: 'el cartel no dice que perdió el acceso',
+      de: 'mostrarExito(data?.tenia_cuenta', a: 'mostrarExito(false' },
+
+    // ── Reactivar ────────────────────────────────────────────────────────
+    { nombre: 'reactivar manda de más',
+      de: "llamarRpcBaja('reactivar_empleado', { p_empleado_id: emp.id })", a: "llamarRpcBaja('reactivar_empleado', { p_empleado_id: emp.id, p_motivo: null })" },
+    { nombre: 'reactivar no vuelve a pedir el PIN',
+      de: '      if (sigue && estado.fichaAbierta === emp.id && !esDispositivo(emp)) cargarEstadoPin(emp.id)\n', a: '' },
+    { nombre: 'el error de reactivar se tapa con uno genérico',
+      de: "const texto = error.message || 'No se pudo reactivar.'", a: "const texto = 'No se pudo reactivar.'" },
+    { nombre: 'reactivar no revisa el permiso',
+      de: 'if (b.enviando || !puedeReactivar(emp)) return', a: 'if (b.enviando) return' },
+    { nombre: 'reactivar no avisa la baja de Naaloo',
+      de: "${emp.baja_en_app === false ? '<p class=\"ficha-baja__ayuda\">La baja vino", a: "${false ? '<p class=\"ficha-baja__ayuda\">La baja vino" },
+    { nombre: 'reactivar promete volver a entrar sin cuenta',
+      de: "${emp.auth_user_id ? ' y puede volver a entrar a la app con los permisos que tenía' : ''}",
+      a: "${' y puede volver a entrar a la app con los permisos que tenía'}" },
+    { nombre: 'la línea del motivo se dibuja sin motivo',
+      de: "${String(emp.baja_motivo ?? '').trim() ? `", a: '${true ? `' },
+    { nombre: 'Reactivar se ofrece sin permiso',
+      de: 'const reactivable = deBaja && puedeReactivar(emp)', a: 'const reactivable = deBaja' },
+  ],
+})

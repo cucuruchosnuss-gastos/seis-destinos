@@ -22,7 +22,7 @@ correrMutaciones({
     { nombre: 'personas filtran tipo en SQL', de: ".eq('tiene_acceso', true).eq('activo', true).order('nombre')", a: ".eq('tiene_acceso', true).eq('activo', true).neq('tipo', 'sistema').order('nombre')" },
     // Super admins
     { nombre: 'super admins sin filtrar tablets', de: 'estado.superAdmins = (data || []).filter(e => !esCuentaDeTablet(e))', a: 'estado.superAdmins = data || []' },
-    { nombre: 'super admins sin traer tipo', de: ".select('id, nombre, tipo, caja_raiz, oculto_como_contraparte')", a: ".select('id, nombre, caja_raiz, oculto_como_contraparte')" },
+    { nombre: 'super admins sin traer tipo', de: ".select('id, nombre, tipo, caja_raiz, oculto_como_contraparte, activo')", a: ".select('id, nombre, caja_raiz, oculto_como_contraparte, activo')" },
     // Selector de contraparte
     { nombre: 'la contraparte no filtra tablets', de: 'candidatos.filter(c => !c.oculto_como_contraparte && !esCuentaDeTablet(c))', a: 'candidatos.filter(c => !c.oculto_como_contraparte)' },
   ],

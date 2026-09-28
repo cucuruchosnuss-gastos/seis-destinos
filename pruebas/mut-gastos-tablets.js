@@ -31,10 +31,10 @@ correrMutaciones({
     { nombre: 'la edición ignora empleado_id sin embed',
       de: 'const idActual = g?.empleados?.id ?? g?.empleado_id', a: 'const idActual = g?.empleados?.id' },
     { nombre: 'la carga inicial deja de traer tipo',
-      de: ".select('id, nombre, tipo').eq('activo', true)", a: ".select('id, nombre').eq('activo', true)" },
+      de: ".select('id, nombre, tipo, activo').order('nombre')", a: ".select('id, nombre, activo').order('nombre')" },
     { nombre: 'cargarMaestros deja de traer tipo',
-      de: ".select('id, nombre, unidad_negocio_id, tipo').eq('activo', true)", a: ".select('id, nombre, unidad_negocio_id').eq('activo', true)" },
+      de: ".select('id, nombre, unidad_negocio_id, tipo, activo').order('nombre')", a: ".select('id, nombre, unidad_negocio_id, activo').order('nombre')" },
     { nombre: 'la tablet se filtra en SQL con .neq (descarta los tipo null)',
-      de: ".select('id, nombre, tipo').eq('activo', true)", a: ".select('id, nombre, tipo').neq('tipo', 'sistema').eq('activo', true)" },
+      de: ".select('id, nombre, tipo, activo').order('nombre')", a: ".select('id, nombre, tipo, activo').neq('tipo', 'sistema').order('nombre')" },
   ],
 })

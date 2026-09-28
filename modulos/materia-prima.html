@@ -3508,9 +3508,9 @@
     // v_empleados_publico, NUNCA con un embed de PostgREST: `editado_por` está
     // sin FK a `empleados` a propósito, y un embed fallaría por ambigüedad.
     //
-    // Si el empleado no aparece (dado de baja, y la vista se filtra por
-    // activo=true), se devuelve null y la línea muestra la fecha SIN nombre:
-    // una baja no puede hacer desaparecer un dato de auditoría.
+    // Si el empleado no aparece (un id que la vista no devuelve), se devuelve
+    // null y la línea muestra la fecha SIN nombre: nunca se pierde el dato de
+    // auditoría. Un dado de baja SÍ aparece: asegurarEmpleados() trae a todos.
     // Quién CARGÓ el ingreso. Mismo criterio que textoEdicion(): se resuelve
     // contra el cache de v_empleados_publico y NUNCA con un embed —`empleados`
     // tiene el RLS cerrado, así que un usuario común solo se ve a sí mismo—.
@@ -3520,9 +3520,9 @@
     // administración, que es el circuito normal del módulo. Arriba se perdería
     // uno de los dos.
     //
-    // Si el empleado no aparece —la vista filtra activo=true, así que un dado
-    // de baja no está— se devuelve '' y la línea no se dibuja. Igual que en la
-    // edición: una baja no puede hacer desaparecer el ingreso.
+    // Si el empleado no aparece (un id que la vista no devuelve) se devuelve
+    // '' y la línea no se dibuja. Un dado de baja SÍ aparece —asegurarEmpleados()
+    // trae a todos, también a los inactivos—, así que su nombre no se pierde.
     function textoCarga(ingreso) {
       const quien = estado.empleados.find(e => e.id === ingreso?.empleado_id)?.nombre
       return quien ? `Cargado por ${quien}` : ''
@@ -4575,12 +4575,16 @@
     // Desde que el detalle muestra quién CARGÓ el ingreso, y `empleado_id` es
     // NOT NULL, la condición que la dispara es siempre verdadera: corre al
     // abrir el primer detalle de cada sesión. Sigue siendo una sola consulta.
+    //
+    // TODAS las personas, también las dadas de baja (28/09/2026): es un mapa
+    // para NOMBRAR a quien cargó, editó o recibió, nunca una lista para elegir.
+    // Con .eq('activo', true) el nombre de alguien dado de baja desaparecía
+    // de los ingresos que cargó.
     async function asegurarEmpleados() {
       if (estado.empleadosCargados) return
       const { data, error } = await supabase
         .from('v_empleados_publico')
         .select('id, nombre')
-        .eq('activo', true)
       if (error) { console.error(error); return }  // sin nombres, se muestra solo la fecha
       estado.empleados = data ?? []
       estado.empleadosCargados = true
