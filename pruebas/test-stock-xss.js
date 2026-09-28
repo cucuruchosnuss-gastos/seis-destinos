@@ -51,15 +51,17 @@ const CONSTANTES_EXCLUIDAS = new Set([])
 const RENDERS = [
   'esc', 'renderizarUnidadesSugeridas', 'renderizarChips', 'renderizarLista', 'abrirDetalleInsumo',
   'poblarSelectorVista', 'poblarSelectorCategoria', 'confirmarImportacion',
-  'renderizarChipsUnidadStock', 'renderizarStock', 'abrirLotes',
+  // pasaFiltroUnidad es de js/barra-unidad.js: extraerFn la encuentra por el
+  // import del módulo (imports.js), así el sandbox corre la REAL.
+  'pasaFiltroUnidad', 'renderizarStock', 'htmlGrupoStock', 'abrirLotes',
   'renderizarChipsUnidadRecuento', 'renderizarMetaRecuento', 'renderizarChipsFiltroRec',
   'renderizarItemsRecuento', 'renderizarSugerenciasCatalogo', 'renderizarPresentacionesAgregar',
-  'abrirModalCerrar', 'renderizarChipsUnidadHistorial', 'renderizarHistorial',
+  'abrirModalCerrar', 'renderizarHistorial',
   'renderizarCabeceraRecuento', 'renderizarDetalleRecuento', 'renderizarAjustesRecuento',
   'renderizarAlias', 'htmlFilaAlias', 'abrirModalAlias', 'abrirBorradoAlias', 'renderizarSugerenciasAlias',
   'abrirModalMovimiento', 'poblarSelectorMotivoTipo', 'renderizarUnidadMov', 'renderizarSugerenciasMov',
   'elegirInsumoMov', 'cargarLotesMov', 'renderizarPresentacionesMov', 'actualizarSaldoMov',
-  'renderizarChipsUnidadMerma', 'renderizarChipsOrigenMerma', 'renderizarMermas',
+  'renderizarChipsOrigenMerma', 'renderizarMermas',
   'renderizarOrigenTransf', 'renderizarDestinoTransf', 'renderizarItemsTransf', 'renderizarSugerenciasTi',
   'elegirInsumoTi', 'renderizarLotesTi', 'renderizarPresentacionesTi', 'actualizarSaldoTi',
   'renderizarTransito', 'renderizarTransfHistorial', 'renderizarCabeceraTransf', 'renderizarItemsTransfDetalle',
@@ -217,9 +219,11 @@ async function correrRenders(S) {
   chequearMarcas(chk, 'errores de la importación de Excel', html('lista-errores-import'), ['imp_nombre', 'imp_marca', 'imp_motivo'])
 
   // ── Stock ────────────────────────────────────────────────────────────────
+  // Los chips de unidad del listado se retiraron (la unidad la elige la barra
+  // de arriba, 28/09/2026). Con "Todas" y dos unidades, el nombre de la unidad
+  // va en cada fila: por eso la marca uni_nombre tiene que aparecer escapada.
   E.unidadesStock = [{ id: marca('uni_id'), nombre: marca('uni_nombre') }, { id: 'u2', nombre: 'Otra' }]
-  S.renderizarChipsUnidadStock()
-  chequearMarcas(chk, 'chips de unidad del stock', html('chips-unidad-stock'), ['uni_id', 'uni_nombre'])
+  E.unidadBarra = null
   const filaStock = {
     insumo_id: marca('st_insumo'), unidad_negocio_id: marca('uni_id'), insumo_nombre: marca('st_nombre'), marca: marca('st_marca'),
     unidad_medida: marca('st_unidad'), tipo: 'insumo', categoria: null, aclaracion: marca('st_aclaracion'),
@@ -227,10 +231,24 @@ async function correrRenders(S) {
   }
   E.stock = [filaStock, { ...filaStock, insumo_id: 's2', marca: marca('st_marca2'), aclaracion: null, vista_preferida: 'base', cantidad_total: -3, presentaciones: 0 },
     { ...filaStock, insumo_id: 's3', insumo_nombre: 'Rara', marca: null, aclaracion: null, tipo: marca('st_tipo'), categoria: marca('st_categoria') }]
-  E.unidadStock = ''; E.busquedaStock = ''
+  E.busquedaStock = ''
   S.renderizarStock()
   chequearMarcas(chk, 'listado de stock', html('lista-stock'),
-    ['st_insumo', 'uni_id', 'st_nombre', 'st_marca', 'st_marca2', 'st_aclaracion', 'st_unidad', 'st_tipo', 'st_categoria'])
+    ['st_insumo', 'uni_id', 'uni_nombre', 'st_nombre', 'st_marca', 'st_marca2', 'st_aclaracion', 'st_unidad', 'st_tipo', 'st_categoria'])
+
+  // "Todas" con el MISMO insumo en dos unidades: una tarjeta con la suma y un
+  // renglón por unidad (htmlGrupoStock). Todo lo de la base, escapado.
+  const enDos = {
+    ...filaStock, insumo_id: marca('gr_insumo'), insumo_nombre: marca('gr_nombre'), marca: marca('gr_marca'),
+    aclaracion: marca('gr_aclaracion'), unidad_medida: marca('gr_unidad'), tipo: marca('gr_tipo'), categoria: 'Harinas',
+  }
+  const stockAntes = E.stock
+  E.stock = [enDos, { ...enDos, unidad_negocio_id: 'u2' }]
+  S.renderizarStock()
+  chequearMarcas(chk, 'listado de stock con "Todas" (tarjeta sumada por unidad)', html('lista-stock'),
+    ['gr_insumo', 'uni_id', 'uni_nombre', 'gr_nombre', 'gr_marca', 'gr_aclaracion', 'gr_unidad', 'gr_tipo'])
+  chk('la tarjeta sumada se dibujó (si no, el chequeo no mira nada)', /fila-stock--grupo/.test(html('lista-stock')))
+  E.stock = stockAntes
 
   S.__setDatos('v_stock_por_lote', [
     { lote: marca('lote'), contenido_por_bulto: 25, saldo: 50, desde: '2026-09-01' },
@@ -277,12 +295,10 @@ async function correrRenders(S) {
   chequearMarcas(chk, 'resumen de diferencias antes de cerrar', html('cierre-lista-difs'), ['item_nombre', 'item_lote', 'item_unidad'])
 
   // ── Historial de recuentos ───────────────────────────────────────────────
-  S.renderizarChipsUnidadHistorial()
-  chequearMarcas(chk, 'chips de unidad del historial', html('chips-unidad-historial'), ['uni_id', 'uni_nombre'])
   const cerrado = { id: marca('hist_id'), estado: 'cerrado', unidad_negocio_id: 'u1', unidad_nombre: marca('hist_unidad'),
     abierto_por_nombre: marca('hist_abrio'), cerrado_por_nombre: marca('hist_cerro'), abierto_en: T, cerrado_en: T, items: 3, con_diferencia: 1 }
   const anulado = { ...cerrado, id: 'h2', estado: 'anulado', motivo_anulacion: marca('hist_motivo'), cerrado_en: null }
-  E.recuentos = [cerrado, anulado]; E.unidadHist = ''
+  E.recuentos = [cerrado, anulado]
   S.renderizarHistorial()
   chequearMarcas(chk, 'historial de recuentos', html('lista-historial'),
     ['hist_id', 'hist_unidad', 'hist_abrio', 'hist_cerro', 'hist_motivo'])
@@ -355,18 +371,20 @@ async function correrRenders(S) {
   chk('saldo del movimiento: se dibujó (si no, el chequeo no mira nada)', /Saldo actual/.test(html('mov-saldo')))
 
   // ── Mermas ───────────────────────────────────────────────────────────────
-  S.renderizarChipsUnidadMerma()
-  chequearMarcas(chk, 'chips de unidad de mermas', html('chips-unidad-mermas'), ['uni_id', 'uni_nombre'])
   S.renderizarChipsOrigenMerma()
   chequearMarcas(chk, 'chips de origen de mermas', html('chips-origen-mermas'), [])
   const merma = { unidad_negocio_id: 'u1', unidad_nombre: marca('mer_unidad'), fecha: '2026-09-10', mes: '2026-09-01',
     insumo_nombre: marca('mer_nombre'), marca: marca('mer_marca'), unidad_medida: marca('mer_um'), lote: marca('mer_lote'),
     cantidad: 5, origen: 'baja', motivo_tipo: 'rotura', motivo_texto: marca('mer_texto') }
-  E.mermas = [merma, { ...merma, marca: marca('mer_marca2'), origen: marca('mer_origen'), lote: null, motivo_texto: null }]
-  E.unidadMerma = ''; E.origenMerma = ''
+  // Con "Todas" y dos unidades en el mes, el conteo por unidad (con el nombre
+  // que viene de la base) va escapado.
+  E.mermas = [merma, { ...merma, marca: marca('mer_marca2'), origen: marca('mer_origen'), lote: null, motivo_texto: null },
+    { ...merma, unidad_negocio_id: 'u2', unidad_nombre: marca('mer_unidad2') }]
+  E.origenMerma = ''
   S.renderizarMermas()
   chequearMarcas(chk, 'tablero de mermas', html('lista-mermas'),
-    ['mer_unidad', 'mer_nombre', 'mer_marca', 'mer_marca2', 'mer_um', 'mer_lote', 'mer_texto', 'mer_origen'])
+    ['mer_unidad', 'mer_unidad2', 'mer_nombre', 'mer_marca', 'mer_marca2', 'mer_um', 'mer_lote', 'mer_texto', 'mer_origen'])
+  chk('mermas: el conteo por unidad se dibujó (si no, el chequeo no mira nada)', /merma-mes__unidades/.test(html('lista-mermas')))
 
   // ── Transferencias ───────────────────────────────────────────────────────
   E.unidadesEnvio = [{ id: 'u1', nombre: marca('env_nombre') }, { id: marca('env_id'), nombre: 'B' }]
@@ -453,6 +471,12 @@ const SEGURAS = {
   },
   renderizarStock: {
     'htmlMarca(f.marca, marcaArriba)': H_MARCA, 'htmlAclaracion(f.aclaracion)': H_ACL,
+  },
+  // La tarjeta sumada de "Todas" (barra de unidad, 28/09/2026).
+  htmlGrupoStock: {
+    'htmlMarca(g.marca, marcaArriba)': H_MARCA, 'htmlAclaracion(g.aclaracion)': H_ACL,
+    'g.porUnidad.length': DENTRO_DE_ESC,
+    renglones: HTML_PROPIO,
   },
   abrirLotes: {
     'htmlBultos(l)': 'HTML de la flecha htmlBultos de esta función, que hace esc(txt)',

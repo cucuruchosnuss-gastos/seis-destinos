@@ -2085,6 +2085,64 @@
     /* .rec-fila__bultos —el equivalente en bultos como texto de apoyo— se fue
        cuando el renglón con presentación pasó a tener su propio CAMPO de
        bultos: el número ahora se escribe ahí, no se lee al costado. */
+
+    /* ── La barra de unidad de arriba (28/09/2026) ───────────────────────────
+       Van AL FINAL a propósito: .fila-stock--grupo es una variante de
+       .fila-stock y de la receta de tarjeta de más arriba, y con la misma
+       especificidad decide el orden (la trampa de la variante antes que su
+       base). */
+
+    /* Con "Todas": un insumo en varias unidades es UNA tarjeta con la suma y
+       un renglón por unidad. La tarjeta apila (no es la fila de siempre) y no
+       es tocable: lo son sus renglones. */
+    .fila-stock--grupo {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+      cursor: default;
+    }
+    .fila-stock__cabeza {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+    .fila-stock__unidades {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3125rem;
+      min-width: 0;
+    }
+    .fila-stock__unidad {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-height: 44px;
+      width: 100%;
+      min-width: 0;
+      padding: 0.5rem 0.75rem;
+      background: var(--color-superficie);
+      border: 1px solid var(--borde-tarjeta);
+      border-radius: 10px;
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      color: var(--color-texto);
+      text-align: left;
+      cursor: pointer;
+    }
+    .fila-stock__unidad-nombre { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+    .fila-stock__unidad-cant { font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+    .fila-stock__unidad-cant--negativa { color: var(--bordo-oscuro); }
+
+    /* El catálogo y los alias no se filtran por unidad: se dice en chico. */
+    .nota-unidad-barra {
+      margin: 0 0 0.625rem;
+      font-size: 0.75rem;
+      color: var(--color-texto-suave);
+      overflow-wrap: anywhere;
+    }
+    .nota-unidad-barra[hidden] { display: none; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -2124,7 +2182,10 @@
     <!-- ══ VISTA: STOCK ACTUAL ═══════════════════════════════════════════ -->
     <div class="vista-stock" id="vista-stock" hidden>
 
-      <div class="chips-unidad" id="chips-unidad-stock"></div>
+      <!-- La unidad la elige la barra de arriba (js/barra-unidad.js): los chips
+           de unidad que había acá se retiraron. Esto dice si la unidad elegida
+           es una donde esta persona no ve stock. -->
+      <div class="rec-aviso rec-aviso--info" id="stock-aviso-unidad" hidden></div>
 
       <input type="search" class="buscador-stock" id="buscador-stock-actual" placeholder="Buscar por nombre o marca…" autocomplete="off">
 
@@ -2151,6 +2212,9 @@
       </div>
       <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-pendientes">Ver pendientes</button>
     </div>
+
+    <!-- El catálogo es UNO para las cuatro unidades: la barra no lo filtra. -->
+    <p class="nota-unidad-barra" id="catalogo-nota-unidad" hidden>El catálogo de insumos es uno solo para todas las unidades: la barra de arriba no lo filtra.</p>
 
     <input type="search" class="buscador-stock" id="buscador-stock" placeholder="Buscar por nombre o marca…" autocomplete="off">
 
@@ -2184,6 +2248,8 @@
         Cada proveedor le pone su propio nombre a la misma cosa. Un <strong>alias</strong> traduce el texto del remito o la factura al insumo del catálogo, para que la próxima carga de ese proveedor lo resuelva sola. Se crean solos al mapear un renglón a mano en <strong>Ingreso</strong>; acá se corrigen.
       </div>
 
+      <p class="nota-unidad-barra" id="alias-nota-unidad" hidden>Los alias son de cada proveedor y valen para todas las unidades: la barra de arriba no los filtra.</p>
+
       <input type="search" class="buscador-stock" id="buscador-alias" placeholder="Buscar por el texto del papel o por el insumo…" autocomplete="off">
 
       <div class="lista-contenido" id="lista-alias"></div>
@@ -2199,7 +2265,11 @@
       <!-- Los chips salen de v_mis_unidades_ajuste, que resuelve
            tiene_tarea_alcance('stock','ajustar_inventario', id) — la MISMA que
            revalidan las 5 RPCs. No hay opción "Todas": se cuenta una unidad
-           concreta, y un recuento pertenece a una sola. -->
+           concreta, y un recuento pertenece a una sola.
+           DESDE LA BARRA DE UNIDAD (28/09/2026) solo aparecen con "Todas" en la
+           barra: con una unidad elegida, se cuenta esa (o se dice que no hay
+           permiso), y con "Todas" se pide acá, sin cambiar la barra. -->
+      <div class="rec-aviso rec-aviso--info" id="rec-aviso-unidad" hidden></div>
       <div class="chips-unidad" id="chips-unidad-recuento"></div>
 
       <div class="estado-vacio-stock" id="rec-cargando">Cargando recuento…</div>
@@ -2275,7 +2345,7 @@
 
       <!-- ── Listado ────────────────────────────────────────────────────── -->
       <div class="rec-paso" id="hist-paso-lista" hidden>
-        <div class="chips-unidad" id="chips-unidad-historial"></div>
+        <div class="rec-aviso rec-aviso--info" id="hist-aviso-unidad" hidden></div>
         <div class="lista-contenido" id="lista-historial"></div>
         <div class="estado-vacio-stock" id="hist-cargando">Cargando recuentos…</div>
         <div class="estado-vacio-stock" id="hist-vacio" hidden></div>
@@ -2321,6 +2391,7 @@
              mis_pendientes() (el mismo de la tarjeta del dashboard). La
              recepción NO vive en Stock: vive en Ingreso → Ingresos internos. -->
         <div class="aviso-pendientes" id="transito-aviso-recibir" hidden></div>
+        <div class="rec-aviso rec-aviso--info" id="transito-aviso-unidad" hidden></div>
         <div class="transf-subtitulo" style="margin-top:0;">En tránsito — salió y todavía no llegó</div>
         <div class="lista-contenido" id="lista-transito"></div>
         <div class="estado-vacio-stock" id="transito-cargando">Cargando…</div>
@@ -2357,7 +2428,7 @@
 
       <button type="button" class="hist-volver" id="btn-volver-de-mermas">‹ Volver al stock</button>
 
-      <div class="chips-unidad" id="chips-unidad-mermas"></div>
+      <div class="rec-aviso rec-aviso--info" id="mermas-aviso-unidad" hidden></div>
       <div class="chips-unidad" id="chips-origen-mermas"></div>
 
       <div class="lista-contenido" id="lista-mermas"></div>
@@ -2926,6 +2997,7 @@
            disponibles: son alcances distintos (ajustar_inventario vs dar_baja). -->
       <div class="campo-stock" id="mov-campo-unidad">
         <label>Unidad de negocio</label>
+        <div class="campo-stock__ayuda" id="mov-aviso-unidad-barra" hidden></div>
         <div class="chips-unidad" id="mov-chips-unidad"></div>
         <div class="mov-unidad-fija" id="mov-unidad-fija" hidden></div>
         <div class="campo-stock__error" id="mov-error-unidad" hidden></div>
@@ -3033,6 +3105,7 @@
 
       <div class="campo-stock">
         <label>Sale de</label>
+        <div class="campo-stock__ayuda" id="transf-aviso-unidad-barra" hidden></div>
         <div class="chips-unidad" id="transf-chips-origen"></div>
         <div class="mov-unidad-fija" id="transf-origen-fija" hidden></div>
         <div class="campo-stock__error" id="transf-error-origen" hidden></div>
@@ -3129,6 +3202,10 @@
     import { formatearFecha, mostrarError, mostrarExito, formatearNumeroAr, leerNumeroAr, enlazarCampoNumero, ponerNumero, leerCampoNumero, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    // La barra de unidad de negocio de arriba (28/09/2026): elegir la fábrica
+    // UNA vez y que la pantalla muestre solo lo de ella. Es el mismo archivo que
+    // el <head> carga para dibujarla, así que el navegador lo ejecuta una vez.
+    import { unidadesDeLaBarra, alCambiarUnidad, pasaFiltroUnidad } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
 
@@ -3186,6 +3263,28 @@
       // si falló, FABRICA_SIN_DATOS: no se saca nada.
       fabrica: FABRICA_SIN_DATOS,
 
+      // ── La barra de unidad de arriba (js/barra-unidad.js) ───────────
+      // unidadBarra: el id elegido, o null = Todas (también null cuando la
+      // persona tiene una sola unidad: ahí la barra no aparece y no se filtra
+      // nada). unidadesBarra: las unidades de la barra, para los nombres.
+      //
+      // LA BARRA SOLO FILTRA LO QUE SE MUESTRA, y los PERMISOS siguen siendo
+      // los de cada vista: la barra lista las unidades de la PERSONA (la propia
+      // más el alcance de todas sus tareas), y cada pantalla de Stock tiene su
+      // propio alcance (ver, ajustar, dar de baja, enviar). Con una unidad
+      // elegida donde esa pantalla no tiene permiso, la pantalla LO DICE en vez
+      // de quedar vacía, que se leería como "no hay nada".
+      unidadBarra: null,
+      unidadesBarra: [],
+      barraVisible: false,
+      // Se reemplaza en init() por la promesa de la barra: cada carga pide sus
+      // datos en paralelo y ESPERA esto recién antes de dibujar. En las
+      // pruebas queda resuelta y la barra no filtra nada.
+      barraLista: Promise.resolve(),
+      // Qué vistas ya tienen sus datos: cambiar la barra repinta solo esas
+      // (repintar una sin datos mostraría su vacío como si no hubiera nada).
+      cargados: new Set(),
+
       sesion: null,
       miEmpleadoId: null,
       miRolApp: null,
@@ -3210,7 +3309,6 @@
       // mostraría unidades de más (chips que no llevan a nada) o de menos
       // (alguien deja de ver algo que sí puede ver, que es un bug de verdad).
       unidadesStock: [],
-      unidadStock: '',         // '' = todas
       busquedaStock: '',
       stock: [],               // filas de v_stock_insumos
 
@@ -3241,7 +3339,6 @@
       agregados: 0,
 
       // ── Historial de recuentos ──────────────────────────────────────
-      unidadHist: '',
       recuentos: [],
       recuentoDetalle: null,
       itemsDetalle: [],
@@ -3285,10 +3382,10 @@
       transferencias: [],
       transfDetalle: null,
       itemsTransfDetalle: [],
-      // Tablero de mermas. Los dos filtros son de UI: la barrera de alcance
-      // vive en v_mermas (ver cargarMermas).
+      // Tablero de mermas. El filtro de origen es de UI (el de unidad lo
+      // decide la barra de arriba): la barrera de alcance vive en v_mermas
+      // (ver cargarMermas).
       mermas: [],
-      unidadMerma: '',
       origenMerma: '',
     }
 
@@ -3302,6 +3399,86 @@
     const puedeVerStock  = () => tieneTarea('stock', 'ver')
     const puedeAjustar   = () => tieneTarea('stock', 'ajustar_inventario')
     const puedeEnviar    = () => tieneTarea('stock', 'enviar_transferencia')
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA BARRA DE UNIDAD DE ARRIBA (js/barra-unidad.js, 28/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Reemplazó a los chips de unidad que tenían el listado de stock, el
+    // historial de recuentos y el tablero de mermas: nunca dos lugares para
+    // elegir lo mismo. Lo que ELIGE la unidad de algo NUEVO (de qué unidad sale
+    // un movimiento o una transferencia, en qué unidad se cuenta) NO es un
+    // filtro y queda en su pantalla: viene puesto con la unidad de la barra
+    // cuando se puede, y con "Todas" se pide ahí mismo, sin cambiar la barra.
+
+    // El nombre de una unidad por su id: el de la barra, o el de cualquiera de
+    // las listas del módulo. Nunca un id suelto en pantalla.
+    function nombreDeUnidadBarra(id) {
+      return estado.unidadesBarra.find(u => u.id === id)?.nombre
+        || estado.unidadesStock.find(u => u.id === id)?.nombre
+        || estado.unidadesAjuste.find(u => u.id === id)?.nombre
+        || estado.unidadesBaja.find(u => u.id === id)?.nombre
+        || estado.unidadesEnvio.find(u => u.id === id)?.nombre
+        || estado.destinos.find(u => u.id === id)?.nombre
+        || 'esa unidad'
+    }
+
+    // ¿La barra eligió una unidad donde ESTA pantalla no tiene permiso? `lista`
+    // son las unidades del alcance de la tarea de la pantalla (una de las
+    // v_mis_unidades_*). Con Todas, nunca.
+    function sinPermisoEnBarra(lista) {
+      return !!estado.unidadBarra && !(lista || []).some(u => u.id === estado.unidadBarra)
+    }
+
+    // El texto de "no tenés permiso", con el nombre de la unidad elegida.
+    function textoSinPermiso(accion) {
+      return `No tenés permiso para ${accion} en ${nombreDeUnidadBarra(estado.unidadBarra)}.`
+    }
+
+    // Una caja de aviso de la pantalla: el texto, o escondida.
+    function pintarAvisoUnidad(id, texto) {
+      const el = document.getElementById(id)
+      el.hidden = !texto
+      el.textContent = texto || ''
+    }
+
+    // El catálogo y los alias son UNO SOLO para todas las unidades: ahí la
+    // barra no filtra nada, y se dice en chico (solo si la barra está a la
+    // vista: con una sola unidad no hay nada que aclarar).
+    function pintarNotasBarra() {
+      document.getElementById('catalogo-nota-unidad').hidden = !estado.barraVisible
+      document.getElementById('alias-nota-unidad').hidden = !estado.barraVisible
+    }
+
+    function aplicarEstadoBarra(e) {
+      estado.unidadBarra = e?.elegida || null
+      estado.unidadesBarra = Array.isArray(e?.unidades) ? e.unidades : []
+      estado.barraVisible = e?.mostrar === true
+      pintarNotasBarra()
+    }
+
+    // Cambiaron la barra con la pantalla abierta: se repinta sin recargar, y
+    // solo lo que ya tiene sus datos. El recuento es lo único que CONSULTA por
+    // unidad: guarda lo contado antes de cambiar y relee (con su turno).
+    async function alCambiarBarra(e) {
+      aplicarEstadoBarra(e)
+      if (estado.cargados.has('stock')) renderizarStock()
+      if (estado.cargados.has('historial')) renderizarHistorial()
+      if (estado.cargados.has('mermas')) renderizarMermas()
+      if (estado.cargados.has('transito')) { renderizarTransito(); renderizarTransfHistorial() }
+      if (estado.cargados.has('recuento')) {
+        const nueva = unidadRecuentoPorBarra()
+        if (nueva !== estado.unidadRecuento) {
+          // Cambiar de unidad con cambios sin guardar los perdería.
+          await guardarConteoAhora()
+          estado.unidadRecuento = nueva
+          renderizarChipsUnidadRecuento()
+          await cargarRecuento()
+        } else {
+          renderizarChipsUnidadRecuento()
+        }
+      }
+    }
 
     // Cantidades del stock: separador de miles argentino y la unidad del
     // catálogo. Hasta 3 decimales porque hay insumos en kg y litros donde el
@@ -3904,7 +4081,8 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     // NO se filtra por unidad en la consulta: la RLS de la vista ya devuelve
-    // solo las unidades del alcance. El chip es comodidad, no seguridad.
+    // solo las unidades del alcance. La barra de unidad de arriba es
+    // comodidad, no seguridad.
     async function cargarStock() {
       const cargandoEl = document.getElementById('stock-cargando')
       cargandoEl.hidden = false
@@ -3926,38 +4104,91 @@
       estado.unidadesStock = sinUnidadesDePrueba(unidades.data ?? [], estado.fabrica)
       estado.stock = sinUnidadesDePrueba(filas.data ?? [], estado.fabrica, f => f?.unidad_negocio_id)
 
-      // Con una sola unidad no hay nada que elegir: se filtra por ella y los
-      // chips no se dibujan.
-      if (estado.unidadesStock.length === 1) estado.unidadStock = estado.unidadesStock[0].id
-
-      renderizarChipsUnidadStock()
+      // La unidad la elige la barra de arriba (antes había chips acá). Se
+      // espera a que la barra sepa las unidades recién ANTES de dibujar: las
+      // consultas ya salieron en paralelo.
+      await estado.barraLista
+      estado.cargados.add('stock')
       renderizarStock()
     }
 
-    function renderizarChipsUnidadStock() {
-      const cont = document.getElementById('chips-unidad-stock')
-      // Una sola unidad (o ninguna) no es una elección.
-      cont.hidden = estado.unidadesStock.length < 2
-      if (cont.hidden) { cont.innerHTML = ''; return }
+    // Filtra por la unidad de la barra, DONDE SE ARMA LA LISTA y no en la
+    // consulta (la RLS de la vista ya devuelve solo el alcance). Toda fila de
+    // v_stock_insumos tiene unidad, así que acá no hay "sin unidad".
+    function filasStockVisibles() {
+      return estado.stock
+        .filter(f => pasaFiltroUnidad(f.unidad_negocio_id, estado.unidadBarra))
+        .filter(f => coincideStock(f, estado.busquedaStock))
+        .sort((a, b) => (a.insumo_nombre || '').localeCompare(b.insumo_nombre || '', 'es', { sensitivity: 'base' }))
+    }
 
-      const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidadesStock]
-      cont.innerHTML = chips.map(u => `
-        <button type="button" class="chip-unidad ${estado.unidadStock === u.id ? 'chip-unidad--activa' : ''}" data-unidad="${esc(u.id)}">${esc(u.nombre)}</button>
-      `).join('')
-      cont.querySelectorAll('.chip-unidad').forEach(btn => {
-        btn.addEventListener('click', () => {
-          estado.unidadStock = btn.dataset.unidad
-          renderizarChipsUnidadStock()
-          renderizarStock()
-        })
+    // Con "Todas" y más de una unidad con stock, el listado dice de qué unidad
+    // es cada cosa: con una unidad elegida (o una sola posible) es obvio.
+    function stockConUnidades() {
+      return !estado.unidadBarra && estado.unidadesStock.length > 1
+    }
+
+    // El nombre de la unidad de una fila de stock, para "Todas".
+    function nombreUnidadStock(id) {
+      return estado.unidadesStock.find(u => u.id === id)?.nombre || nombreDeUnidadBarra(id)
+    }
+
+    // "TODAS" MUESTRA LA SUMA, CON EL DETALLE POR UNIDAD. Un insumo que está en
+    // UNA sola unidad queda como su fila (con el nombre de la unidad); uno que
+    // está en VARIAS pasa a ser UNA tarjeta con el total sumado y un renglón por
+    // unidad, que es el que abre el detalle por lote de esa unidad.
+    //
+    // La suma se hace en la unidad del CATÁLOGO: es una sola por insumo (el
+    // catálogo es único para las cuatro unidades), así que kilos con kilos. Los
+    // BULTOS no se suman: cada unidad puede tener otra presentación, y "un"
+    // bulto que represente a las dos no existe.
+    function agruparStockPorInsumo(filas) {
+      const porInsumo = new Map()
+      for (const f of filas) {
+        if (!porInsumo.has(f.insumo_id)) porInsumo.set(f.insumo_id, [])
+        porInsumo.get(f.insumo_id).push(f)
+      }
+      return [...porInsumo.values()].map(deEse => {
+        if (deEse.length === 1) return deEse[0]
+        const p = deEse[0]
+        return {
+          insumo_id: p.insumo_id, insumo_nombre: p.insumo_nombre, marca: p.marca,
+          unidad_medida: p.unidad_medida, tipo: p.tipo, categoria: p.categoria, aclaracion: p.aclaracion,
+          cantidad_total: deEse.reduce((s, f) => s + Number(f.cantidad_total), 0),
+          porUnidad: deEse.slice().sort((a, b) =>
+            nombreUnidadStock(a.unidad_negocio_id).localeCompare(nombreUnidadStock(b.unidad_negocio_id), 'es')),
+        }
       })
     }
 
-    function filasStockVisibles() {
-      return estado.stock
-        .filter(f => !estado.unidadStock || f.unidad_negocio_id === estado.unidadStock)
-        .filter(f => coincideStock(f, estado.busquedaStock))
-        .sort((a, b) => (a.insumo_nombre || '').localeCompare(b.insumo_nombre || '', 'es', { sensitivity: 'base' }))
+    // La tarjeta de un insumo que está en varias unidades (solo con "Todas").
+    // La tarjeta NO es tocable: lo son sus renglones, uno por unidad, porque
+    // el detalle por lote es siempre de UNA unidad.
+    function htmlGrupoStock(g, marcaArriba) {
+      const negativo = Number(g.cantidad_total) < 0
+      const renglones = g.porUnidad.map(f => {
+        const neg = Number(f.cantidad_total) < 0
+        return `
+          <button type="button" class="fila-stock__unidad" data-stock="${esc(f.insumo_id)}" data-unidad="${esc(f.unidad_negocio_id)}">
+            <span class="fila-stock__unidad-nombre">${esc(nombreUnidadStock(f.unidad_negocio_id))}</span>
+            <span class="fila-stock__unidad-cant ${neg ? 'fila-stock__unidad-cant--negativa' : ''}">${esc(formatearCantidadStock(f.cantidad_total, f.unidad_medida))}</span>
+          </button>`
+      }).join('')
+      return `
+        <div class="tarjeta-lista fila-stock fila-stock--grupo">
+          <div class="fila-stock__cabeza">
+            <div class="fila-stock__info">
+              <div class="fila-stock__nombre">${esc(g.insumo_nombre)}${htmlMarca(g.marca, marcaArriba)}${htmlAclaracion(g.aclaracion)}</div>
+              <div class="fila-stock__meta">
+                <span class="fila-stock__meta-texto">${esc([marcaArriba ? '' : g.marca, `en ${g.porUnidad.length} unidades`].filter(Boolean).join(' · '))}</span>
+                <span class="chip-tipo chip-tipo--${esc(g.tipo)}">${esc(TIPOS[g.tipo] ?? g.tipo)}</span>
+                ${negativo ? '<span class="chip-saldo-negativo">Saldo negativo</span>' : ''}
+              </div>
+            </div>
+            <div class="fila-stock__total ${negativo ? 'fila-stock__total--negativa' : ''}">${esc(formatearCantidadStock(g.cantidad_total, g.unidad_medida))}</div>
+          </div>
+          <div class="fila-stock__unidades">${renglones}</div>
+        </div>`
     }
 
     // Misma normalización de acentos que el catálogo: normalizar() ya existe.
@@ -3970,7 +4201,20 @@
     function renderizarStock() {
       const listaEl = document.getElementById('lista-stock')
       const vacioEl = document.getElementById('stock-vacio')
-      const filas = filasStockVisibles()
+
+      // La barra eligió una unidad donde esta persona no puede ver stock: se
+      // dice, en vez de un listado vacío que se leería como "no hay nada".
+      if (sinPermisoEnBarra(estado.unidadesStock)) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = true
+        pintarAvisoUnidad('stock-aviso-unidad', textoSinPermiso('ver el stock'))
+        return
+      }
+      pintarAvisoUnidad('stock-aviso-unidad', '')
+
+      const visibles = filasStockVisibles()
+      const conUnidades = stockConUnidades()
+      const filas = conUnidades ? agruparStockPorInsumo(visibles) : visibles
 
       if (!filas.length) {
         listaEl.innerHTML = ''
@@ -3978,9 +4222,14 @@
         // DOS vacíos distintos. Con el libro en cero hay que explicar de dónde
         // sale el stock; si hay stock y el filtro no encontró nada, decir eso
         // mismo mandaría a buscar un problema que no existe.
-        vacioEl.textContent = estado.stock.length
+        // Tres vacíos: el buscador no encontró nada; la unidad elegida en la
+        // barra no tiene stock (hay en otras); o el libro está en cero.
+        const hayEnLaUnidad = estado.stock.some(f => pasaFiltroUnidad(f.unidad_negocio_id, estado.unidadBarra))
+        vacioEl.textContent = hayEnLaUnidad
           ? 'No se encontró ningún insumo con ese nombre o marca.'
-          : 'Todavía no hay movimientos de stock. El stock se arma solo a medida que se cargan ingresos en el módulo de Insumos, o con el inventario inicial.'
+          : estado.stock.length
+            ? `Todavía no hay stock en ${nombreDeUnidadBarra(estado.unidadBarra)}.`
+            : 'Todavía no hay movimientos de stock. El stock se arma solo a medida que se cargan ingresos en el módulo de Insumos, o con el inventario inicial.'
         return
       }
       vacioEl.hidden = true
@@ -3991,6 +4240,9 @@
       const repes = nombresRepetidos(filas, f => f.insumo_nombre)
 
       listaEl.innerHTML = htmlAgrupado(agruparPorTipoYCategoria(filas, f => f.insumo_nombre), f => {
+        // Con "Todas": un insumo en varias unidades es una tarjeta con la suma
+        // y un renglón por unidad.
+        if (f.porUnidad) return htmlGrupoStock(f, repes.has(normalizar(f.insumo_nombre)) && !!f.marca)
         const negativo = Number(f.cantidad_total) < 0
         const lotes = textoLotes(Number(f.lotes_distintos) || 0)
         const presentaciones = Number(f.presentaciones) || 0
@@ -4063,6 +4315,8 @@
         // La marca sale de la gris CUANDO subio al nombre: no se dibuja dos veces.
         const marcaArriba = repes.has(normalizar(f.insumo_nombre)) && !!f.marca
         const meta = [
+          // Con "Todas", de qué unidad es (con una elegida es obvio).
+          conUnidades ? nombreUnidadStock(f.unidad_negocio_id) : '',
           marcaArriba ? '' : f.marca,
           secundario,          // el que NO quedó destacado; null si no hay bultos
           lotes,
@@ -4264,17 +4518,40 @@
         return
       }
       estado.unidadesAjuste = sinUnidadesDePrueba(data ?? [], estado.fabrica)
-      if (estado.unidadesAjuste.length && !estado.unidadRecuento) {
-        estado.unidadRecuento = estado.unidadesAjuste[0].id
-      }
+      await estado.barraLista
+      estado.unidadRecuento = unidadRecuentoPorBarra()
+      estado.cargados.add('recuento')
       renderizarChipsUnidadRecuento()
+    }
+
+    // En qué unidad se cuenta, según la barra de arriba:
+    //  - con una unidad elegida: esa, si la persona puede ajustar ahí; si no,
+    //    ninguna (y la pantalla dice que no hay permiso);
+    //  - con "Todas": con UNA sola unidad de ajuste, esa; con varias, la que
+    //    ya se había elegido acá, o ninguna — y se pide elegir (un recuento
+    //    es de UNA unidad, y elegir la primera por las dudas sería contar
+    //    donde nadie dijo).
+    function unidadRecuentoPorBarra() {
+      const lista = estado.unidadesAjuste
+      if (estado.unidadBarra) return lista.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
+      if (lista.length === 1) return lista[0].id
+      return lista.some(u => u.id === estado.unidadRecuento) ? estado.unidadRecuento : ''
     }
 
     function renderizarChipsUnidadRecuento() {
       const cont = document.getElementById('chips-unidad-recuento')
+      // Con una unidad elegida en la barra no hay nada que elegir acá.
+      if (sinPermisoEnBarra(estado.unidadesAjuste)) {
+        pintarAvisoUnidad('rec-aviso-unidad', textoSinPermiso('hacer recuentos (ajustar el inventario)'))
+      } else if (!estado.unidadBarra && estado.unidadesAjuste.length > 1 && !estado.unidadRecuento) {
+        pintarAvisoUnidad('rec-aviso-unidad', 'Elegí en qué unidad vas a contar: un recuento es de una sola unidad.')
+      } else {
+        pintarAvisoUnidad('rec-aviso-unidad', '')
+      }
       // Una sola unidad no es una elección. Y sin "Todas": un recuento
-      // pertenece a UNA unidad, no se puede contar dos a la vez.
-      cont.hidden = estado.unidadesAjuste.length < 2
+      // pertenece a UNA unidad, no se puede contar dos a la vez. Los chips son
+      // para elegirla con "Todas" en la barra.
+      cont.hidden = !!estado.unidadBarra || estado.unidadesAjuste.length < 2
       if (cont.hidden) { cont.innerHTML = ''; return }
 
       cont.innerHTML = estado.unidadesAjuste.map(u => `
@@ -4294,7 +4571,13 @@
 
     // Busca el recuento ABIERTO de la unidad elegida. Si hay uno, lo retoma:
     // solo puede haber uno por unidad, y puede haberlo empezado otra persona.
+    //
+    // CON TURNO (28/09/2026): cambiar la unidad en la barra mientras esto está
+    // en vuelo dispara otra carga, y la respuesta de la unidad anterior no
+    // puede pisar a la de la nueva.
+    let turnoRecuento = 0
     async function cargarRecuento() {
+      const turno = ++turnoRecuento
       const cargandoEl = document.getElementById('rec-cargando')
       cargandoEl.hidden = false
       document.getElementById('rec-paso-inicio').hidden = true
@@ -4316,6 +4599,8 @@
         .eq('estado', 'abierto')
         .maybeSingle()
 
+      if (turno !== turnoRecuento) return
+
       if (error) {
         cargandoEl.hidden = true
         console.error(error)
@@ -4331,6 +4616,7 @@
 
       estado.recuento = data
       await cargarItemsRecuento()
+      if (turno !== turnoRecuento) return
       cargandoEl.hidden = true
       document.getElementById('rec-paso-contando').hidden = false
       marcarGuardado('guardado')
@@ -4340,6 +4626,9 @@
     }
 
     async function cargarItemsRecuento() {
+      // Si mientras esto viaja cambió el recuento (otra unidad en la barra),
+      // la respuesta es de otro: no se escribe.
+      const rec = estado.recuento
       // El embed a insumos es inequívoco: stock_recuento_items tiene UNA sola
       // FK a esa tabla.
       const [items, saldos] = await Promise.all([
@@ -4352,6 +4641,8 @@
           .select('insumo_id, lote, contenido_por_bulto, saldo')
           .eq('unidad_negocio_id', estado.recuento.unidad_negocio_id),
       ])
+
+      if (estado.recuento !== rec) return
 
       if (items.error || saldos.error) {
         console.error(items.error || saldos.error)
@@ -5588,41 +5879,32 @@
         return
       }
       estado.recuentos = sinUnidadesDePrueba(data ?? [], estado.fabrica, r => r?.unidad_negocio_id)
-      renderizarChipsUnidadHistorial()
+      await estado.barraLista
+      estado.cargados.add('historial')
       renderizarHistorial()
     }
 
-    // Los chips salen de v_mis_unidades_stock, que es la misma tarea que gatea
-    // esta pantalla. Se cargan en cargarStock().
-    function renderizarChipsUnidadHistorial() {
-      const cont = document.getElementById('chips-unidad-historial')
-      cont.hidden = estado.unidadesStock.length < 2
-      if (cont.hidden) { cont.innerHTML = ''; return }
-
-      const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidadesStock]
-      cont.innerHTML = chips.map(u => `
-        <button type="button" class="chip-unidad ${estado.unidadHist === u.id ? 'chip-unidad--activa' : ''}" data-unidad-hist="${esc(u.id)}">${esc(u.nombre)}</button>
-      `).join('')
-      cont.querySelectorAll('[data-unidad-hist]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          estado.unidadHist = btn.dataset.unidadHist
-          renderizarChipsUnidadHistorial()
-          renderizarHistorial()
-        })
-      })
-    }
-
+    // La unidad la elige la barra de arriba (los chips que había acá se
+    // retiraron). v_recuentos se lee con `ver` O `ajustar_inventario`, así que
+    // "no hay permiso" es no tener ninguna de las dos en esa unidad. Con
+    // "Todas" se ven todos, cada uno con el nombre de su unidad (ya lo tenía).
     function renderizarHistorial() {
       const listaEl = document.getElementById('lista-historial')
       const vacioEl = document.getElementById('hist-vacio')
-      const filas = estado.recuentos.filter(r =>
-        !estado.unidadHist || r.unidad_negocio_id === estado.unidadHist)
+      if (sinPermisoEnBarra([...estado.unidadesStock, ...estado.unidadesAjuste])) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = true
+        pintarAvisoUnidad('hist-aviso-unidad', textoSinPermiso('ver los recuentos'))
+        return
+      }
+      pintarAvisoUnidad('hist-aviso-unidad', '')
+      const filas = estado.recuentos.filter(r => pasaFiltroUnidad(r.unidad_negocio_id, estado.unidadBarra))
 
       if (!filas.length) {
         listaEl.innerHTML = ''
         vacioEl.hidden = false
         vacioEl.textContent = estado.recuentos.length
-          ? 'No hay recuentos en esa unidad.'
+          ? `No hay recuentos en ${nombreDeUnidadBarra(estado.unidadBarra)}.`
           : 'Todavía no se hizo ningún recuento.'
         return
       }
@@ -6328,7 +6610,10 @@
       // elegida no está en el modo nuevo se resetea: dejarla apuntando a una
       // unidad donde la RPC va a rechazar es el dead-end de siempre.
       const unidades = unidadesDelModo(modo)
-      const candidata = unidadPreferida || m.unidadId
+      // La unidad de la barra de arriba viene PUESTA (si en este modo hay
+      // permiso ahí), pero no fija: es la unidad de un registro NUEVO, no un
+      // filtro, y se puede cambiar acá mismo.
+      const candidata = unidadPreferida || m.unidadId || estado.unidadBarra || ''
       m.unidadId = unidades.some(u => u.id === candidata) ? candidata : ''
       // Con una sola disponible se elige sola; renderizarUnidadMov además
       // esconde el paso, para no pedir una decisión que no existe.
@@ -6440,9 +6725,17 @@
 
       aplicarBloqueoUnidadMov()
 
+      // La barra eligió una unidad donde este modo no tiene permiso: se dice,
+      // y la persona elige acá (con una sola posible, ya quedó puesta y se ve).
+      const barraFuera = !m.unidadFija && sinPermisoEnBarra(unidades)
+      pintarAvisoUnidad('mov-aviso-unidad-barra', barraFuera
+        ? `${textoSinPermiso(m.modo === 'baja' ? 'dar de baja mercadería' : 'ajustar el inventario')} ${unidades.length === 1 ? 'Va a quedar en la única donde podés.' : 'Elegí otra unidad.'}`
+        : '')
+
       // Con UNA sola unidad no hay elección que hacer: ya quedó elegida más
-      // arriba y mostrar el paso sería pedir una decisión que no existe.
-      if (!m.unidadFija && unidades.length === 1) {
+      // arriba y mostrar el paso sería pedir una decisión que no existe (salvo
+      // que la barra diga otra: ahí se muestra en cuál va a quedar).
+      if (!m.unidadFija && unidades.length === 1 && !barraFuera) {
         campo.hidden = true
         return
       }
@@ -7015,29 +7308,26 @@
         return
       }
       estado.mermas = sinUnidadesDePrueba(data ?? [], estado.fabrica, m => m?.unidad_negocio_id)
-      renderizarChipsUnidadMerma()
+      await estado.barraLista
+      estado.cargados.add('mermas')
       renderizarChipsOrigenMerma()
       renderizarMermas()
     }
 
-    // Los chips salen de v_mis_unidades_stock, la misma tarea que gatea esta
-    // pantalla — se cargan en cargarStock(), igual que los del historial.
-    function renderizarChipsUnidadMerma() {
-      const cont = document.getElementById('chips-unidad-mermas')
-      cont.hidden = estado.unidadesStock.length < 2
-      if (cont.hidden) { cont.innerHTML = ''; return }
+    // Los chips de UNIDAD que había acá se retiraron: la unidad la elige la
+    // barra de arriba. Quedan los de ORIGEN, que no son una unidad.
 
-      const chips = [{ id: '', nombre: 'Todas' }, ...estado.unidadesStock]
-      cont.innerHTML = chips.map(u => `
-        <button type="button" class="chip-unidad ${estado.unidadMerma === u.id ? 'chip-unidad--activa' : ''}" data-unidad-merma="${esc(u.id)}">${esc(u.nombre)}</button>
-      `).join('')
-      cont.querySelectorAll('[data-unidad-merma]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          estado.unidadMerma = btn.dataset.unidadMerma
-          renderizarChipsUnidadMerma()
-          renderizarMermas()
-        })
-      })
+    // Con "Todas" y más de una unidad en el mes, cuántas pérdidas tuvo cada
+    // unidad: el conteo es lo único que se suma sin mentir (ver resumenDelMes).
+    function perdidasPorUnidad(filas) {
+      const porUnidad = new Map()
+      for (const f of filas) {
+        const n = f.unidad_nombre || nombreDeUnidadBarra(f.unidad_negocio_id)
+        porUnidad.set(n, (porUnidad.get(n) || 0) + 1)
+      }
+      return porUnidad.size > 1
+        ? [...porUnidad].sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([n, c]) => `${n}: ${c}`)
+        : []
     }
 
     function renderizarChipsOrigenMerma() {
@@ -7057,8 +7347,15 @@
     function renderizarMermas() {
       const listaEl = document.getElementById('lista-mermas')
       const vacioEl = document.getElementById('mermas-vacio')
+      if (sinPermisoEnBarra(estado.unidadesStock)) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = true
+        pintarAvisoUnidad('mermas-aviso-unidad', textoSinPermiso('ver las mermas'))
+        return
+      }
+      pintarAvisoUnidad('mermas-aviso-unidad', '')
       const filas = estado.mermas.filter(f =>
-        (!estado.unidadMerma || f.unidad_negocio_id === estado.unidadMerma) &&
+        pasaFiltroUnidad(f.unidad_negocio_id, estado.unidadBarra) &&
         (!estado.origenMerma || f.origen === estado.origenMerma))
 
       if (!filas.length) {
@@ -7088,6 +7385,8 @@
 
       listaEl.innerHTML = agruparMermasPorMes(filas).map(g => {
         const r = resumenDelMes(g.filas)
+        // Con una unidad elegida las filas son todas de ella: da vacío solo.
+        const unidadesDelMes = perdidasPorUnidad(g.filas)
         const cuerpo = g.filas.map(f => {
           const o = ORIGEN_MERMA[f.origen] ?? { clase: '', texto: f.origen }
           const marcaArriba = repes.has(normalizar(f.insumo_nombre)) && !!f.marca
@@ -7118,6 +7417,7 @@
               <span class="merma-mes__conteo">${r.eventos} ${r.eventos === 1 ? 'pérdida' : 'pérdidas'}</span>
             </div>
             <div class="merma-mes__totales">${esc(r.totales.join(' · '))}</div>
+            ${unidadesDelMes.length ? `<div class="merma-mes__totales merma-mes__unidades">${esc(unidadesDelMes.join(' · '))}</div>` : ''}
             <div class="lista-contenido">${cuerpo}</div>
           </div>`
       }).join('')
@@ -7774,7 +8074,11 @@
       // sobreviviera, el próximo envío arrancaría con los ítems del anterior —
       // el bug del modal de movimiento, multiplicado por ser una lista.
       const origenUnico = estado.unidadesEnvio.length === 1 ? estado.unidadesEnvio[0].id : ''
-      estado.transf = { origenId: origenUnico, items: [] }
+      // El origen viene PUESTO con la unidad de la barra de arriba, si desde
+      // ahí se puede enviar. No es un filtro: se puede cambiar acá. Con
+      // "Todas" (o sin permiso ahí) se elige acá, sin cambiar la barra.
+      const desdeBarra = estado.unidadesEnvio.some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
+      estado.transf = { origenId: desdeBarra || origenUnico, items: [] }
 
       document.getElementById('transf-observaciones').value = ''
       document.getElementById('transf-aviso-descuento').hidden = true
@@ -7818,6 +8122,11 @@
       const chips = document.getElementById('transf-chips-origen')
       const fija = document.getElementById('transf-origen-fija')
       aplicarBloqueoOrigenTransf()
+
+      // La barra eligió una unidad desde donde esta persona no puede enviar.
+      pintarAvisoUnidad('transf-aviso-unidad-barra', sinPermisoEnBarra(estado.unidadesEnvio)
+        ? `${textoSinPermiso('enviar mercadería')} ${estado.unidadesEnvio.length === 1 ? 'Sale de la única desde donde podés.' : 'Elegí de qué unidad sale.'}`
+        : '')
 
       // Con una sola unidad de envío no hay elección: ya quedó elegida. A
       // diferencia del movimiento, el origen NO se esconde —se muestra como
@@ -8286,21 +8595,41 @@
       estado.transito = sinPrueba(transito.data ?? []).filter(x =>
         mias.has(x.unidad_origen_id) || mias.has(x.unidad_destino_id))
       estado.transferencias = sinPrueba(hist.data ?? [])
+      await estado.barraLista
+      estado.cargados.add('transito')
       renderizarTransito()
       renderizarTransfHistorial()
+    }
+
+    // Una transferencia tiene DOS unidades: con una elegida en la barra se ve
+    // la que SALE de ella o la que LLEGA a ella. Con "Todas", todas (cada una
+    // ya dice origen → destino).
+    function pasaTransfPorBarra(x) {
+      if (!estado.unidadBarra) return true
+      return x.unidad_origen_id === estado.unidadBarra || x.unidad_destino_id === estado.unidadBarra
     }
 
     function renderizarTransito() {
       const listaEl = document.getElementById('lista-transito')
       const vacioEl = document.getElementById('transito-vacio')
-      if (!estado.transito.length) {
+      if (sinPermisoEnBarra(estado.unidadesStock)) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = true
+        pintarAvisoUnidad('transito-aviso-unidad', textoSinPermiso('ver las transferencias'))
+        return
+      }
+      pintarAvisoUnidad('transito-aviso-unidad', '')
+      const filas = estado.transito.filter(pasaTransfPorBarra)
+      if (!filas.length) {
         listaEl.innerHTML = ''
         vacioEl.hidden = false
-        vacioEl.textContent = 'No hay nada en tránsito.'
+        vacioEl.textContent = estado.unidadBarra
+          ? `No hay nada en tránsito desde o hacia ${nombreDeUnidadBarra(estado.unidadBarra)}.`
+          : 'No hay nada en tránsito.'
         return
       }
       vacioEl.hidden = true
-      listaEl.innerHTML = estado.transito.map(x => {
+      listaEl.innerHTML = filas.map(x => {
         const dias = Number(x.dias_en_transito) || 0
         const viejo = dias >= DIAS_TRANSITO_VIEJO
         const txtDias = dias === 0 ? 'Hoy' : (dias === 1 ? '1 día' : `${dias} días`)
@@ -8321,12 +8650,21 @@
     function renderizarTransfHistorial() {
       const listaEl = document.getElementById('lista-transf-historial')
       const vacioEl = document.getElementById('transf-hist-vacio')
+      // Sin permiso en la unidad de la barra, el aviso ya lo dijo arriba
+      // (renderizarTransito): acá solo no se lista nada.
+      if (sinPermisoEnBarra(estado.unidadesStock)) {
+        listaEl.innerHTML = ''
+        vacioEl.hidden = true
+        return
+      }
       // El historial son las que ya no están pendientes.
-      const filas = estado.transferencias.filter(x => x.estado !== 'pendiente')
+      const filas = estado.transferencias.filter(x => x.estado !== 'pendiente' && pasaTransfPorBarra(x))
       if (!filas.length) {
         listaEl.innerHTML = ''
         vacioEl.hidden = false
-        vacioEl.textContent = 'Todavía no hay transferencias cerradas.'
+        vacioEl.textContent = estado.unidadBarra
+          ? `Todavía no hay transferencias cerradas desde o hacia ${nombreDeUnidadBarra(estado.unidadBarra)}.`
+          : 'Todavía no hay transferencias cerradas.'
         return
       }
       vacioEl.hidden = true
@@ -8828,6 +9166,11 @@
       // En paralelo con lo que sigue: no frena el arranque, y se espera recién
       // antes de la primera carga que arma una lista. Nunca tira.
       const fabricaP = cargarFabricaDePruebas(supabase)
+      // La barra de unidad, también en paralelo: cada carga la espera recién
+      // antes de dibujar. Si falla, la pantalla sigue sin filtrar (la barra es
+      // una comodidad: los permisos siguen en la base).
+      estado.barraLista = unidadesDeLaBarra().then(aplicarEstadoBarra, err => console.error('barra de unidad:', err))
+      alCambiarUnidad(alCambiarBarra)
 
       const { data: emp, error } = await supabase
         .from('empleados')

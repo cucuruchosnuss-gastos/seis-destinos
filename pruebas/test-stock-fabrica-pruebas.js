@@ -1,7 +1,9 @@
 // La FÁBRICA DE PRUEBAS en modulos/stock.html: la unidad "Pruebas (robot)"
 // (unidades_negocio.es_prueba) no puede aparecer para una cuenta real en
-// ninguna lista de UNIDADES del módulo (chips de stock, recuento, historial y
-// mermas; unidades de baja, de envío y destinos de una transferencia) ni en
+// ninguna lista de UNIDADES del módulo (las unidades de stock y los chips del
+// recuento —los de stock, historial y mermas los reemplazó la barra de unidad
+// de arriba el 28/09/2026—; unidades de baja, de envío y destinos de una
+// transferencia) ni en
 // ningún LISTADO de filas de esa unidad (stock, historial de recuentos,
 // mermas, tránsito e historial de transferencias). Una cuenta de prueba SÍ la
 // ve, y sin datos de la fábrica (FABRICA_SIN_DATOS) no se saca nada.
@@ -79,21 +81,29 @@ const PRELUDIO = `
   ${HELPERS}
   var estado = {
     fabrica: FABRICA_SIN_DATOS,
-    unidadesStock: [], unidadStock: '', stock: [],
+    // La barra de unidad (28/09/2026): con "Todas", nada que filtrar.
+    unidadBarra: null, unidadesBarra: [], barraLista: Promise.resolve(), cargados: new Set(),
+    unidadesStock: [], stock: [],
     unidadesAjuste: [], unidadRecuento: '',
-    unidadHist: '', recuentos: [],
-    unidadMerma: '', mermas: [],
+    recuentos: [],
+    mermas: [],
     unidadesBaja: [], unidadesEnvio: [], destinos: [],
     transito: [], transferencias: [],
   }
 `
 
+// Los chips de unidad de stock, historial y mermas se retiraron (los reemplazó
+// la barra de unidad de arriba, 28/09/2026): lo que esta suite protegía de
+// ellos —que la unidad del robot no se ofrezca— lo cubren ahora las LISTAS
+// (estado.unidadesStock, que es de donde salen los permisos) y la barra, que
+// saca la fábrica de pruebas por su cuenta (test-barra-unidad.js).
 const FUNCIONES = [
   'esc',
-  'cargarStock', 'renderizarChipsUnidadStock',
-  'cargarUnidadesRecuento', 'renderizarChipsUnidadRecuento',
-  'cargarHistorial', 'renderizarChipsUnidadHistorial',
-  'cargarMermas', 'renderizarChipsUnidadMerma',
+  'cargarStock',
+  'cargarUnidadesRecuento', 'renderizarChipsUnidadRecuento', 'unidadRecuentoPorBarra',
+  'sinPermisoEnBarra', 'pintarAvisoUnidad', 'textoSinPermiso', 'nombreDeUnidadBarra',
+  'cargarHistorial',
+  'cargarMermas',
   'cargarUnidadesBaja', 'cargarUnidadesEnvio', 'cargarDestinos', 'cargarTransito',
 ]
 
@@ -175,10 +185,7 @@ async function cargarTodo(sb) {
 
     // Los CHIPS dibujados, que es lo que se ve.
     const html = id => sb.document.getElementById(id).innerHTML
-    chk('real: chips de stock no dicen "Pruebas (robot)"', html('chips-unidad-stock').includes('Dolce Pasta') && !html('chips-unidad-stock').includes('robot'), html('chips-unidad-stock'))
     chk('real: chips de recuento no dicen "Pruebas (robot)"', html('chips-unidad-recuento').includes('Dolce Pasta') && !html('chips-unidad-recuento').includes('robot'), html('chips-unidad-recuento'))
-    chk('real: chips de historial no dicen "Pruebas (robot)"', html('chips-unidad-historial').includes('Dolce Pasta') && !html('chips-unidad-historial').includes('robot'), html('chips-unidad-historial'))
-    chk('real: chips de mermas no dicen "Pruebas (robot)"', html('chips-unidad-mermas').includes('Dolce Pasta') && !html('chips-unidad-mermas').includes('robot'), html('chips-unidad-mermas'))
   }
 
   // ── Si el filtro deja UNA sola unidad: el mismo comportamiento de siempre ─
@@ -192,8 +199,7 @@ async function cargarTodo(sb) {
     await sb.cargarStock()
     await sb.cargarUnidadesRecuento()
     const e = sb.estado
-    chk('una sola unidad real: se elige sola en stock', e.unidadStock === REAL1, e.unidadStock)
-    chk('una sola unidad real: los chips de stock no se dibujan', sb.document.getElementById('chips-unidad-stock').hidden === true)
+    chk('una sola unidad real: la lista de stock queda con la real sola', ids(e.unidadesStock).join() === REAL1, ids(e.unidadesStock))
     chk('una sola unidad real: el recuento arranca en la real y no en el robot', e.unidadRecuento === REAL1, e.unidadRecuento)
     chk('una sola unidad real: los chips de recuento no se dibujan', sb.document.getElementById('chips-unidad-recuento').hidden === true)
   }
@@ -213,7 +219,7 @@ async function cargarTodo(sb) {
     chk('prueba: ve su unidad en destinos', ids(e.destinos).includes(ROBOT))
     chk('prueba: ve el tránsito del robot', ids(e.transito).includes('t2') && ids(e.transito).includes('t3'), ids(e.transito))
     chk('prueba: ve el historial del robot', e.transferencias.length === 3, ids(e.transferencias))
-    chk('prueba: los chips dicen "Pruebas (robot)"', sb.document.getElementById('chips-unidad-stock').innerHTML.includes('Pruebas (robot)'))
+    chk('prueba: los chips del recuento dicen "Pruebas (robot)"', sb.document.getElementById('chips-unidad-recuento').innerHTML.includes('Pruebas (robot)'))
   }
 
   // ── Sin datos de la fábrica: no se saca nada ───────────────────────────

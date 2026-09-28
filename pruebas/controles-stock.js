@@ -15,6 +15,9 @@
 // RENOMBRADOS: un control sin id ni data-* cuyo TEXTO cambia a propósito va
 // acá, con su motivo. No es una puerta para tapar un rojo.
 //
+// RETIRADOS / MENOS_COPIAS (28/09/2026): un control que se va a propósito, o
+// que queda menos veces, se declara con su motivo (ver abajo).
+//
 // LISTAR=1 imprime el inventario completo del archivo actual.
 
 const fs = require('fs')
@@ -28,6 +31,26 @@ const ARCHIVO = process.env.ARCHIVO_TEST || path.join(RAIZ, 'modulos/stock.html'
 // clave vieja → clave nueva, con el motivo.
 const RENOMBRADOS = {
   // 'button{Texto viejo}': { nueva: 'button{Texto nuevo}', motivo: '…' },
+}
+
+// Controles RETIRADOS a propósito: clave → motivo. NINGÚN control puede
+// desaparecer sin figurar acá con su razón, y uno declarado que sigue en el
+// archivo es rojo (la declaración sobra y taparía el próximo).
+const MOTIVO_BARRA = 'lo decide la barra de unidad de arriba (js/barra-unidad.js, 28/09/2026): nunca dos lugares para elegir lo mismo'
+const RETIRADOS = {
+  'id:chips-unidad-stock': 'los chips de unidad del listado de stock: ' + MOTIVO_BARRA,
+  'id:chips-unidad-historial': 'los chips de unidad del historial de recuentos: ' + MOTIVO_BARRA,
+  'id:chips-unidad-mermas': 'los chips de unidad del tablero de mermas: ' + MOTIVO_BARRA,
+  'control:button[data-unidad-hist][type=button]': 'el chip de unidad del historial: ' + MOTIVO_BARRA,
+  'data:data-unidad-hist': 'el chip de unidad del historial: ' + MOTIVO_BARRA,
+  'control:button[data-unidad-merma][type=button]': 'el chip de unidad de mermas: ' + MOTIVO_BARRA,
+  'data:data-unidad-merma': 'el chip de unidad de mermas: ' + MOTIVO_BARRA,
+}
+
+// Controles que SIGUEN estando pero aparecen MENOS veces: clave → [cuántas
+// ahora, motivo]. Si aparece un número distinto del declarado, rojo.
+const MENOS_COPIAS = {
+  'control:button[data-unidad][type=button]': [1, 'queda el chip de unidad del RECUENTO (elige en qué unidad se cuenta con "Todas" en la barra); se fue el del listado de stock: ' + MOTIVO_BARRA],
 }
 
 // Atributos que el inventario NO ve porque el HTML que los escribe vive en una
@@ -74,7 +97,21 @@ try {
     const ren = RENOMBRADOS[k.replace(/^control:/, '')]
     if (ren) { clave = 'control:' + ren.nueva; nuevosRenombres.push(`${k} → ${clave} (${ren.motivo})`) }
     const m = A.cuenta.get(clave) || 0
+    if (RETIRADOS[clave]) {
+      console.log(`RETIRADO: ${clave} (${RETIRADOS[clave]})`)
+      chk(`el retirado ${clave} ya no está`, m === 0, `sigue estando ${m} ${m === 1 ? 'vez' : 'veces'}: sacá la declaración de RETIRADOS`)
+      continue
+    }
+    if (MENOS_COPIAS[clave]) {
+      const [ahora, motivo] = MENOS_COPIAS[clave]
+      console.log(`MENOS COPIAS: ${clave} × ${ahora} (${motivo})`)
+      chk(`${clave} aparece las ${ahora} veces declaradas`, m === ahora, `aparece ${m}: actualizá o sacá la declaración`)
+      continue
+    }
     chk(`sigue estando ${clave}`, m >= n, m === 0 ? `FALTA (estaba ${n} ${n === 1 ? 'vez' : 'veces'})` : `aparece ${m} y estaba ${n}`)
+  }
+  for (const k of [...Object.keys(RETIRADOS), ...Object.keys(MENOS_COPIAS)]) {
+    chk(`la declaración de ${k} apunta a algo que estaba en el baseline`, (B.cuenta.get(k) || 0) > 0)
   }
 
   // 2. Las referencias literales del JS apuntan a algo que existe.
