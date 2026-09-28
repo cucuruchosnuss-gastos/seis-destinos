@@ -22,7 +22,7 @@ correrMutaciones({
   ],
   manuales: [
     // Lo que viene puesto
-    { nombre: 'la fecha no viene en hoy', de: "return { id: null, clienteId: null, clienteBusqueda: '', fecha: hoyArgentina(),", a: "return { id: null, clienteId: null, clienteBusqueda: '', fecha: ''," },
+    { nombre: 'la fecha no viene en hoy', de: "return { id: null, unidadId, clienteId: null, clienteBusqueda: '', fecha: hoyArgentina(),", a: "return { id: null, unidadId, clienteId: null, clienteBusqueda: '', fecha: ''," },
     { nombre: 'CON cono viene puesto', de: "      return { clave: claveRenglon, tipo: 'producto', productoId: null, conCono: false, marcaId: null,", a: "      return { clave: claveRenglon, tipo: 'producto', productoId: null, conCono: true, marcaId: null," },
     { nombre: 'hoy sin la zona argentina', de: "new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_AR, year:", a: "new Intl.DateTimeFormat('en-CA', { year:" },
     { nombre: 'la presentación única no se elige sola', de: '      if (!r.presentacionId && lista.length === 1) r.presentacionId = lista[0].id\n', a: '' },
@@ -79,8 +79,8 @@ correrMutaciones({
     { nombre: 'productos de otra unidad', de: ".select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId).eq('activo', true)", a: ".select('id, nombre, tipo_masa, orden').eq('activo', true)" },
     { nombre: 'el aviso del catálogo vacío no sale', de: '      if (estado.catalogo && !estado.catalogo.productos.length) {', a: '      if (false) {' },
     // Permisos
-    { nombre: 'Pedido nuevo se ve sin cargar', de: "      document.getElementById('pe-btn-nuevo').hidden = !puedeEn('cargar')", a: "      document.getElementById('pe-btn-nuevo').hidden = false" },
-    { nombre: 'abrirPedidoNuevo sin gate', de: "      if (!puedeEn('cargar')) return\n      estado.form = formPedidoVacio()", a: '      estado.form = formPedidoVacio()' },
+    { nombre: 'Pedido nuevo se ve sin cargar', de: "      document.getElementById('pe-btn-nuevo').hidden = !puedeEnAlguna('cargar')", a: "      document.getElementById('pe-btn-nuevo').hidden = false" },
+    { nombre: 'abrirPedidoNuevo sin gate', de: "      const unidades = unidadesVistasCon('cargar')\n      if (!unidades.length) return\n      const f = formPedidoVacio(", a: "      const unidades = unidadesVistasCon('ver')\n      const f = formPedidoVacio(" },
     // Números
     { nombre: 'un dato ausente sale como 0', de: "      if (n === null || n === undefined || n === '') return '—'", a: "      if (n === null || n === undefined || n === '') return '0'" },
     { nombre: 'las cajas se enlazan sin decimales', de: '    const DECIMALES_CAJAS = 2', a: '    const DECIMALES_CAJAS = 0' },

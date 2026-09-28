@@ -325,6 +325,21 @@ esperas.push((async () => {
   const it = S.htmlItem(d.items[0], { ...PEDIDO }, CAT, marca('error'))
   chequearMarcas(chk, 'renglón con control y error', it, ['itemid', 'textolibre', 'nota', 'error'])
   chk('el motivo de la anulación se muestra', h.includes('Anulado. Motivo:'))
+  // Lo de la barra de unidad (28/09/2026): los nombres de unidad vienen de la
+  // base y entran a la lista en tres lugares, más el aviso de lectura.
+  const U1 = marca('uid1'), U2 = marca('uid2')
+  S.estado.unidades = new Map([[U1, marca('unombre1')], [U2, marca('unombre2')]])
+  S.estado.unidadBarra = null
+  S.estado.misTareas = new Map([['ver', { unidades: [U1] }], ['cargar', { todas: true }]])
+  S.estado.errorPedidos = null
+  S.estado.avisoPedidos = marca('avisolectura')
+  S.estado.pedidos = [{ id: 'p1', numero: 1, fecha: '2026-09-22', cliente: 'A', estado: 'pendiente', cajas_pedidas: 1, cajas_cumplidas: 0, sin_interpretar: 0, unidad_negocio_id: U1 }]
+  chequearMarcas(chk, 'lista con el aviso de lectura y la unidad sin permiso', S.htmlListaPedidos(), ['avisolectura', 'unombre2'])
+  S.estado.misTareas = new Map([['ver', { todas: true }]])
+  chequearMarcas(chk, 'lista con "Todas": la unidad de cada fila', S.htmlListaPedidos(), ['unombre1'])
+  S.estado.unidadBarra = U2
+  S.estado.misTareas = new Map([['ver', { unidades: [U1] }]])
+  chequearMarcas(chk, 'lista de una unidad sin tareas', S.htmlListaPedidos(), ['unombre2'])
   chk('el mensaje original se muestra en un desplegable', /<details>/.test(h) && /El mensaje original/.test(h))
 }
 

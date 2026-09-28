@@ -45,9 +45,9 @@ correrMutaciones({
     { nombre: 'la fecha vacía viaja ""', de: '        p_desde: esFechaIso(filtros.desde) ? filtros.desde : null,', a: '        p_desde: filtros.desde,' },
     { nombre: 'un estado inventado se pide', de: '      if (!FILTROS_ESTADO.some(([v]) => v === valor)) return\n      estado.filtros.estado = valor', a: '      estado.filtros.estado = valor' },
     { nombre: 'sin identificar vuelve a la base', de: '      estado.filtros.sinIdentificar = !!valor\n      pintarListaPedidos()', a: '      estado.filtros.sinIdentificar = !!valor\n      cargarPedidos()' },
-    { nombre: 'la respuesta vieja pisa la nueva', de: "        if (error) throw error\n        if (turno !== turnoPedidos) return\n        estado.pedidos = data ?? []", a: "        if (error) throw error\n        estado.pedidos = data ?? []" },
-    { nombre: 'sin ver pide la lista igual', de: "      if (!puedeEn('ver')) { estado.pedidos = null; pintarListaPedidos(); return }\n", a: '' },
-    { nombre: 'la cuenta no sigue el filtro', de: '      const n = pedidosVisibles(estado.pedidos, estado.filtros).length', a: '      const n = estado.pedidos.length' },
+    { nombre: 'la respuesta vieja pisa la nueva', de: "      if (turno !== turnoPedidos) return\n      const bien", a: "      const bien" },
+    { nombre: 'sin ver pide la lista igual', de: "      const unidades = unidadesVistasCon('ver')\n      estado.pedidos = null", a: "      const unidades = unidadesVistasCon('cargar')\n      estado.pedidos = null" },
+    { nombre: 'la cuenta no sigue el filtro', de: '      const lista = pedidosVisibles(estado.pedidos, estado.filtros)\n      const n = lista.length', a: '      const lista = estado.pedidos\n      const n = lista.length' },
     // El detalle
     { nombre: 'el cumplido no se tacha', de: "      return `<div class=\"pe-item${texto ? ' pe-item--texto' : ''}${cumplido ? ' pe-item--cumplido' : ''}\"", a: "      return `<div class=\"pe-item${texto ? ' pe-item--texto' : ''}\"" },
     { nombre: 'el tachado no tacha', de: '    .pe-item--cumplido .pe-item__desc { text-decoration: line-through;', a: '    .pe-item--cumplido .pe-item__desc {' },

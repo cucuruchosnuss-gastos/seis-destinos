@@ -87,6 +87,11 @@ const CLIENTES = [
   const vacio = S.htmlListaClientes()
   chequearMarcas(chk, 'sin coincidencias', vacio, ['busqueda'])
   chk('sin coincidencias lo dice', /Ningún cliente coincide/.test(vacio))
+  // El aviso de "no se pudieron leer los clientes de …" nombra unidades, que
+  // vienen de la base: se escapa (28/09/2026, la barra de unidad).
+  S.estado.avisoClientes = marca('aviso')
+  chequearMarcas(chk, 'aviso de clientes que no se leyeron', S.htmlListaClientes(), ['aviso'])
+  S.estado.avisoClientes = null
   S.estado.clientes = []
   chk('sin clientes lo dice', /Todavía no hay clientes/.test(S.htmlListaClientes()))
   S.estado.clientes = null

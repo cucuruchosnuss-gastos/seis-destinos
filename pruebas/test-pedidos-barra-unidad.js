@@ -231,6 +231,7 @@ esperas.push((async () => {
   // Cambiar de unidad: el cliente se suelta y el producto vuelve a empezar.
   await S.elegirUnidadForm('u-cn')
   chk('cambiar de unidad: suelta el cliente', f.clienteId === null)
+  chk('cambiar de unidad: vuelve a leer los clientes de la unidad nueva', (S.estado.clientes || []).map(c => c.id).join() === 'c-cn' && S.estado.clientesDe === 'u-cn', JSON.stringify(S.estado.clientes))
   chk('cambiar de unidad: el renglón de producto vuelve a empezar con sus cajas y su nota', f.renglones[0].tipo === 'producto' && f.renglones[0].productoId === null && f.renglones[0].cajas === 3 && f.renglones[0].observacion === 'ojo')
   chk('cambiar de unidad: el texto libre queda entero', f.renglones[1].tipo === 'texto' && f.renglones[1].texto === 'los rosas')
   await S.elegirUnidadForm('u-rara')
@@ -278,6 +279,9 @@ esperas.push((async () => {
   chk('Todas: cada cliente dice su unidad', /Anatolia<\/span><span class="pe-fila__meta">Cucuruchos Nuss/.test(h) && /Fideos Sur<\/span><span class="pe-fila__meta">Dolce Pasta/.test(h), h)
   S.abrirCliente(null)
   chk('Todas: el cliente nuevo pide la unidad', S.estado.clienteForm.unidadId === null && (S.__els.get('pe-cliente-unidad').innerHTML.match(/data-cliente-unidad=/g) || []).length === 2)
+  S.__doc.getElementById('pe-cliente-nombre').value = 'Sin Unidad'
+  await S.guardarCliente()
+  chk('Todas: guardar un cliente sin elegir la unidad no manda nada y lo dice', !S.__llamadas.rpc.some(r => r[0] === 'guardar_cliente') && S.estado.clienteForm.error === 'Elegí de qué unidad es el cliente.', JSON.stringify(S.estado.clienteForm.error))
   S.elegirUnidadCliente('u-dp')
   chk('elegir la unidad del cliente', S.estado.clienteForm.unidadId === 'u-dp' && S.estado.unidadBarra === null)
   S.elegirUnidadCliente('u-rara')
@@ -290,6 +294,26 @@ esperas.push((async () => {
   // Editar uno de la lista: su unidad, sin elegir.
   S.abrirCliente('c-cn')
   chk('editar: la unidad del cliente', S.estado.clienteForm.unidadId === 'u-cn' && !/data-cliente-unidad=/.test(S.__els.get('pe-cliente-unidad').innerHTML))
+})())
+
+// ── un cliente de una unidad donde no configura no se abre para editar ─────
+{
+  const S = conDos(nuevo(), { configurar: { unidades: ['u-cn'] } })
+  S.estado.clientes = [{ id: 'c-dp', nombre: 'Fideos Sur', apodos: [], activo: true, unidad_negocio_id: 'u-dp' }, { id: 'c-cn', nombre: 'Anatolia', apodos: [], activo: true, unidad_negocio_id: 'u-cn' }]
+  S.abrirCliente('c-dp')
+  chk('editar un cliente de una unidad donde no configura: no se abre', S.estado.clienteForm == null && S.estado.vista !== 'pe-vista-cliente')
+  S.abrirCliente('c-cn')
+  chk('editar uno de la unidad donde configura: se abre', S.estado.clienteForm?.id === 'c-cn' && S.estado.vista === 'pe-vista-cliente')
+}
+
+// ── clientes con "Todas": juntos, ordenados por nombre (no por unidad) ──────
+esperas.push((async () => {
+  const S = conDos(nuevo())
+  S.__tablas.clientes = (f) => ({ data: f.some(x => x[0] === 'eq' && x[2] === 'u-dp')
+    ? [{ id: 'c-dp', nombre: 'Bosco', apodos: [], activo: true }]
+    : [{ id: 'c-cn1', nombre: 'Zapata', apodos: [], activo: true }, { id: 'c-cn2', nombre: 'Álamo', apodos: [], activo: true }], error: null })
+  await S.mostrarClientes()
+  chk('Todas: los clientes de las dos unidades van ordenados por nombre', S.estado.clientes.map(c => c.id).join() === 'c-cn2,c-dp,c-cn1', S.estado.clientes.map(c => c.id).join())
 })())
 
 esperas.push((async () => {
