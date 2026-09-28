@@ -663,6 +663,7 @@
     import { mostrarError, mostrarExito, cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
+    import { abrirPanelSesiones } from '../js/sesiones.js'
 
     mostrarBannerVersion()
 
@@ -1425,6 +1426,19 @@
       cont.querySelectorAll('.btn-quitar-mfa').forEach(btn => {
         btn.addEventListener('click', () => confirmarQuitarMfa(btn.dataset.id))
       })
+      cont.querySelectorAll('.btn-sesiones-usuario').forEach(btn => {
+        btn.addEventListener('click', () => abrirSesiones(btn.dataset.id))
+      })
+    }
+
+    // Las sesiones abiertas de una persona y "Cerrar todas sus sesiones"
+    // (27/09/2026): el panel compartido de js/sesiones.js. La base
+    // (sesiones_de / cerrar_sesiones) solo deja a un super_admin, que es quien
+    // entra a esta pantalla. El nombre se busca acá, no viaja en un atributo.
+    function abrirSesiones(empleadoId) {
+      const emp = estado.empleados.find(e => e.id === empleadoId)
+      if (!emp) return
+      abrirPanelSesiones({ sb: supabase, empleadoId: emp.id, nombre: emp.nombre, propia: emp.id === estado.miEmpleado?.id })
     }
 
     function htmlTarjetaUsuario(emp) {
@@ -1439,6 +1453,8 @@
         // que se excluye es la tarjeta propia (para eso está el menú de
         // perfil, y así nadie se saca el MFA creyendo que se lo saca a otro).
         const puedeQuitarMfa = emp.id !== estado.miEmpleado?.id
+        // "Sesiones" va en TODAS las tarjetas (27/09/2026): también las de
+        // otro super_admin, la propia y las de una tablet.
         const modulos = modulosDeEmpleado(emp.id)
         const chipsModulos = modulos.length
           ? modulos.map(m => {
@@ -1469,12 +1485,11 @@
               </div>
               <div class="acceso__email">${segundaLinea}</div>
               <div class="acceso__acciones" style="margin-top:0.5rem;">${chipsModulos}</div>
-              ${(puedeEditar || puedeQuitarMfa) ? `
-                <div class="acceso__acciones">
+              <div class="acceso__acciones">
+                  <button type="button" class="btn btn--secundario btn-sesiones-usuario" data-id="${esc(emp.id)}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Sesiones</button>
                   ${puedeEditar ? `<button type="button" class="btn btn--secundario btn-editar-usuario" data-id="${esc(emp.id)}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Editar</button>` : ''}
                   ${puedeQuitarMfa ? `<button type="button" class="btn btn--rechazar btn-quitar-mfa" data-id="${esc(emp.id)}" style="width:auto; padding:0.4375rem 0.875rem; font-size:0.8125rem;">Quitar verificación en dos pasos</button>` : ''}
-                </div>
-              ` : ''}
+              </div>
             </div>
           </div>
         `

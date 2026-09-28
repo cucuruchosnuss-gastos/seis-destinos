@@ -622,6 +622,19 @@
       <div class="ad-lista" id="ad-errores-lista"></div>
     </section>
 
+    <!-- ══ SEGURIDAD (27/09/2026, solo super_admin) ════════════════════════
+         El registro de seguridad (registro_seguridad): quién cerró las
+         sesiones de quién, cuándo y por qué. -->
+    <section id="ad-vista-seguridad" hidden>
+      <div class="ad-cabecera-vista">
+        <button type="button" class="ad-link" id="ad-seguridad-volver">&lsaquo; Portada</button>
+        <h1 class="ad-titulo">Seguridad</h1>
+        <button type="button" class="ad-btn ad-btn--suave" id="ad-seguridad-actualizar">Actualizar</button>
+      </div>
+      <p class="ad-cuenta" id="ad-seguridad-cuenta"></p>
+      <div class="ad-lista" id="ad-seguridad-lista"></div>
+    </section>
+
     <!-- ══ UNA COBRANZA (desde la cuenta de un cliente o un link) ══════════ -->
     <section id="ad-vista-cobranza" hidden>
       <div class="ad-cabecera-vista">
@@ -709,6 +722,7 @@
       cobranza: null,        // la abierta: { id, origen, clienteOrigen, fila, cheques, fotos, cliente, clienteId, error, reabriendo, hecho }
       bancos: null,          // codigo → nombre (bancos_bcra)
       errores: { filas: null, error: null, pantalla: '', dispositivo: '', evento: '' },
+      seguridad: { filas: null, error: null },
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -791,6 +805,9 @@
       // Lo que falló en las pantallas (errores_app): solo un super_admin, que
       // es el único que la base deja leer.
       { id: 'errores', titulo: 'Errores de la app', global: true, soloSuperAdmin: true, tareas: [] },
+      // El registro de seguridad (27/09/2026): solo un super_admin, que es el
+      // único que la base deja leer (policy de registro_seguridad).
+      { id: 'seguridad', titulo: 'Seguridad', global: true, soloSuperAdmin: true, tareas: [] },
     ]
 
     function seccionVisible(s, unidadId = estado.empresaId) {
@@ -862,9 +879,9 @@
     // VISTAS
     // ═══════════════════════════════════════════════════════════════════════
 
-    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores']
+    const VISTAS = ['ad-vista-inicio', 'ad-vista-ordenes', 'ad-vista-orden', 'ad-vista-clientes', 'ad-vista-cliente', 'ad-vista-ficha', 'ad-vista-listas', 'ad-vista-lista', 'ad-vista-importar', 'ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad']
     // Las vistas que no son de una empresa: el selector de empresa se esconde.
-    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores']
+    const VISTAS_GLOBALES = ['ad-vista-cheques', 'ad-vista-cobranzas', 'ad-vista-cobranza', 'ad-vista-errores', 'ad-vista-seguridad']
     const SUBTITULO_DE_VISTA = {
       'ad-vista-inicio': 'Portada',
       'ad-vista-ordenes': 'Órdenes',
@@ -879,6 +896,7 @@
       'ad-vista-cobranzas': 'Cobranzas por asentar',
       'ad-vista-cobranza': 'Cobranza',
       'ad-vista-errores': 'Errores de la app',
+      'ad-vista-seguridad': 'Seguridad',
     }
 
     function mostrarVista(id) {
@@ -1064,6 +1082,10 @@
         return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
           `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
           `<span class="ad-seccion__detalle">Lo que falló en las pantallas, con el dispositivo, para diagnosticar</span></button>`
+      } else if (s.id === 'seguridad') {
+        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
+          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
+          `<span class="ad-seccion__detalle">Quién cerró las sesiones de quién, cuándo y por qué</span></button>`
       } else if (s.id === 'importar') {
         return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
           `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
@@ -1140,6 +1162,7 @@
       else if (id === 'cheques') mostrarCheques()
       else if (id === 'cobranzas') mostrarCobranzas()
       else if (id === 'errores') mostrarErrores()
+      else if (id === 'seguridad') mostrarSeguridad()
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -4066,6 +4089,71 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // SEGURIDAD — solo super_admin (27/09/2026)
+    //
+    // El registro_seguridad: lo escribe la base (cerrar_sesiones) y lo lee
+    // solo un super_admin (su policy). Los nombres salen de
+    // v_empleados_publico (asegurarNombres), nunca de un embed a empleados.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const MAX_SEGURIDAD = 300
+    const ETIQUETA_ACCION_SEGURIDAD = {
+      cerrar_sesiones: 'Cerró todas las sesiones',
+    }
+
+    async function leerSeguridad() {
+      const { data, error } = await supabase.from('registro_seguridad')
+        .select('id, empleado_id, accion, motivo, hecho_por, hecho_en')
+        .order('hecho_en', { ascending: false }).limit(MAX_SEGURIDAD)
+      if (error) throw error
+      return data ?? []
+    }
+
+    function htmlFilaSeguridad(r) {
+      const de = r.empleado_id ? (estado.nombres.get(r.empleado_id) ?? 'Alguien') : '—'
+      const por = r.hecho_por ? (estado.nombres.get(r.hecho_por) ?? 'Alguien') : '—'
+      // Una acción que la pantalla no conoce se muestra tal cual (escapada),
+      // no se esconde.
+      const accion = ETIQUETA_ACCION_SEGURIDAD[r.accion] ?? r.accion ?? '—'
+      const quien = r.empleado_id && r.empleado_id === r.hecho_por ? `${de} (a sí mismo)` : `De ${de} · lo hizo ${por}`
+      return `<div class="ad-tarjeta" data-seguridad="${esc(r.id)}">` +
+        `<div class="ad-fila__linea"><span class="ad-sello">${esc(accion)}</span><span class="ad-fila__meta">${esc(momentoAr(r.hecho_en))}</span></div>` +
+        `<div class="ad-error-app__mensaje">${esc(quien)}</div>` +
+        `<p class="ad-texto-suave">Motivo: ${esc(r.motivo || '—')}</p></div>`
+    }
+
+    function pintarSeguridad() {
+      const sg = estado.seguridad
+      const lista = document.getElementById('ad-seguridad-lista')
+      const cuenta = document.getElementById('ad-seguridad-cuenta')
+      if (sg.error) { lista.innerHTML = `<div class="ad-aviso ad-aviso--grave">${esc(sg.error)}</div>`; cuenta.textContent = ''; return }
+      if (sg.filas === null) { lista.innerHTML = '<div class="ad-vacio">Cargando el registro…</div>'; cuenta.textContent = ''; return }
+      cuenta.textContent = sg.filas.length === MAX_SEGURIDAD ? `Los últimos ${MAX_SEGURIDAD}` : (sg.filas.length === 1 ? '1 registro' : `${sg.filas.length} registros`)
+      lista.innerHTML = sg.filas.length ? sg.filas.map(htmlFilaSeguridad).join('') : '<div class="ad-vacio">Todavía no hay nada en el registro de seguridad.</div>'
+    }
+
+    let turnoSeguridad = 0
+
+    async function mostrarSeguridad() {
+      if (estado.miRolApp !== 'super_admin') { mostrarInicio(); return }
+      mostrarVista('ad-vista-seguridad')
+      const turno = ++turnoSeguridad
+      estado.seguridad = { filas: null, error: null }
+      pintarSeguridad()
+      try {
+        const filas = await leerSeguridad()
+        await asegurarNombres(filas.flatMap(r => [r.empleado_id, r.hecho_por]))
+        if (turno !== turnoSeguridad) return
+        estado.seguridad.filas = filas
+      } catch (err) {
+        if (turno !== turnoSeguridad) return
+        console.error('No se pudo leer el registro de seguridad:', err)
+        estado.seguridad.error = 'No se pudo leer el registro de seguridad. Revisá la conexión y volvé a entrar.'
+      }
+      pintarSeguridad()
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // EVENTOS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -4203,6 +4291,8 @@
       // Errores de la app
       document.getElementById('ad-errores-volver').addEventListener('click', () => mostrarInicio())
       document.getElementById('ad-errores-actualizar').addEventListener('click', () => mostrarErrores())
+      document.getElementById('ad-seguridad-volver').addEventListener('click', () => mostrarInicio())
+      document.getElementById('ad-seguridad-actualizar').addEventListener('click', () => mostrarSeguridad())
       for (const [id, clave] of [['ad-errores-pantalla', 'pantalla'], ['ad-errores-dispositivo', 'dispositivo'], ['ad-errores-evento', 'evento']]) {
         document.getElementById(id).addEventListener('change', (e) => { estado.errores[clave] = e.target.value; pintarErrores() })
       }

@@ -133,6 +133,7 @@
           <button type="button" class="menu-perfil__opcion" id="btn-cambiar-email">Cambiar email</button>
           <button type="button" class="menu-perfil__opcion" id="btn-cambiar-contrasena">Cambiar contraseña</button>
           <button type="button" class="menu-perfil__opcion" id="btn-mfa">Verificación en dos pasos</button>
+          <button type="button" class="menu-perfil__opcion" id="btn-mis-sesiones">Mis sesiones abiertas</button>
         </div>
       </div>
       <button class="btn btn--secundario" id="btn-logout" style="font-size: 0.875rem; padding: 0.5rem 0.875rem;">
@@ -307,6 +308,7 @@
       MODULOS, moduloVisible, entraDerechoAProduccion, COLORES_MODULO,
       agruparPendientes, escDash,
     } from './js/modulos.js'
+    import { abrirPanelSesiones } from './js/sesiones.js'
 
     mostrarBannerVersion()
 
@@ -679,6 +681,20 @@
       document.getElementById('grilla-modulos').hidden = true
       document.getElementById('dashboard-pendiente').hidden = false
       throw new Error('Cuenta sin empleado vinculado — estado: ' + (estadoSolicitud ?? 'sin solicitud'))
+    }
+
+    // Mis sesiones abiertas (27/09/2026): el panel compartido de
+    // js/sesiones.js, con "Cerrar todas mis sesiones" (también esta: se vuelve
+    // al login con el aviso). ?cuenta=sesiones lo abre derecho (lo usa la
+    // barra lateral de las otras pantallas).
+    function abrirMisSesiones() {
+      menuPerfilPanel.hidden = true
+      abrirPanelSesiones({ sb: supabase, empleadoId: miEmpleado.id, nombre: nombre || email, propia: true })
+    }
+    document.getElementById('btn-mis-sesiones').addEventListener('click', abrirMisSesiones)
+    if (new URLSearchParams(window.location.search).get('cuenta') === 'sesiones') {
+      history.replaceState(null, '', window.location.pathname)
+      abrirMisSesiones()
     }
 
     const esAdmin      = ['admin', 'super_admin'].includes(miEmpleado.rol_app)

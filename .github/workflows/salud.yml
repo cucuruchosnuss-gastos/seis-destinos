@@ -1,0 +1,28 @@
+# ¿La app responde? (27/09/2026). Cada 30 minutos: que carguen las páginas de
+# GitHub Pages, que conteste Auth de Supabase y que la base conteste con la
+# clave pública (ver pruebas/salud-en-vivo.js). Falla si algo no responde, y
+# GitHub le avisa por mail a quien activó los workflows.
+#
+# Ojo: GitHub apaga los workflows programados de un repo sin commits en 60
+# días; ahí hay que volver a activarlo desde la pestaña Actions.
+name: Salud
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  responde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: ¿La app responde?
+        run: node pruebas/salud-en-vivo.js

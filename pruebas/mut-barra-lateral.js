@@ -40,6 +40,8 @@ correrMutacionesEnVarios([
       { nombre: 'los módulos deshabilitados cuentan', de: "        sb.from('empleado_modulos').select('modulo').eq('empleado_id', yo.id).eq('habilitado', true),", a: "        sb.from('empleado_modulos').select('modulo').eq('empleado_id', yo.id)," },
       { nombre: 'el logo no lleva al inicio', de: "new URL('dashboard.html', raiz).href", a: "new URL('index.html', raiz).href" },
       { nombre: 'el botón no dice su estado', de: "aria-expanded=\"${colapsada ? 'false' : 'true'}\"", a: 'aria-expanded="true"' },
+      { nombre: 'Mis sesiones no son las propias', de: 'abrirPanelSesiones({ sb, empleadoId: yo.id, propia: true, doc })', a: 'abrirPanelSesiones({ sb, empleadoId: yo.id, propia: false, doc })' },
+      { nombre: 'Mis sesiones no abre nada', de: "      nav.querySelector('#barra-lateral-sesiones')?.addEventListener('click', () =>\n        abrirPanelSesiones({ sb, empleadoId: yo.id, propia: true, doc }))\n", a: '' },
       { nombre: 'achicada sin tooltip', de: ` title="\${escDash(m.nombre)}"\${esActual`, a: `\${esActual` },
     ],
   },

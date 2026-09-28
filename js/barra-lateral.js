@@ -18,6 +18,7 @@
 
 import { supabase } from './supabase.js'
 import { MODULOS, moduloVisible, agruparPendientes, escDash } from './modulos.js'
+import { abrirPanelSesiones } from './sesiones.js'
 
 // La raíz del repo: este archivo vive en js/.
 const RAIZ = new URL('../', import.meta.url)
@@ -85,6 +86,9 @@ export function htmlBarra({ modulos, actual, colapsada, raiz }) {
   return `<a class="barra-lateral__logo" href="${escDash(new URL('dashboard.html', raiz).href)}" title="Inicio">` +
       `<img src="${escDash(new URL('logo.png', raiz).href)}" alt="Seis Destinos · Inicio"></a>` +
     `<div class="barra-lateral__items">${items}</div>` +
+    // Mi cuenta: las sesiones abiertas de quien mira (js/sesiones.js).
+    '<button type="button" class="barra-lateral__plegar" id="barra-lateral-sesiones" title="Mis sesiones abiertas" aria-label="Mis sesiones abiertas">' +
+      '<span class="barra-lateral__icono" data-icono="monitor-smartphone" aria-hidden="true">◧</span><span class="barra-lateral__nombre">Mis sesiones</span></button>' +
     `<button type="button" class="barra-lateral__plegar" id="barra-lateral-plegar" aria-expanded="${colapsada ? 'false' : 'true'}"` +
       ` aria-label="${textoBoton}" title="${textoBoton}"><span aria-hidden="true">${colapsada ? '»' : '«'}</span>` +
       `<span class="barra-lateral__nombre">Achicar</span></button>`
@@ -173,6 +177,8 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
     const dibujar = () => {
       nav.innerHTML = htmlBarra({ modulos, actual, colapsada, raiz: RAIZ })
       doc.body.classList.toggle('barra-lateral-colapsada', colapsada)
+      nav.querySelector('#barra-lateral-sesiones')?.addEventListener('click', () =>
+        abrirPanelSesiones({ sb, empleadoId: yo.id, propia: true, doc }))
       nav.querySelector('#barra-lateral-plegar').addEventListener('click', () => {
         colapsada = !colapsada
         guardar(colapsada)

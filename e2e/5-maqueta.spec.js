@@ -145,6 +145,23 @@ const PANTALLAS = [
       await page.locator('#ad-errores-pantalla').selectOption('produccion')
       await expect(page.locator('#ad-errores-cuenta')).toHaveText('1 de 2')
     }],
+    ['seguridad', async (page) => {
+      await page.locator('#ad-errores-volver').click()
+      await page.locator('[data-seccion="seguridad"]').click()
+      await expect(page.locator('#ad-seguridad-lista')).toContainText('De Franco Díaz · lo hizo Emanuel Romero')
+      await expect(page.locator('#ad-seguridad-cuenta')).toHaveText('2 registros')
+    }],
+    ['mis-sesiones', async (page) => {
+      // En la compu, desde la barra lateral; en el celular, el panel se prueba en el dashboard.
+      if (!(await page.locator('#barra-lateral-sesiones').isVisible())) return
+      await page.locator('#barra-lateral-sesiones').click()
+      await expect(page.locator('.sesiones')).toContainText('Chrome en Android')
+      await expect(page.locator('.sesiones')).toContainText('Edge en Windows')
+      await page.locator('[data-accion="pedir-cerrar"]').click()
+      await expect(page.locator('.sesiones')).toContainText('Poné el motivo')
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.sesiones')).toHaveCount(0)
+    }],
   ]],
   ['modulos/pedidos.html', 'pedidos', [
     ['lista', async (page) => { await expect(page.locator('[data-pedido]').first()).toBeVisible() }],

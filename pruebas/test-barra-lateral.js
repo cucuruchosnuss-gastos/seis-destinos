@@ -38,12 +38,14 @@ function construir() {
     var localStorage = { getItem(k) { return __ls.has(k) ? __ls.get(k) : null }, setItem(k, v) { __ls.set(k, String(v)) } }
     var window = { lucide: {} }
     var console = { warn() {}, error() {}, log() {} }
+    var __paneles = []
+    var abrirPanelSesiones = (o) => { __paneles.push(o) }
   `
   for (const c of ['MODULOS', 'MODULO_DE_PENDIENTE', 'TAMBIEN_EN_TARJETA']) codigo += extraerConst(mod, c)
   for (const f of DE_MODULOS) codigo += extraerFn(mod, f) + '\n'
   for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'URL_LUCIDE']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
-  codigo += `return { ${FUNCIONES.join(', ')}, MODULOS, __ls, __win: window }`
+  codigo += `return { ${FUNCIONES.join(', ')}, MODULOS, __ls, __win: window, __paneles }`
   return new Function(codigo)()
 }
 
@@ -58,8 +60,12 @@ function navFalso() {
     className: '', atributos: {}, burbujas: [], boton: null,
     setAttribute(k, v) { this.atributos[k] = String(v) },
     get innerHTML() { return html },
-    set innerHTML(v) { html = v; this.boton = null; this.burbujas = [] },
+    set innerHTML(v) { html = v; this.boton = null; this.sesiones = null; this.burbujas = [] },
     querySelector(sel) {
+      if (sel === '#barra-lateral-sesiones' && html.includes('id="barra-lateral-sesiones"')) {
+        if (!this.sesiones) this.sesiones = { handlers: [], addEventListener(t, f) { if (t === 'click') this.handlers.push(f) } }
+        return this.sesiones
+      }
       if (sel === '#barra-lateral-plegar' && html.includes('id="barra-lateral-plegar"')) {
         if (!this.boton) this.boton = { handlers: [], addEventListener(t, f) { if (t === 'click') this.handlers.push(f) } }
         return this.boton
@@ -230,6 +236,10 @@ esperas.push((async () => {
     nav.boton.handlers[0]()
     chk('al agrandar: se recuerda', S.__ls.get('barraLateral.colapsada') === '0' && !doc.body.classList.contains('barra-lateral-colapsada'))
     chk('al volver a la pestaña se recargan los pendientes', doc.listeners.some(([t]) => t === 'visibilitychange'))
+    chk('tiene "Mis sesiones" (Mi cuenta)', nav.innerHTML.includes('id="barra-lateral-sesiones" title="Mis sesiones abiertas" aria-label="Mis sesiones abiertas"'))
+    nav.sesiones.handlers[0]()
+    const pn = S.__paneles[0]
+    chk('"Mis sesiones" abre el panel con las PROPIAS de quien mira', !!pn && pn.empleadoId === 'e1' && pn.propia === true && pn.doc === doc)
   }
   // La preferencia guardada se respeta al abrir otra pantalla.
   {
