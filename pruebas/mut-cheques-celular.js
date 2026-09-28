@@ -17,6 +17,7 @@ correrMutaciones({
   funciones: ['htmlTarjetaCheque'],
   equivalentes: [
     { expr: 'esc(clases)', motivo: 'las clases son literales del código' },
+    { expr: 'esc(TEXTO_SIN_UNIDAD)', motivo: "constante del código ('Sin unidad', la marca del celular con una unidad elegida en la barra, 28/09/2026), sin ningún carácter que escapar" },
     { expr: 'esc(formatearImporte(ch.importe))', motivo: 'formatearImporte solo devuelve dígitos, puntos, comas, "$", "-" o "—"' },
     { expr: 'esc(pago)', motivo: '"a la vista" o "paga dd/mm/aa" (fechaCorta solo arma dígitos y barras)' },
     { expr: 'esc(textoVencimientoCorto(venc))', motivo: 'palabras fijas y una fecha dd/mm armada por el código' },

@@ -54,7 +54,9 @@ correrMutaciones({
     { nombre: 'limpiar deja el filtro de vencimientos',
       de: 'estado.filtros = { ...FILTROS_CHEQUES_DEFECTO, soloVencen: false }', a: 'estado.filtros = { ...FILTROS_CHEQUES_DEFECTO, soloVencen: estado.filtros.soloVencen }' },
     { nombre: 'el error del resumen deja los vencimientos viejos',
-      de: '        estado.cartera = null\n        estado.vencimientos = null', a: '        estado.cartera = null' },
+      // Anclado a filasResumen (28/09/2026): recalcularResumen() tiene el mismo
+      // par de renglones y el texto dejó de ser único.
+      de: '        estado.filasResumen = null\n        estado.cartera = null\n        estado.vencimientos = null', a: '        estado.filasResumen = null\n        estado.cartera = null' },
     { nombre: 'el vencido usa un hex suelto',
       de: '--chq-vencido-fondo: color-mix(in srgb, var(--bordo) 18%, var(--bordo-suave));', a: '--chq-vencido-fondo: #e8c9d0;' },
     { nombre: 'la marca usa el naranja',

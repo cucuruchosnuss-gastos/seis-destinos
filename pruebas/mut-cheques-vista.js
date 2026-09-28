@@ -29,7 +29,9 @@ correrMutaciones({
     { nombre: 'la cartera cuenta también los salidos',
       de: "if (ch.estado !== 'en_cartera') continue\n        cantidad++", a: "cantidad++" },
     { nombre: 'la cartera con error queda en cero',
-      de: '        estado.cartera = null\n', a: '        estado.cartera = { cantidad: 0, total: 0 }\n' },
+      // Anclado a filasResumen (28/09/2026): recalcularResumen() también pone
+      // la cartera en null y el renglón suelto dejó de ser único.
+      de: '        estado.filasResumen = null\n        estado.cartera = null\n', a: '        estado.filasResumen = null\n        estado.cartera = { cantidad: 0, total: 0 }\n' },
     { nombre: 'Dar salida se ofrece con la cobranza por controlar',
       de: "      if (cob?.estado === 'procesada') return 'dar'", a: "      if (cob) return 'dar'" },
     { nombre: 'Dar salida se ofrece sin la tarea procesar',
