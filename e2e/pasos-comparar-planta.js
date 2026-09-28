@@ -87,6 +87,35 @@ const PASOS_COMPARAR_PLANTA = [
     await expect(page.locator('#pr-planilla')).toBeVisible();
     await expect(page.locator('#pr-planilla-producido .pr-fila-prod').first()).toBeVisible();
   }],
+  ['5a', async (page) => {
+    await page.locator('#pr-btn-agregar-producto').click();
+    await expect(page.locator('#pr-agregar-prod')).toBeVisible();
+  }],
+  ['5b', async (page) => {
+    // La Máquina 2 no tiene masa de chocolate.
+    await abrirMaquina(page, 't2');
+    await expect(page.locator('#pr-planilla')).toBeVisible();
+    await page.locator('#pr-btn-agregar-producto').click();
+    await page.locator('[data-ag-producto="p-Mini-ch"]').click();
+    await expect(page.locator('.pr-ag__aviso-choco')).toBeVisible();
+  }],
+  ['5c', async (page) => {
+    await abrirMaquina(page, 't1');
+    await expect(page.locator('#pr-planilla')).toBeVisible();
+    await page.locator('#pr-btn-agregar-producto').click();
+    await page.locator('[data-ag-producto="p-Mini"]').click();
+    await expect(page.locator('#pr-agregar-cono')).toBeVisible();
+  }],
+  ['5d', async (page) => {
+    await page.locator('#pr-agregar-marcas [data-marca="c-1"]').click();
+    await expect(page.locator('[data-ag-presentacion]').first()).toBeVisible();
+  }],
+  ['5e', async (page) => {
+    await page.locator('[data-ag-presentacion]').first().click();
+    await expect(page.locator('#pr-agregar-cajas-panel')).toBeVisible();
+    await page.locator('[data-cajas-poner="3"]').click();
+    await page.locator('[data-cajas-paso="1"]').click();
+  }],
   ['6', async (page) => {
     // La Máquina 3 está parada: sus paradas.
     await abrirMaquina(page, 't3');
@@ -107,6 +136,24 @@ const PASOS_COMPARAR_PLANTA = [
     await PERSONA(page, 'Villagra Vladimir').click();
     await teclear(page, '4826');
     await expect(page.locator('#pr-sala')).toBeVisible();
+  }],
+  ['9b', async (page) => {
+    await page.locator('[data-sala-turno="t1"]').click();
+    await expect(page.locator('#pr-receta')).toBeVisible();
+    await page.locator('#pr-receta [data-base="anterior"]').click().catch(() => {});
+  }],
+  ['9c', async (page) => {
+    await page.locator('#pr-receta [data-base="modificar"], #pr-receta [data-base="modificada"]').first().click();
+  }],
+  ['9e', async (page) => {
+    await page.locator('#pr-receta [data-base="anterior"]').click().catch(() => {});
+    await page.locator('#pr-receta-filas [data-lote]').first().click();
+    await expect(page.locator('#pr-lote-panel')).toBeVisible();
+  }],
+  ['9g', async (page) => {
+    await page.keyboard.press('Escape');
+    await page.locator('#pr-barra [data-lateral-turno="t1"]').click();
+    await expect(page.locator('#pr-hist-maq')).toBeVisible();
   }],
 ];
 

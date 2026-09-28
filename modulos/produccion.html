@@ -249,7 +249,7 @@
     .pr-lp__titulos { flex: 1; min-width: 0; line-height: 1.15; }
     .pr-lp__titulo { margin: 0; font-family: var(--p-titulo); font-size: 23px; font-weight: 700; flex: 1; min-width: 0; }
     .pr-lp__sub { font-size: 14px; color: var(--p-gris); }
-    .pr-cerrar-x { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 0; background: var(--p-renglon); color: var(--p-tinta-2); display: flex; align-items: center; justify-content: center; }
+    .pr-cerrar-x { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 0; background: var(--p-renglon); color: var(--p-tinta-2); display: flex; align-items: center; justify-content: center; font-size: 26px; line-height: 1; padding: 0; }
 
     /* ════ LA BARRA (diseño: "Estructura") ════
        Apaisada: 200 px al costado. El botón al otro modo (48, con el tono de
@@ -837,6 +837,266 @@
     .pr-cerrado__lote { margin: 0 0 8px; font-size: 17px; }
     .pr-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
     .pr-lista__item { display: flex; gap: 12px; align-items: baseline; background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 12px; padding: 8px 12px; font-size: 15px; }
+
+    /* ══ 5a – 5e · AGREGAR PRODUCTO ══ */
+    .pr-solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .pr-ag { flex: 1; min-height: 0; display: flex; gap: 10px; --p-prod-fs: 40px; --p-choco-fs: 30px; --p-cono-h: 50px; }
+    @media (orientation: portrait) { .pr-ag { flex-direction: column; --p-prod-fs: 52px; --p-choco-fs: 40px; --p-cono-h: 64px; } }
+    .pr-ag__pasos-col { width: 220px; flex-shrink: 0; background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    @media (orientation: portrait) { .pr-ag__pasos-col { width: auto; flex-direction: row; } }
+    .pr-ag__lista { display: flex; flex-direction: column; gap: 6px; }
+    @media (orientation: portrait) { .pr-ag__lista { flex-direction: row; flex: 1; min-width: 0; } }
+    .pr-paso { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 12px; border: 2px solid transparent; background: transparent; text-align: left; font: inherit; color: inherit; min-width: 0; }
+    @media (orientation: portrait) { .pr-paso { flex: 1 1 0; } }
+    .pr-paso--actual { background: var(--p-acento-suave); border-color: var(--p-acento); }
+    .pr-paso__n { width: 30px; height: 30px; border-radius: 999px; background: #fff; color: var(--p-suave); border: 2px solid var(--p-linea); font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; }
+    .pr-paso--hecho .pr-paso__n { background: var(--p-tinta); border-color: var(--p-tinta); color: #fff; }
+    .pr-paso--actual .pr-paso__n { background: var(--p-acento); border-color: var(--p-acento); color: #fff; }
+    .pr-paso__t { min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
+    .pr-paso__l { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: var(--p-suave); }
+    .pr-paso__v { font-size: 15px; font-weight: 800; color: var(--p-apagado); }
+    .pr-paso--hecho .pr-paso__v { color: var(--p-tinta); }
+    .pr-paso--actual .pr-paso__l, .pr-paso--actual .pr-paso__v { color: var(--p-acento-osc); }
+    .pr-ag__cancelar { margin-top: auto; height: 44px; border-radius: 12px; border: 1px solid var(--p-borde); background: #fff; font-size: 15px; font-weight: 700; color: var(--p-tinta-2); }
+    @media (orientation: portrait) { .pr-ag__cancelar { display: none; } }
+    .pr-ag__opciones { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+    .pr-ag__panel { flex: 1; min-height: 0; background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .pr-ag__pregunta { margin: 0; font-family: var(--p-titulo); font-size: 22px; font-weight: 700; flex-shrink: 0; }
+    .pr-ag__rotulo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); flex-shrink: 0; }
+    .pr-ag__productos { flex: 1.5; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 8px; }
+    .pr-ag__productos--choco { flex: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pr-ag__producto {
+      border: 3px solid transparent; border-radius: 14px; padding: 8px 14px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+      min-height: 0; position: relative; text-align: left; font: inherit; overflow: hidden;
+    }
+    .pr-ag__producto[aria-pressed="true"] { border-color: var(--p-acento); box-shadow: 0 0 0 3px var(--p-acento-suave); }
+    .pr-ag__muestra { position: absolute; top: 10px; right: 12px; width: 16px; height: 16px; border-radius: 5px; }
+    .pr-ag__familia { font-size: 14px; font-weight: 700; }
+    .pr-ag__tamano { font-family: var(--p-titulo); font-size: var(--p-prod-fs); font-weight: 800; line-height: 1; }
+    .pr-ag__productos--chico .pr-ag__tamano { font-size: calc(var(--p-prod-fs) * 0.85); }
+    .pr-ag__producto--choco { color: #fff; padding: 6px 12px; }
+    .pr-ag__producto--choco .pr-ag__familia { font-size: 13px; opacity: 0.9; }
+    .pr-ag__producto--choco .pr-ag__tamano { font-size: var(--p-choco-fs); }
+    .pr-ag__aviso-choco { flex-shrink: 0; background: var(--p-mal-suave); border: 1.5px solid var(--p-mal-borde); border-radius: 14px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--p-mal); }
+    .pr-ag__aviso-textos { flex: 1; min-width: 220px; display: flex; flex-direction: column; color: var(--p-mal-txt); font-size: 14px; line-height: 1.35; }
+    .pr-ag__aviso-textos strong { font-size: 16px; font-weight: 800; }
+    .pr-ag__ir-sala { height: 48px; padding: 0 14px; border-radius: 12px; background: var(--p-masa); border: 2px solid var(--p-masa-borde); color: var(--p-masa-txt); font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .pr-ag__cono-fila { display: flex; gap: 8px; flex-shrink: 0; }
+    .pr-ag__sin-cono { flex: 0 0 34%; height: 56px; border-radius: 14px; background: #fff; border: 2px solid var(--p-linea); font-family: var(--p-titulo); font-size: 21px; font-weight: 700; color: var(--p-tinta); }
+    .pr-ag__sin-cono[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); color: var(--p-acento-osc); }
+    .pr-ag__sin-cono:disabled { opacity: 0.4; }
+    .pr-ag__buscar-caja { flex: 1; min-width: 0; height: 56px; border-radius: 14px; background: var(--p-alt); border: 1.5px solid var(--p-borde); display: flex; align-items: center; gap: 8px; padding: 0 14px; color: var(--p-suave); box-sizing: border-box; }
+    .pr-ag__buscar { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; font-size: 16px; color: var(--p-tinta); outline: none; }
+    .pr-ag__conos { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: var(--p-cono-h); gap: 8px; align-content: start; }
+    @media (orientation: portrait) { .pr-ag__conos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .pr-cono {
+      border-radius: 12px; border: 2px solid var(--p-borde); background: #fff; color: var(--p-tinta);
+      font-size: 15px; font-weight: 800; letter-spacing: 0.03em; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 8px; line-height: 1.15; min-width: 0;
+    }
+    .pr-cono[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--p-acento); }
+    .pr-cono--comun { background: var(--p-tinte); border-color: var(--p-caja); }
+    .pr-cono__nota { font-size: 11px; font-weight: 700; letter-spacing: 0; opacity: 0.85; }
+    .pr-cono__pendiente { font-size: 11px; font-weight: 800; letter-spacing: 0; color: var(--p-mal); }
+    .pr-ag__cono-pie { flex-shrink: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pr-ag__nuevo { border: 0; background: none; color: var(--p-acento); font-size: 14px; font-weight: 800; min-height: 36px; padding: 0; }
+    .pr-ag__alta { display: flex; gap: 8px; flex: 1; min-width: 240px; }
+    .pr-ag__alta .pr-input { flex: 1; }
+    .pr-ag__nota { margin: 0; font-size: 12.5px; color: var(--p-suave); flex: 1; min-width: 200px; }
+    .pr-ag__presentaciones { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 12px; }
+    @media (orientation: portrait) { .pr-ag__presentaciones { grid-template-columns: minmax(0, 1fr); } }
+    .pr-ag__presentacion { border-radius: 16px; background: #fff; border: 2px solid var(--p-linea); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 12px; font: inherit; color: var(--p-tinta); min-height: 0; }
+    @media (orientation: portrait) { .pr-ag__presentacion { flex-direction: row; } }
+    .pr-ag__presentacion[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-zona); }
+    .pr-ag__caja-dibujo { width: 70px; height: 84px; display: flex; align-items: flex-end; justify-content: center; flex-shrink: 0; }
+    .pr-ag__caja-dibujo span { width: 70px; border: 3px solid; border-radius: 6px; box-sizing: border-box; }
+    .pr-ag__pres-textos { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .pr-ag__pres-nombre { font-family: var(--p-titulo); font-size: 30px; font-weight: 800; line-height: 1.1; }
+    .pr-ag__pres-u { font-family: var(--p-titulo); font-size: 44px; font-weight: 800; line-height: 1; }
+    .pr-ag__pres-nota { font-size: 15px; color: var(--p-gris); }
+    .pr-ag__cajas-centro { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+    .pr-contador { display: flex; align-items: center; gap: 16px; }
+    .pr-contador__paso { width: 84px; height: 84px; border-radius: 20px; border: 2px solid var(--p-linea); background: #fff; font-size: 44px; font-weight: 700; color: var(--p-tinta-2); display: flex; align-items: center; justify-content: center; padding: 0; }
+    .pr-contador__valor { width: 170px; height: 96px; border-radius: 20px; border: 3px solid var(--p-acento); background: var(--p-acento-zona); font-family: var(--p-titulo); font-size: 76px; font-weight: 800; text-align: center; color: var(--p-tinta); padding: 0; box-sizing: border-box; outline: none; }
+    .pr-calculo { font-size: 20px; font-weight: 700; color: var(--p-tinta-2); display: flex; gap: 6px; align-items: baseline; }
+    .pr-calculo__total { font-family: var(--p-titulo); font-weight: 800; color: var(--p-tinta); }
+    .pr-ag__rapidos { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .pr-ag__rapidos button { width: 52px; height: 44px; border-radius: 11px; border: 0; background: var(--p-renglon); font-size: 17px; font-weight: 700; color: var(--p-tinta); }
+    .pr-ag__empaque { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; }
+    .pr-ag__empaque:empty { display: none; }
+    .pr-ag__caja { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--p-borde); background: var(--p-alt); font-size: 14px; font-weight: 700; color: var(--p-tinta-2); text-align: left; }
+    .pr-ag__caja--falta { border-color: var(--p-mal-borde); background: var(--p-mal-zona); color: var(--p-mal-txt); }
+    .pr-ag__caja-cambiar { color: var(--p-acento); font-weight: 800; }
+    .pr-ag__subtitulo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); text-transform: uppercase; }
+    .pr-ag__grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 6px; }
+    .pr-ag__grilla--emb { grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); }
+    .pr-ag__opcion { min-height: 44px; border-radius: 12px; border: 2px solid var(--p-borde); background: #fff; padding: 4px 10px; text-align: left; font-size: 15px; font-weight: 700; display: flex; flex-direction: column; justify-content: center; color: var(--p-tinta); }
+    .pr-ag__opcion[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); }
+    .pr-ag__opcion:disabled { opacity: 0.45; }
+    .pr-ag__opcion-nota { font-size: 12px; font-weight: 600; color: var(--p-gris); }
+    .pr-ag__consumo { margin: 0; font-size: 13px; color: var(--p-gris); }
+    .pr-ag__seguir { align-self: flex-start; }
+    .pr-ag__motivo { flex-shrink: 0; }
+    .pr-ag__falta-emp { margin: 0; font-size: 13px; font-weight: 700; color: var(--p-mal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pr-ag__caja span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ══ 9b – 9d · LA RECETA ══ */
+    .pr-banda--ok { background: var(--p-bien-suave); border: 1.5px solid var(--p-bien); color: var(--p-bien-txt); }
+    .pr-banda__tilde { width: 26px; height: 26px; border-radius: 999px; background: var(--p-bien); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0; }
+    .pr-banda__titulo { font-weight: 800; font-size: 15px; }
+    .pr-receta-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 10px; }
+    @media (orientation: portrait) { .pr-receta-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; } }
+    .pr-receta-centro { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; transition: opacity 0.15s; }
+    .pr-receta-centro--atenuado { opacity: 0.35; }
+    .pr-receta { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+    .pr-receta__opciones { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+    .pr-seg-rec { display: flex; gap: 3px; background: var(--p-caja); border-radius: 12px; padding: 4px; }
+    .pr-seg-rec__op, .pr-como {
+      min-height: 40px; padding: 0 12px; border-radius: 9px; border: 0; background: transparent; color: var(--p-tinta-2);
+      font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .pr-seg-rec__op[aria-pressed="true"], .pr-como[aria-pressed="true"] { background: var(--p-acento); color: #fff; font-weight: 800; }
+    .pr-como:disabled { opacity: 0.4; }
+    .pr-como__detalle { font-size: 12.5px; font-weight: 600; opacity: 0.8; }
+    .pr-como__choco { color: var(--p-choco); font-weight: 800; }
+    .pr-como[aria-pressed="true"] .pr-como__choco { color: #fff; }
+    .pr-receta__motivo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .pr-receta__chips { display: flex; gap: 6px; flex-shrink: 0; }
+    .pr-chip-modificada { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-mal-suave); color: var(--p-mal); font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; }
+    .pr-chip-choco { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-choco); color: #fff; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; }
+    .pr-receta__motivo-campo { flex: 1; min-width: 0; height: 40px; border-radius: 10px; border: 2px solid var(--p-acento); background: #fff; display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+    .pr-receta__motivo-rotulo { font-size: 15px; font-weight: 700; color: var(--p-gris); }
+    .pr-receta__motivo-campo input { flex: 1; min-width: 0; border: 0; outline: none; font-size: 15px; background: transparent; }
+    .pr-receta__mas { height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--p-acento); background: var(--p-acento-zona); color: var(--p-acento); font-size: 15px; font-weight: 800; white-space: nowrap; }
+    .pr-receta__tabla { flex: 1; min-height: 0; background: #fff; border: 1px solid var(--p-borde); border-radius: 14px; overflow: auto; display: flex; flex-direction: column; }
+    .pr-rec, .pr-rec--cab {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.25fr) 64px; gap: 10px; align-items: center; padding: 0 12px;
+    }
+    .pr-rec--cab { height: 26px; background: var(--p-trigo-suave); font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: var(--p-trigo-txt); flex-shrink: 0; position: sticky; top: 0; z-index: 1; }
+    .pr-rec { flex: 1 0 auto; min-height: 42px; border-top: 1px solid var(--p-div); }
+    .pr-rec--cero { opacity: 0.6; }
+    .pr-rec--agregado { background: var(--p-trigo-renglon); }
+    .pr-rec--floja { background: var(--p-mal-renglon); }
+    .pr-rec__ing { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; }
+    .pr-rec__nombre { font-family: var(--p-titulo); font-size: 18px; font-weight: 700; }
+    .pr-rec__marca { font-size: 12.5px; color: var(--p-gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pr-rec__agregado { font-size: 11px; font-weight: 800; color: var(--p-trigo-txt); }
+    .pr-rec__sello { font-size: 11px; font-weight: 800; padding: 1px 5px; border-radius: 5px; background: var(--p-trigo-chip); }
+    .pr-rec__dif { font-family: var(--p-texto); font-size: 12.5px; font-weight: 700; color: var(--p-gris); }
+    .pr-rec__dif--aleja { color: var(--p-mal); }
+    .pr-rec__cant { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .pr-rec__valor { font-family: var(--p-titulo); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+    @media (orientation: portrait) { .pr-rec__valor { font-size: 36px; } }
+    .pr-rec__unidad { font-family: var(--p-texto); font-size: 14px; font-weight: 700; color: var(--p-gris); margin-left: 4px; letter-spacing: 0; }
+    .pr-rec__paso { width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--p-linea); background: #fff; font-size: 20px; font-weight: 700; flex-shrink: 0; padding: 0; }
+    .pr-rec__num { width: 78px; min-width: 0; border: 0; background: transparent; font-family: var(--p-titulo); font-size: 24px; font-weight: 800; text-align: right; outline: none; }
+    .pr-rec__num--aleja { color: var(--p-mal); }
+    .pr-rec__lote-celda { min-width: 0; }
+    .pr-rec__lote { width: 100%; min-height: 36px; border-radius: 9px; border: 1.5px solid var(--p-borde); background: #fff; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 2px 8px; text-align: left; line-height: 1.1; min-width: 0; }
+    .pr-rec__lote-texto { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .pr-rec__lote-nota { font-size: 11.5px; color: var(--p-mal); }
+    .pr-rec__queda { font-size: 11.5px; color: var(--p-gris); }
+    .pr-rec__queda--poco { color: var(--p-mal); font-weight: 700; }
+    .pr-rec__lote--vacio { border-color: var(--p-acento); background: var(--p-acento-zona); color: var(--p-acento-osc); }
+    .pr-rec__lote--terminado { border-color: var(--p-mal); background: var(--p-mal-suave); color: var(--p-mal-txt); }
+    .pr-rec__nota { font-size: 14px; color: var(--p-suave); }
+    .pr-rec__accion { display: flex; justify-content: flex-end; }
+    .pr-rec__otro, .pr-rec__quitar { min-height: 32px; width: 64px; border-radius: 9px; border: 1.5px solid var(--p-borde); background: #fff; font-size: 14px; font-weight: 700; color: var(--p-tinta-2); }
+    .pr-rec__quitar { background: var(--p-trigo-suave); }
+    .pr-receta__pie { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .pr-receta__falta { margin: 0; }
+    .pr-receta__error--aviso { color: var(--p-mal); font-weight: 700; }
+    .pr-receta__registrar { min-height: var(--p-prim); height: var(--p-prim); width: 100%; border-radius: 14px; border: 0; background: var(--p-acento); color: #fff; font-size: 19px; font-weight: 800; }
+    .pr-otro { background: #fff; border: 1px solid var(--p-borde); border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .pr-otro__campos { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
+
+    /* Las masas del turno, a la derecha (abajo con la tablet parada). */
+    .pr-rm { background: #fff; border: 1px solid var(--p-borde); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; padding: 0; }
+    @media (orientation: portrait) { .pr-rm { max-height: 190px; } }
+    .pr-rm__titulo { margin: 0; height: 40px; flex-shrink: 0; padding: 0 12px; background: var(--p-trigo-suave); display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-trigo-txt); }
+    .pr-rm__cuenta { font-family: var(--p-titulo); font-size: 18px; letter-spacing: 0; color: var(--p-masa-txt); }
+    .pr-rm__lista { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px; }
+    .pr-rm__fila { display: flex; align-items: center; gap: 8px; min-height: 40px; border-bottom: 1px solid var(--p-div); flex-wrap: wrap; padding: 4px 0; }
+    .pr-rm__nro { font-size: 14.5px; font-weight: 800; white-space: nowrap; }
+    .pr-rm__det { font-size: 13.5px; color: var(--p-gris); }
+    .pr-rm__chips { display: flex; gap: 4px; margin-left: auto; font-size: 12px; }
+    .pr-rm__chips .pr-chip-modificada, .pr-rm__chips .pr-chip-choco { height: 22px; font-size: 11.5px; padding: 0 6px; }
+    .pr-rm__fila--anulada { opacity: 0.5; text-decoration: line-through; }
+    .pr-rm__fila--espera { background: var(--p-mal-renglon); }
+    .pr-rm__anulada { font-weight: 800; color: var(--p-mal); }
+    .pr-rm__anular-btn { margin: 8px; min-height: 44px; }
+    .pr-rm__anular { margin: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .pr-rm__anular-titulo { margin: 0; font-size: 14px; font-weight: 800; }
+    .pr-rm__anular-nota { margin: 0; font-size: 12.5px; color: var(--p-gris); }
+    .pr-masa-chips { display: inline-flex; gap: 4px; }
+    .pr-receta__tabla--modificar .pr-rec { min-height: 30px; }
+    .pr-receta__tabla--modificar .pr-rec__paso { width: 30px; height: 28px; font-size: 18px; }
+    .pr-receta__tabla--modificar .pr-rec__num { font-size: 22px; width: 70px; }
+    .pr-receta__tabla--modificar .pr-rec__lote { min-height: 30px; }
+    .pr-receta__tabla--modificar .pr-rec__otro, .pr-receta__tabla--modificar .pr-rec__quitar { min-height: 28px; }
+
+    /* ══ 9e / 9f · LA VENTANA DE LOTES (y la de "Otro" insumo) ══ */
+    #pr-lote-panel .pr-lp__caja { max-height: min(500px, calc(100dvh - 24px)); }
+    .pr-lp__manual { width: 100%; min-height: 44px; border-radius: 12px; border: 2px dashed var(--p-acento); background: #fff; color: var(--p-acento); font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; }
+    .pr-lp__otros:empty, .pr-lp__pie-lotes:empty { display: none; }
+    .pr-lp__tarjetas { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+    .pr-lp__filtros { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+    .pr-lp__filtro { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--p-borde); background: #fff; font-size: 14px; font-weight: 800; color: var(--p-tinta-2); }
+    .pr-lp__filtro span { color: var(--p-suave); font-weight: 700; }
+    .pr-lp__filtro[aria-pressed="true"] { background: var(--p-tinta); border-color: var(--p-tinta); color: #fff; }
+    .pr-lp__filtro[aria-pressed="true"] span { color: rgba(255, 255, 255, 0.75); }
+    .pr-lp__filas { flex: 1; min-height: 0; border: 1px solid var(--p-borde); border-radius: 12px; padding: 4px; display: flex; flex-direction: column; gap: 4px; }
+    .pr-lp__tarjeta { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 6px 12px; border-radius: 10px; border: 2px solid transparent; background: #fff; text-align: left; font: inherit; color: var(--p-tinta); flex-shrink: 0; }
+    .pr-lp__fila--viejo { background: var(--p-trigo-suave); }
+    .pr-lp__tarjeta[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); }
+    .pr-lp__radio { width: 20px; height: 20px; border-radius: 999px; border: 2px solid var(--p-apagado); flex-shrink: 0; box-sizing: border-box; }
+    .pr-lp__tarjeta[aria-pressed="true"] .pr-lp__radio { border-color: var(--p-acento); box-shadow: inset 0 0 0 4px #fff; background: var(--p-acento); }
+    .pr-lp__fila-col { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+    .pr-lp__fila-texto { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pr-lp__fila-texto strong { font-weight: 800; }
+    .pr-lp__fila-primero { padding: 2px 8px; border-radius: 6px; background: var(--p-trigo-chip); color: var(--p-trigo-txt); font-size: 11.5px; font-weight: 800; letter-spacing: 0.03em; }
+    .pr-lp__fila-fecha { font-size: 13px; color: var(--p-gris); }
+    .pr-lp__fila-queda { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+    .pr-lp__fila-queda strong { font-family: var(--p-titulo); font-size: 20px; font-weight: 800; }
+    .pr-lp__fila-queda span { font-size: 12px; color: var(--p-gris); }
+    .pr-lp__vacio { margin: 0; font-size: 15px; color: var(--p-gris); }
+    .pr-lp__pie-lotes { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .pr-lp__se-termino { align-self: flex-start; border: 0; background: none; color: var(--p-mal); font-size: 14px; font-weight: 800; min-height: 32px; padding: 0; }
+    .pr-lp__escribir { display: flex; flex-direction: column; gap: 6px; }
+    .pr-lp__escribir-rotulo { font-size: 15px; font-weight: 800; }
+    .pr-lp__escribir-nota { margin: 0; font-size: 13px; color: var(--p-gris); }
+    .pr-lp__escribir-error { margin: 0; color: var(--p-mal); font-weight: 800; }
+    .pr-lp__tarjeta--floja { background: var(--p-mal-renglon); }
+    .pr-lp__izq { display: flex; flex-direction: column; line-height: 1.2; }
+    .pr-lp__marca { font-size: 16px; font-weight: 800; }
+    .pr-lp__insumo, .pr-lp__lote, .pr-lp__fecha { font-size: 13px; color: var(--p-gris); }
+
+    /* ══ 9g · EL HISTORIAL DE UNA MÁQUINA ══ */
+    .pr-hm-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr); gap: 10px; }
+    @media (orientation: portrait) { .pr-hm-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 0.7fr) minmax(0, 1fr); } }
+    .pr-hm { background: #fff; border: 1px solid var(--p-borde); border-radius: 16px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+    .pr-hm__lista { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+    .pr-hm__masa { display: flex; align-items: center; gap: 8px; min-height: 58px; flex: 1 0 auto; padding: 6px 12px; border-radius: 12px; border: 2px solid var(--p-borde); background: #fff; text-align: left; font: inherit; color: var(--p-tinta); }
+    .pr-hm__masa[aria-pressed="true"] { border-color: var(--p-acento); background: var(--p-acento-suave); }
+    .pr-hm__masa--anulada { opacity: 0.55; }
+    .pr-hm__masa-chips { display: flex; gap: 4px; flex-shrink: 0; }
+    .pr-hm__masa-col { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+    .pr-hm__masa-l1 { font-size: 15.5px; font-weight: 800; }
+    .pr-hm__masa-l2 { font-size: 13px; color: var(--p-gris); white-space: nowrap; }
+    .pr-hm__masa-chips .pr-chip-modificada, .pr-hm__masa-chips .pr-chip-choco { height: 22px; font-size: 11.5px; padding: 0 6px; }
+    .pr-hm__nota { margin: 0; font-size: 13px; color: var(--p-gris); }
+    .pr-hm__der { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .pr-hm__detalle { flex: 1; min-height: 0; background: #fff; border: 1px solid var(--p-borde); border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+    .pr-hm__det-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .pr-hm__det-titulo { margin: 0; font-family: var(--p-titulo); font-size: 22px; font-weight: 800; }
+    .pr-hm__det-sub { margin: 0; font-size: 14px; color: var(--p-gris); }
+    .pr-hm__motivo { margin: 0; font-size: 14px; }
+    .pr-hm__rotulo { font-weight: 800; }
+    .pr-hm__ings { display: flex; flex-direction: column; border-top: 1px solid var(--p-div); margin-top: 4px; }
+    .pr-hm__ing { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.1fr); gap: 8px; align-items: center; min-height: 40px; border-bottom: 1px solid var(--p-div); }
+    .pr-hm__ing-nombre { font-size: 15.5px; font-weight: 800; }
+    .pr-hm__ing-cant { font-family: var(--p-titulo); font-size: 19px; font-weight: 800; }
+    .pr-hm__ing-marca { font-size: 13.5px; color: var(--p-tinta-2); }
+    .pr-hm__anular-btn { align-self: flex-start; margin-top: 6px; }
   </style>
 </head>
 
@@ -1179,52 +1439,71 @@
            pasos de cono y cajas COMPARTEN pantalla para ahorrar un toque. -->
       <section id="pr-agregar-prod" hidden>
         <div class="pr-ag" id="pr-ag-grilla">
-          <div class="pr-tarjeta">
-            <span class="pr-ag__lote" id="pr-agregar-lote"></span>
-            <h1 class="pr-titulo" id="pr-agregar-titulo">Agregar producto</h1>
+          <div class="pr-ag__pasos-col">
+            <span class="pr-ag__lote" id="pr-agregar-lote" hidden></span>
+            <h1 class="pr-solo-lector" id="pr-agregar-titulo">Agregar producto</h1>
             <div class="pr-ag__lista" id="pr-agregar-pasos"></div>
-            <button type="button" class="pr-btn pr-btn--secundario pr-ag__cancelar" id="pr-agregar-cancelar">Cancelar</button>
+            <button type="button" class="pr-ag__cancelar" id="pr-agregar-cancelar">Cancelar</button>
           </div>
 
-          <!-- Pasos 1, 2 y 3: son solo botones, así que se dibujan enteros. -->
-          <div class="pr-tarjeta" id="pr-agregar-panel"></div>
+          <div class="pr-ag__opciones">
+            <!-- Producto, presentación y caja: son solo botones, así que se
+                 dibujan enteros. -->
+            <div class="pr-ag__panel" id="pr-agregar-panel"></div>
 
-          <!-- El cono va en HTML fijo porque tiene un buscador: redibujar el
-               bloque en cada tecla le sacaría el foco al campo. -->
-          <div class="pr-tarjeta" id="pr-agregar-cono" hidden>
-            <span class="pr-ag__titulo">¿Qué cono?</span>
-            <input type="text" id="pr-agregar-marca-buscar" class="pr-input pr-ag__buscar" placeholder="Buscar un cono…" autocomplete="off" aria-label="Buscar un cono">
-            <div class="pr-ag__lista pr-ag__conos" id="pr-agregar-marcas" data-scroll-propio></div>
-            <button type="button" class="pr-btn pr-ag__nuevo" id="pr-agregar-cono-nuevo">+ Agregar cono nuevo</button>
-            <div class="pr-ag__alta" id="pr-agregar-cono-form" hidden>
-              <input type="text" id="pr-agregar-cono-nombre" class="pr-input" maxlength="80" placeholder="Nombre del cono" autocomplete="off" aria-label="Nombre del cono nuevo">
-              <button type="button" class="pr-btn" id="pr-agregar-cono-confirmar">Agregarlo</button>
+            <!-- El cono va en HTML fijo porque tiene un buscador: redibujar el
+                 bloque en cada tecla le sacaría el foco al campo. -->
+            <div class="pr-ag__panel" id="pr-agregar-cono" hidden>
+              <h2 class="pr-ag__pregunta">¿Con qué cono?</h2>
+              <div class="pr-ag__cono-fila">
+                <button type="button" class="pr-ag__sin-cono" id="pr-agregar-sin-cono" data-ag-cono="0" aria-pressed="false">Sin cono</button>
+                <label class="pr-ag__buscar-caja">
+                  <svg class="pr-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"/></svg>
+                  <input type="text" id="pr-agregar-marca-buscar" class="pr-ag__buscar" placeholder="Buscar cono" autocomplete="off" aria-label="Buscar un cono">
+                </label>
+              </div>
+              <span class="pr-ag__rotulo" id="pr-agregar-conos-rotulo">CON CONO</span>
+              <div class="pr-ag__conos" id="pr-agregar-marcas" data-scroll-propio></div>
+              <div class="pr-ag__cono-pie">
+                <button type="button" class="pr-ag__nuevo" id="pr-agregar-cono-nuevo">+ Agregar cono nuevo</button>
+                <div class="pr-ag__alta" id="pr-agregar-cono-form" hidden>
+                  <input type="text" id="pr-agregar-cono-nombre" class="pr-input" maxlength="80" placeholder="Nombre del cono" autocomplete="off" aria-label="Nombre del cono nuevo">
+                  <button type="button" class="pr-btn pr-btn--accion" id="pr-agregar-cono-confirmar">Agregarlo</button>
+                </div>
+                <p class="pr-ag__nota">Un cono nuevo queda pendiente hasta que lo revisen en Configuración, y se puede usar igual.</p>
+                <p class="pr-error" id="pr-agregar-cono-error" hidden></p>
+              </div>
             </div>
-            <p class="pr-ag__nota">Un cono nuevo queda pendiente hasta que lo revisen en Configuración, y se puede usar igual.</p>
-            <p class="pr-error" id="pr-agregar-cono-error" hidden></p>
-          </div>
 
-          <!-- Las cajas: − / número / + de 96px, y el cálculo debajo. -->
-          <div class="pr-tarjeta" id="pr-agregar-cajas-panel" hidden>
-            <span class="pr-ag__titulo">¿Cuántas cajas?</span>
-            <div class="pr-contador">
-              <button type="button" class="pr-contador__paso" data-cajas-paso="-1" aria-label="Una caja menos">&minus;</button>
-              <input type="text" id="pr-agregar-cajas" class="pr-input" autocomplete="off" aria-label="Cajas">
-              <button type="button" class="pr-contador__paso" data-cajas-paso="1" aria-label="Una caja más">+</button>
+            <!-- 5e · Las cajas: − / número / +, la cuenta y los números
+                 rápidos. El único paso con botón de confirmar. -->
+            <div class="pr-ag__panel" id="pr-agregar-cajas-panel" hidden>
+              <h2 class="pr-ag__pregunta">¿Cuántas cajas?</h2>
+              <div class="pr-ag__cajas-centro">
+                <div class="pr-contador">
+                  <button type="button" class="pr-contador__paso" data-cajas-paso="-1" aria-label="Una caja menos">&minus;</button>
+                  <input type="text" id="pr-agregar-cajas" class="pr-contador__valor" autocomplete="off" aria-label="Cajas">
+                  <button type="button" class="pr-contador__paso" data-cajas-paso="1" aria-label="Una caja más">+</button>
+                </div>
+                <div class="pr-calculo">
+                  <span class="pr-calculo__cuenta" id="pr-agregar-cuenta"></span>
+                  <span class="pr-calculo__total" id="pr-agregar-unidades"></span>
+                </div>
+                <div class="pr-ag__rapidos" id="pr-agregar-rapidos">
+                  <button type="button" data-cajas-poner="1">1</button><button type="button" data-cajas-poner="2">2</button><button type="button" data-cajas-poner="3">3</button><button type="button" data-cajas-poner="5">5</button><button type="button" data-cajas-poner="10">10</button><button type="button" data-cajas-poner="20">20</button>
+                </div>
+              </div>
+              <!-- La caja elegida (un toque la cambia), el embolsado y lo que
+                   va a consumir. -->
+              <div class="pr-ag__empaque" id="pr-agregar-empaque"></div>
+              <!-- Al CORREGIR un renglón: por qué (obligatorio, 3 letras). -->
+              <label class="pr-campo pr-ag__motivo" id="pr-agregar-campo-motivo" hidden>
+                <span class="pr-campo__rotulo">¿Por qué lo corregís?</span>
+                <input type="text" id="pr-agregar-motivo" class="pr-input" maxlength="300" autocomplete="off">
+              </label>
+              <p class="pr-error-pegado" id="pr-agregar-error" hidden></p>
+              <button type="button" class="pr-prim" id="pr-agregar-confirmar">Agregar a lo producido</button>
             </div>
-            <div class="pr-calculo">
-              <div class="pr-calculo__cuenta" id="pr-agregar-cuenta"></div>
-              <div class="pr-calculo__total" id="pr-agregar-unidades"></div>
-            </div>
-            <!-- La caja elegida (un toque la cambia) y lo que va a consumir. -->
-            <div class="pr-ag__empaque" id="pr-agregar-empaque"></div>
-            <!-- Al CORREGIR un renglón: por qué (obligatorio, 3 letras). -->
-            <label class="pr-campo pr-ag__motivo" id="pr-agregar-campo-motivo" hidden>
-              <span class="pr-campo__rotulo">¿Por qué lo corregís?</span>
-              <input type="text" id="pr-agregar-motivo" class="pr-input" maxlength="300" autocomplete="off">
-            </label>
-            <p class="pr-error" id="pr-agregar-error" hidden></p>
-            <button type="button" class="pr-btn pr-btn--accion pr-ag__confirmar" id="pr-agregar-confirmar">Agregar a lo producido</button>
           </div>
         </div>
       </section>
@@ -1383,12 +1662,15 @@
       <div class="pr-lp" id="pr-lote-panel" hidden role="dialog" aria-modal="true" aria-labelledby="pr-lote-panel-titulo">
         <div class="pr-lp__caja">
           <div class="pr-lp__cab">
-            <h2 class="pr-lp__titulo" id="pr-lote-panel-titulo"></h2>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-lote-panel-cerrar">Cerrar</button>
+            <div class="pr-lp__titulos">
+              <h2 class="pr-lp__titulo" id="pr-lote-panel-titulo"></h2>
+              <span class="pr-lp__sub" id="pr-lote-panel-sub"></span>
+            </div>
+            <button type="button" class="pr-cerrar-x" id="pr-lote-panel-cerrar" aria-label="Cerrar">&times;</button>
           </div>
           <div class="pr-lp__otros" id="pr-lote-panel-otros"></div>
-          <div id="pr-lote-panel-terminado"></div>
           <div class="pr-lp__tarjetas" id="pr-lote-panel-tarjetas"></div>
+          <div class="pr-lp__pie-lotes" id="pr-lote-panel-terminado"></div>
         </div>
       </div>
 
@@ -1406,21 +1688,22 @@
         </div>
         <div class="pr-receta-grid">
         <div class="pr-receta-centro" id="pr-receta-centro">
-        <div class="pr-tarjeta pr-receta">
-          <div class="pr-receta__cab">
-            <div class="pr-receta__que" id="pr-receta-cab"></div>
-            <button type="button" class="pr-btn pr-btn--secundario" id="pr-receta-cambiar">Cambiar</button>
-          </div>
+        <div class="pr-receta">
+          <!-- Arriba, en una fila: Simple / Doble y de dónde sale la masa
+               (Original / Anterior / Modificar). -->
           <div class="pr-receta__opciones" id="pr-receta-opciones"></div>
+          <!-- Con Modificar: de qué se trata (Modificada, Chocolate), el
+               motivo y "+ Ingrediente". -->
           <div class="pr-receta__motivo" id="pr-receta-motivo-fila" hidden>
-            <label class="pr-campo pr-receta__motivo-campo">
-              <span class="pr-campo__rotulo">¿Por qué la modificás?</span>
-              <input type="text" id="pr-receta-motivo" class="pr-input" maxlength="300" autocomplete="off">
+            <span class="pr-receta__chips" id="pr-receta-cab"></span>
+            <label class="pr-receta__motivo-campo">
+              <span class="pr-receta__motivo-rotulo">Motivo:</span>
+              <input type="text" id="pr-receta-motivo" maxlength="300" autocomplete="off" placeholder="¿por qué la modificás?">
             </label>
-            <button type="button" class="pr-btn pr-receta__mas" id="pr-receta-otro">+ Agregar ingrediente</button>
+            <button type="button" class="pr-receta__mas" id="pr-receta-otro">+ Ingrediente</button>
           </div>
           <p class="pr-aviso" id="pr-receta-aviso-stock" hidden>No se pudo leer cuánto queda de cada lote. La masa se registra igual.</p>
-          <div class="pr-receta__tabla" id="pr-receta-filas"></div>
+          <div class="pr-receta__tabla" id="pr-receta-filas" data-scroll-propio></div>
         </div>
         <!-- Lo que se le puso a la masa y no está en la receta ni en la lista de
              "+ Agregar ingrediente": se escribe. No descuenta stock y puede
@@ -1488,13 +1771,15 @@
            Sala de masa. Centro: las masas del turno; derecha: la elegida. -->
       <section id="pr-hist-maq" hidden>
         <div class="pr-hm-grid">
-          <div class="pr-tarjeta pr-hm">
-            <h1 class="pr-hm__titulo" id="pr-hm-titulo"></h1>
-            <div class="pr-hm__lista" id="pr-hm-lista"></div>
+          <div class="pr-hm">
+            <h1 class="pr-solo-lector" id="pr-hm-titulo"></h1>
+            <div class="pr-hm__lista" id="pr-hm-lista" data-scroll-propio></div>
             <p class="pr-hm__nota" id="pr-hm-nota" hidden></p>
-            <button type="button" class="pr-btn pr-btn--accion pr-hm__nueva" id="pr-hm-nueva">+ Nueva masa</button>
           </div>
-          <aside class="pr-tarjeta pr-hm__detalle" id="pr-hm-detalle" aria-label="Detalle de la masa"></aside>
+          <div class="pr-hm__der">
+            <aside class="pr-hm__detalle" id="pr-hm-detalle" aria-label="Detalle de la masa" data-scroll-propio></aside>
+            <button type="button" class="pr-prim pr-hm__nueva" id="pr-hm-nueva">+ Nueva masa</button>
+          </div>
         </div>
       </section>
 
@@ -2340,16 +2625,17 @@
 
     function htmlMasaHist(m, elegida) {
       const origenHist = m.origen ? (ETIQUETA_ORIGEN[m.origen] ?? m.origen) : ''
-      return `<button type="button" class="pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}" data-hm-masa="${esc(m.id)}" aria-pressed="${elegida ? 'true' : 'false'}">` +
-        `<span class="pr-hm__masa-l1">Masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'}</span>` +
-        `<span class="pr-hm__masa-l2">${esc(horaArgentina(m.hora) || '—')}${origenHist ? ` · ${esc(origenHist)}` : ''}` +
-        `${m.anulada ? ' · <span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)}</span></button>`
+      return `<button type="button" class="pr-hm__masa${m.anulada ? ' pr-hm__masa--anulada' : ''}" data-hm-masa="${esc(m.id)}" aria-pressed="${elegida ? 'true' : 'false'}" title="${esc(origenHist)}">` +
+        `<span class="pr-hm__masa-col"><span class="pr-hm__masa-l1">Masa ${esc(m.nro)}</span>` +
+        `<span class="pr-hm__masa-l2">${m.doble ? 'Doble' : 'Simple'} · ${esc(horaArgentina(m.hora) || '—')}</span></span>` +
+        `<span class="pr-hm__masa-chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)}</span></button>`
     }
 
     // Cada ingrediente con su marca, cantidad y lote. Lo agregado (la receta
     // lo tenía en 0) dice "agregado"; lo que cambió muestra la diferencia en
     // bordó. Las cantidades son de UNA masa simple, como en la receta.
     function htmlIngredientesHist(d, m) {
+      const factor = m.doble ? 2 : 1
       const filasIngHist = [...d.items]
         .filter(x => Number(x.cantidad_simple_kg ?? 0) > 0 || (!!d.receta && (d.receta.get(x.ingrediente_id) ?? 0) > 0))
         .sort((a, z) => (a.ingredientes?.orden ?? 999) - (z.ingredientes?.orden ?? 999))
@@ -2362,19 +2648,18 @@
             const rec = d.receta.get(x.ingrediente_id) ?? 0
             if (!(rec > 0)) cambioReceta = ' <span class="pr-rec__agregado">agregado</span>'
             else {
-              const g = Math.round((kg - rec) * 1000)
+              const g = Math.round((kg - rec) * 1000) * factor
               if (g !== 0) cambioReceta = ` <span class="pr-rec__dif pr-rec__dif--aleja">${esc(textoGramos(g))}</span>`
             }
           }
+          const loteIng = x.lote ? esc(x.lote) : (x.ingrediente_id && marcaIng ? 'sin lote' : 'no lleva lote')
           return '<div class="pr-hm__ing">' +
             `<span class="pr-hm__ing-nombre">${esc(nombreIng)}${cambioReceta}</span>` +
-            `<span class="pr-hm__ing-cant">${esc(textoCantidad(kg))}</span>` +
-            `<span class="pr-hm__ing-marca">${esc(marcaIng)}</span>` +
-            `<span class="pr-hm__ing-lote">${x.lote ? `lote ${esc(x.lote)}` : 'sin lote'}</span></div>`
+            `<span class="pr-hm__ing-cant">${esc(textoCantidad(redondearKg(kg * factor)))}</span>` +
+            `<span class="pr-hm__ing-marca">${marcaIng ? `${esc(marcaIng)} · ` : ''}<span class="pr-hm__ing-lote">${loteIng}</span></span></div>`
         })
       if (!filasIngHist.length) return '<p class="pr-texto-suave">Esta masa no tiene ingredientes cargados.</p>'
-      return `<p class="pr-hm__nota-cant">Cantidades de una masa simple${m.doble ? ': esta fue doble, lleva el doble de todo' : ''}.</p>` +
-        `<div class="pr-hm__ings">${filasIngHist.join('')}</div>`
+      return `<div class="pr-hm__ings">${filasIngHist.join('')}</div>`
     }
 
     function htmlAnularHist(m, a) {
@@ -2393,10 +2678,9 @@
       if (!m) return '<p class="pr-texto-suave">Tocá una masa para ver su detalle.</p>'
       const quien = (estado.personal ?? []).find(x => x.id === m.masero_id)?.nombre ?? ''
       const chips = m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)
-      let html = `<h2 class="pr-hm__det-titulo">Masa ${esc(m.nro)} · ${esc(horaArgentina(m.hora) || '—')}</h2>` +
-        `<p class="pr-hm__det-sub">${m.doble ? 'Doble' : 'Simple'}${quien ? ` · la hizo ${esc(quien)}` : ''}</p>` +
-        (chips ? `<p class="pr-hm__det-chips">${chips}</p>` : '')
-      if (m.motivo) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Motivo:</span> ${esc(m.motivo)}</p>`
+      const sub = [horaArgentina(m.hora) || '—', quien ? `la hizo ${esc(quien)}` : '', m.motivo ? `“${esc(m.motivo)}”` : ''].filter(Boolean).join(' · ')
+      let html = `<div class="pr-hm__det-cab"><h2 class="pr-hm__det-titulo">Masa ${esc(m.nro)} · ${m.doble ? 'Doble' : 'Simple'}</h2>${chips}</div>` +
+        `<p class="pr-hm__det-sub">${sub}</p>`
       if (m.anulada && m.anulada_motivo) html += `<p class="pr-hm__motivo"><span class="pr-hm__rotulo">Se anuló:</span> ${esc(m.anulada_motivo)}</p>`
       const d = h.detalle && h.detalle.masaId === m.id ? h.detalle : null
       if (d && d.error) html += '<p class="pr-aviso pr-aviso--grave">No se pudo leer el detalle de esta masa.</p>'
@@ -2422,7 +2706,7 @@
       if (h.error) lista.innerHTML = '<p class="pr-aviso pr-aviso--grave">No se pudieron leer las masas de esta máquina.</p>'
       else if (h.masas == null) lista.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
       else {
-        const orden = [...h.masas].sort((a, z) => Number(a.nro) - Number(z.nro))
+        const orden = [...h.masas].sort((a, z) => Number(z.nro) - Number(a.nro))
         const filas = orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('') + pend.map(htmlMasaRecetaPendiente).join('')
         lista.innerHTML = filas || '<p class="pr-texto-suave">Todavía no hay masas en este turno.</p>'
       }
@@ -6184,6 +6468,7 @@
         return h + htmlAvisoStockEmpaque(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
       }
       if (a.faltaCaja) h += '<p class="pr-error">Elegí una caja.</p>'
+      if (a.cajaElegida) h += htmlEmbolsado(a, cat) + '<button type="button" class="pr-btn pr-btn--accion pr-ag__seguir" data-ag-seguir="1">Seguir con las cajas</button>'
       // Lo que consume una caja y el aviso de stock se siguen viendo acá; el
       // embolsado se elige al lado de las cajas (tocar una caja ya avanza).
       const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
@@ -6201,24 +6486,24 @@
         return '<button type="button" class="pr-ag__caja pr-ag__caja--falta" data-paso-ag="caja">Falta elegir la caja<span class="pr-ag__caja-cambiar">Elegir</span></button>'
       }
       if (cat?.empaqueError) {
-        return '<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>Sin caja · no se pudo leer el empaque</span><span class="pr-ag__caja-cambiar">Ver</span></button>' + htmlAvisoSinEmpaque()
+        return '<button type="button" class="pr-ag__caja pr-ag__caja--falta" data-paso-ag="caja"><span>Sin caja · no se pudo leer el empaque: se carga sin descontar la caja</span><span class="pr-ag__caja-cambiar">Ver</span></button>'
       }
       const sinCajas = !cajasDe(cat, a.presentacionId).length
-      let h = `<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>${esc(textoCajaElegida(a, cat))}</span><span class="pr-ag__caja-cambiar">Cambiar</span></button>` +
-        htmlEmbolsado(a, cat)
-      if (sinCajas) h += '<div class="pr-aviso pr-aviso--grave">Esta presentación no tiene cajas configuradas: no se va a descontar la caja.</div>'
+      const doble = conoDobleBolsa(cat, a.marcaId)
+      let h = `<button type="button" class="pr-ag__caja${sinCajas ? ' pr-ag__caja--falta' : ''}" data-paso-ag="caja">` +
+        `<span>${sinCajas ? 'Esta presentación no tiene cajas configuradas: no se descuenta la caja' : esc(textoCajaElegida(a, cat))}${doble ? ' · el cono va con doble bolsa' : ''}</span>` +
+        '<span class="pr-ag__caja-cambiar">Cambiar</span></button>'
+      // Lo que no alcanza del empaque: una línea, sin bloquear.
+      const st = a.stock?.estado
       const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))
-      if (!porCaja.length) return h + '<p class="pr-ag__consumo">No descuenta empaque.</p>'
-      const cajas = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0
-      // Con faltantes, el aviso REEMPLAZA a la línea del consumo: ya dice lo
-      // que se necesita de cada insumo que no alcanza, y las dos juntas no
-      // entran en la columna a 1280×800. Lo que consume una caja completa se
-      // sigue viendo en el paso de la caja.
-      if ((faltantesEmpaque(a, cat) ?? []).length) return h + htmlAvisoStockEmpaque(a, cat)
-      h += cajas
-        ? `<p class="pr-ag__consumo">${esc(formatearNumeroAr(cajas, { decimales: 0 }))} ${cajas === 1 ? 'caja' : 'cajas'} = ${esc(textoConsumo(cat, consumoTotal(porCaja, cajas)))}</p>`
-        : `<p class="pr-ag__consumo">Por caja: ${esc(textoConsumo(cat, porCaja))}</p>`
-      return h + htmlAvisoStockEmpaque(a, cat)
+      if (!porCaja.length) return h
+      const f = faltantesEmpaque(a, cat) ?? []
+      if (st === 'ok' && f.length) {
+        h += `<p class="pr-ag__falta-emp">Falta en el stock: ${esc(f.map(x => textoInsumoEmpaque(insumoDe(cat, x.insumoId))).join(', '))}. Se puede cargar igual.</p>`
+      } else if (st === 'error') {
+        h += '<p class="pr-ag__falta-emp">No se pudo leer el stock del empaque.</p>'
+      }
+      return h
     }
 
     // La normalización de TODOS los buscadores del módulo: sin acentos y en
@@ -6260,20 +6545,26 @@
     function pasosAgregar(a, cat) {
       const prod = (cat?.productos ?? []).find(p => p.id === a.productoId)
       const pres = (cat?.presentaciones ?? []).find(pr => pr.id === a.presentacionId)
-      const marca = a.marcaId ? (cat?.marcas ?? []).find(m => m.id === a.marcaId) : null
+      const marca = a.marcaId ? [...(cat?.marcas ?? []), ...(estado.planilla?.marcasItems ?? [])].find(m => m.id === a.marcaId) : null
+      const conoTexto = !a.marcaElegida ? '' : (a.conCono ? (marca ? marca.nombre : 'Común') : 'Sin cono')
+      const presTexto = pres ? `${mayusculaInicial(envasePresentacion(pres, prod?.nombre ?? ''))} · ${formatearNumeroAr(pres.unidades_por_caja, { decimales: 0 })}` : ''
       const pasos = [
         { clave: 'producto', titulo: 'Producto', valor: prod ? prod.nombre : '' },
-        { clave: 'cono_si_no', titulo: 'Con o sin cono', valor: a.conCono === null ? '' : (a.conCono ? 'Con cono' : 'Sin cono') },
-        { clave: 'presentacion', titulo: 'Presentación', valor: pres ? pres.nombre : '' },
+        { clave: 'cono', titulo: 'Cono', valor: conoTexto },
+        { clave: 'presentacion', titulo: 'Presentación', valor: presTexto },
       ]
-      // Mientras no se sepa si lleva cono, el paso se muestra igual: son 6.
-      // Recién al contestar "Sin cono" desaparece y Cajas pasa a ser el 5.
-      if (a.conCono !== false) pasos.push({ clave: 'cono', titulo: 'Cono', valor: a.marcaElegida ? (marca ? marca.nombre : 'Común') : '' })
-      // La caja va DESPUÉS del cono (o de la presentación) y ANTES de las
-      // cajas. Casi siempre viene puesta, así que figura hecha y se saltea.
-      pasos.push({ clave: 'caja', titulo: 'Caja', valor: a.presentacionId && a.cajaElegida ? textoCajaElegida(a, cat) : '' })
-      pasos.push({ clave: 'cajas', titulo: 'Cajas', valor: a.cajas ? formatearNumeroAr(a.cajas, { decimales: 0 }) : '' })
+      // La caja de empaque casi siempre viene puesta: el paso aparece solo si
+      // hay que elegirla (o si se la está cambiando).
+      if (a.paso === 'caja' || (a.presentacionId && !a.cajaElegida)) {
+        pasos.push({ clave: 'caja', titulo: 'Caja', valor: a.presentacionId && a.cajaElegida ? textoCajaElegida(a, cat) : '' })
+      }
+      pasos.push({ clave: 'cajas', titulo: 'Cajas', valor: a.cajas ? `${formatearNumeroAr(a.cajas, { decimales: 0 })} ${a.cajas === 1 ? 'caja' : 'cajas'}` : '' })
       return pasos.map((x, i) => ({ ...x, n: i + 1, estado: x.clave === a.paso ? 'actual' : (x.valor ? 'hecho' : 'falta') }))
+    }
+
+    function mayusculaInicial(t) {
+      const s = String(t ?? '')
+      return s.charAt(0).toLocaleUpperCase('es') + s.slice(1)
     }
 
     // El actual pintado, los hechos con lo elegido y TOCABLES para volver, los
@@ -6281,11 +6572,12 @@
     // puede mostrar nada.
     function htmlPasosAgregar(pasos) {
       return pasos.map(x => {
-        const cab = `<span class="pr-paso-bloque__n">${esc(x.n)} · ${esc(x.titulo)}</span>`
-        const valor = `<span class="pr-paso-bloque__valor">${esc(x.valor || 'Elegí uno')}</span>`
-        if (x.estado === 'hecho') return `<button type="button" class="pr-paso-bloque" data-paso-ag="${esc(x.clave)}">${cab}${valor}</button>`
-        if (x.estado === 'actual') return `<div class="pr-paso-bloque pr-paso-bloque--actual">${cab}${valor}</div>`
-        return `<div class="pr-paso-bloque pr-paso-bloque--falta">${esc(x.n)} · ${esc(x.titulo)}</div>`
+        const n = x.estado === 'hecho' ? '&#10003;' : esc(x.n)
+        const valor = x.estado === 'actual' ? 'elegí abajo' : (x.estado === 'hecho' ? x.valor : '—')
+        const cuerpo = `<span class="pr-paso__n">${n}</span><span class="pr-paso__t"><span class="pr-paso__l">${esc(x.titulo.toLocaleUpperCase('es'))}</span>` +
+          `<span class="pr-paso__v">${esc(valor)}</span></span>`
+        if (x.estado === 'hecho') return `<button type="button" class="pr-paso pr-paso--hecho" data-paso-ag="${esc(x.clave)}">${cuerpo}</button>`
+        return `<div class="pr-paso pr-paso--${x.estado}"${x.estado === 'actual' ? ' aria-current="step"' : ''}>${cuerpo}</div>`
       }).join('')
     }
 
@@ -6347,25 +6639,48 @@
       return { familia: t[0], tamano: t.slice(1).join(' ') }
     }
 
-    function htmlPasoProducto(cat) {
+    function htmlPasoProducto(cat, a = estado.agregar) {
       const { comunes, chocolate } = productosPorMasa(cat)
       if (!comunes.length && !chocolate.length) {
-        return '<span class="pr-ag__titulo">¿Qué producto?</span>' +
+        return '<h2 class="pr-ag__pregunta">¿Qué producto salió?</h2>' +
           '<div class="pr-aviso pr-aviso--grave">Esta unidad no tiene productos cargados. Se cargan en Configuración → Productos.</div>'
       }
       const boton = p => {
         const { familia, tamano } = partesNombreProducto(p.nombre)
-        const choco = esProductoChocolate(p)
-        return `<button type="button" class="pr-ag__opcion pr-ag__producto${choco ? ' pr-ag__opcion--choco' : ''}" data-ag-producto="${esc(p.id)}">` +
-          (familia ? `<span class="pr-ag__familia">${esc(familia)}</span>` : (choco ? '<span class="pr-ag__familia">chocolate</span>' : '')) +
-          `<span class="pr-ag__tamano">${esc(tamano)}</span></button>`
+        const col = colorProducto(p)
+        const elegido = a?.productoId === p.id
+        if (col.choco) {
+          return `<button type="button" class="pr-ag__producto pr-ag__producto--choco" data-ag-producto="${esc(p.id)}" aria-pressed="${elegido ? 'true' : 'false'}" style="background: ${col.c}">` +
+            `<span class="pr-ag__familia">Chocolate</span><span class="pr-ag__tamano">${esc(tamano)}</span></button>`
+        }
+        return `<button type="button" class="pr-ag__producto" data-ag-producto="${esc(p.id)}" aria-pressed="${elegido ? 'true' : 'false'}" style="background: ${col.t}; color: ${col.dk}">` +
+          `<span class="pr-ag__muestra" style="background: ${col.c}"></span>` +
+          (familia ? `<span class="pr-ag__familia">${esc(familia)}</span>` : '') + `<span class="pr-ag__tamano">${esc(tamano)}</span></button>`
       }
-      const chocoHtml = chocolate.length
-        ? '<div class="pr-ag__corte"><span class="pr-ag__corte-texto">Chocolate</span><span class="pr-ag__corte-linea"></span></div>' +
-          `<div class="pr-ag__grilla">${chocolate.map(boton).join('')}</div>`
+      const chocoSin = a?.chocoSinMasa ? (cat?.productos ?? []).find(p => p.id === a.productoId) : null
+      const aviso = chocoSin
+        ? '<div class="pr-ag__aviso-choco" role="alert">' +
+          '<svg class="pr-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17h-19zM12 10v4M12 17.5v.01"/></svg>' +
+          '<span class="pr-ag__aviso-textos"><strong>En este turno no hay masa de chocolate</strong>' +
+          `<span>Para cargar ${esc(nombreCorto(chocoSin.nombre))}, primero el masero registra una masa con cacao.</span></span>` +
+          `<button type="button" class="pr-ag__ir-sala" data-ag-ir-sala="1">${ICONO_MODO.masa}Ir a Sala de masa</button></div>`
         : ''
-      return '<span class="pr-ag__titulo">¿Qué producto?</span>' +
-        `<div class="pr-ag__grilla">${comunes.map(boton).join('')}</div>${chocoHtml}`
+      return '<h2 class="pr-ag__pregunta">¿Qué producto salió?</h2>' +
+        (comunes.length ? `<span class="pr-ag__rotulo">COMUNES</span><div class="pr-ag__productos${chocoSin ? ' pr-ag__productos--chico' : ''}">${comunes.map(boton).join('')}</div>` : '') +
+        (chocolate.length ? `<span class="pr-ag__rotulo">DE CHOCOLATE</span><div class="pr-ag__productos pr-ag__productos--choco">${chocolate.map(boton).join('')}</div>` : '') +
+        aviso
+    }
+
+    // "Cucuruchón Mini Chocolate" → "Mini Chocolate", para los avisos.
+    function nombreCorto(nombre) {
+      const { familia, tamano } = partesNombreProducto(nombre)
+      const choco = /chocolate\s*$/i.test(String(nombre ?? ''))
+      return `${tamano || familia}${choco ? ' Chocolate' : ''}`
+    }
+
+    // ¿Hay alguna masa de chocolate en el turno de la planilla?
+    function hayMasaChocolate(p = estado.planilla) {
+      return (p?.masas ?? []).some(m => m.es_chocolate)
     }
 
     // Con cono o sin cono. La opción que no tiene ninguna presentación se ve
@@ -6383,15 +6698,21 @@
 
     function htmlPasoPresentacion(a, cat) {
       const pres = presentacionesDe(cat, a.productoId, a.conCono)
+      const prod = (cat?.productos ?? []).find(p => p.id === a.productoId)
       if (!pres.length) {
-        return '<span class="pr-ag__titulo">¿Qué presentación?</span>' +
+        return '<h2 class="pr-ag__pregunta">¿Qué presentación?</h2>' +
           '<div class="pr-aviso pr-aviso--grave">No hay presentaciones para eso. Se cargan en Configuración → Productos.</div>'
       }
-      return '<span class="pr-ag__titulo">¿Qué presentación?</span><div class="pr-ag__grilla">' +
+      const col = colorProducto(prod ?? {})
+      const caja = col.choco ? { c: col.c, t: col.t } : col
+      return '<h2 class="pr-ag__pregunta">¿Qué presentación?</h2><div class="pr-ag__presentaciones">' +
         pres.map(pr => {
-          const det = detallePresentacion(pr)
-          return `<button type="button" class="pr-ag__opcion" data-ag-presentacion="${esc(pr.id)}" aria-pressed="${pr.id === a.presentacionId ? 'true' : 'false'}">${esc(pr.nombre)}` +
-            `<span class="pr-ag__opcion-nota">${esc(formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 }))} por caja${det ? ` · ${esc(det)}` : ''}</span></button>`
+          const alto = pr.media_caja ? 44 : 84
+          return `<button type="button" class="pr-ag__presentacion" data-ag-presentacion="${esc(pr.id)}" aria-pressed="${pr.id === a.presentacionId ? 'true' : 'false'}">` +
+            `<span class="pr-ag__caja-dibujo"><span style="height: ${alto}px; border-color: ${caja.c}; background: ${caja.t}"></span></span>` +
+            `<span class="pr-ag__pres-textos"><span class="pr-ag__pres-nombre">${esc(mayusculaInicial(envasePresentacion(pr, prod?.nombre ?? '')))}</span>` +
+            `<span class="pr-ag__pres-u" style="color: ${col.choco ? col.c : col.dk}">${esc(formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 }))}</span>` +
+            '<span class="pr-ag__pres-nota">unidades por caja</span></span></button>'
         }).join('') + '</div>'
     }
 
@@ -6423,8 +6744,30 @@
       return (marcas ?? []).filter(m => normalizarBusqueda(m.nombre).includes(q))
     }
 
-    function conosParaElegir(marcas, texto) {
-      return marcasFiltradas((marcas ?? []).filter(conoOfrecible), texto)
+    function conosParaElegir(marcas, texto, uso = estado.usoConos) {
+      const lista = marcasFiltradas((marcas ?? []).filter(conoOfrecible), texto)
+      if (!uso?.size) return lista
+      return lista.map((m, i) => ({ m, i, n: uso.get(m.id) ?? 0 })).sort((x, y) => (y.n - x.n) || (x.i - y.i)).map(x => x.m)
+    }
+
+    // Cuántas veces salió cada cono en los últimos 30 días en esta fábrica:
+    // los turnos de la unidad desde hace 30 días y sus sublotes no anulados.
+    // Si no se puede leer, los conos quedan en el orden del catálogo.
+    async function leerUsoConos(unidadId, hoy = hoyArgentina()) {
+      const uso = new Map()
+      try {
+        const { data: turnos, error } = await supabase.from('turnos_produccion').select('id')
+          .eq('unidad_negocio_id', unidadId).gte('fecha', sumarDias(hoy, -30))
+        if (error) throw error
+        const ids = (turnos ?? []).map(t => t.id)
+        if (!ids.length) return uso
+        const { data: items, error: e2 } = await supabase.from('produccion_items').select('marca_id, anulado').in('turno_id', ids.slice(0, 600))
+        if (e2) throw e2
+        for (const it of items ?? []) if (it.marca_id && !it.anulado) uso.set(it.marca_id, (uso.get(it.marca_id) ?? 0) + 1)
+      } catch (err) {
+        console.warn('conos más usados:', err)
+      }
+      return uso
     }
 
     // La lista de conos. "Común" va primera y es un caso real —un cono sin
@@ -6432,13 +6775,16 @@
     // se puede usar IGUAL: lo dice el chip, no se esconde.
     function htmlMarcas(marcas, texto, a, anterior) {
       const elegida = a?.marcaId ?? null
-      const comun = `<button type="button" class="pr-cono" data-marca="" aria-pressed="${a?.marcaElegida && !elegida ? 'true' : 'false'}">` +
-        'Común<span class="pr-cono__nota">sin marca</span></button>'
+      const conCono = a?.conCono === true && a?.marcaElegida
       const lista = conosParaElegir(marcas, texto)
+      const comun = !texto || normalizarBusqueda('común').includes(normalizarBusqueda(texto))
+        ? `<button type="button" class="pr-cono pr-cono--comun" data-marca="" aria-pressed="${conCono && !elegida ? 'true' : 'false'}">Común<span class="pr-cono__nota">con cono, sin marca</span></button>`
+        : ''
       const botones = lista.map(m => {
+        const col = colorCono(m.nombre)
         const notas = (anterior && anterior.marcaId === m.id ? `<span class="pr-cono__nota">el de ${esc(anterior.sublote)}</span>` : '') +
           (m.estado_alta === 'pendiente_revision' ? '<span class="pr-cono__pendiente">nuevo, a revisar</span>' : '')
-        return `<button type="button" class="pr-cono" data-marca="${esc(m.id)}" aria-pressed="${m.id === elegida ? 'true' : 'false'}">` +
+        return `<button type="button" class="pr-cono" data-marca="${esc(m.id)}" aria-pressed="${conCono && m.id === elegida ? 'true' : 'false'}" style="background: ${col.bg}; color: ${col.fg}; border-color: ${col.bd}">` +
           `<span>${htmlResaltado(m.nombre, texto)}</span>${notas}</button>`
       }).join('')
       const nada = texto && !lista.length ? `<span class="pr-op__nada">Ningún cono coincide con "${esc(texto)}". Si es nuevo, agregalo acá abajo.</span>` : ''
@@ -6450,7 +6796,7 @@
       estado.agregar = {
         paso: 'producto', productoId: '', conCono: null, presentacionId: '',
         marcaId: null, marcaElegida: false, busqueda: '', cajas: null, guardando: false,
-        cajaId: null, cajaElegida: false, embolsado: null, faltaCaja: false, stock: null,
+        cajaId: null, cajaElegida: false, embolsado: null, faltaCaja: false, stock: null, chocoSinMasa: false,
       }
       document.getElementById('pr-agregar-marca-buscar').value = ''
       document.getElementById('pr-agregar-cono-form').hidden = true
@@ -6460,8 +6806,13 @@
       ponerNumero(document.getElementById('pr-agregar-cajas'), null)
       mostrarVista('pr-agregar-prod')
       pintarAgregar()
-      // El stock del empaque llega después: la pantalla no lo espera.
-      return cargarStockAgregar(estado.agregar)
+      // Los conos más usados y el stock del empaque llegan después: la
+      // pantalla no los espera.
+      const a = estado.agregar
+      if (!estado.usoConos) {
+        leerUsoConos(estado.unidadId).then(uso => { estado.usoConos = uso; if (estado.agregar === a) pintarAgregar() })
+      }
+      return cargarStockAgregar(a)
     }
 
     function irAPasoAgregar(clave) {
@@ -6475,17 +6826,31 @@
     function elegirProductoAgregar(id) {
       const a = estado.agregar
       if (!a) return
+      const cat = estado.catalogo
+      const prod = (cat?.productos ?? []).find(p => p.id === id)
       if (a.productoId !== id) { a.conCono = null; a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }
       a.productoId = id
-      a.paso = 'cono_si_no'
+      // 5b · Un producto de chocolate sin ninguna masa de chocolate en el
+      // turno: se dice en el mismo paso, con "Ir a Sala de masa", y no avanza.
+      a.chocoSinMasa = !!prod && esProductoChocolate(prod) && !hayMasaChocolate()
+      if (a.chocoSinMasa) { a.paso = 'producto'; return pintarAgregar() }
+      // Sin presentaciones con cono no hay cono que elegir: derecho a la
+      // presentación, sin cono.
+      if (!presentacionesDe(cat, id, true).length) {
+        a.conCono = false; a.marcaId = null; a.marcaElegida = true
+        a.paso = 'presentacion'
+      } else {
+        a.paso = 'cono'
+      }
       pintarAgregar()
     }
 
     function elegirConoSiNo(v) {
       const a = estado.agregar
       if (!a) return
-      if (a.conCono !== v) { a.presentacionId = ''; a.marcaId = null; a.marcaElegida = false; soltarCaja(a) }
+      if (a.conCono !== v) { a.presentacionId = ''; soltarCaja(a) }
       a.conCono = v
+      if (!v) { a.marcaId = null; a.marcaElegida = true }
       a.paso = 'presentacion'
       pintarAgregar()
     }
@@ -6503,9 +6868,9 @@
         a.embolsado = embolsadoSugerido(estado.catalogo, id, a.cajaId)
         a.faltaCaja = false
       }
-      // Con cono hay que elegirlo; sin cono se va a la caja, y si la caja ya
-      // vino puesta, derecho a las cajas.
-      a.paso = a.conCono ? 'cono' : (a.cajaElegida ? 'cajas' : 'caja')
+      // El cono ya se eligió antes: a la caja, y si vino puesta, derecho a las
+      // cajas.
+      a.paso = a.cajaElegida ? 'cajas' : 'caja'
       pintarAgregar()
     }
 
@@ -6519,9 +6884,11 @@
     function elegirCono(id) {
       const a = estado.agregar
       if (!a) return
+      if (a.conCono !== true) { a.presentacionId = ''; soltarCaja(a) }
+      a.conCono = true
       a.marcaId = id || null
       a.marcaElegida = true
-      a.paso = a.cajaElegida ? 'cajas' : 'caja'
+      a.paso = a.presentacionId ? (a.cajaElegida ? 'cajas' : 'caja') : 'presentacion'
       pintarAgregar()
     }
 
@@ -6572,12 +6939,19 @@
       const a = estado.agregar, cat = estado.catalogo
       if (!a || !cat) return
       const pr = cat.presentaciones.find(x => x.id === a.presentacionId)
-      const porCaja = pr ? formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 }) : ''
-      document.getElementById('pr-agregar-cuenta').textContent = pr
-        ? (a.cajas ? `${formatearNumeroAr(a.cajas, { decimales: 0 })} × ${porCaja} por caja` : `${porCaja} por caja`)
-        : ''
+      document.getElementById('pr-agregar-cuenta').textContent = pr ? (a.cajas === 1 ? 'caja =' : 'cajas =') : ''
       document.getElementById('pr-agregar-unidades').textContent = pr && a.cajas
-        ? `${formatearNumeroAr(a.cajas * pr.unidades_por_caja, { decimales: 0 })} u` : '—'
+        ? `${formatearNumeroAr(a.cajas * pr.unidades_por_caja, { decimales: 0 })} unidades`
+        : (pr ? `${formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 })} por caja` : '—')
+    }
+
+    function ponerCajasAgregar(n) {
+      const a = estado.agregar
+      if (!a) return
+      const campo = document.getElementById('pr-agregar-cajas')
+      ponerNumero(campo, n)
+      a.cajas = leerCampoNumero(campo)
+      pintarAgregar()
     }
 
     function pintarAgregar() {
@@ -6587,23 +6961,25 @@
       document.getElementById('pr-agregar-titulo').textContent = a.corrige ? `Corregir el sublote ${a.corrige.sublote}` : 'Agregar producto'
       document.getElementById('pr-agregar-campo-motivo').hidden = !a.corrige
       document.getElementById('pr-agregar-pasos').innerHTML = htmlPasosAgregar(pasosAgregar(a, cat))
-      // Tres columnas (28/09/2026): la barra, los pasos y, a la derecha, las
-      // opciones del paso actual. El cono y las cajas ya no comparten: cada
-      // paso ocupa la columna de las opciones.
-      const enFinal = a.paso === 'cono' || a.paso === 'cajas'
+      // Tres columnas: la barra, los pasos y, a la derecha, las opciones del
+      // paso actual. Tocar una opción la ELIGE Y PASA SOLA al siguiente.
       const panel = document.getElementById('pr-agregar-panel')
-      panel.hidden = enFinal
+      panel.hidden = a.paso === 'cono' || a.paso === 'cajas'
       if (!panel.hidden) {
-        panel.innerHTML = a.paso === 'producto' ? htmlPasoProducto(cat)
-          : a.paso === 'cono_si_no' ? htmlPasoConoSiNo(a, cat)
+        panel.innerHTML = a.paso === 'producto' ? htmlPasoProducto(cat, a)
           : a.paso === 'caja' ? htmlPasoCaja(a, cat)
           : htmlPasoPresentacion(a, cat)
       }
-      // El cono y las cajas COMPARTEN pantalla: se llega al cono con las cajas
-      // ya al lado, así que se ahorra un toque.
       const cono = document.getElementById('pr-agregar-cono')
-      cono.hidden = !(a.conCono && a.paso === 'cono')
+      cono.hidden = a.paso !== 'cono'
       if (!cono.hidden) {
+        const sinCono = presentacionesDe(cat, a.productoId, false).length > 0
+        const bSin = document.getElementById('pr-agregar-sin-cono')
+        bSin.disabled = !sinCono
+        bSin.setAttribute('aria-pressed', a.marcaElegida && a.conCono === false ? 'true' : 'false')
+        const activos = (cat.marcas ?? []).filter(conoOfrecible).length
+        document.getElementById('pr-agregar-conos-rotulo').textContent =
+          `CON CONO · ${activos} ${activos === 1 ? 'ACTIVO' : 'ACTIVOS'}${estado.usoConos?.size ? ' · LOS MÁS USADOS PRIMERO' : ''}`
         document.getElementById('pr-agregar-marcas').innerHTML = htmlMarcas(cat.marcas, a.busqueda, a, conoAnterior(p?.items))
       }
       document.getElementById('pr-agregar-cajas-panel').hidden = a.paso !== 'cajas'
@@ -6612,7 +6988,9 @@
       document.getElementById('pr-agregar-empaque').innerHTML = a.paso === 'cajas' ? htmlEmpaqueAgregar(a, cat) : ''
       const confirmar = document.getElementById('pr-agregar-confirmar')
       confirmar.disabled = !!a.guardando
-      confirmar.textContent = a.corrige ? 'Guardar la corrección' : 'Agregar a lo producido'
+      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0
+      confirmar.textContent = a.corrige ? 'Guardar la corrección'
+        : (n ? `Agregar ${formatearNumeroAr(n, { decimales: 0 })} ${n === 1 ? 'caja' : 'cajas'} a lo producido` : 'Agregar a lo producido')
     }
 
     // La caja y el embolsado viajan SIEMPRE: el embolsado es el efectivo (con
@@ -7177,7 +7555,14 @@
       document.getElementById('pr-agregar-pasos').addEventListener('click', ev => {
         const b = ev.target.closest('[data-paso-ag]'); if (b) irAPasoAgregar(b.dataset.pasoAg)
       })
+      document.getElementById('pr-agregar-sin-cono').addEventListener('click', ev => {
+        if (!ev.currentTarget.disabled) elegirConoSiNo(false)
+      })
+      document.getElementById('pr-agregar-rapidos').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-cajas-poner]'); if (b) ponerCajasAgregar(Number(b.dataset.cajasPoner))
+      })
       document.getElementById('pr-agregar-panel').addEventListener('click', ev => {
+        if (ev.target.closest('[data-ag-ir-sala]')) return tocarModo('masa')
         const prod = ev.target.closest('[data-ag-producto]')
         if (prod) return elegirProductoAgregar(prod.dataset.agProducto)
         const cono = ev.target.closest('[data-ag-cono]')
@@ -7380,8 +7765,16 @@
 
     function htmlComo(clave, titulo, detalleHtml, habilitado, elegida = false) {
       return `<button type="button" class="pr-como" data-base="${esc(clave)}" aria-pressed="${elegida ? 'true' : 'false'}"${habilitado ? '' : ' disabled'}>` +
-        `<span class="pr-como__col"><span class="pr-como__titulo">${esc(titulo)}</span>` +
-        `<span class="pr-como__detalle">${detalleHtml}</span></span></button>`
+        `<span class="pr-como__titulo">${esc(titulo)}</span>${detalleHtml ? `<span class="pr-como__detalle">${detalleHtml}</span>` : ''}</button>`
+    }
+
+    // Lo que va al lado de "Anterior": cuál fue y, si era de CHOCOLATE, se
+    // dice ANTES de copiarla (copiar una masa de chocolate sin saberlo sale
+    // caro). El detalle largo queda en el title del botón.
+    function detalleAnteriorCorto(d) {
+      const a = d?.anterior
+      if (!a) return 'no hay'
+      return `igual a la ${esc(a.nro)}${a.es_de_hoy === false ? ' (otro día)' : ''}${a.es_chocolate ? ' <span class="pr-como__choco">· de chocolate</span>' : ''}`
     }
 
     // 4b · Arriba de la receta, en una fila: el número de masa, el tamaño
@@ -7392,21 +7785,21 @@
     function htmlOpcionesReceta(b, d) {
       const tipos = estado.tiposMasa ?? []
       const tiposReceta = tipos.length > 1
-        ? '<span class="pr-chips pr-receta__tipos" role="group" aria-label="Tipo de masa">' +
-          tipos.map(x => `<button type="button" class="pr-chip" data-tipo-masa="${esc(x)}" aria-pressed="${x === b.tipo ? 'true' : 'false'}">${esc(x)}</button>`).join('') +
+        ? '<span class="pr-seg-rec pr-receta__tipos" role="group" aria-label="Tipo de masa">' +
+          tipos.map(x => `<button type="button" class="pr-seg-rec__op" data-tipo-masa="${esc(x)}" aria-pressed="${x === b.tipo ? 'true' : 'false'}">${esc(x)}</button>`).join('') +
           '</span>'
         : ''
-      const tamanoReceta = '<span class="pr-receta__tamano" role="group" aria-label="Tamaño"><span class="pr-sala__rotulo">Tamaño</span>' +
-        `<button type="button" class="pr-segmento__opcion" data-doble="no" aria-pressed="${b.doble ? 'false' : 'true'}">Simple</button>` +
-        `<button type="button" class="pr-segmento__opcion" data-doble="si" aria-pressed="${b.doble ? 'true' : 'false'}">Doble</button></span>`
+      const tamanoReceta = '<span class="pr-seg-rec pr-receta__tamano" role="group" aria-label="Tamaño">' +
+        `<button type="button" class="pr-seg-rec__op" data-doble="no" aria-pressed="${b.doble ? 'false' : 'true'}">Simple</button>` +
+        `<button type="button" class="pr-seg-rec__op" data-doble="si" aria-pressed="${b.doble ? 'true' : 'false'}">Doble</button></span>`
       const como = b.como ?? 'original'
       const hayAnterior = !!d?.anterior
-      const comos = '<div class="pr-receta__comos" role="group" aria-label="De dónde sale la masa">' +
-        htmlComo('original', 'Original', `la vigente · v${esc(d.original.version)}`, true, como === 'original') +
-        htmlComo('anterior', 'Anterior', hayAnterior ? detalleAnterior(d) : 'no hay una masa anterior en esta máquina', hayAnterior, como === 'anterior') +
-        htmlComo('modificar', 'Modificar', `cambiás lo que necesites · ${esc(dePartida(d))}`, true, como === 'modificar') +
-        '</div>'
-      return `<div class="pr-receta__fila"><span class="pr-receta__nro">Masa ${esc(b.nro ?? '—')}</span>${tamanoReceta}${tiposReceta}</div>` + comos
+      const comos = '<span class="pr-seg-rec pr-receta__comos" role="group" aria-label="De dónde sale la masa">' +
+        htmlComo('original', 'Original', `v${esc(d.original.version)}`, true, como === 'original') +
+        htmlComo('anterior', 'Anterior', detalleAnteriorCorto(d), hayAnterior, como === 'anterior') +
+        htmlComo('modificar', 'Modificar', '', true, como === 'modificar') +
+        '</span>'
+      return `${tamanoReceta}${comos}${tiposReceta}`
     }
 
     // "Modificar" NO pregunta de dónde parte: arranca de la última masa de HOY
@@ -8089,18 +8482,9 @@
     }
 
     function htmlCabeceraReceta(b, datos) {
-      const clave = etiquetaBorrador(b)
-      // El origen (Original / Anterior / Modificada) ya lo dice el botón
-      // apretado de arriba: no se repite como pastilla (28/09/2026). La clave
-      // queda en la clase de la cabecera, para quien la quiera mirar.
-      const chips = [
-        `<span class="pr-chip-rec pr-chip-rec--${esc(clave)}">${b.doble ? 'Doble' : 'Simple'}</span>`,
-      ]
+      const chips = ['<span class="pr-chip-modificada">Modificada</span>']
       if (esChocolate(b, estado.defineChocolate)) chips.push('<span class="pr-chip-choco">Chocolate</span>')
-      const tipo = (estado.tiposMasa ?? []).length > 1 ? ` · ${esc(b.tipo ?? '')}` : ''
-      return `<span class="pr-receta__maq">${esc(b.maquinaNombre)}</span>` +
-        `<span class="pr-receta__sub">Lote ${esc(b.lote)} · masa ${esc(b.nro ?? '—')}${tipo}</span>` +
-        chips.join('')
+      return chips.join('')
     }
 
     // La celda del lote: un BOTÓN que abre el panel. Sin lote elegido dice UNA
@@ -8129,8 +8513,8 @@
       let texto
       if (vacio) texto = textoVacioLote(e)
       else if (e.l.sinLote) texto = 'Sin lote'
-      else if (e.l.manual) texto = `Lote ${String(e.l.lote ?? '').trim()}`
-      else texto = `Lote ${e.l.lote}`
+      else if (e.l.manual) texto = String(e.l.lote ?? '').trim()
+      else texto = String(e.l.lote ?? '')
       const clases = ['pr-rec__lote']
       if (e.terminado) clases.push('pr-rec__lote--terminado')
       else if (vacio) clases.push('pr-rec__lote--vacio')
@@ -8147,6 +8531,13 @@
     function htmlCeldaQueda(e) {
       if (e.quedaAntes == null) return ''
       return `<span class="pr-rec__queda${e.noAlcanza ? ' pr-rec__queda--poco' : ''}">quedan ${esc(textoCantidad(e.quedaAntes))}</span>`
+    }
+
+    // "25,00 kg" → el número grande y "kg" chico.
+    function htmlCantidadGrande(kg) {
+      const t = textoCantidad(kg)
+      const m = /^(.*?)\s*(kg|g|l|lt)$/.exec(t)
+      return m ? `${esc(m[1])}<span class="pr-rec__unidad">${esc(m[2])}</span>` : esc(t)
     }
 
     function htmlFilaReceta(it, b, datos) {
@@ -8171,7 +8562,7 @@
           `<button type="button" class="pr-rec__paso" data-menos="${esc(id)}" aria-label="Menos ${esc(it.ingrediente)}"${kg <= 0 ? ' disabled' : ''}>−</button>` +
           `<input type="text" class="pr-rec__num${aleja ? ' pr-rec__num--aleja' : ''}" data-cant="${esc(id)}" aria-label="Kilos de ${esc(it.ingrediente)}">` +
           `<button type="button" class="pr-rec__paso" data-mas="${esc(id)}" aria-label="Más ${esc(it.ingrediente)}">+</button></span>`
-        : `<span class="pr-rec__cant pr-rec__cant--fija"><span class="pr-rec__valor" data-valor="${esc(id)}">${esc(textoCantidad(kg))}</span></span>`
+        : `<span class="pr-rec__cant pr-rec__cant--fija"><span class="pr-rec__valor" data-valor="${esc(id)}">${htmlCantidadGrande(kg)}</span></span>`
       let accionRenglon = ''
       if (agregado) accionRenglon = `<button type="button" class="pr-rec__quitar" data-quitar-ing="${esc(id)}">Quitar</button>`
       else if (e.pide && insumosDe(datos, id).length) accionRenglon = `<button type="button" class="pr-rec__otro" data-otro-insumo="${esc(id)}">Otro</button>`
@@ -8212,8 +8603,8 @@
       })
     }
     function htmlFilasReceta(b, datos) {
-      const cab = '<div class="pr-rec--cab"><span>Ingrediente</span>' +
-        '<span class="pr-rec__cant-cab">Cantidad (kg)</span><span>Lote</span><span></span></div>'
+      const cab = '<div class="pr-rec--cab"><span>INGREDIENTE</span>' +
+        '<span class="pr-rec__cant-cab">CANTIDAD</span><span>LOTE</span><span></span></div>'
       return cab + renglonesVisibles(b, datos).map(it => htmlFilaReceta(it, b, datos)).join('') +
         (b.otros ?? []).map(o => htmlFilaOtro(o)).join('')
     }
@@ -8223,9 +8614,9 @@
       if (!b || !d) return
       document.getElementById('pr-receta-cab').innerHTML = htmlCabeceraReceta(b, d)
       document.getElementById('pr-receta-opciones').innerHTML = htmlOpcionesReceta(b, d)
-      document.getElementById('pr-receta-cambiar').textContent = `${b.maquinaNombre ?? 'Máquina'} · Cambiar`
       const cont = document.getElementById('pr-receta-filas')
       cont.innerHTML = htmlFilasReceta(b, d)
+      cont.classList.toggle('pr-receta__tabla--modificar', b.como === 'modificar')
       // Los números se escriben con ponerNumero, nunca con value=.
       for (const input of cont.querySelectorAll('[data-cant]')) {
         enlazarCampoNumero(input, { decimales: 3 })
@@ -8262,7 +8653,7 @@
       falta.textContent = texto
       falta.hidden = !texto
       falta.classList.toggle('pr-receta__error--aviso', !estado.errorReceta && !pendiente.length && !!textoAvisos)
-      btn.textContent = 'Registrar masa'
+      btn.textContent = `Registrar masa ${b.nro ?? ''}${etiquetaBorrador(b) === 'modificada' ? ' · modificada' : ''}`.replace(/\s+·/, ' ·').trim()
       // El botón NO se deshabilita por lo que falta: el error pegado se diría
       // y nadie podría tocarlo. Se traba solo mientras se manda.
       btn.disabled = !!estado.enviandoMasa
@@ -8389,14 +8780,17 @@
       })
     }
 
-    function htmlFilaLote(f, elegido, viejo) {
+    function htmlFilaLote(f, elegido, viejo, nota = '') {
       const o = f.o
       const lote = o.sinLote ? 'sin lote' : `lote ${esc(o.lote)}`
-      const queda = f.queda != null ? ` · quedan ${esc(textoCantidad(f.queda))}` : ''
-      const fecha = f.desde ? `<span class="pr-lp__fila-fecha">desde ${esc(textoFechaLote(f.desde))}</span>` : ''
+      const sub = nota || (f.desde ? `Ingresó el ${esc(textoFechaLote(f.desde))}` : '')
       return `<button type="button" class="pr-lp__tarjeta pr-lp__fila${viejo ? ' pr-lp__fila--viejo' : ''}" data-lote-op="${f.i}" aria-pressed="${elegido ? 'true' : 'false'}">` +
-        (viejo ? '<span class="pr-lp__fila-primero">Usar primero</span>' : '') +
-        `<span class="pr-lp__fila-texto"><strong>${esc(f.marca)}</strong> · ${lote}${queda}</span>${fecha}</button>`
+        '<span class="pr-lp__radio" aria-hidden="true"></span>' +
+        `<span class="pr-lp__fila-col"><span class="pr-lp__fila-texto"><strong>${esc(f.marca)}</strong> ${lote}` +
+        (viejo ? '<span class="pr-lp__fila-primero">EL MÁS VIEJO · USALO PRIMERO</span>' : '') + '</span>' +
+        (sub ? `<span class="pr-lp__fila-fecha">${sub}</span>` : '') + '</span>' +
+        (f.queda != null ? `<span class="pr-lp__fila-queda"><strong>${esc(textoCantidad(f.queda))}</strong><span>quedan</span></span>` : '') +
+        '</button>'
     }
 
     function htmlPanelLote(ingredienteId) {
@@ -8405,29 +8799,39 @@
       if (!b || !d || !it) return null
       const e = estadoLote(it, b, d)
       const elegido = e.terminado ? -1 : indiceLote(e.ops, e.l)
+      const pl = estado.panelLote ?? {}
+      // El que está marcado en la lista: el que se tocó, o el que está puesto.
+      const marcado = Number.isInteger(pl.sel) ? pl.sel : elegido
       const todas = filasPanelLote(e, d, ingredienteId)
       const marcas = [...new Set(todas.map(f => f.marca).filter(Boolean))]
-      const filtro = marcas.includes(estado.panelLote?.marca) ? estado.panelLote.marca : ''
+      const filtro = marcas.includes(pl.marca) ? pl.marca : ''
       const filas = filtro ? todas.filter(f => f.marca === filtro) : todas
       const viejoI = (todas.find(f => f.desde && !f.o.sinLote && (f.queda == null || f.queda > 0)) ?? null)?.i ?? null
       const filtrosHtml = marcas.length > 1
         ? '<div class="pr-lp__filtros" role="group" aria-label="Marca">' +
-          `<button type="button" class="pr-lp__filtro" data-lote-marca="" aria-pressed="${filtro ? 'false' : 'true'}">Todas</button>` +
-          marcas.map(m => `<button type="button" class="pr-lp__filtro" data-lote-marca="${esc(m)}" aria-pressed="${m === filtro ? 'true' : 'false'}">${esc(m)}</button>`).join('') +
+          `<button type="button" class="pr-lp__filtro" data-lote-marca="" aria-pressed="${filtro ? 'false' : 'true'}">Todas <span>${todas.length}</span></button>` +
+          marcas.map(m => `<button type="button" class="pr-lp__filtro" data-lote-marca="${esc(m)}" aria-pressed="${m === filtro ? 'true' : 'false'}">${esc(m)} <span>${todas.filter(f => f.marca === m).length}</span></button>`).join('') +
           '</div>'
         : ''
+      // El lote puesto viene de la masa anterior de esa máquina (salvo que se
+      // haya escrito a mano): se dice.
+      const notaElegido = elegido >= 0 && d.anterior && !e.l?.manual ? `El de la masa anterior (${esc(d.anterior.nro)})` : ''
       const listaHtml = filas.length
-        ? `<div class="pr-lp__filas" data-scroll-propio>${filas.map(f => htmlFilaLote(f, f.i === elegido, f.i === viejoI)).join('')}</div>`
+        ? `<div class="pr-lp__filas" data-scroll-propio>${filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')}</div>`
         : '<p class="pr-lp__vacio">No hay lotes con stock cargado de este insumo.</p>'
       const hayElegido = !e.terminado && !e.falta && !!e.l && !e.l.sinLote
+      const sel = todas.find(f => f.i === marcado) ?? null
+      const usar = sel && !pl.escribir
+        ? `<button type="button" class="pr-prim" id="pr-lote-panel-usar-lista">Usar ${esc(sel.marca)}${sel.o.sinLote ? ' · sin lote' : ` · lote ${esc(sel.o.lote)}`}</button>`
+        : ''
+      const termino = hayElegido ? '<button type="button" class="pr-lp__se-termino" id="pr-lote-panel-se-termino">Se terminó el lote puesto</button>' : ''
       return {
         titulo: `Lote de ${it.ingrediente}`,
-        terminado: hayElegido
-          ? '<div class="pr-lp__pie"><button type="button" class="pr-btn pr-btn--peligro" id="pr-lote-panel-se-termino">Se terminó</button></div>'
-          : '',
+        sub: `para la masa ${b.nro ?? '—'} · ${b.maquinaNombre ?? 'Máquina'}`,
+        terminado: usar || termino ? `${termino}${usar}` : '',
         // Sin lotes con stock, la lista vacía no dice nada útil: la ventana
         // abre directo con el campo.
-        tarjetas: estado.panelLote?.escribir && !todas.length ? '' : filtrosHtml + listaHtml,
+        tarjetas: pl.escribir && !todas.length ? '' : filtrosHtml + listaHtml,
         otros: htmlEscribirLote(it, e, d),
       }
     }
@@ -8457,7 +8861,7 @@
       const posibles = insumosDe(d, it.ingrediente_id)
       if (!posibles.length) return ''
       if (!pl?.escribir) {
-        return '<button type="button" class="pr-link pr-lp__manual" data-lote-escribir>El lote no está en la lista: escribirlo</button>'
+        return '<button type="button" class="pr-lp__manual" data-lote-escribir><svg class="pr-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg>El lote no está en la lista: escribirlo</button>'
       }
       const insId = insumoParaEscribir(it, e, d)
       const ins = posibles.find(x => x.insumo_id === insId) ?? null
@@ -8515,6 +8919,7 @@
       const h = pl.modo === 'otro' ? htmlPanelOtroInsumo(pl.ingredienteId) : htmlPanelLote(pl.ingredienteId)
       if (!h) return cerrarPanelLote()
       document.getElementById('pr-lote-panel-titulo').textContent = h.titulo
+      document.getElementById('pr-lote-panel-sub').textContent = h.sub ?? ''
       document.getElementById('pr-lote-panel-terminado').innerHTML = h.terminado
       document.getElementById('pr-lote-panel-tarjetas').innerHTML = h.tarjetas
       document.getElementById('pr-lote-panel-otros').innerHTML = h.otros
@@ -8629,7 +9034,21 @@
       const o = ops[Number(indice)]
       if (!o) return
       if (o.manual) { abrirEscribirLote(o.insumo_id); return }
-      elegirOpcionLote(pl.ingredienteId, String(indice))
+      pl.sel = Number(indice)
+      pintarPanelLote()
+      document.getElementById('pr-lote-panel-usar-lista')?.focus()
+    }
+
+    function usarLoteDeLista() {
+      const pl = estado.panelLote
+      if (!pl) return
+      const b = estado.masa, d = estado.datosMasa
+      const it = d?.original.items.find(x => x.ingrediente_id === pl.ingredienteId)
+      if (!b || !it) return
+      const e = estadoLote(it, b, d)
+      const i = Number.isInteger(pl.sel) ? pl.sel : indiceLote(e.ops, e.l)
+      if (!(i >= 0)) return
+      elegirOpcionLote(pl.ingredienteId, String(i))
       cerrarPanelLote()
     }
 
@@ -8973,17 +9392,15 @@
 
     function htmlMasaReceta(m) {
       return `<div class="pr-rm__fila${m.anulada ? ' pr-rm__fila--anulada' : ''}">` +
-        `<span class="pr-rm__nro">${esc(m.nro)}</span>` +
-        `<span class="pr-rm__tam pr-masa-tam">${textoTamanoMasa(m)}</span>` +
-        `<span class="pr-rm__hora">${esc(horaArgentina(m.hora) || '—')}</span>` +
+        `<span class="pr-rm__nro">Masa ${esc(m.nro)}</span>` +
+        `<span class="pr-rm__det"><span class="pr-rm__tam pr-masa-tam">${m.doble ? 'Doble' : 'Simple'}</span> · <span class="pr-rm__hora">${esc(horaArgentina(m.hora) || '—')}</span></span>` +
         `<span class="pr-rm__chips">${m.anulada ? '<span class="pr-rm__anulada">Anulada</span>' : chipsDeMasa(m)}</span></div>`
     }
 
     function htmlMasaRecetaPendiente(b) {
       return '<div class="pr-rm__fila pr-rm__fila--espera">' +
-        `<span class="pr-rm__nro">${esc(b.nro ?? '—')}</span>` +
-        `<span class="pr-rm__tam pr-masa-tam">${textoTamanoMasa(b)}</span>` +
-        '<span class="pr-rm__hora">esperando conexión</span>' +
+        `<span class="pr-rm__nro">Masa ${esc(b.nro ?? '—')}</span>` +
+        `<span class="pr-rm__det"><span class="pr-rm__tam pr-masa-tam">${b.doble ? 'Doble' : 'Simple'}</span> · <span class="pr-rm__hora">esperando conexión</span></span>` +
         '<span class="pr-rm__chips">Se manda sola cuando vuelva la señal. No la cargues de nuevo.</span></div>'
     }
 
@@ -9005,7 +9422,8 @@
       if (!cont) return
       const centro = document.getElementById('pr-receta-centro')
       if (!t) { cont.innerHTML = ''; if (centro) centro.classList.remove('pr-receta-centro--atenuado'); return }
-      const titulo = `<h2 class="pr-rm__titulo">Masas del turno · ${esc(t.maquinaNombre)}${t.turno ? ` · ${esc(String(t.turno).toLowerCase())}` : ''}</h2>`
+      const cuantas = (estado.masasReceta ?? []).filter(m => !m.anulada).length
+      const titulo = `<h2 class="pr-rm__titulo" title="Masas del turno · ${esc(t.maquinaNombre)}${t.turno ? ` · ${esc(String(t.turno).toLowerCase())}` : ''}"><span>MASAS DEL TURNO</span><span class="pr-rm__cuenta">${esc(cuantas)}</span></h2>`
       const pend = borradoresPendientes().filter(b => b.turnoId === t.id)
       let cuerpo
       if (estado.errorMasasReceta) cuerpo = '<p class="pr-aviso pr-aviso--grave">No se pudieron leer las masas del turno.</p>'
@@ -9238,7 +9656,6 @@
         else if (ds.doble !== undefined) elegirTamano(ds.doble === 'si')
         else if (ds.base !== undefined && ds.base !== estado.masa?.como) elegirComo(ds.base)
       })
-      document.getElementById('pr-receta-cambiar').addEventListener('click', mostrarSala)
       document.getElementById('pr-receta-registrar').addEventListener('click', registrarMasa)
       document.getElementById('pr-receta-otro').addEventListener('click', abrirAgregarIngrediente)
       document.getElementById('pr-receta-motivo').addEventListener('input', ev => {
@@ -9314,6 +9731,7 @@
         if (ev.target === panelLote || ev.target.closest('#pr-lote-panel-cerrar')) { cerrarPanelLote(); return }
         if (ev.target.closest('#pr-lote-panel-se-termino')) {
           marcarLoteTerminado(estado.panelLote.ingredienteId)
+          estado.panelLote.sel = null
           pintarPanelLote()
           const primera = panelLote.querySelector('.pr-lp__tarjeta, [data-lote-op]')
           if (primera) primera.focus()
@@ -9324,6 +9742,7 @@
         const ei = ev.target.closest('[data-lote-escribir-insumo]')
         if (ei && estado.panelLote) { estado.panelLote.insumoEscribir = ei.dataset.loteEscribirInsumo; pintarPanelLote(); enfocarEscribir(); return }
         if (ev.target.closest('#pr-lote-panel-usar')) { usarLoteEscrito(); return }
+        if (ev.target.closest('#pr-lote-panel-usar-lista')) { usarLoteDeLista(); return }
         const mf = ev.target.closest('[data-lote-marca]')
         if (mf && estado.panelLote) { estado.panelLote.marca = mf.dataset.loteMarca; pintarPanelLote(); return }
         const t = ev.target.closest('[data-lote-op]'); if (t) elegirTarjetaLote(t.dataset.loteOp)
