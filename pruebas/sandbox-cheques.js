@@ -54,8 +54,18 @@ const OPCIONALES = [
   'avisoDestacadoOtraUnidad',
   // color por estado y leyenda (22/09/2026)
   'esPorControlar', 'clavesEstadoCheque', 'leyendaDeCheques', 'htmlLeyendaEstados', 'pintarLeyendaEstados',
+  // endosar a un proveedor (29/09/2026)
+  'textoChequeEndosado', 'aCentavos', 'ordenarFacturasFifo', 'repartoFifo', 'deudasVisibles', 'deudaDeUnidad',
+  'textoDeudaProveedor', 'chequesDelEndoso', 'unidadDefectoEndoso', 'opcionesUnidadEndoso', 'htmlOpcionesUnidadEndoso',
+  'textoEntreEmpresas', 'nombreUnidadEndoso', 'erroresEndoso', 'parametrosEndoso', 'reiniciarEndoso',
+  'cargarUnidadesEndoso', 'prepararEndoso', 'buscarProveedoresEndoso', 'htmlResultadosEndoso', 'pintarResultadosEndoso',
+  'elegirProveedorEndoso', 'cambiarProveedorEndoso', 'elegirUnidadEndoso', 'cargarPreviaEndoso', 'htmlPreviaEndoso',
+  'pintarPreviaEndoso', 'pintarEndoso', 'abrirVincularProveedor', 'endosarEnOrden', 'textoResultadoEndoso',
+  'textoFalloEndoso', 'confirmarEndoso',
 ]
-const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS']
+const CONSTANTES_OPCIONALES = ['SIN_UNIDAD', 'TEXTO_SIN_UNIDAD', 'LEYENDA_ESTADOS',
+  // endosar a un proveedor (29/09/2026)
+  'puedeRegistrarPago', 'puedeVerFacturas', 'TEXTO_SIN_PERMISO_ENDOSO', 'TEXTO_SIN_FACTURAS', 'LARGO_MINIMO_BUSQUEDA']
 
 const PRELUDIO = `
   ${fuenteNumeros()}
@@ -145,6 +155,9 @@ const PRELUDIO = `
   var accionDelMotivo = null
   var turnoCheques = 0
   var temporizadorAvisoSeleccion = null
+  var turnoBusquedaEndoso = 0
+  var turnoPreviaEndoso = 0
+  var temporizadorBusquedaEndoso = null
 `
 
 function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes = [], stubs = [] } = {}) {
@@ -158,6 +171,8 @@ function construirCheques(ruta, { preludioExtra = '', funciones = [], constantes
   // pasaFiltroUnidad es de js/barra-unidad.js: si la región la importa, se
   // trae la función REAL por el import (extraer.js la busca ahí).
   const importadas = /\bpasaFiltroUnidad\b[^\n]*from\s+'\.\.\/js\/barra-unidad\.js'/.test(src) ? ['pasaFiltroUnidad'] : []
+  // sinUnidadesDePrueba (js/utils.js): la REAL, si la región la importa.
+  if (/\bsinUnidadesDePrueba\b[^\n]*from\s+'\.\.\/js\/utils\.js'/.test(src)) importadas.push('sinUnidadesDePrueba')
   const fns = [...FUNCIONES, ...OPCIONALES.filter(existe), ...importadas, ...funciones].filter(f => !stubs.includes(f))
   const cts = [...CONSTANTES, ...CONSTANTES_OPCIONALES.filter(existeC), ...constantes]
   return construirCon(ruta, {

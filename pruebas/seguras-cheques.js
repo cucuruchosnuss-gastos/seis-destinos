@@ -19,6 +19,13 @@ const SEGURAS_CHEQUES = [
   ['volver', 'HTML ya escapado: el botón se arma arriba con esc(ch.id), o vacío'],
   ['htmlCeldaUnidad(ch, cob)', 'HTML armado por htmlCeldaUnidad(), que escapa adentro'],
   ['htmlLeyendaEstados(entradas)', 'HTML armado por htmlLeyendaEstados(), que escapa adentro'],
+  // Endosar a un proveedor (29/09/2026)
+  ["htmlAccionSalida(ch, 'volver')", 'HTML armado por htmlAccionSalida(), que escapa adentro (el botón de volver a cartera)'],
+  ['lineasFacturas.join(\'\')', 'HTML armado arriba en htmlPreviaEndoso: cada <li> con esc() del nombre y del detalle'],
+  ['lineasCheques.join(\'\')', 'HTML armado arriba en htmlPreviaEndoso: cada <li> con esc() del texto'],
+  ['htmlResultadosEndoso(estado.salida)', 'HTML armado por htmlResultadosEndoso(), que escapa adentro'],
+  ['htmlPreviaEndoso(estado.salida)', 'HTML armado por htmlPreviaEndoso(), que escapa adentro'],
+  ['htmlOpcionesUnidadEndoso(s)', 'HTML armado por htmlOpcionesUnidadEndoso(), que escapa adentro'],
 ]
 
 const SEGURAS_REGEX_CHEQUES = [

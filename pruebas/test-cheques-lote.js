@@ -122,12 +122,14 @@ function armar({ tareas = ['cobranzas:ver_todo', 'cobranzas:procesar'] } = {}) {
     const antes = S.__llamadas.refrescar
     llamadas.length = 0
     S.__setRpc(async (...a) => { llamadas.push(a); return { data: 2, error: null } })
-    S.estado.salida.tipo = 'endosado'
-    doc.getElementById('chq-salida-destino').value = '  Molino del Sur SA  '
+    // El endoso a un proveedor va por su propio camino (test-cheques-endoso.js):
+    // el lote de marcar_salida_cheques queda para el depósito.
+    S.estado.salida.tipo = 'depositado'
+    doc.getElementById('chq-salida-destino').value = '  Banco Nación cta 123  '
     await S.confirmarSalida()
     const ult = llamadas[0]
     chk('llama a marcar_salida_cheques con el payload EXACTO', ult && ult[0] === 'marcar_salida_cheques' &&
-      JSON.stringify(ult[1]) === JSON.stringify({ p_cheque_ids: ['a', 'b'], p_tipo: 'endosado', p_fecha: S.hoyArgentina(), p_destino: 'Molino del Sur SA' }),
+      JSON.stringify(ult[1]) === JSON.stringify({ p_cheque_ids: ['a', 'b'], p_tipo: 'depositado', p_fecha: S.hoyArgentina(), p_destino: 'Banco Nación cta 123' }),
       JSON.stringify(ult))
     chk('una sola llamada (no una por cheque)', llamadas.length === 1)
     chk('al salir bien: cierra el diálogo', doc.getElementById('chq-modal-salida').hidden === true && S.estado.salida === null)
