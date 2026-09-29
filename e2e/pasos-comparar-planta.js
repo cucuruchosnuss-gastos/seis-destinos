@@ -67,7 +67,20 @@ const PASOS_COMPARAR_PLANTA = [
     await page.locator('#pr-btn-maestro').click();
     await teclear(page, '123');
   }],
+  ['10b', async (page) => {
+    await teclear(page, '45678');
+    await page.locator('#pr-pin-teclado [data-tecla="entrar"]').click().catch(() => {});
+    await expect(page.locator('#pr-acceso')).toBeVisible();
+    await page.locator('#pr-acceso-personas [data-acceso-persona]').first().click();
+    await page.locator('[data-acceso-puesto="masero"]').click();
+  }],
+  ['10c', async (page) => {
+    await page.locator('#pr-acceso-confirmar').click();
+    await expect(page.locator('#pr-acceso-pin')).toBeVisible();
+  }],
   ['2a', async (page) => {
+    await page.locator('#pr-acceso-pin-listo').click().catch(() => {});
+    await page.locator('#pr-maestro-salir').click().catch(() => {});
     await cerrarPin(page);
     await PERSONA(page, 'Hinga Luciano').click();
     await teclear(page, '4826');

@@ -240,6 +240,7 @@ module.exports = {
     personal_produccion: PERSONAL,
     verificar_pin_produccion: { ok: true, debe_cambiar: false },
     verificar_pin_maestro: { ok: true },
+    otorgar_puesto_temporal: { ok: true, pin_temporal: '4719' },
     datos_para_masa: { turno: { id: 't1', lote: 7038 }, original: ORIGINAL, anterior: ANTERIOR, insumos: INSUMOS },
     stock_para_masa: STOCK,
     que_falta_para_cerrar: [

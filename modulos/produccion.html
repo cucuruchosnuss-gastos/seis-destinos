@@ -1097,6 +1097,155 @@
     .pr-hm__ing-cant { font-family: var(--p-titulo); font-size: 19px; font-weight: 800; }
     .pr-hm__ing-marca { font-size: 13.5px; color: var(--p-tinta-2); }
     .pr-hm__anular-btn { align-self: flex-start; margin-top: 6px; }
+
+    /* ══ 10b / 10c · EL ACCESO MAESTRO, PANTALLA PROPIA ══
+       Banda blanca de 56 px de borde a borde (como la de ¿Quién sos?, pero
+       sin tono de modo) y abajo, con el margen de siempre, la pantalla. */
+    .pr-banda-maestro {
+      height: 56px; flex-shrink: 0; box-sizing: border-box; background: var(--p-tarjeta); border-bottom: 2px solid var(--p-borde);
+      color: var(--p-tinta); display: flex; align-items: center; gap: 12px; padding: 0 16px;
+    }
+    .pr-banda-maestro .pr-ico { width: 24px; height: 24px; }
+    .pr-banda-maestro__titulo { font-family: var(--p-titulo); font-size: 21px; font-weight: 800; white-space: nowrap; }
+    .pr-banda-maestro__sub { font-size: 15px; font-weight: 600; opacity: 0.85; white-space: nowrap; }
+    .pr-banda-maestro__espacio { flex: 1; }
+    .pr-banda-maestro__reloj { font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .pr-banda-maestro__btn {
+      height: 40px; padding: 0 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.7); border: 1.5px solid var(--p-borde);
+      font-size: 15px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; color: var(--p-tinta);
+    }
+    /* Entrar a un modo no está en el diseño: se agregó porque sin él no hay
+       cómo pasar del acceso maestro a un modo. Va discreto, como link. */
+    .pr-banda-maestro__btn[data-maestro-modo] { border: 0; background: none; padding: 0 2px; color: var(--p-gris); text-decoration: underline; text-underline-offset: 3px; font-size: 13.5px; }
+    .pr-banda-maestro__btn[data-maestro-modo] + .pr-banda-maestro__btn[data-maestro-modo] { margin-left: -4px; }
+    @media (orientation: portrait) {
+      .pr-banda-maestro { height: auto; min-height: 56px; flex-wrap: wrap; row-gap: 4px; padding: 6px 12px; gap: 10px; }
+      .pr-banda-maestro__titulo, .pr-banda-maestro__sub, .pr-banda-maestro__reloj { white-space: normal; }
+      .pr-banda-maestro__titulo { line-height: 1.05; }
+      .pr-banda-maestro__sub { font-size: 14px; line-height: 1.2; }
+      .pr-banda-maestro__btn { white-space: normal; line-height: 1.1; }
+    }
+
+    .pr-maestro-sec { padding: 9px 14px 9px; box-sizing: border-box; position: relative; }
+    @media (orientation: portrait) { .pr-maestro-sec { padding: 12px 14px 14px; } }
+    .pr-maestro-grid { flex: 1; min-height: 0; display: flex; flex-direction: row; gap: 10px; }
+    @media (orientation: portrait) { .pr-maestro-grid { flex-direction: column; } }
+    .pr-maestro-izq {
+      flex: 1.4; min-height: 0; min-width: 0; background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;
+    }
+    .pr-maestro-izq--ancho { flex: 1; }
+    .pr-maestro-der { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+    @media (orientation: portrait) { .pr-maestro-izq { flex: 1.25 1 0; } .pr-maestro-der { flex: 1 1 0; } }
+
+    .pr-maestro-tabs { display: flex; gap: 2px; background: var(--p-caja); border-radius: 10px; padding: 3px; flex-shrink: 0; }
+    .pr-maestro-tab { flex: 1; height: 40px; border-radius: 8px; border: 0; background: none; color: var(--p-tinta-2); font-size: 15.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .pr-maestro-tab[aria-selected="true"] { background: var(--p-acento); color: #fff; font-weight: 800; }
+
+    .pr-maestro-buscar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .pr-maestro-rotulo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); white-space: nowrap; }
+    .pr-maestro-buscar input {
+      flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 10px; background: var(--p-alt); border: 1px solid var(--p-div);
+      padding: 0 10px; font-size: 15px; color: var(--p-tinta);
+    }
+    .pr-maestro-buscar input::placeholder { color: var(--p-suave); }
+
+    /* La grilla pareja de personas: 3 columnas apaisada, 2 parada (4 en Asignar,
+       que ocupa todo el ancho). */
+    .pr-maestro-personas { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(48px, 1fr); gap: 6px; align-content: stretch; }
+    .pr-maestro-personas--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (orientation: portrait) { .pr-maestro-personas, .pr-maestro-personas--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .pr-maestro-personas > .pr-texto-suave { grid-column: 1 / -1; }
+    .pr-maestro-personas .pr-opcion { min-height: 0; padding: 0 10px; border-radius: 12px; font-size: 15.5px; font-weight: 700; color: var(--p-tinta); justify-content: center; }
+    .pr-maestro-personas .pr-opcion > span { display: flex; flex-direction: column; line-height: 1.2; }
+    /* En el diseño la grilla dice solo el nombre; lo que falta saber de la
+       persona elegida lo dice la nota. Asignar PIN sí dice el estado del PIN. */
+    #pr-acceso-personas .pr-acceso__detalle { display: none; }
+    .pr-acceso__detalle { font-size: 12.5px; font-weight: 600; color: var(--p-gris); }
+    .pr-acceso__detalle--sin { color: var(--p-mal); }
+
+    .pr-maestro-puestos-caja {
+      flex: 1; min-height: 0; background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 16px;
+      padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;
+    }
+    .pr-maestro-puestos { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+    .pr-puesto-card {
+      flex: 1; min-height: 0; border-radius: 14px; border: 2px solid var(--p-borde); background: var(--p-tarjeta);
+      display: flex; align-items: center; gap: 12px; padding: 0 14px; text-align: left; color: var(--p-tinta);
+    }
+    .pr-puesto-card[aria-pressed="true"] { border: 3px solid var(--p-acento); background: var(--p-acento-suave); padding: 0 13px; }
+    .pr-puesto-card__color { width: 16px; height: 16px; border-radius: 5px; box-sizing: border-box; flex-shrink: 0; }
+    .pr-puesto-card--encargado .pr-puesto-card__color { background: var(--p-prod); border: 1.5px solid var(--p-prod); }
+    .pr-puesto-card--masero .pr-puesto-card__color { background: var(--p-masa); border: 1.5px solid var(--p-masa-borde); }
+    .pr-puesto-card--operario .pr-puesto-card__color { background: var(--p-teal-suave); border: 1.5px solid var(--p-teal-borde); }
+    .pr-puesto-card__nombre { font-family: var(--p-titulo); font-size: 22px; font-weight: 700; }
+    .pr-puesto-card__desc { font-size: 14px; color: var(--p-gris); }
+
+    /* "Hasta el final del" no está en el diseño (el diseño es solo hoy): se
+       conserva en una línea chica debajo de las tarjetas. */
+    .pr-maestro-hasta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; font-size: 13.5px; color: var(--p-gris); font-weight: 600; }
+    .pr-maestro-hasta .pr-input { height: 34px; min-height: 0; padding: 0 8px; font-size: 14px; width: auto; border-radius: 8px; }
+    #pr-acceso-nota:empty { display: none; }
+    #pr-acceso-nota .pr-aviso { margin: 0; font-size: 13.5px; padding: 6px 10px; }
+    .pr-maestro-der .pr-error-pegado { margin: 0; flex-shrink: 0; font-size: 13.5px; }
+    #pr-acceso-confirmar { height: var(--p-prim); min-height: 0; border-radius: 14px; font-size: 18px; text-align: center; padding: 0 10px; line-height: 1.15; flex-shrink: 0; }
+
+    /* 10c · El PIN temporal: una tarjeta al centro, sobre la misma pantalla. */
+    .pr-pin-temporal { position: absolute; inset: 0; z-index: 5; background: var(--p-fondo); display: flex; align-items: center; justify-content: center; padding: 9px 14px; box-sizing: border-box; }
+    .pr-pin-temporal__caja {
+      width: 100%; max-width: 560px; box-sizing: border-box; background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 20px;
+      padding: 18px 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+    }
+    .pr-pin-temporal__texto { margin: 0; font-size: 17px; font-weight: 700; color: var(--p-tinta-2); }
+    .pr-pin-nuevo { margin: 0; font-family: var(--p-titulo); font-size: 96px; font-weight: 800; letter-spacing: 0.18em; line-height: 1; padding-left: 0.18em; font-variant-numeric: tabular-nums; color: var(--p-tinta); }
+    .pr-pin-temporal__nota { margin: 0; background: var(--p-mal-suave); border: 1px solid var(--p-mal-borde); border-radius: 12px; padding: 8px 12px; font-size: 15px; font-weight: 700; color: var(--p-mal-txt); }
+    .pr-pin-temporal__caja .pr-prim { width: 100%; height: var(--p-prim); min-height: 0; border-radius: 14px; font-size: 19px; }
+
+    /* Asignar PIN: la ventana del teclado, como la del PIN de ¿Quién sos?. */
+    .pr-asignar__panel {
+      position: fixed; z-index: 50; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      width: 380px; max-width: calc(100vw - 24px); box-sizing: border-box; max-height: calc(100dvh - 16px); overflow: auto;
+      background: var(--p-tarjeta); border-radius: 22px; padding: 14px 18px 16px;
+      display: flex; flex-direction: column; gap: 8px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+    }
+    @media (orientation: portrait) { .pr-asignar__panel { width: 460px; } }
+    .pr-asignar__quien { margin: 0; font-family: var(--p-titulo); font-size: 21px; font-weight: 700; }
+    .pr-asignar__panel .pr-aviso { margin: 0; font-size: 13px; padding: 6px 10px; }
+    .pr-asignar__paso { margin: 0; text-align: center; font-size: 15px; font-weight: 800; color: var(--p-tinta-2); }
+    .pr-asignar__panel .pr-tecla { height: 50px; }
+    @media (orientation: portrait) { .pr-asignar__panel .pr-tecla { height: 72px; } }
+    .pr-asignar__panel .pr-error { margin: 0; text-align: center; color: var(--p-mal); font-weight: 800; }
+    .pr-asignar__botones { display: flex; gap: 8px; }
+    .pr-asignar__botones .pr-btn { flex: 1; min-height: 48px; }
+
+    /* Con el maestro activo DENTRO de un modo, una franja chica fija abajo:
+       todo lo que se haga queda a su nombre. */
+    .pr-maestro {
+      position: fixed; z-index: 40; left: 50%; bottom: 8px; transform: translateX(-50%); max-width: calc(100vw - 16px); box-sizing: border-box;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+      background: var(--p-tarjeta); border: 1.5px solid var(--p-linea); border-radius: 14px; padding: 6px 8px 6px 14px;
+      box-shadow: 0 8px 24px rgba(28, 26, 23, 0.18); font-size: 13.5px; font-weight: 700; color: var(--p-tinta-2);
+    }
+    .pr-maestro__botones { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pr-maestro__botones .pr-btn { min-height: 36px; padding: 0 10px; font-size: 13.5px; }
+
+    /* EL LOGIN DE LA TABLET y "Cargando": una tarjeta al centro. */
+    #pr-cargando, #pr-sin-acceso { flex: 1; align-self: center; }
+    .pr-entrar {
+      margin: auto; width: 100%; max-width: 420px; box-sizing: border-box; background: var(--p-tarjeta); border: 1px solid var(--p-borde);
+      border-radius: 20px; padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; max-height: calc(100dvh - 16px); overflow: auto;
+    }
+    .pr-entrar__titulo { margin: 0 0 4px; font-family: var(--p-titulo); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+    .pr-entrar__aviso { margin: 0; background: var(--p-alt); border: 1px solid var(--p-div); border-radius: 12px; padding: 8px 12px; font-size: 14px; color: var(--p-tinta-2); }
+    .pr-entrar__campo { display: flex; flex-direction: column; gap: 4px; }
+    .pr-entrar__campo label { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; color: var(--p-gris); }
+    .pr-entrar__campo input {
+      height: 48px; box-sizing: border-box; border-radius: 12px; border: 1.5px solid var(--p-borde); background: var(--p-tarjeta);
+      padding: 0 12px; font-size: 16px; color: var(--p-tinta);
+    }
+    .pr-entrar__campo input:focus { outline: none; border-color: var(--p-acento); }
+    .pr-entrar__error { margin: 0; color: var(--p-mal); font-size: 15px; font-weight: 800; }
+    .pr-entrar .pr-btn--accion { min-height: 54px; border-radius: 14px; font-size: 18px; }
   </style>
 </head>
 
@@ -1226,8 +1375,8 @@
         <span class="pr-banda-maestro__titulo">Acceso maestro</span>
         <span class="pr-banda-maestro__sub">Solo administración</span>
         <span class="pr-banda-maestro__espacio"></span>
-        <button type="button" class="pr-banda-maestro__btn" data-maestro-modo="produccion">Entrar a Producción</button>
-        <button type="button" class="pr-banda-maestro__btn" data-maestro-modo="masa">Entrar a Sala de masa</button>
+        <button type="button" class="pr-banda-maestro__btn" data-maestro-modo="produccion">Ir a Producción</button>
+        <button type="button" class="pr-banda-maestro__btn" data-maestro-modo="masa">Ir a Sala de masa</button>
         <span class="pr-banda-maestro__reloj" id="pr-maestro-reloj"></span>
         <button type="button" class="pr-banda-maestro__btn" id="pr-maestro-salir">Salir del acceso maestro</button>
       </header>
