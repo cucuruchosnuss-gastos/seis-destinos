@@ -38,6 +38,7 @@ let codigo = `
 `
 codigo += extraerConst(src, 'MODULO_DE_PENDIENTE')
 codigo += extraerConst(src, 'TAMBIEN_EN_TARJETA')
+codigo += extraerConst(src, 'PENDIENTES_URGENTES')
 codigo += extraerConst(src, 'MODULOS')
 for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
 codigo += `return { ${FUNCIONES.join(', ')}, MODULO_DE_PENDIENTE, MODULOS,
@@ -135,6 +136,19 @@ chk('produccion (conos_por_revisar) → la tarjeta de Producción', S.MODULO_DE_
     { modulo: 'caja', clave: 'solicitudes_empresa', cantidad: 3, texto: 'Movimientos por aceptar en la caja de la empresa' },
   ])
   chk('caja: una clave en 0 no suma ni resta', g2.get('caja')?.total === 3 && g2.get('caja')?.detalle.length === 1)
+}
+
+// Lo URGENTE (29/09/2026, handoff "Esqueleto"): la barra pinta en bordó la
+// burbuja del módulo que tiene algo urgente, y en gris la de lo demás.
+{
+  const g = S.agruparPendientes([
+    { modulo: 'cheques', clave: 'por_vencer', cantidad: 3, texto: 'Cheques que vencen esta semana' },
+    { modulo: 'produccion', clave: 'conos_por_revisar', cantidad: 2, texto: 'Conos nuevos por revisar' },
+    { modulo: 'cobranzas', clave: 'por_controlar', cantidad: 1, texto: 'Cobranzas por controlar' },
+  ])
+  chk('urgente: cheques que vencen esta semana', g.get('cheques')?.urgente === true)
+  chk('urgente: cobranzas por asentar (en Cobranzas y en Administración)', g.get('cobranzas')?.urgente === true && g.get('administracion')?.urgente === true)
+  chk('no urgente: conos por revisar', g.get('produccion')?.urgente === false)
 }
 
 // --- htmlBurbuja ----------------------------------------------------------

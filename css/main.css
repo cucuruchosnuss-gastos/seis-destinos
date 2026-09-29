@@ -1,18 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* Sistema visual 2026 (handoff "Esqueleto", 28/09/2026): Bricolage Grotesque
+   para títulos y números grandes, Figtree para todo lo demás. */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&display=swap');
 
 /* ─── Variables ─────────────────────────────────────────────────────────── */
 
 :root {
+  /* Grises CÁLIDOS y sin azules (handoff "Esqueleto"): el acento es el
+     naranja —lo que se toca y lo elegido— y nunca marca validez (verde y
+     bordó son del dato). Los valores de antes eran azulados. */
   --color-fondo:          #FFFFFF;
-  --color-superficie:     #eef1f6;
-  --color-borde:          #E5E7EB;
-  --color-acento:           #1a2a52;
-  --color-acento-hover:     #14213f;
-  --color-acento-highlight: #2bb8c9;
-  --color-acento-suave:     #E0FAFE;
-  --color-acento-gris:      #A8B8D8;
-  --color-texto:          #111111;
-  --color-texto-suave:    #8a94ab;
+  --color-superficie:     #F5F3EF;
+  --color-borde:          #E7E3DC;
+  --color-borde-fuerte:   #D6CFC4;
+  --color-divisor:        #EFEBE5;
+  --color-pista:          #F3F0EB;
+  --color-pista-hover:    #E9E5DF;
+  --color-fila-hover:     #F6F3EF;
+  --color-acento:           #C2410C;
+  --color-acento-hover:     #8F2F08;
+  --color-acento-highlight: #C2410C;
+  --color-acento-suave:     #FDEEE4;
+  --color-acento-fila:      #FFF8F3;
+  --color-acento-gris:      #D6CFC4;
+  --color-texto:          #1C1A17;
+  --color-texto-menu:     #3D3831;
+  --color-texto-2:        #6B645A;
+  --color-texto-suave:    #9A9287;
   --color-error:          #EF4444;
   --color-exito:          #16a34a;
 
@@ -62,15 +75,16 @@
   --azul-suave:      #E7EFFA;
   --azul-oscuro:     #164680;
 
-  --radio-tarjeta:  20px;
+  --radio-tarjeta:  16px;
   --radio-input:    12px;
-  --radio-boton:    14px;
+  --radio-boton:    12px;
 
   --sombra-suave:   0 4px 16px rgba(0, 0, 0, 0.10);
   --sombra-media:   0 4px 12px rgba(0, 0, 0, 0.10);
   --sombra-hover:   0 8px 28px rgba(0, 0, 0, 0.14);
 
-  --fuente: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --fuente: 'Figtree', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --fuente-titulo: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
 
   --transicion: 0.18s ease;
 }
@@ -127,8 +141,8 @@ img, svg {
 
 /* ─── Tipografía ─────────────────────────────────────────────────────────── */
 
-h1 { font-size: 1.5rem;   font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
-h2 { font-size: 1.25rem;  font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
+h1 { font-family: var(--fuente-titulo); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; font-variant-numeric: tabular-nums; }
+h2 { font-family: var(--fuente-titulo); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; }
 h3 { font-size: 1.0625rem; font-weight: 600; line-height: 1.4; }
 
 .texto-suave { color: var(--color-texto-suave); }
@@ -708,7 +722,7 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 }
 
 .badge--secundario {
-  background-color: rgba(168, 184, 216, 0.18);
+  background-color: rgba(214, 207, 196, 0.18);
   color: var(--color-acento-gris);
 }
 
@@ -940,128 +954,132 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   pointer-events: none;
 }
 
-/* ─── Barra lateral de la compu (js/barra-lateral.js, 27/09/2026) ─────────
-   Solo desde 1024 px: en el celular no existe. Fija a la izquierda; la
-   página se corre con margin-left (no padding: no pisa el padding propio de
-   cada módulo). z-index 30: los modales (50 y más) la tapan. La planta no la
-   carga. */
+/* ─── La barra lateral (js/barra-lateral.js; handoff "Esqueleto", 29/09/2026) ─
+   COMPU (desde 1024 px): fija a la izquierda, 232 px abierta y 64 achicada;
+   la página se corre con margin-left (no padding: no pisa el padding propio
+   de cada módulo). z-index 30: los modales (50 y más) la tapan.
+   CELULAR: la barra de abajo (Inicio + 3 + Más) y la hoja "Más".
+   La planta no la carga. */
 .barra-lateral { display: none; }
+.barra-abajo { display: none; }
+.hoja-mas[hidden] { display: none; }
 
 @media (min-width: 1024px) {
   body.con-barra-lateral { --ancho-barra-lateral: 232px; margin-left: var(--ancho-barra-lateral); }
   body.con-barra-lateral.barra-lateral-colapsada { --ancho-barra-lateral: 64px; }
 
   .barra-lateral {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: var(--ancho-barra-lateral);
-    z-index: 30;
-    box-sizing: border-box;
-    padding: 0.75rem 0.5rem;
-    gap: 0.25rem;
-    background: var(--color-fondo);
-    border-right: 1px solid var(--color-borde);
-    overflow-x: hidden;
-    overflow-y: auto;
+    display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0;
+    width: var(--ancho-barra-lateral); z-index: 30; box-sizing: border-box;
+    padding: 12px 10px 10px; background: #FFFFFF; border-right: 1px solid var(--color-borde);
+    font-family: var(--fuente);
   }
   .barra-lateral__logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 48px;
-    margin-bottom: 0.5rem;
-    border-radius: var(--radio-boton);
+    display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px; margin-bottom: 8px;
+    color: var(--color-texto); text-decoration: none; border-radius: 10px; flex-shrink: 0;
   }
-  .barra-lateral__logo img { width: 48px; height: 48px; object-fit: contain; }
-  .barra-lateral-colapsada .barra-lateral__logo img { width: 40px; height: 40px; }
-  .barra-lateral__items { display: flex; flex-direction: column; gap: 0.125rem; flex: 1; }
+  .barra-lateral__logo:hover { text-decoration: none; }
+  .barra-lateral__logo-img {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; box-sizing: border-box;
+    background-size: 165%; background-position: 50% 28%; background-repeat: no-repeat; border: 1px solid var(--color-divisor);
+  }
+  .barra-lateral__marca { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+  .barra-lateral__marca-nombre { font-family: var(--fuente-titulo); font-weight: 700; font-size: 15.5px; letter-spacing: -0.01em; white-space: nowrap; }
+  .barra-lateral__marca-group { font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: var(--color-texto-suave); }
+  /* La lista hace scroll SOLO si hay más de 16 módulos; el logo y el pie quedan. */
+  .barra-lateral__items { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; overflow-x: visible; }
   .barra-lateral__item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-height: 44px;
-    padding: 0 0.75rem;
-    border-radius: 12px;
-    color: var(--color-texto);
-    font-size: 0.9375rem;
-    font-weight: 600;
-    text-decoration: none;
-    white-space: nowrap;
+    position: relative; display: flex; align-items: center; gap: 10px; height: 32px; flex-shrink: 0;
+    padding: 0 8px 0 5px; border-radius: 9px; color: var(--color-texto-menu); font-size: 13.5px; font-weight: 500;
+    text-decoration: none; white-space: nowrap; box-sizing: border-box;
   }
-  .barra-lateral__item:hover { background: var(--color-superficie); }
-  .barra-lateral__item:focus-visible,
-  .barra-lateral__logo:focus-visible,
-  .barra-lateral__plegar:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
-  .barra-lateral__item--actual { background: var(--color-superficie); color: var(--color-acento); box-shadow: inset 3px 0 0 var(--color-acento); }
+  .barra-lateral__item:hover { background: var(--color-fila-hover); text-decoration: none; }
+  .barra-lateral__item:focus-visible, .barra-lateral__logo:focus-visible, .barra-lateral__plegar:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 1px; }
+  /* La variante DESPUÉS de su base (bug recurrente del proyecto). */
+  .barra-lateral__item--actual, .barra-lateral__item--actual:hover { background: var(--color-acento-suave); color: var(--color-acento-hover); font-weight: 700; }
   .barra-lateral__icono {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
-    font-weight: 800;
+    width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
   }
-  .barra-lateral__icono svg { width: 22px; height: 22px; }
-  .barra-lateral__nombre { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .barra-lateral__icono svg { width: 15px; height: 15px; }
+  .barra-lateral__nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .barra-lateral__divisor { height: 1px; background: var(--color-divisor); margin: 5px 6px; flex-shrink: 0; }
   .barra-lateral__burbuja {
-    margin-left: auto;
-    min-width: 1.375rem;
-    height: 1.375rem;
-    padding: 0 0.375rem;
-    border-radius: 999px;
-    background: var(--rojo);
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1.375rem;
-    text-align: center;
-    box-sizing: border-box;
+    min-width: 20px; height: 18px; padding: 0 6px; box-sizing: border-box; border-radius: 999px;
+    background: var(--color-caja, #EDE9E3); color: var(--color-texto); font-size: 11.5px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; flex-shrink: 0;
   }
+  .barra-lateral__burbuja--urgente { background: var(--bordo); color: #fff; }
+  .barra-lateral__pie { border-top: 1px solid var(--color-divisor); padding-top: 8px; display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+  .barra-lateral__personalizar { flex: 1; height: 36px; }
   .barra-lateral__plegar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-height: 44px;
-    padding: 0 0.75rem;
-    border: 0;
-    border-radius: 12px;
-    background: none;
-    color: var(--color-texto);
-    font: inherit;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
+    width: 32px; height: 32px; border-radius: 8px; border: 0; background: none; color: var(--color-texto-2);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; padding: 0;
   }
-  .barra-lateral__plegar:hover { background: var(--color-superficie); }
-  .barra-lateral__plegar > span:first-child { flex: 0 0 24px; text-align: center; font-size: 1.125rem; }
+  .barra-lateral__plegar:hover { background: #F1EEE9; color: var(--color-texto); }
+  .barra-lateral__tip { display: none; }
 
-  /* Achicada: solo los íconos; el nombre va en el tooltip (title) y la
-     burbuja se pega al ícono. */
-  .barra-lateral-colapsada .barra-lateral__nombre { display: none; }
-  .barra-lateral-colapsada .barra-lateral__item,
-  .barra-lateral-colapsada .barra-lateral__plegar { justify-content: center; padding: 0; }
-  .barra-lateral-colapsada .barra-lateral__burbuja {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    margin: 0;
-    min-width: 1.125rem;
-    height: 1.125rem;
-    line-height: 1.125rem;
-    font-size: 0.625rem;
-    padding: 0 0.25rem;
+  /* Achicada: solo los íconos; al pasar el mouse, un cartel negro con el
+     nombre y lo pendiente. La burbuja se pega a la esquina del ícono. */
+  .barra-lateral-colapsada .barra-lateral__nombre, .barra-lateral-colapsada .barra-lateral__marca { display: none; }
+  .barra-lateral-colapsada .barra-lateral__logo { justify-content: center; }
+  .barra-lateral-colapsada .barra-lateral__item { justify-content: center; padding: 0; }
+  .barra-lateral-colapsada .barra-lateral__items { overflow: visible; }
+  .barra-lateral-colapsada .barra-lateral__pie { flex-direction: column; }
+  .barra-lateral-colapsada .barra-lateral__personalizar { flex: none; width: 100%; }
+  .barra-lateral-colapsada .barra-lateral__burbuja { position: absolute; top: 1px; right: 3px; }
+  .barra-lateral-colapsada .barra-lateral__item:hover .barra-lateral__tip,
+  .barra-lateral-colapsada .barra-lateral__item:focus-visible .barra-lateral__tip {
+    display: flex; gap: 8px; align-items: center; position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+    background: var(--color-texto); color: #fff; font-size: 13px; font-weight: 600; padding: 7px 10px; border-radius: 8px;
+    white-space: nowrap; box-shadow: 0 8px 20px rgba(28, 26, 23, 0.25); z-index: 40; pointer-events: none;
   }
+  .barra-lateral__tip-extra { color: #D6CFC4; font-weight: 500; }
+  .barra-lateral__tip-extra:empty { display: none; }
+}
+
+/* CELULAR: la barra de abajo (84 px con el área segura) y la hoja "Más". */
+@media (max-width: 1023.98px) {
+  body.con-barra-lateral { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .barra-abajo {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+    height: calc(64px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box;
+    background: #FFFFFF; border-top: 1px solid var(--color-borde); font-family: var(--fuente);
+  }
+  .barra-abajo__tab {
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    position: relative; color: var(--tab-color); text-decoration: none; border: 0; background: none; padding: 0; font: inherit; cursor: pointer;
+  }
+  .barra-abajo__tab:hover { text-decoration: none; }
+  .barra-abajo__icono { width: 44px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .barra-abajo__nombre { font-size: 11.5px; font-weight: 500; color: var(--color-texto-menu); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+  .barra-abajo__tab--actual .barra-abajo__icono { background: var(--color-acento-suave); }
+  .barra-abajo__tab--actual .barra-abajo__nombre { font-weight: 700; color: var(--color-acento-hover); }
+  .barra-abajo__burbuja {
+    position: absolute; top: 4px; left: calc(50% + 8px); min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+    border-radius: 999px; background: #EDE9E3; color: var(--color-texto); font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; border: 2px solid #fff;
+  }
+  .barra-abajo__burbuja--urgente { background: var(--bordo); color: #fff; }
+  .hoja-mas { position: fixed; inset: 0; z-index: 45; background: rgba(28, 26, 23, 0.42); display: flex; flex-direction: column; justify-content: flex-end; }
+  .hoja-mas__caja { background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 8px 16px calc(28px + env(safe-area-inset-bottom, 0px)); max-height: 90dvh; overflow-y: auto; font-family: var(--fuente); }
+  .hoja-mas__manija { width: 40px; height: 5px; border-radius: 999px; background: #D6CFC4; margin: 0 auto 12px; }
+  .hoja-mas__cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .hoja-mas__titulo { font-family: var(--fuente-titulo); font-size: 20px; font-weight: 700; margin: 0; }
+  .hoja-mas__cerrar { width: 36px; height: 36px; border-radius: 999px; border: 0; background: var(--color-pista); color: var(--color-texto-menu); display: flex; align-items: center; justify-content: center; }
+  .hoja-mas__grilla { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .hoja-mas__modulo { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 9px; border-radius: 14px; background: #F9F7F4; color: var(--color-texto); text-decoration: none; }
+  .hoja-mas__modulo:hover { text-decoration: none; }
+  .hoja-mas__icono { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; }
+  .hoja-mas__nombre { font-size: 12.5px; font-weight: 600; text-align: center; line-height: 1.15; }
+  .hoja-mas__acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .hoja-mas__accion { height: 46px; border-radius: 12px; border: 1px solid var(--color-borde); background: #FFFFFF; display: flex; align-items: center; justify-content: center; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--color-texto); text-decoration: none; }
+  .hoja-mas__accion:hover { text-decoration: none; }
 }
 
 @media print {
-  .barra-lateral { display: none !important; }
-  body.con-barra-lateral { margin-left: 0 !important; }
+  .barra-lateral, .barra-abajo, .hoja-mas { display: none !important; }
+  body.con-barra-lateral { margin-left: 0 !important; padding-bottom: 0 !important; }
 }
 
 /* ─── Panel de sesiones (js/sesiones.js, 27/09/2026) ──────────────────────
@@ -1101,8 +1119,8 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   border: 1px solid var(--color-borde); border-radius: 12px; min-width: 0;
 }
 .sesiones__dispositivo { font-weight: 700; overflow-wrap: anywhere; }
-.sesiones__detalle { font-size: 0.8125rem; color: #55617d; overflow-wrap: anywhere; }
-.sesiones__vacio { margin: 0.5rem 0; color: #55617d; }
+.sesiones__detalle { font-size: 0.8125rem; color: #6B645A; overflow-wrap: anywhere; }
+.sesiones__vacio { margin: 0.5rem 0; color: #6B645A; }
 .sesiones__acciones { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
 .sesiones__rotulo { font-weight: 700; font-size: 0.875rem; }
 .sesiones__motivo {
@@ -1121,51 +1139,88 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
 }
 .sesiones__aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
 
-/* ─── Barra de unidad de negocio (js/barra-unidad.js, 28/09/2026) ─────────
-   Arriba de todo, en compu y celular (no en la planta ni al imprimir). Los
-   chips scrollean de costado ADENTRO de la barra: la página nunca. El chip
-   elegido va en el acento de la app, con el nombre (el color nunca va solo). */
-.barra-unidad {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  padding: 0.5rem 1rem;
-  background: var(--color-fondo);
-  border-bottom: 1px solid var(--color-borde);
+/* ─── La barra de arriba (js/barra-unidad.js; handoff "Esqueleto", 29/09/2026) ─
+   La ÚNICA barra de arriba: las fábricas (la barra de unidad de negocio,
+   28/09/2026) a la izquierda y el usuario con su menú a la derecha. COMPU:
+   52 px, blanca, pegada arriba. CELULAR: el logo y las iniciales arriba, y
+   las fábricas en una fila que se desliza de costado (la última queda
+   cortada a propósito). No en la planta, en el login ni al imprimir. El chip
+   elegido va en el acento (naranja), con el nombre: el color nunca va solo. */
+.barra-arriba {
+  position: sticky; top: 0; z-index: 28; box-sizing: border-box; width: 100%; max-width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 52px; padding: 0 16px 0 20px; background: #FFFFFF; border-bottom: 1px solid var(--color-borde);
+  font-family: var(--fuente);
 }
-.barra-unidad__chips {
-  display: flex;
-  gap: 0.375rem;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
+.barra-arriba__marca { display: none; }
+.barra-arriba__fabricas { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.barra-unidad__chips { display: flex; gap: 2px; background: var(--color-pista); border-radius: 11px; padding: 3px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .barra-unidad__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0 0.875rem;
-  border: 1px solid var(--color-borde);
-  border-radius: 999px;
-  background: var(--color-fondo);
-  color: var(--color-texto);
-  font: inherit;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; height: 30px; padding: 0 11px 0 5px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--color-texto-menu); font: inherit;
+  font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
-.barra-unidad__chip:hover { background: var(--color-superficie); }
-.barra-unidad__chip:focus-visible { outline: 3px solid var(--color-acento-highlight); outline-offset: 2px; }
+.barra-unidad__chip:hover { background: var(--color-pista-hover); }
+.barra-unidad__chip:focus-visible { outline: 3px solid var(--color-acento-highlight); outline-offset: 1px; }
 /* La variante DESPUÉS de su base (bug recurrente del proyecto). */
-.barra-unidad__chip--activa,
-.barra-unidad__chip--activa:hover { background: var(--color-acento); border-color: var(--color-acento); color: #fff; }
-.barra-unidad__logo { width: 22px; height: 22px; object-fit: contain; border-radius: 4px; background: #fff; }
-.barra-unidad__nota { font-size: 0.8125rem; color: var(--color-acento); opacity: 0.85; white-space: nowrap; }
-@media (max-width: 480px) { .barra-unidad__nota { display: none; } }
-@media print { .barra-unidad { display: none !important; } }
+.barra-unidad__chip--activa, .barra-unidad__chip--activa:hover { background: var(--color-acento); color: #fff; font-weight: 700; box-shadow: 0 1px 2px rgba(28, 26, 23, 0.15); }
+.barra-unidad__marca {
+  width: 20px; height: 20px; border-radius: 999px; flex-shrink: 0; color: #fff; font-size: 9px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.barra-unidad__marca--todas { border-radius: 6px; background: #FFFFFF; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; padding: 4px; box-sizing: border-box; align-items: stretch; justify-items: stretch; }
+.barra-unidad__marca--todas i { display: block; border-radius: 2px; }
+.barra-unidad__chip--activa .barra-unidad__marca:not(.barra-unidad__marca--todas),
+.barra-unidad__chip--activa .barra-unidad__logo { box-shadow: 0 0 0 2px #FFFFFF; }
+.barra-unidad__logo { width: 20px; height: 20px; object-fit: contain; border-radius: 999px; background: #fff; flex-shrink: 0; }
+.barra-unidad__nota { font-size: 12.5px; color: var(--color-texto-2); white-space: nowrap; }
+.barra-arriba__usuario {
+  display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px 0 4px; border-radius: 999px;
+  border: 1px solid var(--color-borde); background: #FFFFFF; color: var(--color-texto); font: inherit; cursor: pointer; flex-shrink: 0; margin-left: auto;
+}
+.barra-arriba__usuario:hover { border-color: var(--color-borde-fuerte); }
+.barra-arriba__usuario[aria-expanded="true"] { background: var(--color-fila-hover); border-color: var(--color-borde-fuerte); }
+.barra-arriba__usuario:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
+.barra-arriba__ini { width: 30px; height: 30px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.barra-arriba__ini--grande { width: 38px; height: 38px; font-size: 14px; }
+.barra-arriba__nombre { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.barra-arriba__flecha { color: var(--color-texto-2); }
+.barra-arriba__menu {
+  position: absolute; top: 50px; right: 16px; width: 260px; box-sizing: border-box; background: #fff; border-radius: 14px;
+  box-shadow: 0 18px 40px -8px rgba(28, 26, 23, 0.28), 0 0 0 1px rgba(28, 26, 23, 0.06); padding: 6px; z-index: 35;
+}
+.barra-arriba__menu-cab { display: flex; gap: 10px; align-items: center; padding: 10px 10px 12px; border-bottom: 1px solid var(--color-divisor); margin-bottom: 4px; }
+.barra-arriba__menu-quien { min-width: 0; display: flex; flex-direction: column; }
+.barra-arriba__menu-nombre { font-size: 15px; font-weight: 700; }
+.barra-arriba__menu-mail { font-size: 13px; color: var(--color-texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barra-arriba__menu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 10px; box-sizing: border-box;
+  border: 0; border-radius: 9px; background: none; color: var(--color-texto); font: inherit; font-size: 14.5px; font-weight: 500;
+  text-decoration: none; cursor: pointer; text-align: left;
+}
+.barra-arriba__menu-item svg { color: var(--color-texto-2); flex-shrink: 0; }
+.barra-arriba__menu-item:hover, .barra-arriba__menu-item:focus-visible { background: var(--color-fila-hover); text-decoration: none; outline: none; }
+.barra-arriba__menu-item--salir { font-weight: 600; }
+.barra-arriba__menu-texto { flex: 1; }
+.barra-arriba__menu-extra { font-size: 12.5px; color: var(--color-texto-2); }
+.barra-arriba__menu-divisor { height: 1px; background: var(--color-divisor); margin: 4px 6px; }
+
+@media (max-width: 1023.98px) {
+  .barra-arriba { flex-wrap: wrap; padding: 0; gap: 0; min-height: 0; }
+  .barra-arriba__marca { display: flex; align-items: center; gap: 9px; height: 50px; padding: 0 16px; color: var(--color-texto); text-decoration: none; }
+  .barra-arriba__marca:hover { text-decoration: none; }
+  .barra-arriba__logo { width: 32px; height: 32px; border-radius: 9px; background-size: 165%; background-position: 50% 28%; background-repeat: no-repeat; border: 1px solid var(--color-divisor); box-sizing: border-box; }
+  .barra-arriba__marca-nombre { font-family: var(--fuente-titulo); font-weight: 700; font-size: 17px; }
+  .barra-arriba__usuario { order: 2; margin: 0 16px 0 auto; border: 0; padding: 0; height: 38px; }
+  .barra-arriba__usuario .barra-arriba__ini { width: 38px; height: 38px; font-size: 14px; }
+  .barra-arriba__nombre, .barra-arriba__flecha { display: none; }
+  .barra-arriba__fabricas { order: 3; flex: 0 0 100%; width: 100%; }
+  .barra-arriba--sin-fabricas .barra-arriba__fabricas { display: none; }
+  .barra-unidad__chips { background: none; padding: 2px 16px 12px; gap: 6px; border-radius: 0; width: 100%; box-sizing: border-box; }
+  .barra-unidad__chip { height: 36px; padding: 0 13px 0 6px; border-radius: 10px; font-size: 14px; background: #FFFFFF; border: 1px solid var(--color-borde); }
+  .barra-unidad__chip--activa, .barra-unidad__chip--activa:hover { background: var(--color-acento); border-color: var(--color-acento); color: #fff; }
+  .barra-unidad__marca, .barra-unidad__logo { width: 22px; height: 22px; }
+  .barra-unidad__nota { display: none; }
+  .barra-arriba__menu { top: 48px; right: 12px; max-width: calc(100vw - 24px); }
+}
+@media print { .barra-unidad, .barra-arriba { display: none !important; } }

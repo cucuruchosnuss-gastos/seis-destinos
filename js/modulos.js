@@ -285,12 +285,63 @@ export function agruparPendientes(filas) {
     if (!clave) { console.warn('mis_pendientes: módulo sin tarjeta', fila?.modulo); continue }
     const n = typeof fila.cantidad === 'number' ? fila.cantidad : Number(fila.cantidad)
     if (fila.cantidad === null || fila.cantidad === undefined || fila.cantidad === '' || !Number.isInteger(n) || n <= 0) continue
+    const urgente = PENDIENTES_URGENTES.includes(`${fila.modulo}:${fila.clave}`)
     for (const c of [clave, ...(TAMBIEN_EN_TARJETA[`${fila.modulo}:${fila.clave}`] ?? [])]) {
-      const actual = porModulo.get(c) || { total: 0, detalle: [] }
+      const actual = porModulo.get(c) || { total: 0, detalle: [], urgente: false }
       actual.total += n
       actual.detalle.push(textoPendiente({ ...fila, cantidad: n }))
+      if (urgente) actual.urgente = true
       porModulo.set(c, actual)
     }
   }
   return porModulo
+}
+
+// ═══ El sistema visual 2026 (handoff "Esqueleto", 28/09/2026) ═══════════
+// Qué pendientes son URGENTES (burbuja bordó en la barra; los demás, gris).
+// El diseño: cheques que vencen en 7 días, cobranzas por asentar y clientes
+// pasados de su límite (más máquina parada, pedidos y proyectos atrasados y
+// deuda vencida, que mis_pendientes() todavía no devuelve).
+export const PENDIENTES_URGENTES = ['cheques:por_vencer', 'cobranzas:por_controlar', 'administracion:clientes_sobre_limite']
+
+// El color de cada módulo: SOLO en el ícono y en detalles (barritas), nunca
+// en fondos grandes. oklch del diseño; el fondo del ícono es
+// oklch(0.955 C×0.28 H). Se evitaron los tonos 210–270 (azules).
+export const PALETA_MODULO = {
+  inicio: [0.35, 0.012, 60],
+  gastos: [0.55, 0.16, 355],
+  caja: [0.60, 0.13, 85],
+  cobranzas: [0.62, 0.15, 62],
+  cheques: [0.52, 0.16, 290],
+  'cuentas-corrientes': [0.50, 0.15, 322],
+  'materia-prima': [0.48, 0.08, 50],
+  stock: [0.52, 0.12, 130],
+  produccion: [0.52, 0.10, 180],
+  pedidos: [0.58, 0.17, 20],
+  retiros: [0.55, 0.11, 108],
+  administracion: [0.45, 0.14, 305],
+  taller: [0.42, 0.07, 150],
+  accesos: [0.50, 0.07, 205],
+  empleados: [0.60, 0.13, 340],
+  seguridad: [0.40, 0.012, 60],
+  personalizar: [0.35, 0.012, 60],
+}
+
+// { c, t }: el color y el fondo suave de un módulo, como texto de CSS armado
+// por el código (nunca viene de la base).
+export function colorDeModulo(clave) {
+  const p = Object.prototype.hasOwnProperty.call(PALETA_MODULO, clave) ? PALETA_MODULO[clave] : PALETA_MODULO.inicio
+  const [L, C, H] = p
+  return { c: `oklch(${L} ${C} ${H})`, t: `oklch(0.955 ${Math.max(C * 0.28, 0.008).toFixed(3)} ${H})` }
+}
+
+// El orden de la barra por defecto (el del diseño, 1a): lo que más se mira
+// arriba. Un módulo que no está acá va al final, en el orden del catálogo.
+export const ORDEN_BARRA = ['produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'cuentas-corrientes', 'materia-prima',
+  'stock', 'pedidos', 'retiros', 'administracion', 'taller', 'accesos', 'empleados']
+
+export function enOrdenDeBarra(modulos) {
+  const pos = c => { const i = ORDEN_BARRA.indexOf(c); return i === -1 ? 100 : i }
+  const idx = new Map(modulos.map((m, i) => [m.clave, i]))
+  return [...modulos].sort((a, b) => pos(a.clave) - pos(b.clave) || idx.get(a.clave) - idx.get(b.clave))
 }

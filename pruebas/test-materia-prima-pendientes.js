@@ -56,7 +56,7 @@ function nuevo() {
 // materia_prima.
 // La regla de la tarjeta vive en js/modulos.js desde el 27/09/2026.
 const DASH = fs.readFileSync(path.join(RAIZ, 'js', 'modulos.js'), 'utf8')
-const dash = new Function(`var console = { warn() {} }\n${extraerConst(DASH, 'MODULO_DE_PENDIENTE')}\n${extraerConst(DASH, 'TAMBIEN_EN_TARJETA')}\n${extraerFn(DASH, 'textoPendiente')}\n${extraerFn(DASH, 'agruparPendientes')}\nreturn { agruparPendientes }`)()
+const dash = new Function(`var console = { warn() {} }\n${extraerConst(DASH, 'MODULO_DE_PENDIENTE')}\n${extraerConst(DASH, 'TAMBIEN_EN_TARJETA')}\n${extraerConst(DASH, 'PENDIENTES_URGENTES')}\n${extraerFn(DASH, 'textoPendiente')}\n${extraerFn(DASH, 'agruparPendientes')}\nreturn { agruparPendientes }`)()
 
 let S0
 try { S0 = nuevo() } catch (e) {
