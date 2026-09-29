@@ -782,26 +782,16 @@
     // base no mandó 'conos' (red por si la función cambia: la pantalla
     // muestra el stock de la presentación entre todos los conos y el cono se
     // elige después).
-    // OJO: 'conos' NO trae el cono COMÚN (marca null). Se deduce como el
-    // stock de la presentación menos sus conos, solo si da más de cero. Si
-    // algún cono quedara en negativo (la base lo saca de 'conos' pero sí lo
-    // suma en stock_cajas), el común saldría de menos: arreglarlo es que la
-    // función sume también la fila de marca null.
+    // Desde la noche del 29/09/2026 'conos' trae TAMBIÉN el cono común
+    // (marca_id null, cono 'Común'): se toma de la base tal cual, sin
+    // deducirlo restando.
     function conosDesdeRpc(data) {
       if (!Array.isArray(data?.conos)) return null
       const m = new Map()
       for (const c of data.conos) {
-        if (!c?.presentacion_id || !c?.marca_id) continue
-        const k = claveLotes(c.presentacion_id, c.marca_id)
+        if (!c?.presentacion_id) continue
+        const k = claveLotes(c.presentacion_id, c.marca_id || null)
         m.set(k, (m.get(k) ?? 0) + (Number(c.stock_cajas) || 0))
-      }
-      for (const x of Array.isArray(data?.productos) ? data.productos : []) {
-        // (un stock_cajas desconocido da 0 acá y no inventa ningún común)
-        if (!x?.presentacion_id || x.con_cono !== true) continue
-        let deConos = 0
-        for (const [k, v] of m) if (k.startsWith(x.presentacion_id + '|')) deConos += v
-        const comun = (Number(x.stock_cajas) || 0) - deConos
-        if (comun > 0) m.set(claveLotes(x.presentacion_id, null), comun)
       }
       return m
     }

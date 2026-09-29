@@ -544,8 +544,9 @@ module.exports = {
         }
       ],
       // El stock por cono (29/09/2026): la base trae los conos con stock,
-      // sin el común (marca null), que la pantalla deduce: 17 − 12 = 5.
+      // también el común (marca null, cono 'Común').
       "conos": [
+        { "presentacion_id": "pr1c", "marca_id": null, "cono": "Común", "stock_cajas": 5 },
         { "presentacion_id": "pr1c", "marca_id": "m1", "cono": "LOLO", "stock_cajas": 12 }
       ]
     },

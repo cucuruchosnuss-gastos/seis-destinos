@@ -152,8 +152,8 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
 }
 {
   // El stock por cono viene de catalogo_para_retiro().conos (29/09/2026), sin
-  // pedir stock:ver: el depósito lo ve siempre. El cono común (marca null)
-  // no viene: se deduce como el stock de la presentación menos sus conos.
+  // pedir stock:ver: el depósito lo ve siempre. Desde la noche del 29/09/2026
+  // la base trae también el cono común (marca null, cono 'Común').
   const S = nuevo()
   const data = {
     productos: [
@@ -162,18 +162,18 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
       { presentacion_id: 'pr-c', producto: 'Grande', presentacion: 'Caja con cono', categoria: 'cucuruchones', con_cono: true, stock_cajas: 5 },
     ],
     conos: [
+      { presentacion_id: 'pr-a', marca_id: null, cono: 'Común', stock_cajas: 4 },
       { presentacion_id: 'pr-a', marca_id: 'm1', cono: 'LOLO', stock_cajas: 7 },
       { presentacion_id: 'pr-c', marca_id: 'm2', cono: 'CASERATO', stock_cajas: 5 },
-      { presentacion_id: 'pr-a', marca_id: null, cono: 'x', stock_cajas: 99 },
     ],
     insumos: [],
   }
   const m = S.conosDesdeRpc(data)
   chk('los conos de la base, por presentación y cono', m instanceof Map && m.get('pr-a|m1') === 7 && m.get('pr-c|m2') === 5)
-  chk('el cono común se deduce: el stock de la presentación menos sus conos', m.get('pr-a|') === 4)
-  chk('sin sobrante no hay cono común', !m.has('pr-c|'))
+  chk('el cono común viene de la base (marca null)', m.get('pr-a|') === 4)
+  chk('el común NO se deduce restando: sin fila de común no hay común', !m.has('pr-c|'))
+  chk('el común de la base se toma tal cual aunque el stock de la presentación diga otra cosa', S.conosDesdeRpc({ ...data, conos: [{ presentacion_id: 'pr-a', marca_id: null, cono: 'Común', stock_cajas: 9 }] }).get('pr-a|') === 9)
   chk('una presentación SIN cono no suma cono común', !m.has('pr-b|'))
-  chk('una fila de la base sin marca no se toma como un cono', m.get('pr-a|') !== 99)
   chk('sin la clave conos, null (el cono se elige después)', S.conosDesdeRpc({ productos: data.productos }) === null && S.conosDesdeRpc(null) === null)
   chk('un stock de presentación desconocido no inventa un cono común', !S.conosDesdeRpc({ productos: [{ presentacion_id: 'pr-x', con_cono: true, stock_cajas: null }], conos: [] }).has('pr-x|'))
   const cat = S.catalogoDesdeRpc(data, [{ id: 'm1', nombre: 'LOLO' }, { id: 'm2', nombre: 'CASERATO' }], [])
