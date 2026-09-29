@@ -76,7 +76,7 @@ function armar(rol, tareas, archivo = ARCHIVO) {
   chk('gestión: sin permiso, aviso y vuelta al dashboard', /if \(!puedeVerGestion\(\)\) \{\s*\n\s*sinAcceso\(/.test(FUENTE_G))
   chk('gestión: sinAcceso vuelve al dashboard', /window\.location\.href = '\.\.\/dashboard\.html'/.test(FUENTE_G))
   chk('planta: NINGÚN link ni redirección al dashboard (la cuenta de la tablet no tiene nada que hacer ahí)', !/dashboard\.html/.test(FUENTE))
-  chk('planta: una cuenta personal se va a la gestión con replace', /if \(destino === 'gestion'\) \{ window\.location\.replace\('produccion-gestion\.html'\)/.test(FUENTE))
+  chk('planta: una cuenta personal se va a la gestión con replace', /if \(destino === 'gestion'\) \{ olvidarPlantaInstalada\(\); window\.location\.replace\('produccion-gestion\.html'\)/.test(FUENTE))
   chk('planta: si mi_sesion_produccion falla NO se redirige: se dice y se ofrecen los links',
     /console\.error\('mi_sesion_produccion:', err\)\s*\n\s*sinAcceso\('No se pudo saber qué cuenta es esta\. Revisá la conexión\.', LINKS_SIN_SESION\)\s*\n\s*return/.test(FUENTE))
   chk('gestión: una cuenta de dispositivo se va a la planta con replace', /es_dispositivo === true\) \{ window\.location\.replace\('produccion\.html'\)/.test(FUENTE_G))

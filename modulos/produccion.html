@@ -2030,7 +2030,7 @@
 
   <script type="module">
     import { verificarSesion, iniciarSesion } from '../js/auth.js'
-    import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion, registrarError } from '../js/salud.js'
+    import { tomarAvisoLogin, esErrorDeRed as esErrorDeRedSalud, mostrarSinConexion, ocultarSinConexion, registrarError, marcarPlantaInstalada, olvidarPlantaInstalada } from '../js/salud.js'
     import {
       mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, formatearNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, sinPersonasDePrueba, FABRICA_SIN_DATOS,
@@ -10417,7 +10417,95 @@
       return true
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // EL "ATRÁS" DE ANDROID (29/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    // Caso real: con la app ANCLADA, un toque en "atrás" sacaba a Android de
+    // produccion.html —que es todo el alcance del manifest— y la tablet
+    // quedaba en blanco con el logo, clavada (anclada, no se podía salir sin
+    // el PIN de desanclaje). Regla: el "atrás" NUNCA saca de la planta.
+    //
+    // Cómo: la planta tiene SIEMPRE una entrada de historial propia arriba
+    // ({ planta: 'arriba' }) sobre su entrada base. Cada "atrás" la saca, el
+    // popstate la vuelve a poner y hace lo que corresponde ADENTRO, según
+    // dónde se esté (atrasDeLaPlanta). Chrome saltea con el botón "atrás" las
+    // entradas agregadas sin que la persona haya tocado la página; por eso
+    // también se re-arma en cada toque (armarAtras en pointerdown): una
+    // entrada puesta con un toque de por medio no se saltea.
+    const ESTADO_ATRAS = 'arriba'
+
+    function armarAtras() {
+      try {
+        if (history.state?.planta !== ESTADO_ATRAS) history.pushState({ planta: ESTADO_ATRAS }, '')
+      } catch { /* sin historial (un webview raro): nada que hacer */ }
+    }
+
+    function instalarAtras() {
+      try {
+        if (history.state?.planta !== ESTADO_ATRAS) history.replaceState({ planta: 'base' }, '')
+      } catch { /* nada */ }
+      armarAtras()
+      window.addEventListener('popstate', () => {
+        armarAtras()
+        try { atrasDeLaPlanta() } catch (err) { console.error('atrás de la planta:', err) }
+      })
+      document.addEventListener('pointerdown', armarAtras, true)
+      document.addEventListener('keydown', armarAtras, true)
+    }
+
+    const visible = id => { const el = document.getElementById(id); return !!el && !el.hidden }
+
+    // Qué hace un "atrás" adentro de la planta. Devuelve qué hizo (lo usan las
+    // pruebas): 'ventana', 'paso', 'seccion', 'inicio' o 'nada'.
+    function atrasDeLaPlanta() {
+      // Mientras carga, en el login o sin acceso: nada que cerrar.
+      if (!visible('pr-vista')) return 'nada'
+      // 1 · Una ventana abierta: se cierra (la de más arriba primero).
+      if (visible('pr-acceso-pin')) { cerrarDarAcceso(); return 'ventana' }
+      if (estado.vista === 'pr-asignar' && estado.asignar?.personaId) {
+        if (!estado.asignar.enviando) volverAsignarPin()
+        return 'ventana'
+      }
+      if (estado.vista === 'pr-quien' && estado.pin) {
+        if (!estado.pin.enviando) cerrarPin()
+        return 'ventana'
+      }
+      if (visible('pr-lote-panel')) { cerrarPanelLote(); return 'ventana' }
+      if (visible('pr-agregar-ing')) { cerrarAgregarIngrediente(); return 'ventana' }
+      if (visible('pr-otro')) { cerrarOtro(); return 'ventana' }
+      if (visible('pr-anular-masa')) { document.getElementById('pr-anular-masa').hidden = true; estado.anulando = null; return 'ventana' }
+      if (estado.vista === 'pr-hist-maq' && estado.histMaq?.anular && !estado.histMaq.anular.enviando) { cancelarAnularHist(); return 'ventana' }
+      if (visible('pr-ops-ventana')) { cerrarVentanaOps(); return 'ventana' }
+      if (visible('pr-parada-editor')) { cerrarEditorParada(); return 'ventana' }
+      if (visible('pr-corregir')) { cerrarCorregir(); return 'ventana' }
+      if (visible('pr-forzar-form')) { document.getElementById('pr-forzar-form').hidden = true; return 'ventana' }
+      if (estado.vista === 'pr-cierre' && visible('pr-cierre-confirmar')) { document.getElementById('pr-cierre-confirmar-no').click(); return 'ventana' }
+      if (estado.vista === 'pr-agregar-prod' && visible('pr-agregar-cono-form')) { document.getElementById('pr-agregar-cono-form').hidden = true; return 'ventana' }
+      // 2 · Un paso de Agregar producto: al paso anterior; del primero, a la
+      // planilla (lo mismo que "Cancelar").
+      if (estado.vista === 'pr-agregar-prod') {
+        const a = estado.agregar
+        const pasos = a ? pasosAgregar(a, estado.catalogo) : []
+        const i = pasos.findIndex(x => x.clave === a?.paso)
+        if (i > 0) { irAPasoAgregar(pasos[i - 1].clave); return 'paso' }
+        document.getElementById('pr-agregar-cancelar').click()
+        return 'seccion'
+      }
+      // 3 · Una sección: al Inicio del modo.
+      if (['pr-abrir', 'pr-abiertos', 'pr-planilla', 'pr-paradas', 'pr-cierre', 'pr-cerrado'].includes(estado.vista)) { mostrarTablero(); return 'seccion' }
+      if (['pr-receta', 'pr-hist-maq', 'pr-masas'].includes(estado.vista)) { mostrarSala(); return 'seccion' }
+      // El acceso maestro: de "Asignar PIN" a su pantalla principal.
+      if (estado.vista === 'pr-asignar' && estado.maestro) { abrirDarAcceso(); return 'seccion' }
+      // 4 · En el Inicio (el tablero, la sala, "¿Quién sos?", la pantalla del
+      // acceso maestro): no hace nada, y se dice cómo salir.
+      mostrarExito(estado.vista === 'pr-acceso' || estado.vista === 'pr-asignar'
+        ? 'Para salir del acceso maestro, usá Salir.'
+        : 'Para salir, usá Salir.')
+      return 'inicio'
+    }
+
     async function init() {
+      instalarAtras()
       document.getElementById('pr-entrar').addEventListener('submit', enviarEntrar)
       window.addEventListener('app:reanudada', () => { alReanudar() })
       // Sin sesión: el login de la tablet, acá mismo (no login.html).
@@ -10448,10 +10536,11 @@
         return
       }
       const destino = destinoDeSesion(ses)
-      if (destino === 'gestion') { window.location.replace('produccion-gestion.html'); return }
+      if (destino === 'gestion') { olvidarPlantaInstalada(); window.location.replace('produccion-gestion.html'); return }
       if (destino === 'sin_fabrica') { sinAcceso('Esta tablet no tiene una fábrica asignada. Pedí que la configuren desde Empleados.'); return }
       if (destino === 'sin_permiso') { sinAcceso('Esta tablet no tiene permiso para cargar la producción de su fábrica. Pedí que se lo den en Accesos.'); return }
       estado.sesionPlanta = ses
+      marcarPlantaInstalada()
       await cargarPermisoStock()
       document.getElementById('pr-cargando').hidden = true
       document.getElementById('pr-vista').hidden = false

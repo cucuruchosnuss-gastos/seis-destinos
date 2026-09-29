@@ -275,7 +275,51 @@ export async function revisarAlVolver(origen = 'volver') {
 
 // ── Instalar ─────────────────────────────────────────────────────────────────
 
+// ── LA PLANTA NUNCA QUEDA AFUERA DE SU ALCANCE (29/09/2026) ─────────────────
+// Red de seguridad del "atrás" de Android: si la pestaña de la PLANTA
+// INSTALADA (anclada en la tablet) termina en otra página de la app, vuelve
+// sola a la planta en vez de quedarse en blanco. La planta lo anota en la
+// pestaña (sessionStorage, que es de esa pestaña) solo para una cuenta de
+// dispositivo en la app instalada; al mandar a la gestión lo borra.
+export const CLAVE_PLANTA_INSTALADA = 'sd_planta_instalada'
+const RUTA_PLANTA = '/modulos/produccion.html'
+
+export function esAppInstalada(win = globalThis) {
+  try {
+    if (win.navigator?.standalone === true) return true
+    return ['standalone', 'fullscreen', 'minimal-ui'].some(m => win.matchMedia?.(`(display-mode: ${m})`)?.matches === true)
+  } catch { return false }
+}
+
+export function marcarPlantaInstalada(win = globalThis) {
+  try { if (esAppInstalada(win)) win.sessionStorage.setItem(CLAVE_PLANTA_INSTALADA, '1') } catch { /* nada */ }
+}
+
+export function olvidarPlantaInstalada(win = globalThis) {
+  try { win.sessionStorage.removeItem(CLAVE_PLANTA_INSTALADA) } catch { /* nada */ }
+}
+
+// ¿Hay que volver a la planta? Devuelve la dirección, o null.
+export function destinoRedPlanta(win = globalThis, base = import.meta.url) {
+  try {
+    if (win.sessionStorage?.getItem(CLAVE_PLANTA_INSTALADA) !== '1') return null
+    const planta = new URL('..' + RUTA_PLANTA, base)
+    const ruta = String(win.location?.pathname ?? '')
+    if (ruta === planta.pathname) return null
+    // El segundo factor lo pide verificarSesion() y vuelve solo: no se corta.
+    if (ruta.endsWith('/mfa.html')) return null
+    return planta.href
+  } catch { return null }
+}
+
+export function volverALaPlantaSiSeSalio(win = globalThis) {
+  const destino = destinoRedPlanta(win)
+  if (destino) { try { win.location.replace(destino) } catch { /* nada */ } }
+  return destino
+}
+
 export function instalarSalud(supabase, win = globalThis) {
+  volverALaPlantaSiSeSalio(win)
   if (!supabase || cliente) return
   cliente = supabase
   rpcOriginal = supabase.rpc.bind(supabase)
