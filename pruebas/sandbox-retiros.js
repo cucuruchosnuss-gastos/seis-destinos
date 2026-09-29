@@ -20,7 +20,7 @@ const FUNCIONES_BASE = [
   'leerPreferencia', 'guardarPreferencia', 'guardarBorrador', 'leerBorrador', 'mostrarVista',
   'htmlLogo', 'htmlEmpresas', 'htmlEmpresaActual', 'pintarEmpresaActual', 'mostrarEleccionEmpresa',
   'formTieneDatos', 'elegirEmpresa', 'aplicarEmpresa', 'confirmarCambioEmpresa', 'cancelarCambioEmpresa', 'pedirCambioEmpresa',
-  'leerClientes', 'clientesFiltrados', 'leerCatalogo', 'puedeVerStockTerminado', 'leerStockConos', 'stockPorCono', 'catalogoDesdeRpc', 'insumoDe', 'stockProducto', 'opcionesCatalogo', 'ordenCategoria', 'gruposCatalogo', 'presentacionesDe',
+  'leerClientes', 'clientesFiltrados', 'leerCatalogo', 'conosDesdeRpc', 'catalogoDesdeRpc', 'insumoDe', 'stockProducto', 'opcionesCatalogo', 'ordenCategoria', 'gruposCatalogo', 'presentacionesDe',
   'marcasFiltradas', 'textoCono', 'descripcionRenglon', 'asegurarDatosEmpresa',
   'claveLotesRenglon', 'lotesDeRetiro', 'lotesDeInsumo', 'cantidadPedida', 'asignacion', 'completarConLosMasViejos', 'lotesParaBase',
   'listaLotesDe', 'asegurarLotesDeRenglones', 'leerLotes', 'leerLotesInsumo', 'asegurarLotes',
@@ -48,7 +48,7 @@ const FUNCIONES_BASE = [
 
 const CONSTANTES_BASE = [
   'ZONA_AR', 'DECIMALES_CAJAS', 'CLAVE_EMPRESA', 'CLAVE_BORRADOR', 'VISTAS', 'SUBTITULO_DE_VISTA', 'claveLotes', 'claveLotesInsumo',
-  'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'TOPE_FILAS', 'GRUPOS_RETIRO', 'hayStock', 'CLASE_GRUPO',
+  'CATEGORIAS_RETIRO', 'TITULO_SIN_CATEGORIA', 'TITULO_INSUMOS', 'GRUPOS_RETIRO', 'hayStock', 'CLASE_GRUPO',
   'MARCA_A_ELEGIR', 'LOTE_FALTANTE', 'nombreLote', 'r3', 'renglonConLotes', 'TEXTO_FALTANTE', 'NOMBRE_UNIDAD_HOJA',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
 ]
@@ -135,7 +135,7 @@ const PRELUDIO = `
     ],
     fabrica: FABRICA_SIN_DATOS,
     empresaId: null, empresaPendiente: null, vista: null, unidadBarra: null,
-    clientes: null, errorClientes: null, catalogo: null, catalogoEmpresa: null, errorCatalogo: null, stockConos: undefined,
+    clientes: null, errorClientes: null, catalogo: null, catalogoEmpresa: null, errorCatalogo: null,
     lotes: new Map(), form: null, confirmando: false, hecho: null, mis: null, errorMis: null, mio: null, enviando: false,
   }
 `

@@ -52,9 +52,13 @@ function armar({ personal = PERSONAL, respuestas = {} } = {}) {
   return S
 }
 const rpcs = (S, n) => S.__llamadas.rpc.filter(l => l[0] === n)
+// Planta v2: con el último número el PIN se manda solo (la ventana no tiene
+// "Entrar"). Tocar 'entrar' después mandaría el panel vacío y taparía el
+// mensaje con "Faltan números".
 async function tipear(S, pin) {
-  for (const d of String(pin)) S.teclaPin(d)
-  return S.teclaPin('entrar')
+  let r
+  for (const d of String(pin)) r = S.teclaPin(d)
+  return r
 }
 
 // ── d) El acceso maestro, sin "¿Quién sos?" ──────────────────────────────
@@ -64,11 +68,14 @@ esperas.push((async () => {
   // La planta con dos modos (28/09/2026): el acceso maestro está en UN solo
   // lugar, abajo de los nombres de "¿Quién sos?" de Producción.
   chk('el acceso maestro está al pie de "¿Quién sos?"',
-    /<div class="pr-quien__pie">[\s\S]*?<button type="button" class="pr-link" id="pr-btn-maestro">Acceso maestro<\/button>/.test(FUENTE))
+    /<div class="pr-quien__pie">[\s\S]*?<button type="button" class="pr-quien__maestro" id="pr-btn-maestro">(<svg[\s\S]*?<\/svg>)?Acceso maestro<\/button>/.test(FUENTE))
   chk('… y se escucha', /getElementById\('pr-btn-maestro'\)\.addEventListener\('click', abrirMaestro\)/.test(FUENTE))
   chk('… y no hay otro atajo en la barra', !/pr-btn-barra-maestro/.test(FUENTE))
   await S.abrirMaestro()
-  chk('abre SOLO el teclado: la columna de la lista se esconde', S.estado.pin?.modo === 'maestro' && S.__doc.getElementById('pr-quien-col').hidden === true)
+  // Planta v2 (diseño 10a): la ventana del PIN maestro se abre sobre la
+  // grilla, que queda detrás (pr-quien--maestro), con solo el teclado.
+  chk('abre SOLO el teclado: la ventana del PIN maestro, sobre la grilla', S.estado.pin?.modo === 'maestro' &&
+    S.__doc.getElementById('pr-pin').hidden === false && S.__doc.getElementById('pr-quien').classList.contains('pr-quien--maestro'))
   chk('… con la vista de ¿Quién sos? de fondo pero sin pintar la lista', S.estado.vista === 'pr-quien' && S.__doc.getElementById('pr-quien-lista').innerHTML === '')
   chk('… trae el personal para saber quién es maestro', rpcs(S, 'personal_produccion').length === 1)
   chk('con UN solo maestro, ya está elegido', S.estado.pin.personaId === 'e-jefa')
@@ -76,8 +83,16 @@ esperas.push((async () => {
   await tipear(S, '48271936')
   const l = rpcs(S, 'verificar_pin_maestro')
   chk('se verifica UNA vez, con esa persona', l.length === 1 && l[0][1].p_empleado_id === 'e-jefa' && l[0][1].p_pin === '48271936', JSON.stringify(l))
-  chk('verificado, entra DIRECTO al modo como esa persona', S.estado.maestro?.id === 'e-jefa' && S.estado.persona?.id === 'e-jefa' && S.estado.vista === 'pr-produccion', S.estado.vista)
-  chk('… la columna de la lista vuelve a verse (para la próxima)', S.__doc.getElementById('pr-quien-col').hidden === false)
+  // Planta v2: verificado, va a la PANTALLA del acceso maestro (Dar acceso
+  // por hoy), y desde su banda entra a un modo como esa persona.
+  chk('verificado, abre la pantalla del acceso maestro', S.estado.maestro?.id === 'e-jefa' && S.estado.vista === 'pr-acceso' && S.estado.pin === null, S.estado.vista)
+  chk('… ¿Quién sos? (con la ventana del PIN adentro) se esconde, y la grilla deja de estar de fondo',
+    S.__doc.getElementById('pr-quien').hidden === true && S.__doc.getElementById('pr-acceso').hidden === false &&
+    !S.__doc.getElementById('pr-quien').classList.contains('pr-quien--maestro'))
+  await S.entrarComoMaestro('produccion')
+  chk('"Ir a Producción" entra DIRECTO al modo como esa persona', S.estado.persona?.id === 'e-jefa' && S.estado.vista === 'pr-produccion', S.estado.vista)
+  chk('… los botones de la banda llevan a cada modo', /data-maestro-modo="produccion">Ir a Producción</.test(FUENTE) && /data-maestro-modo="masa">Ir a Sala de masa</.test(FUENTE) &&
+    /closest\('\[data-maestro-modo\]'\)/.test(FUENTE) && /entrarComoMaestro\(/.test(FUENTE.slice(FUENTE.indexOf("closest('[data-maestro-modo]')"))))
   chk('… la barra lateral dice que es el acceso maestro', /Acceso maestro/.test(S.htmlLateral()))
   chk('… y no ofrece el acceso maestro otra vez', !/abrirMaestro|pr-btn-maestro/.test(S.htmlLateral()))
   // Cambiar de modo con el maestro activo no pasa por ¿Quién sos?.
@@ -157,7 +172,11 @@ esperas.push((async () => {
   chk('se le da el acceso aunque ya tenga el puesto fijo', o && o.p_empleado_id === 'e-juan' && o.p_puesto === 'masero' && o.p_maestro_id === 'e-jefa', JSON.stringify(o))
   chk('… y se muestra su PIN de un día, una vez', S.__doc.getElementById('pr-acceso-pin-numero').textContent === '5831' && S.__doc.getElementById('pr-acceso-pin').hidden === false)
   S.cerrarDarAcceso()
-  chk('al cerrar, el PIN se borra', S.__doc.getElementById('pr-acceso-pin-numero').textContent === '' && S.estado.acceso === null)
+  // Planta v2: con el maestro activo, cerrar vuelve a la pantalla del acceso
+  // maestro con un formulario nuevo (sin persona ni puesto elegidos).
+  chk('al cerrar, el PIN se borra', S.__doc.getElementById('pr-acceso-pin-numero').textContent === '' &&
+    S.__doc.getElementById('pr-acceso-pin').hidden === true && S.estado.acceso?.personaId === null && S.estado.acceso?.pin == null &&
+    !JSON.stringify(S.estado).includes('5831'))
   // Con PIN y el puesto fijo: nada que resolver, y se dice.
   S.abrirDarAcceso()
   S.estado.acceso.personaId = 'e-ana'
@@ -183,9 +202,12 @@ esperas.push((async () => {
   chequearMarcas(chk, 'nota de dar acceso', S.htmlNotaAcceso(mala, { personaId: 'e2', puesto: 'masero' }), ['nombreM2'])
   S.sinAcceso(marca('texto'))
   chequearMarcas(chk, 'cartel sin acceso', S.__doc.getElementById('pr-sin-acceso').innerHTML, ['texto'])
+  // Planta v2: la barra lateral ya no nombra la unidad (va en el título de la
+  // cabecera, que se escribe con textContent).
   S.estado.unidades = new Map([['u-cn', marca('unidad')]])
   S.estado.persona = { id: 'e-jefa', nombre: marca('maestra'), puesto: 'encargado' }
-  chequearMarcas(chk, 'barra con el acceso maestro', S.htmlLateral(), ['unidad', 'maestra'])
+  chequearMarcas(chk, 'barra con el acceso maestro', S.htmlLateral(), ['maestra'])
+  chk('la cabecera (con la unidad) se escribe con textContent', /getElementById\('pr-cab-titulo'\)\s+t\.textContent = c\.titulo/.test(FUENTE))
 })())
 
 // ── Sin fábrica / sin permiso: se dice, sin volver al dashboard ─────────
@@ -210,13 +232,14 @@ esperas.push((async () => {
 
 // ── g) "← Atrás", arriba a la izquierda ───────────────────────────────────
 {
-  const cab = (FUENTE.match(/<div class="pr-planilla-cab">([\s\S]*?)<div class="pr-planilla-cab__botones">/) || [])[1] ?? ''
-  chk('planilla: "← Atrás" es lo PRIMERO de la cabecera', /^\s*<button type="button" class="pr-btn pr-btn--secundario pr-atras" id="pr-planilla-volver"><span aria-hidden="true">←<\/span> Atrás<\/button>/.test(cab), cab.slice(0, 160))
+  // Planta v2: la planilla ya no tiene "← Atrás" (#pr-planilla-volver se
+  // retiró a propósito): se navega con la barra lateral (Inicio, Planilla…).
+  chk('planilla: sin "← Atrás" propio, se vuelve por la barra lateral', !/id="pr-planilla-volver"/.test(FUENTE) &&
+    /data-seccion="\$\{sec\.id\}"/.test(FUENTE) && /\{ id: 'inicio', texto: 'Inicio'/.test(FUENTE))
   chk('… y no quedó "‹ Máquinas"', !/Máquinas<\/button>/.test(FUENTE))
   const masas = (FUENTE.match(/<div class="pr-fila-titulo pr-masas__titulo">([\s\S]*?)<\/h1>/) || [])[1] ?? ''
   chk('masas del turno: "← Atrás" antes del título', /^\s*<button type="button" class="pr-btn pr-btn--secundario pr-atras" id="pr-masas-volver"><span aria-hidden="true">←<\/span> Atrás<\/button>\s*<h1/.test(masas), masas.slice(0, 160))
-  chk('los dos siguen yendo a donde iban', /getElementById\('pr-planilla-volver'\)\.addEventListener\('click', mostrarTablero\)/.test(FUENTE) &&
-    /getElementById\('pr-masas-volver'\)\.addEventListener\('click', mostrarSala\)/.test(FUENTE))
+  chk('sigue yendo a donde iba', /getElementById\('pr-masas-volver'\)\.addEventListener\('click', mostrarSala\)/.test(FUENTE))
 }
 
 // ── h) El manifest de la planta ───────────────────────────────────────────
@@ -242,7 +265,9 @@ esperas.push((async () => {
     }
   }
   chk('la planta usa ESE manifest, no el de la app', /<link rel="manifest" href="\.\.\/manifest\.webmanifest">/.test(FUENTE) && !/href="\.\.\/manifest\.json"/.test(FUENTE))
-  chk('theme-color del modo Producción', /<meta name="theme-color" content="#3F4655">/.test(FUENTE))
+  // Planta v2: el color del modo Producción es el token --p-prod.
+  const prod = (FUENTE.match(/--p-prod: (#[0-9A-Fa-f]{6});/) || [])[1]
+  chk('theme-color del modo Producción', !!prod && new RegExp(`<meta name="theme-color" content="${prod}">`).test(FUENTE), prod)
   chk('apple-touch-icon a la de 192', /<link rel="apple-touch-icon" href="\.\.\/icons\/planta-192\.png">/.test(FUENTE))
   const gestion = fs.readFileSync(path.join(RAIZ, 'modulos/produccion-gestion.html'), 'utf8')
   chk('la gestión sigue con el manifest de la app', /<link rel="manifest" href="\.\.\/manifest\.json">/.test(gestion) && !/manifest\.webmanifest/.test(gestion))

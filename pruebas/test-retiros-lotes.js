@@ -2,8 +2,9 @@
 // (modulos/retiros.html, 28/09/2026).
 //
 // - El catálogo en TRES grupos: "Producto terminado · SIN CONO", "· CON CONO"
-//   (cada cono con su stock, leído de stock_terminado_movimientos con
-//   stock:ver) y "Materia prima e insumos". Lo que no tiene stock aparece al
+//   (cada cono con su stock, de catalogo_para_retiro().conos, sin pedir
+//   stock:ver —29/09/2026—; el cono común se deduce) y "Materia prima e
+//   insumos". Lo que no tiene stock aparece al
 //   buscar, marcado "sin stock", y se puede elegir.
 // - Los lotes del renglón en lista, los más viejos primero, con un campo por
 //   lote; "Completar con los más viejos" reparte lo pedido; siempre se ve el
@@ -88,8 +89,9 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('los tres colores son distintos (grafito, amarillo, marrón)', /\.rt-grupo--sin-cono \{[^}]*--grafito/.test(css) && /\.rt-grupo--con-cono \{[^}]*--amarillo/.test(css) && /\.rt-grupo--insumos  \{[^}]*--marron/.test(css))
 }
 {
-  // Sin el stock por cono (sin permiso, o falló): una opción por presentación
-  // con el stock entre todos los conos, y el cono se elige después.
+  // Si la base no mandara 'conos' (red por si la función cambia): una opción
+  // por presentación con el stock entre todos los conos, y el cono se elige
+  // después.
   const S = nuevo()
   conEmpresa(S)
   const con = S.gruposCatalogo(CAT, '', null).find(x => x.tipo === 'con_cono').lista
@@ -149,33 +151,44 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
     () => chk('si los insumos sin stock no se pueden leer, el catálogo sale igual', false)))
 }
 {
+  // El stock por cono viene de catalogo_para_retiro().conos (29/09/2026), sin
+  // pedir stock:ver: el depósito lo ve siempre. El cono común (marca null)
+  // no viene: se deduce como el stock de la presentación menos sus conos.
   const S = nuevo()
-  S.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', { unidades: ['u-n'] }]])
-  S.__tablas.stock_terminado_movimientos = [
-    { presentacion_id: 'pr-a', marca_id: 'm1', cajas: 10 }, { presentacion_id: 'pr-a', marca_id: 'm1', cajas: -3 },
-    { presentacion_id: 'pr-a', marca_id: null, cajas: 4 },
-  ]
-  esperas.push(S.leerStockConos('u-n').then(m => {
-    chk('con stock:ver en la empresa, el stock por cono se suma por presentación y cono', m instanceof Map && m.get('pr-a|m1') === 7 && m.get('pr-a|') === 4)
-    const q = S.__llamadas.consultas.find(x => x[0] === 'stock_terminado_movimientos')
-    chk('solo de esa empresa', q && q[1].some(f => f[0] === 'eq' && f[1] === 'unidad_negocio_id' && f[2] === 'u-n'))
-  }))
+  const data = {
+    productos: [
+      { presentacion_id: 'pr-a', producto: 'Mini', presentacion: 'Caja con cono', categoria: 'cucuruchones', con_cono: true, stock_cajas: 11 },
+      { presentacion_id: 'pr-b', producto: 'Mini', presentacion: 'Caja', categoria: 'cucuruchones', con_cono: false, stock_cajas: 30 },
+      { presentacion_id: 'pr-c', producto: 'Grande', presentacion: 'Caja con cono', categoria: 'cucuruchones', con_cono: true, stock_cajas: 5 },
+    ],
+    conos: [
+      { presentacion_id: 'pr-a', marca_id: 'm1', cono: 'LOLO', stock_cajas: 7 },
+      { presentacion_id: 'pr-c', marca_id: 'm2', cono: 'CASERATO', stock_cajas: 5 },
+      { presentacion_id: 'pr-a', marca_id: null, cono: 'x', stock_cajas: 99 },
+    ],
+    insumos: [],
+  }
+  const m = S.conosDesdeRpc(data)
+  chk('los conos de la base, por presentación y cono', m instanceof Map && m.get('pr-a|m1') === 7 && m.get('pr-c|m2') === 5)
+  chk('el cono común se deduce: el stock de la presentación menos sus conos', m.get('pr-a|') === 4)
+  chk('sin sobrante no hay cono común', !m.has('pr-c|'))
+  chk('una presentación SIN cono no suma cono común', !m.has('pr-b|'))
+  chk('una fila de la base sin marca no se toma como un cono', m.get('pr-a|') !== 99)
+  chk('sin la clave conos, null (el cono se elige después)', S.conosDesdeRpc({ productos: data.productos }) === null && S.conosDesdeRpc(null) === null)
+  chk('un stock de presentación desconocido no inventa un cono común', !S.conosDesdeRpc({ productos: [{ presentacion_id: 'pr-x', con_cono: true, stock_cajas: null }], conos: [] }).has('pr-x|'))
+  const cat = S.catalogoDesdeRpc(data, [{ id: 'm1', nombre: 'LOLO' }, { id: 'm2', nombre: 'CASERATO' }], [])
+  chk('el catálogo lleva los conos', cat.conos instanceof Map && cat.conos.get('pr-a|m1') === 7)
+  const h = S.htmlProductosRenglon(0, cat, '')
+  chk('sin pasar nada, las opciones usan los conos del catálogo', /data-presentacion="pr-a" data-marca="m1"/.test(h) && /hay 7 cajas/.test(h) &&
+    /data-presentacion="pr-a" data-marca=""/.test(h) && !/entre todos los conos/.test(h))
+  const sinConos = S.catalogoDesdeRpc({ productos: data.productos }, [], [])
+  chk('sin conos de la base, la red: entre todos los conos', sinConos.conos === null && /hay 11 cajas entre todos los conos/.test(S.htmlProductosRenglon(0, sinConos, '')))
+  chk('ya no se lee stock_terminado_movimientos ni se pide stock:ver', !/stock_terminado_movimientos/.test(src.slice(src.indexOf('<script'))) && !/leerStockConos|puedeVerStockTerminado/.test(src))
   const T = nuevo()
-  T.estado.misTareas = new Map([['retiros:cargar', { unidades: ['u-n'] }], ['stock:ver', { unidades: ['u-d'] }]])
-  esperas.push(T.leerStockConos('u-n').then(m => {
-    chk('sin stock:ver en ESA empresa, no se consulta (null)', m === null && !T.__llamadas.consultas.some(c => c[0] === 'stock_terminado_movimientos'))
-  }))
-  const U = nuevo()
-  U.estado.misTareas = new Map([['produccion:ver', { todas: true }]])
-  chk('Producción también deja leer el stock terminado', U.puedeVerStockTerminado('u-n') === true)
-  const V = nuevo()
-  V.estado.misTareas = new Map([['stock:ver', { todas: true }]])
-  V.__tablas.stock_terminado_movimientos = Array.from({ length: 1000 }, () => ({ presentacion_id: 'x', marca_id: null, cajas: 1 }))
-  esperas.push(V.leerStockConos('u-n').then(m => chk('al tope de 1000 filas no se inventa: null', m === null)))
-  const W = nuevo()
-  W.estado.misTareas = new Map([['stock:ver', { todas: true }]])
-  W.__tablas.stock_terminado_movimientos = () => ({ data: null, error: { message: 'x' } })
-  esperas.push(W.leerStockConos('u-n').then(m => chk('si falla, null (sin número de menos)', m === null)))
+  T.__setRpc(async (n) => n === 'catalogo_para_retiro' ? { data, error: null } : { data: null, error: null })
+  T.__tablas.insumos = []
+  esperas.push(T.leerCatalogo('u-n').then(c => chk('leerCatalogo trae los conos de catalogo_para_retiro', c.conos instanceof Map && c.conos.get('pr-c|m2') === 5 &&
+    !T.__llamadas.consultas.some(q => q[0] === 'stock_terminado_movimientos'))))
 }
 
 // ── Los lotes de un insumo: el stock SIN LOTE se ofrece, "SIN STOCK" no ─────

@@ -31,19 +31,22 @@ correrMutacionesProduccion({
     { nombre: 'gestión: sin permiso se queda', de: '      if (!puedeVerGestion()) {\n        sinAcceso(', a: '      if (false) {\n        sinAcceso(' },
     { nombre: 'gestión: el dispositivo no va a la planta', de: "if (ses && ses.es_dispositivo === true) { window.location.replace('produccion.html'); return }", a: 'if (false) { return }' },
 
-    // La tablet real (28/09/2026): los mínimos nuevos y el bloque que los pone.
-    { nombre: 'botones de 40 px', de: 'body { --pr-alto-boton: 44px; font-size: 15px; }', a: 'body { --pr-alto-boton: 40px; font-size: 15px; }' },
-    { nombre: 'texto base de 14 px', de: 'body { --pr-alto-boton: 44px; font-size: 15px; }', a: 'body { --pr-alto-boton: 44px; font-size: 14px; }' },
-    { nombre: 'un texto a 10 px', de: '.pr-rec__lote-nota { font-size: 0.6875rem; }', a: '.pr-rec__lote-nota { font-size: 0.625rem; }' },
-    { nombre: 'un botón de 28 px', de: '.pr-lp__filtro {\n      min-height: 30px;', a: '.pr-lp__filtro {\n      min-height: 28px;' },
-    { nombre: 'el teclado del PIN se achica', de: '.pr-tecla { min-height: clamp(48px, 9.5vh, 72px);', a: '.pr-tecla { min-height: clamp(40px, 9.5vh, 72px);' },
-    { nombre: 'el tablero vuelve a dos columnas', de: '.pr-tablero { gap: 0.5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }', a: '.pr-tablero { gap: 0.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }' },
-    { nombre: 'la barra lateral se angosta sin correr la página', de: 'body.pr-con-lateral .pr-app { margin-left: 208px; }', a: 'body.pr-con-lateral .pr-app { margin-left: 180px; }' },
-    { nombre: 'la barra pasa arriba también apaisada', de: '@media (orientation: portrait), (max-width: 760px) {\n      .pr-lateral { position: static;', a: '@media (max-width: 1000px) {\n      .pr-lateral { position: static;' },
-    { nombre: 'el lote de la tarjeta puede partirse', de: '.pr-maquina__lote { font-size: 1.875rem; line-height: 1.05; white-space: nowrap; }', a: '.pr-maquina__lote { font-size: 1.875rem; line-height: 1.05; }' },
-    { nombre: 'las palabras se cortan', de: '.pr-app, .pr-lateral { overflow-wrap: normal; word-break: normal; hyphens: manual; }', a: '.pr-app, .pr-lateral { overflow-wrap: anywhere; }' },
-    { nombre: 'la tablet parada deja de ir última', de: '    /* ══ LA TABLET PARADA', a: '    /* ══ LA TABLET PARADA */\n    /* ══ OTRO BLOQUE */\n    /* ══ LA TABLET PARADA' },
-    { nombre: 'los modos no se reparten el ancho', de: '      flex: 1 1 0; min-width: 0; min-height: 56px;', a: '      flex: 0 0 auto; min-width: 0; min-height: 56px;' },
-    { nombre: 'el nombre del modo pierde el espaciado', de: '      font: inherit; font-size: 1.375rem; font-weight: 800; letter-spacing: 0.1em;', a: '      font: inherit; font-size: 1.375rem; font-weight: 800;' },
+    // Planta v2 (28/09/2026): el <style> del handoff (tokens --p-*, px, la
+    // tablet parada con @media (orientation: portrait)). Se fueron los
+    // bloques "LA TABLET REAL" / "LA TABLET PARADA" y la barra de modos, así
+    // que "la tablet parada deja de ir última" y "los modos no se reparten el
+    // ancho" no tienen qué mutar.
+    { nombre: 'botones de 40 px', de: '    .pr-btn {\n      min-height: 44px;', a: '    .pr-btn {\n      min-height: 40px;' },
+    { nombre: 'texto base de 14 px', de: '      font-size: 15px;\n      line-height: 1.25;', a: '      font-size: 14px;\n      line-height: 1.25;' },
+    { nombre: 'la acción principal se achica', de: '--p-prim: 54px;', a: '--p-prim: 44px;' },
+    { nombre: 'un texto a 10 px', de: '.pr-lat__modo { font-size: 11px;', a: '.pr-lat__modo { font-size: 10px;' },
+    { nombre: 'un botón de 28 px', de: '.pr-rec__otro, .pr-rec__quitar { min-height: 32px;', a: '.pr-rec__otro, .pr-rec__quitar { min-height: 26px;' },
+    { nombre: 'el teclado del PIN se achica', de: '--p-tecla: 58px;', a: '--p-tecla: 40px;' },
+    { nombre: 'el tablero pierde las 6 columnas', de: 'grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: 1fr;', a: 'grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr;' },
+    { nombre: 'la barra lateral se angosta', de: 'width: 200px; flex-shrink: 0; background: var(--p-tarjeta); border-right', a: 'width: 180px; flex-shrink: 0; background: var(--p-tarjeta); border-right' },
+    { nombre: 'la barra pasa arriba también apaisada', de: '@media (orientation: portrait) {\n      .pr-lateral {\n        width: auto;', a: '@media (max-width: 1100px) {\n      .pr-lateral {\n        width: auto;' },
+    { nombre: 'el lote de la tarjeta puede partirse', de: '.pr-maquina__lote { display: flex; align-items: baseline; gap: 8px; }', a: '.pr-maquina__lote { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }' },
+    { nombre: 'las palabras se cortan', de: '.pr-persona__nombre { font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }', a: '.pr-persona__nombre { font-size: 17px; font-weight: 700; word-break: break-all; }' },
+    { nombre: 'el nombre del modo pierde la negrita', de: '.pr-banda-modo__nombre { font-family: var(--p-titulo); font-size: 21px; font-weight: 800;', a: '.pr-banda-modo__nombre { font-family: var(--p-titulo); font-size: 21px; font-weight: 500;' },
   ],
 })

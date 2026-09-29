@@ -46,7 +46,8 @@ correrMutacionesProduccion({
     { nombre: 'seguir sin caja avanza igual', de: "      if (!a.cajaElegida) { a.faltaCaja = true; return pintarAgregar() }", a: '' },
     { nombre: 'confirmar sin caja manda igual', de: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }", a: '' },
     { nombre: 'la caja puesta no saltea su paso (con cono)', de: "      a.paso = a.cajaElegida ? 'cajas' : 'caja'\n", a: "      a.paso = 'caja'\n" },
-    { nombre: 'la caja puesta no saltea su paso (sin cono)', de: "      a.paso = a.conCono ? 'cono' : (a.cajaElegida ? 'cajas' : 'caja')", a: "      a.paso = a.conCono ? 'cono' : 'cajas'" },
+    // Planta v2: la caja puesta tampoco dibuja su paso en la columna.
+    { nombre: 'la caja puesta dibuja su paso igual', de: "      if (a.paso === 'caja' || (a.presentacionId && !a.cajaElegida)) {", a: '      if (true) {' },
     { nombre: 'el paso de la caja no se dibuja', de: "          : a.paso === 'caja' ? htmlPasoCaja(a, cat)\n", a: '' },
     { nombre: 'la caja no es un paso', de: "      pasos.push({ clave: 'caja', titulo: 'Caja',", a: "      if (false) pasos.push({ clave: 'caja', titulo: 'Caja'," },
     { nombre: 'el error de caja se muestra antes de intentar', de: "      if (a.faltaCaja) h += '<p class=\"pr-error\">Elegí una caja.</p>'", a: "      h += '<p class=\"pr-error\">Elegí una caja.</p>'" },
@@ -63,7 +64,8 @@ correrMutacionesProduccion({
     { nombre: 'el insumo sin la marca', de: "      return ins.marca ? `${ins.nombre} ${ins.marca}` : String(ins.nombre ?? '')", a: "      return String(ins.nombre ?? '')" },
     { nombre: 'el consumo con el embolsado sin forzar', de: "      const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))\n      h += !a.cajaElegida", a: "      const porCaja = consumoPorCaja(cat, a.presentacionId, a.cajaId, a.embolsado)\n      h += !a.cajaElegida" },
     { nombre: 'el total en vivo no se dibuja', de: "      document.getElementById('pr-agregar-empaque').innerHTML = a.paso === 'cajas' ? htmlEmpaqueAgregar(a, cat) : ''", a: "      document.getElementById('pr-agregar-empaque').innerHTML = ''" },
-    { nombre: 'sin cajas configuradas no se avisa al lado de las cajas', de: "      if (sinCajas) h += '<div class=\"pr-aviso pr-aviso--grave\">", a: "      if (false) h += '<div class=\"pr-aviso pr-aviso--grave\">" },
+    { nombre: 'sin cajas configuradas no se avisa al lado de las cajas', de: "${sinCajas ? 'Esta presentación no tiene cajas configuradas: no se descuenta la caja' :", a: "${false ? '' :" },
+    { nombre: 'sin cajas configuradas la chapa no va en bordó', de: "class=\"pr-ag__caja${sinCajas ? ' pr-ag__caja--falta' : ''}\"", a: 'class="pr-ag__caja"' },
     // ── Lo que se lee y lo que viaja ────────────────────────────────────
     { nombre: 'los conos sin doble_bolsa', de: ".select('id, nombre, estado_alta, doble_bolsa')", a: ".select('id, nombre, estado_alta')" },
     { nombre: 'la unidad sin su caja', de: ".select('id, caja_predeterminada_id')", a: ".select('id')" },
@@ -74,7 +76,12 @@ correrMutacionesProduccion({
     // ── Parte 2: verlo después ──────────────────────────────────────────
     { nombre: 'la planilla no trae la caja', de: "unidades, anulado, caja_insumo_id, embolsado')\n        .eq('turno_id', turnoId).order('orden')", a: "unidades, anulado')\n        .eq('turno_id', turnoId).order('orden')" },
     { nombre: 'el historial no trae la caja', de: "unidades, anulado, caja_insumo_id, embolsado').eq('turno_id', turnoId).order('orden'))", a: "unidades, anulado').eq('turno_id', turnoId).order('orden'))" },
-    { nombre: 'el renglón de la planilla no dice su empaque', de: "partesProducido({ ...d, caja, embolsado: it.embolsado })", a: "partesProducido({ ...d, caja: '', embolsado: null })" },
+    // Planta v2: el renglón dice caja y bolsa en su columna, y el texto
+    // entero (partesProducido) en el title.
+    { nombre: 'el title del renglón no dice su empaque', de: "partesProducido({ ...d, caja, embolsado: it.embolsado })", a: "partesProducido({ ...d, caja: '', embolsado: null })" },
+    { nombre: 'la columna del renglón no dice su caja', de: "      const envase = caja || (d ? envasePresentacion(d.pr, d.producto) : '')", a: "      const envase = d ? envasePresentacion(d.pr, d.producto) : ''" },
+    { nombre: 'la columna del renglón no dice su bolsa', de: "      const bolsa = it.embolsado && it.embolsado !== 'ninguno' ? (TEXTO_EMBOLSADO[it.embolsado] ?? it.embolsado) : ''", a: "      const bolsa = ''" },
+    { nombre: 'la columna del renglón nombra "sin bolsa"', de: "      const bolsa = it.embolsado && it.embolsado !== 'ninguno' ? (TEXTO_EMBOLSADO[it.embolsado] ?? it.embolsado) : ''", a: "      const bolsa = it.embolsado ? (TEXTO_EMBOLSADO[it.embolsado] ?? it.embolsado) : ''" },
     { nombre: 'el sublote del historial no dice su empaque', de: "        caja: nombreCajaItem(p, d.insumosEmpaque), embolsado: p.embolsado,", a: "        caja: '', embolsado: null," },
     { nombre: 'la caja del renglón no se nombra', de: "      return ins ? textoInsumoEmpaque(ins) : 'caja sin nombre'", a: "      return 'caja'" },
     { nombre: 'el embolsado del renglón no se dice', de: "      if (embolsado && embolsado !== 'ninguno') sumar(TEXTO_EMBOLSADO[embolsado] ?? embolsado)\n", a: '' },
@@ -94,7 +101,7 @@ correrMutacionesProduccion({
     { nombre: 'lo devuelto entero se lista en cero', de: '        .filter(f => f.cantidad !== 0)', a: '' },
     { nombre: 'sin movimientos se dice otra cosa', de: "      if (!e.movimientos.length) return '<p class=\"pr-texto-suave\">No se descontó empaque en este turno.</p>'", a: '' },
     { nombre: 'el tope de 1000 no se avisa', de: '      const tope = e.movimientos.length >= TOPE_FILAS', a: '      const tope = false' },
-    { nombre: 'el empaque del renglón de la planilla sin escapar', de: "<span class=\"pr-producido__detalle\">${esc(partes.join(' · '))}</span>", a: "<span class=\"pr-producido__detalle\">${partes.join(' · ')}</span>" },
+    { nombre: 'el empaque del renglón de la planilla sin escapar', de: "sin empaque</span> ` : ''}${esc(cajaTexto)}</span>", a: "sin empaque</span> ` : ''}${cajaTexto}</span>" },
     { nombre: 'el empaque del sublote del historial sin escapar', de: '<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(que)}`', a: '<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${que}`' },
     // ── Parte 3: configuración ──────────────────────────────────────────
     { nombre: 'la pestaña Empaque no está', de: "['productos', 'Productos'], ['empaque', 'Empaque'],", a: "['productos', 'Productos']," },
@@ -136,7 +143,7 @@ correrMutacionesProduccion({
     { nombre: 'sin saber el permiso se consulta la vista igual', de: "      if (permiso === null) return { estado: 'desconocido', saldos: new Map() }", a: '' },
     { nombre: 'el stock de otra unidad', de: ".select('insumo_id, cantidad_total').eq('unidad_negocio_id', unidadId).in('insumo_id', insumoIds)", a: ".select('insumo_id, cantidad_total').in('insumo_id', insumoIds)" },
     { nombre: 'un error de la vista se lee como cero', de: "        console.error('stock del empaque:', err)\n        return { estado: 'error', saldos: new Map() }", a: "        return { estado: 'ok', saldos: new Map() }" },
-    { nombre: 'abrir agregar no lee el stock', de: '      // El stock del empaque llega después: la pantalla no lo espera.\n      return cargarStockAgregar(estado.agregar)\n', a: '' },
+    { nombre: 'abrir agregar no lee el stock', de: '      return cargarStockAgregar(a)\n', a: '' },
     { nombre: 'el faltante no cuenta las cajas cargadas', de: '      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 1', a: '      const n = 1' },
     { nombre: 'el faltante sin cajas escritas no mira ninguna', de: '      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 1', a: '      const n = Number.isInteger(a.cajas) && a.cajas > 0 ? a.cajas : 0' },
     { nombre: 'el faltante ignora el embolsado', de: '      const necesita = consumoTotal(consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat)), n)', a: "      const necesita = consumoTotal(consumoPorCaja(cat, a.presentacionId, a.cajaId, 'ninguno'), n)" },
@@ -148,9 +155,13 @@ correrMutacionesProduccion({
     { nombre: 'un error de lectura no se dice', de: "      if (st === 'error') return '<div class=\"pr-aviso pr-aviso--grave\">No se pudo leer el stock.</div>'", a: '' },
     { nombre: 'el aviso de stock sin nada que consumir', de: "      if (!a?.cajaElegida || !consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat)).length) return ''", a: "      if (!a?.cajaElegida) return ''" },
     { nombre: 'el aviso no está en el paso de la caja', de: "'No descuenta empaque.'}</p>`\n      return h + htmlAvisoStockEmpaque(a, cat)\n", a: "'No descuenta empaque.'}</p>`\n      return h\n" },
-    { nombre: 'el aviso no está al lado de las cajas', de: "        : `<p class=\"pr-ag__consumo\">Por caja: ${esc(textoConsumo(cat, porCaja))}</p>`\n      return h + htmlAvisoStockEmpaque(a, cat)\n    }", a: "        : `<p class=\"pr-ag__consumo\">Por caja: ${esc(textoConsumo(cat, porCaja))}</p>`\n      return h\n    }" },
-    { nombre: 'con faltantes se dibujan el consumo y el aviso', de: '      if ((faltantesEmpaque(a, cat) ?? []).length) return h + htmlAvisoStockEmpaque(a, cat)\n', a: '' },
+    // Planta v2: al lado de las cajas, una línea con lo que falta.
+    { nombre: 'el aviso no está al lado de las cajas', de: "      if (st === 'ok' && f.length) {", a: '      if (false) {' },
+    { nombre: 'al lado de las cajas un error de stock no se dice', de: "      } else if (st === 'error') {\n        h += '<p class=\"pr-ag__falta-emp\">", a: "      } else if (false) {\n        h += '<p class=\"pr-ag__falta-emp\">" },
+    { nombre: 'la línea de lo que falta nombra lo que alcanza', de: "      const f = faltantesEmpaque(a, cat) ?? []\n      if (st === 'ok' && f.length) {", a: "      const f = consumoPorCaja(cat, a.presentacionId, a.cajaId, embolsadoEfectivo(a, cat))\n      if (st === 'ok' && f.length) {" },
+    { nombre: 'la línea de lo que falta no es bordó', de: '.pr-ag__falta-emp { margin: 0; font-size: 13px; font-weight: 700; color: var(--p-mal);', a: '.pr-ag__falta-emp { margin: 0; font-size: 13px; font-weight: 700; color: var(--p-gris);' },
     { nombre: 'no dice que se puede cargar igual', de: "        '<br>Se puede cargar igual.</div>'", a: "        '</div>'" },
+    { nombre: 'al lado de las cajas no dice que se puede cargar igual', de: '.join(\', \'))}. Se puede cargar igual.</p>`', a: '.join(\', \'))}.</p>`' },
     { nombre: 'el aviso bloquea la carga', de: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }", a: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }\n      if ((faltantesEmpaque(a, estado.catalogo) ?? []).length) { err.textContent = 'Falta empaque.'; err.hidden = false; return }" },
     { nombre: 'la sección del empaque no se dibuja', de: '<h2 class="pr-subtitulo">Empaque consumido</h2>${htmlEmpaqueTurno(d)}</section>`', a: '<h2 class="pr-subtitulo">Empaque consumido</h2></section>`' },
   ],

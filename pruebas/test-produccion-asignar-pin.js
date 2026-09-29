@@ -74,7 +74,7 @@ async function primeraVez(S, pin) { tipear(S, pin); await S.confirmarAsignarPin(
   chk('el botón "Asignar PIN" existe', k > 0)
   chk('… y está en la franja del acceso maestro', i > 0 && j > 0 && k > i && k < j)
   chk('… con el texto "Asignar PIN"', /id="pr-btn-asignar-pin">Asignar PIN</.test(FUENTE))
-  chk('la vista pr-asignar existe y nace escondida', /<section class="pr-tarjeta" id="pr-asignar" hidden>/.test(FUENTE))
+  chk('la vista pr-asignar existe y nace escondida', /<section class="[^"]*" id="pr-asignar" hidden>/.test(FUENTE))
   chk('pr-asignar está en VISTAS', /const VISTAS = \[[^\]]*'pr-asignar'/.test(FUENTE))
   chk('el PIN nuevo no usa ningún <input> dentro de la vista',
     !/id="pr-asignar"[\s\S]*?<\/section>/.exec(FUENTE)[0].replace(/<input type="search" id="pr-asignar-buscar"[^>]*>/, '').includes('<input'))
@@ -128,7 +128,8 @@ async function primeraVez(S, pin) { tipear(S, pin); await S.confirmarAsignarPin(
   S.elegirPersonaAsignar('e-otra')
   chk('no se puede elegir a alguien de otra fábrica', S.estado.asignar.personaId === null)
   S.elegirPersonaAsignar('e-sin')
-  chk('elegir abre el panel', el(S, 'pr-asignar-panel').hidden === false && el(S, 'pr-asignar-lista').hidden === true)
+  // Planta v2: el panel es una ventana ENCIMA de la lista, con el fondo oscurecido.
+  chk('elegir abre el panel (ventana con el fondo oscurecido)', el(S, 'pr-asignar-panel').hidden === false && el(S, 'pr-asignar-fondo').hidden === false)
   chk('el título dice "Asignar PIN a" sin PIN', el(S, 'pr-asignar-titulo').textContent === 'Asignar PIN a Ana Sinpin')
   chk('el aviso del PIN de un solo uso está', /El PIN nuevo es de un solo uso: la primera vez que entre va a tener que elegir uno propio\./.test(FUENTE))
   S.volverAsignarPin()

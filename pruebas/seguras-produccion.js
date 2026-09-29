@@ -181,6 +181,40 @@ const SEGURAS_PRODUCCION = [
   ['fecha', 'HTML ya escapado: htmlFilaLote() lo arma arriba con esc(textoFechaLote()), o vacío'],
   ["filas.map(f => htmlFilaLote(f, f.i === elegido, f.i === viejoI)).join('')", 'renglones que arma htmlFilaLote(), con la marca, el lote, lo que queda y la fecha escapados'],
   ['manualI', 'número: el índice de la opción "escribir el lote a mano" (e.ops)'],
+  // Planta v2 (28/09/2026): el diseño "Planta v2" de Claude Design
+  ['tam', 'número: el tamaño del ícono en px que se le pasa a icono() (siempre un literal numérico en los call sites)'],
+  ['grosor', 'número: el grosor del trazo que se le pasa a icono() (siempre un literal numérico en los call sites)'],
+  ["ICONO[nombre] ?? ''", 'trazo SVG constante del código (ICONO), indexado por un nombre de ícono constante'],
+  ['ICONO[nombre]', 'trazo SVG constante del código (ICONO), indexado por un nombre de ícono constante'],
+  ["icono(sec.icono, 16)", 'SVG armado por icono(): el nombre sale de SECCIONES_PRODUCCION (constante) y el trazo de ICONO'],
+  ["icono(modoBanda, 24, 2.4)", "SVG armado por icono(): modoBanda es 'masa' o 'produccion' y el trazo sale de ICONO"],
+  ['tono', "clase CSS constante del código: htmlBotonPersona() la resuelve en 'masa', 'encargado' u 'operario'"],
+  ['modo', "clase CSS constante del código: htmlLatPersona() la resuelve en 'masa' o 'produccion'"],
+  ['sec.tono', 'clase CSS constante del código: el tono de SECCIONES_PRODUCCION'],
+  ['sec.corto', 'texto constante del código: el nombre corto de SECCIONES_PRODUCCION'],
+  ['sub', 'HTML ya escapado: htmlLatSecciones() arma la pastilla constante "en curso"; htmlDetalleHist() une la hora (Intl) con esc() del masero y del motivo; htmlFilaLote() recibe la nota ya escapada (esc del número de la anterior) o esc() de la fecha'],
+  ['loteIng', "HTML ya escapado: htmlIngredientesHist() lo arma con esc(x.lote), o 'sin lote' / 'no lleva lote' constantes"],
+  ['estilo', 'atributo style armado en htmlMaquina() con el span de spanTablero(): dos números (--span-h y --span-v), nunca un dato'],
+  ["gente.map(tag).join('')", 'botones que arma tag() de htmlTagsOperarios(): el id va con esc() y el nombre por htmlResaltado(), que escapa'],
+  ["form.filas.map((fila, i) => htmlFilaAbrir(fila, i, estado.operarios ?? [], form)).join('')", 'botones que arma htmlFilaAbrir(), que escapa el nombre y el lote de cada máquina'],
+  ['nombre', 'HTML armado en htmlProducido(): htmlNombreProducto() escapa el nombre (el color sale de constantes) o un texto constante'],
+  ['cono', "HTML armado en htmlProducido(): htmlChipCono() escapa el nombre del cono (el color sale de constantes), o '<span>sin cono</span>' constante, o vacío"],
+  ['x.estado', "clase CSS constante del código: pasosAgregar() pone 'actual', 'hecho' o 'falta'"],
+  ['col.c', 'color constante del código: colorProducto() lo saca de COLOR_TAMANO / COLOR_CHOCO o de un tono numérico de TONOS_NOMBRE'],
+  ['col.dk', 'color constante del código: colorProducto() lo saca de COLOR_TAMANO o de un tono numérico de TONOS_NOMBRE'],
+  ['col.t', 'color constante del código: colorProducto() lo saca de COLOR_TAMANO o de un tono numérico de TONOS_NOMBRE'],
+  ['col.bg', 'color constante del código: colorCono() lo arma con un tono numérico de TONOS_CONO'],
+  ['col.fg', 'color constante del código: colorCono() lo arma con un tono numérico de TONOS_CONO'],
+  ['col.bd', 'color constante del código: colorCono() lo arma con un tono numérico de TONOS_CONO'],
+  ['caja.c', 'color constante del código: el c de colorProducto() (COLOR_TAMANO / COLOR_CHOCO / TONOS_NOMBRE)'],
+  ['caja.t', 'color constante del código: el t de colorProducto() (COLOR_TAMANO / TONOS_NOMBRE)'],
+  ['alto', 'número: 44 u 84, el alto del dibujo de la caja (media caja o caja entera)'],
+  ['c.cl', "clase CSS constante del código: htmlResumenCierre() pone 'teal', 'trigo', 'tinta' o 'bordo'"],
+  ['ultima', 'HTML ya escapado: htmlFilaSala() lo arma arriba con esc() de hace cuánto y de la hora, o un texto constante'],
+  ['htmlCantidadGrande(kg)', 'HTML armado por htmlCantidadGrande(), que escapa el número y la unidad'],
+  ['todas.length', 'número: cuántos lotes hay en la ventana'],
+  ['todas.filter(f => f.marca === m).length', 'número: cuántos lotes de esa marca hay en la ventana'],
+  ["filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')", 'renglones que arma htmlFilaLote(): la marca, el lote, lo que queda y la fecha van con esc(), y la nota (notaElegido) ya viene escapada'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [
@@ -188,6 +222,8 @@ const SEGURAS_REGEX_PRODUCCION = [
   // cono por revisar; htmlErrorPegado() escapa el texto y el id solo se compara.
   [/^cuerpoPend\((null|n|conos), /, 'HTML armado por cuerpoPend() de renderPendientes(), que escapa el número y los dos textos'],
   [/^htmlErrorPegado\(c, 'pend-' \+ m\.id\)$/,'HTML armado por htmlErrorPegado(), que escapa el texto del error; el id del cono solo se compara, no se imprime'],
+  // Planta v2 (28/09/2026): un ícono con nombre y tamaños LITERALES.
+  [/^icono\('[a-z]+'(, [\d.]+)*\)$/, 'SVG armado por icono(): nombre literal del código, tamaños numéricos literales, trazo sacado de ICONO'],
 ]
 
 module.exports = { SEGURAS_PRODUCCION, SEGURAS_REGEX_PRODUCCION }

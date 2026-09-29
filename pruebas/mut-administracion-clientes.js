@@ -27,6 +27,10 @@ correrMutaciones({
     { expr: "esc('saldo ' + importeHoja(m.saldo))", motivo: 'un importe formateado por importeHoja()' },
     { expr: 'esc(l.id)', motivo: 'el id de una lista va al value de un <option> entre comillas (uuid de la base)' },
     { expr: 'esc(p.id)', motivo: 'el id de un proveedor va a un data-proveedor entre comillas (uuid de la base)' },
+    // Los tres que se sumaron con los clientes apagados (28/09/2026):
+    { expr: 'esc(it.error)', motivo: 'el error pegado del interruptor lo prueba test-clientes-apagados.js (marca «error»)' },
+    { expr: 'esc(estado.apagados.error)', motivo: 'texto constante del código: lo pone cargarApagados()' },
+    { expr: 'esc(textoCodigoAnterior(cli.codigo_anterior))', motivo: 'clientes.codigo_anterior es integer en la base: el texto es una constante y un número' },
   ],
   manuales: [
     { nombre: 'la sección Clientes sin permiso', de: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'] },", a: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'cargar'] }," },
@@ -34,10 +38,10 @@ correrMutaciones({
     { nombre: 'igual al límite lo pasa', de: '      return Number(saldo) > Number(limite)\n    }', a: '      return Number(saldo) >= Number(limite)\n    }' },
     { nombre: 'sin límite cuenta como que lo pasa', de: "      if (saldo === null || saldo === undefined || limite === null || limite === undefined || limite === '') return false\n      return Number(saldo) > Number(limite)", a: '      return Number(saldo) > Number(limite)' },
     { nombre: 'la portada no cuenta los que pasan el límite', de: '      return saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length', a: '      return 0' },
-    { nombre: 'el que pasa no va en bordó', de: "${pasa ? ' ad-fila--atencion' : ''}\" data-cliente=", a: '" data-cliente=' },
+    { nombre: 'el que pasa no va en bordó', de: "${pasa ? ' ad-fila--atencion' : ''}${c.apagado ? ' ad-fila--apagada' : ''}\" data-cliente=", a: "${c.apagado ? ' ad-fila--apagada' : ''}\" data-cliente=" },
     { nombre: 'sin el chip de proveedor', de: "${c.es_tambien_proveedor ? '<span class=\"ad-sello ad-sello--proveedor\">También proveedor</span>' : ''}", a: '' },
     // Búsqueda
-    { nombre: 'no busca por CUIT', de: '        (digitos.length >= 3 && String(c.cuit ?? \'\').includes(digitos)))\n    }\n\n    function htmlFilaCliente', a: '        false)\n    }\n\n    function htmlFilaCliente' },
+    { nombre: 'no busca por CUIT', de: "        (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)) ||", a: '        false ||' },
     { nombre: 'no busca por razón social', de: '      return todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||', a: '      return todos.filter(c => normalizar(c.nombre).includes(q) ||' },
     // La cuenta
     { nombre: 'el detalle con el número pelado', de: "      return 'Orden de retiro ' + (codigo || '(sin código)') + resto", a: '      return base' },

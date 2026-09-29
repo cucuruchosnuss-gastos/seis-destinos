@@ -89,37 +89,47 @@ function armar(rol, tareas, archivo = ARCHIVO) {
 // (lo mide e2e/8-planta-tamanos.spec.js en un navegador), así que los mínimos
 // de antes (texto de 16 px, botones de 48) se aflojaron a propósito. Los que
 // quedan: nada por debajo de 11 px (0,6875rem) y nada tocable de menos de
-// 30 px de alto; y el teclado del PIN sigue grande (hasta 72 px).
+// 30 px de alto; y el teclado del PIN sigue grande.
+//
+// Planta v2 (28/09/2026): el <style> se reemplazó entero por el del handoff
+// "Planta v2" (tokens --p-*, tamaños en px, la tablet parada con
+// @media (orientation: portrait)). Los bloques "LA TABLET REAL" / "LA TABLET
+// PARADA" ya no existen: las intenciones se miden sobre el CSS nuevo.
 {
   const todoElCss = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
   const iniCfg = todoElCss.indexOf('/* ── Configuración: LA EXCEPCIÓN DEL MÓDULO')
   const finCfg = todoElCss.indexOf('/* ── fin de Configuración')
   const css = iniCfg > 0 && finCfg > iniCfg ? todoElCss.slice(0, iniCfg) + todoElCss.slice(finCfg) : todoElCss
   const rems = [...css.matchAll(/font-size:\s*([0-9.]+)rem/g)].map(m => Number(m[1]))
-  chk('hay tamaños de letra en rem (si da cero, no se está leyendo)', rems.length > 5)
-  chk('ningún texto por debajo de 11 px (0,6875rem)', rems.every(r => r >= 0.6875), rems.filter(r => r < 0.6875).join(', '))
+  const pxsLetra = [...css.matchAll(/font-size:\s*([0-9.]+)px/g)].map(m => Number(m[1]))
+  chk('hay tamaños de letra (si da cero, no se está leyendo)', rems.length + pxsLetra.length > 5)
+  chk('ningún texto por debajo de 11 px (0,6875rem)', rems.every(r => r >= 0.6875) && pxsLetra.every(n => n >= 11),
+    [...rems.filter(r => r < 0.6875).map(r => r + 'rem'), ...pxsLetra.filter(n => n < 11).map(n => n + 'px')].join(', '))
   const ems = [...css.matchAll(/font-size:\s*([0-9.]+)em/g)].map(m => Number(m[1]))
   chk('ningún tamaño en em por debajo de 1', ems.every(r => r >= 1), ems.join(', '))
   const pxs = [...css.matchAll(/min-height:\s*([0-9]+)px/g)].map(m => Number(m[1]))
   chk('ningún alto mínimo en px por debajo de 30 (salvo cero)', pxs.every(n => n === 0 || n >= 30), pxs.filter(n => n && n < 30).join(', '))
 
-  const iniReal = css.indexOf('/* ══ LA TABLET REAL (28/09/2026)')
-  const iniDos = css.indexOf('/* ══ LA PLANTA CON DOS MODOS')
-  const iniParada = css.indexOf('/* ══ LA TABLET PARADA')
-  chk('el bloque de la tablet real existe y va después del de dos modos', iniReal > 0 && iniDos > 0 && iniReal > iniDos)
-  chk('… y el de la tablet PARADA va último (pisa por orden a todos)', iniParada > iniReal && !/\n    \/\* ══ /.test(css.slice(iniParada + 10)))
-  const real = css.slice(iniReal)
-  chk('botones de 44 px y texto base de 15 px', /body \{ --pr-alto-boton: 44px; font-size: 15px; \}/.test(real))
-  chk('la barra lateral mide 208 px apaisada, y la página se corre lo mismo',
-    /@media \(orientation: landscape\) and \(min-width: 761px\) \{\s*\.pr-lateral \{ width: 208px; \}\s*body\.pr-con-lateral \.pr-app \{ margin-left: 208px; \}/.test(real))
-  chk('la barra pasa arriba solo con la tablet PARADA (o angosta)', /@media \(orientation: portrait\), \(max-width: 760px\) \{\s*\.pr-lateral \{ position: static;/.test(css))
-  chk('el teclado del PIN: grande, de 48 a 72 px según el alto', /\.pr-tecla \{ min-height: clamp\(48px, 9\.5vh, 72px\);/.test(real))
-  chk('el tablero: tres columnas apaisada, dos parada', /\.pr-tablero \{ gap: 0\.5rem; grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/.test(real) &&
-    /@media \(orientation: portrait\) \{ \.pr-tablero \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \} \}/.test(real))
-  chk('el LOTE nunca en dos renglones (white-space: nowrap)', /\.pr-maquina__lote \{[^}]*white-space: nowrap;/.test(real) &&
-    /\.pr-lat__maq-lote \{[^}]*white-space: nowrap;/.test(real) && /\.pr-planilla-cab__numero \{[^}]*white-space: nowrap;/.test(real))
-  chk('las palabras no se cortan al medio', /\.pr-app, \.pr-lateral \{ overflow-wrap: normal; word-break: normal; hyphens: manual; \}/.test(real))
-  chk('el nombre del modo va espaciado en la banda, no solo de color', /\.pr-banda-modo__nombre \{[^}]*letter-spacing: 0\.06em/.test(css))
+  chk('la tablet parada se resuelve con @media (orientation: portrait)', (css.match(/@media \(orientation: portrait\)/g) || []).length > 5)
+  chk('botones de 44 px y texto base de 15 px', /\.pr-btn \{\s*min-height: 44px;/.test(css) &&
+    /body, body\.pagina-modulo \{[^}]*font-size: 15px;/.test(css))
+  chk('la acción principal: 54 px apaisada, 64 parada', /\.pr-prim \{\s*min-height: var\(--p-prim\); height: var\(--p-prim\)/.test(css) &&
+    /--p-prim: 54px/.test(css) && /@media \(orientation: portrait\) \{\s*:root \{ --p-prim: 64px/.test(css))
+  chk('la barra lateral mide 200 px apaisada, y la página se corre sola (flex de fila)',
+    /\.pr-lateral \{\s*width: 200px; flex-shrink: 0;/.test(css) && /\.pr-app \{[^}]*display: flex; flex-direction: row/.test(css))
+  chk('la barra pasa arriba solo con la tablet PARADA', /@media \(orientation: portrait\) \{\s*\.pr-lateral \{\s*width: auto;/.test(css) &&
+    /@media \(orientation: portrait\) \{ \.pr-app \{ flex-direction: column; \} \}/.test(css))
+  chk('el teclado del PIN: grande, 58 px apaisada y 84 parada', /\.pr-tecla \{\s*height: var\(--p-tecla\)/.test(css) &&
+    /--p-tecla: 58px/.test(css) && /@media \(orientation: portrait\) \{\s*:root \{[^}]*--p-tecla: 84px/.test(css))
+  chk('el tablero: tres por fila apaisada (6 columnas, cada máquina ocupa 2), dos parada',
+    /\.pr-tablero \{[^}]*grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/.test(css) && /\.pr-maquina \{\s*grid-column: span var\(--span-h, 2\)/.test(css) &&
+    /@media \(orientation: portrait\) \{ \.pr-tablero \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/.test(css))
+  chk('el LOTE nunca en dos renglones', /\.pr-maquina__lote \{ display: flex;/.test(css) && !/\.pr-maquina__lote \{[^}]*flex-wrap: wrap/.test(css) &&
+    /\.pr-cab__ctx \{[^}]*white-space: nowrap;/.test(css))
+  chk('las palabras no se cortan al medio (ni break-all ni guiones automáticos)',
+    !/word-break:\s*break-all/.test(css) && !/hyphens:\s*auto/.test(css))
+  chk('el nombre del modo va escrito en la banda, grande y en negrita, no solo de color',
+    /\.pr-banda-modo__nombre \{[^}]*font-size: 21px; font-weight: 800/.test(css))
 }
 
 fin()

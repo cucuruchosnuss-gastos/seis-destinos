@@ -152,13 +152,18 @@ esperas.push((async () => {
   await S.mostrarTablero()
   const html = S.__doc.getElementById('pr-tablero').innerHTML
   chk('una tarjeta por máquina activa', (html.match(/class="pr-maquina[ "]/g) || []).length === 3, html.match(/class="pr-maquina[ "]/g))
-  chk('tocar la andando lleva a Lo producido (no a la planilla)', /data-producido="t1"/.test(html) && !/data-planilla=/.test(html))
+  // Planta v2: tocar una máquina andando la elige y abre SU planilla (que
+  // ahora tiene lo producido adentro). data-producido sigue siendo el control.
+  chk('tocar la andando la elige (data-producido), sin el botón de cerrar planilla', /data-producido="t1"/.test(html) && !/data-planilla=/.test(html))
   chk('la andando: "Andando", LOTE grande, el encargado, las masas y las CAJAS',
-    /pr-maquina__chip">Andando</.test(html) && /pr-maquina__rotulo">LOTE</.test(html) && /class="pr-maquina__lote">7023</.test(html) &&
-    /pr-maquina__estado">Federico Silva</.test(html) && /5 masas · 42 cajas/.test(html), html)
+    /<span class="pr-maquina__punto"><\/span>Andando<\/span>/.test(html) &&
+    /<span class="pr-maquina__rotulo">Lote<\/span><span class="pr-maquina__numero">7023<\/span>/.test(html) &&
+    /pr-maquina__linea">Federico Silva · desde las 06:02</.test(html) &&
+    /pr-maquina__stat pr-maquina__stat--masas">5 masas</.test(html) && /pr-maquina__stat">42 cajas</.test(html), html)
   chk('… con la franja del modo', /pr-maquina--activa/.test(html))
   chk('las sin turno: gris punteada, "Sin turno" y su "Abrir turno"',
-    (html.match(/pr-maquina__libre">Sin turno</g) || []).length === 2 && (html.match(/pr-maquina--libre/g) || []).length === 2 &&
+    (html.match(/pr-maquina__libre">Sin turno abierto</g) || []).length === 2 && (html.match(/pr-maquina--libre/g) || []).length === 2 &&
+    (html.match(/<span class="pr-maquina__punto"><\/span>Sin turno<\/span>/g) || []).length === 2 &&
     /data-abrir-libre="m2">Abrir turno</.test(html) && /data-abrir-libre="m3">Abrir turno</.test(html))
   chk('las cajas se leen de lo producido', S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('turno_id, cajas')))
   chk('mil cajas con su punto de miles', S.textoCajasTablero(1234) === '1.234 cajas' && S.textoCajasTablero(1) === '1 caja' && S.textoCajasTablero(0) === '0 cajas')
@@ -169,32 +174,46 @@ esperas.push((async () => {
   await S.mostrarAbrir({ type: 'click' })
   chk('… y desde el botón (llega el evento) no viene ninguna elegida', S.estado.abrir.filas.every(x => !x.elegida))
   chk('el tablero escucha la tarjeta andando y la sin turno',
-    /const p = ev\.target\.closest\('\[data-producido\]'\); if \(p\) \{ tocar\(\); abrirLoProducido\(p\.dataset\.producido\); return \}/.test(FUENTE) &&
+    /const p = ev\.target\.closest\('\[data-producido\]'\); if \(p\) \{ tocar\(\); abrirPlanilla\(p\.dataset\.producido\); return \}/.test(FUENTE) &&
     /const a = ev\.target\.closest\('\[data-abrir-libre\]'\); if \(a\) \{ tocar\(\); mostrarAbrir\(a\.dataset\.abrirLibre\) \}/.test(FUENTE))
-  chk('el encabezado dice el turno y la fecha', /Turno Mañana · /.test(S.__doc.getElementById('pr-tablero-cuando').textContent),
-    S.__doc.getElementById('pr-tablero-cuando').textContent)
+  // Planta v2: el encabezado del tablero es la cabecera de la pantalla
+  // ("Máquinas de Cucuruchos Nuss", con el reloj); ya no hay "Turno … · día".
+  S.estado.unidades = new Map([['u-cn', 'Cucuruchos Nuss']])
+  const vistaAntes = S.estado.vista
+  S.estado.vista = 'pr-produccion'
+  chk('el encabezado dice de qué fábrica son las máquinas', S.cabeceraDeVista()?.titulo === 'Máquinas de Cucuruchos Nuss', JSON.stringify(S.cabeceraDeVista()))
+  S.estado.vista = vistaAntes
   chk('lee las máquinas activas de la unidad', S.__llamadas.consultas.some(([t, f]) => t === 'maquinas' && JSON.stringify(f).includes('["eq","unidad_negocio_id","u-cn"]') && JSON.stringify(f).includes('["eq","activa",true]')))
   // Un turno 'pendiente_completar' NO está abierto: la máquina quedó libre.
   chk('lee SOLO los turnos abiertos de la unidad', S.__llamadas.consultas.some(([t, f]) => t === 'turnos_produccion' && JSON.stringify(f).includes('["eq","estado","abierto"]') && JSON.stringify(f).includes('["eq","unidad_negocio_id","u-cn"]')))
   chk('cuenta solo masas sin anular', S.__llamadas.consultas.some(([t, f]) => t === 'masas' && JSON.stringify(f).includes('["eq","anulada",false]')))
   chk('cuenta solo sublotes sin anular', S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('["eq","anulado",false]')))
-  const btn = S.__doc.getElementById('pr-btn-abrir-turno')
-  chk('hay libres: se puede abrir otra', btn.disabled === false && btn.textContent === '+ Abrir otra máquina')
+  // Planta v2: #pr-btn-abrir-turno se retiró. Se abre desde la tarjeta libre
+  // (data-abrir-libre) o con "Abrir turno" de la barra lateral.
+  chk('hay libres: se puede abrir otra (desde su tarjeta)', /data-abrir-libre="m2"/.test(html) && /data-abrir-libre="m3"/.test(html))
   chk('con un turno abierto se pide la pantalla encendida', pedidos === 1 && S.estado.hayTurnoAbierto === true)
 
   const T = armar({ ...TABLAS, turnos_produccion: [], masas: [], produccion_items: [] })
   await T.mostrarTablero()
-  chk('sin turnos abiertos: "Abrir turno"', T.__doc.getElementById('pr-btn-abrir-turno').textContent === 'Abrir turno')
+  const ht = T.__doc.getElementById('pr-tablero').innerHTML
+  chk('sin turnos abiertos: todas "Sin turno", cada una con su "Abrir turno"',
+    (ht.match(/data-abrir-libre=/g) || []).length === 3 && !/pr-maquina--activa/.test(ht))
   chk('… y no se pide la pantalla encendida', T.estado.hayTurnoAbierto === false)
 
   const U = armar({ ...TABLAS, turnos_produccion: ['m1', 'm2', 'm3'].map((m, i) => ({ id: 't' + i, lote: 1 + i, maquina_id: m, abierto_en: null })) })
   await U.mostrarTablero()
-  chk('todas abiertas: no hay nada que abrir', U.__doc.getElementById('pr-btn-abrir-turno').disabled === true)
+  // Con todas abiertas no hay tarjeta libre, y "Abrir turno" de la barra no
+  // puede quedar como un botón mudo (mostrarAbrir sale sin hacer nada si no
+  // hay ninguna libre): se tiene que ver apagado.
+  U.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
+  chk('todas abiertas: no hay nada que abrir (sin tarjeta libre, y "Abrir turno" de la barra apagado)',
+    !/data-abrir-libre/.test(U.__doc.getElementById('pr-tablero').innerHTML) && /data-seccion="abrir"[^>]*disabled/.test(U.htmlLatSecciones()),
+    (U.htmlLatSecciones().match(/<button[^>]*data-seccion="abrir"[^>]*>/) || [''])[0])
 
   const V = armar({ ...TABLAS, maquinas: () => ({ data: null, error: { message: 'sin red' } }) })
   await V.mostrarTablero()
   chk('si falla la lectura: aviso, sin tablero viejo', /No se pudieron leer las máquinas/.test(V.__doc.getElementById('pr-tablero-aviso').innerHTML) &&
-    V.__doc.getElementById('pr-tablero').innerHTML === '' && V.__doc.getElementById('pr-btn-abrir-turno').disabled === true)
+    V.__doc.getElementById('pr-tablero').innerHTML === '' && V.estado.tablero === null)
 
   const W = armar({ ...TABLAS, maquinas: [] })
   await W.mostrarTablero()
@@ -226,17 +245,19 @@ esperas.push((async () => {
   chk('la de AYER va PRIMERA y a todo el ancho', hy.indexOf('pr-maquina--ayer') >= 0 &&
     hy.indexOf('pr-maquina--ayer') < hy.indexOf('pr-maquina--parada'), hy.slice(0, 120))
   chk('… con el sello, el lote y qué hay que hacer',
-    /ABIERTA DE AYER/.test(hy) && /Lote 7019/.test(hy) && /Hay que cerrarla antes de volver a usarla/.test(hy))
+    /ABIERTA DE AYER/.test(hy) && /<span class="pr-maquina__rotulo">Lote<\/span><span class="pr-maquina__numero">7019<\/span>/.test(hy) &&
+    /Hay que cerrarla antes de volver a usarla/.test(hy))
   chk('… diciendo cuándo se abrió y cuánto lleva', /Abierta el domingo 05\/01 a las 14:10 · 1 masa · 0 sublotes/.test(hy), hy)
   chk('… y con su botón para cerrar la planilla', /data-planilla="t-ayer"[^>]*>Cerrar planilla de ayer</.test(hy))
   chk('la parada: la tarjeta entera en bordó con "PARADA" y el motivo',
-    /pr-maquina pr-maquina--parada/.test(hy) && /pr-maquina__chip">PARADA</.test(hy) && /pulpo/.test(hy), hy)
+    /pr-maquina pr-maquina--parada/.test(hy) && /<span class="pr-maquina__punto"><\/span>PARADA<\/span>/.test(hy) && /pulpo/.test(hy), hy)
   const eParada = Y.estado.tablero.find(e => e.parada)
   const tParada = Y.htmlMaquina(eParada, HOY, new Date(new Date(eParada.parada.inicio).getTime() + 12 * 60000))
-  chk('… con "Hace 12 min · pulpo"', /pr-maquina__estado">Hace 12 min · pulpo</.test(tParada), tParada)
+  chk('… con "Hace 12 min · pulpo"', /pr-maquina__linea">Hace 12 min · pulpo</.test(tParada), tParada)
   chk('… y NO cambia de lugar: va en su orden (m1 antes que m9)', hy.indexOf('pr-maquina--parada') < hy.indexOf('pr-maquina--libre'))
   chk('la parada es la ÚNICA tarjeta oscura (bordó entero, letra blanca)',
-    /\.pr-tablero \.pr-maquina--parada \{ background: var\(--bordo\); border-color: var\(--bordo\); color: #fff; \}/.test(FUENTE))
+    /\.pr-maquina--parada \{ background: var\(--p-mal\); border-color: var\(--p-mal\); color: #fff; \}/.test(FUENTE) &&
+    !/\.pr-maquina--(activa|libre|ayer) \{[^}]*color: #fff/.test(FUENTE))
 
   // HTML malicioso en la tarjeta.
   const Z = armar({
@@ -271,33 +292,36 @@ esperas.push((async () => {
   chk('› nunca pasa de hoy', S.estado.abrir.fecha === S.hoyArgentina())
 
   chk('el turno queda sugerido por la hora', S.TURNOS.includes(form.turno))
-  chk('el encargado es la persona de "¿Quién sos?"', /Federico Silva/.test(S.__doc.getElementById('pr-abrir-encargado').textContent))
+  chk('el encargado es la persona de "¿Quién sos?"', /Federico Silva/.test(S.__doc.getElementById('pr-abrir-encargado').innerHTML))
   let filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
-  chk('cada máquina con su casilla de 56px', (filas.match(/data-abrir-maquina=/g) || []).length === 2 && /class="pr-casilla"/.test(filas))
-  chk('sin marcar no se piden operarios', (filas.match(/Sin marcar/g) || []).length === 2 && !/data-mas-operario/.test(filas))
+  // Planta v2: las máquinas son botones con su casilla (aria-pressed), de 44 px.
+  chk('cada máquina es un botón con su casilla', (filas.match(/<button type="button" class="pr-abrir-maq" data-abrir-maquina=/g) || []).length === 2 &&
+    (filas.match(/pr-abrir-maq__casilla/g) || []).length === 2 && /\.pr-abrir-maq \{\s*min-height: 44px/.test(FUENTE))
+  chk('sin marcar no se piden operarios', /Elegí qué máquina arranca\./.test(filas) && !/data-toggle-op/.test(filas) && !/data-mas-operario/.test(filas))
   chk('sin elegir máquina no se puede abrir', S.__doc.getElementById('pr-abrir-confirmar').disabled === true)
-  chk('el resumen arranca en cero', S.__doc.getElementById('pr-abrir-resumen').textContent === '0 máquinas · 0 operarios')
+  chk('el botón arranca sin máquinas', S.__doc.getElementById('pr-abrir-confirmar').textContent === 'Abrir turno')
 
-  form.filas[0].elegida = true
-  S.pintarAbrir()
+  S.tocarMaquinaAbrir(0)
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
   // (28/09/2026, la tablet real) Marcada: TODOS los operarios a la vista como
   // etiquetas chicas, y un buscador que NO toma el foco solo.
-  chk('marcada: todos los operarios como etiquetas', /class="pr-op-tags" data-res-op="0"/.test(filas) &&
-    /data-toggle-op="0" data-op-id="e-op1" aria-pressed="false">Ramón Díaz/.test(filas) &&
-    /data-toggle-op="0" data-op-id="e-op2" aria-pressed="false">Marcos Vera/.test(filas), filas)
+  chk('marcada: todos los operarios como etiquetas', /class="pr-abrir-ops__lista pr-op-tags" data-res-op="0"/.test(filas) &&
+    /data-toggle-op="0" data-op-id="e-op1" aria-pressed="false">[\s\S]*?pr-op-tag__nombre">Ramón Díaz</.test(filas) &&
+    /data-toggle-op="0" data-op-id="e-op2" aria-pressed="false">[\s\S]*?pr-op-tag__nombre">Marcos Vera</.test(filas), filas)
   chk('… con el buscador en la fila', /data-buscar-op="0"/.test(filas))
   chk('… que no toma el foco solo (sin .focus() en el agregado)', !/function agregarOperarioFila[\s\S]{0,500}?\.focus\(\)\s*\n\s*\}/.test(FUENTE))
   chk('… y sin "+ Operario"', !/data-mas-operario="0"/.test(filas))
   // Una máquina marcada SIN operarios se puede abrir: abrir_turnos no los
   // exige ni valida su puesto (solo agregar_operario_turno lo hace).
   chk('marcada sin operarios: igual se puede abrir', S.faltanParaAbrir(form, S.hoyArgentina()).length === 0)
-  chk('… y el resumen lo dice', S.__doc.getElementById('pr-abrir-resumen').textContent === '1 máquina · 0 operarios')
+  // Planta v2: el resumen va en el botón ("Abrir turno de X · N operarios").
+  chk('… y el botón lo dice', S.__doc.getElementById('pr-abrir-confirmar').textContent === 'Abrir turno de Máquina 2 · 0 operarios',
+    S.__doc.getElementById('pr-abrir-confirmar').textContent)
 
   // El buscador se abre DENTRO de la fila.
   S.abrirBuscadorOperario(0, true)
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
-  chk('el buscador está dentro de la fila', /data-buscar-op="0"/.test(filas) && /data-res-op="0"/.test(filas))
+  chk('el buscador está en la tarjeta de operarios de esa máquina', /data-buscar-op="0"/.test(filas) && /data-res-op="0"/.test(filas))
   chk('… con los operarios configurados y no el encargado',
     /Ramón Díaz/.test(filas) && /Marcos Vera/.test(filas) && !/Federico Silva/.test(filas))
   form.filas[0].busqueda = 'mar'
@@ -310,8 +334,8 @@ esperas.push((async () => {
   S.agregarOperarioFila(0, 'e-op2')
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
   chk('dos operarios en la misma máquina, como etiquetas apretadas',
-    /data-toggle-op="0" data-op-id="e-op1" aria-pressed="true">Ramón Díaz/.test(filas) &&
-    /data-toggle-op="0" data-op-id="e-op2" aria-pressed="true">Marcos Vera/.test(filas), filas)
+    /data-toggle-op="0" data-op-id="e-op1" aria-pressed="true">[\s\S]*?pr-op-tag__nombre">Ramón Díaz</.test(filas) &&
+    /data-toggle-op="0" data-op-id="e-op2" aria-pressed="true">[\s\S]*?pr-op-tag__nombre">Marcos Vera</.test(filas), filas)
   chk('… la búsqueda se vacía para seguir eligiendo', form.filas[0].busqueda === '')
   chk('… y un elegido se ve aunque el filtro no lo nombre', (() => {
     form.filas[0].busqueda = 'mariela'
@@ -319,14 +343,14 @@ esperas.push((async () => {
     form.filas[0].busqueda = ''
     return /data-op-id="e-op1" aria-pressed="true"/.test(h) && /Mariela Soto/.test(h.replace(/<\/?strong>/g, ''))
   })())
-  chk('el resumen cuenta los operarios', S.__doc.getElementById('pr-abrir-resumen').textContent === '1 máquina · 2 operarios')
+  chk('el botón cuenta los operarios', S.__doc.getElementById('pr-abrir-confirmar').textContent === 'Abrir turno de Máquina 2 · 2 operarios')
 
   // El que ya está en otra máquina aparece APAGADO y diciendo dónde.
-  form.filas[1].elegida = true
-  S.abrirBuscadorOperario(1, true)
+  S.tocarMaquinaAbrir(1)
   filas = S.__doc.getElementById('pr-abrir-maquinas').innerHTML
   chk('el que está en otra máquina aparece apagado y dice en cuál',
-    /data-toggle-op="1" data-op-id="e-op1" aria-pressed="false" disabled>Ramón Díaz <span class="pr-op-tag__nota">· en Máquina 2<\/span>/.test(filas), filas)
+    /data-toggle-op="1" data-op-id="e-op1" aria-pressed="false" disabled>[\s\S]*?pr-op-tag__nombre">Ramón Díaz<\/span><span class="pr-op-tag__nota">en Máquina 2<\/span>/.test(filas), filas)
+  chk('con dos máquinas elegidas, el botón las cuenta', S.__doc.getElementById('pr-abrir-confirmar').textContent === 'Abrir 2 máquinas · 2 operarios')
   chk('… y quien está libre no', /data-toggle-op="1" data-op-id="e-op3" aria-pressed="false">/.test(filas))
   // El buscador de la PLANILLA ("+ Sumar") sigue usando candidatosOperario()
   // y htmlResultadosOperario(): se prueban directo.
@@ -424,7 +448,8 @@ esperas.push((async () => {
     A.estado.abrir.filas.map(f => f.maquinaId).join())
   const fa = A.__doc.getElementById('pr-abrir-maquinas').innerHTML
   chk('… con la casilla NO marcable y el motivo',
-    /data-abrir-maquina="1" disabled/.test(fa) && /Abierta de ayer \(lote 7019\)\. Cerrala primero\./.test(fa), fa)
+    /data-abrir-maquina="1" disabled aria-label="Máquina 1: abierta de ayer, no se puede marcar"/.test(fa) &&
+    /pr-abrir-maq__nota">abierta de ayer \(lote 7019\)</.test(fa), fa)
   // Marcarla no la deja marcada: la RPC la rechazaría nombrándola.
   A.estado.abrir.filas[1].elegida = true
   chk('aunque se fuerce el estado, la bloqueada no viaja',
@@ -460,10 +485,27 @@ esperas.push((async () => {
     [{ maquina_id: 'mx', maquina: marca('nombreMaq'), lote: marca('lote2') }],
     { filas: [{ maquinaId: 'mx', operarios: [marca('opId2')] }] },
     [{ id: marca('opId2'), nombre: marca('opNombre2') }]), ['nombreMaq', 'lote2', 'opNombre2'])
-  chequearMarcas(chk, 'fila de abrir', S.htmlFilaAbrir(
-    { nombre: marca('filaNombre'), elegida: true, operarios: [marca('chipId')], buscando: true, busqueda: marca('busq') }, 0,
-    [{ id: marca('chipId'), nombre: marca('chipNombre') }], { filas: [] }),
-    ['filaNombre', 'chipId', 'chipNombre', 'busq'])
+  // Planta v2: la fila de la máquina es solo el botón; los operarios, sus
+  // etiquetas y el buscador van en la tarjeta de operarios (htmlOperariosAbrir).
+  const filaMala = { maquinaId: 'mx', nombre: marca('filaNombre'), elegida: true, operarios: [marca('chipId')], buscando: true, busqueda: marca('busq') }
+  chequearMarcas(chk, 'fila de abrir', S.htmlFilaAbrir(filaMala, 0, [], { filas: [filaMala] }), ['filaNombre'])
+  chequearMarcas(chk, 'operarios de abrir', S.htmlOperariosAbrir({ filas: [filaMala], editando: 0 },
+    [{ id: marca('chipId'), nombre: marca('chipNombre') }]), ['filaNombre', 'chipId', 'chipNombre', 'busq'])
+  // Las otras ramas de la tarjeta de operarios: con dos máquinas el título
+  // nombra la máquina ("OPERARIOS DE …", en mayúsculas), los que trabajaron
+  // hace poco van en su grupo ("TRABAJARON HACE POCO EN …"), el ocupado dice
+  // dónde está (texto que arma la pantalla con el nombre de la máquina), y
+  // "Nadie coincide" repite lo buscado. Todo eso se escapa.
+  const maqMala = { maquinaId: 'mm', nombre: '<x', elegida: true, operarios: [], busqueda: '' }
+  const otraMaq = { maquinaId: 'mo', nombre: 'Otra', elegida: true, operarios: [], busqueda: '' }
+  const formMalo = { filas: [maqMala, otraMaq], editando: 0, ocupados: new Map([['op-o', marca('ocupado')]]), recientes: new Map([['mm', new Set(['op-r'])]]) }
+  const opsMalas = [{ id: 'op-r', nombre: 'Reciente Uno' }, { id: 'op-o', nombre: 'Ocupado Dos' }]
+  const tarjetaOps = S.htmlOperariosAbrir(formMalo, opsMalas)
+  chk('operarios de abrir: el título con la máquina va escapado', /OPERARIOS DE &lt;X</.test(tarjetaOps), tarjetaOps)
+  chk('operarios de abrir: el grupo "trabajaron hace poco" va escapado', /TRABAJARON HACE POCO EN &lt;X</.test(tarjetaOps), tarjetaOps)
+  chequearMarcas(chk, 'operarios de abrir (ocupado)', tarjetaOps, ['ocupado'])
+  maqMala.busqueda = '<zz'
+  chk('operarios de abrir: "Nadie coincide" escapa lo buscado', /Nadie coincide con "&lt;zz"/.test(S.htmlTagsOperarios(maqMala, 0, opsMalas, formMalo)))
   chequearMarcas(chk, 'fila bloqueada', S.htmlFilaAbrir({ nombre: marca('bloq'), bloqueada: true, lote: marca('loteBloq') }, 1, [], { filas: [] }),
     ['bloq', 'loteBloq'])
   chequearMarcas(chk, 'buscador', S.htmlBuscadorOperarios(

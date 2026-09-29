@@ -90,14 +90,14 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   S.estado.hayTurnoAbierto = false
   chk('sin haberlo medido, SALA DE MASA no se deshabilita', S.salaDeshabilitada() === false)
   const sinMedir = S.htmlBotonOtroModo()
-  chk('… y el botón no va apagado', !/disabled/.test(sinMedir) && !/abrí una máquina/.test(sinMedir), sinMedir)
+  chk('… y el botón no va apagado', !/disabled/.test(sinMedir) && !/sin máquinas abiertas/.test(sinMedir), sinMedir)
 
   // Medido y sin ninguna abierta: apagado, con la leyenda adentro.
   S.estado.abiertasConocido = true
   chk('sin máquinas abiertas: SALA DE MASA deshabilitada', S.salaDeshabilitada() === true)
   const off = S.htmlBotonOtroModo()
   chk('… el botón al otro modo va disabled', /data-modo="masa" disabled/.test(off), off)
-  chk('… con la leyenda adentro del mismo botón', /abrí una máquina/.test(off))
+  chk('… con la leyenda adentro del mismo botón', /<span class="pr-lat__otro-nota">sin máquinas abiertas<\/span>/.test(off))
 
   // Con una abierta: se habilita sola.
   S.marcarAbiertas(true)
@@ -126,11 +126,12 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   S.estado.persona = { id: 'e-masero', nombre: 'Juan Masero', puesto: 'masero' }
   const lat = S.htmlLateral()
   chk('la barra dice el modo y quién está', /Sala de masa/.test(lat) && /Juan Masero/.test(lat))
-  chk('… el puesto y la unidad', /Masero · Cucuruchos Nuss/.test(lat), lat)
+  // Planta v2: la unidad ya no va en la barra (va en la cabecera).
+  chk('… y el puesto', /<span class="pr-lat__puesto">Masero<\/span>/.test(lat), lat)
   chk('… "Cambiar de persona" y "Salir"', /id="pr-lat-cambiar"/.test(lat) && /id="pr-btn-salir"/.test(lat))
   S.estado.modo = 'produccion'
   S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
-  chk('el puesto sale del modo', /Encargado · /.test(S.htmlLateral()))
+  chk('el puesto sale del modo', /<span class="pr-lat__puesto">Encargado<\/span>/.test(S.htmlLateral()))
 
   // Si la persona tiene TAMBIÉN el puesto del otro modo, pasa sin PIN.
   S.estado.personal = [{ id: 'e-fede', nombre: 'Federico Silva', puestos: ['encargado', 'masero'], puestos_temporales: [] }]
@@ -149,22 +150,28 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
   S.estado.vista = 'pr-produccion'
   const sinMaq = S.htmlLatSecciones()
-  chk('las cinco secciones, en orden', /Inicio[\s\S]*Abrir turno[\s\S]*Lo producido[\s\S]*Paradas[\s\S]*Cerrar planilla/.test(sinMaq))
+  // Planta v2: "Lo producido" pasó a ser la "Planilla" (resumen + lo producido).
+  chk('las cinco secciones, en orden', /Inicio[\s\S]*Abrir turno[\s\S]*Planilla[\s\S]*Paradas[\s\S]*Cerrar planilla/.test(sinMaq))
   chk('Inicio marcada en el tablero', /data-seccion="inicio" aria-current="page"/.test(sinMaq))
   chk('sin máquina elegida las tres de máquina van apagadas',
-    /data-seccion="producido" disabled/.test(sinMaq) && /data-seccion="paradas" disabled/.test(sinMaq) && /data-seccion="cierre" disabled/.test(sinMaq))
+    /data-seccion="planilla" disabled/.test(sinMaq) && /data-seccion="paradas" disabled/.test(sinMaq) && /data-seccion="cierre" disabled/.test(sinMaq))
   chk('… y Abrir turno no', !/data-seccion="abrir"[^>]*disabled/.test(sinMaq))
-  chk('sin máquina elegida lo dice en un recuadro', /Tocá una máquina/.test(S.htmlLatMaquina()))
+  // Planta v2: htmlLatMaquina se fue; la máquina elegida va en la cabecera
+  // de la pantalla (cabeceraDeVista, "Lote 7033 · Máquina 1").
+  S.estado.vista = 'pr-planilla'
+  chk('sin máquina elegida la cabecera no inventa un lote', S.cabeceraDeVista()?.ctx === '', JSON.stringify(S.cabeceraDeVista()))
   S.estado.planilla = { turno: { id: 't1', lote: 7033, turno: 'Mañana' }, maquinaNombre: 'Máquina 1', paradas: [] }
   S.estado.vista = 'pr-planilla'
   const conMaq = S.htmlLatSecciones()
   chk('con máquina, las de máquina se prenden', !/disabled/.test(conMaq))
-  chk('la planilla marca Paradas', /data-seccion="paradas" aria-current="page"/.test(conMaq))
-  const maq = S.htmlLatMaquina()
-  chk('la máquina elegida con su lote y su turno', /Máquina 1/.test(maq) && /Lote 7033/.test(maq) && /Turno Mañana/.test(maq))
+  chk('la planilla marca Planilla', /data-seccion="planilla" aria-current="page"/.test(conMaq))
+  S.estado.vista = 'pr-paradas'
+  chk('la pantalla de paradas marca Paradas', /data-seccion="paradas" aria-current="page"/.test(S.htmlLatSecciones()))
+  S.estado.vista = 'pr-planilla'
+  chk('la máquina elegida con su lote, en la cabecera', S.cabeceraDeVista()?.ctx === 'Lote 7033 · Máquina 1', JSON.stringify(S.cabeceraDeVista()))
   S.estado.planilla.paradas = [{ id: 'p', inicio: '2026-09-28T10:00:00Z', fin: null, motivo: 'x' }]
-  chk('parada: la máquina en bordó y Paradas dice "en curso"',
-    /pr-lat__maq--parada/.test(S.htmlLatMaquina()) && /en curso/.test(S.htmlLatSecciones()))
+  chk('parada: Paradas dice "en curso", en bordó',
+    /<span class="pr-lat__sub pr-lat__sub--mal">en curso<\/span>/.test(S.htmlLatSecciones()))
 }
 
 // ── Sala de masa: las máquinas abiertas en la barra ───────────────────────
@@ -181,7 +188,8 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   chk('Inicio primero, marcado en el inicio de la sala', /data-seccion="sala-inicio" aria-current="page"/.test(sala))
   chk('una fila por máquina ABIERTA', /data-lateral-turno="t1"/.test(sala) && /data-lateral-turno="t2"/.test(sala) && !/Máquina 3/.test(sala))
   chk('con su lote y cuántas masas lleva', /Lote 7033/.test(sala) && /aria-label="4 masas">4</.test(sala))
-  chk('la parada dice "Parada" en vez del lote', /pr-lat__maq-fila--parada/.test(sala) && /Parada/.test(sala))
+  chk('la parada dice "Parada" en vez del lote', /pr-lat__item--parada" data-lateral-turno="t2"/.test(sala) &&
+    /<span class="pr-lat__sub pr-lat__sub--mal">Parada<\/span>/.test(sala) && !/Lote 7034/.test(sala), sala)
   S.estado.vista = 'pr-receta'
   S.estado.salaTurno = { id: 't1' }
   chk('la máquina con la que se trabaja queda marcada', /data-lateral-turno="t1" aria-current="true"/.test(S.htmlLatSala()))
@@ -196,19 +204,20 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   S.estado.abiertasConocido = true
   S.estado.hayTurnoAbierto = true
   const b = S.htmlBandaQuien()
-  chk('Producción: la banda grafito con su nombre', /pr-banda-modo--produccion/.test(b) && /PRODUCCIÓN/.test(b))
+  chk('Producción: la banda grafito con su nombre', /pr-banda-modo--produccion/.test(b) && /<span class="pr-banda-modo__nombre">Producción<\/span>/.test(b), b)
   chk('… y "Ir a Sala de masa" (el masero no necesita al encargado)', /id="pr-quien-ir-masa"/.test(b) && !/id="pr-quien-ir-masa" disabled/.test(b))
   S.estado.hayTurnoAbierto = false
   chk('sin máquinas abiertas, "Ir a Sala de masa" va apagado con la leyenda',
-    /id="pr-quien-ir-masa" disabled/.test(S.htmlBandaQuien()) && /todavía no hay máquinas abiertas/.test(S.htmlBandaQuien()))
+    /id="pr-quien-ir-masa" disabled/.test(S.htmlBandaQuien()) && /<span class="pr-banda-modo__nota">sin máquinas abiertas<\/span>/.test(S.htmlBandaQuien()))
   S.estado.abiertasConocido = false
   chk('sin haberlo medido, va prendido', !/disabled/.test(S.htmlBandaQuien()))
   S.estado.modo = 'masa'
   const m = S.htmlBandaQuien()
-  chk('Sala de masa: la banda amarilla con "Cancelar"', /pr-banda-modo--masa/.test(m) && /SALA DE MASA/.test(m) && /id="pr-quien-cancelar"/.test(m))
-  S.estado.pin = { modo: 'maestro' }
-  const x = S.htmlBandaQuien()
-  chk('el acceso maestro trae su banda blanca con "Volver"', /pr-banda-modo--maestro/.test(x) && /ACCESO MAESTRO/.test(x) && /id="pr-quien-volver"/.test(x))
+  chk('Sala de masa: la banda amarilla con "Cancelar"', /pr-banda-modo--masa/.test(m) && /<span class="pr-banda-modo__nombre">Sala de masa<\/span>/.test(m) && /id="pr-quien-cancelar"/.test(m))
+  // Planta v2: el acceso maestro es una PANTALLA propia con su banda
+  // (#pr-maestro-banda) y su salida, ya no una banda de "¿Quién sos?".
+  chk('el acceso maestro trae su banda con su salida', /<header class="pr-banda-maestro" id="pr-maestro-banda" hidden>/.test(FUENTE) &&
+    /<span class="pr-banda-maestro__titulo">Acceso maestro<\/span>/.test(FUENTE) && /id="pr-maestro-salir">Salir del acceso maestro</.test(FUENTE))
 }
 
 // ── La barra se ve SOLO con alguien adentro, y el fondo es el común ───────
@@ -243,14 +252,19 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
     !S.__body.classList.contains('pr-modo-masa') && !S.__body.classList.contains('pr-modo-produccion'))
 
   const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
-  chk('los colores de modo son variables del body', /--pr-prod-activo:\s*#3F4655/.test(css) && /--pr-masa-activo:\s*#F3D774/.test(css))
-  chk('el fondo es el COMÚN de la app en los dos modos (el tono va en la banda y el botón)',
-    /body\.pagina-modulo\.pr-modo-produccion, body\.pagina-modulo\.pr-modo-masa \{ background-color: var\(--color-superficie\); \}/.test(css))
+  // Planta v2: los colores del handoff son tokens --p-* del :root.
+  chk('los colores de modo son tokens', /--p-prod:\s*#2B2723/.test(css) && /--p-masa:\s*#F3D774/.test(css))
+  chk('el fondo es el COMÚN de la planta en los dos modos (el tono va en la banda y el botón)',
+    /body, body\.pagina-modulo \{[^}]*background: var\(--p-fondo\)/.test(css) && !/pr-modo-(produccion|masa)[^{]*\{[^}]*background/.test(css))
   chk('el botón apagado va PUNTEADO, no solo de otro color', /\.pr-lat__otro:disabled \{[^}]*dashed/.test(css) && /\.pr-banda-modo__ir:disabled \{[^}]*dashed/.test(css))
-  chk('la barra mide 240 px y la página se corre lo mismo', /\.pr-lateral \{[^}]*width: 240px/.test(css) && /body\.pr-con-lateral \.pr-app \{ margin-left: 240px/.test(css))
-  chk('los ítems de la barra miden 52 px', /\.pr-lat__item \{[^}]*min-height: 52px/.test(css))
-  chk('donde el hex ya tiene nombre se usa la variable de main.css',
-    /--pr-prod-letra:\s*var\(--color-fondo\)/.test(css) && !/#FDEEE4/.test(css) && !/#7A2E42/.test(css))
+  // Planta v2: la barra mide 200 px al costado y la página es un flex de
+  // fila (la barra corre el contenido sin margin a mano).
+  chk('la barra mide 200 px y la página se corre (flex de fila)', /\.pr-lateral \{[^}]*width: 200px/.test(css) &&
+    /\.pr-app \{[^}]*display: flex; flex-direction: row/.test(css))
+  chk('los ítems de la barra miden 44 px (56 con la tablet parada)', /\.pr-lat__item \{[^}]*min-height: 44px/.test(css) &&
+    /@media \(orientation: portrait\) \{[\s\S]*?\.pr-lat__item \{[^}]*min-height: 56px/.test(css))
+  chk('cada color se escribe UNA vez, como token del :root (nunca el hex repetido)',
+    ['#FDEEE4', '#7A2E42', '#C2410C', '#8F2F08', '#2B2723'].every(h => (css.match(new RegExp(h, 'gi')) || []).length === 1))
 }
 
 // ── Tocar un modo pide el PIN ─────────────────────────────────────────────
@@ -302,11 +316,13 @@ esperas.push((async () => {
   await T.mostrarQuien()
   const htmlMasa = T.__doc.getElementById('pr-quien-lista').innerHTML
   chk('modo Sala de masa: el masero fijo y el de hoy', JSON.stringify(botones(htmlMasa)) === '["e-masero","e-hoy"]')
-  chk('… el temporal lleva la etiqueta "hoy"', /Carla Ríos<span class="pr-quien__hoy">hoy<\/span>/.test(htmlMasa), htmlMasa)
-  chk('… y el fijo no la lleva', /Juan Masero<\/span>/.test(htmlMasa))
+  chk('… el temporal lleva la etiqueta "hoy"', /Carla Ríos<\/span><span class="pr-persona__rol">hoy<\/span>/.test(htmlMasa), htmlMasa)
+  chk('… y el fijo no la lleva', /Juan Masero<\/span><span class="pr-persona__rol">Masero<\/span>/.test(htmlMasa))
 
   // El buscador filtra sin volver a pedir nada.
+  // Planta v2: el buscador es "Buscar a otra persona" (busca en todo el personal).
   const pedidos = T.__llamadas.rpc.length
+  T.estado.quienBuscar = true
   T.estado.quienBusqueda = 'carla'
   T.pintarQuien()
   chk('el buscador filtra la lista', JSON.stringify(botones(T.__doc.getElementById('pr-quien-lista').innerHTML)) === '["e-hoy"]')
@@ -320,9 +336,14 @@ esperas.push((async () => {
   U.__setRpc(async () => ({ data: PERSONAL.map(p => ({ ...p, puestos: [], puestos_temporales: [] })), error: null }))
   U.estado.modo = 'masa'
   await U.mostrarQuien()
-  chk('sin puestos: todos, con aviso para configurarlos', botones(U.__doc.getElementById('pr-quien-lista').innerHTML).length === 6 &&
+  // Planta v2: la grilla es SOLO de esta fábrica (5 de los 6); el de otra
+  // unidad se encuentra con "Buscar a otra persona", y ahí lo dice.
+  chk('sin puestos: todos los de esta fábrica, con aviso para configurarlos',
+    JSON.stringify(botones(U.__doc.getElementById('pr-quien-lista').innerHTML)) === '["e-fede","e-agus","e-masero","e-hoy","e-op"]' &&
     /Configuración → Personal/.test(U.__doc.getElementById('pr-quien-aviso').innerHTML))
-  chk('… la persona de otra unidad lo dice', /De otra unidad/.test(U.__doc.getElementById('pr-quien-lista').innerHTML))
+  U.alternarBuscarOtra()
+  chk('… la persona de otra unidad aparece al buscar y lo dice',
+    /data-persona="e-nada"[\s\S]*?<span class="pr-persona__rol">de otra unidad<\/span>/.test(U.__doc.getElementById('pr-quien-lista').innerHTML))
 
   const V = construirProduccion(ARCHIVO)
   V.__setRpc(async () => ({ data: null, error: { message: 'sin red' } }))
@@ -337,16 +358,39 @@ esperas.push((async () => {
   W.estado.modo = 'masa'
   await W.mostrarQuien()
   chequearMarcas(chk, '¿Quién sos?', W.__doc.getElementById('pr-quien-lista').innerHTML, ['id', 'nombre'])
+  // Planta v2: la tarjeta de la persona lleva sus iniciales y su puesto. Un
+  // puesto que no está en PUESTOS se muestra tal cual viene de la base, y las
+  // iniciales son un pedazo del nombre ("<x yz" da "<Y"): los dos se escapan.
+  const WP = construirProduccion(ARCHIVO)
+  WP.estado.modo = 'masa'
+  const tarjeta = WP.htmlBotonPersona({ id: 'e', nombre: '<x yz', misma_unidad: true, puestos: ['masero', marca('puestoraro')], puestos_temporales: [] }, 'masero', null)
+  // (en minúsculas: el segundo puesto se muestra con toLocaleLowerCase)
+  chequearMarcas(chk, 'tarjeta de persona', tarjeta, ['puestoraro'])
+  chk('tarjeta de persona: las iniciales van escapadas', /pr-persona__ini--masa" aria-hidden="true">&lt;Y</.test(tarjeta), tarjeta)
 
   // HTML malicioso en el nombre de la unidad, que va a la barra.
   const X = construirProduccion(ARCHIVO)
   X.estado.unidades = new Map([['u-cn', marca('unidadNombre')]])
   X.estado.modo = 'produccion'
   X.estado.persona = { id: 'e', nombre: marca('personaNombre'), puesto: 'encargado' }
-  chequearMarcas(chk, 'barra lateral', X.htmlLateral(), ['unidadNombre', 'personaNombre'])
+  // Planta v2: la unidad ya no va en la barra, va en el título de la
+  // cabecera ("Máquinas de …"), escrito con textContent.
+  chequearMarcas(chk, 'barra lateral', X.htmlLateral(), ['personaNombre'])
+  // Las iniciales también son un pedazo del dato: "<x yz" da "<Y".
+  const Z = construirProduccion(ARCHIVO)
+  Z.estado.modo = 'produccion'
+  Z.estado.persona = { id: 'e', nombre: '<x yz', puesto: 'encargado' }
+  chk('barra: las iniciales van escapadas', /pr-lat__ini--produccion" aria-hidden="true">&lt;Y</.test(Z.htmlLateral()), Z.htmlLateral())
+  X.estado.vista = 'pr-produccion'
+  chk('la unidad va en el título de la cabecera (texto)', (X.cabeceraDeVista()?.titulo ?? '').includes(marca('unidadNombre')))
   // … y el nombre de una máquina y su lote, en la barra de Producción y en la de Sala de masa.
   X.estado.planilla = { turno: { id: marca('turnoId'), lote: marca('lote'), turno: marca('turno') }, maquinaNombre: marca('maquina'), paradas: [] }
-  chequearMarcas(chk, 'barra: la máquina elegida', X.htmlLatMaquina(), ['lote', 'turno', 'maquina'])
+  X.estado.vista = 'pr-planilla'
+  chk('la máquina elegida y su lote van en la cabecera (texto)',
+    (X.cabeceraDeVista()?.ctx ?? '').includes(marca('maquina')) && (X.cabeceraDeVista()?.ctx ?? '').includes(marca('lote')))
+  chk('… y la cabecera se escribe con textContent, nunca innerHTML',
+    /getElementById\('pr-cab-ctx'\)\.textContent = c\.ctx/.test(FUENTE) && /t\.textContent = c\.titulo/.test(FUENTE) &&
+    !/function pintarCabeceraVista\(\) \{[^}]*innerHTML/.test(FUENTE))
   X.estado.modo = 'masa'
   X.estado.tablero = [{ maquina: { id: 'm', nombre: marca('maqSala') }, turno: { id: marca('idSala'), lote: marca('loteSala') }, masas: 2, parada: null }]
   chequearMarcas(chk, 'barra: las máquinas de la sala', X.htmlLatSala(), ['maqSala', 'idSala', 'loteSala'])
@@ -472,7 +516,10 @@ esperas.push((async () => {
   await new Promise(r => setTimeout(r, 0))
   chk('… vuelve a "¿Quién sos?" de Producción', S.estado.vista === 'pr-quien' && S.estado.modo === 'produccion')
   chk('… con la persona YA ELEGIDA: solo pone el PIN', S.estado.quienFija?.id === 'e-fede' && S.estado.pin?.personaId === 'e-fede')
-  chk('… sin la lista de nombres', S.__doc.getElementById('pr-quien-lista').hidden === true)
+  // Planta v2: la grilla no se esconde: la persona queda marcada y la
+  // ventana del PIN se abre sola para ella.
+  chk('… con la ventana del PIN abierta y su nombre marcado en la grilla', S.__doc.getElementById('pr-pin').hidden === false &&
+    /data-persona="e-fede" aria-pressed="true"/.test(S.__doc.getElementById('pr-quien-lista').innerHTML))
   chk('… la persona de Producción NO se borra de la tablet', S.personaGuardada('produccion')?.id === 'e-fede')
   chk('… y el masero de Sala de masa tampoco', S.personaGuardada('masa')?.id === 'e-masero')
 

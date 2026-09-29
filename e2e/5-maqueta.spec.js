@@ -313,8 +313,8 @@ for (const [archivo, datos] of conBarra) {
 async function planta_marcarPin(page, pin) {
   const teclado = page.locator('#pr-pin-teclado');
   await expect(teclado).toBeVisible();
+  // Planta v2: sin tecla "Entrar", con el último número se manda solo.
   for (const d of pin) await teclado.locator(`[data-tecla="${d}"]`).click();
-  await teclado.locator('[data-tecla="entrar"]').click();
 }
 async function planta_elegir(page, nombre) {
   const fija = page.locator('#pr-quien-fija');
@@ -343,10 +343,13 @@ for (const [ancho, alto] of [[1280, 800], [800, 1280]]) {
       await expect(page.locator('#pr-barra')).toContainText('Federico Silva');
       await expect(page.locator('[data-producido]').first()).toBeVisible();
       await expect(page.locator('#pr-tablero')).toContainText('Sin turno');
-      await expect(page.locator('#pr-tablero')).toContainText('Se rompió la cadena');
+      // Planta v2: el motivo va en la tarjeta parada, en minúscula como en el diseño 2a.
+      await expect(page.locator('#pr-tablero')).toContainText(/se rompió la cadena/i);
     });
     await paso('lo-producido', async () => {
       await page.locator('[data-producido]').first().click();
+      await expect(page.locator('#pr-planilla')).toBeVisible();
+      await page.locator('#pr-btn-agregar-producto').click();
       await expect(page.locator('#pr-agregar-prod')).toBeVisible();
     });
     await paso('sala-de-masa', async () => {

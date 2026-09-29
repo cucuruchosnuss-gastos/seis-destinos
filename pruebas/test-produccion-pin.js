@@ -58,10 +58,12 @@ function armar(respuestas = {}) {
   return S
 }
 
-// Tipea un PIN entero y toca Entrar.
+// Tipea un PIN entero. Planta v2: la ventana del PIN no tiene "Entrar": con
+// el último número se manda sola, y teclaPin devuelve ese envío.
 async function tipear(S, pin) {
-  for (const d of String(pin)) S.teclaPin(d)
-  return S.teclaPin('entrar')
+  let envio
+  for (const d of String(pin)) envio = S.teclaPin(d)
+  return envio
 }
 
 // ── Los mensajes, uno por motivo ──────────────────────────────────────────
@@ -142,13 +144,33 @@ esperas.push((async () => {
   chk('los puntos son formas, no números', !/4|7|2|9/.test(puntos.replace(/pr-pin__punto/g, '')), puntos)
   chk('… cuatro puntos, los cuatro llenos', (puntos.match(/<span class="pr-pin__punto/g) || []).length === 4 &&
     (puntos.match(/pr-pin__punto--lleno/g) || []).length === 4)
-  S.teclaPin('borrar')
-  chk('Borrar saca el último', S.estado.pin.digitos === '472')
-  chk('… y el punto se vacía', (S.__doc.getElementById('pr-pin-puntos').innerHTML.match(/pr-pin__punto--lleno/g) || []).length === 3)
-  S.teclaPin('5'); S.teclaPin('6')
-  chk('no entra un quinto número', S.estado.pin.digitos === '4725')
-  chk('el teclado tiene 1–9, Borrar, 0 y Entrar',
-    (S.__doc.getElementById('pr-pin-teclado').innerHTML.match(/data-tecla=/g) || []).length === 12)
+  // Con el cuarto número ya se mandó solo: una quinta tecla no entra.
+  chk('con el último número se manda solo', S.__llamadas.rpc.filter(l => l[0] === 'verificar_pin_produccion').length === 1)
+  S.teclaPin('5')
+  chk('no entra un quinto número', S.estado.pin.digitos === '4729')
+  // Y aunque el panel quede lleno sin estar mandando (un envío que volvió sin
+  // limpiar), el largo nunca pasa del PIN.
+  const L = armar()
+  L.elegirPersona('e-fede')
+  L.estado.pin.digitos = '4729'
+  L.estado.pin.enviando = false
+  L.teclaPin('5')
+  chk('… ni con el panel lleno y sin mandar: nunca más largo que el PIN', L.estado.pin.digitos.length === 4)
+
+  // Borrar (⌫) y Borrar todo, antes de completar el PIN.
+  const B = armar()
+  B.elegirPersona('e-fede')
+  for (const d of '472') B.teclaPin(d)
+  B.teclaPin('borrar')
+  chk('⌫ saca el último', B.estado.pin.digitos === '47')
+  chk('… y el punto se vacía', (B.__doc.getElementById('pr-pin-puntos').innerHTML.match(/pr-pin__punto--lleno/g) || []).length === 2)
+  B.teclaPin('limpiar')
+  chk('"Borrar" borra todo', B.estado.pin.digitos === '' && !/pr-pin__punto--lleno/.test(B.__doc.getElementById('pr-pin-puntos').innerHTML))
+  chk('… y nada se mandó con un PIN incompleto', !B.__llamadas.rpc.some(l => l[0] === 'verificar_pin_produccion'))
+  const teclado = S.__doc.getElementById('pr-pin-teclado').innerHTML
+  chk('el teclado tiene 1–9, Borrar, 0 y ⌫ (sin "Entrar")',
+    (teclado.match(/data-tecla=/g) || []).length === 12 && /data-tecla="limpiar"/.test(teclado) && /data-tecla="borrar"/.test(teclado) &&
+    !/data-tecla="entrar"/.test(teclado) && !/pr-tecla--accion/.test(teclado), teclado)
   chk('ningún campo del PIN es un <input>: no se levanta el teclado del sistema',
     !/id="pr-pin-[a-z]*"[^>]*<input/.test(FUENTE) && !/<input[^>]*pr-pin/.test(FUENTE))
 })())
@@ -197,8 +219,9 @@ esperas.push((async () => {
   chk('… con la hora a la que se puede volver a probar', /Probá de nuevo a las/.test(V.__doc.getElementById('pr-pin-mensaje').innerHTML))
   chk('… el teclado deshabilitado', /data-tecla="1" disabled/.test(V.__doc.getElementById('pr-pin-teclado').innerHTML))
   chk('… y atenuado', /pr-pin__teclado--off/.test(V.__doc.getElementById('pr-pin-teclado').className))
-  chk('… con "Elegir otra persona"', V.__doc.getElementById('pr-pin-otra').hidden === false &&
-    V.__doc.getElementById('pr-pin-otra').textContent === 'Elegir otra persona')
+  // Planta v2: la salida es la ✕ de la ventana, siempre a la vista.
+  chk('… con "Elegir otra persona" (la ✕ de la ventana)', V.__doc.getElementById('pr-pin-otra').hidden === false &&
+    V.__doc.getElementById('pr-pin-otra').getAttribute('aria-label') === 'Elegir otra persona')
   const antesDeTeclear = V.estado.pin.digitos
   V.teclaPin('7')
   chk('bloqueado: las teclas no hacen nada', V.estado.pin.digitos === antesDeTeclear)
@@ -240,7 +263,8 @@ esperas.push((async () => {
     S.__doc.getElementById('pr-pin-progreso').innerHTML)
   chk('… el primer tramo hecho y el segundo no',
     (S.__doc.getElementById('pr-pin-progreso').innerHTML.match(/pr-pin__tramo--hecho/g) || []).length === 1)
-  chk('… la tecla de acción dice "Seguir"', /data-tecla="entrar"[^>]*>Seguir</.test(S.__doc.getElementById('pr-pin-teclado').innerHTML))
+  // Planta v2: no hay tecla "Seguir": el subtítulo dice qué se pide.
+  chk('… el subtítulo pide el PIN nuevo', S.__doc.getElementById('pr-pin-sub').textContent === 'Elegí un PIN nuevo de 4 números')
   chk('… y el saludo lo explica', /Es tu primera vez/.test(S.__doc.getElementById('pr-pin-saludo').textContent))
   chk('en el paso del PIN de siempre NO hay barra de progreso',
     S.htmlProgresoPin('pin') === '' && S.htmlProgresoPin('nuevo') !== '')
@@ -249,7 +273,7 @@ esperas.push((async () => {
   chk('el PIN nuevo pide repetirlo', S.estado.pin.fase === 'repetir')
   chk('… los dos tramos hechos', (S.__doc.getElementById('pr-pin-progreso').innerHTML.match(/pr-pin__tramo--hecho/g) || []).length === 2)
   chk('… y todavía no se llamó a cambiar_pin_produccion', cambios.length === 0)
-  chk('… la tecla vuelve a decir "Entrar"', /data-tecla="entrar"[^>]*>Entrar</.test(S.__doc.getElementById('pr-pin-teclado').innerHTML))
+  chk('… y el subtítulo pide repetirlo', S.__doc.getElementById('pr-pin-sub').textContent === 'Escribilo otra vez')
 
   await tipear(S, '8613')
   chk('se llama a cambiar_pin_produccion con el actual y el nuevo',
@@ -311,8 +335,8 @@ esperas.push((async () => {
   chk('… pide 8 números', S.estado.pin.largo === 8 && S.LARGO_PIN_MAESTRO === 8)
   chk('… con 8 puntos', (S.__doc.getElementById('pr-pin-puntos').innerHTML.match(/pr-pin__punto\b/g) || []).length === 8)
   chk('… el panel va en gris, no compite con el naranja', /pr-pin--maestro/.test(S.__doc.getElementById('pr-pin').className))
-  chk('… y tiene salida propia', S.__doc.getElementById('pr-pin-otra').hidden === false &&
-    S.__doc.getElementById('pr-pin-otra').textContent === 'Cancelar')
+  chk('… y tiene salida propia (la ✕ dice "Cancelar")', S.__doc.getElementById('pr-pin-otra').hidden === false &&
+    S.__doc.getElementById('pr-pin-otra').getAttribute('aria-label') === 'Cancelar')
 
   // Con UN solo maestro posible se elige solo: pedir el nombre cuando no hay
   // nada que elegir es un toque de más.
@@ -337,8 +361,14 @@ esperas.push((async () => {
   chk('se llama a verificar_pin_maestro con el empleado y el PIN',
     JSON.stringify(l[1]) === JSON.stringify({ p_empleado_id: 'e-jefa', p_pin: '48271936' }), JSON.stringify(l[1]))
   chk('el maestro queda activo', T.estado.maestro?.id === 'e-jefa')
-  chk('… y entra al modo', T.estado.persona?.id === 'e-jefa')
+  // Planta v2: el acceso maestro es una pantalla propia (Dar acceso por hoy /
+  // Asignar PIN); de ahí se entra a un modo con "Ir a Producción".
+  chk('… y abre su pantalla (Dar acceso por hoy), sin dejar a nadie adentro', T.estado.vista === 'pr-acceso' && T.estado.persona === null)
+  await T.entrarComoMaestro('produccion')
+  chk('"Ir a Producción" entra al modo como el maestro', T.estado.persona?.id === 'e-jefa' && T.estado.modo === 'produccion')
   chk('TODO lo que haga queda a SU nombre', T.estado.persona?.nombre === 'Marta Jefa')
+  chk('los botones de la banda del maestro llevan a los modos',
+    /closest\('\[data-maestro-modo\]'\); if \(b && estado\.maestro\) \{ tocar\(\); entrarComoMaestro\(b\.dataset\.maestroModo\) \}/.test(FUENTE))
   chk('el PIN maestro NO queda en el DOM ni en ningún storage', !rastro(T).includes('48271936'))
   chk('… pero sí en memoria, que es lo que otorgar_puesto_temporal pide', T.__pinMaestro() === '48271936')
 
@@ -430,11 +460,15 @@ esperas.push((async () => {
   chk('… y p_hasta en null para que la base ponga la medianoche argentina', T.__ultimo.p_hasta === null)
   chk('el PIN temporal se muestra', T.__doc.getElementById('pr-acceso-pin').hidden === false &&
     T.__doc.getElementById('pr-acceso-pin-numero').textContent === '7315')
-  chk('… diciendo que no se vuelve a mostrar y a quién pasárselo',
-    /No se va a volver a mostrar/.test(T.__doc.getElementById('pr-acceso-pin-texto').textContent) &&
-    /Operario Uno/.test(T.__doc.getElementById('pr-acceso-pin-texto').textContent))
+  chk('… diciendo a quién pasárselo y que no se vuelve a mostrar',
+    /<strong>Operario Uno<\/strong>/.test(T.__doc.getElementById('pr-acceso-pin-texto').innerHTML) &&
+    /id="pr-acceso-pin"[\s\S]{0,400}?Se muestra una sola vez\. Dáselo ahora o anotalo\./.test(FUENTE))
+  const accesoAntes = T.estado.acceso
   T.cerrarDarAcceso()
-  chk('al cerrar se suelta el formulario entero: ahí se va el PIN de la memoria', T.estado.acceso === null)
+  // Planta v2: con el maestro activo, cerrar vuelve a su pantalla con un
+  // formulario NUEVO (sin persona ni PIN); el viejo, con el PIN, se suelta.
+  chk('al cerrar se suelta el formulario entero: ahí se va el PIN de la memoria',
+    T.estado.acceso !== accesoAntes && (T.estado.acceso === null || (T.estado.acceso.pin === null && T.estado.acceso.personaId === null)))
   chk('… y se borra de la pantalla',
     T.__doc.getElementById('pr-acceso-pin-numero').textContent === '' &&
     T.__doc.getElementById('pr-acceso-pin').hidden === true && !rastro(T).includes('7315'))
@@ -471,16 +505,17 @@ esperas.push((async () => {
 // ── Lo que queda escrito: medidas y colores del panel ────────────────────
 {
   const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
-  chk('las teclas del PIN son de 84 px', /\.pr-tecla\s*\{[^}]*min-height: 84px/.test(css))
-  chk('la cuenta regresiva es de 72 px (4.5rem) y en bordó',
-    /\.pr-pin__reloj\s*\{[^}]*font-size: 4\.5rem/.test(css) && /\.pr-pin__bloqueo\s*\{[^}]*var\(--bordo\)/.test(css))
-  chk('los puntos del PIN común son de 30 px', /\.pr-pin__punto\s*\{[^}]*width: 30px/.test(css))
-  chk('los del maestro, de 22 px', /\.pr-pin--maestro \.pr-pin__punto\s*\{[^}]*width: 22px/.test(css))
-  chk('el panel del maestro va en gris', /\.pr-pin--maestro\s*\{\s*background: var\(--pr-panel-gris\)/.test(css))
-  chk('y su tecla de acción NO es naranja', /\.pr-pin--maestro \.pr-tecla--accion\s*\{\s*background: var\(--pr-prod-activo\)/.test(css))
-  chk('la tecla de acción común SÍ es naranja', /\.pr-tecla--accion\s*\{[^}]*background: var\(--naranja\)/.test(css))
-  chk('"Acceso maestro" es un texto subrayado en un objetivo de 56 px',
-    /\.pr-link\s*\{[^}]*min-height: var\(--pr-alto-boton\)[^}]*text-decoration: underline/s.test(css))
+  // Planta v2 (ventana del PIN 1b): teclas de 58 px apaisada y 84 parada.
+  chk('las teclas del PIN son grandes: 58 px apaisada, 84 parada', /\.pr-tecla\s*\{[^}]*height: var\(--p-tecla\)/.test(css) &&
+    /--p-tecla: 58px/.test(css) && /@media \(orientation: portrait\) \{\s*:root \{[^}]*--p-tecla: 84px/.test(css))
+  chk('la cuenta regresiva es grande (40 px) y en bordó',
+    /\.pr-pin__reloj\s*\{[^}]*font-size: 40px/.test(css) && /\.pr-pin__bloqueo\s*\{[^}]*background: var\(--p-mal-suave\)[^}]*color: var\(--p-mal-txt\)/.test(css))
+  chk('los puntos del PIN son formas de 18 px (los 8 del maestro entran en la ventana)', /\.pr-pin__punto\s*\{[^}]*width: 18px/.test(css))
+  chk('el panel del maestro va en gris, no compite con el naranja', /\.pr-pin--maestro \.pr-pin__ini \{ background: var\(--p-renglon\)/.test(css) &&
+    !/\.pr-pin--maestro[^{]*\{[^}]*var\(--p-acento/.test(css))
+  // (La tecla de acción naranja se fue: con el último número se manda sola.)
+  chk('"Acceso maestro" es discreto (gris, sin naranja) en un objetivo de 44 px',
+    /\.pr-quien__maestro \{[^}]*height: 44px[^}]*color: var\(--p-gris\)/.test(css) && !/\.pr-quien__maestro \{[^}]*--p-acento/.test(css))
 }
 
 fin()

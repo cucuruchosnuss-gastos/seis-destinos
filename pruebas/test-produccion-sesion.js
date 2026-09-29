@@ -85,12 +85,22 @@ esperas.push((async () => {
   const personalAntes = S.__llamadas.rpc.filter(([n]) => n === 'personal_produccion').length
   await S.tocarModo('masa')
   chk('volver a Sala de masa no borra al encargado', /e-fede/.test(guardada(S, 'produccion') ?? ''))
-  chk('… muestra "Masero: Juan Masero"', S.__doc.getElementById('pr-quien-fija').hidden === false &&
-    S.__doc.getElementById('pr-quien-fija-texto').textContent === 'Masero: Juan Masero',
-    S.__doc.getElementById('pr-quien-fija-texto').textContent)
-  chk('… SIN la lista ni el buscador', S.__doc.getElementById('pr-quien-lista').hidden === true &&
-    S.__doc.getElementById('pr-quien-buscar').hidden === true && S.__doc.getElementById('pr-quien-lista').innerHTML === '')
-  chk('… sin pedir el personal (no hace falta la lista)', S.__llamadas.rpc.filter(([n]) => n === 'personal_produccion').length === personalAntes)
+  // Planta v2 (diseño 8a): ya no hay cartel "Masero: Juan Masero" ni se
+  // esconde la grilla: Juan queda ELEGIDO en la grilla y la ventana del PIN
+  // se abre sola para él, con la ✕ como "Soy otra persona". La grilla se
+  // dibuja detrás, así que pedir el personal ahora es lo esperado.
+  void personalAntes
+  // saludoPin usa primerNombre (la segunda palabra: los nombres vienen
+  // "Apellido Nombre"), así que "Juan Masero" saluda "Hola, Masero".
+  chk('… la ventana del PIN saluda al masero guardado, en Sala de masa', S.__doc.getElementById('pr-pin-saludo').textContent === 'Hola, Masero' &&
+    S.__doc.getElementById('pr-pin-sub').textContent === 'Sala de masa · poné tu PIN',
+    S.__doc.getElementById('pr-pin-saludo').textContent)
+  chk('… la ✕ de la ventana dice "Soy otra persona"', S.__doc.getElementById('pr-pin-otra').getAttribute('aria-label') === 'Soy otra persona',
+    S.__doc.getElementById('pr-pin-otra').getAttribute('aria-label'))
+  chk('… en la grilla (sin buscador) Juan queda marcado y nadie más', S.__doc.getElementById('pr-quien-buscar').hidden === true &&
+    /data-persona="e-masero" aria-pressed="true"/.test(S.__doc.getElementById('pr-quien-lista').innerHTML) &&
+    (S.__doc.getElementById('pr-quien-lista').innerHTML.match(/aria-pressed="true"/g) || []).length === 1,
+    S.__doc.getElementById('pr-quien-lista').innerHTML)
   chk('… con el teclado del PIN abierto para ESA persona y SU puesto', S.__doc.getElementById('pr-pin').hidden === false &&
     S.estado.pin?.personaId === 'e-masero' && S.estado.pin?.puesto === 'masero')
   chk('… pero todavía NO está adentro: hay que poner el PIN', S.estado.persona === null)
@@ -114,13 +124,16 @@ esperas.push((async () => {
   T.marcarAbiertas(true)
   T.sessionStorage.setItem('produccion.persona.masa', JSON.stringify(JUAN))
   await T.mostrarQuien()
-  chk('con persona guardada no se ve la lista', T.__doc.getElementById('pr-quien-lista').hidden === true)
-  await T.soyOtraPersona()
-  chk('"Soy otra persona" vuelve a la lista', T.__doc.getElementById('pr-quien-lista').hidden === false &&
+  chk('con persona guardada la ventana del PIN se abre sola para ella', T.__doc.getElementById('pr-pin').hidden === false &&
+    T.estado.pin?.personaId === 'e-masero' && T.estado.quienFija?.id === 'e-masero')
+  // La ✕ de la ventana ES "Soy otra persona" (cerrarPin → soyOtraPersona).
+  await T.cerrarPin()
+  chk('"Soy otra persona" (la ✕) vuelve a la lista', T.__doc.getElementById('pr-quien-lista').hidden === false &&
     JSON.stringify(botones(T.__doc.getElementById('pr-quien-lista').innerHTML)) === '["e-masero","e-hoy"]')
-  chk('… sin el cartel de la persona fija', T.__doc.getElementById('pr-quien-fija').hidden === true)
+  chk('… sin la persona fija ni su ventana', T.estado.quienFija === null && T.__doc.getElementById('pr-pin').hidden === true)
   chk('… y sin el PIN abierto de nadie', T.estado.pin === null)
-  chk('el botón está en el HTML', /id="pr-btn-otra-persona">Soy otra persona</.test(FUENTE))
+  chk('la ✕ de la ventana del PIN está en el HTML y cierra con cerrarPin',
+    /id="pr-pin-otra"/.test(FUENTE) && /getElementById\('pr-pin-otra'\)\.addEventListener\('click', cerrarPin\)/.test(FUENTE))
   // Elegir otra persona de la lista y entrar la reemplaza en SU clave.
   T.elegirPersona('e-hoy')
   chk('… elegir a otra abre SU PIN', T.estado.pin?.personaId === 'e-hoy')
@@ -276,8 +289,9 @@ esperas.push((async () => {
   await S.mostrarSala()
   chk('una sola abierta: queda elegida sin tocar nada', S.estado.salaTurno?.id === 't1')
   // (28/09/2026) Planta con dos modos: se entra derecho a la masa nueva (4b).
+  // Planta v2: #pr-receta-cambiar se retiró; la máquina va en la cabecera.
   chk('… y entra derecho a la masa de esa máquina', S.estado.vista === 'pr-receta' &&
-    /Máquina 1/.test(S.__doc.getElementById('pr-receta-cambiar').textContent))
+    /Lote 7023 · Máquina 1/.test(S.cabeceraDeVista()?.ctx ?? ''), JSON.stringify(S.cabeceraDeVista()))
   chk('… pidió los datos de la masa', S.__llamadas.rpc.some(([n]) => n === 'datos_para_masa'))
 
   const T = armar()
@@ -380,7 +394,16 @@ esperas.push((async () => {
   Y.estado.unidades = new Map([['u-cn', marca('unidad')]])
   Y.estado.modo = 'masa'
   Y.estado.persona = { id: 'e', nombre: marca('persona'), puesto: 'masero' }
-  chequearMarcas(chk, 'barra con alguien adentro', Y.htmlLateral(), ['unidad', 'persona'])
+  // Planta v2: la unidad ya no va en la barra (está en el título de la
+  // cabecera, "Máquinas de …", que se escribe con textContent).
+  chequearMarcas(chk, 'barra con alguien adentro', Y.htmlLateral(), ['persona'])
+  // Las iniciales también son un pedazo del dato: "<x yz" da "<Y".
+  Y.estado.persona = { id: 'e', nombre: '<x yz', puesto: 'masero' }
+  chk('barra: las iniciales van escapadas', /pr-lat__ini--masa" aria-hidden="true">&lt;Y</.test(Y.htmlLateral()), Y.htmlLateral())
+  Y.estado.vista = 'pr-produccion'
+  chk('la unidad va en el título de la cabecera', (Y.cabeceraDeVista()?.titulo ?? '').includes(marca('unidad')))
+  chk('… y la cabecera se escribe con textContent', /t\.textContent = c\.titulo/.test(FUENTE) &&
+    /getElementById\('pr-cab-ctx'\)\.textContent = c\.ctx/.test(FUENTE))
 })())
 
 // ── h) Una sola unidad no pregunta la fábrica ───────────────────────────
@@ -419,8 +442,16 @@ esperas.push((async () => {
   S.estado.modo = 'masa'
   S.sessionStorage.setItem('produccion.persona.masa', JSON.stringify({ id: 'e', nombre: '<img src=x onerror=alert(1)>', puesto: 'masero' }))
   await S.mostrarQuien()
-  chk('el nombre fijo va por textContent (no arma HTML)', S.__doc.getElementById('pr-quien-fija-texto').innerHTML === '' &&
-    /<img/.test(S.__doc.getElementById('pr-quien-fija-texto').textContent))
+  // Planta v2: el nombre de la persona guardada sale en el saludo de la
+  // ventana del PIN (y sus iniciales), los dos por textContent.
+  // (saludoPin usa primerNombre: la segunda palabra, "Apellido Nombre").
+  chk('el nombre fijo va por textContent (no arma HTML)', S.__doc.getElementById('pr-pin-saludo').innerHTML === '' &&
+    S.__doc.getElementById('pr-pin-saludo').textContent === 'Hola, src=x' && S.__doc.getElementById('pr-pin-ini').innerHTML === '' &&
+    !/<img/.test(S.__doc.getElementById('pr-pin-mensaje').innerHTML + S.__doc.getElementById('pr-quien-lista').innerHTML),
+    S.__doc.getElementById('pr-pin-saludo').textContent)
+  chk('saludoPin y las iniciales no usan innerHTML',
+    /getElementById\('pr-pin-saludo'\)\.textContent = saludoPin\(p\)/.test(FUENTE) &&
+    /getElementById\('pr-pin-ini'\)\.textContent = /.test(FUENTE))
   chk('pintarQuienFija no usa innerHTML', !/function pintarQuienFija\(\) \{[^}]*innerHTML/.test(FUENTE))
 })())
 

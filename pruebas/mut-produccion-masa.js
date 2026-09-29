@@ -36,6 +36,9 @@ correrMutacionesProduccion({
     { expr: "esc(notas.join(' · '))", motivo: 'constantes del código: "el de la receta", "se terminó", "no alcanza"' },
   ],
   manuales: [
+    { nombre: '"Anterior" sin su detalle largo en el title', de: "como === 'anterior', textoDeHtml(detalleAnterior(d))) +", a: "como === 'anterior') +" },
+    { nombre: '"Modificar" sin decir de dónde parte', de: "como === 'modificar', dePartida(d)) +", a: "como === 'modificar') +" },
+    { nombre: 'textoDeHtml no deshace &amp; (el title saldría con &amp;amp;)', de: ".replace(/&#39;/g, \"'\").replace(/&amp;/g, '&')", a: ".replace(/&#39;/g, \"'\")" },
     // ── LA REGLA DEL UUID ────────────────────────────────────────────────
     { nombre: 'uuid nuevo en cada reintento', de: "        ;({ data, error } = await supabase.rpc('registrar_masa', b.payload))", a: "        ;({ data, error } = await supabase.rpc('registrar_masa', { ...b.payload, p_client_uuid: crypto.randomUUID() }))" },
     { nombre: 'el reintento manda un payload distinto del que se mandó', de: '      let data = null, error = null', a: '      let data = null, error = null\n      b.payload = { ...b.payload, p_items: [] }' },
@@ -107,8 +110,11 @@ correrMutacionesProduccion({
     { nombre: "la parada no se ve en la tarjeta", de: "      const parada = e.parada\n        ? `<span class=\"pr-sala-maq__parada\">", a: "      const parada = false\n        ? `<span class=\"pr-sala-maq__parada\">" },
     { nombre: "el tipo de masa se pregunta aunque haya una sola receta", de: "      const tiposReceta = tipos.length > 1", a: "      const tiposReceta = tipos.length > 0" },
     { nombre: "con UNA máquina abierta no se entra derecho", de: "      if (abiertas.length === 1 && !estado.salaTurno) await elegirMaquinaSala(abiertas[0].turno.id)", a: "      void abiertas" },
-    { nombre: "\"Anterior\" se ofrece sin anterior", de: "'no hay una masa anterior en esta máquina', hayAnterior, como === 'anterior')", a: "'no hay una masa anterior en esta máquina', true, como === 'anterior')" },
-    { nombre: 'no se avisa que la anterior era de chocolate', de: "      const choco = a.es_chocolate ? ' <span class=\"pr-como__choco\">Era de CHOCOLATE.</span>' : ''", a: "      const choco = ''" },
+    { nombre: "\"Anterior\" se ofrece sin anterior", de: "htmlComo('anterior', 'Anterior', detalleAnteriorCorto(d), hayAnterior,", a: "htmlComo('anterior', 'Anterior', detalleAnteriorCorto(d), true," },
+    // Planta v2: el aviso va en el detalle corto del botón "Anterior".
+    { nombre: 'no se avisa que la anterior era de chocolate', de: "${a.es_chocolate ? ' <span class=\"pr-como__choco\">· de chocolate</span>' : ''}", a: "${''}" },
+    { nombre: 'se avisa chocolate aunque no lo sea', de: "${a.es_chocolate ? ' <span class=\"pr-como__choco\">· de chocolate</span>' : ''}", a: "${' <span class=\"pr-como__choco\">· de chocolate</span>'}" },
+    { nombre: '"Anterior" no dice cuál', de: "      return `igual a la ${esc(a.nro)}${a.es_de_hoy", a: "      return `igual${a.es_de_hoy" },
     { nombre: "\"Modificar\" siempre parte de la original", de: "    function partidaDeModificar(d) {\n      return d?.anterior && d.anterior.es_de_hoy !== false ? 'anterior' : 'original'", a: "    function partidaDeModificar(d) {\n      return 'original'" },
     { nombre: '"Usar la anterior" trae las cantidades de la original', de: "      b.partida = como === 'modificar' ? partidaDeModificar(d) : como", a: "      b.partida = 'original'" },
     { nombre: 'los tipos se repiten', de: "      return [...new Set((data ?? []).map(r => r.tipo_masa))].sort((a, b) => a.localeCompare(b, 'es'))", a: '      return (data ?? []).map(r => r.tipo_masa)' },

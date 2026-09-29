@@ -14,6 +14,19 @@ const DATOS = nombre
   : { tablas: {}, rpc: {} }
 if (!nombre) console.warn('[maqueta] sin datos: abrí la primera página con ?maqueta=<nombre>')
 
+// CAMBIOS PUNTUALES (28/09/2026, comparar con el diseño): para dibujar un estado
+// que los datos fijos no tienen (un PIN incorrecto, una fábrica sin máquinas
+// abiertas) una prueba deja en sessionStorage 'maqueta.cambios' un
+// { tablas: {…}, rpc: {…} } que PISA esas tablas o respuestas al cargar la
+// página, o lo pone en globalThis.__maqueta para las rpc de ahí en adelante.
+try {
+  const cambios = JSON.parse(sessionStorage.getItem('maqueta.cambios') || 'null')
+  if (cambios) {
+    Object.assign(DATOS.tablas ??= {}, cambios.tablas ?? {})
+    Object.assign(DATOS.rpc ??= {}, cambios.rpc ?? {})
+  }
+} catch { /* sin sessionStorage: sin cambios */ }
+
 function consulta(tabla) {
   const filtros = []
   const q = {
@@ -37,7 +50,8 @@ export const supabase = {
   // devuelve como error de la base, para mirar cómo lo muestra la pantalla.
   rpc(nombreRpc, params) {
     console.log('[maqueta] rpc', nombreRpc, params)
-    const r = DATOS.rpc?.[nombreRpc]
+    const vivo = globalThis.__maqueta?.rpc
+    const r = vivo && Object.prototype.hasOwnProperty.call(vivo, nombreRpc) ? vivo[nombreRpc] : DATOS.rpc?.[nombreRpc]
     if (typeof r === 'string' && r.startsWith('ERROR:')) return Promise.resolve({ data: null, error: { message: r.slice(6), code: 'P0001' } })
     return Promise.resolve({ data: r ?? null, error: null })
   },

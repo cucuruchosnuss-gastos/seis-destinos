@@ -465,10 +465,6 @@
       catalogo: null,
       catalogoEmpresa: null,
       errorCatalogo: null,
-      // El stock de cada presentación con cono, cono por cono
-      // ('presentacion|marca' → cajas): undefined = no se leyó; null = no se
-      // puede saber (sin permiso o falló).
-      stockConos: undefined,
       // Los lotes con stock por 'presentacion|marca' (producto) o
       // 'ins|insumo' (insumo): { cargando, error, lista }
       lotes: new Map(),
@@ -700,7 +696,6 @@
       if (cambio) {
         estado.clientes = null
         estado.catalogo = null
-        estado.stockConos = undefined
         estado.lotes = new Map()
         estado.mis = null
         estado.form = null
@@ -779,42 +774,34 @@
       return catalogoDesdeRpc(c.data, m.data, t.error ? [] : t.data)
     }
 
-    // El stock de cada PRESENTACIÓN CON CONO, cono por cono. catalogo_para_retiro()
-    // da el stock de la presentación sumando todos los conos, así que para
-    // mostrar "Mini con cono · LOLO · hay 12 cajas" se lee el libro del
-    // stock terminado, que pide stock:ver o Producción en la empresa (el
-    // depósito tiene stock:ver). Sin permiso, o si falla, o si llega al tope
-    // de 1000 filas, devuelve null: la pantalla muestra el stock de la
-    // presentación entre todos los conos y el cono se elige después. Nunca un
-    // número de menos.
-    const TOPE_FILAS = 1000
-    function puedeVerStockTerminado(unidadId) {
-      if (!unidadId) return false
-      if (estado.miRolApp === 'super_admin') return true
-      return ['stock:ver', 'produccion:ver', 'produccion:cargar', 'produccion:configurar'].some(k => {
-        if (!estado.misTareas.has(k)) return false
-        const a = estado.misTareas.get(k)
-        return (a && a.todas === true) || (Array.isArray(a?.unidades) && a.unidades.map(String).includes(String(unidadId)))
-      })
-    }
-
-    async function leerStockConos(unidadId) {
-      if (!puedeVerStockTerminado(unidadId)) return null
-      const { data, error } = await supabase.from('stock_terminado_movimientos')
-        .select('presentacion_id, marca_id, cajas').eq('unidad_negocio_id', unidadId)
-      if (error) { console.error('No se pudo leer el stock por cono:', error); return null }
-      const filas = Array.isArray(data) ? data : []
-      if (filas.length >= TOPE_FILAS) { console.warn('El stock por cono llegó al tope de filas: se muestra por presentación.'); return null }
-      return stockPorCono(filas)
-    }
-
-    // 'presentacion|marca' (marca '' = cono común) → cajas.
-    function stockPorCono(filas) {
+    // El stock de cada PRESENTACIÓN CON CONO, cono por cono (29/09/2026):
+    // catalogo_para_retiro() trae 'conos' [{presentacion_id, marca_id, cono,
+    // stock_cajas}] con los conos con stock (> 0) en la empresa, SIN pedir
+    // stock:ver, así que el depósito los ve siempre. Devuelve
+    // 'presentacion|marca' (marca '' = cono común) → cajas, o null si la
+    // base no mandó 'conos' (red por si la función cambia: la pantalla
+    // muestra el stock de la presentación entre todos los conos y el cono se
+    // elige después).
+    // OJO: 'conos' NO trae el cono COMÚN (marca null). Se deduce como el
+    // stock de la presentación menos sus conos, solo si da más de cero. Si
+    // algún cono quedara en negativo (la base lo saca de 'conos' pero sí lo
+    // suma en stock_cajas), el común saldría de menos: arreglarlo es que la
+    // función sume también la fila de marca null.
+    function conosDesdeRpc(data) {
+      if (!Array.isArray(data?.conos)) return null
       const m = new Map()
-      for (const f of Array.isArray(filas) ? filas : []) {
-        if (!f?.presentacion_id) continue
-        const k = claveLotes(f.presentacion_id, f.marca_id ?? null)
-        m.set(k, (m.get(k) ?? 0) + (Number(f.cajas) || 0))
+      for (const c of data.conos) {
+        if (!c?.presentacion_id || !c?.marca_id) continue
+        const k = claveLotes(c.presentacion_id, c.marca_id)
+        m.set(k, (m.get(k) ?? 0) + (Number(c.stock_cajas) || 0))
+      }
+      for (const x of Array.isArray(data?.productos) ? data.productos : []) {
+        // (un stock_cajas desconocido da 0 acá y no inventa ningún común)
+        if (!x?.presentacion_id || x.con_cono !== true) continue
+        let deConos = 0
+        for (const [k, v] of m) if (k.startsWith(x.presentacion_id + '|')) deConos += v
+        const comun = (Number(x.stock_cajas) || 0) - deConos
+        if (comun > 0) m.set(claveLotes(x.presentacion_id, null), comun)
       }
       return m
     }
@@ -867,7 +854,7 @@
         if (!i?.id || conStock.has(i.id)) continue
         insumos.push({ id: i.id, nombre: i.nombre, marca: i.marca ?? null, categoria: i.categoria ?? null, unidad_medida: i.unidad_medida, stock: 0 })
       }
-      return { productos, presentaciones, marcas: marcas ?? [], insumos }
+      return { productos, presentaciones, marcas: marcas ?? [], insumos, conos: conosDesdeRpc(data) }
     }
 
     function insumoDe(cat, id) {
@@ -884,7 +871,8 @@
     // Lo que se ofrece en un renglón sin elegir, en TRES grupos (28/09/2026):
     //   · "Producto terminado · SIN CONO": una opción por presentación sin cono;
     //   · "Producto terminado · CON CONO": una por presentación Y cono con
-    //     stock (el cono de cada uno); sin el stock por cono, una por
+    //     stock (el cono de cada uno, de catalogo_para_retiro().conos); si la
+    //     base no mandara 'conos', una por
     //     presentación con el stock entre todos los conos, y el cono se elige
     //     después;
     //   · "Materia prima e insumos".
@@ -895,7 +883,7 @@
     // Cada opción: { grupo, productoId, presentacionId, conCono, marcaId
     // (null = cono común; undefined = el cono se elige después), insumoId,
     // nombre, detalle, stock (null = no se sabe) }.
-    function opcionesCatalogo(cat, stockConos = null) {
+    function opcionesCatalogo(cat, stockConos = cat?.conos ?? null) {
       const productos = new Map((cat?.productos ?? []).map(p => [p.id, p]))
       const sin = []
       const con = []
@@ -945,7 +933,7 @@
     // por no poder medirlo.
     const hayStock = (o) => o.stock === null || o.stock === undefined || o.stock > 0
 
-    function gruposCatalogo(cat, busqueda, stockConos = null) {
+    function gruposCatalogo(cat, busqueda, stockConos = cat?.conos ?? null) {
       const q = normalizar(busqueda)
       const coincide = (o) => !q || (o.textos ?? []).some(t => normalizar(t).includes(q))
       const todas = opcionesCatalogo(cat, stockConos)
@@ -990,10 +978,6 @@
         estado.errorCatalogo = null
         tareas.push(leerCatalogo(unidad).then(c => { if (unidad === estado.empresaId) { estado.catalogo = c; estado.catalogoEmpresa = unidad } })
           .catch(err => { console.error('No se pudo leer el catálogo:', err); estado.errorCatalogo = 'No se pudieron leer los productos. Revisá la conexión y volvé a entrar.' }))
-      }
-      if (estado.stockConos === undefined) {
-        tareas.push(leerStockConos(unidad).then(m => { if (unidad === estado.empresaId) estado.stockConos = m })
-          .catch(err => { console.error('No se pudo leer el stock por cono:', err); if (unidad === estado.empresaId) estado.stockConos = null }))
       }
       if (estado.clientes === null) {
         estado.errorClientes = null
@@ -1367,7 +1351,7 @@
       return `hay ${cuanto}${o.entreConos ? ' entre todos los conos' : ''}`
     }
 
-    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = estado.stockConos) {
+    function htmlProductosRenglon(i, cat, busqueda = '', stockConos = cat?.conos ?? null) {
       const grupos = gruposCatalogo(cat, busqueda, stockConos)
       const q = limpio(busqueda)
       // Sin buscar se ven solo los que tienen stock: se dice cómo encontrar el resto.

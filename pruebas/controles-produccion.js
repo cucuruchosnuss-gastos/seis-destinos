@@ -101,6 +101,9 @@ const RENOMBRADOS = [
     'renglón de la receta a la VENTANA de lotes, arriba de la lista, con "Usar este lote" (#pr-lote-panel-usar). ' +
     'Abajo del botón del renglón el lote se veía dos veces y la columna desbordaba; y desde "Se terminó" la ventana ' +
     'abría vacía y sin forma de llegar al campo. Mismo data-lote-manual (el id del ingrediente), mismo dato.'],
+  ['control:input[data-abrir-maquina][type=checkbox]', 'control:button[data-abrir-maquina][type=button]',
+    'Planta v2 (28/09/2026): cada máquina de Abrir turno es un chip que se toca (aria-pressed), como en el diseño 3 ' +
+    'del handoff, en vez de una casilla. Mismo data-abrir-maquina (el índice de la máquina), mismo dato.'],
 ]
 
 // Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS
@@ -197,6 +200,39 @@ const RETIRADOS = [
   ['control:button#pr-btn-barra-maestro[type=button]',
     'La planta con dos modos (28/09/2026): el handoff deja el acceso maestro en UN solo lugar, abajo de los nombres en ' +
     '"¿Quién sos?" de Producción (#pr-btn-maestro, que sigue). El atajo de la barra de arriba se fue con esa barra.'],
+  ['control:button#pr-btn-otra-persona[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): "¿Quién sos?" muestra solo a las personas de esta fábrica con el puesto del modo; para alguien que no está ' +
+    'en la grilla, "Buscar a otra persona" (#pr-quien-otra-persona) abre el buscador. El botón viejo se reemplazó por ese.'],
+  ['control:button#pr-btn-actualizar[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): el Inicio se actualiza solo (tiempo real, y al volver a la pestaña). El diseño 2a no tiene "Actualizar".'],
+  ['control:button#pr-btn-abrir-turno[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): se abre desde la tarjeta de una máquina libre (data-abrir-libre) o desde "Abrir turno" de la barra lateral.'],
+  ['control:button#pr-abrir-cancelar[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): Abrir turno es una sección de la barra lateral: se sale tocando otra (Inicio). El diseño 3 no tiene "Cancelar".'],
+  ['control:button#pr-planilla-volver[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): la planilla es la sección "Planilla" de la barra lateral; se vuelve con "Inicio". El diseño 4a no tiene "Atrás".'],
+  ['control:button#pr-btn-cerrar-planilla[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): "Cerrar planilla" es una sección de la barra lateral (data-seccion="cierre"), como en el diseño.'],
+  ['control:button#pr-parada-cancelar[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): el formulario de "Parada" se reemplazó por la pantalla Paradas (diseño 6): motivos en grilla (data-motivo) ' +
+    'que se tocan y se guardan solos; "Otro motivo" con su campo y #pr-parada-guardar-motivo.'],
+  ['control:button#pr-parada-confirmar[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): ver #pr-parada-cancelar: con la grilla de motivos no hay un "Confirmar" aparte; "Paró ahora" es #pr-btn-parada.'],
+  ['control:button[data-sugerencia][type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): las sugerencias de motivo del formulario viejo son ahora los botones de la grilla de motivos (data-motivo).'],
+  ['control:button#pr-cierre-volver[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): Cerrar planilla es una sección de la barra lateral: se vuelve tocando "Planilla". El diseño 7 no tiene "Volver".'],
+  ['control:button#pr-sala-actualizar[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): la sala se actualiza sola (tiempo real) y la banda de masas pendientes tiene su "Reintentar" (#pr-sala-reintentar).'],
+  ['control:button#pr-receta-cambiar[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): Original / Anterior / Modificar quedaron siempre a la vista arriba de la receta (diseño 9b): no hace falta ' +
+    'un "Cambiar" que vuelva a la pregunta. (Antes se llamaba #pr-masa-volver.)'],
+  ['control:button#pr-acceso-cancelar[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): "Dar acceso por hoy" es una pantalla propia con pestañas y banda (diseño 10b): se sale con "Salir del ' +
+    'acceso maestro" (#pr-maestro-salir) o se cambia de pestaña (data-maestro-tab).'],
+  ['control:button#pr-asignar-volver[type=button]',
+    'Planta v2 (28/09/2026, handoff "Planta v2" de Claude Design): Asignar PIN es la otra pestaña de la pantalla del acceso maestro (data-maestro-tab); la ventana del teclado ' +
+    'tiene su "Cancelar" (#pr-asignar-cancelar).'],
 ]
 
 // Controles que SIGUEN estando pero aparecen MENOS VECES en el fuente:

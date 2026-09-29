@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E4E0D9; -webkit-font-smoothing: antialiased; }
+  a { color: #C2410C; text-decoration: none; }
+  a:hover { color: #8F2F08; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #D6CFC4; border-radius: 8px; }
+</style>
+</helmet>
+<div style="padding: 56px; display: flex; flex-direction: column; gap: 64px; font-family: 'Figtree', sans-serif; color: #1C1A17; width: max-content; min-width: 100%;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 900px;">
+    <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -0.02em;">Producción · Configuración</div>
+    <div style="font-size: 17px; color: #6B645A; line-height: 1.5; text-wrap: pretty;">Mismo sistema que el esqueleto nuevo. Todas las secciones usan el mismo patrón: la lista a la izquierda y el detalle a la derecha, y se edita en el mismo panel. Cada pantalla lleva su número; el README explica medidas y comportamiento.</div>
+  </div>
+
+  <sc-for list="{{ screens }}" as="s" hint-placeholder-count="2">
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 15px; background: #1C1A17; color: #fff; border-radius: 8px; padding: 4px 10px;">{{ s.id }}</div>
+        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700;">{{ s.title }}</div>
+        <div style="font-size: 15px; color: #6B645A;">{{ s.sizeLabel }}</div>
+      </div>
+      <div style="font-size: 15px; color: #6B645A; max-width: 820px; line-height: 1.5;">{{ s.note }}</div>
+
+      <div style="width: {{ s.w }}px; height: {{ s.h }}px; background: #F5F3EF; border-radius: 12px; overflow: hidden; box-shadow: 0 30px 60px -20px rgba(28,26,23,0.35), 0 0 0 1px rgba(28,26,23,0.08); display: flex; position: relative;">
+
+        <sc-if value="{{ s.desk }}" hint-placeholder-val="{{ true }}">
+          <aside style="width: 232px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #E7E3DC; display: flex; flex-direction: column; padding: 12px 10px 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px; margin-bottom: 8px;">
+              <div style="width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; background-image: url(logo.png); background-size: 165%; background-position: 50% 28%; border: 1px solid #EFEBE5;"></div>
+              <div style="display: flex; flex-direction: column; line-height: 1.05;">
+                <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 15.5px; letter-spacing: -0.01em;">Seis Destinos</div>
+                <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: #9A9287;">GROUP</div>
+              </div>
+            </div>
+            <nav style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0;">
+              <sc-for list="{{ side }}" as="m" hint-placeholder-count="10">
+                <div style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px 0 5px; border-radius: 9px; background: {{ m.bg }};">
+                  <div style="width: 24px; height: 24px; border-radius: 7px; background: {{ m.tint }}; color: {{ m.color }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ m.icon }}"></path></svg>
+                  </div>
+                  <div style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: {{ m.fw }}; color: {{ m.fg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.name }}</div>
+                  <sc-if value="{{ m.hasBadge }}">
+                    <div style="min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px; background: {{ m.bBg }}; color: {{ m.bFg }}; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{ m.badge }}</div>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ m.divAfter }}">
+                  <div style="height: 1px; background: #EFEBE5; margin: 5px 6px;"></div>
+                </sc-if>
+              </sc-for>
+            </nav>
+            <div style="border-top: 1px solid #EFEBE5; padding-top: 8px; display: flex; gap: 4px; align-items: center;">
+              <div style="flex: 1; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 8px 0 5px; border-radius: 9px;">
+                <div style="width: 24px; height: 24px; border-radius: 7px; background: #F1EEE9; color: #3D3831; display: flex; align-items: center; justify-content: center;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round;"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"></path></svg>
+                </div>
+                <div style="font-size: 13.5px; font-weight: 500; color: #3D3831;">Personalizar</div>
+              </div>
+              <div style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #6B645A;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"></path></svg>
+              </div>
+            </div>
+          </aside>
+
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+            <header style="height: 52px; flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 20px;">
+              <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 11px; padding: 3px;">
+                <sc-for list="{{ s.factories }}" as="f" hint-placeholder-count="5">
+                  <div style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px 0 5px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13.5px; font-weight: {{ f.fw }};">
+                    <sc-if value="{{ f.all }}">
+                      <div style="width: 20px; height: 20px; border-radius: 6px; background: #FFFFFF; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 4px;">
+                        <div style="border-radius: 2px; background: oklch(0.55 0.11 55);"></div>
+                        <div style="border-radius: 2px; background: oklch(0.52 0.1 130);"></div>
+                        <div style="border-radius: 2px; background: oklch(0.57 0.19 25);"></div>
+                        <div style="border-radius: 2px; background: #57534E;"></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ f.one }}">
+                      <div style="width: 20px; height: 20px; border-radius: 999px; background: {{ f.c }}; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{ f.ring }};">{{ f.ini }}</div>
+                    </sc-if>
+                    <span>{{ f.n }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid #E7E3DC;">
+                <div style="width: 30px; height: 30px; border-radius: 999px; background: oklch(0.42 0.06 150); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">FU</div>
+                <div style="font-size: 14px; font-weight: 600;">Facundo</div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M6 9l6 6 6-6"></path></svg>
+              </div>
+            </header>
+
+            <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 24px 18px; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 30px; height: 30px; border-radius: 9px; background: oklch(0.955 0.028 180); color: oklch(0.52 0.1 180); display: flex; align-items: center; justify-content: center;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M3 21V10l6 4v-4l6 4V5h6v16zM7 17h2M13 17h2"></path></svg>
+                  </div>
+                  <span style="font-size: 15px; color: #6B645A; font-weight: 600;">Producción</span>
+                  <span style="color: #B8B0A4;">/</span>
+                  <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.01em;">Configuración</span>
+                </div>
+                <div style="display: flex; gap: 2px; background: #EDE9E3; border-radius: 11px; padding: 3px; margin-left: 8px;">
+                  <sc-for list="{{ s.tabs }}" as="t" hint-placeholder-count="6">
+                    <div style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 8px; background: {{ t.bg }}; color: {{ t.fg }}; font-size: 13.5px; font-weight: {{ t.fw }}; box-shadow: {{ t.shadow }}; cursor: pointer;">
+                      {{ t.name }}
+                      <sc-if value="{{ t.hasBadge }}">
+                        <span style="min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: {{ t.bBg }}; color: {{ t.bFg }}; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ t.badge }}</span>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <sc-if value="{{ s.showDefaultBox }}">
+                <div style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 8px 0 12px; background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 12px; flex-shrink: 0;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;"><path d="M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8"></path></svg>
+                  <span style="font-size: 14px; color: #6B645A;">Caja predeterminada de Cucuruchos Nuss:</span>
+                  <span style="font-size: 14px; font-weight: 700;">Caja N°1 Nuss</span>
+                  <span style="font-size: 13.5px; color: #6B645A;">· se sugiere en cada presentación nueva</span>
+                  <span style="flex: 1;"></span>
+                  <div style="height: 30px; padding: 0 12px; border-radius: 8px; color: #C2410C; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; cursor: pointer;" style-hover="background: #FDEEE4;">Cambiar</div>
+                </div>
+              </sc-if>
+
+              <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: {{ s.gridCols }}; gap: 14px;">
+                <sc-if value="{{ s.hasList }}" hint-placeholder-val="{{ true }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                    <div style="display: flex; gap: 8px; padding: 10px 10px 6px;">
+                      <div style="flex: 1; height: 36px; border-radius: 10px; background: #FAF8F5; border: 1px solid #EFEBE5; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 14px; color: {{ s.list.qFg }};">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>{{ s.list.q }}
+                      </div>
+                      <div style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1.5px solid #C2410C; color: #C2410C; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; cursor: pointer;" style-hover="background: #FDEEE4;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.8; stroke-linecap: round;"><path d="M12 5v14M5 12h14"></path></svg>{{ s.list.add }}
+                      </div>
+                    </div>
+                    <sc-if value="{{ s.list.notice }}">
+                      <div style="margin: 2px 10px 4px; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; background: #F5E8EC; color: #5C2233; font-size: 13px; font-weight: 600;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A2E42" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 3l9.5 17h-19zM12 10v4M12 17.5v.01"></path></svg>{{ s.list.notice }}
+                      </div>
+                    </sc-if>
+                    <div style="flex: 1; min-height: 0; overflow: auto; padding: 2px 6px 8px;">
+                      <sc-for list="{{ s.list.rows }}" as="r" hint-placeholder-count="8">
+                        <sc-if value="{{ r.isHead }}">
+                          <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; padding: 10px 8px 4px;">{{ r.head }}</div>
+                        </sc-if>
+                        <sc-if value="{{ r.isItem }}" hint-placeholder-val="{{ true }}">
+                          <div style="display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 4px 8px; border-radius: 9px; background: {{ r.bg }}; cursor: pointer;" style-hover="background: {{ r.hover }};">
+                            <sc-if value="{{ r.hasSw }}">
+                              <div style="width: 8px; height: 28px; border-radius: 3px; background: {{ r.sw }}; flex-shrink: 0; opacity: {{ r.op }};"></div>
+                            </sc-if>
+                            <div style="flex: 1; min-width: 0; opacity: {{ r.op }};">
+                              <div style="font-size: 14px; font-weight: {{ r.fw }}; color: {{ r.fg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.name }}</div>
+                              <div style="font-size: 12.5px; color: #6B645A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.sub }}</div>
+                            </div>
+                            <sc-if value="{{ r.hasChip }}">
+                              <span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ r.chipBg }}; color: {{ r.chipFg }}; font-size: 12px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; flex-shrink: 0;">{{ r.chip }}</span>
+                            </sc-if>
+                          </div>
+                        </sc-if>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.prod }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                    <div style="background: {{ s.d.tint }}; border-top: 5px solid {{ s.d.c }}; padding: 12px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 23px; font-weight: 700; letter-spacing: -0.01em;">{{ s.d.name }}</div>
+                      <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: #FFFFFF; color: {{ s.d.dk }}; font-size: 12.5px; font-weight: 700; display: flex; align-items: center;">Masa {{ s.d.masa }}</span>
+                      <span style="font-size: 13.5px; color: #3D3831;">{{ s.d.count }}</span>
+                      <span style="flex: 1;"></span>
+                      <span style="font-size: 13.5px; font-weight: 600; color: #3D3831;">Activo</span>
+                      <div style="width: 38px; height: 22px; border-radius: 999px; background: #C2410C; padding: 3px; display: flex; justify-content: flex-end;"><div style="width: 16px; height: 16px; border-radius: 999px; background: #fff;"></div></div>
+                      <div style="height: 32px; padding: 0 12px; border-radius: 9px; background: #FFFFFF; border: 1px solid #E7E3DC; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; cursor: pointer;">Editar nombre</div>
+                    </div>
+                    <div style="flex: 1; min-height: 0; overflow: auto; padding: 10px 18px 14px;">
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <div style="font-size: 15px; font-weight: 700;">Presentaciones</div>
+                        <span style="flex: 1;"></span>
+                        <div style="height: 30px; padding: 0 10px; border-radius: 8px; color: #C2410C; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; cursor: pointer;" style-hover="background: #FDEEE4;">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.8; stroke-linecap: round;"><path d="M12 5v14M5 12h14"></path></svg>Agregar presentación
+                        </div>
+                      </div>
+                      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 3.3fr) 46px; gap: 12px; align-items: center; height: 30px; padding: 0 6px; border-bottom: 1px solid #EFEBE5; font-size: 12px; font-weight: 700; color: #9A9287; letter-spacing: 0.03em;">
+                        <div>PRESENTACIÓN</div><div>POR CAJA</div><div>EMPAQUE POR CAJA</div><div>ACTIVA</div>
+                      </div>
+                      <sc-for list="{{ s.d.pres }}" as="p" hint-placeholder-count="4">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 3.3fr) 46px; gap: 12px; align-items: center; min-height: 44px; padding: 0 6px; border-bottom: 1px solid #F3F0EB; background: {{ p.rowBg }};">
+                          <div style="display: flex; align-items: center; gap: 8px; min-width: 0; opacity: {{ p.op }}; padding: 4px 0;">
+                            <span style="width: 8px; height: 8px; border-radius: 999px; background: {{ s.d.c }}; flex-shrink: 0;"></span>
+                            <div style="min-width: 0;">
+                              <div style="font-size: 14px; font-weight: 600; line-height: 1.25;">{{ p.name }}</div>
+                              <div style="font-size: 12.5px; color: #6B645A;">{{ p.cono }}</div>
+                            </div>
+                          </div>
+                          <div style="opacity: {{ p.op }};"><span style="height: 22px; padding: 0 7px; border-radius: 6px; background: {{ s.d.tint }}; color: {{ s.d.dk }}; font-size: 12.5px; font-weight: 800; display: inline-flex; align-items: center; font-variant-numeric: tabular-nums;">×{{ p.u }}</span></div>
+                          <div style="min-width: 0;">
+                            <sc-if value="{{ p.hasEmp }}">
+                              <div style="display: flex; align-items: center; gap: 7px; padding: 6px 8px; margin-left: -8px; border-radius: 8px; cursor: pointer; opacity: {{ p.op }};" style-hover="background: #FFF8F3;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;"><path d="M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8"></path></svg>
+                                <span style="flex: 1; min-width: 0; font-size: 13.5px; color: #3D3831; line-height: 1.3; text-wrap: pretty;">{{ p.emp }}</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C2410C" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;"><path d="{{ p.chevIcon }}"></path></svg>
+                              </div>
+                            </sc-if>
+                            <sc-if value="{{ p.noEmp }}">
+                              <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: #F5E8EC; color: #7A2E42; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.6; stroke-linecap: round;"><path d="M12 7v6M12 17v.01"></path></svg>Falta el empaque
+                                </span>
+                                <span style="font-size: 13.5px; font-weight: 700; color: #C2410C; cursor: pointer;">{{ p.fixLabel }}</span>
+                              </div>
+                            </sc-if>
+                          </div>
+                          <div style="width: 34px; height: 20px; border-radius: 999px; background: {{ p.swBg }}; padding: 3px; display: flex; justify-content: {{ p.swJ }};"><div style="width: 14px; height: 14px; border-radius: 999px; background: #fff;"></div></div>
+                        </div>
+                        <sc-if value="{{ p.open }}">
+                          <div style="margin: 6px 0 10px; border: 1.5px solid #C2410C; background: #FFF8F3; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+                            <div style="display: flex; align-items: baseline; gap: 8px;">
+                              <div style="font-size: 15px; font-weight: 700;">Empaque de “{{ p.name }}”</div>
+                              <div style="font-size: 13.5px; color: #6B645A;">· por cada caja de ×{{ p.u }}</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr); gap: 16px;">
+                              <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287;">CAJA</div>
+                                <sc-for list="{{ s.d.edit.cajas }}" as="k" hint-placeholder-count="3">
+                                  <div style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px; border-radius: 9px; background: #FFFFFF; border: 1.5px solid {{ k.border }}; cursor: pointer;">
+                                    <span style="width: 16px; height: 16px; border-radius: 999px; border: 2px solid {{ k.radio }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                      <sc-if value="{{ k.sel }}"><span style="width: 8px; height: 8px; border-radius: 999px; background: #C2410C;"></span></sc-if>
+                                    </span>
+                                    <span style="flex: 1; font-size: 13.5px; font-weight: 600;">{{ k.n }}</span>
+                                    <sc-if value="{{ k.sug }}">
+                                      <span style="height: 20px; padding: 0 7px; border-radius: 6px; background: #F1EEE9; color: #3D3831; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"></path></svg>Sugerida
+                                      </span>
+                                    </sc-if>
+                                  </div>
+                                </sc-for>
+                              </div>
+                              <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 60px 168px 24px; gap: 8px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287;">
+                                  <div>INSUMOS QUE CONSUME</div><div>CANT.</div><div>CUÁNDO</div><div></div>
+                                </div>
+                                <sc-for list="{{ s.d.edit.ins }}" as="i" hint-placeholder-count="3">
+                                  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 60px 168px 24px; gap: 8px; align-items: center; height: 36px;">
+                                    <div style="height: 32px; border-radius: 8px; background: #FFFFFF; border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: space-between; padding: 0 9px; font-size: 13.5px; font-weight: 500;">{{ i.n }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                                    <div style="height: 32px; border-radius: 8px; background: #FFFFFF; border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;">{{ i.q }}</div>
+                                    <div style="height: 32px; border-radius: 8px; background: #FFFFFF; border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: space-between; padding: 0 9px; font-size: 13px; color: #3D3831;">{{ i.c }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                                    <div style="width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9A9287; cursor: pointer;" title="Quitar">
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.4; stroke-linecap: round;"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                                    </div>
+                                  </div>
+                                </sc-for>
+                                <div style="font-size: 13.5px; font-weight: 700; color: #C2410C; padding: 4px 0; cursor: pointer;">+ Agregar insumo</div>
+                              </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid #F6D3BD; padding-top: 10px;">
+                              <div style="flex: 1; min-width: 0; font-size: 13.5px; color: #6B645A;">Va a quedar: <strong style="color: #1C1A17; font-weight: 700;">{{ s.d.edit.preview }}</strong></div>
+                              <div style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #E7E3DC; background: #fff; font-size: 14px; font-weight: 600; display: flex; align-items: center;">Cancelar</div>
+                              <div style="height: 36px; padding: 0 16px; border-radius: 10px; background: #C2410C; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center;">Guardar empaque</div>
+                            </div>
+                          </div>
+                        </sc-if>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.maq }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; padding: 14px 18px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto;">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 23px; font-weight: 700;">Máquina 1</div>
+                      <span style="flex: 1;"></span>
+                      <span style="font-size: 13.5px; color: #6B645A;">Orden en la tablet</span>
+                      <div style="display: flex; align-items: center; height: 32px; border: 1px solid #E7E3DC; border-radius: 9px; overflow: hidden;">
+                        <div style="width: 30px; height: 100%; display: flex; align-items: center; justify-content: center; color: #9A9287; border-right: 1px solid #E7E3DC;">▲</div>
+                        <div style="width: 36px; text-align: center; font-size: 14px; font-weight: 700;">1</div>
+                        <div style="width: 30px; height: 100%; display: flex; align-items: center; justify-content: center; color: #6B645A; border-left: 1px solid #E7E3DC;">▼</div>
+                      </div>
+                      <span style="font-size: 13.5px; font-weight: 600; color: #3D3831; margin-left: 6px;">Activa</span>
+                      <div style="width: 38px; height: 22px; border-radius: 999px; background: #C2410C; padding: 3px; display: flex; justify-content: flex-end;"><div style="width: 16px; height: 16px; border-radius: 999px; background: #fff;"></div></div>
+                    </div>
+                    <div style="border: 1px solid #EFEBE5; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="font-size: 15px; font-weight: 700;">Receta vigente</div>
+                        <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: oklch(0.955 0.028 180); color: oklch(0.42 0.09 180); font-size: 13px; font-weight: 800; display: flex; align-items: center;">v3</span>
+                        <span style="font-size: 13.5px; color: #6B645A;">desde el 14/08/2026 · la cambió Facundo Usabarrena</span>
+                      </div>
+                      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px;">
+                        <sc-for list="{{ recipe }}" as="g" hint-placeholder-count="8">
+                          <div style="display: flex; align-items: center; justify-content: space-between; height: 36px; border-bottom: 1px solid #F3F0EB; font-size: 14px;">
+                            <span style="display: flex; align-items: center; gap: 8px;">{{ g.n }}<sc-if value="{{ g.none }}"><span style="height: 20px; padding: 0 7px; border-radius: 6px; background: #F5E8EC; color: #7A2E42; font-size: 11.5px; font-weight: 700; display: flex; align-items: center;">sin insumo</span></sc-if></span>
+                            <span style="font-weight: 700; font-variant-numeric: tabular-nums;">{{ g.v3 }} kg</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display: flex; gap: 8px; padding-top: 4px;">
+                        <div style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #E7E3DC; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 7px; cursor: pointer;" style-hover="background: #F6F3EF;">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4M12 8v4l3 2"></path></svg>Ver historial · 3 versiones
+                        </div>
+                        <div style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1.5px solid #C2410C; color: #C2410C; font-size: 14px; font-weight: 700; display: flex; align-items: center; cursor: pointer;" style-hover="background: #FDEEE4;">Nueva versión</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: #6B645A;">
+                      <span>Hace:</span>
+                      <sc-for list="{{ maqProds }}" as="mp" hint-placeholder-count="3">
+                        <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: {{ mp.t }}; color: {{ mp.dk }}; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 6px;"><span style="width: 7px; height: 7px; border-radius: 999px; background: {{ mp.c }};"></span>{{ mp.n }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.rec }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #EFEBE5; flex-shrink: 0;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700;">Receta de la Máquina 1</div>
+                      <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 9px; padding: 2px;">
+                        <div style="height: 28px; padding: 0 10px; border-radius: 7px; background: #C2410C; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center;">v3 · vigente</div>
+                        <div style="height: 28px; padding: 0 10px; border-radius: 7px; color: #3D3831; font-size: 13px; font-weight: 600; display: flex; align-items: center;">v2</div>
+                        <div style="height: 28px; padding: 0 10px; border-radius: 7px; color: #3D3831; font-size: 13px; font-weight: 600; display: flex; align-items: center;">v1</div>
+                      </div>
+                      <span style="flex: 1;"></span>
+                      <div style="height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid #E7E3DC; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; cursor: pointer;" style-hover="background: #F6F3EF;">Comparar versiones</div>
+                      <div style="height: 34px; padding: 0 14px; border-radius: 10px; background: #C2410C; color: #fff; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; cursor: pointer;" style-hover="background: #8F2F08;">Nueva versión</div>
+                    </div>
+                    <div style="flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 20px; padding: 10px 18px 14px;">
+                      <div>
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1.3fr); gap: 10px; height: 30px; align-items: center; border-bottom: 1px solid #EFEBE5; font-size: 12px; font-weight: 700; color: #9A9287; letter-spacing: 0.03em;">
+                          <div>INGREDIENTE</div><div style="text-align: right;">CANTIDAD</div><div>INSUMO DEL DEPÓSITO</div>
+                        </div>
+                        <sc-for list="{{ recipe }}" as="g" hint-placeholder-count="8">
+                          <div style="display: grid; grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1.3fr); gap: 10px; min-height: 38px; align-items: center; border-bottom: 1px solid #F3F0EB;">
+                            <div style="font-size: 14px; font-weight: 600;">{{ g.n }}</div>
+                            <div style="text-align: right; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;">{{ g.v3 }} kg</div>
+                            <div style="min-width: 0;">
+                              <sc-if value="{{ g.none }}"><span style="height: 22px; padding: 0 8px; border-radius: 7px; background: #F5E8EC; color: #7A2E42; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center;">Sin insumo · no lleva lote</span></sc-if>
+                              <sc-if value="{{ g.has }}"><span style="font-size: 13px; color: #6B645A; line-height: 1.3; display: block; padding: 3px 0;">{{ g.ins }}</span></sc-if>
+                            </div>
+                          </div>
+                        </sc-for>
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1.3fr); gap: 10px; height: 38px; align-items: center;">
+                          <div style="font-size: 14px; font-weight: 700;">Total de la masa</div>
+                          <div style="text-align: right; font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums;">79,36 kg</div>
+                          <div></div>
+                        </div>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; padding-top: 8px;">HISTORIAL DE VERSIONES</div>
+                        <sc-for list="{{ hist }}" as="h" hint-placeholder-count="3">
+                          <div style="border: 1px solid {{ h.border }}; background: {{ h.bg }}; border-radius: 11px; padding: 9px 12px; display: flex; flex-direction: column; gap: 3px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                              <span style="height: 22px; padding: 0 8px; border-radius: 6px; background: oklch(0.955 0.028 180); color: oklch(0.42 0.09 180); font-size: 12.5px; font-weight: 800; display: flex; align-items: center;">{{ h.v }}</span>
+                              <sc-if value="{{ h.cur }}"><span style="height: 20px; padding: 0 7px; border-radius: 6px; background: #1C1A17; color: #fff; font-size: 11.5px; font-weight: 700; display: flex; align-items: center;">Vigente</span></sc-if>
+                              <span style="font-size: 13px; color: #6B645A; flex: 1;">{{ h.when }}</span>
+                              <span style="font-size: 13px; font-weight: 700; color: #C2410C;">Ver</span>
+                            </div>
+                            <div style="font-size: 13px; color: #3D3831;">{{ h.who }}</div>
+                            <div style="font-size: 13px; color: #6B645A; line-height: 1.35;">{{ h.what }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.cmp }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid #EFEBE5;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700;">Comparar versiones</div>
+                      <span style="font-size: 14px; color: #6B645A;">Máquina 1</span>
+                      <span style="flex: 1;"></span>
+                      <div style="height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600;">v2 · 02/06/2026 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.4;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                      <div style="height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600;">v3 · 14/08/2026 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.4;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                      <div style="height: 34px; padding: 0 12px; border-radius: 9px; font-size: 13.5px; font-weight: 600; color: #3D3831; display: flex; align-items: center; margin-left: 6px;" style-hover="background: #F6F3EF;">Cerrar</div>
+                    </div>
+                    <div style="flex: 1; min-height: 0; overflow: auto; padding: 10px 18px 14px;">
+                      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: #FDEEE4; color: #8F2F08; font-size: 13px; font-weight: 800; display: flex; align-items: center;">3 cambios</span>
+                        <span style="font-size: 13.5px; color: #6B645A;">Lo que cambió va marcado. El resto quedó igual.</span>
+                      </div>
+                      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 120px 120px 170px; gap: 10px; height: 30px; align-items: center; border-bottom: 1px solid #EFEBE5; font-size: 12px; font-weight: 700; color: #9A9287; letter-spacing: 0.03em; padding: 0 8px;">
+                        <div>INGREDIENTE</div><div style="text-align: right;">V2 · ANTES</div><div style="text-align: right;">V3 · AHORA</div><div>CAMBIO</div>
+                      </div>
+                      <sc-for list="{{ cmpRows }}" as="g" hint-placeholder-count="8">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 120px 120px 170px; gap: 10px; min-height: 38px; align-items: center; border-bottom: 1px solid #F3F0EB; padding: 0 8px; background: {{ g.bg }}; border-radius: 6px;">
+                          <div style="font-size: 14px; font-weight: {{ g.fw }}; color: {{ g.fg }};">{{ g.n }}</div>
+                          <div style="text-align: right; font-size: 14px; color: {{ g.oldFg }}; text-decoration: {{ g.strike }}; font-variant-numeric: tabular-nums;">{{ g.v2 }} kg</div>
+                          <div style="text-align: right; font-size: 14px; font-weight: {{ g.fw }}; color: {{ g.fg }}; font-variant-numeric: tabular-nums;">{{ g.v3 }} kg</div>
+                          <div style="font-size: 13.5px; font-weight: 700; color: {{ g.dFg }};">{{ g.d }}</div>
+                        </div>
+                      </sc-for>
+                      <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #FAF8F5; font-size: 13.5px; color: #3D3831;">
+                        <span style="flex: 1;">La v3 la hizo <strong>Facundo Usabarrena</strong> el 14/08/2026. Motivo: “La masa salía seca con la harina nueva”.</span>
+                        <div style="height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid #E7E3DC; background: #fff; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; white-space: nowrap;">Volver a la v2 (crea la v4)</div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.ing }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: auto;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 23px; font-weight: 700;">{{ s.d.name }}</div>
+                      <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: {{ s.d.chipBg }}; color: {{ s.d.chipFg }}; font-size: 12.5px; font-weight: 700; display: flex; align-items: center;">{{ s.d.chip }}</span>
+                    </div>
+                    <sc-if value="{{ s.d.none }}">
+                      <div style="background: #F5E8EC; border: 1px solid #E8CDD5; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 14px;">
+                        <div style="flex: 1;">
+                          <div style="font-size: 15px; font-weight: 700; color: #5C2233;">La Grasa no tiene ningún insumo del depósito conectado</div>
+                          <div style="font-size: 13.5px; color: #5C2233; line-height: 1.4; margin-top: 2px;">Cuando se hace una masa no queda anotado de qué lote salió la grasa, y el stock no se descuenta. Conectá el insumo que se usa.</div>
+                        </div>
+                        <div style="height: 38px; padding: 0 16px; border-radius: 10px; background: #C2410C; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">Conectar insumo</div>
+                      </div>
+                      <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287;">EN EL DEPÓSITO HAY ESTOS, QUE PODRÍAN SER</div>
+                      <sc-for list="{{ s.d.sugs }}" as="x" hint-placeholder-count="3">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 140px 96px; gap: 10px; align-items: center; min-height: 40px; border-bottom: 1px solid #F3F0EB;">
+                          <div style="font-size: 14px; font-weight: 600;">{{ x.n }}</div>
+                          <div style="font-size: 13.5px; color: #6B645A;">{{ x.st }}</div>
+                          <div style="height: 30px; border-radius: 8px; border: 1.5px solid #C2410C; color: #C2410C; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center;">Conectar</div>
+                        </div>
+                      </sc-for>
+                    </sc-if>
+                    <sc-if value="{{ s.d.has }}">
+                      <div style="font-size: 13.5px; color: #6B645A;">Cualquiera de estos insumos cumple como {{ s.d.name }}. En la tablet, el masero elige cuál usó y el lote queda anotado.</div>
+                      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 130px 150px 70px; gap: 10px; height: 30px; align-items: center; border-bottom: 1px solid #EFEBE5; font-size: 12px; font-weight: 700; color: #9A9287; letter-spacing: 0.03em;">
+                        <div>INSUMO DEL DEPÓSITO</div><div>EN DEPÓSITO</div><div>ÚLTIMO LOTE</div><div></div>
+                      </div>
+                      <sc-for list="{{ s.d.ins }}" as="x" hint-placeholder-count="4">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 130px 150px 70px; gap: 10px; align-items: center; min-height: 40px; border-bottom: 1px solid #F3F0EB;">
+                          <div style="font-size: 14px; font-weight: 600;">{{ x.n }}</div>
+                          <div style="font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;">{{ x.st }}</div>
+                          <div style="font-size: 13.5px; color: #6B645A;">{{ x.lote }}</div>
+                          <div style="font-size: 13px; font-weight: 600; color: #6B645A; text-align: right;">Quitar</div>
+                        </div>
+                      </sc-for>
+                      <div style="font-size: 13.5px; font-weight: 700; color: #C2410C;">+ Conectar otro insumo</div>
+                    </sc-if>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: #6B645A; border-top: 1px solid #EFEBE5; padding-top: 10px;">
+                      <span>Lo usan:</span>
+                      <sc-for list="{{ s.d.uses }}" as="u" hint-placeholder-count="3">
+                        <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: oklch(0.955 0.028 180); color: oklch(0.42 0.09 180); font-size: 12.5px; font-weight: 700; display: flex; align-items: center;">{{ u }}</span>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.con }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                    <div style="padding: 12px 18px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #EFEBE5;">
+                      <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700;">351 conos del catálogo</div>
+                        <span style="font-size: 15px; color: #6B645A;">· 26 activos</span>
+                      </div>
+                      <div style="background: #FFF8F3; border: 1px solid #F6D3BD; border-radius: 12px; padding: 6px 12px;">
+                        <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #8F2F08; padding: 4px 0;">POR REVISAR · 2</div>
+                        <sc-for list="{{ pend }}" as="x" hint-placeholder-count="2">
+                          <div style="display: flex; align-items: center; gap: 12px; min-height: 42px; border-top: 1px solid {{ x.bt }};">
+                            <div style="flex: 1; min-width: 0;">
+                              <span style="font-size: 14px; font-weight: 700;">{{ x.n }}</span>
+                              <span style="font-size: 13px; color: #6B645A;"> · {{ x.meta }}</span>
+                            </div>
+                            <div style="height: 32px; padding: 0 12px; border-radius: 9px; border: 1px solid #E7E3DC; background: #fff; font-size: 13.5px; font-weight: 600; display: flex; align-items: center;">Rechazar</div>
+                            <div style="height: 32px; padding: 0 14px; border-radius: 9px; background: #C2410C; color: #fff; font-size: 13.5px; font-weight: 700; display: flex; align-items: center;">Aceptar</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 280px; height: 36px; border-radius: 10px; background: #FFFFFF; border: 1.5px solid #C2410C; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 14px; font-weight: 600;">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>
+                          <span style="flex: 1;">cas</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.4; stroke-linecap: round;"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                        </div>
+                        <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 10px; padding: 3px;">
+                          <sc-for list="{{ conFilters }}" as="f" hint-placeholder-count="4">
+                            <div style="height: 30px; padding: 0 11px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13.5px; font-weight: {{ f.fw }}; display: flex; align-items: center; gap: 5px;">{{ f.l }}<span style="opacity: 0.75;">{{ f.n }}</span></div>
+                          </sc-for>
+                        </div>
+                        <span style="flex: 1;"></span>
+                        <span style="font-size: 13.5px; color: #6B645A;">6 conos con “cas”</span>
+                      </div>
+                    </div>
+                    <div style="flex: 1; min-height: 0; overflow: auto; padding: 0 18px 10px;">
+                      <div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 100px 130px 60px; gap: 12px; height: 32px; align-items: center; border-bottom: 1px solid #EFEBE5; font-size: 12px; font-weight: 700; color: #9A9287; letter-spacing: 0.03em; position: sticky; top: 0; background: #fff;">
+                        <div>CONO</div><div>CLIENTE</div><div>DOBLE BOLSA</div><div>ESTADO</div><div>ACTIVO</div>
+                      </div>
+                      <sc-for list="{{ cones }}" as="x" hint-placeholder-count="6">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 100px 130px 60px; gap: 12px; min-height: 40px; align-items: center; border-bottom: 1px solid #F3F0EB;">
+                          <div style="font-size: 14px; font-weight: 600;"><span style="background: #FDEEE4; border-radius: 3px;">{{ x.hl }}</span>{{ x.rest }}</div>
+                          <div style="font-size: 13.5px; color: #6B645A;">{{ x.cli }}</div>
+                          <div>
+                            <span style="width: 20px; height: 20px; border-radius: 6px; border: 2px solid {{ x.cbBorder }}; background: {{ x.cbBg }}; display: flex; align-items: center; justify-content: center;">
+                              <sc-if value="{{ x.dbl }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" style="stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                            </span>
+                          </div>
+                          <div><span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ x.stBg }}; color: {{ x.stFg }}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center;">{{ x.st }}</span></div>
+                          <div style="width: 34px; height: 20px; border-radius: 999px; background: {{ x.swBg }}; padding: 3px; display: flex; justify-content: {{ x.swJ }};"><div style="width: 14px; height: 14px; border-radius: 999px; background: #fff;"></div></div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.per }}">
+                  <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid #EFEBE5;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700;">Personal y PINes</div>
+                      <span style="font-size: 14px; color: #6B645A;">· 12 personas en Cucuruchos Nuss</span>
+                      <span style="flex: 1;"></span>
+                      <div style="width: 220px; height: 34px; border-radius: 10px; background: #FAF8F5; border: 1px solid #EFEBE5; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 14px; color: #9A9287;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>Buscar persona
+                      </div>
+                      <div style="height: 34px; padding: 0 12px; border-radius: 10px; border: 1.5px solid #C2410C; color: #C2410C; font-size: 13.5px; font-weight: 700; display: flex; align-items: center;">Generar PIN a los que no tienen · 2</div>
+                    </div>
+                    <div style="flex: 1; min-height: 0; overflow: auto; padding: 0 18px;">
+                      <div style="display: grid; grid-template-columns: minmax(0, 1.6fr) 92px 92px 92px minmax(0, 1fr) 120px 90px; gap: 10px; height: 32px; align-items: center; border-bottom: 1px solid #EFEBE5; font-size: 12px; font-weight: 700; color: #9A9287; letter-spacing: 0.03em; position: sticky; top: 0; background: #fff;">
+                        <div>PERSONA</div><div style="text-align: center;">ENCARGADO</div><div style="text-align: center;">MASERO</div><div style="text-align: center;">OPERARIO</div><div>PIN</div><div></div><div></div>
+                      </div>
+                      <sc-for list="{{ people }}" as="x" hint-placeholder-count="8">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1.6fr) 92px 92px 92px minmax(0, 1fr) 120px 90px; gap: 10px; min-height: 40px; align-items: center; border-bottom: 1px solid #F3F0EB; background: {{ x.rowBg }};">
+                          <div style="font-size: 14px; font-weight: 600;">{{ x.n }}</div>
+                          <sc-for list="{{ x.roles }}" as="rl" hint-placeholder-count="3">
+                            <div style="display: flex; justify-content: center;">
+                              <span style="width: 20px; height: 20px; border-radius: 6px; border: 2px solid {{ rl.border }}; background: {{ rl.bg }}; display: flex; align-items: center; justify-content: center;">
+                                <sc-if value="{{ rl.on }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" style="stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                              </span>
+                            </div>
+                          </sc-for>
+                          <div><span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ x.pinBg }}; color: {{ x.pinFg }}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center;">{{ x.pin }}</span></div>
+                          <div style="font-size: 13.5px; font-weight: 700; color: #C2410C;">{{ x.act }}</div>
+                          <div style="font-size: 12.5px; font-weight: 700; color: #8F2F08;">{{ x.changed }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 10px 18px; border-top: 1px solid #EFEBE5;">
+                      <span style="font-size: 13.5px; color: #6B645A;">1 fila cambiada</span>
+                      <div style="height: 38px; padding: 0 16px; border-radius: 10px; background: #C2410C; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center;">Guardar los cambios · 1 fila</div>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </main>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ s.mob }}">
+          <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+            <div style="flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC;">
+              <div style="height: 44px; display: flex; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 700;">12:42</div>
+              <div style="height: 52px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 6px;">
+                <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1A17" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M15 6l-6 6 6 6"></path></svg>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12.5px; color: #6B645A; font-weight: 600;">{{ s.mBack }}</div>
+                  <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 19px; font-weight: 700; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.mTitle }}</div>
+                </div>
+                <div style="height: 34px; padding: 0 10px 0 5px; border-radius: 10px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600;">
+                  <span style="width: 22px; height: 22px; border-radius: 999px; background: oklch(0.52 0.1 130); color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center;">DP</span>Dolce Pasta
+                </div>
+              </div>
+            </div>
+
+            <sc-if value="{{ s.mList }}">
+              <div style="flex: 1; min-height: 0; overflow: auto; padding: 12px 12px 16px;">
+                <div style="height: 44px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 15px; color: #9A9287; margin-bottom: 6px;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>Buscar producto
+                </div>
+                <sc-for list="{{ s.list.rows }}" as="r" hint-placeholder-count="8">
+                  <sc-if value="{{ r.isHead }}">
+                    <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; padding: 12px 6px 6px;">{{ r.head }}</div>
+                  </sc-if>
+                  <sc-if value="{{ r.isItem }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 12px; background: #FFFFFF; border: 1px solid #EFEBE5; border-radius: 12px; margin-bottom: 4px;">
+                      <div style="width: 8px; height: 32px; border-radius: 3px; background: {{ r.sw }}; flex-shrink: 0; opacity: {{ r.op }};"></div>
+                      <div style="flex: 1; min-width: 0; opacity: {{ r.op }};">
+                        <div style="font-size: 15px; font-weight: 600;">{{ r.name }}</div>
+                        <div style="font-size: 13px; color: #6B645A;">{{ r.sub }}</div>
+                      </div>
+                      <sc-if value="{{ r.hasChip }}">
+                        <span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ r.chipBg }}; color: {{ r.chipFg }}; font-size: 12px; font-weight: 700; display: flex; align-items: center;">{{ r.chip }}</span>
+                      </sc-if>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8B0A4" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 6l6 6-6 6"></path></svg>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ s.mDetail }}">
+              <div style="flex: 1; min-height: 0; overflow: auto;">
+                <div style="background: {{ s.d.tint }}; border-top: 5px solid {{ s.d.c }}; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: #FFFFFF; color: {{ s.d.dk }}; font-size: 12.5px; font-weight: 700; display: flex; align-items: center;">Masa {{ s.d.masa }}</span>
+                    <span style="font-size: 13.5px; color: #3D3831;">{{ s.d.count }}</span>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 13.5px; font-weight: 600;">Activo</span>
+                    <div style="width: 44px; height: 26px; border-radius: 999px; background: #C2410C; padding: 3px; display: flex; justify-content: flex-end;"><div style="width: 20px; height: 20px; border-radius: 999px; background: #fff;"></div></div>
+                  </div>
+                </div>
+                <div style="padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 4px;">
+                    <div style="font-size: 16px; font-weight: 700;">Presentaciones</div>
+                    <div style="height: 44px; display: flex; align-items: center; font-size: 14.5px; font-weight: 700; color: #C2410C;">+ Agregar</div>
+                  </div>
+                  <sc-for list="{{ s.d.pres }}" as="p" hint-placeholder-count="3">
+                    <div style="background: #FFFFFF; border: 1px solid #EFEBE5; border-radius: 12px; overflow: hidden;">
+                      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-height: 52px;">
+                        <span style="width: 8px; height: 8px; border-radius: 999px; background: {{ s.d.c }};"></span>
+                        <div style="flex: 1; min-width: 0;">
+                          <div style="font-size: 15px; font-weight: 600;">{{ p.name }}</div>
+                          <div style="font-size: 13px; color: #6B645A;">{{ p.cono }}</div>
+                        </div>
+                        <span style="height: 24px; padding: 0 8px; border-radius: 7px; background: {{ s.d.tint }}; color: {{ s.d.dk }}; font-size: 13px; font-weight: 800; display: flex; align-items: center;">×{{ p.u }}</span>
+                        <div style="width: 40px; height: 24px; border-radius: 999px; background: {{ p.swBg }}; padding: 3px; display: flex; justify-content: {{ p.swJ }};"><div style="width: 18px; height: 18px; border-radius: 999px; background: #fff;"></div></div>
+                      </div>
+                      <sc-if value="{{ p.hasEmp }}">
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 44px; border-top: 1px solid #F3F0EB; background: #FAF8F5;">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;"><path d="M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8"></path></svg>
+                          <span style="flex: 1; font-size: 13.5px; color: #3D3831; line-height: 1.3; padding: 6px 0;">{{ p.emp }}</span>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C2410C" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 6l6 6-6 6"></path></svg>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ p.noEmp }}">
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 44px; border-top: 1px solid #E8CDD5; background: #F5E8EC;">
+                          <span style="flex: 1; font-size: 13.5px; font-weight: 700; color: #7A2E42;">Falta el empaque</span>
+                          <span style="font-size: 14px; font-weight: 700; color: #C2410C;">Completar ›</span>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <nav style="flex-shrink: 0; height: 84px; padding-bottom: 20px; background: #FFFFFF; border-top: 1px solid #E7E3DC; display: flex;">
+              <sc-for list="{{ tabsMob }}" as="t" hint-placeholder-count="5">
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{ t.color }};">
+                  <div style="width: 44px; height: 30px; border-radius: 10px; background: {{ t.bg }}; display: flex; align-items: center; justify-content: center;">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ t.icon }}"></path></svg>
+                  </div>
+                  <div style="font-size: 11.5px; font-weight: {{ t.fw }}; color: {{ t.fg }};">{{ t.name }}</div>
+                </div>
+              </sc-for>
+            </nav>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MOD = {
+  inicio: { n: 'Inicio', h: 60, l: 0.35, c: 0.012, i: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' },
+  produccion: { n: 'Producción', h: 180, l: 0.52, c: 0.1, i: 'M3 21V10l6 4v-4l6 4V5h6v16zM7 17h2M13 17h2' },
+  cobranzas: { n: 'Cobranzas', h: 62, l: 0.62, c: 0.15, i: 'M12 4c4 0 7 1.3 7 3s-3 3-7 3-7-1.3-7-3 3-3 7-3zM5 7v5c0 1.7 3 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3 3 7 3s7-1.3 7-3v-5' },
+  caja: { n: 'Caja', h: 85, l: 0.6, c: 0.13, i: 'M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2' },
+  gastos: { n: 'Gastos', h: 355, l: 0.55, c: 0.16, i: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3' },
+  cheques: { n: 'Cheques', h: 290, l: 0.52, c: 0.16, i: 'M3 7h18v10H3zM6 13.5h6M15 13.5h3M6 10.5h3' },
+  ctacte: { n: 'Cuentas corrientes', h: 322, l: 0.5, c: 0.15, i: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6' },
+  ingreso: { n: 'Ingreso', h: 50, l: 0.48, c: 0.08, i: 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8' },
+  stock: { n: 'Stock', h: 130, l: 0.52, c: 0.12, i: 'M4 4h16v16H4zM4 12h16M10 8h4M10 16h4' },
+  pedidos: { n: 'Pedidos', h: 20, l: 0.58, c: 0.17, i: 'M9 3h6v3H9zM7 4.5H5V21h14V4.5h-2M9 11h6M9 15h4' },
+  ordenes: { n: 'Órdenes de retiro', h: 108, l: 0.55, c: 0.11, i: 'M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0' },
+  admin: { n: 'Administración', h: 305, l: 0.45, c: 0.14, i: 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18' },
+  taller: { n: 'Proyectos Taller', h: 150, l: 0.42, c: 0.07, i: 'M14 3.5a5 5 0 0 0-4.6 6.9L3.6 16.2a2 2 0 0 0 2.8 2.8l5.8-5.8A5 5 0 0 0 20.5 10l-3.2.8-2.1-2.1.8-3.2z' },
+  accesos: { n: 'Accesos', h: 205, l: 0.5, c: 0.07, i: 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M16 11l2 2 4-4' },
+  empleados: { n: 'Empleados', h: 340, l: 0.6, c: 0.13, i: 'M9 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zM2.5 20c0-3.5 2.9-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.8c2.2.6 3.5 2.3 3.5 5.2' },
+  seguridad: { n: 'Seguridad', h: 60, l: 0.4, c: 0.012, i: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4' },
+};
+const fgC = m => `oklch(${m.l} ${m.c} ${m.h})`;
+const tintC = m => `oklch(0.955 ${Math.max(m.c * 0.28, 0.008).toFixed(3)} ${m.h})`;
+const SIDE = ['inicio', 'produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'ctacte', 'ingreso', 'stock', 'pedidos', 'ordenes', 'admin', 'taller', 'accesos', 'empleados', 'seguridad'];
+const BADGES = { produccion: { n: 1, u: true }, cobranzas: { n: 5 }, caja: { n: 1 }, cheques: { n: 3, u: true }, pedidos: { n: 2, u: true }, admin: { n: 7, u: true } };
+
+// Producto: c = franja/punto, dk = texto sobre el suave, t = fondo suave
+const P = (L, C, H) => ({ c: `oklch(${L} ${C} ${H})`, dk: `oklch(${Math.min(L, 0.5) - 0.06} ${C * 0.8} ${H})`, t: `oklch(0.955 ${(C * 0.3).toFixed(3)} ${H})` });
+const PC = {
+  mini: P(0.78, 0.15, 95), chico: P(0.6, 0.14, 145), grande: P(0.68, 0.16, 50), standard: P(0.52, 0.15, 300),
+  miniCh: P(0.6, 0.08, 70), chicoCh: P(0.48, 0.07, 55), grandeCh: P(0.36, 0.05, 45), standardCh: P(0.68, 0.07, 75),
+  b35_4: P(0.78, 0.1, 85), b40_4: P(0.68, 0.11, 75), b45_4: P(0.58, 0.1, 65), b35_3: P(0.8, 0.07, 100), b40_3: P(0.7, 0.07, 90), b45_3: P(0.6, 0.07, 80),
+  soft: P(0.66, 0.13, 350), cubanon: P(0.56, 0.13, 35), canoli: P(0.58, 0.1, 120), capelina: P(0.5, 0.13, 320), obleas: P(0.74, 0.06, 80), vaso: P(0.52, 0.07, 195),
+};
+const item = (name, sub, pc, o = {}) => ({ isItem: true, isHead: false, name, sub, hasSw: !!pc, sw: pc ? pc.c : '', op: o.off ? 0.5 : 1,
+  bg: o.sel ? '#FDEEE4' : 'transparent', hover: o.sel ? '#FDEEE4' : '#F6F3EF', fg: o.sel ? '#8F2F08' : '#1C1A17', fw: o.sel ? 700 : 600,
+  hasChip: !!o.chip, chip: o.chip || '', chipBg: o.bad ? '#F5E8EC' : o.dark ? '#1C1A17' : '#F1EEE9', chipFg: o.bad ? '#7A2E42' : o.dark ? '#fff' : '#3D3831' });
+const head = t => ({ isHead: true, isItem: false, head: t });
+
+const nussRows = sel => [
+  head('COMUNES'),
+  item('Cucuruchón Mini', 'Común · 5 presentaciones', PC.mini, { sel: sel === 'mini', chip: '1 sin empaque', bad: true }),
+  item('Cucuruchón Chico', 'Común · 3 presentaciones', PC.chico),
+  item('Cucuruchón Grande', 'Común · 7 presentaciones', PC.grande, { sel: sel === 'grande' }),
+  item('Cucuruchón Standard', 'Común · 3 presentaciones', PC.standard),
+  head('DE CHOCOLATE'),
+  item('Mini Chocolate', 'Chocolate · 2 presentaciones', PC.miniCh),
+  item('Chico Chocolate', 'Chocolate · 2 presentaciones', PC.chicoCh),
+  item('Standard Chocolate', 'Chocolate · 1 presentación', PC.standardCh),
+  item('Grande Chocolate', 'Chocolate · 1 presentación', PC.grandeCh, { off: true, chip: 'Apagado' }),
+];
+const dolceRows = [
+  head('BARQUILLOS'),
+  item('Barquillo 35 · de 4', 'Común · 2 presentaciones', PC.b35_4),
+  item('Barquillo 40 · de 4', 'Común · 3 presentaciones', PC.b40_4, { chip: '1 sin empaque', bad: true }),
+  item('Barquillo 45 · de 4', 'Común · 2 presentaciones', PC.b45_4),
+  item('Barquillo 35 · de 3', 'Común · 1 presentación', PC.b35_3),
+  item('Barquillo 40 · de 3', 'Común · 1 presentación', PC.b40_3),
+  item('Barquillo 45 · de 3', 'Común · 1 presentación', PC.b45_3, { off: true, chip: 'Apagado' }),
+  head('ESPECIALES'),
+  item('Soft', 'Común · 2 presentaciones', PC.soft),
+  item('Cubanón', 'Chocolate · 1 presentación', PC.cubanon),
+  item('Canoli', 'Común · 1 presentación', PC.canoli),
+  item('Capelina', 'Común · 1 presentación', PC.capelina),
+  item('Obleas', 'Común · 2 presentaciones', PC.obleas),
+  item('Vaso 125', 'Común · 1 presentación', PC.vaso),
+];
+const pres = (name, cono, u, emp, o = {}) => ({ name, cono, u, emp: emp || '', hasEmp: !!emp, noEmp: !emp, open: !!o.open, op: o.off ? 0.5 : 1,
+  swBg: o.off ? '#D6CFC4' : '#C2410C', swJ: o.off ? 'flex-start' : 'flex-end', rowBg: o.open ? '#FFF8F3' : 'transparent',
+  fixLabel: o.open ? 'Completando…' : 'Completar ›', chevIcon: 'M9 6l6 6-6 6' });
+const MINI = (open) => ({ name: 'Cucuruchón Mini', masa: 'Común', count: '5 presentaciones', ...PC.mini, pres: [
+  pres('Caja sin cono', 'Sin cono', 320, 'Caja N°1 Nuss · 1 bolsa grande · 1 plancha · 3 separadores'),
+  pres('Caja con cono', 'Con cono', 320, 'Caja N°1 Nuss · 2 bolsas grandes · 1 plancha · 3 separadores'),
+  pres('Media caja', 'Sin cono', 160, 'Caja N°3 Nuss · 1 bolsa mediana · 2 separadores'),
+  pres('Caja Caserato', 'Con cono', 300, '', { open }),
+  pres('Caja exportación', 'Sin cono', 288, 'Caja Exportación · 2 bolsas grandes · 2 planchas · 4 separadores', { off: true }),
+],
+  edit: {
+    cajas: [
+      { n: 'Caja N°1 Nuss', sug: true, sel: false }, { n: 'Caja Caserato impresa', sug: false, sel: true }, { n: 'Caja N°2 Nuss', sug: false, sel: false },
+    ].map(k => ({ ...k, border: k.sel ? '#C2410C' : '#E7E3DC', radio: k.sel ? '#C2410C' : '#B8B0A4' })),
+    ins: [
+      { n: 'Bolsa grande', q: '1', c: 'Siempre' }, { n: 'Bolsa grande', q: '1', c: 'Si lleva doble bolsa' },
+      { n: 'Plancha', q: '1', c: 'Siempre' }, { n: 'Separador', q: '3', c: 'Siempre' },
+    ],
+    preview: 'Caja Caserato impresa · 1 bolsa grande (+1 si doble bolsa) · 1 plancha · 3 separadores',
+  } });
+const GRANDE = { name: 'Cucuruchón Grande', masa: 'Común', count: '7 presentaciones', ...PC.grande, pres: [
+  pres('Caja sin cono', 'Sin cono', 150, 'Caja N°2 Nuss · 1 bolsa grande · 1 plancha · 2 separadores'),
+  pres('Caja con cono', 'Con cono', 150, 'Caja N°2 Nuss · 2 bolsas grandes · 1 plancha · 2 separadores'),
+  pres('Media caja', 'Sin cono', 75, 'Caja N°3 Nuss · 1 bolsa mediana · 1 separador'),
+  pres('Caja Caserato', 'Con cono', 150, 'Caja Caserato impresa · 2 bolsas grandes · 1 plancha · 2 separadores'),
+  pres('Caja Duomo', 'Con cono', 150, 'Caja Duomo impresa · 2 bolsas grandes · 1 plancha · 2 separadores'),
+  pres('Caja ×100', 'Sin cono', 100, 'Caja N°3 Nuss · 1 bolsa grande · 1 separador'),
+  pres('Bolsón granel', 'Sin cono', 500, 'Sin caja · 1 bolsa de consorcio · 1 precinto'),
+], edit: { cajas: [], ins: [], preview: '' } };
+const BARQ = { name: 'Barquillo 40 · de 4', masa: 'Común', count: '3 presentaciones', ...PC.b40_4, pres: [
+  pres('Caja', 'Sin cono', 240, 'Caja Dolce N°2 · 1 bolsa grande · 2 separadores'),
+  pres('Media caja', 'Sin cono', 120, 'Caja Dolce N°3 · 1 bolsa mediana'),
+  pres('Caja Duomo', 'Sin cono', 240, ''),
+] };
+
+const RECIPE = [
+  { n: 'Harina', v1: '25,00', v2: '25,00', v3: '25,00', ins: 'Júpiter, Chacabuco, La Clásica, Wali' },
+  { n: 'Azúcar', v1: '11,50', v2: '12,00', v3: '12,50', ins: 'Ledesma, Chango' },
+  { n: 'Grasa', v1: '2,40', v2: '2,00', v3: '2,00', none: true },
+  { n: 'Lecitina', v1: '0,25', v2: '0,25', v3: '0,25', ins: 'Lecitina de soja Solae' },
+  { n: 'Colorante', v1: '0,03', v2: '0,03', v3: '0,03', none: true },
+  { n: 'Fécula', v1: '1,20', v2: '1,20', v3: '1,50', none: true },
+  { n: 'Bicarbonato', v1: '0,08', v2: '0,08', v3: '0,08', ins: 'Bicarbonato Dos Anclas' },
+  { n: 'Agua', v1: '37,50', v2: '37,50', v3: '38,00', ins: 'No hace falta' },
+].map(g => ({ ...g, has: !g.none }));
+const num = s => parseFloat(s.replace(',', '.'));
+const CMP = RECIPE.map(g => {
+  const d = num(g.v3) - num(g.v2); const ch = Math.abs(d) > 0.0001;
+  return { n: g.n, v2: g.v2, v3: g.v3, bg: ch ? '#FFF8F3' : 'transparent', fw: ch ? 700 : 500, fg: ch ? '#1C1A17' : '#6B645A',
+    oldFg: ch ? '#6B645A' : '#9A9287', strike: ch ? 'line-through' : 'none',
+    d: ch ? (d > 0 ? '+ ' : '− ') + Math.abs(d).toFixed(2).replace('.', ',') + ' kg' : '—', dFg: ch ? '#8F2F08' : '#B8B0A4' };
+});
+const HIST = [
+  { v: 'v3', cur: true, when: '14/08/2026', who: 'Facundo Usabarrena', what: 'Azúcar 12,00 → 12,50 · Fécula 1,20 → 1,50 · Agua 37,50 → 38,00' },
+  { v: 'v2', cur: false, when: '02/06/2026', who: 'Pablo Nuss', what: 'Azúcar 11,50 → 12,00 · Grasa 2,40 → 2,00' },
+  { v: 'v1', cur: false, when: '10/01/2026', who: 'Facundo Usabarrena', what: 'Primera versión' },
+].map(h => ({ ...h, border: h.cur ? '#D6CFC4' : '#EFEBE5', bg: h.cur ? '#FAF8F5' : '#FFFFFF' }));
+
+const maqRows = [
+  item('Máquina 1', 'Orden 1 · receta v3', null, { sel: true, chip: 'Activa', dark: false }),
+  item('Máquina 2', 'Orden 2 · receta v2', null, { chip: 'Activa' }),
+  item('Máquina 3', 'Orden 3 · receta v4', null, { chip: 'Activa' }),
+  item('Máquina 4', 'Orden 4 · receta v1', null, { chip: 'Activa' }),
+  item('Máquina 5', 'Sin orden · receta v1', null, { off: true, chip: 'Apagada' }),
+];
+const recRows = [
+  item('Máquina 1', 'v3 · desde 14/08/2026 · 3 versiones', null, { sel: true }),
+  item('Máquina 2', 'v2 · desde 20/05/2026 · 2 versiones', null),
+  item('Máquina 3', 'v4 · desde 01/09/2026 · 4 versiones', null),
+  item('Máquina 4', 'v1 · desde 10/01/2026', null),
+  item('Máquina 5', 'v1 · apagada', null, { off: true }),
+];
+const ingRows = sel => [
+  item('Harina', '4 insumos conectados', null, { sel: sel === 'harina' }),
+  item('Azúcar', '2 insumos conectados', null),
+  item('Grasa', 'Ningún insumo', null, { sel: sel === 'grasa', chip: 'No lleva lote', bad: true }),
+  item('Lecitina', '1 insumo conectado', null),
+  item('Cacao', '2 insumos · solo chocolate', null),
+  item('Colorante', 'Ningún insumo', null, { chip: 'No lleva lote', bad: true }),
+  item('Fécula', 'Ningún insumo', null, { chip: 'No lleva lote', bad: true }),
+  item('Bicarbonato', '1 insumo conectado', null),
+  item('Agua', 'No hace falta lote', null, { chip: 'A propósito' }),
+];
+const cone = (hl, rest, cli, dbl, st, on) => ({ hl, rest, cli, dbl, cbBorder: dbl ? '#C2410C' : '#D6CFC4', cbBg: dbl ? '#C2410C' : '#fff',
+  st, stBg: st === 'Por revisar' ? '#FDEEE4' : st === 'Rechazado' ? '#F5E8EC' : '#F1EEE9', stFg: st === 'Por revisar' ? '#8F2F08' : st === 'Rechazado' ? '#7A2E42' : '#3D3831',
+  swBg: on ? '#C2410C' : '#D6CFC4', swJ: on ? 'flex-end' : 'flex-start' });
+const CONES = [
+  cone('Cas', 'erato · Mini con logo', 'Caserato', true, 'Por revisar', false),
+  cone('Cas', 'erato · Grande impreso', 'Caserato', true, 'Aceptado', true),
+  cone('Cas', 'erato · Chico impreso', 'Caserato', false, 'Aceptado', true),
+  cone('Cas', 'erato · Standard 2019', 'Caserato', false, 'Aceptado', false),
+  cone('Cas', 'a Fabbri · Mini', 'Casa Fabbri', false, 'Aceptado', false),
+  cone('Cas', 'cabel · Grande', 'Heladería Cascabel', false, 'Rechazado', false),
+];
+const PEND = [
+  { n: 'Caserato · Mini con logo', meta: 'lo cargó Agustín Barrera en el sublote 7033-2, hoy 10:42' },
+  { n: 'Duomo · Grande bicolor', meta: 'lo cargó Diego Sosa en el sublote 7031-1, ayer 16:05' },
+].map((x, i) => ({ ...x, bt: i ? '#F6D3BD' : 'transparent' }));
+const role = on => ({ on, border: on ? '#C2410C' : '#D6CFC4', bg: on ? '#C2410C' : '#fff' });
+const person = (n, e, m, o, pin, changed) => ({ n, roles: [role(e), role(m), role(o)], pin,
+  pinBg: pin === 'PIN propio' ? '#E6F4EC' : pin === 'Sin PIN' ? '#F5E8EC' : '#F1EEE9', pinFg: pin === 'PIN propio' ? '#205B39' : pin === 'Sin PIN' ? '#7A2E42' : '#3D3831',
+  act: pin === 'Sin PIN' ? 'Asignar PIN' : 'Resetear PIN', changed: changed ? 'Cambiada' : '', rowBg: changed ? '#FFF8F3' : 'transparent' });
+const PEOPLE = [
+  person('Facundo Usabarrena', true, false, false, 'PIN propio'),
+  person('Agustín Barrera', false, true, true, 'PIN propio'),
+  person('Marcela Ríos', true, true, false, 'PIN propio'),
+  person('Diego Sosa', false, true, true, 'PIN propio', true),
+  person('Lucas Medina', false, false, true, 'Por cambiar'),
+  person('Brenda Quiroga', false, false, true, 'PIN propio'),
+  person('Nahuel Correa', false, true, true, 'Sin PIN'),
+  person('Sergio Paz', false, false, true, 'PIN propio'),
+  person('Romina Vera', false, false, true, 'Por cambiar'),
+  person('Iván Molina', false, false, true, 'Sin PIN'),
+  person('Tomás Luna', false, true, true, 'PIN propio'),
+  person('Julieta Paredes', true, false, false, 'PIN propio'),
+];
+const TABS = [['Productos'], ['Máquinas'], ['Recetas'], ['Ingredientes', 3, true], ['Conos', 2], ['Personal y PINes', 2]];
+
+class Component extends DCLogic {
+  renderVals() {
+    const side = SIDE.map((k, i) => { const m = MOD[k]; const on = k === 'produccion'; const b = BADGES[k];
+      return { name: m.n, icon: m.i, color: fgC(m), tint: tintC(m), bg: on ? '#FDEEE4' : 'transparent', fg: on ? '#8F2F08' : '#3D3831', fw: on ? 700 : 500,
+        hasBadge: !!b, badge: b ? b.n : '', bBg: b && b.u ? '#7A2E42' : '#EDE9E3', bFg: b && b.u ? '#fff' : '#3D3831', divAfter: i === 0 || i === 3 }; });
+    const factories = sel => [{ k: 'todas', n: 'Todas' }, { k: 'nuss', n: 'Nuss', c: 'oklch(0.55 0.11 55)', ini: 'N' }, { k: 'dolce', n: 'Dolce Pasta', c: 'oklch(0.52 0.1 130)', ini: 'DP' }, { k: 'mengui', n: 'Mengui', c: 'oklch(0.57 0.19 25)', ini: 'M' }, { k: 'taller', n: 'Taller', c: '#57534E', ini: 'T' }]
+      .map(f => { const on = f.k === sel; return { ...f, all: f.k === 'todas', one: f.k !== 'todas', bg: on ? '#C2410C' : 'transparent', fg: on ? '#fff' : '#3D3831', fw: on ? 700 : 600, ring: on ? '0 0 0 2px #fff' : 'none' }; });
+    const tabs = act => TABS.map(([name, n, u]) => { const on = name === act;
+      return { name, bg: on ? '#FFFFFF' : 'transparent', fg: on ? '#8F2F08' : '#3D3831', fw: on ? 700 : 600, shadow: on ? '0 1px 2px rgba(28,26,23,0.12)' : 'none',
+        hasBadge: !!n, badge: n || '', bBg: u ? '#7A2E42' : '#DDD7CE', bFg: u ? '#fff' : '#3D3831' }; });
+    const L = '300px minmax(0, 1fr)';
+    const base = { w: 1366, h: 768, desk: true, mob: false, hasList: true, gridCols: L, prod: false, maq: false, rec: false, cmp: false, ing: false, con: false, per: false, showDefaultBox: false, factories: factories('nuss'), d: {} };
+    const listProd = sel => ({ q: 'Buscar producto', qFg: '#9A9287', add: 'Nuevo', rows: nussRows(sel) });
+    const S = [
+      { ...base, id: '1a', title: 'Productos · un producto', note: 'Cada producto tiene su color, y todo lo que es suyo lo lleva: la franja de la lista, el bloque de arriba del detalle, el punto de cada presentación y la pastilla ×320. El empaque entra en una sola línea. "Caja Caserato" no tiene empaque y queda marcada para completar.', tabs: tabs('Productos'), prod: true, showDefaultBox: true, list: listProd('mini'), d: MINI(false) },
+      { ...base, id: '1b', title: 'Productos · editando el empaque', note: 'Al tocar la línea del empaque (o "Completar"), se abre en el mismo renglón: a la izquierda la caja (la predeterminada va marcada como Sugerida), a la derecha los insumos por caja con cantidad y cuándo se consumen. Abajo, cómo va a quedar la línea.', tabs: tabs('Productos'), prod: true, showDefaultBox: true, list: listProd('mini'), d: MINI(true) },
+      { ...base, id: '1c', title: 'Productos · muchas presentaciones', note: 'Cucuruchón Grande con 7 presentaciones: entran todas sin scroll, un renglón de 44 px cada una.', tabs: tabs('Productos'), prod: true, showDefaultBox: true, list: listProd('grande'), d: GRANDE },
+      { ...base, id: '2a', title: 'Máquinas', note: 'Lista con orden y estado. El detalle muestra la receta vigente con su versión, quién la cambió y desde cuándo, y lleva al historial o a una versión nueva. Abajo, qué productos hace.', tabs: tabs('Máquinas'), maq: true, list: { q: 'Buscar máquina', qFg: '#9A9287', add: 'Nueva', rows: maqRows } },
+      { ...base, id: '3a', title: 'Recetas · con historial de 3 versiones', note: 'La receta vigente en tabla (en kg), con el insumo del depósito de cada ingrediente. A la derecha, el historial: qué cambió, cuándo y quién. "Nueva versión" copia la vigente para editarla; la anterior no se pisa.', tabs: tabs('Recetas'), rec: true, list: { q: 'Buscar máquina', qFg: '#9A9287', add: 'Nueva', rows: recRows } },
+      { ...base, id: '3b', title: 'Recetas · comparar dos versiones', note: 'Se eligen dos versiones. Lo que cambió va marcado con fondo suave, el valor viejo tachado y la diferencia. Lo que quedó igual va en gris.', tabs: tabs('Recetas'), cmp: true, list: { q: 'Buscar máquina', qFg: '#9A9287', add: 'Nueva', rows: recRows } },
+      { ...base, id: '4a', title: 'Ingredientes · sin insumo conectado', note: 'Grasa, Colorante y Fécula no tienen insumo: van en bordó en la lista, con aviso arriba. El detalle explica qué pasa y propone insumos del depósito para conectar. El Agua no lleva lote a propósito y va en gris.', tabs: tabs('Ingredientes'), ing: true,
+        list: { q: 'Buscar ingrediente', qFg: '#9A9287', add: 'Nuevo', notice: '3 ingredientes no llevan lote', rows: ingRows('grasa') },
+        d: { name: 'Grasa', none: true, has: false, chip: 'No lleva lote', chipBg: '#F5E8EC', chipFg: '#7A2E42',
+          sugs: [{ n: 'Grasa vacuna refinada · Tres Arroyos', st: '180 kg en depósito' }, { n: 'Grasa vegetal · Dánica', st: '64 kg en depósito' }, { n: 'Margarina de hojaldre · Primicia', st: '20 kg en depósito' }],
+          uses: ['Máquina 1 · 2,00 kg', 'Máquina 2 · 2,00 kg', 'Máquina 3 · 1,80 kg'] } },
+      { ...base, id: '4b', title: 'Ingredientes · con insumos', note: 'Harina, con los 4 insumos del depósito que la cumplen: en la tablet, el masero elige cuál usó y el lote queda anotado.', tabs: tabs('Ingredientes'), ing: true,
+        list: { q: 'Buscar ingrediente', qFg: '#9A9287', add: 'Nuevo', notice: '3 ingredientes no llevan lote', rows: ingRows('harina') },
+        d: { name: 'Harina', none: false, has: true, chip: '4 insumos conectados', chipBg: '#E6F4EC', chipFg: '#205B39',
+          ins: [{ n: 'Harina 000 · Júpiter', st: '2.450 kg', lote: '7033 · 22/09' }, { n: 'Harina 000 · Chacabuco', st: '1.200 kg', lote: '7031 · 15/09' }, { n: 'Harina 000 · La Clásica', st: '600 kg', lote: '7029 · 02/09' }, { n: 'Harina 000 · Wali', st: '0 kg', lote: '7018 · 11/07' }],
+          uses: ['Máquina 1 · 25,00 kg', 'Máquina 2 · 25,00 kg', 'Máquina 3 · 24,00 kg', 'Máquina 4 · 25,00 kg'] } },
+      { ...base, id: '5a', title: 'Conos · filtrados', note: 'Los 2 por revisar siempre arriba, con Aceptar y Rechazar. El buscador filtra desde la primera letra y marca lo que coincide. Interruptor de activo y tilde de doble bolsa en cada renglón.', tabs: tabs('Conos'), con: true, hasList: false, gridCols: 'minmax(0, 1fr)' },
+      { ...base, id: '6a', title: 'Personal y PINes', note: 'Una fila de 40 px por persona: roles con casillas, estado del PIN y la acción. Las filas tocadas se marcan y se guardan juntas.', tabs: tabs('Personal y PINes'), per: true, hasList: false, gridCols: 'minmax(0, 1fr)' },
+      { id: '7a', title: 'Celular · lista', w: 390, h: 844, desk: false, mob: true, mList: true, mDetail: false, mBack: 'Configuración', mTitle: 'Productos', note: 'Dolce Pasta: barquillos y especiales separados, cada uno con su color. Renglones de 52 px. Tocar abre el detalle.', list: { rows: dolceRows }, d: {} },
+      { id: '7b', title: 'Celular · detalle', w: 390, h: 844, desk: false, mob: true, mList: false, mDetail: true, mBack: 'Productos', mTitle: 'Barquillo 40 · de 4', note: 'Cada presentación es una tarjeta: arriba el nombre, el ×240 y el interruptor; abajo su empaque en una línea (tocar para editar). La que no tiene empaque va en bordó con "Completar".', d: BARQ, list: { rows: [] } },
+    ].map(s => ({ ...s, sizeLabel: s.w + ' × ' + s.h }));
+    const tabM = (k, name, on) => { const m = MOD[k]; return { name, icon: m.i, color: on ? '#C2410C' : fgC(m), bg: on ? '#FDEEE4' : 'transparent', fg: on ? '#8F2F08' : '#3D3831', fw: on ? 700 : 600 }; };
+    return {
+      screens: S, side, recipe: RECIPE, hist: HIST, cmpRows: CMP, cones: CONES, pend: PEND, people: PEOPLE,
+      maqProds: [{ n: 'Cucuruchón Mini', ...PC.mini }, { n: 'Cucuruchón Chico', ...PC.chico }, { n: 'Mini Chocolate', ...PC.miniCh }].map(x => ({ n: x.n, c: x.c, dk: x.dk, t: x.t })),
+      conFilters: [['Todos', 351, true], ['Activos', 26], ['Apagados', 323], ['Por revisar', 2]].map(([l, n, on]) => ({ l, n, bg: on ? '#C2410C' : 'transparent', fg: on ? '#fff' : '#3D3831', fw: on ? 700 : 600 })),
+      tabsMob: [tabM('inicio', 'Inicio'), tabM('produccion', 'Producción', true), tabM('cobranzas', 'Cobranzas'), tabM('caja', 'Caja'), { name: 'Más', icon: 'M5 12h.01M12 12h.01M19 12h.01', color: '#3D3831', bg: 'transparent', fg: '#3D3831', fw: 600 }],
+    };
+  }
+}
+</script>
+</body>
+</html>

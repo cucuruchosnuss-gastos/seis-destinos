@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E4E0D9; -webkit-font-smoothing: antialiased; }
+  a { color: #C2410C; text-decoration: none; }
+  a:hover { color: #8F2F08; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #D6CFC4; border-radius: 8px; }
+</style>
+</helmet>
+<div style="padding: 56px; display: flex; flex-direction: column; gap: 64px; font-family: 'Figtree', sans-serif; color: #1C1A17; width: max-content; min-width: 100%;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 900px;">
+    <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -0.02em;">Seis Destinos · Esqueleto y tablero</div>
+    <div style="font-size: 17px; color: #6B645A; line-height: 1.5; text-wrap: pretty;">App de gestión (compu y celular). Barra lateral nueva, barra de arriba única y tablero de resúmenes por módulo. Cada pantalla lleva su número; el README explica medidas, tokens y comportamiento.</div>
+  </div>
+
+  <sc-for list="{{ screens }}" as="s" hint-placeholder-count="2">
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 15px; background: #1C1A17; color: #fff; border-radius: 8px; padding: 4px 10px;">{{ s.id }}</div>
+        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700;">{{ s.title }}</div>
+        <div style="font-size: 15px; color: #6B645A;">{{ s.sizeLabel }}</div>
+      </div>
+      <div style="font-size: 15px; color: #6B645A; max-width: 820px; line-height: 1.5;">{{ s.note }}</div>
+
+      <div style="width: {{ s.w }}px; height: {{ s.h }}px; background: #F5F3EF; border-radius: 12px; overflow: hidden; box-shadow: 0 30px 60px -20px rgba(28,26,23,0.35), 0 0 0 1px rgba(28,26,23,0.08); display: flex; position: relative;">
+
+        <sc-if value="{{ s.desk }}" hint-placeholder-val="{{ true }}">
+          <aside style="width: {{ s.sideW }}px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #E7E3DC; display: flex; flex-direction: column; padding: 12px 10px 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px; margin-bottom: 8px; justify-content: {{ s.logoJustify }};">
+              <div style="width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; background-image: url(logo.png); background-size: 165%; background-position: 50% 28%; border: 1px solid #EFEBE5;"></div>
+              <sc-if value="{{ s.expanded }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; line-height: 1.05;">
+                  <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 15.5px; letter-spacing: -0.01em;">Seis Destinos</div>
+                  <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: #9A9287;">GROUP</div>
+                </div>
+              </sc-if>
+            </div>
+            <nav style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0;">
+              <sc-for list="{{ s.side }}" as="m" hint-placeholder-count="10">
+                <div style="position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px 0 5px; border-radius: 9px; background: {{ m.bg }}; cursor: pointer; justify-content: {{ s.itemJustify }};" style-hover="background: {{ m.hoverBg }};">
+                  <div style="width: 24px; height: 24px; border-radius: 7px; background: {{ m.tint }}; color: {{ m.color }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ m.icon }}"></path></svg>
+                  </div>
+                  <sc-if value="{{ s.expanded }}" hint-placeholder-val="{{ true }}">
+                    <div style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: {{ m.fw }}; color: {{ m.fg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.name }}</div>
+                  </sc-if>
+                  <sc-if value="{{ m.hasBadge }}">
+                    <div style="min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px; background: {{ m.bBg }}; color: {{ m.bFg }}; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; position: {{ s.badgePos }}; top: 1px; right: 3px;">{{ m.badge }}</div>
+                  </sc-if>
+                  <sc-if value="{{ m.tip }}">
+                    <div style="position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); background: #1C1A17; color: #fff; font-size: 13px; font-weight: 600; padding: 7px 10px; border-radius: 8px; white-space: nowrap; box-shadow: 0 8px 20px rgba(28,26,23,0.25); z-index: 20; display: flex; gap: 8px; align-items: center;">{{ m.name }}<span style="color: #D6CFC4; font-weight: 500;">{{ m.tipExtra }}</span></div>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ m.divAfter }}">
+                  <div style="height: 1px; background: #EFEBE5; margin: 5px 6px;"></div>
+                </sc-if>
+              </sc-for>
+            </nav>
+            <div style="border-top: 1px solid #EFEBE5; padding-top: 8px; display: flex; flex-direction: {{ s.bottomDir }}; gap: 4px; align-items: center;">
+              <div style="flex: 1; width: 100%; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 8px 0 5px; border-radius: 9px; background: {{ s.persBg }}; cursor: pointer; justify-content: {{ s.itemJustify }};" style-hover="background: #F6F3EF;">
+                <div style="width: 24px; height: 24px; border-radius: 7px; background: #F1EEE9; color: #3D3831; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round;"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"></path></svg>
+                </div>
+                <sc-if value="{{ s.expanded }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size: 13.5px; font-weight: {{ s.persFw }}; color: {{ s.persFg }};">Personalizar</div>
+                </sc-if>
+              </div>
+              <div onClick="{{ s.toggleSide }}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #6B645A; cursor: pointer; flex-shrink: 0;" style-hover="background: #F1EEE9; color: #1C1A17;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ s.collapseIcon }}"></path></svg>
+              </div>
+            </div>
+          </aside>
+        </sc-if>
+
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative;">
+          <sc-if value="{{ s.desk }}" hint-placeholder-val="{{ true }}">
+            <header style="height: 52px; flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 20px; gap: 16px;">
+              <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 11px; padding: 3px;">
+                <sc-for list="{{ s.factories }}" as="f" hint-placeholder-count="5">
+                  <div onClick="{{ f.pick }}" style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px 0 5px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13.5px; font-weight: {{ f.fw }}; cursor: pointer; box-shadow: {{ f.shadow }};" style-hover="background: {{ f.hoverBg }};">
+                    <sc-if value="{{ f.all }}">
+                      <div style="width: 20px; height: 20px; border-radius: 6px; background: {{ f.markBg }}; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 4px;">
+                        <div style="border-radius: 2px; background: oklch(0.55 0.11 55);"></div>
+                        <div style="border-radius: 2px; background: oklch(0.52 0.1 130);"></div>
+                        <div style="border-radius: 2px; background: oklch(0.57 0.19 25);"></div>
+                        <div style="border-radius: 2px; background: #57534E;"></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ f.one }}">
+                      <div style="width: 20px; height: 20px; border-radius: 999px; background: {{ f.c }}; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{ f.ring }};">{{ f.ini }}</div>
+                    </sc-if>
+                    <span>{{ f.n }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div onClick="{{ s.toggleMenu }}" style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid {{ s.userBorder }}; background: {{ s.userBg }}; cursor: pointer;" style-hover="border-color: #D6CFC4;">
+                <div style="width: 30px; height: 30px; border-radius: 999px; background: {{ s.user.color }}; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{ s.user.ini }}</div>
+                <div style="font-size: 14px; font-weight: 600;">{{ s.user.name }}</div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M6 9l6 6 6-6"></path></svg>
+              </div>
+            </header>
+            <sc-if value="{{ s.menuOpen }}">
+              <div style="position: absolute; top: 50px; right: 16px; width: 260px; background: #fff; border-radius: 14px; box-shadow: 0 18px 40px -8px rgba(28,26,23,0.28), 0 0 0 1px rgba(28,26,23,0.06); padding: 6px; z-index: 30;">
+                <div style="display: flex; gap: 10px; align-items: center; padding: 10px 10px 12px; border-bottom: 1px solid #EFEBE5; margin-bottom: 4px;">
+                  <div style="width: 38px; height: 38px; border-radius: 999px; background: {{ s.user.color }}; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{ s.user.ini }}</div>
+                  <div style="min-width: 0;">
+                    <div style="font-size: 15px; font-weight: 700;">{{ s.user.full }}</div>
+                    <div style="font-size: 13px; color: #6B645A; overflow: hidden; text-overflow: ellipsis;">{{ s.user.mail }}</div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: 9px; font-size: 14.5px; font-weight: 500; cursor: pointer;" style-hover="background: #F6F3EF;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4 21c0-4 3.6-6 8-6s8 2 8 6"></path></svg>Mi cuenta
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: 9px; font-size: 14.5px; font-weight: 500; cursor: pointer;" style-hover="background: #F6F3EF;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;"><path d="M3 5h14v10H3zM7 19h6M10 15v4M17 9h4v11h-4z"></path></svg>
+                  <span style="flex: 1;">Mis sesiones</span>
+                  <span style="font-size: 12.5px; color: #6B645A;">3 abiertas</span>
+                </div>
+                <div style="height: 1px; background: #EFEBE5; margin: 4px 6px;"></div>
+                <div style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px; border-radius: 9px; font-size: 14.5px; font-weight: 600; cursor: pointer;" style-hover="background: #F6F3EF;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"></path></svg>Salir
+                </div>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ s.mob }}">
+            <div style="flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC;">
+              <div style="height: 44px; display: flex; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 700;">12:42</div>
+              <div style="height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+                <div style="display: flex; align-items: center; gap: 9px;">
+                  <div style="width: 32px; height: 32px; border-radius: 9px; background-image: url(logo.png); background-size: 165%; background-position: 50% 28%; border: 1px solid #EFEBE5;"></div>
+                  <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 17px;">Seis Destinos</div>
+                </div>
+                <div style="width: 38px; height: 38px; border-radius: 999px; background: {{ s.user.color }}; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{ s.user.ini }}</div>
+              </div>
+              <div style="display: flex; gap: 6px; overflow-x: auto; padding: 2px 16px 12px;">
+                <sc-for list="{{ s.factories }}" as="f" hint-placeholder-count="5">
+                  <div onClick="{{ f.pick }}" style="flex-shrink: 0; display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px 0 6px; border-radius: 10px; background: {{ f.mBg }}; color: {{ f.fg }}; font-size: 14px; font-weight: {{ f.fw }}; border: 1px solid {{ f.mBorder }};">
+                    <sc-if value="{{ f.all }}">
+                      <div style="width: 22px; height: 22px; border-radius: 6px; background: {{ f.markBg }}; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 4px;">
+                        <div style="border-radius: 2px; background: oklch(0.55 0.11 55);"></div>
+                        <div style="border-radius: 2px; background: oklch(0.52 0.1 130);"></div>
+                        <div style="border-radius: 2px; background: oklch(0.57 0.19 25);"></div>
+                        <div style="border-radius: 2px; background: #57534E;"></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ f.one }}">
+                      <div style="width: 22px; height: 22px; border-radius: 999px; background: {{ f.c }}; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{ f.ring }};">{{ f.ini }}</div>
+                    </sc-if>
+                    <span style="white-space: nowrap;">{{ f.n }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <main style="flex: 1; min-height: 0; overflow: auto; padding: {{ s.pad }};">
+            <sc-if value="{{ s.showGreeting }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+                <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: {{ s.greetSize }}px; font-weight: 700; letter-spacing: -0.02em;">{{ s.greet }}</div>
+                <div style="font-size: 16px; color: #6B645A;">{{ s.date }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ s.hasStrip }}">
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #F5E8EC; border: 1px solid #E8CDD5; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #5C2233; font-size: 14.5px; font-weight: 800;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A2E42" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 3l9.5 17h-19zM12 10v4M12 17.5v.01"></path></svg>
+                  Para resolver ya
+                </div>
+                <sc-for list="{{ s.strip }}" as="u" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 4px; border-radius: 8px; background: #FFFFFF; color: #7A2E42; font-size: 14px; font-weight: 600; cursor: pointer;" style-hover="background: #FBF3F5; text-decoration: underline;">
+                    <span style="min-width: 22px; height: 22px; padding: 0 6px; border-radius: 6px; background: #7A2E42; color: #fff; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ u.n }}</span>{{ u.t }}
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ s.arrange }}">
+              <div style="display: flex; align-items: center; gap: 14px; background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; padding: 12px 14px 12px 16px; margin-bottom: 16px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: #FDEEE4; color: #C2410C; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"></circle><circle cx="15" cy="6" r="1.7"></circle><circle cx="9" cy="12" r="1.7"></circle><circle cx="15" cy="12" r="1.7"></circle><circle cx="9" cy="18" r="1.7"></circle><circle cx="15" cy="18" r="1.7"></circle></svg>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 15.5px; font-weight: 700;">Estás acomodando tu tablero</div>
+                  <div style="font-size: 14px; color: #6B645A;">Arrastrá cada tarjeta desde la manija. Cambiale el tamaño o escondela. Se guarda solo para vos.</div>
+                </div>
+                <div style="height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #3D3831; cursor: pointer;" style-hover="background: #F6F3EF;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"></path></svg>Volver a como venía
+                </div>
+                <div style="height: 40px; padding: 0 20px; border-radius: 12px; background: #C2410C; color: #fff; display: flex; align-items: center; font-size: 14.5px; font-weight: 700; cursor: pointer;" style-hover="background: #8F2F08;">Listo</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ s.hasGrid }}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; grid-template-columns: repeat({{ s.cols }}, minmax(0, 1fr)); gap: 14px; grid-auto-flow: dense; align-items: stretch;">
+                <sc-for list="{{ s.cards }}" as="c" hint-placeholder-count="6">
+                  <sc-if value="{{ c.real }}" hint-placeholder-val="{{ true }}">
+                    <div style="grid-column: span {{ c.span }}; background: #FFFFFF; border: {{ c.border }}; border-radius: 16px; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 12px; min-height: 196px; position: relative; cursor: pointer; box-shadow: {{ c.shadow }}; transform: {{ c.transform }}; z-index: {{ c.z }}; transition: border-color .15s, box-shadow .15s;" style-hover="border-color: #D6CFC4; box-shadow: 0 6px 18px -8px rgba(28,26,23,0.18);">
+                      <div style="display: flex; align-items: center; gap: 10px; min-height: 30px;">
+                        <sc-if value="{{ c.arrange }}">
+                          <div style="width: 26px; height: 30px; margin-left: -6px; border-radius: 7px; background: #F3F0EB; color: #6B645A; display: flex; align-items: center; justify-content: center; cursor: grab; flex-shrink: 0;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.8"></circle><circle cx="15" cy="6" r="1.8"></circle><circle cx="9" cy="12" r="1.8"></circle><circle cx="15" cy="12" r="1.8"></circle><circle cx="9" cy="18" r="1.8"></circle><circle cx="15" cy="18" r="1.8"></circle></svg>
+                          </div>
+                        </sc-if>
+                        <div style="width: 30px; height: 30px; border-radius: 9px; background: {{ c.tint }}; color: {{ c.color }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ c.icon }}"></path></svg>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.name }}</div>
+                        <sc-if value="{{ c.chev }}" hint-placeholder-val="{{ true }}">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8B0A4" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 6l6 6-6 6"></path></svg>
+                        </sc-if>
+                      </div>
+                      <sc-if value="{{ c.arrange }}">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -4px;">
+                          <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 8px; padding: 2px;">
+                            <sc-for list="{{ c.sizes }}" as="z" hint-placeholder-count="3">
+                              <div style="height: 24px; padding: 0 8px; border-radius: 6px; background: {{ z.bg }}; color: {{ z.fg }}; font-size: 12px; font-weight: 700; display: flex; align-items: center;">{{ z.l }}</div>
+                            </sc-for>
+                          </div>
+                          <div style="width: 28px; height: 28px; border-radius: 7px; border: 1px solid #E7E3DC; color: #6B645A; display: flex; align-items: center; justify-content: center;" title="Esconder">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c5 0 9 4.5 10 7-.4 1-1.3 2.4-2.6 3.7M6.6 6.6C4.5 8 3 10 2 12c1 2.5 5 7 10 7 1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg>
+                          </div>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ c.ok }}" hint-placeholder-val="{{ true }}">
+                        <div style="display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-start;">
+                          <div style="flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+                            <div style="font-size: 13.5px; font-weight: 600; color: #6B645A;">{{ c.label }}</div>
+                            <div style="display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;">
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: {{ c.numSize }}px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap;">{{ c.value }}</div>
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 17px; font-weight: 600; color: #6B645A;">{{ c.unit }}</div>
+                            </div>
+                            <sc-if value="{{ c.sub }}">
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 19px; font-weight: 700; color: #3D3831; font-variant-numeric: tabular-nums;">{{ c.sub }}</div>
+                            </sc-if>
+                            <sc-if value="{{ c.trend }}">
+                              <div style="display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: {{ c.trendFg }};">
+                                <span style="width: 22px; height: 22px; border-radius: 999px; background: {{ c.trendBg }}; display: flex; align-items: center; justify-content: center;">
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ c.trendIcon }}"></path></svg>
+                                </span>{{ c.trend }}
+                              </div>
+                            </sc-if>
+                          </div>
+                          <sc-if value="{{ c.hasMachines }}">
+                            <div style="flex: 2 1 320px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;">
+                              <sc-for list="{{ c.machines }}" as="mq" hint-placeholder-count="4">
+                                <div style="border-radius: 12px; background: {{ mq.bg }}; border: 1px solid {{ mq.border }}; padding: 9px 11px; display: flex; flex-direction: column; gap: 3px;">
+                                  <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: {{ mq.fg }};">
+                                    <span style="width: 8px; height: 8px; border-radius: 999px; background: {{ mq.dot }};"></span>{{ mq.st }}
+                                  </div>
+                                  <div style="font-size: 14px; font-weight: 600; color: #3D3831;">{{ mq.name }}</div>
+                                  <div style="font-size: 13px; color: {{ mq.detFg }};">{{ mq.det }}</div>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ c.hasSide }}" hint-placeholder-val="{{ true }}">
+                            <div style="flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+                              <sc-for list="{{ c.ctx }}" as="x" hint-placeholder-count="2">
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px;">
+                                  <span style="color: #6B645A;">{{ x.k }}</span>
+                                  <span style="font-weight: 700; color: {{ x.fg }}; font-variant-numeric: tabular-nums; white-space: nowrap;">{{ x.v }}</span>
+                                </div>
+                              </sc-for>
+                              <sc-if value="{{ c.hasList }}">
+                                <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; margin-top: 2px;">{{ c.listTitle }}</div>
+                                <sc-for list="{{ c.list }}" as="li" hint-placeholder-count="3">
+                                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                                    <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 14px;">
+                                      <span style="color: #3D3831; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ li.name }}</span>
+                                      <span style="font-weight: 700; color: {{ li.fg }}; font-variant-numeric: tabular-nums; white-space: nowrap;">{{ li.v }}</span>
+                                    </div>
+                                    <sc-if value="{{ li.bar }}">
+                                      <div style="height: 5px; border-radius: 999px; background: #F1EEE9; overflow: hidden;">
+                                        <div style="height: 100%; width: {{ li.barW }}; background: {{ li.barC }}; border-radius: 999px;"></div>
+                                      </div>
+                                    </sc-if>
+                                  </div>
+                                </sc-for>
+                              </sc-if>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ c.empty }}">
+                        <div style="display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-start;">
+                          <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 6px;">
+                            <div style="font-size: 13.5px; font-weight: 600; color: #6B645A;">{{ c.label }}</div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                              <div style="width: 40px; height: 40px; border-radius: 12px; background: #F3F0EB; color: #9A9287; display: flex; align-items: center; justify-content: center;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round;"><path d="M5 12h14"></path></svg>
+                              </div>
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700; color: #3D3831; line-height: 1.15;">{{ c.emptyMsg }}</div>
+                            </div>
+                          </div>
+                          <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 6px;">
+                            <sc-for list="{{ c.ctx }}" as="x" hint-placeholder-count="2">
+                              <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 14px;">
+                                <span style="color: #6B645A;">{{ x.k }}</span>
+                                <span style="font-weight: 700; color: {{ x.fg }}; font-variant-numeric: tabular-nums;">{{ x.v }}</span>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ c.loading }}">
+                        <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 2px;">
+                          <div style="width: 45%; height: 12px; border-radius: 6px; background: #F1EEE9;"></div>
+                          <div style="width: 75%; height: 34px; border-radius: 8px; background: #F1EEE9;"></div>
+                          <div style="width: 100%; height: 12px; border-radius: 6px; background: #F5F3EF;"></div>
+                          <div style="width: 85%; height: 12px; border-radius: 6px; background: #F5F3EF;"></div>
+                          <div style="font-size: 13px; color: #9A9287;">Cargando…</div>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ c.error }}">
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; padding: 4px 0 8px;">
+                          <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: #3D3831;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A2E42" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 8v5M12 16v.01"></path></svg>
+                            No se pudo cargar
+                          </div>
+                          <div style="font-size: 14px; color: #6B645A; line-height: 1.4;">Puede ser la conexión. El resto del tablero anda bien.</div>
+                          <div style="margin-top: 6px; height: 36px; padding: 0 14px; border-radius: 10px; border: 1.5px solid #C2410C; color: #C2410C; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; cursor: pointer;" style-hover="background: #FDEEE4;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v4h-4"></path></svg>Reintentar
+                          </div>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ c.hasFooter }}" hint-placeholder-val="{{ true }}">
+                        <div style="margin-top: auto; border-top: 1px solid #EFEBE5; padding-top: 6px; display: flex; flex-wrap: wrap; gap: 2px 12px;">
+                          <sc-for list="{{ c.res }}" as="r" hint-placeholder-count="1">
+                            <div style="flex: 1 1 240px; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 8px; margin: 0 -8px; border-radius: 9px; cursor: pointer;" style-hover="background: {{ r.hover }};">
+                              <span style="min-width: 24px; height: 22px; padding: 0 7px; border-radius: 7px; background: {{ r.pillBg }}; color: {{ r.pillFg }}; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; white-space: nowrap; font-variant-numeric: tabular-nums;">{{ r.n }}</span>
+                              <span style="flex: 1; min-width: 0; font-size: 14px; font-weight: {{ r.w }}; color: {{ r.fg }}; line-height: 1.3;">{{ r.t }}</span>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C2410C" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;"><path d="M9 6l6 6-6 6"></path></svg>
+                            </div>
+                          </sc-for>
+                          <sc-if value="{{ c.allGood }}">
+                            <div style="display: flex; align-items: center; gap: 8px; min-height: 34px; font-size: 14px; font-weight: 600; color: #205B39;">
+                              <span style="width: 22px; height: 22px; border-radius: 7px; background: #E6F4EC; display: flex; align-items: center; justify-content: center;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2F7D4F" style="stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+                              </span>{{ c.goodMsg }}
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ c.drop }}">
+                    <div style="grid-column: span {{ c.span }}; border: 2px dashed #C2410C; background: #FFF8F3; border-radius: 16px; min-height: 196px; display: flex; align-items: center; justify-content: center; color: #8F2F08; font-size: 14.5px; font-weight: 700;">Soltá acá</div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ s.arrange }}">
+              <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px; border: 1.5px dashed #D6CFC4; border-radius: 14px; padding: 12px 16px;">
+                <div style="font-size: 14px; font-weight: 700; color: #6B645A;">Escondidas</div>
+                <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px 0 6px; border-radius: 10px; background: #FFFFFF; border: 1px solid #E7E3DC;">
+                  <div style="width: 24px; height: 24px; border-radius: 7px; background: oklch(0.955 0.006 60); color: oklch(0.4 0.01 60); display: flex; align-items: center; justify-content: center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4"></path></svg>
+                  </div>
+                  <span style="font-size: 14px; font-weight: 600;">Seguridad</span>
+                  <span style="height: 26px; padding: 0 10px; border-radius: 7px; background: #FDEEE4; color: #8F2F08; font-size: 13px; font-weight: 700; display: flex; align-items: center;">Mostrar</span>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ s.custom }}">
+              <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 18px;">
+                <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.02em;">Personalizar</div>
+                <div style="font-size: 15px; color: #6B645A;">Lo que cambies acá se guarda solo para vos, Pablo. Los demás siguen viendo lo suyo.</div>
+              </div>
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 16px; align-items: start;">
+                <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; padding: 16px 18px;">
+                  <div style="font-size: 17px; font-weight: 700; margin-bottom: 2px;">Barra lateral</div>
+                  <div style="font-size: 14px; color: #6B645A; margin-bottom: 12px;">Cómo se ordenan los módulos.</div>
+                  <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 11px; padding: 3px; margin-bottom: 14px;">
+                    <div style="flex: 1; height: 34px; border-radius: 8px; background: #C2410C; color: #fff; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">A mano</div>
+                    <div style="flex: 1; height: 34px; border-radius: 8px; color: #3D3831; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Alfabético</div>
+                    <div style="flex: 1; height: 34px; border-radius: 8px; color: #3D3831; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Los que más uso</div>
+                  </div>
+                  <sc-for list="{{ s.pers.side }}" as="p" hint-placeholder-count="8">
+                    <sc-if value="{{ p.head }}">
+                      <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; padding: 8px 0 4px;">{{ p.head }}</div>
+                    </sc-if>
+                    <div style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 4px; border-radius: 9px;" style-hover="background: #F6F3EF;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#B8B0A4" style="cursor: grab; flex-shrink: 0;"><circle cx="9" cy="6" r="1.8"></circle><circle cx="15" cy="6" r="1.8"></circle><circle cx="9" cy="12" r="1.8"></circle><circle cx="15" cy="12" r="1.8"></circle><circle cx="9" cy="18" r="1.8"></circle><circle cx="15" cy="18" r="1.8"></circle></svg>
+                      <div style="width: 24px; height: 24px; border-radius: 7px; background: {{ p.tint }}; color: {{ p.color }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ p.icon }}"></path></svg>
+                      </div>
+                      <div style="flex: 1; font-size: 14px; font-weight: 500;">{{ p.name }}</div>
+                      <div style="height: 26px; padding: 0 9px; border-radius: 7px; display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; background: {{ p.pinBg }}; color: {{ p.pinFg }}; border: 1px solid {{ p.pinBorder }}; cursor: pointer;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z"></path></svg>{{ p.pinL }}
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; padding: 16px 18px;">
+                  <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                      <div style="font-size: 17px; font-weight: 700; margin-bottom: 2px;">Tablero</div>
+                      <div style="font-size: 14px; color: #6B645A;">Arrastrá para cambiar el orden. Elegí el tamaño de cada resumen o escondelo.</div>
+                    </div>
+                    <div style="height: 38px; padding: 0 14px; border-radius: 12px; border: 1.5px solid #C2410C; color: #C2410C; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; white-space: nowrap; cursor: pointer;" style-hover="background: #FDEEE4;">Acomodar sobre el tablero</div>
+                  </div>
+                  <sc-for list="{{ s.pers.board }}" as="p" hint-placeholder-count="8">
+                    <div style="display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 4px; border-radius: 9px; border-bottom: 1px solid #F3F0EB; opacity: {{ p.op }};" style-hover="background: #FAF8F5;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#B8B0A4" style="cursor: grab; flex-shrink: 0;"><circle cx="9" cy="6" r="1.8"></circle><circle cx="15" cy="6" r="1.8"></circle><circle cx="9" cy="12" r="1.8"></circle><circle cx="15" cy="12" r="1.8"></circle><circle cx="9" cy="18" r="1.8"></circle><circle cx="15" cy="18" r="1.8"></circle></svg>
+                      <div style="width: 24px; height: 24px; border-radius: 7px; background: {{ p.tint }}; color: {{ p.color }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ p.icon }}"></path></svg>
+                      </div>
+                      <div style="flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.name }}</div>
+                      <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 8px; padding: 2px;">
+                        <sc-for list="{{ p.sizes }}" as="z" hint-placeholder-count="3">
+                          <div style="height: 26px; padding: 0 9px; border-radius: 6px; background: {{ z.bg }}; color: {{ z.fg }}; font-size: 12.5px; font-weight: 700; display: flex; align-items: center;">{{ z.l }}</div>
+                        </sc-for>
+                      </div>
+                      <div style="width: 40px; height: 24px; border-radius: 999px; background: {{ p.swBg }}; padding: 3px; display: flex; justify-content: {{ p.swJ }}; flex-shrink: 0;" title="Mostrar en el tablero">
+                        <div style="width: 18px; height: 18px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <div style="display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px;">
+                    <div style="height: 38px; padding: 0 14px; border-radius: 12px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #3D3831; cursor: pointer;" style-hover="background: #F6F3EF;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"></path></svg>Volver a como venía
+                    </div>
+                    <div style="font-size: 13.5px; color: #6B645A;">Deja la barra y el tablero como vienen de fábrica.</div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </main>
+
+          <sc-if value="{{ s.mob }}">
+            <nav style="flex-shrink: 0; height: 84px; padding-bottom: 20px; background: #FFFFFF; border-top: 1px solid #E7E3DC; display: flex;">
+              <sc-for list="{{ s.tabs }}" as="t" hint-placeholder-count="5">
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; position: relative; color: {{ t.color }};">
+                  <div style="width: 44px; height: 30px; border-radius: 10px; background: {{ t.bg }}; display: flex; align-items: center; justify-content: center;">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ t.icon }}"></path></svg>
+                  </div>
+                  <div style="font-size: 11.5px; font-weight: {{ t.fw }}; color: {{ t.fg }};">{{ t.name }}</div>
+                  <sc-if value="{{ t.hasBadge }}">
+                    <div style="position: absolute; top: 4px; left: calc(50% + 8px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #7A2E42; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;">{{ t.badge }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </nav>
+          </sc-if>
+
+          <sc-if value="{{ s.sheet }}">
+            <div style="position: absolute; inset: 0; background: rgba(28,26,23,0.42); display: flex; flex-direction: column; justify-content: flex-end; z-index: 40;">
+              <div style="background: #FFFFFF; border-radius: 22px 22px 0 0; padding: 8px 16px 28px;">
+                <div style="width: 40px; height: 5px; border-radius: 999px; background: #D6CFC4; margin: 0 auto 12px;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;">Todos los módulos</div>
+                  <div style="width: 36px; height: 36px; border-radius: 999px; background: #F3F0EB; display: flex; align-items: center; justify-content: center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3D3831" style="stroke-width: 2.4; stroke-linecap: round;"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+                  <sc-for list="{{ s.sheetMods }}" as="m" hint-placeholder-count="9">
+                    <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 9px; border-radius: 14px; background: #F9F7F4;">
+                      <div style="width: 38px; height: 38px; border-radius: 11px; background: {{ m.tint }}; color: {{ m.color }}; display: flex; align-items: center; justify-content: center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ m.icon }}"></path></svg>
+                      </div>
+                      <div style="font-size: 12.5px; font-weight: 600; text-align: center; line-height: 1.15;">{{ m.name }}</div>
+                      <sc-if value="{{ m.hasBadge }}">
+                        <div style="position: absolute; top: 6px; right: 8px; min-width: 20px; height: 18px; padding: 0 5px; border-radius: 999px; background: {{ m.bBg }}; color: {{ m.bFg }}; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ m.badge }}</div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+                  <div style="height: 46px; border-radius: 12px; border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 600;">Personalizar</div>
+                  <div style="height: 46px; border-radius: 12px; border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 600;">Mi cuenta</div>
+                  <div style="height: 46px; border-radius: 12px; border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 600;">Mis sesiones</div>
+                  <div style="height: 46px; border-radius: 12px; border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 600;">Salir</div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MOD = {
+  inicio: { n: 'Inicio', h: 60, l: 0.35, c: 0.012, i: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' },
+  gastos: { n: 'Gastos', h: 355, l: 0.55, c: 0.16, i: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3' },
+  caja: { n: 'Caja', h: 85, l: 0.6, c: 0.13, i: 'M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2' },
+  cobranzas: { n: 'Cobranzas', h: 62, l: 0.62, c: 0.15, i: 'M12 4c4 0 7 1.3 7 3s-3 3-7 3-7-1.3-7-3 3-3 7-3zM5 7v5c0 1.7 3 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3 3 7 3s7-1.3 7-3v-5' },
+  cheques: { n: 'Cheques', h: 290, l: 0.52, c: 0.16, i: 'M3 7h18v10H3zM6 13.5h6M15 13.5h3M6 10.5h3' },
+  ctacte: { n: 'Cuentas corrientes', h: 322, l: 0.5, c: 0.15, i: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6' },
+  ingreso: { n: 'Ingreso', h: 50, l: 0.48, c: 0.08, i: 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8' },
+  stock: { n: 'Stock', h: 130, l: 0.52, c: 0.12, i: 'M4 4h16v16H4zM4 12h16M10 8h4M10 16h4' },
+  produccion: { n: 'Producción', h: 180, l: 0.52, c: 0.1, i: 'M3 21V10l6 4v-4l6 4V5h6v16zM7 17h2M13 17h2' },
+  pedidos: { n: 'Pedidos', h: 20, l: 0.58, c: 0.17, i: 'M9 3h6v3H9zM7 4.5H5V21h14V4.5h-2M9 11h6M9 15h4' },
+  ordenes: { n: 'Órdenes de retiro', h: 108, l: 0.55, c: 0.11, i: 'M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0' },
+  admin: { n: 'Administración', h: 305, l: 0.45, c: 0.14, i: 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18' },
+  taller: { n: 'Proyectos Taller', h: 150, l: 0.42, c: 0.07, i: 'M14 3.5a5 5 0 0 0-4.6 6.9L3.6 16.2a2 2 0 0 0 2.8 2.8l5.8-5.8A5 5 0 0 0 20.5 10l-3.2.8-2.1-2.1.8-3.2z' },
+  accesos: { n: 'Accesos', h: 205, l: 0.5, c: 0.07, i: 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M16 11l2 2 4-4' },
+  empleados: { n: 'Empleados', h: 340, l: 0.6, c: 0.13, i: 'M9 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zM2.5 20c0-3.5 2.9-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.8c2.2.6 3.5 2.3 3.5 5.2' },
+  seguridad: { n: 'Seguridad', h: 60, l: 0.4, c: 0.012, i: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4' },
+};
+const fgC = m => `oklch(${m.l} ${m.c} ${m.h})`;
+const tintC = m => `oklch(0.955 ${Math.max(m.c * 0.28, 0.008).toFixed(3)} ${m.h})`;
+
+const FACT = [
+  { k: 'todas', n: 'Todas' },
+  { k: 'nuss', n: 'Nuss', c: 'oklch(0.55 0.11 55)', ini: 'N' },
+  { k: 'dolce', n: 'Dolce Pasta', c: 'oklch(0.52 0.1 130)', ini: 'DP' },
+  { k: 'mengui', n: 'Mengui', c: 'oklch(0.57 0.19 25)', ini: 'M' },
+  { k: 'taller', n: 'Taller', c: '#57534E', ini: 'T' },
+];
+const USERS = {
+  pablo: { name: 'Pablo', full: 'Pablo Nuss', ini: 'PN', mail: 'pablo@seisdestinos.com.ar', color: 'oklch(0.45 0.09 55)' },
+  lucia: { name: 'Lucía', full: 'Lucía Ferreyra', ini: 'LF', mail: 'lucia.ferreyra@gmail.com', color: 'oklch(0.48 0.12 340)' },
+  facundo: { name: 'Facundo', full: 'Facundo Usabarrena', ini: 'FU', mail: 'facundousabarrena@gmail.com', color: 'oklch(0.42 0.06 150)' },
+};
+const BADGES = {
+  produccion: { n: 1, u: true }, cobranzas: { n: 5 }, caja: { n: 1 }, cheques: { n: 3, u: true },
+  pedidos: { n: 2, u: true }, admin: { n: 7, u: true }, accesos: { n: 2 }, gastos: { n: 7 }, ingreso: { n: 3 }, stock: { n: 2 },
+};
+const OWNER_SIDE = ['inicio', 'produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'ctacte', 'ingreso', 'stock', 'pedidos', 'ordenes', 'admin', 'taller', 'accesos', 'empleados', 'seguridad'];
+
+const OWNER = {
+  produccion: { size: 'ancha', label: 'Cajas producidas hoy', value: '142', unit: 'cajas', trend: '14 más que el lunes pasado (128)', up: true,
+    machines: [
+      { name: 'Máquina 4', st: 'Parada', det: 'Hace 12 min · se cortó la cadena', bad: true },
+      { name: 'Máquina 1', st: 'Andando', det: '38 cajas · lote 7033' },
+      { name: 'Máquina 2', st: 'Andando', det: '52 cajas · lote 7033' },
+      { name: 'Máquina 3', st: 'Andando', det: '44 cajas · lote 7031' },
+    ],
+    ctx: [{ k: 'Máquinas andando', v: '3 de 4' }, { k: 'Masas', v: '23' }, { k: 'Scrap', v: '2,1 %' }],
+    res: [{ n: 1, t: 'máquina parada · Máquina 4', u: true }, { n: 2, t: 'planillas por completar' }, { n: 'Lote 7031', t: 'de harina es el que peor rinde' }] },
+  cobranzas: { size: 'mediana', label: 'Cobrado hoy', value: '$ 2.914.000',
+    ctx: [{ k: 'Últimos 7 días', v: '$ 13.870.000' }], listTitle: 'POR CHOFER',
+    list: [{ name: 'Ramón Gutiérrez', v: '$ 1.320.000' }, { name: 'Marcelo Díaz', v: '$ 986.000' }, { name: 'Juan Pérez', v: '$ 608.000' }],
+    res: [{ n: 5, t: 'por controlar · $ 1.742.000' }] },
+  caja: { size: 'mediana', label: 'Mi saldo', value: '$ 1.248.300', sub: 'US$ 2.350',
+    ctx: [{ k: 'Caja de la empresa', v: '$ 6.840.000' }, { k: '', v: 'US$ 18.200' }, { k: 'Entró hoy', v: '+ $ 420.000', tone: 'good' }, { k: 'Salió hoy', v: '− $ 312.600' }],
+    res: [{ n: 1, t: 'transferencia por aceptar' }] },
+  gastos: { size: 'mediana', label: 'Gastado en septiembre', value: '$ 4.380.000',
+    ctx: [{ k: 'Hoy', v: '$ 186.500' }, { k: 'Últimos 7 días', v: '$ 912.000' }], listTitle: 'LO QUE MÁS PESA',
+    list: [{ name: 'Materia prima', v: '$ 1.920.000', pct: 44 }, { name: 'Sueldos y cargas', v: '$ 1.105.000', pct: 25 }, { name: 'Fletes', v: '$ 486.000', pct: 11 }],
+    res: [{ n: 7, t: 'gastos sin proveedor' }] },
+  cheques: { size: 'chica', label: 'En cartera', value: '$ 18.450.000', sub: '12 cheques',
+    ctx: [{ k: 'Plazo promedio', v: '38 días' }, { k: 'Para depositar hoy', v: '2' }],
+    res: [{ n: 3, t: 'vencen esta semana', u: true }] },
+  pedidos: { size: 'chica', label: 'Por entregar', value: '38', unit: 'pedidos',
+    ctx: [{ k: 'Para hoy', v: '11' }, { k: 'Esta semana', v: '27' }],
+    res: [{ n: 2, t: 'atrasados', u: true }] },
+  admin: { size: 'mediana', label: 'Nos deben los clientes', value: '$ 23.615.000',
+    ctx: [{ k: 'Cobrado en septiembre', v: '$ 41.280.000', tone: 'good' }], listTitle: 'LOS QUE MÁS DEBEN',
+    list: [{ name: 'Caserato', v: '$ 4.120.000' }, { name: 'Heladería Duomo', v: '$ 2.860.000', tone: 'bad' }, { name: 'Freddo Tandil', v: '$ 1.975.000' }],
+    res: [{ n: 5, t: 'cobranzas por asentar', u: true }, { n: 2, t: 'clientes pasados de su límite', u: true }] },
+  ctacte: { size: 'mediana', label: 'Le debemos a proveedores', value: '$ 9.726.400', listTitle: 'LOS MÁS GRANDES',
+    list: [{ name: 'Molino Cañuelas', v: '$ 3.480.000' }, { name: 'Ledesma', v: '$ 2.115.000' }, { name: 'Cartonera del Sur', v: '$ 1.260.000' }],
+    res: [{ n: '$ 1.380.000', t: 'vencido', u: true }, { n: '$ 2.040.000', t: 'vence esta semana' }] },
+  stock: { size: 'mediana', label: 'Insumos por agotarse', value: '6', unit: 'insumos', listTitle: 'PARA CUÁNTOS DÍAS ALCANZA',
+    list: [{ name: 'Harina 000', v: '9 días', pct: 64 }, { name: 'Azúcar', v: '4 días', pct: 28, tone: 'bad' }],
+    res: [{ n: 2, t: 'transferencias por recibir' }] },
+  ingreso: { size: 'chica', label: 'Ingresos de materia prima hoy', value: '4', unit: 'ingresos',
+    ctx: [{ k: 'Últimos 7 días', v: '17' }],
+    res: [{ n: 3, t: 'facturas por ingresar' }, { n: 1, t: 'recuento abierto' }] },
+  ordenes: { size: 'chica', label: 'Cajas despachadas hoy', value: '96', unit: 'cajas',
+    ctx: [{ k: 'Órdenes esta semana', v: '9' }],
+    res: [{ n: 4, t: 'sin valorizar' }] },
+  taller: { size: 'mediana', label: 'Proyectos en curso', value: '7', unit: 'proyectos',
+    ctx: [{ k: 'Facturado', v: '$ 12.400.000' }, { k: 'Cobrado', v: '$ 8.950.000' }, { k: 'Falta cobrar', v: '$ 3.450.000' }],
+    res: [{ n: 2, t: 'atrasados', u: true }, { n: 1, t: 'pasado de presupuesto' }] },
+  accesos: { size: 'chica', name: 'Accesos y empleados', label: 'Usuarios activos', value: '34',
+    ctx: [{ k: 'Empleados en Naaloo', v: '118' }],
+    res: [{ n: 2, t: 'solicitudes de acceso' }] },
+  seguridad: { size: 'chica', label: 'Errores de la app · 7 días', value: '3',
+    ctx: [{ k: 'Sesiones abiertas', v: '21' }],
+    res: [{ n: 1, t: 'error nuevo' }] },
+};
+const OWNER_ORDER = ['produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'pedidos', 'admin', 'ctacte', 'stock', 'ingreso', 'ordenes', 'taller', 'accesos', 'seguridad'];
+const OWNER_STRIP = [{ n: 1, t: 'máquina parada' }, { n: 5, t: 'cobranzas por asentar' }, { n: 2, t: 'pedidos atrasados' }, { n: 3, t: 'cheques vencen esta semana' }];
+
+const LUCIA = {
+  gastos: { size: 'mediana', label: 'Gastado en septiembre', value: '$ 1.310.000',
+    ctx: [{ k: 'Hoy', v: '$ 42.800' }, { k: 'Últimos 7 días', v: '$ 268.400' }], listTitle: 'LO QUE MÁS PESA',
+    list: [{ name: 'Materia prima', v: '$ 610.000', pct: 47 }, { name: 'Mantenimiento', v: '$ 214.000', pct: 16 }, { name: 'Limpieza', v: '$ 98.500', pct: 8 }],
+    res: [{ n: 2, t: 'gastos sin proveedor' }] },
+  caja: { size: 'mediana', label: 'Mi saldo', value: '$ 86.400', sub: 'US$ 0',
+    ctx: [{ k: 'Entró hoy', v: '+ $ 150.000', tone: 'good' }, { k: 'Salió hoy', v: '− $ 63.600' }],
+    res: [] },
+};
+const FACU = {
+  cobranzas: { size: 'mediana', state: 'empty', label: 'Cobrado hoy', emptyMsg: 'Hoy no hubo cobranzas', ctx: [{ k: 'Últimos 7 días', v: '$ 3.120.000' }], res: [], goodMsg: 'Nada por controlar' },
+  caja: { size: 'mediana', state: 'error' },
+  cheques: { size: 'chica', state: 'loading' },
+  pedidos: { size: 'chica', label: 'Por entregar', value: '14', unit: 'pedidos', ctx: [{ k: 'Para hoy', v: '4' }, { k: 'Esta semana', v: '10' }], res: [{ n: 2, t: 'atrasados', u: true }] },
+  gastos: { size: 'mediana', label: 'Gastado en septiembre', value: '$ 1.064.000', ctx: [{ k: 'Hoy', v: '$ 51.200' }, { k: 'Últimos 7 días', v: '$ 233.000' }], listTitle: 'LO QUE MÁS PESA',
+    list: [{ name: 'Materia prima', v: '$ 520.000', pct: 49 }, { name: 'Envases', v: '$ 176.000', pct: 17 }, { name: 'Fletes', v: '$ 91.000', pct: 9 }], res: [] },
+  stock: { size: 'mediana', label: 'Insumos por agotarse', value: '2', unit: 'insumos', listTitle: 'PARA CUÁNTOS DÍAS ALCANZA',
+    list: [{ name: 'Sémola', v: '12 días', pct: 80 }, { name: 'Huevo en polvo', v: '5 días', pct: 34 }], res: [{ n: 1, t: 'transferencia por recibir' }] },
+  accesos: { size: 'chica', name: 'Accesos y empleados', label: 'Usuarios activos', value: '9', ctx: [{ k: 'Empleados en Naaloo', v: '31' }], res: [] },
+};
+
+function mkCard(key, d, o) {
+  const m = MOD[key];
+  const st = d.state || 'ok';
+  const span = o.mobile ? 1 : d.size === 'ancha' ? o.anchaSpan : d.size === 'mediana' ? 2 : 1;
+  const ok = st === 'ok', empty = st === 'empty';
+  const res = (d.res || []).map(r => ({ n: r.n, t: r.t,
+    pillBg: r.u ? '#7A2E42' : '#F1EEE9', pillFg: r.u ? '#FFFFFF' : '#1C1A17',
+    fg: r.u ? '#7A2E42' : '#3D3831', w: r.u ? 650 : 500, hover: r.u ? '#FBF3F5' : '#F6F3EF' }));
+  const ctx = (d.ctx || []).map(x => ({ k: x.k, v: x.v, fg: x.tone === 'good' ? '#205B39' : x.tone === 'bad' ? '#5C2233' : '#1C1A17' }));
+  const list = (d.list || []).map(x => ({ name: x.name, v: x.v, bar: x.pct != null, barW: (x.pct || 0) + '%',
+    barC: x.tone === 'bad' ? '#7A2E42' : fgC(m), fg: x.tone === 'bad' ? '#7A2E42' : '#1C1A17' }));
+  const machines = (d.machines || []).map(x => ({ ...x, bg: x.bad ? '#F5E8EC' : '#F9F7F4', border: x.bad ? '#E8CDD5' : '#EFEBE5',
+    fg: x.bad ? '#7A2E42' : '#205B39', dot: x.bad ? '#7A2E42' : '#2F7D4F', detFg: x.bad ? '#5C2233' : '#6B645A' }));
+  const drag = o.dragKey === key;
+  const sizes = ['Chica', 'Mediana', 'Ancha'].map(l => {
+    const sel = l.toLowerCase() === d.size;
+    return { l, bg: sel ? '#FFFFFF' : 'transparent', fg: sel ? '#8F2F08' : '#6B645A' };
+  });
+  return {
+    real: true, drop: false, key, name: d.name || m.n, icon: m.i, color: fgC(m), tint: tintC(m), span,
+    ok, empty, loading: st === 'loading', error: st === 'error',
+    label: d.label, value: d.value, unit: d.unit || '', sub: d.sub || '',
+    numSize: o.mobile ? (d.size === 'ancha' ? 46 : 36) : d.size === 'ancha' ? 54 : d.size === 'mediana' ? 42 : 36,
+    trend: d.trend || '', trendFg: d.up ? '#205B39' : '#5C2233', trendBg: d.up ? '#E6F4EC' : '#F5E8EC', trendIcon: d.up ? 'M12 19V5M5 12l7-7 7 7' : 'M12 5v14M5 12l7 7 7-7',
+    ctx, list, hasList: list.length > 0, listTitle: d.listTitle || '', hasSide: ctx.length > 0 || list.length > 0,
+    machines, hasMachines: machines.length > 0,
+    emptyMsg: d.emptyMsg || '', goodMsg: d.goodMsg || 'Nada pendiente',
+    res, hasFooter: ok || empty, allGood: (ok || empty) && res.length === 0,
+    arrange: !!o.arrange, chev: !o.arrange, sizes,
+    border: drag ? '2px solid #C2410C' : o.arrange ? '1.5px dashed #D6CFC4' : '1px solid #E7E3DC',
+    shadow: drag ? '0 24px 48px -12px rgba(28,26,23,0.35)' : '0 1px 2px rgba(28,26,23,0.04)',
+    transform: drag ? 'translate(-46%, 18px) rotate(-1.6deg)' : 'none', z: drag ? 5 : 1,
+  };
+}
+
+function mkSide(keys, active, o) {
+  return keys.map((k, idx) => {
+    const m = MOD[k];
+    const b = o.badges ? o.badges[k] : null;
+    const on = k === active;
+    return {
+      name: m.n, icon: m.i, color: fgC(m), tint: tintC(m),
+      bg: on ? '#FDEEE4' : 'transparent', hoverBg: on ? '#FDEEE4' : '#F6F3EF',
+      fg: on ? '#8F2F08' : '#3D3831', fw: on ? 700 : 500,
+      hasBadge: !!(b && b.n != null), badge: b && b.n != null ? b.n : '', bBg: b && b.u ? '#7A2E42' : '#EDE9E3', bFg: b && b.u ? '#FFFFFF' : '#3D3831',
+      divAfter: (o.divAfter || []).includes(idx), tip: o.tip === k, tipExtra: o.tip === k && b ? b.n + ' por controlar' : '',
+    };
+  });
+}
+
+class Component extends DCLogic {
+  state = { ov: {} };
+  ov(id) { return this.state.ov[id] || {}; }
+  setOv(id, patch) { this.setState(s => ({ ov: { ...s.ov, [id]: { ...(s.ov[id] || {}), ...patch } } })); }
+
+  screen(base) {
+    const o = { ...base, ...this.ov(base.id) };
+    const mob = !!o.mobile;
+    const collapsed = !!o.collapsed;
+    const u = USERS[o.user];
+    const data = o.data;
+    let cards = (o.order || []).map(k => mkCard(k, data[k], { mobile: mob, anchaSpan: o.anchaSpan || 4, arrange: o.arrange, dragKey: o.dragKey }));
+    if (o.dropAt != null) cards.splice(o.dropAt, 0, { real: false, drop: true, span: 1 });
+    const factories = FACT.map(f => {
+      const sel = f.k === o.factory;
+      return { ...f, all: f.k === 'todas', one: f.k !== 'todas', pick: () => this.setOv(o.id, { factory: f.k }),
+        bg: sel ? '#C2410C' : 'transparent', hoverBg: sel ? '#C2410C' : '#E9E5DF', fg: sel ? '#FFFFFF' : '#3D3831', fw: sel ? 700 : 600,
+        shadow: sel ? '0 1px 2px rgba(143,47,8,0.3)' : 'none', ring: sel ? '0 0 0 2px #FFFFFF' : 'none', markBg: sel ? '#FFFFFF' : '#FFFFFF',
+        mBg: sel ? '#C2410C' : '#FFFFFF', mBorder: sel ? '#C2410C' : '#E7E3DC' };
+    });
+    const sideKeys = o.side || [];
+    const side = mkSide(sideKeys, o.active || 'inicio', { badges: o.badges, divAfter: o.divAfter, tip: o.tip });
+    return {
+      id: o.id, title: o.title, sizeLabel: o.w + ' × ' + o.h, note: o.note, w: o.w, h: o.h,
+      desk: !mob, mob, expanded: !collapsed, sideW: collapsed ? 64 : 232,
+      logoJustify: collapsed ? 'center' : 'flex-start', itemJustify: collapsed ? 'center' : 'flex-start',
+      badgePos: collapsed ? 'absolute' : 'static', bottomDir: collapsed ? 'column' : 'row',
+      collapseIcon: collapsed ? 'M13 6l6 6-6 6M5 6l6 6-6 6' : 'M11 6l-6 6 6 6M19 6l-6 6 6 6',
+      toggleSide: () => this.setOv(o.id, { collapsed: !collapsed }),
+      persBg: o.custom ? '#FDEEE4' : 'transparent', persFg: o.custom ? '#8F2F08' : '#3D3831', persFw: o.custom ? 700 : 500,
+      side, factories, user: u,
+      menuOpen: !!o.menuOpen, toggleMenu: () => this.setOv(o.id, { menuOpen: !o.menuOpen }),
+      userBorder: o.menuOpen ? '#D6CFC4' : '#E7E3DC', userBg: o.menuOpen ? '#F6F3EF' : '#FFFFFF',
+      pad: mob ? '16px 16px 20px' : o.w > 1600 ? '24px 32px 32px' : '20px 24px 28px',
+      showGreeting: !o.custom && !o.arrange, greet: 'Buen día, ' + u.name, date: '· lunes 28/09', greetSize: mob ? 24 : 26,
+      strip: o.strip || [], hasStrip: !!(o.strip && o.strip.length) && !o.arrange,
+      hasGrid: !o.custom, cols: mob ? 1 : o.cols || 4, cards, arrange: !!o.arrange, custom: !!o.custom,
+      pers: o.pers || { side: [], board: [] },
+      tabs: o.tabs || [], sheet: !!o.sheet, sheetMods: o.sheetMods || [],
+    };
+  }
+
+  renderVals() {
+    const ownerBase = { user: 'pablo', factory: 'todas', side: OWNER_SIDE, badges: BADGES, divAfter: [0, 3], data: OWNER, order: OWNER_ORDER, strip: OWNER_STRIP };
+    const persSide = OWNER_SIDE.slice(1).map((k, i) => {
+      const m = MOD[k]; const pin = i < 3;
+      return { name: m.n, icon: m.i, color: fgC(m), tint: tintC(m), head: i === 0 ? 'FIJADOS ARRIBA' : i === 3 ? 'EL RESTO' : '',
+        pinL: pin ? 'Fijado' : 'Fijar', pinBg: pin ? '#FDEEE4' : '#FFFFFF', pinFg: pin ? '#8F2F08' : '#6B645A', pinBorder: pin ? '#F6D3BD' : '#E7E3DC' };
+    });
+    const persBoard = OWNER_ORDER.map(k => {
+      const m = MOD[k]; const d = OWNER[k]; const vis = k !== 'seguridad';
+      return { name: d.name || m.n, icon: m.i, color: fgC(m), tint: tintC(m), op: vis ? 1 : 0.55,
+        sizes: ['Chica', 'Mediana', 'Ancha'].map(l => { const sel = l.toLowerCase() === d.size; return { l, bg: sel ? '#FFFFFF' : 'transparent', fg: sel ? '#8F2F08' : '#6B645A' }; }),
+        swBg: vis ? '#C2410C' : '#D6CFC4', swJ: vis ? 'flex-end' : 'flex-start' };
+    });
+    const tab = (k, name, on, badge) => { const m = MOD[k]; return { name: name || m.n, icon: m.i, color: on ? '#C2410C' : fgC(m), bg: on ? '#FDEEE4' : 'transparent', fg: on ? '#8F2F08' : '#3D3831', fw: on ? 700 : 600, hasBadge: !!badge, badge: badge || '' }; };
+    const tabs = [tab('inicio', 'Inicio', true), tab('produccion', null, false, 1), tab('cobranzas'), tab('caja'),
+      { name: 'Más', icon: 'M5 12h.01M12 12h.01M19 12h.01', color: '#3D3831', bg: 'transparent', fg: '#3D3831', fw: 600, hasBadge: true, badge: 12 }];
+    const sheetMods = OWNER_SIDE.slice(1).map(k => { const m = MOD[k]; const b = BADGES[k];
+      return { name: m.n, icon: m.i, color: fgC(m), tint: tintC(m), hasBadge: !!b, badge: b ? b.n : '', bBg: b && b.u ? '#7A2E42' : '#E7E3DC', bFg: b && b.u ? '#FFFFFF' : '#3D3831' }; });
+
+    const list = [
+      { ...ownerBase, id: '1a', title: 'Tablero del dueño', w: 1366, h: 768, note: 'Pablo ve un resumen por cada módulo. Arriba, el saludo y una sola franja con lo urgente. Producción va ancha y primera porque es lo que más mira. El tablero sigue hacia abajo con scroll; la barra lateral entra entera sin scroll.' },
+      { ...ownerBase, id: '1b', title: 'Tablero del dueño · pantalla grande', w: 1920, h: 1080, cols: 6, anchaSpan: 4, note: 'Mismas tarjetas en 6 columnas: todo el tablero entra casi sin scroll.' },
+      { id: '2a', title: 'Alguien con solo Gastos y Caja', w: 1366, h: 768, user: 'lucia', factory: 'nuss', side: ['inicio', 'gastos', 'caja'], badges: { gastos: { n: 2 } }, data: LUCIA, order: ['gastos', 'caja'], note: 'Lucía tiene habilitados dos módulos: ve dos tarjetas y dos ítems en la barra. Sin nada urgente, no aparece la franja. Caja sin pendientes muestra "Nada pendiente" en verde.' },
+      { id: '3a', title: 'Estados de tarjeta', w: 1366, h: 768, user: 'facundo', factory: 'dolce', side: ['inicio', 'gastos', 'caja', 'cobranzas', 'cheques', 'pedidos', 'stock', 'accesos', 'empleados'], badges: { pedidos: { n: 2, u: true }, stock: { n: 1 } }, divAfter: [0], data: FACU, order: ['cobranzas', 'caja', 'cheques', 'pedidos', 'gastos', 'stock', 'accesos'], strip: [{ n: 2, t: 'pedidos atrasados' }], note: 'Dolce Pasta elegida. Cobranzas sin datos ("Hoy no hubo cobranzas"), Caja con error y Reintentar, Cheques cargando. Cada tarjeta carga y falla sola: el resto sigue funcionando.' },
+      { ...ownerBase, id: '4a', title: 'Barra lateral colapsada', w: 1366, h: 768, collapsed: true, tip: 'cobranzas', cols: 4, note: 'Solo íconos (64 px). Al pasar el mouse aparece el nombre y lo pendiente. Las burbujas quedan sobre el ícono. El botón de abajo la abre y cierra; se recuerda por persona.' },
+      { ...ownerBase, id: '4b', title: 'Menú del usuario abierto', w: 1366, h: 768, menuOpen: true, note: 'Tocar el nombre abre el menú: Mi cuenta, Mis sesiones y Salir. Reemplaza la barra blanca vieja.' },
+      { ...ownerBase, id: '5a', title: 'Modo acomodar el tablero', w: 1366, h: 768, arrange: true, order: OWNER_ORDER.filter(k => k !== 'seguridad'), dragKey: 'cheques', dropAt: 4, note: 'Cada tarjeta muestra su manija, el tamaño y el botón para esconderla. Cheques está en el aire; el recuadro naranja marca dónde cae. Las escondidas quedan abajo para volver a mostrarlas.' },
+      { ...ownerBase, id: '6a', title: 'Personalizar', w: 1366, h: 768, custom: true, order: [], pers: { side: persSide, board: persBoard }, note: 'Pantalla propia desde "Personalizar" en la barra. Barra lateral: a mano, alfabético o los que más uso, y fijar arriba. Tablero: orden, tamaño y mostrar/esconder, o "Volver a como venía".' },
+      { ...ownerBase, id: '7a', title: 'Celular · tablero', w: 390, h: 844, mobile: true, tabs, note: 'Sin barra lateral. Abajo: Inicio, los 3 módulos que más usa y "Más". Las fábricas en una fila que se desliza. Las tarjetas van de a una, a lo ancho.' },
+      { ...ownerBase, id: '7b', title: 'Celular · Más', w: 390, h: 844, mobile: true, tabs, sheet: true, note: '"Más" abre todos los módulos en grilla, con sus burbujas, y las opciones de la cuenta.' },
+    ];
+    return { screens: list.map(b => this.screen(b)) };
+  }
+}
+</script>
+</body>
+</html>

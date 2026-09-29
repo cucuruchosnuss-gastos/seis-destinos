@@ -106,14 +106,14 @@ const select = (S, tabla) => {
   return c ? (c[1].find(f => f[0] === 'select') || [])[1] ?? '' : ''
 }
 
-// Hasta la pantalla de las cajas de la caja completa, con un cono.
+// Hasta la pantalla de las cajas de la caja completa, con un cono. Planta v2:
+// Producto → Cono → Presentación → (Caja) → Cajas.
 async function hastaCajas(S, { presentacion = 'pr-caja', cono = 'mk-grido' } = {}) {
   await S.abrirPlanilla('t1')
   S.abrirAgregar()
   S.elegirProductoAgregar('p-mini')
-  S.elegirConoSiNo(true)
-  S.elegirPresentacionAgregar(presentacion)
   S.elegirCono(cono)
+  S.elegirPresentacionAgregar(presentacion)
 }
 
 // ── Lo que se lee: el texto de cada select, porque el doble lo ignora ────
@@ -147,18 +147,23 @@ esperas.push((async () => {
   const a = S.estado.agregar
   chk('la caja de la unidad viene puesta', a.cajaId === 'i-nuss' && a.cajaElegida === true)
   chk('… con el embolsado que sugiere', a.embolsado === 'grande')
-  chk('… así que del cono se va derecho a las cajas', a.paso === 'cajas')
+  chk('… así que de la presentación se va derecho a las cajas', a.paso === 'cajas')
+  // Planta v2: la caja que viene puesta NO dibuja su paso (se saltea); se
+  // cambia tocando la chapa de al lado de las cajas, y ahí el paso aparece
+  // entre la presentación y las cajas.
   const pasos = S.pasosAgregar(a, S.estado.catalogo)
-  const caja = pasos.find(x => x.clave === 'caja')
-  chk('la caja es un paso entre el cono y las cajas',
-    pasos.map(x => x.clave).join(',') === 'producto,cono_si_no,presentacion,cono,caja,cajas', pasos.map(x => x.clave).join(','))
-  chk('… hecho, con la caja y el embolsado', caja.estado === 'hecho' && caja.valor === 'Caja N°1 Nuss · bolsa grande', caja.valor)
-  chk('… y se puede tocar para cambiarla', /data-paso-ag="caja"/.test(S.htmlPasosAgregar(pasos)))
+  chk('con la caja puesta, su paso no se dibuja',
+    pasos.map(x => x.clave).join(',') === 'producto,cono,presentacion,cajas', pasos.map(x => x.clave).join(','))
   const resumen = html(S, 'pr-agregar-empaque')
   chk('al lado de las cajas se ve la caja elegida, con "Cambiar"',
     /data-paso-ag="caja"/.test(resumen) && /Caja N°1 Nuss · bolsa grande/.test(resumen) && /Cambiar/.test(resumen), resumen)
 
   S.irAPasoAgregar('caja')
+  const pasosCaja = S.pasosAgregar(S.estado.agregar, S.estado.catalogo)
+  const caja = pasosCaja.find(x => x.clave === 'caja')
+  chk('al tocarla, la caja es un paso entre la presentación y las cajas',
+    pasosCaja.map(x => x.clave).join(',') === 'producto,cono,presentacion,caja,cajas', pasosCaja.map(x => x.clave).join(','))
+  chk('… el actual, con la caja y el embolsado', caja?.estado === 'actual' && caja?.valor === 'Caja N°1 Nuss · bolsa grande', JSON.stringify(caja))
   const panel = html(S, 'pr-agregar-panel')
   chk('el paso de la caja se dibuja en el panel', S.__doc.getElementById('pr-agregar-panel').hidden === false && /¿En qué caja\?/.test(panel))
   chk('… con las tres cajas habilitadas para esa presentación',
@@ -187,11 +192,12 @@ esperas.push((async () => {
   chk('… y "ninguno" no se puede elegir', S.estado.agregar.embolsado === 'grande')
   S.elegirCaja('i-sinimp')
   chk('con una caja que no sugiere bolsa, aparece "Sin bolsa"', opciones() === 'grande,individual,doble,ninguno', opciones())
-  // (28/09/2026) Tocar una caja la elige y PASA SOLA a las cajas: el
-  // embolsado se elige ahí, al lado del número.
-  chk('… y viene elegida', S.estado.agregar.embolsado === 'ninguno' && /data-ag-embolsado="ninguno" aria-pressed="true"/.test(html(S, 'pr-agregar-empaque')))
+  // (28/09/2026) Tocar una caja la elige y PASA SOLA a las cajas. Planta v2:
+  // al lado del número va la chapa (caja · embolsado, una línea); el
+  // embolsado se cambia volviendo al paso de la caja.
+  chk('… y viene elegida', S.estado.agregar.embolsado === 'ninguno' && /Caja N°1 Sin impresión · sin bolsa<\/span>/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
   chk('elegir la caja avanza solo a las cajas', S.estado.agregar.paso === 'cajas')
-  chk('… y el paso de la caja ya no trae el embolsado', !/data-ag-embolsado/.test(S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)))
+  chk('… y el paso de la caja deja cambiar el embolsado', /data-ag-embolsado="ninguno" aria-pressed="true"/.test(S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)))
 
   S.seguirConCajas()
   chk('"Seguir" lleva a las cajas', S.estado.agregar.paso === 'cajas')
@@ -248,8 +254,10 @@ esperas.push((async () => {
   chk('sin cajas configuradas se sigue sin caja', S.estado.agregar.cajaId === null && S.estado.agregar.cajaElegida === true)
   chk('… derecho a las cajas', S.estado.agregar.paso === 'cajas')
   const aviso = 'Esta presentación no tiene cajas configuradas: no se va a descontar la caja.'
+  // Planta v2: al lado de las cajas, la chapa de la caja en bordó (una línea).
   chk('… y lo dice en bordó, al lado de las cajas',
-    html(S, 'pr-agregar-empaque').includes(`pr-aviso--grave">${aviso}`), html(S, 'pr-agregar-empaque'))
+    html(S, 'pr-agregar-empaque').includes('class="pr-ag__caja pr-ag__caja--falta" data-paso-ag="caja"><span>Esta presentación no tiene cajas configuradas: no se descuenta la caja</span>') &&
+    /\.pr-ag__caja--falta \{[^}]*color: var\(--p-mal-txt\);/.test(FUENTE), html(S, 'pr-agregar-empaque'))
   S.irAPasoAgregar('caja')
   chk('… y en el paso de la caja', html(S, 'pr-agregar-panel').includes(`pr-aviso--grave">${aviso}`))
   chk('… el paso dice "Sin caja"', S.pasosAgregar(S.estado.agregar, S.estado.catalogo).find(x => x.clave === 'caja').valor === 'Sin caja · sin bolsa')
@@ -266,16 +274,16 @@ esperas.push((async () => {
   const S = armar()
   await hastaCajas(S, { cono: 'mk-norte' })
   chk('con un cono de doble bolsa, el embolsado es "las dos"', S.embolsadoEfectivo(S.estado.agregar, S.estado.catalogo) === 'doble')
-  // (28/09/2026) El embolsado se elige al lado de las cajas.
-  const panel = html(S, 'pr-agregar-empaque')
+  // Planta v2: al lado de las cajas la chapa lo dice; el embolsado se ve (y
+  // no se puede bajar) en el paso de la caja.
+  chk('… la chapa de al lado de las cajas lo dice', /Caja N°1 Nuss · doble bolsa · el cono va con doble bolsa<\/span>/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
+  const panel = S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)
   chk('… "Las dos" marcada', /data-ag-embolsado="doble" aria-pressed="true">/.test(panel), panel)
   chk('… las otras deshabilitadas',
     /data-ag-embolsado="grande" aria-pressed="false" disabled>/.test(panel) && /data-ag-embolsado="individual" aria-pressed="false" disabled>/.test(panel))
   chk('… y se explica', /Este cono va con doble bolsa/.test(panel))
-  chk('… y lo que consume por caja lleva las dos bolsas',
-    /1 Caja N°1 Nuss · 1 Tiras x4 · 3 Separador N°1 · 1 Bolsa 100x80 · 16 Bolsa PPP 15x60/.test(panel), panel)
-  chk('… también en el paso de la caja (con el embolsado forzado, no el anotado)',
-    /Por caja: 1 Caja N°1 Nuss · 1 Tiras x4 · 3 Separador N°1 · 1 Bolsa 100x80 · 16 Bolsa PPP 15x60/.test(S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)))
+  chk('… y lo que consume por caja lleva las dos bolsas (con el embolsado forzado, no el anotado)',
+    /Por caja: 1 Caja N°1 Nuss · 1 Tiras x4 · 3 Separador N°1 · 1 Bolsa 100x80 · 16 Bolsa PPP 15x60/.test(panel), panel)
   S.elegirEmbolsado('individual')
   chk('no se puede bajar a una bolsa', S.embolsadoEfectivo(S.estado.agregar, S.estado.catalogo) === 'doble')
   chk('… ni siquiera queda anotada por debajo', S.estado.agregar.embolsado === 'grande')
@@ -318,17 +326,15 @@ esperas.push((async () => {
   chk('con miles, con punto', tot('pr-caja', 'i-dolce', 'individual', 100) === '100 Caja N°1 Dolce Pasta · 100 Tiras x4 · 300 Separador N°1 · 1.600 Bolsa PPP 15x60')
   chk('un tercio no deja ruido de coma flotante', S.consumoTotal([{ insumoId: 'a', cantidad: 0.1 }], 3)[0].cantidad === 0.3)
 
-  // En pantalla: por caja en el paso de la caja, y el total en vivo.
+  // En pantalla: lo que consume, por caja, en el paso de la caja. Planta v2:
+  // al lado de las cajas va UNA línea (la caja y el embolsado), sin el total
+  // en vivo que había antes: se retiró a propósito con el diseño.
   await hastaCajas(S)
-  chk('sin cajas cargadas, lo que consume UNA caja', /Por caja: 1 Caja N°1 Nuss · 1 Tiras x4 · 3 Separador N°1 · 1 Bolsa 100x80/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
   S.ponerNumero(S.__doc.getElementById('pr-agregar-cajas'), 10)
   S.estado.agregar.cajas = 10
   S.pintarAgregar()
-  chk('con 10 cajas, el total en vivo',
-    html(S, 'pr-agregar-empaque').includes('10 cajas = 10 Caja N°1 Nuss · 10 Tiras x4 · 30 Separador N°1 · 10 Bolsa 100x80'), html(S, 'pr-agregar-empaque'))
-  S.estado.agregar.cajas = 1
-  S.pintarAgregar()
-  chk('… con una, en singular', html(S, 'pr-agregar-empaque').includes('1 caja = 1 Caja N°1 Nuss'))
+  chk('al lado de las cajas, una sola línea: la caja (sin el consumo)',
+    !/Por caja:|cajas? = /.test(html(S, 'pr-agregar-empaque')) && /Caja N°1 Nuss · bolsa grande/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
   S.irAPasoAgregar('caja')
   chk('el paso de la caja dice lo que consume por caja', /Por caja: 1 Caja N°1 Nuss/.test(html(S, 'pr-agregar-panel')))
   S.elegirEmbolsado('doble')
@@ -391,12 +397,14 @@ esperas.push((async () => {
   chk('la planilla trae la caja y el embolsado de cada renglón',
     /\bcaja_insumo_id\b/.test(select(S, 'produccion_items')) && /\bembolsado\b/.test(select(S, 'produccion_items')), select(S, 'produccion_items'))
   const lista = html(S, 'pr-planilla-producido')
-  const renglon = sub => { const i = lista.indexOf(`>${sub}<`); return lista.slice(i, lista.indexOf('pr-producido__botones', i)) }
-  chk('un renglón dice su caja y su embolsado', /Caja N°1 Nuss · bolsa grande/.test(renglon('7023-1')), renglon('7023-1'))
+  // Planta v2: cada renglón es una fila de la tabla (pr-fila-prod).
+  const renglon = sub => { const i = lista.indexOf(`>${sub}<`); return lista.slice(i, lista.indexOf('pr-fp__botones', i)) }
+  chk('un renglón dice su caja y su embolsado', /pr-fp__caja">Caja N°1 Nuss · bolsa grande</.test(renglon('7023-1')), renglon('7023-1'))
+  chk('… y el title del renglón (el texto entero) también', /title="Cucuruchón Mini · con cono · GRIDO · caja ×600 · Caja N°1 Nuss · bolsa grande">[^]*?>7023-1</.test(lista), lista.slice(0, 300))
   chk('… "doble bolsa"', /Caja N°1 Dolce Pasta · doble bolsa/.test(renglon('7023-2')))
   // Terminar la tablet, parte 5: el embolsado 'ninguno' no se nombra (sin bolsa es lo que no se consumió).
-  chk('… sin caja y sin bolsa, no nombra ni caja ni bolsa', /pr-producido__detalle">sin configurar ×400</.test(renglon('7023-3')) && !/sin bolsa/.test(renglon('7023-3')), renglon('7023-3'))
-  chk('… uno anterior al empaque no dice nada de más', (renglon('7023-4').match(/pr-producido__detalle/g) || []).length === 1, renglon('7023-4'))
+  chk('… sin caja y sin bolsa, no nombra ni caja ni bolsa', /<span class="pr-fp__caja">(<span class="pr-sin-caja[^>]*>sin empaque<\/span> )?Sin configurar<\/span>/.test(renglon('7023-3')) && !/sin bolsa/.test(renglon('7023-3')), renglon('7023-3'))
+  chk('… uno anterior al empaque no dice nada de más', /<span class="pr-fp__caja">Caja<\/span>/.test(renglon('7023-4')) && !/sin-caja|bolsa/.test(renglon('7023-4')), renglon('7023-4'))
   chk('… y una caja que ya no está en el catálogo se nombra igual', /Caja vieja Ex · bolsitas individuales/.test(renglon('7023-5')), renglon('7023-5'))
   chk('el nombre de esa caja se lee aparte, por id',
     S.__llamadas.consultas.some(([t, f]) => t === 'insumos' && JSON.stringify(f).includes('i-vieja')))
@@ -728,19 +736,26 @@ esperas.push((async () => {
   chk('el stock se lee de v_stock_insumos, de la unidad', c && JSON.stringify(c[1]).includes('["eq","unidad_negocio_id","u-cn"]'), JSON.stringify(c?.[1]))
   chk('… solo de los insumos del empaque', c && JSON.stringify(c[1]).includes('["in","insumo_id",["i-nuss","i-dolce","i-sinimp","i-otra","i-tiras","i-sep","i-bolsa","i-ppp"]]'), JSON.stringify(c?.[1]))
   chk('… con insumo y cantidad', /\binsumo_id\b/.test(select(S, 'v_stock_insumos')) && /\bcantidad_total\b/.test(select(S, 'v_stock_insumos')))
-  chk('abrir agregar lee el stock solo', /return cargarStockAgregar\(estado\.agregar\)/.test(FUENTE))
+  chk('abrir agregar lee el stock solo', /return cargarStockAgregar\(a\)\s*\}$/.test(require('./extraer').extraerFn(FUENTE, 'abrirAgregar')))
 
   chk('con stock de sobra para una caja, no se avisa nada', !/Falta/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
   conCajas(S, 10)
+  // Planta v2: al lado de las cajas, UNA línea con lo que falta; el detalle
+  // (cuánto hay y cuánto se necesita) en el paso de la caja
+  // (htmlAvisoStockEmpaque, con el número de cajas cargado).
   const h = html(S, 'pr-agregar-empaque')
-  chk('con 10 cajas: faltan cajas de cartón', h.includes('Faltan 5 Caja N°1 Nuss: hay 5, se necesitan 10'), h)
-  chk('… y separadores', h.includes('Faltan 12 Separador N°1: hay 18, se necesitan 30'))
-  chk('… en bordó', /pr-aviso pr-aviso--grave">Faltan 5/.test(h))
-  chk('… sin nombrar lo que alcanza', !/Tiras x4: hay/.test(h) && !/Bolsa 100x80: hay/.test(h))
+  const det = S.htmlAvisoStockEmpaque(S.estado.agregar, S.estado.catalogo)
+  chk('con 10 cajas: al lado de las cajas, lo que falta en una línea', h.includes('<p class="pr-ag__falta-emp">Falta en el stock: Caja N°1 Nuss, Separador N°1. Se puede cargar igual.</p>'), h)
+  chk('… en bordó', /\.pr-ag__falta-emp \{[^}]*color: var\(--p-mal\);/.test(FUENTE))
+  chk('con 10 cajas: faltan cajas de cartón', det.includes('Faltan 5 Caja N°1 Nuss: hay 5, se necesitan 10'), det)
+  chk('… y separadores', det.includes('Faltan 12 Separador N°1: hay 18, se necesitan 30'))
+  chk('… en bordó (el detalle)', /pr-aviso pr-aviso--grave">Faltan 5/.test(det))
+  chk('… el detalle es el que dibuja el paso de la caja', S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo).includes(det))
+  chk('… sin nombrar lo que alcanza', !/Tiras x4|Bolsa 100x80/.test(h) && !/Tiras x4: hay/.test(det) && !/Bolsa 100x80: hay/.test(det))
   const J = await conStock({ stock: [...STOCK.filter(r => r.insumo_id !== 'i-sep'), { insumo_id: 'i-sep', cantidad_total: 30 }] })
   conCajas(J, 10)
-  chk('lo justo alcanza: no es un faltante', !/Separador N°1: hay/.test(html(J, 'pr-agregar-empaque')), html(J, 'pr-agregar-empaque'))
-  chk('… y dice que se puede cargar igual', /Se puede cargar igual\./.test(h))
+  chk('lo justo alcanza: no es un faltante', !/Separador/.test(html(J, 'pr-agregar-empaque')) && !/Separador N°1: hay/.test(J.htmlAvisoStockEmpaque(J.estado.agregar, J.estado.catalogo)), html(J, 'pr-agregar-empaque'))
+  chk('… y dice que se puede cargar igual', /Se puede cargar igual\./.test(h) && /<br>Se puede cargar igual\.<\/div>$/.test(det), det)
   chk('… y reemplaza a la línea del consumo (las dos no entran a 1280×800)', !/10 cajas = /.test(h))
   chk('el aviso NO deshabilita el botón', S.__doc.getElementById('pr-agregar-confirmar').disabled === false)
   S.__setRpc(async () => ({ data: { sublote: '7023-1' }, error: null }))
@@ -750,19 +765,21 @@ esperas.push((async () => {
   // Un insumo sin fila en la vista es un cero de verdad (con stock:ver).
   const Z = await conStock({ stock: STOCK.filter(r => r.insumo_id !== 'i-bolsa') })
   conCajas(Z, 10)
-  chk('sin fila en la vista: hay 0', html(Z, 'pr-agregar-empaque').includes('Faltan 10 Bolsa 100x80: hay 0, se necesitan 10'))
+  chk('sin fila en la vista: hay 0', Z.htmlAvisoStockEmpaque(Z.estado.agregar, Z.estado.catalogo).includes('Faltan 10 Bolsa 100x80: hay 0, se necesitan 10') &&
+    /Falta en el stock: [^<]*Bolsa 100x80/.test(html(Z, 'pr-agregar-empaque')))
 
   // Medias planchas y singular.
   const M = await conStock({ presentacion: 'pr-media', stock: [...STOCK.filter(r => r.insumo_id !== 'i-tiras'), { insumo_id: 'i-tiras', cantidad_total: 1 }] })
   conCajas(M, 3)
-  chk('media caja: falta media plancha', html(M, 'pr-agregar-empaque').includes('Falta 0,5 Tiras x4: hay 1, se necesitan 1,5'), html(M, 'pr-agregar-empaque'))
+  chk('media caja: falta media plancha', M.htmlAvisoStockEmpaque(M.estado.agregar, M.estado.catalogo).includes('Falta 0,5 Tiras x4: hay 1, se necesitan 1,5'), M.htmlAvisoStockEmpaque(M.estado.agregar, M.estado.catalogo))
 
   // En el paso de la caja, contra UNA caja si todavía no hay número.
   const P = await conStock({ stock: STOCK.filter(r => r.insumo_id !== 'i-nuss') })
   P.irAPasoAgregar('caja')
   chk('al elegir la caja, avisa si no hay ni una', html(P, 'pr-agregar-panel').includes('Falta 1 Caja N°1 Nuss: hay 0, se necesitan 1'), html(P, 'pr-agregar-panel'))
   P.elegirCaja('i-dolce')
-  chk('… y cambia con la caja (ya al lado de las cajas)', !/Caja N°1 Nuss: hay/.test(html(P, 'pr-agregar-empaque')) && /Caja N°1 Dolce Pasta: hay 0/.test(html(P, 'pr-agregar-empaque')), html(P, 'pr-agregar-empaque'))
+  chk('… y cambia con la caja (ya al lado de las cajas)', !/Caja N°1 Nuss/.test(html(P, 'pr-agregar-empaque')) && /Falta en el stock: Caja N°1 Dolce Pasta/.test(html(P, 'pr-agregar-empaque')) &&
+    /Caja N°1 Dolce Pasta: hay 0/.test(P.htmlAvisoStockEmpaque(P.estado.agregar, P.estado.catalogo)), html(P, 'pr-agregar-empaque'))
   chk('faltantes sin stock leído: null (no se inventa)', P.faltantesEmpaque({ ...P.estado.agregar, stock: { estado: 'error' } }, P.estado.catalogo) === null)
 })())
 
@@ -770,14 +787,16 @@ esperas.push((async () => {
   const S = await conStock({ stockVer: null })
   chk('sin stock:ver: no se consulta la vista', !S.__llamadas.consultas.some(([t]) => t === 'v_stock_insumos'))
   conCajas(S, 10)
-  chk('… y se dice, en vez de un faltante inventado',
-    /No se puede ver el stock con este usuario/.test(html(S, 'pr-agregar-empaque')) && !/Falta/.test(html(S, 'pr-agregar-empaque')))
-  chk('… tampoco en el paso de la caja', (() => { S.irAPasoAgregar('caja'); return /No se puede ver el stock con este usuario/.test(html(S, 'pr-agregar-panel')) })())
+  // Planta v2: al lado de las cajas no se inventa un faltante; lo de que no
+  // se puede ver el stock se dice en el paso de la caja.
+  chk('… y no se inventa un faltante', !/Falta/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
+  chk('… lo dice el paso de la caja', (() => { S.irAPasoAgregar('caja'); return /No se puede ver el stock con este usuario/.test(html(S, 'pr-agregar-panel')) })())
   const D = await conStock({ stockVer: 'desconocido' })
-  chk('sin saber el permiso: se dice, sin consultar', /No se pudo saber si este usuario puede ver el stock/.test(html(D, 'pr-agregar-empaque')) &&
-    !D.__llamadas.consultas.some(([t]) => t === 'v_stock_insumos'))
+  chk('sin saber el permiso: se dice, sin consultar', /No se pudo saber si este usuario puede ver el stock/.test(D.htmlAvisoStockEmpaque(D.estado.agregar, D.estado.catalogo)) &&
+    !/Falta/.test(html(D, 'pr-agregar-empaque')) && !D.__llamadas.consultas.some(([t]) => t === 'v_stock_insumos'))
   const E = await conStock({ stock: () => ({ data: null, error: { message: 'x' } }) })
-  chk('si falla la lectura: "No se pudo leer el stock"', /No se pudo leer el stock\./.test(html(E, 'pr-agregar-empaque')))
+  chk('si falla la lectura: "No se pudo leer el stock"', /No se pudo leer el stock del empaque\./.test(html(E, 'pr-agregar-empaque')) &&
+    /No se pudo leer el stock\./.test(E.htmlAvisoStockEmpaque(E.estado.agregar, E.estado.catalogo)))
   chk('… y agregar sigue andando', E.__doc.getElementById('pr-agregar-confirmar').disabled === false)
   // Sin nada que consuma, no se dice nada del stock.
   const N = armar()
@@ -821,9 +840,15 @@ esperas.push((async () => {
   const a = { paso: 'caja', productoId: 'p-mini', conCono: true, presentacionId: 'pr-caja', marcaId: null, marcaElegida: true,
     cajaId: 'i-malo', cajaElegida: true, embolsado: 'grande', cajas: 3 }
   chequearMarcas(chk, 'paso de la caja', X.htmlPasoCaja(a, catMalo), ['cajaNombre', 'cajaMarca', 'insumoEmpaque'])
-  chequearMarcas(chk, 'resumen del empaque', X.htmlEmpaqueAgregar(a, catMalo), ['cajaNombre', 'cajaMarca', 'insumoEmpaque'])
-  chequearMarcas(chk, 'resumen del empaque sin cajas cargadas', X.htmlEmpaqueAgregar({ ...a, cajas: null }, catMalo), ['cajaNombre', 'insumoEmpaque'])
-  chequearMarcas(chk, 'pasos con la caja', X.htmlPasosAgregar(X.pasosAgregar(a, catMalo)), ['cajaNombre', 'cajaMarca'])
+  // Planta v2: al lado de las cajas, la chapa (caja · embolsado) y la línea
+  // de lo que falta del stock, que nombra los insumos.
+  const faltaTodo = { estado: 'ok', saldos: new Map() }
+  chequearMarcas(chk, 'resumen del empaque', X.htmlEmpaqueAgregar(a, catMalo), ['cajaNombre', 'cajaMarca'])
+  chequearMarcas(chk, 'resumen del empaque con faltantes', X.htmlEmpaqueAgregar({ ...a, stock: faltaTodo }, catMalo), ['cajaNombre', 'cajaMarca', 'insumoEmpaque'])
+  chequearMarcas(chk, 'resumen del empaque sin cajas cargadas', X.htmlEmpaqueAgregar({ ...a, cajas: null, stock: faltaTodo }, catMalo), ['cajaNombre', 'insumoEmpaque'])
+  // (El paso de la caja en la columna de pasos ya no muestra su valor: con
+  // la caja resuelta se saltea, y mientras se elige dice "elegí abajo".)
+  chequearMarcas(chk, 'pasos con la caja', X.htmlPasosAgregar(X.pasosAgregar({ ...a, paso: 'cajas', cajaElegida: false }, catMalo)), [])
   const conIdMalo = { ...catMalo, cajas: [{ presentacion_id: 'pr-caja', insumo_id: marca('cajaId'), embolsado_sugerido: 'grande' }] }
   chequearMarcas(chk, 'id de la caja en el atributo', X.htmlPasoCaja({ ...a, cajaId: null }, conIdMalo), ['cajaId'])
   // Parte 2: el renglón ya cargado y el empaque del turno.

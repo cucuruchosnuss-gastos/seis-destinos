@@ -195,17 +195,31 @@ esperas.push((async () => {
   chk('tocar la tarjeta abre la masa nueva de esa máquina', S.estado.vista === 'pr-receta' && S.estado.salaTurno?.id === 't1')
   chk('… con "Anterior" elegida: hay una masa de hoy', S.estado.masa?.como === 'anterior')
   const opciones = S.__doc.getElementById('pr-receta-opciones').innerHTML
-  chk('arriba: "Masa 3"', /pr-receta__nro">Masa 3</.test(opciones), opciones.slice(0, 300))
-  chk('… y "Máquina 1 · Cambiar", que vuelve al inicio', S.__doc.getElementById('pr-receta-cambiar').textContent === 'Máquina 1 · Cambiar')
+  // Planta v2 (28/09/2026): el número de masa y la máquina van en la cabecera
+  // de la pantalla ("Lote 7023 · Máquina 1" | "Nueva masa · Masa 3"); se
+  // vuelve a las máquinas con "Inicio" de la barra lateral (se retiró
+  // #pr-receta-cambiar).
+  const cabR = S.cabeceraDeVista()
+  chk('arriba: "Nueva masa · Masa 3", con el lote y la máquina', cabR?.titulo === 'Nueva masa · Masa 3' && cabR?.ctx === 'Lote 7023 · Máquina 1', JSON.stringify(cabR))
+  {
+    const IN = armar()
+    await IN.mostrarSala(); await IN.elegirMaquinaSala('t1')
+    chk('… y "Inicio" de la barra lateral está y vuelve a las máquinas', /data-seccion="sala-inicio"/.test(IN.htmlLatSala()))
+    await IN.irASeccion('sala-inicio')
+    chk('… (irASeccion("sala-inicio") abre el inicio de la sala)', IN.estado.vista === 'pr-sala')
+  }
   chk('con UNA sola receta no se pregunta el tipo de masa', !/data-tipo-masa/.test(opciones))
   chk('tamaño: Simple marcado por defecto', /data-doble="no" aria-pressed="true"/.test(opciones) && /data-doble="si" aria-pressed="false"/.test(opciones))
   chk('Original / Anterior / Modificar, con la elegida marcada', ['original', 'anterior', 'modificar'].every(x => opciones.includes(`data-base="${x}"`)) &&
     /data-base="anterior" aria-pressed="true"/.test(opciones))
   chk('no hay selector Común / Chocolate', !/data-chocolate|>Chocolate</.test(opciones))
-  chk('"Original" dice la vigente', /la vigente · v7/.test(opciones))
-  chk('"Anterior" dice cuál fue y a qué hora', /Igual a la masa 9 de las 10:05/.test(opciones), opciones)
-  chk('… y que venía modificada, con la diferencia', /modificada: \+200 g Azúcar/.test(opciones))
-  chk('"Modificar" dice de dónde parte', /Parte de la masa 9\./.test(opciones))
+  // Planta v2: los segmentos llevan un detalle corto. Se eliminaron por diseño
+  // la hora de la anterior, su diferencia ("modificada: +200 g Azúcar") y el
+  // "Parte de la masa 9." de Modificar (ver el informe: el comentario de
+  // detalleAnteriorCorto dice que el detalle largo va en el title y no va).
+  chk('"Original" dice la versión vigente', /data-base="original"[^>]*><span class="pr-como__titulo">Original<\/span><span class="pr-como__detalle">v7<\/span>/.test(opciones))
+  chk('"Anterior" dice cuál fue', /data-base="anterior"[^>]*><span class="pr-como__titulo">Anterior<\/span><span class="pr-como__detalle">igual a la 9<\/span>/.test(opciones), opciones)
+  chk('"Modificar" sin detalle', /data-base="modificar"[^>]*><span class="pr-como__titulo">Modificar<\/span><\/button>/.test(opciones))
   chk('el tipo de masa se eligió solo (hay uno)', S.estado.tipoMasa === 'Común')
   chk('datos_para_masa con el turno y el tipo', JSON.stringify(S.__llamadas.rpc.find(([n]) => n === 'datos_para_masa')?.[1]) === '{"p_turno_id":"t1","p_tipo_masa":"Común"}')
   chk('stock_para_masa con el turno', JSON.stringify(S.__llamadas.rpc.find(([n]) => n === 'stock_para_masa')?.[1]) === '{"p_turno_id":"t1"}')
@@ -230,13 +244,16 @@ esperas.push((async () => {
   await SA.mostrarSala(); await SA.elegirMaquinaSala('t1')
   const pa = SA.__doc.getElementById('pr-receta-opciones').innerHTML
   chk('sin anterior: arranca con Original', SA.estado.masa?.como === 'original')
-  chk('… "Anterior" deshabilitado y lo dice', /data-base="anterior" aria-pressed="false" disabled/.test(pa) && /no hay una masa anterior/.test(pa))
-  chk('… y "Modificar" parte de la receta vigente', /Parte de la receta vigente\./.test(pa))
+  chk('… "Anterior" deshabilitado y lo dice', /data-base="anterior" aria-pressed="false" disabled/.test(pa) && /pr-como__detalle">no hay</.test(pa), pa)
+  chk('… y "Modificar" parte de la receta vigente', SA.partidaDeModificar(SA.estado.datosMasa) === 'original')
   SA.elegirComo('anterior')
   chk('… y elegir Anterior no hace nada', SA.estado.masa.como === 'original')
   const CH = armar({ datos: { ...DATOS, anterior: { ...ANTERIOR, es_chocolate: true } } })
   await CH.mostrarSala(); await CH.elegirMaquinaSala('t1')
-  chk('si la anterior fue de CHOCOLATE, lo dice ANTES de copiarla', /Era de CHOCOLATE/.test(CH.__doc.getElementById('pr-receta-opciones').innerHTML))
+  chk('si la anterior fue de CHOCOLATE, lo dice ANTES de copiarla, en el botón "Anterior"',
+    /data-base="anterior"[^>]*><span class="pr-como__titulo">Anterior<\/span><span class="pr-como__detalle">igual a la 9 <span class="pr-como__choco">· de chocolate<\/span>/.test(CH.__doc.getElementById('pr-receta-opciones').innerHTML),
+    CH.__doc.getElementById('pr-receta-opciones').innerHTML)
+  chk('… y si no fue de chocolate no lo dice', !/de chocolate/.test(opciones))
   const OTRODIA = armar({ datos: { ...DATOS, anterior: { ...ANTERIOR, es_de_hoy: false } } })
   await OTRODIA.mostrarSala(); await OTRODIA.elegirMaquinaSala('t1')
   chk('la anterior es de otro día: arranca con Original', OTRODIA.estado.masa?.como === 'original')
@@ -281,7 +298,8 @@ esperas.push((async () => {
   const filas = R.__doc.getElementById('pr-receta-filas').innerHTML
   chk('un renglón por lo que lleva la masa', (filas.match(/data-valor="/g) || []).length === 6, filas.slice(0, 200))
   chk('el cacao en 0 no aparece hasta agregarlo', !/i-cacao/.test(filas))
-  chk('con Anterior las cantidades se ven pero no se tocan', /data-valor="i-azucar">2,7 kg</.test(filas) && !/data-cant=|data-mas=|data-menos=/.test(filas))
+  // Planta v2: el número grande y la unidad chica (htmlCantidadGrande).
+  chk('con Anterior las cantidades se ven pero no se tocan', /data-valor="i-azucar">2,7<span class="pr-rec__unidad">kg<\/span></.test(filas) && !/data-cant=|data-mas=|data-menos=/.test(filas))
   chk('la marca es la del insumo del lote elegido; "otro" si no es el de la receta', /pr-rec__marca">Wali · otro</.test(filas) && /pr-rec__marca">Ledesma</.test(filas), filas.slice(0, 400))
   chk('el que no tiene insumo en el catálogo: "no lleva lote"', /no lleva lote/.test(filas))
   chk('la diferencia del azúcar se MUESTRA junto al nombre (+200 g sobre 2,5 kg)', /Azúcar <span class="pr-rec__dif">\+200 g/.test(filas), filas.slice(0, 200))
@@ -298,8 +316,8 @@ esperas.push((async () => {
   R.abrirPanelLote('i-harina')
   const tarjetasHar = R.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
   R.cerrarPanelLote()
-  chk('menos de un kilo se lee en gramos, como se habla en la sala', /quedan 240 g/.test(tarjetasLec) && /quedan 200 kg/.test(tarjetasHar), tarjetasLec)
-  chk('la fecha de cada lote sale de stock_para_masa (sin stock:ver)', /desde 05\/09\/2026/.test(tarjetasHar) && !R.__llamadas.consultas.some(([t]) => t === 'v_stock_por_lote'))
+  chk('menos de un kilo se lee en gramos, como se habla en la sala', /<strong>240 g<\/strong><span>quedan/.test(tarjetasLec) && /<strong>200 kg<\/strong><span>quedan/.test(tarjetasHar), tarjetasLec)
+  chk('la fecha de cada lote sale de stock_para_masa (sin stock:ver)', /Ingresó el 01\/09\/2026/.test(tarjetasHar) && /Ingresó el 10\/09\/2026/.test(tarjetasHar) && !R.__llamadas.consultas.some(([t]) => t === 'v_stock_por_lote'), tarjetasHar)
   // 4e: en una doble la lecitina no alcanza (0,24 kg y lleva 0,3).
   const DOB = await hastaLaReceta(armar(), { como: 'anterior', doble: true })
   const filasDob = DOB.__doc.getElementById('pr-receta-filas').innerHTML
@@ -309,23 +327,27 @@ esperas.push((async () => {
   chk('… y el aviso va pegado a Registrar ANTES de tocarlo', pieDob === 'Al lote 3310 de lecitina le quedan 240 g y esta masa lleva 300 g. Podés registrar igual.' &&
     DOB.__doc.getElementById('pr-receta-error').hidden === false, pieDob)
   chk('… como aviso, no como error', DOB.__doc.getElementById('pr-receta-error').classList.contains('pr-receta__error--aviso'))
-  chk('… y el botón no cambia a "Registrar igual"', DOB.__doc.getElementById('pr-receta-registrar').textContent === 'Registrar masa')
+  // Planta v2: el botón nombra la masa ("Registrar masa 3").
+  chk('… y el botón no cambia a "Registrar igual"', DOB.__doc.getElementById('pr-receta-registrar').textContent === 'Registrar masa 3' &&
+    !/igual/i.test(DOB.__doc.getElementById('pr-receta-registrar').textContent), DOB.__doc.getElementById('pr-receta-registrar').textContent)
   await DOB.registrarMasa()
   chk('el primer toque registra: un lote que no alcanza es un AVISO, nunca un bloqueo (Parte 0)', llamadasMasa(DOB).length === 1)
 
   // Terminar la tablet, parte 3: el lote de la anterior que NO figura con
   // stock (S-VIEJO) queda elegido, con "sin ingreso cargado".
-  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span class="pr-rec__lote-texto">Lote S-VIEJO<\/span><span class="pr-rec__lote-nota">sin ingreso cargado<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
+  chk('el lote de la anterior que no está en stock queda elegido', /data-lote="i-sal"[^>]*><span class="pr-rec__lote-texto">S-VIEJO<\/span><span class="pr-rec__lote-nota">sin ingreso cargado<\/span>/.test(filas), filas.slice(filas.indexOf('data-lote="i-sal"') - 60, filas.indexOf('data-lote="i-sal"') + 300))
   chk('… y NO frena Registrar', R.__doc.getElementById('pr-receta-error').hidden === true)
   R.marcarLoteTerminado('i-sal')
   const filasTerm = R.__doc.getElementById('pr-receta-filas').innerHTML
   chk('el lote que se terminó: el botón en bordó lo dice', /pr-rec__lote pr-rec__lote--terminado" data-lote="i-sal"/.test(filasTerm) && /Se terminó · elegí otro/.test(filasTerm))
   chk('… y el pie dice cuál', R.__doc.getElementById('pr-receta-error').textContent === 'Falta elegir otro lote de sal: el que estaba se terminó.', R.__doc.getElementById('pr-receta-error').textContent)
-  chk('la cabecera: máquina, lote, número de masa y los chips', /Máquina 1<\/span><span class="pr-receta__sub">Lote 7023 · masa 3<\/span>/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) &&
-    // (28/09/2026) El origen ya NO va como pastilla aparte: lo dice el botón
-    // apretado de arriba. Queda la clave en la clase del chip del tamaño.
-    /pr-chip-rec pr-chip-rec--anterior">Simple/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) && !/pr-chip-origen/.test(R.__doc.getElementById('pr-receta-cab').innerHTML),
-    R.__doc.getElementById('pr-receta-cab').innerHTML)
+  // Planta v2 (28/09/2026): máquina, lote y número de masa van en la cabecera
+  // de la pantalla; los chips (Modificada, Chocolate) van en la fila del
+  // motivo, que solo se ve con Modificar. El origen no va como pastilla aparte.
+  chk('la cabecera: máquina, lote y número de masa', R.cabeceraDeVista()?.ctx === 'Lote 7023 · Máquina 1' && R.cabeceraDeVista()?.titulo === 'Nueva masa · Masa 3',
+    JSON.stringify(R.cabeceraDeVista()))
+  chk('… con Anterior la fila de los chips no se ve, y el origen no va como pastilla', R.__doc.getElementById('pr-receta-motivo-fila').hidden === true &&
+    !/pr-chip-origen|pr-chip-rec/.test(R.__doc.getElementById('pr-receta-cab').innerHTML), R.__doc.getElementById('pr-receta-cab').innerHTML)
   chk('sin cacao NO hay chip de chocolate', !/Chocolate/.test(R.__doc.getElementById('pr-receta-cab').innerHTML))
 
   // El lote se elige con UN solo desplegable que lleva insumo Y lote.
@@ -394,7 +416,10 @@ esperas.push((async () => {
   chk('un número ilegible no cambia nada', R.estado.masa.cantidades['i-azucar'] === 2.5)
   chk('tocar una cantidad marca la masa como cambiada', R.estado.masa.cambiada === true)
   R.pintarReceta()
-  chk('la cabecera sabe que es Modificada (sin pastilla aparte)', /pr-chip-rec--modificada"/.test(R.__doc.getElementById('pr-receta-cab').innerHTML) &&
+  chk('el botón dice que la masa sale modificada', R.__doc.getElementById('pr-receta-registrar').textContent === 'Registrar masa 3 · modificada',
+    R.__doc.getElementById('pr-receta-registrar').textContent)
+  chk('la cabecera sabe que es Modificada (sin pastilla de origen aparte)', /pr-chip-modificada">Modificada</.test(R.__doc.getElementById('pr-receta-cab').innerHTML) &&
+    R.__doc.getElementById('pr-receta-motivo-fila').hidden === false &&
     /data-base="modificar" aria-pressed="true"/.test(R.__doc.getElementById('pr-receta-opciones').innerHTML), R.__doc.getElementById('pr-receta-opciones').innerHTML)
   chk('el borrador guarda lo tipeado', JSON.parse(R.localStorage.getItem('produccion.masa.' + R.estado.masa.client_uuid)).cantidades['i-azucar'] === 2.5)
 
@@ -650,7 +675,7 @@ esperas.push((async () => {
   await T.cargarMasasReceta()
   const der = T.__doc.getElementById('pr-receta-masas').innerHTML
   chk('a la derecha, "Masas del turno · Máquina 1 · tarde"', /Masas del turno · Máquina 1 · tarde/.test(der), der.slice(0, 200))
-  chk('… solo las de ESTE turno de ESTA máquina', /pr-rm__nro">1</.test(der) && /pr-rm__nro">2</.test(der) && !/13:05|10:05/.test(der.replace(/<h2[\s\S]*?<\/h2>/, '')), der)
+  chk('… solo las de ESTE turno de ESTA máquina', /pr-rm__nro">Masa 1</.test(der) && /pr-rm__nro">Masa 2</.test(der) && !/13:05|10:05/.test(der.replace(/<h2[\s\S]*?<\/h2>/, '')), der)
   chk('… la de chocolate con su chip, la anulada dice Anulada', /pr-chip-choco">Chocolate/.test(der) && /pr-rm__anulada">Anulada/.test(der))
   chk('al pie, "Anular la última masa"', /data-anular-ultima/.test(der))
   chk('la última que se puede anular es la de número más alto no anulada', T.ultimaMasaAnulable(T.estado.masasReceta)?.id === 'ma4')
@@ -719,8 +744,18 @@ esperas.push((async () => {
   chequearMarcas(chk, 'tarjeta de la sala', X.htmlFilaSala({ maquina: { nombre: marca('maqSala') }, turno: { id: marca('turnoSala'), lote: marca('loteSala'), turno: marca('turnonom') }, masas: 2, ultimaMasa: null, parada: null }, true), ['maqSala', 'turnoSala', 'loteSala', 'turnonom'])
   chequearMarcas(chk, 'detalle de la anterior', X.detalleAnterior(malos), ['loteAnt', 'nroAnt'])
   chequearMarcas(chk, 'opción de "de dónde sale"', X.htmlComo(marca('comoClave'), marca('comoTit'), 'x', true), ['comoClave', 'comoTit'])
-  chequearMarcas(chk, 'arriba de la receta', X.htmlOpcionesReceta(bm, malos), ['nroBorr', 'version', 'tipoA', 'tipoB'])
-  chequearMarcas(chk, 'cabecera de la receta', X.htmlCabeceraReceta(bm, malos), ['maqBorr', 'loteBorr', 'nroBorr'])
+  // Planta v2: el número de masa, la máquina y el lote se fueron de estos dos
+  // renders (van en la cabecera de la pantalla, con textContent).
+  chequearMarcas(chk, 'arriba de la receta', X.htmlOpcionesReceta(bm, malos), ['nroAnt', 'version', 'tipoA', 'tipoB'])
+  // El detalle largo de "Anterior" (hora, diferencias) y de dónde parte
+  // "Modificar" van en el title del botón, en texto y escapados una vez.
+  chk('el title de "Anterior" dice el detalle largo', /data-base="anterior"[^>]*title="Igual a la masa /.test(X.htmlOpcionesReceta(bm, malos)))
+  chk('el title de "Modificar" dice de dónde parte', /data-base="modificar"[^>]*title="Parte de /.test(X.htmlOpcionesReceta(bm, malos)))
+  chk('textoDeHtml saca etiquetas y deshace las entidades de esc()', X.textoDeHtml('<b>a &amp; &lt;x&gt; &quot;y&quot; &#39;z&#39;</b>') === 'a & <x> "y" \'z\'')
+  chequearMarcas(chk, 'detalle corto de la anterior', X.detalleAnteriorCorto(malos), ['nroAnt'])
+  chequearMarcas(chk, 'cabecera de la receta', X.htmlCabeceraReceta(bm, malos), [])
+  chk('la cabecera de la pantalla (máquina, lote, número de masa) va con textContent, no como HTML',
+    /document\.getElementById\('pr-cab-ctx'\)\.textContent = c\.ctx/.test(FUENTE) && /t\.textContent = c\.titulo/.test(FUENTE))
   chequearMarcas(chk, 'fila de la receta', X.htmlFilaReceta(malos.original.items[0], bm, malos), ['ingId', 'ingrediente', 'insMarca', 'lote'])
   chequearMarcas(chk, 'fila editable', X.htmlFilaReceta(malos.original.items[0], { ...bm, como: 'modificar' }, malos), ['ingId', 'ingrediente'])
   const bManual = { ...bm, lotes: { [marca('ingId')]: { insumo_id: marca('insId'), lote: null, manual: true, sinLote: false } } }

@@ -2,13 +2,16 @@
 // e2e/8-planta-tamanos.spec.js (la prueba) y e2e/recorrer-planta.js (para
 // mirar). Cada paso es [nombre, fn(page), ¿se mide?]. La maqueta tiene los
 // datos de pruebas/datos-maqueta/produccion.js.
+//
+// Planta v2 (28/09/2026): el PIN se manda solo con el último número (no hay
+// tecla "Entrar"); Agregar producto va Producto → Cono → Presentación → (Caja)
+// → Cajas; la ventana de lotes marca un renglón y "Usar …" lo pone.
 const { expect } = require('@playwright/test')
 
 async function marcarPin(page, pin, dentro = '#pr-pin-teclado') {
   const teclado = page.locator(dentro)
   await expect(teclado).toBeVisible()
   for (const d of pin) await teclado.locator(`[data-tecla="${d}"]`).click()
-  await teclado.locator('[data-tecla="entrar"]').click()
 }
 const persona = (page, nombre) => page.locator('#pr-quien-lista [data-persona]', { hasText: nombre })
 
@@ -35,40 +38,39 @@ const PASOS_PLANTA = [
     await expect(page.locator('#pr-abrir')).toBeVisible()
   }],
   ['abrir-turno-operarios', async (page) => {
-    const casilla = page.locator('#pr-abrir [data-elegir-maquina], #pr-abrir .pr-casilla').first()
-    await casilla.click()
+    const maquina = page.locator('#pr-abrir [data-abrir-maquina]:not([disabled])').first()
+    if (await maquina.count()) await maquina.click()
     await page.waitForTimeout(100)
   }],
-  ['lo-producido-producto', async (page) => {
+  ['planilla', async (page) => {
     await page.locator('#pr-barra [data-seccion="inicio"]').click()
     await page.locator('[data-producido]').first().click()
+    await expect(page.locator('#pr-planilla')).toBeVisible()
+    await expect(page.locator('#pr-planilla-producido')).toContainText('7033-6')
+  }],
+  ['lo-producido-producto', async (page) => {
+    await page.locator('#pr-btn-agregar-producto').click()
     await expect(page.locator('#pr-agregar-prod')).toBeVisible()
     await expect(page.locator('[data-ag-producto]').first()).toBeVisible()
   }],
-  ['lo-producido-cono-si-no', async (page) => {
-    await page.locator('[data-ag-producto]').first().click()
-    await expect(page.locator('[data-ag-cono="1"]')).toBeVisible()
-  }],
-  ['lo-producido-presentacion', async (page) => {
-    await page.locator('[data-ag-cono="1"]').click()
-    await expect(page.locator('[data-ag-presentacion]').first()).toBeVisible()
-  }],
   ['lo-producido-cono', async (page) => {
-    await page.locator('[data-ag-presentacion]').first().click()
+    await page.locator('[data-ag-producto]').first().click()
+    await expect(page.locator('#pr-agregar-cono')).toBeVisible()
     await expect(page.locator('#pr-agregar-marcas [data-marca]').nth(3)).toBeVisible()
   }],
-  ['lo-producido-caja', async (page) => {
+  ['lo-producido-presentacion', async (page) => {
     await page.locator('#pr-agregar-marcas [data-marca]').nth(2).click()
-    await expect(page.locator('[data-ag-caja]').first()).toBeVisible()
+    await expect(page.locator('[data-ag-presentacion]').first()).toBeVisible()
   }],
   ['lo-producido-cajas', async (page) => {
-    await page.locator('[data-ag-caja]').first().click()
-    await expect(page.locator('#pr-agregar-cajas')).toBeVisible()
+    await page.locator('[data-ag-presentacion]').first().click()
+    const caja = page.locator('[data-ag-caja]').first()
+    if (await caja.isVisible().catch(() => false)) await caja.click()
+    await expect(page.locator('#pr-agregar-cajas-panel')).toBeVisible()
   }],
-  ['planilla', async (page) => {
+  ['paradas', async (page) => {
     await page.locator('#pr-barra [data-seccion="paradas"]').click()
-    await expect(page.locator('#pr-planilla')).toBeVisible()
-    await expect(page.locator('#pr-planilla-producido')).toContainText('7033-6')
+    await expect(page.locator('#pr-paradas')).toBeVisible()
   }],
   ['cerrar-planilla', async (page) => {
     await page.locator('#pr-barra [data-seccion="cierre"]').click()

@@ -88,14 +88,23 @@ esperas.push((async () => {
     await S.mostrarQuien()
     chk(`planta, ${quien}: el personal ${ve ? 'trae' : 'no trae'} a los robots`, ve ? tieneRobots(S.estado.personal) : sinRobots(S.estado.personal),
       JSON.stringify(ids(S.estado.personal)))
+    // Planta v2: la GRILLA muestra solo las personas de ESTA fábrica (y los
+    // robots del fixture son de otra unidad); las demás se encuentran con
+    // "Buscar a otra persona", que busca en todo el personal que llegó. Ahí
+    // es donde el filtro de la fábrica de pruebas tiene que notarse.
+    const grilla = S.__doc.getElementById('pr-quien-lista').innerHTML
+    chk(`planta, ${quien}: la grilla (encargados) muestra a Federico Silva y no a los de otra unidad`,
+      /Federico Silva/.test(grilla) && !/Robot Encargado/.test(grilla), grilla)
+    S.alternarBuscarOtra()
     const html = S.__doc.getElementById('pr-quien-lista').innerHTML
-    chk(`planta, ${quien}: "¿Quién sos?" (encargados) ${ve ? 'muestra' : 'no muestra'} a Robot Encargado`,
+    chk(`planta, ${quien}: "Buscar a otra persona" (encargados) ${ve ? 'muestra' : 'no muestra'} a Robot Encargado`,
       /Robot Encargado/.test(html) === ve && /Federico Silva/.test(html), html)
 
     const M = armar(PLANTA, fab)
     M.estado.modo = 'masa'
     await M.mostrarQuien()
-    chk(`planta, ${quien}: "¿Quién sos?" (maseros) ${ve ? 'muestra' : 'no muestra'} a Robot Masero`,
+    M.alternarBuscarOtra()
+    chk(`planta, ${quien}: "Buscar a otra persona" (maseros) ${ve ? 'muestra' : 'no muestra'} a Robot Masero`,
       /Robot Masero/.test(M.__doc.getElementById('pr-quien-lista').innerHTML) === ve)
 
     // Lo que se arma del mismo personal: operarios, maestros y "Dar acceso por hoy".

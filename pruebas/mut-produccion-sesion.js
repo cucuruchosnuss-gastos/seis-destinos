@@ -10,7 +10,8 @@ correrMutacionesProduccion({
   escape: 'esc',
   funciones: ['htmlMaseroAdentro', 'htmlLatPersona'],
   equivalentes: [
-    { expr: "esc(TITULO_DE_MODO[estado.modo] ?? '')", motivo: 'TITULO_DE_MODO es una constante del código ("Producción" / "Sala de masa"): sin esc() sale idéntico' },
+    { expr: 'esc(TITULO_DE_MODO[modo])', motivo: 'TITULO_DE_MODO es una constante del código ("Producción" / "Sala de masa"): sin esc() sale idéntico' },
+    { expr: 'esc(NOMBRE_MODO[modo])', motivo: 'NOMBRE_MODO es una constante del código ("PRODUCCIÓN" / "SALA DE MASA"): sin esc() sale idéntico' },
     { expr: 'esc(puestoEnLateral())', motivo: 'puestoEnLateral() devuelve un literal del código ("Acceso maestro" o ROL_DE_MODO): sin esc() sale idéntico' },
   ],
   manuales: [
@@ -21,9 +22,13 @@ correrMutacionesProduccion({
     // b) Con persona guardada, solo el PIN.
     { nombre: 'la persona guardada se ignora (vuelve la lista)', de: '      const guardada = estado.quienOtra ? null : personaGuardada(estado.modo)', a: '      const guardada = null' },
     { nombre: 'con persona guardada no se abre su PIN', de: "        estado.pin = nuevoPanelPin('persona', guardada, PUESTO_DE_MODO[estado.modo])\n", a: '' },
-    { nombre: 'la lista no se esconde', de: '        document.getElementById(id).hidden = !!f', a: '        document.getElementById(id).hidden = false' },
+    // Planta v2: con persona guardada la grilla NO se esconde (queda elegida
+    // y la ventana del PIN se abre sola); la ✕ de la ventana es "Soy otra persona".
+    { nombre: 'la ✕ con persona guardada no dice "Soy otra persona"', de: "(estado.quienFija ? 'Soy otra persona' : 'Elegir otra persona')", a: "'Elegir otra persona'" },
+    { nombre: 'la ✕ con persona guardada no la suelta', de: '      if (estado.quienFija) return soyOtraPersona()\n', a: '' },
+    { nombre: 'la persona guardada no queda marcada en la grilla', de: '      const elegida = estado.pin?.personaId ?? null', a: '      const elegida = null' },
     { nombre: '"Soy otra persona" no suelta a la guardada', de: '      tocar()\n      estado.quienOtra = true\n      return mostrarQuien()', a: '      tocar()\n      return mostrarQuien()' },
-    { nombre: 'el nombre fijo por innerHTML', de: "      document.getElementById('pr-quien-fija-texto').textContent = f ?", a: "      document.getElementById('pr-quien-fija-texto').innerHTML = f ?" },
+    { nombre: 'el nombre fijo (saludo del PIN) por innerHTML', de: "      document.getElementById('pr-pin-saludo').textContent = saludoPin(p)", a: "      document.getElementById('pr-pin-saludo').innerHTML = saludoPin(p)" },
     // Inactividad.
     // (28/09/2026) Decisión de Facu: Producción deja a la persona ELEGIDA, y
     // en Sala de masa no se toca nada.
@@ -40,9 +45,9 @@ correrMutacionesProduccion({
     { nombre: 'sin abiertas el masero no sale', de: '      if (hay === false) sacarMaseroPorCierre()\n', a: '' },
     { nombre: 'apagar la sala saca también al maestro', de: " && estado.persona.id !== estado.maestro?.id) {", a: ') {' },
     { nombre: 'la máquina cerrada sigue en la sala', de: '        if (e.turno && e.turno.id === turnoId) e.turno = null\n', a: '' },
-    { nombre: 'la elegida no se suelta', de: '      if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()\n      await refrescarAbiertas()', a: '      await refrescarAbiertas()' },
-    { nombre: 'no se vuelve a medir', de: '      if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()\n      await refrescarAbiertas()', a: '      if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()' },
-    { nombre: 'sin medir se apaga igual (rompe el tercer estado)', de: '      if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()\n      await refrescarAbiertas()', a: '      if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()\n      marcarAbiertas((estado.tablero ?? []).some(e => e.turno))' },
+    { nombre: 'la elegida no se suelta', de: '      if (estado.salaTurno && estado.salaTurno.id === turnoId) soltarMaquinaSala()\n      // LA MÁQUINA CERRADA', a: '      // LA MÁQUINA CERRADA' },
+    { nombre: 'no se vuelve a medir', de: '      await refrescarAbiertas()\n      pintarLateral()\n    }', a: '      pintarLateral()\n    }' },
+    { nombre: 'sin medir se apaga igual (rompe el tercer estado)', de: '      await refrescarAbiertas()\n      pintarLateral()\n    }', a: '      marcarAbiertas((estado.tablero ?? []).some(e => e.turno))\n      pintarLateral()\n    }' },
     { nombre: 'cerrar_turno no avisa a la sala', de: "        mostrarExito('Planilla cerrada.')\n        await maquinaCerrada(turnoId)", a: "        mostrarExito('Planilla cerrada.')" },
     { nombre: 'forzar_cierre_turno no avisa a la sala', de: '        await maquinaCerrada(p.turno.id)\n', a: '' },
     // e) Una sola máquina.
@@ -57,8 +62,8 @@ correrMutacionesProduccion({
     { nombre: 'el error sin reintentar', de: "Revisá la conexión. ' + AVISO_SALA_REINTENTAR + '</div>'", a: "Revisá la conexión.</div>'" },
     { nombre: 'Volver a intentar no se escucha', de: "        if (ev.target.closest('#pr-sala-volver-intentar')) mostrarSala()", a: '        void ev' },
     // g) Sin nadie adentro: "¿Quién sos?" a pantalla completa, sin barra.
-    { nombre: 'la barra se ve sin nadie adentro', de: "      return enModoTablet() && !!estado.persona && estado.vista", a: '      return enModoTablet() && estado.vista' },
-    { nombre: 'la barra se ve en "¿Quién sos?"', de: " && estado.vista !== 'pr-quien' && estado.vista !== 'pr-inicio'", a: " && estado.vista !== 'pr-inicio'" },
+    { nombre: 'la barra se ve sin nadie adentro', de: '      return enModoTablet() && !!estado.persona && !PANTALLAS_SIN_BARRA', a: '      return enModoTablet() && !PANTALLAS_SIN_BARRA' },
+    { nombre: 'la barra se ve en "¿Quién sos?"', de: "const PANTALLAS_SIN_BARRA = ['pr-quien', 'pr-inicio'", a: "const PANTALLAS_SIN_BARRA = ['pr-inicio'" },
     // h) Unidad.
     // (25/09/2026) Las de elegir y cambiar de fábrica se fueron: la tablet trae
     // SU fábrica (mi_sesion_produccion). La que queda: el arranque la toma de ahí.
