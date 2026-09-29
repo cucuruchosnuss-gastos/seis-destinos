@@ -110,6 +110,8 @@ const FUNCIONES = [
   // el padrón y el historial
   'cargarPadronSaldos', 'armarPadronSaldos', 'filtrarPadron', 'renderizarPadron',
   'cargarHistorial', 'armarHistorial', 'renderizarListaHistorial',
+  // el cheque endosado (29/09/2026): la referencia de un pago
+  'etiquetaPagoDeGasto', 'cargarEtiquetasDePagos', 'referenciaMovimiento',
   // la ficha
   'abrirFicha', 'sincronizarUrlFicha', 'renderizarFicha', 'cambiarUnidadFicha', 'htmlFichaUnidad', 'renderizarFichaUnidad',
   'saldosFichaVisibles', 'saldosFichaDeUnidad', 'creditosFichaDeUnidad',
@@ -117,7 +119,7 @@ const FUNCIONES = [
   'renderizarFichaBanner', 'renderizarFichaMovimientos', 'htmlFilaSinImporte', 'htmlRemitosSinFacturar', 'renderizarFichaRemitos',
   'abrirModalPago', 'abrirModalAplicarCreditoDesdeFicha',
 ]
-const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR']
+const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR', 'TANDA_GASTOS_PAGO']
 
 function sandbox() {
   return construirCon(ARCHIVO, {

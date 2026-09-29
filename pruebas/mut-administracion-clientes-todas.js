@@ -1,0 +1,106 @@
+// Mutaciones de test-administracion-clientes-todas.js ("Todas las fábricas"
+// en Administración → Clientes, 29/09/2026). Ver mutar.js (los tres guards:
+// suite verde sobre el limpio, ancla única, mutación que cambia algo). Muta
+// modulos/administracion.html, fuera de la región de Cheques.
+//
+//   node pruebas/mut-administracion-clientes-todas.js
+'use strict'
+const path = require('path')
+const { correrMutaciones } = require('./mutar')
+const { limitesAdministracion } = require('./fuente-cheques')
+
+correrMutaciones({
+  suite: path.join(__dirname, 'test-administracion-clientes-todas.js'),
+  original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/administracion.html'),
+  region: limitesAdministracion,
+  funciones: [],
+  manuales: [
+    // El segmento
+    { nombre: 'el segmento no ofrece "Todas las fábricas"',
+      de: "(enClientes ? `<button type=\"button\" class=\"ad-segmento__opcion\" data-empresa=\"${esc(TODAS_LAS_FABRICAS)}\" aria-pressed=\"${todas ? 'true' : 'false'}\">Todas las fábricas</button>` : '')",
+      a: "''" },
+    { nombre: 'la opción aparece fuera de Clientes',
+      de: "      const enClientes = estado.vista === 'ad-vista-clientes' && empresasDeClientes().length > 1",
+      a: '      const enClientes = empresasDeClientes().length > 1' },
+    { nombre: 'con "Todas las fábricas", la empresa sigue marcada',
+      de: 'aria-pressed="${!todas && e.id === estado.empresaId', a: 'aria-pressed="${e.id === estado.empresaId' },
+    { nombre: 'cambiar de vista no repinta el segmento',
+      de: '      estado.vista = id\n      pintarEmpresas()\n', a: '      estado.vista = id\n' },
+    { nombre: 'el clic del segmento no entiende "Todas las fábricas"',
+      de: '        if (b) elegirEnSegmento(b.dataset.empresa)', a: '        if (b) elegirEmpresa(b.dataset.empresa)' },
+    // Qué empresas
+    { nombre: 'la fábrica de pruebas entra',
+      de: "      return empresasDeAdministracion().filter(e => puedeEn('retiros', 'ver', e.id))",
+      a: "      return (estado.empresas ?? []).filter(e => puedeEn('retiros', 'ver', e.id) || e.id === 'u-x')" },
+    { nombre: 'empresas sin permiso de ver clientes entran',
+      de: "      return empresasDeAdministracion().filter(e => puedeEn('retiros', 'ver', e.id))", a: '      return empresasDeAdministracion()' },
+    { nombre: 'el modo ignora la barra de arriba',
+      de: '      return !!estado.clientesTodas && !estado.unidadBarra && empresasDeClientes().length > 1',
+      a: '      return !!estado.clientesTodas && empresasDeClientes().length > 1' },
+    { nombre: 'el modo se prende con una sola empresa',
+      de: '      return !!estado.clientesTodas && !estado.unidadBarra && empresasDeClientes().length > 1',
+      a: '      return !!estado.clientesTodas && !estado.unidadBarra' },
+    // Leer y juntar
+    { nombre: 'el límite y el código salen solo de la empresa elegida',
+      de: '      return (estado.fichasTodas && clientesEnTodas() && estado.fichasTodas.get(id)) || clienteDe(id)', a: '      return clienteDe(id)' },
+    { nombre: 'el que menos debe arriba',
+      de: '      if (sa !== sb) return sb - sa', a: '      if (sa !== sb) return sa - sb' },
+    { nombre: 'sin saldo no va al final',
+      de: '      if (sa === null && sb !== null) return 1\n      if (sb === null && sa !== null) return -1\n', a: '' },
+    { nombre: 'no se ordena',
+      de: '      filas.sort(porSaldo)\n      return { filas, fichas, fallaron, total: empresas.length }', a: '      return { filas, fichas, fallaron, total: empresas.length }' },
+    { nombre: 'una empresa que falla tapa a todas',
+      de: '          return { e, error: true }', a: '          throw err' },
+    { nombre: 'la fila no sabe su empresa',
+      de: '        for (const s of r.saldos) filas.push({ ...s, unidad_negocio_id: r.e.id, empresa: r.e.nombre })',
+      a: '        for (const s of r.saldos) filas.push({ ...s, unidad_negocio_id: r.e.id })' },
+    { nombre: 'la fila no sabe su unidad',
+      de: '        for (const s of r.saldos) filas.push({ ...s, unidad_negocio_id: r.e.id, empresa: r.e.nombre })',
+      a: '        for (const s of r.saldos) filas.push({ ...s, empresa: r.e.nombre })' },
+    { nombre: 'las fichas de las otras empresas no se guardan',
+      de: '        for (const f of r.fichas) fichas.set(f.id, f)\n', a: '' },
+    { nombre: 'si fallan todas se muestra una lista vacía',
+      de: "          if (!r.filas.length && r.fallaron.length === r.total) throw new Error('No se pudo leer ninguna fábrica')\n", a: '' },
+    { nombre: 'mostrarClientes no mira el modo',
+      de: '        if (enTodas) {\n          const r = await leerClientesTodas()', a: '        if (false) {\n          const r = await leerClientesTodas()' },
+    // La lista
+    { nombre: 'la fila no dice su empresa',
+      de: "        `${c.empresa ? `<span class=\"ad-sello ad-sello--empresa\" title=\"Empresa\">${esc(c.empresa)}</span>` : ''}` +\n", a: '' },
+    { nombre: 'la empresa sin escapar',
+      de: '<span class="ad-sello ad-sello--empresa" title="Empresa">${esc(c.empresa)}</span>', a: '<span class="ad-sello ad-sello--empresa" title="Empresa">${c.empresa}</span>' },
+    { nombre: 'no se dice qué empresa falló',
+      de: "      if (enTodas && estado.todasFallaron?.length) {", a: '      if (false) {' },
+    { nombre: 'la empresa que falló sin escapar',
+      de: "        aviso = `<div class=\"ad-aviso ad-aviso--grave\">${esc('No se pudieron leer los clientes de ' + estado.todasFallaron.join(', ') + '. Los de las demás fábricas se ven igual.')}</div>` + aviso",
+      a: "        aviso = `<div class=\"ad-aviso ad-aviso--grave\">${'No se pudieron leer los clientes de ' + estado.todasFallaron.join(', ') + '. Los de las demás fábricas se ven igual.'}</div>` + aviso" },
+    { nombre: 'sin clientes dice "esta empresa"',
+      de: "(enTodas ? '<div class=\"ad-vacio\">Ninguna fábrica tiene clientes todavía.</div>' : '<div class=\"ad-vacio\">Esta empresa todavía no tiene clientes.</div>')",
+      a: "'<div class=\"ad-vacio\">Esta empresa todavía no tiene clientes.</div>'" },
+    { nombre: 'la cuenta no dice las fábricas',
+      de: " + (enTodas ? ` · ${nFabricas} ${nFabricas === 1 ? 'fábrica' : 'fábricas'}` : '')", a: '' },
+    { nombre: 'con "Todas las fábricas" se ofrece el alta',
+      de: '      const alta = !enTodas && puedeDarAlta()', a: '      const alta = puedeDarAlta()' },
+    // El interruptor y la cuenta
+    { nombre: 'el interruptor con la regla de la empresa elegida',
+      de: "      if (!puedePrenderApagar(c.unidad_negocio_id ?? estado.empresaId)) return ''", a: "      if (!puedePrenderApagar()) return ''" },
+    { nombre: 'guardar sin permiso en la empresa del cliente',
+      de: '      if (!fila || !puedePrenderApagar(fila.unidad_negocio_id ?? estado.empresaId)) return', a: '      if (!fila) return' },
+    { nombre: 'los apagados solo de la empresa elegida',
+      de: '        const filas = clientesEnTodas() ? await leerApagadosTodas() : await leerApagados(unidad)', a: '        const filas = await leerApagados(unidad)' },
+    { nombre: 'los apagados sin su empresa',
+      de: '.then(l => l.map(c => ({ ...c, unidad_negocio_id: e.id, empresa: e.nombre }))))', a: '.then(l => l.map(c => ({ ...c, unidad_negocio_id: e.id }))))' },
+    { nombre: 'abrir un cliente de otra empresa no cambia la empresa',
+      de: '          estado.empresaId = unidad\n          estado.clientes = null', a: '          estado.clientes = null' },
+    { nombre: 'el clic de la lista abre sin mirar la empresa',
+      de: '        if (b) abrirClienteDeLista(b.dataset.cliente)', a: '        if (b) abrirCliente(b.dataset.cliente)' },
+    // Elegir en el segmento
+    { nombre: '"Todas las fábricas" no prende el modo',
+      de: '        estado.clientesTodas = true\n        estado.apagados = null\n        mostrarClientes()', a: '        estado.apagados = null\n        mostrarClientes()' },
+    { nombre: 'la misma empresa manda a la portada',
+      de: '        if (id === estado.empresaId) { mostrarClientes(); return }\n', a: '' },
+    // Colores
+    { nombre: '"También proveedor" vuelve al naranja',
+      de: '    .ad-sello--proveedor { background: var(--color-superficie); color: var(--color-texto-menu); border-color: var(--color-borde); }',
+      a: '    .ad-sello--proveedor { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: transparent; }' },
+  ],
+})

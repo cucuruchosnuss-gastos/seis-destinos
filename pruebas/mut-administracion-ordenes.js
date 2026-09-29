@@ -20,6 +20,8 @@ correrMutaciones({
     'htmlDatoAd', 'htmlRenglonOrden', 'htmlDetalleOrden', 'htmlValorizar'],
   equivalentes: [
     { expr: 'esc(e.id)', motivo: 'el id de una empresa va a un data-empresa entre comillas (uuid de la base)' },
+    { expr: 'esc(TODAS_LAS_FABRICAS)', motivo: "constante del código: 'todas' (\"Todas las fábricas\" de Clientes, 29/09/2026)" },
+    { expr: "esc('Con ' + nombre + ' elegida arriba no tenés órdenes, clientes ni precios en Administración. Elegí otra unidad o \"Todas\".')", motivo: 'el nombre de la unidad lo prueba test-administracion-barra-unidad.js (marca «unidad»)' },
     { expr: 'esc(c.id)', motivo: 'el id de un cliente va al value de un <option> entre comillas (uuid de la base)' },
     { expr: 'esc(o.id)', motivo: 'el id de una orden va a un data-orden entre comillas (uuid de la base)' },
     { expr: 'esc(s.id)', motivo: 'constante del código: el id de una SECCIÓN' },

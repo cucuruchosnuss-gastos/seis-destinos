@@ -19,11 +19,13 @@ correrMutaciones({
     { expr: 'esc(estado.apagados.error)', motivo: 'texto constante del código: lo pone cargarApagados()' },
     { expr: 'esc(importeHoja(c.saldo))', motivo: 'importeHoja() arma "$ " y un número formateado, o "—"' },
     { expr: "esc('Ningún cliente coincide con «' + limpio(estado.busquedaClientes) + '».')", motivo: 'lo buscado lo prueba test-administracion-clientes.js' },
+    { expr: 'esc(c.empresa)', motivo: 'la empresa de "Todas las fábricas": la prueba test-administracion-clientes-todas.js' },
+    { expr: "esc('No se pudieron leer los clientes de ' + estado.todasFallaron.join(', ') + '. Los de las demás fábricas se ven igual.')", motivo: 'el aviso de "Todas las fábricas": lo prueba test-administracion-clientes-todas.js' },
   ],
   manuales: [
     // El interruptor
     { nombre: 'no hay interruptor', de: '      return `<div class="ad-fila-cliente">${fila}${htmlInterruptor(c)}</div>`', a: '      return `<div class="ad-fila-cliente">${fila}</div>`' },
-    { nombre: 'el interruptor sin permiso', de: '      if (!puedePrenderApagar()) return \'\'\n', a: '' },
+    { nombre: 'el interruptor sin permiso', de: '      if (!puedePrenderApagar(c.unidad_negocio_id ?? estado.empresaId)) return \'\'\n', a: '' },
     { nombre: 'el interruptor con otro permiso', de: '      return puedeDarAlta(unidadId)\n    }\n\n    function htmlInterruptor', a: "      return puedeEn('retiros', 'ver', unidadId)\n    }\n\n    function htmlInterruptor" },
     { nombre: 'el apagado se ve prendido', de: '      const prendido = !c.apagado\n', a: '      const prendido = true\n' },
     { nombre: 'mientras guarda no se traba', de: "aria-label=\"${esc((prendido ? 'Apagar a ' : 'Prender a ') + (c.nombre ?? 'este cliente'))}\"${it?.guardando ? ' disabled' : ''}>", a: "aria-label=\"${esc((prendido ? 'Apagar a ' : 'Prender a ') + (c.nombre ?? 'este cliente'))}\">" },
@@ -37,7 +39,7 @@ correrMutaciones({
     { nombre: 'el error de la base se tapa', de: "        estado.interruptor = { id, guardando: false, error: err?.message || 'No se pudo guardar. Probá de nuevo.' }", a: "        estado.interruptor = { id, guardando: false, error: 'No se pudo guardar. Probá de nuevo.' }" },
     { nombre: 'el error no va pegado a la fila', de: "        `${it?.error ? `<span class=\"ad-error-pegado\">${esc(it.error)}</span>` : ''}</button>`", a: '        `</button>`' },
     { nombre: 'después del error queda trabado', de: "        estado.interruptor = { id, guardando: false, error: err?.message", a: "        estado.interruptor = { id, guardando: true, error: err?.message" },
-    { nombre: 'un doble toque manda dos veces', de: '      if (!puedePrenderApagar() || estado.interruptor?.guardando) return', a: '      if (!puedePrenderApagar()) return' },
+    { nombre: 'un doble toque manda dos veces', de: '      if (estado.interruptor?.guardando) return\n', a: '' },
     { nombre: 'no se dice qué pasa al apagar', de: 'está apagado: ya no aparece para cargar retiros, pedidos ni cobranzas.', a: 'listo.' },
     { nombre: 'no se vuelve a leer la lista', de: '        estado.apagados = null\n        await mostrarClientes()\n', a: '' },
     // Los apagados
@@ -59,8 +61,8 @@ correrMutaciones({
     { nombre: 'la cuenta sin código anterior', de: "        cli && textoCodigoAnterior(cli.codigo_anterior) ?", a: '        false ?' },
     { nombre: 'la ficha no lee el código anterior', de: 'proveedor_id, observaciones, unidad_negocio_id, codigo_anterior\')', a: "proveedor_id, observaciones, unidad_negocio_id')" },
     { nombre: 'el código cero no se muestra', de: "      if (codigo === null || codigo === undefined || codigo === '') return ''", a: "      if (!codigo) return ''" },
-    { nombre: 'el buscador no mira el código', de: "(digitos.length > 0 && digitos === String(c.codigo_anterior ?? clienteDe(c.cliente_id)?.codigo_anterior ?? ''))", a: 'false' },
-    { nombre: 'el buscador del código por parte', de: "(digitos.length > 0 && digitos === String(c.codigo_anterior ?? clienteDe(c.cliente_id)?.codigo_anterior ?? ''))", a: "(digitos.length > 0 && String(c.codigo_anterior ?? clienteDe(c.cliente_id)?.codigo_anterior ?? '').includes(digitos))" },
+    { nombre: 'el buscador no mira el código', de: "(digitos.length > 0 && digitos === String(c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior ?? ''))", a: 'false' },
+    { nombre: 'el buscador del código por parte', de: "(digitos.length > 0 && digitos === String(c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior ?? ''))", a: "(digitos.length > 0 && String(c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior ?? '').includes(digitos))" },
     { nombre: 'asentar ofrece apagados', de: ".select('id, nombre, razon_social, apodos, unidad_negocio_id').eq('activo', true).order('nombre')", a: ".select('id, nombre, razon_social, apodos, unidad_negocio_id').order('nombre')" },
   ],
 })

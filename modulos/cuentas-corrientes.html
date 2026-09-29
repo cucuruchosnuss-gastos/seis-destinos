@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cuentas corrientes — Seis Destinos</title>
+  <title>Cuentas corrientes · Proveedores — Seis Destinos</title>
   <link rel="stylesheet" href="../css/main.css">
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#FFFFFF">
@@ -12,10 +12,24 @@
   <style>
     body {
       overflow-x: hidden;
-      --turquesa:        #3FBFAE;
-      --turquesa-suave:  #E8FBF7;
-      --turquesa-oscuro: #1E8C7C;
     }
+
+    /* LOS COLORES DEL MÓDULO (29/09/2026, sistema visual 2026). Antes el
+       módulo tenía un turquesa propio y mezclaba naranja y verde sin criterio.
+       Ahora:
+       - NARANJA (--color-acento) SOLO para lo que se toca y lo elegido:
+         botones, pestañas, filtros elegidos, foco.
+       - VERDE (--verde / --verde-oscuro) para lo que está A FAVOR: el crédito
+         a favor, un pago o un crédito aplicado que baja la deuda, una factura
+         pagada.
+       - BORDÓ para lo que se debe Y está vencido. HOY NO HAY NADA ASÍ: la base
+         no sabe cuándo vence una factura de proveedor (facturas_pendientes no
+         tiene fecha de vencimiento y proveedores no tiene plazo de pago), así
+         que la deuda va en TINTA NEUTRA y no se inventa un "vencido". El bordó
+         queda para lo que FALTA (las descargas sin importe) y para el interés
+         por mora, que existe justamente porque algo se pagó tarde.
+       - El color del módulo (el de js/modulos.js, PALETA_MODULO) va solo en el
+         ícono de la cabecera. */
 
     /* Cualquier regla de autor con display (.grilla-resumen-cc, .tabs-cc,
        .filtros-cc, .lista-contenido acá; .btn en main.css) le gana al
@@ -46,7 +60,9 @@
       width: 34px;
       height: 34px;
       border-radius: 9px;
-      background: linear-gradient(135deg, var(--turquesa), var(--turquesa-oscuro));
+      /* El color del módulo (js/modulos.js, PALETA_MODULO 'cuentas-corrientes'):
+         solo en el ícono. */
+      background: oklch(0.50 0.15 322);
       flex-shrink: 0;
     }
     .cc-header__marca-col { display: flex; flex-direction: column; line-height: 1.15; }
@@ -76,6 +92,8 @@
       text-decoration: none;
     }
     .cc-header__volver:hover { background: var(--color-superficie); color: var(--color-texto); text-decoration: none; }
+    .cc-link-clientes { font-size: 0.8125rem; color: var(--color-texto-2); margin: -0.5rem 0 1rem; overflow-wrap: anywhere; }
+    .cc-link-clientes a { color: var(--color-acento); font-weight: 600; }
 
     .cc-header-ficha {
       display: flex;
@@ -120,7 +138,7 @@
       cursor: pointer;
     }
     .tabs-cc__opcion--activa {
-      background: var(--turquesa);
+      background: var(--color-acento);
       color: #fff;
     }
 
@@ -152,7 +170,7 @@
       font-weight: 700;
       margin-left: 0.375rem;
     }
-    .chip-contador--activo { background: var(--turquesa); color: #fff; }
+    .chip-contador--activo { background: var(--color-fondo); color: var(--color-acento-hover); }
 
     /* ── Tarjetas de resumen (Pantalla 1) ──────────────────────────────────── */
 
@@ -168,9 +186,12 @@
       background: var(--color-fondo);
       border: 1px solid var(--color-borde);
     }
+    /* "Saldo total a pagar": un DATO, no algo que se toca, así que no va en
+       naranja. La clase conserva el nombre viejo (--navy) por los tests y el
+       HTML; se ve como las otras tarjetas, con el número más grande. */
     .resumen-cc-card--navy {
-      background: var(--color-acento);
-      border-color: var(--color-acento);
+      background: var(--color-fondo);
+      border-color: var(--color-borde);
     }
     .resumen-cc-card__etiqueta {
       font-size: 0.6875rem;
@@ -179,7 +200,7 @@
       text-transform: uppercase;
       color: var(--color-texto-suave);
     }
-    .resumen-cc-card--navy .resumen-cc-card__etiqueta { color: rgba(255,255,255,0.7); }
+    .resumen-cc-card--navy .resumen-cc-card__etiqueta { color: var(--color-texto-suave); }
     .resumen-cc-card__monto {
       font-size: 1.5rem;
       font-weight: 700;
@@ -187,15 +208,15 @@
       margin-top: 0.375rem;
       color: var(--color-texto);
     }
-    .resumen-cc-card--navy .resumen-cc-card__monto { color: #fff; }
-    .resumen-cc-card__monto--favor { color: #1E8C4A; }
+    .resumen-cc-card--navy .resumen-cc-card__monto { color: var(--color-texto); }
+    .resumen-cc-card__monto--favor { color: var(--verde-oscuro); }
     .resumen-cc-card__monto--secundaria {
       font-size: 1rem;
       margin-top: 0.25rem;
     }
     .cc-centavos { color: var(--color-texto-suave); font-weight: 600; }
-    .resumen-cc-card--navy .cc-centavos { color: rgba(255,255,255,0.65); }
-    .resumen-cc-card__monto--favor .cc-centavos { color: rgba(30,140,74,0.55); }
+    .resumen-cc-card--navy .cc-centavos { color: var(--color-texto-suave); }
+    .resumen-cc-card__monto--favor .cc-centavos { color: color-mix(in srgb, var(--verde-oscuro) 55%, transparent); }
 
     /* ── Filtros ───────────────────────────────────────────────────────────── */
 
@@ -219,7 +240,7 @@
       outline: none;
     }
     .filtros-cc input:focus,
-    .filtros-cc select:focus { border-color: var(--turquesa); }
+    .filtros-cc select:focus { border-color: var(--color-acento); }
     .filtros-cc__buscar { flex: 1; min-width: 160px; }
     /* Las dos fechas (desde/hasta) son hijas directas de este flex sin base
        propia: con el width:100% global de main.css se irían cada una a su
@@ -239,10 +260,10 @@
       justify-content: center;
       height: 36px;
       padding: 0 1rem;
-      border: 1.5px solid var(--turquesa);
+      border: 1.5px solid var(--color-acento);
       border-radius: 999px;
       background: var(--color-fondo);
-      color: var(--turquesa-oscuro);
+      color: var(--color-acento);
       font-family: var(--fuente);
       font-size: 0.8125rem;
       font-weight: 600;
@@ -251,7 +272,7 @@
       cursor: pointer;
       transition: background-color 0.18s ease, color 0.18s ease;
     }
-    .btn-filtro-cc:hover { background: var(--turquesa); color: #fff; }
+    .btn-filtro-cc:hover { background: var(--color-acento); color: #fff; }
 
     h3.titulo-seccion-cc {
       font-size: 0.875rem;
@@ -287,7 +308,7 @@
       -webkit-tap-highlight-color: transparent;
     }
     .segmented-rango__opcion--activa {
-      background: var(--turquesa);
+      background: var(--color-acento);
       color: #fff;
     }
 
@@ -312,12 +333,12 @@
       -webkit-tap-highlight-color: transparent;
     }
     .btn-tipo-doc:hover {
-      border-color: var(--turquesa);
-      background: var(--turquesa-suave);
+      border-color: var(--color-acento);
+      background: var(--color-acento-suave);
     }
     .btn-tipo-doc--seleccionado {
-      border-color: var(--turquesa);
-      background: var(--turquesa);
+      border-color: var(--color-acento);
+      background: var(--color-acento);
       color: #fff;
     }
 
@@ -330,7 +351,7 @@
     }
 
     /* ── Selector "Ordenar" (Movimientos de la ficha) — patrón .multiselect
-       de gastos.html, portado tal cual pero en turquesa. ────────────────── */
+       de gastos.html, portado tal cual pero en el naranja de lo elegido. ── */
     .multiselect { position: relative; flex-shrink: 0; }
     .multiselect__boton {
       padding: 0.4375rem 0.75rem;
@@ -344,9 +365,9 @@
       white-space: nowrap;
     }
     .multiselect__boton--activo {
-      border-color: var(--turquesa);
-      background: var(--turquesa-suave);
-      color: var(--turquesa-oscuro);
+      border-color: var(--color-acento);
+      background: var(--color-acento-suave);
+      color: var(--color-acento-hover);
     }
     .multiselect__panel {
       position: fixed;
@@ -387,7 +408,7 @@
       color: var(--color-texto-suave);
       text-align: right;
     }
-    .proveedor-cc__etiqueta--favor { color: #1E8C4A; }
+    .proveedor-cc__etiqueta--favor { color: var(--verde-oscuro); }
     .proveedor-cc__monto {
       font-size: 0.9375rem;
       font-weight: 700;
@@ -395,17 +416,17 @@
       margin-top: 0.125rem;
       text-align: right;
     }
-    .proveedor-cc__monto--favor { color: #1E8C4A; }
+    .proveedor-cc__monto--favor { color: var(--verde-oscuro); }
 
     .btn-ver-cuenta {
       width: auto;
       padding: 0.5rem 1rem;
       font-size: 0.8125rem;
-      background: var(--turquesa);
+      background: var(--color-acento);
       color: #fff;
-      border-color: var(--turquesa);
+      border-color: var(--color-acento);
     }
-    .btn-ver-cuenta:hover { background: var(--turquesa-oscuro); border-color: var(--turquesa-oscuro); }
+    .btn-ver-cuenta:hover { background: var(--color-acento-hover); border-color: var(--color-acento-hover); }
 
     /* Padrón completo (Pantalla C). La tarjeta entera abre la ficha, por eso
        el cursor; el ✏️ vive adentro y frena la propagación. */
@@ -424,11 +445,11 @@
       white-space: nowrap;
     }
 
-    /* Botones de confirmación de los 3 modales — turquesa en vez del verde
-       genérico (.btn--exito), para combinar con la paleta del módulo. */
-    .btn-cc-turquesa { background-color: var(--turquesa); color: #fff; }
-    .btn-cc-turquesa:hover:not(:disabled) { background-color: var(--turquesa-oscuro); }
-    .btn-cc-turquesa:disabled { opacity: 0.55; cursor: not-allowed; }
+    /* Botones de confirmación de los modales (y "Descargar Excel"): se tocan,
+       así que van en el naranja de la app. Antes eran turquesa. */
+    .btn-cc-accion { background-color: var(--color-acento); color: #fff; }
+    .btn-cc-accion:hover:not(:disabled) { background-color: var(--color-acento-hover); }
+    .btn-cc-accion:disabled { opacity: 0.55; cursor: not-allowed; }
 
     /* Íconos chicos ver/editar/eliminar — reusados en "Facturas sin
        proveedor asignado" y en las filas tipo "factura" del historial de
@@ -477,10 +498,15 @@
 
     /* ── Ficha de proveedor (Pantalla B) ───────────────────────────────────── */
 
+    /* El saldo del proveedor es un DATO: tarjeta blanca, la deuda en tinta
+       neutra (no se sabe si está vencida) y el saldo a favor en verde. Los
+       botones SÍ se tocan: naranja. */
     .banner-ficha-cc {
       border-radius: 20px;
       padding: 1.5rem;
-      background: linear-gradient(135deg, var(--turquesa), var(--turquesa-oscuro));
+      background: var(--color-fondo);
+      border: 1px solid var(--color-borde);
+      box-shadow: var(--sombra-suave);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -493,15 +519,17 @@
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.8);
+      color: var(--color-texto-suave);
     }
     .banner-ficha-cc__monto {
       font-size: 1.875rem;
       font-weight: 700;
       letter-spacing: -0.02em;
-      color: #fff;
+      color: var(--color-texto);
       margin-top: 0.25rem;
     }
+    .banner-ficha-cc--favor .banner-ficha-cc__etiqueta,
+    .banner-ficha-cc--favor .banner-ficha-cc__monto { color: var(--verde-oscuro); }
     .banner-ficha-cc__acciones { display: flex; gap: 0.625rem; flex-wrap: wrap; }
     .banner-ficha-cc__btn {
       border: none;
@@ -513,13 +541,13 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    .banner-ficha-cc__btn--primario { background: #fff; color: var(--turquesa-oscuro); }
-    .banner-ficha-cc__btn--primario:hover { background: #F0FDFB; }
-    .banner-ficha-cc__btn--secundario { background: rgba(255,255,255,0.22); color: #fff; }
-    .banner-ficha-cc__btn--secundario:hover { background: rgba(255,255,255,0.32); }
+    .banner-ficha-cc__btn--primario { background: var(--color-acento); color: #fff; }
+    .banner-ficha-cc__btn--primario:hover { background: var(--color-acento-hover); }
+    .banner-ficha-cc__btn--secundario { background: var(--color-fondo); color: var(--color-acento); box-shadow: inset 0 0 0 1.5px var(--color-acento); }
+    .banner-ficha-cc__btn--secundario:hover { background: var(--color-acento-suave); }
     .banner-ficha-cc__btn[disabled] { opacity: 0.5; cursor: not-allowed; }
-    .banner-ficha-cc__btn[disabled]:hover { background: #fff; }
-    .banner-ficha-cc__btn--secundario[disabled]:hover { background: rgba(255,255,255,0.22); }
+    .banner-ficha-cc__btn--primario[disabled]:hover { background: var(--color-acento); }
+    .banner-ficha-cc__btn--secundario[disabled]:hover { background: var(--color-fondo); }
 
     /* Solo en modo "Todas las unidades": el nombre de la empresa va ARRIBA y
        más grande que la etiqueta de moneda. Mirando consolidado, lo que hay
@@ -529,13 +557,13 @@
     .banner-ficha-cc__unidad {
       font-size: 1rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--color-texto);
       margin-bottom: 0.125rem;
     }
     .banner-ficha-cc__ayuda {
       flex-basis: 100%;
       font-size: 0.75rem;
-      color: rgba(255,255,255,0.85);
+      color: var(--color-texto-2);
     }
 
     /* Banner secundario — para una segunda moneda con saldo; sin botones,
@@ -567,16 +595,16 @@
       min-height: 44px;
       padding: 0 1rem;
       border-radius: 999px;
-      border: 1px solid var(--turquesa);
+      border: 1px solid var(--color-acento);
       background: #fff;
-      color: var(--turquesa-oscuro);
+      color: var(--color-acento);
       font-family: var(--fuente);
       font-size: 0.8125rem;
       font-weight: 700;
       cursor: pointer;
     }
-    .ficha-unidad-cc__chip:hover { background: var(--turquesa-suave); }
-    .ficha-unidad-cc__chip:focus-visible { outline: 3px solid var(--turquesa); outline-offset: 2px; }
+    .ficha-unidad-cc__chip:hover { background: var(--color-acento-suave); }
+    .ficha-unidad-cc__chip:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
 
     /* Una línea chica que dice qué muestra la pantalla con la barra de
        unidad elegida, o que algo no se puede filtrar por unidad. */
@@ -584,7 +612,7 @@
 
     /* "Todas las unidades" en el resumen de arriba: el total por unidad. */
     .resumen-cc-card__desglose { display: grid; gap: 0.125rem; margin-top: 0.5rem; font-size: 0.75rem; color: var(--color-texto-suave); }
-    .resumen-cc-card--navy .resumen-cc-card__desglose { color: rgba(255,255,255,0.85); }
+    .resumen-cc-card--navy .resumen-cc-card__desglose { color: var(--color-texto-2); }
     .resumen-cc-card__desglose-fila { display: flex; justify-content: space-between; gap: 0.5rem; }
     .resumen-cc-card__desglose-fila span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -612,21 +640,22 @@
       color: var(--color-texto-suave);
     }
     .fila-movimiento__referencia { font-size: 0.9375rem; font-weight: 600; color: var(--color-texto); }
-    .fila-movimiento__fecha { font-size: 0.8125rem; color: var(--color-acento-highlight); }
+    .fila-movimiento__fecha { font-size: 0.8125rem; color: var(--color-texto-2); }
     .fila-movimiento__monto { font-size: 1rem; font-weight: 700; white-space: nowrap; }
     .fila-movimiento__saldo { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.1875rem; white-space: nowrap; }
 
-    /* Punto de color a la izquierda de cada fila de movimiento (ficha) —
-       verde pago, navy factura, violeta crédito aplicado. */
+    /* Punto de color a la izquierda de cada fila de movimiento (ficha): la
+       factura en gris (una deuda, sin saber si está vencida), el pago y el
+       crédito aplicado en verde (bajan la deuda), el interés en bordó (mora). */
     .punto-tipo-mov {
       flex-shrink: 0;
       width: 8px;
       height: 8px;
       border-radius: 50%;
     }
-    .punto-tipo-mov--pago              { background: #1E8C4A; }
-    .punto-tipo-mov--factura           { background: var(--color-acento); }
-    .punto-tipo-mov--credito_aplicado  { background: var(--violeta); }
+    .punto-tipo-mov--pago              { background: var(--verde); }
+    .punto-tipo-mov--factura           { background: var(--color-texto-suave); }
+    .punto-tipo-mov--credito_aplicado  { background: var(--verde-oscuro); }
     .punto-tipo-mov--interes           { background: var(--bordo); }
 
     /* Chip de tipo — historial de facturas (Pantalla 3), no lleva punto. */
@@ -640,14 +669,15 @@
       text-transform: uppercase;
       margin-bottom: 0.25rem;
     }
-    .chip-tipo-mov--pago              { background: var(--color-acento-suave); color: var(--color-acento-highlight); }
-    .chip-tipo-mov--factura           { background: var(--rojo-suave); color: var(--rojo); }
-    .chip-tipo-mov--credito_aplicado  { background: var(--violeta-suave); color: var(--violeta-oscuro); }
+    .chip-tipo-mov--pago              { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .chip-tipo-mov--factura           { background: var(--color-superficie); color: var(--color-texto-menu); }
+    .chip-tipo-mov--credito_aplicado  { background: var(--verde-suave); color: var(--verde-oscuro); }
     .chip-tipo-mov--interes           { background: var(--bordo-suave); color: var(--bordo-oscuro); }
 
     /* Estado de cobro de la factura (pendiente/parcial/pagada) — va al lado
-       de la referencia, en las dos pantallas (ficha e historial). El verde es
-       el mismo #1E8C4A de .punto-tipo-mov--pago. */
+       de la referencia, en las dos pantallas (ficha e historial). Pendiente y
+       parcial en gris: son deuda, y la base no sabe si está vencida. Pagada
+       en verde. */
     .badge-estado-factura {
       display: inline-block;
       padding: 0.125rem 0.4375rem;
@@ -660,9 +690,9 @@
       vertical-align: middle;
       white-space: nowrap;
     }
-    .badge-estado-factura--pendiente { background: var(--rojo-suave);     color: var(--rojo); }
-    .badge-estado-factura--parcial   { background: var(--amarillo-suave); color: var(--amarillo); }
-    .badge-estado-factura--pagada    { background: rgba(30,140,74,0.12);  color: #1E8C4A; }
+    .badge-estado-factura--pendiente { background: var(--color-superficie); color: var(--color-texto-menu); }
+    .badge-estado-factura--parcial   { background: var(--color-superficie); color: var(--color-texto-2); }
+    .badge-estado-factura--pagada    { background: var(--verde-suave);      color: var(--verde-oscuro); }
 
     /* Historial de facturas — misma tarjeta, letra más chica para que
        entren más filas sin scrollear tanto. La ficha de proveedor
@@ -672,30 +702,29 @@
     #lista-historial .fila-movimiento__fecha { font-size: 0.75rem; }
     #lista-historial .fila-movimiento__monto { font-size: 0.875rem; }
     .fila-movimiento__monto--deuda { color: var(--color-texto); }
-    .fila-movimiento__monto--reduce { color: #1E8C4A; }
+    .fila-movimiento__monto--reduce { color: var(--verde-oscuro); }
 
     /* ── Descargas sin importe ─────────────────────────────────────────────
        Una factura en 'sin_importe' (una descarga sin comprobante cargada por
        Ingreso) NO entra a ningún saldo: v_saldo_proveedor suma pendiente y
        parcial. El saldo que se muestra queda incompleto y la pantalla lo dice
-       en rojo, al lado. Con fondo propio para que se lea también sobre la
-       tarjeta navy del resumen. */
+       en bordó (el color de lo que falta), al lado. Con fondo propio. */
     .sin-importe-cc {
       display: inline-block;
       margin-top: 0.25rem;
       padding: 0.125rem 0.5rem;
       border-radius: 999px;
-      background: #FDECEC;
-      color: #B91C1C;
+      background: var(--bordo-suave);
+      color: var(--bordo);
       font-size: 0.75rem;
       font-weight: 700;
       white-space: nowrap;
     }
-    .fila-movimiento--sin-importe { border-color: rgba(185,28,28,0.35); }
-    .fila-movimiento__monto--falta { color: #B91C1C; font-weight: 700; white-space: nowrap; }
+    .fila-movimiento--sin-importe { border-color: color-mix(in srgb, var(--bordo) 35%, transparent); }
+    .fila-movimiento__monto--falta { color: var(--bordo); font-weight: 700; white-space: nowrap; }
     .fila-movimiento__cantidades { font-size: 0.8125rem; color: var(--color-texto); margin-top: 0.25rem; overflow-wrap: anywhere; }
     .fila-movimiento__aviso { font-size: 0.75rem; color: var(--color-texto-suave); margin-top: 0.25rem; overflow-wrap: anywhere; }
-    .badge-estado-factura--sin_importe { background: #FDECEC; color: #B91C1C; }
+    .badge-estado-factura--sin_importe { background: var(--bordo-suave); color: var(--bordo); }
     .cargar-importe-cc {
       margin-top: 0.625rem;
       padding: 0.75rem;
@@ -711,7 +740,7 @@
       border: 1px solid var(--color-borde); border-radius: 10px; font-family: var(--fuente); font-size: 0.9375rem;
     }
     .cargar-importe-cc__total { font-size: 0.8125rem; font-weight: 700; margin-top: 0.375rem; }
-    .cargar-importe-cc__error { font-size: 0.8125rem; color: #B91C1C; margin-top: 0.375rem; overflow-wrap: anywhere; }
+    .cargar-importe-cc__error { font-size: 0.8125rem; color: var(--bordo); margin-top: 0.375rem; overflow-wrap: anywhere; }
     .cargar-importe-cc__acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.625rem; }
     .cargar-importe-cc__acciones .btn { width: auto; flex: 1 1 8rem; margin: 0; }
     .remitos-cc { margin-top: 1.5rem; }
@@ -778,7 +807,7 @@
     .grupo-importar-excel[hidden] { display: none; }
 
     /* Mismo alto que .btn-filtro-cc para que no quede flotando en la barra,
-       pero neutro (borde gris, sin turquesa): es ayuda, no una acción. */
+       pero neutro (borde gris): es ayuda, no una acción. */
     .btn-ayuda-excel {
       flex-shrink: 0;
       display: inline-flex;
@@ -799,8 +828,8 @@
     }
 
     .btn-ayuda-excel:hover {
-      color: var(--turquesa-oscuro);
-      border-color: var(--turquesa);
+      color: var(--color-acento);
+      border-color: var(--color-acento);
     }
 
     /* El panel del modal ya scrollea vertical; esto es para que una dirección
@@ -934,7 +963,7 @@
     }
     .resumen-aplicacion__excedente {
       margin-top: 0.375rem;
-      color: var(--turquesa-oscuro);
+      color: var(--verde-oscuro);
       font-weight: 600;
     }
     .resumen-aplicacion__error {
@@ -983,14 +1012,14 @@
       font-size: 0.875rem;
       color: var(--color-texto);
     }
-    /* Ámbar — mismo criterio de color usado para crédito a favor en otras
-       partes del módulo (sobrepago que quedó como crédito a favor). */
+    /* Verde: el sobrepago que quedó como crédito A FAVOR (el mismo criterio
+       que el resto del módulo). */
     .detalle-pago-credito {
       margin-top: 0.75rem;
       padding: 0.75rem 0.875rem;
       border-radius: 10px;
-      background: var(--amarillo-suave);
-      color: var(--amarillo-oscuro);
+      background: var(--verde-suave);
+      color: var(--verde-oscuro);
       font-size: 0.8125rem;
     }
     .detalle-pago-credito div + div { margin-top: 0.25rem; }
@@ -1044,10 +1073,15 @@
           <div class="cc-header__logo"></div>
           <div class="cc-header__marca-col">
             <span class="cc-header__marca-texto">Seis Destinos</span>
-            <span class="cc-header__titulo">Cuentas corrientes <span style="color:var(--turquesa); font-size:0.875rem; line-height:1;">●</span></span>
+            <span class="cc-header__titulo">Cuentas corrientes · Proveedores</span>
           </div>
         </div>
       </header>
+      <!-- Este módulo es SOLO de proveedores (29/09/2026). Las cuentas de los
+           clientes viven en Administración → Clientes; el link se ve con
+           retiros:ver (la tarea que abre esa sección). Administración todavía
+           no entiende ?seccion=clientes: el link lleva a su portada. -->
+      <p class="cc-link-clientes" id="cc-link-clientes" hidden>Las cuentas corrientes de los clientes están en <a href="administracion.html">Administración → Clientes</a>.</p>
 
       <div class="grilla-resumen-cc">
         <div class="resumen-cc-card resumen-cc-card--navy">
@@ -1121,7 +1155,7 @@
           </div>
           <input type="date" id="filtro-fecha-desde-historial">
           <input type="date" id="filtro-fecha-hasta-historial">
-          <button type="button" id="btn-exportar-excel-historial" class="btn btn--secundario" style="width:auto; background:var(--turquesa); color:#fff; border-color:var(--turquesa);">📥 Descargar Excel</button>
+          <button type="button" id="btn-exportar-excel-historial" class="btn btn-cc-accion" style="width:auto;">📥 Descargar Excel</button>
         </div>
 
         <div id="estado-cargando-historial" class="estado-vacio" hidden>
@@ -1310,7 +1344,7 @@
 
       <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-pago">Cancelar</button>
-        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-pago">Confirmar pago</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-pago">Confirmar pago</button>
       </div>
     </div>
   </div><!-- /modal-pago -->
@@ -1350,7 +1384,7 @@
 
         <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
           <button type="button" class="btn btn--secundario" id="btn-cancelar-aplicar-credito">Cancelar</button>
-          <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-aplicar-credito">Aplicar</button>
+          <button type="button" class="btn btn-cc-accion" id="btn-confirmar-aplicar-credito">Aplicar</button>
         </div>
       </div>
     </div>
@@ -1377,7 +1411,7 @@
 
       <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-asignar-proveedor">Cancelar</button>
-        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-asignar-proveedor">Asignar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-asignar-proveedor">Asignar</button>
       </div>
     </div>
   </div><!-- /modal-asignar-proveedor -->
@@ -1413,7 +1447,7 @@
 
       <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-agregar-proveedor">Cancelar</button>
-        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-agregar-proveedor">Confirmar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-agregar-proveedor">Confirmar</button>
       </div>
     </div>
   </div><!-- /modal-agregar-proveedor -->
@@ -1453,7 +1487,7 @@
 
       <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-editar-proveedor">Cancelar</button>
-        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-editar-proveedor">Guardar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-editar-proveedor">Guardar</button>
       </div>
     </div>
   </div><!-- /modal-editar-proveedor -->
@@ -1490,7 +1524,7 @@
       </p>
 
       <div style="display:flex; gap:0.75rem; padding:1rem 0 0;">
-        <button type="button" class="btn btn-cc-turquesa" id="btn-entendido-ayuda-excel">Entendido</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-entendido-ayuda-excel">Entendido</button>
       </div>
     </div>
   </div><!-- /modal-ayuda-excel -->
@@ -1526,13 +1560,13 @@
 
       <div class="preview-acciones" id="preview-acciones">
         <button type="button" class="btn btn--secundario" id="btn-cancelar-preview-excel">Cancelar</button>
-        <button type="button" class="btn btn-cc-turquesa" id="btn-confirmar-preview-excel">Confirmar carga</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-confirmar-preview-excel">Confirmar carga</button>
       </div>
 
       <!-- Después de correr, "Confirmar" desaparece: volver a apretarlo
            crearía los proveedores de nuevo. -->
       <div class="preview-acciones" id="preview-acciones-fin" hidden>
-        <button type="button" class="btn btn-cc-turquesa" id="btn-cerrar-resultado-excel">Cerrar</button>
+        <button type="button" class="btn btn-cc-accion" id="btn-cerrar-resultado-excel">Cerrar</button>
       </div>
     </div>
   </div><!-- /modal-preview-excel -->
@@ -1571,7 +1605,8 @@
     // Estados de facturas_pendientes que llevan badge. 'anulada' no está a
     // propósito: esas facturas no aparecen en v_cuenta_corriente_movimientos.
     const ESTADO_FACTURA_LABEL = { pendiente: 'Pendiente', parcial: 'Parcial', pagada: 'Pagada', sin_importe: 'Falta importe' }
-    const PALETA_AVATAR = ['#FDE7E7', '#E3F0FF', '#E6F7EC', '#FFF3DA', '#F1E7FC']
+    // Fondos cálidos (sistema visual 2026: sin azules ni lavandas).
+    const PALETA_AVATAR = ['#FDE7E7', '#F6EBDD', '#E6F4EC', '#FFF3DA', '#F3E8E2']
 
     // Selector "Ordenar" de Movimientos (ficha) — se aplica del lado del
     // cliente sobre los datos ya cargados, sin refetch.
@@ -1622,6 +1657,8 @@
       // del de la ficha (estado.ficha.estadoPorFactura): son dos pantallas
       // con ciclos de vida distintos.
       estadoPorFacturaHistorial: {},
+      // gasto_id → "Cheque endosado 072-43300023" (cargarEtiquetasDePagos).
+      etiquetasPagoHistorial: new Map(),
       historialCargadoUnaVez: false,
       ficha: null,        // { proveedorId, unidadId, nombre }
       // Facturas en 'sin_importe' (id, proveedor_id, unidad_negocio_id,
@@ -1817,6 +1854,13 @@
       if (pend) pend.hidden = !estado.unidadElegida
     }
 
+    // El link a las cuentas de los CLIENTES (Administración → Clientes), para
+    // quien puede verlas: retiros:ver, con bypass de super_admin.
+    function renderizarLinkClientes() {
+      const el = document.getElementById('cc-link-clientes')
+      if (el) el.hidden = !tieneTarea('retiros', 'ver')
+    }
+
     // Las unidades del selector de la ficha, en el orden de los ids.
     function unidadesDeFicha(ids) {
       return unidadesParaElegir((ids ?? [])
@@ -1899,9 +1943,12 @@
         // "Cuenta de Empresa" del selector de pago — un pago a proveedor crea
         // una fila en gastos, así que es literalmente cargar un gasto contra
         // las cuentas de la Empresa.
-        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes', 'gastos'])
+        // 'retiros' entra por retiros:ver, que decide si se ofrece el link a
+        // las cuentas de los clientes (Administración → Clientes).
+        .in('modulo', ['cuentas_corrientes', 'facturas_pendientes', 'gastos', 'retiros'])
         .eq('habilitado', true)
       estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
+      renderizarLinkClientes()
 
       // La barra de unidad de arriba: se escucha ANTES de esperarla, así un
       // cambio mientras carga no se pierde. Esperarla va en paralelo con lo
@@ -2325,7 +2372,7 @@
       document.getElementById('modal-detalle-pago').removeAttribute('hidden')
 
       const [gastoRes, aplicacionesRes, creditosRes] = await Promise.all([
-        supabase.from('gastos').select('fecha_pago, medio_pago, importe, moneda').eq('id', gastoId).maybeSingle(),
+        supabase.from('gastos').select('fecha_pago, medio_pago, importe, moneda, descripcion').eq('id', gastoId).maybeSingle(),
         supabase.from('aplicaciones_pago')
           .select('monto_aplicado, facturas_pendientes(numero_comprobante, razon_social, fecha_factura, categorias(nombre))')
           .eq('gasto_id', gastoId),
@@ -2379,7 +2426,7 @@
       cont.innerHTML = `
         <div class="detalle-pago-hero">
           <div class="detalle-pago-hero__monto">${importeHtml(gasto?.importe, gasto?.moneda)}</div>
-          <div class="detalle-pago-hero__meta">${formatearFecha(gasto?.fecha_pago)} · ${esc(MEDIOS_PAGO_LABEL[gasto?.medio_pago] || gasto?.medio_pago || '')}</div>
+          <div class="detalle-pago-hero__meta">${formatearFecha(gasto?.fecha_pago)} · ${esc(etiquetaPagoDeGasto(gasto) || MEDIOS_PAGO_LABEL[gasto?.medio_pago] || gasto?.medio_pago || '')}</div>
         </div>
         <div class="detalle-pago-seccion-titulo">Facturas cubiertas</div>
         ${filasFacturas || '<p style="color:var(--color-texto-suave); font-size:0.8125rem;">Sin facturas asociadas.</p>'}
@@ -3069,13 +3116,57 @@
       // del rango (ver cargarEstadosDeFacturas): la búsqueda y la unidad se
       // aplican después, sin volver a consultar.
       const idsFactura = [...new Set(filas.filter(m => m.tipo === 'factura' && m.factura_pendiente_id).map(m => m.factura_pendiente_id))]
-      const estados = idsFactura.length ? await cargarEstadosDeFacturas(idsFactura) : {}
+      const [estados, etiquetasPago] = await Promise.all([
+        idsFactura.length ? cargarEstadosDeFacturas(idsFactura) : {},
+        cargarEtiquetasDePagos(filas),
+      ])
       if (turno !== turnoHistorial) return
       estado.estadoPorFacturaHistorial = estados
+      estado.etiquetasPagoHistorial = etiquetasPago
 
       cargandoEl.hidden = true
       estado.historialCrudo = filas
       armarHistorial()
+    }
+
+    // ── EL CHEQUE ENDOSADO A UN PROVEEDOR (29/09/2026) ──────────────────────
+    // endosar_cheque_a_proveedor registra el endoso como un PAGO: un gasto con
+    // medio_pago 'cheque' y la descripción
+    // 'Cheque endosado <banco>-<número> — <razón social>' (verificado con
+    // pg_get_functiondef el 29/09/2026). v_cuenta_corriente_movimientos trae
+    // para TODO pago la referencia fija 'Pago a proveedor', así que la
+    // etiqueta sale del gasto: "Cheque endosado 072-43300023".
+    // Solo se toman del texto el banco (3 dígitos) y el número (8), los mismos
+    // largos que exigen los CHECK de cobranza_cheques; si la descripción no
+    // tiene esa forma, el pago queda como "Pago a proveedor".
+    function etiquetaPagoDeGasto(gasto) {
+      if (!gasto || gasto.medio_pago !== 'cheque') return null
+      const m = /^Cheque endosado (\d{3})-(\d{8})(?!\d)/.exec(String(gasto.descripcion ?? ''))
+      return m ? `Cheque endosado ${m[1]}-${m[2]}` : null
+    }
+
+    // gasto_id → "Cheque endosado 072-43300023", para los pagos de las filas.
+    // En tandas (un .in() largo no entra en la dirección). Si la lectura
+    // falla, los pagos quedan como vienen de la vista: no se inventa nada.
+    const TANDA_GASTOS_PAGO = 200
+    async function cargarEtiquetasDePagos(filas) {
+      const ids = [...new Set((filas ?? []).filter(m => m.tipo === 'pago' && m.gasto_id).map(m => m.gasto_id))]
+      const mapa = new Map()
+      for (let i = 0; i < ids.length; i += TANDA_GASTOS_PAGO) {
+        const { data, error } = await supabase.from('gastos').select('id, medio_pago, descripcion').in('id', ids.slice(i, i + TANDA_GASTOS_PAGO))
+        if (error) { console.error('No se pudieron leer los pagos (cheques endosados):', error); return mapa }
+        for (const g of data ?? []) {
+          const t = etiquetaPagoDeGasto(g)
+          if (t) mapa.set(g.id, t)
+        }
+      }
+      return mapa
+    }
+
+    // La referencia de un movimiento: la del cheque endosado si el pago es
+    // uno; si no, la de la vista.
+    function referenciaMovimiento(m, etiquetas) {
+      return (m?.tipo === 'pago' && etiquetas?.get(m.gasto_id)) || m?.referencia || ''
     }
 
     // El historial con la búsqueda y la unidad de la barra, sobre lo cargado.
@@ -3107,7 +3198,7 @@
           ? '<div class="fila-movimiento__monto fila-movimiento__monto--falta">Falta importe</div>'
           : `<div class="fila-movimiento__monto ${claseMonto}">${monto < 0 ? '−' : '+'}${importeHtml(Math.abs(monto), m.moneda)}</div>`
         const unidadNombre = etiquetaUnidad(m.unidad_negocio_id)
-        const referencia = m.referencia || ''
+        const referencia = referenciaMovimiento(m, estado.etiquetasPagoHistorial)
         const badgeEstado = m.tipo === 'factura'
           ? badgeEstadoFactura(estado.estadoPorFacturaHistorial[m.factura_pendiente_id])
           : ''
@@ -3134,7 +3225,7 @@
         'Unidad':     etiquetaUnidad(m.unidad_negocio_id),
         'Fecha':      formatearFecha(m.fecha),
         'Tipo':       TIPO_MOVIMIENTO_LABEL[m.tipo] || m.tipo,
-        'Referencia': m.referencia || '',
+        'Referencia': referenciaMovimiento(m, estado.etiquetasPagoHistorial),
         // Vacío y no 0: una descarga sin importe no vale cero.
         'Monto':      m.monto == null ? '' : Number(m.monto),
         'Moneda':     m.moneda || '',
@@ -3361,7 +3452,7 @@
           const etiqueta = esFavor ? `Saldo a favor · ${esc(s.moneda)}` : `A pagar · ${esc(s.moneda)}`
           const monto = esFavor ? credito : deuda
           return `
-            <div class="banner-ficha-cc${i > 0 ? ' banner-ficha-cc--secundaria' : ''}">
+            <div class="banner-ficha-cc${i > 0 ? ' banner-ficha-cc--secundaria' : ''}${esFavor ? ' banner-ficha-cc--favor' : ''}">
               <div>
                 ${todas || !s.unidad_negocio_id ? `<div class="banner-ficha-cc__unidad">${esc(etiquetaUnidad(s.unidad_negocio_id))}</div>` : ''}
                 <div class="banner-ficha-cc__etiqueta">${etiqueta}</div>
@@ -3416,11 +3507,15 @@
       // Las cantidades del ingreso vinculado a cada descarga sin importe: es lo
       // único que hay para ponerle precio.
       const idsSinImporte = idsFactura.filter(id => estadoPorFactura[id] === 'sin_importe')
-      const cantidades = idsSinImporte.length ? await cargarCantidadesSinImporte(idsSinImporte) : new Map()
+      const [cantidades, etiquetasPago] = await Promise.all([
+        idsSinImporte.length ? cargarCantidadesSinImporte(idsSinImporte) : new Map(),
+        cargarEtiquetasDePagos(data ?? []),
+      ])
       if (estado.ficha !== ficha) return
 
       cargandoEl.hidden = true
 
+      estado.ficha.etiquetasPago    = etiquetasPago
       estado.ficha.movimientosRaw   = data ?? []
       estado.ficha.estadoPorFactura = estadoPorFactura
       estado.ficha.cantidadesSinImporte = cantidades
@@ -3498,7 +3593,7 @@
         const lineaSaldo = (!todas && m.unidad_negocio_id && saldoAcum !== 0)
           ? `<div class="fila-movimiento__saldo">${saldoAcum > 0 ? 'Saldo debe' : 'Saldo a favor'} ${importeHtml(Math.abs(saldoAcum), m.moneda)}</div>`
           : ''
-        const referencia = m.referencia || '—'
+        const referencia = referenciaMovimiento(m, estado.ficha.etiquetasPago) || '—'
         const badgeEstado = m.tipo === 'factura'
           ? badgeEstadoFactura(estadoPorFactura[m.factura_pendiente_id])
           : ''

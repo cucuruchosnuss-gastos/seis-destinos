@@ -30,6 +30,9 @@ const FUNCIONES_BASE = [
   // Clientes apagados y el interruptor (28/09/2026)
   'textoCodigoAnterior', 'puedePrenderApagar', 'htmlInterruptor', 'leerApagados', 'clientesDeLaLista', 'cargarApagados',
   'cambiarMostrarApagados', 'cambiarActivoCliente',
+  // Clientes de "Todas las fábricas" (29/09/2026)
+  'empresasDeClientes', 'clientesEnTodas', 'fichaCliente', 'porSaldo', 'leerClientesTodas', 'leerApagadosTodas',
+  'elegirEnSegmento', 'abrirClienteDeLista',
   'leerFicha', 'asegurarListas', 'asegurarProveedores', 'valorComparable', 'cambiosFicha', 'leerFormFicha', 'htmlOpcionesListas',
   'proveedoresFiltrados', 'htmlProveedorElegido', 'htmlResultadosProveedores', 'pintarProveedorFicha', 'textoCambiosFicha',
   'pintarPieFicha', 'llenarFicha', 'abrirFicha', 'elegirProveedorFicha', 'guardarFicha',
@@ -78,6 +81,8 @@ const CONSTANTES_BASE = [
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
   'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'SUGERIDOS_EN_BOTONES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'MAX_ERRORES', 'ETIQUETA_EVENTO_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD', 'LARGO_MINIMO_MOTIVO_REVISAR',
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
+  // Clientes de "Todas las fábricas" (29/09/2026)
+  'TODAS_LAS_FABRICAS',
 ]
 
 const PRELUDIO = `
