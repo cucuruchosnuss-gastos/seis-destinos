@@ -5567,6 +5567,38 @@
     .chq-modal__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); margin-bottom: 0.75rem; overflow-wrap: anywhere; }
     .chq-salida-tipos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; min-width: 0; }
 
+    /* ── Endosar a un proveedor (29/09/2026) ─────────────────────────────── */
+    .chq-endoso-resultados { display: flex; flex-direction: column; gap: 0.375rem; margin-top: 0.5rem; min-width: 0; }
+    .chq-endoso-resultados:empty { display: none; }
+    .chq-endoso-prov {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem;
+      width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; text-align: left;
+      border: 1px solid var(--color-borde); border-radius: var(--radio-boton, 12px);
+      background: var(--color-fondo); color: var(--color-texto); font: inherit; cursor: pointer; min-width: 0;
+    }
+    .chq-endoso-prov:hover, .chq-endoso-prov:focus-visible { border-color: var(--naranja); }
+    .chq-endoso-prov__nombre { font-weight: 600; overflow-wrap: anywhere; }
+    .chq-endoso-prov__cuit, .chq-endoso-prov__deuda { font-size: 0.78125rem; color: var(--color-texto-2, var(--color-texto-suave)); overflow-wrap: anywhere; }
+    .chq-endoso-nota { font-size: 0.8125rem; color: var(--color-texto-2, var(--color-texto-suave)); margin-top: 0.5rem; overflow-wrap: anywhere; }
+    .chq-endoso-elegido {
+      display: flex; align-items: center; gap: 0.5rem; justify-content: space-between;
+      padding: 0.625rem 0.75rem; margin-bottom: 0.875rem; border: 1px solid var(--naranja);
+      border-radius: var(--radio-boton, 12px); background: var(--naranja-suave); min-width: 0;
+    }
+    .chq-endoso-elegido__texto { font-weight: 600; color: var(--naranja-oscuro); overflow-wrap: anywhere; min-width: 0; }
+    .chq-endoso-elegido .chq-btn { flex: 0 0 auto; white-space: nowrap; }
+    .chq-endoso-aviso { font-size: 0.8125rem; font-weight: 600; color: var(--bordo-oscuro); margin-top: 0.375rem; overflow-wrap: anywhere; }
+    .chq-endoso-previa {
+      border: 1px solid var(--color-borde); border-radius: var(--radio-boton, 12px);
+      padding: 0.75rem; margin-bottom: 0.875rem; font-size: 0.875rem; min-width: 0;
+    }
+    .chq-endoso-previa__titulo { font-weight: 700; margin-bottom: 0.375rem; }
+    .chq-endoso-previa ul { margin: 0 0 0.5rem; padding-left: 1.1rem; }
+    .chq-endoso-previa li { margin-bottom: 0.25rem; overflow-wrap: anywhere; }
+    .chq-endoso-previa__total { font-weight: 600; overflow-wrap: anywhere; }
+    /* Dos botones en la columna Salida (Vincular + Volver): uno debajo del otro en la tarjeta. */
+    .chq-tarjeta__lado { flex-direction: column; justify-content: center; align-items: flex-end; gap: 0.375rem; }
+
     @media (min-width: 640px) {
       .chq-modal { align-items: center; }
     }
@@ -5668,21 +5700,45 @@
     <div class="chq-modal__caja">
       <div class="chq-modal__titulo" id="chq-salida-titulo">Salida del cheque</div>
       <div class="chq-campo__ayuda" id="chq-salida-cheques" style="margin:-.25rem 0 .875rem;white-space:pre-line"></div>
-      <div class="chq-campo">
+      <div class="chq-campo" id="chq-salida-campo-tipo">
         <label>¿Qué pasó con el cheque?</label>
         <div class="chq-salida-tipos">
           <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="depositado">Depositado</button>
           <button type="button" class="chq-btn chq-btn--grande" data-salida-tipo="endosado">Endosado</button>
         </div>
+        <!-- Sin «Registrar pagos a proveedores» el endoso no se ofrece: lo dice acá. -->
+        <div class="chq-campo__ayuda" id="chq-salida-nota-endoso" hidden></div>
       </div>
-      <div class="chq-campo">
+      <div class="chq-campo" id="chq-salida-campo-fecha">
         <label for="chq-salida-fecha">Fecha</label>
         <input type="date" id="chq-salida-fecha">
       </div>
+      <!-- Vincular un endoso viejo: se conserva su fecha de salida. -->
+      <div class="chq-campo__ayuda" id="chq-salida-nota-fecha" style="margin:-.25rem 0 .875rem" hidden></div>
       <div class="chq-campo" id="chq-salida-campo-destino" hidden>
         <label for="chq-salida-destino" id="chq-salida-label-destino">¿A quién se lo pasaste?</label>
         <input type="text" id="chq-salida-destino" maxlength="150" autocomplete="off">
         <div class="chq-campo__ayuda" id="chq-salida-ayuda-destino"></div>
+      </div>
+      <!-- ENDOSAR A UN PROVEEDOR (29/09/2026): el endoso paga su cuenta corriente
+           (endosar_cheque_a_proveedor). Buscador → fábrica de la deuda → qué se paga. -->
+      <div id="chq-endoso" hidden>
+        <div class="chq-campo" id="chq-endoso-campo-buscar">
+          <label for="chq-endoso-buscar">¿A qué proveedor se lo pasaste?</label>
+          <input type="text" id="chq-endoso-buscar" maxlength="80" autocomplete="off" placeholder="Nombre o CUIT">
+          <div class="chq-campo__ayuda">Escribí al menos 2 letras del nombre o números del CUIT.</div>
+          <div class="chq-endoso-resultados" id="chq-endoso-resultados"></div>
+        </div>
+        <div class="chq-endoso-elegido" id="chq-endoso-elegido" hidden>
+          <span class="chq-endoso-elegido__texto" id="chq-endoso-elegido-texto"></span>
+          <button type="button" class="chq-btn chq-btn--chico" id="chq-endoso-cambiar">Cambiar</button>
+        </div>
+        <div class="chq-campo" id="chq-endoso-campo-unidad" hidden>
+          <label for="chq-endoso-unidad">¿De qué fábrica es la deuda que se paga?</label>
+          <select id="chq-endoso-unidad"></select>
+          <div class="chq-endoso-aviso" id="chq-endoso-aviso-unidad" hidden></div>
+        </div>
+        <div class="chq-endoso-previa" id="chq-endoso-previa" hidden></div>
       </div>
       <div class="chq-campo__error" id="chq-salida-error" hidden></div>
       <div class="chq-acciones">
@@ -5711,7 +5767,7 @@
 
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
-    import { mostrarError, mostrarExito } from '../js/utils.js'
+    import { mostrarError, mostrarExito, cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS } from '../js/utils.js'
     import { supabase } from '../js/supabase.js'
     import {
       dvBcra, formatearImporte, hoyArgentina, esFechaIso, diasEntre, formatearFechaCob,
@@ -5774,8 +5830,15 @@
       // `ultimo` es el último tocado, para marcar un tramo con Shift + clic.
       // `noPueden` (Parte 8): los elegidos que no pueden salir, marcados.
       seleccion: { activa: false, ids: new Set(), ultimo: null, noPueden: new Set() },
-      // El diálogo de salida abierto: { cheque, cobranza, tipo } o null.
+      // El diálogo de salida abierto: { cheque, cobranza, tipo } o null. Con el
+      // endoso a un proveedor suma { modo, proveedor, unidadId, busqueda,
+      // resultados, previa } (ver "ENDOSAR A UN PROVEEDOR").
       salida: null,
+      // La fábrica de pruebas: sus unidades no se ofrecen a una cuenta real.
+      fabrica: FABRICA_SIN_DATOS,
+      // Las fábricas para elegir de cuál es la deuda que paga un endoso:
+      // [{ id, nombre }], o null mientras no se leyeron (o si no se pudo).
+      unidadesEndoso: null,
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -5825,6 +5888,16 @@
     // solo `cargar` la persona vería nada más que sus propios cheques, y eso
     // no es una cartera.
     const puedeVerCartera = () => tieneTarea('ver_todo') || tieneTarea('procesar')
+    // ENDOSAR A UN PROVEEDOR paga su cuenta corriente: endosar_cheque_a_proveedor
+    // exige, además de cobranzas:procesar, cuentas_corrientes:registrar_pago
+    // (verificado con pg_get_functiondef el 29/09/2026). Sin ella el endoso no
+    // se ofrece y la pantalla dice por qué, en vez de dejar que la base lo
+    // rechace a ciegas. Con bypass de super_admin, como tiene_tarea().
+    const puedeRegistrarPago = () => estado.miRolApp === 'super_admin' || estado.misTareas.has('cuentas_corrientes:registrar_pago')
+    // Las facturas del proveedor se leen con cuentas_corrientes:ver_todo (la
+    // policy de facturas_pendientes: propias o ver_todo). Sin ella la lista
+    // saldría INCOMPLETA sin ningún error: no se muestra.
+    const puedeVerFacturas = () => estado.miRolApp === 'super_admin' || estado.misTareas.has('cuentas_corrientes:ver_todo')
 
     // ═══════════════════════════════════════════════════════════════════════
     // CATÁLOGO DE BANCOS
@@ -6389,6 +6462,7 @@
       fecha.max = hoyArgentina()
       fecha.min = minima ?? ''
       document.getElementById('chq-salida-destino').value = ''
+      reiniciarEndoso()
       pintarModalSalida()
       document.getElementById('chq-modal-salida').hidden = false
     }
@@ -6700,7 +6774,7 @@
       pintarFiltrosCheques()
       const { q, sinResultados } = aplicarFiltrosCheques(
         supabase.from('cobranza_cheques').select(
-          'id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino'),
+          'id, cobranza_id, foto_id, banco_codigo, numero, tipo, fecha_emision, fecha_pago, importe, estado, salida_fecha, salida_destino, salida_proveedor_id'),
         estado.filtros)
       if (sinResultados) {
         estado.filas = []; estado.error = null; estado.tope = false
@@ -6921,6 +6995,9 @@
       cont.querySelectorAll('[data-volver-cartera]').forEach(b => b.addEventListener('click', (ev) => {
         ev.stopPropagation(); abrirVolverACartera(b.dataset.volverCartera)
       }))
+      cont.querySelectorAll('[data-vincular-proveedor]').forEach(b => b.addEventListener('click', (ev) => {
+        ev.stopPropagation(); abrirVincularProveedor(b.dataset.vincularProveedor)
+      }))
     }
 
     // Tocar un cheque abre su cobranza en Cobranzas, que sabe volver acá.
@@ -7023,8 +7100,18 @@
     //   'nota'   → en cartera, cobranza por controlar, con `procesar`
     //   'volver' → ya salió, con `procesar`
     //   null     → nada (sin permiso, anulado, cobranza que no se ve)
+    //   'pagado'   → endosado A UN PROVEEDOR (29/09/2026): pagó su cuenta
+    //                corriente. NO se ofrece "Volver a cartera":
+    //                volver_cheque_a_cartera no revierte el gasto del endoso
+    //                (ni limpia salida_proveedor_id), y dejaría un pago sin
+    //                cheque. Se dice por qué.
+    //   'vincular' → endosado "con texto" de antes (sin proveedor), con
+    //                `procesar` y `cuentas_corrientes:registrar_pago`:
+    //                "Vincular al proveedor" y "Volver a cartera"
     function accionSalida(ch, cob) {
       const salido = ch.estado === 'depositado' || ch.estado === 'endosado'
+      if (ch.estado === 'endosado' && ch.salida_proveedor_id) return puedeProcesar() ? 'pagado' : null
+      if (ch.estado === 'endosado' && puedeProcesar() && puedeRegistrarPago()) return 'vincular'
       if (salido) return puedeProcesar() ? 'volver' : null
       if (ch.estado !== 'en_cartera' || !puedeProcesar()) return null
       if (cob?.estado === 'procesada') return 'dar'
@@ -7037,12 +7124,26 @@
       if (accion === 'dar') return `<button type="button" class="chq-btn chq-btn--chico chq-btn--salida" data-dar-salida="${esc(ch.id)}">Dar salida</button>`
       if (accion === 'volver') return `<button type="button" class="chq-btn chq-btn--chico" data-volver-cartera="${esc(ch.id)}">Volver a cartera</button>`
       if (accion === 'nota') return '<span class="chq-salida__nota">Asentá la cobranza para darle salida</span>'
+      if (accion === 'vincular') return `<button type="button" class="chq-btn chq-btn--chico chq-btn--salida" data-vincular-proveedor="${esc(ch.id)}">Vincular al proveedor</button>${htmlAccionSalida(ch, 'volver')}`
+      if (accion === 'pagado') return '<span class="chq-salida__nota" title="Este endoso pagó la cuenta corriente del proveedor. Volverlo a cartera dejaría ese pago sin cheque: primero hay que anular el pago, y la base todavía no sabe deshacer el endoso.">Pagó su cuenta corriente</span>'
       return ''
+    }
+
+    // Cómo se nombra un cheque endosado a un proveedor: "Cheque endosado
+    // 072-43300023" (banco-número), igual que su pago en la cuenta del
+    // proveedor (endosar_cheque_a_proveedor le pone esa descripción al gasto).
+    function textoChequeEndosado(ch) {
+      return `Cheque endosado ${ch.banco_codigo ?? '—'}-${ch.numero ?? '—'}`
     }
 
     // La fecha y el destino de un cheque que salió, en una línea de texto
     // plano. El destino lo TIPEA una persona: quien la muestre, la escapa.
+    // Un endoso A UN PROVEEDOR dice además "Cheque endosado 072-43300023", y
+    // el destino es la razón social del proveedor (la pone la base).
     function textoSalidaCorto(ch) {
+      if (ch.estado === 'endosado' && ch.salida_proveedor_id) {
+        return [formatearFechaCob(ch.salida_fecha), textoChequeEndosado(ch), String(ch.salida_destino ?? '').trim()].filter(Boolean).join(' · ')
+      }
       return [formatearFechaCob(ch.salida_fecha), String(ch.salida_destino ?? '').trim()].filter(Boolean).join(' · ')
     }
 
@@ -7186,6 +7287,7 @@
       fecha.max = hoyArgentina()
       fecha.min = esFechaIso(cob?.fecha) ? cob.fecha : ''
       document.getElementById('chq-salida-destino').value = ''
+      reiniciarEndoso()
       pintarModalSalida()
       document.getElementById('chq-modal-salida').hidden = false
     }
@@ -7200,20 +7302,40 @@
     function pintarModalSalida() {
       const s = estado.salida
       if (!s) return
+      // Sin «Registrar pagos a proveedores» el endoso no se ofrece: el botón
+      // queda apagado y la nota de abajo dice por qué.
+      const sinPermisoEndoso = !puedeRegistrarPago()
       document.querySelectorAll('[data-salida-tipo]').forEach(b => {
         b.classList.toggle('chq-btn--elegido', b.dataset.salidaTipo === s.tipo)
+        if (b.dataset.salidaTipo === 'endosado') b.disabled = sinPermisoEndoso
       })
-      document.getElementById('chq-salida-campo-destino').hidden = !s.tipo
-      document.getElementById('chq-salida-label-destino').textContent =
-        s.tipo === 'endosado' ? '¿A quién se lo pasaste?' : '¿En qué banco o cuenta? (opcional)'
-      document.getElementById('chq-salida-ayuda-destino').textContent =
-        s.tipo === 'endosado' ? 'Obligatorio: el nombre de quien lo recibió.' : 'Si no lo sabés, dejalo vacío.'
+      const notaEndoso = document.getElementById('chq-salida-nota-endoso')
+      notaEndoso.textContent = sinPermisoEndoso ? TEXTO_SIN_PERMISO_ENDOSO : ''
+      notaEndoso.hidden = !sinPermisoEndoso
+      // "Vincular al proveedor" (un endoso viejo, con texto): no se elige qué
+      // pasó ni la fecha — se conserva la suya.
+      const vincular = s.modo === 'vincular'
+      document.getElementById('chq-salida-campo-tipo').hidden = vincular
+      document.getElementById('chq-salida-campo-fecha').hidden = vincular
+      const notaFecha = document.getElementById('chq-salida-nota-fecha')
+      notaFecha.textContent = vincular ? `Se conserva la fecha de salida: ${formatearFechaCob(s.cheque?.salida_fecha)}.` : ''
+      notaFecha.hidden = !vincular
+      // EL DESTINO COMO TEXTO QUEDA SOLO PARA EL DEPÓSITO (el banco o la
+      // cuenta, opcional). El endoso ya no guarda un texto libre: elige al
+      // proveedor y paga su cuenta (ver "ENDOSAR A UN PROVEEDOR").
+      document.getElementById('chq-salida-campo-destino').hidden = s.tipo !== 'depositado'
+      document.getElementById('chq-salida-label-destino').textContent = '¿En qué banco o cuenta? (opcional)'
+      document.getElementById('chq-salida-ayuda-destino').textContent = 'Si no lo sabés, dejalo vacío.'
       document.getElementById('chq-salida-error').hidden = true
+      pintarEndoso()
     }
 
     async function confirmarSalida() {
       const s = estado.salida
       if (!s) return
+      // El endoso (y vincular uno viejo) va por su propio camino: paga la
+      // cuenta del proveedor con endosar_cheque_a_proveedor.
+      if (s.tipo === 'endosado' || s.modo === 'vincular') return confirmarEndoso()
       const datos = {
         tipo: s.tipo,
         fecha: document.getElementById('chq-salida-fecha').value,
@@ -7258,6 +7380,530 @@
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // ENDOSAR A UN PROVEEDOR (29/09/2026)
+    // Antes "Endosado" guardaba un texto libre y no tocaba la cuenta del
+    // proveedor. Ahora se elige al proveedor con proveedores_para_endoso, la
+    // fábrica cuya deuda se paga (por defecto la del cheque) y se confirma con
+    // endosar_cheque_a_proveedor, que registra el pago (reparte sobre sus
+    // facturas más viejas; lo que sobra queda a favor) y deja el cheque
+    // endosado con salida_proveedor_id. Verificado con pg_get_functiondef el
+    // 29/09/2026:
+    //   proveedores_para_endoso(p_busqueda) → null sin cobranzas:procesar, o
+    //     hasta 50 [{ id, nombre, cuit, deuda: [{ unidad_id, unidad, pendiente }] }]
+    //   endosar_cheque_a_proveedor(p_cheque_id, p_proveedor_id,
+    //     p_unidad_negocio_id, p_fecha, p_aplicaciones) → { gasto_id,
+    //     aplicado, a_favor, entre_empresas }. Sin p_aplicaciones reparte
+    //     igual que repartoFifo(). Sin p_fecha, un endoso viejo conserva la suya.
+    // Varios cheques al mismo proveedor: UNO POR UNO, en orden (cada uno paga
+    // lo que el anterior dejó). Si uno falla se para y se dice cuáles salieron.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const TEXTO_SIN_PERMISO_ENDOSO = 'Endosar a un proveedor paga su cuenta corriente: hace falta la tarea «Registrar pagos a proveedores» (Cuentas corrientes). Sin ella solo se puede marcar como depositado.'
+    const TEXTO_SIN_FACTURAS = 'No ves las facturas del proveedor (hace falta «Ver proveedores, saldos y facturas de toda la empresa»): la cuenta sale de la deuda total de esa fábrica.'
+    const LARGO_MINIMO_BUSQUEDA = 2
+
+    let turnoBusquedaEndoso = 0
+    let turnoPreviaEndoso = 0
+    let temporizadorBusquedaEndoso = null
+
+    // Los centavos de un importe: el reparto se cuenta en enteros (como numeric
+    // en la base), sin el error del punto flotante.
+    function aCentavos(n) {
+      const x = Number(n)
+      return Number.isFinite(x) ? Math.round(x * 100) : 0
+    }
+
+    // El orden de endosar_cheque_a_proveedor: fecha_factura (las sin fecha al
+    // final) y después created_at.
+    function ordenarFacturasFifo(facturas) {
+      return [...(facturas ?? [])].sort((a, b) => {
+        const fa = a?.fecha_factura || null, fb = b?.fecha_factura || null
+        if (fa !== fb) {
+          if (fa === null) return 1
+          if (fb === null) return -1
+          return fa < fb ? -1 : 1
+        }
+        const ca = String(a?.created_at ?? ''), cb = String(b?.created_at ?? '')
+        return ca < cb ? -1 : ca > cb ? 1 : 0
+      })
+    }
+
+    // El reparto de la base, cheque por cheque y EN ORDEN: cada cheque paga las
+    // facturas más viejas que el anterior dejó con saldo; lo que sobra queda a
+    // favor. → [{ importe, aplicaciones: [{ factura, monto }], aplicado, aFavor }]
+    function repartoFifo(importes, facturas) {
+      // Una factura sin saldo (o que ya pagó un cheque anterior) se saltea.
+      const saldos = ordenarFacturasFifo(facturas)
+        .map(f => ({ factura: f, resta: aCentavos(f.saldo_pendiente) }))
+      return importes.map(imp => {
+        const total = aCentavos(imp)
+        let resta = total
+        const aplicaciones = []
+        for (const s of saldos) {
+          if (resta <= 0) break
+          if (s.resta <= 0) continue
+          const m = Math.min(resta, s.resta)
+          aplicaciones.push({ factura: s.factura, monto: m / 100 })
+          s.resta -= m
+          resta -= m
+        }
+        return { importe: total / 100, aplicaciones, aplicado: (total - resta) / 100, aFavor: resta / 100 }
+      })
+    }
+
+    // La deuda del proveedor por fábrica, sin la fábrica de pruebas (para una
+    // cuenta real) y solo lo que de verdad se debe.
+    function deudasVisibles(proveedor) {
+      const lista = Array.isArray(proveedor?.deuda) ? proveedor.deuda : []
+      return sinUnidadesDePrueba(lista, estado.fabrica, d => d?.unidad_id).filter(d => Number(d?.pendiente) > 0)
+    }
+
+    function deudaDeUnidad(proveedor, unidadId) {
+      const d = deudasVisibles(proveedor).find(x => x.unidad_id === unidadId)
+      return d ? Number(d.pendiente) : 0
+    }
+
+    // "Debe: Nuss $ 1.234,00 · Dolce Pasta $ 50,00", o "Sin deuda…". Texto plano.
+    function textoDeudaProveedor(proveedor) {
+      const ds = deudasVisibles(proveedor)
+      if (!ds.length) return 'Sin deuda en cuenta corriente'
+      return 'Debe: ' + ds.map(d => `${d.unidad ?? 'Sin nombre'} ${formatearImporte(d.pendiente)}`).join(' · ')
+    }
+
+    // Los cheques del diálogo abierto (uno, o los elegidos en orden).
+    function chequesDelEndoso(s) {
+      if (!s) return []
+      return s.lote ? (s.cheques ?? []) : (s.cheque ? [s.cheque] : [])
+    }
+
+    // La fábrica por defecto: la de los cheques, si todos los que tienen una
+    // son de la MISMA. Un cheque sin fábrica, o cheques de fábricas distintas:
+    // se elige (null).
+    function unidadDefectoEndoso(cheques, cobranzas) {
+      const us = new Set(cheques.map(ch => cobranzas.get(ch.cobranza_id)?.unidad_negocio_id).filter(Boolean))
+      return us.size === 1 ? [...us][0] : null
+    }
+
+    // Las fábricas que se pueden elegir: las activas (unidades_negocio), más
+    // las de la deuda del proveedor y las de los cheques (por si la lista no se
+    // pudo leer), sin repetir y sin la fábrica de pruebas.
+    function opcionesUnidadEndoso(s) {
+      const mapa = new Map()
+      for (const u of estado.unidadesEndoso ?? []) if (u?.id) mapa.set(u.id, u.nombre ?? '')
+      for (const d of deudasVisibles(s?.proveedor)) if (d.unidad_id && !mapa.has(d.unidad_id)) mapa.set(d.unidad_id, d.unidad ?? '')
+      for (const ch of chequesDelEndoso(s)) {
+        const cob = estado.cobranzas.get(ch.cobranza_id)
+        if (cob?.unidad_negocio_id && !mapa.has(cob.unidad_negocio_id)) mapa.set(cob.unidad_negocio_id, cob.unidad_negocio_nombre ?? '')
+      }
+      const lista = [...mapa.entries()].map(([id, nombre]) => ({ id, nombre: nombre || 'Sin nombre' }))
+      return sinUnidadesDePrueba(lista, estado.fabrica).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    }
+
+    function htmlOpcionesUnidadEndoso(s) {
+      const ops = opcionesUnidadEndoso(s).map(u => {
+        const d = deudaDeUnidad(s?.proveedor, u.id)
+        const detalle = d > 0 ? `debe ${formatearImporte(d)}` : 'sin deuda'
+        return `<option value="${esc(u.id)}">${esc(u.nombre)} · ${esc(detalle)}</option>`
+      })
+      return '<option value="">Elegí la fábrica</option>' + ops.join('')
+    }
+
+    // "Queda como deuda entre empresas": un cheque de UNA fábrica que paga la
+    // deuda de OTRA. La base lo anota (movimientos_entre_unidades) solo si el
+    // cheque tiene fábrica y es distinta. '' si no hay nada que avisar.
+    function textoEntreEmpresas(cheques, cobranzas, unidadId, nombreUnidad) {
+      if (!unidadId) return ''
+      const porAcreedora = new Map()
+      for (const ch of cheques) {
+        const cob = cobranzas.get(ch.cobranza_id)
+        const u = cob?.unidad_negocio_id
+        if (!u || u === unidadId) continue
+        const prev = porAcreedora.get(u) ?? { nombre: cob.unidad_negocio_nombre || 'otra fábrica', centavos: 0 }
+        prev.centavos += aCentavos(ch.importe)
+        porAcreedora.set(u, prev)
+      }
+      if (!porAcreedora.size) return ''
+      const deudora = nombreUnidad || 'La fábrica elegida'
+      const partes = [...porAcreedora.values()].map(a => `${formatearImporte(a.centavos / 100)} a ${a.nombre}`)
+      const uno = cheques.length === 1
+      return `${uno ? 'El cheque es de otra fábrica' : 'Hay cheques de otra fábrica'}: queda como deuda entre empresas (${deudora} le va a deber ${partes.join(' y ')}).`
+    }
+
+    function nombreUnidadEndoso(s, unidadId) {
+      return opcionesUnidadEndoso(s).find(u => u.id === unidadId)?.nombre ?? ''
+    }
+
+    // Lo que falta ANTES de llamar. Las mismas reglas de la base (proveedor,
+    // fábrica, fecha no futura) y la de la salida (no antes de la cobranza).
+    function erroresEndoso({ proveedor, unidadId, fecha, vincular }, fechaCobranza, hoy) {
+      const e = []
+      if (!puedeRegistrarPago()) e.push(TEXTO_SIN_PERMISO_ENDOSO)
+      if (!proveedor?.id) e.push('Elegí el proveedor.')
+      if (!unidadId) e.push('Elegí de qué fábrica es la deuda que se paga.')
+      // La fecha, con las MISMAS reglas que la salida (una sola copia).
+      if (!vincular) e.push(...erroresSalida({ tipo: 'depositado', fecha, destino: '' }, fechaCobranza, hoy))
+      return e
+    }
+
+    // Los parámetros tal cual viajan. Sin p_aplicaciones: reparte la base (las
+    // facturas más viejas primero). Un endoso viejo va sin fecha (null): así
+    // la base respeta la suya.
+    function parametrosEndoso(chequeId, { proveedorId, unidadId, fecha }) {
+      return { p_cheque_id: chequeId, p_proveedor_id: proveedorId, p_unidad_negocio_id: unidadId, p_fecha: fecha || null }
+    }
+
+    // Deja el diálogo sin nada del endoso anterior (se llama al abrirlo).
+    function reiniciarEndoso() {
+      const s = estado.salida
+      if (s) {
+        s.modo = s.modo ?? 'salida'
+        s.proveedor = null
+        s.unidadId = unidadDefectoEndoso(chequesDelEndoso(s), estado.cobranzas)
+        s.busqueda = ''
+        s.resultados = null
+        s.errorBusqueda = null
+        s.buscando = false
+        s.previa = null
+      }
+      clearTimeout(temporizadorBusquedaEndoso)
+      turnoBusquedaEndoso++
+      turnoPreviaEndoso++
+      document.getElementById('chq-endoso-buscar').value = ''
+    }
+
+    // Las fábricas activas, una vez (la policy de unidades_negocio deja leer a
+    // cualquiera). Si falla, las opciones salen de la deuda y de los cheques.
+    async function cargarUnidadesEndoso() {
+      if (estado.unidadesEndoso) return
+      try {
+        const { data, error } = await supabase.from('unidades_negocio').select('id, nombre').eq('activo', true)
+        if (error) throw error
+        estado.unidadesEndoso = data ?? []
+      } catch (err) {
+        console.error('No se pudieron leer las fábricas:', err)
+      }
+      pintarEndoso()
+    }
+
+    // Al elegir "Endosado".
+    function prepararEndoso() {
+      const s = estado.salida
+      if (!s || s.tipo !== 'endosado') return
+      cargarUnidadesEndoso()
+    }
+
+    // El buscador: desde 2 letras, con un turno (una respuesta vieja no pisa la
+    // nueva). Repinta SOLO los resultados, nunca el campo (no pierde el foco).
+    async function buscarProveedoresEndoso(texto) {
+      const s = estado.salida
+      if (!s) return
+      const t = String(texto ?? '').trim()
+      s.busqueda = t
+      const turno = ++turnoBusquedaEndoso
+      if (t.length < LARGO_MINIMO_BUSQUEDA) {
+        s.resultados = null; s.errorBusqueda = null; s.buscando = false
+        pintarResultadosEndoso()
+        return
+      }
+      s.buscando = true
+      pintarResultadosEndoso()
+      try {
+        const { data, error } = await supabase.rpc('proveedores_para_endoso', { p_busqueda: t })
+        if (turno !== turnoBusquedaEndoso || estado.salida !== s) return
+        if (error) throw error
+        s.sinPermisoBusqueda = data === null
+        s.resultados = Array.isArray(data) ? data : []
+        s.errorBusqueda = null
+      } catch (err) {
+        if (turno !== turnoBusquedaEndoso || estado.salida !== s) return
+        console.error('Falló proveedores_para_endoso:', err)
+        s.resultados = []
+        // El mensaje de la base, entero.
+        s.errorBusqueda = err?.message || 'No se pudieron buscar los proveedores.'
+      }
+      s.buscando = false
+      pintarResultadosEndoso()
+    }
+
+    function htmlResultadosEndoso(s) {
+      if (!s || !s.busqueda || s.busqueda.length < LARGO_MINIMO_BUSQUEDA) return ''
+      if (s.buscando) return '<div class="chq-endoso-nota">Buscando…</div>'
+      if (s.errorBusqueda) return `<div class="chq-endoso-aviso">${esc(s.errorBusqueda)}</div>`
+      if (s.sinPermisoBusqueda) return '<div class="chq-endoso-aviso">No tenés permiso para buscar proveedores: hace falta «Controlar y asentar cobranzas».</div>'
+      if (!s.resultados) return ''
+      if (!s.resultados.length) return `<div class="chq-endoso-nota">No hay proveedores que coincidan con «${esc(s.busqueda)}». Si es nuevo, dalo de alta en Cuentas corrientes.</div>`
+      return s.resultados.map(p => `
+          <button type="button" class="chq-endoso-prov" data-endoso-proveedor="${esc(p.id)}">
+            <span class="chq-endoso-prov__nombre">${esc(p.nombre ?? '—')}</span>
+            <span class="chq-endoso-prov__cuit">CUIT ${esc(p.cuit || '—')}</span>
+            <span class="chq-endoso-prov__deuda">${esc(textoDeudaProveedor(p))}</span>
+          </button>`).join('')
+    }
+
+    function pintarResultadosEndoso() {
+      document.getElementById('chq-endoso-resultados').innerHTML = htmlResultadosEndoso(estado.salida)
+    }
+
+    // Elegir un proveedor de la lista.
+    function elegirProveedorEndoso(id) {
+      const s = estado.salida
+      if (!s) return
+      const p = (s.resultados ?? []).find(x => x.id === id)
+      if (!p) return
+      s.proveedor = p
+      pintarEndoso()
+      cargarPreviaEndoso()
+    }
+
+    function cambiarProveedorEndoso() {
+      const s = estado.salida
+      if (!s) return
+      s.proveedor = null
+      s.previa = null
+      turnoPreviaEndoso++
+      pintarEndoso()
+      document.getElementById('chq-endoso-buscar').focus()
+    }
+
+    function elegirUnidadEndoso(id) {
+      const s = estado.salida
+      if (!s) return
+      s.unidadId = id || null
+      pintarEndoso()
+      cargarPreviaEndoso()
+    }
+
+    // Las facturas del proveedor en esa fábrica, para la vista previa. Solo con
+    // cuentas_corrientes:ver_todo: sin ella la lista saldría incompleta.
+    async function cargarPreviaEndoso() {
+      const s = estado.salida
+      if (!s) return
+      const turno = ++turnoPreviaEndoso
+      if (!s.proveedor || !s.unidadId) { s.previa = null; pintarPreviaEndoso(); return }
+      if (!puedeVerFacturas()) { s.previa = { facturas: null }; pintarPreviaEndoso(); return }
+      s.previa = { cargando: true }
+      pintarPreviaEndoso()
+      try {
+        const { data, error } = await supabase.from('facturas_pendientes')
+          .select('id, numero_comprobante, fecha_factura, created_at, saldo_pendiente')
+          .eq('proveedor_id', s.proveedor.id)
+          .eq('unidad_negocio_id', s.unidadId)
+          .eq('moneda', 'ARS')
+          .in('estado', ['pendiente', 'parcial'])
+        if (turno !== turnoPreviaEndoso || estado.salida !== s) return
+        if (error) throw error
+        s.previa = { facturas: data ?? [] }
+      } catch (err) {
+        if (turno !== turnoPreviaEndoso || estado.salida !== s) return
+        console.error('No se pudieron leer las facturas del proveedor:', err)
+        s.previa = { error: true }
+      }
+      pintarPreviaEndoso()
+    }
+
+    // QUÉ SE PAGA: las facturas (las más viejas primero) y lo que queda a
+    // favor, con la MISMA cuenta que la base. Sin las facturas, solo el total,
+    // con la deuda de proveedores_para_endoso, y se dice por qué.
+    function htmlPreviaEndoso(s) {
+      const p = s?.previa
+      if (!p || !s.proveedor || !s.unidadId) return ''
+      if (p.cargando) return '<div class="chq-endoso-nota">Calculando qué se paga…</div>'
+      const cheques = chequesDelEndoso(s)
+      const importes = cheques.map(ch => ch.importe)
+      const conFacturas = Array.isArray(p.facturas)
+      const facturas = conFacturas ? p.facturas
+        : [{ id: 'deuda', saldo_pendiente: deudaDeUnidad(s.proveedor, s.unidadId), fecha_factura: null }]
+      const reparto = repartoFifo(importes, facturas)
+      const aplicado = reparto.reduce((t, r) => t + aCentavos(r.aplicado), 0) / 100
+      const aFavor = reparto.reduce((t, r) => t + aCentavos(r.aFavor), 0) / 100
+      const partes = ['<div class="chq-endoso-previa__titulo">Qué se paga</div>']
+      if (p.error) partes.push('<div class="chq-endoso-aviso">No se pudieron leer las facturas: la cuenta sale de la deuda total de esa fábrica.</div>')
+      else if (!conFacturas) partes.push(`<div class="chq-endoso-nota">${esc(TEXTO_SIN_FACTURAS)}</div>`)
+      if (conFacturas) {
+        // Cada factura una vez, con lo que le pagan TODOS los cheques.
+        const porFactura = new Map()
+        for (const r of reparto) for (const a of r.aplicaciones) {
+          const prev = porFactura.get(a.factura.id) ?? { factura: a.factura, centavos: 0 }
+          prev.centavos += aCentavos(a.monto)
+          porFactura.set(a.factura.id, prev)
+        }
+        if (porFactura.size) {
+          const lineasFacturas = [...porFactura.values()].map(({ factura: f, centavos }) => {
+            const queda = aCentavos(f.saldo_pendiente) - centavos
+            const nombre = `Factura ${f.numero_comprobante || 'sin número'}${esFechaIso(f.fecha_factura) ? ` del ${formatearFechaCob(f.fecha_factura)}` : ''}`
+            const detalle = queda > 0 ? `se pagan ${formatearImporte(centavos / 100)} de ${formatearImporte(f.saldo_pendiente)}` : `se paga entera (${formatearImporte(centavos / 100)})`
+            return `<li>${esc(nombre)}: ${esc(detalle)}</li>`
+          })
+          partes.push(`<ul>${lineasFacturas.join('')}</ul>`)
+        } else {
+          partes.push('<div class="chq-endoso-nota">No tiene facturas pendientes en esa fábrica.</div>')
+        }
+      }
+      if (cheques.length > 1) {
+        const lineasCheques = reparto.map((r, i) => {
+          const texto = `Nº ${cheques[i].numero ?? '—'} (${formatearImporte(r.importe)}): paga ${formatearImporte(r.aplicado)}${r.aFavor > 0 ? ` · a favor ${formatearImporte(r.aFavor)}` : ''}`
+          return `<li>${esc(texto)}</li>`
+        })
+        partes.push(`<div class="chq-endoso-nota">Uno por uno, en este orden:</div><ul>${lineasCheques.join('')}</ul>`)
+      }
+      const total = aplicado > 0
+        ? `Paga ${formatearImporte(aplicado)} de su cuenta${aFavor > 0 ? ` y quedan ${formatearImporte(aFavor)} a favor del proveedor` : ''}.`
+        : `No hay deuda que pagar en esa fábrica: los ${formatearImporte(aFavor)} quedan a favor del proveedor.`
+      partes.push(`<div class="chq-endoso-previa__total">${esc(total)}</div>`)
+      return partes.join('')
+    }
+
+    function pintarPreviaEndoso() {
+      const el = document.getElementById('chq-endoso-previa')
+      el.innerHTML = htmlPreviaEndoso(estado.salida)
+      el.hidden = !el.innerHTML
+    }
+
+    // El bloque entero del endoso: buscador o proveedor elegido, la fábrica
+    // con su aviso, y qué se paga.
+    function pintarEndoso() {
+      const s = estado.salida
+      const bloque = document.getElementById('chq-endoso')
+      const activo = !!s && (s.tipo === 'endosado' || s.modo === 'vincular') && puedeRegistrarPago()
+      bloque.hidden = !activo
+      if (!activo) return
+      const elegido = !!s.proveedor
+      document.getElementById('chq-endoso-campo-buscar').hidden = elegido
+      document.getElementById('chq-endoso-elegido').hidden = !elegido
+      // textContent: el nombre viene de la base y no es HTML.
+      document.getElementById('chq-endoso-elegido-texto').textContent = elegido
+        ? `${s.proveedor.nombre ?? '—'}${s.proveedor.cuit ? ` · CUIT ${s.proveedor.cuit}` : ''}` : ''
+      document.getElementById('chq-endoso-campo-unidad').hidden = !elegido
+      const sel = document.getElementById('chq-endoso-unidad')
+      const aviso = document.getElementById('chq-endoso-aviso-unidad')
+      if (elegido) {
+        sel.innerHTML = htmlOpcionesUnidadEndoso(s)
+        sel.value = s.unidadId ?? ''
+        const cheques = chequesDelEndoso(s)
+        const sinFabrica = !s.unidadId
+          ? (cheques.some(ch => !estado.cobranzas.get(ch.cobranza_id)?.unidad_negocio_id)
+            ? 'El cheque no tiene fábrica: elegí de cuál es la deuda que paga.' : 'Elegí de qué fábrica es la deuda que paga.')
+          : ''
+        const texto = sinFabrica || textoEntreEmpresas(cheques, estado.cobranzas, s.unidadId, nombreUnidadEndoso(s, s.unidadId))
+        aviso.textContent = texto
+        aviso.hidden = !texto
+      } else {
+        aviso.textContent = ''
+        aviso.hidden = true
+      }
+      pintarResultadosEndoso()
+      pintarPreviaEndoso()
+    }
+
+    // "Vincular al proveedor": un cheque endosado "con texto" (de antes) pasa
+    // a pagar la cuenta del proveedor, con la MISMA función, sin fecha (la base
+    // conserva la suya). El buscador arranca con lo que se había escrito.
+    function abrirVincularProveedor(chequeId) {
+      const ch = estado.filas.find(x => x.id === chequeId)
+      if (!ch || ch.estado !== 'endosado' || ch.salida_proveedor_id) return
+      const cob = estado.cobranzas.get(ch.cobranza_id) ?? null
+      estado.salida = { modo: 'vincular', cheque: ch, cobranza: cob, tipo: 'endosado' }
+      reiniciarEndoso()
+      document.getElementById('chq-salida-titulo').textContent = 'Vincular el endoso a un proveedor'
+      const escrito = String(ch.salida_destino ?? '').trim()
+      // textContent: el destino lo tipeó una persona y no es HTML.
+      const descripcion = `N° ${ch.numero ?? '—'} · ${nombreBanco(ch.banco_codigo)} · ${formatearImporte(ch.importe)} · se anotó «${escrito || '—'}»`
+      document.getElementById('chq-salida-cheques').textContent = descripcion
+      document.getElementById('chq-endoso-buscar').value = escrito
+      pintarModalSalida()
+      document.getElementById('chq-modal-salida').hidden = false
+      cargarUnidadesEndoso()
+      if (escrito.length >= LARGO_MINIMO_BUSQUEDA) buscarProveedoresEndoso(escrito)
+    }
+
+    // Uno por uno y en orden. Para en el primero que falla.
+    async function endosarEnOrden(cheques, datos) {
+      const hechos = []
+      for (const ch of cheques) {
+        let error = null, data = null
+        try {
+          const r = await supabase.rpc('endosar_cheque_a_proveedor', parametrosEndoso(ch.id, datos))
+          error = r.error
+          data = r.data
+        } catch (e) {
+          error = e
+        }
+        if (error) return { hechos, fallo: ch, error }
+        hechos.push({ cheque: ch, resultado: data })
+      }
+      return { hechos, fallo: null, error: null }
+    }
+
+    // Lo que se dice al terminar bien.
+    function textoResultadoEndoso(hechos, proveedorNombre) {
+      const aplicado = hechos.reduce((t, h) => t + aCentavos(h.resultado?.aplicado), 0) / 100
+      const aFavor = hechos.reduce((t, h) => t + aCentavos(h.resultado?.a_favor), 0) / 100
+      const entre = hechos.some(h => h.resultado?.entre_empresas === true)
+      const quien = proveedorNombre || 'el proveedor'
+      const cabeza = hechos.length === 1 ? `Cheque endosado a ${quien}` : `Se endosaron ${hechos.length} cheques a ${quien}`
+      const paga = aplicado > 0 ? `pagó ${formatearImporte(aplicado)} de su cuenta` : 'no había deuda que pagar'
+      const favor = aFavor > 0 ? ` y quedaron ${formatearImporte(aFavor)} a favor` : ''
+      return `${cabeza}: ${paga}${favor}.${entre ? ' Queda como deuda entre empresas.' : ''}`
+    }
+
+    // Lo que se dice si uno falla: cuáles salieron y cuál no, con el mensaje
+    // de la base ENTERO.
+    function textoFalloEndoso({ hechos, fallo, error }, total) {
+      const salieron = hechos.length
+        ? `${hechos.length === 1 ? 'Salió 1' : `Salieron ${hechos.length}`}: ${hechos.map(h => `Nº ${h.cheque.numero ?? '—'}`).join(', ')}. `
+        : (total > 1 ? 'No salió ninguno. ' : '')
+      const cual = `No se pudo endosar el cheque ${fallo.banco_codigo ?? '—'} Nº ${fallo.numero ?? '—'}: ${error?.message || 'error desconocido'}`
+      const faltan = total - hechos.length - 1
+      return `${salieron}${cual}${faltan > 0 ? ` ${faltan === 1 ? 'El que sigue no se tocó.' : `Los ${faltan} que siguen no se tocaron.`}` : ''}`
+    }
+
+    async function confirmarEndoso() {
+      const s = estado.salida
+      if (!s) return
+      const vincular = s.modo === 'vincular'
+      const err = document.getElementById('chq-salida-error')
+      const cheques = chequesDelEndoso(s)
+      const fecha = vincular ? null : document.getElementById('chq-salida-fecha').value
+      const errores = erroresEndoso({ proveedor: s.proveedor, unidadId: s.unidadId, fecha, vincular }, s.cobranza?.fecha, hoyArgentina())
+      if (errores.length) {
+        err.textContent = errores.join(' ')
+        err.hidden = false
+        return
+      }
+      const btn = document.getElementById('chq-salida-confirmar')
+      btn.disabled = true
+      try {
+        const r = await endosarEnOrden(cheques, { proveedorId: s.proveedor.id, unidadId: s.unidadId, fecha })
+        if (r.fallo) {
+          console.error('Falló endosar_cheque_a_proveedor:', r.error)
+          const mensaje = textoFalloEndoso(r, cheques.length)
+          // Los que salieron ya no se reintentan: salen del diálogo y de la
+          // selección. Quedan el que falló y los que seguían.
+          if (r.hechos.length) {
+            const hechos = new Set(r.hechos.map(h => h.cheque.id))
+            if (s.lote) s.cheques = s.cheques.filter(ch => !hechos.has(ch.id))
+            for (const id of hechos) estado.seleccion.ids.delete(id)
+            await refrescarTodo()
+            cargarPreviaEndoso()
+          }
+          err.textContent = mensaje
+          err.hidden = false
+          return
+        }
+        cerrarModalSalida()
+        if (s.lote) cancelarSeleccion()
+        mostrarExito(textoResultadoEndoso(r.hechos, s.proveedor.nombre))
+        await refrescarTodo()
+      } catch (e) {
+        console.error('Falló el endoso:', e)
+        err.textContent = e?.message || 'No se pudo endosar el cheque.'
+        err.hidden = false
+      } finally {
+        btn.disabled = false
+      }
+    }
+
     // ── Volver a cartera: pide un motivo en un diálogo propio ─────────────
 
     let accionDelMotivo = null
@@ -7279,6 +7925,9 @@
     function abrirVolverACartera(chequeId) {
       const ch = estado.filas.find(x => x.id === chequeId)
       if (!ch) return
+      // Un endoso A UN PROVEEDOR no vuelve desde acá: volver_cheque_a_cartera
+      // no revierte su pago y lo dejaría sin cheque (ver accionSalida).
+      if (ch.salida_proveedor_id) return
       abrirModalMotivo({
         titulo: `Volver a cartera el cheque N° ${ch.numero ?? '—'}`,
         etiqueta: 'Por qué vuelve a cartera',
@@ -7372,8 +8021,22 @@
         if (!estado.salida) return
         estado.salida.tipo = b.dataset.salidaTipo
         pintarModalSalida()
+        prepararEndoso()
         if (!document.getElementById('chq-salida-campo-destino').hidden) document.getElementById('chq-salida-destino').focus()
+        else if (!document.getElementById('chq-endoso').hidden && !estado.salida?.proveedor) document.getElementById('chq-endoso-buscar').focus()
       }))
+      // ── Endosar a un proveedor ──
+      document.getElementById('chq-endoso-buscar').addEventListener('input', (ev) => {
+        const texto = ev.target.value
+        clearTimeout(temporizadorBusquedaEndoso)
+        temporizadorBusquedaEndoso = setTimeout(() => buscarProveedoresEndoso(texto), 300)
+      })
+      document.getElementById('chq-endoso-resultados').addEventListener('click', (ev) => {
+        const b = ev.target?.closest?.('[data-endoso-proveedor]')
+        if (b) elegirProveedorEndoso(b.dataset.endosoProveedor)
+      })
+      document.getElementById('chq-endoso-cambiar').addEventListener('click', cambiarProveedorEndoso)
+      document.getElementById('chq-endoso-unidad').addEventListener('change', (ev) => elegirUnidadEndoso(ev.target.value))
       document.getElementById('chq-salida-cancelar').addEventListener('click', cerrarModalSalida)
       document.getElementById('chq-salida-confirmar').addEventListener('click', confirmarSalida)
 
@@ -7447,7 +8110,9 @@
         const { data: tareas } = await supabase
           .from('empleado_tareas').select('modulo, tarea')
           .eq('empleado_id', estado.miEmpleadoId)
-          .eq('modulo', 'cobranzas')
+          // Las de Cuentas corrientes deciden el ENDOSO a un proveedor
+          // (registrar_pago) y si se ven sus facturas (ver_todo).
+          .in('modulo', ['cobranzas', 'cuentas_corrientes'])
           .eq('habilitado', true)
         estado.misTareas = new Set((tareas ?? []).map(t => `${t.modulo}:${t.tarea}`))
       } catch (err) {
@@ -7484,7 +8149,10 @@
       // lista no aparece un instante con los cheques de todas las unidades.
       // unidadesDeLaBarra() no falla (si la barra no pudo, dice null = Todas).
       alCambiarUnidad(alCambiarLaBarra)
-      const [eleccion] = await Promise.all([unidadesDeLaBarra().catch(() => null), cargarBancos()])
+      // La fábrica de pruebas (no frena nada: cargarFabricaDePruebas nunca
+      // tira): su deuda y su nombre no se ofrecen al endosar.
+      const [eleccion, fabrica] = await Promise.all([unidadesDeLaBarra().catch(() => null), cargarFabricaDePruebas(supabase), cargarBancos()])
+      estado.fabrica = fabrica ?? FABRICA_SIN_DATOS
       aplicarEleccionBarra(eleccion)
       await refrescarTodo()
     }

@@ -392,9 +392,16 @@ if (SOLO !== 'estatico') {
       S.estado.salida.tipo === null && doc.getElementById('chq-salida-campo-destino').hidden === true)
     chk('diálogo: el cheque se describe por textContent (no es HTML)',
       doc.getElementById('chq-salida-cheques').textContent.includes(marca('dlg_cliente')) && doc.getElementById('chq-salida-cheques').innerHTML === '')
+    // Desde el 29/09/2026 el endoso ya no guarda un texto libre: elige al
+    // proveedor y paga su cuenta (test-cheques-endoso.js). Sin
+    // «Registrar pagos a proveedores» no se ofrece y se dice por qué.
     S.estado.salida.tipo = 'endosado'; S.pintarModalSalida()
-    chk('diálogo: endosado pregunta a quién', doc.getElementById('chq-salida-label-destino').textContent === '¿A quién se lo pasaste?' &&
-      doc.getElementById('chq-salida-campo-destino').hidden === false)
+    chk('diálogo: endosado ya no pide el destino como texto', doc.getElementById('chq-salida-campo-destino').hidden === true)
+    chk('diálogo: sin registrar_pago el endoso no se ofrece y lo dice', doc.getElementById('chq-salida-nota-endoso').hidden === false &&
+      /Registrar pagos a proveedores/.test(doc.getElementById('chq-salida-nota-endoso').textContent) && doc.getElementById('chq-endoso').hidden === true)
+    S.estado.misTareas.add('cuentas_corrientes:registrar_pago'); S.pintarModalSalida()
+    chk('diálogo: con registrar_pago, endosado abre el buscador de proveedores', doc.getElementById('chq-endoso').hidden === false &&
+      doc.getElementById('chq-salida-nota-endoso').hidden === true)
     S.estado.salida.tipo = 'depositado'; S.pintarModalSalida()
     chk('diálogo: depositado pregunta en qué banco o cuenta, opcional', /banco o cuenta\? \(opcional\)/.test(doc.getElementById('chq-salida-label-destino').textContent))
   }
@@ -409,12 +416,15 @@ if (SOLO !== 'estatico') {
     esperas.push((async () => {
       S.__setRpc(async (...a) => { llamadas.push(a); return { data: null, error: null } })
       S.abrirModalSalida('z2')
-      S.estado.salida.tipo = 'endosado'
+      // El endoso va por su propio camino (test-cheques-endoso.js): acá, el depósito.
+      S.estado.salida.tipo = 'depositado'
       doc.getElementById('chq-salida-destino').value = ''
+      doc.getElementById('chq-salida-fecha').value = '2999-01-01'
       await S.confirmarSalida()
-      chk('confirmar: endosado sin destino NO llama a la base', llamadas.length === 0)
+      chk('confirmar: una fecha futura NO llama a la base', llamadas.length === 0)
       chk('confirmar: y lo dice en el diálogo', doc.getElementById('chq-salida-error').hidden === false &&
-        /a quién/.test(doc.getElementById('chq-salida-error').textContent))
+        /posterior/.test(doc.getElementById('chq-salida-error').textContent))
+      doc.getElementById('chq-salida-fecha').value = S.hoyArgentina()
       const MSG = 'Solo se puede marcar la salida de un cheque de una cobranza asentada.'
       S.__setRpc(async () => ({ data: null, error: { message: MSG } }))
       doc.getElementById('chq-salida-destino').value = 'Molino'
@@ -428,7 +438,7 @@ if (SOLO !== 'estatico') {
       const ult = llamadas[llamadas.length - 1]
       chk('confirmar: llama a marcar_salida_cheque con los parámetros exactos',
         ult && ult[0] === 'marcar_salida_cheque' && JSON.stringify(ult[1]) === JSON.stringify({
-          p_cheque_id: 'z2', p_tipo: 'endosado', p_fecha: S.hoyArgentina(), p_destino: 'Molino del Centro' }), JSON.stringify(ult))
+          p_cheque_id: 'z2', p_tipo: 'depositado', p_fecha: S.hoyArgentina(), p_destino: 'Molino del Centro' }), JSON.stringify(ult))
       chk('confirmar: al salir bien cierra el diálogo', S.estado.salida === null && doc.getElementById('chq-modal-salida').hidden === true)
       chk('confirmar: y recarga la lista, el total y los bancos', S.__llamadas.refrescar === antes + 1)
     })())

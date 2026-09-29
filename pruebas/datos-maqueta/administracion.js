@@ -73,6 +73,22 @@ module.exports = {
         "tarea": "ver_todo",
         "alcance": null,
         "habilitado": true
+      },
+      // Endosar a un proveedor (29/09/2026): registrar_pago lo habilita y
+      // ver_todo deja ver sus facturas en la vista previa.
+      {
+        "empleado_id": "emp-1",
+        "modulo": "cuentas_corrientes",
+        "tarea": "registrar_pago",
+        "alcance": null,
+        "habilitado": true
+      },
+      {
+        "empleado_id": "emp-1",
+        "modulo": "cuentas_corrientes",
+        "tarea": "ver_todo",
+        "alcance": null,
+        "habilitado": true
       }
     ],
     "unidades_negocio": [
@@ -623,6 +639,12 @@ module.exports = {
         "nombre": "Emanuel Romero"
       }
     ],
+    // Las facturas de ANATOLIA en las dos fábricas (endosar a un proveedor).
+    "facturas_pendientes": [
+      { "id": "fp-1", "proveedor_id": "pv1", "unidad_negocio_id": "u-n", "moneda": "ARS", "estado": "pendiente", "numero_comprobante": "0003-00001201", "fecha_factura": "2026-08-20", "created_at": "2026-08-21T10:00:00Z", "saldo_pendiente": 250000 },
+      { "id": "fp-2", "proveedor_id": "pv1", "unidad_negocio_id": "u-n", "moneda": "ARS", "estado": "parcial", "numero_comprobante": "0003-00001245", "fecha_factura": "2026-09-05", "created_at": "2026-09-06T10:00:00Z", "saldo_pendiente": 400000 },
+      { "id": "fp-3", "proveedor_id": "pv1", "unidad_negocio_id": "u-d", "moneda": "ARS", "estado": "pendiente", "numero_comprobante": "0003-00001300", "fecha_factura": "2026-09-12", "created_at": "2026-09-13T10:00:00Z", "saldo_pendiente": 90000 }
+    ],
     "proveedores": [
       {
         "id": "pv1",
@@ -850,6 +872,29 @@ module.exports = {
         "fecha_emision": "2026-08-25",
         "fecha_pago": null
       },
+      // Endosado A UN PROVEEDOR (29/09/2026): pagó su cuenta corriente.
+      {
+        "sucursal_codigo": "123",
+        "codigo_postal": "5000",
+        "dv_ruta": 0,
+        "dv_numero": 0,
+        "cuenta": "00012345678",
+        "dv_cuenta": 0,
+        "salida_fecha": "2026-09-22",
+        "salida_destino": "ANATOLIA SRL",
+        "salida_proveedor_id": "pv1",
+        "salida_por": "emp-1",
+        "salida_registrada_en": "2026-09-22T12:00:00Z",
+        "id": "chq-6",
+        "cobranza_id": "cob-1",
+        "banco_codigo": "285",
+        "numero": "68435161",
+        "estado": "endosado",
+        "importe": 550000,
+        "tipo": "comun",
+        "fecha_emision": "2026-09-10",
+        "fecha_pago": null
+      },
       {
         "id": "chk-a1",
         "cobranza_id": "a1111111-1111-4111-8111-111111111111",
@@ -918,6 +963,12 @@ module.exports = {
     ]
   },
   "rpc": {
+    // Endosar a un proveedor (29/09/2026): el buscador, con la deuda por fábrica.
+    "proveedores_para_endoso": [
+      { "id": "pv1", "nombre": "ANATOLIA SRL", "cuit": "30712345678", "deuda": [{ "unidad_id": "u-n", "unidad": "Cucuruchos Nuss", "pendiente": 650000 }, { "unidad_id": "u-d", "unidad": "Dolce Pasta", "pendiente": 90000 }] },
+      { "id": "pv2", "nombre": "FERPLAST S.R.L.", "cuit": "30708959320", "deuda": [] }
+    ],
+    "endosar_cheque_a_proveedor": { "gasto_id": "g-maqueta", "aplicado": 387300.5, "a_favor": 0, "entre_empresas": false },
     // Retiros por revisar (28/09/2026): renglones que salieron sin estar en stock.
     "retiros_por_revisar": [
       { "item_id": "it-1", "orden_id": "o1", "codigo": "N-0042", "fecha": "2026-09-27", "cliente": "Distribuidora Anatolia", "que": "Cucurucho Mini · Caja x 600 · LOLO", "pedidas": 42, "faltante": 5, "unidad": "cajas", "cargada_por": "Emanuel Romero" },
