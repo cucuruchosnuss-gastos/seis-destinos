@@ -49,7 +49,7 @@ correrMutacionesProduccion({
     { nombre: 'la barra se ve en "¿Quién sos?"', de: "const PANTALLAS_SIN_BARRA = ['pr-quien', 'pr-inicio'", a: "const PANTALLAS_SIN_BARRA = ['pr-inicio'" },
     { nombre: 'la barra se ve sin nadie adentro', de: '      return enModoTablet() && !!estado.persona && !PANTALLAS_SIN_BARRA', a: '      return enModoTablet() && !PANTALLAS_SIN_BARRA' },
     { nombre: 'la página no se corre con la barra', de: "      document.body?.classList?.toggle('pr-con-lateral', ver)", a: "      document.body?.classList?.toggle('pr-con-lateral', false)" },
-    { nombre: 'las secciones de máquina no se apagan sin máquina', de: '        const off = sec.deMaquina && !hay', a: '        const off = false' },
+    { nombre: "las secciones de máquina no se apagan sin máquina", de: "        const off = (sec.deMaquina && !hay) || (sec.id", a: "        const off = (false) || (sec.id" },
     { nombre: 'la sección activa no se marca', de: "${sec.id === activa ? ' aria-current=\"page\"' : ''}", a: '' },
     { nombre: 'la parada en curso no se dice en la barra', de: '      const parada = hay && !!paradaEnCurso(estado.planilla.paradas)', a: '      const parada = false' },
     { nombre: 'la máquina parada de la sala no va en bordó', de: "${e.parada ? ' pr-lat__item--parada' : ''}", a: '' },

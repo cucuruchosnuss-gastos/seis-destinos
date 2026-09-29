@@ -34,7 +34,9 @@ const BASES = [...bloque.matchAll(/'([0-9a-f]{7,})'/g)].map(m => m[1])
 const RENOMBRADOS = [...fuenteChequeo.matchAll(/\['(control:[^']+)', '(control:[^']+)',/g)].map(m => [m[1], m[2]])
 
 // Commits de la gestión ya cerrados: lo que tenían tiene que seguir estando.
-const BASES_GESTION = ['f7554f7', 'e211129'] // Planta y gestión, parte 1; el diseño "Producción · Gestión"
+// e33da8c: la gestión justo antes del diseño "Producción · Configuración"
+// (29/09/2026): todo lo que tenía sigue, o está en RETIRADOS con su motivo.
+const BASES_GESTION = ['f7554f7', 'e211129', 'e33da8c'] // Planta y gestión, parte 1; el diseño "Producción · Gestión"; antes de Configuración
 
 // Controles de la gestión RETIRADOS a propósito: [clave, motivo]. Uno que
 // sigue estando en el archivo pone la prueba en rojo (la declaración sobra),
@@ -46,6 +48,7 @@ const RETIRADOS = [
   ['control:button#pr-btn-ir-stock[type=button]', 'Diseño "Producción · Gestión" (26/09/2026): la grilla "Ir a" se fue; el stock terminado es el renglón #pr-menu-stock del menú'],
   ['control:button[data-config-tab][type=button]', 'Diseño "Producción · Gestión" (26/09/2026): no hay fila de pestañas en Configuración; cada sección es un renglón del menú (data-ir-config) y la pantalla dice cuál es en su título'],
   ['control:button[data-marca-activa][type=button]', 'Diseño "Producción · Gestión" (26/09/2026): el botón Activar/Desactivar de cada cono pasó a ser el interruptor "Activo" (input[data-marca-activo], role=switch), que se guarda al tocarlo'],
+  ['control:select[data-receta-maquina]', 'Diseño "Producción · Configuración" (29/09/2026): en Recetas la máquina se elige en la LISTA de la izquierda (button[data-cfg-sel]), como en las otras secciones con lista | detalle'],
 ]
 
 let ok = 0

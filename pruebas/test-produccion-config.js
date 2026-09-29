@@ -1,6 +1,7 @@
 // B6 del módulo Producción (22/09/2026), rehecha con el rediseño parte 5
-// (23/09/2026): la configuración, por unidad. Es la ÚNICA pantalla del módulo
-// que se usa en la compu.
+// (23/09/2026) y con el diseño "Producción · Configuración" (29/09/2026: el
+// segmentado de secciones y la lista | detalle; las reglas y las RPCs no
+// cambiaron, así que lo que se prueba acá es lo mismo, en la pantalla nueva).
 //
 // Contrato con la base (pg_get_functiondef, 23/09/2026):
 //  - guardar_maquina(p_id, p_unidad_negocio_id, p_nombre, p_activa, p_orden):
@@ -105,11 +106,23 @@ esperas.push((async () => {
   const M = armar()
   M.__tablas.maquinas = [{ id: 'm1', nombre: 'Máquina 1', activa: true, orden: 1 }, { id: 'm2', nombre: 'Máquina 2', activa: true, orden: 2 }, { id: 'm3', nombre: 'Vieja', activa: false, orden: 3 }]
   await M.mostrarConfig()
+  chk('sin pedir una sección abre en Productos, la primera del diseño', M.estado.config.tab === 'productos')
+  await M.mostrarConfig('maquinas')
   chk('abre en Máquinas, de la unidad de configurar', M.estado.config.tab === 'maquinas' && M.estado.config.unidadId === 'u-cn')
   chk('lee todas las máquinas de la unidad (también las inactivas)', M.__llamadas.consultas.some(([t, f]) => t === 'maquinas' && JSON.stringify(f).includes('["eq","unidad_negocio_id","u-cn"]') && !JSON.stringify(f).includes('["eq","activa"')))
-  const hm = cuerpo(M)
-  chk('cada máquina con renombrar, subir, bajar y activar/desactivar', (hm.match(/data-maq-guardar=/g) || []).length === 3 && /data-maq-activa="m3">Activar/.test(hm) && /data-maq-activa="m1">Desactivar/.test(hm))
-  chk('la primera no sube y la última no baja', /data-maq-subir="0"[^>]*disabled/.test(hm) && /data-maq-bajar="2"[^>]*disabled/.test(hm))
+  let hm = cuerpo(M)
+  chk('la lista tiene las tres máquinas, la apagada al 50 % y con su pastilla', (hm.match(/data-cfg-sel=/g) || []).length === 3 &&
+    /pc-fila pc-fila--off" data-cfg-sel="m3"[\s\S]{0,400}Apagada/.test(hm) && /data-cfg-sel="m1"[\s\S]{0,400}Orden 1/.test(hm))
+  chk('el detalle de la elegida: renombrar, subir, bajar y el interruptor Activa',
+    /data-maq-editar="m1"/.test(hm) && /data-maq-subir="0"/.test(hm) && /data-maq-bajar="0"/.test(hm) && /aria-checked="true"[^>]*data-maq-activa="m1"/.test(hm))
+  chk('la primera no sube', /data-maq-subir="0"[^>]*disabled/.test(hm) && !/data-maq-bajar="0"[^>]*disabled/.test(hm))
+  M.elegirEnLista('m3')
+  hm = cuerpo(M)
+  chk('… y la última no baja; la apagada tiene el interruptor apagado', /data-maq-bajar="2"[^>]*disabled/.test(hm) && /aria-checked="false"[^>]*data-maq-activa="m3"/.test(hm))
+  M.accionMaquina({ maqEditar: 'm3' })
+  chk('"Editar nombre" abre el campo y el botón de guardar el nombre', /data-maq-nombre="m3" value="Vieja"/.test(cuerpo(M)) && /data-maq-guardar="m3"/.test(cuerpo(M)))
+  M.accionMaquina({ maqEditarCancelar: '1' })
+  M.elegirEnLista('m1')
   const lista = M.estado.config.datos.maquinas
   const cambios = M.ordenTrasMover(lista, 2, -1)
   chk('subir la tercera: cambian SOLO la 2 y la 3', cambios.length === 2 && cambios.find(x => x.id === 'm3').orden === 2 && cambios.find(x => x.id === 'm2').orden === 3)
@@ -118,9 +131,11 @@ esperas.push((async () => {
   const gm = rpcs(M, 'guardar_maquina')
   chk('reordenar llama a guardar_maquina por cada una que cambia, con su nombre y estado', gm.length === 2 &&
     JSON.stringify(gm.find(p => p.p_id === 'm3')) === JSON.stringify({ p_id: 'm3', p_unidad_negocio_id: 'u-cn', p_nombre: 'Vieja', p_activa: false, p_orden: 2 }))
+  M.estado.config.alta = true   // "+ Nueva" abre el alta arriba de la lista
   M.__doc.getElementById('pr-config-maq-nueva').value = '  Máquina 3 '
   await M.accionMaquina({ maqAgregar: '1' })
   chk('agregar: nueva, activa, al final', JSON.stringify(rpcs(M, 'guardar_maquina').at(-1)) === JSON.stringify({ p_id: null, p_unidad_negocio_id: 'u-cn', p_nombre: 'Máquina 3', p_activa: true, p_orden: 4 }))
+  M.estado.config.alta = true
   M.__doc.getElementById('pr-config-maq-nueva').value = '   '
   const antes = rpcs(M, 'guardar_maquina').length
   await M.accionMaquina({ maqAgregar: '1' })
@@ -137,23 +152,31 @@ esperas.push((async () => {
   await M.accionMaquina({ maqGuardar: 'm1' })
   chk('renombrar: el nombre nuevo recortado', rpcs(M, 'guardar_maquina').at(-1).p_nombre === 'Horno A' && rpcs(M, 'guardar_maquina').at(-1).p_activa === true)
 
-  // ── Las secciones (antes pestañas; desde el 26/09/2026, renglones del menú) ─
+  // ── Las secciones: renglones del menú y, desde el 29/09/2026, el segmentado ─
   const T = armar()
   const menu = leer(ARCHIVO).slice(leer(ARCHIVO).indexOf('<nav class="pg-menu"'), leer(ARCHIVO).indexOf('</nav>'))
-  chk('las siete secciones del diseño, cada una un renglón del menú',
-    ['maquinas', 'recetas', 'ingredientes', 'productos', 'empaque', 'marcas', 'personal'].every(k => menu.includes(`data-ir-config="${k}"`)) &&
-    ['Máquinas', 'Recetas', 'Ingredientes', 'Productos', 'Empaque', 'Marcas / Conos', 'Personal y PINes'].every(x => menu.includes(x)))
-  chk('no queda ninguna fila de pestañas', !leer(ARCHIVO).includes('data-config-tab') && !leer(ARCHIVO).includes('id="pr-config-tabs"'))
+  chk('las seis secciones, cada una un renglón del menú (el Empaque ya no va solo: está en Productos)',
+    ['maquinas', 'recetas', 'ingredientes', 'productos', 'marcas', 'personal'].every(k => menu.includes(`data-ir-config="${k}"`)) &&
+    !menu.includes('data-ir-config="empaque"') &&
+    ['Máquinas', 'Recetas', 'Ingredientes', 'Productos y empaque', 'Marcas / Conos', 'Personal y PINes'].every(x => menu.includes(x)))
+  chk('la fila vieja de pestañas no volvió (data-config-tab), y el segmentado es otro', !leer(ARCHIVO).includes('data-config-tab') && !leer(ARCHIVO).includes('id="pr-config-tabs"') && leer(ARCHIVO).includes('id="pr-config-secciones"'))
   await T.mostrarConfig('marcas')
-  chk('mostrarConfig abre la sección pedida, y el título dice cuál es', T.estado.config.tab === 'marcas' && T.__doc.getElementById('pr-config-titulo').textContent === 'Marcas / Conos')
+  chk('mostrarConfig abre la sección pedida, y el título dice cuál es', T.estado.config.tab === 'marcas' && T.__doc.getElementById('pr-config-titulo').textContent === 'Conos')
+  const seg = T.htmlSeccionesConfig(T.estado.config)
+  chk('el segmentado tiene las seis, en el orden del diseño, con la elegida marcada',
+    ['productos', 'maquinas', 'recetas', 'ingredientes', 'marcas', 'personal'].map(k => seg.indexOf(`data-config-seccion="${k}"`)).every((x, i, a) => x >= 0 && (i === 0 || x > a[i - 1])) &&
+    /pc-tab pc-tab--on" data-config-seccion="marcas" aria-pressed="true">Conos/.test(seg))
   await T.mostrarConfig('no-existe')
   chk('una sección que no existe no se inventa', T.estado.config.tab === 'marcas')
+  await T.mostrarConfig('empaque')
+  chk('el Empaque (que era una sección) lleva a Productos', T.estado.config.tab === 'productos')
   // El número de conos por revisar va en el renglón del menú y sale de
   // mis_pendientes() (la misma cifra del dashboard), nunca de un conteo propio.
   const nConos = T.__doc.getElementById('pr-menu-n-conos')
   T.estado.conosPendientes = 1
   T.pintarBurbujaConos()
   chk('Marcas / Conos lleva el número de pendientes', nConos.hidden === false && nConos.textContent === '1')
+  chk('… y la burbuja de Conos del segmentado, la misma cifra', /data-config-seccion="marcas"[^>]*>Conos<span class="pc-tab__n"[^>]*>1</.test(T.htmlSeccionesConfig(T.estado.config)))
   T.estado.conosPendientes = null
   T.pintarBurbujaConos()
   chk('sin poder contar, no se dibuja ningún número (nunca uno inventado)', nConos.hidden === true && nConos.textContent === '')
@@ -164,10 +187,10 @@ esperas.push((async () => {
   // ── Recetas ───────────────────────────────────────────────────────────
   const R = armar()
   Object.assign(R.__tablas, {
-    maquinas: [{ id: 'm1', nombre: 'Máquina 1' }],
-    recetas: [{ id: 'r2', tipo_masa: 'Común', version: 2, nota: 'Menos azúcar', creada_por: 'e-fede', created_at: '2026-09-20T15:00:00Z' },
-      { id: 'r1', tipo_masa: 'Común', version: 1, nota: 'Cargada desde la receta por defecto del prototipo v7: revisar', creada_por: null, created_at: '2026-09-01T15:00:00Z' },
-      { id: 'rc', tipo_masa: 'Chocolate', version: 1, nota: 'Cargada desde la receta por defecto del prototipo v7: revisar', creada_por: null, created_at: '2026-09-01T15:00:00Z' }],
+    maquinas: [{ id: 'm1', nombre: 'Máquina 1', activa: true, orden: 1 }],
+    recetas: [{ id: 'r2', maquina_id: 'm1', tipo_masa: 'Común', version: 2, nota: 'Menos azúcar', creada_por: 'e-fede', created_at: '2026-09-20T15:00:00Z' },
+      { id: 'r1', maquina_id: 'm1', tipo_masa: 'Común', version: 1, nota: 'Cargada desde la receta por defecto del prototipo v7: revisar', creada_por: null, created_at: '2026-09-01T15:00:00Z' },
+      { id: 'rc', maquina_id: 'm1', tipo_masa: 'Chocolate', version: 1, nota: 'Cargada desde la receta por defecto del prototipo v7: revisar', creada_por: null, created_at: '2026-09-01T15:00:00Z' }],
     receta_items: [{ receta_id: 'r2', ingrediente_id: 'i-harina', cantidad_kg: 25, insumo_preferido_id: 'ins-h1' }, { receta_id: 'r2', ingrediente_id: 'i-cacao', cantidad_kg: 0, insumo_preferido_id: null },
       { receta_id: 'rc', ingrediente_id: 'i-harina', cantidad_kg: 24, insumo_preferido_id: null }, { receta_id: 'rc', ingrediente_id: 'i-cacao', cantidad_kg: 1.5, insumo_preferido_id: null }],
     ingredientes: [{ id: 'i-harina', nombre: 'Harina', descuenta_stock: true, orden: 1, activo: true }, { id: 'i-cacao', nombre: 'Cacao', descuenta_stock: true, orden: 2, activo: true },
@@ -188,12 +211,17 @@ esperas.push((async () => {
   R.pintarPestanaConfig()
   hr = cuerpo(R)
   chk('una versión revisada ya no muestra el aviso', !/Revisar: esta receta vino del prototipo/.test(hr))
-  chk('las tres columnas del diseño: recetas, editor e historial', /class="pr-cfg-recetas"/.test(hr))
-  chk('muestra las versiones con autor, fecha y nota', /Versión 2 · vigente<\/strong> · 20\/09\/2026 · Federico Silva/.test(hr) && /Versión 1<\/strong> · 01\/09\/2026 · —/.test(hr), hr.slice(hr.indexOf('Versiones'), hr.indexOf('Versiones') + 320))
-  chk('la vigente se marca en el historial', /pr-cfg-version pr-cfg-version--vigente/.test(hr))
+  chk('las tres columnas del diseño: la lista de máquinas, la receta y el historial', /class="pc-lista"/.test(hr) && /class="pc-rec__cuerpo"/.test(hr) && /HISTORIAL DE VERSIONES/.test(hr))
+  chk('muestra las versiones con fecha y autor', /v2<\/span><span class="pc-vigente">Vigente<\/span><span class="pc-hist__cuando">20\/09\/2026[\s\S]{0,200}pc-hist__quien">Federico Silva/.test(hr) &&
+    /v1<\/span><span class="pc-hist__cuando">01\/09\/2026[\s\S]{0,200}pc-hist__quien">—/.test(hr), hr.slice(hr.indexOf('HISTORIAL'), hr.indexOf('HISTORIAL') + 600))
+  chk('… qué cambió en cada una, y el motivo de la que se mira', /Harina 24,00 → 25,00/.test(hr) === false && /Primera versión/.test(hr) && /Motivo: “Menos azúcar”/.test(hr))
+  chk('la vigente se marca en el historial', /pc-hist__v pc-hist__v--vig/.test(hr))
+  chk('sin editar no hay campos: la receta vigente se MIRA (tabla con el total)', !/data-receta-kg=/.test(hr) && /Total de la masa/.test(hr) && /25,00 kg/.test(hr))
+  await R.accionReceta({ recetaNueva: '1' })
+  hr = cuerpo(R)
   chk('el botón dice qué versión va a crear', /id="pr-cfg-receta-guardar"[^>]*>Guardar versión 3</.test(hr), hr.slice(hr.indexOf('pr-cfg-receta-guardar') - 40, hr.indexOf('pr-cfg-receta-guardar') + 90))
   chk('próximaVersion: la vigente + 1, y 1 si no hay ninguna', R.proximaVersion(d.recetas, 'Común') === 3 && R.proximaVersion(d.recetas, 'Frutilla') === 1)
-  chk('la nota dice que es obligatoria', /pr-obligatorio">· obligatoria/.test(hr))
+  chk('la nota (el motivo) dice que es obligatoria', /pr-obligatorio">· obligatorio/.test(hr))
   chk('las cantidades van por data-numero (se ponen con ponerNumero, no con value=)', /data-receta-kg="i-harina" data-numero="25"/.test(hr) && !/data-receta-kg="i-harina"[^>]*value=/.test(hr))
   chk('el editor tiene solo los ingredientes activos', !/data-receta-kg="i-baja"/.test(hr))
   chk('el insumo preferido, con los insumos del ingrediente', /data-receta-pref="i-harina"/.test(hr) && /value="ins-h1" selected/.test(hr) && !/data-receta-pref="i-cacao"/.test(hr))
@@ -228,6 +256,7 @@ esperas.push((async () => {
   chk('… y ese error va pegado al botón de guardar la versión', R.estado.config.error.donde === 'pr-cfg-receta-guardar' && /pr-cfg-error[\s\S]{0,300}id="pr-cfg-receta-guardar"/.test(cuerpo(R)))
   R.__doc.getElementById('pr-config-receta-nota').value = 'Probamos 500 g más'
   await R.guardarReceta()
+  chk('guardar cierra la edición: vuelve a la receta vigente', R.estado.config.recetaEditando === false)
   const gr = rpcs(R, 'guardar_receta_original')
   chk('guardar: la receta de la máquina y el tipo, leída del formulario', gr.length === 1 && gr[0].p_maquina_id === 'm1' && gr[0].p_tipo_masa === 'Común' &&
     JSON.stringify(gr[0].p_items) === '[{"ingrediente_id":"i-harina","cantidad_kg":25.5,"insumo_preferido_id":"ins-h1"}]', JSON.stringify(gr[0]))
@@ -256,8 +285,12 @@ esperas.push((async () => {
   I.estado.config.tab = 'ingredientes'
   await I.cargarPestanaConfig()
   const hi = cuerpo(I)
-  chk('aviso bordó con los que no tienen insumo (grasa y fécula; el agua no descuenta)', /pr-aviso--grave">No descuentan stock porque no tienen ningún insumo del catálogo: Grasa, Fécula\./.test(hi))
-  chk('cada ingrediente dice sus insumos', /Insumos: Harina 000 · Jupiter/.test(hi) && /Insumos: ninguno/.test(hi))
+  chk('aviso bordó arriba de la lista con los que no llevan lote (grasa y fécula; el agua no descuenta)', /pc-lista__aviso[\s\S]{0,400}2 ingredientes no llevan lote/.test(hi) &&
+    I.ingredientesSinInsumo(I.estado.config.datos).map(g => g.nombre).join(',') === 'Grasa,Fécula')
+  chk('… en la lista: "No lleva lote" en bordó a los dos, y el Agua "A propósito" en gris',
+    /data-cfg-sel="i-grasa"[\s\S]{0,300}pc-chip--grave">No lleva lote/.test(hi) && /data-cfg-sel="i-fecula"[\s\S]{0,300}pc-chip--grave">No lleva lote/.test(hi) &&
+    /data-cfg-sel="i-agua"[\s\S]{0,300}pc-chip--gris">A propósito/.test(hi))
+  chk('cada ingrediente dice sus insumos', /data-cfg-sel="i-harina"[\s\S]{0,300}1 insumo conectado/.test(hi) && /data-cfg-sel="i-grasa"[\s\S]{0,300}Ningún insumo/.test(hi) && /Harina 000 · Jupiter/.test(hi))
   await I.accionIngrediente({ ingInsumos: 'i-grasa' })
   chk('elegir insumos: abre la lista del catálogo', /data-ing-insumo="ins-g"/.test(cuerpo(I)))
   I.estado.config.insumosElegidos.add('ins-g')
@@ -266,9 +299,11 @@ esperas.push((async () => {
   conInputs(I, [input({ 'data-ing-nombre': 'i-grasa' }, { value: 'Grasa vacuna' }), input({ 'data-ing-descuenta': 'i-grasa' }, { checked: false }), input({ 'data-ing-activo': 'i-grasa' }, { checked: false })])
   await I.accionIngrediente({ ingGuardar: 'i-grasa' })
   chk('guardar un ingrediente: nombre, descuenta, orden y activo del formulario', JSON.stringify(rpcs(I, 'guardar_ingrediente')[0]) === JSON.stringify({ p_id: 'i-grasa', p_nombre: 'Grasa vacuna', p_descuenta_stock: false, p_orden: 2, p_activo: false }), JSON.stringify(rpcs(I, 'guardar_ingrediente')[0]))
+  I.estado.config.alta = true
   I.__doc.getElementById('pr-config-ing-nuevo').value = 'Colorante'
   await I.accionIngrediente({ ingAgregar: '1' })
   chk('agregar un ingrediente: descuenta por defecto, al final', JSON.stringify(rpcs(I, 'guardar_ingrediente').at(-1)) === JSON.stringify({ p_id: null, p_nombre: 'Colorante', p_descuenta_stock: true, p_orden: 4, p_activo: true }))
+  I.estado.config.alta = true
   I.__doc.getElementById('pr-config-ing-nuevo').value = '  '
   await I.accionIngrediente({ ingAgregar: '1' })
   chk('el error de ingredientes va pegado a su botón', I.estado.config.error.donde === 'pr-cfg-ing-agregar' && /pr-cfg-error[\s\S]{0,200}id="pr-cfg-ing-agregar"/.test(cuerpo(I)))
@@ -286,13 +321,17 @@ esperas.push((async () => {
   let hp = cuerpo(P)
   chk('aviso: los productos vinieron del prototipo', /vinieron del prototipo/.test(hp))
   chk('dice que cambiar las unidades por caja no toca lo producido', /no toca lo ya producido/.test(hp))
-  chk('unidades por caja por data-numero, entera', /data-pres-unidades="pr1" data-numero="600" data-decimales="0"/.test(hp))
   chk('los de chocolate van ABAJO y separados, como en la carga',
-    hp.indexOf('data-prod-nombre="p1"') < hp.indexOf('pr-ag__corte-texto">Chocolate') && hp.indexOf('pr-ag__corte-texto">Chocolate') < hp.indexOf('data-prod-nombre="p2"'))
+    hp.indexOf('>COMUNES<') >= 0 && hp.indexOf('>COMUNES<') < hp.indexOf('data-cfg-sel="p1"') && hp.indexOf('data-cfg-sel="p1"') < hp.indexOf('>DE CHOCOLATE<') && hp.indexOf('>DE CHOCOLATE<') < hp.indexOf('data-cfg-sel="p2"'))
+  P.estado.config.empAbierto = 'pr1'
+  P.estado.config.presDatos = 'pr1'
+  P.pintarPestanaConfig()
+  hp = cuerpo(P)
+  chk('unidades por caja por data-numero, entera (en el editor de la presentación)', /data-pres-unidades="pr1" data-numero="600" data-decimales="0"/.test(hp))
   chk('… y lo decide el tipo de masa, no el nombre', P.esProductoChocolate({ tipo_masa: 'Chocolate' }) === true && P.esProductoChocolate({ nombre: 'Mini chocolate', tipo_masa: 'Común' }) === false)
   P.__tablas.productos_terminados = [{ id: 'p1', nombre: 'Cucuruchón Mini', tipo_masa: 'Común', activo: true, orden: 1 }]
   await P.cargarPestanaConfig()
-  chk('sin productos de chocolate no se dibuja la línea', !/pr-ag__corte-texto/.test(cuerpo(P)))
+  chk('sin productos de chocolate no se dibuja su grupo', !/DE CHOCOLATE/.test(cuerpo(P)))
   await P.accionProducto({ productosRevisados: '1' })
   chk('"Ya los revisé" lo guarda en la tablet y lo saca', P.localStorage.getItem('produccion.aviso-productos-revisado') === '1' && !/vinieron del prototipo/.test(cuerpo(P)))
   conInputs(P, [input({ 'data-pres-unidades': 'pr1' }, { value: '0' })])
@@ -306,6 +345,7 @@ esperas.push((async () => {
   chk('guardar una presentación: todo lo del formulario (empaque vacío → null)', JSON.stringify(rpcs(P, 'guardar_presentacion')[0]) === JSON.stringify({
     p_id: 'pr1', p_producto_id: 'p1', p_nombre: 'Caja x480', p_con_cono: true, p_media_caja: true, p_empaque: null, p_unidades_por_caja: 480, p_activa: true, p_orden: 1 }), JSON.stringify(rpcs(P, 'guardar_presentacion')[0]))
   chk('guardar_producto: tipo vacío → null', P.parametrosGuardarProducto({ id: 'p1', nombre: 'X', tipo_masa: 'Común', activo: true, orden: 1 }, 'u-cn', { tipo_masa: '  ' }).p_tipo_masa === null)
+  P.estado.config.alta = true
   P.__doc.getElementById('pr-config-prod-nuevo').value = 'Cucuruchón Grande'
   await P.accionProducto({ prodAgregar: '1' })
   chk('agregar un producto: en la unidad, activo, al final', JSON.stringify(rpcs(P, 'guardar_producto').at(-1)) === JSON.stringify({ p_id: null, p_unidad_negocio_id: 'u-cn', p_nombre: 'Cucuruchón Grande', p_tipo_masa: null, p_activo: true, p_orden: 2 }))
@@ -323,12 +363,22 @@ esperas.push((async () => {
   K.estado.config.tab = 'marcas'
   await K.cargarPestanaConfig()
   let hk = cuerpo(K)
-  chk('los pendientes de revisar van ARRIBA de la lista de conos', hk.indexOf('Por revisar · 1</p>') >= 0 && hk.indexOf('Por revisar · 1</p>') < hk.indexOf('id="pr-cfg-marcas-lista"'))
-  chk('cada pendiente dice quién lo cargó y cuándo', /Lo cargó Laura Méndez en la tablet · 22\/09\/2026 16:40/.test(hk), hk.slice(hk.indexOf('Lo cargó') - 20, hk.indexOf('Lo cargó') + 80))
+  chk('los pendientes de revisar van ARRIBA de la lista de conos', hk.indexOf('POR REVISAR · 1</div>') >= 0 && hk.indexOf('POR REVISAR · 1</div>') < hk.indexOf('id="pr-cfg-marcas-lista"'))
+  chk('cada pendiente dice quién lo cargó y cuándo', /lo cargó Laura Méndez en la tablet, 22\/09\/2026 16:40/.test(hk), hk.slice(hk.indexOf('lo cargó') - 20, hk.indexOf('lo cargó') + 80))
   chk('el nombre del pendiente se puede corregir antes de aceptar', /data-pend-nombre="mk3" value="CASERATO 2"/.test(hk))
   chk('con Aceptar y Rechazar', /data-pend-no="mk3">Rechazar/.test(hk) && /data-pend-si="mk3">Aceptar/.test(hk))
   chk('dice que se pueden usar igual mientras tanto', /Se pueden usar igual mientras tanto/.test(hk))
-  chk('la lista de conos no lista ni los pendientes ni los rechazados', !/>CASERATO 2</.test(hk.slice(hk.indexOf('id="pr-cfg-marcas-lista"'))) && !/NO VA/.test(hk))
+  // Diseño 5a: "Todos" es TODO el catálogo (Activos + Apagados + Por revisar),
+  // con el estado de cada uno; los rechazados cuentan como apagados.
+  const tablaK = (h) => h.slice(h.indexOf('id="pr-cfg-marcas-lista"'))
+  chk('arranca en "Todos", y la tabla muestra también los por revisar y los rechazados, con su estado',
+    K.estado.config.filtroConos === 'todos' && /CASERATO 2<\/div>[\s\S]{0,600}pc-chip--naranja">Por revisar/.test(tablaK(hk)) && /NO VA<\/div>[\s\S]{0,600}pc-chip--grave">Rechazado/.test(tablaK(hk)))
+  chk('las cuentas del segmentado: Todos 4 · Activos 1 · Apagados 2 · Por revisar 1',
+    /data-conos-filtro="todos"[^>]*>Todos<span class="pc-seg__n">4</.test(hk) && /data-conos-filtro="activos"[^>]*>Activos<span class="pc-seg__n">1</.test(hk) &&
+    /data-conos-filtro="apagados"[^>]*>Apagados<span class="pc-seg__n">2</.test(hk) && /data-conos-filtro="revisar"[^>]*>Por revisar<span class="pc-seg__n">1</.test(hk))
+  K.elegirFiltroConos('activos')
+  chk('"Activos" no lista ni los pendientes ni los rechazados ni los apagados', !/CASERATO 2</.test(tablaK(cuerpo(K))) && !/NO VA/.test(tablaK(cuerpo(K))) && !/GRIDO/.test(tablaK(cuerpo(K))) && /FRIGOR/.test(tablaK(cuerpo(K))))
+  K.elegirFiltroConos('todos')
   chk('marcasPendientes y marcasDelCatalogo separan por estado_alta',
     K.marcasPendientes(K.estado.config.datos).length === 1 && K.marcasDelCatalogo(K.estado.config.datos).length === 2)
   conInputs(K, [input({ 'data-pend-nombre': 'mk3' }, { value: ' Caserato 2 ' })])
@@ -346,9 +396,10 @@ esperas.push((async () => {
     /No se pudo aceptar: No tenés permiso[\s\S]{0,400}data-pend-si="mk3"/.test(cuerpo(K)))
   K.__setRpc(async () => ({ data: 'x', error: null }))
   K.estado.config.busqueda = 'frí'
+  K.estado.config.listaConos = null   // lo mismo que hace el buscador al escribir
   K.pintarPestanaConfig()
   hk = cuerpo(K)
-  chk('el buscador filtra el catálogo (sin acentos ni mayúsculas)', /FRIGOR/.test(hk) && !/GRIDO/.test(hk))
+  chk('el buscador filtra el catálogo (sin acentos ni mayúsculas) y resalta lo que coincide', /<mark class="pc-hl">FRI<\/mark>GOR/.test(hk) && !/GRIDO/.test(hk))
   // Apagar un cono es el interruptor "Activo", que se guarda al tocarlo.
   await K.tocarCono('mk1', 'activa', false)
   chk('dar de baja una marca: activa=false con su nombre', JSON.stringify(rpcs(K, 'guardar_marca')[0]) === '{"p_id":"mk1","p_nombre":"FRIGOR","p_activa":false}')
@@ -365,10 +416,10 @@ esperas.push((async () => {
   chk('… que arranca sin contar filas', /id="pr-cfg-personal-guardar"[^>]*>Guardar los cambios</.test(he))
   // Diseño 3a: PIN propio en verde, pendiente de cambiar en gris y Sin PIN
   // en bordó (es lo que hay que resolver). El texto va siempre.
-  chk('el estado del PIN de cada persona', /pr-cfg-chip--ok">PIN propio/.test(he) && /pr-cfg-chip--alerta">Sin PIN/.test(he) && /pr-cfg-chip--gris">PIN pendiente de cambiar/.test(he))
-  chk('… y el PIN que vence se dice aparte', /pr-cfg-chip--gris">temporal/.test(he))
+  chk('el estado del PIN de cada persona (verde, bordó y gris, con el texto)', /pc-chip--ok pr-cfg-chip--ok">PIN propio/.test(he) && /pc-chip--grave pr-cfg-chip--alerta">Sin PIN/.test(he) && /pc-chip--gris pr-cfg-chip--gris">Por cambiar/.test(he))
+  chk('… y el PIN que vence se dice aparte', /pc-chip--gris">temporal/.test(he))
   chk('estadoDelPin sale de personal_produccion, sin inventar "bloqueado"',
-    E.estadoDelPin({ tiene_pin: false }).texto === 'Sin PIN' && E.estadoDelPin({ tiene_pin: true, debe_cambiar_pin: true }).texto === 'PIN pendiente de cambiar' &&
+    E.estadoDelPin({ tiene_pin: false }).texto === 'Sin PIN' && E.estadoDelPin({ tiene_pin: true, debe_cambiar_pin: true }).texto === 'Por cambiar' &&
     E.estadoDelPin({ tiene_pin: true }).texto === 'PIN propio' && !he.includes('Bloqueado'))
   E.estado.config.todoElPersonal = true
   E.pintarPestanaConfig()
@@ -378,7 +429,7 @@ esperas.push((async () => {
   E.tocarPuestoPersonal('e1', 'masero', true)
   he = cuerpo(E)
   chk('tocar una casilla no manda nada todavía', rpcs(E, 'guardar_puestos').length === 0)
-  chk('… la fila queda marcada (franja, fondo y la palabra)', /pr-cfg-fila--tocada[\s\S]{0,1600}Cambiada/.test(he) && E.estado.config.cambios.get('e1').join(',') === 'encargado,masero')
+  chk('… la fila queda marcada (franja, fondo y la palabra)', /pr-cfg-fila--tocada"><strong class="pc-per__nombre">Federico Silva<\/strong>(?:(?!pc-per__fila)[\s\S])*Cambiada<\/span><\/div>/.test(he) && E.estado.config.cambios.get('e1').join(',') === 'encargado,masero')
   chk('… y el botón dice cuántas filas se tocaron', /id="pr-cfg-personal-guardar"[^>]*>Guardar los cambios · 1 fila</.test(he))
   E.tocarPuestoPersonal('e1', 'masero', false)
   chk('destildar y volver al estado de la base deja de contar como cambio', E.estado.config.cambios.size === 0 && /Guardar los cambios<\/button>/.test(cuerpo(E)))
@@ -489,7 +540,7 @@ esperas.push((async () => {
   // ── Accesos temporales ────────────────────────────────────────────────
   const X2 = await personal(armar())
   let hx = cuerpo(X2)
-  chk('los temporales VIGENTES, con quién los dio y hasta cuándo', /Prestado<\/strong> · masero/.test(hx) && /Lo dio Federico Silva · hasta/.test(hx))
+  chk('los temporales VIGENTES, con quién los dio y hasta cuándo', /Prestado<\/strong> · masero/.test(hx) && /lo dio Federico Silva · hasta/.test(hx))
   chk('… y uno vencido no aparece', !/Mariela Soto<\/strong> · encargado/.test(hx))
   chk('temporalVigente mira la fecha, no la sola falta de revocación',
     X2.temporalVigente({ hasta: EN_UN_ANIO }) === true && X2.temporalVigente({ hasta: AYER }) === false && X2.temporalVigente({ hasta: null }) === false)
@@ -521,20 +572,33 @@ esperas.push((async () => {
   // ── HTML malicioso ────────────────────────────────────────────────────
   const X = armar()
   X.estado.config = { unidadId: 'u-cn', tab: 'maquinas', busqueda: marca('busqueda'), recetaMaquina: marca('maqId'), recetaTipo: marca('tipo'), cambios: new Map(), error: null }
-  X.estado.config.datos = { maquinas: [{ id: marca('maqId'), nombre: marca('maqNombre'), activa: true, orden: 1 }] }
-  chequearMarcas(chk, 'máquinas', X.htmlConfigMaquinas(X.estado.config), ['maqId', 'maqNombre'])
+  X.estado.config.datos = { maquinas: [{ id: marca('maqId'), nombre: marca('maqNombre'), activa: true, orden: 1 }],
+    recetas: [{ id: 'r', maquina_id: marca('maqId'), tipo_masa: marca('tipo'), version: 1, nota: marca('nota'), creada_por: 'e', created_at: null }],
+    items: [{ receta_id: 'r', ingrediente_id: marca('ingId'), cantidad_kg: 2 }], nombres: new Map([['e', marca('autor')]]),
+    ingredientes: [{ id: marca('ingId'), nombre: marca('ingNombre'), descuenta_stock: true, activo: true }], relaciones: [], insumos: [],
+    productos: [{ id: 'p', nombre: marca('prodNombre'), tipo_masa: marca('tipo'), activo: true }] }
+  chequearMarcas(chk, 'máquinas', X.htmlConfigMaquinas(X.estado.config), ['maqId', 'maqNombre', 'tipo', 'ingNombre', 'autor', 'prodNombre'])
+  X.estado.config.maqEditando = marca('maqId')
+  chequearMarcas(chk, 'máquina con el nombre en edición', X.htmlConfigMaquinas(X.estado.config), ['maqId', 'maqNombre'])
+  X.estado.config.maqEditando = null
   X.estado.config.datos = {
-    maquinas: [{ id: marca('maqId'), nombre: marca('maqNombre') }], tipos: [marca('tipo')],
-    recetas: [{ id: 'r', tipo_masa: marca('tipo'), version: marca('version'), nota: marca('nota'), creada_por: 'e', created_at: null }],
+    maquinas: [{ id: marca('maqId'), nombre: marca('maqNombre') }], tipos: [marca('tipo'), 'Otro'],
+    recetas: [{ id: 'r', maquina_id: marca('maqId'), tipo_masa: marca('tipo'), version: marca('version'), nota: marca('nota'), creada_por: 'e', created_at: null }],
     items: [{ receta_id: 'r', ingrediente_id: marca('ingId'), cantidad_kg: marca('kg'), insumo_preferido_id: marca('insId') }],
-    ingredientes: [{ id: marca('ingId'), nombre: marca('ingNombre'), activo: true }], nombres: new Map([['e', marca('autor')]]),
+    ingredientes: [{ id: marca('ingId'), nombre: marca('ingNombre'), descuenta_stock: true, activo: true }], nombres: new Map([['e', marca('autor')]]),
     relaciones: [{ ingrediente_id: marca('ingId'), insumo_id: marca('insId') }], insumos: [{ id: marca('insId'), nombre: marca('insNombre'), marca: marca('insMarca') }],
   }
-  chequearMarcas(chk, 'recetas', X.htmlConfigRecetas(X.estado.config), ['maqId', 'maqNombre', 'tipo', 'version', 'nota', 'ingId', 'ingNombre', 'insId', 'insNombre', 'insMarca', 'autor'])
+  X.estado.config.datos.todas = X.estado.config.datos.recetas
+  chequearMarcas(chk, 'recetas', X.htmlConfigRecetas(X.estado.config), ['maqId', 'maqNombre', 'tipo', 'version', 'nota', 'ingNombre', 'insNombre', 'insMarca', 'autor'])
+  X.estado.config.recetaEditando = true
+  chequearMarcas(chk, 'receta en edición', X.htmlConfigRecetas(X.estado.config), ['maqNombre', 'tipo', 'ingId', 'ingNombre', 'insId', 'insNombre', 'insMarca'])
   chk('una cantidad que no es número no llega cruda (pasa por Number)', !/data-numero="[^"]*data-xss/.test(X.htmlConfigRecetas(X.estado.config)))
   X.estado.config.recetaTipo = X.NUEVO_TIPO
   chequearMarcas(chk, 'receta nueva', X.htmlConfigRecetas(X.estado.config), ['tipo'])
-  X.estado.config.datos = { ingredientes: [{ id: marca('ingId'), nombre: marca('ingNombre'), descuenta_stock: true, activo: true }], relaciones: [], insumos: [{ id: marca('insId'), nombre: marca('insNombre'), marca: marca('insMarca') }] }
+  X.estado.config.datos = { ingredientes: [{ id: marca('ingId'), nombre: marca('ingNombre'), descuenta_stock: true, activo: true }], relaciones: [], insumos: [{ id: marca('insId'), nombre: marca('insNombre'), marca: marca('insMarca') }],
+    maquinas: [], recetas: [], items: [] }
+  X.estado.config.sel = {}
+  X.estado.config.tab = 'ingredientes'
   X.estado.config.ingredienteAbierto = marca('ingId')
   X.estado.config.busqueda = ''
   X.estado.config.insumosElegidos = new Set()
@@ -542,8 +606,17 @@ esperas.push((async () => {
   X.estado.config.busqueda = marca('busqueda')
   chequearMarcas(chk, 'buscador de insumos', X.htmlConfigIngredientes(X.estado.config), ['busqueda'])
   X.estado.config.datos = { productos: [{ id: marca('prodId'), nombre: marca('prodNombre'), tipo_masa: marca('prodTipo'), activo: true }],
-    presentaciones: [{ id: marca('presId'), producto_id: marca('prodId'), nombre: marca('presNombre'), empaque: marca('empaque'), unidades_por_caja: marca('upc'), activa: true }] }
-  chequearMarcas(chk, 'productos', X.htmlConfigProductos(X.estado.config), ['prodId', 'prodNombre', 'prodTipo', 'presId', 'presNombre', 'empaque', 'upc'])
+    presentaciones: [{ id: marca('presId'), producto_id: marca('prodId'), nombre: marca('presNombre'), empaque: marca('empaque'), unidades_por_caja: marca('upc'), activa: true }],
+    cajas: [], empaque: [], insumos: [], borradores: new Map(), cajaPredeterminada: null }
+  X.estado.config.sel = {}
+  X.estado.config.tab = 'productos'
+  chequearMarcas(chk, 'productos', X.htmlConfigProductos(X.estado.config), ['prodId', 'prodNombre', 'prodTipo', 'presId', 'presNombre', 'upc'])
+  X.estado.config.empAbierto = marca('presId')
+  X.estado.config.presDatos = marca('presId')
+  X.estado.config.prodEditando = marca('prodId')
+  chequearMarcas(chk, 'producto en edición, con el editor de su presentación', X.htmlConfigProductos(X.estado.config), ['prodId', 'prodNombre', 'prodTipo', 'presId', 'presNombre', 'empaque', 'upc'])
+  X.estado.config.empAbierto = null
+  X.estado.config.prodEditando = null
   X.estado.config.datos = { marcas: [{ id: marca('marcaId'), nombre: marca('marcaNombre'), activa: true, estado_alta: 'aprobada' },
     { id: marca('pendId'), nombre: marca('pendNombre'), activa: false, estado_alta: 'pendiente_revision', creada_por: 'e', creada_en: null }],
     nombres: new Map([['e', marca('quien')]]) }

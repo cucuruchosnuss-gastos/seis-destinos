@@ -390,9 +390,12 @@ esperas.push((async () => {
 {
   chk('la gestión no tiene nada de la tablet', !/id="pr-barra"|id="pr-quien"|id="pr-planilla"|id="pr-sala"|id="pr-receta"/.test(FUENTE))
   chk('"‹ Volver" al inicio de la app, arriba', /<a href="\.\.\/dashboard\.html" class="pr-header__volver" id="pr-gestion-volver"/.test(FUENTE))
-  for (const tab of ['maquinas', 'personal', 'recetas', 'ingredientes', 'productos', 'empaque', 'marcas']) {
+  for (const tab of ['maquinas', 'personal', 'recetas', 'ingredientes', 'productos', 'marcas']) {
     chk(`un renglón del menú para Configuración → ${tab}`, new RegExp(`data-ir-config="${tab}"`).test(FUENTE))
   }
+  // Desde el diseño de Configuración (29/09/2026) el empaque se edita en
+  // Productos: no tiene renglón propio.
+  chk('el Empaque no tiene renglón propio (está en Productos)', !/data-ir-config="empaque"/.test(FUENTE) && /data-ir-config="productos"[^>]*><span class="pg-menu__txt">Productos y empaque</.test(FUENTE))
   chk('un renglón para las planillas pendientes, con su número', /data-ir-pendientes id="pr-btn-ir-pendientes"[^>]*>[^]*?id="pr-menu-n-pendientes"/.test(FUENTE))
   chk('los renglones de configuración, solo con configurar', /for \(const b of document\.querySelectorAll\('\[data-ir-config\]'\)\) b\.hidden = !tieneTarea\('configurar'\)/.test(FUENTE))
   chk('no hay fila de pestañas ni grilla "Ir a"', !/id="pr-config-tabs"|data-config-tab|id="pr-oficina"/.test(FUENTE))
