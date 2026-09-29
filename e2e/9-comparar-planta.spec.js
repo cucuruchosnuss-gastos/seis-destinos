@@ -29,7 +29,7 @@ const SALIDA = path.join(__dirname, 'resultados', 'comparar');
 // su motivo y su propio tope, así siguen vigiladas). Como RETIRADOS en los
 // controles: una diferencia sin explicación es indistinguible de una rotura.
 const DESVIOS = {
-  '5c': { tope: 0.45, motivo: 'el color de cada cono sale de su NOMBRE (así un cono no cambia de color cuando cambia el orden de "los más usados"); el diseño los pinta por posición. Además la app suma el chip "Común" (cono sin marca), que el diseño no dibuja.' },
+  '5c': { tope: 0.45, motivo: 'el color de cada cono sale de su ID, de una paleta de ocho colores cálidos (así un cono no cambia de color cuando cambia el orden de "los más usados"); el diseño los pinta por posición y en lavandas. Además la app suma el chip "Común" (cono sin marca), que el diseño no dibuja.' },
 };
 
 for (const [ancho, alto] of [[1000, 540], [600, 940]]) {

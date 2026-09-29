@@ -5558,7 +5558,7 @@
         ? htmlNombreProducto(prod, d.producto)
         : `<span class="pr-prod-nombre">${cat ? 'Un producto que ya no está en el catálogo' : 'Producto'}</span>`
       const cono = !d ? ''
-        : (d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común') : (d.conConoEnProducto ? '<span class="pr-fp__sin">sin cono</span>' : ''))
+        : (d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común', it.marca_id) : (d.conConoEnProducto ? '<span class="pr-fp__sin">sin cono</span>' : ''))
       // "Caja y bolsa": la caja de empaque (o el envase de la presentación) y
       // el embolsado en palabras.
       const envase = caja || (d ? envasePresentacion(d.pr, d.producto) : '')
@@ -6823,7 +6823,22 @@
     }
     const COLOR_CHOCO = { mini: 'oklch(0.44 0.07 55)', chico: 'oklch(0.38 0.06 50)', standard: 'oklch(0.5 0.08 60)', grande: 'oklch(0.42 0.07 52)' }
     const TONOS_NOMBRE = [95, 145, 50, 300, 170, 20, 115, 330]
-    const TONOS_CONO = [20, 150, 300, 70, 340, 120, 30, 280]
+    // Los conos (29/09/2026, pedido de Facu): OCHO colores cálidos bien
+    // distintos entre sí y sin azules (ni lavandas). Cada cono toma el suyo por
+    // su ID, así no cambia de color si se lo renombra ni cuando cambia el orden
+    // de "los más usados". bg el fondo, fg la letra, bd el borde.
+    const PALETA_CONO = [
+      { nombre: 'rojo',     bg: 'oklch(0.87 0.08 28)',   fg: 'oklch(0.42 0.15 28)',  bd: 'oklch(0.76 0.12 28)' },
+      { nombre: 'naranja',  bg: 'oklch(0.9 0.1 62)',     fg: 'oklch(0.47 0.13 55)',  bd: 'oklch(0.79 0.13 62)' },
+      { nombre: 'amarillo', bg: 'oklch(0.95 0.11 98)',   fg: 'oklch(0.46 0.1 90)',   bd: 'oklch(0.85 0.14 98)' },
+      { nombre: 'oliva',    bg: 'oklch(0.9 0.08 118)',   fg: 'oklch(0.41 0.09 120)', bd: 'oklch(0.78 0.1 118)' },
+      { nombre: 'verde',    bg: 'oklch(0.89 0.08 155)',  fg: 'oklch(0.4 0.1 155)',   bd: 'oklch(0.77 0.1 155)' },
+      { nombre: 'marron',   bg: 'oklch(0.83 0.045 60)',  fg: 'oklch(0.34 0.06 55)',  bd: 'oklch(0.7 0.06 60)' },
+      { nombre: 'rosa',     bg: 'oklch(0.94 0.05 355)',  fg: 'oklch(0.48 0.15 355)', bd: 'oklch(0.83 0.1 355)' },
+      { nombre: 'ciruela',  bg: 'oklch(0.85 0.07 330)',  fg: 'oklch(0.36 0.12 330)', bd: 'oklch(0.73 0.1 330)' },
+    ]
+    // El cono común (sin marca, id null): un gris cálido, fuera de los ocho.
+    const COLOR_CONO_COMUN = { nombre: 'comun', bg: '#F1EEE9', fg: '#3D3831', bd: '#D6CFC4' }
 
     function indiceDeNombre(nombre, n) {
       let h = 0
@@ -6842,9 +6857,9 @@
       return { choco: false, c: `oklch(0.66 0.14 ${h})`, dk: `oklch(0.43 0.112 ${h})`, t: `oklch(0.95 0.045 ${h})` }
     }
 
-    function colorCono(nombre) {
-      const h = TONOS_CONO[indiceDeNombre(nombre ?? '', TONOS_CONO.length)]
-      return { bg: `oklch(0.92 0.07 ${h})`, fg: `oklch(0.35 0.1 ${h})`, bd: `oklch(0.82 0.1 ${h})` }
+    function colorCono(id) {
+      if (id == null || id === '') return COLOR_CONO_COMUN
+      return PALETA_CONO[indiceDeNombre(String(id), PALETA_CONO.length)]
     }
 
     // El nombre del producto con su color: un cuadradito del color y el nombre
@@ -6856,8 +6871,8 @@
         : `<span class="pr-prod-color" style="background: ${col.c}"></span><span class="pr-prod-nombre" style="color: ${col.dk}">${esc(nombre)}</span>`
     }
 
-    function htmlChipCono(nombre) {
-      const col = colorCono(nombre)
+    function htmlChipCono(nombre, id) {
+      const col = colorCono(id)
       return `<span class="pr-cono-chip" style="background: ${col.bg}; color: ${col.fg}">${esc(nombre)}</span>`
     }
 
@@ -7012,7 +7027,7 @@
         ? `<button type="button" class="pr-cono pr-cono--comun" data-marca="" aria-pressed="${conCono && !elegida ? 'true' : 'false'}">Común<span class="pr-cono__nota">con cono, sin marca</span></button>`
         : ''
       const botones = lista.map(m => {
-        const col = colorCono(m.nombre)
+        const col = colorCono(m.id)
         const notas = (anterior && anterior.marcaId === m.id ? `<span class="pr-cono__nota">el de ${esc(anterior.sublote)}</span>` : '') +
           (m.estado_alta === 'pendiente_revision' ? '<span class="pr-cono__pendiente">nuevo, a revisar</span>' : '')
         return `<button type="button" class="pr-cono" data-marca="${esc(m.id)}" aria-pressed="${conCono && m.id === elegida ? 'true' : 'false'}" style="background: ${col.bg}; color: ${col.fg}; border-color: ${col.bd}">` +
