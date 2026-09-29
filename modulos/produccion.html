@@ -890,6 +890,11 @@
     .pr-ag__producto--choco { color: #fff; padding: 6px 12px; }
     .pr-ag__producto--choco .pr-ag__familia { font-size: 13px; opacity: 0.9; }
     .pr-ag__producto--choco .pr-ag__tamano { font-size: var(--p-choco-fs); }
+    /* Chocolate con color elegido: la marca marrón queda igual (borde y la
+       palabra), porque avisa que lleva masa de chocolate. */
+    .pr-ag__producto--choco-elegido { border-color: var(--p-choco); }
+    .pr-ag__producto--choco-elegido .pr-ag__familia--choco { align-self: flex-start; background: var(--p-choco); color: #fff; border-radius: 6px; padding: 1px 7px; font-size: 12.5px; font-weight: 800; }
+    .pr-ag__producto--choco-elegido .pr-ag__tamano { font-size: var(--p-choco-fs); }
     .pr-ag__aviso-choco { flex-shrink: 0; background: var(--p-mal-suave); border: 1.5px solid var(--p-mal-borde); border-radius: 14px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--p-mal); }
     .pr-ag__aviso-textos { flex: 1; min-width: 220px; display: flex; flex-direction: column; color: var(--p-mal-txt); font-size: 14px; line-height: 1.35; }
     .pr-ag__aviso-textos strong { font-size: 16px; font-weight: 800; }
@@ -976,6 +981,7 @@
     .pr-receta__chips { display: flex; gap: 6px; flex-shrink: 0; }
     .pr-chip-modificada { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-mal-suave); color: var(--p-mal); font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; }
     .pr-chip-choco { height: 30px; padding: 0 9px; border-radius: 7px; background: var(--p-choco); color: #fff; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; }
+    .pr-chip-choco--prod { height: 22px; font-size: 11.5px; padding: 0 6px; flex-shrink: 0; }
     .pr-receta__motivo-campo { flex: 1; min-width: 0; height: 40px; border-radius: 10px; border: 2px solid var(--p-acento); background: #fff; display: flex; align-items: center; gap: 6px; padding: 0 10px; }
     .pr-receta__motivo-rotulo { font-size: 15px; font-weight: 700; color: var(--p-gris); }
     .pr-receta__motivo-campo input { flex: 1; min-width: 0; border: 0; outline: none; font-size: 15px; background: transparent; }
@@ -6863,14 +6869,19 @@
       return h % n
     }
 
-    // { choco, c, dk, t }: c el color del producto, dk el de su letra, t el
-    // tinte suave. Texto de CSS armado por el código: nunca viene de la base.
+    // { choco, elegido, c, dk, t }: c el color del producto, dk el de su
+    // letra, t el tinte suave. Texto de CSS armado por el código: nunca viene
+    // de la base. `choco` dice SIEMPRE si el producto es de chocolate, aunque
+    // tenga un color elegido: la marca de chocolate no es decoración, avisa
+    // que lleva masa de chocolate (29/09/2026). Con color elegido, `elegido`
+    // va en true y la etiqueta toma ese color; la marca marrón se dibuja
+    // aparte (borde y la palabra "Chocolate").
     function colorProducto(p) {
       const elegido = Object.prototype.hasOwnProperty.call(COLORES_ELEGIBLES, p?.color ?? '') ? COLORES_ELEGIBLES[p.color] : null
       if (elegido) {
         const [L, C, H] = elegido.lch
         const r = (n) => Math.round(n * 1000) / 1000
-        return { choco: false, c: `oklch(${L} ${C} ${H})`, dk: `oklch(${r(Math.min(L, 0.5) - 0.06)} ${r(C * 0.8)} ${H})`, t: `oklch(0.955 ${(C * 0.3).toFixed(3)} ${H})` }
+        return { choco: esProductoChocolate(p ?? {}), elegido: true, c: `oklch(${L} ${C} ${H})`, dk: `oklch(${r(Math.min(L, 0.5) - 0.06)} ${r(C * 0.8)} ${H})`, t: `oklch(0.955 ${(C * 0.3).toFixed(3)} ${H})` }
       }
       const tamano = normalizarBusqueda(partesNombreProducto(p?.nombre).tamano).split(' ')[0] ?? ''
       const propio = (o) => Object.prototype.hasOwnProperty.call(o, tamano) ? o[tamano] : null
@@ -6889,9 +6900,11 @@
     // en el tono oscuro; el de chocolate, en su pastilla marrón.
     function htmlNombreProducto(p, nombre) {
       const col = colorProducto(p)
-      return col.choco
-        ? `<span class="pr-prod-nombre pr-prod-nombre--choco" style="background: ${col.c}">${esc(nombre)}</span>`
-        : `<span class="pr-prod-color" style="background: ${col.c}"></span><span class="pr-prod-nombre" style="color: ${col.dk}">${esc(nombre)}</span>`
+      if (col.choco && !col.elegido) return `<span class="pr-prod-nombre pr-prod-nombre--choco" style="background: ${col.c}">${esc(nombre)}</span>`
+      // Con color elegido el nombre va en ese color, y la marca de chocolate
+      // queda igual: la pastilla marrón con la palabra, al lado.
+      return `<span class="pr-prod-color" style="background: ${col.c}"></span><span class="pr-prod-nombre" style="color: ${col.dk}">${esc(nombre)}</span>` +
+        (col.choco ? '<span class="pr-chip-choco pr-chip-choco--prod">Chocolate</span>' : '')
     }
 
     function htmlChipCono(nombre, id) {
@@ -6918,9 +6931,16 @@
         const { familia, tamano } = partesNombreProducto(p.nombre)
         const col = colorProducto(p)
         const elegido = a?.productoId === p.id
-        if (col.choco) {
+        if (col.choco && !col.elegido) {
           return `<button type="button" class="pr-ag__producto pr-ag__producto--choco" data-ag-producto="${esc(p.id)}" aria-pressed="${elegido ? 'true' : 'false'}" style="background: ${col.c}">` +
             `<span class="pr-ag__familia">Chocolate</span><span class="pr-ag__tamano">${esc(tamano)}</span></button>`
+        }
+        if (col.choco) {
+          // Chocolate con color elegido: la etiqueta en su color, con el
+          // borde marrón y la palabra "Chocolate" en su pastilla.
+          return `<button type="button" class="pr-ag__producto pr-ag__producto--choco-elegido" data-ag-producto="${esc(p.id)}" aria-pressed="${elegido ? 'true' : 'false'}" style="background: ${col.t}; color: ${col.dk}">` +
+            `<span class="pr-ag__muestra" style="background: ${col.c}"></span>` +
+            `<span class="pr-ag__familia pr-ag__familia--choco">Chocolate</span><span class="pr-ag__tamano">${esc(tamano)}</span></button>`
         }
         return `<button type="button" class="pr-ag__producto" data-ag-producto="${esc(p.id)}" aria-pressed="${elegido ? 'true' : 'false'}" style="background: ${col.t}; color: ${col.dk}">` +
           `<span class="pr-ag__muestra" style="background: ${col.c}"></span>` +
@@ -6973,14 +6993,14 @@
           '<div class="pr-aviso pr-aviso--grave">No hay presentaciones para eso. Se cargan en Configuración → Productos.</div>'
       }
       const col = colorProducto(prod ?? {})
-      const caja = col.choco ? { c: col.c, t: col.t } : col
+      const caja = col.choco && !col.elegido ? { c: col.c, t: col.t } : col
       return '<h2 class="pr-ag__pregunta">¿Qué presentación?</h2><div class="pr-ag__presentaciones">' +
         pres.map(pr => {
           const alto = pr.media_caja ? 44 : 84
           return `<button type="button" class="pr-ag__presentacion" data-ag-presentacion="${esc(pr.id)}" aria-pressed="${pr.id === a.presentacionId ? 'true' : 'false'}">` +
             `<span class="pr-ag__caja-dibujo"><span style="height: ${alto}px; border-color: ${caja.c}; background: ${caja.t}"></span></span>` +
             `<span class="pr-ag__pres-textos"><span class="pr-ag__pres-nombre">${esc(mayusculaInicial(envasePresentacion(pr, prod?.nombre ?? '')))}</span>` +
-            `<span class="pr-ag__pres-u" style="color: ${col.choco ? col.c : col.dk}">${esc(formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 }))}</span>` +
+            `<span class="pr-ag__pres-u" style="color: ${col.choco && !col.elegido ? col.c : col.dk}">${esc(formatearNumeroAr(pr.unidades_por_caja, { decimales: 0 }))}</span>` +
             '<span class="pr-ag__pres-nota">unidades por caja</span></span></button>'
         }).join('') + '</div>'
     }

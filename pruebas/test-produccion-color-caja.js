@@ -69,7 +69,7 @@ esperas.push((async () => {
   const pl = P.colorProducto({ ...grande, color: 'violeta' })
   chk('con color elegido, manda el elegido (planta)', pl.c === 'oklch(0.52 0.15 300)' && pl.choco === false)
   chk('la planta usa la misma fórmula que la gestión para el tono', JSON.stringify({ c: pl.c, dk: pl.dk, t: pl.t }) === JSON.stringify(G.colorDeProducto({ ...grande, color: 'violeta' })))
-  chk('un chocolate con color elegido también lo toma (sin la pastilla marrón)', P.colorProducto({ nombre: 'Mini Chocolate', tipo_masa: 'Chocolate', color: 'rosa' }).c === 'oklch(0.66 0.13 350)')
+  chk('un chocolate con color elegido también lo toma (y sigue marcado chocolate)', P.colorProducto({ nombre: 'Mini Chocolate', tipo_masa: 'Chocolate', color: 'rosa' }).c === 'oklch(0.66 0.13 350)' && P.colorProducto({ nombre: 'Mini Chocolate', tipo_masa: 'Chocolate', color: 'rosa' }).choco === true)
   chk('en la planta, sin color sale del nombre como antes', P.colorProducto({ ...grande, color: null }).c === P.colorProducto(grande).c)
 
   // ── El selector de color en el detalle del producto ───────────────────
