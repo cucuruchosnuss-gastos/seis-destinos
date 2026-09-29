@@ -94,8 +94,8 @@ module.exports = {
       }
     ],
     "clientes": [
-      // Un cliente APAGADO (28/09/2026): no está en clientes_con_saldo, se ve
-      // con "Mostrar apagados".
+      // Un cliente APAGADO (28/09/2026): se ve con "Mostrar apagados"
+      // (clientes_con_saldo con p_incluir_apagados, 29/09/2026).
       { "id": "c-apagado", "unidad_negocio_id": "u-n", "nombre": "Kiosco Cerrado", "razon_social": null, "apodos": [], "cuit": null,
         "localidad": "Río Cuarto", "telefono": null, "observaciones": null, "activo": false, "codigo_anterior": 55, "limite_credito": null, "proveedor_id": null },
       {
@@ -1178,7 +1178,9 @@ module.exports = {
         "saldo": 126000,
         "ultimo_movimiento": "2026-09-20",
         "retiros_mes": 3,
-        "es_tambien_proveedor": true
+        "es_tambien_proveedor": true,
+        "activo": true,
+        "codigo_anterior": 101
       },
       {
         "cliente_id": "c2",
@@ -1188,9 +1190,16 @@ module.exports = {
         "lista": null,
         "saldo": 0,
         "retiros_mes": 0,
-        "es_tambien_proveedor": false
-      }
+        "es_tambien_proveedor": false,
+        "activo": true,
+        "codigo_anterior": null
+      },
+      // El apagado (29/09/2026): la maqueta contesta lo mismo con y sin
+      // p_incluir_apagados; la pantalla separa por 'activo'.
+      { "cliente_id": "c-apagado", "nombre": "Kiosco Cerrado", "razon_social": null, "cuit": null, "lista": "Mayoristas", "saldo": 749.5,
+        "ultimo_movimiento": "2026-08-30", "retiros_mes": 1, "es_tambien_proveedor": false, "activo": false, "codigo_anterior": 55 }
     ],
+    "cambiar_activo_cliente": null,
     "cuenta_cliente": [
       {
         "fecha": "2026-09-01",

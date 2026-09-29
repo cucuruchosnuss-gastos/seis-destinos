@@ -12,8 +12,8 @@ test.use({ viewport: { width: 1280, height: 800 } });
 async function marcarPin(page, pin) {
   const teclado = page.locator('#pr-pin-teclado');
   await expect(teclado).toBeVisible();
+  // Planta v2: sin tecla "Entrar", con el último número se manda solo.
   for (const d of pin) await teclado.locator(`[data-tecla="${d}"]`).click();
-  await teclado.locator('[data-tecla="entrar"]').click();
 }
 
 async function elegirPersona(page, nombre) {
@@ -58,21 +58,22 @@ test.describe('planta', () => {
       await captura(page, 'quien-sos-encargado', info);
       await marcarPin(page, PIN_ENCARGADO);
       await expect(page.locator('#pr-barra')).toContainText('Robot Encargado');
-      await expect(page.locator('#pr-btn-abrir-turno')).toBeVisible();
+      await expect(page.locator('#pr-barra [data-seccion="abrir"]')).toBeVisible();
       await captura(page, 'tablero-vacio', info);
     });
 
     let lote;
     await test.step('abrir turno en la Máquina robot con un operario', async () => {
-      await page.locator('#pr-btn-abrir-turno').click();
+      // Planta v2: "Abrir turno" es una sección de la barra; cada máquina es
+      // un chip y sus operarios se eligen en la tarjeta de al lado.
+      await page.locator('#pr-barra [data-seccion="abrir"]').click();
       await expect(page.locator('#pr-abrir')).toBeVisible();
       await page.locator('#pr-abrir-turnos [data-turno="Mañana"]').click();
-      const fila = page.locator('.pr-abrir-fila', { hasText: 'Máquina robot' });
-      await fila.locator('[data-abrir-maquina]').check();
-      // (28/09/2026) Los operarios son etiquetas chicas, todas a la vista:
-      // se tocan para elegir.
-      await fila.locator('[data-toggle-op]', { hasText: 'Robot Masero' }).click();
-      await expect(fila.locator('[data-toggle-op][aria-pressed="true"]', { hasText: 'Robot Masero' })).toBeVisible();
+      const maquina = page.locator('#pr-abrir [data-abrir-maquina]', { hasText: 'Máquina robot' });
+      if ((await maquina.getAttribute('aria-pressed')) !== 'true') await maquina.click();
+      const ops = page.locator('#pr-abrir .pr-abrir-ops');
+      await ops.locator('[data-toggle-op]', { hasText: 'Robot Masero' }).click();
+      await expect(ops.locator('[data-toggle-op][aria-pressed="true"]', { hasText: 'Robot Masero' })).toBeVisible();
       await captura(page, 'abrir-turno', info);
       await page.locator('#pr-abrir-confirmar').click();
       await expect(page.locator('#pr-abiertos')).toBeVisible();
@@ -98,7 +99,7 @@ test.describe('planta', () => {
       await expect(page.locator('#pr-barra')).toContainText('Robot Masero');
       // Con una sola máquina abierta lleva derecho a su masa nueva (4b).
       await expect(page.locator('#pr-receta')).toBeVisible();
-      await expect(page.locator('#pr-receta-cambiar')).toContainText('Máquina robot');
+      await expect(page.locator('#pr-cab')).toContainText('Máquina robot');
       await captura(page, 'sala', info);
     });
 
@@ -151,11 +152,13 @@ test.describe('planta', () => {
     });
 
     await test.step('cargar lo producido con su caja', async () => {
-      // Tocar la máquina la elige y lleva derecho a Lo producido.
+      // Tocar la máquina la elige y lleva a su planilla; "+ Agregar producto".
       await page.locator('#pr-tablero [data-producido]', { hasText: 'Máquina robot' }).click();
+      await expect(page.locator('#pr-planilla')).toBeVisible();
+      await page.locator('#pr-btn-agregar-producto').click();
       await expect(page.locator('#pr-agregar-prod')).toBeVisible();
       await page.locator('[data-ag-producto]', { hasText: 'Cucuruchón Mini' }).click();
-      await page.locator('[data-ag-cono="0"]').click();
+      await page.locator('#pr-agregar-sin-cono').click();
       const pres = page.locator('[data-ag-presentacion]').first();
       if (await pres.isVisible().catch(() => false)) await pres.click();
       // Tocar una caja la elige y pasa sola a las cajas; sin cajas
@@ -169,7 +172,7 @@ test.describe('planta', () => {
       await expect(page.locator('#pr-agregar-empaque')).toContainText('Caja');
       await captura(page, 'agregar-producido', info);
       await page.locator('#pr-agregar-confirmar').click();
-      await expect(page.locator('#pr-planilla-lote')).toContainText(lote);
+      await expect(page.locator('#pr-cab')).toContainText(lote);
       await expect(page.locator('#pr-planilla-masas')).toContainText(/simple/i);
       await expect(page.locator('#pr-planilla-producido')).toContainText(`${lote}-1`);
       await expect(page.locator('#pr-planilla-producido')).toContainText('Caja');
@@ -177,6 +180,8 @@ test.describe('planta', () => {
     });
 
     await test.step('anotar una parada con horarios', async () => {
+      await page.locator('#pr-barra [data-seccion="paradas"]').click();
+      await expect(page.locator('#pr-paradas')).toBeVisible();
       await page.locator('#pr-btn-anotar-parada').click();
       await expect(page.locator('#pr-parada-editor')).toBeVisible();
       await page.locator('#pr-parada-editor-motivo').fill('Parada del robot de pruebas');
@@ -187,7 +192,7 @@ test.describe('planta', () => {
     });
 
     await test.step('cerrar la planilla', async () => {
-      await page.locator('#pr-btn-cerrar-planilla').click();
+      await page.locator('#pr-barra [data-seccion="cierre"]').click();
       await expect(page.locator('#pr-cierre')).toBeVisible();
       await page.locator('#pr-cierre-scrap').fill('2');
       await captura(page, 'cierre', info);
@@ -221,9 +226,10 @@ test.describe('planta', () => {
     const elegir = page.locator('[data-maestro]', { hasText: process.env.E2E_MAESTRO_NOMBRE });
     if (await elegir.count()) await elegir.first().click();
     await marcarPin(page, process.env.E2E_MAESTRO_PIN);
-    await expect(page.locator('#pr-maestro')).toBeVisible();
-
-    await page.locator('#pr-btn-asignar-pin').click();
+    // Planta v2: el acceso maestro abre su propia pantalla, con la pestaña
+    // "Asignar PIN".
+    await expect(page.locator('#pr-acceso')).toBeVisible();
+    await page.locator('#pr-acceso [data-maestro-tab="asignar"]').click();
     await expect(page.locator('#pr-asignar')).toBeVisible();
     const robot = page.locator('#pr-asignar-personas [data-asignar-persona]', { hasText: 'Robot Masero' });
     await expect(robot).toContainText(/PIN propio|Pendiente de cambiar|PIN de un día|Sin PIN/);

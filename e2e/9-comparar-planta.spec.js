@@ -25,6 +25,12 @@ const MAQUETA = 'http://localhost:4180';
 const AVISO = 0.12;
 const FALLA = 0.30;
 const SALIDA = path.join(__dirname, 'resultados', 'comparar');
+// Pantallas donde la diferencia la explica un DESVÍO DECLARADO del diseño (con
+// su motivo y su propio tope, así siguen vigiladas). Como RETIRADOS en los
+// controles: una diferencia sin explicación es indistinguible de una rotura.
+const DESVIOS = {
+  '5c': { tope: 0.45, motivo: 'el color de cada cono sale de su NOMBRE (así un cono no cambia de color cuando cambia el orden de "los más usados"); el diseño los pinta por posición. Además la app suma el chip "Común" (cono sin marca), que el diseño no dibuja.' },
+};
 
 for (const [ancho, alto] of [[1000, 540], [600, 940]]) {
   test(`la planta se ve como el diseño a ${ancho}×${alto}`, async ({ browser }, info) => {
@@ -60,7 +66,7 @@ for (const [ancho, alto] of [[1000, 540], [600, 940]]) {
     fs.writeFileSync(path.join(SALIDA, `resumen-${ancho}x${alto}.json`), JSON.stringify(tabla, null, 1));
     console.log(tabla.map(t => `${(t.diferencia * 100).toFixed(1).padStart(5)} %  ${t.clave}  ${t.titulo}`).join('\n'));
     expect(errores, errores.join('\n')).toEqual([]);
-    const lejos = tabla.filter(t => t.diferencia > FALLA);
+    const lejos = tabla.filter(t => t.diferencia > (DESVIOS[t.clave.split('-')[0]]?.tope ?? FALLA));
     expect(lejos.map(t => `${t.clave} difiere ${(t.diferencia * 100).toFixed(1)} %`), 'pantallas que no se parecen al diseño').toEqual([]);
     await ctx.close();
   });

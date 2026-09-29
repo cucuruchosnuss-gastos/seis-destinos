@@ -65,7 +65,11 @@ function medirPantalla() {
   // El lote nunca en dos renglones.
   for (const el of document.querySelectorAll('[data-lote-numero], .pr-maquina__lote, .pr-lat__maq-lote, .pr-planilla-cab__numero')) {
     if (!vivo(el)) continue
-    const lh = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.3
+    // Planta v2: "Lote" chico y el número grande en la misma línea; el renglón
+    // lo marca el texto MÁS grande de adentro. Dos renglones = partes con
+    // arriba distinto (una debajo de la otra).
+    const partes = [el, ...el.querySelectorAll('*')].filter(vivo)
+    const lh = Math.max(...partes.map(p => parseFloat(getComputedStyle(p).lineHeight) || parseFloat(getComputedStyle(p).fontSize) * 1.3))
     if (el.getBoundingClientRect().height > lh * 1.6) res.lote.push(nombre(el))
   }
   return res

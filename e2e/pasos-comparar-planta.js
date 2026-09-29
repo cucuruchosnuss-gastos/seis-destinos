@@ -13,11 +13,14 @@ const datos = require('../pruebas/datos-maqueta/planta-v2');
 const PERSONA = (page, nombre) => page.locator('#pr-quien-lista [data-persona]', { hasText: nombre });
 
 async function prepararPlanta(page, base) {
+  // Un paso que no encuentra su control falla en 15 s, no en los 6 minutos de la prueba.
+  page.setDefaultTimeout(15000);
   await page.clock.setFixedTime(new Date(datos.ahora));
   await page.goto(`${base}/modulos/produccion.html?maqueta=planta-v2`, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => document.fonts?.ready);
 }
 
+// Sin tecla "Entrar": con el último número el PIN se manda solo.
 async function teclear(page, digitos, dentro = '#pr-pin-teclado') {
   const teclado = page.locator(dentro);
   await expect(teclado).toBeVisible();
@@ -51,14 +54,12 @@ const PASOS_COMPARAR_PLANTA = [
   ['1c', async (page) => {
     await rpcVivo(page, 'verificar_pin_produccion', { ok: false, motivo: 'pin_incorrecto', intentos_restantes: 2 });
     await teclear(page, '26');
-    await page.locator('#pr-pin-teclado [data-tecla="entrar"]').click().catch(() => {});
     await page.waitForTimeout(200);
   }],
   ['1d', async (page) => {
     const hasta = new Date(new Date(datos.ahora).getTime() + (4 * 60 + 32) * 1000).toISOString();
     await rpcVivo(page, 'verificar_pin_produccion', { ok: false, motivo: 'bloqueado', bloqueado_hasta: hasta });
     await teclear(page, '1234');
-    await page.locator('#pr-pin-teclado [data-tecla="entrar"]').click().catch(() => {});
     await page.waitForTimeout(200);
   }],
   ['10a', async (page) => {
@@ -69,7 +70,6 @@ const PASOS_COMPARAR_PLANTA = [
   }],
   ['10b', async (page) => {
     await teclear(page, '45678');
-    await page.locator('#pr-pin-teclado [data-tecla="entrar"]').click().catch(() => {});
     await expect(page.locator('#pr-acceso')).toBeVisible();
     await page.locator('#pr-acceso-personas [data-acceso-persona]').first().click();
     await page.locator('[data-acceso-puesto="masero"]').click();
@@ -84,7 +84,6 @@ const PASOS_COMPARAR_PLANTA = [
     await cerrarPin(page);
     await PERSONA(page, 'Hinga Luciano').click();
     await teclear(page, '4826');
-    await page.locator('#pr-pin-teclado [data-tecla="entrar"]').click().catch(() => {});
     await expect(page.locator('#pr-barra')).toBeVisible();
     await irASeccion(page, 'inicio');
   }],

@@ -567,9 +567,13 @@
     /* ══ 3 · ABRIR TURNO ══ */
     .pr-abrir__fila { display: flex; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
     .pr-abrir__caja { background: var(--p-tarjeta); border: 1px solid var(--p-borde); border-radius: 14px; padding: 8px 10px; display: flex; align-items: center; gap: 10px; }
-    .pr-abrir__caja--encargado { flex: 1; min-width: 200px; }
+    .pr-abrir__caja--encargado { flex: 1; min-width: 0; }
+    .pr-abrir__caja--encargado > * { min-width: 0; }
+    .pr-abrir__encargado { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+    .pr-abrir__caja { max-width: 100%; box-sizing: border-box; min-width: 0; }
+    @media (orientation: portrait) { .pr-abrir__caja .pr-segmento__opcion { padding: 0 12px; } }
     .pr-abrir__caja--fecha { gap: 4px; padding: 4px 6px; }
-    .pr-abrir__rotulo { font-size: 12.5px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); }
+    .pr-abrir__rotulo { flex-shrink: 0; font-size: 12.5px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); }
     .pr-abrir__caja .pr-segmento { background: var(--p-renglon); gap: 3px; }
     .pr-abrir__caja .pr-segmento__opcion { min-height: 40px; height: 40px; padding: 0 16px; font-size: 16px; }
     .pr-abrir__encargado { height: 40px; padding: 0 12px; border-radius: 10px; background: var(--p-teal-suave); color: var(--p-teal-osc); font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
@@ -653,7 +657,7 @@
     .pr-res--masas .pr-res__rotulo { color: var(--p-trigo-txt); }
     .pr-res--paradas .pr-res__rotulo { color: var(--p-mal); }
     .pr-res__cuenta { font-family: var(--p-titulo); font-size: 18px; font-weight: 800; }
-    .pr-res__persona { font-size: 14.5px; font-weight: 600; line-height: 1.2; display: flex; gap: 6px; align-items: baseline; white-space: nowrap; }
+    .pr-res__persona { font-size: 14.5px; font-weight: 600; line-height: 1.2; display: flex; gap: 6px; align-items: baseline; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
     .pr-res__enc { font-size: 11.5px; font-weight: 800; color: var(--p-teal); }
     .pr-res__vacio { font-size: 14px; color: var(--p-gris); }
     .pr-res__numeros { display: flex; align-items: baseline; gap: 8px; margin-top: auto; }
@@ -847,7 +851,8 @@
     .pr-ag__lista { display: flex; flex-direction: column; gap: 6px; }
     @media (orientation: portrait) { .pr-ag__lista { flex-direction: row; flex: 1; min-width: 0; } }
     .pr-paso { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 12px; border: 2px solid transparent; background: transparent; text-align: left; font: inherit; color: inherit; min-width: 0; }
-    @media (orientation: portrait) { .pr-paso { flex: 1 1 0; } }
+    /* Parada, cada paso ocupa lo que pide su texto ("PRESENTACIÓN" es más
+       ancho que "CONO"): con cuatro partes iguales se salía de su recuadro. */
     .pr-paso--actual { background: var(--p-acento-suave); border-color: var(--p-acento); }
     .pr-paso__n { width: 30px; height: 30px; border-radius: 999px; background: #fff; color: var(--p-suave); border: 2px solid var(--p-linea); font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; }
     .pr-paso--hecho .pr-paso__n { background: var(--p-tinta); border-color: var(--p-tinta); color: #fff; }
@@ -857,6 +862,12 @@
     .pr-paso__v { font-size: 15px; font-weight: 800; color: var(--p-apagado); }
     .pr-paso--hecho .pr-paso__v { color: var(--p-tinta); }
     .pr-paso--actual .pr-paso__l, .pr-paso--actual .pr-paso__v { color: var(--p-acento-osc); }
+    @media (orientation: portrait) {
+      .pr-paso { flex: 1 1 auto; padding: 6px; gap: 6px; }
+      .pr-paso__n { width: 26px; height: 26px; font-size: 13px; }
+      .pr-paso__l { font-size: 11px; letter-spacing: 0.02em; }
+      .pr-paso__v { font-size: 14px; }
+    }
     .pr-ag__cancelar { margin-top: auto; height: 44px; border-radius: 12px; border: 1px solid var(--p-borde); background: #fff; font-size: 15px; font-weight: 700; color: var(--p-tinta-2); }
     @media (orientation: portrait) { .pr-ag__cancelar { display: none; } }
     .pr-ag__opciones { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
@@ -1036,6 +1047,9 @@
 
     /* ══ 9e / 9f · LA VENTANA DE LOTES (y la de "Otro" insumo) ══ */
     #pr-lote-panel .pr-lp__caja { max-height: min(500px, calc(100dvh - 24px)); }
+    /* Parada (diseño 9e a 600 × 940), la ventana ocupa casi todo el alto: la
+       lista de lotes se ve entera en vez de scrollear en un recuadro corto. */
+    @media (orientation: portrait) { #pr-lote-panel .pr-lp__caja { height: calc(100dvh - 220px); max-height: calc(100dvh - 24px); } }
     .pr-lp__manual { width: 100%; min-height: 44px; border-radius: 12px; border: 2px dashed var(--p-acento); background: #fff; color: var(--p-acento); font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; }
     .pr-lp__otros:empty, .pr-lp__pie-lotes:empty { display: none; }
     .pr-lp__tarjetas { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }

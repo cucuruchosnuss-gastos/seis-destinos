@@ -464,7 +464,7 @@ module.exports = {
           "con_cono": true,
           "media_caja": false,
           "unidades_por_caja": 100,
-          "stock_cajas": 12
+          "stock_cajas": 17
         },
         {
           "presentacion_id": "pr2",
@@ -542,6 +542,11 @@ module.exports = {
           "unidad_medida": "un",
           "stock": 12000
         }
+      ],
+      // El stock por cono (29/09/2026): la base trae los conos con stock,
+      // sin el común (marca null), que la pantalla deduce: 17 − 12 = 5.
+      "conos": [
+        { "presentacion_id": "pr1c", "marca_id": "m1", "cono": "LOLO", "stock_cajas": 12 }
       ]
     },
     "lotes_para_retiro": [

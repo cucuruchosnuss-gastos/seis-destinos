@@ -232,7 +232,9 @@ const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unid
   'htmlQuienEnBarra', 'htmlBarraModos', 'pintarBarra', 'htmlMaestroEnBarra',
   // Sala de masa (parte 2): el panel de la derecha pasó arriba de la receta
   // (htmlOpcionesReceta) y la fecha de cada lote sale de stock_para_masa.
-  'htmlPanelSala', 'leerFechasLotes']
+  'htmlPanelSala', 'leerFechasLotes',
+  // Planta v2 (28/09/2026): la máquina elegida va en la cabecera, no en la barra.
+  'htmlLatMaquina']
 // Nuevas de la planta
 const NUEVAS_PLANTA = [
   'mostrarSinFabrica', 'htmlMaestroEnBarra', 'maestrosDisponibles', 'pintarQuienMaestro', 'htmlMaestrosPin',
@@ -274,13 +276,26 @@ const NUEVAS_PLANTA = [
   'textoReloj', 'htmlReloj', 'tocarReloj', 'iniciarReloj', 'htmlTagsOperarios', 'partesNombreProducto',
   'marcaDeInsumo', 'filasPanelLote', 'htmlFilaLote', 'abrirCorregirCompleto',
   'datosCorregirCompleto', 'confirmarCorregirCompleto',
+  // Planta v2 (28/09/2026): el diseño "Planta v2" de Claude Design.
+  'icono', 'inicialesDe', 'htmlRelojDoble', 'cabeceraDeVista', 'pintarCabeceraVista', 'contextoAbrir',
+  'alternarBuscarOtra', 'pintarBandaMaestro', 'spanTablero', 'htmlOperariosAbrir', 'leerOcupadosYRecientes',
+  'tocarMaquinaAbrir', 'apellidoDe', 'htmlOpsResumen', 'htmlMasasResumen', 'htmlParadasResumen', 'abrirVentanaOps',
+  'cerrarVentanaOps', 'motivoDeParada', 'textoMotivoParada', 'seleccionParada', 'htmlParadasTurno', 'pintarParadas',
+  'tocarMotivoParada', 'guardarMotivoParada', 'mayusculaInicial', 'indiceDeNombre', 'colorProducto', 'colorCono',
+  'htmlNombreProducto', 'htmlChipCono', 'nombreCorto', 'hayMasaChocolate', 'leerUsoConos', 'ponerCajasAgregar',
+  'scrapAlto', 'bloqueosCierre', 'irDesdeCierre', 'detalleAnteriorCorto', 'htmlCantidadGrande', 'usarLoteDeLista',
+  'mostrarEntrar', 'errorEntrar', 'conReintento',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']
 const CONST_SOLO_GESTION = ['PESTANAS_CONFIG', 'CLAVE_AVISO_PRODUCTOS', 'NUEVO_TIPO', 'LECTORES_CONFIG', 'RENDERS_CONFIG',
   'puedeVerHistorial', 'TOPE_FILAS', 'ESTADO_TURNO', 'TIPO_CORRECCION', 'CONDICIONES_EMPAQUE']
-const CONST_NUEVAS_PLANTA = ['LINKS_SIN_SESION',
-  'TABLAS_VIVAS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR']
+// ICONO primero: ICONO_MODO y otras lo usan al declararse.
+const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
+  'TABLAS_VIVAS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR',
+  // Planta v2 (28/09/2026)
+  'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'MOTIVOS_PARADA', 'OTRO_MOTIVO', 'COLOR_TAMANO', 'COLOR_CHOCO',
+  'TONOS_NOMBRE', 'TONOS_CONO']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

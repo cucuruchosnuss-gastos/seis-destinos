@@ -29,4 +29,6 @@ description: Aplicar un handoff de Claude Design (un .zip o carpeta con README, 
    - se mudó de pantalla o de archivo → lista de MOVIDOS (`controles-movidos.js` / `controles-produccion-movidos.js`), con su destino;
    - se retira a propósito → `RETIRADOS`, con motivo.
 
-7. **Verificar**: `node pruebas/controles-<modulo>.js`, `node pruebas/check-scripts.js`, las suites del módulo (`FILTRO=<modulo> node pruebas/correr-todo.js`), y mirarlo renderizado con `node e2e/servidor.js` + navegador a 390 px y a 1280/1440 px. Cerrar con la skill cerrar-tanda.
+7. **Comparar con el diseño** (skill `comparar-con-diseno`): la pantalla real al lado del diseño, al mismo tamaño y con los mismos datos, hasta que las diferencias sean solo de datos. Lo que se agregó o no se pudo copiar va al traspaso como desvío, con su motivo.
+
+8. **Verificar**: `node pruebas/controles-<modulo>.js`, `node pruebas/check-scripts.js`, las suites del módulo (`FILTRO=<modulo> node pruebas/correr-todo.js`), y mirarlo renderizado con `node e2e/servidor.js` + navegador a 390 px y a 1280/1440 px. Cerrar con la skill cerrar-tanda.
