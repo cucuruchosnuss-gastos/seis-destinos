@@ -102,18 +102,23 @@ esperas.push((async () => {
   const a = S.estado.agregar
   chk('la caja no traba: queda "elegida" sin caja', a.cajaElegida === true && a.cajaId === null)
   chk('… y va derecho a las cajas', a.paso === 'cajas')
-  const paso = S.pasosAgregar(a, S.estado.catalogo).find(x => x.clave === 'caja')
-  chk('el paso de la caja figura hecho y dice por qué', paso.estado === 'hecho' && paso.valor === 'Sin caja · no se pudo leer el empaque', JSON.stringify(paso))
+  // Planta v2: la caja que viene "puesta" (acá: sin caja) no dibuja su paso;
+  // lo dice la chapa de la caja al lado de las cajas, y tocándola se va al
+  // paso de la caja, que tiene el aviso entero.
+  chk('el paso de la caja se saltea (vino resuelto)', !S.pasosAgregar(a, S.estado.catalogo).some(x => x.clave === 'caja'))
+  chk('… y lo resuelto dice por qué', S.textoCajaElegida(a, S.estado.catalogo) === 'Sin caja · no se pudo leer el empaque')
   const emp = html(S, 'pr-agregar-empaque')
-  chk('al lado de las cajas, el aviso en bordó', emp.includes(`pr-aviso--grave">${AVISO}`), emp)
-  chk('… que dice que no se descuenta la caja ni las bolsas y cómo se corrige',
-    emp.includes('no se va a descontar la caja ni las bolsas') && emp.includes('Corregilo después'))
-  chk('… y la chapa de la caja dice por qué no hay caja', emp.includes('<span>Sin caja · no se pudo leer el empaque</span>'), emp)
+  chk('al lado de las cajas, la chapa de la caja en bordó dice por qué no hay caja',
+    emp.includes('class="pr-ag__caja pr-ag__caja--falta" data-paso-ag="caja"><span>Sin caja · no se pudo leer el empaque: se carga sin descontar la caja</span>'), emp)
   chk('… sin consumo inventado', !/Por caja:|No descuenta empaque|cajas? =/.test(emp), emp)
   chk('… ni aviso de stock (no hay nada que medir)', !/Faltan?|No se pudo leer el stock|No se puede ver el stock/.test(emp))
   S.irAPasoAgregar('caja')
+  const paso = S.pasosAgregar(S.estado.agregar, S.estado.catalogo).find(x => x.clave === 'caja')
+  chk('en el paso de la caja, el paso dice por qué', paso?.estado === 'actual' && paso?.valor === 'Sin caja · no se pudo leer el empaque', JSON.stringify(paso))
   const panel = html(S, 'pr-agregar-panel')
-  chk('en el paso de la caja: el mismo aviso', panel.includes(`pr-aviso--grave">${AVISO}`), panel)
+  chk('en el paso de la caja: el aviso en bordó', panel.includes(`pr-aviso--grave">${AVISO}`), panel)
+  chk('… que dice que no se descuenta la caja ni las bolsas y cómo se corrige',
+    panel.includes('no se va a descontar la caja ni las bolsas') && panel.includes('Corregilo después'))
   chk('… sin cajas para elegir ni embolsado', !/data-ag-caja=|data-ag-embolsado=/.test(panel))
   chk('… con salida a las cajas', /data-ag-seguir="1"/.test(panel))
   chk('… y no pide "Elegí una caja"', !/Elegí una caja/.test(panel))
@@ -153,7 +158,12 @@ esperas.push((async () => {
   S.estado.agregar.cajas = 3
   S.estado.agregar.stock = { estado: 'ok', saldos: new Map() }
   S.pintarAgregar()
-  chk('con faltantes se avisa', /Faltan 3 Caja N°1 Nuss/.test(html(S, 'pr-agregar-empaque')))
+  // Planta v2: al lado de las cajas, una línea con lo que falta; el detalle
+  // (cuántos) en el paso de la caja.
+  chk('con faltantes se avisa', /Falta en el stock: Caja N°1 Nuss[^<]*\. Se puede cargar igual\./.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
+  S.irAPasoAgregar('caja')
+  chk('… y el paso de la caja dice cuántas', /Faltan 3 Caja N°1 Nuss/.test(html(S, 'pr-agregar-panel')), html(S, 'pr-agregar-panel'))
+  S.seguirConCajas()
   await S.confirmarAgregar()
   chk('… y se carga igual', rpcs(S, 'registrar_produccion_item').length === 1)
 })())
@@ -182,8 +192,9 @@ esperas.push((async () => {
   ] } })
   await P.abrirPlanilla('t1')
   const h = html(P, 'pr-planilla-producido')
-  const fila = sub => { const i = h.indexOf(`>${sub}</span>`); const d = h.lastIndexOf('<div class="pr-producido', i); return h.slice(d, h.indexOf('<div class="pr-producido__botones', i)) }
-  chk('en la planilla: el renglón sin caja va en bordó', /pr-producido pr-producido--sin-caja/.test(fila('7023-1')), fila('7023-1'))
+  // Planta v2: cada renglón es una fila de la tabla (pr-fila-prod).
+  const fila = sub => { const i = h.indexOf(`>${sub}</span>`); const d = h.lastIndexOf('<div class="pr-fila-prod', i); return h.slice(d, h.indexOf('<span class="pr-fp__botones', i)) }
+  chk('en la planilla: el renglón sin caja va en bordó', /class="pr-fila-prod pr-fila-prod--sin-caja"/.test(fila('7023-1')), fila('7023-1'))
   // (28/09/2026) El renglón va en UNA línea: una etiqueta corta "sin
   // empaque" en bordó, con el texto entero en el title.
   chk('… y lo dice', fila('7023-1').includes('pr-sin-caja pr-sin-caja--chip" title="Sin empaque descontado: no se descontó la caja ni las bolsas') &&
@@ -193,7 +204,9 @@ esperas.push((async () => {
   chk('… y los tres siguen sumando al total', /15 cajas/.test(html(P, 'pr-planilla-total')))
   // Un renglón de un producto que ya no está en el catálogo también se marca.
   const sinCat = P.htmlProducido({ ...base, presentacion_id: 'pr-vieja', caja_insumo_id: null, embolsado: 'ninguno' }, P.estado.catalogo)
-  chk('… también si el producto ya no está en el catálogo', /pr-producido--sin-caja/.test(sinCat) && /Sin empaque descontado/.test(sinCat))
+  chk('… también si el producto ya no está en el catálogo', /pr-fila-prod--sin-caja/.test(sinCat) && /Sin empaque descontado/.test(sinCat))
+  // El bordó lo lleva la etiqueta "sin empaque" (el CSS nuevo, tokens --p-*).
+  chk('… la etiqueta "sin empaque" es bordó en el CSS', /\.pr-sin-caja--chip \{[^}]*color: var\(--p-mal\)/.test(FUENTE))
   const sinCatalogo = P.htmlProducido({ ...base, caja_insumo_id: null, embolsado: 'ninguno' }, null)
   chk('… y si el catálogo no se pudo leer', /Sin empaque descontado/.test(sinCatalogo))
 })())

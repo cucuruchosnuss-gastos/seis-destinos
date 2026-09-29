@@ -10,7 +10,7 @@ const { correrMutacionesProduccion } = require('./mutar-produccion')
 correrMutacionesProduccion({
   suite: path.join(__dirname, 'test-produccion-paradas.js'),
   escape: 'esc',
-  funciones: ['htmlAccionesParada', 'htmlParadas', 'htmlCampoHora', 'htmlHorasParada'],
+  funciones: ['htmlAccionesParada', 'htmlParadas', 'htmlCampoHora', 'htmlHorasParada', 'htmlParadasTurno'],
   equivalentes: [
     { expr: 'esc(clave)', motivo: 'clave es "inicio" o "fin", constantes del código' },
     { expr: 'esc(rotulo)', motivo: 'el rótulo es "Paró a las" / "Volvió a las", constantes del código' },
@@ -20,6 +20,7 @@ correrMutacionesProduccion({
     { expr: 'esc(desde)', motivo: 'horaArgentina() solo devuelve "HH:MM" o vacío, y si no "—"' },
     { expr: 'esc(dur)', motivo: 'duracionTexto() solo devuelve horas y minutos' },
     { expr: "esc(horaArgentina(p.fin) || '—')", motivo: 'horaArgentina() solo devuelve "HH:MM" o vacío' },
+    { expr: 'esc(hasta)', motivo: 'htmlParadasTurno: horaArgentina() ("HH:MM"), "—" o "ahora"' },
   ],
   manuales: [
     // Las horas.
@@ -66,13 +67,18 @@ correrMutacionesProduccion({
     { nombre: 'el historial deja borrar sin configurar', de: '      return { editar: configura && carga, borrar: configura }', a: '      return { editar: configura && carga, borrar: true }' },
     { nombre: 'el historial toca planillas abiertas', de: "      if (!turno || turno.estado !== 'cerrado') return { editar: false, borrar: false }\n", a: '' },
     { nombre: 'el historial abre el editor sin permiso', de: "      if (modo === 'borrar' ? !acc.borrar : !acc.editar) return\n", a: '' },
-    { nombre: 'la planilla no ofrece corregir', de: 'htmlParadas(p.paradas, { editar: true, borrar: true })', a: 'htmlParadas(p.paradas)' },
+    // Planta v2: cada parada de la planilla es un botón que abre el editor;
+    // borrar vive adentro del editor (puedeBorrar).
+    { nombre: 'la planilla no ofrece corregir', de: "pr-parada-item--curso'}\" data-parada-editar=\"${esc(p.id)}\"", a: "pr-parada-item--curso'}\" data-x=\"${esc(p.id)}\"" },
+    { nombre: 'la planilla no ofrece borrar', de: "contexto: 'planilla', puedeBorrar: true", a: "contexto: 'planilla', puedeBorrar: false" },
     // El editor.
     { nombre: 'Escape no cierra el editor', de: "      if (ev.key === 'Escape') { ev.preventDefault(); cerrarEditorParada(); return }\n", a: '' },
     { nombre: 'borrar en una abierta pide motivo', de: "      document.getElementById('pr-parada-editor-campo-motivo').hidden = f.modo === 'borrar' && !cerrada", a: "      document.getElementById('pr-parada-editor-campo-motivo').hidden = false" },
     { nombre: 'corregir no trae el motivo', de: "        motivo: modo === 'borrar' ? '' : (parada?.motivo ?? ''),", a: "        motivo: '',"},
-    { nombre: '"Paró ahora" también en una pendiente de completar', de: "!!enCurso || p.turno.estado !== 'abierto'\n", a: '!!enCurso\n' },
-    { nombre: '"Anotar una parada" nunca aparece', de: "document.getElementById('pr-btn-anotar-parada').hidden = !p", a: "document.getElementById('pr-btn-anotar-parada').hidden = true" },
+    { nombre: '"Paró ahora" también en una pendiente de completar', de: "document.getElementById('pr-btn-parada').hidden = !!enCurso || !abierta", a: "document.getElementById('pr-btn-parada').hidden = !!enCurso" },
+    { nombre: '"Paró ahora" nunca aparece', de: "document.getElementById('pr-btn-parada').hidden = !!enCurso || !abierta", a: "document.getElementById('pr-btn-parada').hidden = true" },
+    // Planta v2: "Anotar" está siempre (sin hidden desde JS).
+    { nombre: '"Anotar una parada" nunca aparece', de: 'id="pr-btn-anotar-parada">', a: 'id="pr-btn-anotar-parada" hidden>' },
     { nombre: 'una abierta en una pendiente arranca "todavía no volvió"', de: "sigue: !!parada && !parada.fin && turno?.estado === 'abierto',", a: 'sigue: !!parada && !parada.fin,' },
     { nombre: 'una pendiente no arranca en la hora en que se la forzó', de: "      if (turno?.estado === 'pendiente_completar' && turno.forzado_en) return horaRedondeada(new Date(turno.forzado_en))\n", a: '' },
     { nombre: 'el error del editor no se ve', de: '      errEditor.textContent = texto\n      errEditor.hidden = !texto', a: "      errEditor.textContent = ''\n      errEditor.hidden = true" },

@@ -105,18 +105,25 @@ esperas.push((async () => {
   const S = armar()
   await S.abrirPlanilla('t37')
   chk('2. el nombre de la máquina sale de la base', S.estado.planilla?.maquinaNombre === 'Máquina 1', S.estado.planilla?.maquinaNombre)
-  S.mostrarCierre()
-  chk('2. el título del cierre dice "Cerrar Máquina 1 · lote 7037"',
-    S.__doc.getElementById('pr-cierre-titulo').textContent === 'Cerrar Máquina 1 · lote 7037', S.__doc.getElementById('pr-cierre-titulo').textContent)
+  await S.mostrarCierre()
+  // Planta v2: el título va en la cabecera (pr-cab): el contexto dice el lote
+  // y la máquina con su número, el título "Cerrar planilla".
+  const cab = S.cabeceraDeVista()
+  chk('2. la cabecera del cierre dice "Lote 7037 · Máquina 1" y "Cerrar planilla"',
+    cab?.ctx === 'Lote 7037 · Máquina 1' && cab?.titulo === 'Cerrar planilla', JSON.stringify(cab))
   chk('2. antes de cerrar, la máquina está elegida', !!S.maquinaElegida())
+  const latAntes = S.htmlLatSecciones()
+  chk('2. antes de cerrar, Planilla, Paradas y Cerrar planilla están prendidas',
+    !/data-seccion="(planilla|paradas|cierre)"[^>]*disabled/.test(latAntes), latAntes)
   S.estado.tablero = [{ maquina: { id: 'm1', nombre: 'Máquina 1' }, turno: { id: 't37' } }]
   await S.maquinaCerrada('t37')
   chk('2. al cerrarse, la máquina deja de estar elegida', S.maquinaElegida() === null && S.estado.planilla === null)
   const lat = S.htmlLatSecciones()
-  chk('2. … y Lo producido, Paradas y Cerrar planilla quedan apagadas',
-    /data-seccion="producido" disabled|data-seccion="producido"[^>]*disabled/.test(lat) &&
+  chk('2. … y Planilla, Paradas y Cerrar planilla quedan apagadas',
+    /data-seccion="planilla"[^>]*disabled/.test(lat) &&
     /data-seccion="paradas"[^>]*disabled/.test(lat) && /data-seccion="cierre"[^>]*disabled/.test(lat), lat)
-  chk('2. la barra ya no muestra la tarjeta del lote', !/Lote 7037/.test(S.htmlLatMaquina()), S.htmlLatMaquina())
+  S.estado.vista = 'pr-planilla'
+  chk('2. la cabecera ya no muestra el lote', !/Lote 7037/.test(S.cabeceraDeVista()?.ctx ?? ''), JSON.stringify(S.cabeceraDeVista()))
   // Cerrar otra máquina no suelta la elegida.
   const O = armar()
   await O.abrirPlanilla('t37')

@@ -20,6 +20,11 @@
 //    saldo, cuánto queda y desde cuándo—, que la tablet lee con
 //    produccion:cargar: ya no hace falta stock:ver ni v_stock_por_lote.
 //
+//  - Planta v2 (28/09/2026): tocar un renglón de la ventana lo MARCA y "Usar …"
+//    lo pone; el recuadro dice el lote solo (la palabra "Lote" va en el
+//    aria-label); "Se terminó el lote puesto" va al pie; la fecha dice
+//    "Ingresó el …" y el más viejo "EL MÁS VIEJO · USALO PRIMERO".
+//
 //   node pruebas/test-produccion-lotes.js
 
 process.env.TZ = 'UTC'
@@ -121,7 +126,10 @@ esperas.push((async () => {
   // ── c) El lote sin ingreso cargado pasa a la masa siguiente ───────────
   const C = await hastaLaReceta(armar())
   const bC = botonLote(C, 'i-azucar')
-  chk('el lote a mano de la anterior queda elegido', /<span class="pr-rec__lote-texto">Lote A-MANO-1<\/span>/.test(bC), bC)
+  // Planta v2 (28/09/2026): el recuadro dice el lote solo, sin "Lote"; la
+  // palabra va en el aria-label ("Lote de Azúcar: A-MANO-1").
+  chk('el lote a mano de la anterior queda elegido', /<span class="pr-rec__lote-texto">A-MANO-1<\/span>/.test(bC) &&
+    /aria-label="Lote de Azúcar: A-MANO-1, sin ingreso cargado"/.test(bC), bC)
   chk('… con "sin ingreso cargado"', /pr-rec__lote-nota">sin ingreso cargado</.test(bC))
   chk('… no como terminado ni vacío', !/pr-rec__lote--terminado|pr-rec__lote--vacio/.test(bC))
   chk('… y no bloquea Registrar', C.__doc.getElementById('pr-receta-registrar').disabled === false, C.__doc.getElementById('pr-receta-error').textContent)
@@ -149,13 +157,13 @@ esperas.push((async () => {
   chk('"Usar este lote" pone el lote escrito, sin espacios en los bordes', M.estado.masa.lotes['i-azucar'].lote === 'B-22' &&
     M.estado.masa.lotes['i-azucar'].manual === true && M.estado.masa.lotes['i-azucar'].insumo_id === 'ins-az')
   chk('… y cierra la ventana', M.estado.panelLote === null && M.__doc.getElementById('pr-lote-panel').hidden === true)
-  chk('el lote escrito a mano dice "sin ingreso cargado"', /sin ingreso cargado/.test(botonLote(M, 'i-azucar')) && /Lote B-22/.test(botonLote(M, 'i-azucar')))
-  chk('… y el lote va UNA sola vez: sin un campo abajo del botón', (filas(M).match(/>Lote B-22</g) || []).length === 1 && !/data-lote-manual/.test(filas(M)), filas(M))
+  chk('el lote escrito a mano dice "sin ingreso cargado"', /sin ingreso cargado/.test(botonLote(M, 'i-azucar')) && /pr-rec__lote-texto">B-22</.test(botonLote(M, 'i-azucar')))
+  chk('… y el lote va UNA sola vez: sin un campo abajo del botón', (filas(M).match(/>B-22</g) || []).length === 1 && !/data-lote-manual/.test(filas(M)), filas(M))
 
   // "Se terminó" lo suelta y pide otro.
   const S = await hastaLaReceta(armar())
   S.abrirPanelLote('i-azucar')
-  chk('con un lote elegido, el panel ofrece "Se terminó"', /id="pr-lote-panel-se-termino">Se terminó</.test(S.__doc.getElementById('pr-lote-panel-terminado').innerHTML))
+  chk('con un lote elegido, el panel ofrece "Se terminó el lote puesto" al pie', /id="pr-lote-panel-se-termino">Se terminó el lote puesto</.test(S.__doc.getElementById('pr-lote-panel-terminado').innerHTML))
   S.marcarLoteTerminado('i-azucar')
   S.pintarPanelLote()
   chk('"Se terminó" suelta el lote', S.estado.masa.lotes['i-azucar'].lote === null && S.estado.masa.lotes['i-azucar'].terminado === true)
@@ -198,7 +206,7 @@ esperas.push((async () => {
   H.marcarLoteTerminado('i-harina')
   H.pintarPanelLote()
   chk('"Se terminó" con lotes: la lista sigue y el link también', /data-lote-op=/.test(H.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML) &&
-    /data-lote-escribir>El lote no está en la lista: escribirlo</.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML))
+    /data-lote-escribir>(?:<svg[^]*?<\/svg>)?El lote no está en la lista: escribirlo</.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML))
   H.abrirEscribirLote()
   chk('tocar el link abre el campo en la ventana', H.estado.panelLote.escribir === true && /id="pr-lote-panel-escribir"/.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML))
   chk('… con los dos insumos para elegir de qué marca es', /data-lote-escribir-insumo="ins-h1"/.test(H.__doc.getElementById('pr-lote-panel-otros').innerHTML) &&
@@ -230,8 +238,10 @@ esperas.push((async () => {
   const lista = tar.slice(tar.indexOf('pr-lp__filas'))
   chk('un renglón por lote, en UNA lista', (lista.match(/data-lote-op=/g) || []).length === 3 && /class="pr-lp__filas" data-scroll-propio/.test(tar), tar)
   chk('… con la marca', /<strong>Júpiter<\/strong>/.test(lista) && /<strong>Wali<\/strong>/.test(lista))
-  chk('… el lote', /lote 24518/.test(lista) && /lote W-9/.test(lista))
-  chk('… y cuánto queda', /quedan 200 kg/.test(lista) && /quedan 250,5 kg/.test(lista), lista)
+  chk('… el lote', /<strong>Júpiter<\/strong> lote 24518/.test(lista) && /<strong>Wali<\/strong> lote W-9/.test(lista))
+  // Planta v2: lo que queda a la derecha, grande, con "quedan" abajo.
+  chk('… y cuánto queda', /pr-lp__fila-queda"><strong>200 kg<\/strong><span>quedan<\/span>/.test(lista) &&
+    /pr-lp__fila-queda"><strong>250,5 kg<\/strong><span>quedan<\/span>/.test(lista), lista)
   chk('… el de la masa anterior viene marcado', /data-lote-op="3" aria-pressed="true"/.test(lista) && (lista.match(/aria-pressed="true"/g) || []).length === 1)
   chk('filtros por marca: Todas, Júpiter y Wali', /data-lote-marca="" aria-pressed="true">Todas/.test(tar) &&
     /data-lote-marca="Júpiter"/.test(tar) && /data-lote-marca="Wali"/.test(tar))
@@ -246,16 +256,28 @@ esperas.push((async () => {
   chk('Enter en el campo usa el lote', /ev\.key === 'Enter' && ev\.target\.closest\('\[data-lote-manual\]'\)\) \{ ev\.preventDefault\(\); usarLoteEscrito\(\) \}/.test(FUENTE))
   A.estado.panelLote.marca = ''
   A.pintarPanelLote()
-  chk('sin fechas en stock_para_masa no hay fecha, y v_stock_por_lote no se consulta', !/pr-lp__fila-fecha/.test(tar) && A.__consultasFecha() === 0)
+  // (La línea chica del lote puesto dice "El de la masa anterior (9)": no es
+  // una fecha.)
+  chk('sin fechas en stock_para_masa no hay fecha, y v_stock_por_lote no se consulta', !/Ingresó el/.test(tar) && A.__consultasFecha() === 0)
+  chk('el lote puesto dice que es el de la masa anterior', /data-lote-op="3" aria-pressed="true">[^]*?pr-lp__fila-fecha">El de la masa anterior \(9\)</.test(tar) &&
+    (tar.match(/El de la masa anterior/g) || []).length === 1, tar)
   const otros = A.__doc.getElementById('pr-lote-panel-otros').innerHTML
   chk('ya no hay botones de "Otro lote" por insumo: UN link para escribir uno que no está', !/Otro lote/.test(tar + otros) &&
     /El lote no está en la lista: escribirlo/.test(otros) && (otros.match(/data-lote-escribir>/g) || []).length === 1, otros)
   chk('… en su propio bloque, ARRIBA de la lista (Parte 0)', FUENTE.indexOf('id="pr-lote-panel-otros"') < FUENTE.indexOf('id="pr-lote-panel-tarjetas"') &&
     FUENTE.indexOf('id="pr-lote-panel-otros"') > 0)
-  // Elegir una tarjeta pone ese lote en el renglón y cierra.
+  // Planta v2 (28/09/2026): tocar un renglón lo MARCA (no lo pone todavía) y
+  // "Usar …" lo pone en la masa y cierra la ventana.
   A.elegirTarjetaLote('0')
-  chk('elegir una tarjeta pone ESE lote', A.estado.masa.lotes['i-harina'].insumo_id === 'ins-h1' && A.estado.masa.lotes['i-harina'].lote === '24518')
-  chk('… en el renglón', /Lote 24518/.test(botonLote(A, 'i-harina')))
+  chk('tocar un renglón lo marca, sin ponerlo todavía', A.estado.panelLote?.sel === 0 && A.estado.masa.lotes['i-harina'].lote === 'W-9' &&
+    /data-lote-op="0" aria-pressed="true"/.test(A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML) &&
+    (A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML.match(/aria-pressed="true"/g) || []).length === 2)
+  chk('… y el botón dice cuál va a usar', /id="pr-lote-panel-usar-lista">Usar Júpiter · lote 24518</.test(A.__doc.getElementById('pr-lote-panel-terminado').innerHTML),
+    A.__doc.getElementById('pr-lote-panel-terminado').innerHTML)
+  chk('"Usar …" se toca en el panel', /if \(ev\.target\.closest\('#pr-lote-panel-usar-lista'\)\) \{ usarLoteDeLista\(\); return \}/.test(FUENTE))
+  A.usarLoteDeLista()
+  chk('"Usar …" pone ESE lote', A.estado.masa.lotes['i-harina'].insumo_id === 'ins-h1' && A.estado.masa.lotes['i-harina'].lote === '24518')
+  chk('… en el renglón', /pr-rec__lote-texto">24518</.test(botonLote(A, 'i-harina')))
   chk('… y cierra el panel', A.__doc.getElementById('pr-lote-panel').hidden === true && A.estado.panelLote === null)
   // Un solo insumo: "Otro lote de este insumo".
   A.abrirPanelLote('i-azucar')
@@ -268,7 +290,7 @@ esperas.push((async () => {
   // No-materia prima: "Sin lote" es una tarjeta más.
   A.abrirPanelLote('i-lecitina')
   const tLec = A.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
-  chk('lo que no es materia prima ofrece "sin lote" en la lista', /· sin lote/.test(tLec) && /quedan 240 g/.test(tLec), tLec)
+  chk('lo que no es materia prima ofrece "sin lote" en la lista', /<strong>Solae<\/strong> sin lote/.test(tLec) && /<strong>240 g<\/strong><span>quedan/.test(tLec), tLec)
   A.cerrarPanelLote()
 
   // La fecha de cada lote sale de stock_para_masa (desde), sin stock:ver.
@@ -278,12 +300,14 @@ esperas.push((async () => {
   ] }))
   F.abrirPanelLote('i-harina')
   const tF = F.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML
-  chk('"quedan" sale de stock_para_masa (90) y no de datos_para_masa (100)', /lote W-9 · quedan 90 kg/.test(tF), tF)
-  chk('la fecha del lote sale de stock_para_masa', /pr-lp__fila-fecha">desde 02\/09\/2026</.test(tF) && /pr-lp__fila-fecha">desde 30\/08\/2026</.test(tF), tF)
-  chk('… y el que no tiene fecha no inventa una', (tF.match(/pr-lp__fila-fecha/g) || []).length === 2)
-  chk('el más viejo va arriba y destacado ("Usar primero")', tF.indexOf('lote W-9') < tF.indexOf('lote 24518') &&
-    /pr-lp__fila--viejo" data-lote-op="\d+" aria-pressed="(true|false)"><span class="pr-lp__fila-primero">Usar primero<\/span><span class="pr-lp__fila-texto"><strong>Wali<\/strong> · lote W-9/.test(tF) &&
-    (tF.match(/Usar primero/g) || []).length === 1, tF)
+  chk('"quedan" sale de stock_para_masa (90) y no de datos_para_masa (100)', /lote W-9[^]*?<strong>90 kg<\/strong><span>quedan/.test(tF) && !/100 kg/.test(tF), tF)
+  // Planta v2: "Ingresó el …". El lote puesto (W-9, de la masa anterior)
+  // muestra esa nota en lugar de la fecha.
+  chk('la fecha del lote sale de stock_para_masa', /pr-lp__fila-fecha">Ingresó el 02\/09\/2026</.test(tF), tF)
+  chk('… y el que no tiene fecha no inventa una', (tF.match(/Ingresó el/g) || []).length === 1 && !/lote L-101<\/span><span class="pr-lp__fila-fecha">Ingresó/.test(tF))
+  chk('el más viejo va arriba y destacado ("EL MÁS VIEJO · USALO PRIMERO")', tF.indexOf('lote W-9') < tF.indexOf('lote 24518') &&
+    /pr-lp__fila--viejo" data-lote-op="\d+" aria-pressed="(true|false)"><span class="pr-lp__radio" aria-hidden="true"><\/span><span class="pr-lp__fila-col"><span class="pr-lp__fila-texto"><strong>Wali<\/strong> lote W-9<span class="pr-lp__fila-primero">EL MÁS VIEJO · USALO PRIMERO<\/span>/.test(tF) &&
+    (tF.match(/USALO PRIMERO/g) || []).length === 1, tF)
   chk('… sin stock:ver ni v_stock_por_lote', F.__consultasFecha() === 0 && !F.estado.stockVer)
   chk('una fecha ilegible no dibuja nada', F.textoFechaLote('ayer') === '' && F.textoFechaLote(null) === '')
 
@@ -292,7 +316,7 @@ esperas.push((async () => {
   const E = await hastaLaReceta(armar({ stockError: { message: 'sin red' } }))
   E.abrirPanelLote('i-harina')
   chk('si stock_para_masa no llega, la masa sigue y no hay fechas', !!E.estado.masa && !!E.estado.datosMasa && !E.estado.errorSala &&
-    !/pr-lp__fila-fecha/.test(E.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML), E.estado.errorSala)
+    !/Ingresó el/.test(E.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML), E.estado.errorSala)
   chk('… ni "quedan" en la receta', !/pr-rec__queda/.test(filas(E)))
   chk('… y el aviso dice que se registra igual', E.__doc.getElementById('pr-receta-aviso-stock').hidden === false)
   E.cerrarPanelLote()
@@ -313,6 +337,8 @@ esperas.push((async () => {
   chequearMarcas(chk, 'la lista de lotes', X.__doc.getElementById('pr-lote-panel-tarjetas').innerHTML, ['marca', 'lote'])
   chequearMarcas(chk, 'el link del lote a mano', X.__doc.getElementById('pr-lote-panel-otros').innerHTML, [])
   X.elegirTarjetaLote('0')
+  chequearMarcas(chk, 'el botón "Usar …" del lote marcado', X.__doc.getElementById('pr-lote-panel-terminado').innerHTML, ['marca', 'lote'])
+  X.usarLoteDeLista()
   chequearMarcas(chk, 'el renglón con el lote elegido', filas(X), ['lote', 'ingId', 'ingrediente'])
   // Y el campo del lote escrito a mano, que lleva el id y el nombre del ingrediente.
   X.abrirPanelLote(ING)
@@ -335,11 +361,15 @@ esperas.push((async () => {
   chk('el renglón abre el panel', /closest\('\[data-lote\]'\); if \(b\) abrirPanelLote\(b\.dataset\.lote\)/.test(FUENTE))
   const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
   const reg = (sel) => { const i = css.indexOf('\n    ' + sel + ' {'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)) }
-  chk('tarjetas de 88 px de alto', /min-height: 88px/.test(reg('.pr-lp__tarjeta')))
-  chk('separadas 10 px (8 como mínimo)', /gap: 0\.625rem/.test(reg('.pr-lp__tarjetas')))
-  chk('scroll interno del panel, no de la página', /overflow-y: auto/.test(reg('.pr-lp__tarjetas')) && /max-height: calc\(100vh - 2rem\)/.test(reg('.pr-lp__caja')))
-  chk('"Otro lote" apartado con una línea', /border-top: 2px dashed/.test(reg('.pr-lp__otros')))
-  chk('el botón del renglón mide lo de la tablet', /min-height: var\(--pr-alto-boton\)/.test(reg('.pr-rec__lote')))
+  // Planta v2 (28/09/2026): los valores del diseño. Se eliminaron por diseño
+  // las tarjetas de 88 px separadas 10 px y el borde de la tablet
+  // (--pr-alto-boton): la ventana es una lista de renglones.
+  const alto = (sel) => Number((/min-height: (\d+)px/.exec(reg(sel)) || [])[1])
+  chk('cada renglón de la lista se toca con el dedo (44 px o más)', alto('.pr-lp__tarjeta') >= 44, alto('.pr-lp__tarjeta'))
+  chk('scroll interno de la lista, no de la página', /class="pr-lp__filas" data-scroll-propio/.test(FUENTE) && /\n    \[data-scroll-propio\] \{ overflow-y: auto;/.test(css) &&
+    /max-height: min\(500px, calc\(100dvh - 24px\)\)/.test(reg('.pr-lp__caja')) && /overflow: hidden/.test(reg('.pr-lp__caja')))
+  chk('escribir un lote que no está: apartado, con borde punteado', /border: 2px dashed var\(--p-acento\)/.test(reg('.pr-lp__manual')))
+  chk('el lote puesto se lee en el recuadro del renglón, que ocupa su celda', /width: 100%/.test(reg('.pr-rec__lote')) && alto('.pr-rec__lote') >= 36)
   chk('la fecha y lo que queda salen de stock_para_masa', /rpc\('stock_para_masa', \{ p_turno_id: estado\.salaTurno\.id \}\)/.test(FUENTE) && !/from\('v_stock_por_lote'\)/.test(FUENTE))
 }
 

@@ -103,32 +103,38 @@ esperas.push((async () => {
   const S = armar({ paradas: [{ id: 'pa1', inicio: '2026-09-22T11:00:00Z', fin: '2026-09-22T11:35:00Z', motivo: 'Cambio de molde' }] })
   await S.abrirPlanilla('t1')
 
-  chk('planilla: el lote, grande y solo', /pr-planilla-cab__numero">7023</.test(html(S, 'pr-planilla-lote')))
-  chk('… la máquina, el turno y la hora de apertura', /Máquina 1/.test(html(S, 'pr-planilla-que')) &&
-    /Turno Mañana · abierta 06:02/.test(html(S, 'pr-planilla-que')), html(S, 'pr-planilla-que'))
+  // Planta v2: el lote y la máquina van en la cabecera de la pantalla (pr-cab,
+  // con textContent). El turno y la hora de apertura ya no se muestran en la
+  // planilla (se retiraron con el diseño; el cierre dice "desde … a …").
+  const cab = S.cabeceraDeVista()
+  chk('planilla: el lote y la máquina, en la cabecera', S.estado.vista === 'pr-planilla' && cab?.ctx === 'Lote 7023 · Máquina 1' && cab?.titulo === 'Planilla', JSON.stringify(cab))
   chk('… el operario, en su bloque', /Ramón Díaz/.test(html(S, 'pr-planilla-operarios')))
   chk('… y las masas se piden SIN las anuladas',
     S.__llamadas.consultas.some(([t, f]) => t === 'masas' && JSON.stringify(f).includes('["eq","anulada",false]')))
 
+  // Planta v2: las masas van en un resumen (htmlMasasResumen): cuántas, si
+  // alguna fue de chocolate y la última. El detalle de cada masa (tamaño,
+  // "Modificada") está en el historial de la máquina, en Sala de masa.
   const masas = html(S, 'pr-planilla-masas')
-  chk('masas: la cantidad en grande', /pr-masas__numero">2</.test(masas), masas)
-  chk('… y la hora de la última', /última 10:18/.test(masas), masas)
-  chk('… las dos últimas, de la más nueva a la más vieja, con hora y tamaño', masas.indexOf('>12<') < masas.indexOf('>11<') &&
-    /<strong>12<\/strong> · 10:18 · <span class="pr-masa-tam">DOBLE<\/span>/.test(masas) && /<strong>11<\/strong> · 09:51 · <span class="pr-masa-tam">SIMPLE<\/span>/.test(masas), masas)
-  // Terminar la tablet, parte 5: chip SOLO para la modificada (en bordó); la anterior no lleva.
-  chk('… "Modificada" solo en la que lo es, y ningún chip de origen', (masas.match(/pr-chip-modificada">Modificada</g) ?? []).length === 1 &&
-    !/Anterior|pr-chip-origen/.test(masas), masas)
+  chk('masas: la cantidad en grande', /pr-res__num">2</.test(masas), masas)
+  chk('… y la hora de la última', /Última a las 10:18/.test(masas), masas)
+  chk('… sin chocolate: "todas comunes"', /pr-res__sub">todas comunes</.test(masas), masas)
+  chk('… con chocolate lo dice', /pr-res__sub">1 de chocolate</.test(S.htmlMasasResumen([MASAS[0], { ...MASAS[1], es_chocolate: true }])))
   // Las carga el masero: desde la planilla NO se editan.
-  chk('… y NINGÚN control para editarlas', !/<button|<input|<select/.test(masas), masas)
-  chk('sin masas todavía, se dice', /Todavía no hay masas/.test(S.htmlMasasPlanilla([])))
-  chk('con una sola masa dice "masa", no "masas"', /pr-masas__ultima">masa ·/.test(S.htmlMasasPlanilla([MASAS[0]])))
+  chk('… y NINGÚN control para editarlas', !/<button|<input|<select/.test(masas) &&
+    /<div class="pr-res pr-res--masas" id="pr-planilla-masas"><\/div>/.test(FUENTE), masas)
+  chk('sin masas todavía, se dice', /todavía ninguna/.test(S.htmlMasasResumen([])) && /Las carga el masero/.test(S.htmlMasasResumen([])))
+  chk('con una sola masa dice "común", no "todas comunes"', /pr-res__sub">común</.test(S.htmlMasasResumen([MASAS[0]])))
 
   chk('paradas: la terminada con su rango y su duración',
-    /<strong>08:00–08:35<\/strong> · Cambio de molde/.test(html(S, 'pr-planilla-paradas')) &&
-    /35 min/.test(html(S, 'pr-planilla-paradas')), html(S, 'pr-planilla-paradas'))
-  chk('sin parada en curso: "Parada" a la vista', S.__doc.getElementById('pr-btn-parada').hidden === false)
+    /<span class="pr-parada-item__horas">08:00 – 08:35<\/span><span class="pr-parada-item__dur">35 min<\/span>/.test(html(S, 'pr-planilla-paradas')) &&
+    /pr-parada-item__motivo">Cambio de molde</.test(html(S, 'pr-planilla-paradas')), html(S, 'pr-planilla-paradas'))
+  chk('… y en el resumen de arriba, cuántas y la última', /PARADAS<\/span>[\s\S]*pr-res__num">1</.test(html(S, 'pr-planilla-paradas-resumen')) &&
+    /Última 08:00 · cambio de molde/.test(html(S, 'pr-planilla-paradas-resumen')), html(S, 'pr-planilla-paradas-resumen'))
+  chk('sin parada en curso: "Paró ahora" a la vista', S.__doc.getElementById('pr-btn-parada').hidden === false)
   chk('… y ninguna franja', S.__doc.getElementById('pr-parada-activa').hidden === true)
-  chk('… y "Cerrar planilla" se puede tocar', S.__doc.getElementById('pr-btn-cerrar-planilla').disabled === false)
+  // Planta v2: a "Cerrar planilla" se llega por la barra lateral.
+  chk('… y "Cerrar planilla" se puede tocar', /data-seccion="cierre"(?![^>]*disabled)[^>]*>/.test(S.htmlLatSecciones()), S.htmlLatSecciones())
 
   chk('duración de una hora y pico', S.duracionTexto('2026-09-22T10:00:00Z', '2026-09-22T11:05:00Z') === '1 h 05 min')
   chk('duración ilegible: vacía', S.duracionTexto('basura', null) === '')
@@ -144,20 +150,28 @@ esperas.push((async () => {
   const S = armar({ paradas: [{ id: 'pa2', inicio: '2026-09-22T13:32:00Z', fin: null, motivo: 'pulpo' }] })
   await S.abrirPlanilla('t1')
   // 6b · "desde 10:32 · hace 14 min" y "¿Por qué paró?".
+  // Planta v2 (6b): la franja en bordó "PARADA · desde las 10:32 · hace …",
+  // y el motivo marcado en la grilla de "¿Por qué paró?".
   chk('con parada en curso: la franja fija, desde cuándo y hace cuánto', S.__doc.getElementById('pr-parada-activa').hidden === false &&
-    /^desde 10:32 · hace \d/.test(S.__doc.getElementById('pr-parada-activa-texto').textContent), S.__doc.getElementById('pr-parada-activa-texto').textContent)
-  chk('… y por qué paró', S.__doc.getElementById('pr-parada-activa-hace').textContent === '¿Por qué paró? pulpo')
-  chk('… con "Volvió a andar"', /id="pr-btn-reanudar">Volvió a andar</.test(require('fs').readFileSync(ARCHIVO, 'utf8')))
-  chk('… "Parada" desaparece (la base rechaza una segunda)', S.__doc.getElementById('pr-btn-parada').hidden === true)
+    S.__doc.getElementById('pr-parada-activa-texto').textContent === 'desde las 10:32' &&
+    /^ · hace \d/.test(S.__doc.getElementById('pr-parada-activa-hace').textContent), S.__doc.getElementById('pr-parada-activa-hace').textContent)
+  chk('… y por qué paró', S.__doc.getElementById('pr-parada-motivos-titulo').textContent === '¿Por qué paró?' &&
+    /data-motivo="Otro motivo" aria-pressed="true"/.test(html(S, 'pr-parada-sugerencias')) &&
+    /En curso desde 10:32 · pulpo/.test(html(S, 'pr-planilla-paradas-resumen')), html(S, 'pr-planilla-paradas-resumen'))
+  chk('… con "Volvió a andar"', /id="pr-btn-reanudar"[^>]*>Volvió a andar</.test(FUENTE) && S.__doc.getElementById('pr-btn-reanudar').hidden === false)
+  chk('… "Paró ahora" desaparece (la base rechaza una segunda)', S.__doc.getElementById('pr-btn-parada').hidden === true)
   // LO QUE CAMBIÓ: cerrar_turno cierra sola la parada abierta y la marca como
   // que la máquina no volvió. Antes la pantalla lo bloqueaba.
-  chk('… pero "Cerrar planilla" SIGUE pudiendo tocarse', S.__doc.getElementById('pr-btn-cerrar-planilla').disabled === false)
+  chk('… pero "Cerrar planilla" SIGUE pudiendo tocarse', /data-seccion="cierre"(?![^>]*disabled)[^>]*>/.test(S.htmlLatSecciones()))
   chk('la parada en curso va PRIMERA y en bordó', (() => {
-    const h = S.htmlParadas([
-      { id: 'a', inicio: '2026-09-22T11:00:00Z', fin: '2026-09-22T11:20:00Z', motivo: 'vieja' },
+    // La terminada empezó DESPUÉS que la en curso: la en curso va primera
+    // igual (no es un orden por hora).
+    const h = S.htmlParadasTurno([
+      { id: 'a', inicio: '2026-09-22T14:00:00Z', fin: '2026-09-22T14:20:00Z', motivo: 'vieja' },
       { id: 'b', inicio: '2026-09-22T13:00:00Z', fin: null, motivo: 'ahora' },
     ])
-    return h.indexOf('ahora') < h.indexOf('vieja') && /pr-renglon--curso[\s\S]*ahora/.test(h) && /en curso/.test(h)
+    return h.indexOf('ahora') < h.indexOf('vieja') && /pr-parada-item--curso" data-parada-editar="b"/.test(h) && /10:00 – ahora/.test(h) &&
+      /\.pr-parada-item--curso \{ background: var\(--p-mal-suave\);/.test(FUENTE)
   })())
 
   await S.mostrarCierre()
@@ -194,28 +208,42 @@ esperas.push((async () => {
   const S = armar()
   await S.abrirPlanilla('t1')
   const prod = html(S, 'pr-planilla-producido')
+  // Planta v2: cada renglón es una fila de la tabla (pr-fila-prod).
+  const fila = sub => { const i = prod.indexOf(`>${sub}</span>`); return prod.slice(prod.lastIndexOf('<div class="pr-fila-prod', i), prod.indexOf('<span class="pr-fp__botones', i)) }
   chk('lo producido sale de produccion_items, con SU sublote',
-    /pr-producido__sublote">7023-1</.test(prod) && /pr-producido__sublote">7023-2</.test(prod))
+    /pr-fp__sub">7023-1</.test(prod) && /pr-fp__sub">7023-2</.test(prod))
   chk('… en el orden de la base (orden 1, 2)', prod.indexOf('7023-1') < prod.indexOf('7023-2'))
   chk('… se pide por turno y ordenado por orden',
     S.__llamadas.consultas.some(([t, f]) => t === 'produccion_items' && JSON.stringify(f).includes('["eq","turno_id","t1"]')))
+  const f1 = fila('7023-1'), f2 = fila('7023-2')
   chk('… el renglón dice producto, cono, caja, cajas y unidades',
-    /Cucuruchón Mini/.test(prod) && /pr-producido__detalle">con cono · CASERATO · caja x600</.test(prod) &&
-    /35 cajas/.test(prod) && /21\.000 u/.test(prod), prod)
-  chk('… sin cono no nombra ningún cono', !/Común/.test(prod) && /pr-producido__detalle">caja x200</.test(prod), prod)
+    /Cucuruchón Mini<\/span>/.test(f1) && /<span class="pr-cono-chip"[^>]*>CASERATO<\/span>/.test(f1) && /pr-fp__caja">Caja x600</.test(f1) &&
+    /pr-fp__cajas">35</.test(f1) && /pr-fp__uni">21\.000</.test(f1), f1)
+  chk('… con el texto entero en el title', /title="Cucuruchón Mini · con cono · CASERATO · caja x600"/.test(f1), f1)
+  // (El Grande de este catálogo no tiene ninguna presentación con cono: la
+  // columna queda vacía, como su title, sin decir "sin cono".)
+  chk('… sin cono no nombra ningún cono', !/pr-cono-chip|Común|sin cono/.test(f2) && /pr-fp__cono"><\/span>/.test(f2) && /pr-fp__caja">Caja x200</.test(f2), f2)
   chk('… y cada uno se puede corregir y borrar', /data-corregir="it-1"/.test(prod) && /data-borrar="it-1"/.test(prod))
   chk('el total del turno suma cajas y unidades',
-    /55 cajas · 25\.000 u/.test(html(S, 'pr-planilla-total')), html(S, 'pr-planilla-total'))
-  chk('sin nada cargado, se dice', /Todavía no cargaste nada producido/.test(S.htmlLoProducido([], cat())))
+    /pr-total__valor">55 cajas</.test(html(S, 'pr-planilla-total')) && /pr-total__uni">25\.000 unidades</.test(html(S, 'pr-planilla-total')), html(S, 'pr-planilla-total'))
+  chk('… y cuántos renglones', S.__doc.getElementById('pr-planilla-renglones').textContent === '2 renglones')
+  // Planta v2: sin nada cargado, el lugar libre es el botón grande "+ Agregar
+  // el próximo producto" (también con pocos renglones).
+  const V0 = armar({ items: [] })
+  await V0.abrirPlanilla('t1')
+  chk('sin nada cargado, se dice', html(V0, 'pr-planilla-producido') === '' && V0.__doc.getElementById('pr-agregar-proximo').hidden === false &&
+    V0.__doc.getElementById('pr-planilla-renglones').textContent === '0 renglones' &&
+    /id="pr-agregar-proximo" hidden>\s*<span class="pr-prod__proximo-titulo">\+ Agregar el próximo producto<\/span>/.test(FUENTE))
 
   // Un ANULADO se sigue viendo: ese sublote existió y su stock entró y salió.
   const A = armar({ items: [...ITEMS, { id: 'it-3', orden: 3, sublote: '7023-3', presentacion_id: 'pr-mini-600', marca_id: null, cajas: 5, unidades_por_caja: 600, unidades: 3000, anulado: true }] })
   await A.abrirPlanilla('t1')
   const pa = html(A, 'pr-planilla-producido')
   chk('un sublote anulado NO se esconde', /7023-3/.test(pa))
-  chk('… se muestra anulado', /pr-producido--anulado[\s\S]*7023-3/.test(pa) && /Anulado/.test(pa), pa)
+  chk('… se muestra anulado', /class="pr-fila-prod pr-fila-prod--anulado"[^>]*><span class="pr-fp__l1"><span class="pr-fp__sub">7023-3</.test(pa) &&
+    /pr-fp__anulado">Anulado</.test(pa) && /\.pr-fila-prod--anulado \.pr-fp__l1, \.pr-fila-prod--anulado \.pr-fp__num \{ text-decoration: line-through; \}/.test(FUENTE), pa)
   chk('… sin botones de corregir ni borrar', !/data-corregir="it-3"/.test(pa) && !/data-borrar="it-3"/.test(pa))
-  chk('… y NO suma al total', /55 cajas · 25\.000 u/.test(html(A, 'pr-planilla-total')), html(A, 'pr-planilla-total'))
+  chk('… y NO suma al total', /pr-total__valor">55 cajas</.test(html(A, 'pr-planilla-total')) && /25\.000 unidades/.test(html(A, 'pr-planilla-total')), html(A, 'pr-planilla-total'))
   chk('itemsVivos deja afuera los anulados', A.itemsVivos([{ anulado: true }, { anulado: false }]).length === 1)
   chk('las unidades del total salen de la fila de la base, no del catálogo de hoy',
     A.totalesProducido([{ cajas: 2, unidades: 999, anulado: false }]).unidades === 999)
@@ -301,44 +329,34 @@ esperas.push((async () => {
   // Paso 1: los de chocolate SEPARADOS y abajo.
   const p1 = html(S, 'pr-agregar-panel')
   chk('paso 1: cada producto es un botón', /data-ag-producto="p-mini"/.test(p1) && /data-ag-producto="p-choco"/.test(p1))
-  chk('… los de chocolate van abajo, con su línea', p1.indexOf('data-ag-producto="p-mini"') < p1.indexOf('pr-ag__corte') &&
-    p1.indexOf('pr-ag__corte') < p1.indexOf('data-ag-producto="p-choco"'), p1)
-  chk('… la familia chica arriba y el tamaño grande', /data-ag-producto="p-mini"><span class="pr-ag__familia">Cucuruchón<\/span><span class="pr-ag__tamano">Mini<\/span>/.test(p1), p1)
-  chk('… y la etiqueta ENTERA del de chocolate en marrón', /class="pr-ag__opcion pr-ag__producto pr-ag__opcion--choco" data-ag-producto="p-choco"/.test(p1) &&
-    !/pr-ag__opcion--choco" data-ag-producto="p-mini"/.test(p1), p1)
-  chk('… y la palabra "Chocolate" separa las dos grillas', /pr-ag__corte-texto">Chocolate</.test(p1))
+  // Planta v2: "COMUNES" arriba y "DE CHOCOLATE", en su propia grilla, abajo.
+  const rotChoco = '<span class="pr-ag__rotulo">DE CHOCOLATE</span>'
+  chk('… los de chocolate van abajo, en su grupo', p1.indexOf('data-ag-producto="p-mini"') < p1.indexOf(rotChoco) &&
+    p1.indexOf(rotChoco) < p1.indexOf('data-ag-producto="p-choco"'), p1)
+  chk('… la familia chica arriba y el tamaño grande', /data-ag-producto="p-mini"[^>]*><span class="pr-ag__muestra"[^>]*><\/span><span class="pr-ag__familia">Cucuruchón<\/span><span class="pr-ag__tamano">Mini<\/span>/.test(p1), p1)
+  chk('… y la etiqueta ENTERA del de chocolate en marrón', /class="pr-ag__producto pr-ag__producto--choco" data-ag-producto="p-choco"/.test(p1) &&
+    !/pr-ag__producto--choco" data-ag-producto="p-mini"/.test(p1), p1)
+  chk('… y el grupo "De chocolate" separa las dos grillas', p1.includes(`${rotChoco}<div class="pr-ag__productos pr-ag__productos--choco">`))
   chk('el tipo de masa es lo que decide, no el nombre',
     S.esProductoChocolate({ tipo_masa: 'Chocolate' }) && S.esProductoChocolate({ tipo_masa: 'chocolate' }) &&
     !S.esProductoChocolate({ tipo_masa: 'Común', nombre: 'Cono de chocolate' }))
-  chk('sin productos de chocolate no se dibuja ninguna línea',
-    !/pr-ag__corte/.test(S.htmlPasoProducto({ productos: [{ id: 'a', nombre: 'X', tipo_masa: 'Común' }], presentaciones: [], marcas: [] })))
+  chk('sin productos de chocolate no se dibuja ese grupo',
+    !/DE CHOCOLATE/.test(S.htmlPasoProducto({ productos: [{ id: 'a', nombre: 'X', tipo_masa: 'Común' }], presentaciones: [], marcas: [] })))
   chk('sin productos, se dice dónde se cargan', /Configuración → Productos/.test(S.htmlPasoProducto({ productos: [], presentaciones: [], marcas: [] })))
 
-  // Los pasos de la izquierda.
+  // Los pasos de la izquierda. Planta v2: Producto → Cono → Presentación →
+  // (Caja) → Cajas. La caja aparece solo si hay que elegirla.
   let pasos = S.pasosAgregar(S.estado.agregar, cat())
-  chk('pasos: son 6 y el primero es el actual', pasos.length === 6 && pasos[0].estado === 'actual' && pasos[0].n === 1)
+  chk('pasos: son 4 y el primero es el actual', pasos.length === 4 && pasos.map(x => x.clave).join(',') === 'producto,cono,presentacion,cajas' &&
+    pasos[0].estado === 'actual' && pasos[0].n === 1, pasos.map(x => x.clave).join(','))
   chk('… los que faltan están apagados', pasos.slice(1).every(x => x.estado === 'falta'))
   chk('… y un paso que falta NO muestra ningún valor',
-    !/Elegí uno/.test(S.htmlPasosAgregar([{ n: 2, titulo: 'Presentación', valor: '', estado: 'falta' }])))
+    !/Elegí uno/.test(S.htmlPasosAgregar([{ n: 2, titulo: 'Presentación', valor: '', estado: 'falta' }])) &&
+    !/Caja x600/.test(S.htmlPasosAgregar([{ n: 3, titulo: 'Presentación', valor: 'Caja x600', estado: 'falta' }])) &&
+    /pr-paso__v">—</.test(S.htmlPasosAgregar([{ n: 3, titulo: 'Presentación', valor: 'Caja x600', estado: 'falta' }])))
 
   S.elegirProductoAgregar('p-mini')
-  chk('elegir el producto lleva al paso 2', S.estado.agregar.paso === 'cono_si_no')
-  const p2 = html(S, 'pr-agregar-panel')
-  chk('paso 2: con cono y sin cono, cada uno con cuántas presentaciones tiene',
-    /data-ag-cono="1"/.test(p2) && /data-ag-cono="0"/.test(p2) && /1 presentación/.test(p2), p2)
-  chk('… la opción sin presentaciones queda apagada y dice por qué', (() => {
-    const h = S.htmlPasoConoSiNo({ productoId: 'p-gde', conCono: null }, cat())
-    return /data-ag-cono="1" disabled/.test(h) && /no hay presentaciones/.test(h)
-  })())
-
-  S.elegirConoSiNo(true)
-  const p3 = html(S, 'pr-agregar-panel')
-  chk('paso 3: solo las presentaciones CON cono de ese producto',
-    /data-ag-presentacion="pr-mini-600"/.test(p3) && !/pr-mini-300/.test(p3) && !/pr-gde-200/.test(p3), p3)
-  chk('… con sus unidades por caja', /600 por caja/.test(p3))
-
-  S.elegirPresentacionAgregar('pr-mini-600')
-  chk('con cono, el paso siguiente es el cono', S.estado.agregar.paso === 'cono')
+  chk('elegir el producto lleva al paso 2, el cono', S.estado.agregar.paso === 'cono')
   // (28/09/2026) Tres columnas: la barra, los pasos y las opciones del paso
   // actual. El cono y las cajas ya NO comparten: el cono ocupa la columna.
   chk('… y el cono ocupa la columna de las opciones, solo', S.__doc.getElementById('pr-agregar-cono').hidden === false &&
@@ -346,6 +364,25 @@ esperas.push((async () => {
     S.__doc.getElementById('pr-agregar-panel').hidden === true)
   chk('… la grilla es siempre la misma (pasos + opciones)', S.__doc.getElementById('pr-ag-grilla').className === 'pr-ag')
   chk('… y la lista de conos scrollea en su recuadro', /id="pr-agregar-marcas" data-scroll-propio/.test(FUENTE))
+  chk('paso 2: "Sin cono" se puede elegir si el producto tiene presentaciones sin cono', S.__doc.getElementById('pr-agregar-sin-cono').disabled === false)
+  chk('… y el rótulo dice cuántos conos activos hay', S.__doc.getElementById('pr-agregar-conos-rotulo').textContent === 'CON CONO · 3 ACTIVOS',
+    S.__doc.getElementById('pr-agregar-conos-rotulo').textContent)
+  chk('… un producto que SOLO tiene presentaciones con cono deja "Sin cono" apagado', (() => {
+    const T = armar()
+    T.estado.catalogo = { ...cat(), cajas: [], empaque: [], insumos: [] }
+    T.estado.planilla = { ...PLANILLA, masas: [{ ...MASAS[0], es_chocolate: true }] }
+    T.abrirAgregar()
+    T.elegirProductoAgregar('p-choco')
+    return T.estado.agregar.paso === 'cono' && T.__doc.getElementById('pr-agregar-sin-cono').disabled === true
+  })())
+  chk('… y uno SIN presentaciones con cono va derecho a la presentación, sin cono', (() => {
+    const T = armar()
+    T.estado.catalogo = { ...cat(), cajas: [], empaque: [], insumos: [] }
+    T.estado.planilla = PLANILLA
+    T.abrirAgregar()
+    T.elegirProductoAgregar('p-gde')
+    return T.estado.agregar.paso === 'presentacion' && T.estado.agregar.conCono === false && T.estado.agregar.marcaElegida === true
+  })())
 
   const conos = html(S, 'pr-agregar-marcas')
   chk('conos: "Común" primero, y es una opción de verdad', conos.indexOf('data-marca=""') === conos.indexOf('data-marca'))
@@ -372,22 +409,37 @@ esperas.push((async () => {
     /HELADER<strong>ÍA<\/strong>/.test(S.htmlMarcas(cat().marcas, 'ia', S.estado.agregar, null)) &&
     /HELADERÍA LA CASONA/.test(S.htmlMarcas(cat().marcas, 'heladeria', S.estado.agregar, null).replace(/<\/?strong>/g, '')),
     S.htmlMarcas(cat().marcas, 'heladeria', S.estado.agregar, null))
+  S.estado.agregar.busqueda = ''
 
   S.elegirCono('mk-caserato')
-  chk('elegir el cono lleva a las cajas', S.estado.agregar.paso === 'cajas' && S.estado.agregar.marcaId === 'mk-caserato')
+  chk('elegir el cono lleva a la presentación', S.estado.agregar.paso === 'presentacion' && S.estado.agregar.marcaId === 'mk-caserato' &&
+    S.__doc.getElementById('pr-agregar-cono').hidden === true && S.__doc.getElementById('pr-agregar-panel').hidden === false)
+  const p3 = html(S, 'pr-agregar-panel')
+  chk('paso 3: solo las presentaciones CON cono de ese producto',
+    /data-ag-presentacion="pr-mini-600"/.test(p3) && !/pr-mini-300/.test(p3) && !/pr-gde-200/.test(p3), p3)
+  chk('… con sus unidades por caja', /pr-ag__pres-u"[^>]*>600<\/span><span class="pr-ag__pres-nota">unidades por caja</.test(p3), p3)
+
+  // Sin cajas configuradas para la presentación (este catálogo no tiene
+  // empaque), la caja queda resuelta sin caja: derecho a las cajas.
+  S.elegirPresentacionAgregar('pr-mini-600')
+  chk('elegir la presentación lleva a las cajas', S.estado.agregar.paso === 'cajas')
   chk('… y ahí las cajas ocupan la columna (el cono se cambia tocando su paso)',
     S.__doc.getElementById('pr-agregar-cono').hidden === true && S.__doc.getElementById('pr-agregar-cajas-panel').hidden === false)
   pasos = S.pasosAgregar(S.estado.agregar, cat())
-  chk('los pasos hechos se pueden tocar para volver', /data-paso-ag="producto"/.test(S.htmlPasosAgregar(pasos)))
-  chk('… mostrando lo elegido', pasos[0].valor === 'Cucuruchón Mini' && pasos[3].valor === 'CASERATO')
+  chk('los pasos hechos se pueden tocar para volver', /data-paso-ag="producto"/.test(S.htmlPasosAgregar(pasos)) && /data-paso-ag="cono"/.test(S.htmlPasosAgregar(pasos)))
+  chk('… mostrando lo elegido', pasos[0].valor === 'Cucuruchón Mini' && pasos[1].valor === 'CASERATO' && pasos[2].valor === 'Caja x600 · 600',
+    JSON.stringify(pasos.map(x => x.valor)))
 
   S.cambiarCajas(1)
   chk('las cajas suben de a una', S.estado.agregar.cajas === 1)
+  chk('… con una, "caja ="', S.__doc.getElementById('pr-agregar-cuenta').textContent === 'caja =')
   S.ponerNumero(S.__doc.getElementById('pr-agregar-cajas'), 35)
   S.estado.agregar.cajas = 35
   S.pintarAgregar()
-  chk('el cálculo dice cajas × por caja', S.__doc.getElementById('pr-agregar-cuenta').textContent === '35 × 600 por caja')
-  chk('… y el total en unidades, con puntos de miles', S.__doc.getElementById('pr-agregar-unidades').textContent === '21.000 u')
+  // Planta v2: "35 [cajas =] 21.000 unidades" (el número va en el campo).
+  chk('el cálculo dice cajas = unidades', S.__doc.getElementById('pr-agregar-cuenta').textContent === 'cajas =')
+  chk('… y el total en unidades, con puntos de miles', S.__doc.getElementById('pr-agregar-unidades').textContent === '21.000 unidades')
+  chk('… el botón dice cuántas cajas agrega', S.__doc.getElementById('pr-agregar-confirmar').textContent === 'Agregar 35 cajas a lo producido')
   S.cambiarCajas(-1)
   chk('y bajan de a una', S.estado.agregar.cajas === 34)
   S.cambiarCajas(-99)
@@ -406,48 +458,59 @@ esperas.push((async () => {
   chk('… y se vuelve a la planilla, diciendo el sublote que devolvió la base',
     S.__doc.getElementById('pr-planilla').hidden === false && S.__llamadas.exitos.some(t => /7023-3/.test(t)))
 
-  // Sin cono: el paso del cono no existe y la numeración se corre sola.
+  // Sin cono: el paso del cono queda hecho con "Sin cono".
   const N = armar()
   await N.abrirPlanilla('t1')
   N.abrirAgregar()
   N.elegirProductoAgregar('p-gde')
-  N.elegirConoSiNo(false)
   N.elegirPresentacionAgregar('pr-gde-200')
   chk('sin cono se va derecho a las cajas', N.estado.agregar.paso === 'cajas')
   chk('… el panel del cono no aparece', N.__doc.getElementById('pr-agregar-cono').hidden === true)
   chk('… y las cajas quedan en el centro', N.__doc.getElementById('pr-ag-grilla').className === 'pr-ag')
   const pn = N.pasosAgregar(N.estado.agregar, cat())
-  chk('… los pasos son 5 y Cajas es el 5', pn.length === 5 && pn[4].clave === 'cajas' && pn[4].n === 5)
+  chk('… los pasos son 4, el cono dice "Sin cono" y Cajas es el 4', pn.length === 4 && pn[1].valor === 'Sin cono' && pn[3].clave === 'cajas' && pn[3].n === 4,
+    JSON.stringify(pn))
   N.estado.agregar.cajas = 7
   await N.confirmarAgregar()
   chk('sin cono, el cono viaja en null', rpcs(N, 'registrar_produccion_item')[0]?.[1].p_marca_id === null)
 
-  // Volver atrás invalida lo de abajo.
-  const V = armar()
+  // Volver atrás invalida lo de abajo. (Con una masa de chocolate en el
+  // turno: si no, el de chocolate se frena en el paso del producto.)
+  const V = armar({ masas: [...MASAS, { id: 'm-13', nro: 13, hora: '2026-09-22T13:40:00Z', doble: false, origen: 'original', es_chocolate: true }] })
   await V.abrirPlanilla('t1')
   V.abrirAgregar()
   V.elegirProductoAgregar('p-mini')
-  V.elegirConoSiNo(true)
-  V.elegirPresentacionAgregar('pr-mini-600')
   V.elegirCono('mk-grido')
+  V.elegirPresentacionAgregar('pr-mini-600')
   V.irAPasoAgregar('producto')
   V.elegirProductoAgregar('p-choco')
   chk('elegir OTRO producto borra la presentación y el cono del anterior',
     V.estado.agregar.presentacionId === '' && V.estado.agregar.marcaId === null && V.estado.agregar.conCono === null)
-  V.elegirConoSiNo(true)
+  V.elegirCono('mk-caserato')
   V.elegirPresentacionAgregar('pr-choco-500')
-  V.irAPasoAgregar('cono_si_no')
-  V.elegirConoSiNo(true)
-  chk('volver al mismo paso y contestar lo mismo NO borra lo de abajo', V.estado.agregar.presentacionId === 'pr-choco-500')
+  V.irAPasoAgregar('cono')
+  V.elegirCono('mk-grido')
+  chk('volver al cono y elegir otro cono NO borra la presentación', V.estado.agregar.presentacionId === 'pr-choco-500' && V.estado.agregar.marcaId === 'mk-grido')
+  V.irAPasoAgregar('presentacion')
+  V.elegirPresentacionAgregar('pr-choco-500')
+  chk('volver a la presentación y elegir la misma NO borra lo de abajo', V.estado.agregar.presentacionId === 'pr-choco-500' && V.estado.agregar.paso === 'cajas')
+
+  // 5b · Un producto de chocolate sin masa de chocolate en el turno: se dice
+  // en el mismo paso, con "Ir a Sala de masa", y no avanza.
+  const K = armar()
+  await K.abrirPlanilla('t1')
+  K.abrirAgregar()
+  K.elegirProductoAgregar('p-choco')
+  chk('chocolate sin masa de chocolate: se queda en el producto y lo dice', K.estado.agregar.paso === 'producto' &&
+    /En este turno no hay masa de chocolate/.test(html(K, 'pr-agregar-panel')) && /data-ag-ir-sala="1"/.test(html(K, 'pr-agregar-panel')), html(K, 'pr-agregar-panel'))
 
   // Sin cajas no se manda.
   const Z = armar()
   await Z.abrirPlanilla('t1')
   Z.abrirAgregar()
   Z.elegirProductoAgregar('p-mini')
-  Z.elegirConoSiNo(true)
-  Z.elegirPresentacionAgregar('pr-mini-600')
   Z.elegirCono('')
+  Z.elegirPresentacionAgregar('pr-mini-600')
   chk('"Común" también es elegir un cono', Z.estado.agregar.marcaElegida === true && Z.estado.agregar.marcaId === null)
   await Z.confirmarAgregar()
   chk('sin cajas no se manda nada', rpcs(Z, 'registrar_produccion_item').length === 0 &&
@@ -510,10 +573,16 @@ esperas.push((async () => {
   await S.mostrarCierre()
   chk('el cierre abre con la hora de ahora', /^\d{2}:\d{2}$/.test(S.estado.cierre.hora))
   chk('sin borrador no dice que se recuperó', S.__doc.getElementById('pr-cierre-borrador').hidden === true)
+  // Planta v2: el resumen son celdas (número grande, rótulo y detalle).
+  const celda = (rot) => (html(S, 'pr-cierre-resumen').match(new RegExp(`<span class="pr-resumen__num">([^<]*)</span><span class="pr-resumen__textos"><span class="pr-resumen__rotulo">${rot}</span><span class="pr-resumen__sub">([^<]*)</span>`)) || []).slice(1).join('|')
   chk('el resumen trae masas, paradas y lo producido',
-    /Masas<\/span><strong>2</.test(html(S, 'pr-cierre-resumen')) &&
-    /2 sublotes/.test(html(S, 'pr-cierre-resumen')) &&
-    /55 cj · 25\.000 u/.test(html(S, 'pr-cierre-resumen')), html(S, 'pr-cierre-resumen'))
+    // (Sin paradas dice "0 min": textoMinutos(0) no es vacío. Se acepta
+    // también "ninguna", que es lo que parece buscar el código.)
+    celda('MASAS') === '2|0 de chocolate' && /^0\|(ninguna|0 min)$/.test(celda('PARADAS')) && celda('CAJAS') === '55|25.000 unidades' &&
+    celda('SUBLOTES') === '2|7023-1 a 7023-2' && celda('OPERARIOS') === '2|Federico, Ramón', html(S, 'pr-cierre-resumen'))
+  chk('… el scrap sin cargar dice "—", nunca un 0 inventado', celda('SCRAP') === '—|sin promedio', celda('SCRAP'))
+  chk('… y el título dice desde cuándo', /^RESUMEN DEL TURNO · 06:02 A \d{2}:\d{2}$/.test(S.__doc.getElementById('pr-cierre-resumen-titulo').textContent),
+    S.__doc.getElementById('pr-cierre-resumen-titulo').textContent)
 
   // Nada se marca hasta que se intenta: señalar en rojo un formulario que
   // nadie terminó de llenar es ruido.
@@ -545,7 +614,7 @@ esperas.push((async () => {
   // "Se rompió y no volvió".
   S.alternarRota()
   chk('la casilla cambia la etiqueta de la hora',
-    S.__doc.getElementById('pr-cierre-hora-rotulo').textContent === 'Hora en que se rompió')
+    S.__doc.getElementById('pr-cierre-hora-rotulo').textContent === 'SE ROMPIÓ A LAS')
   chk('… y hace obligatorio contar qué pasó',
     /obligatorio/.test(html(S, 'pr-cierre-obs-rotulo')) &&
     S.faltanParaCerrar({ hora: '14:05', scrap: 0, obs: '', rota: true })[0].campo === 'obs')
@@ -558,7 +627,8 @@ esperas.push((async () => {
   S.alternarRota()
   chk('sin marcar, las observaciones vuelven a ser opcionales',
     S.faltanParaCerrar({ hora: '14:05', scrap: 0, obs: '', rota: false }).length === 0 &&
-    S.__doc.getElementById('pr-cierre-obs-rotulo').innerHTML === 'Observaciones')
+    S.__doc.getElementById('pr-cierre-obs-rotulo').innerHTML === 'OBSERVACIONES' &&
+    S.__doc.getElementById('pr-cierre-hora-rotulo').textContent === 'SE APAGÓ EL FUEGO A LAS')
 
   // La hora, de a 5 minutos.
   chk('la hora se normaliza', S.normalizarHora('9:05') === '09:05' && S.normalizarHora('  14:5 ') === '' && S.normalizarHora('24:00') === '')
@@ -621,7 +691,7 @@ esperas.push((async () => {
   await tic()
   chk('con lo producido cargado y sin paradas, se manda sin preguntar', rpcs(R, 'cerrar_turno').length === 1)
   chk('después de cerrar se borra el borrador', R.localStorage.getItem('produccion.cierre.t1') === null)
-  chk('y se muestran los sublotes del turno', /7023-1<\/span> 35 cajas · 21\.000 unidades/.test(html(R, 'pr-cerrado-lista')) &&
+  chk('y se muestran los sublotes del turno', /7023-1<\/span> <span>35 cajas · 21\.000 unidades<\/span>/.test(html(R, 'pr-cerrado-lista')) &&
     R.__doc.getElementById('pr-cerrado').hidden === false, html(R, 'pr-cerrado-lista'))
   chk('… los anulados no entran a esa lista', !/7023-9/.test(R.htmlSublotesDefinitivos({ lote: 7023, sublotes: [] },
     [{ sublote: '7023-9', cajas: 1, unidades: 1, anulado: true }])))
@@ -703,10 +773,12 @@ esperas.push((async () => {
     /Federico Silva/.test(html(P, 'pr-planilla-estado')) && /Nadie anotó/.test(html(P, 'pr-planilla-estado')),
     html(P, 'pr-planilla-estado'))
   chk('… avisando que lo producido todavía no está en el stock', /todavía no está en el stock/.test(html(P, 'pr-planilla-estado')))
-  chk('… y el botón dice "Completar la planilla"', P.__doc.getElementById('pr-btn-cerrar-planilla').textContent === 'Completar la planilla')
   chk('… se le puede seguir cargando lo producido', P.__doc.getElementById('pr-btn-agregar-producto').disabled === false)
+  chk('… la cabecera de la planilla lo dice', P.cabeceraDeVista()?.titulo === 'Planilla · pendiente de completar')
   await P.mostrarCierre()
-  chk('… y el cierre lo dice también', /^Completar /.test(P.__doc.getElementById('pr-cierre-titulo').textContent))
+  // Planta v2: el título va en la cabecera y el botón dice qué hace.
+  chk('… y el botón dice "Completar la planilla"', P.__doc.getElementById('pr-cierre-enviar').textContent === 'Completar la planilla')
+  chk('… y el cierre lo dice también', P.cabeceraDeVista()?.titulo === 'Completar la planilla')
   P.__doc.getElementById('pr-cierre-hora').value = '14:05'
   P.ponerNumero(P.__doc.getElementById('pr-cierre-scrap'), 0)
   P.cambioEnCierre()
@@ -722,21 +794,40 @@ esperas.push((async () => {
 esperas.push((async () => {
   const S = armar()
   await S.abrirPlanilla('t1')
-  S.__tablas.paradas_produccion = [
-    { motivo: 'Cambio de molde' }, { motivo: 'cambio de  molde ' }, { motivo: 'Falta masa' }, { motivo: '' },
-  ]
-  await S.mostrarFormParada()
+  // Planta v2: los motivos son FIJOS, en una grilla grande (MOTIVOS_PARADA)
+  // más "Otro motivo" con su detalle, que se guarda como "Otro: …". Ya no se
+  // sugieren los motivos usados antes.
+  S.pintarParadas()
   const sug = html(S, 'pr-parada-sugerencias')
-  chk('sugiere los motivos usados antes, sin repetir', (sug.match(/data-sugerencia=/g) || []).length === 2 && /Falta masa/.test(sug))
-  S.__doc.getElementById('pr-parada-motivo').value = 'x'
-  await S.confirmarParada()
-  chk('motivo de una letra: no se manda', rpcs(S, 'iniciar_parada').length === 0)
+  const motivos = [...sug.matchAll(/data-motivo="([^"]+)"/g)].map(m => m[1])
+  chk('los motivos grandes, y "Otro motivo" al final', JSON.stringify(motivos) ===
+    JSON.stringify(['Se cortó la cadena', 'Falta masa', 'Limpieza', 'Cambio de molde', 'Corte de luz', 'Otro motivo']), motivos.join(','))
+  chk('… ninguno elegido de antemano', !/aria-pressed="true"/.test(sug))
+  await S.mostrarFormParada()
+  chk('sin elegir un motivo: no se manda y se dice', rpcs(S, 'iniciar_parada').length === 0 &&
+    S.__doc.getElementById('pr-parada-error').textContent === 'Elegí por qué se para.' && S.__doc.getElementById('pr-parada-error').hidden === false)
+  await S.tocarMotivoParada('Falta masa')
+  chk('tocar un motivo sin parada en curso solo lo elige (no manda nada)', rpcs(S, 'iniciar_parada').length === 0 &&
+    /data-motivo="Falta masa" aria-pressed="true"/.test(html(S, 'pr-parada-sugerencias')))
+  await S.tocarMotivoParada('Otro motivo')
+  chk('"Otro motivo" abre el detalle', S.__doc.getElementById('pr-parada-otro').hidden === false)
   S.__doc.getElementById('pr-parada-motivo').value = '  Se cortó la luz  '
-  S.__tablas.paradas_produccion = [{ id: 'pa2', inicio: '2026-09-22T12:00:00Z', fin: null, motivo: 'Se cortó la luz' }]
+  S.__tablas.paradas_produccion = [{ id: 'pa2', inicio: '2026-09-22T12:00:00Z', fin: null, motivo: 'Otro: Se cortó la luz' }]
   await S.confirmarParada()
-  chk('iniciar_parada con el turno y el motivo recortado',
-    JSON.stringify(rpcs(S, 'iniciar_parada')[0]?.[1]) === '{"p_turno_id":"t1","p_motivo":"Se cortó la luz"}')
+  chk('iniciar_parada con el turno y el motivo recortado ("Otro: …")',
+    JSON.stringify(rpcs(S, 'iniciar_parada')[0]?.[1]) === '{"p_turno_id":"t1","p_motivo":"Otro: Se cortó la luz"}', JSON.stringify(rpcs(S, 'iniciar_parada')))
   chk('… y aparece la franja', S.__doc.getElementById('pr-parada-activa').hidden === false)
+  chk('"Otro" sin detalle se guarda "Otro motivo"', S.textoMotivoParada({ clave: 'Otro motivo', detalle: '   ' }) === 'Otro motivo' &&
+    S.textoMotivoParada({ clave: 'Limpieza', detalle: 'x' }) === 'Limpieza' && S.textoMotivoParada({ clave: null }) === '')
+  chk('un motivo guardado se reconoce al volver', S.motivoDeParada('Otro: pulpo').clave === 'Otro motivo' && S.motivoDeParada('Otro: pulpo').detalle === 'pulpo' &&
+    S.motivoDeParada('limpieza').clave === 'Limpieza' && S.motivoDeParada('algo raro').detalle === 'algo raro')
+  // Con la máquina parada, tocar OTRO motivo le cambia el motivo a la que
+  // sigue (editar_parada, con sus mismas horas).
+  S.estado.paradaSel = null
+  await S.tocarMotivoParada('Limpieza')
+  chk('con una parada en curso, tocar otro motivo lo corrige con editar_parada',
+    JSON.stringify(rpcs(S, 'editar_parada')[0]?.[1]) === '{"p_parada_id":"pa2","p_motivo":"Limpieza","p_inicio":"2026-09-22T12:00:00Z","p_fin":null}',
+    JSON.stringify(rpcs(S, 'editar_parada')))
   // Con una parada vieja ADELANTE en la lista: reanudar tiene que terminar la
   // EN CURSO, no la primera que encuentre.
   S.estado.planilla.paradas = [
@@ -756,9 +847,13 @@ esperas.push((async () => {
   S.__tablas.productos_terminados = () => ({ data: null, error: { message: 'sin red' } })
   await S.abrirPlanilla('t1')
   chk('sin catálogo, los sublotes se siguen viendo con sus cajas',
-    /7023-1/.test(html(S, 'pr-planilla-producido')) && /35 cajas/.test(html(S, 'pr-planilla-producido')))
-  chk('… y se dice que el nombre no se puede mostrar', /No se pudo leer el catálogo/.test(html(S, 'pr-planilla-producido')))
-  chk('… "+ Agregar producto" queda trabado', S.__doc.getElementById('pr-btn-agregar-producto').disabled === true)
+    /pr-fp__sub">7023-1</.test(html(S, 'pr-planilla-producido')) && /pr-fp__cajas">35</.test(html(S, 'pr-planilla-producido')))
+  // Planta v2: sin catálogo el renglón dice "Producto" (nunca un nombre
+  // inventado) y el botón de agregar, trabado, lo explica en su title.
+  chk('… y el nombre no se inventa', /<span class="pr-prod-nombre">Producto<\/span>/.test(html(S, 'pr-planilla-producido')) &&
+    S.__doc.getElementById('pr-btn-agregar-producto').title === 'No se pudo leer el catálogo de productos', html(S, 'pr-planilla-producido'))
+  chk('… "+ Agregar producto" queda trabado', S.__doc.getElementById('pr-btn-agregar-producto').disabled === true &&
+    S.__doc.getElementById('pr-agregar-proximo').disabled === true)
   chk('… y abrirlo no hace nada', (() => { S.abrirAgregar(); return S.__doc.getElementById('pr-agregar-prod').hidden === true })())
   chk('un producto que ya no está en el catálogo se dice distinto',
     /ya no está en el catálogo/.test(S.htmlProducido({ id: 'x', sublote: '7023-9', presentacion_id: 'vieja', cajas: 1, unidades: 1 }, cat())))
@@ -768,17 +863,35 @@ esperas.push((async () => {
 esperas.push((async () => {
   const X = armar()
   X.estado.personal = [{ id: 'e-x', nombre: marca('quien') }]
-  chequearMarcas(chk, 'lote de la planilla', X.htmlLotePlanilla({ turno: { lote: marca('lote') } }), ['lote'])
-  chequearMarcas(chk, 'cabecera de la planilla',
-    X.htmlQuePlanilla({ turno: { turno: marca('turno'), abierto_en: null }, maquinaNombre: marca('maquina') }), ['turno', 'maquina'])
+  // Planta v2: el lote y la máquina van en la cabecera (pr-cab), que se
+  // escribe con textContent: el contexto se arma sin escapar y va como texto.
+  chk('cabecera de la planilla: se escribe con textContent',
+    /getElementById\('pr-cab-ctx'\)\.textContent = c\.ctx/.test(FUENTE) && /t\.textContent = c\.titulo/.test(FUENTE) &&
+    !/pr-cab-(ctx|titulo)'\)\.innerHTML/.test(FUENTE))
+  X.estado.planilla = { turno: { id: 't', lote: marca('lote'), estado: 'abierto' }, maquinaNombre: marca('maquina'), paradas: [], items: [], masas: [], operarios: [] }
+  X.estado.vista = 'pr-planilla'
+  chk('… el contexto trae el lote y la máquina tal cual (van como texto)', X.cabeceraDeVista().ctx === `Lote ${marca('lote')} · ${marca('maquina')}`)
   chequearMarcas(chk, 'estado de la planilla',
     X.htmlEstadoPlanilla({ turno: { estado: 'pendiente_completar', fecha: '2026-09-21', forzado_por: 'e-x', forzado_motivo: marca('motivoForzado') } }, '2026-09-22'),
     ['quien', 'motivoForzado'])
-  chequearMarcas(chk, 'masas de la planilla',
-    X.htmlMasasPlanilla([{ nro: marca('nro'), hora: null, doble: false, origen: 'modificada', es_chocolate: true }]), ['nro'])
-  chequearMarcas(chk, 'paradas',
-    X.htmlParadas([{ motivo: marca('motivoParada'), inicio: null, fin: null }, { motivo: marca('motivoVieja'), inicio: null, fin: '2026-09-22T10:00:00Z' }]),
-    ['motivoParada', 'motivoVieja'])
+  // Planta v2: los tres resúmenes de arriba (operarios, masas, paradas) y la
+  // lista de paradas del turno. (El resumen de paradas pasa el motivo a
+  // minúsculas: las marcas van en minúsculas para que se reconozcan.)
+  X.estado.personal = [{ id: 'e-x', nombre: marca('quien') }, { id: 'e-y', nombre: marca('operario') }]
+  chequearMarcas(chk, 'resumen de operarios',
+    X.htmlOpsResumen({ turno: { encargado_id: 'e-x' }, operarios: [{ empleado_id: 'e-y', hasta: null }] }), ['quien', 'operario'])
+  // (El pie nombra al masero por su primera palabra: de la marca queda
+  // '"><b', que tampoco puede aparecer crudo.)
+  const resMasas = X.htmlMasasResumen([{ nro: 1, hora: null, doble: false, origen: 'modificada', es_chocolate: true, masero_id: 'e-x' }])
+  chequearMarcas(chk, 'resumen de masas', resMasas, [])
+  chk('resumen de masas: el masero escapado', !resMasas.includes('"><b') && resMasas.includes('&quot;&gt;&lt;b'), resMasas)
+  chequearMarcas(chk, 'resumen de paradas',
+    X.htmlParadasResumen([{ motivo: marca('motivoparada'), inicio: '2026-09-22T09:00:00Z', fin: null }]), ['motivoparada'])
+  chequearMarcas(chk, 'resumen de paradas (la última)',
+    X.htmlParadasResumen([{ motivo: marca('motivovieja'), inicio: '2026-09-22T09:00:00Z', fin: '2026-09-22T10:00:00Z' }]), ['motivovieja'])
+  chequearMarcas(chk, 'paradas del turno',
+    X.htmlParadasTurno([{ id: marca('paradaid'), motivo: marca('motivoParada'), inicio: null, fin: null }, { id: 'p2', motivo: marca('motivoVieja'), inicio: null, fin: '2026-09-22T10:00:00Z' }]),
+    ['paradaid', 'motivoParada', 'motivoVieja'])
 
   const catMalo = {
     productos: [{ id: marca('prodId'), nombre: marca('producto'), tipo_masa: 'Común' }],
@@ -796,23 +909,38 @@ esperas.push((async () => {
   // (28/09/2026) El nombre del producto se parte en familia (chica) y tamaño
   // (grande): las dos mitades van escapadas, y juntas dicen el nombre.
   chequearMarcas(chk, 'paso del producto', X.htmlPasoProducto(catMalo).replace(/<\/span><span class="pr-ag__tamano">/g, ' '), ['prodId', 'producto'])
-  chequearMarcas(chk, 'paso de la presentación',
-    X.htmlPasoPresentacion({ productoId: marca('prodId'), conCono: true }, catMalo), ['presId', 'presentacion', 'empaque'])
+  // El de chocolate tiene su propio botón, y el aviso de "no hay masa de
+  // chocolate" nombra el producto.
+  const catChoco = { ...catMalo, productos: [{ id: marca('chocoId'), nombre: `Cucuruchón ${marca('chocoTam')} Chocolate`, tipo_masa: 'Chocolate' }] }
+  chequearMarcas(chk, 'paso del producto (chocolate, sin masa)',
+    X.htmlPasoProducto(catChoco, { productoId: marca('chocoId'), chocoSinMasa: true }), ['chocoId', 'chocoTam'])
+  // Planta v2: la presentación ya no muestra su empaque (texto de la base).
+  const pasoPres = X.htmlPasoPresentacion({ productoId: marca('prodId'), conCono: true }, catMalo)
+  chequearMarcas(chk, 'paso de la presentación', pasoPres, ['presId', 'presentacion'])
+  chk('paso de la presentación: sin el empaque', !pasoPres.includes('empaque'), pasoPres)
   chequearMarcas(chk, 'lista de conos',
     X.htmlMarcas(catMalo.marcas, '', { marcaId: null, marcaElegida: false }, { marcaId: marca('marcaId'), sublote: marca('subAnterior') }) +
     X.htmlMarcas(catMalo.marcas, marca('busqueda') + 'zz', {}, null),
     ['marcaId', 'cono', 'subAnterior', 'busqueda'])
   chequearMarcas(chk, 'avisos del cierre', X.htmlAvisosCierre([marca('aviso')]), ['aviso'])
+  // Planta v2: el resumen del cierre nombra el primer y el último sublote.
   chequearMarcas(chk, 'resumen del cierre',
-    X.htmlResumenCierre({ masas: [], paradas: [], items: [itemMalo] }, catMalo), ['sublote', 'producto'])
+    X.htmlResumenCierre({ turno: { encargado_id: 'e-x' }, operarios: [], masas: [], paradas: [], items: [itemMalo] }, catMalo, { scrap: null }), ['sublote'])
+  chequearMarcas(chk, 'lo que falta para cerrar (lo que dice la base)',
+    X.htmlFaltaCierre({ intentado: false }, { items: [itemMalo] }, { falta: [
+      { nivel: 'bloquea', clave: marca('clave'), texto: marca('bloquea'), accion: marca('accion') },
+      { nivel: 'aviso', clave: 'parada_abierta', texto: marca('avisobase') },
+    ] }), ['bloquea', 'accion', 'avisobase'])
   chequearMarcas(chk, 'sublotes definitivos',
     X.htmlSublotesDefinitivos({ lote: marca('loteRes'), sublotes: [{ sublote: marca('subRes'), cajas: 1, unidades: 1 }] }, []), ['loteRes', 'subRes'])
   chequearMarcas(chk, 'pendientes de completar',
     X.htmlPendientesCompletar([{ id: marca('turnoId'), lote: marca('lotePend'), maquina_id: 'm1' }], [{ id: 'm1', nombre: marca('maquinaPend') }]),
     ['turnoId', 'lotePend', 'maquinaPend'])
-  X.__tablas.paradas_produccion = [{ motivo: marca('sugerida') }]
-  await X.mostrarFormParada()
-  chequearMarcas(chk, 'motivos sugeridos', html(X, 'pr-parada-sugerencias'), ['sugerida'])
+  // Planta v2: la grilla de motivos es fija; lo que viene de la base (el
+  // motivo de las paradas) se dibuja en la lista del turno.
+  X.estado.planilla = { turno: { id: 't', lote: 1, estado: 'abierto' }, paradas: [{ id: 'p', motivo: marca('sugerida'), inicio: '2026-09-22T09:00:00Z', fin: null }], items: [] }
+  X.pintarParadas()
+  chequearMarcas(chk, 'paradas pintadas', html(X, 'pr-planilla-paradas'), ['sugerida'])
 })())
 
 // ── 7 · Lo que falta, a la derecha y con cómo resolverlo ───────────────────
@@ -823,18 +951,73 @@ esperas.push((async () => {
   S.__doc.getElementById('pr-cierre-hora').value = ''
   S.ponerNumero(S.__doc.getElementById('pr-cierre-scrap'), null)
   S.cambioEnCierre()
+  // Planta v2: "LO QUE FALTA" a la derecha. Lo del formulario (hora, scrap)
+  // se dice al tocar "Cerrar planilla" (antes sería señalar en rojo algo que
+  // nadie terminó de llenar); lo demás sale de que_falta_para_cerrar (la
+  // base) y de lo que la pantalla sabe (nada producido, scrap alto).
   const falta = html(S, 'pr-cierre-falta')
-  chk('"Lo que falta" se ve a la derecha, con cada cosa', /pr-falta__titulo">Lo que falta</.test(falta) &&
-    /Falta la hora en que se apagó el fuego\./.test(falta) && /Falta el scrap\. Si no hubo, poné 0\./.test(falta), falta)
-  chk('… la parada sin terminar, con "Ir a Paradas"', /si cerrás, queda como que no volvió/.test(falta) && /data-cierre-ir="paradas">Ir a Paradas</.test(falta))
+  chk('"Lo que falta" se ve a la derecha', /<span class="pr-cierre-caja__rotulo">LO QUE FALTA<\/span>\s*<div class="pr-cierre__falta" id="pr-cierre-falta"/.test(FUENTE))
+  chk('… sin intentar, lo del formulario no se dice todavía', !/Falta la hora|Falta el scrap/.test(falta), falta)
   chk('… nada producido, con "Ir a Lo producido"', /No cargaste nada producido/.test(falta) && /data-cierre-ir="producido">Ir a Lo producido</.test(falta))
   chk('… sin intentar, nada en bordó', !/pr-falta__item--mal/.test(falta))
+  chk('que_falta_para_cerrar y scrap_de_referencia se piden con el turno',
+    JSON.stringify(rpcs(S, 'que_falta_para_cerrar')[0]?.[1]) === '{"p_turno_id":"t1"}' && JSON.stringify(rpcs(S, 'scrap_de_referencia')[0]?.[1]) === '{"p_turno_id":"t1"}')
   S.intentarCerrar()
   await tic()
   const falta2 = html(S, 'pr-cierre-falta')
   chk('después de intentar, lo del formulario va en bordó (y lo de otra sección no)',
-    (falta2.match(/pr-falta__item pr-falta__item--mal/g) || []).length === 2 && /pr-falta__item"><span>Hay una parada/.test(falta2), falta2)
-  chk('el listener lleva a la sección', /const b = ev\.target\.closest\('\[data-cierre-ir\]'\); if \(b\) irASeccion\(b\.dataset\.cierreIr\)/.test(require('fs').readFileSync(ARCHIVO, 'utf8')))
+    (falta2.match(/pr-falta__item pr-falta__item--mal/g) || []).length === 2 &&
+    /Falta la hora en que se apagó el fuego\./.test(falta2) && /Falta el scrap\. Si no hubo, poné 0\./.test(falta2) &&
+    /<div class="pr-falta__item"><span class="pr-falta__chip">AVISO<\/span><span class="pr-falta__texto">No cargaste nada producido\./.test(falta2), falta2)
+  chk('el listener lleva a la sección', /const b = ev\.target\.closest\('\[data-cierre-ir\]'\); if \(b\) irDesdeCierre\(b\.dataset\.cierreIr\)/.test(FUENTE))
+  // Lo que dice la base: un AVISO de parada, con "Ir a Paradas".
+  S.estado.cierreBase = { falta: [{ nivel: 'aviso', clave: 'parada_sin_terminar', texto: 'Hay una parada sin terminar: si cerrás, queda como que no volvió.' }], errorFalta: false, scrapRef: null }
+  S.pintarCierre()
+  const falta3 = html(S, 'pr-cierre-falta')
+  chk('… la parada sin terminar (de la base), con "Ir a Paradas"', /si cerrás, queda como que no volvió/.test(falta3) && /data-cierre-ir="paradas">Ir a Paradas</.test(falta3), falta3)
+  chk('… un aviso NO traba el botón', S.__doc.getElementById('pr-cierre-enviar').disabled === false && S.__doc.getElementById('pr-cierre-bloquea').hidden === true)
+  const QF = armar()
+  QF.__setRpc(async (n) => n === 'que_falta_para_cerrar' ? { data: null, error: { message: 'sin red' } } : { data: null, error: null })
+  await QF.abrirPlanilla('t1')
+  await QF.mostrarCierre()
+  chk('… si que_falta_para_cerrar falla, el cierre lo dice (no "no falta nada")', QF.estado.cierreBase.errorFalta === true &&
+    /No se pudo saber si falta algo: la base lo revisa igual al cerrar\./.test(html(QF, 'pr-cierre-falta')) &&
+    !/No falta nada/.test(html(QF, 'pr-cierre-falta')) && QF.__doc.getElementById('pr-cierre-enviar').disabled === false, html(QF, 'pr-cierre-falta'))
+  chk('… si no se pudo leer, se dice y no se bloquea',
+    /No se pudo saber si falta algo/.test(S.htmlFaltaCierre({}, S.estado.planilla, { falta: null, errorFalta: true })) && S.bloqueosCierre({ falta: null, errorFalta: true }) === 0)
+
+  // LO QUE LA BASE DICE QUE NO DEJA CERRAR: "Enviar" se traba (a propósito)
+  // y se dice cuántas cosas faltan; lo del formulario sigue sin trabarlo.
+  const B = armar()
+  B.__setRpc(async (n) => n === 'que_falta_para_cerrar'
+    ? { data: [{ nivel: 'bloquea', clave: 'chocolate_sin_masa', texto: 'Hay chocolate sin masa de chocolate', accion: 'Cargá la masa o corregí el producto.' }], error: null }
+    : { data: null, error: null })
+  await B.abrirPlanilla('t1')
+  await B.mostrarCierre()
+  const fb = html(B, 'pr-cierre-falta')
+  chk('un bloqueo de la base: "NO DEJA CERRAR" con qué hacer', /pr-falta__sello">NO DEJA CERRAR</.test(fb) && /Cargá la masa o corregí el producto\./.test(fb) &&
+    /data-cierre-ir="sala">Ir a Sala de masa</.test(fb), fb)
+  chk('… "Cerrar planilla" se traba', B.__doc.getElementById('pr-cierre-enviar').disabled === true)
+  chk('… y arriba del botón se dice cuántas cosas faltan', B.__doc.getElementById('pr-cierre-bloquea').hidden === false &&
+    B.__doc.getElementById('pr-cierre-bloquea').textContent === 'Falta resolver 1 cosa para poder cerrar')
+  B.__doc.getElementById('pr-cierre-hora').value = '14:05'
+  B.ponerNumero(B.__doc.getElementById('pr-cierre-scrap'), 0)
+  B.cambioEnCierre()
+  B.estado.cierre.confirmado = true
+  B.intentarCerrar()
+  await tic()
+  chk('… y aunque se intente, no se manda', rpcs(B, 'cerrar_turno').length === 0)
+  chk('bloqueosCierre cuenta solo los que bloquean', B.bloqueosCierre({ falta: [{ nivel: 'bloquea' }, { nivel: 'aviso' }, { nivel: 'bloquea' }] }) === 2 &&
+    B.bloqueosCierre({ falta: null }) === 0)
+
+  // El scrap alto: el doble del promedio o más, con 5 turnos o más.
+  chk('scrap alto: el doble del promedio con 5 turnos', B.scrapAlto(8, { promedio_kg: 4, turnos: 5 }) === true && B.scrapAlto(7.9, { promedio_kg: 4, turnos: 5 }) === false)
+  chk('… con menos de 5 turnos no se compara', B.scrapAlto(100, { promedio_kg: 4, turnos: 4 }) === false)
+  chk('… sin scrap o sin promedio, tampoco', B.scrapAlto(null, { promedio_kg: 4, turnos: 9 }) === false && B.scrapAlto(8, null) === false &&
+    B.scrapAlto(8, { promedio_kg: 0, turnos: 9 }) === false)
+  chk('… y se avisa, con "Revisar"', /Scrap: el doble del promedio<\/span><button type="button" class="pr-falta__link" data-cierre-ir="scrap">Revisar</.test(
+    B.htmlFaltaCierre({ scrap: 9 }, { items: ITEMS }, { falta: [], scrapRef: { promedio_kg: 4, turnos: 5 } })))
+  chk('… en el resumen, el promedio de referencia', /promedio 4 kg/.test(B.htmlResumenCierre({ turno: {}, items: [], paradas: [], masas: [] }, null, { scrap: 9 }, { promedio_kg: 4, turnos: 5 })))
 
   const C = armar()
   await C.abrirPlanilla('t1')
@@ -843,7 +1026,7 @@ esperas.push((async () => {
   C.ponerNumero(C.__doc.getElementById('pr-cierre-scrap'), 0)
   C.cambioEnCierre()
   chk('con todo completo: "No falta nada"', /No falta nada: se puede cerrar\./.test(html(C, 'pr-cierre-falta')), html(C, 'pr-cierre-falta'))
-  const rota = C.htmlFaltaCierre({ hora: '10:00', scrap: 1, rota: true, obs: '' }, C.estado.planilla)
+  const rota = C.htmlFaltaCierre({ hora: '10:00', scrap: 1, rota: true, obs: '', intentado: true }, C.estado.planilla)
   chk('rota sin "qué pasó": lo pide', /Falta contar qué pasó con la máquina/.test(rota))
 })())
 

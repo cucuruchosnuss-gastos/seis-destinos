@@ -18,7 +18,12 @@ correrMutacionesProduccion({
     // lugar: el pie de "¿Quién sos?" de Producción)
     { nombre: 'el acceso maestro del pie no se escucha', de: "      document.getElementById('pr-btn-maestro').addEventListener('click', abrirMaestro)\n", a: '' },
     { nombre: 'la barra no dice que es el acceso maestro', de: "      if (p && estado.maestro && p.id === estado.maestro.id) return 'Acceso maestro'\n", a: '' },
-    { nombre: 'el maestro ve la lista de ¿Quién sos?', de: "document.getElementById('pr-quien-col').hidden = enMaestro", a: "document.getElementById('pr-quien-col').hidden = false" },
+    // Planta v2 (10a): la grilla queda detrás de la ventana del PIN maestro.
+    { nombre: 'la grilla no queda de fondo del PIN maestro', de: "classList?.toggle('pr-quien--maestro', enMaestro)", a: "classList?.toggle('pr-quien--maestro', false)" },
+    { nombre: 'verificado, no abre la pantalla del acceso maestro', de: '      tocar()\n      return abrirDarAcceso()', a: '      tocar()\n      return entrarComoMaestro(estado.modo)' },
+    { nombre: '"Ir a Producción" no entra al modo', de: "if (b && estado.maestro) { tocar(); entrarComoMaestro(b.dataset.maestroModo) }", a: 'if (b && estado.maestro) { tocar() }' },
+    { nombre: 'entrar como maestro entra con otra persona', de: 'return entrar({ id: estado.maestro.id, nombre: estado.maestro.nombre, puesto: PUESTO_DE_MODO[modo] })', a: 'return entrar({ id: estado.persona?.id, nombre: estado.maestro.nombre, puesto: PUESTO_DE_MODO[modo] })' },
+    { nombre: 'cerrar el PIN del acceso lo deja a la vista', de: "      document.getElementById('pr-acceso-pin-numero').textContent = ''\n      document.getElementById('pr-acceso-pin').hidden = true\n      estado.acceso = null", a: "      estado.acceso = null" },
     { nombre: 'con un solo maestro no se elige solo', de: 'if (maestros.length === 1) { p.personaId = maestros[0].id', a: 'if (false) { p.personaId = maestros[0].id' },
     { nombre: 'la fila de nombres aparece con un solo maestro', de: "if (maestros.length < 2) return ''", a: "if (maestros.length < 1) return ''" },
     { nombre: 'la fila muestra a todo el personal', de: 'filter(x => x.es_maestro === true)', a: 'filter(x => true)' },
@@ -34,11 +39,14 @@ correrMutacionesProduccion({
     // sin acceso: nunca al dashboard
     { nombre: 'sinAcceso vuelve al dashboard', de: '      el.innerHTML = `<p>${esc(texto)}</p>${linksHtml}`\n      el.hidden = false\n', a: '      el.innerHTML = `<p>${esc(texto)}</p>${linksHtml}`\n      el.hidden = false\n      setTimeout(() => { window.location.href = \'../dashboard.html\' }, 2500)\n' },
     // g) Atrás
-    { nombre: 'la planilla vuelve a "‹ Máquinas"', de: 'id="pr-planilla-volver"><span aria-hidden="true">←</span> Atrás</button>', a: 'id="pr-planilla-volver">‹ Máquinas</button>' },
+    // Planta v2: la planilla no tiene "Atrás": se navega con la barra.
+    { nombre: 'la barra pierde Inicio', de: "      { id: 'inicio', texto: 'Inicio', corto: 'Inicio', icono: 'home', tono: 'tinta', deMaquina: false },\n", a: '' },
+    { nombre: 'el Atrás de las masas vuelve a "‹ Máquinas"', de: 'id="pr-masas-volver"><span aria-hidden="true">←</span> Atrás</button>', a: 'id="pr-masas-volver">‹ Máquinas</button>' },
     { nombre: 'el Atrás de las masas va después del título', de: '          <button type="button" class="pr-btn pr-btn--secundario pr-atras" id="pr-masas-volver"><span aria-hidden="true">←</span> Atrás</button>\n          <h1 class="pr-titulo">Masas del turno</h1>\n', a: '          <h1 class="pr-titulo">Masas del turno</h1>\n          <button type="button" class="pr-btn pr-btn--secundario pr-atras" id="pr-masas-volver"><span aria-hidden="true">←</span> Atrás</button>\n' },
     // h) el manifest
     { nombre: 'la planta usa el manifest de la app', de: '<link rel="manifest" href="../manifest.webmanifest">', a: '<link rel="manifest" href="../manifest.json">' },
-    { nombre: 'otro theme-color', de: '<meta name="theme-color" content="#3F4655">', a: '<meta name="theme-color" content="#1a2a52">' },
+    { nombre: 'otro theme-color', de: '<meta name="theme-color" content="#2B2723">', a: '<meta name="theme-color" content="#1a2a52">' },
+    { nombre: 'la unidad de la cabecera va por innerHTML', de: "      t.textContent = c.titulo\n", a: "      t.innerHTML = c.titulo\n" },
     { nombre: 'sin apple-touch-icon', de: '  <link rel="apple-touch-icon" href="../icons/planta-192.png">\n', a: '' },
   ],
 })

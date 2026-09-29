@@ -24,7 +24,10 @@ correrMutacionesProduccion({
     { nombre: 'el paso dice lo de siempre', de: "      if (cat?.empaqueError) return 'Sin caja · no se pudo leer el empaque'\n", a: '' },
     { nombre: 'el paso de la caja no avisa', de: "        return h + htmlAvisoSinEmpaque() + '<button", a: "        return h + '<button" },
     { nombre: 'el paso de la caja dibuja lo de siempre', de: "      if (cat?.empaqueError) {\n        return h + htmlAvisoSinEmpaque()", a: "      if (false) {\n        return h + htmlAvisoSinEmpaque()" },
-    { nombre: 'al lado de las cajas no avisa', de: "<span class=\"pr-ag__caja-cambiar\">Ver</span></button>' + htmlAvisoSinEmpaque()", a: "<span class=\"pr-ag__caja-cambiar\">Ver</span></button>'" },
+    // Planta v2: al lado de las cajas va la chapa en bordó (una línea); el
+    // aviso entero, en el paso de la caja.
+    { nombre: 'al lado de las cajas no avisa', de: "<span>Sin caja · no se pudo leer el empaque: se carga sin descontar la caja</span>", a: "<span>Caja</span>" },
+    { nombre: 'la chapa sin empaque no es bordó', de: "return '<button type=\"button\" class=\"pr-ag__caja pr-ag__caja--falta\" data-paso-ag=\"caja\"><span>Sin caja", a: "return '<button type=\"button\" class=\"pr-ag__caja\" data-paso-ag=\"caja\"><span>Sin caja" },
     { nombre: 'al lado de las cajas se dibuja lo de siempre', de: "      if (cat?.empaqueError) {\n        return '<button", a: "      if (false) {\n        return '<button" },
     { nombre: 'el aviso no es bordó', de: "      return '<div class=\"pr-aviso pr-aviso--grave\">No se pudo leer la configuración del empaque", a: "      return '<div class=\"pr-aviso\">No se pudo leer la configuración del empaque" },
     { nombre: 'el aviso no dice cómo se corrige', de: " Corregilo después: avisale a quien lleva el stock para que las descuente a mano.", a: '' },
@@ -34,7 +37,7 @@ correrMutacionesProduccion({
     { nombre: 'sin empaque se va por la rama de siempre', de: "      const sinEmpaque = !!cat?.empaqueError\n      return {\n        p_turno_id", a: "      const sinEmpaque = false\n      return {\n        p_turno_id" },
     { nombre: 'sin empaque se frena la carga', de: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }", a: "      if (!a.cajaElegida || estado.catalogo?.empaqueError) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }" },
     { nombre: 'sin empaque se pierde el cono', de: "p_marca_id: a.marcaId ?? null, p_cajas: a.cajas,", a: "p_marca_id: null, p_cajas: a.cajas," },
-    { nombre: 'la chapa al lado de las cajas dice lo de siempre', de: "<span>Sin caja · no se pudo leer el empaque</span>", a: "<span>Sin caja</span>" },
+    { nombre: 'la chapa al lado de las cajas dice lo de siempre', de: "no se pudo leer el empaque: se carga sin descontar la caja</span>", a: "</span>" },
     { nombre: 'si falla leer el chocolate, la sala no carga la masa', de: "        console.error('ingredientes que definen el chocolate:', err)\n", a: "        throw err\n" },
     { nombre: 'el aviso de stock bloquea', de: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }", a: "      if (!a.cajaElegida) { err.textContent = 'Elegí la caja.'; err.hidden = false; return }\n      if ((faltantesEmpaque(a, estado.catalogo) ?? []).length) { err.textContent = 'Falta empaque.'; err.hidden = false; return }" },
     // ── La marca del renglón ───────────────────────────────────────────
@@ -43,7 +46,8 @@ correrMutacionesProduccion({
     { nombre: 'los que tienen caja se marcan', de: "      return !!it && !it.anulado && !it.caja_insumo_id && !!it.embolsado", a: "      return !!it && !it.anulado && !!it.embolsado" },
     { nombre: 'con doble bolsa dice también las bolsas', de: "(it.embolsado === 'ninguno' ? ' ni las bolsas' : '')", a: "' ni las bolsas'" },
     { nombre: 'sin bolsa no dice las bolsas', de: "(it.embolsado === 'ninguno' ? ' ni las bolsas' : '')", a: "''" },
-    { nombre: 'la planilla no pinta en bordó', de: "+ (sinCaja ? ' pr-producido--sin-caja' : '')", a: '' },
+    { nombre: 'la planilla no pinta en bordó', de: "+ (sinCaja ? ' pr-fila-prod--sin-caja' : '')", a: '' },
+    { nombre: 'la etiqueta "sin empaque" no es bordó', de: '.pr-sin-caja--chip { display: inline-block; padding: 1px 7px; border-radius: 6px; background: var(--p-mal-suave); color: var(--p-mal);', a: '.pr-sin-caja--chip { display: inline-block; padding: 1px 7px; border-radius: 6px; background: var(--p-mal-suave); color: var(--p-tinta);' },
     { nombre: 'la planilla no lo dice', de: "${sinCaja ? `<span class=\"pr-sin-caja pr-sin-caja--chip\" title=\"${esc(textoSinCaja(it))}\">sin empaque</span> ` : ''}", a: '' },
     { nombre: 'el historial no pinta en bordó', de: "${sinCaja ? ' pr-of-sin-caja' : ''}", a: '' },
     { nombre: 'el historial no lo dice', de: "        (sinCaja ? `<strong class=\"pr-sin-caja\">${esc(textoSinCaja(p))}</strong>` : '') + corr +", a: "        corr +" },

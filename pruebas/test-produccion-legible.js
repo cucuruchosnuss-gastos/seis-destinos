@@ -13,6 +13,10 @@
 //     verificados contra el CHECK el 25/09/2026: aprobada / pendiente_revision
 //     / rechazada. En la base: 351 conos, 26 activos.
 //
+//  Planta v2 (28/09/2026): la planilla es una tabla (producto · cono · caja y
+//  bolsa · cajas · unidades) y el renglón de partesProducido() va en el title
+//  de la fila; "Común" se filtra como los demás conos.
+//
 //   node pruebas/test-produccion-legible.js
 
 process.env.TZ = 'UTC'
@@ -65,7 +69,12 @@ function armar(archivo = ARCHIVO) {
 const S = armar()
 const G = armar(ARCHIVO_G)
 const item = (extra) => ({ id: 'it', sublote: '7023-1', cajas: 10, unidades: 3200, anulado: false, marca_id: null, caja_insumo_id: null, embolsado: null, ...extra })
-const detalle = (html) => (html.match(/pr-producido__detalle">([^<]*)</) || [])[1]
+// Planta v2 (28/09/2026): la planilla es una tabla (producto · cono · caja y
+// bolsa · cajas · unidades) y el renglón entero, armado con partesProducido(),
+// va en el title de la fila. El detalle es ese title sin el producto.
+const desEsc = (t) => t.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+const tituloFila = (html) => { const m = html.match(/<div class="pr-fila-prod[^"]*" title="([^"]*)"/); return m ? desEsc(m[1]) : undefined }
+const detalle = (html) => { const t = tituloFila(html); return t == null ? undefined : t.split(' · ').slice(1).join(' · ') }
 const renglon = (extra) => detalle(S.htmlProducido(item(extra), CAT, INSUMOS))
 // El historial, con la MISMA regla.
 const D = {
@@ -107,12 +116,22 @@ const hist = (extra) => {
   chk('el renglón viejo ("Caja con cono · con cono · Común") no vuelve', !/Caja con cono · con cono/.test(S.htmlProducido(item({ presentacion_id: 'pr-con', unidades_por_caja: 320 }), CAT, INSUMOS)))
   // El producto va arriba en la planilla y NO se repite en el detalle.
   const h = S.htmlProducido(item({ presentacion_id: 'pr-con', unidades_por_caja: 320 }), CAT, INSUMOS)
-  // (28/09/2026) El renglón va en UNA línea y el texto entero queda en el
-  // title (por si no entra): se cuenta lo que se VE, sin el title.
+  // (28/09/2026) Planta v2: la fila es de tabla (producto · cono · caja y
+  // bolsa · cajas · unidades) y el texto entero queda en el title de la fila:
+  // se cuenta lo que se VE, sin el title.
   const visto = h.replace(/ title="[^"]*"/g, '')
-  chk('planilla: el producto una sola vez', (visto.match(/Cucuruchón Mini/g) || []).length === 1 && /pr-producido__nombre">Cucuruchón Mini</.test(h), h)
-  chk('planilla: el renglón en UNA línea, con el texto entero en el title', /pr-producido__linea" title="Cucuruchón Mini · con cono · Común · caja ×320"/.test(h), h)
-  chk('planilla: todo en UN renglón de detalle', (h.match(/pr-producido__detalle"/g) || []).length === 1, h)
+  chk('planilla: el producto una sola vez', (visto.match(/Cucuruchón Mini/g) || []).length === 1 && /pr-fp__prod">[^]*?pr-prod-nombre"[^>]*>Cucuruchón Mini</.test(h), h)
+  chk('planilla: la fila con el texto entero en el title', /<div class="pr-fila-prod" title="Cucuruchón Mini · con cono · Común · caja ×320">/.test(h), h)
+  chk('planilla: el cono UNA vez, en su columna (el común dice "Común")', /pr-fp__cono"><span class="pr-cono-chip"[^>]*>Común<\/span>/.test(h) && (visto.match(/Común/g) || []).length === 1, h)
+  // La columna "caja y bolsa": la caja de empaque y el embolsado, en palabras.
+  const hCaja = S.htmlProducido(item({ presentacion_id: 'pr-con', marca_id: 'mk-caserato', unidades_por_caja: 320, caja_insumo_id: 'i-nuss', embolsado: 'grande' }), CAT, INSUMOS)
+  chk('planilla: la columna de caja dice la caja de empaque y la bolsa', /pr-fp__caja">Caja N°1 Nuss · bolsa grande</.test(hCaja) && /pr-cono-chip"[^>]*>CASERATO</.test(hCaja), hCaja)
+  const hSin = S.htmlProducido(item({ presentacion_id: 'pr-sin', unidades_por_caja: 320 }), CAT, INSUMOS)
+  chk('planilla: sin cono lo dice en la columna del cono', /pr-fp__cono"><span class="pr-fp__sin">sin cono</.test(hSin), hSin)
+  // … pero un producto que no tiene ninguna presentación con cono (un Vaso)
+  // no dice "sin cono": no hay nada que distinguir (la regla de partesProducido).
+  const hVaso = S.htmlProducido(item({ presentacion_id: 'pr-vaso', unidades_por_caja: 350 }), CAT, INSUMOS)
+  chk('planilla: un Vaso no dice "sin cono" en la columna del cono', /pr-fp__cono"><\/span>/.test(hVaso) && !/sin cono/.test(hVaso.replace(/ title="[^"]*"/g, '')), hVaso)
   // Las unidades por caja GUARDADAS en el renglón, no las del catálogo de hoy.
   chk('las unidades por caja guardadas en el renglón mandan', renglon({ presentacion_id: 'pr-con', unidades_por_caja: 300 }) === 'con cono · Común · caja ×300')
   // Un nombre que ya trae las unidades no las repite; un nombre igual al producto no se repite.
@@ -135,9 +154,9 @@ const hist = (extra) => {
   S.estado.planilla = null
   // Las marcas que ya existían se mantienen.
   const anul = S.htmlProducido(item({ presentacion_id: 'pr-con', unidades_por_caja: 320, anulado: true }), CAT, INSUMOS)
-  chk('el anulado se sigue marcando', /pr-producido--anulado/.test(anul) && />Anulado</.test(anul))
+  chk('el anulado se sigue marcando', /class="pr-fila-prod pr-fila-prod--anulado"/.test(anul) && /pr-fp__anulado">Anulado</.test(anul) && !/data-corregir|data-borrar/.test(anul))
   const sinCaja = S.htmlProducido(item({ presentacion_id: 'pr-sin', unidades_por_caja: 320, embolsado: 'grande' }), CAT, INSUMOS)
-  chk('"Sin empaque descontado" sigue', /pr-producido--sin-caja/.test(sinCaja) && /Sin empaque descontado/.test(sinCaja))
+  chk('"Sin empaque descontado" sigue', /class="pr-fila-prod pr-fila-prod--sin-caja"/.test(sinCaja) && /pr-sin-caja--chip" title="Sin empaque descontado/.test(sinCaja))
   const hAnul = G.htmlSubloteHistorial(item({ presentacion_id: 'pr-con', unidades_por_caja: 320, anulado: true }), {
     ...D, correcciones: [{ produccion_item_id: 'it', tipo: 'anulado', motivo: 'Se cargó dos veces', hecha_por: 'e', hecha_en: '2026-09-22T14:00:00Z' }], nombres: new Map([['e', 'Ana']]) })
   chk('historial: anulado tachado, "no suma" y su corrección', /pr-of-anulado/.test(hAnul) && /anulado, no suma/.test(hAnul) && /Anulado · Se cargó dos veces · Ana/.test(hAnul), hAnul)
@@ -175,13 +194,18 @@ const hist = (extra) => {
   chk('historial: original y anterior sin chip', !/pr-chip/.test(hm(M[0]) + hm(M[1])))
   chk('historial: modificada y chocolate con su chip', /pr-chip-modificada/.test(hm(M[2])) && /pr-chip-choco/.test(hm(M[2])))
   chk('historial: SIMPLE / DOBLE', /pr-masa-tam">SIMPLE</.test(hm(M[0])) && /pr-masa-tam">DOBLE</.test(hm(M[1])))
-  // El CSS: bordó y grande.
+  // El CSS: "Modificada" en bordó (Planta v2: el bordó es --p-mal /
+  // --p-mal-suave, #7A2E42 / #F5E8EC) y nunca en el naranja.
+  // (28/09/2026) Se eliminaron por diseño: el chip de origen de la cabecera
+  // (la cabecera ya no lleva pastilla aparte), el tamaño SIMPLE / DOBLE a
+  // 1,375 rem y la regla de la tablet vertical que escondía la hora: el
+  // diseño Planta v2 los reemplazó y no tienen equivalente.
   const css = FUENTE.slice(0, FUENTE.indexOf('</style>'))
-  const regla = (sel) => (css.match(new RegExp(sel.replace('.', '\\.') + ' \\{([^}]*)\\}')) || [])[1] || ''
-  chk('"Modificada" en bordó', /var\(--bordo-suave\)/.test(regla('.pr-chip-modificada')) && /var\(--bordo-oscuro\)/.test(regla('.pr-chip-modificada')))
-  chk('el chip de origen "modificada" de la cabecera también en bordó', /var\(--bordo-suave\)/.test(regla('.pr-chip-origen--modificada')) && !/naranja/.test(regla('.pr-chip-origen--modificada')))
-  chk('SIMPLE / DOBLE grande (1,375 rem, 900)', /font-size: 1\.375rem/.test(regla('.pr-masa-tam')) && /font-weight: 900/.test(regla('.pr-masa-tam')))
-  chk('en la tablet vertical se va la hora y NO el tamaño', /\.pr-masas__cab span:nth-child\(2\), \.pr-masa-fila__hora \{ display: none; \}/.test(css) && !/\.pr-masa-fila__tam \{ display: none/.test(css))
+  const regla = (sel) => (css.match(new RegExp('\\n    ' + sel.replace('.', '\\.') + ' \\{([^}]*)\\}')) || [])[1] || ''
+  chk('"Modificada" en bordó', /background: var\(--p-mal-suave\)/.test(regla('.pr-chip-modificada')) && /color: var\(--p-mal\)/.test(regla('.pr-chip-modificada')) &&
+    !/--p-acento/.test(regla('.pr-chip-modificada')), regla('.pr-chip-modificada'))
+  chk('el bordó de --p-mal es el bordó de la app', /--p-mal: #7A2E42;/.test(css))
+  chk('"Chocolate" en su marrón, no en bordó ni naranja', /background: var\(--p-choco\)/.test(regla('.pr-chip-choco')) && !/--p-mal|--p-acento/.test(regla('.pr-chip-choco')))
 }
 
 // ── c) el buscador de conos ──────────────────────────────────────────────
@@ -195,7 +219,11 @@ const hist = (extra) => {
   chk('un estado que no se conoce no se ofrece', S.conosParaElegir([{ id: 'x', nombre: 'RARO', estado_alta: 'otra' }], '').length === 0)
   const lista = S.htmlMarcas(CAT.marcas, 'h', { marcaElegida: false }, null)
   chk('el pendiente, con "nuevo, a revisar"', /ELADERÍA DEL SOL/.test(lista) && /pr-cono__pendiente">nuevo, a revisar</.test(lista), lista)
-  chk('"Común" sigue siempre', /data-marca="" aria-pressed="false">Común/.test(lista))
+  // Planta v2: "Común" es una opción de verdad y se filtra como las demás:
+  // está sin texto y cuando la búsqueda lo nombra, no con "h".
+  const conComun = (t) => /data-marca="" aria-pressed="false">Común/.test(S.htmlMarcas(CAT.marcas, t, { marcaElegida: false }, null))
+  chk('"Común" está sin buscar y cuando la búsqueda lo nombra (sin acentos)', conComun('') && conComun('com') && conComun('COMÚN'))
+  chk('… y no aparece si la búsqueda no lo nombra', !/data-marca=""/.test(lista))
   chk('la lista no ofrece el dado de baja ni el rechazado', !/mk-baja|mk-rech/.test(S.htmlMarcas(CAT.marcas, '', {}, null)))
   // En CADA tecla, sin apretar nada: el listener de input vuelve a dibujar la lista.
   chk('filtra en cada tecla (input), sin botón', /getElementById\('pr-agregar-marca-buscar'\)\.addEventListener\('input', ev => \{\s*estado\.agregar\.busqueda = ev\.target\.value\s*document\.getElementById\('pr-agregar-marcas'\)\.innerHTML =\s*htmlMarcas\(/.test(FUENTE))

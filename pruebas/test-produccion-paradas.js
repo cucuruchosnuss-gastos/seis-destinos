@@ -180,7 +180,12 @@ esperas.push((async () => {
   // SIN parada en curso: si no, "Paró ahora" se escondería por la en curso y
   // no por el estado de la planilla.
   Q.estado.planilla = { turno: PC, paradas: [] }
-  Q.pintarBotonesPlanilla()
+  // Planta v2: el botón lo pinta pintarParadas (la sección Paradas).
+  Q.estado.planilla = { turno: { ...PC, estado: 'abierto' }, paradas: [] }
+  Q.pintarParadas()
+  chk('abierta y sin parada en curso: "Paró ahora" está', Q.__doc.getElementById('pr-btn-parada').hidden === false)
+  Q.estado.planilla = { turno: PC, paradas: [] }
+  Q.pintarParadas()
   chk('pendiente de completar: "Paró ahora" no aparece (iniciar_parada solo vale abierta)', Q.__doc.getElementById('pr-btn-parada').hidden === true)
   Q.estado.planilla = { turno: PC, paradas: [abiertaPc] }
   chk('… "Anotar una parada" sí', Q.__doc.getElementById('pr-btn-anotar-parada').hidden === false)
@@ -317,6 +322,8 @@ esperas.push((async () => {
   const mala = [{ id: marca('id'), inicio: '2026-09-25T12:00:00Z', fin: '2026-09-25T12:20:00Z', motivo: marca('motivo') },
     { id: 'p2', inicio: '2026-09-25T13:00:00Z', fin: null, motivo: marca('motivoCurso') }]
   chequearMarcas(chk, 'paradas de la planilla', X.htmlParadas(mala, { editar: true, borrar: true }), ['id', 'motivo', 'motivoCurso'])
+  // Planta v2: la planilla dibuja las paradas con htmlParadasTurno.
+  chequearMarcas(chk, 'paradas del turno (planta v2)', X.htmlParadasTurno(mala), ['id', 'motivo', 'motivoCurso'])
   chequearMarcas(chk, 'paradas del historial', X.htmlParadas(mala, { editar: false, borrar: true }), ['id', 'motivo'])
   // El detalle del historial ENTERO, de una cerrada y con configurar: los
   // botones de corregir y borrar llevan el id escapado.
@@ -341,8 +348,8 @@ esperas.push((async () => {
 
 // ── Lo que queda escrito ──────────────────────────────────────────────────
 {
-  chk('"Paró ahora" sigue con iniciar_parada', /id="pr-btn-parada">Paró ahora</.test(FUENTE) && /supabase\.rpc\('iniciar_parada'/.test(FUENTE))
-  chk('"Anotar una parada" en la planilla', /id="pr-btn-anotar-parada">Anotar una parada</.test(FUENTE))
+  chk('"Paró ahora" sigue con iniciar_parada', /id="pr-btn-parada"[^>]*>Paró ahora</.test(FUENTE) && /supabase\.rpc\('iniciar_parada'/.test(FUENTE))
+  chk('"Anotar una parada" en la planilla', /id="pr-btn-anotar-parada">\+ Anotar una parada que ya pasó</.test(FUENTE))
   chk('el editor es un diálogo modal', /id="pr-parada-editor" hidden role="dialog" aria-modal="true"/.test(FUENTE))
   {
     const { extraerFn } = require('./extraer')
@@ -357,7 +364,15 @@ esperas.push((async () => {
     /closest\('\[data-parada-borrar\]'\); if \(b\) abrirEditorDesdePlanilla\('borrar'/.test(FUENTE))
   chk('y los del historial (en la gestión)', /abrirEditorDesdeHistorial\('editar', e\.dataset\.paradaEditar\)/.test(FUENTE_G) && /abrirEditorDesdeHistorial\('borrar', b\.dataset\.paradaBorrar\)/.test(FUENTE_G))
   chk('la gestión conecta el editor de paradas (Escape y teclado incluidos)', /editor\.addEventListener\('keydown', teclaEditorParada\)/.test(FUENTE_G) && /function conectarEditorParada\(\)/.test(FUENTE_G))
-  chk('la planilla ofrece corregir y borrar', /htmlParadas\(p\.paradas, \{ editar: true, borrar: true \}\)/.test(FUENTE))
+  // Planta v2: cada parada del turno es un botón que abre el editor
+  // (data-parada-editar); "Borrar esta parada" vive adentro del editor, que
+  // desde la planilla se abre con puedeBorrar.
+  {
+    const { extraerFn } = require('./extraer')
+    chk('la planilla ofrece corregir y borrar', /data-parada-editar="\$\{esc\(p\.id\)\}"/.test(extraerFn(FUENTE, 'htmlParadasTurno')) &&
+      /getElementById\('pr-planilla-paradas'\)\.innerHTML = htmlParadasTurno\(p\.paradas\)/.test(FUENTE) &&
+      /contexto: 'planilla', puedeBorrar: true/.test(extraerFn(FUENTE, 'abrirEditorDesdePlanilla')))
+  }
 }
 
 fin()

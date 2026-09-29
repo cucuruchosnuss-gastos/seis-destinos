@@ -74,23 +74,34 @@ esperas.push((async () => {
   S.estado.pin = S.nuevoPanelPin('persona', { id: 'e-fede', nombre: 'Federico Silva' }, 'encargado')
   S.pintarPin()
   chk('7. al tocar a alguien: la ventana y el fondo oscurecido', S.__doc.getElementById('pr-pin').hidden === false && S.__doc.getElementById('pr-pin-fondo').hidden === false)
-  chk('7. la ventana siempre tiene salida', S.__doc.getElementById('pr-pin-otra').hidden === false &&
-    S.__doc.getElementById('pr-pin-otra').textContent === 'Elegir otra persona')
+  // Planta v2: la salida es la ✕ de la ventana (nunca se esconde); lo que
+  // hace lo dice su aria-label.
+  chk('7. la ventana siempre tiene salida', S.__doc.getElementById('pr-pin-otra').hidden !== true &&
+    /<button type="button" class="pr-pin__cerrar" id="pr-pin-otra" aria-label="Cerrar">/.test(FUENTE) &&
+    S.__doc.getElementById('pr-pin-otra').getAttribute('aria-label') === 'Elegir otra persona')
   chk('7. el teclado entero, del 1 al 0', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].every(d => new RegExp(`data-tecla="${d}"`).test(html(S, 'pr-pin-teclado'))))
   S.estado.quienFija = { id: 'e-fede', nombre: 'Federico Silva' }
   S.pintarPin()
-  chk('7. con la persona guardada, la salida es "Soy otra persona"', S.__doc.getElementById('pr-pin-otra').textContent === 'Soy otra persona')
+  chk('7. con la persona guardada, la salida es "Soy otra persona"', S.__doc.getElementById('pr-pin-otra').getAttribute('aria-label') === 'Soy otra persona')
   S.estado.quienFija = null
   S.estado.pin = S.nuevoPanelPin('maestro', null, null)
   S.pintarPin()
   chk('7. el PIN maestro, en la misma ventana, con "Cancelar"', S.__doc.getElementById('pr-pin').hidden === false &&
-    S.__doc.getElementById('pr-pin-otra').textContent === 'Cancelar')
+    S.__doc.getElementById('pr-pin-otra').getAttribute('aria-label') === 'Cancelar')
   chk('7. es un diálogo', /id="pr-pin" hidden role="dialog" aria-modal="true"/.test(FUENTE))
   chk('7. el fondo y Escape cierran la ventana', /getElementById\('pr-pin-fondo'\)\.addEventListener\('click', \(\) => \{ if \(!estado\.pin\?\.enviando\) cerrarPin\(\) \}\)/.test(FUENTE) &&
     /if \(ev\.key !== 'Escape'\) return\s+if \(estado\.vista === 'pr-quien' && estado\.pin && !estado\.pin\.enviando\) cerrarPin\(\)/.test(FUENTE))
-  chk('7. la ventana va centrada y fija, arriba del fondo', /#pr-pin, \.pr-asignar__panel \{\s*position: fixed; z-index: 61; left: 50%; top: 50%; transform: translate\(-50%, -50%\);/.test(FUENTE) &&
-    /\.pr-pin-fondo \{ position: fixed; inset: 0; z-index: 60;/.test(FUENTE))
-  chk('7. la lista de personas ocupa toda la pantalla', /\.pr-quien \{ grid-template-columns: minmax\(0, 1fr\); gap: 0\.5rem; \}/.test(FUENTE))
+  // Planta v2 (CSS nuevo, tokens --p-*): la ventana y el panel de Asignar
+  // PIN, centrados y fijos, con el z-index ARRIBA del fondo.
+  {
+    const zDe = re => Number((FUENTE.match(re) || [])[1])
+    const zPin = zDe(/\n    \.pr-pin \{\s*position: fixed; z-index: (\d+); left: 50%; top: 50%; transform: translate\(-50%, -50%\);/)
+    const zAsig = zDe(/\n    \.pr-asignar__panel \{\s*position: fixed; z-index: (\d+); left: 50%; top: 50%; transform: translate\(-50%, -50%\);/)
+    const zFondo = zDe(/\.pr-pin-fondo \{ position: fixed; inset: 0; z-index: (\d+);/)
+    chk('7. la ventana va centrada y fija, arriba del fondo', zPin > zFondo && zAsig > zFondo, JSON.stringify({ zPin, zAsig, zFondo }))
+  }
+  chk('7. la lista de personas ocupa toda la pantalla', /\.pr-quien__cuerpo \{ flex: 1; min-height: 0;/.test(FUENTE) &&
+    /\.pr-quien__nombres \{\s*flex: 1; min-height: 0; display: grid;/.test(FUENTE))
 
   // Asignar PIN: la misma ventana, con su fondo y su "Cancelar".
   const A = armar()
@@ -114,31 +125,42 @@ esperas.push((async () => {
   const p1 = html(S, 'pr-agregar-panel')
   chk('11. la familia chica arriba y el tamaño grande', /<span class="pr-ag__familia">Cucuruchón<\/span><span class="pr-ag__tamano">Mini<\/span>/.test(p1), p1)
   chk('11. "Cono dulce 35 x4": familia "Cono dulce", tamaño "35 x4"', /<span class="pr-ag__familia">Cono dulce<\/span><span class="pr-ag__tamano">35 x4<\/span>/.test(p1), p1)
-  chk('11. primero los comunes y después, separados, los de chocolate', p1.indexOf('p-cono') < p1.indexOf('pr-ag__corte') && p1.indexOf('pr-ag__corte') < p1.indexOf('p-choco'))
-  chk('11. el de chocolate con la etiqueta ENTERA en marrón', /class="pr-ag__opcion pr-ag__producto pr-ag__opcion--choco" data-ag-producto="p-choco"/.test(p1) &&
-    /\.pr-ag__opcion--choco \{ background: var\(--marron-oscuro\); border-color: var\(--marron-oscuro\); color: #fff; \}/.test(FUENTE))
+  // Planta v2: "COMUNES" y, en su propio grupo, "DE CHOCOLATE".
+  const iChoco = p1.indexOf('<span class="pr-ag__rotulo">DE CHOCOLATE</span>')
+  chk('11. primero los comunes y después, separados, los de chocolate', iChoco > 0 && p1.indexOf('p-cono') < iChoco && iChoco < p1.indexOf('p-choco'), p1)
+  // El color del chocolate: un marrón (tono 50–60, poco saturado) de fondo
+  // en TODA la etiqueta, con la letra blanca.
+  const choco = (p1.match(/<button type="button" class="pr-ag__producto pr-ag__producto--choco" data-ag-producto="p-choco"[^>]*style="background: ([^"]+)">/) || [])[1] ?? ''
+  const oklch = /^oklch\(([\d.]+) ([\d.]+) (\d+)\)$/.exec(choco)
+  chk('11. el de chocolate con la etiqueta ENTERA en marrón', !!oklch && Number(oklch[3]) >= 45 && Number(oklch[3]) <= 65 && Number(oklch[2]) <= 0.1 && Number(oklch[1]) <= 0.55 &&
+    /\.pr-ag__producto--choco \{ color: #fff;/.test(FUENTE), choco)
   chk('11. partesNombreProducto: una palabra es toda tamaño', JSON.stringify(S.partesNombreProducto('Soft')) === '{"familia":"","tamano":"Soft"}' &&
     JSON.stringify(S.partesNombreProducto('Cucuruchón Grande Chocolate')) === '{"familia":"Cucuruchón","tamano":"Grande"}')
+  // Planta v2: Producto → Cono → Presentación → (Caja) → Cajas. El cono va
+  // en su columna, con "Sin cono" blanco y cada cono de su color.
   S.elegirProductoAgregar('p-mini')
-  chk('11. tocar el producto pasa solo a "Con o sin cono"', S.estado.agregar.paso === 'cono_si_no')
-  const p2 = html(S, 'pr-agregar-panel')
-  chk('11. "Con cono" de colores y "Sin cono" blanco', /pr-ag__opcion pr-ag__opcion--con-cono" data-ag-cono="1"/.test(p2) && /pr-ag__opcion pr-ag__opcion--sin-cono" data-ag-cono="0"/.test(p2) &&
-    /\.pr-ag__opcion--con-cono \{\s*background: linear-gradient/.test(FUENTE) && /\.pr-ag__opcion--sin-cono \{ background: #fff; \}/.test(FUENTE), p2)
-  S.elegirConoSiNo(true)
-  chk('11. y pasa solo a la presentación', S.estado.agregar.paso === 'presentacion')
-  S.elegirPresentacionAgregar('pr-con')
-  chk('11. y al cono (la columna del cono, sola)', S.estado.agregar.paso === 'cono' && S.__doc.getElementById('pr-agregar-cono').hidden === false &&
+  chk('11. tocar el producto pasa solo al cono (la columna del cono, sola)', S.estado.agregar.paso === 'cono' &&
+    S.__doc.getElementById('pr-agregar-cono').hidden === false && S.__doc.getElementById('pr-agregar-panel').hidden === true &&
     S.__doc.getElementById('pr-agregar-cajas-panel').hidden === true)
+  const conos = html(S, 'pr-agregar-marcas')
+  chk('11. cada cono de su color y "Sin cono" blanco', /<button type="button" class="pr-cono" data-marca="mk-fabri" aria-pressed="false" style="background: oklch\([^"]+; color: oklch\([^"]+; border-color: oklch\(/.test(conos) &&
+    /id="pr-agregar-sin-cono" data-ag-cono="0"/.test(FUENTE) && /\.pr-ag__sin-cono \{[^}]*background: #fff;/.test(FUENTE), conos)
   S.elegirCono('mk-fabri')
-  chk('11. elegir el cono pasa sola a la caja', S.estado.agregar.paso === 'caja')
+  chk('11. elegir el cono pasa solo a la presentación', S.estado.agregar.paso === 'presentacion' && S.__doc.getElementById('pr-agregar-cono').hidden === true)
+  S.elegirPresentacionAgregar('pr-con')
+  chk('11. con dos cajas y ninguna de la unidad, pasa sola a la caja', S.estado.agregar.paso === 'caja')
+  chk('11. sin caja elegida no hay "Seguir con las cajas" (tocar una caja ya avanza)', !/data-ag-seguir/.test(S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)))
   S.elegirCaja('c-dp')
   chk('11. tocar una caja la ELIGE Y PASA SOLA a las cajas', S.estado.agregar.paso === 'cajas' && S.estado.agregar.cajaId === 'c-dp' &&
     S.__doc.getElementById('pr-agregar-cajas-panel').hidden === false && S.__doc.getElementById('pr-agregar-panel').hidden === true &&
     S.__doc.getElementById('pr-agregar-cono').hidden === true)
-  chk('11. el embolsado se elige al lado de las cajas', /data-ag-embolsado="individual" aria-pressed="true"/.test(html(S, 'pr-agregar-empaque')))
-  chk('11. sin "Seguir con las cajas" cuando hay cajas', !/data-ag-seguir/.test(S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)))
+  // Al lado de las cajas, la caja y el embolsado en UNA línea; tocarla vuelve
+  // al paso de la caja, donde se cambia el embolsado.
+  chk('11. al lado de las cajas, la caja y el embolsado en una línea', /<button type="button" class="pr-ag__caja" data-paso-ag="caja"><span>Caja N°1 Dolce Pasta · bolsitas individuales<\/span>/.test(html(S, 'pr-agregar-empaque')), html(S, 'pr-agregar-empaque'))
+  const pasoCaja = S.htmlPasoCaja(S.estado.agregar, S.estado.catalogo)
+  chk('11. el embolsado se cambia en el paso de la caja, con "Seguir con las cajas"', /data-ag-embolsado="individual" aria-pressed="true"/.test(pasoCaja) && /data-ag-seguir/.test(pasoCaja), pasoCaja)
   chk('11. la lista de conos es la única que scrollea, en su recuadro', /id="pr-agregar-marcas" data-scroll-propio/.test(FUENTE) &&
-    /\.pr-ag__conos \{ flex: 1 1 auto; min-height: 0; overflow-y: auto;/.test(FUENTE))
+    /\.pr-ag__conos \{ flex: 1; min-height: 0; overflow: auto;/.test(FUENTE))
 })())
 
 // ── 12. Corregir TODO un renglón ─────────────────────────────────────────
@@ -202,9 +224,16 @@ esperas.push((async () => {
 esperas.push((async () => {
   const S = armar()
   const h = S.htmlProducido({ ...ITEM }, CAT, CAT.insumos)
-  chk('13. una sola línea: producto y detalle en .pr-producido__linea', /<span class="pr-producido__linea" title="Cucuruchón Mini · con cono · FABRI · [^"]*"><span class="pr-producido__nombre">Cucuruchón Mini<\/span> <span class="pr-producido__detalle">con cono · FABRI/.test(h), h)
-  chk('13. el botón dice "Anular", no "Borrar"', /data-borrar="it-1">Anular</.test(h) && !/>Borrar</.test(h))
-  chk('13. la línea no se parte: se corta con … y el texto entero queda en el title', /\.pr-producido__linea \{ display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;/.test(FUENTE))
+  // Planta v2: el renglón es una fila de la tabla de lo producido
+  // (sublote · producto · cono · caja y bolsa · cajas · unidades · botones),
+  // con el texto entero en el title.
+  chk('13. una sola fila: sublote, producto, cono y caja, con el texto entero en el title',
+    /^<div class="pr-fila-prod" title="Cucuruchón Mini · con cono · FABRI · [^"]*">/.test(h) &&
+    /<span class="pr-fp__sub">7037-1<\/span><span class="pr-fp__prod">[\s\S]*?Cucuruchón Mini<\/span><\/span><\/span><span class="pr-fp__l2"><span class="pr-fp__cono"><span class="pr-cono-chip"[^>]*>FABRI<\/span><\/span><span class="pr-fp__caja">Caja N°1 Nuss · bolsa grande<\/span>/.test(h), h)
+  chk('13. el botón dice "Anular", no "Borrar"', /data-borrar="it-1" title="Anular" aria-label="Anular el sublote 7037-1"/.test(h) && !/Borrar/.test(h), h)
+  chk('13. la fila no se parte (apaisada): las partes van en las columnas de la misma grilla que el encabezado',
+    /\.pr-prod__thead, \.pr-fila-prod \{\s*display: grid; grid-template-columns: 70px [^;]+;/.test(FUENTE) &&
+    /\.pr-fp__l1, \.pr-fp__l2, \.pr-fp__num \{ display: contents; \}/.test(FUENTE))
   const sc = S.htmlProducido({ ...ITEM, caja_insumo_id: null, embolsado: 'grande' }, CAT, CAT.insumos)
   chk('13. sin empaque: etiqueta corta en la misma línea, el texto entero en el title', /pr-sin-caja pr-sin-caja--chip" title="Sin empaque descontado/.test(sc) && />sin empaque<\/span>/.test(sc), sc)
   S.abrirCorregir('it-1', 'anular')
@@ -214,12 +243,24 @@ esperas.push((async () => {
 
 // ── 9, 14, 16. La receta, las paradas y el reloj ─────────────────────────
 esperas.push((async () => {
-  chk('9. Original / Anterior / Modificar: tres botones chicos en UNA fila', /\.pr-receta__comos \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); gap: 0\.375rem; \}/.test(FUENTE))
+  // Planta v2: un segmentado (.pr-seg-rec, flex sin wrap) con los tres.
+  {
+    const ops = require('./extraer').extraerFn(FUENTE, 'htmlOpcionesReceta')
+    chk('9. Original / Anterior / Modificar: tres botones chicos en UNA fila',
+      /const comos = '<span class="pr-seg-rec pr-receta__comos" role="group"[^']*' \+\s*htmlComo\('original'[\s\S]*?htmlComo\('anterior'[\s\S]*?htmlComo\('modificar'[\s\S]*?'<\/span>'/.test(ops) &&
+      /\.pr-seg-rec \{ display: flex;/.test(FUENTE) && !/\.pr-seg-rec[^{]*\{[^}]*flex-wrap: wrap/.test(FUENTE) &&
+      /\.pr-seg-rec__op, \.pr-como \{[^}]*white-space: nowrap;/.test(FUENTE))
+  }
   chk('9. sin la pastilla aparte del origen', !/class="pr-chip-origen/.test(FUENTE.slice(FUENTE.indexOf('function htmlCabeceraReceta'), FUENTE.indexOf('function htmlCabeceraReceta') + 1500)))
-  chk('9. la receta: una fila por ingrediente, también debajo de 1100 px', /@media \(max-width: 1100px\) \{\s*\/\* Ya no se apila la receta: sigue en una fila por ingrediente\. \*\/\s*\.pr-rec \{ grid-template-columns: minmax\(96px, 1fr\) 150px minmax\(150px, 1\.35fr\) 56px; \}/.test(FUENTE))
-  chk('14. "Paró ahora" en bordó', /\.pr-planilla-cab #pr-btn-parada \{ background: var\(--bordo\); border-color: var\(--bordo\); color: #fff; \}/.test(FUENTE))
-  chk('14. la tarjeta de paradas en bordó', /class="pr-tarjeta pr-bloque--paradas"/.test(FUENTE) && /\.pr-bloque--paradas \{ background: var\(--bordo-suave\); border-color: var\(--bordo\); \}/.test(FUENTE) &&
-    /\.pr-bloque--paradas \.pr-bloque__titulo \{ color: var\(--bordo-oscuro\); \}/.test(FUENTE))
+  // Planta v2: la receta es una grilla de 4 columnas por renglón en TODOS
+  // los tamaños: ningún @media la apila.
+  chk('9. la receta: una fila por ingrediente, en cualquier ancho',
+    /\.pr-rec, \.pr-rec--cab \{\s*display: grid; grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1\.1fr\) minmax\(0, 1\.25fr\) 64px;/.test(FUENTE) &&
+    !/\.pr-rec[ ,{][^}]*(grid-template-columns: (minmax\(0, 1fr\)|1fr);|display: (block|flex))/.test(FUENTE.replace(/\.pr-rec, \.pr-rec--cab \{[^}]*\}/, '')))
+  // Planta v2: las paradas en bordó con los tokens nuevos (--p-mal).
+  chk('14. "Paró ahora" en bordó', /class="pr-prim pr-prim--mal" id="pr-btn-parada"/.test(FUENTE) && /\.pr-prim--mal \{ background: var\(--p-mal\); \}/.test(FUENTE))
+  chk('14. la tarjeta de paradas en bordó', /\.pr-parada-activa \{ background: var\(--p-mal\); color: #fff;/.test(FUENTE) &&
+    /\.pr-paradas__cab \{[^}]*color: var\(--p-mal\);/.test(FUENTE) && /\.pr-parada-item--curso \{ background: var\(--p-mal-suave\);/.test(FUENTE))
 
   const S = armar()
   chk('16. el reloj: "28/09/2026 · 12:37" en hora argentina', S.textoReloj(new Date('2026-09-28T15:37:10Z')) === '28/09/2026 · 12:37', S.textoReloj(new Date('2026-09-28T15:37:10Z')))
@@ -236,13 +277,47 @@ esperas.push((async () => {
   chk('16. cada minuto, al minuto justo', /relojPlanta = setTimeout\(\(\) => \{ tocarReloj\(\); relojPlanta = setInterval\(tocarReloj, 60000\) \}, falta \+ 50\)/.test(FUENTE))
   S.estado.modo = 'produccion'
   S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
-  chk('16. en la barra lateral (los dos modos)', /class="pr-reloj pr-lat__reloj" data-reloj/.test(S.htmlLateral()))
+  // Planta v2: en la barra lateral va en dos líneas (la tablet parada) y,
+  // apaisada, en la cabecera de cada pantalla.
+  const relojLat = /class="pr-lat__reloj" aria-label="Fecha y hora"><span class="pr-reloj-hora" data-reloj-hora>/
+  chk('16. en la barra lateral (los dos modos)', relojLat.test(S.htmlLateral()))
   S.estado.modo = 'masa'
-  chk('16. … también en Sala de masa', /class="pr-reloj pr-lat__reloj" data-reloj/.test(S.htmlLateral()))
+  chk('16. … también en Sala de masa', relojLat.test(S.htmlLateral()))
+  chk('16. y en la cabecera de cada pantalla', /<span class="pr-reloj pr-cab__reloj" data-reloj aria-label="Fecha y hora"><\/span>/.test(FUENTE))
+  // tocarReloj también actualiza el reloj de dos líneas.
+  {
+    const hora = { textContent: '' }, fecha = { textContent: '' }
+    const qsa2 = S.__doc.querySelectorAll
+    S.__doc.querySelectorAll = (sel) => sel === '[data-reloj-hora]' ? [hora] : sel === '[data-reloj-fecha]' ? [fecha] : []
+    S.tocarReloj(new Date('2026-09-28T15:38:00Z'))
+    S.__doc.querySelectorAll = qsa2
+    chk('16. el reloj de dos líneas también se actualiza', hora.textContent === '12:38' && fecha.textContent === '28/09/2026', JSON.stringify([hora, fecha]))
+  }
   S.estado.modo = 'produccion'
   chk('16. y en "¿Quién sos?"', /class="pr-reloj pr-banda-modo__reloj" data-reloj/.test(S.htmlBandaQuien()))
   chk('16. arranca con la planta', /iniciarReloj\(\)\s+registrarPantalla\(\)/.test(FUENTE))
 })())
+
+// ── Todo entra sin scroll (1000×540 apaisada, 600×940 parada) ────────────
+// Planta v2 (CSS nuevo, tokens --p-*): la página NO scrollea —el marco mide
+// 100dvh y esconde lo que sobra— y las listas largas scrollean adentro de su
+// recuadro (data-scroll-propio). Parada, la barra va arriba (columna). Las
+// medidas reales las hace e2e/8-planta-tamanos.spec.js; esto fija las reglas.
+{
+  const css = FUENTE.slice(FUENTE.indexOf('<style>'), FUENTE.indexOf('</style>'))
+  chk('sin scroll: el body esconde lo que sobra', /\n    body, body\.pagina-modulo \{[^}]*overflow: hidden;/.test(css))
+  chk('… el marco mide el alto de la pantalla y no crece', /\.pr-app \{ height: 100dvh; display: flex; flex-direction: row; overflow: hidden; \}/.test(css))
+  chk('… parada, la barra va arriba', /@media \(orientation: portrait\) \{ \.pr-app \{ flex-direction: column; \} \}/.test(css))
+  chk('… cada pantalla llena el resto sin empujar', /#pr-vista > section \{ flex: 1; min-height: 0; min-width: 0;/.test(css))
+  chk('… y lo que scrollea, scrollea en su recuadro', /\[data-scroll-propio\] \{ overflow-y: auto; min-height: 0;/.test(css))
+  chk('… sin anchos ni altos fijos en px del marco (solo 100dvh)', !/\.pr-app \{[^}]*height: \d+px/.test(css))
+  const listas = ['pr-acceso-personas', 'pr-asignar-personas', 'pr-planilla-producido', 'pr-planilla-operarios', 'pr-agregar-marcas',
+    'pr-planilla-paradas', 'pr-cierre-falta', 'pr-receta-filas', 'pr-hm-lista', 'pr-hm-detalle', 'pr-cerrado-lista']
+  const sin = listas.filter(id => !new RegExp(`id="${id}"[^>]*data-scroll-propio`).test(FUENTE))
+  chk('las listas largas scrollean en su recuadro (data-scroll-propio)', sin.length === 0, sin.join(', '))
+  chk('… también las que se arman en JS (operarios de Abrir turno, lotes)', /class="pr-abrir-ops__lista pr-op-tags" data-res-op="\$\{i\}" data-scroll-propio/.test(FUENTE) &&
+    /<div class="pr-lp__filas" data-scroll-propio>/.test(FUENTE))
+}
 
 // ── HTML malicioso en cada render nuevo ──────────────────────────────────
 esperas.push((async () => {
@@ -252,9 +327,22 @@ esperas.push((async () => {
   const form = { filas: [{ nombre: marca('maquina'), elegida: true, bloqueada: false, operarios: [], busqueda: '' },
     { nombre: marca('otra'), elegida: true, bloqueada: false, operarios: [marca('opId')], busqueda: '' }] }
   chequearMarcas(chk, 'etiquetas de operarios', X.htmlTagsOperarios(form.filas[0], 0, ops, form), ['opId', 'operario', 'otra'])
-  chequearMarcas(chk, 'la fila de Abrir turno', X.htmlFilaAbrir(form.filas[0], 0, ops, form), ['maquina', 'opId', 'operario'])
+  // Planta v2: la máquina es un botón (htmlFilaAbrir) y sus operarios van en
+  // la tarjeta de al lado (htmlOperariosAbrir).
+  chequearMarcas(chk, 'la fila de Abrir turno', X.htmlFilaAbrir(form.filas[0], 0, ops, form), ['maquina'])
+  chequearMarcas(chk, 'la máquina abierta de ayer', X.htmlFilaAbrir({ ...form.filas[0], bloqueada: true, lote: marca('lote') }, 0, ops, form), ['maquina', 'lote'])
+  // Con recientes: "TRABAJARON HACE POCO EN <MÁQUINA>" lleva el nombre de la
+  // máquina EN MAYÚSCULAS (la marca cruda sería "<B DATA-XSS=").
+  const conRecientes = X.htmlTagsOperarios({ ...form.filas[0], maquinaId: 'm-x' }, 0, ops, { ...form, recientes: new Map([['m-x', new Set([marca('opId')])]]) })
+  chk('etiquetas con recientes: el nombre de la máquina escapado (en mayúsculas)', !/<b data-xss=/i.test(conRecientes) &&
+    conRecientes.includes('TRABAJARON HACE POCO EN &quot;&gt;&lt;B DATA-XSS=&quot;MAQUINA&quot;&gt;'), conRecientes)
   form.filas[0].busqueda = marca('busqueda')
   chequearMarcas(chk, 'etiquetas buscando algo raro', X.htmlTagsOperarios(form.filas[0], 0, ops, form), ['busqueda'])
+  const opsAbrir = X.htmlOperariosAbrir({ ...form, editando: 0 }, ops)
+  chequearMarcas(chk, 'los operarios de la máquina', opsAbrir, ['maquina', 'busqueda'])
+  // El título lleva el nombre de la máquina EN MAYÚSCULAS: una marca cruda
+  // ahí sería "<B DATA-XSS=", que la comparación de siempre no ve.
+  chk('los operarios de la máquina: tampoco una marca cruda en mayúsculas', !/<b data-xss=/i.test(opsAbrir), opsAbrir)
   // Un renglón de lote.
   const fila = { o: { insumo_id: 'x', lote: marca('lote'), sinLote: false, stock: 5 }, i: 0, marca: marca('marca'), desde: '2026-09-01', queda: 5 }
   chequearMarcas(chk, 'renglón de lote', X.htmlFilaLote(fila, true, true), ['lote', 'marca'])

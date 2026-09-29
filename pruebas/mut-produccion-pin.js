@@ -11,6 +11,7 @@ correrMutacionesProduccion({
   escape: 'esc',
   funciones: ['htmlMensajePin', 'htmlTecladoPin', 'htmlPuntosPin', 'pintarDarAcceso'],
   equivalentes: [
+    { expr: "esc(QUE_HACE_PUESTO[clave] ?? '')", motivo: 'QUE_HACE_PUESTO son tres textos del código ("abre y cierra planillas", …) indexados por las claves de PUESTOS: ninguna salida posible tiene un carácter escapable' },
     { expr: 'esc(clave)', motivo: 'la clave del puesto sale de PUESTOS, una constante del código (encargado / masero / operario): ninguna salida posible tiene un carácter escapable' },
     { expr: 'esc(rotulo)', motivo: 'el rótulo del puesto sale de PUESTOS, una constante del código (Encargado / Masero / Operario): ninguna salida posible tiene un carácter escapable' },
   ],
@@ -30,7 +31,10 @@ correrMutacionesProduccion({
     { nombre: 'los segundos sin dos dígitos', de: "      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`", a: '      return `${Math.floor(s / 60)}:${s % 60}`' },
     { nombre: 'una fecha ilegible da NaN en vez de null', de: '      if (!Number.isFinite(ms) || ms <= 0) return null', a: '      if (ms <= 0) return null' },
     { nombre: 'el teclado no se apaga con el bloqueo', de: "      const off = bloqueado ? ' disabled' : ''", a: "      const off = ''" },
-    { nombre: 'sin salida cuando está bloqueado', de: "      otra.hidden = !(p.modo === 'maestro' || reloj)", a: "      otra.hidden = p.modo !== 'maestro'" },
+    // Planta v2: la ✕ de la ventana siempre está (es una ventana y siempre
+    // tiene salida); lo que se mide es que diga a dónde lleva.
+    { nombre: 'la ✕ de la ventana no dice a dónde lleva', de: "      document.getElementById('pr-pin-otra').setAttribute(", a: "      void (" },
+    { nombre: 'la salida del maestro no dice Cancelar', de: "p.modo === 'maestro' ? 'Cancelar' : ", a: "" },
     { nombre: 'bloqueado: las teclas siguen andando', de: '      if (p.bloqueadoHasta && cuentaRegresiva(p.bloqueadoHasta)) return\n', a: '' },
 
     // ── Los intentos ───────────────────────────────────────────────────────
@@ -40,9 +44,11 @@ correrMutacionesProduccion({
 
     // ── El PIN no queda en ningún lado ─────────────────────────────────────
     { nombre: 'el PIN se guarda en sessionStorage', de: '      p.enviando = false\n      if (!res || res.ok !== true) {\n        aplicarRechazoPin(res)\n        return pintarPin()\n      }\n      // ESTE ES EL ÚNICO CAMINO', a: "      p.enviando = false\n      guardarSesion('produccion.ultimo-pin', p.digitos)\n      if (!res || res.ok !== true) {\n        aplicarRechazoPin(res)\n        return pintarPin()\n      }\n      // ESTE ES EL ÚNICO CAMINO" },
-    { nombre: 'los puntos muestran el número tipeado', de: '        const clase = i < puestos ? \' pr-pin__punto--lleno\' : (mal ? \' pr-pin__punto--mal\' : \'\')\n        out += `<span class="pr-pin__punto${clase}"></span>`', a: '        const clase = i < puestos ? \' pr-pin__punto--lleno\' : (mal ? \' pr-pin__punto--mal\' : \'\')\n        out += `<span class="pr-pin__punto${clase}">${estado.pin?.digitos[i] ?? \'\'}</span>`' },
+    { nombre: 'los puntos muestran el número tipeado', de: '        out += `<span class="pr-pin__punto${clase}"></span>`', a: '        out += `<span class="pr-pin__punto${clase}">${estado.pin?.digitos[i] ?? \'\'}</span>`' },
     { nombre: 'el PIN maestro se guarda en sessionStorage', de: '      pinMaestro = p.digitos        // EN MEMORIA: otorgar_puesto_temporal lo pide', a: "      pinMaestro = p.digitos\n      guardarSesion('produccion.maestro-pin', p.digitos)" },
-    { nombre: 'el PIN temporal queda en el estado después de cerrar', de: "      document.getElementById('pr-acceso-pin').hidden = true\n      estado.acceso = null\n      return siguientePaso()", a: "      document.getElementById('pr-acceso-pin').hidden = true\n      return siguientePaso()" },
+    // Con el maestro activo, cerrar vuelve a SU pantalla con un formulario
+    // nuevo: el PIN se va de la memoria al soltar el viejo.
+    { nombre: 'el PIN temporal queda en el estado después de cerrar', de: "      estado.acceso = null\n      document.getElementById('pr-acceso-pin-texto').textContent = ''\n      return estado.maestro ? abrirDarAcceso() : siguientePaso()", a: "      document.getElementById('pr-acceso-pin-texto').textContent = ''\n      return siguientePaso()" },
     { nombre: 'el PIN temporal queda escrito en la pantalla', de: "      document.getElementById('pr-acceso-pin-numero').textContent = ''\n      document.getElementById('pr-acceso-pin').hidden = true\n      estado.acceso = null", a: "      document.getElementById('pr-acceso-pin').hidden = true\n      estado.acceso = null" },
 
     // ── El teclado ─────────────────────────────────────────────────────────
@@ -50,7 +56,9 @@ correrMutacionesProduccion({
     { nombre: 'Borrar no borra', de: "      if (t === 'borrar') p.digitos = p.digitos.slice(0, -1)", a: "      if (t === 'borrar') p.digitos = p.digitos" },
     { nombre: 'el PIN maestro pide 4 números', de: "        largo: modo === 'maestro' ? LARGO_PIN_MAESTRO : LARGO_PIN,", a: '        largo: LARGO_PIN,' },
     { nombre: 'un PIN incompleto se manda igual', de: '      if (p.digitos.length !== p.largo) {', a: '      if (false) {' },
-    { nombre: 'la tecla de acción no cambia en el primer paso', de: "${p.fase === 'nuevo' ? 'Seguir' : 'Entrar'}", a: 'Entrar' },
+    // Planta v2: sin tecla de acción (se manda solo); el subtítulo dice el paso.
+    { nombre: 'el subtítulo no pide el PIN nuevo en el primer paso', de: "      if (p.fase === 'nuevo') return 'Elegí un PIN nuevo de 4 números'\n", a: '' },
+    { nombre: 'con el último número no se manda solo', de: '      if (/^[0-9]$/.test(t) && p.digitos.length === p.largo) return enviarPin()', a: '      void 0' },
 
     // ── Verificar el PIN ───────────────────────────────────────────────────
     { nombre: 'verificar_pin_produccion sin el puesto', de: '          p_puesto: p.puesto, p_pin: p.digitos,', a: '          p_puesto: null, p_pin: p.digitos,' },
@@ -82,7 +90,7 @@ correrMutacionesProduccion({
     { nombre: 'cerrar el maestro le deja el PIN en memoria', de: '      estado.maestro = null\n      pinMaestro = null', a: '      estado.maestro = null' },
     { nombre: 'cerrar el maestro deja a la persona adentro', de: '      if (estado.persona && estado.persona.id === id) {\n        estado.persona = null\n        estado.pin = null\n      }\n    }', a: '    }' },
     { nombre: 'el cartel del maestro no dice a nombre de quién queda', de: '        `Acceso maestro · ${estado.maestro.nombre} · todo lo que hagas queda a tu nombre`', a: '        `Acceso maestro`' },
-    { nombre: 'el panel del maestro no se marca como tal', de: "      panel.className = 'pr-tarjeta pr-pin' + (p.modo === 'maestro' ? ' pr-pin--maestro' : '')", a: "      panel.className = 'pr-tarjeta pr-pin'" },
+    { nombre: 'el panel del maestro no se marca como tal', de: "      const modoPin = p.modo === 'maestro' ? 'maestro' : (estado.modo === 'masa' ? 'masa' : 'produccion')", a: "      const modoPin = estado.modo === 'masa' ? 'masa' : 'produccion'" },
 
     // ── Dar acceso por hoy ─────────────────────────────────────────────────
     { nombre: 'hasta hoy se manda una fecha en vez de null', de: '      if (!fecha || fecha === hoy) return null', a: '      if (!fecha) return null' },
@@ -96,7 +104,8 @@ correrMutacionesProduccion({
     { nombre: 'un rechazo del maestro se lee como éxito', de: '      if (!res || res.ok !== true) {\n        // Si el maestro dejó de valer', a: '      if (false) {\n        // Si el maestro dejó de valer' },
     { nombre: 'el PIN temporal no se muestra', de: '      if (res.pin_temporal) {', a: '      if (false) {' },
     { nombre: 'un pin_temporal null se muestra igual', de: '      if (res.pin_temporal) {', a: '      if (true) {' },
-    { nombre: 'no se dice que el PIN no se vuelve a mostrar', de: '          `Anotalo y pasáselo a ${nombre}. No se va a volver a mostrar.`', a: '          `Listo.`' },
+    { nombre: 'no se dice que el PIN no se vuelve a mostrar', de: 'Se muestra una sola vez. Dáselo ahora o anotalo.', a: 'Dáselo.' },
+    { nombre: 'no se dice a quién pasarle el PIN temporal', de: 'PIN temporal de <strong>${esc(nombre)}</strong>', a: 'PIN temporal' },
     // Anclado a faltanParaAcceso() y no a `btn.disabled = …`, que no es único
     // en el archivo: el guard del runner lo cortaba antes de correr.
     { nombre: 'el botón se destraba sin elegir nada', de: '      return faltan\n    }\n\n    function abrirDarAcceso() {', a: '      return []\n    }\n\n    function abrirDarAcceso() {' },

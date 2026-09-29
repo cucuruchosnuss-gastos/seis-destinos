@@ -1040,10 +1040,10 @@
     .pr-rm__anular-nota { margin: 0; font-size: 12.5px; color: var(--p-gris); }
     .pr-masa-chips { display: inline-flex; gap: 4px; }
     .pr-receta__tabla--modificar .pr-rec { min-height: 30px; }
-    .pr-receta__tabla--modificar .pr-rec__paso { width: 30px; height: 28px; font-size: 18px; }
+    .pr-receta__tabla--modificar .pr-rec__paso { width: 30px; height: 30px; font-size: 18px; }
     .pr-receta__tabla--modificar .pr-rec__num { font-size: 22px; width: 70px; }
     .pr-receta__tabla--modificar .pr-rec__lote { min-height: 30px; }
-    .pr-receta__tabla--modificar .pr-rec__otro, .pr-receta__tabla--modificar .pr-rec__quitar { min-height: 28px; }
+    .pr-receta__tabla--modificar .pr-rec__otro, .pr-receta__tabla--modificar .pr-rec__quitar { min-height: 30px; }
 
     /* ══ 9e / 9f · LA VENTANA DE LOTES (y la de "Otro" insumo) ══ */
     #pr-lote-panel .pr-lp__caja { max-height: min(500px, calc(100dvh - 24px)); }
@@ -2432,8 +2432,12 @@
       const activa = SECCION_DE_VISTA[estado.vista] ?? null
       const hay = !!maquinaElegida()
       const parada = hay && !!paradaEnCurso(estado.planilla.paradas)
+      // "Abrir turno" se apaga con TODAS las máquinas abiertas (mostrarAbrir no
+      // tendría nada que ofrecer). Sin tablero leído todavía, queda prendido:
+      // no se niega lo que no se midió.
+      const sinLibres = Array.isArray(estado.tablero) && estado.tablero.length > 0 && !estado.tablero.some(e => !e.turno)
       return '<nav class="pr-lat__secciones" aria-label="Secciones">' + SECCIONES_PRODUCCION.map(sec => {
-        const off = sec.deMaquina && !hay
+        const off = (sec.deMaquina && !hay) || (sec.id === 'abrir' && sinLibres)
         const sub = sec.id === 'paradas' && parada ? '<span class="pr-lat__sub pr-lat__sub--mal">en curso</span>' : ''
         return `<button type="button" class="pr-lat__item pr-lat__item--${sec.tono}" data-seccion="${sec.id}"${sec.id === activa ? ' aria-current="page"' : ''}${off ? ' disabled' : ''}>` +
           `<span class="pr-lat__icono">${icono(sec.icono, 16)}</span>` +
@@ -2896,7 +2900,7 @@
       else if (h.masas == null) lista.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
       else {
         const orden = [...h.masas].sort((a, z) => Number(z.nro) - Number(a.nro))
-        const filas = orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('') + pend.map(htmlMasaRecetaPendiente).join('')
+        const filas = pend.map(htmlMasaRecetaPendiente).join('') + orden.map(m => htmlMasaHist(m, m.id === h.elegida)).join('')
         lista.innerHTML = filas || '<p class="pr-texto-suave">Todavía no hay masas en este turno.</p>'
       }
       const ultima = ultimaMasaAnulable(h.masas)
@@ -5550,7 +5554,7 @@
         ? htmlNombreProducto(prod, d.producto)
         : `<span class="pr-prod-nombre">${cat ? 'Un producto que ya no está en el catálogo' : 'Producto'}</span>`
       const cono = !d ? ''
-        : (d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común') : '<span class="pr-fp__sin">sin cono</span>')
+        : (d.pr?.con_cono ? htmlChipCono(d.marcaNombre ?? 'Común') : (d.conConoEnProducto ? '<span class="pr-fp__sin">sin cono</span>' : ''))
       // "Caja y bolsa": la caja de empaque (o el envase de la presentación) y
       // el embolsado en palabras.
       const envase = caja || (d ? envasePresentacion(d.pr, d.producto) : '')
@@ -6814,7 +6818,7 @@
       standard: { c: 'oklch(0.52 0.15 300)', dk: 'oklch(0.43 0.120 300)', t: 'oklch(0.95 0.048 300)' },
     }
     const COLOR_CHOCO = { mini: 'oklch(0.44 0.07 55)', chico: 'oklch(0.38 0.06 50)', standard: 'oklch(0.5 0.08 60)', grande: 'oklch(0.42 0.07 52)' }
-    const TONOS_NOMBRE = [95, 145, 50, 300, 200, 20, 250, 330]
+    const TONOS_NOMBRE = [95, 145, 50, 300, 170, 20, 115, 330]
     const TONOS_CONO = [20, 150, 300, 70, 340, 120, 30, 280]
 
     function indiceDeNombre(nombre, n) {
@@ -6827,8 +6831,9 @@
     // tinte suave. Texto de CSS armado por el código: nunca viene de la base.
     function colorProducto(p) {
       const tamano = normalizarBusqueda(partesNombreProducto(p?.nombre).tamano).split(' ')[0] ?? ''
-      if (esProductoChocolate(p ?? {})) return { choco: true, c: COLOR_CHOCO[tamano] ?? 'oklch(0.42 0.07 55)', dk: '#fff', t: 'oklch(0.93 0.03 55)' }
-      if (COLOR_TAMANO[tamano]) return { choco: false, ...COLOR_TAMANO[tamano] }
+      const propio = (o) => Object.prototype.hasOwnProperty.call(o, tamano) ? o[tamano] : null
+      if (esProductoChocolate(p ?? {})) return { choco: true, c: propio(COLOR_CHOCO) ?? 'oklch(0.42 0.07 55)', dk: '#fff', t: 'oklch(0.93 0.03 55)' }
+      if (propio(COLOR_TAMANO)) return { choco: false, ...propio(COLOR_TAMANO) }
       const h = TONOS_NOMBRE[indiceDeNombre(p?.nombre ?? '', TONOS_NOMBRE.length)]
       return { choco: false, c: `oklch(0.66 0.14 ${h})`, dk: `oklch(0.43 0.112 ${h})`, t: `oklch(0.95 0.045 ${h})` }
     }
@@ -7985,8 +7990,16 @@
       return partes.join(' · ') + choco
     }
 
-    function htmlComo(clave, titulo, detalleHtml, habilitado, elegida = false) {
-      return `<button type="button" class="pr-como" data-base="${esc(clave)}" aria-pressed="${elegida ? 'true' : 'false'}"${habilitado ? '' : ' disabled'}>` +
+    // El HTML (ya escapado) de un detalle, pasado a texto para un title: se
+    // sacan las etiquetas y se deshacen las cinco entidades de esc(); el
+    // title lo vuelve a escapar.
+    function textoDeHtml(html) {
+      return String(html ?? '').replace(/<[^>]*>/g, '')
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+    }
+
+    function htmlComo(clave, titulo, detalleHtml, habilitado, elegida = false, tituloLargo = '') {
+      return `<button type="button" class="pr-como" data-base="${esc(clave)}" aria-pressed="${elegida ? 'true' : 'false'}"${habilitado ? '' : ' disabled'}${tituloLargo ? ` title="${esc(tituloLargo)}"` : ''}>` +
         `<span class="pr-como__titulo">${esc(titulo)}</span>${detalleHtml ? `<span class="pr-como__detalle">${detalleHtml}</span>` : ''}</button>`
     }
 
@@ -8018,8 +8031,8 @@
       const hayAnterior = !!d?.anterior
       const comos = '<span class="pr-seg-rec pr-receta__comos" role="group" aria-label="De dónde sale la masa">' +
         htmlComo('original', 'Original', `v${esc(d.original.version)}`, true, como === 'original') +
-        htmlComo('anterior', 'Anterior', detalleAnteriorCorto(d), hayAnterior, como === 'anterior') +
-        htmlComo('modificar', 'Modificar', '', true, como === 'modificar') +
+        htmlComo('anterior', 'Anterior', detalleAnteriorCorto(d), hayAnterior, como === 'anterior', textoDeHtml(detalleAnterior(d))) +
+        htmlComo('modificar', 'Modificar', '', true, como === 'modificar', dePartida(d)) +
         '</span>'
       return `${tamanoReceta}${comos}${tiposReceta}`
     }

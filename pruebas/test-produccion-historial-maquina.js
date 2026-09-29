@@ -3,6 +3,8 @@
 // masas de ESE turno (botones de 72 px) y a la derecha el detalle de la
 // elegida —número y hora, tamaño, quién la hizo, las pastillas, el motivo y
 // cada ingrediente con su marca, cantidad y lote—. Solo se anula la ÚLTIMA.
+// Planta v2 (28/09/2026): la más nueva arriba, el origen en el title, las
+// cantidades como SALIERON (una doble dice el doble) y "marca · lote".
 //
 // Contra la base (verificado el 28/09/2026 con information_schema y
 // pg_constraint):
@@ -97,8 +99,12 @@ esperas.push((async () => {
   chk('el título: máquina · turno · lote · masas (sin la anulada)',
     S.__doc.getElementById('pr-hm-titulo').textContent === 'Máquina 1 · Turno mañana · lote 7033 · 2 masas', S.__doc.getElementById('pr-hm-titulo').textContent)
   const l = lista(S)
-  chk('solo las masas de ESE turno, en orden', /data-hm-masa="ma1"[\s\S]*data-hm-masa="ma2"[\s\S]*data-hm-masa="ma3"/.test(l) && !/data-hm-masa="mx"/.test(l), l)
-  chk('cada masa: "Masa 2 · Doble" y "07:40 · Modificada" con sus pastillas', /Masa 2 · Doble/.test(l) && /07:40 · Modificada/.test(l) &&
+  // Planta v2 (28/09/2026): la más nueva arriba.
+  chk('solo las masas de ESE turno, la más nueva arriba', /data-hm-masa="ma3"[\s\S]*data-hm-masa="ma2"[\s\S]*data-hm-masa="ma1"/.test(l) && !/data-hm-masa="mx"/.test(l), l)
+  // El renglón: "Masa 2" y "Doble · 07:40"; el origen va en el title y lo
+  // que no es lo normal (Modificada, Chocolate) en sus pastillas.
+  chk('cada masa: "Masa 2" y "Doble · 07:40", el origen en el title y sus pastillas', /pr-hm__masa-l1">Masa 2</.test(l) && /pr-hm__masa-l2">Doble · 07:40</.test(l) &&
+    /data-hm-masa="ma2" aria-pressed="true" title="Modificada"/.test(l) &&
     /pr-chip-modificada">Modificada/.test(l) && /pr-chip-choco">Chocolate/.test(l))
   chk('la anulada lo dice', /pr-hm__masa pr-hm__masa--anulada" data-hm-masa="ma3"/.test(l) && /pr-rm__anulada">Anulada/.test(l))
   chk('arranca elegida la última que se puede anular (la 2), con borde naranja', /data-hm-masa="ma2" aria-pressed="true"/.test(l) && S.estado.histMaq.elegida === 'ma2')
@@ -109,17 +115,18 @@ esperas.push((async () => {
 
   // El detalle a la derecha.
   const d = det(S)
-  chk('detalle: número y hora', /pr-hm__det-titulo">Masa 2 · 07:40</.test(d), d.slice(0, 300))
-  chk('… tamaño y quién la hizo', /Doble · la hizo Agustín Barrera/.test(d))
-  chk('… las pastillas y el motivo', /pr-chip-modificada/.test(d) && /Motivo:<\/span> Pidieron de chocolate/.test(d))
-  chk('… cada ingrediente con su marca, cantidad y lote', /Harina<\/span><span class="pr-hm__ing-cant">25 kg<\/span><span class="pr-hm__ing-marca">Wali<\/span><span class="pr-hm__ing-lote">lote W-9/.test(d), d)
+  chk('detalle: número y tamaño', /pr-hm__det-titulo">Masa 2 · Doble</.test(d), d.slice(0, 300))
+  chk('… hora y quién la hizo', /pr-hm__det-sub">07:40 · la hizo Agustín Barrera/.test(d))
+  chk('… las pastillas y el motivo', /pr-chip-modificada/.test(d) && /· “Pidieron de chocolate”<\/p>/.test(d))
+  // Planta v2: las cantidades como SALIERON (una doble, ×2) y "marca · lote".
+  chk('… cada ingrediente con su marca, cantidad y lote', /Harina<\/span><span class="pr-hm__ing-cant">50 kg<\/span><span class="pr-hm__ing-marca">Wali · <span class="pr-hm__ing-lote">W-9<\/span>/.test(d), d)
   chk('… lo agregado dice "agregado"', /Cacao <span class="pr-rec__agregado">agregado<\/span>/.test(d))
-  chk('… lo que cambió muestra la diferencia en bordó', /Azúcar <span class="pr-rec__dif pr-rec__dif--aleja">\+200 g/.test(d))
+  chk('… lo que cambió muestra la diferencia en bordó (en lo que salió: ×2)', /Azúcar <span class="pr-rec__dif pr-rec__dif--aleja">\+400 g/.test(d))
   chk('… lo que no cambió no dice nada', /Harina<\/span>/.test(d) && !/Harina <span/.test(d))
-  chk('… lo escrito a mano, con su cantidad', /Gluten<\/span><span class="pr-hm__ing-cant">50 g<\/span><span class="pr-hm__ing-marca">escrito a mano/.test(d))
+  chk('… lo escrito a mano, con su cantidad', /Gluten<\/span><span class="pr-hm__ing-cant">100 g<\/span><span class="pr-hm__ing-marca">escrito a mano · /.test(d))
   chk('… lo que la receta tiene en 0 y no se usó no aparece', !/Bicarbonato/.test(d))
-  chk('… el agua sin lote dice "sin lote"', /Agua<\/span><span class="pr-hm__ing-cant">10 kg<\/span><span class="pr-hm__ing-marca"><\/span><span class="pr-hm__ing-lote">sin lote/.test(d))
-  chk('… y que las cantidades son de una simple (esta fue doble)', /esta fue doble, lleva el doble de todo/.test(d))
+  chk('… el agua (sin insumo) dice "no lleva lote", sin marca', /Agua<\/span><span class="pr-hm__ing-cant">20 kg<\/span><span class="pr-hm__ing-marca"><span class="pr-hm__ing-lote">no lleva lote/.test(d))
+  chk('… y las cantidades son las que salieron: la doble dice el doble', /50 kg/.test(d) && !/>25 kg</.test(d) && !/2,7 kg/.test(d))
   chk('masa_items con los embeds de ingrediente e insumo', S.__llamadas.consultas.some(([t, f]) => t === 'masa_items' &&
     /ingredientes\(nombre, orden\)/.test(JSON.stringify(f)) && /insumos\(nombre, marca\)/.test(JSON.stringify(f))))
   chk('la lectura de masas trae masero, motivo y receta', /masero_id, motivo, receta_id/.test(FUENTE))
@@ -128,9 +135,10 @@ esperas.push((async () => {
   // Tocar otra masa.
   await S.elegirMasaHist('ma1')
   const d1 = det(S)
-  chk('tocar otra masa cambia el detalle', /Masa 1 · 07:05/.test(d1) && /data-hm-masa="ma1" aria-pressed="true"/.test(lista(S)))
+  chk('tocar otra masa cambia el detalle', /pr-hm__det-titulo">Masa 1 · Simple</.test(d1) && /pr-hm__det-sub">07:05/.test(d1) && /data-hm-masa="ma1" aria-pressed="true"/.test(lista(S)))
+  chk('… una simple dice la cantidad de una simple', /Harina<\/span><span class="pr-hm__ing-cant">25 kg</.test(d1))
   chk('… y en una que no es la última no se ofrece anular', !/pr-hm-anular/.test(d1))
-  chk('… sin motivo no dice "Motivo"', !/Motivo:/.test(d1))
+  chk('… sin motivo no muestra ningún motivo entre comillas', !/[“”]/.test(d1))
   await S.elegirMasaHist('ma3')
   chk('la anulada dice por qué se anuló', /Se anuló:<\/span> Se volcó/.test(det(S)) && !/pr-hm-anular/.test(det(S)))
   await S.elegirMasaHist('no-existe')
@@ -181,6 +189,15 @@ esperas.push((async () => {
   chk('sin produccion:cargar no aparece "Anular esta masa"', !/pr-hm-anular/.test(det(N)))
   N.pedirAnularHist()
   chk('… ni se puede pedir', N.estado.histMaq.anular === null)
+
+  // Una masa que todavía no se mandó es la más nueva de todas: va ARRIBA, como
+  // en la lista de la receta.
+  const P = armar()
+  await P.mostrarSala(); await P.mostrarHistorialMaquina('t1')
+  P.__ls.set('produccion.masa.u-pend', JSON.stringify({ client_uuid: 'u-pend', turnoId: 't1', pendiente: true, payload: {}, nro: 9, doble: false }))
+  P.pintarHistMaq()
+  const listaP = P.__els.get('pr-hm-lista')?.innerHTML ?? ''
+  chk('la masa sin mandar va primera en el historial', listaP.indexOf('esperando conexión') > -1 && listaP.indexOf('esperando conexión') < listaP.indexOf('data-hm-masa'), listaP)
 
   // La base dice que no.
   const R = armar({ rpc: async (n) => n === 'anular_masa' ? { data: null, error: { message: 'El turno ya está cerrado.', code: 'P0001' } } : { data: null, error: null } })

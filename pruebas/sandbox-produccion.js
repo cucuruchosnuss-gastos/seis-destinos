@@ -284,7 +284,7 @@ const NUEVAS_PLANTA = [
   'tocarMotivoParada', 'guardarMotivoParada', 'mayusculaInicial', 'indiceDeNombre', 'colorProducto', 'colorCono',
   'htmlNombreProducto', 'htmlChipCono', 'nombreCorto', 'hayMasaChocolate', 'leerUsoConos', 'ponerCajasAgregar',
   'scrapAlto', 'bloqueosCierre', 'irDesdeCierre', 'detalleAnteriorCorto', 'htmlCantidadGrande', 'usarLoteDeLista',
-  'mostrarEntrar', 'errorEntrar', 'conReintento',
+  'mostrarEntrar', 'errorEntrar', 'conReintento', 'textoDeHtml',
 ]
 const CONST_EN_AMBOS = ['VISTAS', 'LARGO_PIN', 'LARGO_PIN_MAESTRO', 'ZONA_AR', 'PUESTOS', 'EMBOLSADOS', 'TEXTO_EMBOLSADO',
   'MS_DIA', 'TOLERANCIA_FUTURO_MS', 'PISO_APERTURA_MS', 'MAX_CRUCE_MS']

@@ -23,6 +23,13 @@ correrMutacionesProduccion({
     // 2. la máquina cerrada
     { nombre: 'la máquina cerrada sigue elegida', de: '      if (estado.planilla?.turno?.id === turnoId) {\n        estado.planilla = null', a: '      if (false) {\n        estado.planilla = null' },
     { nombre: 'cerrar otra suelta la elegida', de: '      if (estado.planilla?.turno?.id === turnoId) {\n        estado.planilla = null', a: '      if (estado.planilla) {\n        estado.planilla = null' },
+    // Planta v2: el título va en la cabecera y las secciones en la barra.
+    { nombre: 'la cabecera no dice la máquina', de: "const ctxPlanilla = p?.turno ? `Lote ${p.turno.lote} · ${p.maquinaNombre ?? 'Máquina'}` : ''", a: "const ctxPlanilla = p?.turno ? `Lote ${p.turno.lote}` : ''" },
+    { nombre: 'el cierre no tiene título propio', de: "case 'pr-cierre': return { ctx: ctxPlanilla, titulo: pendiente ? 'Completar la planilla' : 'Cerrar planilla' }", a: "case 'pr-cierre': return { ctx: ctxPlanilla, titulo: 'Planilla' }" },
+    // (El ancla es el paréntesis: la misma línea también apaga "Abrir turno"
+    // con todas las máquinas abiertas, y eso lo prueba test-produccion-abrir.)
+    { nombre: 'sin máquina las secciones siguen prendidas', de: '        const off = (sec.deMaquina && !hay) ||', a: '        const off = (false) ||' },
+    { nombre: 'con máquina las secciones se apagan', de: '        const off = (sec.deMaquina && !hay) ||', a: '        const off = (sec.deMaquina) ||' },
     { nombre: 'el nombre de la máquina no se lee', de: "        maquinaNombre = maq?.nombre ?? null\n", a: '' },
     { nombre: 'sin nombre en la base no usa el del tablero', de: '{ const l = await leerPlanilla(turnoId); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? nombre } }', a: "{ const l = await leerPlanilla(turnoId); estado.planilla = { ...l, maquinaNombre: l.maquinaNombre ?? 'Máquina' } }" },
     // 3. tiempo real
