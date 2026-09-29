@@ -28,5 +28,11 @@ correrMutaciones({
     { nombre: 'no avisa al cambiar', de: '  pintar()\n  avisar()\n}', a: '  pintar()\n}' },
     { nombre: 'la nota sale siempre', de: "notaPagina = meta?.getAttribute('content') === 'no-filtra' ? 'Esta pantalla muestra todas las unidades.' : ''", a: "notaPagina = 'Esta pantalla muestra todas las unidades.'" },
     { nombre: 'no sigue a otra pestaña', de: "if (ev.key !== CLAVE_ELEGIDA || !estado) return", a: 'return' },
+    // La barra de arriba (29/09/2026): el usuario y su menú.
+    { nombre: 'la pastilla no escapa el nombre', de: '<span class="barra-arriba__nombre">${escUni(nombreDePila(nombre))}</span>', a: '<span class="barra-arriba__nombre">${nombreDePila(nombre)}</span>' },
+    { nombre: 'el menú no escapa el mail', de: '<span class="barra-arriba__menu-mail">${escUni(email || \'\')}</span>', a: '<span class="barra-arriba__menu-mail">${email || \'\'}</span>' },
+    { nombre: 'inventa "0 abiertas" sin saber', de: "Number.isInteger(sesiones) && sesiones > 0 ?", a: 'true ?' },
+    { nombre: 'Mi cuenta no lleva al dashboard', de: "new URL('dashboard.html?cuenta=mi-cuenta', raiz)", a: "new URL('dashboard.html', raiz)" },
+    { nombre: 'con una unidad no marca "sin fábricas"', de: "  nav.classList.toggle('barra-arriba--sin-fabricas', !estado.mostrar)\n", a: '' },
   ],
 })

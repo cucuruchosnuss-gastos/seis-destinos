@@ -6,7 +6,7 @@
   <title>Dashboard — Seis Destinos</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a2a52">
+  <meta name="theme-color" content="#FFFFFF">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <style>
     body {
@@ -16,7 +16,10 @@
 
     .menu-perfil { position: relative; }
 
-    .header__avatar { cursor: pointer; }
+    .mi-cuenta__quien { display: flex; align-items: center; gap: 0.75rem; margin: 0.75rem 0 1rem; }
+    .mi-cuenta__quien .header__info { display: flex; min-width: 0; }
+    .mi-cuenta__opciones { display: flex; flex-direction: column; gap: 0.25rem; }
+    .mi-cuenta__pie { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: 1rem; }
 
     .menu-perfil__panel {
       position: absolute;
@@ -45,7 +48,7 @@
       cursor: pointer;
     }
 
-    .menu-perfil__opcion:hover { background: var(--color-fondo); }
+    .menu-perfil__opcion:hover { background: var(--color-fila-hover); }
 
     .modal-perfil {
       position: fixed;
@@ -122,27 +125,33 @@
 </head>
 <body class="pagina-dashboard">
 
-  <header class="header">
-    <img src="logo.png" alt="Seis Destinos" style="max-width: 120px; height: auto; display: block;">
-    <div class="header__usuario">
-      <div class="header__info">
-        <span class="header__info-nombre" id="header-nombre"></span>
-        <span class="header__info-subtitulo" id="header-email"></span>
-      </div>
-      <div class="menu-perfil" id="menu-perfil">
-        <div class="header__avatar" id="header-avatar"></div>
-        <div class="menu-perfil__panel" id="menu-perfil-panel" hidden>
-          <button type="button" class="menu-perfil__opcion" id="btn-cambiar-email">Cambiar email</button>
-          <button type="button" class="menu-perfil__opcion" id="btn-cambiar-contrasena">Cambiar contraseña</button>
-          <button type="button" class="menu-perfil__opcion" id="btn-mfa">Verificación en dos pasos</button>
-          <button type="button" class="menu-perfil__opcion" id="btn-mis-sesiones">Mis sesiones abiertas</button>
+  <!-- MI CUENTA (29/09/2026, handoff "Esqueleto"): la barra blanca vieja
+       (logo grande, nombre, mail y Salir) se eliminó; el nombre, el mail,
+       Salir y las opciones de la cuenta viven en el menú del usuario de la
+       barra de arriba (js/barra-unidad.js), que abre este panel. -->
+  <div class="modal-perfil" id="modal-mi-cuenta" hidden>
+    <div class="modal-perfil__backdrop" id="mi-cuenta-fondo"></div>
+    <div class="modal-perfil__panel menu-perfil" id="menu-perfil" role="dialog" aria-modal="true" aria-labelledby="mi-cuenta-titulo">
+      <h3 class="modal-perfil__titulo" id="mi-cuenta-titulo">Mi cuenta</h3>
+      <div class="mi-cuenta__quien">
+        <div class="header__avatar" id="header-avatar" aria-hidden="true"></div>
+        <div class="header__info">
+          <span class="header__info-nombre" id="header-nombre"></span>
+          <span class="header__info-subtitulo" id="header-email"></span>
         </div>
       </div>
-      <button class="btn btn--secundario" id="btn-logout" style="font-size: 0.875rem; padding: 0.5rem 0.875rem;">
-        Salir
-      </button>
+      <div class="mi-cuenta__opciones" id="menu-perfil-panel">
+        <button type="button" class="menu-perfil__opcion" id="btn-cambiar-email">Cambiar email</button>
+        <button type="button" class="menu-perfil__opcion" id="btn-cambiar-contrasena">Cambiar contraseña</button>
+        <button type="button" class="menu-perfil__opcion" id="btn-mfa">Verificación en dos pasos</button>
+        <button type="button" class="menu-perfil__opcion" id="btn-mis-sesiones">Mis sesiones abiertas</button>
+      </div>
+      <div class="mi-cuenta__pie">
+        <button type="button" class="btn btn--secundario" id="btn-cerrar-mi-cuenta">Cerrar</button>
+        <button type="button" class="btn btn--secundario" id="btn-logout">Salir</button>
+      </div>
     </div>
-  </header>
+  </div>
 
   <div class="modal-perfil" id="modal-email" hidden>
     <div class="modal-perfil__backdrop"></div>
@@ -336,16 +345,20 @@
     // (que queda desactualizado) ni de un reload de página.
     let emailActual = email
 
-    const menuPerfil      = document.getElementById('menu-perfil')
-    const menuPerfilPanel = document.getElementById('menu-perfil-panel')
-
-    document.getElementById('header-avatar').addEventListener('click', (e) => {
-      e.stopPropagation()
-      menuPerfilPanel.hidden = !menuPerfilPanel.hidden
-    })
-    document.addEventListener('click', (e) => {
-      if (!menuPerfilPanel.hidden && !menuPerfil.contains(e.target)) menuPerfilPanel.hidden = true
-    })
+    // "Mi cuenta" es un panel: lo abre el menú del usuario de la barra de
+    // arriba (evento cuenta:abrir) o ?cuenta=mi-cuenta desde otra pantalla.
+    // Abrir cualquiera de sus opciones lo cierra (menuPerfilPanel.hidden = true).
+    const menuPerfilPanel = document.getElementById('modal-mi-cuenta')
+    const cerrarMiCuenta = () => { menuPerfilPanel.hidden = true }
+    const abrirMiCuenta = () => { menuPerfilPanel.hidden = false; document.getElementById('btn-cambiar-email').focus() }
+    document.getElementById('btn-cerrar-mi-cuenta').addEventListener('click', cerrarMiCuenta)
+    document.getElementById('mi-cuenta-fondo').addEventListener('click', cerrarMiCuenta)
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menuPerfilPanel.hidden) cerrarMiCuenta() })
+    window.addEventListener('cuenta:abrir', abrirMiCuenta)
+    if (new URLSearchParams(window.location.search).get('cuenta') === 'mi-cuenta') {
+      history.replaceState(null, '', window.location.pathname)
+      abrirMiCuenta()
+    }
 
     function abrirModalEmail() {
       menuPerfilPanel.hidden = true

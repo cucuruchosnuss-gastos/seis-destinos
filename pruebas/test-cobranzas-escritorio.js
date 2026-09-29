@@ -452,7 +452,12 @@ async function pruebas() {
     const SALIERON = /cob-pestana|cob-cartera|cob-tabla|cob-btn--elegido/
     // cob-unidad-: la nota y la marca "Sin unidad" de la barra de unidad (28/09/2026).
     const ENTRARON = /cob-acceso-cheques|cob-link-cheques|^a\.cob-btn|^\.cob-unidad-/
-    const antes = reglasFuera(pelar(base)).filter(r => !SALIERON.test(r))
+    // (29/09/2026) El sistema visual nuevo cambió en TODA la app los tintes
+    // azulados escritos a mano por los cálidos (rgba(26,42,82) → rgba(28,26,23),
+    // #55617d → #6B645A): se comparan con esa traducción aplicada.
+    const migrar = t => t.replace(/rgba\(\s*26\s*,\s*42\s*,\s*82\s*,/g, 'rgba(28, 26, 23,').replace(/#55617d/gi, '#6B645A')
+      .replace(/rgba\(\s*168\s*,\s*184\s*,\s*216\s*,/g, 'rgba(214, 207, 196,').replace(/#eef1f6/gi, '#F5F3EF').replace(/#8a94ab/gi, '#9A9287')
+    const antes = reglasFuera(pelar(migrar(base))).filter(r => !SALIERON.test(r))
     const hoy = reglasFuera(pelar(FUENTE)).filter(r => !ENTRARON.test(r))
     chk('abajo de 1100px: se fueron las reglas de la cartera', reglasFuera(pelar(base)).some(r => SALIERON.test(r)) &&
       !reglasFuera(pelar(FUENTE)).some(r => SALIERON.test(r)))

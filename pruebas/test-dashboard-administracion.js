@@ -30,7 +30,7 @@ chk('NO se ve sin el módulo retiros', !ver({ misModulos: ['pedidos'], misTareas
 chk('super_admin la ve', ver({ esAdmin: true, esSuperAdmin: true }))
 // La burbuja: mis_pendientes() devuelve 'administracion' con dos claves y la
 // tarjeta muestra la SUMA (agruparPendientes ya suma por módulo).
-const P = new Function(extraerConst(src, 'MODULO_DE_PENDIENTE') + '\n' + extraerConst(src, 'TAMBIEN_EN_TARJETA') + '\n' + extraerFn(src, 'escDash') + '\n' + extraerFn(src, 'textoPendiente') + '\n' +
+const P = new Function(extraerConst(src, 'MODULO_DE_PENDIENTE') + '\n' + extraerConst(src, 'TAMBIEN_EN_TARJETA') + '\n' + extraerConst(src, 'PENDIENTES_URGENTES') + '\n' + extraerFn(src, 'escDash') + '\n' + extraerFn(src, 'textoPendiente') + '\n' +
   extraerFn(src, 'agruparPendientes') + '\nreturn { MODULO_DE_PENDIENTE, agruparPendientes }')()
 chk('los pendientes de administracion van a la tarjeta Administración', P.MODULO_DE_PENDIENTE.administracion === 'administracion')
 const g = P.agruparPendientes([

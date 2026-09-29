@@ -24,7 +24,8 @@ const src = fs.readFileSync(RUTA, 'utf8')
 console.log(`ARCHIVO ${RUTA} (${src.length} bytes)`)
 const { chk, esperas, fin } = arnes()
 
-const FUNCIONES = ['escUni', 'logoUnidad', 'nombreCorto', 'debeMostrarseUnidad', 'idsDeLaPersona', 'ordenarUnidades',
+const FUNCIONES = ['escUni', 'logoUnidad', 'nombreCorto', 'inicialesDe', 'colorPersona', 'nombreDePila', 'htmlUsuario', 'htmlMenuUsuario',
+  'htmlMarcaCelular', 'debeMostrarseUnidad', 'idsDeLaPersona', 'ordenarUnidades',
   'resolverElegida', 'pasaFiltroUnidad', 'filtrarPorUnidad', 'htmlBarraUnidad', 'leerGuardada', 'guardarElegida', 'avisar',
   'estadoUnidad', 'unidadesDeLaBarra', 'alCambiarUnidad', 'elegirUnidad', 'pintar', 'cargarUnidadesDeLaPersona', 'instalarBarraUnidad']
 
@@ -54,8 +55,11 @@ function construir() {
     var promesa = null
     var nav = null
     var notaPagina = ''
+    var persona = null
+    var __sesiones = []
+    function abrirPanelSesiones(o) { __sesiones.push(o) }
   `
-  for (const c of ['CLAVE_ELEGIDA', 'TODAS', 'NOMBRE_CORTO', 'ORDEN_PREFIJO']) codigo += extraerConst(src, c)
+  for (const c of ['CLAVE_ELEGIDA', 'TODAS', 'NOMBRE_CORTO', 'MARCA_FABRICA', 'TONOS_PERSONA', 'ORDEN_PREFIJO']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
   codigo += `return { ${FUNCIONES.join(', ')}, __ls, __win: window, __eventos, __oyentes,
     __setFabrica(f) { __fabrica = f }, __estado() { return estado }, __setPromesa(p) { promesa = p } }`
@@ -106,9 +110,20 @@ function docFalso(meta = null) {
       classList: { add(c) { clases.add(c) }, contains(c) { return clases.has(c) } },
     },
     querySelector(sel) { return sel === 'meta[name="sd-unidad"]' && meta ? { getAttribute: () => meta } : null },
+    addEventListener() {},
+    // (29/09/2026) La barra de arriba: el nav tiene adentro el lugar de las
+    // fábricas (querySelector) y su innerHTML dice todo junto.
     createElement() {
+      const partes = {}
+      let propio = ''
+      const clases = new Set()
       return {
-        className: '', atributos: {}, innerHTML: '',
+        className: '', atributos: {},
+        get innerHTML() { return propio + Object.values(partes).map(p => p.innerHTML).join('') },
+        set innerHTML(v) { propio = v },
+        classList: { toggle(c, si) { if (si) clases.add(c); else clases.delete(c) }, contains(c) { return clases.has(c) } },
+        querySelector(sel) { return (partes[sel] ||= { innerHTML: '', hidden: true, setAttribute() {}, focus() {}, querySelector() { return null } }) },
+        contains() { return false },
         setAttribute(k, v) { this.atributos[k] = v },
         addEventListener(t, f) { if (t === 'click') this.click = f },
       }
@@ -184,6 +199,25 @@ const chips = html => [...String(html).matchAll(/data-unidad="([^"]+)"/g)].map(m
   chk('un grupo con nombre para el lector', h2.includes('role="group" aria-label="Unidad de negocio"'))
 }
 
+// ── 1b. El usuario y su menú (29/09/2026, handoff "Esqueleto") ───────────────
+{
+  const s = construir()
+  chk('iniciales de las dos primeras palabras', s.inicialesDe('Pablo Nuss') === 'PN' && s.inicialesDe('lucía') === 'L' && s.inicialesDe('') === '·')
+  chk('nombre de pila', s.nombreDePila('Facundo Usabarrena') === 'Facundo' && s.nombreDePila('') === 'Mi cuenta')
+  chk('el color de la persona sale del nombre (siempre el mismo, cálido)', s.colorPersona('Pablo Nuss') === s.colorPersona('Pablo Nuss') && /^oklch\(0\.45 0\.09 \d+\)$/.test(s.colorPersona('Pablo Nuss')))
+  const malo = '"><b data-xss="1">x</b>'
+  const u = s.htmlUsuario({ nombre: malo + ' Otro' })
+  chk('la pastilla escapa el nombre', !u.includes('<b data-xss') && u.includes('&lt;b'), u)
+  chk('la pastilla abre un menú (aria)', /aria-haspopup="menu" aria-expanded="false" aria-controls="barra-arriba-menu"/.test(u))
+  const m = s.htmlMenuUsuario({ nombre: malo, email: malo, sesiones: 3, raiz: new URL('https://e.test/r/') })
+  chk('el menú escapa nombre y mail', !m.includes('<b data-xss') && (m.match(/&lt;b data-xss/g) || []).length === 2, m)
+  chk('el menú: Mi cuenta, Mis sesiones y Salir', /id="barra-arriba-mi-cuenta"[^>]*>|href="https:\/\/e\.test\/r\/dashboard\.html\?cuenta=mi-cuenta"/.test(m) && m.includes('id="barra-arriba-sesiones"') && m.includes('id="barra-arriba-salir"'))
+  chk('Mi cuenta lleva al dashboard con ?cuenta=mi-cuenta', m.includes('href="https://e.test/r/dashboard.html?cuenta=mi-cuenta"'), m)
+  chk('"3 abiertas" cuando se sabe', m.includes('>3 abiertas<'))
+  chk('"1 abierta" en singular', s.htmlMenuUsuario({ nombre: 'A', email: '', sesiones: 1 }).includes('>1 abierta<'))
+  chk('sin saber cuántas, no inventa un número', !/abiertas?</.test(s.htmlMenuUsuario({ nombre: 'A', email: '', sesiones: null })))
+}
+
 // ── 2. Instalar ─────────────────────────────────────────────────────────────
 esperas.push((async () => {
   // Super admin: las cuatro reales (la de prueba no, sin ser cuenta de prueba).
@@ -223,9 +257,11 @@ esperas.push((async () => {
   const c = await instalar({ yo: { id: 'e3', rol_app: 'usuario', unidad_negocio_id: 'u-nuss' }, tareas: [{ alcance: { unidades: ['u-dolce'] } }] }, { guardado: 'u-taller' })
   chk('lo guardado que ya no es de la persona: Todas', c.s.estadoUnidad().elegida === null)
 
-  // Una sola unidad: no se dibuja y no se filtra.
-  const d = await instalar({ yo: { id: 'e4', rol_app: 'usuario', unidad_negocio_id: 'u-nuss' }, tareas: [] }, { guardado: 'u-nuss' })
-  chk('con UNA sola unidad no se dibuja', d.nav === null && d.doc.__hijos.length === 0)
+  // Una sola unidad: no se filtra y no hay fábricas para elegir. (29/09/2026)
+  // La barra de arriba se dibuja igual: lleva el usuario y su menú.
+  const d = await instalar({ yo: { id: 'e4', nombre: 'Lucía Ferreyra', rol_app: 'usuario', unidad_negocio_id: 'u-nuss' }, tareas: [] }, { guardado: 'u-nuss' })
+  chk('con UNA sola unidad la barra de arriba va igual, sin fábricas', !!d.nav && chips(d.nav.innerHTML).length === 0 && d.nav.classList.contains('barra-arriba--sin-fabricas'), d.nav && d.nav.innerHTML)
+  chk('… con el usuario: iniciales y nombre de pila', /barra-arriba__ini[^>]*>LF</.test(d.nav.innerHTML) && />Lucía</.test(d.nav.innerHTML), d.nav.innerHTML)
   chk('con UNA sola unidad la elección es null (no se filtra)', d.s.estadoUnidad().elegida === null && d.s.estadoUnidad().mostrar === false)
 
   // Cuenta de prueba: ve la de prueba.
@@ -272,9 +308,12 @@ esperas.push((async () => {
   }
   const css = fs.readFileSync(process.env.ARCHIVO_CSS || path.join(RAIZ, 'css', 'main.css'), 'utf8')
   chk('CSS: los chips scrollean adentro de la barra', /\.barra-unidad__chips \{[^}]*overflow-x: auto/.test(css))
-  chk('CSS: la barra no se sale del ancho', /\.barra-unidad \{[^}]*max-width: 100%/.test(css) && /\.barra-unidad \{[^}]*box-sizing: border-box/.test(css))
-  chk('CSS: chips de 44 px', /\.barra-unidad__chip \{[^}]*min-height: 44px/.test(css))
-  chk('CSS: no se imprime', /@media print \{ \.barra-unidad \{ display: none !important; \} \}/.test(css))
+  // (29/09/2026) La barra de arriba del diseño: 52 px, las fábricas en una
+  // pista, botones de 30 px en la compu y 36 en el celular.
+  chk('CSS: la barra no se sale del ancho', /\.barra-arriba \{[^}]*max-width: 100%/.test(css) && /\.barra-arriba \{[^}]*box-sizing: border-box/.test(css))
+  chk('CSS: la barra de arriba mide 52 px en la compu', /\.barra-arriba \{[^}]*min-height: 52px/.test(css))
+  chk('CSS: chips de 30 px en la compu y 36 en el celular', /\.barra-unidad__chip \{[^}]*height: 30px/.test(css) && /@media \(max-width: 1023\.98px\)[^]*\.barra-unidad__chip \{[^}]*height: 36px/.test(css))
+  chk('CSS: no se imprime', /@media print \{ \.barra-unidad, \.barra-arriba \{ display: none !important; \} \}/.test(css))
   const base = css.indexOf('.barra-unidad__chip {'), activa = css.indexOf('.barra-unidad__chip--activa,')
   chk('CSS: la variante activa va DESPUÉS de la base', base !== -1 && activa > base)
 }

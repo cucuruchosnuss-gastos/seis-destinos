@@ -257,7 +257,11 @@ chk('por defecto, cerrar las propias llama a sesionCortada() de salud.js', /alCo
   chk('el menú abre las PROPIAS', /abrirPanelSesiones\(\{ sb: supabase, empleadoId: miEmpleado\.id, nombre: nombre \|\| email, propia: true \}\)/.test(dash))
   chk('?cuenta=sesiones las abre derecho', /get\('cuenta'\) === 'sesiones'/.test(dash))
   const barra = fs.readFileSync(path.join(RAIZ, 'js', 'barra-lateral.js'), 'utf8')
-  chk('la barra lateral abre las propias', /abrirPanelSesiones\(\{ sb, empleadoId: yo\.id, propia: true, doc \}\)/.test(barra) && barra.includes('id="barra-lateral-sesiones"'))
+  // (29/09/2026, handoff "Esqueleto") "Mis sesiones" está en el menú del
+  // usuario de la barra de arriba y, en el celular, en la hoja "Más".
+  chk('la hoja "Más" del celular abre las propias', /abrirPanelSesiones\(\{ sb, empleadoId: yo\.id, propia: true, doc \}\)/.test(barra) && barra.includes('id="hoja-mas-sesiones"'))
+  const arriba = fs.readFileSync(path.join(RAIZ, 'js', 'barra-unidad.js'), 'utf8')
+  chk('el menú del usuario de la barra de arriba abre las propias', /abrirPanelSesiones\(\{ sb, empleadoId: persona\.id, nombre: persona\.nombre, propia: true, doc \}\)/.test(arriba) && arriba.includes('id="barra-arriba-sesiones"'))
 }
 
 // ── El CSS del panel ───────────────────────────────────────────────────────
