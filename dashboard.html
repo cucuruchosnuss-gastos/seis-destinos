@@ -116,6 +116,254 @@
       .modal-perfil { align-items: center; }
       .modal-perfil__panel { max-width: 400px; border-radius: 20px; box-shadow: var(--sombra-hover); }
     }
+
+    /* ═══ EL TABLERO DE RESÚMENES (29/09/2026, handoff "Esqueleto") ═══════════
+       Los valores están copiados de los style="" del diseño
+       (e2e/disenos/esqueleto/esqueleto.dc.html). Las variables de main.css se
+       usan cuando el hex ya existe. Verde y bordó dicen algo del dato; el
+       naranja es lo que se toca. */
+    body.pagina-dashboard { --tb-borde-hover: #D6CFC4; --tb-hueso: #F1EEE9; --tb-hueso-2: #F5F3EF; --tb-caja-gris: #F9F7F4;
+      --tb-mal-borde: #E8CDD5; --tb-mal-hover: #FBF3F5; --tb-chev: #B8B0A4; }
+    .dashboard__contenido.tb { max-width: none; margin: 0; padding: 20px 24px 28px; font-family: var(--fuente); }
+    @media (min-width: 1601px) { .dashboard__contenido.tb { padding: 24px 32px 32px; } }
+    @media (max-width: 1023.98px) { .dashboard__contenido.tb { padding: 16px 16px 20px; } }
+
+    .tb-saludo { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .tb-saludo__hola { margin: 0; font-family: var(--fuente-titulo); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--color-texto); }
+    .tb-saludo__fecha { font-size: 16px; color: var(--color-texto-2); }
+    @media (max-width: 1023.98px) { .tb-saludo__hola { font-size: 24px; } }
+
+    .tb-franja { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--bordo-suave); border: 1px solid var(--tb-mal-borde);
+      border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; }
+    .tb-franja__titulo { display: flex; align-items: center; gap: 8px; color: var(--bordo-oscuro); font-size: 14.5px; font-weight: 800; }
+    .tb-franja__item { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 4px; border-radius: 8px; background: #FFFFFF;
+      color: var(--bordo); font-size: 14px; font-weight: 600; text-decoration: none; }
+    .tb-franja__item:hover { background: var(--tb-mal-hover); text-decoration: underline; color: var(--bordo); }
+    .tb-franja__n { min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 6px; background: var(--bordo); color: #fff;
+      font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+    /* La grilla: 4 columnas en 1366, 3 entre 1024 y 1279, 6 desde 1680, 1 en
+       el celular. Chica 1, mediana 2, ancha 4 (la fila entera con 3 o menos). */
+    .tb-grilla { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; grid-auto-flow: dense; align-items: stretch; }
+    .tb-tarjeta--mediana, .tb-soltar.tb-tarjeta--mediana { grid-column: span 2; }
+    .tb-tarjeta--ancha, .tb-soltar.tb-tarjeta--ancha { grid-column: span 4; }
+    @media (min-width: 1024px) and (max-width: 1279.98px) {
+      .tb-grilla { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .tb-tarjeta--ancha, .tb-soltar.tb-tarjeta--ancha { grid-column: span 3; }
+    }
+    @media (min-width: 1680px) { .tb-grilla { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+    @media (max-width: 1023.98px) {
+      .tb-grilla { grid-template-columns: minmax(0, 1fr); }
+      .tb-grilla > * { grid-column: 1 / -1; }
+    }
+
+    .tb-tarjeta { --tb-numero: 36px; position: relative; background: #FFFFFF; border: 1px solid var(--color-borde); border-radius: 16px;
+      padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 12px; min-height: 196px; min-width: 0; box-sizing: border-box;
+      box-shadow: 0 1px 2px rgba(28, 26, 23, 0.04); transition: border-color .15s, box-shadow .15s; color: var(--color-texto); }
+    .tb-tarjeta:not(.tb-tarjeta--acomodar) { cursor: pointer; }
+    .tb-tarjeta:not(.tb-tarjeta--acomodar):hover { border-color: var(--tb-borde-hover); box-shadow: 0 6px 18px -8px rgba(28, 26, 23, 0.18); }
+    .tb-tarjeta--mediana { --tb-numero: 42px; }
+    .tb-tarjeta--ancha { --tb-numero: 54px; }
+    @media (max-width: 1023.98px) { .tb-tarjeta, .tb-tarjeta--mediana { --tb-numero: 36px; } .tb-tarjeta--ancha { --tb-numero: 46px; } }
+    .tb-tarjeta__cab { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+    .tb-tarjeta__icono { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tb-tarjeta__nombre, .tb-tarjeta__abrir { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; color: var(--color-texto); text-decoration: none; }
+    .tb-tarjeta__abrir:hover { text-decoration: none; color: var(--color-texto); }
+    /* Tocar la tarjeta abre el módulo: el link del nombre la cubre entera; lo
+       que va encima (el pie, Reintentar) queda por arriba del link. */
+    .tb-tarjeta__abrir::after { content: ''; position: absolute; inset: 0; border-radius: 16px; z-index: 0; }
+    .tb-tarjeta__abrir:focus-visible { outline: none; }
+    .tb-tarjeta:has(.tb-tarjeta__abrir:focus-visible) { outline: 3px solid var(--color-acento); outline-offset: 2px; }
+    .tb-tarjeta__chev { color: var(--tb-chev); display: flex; }
+
+    .tb-cuerpo { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-start; }
+    .tb-bloque { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .tb-etiqueta { font-size: 13.5px; font-weight: 600; color: var(--color-texto-2); }
+    .tb-cifra { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+    .tb-numero { font-family: var(--fuente-titulo); font-size: var(--tb-numero); font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+      font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tb-unidad { font-family: var(--fuente-titulo); font-size: 17px; font-weight: 600; color: var(--color-texto-2); }
+    .tb-sub { font-family: var(--fuente-titulo); font-size: 19px; font-weight: 700; color: var(--color-texto-menu); font-variant-numeric: tabular-nums; }
+    .tb-tendencia { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; }
+    .tb-tendencia__circulo { width: 22px; height: 22px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tb-tendencia--sube { color: var(--verde-oscuro); } .tb-tendencia--sube .tb-tendencia__circulo { background: var(--verde-suave); }
+    .tb-tendencia--baja { color: var(--bordo-oscuro); } .tb-tendencia--baja .tb-tendencia__circulo { background: var(--bordo-suave); }
+    .tb-tendencia--igual { color: var(--color-texto-2); } .tb-tendencia--igual .tb-tendencia__circulo { background: var(--tb-hueso); }
+
+    .tb-dato { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px; }
+    .tb-dato__k { color: var(--color-texto-2); }
+    .tb-dato__v { font-weight: 700; color: var(--color-texto); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tb-dato--bien { color: var(--verde-oscuro); } .tb-dato--mal { color: var(--bordo-oscuro); } .tb-dato--suave { color: var(--color-texto-suave); font-weight: 600; }
+    .tb-lista__titulo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--color-texto-suave); margin-top: 2px; }
+    .tb-lista__item { display: flex; flex-direction: column; gap: 3px; }
+    .tb-lista__fila { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+    .tb-lista__nombre { color: var(--color-texto-menu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .tb-lista__v { font-weight: 700; color: var(--color-texto); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tb-lista__v--mal { color: var(--bordo); }
+    .tb-barrita { height: 5px; border-radius: 999px; background: var(--tb-hueso); overflow: hidden; }
+    .tb-barrita__lleno { height: 100%; background: var(--tb-color); border-radius: 999px; }
+    .tb-barrita__lleno--mal { background: var(--bordo); }
+
+    .tb-maquinas { flex: 2 1 320px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .tb-maquina { border-radius: 12px; background: var(--tb-caja-gris); border: 1px solid var(--color-divisor); padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .tb-maquina__st { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--verde-oscuro); }
+    .tb-maquina__punto { width: 8px; height: 8px; border-radius: 999px; background: var(--verde); flex-shrink: 0; }
+    .tb-maquina__nombre { font-size: 14px; font-weight: 600; color: var(--color-texto-menu); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tb-maquina__det { font-size: 13px; color: var(--color-texto-2); }
+    .tb-maquina--mal { background: var(--bordo-suave); border-color: var(--tb-mal-borde); }
+    .tb-maquina--mal .tb-maquina__st { color: var(--bordo); } .tb-maquina--mal .tb-maquina__punto { background: var(--bordo); }
+    .tb-maquina--mal .tb-maquina__det { color: var(--bordo-oscuro); }
+    .tb-maquina--neutro .tb-maquina__st { color: var(--color-texto-2); } .tb-maquina--neutro .tb-maquina__punto { background: var(--color-texto-suave); }
+
+    .tb-vacio { display: flex; align-items: center; gap: 10px; }
+    .tb-vacio__marca { width: 40px; height: 40px; border-radius: 12px; background: var(--color-pista); color: var(--color-texto-suave);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tb-vacio__msg { font-family: var(--fuente-titulo); font-size: 21px; font-weight: 700; color: var(--color-texto-menu); line-height: 1.15; }
+    /* "Pronto" (un dato que la base todavía no tiene): una frase, no un número. */
+    .tb-vacio__msg--pronto { font-family: var(--fuente); font-size: 15px; font-weight: 600; color: var(--color-texto-2); line-height: 1.35; }
+    .tb-nota { font-size: 12.5px; color: var(--color-texto-suave); line-height: 1.35; }
+
+    .tb-cargando { display: flex; flex-direction: column; gap: 10px; padding-top: 2px; }
+    .tb-hueso { border-radius: 6px; background: var(--tb-hueso); position: relative; overflow: hidden; }
+    .tb-hueso::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+      transform: translateX(-100%); animation: tb-brillo 1.4s ease-in-out infinite; }
+    @keyframes tb-brillo { to { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) { .tb-hueso::after { animation: none; } }
+    .tb-hueso--etiqueta { width: 45%; height: 12px; }
+    .tb-hueso--numero { width: 75%; height: 34px; border-radius: 8px; }
+    .tb-hueso--linea { width: 100%; height: 12px; background: var(--tb-hueso-2); }
+    .tb-hueso--linea2 { width: 85%; height: 12px; background: var(--tb-hueso-2); }
+    .tb-cargando__texto { font-size: 13px; color: var(--color-texto-suave); }
+
+    .tb-error { flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; padding: 4px 0 8px; }
+    .tb-error__titulo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--color-texto-menu); }
+    .tb-error__texto { font-size: 14px; color: var(--color-texto-2); line-height: 1.4; }
+    .tb-reintentar { position: relative; z-index: 1; margin-top: 6px; height: 36px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--color-acento);
+      background: #FFFFFF; color: var(--color-acento); font: inherit; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; cursor: pointer; }
+    .tb-reintentar:hover { background: var(--color-acento-suave); }
+    .tb-reintentar:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
+
+    .tb-pie { margin-top: auto; border-top: 1px solid var(--color-divisor); padding-top: 6px; display: flex; flex-wrap: wrap; gap: 2px 12px; }
+    .tb-res { position: relative; z-index: 1; flex: 1 1 240px; min-width: 0; display: flex; align-items: center; gap: 8px; min-height: 34px;
+      padding: 4px 8px; margin: 0 -8px; border-radius: 9px; text-decoration: none; color: inherit; box-sizing: border-box; }
+    .tb-res:hover { background: var(--color-fila-hover); text-decoration: none; color: inherit; }
+    .tb-res:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 0; }
+    .tb-res__n { min-width: 24px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 7px; background: var(--tb-hueso); color: var(--color-texto);
+      font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .tb-res__t { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; color: var(--color-texto-menu); line-height: 1.3; }
+    .tb-res__flecha { color: var(--color-acento); display: flex; flex-shrink: 0; }
+    .tb-res__flecha svg { width: 15px; height: 15px; stroke-width: 2.4; }
+    /* La variante DESPUÉS de su base (bug recurrente del proyecto). */
+    .tb-res--urgente:hover { background: var(--tb-mal-hover); }
+    .tb-res--urgente .tb-res__n { background: var(--bordo); color: #FFFFFF; }
+    .tb-res--urgente .tb-res__t { font-weight: 650; color: var(--bordo); }
+    .tb-bien { display: flex; align-items: center; gap: 8px; min-height: 34px; font-size: 14px; font-weight: 600; color: var(--verde-oscuro); }
+    .tb-bien__tilde { width: 22px; height: 22px; border-radius: 7px; background: var(--verde-suave); display: flex; align-items: center; justify-content: center; }
+    .tb-pie__nota { display: flex; align-items: center; min-height: 34px; font-size: 13.5px; color: var(--color-texto-2); }
+
+    /* ── Modo acomodar (5a) ────────────────────────────────────────────── */
+    .tb-acomodar-barra { display: flex; align-items: center; gap: 14px; background: #FFFFFF; border: 1px solid var(--color-borde); border-radius: 14px;
+      padding: 12px 14px 12px 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tb-acomodar-barra__icono { width: 36px; height: 36px; border-radius: 10px; background: var(--color-acento-suave); color: var(--color-acento);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tb-acomodar-barra__texto { flex: 1 1 260px; min-width: 0; }
+    .tb-acomodar-barra__titulo { font-size: 15.5px; font-weight: 700; }
+    .tb-acomodar-barra__ayuda { font-size: 14px; color: var(--color-texto-2); }
+    .tb-boton-borde { height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--color-borde); background: #FFFFFF; display: flex;
+      align-items: center; gap: 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--color-texto-menu); cursor: pointer; }
+    .tb-boton-borde:hover { background: var(--color-fila-hover); }
+    .tb-boton-listo { height: 40px; padding: 0 20px; border-radius: 12px; border: 0; background: var(--color-acento); color: #FFFFFF; display: flex;
+      align-items: center; font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer; }
+    .tb-boton-listo:hover { background: var(--color-acento-hover); }
+    .tb-boton-borde:focus-visible, .tb-boton-listo:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
+    .tb-tarjeta--acomodar { border: 1.5px dashed var(--tb-borde-hover); }
+    .tb-manija { width: 26px; height: 30px; margin-left: -6px; border-radius: 7px; border: 0; background: var(--color-pista); color: var(--color-texto-2);
+      display: flex; align-items: center; justify-content: center; cursor: grab; flex-shrink: 0; padding: 0; touch-action: none; }
+    .tb-manija:focus-visible, .pz-manija:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 1px; }
+    .tb-manija[aria-pressed="true"] { background: var(--color-acento); color: #FFFFFF; }
+    .tb-acomodo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: -4px; }
+    .tb-seg { display: flex; gap: 2px; background: var(--color-pista); border-radius: 8px; padding: 2px; }
+    .tb-seg__op { height: 24px; padding: 0 8px; border-radius: 6px; border: 0; background: transparent; color: var(--color-texto-2); font: inherit;
+      font-size: 12px; font-weight: 700; display: flex; align-items: center; cursor: pointer; }
+    .tb-seg__op--activa { background: #FFFFFF; color: var(--color-acento-hover); }
+    .tb-seg__op:focus-visible, .tb-esconder:focus-visible { outline: 2px solid var(--color-acento); outline-offset: 1px; }
+    .tb-esconder { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--color-borde); background: #FFFFFF; color: var(--color-texto-2);
+      display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+    .tb-tarjeta.arrastrando, .tb-tarjeta.levantada-teclado { border: 2px solid var(--color-acento); box-shadow: 0 24px 48px -12px rgba(28, 26, 23, 0.35); }
+    .tb-tarjeta.arrastrando { transform: rotate(-1.6deg); }
+    .tb-soltar { border: 2px dashed var(--color-acento); background: var(--color-acento-fila); border-radius: 16px; min-height: 196px; display: flex;
+      align-items: center; justify-content: center; color: var(--color-acento-hover); font-size: 14.5px; font-weight: 700; }
+    .tb-escondidas { margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border: 1.5px dashed var(--tb-borde-hover);
+      border-radius: 14px; padding: 12px 16px; }
+    .tb-escondidas__titulo { font-size: 14px; font-weight: 700; color: var(--color-texto-2); }
+    .tb-escondidas__vacio { font-size: 14px; color: var(--color-texto-suave); }
+    .tb-escondida { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px; border-radius: 10px; background: #FFFFFF; border: 1px solid var(--color-borde); }
+    .tb-escondida__icono { width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+    .tb-escondida__nombre { font-size: 14px; font-weight: 600; }
+    .tb-escondida__mostrar { height: 26px; padding: 0 10px; border-radius: 7px; border: 0; background: var(--color-acento-suave); color: var(--color-acento-hover);
+      font: inherit; font-size: 13px; font-weight: 700; display: flex; align-items: center; cursor: pointer; }
+
+    /* ── Personalizar (6a) ─────────────────────────────────────────────── */
+    .pz-cab { display: flex; flex-direction: column; gap: 4px; margin-bottom: 18px; }
+    .pz-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+    .pz-bajada { margin: 0; font-size: 15px; color: var(--color-texto-2); }
+    .pz-columnas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 16px; align-items: start; }
+    @media (max-width: 1023.98px) { .pz-columnas { grid-template-columns: minmax(0, 1fr); } }
+    .pz-caja { background: #FFFFFF; border: 1px solid var(--color-borde); border-radius: 16px; padding: 16px 18px; min-width: 0; }
+    .pz-caja__titulo { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
+    .pz-caja__texto { margin: 0 0 12px; font-size: 14px; color: var(--color-texto-2); }
+    .pz-caja__cab { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .pz-caja__cab .pz-caja__texto { margin-bottom: 0; }
+    .pz-caja__cab-texto { flex: 1 1 220px; min-width: 0; }
+    .pz-orden { display: flex; gap: 2px; background: var(--color-pista); border-radius: 11px; padding: 3px; margin-bottom: 14px; }
+    .pz-orden__op { flex: 1; min-width: 0; height: 34px; border-radius: 8px; border: 0; background: transparent; color: var(--color-texto-menu); font: inherit;
+      font-size: 13.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .pz-orden__op--activa { background: var(--color-acento); color: #FFFFFF; font-weight: 700; }
+    .pz-orden__op:focus-visible, .pz-fijar:focus-visible, .pz-interruptor:focus-visible, .pz-acomodar:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 1px; }
+    .pz-grupo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--color-texto-suave); padding: 8px 0 4px; }
+    .pz-fila { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 4px; border-radius: 9px; background: #FFFFFF; }
+    .pz-fila:hover { background: var(--color-fila-hover); }
+    .pz-fila.arrastrando, .pz-fila.levantada-teclado { box-shadow: 0 0 0 2px var(--color-acento); }
+    .pz-manija { width: 14px; height: 28px; border: 0; background: none; color: var(--tb-chev); display: flex; align-items: center; justify-content: center;
+      cursor: grab; flex-shrink: 0; padding: 0; touch-action: none; border-radius: 6px; }
+    .pz-manija svg { fill: currentColor; }
+    .pz-manija--vacia { cursor: default; }
+    .pz-manija[aria-pressed="true"] { background: var(--color-acento); color: #FFFFFF; }
+    .pz-icono { width: 24px; height: 24px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pz-nombre { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pz-fijar { height: 26px; padding: 0 9px; border-radius: 7px; display: flex; align-items: center; gap: 5px; font: inherit; font-size: 12.5px; font-weight: 700;
+      background: #FFFFFF; color: var(--color-texto-2); border: 1px solid var(--color-borde); cursor: pointer; flex-shrink: 0; }
+    .pz-fijar--si { background: var(--color-acento-suave); color: var(--color-acento-hover); border-color: #F6D3BD; }
+    .pz-acomodar { height: 38px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--color-acento); background: #FFFFFF; color: var(--color-acento);
+      font: inherit; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; white-space: nowrap; cursor: pointer; }
+    .pz-acomodar:hover { background: var(--color-acento-suave); }
+    .pz-fila--tablero { height: 42px; border-bottom: 1px solid var(--color-pista); border-radius: 9px; }
+    .pz-fila--tablero:hover { background: #FAF8F5; }
+    .pz-fila--apagada { opacity: 0.55; }
+    .pz-seg .tb-seg__op { height: 26px; padding: 0 9px; font-size: 12.5px; }
+    .pz-interruptor { width: 40px; height: 24px; border-radius: 999px; border: 0; background: var(--color-acento-gris); padding: 3px; display: flex;
+      justify-content: flex-start; flex-shrink: 0; cursor: pointer; }
+    .pz-interruptor--si { background: var(--color-acento); justify-content: flex-end; }
+    .pz-interruptor__bola { width: 18px; height: 18px; border-radius: 999px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+    .pz-pie { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; flex-wrap: wrap; }
+    .pz-volver { height: 38px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--color-borde); background: #FFFFFF; display: flex; align-items: center;
+      gap: 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--color-texto-menu); cursor: pointer; }
+    .pz-volver:hover { background: var(--color-fila-hover); }
+    .pz-volver:focus-visible { outline: 3px solid var(--color-acento); outline-offset: 2px; }
+    .pz-pie__texto { font-size: 13.5px; color: var(--color-texto-2); }
+    .pz-dispositivo { margin: 8px 0 0; font-size: 12.5px; color: var(--color-texto-suave); }
+    @media (max-width: 1023.98px) {
+      .pz-fila--tablero { height: auto; min-height: 42px; flex-wrap: wrap; padding: 6px 4px; }
+      .pz-fila--tablero .pz-nombre { flex: 1 1 120px; }
+    }
+
+    .tb-confirmar { position: fixed; inset: 0; z-index: 70; background: rgba(28, 26, 23, 0.42); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .tb-confirmar__caja { background: #FFFFFF; border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; box-sizing: border-box;
+      box-shadow: 0 18px 40px -8px rgba(28, 26, 23, 0.28); }
+    .tb-confirmar__titulo { margin: 0 0 6px; font-family: var(--fuente-titulo); font-size: 20px; font-weight: 700; }
+    .tb-confirmar__texto { margin: 0 0 16px; font-size: 14.5px; color: var(--color-texto-2); line-height: 1.45; }
+    .tb-confirmar__botones { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -282,13 +530,42 @@
     </div>
   </div>
 
-  <main class="dashboard__contenido">
-    <div class="dashboard__titulo" id="dashboard-titulo">
-      <h1>Módulos</h1>
+  <!-- EL TABLERO DE RESÚMENES (29/09/2026, handoff "Esqueleto"): reemplaza a
+       la grilla vieja "Módulos · Abrir →". Lo arma js/tablero.js: el saludo,
+       la franja "Para resolver ya", una tarjeta por módulo, el modo acomodar y
+       Personalizar (dashboard.html?vista=personalizar). -->
+  <main class="dashboard__contenido tb" id="tablero">
+    <div class="tb-saludo" id="dashboard-titulo"></div>
+
+    <div class="tb-franja" id="tb-franja" hidden></div>
+
+    <div class="tb-acomodar-barra" id="tb-acomodar-barra" hidden>
+      <span class="tb-acomodar-barra__icono" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg></span>
+      <div class="tb-acomodar-barra__texto">
+        <div class="tb-acomodar-barra__titulo">Estás acomodando tu tablero</div>
+        <div class="tb-acomodar-barra__ayuda">Arrastrá cada tarjeta desde la manija. Cambiale el tamaño o escondela. Se guarda solo para vos.</div>
+      </div>
+      <button type="button" class="tb-boton-borde" id="tb-acomodar-volver-fabrica"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>Volver a como venía</button>
+      <button type="button" class="tb-boton-listo" id="tb-acomodar-listo">Listo</button>
     </div>
 
-    <div class="grilla-modulos" id="grilla-modulos">
-      <!-- Los módulos se renderizan desde JS -->
+    <div class="tb-grilla grilla-modulos" id="grilla-modulos">
+      <!-- Las tarjetas se arman desde js/tablero.js -->
+    </div>
+
+    <div class="tb-escondidas" id="tb-escondidas" hidden></div>
+
+    <section class="pz" id="tb-personalizar" hidden aria-label="Personalizar"></section>
+
+    <div class="tb-confirmar" id="tb-confirmar" hidden role="dialog" aria-modal="true" aria-labelledby="tb-confirmar-titulo">
+      <div class="tb-confirmar__caja">
+        <h2 class="tb-confirmar__titulo" id="tb-confirmar-titulo">¿Volver a como venía?</h2>
+        <p class="tb-confirmar__texto">La barra lateral y el tablero vuelven al orden y a los tamaños de fábrica, y lo que escondiste vuelve a aparecer.</p>
+        <div class="tb-confirmar__botones">
+          <button type="button" class="tb-boton-borde" id="tb-confirmar-no">Cancelar</button>
+          <button type="button" class="tb-boton-listo" id="tb-confirmar-si">Sí, volver a como venía</button>
+        </div>
+      </div>
     </div>
 
     <div id="dashboard-pendiente" class="estado-vacio" hidden>
@@ -315,11 +592,9 @@
       validarContrasena, renderizarRequisitos, renderizarCoincidencia
     } from './js/utils.js'
     import { supabase } from './js/supabase.js'
-    import {
-      MODULOS, moduloVisible, entraDerechoAProduccion, COLORES_MODULO,
-      agruparPendientes, escDash,
-    } from './js/modulos.js'
+    import { MODULOS, moduloVisible, entraDerechoAProduccion } from './js/modulos.js'
     import { abrirPanelSesiones } from './js/sesiones.js'
+    import { crearTablero } from './js/tablero.js'
 
     mostrarBannerVersion()
 
@@ -736,15 +1011,19 @@
     // tiene_tarea() en la base). Si la consulta falla, esas tarjetas no se
     // muestran: nunca una tarjeta que después rebota por falta de permiso.
     let misTareas = new Set()
+    // El alcance de cada tarea (qué fábricas): lo usa el tablero para saber
+    // de qué unidades pedir Producción, Pedidos y Administración.
+    const alcances = new Map()
     if (!esSuperAdmin && MODULOS.some(m => m.requiereTareas)) {
       try {
         const { data: tareasData, error: errTareas } = await supabase
           .from('empleado_tareas')
-          .select('modulo, tarea')
+          .select('modulo, tarea, alcance')
           .eq('empleado_id', miEmpleado.id)
           .eq('habilitado', true)
         if (errTareas) throw errTareas
         misTareas = new Set((tareasData || []).map(t => `${t.modulo}:${t.tarea}`))
+        for (const t of tareasData || []) alcances.set(`${t.modulo}:${t.tarea}`, t.alcance ?? null)
       } catch (err) {
         console.error('No se pudieron leer las tareas para el dashboard:', err)
       }
@@ -769,102 +1048,18 @@
       await new Promise(() => {})
     }
 
-    // Renderizar grilla de módulos
-    const grilla = document.getElementById('grilla-modulos')
-
-    const tarjetas = modulosVisibles.map((modulo) => {
-      const colores = COLORES_MODULO[modulo.color]
-
-      if (modulo.proximamente) {
-        return `
-          <div class="tarjeta-modulo tarjeta-modulo--inactiva" title="${modulo.nombre} — próximamente">
-            <span class="tarjeta-modulo__icono-contenedor" style="background:${colores.bg}; color:${colores.fg};">
-              <i data-lucide="${modulo.icono}"></i>
-            </span>
-            <span class="tarjeta-modulo__texto">
-              <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
-              <span class="tarjeta-modulo__descripcion">${modulo.descripcion}</span>
-            </span>
-            <span class="tarjeta-modulo__proximamente">Próximamente</span>
-          </div>
-        `
-      }
-      return `
-        <a href="${(esDispositivo && modulo.urlDispositivo) || modulo.url}" class="tarjeta-modulo" data-clave="${modulo.clave}">
-          <span class="tarjeta-modulo__icono-contenedor" style="background:${colores.bg}; color:${colores.fg};">
-            <i data-lucide="${modulo.icono}"></i>
-          </span>
-          <span class="tarjeta-modulo__texto">
-            <span class="tarjeta-modulo__nombre">${modulo.nombre}</span>
-            <span class="tarjeta-modulo__descripcion">${modulo.descripcion}</span>
-          </span>
-          <span class="tarjeta-modulo__abrir" style="color:${colores.fg};">Abrir →</span>
-        </a>
-      `
-    }).join('')
-
-    const placeholder = `
-      <div class="tarjeta-modulo tarjeta-modulo--placeholder">
-        <span class="tarjeta-modulo__icono-contenedor">
-          <i data-lucide="plus"></i>
-        </span>
-        <span class="tarjeta-modulo__descripcion">Más módulos en camino</span>
-      </div>
-    `
-
-    grilla.innerHTML = tarjetas + placeholder
-    lucide.createIcons()
-
-    // ═══ Burbujas de pendientes ═══════════════════════════════════════════
-    // mis_pendientes() devuelve SOLO lo que la persona que mira tiene que
-    // resolver, según sus permisos: filas (modulo, clave, cantidad, texto).
-    // Una llamada al abrir y otra al volver a la pestaña.
-    //
-    // Si la llamada falla NO se muestra ninguna burbuja: nunca un número viejo
-    // o inventado. Un contador que miente es peor que no tener contador.
-    //
-    // Los nombres de módulo de la RPC (guión BAJO, los de empleado_tareas) y
-    // los de MODULOS (guión MEDIO, los de empleado_modulos) son namespaces
-    // distintos: se mapean acá, explícitos. Un módulo que la RPC devuelva y no
-    // esté en este mapa se ignora (y se avisa por consola), no se adivina.
-    function htmlBurbuja(p) {
-      if (!p || !(p.total > 0)) return ''
-      const detalle = escDash(p.detalle.join(' · '))
-      const numero = p.total > 99 ? '99+' : String(p.total)
-      return `<span class="tarjeta-modulo__burbuja" title="${detalle}" aria-label="${detalle}">${numero}</span>`
-    }
-
-    // Saca TODAS las burbujas y pone las nuevas. Con null (la llamada falló)
-    // solo las saca.
-    function pintarBurbujas(porModulo) {
-      document.querySelectorAll('.tarjeta-modulo__burbuja').forEach(b => b.remove())
-      if (!porModulo) return
-      document.querySelectorAll('.tarjeta-modulo[data-clave]').forEach(tarjeta => {
-        const html = htmlBurbuja(porModulo.get(tarjeta.dataset.clave))
-        if (html) tarjeta.insertAdjacentHTML('beforeend', html)
-      })
-    }
-
-    // Un turno por llamada: la respuesta de una llamada vieja no pisa la nueva.
-    let turnoPendientes = 0
-    async function cargarPendientes() {
-      const turno = ++turnoPendientes
-      let porModulo = null
-      try {
-        const { data, error } = await supabase.rpc('mis_pendientes')
-        if (error) throw error
-        porModulo = agruparPendientes(Array.isArray(data) ? data : [])
-      } catch (err) {
-        console.error('mis_pendientes:', err)
-        porModulo = null
-      }
-      if (turno !== turnoPendientes) return
-      pintarBurbujas(porModulo)
-    }
-
-    cargarPendientes()
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') cargarPendientes()
+    // ═══ El tablero de resúmenes (js/tablero.js, 29/09/2026) ═══════════════
+    // Una tarjeta por módulo que la persona puede abrir (la misma regla de la
+    // barra lateral), cada una con sus datos pedidos POR SEPARADO: si una
+    // falla, las otras siguen. dashboard.html?vista=personalizar abre
+    // Personalizar (el link de la barra lateral).
+    const vista = new URLSearchParams(window.location.search).get('vista') === 'personalizar' ? 'personalizar' : 'tablero'
+    crearTablero({
+      // El nombre de pila sale del registro (user_metadata.nombre_completo,
+      // "Nombre Apellido"); el de empleados viene de Naaloo como "Apellido
+      // Nombre" y daría "Buen día, Usabarrena". Sin nombre, "Buen día" solo.
+      sb: supabase, yo: miEmpleado, nombre, esSuperAdmin, misTareas, alcances, esDispositivo,
+      ctxVis: { esAdmin, esSuperAdmin, misModulos, misTareas }, vistaInicial: vista,
     })
   </script>
 

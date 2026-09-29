@@ -188,6 +188,54 @@ const PANTALLAS = [
       await expect(page.locator('.sesiones')).toHaveCount(0)
     }],
   ]],
+  // El tablero de resúmenes (29/09/2026, handoff "Esqueleto"): el tablero,
+  // Personalizar (fijar, tamaño, esconder), el modo acomodar con el teclado y
+  // "Volver a como venía" con su panel. Los datos son los del diseño (el
+  // reloj NO está fijo acá: lo compara 11-comparar-esqueleto.spec.js).
+  ['dashboard.html', 'tablero', [
+    ['tablero', async (page) => {
+      await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(14)
+      await expect(page.locator('.tb-tarjeta--cargando')).toHaveCount(0)
+      await expect(page.locator('[data-tarjeta="produccion"]')).toContainText('Máquina 4')
+    }],
+    ['personalizar', async (page) => {
+      await page.goto(`${MAQUETA}/dashboard.html?vista=personalizar`)
+      await expect(page.locator('#tb-personalizar')).toContainText('Se guarda en este dispositivo.')
+      await page.locator('[data-pz-fijar="stock"]').click()
+      await expect(page.locator('[data-pz-fijar="stock"]')).toHaveAttribute('aria-pressed', 'true')
+      await page.locator('[data-pz-tamano="cheques"][data-tamano="mediana"]').click()
+      await page.locator('[data-pz-mostrar="seguridad"]').click()
+      await expect(page.locator('[data-pz-mostrar="seguridad"]')).toHaveAttribute('aria-checked', 'false')
+    }],
+    ['acomodar', async (page) => {
+      await page.locator('#pz-acomodar').click()
+      await expect(page.locator('#tb-acomodar-barra')).toBeVisible()
+      await expect(page.locator('#tb-escondidas')).toContainText('Seguridad')
+      await expect(page.locator('.tb-tarjeta__abrir')).toHaveCount(0)
+      await page.locator('[data-manija="caja"]').focus()
+      await page.keyboard.press('Enter')
+      await page.keyboard.press('ArrowLeft')
+      await page.keyboard.press('Enter')
+      const orden = await page.locator('#grilla-modulos [data-tarjeta]').evaluateAll(xs => xs.map(x => x.dataset.tarjeta))
+      expect(orden.indexOf('caja')).toBe(1)
+    }],
+    ['volver-a-como-venia', async (page) => {
+      await page.locator('#tb-acomodar-volver-fabrica').click()
+      await expect(page.locator('#tb-confirmar')).toBeVisible()
+      await page.locator('#tb-confirmar-si').click()
+      await expect(page.locator('#tb-confirmar')).toBeHidden()
+      await page.locator('#tb-acomodar-listo').click()
+      await expect(page.locator('#grilla-modulos [data-tarjeta]')).toHaveCount(14)
+      await expect(page.locator('.tb-tarjeta__abrir')).toHaveCount(14)
+    }],
+  ]],
+  ['dashboard.html', 'tablero-estados', [
+    ['estados', async (page) => {
+      await expect(page.locator('[data-tarjeta="caja"]')).toContainText('No se pudo cargar')
+      await expect(page.locator('[data-tarjeta="cheques"]')).toContainText('Cargando…')
+      await expect(page.locator('[data-tarjeta="gastos"]')).not.toContainText('No se pudo cargar')
+    }],
+  ]],
   ['modulos/pedidos.html', 'pedidos', [
     ['lista', async (page) => { await expect(page.locator('[data-pedido]').first()).toBeVisible() }],
     ['detalle', async (page) => { await page.locator('[data-pedido="pe1"]').click(); await expect(page.locator('#pe-btn-imprimir')).toBeVisible() }],

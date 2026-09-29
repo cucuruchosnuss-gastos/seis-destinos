@@ -6,6 +6,8 @@
 //   ARCHIVO_TEST     otra copia de dashboard.html
 //   ARCHIVO_MODULOS  otra copia de js/modulos.js (la usan los runners de
 //                    mutaciones para mutar el catálogo)
+//   ARCHIVO_JS_TABLERO otra copia de js/tablero.js (el tablero de resúmenes,
+//                    29/09/2026: las tarjetas del dashboard se arman ahí)
 'use strict'
 
 const fs = require('fs')
@@ -14,6 +16,7 @@ const path = require('path')
 const RAIZ = path.join(__dirname, '..')
 const RUTA_DASHBOARD = process.env.ARCHIVO_TEST || path.join(RAIZ, 'dashboard.html')
 const RUTA_MODULOS = process.env.ARCHIVO_MODULOS || path.join(RAIZ, 'js', 'modulos.js')
+const RUTA_TABLERO = process.env.ARCHIVO_JS_TABLERO || path.join(RAIZ, 'js', 'tablero.js')
 
 function leer(ruta) {
   const t = fs.readFileSync(ruta, 'utf8')
@@ -23,9 +26,9 @@ function leer(ruta) {
   return t
 }
 
-// dashboard.html entero + js/modulos.js.
+// dashboard.html entero + js/modulos.js + js/tablero.js.
 function fuenteDashboard() {
-  return leer(RUTA_DASHBOARD) + '\n' + leer(RUTA_MODULOS)
+  return leer(RUTA_DASHBOARD) + '\n' + leer(RUTA_MODULOS) + '\n' + leer(RUTA_TABLERO)
 }
 
 // Solo el <script type="module"> del dashboard + js/modulos.js.
@@ -35,4 +38,4 @@ function scriptDashboard() {
   return html.slice(ini, html.indexOf('</script>', ini)) + '\n' + leer(RUTA_MODULOS)
 }
 
-module.exports = { fuenteDashboard, scriptDashboard, RUTA_DASHBOARD, RUTA_MODULOS }
+module.exports = { fuenteDashboard, scriptDashboard, RUTA_DASHBOARD, RUTA_MODULOS, RUTA_TABLERO }

@@ -1,5 +1,11 @@
-// Burbujas de pendientes del dashboard (mis_pendientes). Se EJECUTAN las
-// funciones reales de dashboard.html con la RPC mockeada y un DOM falso.
+// Los pendientes del dashboard (mis_pendientes). Se EJECUTAN las funciones
+// reales con la RPC mockeada. Desde el 29/09/2026 (el tablero de resúmenes,
+// js/tablero.js) el dashboard ya no pinta burbujas en tarjetas "Abrir →": lo
+// pendiente va en el PIE de cada tarjeta ("lo que hay que resolver"). Las
+// reglas de siempre se siguen exigiendo ahí: un error nunca deja un número
+// viejo, un null o un cero no cuentan, la respuesta vieja no pisa la nueva, y
+// se vuelve a pedir al volver a la pestaña. La agrupación por tarjeta
+// (agruparPendientes, js/modulos.js) la sigue usando la barra lateral.
 //
 //   node pruebas/test-dashboard-pendientes.js
 //   ARCHIVO_TEST=/otra/copia.html node pruebas/test-dashboard-pendientes.js
@@ -15,7 +21,10 @@ let ok = 0
 const fallas = []
 function chk(nombre, cond, detalle) { if (cond) ok++; else fallas.push(nombre + (detalle !== undefined ? ` — ${detalle}` : '')) }
 
-const FUNCIONES = ['moduloVisible', 'escDash', 'textoPendiente', 'agruparPendientes', 'htmlBurbuja', 'pintarBurbujas', 'cargarPendientes']
+const FUNCIONES = ['moduloVisible', 'escDash', 'textoPendiente', 'agruparPendientes', 'htmlBurbujaBarra']
+// El tablero (js/tablero.js), con el código real.
+const T = require('./sandbox-tablero').construir()
+const { ctxFalso } = require('./sandbox-tablero')
 let codigo = `
   var __tarjetas = []
   var __rpc = async () => ({ data: [], error: null })
@@ -129,8 +138,13 @@ chk('produccion (conos_por_revisar) → la tarjeta de Producción', S.MODULO_DE_
   chk('caja: dos claves con 1 cada una → la tarjeta dice 2', g.get('caja')?.total === 2, g.get('caja')?.total)
   chk('caja: el detalle nombra las dos', g.get('caja')?.detalle.join(' | ') ===
     '1 movimientos por aceptar en mi caja | 1 movimientos por aceptar en la caja de la empresa', g.get('caja')?.detalle.join(' | '))
-  const h = S.htmlBurbuja(g.get('caja'))
-  chk('caja: la burbuja muestra 2', />2<\/span>$/.test(h), h)
+  // La burbuja de la barra lateral dice la suma; el pie de la tarjeta, un
+  // renglón por cada caja (así se ve adentro).
+  const h = S.htmlBurbujaBarra(g.get('caja'))
+  chk('caja: la burbuja de la barra muestra 2', />2<\/span>$/.test(h), h)
+  const pie = T.resolverDePendientes('caja', T.mapaPendientes([
+    { modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 1 }, { modulo: 'caja', clave: 'solicitudes_empresa', cantidad: '1' }]), new Set(['caja']))
+  chk('caja: el pie de la tarjeta nombra las dos cajas (1 + 1)', pie.length === 2 && pie.every(r => r.n === 1), JSON.stringify(pie))
   const g2 = S.agruparPendientes([
     { modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 0, texto: 'Movimientos por aceptar en mi caja' },
     { modulo: 'caja', clave: 'solicitudes_empresa', cantidad: 3, texto: 'Movimientos por aceptar en la caja de la empresa' },
@@ -151,85 +165,62 @@ chk('produccion (conos_por_revisar) → la tarjeta de Producción', S.MODULO_DE_
   chk('no urgente: conos por revisar', g.get('produccion')?.urgente === false)
 }
 
-// --- htmlBurbuja ----------------------------------------------------------
+// --- el pie de cada tarjeta (lo que era la burbuja) -------------------------
 {
-  chk('sin datos → nada', S.htmlBurbuja(undefined) === '')
-  chk('total 0 → nada', S.htmlBurbuja({ total: 0, detalle: [] }) === '')
-  const h = S.htmlBurbuja({ total: 5, detalle: ['5 cobranzas por controlar'] })
-  chk('muestra el número', />5<\/span>$/.test(h), h)
-  chk('aria-label con el detalle', h.includes('aria-label="5 cobranzas por controlar"'))
-  chk('title con el detalle', h.includes('title="5 cobranzas por controlar"'))
-  chk('más de 99 → "99+"', />99\+</.test(S.htmlBurbuja({ total: 150, detalle: ['x'] })))
-  const mal = S.htmlBurbuja({ total: 1, detalle: ['1 "><img src=x onerror=alert(1)>'] })
-  chk('el texto va escapado', !mal.includes('<img') && mal.includes('&quot;&gt;&lt;img'), mal)
-}
-
-// --- con la RPC: datos, cero, error, módulo inexistente ------------------
-const esperas = []
-async function correr(nombre, rpc, verificar) {
-  const tarjetas = S.__setTarjetas(['gastos', 'caja', 'accesos', 'cobranzas', 'materia-prima', 'stock', 'cuentas-corrientes'])
-  S.__setRpc(rpc)
-  await S.cargarPendientes()
-  await verificar(tarjetas, nombre)
-}
-const porClave = (ts, c) => ts.find(t => t.dataset.clave === c).hijos
-esperas.push((async () => {
-  await correr('con datos', async () => ({ data: [
+  const filas = [
     { modulo: 'cobranzas', clave: 'por_controlar', cantidad: 5, texto: 'Cobranzas por controlar' },
     { modulo: 'accesos', clave: 'solicitudes', cantidad: 2, texto: 'Solicitudes de acceso' },
-    { modulo: 'caja', clave: 'solicitudes_por_aceptar', cantidad: 0, texto: 'Movimientos por aceptar' },
-  ], error: null }), (ts) => {
-    chk('con datos: cobranzas tiene su burbuja', porClave(ts, 'cobranzas').length === 1 && />5</.test(porClave(ts, 'cobranzas')[0]))
-    chk('con datos: accesos tiene su burbuja', porClave(ts, 'accesos').length === 1)
-    chk('con datos: caja en 0 no tiene', porClave(ts, 'caja').length === 0)
-    chk('con datos: gastos sin fila no tiene', porClave(ts, 'gastos').length === 0)
-  })
-  // Repintar no duplica
-  await correr('con datos dos veces', async () => ({ data: [{ modulo: 'stock', clave: 'x', cantidad: 1, texto: 'Transferencias por aceptar' }], error: null }), async (ts) => {
-    await S.cargarPendientes()
-    chk('volver a cargar no duplica la burbuja', porClave(ts, 'stock').length === 1)
-  })
-  await correr('con cero', async () => ({ data: [
-    { modulo: 'cobranzas', clave: 'por_controlar', cantidad: 0, texto: 'Cobranzas por controlar' },
-  ], error: null }), (ts) => {
-    chk('con cero: ninguna burbuja', ts.every(t => t.hijos.length === 0))
-  })
-  // Error: primero hay burbujas, después falla → no queda ninguna (nunca un número viejo)
-  {
-    const tarjetas = S.__setTarjetas(['cobranzas'])
-    S.__setRpc(async () => ({ data: [{ modulo: 'cobranzas', clave: 'x', cantidad: 3, texto: 'Cobranzas por controlar' }], error: null }))
-    await S.cargarPendientes()
-    chk('antes del error había burbuja', tarjetas[0].hijos.length === 1)
-    S.__setRpc(async () => ({ data: null, error: { message: 'sin red' } }))
-    await S.cargarPendientes()
-    chk('con error: se saca la burbuja vieja', tarjetas[0].hijos.length === 0)
-    S.__setRpc(async () => { throw new Error('red caída') })
-    await S.cargarPendientes()
-    chk('con excepción: ninguna burbuja', tarjetas[0].hijos.length === 0)
-  }
-  await correr('módulo inexistente', async () => ({ data: [{ modulo: 'produccion', clave: 'x', cantidad: 7, texto: 'Algo' }], error: null }), (ts) => {
-    chk('módulo inexistente: ninguna burbuja', ts.every(t => t.hijos.length === 0))
-  })
-  // Respuesta vieja que llega tarde no pisa la nueva
-  {
-    const tarjetas = S.__setTarjetas(['cobranzas'])
-    let soltar
-    S.__setRpc(() => new Promise(r => { soltar = () => r({ data: [{ modulo: 'cobranzas', clave: 'x', cantidad: 9, texto: 'Viejo' }], error: null }) }))
-    const vieja = S.cargarPendientes()
-    S.__setRpc(async () => ({ data: [{ modulo: 'cobranzas', clave: 'x', cantidad: 1, texto: 'Nuevo' }], error: null }))
-    await S.cargarPendientes()
-    soltar(); await vieja
-    chk('la respuesta vieja no pisa la nueva', tarjetas[0].hijos.length === 1 && />1</.test(tarjetas[0].hijos[0]), tarjetas[0].hijos.join())
-  }
+    { modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 0, texto: 'Movimientos por aceptar' },
+    { modulo: 'modulo_inventado', clave: 'x', cantidad: 7, texto: '<b>' },
+  ]
+  const pend = T.mapaPendientes(filas)
+  const vis = new Set(['administracion', 'accesos', 'caja', 'gastos'])
+  chk('con datos: las cobranzas por controlar van al pie de Administración ("por asentar")', T.resolverDePendientes('administracion', pend, vis).some(r => r.n === 5 && r.t === 'cobranzas por asentar'))
+  chk('con datos: accesos tiene su renglón', T.resolverDePendientes('accesos', pend, vis).some(r => r.n === 2))
+  chk('con datos: caja en 0 no tiene', T.resolverDePendientes('caja', pend, vis).length === 0)
+  chk('con datos: gastos sin fila no tiene', T.resolverDePendientes('gastos', pend, vis).length === 0)
+  chk('un módulo que la RPC devuelva y no tenga tarjeta se ignora', ![...vis].some(c => T.resolverDePendientes(c, pend, vis).some(r => r.n === 7)))
+  chk('con cero: ningún renglón', T.mapaPendientes([{ modulo: 'cobranzas', clave: 'por_controlar', cantidad: 0 }]).size === 0)
+  chk('un null o un texto no se vuelven un número', T.mapaPendientes([{ modulo: 'accesos', clave: 'solicitudes', cantidad: null }, { modulo: 'accesos', clave: 'solicitudes', cantidad: 'x' }]).size === 0)
+  const h = T.htmlTarjeta({ clave: 'accesos', nombre: 'Accesos', url: 'modulos/accesos.html', tamano: 'chica' },
+    { estado: 'ok', valor: '1', resolver: [{ n: 1, t: '"><img src=x onerror=alert(1)>', url: 'modulos/accesos.html' }] })
+  chk('el texto del pie va escapado', !h.includes('<img') && h.includes('&quot;&gt;&lt;img'), h)
+  const b = S.htmlBurbujaBarra({ total: 1, detalle: ['1 "><img src=x onerror=alert(1)>'] })
+  chk('el detalle de la burbuja de la barra va escapado (también las comillas)', !b.includes('<img') && b.includes('&quot;&gt;&lt;img'), b)
+  const caido = T.htmlTarjeta({ clave: 'caja', nombre: 'Caja', url: 'modulos/caja.html', tamano: 'mediana' }, { estado: 'ok', valor: '$ 1', resolver: [], pendError: true })
+  chk('si mis_pendientes falló, el pie dice que no se pudo saber (nunca "Nada pendiente")', caido.includes('No se pudo saber qué hay pendiente.') && !caido.includes('Nada pendiente'))
+}
+
+// --- con la RPC: error, repetir, respuesta vieja -------------------------
+const esperas = []
+esperas.push((async () => {
+  const vis = new Set(['caja'])
+  const cargador = { caja: async () => ({ estado: 'ok', valor: '$ 1', resolver: [] }) }
+  const bien = await T.cargarTarjeta('caja', ctxFalso(T, { visibles: vis, pend: Promise.resolve(T.mapaPendientes([{ modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 3 }])) }), cargador)
+  chk('antes del error había renglón', bien.resolver.length === 1 && bien.resolver[0].n === 3)
+  const mal = await T.cargarTarjeta('caja', ctxFalso(T, { visibles: vis, pend: Promise.resolve(null) }), cargador)
+  chk('con error: ningún número (nunca uno viejo), y el pie lo dice', mal.resolver.length === 0 && mal.pendError === true)
+  const rota = await T.cargarTarjeta('caja', ctxFalso(T, { visibles: vis, pend: Promise.reject(new Error('red caída')) }), cargador)
+  chk('con excepción: ningún número', rota.resolver.length === 0 && rota.pendError === true)
+  const otra = await T.cargarTarjeta('caja', ctxFalso(T, { visibles: vis, pend: Promise.resolve(T.mapaPendientes([{ modulo: 'caja', clave: 'solicitudes_mi_caja', cantidad: 1 }])) }), cargador)
+  chk('volver a cargar no duplica el renglón', otra.resolver.length === 1)
+  // Respuesta vieja que llega tarde no pisa la nueva.
+  const estado = { modelos: new Map(), turnos: new Map() }
+  let soltar
+  const vieja = T.refrescarTarjeta(estado, 'caja', {}, () => {}, () => new Promise(r => { soltar = () => r({ estado: 'ok', valor: '9' }) }))
+  await T.refrescarTarjeta(estado, 'caja', {}, () => {}, async () => ({ estado: 'ok', valor: '1' }))
+  soltar(); await vieja
+  chk('la respuesta vieja no pisa la nueva', estado.modelos.get('caja').valor === '1')
 })())
 
 // --- estático: una sola llamada al abrir, otra al volver a la pestaña -----
 {
   const sinComentarios = src.replace(/^\s*\/\/.*$/gm, '')
-  chk('se llama al abrir', /\n\s*cargarPendientes\(\)\n/.test(sinComentarios))
-  chk('se llama al volver a la pestaña', /visibilitychange[\s\S]{0,120}visibilityState === 'visible'\) cargarPendientes\(\)/.test(sinComentarios))
+  const tab = (require('./imports').leerJs('tablero.js') || '').replace(/^\s*\/\/.*$/gm, '')
+  chk('se pide mis_pendientes al cargar el tablero', /sb\.rpc\('mis_pendientes'\)/.test(tab) && /estado\.listo = true\s*\n\s*cargarTodo\(\)/.test(tab))
+  chk('se vuelve a pedir al volver a la pestaña', /visibilitychange[\s\S]{0,120}visibilityState === 'visible'[\s\S]{0,40}cargarTodo\(\)/.test(tab))
   chk('la consulta vieja a solicitudes_acceso ya no está', !/from\('solicitudes_acceso'\)/.test(sinComentarios))
-  chk('cada tarjeta lleva data-clave', /class="tarjeta-modulo" data-clave="\$\{modulo\.clave\}"/.test(src))
+  chk('cada tarjeta lleva su clave (data-tarjeta)', /data-tarjeta="\$\{escTab\(t\.clave\)\}"/.test(tab))
 }
 
 Promise.all(esperas).catch(e => chk('rama async sin excepción', false, e && e.stack)).then(() => {
