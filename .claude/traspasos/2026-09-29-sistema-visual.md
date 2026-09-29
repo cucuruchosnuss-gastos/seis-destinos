@@ -1,5 +1,7 @@
 # Traspaso · La tanda del sistema visual (28 y 29/09/2026)
 
+> **Actualización (noche del 29/09/2026, `2026-09-29-ajustes.md`):** ya quedaron CERRADOS el error de `v_caja_saldos`, las preferencias en el servidor, el cono común en `catalogo_para_retiro`, el color de producto, la caja predeterminada y las tres decisiones de diseño (borde de botón, lotes a 8 px, conos). Lo que sigue abajo describe el estado de antes.
+
 Tag de antes: `antes-de-sistema-visual-2026-09-28`. Orden pedido por Facu: 0, 5, 6, 4, 1, 2, 3. Todo quedó en `origin/main`, parte por parte, con Actions en verde. Supabase se usó **solo para leer**: la tanda no escribió nada en la base.
 
 Los traspasos de detalle de dos partes son aparte:

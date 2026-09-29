@@ -2,7 +2,7 @@
 
 Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a information_schema y pg_proc). **Es una foto, no la fuente de verdad**: ante la duda, consultá la base.
 
-- 76 tablas, 19 vistas, 226 funciones.
+- 77 tablas, 19 vistas, 234 funciones.
 
 ## Tablas y vistas
 
@@ -171,6 +171,8 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | salida_destino | text | sí |  |
 | salida_por | uuid | sí |  |
 | salida_registrada_en | timestamp with time zone | sí |  |
+| salida_proveedor_id | uuid | sí |  |
+| salida_gasto_id | uuid | sí |  |
 
 ### cobranza_fotos
 
@@ -729,6 +731,14 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | expira_en | timestamp with time zone | sí |  |
 | debe_cambiar | boolean | no | false |
 
+### preferencias_usuario
+
+| Columna | Tipo | Nula | Default |
+|---|---|---|---|
+| empleado_id | uuid | no |  |
+| datos | jsonb | no | '{}'::jsonb |
+| actualizado_en | timestamp with time zone | no | now() |
+
 ### presentacion_cajas
 
 | Columna | Tipo | Nula | Default |
@@ -813,6 +823,7 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | activo | boolean | no | true |
 | orden | integer | no | 0 |
 | categoria | text | sí |  |
+| color | text | sí |  |
 
 ### proveedor_insumo_alias
 
@@ -1450,6 +1461,7 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | `_chequear_masa_chocolate(p_turno_id uuid, p_presentacion_id uuid)` | void | D |  |  |
 | `_chequeo_chocolate_tras_anular()` | trigger | D |  |  |
 | `_chocolate_sin_masa(p_turno_id uuid)` | boolean | D |  |  |
+| `_clave_nombre(p text)` | text |  |  | sí |
 | `_cobranza_cheque_proteger_salida()` | trigger |  |  |  |
 | `_cobranza_escribir_detalle(p_cobranza_id uuid, p_fotos jsonb, p_cheques jsonb)` | void | D |  |  |
 | `_cobranza_estado_texto(p text)` | text |  |  | sí |
@@ -1502,9 +1514,12 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | `asignar_unidad_cobranza(p_id uuid, p_unidad_negocio_id uuid)` | void | D |  | sí |
 | `borrar_parada(p_parada_id uuid, p_motivo text)` | void | D |  | sí |
 | `buscar_cheque_cargado(p_banco_codigo text, p_numero text, p_sucursal_codigo text, p_cuenta text, p_excluir_cobranza_id uuid)` | TABLE(cobranza_id uuid, fecha date, cargada_por text, importe numeric, coincide_completo boolean) | D |  | sí |
+| `buscar_clientes(p_busqueda text, p_unidad_negocio_id uuid)` | jsonb | D |  | sí |
 | `buscar_comprobante_cargado(p_proveedor_id uuid, p_numero_doc text, p_razon_social text, p_excluir_modulo text, p_excluir_id uuid)` | TABLE(modulo text, registro_id uuid, numero_doc text, razon_social text, fecha date, unidad_negocio_id uuid, importe numeric) | D |  | sí |
 | `buscar_empleado_por_cuil(p_cuil text)` | TABLE(nombre text, rol text) | D |  |  |
 | `cambiar_activo_cliente(p_cliente_id uuid, p_activo boolean)` | void | D |  | sí |
+| `cambiar_caja_predeterminada(p_unidad_negocio_id uuid, p_insumo_id uuid)` | void | D |  | sí |
+| `cambiar_color_producto(p_producto_id uuid, p_color text)` | void | D |  | sí |
 | `cambiar_estado_pedido(p_pedido_id uuid, p_estado text, p_motivo text)` | void | D |  | sí |
 | `cambiar_pin_produccion(p_empleado_id uuid, p_unidad_negocio_id uuid, p_pin_actual text, p_pin_nuevo text)` | jsonb | D |  | sí |
 | `cancelar_solicitud_movimiento_caja(p_solicitud_id uuid)` | void | D |  | sí |
@@ -1545,6 +1560,7 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | `editar_insumo(p_insumo_id uuid, p_nombre text, p_marca text, p_unidad_medida text, p_tipo text, p_tolerancia_merma_pct numeric, p_estado_alta text, p_aclaracion text, p_categoria text, p_vista_preferida text)` | void | D |  | sí |
 | `editar_parada(p_parada_id uuid, p_motivo text, p_inicio timestamp with time zone, p_fin timestamp with time zone)` | void | D |  | sí |
 | `editar_proveedor(p_proveedor_id uuid, p_razon_social text, p_cuit text, p_nombre_fantasia text, p_direccion text)` | void | D |  | sí |
+| `endosar_cheque_a_proveedor(p_cheque_id uuid, p_proveedor_id uuid, p_unidad_negocio_id uuid, p_fecha date, p_aplicaciones jsonb)` | jsonb | D |  | sí |
 | `estado_pin_produccion(p_empleado_id uuid)` | jsonb | D |  | sí |
 | `facturar_proyecto(p_proyecto_id uuid, p_importe numeric, p_concepto text, p_fecha date)` | void | D |  | sí |
 | `facturas_sin_ingreso()` | TABLE(origen text, id uuid, fecha date, proveedor text, razon_social text, tipo_doc text, numero_doc text, importe numeric, moneda text, unidad_negocio_id uuid, unidad text, foto_url text) | D |  | sí |
@@ -1569,6 +1585,7 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | `guardar_lista_precios(p_id uuid, p_unidad_negocio_id uuid, p_nombre text, p_moneda text, p_activa boolean)` | uuid | D |  | sí |
 | `guardar_maquina(p_id uuid, p_unidad_negocio_id uuid, p_nombre text, p_activa boolean, p_orden integer)` | uuid | D |  | sí |
 | `guardar_marca(p_id uuid, p_nombre text, p_activa boolean)` | uuid | D |  | sí |
+| `guardar_mis_preferencias(p_datos jsonb)` | void | D |  | sí |
 | `guardar_pedido(p_id uuid, p_unidad_negocio_id uuid, p_cliente_id uuid, p_fecha date, p_fecha_entrega date, p_observaciones text, p_items jsonb, p_texto_original text)` | jsonb | D |  | sí |
 | `guardar_precios(p_lista_id uuid, p_vigente_desde date, p_items jsonb)` | jsonb | D |  | sí |
 | `guardar_presentacion(p_id uuid, p_producto_id uuid, p_nombre text, p_con_cono boolean, p_media_caja boolean, p_empaque text, p_unidades_por_caja integer, p_activa boolean, p_orden integer)` | uuid | D |  | sí |
@@ -1603,6 +1620,7 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | `mi_sesion_produccion()` | jsonb | D |  | sí |
 | `mis_ordenes_retiro(p_unidad_negocio_id uuid, p_desde date)` | jsonb | D |  | sí |
 | `mis_pendientes()` | TABLE(modulo text, clave text, cantidad bigint, texto text) | D |  | sí |
+| `mis_preferencias()` | jsonb | D |  | sí |
 | `mis_unidades_retiro()` | TABLE(id uuid, nombre text, prefijo text, razon_social text, cuit text, domicilio text, telefono text, logo_url text) | D |  | sí |
 | `mover_tarea_taller(p_id uuid, p_estado text, p_orden integer, p_motivo_bloqueo text)` | void | D |  | sí |
 | `normalizar_numero_doc(p_texto text)` | text |  |  | sí |
@@ -1616,6 +1634,7 @@ Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a 
 | `precio_vigente_insumo(p_lista_id uuid, p_insumo_id uuid, p_fecha date)` | numeric | D |  |  |
 | `presentaciones_sugeridas(p_proveedor_id uuid, p_insumo_ids uuid[])` | TABLE(insumo_id uuid, interpretacion text, presentaciones jsonb) | D |  | sí |
 | `proponer_marca(p_nombre text)` | jsonb | D |  | sí |
+| `proveedores_para_endoso(p_busqueda text)` | jsonb | D |  | sí |
 | `proyectos_taller(p_solo_activos boolean)` | jsonb | D |  | sí |
 | `puede_ver_produccion()` | boolean | D |  | sí |
 | `que_falta_para_cerrar(p_turno_id uuid)` | jsonb | D |  | sí |
