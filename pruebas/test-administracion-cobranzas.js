@@ -110,7 +110,7 @@ async function pruebas() {
     await S.mostrarInicio()
     await esperar()
     const h = html(S, 'ad-secciones')
-    chk('la portada tiene la tarjeta con su número', /data-seccion="cobranzas"/.test(h) && />2<\/span>/.test(h) && /cobranzas para elegir el cliente y asentar/.test(h), h)
+    chk('la portada tiene la tarjeta con su número', /data-seccion="cobranzas"/.test(h) && />2<\/span>/.test(h) && /por asentar</.test(h), h)
     const S5 = nuevo({ rpc: async (n) => n === 'cobranzas_por_asentar' ? { data: null, error: { message: 'sin red' } } : { data: [], error: null } })
     await S5.mostrarInicio()
     await esperar()

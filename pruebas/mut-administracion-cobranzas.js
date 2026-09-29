@@ -33,8 +33,8 @@ correrMutaciones({
     { nombre: 'la sección se ve con ver_todo', de: "{ id: 'cobranzas', titulo: 'Cobranzas por asentar', global: true, tareas: ['cobranzas:procesar'] }", a: "{ id: 'cobranzas', titulo: 'Cobranzas por asentar', global: true, tareas: ['cobranzas:procesar', 'cobranzas:ver_todo'] }" },
     { nombre: 'la sección depende de la empresa', de: "{ id: 'cobranzas', titulo: 'Cobranzas por asentar', global: true,", a: "{ id: 'cobranzas', titulo: 'Cobranzas por asentar', global: false, permiso: ['retiros', 'ver']," },
     { nombre: 'asentar no pide procesar', de: "      return tieneTarea('cobranzas', 'procesar')\n    }\n\n    // Ver una cobranza", a: "      return true\n    }\n\n    // Ver una cobranza" },
-    { nombre: 'la portada no cuenta las cobranzas', de: "        leerPorAsentar().then(l => { p.porAsentar = l.length })", a: "        leerPorAsentar().then(l => { p.porAsentar = 0 })" },
-    { nombre: 'la portada inventa un 0 si falla', de: "numero = portada?.porAsentar ?? null", a: "numero = portada?.porAsentar ?? 0" },
+    { nombre: 'la portada no cuenta las cobranzas', de: "        leerPorAsentar().then(l => { p.porAsentar = l.length; p.cobranzasLista = l })", a: "        leerPorAsentar().then(l => { p.porAsentar = 0; p.cobranzasLista = l })" },
+    { nombre: 'la portada no dice que falló', de: "carga: p?.porAsentar == null && !p?.errorCobranzas, error: p?.errorCobranzas,", a: "carga: p?.porAsentar == null && !p?.errorCobranzas, error: null," },
     // ── La lista ──
     { nombre: 'la lista no pide los cheques', de: "          const r = await leerChequesDe(lista.map(f => f.cobranza_id))", a: "          const r = await leerChequesDe([])" },
     { nombre: 'sin el aviso de los cheques ajenos', de: "        ? '<div class=\"ad-aviso\">Sin el permiso de ver todas las cobranzas, los cheques de las que cargaron otras personas no se ven. Se pueden asentar igual.</div>' : ''", a: "        ? '' : ''" },

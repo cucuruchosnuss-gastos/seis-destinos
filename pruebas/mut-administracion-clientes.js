@@ -40,7 +40,7 @@ correrMutaciones({
     // El límite
     { nombre: 'igual al límite lo pasa', de: '      return Number(saldo) > Number(limite)\n    }', a: '      return Number(saldo) >= Number(limite)\n    }' },
     { nombre: 'sin límite cuenta como que lo pasa', de: "      if (saldo === null || saldo === undefined || limite === null || limite === undefined || limite === '') return false\n      return Number(saldo) > Number(limite)", a: '      return Number(saldo) > Number(limite)' },
-    { nombre: 'la portada no cuenta los que pasan el límite', de: '      return saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length', a: '      return 0' },
+    { nombre: 'la portada no cuenta los que pasan el límite', de: 'sobreLimite: saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length', a: 'sobreLimite: 0' },
     { nombre: 'el que pasa no va en bordó', de: "${pasa ? ' ad-fila--atencion' : ''}${c.apagado ? ' ad-fila--apagada' : ''}\" data-cliente=", a: "${c.apagado ? ' ad-fila--apagada' : ''}\" data-cliente=" },
     { nombre: 'sin el chip de proveedor', de: "${c.es_tambien_proveedor ? '<span class=\"ad-sello ad-sello--proveedor\">También proveedor</span>' : ''}", a: '' },
     // Búsqueda

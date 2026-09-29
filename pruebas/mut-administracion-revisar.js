@@ -20,9 +20,9 @@ correrMutaciones({
     { nombre: 'se abre sin permiso', de: "      if (!puedeEn('retiros', 'precios', estado.empresaId)) { mostrarInicio(); return }\n      mostrarVista('ad-vista-revisar')", a: "      mostrarVista('ad-vista-revisar')" },
     { nombre: 'la portada no la ofrece', de: "      else if (id === 'revisar') mostrarRevisar()\n", a: '' },
     // La portada
-    { nombre: 'la portada no la cuenta', de: '        leerPorRevisar(unidad).then(l => { p.porRevisar = l.length })', a: '        Promise.resolve([]).then(l => { p.porRevisar = null })' },
+    { nombre: 'la portada no la cuenta', de: '        leerPorRevisar(unidad).then(l => { p.porRevisar = l.length; p.revisarFilas = l })', a: '        Promise.resolve([]).then(l => { p.porRevisar = null; p.revisarFilas = l })' },
     { nombre: 'un error en la portada da 0', de: "p.errorRevisar = 'No se pudo contar.' })", a: 'p.porRevisar = 0 })' },
-    { nombre: 'la portada no muestra el número', de: "        numero = portada?.porRevisar ?? null", a: '        numero = null' },
+    { nombre: 'la portada no muestra el número', de: "numero: p?.porRevisar ?? null, unidad:", a: 'numero: null, unidad:' },
     // La lista
     { nombre: 'se piden los de todas las empresas', de: "supabase.rpc('retiros_por_revisar', { p_unidad_negocio_id: unidadId })", a: "supabase.rpc('retiros_por_revisar', { p_unidad_negocio_id: null })" },
     { nombre: 'sin el código de la orden', de: "<span class=\"ad-fila__codigo\">${esc(f.codigo || '—')}</span><span class=\"ad-sello ad-sello--anulada\">Sin stock</span>", a: "<span class=\"ad-sello ad-sello--anulada\">Sin stock</span>" },
