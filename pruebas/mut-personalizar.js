@@ -25,6 +25,7 @@ correrMutaciones({
     { nombre: 'la bajada dice "Mi cuenta" sin nombre', de: "Lo que cambies acá se guarda solo para vos${String(nombre ?? '').trim() ? `, ${escTab(nombreDePila(nombre))}` : ''}.", a: 'Lo que cambies acá se guarda solo para vos, ${escTab(nombreDePila(nombre))}.' },
     // El controlador de la pantalla
     { nombre: 'guardar no avisa a la barra lateral', de: "    try { win.dispatchEvent(new CustomEvent('preferencias:cambio')) } catch { /* sin eventos */ }\n", a: '' },
+    { nombre: 'acomodar no avisa a la barra lateral', de: "        try { win.dispatchEvent(new CustomEvent('vista:cambio')) } catch { /* sin eventos */ }\n", a: '' },
     { nombre: '"Volver a como venía" sin confirmar', de: "case 'tb-acomodar-volver-fabrica': case 'pz-volver-fabrica': abrirConfirmar(t); return", a: "case 'tb-acomodar-volver-fabrica': case 'pz-volver-fabrica': volverDeFabrica(); return" },
     { nombre: 'el panel no se cierra con Escape', de: "    if (e.key === 'Escape' && !el('tb-confirmar').hidden) { cerrarConfirmar(); return }\n", a: '' },
     { nombre: 'el foco no vuelve al cerrar el panel', de: '    alCerrar?.focus?.()\n', a: '' },

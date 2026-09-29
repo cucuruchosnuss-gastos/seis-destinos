@@ -1131,6 +1131,8 @@ export function crearTablero({ sb, doc = document, win = window, yo, nombre, esS
     switch (t.id) {
       case 'pz-acomodar':
         try { win.history.replaceState(null, '', win.location.pathname) } catch { /* sin historial */ }
+        // La barra lateral marca Inicio (se acomoda el tablero, no Personalizar).
+        try { win.dispatchEvent(new CustomEvent('vista:cambio')) } catch { /* sin eventos */ }
         estado.acomodar = true
         mostrarVista('tablero')
         cargarFaltantes()

@@ -332,6 +332,15 @@ esperas.push((async () => {
     win.oyentes['preferencias:cambio'][0]()
     chk('Personalizar avisa y la barra se rearma con Gastos fijado arriba', claves(nav.innerHTML).join() === 'inicio,gastos,caja,personalizar', claves(nav.innerHTML).join())
   }
+  // Personalizar → "Acomodar sobre el tablero": la dirección vuelve al tablero y la barra marca Inicio.
+  {
+    const S = construir(); const doc = docFalso(); const win = winEn('/x/dashboard.html', '?vista=personalizar')
+    const nav = await S.instalarBarraLateral({ sb: sbFalso({ modulos: ['gastos'] }), doc, win })
+    chk('en Personalizar, Personalizar es el actual', /data-clave="personalizar" title="Personalizar" aria-current="page"/.test(nav.innerHTML) && !/data-clave="inicio"[^>]*aria-current/.test(nav.innerHTML))
+    win.location.search = ''
+    ;(win.oyentes['vista:cambio'] || []).forEach(f => f())
+    chk('al pasar a acomodar, la barra marca Inicio y no Personalizar', /data-clave="inicio"[^>]*aria-current="page"/.test(nav.innerHTML) && !/data-clave="personalizar"[^>]*aria-current/.test(nav.innerHTML), nav.innerHTML.slice(0, 400))
+  }
   // La preferencia guardada se respeta al abrir otra pantalla.
   {
     const S = construir(); const doc = docFalso()

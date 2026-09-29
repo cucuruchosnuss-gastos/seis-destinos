@@ -255,7 +255,7 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
     const modulos = modulosDeBarra({ esAdmin, esSuperAdmin, misModulos, misTareas })
     if (!modulos.length) return null
 
-    const actual = claveActual(win.location.pathname, win.location.search)
+    let actual = claveActual(win.location.pathname, win.location.search)
     // Una apertura más de este módulo (para "los que más uso").
     let prefs = leerPrefs(yo.id)
     if (actual && modulos.some(m => m.clave === actual)) { prefs = anotarUso(prefs, actual); guardarPrefs(yo.id, prefs) }
@@ -303,6 +303,16 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
     // Personalizar avisa cuando cambia el orden o los fijados.
     win.addEventListener('preferencias:cambio', () => {
       prefs = leerPrefs(yo.id)
+      dibujar()
+      pintarBurbujasBarra(nav, ultimos)
+      pintarBurbujasAbajo(abajo, ultimos)
+    })
+
+    // La pantalla cambió de vista sin recargar (el tablero entra en modo
+    // acomodar desde Personalizar y deja la dirección en el tablero): se
+    // vuelve a leer cuál es el ítem actual.
+    win.addEventListener('vista:cambio', () => {
+      actual = claveActual(win.location.pathname, win.location.search)
       dibujar()
       pintarBurbujasBarra(nav, ultimos)
       pintarBurbujasAbajo(abajo, ultimos)
