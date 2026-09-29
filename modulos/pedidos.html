@@ -181,6 +181,7 @@
       border: 1px solid var(--color-borde); background: var(--color-fondo); font: inherit; color: var(--color-texto);
     }
     .pe-resultado__nombre { font-weight: 700; overflow-wrap: anywhere; }
+    .pe-resultado__meta { font-size: 0.8125rem; color: var(--pe-texto-secundario); overflow-wrap: anywhere; }
 
     .pe-renglones { display: flex; flex-direction: column; gap: 0.75rem; margin: 0 0 0.75rem; }
     .pe-renglon {
@@ -536,6 +537,13 @@
       errorClientes: null,
       avisoClientes: null,
       clientesBusqueda: '',
+      // El buscador de clientes del pedido (29/09/2026): la última respuesta
+      // de buscar_clientes { texto, unidadId, filas }, si la base dijo que no
+      // hay permiso (null: no se le vuelve a preguntar), su turno y su espera.
+      buscarClientes: null,
+      buscarClientesSinPermiso: false,
+      turnoBuscarClientes: 0,
+      esperaBuscarClientes: null,
       clienteForm: null,
       guardandoCliente: false,
       // Cargar un pedido
@@ -731,14 +739,95 @@
       return data ?? []
     }
 
+    // ── El buscador de clientes (29/09/2026) ───────────────────────────────
+    // buscar_clientes(p_busqueda, p_unidad_negocio_id) busca en la base por
+    // nombre, razón social, CUIT, apodo o PARECIDO desde 2 letras ("JyM"
+    // encuentra "J&M DISTRIBUCIONES Y SERVICI"), acá con la unidad del
+    // pedido. Devuelve null sin cobranzas:procesar, retiros:ver ni pedidos:ver
+    // (quien tiene pedidos:cargar sin ver): ahí queda la búsqueda local de
+    // siempre, SIN ningún error a la vista, y no se le vuelve a preguntar en
+    // esta página. Pedidos no es una pantalla de plata: el saldo que devuelve
+    // la función no se dibuja nunca.
+    const MIN_LETRAS_BUSCAR = 2
+    const ESPERA_BUSCAR_MS = 250
+
+    // Réplica de public._clave_nombre() (leída el 29/09/2026): sin nada que no
+    // sea letra o número, y "JyM" → "jm", así "JyM" encuentra "J&M ..." también
+    // en la búsqueda local. Si cambia la de la base, cambia esta y sus copias
+    // de administracion.html y retiros.html (pruebas/test-buscar-clientes.js).
+    function claveBusquedaCliente(texto) {
+      return normalizar(texto).replace(/[^a-z0-9]+/g, '').replace(/^(.)y(.)$/, '$1$2')
+    }
+
     // Por nombre Y por apodo: el mensaje dice "el Turco" y el cliente se
-    // llama "Distribuidora Anatolia".
+    // llama "Distribuidora Anatolia". Más la clave de _clave_nombre().
     function clientesFiltrados(lista, busqueda) {
       const q = normalizar(busqueda)
+      const qc = claveBusquedaCliente(busqueda)
       const todos = Array.isArray(lista) ? lista : []
       if (!q) return todos
       return todos.filter(c => normalizar(c.nombre).includes(q) ||
+        (qc.length >= MIN_LETRAS_BUSCAR && claveBusquedaCliente(c.nombre).startsWith(qc)) ||
         (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))
+    }
+
+    // Se le pregunta a la base si hay unidad, si todavía no dijo que no hay
+    // permiso, y si la unidad no es de la fábrica de pruebas (la función
+    // nunca la trae: ahí manda la lista local).
+    function buscarClientesEnLaBase(unidadId) {
+      return !estado.buscarClientesSinPermiso && !!unidadId && !estado.fabrica?.unidades?.has?.(unidadId)
+    }
+
+    // La respuesta de la base que corresponde a lo que está escrito ahora (o null).
+    function busquedaVigente(q, unidadId) {
+      const r = estado.buscarClientes
+      return r && r.texto === q && r.unidadId === unidadId && Array.isArray(r.filas) ? r : null
+    }
+
+    // Cada tecla repinta al instante con la lista local; la consulta a la base
+    // sale recién cuando se deja de escribir un momento.
+    function buscarClienteForm(texto) {
+      const f = estado.form
+      if (!f) return
+      f.clienteBusqueda = texto
+      clearTimeout(estado.esperaBuscarClientes)
+      const q = limpio(texto)
+      const unidadId = f.unidadId
+      if (q.length >= MIN_LETRAS_BUSCAR && buscarClientesEnLaBase(unidadId) && !busquedaVigente(q, unidadId)) {
+        estado.esperaBuscarClientes = setTimeout(() => consultarClientesForm(q, unidadId), ESPERA_BUSCAR_MS)
+      }
+      document.getElementById('pe-form-clientes-resultados').innerHTML = htmlResultadosClientes(texto)
+    }
+
+    // Una respuesta de un texto anterior (o de otra unidad) no pisa la actual.
+    async function consultarClientesForm(q, unidadId) {
+      const turno = estado.turnoBuscarClientes = (estado.turnoBuscarClientes ?? 0) + 1
+      let filas
+      try {
+        const { data, error } = await supabase.rpc('buscar_clientes', { p_busqueda: q, p_unidad_negocio_id: unidadId })
+        if (error) throw error
+        if (data === null) { estado.buscarClientesSinPermiso = true; return }
+        filas = (Array.isArray(data) ? data : []).filter(c => c && (c.unidad_negocio_id == null || c.unidad_negocio_id === unidadId))
+      } catch (err) {
+        console.error('No se pudo buscar el cliente en la base (queda la lista local):', err)
+        return
+      }
+      const f = estado.form
+      if (turno !== estado.turnoBuscarClientes || !f || f.unidadId !== unidadId || limpio(f.clienteBusqueda) !== q) return
+      estado.buscarClientes = { texto: q, unidadId, filas }
+      if (!f.clienteId) document.getElementById('pe-form-clientes-resultados').innerHTML = htmlResultadosClientes(f.clienteBusqueda)
+    }
+
+    // Un cliente que devolvió la base y todavía no está en la lista local: se
+    // suma con lo que trajo (activo: la función solo devuelve activos).
+    function incorporarClienteDeBusqueda(id) {
+      const r = (estado.buscarClientes?.filas ?? []).find(c => c.cliente_id === id)
+      if (!r) return null
+      const c = { id, nombre: r.nombre, apodos: [], localidad: r.localidad ?? null, telefono: null, observaciones: null,
+        activo: true, unidad_negocio_id: r.unidad_negocio_id ?? estado.buscarClientes.unidadId }
+      if (Array.isArray(estado.clientes)) estado.clientes.push(c)
+      else estado.clientes = [c]
+      return c
     }
 
     function htmlChipsApodos(apodos) {
@@ -1250,16 +1339,35 @@
 
     // Los activos de la unidad, por nombre o por apodo. Hasta 8: con más de
     // eso conviene seguir escribiendo.
+    // Un resultado: nombre, la EMPRESA siempre (el mismo cliente existe en
+    // Nuss y en Dolce Pasta), localidad y apodos. Nunca el saldo.
+    function htmlResultadoClienteForm(c, empresa) {
+      const meta = [limpio(empresa) || 'Unidad sin nombre', limpio(c.localidad)].filter(Boolean).join(' · ')
+      return `<button type="button" class="pe-resultado" data-form-cliente="${esc(c.id)}">` +
+        `<span class="pe-resultado__nombre">${esc(c.nombre)}</span><span class="pe-resultado__meta">${esc(meta)}</span>${htmlChipsApodos(c.apodos)}</button>`
+    }
+
     function htmlResultadosClientes(busqueda) {
       if (estado.form && !estado.form.unidadId) return '<div class="pe-texto-suave">Elegí primero de qué unidad es el pedido.</div>'
+      const unidadId = estado.form?.unidadId ?? null
+      const q = limpio(busqueda)
+      // Desde 2 letras, si la base ya contestó para este texto: lo suyo.
+      const r = q.length >= MIN_LETRAS_BUSCAR ? busquedaVigente(q, unidadId) : null
+      if (r) {
+        if (!r.filas.length) return `<div class="pe-texto-suave">Ningún cliente coincide con «${esc(q)}».</div>`
+        return r.filas.slice(0, 8).map(x => {
+          const local = (estado.clientes ?? []).find(c => c.id === x.cliente_id)
+          const c = local ?? { id: x.cliente_id, nombre: x.nombre, localidad: x.localidad, apodos: [] }
+          return htmlResultadoClienteForm(c, x.empresa || nombreUnidad(unidadId))
+        }).join('')
+      }
       if (estado.errorClientes) return `<div class="pe-aviso pe-aviso--grave">${esc(estado.errorClientes)}</div>`
       if (estado.clientes === null) return '<div class="pe-texto-suave">Cargando clientes…</div>'
       const activos = estado.clientes.filter(c => c.activo !== false)
       if (!activos.length) return '<div class="pe-aviso">Esta unidad todavía no tiene clientes activos. Los carga quien tiene permiso de configurar Pedidos, en «Clientes».</div>'
       const lista = clientesFiltrados(activos, busqueda).slice(0, 8)
       if (!lista.length) return `<div class="pe-texto-suave">Ningún cliente coincide con «${esc(limpio(busqueda))}».</div>`
-      return lista.map(c => `<button type="button" class="pe-resultado" data-form-cliente="${esc(c.id)}">` +
-        `<span class="pe-resultado__nombre">${esc(c.nombre)}</span>${htmlChipsApodos(c.apodos)}</button>`).join('')
+      return lista.map(c => htmlResultadoClienteForm(c, nombreUnidad(c.unidad_negocio_id ?? unidadId))).join('')
     }
 
     function pintarClienteForm() {
@@ -1272,7 +1380,8 @@
 
     function elegirClienteForm(id) {
       const f = estado.form
-      if (!f || !(estado.clientes ?? []).some(c => c.id === id)) return
+      if (!f) return
+      if (!(estado.clientes ?? []).some(c => c.id === id) && !incorporarClienteDeBusqueda(id)) return
       f.clienteId = id
       pintarClienteForm()
       pintarPieForm()
@@ -2156,11 +2265,7 @@
         if (id) abrirDetalle(id)
         else mostrarInicio()
       })
-      document.getElementById('pe-form-cliente-buscar').addEventListener('input', (e) => {
-        if (!estado.form) return
-        estado.form.clienteBusqueda = e.target.value
-        document.getElementById('pe-form-clientes-resultados').innerHTML = htmlResultadosClientes(e.target.value)
-      })
+      document.getElementById('pe-form-cliente-buscar').addEventListener('input', (e) => buscarClienteForm(e.target.value))
       document.getElementById('pe-form-clientes-resultados').addEventListener('click', (e) => {
         const b = e.target.closest('[data-form-cliente]')
         if (b) elegirClienteForm(b.dataset.formCliente)

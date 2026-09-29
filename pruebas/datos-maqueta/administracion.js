@@ -136,7 +136,15 @@ module.exports = {
         "razon_social": "RIVADAVIA SRL",
         "apodos": [],
         "activo": true
-      }
+      },
+      // "JyM" (29/09/2026): el mismo cliente en Nuss y en Dolce Pasta, con
+      // cuentas separadas, más dos que se le parecen.
+      { "id": "c-jm-n", "unidad_negocio_id": "u-n", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "razon_social": "J&M DISTRIBUCIONES Y SERVICI",
+        "apodos": [], "cuit": "30711111112", "localidad": "Córdoba", "activo": true },
+      { "id": "c-jm-d", "unidad_negocio_id": "u-d", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "razon_social": "J&M DISTRIBUCIONES Y SERVICI",
+        "apodos": [], "cuit": "30711111112", "localidad": "Córdoba", "activo": true },
+      { "id": "c-jmv", "unidad_negocio_id": "u-n", "nombre": "JM Viandas", "razon_social": null, "apodos": [], "activo": true },
+      { "id": "c-juanma", "unidad_negocio_id": "u-d", "nombre": "Juan Manuel Kiosco", "razon_social": null, "apodos": ["Juanma"], "activo": true }
     ],
     "productos_terminados": [
       {
@@ -1256,8 +1264,47 @@ module.exports = {
         "moneda": "ARS",
         "observaciones": null,
         "sugeridos": []
+      },
+      // El chofer escribió "JyM" (29/09/2026): cuatro sugeridos, ya ordenados
+      // por parecido; los tres primeros van como botones y el cuarto de lista
+      // inicial del buscador. J&M está en las dos empresas: se elige cuál.
+      {
+        "cobranza_id": "c3333333-3333-4333-8333-333333333333",
+        "fecha": "2026-09-28",
+        "cliente_escrito": "JyM",
+        "cargada_por": "Mariano Chofer",
+        "efectivo": 80000,
+        "cheques": 0,
+        "total": 80000,
+        "moneda": "ARS",
+        "observaciones": null,
+        "sugeridos": [
+          { "cliente_id": "c-jm-n", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "empresa": "Cucuruchos Nuss", "veces": 3 },
+          { "cliente_id": "c-jm-d", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "empresa": "Dolce Pasta", "veces": 1 },
+          { "cliente_id": "c-jmv", "nombre": "JM Viandas", "empresa": "Cucuruchos Nuss", "veces": 0 },
+          { "cliente_id": "c-juanma", "nombre": "Juan Manuel Kiosco", "empresa": "Dolce Pasta", "veces": 0 }
+        ]
       }
     ],
+    // buscar_clientes (29/09/2026), sin fábrica (p_unidad_negocio_id null):
+    // cada resultado con su empresa y su saldo. Lo que no está acá no coincide.
+    "buscar_clientes": {
+      "__segun": [
+        { "si": { "p_busqueda": "JyM" }, "r": [
+          { "cliente_id": "c-jm-n", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "razon_social": "J&M DISTRIBUCIONES Y SERVICI", "cuit": "30711111112",
+            "localidad": "Córdoba", "empresa": "Cucuruchos Nuss", "unidad_negocio_id": "u-n", "activo": true, "saldo": 185000, "parecido": 0.9 },
+          { "cliente_id": "c-jm-d", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "razon_social": "J&M DISTRIBUCIONES Y SERVICI", "cuit": "30711111112",
+            "localidad": "Córdoba", "empresa": "Dolce Pasta", "unidad_negocio_id": "u-d", "activo": true, "saldo": -12500, "parecido": 0.9 },
+          { "cliente_id": "c-jmv", "nombre": "JM Viandas", "razon_social": null, "cuit": null,
+            "localidad": null, "empresa": "Cucuruchos Nuss", "unidad_negocio_id": "u-n", "activo": true, "saldo": 0, "parecido": 0.9 }
+        ] },
+        { "si": { "p_busqueda": "pepe de la" }, "r": [
+          { "cliente_id": "c2", "nombre": "Kiosco Pepe", "razon_social": null, "cuit": null,
+            "localidad": null, "empresa": "Cucuruchos Nuss", "unidad_negocio_id": "u-n", "activo": true, "saldo": 42000, "parecido": 0.4 }
+        ] }
+      ],
+      "__defecto": []
+    },
     "asentar_cobranza": {
       "importe": 437300.5,
       "saldo_cliente": -311300.5

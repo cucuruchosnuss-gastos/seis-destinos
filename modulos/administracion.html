@@ -3651,6 +3651,17 @@
     // El buscador de todos los clientes muestra hasta estos; el resto se
     // encuentra escribiendo.
     const MAX_RESULTADOS_CLIENTES = 30
+    // El buscador de clientes (29/09/2026): buscar_clientes(p_busqueda,
+    // p_unidad_negocio_id) busca en la base por nombre, razón social, CUIT,
+    // apodo o PARECIDO, desde 2 letras ("JyM" encuentra "J&M DISTRIBUCIONES Y
+    // SERVICI"). Acá sin fábrica (p_unidad null): un mismo cliente existe en
+    // Nuss y en Dolce Pasta con cuentas separadas, así que cada resultado dice
+    // SIEMPRE su empresa y al asentar se elige cuál. Los sugeridos de
+    // cobranzas_por_asentar() ya vienen ordenados por parecido: los tres
+    // primeros van como botones y el resto como lista inicial del buscador.
+    const MIN_LETRAS_BUSCAR = 2
+    const ESPERA_BUSCAR_MS = 250
+    const SUGERIDOS_EN_BOTONES = 3
     const ETIQUETA_ESTADO_COBRANZA = { registrada: 'Por asentar', procesada: 'Asentada', anulada: 'Anulada' }
 
     function puedeAsentar() {
@@ -3743,13 +3754,41 @@
       return (estado.empresas ?? []).find(e => e.id === unidadId)?.nombre ?? ''
     }
 
-    // El buscador: nombre, razón social y apodos, sin acentos ni mayúsculas.
+    // Réplica de public._clave_nombre() (leída el 29/09/2026): sin nada que no
+    // sea letra o número, y "JyM" → "jm", así "JyM" encuentra "J&M ..." también
+    // en la búsqueda local. Si cambia la de la base, cambia esta y sus copias
+    // de retiros.html y pedidos.html (pruebas/test-buscar-clientes.js).
+    function claveBusquedaCliente(texto) {
+      return normalizar(texto).replace(/[^a-z0-9]+/g, '').replace(/^(.)y(.)$/, '$1$2')
+    }
+
+    // La búsqueda LOCAL (la red cuando buscar_clientes no contesta, y la de
+    // una cuenta de la fábrica de pruebas): nombre, razón social y apodos, sin
+    // acentos ni mayúsculas, más la clave de _clave_nombre() desde 2 letras.
     function clientesParaAsentar(lista, busqueda) {
       const q = normalizar(busqueda)
+      const qc = claveBusquedaCliente(busqueda)
+      const porClave = (t) => qc.length >= MIN_LETRAS_BUSCAR && claveBusquedaCliente(t).startsWith(qc)
       const todos = Array.isArray(lista) ? lista : []
       const ok = !q ? todos : todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
+        porClave(c.nombre) || porClave(c.razon_social) ||
         (Array.isArray(c.apodos) && c.apodos.some(a => normalizar(a).includes(q))))
       return [...ok].sort((a, b) => normalizar(a.nombre).localeCompare(normalizar(b.nombre)))
+    }
+
+    // Una cuenta de la fábrica de pruebas busca en la lista local:
+    // buscar_clientes() nunca trae la fábrica de pruebas.
+    function buscaEnLaListaLocal() {
+      return estado.fabrica?.soyDePrueba === true
+    }
+
+    // El saldo de un resultado del buscador (acá sí: es Administración). Un
+    // saldo que no vino no dice nada: nunca un "$ 0,00" inventado.
+    function textoSaldoCorto(saldo) {
+      if (saldo === null || saldo === undefined || saldo === '' || !Number.isFinite(Number(saldo))) return ''
+      const n = Number(saldo)
+      if (n === 0) return 'Cuenta en cero'
+      return n > 0 ? 'Debe ' + importeCob(n) : 'A favor ' + importeCob(-n)
     }
 
     function importeCob(n, moneda = 'ARS') {
@@ -3783,11 +3822,13 @@
       return `<div class="ad-cob__cheques">${lista.map(htmlChequeCob).join('')}</div>`
     }
 
-    // Un cliente para elegir: nombre, razón social si es otra, y la empresa.
+    // Un cliente para elegir: nombre, razón social si es otra, la empresa
+    // SIEMPRE (el mismo cliente existe en Nuss y en Dolce Pasta) y, si vino
+    // de buscar_clientes(), su saldo.
     function htmlOpcionCliente(cl, elegidoId, sugerido) {
-      const empresa = cl.empresa ?? nombreEmpresa(cl.unidad_negocio_id)
+      const empresa = limpio(cl.empresa) || nombreEmpresa(cl.unidad_negocio_id) || 'Empresa sin nombre'
       const razon = limpio(cl.razon_social) && normalizar(cl.razon_social) !== normalizar(cl.nombre) ? cl.razon_social : ''
-      const detalle = [razon, empresa].filter(Boolean).join(' · ')
+      const detalle = [razon, empresa, textoSaldoCorto(cl.saldo)].filter(Boolean).join(' · ')
       return `<button type="button" class="ad-opcion-cliente${sugerido ? ' ad-opcion-cliente--sugerido' : ''}" data-asentar-cliente="${esc(cl.cliente_id ?? cl.id)}" data-asentar-sugerido="${sugerido ? '1' : '0'}" aria-pressed="${(cl.cliente_id ?? cl.id) === elegidoId ? 'true' : 'false'}">` +
         `<span class="ad-opcion-cliente__nombre">${esc(cl.nombre)}</span>` +
         `${detalle ? `<span class="ad-opcion-cliente__detalle">${esc(detalle)}</span>` : ''}</button>`
@@ -3795,7 +3836,41 @@
 
     // Los resultados del buscador. Se dibujan SOLOS (no la tarjeta entera):
     // redibujar la tarjeta en cada tecla le sacaría el foco al campo.
+    //
+    // Antes de escribir (menos de 2 letras): los sugeridos que no entraron en
+    // los botones. Desde 2 letras: buscar_clientes() en todas las empresas.
+    // Si la base no contesta (error, o null sin permiso) se DICE y queda la
+    // búsqueda local como red; nunca un "no hay resultados" que no es cierto.
     function htmlResultadosAsentar(a) {
+      const q = limpio(a.busqueda)
+      const enBotones = new Set(a.sugeridos.slice(0, SUGERIDOS_EN_BOTONES).map(s => s.cliente_id))
+      if (q.length < MIN_LETRAS_BUSCAR) {
+        const resto = a.sugeridos.slice(SUGERIDOS_EN_BOTONES)
+        const pista = `<p class="ad-texto-suave">${esc('Escribí al menos ' + MIN_LETRAS_BUSCAR + ' letras para buscar entre los clientes de todas las empresas.')}</p>`
+        if (!resto.length) return pista
+        return `<p class="ad-texto-suave">${esc(resto.length === 1 ? 'Otro parecido a lo que escribió el chofer:' : 'Otros parecidos a lo que escribió el chofer:')}</p>` +
+          `<div class="ad-opciones-clientes">${resto.map(s => htmlOpcionCliente(s, a.cliente?.id, false)).join('')}</div>` + pista
+      }
+      if (buscaEnLaListaLocal()) return htmlResultadosLocales(a, enBotones)
+      const r = a.remoto
+      if (!r || r.texto !== q || r.filas === undefined) return '<div class="ad-texto-suave">Buscando…</div>'
+      if (r.error) {
+        return '<div class="ad-aviso ad-aviso--grave">No se pudo buscar en la base: revisá la conexión. Estos son los que coinciden entre los clientes que ves:</div>' +
+          htmlResultadosLocales(a, enBotones)
+      }
+      if (r.filas === null) {
+        return '<div class="ad-aviso">Con tu usuario no se puede buscar entre todos los clientes. Estos son los que coinciden entre los que ves:</div>' +
+          htmlResultadosLocales(a, enBotones)
+      }
+      const lista = r.filas.filter(c => !enBotones.has(c.cliente_id))
+      if (!lista.length) return `<div class="ad-texto-suave">${esc(enBotones.size && r.filas.length ? 'Solo coinciden los sugeridos de arriba.' : 'Ningún cliente coincide con «' + q + '».')}</div>`
+      const mas = lista.length - MAX_RESULTADOS_CLIENTES
+      return `<div class="ad-opciones-clientes">${lista.slice(0, MAX_RESULTADOS_CLIENTES).map(c => htmlOpcionCliente(c, a.cliente?.id, false)).join('')}</div>` +
+        (mas > 0 ? `<p class="ad-texto-suave">${esc(mas === 1 ? 'Y 1 cliente más: seguí escribiendo.' : 'Y ' + mas + ' clientes más: seguí escribiendo.')}</p>` : '')
+    }
+
+    // La búsqueda local (la tabla clientes, lo que la policy deja ver).
+    function htmlResultadosLocales(a, enBotones) {
       const cb = estado.cobranzas
       if (cb.errorClientes) return `<div class="ad-aviso ad-aviso--grave">${esc(cb.errorClientes)}</div>`
       if (cb.clientes === null) return '<div class="ad-texto-suave">Cargando los clientes…</div>'
@@ -3803,8 +3878,7 @@
         return '<div class="ad-aviso">Con tu usuario no se ve la lista de clientes de ninguna empresa (la da el permiso de Órdenes de retiro o de Pedidos en cada empresa)' +
           (a.sugeridos.length ? ': elegí uno de los sugeridos.' : '. Pedile a quien administra los permisos que te lo dé.') + '</div>'
       }
-      const sugeridosIds = new Set(a.sugeridos.map(s => s.cliente_id))
-      const lista = clientesParaAsentar(cb.clientes, a.busqueda).filter(c => !sugeridosIds.has(c.id))
+      const lista = clientesParaAsentar(cb.clientes, a.busqueda).filter(c => !enBotones.has(c.id))
       if (!lista.length) return `<div class="ad-texto-suave">${esc(limpio(a.busqueda) ? 'Ningún cliente coincide con «' + limpio(a.busqueda) + '».' : 'No hay otros clientes.')}</div>`
       const mas = lista.length - MAX_RESULTADOS_CLIENTES
       return `<div class="ad-opciones-clientes">${lista.slice(0, MAX_RESULTADOS_CLIENTES).map(c => htmlOpcionCliente(c, a.cliente?.id, false)).join('')}</div>` +
@@ -3849,16 +3923,19 @@
     }
 
     function htmlPanelAsentar(c, a) {
-      const sugeridos = a.sugeridos.length
-        ? `<p class="ad-texto-suave">${esc(a.sugeridos.length === 1 ? 'Sugerido por lo que escribió el chofer:' : 'Sugeridos por lo que escribió el chofer:')}</p>` +
-          `<div class="ad-opciones-clientes">${a.sugeridos.map(s => htmlOpcionCliente(s, a.cliente?.id, true)).join('')}</div>`
+      // Los tres primeros sugeridos (ya vienen ordenados por parecido), como
+      // botones; el resto va de lista inicial en el buscador.
+      const botones = a.sugeridos.slice(0, SUGERIDOS_EN_BOTONES)
+      const sugeridos = botones.length
+        ? `<p class="ad-texto-suave">${esc(botones.length === 1 ? 'Sugerido por lo que escribió el chofer:' : 'Sugeridos por lo que escribió el chofer:')}</p>` +
+          `<div class="ad-opciones-clientes">${botones.map(s => htmlOpcionCliente(s, a.cliente?.id, true)).join('')}</div>`
         : `<p class="ad-texto-suave">${esc('Ningún cliente se llama «' + limpio(c.escrito) + '» ni tiene ese apodo. Buscalo:')}</p>`
       const elegido = a.cliente
         ? `<div class="ad-aviso">${esc('Se va a asentar en la cuenta de ' + a.cliente.nombre + (a.cliente.empresa ? ' (' + a.cliente.empresa + ')' : '') + ': baja su deuda en ' + importeCob(c.total, c.moneda) + '.')}</div>`
         : ''
       return `<div class="ad-panel" id="ad-asentar-panel">` +
         `<h3 class="ad-subtitulo" style="margin-top:0">¿De qué cliente es?</h3>${sugeridos}` +
-        `<div class="ad-campo" style="margin-top:0.75rem"><label for="ad-asentar-buscar">${a.sugeridos.length ? '¿Es otro? Buscalo entre todos los clientes' : 'Buscar entre todos los clientes'} (nombre, razón social o apodo)</label>` +
+        `<div class="ad-campo" style="margin-top:0.75rem"><label for="ad-asentar-buscar">${botones.length ? '¿Es otro? Buscalo entre todos los clientes' : 'Buscar entre todos los clientes'} (nombre, razón social, CUIT o apodo)</label>` +
         `<input type="search" class="ad-input" id="ad-asentar-buscar" autocomplete="off" maxlength="120" value="${esc(a.busqueda)}"></div>` +
         `<div id="ad-asentar-resultados">${htmlResultadosAsentar(a)}</div>${elegido}${htmlProyectoAsentar(a)}` +
         `${a.error ? `<p class="ad-error-pegado">${esc(a.error)}</p>` : ''}` +
@@ -3999,10 +4076,38 @@
       if (a && el) el.innerHTML = htmlResultadosAsentar(a)
     }
 
+    // Cada tecla repinta al instante; la consulta a la base sale recién cuando
+    // se deja de escribir un momento (ESPERA_BUSCAR_MS), y una respuesta de un
+    // texto anterior no pisa la del actual (el turno de consultarClientesAsentar).
     function buscarClienteAsentar(texto) {
       const a = estado.cobranzas.asentando
       if (!a) return
       a.busqueda = texto
+      clearTimeout(a.espera)
+      const q = limpio(texto)
+      if (q.length >= MIN_LETRAS_BUSCAR && !buscaEnLaListaLocal() && a.remoto?.texto !== q) {
+        a.remoto = { texto: q, filas: undefined, error: null }
+        a.espera = setTimeout(() => consultarClientesAsentar(a), ESPERA_BUSCAR_MS)
+      }
+      repintarResultadosAsentar()
+    }
+
+    async function consultarClientesAsentar(a) {
+      const q = a?.remoto?.texto
+      if (!q) return
+      const turno = a.turno = (a.turno ?? 0) + 1
+      let filas = null, error = null
+      try {
+        const { data, error: e } = await supabase.rpc('buscar_clientes', { p_busqueda: q, p_unidad_negocio_id: null })
+        if (e) throw e
+        // null = la base dice que no tiene el permiso.
+        filas = data === null ? null : sinUnidadesDePrueba(Array.isArray(data) ? data : [], estado.fabrica, c => c.unidad_negocio_id)
+      } catch (err) {
+        console.error('No se pudo buscar el cliente:', err)
+        error = err?.message || 'error'
+      }
+      if (turno !== a.turno || estado.cobranzas.asentando !== a || a.remoto?.texto !== q) return
+      a.remoto = { texto: q, filas, error }
       repintarResultadosAsentar()
     }
 
@@ -4011,7 +4116,9 @@
       const a = cb.asentando
       if (!a) return
       const sug = a.sugeridos.find(s => s.cliente_id === id)
+      const rem = !sug && Array.isArray(a.remoto?.filas) ? a.remoto.filas.find(r => r.cliente_id === id) : null
       const cl = sug ? { id, nombre: sug.nombre, empresa: sug.empresa ?? '' }
+        : rem ? { id, nombre: rem.nombre, empresa: rem.empresa ?? nombreEmpresa(rem.unidad_negocio_id) }
         : (() => { const x = (cb.clientes ?? []).find(y => y.id === id); return x ? { id, nombre: x.nombre, empresa: nombreEmpresa(x.unidad_negocio_id) } : null })()
       if (!cl) return
       a.cliente = cl
@@ -4022,6 +4129,7 @@
     }
 
     function cancelarAsentar() {
+      clearTimeout(estado.cobranzas.asentando?.espera)
       estado.cobranzas.asentando = null
       repintarAsentar()
     }

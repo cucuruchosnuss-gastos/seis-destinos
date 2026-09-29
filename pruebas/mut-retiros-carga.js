@@ -16,6 +16,7 @@ correrMutaciones({
     'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon', 'htmlRenglon',
     'htmlResumen', 'htmlDatoRt', 'htmlFaltantes', 'htmlHecho', 'htmlEleccionRenglon'],
   equivalentes: [
+    { expr: 'esc(q)', motivo: 'lo prueba test-buscar-clientes.js: el «Ningún cliente coincide con…» de lo que devolvió buscar_clientes()' },
     { expr: 'esc(estado.errorCatalogo)', motivo: 'texto constante del código: lo pone asegurarDatosEmpresa()' },
     { expr: 'esc(falta)', motivo: 'texto constante del código que devuelve faltanRenglon()' },
     { expr: 'esc(enteroHoja(r.cajas))', motivo: 'número formateado por enteroHoja(): solo dígitos y puntos' },

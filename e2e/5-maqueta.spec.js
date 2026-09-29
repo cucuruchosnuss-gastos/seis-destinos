@@ -146,11 +146,23 @@ const PANTALLAS = [
     ['asentar', async (page) => {
       await page.locator('[data-asentar]').first().click()
       await expect(page.locator('.ad-opcion-cliente--sugerido')).toBeVisible()
+      // buscar_clientes (29/09/2026): "JyM" encuentra J&M en las dos empresas,
+      // cada una con su empresa y su saldo.
+      await page.locator('#ad-asentar-buscar').fill('JyM')
+      await expect(page.locator('#ad-asentar-resultados')).toContainText('Cucuruchos Nuss · Debe')
+      await expect(page.locator('#ad-asentar-resultados')).toContainText('Dolce Pasta · A favor')
       await page.locator('#ad-asentar-buscar').fill('pepe de la')
       await expect(page.locator('#ad-asentar-resultados')).toContainText('Kiosco Pepe')
       await page.locator('.ad-opcion-cliente--sugerido').click()
       await page.locator('#ad-asentar-confirmar').click()
       await expect(page.locator('.ad-cob__hecho')).toContainText('Le queda un saldo a favor')
+    }],
+    // El chofer escribió "JyM" (29/09/2026): los tres primeros sugeridos como
+    // botones (J&M en las dos empresas) y el cuarto en la lista del buscador.
+    ['asentar-jym', async (page) => {
+      await page.locator('[data-asentar="c3333333-3333-4333-8333-333333333333"]').click()
+      await expect(page.locator('.ad-opcion-cliente--sugerido')).toHaveCount(3)
+      await expect(page.locator('#ad-asentar-panel')).toContainText('Juan Manuel Kiosco')
     }],
     ['cobranza-en-la-cuenta', async (page) => {
       await page.locator('#ad-cobranzas-volver').click(); await page.locator('[data-seccion="clientes"]').click()
@@ -251,6 +263,14 @@ const PANTALLAS = [
     ['detalle', async (page) => { await page.locator('[data-pedido="pe1"]').click(); await expect(page.locator('#pe-btn-imprimir')).toBeVisible() }],
     ['clientes', async (page) => { await page.locator('#pe-detalle-volver').click(); await page.locator('#pe-btn-clientes').click(); await expect(page.locator('#pe-clientes-lista')).toContainText('Anatolia') }],
     ['cargar', async (page) => { await page.locator('#pe-clientes-volver').click(); await page.locator('#pe-btn-nuevo').click() }],
+    // El buscador de clientes (29/09/2026): "JyM" encuentra J&M, con su empresa.
+    ['buscar-cliente', async (page) => {
+      const unidad = page.locator('[data-form-unidad="u-n"]')
+      if (await unidad.count()) await unidad.click()
+      await page.locator('#pe-form-cliente-buscar').fill('JyM')
+      await expect(page.locator('#pe-form-clientes-resultados')).toContainText('Cucuruchos Nuss')
+      await expect(page.locator('#pe-form-clientes-resultados')).toContainText('J&M DISTRIBUCIONES')
+    }],
   ]],
   // Proyectos Taller (28/09/2026): la lista, la ficha con la venta (Tomás
   // tiene precios), cargar horas, facturar, el editor y el valor de la hora.

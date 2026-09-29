@@ -17,7 +17,7 @@ correrMutaciones({
     { expr: 'esc(estado.errorClientes)', motivo: 'texto constante del código: mostrarClientes() lo pone siempre igual' },
   ],
   manuales: [
-    { nombre: 'el buscador no mira los apodos', de: "      return todos.filter(c => normalizar(c.nombre).includes(q) ||\n        (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))", a: '      return todos.filter(c => normalizar(c.nombre).includes(q))' },
+    { nombre: 'el buscador no mira los apodos', de: "        (qc.length >= MIN_LETRAS_BUSCAR && claveBusquedaCliente(c.nombre).startsWith(qc)) ||\n        (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))", a: '        (qc.length >= MIN_LETRAS_BUSCAR && claveBusquedaCliente(c.nombre).startsWith(qc)))' },
     { nombre: 'normalizar no saca acentos', de: ".normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/\\s+/g, ' ').trim()", a: ".toLowerCase().replace(/\\s+/g, ' ').trim()" },
     { nombre: 'un apodo repetido se agrega igual', de: "      if (lista.some(a => normalizar(a) === normalizar(t))) return { apodos: lista, error: `«${t}» ya está en la lista.` }\n", a: '' },
     { nombre: 'un apodo vacío se agrega', de: "      if (!t) return { apodos: lista, error: 'Escribí el apodo antes de agregarlo.' }\n", a: '' },

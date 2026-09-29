@@ -462,6 +462,13 @@
       vista: null,
       clientes: null,
       errorClientes: null,
+      // El buscador de clientes (29/09/2026): la última respuesta de
+      // buscar_clientes { texto, empresaId, filas }, si la base dijo que no
+      // hay permiso (null: no se le vuelve a preguntar), su turno y su espera.
+      buscarClientes: null,
+      buscarClientesSinPermiso: false,
+      turnoBuscarClientes: 0,
+      esperaBuscarClientes: null,
       catalogo: null,
       catalogoEmpresa: null,
       errorCatalogo: null,
@@ -695,6 +702,7 @@
       guardarPreferencia(CLAVE_EMPRESA, id)
       if (cambio) {
         estado.clientes = null
+        estado.buscarClientes = null
         estado.catalogo = null
         estado.lotes = new Map()
         estado.mis = null
@@ -745,13 +753,94 @@
       return data ?? []
     }
 
-    // Por nombre, razón social y apodo.
+    // ── El buscador de clientes (29/09/2026) ───────────────────────────────
+    // buscar_clientes(p_busqueda, p_unidad_negocio_id) busca en la base por
+    // nombre, razón social, CUIT, apodo o PARECIDO desde 2 letras ("JyM"
+    // encuentra "J&M DISTRIBUCIONES Y SERVICI"), acá con la empresa de la
+    // orden. Devuelve null sin cobranzas:procesar, retiros:ver ni pedidos:ver:
+    // el depósito muchas veces tiene SOLO retiros:cargar, y ahí queda la
+    // búsqueda local de siempre, SIN ningún error a la vista (y no se vuelve a
+    // preguntar en esta página). Esta pantalla NO muestra plata: el saldo que
+    // devuelve la función no se dibuja nunca.
+    const MIN_LETRAS_BUSCAR = 2
+    const ESPERA_BUSCAR_MS = 250
+
+    // Réplica de public._clave_nombre() (leída el 29/09/2026): sin nada que no
+    // sea letra o número, y "JyM" → "jm", así "JyM" encuentra "J&M ..." también
+    // en la búsqueda local. Si cambia la de la base, cambia esta y sus copias
+    // de administracion.html y pedidos.html (pruebas/test-buscar-clientes.js).
+    function claveBusquedaCliente(texto) {
+      return normalizar(texto).replace(/[^a-z0-9]+/g, '').replace(/^(.)y(.)$/, '$1$2')
+    }
+
+    // Por nombre, razón social y apodo, más la clave de _clave_nombre().
     function clientesFiltrados(lista, busqueda) {
       const q = normalizar(busqueda)
+      const qc = claveBusquedaCliente(busqueda)
+      const porClave = (t) => qc.length >= MIN_LETRAS_BUSCAR && claveBusquedaCliente(t).startsWith(qc)
       const todos = Array.isArray(lista) ? lista : []
       if (!q) return todos
       return todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
+        porClave(c.nombre) || porClave(c.razon_social) ||
         (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))
+    }
+
+    // Se le pregunta a la base si hay empresa, si todavía no dijo que no hay
+    // permiso, y si la empresa no es de la fábrica de pruebas (la función
+    // nunca la trae: ahí manda la lista local).
+    function buscarClientesEnLaBase() {
+      return !estado.buscarClientesSinPermiso && !!estado.empresaId && !estado.fabrica?.unidades?.has?.(estado.empresaId)
+    }
+
+    // La respuesta de la base que corresponde a lo que está escrito ahora (o null).
+    function busquedaVigente(q) {
+      const r = estado.buscarClientes
+      return r && r.texto === q && r.empresaId === estado.empresaId && Array.isArray(r.filas) ? r : null
+    }
+
+    // Cada tecla repinta al instante con la lista local; la consulta a la base
+    // sale recién cuando se deja de escribir un momento.
+    function buscarClienteRetiro(texto) {
+      const f = estado.form
+      if (!f) return
+      f.clienteBusqueda = texto
+      clearTimeout(estado.esperaBuscarClientes)
+      const q = limpio(texto)
+      if (q.length >= MIN_LETRAS_BUSCAR && buscarClientesEnLaBase() && !busquedaVigente(q)) {
+        const empresaId = estado.empresaId
+        estado.esperaBuscarClientes = setTimeout(() => consultarClientesRetiro(q, empresaId), ESPERA_BUSCAR_MS)
+      }
+      document.getElementById('rt-clientes-resultados').innerHTML = htmlResultadosClientes(texto)
+    }
+
+    // Una respuesta de un texto anterior (o de otra empresa) no pisa la actual.
+    async function consultarClientesRetiro(q, empresaId) {
+      const turno = estado.turnoBuscarClientes = (estado.turnoBuscarClientes ?? 0) + 1
+      let filas
+      try {
+        const { data, error } = await supabase.rpc('buscar_clientes', { p_busqueda: q, p_unidad_negocio_id: empresaId })
+        if (error) throw error
+        if (data === null) { estado.buscarClientesSinPermiso = true; return }
+        filas = (Array.isArray(data) ? data : []).filter(c => c && (c.unidad_negocio_id == null || c.unidad_negocio_id === empresaId))
+      } catch (err) {
+        console.error('No se pudo buscar el cliente en la base (queda la lista local):', err)
+        return
+      }
+      if (turno !== estado.turnoBuscarClientes || empresaId !== estado.empresaId || limpio(estado.form?.clienteBusqueda) !== q) return
+      estado.buscarClientes = { texto: q, empresaId, filas }
+      if (estado.form && !estado.form.clienteId) document.getElementById('rt-clientes-resultados').innerHTML = htmlResultadosClientes(estado.form.clienteBusqueda)
+    }
+
+    // Un cliente que devolvió la base y todavía no está en la lista local (la
+    // lista se leyó antes, o no se pudo leer): se suma con lo que trajo.
+    function incorporarClienteDeBusqueda(id) {
+      const r = (estado.buscarClientes?.filas ?? []).find(c => c.cliente_id === id)
+      if (!r) return null
+      const c = { id, nombre: r.nombre, razon_social: r.razon_social ?? null, cuit: r.cuit ?? null, localidad: r.localidad ?? null,
+        apodos: [], activo: true, transporte_habitual: null }
+      if (Array.isArray(estado.clientes)) estado.clientes.push(c)
+      else estado.clientes = [c]
+      return c
     }
 
     // El catálogo de la carga sale de catalogo_para_retiro(): los productos
@@ -1272,20 +1361,36 @@
         `<button type="button" class="rt-btn rt-btn--suave" id="rt-cliente-cambiar">Cambiar</button></div>`
     }
 
+    // Un resultado: nombre, la EMPRESA siempre (aunque acá es una sola, que se
+    // vea: el mismo cliente existe en Nuss y en Dolce Pasta), razón social si
+    // es otra, localidad y apodos. Nunca el saldo.
+    function htmlResultadoCliente(c, empresa) {
+      const d = [limpio(empresa) || 'Empresa sin nombre', detalleCliente(c)].filter(Boolean).join(' · ')
+      const apodos = (Array.isArray(c.apodos) ? c.apodos : []).filter(Boolean).join(', ')
+      return `<button type="button" class="rt-resultado" data-cliente="${esc(c.id)}">` +
+        `<span class="rt-resultado__nombre">${esc(c.nombre)}</span>` +
+        `<span class="rt-resultado__detalle">${esc(d)}</span>` +
+        `${apodos ? `<span class="rt-resultado__detalle">También: ${esc(apodos)}</span>` : ''}</button>`
+    }
+
     function htmlResultadosClientes(busqueda) {
+      const q = limpio(busqueda)
+      // Desde 2 letras, si la base ya contestó para este texto: lo suyo.
+      const r = q.length >= MIN_LETRAS_BUSCAR ? busquedaVigente(q) : null
+      if (r) {
+        if (!r.filas.length) return `<div class="rt-texto-suave">Ningún cliente coincide con «${esc(q)}».</div>`
+        return r.filas.slice(0, 8).map(x => {
+          const local = clienteDe(x.cliente_id)
+          const c = local ?? { id: x.cliente_id, nombre: x.nombre, razon_social: x.razon_social, localidad: x.localidad, apodos: [] }
+          return htmlResultadoCliente(c, x.empresa || empresaActual()?.nombre)
+        }).join('')
+      }
       if (estado.errorClientes) return `<div class="rt-aviso rt-aviso--grave">${esc(estado.errorClientes)}</div>`
       if (estado.clientes === null) return '<div class="rt-texto-suave">Cargando clientes…</div>'
       if (!estado.clientes.length) return '<div class="rt-aviso">Esta empresa todavía no tiene clientes. Los carga administración.</div>'
       const lista = clientesFiltrados(estado.clientes, busqueda).slice(0, 8)
       if (!lista.length) return `<div class="rt-texto-suave">Ningún cliente coincide con «${esc(limpio(busqueda))}».</div>`
-      return lista.map(c => {
-        const d = detalleCliente(c)
-        const apodos = (Array.isArray(c.apodos) ? c.apodos : []).filter(Boolean).join(', ')
-        return `<button type="button" class="rt-resultado" data-cliente="${esc(c.id)}">` +
-          `<span class="rt-resultado__nombre">${esc(c.nombre)}</span>` +
-          `${d ? `<span class="rt-resultado__detalle">${esc(d)}</span>` : ''}` +
-          `${apodos ? `<span class="rt-resultado__detalle">También: ${esc(apodos)}</span>` : ''}</button>`
-      }).join('')
+      return lista.map(c => htmlResultadoCliente(c, empresaActual()?.nombre)).join('')
     }
 
     function pintarCliente() {
@@ -1300,8 +1405,9 @@
     // escrito otro a mano.
     function elegirCliente(id) {
       const f = estado.form
-      const c = clienteDe(id)
-      if (!f || !c) return
+      if (!f) return
+      const c = clienteDe(id) ?? incorporarClienteDeBusqueda(id)
+      if (!c) return
       f.clienteId = id
       if (!limpio(f.transporte) || f.transporte === f.transporteAuto) {
         f.transporte = limpio(c.transporte_habitual)
@@ -2145,11 +2251,7 @@
       document.getElementById('rt-cambiar-si').addEventListener('click', () => confirmarCambioEmpresa())
       document.getElementById('rt-cambiar-no').addEventListener('click', () => { cancelarCambioEmpresa(); if (estado.vista === 'rt-vista-empresa') abrirFormulario() })
       document.getElementById('rt-btn-mis').addEventListener('click', () => mostrarMisRetiros())
-      document.getElementById('rt-cliente-buscar').addEventListener('input', (e) => {
-        if (!estado.form) return
-        estado.form.clienteBusqueda = e.target.value
-        document.getElementById('rt-clientes-resultados').innerHTML = htmlResultadosClientes(e.target.value)
-      })
+      document.getElementById('rt-cliente-buscar').addEventListener('input', (e) => buscarClienteRetiro(e.target.value))
       document.getElementById('rt-clientes-resultados').addEventListener('click', (e) => {
         const b = e.target.closest('[data-cliente]')
         if (b) elegirCliente(b.dataset.cliente)

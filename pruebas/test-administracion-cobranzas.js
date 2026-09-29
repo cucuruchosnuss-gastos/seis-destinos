@@ -27,7 +27,9 @@ const src = fs.readFileSync(ARCHIVO, 'utf8')
 console.log(`ARCHIVO ${ARCHIVO} (${src.length} bytes)`)
 const { chk, esperas, fin } = arnes()
 
-const POR_ASENTAR = DATOS.rpc.cobranzas_por_asentar
+// Las dos primeras de la maqueta (la tercera, «JyM», la prueba
+// test-buscar-clientes.js).
+const POR_ASENTAR = DATOS.rpc.cobranzas_por_asentar.slice(0, 2)
 const COB_A = POR_ASENTAR[0].cobranza_id      // "Caserato", con un sugerido y dos cheques
 const COB_B = POR_ASENTAR[1].cobranza_id      // sin sugeridos, solo efectivo
 const COB_C = DATOS.tablas.cobranzas.find(c => c.cliente_id === 'c1').id   // asentada en c1
@@ -51,7 +53,21 @@ function tabla(filas) {
   }
 }
 
-function nuevo({ tareas = ['cobranzas:procesar', 'cobranzas:ver_todo'], rol = 'usuario', rpc = null, soyDePrueba = false } = {}) {
+// buscar_clientes() de mentira (29/09/2026): sin la fábrica de pruebas y con la
+// empresa de cada resultado. `buscar: null` = la base dice que no hay permiso.
+const { servidorBuscarClientes } = require('./buscar-clientes-comun')
+const SERVIDOR_BUSCAR = servidorBuscarClientes({
+  clientes: CLIENTES, empresas: { 'u-n': 'Cucuruchos Nuss', 'u-d': 'Dolce Pasta' }, pruebas: new Set([PRUEBA]),
+})
+// Escribir en el buscador y dejar que la consulta (que en la pantalla sale
+// después de ESPERA_BUSCAR_MS) conteste.
+async function buscar(S, texto) {
+  S.buscarClienteAsentar(texto)
+  await S.consultarClientesAsentar(S.estado.cobranzas.asentando)
+  await esperar()
+}
+
+function nuevo({ tareas = ['cobranzas:procesar', 'cobranzas:ver_todo'], rol = 'usuario', rpc = null, soyDePrueba = false, buscarRpc = SERVIDOR_BUSCAR } = {}) {
   const S = construirAdministracion(ARCHIVO)
   S.estado.miRolApp = rol
   S.estado.misTareas = new Map([['retiros:ver', { unidades: ['u-n'] }], ...tareas.map(t => [t, null])])
@@ -65,8 +81,9 @@ function nuevo({ tareas = ['cobranzas:procesar', 'cobranzas:ver_todo'], rol = 'u
   S.__tablas.cobranzas = tabla(DATOS.tablas.cobranzas)
   S.__tablas.cliente_movimientos = tabla(DATOS.tablas.cliente_movimientos)
   S.__tablas.ordenes_retiro = [{ id: 'o1', codigo: 'N-0012' }]
-  S.__setRpc(rpc ?? (async (n) => {
+  S.__setRpc(rpc ?? (async (n, p) => {
     if (n === 'cobranzas_por_asentar') return { data: POR_ASENTAR, error: null }
+    if (n === 'buscar_clientes') return { data: buscarRpc ? buscarRpc(p) : null, error: null }
     if (n === 'asentar_cobranza') return { data: DATOS.rpc.asentar_cobranza, error: null }
     if (n === 'cuenta_cliente') return { data: DATOS.rpc.cuenta_cliente, error: null }
     if (n === 'reabrir_cobranza') return { data: null, error: null }
@@ -210,20 +227,25 @@ async function pruebas() {
     chk('el sugerido, destacado y con su empresa', /class="ad-opcion-cliente ad-opcion-cliente--sugerido" data-asentar-cliente="c1"[^>]*>[\s\S]*?Distribuidora Anatolia[\s\S]*?Cucuruchos Nuss/.test(h))
     chk('dice por qué se sugiere', /Sugerido por lo que escribió el chofer/.test(h))
     const res = html(S, 'ad-asentar-resultados') || h
-    chk('el buscador arranca con TODOS los demás clientes, con su empresa', /Kiosco Pepe/.test(res) && /Almacén Rivadavia[\s\S]*?RIVADAVIA SRL · Dolce Pasta/.test(res))
-    chk('el sugerido no se repite en el buscador', (h.match(/data-asentar-cliente="c1"/g) || []).length === 1 && !/data-asentar-cliente="c1"/.test(res))
+    // Antes de escribir (29/09/2026): el resto de los sugeridos; con uno solo
+    // no hay resto y dice desde cuántas letras se busca.
+    chk('antes de escribir: dice que se busca desde 2 letras en todas las empresas', /Escribí al menos 2 letras para buscar entre los clientes de todas las empresas\./.test(h))
+    chk('el sugerido no se repite en el buscador', (h.match(/data-asentar-cliente="c1"/g) || []).length === 1)
     chk('la fábrica de pruebas NO aparece para una cuenta real', !/Cliente Robot/.test(h + res))
-    chk('los clientes se leen de la tabla clientes, solo los activos', S.__llamadas.consultas.some(c => c[0] === 'clientes' && c[1].some(f => f[0] === 'eq' && f[1] === 'activo' && f[2] === true)))
+    chk('los clientes se leen de la tabla clientes, solo los activos (la red)', S.__llamadas.consultas.some(c => c[0] === 'clientes' && c[1].some(f => f[0] === 'eq' && f[1] === 'activo' && f[2] === true)))
 
-    // El buscador: nombre, razón social y apodo, sin acentos.
-    S.buscarClienteAsentar('pepe de la')
+    // El buscador: buscar_clientes() desde 2 letras, con la empresa y el saldo.
+    await buscar(S, 'pepe de la')
     chk('busca por apodo ("pepe de la" → Kiosco Pepe)', /Kiosco Pepe/.test(html(S, 'ad-asentar-resultados')) && !/Rivadavia/.test(html(S, 'ad-asentar-resultados')))
-    S.buscarClienteAsentar('rivadavia srl')
-    chk('busca por razón social', /Almacén Rivadavia/.test(html(S, 'ad-asentar-resultados')))
-    S.buscarClienteAsentar('ALMACEN')
+    chk('buscar_clientes con el texto y SIN fábrica', JSON.stringify(S.__llamadas.rpc.filter(r => r[0] === 'buscar_clientes').pop()?.[1]) === JSON.stringify({ p_busqueda: 'pepe de la', p_unidad_negocio_id: null }))
+    await buscar(S, 'rivadavia srl')
+    chk('busca por razón social, con su empresa', /Almacén Rivadavia[\s\S]*?RIVADAVIA SRL · Dolce Pasta/.test(html(S, 'ad-asentar-resultados')))
+    await buscar(S, 'ALMACEN')
     chk('sin acentos ni mayúsculas ("ALMACEN" → Almacén)', /Almacén Rivadavia/.test(html(S, 'ad-asentar-resultados')))
-    S.buscarClienteAsentar('zzz')
+    await buscar(S, 'zzz')
     chk('sin resultados lo dice', /Ningún cliente coincide con «zzz»\./.test(html(S, 'ad-asentar-resultados')))
+    await buscar(S, 'anatolia')
+    chk('lo único que coincide es el sugerido de arriba: lo dice', /Solo coinciden los sugeridos de arriba\./.test(html(S, 'ad-asentar-resultados')))
     chk('buscar NO redibuja la tarjeta (no se pierde el foco)', html(S, 'ad-cobranzas-lista') === h)
 
     // Confirmar sin elegir: no llama a nada.
@@ -294,20 +316,38 @@ async function pruebas() {
     chk('el panel sigue abierto con el cliente elegido', /ad-asentar-panel/.test(h) && S.estado.cobranzas.asentando?.cliente?.id === 'c1' && S.estado.cobranzas.asentando.enviando === false)
   }
   {
+    // La red local (buscar_clientes devolvió null): razón social, y el sugerido
+    // del botón no se repite.
+    const S = nuevo({ buscarRpc: null })
+    await S.mostrarCobranzas(); await esperar()
+    await S.abrirAsentar(COB_A); await esperar()
+    await buscar(S, 'rivadavia srl')
+    chk('red local: busca por razón social', /Almacén Rivadavia/.test(html(S, 'ad-asentar-resultados')))
+    await buscar(S, 'anatolia')
+    await buscar(S, 'pepe de la')
+    chk('red local: busca por apodo', /Kiosco Pepe/.test(html(S, 'ad-asentar-resultados')))
+    await buscar(S, 'robot')
+    chk('red local: la fábrica de pruebas no aparece para una cuenta real', !/Cliente Robot/.test(html(S, 'ad-asentar-resultados')))
+    await buscar(S, 'anatolia')
+    chk('red local: el sugerido de arriba no se repite', !/data-asentar-cliente="c1"/.test(html(S, 'ad-asentar-resultados')) && /Ningún cliente coincide con «anatolia»/.test(html(S, 'ad-asentar-resultados')))
+  }
+  {
     // Quien no ve ningún cliente (sin Retiros ni Pedidos): se dice, y quedan los sugeridos.
-    const S = nuevo()
+    const S = nuevo({ buscarRpc: null })
     S.__tablas.clientes = []
     await S.mostrarCobranzas()
     await esperar()
     await S.abrirAsentar(COB_A)
     await esperar()
-    chk('sin clientes visibles: lo dice y ofrece los sugeridos', /no se ve la lista de clientes de ninguna empresa[\s\S]*elegí uno de los sugeridos/.test(html(S, 'ad-asentar-resultados') || html(S, 'ad-cobranzas-lista')))
-    const S2 = nuevo()
+    await buscar(S, 'ca')
+    chk('buscar_clientes sin permiso y sin clientes visibles: lo dice y ofrece los sugeridos', /no se ve la lista de clientes de ninguna empresa[\s\S]*elegí uno de los sugeridos/.test(html(S, 'ad-asentar-resultados') || html(S, 'ad-cobranzas-lista')))
+    const S2 = nuevo({ buscarRpc: null })
     S2.__tablas.clientes = () => ({ data: null, error: { message: 'x' } })
     await S2.mostrarCobranzas()
     await esperar()
     await S2.abrirAsentar(COB_B)
     await esperar()
+    await buscar(S2, 'ca')
     chk('si no se pueden leer los clientes se dice en bordó', /ad-aviso--grave">No se pudo leer la lista de clientes/.test(html(S2, 'ad-asentar-resultados')))
   }
   {
@@ -317,7 +357,9 @@ async function pruebas() {
     await esperar()
     await S.abrirAsentar(COB_B)
     await esperar()
-    chk('cuenta de prueba: ve el cliente de la fábrica de pruebas', /Cliente Robot/.test(html(S, 'ad-asentar-resultados')))
+    S.buscarClienteAsentar('robot')
+    chk('cuenta de prueba: busca en la lista local y ve el cliente de la fábrica de pruebas', /Cliente Robot/.test(html(S, 'ad-asentar-resultados')))
+    chk('cuenta de prueba: no llama a buscar_clientes (nunca trae la fábrica de pruebas)', !S.__llamadas.rpc.some(r => r[0] === 'buscar_clientes'))
   }
 
   // ══ 4. UNA COBRANZA ASENTADA: desde la cuenta del cliente, con "Reabrir" ════
@@ -449,8 +491,21 @@ async function pruebas() {
     S.estado.cobranzas.clientes = [{ id: marca('cli-id'), nombre: marca('cli-nombre'), razon_social: marca('cli-razon'), apodos: [], unidad_negocio_id: 'u-n' }]
     const a = { id: COB_A, sugeridos: mala.sugeridos, busqueda: marca('busqueda'), cliente: { id: 'x', nombre: marca('eleg-nombre'), empresa: marca('eleg-empresa') }, error: marca('error') }
     chequearMarcas(chk, 'panel de asentar', S.htmlPanelAsentar(c, a), ['sug-id', 'sug-nombre', 'sug-empresa', 'busqueda', 'eleg-nombre', 'eleg-empresa', 'error'])
+    // Los resultados (29/09/2026): el resto de los sugeridos antes de
+    // escribir, lo que devuelve buscar_clientes y la red local.
     a.busqueda = ''
-    chequearMarcas(chk, 'resultados', S.htmlResultadosAsentar(a), ['cli-id', 'cli-nombre', 'cli-razon'])
+    a.sugeridos = [...mala.sugeridos, ...[1, 2, 3].map(i => ({ cliente_id: marca('resto-id' + i), nombre: marca('resto-nombre' + i), empresa: marca('resto-empresa' + i) }))]
+    chequearMarcas(chk, 'resto de los sugeridos', S.htmlResultadosAsentar(a), ['resto-id3', 'resto-nombre3', 'resto-empresa3'])
+    a.sugeridos = mala.sugeridos
+    a.busqueda = 'ab'
+    a.remoto = { texto: 'ab', filas: [{ cliente_id: marca('rem-id'), nombre: marca('rem-nombre'), razon_social: marca('rem-razon'), empresa: marca('rem-empresa'), saldo: 5 }], error: null }
+    chequearMarcas(chk, 'resultados de buscar_clientes', S.htmlResultadosAsentar(a), ['rem-id', 'rem-nombre', 'rem-razon', 'rem-empresa'])
+    a.busqueda = marca('rem-busca')
+    a.remoto = { texto: S.limpio(a.busqueda), filas: [], error: null }
+    chequearMarcas(chk, 'sin resultados de buscar_clientes', S.htmlResultadosAsentar(a), ['rem-busca'])
+    a.remoto = { texto: 'ab', filas: null, error: null }
+    a.busqueda = ''
+    chequearMarcas(chk, 'resultados locales', S.htmlResultadosLocales(a, new Set()), ['cli-id', 'cli-nombre', 'cli-razon'])
     chequearMarcas(chk, 'hecho', S.htmlHechoCob({ importe: 1, saldo: 2, cliente: { nombre: marca('h-nombre'), empresa: marca('h-empresa') } }), ['h-nombre', 'h-empresa'])
     S.estado.cobranzas.error = marca('err-lista')
     chequearMarcas(chk, 'error de la lista', S.htmlListaCobranzas(), ['err-lista'])

@@ -25,7 +25,7 @@ const FUNCIONES_BASE = [
   'leerClientesDe', 'htmlUnidadCliente', 'elegirUnidadCliente', 'htmlUnidadForm', 'elegirUnidadForm',
   'leerPedidosDe', 'juntarPedidos',
   // Parte 2: clientes
-  'leerClientes', 'clientesFiltrados', 'htmlChipsApodos', 'htmlFilaCliente', 'htmlListaClientes',
+  'leerClientes', 'claveBusquedaCliente', 'clientesFiltrados', 'buscarClientesEnLaBase', 'busquedaVigente', 'buscarClienteForm', 'consultarClientesForm', 'incorporarClienteDeBusqueda', 'htmlResultadoClienteForm', 'htmlChipsApodos', 'htmlFilaCliente', 'htmlListaClientes',
   'pintarClientes', 'mostrarClientes', 'formClienteVacio', 'formClienteDesde', 'agregarApodo',
   'quitarApodo', 'htmlApodosForm', 'faltanCliente', 'parametrosGuardarCliente', 'abrirCliente',
   'pintarFormCliente', 'leerFormCliente', 'agregarApodoAlForm', 'quitarApodoDelForm', 'guardarCliente',
@@ -55,7 +55,7 @@ const FUNCIONES_BASE = [
 
 const CONSTANTES_BASE = [
   'TAREAS_PEDIDOS', 'puedeEntrar', 'VISTAS', 'SUBTITULO_DE_VISTA',
-  'ZONA_AR', 'DECIMALES_CAJAS', 'AVISO_CUMPLIDOS',
+  'ZONA_AR', 'DECIMALES_CAJAS', 'AVISO_CUMPLIDOS', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS',
   'ETIQUETA_ESTADO', 'FILTROS_ESTADO', 'ESTADOS_A_MANO', 'LARGO_MINIMO_MOTIVO',
   'pedidoCerrado', 'renglonCumplido', 'tieneCumplidos',
 ]
@@ -143,6 +143,7 @@ const PRELUDIO = `
     fabrica: FABRICA_SIN_DATOS,
     unidadBarra: null, unidadId: 'u-cn', vista: null,
     clientes: null, clientesDe: null, errorClientes: null, avisoClientes: null, clientesBusqueda: '', clienteForm: null, guardandoCliente: false,
+    buscarClientes: null, buscarClientesSinPermiso: false, turnoBuscarClientes: 0, esperaBuscarClientes: null,
     catalogo: null, catalogoUnidad: null, errorCatalogo: null, form: null, guardandoPedido: false,
     pedidos: null, errorPedidos: null, avisoPedidos: null, filtros: { estado: '', desde: '', hasta: '', sinIdentificar: false },
     detalle: null, enviandoAvance: false, cambiandoEstado: false,

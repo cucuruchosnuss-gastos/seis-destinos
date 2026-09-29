@@ -16,6 +16,7 @@ correrMutaciones({
     'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlOpcionPresentacion', 'htmlPieRenglon', 'htmlRenglon',
     'htmlAvisoCatalogo'],
   equivalentes: [
+    { expr: 'esc(q)', motivo: 'lo prueba test-buscar-clientes.js: el «Ningún cliente coincide con…» de lo que devolvió buscar_clientes()' },
     { expr: 'esc(estado.errorClientes)', motivo: 'texto constante del código: lo ponen asegurarCatalogoYClientes() y mostrarClientes()' },
     { expr: 'esc(estado.errorCatalogo)', motivo: 'texto constante del código: lo pone asegurarCatalogoYClientes()' },
     { expr: 'esc(falta)', motivo: 'texto constante del código que devuelve faltanRenglon()' },

@@ -87,7 +87,11 @@ module.exports = {
         "telefono": null,
         "observaciones": "Retira los martes",
         "activo": true
-      }
+      },
+      // El mensaje dice "JyM" (29/09/2026): buscar_clientes() lo encuentra por
+      // parecido, y la búsqueda local también (la clave de _clave_nombre).
+      { "id": "c-jm-n", "unidad_negocio_id": "u-n", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "apodos": [], "localidad": "Córdoba",
+        "telefono": null, "observaciones": null, "activo": true }
     ],
     "productos_terminados": [
       {
@@ -215,6 +219,18 @@ module.exports = {
     ]
   },
   "rpc": {
+    // buscar_clientes (29/09/2026): con la unidad del pedido. "JyM" encuentra
+    // J&M de Nuss; lo demás responde null (como a quien tiene pedidos:cargar
+    // sin ver) y queda la búsqueda local. Nunca se muestra el saldo.
+    "buscar_clientes": {
+      "__segun": [
+        { "si": { "p_busqueda": "JyM", "p_unidad_negocio_id": "u-n" }, "r": [
+          { "cliente_id": "c-jm-n", "nombre": "J&M DISTRIBUCIONES Y SERVICI", "razon_social": "J&M DISTRIBUCIONES Y SERVICI", "cuit": "30711111112",
+            "localidad": "Córdoba", "empresa": "Cucuruchos Nuss", "unidad_negocio_id": "u-n", "activo": true, "saldo": 185000, "parecido": 0.9 }
+        ] }
+      ],
+      "__defecto": null
+    },
     "pedidos_de": [
       {
         "id": "pe1",
