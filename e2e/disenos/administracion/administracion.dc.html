@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E4E0D9; -webkit-font-smoothing: antialiased; }
+  a { color: #C2410C; text-decoration: none; }
+  a:hover { color: #8F2F08; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #D6CFC4; border-radius: 8px; }
+</style>
+</helmet>
+<div style="padding: 56px; display: flex; flex-direction: column; gap: 48px; font-family: 'Figtree', sans-serif; color: #1C1A17; width: max-content; min-width: 100%;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 900px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: oklch(0.955 0.039 305); color: oklch(0.45 0.14 305); display: flex; align-items: center; justify-content: center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18"></path></svg>
+      </div>
+      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -0.02em;">Administración</div>
+    </div>
+    <div style="font-size: 17px; color: #6B645A; line-height: 1.5; text-wrap: pretty;">Donde está la plata. La usan Facu, Pablo y Yanina desde la compu. Cada sección se ve solo con su permiso. Todas las pantallas a 1366 × 768 y dos de celular a 390 × 844.</div>
+  </div>
+
+  <sc-for list="{{ groups }}" as="gp" hint-placeholder-count="1">
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid #D6CFC4; padding-bottom: 10px;">
+        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 30px; font-weight: 800;">{{ gp.title }}</div>
+        <div style="font-size: 16px; color: #6B645A;">{{ gp.sub }}</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 44px 36px; align-items: flex-start;">
+        <sc-for list="{{ gp.screens }}" as="s" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 10px; width: {{ s.w }}px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 14px; background: #1C1A17; color: #fff; border-radius: 8px; padding: 3px 9px;">{{ s.id }}</div>
+              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;">{{ s.title }}</div>
+              <div style="font-size: 13px; font-weight: 700; color: #9A9287;">{{ s.sizeLabel }}</div>
+            </div>
+            <div style="font-size: 14.5px; color: #6B645A; line-height: 1.45; max-width: 1000px; text-wrap: pretty;">{{ s.note }}</div>
+            <div style="width: {{ s.w }}px; height: {{ s.h }}px; background: #F5F3EF; border-radius: {{ s.radius }}px; overflow: hidden; box-shadow: 0 30px 60px -20px rgba(28,26,23,0.35), 0 0 0 1px rgba(28,26,23,0.1); display: flex; position: relative;">
+
+              <sc-if value="{{ s.desk }}">
+                <aside style="width: 232px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #E7E3DC; display: flex; flex-direction: column; padding: 12px 10px 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px; margin-bottom: 8px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; background-image: url(logo.png); background-size: 165%; background-position: 50% 28%; border: 1px solid #EFEBE5;"></div>
+                    <div style="line-height: 1.05;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 15.5px;">Seis Destinos</div>
+                      <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: #9A9287;">GROUP</div>
+                    </div>
+                  </div>
+                  <nav style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                    <sc-for list="{{ side }}" as="m" hint-placeholder-count="12">
+                      <div style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px 0 5px; border-radius: 9px; background: {{ m.bg }};">
+                        <div style="width: 24px; height: 24px; border-radius: 7px; background: {{ m.tint }}; color: {{ m.color }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ m.icon }}"></path></svg>
+                        </div>
+                        <div style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: {{ m.fw }}; color: {{ m.fg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.name }}</div>
+                        <sc-if value="{{ m.hasBadge }}"><div style="min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px; background: {{ m.bBg }}; color: {{ m.bFg }}; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{ m.badge }}</div></sc-if>
+                      </div>
+                      <sc-if value="{{ m.div }}"><div style="height: 1px; background: #EFEBE5; margin: 5px 6px;"></div></sc-if>
+                    </sc-for>
+                  </nav>
+                  <div style="border-top: 1px solid #EFEBE5; padding-top: 8px; display: flex; align-items: center; gap: 10px; height: 44px; padding-left: 5px; font-size: 13.5px; font-weight: 500; color: #3D3831;">
+                    <div style="width: 24px; height: 24px; border-radius: 7px; background: #F1EEE9; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round;"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"></path></svg></div>Personalizar
+                  </div>
+                </aside>
+              </sc-if>
+
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <sc-if value="{{ s.desk }}">
+                  <header style="height: 52px; flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 20px;">
+                    <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 11px; padding: 3px;">
+                      <sc-for list="{{ topFabs }}" as="f" hint-placeholder-count="5">
+                        <div style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px 0 5px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13.5px; font-weight: {{ f.fw }};">
+                          <sc-if value="{{ f.all }}">
+                            <div style="width: 20px; height: 20px; border-radius: 6px; background: #FFFFFF; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 4px;">
+                              <div style="border-radius: 2px; background: oklch(0.55 0.11 55);"></div><div style="border-radius: 2px; background: oklch(0.52 0.1 130);"></div><div style="border-radius: 2px; background: oklch(0.57 0.19 25);"></div><div style="border-radius: 2px; background: #57534E;"></div>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ f.one }}"><span style="width: 20px; height: 20px; border-radius: 999px; background: {{ f.c }}; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{ f.ring }};">{{ f.ini }}</span></sc-if>{{ f.n }}
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid #E7E3DC;">
+                      <div style="width: 30px; height: 30px; border-radius: 999px; background: oklch(0.42 0.06 150); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">FU</div>
+                      <div style="font-size: 14px; font-weight: 600;">Facundo</div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M6 9l6 6 6-6"></path></svg>
+                    </div>
+                  </header>
+                  <div style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 12px 24px 0;">
+                    <div style="width: 30px; height: 30px; border-radius: 9px; background: oklch(0.955 0.039 305); color: oklch(0.45 0.14 305); display: flex; align-items: center; justify-content: center;">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18"></path></svg>
+                    </div>
+                    <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700;">Administración</div>
+                    <div style="display: flex; gap: 2px; background: #EDE9E3; border-radius: 11px; padding: 3px; margin-left: 6px;">
+                      <sc-for list="{{ s.tabs }}" as="t" hint-placeholder-count="10">
+                        <div style="display: flex; align-items: center; gap: 5px; height: 30px; padding: 0 9px; border-radius: 8px; background: {{ t.bg }}; color: {{ t.fg }}; font-size: 13px; font-weight: {{ t.fw }}; box-shadow: {{ t.sh }}; white-space: nowrap;">
+                          {{ t.n }}<sc-if value="{{ t.hasB }}"><span style="min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: {{ t.bBg }}; color: {{ t.bFg }}; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ t.b }}</span></sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.mob }}">
+                  <div style="flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC;">
+                    <div style="height: 44px; display: flex; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 700;">16:10</div>
+                    <div style="height: 56px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 4px;">
+                      <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; opacity: {{ s.backOp }};"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1A17" style="stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round;"><path d="M15 6l-6 6 6 6"></path></svg></div>
+                      <div style="flex: 1; min-width: 0; line-height: 1.1;">
+                        <div style="font-size: 12.5px; font-weight: 600; color: #6B645A;">{{ s.mSub }}</div>
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;">{{ s.mTitle }}</div>
+                      </div>
+                      <div style="height: 34px; padding: 0 10px 0 5px; border-radius: 10px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700;"><span style="width: 22px; height: 22px; border-radius: 999px; background: oklch(0.55 0.11 55); color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center;">N</span>Nuss</div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: {{ s.cols }}; grid-template-rows: {{ s.rows }}; grid-auto-rows: {{ s.autoRows }}; align-content: {{ s.alignC }}; gap: 12px; padding: {{ s.pad }}; overflow: {{ s.ovf }};">
+                  <sc-for list="{{ s.panels }}" as="p" hint-placeholder-count="3">
+                    <div style="grid-column: {{ p.col }}; grid-row: {{ p.row }}; min-height: 0; min-width: 0; background: {{ p.bg }}; border: {{ p.border }}; border-radius: 16px; padding: {{ p.pad }}; display: flex; flex-direction: column; gap: {{ p.gap }}px; overflow: hidden; position: {{ p.pos }}; left: {{ p.left }}; top: {{ p.top }}; transform: {{ p.tf }}; width: {{ p.w }}; z-index: {{ p.z }}; box-shadow: {{ p.sh }};">
+                      <sc-if value="{{ p.hasHead }}">
+                        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                          <sc-if value="{{ p.hasIcon }}">
+                            <div style="width: 32px; height: 32px; border-radius: 9px; background: {{ p.iT }}; color: {{ p.iC }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ p.icon }}"></path></svg>
+                            </div>
+                          </sc-if>
+                          <div style="flex: 1; min-width: 0; line-height: 1.2;">
+                            <div style="font-family: {{ p.tFam }}; font-size: {{ p.tfs }}px; font-weight: 700; font-style: {{ p.tIt }};">{{ p.title }}</div>
+                            <sc-if value="{{ p.hasSub }}"><div style="font-size: 13.5px; color: #6B645A; margin-top: 1px;">{{ p.sub }}</div></sc-if>
+                          </div>
+                          <sc-for list="{{ p.chips }}" as="k" hint-placeholder-count="1">
+                            <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: {{ k.bg }}; color: {{ k.fg }}; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; white-space: nowrap;">{{ k.t }}</span>
+                          </sc-for>
+                          <sc-for list="{{ p.acts }}" as="b" hint-placeholder-count="1">
+                            <div style="height: {{ b.h }}px; padding: 0 {{ b.px }}px; border-radius: 10px; background: {{ b.bg }}; color: {{ b.fg }}; border: {{ b.bd }}; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">{{ b.t }}</div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+
+                      <sc-for list="{{ p.blocks }}" as="b" hint-placeholder-count="2">
+                        <div style="flex: {{ b.flex }}; min-height: 0; display: flex; flex-direction: column;">
+                          <sc-if value="{{ b.links }}">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                              <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; margin-right: 4px;">{{ b.label }}</span>
+                              <sc-for list="{{ b.items }}" as="l" hint-placeholder-count="5">
+                                <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 6px; border-radius: 11px; background: #FFFFFF; border: 1px solid #E7E3DC; font-size: 14px; font-weight: 700;">
+                                  <span style="width: 26px; height: 26px; border-radius: 8px; background: {{ l.t }}; color: {{ l.c }}; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ l.icon }}"></path></svg></span>{{ l.n }}<sc-if value="{{ l.hasX }}"><span style="font-size: 12.5px; font-weight: 600; color: #6B645A;">{{ l.x }}</span></sc-if>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.tabs }}">
+                            <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 10px; padding: 3px; align-self: flex-start;">
+                              <sc-for list="{{ b.items }}" as="t" hint-placeholder-count="2">
+                                <div style="height: 32px; padding: 0 14px; border-radius: 8px; background: {{ t.bg }}; color: {{ t.fg }}; font-size: 14px; font-weight: {{ t.fw }}; display: flex; align-items: center; box-shadow: {{ t.sh }};">{{ t.n }}</div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.tool }}">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                              <sc-if value="{{ b.hasQ }}">
+                                <div style="width: {{ b.qW }}; height: 36px; border-radius: 10px; background: {{ b.qBg }}; border: {{ b.qBd }}; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 14px; color: {{ b.qFg }}; font-weight: {{ b.qFw }};">
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round; flex-shrink: 0;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ b.q }}</span>
+                                </div>
+                              </sc-if>
+                              <sc-if value="{{ b.hasSeg }}">
+                                <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 10px; padding: 3px;">
+                                  <sc-for list="{{ b.seg }}" as="f" hint-placeholder-count="3">
+                                    <div style="height: 30px; padding: 0 10px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13px; font-weight: {{ f.fw }}; display: flex; align-items: center; gap: 5px; white-space: nowrap;">{{ f.t }}<span style="opacity: 0.75;">{{ f.n }}</span></div>
+                                  </sc-for>
+                                </div>
+                              </sc-if>
+                              <sc-for list="{{ b.toggles }}" as="g" hint-placeholder-count="1">
+                                <div style="display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: #3D3831; white-space: nowrap;">
+                                  <div style="width: 34px; height: 20px; border-radius: 999px; background: {{ g.bg }}; padding: 3px; display: flex; justify-content: {{ g.j }};"><div style="width: 14px; height: 14px; border-radius: 999px; background: #fff;"></div></div>{{ g.t }}
+                                </div>
+                              </sc-for>
+                              <span style="flex: 1;"></span>
+                              <sc-for list="{{ b.btns }}" as="x" hint-placeholder-count="1">
+                                <div style="height: {{ x.h }}px; padding: 0 {{ x.px }}px; border-radius: 10px; background: {{ x.bg }}; color: {{ x.fg }}; border: {{ x.bd }}; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">{{ x.t }}</div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.alert }}">
+                            <div style="background: {{ b.bg }}; border: 1.5px solid {{ b.bd }}; border-radius: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 10px;">
+                              <sc-if value="{{ b.hasIcon }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ b.ic }}" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;"><path d="{{ b.icon }}"></path></svg></sc-if>
+                              <div style="flex: 1; min-width: 0; line-height: 1.35;">
+                                <div style="font-size: 14.5px; font-weight: 800; color: {{ b.fg }};">{{ b.title }}</div>
+                                <sc-if value="{{ b.hasText }}"><div style="font-size: 13.5px; color: {{ b.fg }};">{{ b.msg }}</div></sc-if>
+                              </div>
+                              <sc-for list="{{ b.btns }}" as="x" hint-placeholder-count="1">
+                                <div style="height: {{ x.h }}px; padding: 0 {{ x.px }}px; border-radius: 10px; background: {{ x.bg }}; color: {{ x.fg }}; border: {{ x.bd }}; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">{{ x.t }}</div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.kv }}">
+                            <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: {{ b.gap }};">
+                              <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="4">
+                                <div style="min-width: 0; line-height: 1.25; padding: {{ b.cellPad }}; border-bottom: {{ b.line }};">
+                                  <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287;">{{ r.k }}</div>
+                                  <div style="font-family: {{ r.fam }}; font-size: {{ r.fs }}px; font-weight: {{ r.fw }}; color: {{ r.fg }}; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;">{{ r.v }}</div>
+                                  <sc-if value="{{ r.hasSub }}"><div style="font-size: 12.5px; color: {{ r.subFg }};">{{ r.sub }}</div></sc-if>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.big }}">
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                                <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: {{ b.fs }}px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: {{ b.fg }}; font-variant-numeric: tabular-nums;">{{ b.v }}</span>
+                                <span style="font-size: 15px; font-weight: 700; color: #3D3831;">{{ b.label }}</span>
+                              </div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.lines }}">
+                            <div style="display: flex; flex-direction: column; gap: 4px; margin-top: auto;">
+                              <sc-for list="{{ b.items }}" as="l" hint-placeholder-count="2">
+                                <div style="display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: {{ l.fw }}; color: {{ l.fg }}; line-height: 1.3;">
+                                  <sc-if value="{{ l.dot }}"><span style="width: 7px; height: 7px; border-radius: 999px; background: {{ l.fg }}; flex-shrink: 0;"></span></sc-if>{{ l.t }}
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.btns }}">
+                            <div style="display: flex; align-items: center; gap: 8px; justify-content: {{ b.j }}; flex-wrap: wrap;">
+                              <sc-for list="{{ b.items }}" as="x" hint-placeholder-count="2">
+                                <sc-if value="{{ x.spacer }}"><span style="flex: 1;"></span></sc-if>
+                                <sc-if value="{{ x.real }}"><div style="height: {{ x.h }}px; padding: 0 {{ x.px }}px; border-radius: 11px; background: {{ x.bg }}; color: {{ x.fg }}; border: {{ x.bd }}; font-size: {{ x.fs }}px; font-weight: 800; display: flex; align-items: center; white-space: nowrap;">{{ x.t }}</div></sc-if>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.opts }}">
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                              <sc-if value="{{ b.hasHead }}">
+                                <div style="display: flex; align-items: baseline; gap: 8px;">
+                                  <span style="font-size: 14.5px; font-weight: 800;">{{ b.head }}</span>
+                                  <span style="font-size: 12.5px; color: #6B645A;">{{ b.headSub }}</span>
+                                </div>
+                              </sc-if>
+                              <div style="display: flex; flex-direction: {{ b.dir }}; gap: 6px; flex-wrap: wrap;">
+                                <sc-for list="{{ b.items }}" as="o" hint-placeholder-count="2">
+                                  <div style="flex: {{ b.itemFlex }}; display: flex; align-items: center; gap: 10px; min-height: {{ b.h }}px; padding: 5px 12px; border-radius: 11px; background: {{ o.bg }}; border: {{ o.bw }}px solid {{ o.bd }};">
+                                    <span style="width: 18px; height: 18px; border-radius: 999px; border: 2px solid {{ o.radio }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><sc-if value="{{ o.sel }}"><span style="width: 8px; height: 8px; border-radius: 999px; background: #C2410C;"></span></sc-if></span>
+                                    <div style="flex: 1; min-width: 0; line-height: 1.25;">
+                                      <div style="font-size: 14px; font-weight: 700;">{{ o.t }}</div>
+                                      <sc-if value="{{ o.hasSub }}"><div style="font-size: 12.5px; color: #6B645A;">{{ o.sub }}</div></sc-if>
+                                    </div>
+                                    <sc-if value="{{ o.hasRight }}"><span style="font-size: 13px; font-weight: 700; color: {{ o.rFg }}; white-space: nowrap; font-variant-numeric: tabular-nums;">{{ o.right }}</span></sc-if>
+                                  </div>
+                                </sc-for>
+                              </div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.photos }}">
+                            <div style="display: flex; gap: 8px;">
+                              <sc-for list="{{ b.items }}" as="ph" hint-placeholder-count="2">
+                                <div style="flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; border: 1px solid #EFEBE5; border-radius: 12px; padding: 6px;">
+                                  <div style="width: 92px; height: 54px; border-radius: 8px; flex-shrink: 0; background: repeating-linear-gradient(135deg, #EDE9E3 0 8px, #F5F3EF 8px 16px); border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #9A9287;">foto</div>
+                                  <div style="min-width: 0; line-height: 1.3;">
+                                    <div style="font-size: 13.5px; font-weight: 700;">{{ ph.t }}</div>
+                                    <div style="font-size: 12.5px; color: #6B645A;">{{ ph.sub }}</div>
+                                    <div style="font-size: 14.5px; font-weight: 800; font-variant-numeric: tabular-nums;">{{ ph.v }}</div>
+                                  </div>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.fields }}">
+                            <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 8px;">
+                              <sc-for list="{{ b.items }}" as="fd" hint-placeholder-count="2">
+                                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                                  <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287;">{{ fd.l }}</div>
+                                  <div style="min-height: {{ fd.h }}px; border-radius: 10px; background: #FFFFFF; border: {{ fd.bw }}px solid {{ fd.bd }}; display: flex; align-items: {{ fd.al }}; padding: 8px 11px; font-size: {{ fd.fs }}px; font-weight: {{ fd.fw }}; font-variant-numeric: tabular-nums; line-height: 1.35;">{{ fd.v }}</div>
+                                  <sc-if value="{{ fd.hasHint }}"><div style="font-size: 12px; color: {{ fd.hintFg }};">{{ fd.hint }}</div></sc-if>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.steps }}">
+                            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+                              <sc-for list="{{ b.items }}" as="st" hint-placeholder-count="4">
+                                <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: {{ st.bg }}; border: 1.5px solid {{ st.bd }};">
+                                  <span style="width: 28px; height: 28px; border-radius: 999px; background: {{ st.cBg }}; color: {{ st.cFg }}; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{ st.n }}</span>
+                                  <div style="min-width: 0; line-height: 1.25;">
+                                    <div style="font-size: 13.5px; font-weight: 800;">{{ st.t }}</div>
+                                    <div style="font-size: 12.5px; color: {{ st.sFg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ st.s }}</div>
+                                  </div>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.table }}">
+                            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; border: {{ b.bd }}; border-radius: 12px; overflow: hidden;">
+                              <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 12px; min-height: 30px; align-items: center; padding: 0 12px; background: {{ b.headBg }}; border-bottom: 1px solid #EFEBE5; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287; flex-shrink: 0;">
+                                <sc-for list="{{ b.head }}" as="h" hint-placeholder-count="4"><div style="text-align: {{ h.al }}; white-space: nowrap;">{{ h.t }}</div></sc-for>
+                              </div>
+                              <div style="flex: 1; min-height: 0; overflow: auto;">
+                                <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="6">
+                                  <sc-if value="{{ r.isSec }}"><div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAF8F5; border-bottom: 1px solid #EFEBE5; font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #6B645A;">{{ r.t }}</div></sc-if>
+                                  <sc-if value="{{ r.isRow }}">
+                                    <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 12px; align-items: center; min-height: {{ r.h }}px; padding: 4px 12px; border-bottom: 1px solid #F3F0EB; background: {{ r.bg }}; border-left: 3px solid {{ r.edge }};">
+                                      <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4">
+                                        <div style="min-width: 0; text-align: {{ c.al }};">
+                                          <sc-if value="{{ c.tx }}">
+                                            <div style="display: flex; align-items: center; gap: 8px; justify-content: {{ c.jc }};">
+                                              <sc-if value="{{ c.hasBar }}"><span style="width: 6px; height: 24px; border-radius: 3px; background: {{ c.bar }}; flex-shrink: 0;"></span></sc-if>
+                                              <div style="min-width: 0; line-height: 1.25;">
+                                                <div style="font-family: {{ c.fam }}; font-size: {{ c.fs }}px; font-weight: {{ c.fw }}; color: {{ c.fg }}; font-style: {{ c.ital }}; text-decoration: {{ c.deco }}; font-variant-numeric: tabular-nums;">{{ c.t }}</div>
+                                                <sc-if value="{{ c.hasSub }}"><div style="font-size: 12.5px; color: {{ c.subFg }}; font-weight: {{ c.subFw }};">{{ c.sub }}</div></sc-if>
+                                              </div>
+                                            </div>
+                                          </sc-if>
+                                          <sc-if value="{{ c.ch }}">
+                                            <div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: {{ c.jc }};">
+                                              <sc-for list="{{ c.chips }}" as="k" hint-placeholder-count="1">
+                                                <span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ k.bg }}; color: {{ k.fg }}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; white-space: nowrap;">{{ k.t }}</span>
+                                              </sc-for>
+                                            </div>
+                                          </sc-if>
+                                          <sc-if value="{{ c.sw }}">
+                                            <div style="width: 34px; height: 20px; border-radius: 999px; background: {{ c.bg }}; padding: 3px; display: flex; justify-content: {{ c.j }}; margin-left: auto;"><div style="width: 14px; height: 14px; border-radius: 999px; background: #fff;"></div></div>
+                                          </sc-if>
+                                          <sc-if value="{{ c.inp }}">
+                                            <div style="height: 34px; border-radius: 9px; border: {{ c.bw }}px solid {{ c.bd }}; background: #FFFFFF; display: flex; align-items: center; justify-content: flex-end; padding: 0 10px; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums;">{{ c.t }}</div>
+                                            <sc-if value="{{ c.hasSub }}"><div style="font-size: 11.5px; color: {{ c.subFg }}; font-weight: 700; margin-top: 2px;">{{ c.sub }}</div></sc-if>
+                                          </sc-if>
+                                          <sc-if value="{{ c.bt }}"><span style="font-size: 13.5px; font-weight: 700; color: {{ c.fg }}; white-space: nowrap;">{{ c.t }}</span></sc-if>
+                                        </div>
+                                      </sc-for>
+                                    </div>
+                                  </sc-if>
+                                </sc-for>
+                              </div>
+                              <sc-if value="{{ b.hasFoot }}">
+                                <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 12px; align-items: center; min-height: 44px; padding: 0 12px; background: #FAF8F5; border-top: 2px solid #E7E3DC; flex-shrink: 0;">
+                                  <sc-for list="{{ b.foot }}" as="c" hint-placeholder-count="2">
+                                    <div style="text-align: {{ c.al }}; font-family: {{ c.fam }}; font-size: {{ c.fs }}px; font-weight: {{ c.fw }}; color: {{ c.fg }}; font-variant-numeric: tabular-nums; white-space: nowrap;">{{ c.t }}</div>
+                                  </sc-for>
+                                </div>
+                              </sc-if>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.skel }}">
+                            <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 4px;">
+                              <div style="width: 35%; height: 38px; border-radius: 8px; background: #EDE9E3;"></div>
+                              <div style="width: 70%; height: 12px; border-radius: 6px; background: #F1EEE9;"></div>
+                              <div style="width: 55%; height: 12px; border-radius: 6px; background: #F5F3EF;"></div>
+                              <div style="font-size: 13px; color: #9A9287;">Cargando…</div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.empty }}">
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px;">
+                              <div style="width: 64px; height: 64px; border-radius: 18px; background: #E6F4EC; display: flex; align-items: center; justify-content: center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2F7D4F" style="stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 700;">{{ b.title }}</div>
+                              <div style="font-size: 15px; color: #6B645A; max-width: 460px; line-height: 1.45;">{{ b.msg }}</div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.text }}">
+                            <div style="font-size: {{ b.fs }}px; color: {{ b.fg }}; font-weight: {{ b.fw }}; line-height: 1.4; text-wrap: pretty;">{{ b.t }}</div>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ s.mob }}">
+                  <nav style="flex-shrink: 0; height: 84px; padding-bottom: 20px; background: #FFFFFF; border-top: 1px solid #E7E3DC; display: flex;">
+                    <sc-for list="{{ mnav }}" as="t" hint-placeholder-count="5">
+                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+                        <div style="width: 44px; height: 30px; border-radius: 10px; background: {{ t.bg }}; color: {{ t.ic }}; display: flex; align-items: center; justify-content: center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ t.icon }}"></path></svg></div>
+                        <div style="font-size: 11.5px; font-weight: {{ t.fw }}; color: {{ t.fg }};">{{ t.n }}</div>
+                      </div>
+                    </sc-for>
+                  </nav>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ s.dim }}"><div style="position: absolute; inset: 0; background: rgba(28,26,23,0.45); z-index: 20;"></div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const C = { ink: '#1C1A17', ink2: '#3D3831', mut: '#6B645A', soft: '#9A9287', or: '#C2410C', orS: '#FDEEE4', orD: '#8F2F08', orZ: '#FFF8F3', gr: '#2F7D4F', grS: '#E6F4EC', grT: '#205B39', bo: '#7A2E42', boS: '#F5E8EC', boT: '#5C2233', boB: '#E8CDD5', boR: '#FBF1F4' };
+const BRIC = "'Bricolage Grotesque', sans-serif", FIG = "'Figtree', sans-serif";
+const MOD = {
+  inicio: ['Inicio', 60, 0.35, 0.012, 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z'],
+  produccion: ['Producción', 180, 0.52, 0.1, 'M3 21V10l6 4v-4l6 4V5h6v16zM7 17h2M13 17h2'],
+  cobranzas: ['Cobranzas', 62, 0.62, 0.15, 'M12 4c4 0 7 1.3 7 3s-3 3-7 3-7-1.3-7-3 3-3 7-3zM5 7v5c0 1.7 3 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3 3 7 3s7-1.3 7-3v-5'],
+  caja: ['Caja', 85, 0.6, 0.13, 'M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2'],
+  gastos: ['Gastos', 355, 0.55, 0.16, 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3'],
+  cheques: ['Cheques', 290, 0.52, 0.16, 'M3 7h18v10H3zM6 13.5h6M15 13.5h3M6 10.5h3'],
+  ctacte: ['Cuentas corrientes', 322, 0.5, 0.15, 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6'],
+  ingreso: ['Ingreso', 50, 0.48, 0.08, 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8'],
+  stock: ['Stock', 130, 0.52, 0.12, 'M4 4h16v16H4zM4 12h16M10 8h4M10 16h4'],
+  pedidos: ['Pedidos', 20, 0.58, 0.17, 'M9 3h6v3H9zM7 4.5H5V21h14V4.5h-2M9 11h6M9 15h4'],
+  ordenes: ['Órdenes de retiro', 108, 0.55, 0.11, 'M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0'],
+  admin: ['Administración', 305, 0.45, 0.14, 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18'],
+  taller: ['Proyectos Taller', 150, 0.42, 0.07, 'M14 3.5a5 5 0 0 0-4.6 6.9L3.6 16.2a2 2 0 0 0 2.8 2.8l5.8-5.8A5 5 0 0 0 20.5 10l-3.2.8-2.1-2.1.8-3.2z'],
+  accesos: ['Accesos', 205, 0.5, 0.07, 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M16 11l2 2 4-4'],
+  empleados: ['Empleados', 340, 0.6, 0.13, 'M9 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zM2.5 20c0-3.5 2.9-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.8c2.2.6 3.5 2.3 3.5 5.2'],
+  seguridad: ['Seguridad', 60, 0.4, 0.012, 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4'],
+};
+const mc = k => { const [n, h, l, c, i] = MOD[k]; return { n, i, c: `oklch(${l} ${c} ${h})`, t: `oklch(0.955 ${Math.max(c * 0.28, 0.008).toFixed(3)} ${h})` }; };
+const IC = { warn: 'M12 3l9.5 17h-19zM12 10v4M12 17.5v.01', ok: 'M5 12.5l4.5 4.5L19 7.5', info: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 11v5M12 8v.01', err: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 8v5M12 16v.01', revisar: 'M3 8l9-5 9 5v8l-9 5-9-5zM12 9v4M12 16v.01', clientes: 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M17 8h5M17 12h5', precios: 'M20 12l-8 8-9-9V3h8zM7.5 7.5v.01', importar: 'M12 3v12M7 10l5 5 5-5M4 17v3h16v-3', errores: 'M8 6V4h8v2M5 8h14l-1 12H6zM10 12v4M14 12v4' };
+
+// ---------- builders ----------
+const TONE = { n: { bg: '#F1EEE9', fg: C.ink2 }, bad: { bg: C.bo, fg: '#fff' }, badS: { bg: C.boS, fg: C.bo }, good: { bg: C.grS, fg: C.grT }, or: { bg: C.orS, fg: C.orD }, dark: { bg: '#2B2723', fg: '#fff' } };
+const chip = (t, tone = 'n') => ({ t, ...TONE[tone] });
+const CB = { tx: false, ch: false, sw: false, inp: false, bt: false, al: 'left', jc: 'flex-start' };
+const T = (t, o = {}) => ({ ...CB, tx: true, t, sub: o.sub || '', hasSub: !!o.sub, subFg: o.subFg || C.mut, subFw: o.subFw || 500, fs: o.fs || 14, fw: o.fw || 500, fg: o.fg || C.ink, al: o.al || 'left', jc: o.al === 'right' ? 'flex-end' : 'flex-start', fam: o.big ? BRIC : FIG, hasBar: !!o.bar, bar: o.bar || '', ital: o.ital ? 'italic' : 'normal', deco: o.strike ? 'line-through' : 'none' });
+const N = (t, o = {}) => T(t, { al: 'right', fw: 700, ...o });
+const CH = (...cs) => ({ ...CB, ch: true, chips: cs.filter(Boolean) });
+const CHR = (...cs) => ({ ...CH(...cs), al: 'right', jc: 'flex-end' });
+const SW = on => ({ ...CB, sw: true, bg: on ? C.or : '#D6CFC4', j: on ? 'flex-end' : 'flex-start' });
+const IN = (t, o = {}) => ({ ...CB, inp: true, t, bd: o.bd || '#E7E3DC', bw: o.bd ? 2 : 1, sub: o.sub || '', hasSub: !!o.sub, subFg: o.subFg || C.mut });
+const BT = (t, fg = C.or) => ({ ...CB, bt: true, t, fg, al: 'right' });
+const btn = (t, k = 'plain', o = {}) => ({ t, real: true, spacer: false, h: o.h || 38, px: o.px || 14, fs: o.fs || 14,
+  ...{ primary: { bg: C.or, fg: '#fff', bd: '2px solid #C2410C' }, ghost: { bg: '#fff', fg: C.or, bd: '2px solid #C2410C' }, plain: { bg: '#fff', fg: C.ink2, bd: '1px solid #E7E3DC' }, danger: { bg: C.bo, fg: '#fff', bd: '2px solid #7A2E42' }, link: { bg: 'transparent', fg: C.or, bd: '1px solid transparent' }, linkBad: { bg: 'transparent', fg: C.bo, bd: '1px solid transparent' }, off: { bg: '#E7E3DC', fg: C.soft, bd: '2px solid #E7E3DC' } }[k] });
+const SP = { real: false, spacer: true };
+const BB = { links: false, tabs: false, tool: false, alert: false, kv: false, big: false, lines: false, btns: false, opts: false, photos: false, fields: false, steps: false, table: false, skel: false, empty: false, text: false, flex: '0 0 auto' };
+const B = {
+  links: (label, items) => ({ ...BB, links: true, label, items }),
+  tabs: (items, on) => ({ ...BB, tabs: true, items: items.map(n => ({ n, bg: n === on ? '#fff' : 'transparent', fg: n === on ? C.orD : C.ink2, fw: n === on ? 700 : 600, sh: n === on ? '0 1px 2px rgba(28,26,23,.12)' : 'none' })) }),
+  tool: (o) => ({ ...BB, tool: true, hasQ: !!o.q, q: o.q || '', qW: o.qW || '300px', qBg: o.typed ? '#fff' : '#FAF8F5', qBd: o.typed ? '2px solid #C2410C' : '1px solid #EFEBE5', qFg: o.typed ? C.ink : C.soft, qFw: o.typed ? 600 : 500,
+    hasSeg: !!o.seg, seg: (o.seg || []).map(([t, n, on]) => ({ t, n: n ?? '', bg: on ? C.or : 'transparent', fg: on ? '#fff' : C.ink2, fw: on ? 700 : 600 })),
+    toggles: (o.toggles || []).map(([t, on]) => ({ t, bg: on ? C.or : '#D6CFC4', j: on ? 'flex-end' : 'flex-start' })), btns: o.btns || [] }),
+  alert: (tone, title, text, o = {}) => { const tn = { bad: [C.boS, C.boB, C.boT, C.bo, IC.warn], good: [C.grS, '#C9E6D4', C.grT, C.gr, IC.ok], n: ['#FAF8F5', '#EFEBE5', C.ink2, C.mut, IC.info], or: [C.orZ, '#F6D3BD', C.orD, C.or, IC.info] }[tone];
+    return { ...BB, alert: true, bg: tn[0], bd: tn[1], fg: tn[2], ic: tn[3], icon: o.icon || tn[4], hasIcon: o.noIcon ? false : true, title, msg: text || '', hasText: !!text, btns: o.btns || [] }; },
+  kv: (rows, o = {}) => ({ ...BB, kv: true, cols: o.cols || 'repeat(2, minmax(0, 1fr))', gap: o.gap || '8px 16px', cellPad: o.line ? '6px 0' : '0', line: o.line ? '1px solid #F3F0EB' : 'none',
+    rows: rows.map(r => ({ k: r[0], v: r[1], fs: (r[2] && r[2].fs) || o.fs || 15, fw: (r[2] && r[2].fw) || o.fw || 600, fg: (r[2] && r[2].fg) || C.ink, fam: ((r[2] && r[2].big) || o.big) ? BRIC : FIG, sub: (r[2] && r[2].sub) || '', hasSub: !!(r[2] && r[2].sub), subFg: (r[2] && r[2].subFg) || C.mut })) }),
+  big: (v, label, o = {}) => ({ ...BB, big: true, v, label, fg: o.fg || C.ink, fs: o.fs || 42 }),
+  lines: (items) => ({ ...BB, lines: true, flex: '1 1 auto', items: items.map(l => typeof l === 'string' ? { t: l, fg: C.mut, fw: 500, dot: false } : { fg: C.mut, fw: 600, dot: false, ...l }) }),
+  btns: (items, j = 'flex-start') => ({ ...BB, btns: true, items, j }),
+  opts: (items, o = {}) => ({ ...BB, opts: true, hasHead: !!o.head, head: o.head || '', headSub: o.headSub || '', dir: o.row ? 'row' : 'column', itemFlex: o.row ? '1 1 0' : '0 0 auto', h: o.h || 48,
+    items: items.map(x => ({ t: x.t, sub: x.sub || '', hasSub: !!x.sub, right: x.right || '', hasRight: !!x.right, rFg: x.rFg || C.ink2, sel: !!x.sel, bg: x.sel ? C.orZ : '#fff', bd: x.sel ? C.or : '#E7E3DC', bw: x.sel ? 2 : 1, radio: x.sel ? C.or : '#B8B0A4' })) }),
+  photos: (items) => ({ ...BB, photos: true, items }),
+  fields: (items, cols = 'repeat(2, minmax(0, 1fr))') => ({ ...BB, fields: true, cols, items: items.map(f => ({ l: f.l, v: f.v, h: f.h || 40, al: f.h ? 'flex-start' : 'center', fs: f.fs || 14.5, fw: f.fw || 600, bd: f.focus ? C.or : '#E7E3DC', bw: f.focus ? 2 : 1, hint: f.hint || '', hasHint: !!f.hint, hintFg: f.hintFg || C.mut })) }),
+  steps: (items) => ({ ...BB, steps: true, items: items.map((x, i) => { const st = x.st; return { n: st === 'done' ? '✓' : i + 1, t: x.t, s: x.s, bg: st === 'cur' ? C.orZ : '#fff', bd: st === 'cur' ? C.or : '#EFEBE5', cBg: st === 'done' ? C.ink : st === 'cur' ? C.or : '#F1EEE9', cFg: st === 'todo' ? C.soft : '#fff', sFg: st === 'done' ? C.grT : C.mut }; }) }),
+  table: (cols, head, rows, o = {}) => ({ ...BB, table: true, flex: o.fixed ? '0 0 auto' : '1 1 0', cols, bd: o.bare ? 'none' : '1px solid #EFEBE5', headBg: o.headBg || '#FFFFFF',
+    head: head.map(h => typeof h === 'string' ? { t: h, al: 'left' } : h),
+    rows: rows.map(r => r.sec ? { isSec: true, isRow: false, t: r.sec } : { isSec: false, isRow: true, cells: r.cells || r, bg: r.bg || 'transparent', edge: r.edge || 'transparent', h: o.rowH || 42 }),
+    hasFoot: !!o.foot, foot: (o.foot || []).map(f => typeof f === 'string' ? { t: f, al: 'left', fs: 13, fw: 800, fg: C.mut, fam: FIG } : { al: 'right', fs: 17, fw: 800, fg: C.ink, fam: BRIC, ...f }) }),
+  skel: () => ({ ...BB, skel: true }),
+  empty: (title, text) => ({ ...BB, empty: true, flex: '1 1 auto', title, msg: text }),
+  text: (t, o = {}) => ({ ...BB, text: true, t, fs: o.fs || 13.5, fg: o.fg || C.mut, fw: o.fw || 500 }),
+};
+const panel = (o) => ({ col: o.col || 'auto', row: o.row || 'auto', bg: o.bg || '#FFFFFF', border: o.border || '1px solid #E7E3DC', pad: o.pad || '14px 16px', gap: o.gap || 10,
+  pos: 'static', left: 'auto', top: 'auto', tf: 'none', w: 'auto', z: 'auto', sh: 'none',
+  hasHead: !!o.title, title: o.title || '', tfs: o.tfs || 17, tFam: o.tBig ? BRIC : FIG, tIt: o.ital ? 'italic' : 'normal', hasSub: !!o.sub, sub: o.sub || '',
+  hasIcon: !!o.mod || !!o.icon, icon: o.mod ? mc(o.mod).i : o.icon || '', iC: o.mod ? mc(o.mod).c : o.iC || C.ink2, iT: o.mod ? mc(o.mod).t : o.iT || '#F1EEE9',
+  chips: o.chips || [], acts: o.acts || [], blocks: o.blocks || [], ...(o.modal ? { pos: 'absolute', left: '50%', top: '50%', tf: 'translate(-50%, -50%)', w: o.w || '520px', z: 30, sh: '0 30px 60px rgba(0,0,0,0.3)', border: 'none' } : {}) });
+const bare = (blocks, o = {}) => panel({ bg: 'transparent', border: 'none', pad: '0', ...o, blocks });
+const $ = n => '$ ' + Math.round(n).toLocaleString('es-AR');
+
+// ---------- datos ----------
+const COBS = [
+  { n: '“Caserato”', who: 'Ramón Gutiérrez', when: 'ayer 17:20', tot: 486000, how: 'efectivo + 2 cheques' },
+  { n: '“Duomo”', who: 'Marcelo Díaz', when: 'hoy 11:40', tot: 312000, how: 'efectivo' },
+  { n: '“Los forte”', who: 'Juan Pérez', when: 'hoy 10:15', tot: 410000, how: 'efectivo + 1 cheque' },
+  { n: '“Carrizo”', who: 'Ramón Gutiérrez', when: 'hoy 09:30', tot: 380000, how: 'efectivo' },
+  { n: '“katy”', who: 'Marcelo Díaz', when: '27/09 · 15:05', tot: 154000, how: 'efectivo' },
+];
+const cobList = (sel, skip) => B.table('minmax(0, 1fr) 110px', ['LO QUE ESCRIBIÓ EL CHOFER', { t: 'TOTAL', al: 'right' }],
+  COBS.filter(c => c.n !== skip).map(c => ({ cells: [T(c.n, { ital: true, fw: 800, fs: 15.5, sub: c.who + ' · ' + c.when }), N($(c.tot), { sub: c.how, fs: 14.5 })], bg: c.n === sel ? C.orS : 'transparent', edge: c.n === sel ? C.or : 'transparent' })), { rowH: 58, bare: true });
+
+const ORD = [
+  ['N-0013', '28/09', 'Heladería Duomo', 38, null], ['N-0012', '28/09', 'Salvador Loforte', 112, null, true], ['N-0011', '28/09', 'Caserato', 64, null], ['N-0010', '26/09', 'Heladería Duomo', 38, 'anul'],
+  ['N-0009', '25/09', 'Helados Katy', 22, 1012000], ['N-0008', '22/09', 'Caserato', 80, 3680000], ['N-0007', '19/09', 'Salvador Loforte', 54, 2430000], ['N-0006', '17/09', 'La Romana', 30, 1380000],
+  ['N-0005', '15/09', 'Freddo Tandil', 40, null], ['N-0004', '12/09', 'Caserato', 72, 3240000], ['N-0003', '09/09', 'Giuseppe', 26, 1170000],
+];
+const ordTable = sel => B.table('78px 52px minmax(0, 1fr) 50px 124px', ['CÓDIGO', 'FECHA', 'CLIENTE', { t: 'CAJAS', al: 'right' }, { t: 'IMPORTE', al: 'right' }],
+  ORD.map(([c, f, cl, cj, v, falt]) => ({ cells: [T(c, { big: true, fw: 800, fs: 15, strike: v === 'anul' }), T(f, { fg: C.mut, fs: 13 }), T(cl, { fw: 600, sub: falt ? 'con faltante · por revisar' : '', subFg: C.bo, subFw: 700 }), N(cj, { fw: 600 }),
+    v === null ? CHR(chip('Sin valorizar', 'bad')) : v === 'anul' ? CHR(chip('Anulada', 'n')) : N($(v))], bg: c === sel ? C.orS : 'transparent', edge: c === sel ? C.or : 'transparent' })), { bare: true, rowH: 44 });
+
+const CLIENTES = [
+  ['Caserato', 'Caserato Helados SA', 'C-0112', 'Heladerías', 8, 4120000, 6000000],
+  ['Heladería Duomo', 'Duomo SRL', 'C-0087', 'Heladerías', 5, 2860000, 3000000],
+  ['Freddo Tandil', 'Tandil Frío SA', 'C-0140', 'Distribuidores', 4, 1975000, 1500000, 'over'],
+  ['Salvador Loforte', 'Loforte Salvador Ángel', 'C-0231', 'Mayoristas', 3, 1460000, 2000000, 'prov'],
+  ['Helados Katy', 'Katy Helados SA', 'C-0095', 'Heladerías', 4, 1240000, 1000000, 'over'],
+  ['La Romana', 'La Romana Heladerías SRL', 'C-0061', 'Heladerías', 3, 980000, 2000000],
+  ['Giuseppe', 'Giuseppe Gelato SAS', 'C-0178', 'Heladerías', 2, 612000, 1500000],
+  ['Persicco', 'Persicco Córdoba SA', 'C-0203', 'Mayoristas', 2, 540000, 3000000],
+  ['San Remo', 'Heladería San Remo', 'C-0044', 'Heladerías', 1, 318000, 800000, 'prov'],
+  ['Via Flaminia', 'Via Flaminia SRL', 'C-0156', 'Distribuidores', 1, 0, 1200000],
+  ['Sei Tu', 'Sei Tu Helados', 'C-0219', 'Heladerías', 0, 0, 600000],
+];
+const HIST = [['01/09/2026', 38400, '+6,1 %', 'Pablo Nuss'], ['01/07/2026', 36200, '+6,5 %', 'Pablo Nuss'], ['02/05/2026', 34000, '+8,0 %', 'Facundo U.'], ['03/03/2026', 31480, '—', 'Facundo U.']];
+const PRECIOS = [
+  { sec: 'PRODUCTO TERMINADO · SIN CONO' }, ['Cucuruchón Mini ×320', 38400, 'caja'], ['Cucuruchón Mini ×160', 20300, 'caja'], ['Cucuruchón Chico ×240', 34200, 'caja'], ['Cucuruchón Grande ×150', 39600, 'caja'], ['Cucuruchón Standard ×200', 31800, 'caja'], ['Mini Chocolate ×320', 44100, 'caja'],
+  { sec: 'PRODUCTO TERMINADO · CON CONO' }, ['Cucuruchón Mini ×320 · con cono', 41500, 'caja'], ['Cucuruchón Grande ×150 · con cono', 41800, 'caja'],
+  { sec: 'MATERIA PRIMA E INSUMOS' }, ['Caja N°1 Nuss', 1150, 'unidad'], ['Bolsa grande', 185, 'unidad'], ['Harina 000 Júpiter', 690, 'kg'],
+];
+
+class Component extends DCLogic {
+  tabs(on) {
+    const L = [['Inicio'], ['Cobranzas', 5, 1], ['Órdenes', 4, 1], ['Por revisar', 2], ['Clientes'], ['Listas de precios'], ['Importar'], ['Cheques', 12], ['Seguridad'], ['Errores', 1, 1]];
+    return L.map(([n, b, u]) => { const a = n === on; return { n, bg: a ? '#fff' : 'transparent', fg: a ? C.orD : C.ink2, fw: a ? 700 : 600, sh: a ? '0 1px 2px rgba(28,26,23,.12)' : 'none', hasB: !!b, b: b || '', bBg: u ? C.bo : '#DDD7CE', bFg: u ? '#fff' : C.ink2 }; });
+  }
+  portada(o = {}) {
+    const card = (mod, title, big, label, lines, x = {}) => panel({ mod: x.icon ? null : mod, icon: x.icon, iC: x.iC, iT: x.iT, title, tfs: 15.5, chips: x.chips, gap: 8, blocks: x.blocks || [B.big(big, label, { fg: x.fg, fs: 40 }), B.lines(lines)] });
+    const good = { fg: C.grT, fw: 700, dot: true }, bad = { fg: C.bo, fw: 700, dot: true }, go = t => ({ t, fg: C.or, fw: 700 });
+    return [
+      bare([B.links('ACCESOS DIRECTOS', ['cheques', 'cobranzas', 'ctacte', 'gastos', 'caja'].map(k => { const m = mc(k); return { n: m.n, icon: m.i, c: m.c, t: m.t, hasX: false, x: '' }; }))], { col: '1 / -1' }),
+      o.loadCob ? panel({ mod: 'cobranzas', title: 'Cobranzas por asentar', tfs: 15.5, blocks: [B.skel()] }) : card('cobranzas', 'Cobranzas por asentar', '5', 'por asentar', [{ t: '$ 1.742.000 que cargaron los choferes', ...bad }, 'La más vieja: ayer 17:20 · Ramón Gutiérrez', go('Ir a asentar ›')], { fg: C.bo }),
+      card('ordenes', 'Órdenes de retiro', '4', 'sin valorizar', [{ t: '1 con faltante: pasa a Retiros por revisar', ...bad }, '11 órdenes este mes · 576 cajas', go('Ir a valorizar ›')], { fg: C.bo }),
+      card(null, 'Retiros por revisar', '2', 'se llevaron sin stock', ['Los Forte: 14 cajas de Mini con cono CASERATO', 'Duomo: 6 cajas de Barquillo 40', go('Revisar ›')], { icon: IC.revisar, iC: C.bo, iT: C.boS }),
+      card(null, 'Clientes', '55', 'activos en Nuss', [{ t: '2 pasados de su límite de crédito', ...bad }, 'Nos deben $ 23.615.000 en total'], { icon: IC.clientes, iC: mc('admin').c, iT: mc('admin').t }),
+      card(null, 'Listas de precios', '3', 'listas', ['Heladerías · Mayoristas · Distribuidores', 'Último aumento: 01/09 · +6 %'], { icon: IC.precios, iC: mc('caja').c, iT: mc('caja').t }),
+      card(null, 'Importar', '—', 'nada pendiente', [{ t: 'Clientes, precios y saldos desde Excel', fg: C.mut, fw: 500 }, 'Último: 14/09 · 12 clientes de Dolce Pasta'], { icon: IC.importar, fg: C.soft }),
+      o.errCheq ? panel({ mod: 'cheques', title: 'Cheques', tfs: 15.5, blocks: [B.alert('bad', 'No se pudo cargar', 'Puede ser la conexión. El resto anda bien.', { icon: IC.err, btns: [btn('Reintentar', 'ghost', { h: 34, px: 10 })] })] })
+        : card('cheques', 'Cheques', '12', 'en cartera', ['$ 18.450.000 · plazo promedio 38 días', { t: '3 vencen esta semana', ...bad }]),
+      card('seguridad', 'Seguridad', '21', 'sesiones abiertas', ['2 cerradas por otra persona hoy', { t: 'Sin nada raro', ...good }]),
+      card(null, 'Errores de la app', '3', 'en 7 días', [{ t: '1 nuevo', ...bad }, 'Solo lo ven los super_admin'], { icon: IC.errores, chips: [chip('super_admin', 'dark')] }),
+    ];
+  }
+  renderVals() {
+    const D = (id, title, note, tab, cols, rows, panels, o = {}) => ({ id, title, note, w: 1366, h: 768, sizeLabel: '1366 × 768', desk: true, mob: false, radius: 12, tabs: this.tabs(tab), cols, rows, panels, pad: '12px 24px 18px', ovf: 'hidden', autoRows: 'auto', alignC: 'stretch', dim: false, ...o });
+    const Mo = (id, title, note, mTitle, panels, o = {}) => ({ id, title, note, w: 390, h: 844, sizeLabel: '390 × 844', desk: false, mob: true, radius: 28, tabs: [], cols: 'minmax(0, 1fr)', rows: 'none', panels, pad: '12px', ovf: 'auto', autoRows: 'max-content', alignC: 'start', dim: false, mSub: 'Administración', mTitle, backOp: 1, ...o });
+
+    const caseratoDetail = (mob) => panel({ title: '“Caserato”', tBig: true, tfs: 24, ital: true, sub: 'Lo escribió Ramón Gutiérrez · 27/09/2026 17:20 · Cucuruchos Nuss', chips: [chip('Por asentar', 'or')], gap: 12, blocks: [
+      B.kv([['EFECTIVO', '$ 186.000', { fs: 19, big: true, fw: 800 }], ['CHEQUES · 2', '$ 300.000', { fs: 19, big: true, fw: 800 }], ['TOTAL', '$ 486.000', { fs: 22, big: true, fw: 800 }]], { cols: mob ? 'repeat(3, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))' }),
+      B.photos(mob ? [{ t: 'Galicia · 45821233', sub: 'cobro 15/10', v: '$ 180.000' }] : [{ t: 'Banco Galicia · N° 45821233', sub: 'para cobrar el 15/10/2026', v: '$ 180.000' }, { t: 'Banco Macro · N° 00918276', sub: 'para cobrar el 30/10/2026', v: '$ 120.000' }]),
+      B.opts([{ t: 'Caserato Helados SA', sub: 'Ramón escribió “Caserato” 14 veces para este cliente', right: mob ? '' : 'debe $ 4.120.000', sel: true }, { t: 'Caserato Río Cuarto', sub: 'sucursal · 2 veces', right: mob ? '' : 'debe $ 640.000' }], { head: '¿De qué cliente es?', headSub: mob ? 'Sugeridos' : 'Sugeridos: el sistema aprende cómo escribe cada chofer', h: 52 }),
+      B.tool({ q: 'Si no es ninguno, buscá el cliente', qW: '100%' }),
+      B.alert('n', 'Se descuenta de la cuenta de Caserato Helados SA en Nuss', 'Debe $ 4.120.000 → le queda $ 3.634.000'),
+      B.btns([btn('Asentar $ 486.000', 'primary', { h: 44, fs: 15.5, px: 20 })], mob ? 'stretch' : 'flex-end'),
+    ] });
+    const valorizar = panel({ title: 'N-0013 · Heladería Duomo', tBig: true, tfs: 22, sub: 'Retiró el 28/09 16:40 · la cargó Emanuel Ríos · lista Heladerías', chips: [chip('Sin valorizar', 'bad')], gap: 10, blocks: [
+      B.table('minmax(0, 1fr) 46px 124px 104px', ['PRODUCTO', { t: 'CAJAS', al: 'right' }, { t: 'PRECIO × CAJA', al: 'right' }, { t: 'SUBTOTAL', al: 'right' }], [
+        [T('Cucuruchón Grande ×150', { fw: 700, bar: 'oklch(0.68 0.16 50)', sub: 'con cono DUOMO' }), N('20'), IN('$ 41.800'), N('$ 836.000')],
+        [T('Cucuruchón Mini ×320', { fw: 700, bar: 'oklch(0.78 0.15 95)', sub: 'sin cono' }), N('12'), IN('$ 36.900', { bd: C.or, sub: 'lista $ 38.400 · corregido', subFg: C.orD }), N('$ 442.800')],
+        [T('Cucuruchón Chico ×240', { fw: 700, bar: 'oklch(0.6 0.14 145)', sub: 'sin cono' }), N('6'), IN('$ 34.200'), N('$ 205.200')],
+      ], { rowH: 56, fixed: true, foot: ['TOTAL · 38 CAJAS', { t: '' }, { t: '' }, { t: '$ 1.484.000' }] }),
+      B.alert('bad', 'Con esta orden, Heladería Duomo pasa su límite de crédito', 'Límite $ 3.000.000 · hoy debe $ 2.860.000 · quedaría en $ 4.344.000'),
+      B.text('Los precios salen de la lista Heladerías vigente el día del retiro. Se pueden corregir renglón por renglón.'),
+      { ...B.btns([btn('Anular…', 'linkBad'), SP, btn('Imprimir con precios', 'plain'), btn('Enviar', 'plain'), btn('Guardar valorización', 'primary', { px: 18 })]), flex: '0 0 auto' },
+    ] });
+    const valorizada = panel({ title: 'N-0009 · Helados Katy', tBig: true, tfs: 22, sub: 'Retiró el 25/09 · valorizada por Yanina el 26/09 · lista Heladerías', chips: [chip('Valorizada', 'good')], blocks: [
+      B.table('minmax(0, 1fr) 46px 110px 110px', ['PRODUCTO', { t: 'CAJAS', al: 'right' }, { t: 'PRECIO', al: 'right' }, { t: 'SUBTOTAL', al: 'right' }], [
+        [T('Cucuruchón Mini ×320', { fw: 700, bar: 'oklch(0.78 0.15 95)', sub: 'con cono HELADOS KATY' }), N('14'), N('$ 41.500'), N('$ 581.000')],
+        [T('Cucuruchón Chico ×240', { fw: 700, bar: 'oklch(0.6 0.14 145)', sub: 'sin cono' }), N('8'), N('$ 34.200'), N('$ 273.600')],
+      ], { rowH: 52, fixed: true, foot: ['TOTAL · 22 CAJAS', { t: '' }, { t: '' }, { t: '$ 854.600' }] }),
+      B.btns([btn('Anular…', 'linkBad'), SP, btn('Imprimir con precios', 'plain'), btn('Enviar', 'plain'), btn('Corregir valorización', 'ghost')]),
+    ] });
+    const anularModal = { ...panel({ modal: true, w: '540px', title: 'Anular N-0009', tBig: true, tfs: 22, sub: 'Helados Katy · 22 cajas · $ 854.600', gap: 12, blocks: [
+      B.opts([{ t: 'El cliente devolvió todo' }, { t: 'Se cargó dos veces', sel: true }, { t: 'Otro motivo' }], { head: '¿Por qué se anula?', row: true, h: 44 }),
+      B.fields([{ l: 'MOTIVO · OBLIGATORIO', v: 'Se cargó dos veces: la buena es la N-0008.', h: 72, focus: true, fw: 500 }], 'minmax(0, 1fr)'),
+      B.text('La orden queda tachada en la lista y la hoja sale con el sello ANULADA. No se puede deshacer.'),
+      B.btns([btn('Cancelar', 'plain'), btn('Anular N-0009', 'danger')], 'flex-end'),
+    ] }) };
+
+    const clientHead = (name, sub, tab, kv) => panel({ col: '1 / -1', title: name, tBig: true, tfs: 24, sub, chips: tab === 'Ficha' ? [chip('también proveedor', 'n')] : [], acts: [btn('Ajuste con motivo', 'plain', { h: 36 })], blocks: [
+      B.kv(kv, { cols: 'repeat(4, minmax(0, 1fr))', big: true, fw: 800, fs: 20 }), B.tabs(['Cuenta corriente', 'Ficha'], tab)] });
+    const fichaPanel = (title, rows) => panel({ title, tfs: 15.5, acts: [btn('Editar', 'link', { h: 28, px: 4 })], gap: 6, blocks: [B.kv(rows, { cols: rows.length > 1 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)', gap: '2px 14px', line: true, fs: 14.5 })] });
+
+    const precioRows = (sel) => PRECIOS.map(r => r.sec ? r : { cells: [T(r[0], { fw: 600 }), N($(r[1]), { sub: 'por ' + r[2] }), T('01/09/2026', { fg: C.mut, fs: 13 }), BT('Historial')], bg: r[0] === sel ? C.orS : 'transparent', edge: r[0] === sel ? C.or : 'transparent' });
+    const listsPanel = panel({ title: 'Listas de Nuss', tfs: 15.5, blocks: [B.opts([{ t: 'Heladerías', sub: '32 clientes', sel: true }, { t: 'Mayoristas', sub: '14 clientes' }, { t: 'Distribuidores', sub: '9 clientes' }], { h: 54 })] });
+    const r100 = n => Math.round(n / 100) * 100;
+
+    const desk = [
+      D('1a', 'Portada', 'Cada sección con su número pendiente, grande. Arriba, los accesos directos a los otros módulos. Cada tarjeta se ve solo con su permiso.', 'Inicio', 'repeat(3, minmax(0, 1fr))', 'auto repeat(3, minmax(0, 1fr))', this.portada()),
+      D('2a', 'Cobranzas por asentar', 'Lo que cargó el chofer, tal como lo escribió. Al asentar, primero los clientes sugeridos (el sistema aprende los apodos) y antes de confirmar se ve en qué cuenta se descuenta y cuánto queda.', 'Cobranzas', '380px minmax(0, 1fr)', 'minmax(0, 1fr)', [
+        panel({ title: 'Por asentar', sub: '$ 1.742.000 en total', chips: [chip('5', 'bad')], pad: '14px 8px 8px', blocks: [cobList('“Caserato”')] }), caseratoDetail(false)]),
+      D('2b', 'Asentar a un cliente del Taller', 'Si el cliente es del Taller, se elige a qué proyecto va la plata. Arriba, la confirmación de la anterior: en qué cuenta se descontó y cuánto le queda.', 'Cobranzas', '380px minmax(0, 1fr)', 'auto minmax(0, 1fr)', [
+        bare([B.alert('good', 'Asentada: “Caserato” → Caserato Helados SA · Nuss', 'Se descontaron $ 486.000 de su cuenta. Le queda $ 3.634.000.', { btns: [btn('Ver la cuenta', 'link', { h: 32 })] })], { col: '1 / -1' }),
+        panel({ title: 'Por asentar', sub: '$ 1.256.000 en total', chips: [chip('4', 'bad')], pad: '14px 8px 8px', blocks: [cobList('“Carrizo”', '“Caserato”')] }),
+        panel({ title: '“Carrizo”', tBig: true, tfs: 24, ital: true, sub: 'Lo escribió Ramón Gutiérrez · hoy 09:30 · Taller', chips: [chip('Por asentar', 'or')], gap: 12, blocks: [
+          B.kv([['EFECTIVO', '$ 380.000', { fs: 19, big: true, fw: 800 }], ['CHEQUES', '—', { fs: 19, big: true, fw: 800, fg: C.soft }], ['TOTAL', '$ 380.000', { fs: 22, big: true, fw: 800 }]], { cols: 'repeat(3, minmax(0, 1fr))' }),
+          B.opts([{ t: 'Carrizo Hnos. SRL', sub: 'cliente del Taller · Ramón escribió “Carrizo” 6 veces', right: 'debe $ 2.580.000', sel: true }], { head: '¿De qué cliente es?', headSub: 'Sugerido', h: 52 }),
+          B.opts([{ t: 'Maq Barquillo 24 Carrizo', sub: 'en curso · falta cobrar $ 2.400.000', sel: true }, { t: 'Mantenimiento horno Carrizo', sub: 'terminado · falta cobrar $ 180.000' }, { t: 'A cuenta, sin proyecto', sub: 'queda en la cuenta del cliente' }], { head: '¿A qué proyecto va la plata?', h: 48 }),
+          B.alert('n', 'Se descuenta de la cuenta de Carrizo Hnos. en Taller y suma a lo cobrado de Maq Barquillo 24', 'Al proyecto le falta cobrar $ 2.400.000 → le quedan $ 2.020.000'),
+          B.btns([btn('Asentar $ 380.000', 'primary', { h: 44, fs: 15.5, px: 20 })], 'flex-end'),
+        ] })]),
+      D('3a', 'Órdenes de retiro · valorizar', 'Todas las órdenes, con “Sin valorizar” en bordó. Al valorizar: los precios de la lista del cliente, corregibles, el total y el aviso si el cliente pasa su límite de crédito.', 'Órdenes', 'minmax(0, 1fr) 590px', 'minmax(0, 1fr)', [
+        panel({ title: 'Órdenes de Nuss', sub: 'Septiembre · 11 órdenes', pad: '14px 8px 8px', blocks: [{ ...B.tool({ seg: [['Todas', 11, true], ['Sin valorizar', 4], ['Valorizadas', 6], ['Anuladas', 1]] }), }, ordTable('N-0013')] }), valorizar]),
+      D('3b', 'Corregir y anular', 'Una orden valorizada se puede corregir, imprimir y enviar con precios. Anular pide motivo.', 'Órdenes', 'minmax(0, 1fr) 590px', 'minmax(0, 1fr)', [
+        panel({ title: 'Órdenes de Nuss', sub: 'Septiembre · 11 órdenes', pad: '14px 8px 8px', blocks: [B.tool({ seg: [['Todas', 11, true], ['Sin valorizar', 4], ['Valorizadas', 6], ['Anuladas', 1]] }), ordTable('N-0009')] }), valorizada, anularModal], { dim: true }),
+      D('4a', 'Retiros por revisar', 'Lo que se llevó un cliente sin estar en stock. “Aceptar” pide el motivo. Abajo, lo aceptado este mes.', 'Por revisar', 'minmax(0, 1fr)', 'auto auto minmax(0, 1fr)', [
+        panel({ title: 'N-0012 · Salvador Loforte', tBig: true, tfs: 20, sub: 'La cargó Franco Medina · 28/09 16:04', chips: [chip('Por revisar', 'or')], blocks: [
+          B.kv([['PRODUCTO', 'Cucuruchón Mini ×320 · con cono CASERATO'], ['SE LLEVÓ', '50 cajas', { big: true, fw: 800, fs: 20 }], ['HABÍA', '36 cajas', { big: true, fw: 800, fs: 20 }], ['FALTANTE', '14 cajas', { big: true, fw: 800, fs: 20, fg: C.bo }]], { cols: 'minmax(0, 2fr) repeat(3, minmax(0, 1fr))' }),
+          B.opts([{ t: 'Se compró y no se cargó el ingreso', sel: true }, { t: 'Hubo un error en el recuento' }, { t: 'Otro motivo' }], { head: '¿Por qué se acepta?', row: true, h: 44 }),
+          B.fields([{ l: 'DETALLE', v: 'Entraron 20 cajas de Mini con cono CASERATO el 27/09 y nadie cargó el ingreso.', focus: true, fw: 500 }], 'minmax(0, 1fr)'),
+          B.btns([btn('Aceptar', 'primary', { px: 24 })], 'flex-end')] }),
+        panel({ title: 'D-0004 · Heladería Duomo', tBig: true, tfs: 20, sub: 'La cargó Emanuel Ríos · 27/09 17:45 · Dolce Pasta', chips: [chip('Por revisar', 'or')], acts: [btn('Revisar', 'ghost', { h: 36 })], blocks: [
+          B.kv([['PRODUCTO', 'Barquillo 40 · de 4'], ['SE LLEVÓ', '30 cajas', { big: true, fw: 800, fs: 18 }], ['HABÍA', '24 cajas', { big: true, fw: 800, fs: 18 }], ['FALTANTE', '6 cajas', { big: true, fw: 800, fs: 18, fg: C.bo }]], { cols: 'minmax(0, 2fr) repeat(3, minmax(0, 1fr))' })] }),
+        panel({ title: 'Aceptados este mes', tfs: 15.5, blocks: [B.table('90px 80px minmax(0, 1.2fr) 80px minmax(0, 1.6fr) 120px', ['FECHA', 'ORDEN', 'PRODUCTO', { t: 'FALTANTE', al: 'right' }, 'MOTIVO', 'ACEPTÓ'], [
+          [T('21/09', { fg: C.mut }), T('N-0007', { fw: 700 }), T('Cucuruchón Chico ×240'), N('8 cajas'), T('Se compró y no se cargó el ingreso', { fg: C.ink2 }), T('Yanina')],
+          [T('11/09', { fg: C.mut }), T('D-0002', { fw: 700 }), T('Soft'), N('4 cajas'), T('Hubo un error en el recuento', { fg: C.ink2 }), T('Facundo U.')],
+        ], { rowH: 38 })] })]),
+      D('5a', 'Clientes', 'Saldo, lista, retiros del mes, “también proveedor” y el código del sistema viejo. Los pasados de su límite en bordó. Interruptor para apagar y “Mostrar apagados”.', 'Clientes', 'minmax(0, 1fr)', 'minmax(0, 1fr)', [
+        panel({ title: 'Clientes de Cucuruchos Nuss', sub: '55 activos · 3 apagados', blocks: [
+          B.tool({ q: 'Buscar por nombre, razón social, apodo o código viejo', qW: '420px', toggles: [['Mostrar apagados', false]], btns: [btn('Importar', 'plain', { h: 36 }), btn('+ Nuevo cliente', 'primary', { h: 36 })] }),
+          B.table('minmax(0, 1.5fr) 74px minmax(0, 0.9fr) 70px 130px 120px minmax(0, 1fr) 50px', ['CLIENTE', 'CÓD. VIEJO', 'LISTA', { t: 'RETIROS', al: 'right' }, { t: 'SALDO', al: 'right' }, { t: 'LÍMITE', al: 'right' }, '', { t: 'ACTIVO', al: 'right' }],
+            CLIENTES.map(([n, rs, cod, l, ret, sal, lim, x]) => ({ cells: [T(n, { fw: 700, sub: rs }), T(cod, { fg: C.mut, fs: 13 }), T(l, { fg: C.ink2 }), N(ret, { fw: 600 }), N(sal ? $(sal) : '$ 0', { fg: x === 'over' ? C.bo : sal ? C.ink : C.soft, fw: 800 }), N($(lim), { fw: 500, fg: C.mut }),
+              CH(x === 'over' ? chip('pasado de su límite', 'badS') : null, x === 'prov' ? chip('también proveedor', 'n') : null), SW(true)], bg: x === 'over' ? C.boR : 'transparent' })), { rowH: 46 })] })]),
+      D('5b', 'Cliente · cuenta corriente', 'Fecha, detalle (el código de la orden o “Cobranza del 12/09”), importe y saldo acumulado. El saldo inicial va arriba, marcado. La orden sin valorizar todavía no suma.', 'Clientes', 'minmax(0, 1fr)', 'auto minmax(0, 1fr)', [
+        clientHead('Caserato', 'Caserato Helados SA · CUIT 30-68541237-9 · lista Heladerías · C-0112', 'Cuenta corriente', [['SALDO', '$ 4.120.000'], ['LÍMITE DE CRÉDITO', '$ 6.000.000'], ['PLAZO DE PAGO', '30 días'], ['RETIROS DEL MES', '8']]),
+        panel({ pad: '8px', blocks: [B.table('96px minmax(0, 1fr) 150px 150px 160px', ['FECHA', 'DETALLE', { t: 'DEBE', al: 'right' }, { t: 'HABER', al: 'right' }, { t: 'SALDO', al: 'right' }], [
+          { cells: [T('01/08/2026', { fg: C.mut }), T('Saldo inicial', { fw: 700, sub: 'cargado una sola vez · por Pablo Nuss' }), N(''), N(''), N('$ 2.310.000', { fw: 800 })], bg: '#FAF8F5' },
+          [T('05/09/2026', { fg: C.mut }), T('N-0002 · Orden de retiro', { fw: 600, sub: '60 cajas' }), N('$ 2.700.000'), N(''), N('$ 5.010.000', { fw: 800 })],
+          [T('12/09/2026', { fg: C.mut }), T('Cobranza del 12/09', { fw: 600, sub: 'efectivo y 1 cheque · Ramón Gutiérrez' }), N(''), N('$ 1.800.000', { fg: C.grT }), N('$ 3.210.000', { fw: 800 })],
+          [T('12/09/2026', { fg: C.mut }), T('N-0004 · Orden de retiro', { fw: 600, sub: '72 cajas' }), N('$ 3.240.000'), N(''), N('$ 6.450.000', { fw: 800 })],
+          [T('18/09/2026', { fg: C.mut }), T('Cobranza del 18/09', { fw: 600, sub: '2 cheques · Ramón Gutiérrez' }), N(''), N('$ 2.500.000', { fg: C.grT }), N('$ 3.950.000', { fw: 800 })],
+          [T('20/09/2026', { fg: C.mut }), T('Ajuste · cajas dañadas en el viaje', { fw: 600, sub: 'motivo cargado por Pablo Nuss' }), N(''), N('$ 210.000', { fg: C.grT }), N('$ 3.740.000', { fw: 800 })],
+          [T('22/09/2026', { fg: C.mut }), T('N-0008 · Orden de retiro', { fw: 600, sub: '80 cajas' }), N('$ 3.680.000'), N(''), N('$ 7.420.000', { fw: 800 })],
+          [T('25/09/2026', { fg: C.mut }), T('Cobranza del 25/09', { fw: 600, sub: 'efectivo · Ramón Gutiérrez' }), N(''), N('$ 3.300.000', { fg: C.grT }), N('$ 4.120.000', { fw: 800 })],
+          [T('28/09/2026', { fg: C.mut }), T('N-0011 · Orden de retiro', { fw: 600, sub: '64 cajas · todavía no suma' }), CHR(chip('Sin valorizar', 'bad')), N(''), N('$ 4.120.000', { fw: 800, fg: C.mut })],
+        ], { rowH: 46, bare: true })] })]),
+      D('5c', 'Cliente · ficha', 'En secciones: Datos, Dirección, Contacto, Banco, Comercial y Observaciones. Cada una se edita por separado. El saldo inicial se carga una sola vez.', 'Clientes', 'repeat(3, minmax(0, 1fr))', 'auto repeat(2, minmax(0, 1fr))', [
+        clientHead('Salvador Loforte', '“Los Forte” · Loforte Salvador Ángel · lista Mayoristas · C-0231', 'Ficha', [['SALDO', '$ 1.460.000'], ['LÍMITE DE CRÉDITO', '$ 2.000.000'], ['PLAZO DE PAGO', '15 días'], ['RETIROS DEL MES', '3']]),
+        fichaPanel('Datos', [['NOMBRE', 'Salvador Loforte'], ['RAZÓN SOCIAL', 'Loforte Salvador Ángel'], ['CUIT', '20-23456789-4'], ['CONDICIÓN IVA', 'Responsable inscripto']]),
+        fichaPanel('Dirección', [['CALLE', 'Av. Colón 2150'], ['LOCALIDAD', 'Córdoba (5000)'], ['PROVINCIA', 'Córdoba']]),
+        fichaPanel('Contacto', [['CONTACTO', 'Salvador Loforte'], ['TELÉFONO', '351 598-2211'], ['MAIL', 'losforte@gmail.com'], ['APODOS', '“Los Forte”, “Loforte”']]),
+        fichaPanel('Banco', [['BANCO', 'Banco de Córdoba'], ['CBU', '0200302111000018452271'], ['ALIAS', 'LOSFORTE.HELADOS']]),
+        fichaPanel('Comercial', [['LISTA DE PRECIOS', 'Mayoristas'], ['LÍMITE · PLAZO', '$ 2.000.000 · 15 días'], ['ES EL MISMO QUE EL PROVEEDOR', 'Loforte Salvador Ángel', { fg: C.or, fw: 700, sub: 'en Cuentas corrientes' }], ['SALDO INICIAL', '$ 850.000 · 01/08/2026', { sub: 'ya cargado · no se puede volver a cargar' }]]),
+        fichaPanel('Observaciones', [['', 'Paga con cheques a 30 días. Retira los martes a la mañana con Transporte Gutiérrez.', { fw: 500 }]]),
+      ]),
+      D('6a', 'Listas de precios', 'Las listas de la fábrica con su grilla (y la sección de materia prima e insumos). Editar desde una fecha guarda una versión nueva. A la derecha, el historial del producto elegido.', 'Listas de precios', '220px minmax(0, 1fr) 290px', 'minmax(0, 1fr)', [
+        listsPanel,
+        panel({ title: 'Heladerías', tBig: true, tfs: 21, sub: 'Precios sin IVA · vigentes desde el 01/09/2026', acts: [btn('Editar desde una fecha', 'plain', { h: 36 }), btn('Aumentar todo un %', 'ghost', { h: 36 })], pad: '14px 16px 8px', blocks: [
+          B.table('minmax(0, 1fr) 130px 100px 80px', ['PRODUCTO', { t: 'PRECIO VIGENTE', al: 'right' }, 'DESDE', ''], precioRows('Cucuruchón Mini ×320'), { rowH: 40, bare: true })] }),
+        panel({ title: 'Cucuruchón Mini ×320', tfs: 15.5, sub: 'Historial en Heladerías', blocks: [
+          B.table('minmax(0, 1fr) 90px', ['DESDE', { t: 'PRECIO', al: 'right' }], HIST.map(([d, p, c, q], i) => ({ cells: [T(d, { fw: i ? 500 : 700, sub: q }), N($(p), { sub: c, subFg: i === 3 ? C.soft : C.ink2 })], bg: i === 0 ? '#FAF8F5' : 'transparent' })), { rowH: 50, fixed: true }),
+          B.text('Cada cambio guarda una versión nueva desde su fecha. Las órdenes viejas mantienen el precio de su día.')] }),
+      ]),
+      D('6b', 'Aumentar todo un %', 'Calcula y muestra lo que va a quedar. Recién al confirmar se guarda, como versión nueva desde la fecha elegida.', 'Listas de precios', '220px minmax(0, 1fr)', 'minmax(0, 1fr)', [
+        listsPanel,
+        panel({ title: 'Aumentar todo Heladerías', tBig: true, tfs: 21, gap: 10, blocks: [
+          B.fields([{ l: 'AUMENTO', v: '8 %', focus: true, fs: 18, fw: 800 }, { l: 'DESDE', v: '01/10/2026', fs: 16 }, { l: 'REDONDEO', v: 'a $ 100', fs: 16 }], 'repeat(3, minmax(0, 1fr))'),
+          B.alert('or', 'Todavía no se guardó nada', 'Hasta el 30/09 siguen los precios de ahora. Los 32 clientes de Heladerías toman los nuevos desde el 01/10.'),
+          B.table('minmax(0, 1fr) 130px 130px 90px', ['PRODUCTO', { t: 'AHORA', al: 'right' }, { t: 'DESDE 01/10', al: 'right' }, { t: 'CAMBIO', al: 'right' }],
+            PRECIOS.map(r => r.sec ? r : [T(r[0], { fw: 600 }), N($(r[1]), { fw: 500, fg: C.mut }), N($(r[1] < 1000 ? Math.round(r[1] * 1.08) : r100(r[1] * 1.08)), { fw: 800 }), N('+ ' + $((r[1] < 1000 ? Math.round(r[1] * 1.08) : r100(r[1] * 1.08)) - r[1]), { fw: 600, fg: C.orD })]), { rowH: 36 }),
+          B.btns([btn('Cancelar', 'plain'), btn('Confirmar aumento · 11 precios', 'primary', { px: 18 })], 'flex-end')] }),
+      ]),
+      D('7a', 'Importar desde Excel', 'Clientes, precios o saldos iniciales. Plantilla descargable, vista previa fila por fila con cada error en bordó, y “Guardar solo las filas buenas”.', 'Importar', 'minmax(0, 1fr)', 'auto minmax(0, 1fr)', [
+        panel({ title: 'Importar clientes a Cucuruchos Nuss', tfs: 17, acts: [btn('Descargar la plantilla', 'link', { h: 32 })], blocks: [B.steps([{ t: 'Qué importás', s: 'Clientes', st: 'done' }, { t: 'La plantilla', s: 'Descargada', st: 'done' }, { t: 'Subir el Excel', s: 'clientes-nuss.xlsx · 49 filas', st: 'done' }, { t: 'Revisar y guardar', s: '3 filas con error', st: 'cur' }])] }),
+        panel({ title: 'Vista previa · 49 filas', tfs: 17, chips: [chip('46 buenas', 'good'), chip('3 con error', 'bad')], blocks: [
+          B.tool({ seg: [['Todas', 49, true], ['Solo con error', 3]], btns: [btn('Subir otro archivo', 'plain', { h: 36 })] }),
+          B.table('52px minmax(0, 1.1fr) minmax(0, 1.2fr) 130px 200px 110px minmax(0, 1.3fr)', ['FILA', 'NOMBRE', 'RAZÓN SOCIAL', 'CUIT', 'CBU', 'LISTA', 'ESTADO'], [
+            [T('2', { fg: C.mut }), T('Heladería Il Gelato', { fw: 700 }), T('Il Gelato SRL'), T('30-71234567-2'), T('0110599520000012345678', { fs: 13 }), T('Heladerías'), CH(chip('Bien', 'good'))],
+            [T('3', { fg: C.mut }), T('Frío Sur', { fw: 700 }), T('Frío Sur SA'), T('30-70999888-1'), T('0720123420000000987654', { fs: 13 }), T('Distribuidores'), CH(chip('Bien', 'good'))],
+            { cells: [T('4', { fg: C.mut }), T('Helados Boreal', { fw: 700 }), T('Boreal Helados SAS'), T('30-7123-45', { fg: C.bo, fw: 700 }), T('0170045620000003344556', { fs: 13 }), T('Heladerías'), T('CUIT inválido: tiene 8 números', { fg: C.bo, fw: 700 })], bg: C.boR, edge: C.bo },
+            [T('5', { fg: C.mut }), T('Lucciano’s Nueva Córdoba', { fw: 700 }), T('Lucciano’s SA'), T('30-71555444-9'), T('2850590940090418135201', { fs: 13 }), T('Heladerías'), CH(chip('Bien', 'good'))],
+            { cells: [T('6', { fg: C.mut }), T('El Piamontés', { fw: 700 }), T('Piamontés Helados SRL'), T('30-70111222-5'), T('01100456200000123', { fs: 13, fg: C.bo, fw: 700 }), T('Mayoristas'), T('CBU corto: tiene 17 números, lleva 22', { fg: C.bo, fw: 700 })], bg: C.boR, edge: C.bo },
+            [T('7', { fg: C.mut }), T('Chungo Cerro', { fw: 700 }), T('Chungo SA'), T('30-50123987-3'), T('0070089420000004511111', { fs: 13 }), T('Heladerías'), CH(chip('Bien', 'good'))],
+            { cells: [T('8', { fg: C.mut }), T('Caserato', { fw: 700, fg: C.bo }), T('Caserato Helados SA'), T('30-68541237-9'), T('0070089420000004512873', { fs: 13 }), T('Heladerías'), T('Nombre repetido: “Caserato” ya existe', { fg: C.bo, fw: 700 })], bg: C.boR, edge: C.bo },
+            [T('9', { fg: C.mut }), T('Heladería Valentino', { fw: 700 }), T('Valentino Gelatos SRL'), T('30-71888777-0'), T('0340210800000011223344', { fs: 13 }), T('Heladerías'), CH(chip('Bien', 'good'))],
+          ], { rowH: 42 }),
+          B.btns([btn('Cancelar', 'plain'), SP, btn('Guardar solo las 46 filas buenas', 'primary', { px: 20 })])] }),
+      ]),
+      D('8a', 'Seguridad y errores de la app', 'Quién cerró las sesiones de quién. Los errores de la app los ven solo los super_admin.', 'Seguridad', 'minmax(0, 1fr) minmax(0, 1fr)', 'minmax(0, 1fr)', [
+        panel({ mod: 'seguridad', title: 'Sesiones cerradas', sub: 'Últimos 30 días · 21 abiertas ahora', blocks: [B.table('110px minmax(0, 1fr)', ['CUÁNDO', 'QUÉ PASÓ'], [
+          [T('Hoy 09:12', { fw: 700 }), T('Pablo Nuss cerró las 2 sesiones de Mauricio Leiva', { fw: 600, sub: 'Motivo: “Perdió el celular”' })],
+          [T('Hoy 08:40', { fw: 700 }), T('Facundo Usabarrena cerró 1 sesión de Yanina Paz', { fw: 600, sub: 'Una compu vieja de la oficina' })],
+          [T('24/09 18:05', { fw: 700 }), T('Yanina Paz cerró todas sus sesiones', { fw: 600, sub: 'Desde Mis sesiones' })],
+          [T('19/09 11:30', { fw: 700 }), T('Pablo Nuss cerró las 3 sesiones de Ramón Gutiérrez', { fw: 600, sub: 'Motivo: “Cambió de teléfono”' })],
+          [T('12/09 16:22', { fw: 700 }), T('Facundo Usabarrena cerró 1 sesión de Franco Medina', { fw: 600, sub: 'Tablet del depósito' })],
+        ], { rowH: 56 })] }),
+        panel({ mod: 'seguridad', title: 'Errores de la app', sub: 'Últimos 7 días', chips: [chip('Solo super_admin', 'dark')], blocks: [B.table('minmax(0, 1fr) 58px 110px 76px', ['ERROR', { t: 'VECES', al: 'right' }, 'ÚLTIMA', ''], [
+          { cells: [T('No se pudo generar el PDF de la orden', { fw: 700, sub: 'Órdenes de retiro · al enviar por WhatsApp' }), N('4'), T('Hoy 15:48', { fg: C.mut }), CHR(chip('Nuevo', 'bad'))], bg: C.boR },
+          [T('Se cortó la subida de una foto de cheque', { fw: 700, sub: 'Cobranzas · celular de Marcelo Díaz' }), N('2'), T('Ayer 17:02', { fg: C.mut }), CHR(chip('Visto', 'n'))],
+          [T('Tardó más de 10 s la cuenta corriente', { fw: 700, sub: 'Administración · Caserato' }), N('1'), T('24/09 10:15', { fg: C.mut }), CHR(chip('Visto', 'n'))],
+        ], { rowH: 56 })] }),
+      ]),
+      D('9a', 'Estados · cargando y error', 'Cada tarjeta de la portada carga sola: Cobranzas cargando y Cheques con error y Reintentar, sin romper las demás.', 'Inicio', 'repeat(3, minmax(0, 1fr))', 'auto repeat(3, minmax(0, 1fr))', this.portada({ loadCob: true, errCheq: true })),
+      D('9b', 'Estados · sin datos', 'No hay cobranzas por asentar.', 'Cobranzas', 'minmax(0, 1fr)', 'minmax(0, 1fr)', [
+        panel({ title: 'Por asentar', chips: [chip('0', 'good')], blocks: [B.empty('No hay cobranzas por asentar', 'Todo lo que cargaron los choferes ya está en la cuenta de cada cliente. La última se asentó hoy a las 11:52.')] })]),
+    ];
+    const mob = [
+      Mo('10a', 'Celular · portada', 'Las secciones en una columna, cada una con su número. Tocar abre la sección.', 'Administración', this.portada().slice(1).map(p => ({ ...p, blocks: p.blocks.map(b => b.big ? { ...b, fs: 34 } : b) })), { backOp: 0, mSub: 'Seis Destinos' }),
+      Mo('10b', 'Celular · asentar', 'La misma cobranza, apilada. Los cheques con su foto.', '“Caserato”', [caseratoDetail(true)], { mSub: 'Cobranzas por asentar' }),
+    ];
+    const side = ['inicio', 'produccion', 'cobranzas', 'caja', 'gastos', 'cheques', 'ctacte', 'ingreso', 'stock', 'pedidos', 'ordenes', 'admin', 'taller', 'accesos', 'empleados', 'seguridad'].map((k, i) => { const m = mc(k); const on = k === 'admin'; const b = { produccion: [1, 1], cobranzas: [5], caja: [1], cheques: [3, 1], pedidos: [2, 1], admin: [7, 1], accesos: [2] }[k];
+      return { name: m.n, icon: m.i, color: m.c, tint: m.t, bg: on ? C.orS : 'transparent', fg: on ? C.orD : C.ink2, fw: on ? 700 : 500, hasBadge: !!b, badge: b ? b[0] : '', bBg: b && b[1] ? C.bo : '#EDE9E3', bFg: b && b[1] ? '#fff' : C.ink2, div: i === 0 || i === 3 }; });
+    const topFabs = [['Todas', null, 'todas'], ['Nuss', 'oklch(0.55 0.11 55)', 'N'], ['Dolce Pasta', 'oklch(0.52 0.1 130)', 'DP'], ['Mengui', 'oklch(0.57 0.19 25)', 'M'], ['Taller', '#57534E', 'T']].map(([n, c, ini], i) => { const on = i === 1; return { n, c: c || '', ini, all: i === 0, one: i > 0, bg: on ? C.or : 'transparent', fg: on ? '#fff' : C.ink2, fw: on ? 700 : 600, ring: on ? '0 0 0 2px #fff' : 'none' }; });
+    const tm = (k, n, on) => { const m = mc(k); return { n: n || m.n, icon: m.i, ic: on ? C.or : m.c, bg: on ? C.orS : 'transparent', fg: on ? C.orD : C.ink2, fw: on ? 700 : 600 }; };
+    return {
+      groups: [{ title: 'Compu', sub: '1366 × 768 · el lugar de trabajo', screens: desk }, { title: 'Celular', sub: '390 × 844 · para mirar y asentar en la calle', screens: mob }],
+      side, topFabs, mnav: [tm('inicio'), tm('admin', 'Administración', true), tm('cobranzas'), tm('caja'), { n: 'Más', icon: 'M5 12h.01M12 12h.01M19 12h.01', ic: C.ink2, bg: 'transparent', fg: C.ink2, fw: 600 }],
+    };
+  }
+}
+</script>
+</body>
+</html>

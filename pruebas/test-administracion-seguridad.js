@@ -98,7 +98,9 @@ async function pruebas() {
   // La portada la ofrece y la abre.
   {
     const S = nuevo()
-    const h = S.htmlSeccion(S.SECCIONES.find(s => s.id === 'seguridad'), null)
+    // Con el diseño (29/09/2026) mientras cuenta muestra barras grises: la
+    // explicación va con el número de cierres de sesión.
+    const h = S.htmlSeccion(S.SECCIONES.find(s => s.id === 'seguridad'), { cierres: 2 })
     chk('la portada la ofrece con su explicación', /data-seccion="seguridad"/.test(h) && /Quién cerró las sesiones de quién/.test(h))
     S.abrirSeccion('seguridad')
     await esperar()

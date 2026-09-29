@@ -37,6 +37,16 @@ const SEGURAS_ADMINISTRACION = [
   ['htmlProyectoAsentar(a)', 'HTML armado por htmlProyectoAsentar(), que escapa id y nombre de cada proyecto'],
   ['fila', 'HTML ya escapado: htmlFilaCliente() arma el botón de la fila con esc() de cada dato'],
   ['htmlInterruptor(c)', 'HTML armado por htmlInterruptor(), que escapa el id y el nombre del cliente'],
+  // El diseño "Administración" (29/09/2026): la portada y las pestañas
+  ['tam', 'número del código: el tamaño del ícono que pasa quien llama a htmlTrazo() (18 o 15)'],
+  ['d', 'constante del código: el trazo del ícono sale de TRAZO_ICONO, nunca de la base'],
+  ['tono', 'constante del código: una de dos clases fijas (--mal / --bien) o vacío'],
+  ['clase', 'constante del código: una de dos clases fijas (--atencion / --suave) o vacío'],
+  ['htmlTrazo(info.trazo)', 'HTML constante del código: el <svg> con un trazo de TRAZO_ICONO'],
+  ['htmlTrazo(l.clave, 15)', 'HTML constante del código: el <svg> con un trazo de TRAZO_ICONO'],
+  ['lineas', 'HTML armado por htmlLineaSeccion(), que escapa cada renglón'],
+  ['cabeza', 'HTML ya escapado: htmlSeccion() arma la cabeza con esc() del título y del chip'],
+  ['cuerpo', 'HTML ya escapado: htmlSeccion() arma el cuerpo con esc() del número y la unidad, o textos constantes'],
   ['acciones', 'HTML ya escapado: htmlFilaRevisar() arma el panel del motivo con esc() del motivo y del error, o el botón "Aceptar" con esc() del id'],
 ]
 

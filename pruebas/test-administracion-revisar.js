@@ -61,7 +61,7 @@ async function pruebas() {
     const h = html(S, 'ad-secciones')
     const llamada = S.__llamadas.rpc.find(r => r[0] === 'retiros_por_revisar')
     chk('la portada cuenta los retiros por revisar de la empresa', !!llamada && llamada[1].p_unidad_negocio_id === 'u-n')
-    chk('y muestra el número en la tarjeta, destacado', /data-seccion="revisar"[\s\S]*?ad-seccion__numero ad-seccion__numero--atencion">2</.test(h) && /renglones salieron sin estar en stock/.test(h))
+    chk('y muestra el número en la tarjeta, destacado', /data-seccion="revisar"[\s\S]*?ad-seccion__numero ad-seccion__numero--atencion">2</.test(h) && /se llevaron sin stock</.test(h))
     const U = nuevo({ filas: () => ({ data: null, error: { message: 'x' } }) })
     await U.mostrarInicio()
     await esperar()

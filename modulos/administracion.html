@@ -41,27 +41,72 @@
 
     body {
       overflow-x: hidden;
-      --borde-tarjeta:  rgba(28, 26, 23, 0.08);
-      --sombra-tarjeta: 0 1px 2px rgba(28, 26, 23, 0.05);
-      --ad-texto-secundario: #4a5670;
+      /* Bloques blancos con el borde del sistema y sin sombra (diseño 29/09/2026). */
+      --borde-tarjeta:  var(--color-borde);
+      --sombra-tarjeta: none;
+      /* El gris cálido del sistema visual (29/09/2026): antes era un gris azulado. */
+      --ad-texto-secundario: var(--color-texto-2);
       --ad-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
     }
 
-    .ad-app { max-width: 1100px; margin: 0 auto; padding: 0 1rem calc(2rem + env(safe-area-inset-bottom)); min-width: 0; }
+    /* El diseño "Administración" (29/09/2026, e2e/disenos/administracion):
+       contenido con padding 12px 24px 18px, bloques blancos de radio 16. El
+       color del módulo (uva, oklch 0.45 0.14 305) va solo en el ícono. */
+    .ad-app { max-width: 1400px; margin: 0 auto; padding: 0 1rem calc(2rem + env(safe-area-inset-bottom)); min-width: 0; }
+    @media (min-width: 1024px) { .ad-app { padding: 0 24px 18px; } }
 
     .ad-header {
-      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-      min-width: 0; background: var(--color-fondo); border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-suave); padding: 0.875rem 1rem; margin: 1rem 0;
+      display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 0 0; margin: 0 0 12px;
     }
     .ad-header__volver {
-      color: var(--color-texto-suave); text-decoration: none; font-size: 0.875rem; font-weight: 600;
-      flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding-right: 0.5rem;
+      color: var(--color-texto-2); text-decoration: none; font-size: 0.875rem; font-weight: 600;
+      flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding-right: 0.25rem;
     }
-    .ad-header__col { display: flex; flex-direction: column; min-width: 0; text-align: right; }
-    .ad-header__marca { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-texto-suave); }
-    .ad-header__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); min-width: 0; overflow-wrap: anywhere; }
-    .ad-header__punto { color: var(--naranja); font-size: 0.875rem; line-height: 1; }
+    .ad-header__icono {
+      width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      background: oklch(0.955 0.039 305); color: oklch(0.45 0.14 305);
+    }
+    .ad-header__col { display: flex; flex-direction: column; min-width: 0; flex-shrink: 0; }
+    .ad-header__marca { display: none; }
+    .ad-header__titulo { font-family: var(--fuente-titulo); font-size: 21px; font-weight: 700; letter-spacing: -0.02em; color: var(--color-texto); white-space: nowrap; }
+    /* En la compu las pestañas dicen dónde se está: el "· Portada" sobra. */
+    .ad-header__punto, #ad-subtitulo { display: none; }
+    .ad-pestanas {
+      display: flex; gap: 2px; background: #EDE9E3; border-radius: 11px; padding: 3px; margin-left: 6px;
+      min-width: 0; overflow-x: auto; scrollbar-width: none;
+    }
+    .ad-pestanas:empty { display: none; }
+    .ad-pestana {
+      display: flex; align-items: center; gap: 5px; height: 30px; padding: 0 9px; border-radius: 8px; border: 0;
+      background: transparent; color: var(--color-texto-menu); font: inherit; font-size: 13px; font-weight: 600;
+      white-space: nowrap; cursor: pointer; flex-shrink: 0;
+    }
+    .ad-pestana[aria-current="page"] { background: var(--color-fondo); color: var(--naranja-oscuro); font-weight: 700; box-shadow: 0 1px 2px rgba(28, 26, 23, 0.12); }
+    .ad-pestana:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; }
+    .ad-pestana__burbuja {
+      min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #DDD7CE; color: var(--color-texto-menu);
+      font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+    }
+    .ad-pestana__burbuja--urgente { background: var(--bordo); color: #fff; }
+    /* En la compu la barra lateral ya vuelve al inicio: el "‹ Volver" al
+       dashboard se esconde. Los "‹ Portada" / "‹ Órdenes" de cada sección
+       quedan (desvío del diseño, que no los dibuja): vuelven a la vista de
+       antes, y las pestañas no. */
+    @media (min-width: 1024px) {
+      .ad-header__volver { display: none; }
+    }
+    /* En el celular (10a): "Administración" chico arriba y la sección grande;
+       las pestañas bajan a su propia fila y scrollean de costado ADENTRO. */
+    @media (max-width: 1023px) {
+      .ad-header { flex-wrap: wrap; gap: 6px 8px; }
+      .ad-header__icono { display: none; }
+      .ad-header__col { flex: 1 1 0; }
+      .ad-header__titulo { display: flex; flex-direction: column; line-height: 1.1; font-size: 20px; }
+      .ad-header__nombre { font-family: var(--fuente); font-size: 12.5px; font-weight: 600; color: var(--color-texto-2); letter-spacing: 0; }
+      #ad-subtitulo { display: block; }
+      .ad-pestanas { flex: 1 1 100%; margin-left: 0; }
+      .ad-pestana { height: 36px; }
+    }
 
     .ad-btn {
       min-height: 44px; padding: 0 1rem; font: inherit; font-size: 0.9375rem; font-weight: 700;
@@ -127,29 +172,56 @@
     .ad-check { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; font-weight: 600; }
     .ad-check input { width: 22px; height: 22px; accent-color: var(--naranja); }
 
-    /* ── Portada ──────────────────────────────────────────────────────── */
-    .ad-secciones { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); margin: 0 0 1rem; }
+    /* ── Portada (1a del diseño) ──────────────────────────────────────────
+       Una tarjeta por sección: ícono con el color de su módulo, el número
+       grande (Bricolage 40; bordó si es urgente) y dos o tres renglones. */
+    .ad-portada-accesos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+    .ad-portada-accesos .ad-subtitulo { margin: 0 4px 0 0; font-size: 12px; font-weight: 800; letter-spacing: 0.07em; }
+    .ad-secciones { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); margin: 0 0 1rem; }
+    @media (min-width: 700px) { .ad-secciones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (min-width: 1024px) { .ad-secciones { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     .ad-seccion {
-      display: flex; flex-direction: column; gap: 0.375rem; text-align: left; min-height: 112px;
-      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
-      border-radius: var(--radio-tarjeta); padding: 1rem 1.125rem; font: inherit; color: var(--color-texto);
-      cursor: pointer; text-decoration: none; min-width: 0;
+      display: flex; flex-direction: column; gap: 8px; text-align: left; min-height: 188px; box-sizing: border-box;
+      background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; padding: 14px 16px;
+      font: inherit; color: var(--color-texto); cursor: pointer; text-decoration: none; min-width: 0;
     }
-    .ad-seccion__titulo { font-weight: 800; font-size: 1.0625rem; }
-    .ad-seccion__detalle { font-size: 0.875rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
-    .ad-seccion__numero { font-size: 1.75rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+    @media (max-width: 699px) { .ad-seccion { min-height: 0; } }
+    .ad-seccion:hover { border-color: var(--color-borde-fuerte); }
+    .ad-seccion:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+    .ad-seccion__cabeza { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .ad-seccion__icono { width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .ad-seccion__titulo { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 15.5px; line-height: 1.2; }
+    .ad-seccion__chip { height: 24px; padding: 0 9px; border-radius: 7px; background: #2B2723; color: #fff; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; white-space: nowrap; }
+    .ad-seccion__grande { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .ad-seccion__numero { font-family: var(--fuente-titulo); font-size: 40px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--color-texto); }
     .ad-seccion__numero--atencion { color: var(--bordo); }
-    /* La fila de accesos directos: una pastilla por módulo, que baja de
-       renglón si no entra (nunca scroll de costado). */
-    .ad-accesos { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; }
+    .ad-seccion__numero--suave { color: var(--color-texto-suave); }
+    .ad-seccion__unidad { font-size: 15px; font-weight: 700; color: var(--color-texto-menu); }
+    .ad-seccion__lineas { display: flex; flex-direction: column; gap: 4px; margin-top: auto; min-width: 0; }
+    .ad-seccion__detalle { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 500; color: var(--color-texto-2); line-height: 1.3; overflow-wrap: anywhere; }
+    .ad-seccion__detalle--mal, .ad-seccion__detalle--bien { font-weight: 700; }
+    .ad-seccion__detalle--mal { color: var(--bordo); }
+    .ad-seccion__detalle--bien { color: var(--verde-oscuro); }
+    .ad-seccion__detalle--mal::before, .ad-seccion__detalle--bien::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex-shrink: 0; }
+    .ad-seccion__ir { font-size: 13.5px; font-weight: 700; color: var(--naranja); }
+    /* 9a: mientras carga, barras grises; si falla, lo dice sin inventar un 0. */
+    .ad-seccion__barras { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+    .ad-seccion__barras span { display: block; border-radius: 6px; }
+    .ad-seccion__barras span:nth-child(1) { width: 35%; height: 38px; border-radius: 8px; background: #EDE9E3; }
+    .ad-seccion__barras span:nth-child(2) { width: 70%; height: 12px; background: #F1EEE9; }
+    .ad-seccion__barras span:nth-child(3) { width: 55%; height: 12px; background: var(--color-superficie); }
+    /* La fila de accesos directos: una pastilla por módulo, con su ícono y su
+       color, que baja de renglón si no entra (nunca scroll de costado). */
+    .ad-accesos { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
     .ad-acceso {
-      display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 1rem;
-      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
-      border-radius: 999px; color: var(--color-texto); font: inherit; font-weight: 700; font-size: 0.9375rem; text-decoration: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 12px 0 6px;
+      background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 11px;
+      color: var(--color-texto); font: inherit; font-weight: 700; font-size: 14px; text-decoration: none; cursor: pointer;
     }
-    .ad-acceso:hover { border-color: var(--naranja); }
+    .ad-acceso:hover { border-color: var(--color-borde-fuerte); }
     .ad-acceso:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
-    .ad-acceso svg, .ad-acceso i { width: 18px; height: 18px; color: var(--naranja); }
+    .ad-acceso__icono { width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    @media (max-width: 1023px) { .ad-acceso { min-height: 44px; } }
     .ad-empresa-actual { display: flex; align-items: center; gap: 0.75rem; margin: 0 0 0.75rem; min-width: 0; }
     .ad-logo { max-height: 36px; max-width: 80px; width: auto; height: auto; object-fit: contain; }
 
@@ -158,7 +230,7 @@
     .ad-fila {
       display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left;
       background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
-      border-radius: 17px; padding: 0.75rem 1rem; font: inherit; color: var(--color-texto); cursor: pointer;
+      border-radius: 12px; padding: 0.75rem 1rem; font: inherit; color: var(--color-texto); cursor: pointer;
       min-width: 0; min-height: 56px;
     }
     .ad-fila--anulada { background: var(--bordo-suave); }
@@ -305,12 +377,17 @@
 <body class="pagina-modulo">
   <div class="ad-app" id="ad-app">
 
+    <!-- El encabezado del diseño "Administración" (29/09/2026): el ícono, el
+         título y las PESTAÑAS de sección, solo las que la persona puede ver,
+         cada una con su burbuja (bordó si es urgente, gris si no). -->
     <header class="ad-header">
       <a href="../dashboard.html" class="ad-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <span class="ad-header__icono" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18"/></svg></span>
       <div class="ad-header__col">
         <span class="ad-header__marca">Seis Destinos</span>
-        <span class="ad-header__titulo">Administración <span class="ad-header__punto">&#9679;</span> <span id="ad-subtitulo">Portada</span></span>
+        <span class="ad-header__titulo"><span class="ad-header__nombre">Administración</span> <span class="ad-header__punto">&#9679;</span> <span id="ad-subtitulo">Portada</span></span>
       </div>
+      <nav class="ad-pestanas" id="ad-pestanas" aria-label="Secciones de Administración"></nav>
     </header>
 
     <div class="ad-vacio" id="ad-sin-acceso" hidden></div>
@@ -323,8 +400,10 @@
     <section id="ad-vista-inicio" hidden>
       <!-- Accesos directos (27/09/2026): una fila con Cheques, Cobranzas,
            Cuentas corrientes, Gastos y Caja, según los permisos. -->
-      <h2 class="ad-subtitulo" id="ad-links-titulo" hidden>Accesos directos</h2>
-      <nav class="ad-accesos" id="ad-links" aria-labelledby="ad-links-titulo"></nav>
+      <div class="ad-portada-accesos">
+        <h2 class="ad-subtitulo" id="ad-links-titulo" hidden>Accesos directos</h2>
+        <nav class="ad-accesos" id="ad-links" aria-labelledby="ad-links-titulo"></nav>
+      </div>
       <div class="ad-secciones" id="ad-secciones"></div>
     </section>
 
@@ -710,7 +789,7 @@
   <script type="module">
     import { verificarSesion } from '../js/auth.js'
     import {
-      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, leerNumeroAr,
+      mostrarError, mostrarExito, enlazarCampoNumero, leerCampoNumero, ponerNumero, leerNumeroAr, formatearNumeroAr,
       cargarFabricaDePruebas, sinUnidadesDePrueba, FABRICA_SIN_DATOS,
     } from '../js/utils.js'
     import {
@@ -720,7 +799,7 @@
     } from '../js/retiros-comun.js'
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
-    import { MODULOS, moduloVisible } from '../js/modulos.js'
+    import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
     import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
@@ -978,6 +1057,7 @@
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       estado.vista = id
       pintarEmpresas()
+      pintarPestanas()
       document.getElementById('ad-subtitulo').textContent = SUBTITULO_DE_VISTA[id] ?? 'Administración'
       // La cartera de cheques y las cobranzas no son de una empresa: el
       // selector se esconde.
@@ -1148,6 +1228,22 @@
     // PORTADA
     // ═══════════════════════════════════════════════════════════════════════
 
+    // La cartera para la portada (los en cartera que la persona puede ver).
+    async function leerChequesPortada() {
+      const { data, error } = await supabase.from('cobranza_cheques').select('importe, tipo, fecha_emision, fecha_pago').eq('estado', 'en_cartera')
+      if (error) throw error
+      return resumenCheques(data ?? [], hoyArgentina())
+    }
+
+    // Cuántas filas de una tabla desde hace 7 días (el registro de seguridad y
+    // los errores de la app, que solo lee un super_admin).
+    async function contarDesde(tabla, columna) {
+      const desde = new Date(Date.now() - 7 * 86400000).toISOString()
+      const { data, error } = await supabase.from(tabla).select('id').gte(columna, desde)
+      if (error) throw error
+      return (data ?? []).length
+    }
+
     // Cuántas órdenes confirmadas falta valorizar en la empresa.
     async function contarSinValorizar(unidadId) {
       const { data, error } = await supabase.from('ordenes_retiro').select('id')
@@ -1160,53 +1256,215 @@
       return n === null || n === undefined ? '—' : String(n)
     }
 
-    function htmlSeccion(s, portada) {
-      let numero = null, detalle = ''
-      if (s.id === 'ordenes') {
-        numero = portada?.sinValorizar ?? null
-        detalle = portada?.error ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'orden sin valorizar' : 'órdenes sin valorizar'))
-      } else if (s.id === 'listas') {
-        numero = portada?.listas ?? null
-        detalle = portada?.errorListas ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'lista' : 'listas'))
-        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
-          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
-          `<span class="ad-seccion__numero">${esc(textoNumeroSeccion(numero))}</span>` +
-          `<span class="ad-seccion__detalle">${esc(detalle)}</span></button>`
-      } else if (s.id === 'cheques') {
-        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
-          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
-          `<span class="ad-seccion__detalle">La cartera: en cartera, salidos, vencimientos y dar salida</span></button>`
-      } else if (s.id === 'cobranzas') {
-        numero = portada?.porAsentar ?? null
-        detalle = portada?.errorCobranzas ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'cobranza para elegir el cliente y asentar' : 'cobranzas para elegir el cliente y asentar'))
-      } else if (s.id === 'errores') {
-        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
-          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
-          `<span class="ad-seccion__detalle">Lo que falló en las pantallas, con el dispositivo, para diagnosticar</span></button>`
-      } else if (s.id === 'seguridad') {
-        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
-          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
-          `<span class="ad-seccion__detalle">Quién cerró las sesiones de quién, cuándo y por qué</span></button>`
-      } else if (s.id === 'importar') {
-        return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
-          `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
-          `<span class="ad-seccion__detalle">Clientes, precios y saldos iniciales desde un Excel</span></button>`
-      } else if (s.id === 'revisar') {
-        numero = portada?.porRevisar ?? null
-        detalle = portada?.errorRevisar ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'renglón salió sin estar en stock' : 'renglones salieron sin estar en stock'))
-      } else if (s.id === 'clientes') {
-        numero = portada?.sobreLimite ?? null
-        detalle = portada?.errorClientes ? 'No se pudo contar' : (numero === null ? 'Contando…' : (numero === 1 ? 'cliente pasa su límite' : 'clientes pasan su límite'))
+    // Los trazos de los íconos de la portada, copiados del diseño (viewBox
+    // 24 × 24): los de módulo son los de la barra lateral; los de sección
+    // (revisar, clientes, precios, importar, errores) son propios del diseño.
+    const TRAZO_ICONO = {
+      cobranzas: 'M12 4c4 0 7 1.3 7 3s-3 3-7 3-7-1.3-7-3 3-3 7-3zM5 7v5c0 1.7 3 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3 3 7 3s7-1.3 7-3v-5',
+      retiros: 'M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0',
+      cheques: 'M3 7h18v10H3zM6 13.5h6M15 13.5h3M6 10.5h3',
+      seguridad: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4',
+      'cuentas-corrientes': 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6',
+      gastos: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3',
+      caja: 'M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2',
+      revisar: 'M3 8l9-5 9 5v8l-9 5-9-5zM12 9v4M12 16v.01',
+      clientes: 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M17 8h5M17 12h5',
+      precios: 'M20 12l-8 8-9-9V3h8zM7.5 7.5v.01',
+      importar: 'M12 3v12M7 10l5 5 5-5M4 17v3h16v-3',
+      errores: 'M8 6V4h8v2M5 8h14l-1 12H6zM10 12v4M14 12v4',
+    }
+    // De cada sección: su ícono y el color (el de su módulo; Por revisar va en
+    // bordó, Importar y Errores en gris, como el diseño).
+    const ICONO_SECCION = {
+      cobranzas: { trazo: 'cobranzas', modulo: 'cobranzas' },
+      ordenes: { trazo: 'retiros', modulo: 'retiros' },
+      revisar: { trazo: 'revisar', c: 'var(--bordo)', t: 'var(--bordo-suave)' },
+      clientes: { trazo: 'clientes', modulo: 'administracion' },
+      listas: { trazo: 'precios', modulo: 'caja' },
+      importar: { trazo: 'importar', c: 'var(--color-texto-menu)', t: '#F1EEE9' },
+      cheques: { trazo: 'cheques', modulo: 'cheques' },
+      seguridad: { trazo: 'seguridad', modulo: 'seguridad' },
+      errores: { trazo: 'errores', c: 'var(--color-texto-menu)', t: '#F1EEE9' },
+    }
+
+    function htmlTrazo(clave, tam = 18) {
+      const d = Object.prototype.hasOwnProperty.call(TRAZO_ICONO, clave) ? TRAZO_ICONO[clave] : TRAZO_ICONO.clientes
+      return `<svg width="${tam}" height="${tam}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`
+    }
+
+    // El color de un ícono: el de su módulo (js/modulos.js) o el fijo de la
+    // sección. Nunca viene de la base.
+    function coloresIcono(info) {
+      if (info?.modulo) return colorDeModulo(info.modulo)
+      return { c: info?.c ?? 'var(--color-texto-menu)', t: info?.t ?? '#F1EEE9' }
+    }
+
+    // La plata de la portada, sin centavos: "$ 1.742.000". Un dato ausente es
+    // "—", nunca "$ 0".
+    function plataPortada(n) {
+      if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'
+      return '$ ' + formatearNumeroAr(Math.round(Number(n)), { decimales: 0 })
+    }
+
+    // Los días entre dos fechas ISO (b − a).
+    function diasEntreIso(a, b) {
+      if (!esFechaIso(a) || !esFechaIso(b)) return null
+      const [ya, ma, da] = a.split('-').map(Number), [yb, mb, db] = b.split('-').map(Number)
+      return Math.round((Date.UTC(yb, mb - 1, db) - Date.UTC(ya, ma - 1, da)) / 86400000)
+    }
+
+    // La cartera en la portada: cuántos, cuánto, el plazo promedio ponderado
+    // por importe (días hasta el pago; un común, 0) y cuántos vencen esta
+    // semana con la regla de cheque_plazo_presentacion (30 días desde el pago
+    // o, si es común, desde la emisión; vencidos incluidos, a 7 días).
+    function resumenCheques(filas, hoy) {
+      const lista = Array.isArray(filas) ? filas : []
+      let total = 0, pesos = 0, dias = 0, vencen = 0
+      for (const ch of lista) {
+        const imp = Number(ch?.importe)
+        if (Number.isFinite(imp)) total += imp
+        const d = ch?.tipo === 'diferido' ? Math.max(0, diasEntreIso(hoy, ch?.fecha_pago) ?? 0) : 0
+        if (Number.isFinite(imp) && imp > 0) { pesos += imp; dias += d * imp }
+        const base = ch?.tipo === 'diferido' ? ch?.fecha_pago : ch?.fecha_emision
+        const hasta = diasEntreIso(hoy, base)
+        if (hasta !== null && hasta + 30 <= 7) vencen++
       }
-      const atencion = Number(numero) > 0
-      return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">` +
-        `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>` +
-        `<span class="ad-seccion__numero${atencion ? ' ad-seccion__numero--atencion' : ''}">${esc(textoNumeroSeccion(numero))}</span>` +
-        `<span class="ad-seccion__detalle">${esc(detalle)}</span></button>`
+      return { cantidad: lista.length, total, plazo: pesos > 0 ? Math.round(dias / pesos) : null, vencen }
+    }
+
+    function htmlLineaSeccion(l) {
+      if (!l) return ''
+      if (typeof l === 'string') return `<span class="ad-seccion__detalle">${esc(l)}</span>`
+      if (l.ir) return `<span class="ad-seccion__ir">${esc(l.ir)}</span>`
+      const tono = l.tono === 'mal' ? ' ad-seccion__detalle--mal' : l.tono === 'bien' ? ' ad-seccion__detalle--bien' : ''
+      return `<span class="ad-seccion__detalle${tono}">${esc(l.t)}</span>`
+    }
+
+    // Qué dice cada tarjeta: { numero, unidad, urgente, suave, lineas, carga, error }.
+    // numero null = no se sabe (se muestra "—"); carga = todavía contando.
+    function contenidoSeccion(s, p) {
+      const n = (v, uno, varios) => (Number(v) === 1 ? uno : varios)
+      if (s.id === 'cobranzas') {
+        const lista = p?.cobranzasLista ?? null
+        const total = lista ? lista.reduce((a, c) => a + (Number.isFinite(Number(c?.total)) ? Number(c.total) : 0), 0) : null
+        const vieja = lista && lista.length ? [...lista].sort((a, b) => String(a?.fecha ?? '').localeCompare(String(b?.fecha ?? '')))[0] : null
+        return { numero: p?.porAsentar ?? null, unidad: 'por asentar', urgente: Number(p?.porAsentar) > 0,
+          carga: p?.porAsentar == null && !p?.errorCobranzas, error: p?.errorCobranzas,
+          lineas: [lista && lista.length ? { t: plataPortada(total) + ' que cargaron los choferes', tono: 'mal' } : (lista ? { t: 'No hay cobranzas por asentar', tono: 'bien' } : null),
+            vieja ? 'La más vieja: ' + [fechaCorta(vieja.fecha), vieja.cargada_por ?? vieja.cargada_por_nombre].filter(Boolean).join(' · ') : null,
+            { ir: 'Ir a asentar ›' }] }
+      }
+      if (s.id === 'ordenes') {
+        return { numero: p?.sinValorizar ?? null, unidad: 'sin valorizar', urgente: Number(p?.sinValorizar) > 0,
+          carga: p?.sinValorizar == null && !p?.error, error: p?.error,
+          lineas: [p?.sinValorizar != null ? n(p.sinValorizar, 'orden confirmada que falta valorizar', 'órdenes confirmadas que falta valorizar') : null, { ir: 'Ir a valorizar ›' }] }
+      }
+      if (s.id === 'revisar') {
+        const filas = p?.revisarFilas ?? []
+        return { numero: p?.porRevisar ?? null, unidad: n(p?.porRevisar, 'se llevó sin stock', 'se llevaron sin stock'), urgente: Number(p?.porRevisar) > 0,
+          carga: p?.porRevisar == null && !p?.errorRevisar, error: p?.errorRevisar,
+          lineas: [...filas.slice(0, 2).map(f => [f?.cliente, [cantidadRevisar(f?.faltante, f?.unidad), f?.que].filter(Boolean).join(' de ')].filter(Boolean).join(': ')), { ir: 'Revisar ›' }] }
+      }
+      if (s.id === 'clientes') {
+        const emp = empresaActual()
+        return { numero: p?.activos ?? null, unidad: 'activos' + (emp ? ' en ' + emp.nombre : ''),
+          carga: p?.activos == null && !p?.errorClientes, error: p?.errorClientes,
+          lineas: [p?.sobreLimite != null ? (Number(p.sobreLimite) > 0 ? { t: n(p.sobreLimite, '1 pasado de su límite de crédito', p.sobreLimite + ' pasados de su límite de crédito'), tono: 'mal' } : 'Ninguno pasado de su límite') : null,
+            p?.deuda != null ? 'Nos deben ' + plataPortada(p.deuda) + ' en total' : null] }
+      }
+      if (s.id === 'listas') {
+        const nombres = p?.listasNombres ?? []
+        return { numero: p?.listas ?? null, unidad: n(p?.listas, 'lista', 'listas'), carga: p?.listas == null && !p?.errorListas, error: p?.errorListas,
+          lineas: [nombres.length ? nombres.join(' · ') : null] }
+      }
+      if (s.id === 'importar') {
+        return { numero: '—', unidad: 'nada pendiente', suave: true, lineas: ['Clientes, precios y saldos iniciales desde un Excel'] }
+      }
+      if (s.id === 'cheques') {
+        const r = p?.cheques ?? null
+        return { numero: r ? r.cantidad : null, unidad: 'en cartera', carga: !r && !p?.errorCheques, error: p?.errorCheques,
+          lineas: r ? [[plataPortada(r.total), r.plazo != null ? 'plazo promedio ' + r.plazo + ' días' : null].filter(Boolean).join(' · '),
+            r.vencen > 0 ? { t: n(r.vencen, '1 vence esta semana', r.vencen + ' vencen esta semana'), tono: 'mal' } : { t: 'Ninguno vence esta semana', tono: 'bien' }] : [] }
+      }
+      if (s.id === 'seguridad') {
+        return { numero: p?.cierres ?? null, unidad: n(p?.cierres, 'cierre de sesiones en 7 días', 'cierres de sesiones en 7 días'),
+          carga: p?.cierres == null && !p?.errorSeguridad, error: p?.errorSeguridad,
+          lineas: ['Quién cerró las sesiones de quién, cuándo y por qué'] }
+      }
+      if (s.id === 'errores') {
+        return { numero: p?.errores7 ?? null, unidad: 'en 7 días', urgente: Number(p?.errores7) > 0, chip: 'super_admin',
+          carga: p?.errores7 == null && !p?.errorErrores, error: p?.errorErrores,
+          lineas: ['Solo lo ven los super_admin'] }
+      }
+      return { numero: null, unidad: '', lineas: [] }
+    }
+
+    function htmlSeccion(s, portada) {
+      const info = ICONO_SECCION[s.id] ?? {}
+      const col = coloresIcono(info)
+      const c = contenidoSeccion(s, portada)
+      const cabeza = `<span class="ad-seccion__cabeza"><span class="ad-seccion__icono" style="background:${esc(col.t)};color:${esc(col.c)}">${htmlTrazo(info.trazo)}</span>` +
+        `<span class="ad-seccion__titulo">${esc(s.titulo)}</span>${c.chip ? `<span class="ad-seccion__chip">${esc(c.chip)}</span>` : ''}</span>`
+      let cuerpo
+      if (c.error) {
+        cuerpo = `<span class="ad-seccion__grande"><span class="ad-seccion__numero">—</span></span>` +
+          `<span class="ad-seccion__lineas"><span class="ad-seccion__detalle ad-seccion__detalle--mal">No se pudo contar</span>` +
+          `<span class="ad-seccion__detalle">Puede ser la conexión. El resto anda bien.</span></span>`
+      } else if (c.carga) {
+        cuerpo = '<span class="ad-seccion__barras" aria-hidden="true"><span></span><span></span><span></span></span><span class="ad-seccion__detalle">Contando…</span>'
+      } else {
+        const clase = c.urgente ? ' ad-seccion__numero--atencion' : c.suave ? ' ad-seccion__numero--suave' : ''
+        const lineas = (c.lineas ?? []).map(htmlLineaSeccion).join('')
+        cuerpo = `<span class="ad-seccion__grande"><span class="ad-seccion__numero${clase}">${esc(textoNumeroSeccion(c.numero))}</span>` +
+          `<span class="ad-seccion__unidad">${esc(c.unidad)}</span></span>` +
+          `<span class="ad-seccion__lineas">${lineas}</span>`
+      }
+      return `<button type="button" class="ad-seccion" data-seccion="${esc(s.id)}">${cabeza}${cuerpo}</button>`
+    }
+
+    // Las pestañas de sección del encabezado (el orden del diseño). Solo las
+    // que la persona puede ver; Inicio siempre.
+    const PESTANAS = [
+      ['inicio', 'Inicio'], ['cobranzas', 'Cobranzas'], ['ordenes', 'Órdenes'], ['revisar', 'Por revisar'], ['clientes', 'Clientes'],
+      ['listas', 'Listas de precios'], ['importar', 'Importar'], ['cheques', 'Cheques'], ['seguridad', 'Seguridad'], ['errores', 'Errores'],
+    ]
+    // De qué pestaña es cada vista (una orden es de Órdenes, un cliente de Clientes…).
+    const PESTANA_DE_VISTA = {
+      'ad-vista-inicio': 'inicio', 'ad-vista-ordenes': 'ordenes', 'ad-vista-orden': 'ordenes', 'ad-vista-clientes': 'clientes',
+      'ad-vista-cliente': 'clientes', 'ad-vista-ficha': 'clientes', 'ad-vista-listas': 'listas', 'ad-vista-lista': 'listas',
+      'ad-vista-importar': 'importar', 'ad-vista-cheques': 'cheques', 'ad-vista-cobranzas': 'cobranzas', 'ad-vista-cobranza': 'cobranzas',
+      'ad-vista-errores': 'errores', 'ad-vista-seguridad': 'seguridad', 'ad-vista-revisar': 'revisar',
+    }
+
+    // La burbuja de cada pestaña: { n, urgente } o null (no se sabe o no hay).
+    function burbujaPestana(id, p) {
+      const v = id === 'cobranzas' ? p?.porAsentar : id === 'ordenes' ? p?.sinValorizar : id === 'revisar' ? p?.porRevisar
+        : id === 'cheques' ? p?.cheques?.cantidad : id === 'errores' ? p?.errores7 : null
+      if (v === null || v === undefined || !(Number(v) > 0)) return null
+      return { n: Number(v) > 99 ? '99+' : String(v), urgente: id === 'cobranzas' || id === 'ordenes' }
+    }
+
+    function htmlPestanas(vista, visibles, p) {
+      const ids = new Set(visibles.map(s => s.id))
+      const actual = PESTANA_DE_VISTA[vista] ?? null
+      return PESTANAS.filter(([id]) => id === 'inicio' || ids.has(id)).map(([id, nombre]) => {
+        const b = burbujaPestana(id, p)
+        return `<button type="button" class="ad-pestana" data-pestana="${esc(id)}"${id === actual ? ' aria-current="page"' : ''}>${esc(nombre)}` +
+          (b ? `<span class="ad-pestana__burbuja${b.urgente ? ' ad-pestana__burbuja--urgente' : ''}">${esc(b.n)}</span>` : '') + '</button>'
+      }).join('')
+    }
+
+    function pintarPestanas() {
+      const el = document.getElementById('ad-pestanas')
+      if (!el) return
+      const visibles = seccionesVisibles()
+      // Sin ninguna sección (solo la portada) no hay nada que elegir.
+      el.innerHTML = visibles.length ? htmlPestanas(estado.vista, visibles, estado.portada) : ''
     }
 
     function htmlLink(l) {
-      const contenido = `<i data-lucide="${esc(l.icono)}" aria-hidden="true"></i><span>${esc(l.nombre)}</span>`
+      const col = colorDeModulo(l.clave)
+      const contenido = `<span class="ad-acceso__icono" style="background:${esc(col.t)};color:${esc(col.c)}">${htmlTrazo(l.clave, 15)}</span><span>${esc(l.nombre)}</span>`
       // Una url con parámetros es una sección de ESTA pantalla (hoy solo
       // Cheques: administracion.html?seccion=cheques): un botón que la abre
       // sin recargar.
@@ -1217,22 +1475,37 @@
       return `<a class="ad-acceso" href="${encodeURIComponent(l.url.split('/').pop())}" data-link="${esc(l.clave)}">${contenido}</a>`
     }
 
+    // Las tarjetas de la portada van en el orden de las pestañas (el del diseño).
+    function enOrdenDePestanas(secciones) {
+      const orden = PESTANAS.map(([id]) => id)
+      const pos = id => { const i = orden.indexOf(id); return i < 0 ? orden.length : i }
+      return [...secciones].sort((a, b) => pos(a.id) - pos(b.id))
+    }
+
     function pintarPortada() {
-      const secciones = seccionesVisibles()
+      const secciones = enOrdenDePestanas(seccionesVisibles())
       document.getElementById('ad-secciones').innerHTML = secciones.length
         ? secciones.map(s => htmlSeccion(s, estado.portada)).join('')
         : '<div class="ad-aviso">En esta empresa no tenés ninguna sección de Administración.</div>'
       const links = linksVisibles()
       document.getElementById('ad-links').innerHTML = links.map(htmlLink).join('')
       document.getElementById('ad-links-titulo').hidden = !links.length
-      if (links.length && typeof window !== 'undefined' && window.lucide) window.lucide.createIcons()
+      pintarPestanas()
     }
 
     let turnoPortada = 0
 
     async function mostrarInicio() {
       mostrarVista('ad-vista-inicio')
-      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null, porAsentar: null, errorCobranzas: null, porRevisar: null, errorRevisar: null }
+      await contarPortada()
+    }
+
+    // Cuenta lo de cada tarjeta de la portada y cada burbuja de las pestañas.
+    // También corre al abrir derecho una sección (?seccion=), así las
+    // pestañas tienen su número aunque no se haya pasado por la portada.
+    async function contarPortada() {
+      estado.portada = { sinValorizar: null, error: null, sobreLimite: null, errorClientes: null, listas: null, errorListas: null, porAsentar: null, errorCobranzas: null, porRevisar: null, errorRevisar: null,
+        cobranzasLista: null, revisarFilas: null, activos: null, deuda: null, listasNombres: null, cheques: null, errorCheques: null, cierres: null, errorSeguridad: null, errores7: null, errorErrores: null }
       pintarPortada()
       const turno = ++turnoPortada
       const unidad = estado.empresaId
@@ -1240,19 +1513,33 @@
       // Las cobranzas por asentar no son de una empresa: se cuentan antes de
       // mirar los permisos de la empresa.
       if (SECCIONES.some(s => s.id === 'cobranzas' && seccionVisible(s))) {
-        leerPorAsentar().then(l => { p.porAsentar = l.length }).catch(err => { console.error('No se pudieron contar las cobranzas:', err); p.errorCobranzas = 'No se pudo contar.' })
+        leerPorAsentar().then(l => { p.porAsentar = l.length; p.cobranzasLista = l }).catch(err => { console.error('No se pudieron contar las cobranzas:', err); p.errorCobranzas = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
       if (puedeEn('retiros', 'precios', unidad)) {
-        leerPorRevisar(unidad).then(l => { p.porRevisar = l.length }).catch(err => { console.error('No se pudieron contar los retiros por revisar:', err); p.errorRevisar = 'No se pudo contar.' })
+        leerPorRevisar(unidad).then(l => { p.porRevisar = l.length; p.revisarFilas = l }).catch(err => { console.error('No se pudieron contar los retiros por revisar:', err); p.errorRevisar = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
-        asegurarListas(unidad).then(() => { p.listas = estado.listas.filas.length }).catch(err => { console.error('No se pudieron contar las listas:', err); p.errorListas = 'No se pudo contar.' })
+        asegurarListas(unidad).then(() => { p.listas = estado.listas.filas.length; p.listasNombres = estado.listas.filas.map(l => l?.nombre).filter(Boolean) }).catch(err => { console.error('No se pudieron contar las listas:', err); p.errorListas = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
+      }
+      // La cartera, los cierres de sesión y los errores tampoco son de una
+      // empresa (cada tarjeta carga sola: si una falla, las otras siguen).
+      if (SECCIONES.some(s => s.id === 'cheques' && seccionVisible(s))) {
+        leerChequesPortada().then(r => { p.cheques = r }).catch(err => { console.error('No se pudo contar la cartera:', err); p.errorCheques = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
+      }
+      if (SECCIONES.some(s => s.id === 'seguridad' && seccionVisible(s))) {
+        contarDesde('registro_seguridad', 'hecho_en').then(n => { p.cierres = n }).catch(err => { console.error('No se pudo contar el registro de seguridad:', err); p.errorSeguridad = 'No se pudo contar.' })
+          .then(() => { if (turno === turnoPortada) pintarPortada() })
+      }
+      if (SECCIONES.some(s => s.id === 'errores' && seccionVisible(s))) {
+        contarDesde('errores_app', 'creado_en').then(n => { p.errores7 = n }).catch(err => { console.error('No se pudieron contar los errores:', err); p.errorErrores = 'No se pudo contar.' })
           .then(() => { if (turno === turnoPortada) pintarPortada() })
       }
       if (!puedeEn('retiros', 'ver', unidad)) return
       await Promise.all([
         contarSinValorizar(unidad).then(n => { p.sinValorizar = n }).catch(err => { console.error('No se pudo contar la portada:', err); p.error = 'No se pudo contar.' }),
-        contarSobreLimite(unidad).then(n => { p.sobreLimite = n }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
+        leerResumenClientes(unidad).then(r => { p.sobreLimite = r.sobreLimite; p.activos = r.activos; p.deuda = r.deuda }).catch(err => { console.error('No se pudieron contar los clientes:', err); p.errorClientes = 'No se pudo contar.' }),
       ])
       if (turno !== turnoPortada) return
       pintarPortada()
@@ -1865,8 +2152,15 @@
     }
 
     async function contarSobreLimite(unidadId) {
+      return (await leerResumenClientes(unidadId)).sobreLimite
+    }
+
+    // La tarjeta de Clientes: cuántos activos, cuántos pasan su límite y
+    // cuánto nos deben en total (la suma de los saldos a favor nuestro).
+    async function leerResumenClientes(unidadId) {
       const [saldos] = await Promise.all([leerSaldos(unidadId), estado.clientes === null ? leerClientes(unidadId).then(c => { if (unidadId === estado.empresaId) estado.clientes = c }) : null])
-      return saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length
+      const deuda = saldos.reduce((a, x) => a + (Number(x?.saldo) > 0 ? Number(x.saldo) : 0), 0)
+      return { sobreLimite: saldos.filter(x => pasaLimite(x.saldo, limiteDe(x.cliente_id))).length, activos: saldos.length, deuda }
     }
 
     function clientesFiltrados(lista, busqueda) {
@@ -4794,6 +5088,13 @@
         const b = e.target.closest('[data-seccion]')
         if (b) abrirSeccion(b.dataset.seccion)
       })
+      // Las pestañas del encabezado: Inicio o una sección.
+      document.getElementById('ad-pestanas').addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-pestana]')
+        if (!b) return
+        if (b.dataset.pestana === 'inicio') mostrarInicio()
+        else abrirSeccion(b.dataset.pestana)
+      })
       // Cheques, en la fila de accesos directos, es una sección de esta misma
       // pantalla: se abre sin recargar. Los demás son links comunes.
       document.getElementById('ad-links').addEventListener('click', (e) => {
@@ -5052,7 +5353,14 @@
         history.replaceState(null, '', window.location.pathname)
         if (id && RE_UUID.test(id)) abrirCobranza(id, { origen: 'link' })
         else mostrarCobranzas()
+      } else if (pedida && seccionesVisibles().some(s => s.id === pedida)) {
+        // ?seccion=clientes (el link de Cuentas corrientes), ?seccion=seguridad
+        // (la barra lateral de un super_admin) o cualquier otra sección que la
+        // persona puede ver. Se limpia la dirección antes de abrir.
+        history.replaceState(null, '', window.location.pathname)
+        abrirSeccion(pedida)
       } else mostrarInicio()
+      if (estado.vista !== 'ad-vista-inicio') contarPortada()
       if (window.lucide) window.lucide.createIcons()
     }
 

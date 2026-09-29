@@ -25,6 +25,12 @@ correrMutaciones({
     { expr: 'esc(c.id)', motivo: 'el id de un cliente va al value de un <option> entre comillas (uuid de la base)' },
     { expr: 'esc(o.id)', motivo: 'el id de una orden va a un data-orden entre comillas (uuid de la base)' },
     { expr: 'esc(s.id)', motivo: 'constante del código: el id de una SECCIÓN' },
+    // La portada y los accesos del diseño (29/09/2026): lo nuevo lo prueba test-administracion-diseno.js.
+    { expr: 'esc(col.t)', motivo: 'color armado por el código (colorDeModulo o ICONO_SECCION), nunca de la base' },
+    { expr: 'esc(col.c)', motivo: 'color armado por el código (colorDeModulo o ICONO_SECCION), nunca de la base' },
+    { expr: 'esc(c.chip)', motivo: 'constante del código ("super_admin")' },
+    { expr: 'esc(textoNumeroSeccion(c.numero))', motivo: 'un número, "—" o un texto constante' },
+    { expr: 'esc(c.unidad)', motivo: 'lleva el nombre de la empresa: lo prueba test-administracion-diseno.js (empresa con HTML)' },
     { expr: 'esc(s.titulo)', motivo: 'constante del código: el título de una SECCIÓN' },
     { expr: 'esc(l.clave)', motivo: 'constante del código: la clave de un LINK' },
     { expr: 'esc(l.titulo)', motivo: 'constante del código: el título de un LINK' },
@@ -64,7 +70,7 @@ correrMutaciones({
     // Portada
     { nombre: 'la portada no cuenta las sin valorizar', de: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada').eq('estado_valorizacion', 'pendiente')\n      if (error) throw error\n      return (data ?? []).length", a: ".eq('unidad_negocio_id', unidadId).eq('estado', 'confirmada')\n      if (error) throw error\n      return (data ?? []).length" },
     { nombre: 'la portada inventa un cero', de: "p.error = 'No se pudo contar.' })", a: 'p.sinValorizar = 0 })' },
-    { nombre: 'el número sin valorizar no se marca', de: '      const atencion = Number(numero) > 0', a: '      const atencion = false' },
+    { nombre: 'el número sin valorizar no se marca', de: "const clase = c.urgente ? ' ad-seccion__numero--atencion'", a: "const clase = false ? ' ad-seccion__numero--atencion'" },
     { nombre: 'sin ver se cuenta igual', de: "      if (!puedeEn('retiros', 'ver', unidad)) return\n      await Promise.all([", a: '      await Promise.all([' },
     // Lista y filtros
     { nombre: 'no filtra por fecha desde', de: "      if (esFechaIso(filtros.desde)) q = q.gte('fecha', filtros.desde)\n", a: '' },

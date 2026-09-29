@@ -112,7 +112,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   chk('los links van a pantallas que existen', S.LINKS.every(x => fs.existsSync(path.join(__dirname, '..', x.url.split('?')[0]))))
   const h = S.htmlLink(S.LINKS.find(x => x.clave === 'gastos'))
   chk('un link es un <a> a su pantalla (la misma carpeta modulos/)', /<a class="ad-acceso" href="gastos\.html" data-link="gastos">/.test(h), h)
-  chk('lleva su ícono y su nombre', /data-lucide="credit-card"/.test(h) && />Gastos<\/span>/.test(h))
+  chk('lleva su ícono y su nombre (el trazo y el color del módulo, como el diseño)', /<svg[^>]*><path d="M6 3h12v18/.test(h) && /ad-acceso__icono" style="background:oklch\(/.test(h) && />Gastos<\/span>/.test(h))
   const hc = S.htmlLink(S.LINKS.find(x => x.clave === 'cheques'))
   chk('Cheques es un botón de esta misma pantalla (no recarga)', /^<button type="button" class="ad-acceso" data-link="cheques">/.test(hc) && !hc.includes('href'), hc)
   S2.pintarPortada()
@@ -131,7 +131,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
   esperas.push(S.mostrarInicio().then(() => {
     const h = S.__els.get('ad-secciones').innerHTML
     chk('la portada tiene la tarjeta de Órdenes', /data-seccion="ordenes"/.test(h))
-    chk('con el número de órdenes sin valorizar, en bordó', /ad-seccion__numero--atencion">3</.test(h) && /órdenes sin valorizar/.test(h))
+    chk('con el número de órdenes sin valorizar, en bordó', /ad-seccion__numero--atencion">3</.test(h) && /sin valorizar</.test(h))
     chk('cuenta las confirmadas pendientes de la empresa', filtros.some(x => x[1] === 'unidad_negocio_id' && x[2] === 'u-n') &&
       filtros.some(x => x[1] === 'estado' && x[2] === 'confirmada') && filtros.some(x => x[1] === 'estado_valorizacion' && x[2] === 'pendiente'))
   }))

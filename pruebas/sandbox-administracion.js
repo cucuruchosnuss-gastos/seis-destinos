@@ -16,6 +16,9 @@ const FUNCIONES_BASE = [
   'htmlLogo', 'empresaSegunBarra', 'htmlEmpresas', 'pintarEmpresas', 'elegirEmpresa', 'empresaInicial', 'alCambiarLaBarra',
   'leerClientes', 'leerCatalogo', 'insumoDe', 'partesInsumo', 'asegurarDatosEmpresa', 'clienteDe', 'asegurarNombres', 'partesRenglon',
   'contarSinValorizar', 'textoNumeroSeccion', 'htmlSeccion', 'htmlLink', 'pintarPortada', 'mostrarInicio', 'abrirSeccion',
+  // El diseño "Administración" (29/09/2026): pestañas y tarjetas de la portada
+  'colorDeModulo', 'htmlTrazo', 'coloresIcono', 'plataPortada', 'diasEntreIso', 'resumenCheques', 'htmlLineaSeccion', 'contenidoSeccion',
+  'burbujaPestana', 'htmlPestanas', 'contarPortada', 'pintarPestanas', 'enOrdenDePestanas', 'leerChequesPortada', 'contarDesde', 'leerResumenClientes',
   'htmlSelloOrden', 'leerOrdenes', 'htmlFilaOrden', 'htmlListaOrdenes', 'htmlOpcionesClientes', 'pintarOrdenes',
   'cargarOrdenes', 'mostrarOrdenes', 'leerFiltros',
   'leerOrden', 'lotesDeRenglon', 'cantidadValorizable', 'htmlDatoAd', 'htmlRenglonOrden', 'htmlDetalleOrden', 'pintarOrden', 'pintarAccionesOrden', 'abrirOrden',
@@ -84,6 +87,8 @@ const CONSTANTES_BASE = [
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'RENGLONES_POR_HOJA',
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
+  // El diseño "Administración" (29/09/2026)
+  'PALETA_MODULO', 'TRAZO_ICONO', 'ICONO_SECCION', 'PESTANAS', 'PESTANA_DE_VISTA',
 ]
 
 const PRELUDIO = `

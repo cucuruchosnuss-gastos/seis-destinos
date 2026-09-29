@@ -63,7 +63,8 @@ function preparar(S) {
   esperas.push(S.mostrarInicio().then(() => {
     const h = S.__els.get('ad-secciones').innerHTML
     chk('la portada tiene la tarjeta de Clientes', /data-seccion="clientes"/.test(h))
-    chk('con cuántos pasan su límite (solo Anatolia: 126.000 > 100.000)', /ad-seccion__numero--atencion">1</.test(h) && /cliente pasa su límite/.test(h))
+    chk('con cuántos pasan su límite (solo Anatolia: 126.000 > 100.000), en bordó', /data-seccion="clientes"[\s\S]*?ad-seccion__detalle--mal">1 pasado de su límite de crédito</.test(h))
+    chk('y el número grande son los activos (el diseño)', /data-seccion="clientes"[\s\S]*?ad-seccion__numero">\d+<\/span><span class="ad-seccion__unidad">activos en /.test(h))
     chk('sin límite cargado no cuenta como que lo pasa', S.pasaLimite(5, null) === false && S.pasaLimite(5, '') === false)
     chk('igual al límite no lo pasa', S.pasaLimite(100, 100) === false && S.pasaLimite(100.01, 100) === true)
   }))
