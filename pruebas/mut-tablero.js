@@ -15,6 +15,7 @@ correrMutaciones({
   funciones: [],
   escape: 'escTab',
   manuales: [
+    { nombre: 'una parada larga en minutos ("1.079 min")', de: '  if (m < 60) return `${m} min`\n', a: '  return `${m} min`\n' },
     // Fechas y saludo
     { nombre: 'hoy en UTC y no en Argentina', de: 'return new Date(+ahora - 3 * 60 * 60 * 1000)', a: 'return new Date(+ahora)' },
     { nombre: '"Buen día" hasta las 13 inclusive', de: "h < 13 ? 'Buen día'", a: "h <= 13 ? 'Buen día'" },

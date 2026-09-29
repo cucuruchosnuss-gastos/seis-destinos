@@ -26,7 +26,7 @@ const CONSTANTES = ['ORDEN_TABLERO', 'TAMANOS_POR_DEFECTO', 'SEGURIDAD_TABLERO',
   'NOMBRE_ORDEN_BARRA', 'ORDEN_BARRA', 'SEGURIDAD']
 const FUNCIONES = ['escTab', 'tarjetasPosibles', 'tamanoDe', 'tarjetasOrdenadas', 'conTamano', 'conOculta', 'conOrden', 'moverClave',
   'prefsDeFabrica', 'relojAr', 'hoyAr', 'horaAr', 'sumarDias', 'diaSemana', 'lunesDe', 'primeroDelMes', 'diasEntre', 'nombreMes', 'saludo',
-  'esNumero', 'num', 'plata', 'entero', 'plural', 'mapaPendientes', 'resolverDePendientes', 'usaPendientes', 'itemsFranja', 'avisoParcial',
+  'esNumero', 'num', 'plata', 'haceCuanto', 'entero', 'plural', 'mapaPendientes', 'resolverDePendientes', 'usaPendientes', 'itemsFranja', 'avisoParcial',
   'nombreUnidad', 'sinPermisoEn', 'consulta', 'cargarGastos', 'cargarCaja', 'cargarCobranzas', 'plazoCheque', 'cargarCheques',
   'cargarCuentasCorrientes', 'cargarIngreso', 'cargarStock', 'cargarProduccion', 'cargarPedidos', 'cargarRetiros', 'cargarAdministracion',
   'cargarTaller', 'cargarAccesos', 'cargarEmpleados', 'cargarSeguridad', 'cargarTarjeta', 'htmlTono', 'htmlCtx', 'htmlMaquinas',

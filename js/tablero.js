@@ -185,6 +185,16 @@ export function plata(n, moneda = 'ARS') {
   const pre = moneda === 'USD' ? 'US$ ' : (!moneda || moneda === 'ARS') ? '$ ' : `${moneda} `
   return pre + formatearNumeroAr(Math.round(Number(n)), { decimales: 0 })
 }
+// "hace 12 min", "hace 2 h 5 min", "hace 18 h" (desde las 24 h, en días).
+export function haceCuanto(min) {
+  if (!Number.isFinite(min) || min < 0) return ''
+  const m = Math.round(min)
+  if (m < 60) return `${m} min`
+  if (m < 24 * 60) { const h = Math.floor(m / 60), r = m % 60; return r ? `${h} h ${r} min` : `${h} h` }
+  const d = Math.floor(m / (24 * 60))
+  return `${d} ${d === 1 ? 'día' : 'días'}`
+}
+
 export function entero(n) {
   return esNumero(n) ? formatearNumeroAr(Math.round(Number(n)), { decimales: 0 }) : '—'
 }
@@ -518,7 +528,7 @@ export async function cargarProduccion(ctx) {
       masas += num(a.masas) ?? 0
       if (a.parada_en_curso) {
         const min = a.parada_en_curso.desde ? Math.max(0, Math.round((+ahora - new Date(a.parada_en_curso.desde)) / 60000)) : null
-        maquinas.push({ nombre, st: 'Parada', det: `${min === null ? 'Parada' : `Hace ${entero(min)} min`}${a.parada_en_curso.motivo ? ' · ' + a.parada_en_curso.motivo : ''}`, tipo: 'mal' })
+        maquinas.push({ nombre, st: 'Parada', det: `${min === null ? 'Parada' : `Hace ${haceCuanto(min)}`}${a.parada_en_curso.motivo ? ' · ' + a.parada_en_curso.motivo : ''}`, tipo: 'mal' })
       } else maquinas.push({ nombre, st: 'Andando', det: `${entero(a.cajas)} cajas · lote ${a.lote ?? '—'}`, tipo: 'bien' })
     }
     scrap += num(d?.semana?.scrap_kg) ?? 0

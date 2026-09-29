@@ -76,7 +76,7 @@ const U = {
 const TODAS_U = Object.values(U)
 
 // ── La base falsa ────────────────────────────────────────────────────────────
-function sbFalso({ uid = 'uid-1', yo, tareas = [], unidades = TODAS_U, errorUnidades = null } = {}) {
+function sbFalso({ uid = 'uid-1', yo, tareas = [], unidades = TODAS_U, errorUnidades = null, meta = {} } = {}) {
   const consultas = []
   function q(tabla) {
     const filtros = {}
@@ -94,7 +94,7 @@ function sbFalso({ uid = 'uid-1', yo, tareas = [], unidades = TODAS_U, errorUnid
     }
     return o
   }
-  return { auth: { getSession: async () => ({ data: { session: uid ? { user: { id: uid } } : null } }) }, from: q, __consultas: consultas }
+  return { auth: { getSession: async () => ({ data: { session: uid ? { user: { id: uid, user_metadata: meta } } : null } }) }, from: q, __consultas: consultas }
 }
 
 // ── El DOM falso ─────────────────────────────────────────────────────────────
@@ -132,6 +132,7 @@ function docFalso(meta = null) {
   }
 }
 
+async function instalarCon(opciones) { return instalar(opciones) }
 async function instalar(opciones = {}, { guardado = null, pathname = '/seis-destinos/modulos/gastos.html', meta = null, fabrica = null } = {}) {
   const s = construir()
   if (guardado != null) s.__ls.set('barraUnidad.elegida', guardado)
@@ -262,6 +263,10 @@ esperas.push((async () => {
   const d = await instalar({ yo: { id: 'e4', nombre: 'Lucía Ferreyra', rol_app: 'usuario', unidad_negocio_id: 'u-nuss' }, tareas: [] }, { guardado: 'u-nuss' })
   chk('con UNA sola unidad la barra de arriba va igual, sin fábricas', !!d.nav && chips(d.nav.innerHTML).length === 0 && d.nav.classList.contains('barra-arriba--sin-fabricas'), d.nav && d.nav.innerHTML)
   chk('… con el usuario: iniciales y nombre de pila', /barra-arriba__ini[^>]*>LF</.test(d.nav.innerHTML) && />Lucía</.test(d.nav.innerHTML), d.nav.innerHTML)
+  // El nombre del registro ("Nombre Apellido") manda sobre el de la ficha, que
+  // viene de Naaloo como "Apellido Nombre".
+  const dn = await instalarCon({ yo: { id: 'e8', nombre: 'Usabarrena Facundo', rol_app: 'usuario', unidad_negocio_id: 'u-nuss' }, tareas: [], meta: { nombre_completo: 'Facundo Usabarrena' } })
+  chk('el nombre sale del registro (nombre de pila, no el apellido)', />Facundo</.test(dn.nav.innerHTML) && /barra-arriba__ini[^>]*>FU</.test(dn.nav.innerHTML), dn.nav.innerHTML)
   chk('con UNA sola unidad la elección es null (no se filtra)', d.s.estadoUnidad().elegida === null && d.s.estadoUnidad().mostrar === false)
 
   // Cuenta de prueba: ve la de prueba.

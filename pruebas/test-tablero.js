@@ -46,6 +46,7 @@ chk('dólares: "US$ 2.350"', S.plata(2350, 'USD') === 'US$ 2.350')
 chk('un texto numérico de la base se lee', S.plata('4380000.00') === '$ 4.380.000')
 chk('negativo', S.plata(-250000) === '$ -250.000' || S.plata(-250000) === '$ -250.000', S.plata(-250000))
 chk('entero(null) es "—"', S.entero(null) === '—' && S.entero(0) === '0' && S.entero(1500) === '1.500')
+chk('hace cuánto: minutos, horas y días (nunca "1.079 min")', S.haceCuanto(12) === '12 min' && S.haceCuanto(125) === '2 h 5 min' && S.haceCuanto(1080) === '18 h' && S.haceCuanto(3000) === '2 días' && S.haceCuanto(null) === '')
 
 // ── Qué tarjetas ve cada persona (la regla de la barra) ────────────────────
 const SUPER = { esAdmin: true, esSuperAdmin: true, misModulos: [], misTareas: new Set() }
