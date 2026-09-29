@@ -57,6 +57,7 @@ correrMutacionesProduccion({
     { nombre: 'el renglón no abre el panel', de: "const b = ev.target.closest('[data-lote]'); if (b) abrirPanelLote(b.dataset.lote)", a: "const b = ev.target.closest('[data-lote]'); void b" },
     { nombre: 'con el campo abierto y sin lotes, la lista vacía se sigue mostrando', de: "        tarjetas: pl.escribir && !todas.length ? '' : filtrosHtml + listaHtml,", a: "        tarjetas: filtrosHtml + listaHtml," },
     { nombre: 'renglones chicos', de: '    .pr-lp__tarjeta { display: flex; align-items: center; gap: 12px; min-height: 54px;', a: '    .pr-lp__tarjeta { display: flex; align-items: center; gap: 12px; min-height: 30px;' },
+    { nombre: 'renglones pegados (4 px, como el diseño)', de: 'border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }', a: 'border-radius: 12px; padding: 4px; display: flex; flex-direction: column; gap: 4px; }' },
     { nombre: 'sin scroll interno de la lista', de: 'class="pr-lp__filas" data-scroll-propio>', a: 'class="pr-lp__filas">' },
     { nombre: 'la ventana puede pasar la pantalla', de: '      width: min(640px, 100%); max-height: min(500px, calc(100dvh - 24px));', a: '      width: min(640px, 100%);' },
     { nombre: 'el link de escribir sin su borde punteado', de: '    .pr-lp__manual { width: 100%; min-height: 44px; border-radius: 12px; border: 2px dashed var(--p-acento);', a: '    .pr-lp__manual { width: 100%; min-height: 44px; border-radius: 12px; border: 2px solid var(--p-acento);' },

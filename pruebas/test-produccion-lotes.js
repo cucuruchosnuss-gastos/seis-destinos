@@ -366,6 +366,8 @@ esperas.push((async () => {
   // (--pr-alto-boton): la ventana es una lista de renglones.
   const alto = (sel) => Number((/min-height: (\d+)px/.exec(reg(sel)) || [])[1])
   chk('cada renglón de la lista se toca con el dedo (44 px o más)', alto('.pr-lp__tarjeta') >= 44, alto('.pr-lp__tarjeta'))
+  const gapFilas = Number((/gap: (\d+)px/.exec(reg('.pr-lp__filas')) || [])[1])
+  chk('8 px entre renglones como mínimo (dedos enharinados)', gapFilas >= 8, gapFilas)
   chk('scroll interno de la lista, no de la página', /class="pr-lp__filas" data-scroll-propio/.test(FUENTE) && /\n    \[data-scroll-propio\] \{ overflow-y: auto;/.test(css) &&
     /max-height: min\(500px, calc\(100dvh - 24px\)\)/.test(reg('.pr-lp__caja')) && /overflow: hidden/.test(reg('.pr-lp__caja')))
   chk('escribir un lote que no está: apartado, con borde punteado', /border: 2px dashed var\(--p-acento\)/.test(reg('.pr-lp__manual')))
