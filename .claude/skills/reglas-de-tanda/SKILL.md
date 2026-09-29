@@ -31,6 +31,8 @@ Facu suele estar afuera. **Trabajá sin frenar a preguntarle.** Si algo es impos
 - **Números** con `enlazarCampoNumero` / `leerNumeroAr` / `ponerNumero` de `js/utils.js`; los identificadores (CUIT, CBU, número de cheque, teléfono) van como texto.
 - **La fábrica de pruebas nunca aparece para cuentas reales** (`sinUnidadesDePrueba` / `sinPersonasDePrueba` donde se arma cada lista).
 - Los scripts de edición se escriben en un archivo y se corren (skill `editar-archivos`), nunca por heredoc.
+- **Subagentes en paralelo: cada uno que haga commits o cambie de rama va con `isolation: "worktree"`** (su propia carpeta). Nunca un `git checkout` en la carpeta compartida mientras otro trabaja: en la tanda del 29/09/2026 un subagente cambió la rama de la carpeta compartida y un commit cayó en la rama equivocada (llegó a main sin su CLAUDE.md).
+- Al cerrar, cada commit de la tanda tiene que estar en `main`: `git branch --contains <hash>` lo dice.
 - Suites nuevas con mutaciones, en `pruebas/`, con el baseline anclado a un commit FIJO.
 
 ## Al cerrar

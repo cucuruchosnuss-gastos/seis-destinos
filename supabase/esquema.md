@@ -1,8 +1,8 @@
 # Esquema de la base (nuss-central, `public`)
 
-Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a information_schema y pg_proc). **Es una foto, no la fuente de verdad**: ante la duda, consultá la base.
+Foto tomada el 2026-09-29 con `npm run esquema` (una consulta de solo lectura a information_schema y pg_proc). **Es una foto, no la fuente de verdad**: ante la duda, consultá la base.
 
-- 74 tablas, 19 vistas, 218 funciones.
+- 76 tablas, 19 vistas, 226 funciones.
 
 ## Tablas y vistas
 
@@ -858,7 +858,7 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | Columna | Tipo | Nula | Default |
 |---|---|---|---|
 | id | uuid | no | gen_random_uuid() |
-| proyecto_id | uuid | no |  |
+| proyecto_id | uuid | sí |  |
 | empleado_id | uuid | no |  |
 | fecha | date | no |  |
 | horas | numeric | no |  |
@@ -866,6 +866,7 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | cargado_por | uuid | sí |  |
 | cargado_en | timestamp with time zone | no | now() |
 | anulado | boolean | no | false |
+| tarea_id | uuid | sí |  |
 
 ### proyecto_notas
 
@@ -1076,6 +1077,35 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | respondido_en | timestamp with time zone | sí |  |
 | motivo_rechazo | text | sí |  |
 | created_at | timestamp with time zone | no | now() |
+
+### taller_tarea_personas
+
+| Columna | Tipo | Nula | Default |
+|---|---|---|---|
+| tarea_id | uuid | no |  |
+| empleado_id | uuid | no |  |
+
+### taller_tareas
+
+| Columna | Tipo | Nula | Default |
+|---|---|---|---|
+| id | uuid | no | gen_random_uuid() |
+| proyecto_id | uuid | sí |  |
+| titulo | text | no |  |
+| descripcion | text | sí |  |
+| estado | text | no | 'por_hacer'::text |
+| fecha_inicio | date | sí |  |
+| dias | integer | sí |  |
+| fecha_fin_real | date | sí |  |
+| prioridad | integer | no | 2 |
+| orden | integer | no | 0 |
+| horas_estimadas | numeric | sí |  |
+| motivo_bloqueo | text | sí |  |
+| creada_por | uuid | sí |  |
+| creada_en | timestamp with time zone | no | now() |
+| actualizada_en | timestamp with time zone | sí |  |
+| avance_pct | integer | no | 0 |
+| nombre_corto | text | sí |  |
 
 ### taller_valor_hora
 
@@ -1474,18 +1504,20 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | `buscar_cheque_cargado(p_banco_codigo text, p_numero text, p_sucursal_codigo text, p_cuenta text, p_excluir_cobranza_id uuid)` | TABLE(cobranza_id uuid, fecha date, cargada_por text, importe numeric, coincide_completo boolean) | D |  | sí |
 | `buscar_comprobante_cargado(p_proveedor_id uuid, p_numero_doc text, p_razon_social text, p_excluir_modulo text, p_excluir_id uuid)` | TABLE(modulo text, registro_id uuid, numero_doc text, razon_social text, fecha date, unidad_negocio_id uuid, importe numeric) | D |  | sí |
 | `buscar_empleado_por_cuil(p_cuil text)` | TABLE(nombre text, rol text) | D |  |  |
+| `cambiar_activo_cliente(p_cliente_id uuid, p_activo boolean)` | void | D |  | sí |
 | `cambiar_estado_pedido(p_pedido_id uuid, p_estado text, p_motivo text)` | void | D |  | sí |
 | `cambiar_pin_produccion(p_empleado_id uuid, p_unidad_negocio_id uuid, p_pin_actual text, p_pin_nuevo text)` | jsonb | D |  | sí |
 | `cancelar_solicitud_movimiento_caja(p_solicitud_id uuid)` | void | D |  | sí |
 | `cancelar_transferencia_stock(p_transferencia_id uuid)` | void | D |  | sí |
 | `cargar_horas_proyecto(p_proyecto_id uuid, p_empleado_id uuid, p_fecha date, p_horas numeric, p_tarea text)` | uuid | D |  | sí |
+| `cargar_horas_tarea(p_tarea_id uuid, p_fecha date, p_horas numeric, p_empleado_id uuid, p_nota text)` | uuid | D |  | sí |
 | `cargar_proyecto_a_fabrica(p_proyecto_id uuid, p_importe numeric, p_concepto text, p_fecha date)` | void | D |  | sí |
 | `catalogo_para_retiro(p_unidad_negocio_id uuid)` | jsonb | D |  | sí |
 | `cerrar_recuento(p_recuento_id uuid, p_clase text)` | jsonb | D |  | sí |
 | `cerrar_sesiones(p_empleado_id uuid, p_motivo text)` | jsonb | D |  | sí |
 | `cerrar_turno(p_turno_id uuid, p_hora_apagado time without time zone, p_scrap_kg numeric, p_observaciones text, p_productos jsonb)` | jsonb | D |  | sí |
 | `cheque_plazo_presentacion(p_tipo text, p_emision date, p_pago date)` | date |  |  | sí |
-| `clientes_con_saldo(p_unidad_negocio_id uuid)` | TABLE(cliente_id uuid, nombre text, razon_social text, cuit text, lista text, saldo numeric, ultimo_movimiento date, retiros_mes integer, es_tambien_proveedor boolean) | D |  | sí |
+| `clientes_con_saldo(p_unidad_negocio_id uuid, p_incluir_apagados boolean)` | TABLE(cliente_id uuid, nombre text, razon_social text, cuit text, lista text, saldo numeric, ultimo_movimiento date, retiros_mes integer, es_tambien_proveedor boolean, activo boolean, codigo_anterior integer) | D |  | sí |
 | `cobranzas_por_asentar()` | jsonb | D |  | sí |
 | `completar_datos_empleado(p_empleado_id uuid, p_rol text, p_unidad_negocio_id uuid, p_domicilio text, p_telefono text)` | void | D |  | sí |
 | `completar_importe_factura(p_factura_id uuid, p_importe numeric)` | void | D |  | sí |
@@ -1544,6 +1576,7 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | `guardar_proyecto(p_id uuid, p_datos jsonb)` | uuid | D |  | sí |
 | `guardar_puestos(p_empleado_id uuid, p_unidad_negocio_id uuid, p_puestos text[])` | void | D |  | sí |
 | `guardar_receta_original(p_maquina_id uuid, p_tipo_masa text, p_items jsonb, p_nota text)` | jsonb | D |  | sí |
+| `guardar_tarea_taller(p_id uuid, p_datos jsonb)` | uuid | D |  | sí |
 | `guardar_valor_hora(p_valor numeric, p_vigente_desde date)` | void | D |  | sí |
 | `importar_empleados_naaloo(p_filas jsonb, p_unidad_negocio_id uuid)` | jsonb | D |  | sí |
 | `importar_insumos_excel(p_filas jsonb)` | jsonb | D |  | sí |
@@ -1556,7 +1589,9 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | `listar_factores_mfa(p_auth_user_id uuid)` | TABLE(id uuid, friendly_name text, status text) | D |  |  |
 | `lotes_insumo_para_retiro(p_unidad_negocio_id uuid, p_insumo_id uuid)` | TABLE(lote text, cantidad numeric, desde date) | D |  | sí |
 | `lotes_para_retiro(p_unidad_negocio_id uuid, p_presentacion_id uuid, p_marca_id uuid)` | TABLE(lote text, cajas integer, desde date) | D |  | sí |
+| `lotes_sin_ingreso(p_unidad_negocio_id uuid)` | jsonb | D |  | sí |
 | `marcar_avance_pedido(p_item_id uuid, p_cajas_cumplidas numeric)` | jsonb | D |  | sí |
+| `marcar_avance_tarea(p_id uuid, p_avance_pct integer)` | void | D |  | sí |
 | `marcar_cobranza_asentada(p_id uuid, p_unidad_negocio_id uuid)` | void | D |  | sí |
 | `marcar_cobranza_procesada(p_id uuid)` | void | D |  | sí |
 | `marcar_cuenta_favorita_caja(p_cuenta_id uuid)` | void | D |  | sí |
@@ -1569,6 +1604,7 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | `mis_ordenes_retiro(p_unidad_negocio_id uuid, p_desde date)` | jsonb | D |  | sí |
 | `mis_pendientes()` | TABLE(modulo text, clave text, cantidad bigint, texto text) | D |  | sí |
 | `mis_unidades_retiro()` | TABLE(id uuid, nombre text, prefijo text, razon_social text, cuit text, domicilio text, telefono text, logo_url text) | D |  | sí |
+| `mover_tarea_taller(p_id uuid, p_estado text, p_orden integer, p_motivo_bloqueo text)` | void | D |  | sí |
 | `normalizar_numero_doc(p_texto text)` | text |  |  | sí |
 | `normalizar_razon_social(p_texto text)` | text |  |  | sí |
 | `normalizar_texto(p_texto text)` | text |  |  | sí |
@@ -1617,11 +1653,13 @@ Foto tomada el 2026-09-28 con `npm run esquema` (una consulta de solo lectura a 
 | `retiros_por_revisar(p_unidad_negocio_id uuid)` | jsonb | D |  | sí |
 | `revisar_marca(p_marca_id uuid, p_aprobar boolean, p_nombre text)` | void | D |  | sí |
 | `revocar_puesto_temporal(p_id uuid)` | void | D |  | sí |
+| `scrap_de_referencia(p_turno_id uuid)` | jsonb | D |  | sí |
 | `sesiones_de(p_empleado_id uuid)` | TABLE(creada timestamp with time zone, ultima_actividad timestamp with time zone, dispositivo text, ip text) | D |  | sí |
 | `sincronizar_pago_directo_proveedor(p_gasto_id uuid, p_importe numeric, p_moneda text, p_fecha date, p_categoria_id uuid, p_numero_comprobante text, p_razon_social text)` | void | D |  | sí |
 | `stock_para_masa(p_turno_id uuid)` | jsonb | D |  | sí |
 | `sugerir_facturas_fifo(p_proveedor_id uuid, p_unidad_negocio_id uuid, p_moneda text, p_monto numeric)` | TABLE(factura_pendiente_id uuid, fecha_factura date, numero_comprobante text, saldo_pendiente numeric, monto_a_aplicar numeric) | D |  | sí |
 | `sumar_permiso(p_empleado_id uuid, p_modulo text, p_tarea text, p_unidades uuid[])` | void | D |  | sí |
+| `tareas_taller(p_desde date, p_hasta date, p_empleado_id uuid, p_proyecto_id uuid)` | jsonb | D |  | sí |
 | `terminar_parada(p_parada_id uuid)` | void | D |  | sí |
 | `tiene_cuenta_corriente_activa(p_proveedor_id uuid)` | boolean | D |  | sí |
 | `tiene_puesto_produccion(p_empleado_id uuid, p_unidad uuid, p_puesto text)` | boolean | D |  |  |
