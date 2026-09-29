@@ -6423,7 +6423,7 @@
     // la tablet se puede usar igual, pero se dice.
     async function leerCatalogoProductos(unidadId) {
       const { data: productos, error: e1 } = await supabase.from('productos_terminados')
-        .select('id, nombre, tipo_masa, orden').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')
+        .select('id, nombre, tipo_masa, orden, color').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')
       if (e1) throw e1
       const ids = (productos ?? []).map(p => p.id)
       let presentaciones = []
@@ -6840,6 +6840,23 @@
     // El cono común (sin marca, id null): un gris cálido, fuera de los ocho.
     const COLOR_CONO_COMUN = { nombre: 'comun', bg: '#F1EEE9', fg: '#3D3831', bd: '#D6CFC4' }
 
+    // El color ELEGIDO de un producto (productos_terminados.color, 29/09/2026;
+    // lo cambia la configuración de la gestión con cambiar_color_producto).
+    // La misma tabla que COLORES_ELEGIBLES de produccion-gestion.html (la
+    // prueba exige que digan lo mismo). Con el color en null, sale del nombre.
+    const COLORES_ELEGIBLES = {
+      amarillo: { nombre: 'Amarillo', lch: [0.78, 0.15, 95] },
+      verde: { nombre: 'Verde', lch: [0.6, 0.14, 145] },
+      durazno: { nombre: 'Durazno', lch: [0.68, 0.16, 50] },
+      violeta: { nombre: 'Violeta', lch: [0.52, 0.15, 300] },
+      marron: { nombre: 'Marrón', lch: [0.48, 0.07, 55] },
+      marron_claro: { nombre: 'Marrón claro', lch: [0.68, 0.07, 75] },
+      rosa: { nombre: 'Rosa', lch: [0.66, 0.13, 350] },
+      celeste_gris: { nombre: 'Celeste gris', lch: [0.52, 0.07, 195] },
+      oliva: { nombre: 'Oliva', lch: [0.58, 0.1, 120] },
+      terracota: { nombre: 'Terracota', lch: [0.56, 0.13, 35] },
+    }
+
     function indiceDeNombre(nombre, n) {
       let h = 0
       for (const ch of normalizarBusqueda(nombre)) h = (h * 31 + ch.codePointAt(0)) >>> 0
@@ -6849,6 +6866,12 @@
     // { choco, c, dk, t }: c el color del producto, dk el de su letra, t el
     // tinte suave. Texto de CSS armado por el código: nunca viene de la base.
     function colorProducto(p) {
+      const elegido = Object.prototype.hasOwnProperty.call(COLORES_ELEGIBLES, p?.color ?? '') ? COLORES_ELEGIBLES[p.color] : null
+      if (elegido) {
+        const [L, C, H] = elegido.lch
+        const r = (n) => Math.round(n * 1000) / 1000
+        return { choco: false, c: `oklch(${L} ${C} ${H})`, dk: `oklch(${r(Math.min(L, 0.5) - 0.06)} ${r(C * 0.8)} ${H})`, t: `oklch(0.955 ${(C * 0.3).toFixed(3)} ${H})` }
+      }
       const tamano = normalizarBusqueda(partesNombreProducto(p?.nombre).tamano).split(' ')[0] ?? ''
       const propio = (o) => Object.prototype.hasOwnProperty.call(o, tamano) ? o[tamano] : null
       if (esProductoChocolate(p ?? {})) return { choco: true, c: propio(COLOR_CHOCO) ?? 'oklch(0.42 0.07 55)', dk: '#fff', t: 'oklch(0.93 0.03 55)' }

@@ -233,13 +233,15 @@ const NUEVAS_GESTION = [
   'gruposProductos', 'subProducto', 'filasListaProductos', 'htmlCajaPredeterminada', 'htmlAltaProducto', 'htmlCajasEditor',
   'htmlInsumosEditor', 'htmlEditorEmpaque', 'htmlFilaPresentacion', 'htmlDetalleProducto', 'tocarActivoProducto',
   'tocarActivaPresentacion', 'borradorTocado', 'abrirEmpaque', 'descartarBorrador', 'diaRelativo', 'htmlResaltado',
+  // El color elegido de cada producto y la caja predeterminada (29/09/2026)
+  'htmlColoresProducto', 'parametrosColorProducto', 'cambiarColorProducto', 'parametrosCajaPredeterminada', 'cambiarCajaPredeterminada',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
   'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
   // El diseño "Producción · Configuración" (29/09/2026)
   'SECCIONES_CONFIG', 'ALIAS_CONFIG', 'CON_LISTA', 'ICONO_BUSCAR', 'ICONO_MAS', 'ICONO_CAJA', 'ICONO_CHEVRON', 'ICONO_ALERTA',
   'ICONO_EXCLAMACION', 'ICONO_CRUZ', 'ICONO_TILDE', 'ICONO_ESTRELLA', 'ICONO_HISTORIAL', 'ICONO_FLECHA',
-  'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO']
+  'COLORES_ELEGIBLES', 'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',
@@ -321,7 +323,7 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'TABLAS_VIVAS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR',
   // Planta v2 (28/09/2026)
   'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'MOTIVOS_PARADA', 'OTRO_MOTIVO', 'COLOR_TAMANO', 'COLOR_CHOCO',
-  'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN']
+  'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',

@@ -1998,7 +1998,13 @@
     .pc-cajap__rot { font-size: 14px; white-space: nowrap; }
     .pc-cajap .pc-negrita { font-size: 14px; white-space: nowrap; }
     .pc-cajap__ayuda { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-    .pc-pronto { height: 30px; padding: 0 12px; border-radius: 8px; color: var(--color-texto-suave); font-size: 13.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; }
+    .pc-colores { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
+    .pc-colores__ayuda { font-size: 13px; }
+    .pc-color { height: 34px; min-width: 34px; padding: 0 5px; border-radius: 10px; border: 1px solid var(--color-borde-boton); background: var(--color-fondo); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font: inherit; }
+    .pc-color--elegido { border: 2px solid var(--color-acento); box-shadow: 0 0 0 2px var(--color-acento-suave); }
+    .pc-color__muestra { width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; }
+    .pc-color__texto { font-size: 13px; font-weight: 700; color: var(--color-texto-menu); padding-right: 4px; }
+    .pc-cajap__select { max-width: 240px; }
     .pc-prod__cab { border-top: 5px solid transparent; padding: 12px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; flex-wrap: wrap; }
     .pc-prod__nombre { font-family: var(--fuente-titulo); font-size: 23px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
     .pc-prod__masa { height: 24px; padding: 0 9px; border-radius: 7px; background: var(--color-fondo); font-size: 12.5px; font-weight: 700; display: flex; align-items: center; }
@@ -4262,10 +4268,10 @@
 
     // ── El color de cada producto (decisión de Facu, 29/09/2026) ──────────
     //
-    // La paleta CERRADA del diseño (20 colores). La base NO tiene dónde
-    // guardar el color de un producto (productos_terminados no tiene columna
-    // de color, verificado con information_schema el 29/09/2026), así que el
-    // color SALE DEL NOMBRE, como en la planta: el tamaño (Mini, Chico,
+    // La paleta CERRADA del diseño (20 colores). Desde la noche del 29/09/2026
+    // el color de un producto se puede ELEGIR (productos_terminados.color, uno
+    // de los diez de COLORES_ELEGIBLES; lo cambia cambiar_color_producto). Con
+    // el color en null SALE DEL NOMBRE, como en la planta: el tamaño (Mini, Chico,
     // Grande, Standard), la familia (barquillos 35/40/45 de 4 o de 3, los
     // especiales) y el chocolate (tipo_masa). Un nombre que no encaja toma
     // uno de la paleta por su nombre, así no cambia de un día para otro.
@@ -4278,6 +4284,22 @@
       b35_3: [0.8, 0.07, 100], b40_3: [0.7, 0.07, 90], b45_3: [0.6, 0.07, 80],
       soft: [0.66, 0.13, 350], cubanon: [0.56, 0.13, 35], canoli: [0.58, 0.1, 120], capelina: [0.5, 0.13, 320],
       obleas: [0.74, 0.06, 80], vaso: [0.52, 0.07, 195],
+    }
+    // Los colores que se pueden elegir para un producto: la lista del CHECK
+    // productos_terminados_color_check (verificado el 29/09/2026), cada uno con
+    // su oklch de la paleta del diseño. La planta tiene la misma tabla (y la
+    // prueba exige que digan lo mismo).
+    const COLORES_ELEGIBLES = {
+      amarillo: { nombre: 'Amarillo', lch: [0.78, 0.15, 95] },
+      verde: { nombre: 'Verde', lch: [0.6, 0.14, 145] },
+      durazno: { nombre: 'Durazno', lch: [0.68, 0.16, 50] },
+      violeta: { nombre: 'Violeta', lch: [0.52, 0.15, 300] },
+      marron: { nombre: 'Marrón', lch: [0.48, 0.07, 55] },
+      marron_claro: { nombre: 'Marrón claro', lch: [0.68, 0.07, 75] },
+      rosa: { nombre: 'Rosa', lch: [0.66, 0.13, 350] },
+      celeste_gris: { nombre: 'Celeste gris', lch: [0.52, 0.07, 195] },
+      oliva: { nombre: 'Oliva', lch: [0.58, 0.1, 120] },
+      terracota: { nombre: 'Terracota', lch: [0.56, 0.13, 35] },
     }
     const ESPECIALES_PRODUCTO = [['soft', 'soft'], ['cubanon', 'cubanon'], ['canoli', 'canoli'], ['capelina', 'capelina'], ['oblea', 'obleas'], ['vaso', 'vaso']]
 
@@ -4312,6 +4334,8 @@
 
     // { c, dk, t }: texto de CSS armado por el código, nunca de la base.
     function colorDeProducto(p) {
+      const elegido = Object.prototype.hasOwnProperty.call(COLORES_ELEGIBLES, p?.color ?? '') ? COLORES_ELEGIBLES[p.color] : null
+      if (elegido) return tonoProducto(elegido.lch)
       return tonoProducto(PALETA_PRODUCTO[claveColorProducto(p)] ?? PALETA_PRODUCTO.mini)
     }
 
@@ -4702,7 +4726,7 @@
       const maquinas = data ?? []
       const ids = maquinas.map(m => m.id)
       const extra = await leerRecetasDeMaquinas(ids)
-      const { data: productos, error: e2 } = await supabase.from('productos_terminados').select('id, nombre, tipo_masa, activo, orden, categoria')
+      const { data: productos, error: e2 } = await supabase.from('productos_terminados').select('id, nombre, tipo_masa, activo, orden, categoria, color')
         .eq('unidad_negocio_id', c.unidadId).order('orden').order('nombre')
       if (e2) throw e2
       return { maquinas, productos: productos ?? [], ...extra }
@@ -5608,7 +5632,7 @@
 
     async function leerEmpaqueConfig(c) {
       const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
-      const productos = await leer(supabase.from('productos_terminados').select('id, nombre, tipo_masa, activo, orden, categoria')
+      const productos = await leer(supabase.from('productos_terminados').select('id, nombre, tipo_masa, activo, orden, categoria, color')
         .eq('unidad_negocio_id', c.unidadId).order('orden').order('nombre'))
       const ids = productos.map(p => p.id)
       const presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones')
@@ -5731,20 +5755,22 @@
       }).join('')).join('')
     }
 
-    // La barra de 40 px con la caja predeterminada de la fábrica. La base no
-    // tiene una RPC para cambiarla (unidades_negocio.caja_predeterminada_id no
-    // la escribe ninguna función, verificado el 29/09/2026): "Cambiar" queda
-    // para cuando exista.
+    // La barra de 40 px con la caja predeterminada de la fábrica: se cambia
+    // ahí mismo (un select con las cajas activas del rubro Cajas y "Ninguna"),
+    // con cambiar_caja_predeterminada. Si no se pudo leer, no se ofrece cambiarla.
     function htmlCajaPredeterminada(c) {
       const d = c.datos
       const unidad = estado.unidades.get(c.unidadId) ?? 'esta unidad'
-      let valor
-      if (d.cajaPredeterminada === undefined) valor = '<span class="pc-texto2">no se pudo leer</span>'
-      else if (!d.cajaPredeterminada) valor = '<span class="pc-negrita">ninguna</span>'
-      else valor = `<span class="pc-negrita">${esc(nombreInsumoConfig(d, d.cajaPredeterminada))}</span>`
-      return `<div class="pc-cajap">${ICONO_CAJA.replace('width="14" height="14"', 'width="17" height="17"')}<span class="pc-texto2 pc-cajap__rot">Caja predeterminada de ${esc(unidad)}:</span>${valor}` +
-        `<span class="pc-texto2 pc-cajap__ayuda">· la planta la pone sola cuando la presentación la admite</span><span class="pc-esp"></span>` +
-        `<span class="pc-pronto" title="Para cambiarla falta una función en la base.">Cambiar · pronto</span></div>`
+      const cabeza = `<div class="pc-cajap">${ICONO_CAJA.replace('width="14" height="14"', 'width="17" height="17"')}<span class="pc-texto2 pc-cajap__rot">Caja predeterminada de ${esc(unidad)}:</span>`
+      if (d.cajaPredeterminada === undefined) {
+        return cabeza + '<span class="pc-texto2">no se pudo leer</span><span class="pc-texto2 pc-cajap__ayuda">· la planta la pone sola cuando la presentación la admite</span><span class="pc-esp"></span></div>'
+      }
+      const cajas = (d.insumos ?? []).filter(i => i.categoria === 'Cajas' && (i.activo !== false || i.id === d.cajaPredeterminada))
+      const opciones = `<option value=""${d.cajaPredeterminada ? '' : ' selected'}>Ninguna</option>` +
+        cajas.map(i => `<option value="${esc(i.id)}"${i.id === d.cajaPredeterminada ? ' selected' : ''}>${esc(textoInsumoEmpaque(i))}</option>`).join('')
+      return cabeza +
+        `<select class="pc-select pc-select--chico pc-cajap__select" id="pr-cfg-cajap" data-caja-pred="1" aria-label="Caja predeterminada de ${esc(unidad)}"${c.guardandoCajaPred ? ' disabled' : ''}>` + opciones + '</select>' +
+        '<span class="pc-texto2 pc-cajap__ayuda">· la planta la pone sola cuando la presentación la admite</span><span class="pc-esp"></span></div>' + htmlErrorPegado(c, 'pr-cfg-cajap')
     }
 
     function htmlAltaProducto(c) {
@@ -5878,12 +5904,72 @@
         `<div class="pc-prod__cab" style="background: ${esc(col.t)}; border-top-color: ${esc(col.c)}">${nombre}<span class="pc-esp"></span>` +
         `<span class="pc-sw__rotulo">Activo</span>` + swAbre(true) + `<input type="checkbox" role="switch" class="pc-sw__input" data-prod-activo="${esc(p.id)}"${p.activo ? ' checked' : ''}${c.guardandoSw ? ' disabled' : ''} aria-label="Activo: ${esc(p.nombre)}">` + SW_CIERRA + accionesProdHtml + `</div>` +
         htmlErrorPegado(c, 'pr-cfg-prod-guardar') + htmlErrorPegado(c, 'pr-cfg-prodsw') +
-        `<div class="pc-prod__cuerpo">${aviso}` +
+        `<div class="pc-prod__cuerpo">${aviso}` + htmlColoresProducto(p, c) +
         `<div class="pc-prod__sub"><h3 class="pc-prod__h3">Presentaciones</h3><span class="pc-esp"></span>` +
         `<button type="button" class="pc-link pc-link--30" data-pres-alta="1">${ICONO_MAS}Agregar<span class="pc-solo-compu">&nbsp;presentación</span></button></div>` + altaPresHtml +
         `<div class="pc-pres pc-pres__cab"><div>PRESENTACIÓN</div><div>POR CAJA</div><div>EMPAQUE POR CAJA</div><div>ACTIVA</div></div>` +
         (pres.map(pr => htmlFilaPresentacion(pr, c, col)).join('') || '<p class="pc-texto2 pc-pres__vacio">Este producto todavía no tiene presentaciones.</p>') +
         `<p class="pc-texto2 pc-prod__nota">Cambiar las unidades por caja no toca lo ya producido: cada sublote guardó las suyas.</p></div></div>`
+    }
+
+    // El color del producto: "Automático" (sale del nombre) o uno de los diez.
+    // Se guarda al tocarlo, con cambiar_color_producto; si la base rechaza,
+    // el error va pegado acá y el color vuelve al de antes.
+    function htmlColoresProducto(p, c) {
+      const actual = Object.prototype.hasOwnProperty.call(COLORES_ELEGIBLES, p.color ?? '') ? p.color : ''
+      const auto = tonoProducto(PALETA_PRODUCTO[claveColorProducto({ ...p, color: null })] ?? PALETA_PRODUCTO.mini)
+      const boton = (valor, titulo, fondo) => `<button type="button" class="pc-color${valor === actual ? ' pc-color--elegido' : ''}${valor ? '' : ' pc-color--auto'}" data-prod-color="${esc(p.id)}|${esc(valor)}"` +
+        ` aria-pressed="${valor === actual}" title="${esc(titulo)}" aria-label="Color: ${esc(titulo)}"${c.guardandoColor ? ' disabled' : ''}>` +
+        `<span class="pc-color__muestra" style="background: ${esc(fondo)}"></span>${valor ? '' : '<span class="pc-color__texto">Automático</span>'}</button>`
+      return `<div class="pc-prod__sub"><h3 class="pc-prod__h3">Color</h3><span class="pc-texto2 pc-colores__ayuda">${actual ? esc(COLORES_ELEGIBLES[actual].nombre) : 'Automático: sale del nombre'}</span></div>` +
+        `<div class="pc-colores" role="group" aria-label="Color de ${esc(p.nombre)}">` +
+        boton('', 'Automático (sale del nombre)', auto.c) +
+        Object.entries(COLORES_ELEGIBLES).map(([k, v]) => boton(k, v.nombre, tonoProducto(v.lch).c)).join('') + '</div>' +
+        htmlErrorPegado(c, 'pr-cfg-prod-color')
+    }
+
+    function parametrosColorProducto(productoId, valor) {
+      return { p_producto_id: productoId, p_color: valor || null }
+    }
+
+    async function cambiarColorProducto(id, valor) {
+      const c = estado.config, d = c?.datos
+      const p = d?.productos?.find(x => x.id === id)
+      if (!p || c.guardandoColor) return false
+      if ((p.color ?? '') === (valor ?? '')) return true
+      const anterior = p.color ?? null
+      p.color = valor || null
+      c.guardandoColor = true
+      pintarPestanaConfig()
+      const r = await guardarEnConfig('cambiar_color_producto', parametrosColorProducto(id, valor),
+        `${p.nombre}: ${valor ? COLORES_ELEGIBLES[valor]?.nombre ?? valor : 'color automático'}.`, 'pr-cfg-prod-color')
+      c.guardandoColor = false
+      if (!r.ok) p.color = anterior
+      if (estado.config === c) pintarPestanaConfig()
+      return r.ok
+    }
+
+    // La caja predeterminada de la unidad: la cambia cambiar_caja_predeterminada
+    // (exige produccion:configurar en la unidad; "Eso no es una caja." si el
+    // insumo no es del rubro Cajas). "Ninguna" la deja en null.
+    function parametrosCajaPredeterminada(unidadId, insumoId) {
+      return { p_unidad_negocio_id: unidadId, p_insumo_id: insumoId || null }
+    }
+
+    async function cambiarCajaPredeterminada(insumoId) {
+      const c = estado.config, d = c?.datos
+      if (!d || c.guardandoCajaPred) return false
+      const anterior = d.cajaPredeterminada ?? null
+      if ((anterior ?? '') === (insumoId ?? '')) return true
+      d.cajaPredeterminada = insumoId || null
+      c.guardandoCajaPred = true
+      pintarPestanaConfig()
+      const r = await guardarEnConfig('cambiar_caja_predeterminada', parametrosCajaPredeterminada(c.unidadId, insumoId),
+        insumoId ? `Caja predeterminada: ${nombreInsumoConfig(d, insumoId)}.` : 'Sin caja predeterminada.', 'pr-cfg-cajap')
+      c.guardandoCajaPred = false
+      if (!r.ok) d.cajaPredeterminada = anterior
+      if (estado.config === c) pintarPestanaConfig()
+      return r.ok
     }
 
     function htmlConfigProductos(c) {
@@ -5929,6 +6015,7 @@
     async function accionProducto(ds) {
       const c = estado.config, d = c.datos
       if (ds.productosRevisados !== undefined) { guardarPreferencia(CLAVE_AVISO_PRODUCTOS, '1'); pintarPestanaConfig(); return }
+      if (ds.prodColor !== undefined) { const [id, valor] = ds.prodColor.split('|'); cambiarColorProducto(id, valor || null); return }
       if (ds.prodAgregar !== undefined) {
         const DONDE = 'pr-cfg-prod-agregar'
         const nombre = document.getElementById('pr-config-prod-nuevo').value.trim()
@@ -6850,6 +6937,7 @@
         const t = ev.target, c = estado.config
         if (t.dataset?.empSug !== undefined || t.dataset?.empCond !== undefined || t.dataset?.empIns !== undefined) return cambiarSelectEmpaque(t)
         if (t.dataset?.prodActivo !== undefined) return tocarActivoProducto(t.dataset.prodActivo, t.checked)
+        if (t.dataset?.cajaPred !== undefined) return cambiarCajaPredeterminada(t.value)
         if (t.dataset?.presActiva !== undefined) return tocarActivaPresentacion(t.dataset.presActiva, t.checked)
         if (t.dataset?.recetaCmp !== undefined) { c.comparar = { ...(c.comparar ?? {}), [t.dataset.recetaCmp]: t.value }; c.volverA = null; return pintarPestanaConfig() }
         if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)
