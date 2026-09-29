@@ -27,7 +27,7 @@
 
 import { supabase } from './supabase.js'
 import { MODULOS, moduloVisible, agruparPendientes, escDash, colorDeModulo, enOrdenDeBarra } from './modulos.js'
-import { leerPrefs, guardarPrefs, ordenarBarra, anotarUso, modulosDeAbajo } from './preferencias.js'
+import { cargarPrefs, leerPrefs, guardarPrefs, ordenarBarra, anotarUso, modulosDeAbajo } from './preferencias.js'
 import { abrirPanelSesiones } from './sesiones.js'
 
 // La raíz del repo: este archivo vive en js/.
@@ -256,7 +256,9 @@ export async function instalarBarraLateral({ sb = supabase, doc = document, win 
     if (!modulos.length) return null
 
     let actual = claveActual(win.location.pathname, win.location.search)
-    // Una apertura más de este módulo (para "los que más uso").
+    // Las preferencias de la cuenta (una sola lectura por página, que comparte
+    // con el tablero) y una apertura más de este módulo ("los que más uso").
+    await cargarPrefs({ sb, empleadoId: yo.id })
     let prefs = leerPrefs(yo.id)
     if (actual && modulos.some(m => m.clave === actual)) { prefs = anotarUso(prefs, actual); guardarPrefs(yo.id, prefs) }
 

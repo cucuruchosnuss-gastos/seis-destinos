@@ -57,6 +57,10 @@ export const supabase = {
     console.log('[maqueta] rpc', nombreRpc, params)
     const vivo = globalThis.__maqueta?.rpc
     let r = vivo && Object.prototype.hasOwnProperty.call(vivo, nombreRpc) ? vivo[nombreRpc] : DATOS.rpc?.[nombreRpc]
+    // Las preferencias de la cuenta (29/09/2026): sin datos, la cuenta no
+    // guardó nada ({}), como una persona nueva; así ninguna pantalla dice
+    // "no se pudo guardar en tu cuenta" por no tener el juego.
+    if (r === undefined && nombreRpc === 'mis_preferencias') r = {}
     // Una respuesta que depende de los parámetros (29/09/2026, el tablero pide
     // la misma rpc por fábrica y por fecha): { "__segun": [{ "si": {…}, "r": … }],
     // "__defecto": … } responde la primera cuyo "si" coincide con los parámetros.

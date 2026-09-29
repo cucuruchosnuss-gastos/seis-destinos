@@ -37,7 +37,8 @@ const { chk, esperas, fin } = arnes()
 const FUNCIONES = ['htmlIcono', 'debeMostrarse', 'modulosDeBarra', 'claveActual', 'leerColapsada', 'htmlBurbujaBarra', 'htmlItem',
   'htmlBarra', 'htmlBarraAbajo', 'htmlHojaMas', 'pintarBurbujasBarra', 'pintarBurbujasAbajo', 'leerGuardado', 'guardar', 'instalarBarraLateral']
 const DE_MODULOS = ['moduloVisible', 'escDash', 'textoPendiente', 'agruparPendientes', 'colorDeModulo', 'enOrdenDeBarra']
-const DE_PREFS = ['clavePrefs', 'prefsVacias', 'normalizarPrefs', 'leerPrefs', 'guardarPrefs', 'anotarUso', 'vecesUsado', 'ordenarBarra', 'modulosDeAbajo']
+const DE_PREFS = ['clavePrefs', 'prefsVacias', 'normalizarPrefs', 'leerCopia', 'escribirCopia', 'sonDeFabrica', 'leerPrefs', 'guardarPrefs', 'subirPrefs',
+  'cargarPrefs', 'dondeSeGuardanPrefs', 'anotarUso', 'vecesUsado', 'ordenarBarra', 'modulosDeAbajo']
 
 function construir() {
   let codigo = `
@@ -51,7 +52,7 @@ function construir() {
   `
   for (const c of ['MODULOS', 'MODULO_DE_PENDIENTE', 'TAMBIEN_EN_TARJETA', 'PENDIENTES_URGENTES', 'PALETA_MODULO', 'ORDEN_BARRA']) codigo += extraerConst(mod, c)
   for (const f of DE_MODULOS) codigo += extraerFn(mod, f) + '\n'
-  for (const c of ['ORDENES_BARRA', 'TAMANOS', 'DIAS_USO', 'MS_DIA']) codigo += extraerConst(pref, c)
+  for (const c of ['ORDENES_BARRA', 'TAMANOS', 'DIAS_USO', 'MS_DIA', 'TOPE_USO', 'VERSION_PREFS', 'ESTADO_PREFS']) codigo += extraerConst(pref, c)
   for (const f of DE_PREFS) codigo += extraerFn(pref, f) + '\n'
   for (const c of ['CLAVE_COLAPSADA', 'ANCHO_ABIERTA', 'ICONOS', 'INICIO', 'SEGURIDAD', 'URL_PERSONALIZAR']) codigo += extraerConst(src, c)
   for (const f of FUNCIONES) codigo += extraerFn(src, f) + '\n'
@@ -113,10 +114,10 @@ function docFalso() {
   }
 }
 // La base falsa: empleados, módulos, tareas y mis_pendientes.
-function sbFalso({ uid = 'uid-1', empleado = { id: 'e1', rol_app: 'usuario', es_dispositivo: false }, modulos = [], tareas = [], pendientes = [], errorPendientes = null, errorTareas = null } = {}) {
+function sbFalso({ uid = 'uid-1', empleado = { id: 'e1', rol_app: 'usuario', es_dispositivo: false }, modulos = [], tareas = [], pendientes = [], errorPendientes = null, errorTareas = null, prefsCuenta = {} } = {}) {
   const consultas = []
   const sb = {
-    consultas, salio: false,
+    consultas, salio: false, guardadas: [],
     auth: { async getSession() { return { data: { session: uid ? { user: { id: uid } } : null }, error: null } }, async signOut() { sb.salio = true } },
     from(tabla) {
       const q = { tabla, filtros: [] }
@@ -134,7 +135,12 @@ function sbFalso({ uid = 'uid-1', empleado = { id: 'e1', rol_app: 'usuario', es_
       }
       return cadena
     },
-    rpc(nombre) { consultas.push({ rpc: nombre }); return Promise.resolve(errorPendientes ? { data: null, error: errorPendientes } : { data: pendientes, error: null }) },
+    rpc(nombre, args) {
+      consultas.push({ rpc: nombre })
+      if (nombre === 'mis_preferencias') return Promise.resolve({ data: prefsCuenta, error: null })
+      if (nombre === 'guardar_mis_preferencias') { sb.guardadas.push(args?.p_datos); return Promise.resolve({ data: null, error: null }) }
+      return Promise.resolve(errorPendientes ? { data: null, error: errorPendientes } : { data: pendientes, error: null })
+    },
   }
   return sb
 }
@@ -340,6 +346,19 @@ esperas.push((async () => {
     win.location.search = ''
     ;(win.oyentes['vista:cambio'] || []).forEach(f => f())
     chk('al pasar a acomodar, la barra marca Inicio y no Personalizar', /data-clave="inicio"[^>]*aria-current="page"/.test(nav.innerHTML) && !/data-clave="personalizar"[^>]*aria-current/.test(nav.innerHTML), nav.innerHTML.slice(0, 400))
+  }
+  // Las preferencias vienen de la cuenta (mis_preferencias), no del dispositivo.
+  {
+    const S = construir(); const doc = docFalso()
+    const sb = sbFalso({ modulos: ['gastos', 'caja'], prefsCuenta: { v: 1, barra: { orden: 'mano', manual: [], fijados: ['gastos'] }, tablero: {}, uso: {} } })
+    const nav = await S.instalarBarraLateral({ sb, doc, win: winEn('/x/dashboard.html') })
+    chk('la barra lee las preferencias de la cuenta', sb.consultas.some(q => q.rpc === 'mis_preferencias'))
+    chk('los fijados de la cuenta van arriba', claves(nav.innerHTML).join() === 'inicio,gastos,caja,personalizar', claves(nav.innerHTML).join())
+    const S2 = construir(); const doc2 = docFalso()
+    const sb2 = sbFalso({ modulos: ['gastos', 'caja'] })
+    await S2.instalarBarraLateral({ sb: sb2, doc: doc2, win: winEn('/x/modulos/caja.html') })
+    await new Promise(r => setImmediate(r))
+    chk('abrir un módulo sube la apertura a la cuenta', sb2.guardadas.length === 1 && sb2.guardadas[0].v === 1 && (sb2.guardadas[0].uso.caja || []).length === 1)
   }
   // La preferencia guardada se respeta al abrir otra pantalla.
   {

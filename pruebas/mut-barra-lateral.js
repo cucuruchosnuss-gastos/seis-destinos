@@ -56,6 +56,7 @@ correrMutacionesEnVarios([
       { nombre: 'no anota el uso', de: '    if (actual && modulos.some(m => m.clave === actual)) { prefs = anotarUso(prefs, actual); guardarPrefs(yo.id, prefs) }\n', a: '' },
       { nombre: 'Personalizar no rearma la barra', de: "    win.addEventListener('preferencias:cambio', () => {\n      prefs = leerPrefs(yo.id)\n", a: "    win.addEventListener('preferencias:cambio', () => {\n" },
       { nombre: 'la barra no escucha el cambio de vista', de: "      actual = claveActual(win.location.pathname, win.location.search)\n      dibujar()\n", a: "      dibujar()\n" },
+      { nombre: 'la barra no lee la cuenta', de: "    await cargarPrefs({ sb, empleadoId: yo.id })\n", a: '' },
       { nombre: '"Más" no suma lo que no está a la vista', de: '  for (const [clave, p] of porModulo) if (!visibles.has(clave)) { restoTotal += p.total; restoUrgente ||= !!p.urgente }\n', a: '' },
       { nombre: 'el tab actual no va en naranja', de: "` style=\"--tab-color: ${esActual ? 'var(--color-acento)' : col.c}\">`", a: "` style=\"--tab-color: ${col.c}\">`" },
     ],

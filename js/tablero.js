@@ -29,7 +29,7 @@ import { MODULOS, moduloVisible, colorDeModulo } from './modulos.js'
 import { formatearNumeroAr, sinPersonasDePrueba, cargarFabricaDePruebas, FABRICA_SIN_DATOS } from './utils.js'
 import { pasaFiltroUnidad, nombreDePila, unidadesDeLaBarra, alCambiarUnidad } from './barra-unidad.js'
 import { htmlIcono, modulosDeBarra } from './barra-lateral.js'
-import { TAMANOS, normalizarPrefs, leerPrefs, guardarPrefs, ordenarBarra } from './preferencias.js'
+import { TAMANOS, normalizarPrefs, leerPrefs, guardarPrefs, ordenarBarra, cargarPrefs, dondeSeGuardanPrefs } from './preferencias.js'
 
 // ═══ El catálogo del tablero ══════════════════════════════════════════════
 // El orden por defecto (el de la pantalla 1a del diseño) y los tamaños por
@@ -813,7 +813,7 @@ export function htmlEscondidas(tarjetas) {
 
 // ═══ Personalizar (6a) ════════════════════════════════════════════════════
 export const NOMBRE_ORDEN_BARRA = { mano: 'A mano', alfa: 'Alfabético', uso: 'Los que más uso' }
-export function htmlPersonalizar({ nombre, orden = 'mano', fijados = [], resto = [], tablero = [] }) {
+export function htmlPersonalizar({ nombre, orden = 'mano', fijados = [], resto = [], tablero = [], donde = 'cuenta' }) {
   const itemBarra = (m, fijado) => {
     const col = colorDeModulo(m.clave)
     return `<div class="pz-fila" data-pz-barra="${escTab(m.clave)}">` +
@@ -854,7 +854,9 @@ export function htmlPersonalizar({ nombre, orden = 'mano', fijados = [], resto =
         `<div class="pz-lista" id="pz-lista-tablero">${tablero.map(itemTablero).join('')}</div>` +
         `<div class="pz-pie"><button type="button" class="pz-volver" id="pz-volver-fabrica">${VOLVER}Volver a como venía</button>` +
           '<span class="pz-pie__texto">Deja la barra y el tablero como vienen de fábrica.</span></div>' +
-        '<p class="pz-dispositivo">Se guarda en este dispositivo.</p>' +
+        (donde === 'dispositivo'
+          ? '<p class="pz-dispositivo pz-dispositivo--local">No se pudo guardar en tu cuenta: por ahora queda en este dispositivo.</p>'
+          : '<p class="pz-dispositivo">Se guarda en tu cuenta: lo ves igual en la compu y en el celular.</p>') +
       '</section>' +
     '</div>'
 }
@@ -1002,7 +1004,7 @@ export function crearTablero({ sb, doc = document, win = window, yo, nombre, esS
   }
   function pintarPersonalizar() {
     const { fijados, resto } = ordenarBarra(modulosDeBarra(ctxVis), estado.prefs)
-    el('tb-personalizar').innerHTML = htmlPersonalizar({ nombre, orden: estado.prefs.barra.orden, fijados, resto, tablero: tarjetas() })
+    el('tb-personalizar').innerHTML = htmlPersonalizar({ nombre, orden: estado.prefs.barra.orden, fijados, resto, tablero: tarjetas(), donde: dondeSeGuardanPrefs(yo.id) })
   }
   function mostrarVista(v) {
     estado.vista = v
@@ -1149,6 +1151,13 @@ export function crearTablero({ sb, doc = document, win = window, yo, nombre, esS
   // ── Arranque y refrescos ────────────────────────────────────────────────
   pintarSaludo()
   mostrarVista(vistaInicial)
+  // Las preferencias de la cuenta: se arranca con la copia del dispositivo y,
+  // cuando llegan, se repinta la vista (sin esperarlas para cargar tarjetas).
+  cargarPrefs({ sb, empleadoId: yo.id }).then(p => {
+    estado.prefs = normalizarPrefs(p)
+    mostrarVista(estado.vista)
+    if (estado.listo) cargarFaltantes()
+  })
   const arranque = Promise.all([
     unidadesDeLaBarra().catch(() => ({ unidades: [], elegida: null })),
     cargarFabricaDePruebas(sb).catch(() => FABRICA_SIN_DATOS),

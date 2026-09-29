@@ -210,7 +210,7 @@ const PANTALLAS = [
     }],
     ['personalizar', async (page) => {
       await page.goto(`${MAQUETA}/dashboard.html?vista=personalizar`)
-      await expect(page.locator('#tb-personalizar')).toContainText('Se guarda en este dispositivo.')
+      await expect(page.locator('#tb-personalizar')).toContainText('Se guarda en tu cuenta: lo ves igual en la compu y en el celular.')
       await page.locator('[data-pz-fijar="stock"]').click()
       await expect(page.locator('[data-pz-fijar="stock"]')).toHaveAttribute('aria-pressed', 'true')
       await page.locator('[data-pz-tamano="cheques"][data-tamano="mediana"]').click()
