@@ -248,6 +248,11 @@ export async function cargarUnidadesDeLaPersona(sb) {
   const { data: yo, error } = await sb.from('empleados').select('id, nombre, rol_app, es_dispositivo, unidad_negocio_id').eq('auth_user_id', uid).maybeSingle()
   if (error || !yo) return null
   yo.email = s?.session?.user?.email ?? ''
+  // El nombre para mostrar sale del registro (user_metadata.nombre_completo,
+  // "Nombre Apellido"), como en el dashboard: el de la ficha viene de Naaloo
+  // como "Apellido Nombre" y la pastilla diría el apellido.
+  const meta = s?.session?.user?.user_metadata ?? {}
+  yo.nombreVisible = meta.nombre_completo || meta.full_name || yo.nombre || ''
   const [un, ta, fabrica] = await Promise.all([
     sb.from('unidades_negocio').select('id, nombre, prefijo, logo_url, activo').eq('activo', true),
     yo.rol_app === 'super_admin'
@@ -275,7 +280,7 @@ export async function instalarBarraUnidad({ sb = supabase, doc = document, win =
     }
     const elegida = resolverElegida(leerGuardada(), r.unidades)
     estado = { unidades: r.unidades, elegida, mostrar: r.unidades.length > 1, listo: true }
-    persona = { id: r.yo.id, nombre: r.yo.nombre ?? '', email: r.yo.email ?? '' }
+    persona = { id: r.yo.id, nombre: r.yo.nombreVisible ?? r.yo.nombre ?? '', email: r.yo.email ?? '' }
     // La barra de arriba va SIEMPRE (el usuario y su menú); las fábricas,
     // solo con más de una unidad.
     nav = doc.createElement('nav')

@@ -37,7 +37,12 @@ function consulta(tabla) {
     like() { return q }, ilike() { return q }, not() { return q }, or() { return q },
     maybeSingle() { q._uno = true; return q }, single() { q._uno = true; return q },
     then(res, rej) {
-      const filas = (DATOS.tablas?.[tabla] || []).filter(r => filtros.every(f => f(r)))
+      // Una tabla con el texto "ERROR:…" responde como un error de la base, y
+      // "ESPERAR" no responde nunca (para mirar el estado "Cargando…").
+      const cruda = DATOS.tablas?.[tabla]
+      if (cruda === 'ESPERAR') return new Promise(() => {})
+      if (typeof cruda === 'string' && cruda.startsWith('ERROR:')) return Promise.resolve({ data: null, error: { message: cruda.slice(6), code: 'P0001' } }).then(res, rej)
+      const filas = (cruda || []).filter(r => filtros.every(f => f(r)))
       return Promise.resolve({ data: q._uno ? (filas[0] ?? null) : filas, error: null }).then(res, rej)
     },
   }
@@ -51,12 +56,20 @@ export const supabase = {
   rpc(nombreRpc, params) {
     console.log('[maqueta] rpc', nombreRpc, params)
     const vivo = globalThis.__maqueta?.rpc
-    const r = vivo && Object.prototype.hasOwnProperty.call(vivo, nombreRpc) ? vivo[nombreRpc] : DATOS.rpc?.[nombreRpc]
+    let r = vivo && Object.prototype.hasOwnProperty.call(vivo, nombreRpc) ? vivo[nombreRpc] : DATOS.rpc?.[nombreRpc]
+    // Una respuesta que depende de los parámetros (29/09/2026, el tablero pide
+    // la misma rpc por fábrica y por fecha): { "__segun": [{ "si": {…}, "r": … }],
+    // "__defecto": … } responde la primera cuyo "si" coincide con los parámetros.
+    if (r && typeof r === 'object' && !Array.isArray(r) && Array.isArray(r.__segun)) {
+      const hit = r.__segun.find(c => Object.entries(c.si ?? {}).every(([k, v]) => (params?.[k] ?? null) === v))
+      r = hit ? hit.r : (r.__defecto ?? null)
+    }
+    if (r === 'ESPERAR') return new Promise(() => {})
     if (typeof r === 'string' && r.startsWith('ERROR:')) return Promise.resolve({ data: null, error: { message: r.slice(6), code: 'P0001' } })
     return Promise.resolve({ data: r ?? null, error: null })
   },
   auth: {
-    async getSession() { return { data: { session: { user: { id: DATOS.uid ?? 'uid-maqueta', email: 'maqueta@local' } } }, error: null } },
+    async getSession() { return { data: { session: { user: { id: DATOS.uid ?? 'uid-maqueta', email: DATOS.email ?? 'maqueta@local', user_metadata: DATOS.meta ?? {} } } }, error: null } },
     mfa: { async getAuthenticatorAssuranceLevel() { return { data: { currentLevel: 'aal1', nextLevel: 'aal1' }, error: null } } },
     async signOut() { return {} },
     onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } } },

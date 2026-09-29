@@ -10,22 +10,17 @@ const { correrMutacionesDashboard } = require('./mutar-dashboard')
 
 correrMutacionesDashboard({
   suite: path.join(__dirname, 'test-dashboard-pendientes.js'),
-  funciones: ['htmlBurbuja'],
+  // Desde el 29/09/2026 las burbujas de las tarjetas son el PIE de cada
+  // tarjeta del tablero (js/tablero.js): las mutaciones de lo que se mudó
+  // apuntan ahí (mutar-dashboard.js las reparte).
+  funciones: [],
   escape: 'escDash',
   manuales: [
     { nombre: 'materia_prima mal mapeado', de: "materia_prima: 'materia-prima',", a: "materia_prima: 'materia_prima'," },
     { nombre: 'cuentas_corrientes sin mapear', de: "      cuentas_corrientes: 'cuentas-corrientes',\n", a: '' },
-    { nombre: 'un error deja la burbuja vieja', de: "      document.querySelectorAll('.tarjeta-modulo__burbuja').forEach(b => b.remove())\n", a: '' },
-    { nombre: 'un error pinta lo que había', de: "        console.error('mis_pendientes:', err)\n        porModulo = null", a: "        console.error('mis_pendientes:', err)\n        return" },
-    { nombre: 'la respuesta vieja pisa la nueva', de: '      if (turno !== turnoPendientes) return\n', a: '' },
-    { nombre: 'el cero dibuja burbuja', de: "      if (!p || !(p.total > 0)) return ''", a: "      if (!p) return ''" },
     { nombre: 'una cantidad null cuenta', de: "if (fila.cantidad === null || fila.cantidad === undefined || fila.cantidad === '' || !Number.isInteger(n) || n <= 0) continue", a: 'if (!Number.isInteger(n) || n < 0) continue' },
     { nombre: 'un módulo desconocido se usa tal cual', de: "if (!clave) { console.warn('mis_pendientes: módulo sin tarjeta', fila?.modulo); continue }", a: "if (!clave) continue" },
     { nombre: 'la tarjeta muestra la última clave y no la suma', de: '        actual.total += n\n', a: '        actual.total = n\n' },
-    { nombre: 'sin aria-label', de: ' aria-label="${detalle}"', a: '' },
-    { nombre: 'sin title', de: ' title="${detalle}"', a: '' },
-    { nombre: 'sin tope 99+', de: "p.total > 99 ? '99+' : String(p.total)", a: 'String(p.total)' },
-    { nombre: 'no se recarga al volver', de: "if (document.visibilityState === 'visible') cargarPendientes()", a: "if (false) cargarPendientes()" },
     { nombre: 'el detalle no dice la cantidad', de: 'return `${fila.cantidad} ${frase}`', a: 'return frase' },
     { nombre: 'el escape no escapa comillas', de: ".replace(/\"/g, '&quot;')", a: '' },
     { nombre: 'cheques sin mapear', de: "      cheques: 'cheques',\n", a: '' },
@@ -35,6 +30,17 @@ correrMutacionesDashboard({
     { nombre: 'Cheques cuelga de su propia clave y no de cobranzas', de: 'misModulos.includes(modulo.requiereModulo ?? modulo.clave)', a: 'misModulos.includes(modulo.clave)' },
     { nombre: 'super_admin no ve Cheques sin la fila', de: "      return esSuperAdmin || modulo.requiereTareas.some(t => misTareas.has(t))", a: "      return modulo.requiereTareas.some(t => misTareas.has(t))" },
     { nombre: 'Cheques acepta también cargar', de: "requiereTareas: ['cobranzas:ver_todo', 'cobranzas:procesar'],", a: "requiereTareas: ['cobranzas:ver_todo', 'cobranzas:procesar', 'cobranzas:cargar']," },
-    { nombre: 'repintar duplica', de: "    function pintarBurbujas(porModulo) {\n      document.querySelectorAll('.tarjeta-modulo__burbuja').forEach(b => b.remove())", a: "    function pintarBurbujas(porModulo) {\n      if (!porModulo) document.querySelectorAll('.tarjeta-modulo__burbuja').forEach(b => b.remove())" },
+    // ── El pie de las tarjetas del tablero (js/tablero.js) ──────────────
+    { nombre: 'un error de mis_pendientes no avisa (y el pie diría "Nada pendiente")', de: '    else m.pendError = true\n', a: '' },
+    { nombre: 'un error de mis_pendientes deja números inventados', de: '    if (pend) m.resolver = [...(m.resolver ?? []), ...resolverDePendientes(clave, pend, visibles)]', a: "    m.resolver = [...(m.resolver ?? []), ...resolverDePendientes(clave, pend ?? new Map([['caja:solicitudes_mi_caja', 3]]), visibles)]" },
+    { nombre: 'la respuesta vieja pisa la nueva', de: '  if (estado.turnos.get(clave) !== turno) return false\n', a: '' },
+    { nombre: 'el cero cuenta', de: '    if (!Number.isInteger(n) || n <= 0) continue\n    const k = ', a: '    if (!Number.isInteger(n) || n < 0) continue\n    const k = ' },
+    { nombre: 'un texto se vuelve un número', de: '    if (!Number.isInteger(n) || n <= 0) continue\n    const k = ', a: '    if (n <= 0) continue\n    const k = ' },
+    { nombre: 'un módulo sin tarjeta cae en cualquier tarjeta', de: '    if (destino !== clave) continue\n', a: '' },
+    { nombre: 'no se recarga al volver a la pestaña', de: "if (doc.visibilityState === 'visible' && quieto()) cargarTodo()", a: 'if (false) cargarTodo()' },
+    { nombre: 'el texto del pie sin escapar', de: '<span class="tb-res__t">${escTab(r.t)}</span>', a: '<span class="tb-res__t">${r.t}</span>' },
+    { nombre: 'el pie no dice que no se pudo saber', de: "      ? '<div class=\"tb-pie__nota\">No se pudo saber qué hay pendiente.</div>'", a: "      ? ''" },
+    { nombre: 'la tarjeta pierde su clave', de: 'data-tarjeta="${escTab(t.clave)}"', a: 'data-tarjeta=""' },
+    { nombre: 'volver a cargar duplica el renglón', de: '    if (pend) m.resolver = [...(m.resolver ?? []), ...resolverDePendientes(clave, pend, visibles)]', a: '    if (pend) m.resolver = [...(m.resolver ?? []), ...resolverDePendientes(clave, pend, visibles), ...resolverDePendientes(clave, pend, visibles)]' },
   ],
 })

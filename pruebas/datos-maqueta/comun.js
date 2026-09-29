@@ -17,4 +17,15 @@ const UNIDADES = [
   { id: 'u-p', nombre: 'Pruebas (robot)', prefijo: 'X', logo_url: null, activo: true, es_prueba: true },
 ];
 
-module.exports = { UID, tarea, UNIDADES };
+// Las cuatro fábricas reales del diseño "Esqueleto" (Nuss, Dolce Pasta,
+// Mengui, Taller) sin logo, así la barra de arriba dibuja las marcas de color
+// del diseño; más la de pruebas (nunca se ve en una cuenta real).
+const UNIDADES_4 = [
+  { id: 'u-n', nombre: 'Cucuruchos Nuss', prefijo: 'N', logo_url: null, activo: true, es_prueba: false },
+  { id: 'u-d', nombre: 'Dolce Pasta', prefijo: 'D', logo_url: null, activo: true, es_prueba: false },
+  { id: 'u-o', nombre: 'Mengui', prefijo: 'O', logo_url: null, activo: true, es_prueba: false },
+  { id: 'u-t', nombre: 'Taller', prefijo: 'T', logo_url: null, activo: true, es_prueba: false },
+  { id: 'u-p', nombre: 'Pruebas (robot)', prefijo: 'X', logo_url: null, activo: true, es_prueba: true },
+];
+
+module.exports = { UID, tarea, UNIDADES, UNIDADES_4 };

@@ -17,7 +17,7 @@ correrMutacionesDashboard({
     { nombre: 'la tarjeta de Producción abre otra pantalla', de: "url: 'modulos/produccion-gestion.html',", a: "url: 'modulos/stock.html'," },
     { nombre: 'la tarjeta de una persona abre la planta', de: "url: 'modulos/produccion-gestion.html',", a: "url: 'modulos/produccion.html'," },
     { nombre: 'la tarjeta no sabe a dónde llevar a una tablet', de: "        urlDispositivo: 'modulos/produccion.html',\n", a: '' },
-    { nombre: 'el enlace ignora urlDispositivo', de: 'href="${(esDispositivo && modulo.urlDispositivo) || modulo.url}"', a: 'href="${modulo.url}"' },
+    { nombre: 'el enlace ignora urlDispositivo', de: 'url: (esDispositivo && m.urlDispositivo) || m.url', a: 'url: m.url' },
     { nombre: 'la tarjeta deja de ser azul', de: "        proximamente: false,\n        color: 'azul'", a: "        proximamente: false,\n        color: 'verde'" },
 
     // ── Entrar derecho: el guard del BUCLE ───────────────────────────────

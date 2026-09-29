@@ -33,6 +33,7 @@ correrMutaciones({
     { nombre: 'el menú no escapa el mail', de: '<span class="barra-arriba__menu-mail">${escUni(email || \'\')}</span>', a: '<span class="barra-arriba__menu-mail">${email || \'\'}</span>' },
     { nombre: 'inventa "0 abiertas" sin saber', de: "Number.isInteger(sesiones) && sesiones > 0 ?", a: 'true ?' },
     { nombre: 'Mi cuenta no lleva al dashboard', de: "new URL('dashboard.html?cuenta=mi-cuenta', raiz)", a: "new URL('dashboard.html', raiz)" },
+    { nombre: 'el nombre sale de la ficha (Apellido Nombre)', de: "  yo.nombreVisible = meta.nombre_completo || meta.full_name || yo.nombre || ''", a: "  yo.nombreVisible = yo.nombre || ''" },
     { nombre: 'con una unidad no marca "sin fábricas"', de: "  nav.classList.toggle('barra-arriba--sin-fabricas', !estado.mostrar)\n", a: '' },
   ],
 })
