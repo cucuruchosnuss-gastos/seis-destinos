@@ -302,6 +302,12 @@ async function correrRenders(S) {
   const fila = S.renderizarFilaMovimiento(mov, { mostrarPersona: true })
   chequearMarcas(chk, 'fila de movimiento', fila, ['m_moneda', 'm_medio', 'm_desc', 'p1_nombre', 'p2_nombre', 'm_razon', 'm_cat'])
   const transf = S.renderizarFilaMovimiento({ ...mov, tipo: 'egreso_transferencia', cuenta_id: 'c2', gasto_id: null })
+  // El signo (29/09/2026): la misma regla que las vistas de saldo, todo tipo
+  // que empieza con "ingreso" suma. La devolución de un gasto anulado salía "−".
+  const signoDe = (tipo) => (/class="movimiento__monto">([+−])/.exec(S.renderizarFilaMovimiento({ ...mov, tipo, gasto_id: null, contraparte_empleado_id: null })) || [])[1]
+  chk('signo: la devolución de un gasto anulado suma (+)', signoDe('ingreso_reversion_gasto') === '+', signoDe('ingreso_reversion_gasto'))
+  chk('signo: ingreso, externo y traspaso entrante suman', ['ingreso', 'ingreso_externo', 'ingreso_traspaso'].every(t => signoDe(t) === '+'))
+  chk('signo: gasto, retiro, transferencia y traspaso saliente restan', ['egreso_gasto', 'egreso_retiro', 'egreso_transferencia', 'egreso_traspaso'].every(t => signoDe(t) === '−'))
   chequearMarcas(chk, 'fila de movimiento (Entregado a…, nombre de cuenta)', transf, ['p2_nombre', 'c2_nombre'])
   const tipoRaro = S.renderizarFilaMovimiento({ ...mov, tipo: marca('m_tipo'), gasto_id: null })
   chequearMarcas(chk, 'fila de movimiento (tipo desconocido, en la clase y la etiqueta)', tipoRaro, ['m_tipo'])

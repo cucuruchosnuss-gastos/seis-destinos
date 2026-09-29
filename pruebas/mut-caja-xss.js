@@ -25,6 +25,10 @@ correrMutaciones({
     'poblarSelectorContraparte', 'opcionesCuenta',
   ],
   manuales: [
+    { nombre: 'la devolución de un gasto anulado vuelve a restar',
+      de: "const esPositivo = String(m.tipo ?? '').startsWith('ingreso')", a: "const esPositivo = m.tipo === 'ingreso' || m.tipo === 'ingreso_externo' || m.tipo === 'ingreso_traspaso'" },
+    { nombre: 'todo movimiento suma',
+      de: "const esPositivo = String(m.tipo ?? '').startsWith('ingreso')", a: 'const esPositivo = true' },
     { nombre: 'importeHtml() deja de escapar',
       de: 'return esc(formatearImporte(importe, moneda))', a: 'return formatearImporte(importe, moneda)' },
     { nombre: 'formatearImporteCentavosSuaves() deja de escapar la moneda',

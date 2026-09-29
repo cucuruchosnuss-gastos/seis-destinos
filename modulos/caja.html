@@ -3724,7 +3724,10 @@
 
     // conUnidad: la etiqueta de unidad de la fila (ver htmlUnidadDeFila).
     function renderizarFilaMovimiento(m, { mostrarPersona = false, conUnidad = false } = {}) {
-      const esPositivo = m.tipo === 'ingreso' || m.tipo === 'ingreso_externo' || m.tipo === 'ingreso_traspaso'
+      // La misma regla que las vistas de saldo (v_caja_saldos*, 29/09/2026):
+      // todo tipo que empieza con "ingreso" suma, también la devolución de un
+      // gasto anulado (ingreso_reversion_gasto), que antes salía con "−".
+      const esPositivo = String(m.tipo ?? '').startsWith('ingreso')
       const signo = esPositivo ? '+' : '−'
 
       const personaHtml = mostrarPersona
