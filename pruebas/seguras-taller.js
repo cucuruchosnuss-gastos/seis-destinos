@@ -8,11 +8,9 @@
 
 const SEGURAS_TALLER = [
   ['ancho', 'número: htmlBarraCosto() lo acota con Math.max(0, Math.min(100, avance))'],
-  ['opciones', 'HTML ya escapado: htmlPanelHoras() arma cada <option> con esc() del id y del nombre'],
-  ['tipos', 'HTML ya escapado: htmlSeccionArchivos() arma cada <option> con esc() de la clave y la etiqueta (constantes)'],
-  ['htmlSeccionDatos(r, c)', 'HTML armado por htmlSeccionDatos(), que escapa cada dato con dato() / esc()'],
-  ['htmlSeccionPlata(r, c)', 'HTML armado por htmlSeccionPlata(), que escapa cada cifra con cifra() / esc()'],
-  ["futuros.map(v => `${esc(importe(v.valor))} desde el ${esc(fechaCorta(v.vigente_desde))}`).join(' · ')", 'HTML armado en el mismo renglón con esc() del importe y de la fecha'],
+  ['clases', 'clases CSS armadas en la misma función con literales del código (kv, cabecera y celdas del diagrama)'],
+  ['estilo', 'htmlTabla(): "grid-template-columns:" + esc(columnas), ya escapado en el renglón de arriba'],
+  ['importe((c ?? 0) - pr, moneda)', 'texto de una plantilla que queda adentro de un esc(): htmlCosto() escapa "se pasó $ …" entero'],
 ]
 
 const SEGURAS_REGEX_TALLER = [

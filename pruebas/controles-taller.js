@@ -39,6 +39,18 @@ const RENOMBRADOS = {
 const EN_PLANTILLA_ANIDADA = {
 }
 
+// Controles RETIRADOS a propósito (el diseño "Proyectos Taller", 29/09/2026):
+// clave → motivo. Un retirado que vuelve a aparecer pone la prueba en rojo
+// (la declaración sobra y taparía el próximo).
+const RETIRADOS = {
+  'control:a[href=../dashboard.html]{&lsaquo; Volver}': 'el diseño no tiene "‹ Volver": se vuelve con la barra lateral (Inicio) y, en el celular, con la barra de abajo',
+  'control:button[data-filtro-destino][type=button]': 'el filtro de destino pasó a un select ("Externos e internos", #tl-filtro-destino), como en el diseño 1a',
+  'data:data-filtro-destino': 'el mismo filtro de destino, ahora un select (#tl-filtro-destino)',
+  'control:input#tl-venta-fecha[type=date]': 'la ventana de facturar del diseño (3a/3b) no pide fecha: facturar_proyecto y cargar_proyecto_a_fabrica reciben la de hoy (hoyArgentina())',
+  'id:tl-venta-fecha': 'la misma fecha de la venta, que ya no se pide',
+  'id:tl-ed-slot-venta': 'renombrado a #tl-ed-slot-precio: sin permiso de precios la palabra "venta" no puede estar en el DOM, ni en un id',
+}
+
 let ok = 0
 const fallas = []
 function chk(nombre, cond, detalle) {
@@ -65,7 +77,13 @@ try {
 
   // 1. Todo lo del baseline sigue estando, al menos las mismas veces.
   const nuevosRenombres = []
+  for (const [k, m] of Object.entries(RETIRADOS)) {
+    console.log(`RETIRADO: ${k} (${m})`)
+    chk(`el retirado ${k} ya no está`, !(A.cuenta.get(k) > 0), 'sigue estando: sacá la declaración de RETIRADOS')
+    chk(`el retirado ${k} estaba en el baseline`, B.cuenta.get(k) > 0, 'no estaba: la declaración sobra')
+  }
   for (const [k, n] of [...B.cuenta.entries()].sort()) {
+    if (RETIRADOS[k]) continue
     let clave = k
     const ren = RENOMBRADOS[k.replace(/^control:/, '')]
     if (ren) { clave = 'control:' + ren.nueva; nuevosRenombres.push(`${k} → ${clave} (${ren.motivo})`) }
