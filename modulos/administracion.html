@@ -197,7 +197,11 @@
     .ad-sello--pendiente { background: var(--bordo-suave); color: var(--bordo-oscuro); border-color: var(--bordo); }
     .ad-sello--valorizada { background: var(--verde-suave); color: var(--verde-oscuro); border-color: transparent; }
     .ad-sello--anulada { background: var(--bordo); color: #fff; border-color: var(--bordo); }
-    .ad-sello--proveedor { background: var(--naranja-suave); color: var(--naranja-oscuro); border-color: transparent; }
+    /* "También proveedor" es un dato: neutro (el naranja es solo para lo que
+       se toca, 29/09/2026). */
+    .ad-sello--proveedor { background: var(--color-superficie); color: var(--color-texto-menu); border-color: var(--color-borde); }
+    /* La empresa de cada cliente, con "Todas las fábricas" (29/09/2026). */
+    .ad-sello--empresa { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde-fuerte); letter-spacing: 0.02em; }
     .ad-filtros { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); align-items: end; }
     .ad-cuenta { font-size: 0.8125rem; color: var(--ad-texto-secundario); margin: 0 0 0.5rem; }
 
@@ -761,6 +765,14 @@
       // y sus retiros del mes. null = no se pidieron; { filas, error }.
       mostrarApagados: false,
       apagados: null,
+      // "Todas las fábricas" (29/09/2026): los clientes de TODAS las empresas
+      // donde se ven clientes (clientes_con_saldo por cada una), con la
+      // columna Empresa. fichasTodas: cliente_id → la fila de clientes (para
+      // el límite y el código anterior); todasFallaron: las empresas que no se
+      // pudieron leer (las demás se ven igual).
+      clientesTodas: false,
+      fichasTodas: null,
+      todasFallaron: [],
       // El interruptor que se está guardando y el error de la base, pegado a
       // la fila: { id, guardando, error }.
       interruptor: null,
@@ -965,6 +977,7 @@
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       estado.vista = id
+      pintarEmpresas()
       document.getElementById('ad-subtitulo').textContent = SUBTITULO_DE_VISTA[id] ?? 'Administración'
       // La cartera de cheques y las cobranzas no son de una empresa: el
       // selector se esconde.
@@ -1013,9 +1026,16 @@
         return `<div class="ad-aviso">${esc('Con ' + nombre + ' elegida arriba no tenés órdenes, clientes ni precios en Administración. Elegí otra unidad o "Todas".')}</div>`
       }
       if (lista.length <= 1) return ''
-      return `<p class="ad-texto-suave">Con "Todas" elegido arriba, elegí acá de qué empresa querés ver las órdenes, los clientes y los precios:</p>` +
+      // En la lista de Clientes el segmento suma "Todas las fábricas"
+      // (29/09/2026): una opción más, que no cambia la empresa elegida.
+      const enClientes = estado.vista === 'ad-vista-clientes' && empresasDeClientes().length > 1
+      const todas = enClientes && clientesEnTodas()
+      return (enClientes
+        ? '<p class="ad-texto-suave">Con "Todas" elegido arriba, elegí acá de qué empresa querés ver los clientes, o "Todas las fábricas" para verlos juntos:</p>'
+        : '<p class="ad-texto-suave">Con "Todas" elegido arriba, elegí acá de qué empresa querés ver las órdenes, los clientes y los precios:</p>') +
         `<div class="ad-segmento" role="group" aria-label="Empresa">` + lista.map(e =>
-        `<button type="button" class="ad-segmento__opcion" data-empresa="${esc(e.id)}" aria-pressed="${e.id === estado.empresaId ? 'true' : 'false'}">${esc(e.nombre)}</button>`).join('') + `</div>`
+        `<button type="button" class="ad-segmento__opcion" data-empresa="${esc(e.id)}" aria-pressed="${!todas && e.id === estado.empresaId ? 'true' : 'false'}">${esc(e.nombre)}</button>`).join('') +
+        (enClientes ? `<button type="button" class="ad-segmento__opcion" data-empresa="${esc(TODAS_LAS_FABRICAS)}" aria-pressed="${todas ? 'true' : 'false'}">Todas las fábricas</button>` : '') + `</div>`
     }
 
     function pintarEmpresas() {
@@ -1841,7 +1861,7 @@
     }
 
     function limiteDe(clienteId) {
-      return clienteDe(clienteId)?.limite_credito ?? null
+      return fichaCliente(clienteId)?.limite_credito ?? null
     }
 
     async function contarSobreLimite(unidadId) {
@@ -1856,7 +1876,7 @@
       const digitos = String(busqueda ?? '').replace(/\D/g, '')
       return todos.filter(c => normalizar(c.nombre).includes(q) || normalizar(c.razon_social).includes(q) ||
         (digitos.length >= 3 && String(c.cuit ?? '').includes(digitos)) ||
-        (digitos.length > 0 && digitos === String(c.codigo_anterior ?? clienteDe(c.cliente_id)?.codigo_anterior ?? '')))
+        (digitos.length > 0 && digitos === String(c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior ?? '')))
     }
 
     // El interruptor lo toca quien puede prender o apagar un cliente:
@@ -1867,7 +1887,7 @@
     }
 
     function htmlInterruptor(c) {
-      if (!puedePrenderApagar()) return ''
+      if (!puedePrenderApagar(c.unidad_negocio_id ?? estado.empresaId)) return ''
       const prendido = !c.apagado
       const it = estado.interruptor?.id === c.cliente_id ? estado.interruptor : null
       return `<button type="button" class="ad-interruptor" role="switch" aria-checked="${prendido ? 'true' : 'false'}" data-cliente-activo="${esc(c.cliente_id)}"` +
@@ -1878,7 +1898,7 @@
     function htmlFilaCliente(c) {
       const limite = limiteDe(c.cliente_id)
       const pasa = !c.apagado && pasaLimite(c.saldo, limite)
-      const codigo = c.codigo_anterior ?? clienteDe(c.cliente_id)?.codigo_anterior
+      const codigo = c.codigo_anterior ?? fichaCliente(c.cliente_id)?.codigo_anterior
       // Un apagado trae su lista y sus retiros del mes igual que un prendido
       // (clientes_con_saldo con p_incluir_apagados).
       const meta = [limpio(c.razon_social) && limpio(c.razon_social) !== limpio(c.nombre) ? c.razon_social : null,
@@ -1890,6 +1910,7 @@
         `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(c.nombre)}</span>` +
         `<span class="ad-fila__importe${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(c.saldo))}</span></span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta + limiteTexto)}</span>` +
+        `${c.empresa ? `<span class="ad-sello ad-sello--empresa" title="Empresa">${esc(c.empresa)}</span>` : ''}` +
         `${c.apagado ? '<span class="ad-sello">Apagado</span>' : ''}` +
         `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">También proveedor</span>' : ''}` +
         `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span>` +
@@ -1907,6 +1928,111 @@
       return (Array.isArray(data) ? data : []).filter(c => c?.activo === false).map(c => ({ ...c, apagado: true }))
     }
 
+    // ── "TODAS LAS FÁBRICAS" (29/09/2026) ───────────────────────────────────
+    // Facu: poder ver los clientes de cada fábrica juntos, con la columna
+    // Empresa. clientes_con_saldo() es por empresa, así que se llama una vez
+    // por cada empresa donde se ven clientes (retiros:ver), sin la fábrica de
+    // pruebas (empresasDeAdministracion ya la saca), y se juntan. La cuenta
+    // corriente de cada cliente se sigue abriendo POR SU EMPRESA: la cuenta
+    // del cliente es por unidad aunque la razón social sea la misma.
+    const TODAS_LAS_FABRICAS = 'todas'
+
+    function empresasDeClientes() {
+      return empresasDeAdministracion().filter(e => puedeEn('retiros', 'ver', e.id))
+    }
+
+    // Solo con "Todas" en la barra de arriba (con una unidad elegida ahí, la
+    // empresa la decide la barra) y más de una empresa con clientes.
+    function clientesEnTodas() {
+      return !!estado.clientesTodas && !estado.unidadBarra && empresasDeClientes().length > 1
+    }
+
+    // La fila de clientes (límite, código anterior): con "Todas las fábricas",
+    // de la empresa de ese cliente; si no, la de la empresa elegida.
+    function fichaCliente(id) {
+      return (estado.fichasTodas && clientesEnTodas() && estado.fichasTodas.get(id)) || clienteDe(id)
+    }
+
+    // El que más debe arriba; sin saldo, al final.
+    function porSaldo(a, b) {
+      const sa = a.saldo === null || a.saldo === undefined || a.saldo === '' ? null : Number(a.saldo)
+      const sb = b.saldo === null || b.saldo === undefined || b.saldo === '' ? null : Number(b.saldo)
+      if (sa === null && sb !== null) return 1
+      if (sb === null && sa !== null) return -1
+      if (sa !== sb) return sb - sa
+      return String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es')
+    }
+
+    // Una empresa que falla no tapa a las demás: se dice cuál y se ven las otras.
+    async function leerClientesTodas() {
+      const empresas = empresasDeClientes()
+      const res = await Promise.all(empresas.map(async (e) => {
+        try {
+          const [saldos, fichas] = await Promise.all([leerSaldos(e.id), leerClientes(e.id)])
+          return { e, saldos, fichas }
+        } catch (err) {
+          console.error('No se pudieron leer los clientes de ' + e.nombre + ':', err)
+          return { e, error: true }
+        }
+      }))
+      const filas = [], fichas = new Map(), fallaron = []
+      for (const r of res) {
+        if (r.error) { fallaron.push(r.e.nombre); continue }
+        for (const f of r.fichas) fichas.set(f.id, f)
+        for (const s of r.saldos) filas.push({ ...s, unidad_negocio_id: r.e.id, empresa: r.e.nombre })
+      }
+      filas.sort(porSaldo)
+      return { filas, fichas, fallaron, total: empresas.length }
+    }
+
+    // Los apagados de todas las empresas (una que falla hace fallar el
+    // pedido: se dice, como con una sola).
+    async function leerApagadosTodas() {
+      const empresas = empresasDeClientes()
+      const listas = await Promise.all(empresas.map(e => leerApagados(e.id).then(l => l.map(c => ({ ...c, unidad_negocio_id: e.id, empresa: e.nombre })))))
+      return listas.flat().sort(porSaldo)
+    }
+
+    // El segmento de empresas: "Todas las fábricas" o una empresa.
+    function elegirEnSegmento(id) {
+      if (id === TODAS_LAS_FABRICAS) {
+        if (!empresasDeClientes().length) return
+        estado.clientesTodas = true
+        estado.apagados = null
+        mostrarClientes()
+        return
+      }
+      if (estado.vista === 'ad-vista-clientes' && clientesEnTodas()) {
+        estado.clientesTodas = false
+        estado.apagados = null
+        // La misma empresa que ya estaba elegida: se queda en la lista.
+        if (id === estado.empresaId) { mostrarClientes(); return }
+      }
+      estado.clientesTodas = false
+      elegirEmpresa(id)
+    }
+
+    // Abrir un cliente de la lista: con "Todas las fábricas", la empresa pasa
+    // a ser la suya (su cuenta, su ficha y sus listas son de esa empresa) y
+    // "‹ Clientes" vuelve a la lista de todas.
+    function abrirClienteDeLista(id) {
+      if (clientesEnTodas()) {
+        const fila = clientesDeLaLista().find(c => c.cliente_id === id)
+        const unidad = fila?.unidad_negocio_id
+        if (unidad && unidad !== estado.empresaId && empresasDeAdministracion().some(e => e.id === unidad)) {
+          estado.empresaId = unidad
+          estado.clientes = null
+          estado.catalogo = null
+          estado.ordenes = null
+          estado.portada = null
+          estado.listas = null
+          estado.importar = null
+          estado.filtros.clienteId = ''
+        }
+      }
+      abrirCliente(id)
+    }
+
     // Lo que se ve: los prendidos y, con "Mostrar apagados", los apagados al final.
     function clientesDeLaLista() {
       const prendidos = estado.saldos ?? []
@@ -1922,8 +2048,12 @@
         if (estado.apagados?.error) aviso = `<div class="ad-aviso ad-aviso--grave">${esc(estado.apagados.error)}</div>`
         else if (!estado.apagados?.filas) aviso = '<div class="ad-vacio">Cargando los apagados…</div>'
       }
+      const enTodas = clientesEnTodas()
+      if (enTodas && estado.todasFallaron?.length) {
+        aviso = `<div class="ad-aviso ad-aviso--grave">${esc('No se pudieron leer los clientes de ' + estado.todasFallaron.join(', ') + '. Los de las demás fábricas se ven igual.')}</div>` + aviso
+      }
       const todos = clientesDeLaLista()
-      if (!todos.length) return aviso + '<div class="ad-vacio">Esta empresa todavía no tiene clientes.</div>'
+      if (!todos.length) return aviso + (enTodas ? '<div class="ad-vacio">Ninguna fábrica tiene clientes todavía.</div>' : '<div class="ad-vacio">Esta empresa todavía no tiene clientes.</div>')
       const lista = clientesFiltrados(todos, estado.busquedaClientes)
       if (!lista.length) return aviso + `<div class="ad-vacio">${esc('Ningún cliente coincide con «' + limpio(estado.busquedaClientes) + '».')}</div>`
       return aviso + lista.map(htmlFilaCliente).join('')
@@ -1933,8 +2063,13 @@
       document.getElementById('ad-clientes-lista').innerHTML = htmlListaClientes()
       document.getElementById('ad-clientes-apagados').checked = !!estado.mostrarApagados
       const n = estado.saldos ? clientesFiltrados(clientesDeLaLista(), estado.busquedaClientes).length : null
-      document.getElementById('ad-clientes-cuenta').textContent = n === null ? '' : `${n} ${n === 1 ? 'cliente' : 'clientes'}`
-      const alta = puedeDarAlta()
+      const enTodas = clientesEnTodas()
+      const nFabricas = enTodas ? new Set(clientesDeLaLista().map(c => c.unidad_negocio_id)).size : 0
+      document.getElementById('ad-clientes-cuenta').textContent = n === null ? ''
+        : `${n} ${n === 1 ? 'cliente' : 'clientes'}` + (enTodas ? ` · ${nFabricas} ${nFabricas === 1 ? 'fábrica' : 'fábricas'}` : '')
+      // Con "Todas las fábricas" no hay UNA empresa para el alta: se elige
+      // la empresa en el segmento.
+      const alta = !enTodas && puedeDarAlta()
       document.getElementById('ad-btn-cliente-nuevo').hidden = !alta
       // guardar_cliente acepta retiros:precios desde el 26/09/2026: el aviso
       // de que el alta pedía el permiso de Pedidos ya no tiene a quién decírselo.
@@ -1949,16 +2084,29 @@
     let turnoClientes = 0
 
     async function mostrarClientes() {
-      if (!puedeEn('retiros', 'ver')) { mostrarInicio(); return }
+      const enTodas = clientesEnTodas()
+      if (enTodas ? !empresasDeClientes().length : !puedeEn('retiros', 'ver')) { mostrarInicio(); return }
       mostrarVista('ad-vista-clientes')
       const turno = ++turnoClientes
       estado.saldos = null
       estado.errorSaldos = null
+      estado.todasFallaron = []
       // Los apagados se vuelven a leer (pueden ser de otra empresa, o haber
       // cambiado con el interruptor).
       estado.apagados = null
       pintarClientes()
       try {
+        if (enTodas) {
+          const r = await leerClientesTodas()
+          if (turno !== turnoClientes) return
+          if (!r.filas.length && r.fallaron.length === r.total) throw new Error('No se pudo leer ninguna fábrica')
+          estado.saldos = r.filas
+          estado.fichasTodas = r.fichas
+          estado.todasFallaron = r.fallaron
+          if (estado.mostrarApagados) cargarApagados(turno)
+          pintarClientes()
+          return
+        }
         const unidad = estado.empresaId
         const [saldos] = await Promise.all([leerSaldos(unidad), asegurarDatosEmpresa()])
         if (turno !== turnoClientes) return
@@ -1978,7 +2126,7 @@
       estado.apagados = { filas: null, error: null }
       pintarClientes()
       try {
-        const filas = await leerApagados(unidad)
+        const filas = clientesEnTodas() ? await leerApagadosTodas() : await leerApagados(unidad)
         if (turno !== turnoClientes) return
         estado.apagados = { filas, error: null }
       } catch (err) {
@@ -2000,9 +2148,9 @@
     // SOLO 'activo': no pisa nombre, apodos ni nada más. Antes se hacía con
     // guardar_cliente, que pisa todo, y había que leer la fila entera.
     async function cambiarActivoCliente(id) {
-      if (!puedePrenderApagar() || estado.interruptor?.guardando) return
+      if (estado.interruptor?.guardando) return
       const fila = clientesDeLaLista().find(c => c.cliente_id === id)
-      if (!fila) return
+      if (!fila || !puedePrenderApagar(fila.unidad_negocio_id ?? estado.empresaId)) return
       const prender = !!fila.apagado
       estado.interruptor = { id, guardando: true, error: null }
       pintarClientes()
@@ -2012,6 +2160,8 @@
         estado.interruptor = null
         const cli = clienteDe(id)
         if (cli) cli.activo = prender
+        const fichaTodas = estado.fichasTodas?.get(id)
+        if (fichaTodas) fichaTodas.activo = prender
         const nombre = limpio(fila.nombre) || 'El cliente'
         mostrarExito(prender
           ? `${nombre} está prendido: vuelve a aparecer para cargar retiros, pedidos y cobranzas.`
@@ -4530,7 +4680,7 @@
     function conectarTodo() {
       document.getElementById('ad-empresas').addEventListener('click', (e) => {
         const b = e.target.closest('[data-empresa]')
-        if (b) elegirEmpresa(b.dataset.empresa)
+        if (b) elegirEnSegmento(b.dataset.empresa)
       })
       document.getElementById('ad-secciones').addEventListener('click', (e) => {
         const b = e.target.closest('[data-seccion]')
@@ -4573,7 +4723,7 @@
         const s = e.target.closest('[data-cliente-activo]')
         if (s) { cambiarActivoCliente(s.dataset.clienteActivo); return }
         const b = e.target.closest('[data-cliente]')
-        if (b) abrirCliente(b.dataset.cliente)
+        if (b) abrirClienteDeLista(b.dataset.cliente)
       })
       document.getElementById('ad-clientes-apagados').addEventListener('change', (e) => cambiarMostrarApagados(e.target.checked))
       document.getElementById('ad-btn-cliente-nuevo').addEventListener('click', () => abrirAlta())

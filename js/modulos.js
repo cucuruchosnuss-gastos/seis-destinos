@@ -47,7 +47,9 @@ export const MODULOS = [
   },
   {
     clave: 'cuentas-corrientes',
-    nombre: 'Cuentas corrientes',
+    // "· Proveedores" (29/09/2026): el módulo es SOLO de proveedores; las
+    // cuentas de los clientes están en Administración → Clientes.
+    nombre: 'Cuentas corrientes · Proveedores',
     icono: 'landmark',
     descripcion: 'Cuentas corrientes de proveedores',
     url: 'modulos/cuentas-corrientes.html',

@@ -31,6 +31,9 @@ correrMutaciones({
     { expr: 'esc(it.error)', motivo: 'el error pegado del interruptor lo prueba test-clientes-apagados.js (marca «error»)' },
     { expr: 'esc(estado.apagados.error)', motivo: 'texto constante del código: lo pone cargarApagados()' },
     { expr: 'esc(textoCodigoAnterior(cli.codigo_anterior))', motivo: 'clientes.codigo_anterior es integer en la base: el texto es una constante y un número' },
+    // Los dos de "Todas las fábricas" (29/09/2026):
+    { expr: 'esc(c.empresa)', motivo: 'la empresa de cada fila la prueba test-administracion-clientes-todas.js (marca «empresa»)' },
+    { expr: "esc('No se pudieron leer los clientes de ' + estado.todasFallaron.join(', ') + '. Los de las demás fábricas se ven igual.')", motivo: 'el aviso lo prueba test-administracion-clientes-todas.js (marca «fallo»)' },
   ],
   manuales: [
     { nombre: 'la sección Clientes sin permiso', de: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'ver'] },", a: "      { id: 'clientes', titulo: 'Clientes', permiso: ['retiros', 'cargar'] }," },

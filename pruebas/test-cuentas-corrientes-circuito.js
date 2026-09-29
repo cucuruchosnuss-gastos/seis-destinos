@@ -67,6 +67,8 @@ const FUNCIONES = [
   // La barra de unidad (28/09/2026): lo que usan los renders de arriba.
   'pasaFiltroUnidad', 'veUnidad', 'etiquetaUnidad', 'contarSinImporteVisible', 'htmlDesgloseResumen',
   'saldosFichaVisibles', 'creditosFichaDeUnidad',
+  // El cheque endosado (29/09/2026): la referencia de un pago.
+  'referenciaMovimiento',
 ]
 const CONSTANTES = ['ESTADO_FACTURA_LABEL', 'TIPO_MOVIMIENTO_LABEL', 'PALETA_AVATAR']
 
