@@ -252,22 +252,41 @@ const PANTALLAS = [
     ['clientes', async (page) => { await page.locator('#pe-detalle-volver').click(); await page.locator('#pe-btn-clientes').click(); await expect(page.locator('#pe-clientes-lista')).toContainText('Anatolia') }],
     ['cargar', async (page) => { await page.locator('#pe-clientes-volver').click(); await page.locator('#pe-btn-nuevo').click() }],
   ]],
-  // Proyectos Taller (28/09/2026): la lista, la ficha con la venta (Tomás
-  // tiene precios), cargar horas, facturar, el editor y el valor de la hora.
-  ['modulos/taller.html', 'taller', [
-    ['lista', async (page) => { await expect(page.locator('[data-proyecto]')).toHaveCount(2); await expect(page.locator('.tl-barra--pasado')).toHaveCount(1) }],
-    ['ficha', async (page) => { await page.locator('[data-proyecto]').first().click(); await expect(page.locator('#tl-ficha')).toContainText('Precio de venta'); await expect(page.locator('#tl-ficha')).toContainText('Soldadura del chasis') }],
-    ['horas', async (page) => { await page.locator('[data-accion="horas"]').click(); await expect(page.locator('#tl-horas-persona')).toBeVisible(); await page.locator('[data-accion="panel-cerrar"]').click() }],
+  // Proyectos Taller (29/09/2026, el diseño nuevo, con los datos del diseño):
+  // la lista, la ficha con la venta (Tomás tiene precios), cargar horas,
+  // facturar, el editor, el valor de la hora (solo en la compu) y el diagrama.
+  ['modulos/taller.html', 'taller-diseno', [
+    ['lista', async (page) => { await expect(page.locator('[data-proyecto]').first()).toBeVisible(); await expect(page.locator('#tl-lista')).toContainText('se pasó') }],
+    ['ficha', async (page) => {
+      await page.locator('[data-proyecto]').filter({ hasText: 'Maq Barquillo 24 Carrizo' }).first().click()
+      await expect(page.locator('#tl-ficha .tl-tabs')).toBeVisible()
+      await expect(page.locator('#tl-ficha')).toContainText('PRECIO DE VENTA')
+      await page.locator('#tl-ficha [data-tab="horas"]').click()
+      await expect(page.locator('#tl-ficha')).toContainText('Soldadura del bastidor')
+    }],
+    ['horas', async (page) => { await page.locator('[data-accion="horas"]:visible').first().click(); await expect(page.locator('#tl-horas-persona')).toBeVisible(); await page.locator('#tl-modal [data-accion="modal-cerrar"]').click() }],
     ['facturar', async (page) => {
-      await page.locator('[data-accion="facturar"]').click()
+      await page.locator('[data-accion="facturar"]:visible').first().click()
       await page.locator('#tl-venta-importe').fill('300000')
       await page.locator('#tl-venta-concepto').fill('Avance')
-      await page.locator('[data-accion="venta-revisar"]').click()
-      await expect(page.locator('#tl-ficha')).toContainText('Se le va a facturar $ 300.000,00 a Carrizo')
-      await page.locator('[data-accion="venta-volver"]').click(); await page.locator('[data-accion="panel-cerrar"]').click()
+      await page.locator('#tl-venta-importe').dispatchEvent('input')
+      await expect(page.locator('#tl-venta-resumen')).toContainText('Facturado pasa de')
+      await page.locator('#tl-modal [data-accion="modal-cerrar"]').click()
     }],
-    ['editor', async (page) => { await page.locator('[data-accion="editar"]').click(); await expect(page.locator('#tl-ed-nombre')).toHaveValue(/barquillo/); await expect(page.locator('#tl-ed-venta')).toBeVisible() }],
-    ['valor-hora', async (page) => { await page.locator('#tl-editor-volver').click(); await page.locator('#tl-ficha-volver').click(); await page.locator('#tl-btn-valor-hora').click(); await expect(page.locator('#tl-hora')).toContainText('Hoy rige') }],
+    ['editor', async (page) => { await page.locator('[data-accion="editar"]:visible').first().click(); await expect(page.locator('#tl-ed-nombre')).toHaveValue(/Barquillo/); await expect(page.locator('#tl-ed-venta')).toBeVisible() }],
+    ['valor-hora', async (page) => {
+      await page.locator('#tl-editor-volver').click()
+      if (await page.locator('#tl-ficha-volver').isVisible()) await page.locator('#tl-ficha-volver').click()
+      else await page.locator('[data-pestana="proyectos"]').click()
+      await expect(page.locator('#tl-lista')).toBeVisible()
+      // En el celular no hay botón del valor de la hora (el diseño no lo dibuja).
+      if (await page.locator('#tl-btn-valor-hora').isVisible()) {
+        await page.locator('#tl-btn-valor-hora').click()
+        await expect(page.locator('#tl-hora')).toContainText('18.500')
+        await page.locator('#tl-hora-volver').click()
+      }
+    }],
+    ['diagrama', async (page) => { await page.locator('[data-pestana="diagrama"]').click(); await expect(page.locator('#tl-diagrama')).toBeVisible() }],
   ]],
   ['modulos/produccion-gestion.html', 'produccion-gestion', [
     ['indicadores', async (page) => { await expect(page.locator('body')).toContainText('lote 7021') }],

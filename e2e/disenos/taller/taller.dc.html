@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E4E0D9; -webkit-font-smoothing: antialiased; }
+  a { color: #C2410C; text-decoration: none; }
+  a:hover { color: #8F2F08; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #D6CFC4; border-radius: 8px; }
+</style>
+</helmet>
+<div style="padding: 56px; display: flex; flex-direction: column; gap: 48px; font-family: 'Figtree', sans-serif; color: #1C1A17; width: max-content; min-width: 100%;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 900px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: oklch(0.955 0.02 150); color: oklch(0.42 0.07 150); display: flex; align-items: center; justify-content: center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M14 3.5a5 5 0 0 0-4.6 6.9L3.6 16.2a2 2 0 0 0 2.8 2.8l5.8-5.8A5 5 0 0 0 20.5 10l-3.2.8-2.1-2.1.8-3.2z"></path></svg>
+      </div>
+      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -0.02em;">Proyectos Taller</div>
+    </div>
+    <div style="font-size: 17px; color: #6B645A; line-height: 1.5; text-wrap: pretty;">Lo usan Tomás (ve todo), Edgar (sin precios ni márgenes) y Facu. Máquinas, dispositivos, automatizaciones, mantenimientos y horas para clientes de afuera, y trabajos internos con precio para las otras fábricas. Compu a 1366 × 768 y celular a 390 × 844.</div>
+  </div>
+
+  <sc-for list="{{ groups }}" as="gp" hint-placeholder-count="1">
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid #D6CFC4; padding-bottom: 10px;">
+        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 30px; font-weight: 800;">{{ gp.title }}</div>
+        <div style="font-size: 16px; color: #6B645A;">{{ gp.sub }}</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 44px 36px; align-items: flex-start;">
+        <sc-for list="{{ gp.screens }}" as="s" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 10px; width: {{ s.w }}px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 14px; background: #1C1A17; color: #fff; border-radius: 8px; padding: 3px 9px;">{{ s.id }}</div>
+              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;">{{ s.title }}</div>
+              <div style="font-size: 13px; font-weight: 700; color: #9A9287;">{{ s.sizeLabel }}</div>
+            </div>
+            <div style="font-size: 14.5px; color: #6B645A; line-height: 1.45; max-width: 1000px; text-wrap: pretty;">{{ s.note }}</div>
+            <div style="width: {{ s.w }}px; height: {{ s.h }}px; background: #F5F3EF; border-radius: {{ s.radius }}px; overflow: hidden; box-shadow: 0 30px 60px -20px rgba(28,26,23,0.35), 0 0 0 1px rgba(28,26,23,0.1); display: flex; position: relative;">
+
+              <sc-if value="{{ s.desk }}">
+                <aside style="width: 232px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #E7E3DC; display: flex; flex-direction: column; padding: 12px 10px 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px; margin-bottom: 8px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; background-image: url(logo.png); background-size: 165%; background-position: 50% 28%; border: 1px solid #EFEBE5;"></div>
+                    <div style="line-height: 1.05;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 15.5px;">Seis Destinos</div>
+                      <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: #9A9287;">GROUP</div>
+                    </div>
+                  </div>
+                  <nav style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                    <sc-for list="{{ side }}" as="m" hint-placeholder-count="12">
+                      <div style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px 0 5px; border-radius: 9px; background: {{ m.bg }};">
+                        <div style="width: 24px; height: 24px; border-radius: 7px; background: {{ m.tint }}; color: {{ m.color }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ m.icon }}"></path></svg>
+                        </div>
+                        <div style="flex: 1; min-width: 0; font-size: 13.5px; font-weight: {{ m.fw }}; color: {{ m.fg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.name }}</div>
+                        <sc-if value="{{ m.hasBadge }}"><div style="min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px; background: {{ m.bBg }}; color: {{ m.bFg }}; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{ m.badge }}</div></sc-if>
+                      </div>
+                      <sc-if value="{{ m.div }}"><div style="height: 1px; background: #EFEBE5; margin: 5px 6px;"></div></sc-if>
+                    </sc-for>
+                  </nav>
+                  <div style="border-top: 1px solid #EFEBE5; padding-top: 8px; display: flex; align-items: center; gap: 10px; height: 44px; padding-left: 5px; font-size: 13.5px; font-weight: 500; color: #3D3831;">
+                    <div style="width: 24px; height: 24px; border-radius: 7px; background: #F1EEE9; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round;"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"></path></svg></div>Personalizar
+                  </div>
+                </aside>
+              </sc-if>
+
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                <sc-if value="{{ s.desk }}">
+                  <header style="height: 52px; flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 20px;">
+                    <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 11px; padding: 3px;">
+                      <sc-for list="{{ topFabs }}" as="f" hint-placeholder-count="5">
+                        <div style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px 0 5px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13.5px; font-weight: {{ f.fw }};">
+                          <sc-if value="{{ f.all }}">
+                            <div style="width: 20px; height: 20px; border-radius: 6px; background: #FFFFFF; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 4px;">
+                              <div style="border-radius: 2px; background: oklch(0.55 0.11 55);"></div><div style="border-radius: 2px; background: oklch(0.52 0.1 130);"></div><div style="border-radius: 2px; background: oklch(0.57 0.19 25);"></div><div style="border-radius: 2px; background: #57534E;"></div>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ f.one }}"><span style="width: 20px; height: 20px; border-radius: 999px; background: {{ f.c }}; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{ f.ring }};">{{ f.ini }}</span></sc-if>{{ f.n }}
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid #E7E3DC;">
+                      <div style="width: 30px; height: 30px; border-radius: 999px; background: {{ s.uC }}; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">{{ s.uIni }}</div>
+                      <div style="font-size: 14px; font-weight: 600;">{{ s.uName }}</div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M6 9l6 6 6-6"></path></svg>
+                    </div>
+                  </header>
+                  <div style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 12px 24px 0;">
+                    <div style="width: 30px; height: 30px; border-radius: 9px; background: oklch(0.955 0.02 150); color: oklch(0.42 0.07 150); display: flex; align-items: center; justify-content: center;">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M14 3.5a5 5 0 0 0-4.6 6.9L3.6 16.2a2 2 0 0 0 2.8 2.8l5.8-5.8A5 5 0 0 0 20.5 10l-3.2.8-2.1-2.1.8-3.2z"></path></svg>
+                    </div>
+                    <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 700;">Proyectos Taller</div>
+                    <div style="display: {{ s.tabsDisp }}; gap: 2px; background: #EDE9E3; border-radius: 11px; padding: 3px; margin-left: 6px;">
+                      <sc-for list="{{ s.tabs }}" as="t" hint-placeholder-count="10">
+                        <div style="display: flex; align-items: center; gap: 5px; height: 30px; padding: 0 9px; border-radius: 8px; background: {{ t.bg }}; color: {{ t.fg }}; font-size: 13px; font-weight: {{ t.fw }}; box-shadow: {{ t.sh }}; white-space: nowrap;">
+                          {{ t.n }}<sc-if value="{{ t.hasB }}"><span style="min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: {{ t.bBg }}; color: {{ t.bFg }}; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ t.b }}</span></sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.mob }}">
+                  <div style="flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC;">
+                    <div style="height: 44px; display: flex; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 700;">16:10</div>
+                    <div style="height: 56px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 4px;">
+                      <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; opacity: {{ s.backOp }};"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1A17" style="stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round;"><path d="M15 6l-6 6 6 6"></path></svg></div>
+                      <div style="flex: 1; min-width: 0; line-height: 1.1;">
+                        <div style="font-size: 12.5px; font-weight: 600; color: #6B645A;">{{ s.mSub }}</div>
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;">{{ s.mTitle }}</div>
+                      </div>
+                      <div style="height: 34px; padding: 0 10px 0 5px; border-radius: 10px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700;"><span style="width: 22px; height: 22px; border-radius: 999px; background: #57534E; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center;">T</span>Taller</div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: {{ s.cols }}; grid-template-rows: {{ s.rows }}; grid-auto-rows: {{ s.autoRows }}; align-content: {{ s.alignC }}; gap: 12px; padding: {{ s.pad }}; overflow: {{ s.ovf }};">
+                  <sc-for list="{{ s.panels }}" as="p" hint-placeholder-count="3">
+                    <div style="grid-column: {{ p.col }}; grid-row: {{ p.row }}; min-height: 0; min-width: 0; background: {{ p.bg }}; border: {{ p.border }}; border-radius: 16px; padding: {{ p.pad }}; display: flex; flex-direction: column; gap: {{ p.gap }}px; overflow: hidden; position: {{ p.pos }}; left: {{ p.left }}; top: {{ p.top }}; transform: {{ p.tf }}; width: {{ p.w }}; z-index: {{ p.z }}; box-shadow: {{ p.sh }};">
+                      <sc-if value="{{ p.hasHead }}">
+                        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0; background: {{ p.hBg }}; color: {{ p.hFg }}; margin: {{ p.hM }}; padding: {{ p.hPad }}; border-bottom: {{ p.hBd }};">
+                          <sc-if value="{{ p.hasIcon }}">
+                            <div style="width: 32px; height: 32px; border-radius: 9px; background: {{ p.iT }}; color: {{ p.iC }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ p.icon }}"></path></svg>
+                            </div>
+                          </sc-if>
+                          <div style="flex: 1; min-width: 0; line-height: 1.2;">
+                            <div style="font-family: {{ p.tFam }}; font-size: {{ p.tfs }}px; font-weight: 700; font-style: {{ p.tIt }};">{{ p.title }}</div>
+                            <sc-if value="{{ p.hasSub }}"><div style="font-size: 13.5px; color: {{ p.subFg }}; margin-top: 1px;">{{ p.sub }}</div></sc-if>
+                          </div>
+                          <sc-for list="{{ p.chips }}" as="k" hint-placeholder-count="1">
+                            <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: {{ k.bg }}; color: {{ k.fg }}; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; white-space: nowrap;">{{ k.t }}</span>
+                          </sc-for>
+                          <sc-for list="{{ p.acts }}" as="b" hint-placeholder-count="1">
+                            <div style="height: {{ b.h }}px; padding: 0 {{ b.px }}px; border-radius: 10px; background: {{ b.bg }}; color: {{ b.fg }}; border: {{ b.bd }}; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">{{ b.t }}</div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+
+                      <sc-for list="{{ p.blocks }}" as="b" hint-placeholder-count="2">
+                        <div style="flex: {{ b.flex }}; min-height: 0; display: flex; flex-direction: column;">
+                          <sc-if value="{{ b.links }}">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                              <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; margin-right: 4px;">{{ b.label }}</span>
+                              <sc-for list="{{ b.items }}" as="l" hint-placeholder-count="5">
+                                <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 6px; border-radius: 11px; background: #FFFFFF; border: 1px solid #E7E3DC; font-size: 14px; font-weight: 700;">
+                                  <span style="width: 26px; height: 26px; border-radius: 8px; background: {{ l.t }}; color: {{ l.c }}; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ l.icon }}"></path></svg></span>{{ l.n }}<sc-if value="{{ l.hasX }}"><span style="font-size: 12.5px; font-weight: 600; color: #6B645A;">{{ l.x }}</span></sc-if>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.tabs }}">
+                            <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 10px; padding: 3px; align-self: flex-start;">
+                              <sc-for list="{{ b.items }}" as="t" hint-placeholder-count="2">
+                                <div style="height: 32px; padding: 0 14px; border-radius: 8px; background: {{ t.bg }}; color: {{ t.fg }}; font-size: 14px; font-weight: {{ t.fw }}; display: flex; align-items: center; box-shadow: {{ t.sh }};">{{ t.n }}</div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.tool }}">
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                              <sc-if value="{{ b.hasQ }}">
+                                <div style="width: {{ b.qW }}; height: 36px; border-radius: 10px; background: {{ b.qBg }}; border: {{ b.qBd }}; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 14px; color: {{ b.qFg }}; font-weight: {{ b.qFw }};">
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round; flex-shrink: 0;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ b.q }}</span>
+                                </div>
+                              </sc-if>
+                              <sc-if value="{{ b.hasSeg }}">
+                                <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 10px; padding: 3px;">
+                                  <sc-for list="{{ b.seg }}" as="f" hint-placeholder-count="3">
+                                    <div style="height: 30px; padding: 0 10px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13px; font-weight: {{ f.fw }}; display: flex; align-items: center; gap: 5px; white-space: nowrap;">{{ f.t }}<span style="opacity: 0.75;">{{ f.n }}</span></div>
+                                  </sc-for>
+                                </div>
+                              </sc-if>
+                              <sc-for list="{{ b.toggles }}" as="g" hint-placeholder-count="1">
+                                <div style="display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: #3D3831; white-space: nowrap;">
+                                  <div style="width: 34px; height: 20px; border-radius: 999px; background: {{ g.bg }}; padding: 3px; display: flex; justify-content: {{ g.j }};"><div style="width: 14px; height: 14px; border-radius: 999px; background: #fff;"></div></div>{{ g.t }}
+                                </div>
+                              </sc-for>
+                              <span style="flex: 1;"></span>
+                              <sc-for list="{{ b.btns }}" as="x" hint-placeholder-count="1">
+                                <div style="height: {{ x.h }}px; padding: 0 {{ x.px }}px; border-radius: 10px; background: {{ x.bg }}; color: {{ x.fg }}; border: {{ x.bd }}; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">{{ x.t }}</div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.alert }}">
+                            <div style="background: {{ b.bg }}; border: 1.5px solid {{ b.bd }}; border-radius: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 10px;">
+                              <sc-if value="{{ b.hasIcon }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ b.ic }}" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;"><path d="{{ b.icon }}"></path></svg></sc-if>
+                              <div style="flex: 1; min-width: 0; line-height: 1.35;">
+                                <div style="font-size: 14.5px; font-weight: 800; color: {{ b.fg }};">{{ b.title }}</div>
+                                <sc-if value="{{ b.hasText }}"><div style="font-size: 13.5px; color: {{ b.fg }};">{{ b.msg }}</div></sc-if>
+                              </div>
+                              <sc-for list="{{ b.btns }}" as="x" hint-placeholder-count="1">
+                                <div style="height: {{ x.h }}px; padding: 0 {{ x.px }}px; border-radius: 10px; background: {{ x.bg }}; color: {{ x.fg }}; border: {{ x.bd }}; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap;">{{ x.t }}</div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.kv }}">
+                            <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: {{ b.gap }};">
+                              <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="4">
+                                <div style="min-width: 0; line-height: 1.25; padding: {{ b.cellPad }}; border-bottom: {{ b.line }};">
+                                  <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287;">{{ r.k }}</div>
+                                  <div style="font-family: {{ r.fam }}; font-size: {{ r.fs }}px; font-weight: {{ r.fw }}; color: {{ r.fg }}; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;">{{ r.v }}</div>
+                                  <sc-if value="{{ r.hasSub }}"><div style="font-size: 12.5px; color: {{ r.subFg }};">{{ r.sub }}</div></sc-if>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.big }}">
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                                <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: {{ b.fs }}px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; color: {{ b.fg }}; font-variant-numeric: tabular-nums;">{{ b.v }}</span>
+                                <span style="font-size: 15px; font-weight: 700; color: #3D3831;">{{ b.label }}</span>
+                              </div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.bar }}">
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13.5px;">
+                                <span style="font-weight: 600; color: #3D3831;">{{ b.label }}</span>
+                                <span style="font-weight: 800; color: {{ b.rFg }}; white-space: nowrap; font-variant-numeric: tabular-nums;">{{ b.right }}</span>
+                              </div>
+                              <div style="height: 9px; border-radius: 999px; background: #EDE9E3; overflow: hidden;"><div style="height: 100%; width: {{ b.w }}; background: {{ b.fill }}; border-radius: 999px;"></div></div>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ b.lines }}">
+                            <div style="display: flex; flex-direction: column; gap: 4px; margin-top: auto;">
+                              <sc-for list="{{ b.items }}" as="l" hint-placeholder-count="2">
+                                <div style="display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: {{ l.fw }}; color: {{ l.fg }}; line-height: 1.3;">
+                                  <sc-if value="{{ l.dot }}"><span style="width: 7px; height: 7px; border-radius: 999px; background: {{ l.fg }}; flex-shrink: 0;"></span></sc-if>{{ l.t }}
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.btns }}">
+                            <div style="display: flex; align-items: center; gap: 8px; justify-content: {{ b.j }}; flex-wrap: wrap;">
+                              <sc-for list="{{ b.items }}" as="x" hint-placeholder-count="2">
+                                <sc-if value="{{ x.spacer }}"><span style="flex: 1;"></span></sc-if>
+                                <sc-if value="{{ x.real }}"><div style="height: {{ x.h }}px; padding: 0 {{ x.px }}px; border-radius: 11px; background: {{ x.bg }}; color: {{ x.fg }}; border: {{ x.bd }}; font-size: {{ x.fs }}px; font-weight: 800; display: flex; align-items: center; white-space: nowrap;">{{ x.t }}</div></sc-if>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.opts }}">
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                              <sc-if value="{{ b.hasHead }}">
+                                <div style="display: flex; align-items: baseline; gap: 8px;">
+                                  <span style="font-size: 14.5px; font-weight: 800;">{{ b.head }}</span>
+                                  <span style="font-size: 12.5px; color: #6B645A;">{{ b.headSub }}</span>
+                                </div>
+                              </sc-if>
+                              <div style="display: flex; flex-direction: {{ b.dir }}; gap: 6px; flex-wrap: wrap;">
+                                <sc-for list="{{ b.items }}" as="o" hint-placeholder-count="2">
+                                  <div style="flex: {{ b.itemFlex }}; display: flex; align-items: center; gap: 10px; min-height: {{ b.h }}px; padding: 5px 12px; border-radius: 11px; background: {{ o.bg }}; border: {{ o.bw }}px solid {{ o.bd }};">
+                                    <span style="width: 18px; height: 18px; border-radius: 999px; border: 2px solid {{ o.radio }}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><sc-if value="{{ o.sel }}"><span style="width: 8px; height: 8px; border-radius: 999px; background: #C2410C;"></span></sc-if></span>
+                                    <div style="flex: 1; min-width: 0; line-height: 1.25;">
+                                      <div style="font-size: 14px; font-weight: 700;">{{ o.t }}</div>
+                                      <sc-if value="{{ o.hasSub }}"><div style="font-size: 12.5px; color: #6B645A;">{{ o.sub }}</div></sc-if>
+                                    </div>
+                                    <sc-if value="{{ o.hasRight }}"><span style="font-size: 13px; font-weight: 700; color: {{ o.rFg }}; white-space: nowrap; font-variant-numeric: tabular-nums;">{{ o.right }}</span></sc-if>
+                                  </div>
+                                </sc-for>
+                              </div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.photos }}">
+                            <div style="display: flex; gap: 8px;">
+                              <sc-for list="{{ b.items }}" as="ph" hint-placeholder-count="2">
+                                <div style="flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; border: 1px solid #EFEBE5; border-radius: 12px; padding: 6px;">
+                                  <div style="width: 92px; height: 54px; border-radius: 8px; flex-shrink: 0; background: repeating-linear-gradient(135deg, #EDE9E3 0 8px, #F5F3EF 8px 16px); border: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #9A9287;">foto</div>
+                                  <div style="min-width: 0; line-height: 1.3;">
+                                    <div style="font-size: 13.5px; font-weight: 700;">{{ ph.t }}</div>
+                                    <div style="font-size: 12.5px; color: #6B645A;">{{ ph.sub }}</div>
+                                    <div style="font-size: 14.5px; font-weight: 800; font-variant-numeric: tabular-nums;">{{ ph.v }}</div>
+                                  </div>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.fields }}">
+                            <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 8px;">
+                              <sc-for list="{{ b.items }}" as="fd" hint-placeholder-count="2">
+                                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                                  <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287;">{{ fd.l }}</div>
+                                  <div style="min-height: {{ fd.h }}px; border-radius: 10px; background: #FFFFFF; border: {{ fd.bw }}px solid {{ fd.bd }}; display: flex; align-items: {{ fd.al }}; padding: 8px 11px; font-size: {{ fd.fs }}px; font-weight: {{ fd.fw }}; font-variant-numeric: tabular-nums; line-height: 1.35;">{{ fd.v }}</div>
+                                  <sc-if value="{{ fd.hasHint }}"><div style="font-size: 12px; color: {{ fd.hintFg }};">{{ fd.hint }}</div></sc-if>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.steps }}">
+                            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+                              <sc-for list="{{ b.items }}" as="st" hint-placeholder-count="4">
+                                <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: {{ st.bg }}; border: 1.5px solid {{ st.bd }};">
+                                  <span style="width: 28px; height: 28px; border-radius: 999px; background: {{ st.cBg }}; color: {{ st.cFg }}; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{ st.n }}</span>
+                                  <div style="min-width: 0; line-height: 1.25;">
+                                    <div style="font-size: 13.5px; font-weight: 800;">{{ st.t }}</div>
+                                    <div style="font-size: 12.5px; color: {{ st.sFg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ st.s }}</div>
+                                  </div>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.gantt }}">
+                            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; border: 1px solid #E7E3DC; border-radius: 12px; overflow: hidden;">
+                              <div style="display: grid; grid-template-columns: {{ b.cols }}; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; flex-shrink: 0;">
+                                <div style="padding: 6px 12px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287; display: flex; align-items: flex-end;">{{ b.headL }}</div>
+                                <sc-for list="{{ b.days }}" as="d" hint-placeholder-count="12">
+                                  <div style="padding: 5px 0 6px; text-align: center; line-height: 1.1; background: {{ d.bg }}; border-left: {{ d.blw }}px solid {{ d.bl }};">
+                                    <div style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em; color: {{ d.fg }};">{{ d.w }}</div>
+                                    <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 16px; font-weight: 800; color: {{ d.fg }};">{{ d.n }}</div>
+                                  </div>
+                                </sc-for>
+                              </div>
+                              <div style="flex: 1; min-height: 0; overflow: auto; background: #FFFFFF;">
+                                <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="6">
+                                  <sc-if value="{{ r.isGroup }}">
+                                    <div style="display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 0 12px; background: {{ r.t }}; border-bottom: 2px solid {{ r.c }};">
+                                      <span style="width: 10px; height: 10px; border-radius: 3px; background: {{ r.c }}; flex-shrink: 0;"></span>
+                                      <span style="font-size: 14px; font-weight: 800;">{{ r.label }}</span>
+                                      <span style="font-size: 12.5px; color: {{ r.subFg }}; font-weight: 600;">{{ r.sub }}</span>
+                                      <span style="flex: 1;"></span>
+                                      <sc-for list="{{ r.chips }}" as="k" hint-placeholder-count="1">
+                                        <span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ k.bg }}; color: {{ k.fg }}; font-size: 12px; font-weight: 800; display: flex; align-items: center; white-space: nowrap;">{{ k.t }}</span>
+                                      </sc-for>
+                                    </div>
+                                  </sc-if>
+                                  <sc-if value="{{ r.isRow }}">
+                                    <div style="display: grid; grid-template-columns: {{ b.cols }}; grid-template-rows: {{ r.gr }}; row-gap: 4px; padding: 5px 0; border-bottom: 1px solid #EFEBE5;">
+                                      <sc-for list="{{ b.days }}" as="d" hint-placeholder-count="12">
+                                        <div style="grid-column: {{ d.gc }}; grid-row: 1 / -1; background: {{ d.cellBg }}; border-left: {{ d.blw }}px solid {{ d.bl }}; margin: -5px 0;"></div>
+                                      </sc-for>
+                                      <div style="grid-column: 1; grid-row: 1 / -1; padding: 0 10px 0 12px; display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                        <sc-if value="{{ r.hasAv }}"><span style="width: 28px; height: 28px; border-radius: 999px; background: {{ r.avBg }}; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{ r.ini }}</span></sc-if>
+                                        <div style="min-width: 0; line-height: 1.2;">
+                                          <div style="font-size: 13.5px; font-weight: 700;">{{ r.label }}</div>
+                                          <div style="font-size: 12px; color: {{ r.subFg }}; font-weight: 600;">{{ r.sub }}</div>
+                                        </div>
+                                      </div>
+                                      <sc-for list="{{ r.bars }}" as="x" hint-placeholder-count="2">
+                                        <div lang="es" style="grid-column: {{ x.gc }}; grid-row: {{ x.gr }}; margin: {{ x.m }}; min-height: 38px; border-radius: 8px; background: {{ x.bg }}; border: {{ x.bd }}; border-left: {{ x.blw }}px solid {{ x.c }}; padding: {{ x.pad }}; display: flex; flex-direction: column; justify-content: center; min-width: 0; overflow: hidden; z-index: 1; box-shadow: {{ x.sh }};">
+                                          <div style="font-size: {{ x.fs }}px; font-weight: 800; color: #1C1A17; line-height: 1.15; display: -webkit-box; -webkit-line-clamp: {{ x.clamp }}; -webkit-box-orient: vertical; overflow: hidden; hyphens: auto;">{{ x.t }}</div>
+                                          <sc-if value="{{ x.hasSub }}"><div style="font-size: 11px; font-weight: 700; color: {{ x.subFg }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ x.sub }}</div></sc-if>
+                                        </div>
+                                      </sc-for>
+                                    </div>
+                                  </sc-if>
+                                </sc-for>
+                              </div>
+                              <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 8px 12px; border-top: 1px solid #E7E3DC; background: #FAF8F5; flex-shrink: 0; font-size: 12.5px; font-weight: 600; color: #3D3831;">
+                                <sc-for list="{{ b.legend }}" as="l" hint-placeholder-count="5">
+                                  <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: {{ l.c }};"></span>{{ l.n }}</span>
+                                </sc-for>
+                                <span style="flex: 1;"></span>
+                                <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 18px; height: 12px; border-radius: 3px; border: 2px solid #7A2E42;"></span>atrasada</span>
+                                <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 18px; height: 12px; border-radius: 3px; border: 2px dashed #7A2E42;"></span>se superpone</span>
+                                <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 18px; height: 12px; border-radius: 3px; background: linear-gradient(90deg, #D6CFC4 50%, #F1EEE9 50%);"></span>lo oscuro es el avance</span>
+                              </div>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ b.table }}">
+                            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; border: {{ b.bd }}; border-radius: 12px; overflow: hidden;">
+                              <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 12px; min-height: 30px; align-items: center; padding: 0 12px; background: {{ b.headBg }}; border-bottom: 1px solid #EFEBE5; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287; flex-shrink: 0;">
+                                <sc-for list="{{ b.head }}" as="h" hint-placeholder-count="4"><div style="text-align: {{ h.al }}; white-space: nowrap;">{{ h.t }}</div></sc-for>
+                              </div>
+                              <div style="flex: 1; min-height: 0; overflow: auto;">
+                                <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="6">
+                                  <sc-if value="{{ r.isSec }}"><div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAF8F5; border-bottom: 1px solid #EFEBE5; font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #6B645A;">{{ r.t }}</div></sc-if>
+                                  <sc-if value="{{ r.isRow }}">
+                                    <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 12px; align-items: center; min-height: {{ r.h }}px; padding: 4px 12px; border-bottom: 1px solid #F3F0EB; background: {{ r.bg }}; border-left: 3px solid {{ r.edge }};">
+                                      <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="4">
+                                        <div style="min-width: 0; text-align: {{ c.al }};">
+                                          <sc-if value="{{ c.tx }}">
+                                            <div style="display: flex; align-items: center; gap: 8px; justify-content: {{ c.jc }};">
+                                              <sc-if value="{{ c.hasBar }}"><span style="width: 6px; height: 24px; border-radius: 3px; background: {{ c.bar }}; flex-shrink: 0;"></span></sc-if>
+                                              <div style="min-width: 0; line-height: 1.25;">
+                                                <div style="font-family: {{ c.fam }}; font-size: {{ c.fs }}px; font-weight: {{ c.fw }}; color: {{ c.fg }}; font-style: {{ c.ital }}; text-decoration: {{ c.deco }}; font-variant-numeric: tabular-nums;">{{ c.t }}</div>
+                                                <sc-if value="{{ c.hasSub }}"><div style="font-size: 12.5px; color: {{ c.subFg }}; font-weight: {{ c.subFw }};">{{ c.sub }}</div></sc-if>
+                                              </div>
+                                            </div>
+                                          </sc-if>
+                                          <sc-if value="{{ c.ch }}">
+                                            <div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: {{ c.jc }};">
+                                              <sc-for list="{{ c.chips }}" as="k" hint-placeholder-count="1">
+                                                <span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ k.bg }}; color: {{ k.fg }}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; white-space: nowrap;">{{ k.t }}</span>
+                                              </sc-for>
+                                            </div>
+                                          </sc-if>
+                                          <sc-if value="{{ c.sw }}">
+                                            <div style="width: 34px; height: 20px; border-radius: 999px; background: {{ c.bg }}; padding: 3px; display: flex; justify-content: {{ c.j }}; margin-left: auto;"><div style="width: 14px; height: 14px; border-radius: 999px; background: #fff;"></div></div>
+                                          </sc-if>
+                                          <sc-if value="{{ c.inp }}">
+                                            <div style="height: 34px; border-radius: 9px; border: {{ c.bw }}px solid {{ c.bd }}; background: #FFFFFF; display: flex; align-items: center; justify-content: flex-end; padding: 0 10px; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums;">{{ c.t }}</div>
+                                            <sc-if value="{{ c.hasSub }}"><div style="font-size: 11.5px; color: {{ c.subFg }}; font-weight: 700; margin-top: 2px;">{{ c.sub }}</div></sc-if>
+                                          </sc-if>
+                                          <sc-if value="{{ c.bt }}"><span style="font-size: 13.5px; font-weight: 700; color: {{ c.fg }}; white-space: nowrap;">{{ c.t }}</span></sc-if>
+                                        </div>
+                                      </sc-for>
+                                    </div>
+                                  </sc-if>
+                                </sc-for>
+                              </div>
+                              <sc-if value="{{ b.hasFoot }}">
+                                <div style="display: grid; grid-template-columns: {{ b.cols }}; gap: 12px; align-items: center; min-height: 44px; padding: 0 12px; background: #FAF8F5; border-top: 2px solid #E7E3DC; flex-shrink: 0;">
+                                  <sc-for list="{{ b.foot }}" as="c" hint-placeholder-count="2">
+                                    <div style="text-align: {{ c.al }}; font-family: {{ c.fam }}; font-size: {{ c.fs }}px; font-weight: {{ c.fw }}; color: {{ c.fg }}; font-variant-numeric: tabular-nums; white-space: nowrap;">{{ c.t }}</div>
+                                  </sc-for>
+                                </div>
+                              </sc-if>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.skel }}">
+                            <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 4px;">
+                              <div style="width: 35%; height: 38px; border-radius: 8px; background: #EDE9E3;"></div>
+                              <div style="width: 70%; height: 12px; border-radius: 6px; background: #F1EEE9;"></div>
+                              <div style="width: 55%; height: 12px; border-radius: 6px; background: #F5F3EF;"></div>
+                              <div style="font-size: 13px; color: #9A9287;">Cargando…</div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.empty }}">
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px;">
+                              <div style="width: 64px; height: 64px; border-radius: 18px; background: #E6F4EC; display: flex; align-items: center; justify-content: center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2F7D4F" style="stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></div>
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 700;">{{ b.title }}</div>
+                              <div style="font-size: 15px; color: #6B645A; max-width: 460px; line-height: 1.45;">{{ b.msg }}</div>
+                            </div>
+                          </sc-if>
+
+                          <sc-if value="{{ b.text }}">
+                            <div style="font-size: {{ b.fs }}px; color: {{ b.fg }}; font-weight: {{ b.fw }}; line-height: 1.4; text-wrap: pretty;">{{ b.t }}</div>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ s.mob }}">
+                  <nav style="flex-shrink: 0; height: 84px; padding-bottom: 20px; background: #FFFFFF; border-top: 1px solid #E7E3DC; display: flex;">
+                    <sc-for list="{{ mnav }}" as="t" hint-placeholder-count="5">
+                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+                        <div style="width: 44px; height: 30px; border-radius: 10px; background: {{ t.bg }}; color: {{ t.ic }}; display: flex; align-items: center; justify-content: center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ t.icon }}"></path></svg></div>
+                        <div style="font-size: 11.5px; font-weight: {{ t.fw }}; color: {{ t.fg }};">{{ t.n }}</div>
+                      </div>
+                    </sc-for>
+                  </nav>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ s.dim }}"><div style="position: absolute; inset: 0; background: rgba(28,26,23,0.45); z-index: 20;"></div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const C = { ink: '#1C1A17', ink2: '#3D3831', mut: '#6B645A', soft: '#9A9287', or: '#C2410C', orS: '#FDEEE4', orD: '#8F2F08', orZ: '#FFF8F3', gr: '#2F7D4F', grS: '#E6F4EC', grT: '#205B39', bo: '#7A2E42', boS: '#F5E8EC', boT: '#5C2233', boB: '#E8CDD5', boR: '#FBF1F4' };
+const BRIC = "'Bricolage Grotesque', sans-serif", FIG = "'Figtree', sans-serif";
+const MOD = {
+  inicio: ['Inicio', 60, 0.35, 0.012, 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z'],
+  produccion: ['Producción', 180, 0.52, 0.1, 'M3 21V10l6 4v-4l6 4V5h6v16zM7 17h2M13 17h2'],
+  cobranzas: ['Cobranzas', 62, 0.62, 0.15, 'M12 4c4 0 7 1.3 7 3s-3 3-7 3-7-1.3-7-3 3-3 7-3zM5 7v5c0 1.7 3 3 7 3s7-1.3 7-3V7M5 12v5c0 1.7 3 3 7 3s7-1.3 7-3v-5'],
+  caja: ['Caja', 85, 0.6, 0.13, 'M4 7h15a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM4 7l12-3v3M15 13.5h2'],
+  gastos: ['Gastos', 355, 0.55, 0.16, 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3'],
+  cheques: ['Cheques', 290, 0.52, 0.16, 'M3 7h18v10H3zM6 13.5h6M15 13.5h3M6 10.5h3'],
+  ctacte: ['Cuentas corrientes', 322, 0.5, 0.15, 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6'],
+  ingreso: ['Ingreso', 50, 0.48, 0.08, 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8'],
+  stock: ['Stock', 130, 0.52, 0.12, 'M4 4h16v16H4zM4 12h16M10 8h4M10 16h4'],
+  pedidos: ['Pedidos', 20, 0.58, 0.17, 'M9 3h6v3H9zM7 4.5H5V21h14V4.5h-2M9 11h6M9 15h4'],
+  ordenes: ['Órdenes de retiro', 108, 0.55, 0.11, 'M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0'],
+  admin: ['Administración', 305, 0.45, 0.14, 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 21h18'],
+  taller: ['Proyectos Taller', 150, 0.42, 0.07, 'M14 3.5a5 5 0 0 0-4.6 6.9L3.6 16.2a2 2 0 0 0 2.8 2.8l5.8-5.8A5 5 0 0 0 20.5 10l-3.2.8-2.1-2.1.8-3.2z'],
+  accesos: ['Accesos', 205, 0.5, 0.07, 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M16 11l2 2 4-4'],
+  empleados: ['Empleados', 340, 0.6, 0.13, 'M9 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zM2.5 20c0-3.5 2.9-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14.8c2.2.6 3.5 2.3 3.5 5.2'],
+  seguridad: ['Seguridad', 60, 0.4, 0.012, 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4'],
+};
+const mc = k => { const [n, h, l, c, i] = MOD[k]; return { n, i, c: `oklch(${l} ${c} ${h})`, t: `oklch(0.955 ${Math.max(c * 0.28, 0.008).toFixed(3)} ${h})` }; };
+const IC = { warn: 'M12 3l9.5 17h-19zM12 10v4M12 17.5v.01', ok: 'M5 12.5l4.5 4.5L19 7.5', info: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 11v5M12 8v.01', err: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 8v5M12 16v.01', revisar: 'M3 8l9-5 9 5v8l-9 5-9-5zM12 9v4M12 16v.01', clientes: 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M17 8h5M17 12h5', precios: 'M20 12l-8 8-9-9V3h8zM7.5 7.5v.01', importar: 'M12 3v12M7 10l5 5 5-5M4 17v3h16v-3', errores: 'M8 6V4h8v2M5 8h14l-1 12H6zM10 12v4M14 12v4' };
+
+// ---------- builders ----------
+const TONE = { n: { bg: '#F1EEE9', fg: C.ink2 }, bad: { bg: C.bo, fg: '#fff' }, badS: { bg: C.boS, fg: C.bo }, good: { bg: C.grS, fg: C.grT }, or: { bg: C.orS, fg: C.orD }, dark: { bg: '#2B2723', fg: '#fff' } };
+const chip = (t, tone = 'n') => ({ t, ...TONE[tone] });
+const CB = { tx: false, ch: false, sw: false, inp: false, bt: false, al: 'left', jc: 'flex-start' };
+const T = (t, o = {}) => ({ ...CB, tx: true, t, sub: o.sub || '', hasSub: !!o.sub, subFg: o.subFg || C.mut, subFw: o.subFw || 500, fs: o.fs || 14, fw: o.fw || 500, fg: o.fg || C.ink, al: o.al || 'left', jc: o.al === 'right' ? 'flex-end' : 'flex-start', fam: o.big ? BRIC : FIG, hasBar: !!o.bar, bar: o.bar || '', ital: o.ital ? 'italic' : 'normal', deco: o.strike ? 'line-through' : 'none' });
+const N = (t, o = {}) => T(t, { al: 'right', fw: 700, ...o });
+const CH = (...cs) => ({ ...CB, ch: true, chips: cs.filter(Boolean) });
+const CHR = (...cs) => ({ ...CH(...cs), al: 'right', jc: 'flex-end' });
+const SW = on => ({ ...CB, sw: true, bg: on ? C.or : '#D6CFC4', j: on ? 'flex-end' : 'flex-start' });
+const IN = (t, o = {}) => ({ ...CB, inp: true, t, bd: o.bd || '#E7E3DC', bw: o.bd ? 2 : 1, sub: o.sub || '', hasSub: !!o.sub, subFg: o.subFg || C.mut });
+const BT = (t, fg = C.or) => ({ ...CB, bt: true, t, fg, al: 'right' });
+const btn = (t, k = 'plain', o = {}) => ({ t, real: true, spacer: false, h: o.h || 38, px: o.px || 14, fs: o.fs || 14,
+  ...{ primary: { bg: C.or, fg: '#fff', bd: '2px solid #C2410C' }, ghost: { bg: '#fff', fg: C.or, bd: '2px solid #C2410C' }, plain: { bg: '#fff', fg: C.ink2, bd: '1px solid #E7E3DC' }, danger: { bg: C.bo, fg: '#fff', bd: '2px solid #7A2E42' }, link: { bg: 'transparent', fg: C.or, bd: '1px solid transparent' }, linkBad: { bg: 'transparent', fg: C.bo, bd: '1px solid transparent' }, off: { bg: '#E7E3DC', fg: C.soft, bd: '2px solid #E7E3DC' } }[k] });
+const SP = { real: false, spacer: true };
+const BB = { links: false, tabs: false, tool: false, alert: false, kv: false, big: false, lines: false, btns: false, opts: false, photos: false, fields: false, steps: false, table: false, skel: false, empty: false, text: false, bar: false, gantt: false, flex: '0 0 auto' };
+const B = {
+  links: (label, items) => ({ ...BB, links: true, label, items }),
+  tabs: (items, on) => ({ ...BB, tabs: true, items: items.map(n => ({ n, bg: n === on ? '#fff' : 'transparent', fg: n === on ? C.orD : C.ink2, fw: n === on ? 700 : 600, sh: n === on ? '0 1px 2px rgba(28,26,23,.12)' : 'none' })) }),
+  tool: (o) => ({ ...BB, tool: true, hasQ: !!o.q, q: o.q || '', qW: o.qW || '300px', qBg: o.typed ? '#fff' : '#FAF8F5', qBd: o.typed ? '2px solid #C2410C' : '1px solid #EFEBE5', qFg: o.typed ? C.ink : C.soft, qFw: o.typed ? 600 : 500,
+    hasSeg: !!o.seg, seg: (o.seg || []).map(([t, n, on]) => ({ t, n: n ?? '', bg: on ? C.or : 'transparent', fg: on ? '#fff' : C.ink2, fw: on ? 700 : 600 })),
+    toggles: (o.toggles || []).map(([t, on]) => ({ t, bg: on ? C.or : '#D6CFC4', j: on ? 'flex-end' : 'flex-start' })), btns: o.btns || [] }),
+  alert: (tone, title, text, o = {}) => { const tn = { bad: [C.boS, C.boB, C.boT, C.bo, IC.warn], good: [C.grS, '#C9E6D4', C.grT, C.gr, IC.ok], n: ['#FAF8F5', '#EFEBE5', C.ink2, C.mut, IC.info], or: [C.orZ, '#F6D3BD', C.orD, C.or, IC.info] }[tone];
+    return { ...BB, alert: true, bg: tn[0], bd: tn[1], fg: tn[2], ic: tn[3], icon: o.icon || tn[4], hasIcon: o.noIcon ? false : true, title, msg: text || '', hasText: !!text, btns: o.btns || [] }; },
+  kv: (rows, o = {}) => ({ ...BB, kv: true, cols: o.cols || 'repeat(2, minmax(0, 1fr))', gap: o.gap || '8px 16px', cellPad: o.line ? '6px 0' : '0', line: o.line ? '1px solid #F3F0EB' : 'none',
+    rows: rows.map(r => ({ k: r[0], v: r[1], fs: (r[2] && r[2].fs) || o.fs || 15, fw: (r[2] && r[2].fw) || o.fw || 600, fg: (r[2] && r[2].fg) || C.ink, fam: ((r[2] && r[2].big) || o.big) ? BRIC : FIG, sub: (r[2] && r[2].sub) || '', hasSub: !!(r[2] && r[2].sub), subFg: (r[2] && r[2].subFg) || C.mut })) }),
+  big: (v, label, o = {}) => ({ ...BB, big: true, v, label, fg: o.fg || C.ink, fs: o.fs || 42 }),
+  lines: (items) => ({ ...BB, lines: true, flex: '1 1 auto', items: items.map(l => typeof l === 'string' ? { t: l, fg: C.mut, fw: 500, dot: false } : { fg: C.mut, fw: 600, dot: false, ...l }) }),
+  btns: (items, j = 'flex-start') => ({ ...BB, btns: true, items, j }),
+  opts: (items, o = {}) => ({ ...BB, opts: true, hasHead: !!o.head, head: o.head || '', headSub: o.headSub || '', dir: o.row ? 'row' : 'column', itemFlex: o.row ? '1 1 0' : '0 0 auto', h: o.h || 48,
+    items: items.map(x => ({ t: x.t, sub: x.sub || '', hasSub: !!x.sub, right: x.right || '', hasRight: !!x.right, rFg: x.rFg || C.ink2, sel: !!x.sel, bg: x.sel ? C.orZ : '#fff', bd: x.sel ? C.or : '#E7E3DC', bw: x.sel ? 2 : 1, radio: x.sel ? C.or : '#B8B0A4' })) }),
+  photos: (items) => ({ ...BB, photos: true, items }),
+  fields: (items, cols = 'repeat(2, minmax(0, 1fr))') => ({ ...BB, fields: true, cols, items: items.map(f => ({ l: f.l, v: f.v, h: f.h || 40, al: f.h ? 'flex-start' : 'center', fs: f.fs || 14.5, fw: f.fw || 600, bd: f.focus ? C.or : '#E7E3DC', bw: f.focus ? 2 : 1, hint: f.hint || '', hasHint: !!f.hint, hintFg: f.hintFg || C.mut })) }),
+  steps: (items) => ({ ...BB, steps: true, items: items.map((x, i) => { const st = x.st; return { n: st === 'done' ? '✓' : i + 1, t: x.t, s: x.s, bg: st === 'cur' ? C.orZ : '#fff', bd: st === 'cur' ? C.or : '#EFEBE5', cBg: st === 'done' ? C.ink : st === 'cur' ? C.or : '#F1EEE9', cFg: st === 'todo' ? C.soft : '#fff', sFg: st === 'done' ? C.grT : C.mut }; }) }),
+  table: (cols, head, rows, o = {}) => ({ ...BB, table: true, flex: o.fixed ? '0 0 auto' : '1 1 0', cols, bd: o.bare ? 'none' : '1px solid #EFEBE5', headBg: o.headBg || '#FFFFFF',
+    head: head.map(h => typeof h === 'string' ? { t: h, al: 'left' } : h),
+    rows: rows.map(r => r.sec ? { isSec: true, isRow: false, t: r.sec } : { isSec: false, isRow: true, cells: r.cells || r, bg: r.bg || 'transparent', edge: r.edge || 'transparent', h: o.rowH || 42 }),
+    hasFoot: !!o.foot, foot: (o.foot || []).map(f => typeof f === 'string' ? { t: f, al: 'left', fs: 13, fw: 800, fg: C.mut, fam: FIG } : { al: 'right', fs: 17, fw: 800, fg: C.ink, fam: BRIC, ...f }) }),
+  skel: () => ({ ...BB, skel: true }),
+  empty: (title, text) => ({ ...BB, empty: true, flex: '1 1 auto', title, msg: text }),
+  text: (t, o = {}) => ({ ...BB, text: true, t, fs: o.fs || 13.5, fg: o.fg || C.mut, fw: o.fw || 500 }),
+};
+const panel = (o) => ({ col: o.col || 'auto', row: o.row || 'auto', bg: o.bg || '#FFFFFF', border: o.border || '1px solid #E7E3DC', pad: o.pad || '14px 16px', gap: o.gap || 10,
+  pos: 'static', left: 'auto', top: 'auto', tf: 'none', w: 'auto', z: 'auto', sh: 'none',
+  hasHead: !!o.title, title: o.title || '', tfs: o.tfs || 17, tFam: o.tBig ? BRIC : FIG, tIt: o.ital ? 'italic' : 'normal', hasSub: !!o.sub, sub: o.sub || '',
+  hasIcon: !!o.mod || !!o.icon, icon: o.mod ? mc(o.mod).i : o.icon || '', iC: o.mod ? mc(o.mod).c : o.iC || C.ink2, iT: o.mod ? mc(o.mod).t : o.iT || '#F1EEE9',
+  chips: o.chips || [], acts: o.acts || [], blocks: o.blocks || [],
+  hBg: o.band ? o.band.bg : 'transparent', hFg: o.band ? o.band.fg : 'inherit', subFg: o.band ? o.band.sub : C.mut, hM: o.band ? '-14px -16px 0' : '0', hPad: o.band ? '12px 16px 11px' : '0', hBd: o.band ? '3px solid ' + o.band.bd : 'none', ...(o.modal ? { pos: 'absolute', left: '50%', top: '50%', tf: 'translate(-50%, -50%)', w: o.w || '520px', z: 30, sh: '0 30px 60px rgba(0,0,0,0.3)', border: 'none' } : {}) });
+const bare = (blocks, o = {}) => panel({ bg: 'transparent', border: 'none', pad: '0', ...o, blocks });
+const $ = n => '$ ' + Math.round(n).toLocaleString('es-AR');
+
+// ---------- datos ----------
+TONE.taller = { bg: 'oklch(0.94 0.03 150)', fg: 'oklch(0.34 0.06 150)' };
+TONE.apr = { bg: '#EDE9E3', fg: '#1C1A17' };
+B.bar = (label, right, pct, o = {}) => ({ ...BB, bar: true, label, right, w: Math.min(pct, 100) + '%', fill: pct > 100 ? C.bo : (o.fill || 'oklch(0.52 0.08 150)'), rFg: pct > 100 ? C.bo : C.ink });
+const EST = { Presupuestado: 'n', Aprobado: 'apr', 'En curso': 'taller', Terminado: 'good', Entregado: 'dark', Cancelado: 'n' };
+const HORA = 18500;
+const PROY = [
+  { n: 'Maq Barquillo 24 Carrizo', cli: 'Carrizo Hnos. SRL', ext: true, cat: 'Máquina', est: 'En curso', ent: '15/10/2026', atr: 0, costo: 4820000, pres: 5200000, h: 112, hEst: 140, venta: 9800000, fact: 5880000, cob: 3480000 },
+  { n: 'Dosificador de masa M3', cli: 'Cucuruchos Nuss', ext: false, cat: 'Dispositivo', est: 'En curso', ent: '12/09/2026', atr: 16, costo: 1340000, pres: 1240000, h: 64, hEst: 48, venta: 1900000, fact: 1200000, cob: 0 },
+  { n: 'Automatización empaque', cli: 'Dolce Pasta', ext: false, cat: 'Automatización', est: 'Aprobado', ent: '30/11/2026', atr: 0, costo: 380000, pres: 2900000, h: 10, hEst: 90, venta: 4200000, fact: 0, cob: 0 },
+  { n: 'Mantenimiento horno Carrizo', cli: 'Carrizo Hnos. SRL', ext: true, cat: 'Mantenimiento', est: 'Terminado', ent: '20/09/2026', atr: 0, costo: 410000, pres: 450000, h: 14, hEst: 16, venta: 720000, fact: 720000, cob: 540000 },
+  { n: 'Cinta transportadora Duomo', cli: 'Duomo SRL', ext: true, cat: 'Máquina', est: 'Presupuestado', ent: 'a definir', atr: 0, costo: 0, pres: 3600000, h: 0, hEst: 160, venta: 6500000, fact: 0, cob: 0 },
+  { n: 'Soporte mensual Persicco', cli: 'Persicco Córdoba SA', ext: true, cat: 'Horas', est: 'En curso', ent: '30/09/2026', atr: 0, costo: 407000, pres: 555000, h: 22, hEst: 30, venta: 900000, fact: 0, cob: 0 },
+];
+const BAND = {
+  Presupuestado: { bg: '#F1EEE9', bd: '#B8B0A4', fg: '#1C1A17', sub: '#6B645A' },
+  Aprobado: { bg: 'oklch(0.95 0.045 85)', bd: 'oklch(0.68 0.11 80)', fg: '#1C1A17', sub: 'oklch(0.42 0.07 75)' },
+  'En curso': { bg: 'oklch(0.935 0.04 150)', bd: 'oklch(0.5 0.08 150)', fg: '#1C1A17', sub: 'oklch(0.36 0.05 150)' },
+  Terminado: { bg: '#E6F4EC', bd: '#2F7D4F', fg: '#1C1A17', sub: '#205B39' },
+  Entregado: { bg: '#2B2723', bd: '#1C1A17', fg: '#FFFFFF', sub: '#D6CFC4' },
+  Cancelado: { bg: '#F1EEE9', bd: '#D6CFC4', fg: '#6B645A', sub: '#9A9287' },
+  atrasado: { bg: '#F5E8EC', bd: '#7A2E42', fg: '#5C2233', sub: '#5C2233' },
+};
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const card = (p, tomas, mob) => {
+  const pc = pct(p.costo, p.pres), over = pc > 100;
+  return panel({ title: p.n, tfs: 17, tBig: true, sub: (p.ext ? p.cli : 'Interno → ' + p.cli) + ' · ' + p.cat, border: p.atr ? '1.5px solid #E8CDD5' : '1px solid #E7E3DC', gap: 10,
+    band: p.atr ? BAND.atrasado : BAND[p.est],
+    chips: [{ t: p.est, bg: '#FFFFFF', fg: '#1C1A17' }, ...(p.atr ? [{ t: 'Atrasado', bg: '#7A2E42', fg: '#FFFFFF' }] : [])], blocks: [
+      B.kv([['ENTREGA PROMETIDA', p.ent, { fg: p.atr ? C.bo : C.ink, fw: 700, sub: p.atr ? 'atrasado ' + p.atr + ' días' : '', subFg: C.bo }], ['HORAS', p.h + ' de ' + p.hEst + ' h', { fw: 700, fg: p.h > p.hEst ? C.bo : C.ink }]], { fs: 15 }),
+      B.bar(tomas ? 'Costo ' + $(p.costo) + ' de ' + $(p.pres) : 'Costo contra presupuesto', over ? (tomas ? 'se pasó ' + $(p.costo - p.pres) : pc + ' % · se pasó') : pc + ' %', pc),
+      ...(tomas ? [B.kv([[p.ext ? 'VENTA' : 'PRECIO A LA FÁBRICA', $(p.venta), { fw: 700 }], [p.ext ? 'COBRADO' : 'CARGADO', p.ext ? pct(p.cob, p.venta) + ' % · ' + $(p.cob) : $(p.fact), { fw: 700, fg: C.ink2 }]], { fs: 14 })] : []),
+    ] });
+};
+const GASTOS = [['03/09', 'Chapa inox 304 1,5 mm', 'Aceros Córdoba', 986000], ['05/09', 'Motorreductor 0,75 kW', 'Transmisiones del Centro', 642000], ['10/09', 'Rodamientos y cadenas', 'Rulemanes Colón', 214000],
+  ['14/09', 'Resistencias y termocuplas', 'Electro Hornos', 388000], ['18/09', 'Tablero eléctrico', 'Electricidad Rivera', 356000], ['22/09', 'Pintura epoxi y tornillería', 'Pinturerías Rex', 162000]];
+const HORAS = [['26/09', 'Edgar Molina', 6, 'Soldadura del bastidor'], ['26/09', 'Tomás', 3, 'Armado del tablero eléctrico'], ['25/09', 'Edgar Molina', 8, 'Soldadura del bastidor'], ['24/09', 'Edgar Molina', 7, 'Corte y plegado de chapa'],
+  ['23/09', 'Tomás', 4, 'Pruebas del motorreductor'], ['22/09', 'Edgar Molina', 8, 'Corte y plegado de chapa'], ['19/09', 'Edgar Molina', 6, 'Montaje de transmisión']];
+const NOTAS = [['Quedó soldado el bastidor. Mañana arranco con la tolva.', 'Edgar Molina · 26/09 18:10', true], ['Carrizo pidió que la salida de barquillos quede a 90 cm del piso. Lo charlé con Edgar, entra sin cambiar el plano.', 'Tomás · 25/09 11:32'],
+  ['Llegó el motorreductor. Probado en vacío, anda bien.', 'Tomás · 23/09 16:05', true], ['Se aprobó el plano v3. Arrancamos con el corte de chapa.', 'Tomás · 19/09 09:40']];
+const ARCH = [[{ t: 'Plano general v3.pdf', sub: 'Tomás · 19/09', v: 'Plano' }, { t: 'Presupuesto aprobado.pdf', sub: 'Tomás · 02/09', v: 'Presupuesto' }], [{ t: 'Bastidor soldado.jpg', sub: 'Edgar · desde el celular · 26/09', v: 'Foto' }, { t: 'Motorreductor en prueba.jpg', sub: 'Tomás · desde el celular · 23/09', v: 'Foto' }], [{ t: 'Plano tolva.pdf', sub: 'Tomás · 25/09', v: 'Plano' }, { t: 'Tablero armado.jpg', sub: 'Edgar · desde el celular · 26/09', v: 'Foto' }]];
+
+B.gantt = (o) => ({ ...BB, gantt: true, flex: '1 1 0', ...o });
+const PJ = { car: ['Maq Barquillo 24 Carrizo', 330, 0.52, 0.13], dos: ['Dosificador de masa M3', 70, 0.62, 0.13], dp: ['Automatización empaque', 125, 0.55, 0.11], per: ['Soporte mensual Persicco', 0, 0.58, 0.14], duo: ['Cinta transportadora Duomo', 290, 0.52, 0.14] };
+const pjc = k => { const [n, hh, L, Cc] = PJ[k]; return { n, c: `oklch(${L} ${Cc} ${hh})`, t: `oklch(0.955 ${(Cc * 0.25).toFixed(3)} ${hh})`, t2: `oklch(0.86 ${(Cc * 0.6).toFixed(3)} ${hh})` }; };
+const DAYS = [['LU', '28'], ['MA', '29'], ['MI', '30'], ['JU', '01'], ['VI', '02'], ['SÁ', '03'], ['LU', '05'], ['MA', '06'], ['MI', '07'], ['JU', '08'], ['VI', '09'], ['SÁ', '10']];
+const gDays = () => DAYS.map(([w, n], i) => { const today = i === 0, sat = w === 'SÁ'; return { w: today ? 'HOY' : w, n, gc: String(i + 2), bg: today ? C.orS : '#fff', fg: today ? C.orD : sat ? C.soft : C.ink, bl: today ? C.or : i === 6 ? '#D6CFC4' : '#F1EEE9', blw: today || i === 6 ? 2 : 1, cellBg: today ? C.orZ : sat ? '#FAF8F5' : 'transparent' }; });
+const OPS = { tomas: ['Tomás', 'TO', 'oklch(0.42 0.07 150)'], edgar: ['Edgar Molina', 'EM', 'oklch(0.48 0.08 60)'], julian: ['Julián Ferreyra', 'JF', 'oklch(0.45 0.09 20)'], gustavo: ['Gustavo Páez', 'GP', 'oklch(0.4 0.03 60)'] };
+const ACT = [
+  ['a1', 'car', 'Tolva y dosificación', 'edgar', 0, 3, 20], ['a2', 'car', 'Tablero eléctrico', 'tomas', 0, 1, 60], ['a3', 'car', 'Montaje de cadena y moldes', 'edgar', 4, 8, 0], ['a4', 'car', 'Pruebas en vacío', 'tomas', 9, 10, 0], ['a5', 'car', 'Pintura', 'gustavo', 9, 11, 0],
+  ['a6', 'dos', 'Ajuste de la bomba', 'julian', 0, 1, 70, { late: 'era hasta el 26/09' }], ['a7', 'dos', 'Instalación en Máquina 3', 'julian', 2, 2, 0, { conf: true }],
+  ['a8', 'dp', 'Relevamiento en Dolce Pasta', 'tomas', 2, 2, 0], ['a9', 'dp', 'Diseño y plano', 'tomas', 3, 7, 0], ['a10', 'dp', 'Compra de sensores', 'gustavo', 6, 6, 0],
+  ['a11', 'per', 'Visita mensual', 'gustavo', 2, 2, 0], ['a12', 'duo', 'Medir en Heladería Duomo', 'julian', 2, 2, 0, { conf: true }],
+];
+const SHORT = { a7: 'Instalación M3', a12: 'Medir Duomo', a8: 'Relevar DP', a10: 'Sensores', a11: 'Visita Persicco' };
+const hrs = a => (a[5] - a[4] + 1) * 8;
+const gBar = (a, lane, o = {}) => { const pj = pjc(a[1]); const f = a[7] || {}; const pc = a[6] + '%'; const span = a[5] - a[4] + 1; const one = span === 1;
+  return { gc: (a[4] + 2) + ' / span ' + (a[5] - a[4] + 1), gr: String(lane), c: pj.c, bg: 'linear-gradient(90deg, ' + pj.t2 + ' ' + pc + ', ' + pj.t + ' ' + pc + ')', bd: f.conf ? '2px dashed #7A2E42' : f.late ? '2px solid #7A2E42' : '1px solid rgba(0,0,0,0.04)', sh: o.sel === a[0] ? '0 0 0 3px #C2410C' : 'none',
+    t: o.byProj ? (one ? OPS[a[3]][1] : OPS[a[3]][0].split(' ')[0]) + ' · ' + hrs(a) + ' h' : (one && !o.wide ? SHORT[a[0]] || a[2] : a[2]), fs: one ? 11.5 : 12.5, clamp: one && !o.byProj ? 3 : 2,
+    m: one ? '0 2px' : '0 3px', blw: one ? 3 : 5, pad: one ? '3px 4px' : '3px 7px',
+    hasSub: !one || o.byProj, sub: f.late ? 'atrasada · ' + f.late : f.conf ? 'se superpone' : o.byProj ? (a[6] ? a[6] + ' % hecho' : 'sin empezar') : pj.n + ' · ' + hrs(a) + ' h' + (a[6] ? ' · ' + a[6] + ' %' : ''), subFg: f.late || f.conf ? C.bo : C.ink2 }; };
+const byOperario = (o = {}) => Object.keys(OPS).map(k => { const acts = ACT.filter(a => a[3] === k && (!o.week || a[4] <= 5)).map(a => o.week && a[5] > 5 ? [...a.slice(0, 5), 5, ...a.slice(6)] : a).sort((x, y) => x[4] - y[4]); const lanes = [];
+  const bars = acts.map(a => { let l = lanes.findIndex(end => end < a[4]); if (l < 0) { lanes.push(a[5]); l = lanes.length - 1; } else lanes[l] = a[5]; return gBar(a, l + 1, o); });
+  const tot = acts.reduce((s, a) => s + hrs(a), 0); const conf = acts.some(a => (a[7] || {}).conf);
+  return { isGroup: false, isRow: true, hasAv: true, ini: OPS[k][1], avBg: OPS[k][2], label: OPS[k][0], sub: conf ? '2 cosas el mié 30' : tot + ' h de 96 h', subFg: conf ? C.bo : C.mut, gr: 'repeat(' + lanes.length + ', ' + (o.tall || 50) + 'px)', bars }; });
+const byProyecto = (o = {}) => { const out = []; const EST2 = { car: ['En curso', 'entrega 15/10'], dos: ['En curso', 'entrega era 12/09'], dp: ['Aprobado', 'entrega 30/11'], per: ['En curso', 'entrega mié 30'], duo: ['Presupuestado', 'a definir'] };
+  Object.keys(PJ).forEach(k => { const pj = pjc(k); const e = EST2[k];
+    out.push({ isGroup: true, isRow: false, label: pj.n, sub: e[0] + ' · ' + e[1], subFg: k === 'dos' ? C.bo : C.mut, c: pj.c, t: pj.t, chips: k === 'dos' ? [chip('Atrasado 16 días', 'bad')] : [] });
+    ACT.filter(a => a[1] === k).forEach(a => out.push({ isGroup: false, isRow: true, hasAv: false, ini: '', avBg: '', label: a[2], sub: OPS[a[3]][0] + ' · ' + hrs(a) + ' h', subFg: C.mut, gr: '40px', bars: [gBar(a, 1, { ...o, byProj: true })] })); });
+  return out; };
+const legend = () => Object.keys(PJ).map(k => ({ n: pjc(k).n, c: pjc(k).c }));
+const TTABS = on => ['Proyectos', 'Diagrama de actividades'].map(n => { const a = n === on; return { n, bg: a ? '#fff' : 'transparent', fg: a ? C.orD : C.ink2, fw: a ? 700 : 600, sh: a ? '0 1px 2px rgba(28,26,23,.12)' : 'none', hasB: n === 'Diagrama de actividades', b: 2, bBg: C.bo, bFg: '#fff' }; });
+class Component extends DCLogic {
+  ficha(p, who, tab, o = {}) {
+    const tomas = who === 'tomas';
+    const pc = pct(p.costo, p.pres), over = pc > 100;
+    const gastosTot = GASTOS.reduce((a, g) => a + g[3], 0);
+    const head = panel({ col: '1 / -1', title: p.n, tBig: true, tfs: 24, sub: (p.ext ? p.cli + ' · externo' : 'Interno → ' + p.cli) + ' · ' + p.cat + ' · entrega prometida ' + p.ent,
+      chips: [chip(p.est, EST[p.est]), p.atr ? chip('Atrasado ' + p.atr + ' días', 'bad') : null].filter(Boolean),
+      acts: tomas ? [btn(o.noHora ? 'Valor de la hora · sin cargar' : 'Valor de la hora · ' + $(HORA), 'plain', { h: 36 }), btn(p.ext ? 'Facturar al cliente' : 'Cargar a la fábrica', 'primary', { h: 36 })] : [btn('+ Cargar horas', 'ghost', { h: 36 })], blocks: [] });
+    const datos = panel({ col: '1', title: 'Datos', tfs: 15.5, acts: tomas ? [btn('Editar', 'link', { h: 28, px: 4 })] : [], gap: 6, blocks: [B.kv([['TIPO', p.ext ? 'Externo' : 'Interno'], [p.ext ? 'CLIENTE' : 'FÁBRICA', p.cli], ['CATEGORÍA', p.cat], ['ENTREGA PROMETIDA', p.ent, { fg: p.atr ? C.bo : C.ink }]], { gap: '6px 14px', fs: 14.5 })] });
+    const hCost = o.noHora ? null : p.h * HORA;
+    const plata = tomas
+      ? panel({ col: '1', title: 'Plata', tfs: 15.5, gap: 8, blocks: [
+          B.kv([['PRESUPUESTO DE COSTO', $(p.pres)], ['HORAS ESTIMADAS', p.hEst + ' h']], { fs: 15, fw: 700 }),
+          o.noHora ? B.bar('Costo: solo gastos, sin las horas', $(p.costo - p.h * HORA), pct(p.costo - p.h * HORA, p.pres)) : B.bar('Costo ' + $(p.costo) + ' de ' + $(p.pres), over ? 'se pasó ' + $(p.costo - p.pres) : pc + ' %', pc),
+          B.kv([['GASTOS', $(o.noHora ? p.costo - p.h * HORA : gastosTot)], ['HORAS · ' + p.h + ' h', o.noHora ? 'sin valor de hora' : $(hCost), { fg: o.noHora ? C.bo : C.ink, sub: o.noHora ? 'Cargá el valor para calcularlo' : '× ' + $(HORA) + ' la hora', subFg: o.noHora ? C.bo : C.mut }]], { fs: 15, fw: 700 }),
+          B.text('CON PERMISO DE PRECIOS', { fs: 11.5, fw: 800, fg: C.soft }),
+          B.kv([[p.ext ? 'PRECIO DE VENTA' : 'PRECIO A LA FÁBRICA', $(p.venta)], [p.ext ? 'FACTURADO' : 'CARGADO', $(p.fact)], ...(p.ext ? [['COBRADO', $(p.cob), { fg: C.grT }]] : []), ['MARGEN HOY', o.noHora ? 'falta el valor de hora' : $(p.venta - p.costo) + ' · ' + pct(p.venta - p.costo, p.venta) + ' %', { fg: o.noHora ? C.bo : over ? C.bo : C.grT }]], { fs: 15, fw: 800, big: true }),
+        ] })
+      : panel({ col: '1', title: 'Avance', tfs: 15.5, gap: 10, blocks: [
+          B.kv([['HORAS ESTIMADAS', p.hEst + ' h'], ['HORAS CARGADAS', p.h + ' h', { fg: p.h > p.hEst ? C.bo : C.ink }]], { fs: 18, fw: 800, big: true }),
+          B.bar('Costo contra presupuesto', over ? pc + ' % · se pasó' : pc + ' %', pc),
+          B.bar('Horas contra lo estimado', pct(p.h, p.hEst) + ' %', pct(p.h, p.hEst)),
+          B.alert('n', 'Los precios, lo facturado y el margen los ve Tomás', '', { noIcon: true }),
+        ] });
+    let content;
+    if (tab === 'Gastos') content = B.table('64px minmax(0, 1fr) minmax(0, 0.9fr) ' + (tomas ? '120px' : '0px'), ['FECHA', 'QUÉ', 'PROVEEDOR', { t: tomas ? 'IMPORTE' : '', al: 'right' }],
+      GASTOS.map(g => [T(g[0], { fg: C.mut }), T(g[1], { fw: 700 }), T(g[2], { fg: C.ink2 }), N(tomas ? $(g[3]) : '')]), { rowH: 44, foot: tomas ? ['TOTAL · 6 GASTOS', { t: '' }, { t: '' }, { t: $(gastosTot) }] : null });
+    if (tab === 'Horas') content = B.table('64px 140px 60px minmax(0, 1fr)' + (tomas ? ' 110px' : ''), ['FECHA', 'QUIÉN', { t: 'HORAS', al: 'right' }, 'PARA QUÉ', ...(tomas ? [{ t: 'COSTO', al: 'right' }] : [])],
+      HORAS.map(r => [T(r[0], { fg: C.mut }), T(r[1], { fw: 700 }), N(r[2] + ' h', { fw: 800, big: true, fs: 16 }), T(r[3], { fg: C.ink2 }), ...(tomas ? [N(o.noHora ? 'sin valor' : $(r[2] * HORA), { fg: o.noHora ? C.bo : C.ink })] : [])]),
+      { rowH: 44, foot: ['TOTAL · ' + p.h + ' h cargadas', { t: '' }, { t: '' }, { t: '' }, ...(tomas ? [{ t: o.noHora ? '—' : $(p.h * HORA) }] : [])] });
+    if (tab === 'Notas') content = B.table('minmax(0, 1fr)', ['BITÁCORA · LO MÁS NUEVO ARRIBA'], NOTAS.map(n => [T(n[0], { fw: 600, fs: 14.5, sub: n[1] + (n[2] ? ' · con foto' : '') })]), { rowH: 58 });
+    const tabsB = B.tabs(['Gastos', 'Horas', 'Notas', 'Archivos'], tab);
+    const right = panel({ col: '2', row: '2 / 4', gap: 10, blocks: tab === 'Archivos'
+      ? [tabsB, B.tool({ q: 'Buscar archivo', qW: '260px', seg: [['Todos', 6, true], ['Planos', 2], ['Presupuestos', 1], ['Fotos', 3]], btns: [btn('Subir archivo', 'ghost', { h: 36 })] }), ...ARCH.map(r => B.photos(r)), B.text('Las fotos se pueden subir desde el celular, con la cámara, en la ficha del proyecto.')]
+      : tab === 'Notas' ? [tabsB, B.fields([{ l: 'NUEVA NOTA', v: 'Contá cómo va el proyecto…', fw: 500 }], 'minmax(0, 1fr)'), B.btns([btn('Adjuntar foto', 'plain', { h: 36 }), SP, btn('Agregar nota', 'primary', { h: 36 })]), content]
+      : [tabsB, ...(tab === 'Gastos' ? [B.text(tomas ? 'Se cargan desde Gastos eligiendo este proyecto. Acá solo se ven.' : 'Se cargan desde Gastos eligiendo este proyecto.')] : []), content] });
+    return [head, datos, plata, right];
+  }
+  renderVals() {
+    const USR = { tomas: { uIni: 'TO', uName: 'Tomás', uC: 'oklch(0.42 0.07 150)' }, edgar: { uIni: 'EM', uName: 'Edgar', uC: 'oklch(0.48 0.08 60)' } };
+    const D = (id, title, note, who, cols, rows, panels, o = {}) => ({ id, title, note, w: 1366, h: 768, sizeLabel: '1366 × 768 · ' + (who === 'tomas' ? 'como lo ve Tomás' : 'como lo ve Edgar'), desk: true, mob: false, radius: 12, tabs: TTABS(o.tab || 'Proyectos'), tabsDisp: 'flex', cols, rows, panels, pad: '12px 24px 18px', ovf: 'hidden', autoRows: 'auto', alignC: 'stretch', dim: false, ...USR[who], ...o });
+    const Mo = (id, title, note, mTitle, panels, o = {}) => ({ id, title, note, w: 390, h: 844, sizeLabel: '390 × 844', desk: false, mob: true, radius: 28, tabs: [], tabsDisp: 'none', cols: 'minmax(0, 1fr)', rows: 'none', panels, pad: '12px', ovf: 'auto', autoRows: 'max-content', alignC: 'start', dim: false, mSub: 'Proyectos Taller', mTitle, backOp: 1, uIni: '', uName: '', uC: '', ...o });
+    const tool = (tomas, o = {}) => bare([B.tool({ seg: o.seg || [['Todos', 14, true], ['Presupuestados', 2], ['Aprobados', 1], ['En curso', 6], ['Terminados', 2], ['Entregados', 2], ['Cancelados', 1]], btns: [btn(o.tipo || 'Externos e internos ▾', 'plain', { h: 36 }), btn('Categoría: todas ▾', 'plain', { h: 36 }), ...(tomas ? [btn('Valor de la hora · ' + $(HORA), 'plain', { h: 36 }), btn('+ Nuevo proyecto', 'primary', { h: 36 })] : [])] })], { col: '1 / -1' });
+    const list = tomas => [tool(tomas), ...PROY.map(p => card(p, tomas))];
+    const G3 = 'repeat(3, minmax(0, 1fr))', R3 = 'auto repeat(2, minmax(0, 1fr))';
+    const FC = '420px minmax(0, 1fr)', FR = 'auto auto minmax(0, 1fr)';
+    const facturar = { ...panel({ modal: true, w: '560px', title: 'Facturar al cliente', tBig: true, tfs: 22, sub: 'Maq Barquillo 24 Carrizo · Carrizo Hnos. SRL', gap: 12, blocks: [
+      B.opts([{ t: 'Anticipo' }, { t: 'Avance', sel: true }, { t: 'Saldo final' }], { head: '¿Qué se factura?', row: true, h: 44 }),
+      B.fields([{ l: 'IMPORTE', v: '$ 1.960.000', focus: true, fs: 20, fw: 800, hint: '20 % del precio de venta' }, { l: 'CONCEPTO', v: 'Avance: bastidor y transmisión armados', fw: 500 }], 'minmax(0, 0.8fr) minmax(0, 1.2fr)'),
+      B.alert('n', 'Facturado pasa de $ 5.880.000 a $ 7.840.000', 'Falta facturar $ 1.960.000 de $ 9.800.000'),
+      B.btns([btn('Cancelar', 'plain'), btn('Confirmar · $ 1.960.000', 'primary', { px: 18 })], 'flex-end')] }) };
+    const cargar = { ...panel({ modal: true, w: '560px', title: 'Cargar a la fábrica', tBig: true, tfs: 22, sub: 'Dosificador de masa M3 · interno → Cucuruchos Nuss', gap: 12, blocks: [
+      B.fields([{ l: 'IMPORTE', v: '$ 700.000', focus: true, fs: 20, fw: 800, hint: 'Lo que falta del precio a la fábrica' }, { l: 'CONCEPTO', v: 'Saldo: dosificador instalado en Máquina 3', fw: 500 }], 'minmax(0, 0.8fr) minmax(0, 1.2fr)'),
+      B.alert('n', 'Cargado a Cucuruchos Nuss pasa de $ 1.200.000 a $ 1.900.000', 'Con esto queda cargado todo el precio a la fábrica'),
+      B.btns([btn('Cancelar', 'plain'), btn('Confirmar · $ 700.000', 'primary', { px: 18 })], 'flex-end')] }) };
+    const valorHora = { ...panel({ modal: true, w: '520px', title: 'Valor de la hora del Taller', tBig: true, tfs: 22, gap: 12, blocks: [
+      B.big($(HORA), 'la hora · desde el 01/09/2026', { fs: 44 }),
+      B.table('minmax(0, 1fr) 120px 120px', ['DESDE', { t: 'VALOR', al: 'right' }, 'LO CAMBIÓ'], [[T('01/09/2026', { fw: 700 }), N($(18500)), T('Tomás', { fg: C.ink2 })], [T('01/06/2026'), N($(16800), { fw: 500 }), T('Tomás', { fg: C.ink2 })], [T('01/03/2026'), N($(15000), { fw: 500 }), T('Facundo U.', { fg: C.ink2 })]], { fixed: true, rowH: 40 }),
+      B.fields([{ l: 'NUEVO VALOR', v: '$ 20.000', focus: true, fw: 800 }, { l: 'DESDE', v: '01/10/2026' }], 'repeat(2, minmax(0, 1fr))'),
+      B.text('Las horas cargadas antes del 01/10 siguen con su valor. Las nuevas toman el nuevo.'),
+      B.btns([btn('Cerrar', 'plain'), btn('Guardar el valor nuevo', 'primary')], 'flex-end')] }) };
+    const P0 = PROY[0], P1 = PROY[1], P5 = PROY[5];
+    const skelCard = () => panel({ blocks: [B.skel()] });
+    const desk = [
+      D('1a', 'Lista de proyectos · Tomás', 'Tarjetas con cliente o fábrica, categoría, estado, entrega (bordó si está atrasada) y la barra de costo contra presupuesto, que se pone bordó al pasarse. Tomás ve además venta y cobrado. Filtros por estado, externo/interno y categoría.', 'tomas', G3, R3, list(true)),
+      D('1b', 'Lista de proyectos · Edgar', 'Lo mismo sin ningún precio: la barra en porcentaje y las horas. Sin “Valor de la hora” ni “Nuevo proyecto”.', 'edgar', G3, R3, list(false)),
+      D('2a', 'Ficha · Tomás · Gastos', 'En secciones: Datos y Plata a la izquierda; Gastos, Horas, Notas y Archivos a la derecha. Plata muestra presupuesto de costo, horas estimadas, lo gastado y, con permiso, venta, facturado, cobrado y margen.', 'tomas', FC, FR, this.ficha(P0, 'tomas', 'Gastos')),
+      D('2b', 'Ficha · Edgar · Horas', 'La misma ficha sin ningún precio: “Avance” en lugar de “Plata”, horas sin costo y sin Facturar. Carga horas desde acá.', 'edgar', FC, FR, this.ficha(P0, 'edgar', 'Horas')),
+      D('2c', 'Ficha · Notas', 'La bitácora del avance, lo más nuevo arriba, con foto si la tiene.', 'tomas', FC, FR, this.ficha(P0, 'tomas', 'Notas')),
+      D('2d', 'Ficha · Archivos', 'Planos, presupuestos y fotos. Las fotos llegan desde el celular.', 'tomas', FC, FR, this.ficha(P0, 'tomas', 'Archivos')),
+      D('3a', 'Facturar al cliente', 'Anticipo, avance o saldo final, con importe, concepto y lo que va a quedar antes de confirmar.', 'tomas', FC, FR, [...this.ficha(P0, 'tomas', 'Gastos'), facturar], { dim: true }),
+      D('3b', 'Cargar a la fábrica · interno atrasado y pasado', 'Un interno: “Cargar a la fábrica” con importe y concepto. Atrás, la ficha atrasada 16 días y con el costo pasado de presupuesto, en bordó.', 'tomas', FC, FR, [...this.ficha(P1, 'tomas', 'Horas'), cargar], { dim: true }),
+      D('4a', 'Valor de la hora', 'Siempre a mano desde la lista y la ficha. Con su historial y desde qué fecha rige.', 'tomas', G3, R3, [...list(true), valorHora], { dim: true }),
+      D('5a', 'Sin valor de hora', 'Si no hay valor cargado, el costo de las horas dice “sin valor de hora” en bordó y el margen no se calcula.', 'tomas', FC, FR, this.ficha(P5, 'tomas', 'Horas', { noHora: true })),
+      D('5b', 'Sin datos', 'Filtros que no traen nada.', 'tomas', 'minmax(0, 1fr)', 'auto minmax(0, 1fr)', [tool(true, { seg: [['Todos', 14], ['Presupuestados', 2], ['Aprobados', 1], ['En curso', 6], ['Terminados', 2], ['Entregados', 2], ['Cancelados', 1, true]], tipo: 'Solo internos ▾' }),
+        panel({ blocks: [B.empty('No hay proyectos internos cancelados', 'Probá con otro estado o sacá los filtros.'), B.btns([btn('Sacar los filtros', 'ghost')], 'center')] })]),
+      D('5c', 'Cargando y error', 'Mientras carga, las tarjetas en gris. Si falla, el aviso con Reintentar arriba.', 'tomas', G3, 'auto auto repeat(2, minmax(0, 1fr))', [tool(true), bare([B.alert('bad', 'No se pudo cargar la lista de proyectos', 'Puede ser la conexión.', { icon: IC.err, btns: [btn('Reintentar', 'ghost', { h: 34 })] })], { col: '1 / -1' }), ...[1, 2, 3, 4, 5, 6].map(skelCard)]),
+    ];
+    const gTool = (view) => bare([B.tool({ seg: [['Por operario', null, view === 'op'], ['Por proyecto', null, view === 'pr']], btns: [btn('‹', 'plain', { h: 36, px: 12 }), btn('Hoy', 'plain', { h: 36 }), btn('›', 'plain', { h: 36, px: 12 }), btn('2 semanas ▾', 'plain', { h: 36 }), btn('+ Actividad', 'primary', { h: 36 })] }),
+      B.alert('bad', '1 actividad atrasada y 2 que se superponen', 'Ajuste de la bomba (Julián) tenía que terminar el 26/09 · Julián tiene dos cosas el miércoles 30', { btns: [btn('Ver', 'link', { h: 30 })] })], { col: '1 / -1', gap: 8 });
+    const G_OP = { headL: 'OPERARIO', cols: '170px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.6fr)' }, G_PR = { headL: 'ACTIVIDAD', cols: '210px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.6fr)' };
+    const band = k => { const pj = pjc(k); return { bg: pj.t, bd: pj.c, fg: C.ink, sub: C.ink2 }; };
+    const actCard = (a, o = {}) => panel({ title: a[2], tfs: 17, tBig: true, sub: pjc(a[1]).n, band: band(a[1]), gap: 10, blocks: [
+      B.kv([['CUÁNDO', o.when], ['HORAS', hrs(a) + ' h estimadas']], { fs: 15, fw: 700 }), B.bar('Avance', a[6] + ' %', a[6], { fill: pjc(a[1]).c }), ...(o.btns ? [B.btns([btn('Cargar horas', 'primary', { h: 48, fs: 15.5, px: 18 }), btn('Marcar avance', 'ghost', { h: 48, fs: 15.5 })])] : [])] });
+    const diag = [
+      D('7a', 'Diagrama · por operario', 'Cada operario del Taller en un renglón y sus actividades como barras, del color de su proyecto. Hoy marcado en naranja. Lo oscuro de cada barra es el avance. Bordó: atrasada (línea) o se superpone con otra (punteada). Se ve de un vistazo quién está libre.', 'tomas', 'minmax(0, 1fr)', 'auto minmax(0, 1fr)', [gTool('op'), panel({ pad: '10px', blocks: [B.gantt({ ...G_OP, days: gDays(), rows: byOperario(), legend: legend() })] })], { tab: 'Diagrama de actividades' }),
+      D('7b', 'Diagrama · por proyecto', 'Los mismos datos agrupados por proyecto, con su franja de color, estado y entrega. Cada barra dice quién la hace.', 'tomas', 'minmax(0, 1fr)', 'auto minmax(0, 1fr)', [gTool('pr'), panel({ pad: '10px', blocks: [B.gantt({ ...G_PR, days: gDays(), rows: byProyecto(), legend: legend() })] })], { tab: 'Diagrama de actividades' }),
+      D('7c', 'Editar una actividad', 'Tocar una barra la marca en naranja y abre el panel. Arrastrar la barra la mueve de día; arrastrar el borde la alarga. Al elegir quién la hace, se ve si ya está ocupado.', 'tomas', 'minmax(0, 1fr) 380px', 'minmax(0, 1fr)', [
+        panel({ pad: '10px', blocks: [B.gantt({ ...G_OP, cols: '150px repeat(6, minmax(0, 1fr))', days: gDays().slice(0, 6), rows: byOperario({ sel: 'a7', week: true, tall: 56, wide: true }), legend: [] })] }),
+        panel({ title: 'Instalación en Máquina 3', tBig: true, tfs: 19, sub: 'Dosificador de masa M3', band: band('dos'), gap: 10, blocks: [
+          B.opts([{ t: 'Julián Ferreyra', sub: 'ya tiene “Medir en Duomo” el mié 30', sel: true }, { t: 'Edgar Molina', sub: 'en Tolva y dosificación' }, { t: 'Gustavo Páez', sub: 'Visita mensual Persicco' }, { t: 'Tomás', sub: 'Relevamiento en Dolce Pasta' }], { head: '¿Quién la hace?', h: 42 }),
+          B.alert('bad', 'Julián tiene dos cosas el miércoles 30', 'También “Medir en Heladería Duomo”.', { btns: [] }),
+          B.fields([{ l: 'DESDE', v: 'mié 30/09' }, { l: 'HASTA', v: 'mié 30/09' }, { l: 'HORAS ESTIMADAS', v: '8 h' }, { l: 'AVANCE', v: '0 %' }], 'repeat(2, minmax(0, 1fr))'),
+          B.btns([btn('Eliminar', 'linkBad'), SP, btn('Cancelar', 'plain'), btn('Guardar', 'primary')])] }),
+      ], { tab: 'Diagrama de actividades' }),
+    ];
+    const mob = [
+      Mo('7d', 'Celular · Mis actividades (Edgar)', 'Edgar ve solo lo suyo, por día, con el color del proyecto. Desde acá carga horas y marca el avance. Sin precios.', 'Mis actividades', [
+        bare([B.text('HOY · LUNES 28/09', { fs: 12, fw: 800, fg: C.soft })]), actCard(ACT[0], { when: 'lun 28 al jue 01 · día 1 de 4', btns: true }),
+        bare([B.text('LO QUE VIENE', { fs: 12, fw: 800, fg: C.soft })]), actCard(ACT[2], { when: 'vie 02 al mié 07' }),
+      ], { mSub: 'Proyectos Taller', backOp: 0 }),
+      Mo('6a', 'Celular · lista', 'Las mismas tarjetas, de a una. Filtro por estado arriba.', 'Proyectos', [bare([B.tool({ seg: [['Todos', 14, true], ['En curso', 6], ['Atrasados', 1]] })]), ...PROY.slice(0, 4).map(p => card(p, true, true))], { backOp: 0, mSub: 'Seis Destinos' }),
+      Mo('6b', 'Celular · ficha · Archivos', 'Edgar en el taller: saca la foto y la sube a la ficha. Sin precios.', 'Maq Barquillo 24', [
+        panel({ title: 'Carrizo Hnos. SRL · Máquina', tfs: 15, sub: 'Entrega prometida 15/10/2026', chips: [chip('En curso', 'taller')], blocks: [B.bar('Costo contra presupuesto', '93 %', 93), B.bar('Horas contra lo estimado', '80 %', 80)] }),
+        bare([B.tabs(['Horas', 'Notas', 'Archivos'], 'Archivos')]),
+        panel({ gap: 10, blocks: [B.btns([btn('Sacar foto', 'primary', { h: 56, fs: 17, px: 26 }), btn('Subir archivo', 'ghost', { h: 56, fs: 17, px: 20 })], 'center'), B.photos([ARCH[1][0]]), B.photos([ARCH[2][1]]), B.photos([ARCH[0][0]])] }),
+      ], { uIni: 'EM' }),
+    ];
+    const side = ['inicio', 'gastos', 'caja', 'stock', 'taller'].map((k, i) => { const m = mc(k); const on = k === 'taller';
+      return { name: m.n, icon: m.i, color: m.c, tint: m.t, bg: on ? C.orS : 'transparent', fg: on ? C.orD : C.ink2, fw: on ? 700 : 500, hasBadge: on, badge: 2, bBg: C.bo, bFg: '#fff', div: i === 0 }; });
+    const topFabs = [['Todas', null, 'todas'], ['Nuss', 'oklch(0.55 0.11 55)', 'N'], ['Dolce Pasta', 'oklch(0.52 0.1 130)', 'DP'], ['Mengui', 'oklch(0.57 0.19 25)', 'M'], ['Taller', '#57534E', 'T']].map(([n, c, ini], i) => { const on = i === 4; return { n, c: c || '', ini, all: i === 0, one: i > 0, bg: on ? C.or : 'transparent', fg: on ? '#fff' : C.ink2, fw: on ? 700 : 600, ring: on ? '0 0 0 2px #fff' : 'none' }; });
+    const tm = (k, n, on) => { const m = mc(k); return { n: n || m.n, icon: m.i, ic: on ? C.or : m.c, bg: on ? C.orS : 'transparent', fg: on ? C.orD : C.ink2, fw: on ? 700 : 600 }; };
+    return {
+      groups: [{ title: 'Diagrama de actividades', sub: 'Nuevo · lo arma Tomás · 1366 × 768', screens: diag }, { title: 'Compu', sub: '1366 × 768', screens: desk }, { title: 'Celular', sub: '390 × 844 · en el taller', screens: mob }],
+      side, topFabs, mnav: [tm('inicio'), tm('taller', 'Taller', true), tm('gastos'), tm('caja'), { n: 'Más', icon: 'M5 12h.01M12 12h.01M19 12h.01', ic: C.ink2, bg: 'transparent', fg: C.ink2, fw: 600 }],
+    };
+  }
+}
+
+</script>
+</body>
+</html>
