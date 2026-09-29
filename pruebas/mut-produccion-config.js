@@ -10,7 +10,7 @@ correrMutaciones({
   suite: path.join(__dirname, 'test-produccion-config.js'),
   original: process.env.ARCHIVO_BASE || path.join(__dirname, '..', 'modulos/produccion-gestion.html'),
   escape: 'esc',
-  funciones: ['pintarSelectorUnidad', 'htmlConfigMaquinas', 'htmlConfigRecetas', 'htmlConfigIngredientes', 'htmlPresentacionConfig',
+  funciones: ['pintarSelectorUnidad', 'htmlConfigMaquinas', 'htmlConfigRecetas', 'htmlConfigIngredientes', 'htmlFilaPresentacion', 'htmlEditorEmpaque', 'htmlDetalleProducto', 'htmlDetalleMaquina', 'htmlDetalleReceta', 'htmlDetalleIngrediente', 'htmlFilaCono',
     'htmlConfigProductos', 'htmlPendienteMarca', 'htmlConfigMarcas', 'htmlFilaPersonal', 'htmlPanelPin', 'htmlPanelTemporal',
     'htmlTemporales', 'htmlConfigPersonal', 'htmlTiraPin', 'htmlErrorPegado'],
   equivalentes: [
@@ -20,7 +20,7 @@ correrMutaciones({
     { expr: 'esc(pend.length)', motivo: 'un número: la cantidad de pendientes' },
     { expr: 'esc(version)', motivo: 'un número: la versión que va a crear guardar_receta_original' },
     { expr: 'esc(textoBotonPersonal(n))', motivo: 'texto constante del código con un número adentro' },
-    { expr: 'esc(pin.texto)', motivo: 'texto constante del código: el que devuelve estadoDelPin() ("Sin PIN", "PIN propio", "PIN pendiente de cambiar")' },
+    { expr: 'esc(pin.texto)', motivo: 'texto constante del código: el que devuelve estadoDelPin() ("Sin PIN", "PIN propio", "Por cambiar")' },
   ],
   manuales: [
     // ── Acceso ─────────────────────────────────────────────────────────
@@ -30,10 +30,10 @@ correrMutaciones({
     { nombre: 'las unidades de config salen de cargar', de: "      return unidadesCon('configurar')", a: "      return unidadesCon('cargar')" },
 
     // ── Las secciones (renglones del menú) y el número de conos ────────
-    { nombre: 'mostrarConfig no abre la sección pedida', de: '      const tab = PESTANAS_CONFIG.some(([k]) => k === tabPedida) ? tabPedida :', a: '      const tab = false ? tabPedida :' },
-    { nombre: 'mostrarConfig acepta una sección que no existe', de: '      const tab = PESTANAS_CONFIG.some(([k]) => k === tabPedida) ? tabPedida :', a: '      const tab = tabPedida ? tabPedida :' },
-    { nombre: 'el título no dice la sección', de: "      document.getElementById('pr-config-titulo').textContent = PESTANAS_CONFIG.find(([k]) => k === tab)?.[1] ?? 'Configuración'", a: "      document.getElementById('pr-config-titulo').textContent = 'Configuración'" },
-    { nombre: 'un número de conos inventado cuando no se pudo contar', de: "      const n = tieneTarea('configurar') ? estado.conosPendientes : null", a: "      const n = tieneTarea('configurar') ? (estado.conosPendientes ?? 0) + 1 : null" },
+    { nombre: "mostrarConfig no abre la sección pedida", de: "      const tab = PESTANAS_CONFIG.some(([k]) => k === pedida) ? pedida :", a: "      const tab = false ? pedida :" },
+    { nombre: "mostrarConfig acepta una sección que no existe", de: "      const tab = PESTANAS_CONFIG.some(([k]) => k === pedida) ? pedida :", a: "      const tab = pedida ? pedida :" },
+    { nombre: "el título no dice la sección", de: "      document.getElementById('pr-config-titulo').textContent = elegido ?? nombreSeccion(tab)", a: "      document.getElementById('pr-config-titulo').textContent = 'Configuración'" },
+    { nombre: "un número de conos inventado cuando no se pudo contar", de: "      const n = tieneTarea('configurar') ? estado.conosPendientes : null\n      htmlNumeroMenu(", a: "      const n = tieneTarea('configurar') ? (estado.conosPendientes ?? 0) + 1 : null\n      htmlNumeroMenu(" },
 
     // ── El error PEGADO al botón ───────────────────────────────────────
     { nombre: 'el error no se dibuja pegado a ningún botón', de: "      return c?.error && c.error.donde === donde ? `<div class=\"pr-cfg-error\" role=\"alert\">${esc(c.error.texto)}</div>` : ''", a: "      return ''" },
@@ -64,7 +64,7 @@ correrMutaciones({
     { nombre: 'el tipo nuevo no parte de otro', de: '      const partida = nuevo ? recetaVigente(d.recetas, c.recetaPartida ?? d.tipos[0]) : vigente', a: '      const partida = nuevo ? null : vigente' },
     { nombre: 'la cantidad se pone con value=', de: 'data-numero="${f.kg == null ? \'\' : esc(f.kg)}" data-decimales="3"', a: 'value="${f.kg == null ? \'\' : esc(f.kg)}" data-numero="" data-decimales="3"' },
     { nombre: 'el botón no dice qué versión crea', de: '      return (recetaVigente(recetas, tipo)?.version ?? 0) + 1', a: '      return 1' },
-    { nombre: 'la vigente no se marca en el historial', de: "`<div class=\"pr-cfg-version${i === 0 ? ' pr-cfg-version--vigente' : ''}\">", a: '`<div class="pr-cfg-version">' },
+    { nombre: "la vigente no se marca en el historial", de: "(i === 0 ? `<span class=\"pc-vigente\">Vigente</span>` : '')", a: "''" },
     { nombre: 'textoAntes marca aunque no haya cambiado', de: '      if (Math.abs(Number(original) - Number(actual)) < 1e-9) return null\n', a: '' },
     { nombre: 'textoAntes inventa un "antes" que no existe', de: '      if (original == null || actual == null) return null\n', a: '' },
     { nombre: 'la marca de "antes" no se esconde al volver al valor original', de: '      antes.hidden = !texto', a: '      antes.hidden = false' },
@@ -83,13 +83,13 @@ correrMutaciones({
     { nombre: 'empaque vacío viaja como texto', de: "        p_empaque: empaque === '' ? null : empaque,", a: '        p_empaque: empaque,' },
     { nombre: 'tipo de masa vacío viaja como texto', de: "        p_tipo_masa: tipo === '' ? null : tipo,", a: '        p_tipo_masa: tipo,' },
     { nombre: 'la presentación ignora la media caja', de: "          media_caja: valorDe('data-pres-media', pr.id, 'checked') ?? pr.media_caja,", a: '          media_caja: pr.media_caja,' },
-    { nombre: 'sin la nota de lo ya producido', de: '      const nota = \'<p class="pr-texto-suave">Cambiar las unidades por caja no toca lo ya producido: cada sublote guardó las suyas.</p>\'', a: "      const nota = ''" },
-    { nombre: 'los de chocolate no van separados', de: '      const bloques = comunes.map(bloque).join(\'\') +\n        (chocolate.length ? corte + chocolate.map(bloque).join(\'\') : \'\')', a: '      const bloques = d.productos.map(bloque).join(\'\')' },
-    { nombre: 'la línea de chocolate se dibuja siempre', de: "        (chocolate.length ? corte + chocolate.map(bloque).join('') : '')", a: "        corte + chocolate.map(bloque).join('')" },
+    { nombre: "sin la nota de lo ya producido", de: "Cambiar las unidades por caja no toca lo ya producido: cada sublote guardó las suyas.", a: "" },
+    { nombre: "los de chocolate no van separados", de: "de(esProductoChocolate(p) ? 'DE CHOCOLATE' : 'COMUNES').push(p)", a: "de('COMUNES').push(p)" },
+    { nombre: "la línea de chocolate se dibuja siempre", de: "      return grupos.filter(([, l]) => l.length)\n    }\n\n    function subProducto", a: "      return grupos\n    }\n\n    function subProducto" },
 
     // ── Marcas / Conos ─────────────────────────────────────────────────
     { nombre: 'dar de baja no manda lo tocado', de: "await supabase.rpc('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: !!valor })", a: "await supabase.rpc('guardar_marca', { p_id: m.id, p_nombre: m.nombre, p_activa: true })" },
-    { nombre: 'el buscador de marcas no filtra', de: "      if (!c.listaConos) c.listaConos = marcasFiltradas(conosDelFiltro(c.datos, c.filtroConos ?? 'activos'), c.busqueda).map(m => m.id)", a: "      if (!c.listaConos) c.listaConos = conosDelFiltro(c.datos, c.filtroConos ?? 'activos').map(m => m.id)" },
+    { nombre: "el buscador de marcas no filtra", de: "      if (!c.listaConos) c.listaConos = marcasFiltradas(conosDelFiltro(c.datos, c.filtroConos ?? 'todos'), c.busqueda).map(m => m.id)", a: "      if (!c.listaConos) c.listaConos = conosDelFiltro(c.datos, c.filtroConos ?? 'todos').map(m => m.id)" },
     { nombre: 'no se separan los pendientes de revisar', de: "      return (d?.marcas ?? []).filter(m => m.estado_alta === 'pendiente_revision')", a: '      return []' },
     { nombre: 'el catálogo lista también los pendientes y los rechazados', de: "      return (d?.marcas ?? []).filter(m => m.estado_alta !== 'pendiente_revision' && m.estado_alta !== 'rechazada')", a: '      return (d?.marcas ?? [])' },
     { nombre: 'aceptar no manda el nombre corregido', de: "        const nombre = aprobar ? valorDe('data-pend-nombre', id) : null", a: '        const nombre = null' },
@@ -97,7 +97,7 @@ correrMutaciones({
     { nombre: 'un nombre vacío pisa el que tenía', de: "      return { p_marca_id: id, p_aprobar: aprobar, p_nombre: n === '' ? null : n }", a: '      return { p_marca_id: id, p_aprobar: aprobar, p_nombre: n }' },
     { nombre: 'el error de revisar un cono no se pega a ese pendiente', de: "          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', `pend-${id}`)", a: "          aprobar ? 'Cono aceptado.' : 'Cono rechazado.', DONDE)" },
     { nombre: 'el error de revisar no dice qué no se pudo', de: "          estado.config.error.texto = `${aprobar ? 'No se pudo aceptar' : 'No se pudo rechazar'}: ${estado.config.error.texto}`", a: '' },
-    { nombre: 'no se dice quién cargó el cono', de: "      const pie = [quien ? `Lo cargó ${quien} en la tablet` : null, cuando || null].filter(Boolean).join(' · ')", a: "      const pie = ''" },
+    { nombre: "no se dice quién cargó el cono", de: "      const pie = [quien ? `lo cargó ${quien} en la tablet` : null, cuando || null].filter(Boolean).join(', ')", a: "      const pie = ''" },
 
     // ── Personal: el guardado de a muchos ──────────────────────────────
     { nombre: 'se mandan TODAS las filas, no solo las tocadas', de: '        for (const id of ids) {', a: '        for (const id of c.datos.personal.map(x => x.id)) {' },
@@ -106,7 +106,7 @@ correrMutaciones({
     { nombre: 'destildar y volver atrás igual cuenta como cambio', de: "      if (nuevos.slice().sort().join(',') === antes) c.cambios.delete(persona.id)\n      else c.cambios.set(persona.id, nuevos)", a: '      c.cambios.set(persona.id, nuevos)' },
     { nombre: 'la casilla muestra siempre lo de la base', de: '      return c.cambios.get(p.id) ?? (p.puestos ?? [])', a: '      return p.puestos ?? []' },
     { nombre: 'tocar una casilla guarda de una', de: '      alternarPuesto(c, p, puesto, marcado)\n      pintarPestanaConfig()', a: '      alternarPuesto(c, p, puesto, marcado)\n      guardarCambiosPersonal()' },
-    { nombre: 'el botón se deshabilita por lo que falta', de: `<button type="button" class="pr-btn" id="pr-cfg-personal-guardar"\${c.guardando ? ' disabled' : ''}>`, a: `<button type="button" class="pr-btn" id="pr-cfg-personal-guardar"\${c.guardando || !n ? ' disabled' : ''}>` },
+    { nombre: "el botón se deshabilita por lo que falta", de: "id=\"pr-cfg-personal-guardar\"${c.guardando ? ' disabled' : ''}>", a: "id=\"pr-cfg-personal-guardar\"${c.guardando || !n ? ' disabled' : ''}>" },
     { nombre: 'guardar sin cambios no dice nada', de: "      if (!ids.length) { errorConfig('No cambiaste nada todavía.', DONDE); return }", a: '      if (!ids.length) return' },
     { nombre: 'un rechazo de la base no frena las demás filas', de: 'p_puestos: c.cambios.get(id) }, null, DONDE)\n          if (!r.ok) break', a: 'p_puestos: c.cambios.get(id) }, null, DONDE)\n          if (!r.ok) continue' },
     { nombre: 'el botón queda trabado después de guardar', de: '      } finally {\n        c.guardando = false\n      }', a: '      } finally {\n      }' },
@@ -123,10 +123,10 @@ correrMutaciones({
     { nombre: 'el aviso de salida no se dibuja', de: '      cuerpo.innerHTML = c.salida ? htmlSalirSinGuardar(c) : RENDERS_CONFIG[c.tab](c)', a: '      cuerpo.innerHTML = RENDERS_CONFIG[c.tab](c)' },
 
     // ── El estado del PIN ──────────────────────────────────────────────
-    { nombre: 'sin PIN igual dice que tiene uno propio', de: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--alerta' }\n", a: '' },
-    { nombre: 'sin PIN no va en bordó', de: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--alerta' }", a: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--gris' }" },
-    { nombre: 'no se distingue el PIN que hay que cambiar', de: "      if (p.debe_cambiar_pin) return { texto: 'PIN pendiente de cambiar', clase: 'pr-cfg-chip--gris' }\n", a: '' },
-    { nombre: 'no se dice cuál es un PIN temporal', de: "      const temp = p.pin_temporal ? ` <span class=\"pr-cfg-chip pr-cfg-chip--gris\">temporal</span>` : ''", a: "      const temp = ''" },
+    { nombre: "sin PIN igual dice que tiene uno propio", de: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--alerta', tipo: 'grave' }\n", a: "" },
+    { nombre: "sin PIN no va en bordó", de: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--alerta', tipo: 'grave' }", a: "      if (!p?.tiene_pin) return { texto: 'Sin PIN', clase: 'pr-cfg-chip--gris', tipo: 'gris' }" },
+    { nombre: "no se distingue el PIN que hay que cambiar", de: "      if (p.debe_cambiar_pin) return { texto: 'Por cambiar', clase: 'pr-cfg-chip--gris', tipo: 'gris' }\n", a: "" },
+    { nombre: "no se dice cuál es un PIN temporal", de: "      const temp = p.pin_temporal ? ` <span class=\"pc-chip pc-chip--gris\">temporal</span>` : ''", a: "      const temp = ''" },
     { nombre: 'el botón dice siempre lo mismo tenga o no PIN', de: `>\${p.tiene_pin ? 'Resetear PIN' : 'Asignar PIN'}</button>`, a: '>Resetear PIN</button>' },
 
     // ── La hoja de PINes ───────────────────────────────────────────────
@@ -150,7 +150,7 @@ correrMutaciones({
     { nombre: 'se listan también los temporales vencidos', de: '      const hasta = new Date(t?.hasta ?? \'\').getTime()\n      return Number.isFinite(hasta) && hasta > ahora', a: '      return true' },
     { nombre: 'un temporal sin fecha se da por vigente', de: "      return Number.isFinite(hasta) && hasta > ahora", a: '      return hasta > ahora || !Number.isFinite(hasta)' },
     { nombre: 'los vencidos llegan igual al render', de: 'sinPersonasDePrueba((t.data ?? []).filter(x => temporalVigente(x)), estado.fabrica', a: 'sinPersonasDePrueba((t.data ?? []), estado.fabrica' },
-    { nombre: 'no se dice quién dio el acceso', de: '`<div class="pr-texto-suave">Lo dio ${esc(c.datos.nombres.get(t.otorgado_por) ?? \'—\')} · hasta ${esc(fechaCorta(t.hasta))} ${esc(horaArgentina(t.hasta))}</div></span>`', a: '`</span>`' },
+    { nombre: "no se dice quién dio el acceso", de: "`<span class=\"pc-texto2\"> · lo dio ${esc(c.datos.nombres.get(t.otorgado_por) ?? '—')} · hasta ${esc(fechaCorta(t.hasta))} ${esc(horaArgentina(t.hasta))}</span></span>` +", a: "`</span>` +" },
     { nombre: 'el acceso temporal va a la unidad de la tablet', de: '        p_unidad_negocio_id: c.unidadId,\n        p_puesto: c.temporal?.puesto ?? null,', a: '        p_unidad_negocio_id: estado.unidadId,\n        p_puesto: c.temporal?.puesto ?? null,' },
     { nombre: 'se da el acceso sin elegir nada', de: "      if (faltan.length) { errorConfig(`Falta: ${faltan.join(' · ')}.`, DONDE); return }", a: '' },
     { nombre: 'un pin_temporal null igual abre la hoja', de: '      if (r.data?.pin_temporal) {', a: '      if (r.data) {' },

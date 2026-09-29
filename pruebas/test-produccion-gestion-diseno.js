@@ -70,10 +70,18 @@ esperas.push((async () => {
   chk('… y lo vuelve a cerrar', !body.classList.contains('pg-menu-abierto'))
   chk('el menú se abre con una CLASE y no con [hidden] (la regla global de hidden gana siempre)', !/pr-menu'\)\.hidden = !/.test(FUENTE) && /document\.body\.classList\.add\('pg-menu-abierto'\)/.test(FUENTE))
   chk('Escape lo cierra', /ev\.key === 'Escape' && document\.body\.classList\.contains\('pg-menu-abierto'\)\) cerrarMenu\(\)/.test(FUENTE))
-  for (const id of ['pr-config-volver', 'pr-historial-volver', 'pr-stock-volver']) {
+  for (const id of ['pr-historial-volver', 'pr-stock-volver']) {
     chk(`"‹ Menú" de la sección (${id}) abre el menú`, new RegExp(`getElementById\\('${id}'\\)\\.addEventListener\\('click', abrirMenu\\)`).test(FUENTE))
   }
-  chk('cada sección dice "‹ Menú"', ['pr-config-volver', 'pr-historial-volver', 'pr-stock-volver'].every(id => new RegExp(`id="${id}"[^>]*>(?:&lsaquo;|‹) Menú<`).test(FUENTE)))
+  chk('Historial y Stock dicen "‹ Menú"', ['pr-historial-volver', 'pr-stock-volver'].every(id => new RegExp(`id="${id}"[^>]*>(?:&lsaquo;|‹) Menú<`).test(FUENTE)))
+  // Configuración (diseño 7a/7b, 29/09/2026): ‹ atrás, que del detalle vuelve
+  // a la lista y, si no hay detalle, abre el menú.
+  chk('el ‹ de Configuración va a volverEnConfig', /getElementById\('pr-config-volver'\)\.addEventListener\('click', volverEnConfig\)/.test(FUENTE) && /id="pr-config-volver" aria-label="Atrás"/.test(FUENTE))
+  S.estado.config = { tab: 'marcas', movilDetalle: false }
+  S.volverEnConfig()
+  chk('… sin detalle abierto, abre el menú', body.classList.contains('pg-menu-abierto'))
+  S.cerrarMenu()
+  S.estado.config = null
 
   // Qué ve cada cuenta. En el doble todo arranca visible: se esconde antes.
   S.__doc.getElementById('pr-menu').hidden = true
@@ -98,8 +106,8 @@ esperas.push((async () => {
   chk('el menú tiene los tres bloques, en orden: Control · Catálogo · Personas', /Control<\/p>[^]*Catálogo<\/p>[^]*Personas<\/p>/.test(nav))
   chk('Control: planillas pendientes (con su número), historial y stock terminado',
     /id="pr-btn-ir-pendientes"[^]*id="pr-menu-n-pendientes"[^]*id="pr-menu-historial"[^]*id="pr-menu-stock"/.test(nav))
-  chk('Catálogo: Máquinas, Recetas, Ingredientes, Productos, Empaque y Marcas / Conos (con su número)',
-    /data-ir-config="maquinas"[^]*data-ir-config="recetas"[^]*data-ir-config="ingredientes"[^]*data-ir-config="productos"[^]*data-ir-config="empaque"[^]*data-ir-config="marcas"[^]*id="pr-menu-n-conos"/.test(nav))
+  chk('Catálogo: Máquinas, Recetas, Ingredientes, Productos (con su empaque) y Marcas / Conos (con su número)',
+    /data-ir-config="maquinas"[^]*data-ir-config="recetas"[^]*data-ir-config="ingredientes"[^]*data-ir-config="productos"[^]*data-ir-config="marcas"[^]*id="pr-menu-n-conos"/.test(nav) && !/data-ir-config="empaque"/.test(nav))
   chk('Personas: Personal y PINes', /data-ir-config="personal"[^>]*><span class="pg-menu__txt">Personal y PINes</.test(nav))
   chk('en la compu una barra lateral de 248 px', /grid-template-columns: 248px minmax\(0, 1fr\)/.test(FUENTE))
 
@@ -137,6 +145,10 @@ esperas.push((async () => {
   await N.irA('config:personal')
   chk('… y también cierra el menú (ahí no se pasa por mostrarVista)', !N.__body.classList.contains('pg-menu-abierto'))
   chk('dentro de Configuración, otra sección cambia en el lugar', N.estado.config.tab === 'personal' && N.__doc.getElementById('pr-config-titulo').textContent === 'Personal y PINes')
+  // El título cambia al TOCAR, antes de que termine de leer la sección.
+  const cambio = N.cambiarSeccionConfig('maquinas')
+  chk('… y el título dice la sección nueva mientras se lee', N.__doc.getElementById('pr-config-titulo').textContent === 'Máquinas')
+  await cambio
 })())
 
 // ── Salir con cambios sin guardar ────────────────────────────────────────
@@ -175,22 +187,23 @@ esperas.push((async () => {
 esperas.push((async () => {
   const S = await personal(armar())
   const h = cuerpoCfg(S)
-  chk('arriba: la unidad y cuántas personas tiene', /<p class="pg-sub">Cucuruchos Nuss · 3 personas<\/p>/.test(h), h.slice(0, 200))
+  chk('arriba: la unidad y cuántas personas tiene', /Personal y PINes<\/h2><span class="pc-texto2 pc-14">· 3 personas en Cucuruchos Nuss<\/span>/.test(h), h.slice(0, 300))
   chk('cada rol es una casilla ADENTRO de su label (en el celular, el botón que se prende)',
-    /<label class="pg-rol"><input type="checkbox" class="pr-casilla pr-cfg-centro" data-puesto="encargado" data-persona-puesto="e1" checked aria-label="Encargado: Federico Silva"><span class="pg-rol__txt">Encargado<\/span><\/label>/.test(h))
-  chk('el estado del PIN con su texto (el color no va solo)', /pr-cfg-chip pr-cfg-chip--alerta">Sin PIN</.test(h) && /pr-cfg-chip--gris">PIN pendiente de cambiar</.test(h) && /pr-cfg-chip--ok">PIN propio</.test(h))
+    /<label class="pc-rol"><span class="pc-tilde"><input type="checkbox" class="pc-tilde__input" data-puesto="encargado" data-persona-puesto="e1" checked aria-label="Encargado: Federico Silva"><span class="pc-tilde__caja" aria-hidden="true"><svg[^]{0,400}?<\/svg><\/span><\/span><span class="pc-rol__txt">Encargado<\/span><\/label>/.test(h))
+  chk('el estado del PIN con su texto (el color no va solo)', /pc-chip--grave pr-cfg-chip--alerta">Sin PIN</.test(h) && /pc-chip--gris pr-cfg-chip--gris">Por cambiar</.test(h) && /pc-chip--ok pr-cfg-chip--ok">PIN propio</.test(h))
   chk('"Asignar PIN" a quien no tiene y "Resetear PIN" a quien tiene', /data-pin-asignar="e2">Asignar PIN</.test(h) && /data-pin-asignar="e1">Resetear PIN</.test(h))
-  chk('"Generar PIN para los que no tienen" dice a cuántos (solo de ESTA unidad)', /id="pr-cfg-generar-pines">Generar PIN para los que no tienen · 1</.test(h))
+  chk('"Generar PIN a los que no tienen" dice a cuántos (solo de ESTA unidad)', /id="pr-cfg-generar-pines">Generar PIN a los que no tienen · 1</.test(h))
   chk('sinPinEnUnidad cuenta solo los de la unidad sin PIN', S.sinPinEnUnidad(PERSONAL) === 1 && S.sinPinEnUnidad(null) === 0)
-  chk('UN solo "Guardar los cambios", en el pie', (h.match(/id="pr-cfg-personal-guardar"/g) || []).length === 1 && /class="pr-cfg-pie pg-per__pie"[^]*id="pr-cfg-personal-guardar"/.test(h))
+  chk('UN solo "Guardar los cambios", en el pie', (h.match(/id="pr-cfg-personal-guardar"/g) || []).length === 1 && /class="pc-personal__pie pg-per__pie"[^]*id="pr-cfg-personal-guardar"/.test(h))
   S.tocarPuestoPersonal('e1', 'masero', true)
   S.tocarPuestoPersonal('e3', 'operario', true)
   chk('… que dice cuántas filas se van a mandar', /id="pr-cfg-personal-guardar">Guardar los cambios · 2 filas</.test(cuerpoCfg(S)))
   chk('las filas tocadas se marcan', (cuerpoCfg(S).match(/pr-cfg-fila--tocada/g) || []).length === 2)
   const css = FUENTE.slice(FUENTE.indexOf('LA GESTIÓN · DISEÑO'), FUENTE.indexOf('</style>'))
-  chk('en el celular el pie queda FIJO abajo', /@media \(max-width: 1100px\) \{[^]*?\.pg-per__pie \{ position: sticky; bottom: 0;/.test(css))
-  chk('… y cada rol es un botón de 44 px que se prende en naranja con ✓ (no solo color)', /\.pg-rol \{[^}]*min-height: 44px/.test(css) && /\.pg-rol:has\(input:checked\) \{ border-color: var\(--naranja\); background: var\(--naranja-suave\)/.test(css))
-  chk('… el ✓ va como texto delante del rol marcado', /\.pg-rol:has\(input:checked\) \.pg-rol__txt::before \{ content: '✓ '; \}/.test(css))
+  const cssCfg = FUENTE.slice(FUENTE.indexOf('CONFIGURACIÓN · diseño "Producción · Configuración"'), FUENTE.indexOf('</style>'))
+  chk('en el celular el pie queda FIJO abajo', /@media \(max-width: 899px\) \{[^]*?\.pc-personal__pie \{ position: sticky; bottom: 0;/.test(cssCfg))
+  chk('… y cada rol es un botón de 44 px con su nombre a la vista y el tilde (no solo color)', /\.pc-rol \{[^}]*min-height: 44px/.test(cssCfg) && /\.pc-rol__txt \{ position: static;/.test(cssCfg))
+  chk('… el tilde marcado es naranja con ✓ (el ícono), el vacío solo borde', /\.pc-tilde__input:checked \+ \.pc-tilde__caja \{ border-color: var\(--naranja\); background: var\(--naranja\); \}/.test(cssCfg) && /\.pc-tilde__input:not\(:checked\) \+ \.pc-tilde__caja svg \{ visibility: hidden; \}/.test(cssCfg))
   chk('el body no corta el scroll de costado con hidden (el pie fijo necesita clip)', /overflow-x: clip/.test(css) && !/body\.pg-gestion \{[^}]*overflow-x: hidden/.test(css))
 })())
 
@@ -246,12 +259,18 @@ async function conos(S) {
 esperas.push((async () => {
   const S = await conos(armar())
   let h = cuerpoCfg(S)
-  chk('arriba: cuántos conos y cuántos activos', /<p class="pg-sub">3 conos · 2 activos<\/p>/.test(h))
-  chk('el filtro: Activos · Apagados · Por revisar, con su cuenta', /data-conos-filtro="activos" aria-pressed="true">Activos · 2</.test(h) && /data-conos-filtro="apagados" aria-pressed="false">Apagados · 1</.test(h) &&
-    /data-conos-filtro="revisar" aria-pressed="false">Por revisar · 1</.test(h))
-  chk('abre en Activos: FRIGOR y GRIDO, sin VIEJA', /FRIGOR/.test(h) && /GRIDO/.test(h) && !/<strong>VIEJA/.test(h))
+  // Diseño 5a (29/09/2026): el título cuenta TODO el catálogo, y el filtro
+  // arranca en "Todos" (Activos + Apagados + Por revisar).
+  chk('arriba: cuántos conos y cuántos activos', /4 conos del catálogo<\/h2><span class="pc-texto2 pc-15">· 2 activos<\/span>/.test(h))
+  chk('el filtro: Todos · Activos · Apagados · Por revisar, con su cuenta', /data-conos-filtro="todos" aria-pressed="true">Todos<span class="pc-seg__n">4</.test(h) &&
+    /data-conos-filtro="activos" aria-pressed="false">Activos<span class="pc-seg__n">2</.test(h) && /data-conos-filtro="apagados" aria-pressed="false">Apagados<span class="pc-seg__n">1</.test(h) &&
+    /data-conos-filtro="revisar" aria-pressed="false">Por revisar<span class="pc-seg__n">1</.test(h))
+  chk('abre en Todos: los cuatro, cada uno con su estado', ['FRIGOR', 'GRIDO', 'VIEJA', 'NUEVA'].every(n => new RegExp(`pc-cono__n">${n}<`).test(h)))
+  S.elegirFiltroConos('activos')
+  h = cuerpoCfg(S)
+  chk('"Activos": FRIGOR y GRIDO, sin VIEJA ni la por revisar', /pc-cono__n">FRIGOR</.test(h) && /pc-cono__n">GRIDO</.test(h) && !/pc-cono__n">VIEJA</.test(h) && !/pc-cono__n">NUEVA</.test(h))
   chk('cada cono: el interruptor "Activo" (role=switch) y el tilde "Doble bolsa"',
-    /data-marca-doble="mk2" checked[^>]*aria-label="Doble bolsa: GRIDO"/.test(h) && /role="switch" class="pg-switch__input" data-marca-activo="mk1" checked aria-label="Activo: FRIGOR"/.test(h))
+    /data-marca-doble="mk2" checked[^>]*aria-label="Doble bolsa: GRIDO"/.test(h) && /role="switch" class="pc-sw__input" data-marca-activo="mk1" checked aria-label="Activo: FRIGOR"/.test(h))
   chk('ya no hay botón Activar/Desactivar', !/data-marca-activa=/.test(h))
   chk('los interruptores van a tocarCono al cambiar', /if \(t\.dataset\?\.marcaActivo !== undefined\) return tocarCono\(t\.dataset\.marcaActivo, 'activa', t\.checked\)/.test(FUENTE))
 
@@ -260,10 +279,10 @@ esperas.push((async () => {
   chk('apagar llama a guardar_marca con su nombre', JSON.stringify(rpcs(S, 'guardar_marca').at(-1)) === '{"p_id":"mk1","p_nombre":"FRIGOR","p_activa":false}')
   h = cuerpoCfg(S)
   chk('… queda apagado', /data-marca-activo="mk1"(?![^>]*checked)/.test(h) && /pg-cono--apagado/.test(h))
-  chk('… y NO desaparece bajo el dedo aunque el filtro sea "Activos"', /<strong>FRIGOR<\/strong>/.test(h))
+  chk('… y NO desaparece bajo el dedo aunque el filtro sea "Activos"', /pc-cono__n">FRIGOR</.test(h))
   chk('… con un aviso de que se guardó', S.__llamadas.exitos.some(m => m === 'FRIGOR: apagado.'))
   S.elegirFiltroConos('activos')
-  chk('al volver a elegir el filtro, recién ahí la lista se rearma', !/<strong>FRIGOR<\/strong>/.test(cuerpoCfg(S)))
+  chk('al volver a elegir el filtro, recién ahí la lista se rearma', !/pc-cono__n">FRIGOR</.test(cuerpoCfg(S)))
 
   // La base rechaza: el control vuelve y el error va pegado a ESA fila.
   S.__setRpc(async () => ({ data: null, error: { message: 'No tenés permiso.' } }))
@@ -305,12 +324,16 @@ esperas.push((async () => {
   B.estado.config.busqueda = 'gri'
   B.estado.config.listaConos = null
   B.pintarPestanaConfig()
-  chk('con búsqueda: "Mostrando N de M"', /Mostrando 1 de 2 activos/.test(cuerpoCfg(B)) && /GRIDO/.test(cuerpoCfg(B)) && !/<strong>FRIGOR/.test(cuerpoCfg(B)))
+  chk('con búsqueda: "N conos con …", lo que coincide resaltado, y la × para borrar', /1 cono con “gri”/.test(cuerpoCfg(B)) && /<mark class="pc-hl">GRI<\/mark>DO/.test(cuerpoCfg(B)) &&
+    !/pc-cono__n">FRIGOR/.test(cuerpoCfg(B)) && /data-conos-limpiar="1"/.test(cuerpoCfg(B)) && /pc-buscar--lleno/.test(cuerpoCfg(B)))
+  await B.accionMarca({ conosLimpiar: '1' })
+  chk('la × borra la búsqueda y vuelve a mostrar todo', B.estado.config.busqueda === '' && /pc-cono__n">FRIGOR/.test(cuerpoCfg(B)) && !/data-conos-limpiar/.test(cuerpoCfg(B)))
   // Por revisar: arriba, con quién lo cargó.
-  chk('los pendientes, arriba de la lista, con quién los cargó en la tablet', /Por revisar · 1<\/p>[^]*Lo cargó Laura Méndez en la tablet/.test(cuerpoCfg(B)) &&
-    cuerpoCfg(B).indexOf('Por revisar · 1</p>') < cuerpoCfg(B).indexOf('id="pr-cfg-marcas-lista"'))
+  chk('los pendientes, arriba de la lista, con quién los cargó en la tablet', /POR REVISAR · 1<\/div>[^]*lo cargó Laura Méndez en la tablet/.test(cuerpoCfg(B)) &&
+    cuerpoCfg(B).indexOf('POR REVISAR · 1</div>') < cuerpoCfg(B).indexOf('id="pr-cfg-marcas-lista"'))
   B.elegirFiltroConos('revisar')
-  chk('el filtro "Por revisar" lleva a los de arriba', /Los conos por revisar están arriba/.test(cuerpoCfg(B)))
+  chk('el filtro "Por revisar" muestra en la tabla solo los por revisar, con su estado', /pc-cono__n">NUEVA<\/div>[^]{0,900}pc-chip--naranja">Por revisar/.test(cuerpoCfg(B).slice(cuerpoCfg(B).indexOf('id="pr-cfg-marcas-lista"'))) &&
+    !/pc-cono__n">FRIGOR/.test(cuerpoCfg(B)))
 })())
 
 // ── El historial de un turno: corregir o anular un sublote ───────────────

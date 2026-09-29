@@ -214,9 +214,32 @@ const NUEVAS_GESTION = [
   'abrirCorreccionSublote', 'cerrarCorreccionSublote', 'faltaEnCorreccion', 'guardarCorreccionSublote',
   // Lo que salió por retiros en el stock terminado (26/09/2026)
   'cargarPermisoRetiros', 'puedeVerRetirosEn', 'salidasPorRetiro', 'codigoRetiro', 'htmlRetirosStock',
+  // El diseño "Producción · Configuración" (29/09/2026): el segmentado, la
+  // lista | detalle, el color de cada producto, el empaque en su renglón, las
+  // versiones de receta y los ingredientes con su stock.
+  'tonoProducto', 'claveColorProducto', 'colorDeProducto', 'nombreSeccion', 'burbujaSeccion', 'htmlSeccionesConfig',
+  'pintarSeccionesConfig', 'htmlPastilla', 'htmlFilaLista', 'htmlGrupoLista', 'htmlLista', 'htmlListaDetalle',
+  'htmlVacioLista', 'elegidoEn', 'coincideLista', 'nombreElegido', 'pintarFilasLista', 'elegirEnLista', 'volverEnConfig',
+  'cargarResumenConfig', 'contarSinEmpaque', 'actualizarResumenDesde', 'cambiarSeccionConfig',
+  'leerRecetasDeMaquinas', 'tiposDeMaquina', 'textoRecetaMaquina', 'filasListaMaquinas', 'htmlAltaMaquina',
+  'renglonesReceta', 'sinInsumoIngrediente', 'textoKgReceta', 'htmlRecetaVigenteMaquina', 'htmlDetalleMaquina', 'irARecetaDe',
+  'cambiosEntreVersiones', 'textoQueCambio', 'htmlInsumosIngrediente', 'htmlVersiones', 'htmlTablaRecetaVista',
+  'textoAutorVersion', 'htmlAutorVersion', 'htmlEditorReceta', 'htmlComparar', 'htmlDetalleReceta', 'filasListaRecetas',
+  'parametrosVolverAVersion', 'accionReceta',
+  'leerIngredientesBase', 'leerRecetasDeMaquinasSolo', 'nombreYMarca', 'insumosDeIngrediente', 'subIngrediente',
+  'filasListaIngredientes', 'usosIngrediente', 'sugerenciasIngrediente', 'textoStockInsumo', 'textoStockSugerencia', 'ultimoLoteInsumo',
+  'avisoStockIngredientes', 'htmlPanelElegirInsumos', 'htmlDetalleIngrediente',
+  'borradorDesdeGuardado', 'sinNingunEmpaque', 'lineaEmpaque', 'presentacionesDeProducto', 'sinEmpaqueDeProducto',
+  'gruposProductos', 'subProducto', 'filasListaProductos', 'htmlCajaPredeterminada', 'htmlAltaProducto', 'htmlCajasEditor',
+  'htmlInsumosEditor', 'htmlEditorEmpaque', 'htmlFilaPresentacion', 'htmlDetalleProducto', 'tocarActivoProducto',
+  'tocarActivaPresentacion', 'borradorTocado', 'abrirEmpaque', 'descartarBorrador', 'diaRelativo', 'htmlResaltado',
 ]
 const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJETAS_INDICADORES',
-  'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS']
+  'DIAS_SEMANA', 'UMBRAL_RINDE_POCO', 'FILTROS_CONOS',
+  // El diseño "Producción · Configuración" (29/09/2026)
+  'SECCIONES_CONFIG', 'ALIAS_CONFIG', 'CON_LISTA', 'ICONO_BUSCAR', 'ICONO_MAS', 'ICONO_CAJA', 'ICONO_CHEVRON', 'ICONO_ALERTA',
+  'ICONO_EXCLAMACION', 'ICONO_CRUZ', 'ICONO_TILDE', 'ICONO_ESTRELLA', 'ICONO_HISTORIAL', 'ICONO_FLECHA',
+  'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',
@@ -233,6 +256,9 @@ const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unid
   // Sala de masa (parte 2): el panel de la derecha pasó arriba de la receta
   // (htmlOpcionesReceta) y la fecha de cada lote sale de stock_para_masa.
   'htmlPanelSala', 'leerFechasLotes',
+  // Configuración (29/09/2026): el Empaque ya no es una sección aparte, y la
+  // presentación ya no es un formulario suelto (se edita en su renglón).
+  'htmlEmpaquePresentacion', 'htmlConfigEmpaque', 'htmlPresentacionConfig',
   // Planta v2 (28/09/2026): la máquina elegida va en la cabecera, no en la barra.
   'htmlLatMaquina']
 // Nuevas de la planta
@@ -369,6 +395,7 @@ const PRELUDIO = `
   var reintentando = false
   var relojBandaExito = null
   var turnoBurbujaConos = 0
+  var turnoResumenConfig = 0
   var turnoIndicadores = 0
   var __uuids = 0
   var crypto = { randomUUID() { __uuids++; return 'uuid-' + __uuids } }

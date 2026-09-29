@@ -13,7 +13,7 @@ correrMutacionesProduccion({
   // htmlProducido y htmlSubloteHistorial NO van acá: sus escapes viejos los
   // cubren test-produccion-cierre y test-produccion-historial. Lo nuevo de
   // ellas (el empaque del renglón) va en mutaciones a mano.
-  funciones: ['htmlEmbolsado', 'htmlPasoCaja', 'htmlEmpaqueAgregar', 'htmlEmpaqueTurno', 'htmlEmpaquePresentacion', 'htmlConfigEmpaque', 'htmlAvisoStockEmpaque'],
+  funciones: ['htmlEmbolsado', 'htmlPasoCaja', 'htmlEmpaqueAgregar', 'htmlEmpaqueTurno', 'htmlEditorEmpaque', 'htmlCajasEditor', 'htmlInsumosEditor', 'htmlAvisoStockEmpaque'],
   equivalentes: [
     { expr: 'esc(o.valor)', motivo: "constante del código: 'grande' | 'individual' | 'doble' | 'ninguno'" },
     { expr: 'esc(o.texto)', motivo: 'constante del código: el rótulo de cada embolsado' },
@@ -104,11 +104,11 @@ correrMutacionesProduccion({
     { nombre: 'el empaque del renglón de la planilla sin escapar', de: "sin empaque</span> ` : ''}${esc(cajaTexto)}</span>", a: "sin empaque</span> ` : ''}${cajaTexto}</span>" },
     { nombre: 'el empaque del sublote del historial sin escapar', de: '<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${esc(que)}`', a: '<span class="pr-producido__sublote">${esc(p.sublote)}</span> ${que}`' },
     // ── Parte 3: configuración ──────────────────────────────────────────
-    { nombre: 'la pestaña Empaque no está', de: "['productos', 'Productos'], ['empaque', 'Empaque'],", a: "['productos', 'Productos']," },
-    { nombre: 'los botones de Empaque no se despachan', de: "        else if (tab === 'empaque') accionEmpaque(ds)\n", a: '' },
-    { nombre: 'los selects del empaque no se despachan', de: "        if (t.dataset?.empSug !== undefined || t.dataset?.empCond !== undefined) return cambiarSelectEmpaque(t)\n", a: '' },
+    { nombre: "el link viejo a Empaque no lleva a Productos", de: "    const ALIAS_CONFIG = { empaque: 'productos' }", a: "    const ALIAS_CONFIG = {}" },
+    { nombre: "los botones de Empaque no se despachan", de: "          if (Object.keys(ds).some(k => k.startsWith('emp'))) accionEmpaque(ds)\n          else accionProducto(ds)", a: "          accionProducto(ds)" },
+    { nombre: "los selects del empaque no se despachan", de: "        if (t.dataset?.empSug !== undefined || t.dataset?.empCond !== undefined || t.dataset?.empIns !== undefined) return cambiarSelectEmpaque(t)\n", a: "" },
     { nombre: 'el tilde de doble bolsa no se despacha', de: "        if (t.dataset?.marcaDoble !== undefined) return cambiarDobleBolsa(t.dataset.marcaDoble, t.checked)\n", a: '' },
-    { nombre: 'la inactiva también avisa', de: "      const falta = pr.activa ? faltaEmpaque(d, pr.id) : ''", a: "      const falta = faltaEmpaque(d, pr.id)" },
+    { nombre: "la inactiva también avisa", de: "      if (falta && pr.activa) {", a: "      if (falta) {" },
     { nombre: 'el aviso mira el borrador y no lo guardado', de: "      const sinCaja = !(d.cajas ?? []).some(x => x.presentacion_id === presId)", a: "      const sinCaja = !(d.borradores?.get(presId)?.cajas ?? []).length" },
     { nombre: 'sin cajas no avisa', de: "      if (sinCaja) return 'Produce sin descontar la caja: no tiene ninguna caja habilitada.'\n", a: '' },
     { nombre: 'sin empaque no avisa', de: "      if (sinEmpaque) return 'Produce sin descontar el empaque: no tiene ningún renglón.'\n", a: '' },
@@ -124,7 +124,7 @@ correrMutacionesProduccion({
     { nombre: 'repetidos se mandan igual', de: "      if (new Set(claves).size !== claves.length) return", a: "      if (false) return" },
     { nombre: 'guardar no manda las cajas', de: "        p_cajas: b.cajas.map(x => ({ insumo_id: x.insumo_id, embolsado_sugerido: x.embolsado_sugerido })),", a: '        p_cajas: [],' },
     { nombre: 'guardar no manda la condición', de: "        p_empaque: b.empaque.map(x => ({ insumo_id: x.insumo_id, cantidad: x.cantidad, condicion: x.condicion })),", a: "        p_empaque: b.empaque.map(x => ({ insumo_id: x.insumo_id, cantidad: x.cantidad })),"},
-    { nombre: 'guardar no relee', de: "        const r = await guardarEnConfig('guardar_empaque_presentacion', params, 'Empaque guardado.', donde)\n        if (r.ok) await cargarPestanaConfig()", a: "        const r = await guardarEnConfig('guardar_empaque_presentacion', params, 'Empaque guardado.', donde)" },
+    { nombre: "guardar no relee", de: "        if (r.ok) { c.empAbierto = null; await cargarPestanaConfig() }", a: "        if (r.ok) { c.empAbierto = null }" },
     { nombre: 'el error del guardado va arriba y no pegado', de: "        const r = await guardarEnConfig('guardar_empaque_presentacion', params, 'Empaque guardado.', donde)", a: "        const r = await guardarEnConfig('guardar_empaque_presentacion', params, 'Empaque guardado.')" },
     { nombre: 'quitar una caja no quita', de: "        b.cajas.splice(Number(ds.empQuitarCaja.split('|')[1]), 1)", a: '' },
     { nombre: 'quitar un renglón no quita', de: "        b.empaque.splice(Number(ds.empQuitar.split('|')[1]), 1)", a: '' },

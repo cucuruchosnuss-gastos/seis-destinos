@@ -13,7 +13,17 @@
 const { test, expect } = require('@playwright/test');
 const { vigilarErrores, captura } = require('./ayuda');
 
-const MAQUETA = 'http://localhost:4180';
+const MAQUETA = process.env.MAQUETA_URL || 'http://localhost:4180';
+
+// Configuración de Producción: en la compu se cambia de sección con el
+// segmentado de arriba; en el celular no hay segmentado, se vuelve con "‹"
+// (del detalle a la lista, de la lista al menú) y se elige en el menú.
+async function seccionConfig(page, seccion) {
+  const tab = page.locator(`[data-config-seccion="${seccion}"]`);
+  if (await tab.isVisible()) { await tab.click(); return; }
+  for (let i = 0; i < 3 && !(await page.locator(`[data-ir-config="${seccion}"]`).first().isVisible()); i++) await page.locator('#pr-config-volver').click();
+  await page.locator(`[data-ir-config="${seccion}"]`).first().click();
+}
 
 // A4 (297 mm) menos 8 mm de margen arriba y abajo.
 const ALTO_UTIL_A4_MM = 297 - 2 * 8;
@@ -219,10 +229,21 @@ const PANTALLAS = [
       await expect(page.locator('body')).toContainText('Agustín Barrera')
     }],
     ['conos', async (page) => {
-      if (await page.locator('#pr-btn-menu').isVisible()) await page.locator('#pr-btn-menu').click()
-      await page.locator('[data-ir-config="marcas"]').first().click()
+      // Dentro de Configuración se cambia de sección con el segmentado de arriba
+      // (el diseño de Configuración, 29/09/2026).
+      await seccionConfig(page, 'marcas')
       // El nombre del pendiente va en un campo (se corrige al aceptar): se afirma el grupo.
-      await expect(page.locator('body')).toContainText('Por revisar · 1')
+      await expect(page.locator('body')).toContainText(/por revisar · 1/i)
+    }],
+    ['productos', async (page) => {
+      await seccionConfig(page, 'productos')
+      await expect(page.locator('#pr-config-titulo')).toContainText('Productos')
+      const primera = page.locator('[data-cfg-sel]').first()
+      if (await primera.count()) await primera.click()
+    }],
+    ['recetas', async (page) => {
+      await seccionConfig(page, 'recetas')
+      await expect(page.locator('#pr-config-titulo')).toContainText('Recetas')
     }],
   ]],
   // Dar de baja y reactivar (28/09/2026): los dados de baja se ven solo con

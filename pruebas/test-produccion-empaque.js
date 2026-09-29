@@ -576,45 +576,65 @@ function campo(atributos, value = '') {
   return { atributos, dataset, getAttribute: (k) => atributos[k] ?? null, value }
 }
 const cuerpoCfg = S => S.__doc.getElementById('pr-config-cuerpo').innerHTML
+// Desde el diseño de Configuración (29/09/2026) el empaque se edita en
+// Productos, debajo del renglón de cada presentación (uno abierto a la vez).
 async function abrirEmpaque(S) {
-  await S.mostrarConfig()
-  S.estado.config.tab = 'empaque'
-  await S.cargarPestanaConfig()
+  await S.mostrarConfig('empaque')
 }
-// La tarjeta de UNA presentación dentro del cuerpo.
+// Abre el editor de UNA presentación (en su producto) y lo devuelve.
+function abrirTarjeta(S, presId) {
+  const c = S.estado.config
+  c.sel.productos = c.datos.presentaciones.find(p => p.id === presId).producto_id
+  c.empAbierto = presId
+  S.pintarPestanaConfig()
+}
 const tarjeta = (h, presId) => {
-  const i = h.indexOf(`data-emp-guardar="${presId}"`)
-  const ini = h.lastIndexOf('<div class="pr-config-sub pr-emp', i)
-  return h.slice(ini, i)
+  const ini = h.indexOf(`id="pr-cfg-editor-${presId}"`)
+  const fin = h.indexOf(`data-emp-guardar="${presId}"`, ini)
+  return ini < 0 || fin < 0 ? '' : h.slice(ini, fin + 200)
 }
+// Las llamadas que ESCRIBEN (las de leer —el resumen de las burbujas, los
+// conos— no cuentan como "llamar a la base" para guardar).
+const escrituras = S => S.__llamadas.rpc.filter(([n]) => !['personal_produccion', 'mis_pendientes'].includes(n))
 
 esperas.push((async () => {
   const S = armarConfig()
-  chk('Configuración tiene la pestaña Empaque, después de Productos',
-    S.PESTANAS_CONFIG.map(([k]) => k).join(',') === 'maquinas,recetas,ingredientes,productos,empaque,marcas,personal')
+  chk('el Empaque ya no es una sección aparte: vive en Productos',
+    S.PESTANAS_CONFIG.map(([k]) => k).join(',') === 'productos,maquinas,recetas,ingredientes,marcas,personal' && S.ALIAS_CONFIG.empaque === 'productos')
   await abrirEmpaque(S)
-  chk('la pestaña se lee y se dibuja', S.estado.config.datos?.borradores instanceof Map && /Guardar empaque/.test(cuerpoCfg(S)), cuerpoCfg(S).slice(0, 300))
+  chk('"empaque" abre Productos, con los borradores de cada presentación', S.estado.config.tab === 'productos' && S.estado.config.datos?.borradores instanceof Map)
+  abrirTarjeta(S, 'pr-caja')
+  chk('el editor se dibuja debajo de su renglón', /Guardar empaque/.test(cuerpoCfg(S)) && cuerpoCfg(S).indexOf('data-emp-abrir="pr-caja"') < cuerpoCfg(S).indexOf('id="pr-cfg-editor-pr-caja"'), cuerpoCfg(S).slice(0, 300))
   chk('las cajas se leen con su embolsado sugerido', /\bembolsado_sugerido\b/.test(select(S, 'presentacion_cajas')))
   chk('el empaque, con cantidad y condición', /\bcantidad\b/.test(select(S, 'presentacion_empaque')) && /\bcondicion\b/.test(select(S, 'presentacion_empaque')))
-  chk('los insumos, con categoría y si están activos', /\bcategoria\b/.test(select(S, 'insumos')) && /\bactivo\b/.test(select(S, 'insumos')))
+  chk('los insumos, con categoría y si están activos', S.__llamadas.consultas.some(([t, f]) => t === 'insumos' && f.some(x => x[0] === 'select' && /\bcategoria\b/.test(x[1]) && /\bactivo\b/.test(x[1]))))
   chk('los productos son los de la unidad elegida',
     S.__llamadas.consultas.some(([t, f]) => t === 'productos_terminados' && JSON.stringify(f).includes('["eq","unidad_negocio_id","u-cn"]')))
   const h = cuerpoCfg(S)
-  chk('agrupadas por producto, con los de chocolate abajo', h.indexOf('Cucuruchón Mini<') < h.indexOf('pr-ag__corte') && h.indexOf('pr-ag__corte') < h.indexOf('Caja choco'))
+  chk('en la lista, los productos agrupados, con los de chocolate abajo', h.indexOf('data-cfg-sel="p-mini"') < h.indexOf('>DE CHOCOLATE<') && h.indexOf('>DE CHOCOLATE<') < h.indexOf('data-cfg-sel="p-choco"'))
   const caja = tarjeta(h, 'pr-caja')
   chk('cada caja habilitada con su embolsado sugerido elegido',
     /Caja N°1 Nuss/.test(caja) && /Caja N°1 Dolce Pasta/.test(caja) && /value="individual" selected/.test(caja), caja.slice(0, 600))
+  // (El editor tiene además un <select> de insumo por renglón, con todos los
+  // activos: esto mira SOLO el de "otra caja".)
+  const altaCaja = caja.slice(caja.indexOf('data-emp-caja-nueva="pr-caja"'), caja.indexOf('</select>', caja.indexOf('data-emp-caja-nueva="pr-caja"')))
   chk('… el alta ofrece SOLO cajas activas del rubro Cajas que no están',
-    /data-emp-caja-nueva="pr-caja"/.test(caja) && /<option value="i-sinimp">/.test(caja) && !/<option value="i-nuss">/.test(caja) &&
-    !/<option value="i-baja">/.test(caja) && !/<option value="i-tiras">/.test(caja))
+    /data-emp-caja-nueva="pr-caja"/.test(caja) && /<option value="i-sinimp">/.test(altaCaja) && !/<option value="i-nuss">/.test(altaCaja) &&
+    !/<option value="i-baja">/.test(altaCaja) && !/<option value="i-tiras">/.test(altaCaja))
   chk('… los renglones con su cantidad (3 decimales) y su condición',
     /data-emp-cant="pr-caja\|0" data-numero="1" data-decimales="3"/.test(caja) && /value="bolsa_grande" selected/.test(caja))
-  chk('una presentación completa no avisa nada', !/Produce sin descontar/.test(caja))
-  chk('una activa sin cajas: "Produce sin descontar la caja"', /Produce sin descontar la caja: no tiene ninguna caja/.test(tarjeta(h, 'pr-media')))
-  chk('una activa sin renglones: "Produce sin descontar el empaque"', /Produce sin descontar el empaque/.test(tarjeta(h, 'pr-choco')))
+  // Cada renglón dice su empaque EN UNA LÍNEA; lo que le falta, en el
+  // title de la línea y en la línea misma ("Sin caja · …").
+  const fila = (id) => S.htmlFilaPresentacion(S.estado.config.datos.presentaciones.find(p => p.id === id), { ...S.estado.config, empAbierto: null }, S.colorDeProducto({ nombre: 'x' }))
+  chk('una presentación completa: su línea, sin aviso', /Caja N°1 Nuss o Caja N°1 Dolce Pasta · 1 Tiras x4 · 1 Bolsa 100x80 \(con bolsa grande\)/.test(fila('pr-caja')) && !/Produce sin descontar/.test(fila('pr-caja')) && !/Falta el empaque/.test(fila('pr-caja')), fila('pr-caja'))
+  chk('una activa sin cajas: "Sin caja · …" y "Produce sin descontar la caja" en el title', /title="Produce sin descontar la caja: no tiene ninguna caja habilitada\."/.test(fila('pr-media')) && /Sin caja · 0,5 Tiras x4/.test(fila('pr-media')))
+  chk('una activa sin renglones: "Produce sin descontar el empaque"', /title="Produce sin descontar el empaque/.test(fila('pr-choco')))
   chk('las dos cosas juntas', S.faltaEmpaque({ cajas: [], empaque: [] }, 'x') === 'Produce sin descontar la caja ni el empaque.')
-  chk('una INACTIVA no avisa (no produce)', !/Produce sin descontar/.test(tarjeta(h, 'pr-std')) && /inactiva/.test(tarjeta(h, 'pr-std')))
+  chk('una activa SIN NADA dice "Falta el empaque" con Completar; una INACTIVA sin nada no avisa (no produce)',
+    /Falta el empaque[\s\S]{0,300}data-emp-abrir="pr-std"/.test(S.htmlFilaPresentacion({ ...S.estado.config.datos.presentaciones.find(p => p.id === 'pr-std'), activa: true }, S.estado.config, S.colorDeProducto({ nombre: 'x' }))) &&
+    !/Falta el empaque/.test(fila('pr-std')) && /pc-emp pc-off/.test(fila('pr-std')))
   chk('el buscador de insumos ofrece solo los activos', /<datalist id="pr-emp-insumos">/.test(h) && /value="Separador N°2"/.test(h) && !/value="Caja vieja"/.test(h))
+  chk('cada renglón del editor deja cambiar el insumo, con los activos', /data-emp-ins="pr-caja\|0"[\s\S]{0,2000}value="i-tiras" selected/.test(caja) && !/data-emp-ins="pr-caja\|0"[^<]*<option value="i-baja"/.test(caja))
 
   // Editar el borrador: agregar y quitar, sin llamar a la base.
   camposCfg(S, [
@@ -628,7 +648,7 @@ esperas.push((async () => {
   chk('agregar una caja la suma al borrador (sugiere bolsa grande)', b().cajas.map(x => x.insumo_id).join(',') === 'i-nuss,i-dolce,i-sinimp' && b().cajas[2].embolsado_sugerido === 'grande')
   chk('… las cantidades tipeadas se pasan al borrador antes de redibujar', b().empaque[0].cantidad === 2)
   chk('… y la tarjeta queda marcada sin guardar', /sin guardar/.test(tarjeta(cuerpoCfg(S), 'pr-caja')))
-  chk('… sin llamar a la base', S.__llamadas.rpc.length === 0)
+  chk('… sin llamar a la base', escrituras(S).length === 0)
   await S.accionEmpaque({ empAgregar: 'pr-caja' })
   chk('agregar un insumo por su nombre (sin acentos ni mayúsculas)', b().empaque.map(x => x.insumo_id).join(',') === 'i-tiras,i-bolsa,i-sep2' && b().empaque[2].condicion === 'siempre' && b().empaque[2].cantidad === null)
   chk('insumoPorTexto: el único que contiene el texto', S.insumoPorTexto(S.estado.config.datos, 'tiras')?.id === 'i-tiras')
@@ -639,11 +659,14 @@ esperas.push((async () => {
   chk('un texto que no es un insumo de la lista: lo dice, pegado', /pr-cfg-error" role="alert">Elegí un insumo de la lista\./.test(tarjeta(cuerpoCfg(S), 'pr-caja')) && b().empaque.length === 3)
   // Lo agregado al borrador NO apaga el aviso: el aviso es de lo guardado,
   // que es con lo que produce la base.
+  S.estado.config.empAbierto = 'pr-media'
   camposCfg(S, [campo({ 'data-emp-caja-nueva': 'pr-media' }, 'i-nuss'), campo({ 'data-emp-cant': 'pr-media|0' }, '0,5')])
   await S.accionEmpaque({ empAgregarCaja: 'pr-media' })
   const media = tarjeta(cuerpoCfg(S), 'pr-media')
   chk('agregar una caja sin guardar marca la tarjeta', /sin guardar/.test(media) && S.estado.config.datos.borradores.get('pr-media').tocado === true)
-  chk('… y el aviso sigue hasta que se guarde', /Produce sin descontar la caja/.test(media))
+  chk('… "Va a quedar" ya la dice, pero el renglón sigue diciendo lo GUARDADO hasta que se guarde',
+    /Va a quedar: <strong>Caja N°1 Nuss · 0,5 Tiras x4/.test(media) && /title="Produce sin descontar la caja/.test(fila('pr-media')))
+  S.estado.config.empAbierto = 'pr-caja'
   camposCfg(S, [])
   await S.accionEmpaque({ empQuitarCaja: 'pr-caja|1' })
   chk('quitar una caja', b().cajas.map(x => x.insumo_id).join(',') === 'i-nuss,i-sinimp')
@@ -656,19 +679,20 @@ esperas.push((async () => {
 
   // Guardar: sin cantidad no se manda; con todo, UNA llamada con las dos listas.
   await S.accionEmpaque({ empGuardar: 'pr-caja' })
-  chk('un renglón sin cantidad no se manda', S.__llamadas.rpc.length === 0 &&
+  chk('un renglón sin cantidad no se manda', escrituras(S).length === 0 &&
     /Las cantidades tienen que ser mayores a cero\./.test(tarjeta(cuerpoCfg(S), 'pr-caja')))
   camposCfg(S, [campo({ 'data-emp-cant': 'pr-caja|0' }, '1'), campo({ 'data-emp-cant': 'pr-caja|1' }, '0,5')])
   await S.accionEmpaque({ empGuardar: 'pr-caja' })
   const llamadas = S.__llamadas.rpc.filter(([n]) => n === 'guardar_empaque_presentacion')
-  chk('guardar: UNA sola llamada con las dos listas', llamadas.length === 1 && S.__llamadas.rpc.length === 1)
+  chk('guardar: UNA sola llamada con las dos listas', llamadas.length === 1 && escrituras(S).length === 1)
   chk('… con las cajas y el empaque completos',
     JSON.stringify(llamadas[0]?.[1]) === JSON.stringify({
       p_presentacion_id: 'pr-caja',
       p_cajas: [{ insumo_id: 'i-nuss', embolsado_sugerido: 'grande' }, { insumo_id: 'i-sinimp', embolsado_sugerido: 'ninguno' }],
       p_empaque: [{ insumo_id: 'i-tiras', cantidad: 1, condicion: 'siempre' }, { insumo_id: 'i-sep2', cantidad: 0.5, condicion: 'bolsa_individual' }],
     }), JSON.stringify(llamadas[0]?.[1]))
-  chk('… y relee lo guardado (el borrador vuelve a la base)', S.estado.config.datos.borradores.get('pr-caja').tocado === false)
+  chk('… y relee lo guardado (el borrador vuelve a la base) y cierra el editor', S.estado.config.datos.borradores.get('pr-caja').tocado === false && S.estado.config.empAbierto === null)
+  abrirTarjeta(S, 'pr-caja')
   chk('repetido con la misma condición: no se manda',
     S.parametrosGuardarEmpaque('x', { cajas: [], empaque: [{ insumo_id: 'a', cantidad: 1, condicion: 'siempre' }, { insumo_id: 'a', cantidad: 2, condicion: 'siempre' }] }).error)
   chk('… con distinta condición, sí',
@@ -680,20 +704,20 @@ esperas.push((async () => {
   camposCfg(S, [campo({ 'data-emp-cant': 'pr-caja|0' }, '1'), campo({ 'data-emp-cant': 'pr-caja|1' }, '1')])
   await S.accionEmpaque({ empGuardar: 'pr-caja' })
   const t = tarjeta(cuerpoCfg(S), 'pr-caja')
-  chk('el error de la base, tal cual, pegado a su botón', /pr-cfg-error" role="alert">Una de las cajas no existe o no es del rubro Cajas\.<\/div><button type="button" class="pr-btn" id="pr-cfg-emp-pr-caja"/.test(t), t.slice(-400))
-  chk('… y no en otra presentación', !/Una de las cajas/.test(tarjeta(cuerpoCfg(S), 'pr-media')))
+  chk('el error de la base, tal cual, pegado a su botón', /pr-cfg-error" role="alert">Una de las cajas no existe o no es del rubro Cajas\.<\/div><button type="button" class="pc-btn2" data-emp-cerrar="pr-caja">Cancelar<\/button><button type="button" class="pc-btn" id="pr-cfg-emp-pr-caja"/.test(t), t.slice(-500))
+  chk('… y no en otra presentación', !/Una de las cajas/.test(S.htmlEditorEmpaque(S.estado.config.datos.presentaciones.find(p => p.id === 'pr-media'), S.estado.config)))
 
   // El despacho de los eventos.
-  chk('los botones de la pestaña van a accionEmpaque', /else if \(tab === 'empaque'\) accionEmpaque\(ds\)/.test(FUENTE_G))
-  chk('los selects, a cambiarSelectEmpaque', /if \(t\.dataset\?\.empSug !== undefined \|\| t\.dataset\?\.empCond !== undefined\) return cambiarSelectEmpaque\(t\)/.test(FUENTE_G))
+  chk('los botones del empaque (en Productos) van a accionEmpaque', /else if \(tab === 'productos'\) \{[\s\S]{0,200}if \(Object\.keys\(ds\)\.some\(k => k\.startsWith\('emp'\)\)\) accionEmpaque\(ds\)/.test(FUENTE_G))
+  chk('los selects, a cambiarSelectEmpaque', /if \(t\.dataset\?\.empSug !== undefined \|\| t\.dataset\?\.empCond !== undefined \|\| t\.dataset\?\.empIns !== undefined\) return cambiarSelectEmpaque\(t\)/.test(FUENTE_G))
+  S.cambiarSelectEmpaque({ dataset: { empIns: 'pr-caja|0' }, value: 'i-sep2' })
+  chk('cambiar el insumo de un renglón', S.estado.config.datos.borradores.get('pr-caja').empaque[0].insumo_id === 'i-sep2')
   chk('el tilde de doble bolsa, a cambiarDobleBolsa', /if \(t\.dataset\?\.marcaDoble !== undefined\) return cambiarDobleBolsa\(t\.dataset\.marcaDoble, t\.checked\)/.test(FUENTE_G))
 })())
 
 esperas.push((async () => {
   const S = armarConfig()
-  await S.mostrarConfig()
-  S.estado.config.tab = 'marcas'
-  await S.cargarPestanaConfig()
+  await S.mostrarConfig('marcas')
   chk('las marcas se leen con doble_bolsa', S.__llamadas.consultas.some(([t, f]) => t === 'marcas_personalizadas' && f.some(x => x[0] === 'select' && /\bdoble_bolsa\b/.test(x[1]))))
   const h = cuerpoCfg(S)
   chk('cada cono tiene su tilde "Doble bolsa"', /data-marca-doble="mk-grido"(?![^>]*checked)[^>]*>/.test(h) && /data-marca-doble="mk-norte" checked[^>]*>/.test(h), h.slice(0, 800))
@@ -874,7 +898,9 @@ esperas.push((async () => {
     cajas: [{ insumo_id: marca('insIdCfg'), embolsado_sugerido: 'grande' }],
     empaque: [{ insumo_id: marca('insIdCfg'), cantidad: 1, condicion: 'siempre' }], tocado: true }]])
   const cMalo = { datos: cfgMalo, error: { texto: marca('errorCfg'), donde: 'pr-cfg-emp-' + marca('presIdCfg') } }
-  chequearMarcas(chk, 'pestaña Empaque', XG.htmlConfigEmpaque(cMalo), ['prodCfg', 'presCfg', 'presIdCfg', 'insCfg', 'insMarcaCfg', 'insId2Cfg', 'ins2Cfg', 'errorCfg'])
+  cfgMalo.cajaPredeterminada = marca('insIdCfg')
+  const cMaloP = { ...cMalo, tab: 'productos', sel: { productos: marca('prodIdCfg') }, empAbierto: marca('presIdCfg'), busquedaLista: '' }
+  chequearMarcas(chk, 'Productos con el empaque abierto', XG.htmlConfigProductos(cMaloP), ['prodCfg', 'presCfg', 'presIdCfg', 'insCfg', 'insMarcaCfg', 'insId2Cfg', 'ins2Cfg', 'errorCfg'])
   const marcasMalo = { datos: { marcas: [{ id: marca('marcaIdCfg'), nombre: marca('marcaCfg'), activa: true, estado_alta: 'aprobada', doble_bolsa: true }], nombres: new Map() }, busqueda: '', error: null }
   // Parte 4: el aviso de stock.
   chequearMarcas(chk, 'aviso de faltante', X.htmlAvisoStockEmpaque({ ...a, cajas: 5, stock: { estado: 'ok', saldos: new Map() } }, catMalo), ['cajaNombre', 'cajaMarca', 'insumoEmpaque'])

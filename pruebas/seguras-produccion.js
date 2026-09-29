@@ -215,6 +215,22 @@ const SEGURAS_PRODUCCION = [
   ['todas.length', 'número: cuántos lotes hay en la ventana'],
   ['todas.filter(f => f.marca === m).length', 'número: cuántos lotes de esa marca hay en la ventana'],
   ["filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')", 'renglones que arma htmlFilaLote(): la marca, el lote, lo que queda y la fecha van con esc(), y la nota (notaElegido) ya viene escapada'],
+  // El diseño "Producción · Configuración" (29/09/2026)
+  ['burbuja', 'HTML ya escapado: htmlSeccionesConfig() lo arma arriba con esc() de la cifra y del texto de la burbuja, o vacío'],
+  ['altaHtml', 'HTML armado por quien llama a htmlLista(): htmlAltaMaquina() / htmlAltaProducto() o el alta de ingredientes, con esc() y htmlErrorPegado() adentro'],
+  ['avisoHtml', 'HTML ya escapado: htmlConfigIngredientes() pasa esc() del texto "N ingredientes no llevan lote", o vacío'],
+  ['filasHtml', 'HTML armado por filasListaX() (FILAS_CONFIG), que arman cada renglón con htmlFilaLista() / htmlGrupoLista(), que escapan adentro'],
+  ['listaHtml', 'HTML armado por htmlLista(), que escapa adentro'],
+  ['detalleHtml', 'HTML armado por htmlDetalleX() de cada sección, que escapan adentro'],
+  ['PASTILLA_SIN_INSUMO', 'HTML constante del código: la pastilla bordó "sin insumo"'],
+  ['ingsHtml', 'HTML ya escapado: htmlRecetaVigenteMaquina() arma cada ingrediente con esc() del nombre y de los kilos'],
+  ['tituloMaqHtml', 'HTML ya escapado: htmlDetalleMaquina() lo arma con esc() del id y del nombre de la máquina'],
+  ['opcionesVersion(a)', 'HTML armado por opcionesVersion() en htmlComparar(), con esc() del id, la versión y la fecha'],
+  ['opcionesVersion(b)', 'HTML armado por opcionesVersion() en htmlComparar(), con esc() del id, la versión y la fecha'],
+  ['barraRecHtml', 'HTML ya escapado: htmlDetalleReceta() lo arma con esc() del nombre de la máquina, los tipos y htmlVersiones() (que escapa adentro)'],
+  ['izqRecHtml', 'HTML ya escapado: htmlDetalleReceta() lo arma con htmlEditorReceta() / htmlTablaRecetaVista() (que escapan adentro) y esc() de la nota y las versiones'],
+  ['datosIngHtml', 'HTML ya escapado: htmlDetalleIngrediente() lo arma con esc() del id y del nombre del ingrediente, y htmlErrorPegado()'],
+  ['altaCajaHtml', 'HTML ya escapado: htmlCajasEditor() lo arma con esc() de la presentación y de cada caja, o vacío'],
 ]
 
 const SEGURAS_REGEX_PRODUCCION = [
@@ -224,6 +240,9 @@ const SEGURAS_REGEX_PRODUCCION = [
   [/^htmlErrorPegado\(c, 'pend-' \+ m\.id\)$/,'HTML armado por htmlErrorPegado(), que escapa el texto del error; el id del cono solo se compara, no se imprime'],
   // Planta v2 (28/09/2026): un ícono con nombre y tamaños LITERALES.
   [/^icono\('[a-z]+'(, [\d.]+)*\)$/, 'SVG armado por icono(): nombre literal del código, tamaños numéricos literales, trazo sacado de ICONO'],
+  // El diseño "Producción · Configuración" (29/09/2026): los íconos del
+  // diseño son SVG constantes del código (ICONO_BUSCAR, ICONO_CAJA…).
+  [/^ICONO_[A-Z]+(\.replace\('[^']*', '[^']*'\))?$/, 'SVG constante del código (los íconos del diseño de Configuración); el .replace() cambia solo el tamaño, con textos literales'],
 ]
 
 module.exports = { SEGURAS_PRODUCCION, SEGURAS_REGEX_PRODUCCION }
