@@ -48,6 +48,8 @@ const FUNCIONES_BASE = [
   'versionesDe', 'vigenteYProximo', 'filasGrilla', 'preciosAGuardar', 'calcularAumento', 'htmlFilaPrecio', 'htmlGrilla',
   'htmlHistorial', 'textoPendientes', 'pintarLista', 'abrirLista', 'enlazarPorcentaje', 'cambiarPrecioLista', 'aplicarAumento',
   'descartarCambios', 'pedirGuardarPrecios', 'confirmarGuardarPrecios', 'cambiarActivaLista',
+  // Los clientes de una lista (30/09/2026)
+  'clientesActivosEmpresa', 'htmlNombresCortos', 'htmlResumenClientesLista', 'htmlClientesLista', 'pintarClientesLista', 'cambiarListaCliente',
   // js/retiros-comun.js
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',

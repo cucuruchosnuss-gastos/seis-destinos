@@ -282,6 +282,14 @@
     .ad-interruptor-todas { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; max-width: 7.5rem; }
     .ad-bloqueado-todas { font-size: 0.75rem; color: var(--ad-texto-secundario); line-height: 1.25; text-align: center; }
     .ad-barra-acciones .ad-bloqueado-todas { align-self: center; text-align: left; }
+    /* Los clientes de una lista de precios (30/09/2026). */
+    .ad-lista-clientes .ad-subtitulo { margin-top: 0; }
+    .ad-lista-clientes__cuenta { font-weight: 700; margin: 0 0 0.5rem; }
+    .ad-lista-clientes__detalle > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 700; color: var(--color-acento); }
+    .ad-lista-cliente { display: flex; align-items: flex-start; gap: 0.625rem; min-height: 44px; padding: 0.5rem 0; border-top: 1px solid var(--color-divisor); cursor: pointer; }
+    .ad-lista-cliente input { width: 22px; height: 22px; margin-top: 0.125rem; flex: 0 0 auto; accent-color: var(--naranja); }
+    .ad-lista-cliente__texto { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; overflow-wrap: anywhere; }
+    .ad-lista-cliente__nombre { font-weight: 700; }
     .ad-filtros { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); align-items: end; }
     .ad-cuenta { font-size: 0.8125rem; color: var(--ad-texto-secundario); margin: 0 0 0.5rem; }
 
@@ -640,6 +648,16 @@
         <h1 class="ad-titulo" id="ad-lista-titulo">Lista</h1>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-lista-activa">Desactivar</button>
       </div>
+      <!-- Los clientes de esta lista (30/09/2026): se asignan desde acá con un
+           tilde (guardar_ficha_cliente con lista_precio_id). -->
+      <section class="ad-tarjeta ad-lista-clientes" aria-labelledby="ad-lista-clientes-titulo">
+        <h2 class="ad-subtitulo" id="ad-lista-clientes-titulo">Clientes de esta lista</h2>
+        <div id="ad-lista-clientes-resumen"></div>
+        <details class="ad-lista-clientes__detalle" id="ad-lista-clientes-detalle">
+          <summary>Asignar o sacar clientes</summary>
+          <div id="ad-lista-clientes"></div>
+        </details>
+      </section>
       <div class="ad-tarjeta">
         <div class="ad-fila-campos">
           <div class="ad-campo"><label for="ad-lista-desde">Los precios nuevos rigen desde</label><input type="date" class="ad-input" id="ad-lista-desde"></div>
@@ -3281,6 +3299,92 @@
       ec.textContent = l.confirmar?.error ?? ''
       ec.hidden = !l.confirmar?.error
       document.getElementById('ad-confirmar-precios-si').disabled = estado.trabajando
+      pintarClientesLista()
+    }
+
+    // ── LOS CLIENTES DE UNA LISTA (30/09/2026, pedido de Facu) ──────────────
+    // Los clientes ACTIVOS de la fábrica, un tilde cada uno: tildar asigna la
+    // lista y destildar la saca, con guardar_ficha_cliente mandando SOLO
+    // lista_precio_id ("" = sin lista). Arriba, cuántos la tienen, y un aviso
+    // con los que no tienen NINGUNA lista: valorizar_orden_retiro toma el
+    // precio de la lista del cliente, así que sus órdenes no se valorizan solas.
+    function clientesActivosEmpresa() {
+      return (estado.clientes ?? []).filter(c => c?.activo !== false)
+        .sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''), 'es'))
+    }
+
+    function htmlNombresCortos(filas, tope = 8) {
+      const nombres = filas.slice(0, tope).map(c => limpio(c.nombre) || 'Sin nombre')
+      const resto = filas.length - nombres.length
+      return esc(nombres.join(', ') + (resto > 0 ? ` y ${resto} más` : '') + '.')
+    }
+
+    function htmlResumenClientesLista(l) {
+      if (estado.clientes === null) {
+        return l.error ? '<div class="ad-aviso ad-aviso--grave">No se pudieron leer los clientes de esta fábrica. Revisá la conexión y volvé a entrar.</div>'
+          : '<div class="ad-vacio">Cargando los clientes…</div>'
+      }
+      const activos = clientesActivosEmpresa()
+      const deLaLista = activos.filter(c => c.lista_precio_id === l.id)
+      const sinLista = activos.filter(c => !c.lista_precio_id)
+      const n = deLaLista.length
+      const cuenta = n === 0 ? 'Ningún cliente tiene esta lista.' : `${n} ${n === 1 ? 'cliente tiene' : 'clientes tienen'} esta lista.`
+      const empresa = empresaActual()?.nombre ?? 'esta fábrica'
+      const m = sinLista.length
+      const textoSinLista = m + (m === 1 ? ' cliente de ' : ' clientes de ') + empresa + (m === 1 ? ' no tiene' : ' no tienen') +
+        ' ninguna lista: sus retiros no se van a poder valorizar solos.'
+      const avisoSinLista = m ? `<div class="ad-aviso ad-aviso--grave">${esc(textoSinLista)} ${htmlNombresCortos(sinLista)}</div>` : ''
+      return `<p class="ad-lista-clientes__cuenta">${esc(cuenta)}</p>${avisoSinLista}`
+    }
+
+    function htmlClientesLista(l) {
+      if (estado.clientes === null) return ''
+      const activos = clientesActivosEmpresa()
+      if (!activos.length) return '<div class="ad-vacio">Esta fábrica todavía no tiene clientes activos.</div>'
+      return activos.map(c => {
+        const tiene = c.lista_precio_id === l.id
+        const otra = c.lista_precio_id && !tiene ? (listaDe(c.lista_precio_id)?.nombre ?? 'otra lista') : null
+        const meta = tiene ? 'Tiene esta lista' : otra ? `Hoy en la lista ${otra}: tildarlo lo pasa a esta` : 'Sin lista'
+        const error = l.errores?.get(c.id)
+        return `<label class="ad-lista-cliente"><input type="checkbox"${tiene ? ' checked' : ''}${l.guardando === c.id ? ' disabled' : ''} data-lista-cliente="${esc(c.id)}">` +
+          `<span class="ad-lista-cliente__texto"><span class="ad-lista-cliente__nombre">${esc(c.nombre)}</span>` +
+          `<span class="ad-texto-suave">${esc(meta)}</span>${error ? `<span class="ad-error-pegado">${esc(error)}</span>` : ''}</span></label>`
+      }).join('')
+    }
+
+    function pintarClientesLista() {
+      const l = estado.lista
+      if (!l) return
+      document.getElementById('ad-lista-clientes-resumen').innerHTML = htmlResumenClientesLista(l)
+      document.getElementById('ad-lista-clientes').innerHTML = htmlClientesLista(l)
+    }
+
+    async function cambiarListaCliente(clienteId, tildado) {
+      const l = estado.lista
+      if (!l || l.guardando) return
+      const c = clienteDe(clienteId)
+      if (!c || c.activo === false) return
+      const tiene = c.lista_precio_id === l.id
+      // Nada que cambiar: tildar a uno que ya la tiene, o destildar a uno que
+      // no la tiene (si tiene OTRA lista, destildar acá no se la saca).
+      if (tildado === tiene) { pintarClientesLista(); return }
+      l.guardando = clienteId
+      l.errores.delete(clienteId)
+      pintarClientesLista()
+      try {
+        const { error } = await supabase.rpc('guardar_ficha_cliente', { p_cliente_id: clienteId, p_datos: { lista_precio_id: tildado ? l.id : '' } })
+        if (error) throw error
+        c.lista_precio_id = tildado ? l.id : null
+        const nombre = limpio(c.nombre) || 'El cliente'
+        mostrarExito(tildado ? `${nombre} ahora usa la lista ${listaDe(l.id)?.nombre ?? ''}.` : `${nombre} ya no tiene lista de precios.`)
+      } catch (err) {
+        console.error('No se pudo cambiar la lista del cliente:', err)
+        // El error de la base va tal cual, pegado al cliente; el tilde vuelve.
+        l.errores.set(clienteId, err?.message || 'No se pudo guardar. Probá de nuevo.')
+      } finally {
+        if (estado.lista === l) l.guardando = null
+      }
+      if (estado.lista === l) pintarClientesLista()
     }
 
     let turnoLista = 0
@@ -3288,7 +3392,7 @@
     async function abrirLista(id) {
       if (!puedeEn('retiros', 'precios')) return
       const turno = ++turnoLista
-      estado.lista = { id, precios: null, filas: [], pendientes: new Map(), historial: null, confirmar: null, error: null, errorPorcentaje: null }
+      estado.lista = { id, precios: null, filas: [], pendientes: new Map(), historial: null, confirmar: null, error: null, errorPorcentaje: null, guardando: null, errores: new Map() }
       mostrarVista('ad-vista-lista')
       document.getElementById('ad-lista-desde').value = hoyArgentina()
       ponerNumero(enlazarPorcentaje(), null)
@@ -5327,6 +5431,10 @@
       })
       document.getElementById('ad-panel-historial').addEventListener('click', (e) => {
         if (e.target.closest('#ad-historial-cerrar') && estado.lista) { estado.lista.historial = null; pintarLista(false) }
+      })
+      document.getElementById('ad-lista-clientes').addEventListener('change', (e) => {
+        const t = e.target.closest('[data-lista-cliente]')
+        if (t) cambiarListaCliente(t.dataset.listaCliente, t.checked)
       })
       // Importar
       document.getElementById('ad-importar-volver').addEventListener('click', () => mostrarInicio())
