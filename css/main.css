@@ -1228,3 +1228,42 @@ input[type="datetime-local"]::-webkit-date-and-time-value {
   .barra-arriba__menu { top: 48px; right: 12px; max-width: calc(100vw - 24px); }
 }
 @media print { .barra-unidad, .barra-arriba { display: none !important; } }
+
+/* ─── El panel de detalle al lado de una lista (30/09/2026) ─────────────────
+   Pedido de Facu: todo panel de detalle que va AL LADO de una lista ocupa el
+   ALTO COMPLETO de la pantalla (nunca termina donde termina su contenido
+   dejando un hueco en blanco), con el encabezado fijo arriba, los botones
+   fijos abajo y el scroll ADENTRO del panel. Queda pegado debajo de la barra
+   de arriba (52 px en la compu), no se esconde detrás de ella.
+     .panel-detalle           el panel (sticky, alto de la pantalla, flex)
+     .panel-detalle__cabeza   lo que no se va con el scroll (título, cerrar)
+     .panel-detalle__cuerpo   lo que scrollea
+     .panel-detalle__pie      los botones, siempre a la vista
+   Solo layout: el fondo, el borde y el padding los pone cada módulo. En el
+   celular el detalle es una pantalla aparte y NO lleva la clase: la pone el
+   script solo cuando la lista y el detalle están lado a lado, o el módulo
+   la repite dentro de su @media. Un pie vacío no se dibuja (:empty). */
+:root {
+  --alto-barra-arriba: 52px;
+  --panel-detalle-margen: 16px;
+}
+.panel-detalle {
+  position: sticky;
+  top: calc(var(--alto-barra-arriba) + var(--panel-detalle-margen));
+  height: calc(100vh - var(--alto-barra-arriba) - 2 * var(--panel-detalle-margen));
+  height: calc(100dvh - var(--alto-barra-arriba) - 2 * var(--panel-detalle-margen));
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.panel-detalle__cabeza { flex: 0 0 auto; }
+.panel-detalle__cuerpo { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.panel-detalle__pie { flex: 0 0 auto; }
+.panel-detalle__pie:empty { display: none; }
+@media print {
+  .panel-detalle { position: static; height: auto; overflow: visible; }
+  .panel-detalle__cuerpo { overflow: visible; }
+}
