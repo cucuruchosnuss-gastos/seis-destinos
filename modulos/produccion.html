@@ -1001,6 +1001,8 @@
     .pr-rec__nombre { font-family: var(--p-titulo); font-size: 18px; font-weight: 700; }
     .pr-rec__marca { font-size: 12.5px; color: var(--p-gris); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pr-rec__agregado { font-size: 11px; font-weight: 800; color: var(--p-trigo-txt); }
+    .pr-rec__nuevo { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 5px; background: var(--p-trigo-chip); color: var(--p-trigo-txt); white-space: nowrap; }
+    .pr-receta__cambio { margin: 0; font-weight: 700; color: var(--p-tinta); }
     .pr-rec__sello { font-size: 11px; font-weight: 800; padding: 1px 5px; border-radius: 5px; background: var(--p-trigo-chip); }
     .pr-rec__dif { font-family: var(--p-texto); font-size: 12.5px; font-weight: 700; color: var(--p-gris); }
     .pr-rec__dif--aleja { color: var(--p-mal); }
@@ -1902,6 +1904,7 @@
             </label>
             <button type="button" class="pr-receta__mas" id="pr-receta-otro">+ Ingrediente</button>
           </div>
+          <p class="pr-aviso pr-receta__cambio" id="pr-receta-cambio" hidden></p>
           <p class="pr-aviso" id="pr-receta-aviso-stock" hidden>No se pudo leer cuánto queda de cada lote. La masa se registra igual.</p>
           <div class="pr-receta__tabla" id="pr-receta-filas" data-scroll-propio></div>
         </div>
@@ -6424,11 +6427,18 @@
     // presentaciones activas, y las marcas (conos) activas. `estado_alta` viene
     // para poder decir cuál está pendiente de revisar: un cono propuesto desde
     // la tablet se puede usar igual, pero se dice.
+    //
+    // LA REVENTA NO SE PRODUCE (30/09/2026): un producto con origen_producto_id
+    // lo hace OTRA fábrica y acá solo se revende. La base ya se los esconde a
+    // las cuentas de tablet (policy "produccion: leer productos", con
+    // _soy_dispositivo()), pero alguien que entra con su cuenta personal los
+    // vería: se sacan también acá, al armar la lista (no en la consulta).
     async function leerCatalogoProductos(unidadId) {
-      const { data: productos, error: e1 } = await supabase.from('productos_terminados')
-        .select('id, nombre, tipo_masa, orden, color').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')
+      const { data: leidos, error: e1 } = await supabase.from('productos_terminados')
+        .select('id, nombre, tipo_masa, orden, color, origen_producto_id').eq('unidad_negocio_id', unidadId).eq('activo', true).order('orden').order('nombre')
       if (e1) throw e1
-      const ids = (productos ?? []).map(p => p.id)
+      const productos = (leidos ?? []).filter(p => p?.origen_producto_id == null)
+      const ids = productos.map(p => p.id)
       let presentaciones = []
       if (ids.length) {
         const r = await supabase.from('producto_presentaciones')
@@ -8241,16 +8251,88 @@
     }
 
     // Las cantidades de UNA masa simple según de dónde parte: la original, o
-    // la anterior (un ingrediente que la anterior no tenía —la receta cambió—
-    // toma el de la original).
+    // la anterior. LA LISTA ES SIEMPRE LA DE LA RECETA VIGENTE (30/09/2026):
+    // un ingrediente NUEVO en la receta (nuevosEnReceta) toma la cantidad de
+    // la receta aunque la masa anterior lo tenga en 0. Caso real: la receta
+    // pasó a v2 con bicarbonato, la masa anterior era de la v1 (bicarbonato
+    // en 0) y "Anterior" / "Modificar" lo traían en 0: no se veía ni pedía lote.
     function cantidadesDesde(partida, original, anterior) {
       const out = {}
+      const nuevos = partida === 'anterior' ? nuevosEnReceta({ original, anterior }) : new Set()
       for (const it of original.items) {
         const ant = anterior?.items?.find(x => x.ingrediente_id === it.ingrediente_id)
-        const v = partida === 'anterior' && ant && ant.cantidad_simple_kg != null ? Number(ant.cantidad_simple_kg) : Number(it.cantidad_kg)
+        const deLaAnterior = partida === 'anterior' && ant && ant.cantidad_simple_kg != null && !nuevos.has(it.ingrediente_id)
+        const v = deLaAnterior ? Number(ant.cantidad_simple_kg) : Number(it.cantidad_kg)
         out[it.ingrediente_id] = redondearKg(v)
       }
       return out
+    }
+
+    // ¿La receta vigente es otra que la que usó la masa anterior? Lo sabe
+    // anterior.receta (leerRecetaDeLaAnterior). null = no se pudo saber.
+    function recetaCambioDesdeAnterior(d) {
+      const vieja = d?.anterior?.receta
+      if (!vieja || !d?.original) return null
+      if (vieja.receta_id === d.original.receta_id) return null
+      return { desde: vieja.version ?? null, hasta: d.original.version ?? null }
+    }
+
+    // Los ingredientes NUEVOS en la receta vigente respecto de la masa
+    // anterior: los que la receta lleva (> 0) y la masa anterior no tiene, o
+    // tiene en 0 porque la receta que usó no los llevaba (en 0 o sin el
+    // renglón). Un 0 que puso el masero con la MISMA receta no es nuevo: se
+    // respeta. Si no se pudo leer la receta de la anterior, cuenta solo lo
+    // que la masa anterior directamente no tiene.
+    function nuevosEnReceta(d) {
+      const out = new Set()
+      const ant = d?.anterior
+      if (!ant || !d?.original) return out
+      const cambio = !!recetaCambioDesdeAnterior(d)
+      const vieja = ant.receta
+      for (const it of d.original.items ?? []) {
+        if (!(Number(it.cantidad_kg ?? 0) > 0)) continue
+        const enMasa = (ant.items ?? []).find(x => x.ingrediente_id === it.ingrediente_id)
+        if (!enMasa) { out.add(it.ingrediente_id); continue }
+        if (!cambio) continue
+        const enVieja = (vieja.items ?? []).find(x => x.ingrediente_id === it.ingrediente_id)
+        if (!(Number(enVieja?.cantidad_kg ?? 0) > 0) && !(Number(enMasa.cantidad_simple_kg ?? 0) > 0)) out.add(it.ingrediente_id)
+      }
+      return out
+    }
+
+    // Lo que la masa anterior llevaba DE MÁS, escrito a mano (ingrediente_libre):
+    // viaja otra vez como "otro". Un ingrediente del catálogo que ya no está
+    // en la receta NO puede viajar (registrar_masa exige exactamente los de la
+    // receta vigente): se dice en el aviso de arriba (textoCambioReceta).
+    function otrosDeLaAnterior(d) {
+      const out = []
+      for (const it of d?.anterior?.items ?? []) {
+        if (it.ingrediente_id) continue
+        const nombre = String(it.ingrediente_libre ?? '').trim()
+        const kg = Number(it.cantidad_simple_kg ?? 0)
+        if (nombre.length < 2 || !(kg > 0)) continue
+        out.push({ id: `o${out.length + 1}`, nombre, kg: redondearKg(kg), deAnterior: true })
+      }
+      return out
+    }
+
+    // El aviso de arriba de la receta: la receta cambió desde la masa
+    // anterior, qué es nuevo y qué ya no está. Vacío = no hay nada que decir.
+    function textoCambioReceta(d) {
+      if (!d?.anterior || !d?.original) return ''
+      const partes = []
+      const c = recetaCambioDesdeAnterior(d)
+      if (c) {
+        partes.push(c.desde != null && c.hasta != null
+          ? `La receta cambió (v${c.desde} → v${c.hasta}) desde la masa anterior.`
+          : 'La receta cambió desde la masa anterior.')
+      }
+      const nuevos = nuevosEnReceta(d)
+      const nombres = (d.original.items ?? []).filter(it => nuevos.has(it.ingrediente_id)).map(it => String(it.ingrediente ?? '').toLowerCase())
+      if (nombres.length) partes.push(`Nuevo en la receta: ${nombres.join(', ')}.`)
+      const quitados = c ? (d.anterior.receta?.quitados ?? []) : []
+      if (quitados.length) partes.push(`Ya no está en la receta: ${quitados.map(q => String(q.nombre ?? '').toLowerCase()).join(', ')}.`)
+      return partes.join(' ')
     }
 
     // Diferencia contra la original, en gramos, solo los que cambian.
@@ -8672,6 +8754,17 @@
       const { data, error } = await supabase.rpc('datos_para_masa', { p_turno_id: estado.salaTurno.id, p_tipo_masa: estado.tipoMasa })
       if (error) throw error
       estado.datosMasa = { original: data.original, anterior: data.anterior ?? null, insumos: data.insumos ?? [] }
+      // La receta que usó la masa anterior: sin ella no se sabe si la receta
+      // cambió. Si no se puede leer, la masa se arma igual (nuevosEnReceta
+      // cae a lo que la anterior no tiene) y el aviso no dice la versión.
+      if (estado.datosMasa.anterior) {
+        try {
+          estado.datosMasa.anterior.receta = await leerRecetaDeLaAnterior(estado.datosMasa)
+        } catch (err) {
+          console.error('receta de la masa anterior:', err)
+          estado.datosMasa.anterior.receta = null
+        }
+      }
       await leerStockMasa()
       // Qué ingredientes definen el chocolate es configuración y solo sirve
       // para MOSTRAR el chip: si no se puede leer, la masa se carga igual (la
@@ -8682,6 +8775,37 @@
         console.error('ingredientes que definen el chocolate:', err)
         estado.defineChocolate = null
       }
+    }
+
+    // datos_para_masa no dice con qué receta se hizo la masa anterior: se lee
+    // masas.receta_id y, si es otra que la vigente, su versión y sus
+    // renglones, más el nombre de lo que la anterior llevaba y la receta
+    // vigente ya no tiene (quitados). Las tres tablas se leen con
+    // puede_ver_produccion(), que la tablet tiene.
+    async function leerRecetaDeLaAnterior(d) {
+      const ant = d?.anterior
+      if (!ant?.masa_id) return null
+      const { data: m, error } = await supabase.from('masas').select('receta_id').eq('id', ant.masa_id).maybeSingle()
+      if (error) throw error
+      const recetaId = m?.receta_id ?? null
+      if (!recetaId) return null
+      if (recetaId === d.original.receta_id) return { receta_id: recetaId, version: d.original.version ?? null, items: d.original.items ?? [], quitados: [] }
+      const [r, ri] = await Promise.all([
+        supabase.from('recetas').select('version').eq('id', recetaId).maybeSingle(),
+        supabase.from('receta_items').select('ingrediente_id, cantidad_kg').eq('receta_id', recetaId),
+      ])
+      if (r.error) throw r.error
+      if (ri.error) throw ri.error
+      const vigentes = new Set((d.original.items ?? []).map(it => it.ingrediente_id))
+      const fuera = (ant.items ?? []).filter(x => x.ingrediente_id && !vigentes.has(x.ingrediente_id) && Number(x.cantidad_simple_kg ?? 0) > 0)
+      let quitados = []
+      if (fuera.length) {
+        const rn = await supabase.from('ingredientes').select('id, nombre').in('id', fuera.map(x => x.ingrediente_id))
+        if (rn.error) throw rn.error
+        const nombre = new Map((rn.data ?? []).map(g => [g.id, g.nombre]))
+        quitados = fuera.map(x => ({ ingrediente_id: x.ingrediente_id, nombre: nombre.get(x.ingrediente_id) ?? 'un ingrediente' }))
+      }
+      return { receta_id: recetaId, version: r.data?.version ?? null, items: ri.data ?? [], quitados }
     }
 
     async function elegirTipoMasa(tipo) {
@@ -8734,8 +8858,12 @@
       // empezar la masa vienen de la anterior.
       if (primeraVez || !b.lotes) b.lotes = lotesIniciales(d)
       b.agregados = []
-      b.otros = []
-      b.proximoOtro = 1
+      // Lo que es nuevo en la receta vigente (ver nuevosEnReceta) y lo que la
+      // masa anterior llevaba de más ("otro", escrito a mano) vienen solo
+      // cuando se parte de la anterior. Con la Original, la receta tal cual.
+      b.nuevos = b.partida === 'anterior' ? [...nuevosEnReceta(d)] : []
+      b.otros = b.partida === 'anterior' ? otrosDeLaAnterior(d) : []
+      b.proximoOtro = b.otros.length + 1
       b.motivo = como === 'modificar' ? (b.motivo ?? '') : ''
       b.payload = null
       estado.masa = b
@@ -8843,6 +8971,7 @@
       const e = estadoLote(it, b, datos)
       const editable = b.como === 'modificar'
       const agregado = (b.agregados ?? []).includes(id)
+      const nuevo = (b.nuevos ?? []).includes(id)
       const clases = ['pr-rec']
       if (kg <= 0) clases.push('pr-rec--cero')
       if (agregado) clases.push('pr-rec--agregado')
@@ -8862,7 +8991,8 @@
       else if (e.pide && insumosDe(datos, id).length) accionRenglon = `<button type="button" class="pr-rec__otro" data-otro-insumo="${esc(id)}">Otro</button>`
       return `<div class="${clases.join(' ')}">` +
         `<span class="pr-rec__ing"><span class="pr-rec__nombre">${esc(it.ingrediente)}${difReceta}` +
-        `${agregado ? ' <span class="pr-rec__agregado">agregado</span>' : ''}</span>` +
+        `${agregado ? ' <span class="pr-rec__agregado">agregado</span>' : ''}` +
+        `${nuevo ? ' <span class="pr-rec__nuevo">nuevo en la receta</span>' : ''}</span>` +
         `<span class="pr-rec__marca">${esc(marca)}${esOtro ? ' · otro' : ''}</span></span>` +
         cant +
         `<span class="pr-rec__lote-celda">${htmlCeldaLote(it, b, e)}</span>` +
@@ -8871,10 +9001,21 @@
 
     // El renglón de un "otro": no está en el catálogo, así que no tiene receta
     // contra la que compararse ni lote que descontar. Se quita con su botón.
-    function htmlFilaOtro(o) {
+    // Con Anterior (sin Modificar) el que vino de la masa anterior se ve y NO
+    // se toca, como el resto de las cantidades.
+    function htmlFilaOtro(o, editable = true) {
+      const marca = o.deAnterior ? 'escrito a mano · de la masa anterior' : 'escrito a mano'
+      if (!editable) {
+        return '<div class="pr-rec pr-rec--agregado">' +
+          `<span class="pr-rec__ing"><span class="pr-rec__nombre"><span class="pr-rec__sello">OTRO</span> ${esc(o.nombre)}</span>` +
+          `<span class="pr-rec__marca">${esc(marca)}</span></span>` +
+          `<span class="pr-rec__cant pr-rec__cant--fija"><span class="pr-rec__valor">${htmlCantidadGrande(o.kg ?? 0)}</span></span>` +
+          '<span class="pr-rec__lote-celda"><span class="pr-rec__nota">no descuenta stock</span></span>' +
+          '<span class="pr-rec__accion"></span></div>'
+      }
       return '<div class="pr-rec pr-rec--agregado">' +
         `<span class="pr-rec__ing"><span class="pr-rec__nombre"><span class="pr-rec__sello">OTRO</span> ${esc(o.nombre)}</span>` +
-        '<span class="pr-rec__marca">escrito a mano</span></span>' +
+        `<span class="pr-rec__marca">${esc(marca)}</span></span>` +
         '<span class="pr-rec__cant">' +
         `<button type="button" class="pr-rec__paso" data-menos-otro="${esc(o.id)}" aria-label="Menos ${esc(o.nombre)}"${(o.kg ?? 0) <= 0 ? ' disabled' : ''}>−</button>` +
         `<input type="text" class="pr-rec__num" data-cant-otro="${esc(o.id)}" aria-label="Kilos de ${esc(o.nombre)}">` +
@@ -8900,7 +9041,7 @@
       const cab = '<div class="pr-rec--cab"><span>INGREDIENTE</span>' +
         '<span class="pr-rec__cant-cab">CANTIDAD</span><span>LOTE</span><span></span></div>'
       return cab + renglonesVisibles(b, datos).map(it => htmlFilaReceta(it, b, datos)).join('') +
-        (b.otros ?? []).map(o => htmlFilaOtro(o)).join('')
+        (b.otros ?? []).map(o => htmlFilaOtro(o, b.como === 'modificar')).join('')
     }
 
     function pintarReceta() {
@@ -8925,6 +9066,12 @@
       const motivo = document.getElementById('pr-receta-motivo')
       if (motivo.value !== (b.motivo ?? '')) motivo.value = b.motivo ?? ''
       document.getElementById('pr-receta-aviso-stock').hidden = !estado.stockMasaError
+      // La receta cambió desde la masa anterior (v1 → v2): se dice arriba,
+      // con qué es nuevo, se elija Original, Anterior o Modificar.
+      const cambio = document.getElementById('pr-receta-cambio')
+      const textoCambio = textoCambioReceta(d)
+      cambio.textContent = textoCambio
+      cambio.hidden = !textoCambio
       pintarPieReceta()
     }
 

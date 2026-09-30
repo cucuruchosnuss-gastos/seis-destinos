@@ -212,6 +212,7 @@ const SEGURAS_PRODUCCION = [
   ['c.cl', "clase CSS constante del código: htmlResumenCierre() pone 'teal', 'trigo', 'tinta' o 'bordo'"],
   ['ultima', 'HTML ya escapado: htmlFilaSala() lo arma arriba con esc() de hace cuánto y de la hora, o un texto constante'],
   ['htmlCantidadGrande(kg)', 'HTML armado por htmlCantidadGrande(), que escapa el número y la unidad'],
+  ['htmlCantidadGrande(o.kg ?? 0)', 'HTML armado por htmlCantidadGrande(), que escapa el número y la unidad (el "otro" de la masa anterior, sin tocar)'],
   ['todas.length', 'número: cuántos lotes hay en la ventana'],
   ['todas.filter(f => f.marca === m).length', 'número: cuántos lotes de esa marca hay en la ventana'],
   ["filas.map(f => htmlFilaLote(f, f.i === marcado, f.i === viejoI, f.i === elegido ? notaElegido : '')).join('')", 'renglones que arma htmlFilaLote(): la marca, el lote, lo que queda y la fecha van con esc(), y la nota (notaElegido) ya viene escapada'],

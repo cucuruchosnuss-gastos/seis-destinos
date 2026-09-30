@@ -59,7 +59,7 @@ esperas.push((async () => {
   const P = construirProduccion(PLANTA)
   chk('la planta tiene la MISMA tabla de colores que la gestión', JSON.stringify(P.COLORES_ELEGIBLES) === JSON.stringify(G.COLORES_ELEGIBLES))
   chk('los selects de productos traen la columna color (gestión)', (FUENTE.match(/from\('productos_terminados'\)\.select\('id, nombre, tipo_masa, activo, orden, categoria, color'\)/g) || []).length === 2)
-  chk('el catálogo de la planta trae la columna color', /\.select\('id, nombre, tipo_masa, orden, color'\)\.eq\('unidad_negocio_id', unidadId\)\.eq\('activo', true\)/.test(FUENTE_PLANTA))
+  chk('el catálogo de la planta trae la columna color', /\.select\('id, nombre, tipo_masa, orden, color(, origen_producto_id)?'\)\.eq\('unidad_negocio_id', unidadId\)\.eq\('activo', true\)/.test(FUENTE_PLANTA))
 
   // ── El color, en la gestión y en la planta ────────────────────────────
   const grande = { nombre: 'Cucuruchón Grande', tipo_masa: 'Común' }
