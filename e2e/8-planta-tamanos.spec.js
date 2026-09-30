@@ -50,6 +50,44 @@ for (const [ancho, alto] of TAMANOS) {
   });
 }
 
+// LA RECETA QUE CAMBIÓ EN MEDIO DEL TURNO (30/09/2026): la misma planta con
+// los datos de pruebas/datos-maqueta/produccion-receta-cambio.js (la masa
+// anterior es de la v7, la vigente es la v8). La receta suma arriba el aviso
+// "La receta cambió (v7 → v8)…", el renglón "nuevo en la receta" y el "otro"
+// de la anterior: es la receta más alta que se dibuja, y tiene que entrar
+// igual. Se recorren los mismos pasos y se miden solo los de la receta.
+const PASOS_RECETA = ['receta', 'receta-modificar'];
+for (const [ancho, alto] of TAMANOS) {
+  test(`la receta con el aviso de receta cambiada entra sin scroll a ${ancho}×${alto}`, async ({ page }, info) => {
+    test.setTimeout(3 * 60 * 1000);
+    await page.setViewportSize({ width: ancho, height: alto });
+    const errores = vigilarErrores(page);
+    const problemas = [];
+    await page.goto(`${MAQUETA}/modulos/produccion.html?maqueta=produccion-receta-cambio`);
+    const hasta = PASOS_PLANTA.findIndex(([n]) => n === PASOS_RECETA[PASOS_RECETA.length - 1]);
+    for (const [nombre, fn] of PASOS_PLANTA.slice(0, hasta + 1)) {
+      await test.step(nombre, async () => {
+        await fn(page);
+        if (!PASOS_RECETA.includes(nombre)) return;
+        // El aviso tiene que estar: si no, se estaría midiendo la receta de siempre.
+        await expect(page.locator('#pr-receta-cambio')).toBeVisible();
+        await expect(page.locator('#pr-receta-cambio')).toContainText('La receta cambió (v7 → v8) desde la masa anterior.');
+        await expect(page.locator('#pr-receta-filas .pr-rec__nuevo')).toHaveText('nuevo en la receta');
+        await page.waitForTimeout(150);
+        const m = await page.evaluate(`(${medirPantalla.toString()})()`);
+        await captura(page, `tamano-cambio-${nombre}-${ancho}x${alto}`, info);
+        if (m.scroll) problemas.push(`${nombre}: la página mide ${m.altoDoc} px de alto y la pantalla ${m.alto}`);
+        if (m.scrollX) problemas.push(`${nombre}: scroll de costado (${m.anchoDoc} en ${m.ancho})`);
+        for (const a of m.afuera) problemas.push(`${nombre}: se sale de su recuadro ${a}`);
+        for (const c of m.cortadas) problemas.push(`${nombre}: palabra cortada ${c}`);
+        for (const l of m.lote) problemas.push(`${nombre}: el lote en dos renglones ${l}`);
+      });
+    }
+    expect(errores, errores.join('\n')).toEqual([]);
+    expect(problemas, `\n${problemas.join('\n')}`).toEqual([]);
+  });
+}
+
 // El medidor mide de verdad: una página que scrollea y una palabra partida
 // ponen la prueba en rojo (así un cero no es "no miré").
 test('el medidor detecta el scroll, lo que se sale y la palabra cortada', async ({ page }) => {
