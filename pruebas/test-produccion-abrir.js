@@ -480,6 +480,22 @@ esperas.push((async () => {
     E.__doc.getElementById('pr-abrir-error').hidden === false)
   chk('… y el botón vuelve a quedar usable', E.__doc.getElementById('pr-abrir-confirmar').disabled === false && E.estado.abriendo === false)
 
+  // 30/09/2026: el turno elegido vale para TODAS las máquinas que se abren, y
+  // si ya hay máquinas abiertas en otro turno la base (abrir_turnos) rechaza:
+  // su mensaje se muestra TAL CUAL, sin taparlo con uno genérico.
+  const O = armar()
+  await O.mostrarTablero()
+  await O.mostrarAbrir()
+  O.estado.abrir.filas.forEach(f => { f.elegida = true })
+  const MSJ_OTRO = 'La Máquina 1 sigue abierta en el turno Mañana del 30/09. Cerrá primero las planillas de ese turno antes de abrir el turno Tarde.'
+  let pedido = null
+  O.__setRpc(async (nombre, p) => { if (nombre === 'abrir_turnos') pedido = p; return { data: null, error: { message: MSJ_OTRO } } })
+  await O.confirmarAbrir()
+  chk('un solo turno para todas las máquinas del pedido', pedido && typeof pedido.p_turno === 'string' && Array.isArray(pedido.p_maquinas) &&
+    pedido.p_maquinas.every(m => !('turno' in m)), JSON.stringify(pedido))
+  const errO = O.__doc.getElementById('pr-abrir-error')
+  chk('otro turno abierto: el mensaje de la base se ve TAL CUAL', errO.textContent === MSJ_OTRO && errO.hidden === false, errO.textContent)
+
   // HTML malicioso en lo que arma Abrir turno.
   chequearMarcas(chk, 'lotes asignados', S.htmlLotesAsignados(
     [{ maquina_id: 'mx', maquina: marca('nombreMaq'), lote: marca('lote2') }],

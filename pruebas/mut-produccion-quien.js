@@ -40,11 +40,14 @@ correrMutacionesProduccion({
     { nombre: 'SALA DE MASA se deshabilita sin haberlo medido', de: '      return estado.abiertasConocido === true && estado.hayTurnoAbierto === false', a: '      return estado.hayTurnoAbierto === false' },
     { nombre: 'SALA DE MASA nunca se deshabilita', de: '      return estado.abiertasConocido === true && estado.hayTurnoAbierto === false', a: '      return false' },
     { nombre: 'el botón al otro modo apagado no lleva disabled', de: 'data-modo="${modoDestino}"${off ? \' disabled\' : \'\'}>', a: 'data-modo="${modoDestino}">' },
-    { nombre: 'sin la leyenda de por qué está apagado', de: "        ? 'sin máquinas abiertas'\n        : (puedeCambiarSinPin", a: "        ? ''\n        : (puedeCambiarSinPin" },
+    { nombre: 'sin la leyenda de por qué está apagado', de: "        ? 'sin máquinas abiertas'\n        : (modoDestino", a: "        ? ''\n        : (modoDestino" },
     { nombre: 'el botón lleva al modo donde ya se está', de: "      const modoDestino = OTRO_MODO[estado.modo] ?? 'masa'", a: "      const modoDestino = estado.modo ?? 'masa'" },
     { nombre: 'el tono del botón es el del modo actual', de: 'pr-lat__otro--${modoDestino}', a: 'pr-lat__otro--${estado.modo}' },
-    { nombre: 'pasa sin PIN sin tener el puesto del otro modo', de: '      return !!fila && tienePuesto(fila, PUESTO_DE_MODO[modo])', a: '      return !!fila' },
-    { nombre: 'pasa sin PIN sin saber sus puestos', de: '      return !!fila && tienePuesto(fila, PUESTO_DE_MODO[modo])', a: '      return !fila || tienePuesto(fila, PUESTO_DE_MODO[modo])' },
+    // 30/09/2026: cambiar de modo pide SIEMPRE el PIN. Volver a meter la
+    // excepción de "misma persona con los dos puestos" tiene que dar rojo.
+    { nombre: 'vuelve la excepción: la misma persona con los dos puestos pasa sin PIN', de: "      if (estado.maestro) return entrarComoMaestro(modo)\n      // Sin excepciones", a: "      if (estado.maestro) return entrarComoMaestro(modo)\n      { const f = (estado.personal ?? []).find(x => x.id === quien?.id); if (f && tienePuesto(f, PUESTO_DE_MODO[modo])) return entrar({ id: quien.id, nombre: quien.nombre, puesto: PUESTO_DE_MODO[modo] }) }\n      // Sin excepciones" },
+    { nombre: 'cambiar de modo entra directo con la misma persona', de: "      // se abre el \"¿Quién sos?\" de ESTE modo y se pide el PIN.\n      return mostrarQuien()", a: "      // se abre el \"¿Quién sos?\" de ESTE modo y se pide el PIN.\n      if (quien) return entrar({ id: quien.id, nombre: quien.nombre, puesto: PUESTO_DE_MODO[modo] })\n      return mostrarQuien()" },
+    { nombre: 'el botón vuelve a decir "sin volver a poner el PIN"', de: ": (modoDestino === 'masa' ? 'PIN del masero' : 'PIN del encargado')", a: ": 'sin volver a poner el PIN'" },
     { nombre: 'el puesto de la barra no sale del modo', de: "      return ROL_DE_MODO[estado.modo] ?? ''\n    }\n\n    function htmlLatPersona", a: "      return 'Encargado'\n    }\n\n    function htmlLatPersona" },
     { nombre: 'la barra se ve en "¿Quién sos?"', de: "const PANTALLAS_SIN_BARRA = ['pr-quien', 'pr-inicio'", a: "const PANTALLAS_SIN_BARRA = ['pr-inicio'" },
     { nombre: 'la barra se ve sin nadie adentro', de: '      return enModoTablet() && !!estado.persona && !PANTALLAS_SIN_BARRA', a: '      return enModoTablet() && !PANTALLAS_SIN_BARRA' },

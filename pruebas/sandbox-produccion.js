@@ -274,7 +274,7 @@ const NUEVAS_PLANTA = [
   'confirmarAsignarPin',
   // La planta con dos modos (28/09/2026): la barra lateral y la banda de
   // "¿Quién sos?".
-  'puedeCambiarSinPin', 'htmlBotonOtroModo', 'puestoEnLateral', 'htmlLatPersona', 'maquinaElegida',
+  'htmlBotonOtroModo', 'puestoEnLateral', 'htmlLatPersona', 'maquinaElegida',
   'htmlLatMaquina', 'htmlLatSecciones', 'htmlLatSala', 'htmlLatConexion', 'htmlLateral', 'lateralVisible',
   'pintarLateral', 'htmlBandaQuien', 'pintarBandaQuien', 'cancelarOtroModo', 'cambiarDePersona',
   'irASeccion', 'abrirLoProducido', 'mostrarHistorialMaquina',

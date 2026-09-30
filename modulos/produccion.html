@@ -2362,27 +2362,22 @@
     const OTRO_MODO = { produccion: 'masa', masa: 'produccion' }
     const NOMBRE_MODO = { produccion: 'PRODUCCIÓN', masa: 'SALA DE MASA' }
 
-    // ¿La persona que está adentro tiene TAMBIÉN el puesto del otro modo? Si el
-    // masero es el mismo encargado, el PIN se pone una sola vez (README del
-    // handoff: "después va y viene entre los dos modos sin volver a ponerlo").
-    // Tiene que tener el puesto de verdad —fijo o temporal—: una unidad sin
-    // maseros configurados NO alcanza, porque ahí la lista muestra a todos y
-    // saltearse el PIN sería dejar pasar a cualquiera.
-    function puedeCambiarSinPin(modo) {
-      const p = estado.persona
-      if (!p || (estado.maestro && p.id === estado.maestro.id)) return false
-      const fila = (estado.personal ?? []).find(x => x.id === p.id)
-      return !!fila && tienePuesto(fila, PUESTO_DE_MODO[modo])
-    }
-
+    // Cambiar de modo pide SIEMPRE "¿Quién sos?" y el PIN, en las dos
+    // direcciones, aunque la persona tenga los dos puestos (30/09/2026, Facu:
+    // Federico Silva y Agustín Barrera son encargados Y maseros; si uno deja la
+    // tablet, el que la agarra no puede entrar a su nombre al otro modo y
+    // cargar firmado por él). Antes existía puedeCambiarSinPin(), que dejaba
+    // pasar sin PIN a quien tenía los dos puestos: se sacó a propósito, no
+    // volver a agregarla. La única excepción es el acceso maestro, que es
+    // explícito y queda a nombre del maestro.
     function htmlBotonOtroModo() {
       const modoDestino = OTRO_MODO[estado.modo] ?? 'masa'
       const off = modoDestino === 'masa' && salaDeshabilitada()
       // Apagado (punteado, 2b): "Sala de masa · sin máquinas abiertas".
-      const textoOtroModo = off ? 'Sala de masa' : (modoDestino === 'masa' ? 'Ir a Sala de masa' : 'Ir a Producción')
+      const textoOtroModo = off ? 'Sala de masa' : (modoDestino === 'masa' ? 'Cambiar a Sala de masa' : 'Cambiar a Producción')
       const notaOtroModo = off
         ? 'sin máquinas abiertas'
-        : (puedeCambiarSinPin(modoDestino) ? 'sin volver a poner el PIN' : (modoDestino === 'masa' ? 'PIN del masero' : 'PIN del encargado'))
+        : (modoDestino === 'masa' ? 'PIN del masero' : 'PIN del encargado')
       return `<button type="button" class="pr-lat__otro pr-lat__otro--${modoDestino}" data-modo="${modoDestino}"${off ? ' disabled' : ''}>` +
         `${ICONO_MODO[modoDestino]}<span class="pr-lat__otro-texto"><span class="pr-lat__otro-nombre">${textoOtroModo}</span>` +
         `<span class="pr-lat__otro-nota">${notaOtroModo}</span></span></button>`
@@ -2662,7 +2657,6 @@
       if (modo === 'masa' && salaDeshabilitada()) return
       if (estado.modo === modo && estado.persona) return
       const quien = estado.persona
-      const sinPin = puedeCambiarSinPin(modo)
       // "Cancelar" en el "¿Quién sos?" del otro modo vuelve acá, con la misma
       // persona y sin PIN: nunca se fue, solo miró la otra puerta.
       estado.volverA = quien && !(estado.maestro && quien.id === estado.maestro.id) ? { modo: estado.modo, persona: quien } : null
@@ -2674,7 +2668,8 @@
       // Con el acceso maestro activo se entra sin volver a poner el PIN, y
       // todo lo que se haga queda a nombre del maestro.
       if (estado.maestro) return entrarComoMaestro(modo)
-      if (sinPin) return entrar({ id: quien.id, nombre: quien.nombre, puesto: PUESTO_DE_MODO[modo] })
+      // Sin excepciones: aunque sea la misma persona y tenga los dos puestos,
+      // se abre el "¿Quién sos?" de ESTE modo y se pide el PIN.
       return mostrarQuien()
     }
 

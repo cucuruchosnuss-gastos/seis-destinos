@@ -104,7 +104,7 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   chk('con una máquina abierta se habilita', S.salaDeshabilitada() === false)
   const on = S.htmlBotonOtroModo()
   chk('… sin disabled', !/disabled/.test(on))
-  chk('… lleva a Sala de masa y dice que pide el PIN del masero', /Ir a Sala de masa/.test(on) && /PIN del masero/.test(on))
+  chk('… dice "Cambiar a Sala de masa" y que pide el PIN del masero', /Cambiar a Sala de masa/.test(on) && /PIN del masero/.test(on), on)
   chk('… con el tono de SALA DE MASA (el modo al que lleva)', /pr-lat__otro--masa/.test(on))
   // En un sandbox NUEVO: si el dato ya viniera puesto, esta assertion no
   // estaría mirando lo que marcarAbiertas() hace.
@@ -119,7 +119,7 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   S.estado.modo = 'masa'
   const aProd = S.htmlBotonOtroModo()
   chk('en Sala de masa lleva a Producción, con su tono y el PIN del encargado',
-    /data-modo="produccion"/.test(aProd) && /pr-lat__otro--produccion/.test(aProd) && /Ir a Producción/.test(aProd) && /PIN del encargado/.test(aProd))
+    /data-modo="produccion"/.test(aProd) && /pr-lat__otro--produccion/.test(aProd) && /Cambiar a Producción/.test(aProd) && /PIN del encargado/.test(aProd))
   chk('… y nunca va apagado (Producción no depende de las máquinas)', !/disabled/.test(aProd))
 
   // Quién está adentro, con su puesto y la unidad, y los dos botones del pie.
@@ -133,15 +133,47 @@ const botones = (html) => [...html.matchAll(/data-persona="([^"]+)"/g)].map(m =>
   S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
   chk('el puesto sale del modo', /<span class="pr-lat__puesto">Encargado<\/span>/.test(S.htmlLateral()))
 
-  // Si la persona tiene TAMBIÉN el puesto del otro modo, pasa sin PIN.
+  // 30/09/2026: aunque tenga TAMBIÉN el puesto del otro modo, el botón pide
+  // el PIN (la excepción de "misma persona con los dos puestos" se sacó).
   S.estado.personal = [{ id: 'e-fede', nombre: 'Federico Silva', puestos: ['encargado', 'masero'], puestos_temporales: [] }]
-  chk('el encargado que también es masero pasa sin PIN', S.puedeCambiarSinPin('masa') === true &&
-    /sin volver a poner el PIN/.test(S.htmlBotonOtroModo()))
-  S.estado.personal = [{ id: 'e-fede', nombre: 'Federico Silva', puestos: ['encargado'], puestos_temporales: [] }]
-  chk('… y el que no, pone el PIN del masero', S.puedeCambiarSinPin('masa') === false)
-  S.estado.personal = []
-  chk('… sin saber sus puestos, tampoco se saltea el PIN', S.puedeCambiarSinPin('masa') === false)
+  const dos = S.htmlBotonOtroModo()
+  chk('el encargado que también es masero ve "PIN del masero", nunca "sin volver a poner el PIN"',
+    /PIN del masero/.test(dos) && !/sin volver a poner el PIN/.test(dos), dos)
+  chk('la excepción ya no existe en el módulo', !/function puedeCambiarSinPin/.test(FUENTE) && !/'sin volver a poner el PIN'/.test(FUENTE))
 }
+
+// ── 30/09/2026: cambiar de modo pide quién es y el PIN, SIEMPRE ───────────
+// Federico Silva y Agustín Barrera son encargados Y maseros. Si uno deja la
+// tablet, el que la agarra no puede pasar al otro modo a su nombre.
+esperas.push((async () => {
+  const DOBLE = PERSONAL.map(p => p.id === 'e-fede' ? { ...p, puestos: ['encargado', 'masero'] } : p)
+  const armarDoble = () => {
+    const S = armar()
+    S.__setRpc(async (nombre) => nombre === 'personal_produccion' ? { data: DOBLE, error: null } : { data: null, error: null })
+    S.estado.personal = DOBLE
+    S.marcarAbiertas(true)
+    return S
+  }
+
+  // Producción → Sala de masa, con el encargado-masero adentro.
+  const S = armarDoble()
+  S.estado.modo = 'produccion'
+  S.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'encargado' }
+  await S.tocarModo('masa')
+  chk('Producción → Sala de masa: NO entra con el mismo encargado-masero', S.estado.persona === null, JSON.stringify(S.estado.persona))
+  chk('… está en Sala de masa, en "¿Quién sos?"', S.estado.modo === 'masa' && S.__doc.getElementById('pr-quien').hidden === false)
+  chk('… Federico figura entre los maseros para elegirse (y poner SU PIN)',
+    botones(S.__doc.getElementById('pr-quien-lista').innerHTML).includes('e-fede'))
+  chk('… y no se verificó ningún PIN por él', !S.__llamadas.rpc.some(r => /pin/i.test(r[0])), JSON.stringify(S.__llamadas.rpc))
+
+  // Sala de masa → Producción, al revés.
+  const T = armarDoble()
+  T.estado.modo = 'masa'
+  T.estado.persona = { id: 'e-fede', nombre: 'Federico Silva', puesto: 'masero' }
+  await T.tocarModo('produccion')
+  chk('Sala de masa → Producción: tampoco entra directo', T.estado.persona === null, JSON.stringify(T.estado.persona))
+  chk('… está en Producción, en "¿Quién sos?"', T.estado.modo === 'produccion' && T.__doc.getElementById('pr-quien').hidden === false)
+})())
 
 // ── Las secciones de Producción ───────────────────────────────────────────
 {
