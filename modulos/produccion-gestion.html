@@ -1337,6 +1337,14 @@
     }
     .pr-of-grupo__titulo { font-size: 1.0625rem; font-weight: 800; margin: 0; }
     .pr-of-grupo__total { font-size: 1.0625rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    /* "Reventa · Dolce Pasta": un producto que esta fábrica vende y hace otra
+       del grupo. Es un DATO, así que va neutro: ni bordó (que es "está mal")
+       ni naranja (que es "se toca"). */
+    .pg-reventa {
+      display: inline-block; margin-left: 0.5rem; padding: 0.125rem 0.625rem; border-radius: 999px;
+      font-size: 0.8125rem; font-weight: 700; vertical-align: middle; white-space: nowrap;
+      background: var(--color-pista); color: var(--color-texto-2); border: 1px solid var(--color-borde);
+    }
     /* Un sublote ANULADO no se esconde: existió, se selló en una caja y su
        stock entró y salió. Se muestra tachado y no suma. */
     .pr-of-anulado { opacity: 0.6; }
@@ -2507,6 +2515,9 @@
         <div id="pr-stock-lista"></div>
         <!-- Lo que salió por retiros (26/09/2026): cada orden con su CÓDIGO. -->
         <div id="pr-stock-retiros"></div>
+        <!-- Los traspasos entre fábricas (30/09/2026): lo que se mandó a otra
+             fábrica del grupo y lo que llegó de otra. -->
+        <div id="pr-stock-traspasos"></div>
       </section>
 
     </main>
@@ -7539,14 +7550,16 @@
       const cont = document.getElementById('pr-stock-lista')
       const aviso = document.getElementById('pr-stock-aviso')
       const cajaRetiros = document.getElementById('pr-stock-retiros')
+      const cajaTraspasos = document.getElementById('pr-stock-traspasos')
       aviso.innerHTML = ''
       cajaRetiros.innerHTML = ''
+      if (cajaTraspasos) cajaTraspasos.innerHTML = ''
       cont.innerHTML = '<p class="pr-texto-suave">Cargando…</p>'
       let movs, productos, presentaciones, marcas
       const leer = async (consulta) => { const { data, error } = await consulta; if (error) throw error; return data ?? [] }
       try {
         movs = await leer(supabase.from('stock_terminado_movimientos').select('presentacion_id, marca_id, lote, cajas, unidades, tipo, orden_retiro_id, fecha, motivo, created_at').eq('unidad_negocio_id', estado.stockUnidad))
-        productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden').eq('unidad_negocio_id', estado.stockUnidad))
+        productos = await leer(supabase.from('productos_terminados').select('id, nombre, orden, origen_producto_id').eq('unidad_negocio_id', estado.stockUnidad))
         const ids = productos.map(p => p.id)
         presentaciones = ids.length ? await leer(supabase.from('producto_presentaciones').select('id, producto_id, nombre, orden').in('producto_id', ids)) : []
         marcas = await leer(supabase.from('marcas_personalizadas').select('id, nombre'))
@@ -7557,8 +7570,12 @@
         return
       }
       if (movs.length >= TOPE_FILAS) aviso.innerHTML = '<div class="pr-aviso pr-aviso--grave">Hay más de 1000 movimientos y solo se leyeron los primeros: los totales pueden estar incompletos.</div>'
-      const cat = { productos, presentaciones, marcas }
+      const unidadStock = estado.stockUnidad
+      const origenes = await leerOrigenesReventa(productos)
+      if (estado.stockUnidad !== unidadStock) return
+      const cat = { productos, presentaciones, marcas, origenes }
       cont.innerHTML = htmlStockTerminado(agruparStockTerminado(movs), cat)
+      if (cajaTraspasos) cajaTraspasos.innerHTML = htmlTraspasosStock(traspasosDeStock(movs), cat)
       // Lo que salió por retiros, con el CÓDIGO de cada orden. Sin retiros:ver
       // en esta unidad no se consulta ordenes_retiro (su RLS devolvería vacío
       // y un vacío no se distingue de "no existe"): se dice que no hay permiso.
@@ -7626,6 +7643,82 @@
         filas + '</div>'
     }
 
+    // ── Reventa y traspasos entre fábricas (30/09/2026) ──────────────────
+    // Un producto de REVENTA tiene `origen_producto_id`: el producto de la
+    // fábrica que lo hace (Nuss revende conos de Dolce Pasta, y al revés).
+    // La fábrica sale de ese producto de origen, que es de OTRA unidad: se
+    // lee por id (la policy de productos_terminados lo deja leer con
+    // cualquier tarea de Producción o stock:ver). Devuelve un Map id →
+    // unidad_negocio_id, o null si no se pudo leer (nunca tira: la
+    // etiqueta queda "Reventa" a secas y el stock se ve igual).
+    async function leerOrigenesReventa(productos) {
+      const ids = [...new Set((productos ?? []).map(p => p.origen_producto_id).filter(Boolean))]
+      if (!ids.length) return new Map()
+      try {
+        const { data, error } = await supabase.from('productos_terminados').select('id, unidad_negocio_id').in('id', ids)
+        if (error) throw error
+        return new Map((data ?? []).map(o => [o.id, o.unidad_negocio_id]))
+      } catch (err) {
+        console.error('productos de origen (reventa):', err)
+        return null
+      }
+    }
+
+    // "Reventa · Dolce Pasta", o "Reventa" a secas si no se sabe de qué
+    // fábrica (no se pudo leer el origen, o su unidad no está en el mapa).
+    // Un producto propio devuelve null: no lleva etiqueta.
+    function etiquetaReventa(prod, cat) {
+      if (!prod?.origen_producto_id) return null
+      const unidad = cat?.origenes?.get?.(prod.origen_producto_id)
+      const nombre = unidad ? estado.unidades?.get?.(unidad) : null
+      return nombre ? `Reventa · ${nombre}` : 'Reventa'
+    }
+
+    // El nombre de cada tipo de movimiento del stock terminado. Un tipo que
+    // esta pantalla no conoce se muestra tal cual (y se escapa donde se
+    // dibuja): no se inventa un nombre ni se rompe nada.
+    const NOMBRE_TIPO_STOCK_TERMINADO = {
+      produccion: 'Producción',
+      inventario_inicial: 'Inventario inicial',
+      ajuste: 'Ajuste',
+      despacho: 'Despacho',
+      traspaso_salida: 'Traspaso a otra fábrica',
+      traspaso_entrada: 'Traspaso desde otra fábrica',
+    }
+    function textoTipoStockTerminado(tipo) {
+      const t = String(tipo ?? '').trim()
+      if (!t) return 'Movimiento'
+      return Object.prototype.hasOwnProperty.call(NOMBRE_TIPO_STOCK_TERMINADO, t) ? NOMBRE_TIPO_STOCK_TERMINADO[t] : t
+    }
+
+    // Los traspasos entre fábricas, lo más nuevo primero.
+    function traspasosDeStock(movs) {
+      return (movs ?? []).filter(m => m.tipo === 'traspaso_salida' || m.tipo === 'traspaso_entrada')
+        .sort((x, y) => String(y.fecha).localeCompare(String(x.fecha)) || String(y.created_at ?? '').localeCompare(String(x.created_at ?? '')))
+    }
+
+    function htmlTraspasosStock(traspasos, cat) {
+      if (!traspasos?.length) return ''
+      const filas = traspasos.map(m => {
+        const pr = cat.presentaciones.find(x => x.id === m.presentacion_id)
+        const prod = cat.productos.find(x => x.id === pr?.producto_id)
+        const cono = m.marca_id ? (cat.marcas.find(x => x.id === m.marca_id)?.nombre ?? 'Marca') : 'Común'
+        const que = [prod?.nombre ?? 'Producto', pr?.nombre ?? 'Presentación', cono].join(' · ')
+        const cajasTr = numeroInd(m.cajas)
+        const sale = m.tipo === 'traspaso_salida'
+        const cuenta = `${sale ? 'salieron' : 'entraron'} ${cajasTr === null ? '—' : textoEntero(Math.abs(cajasTr))} ${cajasTr !== null && Math.abs(cajasTr) === 1 ? 'caja' : 'cajas'}`
+        return `<div class="pr-of-fila pr-of-retiro">` +
+          `<span>${esc(fechaDelDia(m.fecha))}</span>` +
+          `<span><strong>${esc(textoTipoStockTerminado(m.tipo))}</strong></span>` +
+          `<span>${esc(que)}</span>` +
+          `<span class="pr-producido__sublote">${esc(m.lote)}</span>` +
+          `<span class="pr-of-num">${esc(cuenta)}</span></div>`
+      }).join('')
+      return `<h2 class="pr-subtitulo">Traspasos entre fábricas</h2>` +
+        `<div class="pr-of-tabla pr-of-grupo"><div class="pr-of-cab pr-of-retiro"><span>Fecha</span><span>Traspaso</span><span>Producto</span><span>Sublote</span><span class="pr-of-num">Cajas</span></div>` +
+        filas + '</div>'
+    }
+
     // Suma por presentación, marca y sublote. Quedan solo los que tienen
     // cajas: un sublote despachado entero no se lista. Un total que NO se pudo
     // sumar queda en null —no en cero— y se lista igual (`null !== 0` es
@@ -7651,13 +7744,13 @@
         const prod = cat.productos.find(x => x.id === pr?.producto_id)
         const marcaNombre = f.marca_id ? (cat.marcas.find(x => x.id === f.marca_id)?.nombre ?? 'Marca') : 'Común'
         const clave = `${prod?.nombre ?? 'Producto'} · ${pr?.nombre ?? 'Presentación'} · ${marcaNombre}`
-        const g = grupos.get(clave) ?? { titulo: clave, cajas: 0, unidades: 0, sublotes: [] }
+        const g = grupos.get(clave) ?? { titulo: clave, reventa: etiquetaReventa(prod, cat), cajas: 0, unidades: 0, sublotes: [] }
         g.cajas = sumarMedido(g.cajas, f.cajas); g.unidades = sumarMedido(g.unidades, f.unidades); g.sublotes.push(f)
         grupos.set(clave, g)
       }
       return [...grupos.values()].sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')).map(g =>
         `<div class="pr-of-tabla pr-of-grupo"><div class="pr-of-grupo__cab">` +
-        `<h2 class="pr-of-grupo__titulo">${esc(g.titulo)}</h2>` +
+        `<h2 class="pr-of-grupo__titulo">${esc(g.titulo)}${g.reventa ? `<span class="pg-reventa">${esc(g.reventa)}</span>` : ''}</h2>` +
         `<span class="pr-of-grupo__total">${esc(textoEntero(g.cajas))} cajas · ${esc(textoEntero(g.unidades))} unidades</span></div>` +
         `<div class="pr-of-cab pr-of-stock"><span>Sublote</span><span class="pr-of-num">Cajas</span><span class="pr-of-num">Unidades</span></div>` +
         g.sublotes.sort((a, b) => String(a.lote).localeCompare(String(b.lote), 'es', { numeric: true })).map(s =>

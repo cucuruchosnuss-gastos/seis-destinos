@@ -312,6 +312,15 @@ const PANTALLAS = [
   ]],
   ['modulos/produccion-gestion.html', 'produccion-gestion', [
     ['indicadores', async (page) => { await expect(page.locator('body')).toContainText('lote 7021') }],
+    // El stock terminado con un producto de reventa y los traspasos entre
+    // fábricas (30/09/2026).
+    ['stock', async (page) => {
+      if (await page.locator('#pr-btn-menu').isVisible()) await page.locator('#pr-btn-menu').click()
+      await page.locator('#pr-menu-stock').click()
+      await expect(page.locator('#pr-stock-lista')).toContainText('Reventa · Dolce Pasta')
+      await expect(page.locator('#pr-stock-traspasos')).toContainText('Traspaso desde otra fábrica')
+      await expect(page.locator('#pr-stock-traspasos')).toContainText('Traspaso a otra fábrica')
+    }],
     ['personal', async (page) => {
       if (await page.locator('#pr-btn-menu').isVisible()) await page.locator('#pr-btn-menu').click()
       await page.locator('[data-ir-config="personal"]').first().click()

@@ -214,6 +214,8 @@ const NUEVAS_GESTION = [
   'abrirCorreccionSublote', 'cerrarCorreccionSublote', 'faltaEnCorreccion', 'guardarCorreccionSublote',
   // Lo que salió por retiros en el stock terminado (26/09/2026)
   'cargarPermisoRetiros', 'puedeVerRetirosEn', 'salidasPorRetiro', 'codigoRetiro', 'htmlRetirosStock',
+  // Reventa y traspasos entre fábricas en el stock terminado (30/09/2026)
+  'leerOrigenesReventa', 'etiquetaReventa', 'textoTipoStockTerminado', 'traspasosDeStock', 'htmlTraspasosStock',
   // El diseño "Producción · Configuración" (29/09/2026): el segmentado, la
   // lista | detalle, el color de cada producto, el empaque en su renglón, las
   // versiones de receta y los ingredientes con su stock.
@@ -241,7 +243,9 @@ const CONST_NUEVAS_GESTION = ['puedeVerGestion', 'CLAVE_UNIDAD_GESTION', 'TARJET
   // El diseño "Producción · Configuración" (29/09/2026)
   'SECCIONES_CONFIG', 'ALIAS_CONFIG', 'CON_LISTA', 'ICONO_BUSCAR', 'ICONO_MAS', 'ICONO_CAJA', 'ICONO_CHEVRON', 'ICONO_ALERTA',
   'ICONO_EXCLAMACION', 'ICONO_CRUZ', 'ICONO_TILDE', 'ICONO_ESTRELLA', 'ICONO_HISTORIAL', 'ICONO_FLECHA',
-  'COLORES_ELEGIBLES', 'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO']
+  'COLORES_ELEGIBLES', 'PALETA_PRODUCTO', 'ESPECIALES_PRODUCTO', 'FILAS_CONFIG', 'ESTADO_CONO', 'swAbre', 'SW_CIERRA', 'PASTILLA_SIN_INSUMO',
+  // Reventa y traspasos en el stock terminado (30/09/2026)
+  'NOMBRE_TIPO_STOCK_TERMINADO']
 // Se fueron de los DOS archivos al partirlo: la tablet ya no elige fábrica
 // (la trae la cuenta del dispositivo) y el menú de la tablet no existe más.
 const RETIRADAS = ['unidadInicial', 'mostrarElegirUnidad', 'elegirUnidad', 'unidadesDeCarga', 'olvidarTodas',

@@ -134,6 +134,64 @@ module.exports = {
         "tipo_masa": "Común",
         "activo": true,
         "orden": 1
+      },
+      {
+        "id": "p2",
+        "unidad_negocio_id": "u-n",
+        "nombre": "Cono dulce",
+        "tipo_masa": "Común",
+        "activo": true,
+        "orden": 2,
+        "origen_producto_id": "p-d1"
+      },
+      {
+        "id": "p-d1",
+        "unidad_negocio_id": "u-d",
+        "nombre": "Cono dulce",
+        "tipo_masa": "Común",
+        "activo": true,
+        "orden": 1
+      }
+    ],
+    "stock_terminado_movimientos": [
+      {
+        "unidad_negocio_id": "u-n",
+        "presentacion_id": "pr1",
+        "marca_id": null,
+        "lote": "7021-1",
+        "cajas": 40,
+        "unidades": 24000,
+        "tipo": "produccion",
+        "orden_retiro_id": null,
+        "fecha": "2026-09-24",
+        "motivo": null,
+        "created_at": "2026-09-24T15:00:00Z"
+      },
+      {
+        "unidad_negocio_id": "u-n",
+        "presentacion_id": "pr1",
+        "marca_id": null,
+        "lote": "7021-1",
+        "cajas": -5,
+        "unidades": -3000,
+        "tipo": "traspaso_salida",
+        "orden_retiro_id": null,
+        "fecha": "2026-09-25",
+        "motivo": "Traspaso a otra fábrica",
+        "created_at": "2026-09-25T10:00:00Z"
+      },
+      {
+        "unidad_negocio_id": "u-n",
+        "presentacion_id": "pr2",
+        "marca_id": null,
+        "lote": "D-120-1",
+        "cajas": 12,
+        "unidades": 1200,
+        "tipo": "traspaso_entrada",
+        "orden_retiro_id": null,
+        "fecha": "2026-09-25",
+        "motivo": "Traspaso desde otra fábrica",
+        "created_at": "2026-09-25T11:00:00Z"
       }
     ],
     "producto_presentaciones": [
@@ -145,6 +203,17 @@ module.exports = {
         "media_caja": false,
         "empaque": null,
         "unidades_por_caja": 600,
+        "activa": true,
+        "orden": 1
+      },
+      {
+        "id": "pr2",
+        "producto_id": "p2",
+        "nombre": "Caja x 100",
+        "con_cono": false,
+        "media_caja": false,
+        "empaque": null,
+        "unidades_por_caja": 100,
         "activa": true,
         "orden": 1
       }
