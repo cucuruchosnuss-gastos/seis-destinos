@@ -963,6 +963,20 @@ module.exports = {
     ]
   },
   "rpc": {
+    // Valorizar (30/09/2026): precio_venta() propone el precio de cada
+    // producto. La lista tiene precio solo en la presentación sin cono; con
+    // cono suma el conito de la lista. Lo que no está acá no tiene precio.
+    "precio_venta": {
+      "__segun": [
+        { "si": { "p_presentacion_id": "pr1", "p_marca_id": null }, "r": {
+          "precio_unitario": 30, "precio_caja": 3000, "unidades_por_caja": 100, "producto_unitario": 30,
+          "conito_unitario": 0, "papel_conito": null, "lista": "Mayoristas", "recargo_pct": 0, "sin_precio": false } },
+        { "si": { "p_presentacion_id": "pr1c", "p_marca_id": "m1" }, "r": {
+          "precio_unitario": 38.5, "precio_caja": 3850, "unidades_por_caja": 100, "producto_unitario": 30,
+          "conito_unitario": 8.5, "papel_conito": "comun", "lista": "Mayoristas", "recargo_pct": 0, "sin_precio": false } }
+      ],
+      "__defecto": { "sin_precio": true, "motivo": "El producto no tiene precio en la lista base." }
+    },
     // Endosar a un proveedor (29/09/2026): el buscador, con la deuda por fábrica.
     "proveedores_para_endoso": [
       { "id": "pv1", "nombre": "ANATOLIA SRL", "cuit": "30712345678", "deuda": [{ "unidad_id": "u-n", "unidad": "Cucuruchos Nuss", "pendiente": 650000 }, { "unidad_id": "u-d", "unidad": "Dolce Pasta", "pendiente": 90000 }] },

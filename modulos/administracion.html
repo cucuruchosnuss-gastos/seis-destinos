@@ -289,6 +289,10 @@
     .ad-renglon__lotes { font-size: 0.8125rem; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
     .ad-renglon__plata { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .ad-renglon__precio { width: 9rem; }
+    /* De dónde sale el precio propuesto al valorizar ("lista X · $ por unidad
+       + conito"), o por qué no hay (en bordó: falta un dato). */
+    .ad-renglon__origen { white-space: normal; font-size: 0.8125rem; color: var(--ad-texto-secundario); max-width: 20rem; margin-left: auto; overflow-wrap: anywhere; }
+    .ad-renglon__origen--grave { color: var(--bordo-oscuro); font-weight: 600; }
     /* Una fila de la grilla de precios. La que tiene un precio nuevo sin
        guardar lleva el fondo naranja suave: es lo elegido/editado, no una
        validez. */
@@ -301,6 +305,7 @@
     @media (max-width: 599px) {
       .ad-renglon { grid-template-columns: minmax(0, 1fr); }
       .ad-renglon__plata { text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
+      .ad-renglon__origen { flex-basis: 100%; max-width: none; margin-left: 0; }
     }
     .ad-total { font-weight: 900; font-size: 1.25rem; text-align: right; margin: 0.5rem 0 0; font-variant-numeric: tabular-nums; }
     .ad-panel { border: 2px solid var(--naranja); border-radius: var(--radio-tarjeta); padding: 1rem; margin: 0 0 0.75rem; background: var(--color-fondo); }
@@ -1745,7 +1750,8 @@
       if (d.valorizar) {
         plata = `<div class="ad-renglon__plata"><label class="ad-dato__rotulo" for="ad-precio-${esc(it.id)}">${esc('Precio x ' + porQue)}</label>` +
           `<input type="text" class="ad-input ad-renglon__precio" id="ad-precio-${esc(it.id)}" data-precio="${esc(it.id)}" autocomplete="off">` +
-          `<div class="ad-texto-suave" data-subtotal="${esc(it.id)}">${esc(importeHoja(subtotalValorizar(d, it), moneda))}</div></div>`
+          `<div class="ad-texto-suave" data-subtotal="${esc(it.id)}">${esc(importeHoja(subtotalValorizar(d, it), moneda))}</div>` +
+          htmlOrigenPrecio(d.valorizar.origen?.[it.id]) + '</div>'
       } else if (d.orden.estado_valorizacion === 'valorizada') {
         plata = `<div class="ad-renglon__plata"><div>${esc(importeHoja(it.precio_caja, moneda) + ' x ' + porQue)}</div><div class="ad-fila__importe">${esc(importeHoja(it.subtotal, moneda))}</div></div>`
       }
@@ -1845,9 +1851,11 @@
 
     // ── Valorizar ─────────────────────────────────────────────────────────
 
-    // Los precios de la lista del cliente vigentes a la fecha del retiro: por
-    // presentación, el de fecha más nueva que no sea posterior. La MISMA
-    // regla que precio_vigente() en la base.
+    // Los precios de la lista del cliente vigentes a la fecha del retiro: el
+    // de fecha más nueva que no sea posterior. Al valorizar se usa SOLO para
+    // los INSUMOS (la regla de precio_vigente_insumo()); los productos van por
+    // precio_venta() de la base (30/09/2026), porque las listas tienen precio
+    // solo en la presentación sin cono y el conito aparte.
     // La clave de un precio: la presentación, o el insumo con 'ins:' adelante
     // (un precio de lista es de UNA de las dos cosas).
     function clavePrecio(x) {
@@ -1873,37 +1881,117 @@
       return (data ?? []).reduce((s, m) => s + (Number(m.importe) || 0), 0)
     }
 
+    // Un precio por unidad (hasta 4 decimales, como lo guarda la lista).
+    function textoPrecioUnitario(n) {
+      return '$ ' + formatearNumeroAr(n, { decimales: 4, minimos: 2 })
+    }
+
+    // De dónde sale el precio de un PRODUCTO, con lo que devolvió
+    // precio_venta(): "lista Heladerías · $ 135,23 por unidad + conito $ 8,50".
+    // Con cono sin conito cargado en la lista lo dice (no inventa "$ 0").
+    function textoOrigenPrecio(r, conCono) {
+      const partes = []
+      if (limpio(r?.lista)) partes.push('lista ' + limpio(r.lista))
+      let unidad = textoPrecioUnitario(r?.producto_unitario) + ' por unidad'
+      const conito = Number(r?.conito_unitario)
+      if (conCono) unidad += Number.isFinite(conito) && conito > 0 ? ' + conito ' + textoPrecioUnitario(conito) : ' (la lista no tiene precio de conito)'
+      partes.push(unidad)
+      return partes.join(' · ')
+    }
+
+    function htmlOrigenPrecio(o) {
+      if (!o?.texto) return ''
+      return `<div class="ad-renglon__origen${o.grave ? ' ad-renglon__origen--grave' : ''}">${esc(o.texto)}</div>`
+    }
+
+    // El precio de venta de UN producto con precio_venta() (la base): el de la
+    // presentación sin cono del mismo producto en la lista, más el conito de
+    // la lista si va con cono. Nunca tira: devuelve { precio } o { error }.
+    async function leerPrecioVenta(listaId, it, fecha) {
+      try {
+        const { data, error } = await supabase.rpc('precio_venta', {
+          p_lista_id: listaId, p_presentacion_id: it.presentacion_id, p_marca_id: it.marca_id ?? null, p_fecha: fecha,
+        })
+        if (error) throw error
+        if (!data || data.sin_precio) return { sinPrecio: true, motivo: limpio(data?.motivo) || 'El producto no tiene precio en la lista.' }
+        const precio = data.precio_caja === null || data.precio_caja === undefined || data.precio_caja === '' ? null : Number(data.precio_caja)
+        if (precio === null || !Number.isFinite(precio)) return { sinPrecio: true, motivo: 'La lista no devolvió un precio para este producto.' }
+        return { precio, datos: data }
+      } catch (err) {
+        console.error('No se pudo leer el precio de la lista:', err)
+        return { error: 'No se pudo leer el precio de la lista.' + (limpio(err?.message) ? ' ' + limpio(err.message) : '') }
+      }
+    }
+
+    let turnoValorizar = 0
+
     // Arma el panel de valorizar: los precios de la lista (o los que ya tenía
     // si se corrige), el saldo del cliente y su límite, para avisar ANTES.
+    // Los PRODUCTOS se proponen con precio_venta() —la lista tiene precio
+    // solo en la presentación sin cono y el conito aparte—; los INSUMOS, con
+    // la regla de precio_vigente_insumo() replicada acá.
     async function abrirValorizar() {
       const d = estado.orden
       const o = d?.orden
       if (!o || o.estado === 'anulada' || !puedeEn('retiros', 'precios', o.unidad_negocio_id) || estado.trabajando) return
+      const turno = ++turnoValorizar
       const cli = clienteDe(o.cliente_id)
-      const v = { precios: {}, desdeLista: new Set(), sinLista: !cli?.lista_precio_id, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
+      const listaId = cli?.lista_precio_id ?? null
+      const v = { precios: {}, desdeLista: new Set(), origen: {}, sinLista: !listaId, saldo: null, limite: cli?.limite_credito ?? null, error: null, cargando: true }
       d.valorizar = v
       pintarOrden()
-      try {
-        let vigentes = new Map()
-        if (cli?.lista_precio_id) {
-          const { data, error } = await supabase.from('lista_precios_items')
-            .select('presentacion_id, insumo_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)
-          if (error) throw error
-          vigentes = preciosVigentes(data, o.fecha)
+      const vigente = (it) => o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined
+      for (const it of d.items) v.precios[it.id] = vigente(it) ? Number(it.precio_caja) : null
+      // Una llamada por renglón DISTINTO (presentación + cono), en paralelo.
+      const productos = listaId ? d.items.filter(it => !it.insumo_id && it.presentacion_id && !vigente(it)) : []
+      const porClave = new Map()
+      for (const it of productos) {
+        const k = it.presentacion_id + '|' + (it.marca_id ?? '')
+        if (!porClave.has(k)) porClave.set(k, leerPrecioVenta(listaId, it, o.fecha))
+      }
+      const trabajoProductos = Promise.all([...porClave].map(async ([k, p]) => [k, await p]))
+      const trabajoResto = (async () => {
+        try {
+          let vigentes = new Map()
+          if (listaId && d.items.some(it => it.insumo_id && !vigente(it))) {
+            const { data, error } = await supabase.from('lista_precios_items')
+              .select('presentacion_id, insumo_id, precio_caja, vigente_desde').eq('lista_id', cli.lista_precio_id)
+            if (error) throw error
+            vigentes = preciosVigentes(data, o.fecha)
+          }
+          const saldo = await leerSaldoCliente(o.cliente_id)
+          return { vigentes, saldo }
+        } catch (err) {
+          console.error('No se pudieron traer los precios:', err)
+          return { error: 'No se pudieron traer los precios de la lista. Podés cargarlos a mano.' }
         }
+      })()
+      const [resProductos, resto] = await Promise.all([trabajoProductos, trabajoResto])
+      // Una respuesta vieja (se cerró o se volvió a abrir) no pisa la nueva.
+      if (turno !== turnoValorizar || estado.orden !== d || d.valorizar !== v) return
+      const resultados = new Map(resProductos)
+      for (const it of productos) {
+        const r = resultados.get(it.presentacion_id + '|' + (it.marca_id ?? ''))
+        if (r?.precio !== undefined) {
+          v.precios[it.id] = r.precio
+          v.desdeLista.add(it.id)
+          const conCono = !!(estado.catalogo?.presentaciones ?? []).find(p => p.id === it.presentacion_id)?.con_cono || !!r.datos?.papel_conito
+          v.origen[it.id] = { texto: textoOrigenPrecio(r.datos, conCono), grave: false }
+        } else {
+          v.origen[it.id] = { texto: r?.error ?? r?.motivo ?? 'No se pudo leer el precio de la lista.', grave: true }
+        }
+      }
+      if (resto.error) v.error = resto.error
+      else {
         for (const it of d.items) {
+          if (!it.insumo_id || vigente(it)) continue
           const k = clavePrecio(it)
-          if (o.estado_valorizacion === 'valorizada' && it.precio_caja !== null && it.precio_caja !== undefined) v.precios[it.id] = Number(it.precio_caja)
-          else if (vigentes.has(k)) { v.precios[it.id] = vigentes.get(k); v.desdeLista.add(it.id) }
-          else v.precios[it.id] = null
+          if (resto.vigentes.has(k)) { v.precios[it.id] = resto.vigentes.get(k); v.desdeLista.add(it.id) }
         }
-        v.saldo = await leerSaldoCliente(o.cliente_id)
-      } catch (err) {
-        console.error('No se pudieron traer los precios:', err)
-        v.error = 'No se pudieron traer los precios de la lista. Podés cargarlos a mano.'
+        v.saldo = resto.saldo
       }
       v.cargando = false
-      if (estado.orden === d) pintarOrden()
+      pintarOrden()
     }
 
     function subtotalValorizar(d, it) {
@@ -2015,6 +2103,7 @@
     }
 
     function cancelarValorizar() {
+      turnoValorizar++
       if (estado.orden) estado.orden.valorizar = null
       pintarOrden()
     }

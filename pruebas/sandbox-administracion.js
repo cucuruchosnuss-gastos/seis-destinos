@@ -22,7 +22,9 @@ const FUNCIONES_BASE = [
   'htmlSelloOrden', 'leerOrdenes', 'htmlFilaOrden', 'htmlListaOrdenes', 'htmlOpcionesClientes', 'pintarOrdenes',
   'cargarOrdenes', 'mostrarOrdenes', 'leerFiltros',
   'leerOrden', 'lotesDeRenglon', 'cantidadValorizable', 'htmlDatoAd', 'htmlRenglonOrden', 'htmlDetalleOrden', 'pintarOrden', 'pintarAccionesOrden', 'abrirOrden',
-  'clavePrecio', 'preciosVigentes', 'leerSaldoCliente', 'abrirValorizar', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
+  'clavePrecio', 'preciosVigentes', 'leerSaldoCliente', 'abrirValorizar',
+  // Valorizar con precio_venta() (30/09/2026)
+  'textoPrecioUnitario', 'textoOrigenPrecio', 'htmlOrigenPrecio', 'leerPrecioVenta', 'subtotalValorizar', 'totalValorizar', 'textoTotalValorizar',
   'saldoProyectado', 'avisoLimite', 'faltanPrecios', 'htmlValorizar', 'cambiarPrecio', 'parametrosValorizar',
   'guardarValorizacion', 'cancelarValorizar', 'pedirAnular', 'cancelarAnular', 'confirmarAnular',
   'ordenParaHoja', 'imprimirOrden', 'textoResultadoEnvio', 'enviarOrdenAd',
@@ -129,6 +131,7 @@ const PRELUDIO = `
   var turnoPortada = 0
   var turnoOrdenes = 0
   var turnoOrden = 0
+  var turnoValorizar = 0
   var turnoClientes = 0
   var turnoCliente = 0
   var turnoLista = 0

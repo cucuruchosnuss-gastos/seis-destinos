@@ -46,7 +46,26 @@ const LISTA = [
   { presentacion_id: 'pr2', precio_caja: 4000, vigente_desde: '2026-08-01' },
 ]
 
+// precio_venta() de la base (30/09/2026): la lista tiene precio solo en la
+// presentación sin cono; con cono suma el conito de la lista.
+const PRECIO_VENTA = {
+  'pr1|': { precio_unitario: 30, precio_caja: 3000, unidades_por_caja: 100, producto_unitario: 30, conito_unitario: 0, papel_conito: null, lista: 'Heladerías', recargo_pct: 0, sin_precio: false },
+  'pr2|m1': { precio_unitario: 40, precio_caja: 4000, unidades_por_caja: 100, producto_unitario: 30, conito_unitario: 10, papel_conito: 'comun', lista: 'Heladerías', recargo_pct: 0, sin_precio: false },
+}
+function rpcPrecioVenta(tabla = RESP_PV, llamadas = []) {
+  return async (n, p) => {
+    if (n !== 'precio_venta') return { data: null, error: null }
+    llamadas.push(p)
+    const r = tabla[p.p_presentacion_id + '|' + (p.p_marca_id ?? '')]
+    if (typeof r === 'function') return r(p)
+    return r ?? { data: { sin_precio: true, motivo: 'El producto no tiene precio en la lista base.' }, error: null }
+  }
+}
+// Envuelve cada fila de PRECIO_VENTA como respuesta de la rpc.
+const RESP_PV = Object.fromEntries(Object.entries(PRECIO_VENTA).map(([k, v]) => [k, { data: v, error: null }]))
+
 function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }], lotes = null } = {}) {
+  S.__setRpc(rpcPrecioVenta())
   S.estado.clientes = CLIENTES
   S.estado.catalogo = CAT
   S.estado.catalogoEmpresa = 'u-n'
@@ -277,6 +296,119 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     chk('corregir arranca con los precios que ya tenía (no los de la lista)', d.valorizar.precios.i1 === 3100)
     chk('la corrección entra por la diferencia: saldo 127.000 − 46.000 + 47.000', S.saldoProyectado(d) === 128000)
   }))
+}
+
+// ── Valorizar con precio_venta() (30/09/2026) ───────────────────────────────
+// Las listas nuevas tienen precio solo en la presentación SIN cono y el
+// conito aparte: el precio de cada producto lo propone la base.
+{
+  const S = nuevo()
+  preparar(S, { items: [...ITEMS, { ...ITEMS[1], id: 'i2b', orden: 3, cajas: 1, unidades: 100 }] })
+  const llamadas = []
+  S.__setRpc(rpcPrecioVenta(RESP_PV, llamadas))
+  esperas.push(S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
+    const d = S.estado.orden
+    const v = d.valorizar
+    chk('los productos se valorizan con precio_venta (sin cono y con cono)', v.precios.i1 === 3000 && v.precios.i2 === 4000 && v.precios.i2b === 4000)
+    chk('una llamada por renglón DISTINTO (presentación + cono)', llamadas.length === 2, JSON.stringify(llamadas))
+    const p1 = llamadas.find(p => p.p_presentacion_id === 'pr1')
+    const p2 = llamadas.find(p => p.p_presentacion_id === 'pr2')
+    chk('con la lista del cliente, la fecha del retiro y el cono del renglón', p1 && p1.p_lista_id === 'l1' && p1.p_fecha === '2026-09-20' && p1.p_marca_id === null && p2 && p2.p_marca_id === 'm1')
+    chk('no lee lista_precios_items si no hay insumos', !S.__llamadas.consultas.some(c => c[0] === 'lista_precios_items'))
+    const h = S.__els.get('ad-orden-cuerpo').innerHTML
+    chk('con cono dice de dónde sale: unidad + conito', /lista Heladerías · \$ 30,00 por unidad \+ conito \$ 10,00/.test(h), h)
+    chk('sin cono, solo la unidad', v.origen.i1.texto === 'lista Heladerías · $ 30,00 por unidad' && !v.origen.i1.grave)
+    chk('los propuestos cuentan como de la lista', v.desdeLista.has('i1') && v.desdeLista.has('i2'))
+    const pv = S.parametrosValorizar(d)
+    chk('se mandan TODOS los precios a valorizar_orden_retiro', pv.p_precios.i1 === 3000 && pv.p_precios.i2 === 4000 && pv.p_precios.i2b === 4000 && Object.keys(pv.p_precios).length === 3)
+  }))
+}
+{
+  const S = nuevo()
+  preparar(S)
+  const tabla = {
+    'pr1|': { data: { sin_precio: true, motivo: 'El producto no tiene precio en la lista base.' }, error: null },
+    'pr2|m1': { data: null, error: { message: 'No tenés permiso para ver precios.' } },
+  }
+  S.__setRpc(rpcPrecioVenta(tabla))
+  esperas.push(S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
+    const v = S.estado.orden.valorizar
+    const h = S.__els.get('ad-orden-cuerpo').innerHTML
+    chk('sin_precio: el campo vacío (nunca un número inventado)', v.precios.i1 === null && !v.desdeLista.has('i1'))
+    chk('y el motivo de la base en bordó', v.origen.i1.grave && /ad-renglon__origen--grave">El producto no tiene precio en la lista base\./.test(h))
+    chk('error de la llamada: vacío y "No se pudo leer el precio de la lista"', v.precios.i2 === null && v.origen.i2.grave && /No se pudo leer el precio de la lista\. No tenés permiso para ver precios\./.test(h))
+    chk('nunca "$ 0": el subtotal sin precio dice "—"', !/\$ 0,00/.test(h) && /data-subtotal="i1">—</.test(h))
+    chk('el total dice que faltan precios', /Total: faltan precios/.test(h))
+  }))
+}
+{
+  const S = nuevo()
+  preparar(S)
+  S.estado.clientes = [{ ...CLIENTES[1], id: 'c1' }]   // sin lista
+  const llamadas = []
+  S.__setRpc(rpcPrecioVenta(RESP_PV, llamadas))
+  esperas.push(S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
+    chk('cliente sin lista: no se llama a precio_venta y se carga a mano', llamadas.length === 0 && S.estado.orden.valorizar.precios.i1 === null)
+  }))
+}
+{
+  // Corregir: los renglones con precio guardado no se vuelven a pedir.
+  const S = nuevo()
+  preparar(S, { orden: { ...ORDEN, estado_valorizacion: 'valorizada', total: 31000 }, items: [{ ...ITEMS[0], precio_caja: 3100, subtotal: 31000 }, ITEMS[1]] })
+  const llamadas = []
+  S.__setRpc(rpcPrecioVenta(RESP_PV, llamadas))
+  esperas.push(S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
+    const v = S.estado.orden.valorizar
+    chk('corregir conserva el precio guardado y pide solo el que falta', v.precios.i1 === 3100 && v.precios.i2 === 4000 && llamadas.length === 1 && llamadas[0].p_presentacion_id === 'pr2')
+  }))
+}
+{
+  // Turno: una respuesta vieja no pisa la de un panel abierto de nuevo.
+  const S = nuevo()
+  preparar(S)
+  let soltar = null
+  let n = 0
+  const lenta = { 'pr1|': () => { n++; return n === 1 ? new Promise(r => { soltar = () => r({ data: { ...PRECIO_VENTA['pr1|'], precio_caja: 1 }, error: null }) }) : { data: PRECIO_VENTA['pr1|'], error: null } }, 'pr2|m1': RESP_PV['pr2|m1'] }
+  S.__setRpc(rpcPrecioVenta(lenta))
+  esperas.push(S.abrirOrden('o1').then(async () => {
+    const vieja = S.abrirValorizar()
+    await Promise.resolve()
+    S.cancelarValorizar()
+    await S.abrirValorizar()
+    const v = S.estado.orden.valorizar
+    soltar()
+    await vieja
+    chk('la respuesta vieja no pisa el panel nuevo', S.estado.orden.valorizar === v && v.precios.i1 === 3000)
+    chk('y el panel nuevo quedó cargado', !S.estado.orden.valorizar.cargando)
+    // Cerrar mientras carga: la respuesta que llega después no lo reabre.
+    n = 0
+    const otra = S.abrirValorizar()
+    await Promise.resolve()
+    S.cancelarValorizar()
+    soltar()
+    await otra
+    chk('cerrar el panel mientras carga: la respuesta tarde no lo reabre', S.estado.orden.valorizar === null)
+  }))
+}
+{
+  // Insumo intacto: sigue con la lista (precio_vigente_insumo) y no llama a precio_venta.
+  const S = nuevo()
+  preparar(S, { items: [{ id: 'i3', orden: 1, presentacion_id: null, marca_id: null, cajas: null, unidades: null, insumo_id: 'ins-h', cantidad: 2, precio_caja: null, subtotal: null, lote: null }] })
+  S.__tablas.lista_precios_items = [{ presentacion_id: null, insumo_id: 'ins-h', precio_caja: 100, vigente_desde: '2026-09-01' }]
+  const llamadas = []
+  S.__setRpc(rpcPrecioVenta(RESP_PV, llamadas))
+  esperas.push(S.abrirOrden('o1').then(() => S.abrirValorizar()).then(() => {
+    const v = S.estado.orden.valorizar
+    chk('un insumo no llama a precio_venta y sale de la lista', llamadas.length === 0 && v.precios.i3 === 100 && v.desdeLista.has('i3') && !v.origen.i3)
+  }))
+}
+{
+  // HTML malicioso en el nombre de la lista y en el motivo de la base.
+  const S = nuevo()
+  chequearMarcas(chk, 'origen del precio', S.htmlOrigenPrecio({ texto: S.textoOrigenPrecio({ lista: marca('lista'), producto_unitario: 1, conito_unitario: 1 }, true) }), ['lista'])
+  chequearMarcas(chk, 'motivo sin precio', S.htmlOrigenPrecio({ texto: marca('motivo-pv'), grave: true }), ['motivo-pv'])
+  chk('con cono sin conito cargado lo dice (no "$ 0")', /la lista no tiene precio de conito/.test(S.textoOrigenPrecio({ lista: 'X', producto_unitario: 30, conito_unitario: 0 }, true)))
+  chk('el precio por unidad con hasta 4 decimales', S.textoPrecioUnitario(135.2345) === '$ 135,2345' && S.textoPrecioUnitario(135.2) === '$ 135,20')
 }
 
 // ── Anular ─────────────────────────────────────────────────────────────────
