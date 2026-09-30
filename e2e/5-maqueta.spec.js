@@ -80,9 +80,11 @@ const PANTALLAS = [
       // Varios lotes: "Completar con los más viejos" reparte las 30 entre los dos
       // lotes (8 + 15 = 23) y lo que falta queda como faltante, en bordó.
       await page.locator('[data-r-completar="0"]').click()
-      await expect(page.locator('[data-r-lotes-resumen="0"]')).toContainText('falta asignar')
-      await expect(page.locator('[data-r-lotes-resumen="0"] [data-r-faltante]')).toContainText('queda pendiente de revisión en Administración')
+      await expect(page.locator('[data-r-lotes-resumen="0"]')).toContainText('Faltan 7 cajas')
+      await expect(page.locator('[data-r-faltante-caja="0"] [data-r-faltante]')).toContainText('queda pendiente de revisión en Administración')
       // Un renglón de insumo, buscado por el buscador que filtra todo junto.
+      // En el celular el renglón se arma en su propio paso: se vuelve a la orden.
+      if (await page.locator('#rt-editor-volver').isVisible()) await page.locator('#rt-editor-volver').click()
       await page.locator('#rt-agregar').click()
       await page.locator('[data-r-buscar="1"]').fill('harina')
       await page.locator('[data-r-insumo="1"]').first().click()
@@ -91,9 +93,9 @@ const PANTALLAS = [
       // Los lotes de un insumo, de lotes_insumo_para_retiro() (sin permiso de Stock).
       await expect(page.locator('[data-r-lote-cant="1"][data-lote="H-0910"]')).toBeVisible()
       await page.locator('[data-r-lote-cant="1"][data-lote="H-0910"]').fill('25,5')
-      await expect(page.locator('[data-r-lotes-resumen="1"]')).toContainText('asignado todo')
+      await expect(page.locator('[data-r-lotes-resumen="1"]')).toContainText('Falta asignar 0')
     }],
-    ['resumen', async (page) => { await page.locator('#rt-revisar').click(); await expect(page.locator('#rt-resumen')).toContainText('25,5 kg') }],
+    ['resumen', async (page) => { if (await page.locator('#rt-editor-volver').isVisible()) await page.locator('#rt-editor-volver').click(); await page.locator('#rt-revisar').click(); await expect(page.locator('#rt-resumen')).toContainText('25,5 kg') }],
     ['hecho', async (page) => { await page.locator('#rt-confirmar').click(); await expect(page.locator('.rt-codigo-grande')).toBeVisible() }],
     ['hoja', async (page, info) => { await medirHoja(page, '#rt-hecho-imprimir', '#rt-impresion', info, 'carga') }, 'solo1280'],
   ]],

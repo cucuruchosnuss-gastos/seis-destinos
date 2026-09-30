@@ -16,6 +16,12 @@ correrMutaciones({
     'htmlMarcasRenglon', 'htmlConoRenglon', 'htmlPresentacionesRenglon', 'htmlLoteRenglon', 'htmlRenglon',
     'htmlResumen', 'htmlDatoRt', 'htmlFaltantes', 'htmlHecho', 'htmlEleccionRenglon'],
   equivalentes: [
+    { expr: 'esc(total.slice(0, k))', motivo: 'lo de antes del primer " + " es siempre "N cajas" (enteroHoja), del código' },
+    { expr: 'esc(estado.errorClientes)', motivo: 'texto constante del código: lo pone asegurarDatosEmpresa()' },
+    { expr: 'esc(i)', motivo: 'el índice del renglón (un número) o "nuevo", del código' },
+    { expr: 'esc(conStock)', motivo: 'un conteo (número)' },
+    { expr: 'esc(fechaCorta(l.desde).slice(0, 5))', motivo: 'la fecha del lote (columna date) como dd/mm' },
+    { expr: 'esc(sub)', motivo: 'textos del código: con/sin cono y media caja / caja completa' },
     { expr: 'esc(q)', motivo: 'lo prueba test-buscar-clientes.js: el «Ningún cliente coincide con…» de lo que devolvió buscar_clientes()' },
     { expr: 'esc(estado.errorCatalogo)', motivo: 'texto constante del código: lo pone asegurarDatosEmpresa()' },
     { expr: 'esc(falta)', motivo: 'texto constante del código que devuelve faltanRenglon()' },
@@ -50,7 +56,7 @@ correrMutaciones({
     { nombre: 'no se recuerda la empresa', de: '      guardarPreferencia(CLAVE_EMPRESA, id)\n', a: '' },
     { nombre: 'cargan también las empresas de ver', de: "      const lista = (estado.empresas ?? []).filter(e => puedeCargarEn(e.id))", a: "      const lista = (estado.empresas ?? []).filter(e => true)" },
     { nombre: 'la fábrica de pruebas se ve', de: '      return sinUnidadesDePrueba(lista, estado.fabrica)', a: '      return lista' },
-    { nombre: 'el banner se esconde con empresa elegida', de: "      el.hidden = !empresaActual() || estado.vista === 'rt-vista-empresa'", a: '      el.hidden = true' },
+    { nombre: 'el banner se esconde con empresa elegida', de: "      el.hidden = !empresaActual() || ['rt-vista-empresa', 'rt-vista-mis', 'rt-vista-mio'].includes(estado.vista)", a: '      el.hidden = true' },
     // El cliente
     { nombre: 'no busca por apodo', de: '        (Array.isArray(c.apodos) ? c.apodos : []).some(a => normalizar(a).includes(q)))', a: '        false)' },
     { nombre: 'no busca por razón social', de: ' || normalizar(c.razon_social).includes(q) ||', a: ' ||' },
@@ -109,9 +115,9 @@ correrMutaciones({
     { nombre: 'solo el primer renglón', de: '        p_items: f.renglones.map(itemParaBase),', a: '        p_items: f.renglones.slice(0, 1).map(itemParaBase),' },
     // Confirmar
     { nombre: 'confirmar con faltas manda igual', de: "      if (faltanOrden(f).length) { mostrarVista('rt-vista-form'); pintarRenglones(); return }\n", a: '' },
-    { nombre: 'revisar avanza con faltas', de: '      if (faltanOrden(f).length) { pintarRenglones(); return }\n      mostrarVista(\'rt-vista-resumen\')', a: "      mostrarVista('rt-vista-resumen')" },
-    { nombre: 'el error de la base se tapa', de: "          : (err?.message || 'No se pudo confirmar la orden. Probá de nuevo.'))", a: "          : 'No se pudo confirmar la orden. Probá de nuevo.')" },
-    { nombre: 'un corte de red no dice que no duplica', de: 'Tocá «Confirmar la orden» de nuevo: si ya había entrado, no se duplica.', a: 'Probá de nuevo.' },
+    { nombre: 'revisar avanza con faltas', de: '      if (faltanOrden(f).length) { pintarRenglones(); return }\n      f.editando = null\n', a: '      f.editando = null\n' },
+    { nombre: 'el error de la base se tapa', de: "red ? TEXTO_SIN_SENAL : (err?.message || 'No se pudo confirmar la orden. Probá de nuevo.'), red)", a: "red ? TEXTO_SIN_SENAL : 'No se pudo confirmar la orden. Probá de nuevo.', red)" },
+    { nombre: 'un corte de red no dice que no duplica', de: 'tocá «Reintentar». Si ya había entrado, no se duplica.', a: 'tocá «Reintentar».' },
     { nombre: 'el botón queda trabado después del error', de: "        console.error('No se pudo confirmar la orden:', err)\n        estado.confirmando = false", a: "        console.error('No se pudo confirmar la orden:', err)" },
     { nombre: 'la orden no se limpia al confirmar', de: '        estado.form = null\n        estado.mis = null\n        guardarBorrador()', a: '        estado.mis = null' },
     // Lo que faltó
@@ -121,5 +127,8 @@ correrMutaciones({
     // El borrador
     { nombre: 'el borrador no guarda el uuid', de: '        const { error, intentado, ...resto } = f', a: '        const { error, intentado, uuid, ...resto } = f' },
     { nombre: 'el borrador de otra empresa se retoma', de: '      if (!b || !empresasDeCarga().some(e => e.id === b.empresaId)) return false', a: '      if (!b) return false' },
+    // El celular (diseño 2026)
+    { nombre: 'el encabezado de columnas se ve en el celular', de: '    .rt-orden-cab { display: none; }\n', a: '' },
+    { nombre: 'el pie del celular se esconde', de: '    .rt-pie-orden { display: contents; }\n', a: '    .rt-pie-orden { display: none; }\n' },
   ],
 })

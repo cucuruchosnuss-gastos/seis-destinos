@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&amp;family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E4E0D9; -webkit-font-smoothing: antialiased; }
+  a { color: #C2410C; text-decoration: none; }
+  a:hover { color: #8F2F08; text-decoration: underline; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #D6CFC4; border-radius: 8px; }
+</style>
+</helmet>
+<div style="padding: 56px; display: flex; flex-direction: column; gap: 48px; font-family: 'Figtree', sans-serif; color: #1C1A17; width: max-content; min-width: 100%;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 900px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: oklch(0.955 0.031 108); color: oklch(0.55 0.11 108); display: flex; align-items: center; justify-content: center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0"></path></svg>
+      </div>
+      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; font-weight: 800; letter-spacing: -0.02em;">Órdenes de retiro · la carga</div>
+    </div>
+    <div style="font-size: 17px; color: #6B645A; line-height: 1.5; text-wrap: pretty;">Para el depósito: Franco, Emanuel, Manuel y Mauricio cargan el retiro desde el celular mientras suben la mercadería al camión. No ven precios, saldos ni órdenes de otros. Primero el celular, después la compu y la hoja impresa.</div>
+  </div>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="1">
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid #D6CFC4; padding-bottom: 10px;">
+        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 30px; font-weight: 800;">{{ g.title }}</div>
+        <div style="font-size: 16px; color: #6B645A;">{{ g.sub }}</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 40px 36px; align-items: flex-start;">
+        <sc-for list="{{ g.screens }}" as="s" hint-placeholder-count="3">
+          <div style="display: flex; flex-direction: column; gap: 10px; width: {{ s.w }}px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 14px; background: #1C1A17; color: #fff; border-radius: 8px; padding: 3px 9px;">{{ s.id }}</div>
+              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 19px; font-weight: 700;">{{ s.title }}</div>
+            </div>
+            <div style="font-size: 13px; font-weight: 700; color: #9A9287;">{{ s.sizeLabel }}</div>
+            <div style="font-size: 14.5px; color: #6B645A; line-height: 1.45; min-height: 42px; text-wrap: pretty;">{{ s.note }}</div>
+            <div style="width: {{ s.w }}px; height: {{ s.h }}px; background: {{ s.frameBg }}; border-radius: {{ s.radius }}px; overflow: hidden; box-shadow: 0 30px 60px -20px rgba(28,26,23,0.35), 0 0 0 1px rgba(28,26,23,0.1); display: flex; position: relative;">
+
+              <sc-if value="{{ s.mob }}">
+                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                  <div style="height: 44px; flex-shrink: 0; background: #FFFFFF; display: flex; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 700;">16:04</div>
+                  <div style="height: 58px; flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; display: flex; align-items: center; gap: 4px; padding: 0 12px 0 4px;">
+                    <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; opacity: {{ s.backOp }};">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1A17" style="stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round;"><path d="M15 6l-6 6 6 6"></path></svg>
+                    </div>
+                    <div style="flex: 1; min-width: 0; line-height: 1.1;">
+                      <div style="font-size: 12.5px; font-weight: 600; color: #6B645A;">{{ s.hSub }}</div>
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.hTitle }}</div>
+                    </div>
+                    <sc-if value="{{ s.hasFab }}">
+                      <div style="height: 36px; padding: 0 10px 0 5px; border-radius: 10px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700;">
+                        <span style="width: 24px; height: 24px; border-radius: 999px; background: oklch(0.55 0.11 55); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;">N</span>Nuss
+                      </div>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ s.hasSteps }}">
+                    <div style="flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; padding: 8px 12px 10px; display: flex; gap: 4px;">
+                      <sc-for list="{{ s.steps }}" as="st" hint-placeholder-count="4">
+                        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+                          <div style="height: 4px; border-radius: 999px; background: {{ st.bar }};"></div>
+                          <div style="font-size: 12px; font-weight: {{ st.fw }}; color: {{ st.fg }}; white-space: nowrap;">{{ st.l }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 12px;">
+                    <sc-if value="{{ s.k.fab }}">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 700; padding: 4px 4px 0;">¿De qué fábrica es el retiro?</div>
+                      <div style="font-size: 15px; color: #6B645A; padding: 0 4px 4px;">Cada fábrica numera sus retiros con su letra.</div>
+                      <div style="flex: 1; min-height: 0; display: grid; grid-auto-rows: 1fr; gap: 10px;">
+                        <sc-for list="{{ fabs }}" as="f" hint-placeholder-count="3">
+                          <div style="background: #FFFFFF; border: 2px solid #E7E3DC; border-radius: 16px; display: flex; align-items: center; gap: 16px; padding: 0 18px;">
+                            <div style="width: 64px; height: 64px; border-radius: 999px; background: {{ f.c }}; color: #fff; font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{ f.ini }}</div>
+                            <div style="flex: 1; min-width: 0;">
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 23px; font-weight: 700;">{{ f.n }}</div>
+                              <div style="font-size: 14.5px; color: #6B645A;">El próximo es <strong style="color: #1C1A17; font-variant-numeric: tabular-nums;">{{ f.next }}</strong></div>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 6l6 6-6 6"></path></svg>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.cli }}">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700; padding: 2px 4px 0;">¿Quién retira?</div>
+                      <div style="height: 52px; flex-shrink: 0; border-radius: 14px; background: #FFFFFF; border: 2px solid #C2410C; display: flex; align-items: center; gap: 10px; padding: 0 14px; font-size: 17px; font-weight: 600;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>
+                        <span>los forte</span><span style="width: 2px; height: 22px; background: #C2410C; margin-left: -8px;"></span>
+                        <span style="flex: 1;"></span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.4; stroke-linecap: round;"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                      </div>
+                      <div style="font-size: 12.5px; color: #6B645A; padding: 0 4px;">Busca por nombre, razón social o apodo.</div>
+                      <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; overflow: hidden;">
+                        <sc-for list="{{ cliRes }}" as="c" hint-placeholder-count="2">
+                          <div style="display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 14px; border-top: 1px solid #F3F0EB; background: {{ c.bg }};">
+                            <div style="width: 40px; height: 40px; border-radius: 999px; background: #F1EEE9; color: #3D3831; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{ c.ini }}</div>
+                            <div style="flex: 1; min-width: 0; line-height: 1.25;">
+                              <div style="font-size: 17px; font-weight: 800;">{{ c.n }}</div>
+                              <div style="font-size: 13.5px; color: #6B645A;">{{ c.pre }}<span style="background: #FDEEE4; color: #8F2F08; font-weight: 700; border-radius: 4px; padding: 0 3px;">{{ c.hl }}</span>{{ c.post }}</div>
+                            </div>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C2410C" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 6l6 6-6 6"></path></svg>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; padding: 8px 4px 0;">LOS QUE MÁS RETIRAN DE NUSS</div>
+                      <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; overflow: hidden;">
+                        <sc-for list="{{ cliRec }}" as="c" hint-placeholder-count="4">
+                          <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 14px; border-top: 1px solid #F3F0EB;">
+                            <div style="flex: 1; min-width: 0; line-height: 1.25;">
+                              <div style="font-size: 16px; font-weight: 700;">{{ c.n }}</div>
+                              <div style="font-size: 13px; color: #6B645A;">{{ c.s }}</div>
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8B0A4" style="stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round;"><path d="M9 6l6 6-6 6"></path></svg>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.cat }}">
+                      <div style="height: 50px; flex-shrink: 0; border-radius: 14px; background: #FFFFFF; border: 2px solid #C2410C; display: flex; align-items: center; gap: 10px; padding: 0 14px; font-size: 17px; font-weight: 600;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>
+                        <span>{{ s.d.q }}</span><span style="flex: 1;"></span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.4; stroke-linecap: round;"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                      </div>
+                      <div style="flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 10px;">
+                        <sc-for list="{{ s.d.groups }}" as="gr" hint-placeholder-count="3">
+                          <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; overflow: hidden; flex-shrink: 0;">
+                            <div style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; background: {{ gr.t }}; border-bottom: 2px solid {{ gr.c }};">
+                              <span style="width: 10px; height: 10px; border-radius: 3px; background: {{ gr.c }};"></span>
+                              <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.05em; color: {{ gr.fg }}; flex: 1;">{{ gr.n }}</span>
+                              <span style="font-size: 12.5px; font-weight: 700; color: {{ gr.fg }};">{{ gr.count }}</span>
+                            </div>
+                            <sc-for list="{{ gr.items }}" as="it" hint-placeholder-count="3">
+                              <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 12px; border-top: 1px solid #F3F0EB;">
+                                <span style="width: 8px; height: 30px; border-radius: 3px; background: {{ it.c }}; flex-shrink: 0; opacity: {{ it.op }};"></span>
+                                <div style="flex: 1; min-width: 0; line-height: 1.2; opacity: {{ it.op }};">
+                                  <div style="font-size: 15.5px; font-weight: 700;">{{ it.n }}</div>
+                                  <div style="display: flex; gap: 6px; align-items: center; margin-top: 3px; flex-wrap: wrap;">
+                                    <sc-if value="{{ it.hasCone }}"><span style="padding: 1px 8px; border-radius: 999px; background: {{ it.cBg }}; color: {{ it.cFg }}; font-size: 11.5px; font-weight: 800; letter-spacing: 0.03em;">{{ it.cone }}</span></sc-if>
+                                    <span style="font-size: 12.5px; color: #6B645A;">{{ it.sub }}</span>
+                                  </div>
+                                </div>
+                                <sc-if value="{{ it.ok }}">
+                                  <div style="text-align: right; line-height: 1.05;">
+                                    <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums;">{{ it.q }}</div>
+                                    <div style="font-size: 12px; color: #6B645A;">{{ it.u }}</div>
+                                  </div>
+                                </sc-if>
+                                <sc-if value="{{ it.none }}">
+                                  <span style="height: 24px; padding: 0 9px; border-radius: 7px; background: #F5E8EC; color: #7A2E42; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; white-space: nowrap;">sin stock</span>
+                                </sc-if>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.lotes }}">
+                      <div style="background: {{ s.d.pt }}; border-left: 6px solid {{ s.d.pc }}; border-radius: 14px; padding: 10px 14px; flex-shrink: 0;">
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700; color: {{ s.d.pdk }};">{{ s.d.prod }}</div>
+                        <div style="display: flex; align-items: center; gap: 6px; margin-top: 3px;">
+                          <sc-if value="{{ s.d.hasCone }}"><span style="padding: 1px 8px; border-radius: 999px; background: {{ s.d.cBg }}; color: {{ s.d.cFg }}; font-size: 12px; font-weight: 800;">{{ s.d.cone }}</span></sc-if>
+                          <span style="font-size: 14px; color: #3D3831;">{{ s.d.sub }}</span>
+                        </div>
+                      </div>
+                      <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                        <div style="flex: 1; font-size: 16px; font-weight: 700;">¿Cuántas cajas se lleva?</div>
+                        <div style="width: 48px; height: 48px; border-radius: 12px; border: 2px solid #D6CFC4; font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center;">−</div>
+                        <div style="width: 72px; height: 52px; border-radius: 12px; border: 3px solid #C2410C; background: #FFF8F3; font-family: 'Bricolage Grotesque', sans-serif; font-size: 30px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ s.d.pedido }}</div>
+                        <div style="width: 48px; height: 48px; border-radius: 12px; border: 2px solid #D6CFC4; font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center;">+</div>
+                      </div>
+                      <div style="flex: 1; min-height: 0; background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px 8px;">
+                          <div style="flex: 1; line-height: 1.2;">
+                            <div style="font-size: 15px; font-weight: 800;">¿De qué lotes?</div>
+                            <div style="font-size: 12.5px; color: #6B645A;">El más viejo arriba</div>
+                          </div>
+                          <div style="height: 40px; padding: 0 12px; border-radius: 11px; border: 2px solid #C2410C; color: #C2410C; font-size: 14px; font-weight: 800; display: flex; align-items: center;">Completar con los más viejos</div>
+                        </div>
+                        <div style="flex: 1; min-height: 0; overflow: auto;">
+                          <sc-for list="{{ s.d.lots }}" as="l" hint-placeholder-count="3">
+                            <div style="display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 6px 14px; border-top: 1px solid #F3F0EB; background: {{ l.bg }};">
+                              <div style="flex: 1; min-width: 0; line-height: 1.2;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                  <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums;">Lote {{ l.n }}</span>
+                                  <sc-if value="{{ l.old }}"><span style="height: 20px; padding: 0 7px; border-radius: 6px; background: oklch(0.93 0.07 90); color: #3B2E00; font-size: 11px; font-weight: 800; display: flex; align-items: center;">EL MÁS VIEJO</span></sc-if>
+                                </div>
+                                <div style="font-size: 13.5px; color: #6B645A;">del {{ l.f }} · quedan <strong style="color: #1C1A17;">{{ l.q }}</strong></div>
+                              </div>
+                              <div style="width: 76px; height: 50px; border-radius: 12px; border: 2px solid {{ l.bd }}; background: #FFFFFF; font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: {{ l.fg }}; font-variant-numeric: tabular-nums;">{{ l.v }}</div>
+                            </div>
+                          </sc-for>
+                        </div>
+                        <div style="border-top: 2px solid #E7E3DC; background: #FAF8F5; padding: 8px 14px; display: flex; align-items: center; gap: 10px;">
+                          <div style="flex: 1; line-height: 1.2;">
+                            <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: #6B645A;">ASIGNADO</div>
+                            <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 800;">{{ s.d.asig }} <span style="font-size: 15px; color: #6B645A; font-weight: 600;">de {{ s.d.pedido }}</span></div>
+                          </div>
+                          <div style="height: 36px; padding: 0 12px; border-radius: 10px; background: {{ s.d.faltaBg }}; color: {{ s.d.faltaFg }}; font-size: 14.5px; font-weight: 800; display: flex; align-items: center; gap: 6px;">{{ s.d.faltaL }}</div>
+                        </div>
+                      </div>
+                      <sc-if value="{{ s.d.faltante }}">
+                        <div style="flex-shrink: 0; background: #F5E8EC; border: 1.5px solid #E8CDD5; border-radius: 14px; padding: 10px 12px; display: flex; gap: 10px;">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A2E42" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;"><path d="M12 3l9.5 17h-19zM12 10v4M12 17.5v.01"></path></svg>
+                          <div style="line-height: 1.35;">
+                            <div style="font-size: 15.5px; font-weight: 800; color: #5C2233;">Hay 36 y se lleva 50</div>
+                            <div style="font-size: 14px; color: #5C2233;">Se puede confirmar igual. Las 14 que faltan quedan pendientes de revisión en Administración.</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.orden }}">
+                      <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                        <div style="flex: 1; min-width: 0; line-height: 1.2;">
+                          <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287;">RETIRA</div>
+                          <div style="font-size: 17px; font-weight: 800;">Salvador Loforte</div>
+                          <div style="font-size: 13px; color: #6B645A;">“Los Forte” · Av. Colón 2150</div>
+                        </div>
+                        <div style="font-size: 14.5px; font-weight: 800; color: #C2410C;">Cambiar</div>
+                      </div>
+                      <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287; padding: 2px 4px 0; display: flex;"><span style="flex: 1;">LO QUE SE LLEVA · 4 RENGLONES</span><span style="color: #1C1A17;">112 cajas + 100 u</span></div>
+                      <div style="flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px;">
+                        <sc-for list="{{ orden }}" as="r" hint-placeholder-count="4">
+                          <div style="background: #FFFFFF; border: 1px solid {{ r.bd }}; border-left: 6px solid {{ r.c }}; border-radius: 12px; padding: 8px 10px 8px 12px; display: flex; gap: 10px; align-items: center; flex-shrink: 0;">
+                            <div style="flex: 1; min-width: 0; line-height: 1.25;">
+                              <div style="font-size: 15px; font-weight: 800;">{{ r.n }}</div>
+                              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 2px;">
+                                <sc-if value="{{ r.hasCone }}"><span style="padding: 1px 8px; border-radius: 999px; background: {{ r.cBg }}; color: {{ r.cFg }}; font-size: 11.5px; font-weight: 800;">{{ r.cone }}</span></sc-if>
+                                <span style="font-size: 12.5px; color: #6B645A; font-variant-numeric: tabular-nums;">{{ r.lotes }}</span>
+                              </div>
+                              <sc-if value="{{ r.falta }}"><div style="font-size: 12.5px; font-weight: 800; color: #7A2E42; margin-top: 2px;">{{ r.falta }}</div></sc-if>
+                            </div>
+                            <div style="text-align: right; line-height: 1.05;">
+                              <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 800;">{{ r.q }}</div>
+                              <div style="font-size: 12px; color: #6B645A;">{{ r.u }}</div>
+                            </div>
+                          </div>
+                        </sc-for>
+                        <div style="min-height: 48px; border-radius: 12px; border: 2px dashed #F0C3A6; background: #FFF8F3; color: #8F2F08; font-size: 15.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">+ Agregar otro producto</div>
+                      </div>
+                      <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; padding: 8px 14px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                          <div style="flex: 1; line-height: 1.2;">
+                            <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287;">TRANSPORTE</div>
+                            <div style="font-size: 15.5px; font-weight: 700;">Transporte Gutiérrez <span style="font-size: 12.5px; font-weight: 600; color: #6B645A;">· el de siempre</span></div>
+                          </div>
+                          <div style="font-size: 14.5px; font-weight: 800; color: #C2410C;">Cambiar</div>
+                        </div>
+                        <div style="height: 44px; border-radius: 10px; background: #FAF8F5; border: 1px solid #E7E3DC; display: flex; align-items: center; padding: 0 12px; font-size: 14.5px; color: #3D3831;">El resto del pedido lo pasan a buscar el martes.</div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.resumen }}">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700; padding: 2px 4px 0;">Revisá antes de confirmar</div>
+                      <div style="flex: 1; min-height: 0; background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; padding: 4px 14px; display: flex; flex-direction: column; overflow: hidden;">
+                        <sc-for list="{{ resumen }}" as="x" hint-placeholder-count="4">
+                          <div style="display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid #F3F0EB;">
+                            <div style="width: 92px; flex-shrink: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; color: #9A9287; padding-top: 2px;">{{ x.k }}</div>
+                            <div style="flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.35;">{{ x.v }}</div>
+                          </div>
+                        </sc-for>
+                        <sc-for list="{{ orden }}" as="r" hint-placeholder-count="4">
+                          <div style="display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #F3F0EB;">
+                            <span style="width: 8px; height: 22px; border-radius: 3px; background: {{ r.c }}; flex-shrink: 0;"></span>
+                            <div style="flex: 1; min-width: 0; line-height: 1.2;">
+                              <div style="font-size: 14.5px; font-weight: 700;">{{ r.n }} <span style="font-weight: 600; color: #6B645A;">{{ r.coneTxt }}</span></div>
+                              <sc-if value="{{ r.falta }}"><div style="font-size: 12.5px; font-weight: 800; color: #7A2E42;">{{ r.falta }}</div></sc-if>
+                            </div>
+                            <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 18px; font-weight: 800;">{{ r.q }} <span style="font-size: 12px; font-weight: 600; color: #6B645A;">{{ r.u }}</span></div>
+                          </div>
+                        </sc-for>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0 8px;">
+                          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.06em; color: #6B645A;">TOTAL</span>
+                          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800;">112 cajas <span style="font-size: 15px; color: #6B645A;">+ 100 u de insumos</span></span>
+                        </div>
+                      </div>
+                      <sc-if value="{{ s.d.err }}">
+                        <div style="flex-shrink: 0; background: #F5E8EC; border: 1.5px solid #E8CDD5; border-radius: 14px; padding: 10px 12px; display: flex; gap: 10px; align-items: center;">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7A2E42" style="stroke-width: 2.2; stroke-linecap: round; flex-shrink: 0;"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0M12 19v.01M3 3l18 18"></path></svg>
+                          <div style="flex: 1; line-height: 1.35;">
+                            <div style="font-size: 15px; font-weight: 800; color: #5C2233;">No se pudo confirmar: no hay señal</div>
+                            <div style="font-size: 13.5px; color: #5C2233;">No se perdió nada. Queda guardado en el celular hasta que vuelva la señal.</div>
+                          </div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.d.noErr }}">
+                        <div style="flex-shrink: 0; font-size: 13.5px; color: #6B645A; text-align: center;">Sin precios: la valoriza Administración.</div>
+                      </sc-if>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.done }}">
+                      <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 999px; background: #E6F4EC; display: flex; align-items: center; justify-content: center;">
+                          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2F7D4F" style="stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+                        </div>
+                        <div style="font-size: 17px; font-weight: 700; color: #205B39; margin-top: 4px;">Retiro confirmado</div>
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 84px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums;">N-0012</div>
+                        <div style="font-size: 16px; color: #3D3831; line-height: 1.4;">Salvador Loforte · 112 cajas<br>28/09/2026 · 16:04</div>
+                      </div>
+                      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex-shrink: 0;">
+                        <sc-for list="{{ doneBtns }}" as="b" hint-placeholder-count="3">
+                          <div style="height: 96px; border-radius: 16px; background: #FFFFFF; border: 2px solid #C2410C; color: #C2410C; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 0 6px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ b.icon }}"></path></svg>
+                            <div style="font-size: 16px; font-weight: 800;">{{ b.l }}</div>
+                            <div style="font-size: 11.5px; font-weight: 600; color: #6B645A; line-height: 1.2;">{{ b.s }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.mis }}">
+                      <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0 2px;">
+                        <div style="flex: 1; font-size: 14.5px; color: #6B645A;">Los que cargaste vos · últimos 30 días</div>
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 18px; font-weight: 800;">9</div>
+                      </div>
+                      <div style="flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px;">
+                        <sc-for list="{{ mis }}" as="m" hint-placeholder-count="6">
+                          <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 14px; padding: 8px 8px 8px 12px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                            <span style="width: 30px; height: 30px; border-radius: 999px; background: {{ m.fc }}; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">{{ m.fi }}</span>
+                            <div style="flex: 1; min-width: 0; line-height: 1.2; opacity: {{ m.op }};">
+                              <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; text-decoration: {{ m.strike }};">{{ m.code }}</span>
+                                <sc-if value="{{ m.anul }}"><span style="height: 20px; padding: 0 7px; border-radius: 6px; background: #7A2E42; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center;">ANULADA</span></sc-if>
+                              </div>
+                              <div style="font-size: 14px; font-weight: 600;">{{ m.cli }}</div>
+                              <div style="font-size: 12.5px; color: #6B645A;">{{ m.when }} · {{ m.cajas }}</div>
+                            </div>
+                            <div style="width: 44px; height: 44px; border-radius: 11px; border: 1.5px solid #E7E3DC; color: #C2410C; display: flex; align-items: center; justify-content: center;" title="Reimprimir">
+                              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z"></path></svg>
+                            </div>
+                            <div style="width: 44px; height: 44px; border-radius: 11px; border: 1.5px solid #E7E3DC; color: #C2410C; display: flex; align-items: center; justify-content: center;" title="Reenviar">
+                              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"></path></svg>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.empty }}">
+                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 0 24px;">
+                        <div style="width: 64px; height: 64px; border-radius: 18px; background: oklch(0.955 0.031 108); color: oklch(0.55 0.11 108); display: flex; align-items: center; justify-content: center;">
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0"></path></svg>
+                        </div>
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700;">Todavía no cargaste retiros</div>
+                        <div style="font-size: 15px; color: #6B645A; line-height: 1.45;">Acá vas a ver los que cargues en los últimos 30 días, para reimprimirlos o reenviarlos.</div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.loading }}">
+                      <div style="height: 50px; flex-shrink: 0; border-radius: 14px; background: #FFFFFF; border: 1.5px solid #E7E3DC; display: flex; align-items: center; gap: 10px; padding: 0 14px; font-size: 16px; color: #9A9287;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>Buscar producto, cono o insumo
+                      </div>
+                      <sc-for list="{{ skel }}" as="k" hint-placeholder-count="3">
+                        <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; overflow: hidden; flex-shrink: 0;">
+                          <div style="height: 40px; background: #F5F3EF; border-bottom: 2px solid #EDE9E3;"></div>
+                          <sc-for list="{{ k.rows }}" as="r" hint-placeholder-count="3">
+                            <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 12px; border-top: 1px solid #F3F0EB;">
+                              <span style="width: 8px; height: 30px; border-radius: 3px; background: #EDE9E3;"></span>
+                              <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                                <div style="width: {{ r }}; height: 12px; border-radius: 6px; background: #EDE9E3;"></div>
+                                <div style="width: 40%; height: 10px; border-radius: 6px; background: #F3F0EB;"></div>
+                              </div>
+                              <div style="width: 36px; height: 20px; border-radius: 6px; background: #EDE9E3;"></div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-for>
+                      <div style="text-align: center; font-size: 14px; color: #9A9287;">Cargando el stock de Nuss…</div>
+                    </sc-if>
+                  </div>
+
+                  <sc-if value="{{ s.hasAction }}">
+                    <div style="flex-shrink: 0; background: #FFFFFF; border-top: 1px solid #E7E3DC; padding: 10px 12px 26px; display: flex; flex-direction: column; gap: 6px;">
+                      <div style="height: 56px; border-radius: 14px; background: {{ s.actBg }}; color: {{ s.actFg }}; border: 2px solid {{ s.actBd }}; font-size: 18px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px;">{{ s.act }}</div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.hasNav }}">
+                    <nav style="flex-shrink: 0; height: 84px; padding-bottom: 20px; background: #FFFFFF; border-top: 1px solid #E7E3DC; display: flex;">
+                      <sc-for list="{{ mnav }}" as="t" hint-placeholder-count="3">
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+                          <div style="width: 48px; height: 30px; border-radius: 10px; background: {{ t.bg }}; color: {{ t.ic }}; display: flex; align-items: center; justify-content: center;">
+                            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ t.icon }}"></path></svg>
+                          </div>
+                          <div style="font-size: 11.5px; font-weight: {{ t.fw }}; color: {{ t.fg }};">{{ t.n }}</div>
+                        </div>
+                      </sc-for>
+                    </nav>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ s.desk }}">
+                <aside style="width: 232px; flex-shrink: 0; background: #FFFFFF; border-right: 1px solid #E7E3DC; display: flex; flex-direction: column; padding: 12px 10px 10px;">
+                  <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px; margin-bottom: 8px;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; background-image: url(logo.png); background-size: 165%; background-position: 50% 28%; border: 1px solid #EFEBE5;"></div>
+                    <div style="line-height: 1.05;">
+                      <div style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 15.5px;">Seis Destinos</div>
+                      <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: #9A9287;">GROUP</div>
+                    </div>
+                  </div>
+                  <nav style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                    <sc-for list="{{ side }}" as="m" hint-placeholder-count="3">
+                      <div style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px 0 5px; border-radius: 9px; background: {{ m.bg }};">
+                        <div style="width: 24px; height: 24px; border-radius: 7px; background: {{ m.tint }}; color: {{ m.color }}; display: flex; align-items: center; justify-content: center;">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="{{ m.icon }}"></path></svg>
+                        </div>
+                        <div style="flex: 1; font-size: 13.5px; font-weight: {{ m.fw }}; color: {{ m.fg }};">{{ m.name }}</div>
+                      </div>
+                    </sc-for>
+                  </nav>
+                  <div style="border-top: 1px solid #EFEBE5; padding-top: 8px; display: flex; align-items: center; gap: 10px; height: 44px; padding-left: 5px; font-size: 13.5px; font-weight: 500; color: #3D3831;">
+                    <div style="width: 24px; height: 24px; border-radius: 7px; background: #F1EEE9; display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round;"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4"></path></svg></div>Personalizar
+                  </div>
+                </aside>
+                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+                  <header style="height: 52px; flex-shrink: 0; background: #FFFFFF; border-bottom: 1px solid #E7E3DC; display: flex; align-items: center; justify-content: space-between; padding: 0 16px 0 20px;">
+                    <div style="display: flex; gap: 2px; background: #F3F0EB; border-radius: 11px; padding: 3px;">
+                      <sc-for list="{{ topFabs }}" as="f" hint-placeholder-count="3">
+                        <div style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px 0 5px; border-radius: 8px; background: {{ f.bg }}; color: {{ f.fg }}; font-size: 13.5px; font-weight: {{ f.fw }};">
+                          <span style="width: 20px; height: 20px; border-radius: 999px; background: {{ f.c }}; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: {{ f.ring }};">{{ f.ini }}</span>{{ f.n }}
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 10px 0 4px; border-radius: 999px; border: 1px solid #E7E3DC;">
+                      <div style="width: 30px; height: 30px; border-radius: 999px; background: oklch(0.45 0.08 108); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;">FM</div>
+                      <div style="font-size: 14px; font-weight: 600;">Franco</div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B645A" style="stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;"><path d="M6 9l6 6 6-6"></path></svg>
+                    </div>
+                  </header>
+                  <main style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 24px 18px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+                      <div style="width: 30px; height: 30px; border-radius: 9px; background: oklch(0.955 0.031 108); color: oklch(0.55 0.11 108); display: flex; align-items: center; justify-content: center;">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0"></path></svg>
+                      </div>
+                      <span style="font-size: 15px; color: #6B645A; font-weight: 600;">Órdenes de retiro</span>
+                      <span style="color: #B8B0A4;">/</span>
+                      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700;">{{ s.dTitle }}</span>
+                      <span style="flex: 1;"></span>
+                      <div style="display: flex; gap: 2px; background: #EDE9E3; border-radius: 11px; padding: 3px;">
+                        <div style="height: 32px; padding: 0 14px; border-radius: 8px; background: {{ s.tabA.bg }}; color: {{ s.tabA.fg }}; font-size: 14px; font-weight: 700; display: flex; align-items: center;">Nuevo retiro</div>
+                        <div style="height: 32px; padding: 0 14px; border-radius: 8px; background: {{ s.tabB.bg }}; color: {{ s.tabB.fg }}; font-size: 14px; font-weight: 700; display: flex; align-items: center;">Mis retiros</div>
+                      </div>
+                    </div>
+
+                    <sc-if value="{{ s.k.dcarga }}">
+                      <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px;">
+                        <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid #EFEBE5;">
+                            <div style="flex: 1; line-height: 1.2;">
+                              <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #9A9287;">RETIRA</div>
+                              <div style="font-size: 18px; font-weight: 800;">Salvador Loforte <span style="font-size: 14px; font-weight: 600; color: #6B645A;">· “Los Forte” · Loforte Salvador Ángel</span></div>
+                            </div>
+                            <div style="font-size: 14px; font-weight: 700; color: #C2410C;">Cambiar</div>
+                            <span style="height: 28px; padding: 0 10px; border-radius: 8px; background: #F3F0EB; font-size: 13px; font-weight: 700; display: flex; align-items: center; font-variant-numeric: tabular-nums;">Se numera al confirmar · N-0012</span>
+                          </div>
+                          <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) 80px 40px; gap: 12px; height: 30px; align-items: center; padding: 0 16px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287; border-bottom: 1px solid #EFEBE5;">
+                            <div>PRODUCTO</div><div>LOTES</div><div style="text-align: right;">CANTIDAD</div><div></div>
+                          </div>
+                          <div style="flex: 1; min-height: 0; overflow: auto;">
+                            <sc-for list="{{ orden }}" as="r" hint-placeholder-count="4">
+                              <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) 80px 40px; gap: 12px; align-items: center; min-height: 52px; padding: 6px 16px; border-bottom: 1px solid #F3F0EB; background: {{ r.rowBg }};">
+                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                  <span style="width: 8px; height: 28px; border-radius: 3px; background: {{ r.c }}; flex-shrink: 0;"></span>
+                                  <div style="min-width: 0; line-height: 1.25;">
+                                    <div style="font-size: 14.5px; font-weight: 800;">{{ r.n }}</div>
+                                    <sc-if value="{{ r.hasCone }}"><span style="padding: 1px 8px; border-radius: 999px; background: {{ r.cBg }}; color: {{ r.cFg }}; font-size: 11.5px; font-weight: 800;">{{ r.cone }}</span></sc-if>
+                                    <sc-if value="{{ r.noCone }}"><span style="font-size: 12.5px; color: #9A9287;">{{ r.coneTxt }}</span></sc-if>
+                                  </div>
+                                </div>
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+                                  <sc-for list="{{ r.lotChips }}" as="lc" hint-placeholder-count="2">
+                                    <span style="height: 24px; padding: 0 8px; border-radius: 7px; background: #F3F0EB; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; font-variant-numeric: tabular-nums;">{{ lc }}</span>
+                                  </sc-for>
+                                  <sc-if value="{{ r.falta }}"><span style="height: 24px; padding: 0 8px; border-radius: 7px; background: #7A2E42; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center;">{{ r.faltaShort }}</span></sc-if>
+                                </div>
+                                <div style="text-align: right; line-height: 1.05;">
+                                  <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 800;">{{ r.q }}</div>
+                                  <div style="font-size: 11.5px; color: #6B645A;">{{ r.u }}</div>
+                                </div>
+                                <div style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #9A9287;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.4; stroke-linecap: round;"><path d="M6 6l12 12M18 6L6 18"></path></svg></div>
+                              </div>
+                            </sc-for>
+                            <div style="margin: 10px 16px; height: 44px; border-radius: 12px; border: 2px dashed #F0C3A6; background: #FFF8F3; color: #8F2F08; font-size: 14.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">Elegí otro producto en el catálogo →</div>
+                          </div>
+                          <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; padding: 10px 16px; border-top: 1px solid #EFEBE5;">
+                            <div style="height: 44px; border-radius: 10px; border: 1px solid #E7E3DC; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 14px;"><span style="font-weight: 800; color: #9A9287; font-size: 11.5px; letter-spacing: 0.06em;">TRANSPORTE</span><span style="font-weight: 700;">Transporte Gutiérrez</span><span style="font-size: 12px; color: #6B645A;">· el de siempre</span></div>
+                            <div style="height: 44px; border-radius: 10px; border: 1px solid #E7E3DC; background: #FAF8F5; display: flex; align-items: center; padding: 0 12px; font-size: 14px; color: #3D3831; white-space: nowrap; overflow: hidden;">El resto del pedido lo pasan a buscar el martes.</div>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #FAF8F5; border-top: 2px solid #E7E3DC;">
+                            <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 800;">112 cajas <span style="font-size: 15px; color: #6B645A; font-weight: 600;">+ 100 u de insumos</span></div>
+                            <span style="height: 26px; padding: 0 9px; border-radius: 7px; background: #F5E8EC; color: #7A2E42; font-size: 12.5px; font-weight: 800; display: flex; align-items: center;">1 renglón con faltante</span>
+                            <span style="flex: 1;"></span>
+                            <div style="height: 44px; padding: 0 20px; border-radius: 12px; background: #C2410C; color: #fff; font-size: 15.5px; font-weight: 800; display: flex; align-items: center;">Ver resumen y confirmar</div>
+                          </div>
+                        </div>
+                        <div style="background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                          <div style="padding: 10px 12px; border-bottom: 1px solid #EFEBE5;">
+                            <div style="height: 38px; border-radius: 10px; background: #FAF8F5; border: 1px solid #EFEBE5; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 14px; color: #9A9287;">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>Buscar producto, cono o insumo
+                            </div>
+                          </div>
+                          <div style="flex: 1; min-height: 0; overflow: auto;">
+                            <sc-for list="{{ catDesk }}" as="gr" hint-placeholder-count="3">
+                              <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; background: {{ gr.t }}; border-bottom: 2px solid {{ gr.c }}; position: sticky; top: 0;">
+                                <span style="width: 9px; height: 9px; border-radius: 3px; background: {{ gr.c }};"></span>
+                                <span style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.05em; color: {{ gr.fg }}; flex: 1;">{{ gr.n }}</span>
+                              </div>
+                              <sc-for list="{{ gr.items }}" as="it" hint-placeholder-count="3">
+                                <div style="display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 4px 12px; border-bottom: 1px solid #F3F0EB;">
+                                  <span style="width: 6px; height: 22px; border-radius: 3px; background: {{ it.c }};"></span>
+                                  <div style="flex: 1; min-width: 0; line-height: 1.2;">
+                                    <div style="font-size: 13.5px; font-weight: 700;">{{ it.n }}</div>
+                                    <sc-if value="{{ it.hasCone }}"><span style="padding: 0 7px; border-radius: 999px; background: {{ it.cBg }}; color: {{ it.cFg }}; font-size: 11px; font-weight: 800;">{{ it.cone }}</span></sc-if>
+                                  </div>
+                                  <div style="font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums;">{{ it.q }} <span style="font-size: 11.5px; font-weight: 600; color: #6B645A;">{{ it.u }}</span></div>
+                                </div>
+                              </sc-for>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.k.dmis }}">
+                      <div style="flex: 1; min-height: 0; background: #FFFFFF; border: 1px solid #E7E3DC; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #EFEBE5;">
+                          <div style="font-size: 15px; font-weight: 700;">Los que cargaste vos · últimos 30 días</div>
+                          <span style="flex: 1;"></span>
+                          <div style="width: 240px; height: 36px; border-radius: 10px; background: #FAF8F5; border: 1px solid #EFEBE5; display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 14px; color: #9A9287;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9287" style="stroke-width: 2.2; stroke-linecap: round;"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"></path></svg>Buscar código o cliente
+                          </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 110px 150px minmax(0, 1fr) 90px 110px 230px; gap: 12px; height: 32px; align-items: center; padding: 0 16px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: #9A9287; border-bottom: 1px solid #EFEBE5;">
+                          <div>CÓDIGO</div><div>FECHA</div><div>CLIENTE</div><div style="text-align: right;">CAJAS</div><div>ESTADO</div><div></div>
+                        </div>
+                        <div style="flex: 1; min-height: 0; overflow: auto;">
+                          <sc-for list="{{ mis }}" as="m" hint-placeholder-count="8">
+                            <div style="display: grid; grid-template-columns: 110px 150px minmax(0, 1fr) 90px 110px 230px; gap: 12px; align-items: center; min-height: 46px; padding: 0 16px; border-bottom: 1px solid #F3F0EB;">
+                              <div style="display: flex; align-items: center; gap: 7px;">
+                                <span style="width: 20px; height: 20px; border-radius: 999px; background: {{ m.fc }}; color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ m.fi }}</span>
+                                <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; text-decoration: {{ m.strike }};">{{ m.code }}</span>
+                              </div>
+                              <div style="font-size: 14px; color: #3D3831;">{{ m.when }}</div>
+                              <div style="font-size: 14px; font-weight: 600;">{{ m.cli }}</div>
+                              <div style="text-align: right; font-size: 14px; font-weight: 700;">{{ m.cajasN }}</div>
+                              <div><span style="height: 22px; padding: 0 8px; border-radius: 7px; background: {{ m.stBg }}; color: {{ m.stFg }}; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center;">{{ m.st }}</span></div>
+                              <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                                <div style="height: 32px; padding: 0 10px; border-radius: 9px; border: 1.5px solid #E7E3DC; color: #C2410C; font-size: 13px; font-weight: 700; display: flex; align-items: center;">Reimprimir</div>
+                                <div style="height: 32px; padding: 0 10px; border-radius: 9px; border: 1.5px solid #E7E3DC; color: #C2410C; font-size: 13px; font-weight: 700; display: flex; align-items: center;">Reenviar</div>
+                              </div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </main>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ s.print }}">
+                <div style="flex: 1; display: flex; flex-direction: column; background: #FFFFFF; position: relative; color: #1C1A17;">
+                  <sc-for list="{{ copies }}" as="cp" hint-placeholder-count="2">
+                    <div style="flex: 1 1 0; min-height: 0; padding: 22px 32px 16px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden;">
+                      <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <div style="width: 52px; height: 52px; border-radius: 999px; background: oklch(0.55 0.11 55); color: #fff; font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">N</div>
+                        <div style="flex: 1; line-height: 1.3;">
+                          <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 16px; font-weight: 800;">Cucuruchos Nuss</div>
+                          <div style="font-size: 10px; color: #3D3831;">SEIS DESTINOS SAS · CUIT 30-71943477-7</div>
+                          <div style="font-size: 10px; color: #3D3831;">Unión 843, Córdoba · Tel. (0351) 472-8810</div>
+                        </div>
+                        <div style="text-align: right; line-height: 1.15;">
+                          <div style="display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; border: 1.5px solid #1C1A17; border-radius: 4px; padding: 2px 6px; margin-bottom: 4px;">{{ cp.label }}</div>
+                          <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: #6B645A;">ORDEN DE RETIRO</div>
+                          <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">N-0012</div>
+                          <div style="font-size: 10px; font-weight: 600;">28/09/2026 · 16:04</div>
+                        </div>
+                      </div>
+                      <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; border-top: 1.5px solid #1C1A17; border-bottom: 1px solid #D6CFC4; padding: 6px 0;">
+                        <div style="line-height: 1.35; font-size: 10px;">
+                          <div style="font-size: 8.5px; font-weight: 800; letter-spacing: 0.08em; color: #6B645A;">CLIENTE</div>
+                          <div style="font-size: 12px; font-weight: 800;">Salvador Loforte</div>
+                          <div>Loforte Salvador Ángel · CUIT 20-23456789-4</div>
+                          <div>Av. Colón 2150, Córdoba</div>
+                        </div>
+                        <div style="line-height: 1.35; font-size: 10px;">
+                          <div style="font-size: 8.5px; font-weight: 800; letter-spacing: 0.08em; color: #6B645A;">TRANSPORTE</div>
+                          <div style="font-size: 12px; font-weight: 800;">Transporte Gutiérrez</div>
+                          <div>Chofer: Ramón Gutiérrez</div>
+                        </div>
+                      </div>
+                      <div style="display: grid; grid-template-columns: 18px minmax(0, 1.4fr) minmax(0, 1.5fr) 52px; gap: 8px; font-size: 8.5px; font-weight: 800; letter-spacing: 0.07em; color: #6B645A; border-bottom: 1px solid #1C1A17; padding-bottom: 3px;">
+                        <div>#</div><div>PRODUCTO</div><div>LOTES</div><div style="text-align: right;">CANT.</div>
+                      </div>
+                      <div style="display: flex; flex-direction: column;">
+                        <sc-for list="{{ printRows }}" as="r" hint-placeholder-count="12">
+                          <div style="display: grid; grid-template-columns: 18px minmax(0, 1.4fr) minmax(0, 1.5fr) 52px; gap: 8px; font-size: 10px; height: 17px; align-items: center; border-bottom: 1px solid #EFEBE5;">
+                            <div style="color: #6B645A;">{{ r.i }}</div>
+                            <div style="font-weight: 700; white-space: nowrap; overflow: hidden;">{{ r.n }}</div>
+                            <div style="font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden;">{{ r.l }}</div>
+                            <div style="text-align: right; font-weight: 800; font-variant-numeric: tabular-nums;">{{ r.q }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10px;">
+                        <div style="flex: 1; min-width: 0;"><strong>Observaciones:</strong> El resto del pedido lo pasan a buscar el martes. <strong>Faltante:</strong> 14 cajas de Mini con cono CASERATO, pendiente de revisión.</div>
+                        <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 14px; font-weight: 800; white-space: nowrap; margin-left: 12px;">Total 212 cajas + 100 u</div>
+                      </div>
+                      <div style="margin-top: auto; display: grid; grid-template-columns: 1fr 1.3fr 1.2fr 0.8fr; gap: 14px; align-items: end; font-size: 9px; color: #3D3831;">
+                        <div style="line-height: 1.35;">Cargó: <strong>Franco Medina</strong><br>Recibí conforme:</div>
+                        <div style="border-top: 1px solid #1C1A17; padding-top: 3px; height: 28px; display: flex; align-items: flex-end;">Firma</div>
+                        <div style="border-top: 1px solid #1C1A17; padding-top: 3px; height: 28px; display: flex; align-items: flex-end;">Aclaración</div>
+                        <div style="border-top: 1px solid #1C1A17; padding-top: 3px; height: 28px; display: flex; align-items: flex-end;">DNI</div>
+                      </div>
+                      <div style="text-align: center; font-size: 8.5px; color: #6B645A; letter-spacing: 0.04em;">Documento interno. No válido como factura.</div>
+                      <sc-if value="{{ s.d.anulada }}">
+                        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+                          <div style="transform: rotate(-16deg); border: 6px solid #7A2E42; border-radius: 14px; padding: 4px 26px; color: #7A2E42; font-family: 'Bricolage Grotesque', sans-serif; font-size: 96px; font-weight: 800; letter-spacing: 0.08em; background: rgba(255,255,255,0.75); line-height: 1.05; text-align: center;">ANULADA<div style="font-family: 'Figtree', sans-serif; font-size: 13px; letter-spacing: 0.02em; font-weight: 700;">28/09/2026 · Pablo Nuss · el cliente canceló el retiro</div></div>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ cp.cut }}">
+                      <div style="height: 0; border-top: 1.5px dashed #9A9287; position: relative;">
+                        <span style="position: absolute; left: 50%; top: -9px; transform: translateX(-50%); background: #fff; padding: 0 8px; font-size: 10px; color: #6B645A; font-weight: 700;">✂ cortar acá</span>
+                      </div>
+                    </sc-if>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const P = (L, C, H) => ({ c: `oklch(${L} ${C} ${H})`, dk: `oklch(${(Math.min(L, 0.5) - 0.07).toFixed(2)} ${(C * 0.8).toFixed(3)} ${H})`, t: `oklch(0.95 ${(C * 0.32).toFixed(3)} ${H})` });
+const PC = { Mini: P(0.78, 0.15, 95), Chico: P(0.6, 0.14, 145), Grande: P(0.68, 0.16, 50), Standard: P(0.52, 0.15, 300), Choc: { c: 'oklch(0.44 0.07 55)', dk: 'oklch(0.36 0.06 55)', t: 'oklch(0.94 0.02 55)' }, Ins: { c: '#9A9287', dk: '#3D3831', t: '#F1EEE9' } };
+const CONE_H = { 'BAHIA CHAJARI': 20, CASERATO: 150, DUOMO: 300, 'HELADOS KATY': 70 };
+const cone = n => { const h = CONE_H[n] ?? 120; return { cBg: `oklch(0.92 0.07 ${h})`, cFg: `oklch(0.35 0.1 ${h})` }; };
+const GR = {
+  sin: { n: 'PRODUCTO TERMINADO · SIN CONO', c: 'oklch(0.62 0.12 80)', t: 'oklch(0.965 0.03 85)', fg: 'oklch(0.4 0.08 75)' },
+  con: { n: 'PRODUCTO TERMINADO · CON CONO', c: 'oklch(0.52 0.12 330)', t: 'oklch(0.965 0.02 330)', fg: 'oklch(0.4 0.11 330)' },
+  mp: { n: 'MATERIA PRIMA E INSUMOS', c: 'oklch(0.5 0.05 150)', t: 'oklch(0.96 0.012 150)', fg: 'oklch(0.36 0.05 150)' },
+};
+const it = (n, pc, q, u, sub, coneN) => ({ n, c: pc.c, q: q || '', u, sub, ok: q > 0 || typeof q === 'string', none: q === 0, op: q === 0 ? 0.55 : 1, hasCone: !!coneN, cone: coneN || '', ...(coneN ? cone(coneN) : { cBg: '', cFg: '' }) });
+const CAT = [
+  { ...GR.sin, items: [it('Cucuruchón Mini ×320', PC.Mini, 128, 'cajas', 'caja completa'), it('Cucuruchón Mini ×160', PC.Mini, 40, 'cajas', 'media altura'), it('Cucuruchón Chico ×240', PC.Chico, 86, 'cajas', 'caja completa'), it('Cucuruchón Grande ×150', PC.Grande, 0, 'cajas', 'caja completa'), it('Mini Chocolate ×320', PC.Choc, 18, 'cajas', 'caja completa')] },
+  { ...GR.con, items: [it('Cucuruchón Mini ×320', PC.Mini, 24, 'cajas', '', 'BAHIA CHAJARI'), it('Cucuruchón Mini ×320', PC.Mini, 36, 'cajas', '', 'CASERATO'), it('Cucuruchón Grande ×150', PC.Grande, 12, 'cajas', '', 'DUOMO'), it('Cucuruchón Chico ×240', PC.Chico, 0, 'cajas', '', 'HELADOS KATY')] },
+  { ...GR.mp, items: [it('Caja N°1 Nuss', PC.Ins, 420, 'u', 'insumo'), it('Bolsa grande', PC.Ins, '3.200', 'u', 'insumo'), it('Harina 000 Júpiter', PC.Ins, '6.100', 'kg', 'materia prima')] },
+].map(g => ({ ...g, count: g.items.filter(i => !i.none).length + ' con stock' }));
+const CAT_DESK = CAT.map(g => ({ ...g, items: g.items.filter(i => !i.none) }));
+
+const oRow = (n, pc, q, u, lots, coneN, falta) => ({ n, c: pc.c, q, u, lotes: lots.join(' · '), lotChips: lots, hasCone: !!coneN, noCone: !coneN, cone: coneN || '', coneTxt: coneN ? '· con cono ' + coneN : (u === 'cajas' ? 'sin cono' : 'insumo'), ...(coneN ? cone(coneN) : { cBg: '', cFg: '' }),
+  falta: falta || '', faltaShort: falta ? 'faltan 14' : '', bd: falta ? '#E8CDD5' : '#E7E3DC', rowBg: falta ? '#FBF1F4' : 'transparent' });
+const ORDEN = [
+  oRow('Cucuruchón Mini ×320', PC.Mini, 42, 'cajas', ['7021 ×15', '7033 ×10', '7038 ×17']),
+  oRow('Cucuruchón Mini ×320', PC.Mini, 50, 'cajas', ['7031 ×20', '7038 ×16'], 'CASERATO', 'Faltan 14 · queda para revisar en Administración'),
+  oRow('Cucuruchón Chico ×240', PC.Chico, 20, 'cajas', ['7036 ×20']),
+  oRow('Caja N°1 Nuss', PC.Ins, 100, 'u', ['ingreso 22/09 ×100']),
+];
+const lots = (arr) => arr.map((l, i) => ({ ...l, old: i === 0, bg: i === 0 ? 'oklch(0.975 0.025 90)' : 'transparent', bd: l.v > 0 ? '#C2410C' : '#E7E3DC', fg: l.v > 0 ? '#1C1A17' : '#B8B0A4' }));
+const FABS = [{ n: 'Cucuruchos Nuss', ini: 'N', c: 'oklch(0.55 0.11 55)', next: 'N-0012' }, { n: 'Dolce Pasta', ini: 'D', c: 'oklch(0.52 0.1 130)', next: 'D-0005' }, { n: 'Heladitos Orly · Mengui', ini: 'O', c: 'oklch(0.57 0.19 25)', next: 'O-0003' }];
+const MIS = [
+  ['N-0012', 'Hoy 16:04', 'Salvador Loforte', 112], ['N-0011', 'Hoy 11:20', 'Caserato', 64], ['D-0004', 'Ayer 17:45', 'Heladería Duomo', 30], ['N-0010', '26/09 · 09:10', 'Heladería Duomo', 38, true],
+  ['N-0009', '25/09 · 15:32', 'Helados Katy', 22], ['O-0002', '24/09 · 10:05', 'La Romana', 16], ['N-0008', '22/09 · 12:40', 'Caserato', 80], ['N-0007', '19/09 · 16:15', 'Salvador Loforte', 54], ['D-0003', '15/09 · 11:00', 'Freddo Tandil', 40],
+].map(([code, when, cli, cajas, anul]) => { const f = FABS.find(x => x.ini === code[0]);
+  return { code, when, cli, cajas: cajas + ' cajas', cajasN: cajas, anul: !!anul, op: anul ? 0.6 : 1, strike: anul ? 'line-through' : 'none', fc: f.c, fi: f.ini,
+    st: anul ? 'Anulada' : 'Confirmada', stBg: anul ? '#7A2E42' : '#F1EEE9', stFg: anul ? '#fff' : '#3D3831' }; });
+const PRINT = [
+  ['Cucuruchón Mini ×320 · sin cono', '7021 ×15 · 7033 ×10 · 7038 ×17', '42 cajas'], ['Cucuruchón Mini ×320 · CASERATO', '7031 ×20 · 7038 ×16 · faltan 14', '50 cajas'],
+  ['Cucuruchón Chico ×240 · sin cono', '7036 ×20', '20 cajas'], ['Cucuruchón Mini ×160 · sin cono', '7033 ×12', '12 cajas'], ['Cucuruchón Grande ×150 · DUOMO', '7030 ×8', '8 cajas'],
+  ['Cucuruchón Standard ×200 · sin cono', '7029 ×10 · 7035 ×6', '16 cajas'], ['Mini Chocolate ×320 · sin cono', '7037 ×10', '10 cajas'], ['Cucuruchón Mini ×320 · BAHIA CHAJARI', '7034 ×18', '18 cajas'],
+  ['Cucuruchón Chico ×240 · HELADOS KATY', '7032 ×12', '12 cajas'], ['Cucuruchón Grande ×150 · sin cono', '7036 ×24', '24 cajas'], ['Caja N°1 Nuss', 'ingreso 22/09', '100 u'], ['Bolsa grande', 'ingreso 19/09', '—'],
+].map(([n, l, q], i) => ({ i: i + 1, n, l, q }));
+
+const MOD = {
+  inicio: { n: 'Inicio', c: 'oklch(0.35 0.012 60)', t: 'oklch(0.955 0.008 60)', i: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' },
+  ordenes: { n: 'Órdenes de retiro', c: 'oklch(0.55 0.11 108)', t: 'oklch(0.955 0.031 108)', i: 'M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0' },
+  stock: { n: 'Stock', c: 'oklch(0.52 0.12 130)', t: 'oklch(0.955 0.034 130)', i: 'M4 4h16v16H4zM4 12h16M10 8h4M10 16h4' },
+};
+const STEPS = ['Cliente', 'Productos', 'Transporte', 'Confirmar'];
+const steps = cur => STEPS.map((l, i) => ({ l, bar: i < cur ? '#1C1A17' : i === cur ? '#C2410C' : '#E7E3DC', fg: i === cur ? '#8F2F08' : i < cur ? '#1C1A17' : '#9A9287', fw: i === cur ? 800 : 600 }));
+
+class Component extends DCLogic {
+  renderVals() {
+    const K = k => ({ fab: false, cli: false, cat: false, lotes: false, orden: false, resumen: false, done: false, mis: false, empty: false, loading: false, dcarga: false, dmis: false, [k]: true });
+    const act = (label, o = {}) => ({ hasAction: true, act: label, actBg: o.ghost ? '#FFFFFF' : '#C2410C', actFg: o.ghost ? '#C2410C' : '#FFFFFF', actBd: '#C2410C' });
+    const M = (id, title, note, k, o) => ({ id, title, note, w: 390, h: 844, sizeLabel: '390 × 844 · celular', mob: true, desk: false, print: false, frameBg: '#F5F3EF', radius: 28, k: K(k),
+      hSub: 'Nuevo retiro', hTitle: 'Nuss', backOp: 1, hasFab: true, hasSteps: false, steps: [], hasAction: false, hasNav: false, d: {}, ...o });
+    const lotData = {
+      ok: { prod: 'Cucuruchón Mini ×320', sub: 'sin cono · caja completa', hasCone: false, cone: '', cBg: '', cFg: '', pc: PC.Mini.c, pt: PC.Mini.t, pdk: PC.Mini.dk, pedido: 42, asig: 42,
+        lots: lots([{ n: '7021', f: '12/09', q: '15 cajas', v: 15 }, { n: '7033', f: '19/09', q: '10 cajas', v: 10 }, { n: '7038', f: '26/09', q: '103 cajas', v: 17 }]), faltaBg: '#E6F4EC', faltaFg: '#205B39', faltaL: '✓ Falta asignar 0', faltante: false },
+      falta: { prod: 'Cucuruchón Mini ×320', sub: 'con cono · caja completa', hasCone: true, cone: 'CASERATO', ...cone('CASERATO'), pc: PC.Mini.c, pt: PC.Mini.t, pdk: PC.Mini.dk, pedido: 50, asig: 36,
+        lots: lots([{ n: '7031', f: '17/09', q: '20 cajas', v: 20 }, { n: '7038', f: '26/09', q: '16 cajas', v: 16 }]), faltaBg: '#7A2E42', faltaFg: '#FFFFFF', faltaL: 'Faltan 14', faltante: true },
+    };
+    const mob = [
+      M('1a', 'Elegir la fábrica', 'Solo si la persona tiene más de una. Cada una con su logo y el próximo código.', 'fab', { hSub: 'Órdenes de retiro', hTitle: 'Nuevo retiro', hasFab: false }),
+      M('1b', 'Cliente', 'Busca por nombre, razón social o apodo: “los forte” encuentra a Salvador Loforte. Abajo, los que más retiran.', 'cli', { hasSteps: true, steps: steps(0) }),
+      M('1c', 'Catálogo en tres grupos', 'Cada grupo con su encabezado y color, y cada opción con cuánto hay. Lo sin stock aparece solo al buscar, marcado “sin stock”.', 'cat', { hasSteps: true, steps: steps(1), d: { q: 'cucuruchón', groups: CAT } }),
+      M('1d', 'Varios lotes en un renglón', '42 Mini = 15 + 10 + 17. El más viejo arriba, un campo por lote y “Completar con los más viejos”. Abajo, cuánto falta asignar.', 'lotes', { hasSteps: true, steps: steps(1), d: lotData.ok, ...act('Agregar · 42 cajas') }),
+      M('1e', 'Faltante', 'Se pide más de lo que hay: se puede agregar igual, con el aviso bordó.', 'lotes', { hasSteps: true, steps: steps(1), d: lotData.falta, ...act('Agregar igual · 50 cajas') }),
+      M('1f', 'La orden armada', 'Renglones con su color, sus lotes y el faltante marcado. Transporte: viene el habitual del cliente. Observaciones.', 'orden', { hasSteps: true, steps: steps(2), ...act('Ver resumen') }),
+      M('1g', 'Resumen sin precios', 'Todo junto antes de confirmar. Sin precios ni saldos.', 'resumen', { hasSteps: true, steps: steps(3), d: { err: false, noErr: true }, ...act('Confirmar retiro') }),
+      M('1h', 'Confirmado', 'El código bien grande y las tres salidas.', 'done', { hSub: 'Órdenes de retiro', hTitle: 'Retiro N-0012', backOp: 0, ...act('Cargar otro retiro', { ghost: true }) }),
+      M('1i', 'Mis retiros', 'Lo que cargó esta persona en los últimos 30 días. Reimprimir y reenviar a un toque.', 'mis', { hSub: 'Órdenes de retiro', hTitle: 'Mis retiros', hasFab: false, backOp: 0, hasNav: true }),
+      M('1j', 'Sin datos', 'Mis retiros vacío.', 'empty', { hSub: 'Órdenes de retiro', hTitle: 'Mis retiros', hasFab: false, backOp: 0, hasNav: true }),
+      M('1k', 'Cargando', 'El catálogo mientras trae el stock.', 'loading', { hasSteps: true, steps: steps(1) }),
+      M('1l', 'Error al confirmar', 'Sin señal en el depósito: no se pierde nada y se reintenta.', 'resumen', { hasSteps: true, steps: steps(3), d: { err: true, noErr: false }, ...act('Reintentar') }),
+    ];
+    const D = (id, title, note, k, o) => ({ id, title, note, w: 1366, h: 768, sizeLabel: '1366 × 768 · compu', mob: false, desk: true, print: false, frameBg: '#F5F3EF', radius: 12, k: K(k), d: {}, ...o });
+    const tab = on => ({ bg: on ? '#FFFFFF' : 'transparent', fg: on ? '#8F2F08' : '#3D3831' });
+    const desk = [
+      D('2a', 'Nuevo retiro en la compu', 'El mismo flujo en una pantalla: la orden a la izquierda, el catálogo a la derecha.', 'dcarga', { dTitle: 'Nuevo retiro', tabA: tab(true), tabB: tab(false) }),
+      D('2b', 'Mis retiros en la compu', 'Últimos 30 días, solo los de esta persona.', 'dmis', { dTitle: 'Mis retiros', tabA: tab(false), tabB: tab(true) }),
+    ];
+    const Pr = (id, title, note, anulada) => ({ id, title, note, w: 794, h: 1123, sizeLabel: 'A4 · 794 × 1123 · dos copias', mob: false, desk: false, print: true, frameBg: '#FFFFFF', radius: 4, k: K('x'), d: { anulada } });
+    const print = [
+      Pr('3a', 'Hoja impresa', 'Original para el cliente y duplicado para el depósito, con línea de corte. 12 renglones entran. Sin precios.', false),
+      Pr('3b', 'Hoja anulada', '“ANULADA” grande y cruzado en las dos copias, con quién y por qué.', true),
+    ];
+    const side = ['inicio', 'ordenes', 'stock'].map(k => { const m = MOD[k]; const on = k === 'ordenes'; return { name: m.n, icon: m.i, color: m.c, tint: m.t, bg: on ? '#FDEEE4' : 'transparent', fg: on ? '#8F2F08' : '#3D3831', fw: on ? 700 : 500 }; });
+    const topFabs = FABS.map((f, i) => ({ n: ['Nuss', 'Dolce Pasta', 'Mengui'][i], ini: ['N', 'DP', 'M'][i], c: f.c, bg: i === 0 ? '#C2410C' : 'transparent', fg: i === 0 ? '#fff' : '#3D3831', fw: i === 0 ? 700 : 600, ring: i === 0 ? '0 0 0 2px #fff' : 'none' }));
+    return {
+      groups: [
+        { title: 'Celular', sub: 'Cómo se usa de verdad: en el depósito, mientras se carga el camión', screens: mob },
+        { title: 'Compu', sub: 'El mismo flujo, en una pantalla', screens: desk },
+        { title: 'Hoja impresa', sub: 'A4, dos copias iguales', screens: print },
+      ],
+      fabs: FABS, side, topFabs, orden: ORDEN, catDesk: CAT_DESK, mis: MIS, printRows: PRINT,
+      copies: [{ label: 'ORIGINAL — CLIENTE', cut: true }, { label: 'DUPLICADO — DEPÓSITO', cut: false }],
+      cliRes: [{ ini: 'SL', n: 'Salvador Loforte', pre: 'apodo ', hl: '“Los Forte”', post: ' · Loforte Salvador Ángel', bg: '#FFF8F3' }, { ini: 'FS', n: 'Forte Heladería', pre: 'razón social ', hl: 'Forte', post: ' Hnos. SRL · Río Cuarto', bg: '#FFFFFF' }],
+      cliRec: [{ n: 'Caserato', s: 'Caserato Helados SA · 8 retiros este mes' }, { n: 'Heladería Duomo', s: 'Duomo SRL · 5 retiros este mes' }, { n: 'Helados Katy', s: 'Katy Helados SA · 4 retiros este mes' }, { n: 'La Romana', s: 'La Romana Heladerías · 3 retiros este mes' }],
+      resumen: [{ k: 'FÁBRICA', v: 'Cucuruchos Nuss · será N-0012' }, { k: 'RETIRA', v: 'Salvador Loforte (“Los Forte”)' }, { k: 'TRANSPORTE', v: 'Transporte Gutiérrez · Ramón Gutiérrez' }, { k: 'OBSERV.', v: 'El resto del pedido lo pasan a buscar el martes.' }],
+      doneBtns: [
+        { l: 'Imprimir', s: 'A4, dos copias', icon: 'M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z' },
+        { l: 'Enviar', s: 'PDF por WhatsApp o mail', icon: 'M21 3L10 14M21 3l-7 18-4-7-7-4z' },
+        { l: 'Compartir', s: 'como texto', icon: 'M8 12h8M12 4v12M7 8l5-5 5 5M5 14v6h14v-6' },
+      ],
+      mnav: [
+        { n: 'Inicio', icon: MOD.inicio.i, bg: 'transparent', ic: MOD.inicio.c, fg: '#3D3831', fw: 600 },
+        { n: 'Nuevo retiro', icon: 'M12 5v14M5 12h14', bg: 'transparent', ic: MOD.ordenes.c, fg: '#3D3831', fw: 600 },
+        { n: 'Mis retiros', icon: MOD.ordenes.i, bg: '#FDEEE4', ic: '#C2410C', fg: '#8F2F08', fw: 700 },
+      ],
+      skel: [{ rows: ['70%', '55%', '65%'] }, { rows: ['60%', '75%'] }, { rows: ['50%'] }],
+    };
+  }
+}
+</script>
+</body>
+</html>

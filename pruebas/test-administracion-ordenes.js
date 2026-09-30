@@ -320,7 +320,7 @@ function preparar(S, { orden = ORDEN, items = ITEMS, movs = [{ importe: 80000 }]
     chk('imprimir desde Administración lleva PRECIOS', S.__impresiones() === 1 && /Precio x caja/.test(h) && /\$ 30\.000,00/.test(h) && /rh-total">\$ 46\.000,00/.test(h))
     chk('con la misma hoja: dos copias y la leyenda', (h.match(/<section class="rh-copia/g) || []).length === 2 && /No válido como factura/.test(h))
     chk('con el logo de la empresa de la orden', /logo-cucuruchos-nuss\.png/.test(h) && /NUSS SRL/.test(h))
-    chk('y quién la cargó', /Cargó<\/span> Emanuel Romero/.test(h))
+    chk('y quién la cargó', /Cargó: <strong>Emanuel Romero<\/strong>/.test(h))
   }))
   const T = nuevo()
   preparar(T)

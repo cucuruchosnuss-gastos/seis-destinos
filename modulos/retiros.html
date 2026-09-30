@@ -52,235 +52,533 @@
   <style>
     [hidden] { display: none !important; }
 
+    /* EL DISEÑO "ÓRDENES DE RETIRO" (29/09/2026, handoff de Claude Design en
+       e2e/disenos/retiros/): los valores salen de los style="" del .dc.html.
+       Celular 390 × 844 (1a–1l) y compu 1366 × 768 (2a–2b). Naranja para lo
+       que se toca y lo elegido; verde para "está completo"; bordó para
+       faltante, sin stock y anulada. El color de cada producto sale de su
+       nombre (colorProductoRetiro), el de cada cono de su id (colorConoRetiro),
+       y el de cada grupo del catálogo de GRUPO_COLOR: texto de CSS armado por
+       el código, nunca de la base. */
     body {
       overflow-x: hidden;
-      --borde-tarjeta:  rgba(28, 26, 23, 0.08);
-      --sombra-tarjeta: 0 1px 2px rgba(28, 26, 23, 0.05);
-      --rt-texto-secundario: #4a5670;
-      --rt-segmento-fondo: color-mix(in srgb, var(--naranja) 9%, transparent);
+      --rt-texto-2: #6B645A;
+      --rt-gris-flecha: #B8B0A4;
+      --rt-fondo-pie: #FAF8F5;
+      --rt-punteado: #F0C3A6;
+      --rt-borde-faltante: #E8CDD5;
+      --rt-fila-faltante: #FBF1F4;
+      --rt-segmento-fondo: #EDE9E3;
+      --rt-esqueleto: #EDE9E3;
+      /* El dorado del módulo (el ícono de Órdenes de retiro). */
+      --rt-modulo: oklch(0.55 0.11 108);
+      --rt-modulo-suave: oklch(0.955 0.031 108);
+      /* "EL MÁS VIEJO": fondo del renglón y pastilla. */
+      --rt-viejo-fondo: oklch(0.975 0.025 90);
+      --rt-viejo-pastilla: oklch(0.93 0.07 90);
+      --rt-viejo-letra: #3B2E00;
     }
 
-    .rt-app { max-width: 820px; margin: 0 auto; padding: 0 1rem calc(2rem + env(safe-area-inset-bottom)); min-width: 0; }
+    .rt-app { max-width: 1320px; margin: 0 auto; padding: 0 0 calc(1rem + env(safe-area-inset-bottom)); min-width: 0; }
+    .rt-contenido { padding: 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .rt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .rt-num { font-family: var(--fuente-titulo); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
+    /* ── El encabezado del módulo (58 px, 1b) ─────────────────────────── */
     .rt-header {
-      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-      min-width: 0; background: var(--color-fondo); border-radius: var(--radio-tarjeta);
-      box-shadow: var(--sombra-suave); padding: 0.875rem 1rem; margin: 1rem 0;
+      height: 58px; flex-shrink: 0; background: var(--color-fondo); border-bottom: 1px solid var(--color-borde);
+      display: flex; align-items: center; gap: 4px; padding: 0 12px 0 4px; min-width: 0;
     }
-    .rt-header__volver {
-      color: var(--color-texto-suave); text-decoration: none; font-size: 0.875rem; font-weight: 600;
-      flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding-right: 0.5rem;
+    .rt-atras {
+      width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      background: none; border: 0; border-radius: 12px; color: var(--color-texto); cursor: pointer; padding: 0; text-decoration: none;
     }
-    .rt-header__col { display: flex; flex-direction: column; min-width: 0; text-align: right; }
-    .rt-header__marca { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-texto-suave); }
-    .rt-header__titulo { font-size: 1.0625rem; font-weight: 700; color: var(--color-texto); min-width: 0; overflow-wrap: anywhere; }
-    .rt-header__punto { color: var(--naranja); font-size: 0.875rem; line-height: 1; }
+    .rt-atras:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: -2px; }
+    .rt-atras svg { width: 22px; height: 22px; }
+    .rt-header__col { flex: 1; min-width: 0; line-height: 1.1; display: flex; flex-direction: column; }
+    .rt-header__marca { font-size: 12.5px; font-weight: 600; color: var(--rt-texto-2); }
+    .rt-header__titulo { font-family: var(--fuente-titulo); font-size: 20px; font-weight: 700; letter-spacing: -0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-texto); }
+    .rt-header__icono { display: none; }
 
+    /* La fábrica elegida, a la derecha del título (un chip; si hay otra, se toca para cambiarla). */
+    .rt-empresa-actual { flex-shrink: 0; min-width: 0; max-width: 45%; }
+    .rt-fab {
+      height: 36px; padding: 0 10px 0 5px; border-radius: 10px; border: 1px solid var(--color-borde); background: var(--color-fondo);
+      display: flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 700; color: var(--color-texto);
+      min-width: 0; max-width: 100%;
+    }
+    button.rt-fab { cursor: pointer; min-height: 44px; }
+    .rt-fab__nombre { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rt-fab .rt-logo { max-height: 24px; max-width: 40px; }
+    .rt-fab__cambiar { font-size: 12.5px; font-weight: 800; color: var(--naranja); }
+    .rt-logo { max-height: 40px; max-width: 88px; width: auto; height: auto; object-fit: contain; flex-shrink: 0; }
+    .rt-inicial {
+      width: 24px; height: 24px; border-radius: 999px; background: var(--rt-modulo); color: #fff; font-size: 11px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+
+    /* Los pasos: Cliente · Productos · Transporte · Confirmar (solo celular). */
+    .rt-pasos { flex-shrink: 0; background: var(--color-fondo); border-bottom: 1px solid var(--color-borde); padding: 8px 12px 10px; display: flex; gap: 4px; }
+    .rt-paso { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--color-texto-suave); white-space: nowrap; }
+    .rt-paso::before { content: ''; height: 4px; border-radius: 999px; background: var(--color-borde); }
+    .rt-paso--hecho { color: var(--color-texto); }
+    .rt-paso--hecho::before { background: var(--color-texto); }
+    .rt-paso--actual { color: var(--naranja-oscuro); font-weight: 800; }
+    .rt-paso--actual::before { background: var(--naranja); }
+
+    /* Nuevo retiro / Mis retiros. */
+    .rt-pestanas { display: flex; gap: 2px; background: var(--rt-segmento-fondo); border-radius: 11px; padding: 3px; align-self: flex-start; }
+    .rt-pestana {
+      height: 38px; padding: 0 14px; border-radius: 8px; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 700;
+      color: var(--color-texto-menu); display: flex; align-items: center; cursor: pointer;
+    }
+    .rt-pestana--actual { background: var(--color-fondo); color: var(--naranja-oscuro); cursor: default; }
+
+    /* ── Botones y campos ─────────────────────────────────────────────── */
     .rt-btn {
-      min-height: 44px; padding: 0 1rem; font: inherit; font-size: 0.9375rem; font-weight: 700;
+      min-height: 44px; padding: 0 1rem; font: inherit; font-size: 15px; font-weight: 800;
       border-radius: var(--radio-boton); border: 2px solid var(--naranja);
       background: var(--naranja); color: #fff; cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
       text-align: center; touch-action: manipulation;
     }
     .rt-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .rt-btn:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
-    .rt-btn--secundario { background: var(--color-fondo); color: var(--naranja-oscuro); }
-    .rt-btn--suave { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde); }
+    .rt-btn:focus-visible, .rt-link:focus-visible, .rt-opcion:focus-visible, .rt-fila:focus-visible, .rt-resultado:focus-visible { outline: 3px solid var(--naranja-oscuro); outline-offset: 2px; }
+    .rt-btn--secundario { background: var(--color-fondo); color: var(--naranja); }
+    .rt-btn--suave { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde-boton); }
     .rt-btn--peligro { background: var(--bordo); border-color: var(--bordo); color: #fff; }
     .rt-btn--ancho { width: 100%; }
     .rt-link {
-      background: none; border: 0; padding: 0 0.25rem; min-height: 44px; font: inherit; font-size: 0.875rem;
-      font-weight: 600; color: var(--color-texto-suave); cursor: pointer; display: inline-flex; align-items: center;
+      background: none; border: 0; padding: 0 0.25rem; min-height: 44px; font: inherit; font-size: 14.5px;
+      font-weight: 800; color: var(--naranja); cursor: pointer; display: inline-flex; align-items: center;
     }
-
-    .rt-tarjeta {
-      background: var(--color-fondo); border-radius: var(--radio-tarjeta);
-      border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
-      padding: 1rem; margin-bottom: 0.75rem; min-width: 0;
-    }
-    .rt-titulo { font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--color-texto); overflow-wrap: anywhere; }
-    .rt-subtitulo { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-texto-suave); margin: 1rem 0 0.5rem; }
-    .rt-texto-suave { color: var(--rt-texto-secundario); font-size: 0.875rem; }
-    .rt-vacio { padding: 2rem 1rem; text-align: center; color: var(--rt-texto-secundario); }
+    .rt-tarjeta { background: var(--color-fondo); border-radius: var(--radio-tarjeta); border: 1px solid var(--color-borde); padding: 10px 14px; min-width: 0; }
+    .rt-titulo { font-family: var(--fuente-titulo); font-size: 22px; font-weight: 700; letter-spacing: -0.03em; margin: 0; padding: 2px 4px 0; color: var(--color-texto); overflow-wrap: anywhere; }
+    .rt-rotulo { font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-texto-suave); }
+    .rt-subtitulo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-texto-suave); padding: 2px 4px 0; margin: 0; display: flex; gap: 8px; }
+    .rt-subtitulo__total { margin-left: auto; color: var(--color-texto); }
+    .rt-texto-suave { color: var(--rt-texto-2); font-size: 14px; margin: 0; }
+    .rt-pista { color: var(--rt-texto-2); font-size: 12.5px; margin: 0; padding: 0 4px; }
+    .rt-vacio { padding: 2rem 1rem; text-align: center; color: var(--rt-texto-2); }
 
     /* Dos escalones: .rt-aviso informa (neutro) y .rt-aviso--grave dice que
        algo falta o salió mal (bordó). El naranja nunca marca validez. */
     .rt-aviso {
-      padding: 0.75rem 0.875rem; border-radius: var(--radio-input); margin: 0.5rem 0;
-      background: var(--color-superficie); border-left: 4px solid var(--color-acento-gris);
-      color: var(--rt-texto-secundario); font-size: 0.875rem; overflow-wrap: anywhere;
+      padding: 10px 12px; border-radius: 14px; margin: 0;
+      background: var(--color-fondo); border: 1.5px solid var(--color-borde);
+      color: var(--color-texto-menu); font-size: 14px; overflow-wrap: anywhere; line-height: 1.35;
     }
-    .rt-aviso--grave { background: var(--bordo-suave); border-left-color: var(--bordo); color: var(--bordo-oscuro); font-weight: 600; }
-    .rt-error-pegado { color: var(--bordo-oscuro); font-weight: 600; font-size: 0.875rem; margin: 0.375rem 0 0; overflow-wrap: anywhere; }
-    .rt-barra-acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0 0 0.75rem; }
-    .rt-cabecera-vista { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.75rem; }
-    .rt-cabecera-vista .rt-titulo { flex: 1 1 auto; }
-    #rt-vista-empresa .rt-texto-suave { margin: 0.375rem 0 0.875rem; }
+    .rt-aviso--grave { background: var(--bordo-suave); border-color: var(--rt-borde-faltante); color: var(--bordo-oscuro); font-weight: 600; }
+    .rt-aviso strong { font-weight: 800; }
+    .rt-error-pegado { color: var(--bordo-oscuro); font-weight: 700; font-size: 14px; margin: 0; overflow-wrap: anywhere; }
+    .rt-barra-acciones { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-    .rt-segmento { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--rt-segmento-fondo); min-width: 0; overflow-x: auto; margin: 0 0 0.625rem; }
-    .rt-segmento__opcion {
-      flex: 1 0 auto; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: 8px;
-      background: transparent; font: inherit; font-size: 0.8125rem; font-weight: 600;
-      color: var(--naranja-oscuro); white-space: nowrap; cursor: pointer;
-    }
-    .rt-segmento__opcion[aria-pressed="true"] { background: var(--naranja); color: #fff; font-weight: 700; }
-
-    .rt-campo { display: flex; flex-direction: column; gap: 0.25rem; margin: 0 0 0.875rem; min-width: 0; }
-    .rt-campo > label, .rt-campo__rotulo { font-size: 0.8125rem; font-weight: 700; color: var(--color-texto); }
+    .rt-campo { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .rt-campo > label, .rt-campo__rotulo { font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-texto-suave); }
     .rt-input, .rt-textarea {
       width: 100%; min-height: 44px; padding: 0.5rem 0.75rem; box-sizing: border-box;
-      font: inherit; font-size: 1rem; color: var(--color-texto); background: var(--color-fondo);
-      border: 1px solid var(--color-borde); border-radius: var(--radio-input);
+      font: inherit; font-size: 15.5px; color: var(--color-texto); background: var(--color-fondo);
+      border: 1px solid var(--color-borde); border-radius: 10px;
     }
-    .rt-textarea { min-height: 72px; resize: vertical; }
+    .rt-textarea { min-height: 44px; resize: vertical; background: var(--rt-fondo-pie); font-size: 14.5px; color: var(--color-texto-menu); }
     .rt-input:focus, .rt-textarea:focus { outline: 2px solid var(--naranja); outline-offset: 0; border-color: var(--naranja); }
-
-    /* ── La empresa: siempre a la vista, arriba ────────────────────────── */
-    .rt-empresa-actual {
-      display: flex; align-items: center; gap: 0.75rem; justify-content: space-between;
-      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
-      border-radius: 17px; padding: 0.625rem 0.875rem; margin: 0 0 0.75rem; min-width: 0;
+    /* El buscador grande (52 px, borde naranja de 2 px). */
+    .rt-buscador {
+      height: 52px; flex-shrink: 0; border-radius: 14px; background: var(--color-fondo); border: 2px solid var(--naranja);
+      display: flex; align-items: center; gap: 10px; padding: 0 14px; min-width: 0;
     }
-    .rt-empresa-actual__cuerpo { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
-    .rt-empresa-actual__rotulo { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rt-texto-secundario); }
-    .rt-empresa-actual__nombre { font-weight: 800; overflow-wrap: anywhere; }
-    /* Los logos de las cuatro empresas con un alto máximo parejo. */
-    .rt-logo { max-height: 40px; max-width: 88px; width: auto; height: auto; object-fit: contain; flex-shrink: 0; }
-    .rt-empresas { display: grid; gap: 0.625rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+    .rt-buscador svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--color-texto-suave); }
+    .rt-buscador input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; font: inherit; font-size: 17px; font-weight: 600; color: var(--color-texto); }
+    .rt-buscador:focus-within { box-shadow: 0 0 0 3px var(--naranja-suave); }
+
+    /* ── 1a · La fábrica ──────────────────────────────────────────────── */
+    .rt-empresas { display: grid; gap: 10px; grid-auto-rows: minmax(120px, 1fr); }
     .rt-empresa {
-      display: flex; align-items: center; gap: 0.875rem; min-height: 72px; padding: 0.75rem 1rem;
-      border-radius: 17px; border: 2px solid var(--color-borde); background: var(--color-fondo);
+      display: flex; align-items: center; gap: 16px; padding: 0 18px; min-height: 120px;
+      border-radius: 16px; border: 2px solid var(--color-borde); background: var(--color-fondo);
       font: inherit; color: var(--color-texto); text-align: left; cursor: pointer; min-width: 0;
     }
-    .rt-empresa[aria-pressed="true"] { border-color: var(--naranja); background: var(--naranja-suave); }
-    .rt-empresa .rt-logo { max-height: 48px; max-width: 96px; }
-    .rt-empresa__nombre { font-weight: 800; font-size: 1.0625rem; overflow-wrap: anywhere; }
-    .rt-empresa__ultima { font-size: 0.75rem; color: var(--naranja-oscuro); font-weight: 700; }
+    .rt-empresa[aria-pressed="true"] { border-color: var(--naranja); }
+    .rt-empresa .rt-logo, .rt-empresa .rt-inicial { width: auto; max-height: 64px; max-width: 64px; }
+    .rt-empresa .rt-inicial { width: 64px; height: 64px; font-family: var(--fuente-titulo); font-size: 26px; }
+    .rt-empresa__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .rt-empresa__nombre { font-family: var(--fuente-titulo); font-size: 23px; font-weight: 700; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+    .rt-empresa__ultima { font-size: 14.5px; color: var(--rt-texto-2); }
+    .rt-flecha { width: 20px; height: 20px; flex-shrink: 0; color: var(--naranja); }
 
-    .rt-panel { border: 2px solid var(--naranja); border-radius: var(--radio-tarjeta); padding: 1rem; margin: 0 0 0.75rem; background: var(--color-fondo); }
+    .rt-panel { border: 2px solid var(--naranja); border-radius: var(--radio-tarjeta); padding: 14px; margin: 12px 12px 0; background: var(--color-fondo); }
     .rt-panel--peligro { border-color: var(--bordo); }
-    .rt-panel__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.75rem 0 0; }
+    .rt-panel__acciones { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
 
-    /* ── Cargar ───────────────────────────────────────────────────────── */
-    .rt-cliente-elegido {
-      display: flex; align-items: center; gap: 0.5rem; justify-content: space-between;
-      padding: 0.625rem 0.875rem; border-radius: var(--radio-input);
-      background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 700; overflow-wrap: anywhere;
-    }
-    .rt-cliente-elegido__detalle { display: block; font-weight: 500; font-size: 0.8125rem; }
-    .rt-resultados { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.375rem 0 0; }
+    /* ── 1b · El cliente ──────────────────────────────────────────────── */
+    .rt-resultados, .rt-lista-blanca { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; overflow: hidden; }
+    .rt-resultados:empty { display: none; }
     .rt-resultado {
-      display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; width: 100%; text-align: left;
-      min-height: 44px; padding: 0.5rem 0.75rem; border-radius: var(--radio-input); cursor: pointer;
-      border: 1px solid var(--color-borde); background: var(--color-fondo); font: inherit; color: var(--color-texto);
+      display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 8px 14px;
+      border: 0; border-top: 1px solid var(--color-pista); background: var(--color-fondo); font: inherit; color: var(--color-texto);
+      text-align: left; cursor: pointer;
     }
-    .rt-resultado__nombre { font-weight: 700; overflow-wrap: anywhere; }
-    .rt-resultado__detalle { font-size: 0.8125rem; color: var(--rt-texto-secundario); overflow-wrap: anywhere; }
+    .rt-resultado:first-child { border-top: 0; background: var(--color-acento-fila); }
+    .rt-resultado__ini {
+      width: 40px; height: 40px; border-radius: 999px; background: #F1EEE9; color: var(--color-texto-menu); font-size: 14px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .rt-resultado__texto { flex: 1; min-width: 0; line-height: 1.25; display: flex; flex-direction: column; }
+    .rt-resultado__nombre { font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
+    .rt-resultado__detalle { font-size: 13.5px; color: var(--rt-texto-2); overflow-wrap: anywhere; }
+    .rt-resultados .rt-texto-suave, .rt-resultados .rt-aviso { padding: 12px 14px; border: 0; border-radius: 0; }
+    .rt-resaltado { background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 700; border-radius: 4px; padding: 0 3px; }
+    .rt-frecuentes .rt-resultado { min-height: 56px; padding: 6px 14px; background: var(--color-fondo); }
+    .rt-frecuentes .rt-resultado__nombre { font-size: 16px; font-weight: 700; }
+    .rt-frecuentes .rt-resultado__detalle { font-size: 13px; }
+    .rt-frecuentes .rt-flecha { color: var(--rt-gris-flecha); width: 16px; height: 16px; }
 
-    .rt-renglones { display: flex; flex-direction: column; gap: 0.75rem; margin: 0 0 0.75rem; }
-    .rt-renglon {
-      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
-      border-radius: 17px; padding: 0.875rem; min-width: 0; border-left: 4px solid var(--naranja);
-    }
-    .rt-renglon--error { border-color: var(--bordo); border-left-color: var(--bordo); }
-    .rt-renglon__cabecera { display: flex; align-items: center; gap: 0.5rem; justify-content: space-between; margin: 0 0 0.5rem; }
-    .rt-renglon__numero { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rt-texto-secundario); }
-    .rt-opciones { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0 0 0.625rem; }
-    .rt-opcion {
-      min-height: 44px; padding: 0.375rem 0.75rem; border-radius: var(--radio-input); cursor: pointer;
-      border: 1px solid var(--color-borde); background: var(--color-fondo); font: inherit; font-size: 0.9375rem;
-      color: var(--color-texto); text-align: left; overflow-wrap: anywhere; max-width: 100%;
-      display: inline-flex; flex-direction: column; justify-content: center;
-    }
-    .rt-opcion[aria-pressed="true"] { border: 2px solid var(--naranja); background: var(--naranja-suave); color: var(--naranja-oscuro); font-weight: 700; }
-    .rt-opcion__detalle { font-size: 0.75rem; color: var(--rt-texto-secundario); font-weight: 500; }
-    .rt-separador {
-      flex: 1 1 100%; display: flex; align-items: center; gap: 0.5rem; margin: 0.25rem 0;
-      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rt-texto-secundario);
-    }
-    .rt-separador::before, .rt-separador::after { content: ""; flex: 1 1 auto; border-top: 1px solid var(--color-borde); }
-    .rt-elegido { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 0 0 0.625rem; }
-    .rt-elegido__texto { font-weight: 700; overflow-wrap: anywhere; }
-    .rt-renglon__pie { display: grid; gap: 0 0.75rem; grid-template-columns: minmax(0, 10rem); align-items: end; }
-    .rt-lote { display: flex; flex-direction: column; gap: 0.375rem; margin: 0 0 0.5rem; }
-    .rt-lote__elegido { font-size: 0.875rem; font-weight: 700; overflow-wrap: anywhere; }
+    /* Quién retira (1f) y el transporte. */
+    .rt-cliente-elegido { display: flex; align-items: center; gap: 10px; }
+    .rt-cliente-elegido__texto { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
+    .rt-cliente-elegido__nombre { font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
+    .rt-cliente-elegido__detalle { font-size: 13px; color: var(--rt-texto-2); overflow-wrap: anywhere; }
+    .rt-transporte__fila { display: flex; align-items: center; gap: 8px; }
+    .rt-transporte__fila .rt-input { flex: 1; font-weight: 700; }
+    .rt-el-de-siempre { font-size: 12.5px; font-weight: 600; color: var(--rt-texto-2); white-space: nowrap; }
+    .rt-cabecera-orden { display: flex; flex-direction: column; gap: 6px; }
 
-    /* ── Resumen y hecho ──────────────────────────────────────────────── */
-    .rt-resumen-fila { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-borde); min-width: 0; }
-    .rt-resumen-fila:last-child { border-bottom: 0; }
-    .rt-resumen-fila__desc { overflow-wrap: anywhere; min-width: 0; }
-    .rt-resumen-fila__cajas { font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .rt-dato { display: flex; flex-direction: column; min-width: 0; margin: 0 0 0.5rem; }
-    .rt-dato__rotulo { font-size: 0.75rem; font-weight: 700; color: var(--rt-texto-secundario); }
-    .rt-dato__valor { font-weight: 600; overflow-wrap: anywhere; white-space: pre-wrap; }
-    .rt-total { font-weight: 800; font-size: 1.0625rem; margin: 0.5rem 0 0; }
-
-    .rt-codigo-grande { font-size: 3rem; font-weight: 900; letter-spacing: 0.02em; line-height: 1.05; margin: 0.25rem 0; font-variant-numeric: tabular-nums; }
-    .rt-hecho__rotulo { font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rt-texto-secundario); }
-
-    /* ── Mis retiros ──────────────────────────────────────────────────── */
-    .rt-lista { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
-    .rt-fila {
-      display: flex; flex-direction: column; gap: 0.25rem; width: 100%; text-align: left;
-      background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); box-shadow: var(--sombra-tarjeta);
-      border-radius: 17px; padding: 0.8125rem 1rem; font: inherit; color: var(--color-texto); cursor: pointer;
-      min-width: 0; min-height: 56px;
+    /* ── La orden armada: renglones como tarjetas (1f) / tabla (2a) ───── */
+    .rt-orden-lista { display: flex; flex-direction: column; gap: 6px; }
+    .rt-item {
+      display: flex; align-items: stretch; background: var(--color-fondo); border: 1px solid var(--color-borde);
+      border-left: 6px solid var(--rt-color, var(--color-borde)); border-radius: 12px; min-width: 0;
     }
-    .rt-fila--anulada { background: var(--bordo-suave); }
-    .rt-fila__linea { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 0; }
-    .rt-fila__codigo { font-weight: 900; font-size: 1.0625rem; font-variant-numeric: tabular-nums; }
-    .rt-fila__meta { font-size: 0.8125rem; color: var(--rt-texto-secundario); overflow-wrap: anywhere; }
+    .rt-item--faltante { border-color: var(--rt-borde-faltante); border-left-color: var(--rt-color, var(--color-borde)); }
+    .rt-item--error { border-color: var(--bordo); border-left-color: var(--bordo); }
+    .rt-item__cuerpo {
+      flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; align-items: center;
+      padding: 8px 4px 8px 12px; background: none; border: 0; font: inherit; color: var(--color-texto); text-align: left; cursor: pointer; min-height: 56px;
+    }
+    .rt-item__prod { grid-column: 1; line-height: 1.25; min-width: 0; display: flex; flex-direction: column; }
+    .rt-item__nombre { font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+    .rt-item__cono { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 2px; font-size: 12.5px; color: var(--color-texto-suave); }
+    .rt-item__lotes { grid-column: 1; font-size: 12.5px; color: var(--rt-texto-2); font-variant-numeric: tabular-nums; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .rt-item__falta { grid-column: 1; font-size: 12.5px; font-weight: 800; color: var(--bordo); margin-top: 2px; }
+    .rt-item__cant { grid-column: 2; grid-row: 1 / span 3; text-align: right; line-height: 1.05; display: flex; flex-direction: column; }
+    .rt-item__q { font-family: var(--fuente-titulo); font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .rt-item__u { font-size: 12px; color: var(--rt-texto-2); }
+    .rt-item__quitar {
+      width: 44px; flex-shrink: 0; border: 0; background: none; color: var(--color-texto-suave); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; border-radius: 0 12px 12px 0;
+    }
+    .rt-item__quitar svg { width: 15px; height: 15px; }
+    .rt-lote-chip { display: none; }
+    .rt-agregar {
+      min-height: 48px; border-radius: 12px; border: 2px dashed var(--rt-punteado); background: var(--color-acento-fila);
+      color: var(--naranja-oscuro); font: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; width: 100%;
+    }
+    .rt-orden-vacia { padding: 14px; text-align: center; color: var(--rt-texto-2); font-size: 14.5px; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px; }
+    /* En el celular el pie no se dibuja como franja: queda solo la acción
+       "Ver resumen", pegada abajo (.rt-accion). El total va en la compu. */
+    .rt-pie-orden { display: contents; }
+    /* El encabezado de columnas (Producto · Lotes · Cantidad) es de la tabla
+       de la compu: en el celular cada renglón es una tarjeta y no va. */
+    .rt-orden-cab { display: none; }
+    .rt-pie-orden__total, .rt-pie-orden__falta { display: none; }
+    .rt-numerar { display: none; }
+
+    /* Las pastillas: el cono (su color), sin stock y anulada (bordó). */
+    .rt-cono {
+      display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.03em;
+      background: var(--rt-cono-bg, #F1EEE9); color: var(--rt-cono-fg, var(--color-texto-menu)); white-space: nowrap;
+    }
     .rt-sello {
-      display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.06em;
-      text-transform: uppercase; border-radius: 999px; padding: 0.1875rem 0.5625rem; white-space: nowrap;
-      background: var(--bordo); color: #fff;
+      display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 800;
+      background: var(--bordo); color: #fff; text-transform: uppercase; letter-spacing: 0.03em;
     }
-    /* Un renglón de insumo de reventa: neutro, no es una alerta. */
-    .rt-sello--insumo { background: var(--color-superficie); color: var(--rt-texto-secundario); border: 1px solid var(--color-borde); }
-    /* El separador de los insumos pesa más que el de una categoría: son otra cosa. */
-    .rt-separador--insumos { color: var(--naranja-oscuro); margin-top: 0.75rem; }
-    /* ── Los TRES grupos del catálogo (28/09/2026) ───────────────────────
-       Cada uno con su encabezado y su color, para no confundir un Mini sin
-       cono con un Mini con cono: SIN CONO en grafito, CON CONO en amarillo
-       (el cono) y la materia prima en marrón (el color de Ingreso). El texto
-       va siempre en el tono oscuro sobre el suave (más de 4,5:1). El naranja
-       sigue siendo solo "lo elegido". */
+    .rt-sello--insumo { background: #F1EEE9; color: var(--color-texto-menu); text-transform: none; }
+
+    /* ── 1c · El catálogo en tres grupos ──────────────────────────────── */
+    .rt-catalogo { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .rt-opciones { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .rt-cat-grupo { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; overflow: hidden; flex-shrink: 0; }
     .rt-grupo {
-      flex: 1 1 100%; display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0 0.125rem;
-      padding: 0.375rem 0.625rem; border-radius: var(--radio-input); border-left: 4px solid;
-      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
+      background: var(--rt-g-t); border-bottom: 2px solid var(--rt-g-c);
+      font-size: 12.5px; font-weight: 800; letter-spacing: 0.05em; color: var(--rt-g-fg); text-transform: uppercase;
     }
-    .rt-grupo--sin-cono { background: var(--grafito-suave); border-left-color: var(--grafito); color: var(--grafito-oscuro); }
-    .rt-grupo--con-cono { background: var(--amarillo-suave); border-left-color: var(--amarillo); color: var(--amarillo-oscuro); }
-    .rt-grupo--insumos  { background: var(--marron-suave); border-left-color: var(--marron); color: var(--marron-oscuro); }
-    .rt-opcion--sin-cono { border-left: 4px solid var(--grafito); }
-    .rt-opcion--con-cono { border-left: 4px solid var(--amarillo); }
-    .rt-opcion--insumos  { border-left: 4px solid var(--marron); }
-    .rt-opcion__sin-stock { color: var(--bordo-oscuro); font-weight: 700; }
-    .rt-pista { flex: 1 1 100%; font-size: 0.8125rem; color: var(--rt-texto-secundario); margin: 0.25rem 0 0; }
-
-    /* ── Varios lotes por renglón ──────────────────────────────────────── */
-    .rt-lotes { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.25rem 0 0.5rem; min-width: 0; }
-    .rt-lote-fila {
-      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 7rem); gap: 0.5rem; align-items: center;
-      padding: 0.375rem 0.5rem; border: 1px solid var(--color-borde); border-radius: var(--radio-input); min-width: 0;
+    .rt-grupo::before { content: ''; width: 10px; height: 10px; border-radius: 3px; background: var(--rt-g-c); flex-shrink: 0; }
+    .rt-grupo__titulo { flex: 1; min-width: 0; }
+    .rt-grupo__cuenta { font-weight: 700; text-transform: none; letter-spacing: 0; }
+    .rt-grupo--sin-cono { --rt-g-c: oklch(0.62 0.12 80); --rt-g-t: oklch(0.965 0.03 85); --rt-g-fg: oklch(0.4 0.08 75); }
+    .rt-grupo--con-cono { --rt-g-c: oklch(0.52 0.12 330); --rt-g-t: oklch(0.965 0.02 330); --rt-g-fg: oklch(0.4 0.11 330); }
+    .rt-grupo--insumos { --rt-g-c: oklch(0.5 0.05 150); --rt-g-t: oklch(0.96 0.012 150); --rt-g-fg: oklch(0.36 0.05 150); }
+    .rt-opcion {
+      display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 6px 12px;
+      border: 0; border-top: 1px solid var(--color-pista); background: var(--color-fondo); font: inherit; color: var(--color-texto);
+      text-align: left; cursor: pointer;
     }
-    .rt-lote-fila__nombre { font-weight: 700; overflow-wrap: anywhere; }
-    .rt-lote-fila__detalle { display: block; font-size: 0.75rem; color: var(--rt-texto-secundario); font-weight: 500; }
-    .rt-lotes__resumen { font-size: 0.875rem; font-weight: 600; color: var(--color-texto); overflow-wrap: anywhere; }
-    .rt-lotes__resumen strong { font-variant-numeric: tabular-nums; }
-    .rt-lotes__falta { color: var(--bordo-oscuro); }
-    .rt-item { background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); border-radius: 17px; padding: 0.75rem 0.875rem; }
-    .rt-item__desc { font-weight: 700; overflow-wrap: anywhere; }
-    .rt-item__lotes { font-size: 0.8125rem; color: var(--rt-texto-secundario); overflow-wrap: anywhere; }
+    .rt-grupo + .rt-opcion { border-top: 0; }
+    .rt-opcion[aria-pressed="true"] { background: var(--color-acento-fila); box-shadow: inset 3px 0 0 var(--naranja); }
+    .rt-opcion__franja { width: 8px; height: 30px; border-radius: 3px; background: var(--rt-color, #9A9287); flex-shrink: 0; }
+    .rt-opcion__texto { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
+    .rt-opcion__nombre { font-size: 15.5px; font-weight: 700; overflow-wrap: anywhere; }
+    .rt-opcion__detalle { display: flex; gap: 6px; align-items: center; margin-top: 3px; flex-wrap: wrap; font-size: 12.5px; color: var(--rt-texto-2); }
+    .rt-opcion__stock { text-align: right; line-height: 1.05; display: flex; flex-direction: column; flex-shrink: 0; }
+    .rt-opcion__q { font-family: var(--fuente-titulo); font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .rt-opcion__u { font-size: 12px; color: var(--rt-texto-2); }
+    .rt-opcion__sin-stock {
+      height: 24px; padding: 0 9px; border-radius: 7px; background: var(--bordo-suave); color: var(--bordo); font-size: 12.5px; font-weight: 800;
+      display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;
+    }
+    .rt-opcion--sin-stock .rt-opcion__franja, .rt-opcion--sin-stock .rt-opcion__texto { opacity: 0.55; }
+    .rt-opciones--simple { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; overflow: hidden; gap: 0; }
+    .rt-opciones--simple .rt-opcion:first-child { border-top: 0; }
+    /* 1k · el catálogo mientras trae el stock. */
+    .rt-esqueleto { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; overflow: hidden; }
+    .rt-esqueleto__cab { height: 40px; background: var(--color-superficie); border-bottom: 2px solid var(--rt-esqueleto); }
+    .rt-esqueleto__fila { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 12px; border-top: 1px solid var(--color-pista); }
+    .rt-esqueleto__fila::before { content: ''; width: 8px; height: 30px; border-radius: 3px; background: var(--rt-esqueleto); }
+    .rt-esqueleto__barra { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .rt-esqueleto__barra span { display: block; height: 12px; border-radius: 6px; background: var(--rt-esqueleto); }
+    .rt-esqueleto__barra span + span { width: 40%; height: 10px; background: var(--color-pista); }
 
-    /* ── Imprimir ─────────────────────────────────────────────────────────
-       La hoja la arma htmlHoja() de js/retiros-comun.js. En pantalla no se
-       ve; al imprimir, es lo ÚNICO que se ve. */
+    /* ── 1d · El renglón elegido: cuánto y de qué lotes ───────────────── */
+    .rt-editor { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .rt-elegido {
+      background: var(--rt-tinte, #F1EEE9); border-left: 6px solid var(--rt-color, #9A9287); border-radius: 14px; padding: 10px 14px;
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .rt-elegido__texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .rt-elegido__nombre { font-family: var(--fuente-titulo); font-size: 20px; font-weight: 700; letter-spacing: -0.03em; color: var(--rt-oscuro, var(--color-texto)); overflow-wrap: anywhere; }
+    .rt-elegido__sub { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--color-texto-menu); flex-wrap: wrap; }
+    .rt-cuanto { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .rt-cuanto label { flex: 1; min-width: 0; font-size: 16px; font-weight: 700; }
+    .rt-paso-btn {
+      width: 48px; height: 48px; border-radius: 12px; border: 2px solid var(--color-borde-fuerte); background: var(--color-fondo);
+      font: inherit; font-size: 26px; font-weight: 700; color: var(--color-texto); cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rt-cuanto .rt-input {
+      width: 72px; height: 52px; border-radius: 12px; border: 3px solid var(--naranja); background: var(--color-acento-fila);
+      font-family: var(--fuente-titulo); font-size: 30px; font-weight: 800; text-align: center; padding: 0 4px; flex-shrink: 0;
+    }
+    .rt-cuanto--insumo .rt-input { width: 110px; font-size: 24px; }
+    .rt-opciones-bloque { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .rt-opciones-bloque .rt-opciones { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+    .rt-opciones-bloque .rt-opcion { width: auto; min-height: 44px; border: 1px solid var(--color-borde); border-radius: 10px; padding: 0 12px; }
+    .rt-segmento { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--rt-segmento-fondo); min-width: 0; }
+    .rt-segmento__opcion {
+      flex: 1 0 auto; min-height: 44px; padding: 0 0.75rem; border: 0; border-radius: 8px;
+      background: transparent; font: inherit; font-size: 14px; font-weight: 700; color: var(--color-texto-menu); white-space: nowrap; cursor: pointer;
+    }
+    .rt-segmento__opcion[aria-pressed="true"] { background: var(--color-fondo); color: var(--naranja-oscuro); }
+    .rt-lote { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+    .rt-lote__cab { display: flex; align-items: center; gap: 8px; padding: 10px 14px 8px; flex-wrap: wrap; }
+    .rt-lote__titulo { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
+    .rt-lote__titulo strong { font-size: 15px; font-weight: 800; }
+    .rt-lote__titulo span { font-size: 12.5px; color: var(--rt-texto-2); }
+    .rt-completar {
+      height: 40px; padding: 0 12px; border-radius: 11px; border: 2px solid var(--naranja); color: var(--naranja); background: var(--color-fondo);
+      font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; min-height: 44px;
+    }
+    .rt-lote__cuerpo > .rt-texto-suave, .rt-lote__cuerpo > .rt-aviso { margin: 0 14px 10px; }
+    .rt-lote-fila { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 6px 14px; border-top: 1px solid var(--color-pista); }
+    .rt-lote-fila--viejo { background: var(--rt-viejo-fondo); }
+    .rt-lote-fila__nombre { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
+    .rt-lote-fila__lote { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-family: var(--fuente-titulo); font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+    .rt-viejo { height: 20px; padding: 0 7px; border-radius: 6px; background: var(--rt-viejo-pastilla); color: var(--rt-viejo-letra); font-family: var(--fuente); font-size: 11px; font-weight: 800; letter-spacing: 0; display: inline-flex; align-items: center; }
+    .rt-lote-fila__detalle { font-size: 13.5px; color: var(--rt-texto-2); }
+    .rt-lote-fila__detalle strong { color: var(--color-texto); }
+    .rt-lote-fila .rt-input {
+      width: 76px; height: 50px; border-radius: 12px; border: 2px solid var(--color-borde); background: var(--color-fondo); flex-shrink: 0;
+      font-family: var(--fuente-titulo); font-size: 24px; font-weight: 800; text-align: center; padding: 0 4px; font-variant-numeric: tabular-nums;
+    }
+    .rt-lote-fila .rt-input:not(:placeholder-shown) { border-color: var(--naranja); }
+    .rt-lote__limpiar { padding: 0 14px 6px; }
+    .rt-lote__pie { border-top: 2px solid var(--color-borde); background: var(--rt-fondo-pie); padding: 8px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .rt-lote__asignado { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
+    .rt-lote__asignado small { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: var(--rt-texto-2); text-transform: uppercase; }
+    .rt-lote__asignado span { font-family: var(--fuente-titulo); font-size: 22px; font-weight: 800; }
+    .rt-lote__asignado em { font-style: normal; font-size: 15px; color: var(--rt-texto-2); font-weight: 600; }
+    .rt-estado-lotes { height: 36px; padding: 0 12px; border-radius: 10px; font-size: 14.5px; font-weight: 800; display: inline-flex; align-items: center; background: #F1EEE9; color: var(--color-texto-menu); white-space: nowrap; }
+    .rt-estado-lotes--ok { background: var(--verde-suave); color: var(--verde-oscuro); }
+    .rt-estado-lotes--falta { background: var(--bordo); color: #fff; }
+    .rt-lotes__resumen { font-size: 13.5px; color: var(--rt-texto-2); display: block; width: 100%; }
+    .rt-lotes__falta { color: var(--bordo-oscuro); font-weight: 700; }
+    .rt-faltante { display: flex; gap: 10px; }
+    .rt-faltante svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--bordo); }
+    .rt-faltante strong { display: block; font-size: 15.5px; }
+
+    /* La acción de abajo (56 px, naranja), pegada al borde de la pantalla. */
+    .rt-accion {
+      position: sticky; bottom: 0; z-index: 5; background: var(--color-fondo); border-top: 1px solid var(--color-borde);
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); margin: 0 -12px -12px; display: flex; flex-direction: column; gap: 6px;
+    }
+    body.con-barra-lateral .rt-accion { padding-bottom: 10px; }
+    .rt-accion .rt-btn { min-height: 56px; border-radius: 14px; font-size: 18px; width: 100%; }
+    .rt-accion .rt-btn--secundario { background: var(--color-fondo); color: var(--naranja); }
+
+    /* ── 1g · Resumen ─────────────────────────────────────────────────── */
+    .rt-resumen { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; padding: 4px 14px; display: flex; flex-direction: column; }
+    .rt-dato { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--color-pista); }
+    .rt-dato__rotulo { width: 92px; flex-shrink: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; color: var(--color-texto-suave); padding-top: 2px; text-transform: uppercase; }
+    .rt-dato__valor { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+    .rt-resumen-fila { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--color-pista); }
+    .rt-resumen-fila::before { content: ''; width: 8px; height: 22px; border-radius: 3px; background: var(--rt-color, #9A9287); flex-shrink: 0; }
+    .rt-resumen-fila__desc { flex: 1; min-width: 0; line-height: 1.2; font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
+    .rt-resumen-fila__cono { font-weight: 600; color: var(--rt-texto-2); }
+    .rt-resumen-fila__lotes { display: block; font-size: 12.5px; font-weight: 500; color: var(--rt-texto-2); }
+    .rt-resumen-fila__cajas { font-family: var(--fuente-titulo); font-size: 18px; font-weight: 800; white-space: nowrap; }
+    .rt-resumen-fila__cajas small { font-size: 12px; font-weight: 600; color: var(--rt-texto-2); font-family: var(--fuente); }
+    .rt-total { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 0 8px; margin: 0; flex-wrap: wrap; }
+    .rt-total__rotulo { font-size: 13px; font-weight: 800; letter-spacing: 0.06em; color: var(--rt-texto-2); }
+    .rt-total__valor { font-family: var(--fuente-titulo); font-size: 24px; font-weight: 800; text-align: right; }
+    .rt-total__valor small { font-size: 15px; color: var(--rt-texto-2); }
+    .rt-sin-precios { font-size: 13.5px; color: var(--rt-texto-2); text-align: center; margin: 0; }
+    .rt-sin-senal { display: flex; gap: 10px; align-items: center; }
+    .rt-sin-senal svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--bordo); }
+    .rt-sin-senal strong { display: block; font-size: 15px; }
+
+    /* ── 1h · Confirmado ──────────────────────────────────────────────── */
+    .rt-hecho { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 28px 0 12px; }
+    .rt-hecho__ok { width: 64px; height: 64px; border-radius: 999px; background: var(--verde-suave); color: var(--verde); display: flex; align-items: center; justify-content: center; }
+    .rt-hecho__ok svg { width: 34px; height: 34px; }
+    .rt-hecho__rotulo { font-size: 17px; font-weight: 700; color: var(--verde-oscuro); margin-top: 4px; }
+    .rt-codigo-grande { font-family: var(--fuente-titulo); font-size: 84px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .rt-hecho__detalle { font-size: 16px; color: var(--color-texto-menu); line-height: 1.4; margin: 0; }
+    .rt-hecho .rt-aviso { text-align: left; width: 100%; box-sizing: border-box; }
+    .rt-salidas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .rt-salida {
+      height: 96px; border-radius: 16px; background: var(--color-fondo); border: 2px solid var(--naranja); color: var(--naranja);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 0 6px;
+      font: inherit; cursor: pointer; min-width: 0;
+    }
+    .rt-salida svg { width: 24px; height: 24px; }
+    .rt-salida strong { font-size: 16px; font-weight: 800; }
+    .rt-salida small { font-size: 11.5px; font-weight: 600; color: var(--rt-texto-2); line-height: 1.2; }
+    .rt-salida:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── 1i · Mis retiros ─────────────────────────────────────────────── */
+    .rt-lista { display: flex; flex-direction: column; gap: 6px; }
+    .rt-mis-cabecera { display: flex; align-items: center; gap: 8px; padding: 0 2px; }
+    .rt-mis-cabecera .rt-texto-suave { flex: 1; font-size: 14.5px; }
+    .rt-mis-cabecera .rt-num { font-size: 18px; }
+    .rt-mia { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 14px; padding: 8px 8px 8px 12px; display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .rt-fila { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 0; font: inherit; color: var(--color-texto); text-align: left; cursor: pointer; min-height: 44px; }
+    .rt-fila__logo { width: 30px; height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .rt-fila__logo .rt-logo { max-height: 30px; max-width: 30px; }
+    .rt-fila__logo .rt-inicial { width: 30px; height: 30px; }
+    .rt-fila__texto { flex: 1; min-width: 0; line-height: 1.2; display: flex; flex-direction: column; }
+    .rt-fila__linea { display: flex; align-items: center; gap: 6px; }
+    .rt-fila__codigo { font-family: var(--fuente-titulo); font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .rt-fila__cliente { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+    .rt-fila__meta { font-size: 12.5px; color: var(--rt-texto-2); }
+    .rt-fila--anulada .rt-fila__texto { opacity: 0.6; }
+    .rt-fila--anulada .rt-fila__codigo { text-decoration: line-through; }
+    .rt-icono-btn {
+      width: 44px; height: 44px; border-radius: 11px; border: 1.5px solid var(--color-borde); background: var(--color-fondo); color: var(--naranja);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; padding: 0;
+    }
+    .rt-icono-btn svg { width: 19px; height: 19px; }
+    .rt-sin-retiros { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 48px 24px; }
+    .rt-sin-retiros__icono { width: 64px; height: 64px; border-radius: 18px; background: var(--rt-modulo-suave); color: var(--rt-modulo); display: flex; align-items: center; justify-content: center; }
+    .rt-sin-retiros__icono svg { width: 30px; height: 30px; }
+    .rt-sin-retiros strong { font-family: var(--fuente-titulo); font-size: 22px; font-weight: 700; letter-spacing: -0.03em; }
+    .rt-sin-retiros p { font-size: 15px; color: var(--rt-texto-2); line-height: 1.45; margin: 0; }
+    .rt-item-mio { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 12px; padding: 8px 12px; }
+    .rt-item__desc { font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+    .rt-item__lotes-mio { font-size: 12.5px; color: var(--rt-texto-2); }
+
+    /* Pasos del celular: cada paso muestra lo suyo (la compu muestra todo). */
+    .rt-carga { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .rt-col-orden, .rt-col-agregar { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    @media (max-width: 1023.98px) {
+      .rt-carga[data-paso="cliente"] .rt-bloque-orden, .rt-carga[data-paso="cliente"] .rt-col-agregar { display: none; }
+      .rt-carga[data-paso="cliente"] .rt-bloque-cliente--elegido { display: none; }
+      .rt-carga[data-paso="productos"] .rt-col-orden { display: none; }
+      .rt-carga[data-paso="orden"] .rt-col-agregar { display: none; }
+      .rt-carga[data-paso="orden"] .rt-bloque-cliente--buscar { display: none; }
+      .rt-vista-form--editando .rt-pestanas { display: none; }
+    }
+
+    /* ── Compu (2a, 2b), desde 1024 px ────────────────────────────────── */
+    @media (min-width: 1024px) {
+      .rt-app { padding: 0 24px 18px; }
+      .rt-header { height: auto; background: none; border: 0; padding: 14px 0 0; gap: 12px; }
+      .rt-header__icono {
+        display: flex; width: 30px; height: 30px; border-radius: 9px; background: var(--rt-modulo-suave); color: var(--rt-modulo);
+        align-items: center; justify-content: center; flex-shrink: 0;
+      }
+      .rt-header__icono svg { width: 17px; height: 17px; }
+      .rt-header__col { flex-direction: row; align-items: baseline; gap: 12px; flex: 0 1 auto; }
+      .rt-header__marca { font-size: 15px; }
+      .rt-header__marca::after { content: '/'; color: var(--rt-gris-flecha); margin-left: 12px; }
+      .rt-header__titulo { font-size: 22px; }
+      .rt-empresa-actual { margin-left: auto; }
+      .rt-pasos { display: none; }
+      .rt-contenido { padding: 12px 0 0; gap: 12px; }
+      .rt-pestanas { position: absolute; right: 24px; top: 12px; }
+      .rt-app { position: relative; }
+      .rt-carga { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; align-items: start; }
+      .rt-col-orden { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; gap: 0; overflow: hidden; }
+      .rt-col-agregar { position: sticky; top: 64px; max-height: calc(100vh - 80px); overflow: auto; background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; gap: 0; }
+      .rt-bloque-cliente, .rt-cabecera-orden { padding: 12px 16px; border-bottom: 1px solid var(--color-divisor); }
+      .rt-bloque-cliente .rt-tarjeta, .rt-bloque-transporte.rt-tarjeta { border: 0; padding: 0; border-radius: 0; }
+      .rt-cliente-elegido__texto { flex-direction: row; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+      .rt-cliente-elegido__nombre { font-size: 18px; }
+      .rt-cliente-elegido__detalle { font-size: 14px; font-weight: 600; }
+      .rt-numerar { display: inline-flex; height: 28px; padding: 0 10px; border-radius: 8px; background: var(--color-pista); font-size: 13px; font-weight: 700; align-items: center; white-space: nowrap; }
+      .rt-subtitulo { display: none; }
+      .rt-orden-cab { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) 80px 40px; gap: 12px; height: 30px; align-items: center; padding: 0 16px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; color: var(--color-texto-suave); border-bottom: 1px solid var(--color-divisor); text-transform: uppercase; }
+      .rt-orden-lista { gap: 0; }
+      .rt-item { border: 0; border-bottom: 1px solid var(--color-pista); border-radius: 0; }
+      .rt-item--faltante { background: var(--rt-fila-faltante); }
+      .rt-item__cuerpo { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) 80px; column-gap: 12px; min-height: 52px; padding: 6px 0 6px 10px; }
+      .rt-item__prod { grid-column: 1; grid-row: 1 / span 2; }
+      .rt-item__nombre { font-size: 14.5px; }
+      .rt-item__lotes { grid-column: 2; grid-row: 1; }
+      .rt-item__lotes-texto { display: none; }
+      .rt-lote-chip { display: inline-flex; height: 24px; padding: 0 8px; border-radius: 7px; background: var(--color-pista); font-size: 12.5px; font-weight: 700; align-items: center; color: var(--color-texto); }
+      .rt-lote-chip--falta { background: var(--bordo); color: #fff; font-weight: 800; }
+      .rt-item__falta { grid-column: 2; grid-row: 2; }
+      .rt-item__cant { grid-column: 3; grid-row: 1 / span 2; }
+      .rt-item__q { font-size: 20px; }
+      .rt-item__quitar { width: 40px; margin-right: 6px; }
+      .rt-agregar { margin: 10px 16px; width: auto; min-height: 44px; font-size: 14.5px; font-weight: 700; }
+      .rt-bloque-transporte { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; padding: 10px 16px; border-top: 1px solid var(--color-divisor); }
+      .rt-orden-vacia { margin: 10px 16px 0; }
+      .rt-pie-orden { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: var(--rt-fondo-pie); border-top: 2px solid var(--color-borde); flex-wrap: wrap; }
+      .rt-pie-orden__total { display: block; font-family: var(--fuente-titulo); font-size: 22px; font-weight: 800; }
+      .rt-pie-orden__total small { font-size: 15px; color: var(--rt-texto-2); font-weight: 600; }
+      .rt-pie-orden__falta { height: 26px; padding: 0 9px; border-radius: 7px; background: var(--bordo-suave); color: var(--bordo); font-size: 12.5px; font-weight: 800; display: inline-flex; align-items: center; }
+      .rt-pie-orden .rt-errores { flex-basis: 100%; }
+      .rt-accion--orden { position: static; margin: 0; padding: 0; border: 0; background: none; margin-left: auto; }
+      .rt-accion--orden .rt-btn { min-height: 44px; font-size: 15.5px; padding: 0 20px; width: auto; }
+      .rt-col-agregar .rt-editor, .rt-col-agregar .rt-catalogo { padding: 10px 12px; }
+      .rt-col-agregar .rt-buscador { height: 38px; border-radius: 10px; border: 1px solid var(--color-divisor); background: var(--rt-fondo-pie); padding: 0 10px; }
+      .rt-col-agregar .rt-buscador input { font-size: 14px; font-weight: 500; }
+      .rt-col-agregar .rt-cat-grupo { border: 0; border-radius: 0; }
+      .rt-col-agregar .rt-opciones { gap: 0; margin: 0 -12px; }
+      .rt-col-agregar .rt-grupo { height: 32px; position: sticky; top: 0; z-index: 1; font-size: 11.5px; }
+      .rt-col-agregar .rt-opcion { min-height: 42px; padding: 4px 12px; gap: 9px; }
+      .rt-col-agregar .rt-opcion__franja { width: 6px; height: 22px; }
+      .rt-col-agregar .rt-opcion__nombre { font-size: 13.5px; }
+      .rt-col-agregar .rt-opcion__stock { flex-direction: row; align-items: baseline; gap: 4px; }
+      .rt-col-agregar .rt-opcion__q { font-family: var(--fuente); font-size: 14px; }
+      .rt-col-agregar .rt-opcion__u { font-size: 11.5px; font-weight: 600; }
+      .rt-col-agregar .rt-accion { margin: 0 -12px -10px; }
+      #rt-vista-resumen, #rt-vista-hecho, #rt-vista-mio, #rt-vista-empresa { max-width: 640px; }
+      .rt-empresas { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+      /* 2b · Mis retiros como tabla. */
+      .rt-mia { border-radius: 0; border: 0; border-bottom: 1px solid var(--color-pista); padding: 6px 16px; }
+      .rt-lista--mis { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; gap: 0; overflow: hidden; }
+      .rt-fila__texto { flex-direction: row; align-items: center; gap: 16px; }
+      .rt-fila__linea { width: 150px; flex-shrink: 0; }
+      .rt-fila__cliente { flex: 1; }
+      .rt-fila__meta { width: 240px; flex-shrink: 0; }
+    }
+
+    /* ── Imprimir: solo la hoja de js/retiros-comun.js ─────────────────── */
     .rt-impresion { display: none; }
     @media print {
-      body { background: #fff !important; }
+      body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
       body > *:not(#rt-impresion) { display: none !important; }
       .rt-impresion { display: block !important; }
     }
@@ -294,123 +592,145 @@
 <body class="pagina-modulo">
   <div class="rt-app" id="rt-app">
 
+    <!-- El encabezado (58 px en el celular, 1b): UNA flecha de volver, que
+         según la vista es la del inicio o la de la pantalla anterior (se ve
+         una sola a la vez), el título y la fábrica a la derecha. -->
     <header class="rt-header">
-      <a href="../dashboard.html" class="rt-header__volver" title="Volver al dashboard">&lsaquo; Volver</a>
+      <a href="../dashboard.html" class="rt-header__volver rt-atras" id="rt-atras-inicio" title="Volver al inicio" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+      <button type="button" class="rt-atras" id="rt-editor-volver" title="Volver a la orden" aria-label="Volver a la orden" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button type="button" class="rt-atras" id="rt-resumen-volver" title="Corregir la orden" aria-label="Corregir la orden" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button type="button" class="rt-atras" id="rt-mio-volver" title="Volver a mis retiros" aria-label="Volver a mis retiros" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <span class="rt-header__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/></svg></span>
       <div class="rt-header__col">
-        <span class="rt-header__marca">Seis Destinos</span>
-        <span class="rt-header__titulo">Órdenes de retiro <span class="rt-header__punto">&#9679;</span> <span id="rt-subtitulo">Cargar</span></span>
+        <span class="rt-header__marca" id="rt-header-sub">Órdenes de retiro</span>
+        <span class="rt-header__titulo" id="rt-subtitulo">Nuevo retiro</span>
       </div>
+      <!-- La fábrica del retiro, SIEMPRE a la vista. Con una sola no hay
+           "Cambiar": no hay nada que elegir. -->
+      <div class="rt-empresa-actual" id="rt-empresa-actual" hidden></div>
     </header>
+    <div class="rt-pasos" id="rt-pasos" hidden></div>
+
+    <div class="rt-panel rt-panel--peligro" id="rt-panel-cambiar" hidden>
+      <p id="rt-panel-cambiar-texto">Tenés una orden a medio cargar. Si cambiás de fábrica, se vacía.</p>
+      <div class="rt-panel__acciones">
+        <button type="button" class="rt-btn rt-btn--peligro" id="rt-cambiar-si">Cambiar y vaciar la orden</button>
+        <button type="button" class="rt-btn rt-btn--suave" id="rt-cambiar-no">Seguir con esta fábrica</button>
+      </div>
+    </div>
 
     <div class="rt-vacio" id="rt-sin-acceso" hidden></div>
     <div class="rt-vacio" id="rt-cargando">Cargando…</div>
 
-    <!-- La empresa del retiro, SIEMPRE a la vista. Con una sola no hay
-         "Cambiar": no hay nada que elegir. -->
-    <div class="rt-empresa-actual" id="rt-empresa-actual" hidden></div>
-    <div class="rt-panel rt-panel--peligro" id="rt-panel-cambiar" hidden>
-      <p id="rt-panel-cambiar-texto">Tenés una orden a medio cargar. Si cambiás de empresa, se vacía.</p>
-      <div class="rt-panel__acciones">
-        <button type="button" class="rt-btn rt-btn--peligro" id="rt-cambiar-si">Cambiar y vaciar la orden</button>
-        <button type="button" class="rt-btn rt-btn--suave" id="rt-cambiar-no">Seguir con esta empresa</button>
-      </div>
-    </div>
-
-    <!-- ══ ¿DE QUÉ EMPRESA? ═══════════════════════════════════════════════ -->
-    <section id="rt-vista-empresa" hidden>
-      <h1 class="rt-titulo">¿De qué empresa es el retiro?</h1>
-      <p class="rt-texto-suave">Todo lo que sigue —clientes, productos y lotes— es de la empresa que elijas.</p>
+    <!-- ══ 1a · ¿DE QUÉ FÁBRICA? ══════════════════════════════════════════ -->
+    <section id="rt-vista-empresa" class="rt-contenido" hidden>
+      <h1 class="rt-titulo">¿De qué fábrica es el retiro?</h1>
+      <p class="rt-texto-suave">Cada fábrica numera sus retiros con su letra.</p>
       <div class="rt-empresas" id="rt-empresas"></div>
     </section>
 
-    <!-- ══ CARGAR ═════════════════════════════════════════════════════════ -->
-    <section id="rt-vista-form" hidden>
-      <div class="rt-cabecera-vista">
-        <h1 class="rt-titulo">Nueva orden de retiro</h1>
-        <button type="button" class="rt-btn rt-btn--suave" id="rt-btn-mis">Mis retiros</button>
+    <!-- ══ CARGAR: 1b cliente · 1c catálogo · 1d lotes · 1f la orden (2a) ══ -->
+    <section id="rt-vista-form" class="rt-contenido" hidden>
+      <div class="rt-pestanas" role="group" aria-label="Nuevo retiro o mis retiros">
+        <span class="rt-pestana rt-pestana--actual" aria-current="page">Nuevo retiro</span>
+        <button type="button" class="rt-pestana" id="rt-btn-mis">Mis retiros</button>
       </div>
-      <div class="rt-tarjeta">
-        <div class="rt-campo">
-          <span class="rt-campo__rotulo">Cliente</span>
-          <div id="rt-cliente-elegido"></div>
-          <div id="rt-cliente-buscador">
-            <input type="search" class="rt-input" id="rt-cliente-buscar" autocomplete="off" maxlength="120"
-                   placeholder="Nombre, razón social o apodo…" aria-label="Buscar el cliente por nombre, razón social o apodo">
+      <div class="rt-carga" id="rt-carga" data-paso="cliente">
+        <div class="rt-col-orden">
+          <div class="rt-bloque-cliente rt-bloque-cliente--buscar" id="rt-cliente-buscador">
+            <h1 class="rt-titulo">¿Quién retira?</h1>
+            <label class="rt-buscador" for="rt-cliente-buscar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"/></svg>
+              <input type="search" id="rt-cliente-buscar" autocomplete="off" maxlength="120"
+                     placeholder="Nombre, razón social o apodo…" aria-label="Buscar el cliente por nombre, razón social o apodo">
+            </label>
+            <p class="rt-pista">Busca por nombre, razón social o apodo.</p>
             <div class="rt-resultados" id="rt-clientes-resultados"></div>
+            <div id="rt-clientes-frecuentes"></div>
+          </div>
+          <div class="rt-bloque-cliente rt-bloque-cliente--elegido" id="rt-cliente-elegido-bloque" hidden>
+            <div class="rt-tarjeta" id="rt-cliente-elegido"></div>
+          </div>
+          <div class="rt-bloque-orden">
+            <p class="rt-subtitulo" id="rt-orden-titulo"></p>
+            <div class="rt-orden-cab" aria-hidden="true"><span>Producto</span><span>Lotes</span><span style="text-align: right">Cantidad</span><span></span></div>
+            <div class="rt-orden-lista" id="rt-orden-lista"></div>
+            <button type="button" class="rt-agregar" id="rt-agregar">+ Agregar otro producto</button>
+            <div class="rt-tarjeta rt-bloque-transporte">
+              <div class="rt-campo">
+                <label for="rt-transporte">Transporte</label>
+                <div class="rt-transporte__fila">
+                  <input type="text" class="rt-input" id="rt-transporte" maxlength="120" autocomplete="off" placeholder="Quién se lo lleva">
+                  <span class="rt-el-de-siempre" id="rt-transporte-habitual" hidden>· el de siempre</span>
+                </div>
+              </div>
+              <div class="rt-campo">
+                <label for="rt-observaciones">Observaciones (opcional)</label>
+                <textarea class="rt-textarea" id="rt-observaciones" maxlength="500" rows="1"></textarea>
+              </div>
+            </div>
+            <div class="rt-pie-orden">
+              <span class="rt-pie-orden__total" id="rt-cuenta"></span>
+              <span class="rt-pie-orden__falta" id="rt-cuenta-faltante" hidden></span>
+              <div class="rt-accion rt-accion--orden">
+                <p class="rt-error-pegado rt-errores" id="rt-form-error" hidden></p>
+                <button type="button" class="rt-btn rt-btn--ancho" id="rt-revisar">Ver resumen</button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <h2 class="rt-subtitulo">Lo que se lleva</h2>
-      <div id="rt-catalogo-aviso"></div>
-      <div class="rt-renglones" id="rt-renglones"></div>
-      <div class="rt-barra-acciones">
-        <button type="button" class="rt-btn rt-btn--secundario" id="rt-agregar">+ Agregar producto</button>
-      </div>
-
-      <div class="rt-tarjeta">
-        <div class="rt-campo">
-          <label for="rt-transporte">Transporte</label>
-          <input type="text" class="rt-input" id="rt-transporte" maxlength="120" autocomplete="off" placeholder="Quién se lo lleva">
+        <div class="rt-col-agregar">
+          <div id="rt-catalogo-aviso"></div>
+          <div class="rt-renglones" id="rt-renglones"></div>
         </div>
-        <div class="rt-campo">
-          <label for="rt-observaciones">Observaciones (opcional)</label>
-          <textarea class="rt-textarea" id="rt-observaciones" maxlength="500"></textarea>
-        </div>
-        <p class="rt-texto-suave" id="rt-cuenta"></p>
-        <p class="rt-error-pegado" id="rt-form-error" hidden></p>
-        <button type="button" class="rt-btn rt-btn--ancho" id="rt-revisar">Revisar la orden</button>
       </div>
     </section>
 
-    <!-- ══ RESUMEN, SIN PRECIOS ═══════════════════════════════════════════ -->
-    <section id="rt-vista-resumen" hidden>
-      <div class="rt-cabecera-vista">
-        <button type="button" class="rt-link" id="rt-resumen-volver">&lsaquo; Corregir</button>
-        <h1 class="rt-titulo">Revisá la orden</h1>
-      </div>
-      <div class="rt-tarjeta" id="rt-resumen"></div>
-      <div class="rt-tarjeta">
-        <p class="rt-error-pegado" id="rt-confirmar-error" hidden></p>
-        <button type="button" class="rt-btn rt-btn--ancho" id="rt-confirmar">Confirmar la orden</button>
+    <!-- ══ 1g · RESUMEN, SIN PRECIOS ══════════════════════════════════════ -->
+    <section id="rt-vista-resumen" class="rt-contenido" hidden>
+      <h1 class="rt-titulo">Revisá antes de confirmar</h1>
+      <div class="rt-resumen" id="rt-resumen"></div>
+      <div class="rt-aviso rt-aviso--grave rt-sin-senal" id="rt-confirmar-error" hidden></div>
+      <p class="rt-sin-precios">Sin precios: la valoriza Administración.</p>
+      <div class="rt-accion">
+        <button type="button" class="rt-btn rt-btn--ancho" id="rt-confirmar">Confirmar retiro</button>
       </div>
     </section>
 
-    <!-- ══ HECHO ══════════════════════════════════════════════════════════ -->
-    <section id="rt-vista-hecho" hidden>
-      <div class="rt-tarjeta" id="rt-hecho"></div>
+    <!-- ══ 1h · CONFIRMADO ════════════════════════════════════════════════ -->
+    <section id="rt-vista-hecho" class="rt-contenido" hidden>
+      <div class="rt-hecho" id="rt-hecho"></div>
       <div id="rt-hecho-empresa-aviso"></div>
-      <div class="rt-barra-acciones">
-        <button type="button" class="rt-btn" id="rt-hecho-imprimir">Imprimir</button>
-        <button type="button" class="rt-btn rt-btn--secundario" id="rt-hecho-enviar">Enviar</button>
-        <button type="button" class="rt-btn rt-btn--suave" id="rt-hecho-compartir">Compartir</button>
+      <div class="rt-salidas">
+        <button type="button" class="rt-salida" id="rt-hecho-imprimir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg><strong>Imprimir</strong><small>A4, dos copias</small></button>
+        <button type="button" class="rt-salida" id="rt-hecho-enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg><strong>Enviar</strong><small>PDF por WhatsApp o mail</small></button>
+        <button type="button" class="rt-salida" id="rt-hecho-compartir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12h8M12 4v12M7 8l5-5 5 5M5 14v6h14v-6"/></svg><strong>Compartir</strong><small>como texto</small></button>
       </div>
       <p class="rt-error-pegado" id="rt-hecho-error" hidden></p>
       <p class="rt-aviso" id="rt-hecho-aviso" hidden></p>
-      <button type="button" class="rt-btn rt-btn--suave rt-btn--ancho" id="rt-otra">Cargar otra orden</button>
+      <div class="rt-accion">
+        <button type="button" class="rt-btn rt-btn--secundario rt-btn--ancho" id="rt-otra">Cargar otro retiro</button>
+      </div>
     </section>
 
-    <!-- ══ MIS RETIROS ════════════════════════════════════════════════════ -->
-    <section id="rt-vista-mis" hidden>
-      <div class="rt-cabecera-vista">
-        <button type="button" class="rt-link" id="rt-mis-volver">&lsaquo; Cargar</button>
-        <h1 class="rt-titulo">Mis retiros</h1>
+    <!-- ══ 1i · MIS RETIROS ═══════════════════════════════════════════════ -->
+    <section id="rt-vista-mis" class="rt-contenido" hidden>
+      <div class="rt-pestanas" role="group" aria-label="Nuevo retiro o mis retiros">
+        <button type="button" class="rt-pestana" id="rt-mis-volver">Nuevo retiro</button>
+        <span class="rt-pestana rt-pestana--actual" aria-current="page">Mis retiros</span>
       </div>
-      <p class="rt-texto-suave">Las órdenes que cargaste vos en los últimos 30 días, para volver a imprimirlas o mandarlas.</p>
-      <div class="rt-lista" id="rt-mis-lista"></div>
+      <div class="rt-mis-cabecera"><p class="rt-texto-suave">Los que cargaste vos · últimos 30 días</p><span class="rt-num" id="rt-mis-cuenta"></span></div>
+      <div class="rt-lista rt-lista--mis" id="rt-mis-lista"></div>
     </section>
 
     <!-- ══ UNA DE MIS ÓRDENES ═════════════════════════════════════════════ -->
-    <section id="rt-vista-mio" hidden>
-      <div class="rt-cabecera-vista">
-        <button type="button" class="rt-link" id="rt-mio-volver">&lsaquo; Mis retiros</button>
-        <h1 class="rt-titulo" id="rt-mio-titulo">Orden</h1>
-      </div>
+    <section id="rt-vista-mio" class="rt-contenido" hidden>
+      <h1 class="rt-titulo" id="rt-mio-titulo">Orden</h1>
       <div id="rt-mio-empresa-aviso"></div>
-      <div class="rt-barra-acciones">
-        <button type="button" class="rt-btn" id="rt-mio-imprimir">Imprimir</button>
-        <button type="button" class="rt-btn rt-btn--secundario" id="rt-mio-enviar">Enviar</button>
-        <button type="button" class="rt-btn rt-btn--suave" id="rt-mio-compartir">Compartir</button>
+      <div class="rt-salidas">
+        <button type="button" class="rt-salida" id="rt-mio-imprimir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg><strong>Imprimir</strong><small>A4, dos copias</small></button>
+        <button type="button" class="rt-salida" id="rt-mio-enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg><strong>Enviar</strong><small>PDF por WhatsApp o mail</small></button>
+        <button type="button" class="rt-salida" id="rt-mio-compartir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12h8M12 4v12M7 8l5-5 5 5M5 14v6h14v-6"/></svg><strong>Compartir</strong><small>como texto</small></button>
       </div>
       <p class="rt-error-pegado" id="rt-mio-error" hidden></p>
       <p class="rt-aviso" id="rt-mio-aviso" hidden></p>
@@ -614,20 +934,50 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     const VISTAS = ['rt-vista-empresa', 'rt-vista-form', 'rt-vista-resumen', 'rt-vista-hecho', 'rt-vista-mis', 'rt-vista-mio']
+    // El encabezado de cada vista (diseño 1a–1l): arriba en chico y el título.
+    // En la carga el título es la fábrica (a la derecha va su chip).
     const SUBTITULO_DE_VISTA = {
-      'rt-vista-empresa': 'Empresa',
-      'rt-vista-form': 'Cargar',
-      'rt-vista-resumen': 'Revisar',
-      'rt-vista-hecho': 'Hecho',
-      'rt-vista-mis': 'Mis retiros',
-      'rt-vista-mio': 'Orden',
+      'rt-vista-empresa': ['Órdenes de retiro', 'Nuevo retiro'],
+      'rt-vista-form': ['Nuevo retiro', null],
+      'rt-vista-resumen': ['Nuevo retiro', null],
+      'rt-vista-hecho': ['Órdenes de retiro', 'Retiro'],
+      'rt-vista-mis': ['Órdenes de retiro', 'Mis retiros'],
+      'rt-vista-mio': ['Mis retiros', 'Orden'],
     }
 
     function mostrarVista(id) {
       for (const v of VISTAS) document.getElementById(v).hidden = v !== id
       estado.vista = id
-      document.getElementById('rt-subtitulo').textContent = SUBTITULO_DE_VISTA[id] ?? 'Retiros'
+      pintarEncabezado()
       window.scrollTo(0, 0)
+    }
+
+    // UNA flecha de volver a la vista (se ven de a una) y el título.
+    function pintarEncabezado() {
+      const id = estado.vista
+      const [sub, titulo] = SUBTITULO_DE_VISTA[id] ?? ['Órdenes de retiro', 'Retiros']
+      const paso = id === 'rt-vista-form' && estado.form ? pasoForm(estado.form) : null
+      const codigo = id === 'rt-vista-hecho' ? estado.hecho?.codigo : id === 'rt-vista-mio' ? estado.mio?.orden?.codigo : null
+      document.getElementById('rt-header-sub').textContent = sub
+      document.getElementById('rt-subtitulo').textContent = titulo === null
+        ? (empresaActual()?.nombre ?? 'Nuevo retiro')
+        : (codigo ? `${titulo} ${codigo}` : titulo)
+      const atras = {
+        'rt-atras-inicio': ['rt-vista-empresa', 'rt-vista-hecho', 'rt-vista-mis'].includes(id) || (id === 'rt-vista-form' && paso !== 'productos'),
+        'rt-editor-volver': id === 'rt-vista-form' && paso === 'productos',
+        'rt-resumen-volver': id === 'rt-vista-resumen',
+        'rt-mio-volver': id === 'rt-vista-mio',
+      }
+      for (const [k, v] of Object.entries(atras)) document.getElementById(k).hidden = !v
+      document.getElementById('rt-pasos').hidden = !(id === 'rt-vista-form' || id === 'rt-vista-resumen')
+      document.getElementById('rt-pasos').innerHTML = htmlPasos(id === 'rt-vista-resumen' ? 3 : ({ cliente: 0, productos: 1, orden: 2 })[paso] ?? 0)
+    }
+
+    // Los cuatro pasos del celular: Cliente · Productos · Transporte · Confirmar.
+    const PASOS_RETIRO = ['Cliente', 'Productos', 'Transporte', 'Confirmar']
+    function htmlPasos(actual) {
+      return PASOS_RETIRO.map((l, i) => `<span class="rt-paso${i < actual ? ' rt-paso--hecho' : i === actual ? ' rt-paso--actual' : ''}"` +
+        `${i === actual ? ' aria-current="step"' : ''}>${esc(l)}</span>`).join('')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -641,33 +991,45 @@
       return logo ? `<img class="${esc(clase)}" src="../${encodeURIComponent(logo)}" alt="">` : ''
     }
 
-    // Con varias empresas se pregunta primero, con los logos. La última que se
-    // usó va primera y marcada: un solo toque para seguir con ella.
+    // El logo de la fábrica, o su letra en un círculo si no tiene.
+    function htmlMarcaEmpresa(emp) {
+      return htmlLogo(emp) || `<span class="rt-inicial" aria-hidden="true">${esc(limpio(emp?.prefijo) || limpio(emp?.nombre).slice(0, 1).toUpperCase() || '—')}</span>`
+    }
+
+    // 1a · Con varias fábricas se pregunta primero: una tarjeta por fábrica,
+    // con el logo. La última que se usó va primera y marcada.
+    // El diseño muestra "El próximo es N-0012": NO se muestra, porque el
+    // número lo pone la base al confirmar y no hay cómo saberlo antes sin
+    // inventarlo (decisión 2: sin señal la orden no toma número).
     function htmlEmpresas() {
       const ultima = leerPreferencia(CLAVE_EMPRESA)
       const lista = [...empresasDeCarga()].sort((a, b) => (b.id === ultima) - (a.id === ultima))
       return lista.map(e =>
         `<button type="button" class="rt-empresa" data-empresa="${esc(e.id)}" aria-pressed="${e.id === ultima ? 'true' : 'false'}">` +
-        `${htmlLogo(e)}<span><span class="rt-empresa__nombre">${esc(e.nombre)}</span>` +
-        `${e.id === ultima ? '<span class="rt-empresa__ultima"> · la última que usaste</span>' : ''}</span></button>`).join('')
+        `${htmlMarcaEmpresa(e)}<span class="rt-empresa__texto"><span class="rt-empresa__nombre">${esc(e.nombre)}</span>` +
+        `${e.id === ultima ? '<span class="rt-empresa__ultima">La última que usaste</span>' : ''}</span>` +
+        `<svg class="rt-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')
     }
 
-    // La empresa elegida, siempre arriba. "Cambiar" solo si hay otra.
+    // La fábrica elegida, a la derecha del título: un chip con su logo. Con
+    // otra para elegir, el chip es el botón de cambiarla.
     function htmlEmpresaActual() {
       const e = empresaActual()
       if (!e) return ''
-      const cambiar = empresasDeCarga().length > 1
-        ? '<button type="button" class="rt-btn rt-btn--suave" id="rt-btn-cambiar-empresa">Cambiar</button>' : ''
-      return `<div class="rt-empresa-actual__cuerpo">${htmlLogo(e)}<span><span class="rt-empresa-actual__rotulo">Empresa del retiro</span><br>` +
-        `<span class="rt-empresa-actual__nombre">${esc(e.nombre)}</span></span></div>${cambiar}`
+      const cuerpo = `${htmlLogo(e) || `<span class="rt-inicial" aria-hidden="true">${esc(limpio(e.prefijo) || limpio(e.nombre).slice(0, 1).toUpperCase())}</span>`}` +
+        `<span class="rt-fab__nombre">${esc(e.nombre)}</span>`
+      return empresasDeCarga().length > 1
+        ? `<button type="button" class="rt-fab" id="rt-btn-cambiar-empresa" aria-label="Fábrica del retiro: ${esc(e.nombre)}. Cambiar">${cuerpo}<span class="rt-fab__cambiar">Cambiar</span></button>`
+        : `<span class="rt-fab" title="Fábrica del retiro">${cuerpo}</span>`
     }
 
     function pintarEmpresaActual() {
       const el = document.getElementById('rt-empresa-actual')
       el.innerHTML = htmlEmpresaActual()
-      el.hidden = !empresaActual() || estado.vista === 'rt-vista-empresa'
+      el.hidden = !empresaActual() || ['rt-vista-empresa', 'rt-vista-mis', 'rt-vista-mio'].includes(estado.vista)
       const p = document.getElementById('rt-panel-cambiar')
       p.hidden = !estado.empresaPendiente
+      if (estado.vista) pintarEncabezado()
     }
 
     function mostrarEleccionEmpresa() {
@@ -1254,9 +1616,11 @@
         cantidad: null, lotes: {} }
     }
 
+    // 'editando' es el renglón que se está armando (1c catálogo / 1d lotes):
+    // arranca en el primero, vacío. null = se está mirando la orden (1f).
     function formVacio() {
       return { uuid: nuevoUuid(), clienteId: null, clienteBusqueda: '', transporte: '', transporteAuto: '',
-        observaciones: '', renglones: [renglonNuevo()], intentado: false, error: null }
+        observaciones: '', renglones: [renglonNuevo()], editando: 0, busquedaNueva: '', intentado: false, error: null }
     }
 
     function autoPresentacion(r, cat) {
@@ -1341,6 +1705,23 @@
         (insumos ? ` · ${insumos} de materia prima e insumos` : '')
     }
 
+    // El total como lo dice el diseño: "112 cajas + 100 un." (los insumos,
+    // por unidad: kilos y unidades no se suman entre sí).
+    function textoTotalForm(f) {
+      const porUnidad = new Map()
+      for (const r of f?.renglones ?? []) {
+        if (!r.insumoId || !(Number(r.cantidad) > 0)) continue
+        porUnidad.set(r.unidad ?? '', (porUnidad.get(r.unidad ?? '') ?? 0) + Number(r.cantidad))
+      }
+      const insumos = [...porUnidad.entries()].map(([u, n]) => cantidadInsumoHoja(n, u || null))
+      return [`${enteroHoja(totalCajasForm(f))} cajas`, ...insumos].join(' + ')
+    }
+
+    // Cuántos renglones tienen algo que no está en stock.
+    function renglonesConFaltante(f) {
+      return (f?.renglones ?? []).filter(r => (asignacion(r, listaLotesDe(r)).faltante ?? 0) > 0).length
+    }
+
     function clienteDe(id) {
       return id ? (estado.clientes ?? []).find(c => c.id === id) ?? null : null
     }
@@ -1352,29 +1733,79 @@
         .map(limpio).filter(Boolean).join(' · ')
     }
 
+    // Quién retira (1f): el nombre, un apodo, la razón social y la localidad,
+    // con "Cambiar". Nunca el saldo.
     function htmlClienteElegido(f) {
       if (!f?.clienteId) return ''
       const c = clienteDe(f.clienteId)
-      const d = c ? detalleCliente(c) : ''
-      return `<div class="rt-cliente-elegido"><span>${esc(c ? c.nombre : 'Cliente (no se pudo leer)')}` +
+      const apodo = (Array.isArray(c?.apodos) ? c.apodos : []).map(limpio).find(Boolean)
+      const d = [apodo ? `“${apodo}”` : '', c ? detalleCliente(c) : ''].filter(Boolean).join(' · ')
+      return `<div class="rt-cliente-elegido"><span class="rt-cliente-elegido__texto"><span class="rt-rotulo">Retira</span>` +
+        `<span class="rt-cliente-elegido__nombre">${esc(c ? c.nombre : 'Cliente (no se pudo leer)')}</span>` +
         `${d ? `<span class="rt-cliente-elegido__detalle">${esc(d)}</span>` : ''}</span>` +
-        `<button type="button" class="rt-btn rt-btn--suave" id="rt-cliente-cambiar">Cambiar</button></div>`
+        `<span class="rt-numerar">Se numera al confirmar</span>` +
+        `<button type="button" class="rt-link" id="rt-cliente-cambiar">Cambiar</button></div>`
     }
 
     // Un resultado: nombre, la EMPRESA siempre (aunque acá es una sola, que se
     // vea: el mismo cliente existe en Nuss y en Dolce Pasta), razón social si
     // es otra, localidad y apodos. Nunca el saldo.
-    function htmlResultadoCliente(c, empresa) {
-      const d = [limpio(empresa) || 'Empresa sin nombre', detalleCliente(c)].filter(Boolean).join(' · ')
-      const apodos = (Array.isArray(c.apodos) ? c.apodos : []).filter(Boolean).join(', ')
+    // Un resultado (1b): las iniciales, el nombre y, en chico, en qué
+    // coincidió (el apodo o la razón social, resaltado), la localidad y la
+    // EMPRESA siempre (el mismo cliente existe en Nuss y en Dolce Pasta).
+    // Nunca el saldo.
+    function htmlResultadoCliente(c, empresa, busqueda = '') {
+      const q = normalizar(busqueda)
+      const apodos = (Array.isArray(c.apodos) ? c.apodos : []).map(limpio).filter(Boolean)
+      const apodo = q ? apodos.find(a => normalizar(a).includes(q)) : null
+      const rs = limpio(c.razon_social)
+      const partes = []
+      if (apodo && !normalizar(c.nombre).includes(q)) partes.push(`apodo “${resaltar(apodo, busqueda)}”`)
+      if (rs && rs !== limpio(c.nombre)) partes.push(q && normalizar(rs).includes(q) && !normalizar(c.nombre).includes(q) ? `razón social ${resaltar(rs, busqueda)}` : esc(rs))
+      if (limpio(c.localidad)) partes.push(esc(limpio(c.localidad)))
+      partes.push(esc(limpio(empresa) || 'Empresa sin nombre'))
+      const otros = apodos.filter(a => a !== apodo)
       return `<button type="button" class="rt-resultado" data-cliente="${esc(c.id)}">` +
-        `<span class="rt-resultado__nombre">${esc(c.nombre)}</span>` +
-        `<span class="rt-resultado__detalle">${esc(d)}</span>` +
-        `${apodos ? `<span class="rt-resultado__detalle">También: ${esc(apodos)}</span>` : ''}</button>`
+        `<span class="rt-resultado__ini" aria-hidden="true">${esc(iniciales(c.nombre))}</span>` +
+        `<span class="rt-resultado__texto"><span class="rt-resultado__nombre">${resaltar(c.nombre, busqueda)}</span>` +
+        `<span class="rt-resultado__detalle">${partes.join(' · ')}</span>` +
+        `${otros.length ? `<span class="rt-resultado__detalle">También: ${esc(otros.join(', '))}</span>` : ''}</span>` +
+        `<svg class="rt-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>`
+    }
+
+    // "SL" de "Salvador Loforte".
+    function iniciales(nombre) {
+      const p = limpio(nombre).split(' ').filter(Boolean)
+      return ((p[0]?.[0] ?? '') + (p[1]?.[0] ?? '')).toUpperCase() || '—'
+    }
+
+    // El texto con lo que coincide con la búsqueda resaltado (sin acentos ni
+    // mayúsculas). ESCAPA todo: lo de afuera y lo resaltado. Si una letra
+    // cambia de largo al sacarle el acento, va sin resaltar.
+    function resaltar(texto, busqueda) {
+      const t = String(texto ?? '')
+      const q = normalizar(busqueda)
+      if (!q) return esc(t)
+      const letras = [...t]
+      const norm = letras.map(ch => ch.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase())
+      if (norm.some(n => n.length !== 1)) return esc(t)
+      const i = norm.join('').indexOf(q)
+      if (i < 0) return esc(t)
+      const antes = letras.slice(0, i).join('')
+      const medio = letras.slice(i, i + q.length).join('')
+      const despues = letras.slice(i + q.length).join('')
+      return `${esc(antes)}<mark class="rt-resaltado">${esc(medio)}</mark>${esc(despues)}`
     }
 
     function htmlResultadosClientes(busqueda) {
       const q = limpio(busqueda)
+      // Sin escribir nada no hay resultados: abajo van los de siempre.
+      if (!q) {
+        if (estado.errorClientes) return `<div class="rt-aviso rt-aviso--grave">${esc(estado.errorClientes)}</div>`
+        if (estado.clientes === null) return '<div class="rt-texto-suave">Cargando clientes…</div>'
+        if (!estado.clientes.length) return '<div class="rt-aviso">Esta empresa todavía no tiene clientes. Los carga administración.</div>'
+        return ''
+      }
       // Desde 2 letras, si la base ya contestó para este texto: lo suyo.
       const r = q.length >= MIN_LETRAS_BUSCAR ? busquedaVigente(q) : null
       if (r) {
@@ -1382,7 +1813,7 @@
         return r.filas.slice(0, 8).map(x => {
           const local = clienteDe(x.cliente_id)
           const c = local ?? { id: x.cliente_id, nombre: x.nombre, razon_social: x.razon_social, localidad: x.localidad, apodos: [] }
-          return htmlResultadoCliente(c, x.empresa || empresaActual()?.nombre)
+          return htmlResultadoCliente(c, x.empresa || empresaActual()?.nombre, busqueda)
         }).join('')
       }
       if (estado.errorClientes) return `<div class="rt-aviso rt-aviso--grave">${esc(estado.errorClientes)}</div>`
@@ -1390,19 +1821,67 @@
       if (!estado.clientes.length) return '<div class="rt-aviso">Esta empresa todavía no tiene clientes. Los carga administración.</div>'
       const lista = clientesFiltrados(estado.clientes, busqueda).slice(0, 8)
       if (!lista.length) return `<div class="rt-texto-suave">Ningún cliente coincide con «${esc(limpio(busqueda))}».</div>`
-      return lista.map(c => htmlResultadoCliente(c, empresaActual()?.nombre)).join('')
+      return lista.map(c => htmlResultadoCliente(c, empresaActual()?.nombre, busqueda)).join('')
+    }
+
+    // LOS QUE MÁS RETIRASTE (1b): el diseño dice "los que más retiran de
+    // Nuss", pero el depósito no puede leer las órdenes de los demás (solo
+    // mis_ordenes_retiro, lo suyo de 30 días): se cuentan las SUYAS, y el
+    // rótulo lo dice. Hasta 4, los que más veces aparecen; solo los que están
+    // entre los clientes de la empresa (el nombre es único por empresa).
+    function frecuentesDe(ordenes, clientes) {
+      const cuenta = new Map()
+      for (const o of Array.isArray(ordenes) ? ordenes : []) {
+        if (o?.estado === 'anulada') continue
+        const n = normalizar(o?.cliente)
+        if (n) cuenta.set(n, (cuenta.get(n) ?? 0) + 1)
+      }
+      return [...cuenta.entries()].sort((a, b) => b[1] - a[1])
+        .map(([n, veces]) => ({ cliente: (clientes ?? []).find(c => normalizar(c.nombre) === n), veces }))
+        .filter(x => x.cliente).slice(0, 4)
+    }
+
+    function htmlFrecuentes(f) {
+      if (!f || limpio(f.clienteBusqueda) || !Array.isArray(estado.mis) || !Array.isArray(estado.clientes)) return ''
+      const lista = frecuentesDe(estado.mis, estado.clientes)
+      if (!lista.length) return ''
+      return `<p class="rt-subtitulo">Los que más retiraste de ${esc(empresaActual()?.nombre ?? 'esta fábrica')}</p>` +
+        `<div class="rt-lista-blanca rt-frecuentes">` + lista.map(({ cliente: c, veces }) =>
+          `<button type="button" class="rt-resultado" data-cliente="${esc(c.id)}"><span class="rt-resultado__texto">` +
+          `<span class="rt-resultado__nombre">${esc(c.nombre)}</span>` +
+          `<span class="rt-resultado__detalle">${esc([limpio(c.razon_social) !== limpio(c.nombre) ? limpio(c.razon_social) : '', `${veces} ${veces === 1 ? 'retiro' : 'retiros'} en 30 días`].filter(Boolean).join(' · '))}</span></span>` +
+          `<svg class="rt-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>`).join('') + `</div>`
+    }
+
+    // Lee "mis retiros" una vez por empresa (para los de siempre). Si falla,
+    // la lista de los de siempre no aparece y nada más.
+    let turnoFrecuentes = 0
+    async function asegurarFrecuentes() {
+      if (Array.isArray(estado.mis) || !estado.empresaId) return
+      const turno = ++turnoFrecuentes
+      const empresa = estado.empresaId
+      try {
+        const lista = await leerMisOrdenes()
+        if (turno !== turnoFrecuentes || empresa !== estado.empresaId || Array.isArray(estado.mis)) return
+        estado.mis = lista
+        if (estado.vista === 'rt-vista-form') pintarCliente()
+      } catch (err) {
+        console.error('No se pudieron leer tus retiros para los de siempre:', err)
+      }
     }
 
     function pintarCliente() {
       const f = estado.form
       if (!f) return
       document.getElementById('rt-cliente-elegido').innerHTML = htmlClienteElegido(f)
+      document.getElementById('rt-cliente-elegido-bloque').hidden = !f.clienteId
       document.getElementById('rt-cliente-buscador').hidden = !!f.clienteId
       document.getElementById('rt-clientes-resultados').innerHTML = f.clienteId ? '' : htmlResultadosClientes(f.clienteBusqueda)
+      document.getElementById('rt-clientes-frecuentes').innerHTML = f.clienteId ? '' : htmlFrecuentes(f)
     }
 
     // Elegir el cliente trae su transporte habitual, salvo que ya se haya
-    // escrito otro a mano.
+    // escrito otro a mano. En el celular sigue el catálogo (1c).
     function elegirCliente(id) {
       const f = estado.form
       if (!f) return
@@ -1416,6 +1895,7 @@
       }
       pintarCliente()
       pintarPie()
+      pintarPaso()
       guardarBorrador()
     }
 
@@ -1427,6 +1907,7 @@
       document.getElementById('rt-cliente-buscar').value = ''
       pintarCliente()
       pintarPie()
+      pintarPaso()
       guardarBorrador()
     }
 
@@ -1439,7 +1920,9 @@
     const MARCA_A_ELEGIR = 'elegir'
 
     // Cuánto hay, dicho para una opción: "hay 12 cajas", "hay 250 kg",
-    // "sin stock" (en bordó), o nada si no se sabe.
+    // "sin stock" (en bordó), o nada si no se sabe. Es el texto para leer (el
+    // title y el lector de pantalla); en pantalla va el número grande y la
+    // unidad debajo (partesStockOpcion).
     function textoStockOpcion(o) {
       if (o.stock === null || o.stock === undefined) return ''
       if (!(o.stock > 0)) return 'sin stock'
@@ -1447,6 +1930,74 @@
       return `hay ${cuanto}${o.entreConos ? ' entre todos los conos' : ''}`
     }
 
+    // { q, u }: el número y la unidad por separado ("128" / "cajas").
+    function partesStockOpcion(o) {
+      if (o.stock === null || o.stock === undefined || !(o.stock > 0)) return null
+      if (o.grupo === 'insumos') {
+        const t = cantidadInsumoHoja(o.stock, o.unidad)
+        const k = t.lastIndexOf(' ')
+        return k > 0 ? { q: t.slice(0, k), u: t.slice(k + 1) } : { q: t, u: '' }
+      }
+      return { q: enteroHoja(o.stock), u: o.entreConos ? 'cajas entre todos los conos' : 'cajas' }
+    }
+
+    // EL COLOR DE CADA PRODUCTO (el de la configuración de Producción): la
+    // base no lo manda en catalogo_para_retiro(), así que sale del NOMBRE con
+    // la misma regla que produccion.html (el tamaño: mini, chico, grande,
+    // standard; chocolate en su marrón; los demás, un tono fijo por nombre).
+    // Un insumo va en gris. Texto de CSS armado por el código, nunca de la base.
+    const COLOR_TAMANO_RETIRO = {
+      mini: { c: 'oklch(0.78 0.15 95)', dk: 'oklch(0.43 0.120 95)', t: 'oklch(0.95 0.048 95)' },
+      chico: { c: 'oklch(0.6 0.14 145)', dk: 'oklch(0.43 0.112 145)', t: 'oklch(0.95 0.045 145)' },
+      grande: { c: 'oklch(0.68 0.16 50)', dk: 'oklch(0.43 0.128 50)', t: 'oklch(0.95 0.051 50)' },
+      standard: { c: 'oklch(0.52 0.15 300)', dk: 'oklch(0.43 0.120 300)', t: 'oklch(0.95 0.048 300)' },
+    }
+    const COLOR_INSUMO_RETIRO = { c: '#9A9287', dk: '#3D3831', t: '#F1EEE9' }
+    const TONOS_RETIRO = [95, 145, 50, 300, 170, 20, 115, 330]
+    function colorProductoRetiro(nombre, esInsumo = false) {
+      if (esInsumo) return COLOR_INSUMO_RETIRO
+      const n = normalizar(nombre)
+      if (n.includes('chocolate')) return { c: 'oklch(0.44 0.07 55)', dk: 'oklch(0.36 0.06 55)', t: 'oklch(0.94 0.02 55)' }
+      const tamano = Object.keys(COLOR_TAMANO_RETIRO).find(k => n.split(' ').includes(k))
+      if (tamano) return COLOR_TAMANO_RETIRO[tamano]
+      let h = 0
+      for (const ch of n) h = (h * 31 + ch.codePointAt(0)) >>> 0
+      const tono = TONOS_RETIRO[h % TONOS_RETIRO.length]
+      return { c: `oklch(0.66 0.14 ${tono})`, dk: `oklch(0.43 0.112 ${tono})`, t: `oklch(0.95 0.045 ${tono})` }
+    }
+
+    // El color de un cono: el mismo de la planta (ocho cálidos, uno fijo por
+    // el ID del cono; el común en gris).
+    const PALETA_CONO_RETIRO = [
+      { bg: 'oklch(0.87 0.08 28)', fg: 'oklch(0.42 0.15 28)' }, { bg: 'oklch(0.9 0.1 62)', fg: 'oklch(0.47 0.13 55)' },
+      { bg: 'oklch(0.95 0.11 98)', fg: 'oklch(0.46 0.1 90)' }, { bg: 'oklch(0.9 0.08 118)', fg: 'oklch(0.41 0.09 120)' },
+      { bg: 'oklch(0.89 0.08 155)', fg: 'oklch(0.4 0.1 155)' }, { bg: 'oklch(0.83 0.045 60)', fg: 'oklch(0.34 0.06 55)' },
+      { bg: 'oklch(0.94 0.05 355)', fg: 'oklch(0.48 0.15 355)' }, { bg: 'oklch(0.85 0.07 330)', fg: 'oklch(0.36 0.12 330)' },
+    ]
+    function colorConoRetiro(id) {
+      if (id === null || id === undefined || id === '') return { bg: '#F1EEE9', fg: '#3D3831' }
+      let h = 0
+      for (const ch of normalizar(String(id))) h = (h * 31 + ch.codePointAt(0)) >>> 0
+      return PALETA_CONO_RETIRO[h % PALETA_CONO_RETIRO.length]
+    }
+
+    function htmlChipCono(nombre, marcaId) {
+      const col = colorConoRetiro(marcaId)
+      return `<span class="rt-cono" style="--rt-cono-bg: ${col.bg}; --rt-cono-fg: ${col.fg}">${esc(nombre)}</span>`
+    }
+
+    // El nombre del producto de una opción o un renglón, sin el cono (el cono
+    // va en su pastilla): "Cucurucho grande · Caja x 100".
+    function nombreProductoPresentacion(cat, productoId, presentacionId) {
+      const prod = (cat?.productos ?? []).find(x => x.id === productoId)
+      const pr = (cat?.presentaciones ?? []).find(x => x.id === presentacionId)
+      return [prod?.nombre ?? 'Producto', pr?.nombre].map(limpio).filter(Boolean).join(' · ')
+    }
+
+    // 1c · El catálogo en TRES grupos, cada uno en su tarjeta con su
+    // encabezado de color: una opción por presentación (y por cono, con
+    // cono) con la franja del color del producto, la pastilla del cono y
+    // cuánto hay. Lo sin stock, solo al buscar, al 55 % y con "sin stock".
     function htmlProductosRenglon(i, cat, busqueda = '', stockConos = cat?.conos ?? null) {
       const grupos = gruposCatalogo(cat, busqueda, stockConos)
       const q = limpio(busqueda)
@@ -1456,35 +2007,62 @@
         return q ? `<span class="rt-texto-suave">Nada coincide con «${esc(q)}».</span>` : pista
       }
       const boton = (o) => {
-        const clase = `rt-opcion rt-opcion--${CLASE_GRUPO[o.grupo]}`
         const stock = textoStockOpcion(o)
         const sinStock = stock === 'sin stock'
-        const detalle = [o.grupo === 'insumos' ? limpio(o.marca) : '', o.grupo === 'con_cono' && o.marcaId === undefined && !o.entreConos ? 'elegí el cono' : '']
+        const clase = `rt-opcion rt-opcion--${CLASE_GRUPO[o.grupo]}${sinStock ? ' rt-opcion--sin-stock' : ''}`
+        const esInsumo = o.grupo === 'insumos'
+        const nombre = esInsumo ? o.nombre : nombreProductoPresentacion(cat, o.productoId, o.presentacionId)
+        const col = colorProductoRetiro(esInsumo ? '' : ((cat?.productos ?? []).find(p => p.id === o.productoId)?.nombre ?? o.nombre), esInsumo)
+        const cono = o.grupo === 'con_cono' && o.marcaId !== undefined && !o.entreConos ? htmlChipCono(textoCono(cat, true, o.marcaId), o.marcaId) : ''
+        const detalle = [esInsumo ? limpio(o.marca) : '', o.grupo === 'con_cono' && o.marcaId === undefined && !o.entreConos ? 'elegí el cono' : '']
           .filter(Boolean).join(' · ')
-        const partes = `<span>${esc(o.nombre)}</span>` +
-          (detalle || stock ? `<span class="rt-opcion__detalle">${esc(detalle)}${detalle && stock ? ' · ' : ''}` +
-            `${stock ? `<span${sinStock ? ' class="rt-opcion__sin-stock"' : ''}>${esc(stock)}</span>` : ''}</span>` : '')
-        if (o.grupo === 'insumos') return `<button type="button" class="${clase}" data-r-insumo="${i}" data-id="${esc(o.insumoId)}">${partes}</button>`
+        const partes = partesStockOpcion(o)
+        const derecha = sinStock
+          ? `<span class="rt-opcion__sin-stock">sin stock</span>`
+          : partes ? `<span class="rt-opcion__stock"><span class="rt-opcion__q">${esc(partes.q)}</span><span class="rt-opcion__u">${esc(partes.u)}</span></span>` : ''
+        const cuerpo = `<span class="rt-opcion__franja" style="--rt-color: ${col.c}"></span>` +
+          `<span class="rt-opcion__texto"><span class="rt-opcion__nombre">${esc(nombre)}</span>` +
+          (cono || detalle ? `<span class="rt-opcion__detalle">${cono}${detalle ? `<span>${esc(detalle)}</span>` : ''}</span>` : '') +
+          `</span>${derecha}`
+        const titulo = stock ? ` title="${esc(stock)}"` : ''
+        if (esInsumo) return `<button type="button" class="${clase}" data-r-insumo="${esc(i)}" data-id="${esc(o.insumoId)}"${titulo}>${cuerpo}</button>`
         // data-marca: el id del cono, "" = cono común (o sin cono), y
         // MARCA_A_ELEGIR = el cono se elige después.
         const marca = o.conCono && o.marcaId === undefined ? MARCA_A_ELEGIR : (o.marcaId ?? '')
-        return `<button type="button" class="${clase}" data-r-producto="${i}" data-id="${esc(o.productoId)}" data-presentacion="${esc(o.presentacionId)}" data-marca="${esc(marca)}">${partes}</button>`
+        return `<button type="button" class="${clase}" data-r-producto="${esc(i)}" data-id="${esc(o.productoId)}" data-presentacion="${esc(o.presentacionId)}" data-marca="${esc(marca)}"${titulo}>${cuerpo}</button>`
       }
-      return grupos.map(g => `<div class="rt-grupo rt-grupo--${CLASE_GRUPO[g.tipo]}">${esc(g.titulo)}</div>` + g.lista.map(boton).join('')).join('') + pista
+      return grupos.map(g => {
+        const conStock = g.lista.filter(hayStock).length
+        return `<div class="rt-cat-grupo"><div class="rt-grupo rt-grupo--${CLASE_GRUPO[g.tipo]}"><span class="rt-grupo__titulo">${esc(g.titulo)}</span>` +
+          `<span class="rt-grupo__cuenta">${esc(conStock)} con stock</span></div>${g.lista.map(boton).join('')}</div>`
+      }).join('') + pista
+    }
+
+    // 1k · El catálogo mientras trae el stock: la forma de los grupos en gris.
+    function htmlEsqueletoCatalogo() {
+      const grupo = (n) => `<div class="rt-esqueleto"><div class="rt-esqueleto__cab"></div>` +
+        Array.from({ length: n }, () => '<div class="rt-esqueleto__fila"><span class="rt-esqueleto__barra"><span></span><span></span></span></div>').join('') + '</div>'
+      return grupo(3) + grupo(2) + grupo(1) +
+        `<p class="rt-pista" style="text-align: center">Cargando el stock de ${esc(empresaActual()?.nombre ?? 'la fábrica')}…</p>`
     }
 
     // El buscador y las opciones de un renglón sin elegir. Tipear filtra solo
-    // las opciones (buscarCatalogoRenglon), sin redibujar el campo.
+    // las opciones (buscarCatalogoRenglon), sin redibujar el campo. `i` puede
+    // ser 'nuevo' (en la compu, el catálogo de la derecha cuando no se está
+    // armando ningún renglón: elegir agrega uno).
     function htmlEleccionRenglon(r, i, cat) {
-      return `<div class="rt-campo"><label for="rt-r-buscar-${i}">Producto o insumo</label>` +
-        `<input type="search" class="rt-input" id="rt-r-buscar-${i}" data-r-buscar="${i}" value="${esc(r.busqueda)}" autocomplete="off" maxlength="60" placeholder="Buscar…">` +
-        `<div class="rt-opciones" role="group" aria-label="Producto o insumo" data-r-opciones="${i}">${htmlProductosRenglon(i, cat, r.busqueda)}</div></div>`
+      const cargando = estado.catalogo === null && !estado.errorCatalogo
+      return `<div class="rt-catalogo"><label class="rt-buscador" for="rt-r-buscar-${esc(i)}">` +
+        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"/></svg>` +
+        `<input type="search" id="rt-r-buscar-${esc(i)}" data-r-buscar="${esc(i)}" value="${esc(r?.busqueda ?? '')}" autocomplete="off" maxlength="60" placeholder="Buscar producto, cono o insumo" aria-label="Buscar producto, cono o insumo"></label>` +
+        `<div class="rt-opciones" role="group" aria-label="Producto o insumo" data-r-opciones="${esc(i)}">` +
+        `${cargando ? htmlEsqueletoCatalogo() : htmlProductosRenglon(i, cat, r?.busqueda ?? '')}</div></div>`
     }
 
     function htmlMarcasRenglon(r, i, cat) {
       const lista = marcasFiltradas(cat?.marcas, r.marcaBusqueda).slice(0, 10)
-      const comun = `<button type="button" class="rt-opcion" data-r-marca="${i}" data-id="" aria-pressed="${r.marcaId ? 'false' : 'true'}">Cono común</button>`
-      const botones = lista.map(m => `<button type="button" class="rt-opcion" data-r-marca="${i}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${esc(m.nombre)}</button>`).join('')
+      const comun = `<button type="button" class="rt-opcion" data-r-marca="${i}" data-id="" aria-pressed="${r.marcaId ? 'false' : 'true'}">${htmlChipCono('Cono común', null)}</button>`
+      const botones = lista.map(m => `<button type="button" class="rt-opcion" data-r-marca="${i}" data-id="${esc(m.id)}" aria-pressed="${m.id === r.marcaId ? 'true' : 'false'}">${htmlChipCono(m.nombre, m.id)}</button>`).join('')
       const vacio = !lista.length && limpio(r.marcaBusqueda) ? `<span class="rt-texto-suave">Ningún cono coincide con «${esc(limpio(r.marcaBusqueda))}».</span>` : ''
       return `${comun}${botones}${vacio}`
     }
@@ -1515,90 +2093,161 @@
 
     // EL AVISO DE FALTANTE, que NO bloquea: la orden sale igual y el renglón
     // queda pendiente de revisión en Administración (la base lo marca).
-    const TEXTO_FALTANTE = 'Esto no está en stock: la orden sale igual y queda pendiente de revisión en Administración'
+    const TEXTO_FALTANTE = 'Se puede confirmar igual. Lo que falta queda pendiente de revisión en Administración'
 
+    // EL AVISO DE FALTANTE (1e), que NO bloquea: la orden sale igual y el
+    // renglón queda pendiente de revisión en Administración (la base lo marca).
     function htmlAvisoFaltante(r, a) {
       if (!(a?.faltante > 0)) return ''
-      return `<div class="rt-aviso rt-aviso--grave" data-r-faltante>${esc(TEXTO_FALTANTE)} (faltan ${esc(cantidadRenglon(r, a.faltante))}).</div>`
+      const hay = r3(a.porLote.reduce((s, l) => s + l.saldo, 0))
+      return `<div class="rt-aviso rt-aviso--grave rt-faltante" data-r-faltante>` +
+        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9.5 17h-19zM12 10v4M12 17.5v.01"/></svg>` +
+        `<span><strong>Hay ${esc(cantidadRenglon(r, hay))} y se lleva ${esc(cantidadRenglon(r, a.pedido))}</strong>` +
+        `${esc(TEXTO_FALTANTE)} (faltan ${esc(cantidadRenglon(r, a.faltante))}).</span></div>`
     }
 
     // El resumen de los lotes del renglón: lo pedido, lo asignado y cuánto
     // falta asignar. Se redibuja solo (sin tocar los campos) al tipear.
+    // El pie de los lotes del renglón (1d): lo asignado de lo pedido y cómo
+    // quedó — "✓ Falta asignar 0" en verde, "Falta asignar N" en gris, lo que
+    // no está en stock ("Faltan N") en bordó. Debajo, en chico, lo que hay que
+    // saber (sin repartir sale sola; lo asignado de más). Se redibuja solo
+    // (sin tocar los campos) al tipear.
     function htmlResumenLotes(r, lista) {
       const a = asignacion(r, lista)
-      if (a.pedido === null) return `<span class="rt-texto-suave">Poné ${r.insumoId ? 'la cantidad' : 'las cajas'} y repartila entre los lotes, o dejala sin repartir: sale sola de los más viejos.</span>`
-      let linea
-      if (!(a.asignado > 0)) linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · sin repartir: sale sola de los lotes más viejos.`
-      else if (a.falta > 0) {
-        linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · asignado: <strong>${esc(cantidadRenglon(r, a.asignado))}</strong> · ` +
-          `<span class="rt-lotes__falta">falta asignar: <strong>${esc(cantidadRenglon(r, a.falta))}</strong>${a.sinLugar ? ' (no hay más en stock)' : ''}</span>`
-      } else if (a.falta < 0) {
-        linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · asignado: <strong>${esc(cantidadRenglon(r, a.asignado))}</strong> · ` +
-          `<span class="rt-lotes__falta">asignaste ${esc(cantidadRenglon(r, -a.falta))} de más</span>`
-      } else linea = `Pedido: <strong>${esc(cantidadRenglon(r, a.pedido))}</strong> · asignado todo.`
+      if (a.pedido === null) return `<span class="rt-lotes__resumen">Poné ${r.insumoId ? 'la cantidad' : 'las cajas'} y repartila entre los lotes, o dejala sin repartir: sale sola de los más viejos.</span>`
+      let estadoLotes
+      if (a.faltante > 0) estadoLotes = `<span class="rt-estado-lotes rt-estado-lotes--falta">Faltan ${esc(cantidadRenglon(r, a.faltante))}</span>`
+      else if (!(a.asignado > 0)) estadoLotes = '<span class="rt-estado-lotes">Sale de los más viejos</span>'
+      else if (a.falta > 0) estadoLotes = `<span class="rt-estado-lotes rt-lotes__falta">Falta asignar ${esc(cantidadRenglon(r, a.falta))}</span>`
+      else if (a.falta < 0) estadoLotes = `<span class="rt-estado-lotes rt-estado-lotes--falta">${esc(cantidadRenglon(r, -a.falta))} de más</span>`
+      else estadoLotes = '<span class="rt-estado-lotes rt-estado-lotes--ok">✓ Falta asignar 0</span>'
+      const asignado = `<div class="rt-lote__asignado"><small>Asignado</small><span>${esc(r.insumoId ? cantidadInsumoHoja(a.asignado, r.unidad) : enteroHoja(a.asignado))} ` +
+        `<em>de ${esc(r.insumoId ? cantidadInsumoHoja(a.pedido, r.unidad) : enteroHoja(a.pedido))}</em></span></div>`
+      let linea = ''
+      if (!(a.asignado > 0)) linea = 'Sin repartir: sale sola de los lotes más viejos.'
+      else if (a.falta > 0 && a.sinLugar) linea = 'No hay más en stock: lo que falta sale igual.'
+      else if (a.falta < 0) linea = `Asignaste ${cantidadRenglon(r, -a.falta)} de más.`
       const excedidos = a.porLote.filter(l => l.excede > 0)
         .map(l => `<br><span class="rt-lotes__falta">${esc(nombreLote(l.lote))}: pusiste ${esc(cantidadRenglon(r, l.q))} y hay ${esc(cantidadRenglon(r, l.saldo))}.</span>`).join('')
-      return `<span class="rt-lotes__resumen">${linea}${excedidos}</span>${htmlAvisoFaltante(r, a)}`
+      return `${asignado}${estadoLotes}${linea || excedidos ? `<span class="rt-lotes__resumen">${esc(linea)}${excedidos}</span>` : ''}`
     }
 
     // Los lotes del renglón, en lista (los más viejos primero), con un campo
     // de cantidad por lote. Sin repartir, la base descuenta sola de los más
     // viejos.
+    // ¿De qué lotes? (1d): los lotes del renglón, el más viejo arriba con su
+    // marca, cada uno con la fecha, cuánto queda y SU campo. Sin repartir, la
+    // base descuenta sola de los más viejos.
     function htmlLoteRenglon(r, i) {
       if (!renglonConLotes(r)) return ''
       const info = estado.lotes.get(claveLotesRenglon(r))
       let cuerpo
-      if (!info || info.cargando) cuerpo = '<span class="rt-texto-suave">Buscando los lotes…</span>'
+      let completar = ''
+      if (!info || info.cargando) cuerpo = '<p class="rt-texto-suave">Buscando los lotes…</p>'
       else if (info.error) cuerpo = `<div class="rt-aviso rt-aviso--grave">${esc(info.error)}</div>`
       else if (!info.lista.length) cuerpo = `<div class="rt-aviso">No hay lotes con stock de ${r.insumoId ? 'este insumo' : 'este producto'}.</div>`
       else {
+        completar = `<button type="button" class="rt-completar" data-r-completar="${i}">Completar con los más viejos</button>`
         cuerpo = `<div class="rt-lotes" role="group" aria-label="Cuánto sale de cada lote">` + info.lista.map((l, k) =>
-          `<div class="rt-lote-fila"><label class="rt-lote-fila__nombre" for="rt-r-${i}-lote-${k}">${esc(nombreLote(l.lote))}` +
-          `<span class="rt-lote-fila__detalle">queda ${esc(cantidadRenglon(r, l.saldo))}${l.desde ? ` · desde ${esc(fechaCorta(l.desde))}` : ''}</span></label>` +
-          `<input type="text" class="rt-input" id="rt-r-${i}-lote-${k}" data-r-lote-cant="${i}" data-lote="${esc(l.lote)}" autocomplete="off"></div>`).join('') + `</div>` +
-          `<div class="rt-barra-acciones"><button type="button" class="rt-btn rt-btn--suave" data-r-completar="${i}">Completar con los más viejos</button>` +
-          `<button type="button" class="rt-link" data-r-lotes-limpiar="${i}">Que salga sola de los más viejos</button></div>`
+          `<div class="rt-lote-fila${k === 0 ? ' rt-lote-fila--viejo' : ''}"><label class="rt-lote-fila__nombre" for="rt-r-${i}-lote-${k}">` +
+          `<span class="rt-lote-fila__lote">${esc(nombreLote(l.lote))}${k === 0 && info.lista.length > 1 ? '<span class="rt-viejo">EL MÁS VIEJO</span>' : ''}</span>` +
+          `<span class="rt-lote-fila__detalle">${l.desde ? `del ${esc(fechaCorta(l.desde).slice(0, 5))} · ` : ''}quedan <strong>${esc(cantidadRenglon(r, l.saldo))}</strong></span></label>` +
+          `<input type="text" class="rt-input" id="rt-r-${i}-lote-${k}" data-r-lote-cant="${i}" data-lote="${esc(l.lote)}" autocomplete="off" placeholder=" " inputmode="decimal"></div>`).join('') + `</div>` +
+          `<div class="rt-lote__limpiar"><button type="button" class="rt-link" data-r-lotes-limpiar="${i}">Que salga sola de los más viejos</button></div>`
       }
       const lista = info && !info.cargando && !info.error ? info.lista : null
-      return `<div class="rt-lote"><span class="rt-campo__rotulo">Lotes (los más viejos primero)</span>${cuerpo}` +
-        `<div data-r-lotes-resumen="${i}">${htmlResumenLotes(r, lista)}</div></div>`
+      return `<div class="rt-lote"><div class="rt-lote__cab"><span class="rt-lote__titulo"><strong>¿De qué lotes?</strong><span>El más viejo arriba</span></span>${completar}</div>` +
+        `<div class="rt-lote__cuerpo">${cuerpo}</div>` +
+        `<div class="rt-lote__pie" data-r-lotes-resumen="${i}">${htmlResumenLotes(r, lista)}</div></div>` +
+        `<div data-r-faltante-caja="${i}">${htmlAvisoFaltante(r, asignacion(r, lista))}</div>`
     }
 
+    // EL RENGLÓN QUE SE ESTÁ ARMANDO: sin elegir, el catálogo (1c); elegido,
+    // el producto con su color, cuánto se lleva (− / número / +) y de qué
+    // lotes (1d), con el faltante (1e), y abajo la acción "Agregar · 42 cajas".
     function htmlRenglon(r, i, cat, conErrores) {
       const falta = conErrores ? faltanRenglon(r) : null
-      const quitar = `<button type="button" class="rt-link" data-r-quitar="${i}" aria-label="Quitar el renglón ${i + 1}">Quitar</button>`
       const error = falta ? `<p class="rt-error-pegado">Falta: ${esc(falta)}.</p>` : ''
-      let cuerpo
-      let pie
+      if (!r.insumoId && !r.productoId) return `<div class="rt-editor" data-renglon="${i}">${htmlEleccionRenglon(r, i, cat)}${error}</div>`
+      let cabeza
+      let opciones = ''
+      let cuanto
       if (r.insumoId) {
         // Un INSUMO: cantidad en su unidad de medida, sin cajas ni cono.
         const ins = insumoDe(cat, r.insumoId)
         const stock = ins && ins.stock !== null && ins.stock !== undefined ? `hay ${cantidadInsumoHoja(ins.stock, r.unidad)}` : ''
-        cuerpo = `<div class="rt-elegido"><span class="rt-elegido__texto">${esc(descripcionRenglon(cat, r))}</span>` +
-          `<span class="rt-sello rt-sello--insumo">Insumo</span>` +
-          `<button type="button" class="rt-link" data-r-cambiar-producto="${i}">Cambiar</button></div>` +
-          (stock ? `<p class="rt-texto-suave">${esc(stock)}</p>` : '')
-        pie = `<div class="rt-renglon__pie"><div class="rt-campo"><label for="rt-r-cantidad-${i}">Cantidad (${esc(unidadHoja(r.unidad) || 'unidad')})</label>` +
-          `<input type="text" class="rt-input" id="rt-r-cantidad-${i}" data-r-cantidad="${i}" autocomplete="off"></div></div>` +
-          htmlLoteRenglon(r, i)
+        const col = colorProductoRetiro('', true)
+        cabeza = `<div class="rt-elegido" style="--rt-color: ${col.c}; --rt-tinte: ${col.t}; --rt-oscuro: ${col.dk}"><span class="rt-elegido__texto">` +
+          `<span class="rt-elegido__nombre">${esc(descripcionRenglon(cat, r))}</span>` +
+          `<span class="rt-elegido__sub"><span class="rt-sello rt-sello--insumo">Insumo</span>${stock ? `<span>${esc(stock)}</span>` : ''}</span></span>` +
+          `<button type="button" class="rt-link" data-r-cambiar-producto="${i}">Cambiar</button></div>`
+        cuanto = `<div class="rt-cuanto rt-cuanto--insumo"><label for="rt-r-cantidad-${i}">¿Cuánto se lleva? (${esc(unidadHoja(r.unidad) || 'unidad')})</label>` +
+          `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="Uno menos">−</button>` +
+          `<input type="text" class="rt-input" id="rt-r-cantidad-${i}" data-r-cantidad="${i}" autocomplete="off">` +
+          `<button type="button" class="rt-paso-btn" data-r-mas="${i}" aria-label="Uno más">+</button></div>`
       } else {
-        if (!r.productoId) {
-          cuerpo = htmlEleccionRenglon(r, i, cat)
-        } else {
-          const prod = (cat?.productos ?? []).find(p => p.id === r.productoId)
-          cuerpo = `<div class="rt-elegido"><span class="rt-elegido__texto">${esc(prod ? prod.nombre : 'Producto (no se pudo leer)')}</span>` +
-            `<button type="button" class="rt-link" data-r-cambiar-producto="${i}">Cambiar</button></div>` +
-            htmlConoRenglon(r, i, cat) + htmlPresentacionesRenglon(r, i, cat)
-        }
-        // El lote va DEBAJO de las cajas, a todo el ancho: en un celular, al
-        // costado no entra.
-        pie = `<div class="rt-renglon__pie"><div class="rt-campo"><label for="rt-r-cajas-${i}">Cajas</label>` +
-          `<input type="text" class="rt-input" id="rt-r-cajas-${i}" data-r-cajas="${i}" autocomplete="off"></div></div>` +
-          htmlLoteRenglon(r, i)
+        const prod = (cat?.productos ?? []).find(p => p.id === r.productoId)
+        const pr = (cat?.presentaciones ?? []).find(x => x.id === r.presentacionId)
+        const col = colorProductoRetiro(prod?.nombre ?? '')
+        const cono = r.conCono ? htmlChipCono(textoCono(cat, true, r.marcaId), r.marcaId) : ''
+        const sub = [r.conCono ? 'con cono' : 'sin cono', pr?.media_caja ? 'media caja' : (pr ? 'caja completa' : '')].filter(Boolean).join(' · ')
+        cabeza = `<div class="rt-elegido" style="--rt-color: ${col.c}; --rt-tinte: ${col.t}; --rt-oscuro: ${col.dk}"><span class="rt-elegido__texto">` +
+          `<span class="rt-elegido__nombre">${esc(prod ? nombreProductoPresentacion(cat, r.productoId, r.presentacionId) : 'Producto (no se pudo leer)')}</span>` +
+          `<span class="rt-elegido__sub">${cono}<span>${esc(sub)}</span></span></span>` +
+          `<button type="button" class="rt-link" data-r-cambiar-producto="${i}">Cambiar</button></div>`
+        // El cono y la presentación se eligen acá solo si la opción no los
+        // trajo (una presentación con cono sin el cono, o un producto de un
+        // borrador viejo).
+        const faltaElegir = !r.presentacionId || r.marcaElegir === true
+        if (faltaElegir) opciones = `<div class="rt-opciones-bloque">${htmlConoRenglon(r, i, cat)}${htmlPresentacionesRenglon(r, i, cat)}</div>`
+        cuanto = `<div class="rt-cuanto"><label for="rt-r-cajas-${i}">¿Cuántas cajas se lleva?</label>` +
+          `<button type="button" class="rt-paso-btn" data-r-menos="${i}" aria-label="Una caja menos">−</button>` +
+          `<input type="text" class="rt-input" id="rt-r-cajas-${i}" data-r-cajas="${i}" autocomplete="off">` +
+          `<button type="button" class="rt-paso-btn" data-r-mas="${i}" aria-label="Una caja más">+</button></div>`
       }
-      return `<div class="rt-renglon${falta ? ' rt-renglon--error' : ''}" data-renglon="${i}">` +
-        `<div class="rt-renglon__cabecera"><span class="rt-renglon__numero">Renglón ${i + 1}</span>${quitar}</div>` +
-        `${cuerpo}${pie}${error}</div>`
+      return `<div class="rt-editor${falta ? ' rt-renglon--error' : ''}" data-renglon="${i}">${cabeza}${opciones}${cuanto}${htmlLoteRenglon(r, i)}${error}` +
+        `<div class="rt-accion"><p class="rt-error-pegado" data-r-listo-error="${i}" hidden></p>` +
+        `<button type="button" class="rt-btn rt-btn--ancho" data-r-listo="${i}">${esc(textoAgregarRenglon(r))}</button>` +
+        `<button type="button" class="rt-link" data-r-quitar="${i}" aria-label="Quitar el renglón ${i + 1}">Quitar de la orden</button></div></div>`
+    }
+
+    // "Agregar · 42 cajas", o "Agregar igual · 50 cajas" si falta stock.
+    function textoAgregarRenglon(r) {
+      const a = asignacion(r, listaLotesDe(r))
+      const pedido = cantidadPedida(r)
+      if (pedido === null) return 'Agregar'
+      return `Agregar${(a.faltante ?? 0) > 0 ? ' igual' : ''} · ${cantidadRenglon(r, pedido)}`
+    }
+
+    // UN RENGLÓN DE LA ORDEN ARMADA (1f en el celular, una fila de la tabla en
+    // la compu): la franja del color del producto, el nombre, el cono, los
+    // lotes (7021 ×15 · 7033 ×10) y la cantidad grande; lo que falta en bordó.
+    // Tocarlo lo vuelve a abrir; la ✕ lo quita.
+    function htmlTarjetaRenglon(r, i, cat, conErrores) {
+      const falta = conErrores ? faltanRenglon(r) : null
+      const a = asignacion(r, listaLotesDe(r))
+      const esInsumo = !!r.insumoId
+      const col = colorProductoRetiro(esInsumo ? '' : ((cat?.productos ?? []).find(p => p.id === r.productoId)?.nombre ?? ''), esInsumo)
+      const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
+      const cono = esInsumo ? '<span>insumo</span>' : r.conCono ? htmlChipCono(textoCono(cat, true, r.marcaId), r.marcaId) : '<span>sin cono</span>'
+      const lotes = a.porLote.filter(l => l.q > 0).map(l => `${l.lote || 'Sin lote'} ×${cantidadRenglon(r, l.q).replace(/ cajas$/, '')}`)
+      const textoLotesR = lotes.length ? lotes.join(' · ') : 'de los lotes más viejos'
+      const faltante = (a.faltante ?? 0) > 0 ? cantidadRenglon(r, a.faltante) : null
+      const pedido = cantidadPedida(r)
+      const q = pedido === null ? '—' : (esInsumo ? cantidadInsumoHoja(pedido, r.unidad).replace(/ \S+$/, '') : enteroHoja(pedido))
+      const u = esInsumo ? (unidadHoja(r.unidad) || '') : 'cajas'
+      return `<div class="rt-item${faltante ? ' rt-item--faltante' : ''}${falta ? ' rt-item--error' : ''}" style="--rt-color: ${col.c}">` +
+        `<button type="button" class="rt-item__cuerpo" data-r-editar="${i}" aria-label="Cambiar el renglón ${i + 1}: ${esc(nombre)}">` +
+        `<span class="rt-item__prod"><span class="rt-item__nombre">${esc(nombre)}</span><span class="rt-item__cono">${cono}</span></span>` +
+        `<span class="rt-item__lotes"><span class="rt-item__lotes-texto">${esc(textoLotesR)}</span>` +
+        lotes.map(l => `<span class="rt-lote-chip">${esc(l)}</span>`).join('') +
+        (faltante ? `<span class="rt-lote-chip rt-lote-chip--falta">faltan ${esc(faltante.replace(/ cajas$/, ''))}</span>` : '') + `</span>` +
+        (faltante ? `<span class="rt-item__falta">Faltan ${esc(faltante)} · queda para revisar en Administración</span>` : '') +
+        (falta ? `<span class="rt-item__falta">Falta: ${esc(falta)}.</span>` : '') +
+        `<span class="rt-item__cant"><span class="rt-item__q">${esc(q)}</span><span class="rt-item__u">${esc(u)}</span></span></button>` +
+        `<button type="button" class="rt-item__quitar" data-r-quitar="${i}" aria-label="Quitar el renglón ${i + 1}">` +
+        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
     }
 
     function htmlAvisoCatalogo() {
@@ -1609,40 +2258,81 @@
       return ''
     }
 
+    // A la izquierda (o en el paso "Transporte" del celular) la orden armada;
+    // a la derecha (o en el paso "Productos") el renglón que se está armando,
+    // o —en la compu, sin renglón abierto— el catálogo para agregar uno.
     function pintarRenglones() {
       const f = estado.form
       if (!f) return
+      const cat = estado.catalogo
+      const conProducto = f.renglones.map((r, i) => [r, i]).filter(([r]) => r.productoId || r.insumoId)
+      document.getElementById('rt-orden-lista').innerHTML = conProducto.length
+        ? conProducto.map(([r, i]) => htmlTarjetaRenglon(r, i, cat, f.intentado)).join('')
+        : '<div class="rt-orden-vacia">Todavía no agregaste nada. Elegí un producto del catálogo.</div>'
+      const n = conProducto.length
+      document.getElementById('rt-orden-titulo').innerHTML =
+        `<span>Lo que se lleva · ${esc(n)} ${n === 1 ? 'renglón' : 'renglones'}</span><span class="rt-subtitulo__total">${esc(textoTotalForm(f))}</span>`
+      const r = editandoDe(f)
       const cont = document.getElementById('rt-renglones')
-      cont.innerHTML = f.renglones.map((r, i) => htmlRenglon(r, i, estado.catalogo, f.intentado)).join('')
+      cont.innerHTML = r ? htmlRenglon(r, f.editando, cat, f.intentado) : htmlEleccionRenglon({ busqueda: f.busquedaNueva ?? '' }, 'nuevo', cat)
       // Las cajas se enlazan DESPUÉS de dibujarlas y el valor se escribe con
       // ponerNumero(): nunca un número en un value="…".
       for (const input of cont.querySelectorAll('[data-r-cajas]')) {
         enlazarCampoNumero(input, { decimales: DECIMALES_CAJAS })
-        const r = f.renglones[Number(input.dataset.rCajas)]
-        if (r) ponerNumero(input, r.cajas)
+        const x = f.renglones[Number(input.dataset.rCajas)]
+        if (x) ponerNumero(input, x.cajas)
       }
       // La cantidad de un insumo, con los decimales de su unidad (kilos y
       // litros 3, unidades 0).
       for (const input of cont.querySelectorAll('[data-r-cantidad]')) {
-        const r = f.renglones[Number(input.dataset.rCantidad)]
-        enlazarCampoNumero(input, { decimales: decimalesDeUnidad(r?.unidad) })
-        if (r) ponerNumero(input, r.cantidad)
+        const x = f.renglones[Number(input.dataset.rCantidad)]
+        enlazarCampoNumero(input, { decimales: decimalesDeUnidad(x?.unidad) })
+        if (x) ponerNumero(input, x.cantidad)
       }
       // Lo que sale de cada lote, con los decimales del renglón.
       for (const input of cont.querySelectorAll('[data-r-lote-cant]')) {
-        const r = f.renglones[Number(input.dataset.rLoteCant)]
-        enlazarCampoNumero(input, { decimales: r?.insumoId ? decimalesDeUnidad(r.unidad) : DECIMALES_CAJAS })
-        const q = r?.lotes?.[input.dataset.lote]
-        if (r && Number(q) > 0) ponerNumero(input, Number(q))
+        const x = f.renglones[Number(input.dataset.rLoteCant)]
+        enlazarCampoNumero(input, { decimales: x?.insumoId ? decimalesDeUnidad(x.unidad) : DECIMALES_CAJAS })
+        const q = x?.lotes?.[input.dataset.lote]
+        if (x && Number(q) > 0) ponerNumero(input, Number(q))
       }
       document.getElementById('rt-catalogo-aviso').innerHTML = htmlAvisoCatalogo()
       pintarPie()
+      pintarPaso()
+    }
+
+    // El renglón que se está armando, o null.
+    function editandoDe(f) {
+      const i = f?.editando
+      return Number.isInteger(i) && i >= 0 && i < (f?.renglones?.length ?? 0) ? f.renglones[i] : null
+    }
+
+    // EL PASO DEL CELULAR: sin cliente, el cliente (1b); con un renglón
+    // abierto, los productos (1c/1d); si no, la orden armada con el
+    // transporte (1f). En la compu se ve todo junto (2a).
+    function pasoForm(f) {
+      if (!f?.clienteId) return 'cliente'
+      return editandoDe(f) ? 'productos' : 'orden'
+    }
+
+    function pintarPaso() {
+      const f = estado.form
+      if (!f) return
+      const paso = pasoForm(f)
+      document.getElementById('rt-carga').dataset.paso = paso
+      document.getElementById('rt-vista-form').classList.toggle('rt-vista-form--editando', paso === 'productos')
+      document.getElementById('rt-transporte-habitual').hidden = !limpio(f.transporte) || f.transporte !== f.transporteAuto
+      if (estado.vista === 'rt-vista-form') pintarEncabezado()
     }
 
     function pintarPie() {
       const f = estado.form
       if (!f) return
-      document.getElementById('rt-cuenta').textContent = textoCuentaForm(f)
+      document.getElementById('rt-cuenta').innerHTML = esc(textoTotalForm(f)).replace(' + ', ' <small>+ ') + (textoTotalForm(f).includes(' + ') ? '</small>' : '')
+      const conFaltante = renglonesConFaltante(f)
+      const cf = document.getElementById('rt-cuenta-faltante')
+      cf.textContent = conFaltante ? `${conFaltante} ${conFaltante === 1 ? 'renglón' : 'renglones'} con faltante` : ''
+      cf.hidden = !conFaltante
       const faltan = f.intentado ? faltanOrden(f) : []
       const e = document.getElementById('rt-form-error')
       const texto = f.error || faltan.join(' ')
@@ -1662,10 +2352,20 @@
 
     // Al tipear lo pedido o lo de un lote se redibuja SOLO el resumen de los
     // lotes (redibujar el renglón le sacaría el foco al campo).
+    // Al tipear lo pedido o lo de un lote se redibujan SOLO el pie de los
+    // lotes, el aviso de faltante y el texto del botón (redibujar el renglón
+    // le sacaría el foco al campo).
     function pintarResumenLotes(i) {
       const r = renglon(i)
-      const cont = document.getElementById('rt-renglones').querySelector(`[data-r-lotes-resumen="${Number(i)}"]`)
-      if (r && cont) cont.innerHTML = htmlResumenLotes(r, listaLotesDe(r))
+      const cont = document.getElementById('rt-renglones')
+      if (!r || !cont) return
+      const lista = listaLotesDe(r)
+      const pie = cont.querySelector(`[data-r-lotes-resumen="${Number(i)}"]`)
+      if (pie) pie.innerHTML = htmlResumenLotes(r, lista)
+      const caja = cont.querySelector(`[data-r-faltante-caja="${Number(i)}"]`)
+      if (caja) caja.innerHTML = htmlAvisoFaltante(r, asignacion(r, lista))
+      const listo = cont.querySelector(`[data-r-listo="${Number(i)}"]`)
+      if (listo) listo.textContent = textoAgregarRenglon(r)
     }
 
     function ponerCantidadLote(i, lote, valor) {
@@ -1696,7 +2396,7 @@
 
     // Elegir una opción del catálogo: el producto y, si la opción la trae, su
     // presentación (con o sin cono) y su cono (marcaId null = común;
-    // undefined = el cono se elige después). Los lotes se leen solos.
+    // MARCA_A_ELEGIR = el cono se elige en el renglón). Los lotes se leen solos.
     function elegirProductoRenglon(i, id, presentacionId = null, marcaId = undefined) {
       const r = renglon(i)
       if (!r || !(estado.catalogo?.productos ?? []).some(p => p.id === id)) return
@@ -1704,10 +2404,12 @@
       r.productoId = id
       r.presentacionId = null
       r.lotes = {}
+      r.marcaElegir = false
       if (pr) {
         r.presentacionId = pr.id
         r.conCono = pr.con_cono === true
         r.marcaId = r.conCono && marcaId && marcaId !== MARCA_A_ELEGIR ? marcaId : null
+        r.marcaElegir = r.conCono && marcaId === MARCA_A_ELEGIR
         r.marcaBusqueda = ''
       } else {
         autoPresentacion(r, estado.catalogo)
@@ -1752,13 +2454,83 @@
     }
 
     // Tipear en el buscador redibuja SOLO las opciones: redibujar el renglón
-    // le sacaría el foco al campo.
+    // le sacaría el foco al campo. 'nuevo' es el catálogo de la compu.
     function buscarCatalogoRenglon(i, texto) {
+      const cont = document.getElementById('rt-renglones').querySelector(`[data-r-opciones="${i === 'nuevo' ? 'nuevo' : Number(i)}"]`)
+      if (i === 'nuevo') {
+        if (!estado.form) return
+        estado.form.busquedaNueva = texto
+        if (cont) cont.innerHTML = htmlProductosRenglon('nuevo', estado.catalogo, texto)
+        return
+      }
       const r = renglon(i)
       if (!r) return
       r.busqueda = texto
-      const cont = document.getElementById('rt-renglones').querySelector(`[data-r-opciones="${Number(i)}"]`)
       if (cont) cont.innerHTML = htmlProductosRenglon(Number(i), estado.catalogo, texto)
+    }
+
+    // El renglón de destino de una opción del catálogo: el que se está
+    // armando o, desde el catálogo de la compu ('nuevo'), uno nuevo.
+    function indiceDestino(i) {
+      const f = estado.form
+      if (!f) return null
+      if (i !== 'nuevo') return Number(i)
+      f.renglones.push(renglonNuevo())
+      f.editando = f.renglones.length - 1
+      f.busquedaNueva = ''
+      return f.editando
+    }
+
+    // Abrir un renglón de la orden para cambiarlo.
+    function editarRenglon(i) {
+      const f = estado.form
+      if (!f || !f.renglones[Number(i)]) return
+      f.editando = Number(i)
+      tocarRenglon()
+      window.scrollTo(0, 0)
+    }
+
+    // "Agregar · 42 cajas": si al renglón no le falta nada, se cierra y se
+    // vuelve a la orden. Si le falta algo, se dice pegado al botón.
+    function renglonListo(i) {
+      const f = estado.form
+      const r = renglon(i)
+      if (!f || !r) return
+      const falta = faltanRenglon(r)
+      if (falta) {
+        const e = document.getElementById('rt-renglones').querySelector(`[data-r-listo-error="${Number(i)}"]`)
+        if (e) { e.textContent = `Falta: ${falta}.`; e.hidden = false }
+        return
+      }
+      f.editando = null
+      tocarRenglon()
+      window.scrollTo(0, 0)
+    }
+
+    // Volver del renglón a la orden: un renglón vacío (sin nada elegido) se
+    // saca; uno a medias queda en la orden, con lo que le falta.
+    function volverDeEditor() {
+      const f = estado.form
+      if (!f) return
+      const r = editandoDe(f)
+      if (r && !r.productoId && !r.insumoId) f.renglones.splice(f.editando, 1)
+      f.editando = null
+      tocarRenglon()
+    }
+
+    // − / + de "¿Cuántas cajas se lleva?": de a uno, nunca menos de cero.
+    function sumarAlRenglon(i, delta) {
+      const r = renglon(i)
+      if (!r) return
+      const campo = r.insumoId ? 'cantidad' : 'cajas'
+      const actual = Number(r[campo]) > 0 ? Number(r[campo]) : 0
+      const nuevo = r3(Math.max(actual + delta, 0))
+      r[campo] = nuevo > 0 ? nuevo : null
+      const input = document.getElementById('rt-renglones').querySelector(`[data-r-${r.insumoId ? 'cantidad' : 'cajas'}="${Number(i)}"]`)
+      if (input) ponerNumero(input, r[campo])
+      pintarResumenLotes(i)
+      pintarPie()
+      guardarBorrador()
     }
 
     function elegirConoRenglon(i, conCono) {
@@ -1766,6 +2538,10 @@
       if (!r || r.conCono === conCono) return
       r.conCono = conCono
       if (!conCono) { r.marcaId = null; r.marcaBusqueda = '' }
+      // Pasar a "con cono" deja el buscador de conos abierto aunque la
+      // presentación se elija sola: si no, el cono quedaría en común sin
+      // haberlo elegido.
+      r.marcaElegir = conCono
       r.presentacionId = null
       r.lotes = {}
       autoPresentacion(r, estado.catalogo)
@@ -1801,14 +2577,22 @@
     function agregarRenglon() {
       const f = estado.form
       if (!f) return
+      // Un renglón vacío abierto se reusa: no se apilan renglones vacíos.
+      const abierto = editandoDe(f)
+      if (abierto && !abierto.productoId && !abierto.insumoId) { tocarRenglon(); return }
       f.renglones.push(renglonNuevo())
+      f.editando = f.renglones.length - 1
       tocarRenglon()
+      window.scrollTo(0, 0)
     }
 
     function quitarRenglon(i) {
       const f = estado.form
       if (!f) return
-      f.renglones.splice(Number(i), 1)
+      const k = Number(i)
+      f.renglones.splice(k, 1)
+      if (f.editando === k) f.editando = null
+      else if (Number.isInteger(f.editando) && f.editando > k) f.editando--
       tocarRenglon()
     }
 
@@ -1833,6 +2617,7 @@
       reconciliarRenglones(estado.form, estado.catalogo)
       if (estado.vista === 'rt-vista-form') pintarFormEntero()
       asegurarLotesDeRenglones()
+      asegurarFrecuentes()
     }
 
     // Un borrador guardado antes de que el catálogo saliera de
@@ -1849,6 +2634,13 @@
         delete r.lote
         delete r.eligiendoLote
       }
+      // Un borrador de antes del diseño del 29/09/2026 no sabe qué renglón se
+      // estaba armando: se abre el primero sin nada elegido, o ninguno.
+      if (!Number.isInteger(f.editando) || f.editando < 0 || f.editando >= f.renglones.length) {
+        const k = f.renglones.findIndex(r => !r.productoId && !r.insumoId)
+        f.editando = k >= 0 ? k : null
+      }
+      if (typeof f.busquedaNueva !== 'string') f.busquedaNueva = ''
       if (!cat) return
       for (const r of f.renglones) {
         if (!r.productoId || r.insumoId || (cat.productos ?? []).some(p => p.id === r.productoId)) continue
@@ -1870,24 +2662,38 @@
 
     // EL RESUMEN NO TIENE PRECIOS: cliente, transporte, los productos con sus
     // cajas y el lote elegido, y el total de CAJAS.
+    // 1g · EL RESUMEN NO TIENE PRECIOS: la fábrica (y que el número lo toma al
+    // confirmar), quién retira, el transporte, las observaciones, los
+    // renglones con su color, sus lotes y lo que falta, y el TOTAL.
     function htmlResumen(f, cat) {
       const c = clienteDe(f.clienteId)
-      const filas = f.renglones.map(r => {
+      const apodo = (Array.isArray(c?.apodos) ? c.apodos : []).map(limpio).find(Boolean)
+      const filas = f.renglones.filter(r => r.productoId || r.insumoId).map(r => {
         const a = asignacion(r, listaLotesDe(r))
         const lote = a.asignado > 0
           ? a.porLote.filter(l => l.q > 0).map(l => `${nombreLote(l.lote)}: ${cantidadRenglon(r, l.q)}`).join(' · ')
           : 'De los lotes más viejos'
-        const cuanto = r.insumoId ? cantidadInsumoHoja(r.cantidad, r.unidad) : `${enteroHoja(r.cajas)} cajas`
-        return `<div class="rt-resumen-fila"><span class="rt-resumen-fila__desc">${esc(descripcionRenglon(cat, r))}` +
-          `${r.insumoId ? ' <span class="rt-sello rt-sello--insumo">Insumo</span>' : ''}` +
-          `<br><span class="rt-texto-suave">${esc(lote)}</span>${htmlAvisoFaltante(r, a)}</span>` +
-          `<span class="rt-resumen-fila__cajas">${esc(cuanto)}</span></div>`
+        const esInsumo = !!r.insumoId
+        const col = colorProductoRetiro(esInsumo ? '' : ((cat?.productos ?? []).find(p => p.id === r.productoId)?.nombre ?? ''), esInsumo)
+        const nombre = esInsumo ? descripcionRenglon(cat, r) : nombreProductoPresentacion(cat, r.productoId, r.presentacionId)
+        const cono = esInsumo ? '' : (r.conCono ? `· con cono ${textoCono(cat, true, r.marcaId)}` : '· sin cono')
+        const pedido = cantidadPedida(r)
+        const q = esInsumo ? cantidadInsumoHoja(r.cantidad, r.unidad).replace(/ \S+$/, '') : enteroHoja(r.cajas)
+        const u = esInsumo ? (unidadHoja(r.unidad) || '') : 'cajas'
+        return `<div class="rt-resumen-fila" style="--rt-color: ${col.c}"><span class="rt-resumen-fila__desc">${esc(nombre)}` +
+          `${cono ? ` <span class="rt-resumen-fila__cono">${esc(cono)}</span>` : ''}` +
+          `${esInsumo ? ' <span class="rt-sello rt-sello--insumo">Insumo</span>' : ''}` +
+          `<span class="rt-resumen-fila__lotes">${esc(lote)}</span>${htmlAvisoFaltante(r, a)}</span>` +
+          `<span class="rt-resumen-fila__cajas">${esc(pedido === null ? '—' : q)} <small>${esc(u)}</small></span></div>`
       }).join('')
-      return htmlDatoRt('Empresa', empresaActual()?.nombre ?? '—') +
-        htmlDatoRt('Cliente', c ? [c.nombre, detalleCliente(c)].filter(Boolean).join(' · ') : '—') +
+      const total = textoTotalForm(f)
+      const k = total.indexOf(' + ')
+      return htmlDatoRt('Fábrica', `${empresaActual()?.nombre ?? '—'} · se numera al confirmar`) +
+        htmlDatoRt('Retira', c ? [c.nombre + (apodo ? ` (“${apodo}”)` : ''), detalleCliente(c)].filter(Boolean).join(' · ') : '—') +
         htmlDatoRt('Transporte', limpio(f.transporte) || '—') +
-        (String(f.observaciones ?? '').trim() ? htmlDatoRt('Observaciones', String(f.observaciones).trim()) : '') +
-        `<div>${filas}</div><p class="rt-total">Total: ${esc(enteroHoja(totalCajasForm(f)))} cajas${esc(textoInsumosForm(f))}</p>`
+        (String(f.observaciones ?? '').trim() ? htmlDatoRt('Observ.', String(f.observaciones).trim()) : '') +
+        `<div>${filas}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span>` +
+        `<span class="rt-total__valor">${k > 0 ? `${esc(total.slice(0, k))} <small>+ ${esc(total.slice(k + 3))}</small>` : esc(total)}</span></p>`
     }
 
     // " · 2 de materia prima e insumos", o nada.
@@ -1900,21 +2706,41 @@
       const f = estado.form
       if (!f) return
       leerCabecera()
+      // Un renglón vacío (sin nada elegido) no es parte de la orden.
+      const conAlgo = f.renglones.filter(r => r.productoId || r.insumoId)
+      if (conAlgo.length !== f.renglones.length) {
+        f.renglones = conAlgo
+        f.editando = null
+      }
       f.intentado = true
       f.error = null
       if (faltanOrden(f).length) { pintarRenglones(); return }
+      f.editando = null
+      guardarBorrador()
       mostrarVista('rt-vista-resumen')
       pintarEmpresaActual()
       document.getElementById('rt-resumen').innerHTML = htmlResumen(f, estado.catalogo)
       pintarConfirmar(null)
     }
 
-    function pintarConfirmar(error) {
+    // El error al confirmar (1l). SIN SEÑAL: no se perdió nada, la orden
+    // queda guardada en el celular (el borrador, con su uuid) y todavía NO
+    // tiene número: lo toma cuando el servidor la confirma. El botón pasa a
+    // "Reintentar" y manda el MISMO uuid, así que nunca se duplica. Un
+    // error de la base va tal cual.
+    function pintarConfirmar(error, sinSenal = false) {
       const e = document.getElementById('rt-confirmar-error')
-      e.textContent = error ?? ''
+      e.innerHTML = !error ? '' : sinSenal
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M2 8.5a15 15 0 0 1 20 0M5.5 12a10 10 0 0 1 13 0M9 15.5a5 5 0 0 1 6 0M12 19v.01M3 3l18 18"/></svg>` +
+          `<span><strong>No se pudo confirmar: no hay señal</strong>${esc(error)}</span>`
+        : `<span>${esc(error)}</span>`
       e.hidden = !error
-      document.getElementById('rt-confirmar').disabled = estado.confirmando
+      const b = document.getElementById('rt-confirmar')
+      b.disabled = estado.confirmando
+      b.textContent = estado.confirmando ? 'Confirmando…' : sinSenal && error ? 'Reintentar' : 'Confirmar retiro'
     }
+
+    const TEXTO_SIN_SENAL = 'No se perdió nada. Queda guardada en este celular, todavía sin número, hasta que vuelva la señal: tocá «Reintentar». Si ya había entrado, no se duplica.'
 
     // Un error SIN código es de red: la orden puede haber entrado o no. El
     // reintento manda el MISMO uuid, así que no se duplica.
@@ -1927,13 +2753,16 @@
       if (!f || estado.confirmando) return
       if (faltanOrden(f).length) { mostrarVista('rt-vista-form'); pintarRenglones(); return }
       estado.confirmando = true
+      // Queda guardada en el celular ANTES de mandarla, con su uuid: si no hay
+      // señal, no se pierde nada.
+      guardarBorrador()
       pintarConfirmar(null)
       try {
         const { data, error } = await supabase.rpc('registrar_orden_retiro', parametrosRegistrar(f))
         if (error) throw error
         estado.confirmando = false
         estado.hecho = { ordenId: data?.orden_id ?? null, codigo: data?.codigo ?? null, faltantes: Array.isArray(data?.stock_insuficiente) ? data.stock_insuficiente : null,
-          reintento: data?.reintento === true, orden: null, error: null, aviso: null, cliente: clienteDe(f.clienteId) }
+          reintento: data?.reintento === true, orden: null, error: null, aviso: null, cliente: clienteDe(f.clienteId), cajas: totalCajasForm(f), total: textoTotalForm(f) }
         estado.form = null
         estado.mis = null
         guardarBorrador()
@@ -1945,9 +2774,8 @@
         estado.confirmando = false
         // Los mensajes de registrar_orden_retiro ya vienen escritos para una
         // persona ("Poné las cajas del renglón 2."): van tal cual.
-        pintarConfirmar(esErrorDeRed(err)
-          ? 'No se pudo confirmar: se cortó la conexión. Tocá «Confirmar la orden» de nuevo: si ya había entrado, no se duplica.'
-          : (err?.message || 'No se pudo confirmar la orden. Probá de nuevo.'))
+        const red = esErrorDeRed(err)
+        pintarConfirmar(red ? TEXTO_SIN_SENAL : (err?.message || 'No se pudo confirmar la orden. Probá de nuevo.'), red)
       }
     }
 
@@ -1972,12 +2800,17 @@
         `y lo que faltó quedó pendiente de revisión en Administración.<ul>${renglones}</ul></div>`
     }
 
+    // 1h · Confirmado: el ✓ verde, el código bien grande, el cliente, las
+    // cajas y la fecha; lo que faltó de stock en bordó.
     function htmlHecho(h) {
       const aviso = h.reintento
         ? '<div class="rt-aviso">Esta orden ya había entrado antes de que se cortara la conexión: no se cargó dos veces.</div>' : ''
-      return `<span class="rt-hecho__rotulo">Orden confirmada</span>` +
+      const cuando = h.orden?.cargada_en ? fechaHoraHoja(h.orden.cargada_en) : ''
+      const detalle = [[h.cliente?.nombre, h.total].filter(Boolean).join(' · '), cuando].filter(Boolean)
+      return `<span class="rt-hecho__ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>` +
+        `<span class="rt-hecho__rotulo">Retiro confirmado</span>` +
         `<div class="rt-codigo-grande">${esc(h.codigo || '—')}</div>` +
-        `${h.cliente ? `<p class="rt-texto-suave">${esc(h.cliente.nombre)}</p>` : ''}${aviso}${htmlFaltantes(h.faltantes)}`
+        `${detalle.length ? `<p class="rt-hecho__detalle">${detalle.map(esc).join('<br>')}</p>` : ''}${aviso}${htmlFaltantes(h.faltantes)}`
     }
 
     function pintarHecho() {
@@ -2167,21 +3000,39 @@
       return (o?.renglones ?? []).reduce((s, r) => s + (Number(r.cajas) || 0), 0)
     }
 
+    // 1i · Un retiro mío: el logo de la fábrica, el código, el cliente, la
+    // fecha y las cajas, con Reimprimir y Reenviar a un toque. Una anulada va
+    // tachada, con "ANULADA", y se puede reimprimir (sale con el sello).
     function htmlFilaMia(o) {
       const anulada = o.estado === 'anulada'
       const insumos = (o.renglones ?? []).filter(r => r?.tipo === 'insumo').length
-      const meta = fechaCorta(o.fecha) + ' · ' + (o.cliente ?? '—') + ' · ' + enteroHoja(cajasDeOrden(o)) + ' cajas' +
+      const meta = fechaCorta(o.fecha) + ' · ' + enteroHoja(cajasDeOrden(o)) + ' cajas' +
         (insumos ? ` · ${insumos} de materia prima e insumos` : '')
-      return `<button type="button" class="rt-fila${anulada ? ' rt-fila--anulada' : ''}" data-mia="${esc(o.orden_id)}">` +
-        `<span class="rt-fila__linea"><span class="rt-fila__codigo">${esc(o.codigo || '—')}</span>${anulada ? '<span class="rt-sello">Anulada</span>' : ''}</span>` +
-        `<span class="rt-fila__meta">${esc(meta)}</span></button>`
+      return `<div class="rt-mia"><button type="button" class="rt-fila${anulada ? ' rt-fila--anulada' : ''}" data-mia="${esc(o.orden_id)}">` +
+        `<span class="rt-fila__logo">${htmlMarcaEmpresa(empresaActual())}</span>` +
+        `<span class="rt-fila__texto"><span class="rt-fila__linea"><span class="rt-fila__codigo">${esc(o.codigo || '—')}</span>${anulada ? '<span class="rt-sello">Anulada</span>' : ''}</span>` +
+        `<span class="rt-fila__cliente">${esc(o.cliente ?? '—')}</span>` +
+        `<span class="rt-fila__meta">${esc(meta)}</span></span></button>` +
+        `<button type="button" class="rt-icono-btn" data-mia-imprimir="${esc(o.orden_id)}" title="Reimprimir" aria-label="Reimprimir ${esc(o.codigo || '')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg></button>` +
+        `<button type="button" class="rt-icono-btn" data-mia-enviar="${esc(o.orden_id)}" title="Reenviar" aria-label="Reenviar ${esc(o.codigo || '')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg></button></div>`
     }
 
     function htmlMisRetiros() {
       if (estado.errorMis) return `<div class="rt-aviso rt-aviso--grave">${esc(estado.errorMis)}</div>`
       if (estado.mis === null) return '<div class="rt-vacio">Cargando tus retiros…</div>'
-      if (!estado.mis.length) return '<div class="rt-vacio">No cargaste ninguna orden de esta empresa en los últimos 30 días.</div>'
+      if (!estado.mis.length) {
+        // 1j · Sin datos.
+        return `<div class="rt-sin-retiros"><span class="rt-sin-retiros__icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h12v10H2zM14 9h4l3 3.5V16h-7M4 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18.5a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/></svg></span>` +
+          `<strong>Todavía no cargaste retiros</strong><p>Acá vas a ver los que cargues de esta fábrica en los últimos 30 días, para reimprimirlos o reenviarlos.</p></div>`
+      }
       return estado.mis.map(htmlFilaMia).join('')
+    }
+
+    function pintarMisRetiros() {
+      const lista = document.getElementById('rt-mis-lista')
+      lista.innerHTML = htmlMisRetiros()
+      lista.classList.toggle('rt-lista--mis', Array.isArray(estado.mis) && estado.mis.length > 0)
+      document.getElementById('rt-mis-cuenta').textContent = Array.isArray(estado.mis) && estado.mis.length ? String(estado.mis.length) : ''
     }
 
     let turnoMis = 0
@@ -2192,7 +3043,7 @@
       const turno = ++turnoMis
       estado.mis = null
       estado.errorMis = null
-      document.getElementById('rt-mis-lista').innerHTML = htmlMisRetiros()
+      pintarMisRetiros()
       try {
         await asegurarDatosEmpresa()
         const lista = await leerMisOrdenes()
@@ -2203,7 +3054,7 @@
         console.error('No se pudieron leer tus retiros:', err)
         estado.errorMis = 'No se pudieron leer tus retiros. Revisá la conexión y volvé a entrar.'
       }
-      document.getElementById('rt-mis-lista').innerHTML = htmlMisRetiros()
+      pintarMisRetiros()
     }
 
     function htmlDetalleMio(o) {
@@ -2211,29 +3062,48 @@
         if (r.esInsumo) {
           const desc = cantidadInsumoHoja(r.cantidad, r.unidad) + ' · ' + [r.producto, r.marca].map(limpio).filter(Boolean).join(' · ')
           const lotes = 'Insumo · ' + (r.lotes.length ? 'lote ' + textoLotes(r.lotes, r.unidad) : 'de los lotes más viejos')
-          return `<div class="rt-item"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes">${esc(lotes)}</div></div>`
+          return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div></div>`
         }
         const desc = enteroHoja(r.cajas) + ' cajas · ' + [r.producto, r.presentacion, r.cono].filter(Boolean).join(' · ')
         const lotes = enteroHoja(r.unidades) + ' unidades · lotes ' + textoLotes(r.lotes)
-        return `<div class="rt-item"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes">${esc(lotes)}</div></div>`
+        return `<div class="rt-item-mio"><div class="rt-item__desc">${esc(desc)}</div><div class="rt-item__lotes-mio">${esc(lotes)}</div></div>`
       }).join('')
-      return `<div class="rt-tarjeta">${o.estado === 'anulada' ? '<div class="rt-aviso rt-aviso--grave">Anulada.</div>' : ''}` +
+      return `<div class="rt-resumen">${o.estado === 'anulada' ? '<div class="rt-aviso rt-aviso--grave">Anulada.</div>' : ''}` +
         htmlDatoRt('Fecha', fechaHoraHoja(o.cargada_en)) + htmlDatoRt('Cliente', o.cliente ?? '—') +
         htmlDatoRt('Transporte', limpio(o.transporte) || '—') +
         (String(o.observaciones ?? '').trim() ? htmlDatoRt('Observaciones', String(o.observaciones).trim()) : '') +
-        `</div><div class="rt-lista">${renglones}</div><p class="rt-total">Total: ${esc(enteroHoja(cajasDeOrden(o)))} cajas</p>`
+        `</div><div class="rt-lista">${renglones}</div><p class="rt-total"><span class="rt-total__rotulo">TOTAL</span><span class="rt-total__valor">${esc(enteroHoja(cajasDeOrden(o)))} cajas</span></p>`
     }
 
     function abrirMia(id) {
-      const o = (estado.mis ?? []).find(x => x.orden_id === id)
-      if (!o) return
-      estado.mio = { orden: o, cliente: null, error: null, aviso: null }
+      if (!prepararMia(id)) return
+      const o = estado.mio.orden
       mostrarVista('rt-vista-mio')
       pintarEmpresaActual()
       document.getElementById('rt-mio-titulo').textContent = `Orden ${o.codigo || ''}`.trim()
       document.getElementById('rt-mio-cuerpo').innerHTML = htmlDetalleMio(o)
       document.getElementById('rt-mio-empresa-aviso').innerHTML = htmlAvisoEmpresa()
       pintarAccionesHoja('mio', estado.mio)
+    }
+
+    // Deja lista la orden para imprimirla o mandarla (también desde la fila de
+    // "Mis retiros", sin abrirla).
+    function prepararMia(id) {
+      const o = (estado.mis ?? []).find(x => x.orden_id === id)
+      if (!o) return false
+      estado.mio = { orden: o, cliente: null, error: null, aviso: null }
+      return true
+    }
+
+    // Reimprimir desde la fila (1i). Reenviar abre la orden, así lo que pasó
+    // (se compartió, se descargó) se dice pegado a los botones.
+    function reimprimirMia(id) {
+      if (prepararMia(id)) imprimirDesde('mio')
+    }
+
+    function reenviarMia(id) {
+      abrirMia(id)
+      if (estado.mio?.orden?.orden_id === id) enviarDesde('mio')
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -2263,11 +3133,21 @@
       document.getElementById('rt-revisar').addEventListener('click', () => revisar())
       document.getElementById('rt-transporte').addEventListener('input', () => { leerCabecera(); guardarBorrador() })
       document.getElementById('rt-observaciones').addEventListener('input', () => { leerCabecera(); guardarBorrador() })
+      document.getElementById('rt-editor-volver').addEventListener('click', () => volverDeEditor())
+      document.getElementById('rt-orden-lista').addEventListener('click', (e) => {
+        let b
+        if ((b = e.target.closest('[data-r-quitar]'))) quitarRenglon(b.dataset.rQuitar)
+        else if ((b = e.target.closest('[data-r-editar]'))) editarRenglon(b.dataset.rEditar)
+      })
       const renglones = document.getElementById('rt-renglones')
       renglones.addEventListener('click', (e) => {
         let b
-        if ((b = e.target.closest('[data-r-producto]'))) elegirProductoRenglon(b.dataset.rProducto, b.dataset.id, b.dataset.presentacion ?? null, b.dataset.marca)
-        else if ((b = e.target.closest('[data-r-insumo]'))) elegirInsumoRenglon(b.dataset.rInsumo, b.dataset.id)
+        // Desde el catálogo de la compu ('nuevo') se agrega un renglón.
+        if ((b = e.target.closest('[data-r-producto]'))) elegirProductoRenglon(indiceDestino(b.dataset.rProducto), b.dataset.id, b.dataset.presentacion ?? null, b.dataset.marca)
+        else if ((b = e.target.closest('[data-r-insumo]'))) elegirInsumoRenglon(indiceDestino(b.dataset.rInsumo), b.dataset.id)
+        else if ((b = e.target.closest('[data-r-listo]'))) renglonListo(b.dataset.rListo)
+        else if ((b = e.target.closest('[data-r-menos]'))) sumarAlRenglon(b.dataset.rMenos, -1)
+        else if ((b = e.target.closest('[data-r-mas]'))) sumarAlRenglon(b.dataset.rMas, 1)
         else if ((b = e.target.closest('[data-r-cambiar-producto]'))) cambiarProductoRenglon(b.dataset.rCambiarProducto)
         else if ((b = e.target.closest('[data-r-cono]'))) elegirConoRenglon(b.dataset.rCono, b.dataset.valor === 'si')
         else if ((b = e.target.closest('[data-r-marca]'))) elegirMarcaRenglon(b.dataset.rMarca, b.dataset.id)
@@ -2300,8 +3180,10 @@
       document.getElementById('rt-otra').addEventListener('click', () => { estado.hecho = null; empezarOrden() })
       document.getElementById('rt-mis-volver').addEventListener('click', () => abrirFormulario())
       document.getElementById('rt-mis-lista').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-mia]')
-        if (b) abrirMia(b.dataset.mia)
+        let b
+        if ((b = e.target.closest('[data-mia-imprimir]'))) reimprimirMia(b.dataset.miaImprimir)
+        else if ((b = e.target.closest('[data-mia-enviar]'))) reenviarMia(b.dataset.miaEnviar)
+        else if ((b = e.target.closest('[data-mia]'))) abrirMia(b.dataset.mia)
       })
       document.getElementById('rt-mio-volver').addEventListener('click', () => mostrarMisRetiros())
       document.getElementById('rt-mio-imprimir').addEventListener('click', () => imprimirDesde('mio'))

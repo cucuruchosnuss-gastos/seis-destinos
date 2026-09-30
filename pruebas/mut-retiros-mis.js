@@ -13,6 +13,7 @@ correrMutaciones({
   equivalentes: [
     { expr: 'esc(estado.errorMis)', motivo: 'texto constante del código: lo pone mostrarMisRetiros()' },
     { expr: 'esc(enteroHoja(cajasDeOrden(o)))', motivo: 'número formateado por enteroHoja(): solo dígitos y puntos' },
+    { expr: 'esc(meta)', motivo: 'la fecha corta (dd/mm/aaaa), las cajas (enteroHoja) y cuántos insumos: ningún texto de la base' },
   ],
   manuales: [
     { nombre: 'lee la tabla de órdenes', de: "      const { data, error } = await supabase.rpc('mis_ordenes_retiro', { p_unidad_negocio_id: estado.empresaId, p_desde: null })", a: "      const { data, error } = await supabase.from('ordenes_retiro').select('*').eq('unidad_negocio_id', estado.empresaId)" },

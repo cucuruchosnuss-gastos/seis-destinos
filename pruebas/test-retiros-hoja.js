@@ -48,10 +48,10 @@ const ORDEN = {
   chk('fecha y hora de Argentina', /26\/09\/2026 14:32/.test(h))
   chk('el cliente con razón social, CUIT y domicilio', /ANATOLIA SRL/.test(h) && /CUIT 30712345678/.test(h) && /Av\. Siempreviva 742, Córdoba/.test(h))
   chk('el transporte', /Expreso Norte/.test(h))
-  chk('los renglones: producto, cono, presentación, cajas, unidades y lotes', /Cucurucho grande/.test(h) && /LOLO/.test(h) && /Caja x 100 con cono/.test(h) && /1\.000/.test(h) && /7030-1 \(6\) · 7031-2 \(4\)/.test(h))
-  chk('el total de cajas', /rh-num rh-cajas">15</.test(h))
+  chk('los renglones: # · producto con presentación y cono · lotes · cantidad (diseño 3a)', /<td class="rh-n">1<\/td><td class="rh-producto">Cucurucho grande · Caja x 100 · sin cono<\/td>/.test(h) && /Caja x 100 con cono · LOLO/.test(h) && /7030-1 ×6 · 7031-2 ×4/.test(h) && /rh-num rh-cajas">10 cajas</.test(h))
+  chk('el total de cajas', /rh-total-cajas">Total 15 cajas</.test(h))
   chk('las observaciones', /Frágil/.test(h))
-  chk('quién la cargó', /Cargó<\/span> Emanuel Romero/.test(h))
+  chk('quién la cargó', /Cargó: <strong>Emanuel Romero<\/strong>/.test(h))
   chk('"Recibí conforme" con firma, aclaración y DNI', /Recibí conforme/.test(h) && />Firma</.test(h) && />Aclaración</.test(h) && />DNI</.test(h))
   chk('la leyenda: no válido como factura', (h.match(/Documento interno\. No válido como factura\./g) || []).length === 2)
   chk('SIN PRECIOS aunque la orden los traiga', !/Precio|Subtotal|\$|3\.000,00|45\.000/.test(h))
@@ -122,7 +122,8 @@ const ORDEN = {
   chk('la copia tiene un alto mínimo de media hoja (134 mm)', /\.rh-copia \{[^}]*min-height: 134mm/.test(S.ESTILOS_HOJA))
   chk('dos copias de 134 mm y el corte entran en 281 mm', 2 * 134 + 5 <= 281)
   chk('una copia no se corta entre páginas', /\.rh-copia \{[^}]*break-inside: avoid/.test(S.ESTILOS_HOJA))
-  chk('las filas de la tabla son bajas (0,45 mm de relleno, 8 pt)', /\.rh-tabla th, \.rh-tabla td \{[^}]*padding: 0\.45mm 1\.2mm;[^}]*font-size: 8pt/.test(S.ESTILOS_HOJA))
+  chk('las filas de la tabla son bajas (17 px del diseño = 4,5 mm, letra de 10 px = 7,5 pt)', /\.rh-tabla td \{[^}]*font-size: 7\.5pt;[^}]*height: 4\.5mm/.test(S.ESTILOS_HOJA))
+  chk('12 renglones por hoja', S.RENGLONES_POR_HOJA === 12)
 }
 
 // ── El texto para compartir, sin precios ───────────────────────────────────
@@ -214,17 +215,17 @@ const MIXTA = {
   chk('la hoja muestra el insumo con su nombre y marca', /Harina 000 · Molino Cañuelas/.test(h))
   chk('con su cantidad y su unidad, no en cajas', /rh-num rh-cajas">25,5 kg</.test(h) && /rh-num rh-cajas">300 un\.</.test(h))
   chk('los decimales de los kilos con coma y las unidades enteras', !/25\.5/.test(h))
-  chk('el encabezado dice que la columna lleva cajas o cantidad', /Cajas \/ cant\./.test(h))
-  chk('los insumos no suman al total de cajas', /Total de cajas<\/td><td class="rh-num rh-cajas">10</.test(h))
-  chk('el lote del insumo con su cantidad', /H-10 \(25,5 kg\)/.test(h))
-  chk('un insumo no tiene unidades de producto', /<tr class="rh-insumo">(?:(?!<\/tr>).)*<td class="rh-num">—<\/td>/.test(h))
+  chk('el encabezado de la columna dice "Cant." (cajas o cantidad)', /<th class="rh-num">Cant\.<\/th>/.test(h))
+  chk('los insumos no suman al total de cajas: van aparte, por unidad', /rh-total-cajas">Total 10 cajas \+ 25,5 kg \+ 300 un\.</.test(h))
+  chk('el lote del insumo con su cantidad', /H-10 ×25,5 kg/.test(h))
+  chk('un insumo no se cuenta en cajas', /<tr class="rh-insumo">(?:(?!<\/tr>).)*rh-cajas">25,5 kg</.test(h) && !/<tr class="rh-insumo">(?:(?!<\/tr>).)*cajas<\/td>/.test(h))
   chk('sin precios aunque el insumo los traiga', !/Precio|Subtotal|\$|2\.550/.test(h))
   const hp = S.htmlHoja(MIXTA, { conPrecios: true })
   chk('con precios, el insumo va por su unidad', /\$\s100,00 \/ kg/.test(hp) && /\$\s2\.550,00/.test(hp))
-  chk('un insumo sin precio dice "—", nunca $ 0,00', /<tr class="rh-insumo"><td>Caja N°1<\/td>(?:(?!<\/tr>).)*<td class="rh-num">—<\/td><td class="rh-num">—<\/td><\/tr>/.test(hp) && !/\$\s0,00/.test(hp))
+  chk('un insumo sin precio dice "—", nunca $ 0,00', /<tr class="rh-insumo"><td class="rh-n">3<\/td><td class="rh-producto">Caja N°1<\/td>(?:(?!<\/tr>).)*<td class="rh-num">—<\/td><td class="rh-num">—<\/td><\/tr>/.test(hp) && !/\$\s0,00/.test(hp))
   chk('con insumos, el encabezado del precio es genérico', /<th class="rh-num">Precio<\/th>/.test(hp))
   const sinInsumos = S.htmlHoja(ORDEN, { conPrecios: true })
-  chk('sin insumos la hoja queda como antes', /Precio x caja/.test(sinInsumos) && !/Cajas \/ cant\./.test(sinInsumos) && /<td colspan="3">Total<\/td>/.test(sinInsumos))
+  chk('sin insumos el precio es "Precio x caja"', /Precio x caja/.test(sinInsumos) && !/<th class="rh-num">Precio<\/th>/.test(sinInsumos) && /rh-total">\$\s45\.000,00</.test(sinInsumos))
   chk('el total de unidades cuenta solo los productos', S.totalUnidadesOrden(MIXTA) === 1000)
   const t = S.textoOrden(MIXTA)
   chk('el texto para compartir lleva el insumo con su cantidad', /- 25,5 kg · Harina 000 · Molino Cañuelas \(lotes H-10 \(25,5 kg\)\)/.test(t) && /- 300 un\. · Caja N°1/.test(t))
@@ -250,6 +251,46 @@ const MIXTA = {
   const malaInsumo = { ...mala, renglones: [{ esInsumo: true, producto: marca('ins-nombre'), marca: marca('ins-marca'), cantidad: 3, unidad: marca('ins-unidad'), lotes: [{ lote: marca('ins-lote'), cantidad: 1 }], precio: 1, subtotal: 1 }] }
   chequearMarcas(chk, 'hoja con un insumo', S.htmlHoja(malaInsumo, { conPrecios: true }), ['ins-nombre', 'ins-marca', 'ins-unidad', 'ins-lote'])
   chk('el rótulo de la copia también se escapa', /&lt;b data-xss=&quot;rotulo&quot;&gt;/.test(S.htmlHoja(mala, { copias: [marca('rotulo')] })))
+  // El sello de anulada con su detalle, y el faltante (un lote SIN STOCK).
+  const anul = { ...mala, estado: 'anulada', anuladaPor: marca('anul-por'), anuladaMotivo: marca('anul-motivo'),
+    renglones: [{ producto: marca('f-producto'), presentacion: 'Caja', cono: 'Sin cono', cajas: 5, unidades: 5, lotes: [{ lote: 'SIN STOCK', cajas: 5 }] }] }
+  chequearMarcas(chk, 'hoja anulada con faltante', S.htmlHoja(anul), ['anul-por', 'anul-motivo', 'f-producto'])
+}
+
+// ── Más de 12 renglones: otra hoja con el mismo encabezado (decisión 3) ─────
+{
+  const S = nuevo()
+  const renglon = (k) => ({ producto: 'Cucurucho mini', presentacion: 'Caja x 320', cono: 'Sin cono', cajas: k, unidades: k * 320, lotes: [{ lote: `70${k}`, cajas: k }] })
+  const doce = { ...ORDEN, renglones: Array.from({ length: 12 }, (_, k) => renglon(k + 1)) }
+  const h12 = S.htmlHoja(doce)
+  chk('12 renglones entran en UNA hoja', (h12.match(/class="rh-pagina"/g) || []).length === 1 && !/Hoja 1 de/.test(h12))
+  const trece = { ...ORDEN, renglones: Array.from({ length: 13 }, (_, k) => renglon(k + 1)) }
+  const h = S.htmlHoja(trece)
+  chk('13 renglones: DOS hojas', (h.match(/class="rh-pagina"/g) || []).length === 2 && S.paginasHoja(trece) === 2)
+  chk('cada hoja con sus dos copias y su corte', (h.match(/<section class="rh-copia/g) || []).length === 4 && (h.match(/class="rh-corte"/g) || []).length === 2)
+  chk('el mismo encabezado, con "Hoja 1 de 2" y "Hoja 2 de 2"', (h.match(/class="rh-codigo">N-0012</g) || []).length === 4 && (h.match(/Hoja 1 de 2/g) || []).length === 2 && (h.match(/Hoja 2 de 2/g) || []).length === 2)
+  const [p1, p2] = h.split('class="rh-pagina"').slice(1)
+  chk('la primera hoja lleva los renglones 1 a 12', (p1.match(/<td class="rh-n">/g) || []).length === 24 && /rh-n">12</.test(p1) && !/rh-n">13</.test(p1))
+  chk('la segunda sigue desde el 13', /rh-n">13</.test(p2) && !/rh-n">12</.test(p2))
+  chk('el total y la firma van en la última hoja', !/rh-total-cajas/.test(p1) && !/>Firma</.test(p1) && /Total 91 cajas/.test(p2) && (p2.match(/>Firma</g) || []).length === 2)
+  chk('la primera dice que sigue', (p1.match(/Sigue en la hoja 2\./g) || []).length === 2)
+  chk('la leyenda en todas las copias', (h.match(/No válido como factura/g) || []).length === 4)
+  chk('una hoja nueva empieza en otra página', /\.rh-pagina \+ \.rh-pagina \{[^}]*break-before: page/.test(S.ESTILOS_HOJA))
+  chk('una orden sin renglones igual es una hoja', S.paginasHoja({ renglones: [] }) === 1)
+}
+
+// ── El faltante y el sello de anulada (diseño 3a y 3b) ──────────────────────
+{
+  const S = nuevo()
+  const conFaltante = { ...ORDEN, renglones: [{ producto: 'Cucurucho mini', presentacion: 'Caja x 320', cono: 'CASERATO', cajas: 50, unidades: 16000, lotes: [{ lote: '7031', cajas: 20 }, { lote: '7038', cajas: 16 }, { lote: 'SIN STOCK', cajas: 14 }] }] }
+  const h = S.htmlHoja(conFaltante)
+  chk('lo que no estaba en stock se dice "faltan N" en los lotes', /7031 ×20 · 7038 ×16 · faltan 14/.test(h))
+  chk('y abajo, el faltante pendiente de revisión', /<strong>Faltante:<\/strong> 14 cajas de Cucurucho mini · Caja x 320 · CASERATO, pendiente de revisión\./.test(h))
+  chk('sin faltante no se nombra', !/Faltante/.test(S.htmlHoja(ORDEN)))
+  const a = S.htmlHoja({ ...ORDEN, estado: 'anulada', anuladaEn: '2026-09-28', anuladaPor: 'Pablo Nuss', anuladaMotivo: 'el cliente canceló el retiro' })
+  chk('el sello de ANULADA lleva fecha, quién y motivo', /rh-anulada__detalle">28\/09\/2026 · Pablo Nuss · el cliente canceló el retiro</.test(a))
+  chk('sin esos datos el sello va solo', !/rh-anulada__detalle/.test(S.htmlHoja({ ...ORDEN, estado: 'anulada' })))
+  chk('el sello va en bordó, como el diseño', /\.rh-anulada \{[^}]*border: 1\.6mm solid #7A2E42/.test(S.ESTILOS_HOJA))
 }
 
 fin()

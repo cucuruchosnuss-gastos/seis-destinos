@@ -45,6 +45,7 @@ const FUNCIONES_BASE = [
   'escHoja', 'logoSeguro', 'datosFaltantesEmpresa', 'textoFaltantesEmpresa', 'fechaHoja', 'fechaHoraHoja',
   'enteroHoja', 'importeHoja', 'decimalesDeUnidad', 'unidadHoja', 'cantidadInsumoHoja', 'tieneInsumos', 'totalCajasOrden', 'totalUnidadesOrden', 'textoLotes', 'nombreInsumoHoja',
   'htmlEmpresaHoja', 'htmlClienteHoja', 'htmlFilaHoja', 'htmlTablaHoja', 'htmlCopiaHoja', 'htmlHoja', 'asegurarEstilosHoja',
+  'textoLotesHoja', 'faltanteDeRenglon', 'descripcionHoja', 'cantidadHoja', 'totalInsumosHoja', 'htmlResumenHoja', 'htmlSelloAnulada', 'paginasHoja',
   'textoOrden', 'nombreArchivoPdf', 'asuntoMail', 'emailValido', 'urlMailto', 'cargarScript', 'generarPdf', 'enviarOrden',
   // Importar (26/09/2026)
   'normalizarEncabezado', 'mapearColumnas', 'textoCelda', 'fechaIsoLocal', 'numeroCelda', 'fechaCelda', 'cuitValido', 'cbuValido',
@@ -80,7 +81,7 @@ const CONSTANTES_BASE = [
   'LIBRERIA_XLSX', 'TIPOS_IMPORTAR', 'EXPLICA_IMPORTAR', 'TITULO_CODIGO', 'COLUMNAS_CLIENTES', 'COLUMNAS_PRECIOS', 'COLUMNAS_SALDOS',
   'COLUMNAS_DE', 'CONDICIONES_IVA', 'ETIQUETA_FILA',
   'VISTAS_GLOBALES', 'RE_UUID', 'MAX_RESULTADOS_CLIENTES', 'MIN_LETRAS_BUSCAR', 'ESPERA_BUSCAR_MS', 'SUGERIDOS_EN_BOTONES', 'ETIQUETA_ESTADO_PROYECTO', 'ETIQUETA_ESTADO_COBRANZA', 'MAX_ERRORES', 'ETIQUETA_EVENTO_ERROR', 'MAX_SEGURIDAD', 'ETIQUETA_ACCION_SEGURIDAD', 'LARGO_MINIMO_MOTIVO_REVISAR',
-  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA',
+  'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'RENGLONES_POR_HOJA',
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
 ]

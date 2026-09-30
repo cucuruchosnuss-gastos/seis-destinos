@@ -77,8 +77,8 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('sin buscar, SIN CONO trae solo lo que tiene stock', g[0].lista.map(o => o.presentacionId).join() === 'pr-mini')
   chk('sin buscar, los insumos sin stock no aparecen', g[2].lista.map(o => o.insumoId).join() === 'i-har')
   const h = S.htmlProductosRenglon(0, CAT, '', CONOS)
-  chk('cada grupo con su encabezado de color', /rt-grupo rt-grupo--sin-cono">Producto terminado · SIN CONO</.test(h) &&
-    /rt-grupo rt-grupo--con-cono">Producto terminado · CON CONO</.test(h) && /rt-grupo rt-grupo--insumos">Materia prima e insumos</.test(h))
+  chk('cada grupo con su encabezado de color', /rt-grupo rt-grupo--sin-cono"><span class="rt-grupo__titulo">Producto terminado · SIN CONO</.test(h) &&
+    /rt-grupo rt-grupo--con-cono"><span class="rt-grupo__titulo">Producto terminado · CON CONO</.test(h) && /rt-grupo rt-grupo--insumos"><span class="rt-grupo__titulo">Materia prima e insumos</.test(h))
   chk('cada opción con el color de su grupo', /rt-opcion rt-opcion--sin-cono" data-r-producto/.test(h) && /rt-opcion rt-opcion--con-cono" data-r-producto/.test(h) && /rt-opcion rt-opcion--insumos" data-r-insumo/.test(h))
   chk('cada opción dice cuánto hay', /hay 42 cajas/.test(h) && /hay 12 cajas/.test(h) && /hay 8 cajas/.test(h) && /hay 250 kg/.test(h))
   chk('la opción con cono lleva la presentación y el cono', /data-presentacion="pr-mini-cono" data-marca="m-lolo"/.test(h) && /data-presentacion="pr-mini-cono" data-marca=""/.test(h))
@@ -86,7 +86,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('sin buscar se dice cómo encontrar lo que no tiene stock', /Escribí para buscar también lo que no tiene stock/.test(h))
   const catNull = { ...CAT, presentaciones: [{ ...CAT.presentaciones[2], stock_cajas: null }] }
   chk('un stock que no se sabe NO esconde la opción', S.gruposCatalogo(catNull, '', CONOS).some(x => x.lista.some(o => o.presentacionId === 'pr-cap')))
-  chk('los tres colores son distintos (grafito, amarillo, marrón)', /\.rt-grupo--sin-cono \{[^}]*--grafito/.test(css) && /\.rt-grupo--con-cono \{[^}]*--amarillo/.test(css) && /\.rt-grupo--insumos  \{[^}]*--marron/.test(css))
+  chk('los tres colores del diseño, distintos (trigo, ciruela, gris verde)', /\.rt-grupo--sin-cono \{ --rt-g-c: oklch\(0\.62 0\.12 80\)/.test(css) && /\.rt-grupo--con-cono \{ --rt-g-c: oklch\(0\.52 0\.12 330\)/.test(css) && /\.rt-grupo--insumos \{ --rt-g-c: oklch\(0\.5 0\.05 150\)/.test(css))
 }
 {
   // Si la base no mandara 'conos' (red por si la función cambia): una opción
@@ -218,10 +218,10 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   S.completarLotes(0)
   chk('"Completar con los más viejos" en el renglón: 15 + 10 + 17', JSON.stringify(r.lotes) === '{"7001-1":15,"7005-2":10,"7010-1":17}')
   const h = S.htmlLoteRenglon(r, 0)
-  chk('la lista de lotes: el más viejo primero, con lo que queda', h.indexOf('7001-1') < h.indexOf('7005-2') && h.indexOf('7005-2') < h.indexOf('7010-1') && /queda 20 cajas/.test(h))
+  chk('la lista de lotes: el más viejo primero, con lo que queda', h.indexOf('7001-1') < h.indexOf('7005-2') && h.indexOf('7005-2') < h.indexOf('7010-1') && /quedan <strong>20 cajas<\/strong>/.test(h))
   chk('un campo por lote', (h.match(/data-r-lote-cant="0"/g) || []).length === 3)
   chk('y el botón "Completar con los más viejos"', /data-r-completar="0"[^>]*>Completar con los más viejos</.test(h))
-  chk('siempre dice el total pedido y lo asignado', /Pedido: <strong>42 cajas<\/strong> · asignado todo\./.test(h))
+  chk('siempre dice el total pedido y lo asignado', /<small>Asignado<\/small><span>42 <em>de 42<\/em><\/span>/.test(h) && /rt-estado-lotes--ok">✓ Falta asignar 0</.test(h))
   chk('el payload lleva los tres lotes', JSON.stringify(S.itemParaBase(r)) ===
     '{"presentacion_id":"pr-mini","marca_id":null,"cajas":42,"lotes":[{"lote":"7001-1","cajas":15},{"lote":"7005-2","cajas":10},{"lote":"7010-1","cajas":17}]}')
   chk('repartido todo, nada falta', S.faltanRenglon(r) === null)
@@ -231,7 +231,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   const a = S.asignacion(r, LOTES_MINI)
   chk('asignado 15 de 42: falta asignar 27', a.asignado === 15 && a.falta === 27 && a.sinLugar === false)
   chk('viaja SOLO el lote con cantidad, y lo que falta con lugar NO va a "SIN STOCK"', JSON.stringify(S.lotesParaBase(r, LOTES_MINI)) === '[{"lote":"7001-1","cajas":15}]')
-  chk('el resumen dice cuánto falta asignar', /falta asignar: <strong>27 cajas<\/strong>/.test(S.htmlResumenLotes(r, LOTES_MINI)))
+  chk('el resumen dice cuánto falta asignar', /<span>15 <em>de 42<\/em><\/span>/.test(S.htmlResumenLotes(r, LOTES_MINI)) && /Falta asignar 27 cajas/.test(S.htmlResumenLotes(r, LOTES_MINI)))
   chk('con lugar en otros lotes, lo que falta asignar bloquea (con qué hacer)', /faltan asignar 27 cajas a los lotes \(tocá «Completar con los más viejos»\)/.test(S.faltanRenglon(r)))
   S.ponerCantidadLote(0, '7001-1', null)
   chk('borrar un lote lo saca', !('7001-1' in r.lotes))
@@ -256,14 +256,14 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   let a = S.asignacion(r, LOTES_MINI)
   chk('sin repartir, lo pedido de más que el stock es faltante', a.faltante === 5)
   let h = S.htmlLoteRenglon(r, 0)
-  chk('el aviso en bordó con el texto pedido', /rt-aviso rt-aviso--grave" data-r-faltante>Esto no está en stock: la orden sale igual y queda pendiente de revisión en Administración \(faltan 5 cajas\)/.test(h))
+  chk('el aviso en bordó con el texto pedido', /rt-aviso rt-aviso--grave rt-faltante" data-r-faltante>/.test(h) && /<strong>Hay 45 cajas y se lleva 50 cajas<\/strong>Se puede confirmar igual\. Lo que falta queda pendiente de revisión en Administración \(faltan 5 cajas\)/.test(h))
   chk('y no bloquea', S.faltanRenglon(r) === null)
   chk('sin repartir no viajan lotes: la base descuenta y marca el faltante', !('lotes' in S.itemParaBase(r)))
   // Completar: 45 asignadas, 5 sin lugar → lote SIN STOCK.
   S.completarLotes(0)
   a = S.asignacion(r, LOTES_MINI)
   chk('completado: falta 5 y no hay más lugar', a.falta === 5 && a.sinLugar === true && a.faltante === 5)
-  chk('el resumen dice que no hay más en stock', /falta asignar: <strong>5 cajas<\/strong> \(no hay más en stock\)/.test(S.htmlResumenLotes(r, LOTES_MINI)))
+  chk('el resumen dice que no hay más en stock', /Faltan 5 cajas/.test(S.htmlResumenLotes(r, LOTES_MINI)) && /No hay más en stock/.test(S.htmlResumenLotes(r, LOTES_MINI)))
   chk('sin lugar, lo que falta asignar NO bloquea', S.faltanRenglon(r) === null)
   chk('y viaja en el lote "SIN STOCK"', JSON.stringify(S.itemParaBase(r).lotes) ===
     '[{"lote":"7001-1","cajas":15},{"lote":"7005-2","cajas":10},{"lote":"7010-1","cajas":20},{"lote":"SIN STOCK","cajas":5}]')
@@ -284,7 +284,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('y no bloquea', S.faltanRenglon(r) === null)
   // Lotes que no se pudieron leer: no se inventa un faltante.
   S.estado.lotes.set(S.claveLotes('pr-cap', null), { cargando: false, error: 'No se pudieron leer los lotes.', lista: [] })
-  chk('si los lotes no se pudieron leer, no se inventa un faltante', S.asignacion(r, S.listaLotesDe(r)).faltante === null && !/data-r-faltante/.test(S.htmlLoteRenglon(r, 0)))
+  chk('si los lotes no se pudieron leer, no se inventa un faltante', S.asignacion(r, S.listaLotesDe(r)).faltante === null && !/data-r-faltante(?![-\w])/.test(S.htmlLoteRenglon(r, 0)))
 }
 {
   // Confirmar con un faltante: la orden SALE (no bloquea).
@@ -298,7 +298,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   S.revisar()
   const res = S.__els.get('rt-resumen').innerHTML
   chk('el resumen dice de qué lote sale cada parte', /Lote 7001-1: 15 cajas · Lote 7005-2: 10 cajas · Lote 7010-1: 20 cajas/.test(res))
-  chk('y el aviso del faltante en bordó', /data-r-faltante>Esto no está en stock/.test(res))
+  chk('y el aviso del faltante en bordó', /rt-aviso--grave rt-faltante" data-r-faltante><svg[^]*?<strong>Hay 45 cajas y se lleva 50 cajas<\/strong>/.test(res))
   let p = null
   S.__setRpc(async (n, x) => {
     if (n === 'registrar_orden_retiro') { p = x; return { data: { orden_id: 'o', codigo: 'N-0040', stock_insuficiente: [{ renglon: 1, producto: 'Cucurucho Mini', presentacion: 'Caja x 600', pedidas: 50, faltaron: 5 }] }, error: null } }
@@ -324,7 +324,7 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chk('el stock sin lote viaja con lote "" (la base lo toma como el lote null)', JSON.stringify(S.itemParaBase(r)) ===
     '{"insumo_id":"i-har","cantidad":30.5,"lotes":[{"lote":"","cantidad":10},{"lote":"H-10","cantidad":20.5}]}')
   const h = S.htmlLoteRenglon(r, 0)
-  chk('el stock sin lote se llama "Sin lote"', />Sin lote<span/.test(h) && /queda 10 kg/.test(h))
+  chk('el stock sin lote se llama "Sin lote"', />Sin lote<span/.test(h) && /quedan <strong>10 kg<\/strong>/.test(h))
   r.cantidad = 40
   S.completarLotes(0)
   chk('un insumo que no alcanza: el resto al lote "SIN STOCK", con cantidad', JSON.stringify(S.itemParaBase(r).lotes.at(-1)) === '{"lote":"SIN STOCK","cantidad":5}')
@@ -344,10 +344,10 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
     return tic().then(() => chk('no se vuelven a leer los que ya están', pedidos === 1))
   }))
   const src2 = src
-  chk('tipear en un lote redibuja SOLO el resumen (no el renglón)', /function ponerCantidadLote[\s\S]*?pintarResumenLotes\(i\)[\s\S]*?\n    \}/.test(src2) &&
-    !/function ponerCantidadLote[^}]*pintarRenglones/.test(src2))
+  const cuerpoPoner = (src2.match(/function ponerCantidadLote\([^)]*\) \{[\s\S]*?\n    \}/) || [''])[0]
+  chk('tipear en un lote redibuja SOLO el resumen (no el renglón)', /pintarResumenLotes\(i\)/.test(cuerpoPoner) && !/pintarRenglones/.test(cuerpoPoner))
   chk('los campos de lote se enlazan con los decimales del renglón y se escriben con ponerNumero', /querySelectorAll\('\[data-r-lote-cant\]'\)/.test(src2) &&
-    /enlazarCampoNumero\(input, \{ decimales: r\?\.insumoId \? decimalesDeUnidad\(r\.unidad\) : DECIMALES_CAJAS \}\)/.test(src2))
+    /enlazarCampoNumero\(input, \{ decimales: x\?\.insumoId \? decimalesDeUnidad\(x\.unidad\) : DECIMALES_CAJAS \}\)/.test(src2))
 }
 {
   // Un borrador de antes (con UN lote elegido) pasa a la forma nueva.
@@ -384,6 +384,9 @@ function conLotes(S, clave, lista) { S.estado.lotes.set(clave, { cargando: false
   chequearMarcas(chk, 'resumen con de más', S.htmlResumenLotes({ ...r, lotes: { a: 4, b: 10 } }, L), ['uni'])
   const catUni = { ...cat, insumos: [{ ...cat.insumos[0], stock: 5 }] }
   chequearMarcas(chk, 'stock de un insumo en su unidad', S.htmlProductosRenglon(0, catUni, '', null), ['uni'])
+  // La unidad de la base puede traer espacios: el número y la unidad se parten
+  // en el último espacio, así que los dos pedazos llevan texto de la base.
+  chk('stock de un insumo: ni un pedazo de la unidad crudo', !/"><b|data-xss="uni"/.test(S.htmlProductosRenglon(0, catUni, '', null)))
 }
 
 fin()

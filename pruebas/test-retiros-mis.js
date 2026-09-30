@@ -49,7 +49,7 @@ function preparar(S) {
     chk('NUNCA lee las tablas de órdenes', !S.__llamadas.consultas.some(c => ['ordenes_retiro', 'orden_retiro_items', 'cliente_movimientos'].includes(c[0])))
     const h = S.__els.get('rt-mis-lista').innerHTML
     chk('lista cada orden con su CÓDIGO', /N-0012/.test(h) && /N-0011/.test(h))
-    chk('con fecha, cliente y cajas', /26\/09\/2026 · Distribuidora Anatolia · 10 cajas/.test(h))
+    chk('con fecha, cliente y cajas', /rt-fila__cliente">Distribuidora Anatolia<\/span><span class="rt-fila__meta">26\/09\/2026 · 10 cajas</.test(h))
     chk('una anulada lo dice', /rt-fila--anulada/.test(h) && />Anulada</.test(h))
     chk('sin plata', !/\$|precio|saldo|importe/i.test(h))
     S.abrirMia('o-1')
@@ -60,7 +60,7 @@ function preparar(S) {
     const hoja = S.__els.get('rt-impresion').innerHTML
     chk('reimprimir arma la hoja con dos copias', S.__impresiones() === 1 && (hoja.match(/<section class="rh-copia/g) || []).length === 2)
     chk('con el cliente completo (buscado por nombre en la empresa)', /ANATOLIA SRL/.test(hoja) && /CUIT 30712345678/.test(hoja))
-    chk('quién la cargó: la persona de la sesión', /Cargó<\/span> Emanuel Romero/.test(hoja))
+    chk('quién la cargó: la persona de la sesión', /Cargó: <strong>Emanuel Romero<\/strong>/.test(hoja))
     chk('y SIN precios', !/Precio x caja|Subtotal|\$/.test(hoja))
     S.abrirMia('o-2')
     S.imprimirDesde('mio')
@@ -86,7 +86,7 @@ function preparar(S) {
   preparar(S)
   S.__setRpc(async () => ({ data: [], error: null }))
   esperas.push(S.mostrarMisRetiros().then(() => {
-    chk('sin órdenes, lo dice', /No cargaste ninguna orden/.test(S.__els.get('rt-mis-lista').innerHTML))
+    chk('sin órdenes, lo dice', /Todavía no cargaste retiros/.test(S.__els.get('rt-mis-lista').innerHTML))
   }))
 }
 {

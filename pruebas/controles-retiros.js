@@ -32,6 +32,8 @@ const BASES = [
 const RENOMBRADOS = [
   ['control:button[data-id][data-r-producto][type=button]', 'control:button[data-id][data-marca][data-presentacion][data-r-producto][type=button]',
     '28/09/2026: la opción del catálogo ya no es el producto solo sino la presentación (y el cono): suma data-presentacion y data-marca'],
+  ['control:a[href=../dashboard.html]{&lsaquo; Volver}', 'control:a#rt-atras-inicio[href=../dashboard.html]',
+    '29/09/2026, diseño "Órdenes de retiro": el volver al inicio es la flecha del encabezado (con aria-label "Volver al inicio"), sin texto'],
 ]
 
 // Controles RETIRADOS a propósito: [clave, motivo]. La clave se compara DESPUÉS

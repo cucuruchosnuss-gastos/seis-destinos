@@ -281,7 +281,7 @@ async function bloque2() {
     S.buscarClienteRetiro('JyM')
     let res = resRt(S)
     chk('retiros: al escribir "JyM" la lista local ya encuentra J&M (la clave)', /data-cliente="c-jm-n"/.test(res))
-    chk('retiros: cada resultado dice la empresa (aunque sea una sola)', /J&amp;M DISTRIBUCIONES Y SERVICI<\/span><span class="rt-resultado__detalle">Cucuruchos Nuss/.test(res), res.slice(0, 400))
+    chk('retiros: cada resultado dice la empresa (aunque sea una sola)', /J&amp;M DISTRIBUCIONES Y SERVICI<\/span><span class="rt-resultado__detalle">[^<]*Cucuruchos Nuss</.test(res), res.slice(0, 400))
     chk('retiros: espera antes de consultar', rpcs(S).length === 0 && vivos().length === 1 && vivos()[0].ms === S.ESPERA_BUSCAR_MS)
     await correrTimers()
     const r = rpcs(S)
@@ -290,7 +290,7 @@ async function bloque2() {
     chk('retiros: muestra lo que devolvió la base (también lo que no estaba en la lista local)', /data-cliente="c-lejano"/.test(res) && /JM Lejano/.test(res))
     chk('retiros: nunca un cliente de otra empresa', !/c-otra/.test(res))
     chk('retiros: NUNCA el saldo (no es una pantalla de plata)', !/\$|185|999|Debe|A favor|saldo/i.test(res), res)
-    chk('retiros: el de la base también con su empresa', /JM Lejano<\/span><span class="rt-resultado__detalle">Cucuruchos Nuss · Salta/.test(res))
+    chk('retiros: el de la base también con su empresa', /JM Lejano<\/span><span class="rt-resultado__detalle">Salta · Cucuruchos Nuss</.test(res))
     S.elegirCliente('c-lejano')
     chk('retiros: elegir uno que solo trajo la base lo suma y lo elige', S.estado.form.clienteId === 'c-lejano' && S.estado.clientes.some(c => c.id === 'c-lejano' && c.nombre === 'JM Lejano'))
     S.cambiarCliente()
@@ -350,8 +350,9 @@ async function bloque2() {
     chequearMarcas(chk, 'retiros: sin resultados de la base', S.htmlResultadosClientes(busca), ['rt-busca'])
     S.estado.buscarClientes = null
     S.estado.clientes = [{ id: marca('rl-id'), nombre: marca('rl-nombre'), razon_social: marca('rl-razon'), localidad: marca('rl-loc'), apodos: [marca('rl-apodo')], activo: true }]
-    chequearMarcas(chk, 'retiros: resultados locales', S.htmlResultadosClientes(''), ['rl-id', 'rl-nombre', 'rl-razon', 'rl-loc', 'rl-apodo'])
+    chequearMarcas(chk, 'retiros: resultados locales', S.htmlResultadosClientes('razon') + S.htmlResultadosClientes('xss'), ['rl-id', 'rl-nombre', 'rl-razon', 'rl-loc', 'rl-apodo'])
     chequearMarcas(chk, 'retiros: sin resultados locales', S.htmlResultadosClientes(marca('rl-busca')), ['rl-busca'])
+    chk('retiros: las iniciales del cliente van escapadas', /rt-resultado__ini" aria-hidden="true">&lt;&lt;</.test(S.htmlResultadoCliente({ id: 'x', nombre: '<b <i', apodos: [] }, 'E', '')))
   }
 }
 

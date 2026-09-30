@@ -91,7 +91,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   const h2 = S.__els.get('rt-empresas').innerHTML
   chk('una orden nueva vuelve a preguntar', S.estado.vista === 'rt-vista-empresa')
   chk('la última usada va primera', h2.indexOf('data-empresa="u-d"') < h2.indexOf('data-empresa="u-n"'))
-  chk('y marcada como la última', /data-empresa="u-d" aria-pressed="true"/.test(h2) && /la última que usaste/.test(h2))
+  chk('y marcada como la última', /data-empresa="u-d" aria-pressed="true"/.test(h2) && /la última que usaste/i.test(h2))
   chk('una empresa que no está en la lista no se elige', (S.elegirEmpresa('u-zzz'), S.estado.empresaId === null))
 }
 {
@@ -183,8 +183,10 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     pos('data-presentacion="pr-cap-a"') < pos('>Producto terminado · CON CONO<'))
   chk('los insumos van AL FINAL, separados', pos('>Materia prima e insumos<') < pos('data-r-insumo="0" data-id="i-har"'))
   chk('sin buscar, lo que no tiene stock no se ofrece', !/pr-cho-sin/.test(hp) && /Escribí para buscar también lo que no tiene stock/.test(hp))
-  chk('cada presentación dice su stock en cajas', /Cucurucho grande · Caja x 100<\/span><span class="rt-opcion__detalle"><span>hay 40 cajas/.test(hp))
-  chk('cada insumo dice su marca y su stock en su unidad', /Molino Cañuelas · <span>hay 250 kg/.test(hp) && /hay 300 un\./.test(hp))
+  // Diseño 2026: el número va grande a la derecha (rt-opcion__q) con su unidad
+  // (rt-opcion__u); el texto entero ("hay 40 cajas") queda en el title.
+  chk('cada presentación dice su stock en cajas', /data-presentacion="pr-cuc-sin" data-marca="" title="hay 40 cajas"/.test(hp) && /Cucurucho grande · Caja x 100<\/span>/.test(hp) && /rt-opcion__q">40<\/span><span class="rt-opcion__u">cajas/.test(hp))
+  chk('cada insumo dice su marca y su stock en su unidad', /Molino Cañuelas<\/span>/.test(hp) && /rt-opcion__q">250<\/span><span class="rt-opcion__u">kg/.test(hp) && /rt-opcion__q">300<\/span><span class="rt-opcion__u">un\./.test(hp))
   S.elegirProductoRenglon(0, 'p-cap')
   chk('eligiendo solo el producto, con dos presentaciones no se elige sola', r.presentacionId === null)
   S.elegirPresentacionRenglon(0, 'pr-cuc-sin')
@@ -253,7 +255,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     chk('de esa empresa, presentación y cono (sin cono = marca null)', params && params.p_unidad_negocio_id === 'u-n' && params.p_presentacion_id === 'pr-cuc-sin' && params.p_marca_id === null)
     chk('sin tocar la tabla stock_terminado_movimientos', !S.__llamadas.consultas.some(c => c[0] === 'stock_terminado_movimientos'))
     const h = S.htmlLoteRenglon(f.renglones[0], 0)
-    chk('se listan los lotes con lo que queda y un campo por lote', /data-r-lote-cant="0" data-lote="7010-2"/.test(h) && /data-lote="7030-1"/.test(h) && /queda 15 cajas/.test(h))
+    chk('se listan los lotes con lo que queda y un campo por lote', /data-r-lote-cant="0" data-lote="7010-2"/.test(h) && /data-lote="7030-1"/.test(h) && /quedan <strong>15 cajas<\/strong>/.test(h))
     chk('el más viejo primero', h.indexOf('7010-2') < h.indexOf('7030-1'))
     chk('sin repartir el payload NO lleva lotes (sale sola de los más viejos)', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"presentacion_id":"pr-cuc-sin","marca_id":null,"cajas":10}')
     S.ponerCantidadLote(0, '7030-1', 10)
@@ -286,7 +288,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
     chk('sin consultar v_stock_por_lote (pide stock:ver)', !S.__llamadas.consultas.some(c => c[0] === 'v_stock_por_lote'))
     chk('sin llamar a lotes_para_retiro (esa es de producto)', !S.__llamadas.rpc.some(x => x[0] === 'lotes_para_retiro'))
     const h = S.htmlLoteRenglon(f.renglones[0], 0)
-    chk('se listan con lo que queda en la unidad del insumo', /data-lote="H-10"/.test(h) && /queda 150 kg/.test(h))
+    chk('se listan con lo que queda en la unidad del insumo', /data-lote="H-10"/.test(h) && /quedan <strong>150 kg<\/strong>/.test(h))
     S.ponerCantidadLote(0, 'H-20', 30)
     chk('el payload del insumo lleva sus lotes con CANTIDAD', JSON.stringify(S.itemParaBase(f.renglones[0])) === '{"insumo_id":"i-har","cantidad":30,"lotes":[{"lote":"H-20","cantidad":30}]}')
   }))
@@ -306,7 +308,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   r.cantidad = 12.5
   chk('kilos con decimales pasan', S.faltanRenglon(r) === null)
   const h = S.htmlRenglon(r, 1, CAT, false)
-  chk('el renglón de insumo pide la CANTIDAD con su unidad, no cajas', /data-r-cantidad="1"/.test(h) && /Cantidad \(kg\)/.test(h) && !/data-r-cajas/.test(h))
+  chk('el renglón de insumo pide la CANTIDAD con su unidad, no cajas', /data-r-cantidad="1"/.test(h) && /¿Cuánto se lleva\? \(kg\)/.test(h) && !/data-r-cajas/.test(h))
   chk('y no ofrece cono ni presentación', !/data-r-cono/.test(h) && !/data-r-presentacion/.test(h))
   chk('dice que es un insumo', /rt-sello--insumo/.test(h))
   const p = S.parametrosRegistrar(f)
@@ -319,7 +321,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   S.revisar()
   const res = S.__els.get('rt-resumen').innerHTML
   chk('el resumen muestra el insumo con su cantidad y unidad', /Harina 000 · Molino Cañuelas/.test(res) && /12,5 kg/.test(res))
-  chk('y el total dice las cajas y los insumos', /Total: 10 cajas · 1 de materia prima e insumos/.test(res))
+  chk('y el total dice las cajas y los insumos', /rt-total__rotulo">TOTAL<\/span><span class="rt-total__valor">10 cajas <small>\+ 12,5 kg<\/small>/.test(res))
   // Unidades enteras
   S.estado.vista = 'rt-vista-form'
   S.elegirInsumoRenglon(1, 'i-caj')
@@ -457,8 +459,9 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   const uuid = f.uuid
   esperas.push(S.confirmar().then(async () => {
     const err = S.__els.get('rt-confirmar-error')
-    chk('si se corta la conexión, lo dice y no se pierde la orden', err.hidden === false && /se cortó la conexión/.test(err.textContent) && S.estado.form === f)
-    chk('y dice que reintentar no duplica', /no se duplica/.test(err.textContent))
+    chk('si se corta la conexión, lo dice y no se pierde la orden', err.hidden === false && /no hay señal/.test(err.innerHTML) && /Queda guardada en este celular, todavía sin número/.test(err.innerHTML) && S.estado.form === f)
+    chk('y dice que reintentar no duplica', /no se duplica/.test(err.innerHTML))
+    chk('el botón pasa a Reintentar', S.__els.get('rt-confirmar').textContent === 'Reintentar')
     chk('el botón vuelve a quedar habilitado', S.__els.get('rt-confirmar').disabled === false)
     await S.confirmar()
     const llamadas = S.__llamadas.rpc.filter(x => x[0] === 'registrar_orden_retiro')
@@ -480,7 +483,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   S.__setRpc(async () => ({ data: null, error: { code: 'P0001', message: 'Poné las cajas del renglón 1.' } }))
   esperas.push(S.confirmar().then(() => {
     const err = S.__els.get('rt-confirmar-error')
-    chk('un error de la base se muestra TAL CUAL, pegado al botón', err.textContent === 'Poné las cajas del renglón 1.' && err.hidden === false)
+    chk('un error de la base se muestra TAL CUAL, pegado al botón', err.innerHTML === '<span>Poné las cajas del renglón 1.</span>' && err.hidden === false)
     chk('y la orden sigue', S.estado.form === f)
   }))
 }
@@ -542,7 +545,7 @@ function cargarRenglon(S, i = 0, cajas = 10) {
 }
 {
   const S = nuevo()
-  chk('el HTML de la carga no tiene ningún campo de plata', !/(precio|importe|saldo|subtotal)/i.test(src.slice(src.indexOf('<body'), src.indexOf('<script type="module">')).replace(/<!--[\s\S]*?-->/g, '')))
+  chk('el HTML de la carga no tiene ningún campo de plata', !/(precio|importe|saldo|subtotal)/i.test(src.slice(src.indexOf('<body'), src.indexOf('<script type="module">')).replace(/<!--[\s\S]*?-->/g, '').replace('<p class="rt-sin-precios">Sin precios: la valoriza Administración.</p>', '')))
   chk('la carga nunca llama a valorizar ni lee listas de precios', !/valorizar_orden_retiro|lista_precios|cliente_movimientos|clientes_con_saldo|cuenta_cliente/.test(src))
   chk('la hoja de la carga se arma con conPrecios: false', /htmlHoja\(ordenParaHoja\(o, \{ cliente \}\), \{ conPrecios: false/.test(src) && !/conPrecios: true/.test(src))
 }
@@ -615,8 +618,14 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   S.estado.form = S.formVacio()
   const h1 = S.htmlEmpresas() + S.htmlEmpresaActual()
   chequearMarcas(chk, 'empresas', h1, ['empresa'])
+  // Sin logo, el chip de la fábrica lleva su prefijo (de la base).
+  S.estado.empresas = [{ id: 'u-n', nombre: 'Nuss', prefijo: marca('prefijo'), logo_url: null }, { id: 'u-d', nombre: 'Otra', logo_url: null }]
+  chequearMarcas(chk, 'empresa sin logo', S.htmlEmpresaActual(), ['prefijo'])
+  S.estado.empresas = [{ id: 'u-n', nombre: marca('empresa'), logo_url: marca('logo') }, { id: 'u-d', nombre: 'Otra', logo_url: null }]
   chk('un logo_url malicioso no llega a un src', !/data-xss="logo"/.test(h1) && !/src="\.\.\/"/.test(h1))
-  const h2 = S.htmlResultadosClientes('') + S.htmlResultadosClientes(marca('busqueda'))
+  // Lo que coincide va resaltado (partido por un <mark>): con «razon» salen
+  // enteros el nombre y el apodo ("También: …"); con «xss», la razón social.
+  const h2 = S.htmlResultadosClientes('razon') + S.htmlResultadosClientes('xss') + S.htmlResultadosClientes(marca('busqueda'))
   chequearMarcas(chk, 'resultados de clientes', h2, ['cliente', 'razon', 'apodo', 'localidad', 'busqueda'])
   S.estado.form.clienteId = 'c1'
   chequearMarcas(chk, 'cliente elegido', S.htmlClienteElegido(S.estado.form), ['cliente', 'razon'])
@@ -625,6 +634,8 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   // La unidad de un insumo viene de la base (sin CHECK): va en "hay 10 …".
   const catUnidad = { ...cat, insumos: [{ ...cat.insumos[0], unidad_medida: marca('unidad-catalogo') }] }
   chequearMarcas(chk, 'stock de un insumo en el catálogo', S.htmlProductosRenglon(0, catUnidad), ['unidad-catalogo'])
+  // El número y la unidad van partidos (grande / chico): ni un pedazo crudo.
+  chk('stock de un insumo: ni un pedazo de la unidad crudo', !/"><b|data-xss="unidad-catalogo"/.test(S.htmlProductosRenglon(0, catUnidad)))
   // El id interno de un producto lleva su NOMBRE ("prod:" + categoría + nombre):
   // armado como lo arma la pantalla, el data-id también va escapado.
   const catRpc = S.catalogoDesdeRpc({ productos: [{ presentacion_id: 'pp1', producto: marca('producto-id'), presentacion: 'Caja', categoria: null, con_cono: false, unidades_por_caja: 1, stock_cajas: 3 }] }, [])
@@ -641,8 +652,14 @@ function cargarRenglon(S, i = 0, cajas = 10) {
   ri.lotes = { [marca('lote-insumo')]: 9 }
   chequearMarcas(chk, 'lotes de un insumo repartidos (y excedidos)', S.htmlLoteRenglon(ri, 1), ['lote-insumo', 'unidad'])
   chequearMarcas(chk, 'resumen con un insumo', S.htmlResumen({ ...S.estado.form, renglones: [ri] }, cat), ['insumo', 'insumo-marca', 'unidad', 'lote-insumo'])
+  chk('resumen con un insumo: ni un pedazo de la unidad crudo', !/"><b|data-xss="unidad"/.test(S.htmlResumen({ ...S.estado.form, renglones: [ri] }, cat)))
+  // En el celular "Ver resumen" tiene que verse: su pie no puede quedar en display: none.
+  const cssBase = src.slice(src.indexOf('<style>'), src.indexOf('@media (max-width: 1023.98px)'))
+  chk('en el celular el pie de la orden deja ver "Ver resumen"', /\.rt-pie-orden \{ display: contents; \}/.test(cssBase) && !/\.rt-pie-orden \{ display: none; \}/.test(cssBase))
+  chk('en el celular el encabezado de columnas de la compu no se ve', /\.rt-orden-cab \{ display: none; \}/.test(cssBase))
+  chk('las iniciales del cliente van escapadas', /rt-resultado__ini" aria-hidden="true">&lt;&lt;</.test(S.htmlResultadoCliente({ id: 'x', nombre: '<b <i', apodos: [] }, 'E', '')))
   chequearMarcas(chk, 'faltantes de insumo', S.htmlFaltantes([{ renglon: 2, insumo: marca('f-insumo'), pedidas: 3, faltaron: 1, unidad: 'kg' }]), ['f-insumo'])
-  r.productoId = 'p1'; r.conCono = true; r.presentacionId = 'pr1'; r.marcaBusqueda = marca('cono-buscado')
+  r.productoId = 'p1'; r.conCono = true; r.presentacionId = 'pr1'; r.marcaElegir = true; r.marcaBusqueda = marca('cono-buscado')
   chequearMarcas(chk, 'renglón con cono', S.htmlRenglon(r, 0, cat, true), ['producto', 'presentacion', 'cono-buscado'])
   r.marcaBusqueda = ''
   chequearMarcas(chk, 'conos', S.htmlMarcasRenglon(r, 0, cat), ['cono'])
