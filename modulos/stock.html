@@ -2143,6 +2143,105 @@
       overflow-wrap: anywhere;
     }
     .nota-unidad-barra[hidden] { display: none; }
+
+    /* ── Traspaso a otra fábrica (producto terminado) ────────────────────
+       Mobile-first: todo en una columna; desde 720px, las dos fábricas lado a
+       lado. El bordó es solo para lo que está mal o no alcanza (el producto
+       que el destino no tiene, un lote al que se le pide más de lo que tiene). */
+    .trp-fabricas { display: grid; grid-template-columns: 1fr; gap: 0 0.75rem; }
+    @media (min-width: 720px) { .trp-fabricas { grid-template-columns: 1fr 1fr; } }
+    .trp-renglon {
+      background: var(--color-fondo);
+      border: 1px solid var(--borde-tarjeta);
+      box-shadow: var(--sombra-tarjeta);
+      border-radius: 1.0625rem;
+      padding: 0.8125rem 0.875rem;
+      margin-bottom: 0.5rem;
+      min-width: 0;
+    }
+    .trp-renglon--falta { border-left: 4px solid var(--bordo); }
+    .trp-renglon__cab { display: flex; align-items: flex-start; gap: 0.5rem; justify-content: space-between; margin-bottom: 0.5rem; }
+    .trp-renglon__nombre { min-width: 0; overflow-wrap: anywhere; font-size: 0.9375rem; }
+    .trp-renglon__cono { display: block; font-size: 0.8125rem; color: var(--color-texto-suave); }
+    .trp-quitar, .trp-completar {
+      min-height: 2.75rem;
+      padding: 0 0.75rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      background: var(--color-fondo);
+      font-family: var(--fuente);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-texto);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .trp-campo { margin-bottom: 0.625rem; }
+    .trp-aviso {
+      font-size: 0.8125rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radio-input);
+      margin: 0.375rem 0;
+      overflow-wrap: anywhere;
+    }
+    .trp-aviso--grave { background: var(--bordo-suave); color: var(--bordo-oscuro); border: 1px solid var(--bordo); }
+    .trp-lotes { border-top: 1px solid var(--color-borde); padding-top: 0.5rem; margin-bottom: 0.625rem; }
+    .trp-lotes__cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.375rem; }
+    .trp-lotes__titulo { font-size: 0.8125rem; color: var(--color-texto-suave); }
+    .trp-lotes__titulo strong { color: var(--color-texto); }
+    .trp-lote { display: flex; align-items: center; gap: 0.5rem; padding: 0.3125rem 0; min-width: 0; }
+    .trp-lote__nombre { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; font-size: 0.875rem; overflow-wrap: anywhere; }
+    .trp-lote__nombre small { font-size: 0.75rem; color: var(--color-texto-suave); }
+    .trp-viejo { font-style: normal; font-size: 0.6875rem; font-weight: 700; color: var(--verde-oscuro); text-transform: uppercase; }
+    .trp-lote__input {
+      flex: 0 0 5.5rem;
+      width: 5.5rem;
+      min-height: 2.75rem;
+      padding: 0 0.625rem;
+      border: 1.5px solid var(--color-borde);
+      border-radius: var(--radio-input);
+      font-family: var(--fuente);
+      font-size: 0.9375rem;
+      text-align: right;
+      background: var(--color-fondo);
+      color: var(--color-texto);
+    }
+    .trp-lotes__numeros { display: flex; flex-wrap: wrap; gap: 0.25rem 0.875rem; font-size: 0.8125rem; color: var(--color-texto-suave); margin-top: 0.375rem; }
+    .trp-lotes__numeros strong { color: var(--color-texto); }
+    .trp-falta, .trp-falta strong { color: var(--bordo-oscuro); }
+    .trp-ok { color: var(--verde-oscuro); font-weight: 600; }
+    .trp-elegir {
+      background: var(--color-fondo);
+      border: 1.5px solid var(--color-borde);
+      border-radius: 1.0625rem;
+      padding: 0.8125rem 0.875rem;
+      margin: 0.5rem 0;
+    }
+    .trp-elegir__cab { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .trp-elegir__cab strong { min-width: 0; overflow-wrap: anywhere; }
+    .trp-elegir__lista { display: flex; flex-direction: column; gap: 0.375rem; max-height: 22rem; overflow-y: auto; }
+    .trp-opcion {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      width: 100%; min-height: 2.75rem; padding: 0.5rem 0.75rem;
+      border: 1px solid var(--color-borde); border-radius: var(--radio-input);
+      background: var(--color-fondo); font-family: var(--fuente); font-size: 0.875rem;
+      color: var(--color-texto); text-align: left; cursor: pointer;
+    }
+    .trp-opcion__nombre { min-width: 0; overflow-wrap: anywhere; }
+    .trp-opcion__stock { flex-shrink: 0; font-weight: 600; }
+    .trp-opcion__stock--cero { font-weight: 400; color: var(--color-texto-suave); }
+    .trp-separador { font-size: 0.75rem; font-weight: 700; color: var(--color-texto-suave); text-transform: uppercase; border-top: 1px solid var(--color-borde); padding-top: 0.5rem; margin-top: 0.25rem; }
+    .trp-previa { background: var(--color-fondo); border: 1px solid var(--borde-tarjeta); border-radius: 1.0625rem; padding: 0.75rem 0.875rem; }
+    .trp-previa__fila { padding: 0.5rem 0; border-bottom: 1px solid var(--color-borde); min-width: 0; overflow-wrap: anywhere; }
+    .trp-previa__que { font-size: 0.875rem; }
+    .trp-previa__lotes { font-size: 0.75rem; color: var(--color-texto-suave); }
+    .trp-previa__plata { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.8125rem; }
+    .trp-previa__total { display: flex; justify-content: space-between; gap: 0.5rem; padding-top: 0.5rem; font-size: 0.9375rem; font-weight: 600; }
+    .trp-previa__deuda { margin-top: 0.375rem; font-size: 0.875rem; font-weight: 600; color: var(--color-texto); }
+    .trp-previa__deuda--sin { font-weight: 400; color: var(--color-texto-suave); }
+    .trp-exito { background: var(--verde-suave); color: var(--verde-oscuro); border: 1px solid var(--verde); border-radius: var(--radio-input); padding: 0.625rem 0.75rem; margin-top: 0.75rem; font-size: 0.875rem; }
+    .trp-acciones { margin-top: 0.75rem; }
+    .trp-error { margin-top: 0.5rem; }
   </style>
   <!-- La barra lateral de la compu (desde 1024 px): js/barra-lateral.js. Es un
        módulo: corre después de armar la página. -->
@@ -2195,6 +2294,7 @@
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-transito">En tránsito<span id="burbuja-transito"></span></button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-historial">Historial de recuentos</button>
         <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-mermas">Mermas</button>
+        <button type="button" class="btn-stock btn-stock--chico" id="btn-ver-traspaso" hidden>Traspaso a otra fábrica</button>
       </div>
 
       <div class="lista-contenido" id="lista-stock"></div>
@@ -2436,6 +2536,67 @@
       <div class="estado-vacio-stock" id="mermas-cargando">Cargando mermas…</div>
       <div class="estado-vacio-stock" id="mermas-vacio" hidden></div>
     </div><!-- /vista-mermas -->
+
+    <!-- ══ VISTA: TRASPASO A OTRA FÁBRICA ════════════════════════════════
+         Producto terminado de una fábrica a otra (Nuss ↔ Dolce Pasta). Drill-
+         down de Stock como el historial y las mermas: PESTANA_DE_VISTA la deja
+         marcada como Stock. Una sola llamada a traspasar_producto_terminado. -->
+    <div class="vista-stock" id="vista-traspaso" hidden>
+
+      <button type="button" class="hist-volver" id="btn-volver-de-traspaso">‹ Volver al stock</button>
+
+      <div class="rec-aviso rec-aviso--info">
+        Pasa <strong>producto terminado</strong> de una fábrica a otra, lote por lote: sale del stock de una y entra al de la otra con el mismo lote. Si ponés precio, queda la deuda entre las dos fábricas.
+      </div>
+
+      <div class="trp-fabricas">
+        <div class="campo-stock">
+          <label for="trp-origen">Sale de</label>
+          <select id="trp-origen"></select>
+        </div>
+        <div class="campo-stock">
+          <label for="trp-destino">Va a</label>
+          <select id="trp-destino"></select>
+        </div>
+      </div>
+
+      <div class="rec-aviso rec-aviso--info" id="trp-aviso-stock" hidden></div>
+
+      <div class="hist-titulo-bloque">Qué pasás</div>
+      <div id="trp-renglones"></div>
+
+      <button type="button" class="btn-stock btn-stock--chico" id="trp-agregar" hidden>+ Agregar producto</button>
+
+      <div class="trp-elegir" id="trp-elegir" hidden>
+        <div class="trp-elegir__cab">
+          <strong id="trp-elegir-titulo"></strong>
+          <button type="button" class="btn-stock btn-stock--chico" id="trp-elegir-cancelar">Cancelar</button>
+        </div>
+        <button type="button" class="hist-volver" id="trp-elegir-volver" hidden>‹ Otro producto</button>
+        <input type="search" class="buscador-stock" id="trp-elegir-buscar" autocomplete="off">
+        <div class="trp-aviso trp-aviso--grave" id="trp-elegir-aviso" hidden></div>
+        <div class="trp-elegir__lista" id="trp-elegir-lista"></div>
+      </div>
+
+      <div class="trp-fabricas">
+        <div class="campo-stock">
+          <label for="trp-fecha">Fecha</label>
+          <input type="date" id="trp-fecha">
+        </div>
+        <div class="campo-stock">
+          <label for="trp-obs">Observaciones <span class="campo-stock__opcional">opcional</span></label>
+          <input type="text" id="trp-obs" placeholder="Ej: pedido de la semana" autocomplete="off">
+        </div>
+      </div>
+
+      <div id="trp-previa"></div>
+
+      <div class="trp-exito" id="trp-exito" role="status" hidden></div>
+      <div class="rec-acciones trp-acciones">
+        <button type="button" class="btn-stock btn-stock--primario" id="trp-confirmar">Confirmar el traspaso</button>
+      </div>
+      <div class="campo-stock__error trp-error" id="trp-error" role="alert" hidden></div>
+    </div><!-- /vista-traspaso -->
 
 
 
@@ -2910,6 +3071,22 @@
        lo bloquean, y acá hace falta NOMBRAR el renglón —insumo, lote y
        presentación— para que nadie quite el que no era.
        ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- Cambiar la fábrica de origen con productos cargados: se pregunta con un
+       panel propio (nunca confirm()), porque los renglones son de esa fábrica
+       y se sacan de la lista. -->
+  <div class="modal-stock" id="modal-trp-origen" hidden>
+    <div class="modal-stock__backdrop" data-cerrar-trp-origen></div>
+    <div class="modal-stock__panel">
+      <button type="button" class="modal-stock__cerrar" data-cerrar-trp-origen aria-label="Cerrar">✕</button>
+      <h2 class="modal-stock__titulo">¿Cambiar la fábrica de origen?</h2>
+      <div class="rec-aviso" id="trp-origen-texto"></div>
+      <div class="modal-stock__acciones">
+        <button type="button" class="btn-stock" data-cerrar-trp-origen>Volver</button>
+        <button type="button" class="btn-stock btn-stock--alerta" id="btn-trp-cambiar-origen">Cambiar y vaciar la lista</button>
+      </div>
+    </div>
+  </div><!-- /modal-trp-origen -->
+
   <div class="modal-stock" id="modal-quitar-item" hidden>
     <div class="modal-stock__backdrop" data-cerrar-quitar></div>
     <div class="modal-stock__panel">
@@ -3387,6 +3564,12 @@
       // (ver cargarMermas).
       mermas: [],
       origenMerma: '',
+
+      // ── Traspaso a otra fábrica (producto terminado) ────────────────
+      // El borrador (nuevoTraspaso) y el catálogo de productos de todas las
+      // fábricas, leído una vez al abrir la pantalla.
+      trp: null,
+      trpCatalogo: null,
     }
 
     // Mismo patrón que el resto de los módulos: super_admin tiene bypass y
@@ -7424,6 +7607,916 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // TRASPASO A OTRA FÁBRICA — producto terminado (30/09/2026)
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // Nuss le compra a Dolce Pasta lo que se hace en Rosario y Dolce le compra
+    // a Nuss los cucuruchones. El traspaso lo hace UNA llamada a
+    // traspasar_producto_terminado (verificada con pg_get_functiondef el
+    // 30/09/2026): por cada lote, −cajas en el origen y +cajas en el destino
+    // con el MISMO lote, y si hay precio, la deuda en movimientos_entre_unidades
+    // (acreedora = origen, deudora = destino). La pantalla no escribe nada más.
+    //
+    // Es PRODUCTO TERMINADO (stock_terminado_movimientos), no insumos: el
+    // listado de esta pestaña es de insumos y no cambia con esto.
+    //
+    // LO QUE LA BASE NO HACE Y ACÁ SE DICE:
+    //  - No valida que haya stock: un lote puede quedar negativo. Pasar más
+    //    cajas de las que tiene un lote se AVISA en bordó y no se bloquea.
+    //  - Busca en el destino el producto con el MISMO nombre, con_cono,
+    //    media_caja y unidades_por_caja (activa). Si no está, rechaza: acá se
+    //    avisa ANTES, con su mismo texto, y ese renglón no se deja confirmar.
+    //  - No tiene clave de idempotencia: un reintento después de un corte de
+    //    red puede pasarlo dos veces. El error de conexión lo dice.
+
+    // Lo que se lee del stock terminado de a una página (PostgREST corta en
+    // 1000) y el tope de páginas: pasado el tope, la pantalla dice que el
+    // stock puede estar incompleto en vez de mostrar números cortados callada.
+    const FILAS_POR_PAGINA_TRP = 1000
+    const TOPE_PAGINAS_TRP = 20
+    const TEXTO_SIN_LISTA_TRP = 'Sin lista interna: escribí el precio por caja (vacío = sin deuda entre fábricas)'
+
+    // Las fábricas entre las que se puede pasar: las de v_mis_unidades_stock,
+    // que ya vienen SIN la fábrica de pruebas (cargarStock las pasa por
+    // sinUnidadesDePrueba). La RPC exige stock:ver en las DOS, así que el
+    // destino sale de la misma lista.
+    function unidadesTraspaso() {
+      return estado.unidadesStock
+    }
+    function puedeTraspasar() {
+      return puedeVerStock() && unidadesTraspaso().length >= 2
+    }
+
+    // El borrador del traspaso. El origen arranca en la unidad de la barra de
+    // arriba si es una de las permitidas; el destino, en la otra si hay una
+    // sola posible.
+    function nuevoTraspaso() {
+      const origen = unidadesTraspaso().some(u => u.id === estado.unidadBarra) ? estado.unidadBarra : ''
+      const t = {
+        origenId: origen, destinoId: '', fecha: hoyLocal(), obs: '',
+        renglones: [], siguiente: 1, eligiendo: null,
+        // stock: null = sin leer; { cargando, error, incompleto, porLote }
+        stock: null, turnoStock: 0,
+        // lista: undefined = todavía no se sabe; null = no hay lista interna
+        lista: undefined,
+        enviando: false, intentado: false, errorBase: null, exito: null,
+        origenPendiente: null,
+      }
+      t.destinoId = destinoPorDefectoTrp(t)
+      return t
+    }
+
+    function destinoPorDefectoTrp(t) {
+      const otras = unidadesTraspaso().filter(u => u.id !== t.origenId)
+      return t.origenId && otras.length === 1 ? otras[0].id : ''
+    }
+
+    // ── Lecturas ─────────────────────────────────────────────────────────────
+
+    // Productos, presentaciones y conos de TODAS las fábricas: las tres se leen
+    // con stock:ver (sin alcance). Hacen falta las del destino para saber si
+    // tiene el producto.
+    async function cargarCatalogoTrp() {
+      if (estado.trpCatalogo?.ok) return
+      const [pr, pp, mk] = await Promise.all([
+        supabase.from('productos_terminados').select('id, unidad_negocio_id, nombre, tipo_masa, categoria, activo, orden, origen_producto_id'),
+        supabase.from('producto_presentaciones').select('id, producto_id, nombre, con_cono, media_caja, unidades_por_caja, activa, orden'),
+        supabase.from('marcas_personalizadas').select('id, nombre, activa, estado_alta'),
+      ])
+      const error = pr.error || pp.error || mk.error
+      if (error) {
+        console.error(error)
+        estado.trpCatalogo = { ok: false, error: 'No se pudieron leer los productos. Revisá la conexión y volvé a abrir el traspaso.', productos: [], presentaciones: [], marcas: [] }
+        return
+      }
+      estado.trpCatalogo = { ok: true, error: null, productos: pr.data ?? [], presentaciones: pp.data ?? [], marcas: mk.data ?? [] }
+    }
+
+    // El stock terminado del ORIGEN, por presentación + cono + lote, con la
+    // fecha más vieja de cada lote (para ordenar los más viejos primero).
+    // Paginado: el libro crece con cada sublote.
+    async function cargarStockTrp(t) {
+      const origen = t.origenId
+      const turno = ++t.turnoStock
+      if (!origen) { t.stock = null; return }
+      t.stock = { cargando: true, error: null, incompleto: false, porLote: [] }
+      const filas = []
+      let incompleto = false
+      for (let pagina = 0; pagina < TOPE_PAGINAS_TRP; pagina++) {
+        const desde = pagina * FILAS_POR_PAGINA_TRP
+        const { data, error } = await supabase.from('stock_terminado_movimientos')
+          .select('presentacion_id, marca_id, lote, cajas, fecha')
+          .eq('unidad_negocio_id', origen)
+          .order('id')
+          .range(desde, desde + FILAS_POR_PAGINA_TRP - 1)
+        // Otra lectura (otro origen) empezó después: esta ya no vale.
+        if (estado.trp !== t || turno !== t.turnoStock) return
+        if (error) {
+          console.error(error)
+          t.stock = { cargando: false, error: `No se pudo leer el stock terminado de ${nombreDeUnidadBarra(origen)}.`, incompleto: false, porLote: [] }
+          return
+        }
+        filas.push(...(data ?? []))
+        if ((data ?? []).length < FILAS_POR_PAGINA_TRP) break
+        if (pagina === TOPE_PAGINAS_TRP - 1) incompleto = true
+      }
+      t.stock = { cargando: false, error: null, incompleto, porLote: agruparStockTrp(filas) }
+    }
+
+    function agruparStockTrp(filas) {
+      const m = new Map()
+      for (const f of filas ?? []) {
+        const lote = f.lote ?? ''
+        const k = `${f.presentacion_id}|${f.marca_id ?? ''}|${lote}`
+        let g = m.get(k)
+        if (!g) {
+          g = { presentacion_id: f.presentacion_id, marca_id: f.marca_id ?? null, lote, saldo: 0, desde: null }
+          m.set(k, g)
+        }
+        g.saldo += Number(f.cajas) || 0
+        if (f.fecha && (!g.desde || f.fecha < g.desde)) g.desde = f.fecha
+      }
+      return [...m.values()]
+    }
+
+    // La lista INTERNA del origen: hoy (30/09/2026) ninguna lista está marcada
+    // como interna y listas_precios no tiene columna para eso, así que la
+    // regla es por NOMBRE: una lista activa del origen que diga "interna" (sin
+    // acentos ni mayúsculas). Quien no lee listas (sin tareas de retiros) no
+    // recibe ninguna y el precio queda para escribir.
+    function listaInternaDe(listas) {
+      return (listas ?? []).filter(l => l && l.activa !== false)
+        .find(l => normalizar(l.nombre).includes('interna')) ?? null
+    }
+
+    async function cargarListaInternaTrp(t) {
+      const origen = t.origenId
+      t.lista = undefined
+      if (!origen) return
+      let lista = null
+      try {
+        const { data, error } = await supabase.from('listas_precios')
+          .select('id, nombre, activa')
+          .eq('unidad_negocio_id', origen)
+          .eq('activa', true)
+          .order('nombre')
+        if (error) throw error
+        lista = listaInternaDe(data)
+      } catch (err) {
+        console.error(err)
+        lista = null
+      }
+      if (estado.trp !== t || t.origenId !== origen) return
+      t.lista = lista
+      for (const r of t.renglones) if (!r.precioTocado && r.precio === null) proponerPrecioTrp(t, r)
+    }
+
+    // El precio propuesto de un renglón: precio_venta() de la lista interna.
+    // Exige retiros:precios en la unidad de la lista y si no, lanza: ahí el
+    // campo queda vacío y se dice. Un precio que la persona ya tocó no se pisa.
+    async function proponerPrecioTrp(t, r) {
+      if (t.lista === undefined) return
+      if (!t.lista) { r.precioEstado = 'sin_lista'; pintarPrecioTrp(r); return }
+      r.precioEstado = 'buscando'
+      pintarPrecioTrp(r)
+      let res = null
+      try {
+        const { data, error } = await supabase.rpc('precio_venta', {
+          p_lista_id: t.lista.id, p_presentacion_id: r.presentacionId, p_marca_id: r.marcaId ?? null, p_fecha: t.fecha || null,
+        })
+        if (error) throw error
+        res = data
+      } catch (err) {
+        console.error(err)
+        res = null
+      }
+      if (estado.trp !== t || !t.renglones.includes(r)) return
+      const crudo = res?.precio_caja
+      const precio = crudo === null || crudo === undefined || crudo === '' ? NaN : Number(crudo)
+      if (res && res.sin_precio !== true && Number.isFinite(precio) && precio > 0) {
+        r.precioEstado = 'propuesto'
+        if (!r.precioTocado) { r.precio = precio; r.propuesta = t.lista.nombre }
+      } else {
+        r.precioEstado = 'sin_precio'
+      }
+      pintarPrecioTrp(r)
+    }
+
+    // ── Cálculos ─────────────────────────────────────────────────────────────
+
+    const esChocolateTrp = (producto) => normalizar(producto?.tipo_masa) === 'chocolate'
+
+    // Una presentación con su producto, o null.
+    function presentacionTrp(id) {
+      const c = estado.trpCatalogo
+      if (!c?.ok) return null
+      const pp = c.presentaciones.find(p => p.id === id)
+      const prod = pp ? c.productos.find(p => p.id === pp.producto_id) : null
+      return pp && prod ? { ...pp, producto: prod } : null
+    }
+
+    // Las presentaciones activas de productos activos del origen: el chocolate
+    // al final (lo decide tipo_masa, como en Retiros), y adentro el orden del
+    // producto y de la presentación.
+    function presentacionesOrigenTrp(t) {
+      const c = estado.trpCatalogo
+      if (!c?.ok || !t?.origenId) return []
+      const prods = new Map(c.productos.filter(p => p.unidad_negocio_id === t.origenId && p.activo !== false).map(p => [p.id, p]))
+      return c.presentaciones.filter(pp => pp.activa && prods.has(pp.producto_id))
+        .map(pp => ({ ...pp, producto: prods.get(pp.producto_id) }))
+        .sort((a, b) => (esChocolateTrp(a.producto) - esChocolateTrp(b.producto))
+          || ((a.producto.orden ?? 0) - (b.producto.orden ?? 0))
+          || String(a.producto.nombre).localeCompare(String(b.producto.nombre))
+          || ((a.orden ?? 0) - (b.orden ?? 0))
+          || String(a.nombre).localeCompare(String(b.nombre)))
+    }
+
+    // La misma búsqueda que hace la base en el destino: producto con el MISMO
+    // nombre, y presentación activa con el mismo con_cono, media_caja y
+    // unidades_por_caja. null = el destino no lo tiene.
+    function presentacionEnDestinoTrp(pres, destinoId) {
+      const c = estado.trpCatalogo
+      if (!c?.ok || !pres || !destinoId) return null
+      const prods = new Set(c.productos.filter(p => p.unidad_negocio_id === destinoId && p.nombre === pres.producto.nombre).map(p => p.id))
+      return c.presentaciones.find(pp => prods.has(pp.producto_id) && pp.activa
+        && pp.con_cono === pres.con_cono && pp.media_caja === pres.media_caja
+        && pp.unidades_por_caja === pres.unidades_por_caja) ?? null
+    }
+
+    // El texto EXACTO de la base, para que diga lo mismo antes y después.
+    function textoFaltaEnDestinoTrp(pres) {
+      return `La fábrica de destino no tiene "${pres.producto.nombre} · ${pres.nombre}": creala antes de pasarle stock.`
+    }
+
+    // Los lotes con stock (> 0) de esa presentación y ese cono en el origen,
+    // los más viejos primero. null = todavía no se sabe (sin leer o con error).
+    function lotesTrp(t, presId, marcaId) {
+      const s = t?.stock
+      if (!s || s.cargando || s.error) return null
+      return s.porLote
+        .filter(l => l.presentacion_id === presId && (l.marca_id ?? null) === (marcaId ?? null) && l.saldo > 0)
+        .sort((a, b) => String(a.desde || '9999-99-99').localeCompare(String(b.desde || '9999-99-99'))
+          || String(a.lote).localeCompare(String(b.lote)))
+    }
+
+    // Las cajas con stock de una presentación (todos los conos), o null.
+    function stockPresentacionTrp(t, presId) {
+      const s = t?.stock
+      if (!s || s.cargando || s.error) return null
+      return s.porLote.filter(l => l.presentacion_id === presId && l.saldo > 0).reduce((x, l) => x + l.saldo, 0)
+    }
+
+    // Los conos de una presentación con cono: el común (marca null) y las
+    // marcas activas, más cualquier marca que tenga stock aunque esté apagada.
+    // Los que tienen stock van primero.
+    function conosTrp(t, pres) {
+      if (!pres?.con_cono) return []
+      const conStock = new Map()
+      for (const l of t?.stock?.porLote ?? []) {
+        if (l.presentacion_id !== pres.id || !(l.saldo > 0)) continue
+        const k = l.marca_id ?? ''
+        conStock.set(k, (conStock.get(k) ?? 0) + l.saldo)
+      }
+      const opciones = [{ marcaId: null, nombre: 'Común', stock: conStock.get('') ?? 0 }]
+      for (const m of estado.trpCatalogo?.marcas ?? []) {
+        const s = conStock.get(m.id) ?? 0
+        if (s > 0 || (m.activa && m.estado_alta !== 'rechazada')) opciones.push({ marcaId: m.id, nombre: m.nombre, stock: s })
+      }
+      return opciones.sort((a, b) => ((b.stock > 0) - (a.stock > 0)) || (b.stock - a.stock)
+        || (a.marcaId === null ? -1 : b.marcaId === null ? 1 : String(a.nombre).localeCompare(String(b.nombre))))
+    }
+
+    function nombreConoTrp(pres, marcaId) {
+      if (!pres?.con_cono) return 'sin cono'
+      if (!marcaId) return 'cono común'
+      const m = (estado.trpCatalogo?.marcas ?? []).find(x => x.id === marcaId)
+      return m ? `cono ${m.nombre}` : 'un cono que ya no está'
+    }
+
+    const nombreLoteTrp = (lote) => lote ? `Lote ${lote}` : 'Sin lote'
+
+    function textoCajasTrp(n) {
+      return `${formatearNumeroAr(n, { decimales: 0 })} ${Math.abs(Number(n)) === 1 ? 'caja' : 'cajas'}`
+    }
+
+    // Plata: un importe ausente es "—", nunca "$ 0".
+    function plataTrp(n) {
+      if (n === null || n === undefined || n === '' || !Number.isFinite(Number(n))) return '—'
+      return '$ ' + formatearNumeroAr(Number(n), { decimales: 2 })
+    }
+
+    // Cómo quedó repartido lo pedido entre los lotes (cajas enteras).
+    //   pedido, asignado, falta (pedido − asignado; negativo = de más),
+    //   porLote = [{ lote, saldo, desde, q, excede }], excedidos.
+    function asignacionTrp(r, lista) {
+      const pedido = Number.isInteger(r?.pedido) && r.pedido > 0 ? r.pedido : null
+      const asignados = r?.lotes && typeof r.lotes === 'object' ? r.lotes : {}
+      const porLote = (lista ?? []).map(l => {
+        const q = Number.isInteger(asignados[l.lote]) && asignados[l.lote] > 0 ? asignados[l.lote] : 0
+        return { lote: l.lote, saldo: l.saldo, desde: l.desde ?? null, q, excede: Math.max(q - l.saldo, 0) }
+      })
+      const asignado = porLote.reduce((s, l) => s + l.q, 0)
+      return { pedido, asignado, falta: pedido === null ? null : pedido - asignado, porLote, excedidos: porLote.filter(l => l.excede > 0) }
+    }
+
+    // "Completar con los más viejos": reparte lo pedido desde el lote más
+    // viejo, cada uno hasta su stock. Arranca de cero (lo asignado a mano se
+    // reemplaza). Lo que no entra queda sin asignar: no hay más en stock.
+    function completarTrp(lista, pedido) {
+      const out = {}
+      let resta = Number.isInteger(pedido) && pedido > 0 ? pedido : 0
+      for (const l of lista ?? []) {
+        if (resta <= 0) break
+        const toma = Math.min(resta, l.saldo)
+        if (toma > 0) out[l.lote] = toma
+        resta -= toma
+      }
+      return out
+    }
+
+    // Lo que viaja a la base por renglón. marca_id null = sin cono o cono
+    // común; precio_caja null = sin deuda por este renglón.
+    function itemParaBaseTrp(t, r) {
+      const a = asignacionTrp(r, lotesTrp(t, r.presentacionId, r.marcaId))
+      return {
+        presentacion_id: r.presentacionId,
+        marca_id: r.marcaId ?? null,
+        lotes: a.porLote.filter(l => l.q > 0).map(l => ({ lote: l.lote, cajas: l.q })),
+        precio_caja: r.precio ?? null,
+      }
+    }
+
+    function parametrosTraspaso(t) {
+      return {
+        p_origen_id: t.origenId,
+        p_destino_id: t.destinoId,
+        p_items: t.renglones.map(r => itemParaBaseTrp(t, r)),
+        p_fecha: t.fecha || null,
+        p_observaciones: String(t.obs ?? '').trim() || null,
+      }
+    }
+
+    // Lo que le falta a UN renglón para poder confirmarse, o null.
+    function faltaRenglonTrp(t, r) {
+      const pres = presentacionTrp(r.presentacionId)
+      if (!pres) return 'ese producto ya no está en el catálogo'
+      if (t.destinoId && !presentacionEnDestinoTrp(pres, t.destinoId)) return textoFaltaEnDestinoTrp(pres)
+      const lista = lotesTrp(t, r.presentacionId, r.marcaId)
+      if (lista === null) return 'todavía no se leyó el stock'
+      if (!lista.length) return 'no hay stock de esto en la fábrica de origen: no hay lote de dónde sacarlo'
+      const a = asignacionTrp(r, lista)
+      if (a.pedido === null) return 'poné cuántas cajas pasás'
+      if (a.falta > 0) return `faltan asignar ${textoCajasTrp(a.falta)} a los lotes (tocá «Completar con los más viejos»)`
+      if (a.falta < 0) return `asignaste ${textoCajasTrp(-a.falta)} de más a los lotes`
+      return null
+    }
+
+    // Todo lo que falta para confirmar, en palabras. Vacío = se puede mandar.
+    function faltanTraspaso(t) {
+      const f = []
+      if (!t) return ['abrí el traspaso']
+      if (estado.trpCatalogo && !estado.trpCatalogo.ok) f.push('no se pudieron leer los productos')
+      if (!t.origenId) f.push('elegí de qué fábrica sale')
+      if (!t.destinoId) f.push('elegí a qué fábrica va')
+      else if (t.origenId && t.origenId === t.destinoId) f.push('elegí dos fábricas distintas')
+      if (!t.fecha) f.push('poné la fecha')
+      else if (t.fecha > hoyLocal()) f.push('la fecha no puede ser de mañana en adelante')
+      if (t.stock?.error) f.push(t.stock.error)
+      if (!t.renglones.length) f.push('agregá al menos un producto')
+      t.renglones.forEach((r, k) => {
+        const p = faltaRenglonTrp(t, r)
+        if (p) f.push(`renglón ${k + 1}: ${p}`)
+      })
+      return f
+    }
+
+    // La vista previa: por renglón, las cajas por lote, el precio y el
+    // subtotal; el total y la deuda que queda.
+    function resumenTraspaso(t) {
+      const filas = t.renglones.map(r => {
+        const pres = presentacionTrp(r.presentacionId)
+        const a = asignacionTrp(r, lotesTrp(t, r.presentacionId, r.marcaId))
+        const lotes = a.porLote.filter(l => l.q > 0)
+        const subtotal = r.precio !== null && r.precio !== undefined && a.asignado > 0
+          ? Math.round(r.precio * a.asignado * 100) / 100 : null
+        return {
+          nombre: pres ? `${pres.producto.nombre} · ${pres.nombre}` : 'Producto que ya no está',
+          cono: nombreConoTrp(pres, r.marcaId),
+          lotes: lotes.length ? lotes.map(l => `${nombreLoteTrp(l.lote)}: ${textoCajasTrp(l.q)}`).join(' · ') : 'sin lotes asignados',
+          cajas: a.asignado,
+          precio: r.precio ?? null,
+          subtotal,
+        }
+      })
+      const total = Math.round(filas.reduce((s, f) => s + (f.subtotal ?? 0), 0) * 100) / 100
+      return { filas, total, cajas: filas.reduce((s, f) => s + f.cajas, 0) }
+    }
+
+    function fraseDeudaTrp(t, total) {
+      if (!(total > 0)) return 'Sin precio: no queda deuda entre fábricas.'
+      const destino = t.destinoId ? nombreDeUnidadBarra(t.destinoId) : 'La fábrica de destino'
+      const origen = t.origenId ? nombreDeUnidadBarra(t.origenId) : 'la de origen'
+      return `${destino} le va a deber ${plataTrp(total)} a ${origen}.`
+    }
+
+    function textoPrecioTrp(t, r) {
+      if (r.precioTocado) return r.precio === null ? 'Sin precio: este renglón no deja deuda.' : ''
+      if (r.propuesta) return `Propuesto de la lista «${r.propuesta}»: podés cambiarlo.`
+      if (t.lista === undefined || r.precioEstado === 'buscando') return 'Buscando el precio…'
+      if (!t.lista) return TEXTO_SIN_LISTA_TRP
+      return `La lista «${t.lista.nombre}» no tiene precio para esto: escribí el precio por caja (vacío = sin deuda entre fábricas)`
+    }
+
+    // ── Dibujo ───────────────────────────────────────────────────────────────
+
+    function renderizarTraspaso() {
+      const t = estado.trp
+      if (!t) return
+      pintarFabricasTrp(t)
+      pintarAvisoStockTrp(t)
+      pintarRenglonesTrp(t)
+      pintarElegirTrp(t)
+      pintarPreviaTrp(t)
+      pintarPieTrp(t)
+    }
+
+    function pintarFabricasTrp(t) {
+      const unidades = unidadesTraspaso()
+      const selO = document.getElementById('trp-origen')
+      selO.innerHTML = '<option value="">Elegí de dónde sale</option>' +
+        unidades.map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+      selO.value = t.origenId
+      const selD = document.getElementById('trp-destino')
+      selD.innerHTML = '<option value="">Elegí a dónde va</option>' +
+        unidades.filter(u => u.id !== t.origenId).map(u => `<option value="${esc(u.id)}">${esc(u.nombre)}</option>`).join('')
+      selD.value = t.destinoId
+      document.getElementById('trp-fecha').value = t.fecha
+      document.getElementById('trp-fecha').max = hoyLocal()
+      document.getElementById('trp-obs').value = t.obs
+    }
+
+    function pintarAvisoStockTrp(t) {
+      const el = document.getElementById('trp-aviso-stock')
+      let texto = ''
+      if (estado.trpCatalogo && !estado.trpCatalogo.ok) texto = estado.trpCatalogo.error
+      else if (!estado.trpCatalogo) texto = 'Leyendo los productos…'
+      else if (!t.origenId) texto = 'Elegí primero de qué fábrica sale: los productos y los lotes son los de esa fábrica.'
+      else if (t.stock?.cargando) texto = 'Leyendo el stock terminado…'
+      else if (t.stock?.error) texto = t.stock.error
+      else if (t.stock?.incompleto) texto = `El stock terminado de ${nombreDeUnidadBarra(t.origenId)} tiene más movimientos de los que se pueden leer de una vez: los números pueden estar incompletos.`
+      el.textContent = texto
+      el.hidden = !texto
+      document.getElementById('trp-agregar').hidden = !(t.origenId && estado.trpCatalogo?.ok) || !!t.eligiendo
+    }
+
+    function pintarRenglonesTrp(t) {
+      const cont = document.getElementById('trp-renglones')
+      cont.innerHTML = t.renglones.length
+        ? t.renglones.map(r => htmlRenglonTrp(t, r)).join('')
+        : '<div class="estado-vacio-stock">Todavía no agregaste ningún producto.</div>'
+      enlazarCamposTrp(t)
+    }
+
+    function htmlRenglonTrp(t, r) {
+      const pres = presentacionTrp(r.presentacionId)
+      if (!pres) {
+        return `<div class="trp-renglon trp-renglon--falta" data-trp-renglon="${esc(r.id)}">
+          <div class="trp-renglon__cab"><div class="trp-renglon__nombre">Producto que ya no está en el catálogo</div>
+          <button type="button" class="trp-quitar" data-trp-quitar="${esc(r.id)}">Quitar</button></div></div>`
+      }
+      const faltaDestino = t.destinoId && !presentacionEnDestinoTrp(pres, t.destinoId)
+      return `<div class="trp-renglon${faltaDestino ? ' trp-renglon--falta' : ''}" data-trp-renglon="${esc(r.id)}">
+        <div class="trp-renglon__cab">
+          <div class="trp-renglon__nombre"><strong>${esc(pres.producto.nombre)}</strong> · ${esc(pres.nombre)}<span class="trp-renglon__cono">${esc(nombreConoTrp(pres, r.marcaId))}</span></div>
+          <button type="button" class="trp-quitar" data-trp-quitar="${esc(r.id)}" aria-label="Quitar ${esc(pres.producto.nombre)} · ${esc(pres.nombre)}">Quitar</button>
+        </div>
+        ${faltaDestino ? `<div class="trp-aviso trp-aviso--grave">${esc(textoFaltaEnDestinoTrp(pres))}</div>` : ''}
+        <div class="campo-stock trp-campo">
+          <label for="trp-pedido-${esc(r.id)}">Cajas que pasás</label>
+          <input type="text" id="trp-pedido-${esc(r.id)}" data-trp-pedido="${esc(r.id)}" inputmode="numeric" autocomplete="off">
+        </div>
+        ${htmlLotesTrp(t, r)}
+        <div class="campo-stock trp-campo">
+          <label for="trp-precio-${esc(r.id)}">Precio por caja <span class="campo-stock__opcional">opcional</span></label>
+          <input type="text" id="trp-precio-${esc(r.id)}" data-trp-precio="${esc(r.id)}" inputmode="decimal" autocomplete="off">
+          <div class="campo-stock__ayuda" data-trp-precio-nota="${esc(r.id)}">${esc(textoPrecioTrp(t, r))}</div>
+        </div>
+      </div>`
+    }
+
+    function htmlLotesTrp(t, r) {
+      const lista = lotesTrp(t, r.presentacionId, r.marcaId)
+      if (lista === null) {
+        return `<div class="campo-stock__ayuda">${esc(t.stock?.error || 'Leyendo los lotes…')}</div>`
+      }
+      if (!lista.length) {
+        return `<div class="trp-aviso trp-aviso--grave">No hay stock de esto en ${esc(nombreDeUnidadBarra(t.origenId))}: no hay lote de dónde sacarlo.</div>`
+      }
+      return `<div class="trp-lotes">
+        <div class="trp-lotes__cab">
+          <span class="trp-lotes__titulo"><strong>¿De qué lotes?</strong> El más viejo arriba</span>
+          <button type="button" class="trp-completar" data-trp-completar="${esc(r.id)}">Completar con los más viejos</button>
+        </div>
+        ${lista.map((l, k) => `<div class="trp-lote">
+          <label class="trp-lote__nombre" for="trp-lote-${esc(r.id)}-${esc(k)}">
+            <span>${esc(nombreLoteTrp(l.lote))}${k === 0 && lista.length > 1 ? ' <em class="trp-viejo">el más viejo</em>' : ''}</span>
+            <small>${l.desde ? `del ${esc(formatearFecha(l.desde))} · ` : ''}hay ${esc(textoCajasTrp(l.saldo))}</small>
+          </label>
+          <input type="text" class="trp-lote__input" id="trp-lote-${esc(r.id)}-${esc(k)}" data-trp-lote="${esc(r.id)}" data-lote="${esc(l.lote)}" inputmode="numeric" autocomplete="off">
+        </div>`).join('')}
+        <div class="trp-lotes__resumen" data-trp-resumen="${esc(r.id)}">${htmlResumenLotesTrp(t, r, lista)}</div>
+      </div>`
+    }
+
+    // Pedido / asignado / falta asignar, y en bordó los lotes a los que se les
+    // pide más de lo que tienen (la base lo deja pasar y el lote queda
+    // negativo: se dice, no se bloquea).
+    function htmlResumenLotesTrp(t, r, lista) {
+      const a = asignacionTrp(r, lista)
+      const origen = nombreDeUnidadBarra(t.origenId)
+      return `<div class="trp-lotes__numeros">
+          <span>Pedido <strong>${esc(a.pedido === null ? '—' : a.pedido)}</strong></span>
+          <span>Asignado <strong>${esc(a.asignado)}</strong></span>
+          ${a.pedido === null ? '<span>Falta asignar <strong>—</strong></span>'
+            : a.falta > 0 ? `<span class="trp-falta">Falta asignar <strong>${esc(a.falta)}</strong></span>`
+            : a.falta < 0 ? `<span class="trp-falta">Asignaste <strong>${esc(-a.falta)}</strong> de más</span>`
+            : '<span class="trp-ok">✓ Falta asignar 0</span>'}
+        </div>
+        ${a.excedidos.map(l => `<div class="trp-aviso trp-aviso--grave">${esc(nombreLoteTrp(l.lote))}: tiene ${esc(textoCajasTrp(l.saldo))} y pasás ${esc(textoCajasTrp(l.q))}. La base lo deja pasar, pero ese lote queda en ${esc(textoCajasTrp(l.saldo - l.q))} en ${esc(origen)}.</div>`).join('')}`
+    }
+
+    // Enlaza los campos de números recién dibujados y les pone lo que dice el
+    // estado (ponerNumero: la única forma de escribir un número en un campo).
+    function enlazarCamposTrp(t) {
+      const cont = document.getElementById('trp-renglones')
+      for (const input of cont.querySelectorAll('[data-trp-pedido]')) {
+        enlazarCampoNumero(input, { decimales: 0 })
+        ponerNumero(input, renglonTrp(t, input.dataset.trpPedido)?.pedido ?? null)
+      }
+      for (const input of cont.querySelectorAll('[data-trp-lote]')) {
+        enlazarCampoNumero(input, { decimales: 0 })
+        ponerNumero(input, renglonTrp(t, input.dataset.trpLote)?.lotes?.[input.dataset.lote] ?? null)
+      }
+      for (const input of cont.querySelectorAll('[data-trp-precio]')) {
+        enlazarCampoNumero(input, { decimales: 2 })
+        ponerNumero(input, renglonTrp(t, input.dataset.trpPrecio)?.precio ?? null)
+      }
+    }
+
+    const renglonTrp = (t, id) => (t?.renglones ?? []).find(r => String(r.id) === String(id)) ?? null
+
+    // El precio de UN renglón sin redibujar los demás (llega por la red y la
+    // persona puede estar escribiendo en otro campo).
+    function pintarPrecioTrp(r) {
+      const t = estado.trp
+      if (!t) return
+      const input = document.querySelector(`[data-trp-precio="${r.id}"]`)
+      if (input && !r.precioTocado) ponerNumero(input, r.precio)
+      const nota = document.querySelector(`[data-trp-precio-nota="${r.id}"]`)
+      if (nota) nota.textContent = textoPrecioTrp(t, r)
+      pintarPreviaTrp(t)
+    }
+
+    // El paso de elegir un producto (y su cono).
+    function pintarElegirTrp(t) {
+      const caja = document.getElementById('trp-elegir')
+      caja.hidden = !t.eligiendo
+      if (!t.eligiendo) return
+      const pres = t.eligiendo.presId ? presentacionTrp(t.eligiendo.presId) : null
+      document.getElementById('trp-elegir-titulo').textContent = pres
+        ? `¿Qué cono? ${pres.producto.nombre} · ${pres.nombre}`
+        : `¿Qué producto pasás de ${nombreDeUnidadBarra(t.origenId)}?`
+      document.getElementById('trp-elegir-volver').hidden = !pres
+      const buscar = document.getElementById('trp-elegir-buscar')
+      buscar.placeholder = pres ? 'Buscar el cono…' : 'Buscar el producto…'
+      buscar.value = t.eligiendo.busqueda
+      pintarElegirListaTrp(t)
+      const aviso = document.getElementById('trp-elegir-aviso')
+      aviso.textContent = t.eligiendo.aviso || ''
+      aviso.hidden = !t.eligiendo.aviso
+    }
+
+    function pintarElegirListaTrp(t) {
+      document.getElementById('trp-elegir-lista').innerHTML = htmlElegirTrp(t)
+    }
+
+    function htmlElegirTrp(t) {
+      const e = t.eligiendo
+      const busq = normalizar(e.busqueda)
+      if (e.presId) {
+        const pres = presentacionTrp(e.presId)
+        const conos = conosTrp(t, pres).filter(c => !busq || normalizar(c.nombre).includes(busq))
+        if (!conos.length) return '<div class="estado-vacio-stock">No hay conos que coincidan.</div>'
+        return conos.map(c => `<button type="button" class="trp-opcion" data-trp-cono="${esc(c.marcaId ?? '')}">
+          <span class="trp-opcion__nombre">${esc(c.nombre)}</span>
+          <span class="trp-opcion__stock${c.stock > 0 ? '' : ' trp-opcion__stock--cero'}">${esc(c.stock > 0 ? textoCajasTrp(c.stock) : 'sin stock')}</span>
+        </button>`).join('')
+      }
+      const todas = presentacionesOrigenTrp(t)
+      if (!todas.length) return '<div class="estado-vacio-stock">Esta fábrica no tiene productos activos.</div>'
+      const lista = todas.filter(p => !busq || normalizar(`${p.producto.nombre} ${p.nombre}`).includes(busq))
+      if (!lista.length) return '<div class="estado-vacio-stock">No hay productos que coincidan.</div>'
+      return lista.map((p, k) => {
+        const s = stockPresentacionTrp(t, p.id)
+        return `${esChocolateTrp(p.producto) && (k === 0 || !esChocolateTrp(lista[k - 1].producto)) ? '<div class="trp-separador">Chocolate</div>' : ''}<button type="button" class="trp-opcion" data-trp-pres="${esc(p.id)}">
+          <span class="trp-opcion__nombre"><strong>${esc(p.producto.nombre)}</strong> · ${esc(p.nombre)}</span>
+          <span class="trp-opcion__stock${s > 0 ? '' : ' trp-opcion__stock--cero'}">${esc(s === null ? '—' : s > 0 ? textoCajasTrp(s) : 'sin stock')}</span>
+        </button>`
+      }).join('')
+    }
+
+    function pintarPreviaTrp(t) {
+      document.getElementById('trp-previa').innerHTML = htmlPreviaTrp(t)
+    }
+
+    function htmlPreviaTrp(t) {
+      if (!t.renglones.length) return ''
+      const res = resumenTraspaso(t)
+      return `<div class="hist-titulo-bloque">Antes de confirmar</div>
+        <div class="trp-previa">
+          ${res.filas.map(f => `<div class="trp-previa__fila">
+            <div class="trp-previa__que"><strong>${esc(f.nombre)}</strong> · ${esc(f.cono)}</div>
+            <div class="trp-previa__lotes">${esc(f.lotes)}</div>
+            <div class="trp-previa__plata"><span>${esc(f.precio === null ? 'Sin precio' : plataTrp(f.precio) + ' por caja')}</span><strong>${esc(plataTrp(f.subtotal))}</strong></div>
+          </div>`).join('')}
+          <div class="trp-previa__total"><span>Total · ${esc(textoCajasTrp(res.cajas))}</span><strong>${esc(plataTrp(res.total > 0 ? res.total : null))}</strong></div>
+          <div class="trp-previa__deuda${res.total > 0 ? '' : ' trp-previa__deuda--sin'}">${esc(fraseDeudaTrp(t, res.total))}</div>
+        </div>`
+    }
+
+    // El botón NO se deshabilita por lo que falta (si no, el error pegado no
+    // se vería nunca): se traba solo mientras se manda. Lo que falta se dice
+    // al tocarlo, y el error de la base va TAL CUAL.
+    function pintarPieTrp(t) {
+      const btn = document.getElementById('trp-confirmar')
+      btn.disabled = !!t.enviando
+      btn.textContent = t.enviando ? 'Pasando…' : 'Confirmar el traspaso'
+      const faltan = t.intentado ? faltanTraspaso(t) : []
+      const lista = faltan.join('; ')
+      const mensaje = t.errorBase || (faltan.length ? `Falta: ${lista}${lista.endsWith('.') ? '' : '.'}` : '')
+      const err = document.getElementById('trp-error')
+      err.textContent = mensaje
+      err.hidden = !mensaje
+      const ok = document.getElementById('trp-exito')
+      ok.textContent = t.exito || ''
+      ok.hidden = !t.exito
+    }
+
+    // Después de tipear: solo el resumen de ese renglón, la vista previa y el
+    // pie. Redibujar el renglón entero le sacaría el foco al campo.
+    function refrescarRenglonTrp(t, r) {
+      const lista = lotesTrp(t, r.presentacionId, r.marcaId)
+      const res = document.querySelector(`[data-trp-resumen="${r.id}"]`)
+      if (res && lista) res.innerHTML = htmlResumenLotesTrp(t, r, lista)
+      pintarPreviaTrp(t)
+      pintarPieTrp(t)
+    }
+
+    // ── Acciones ─────────────────────────────────────────────────────────────
+
+    async function abrirTraspaso() {
+      if (!puedeTraspasar()) return
+      if (!estado.trp) estado.trp = nuevoTraspaso()
+      const t = estado.trp
+      t.exito = null
+      mostrarVista('traspaso')
+      renderizarTraspaso()
+      await cargarCatalogoTrp()
+      if (estado.trp !== t) return
+      renderizarTraspaso()
+      if (t.origenId && (!t.stock || t.stock.error)) {
+        await Promise.all([cargarStockTrp(t), t.lista === undefined ? cargarListaInternaTrp(t) : null])
+        if (estado.trp === t) renderizarTraspaso()
+      }
+    }
+
+    // Cambiar el origen con renglones cargados los vacía (son del origen), así
+    // que primero se pregunta con un panel propio.
+    function pedirCambioOrigenTrp(nuevo) {
+      const t = estado.trp
+      if (!t || nuevo === t.origenId) return
+      if (t.renglones.length) {
+        t.origenPendiente = nuevo
+        document.getElementById('trp-origen').value = t.origenId
+        const n = t.renglones.length
+        document.getElementById('trp-origen-texto').textContent =
+          `${n === 1 ? 'El producto cargado es' : `Los ${n} productos cargados son`} de ${nombreDeUnidadBarra(t.origenId)}. ` +
+          `Si cambiás a ${nuevo ? nombreDeUnidadBarra(nuevo) : 'otra fábrica'}, se sacan de la lista y hay que volver a cargarlos.`
+        document.getElementById('modal-trp-origen').hidden = false
+        return
+      }
+      aplicarOrigenTrp(nuevo)
+    }
+
+    function cerrarModalOrigenTrp() {
+      document.getElementById('modal-trp-origen').hidden = true
+      if (estado.trp) estado.trp.origenPendiente = null
+    }
+
+    function confirmarCambioOrigenTrp() {
+      const t = estado.trp
+      if (!t || t.origenPendiente === null) return
+      const nuevo = t.origenPendiente
+      document.getElementById('modal-trp-origen').hidden = true
+      aplicarOrigenTrp(nuevo)
+    }
+
+    function aplicarOrigenTrp(nuevo) {
+      const t = estado.trp
+      if (!t) return
+      t.origenId = nuevo || ''
+      t.renglones = []
+      t.eligiendo = null
+      t.origenPendiente = null
+      t.intentado = false
+      t.errorBase = null
+      t.exito = null
+      if (!t.destinoId || t.destinoId === t.origenId) t.destinoId = destinoPorDefectoTrp(t)
+      t.stock = null
+      t.lista = undefined
+      renderizarTraspaso()
+      return Promise.all([cargarStockTrp(t), cargarListaInternaTrp(t)]).then(() => { if (estado.trp === t) renderizarTraspaso() })
+    }
+
+    function cambiarDestinoTrp(valor) {
+      const t = estado.trp
+      if (!t) return
+      t.destinoId = valor || ''
+      t.errorBase = null
+      renderizarTraspaso()
+    }
+
+    function abrirElegirTrp() {
+      const t = estado.trp
+      if (!t?.origenId) return
+      t.eligiendo = { presId: null, busqueda: '', aviso: '' }
+      t.exito = null
+      renderizarTraspaso()
+      document.getElementById('trp-elegir-buscar').focus()
+    }
+
+    function cerrarElegirTrp() {
+      const t = estado.trp
+      if (!t) return
+      t.eligiendo = null
+      renderizarTraspaso()
+    }
+
+    function elegirPresentacionTrp(presId) {
+      const t = estado.trp
+      const pres = presentacionTrp(presId)
+      if (!t?.eligiendo || !pres) return
+      if (pres.con_cono) {
+        t.eligiendo = { presId, busqueda: '', aviso: '' }
+        pintarElegirTrp(t)
+        return
+      }
+      agregarRenglonTrp(presId, null)
+    }
+
+    function agregarRenglonTrp(presId, marcaId) {
+      const t = estado.trp
+      if (!t) return
+      const marca = marcaId || null
+      if (t.renglones.some(r => r.presentacionId === presId && (r.marcaId ?? null) === marca)) {
+        if (t.eligiendo) { t.eligiendo.aviso = 'Eso ya está en la lista: cambiá las cajas en su renglón.'; pintarElegirTrp(t) }
+        return
+      }
+      const r = {
+        id: t.siguiente++, presentacionId: presId, marcaId: marca,
+        pedido: null, lotes: {}, precio: null, precioTocado: false, propuesta: null, precioEstado: null,
+      }
+      t.renglones.push(r)
+      t.eligiendo = null
+      t.errorBase = null
+      renderizarTraspaso()
+      proponerPrecioTrp(t, r)
+    }
+
+    function quitarRenglonTrp(id) {
+      const t = estado.trp
+      if (!t) return
+      t.renglones = t.renglones.filter(r => String(r.id) !== String(id))
+      t.errorBase = null
+      renderizarTraspaso()
+    }
+
+    function anotarPedidoTrp(id, n) {
+      const t = estado.trp
+      const r = renglonTrp(t, id)
+      if (!r) return
+      r.pedido = Number.isInteger(n) && n > 0 ? n : null
+      t.errorBase = null
+      refrescarRenglonTrp(t, r)
+    }
+
+    function anotarLoteTrp(id, lote, n) {
+      const t = estado.trp
+      const r = renglonTrp(t, id)
+      if (!r) return
+      if (Number.isInteger(n) && n > 0) r.lotes[lote] = n
+      else delete r.lotes[lote]
+      t.errorBase = null
+      refrescarRenglonTrp(t, r)
+    }
+
+    function anotarPrecioTrp(id, n) {
+      const t = estado.trp
+      const r = renglonTrp(t, id)
+      if (!r) return
+      r.precio = n === null || n === undefined || !Number.isFinite(n) || n < 0 ? null : n
+      r.precioTocado = true
+      r.propuesta = null
+      const nota = document.querySelector(`[data-trp-precio-nota="${r.id}"]`)
+      if (nota) nota.textContent = textoPrecioTrp(t, r)
+      t.errorBase = null
+      pintarPreviaTrp(t)
+      pintarPieTrp(t)
+    }
+
+    function completarRenglonTrp(id) {
+      const t = estado.trp
+      const r = renglonTrp(t, id)
+      if (!r) return
+      const lista = lotesTrp(t, r.presentacionId, r.marcaId)
+      if (!lista || !(r.pedido > 0)) return
+      r.lotes = completarTrp(lista, r.pedido)
+      t.errorBase = null
+      pintarRenglonesTrp(t)
+      pintarPreviaTrp(t)
+      pintarPieTrp(t)
+    }
+
+    // Lo que tipea la persona en cualquiera de los campos de los renglones.
+    function alTipearTrp(e) {
+      const el = e?.target
+      if (!estado.trp || !el?.dataset) return
+      if (el.dataset.trpPedido) anotarPedidoTrp(el.dataset.trpPedido, leerCampoNumero(el))
+      else if (el.dataset.trpLote) anotarLoteTrp(el.dataset.trpLote, el.dataset.lote, leerCampoNumero(el))
+      else if (el.dataset.trpPrecio) anotarPrecioTrp(el.dataset.trpPrecio, leerCampoNumero(el))
+    }
+
+    function alTocarRenglonesTrp(e) {
+      const btn = e?.target?.closest?.('button')
+      if (!btn?.dataset) return
+      if (btn.dataset.trpCompletar) completarRenglonTrp(btn.dataset.trpCompletar)
+      else if (btn.dataset.trpQuitar) quitarRenglonTrp(btn.dataset.trpQuitar)
+    }
+
+    function alTocarElegirTrp(e) {
+      const btn = e?.target?.closest?.('button')
+      if (!btn?.dataset) return
+      if (btn.dataset.trpPres) elegirPresentacionTrp(btn.dataset.trpPres)
+      else if (btn.dataset.trpCono !== undefined && estado.trp?.eligiendo?.presId) agregarRenglonTrp(estado.trp.eligiendo.presId, btn.dataset.trpCono || null)
+    }
+
+    function textoExitoTrp(t, data, cajas) {
+      const origen = nombreDeUnidadBarra(t.origenId)
+      const destino = nombreDeUnidadBarra(t.destinoId)
+      const crudo = data?.importe
+      const importe = crudo === null || crudo === undefined || crudo === '' ? null : Number(crudo)
+      return `Listo: pasaron ${textoCajasTrp(cajas)} de ${origen} a ${destino}. ` +
+        (importe > 0 ? `${destino} le debe ${plataTrp(importe)} a ${origen}.` : 'Sin precio: no quedó deuda entre fábricas.')
+    }
+
+    // UNA llamada a la RPC. Un doble toque manda una sola vez (enviando).
+    async function confirmarTraspaso() {
+      const t = estado.trp
+      if (!t || t.enviando) return
+      t.intentado = true
+      t.errorBase = null
+      t.exito = null
+      if (faltanTraspaso(t).length) { pintarPieTrp(t); return }
+      const parametros = parametrosTraspaso(t)
+      const cajas = parametros.p_items.reduce((s, it) => s + it.lotes.reduce((x, l) => x + l.cajas, 0), 0)
+      t.enviando = true
+      pintarPieTrp(t)
+      try {
+        const { data, error } = await supabase.rpc('traspasar_producto_terminado', parametros)
+        if (error) {
+          console.error(error)
+          t.errorBase = error.message || 'No se pudo hacer el traspaso.'
+          return
+        }
+        const texto = textoExitoTrp(t, data, cajas)
+        mostrarExito(texto)
+        t.exito = texto
+        t.renglones = []
+        t.obs = ''
+        t.intentado = false
+        t.eligiendo = null
+        t.stock = null
+        cargarStockTrp(t).then(() => { if (estado.trp === t) renderizarTraspaso() })
+      } catch (err) {
+        console.error(err)
+        t.errorBase = 'No se pudo saber si el traspaso entró: falló la conexión. Antes de volver a mandarlo, fijate en el stock terminado de la fábrica de destino (Producción → Stock terminado) que no esté ya pasado.'
+      } finally {
+        t.enviando = false
+        renderizarTraspaso()
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // PESTAÑAS
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -7435,12 +8528,13 @@
       alias: 'Alias de proveedor',
       transito: 'Transferencias entre unidades',
       mermas: 'Mermas',
+      traspaso: 'Traspaso a otra fábrica',
     }
 
     // El historial es un drill-down de Stock, no una pestaña propia: cuatro no
     // entran en 375px. Mientras se lo mira, la pestaña que queda marcada sigue
     // siendo la de Stock.
-    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo', transito: 'stock', mermas: 'stock' }
+    const PESTANA_DE_VISTA = { historial: 'stock', alias: 'catalogo', transito: 'stock', mermas: 'stock', traspaso: 'stock' }
 
     function mostrarVista(id) {
       estado.vista = id
@@ -7450,6 +8544,7 @@
       document.getElementById('vista-historial').hidden = id !== 'historial'
       document.getElementById('vista-transito').hidden = id !== 'transito'
       document.getElementById('vista-mermas').hidden = id !== 'mermas'
+      document.getElementById('vista-traspaso').hidden = id !== 'traspaso'
       document.getElementById('vista-alias').hidden = id !== 'alias'
       document.getElementById('stock-subtitulo').textContent = SUBTITULO_VISTA[id]
       document.querySelectorAll('.pestana-stock').forEach(btn => {
@@ -8969,6 +10064,31 @@
 
     document.getElementById('btn-ver-mermas').addEventListener('click', abrirMermas)
     document.getElementById('btn-volver-de-mermas').addEventListener('click', () => mostrarVista('stock'))
+
+    // ── Traspaso a otra fábrica ────────────────────────────────────────────
+    document.getElementById('btn-ver-traspaso').addEventListener('click', abrirTraspaso)
+    document.getElementById('btn-volver-de-traspaso').addEventListener('click', () => mostrarVista('stock'))
+    document.getElementById('trp-origen').addEventListener('change', (e) => pedirCambioOrigenTrp(e.target.value))
+    document.getElementById('trp-destino').addEventListener('change', (e) => cambiarDestinoTrp(e.target.value))
+    document.getElementById('trp-fecha').addEventListener('change', (e) => { if (estado.trp) { estado.trp.fecha = e.target.value; pintarPieTrp(estado.trp) } })
+    document.getElementById('trp-obs').addEventListener('input', (e) => { if (estado.trp) estado.trp.obs = e.target.value })
+    document.getElementById('trp-agregar').addEventListener('click', abrirElegirTrp)
+    document.getElementById('trp-elegir-cancelar').addEventListener('click', cerrarElegirTrp)
+    document.getElementById('trp-elegir-volver').addEventListener('click', () => {
+      if (estado.trp?.eligiendo) { estado.trp.eligiendo = { presId: null, busqueda: '', aviso: '' }; pintarElegirTrp(estado.trp) }
+    })
+    document.getElementById('trp-elegir-buscar').addEventListener('input', (e) => {
+      if (!estado.trp?.eligiendo) return
+      estado.trp.eligiendo.busqueda = e.target.value
+      pintarElegirListaTrp(estado.trp)
+    })
+    document.getElementById('trp-elegir-lista').addEventListener('click', alTocarElegirTrp)
+    document.getElementById('trp-renglones').addEventListener('input', alTipearTrp)
+    document.getElementById('trp-renglones').addEventListener('click', alTocarRenglonesTrp)
+    document.getElementById('trp-confirmar').addEventListener('click', confirmarTraspaso)
+    document.getElementById('btn-trp-cambiar-origen').addEventListener('click', confirmarCambioOrigenTrp)
+    document.querySelectorAll('[data-cerrar-trp-origen]').forEach(el =>
+      el.addEventListener('click', cerrarModalOrigenTrp))
     document.getElementById('btn-volver-a-transito').addEventListener('click', () => {
       document.getElementById('transito-paso-detalle').hidden = true
       document.getElementById('transito-paso-lista').hidden = false
@@ -9277,6 +10397,10 @@
       // la persona ve: alcanza con verStock.
       document.getElementById('btn-ver-transito').hidden = !verStock
       document.getElementById('acciones-stock').hidden = !verStock
+      // El traspaso de producto terminado exige stock:ver en las DOS fábricas:
+      // sin dos unidades reales (la de pruebas ya salió en cargarStock) no hay
+      // entre qué pasar.
+      document.getElementById('btn-ver-traspaso').hidden = !puedeTraspasar()
 
       if (desdeUrl === 'catalogo') aplicarFiltroDesdeUrl()
       cargarPendientesStock()

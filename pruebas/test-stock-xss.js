@@ -544,6 +544,14 @@ const SEGURAS = {
   // devuelve SOLO un entero > 0 o 0 (lo ejecuta test-stock-pendientes.js).
   htmlBurbujaStock: { n: 'número: entero de cantidadPendiente()' },
   pintarPendientesStock: { nTransf: 'número: entero de cantidadPendiente()' },
+  // Traspaso a otra fábrica (30/09/2026): los htmlXxxTrp escapan adentro y
+  // test-stock-traspaso.js los EJECUTA con texto malicioso en cada dato.
+  htmlRenglonTrp: { 'htmlLotesTrp(t, r)': 'HTML de htmlLotesTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
+  htmlLotesTrp: { 'htmlResumenLotesTrp(t, r, lista)': 'HTML de htmlResumenLotesTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
+  pintarRenglonesTrp: { "t.renglones.map(r => htmlRenglonTrp(t, r)).join('')": 'HTML de htmlRenglonTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
+  pintarElegirListaTrp: { 'htmlElegirTrp(t)': 'HTML de htmlElegirTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
+  pintarPreviaTrp: { 'htmlPreviaTrp(t)': 'HTML de htmlPreviaTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
+  refrescarRenglonTrp: { 'htmlResumenLotesTrp(t, r, lista)': 'HTML de htmlResumenLotesTrp(), que escapa adentro (ejecutado con texto malicioso en test-stock-traspaso.js)' },
 }
 // Por función y con regex, para las asignaciones largas cuyo texto completo
 // no tiene sentido copiar: el callback que recibe htmlAgrupado().
