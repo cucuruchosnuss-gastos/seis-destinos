@@ -290,6 +290,15 @@
     .ad-lista-cliente input { width: 22px; height: 22px; margin-top: 0.125rem; flex: 0 0 auto; accent-color: var(--naranja); }
     .ad-lista-cliente__texto { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; overflow-wrap: anywhere; }
     .ad-lista-cliente__nombre { font-weight: 700; }
+    /* El cliente completo (30/09/2026): una fila por cliente con lo que debe
+       en cada empresa y el total del grupo. */
+    .ad-grupo-cliente { background: var(--color-fondo); border: 1px solid var(--color-borde); border-radius: 16px; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.375rem; }
+    .ad-grupo-cliente + .ad-grupo-cliente { margin-top: 0.5rem; }
+    .ad-grupo-cliente__cuentas { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+    .ad-grupo-cliente__cuenta { min-height: 44px; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0 0.75rem; border-radius: 12px; border: 1px solid var(--color-borde-fuerte); background: var(--color-superficie); font: inherit; font-size: 0.875rem; cursor: pointer; color: var(--color-texto); }
+    .ad-grupo-cliente__cuenta:hover { border-color: var(--color-acento); }
+    .ad-otras-cuentas { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+    .ad-otras-cuentas .ad-link { min-height: 44px; }
     .ad-filtros { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); align-items: end; }
     .ad-cuenta { font-size: 0.8125rem; color: var(--ad-texto-secundario); margin: 0 0 0.5rem; }
 
@@ -509,6 +518,7 @@
       <!-- Un cliente APAGADO no aparece para cargar retiros, pedidos ni
            cobranzas, pero sigue acá, con su cuenta corriente (28/09/2026). -->
       <label class="ad-check-apagados"><input type="checkbox" id="ad-clientes-apagados"> Mostrar apagados</label>
+      <label class="ad-check-apagados" id="ad-clientes-agrupar-rotulo" hidden><input type="checkbox" id="ad-clientes-agrupar"> Agrupar por cliente</label>
       <p class="ad-cuenta" id="ad-clientes-cuenta"></p>
       <div class="ad-lista" id="ad-clientes-lista"></div>
     </section>
@@ -2457,18 +2467,67 @@
     function abrirClienteDeLista(id) {
       if (clientesEnTodas()) {
         const fila = clientesDeLaLista().find(c => c.cliente_id === id)
-        const unidad = fila?.unidad_negocio_id
-        if (unidad && unidad !== estado.empresaId && empresasDeAdministracion().some(e => e.id === unidad)) {
-          estado.empresaId = unidad
-          estado.clientes = null
-          estado.catalogo = null
-          estado.ordenes = null
-          estado.portada = null
-          estado.listas = null
-          estado.importar = null
-          estado.filtros.clienteId = ''
-        }
+        pasarAEmpresa(fila?.unidad_negocio_id)
       }
+      abrirCliente(id)
+    }
+
+    // La empresa pasa a ser otra (la de la cuenta que se abre): lo que se leyó
+    // de la anterior se vuelve a leer.
+    function pasarAEmpresa(unidad) {
+      if (!unidad || unidad === estado.empresaId || !empresasDeAdministracion().some(e => e.id === unidad)) return
+      estado.empresaId = unidad
+      estado.clientes = null
+      estado.catalogo = null
+      estado.ordenes = null
+      estado.portada = null
+      estado.listas = null
+      estado.importar = null
+      estado.filtros.clienteId = ''
+    }
+
+    // "También es cliente de…" (30/09/2026): las cuentas del mismo cliente en
+    // las OTRAS fábricas donde se ven clientes (retiros:ver; nunca la de
+    // pruebas), cruzadas por CUIT o por nombre (agruparClientes).
+    async function leerOtrasCuentas(clienteId) {
+      const yo = clienteDe(clienteId)
+      if (!yo) return []
+      const otras = empresasDeClientes().filter(e => e.id !== estado.empresaId)
+      if (!otras.length) return []
+      const res = await Promise.all(otras.map(async (e) => {
+        const { data, error } = await supabase.rpc('clientes_con_saldo', { p_unidad_negocio_id: e.id, p_incluir_apagados: true })
+        if (error) throw error
+        return (Array.isArray(data) ? data : []).map(c => ({ ...c, unidad_negocio_id: e.id, empresa: e.nombre }))
+      }))
+      const mia = { cliente_id: clienteId, nombre: yo.nombre, cuit: yo.cuit, unidad_negocio_id: estado.empresaId }
+      const grupo = agruparClientes([mia, ...res.flat()]).find(g => g.filas.includes(mia))
+      return (grupo?.filas ?? []).filter(f => f !== mia)
+    }
+
+    function htmlOtrasCuentas(c, saldoPropio) {
+      const o = c.otras
+      if (!o) return ''
+      if (o.error) return `<p class="ad-texto-suave">${esc(o.error)}</p>`
+      if (!o.filas.length) return ''
+      const partes = o.filas.map(f => {
+        const e = (estado.empresas ?? []).find(x => x.id === f.unidad_negocio_id)
+        const nombre = e ? nombreCorto(e) : (limpio(f.empresa) || 'otra fábrica')
+        // Con otra unidad elegida en la barra de arriba, esa cuenta no se abre
+        // desde acá (la empresa la decide la barra): solo se dice.
+        const abre = !estado.unidadBarra || estado.unidadBarra === f.unidad_negocio_id
+        const quien = abre ? `<button type="button" class="ad-link" data-otra-cuenta="${esc(f.cliente_id)}" data-otra-unidad="${esc(f.unidad_negocio_id)}">${esc(nombre)}</button>` : `<strong>${esc(nombre)}</strong>`
+        return `<span>${quien}${esc(': ' + textoDebeGrupo(f.saldo))}</span>`
+      })
+      const total = totalDelGrupo([{ saldo: saldoPropio }, ...o.filas])
+      return `<div class="ad-aviso ad-otras-cuentas"><span>También es cliente de</span>${partes.join('<span aria-hidden="true">·</span>')}` +
+        `<span>${esc('· Total en el grupo: ' + (total === null ? '—' : importeHoja(total)))}</span></div>`
+    }
+
+    // Tocar la otra fábrica abre ESA cuenta.
+    function abrirOtraCuenta(id, unidad) {
+      if (!id) return
+      if (estado.unidadBarra && estado.unidadBarra !== unidad) return
+      pasarAEmpresa(unidad)
       abrirCliente(id)
     }
 
@@ -2477,6 +2536,92 @@
       const prendidos = estado.saldos ?? []
       const apagados = estado.mostrarApagados ? (estado.apagados?.filas ?? []) : []
       return [...prendidos, ...apagados]
+    }
+
+    // ── EL CLIENTE COMPLETO (30/09/2026, pedido de Facu) ────────────────────
+    // Un mismo cliente existe en varias fábricas con cuentas separadas. Se
+    // cruzan por CUIT (los 11 dígitos); uno SIN CUIT, por su nombre
+    // (normalizado): si ese nombre es de UN solo cliente con CUIT se suma a
+    // ese grupo, y si no, se agrupa con los que se llaman igual y no tienen
+    // CUIT. Dos con CUIT distinto nunca van juntos, aunque se llamen igual.
+    function cuitDeCliente(c) {
+      const d = String(c?.cuit ?? '').replace(/\D/g, '')
+      return d.length === 11 ? d : ''
+    }
+
+    function agruparClientes(filas) {
+      const grupos = new Map()
+      const porNombre = new Map()
+      const sumar = (clave, f) => {
+        if (!grupos.has(clave)) grupos.set(clave, { clave, filas: [] })
+        grupos.get(clave).filas.push(f)
+      }
+      for (const f of filas) {
+        const cuit = cuitDeCliente(f)
+        if (!cuit) continue
+        sumar('cuit:' + cuit, f)
+        const n = normalizar(f.nombre)
+        if (n) {
+          if (!porNombre.has(n)) porNombre.set(n, new Set())
+          porNombre.get(n).add('cuit:' + cuit)
+        }
+      }
+      for (const f of filas) {
+        if (cuitDeCliente(f)) continue
+        const n = normalizar(f.nombre)
+        const con = n ? porNombre.get(n) : null
+        sumar(con?.size === 1 ? [...con][0] : (n ? 'nombre:' + n : 'id:' + (f.cliente_id ?? f.id)), f)
+      }
+      return [...grupos.values()]
+    }
+
+    function saldoConocido(s) {
+      return s === null || s === undefined || s === '' || !Number.isFinite(Number(s)) ? null : Number(s)
+    }
+
+    // Lo que debe en el grupo: la suma de los saldos que se conocen, en
+    // centavos. Sin ninguno conocido, null ("—"), nunca un "$ 0" inventado.
+    function totalDelGrupo(filas) {
+      const conocidos = filas.map(f => saldoConocido(f.saldo)).filter(v => v !== null)
+      if (!conocidos.length) return null
+      return Math.round(conocidos.reduce((a, v) => a + Math.round(v * 100), 0)) / 100
+    }
+
+    // "debe $ X" / "tiene a favor $ X" / "cuenta en cero" / "sin movimientos".
+    function textoDebeGrupo(saldo) {
+      const n = saldoConocido(saldo)
+      if (n === null) return 'sin movimientos'
+      if (n === 0) return 'cuenta en cero'
+      return n > 0 ? 'debe ' + importeHoja(n) : 'tiene a favor ' + importeHoja(-n)
+    }
+
+    // "Agrupar por cliente" (solo con "Todas las fábricas"): una fila por
+    // cliente, lo que debe en cada empresa (un botón que abre ESA cuenta) y
+    // el total. El que más debe en el grupo, arriba.
+    function gruposDeLaLista(filas) {
+      return agruparClientes(filas).map(g => ({ ...g, filas: [...g.filas].sort(porSaldo), total: totalDelGrupo(g.filas) }))
+        .sort((a, b) => porSaldo({ saldo: a.total, nombre: a.filas[0]?.nombre }, { saldo: b.total, nombre: b.filas[0]?.nombre }))
+    }
+
+    function htmlGrupoCliente(g) {
+      const primero = g.filas[0]
+      const cuit = cuitDeCliente(primero)
+      const fabricas = new Set(g.filas.map(f => f.unidad_negocio_id)).size
+      const meta = [cuit ? 'CUIT ' + cuit : 'Sin CUIT: se cruzó por el nombre',
+        fabricas + (fabricas === 1 ? ' fábrica' : ' fábricas')].join(' · ')
+      const cuentas = g.filas.map(f => `<button type="button" class="ad-grupo-cliente__cuenta" data-cliente="${esc(f.cliente_id)}" title="${esc('Abrir la cuenta en ' + (f.empresa ?? ''))}">` +
+        `${htmlSelloEmpresa(f.unidad_negocio_id, f.empresa)}` +
+        `${limpio(f.nombre) !== limpio(primero.nombre) ? `<span>${esc(f.nombre)}</span>` : ''}` +
+        `<span>${esc(textoDebeGrupo(f.saldo))}</span>${f.apagado ? '<span class="ad-sello">Apagado</span>' : ''}</button>`).join('')
+      return `<div class="ad-grupo-cliente" data-grupo-cliente="${esc(g.clave)}">` +
+        `<div class="ad-fila__linea"><span class="ad-renglon__desc">${esc(primero.nombre)}</span>` +
+        `<span class="ad-fila__importe">${esc('Total ' + (g.total === null ? '—' : importeHoja(g.total)))}</span></div>` +
+        `<span class="ad-fila__meta">${esc(meta)}</span>` +
+        `<div class="ad-grupo-cliente__cuentas">${cuentas}</div></div>`
+    }
+
+    function agrupandoClientes() {
+      return !!estado.agruparClientes && clientesEnTodas()
     }
 
     function htmlListaClientes() {
@@ -2495,6 +2640,7 @@
       if (!todos.length) return aviso + (enTodas ? '<div class="ad-vacio">Ninguna fábrica tiene clientes todavía.</div>' : '<div class="ad-vacio">Esta empresa todavía no tiene clientes.</div>')
       const lista = clientesFiltrados(todos, estado.busquedaClientes)
       if (!lista.length) return aviso + `<div class="ad-vacio">${esc('Ningún cliente coincide con «' + limpio(estado.busquedaClientes) + '».')}</div>`
+      if (agrupandoClientes()) return aviso + gruposDeLaLista(lista).map(htmlGrupoCliente).join('')
       return aviso + lista.map(htmlFilaCliente).join('')
     }
 
@@ -2504,7 +2650,11 @@
       const n = estado.saldos ? clientesFiltrados(clientesDeLaLista(), estado.busquedaClientes).length : null
       const enTodas = clientesEnTodas()
       const nFabricas = enTodas ? new Set(clientesDeLaLista().map(c => c.unidad_negocio_id)).size : 0
+      document.getElementById('ad-clientes-agrupar-rotulo').hidden = !enTodas
+      document.getElementById('ad-clientes-agrupar').checked = !!estado.agruparClientes
+      const nGrupos = n !== null && agrupandoClientes() ? agruparClientes(clientesFiltrados(clientesDeLaLista(), estado.busquedaClientes)).length : null
       document.getElementById('ad-clientes-cuenta').textContent = n === null ? ''
+        : nGrupos !== null ? `${nGrupos} ${nGrupos === 1 ? 'cliente' : 'clientes'} · ${n} ${n === 1 ? 'cuenta' : 'cuentas'} · ${nFabricas} ${nFabricas === 1 ? 'fábrica' : 'fábricas'}`
         : `${n} ${n === 1 ? 'cliente' : 'clientes'}` + (enTodas ? ` · ${nFabricas} ${nFabricas === 1 ? 'fábrica' : 'fábricas'}` : '')
       // Con "Todas las fábricas" no hay UNA empresa para el alta: se elige
       // la empresa en el segmento.
@@ -2727,7 +2877,8 @@
       const saldo = c.cuenta.length ? c.cuenta[c.cuenta.length - 1].saldo : 0
       const limite = cli?.limite_credito ?? null
       const pasa = pasaLimite(saldo, limite)
-      const extras = [cli?.activo === false ? '<div class="ad-aviso">Cliente apagado: no aparece para cargar retiros, pedidos ni cobranzas.</div>' : '',
+      const extras = [htmlOtrasCuentas(c, saldo),
+        cli?.activo === false ? '<div class="ad-aviso">Cliente apagado: no aparece para cargar retiros, pedidos ni cobranzas.</div>' : '',
         cli && textoCodigoAnterior(cli.codigo_anterior) ? `<p class="ad-texto-suave">${esc(textoCodigoAnterior(cli.codigo_anterior))}</p>` : ''].join('')
       const cabecera = extras + `<div class="ad-tarjeta"><div class="ad-fila__linea"><span class="ad-dato__rotulo">Saldo</span>` +
         `<span class="ad-total${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(saldo))}</span></div>` +
@@ -2777,7 +2928,7 @@
 
     async function abrirCliente(id) {
       const turno = ++turnoCliente
-      estado.cliente = { id, cuenta: null, codigos: new Map(), error: null, panel: null, errorPanel: null }
+      estado.cliente = { id, cuenta: null, codigos: new Map(), error: null, panel: null, errorPanel: null, otras: null }
       mostrarVista('ad-vista-cliente')
       pintarCliente()
       try {
@@ -2789,6 +2940,19 @@
         if (turno !== turnoCliente) return
         console.error('No se pudo leer la cuenta:', err)
         estado.cliente.error = 'No se pudo leer la cuenta del cliente. Revisá la conexión y volvé a entrar.'
+      }
+      pintarCliente()
+      // Las cuentas del mismo cliente en las otras fábricas, después (no
+      // demoran la cuenta). Si fallan, se dice en chico; nunca "no es cliente".
+      if (estado.cliente.error) return
+      try {
+        const filas = await leerOtrasCuentas(id)
+        if (turno !== turnoCliente) return
+        estado.cliente.otras = { filas, error: null }
+      } catch (err) {
+        if (turno !== turnoCliente) return
+        console.error('No se pudieron leer las otras cuentas del cliente:', err)
+        estado.cliente.otras = { filas: [], error: 'No se pudo ver si también es cliente de otras fábricas.' }
       }
       pintarCliente()
     }
@@ -5374,6 +5538,7 @@
         if (b) abrirClienteDeLista(b.dataset.cliente)
       })
       document.getElementById('ad-clientes-apagados').addEventListener('change', (e) => cambiarMostrarApagados(e.target.checked))
+      document.getElementById('ad-clientes-agrupar').addEventListener('change', (e) => { estado.agruparClientes = !!e.target.checked; pintarClientes() })
       document.getElementById('ad-btn-cliente-nuevo').addEventListener('click', () => abrirAlta())
       document.getElementById('ad-alta-guardar').addEventListener('click', () => guardarAlta())
       document.getElementById('ad-alta-cancelar').addEventListener('click', () => { estado.alta = null; pintarClientes() })
@@ -5381,6 +5546,8 @@
       document.getElementById('ad-cliente-cuerpo').addEventListener('click', (e) => {
         const b = e.target.closest('[data-cuenta-cobranza]')
         if (b && estado.cliente) abrirCobranza(b.dataset.cuentaCobranza, { origen: 'cuenta', clienteOrigen: estado.cliente.id })
+        const o = e.target.closest('[data-otra-cuenta]')
+        if (o) abrirOtraCuenta(o.dataset.otraCuenta, o.dataset.otraUnidad)
       })
       document.getElementById('ad-btn-ficha').addEventListener('click', () => { if (estado.cliente) abrirFicha(estado.cliente.id) })
       document.getElementById('ad-btn-saldo-inicial').addEventListener('click', () => abrirPanelCliente('saldo'))

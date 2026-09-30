@@ -145,6 +145,10 @@ module.exports = {
         ],
         "activo": true
       },
+      // El cliente completo (30/09/2026): las cuentas de Dolce Pasta de
+      // Anatolia (mismo CUIT) y de Kiosco Pepe (sin CUIT).
+      { "id": "c1-d", "unidad_negocio_id": "u-d", "nombre": "DIST. ANAT. SRL", "razon_social": "DIST. ANAT. SRL", "apodos": [], "cuit": "30-71234567-8", "activo": true },
+      { "id": "c2-d", "unidad_negocio_id": "u-d", "nombre": "Kiosco Pepe", "razon_social": null, "apodos": [], "cuit": null, "activo": true },
       {
         "id": "c-dolce",
         "unidad_negocio_id": "u-d",
@@ -1241,7 +1245,16 @@ module.exports = {
         ]
       }
     ],
-    "clientes_con_saldo": [
+    // El cliente completo (30/09/2026): Dolce Pasta tiene su propia cuenta de
+    // Anatolia (mismo CUIT) y de Kiosco Pepe (sin CUIT, por el nombre).
+    "clientes_con_saldo": { "__segun": [{ "si": { "p_unidad_negocio_id": "u-d" }, "r": [
+      { "cliente_id": "c1-d", "nombre": "DIST. ANAT. SRL", "razon_social": "DIST. ANAT. SRL", "cuit": "30-71234567-8", "lista": null, "saldo": 48000,
+        "ultimo_movimiento": "2026-09-25", "retiros_mes": 1, "es_tambien_proveedor": false, "activo": true, "codigo_anterior": null },
+      { "cliente_id": "c2-d", "nombre": "Kiosco Pepe", "razon_social": null, "cuit": null, "lista": null, "saldo": -2500,
+        "retiros_mes": 0, "es_tambien_proveedor": false, "activo": true, "codigo_anterior": null },
+      { "cliente_id": "c-dolce", "nombre": "Almacén Rivadavia", "razon_social": "RIVADAVIA SRL", "cuit": null, "lista": null, "saldo": 9000,
+        "retiros_mes": 2, "es_tambien_proveedor": false, "activo": true, "codigo_anterior": null }
+    ] }], "__defecto": [
       {
         "cliente_id": "c1",
         "nombre": "Distribuidora Anatolia",
@@ -1271,7 +1284,7 @@ module.exports = {
       // p_incluir_apagados; la pantalla separa por 'activo'.
       { "cliente_id": "c-apagado", "nombre": "Kiosco Cerrado", "razon_social": null, "cuit": null, "lista": "Mayoristas", "saldo": 749.5,
         "ultimo_movimiento": "2026-08-30", "retiros_mes": 1, "es_tambien_proveedor": false, "activo": false, "codigo_anterior": 55 }
-    ],
+    ] },
     "cambiar_activo_cliente": null,
     "cuenta_cliente": [
       {

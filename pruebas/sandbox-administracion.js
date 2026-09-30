@@ -40,6 +40,9 @@ const FUNCIONES_BASE = [
   'elegirEnSegmento', 'abrirClienteDeLista',
   // La etiqueta de la empresa con su color (30/09/2026; js/barra-unidad.js)
   'nombreCorto', 'colorEmpresa', 'htmlSelloEmpresa',
+  // El cliente completo (30/09/2026)
+  'cuitDeCliente', 'agruparClientes', 'saldoConocido', 'totalDelGrupo', 'textoDebeGrupo', 'gruposDeLaLista', 'htmlGrupoCliente',
+  'agrupandoClientes', 'pasarAEmpresa', 'leerOtrasCuentas', 'htmlOtrasCuentas', 'abrirOtraCuenta',
   'leerFicha', 'asegurarListas', 'asegurarProveedores', 'valorComparable', 'cambiosFicha', 'leerFormFicha', 'htmlOpcionesListas',
   'proveedoresFiltrados', 'htmlProveedorElegido', 'htmlResultadosProveedores', 'pintarProveedorFicha', 'textoCambiosFicha',
   'pintarPieFicha', 'llenarFicha', 'abrirFicha', 'elegirProveedorFicha', 'guardarFicha',

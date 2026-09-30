@@ -4,6 +4,9 @@
 
 const SEGURAS_ADMINISTRACION = [
   ['htmlSelloOrden(o)', 'HTML constante del código: htmlSelloOrden() devuelve uno de tres sellos fijos'],
+  [`partes.join('<span aria-hidden="true">·</span>')`, 'HTML ya escapado: cada parte la arma htmlOtrasCuentas() con esc(), unidas por un separador constante'],
+  ['cuentas', 'HTML ya escapado: htmlGrupoCliente() arma cada botón con esc() y htmlSelloEmpresa()'],
+  ['quien', 'HTML ya escapado: htmlOtrasCuentas() arma el botón (o el <strong>) con esc() del id, la unidad y el nombre'],
   ['avisoSinLista', 'HTML ya escapado: htmlResumenClientesLista() lo arma con esc() del texto y htmlNombresCortos(), o vacío'],
   ['htmlNombresCortos(sinLista)', 'HTML ya escapado: htmlNombresCortos() devuelve esc() de los nombres unidos'],
   ['colorEmpresa(unidadId)', 'constante del código: un color de MARCA_FABRICA (js/barra-unidad.js) o el gris fijo; nunca un dato de la base'],

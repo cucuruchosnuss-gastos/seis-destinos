@@ -116,7 +116,7 @@ correrMutaciones({
     { nombre: 'los apagados sin su empresa',
       de: '.then(l => l.map(c => ({ ...c, unidad_negocio_id: e.id, empresa: e.nombre }))))', a: '.then(l => l.map(c => ({ ...c, unidad_negocio_id: e.id }))))' },
     { nombre: 'abrir un cliente de otra empresa no cambia la empresa',
-      de: '          estado.empresaId = unidad\n          estado.clientes = null', a: '          estado.clientes = null' },
+      de: '      estado.empresaId = unidad\n      estado.clientes = null', a: '      estado.clientes = null' },
     { nombre: 'el clic de la lista abre sin mirar la empresa',
       de: '        if (b) abrirClienteDeLista(b.dataset.cliente)', a: '        if (b) abrirCliente(b.dataset.cliente)' },
     // Elegir en el segmento
