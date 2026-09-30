@@ -2,7 +2,9 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- SIN ZOOM (30/09/2026): en la tablet, deslizar para recargar a veces
+       dejaba la pantalla agrandada y sin forma de volver. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Planta — Seis Destinos</title>
   <link rel="stylesheet" href="../css/main.css">
   <!-- El sistema visual nuevo (planta v2, 28/09/2026): Bricolage Grotesque para
@@ -132,6 +134,10 @@
     }
 
     html, body { height: 100%; }
+    /* SIN ZOOM NI "DESLIZAR PARA RECARGAR" (30/09/2026): sin zoom por doble
+       toque, y Chrome no recarga al tirar hacia abajo (eso dejaba la tablet
+       con zoom). Para recargar está el botón "Recargar" de la barra lateral. */
+    html, body { touch-action: manipulation; overscroll-behavior-y: none; }
     body, body.pagina-modulo {
       margin: 0;
       background: var(--p-fondo);
@@ -321,11 +327,18 @@
       height: 44px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--p-borde); background: var(--p-tarjeta);
       display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--p-tinta-2); width: 100%;
     }
+    /* "Recargar", discreto: el mismo botón que Salir, sin borde. */
+    .pr-lat__recargar { border-color: transparent; background: transparent; color: var(--p-gris); }
+    .pr-recargar-fondo { position: fixed; inset: 0; z-index: 60; background: rgba(28, 26, 23, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .pr-recargar { background: var(--p-tarjeta); border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+    .pr-recargar__titulo { margin: 0; font-family: var(--p-titulo); font-size: 22px; font-weight: 800; color: var(--p-tinta); }
+    .pr-recargar__texto { margin: 0; font-size: 16px; color: var(--p-tinta-2); }
+    .pr-recargar__botones { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
     @media (orientation: portrait) {
       .pr-lateral {
         width: auto; border-right: 0; border-bottom: 1px solid var(--p-borde); padding: 0; gap: 0;
-        display: grid; grid-template-columns: auto minmax(0, 1fr) auto 48px; grid-template-areas: "otro quien reloj salir" "nav nav nav nav";
+        display: grid; grid-template-columns: auto minmax(0, 1fr) auto 48px 48px; grid-template-areas: "otro quien reloj recargar salir" "nav nav nav nav nav";
         column-gap: 10px; align-items: center;
       }
       .pr-lat__otro { grid-area: otro; width: auto; padding: 0 12px; margin-left: 12px; margin-top: 8px; margin-bottom: 8px; }
@@ -341,6 +354,7 @@
       .pr-reloj-fecha { font-size: 12px; color: var(--p-gris); }
       .pr-lat__salir { grid-area: salir; width: 48px; height: 48px; border-radius: 12px; margin-right: 12px; padding: 0; }
       .pr-lat__salir span { display: none; }
+      .pr-lat__recargar { grid-area: recargar; margin-right: 0; }
       .pr-lat__secciones { grid-area: nav; flex-direction: row; gap: 4px; padding: 0 8px 8px; overflow: visible; }
       .pr-lat__item {
         flex: 1 1 0; min-width: 0; height: 56px; min-height: 56px; border-radius: 12px; padding: 0 4px;
@@ -607,7 +621,7 @@
     .pr-abrir-ops__elegidos { font-size: 15px; font-weight: 700; color: var(--p-acento); }
     .pr-abrir-ops__espacio { flex: 1; }
     .pr-abrir-ops__buscar { width: 200px; max-width: 45%; height: 40px; border-radius: 10px; background: var(--p-alt); border: 1px solid var(--p-div); display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--p-suave); box-sizing: border-box; }
-    .pr-abrir-ops__buscar input { border: 0; background: transparent; min-width: 0; flex: 1; height: 100%; font-size: 15px; color: var(--p-tinta); outline: none; }
+    .pr-abrir-ops__buscar input { border: 0; background: transparent; min-width: 0; flex: 1; height: 100%; font-size: 16px; color: var(--p-tinta); outline: none; }
     .pr-abrir-ops__lista { flex: 1; display: flex; flex-direction: column; gap: 6px; }
     .pr-op-grupo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); padding-top: 2px; }
     .pr-op-grilla { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
@@ -986,7 +1000,7 @@
     .pr-chip-choco--prod { height: 22px; font-size: 11.5px; padding: 0 6px; flex-shrink: 0; }
     .pr-receta__motivo-campo { flex: 1; min-width: 0; height: 40px; border-radius: 10px; border: 2px solid var(--p-acento); background: #fff; display: flex; align-items: center; gap: 6px; padding: 0 10px; }
     .pr-receta__motivo-rotulo { font-size: 15px; font-weight: 700; color: var(--p-gris); }
-    .pr-receta__motivo-campo input { flex: 1; min-width: 0; border: 0; outline: none; font-size: 15px; background: transparent; }
+    .pr-receta__motivo-campo input { flex: 1; min-width: 0; border: 0; outline: none; font-size: 16px; background: transparent; }
     .pr-receta__mas { height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--p-acento); background: var(--p-acento-zona); color: var(--p-acento); font-size: 15px; font-weight: 800; white-space: nowrap; }
     .pr-receta__tabla { flex: 1; min-height: 0; background: #fff; border: 1px solid var(--p-borde); border-radius: 14px; overflow: auto; display: flex; flex-direction: column; }
     .pr-rec, .pr-rec--cab {
@@ -1174,7 +1188,7 @@
     .pr-maestro-rotulo { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; color: var(--p-suave); white-space: nowrap; }
     .pr-maestro-buscar input {
       flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 10px; background: var(--p-alt); border: 1px solid var(--p-div);
-      padding: 0 10px; font-size: 15px; color: var(--p-tinta);
+      padding: 0 10px; font-size: 16px; color: var(--p-tinta);
     }
     .pr-maestro-buscar input::placeholder { color: var(--p-suave); }
 
@@ -1212,7 +1226,7 @@
     /* "Hasta el final del" no está en el diseño (el diseño es solo hoy): se
        conserva en una línea chica debajo de las tarjetas. */
     .pr-maestro-hasta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; font-size: 13.5px; color: var(--p-gris); font-weight: 600; }
-    .pr-maestro-hasta .pr-input { height: 34px; min-height: 0; padding: 0 8px; font-size: 14px; width: auto; border-radius: 8px; }
+    .pr-maestro-hasta .pr-input { height: 34px; min-height: 0; padding: 0 8px; font-size: 16px; width: auto; border-radius: 8px; }
     #pr-acceso-nota:empty { display: none; }
     #pr-acceso-nota .pr-aviso { margin: 0; font-size: 13.5px; padding: 6px 10px; }
     .pr-maestro-der .pr-error-pegado { margin: 0; flex-shrink: 0; font-size: 13.5px; }
@@ -2339,6 +2353,7 @@
     // currentColor. Una sola fuente para toda la planta.
     const ICONO = {
       home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+      recargar: 'M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6',
       abrir: 'M9 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM2 21c0-3.9 3.1-6 7-6s7 2.1 7 6M19 8v6M16 11h6',
       planilla: 'M4 4h16v16H4zM4 9h16M4 14h16M10 9v11',
       paradas: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM10 9v6M14 9v6',
@@ -2536,7 +2551,39 @@
     function htmlLateral() {
       const cuerpoLat = estado.modo === 'masa' ? htmlLatSala() : htmlLatSecciones()
       return htmlBotonOtroModo() + htmlLatPersona() + htmlRelojDoble('pr-lat__reloj') + cuerpoLat + htmlLatConexion() +
-        `<button type="button" class="pr-lat__salir" id="pr-btn-salir" aria-label="Salir">${icono('salir', 17)}<span>Salir</span></button>`
+        `<button type="button" class="pr-lat__salir pr-lat__recargar" id="pr-btn-recargar" aria-label="Recargar">${icono('recargar', 17)}<span>Recargar</span></button>` +
+        `<button type="button" class="pr-lat__salir" id="pr-btn-salir" aria-label="Salir">${icono('salir', 17)}<span>Salir</span></button>` +
+        htmlConfirmaRecargar()
+    }
+
+    // RECARGAR (30/09/2026): sin "deslizar para recargar" (dejaba la tablet
+    // con zoom), la planta se recarga con este botón. Si hay algo a medio
+    // cargar en pantalla, pregunta antes: recargar lo perdería. (Las masas sin
+    // mandar NO se pierden: quedan guardadas en la tablet y se mandan solas.)
+    const VISTAS_A_MEDIO_CARGAR = ['pr-abrir', 'pr-agregar-prod', 'pr-paradas', 'pr-cierre', 'pr-receta', 'pr-asignar']
+
+    function hayAlgoAMedioCargar() {
+      return VISTAS_A_MEDIO_CARGAR.includes(estado.vista)
+    }
+
+    function htmlConfirmaRecargar() {
+      if (!estado.recargarPide) return ''
+      return `<div class="pr-recargar-fondo"><div class="pr-recargar" role="alertdialog" aria-modal="true" aria-labelledby="pr-recargar-titulo">` +
+        `<p class="pr-recargar__titulo" id="pr-recargar-titulo">¿Recargar la pantalla?</p>` +
+        `<p class="pr-recargar__texto">Se pierde lo que estás cargando y todavía no mandaste.</p>` +
+        `<div class="pr-recargar__botones"><button type="button" class="pr-btn pr-btn--secundario" id="pr-recargar-no">No, seguir</button>` +
+        `<button type="button" class="pr-btn pr-btn--accion" id="pr-recargar-si">Sí, recargar</button></div></div></div>`
+    }
+
+    function pedirRecargar() {
+      if (!hayAlgoAMedioCargar()) { recargarPantalla(); return }
+      estado.recargarPide = true
+      pintarLateral()
+    }
+
+    function recargarPantalla() {
+      estado.recargarPide = false
+      window.location.reload()
     }
 
     // "¿Quién sos?" es a pantalla completa: la barra lateral aparece recién
@@ -4162,6 +4209,9 @@
       // delegación desde el contenedor, que sí es fijo.
       document.getElementById('pr-barra').addEventListener('click', ev => {
         if (ev.target.closest('#pr-btn-salir')) { tocar(); salir(); return }
+        if (ev.target.closest('#pr-btn-recargar')) { tocar(); pedirRecargar(); return }
+        if (ev.target.closest('#pr-recargar-si')) { recargarPantalla(); return }
+        if (ev.target.closest('#pr-recargar-no')) { estado.recargarPide = false; pintarLateral(); return }
         if (ev.target.closest('#pr-lat-cambiar')) { tocar(); cambiarDePersona(); return }
         const s = ev.target.closest('[data-seccion]')
         if (s) { if (!s.disabled) irASeccion(s.dataset.seccion); return }

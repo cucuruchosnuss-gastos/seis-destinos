@@ -280,6 +280,8 @@ const NUEVAS_PLANTA = [
   // "¿Quién sos?".
   'htmlBotonOtroModo', 'puestoEnLateral', 'htmlLatPersona', 'maquinaElegida',
   'htmlLatMaquina', 'htmlLatSecciones', 'htmlLatSala', 'htmlLatConexion', 'htmlLateral', 'lateralVisible',
+  // Recargar sin "deslizar para recargar" (30/09/2026)
+  'hayAlgoAMedioCargar', 'htmlConfirmaRecargar', 'pedirRecargar', 'recargarPantalla',
   'pintarLateral', 'htmlBandaQuien', 'pintarBandaQuien', 'cancelarOtroModo', 'cambiarDePersona',
   'irASeccion', 'abrirLoProducido', 'mostrarHistorialMaquina',
   // Sala de masa con dos modos (28/09/2026): la masa nueva, lo que queda de
@@ -329,7 +331,9 @@ const CONST_NUEVAS_PLANTA = ['ICONO', 'LINKS_SIN_SESION',
   'TABLAS_VIVAS', 'ICONO_MODO', 'OTRO_MODO', 'NOMBRE_MODO', 'SECCIONES_PRODUCCION', 'SECCION_DE_VISTA', 'MINIMO_PARA_BUSCAR',
   // Planta v2 (28/09/2026)
   'PANTALLAS_SIN_BARRA', 'QUE_HACE_PUESTO', 'MOTIVOS_PARADA', 'OTRO_MOTIVO', 'COLOR_TAMANO', 'COLOR_CHOCO',
-  'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES']
+  'TONOS_NOMBRE', 'PALETA_CONO', 'COLOR_CONO_COMUN', 'COLORES_ELEGIBLES',
+  // Recargar (30/09/2026)
+  'VISTAS_A_MEDIO_CARGAR']
 
 const CONSTANTES_BASE = [
   'TAREAS_PRODUCCION', 'puedeEntrar',
