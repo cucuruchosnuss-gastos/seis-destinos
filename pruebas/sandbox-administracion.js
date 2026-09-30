@@ -38,6 +38,8 @@ const FUNCIONES_BASE = [
   // Clientes de "Todas las fábricas" (29/09/2026)
   'empresasDeClientes', 'clientesEnTodas', 'fichaCliente', 'porSaldo', 'leerClientesTodas', 'leerApagadosTodas',
   'elegirEnSegmento', 'abrirClienteDeLista',
+  // La etiqueta de la empresa con su color (30/09/2026; js/barra-unidad.js)
+  'nombreCorto', 'colorEmpresa', 'htmlSelloEmpresa',
   'leerFicha', 'asegurarListas', 'asegurarProveedores', 'valorComparable', 'cambiosFicha', 'leerFormFicha', 'htmlOpcionesListas',
   'proveedoresFiltrados', 'htmlProveedorElegido', 'htmlResultadosProveedores', 'pintarProveedorFicha', 'textoCambiosFicha',
   'pintarPieFicha', 'llenarFicha', 'abrirFicha', 'elegirProveedorFicha', 'guardarFicha',
@@ -89,6 +91,8 @@ const CONSTANTES_BASE = [
   'ZONA_HOJA', 'COPIAS_IMPRESION', 'COPIAS_PDF', 'LEYENDA_LEGAL', 'ESTILOS_HOJA', 'LIBRERIAS_PDF', 'CORTE_HOJA', 'LOTE_SIN_STOCK_HOJA', 'RENGLONES_POR_HOJA',
   // Clientes de "Todas las fábricas" (29/09/2026)
   'TODAS_LAS_FABRICAS',
+  // La etiqueta de la empresa y "Todas" que no cambia nada (30/09/2026)
+  'NOMBRE_CORTO', 'MARCA_FABRICA', 'COLOR_EMPRESA_SIN_MARCA', 'TEXTO_ELEGI_FABRICA',
   // El diseño "Administración" (29/09/2026)
   'PALETA_MODULO', 'TRAZO_ICONO', 'ICONO_SECCION', 'PESTANAS', 'PESTANA_DE_VISTA',
 ]

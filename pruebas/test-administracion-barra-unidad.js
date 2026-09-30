@@ -77,7 +77,7 @@ function nuevo(barra = null) {
   S.estado.empresas = [...S.estado.empresas.filter(e => e.id !== 'u-t'), { id: 'u-t', nombre: marca('unidad') }]
   chk('el nombre de la unidad va escapado', !/<b data-xss=/.test(S.htmlEmpresas()))
 }
-chk('la página importa la barra', /import \{ unidadesDeLaBarra, alCambiarUnidad \} from '\.\.\/js\/barra-unidad\.js'/.test(src))
+chk('la página importa la barra', /import \{ unidadesDeLaBarra, alCambiarUnidad[^}]*\} from '\.\.\/js\/barra-unidad\.js'/.test(src))
 chk('init respeta la barra antes que la preferencia guardada', /const segun = empresaSegunBarra\(lista\)\n\s+estado\.empresaId = segun === undefined \? empresaInicial\(lista, leerPreferencia\(CLAVE_EMPRESA\)\) : segun/.test(src))
 
 fin()

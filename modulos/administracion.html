@@ -273,7 +273,15 @@
        se toca, 29/09/2026). */
     .ad-sello--proveedor { background: var(--color-superficie); color: var(--color-texto-menu); border-color: var(--color-borde); }
     /* La empresa de cada cliente, con "Todas las fábricas" (29/09/2026). */
-    .ad-sello--empresa { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde-fuerte); letter-spacing: 0.02em; }
+    .ad-sello--empresa { background: var(--color-fondo); color: var(--color-texto); border-color: var(--color-borde-fuerte); letter-spacing: 0.02em; gap: 0.3125rem; }
+    /* El color de cada fábrica (el de la barra de arriba) va en un punto: el
+       texto sigue en tinta, que se lee sobre cualquier fondo (30/09/2026). */
+    .ad-sello__punto { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex: 0 0 auto; }
+    /* En "Todas las fábricas" no se cambia nada de un cliente: el interruptor
+       y la ficha quedan apagados con el motivo al lado (30/09/2026). */
+    .ad-interruptor-todas { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; max-width: 7.5rem; }
+    .ad-bloqueado-todas { font-size: 0.75rem; color: var(--ad-texto-secundario); line-height: 1.25; text-align: center; }
+    .ad-barra-acciones .ad-bloqueado-todas { align-self: center; text-align: left; }
     .ad-filtros { display: grid; gap: 0 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); align-items: end; }
     .ad-cuenta { font-size: 0.8125rem; color: var(--ad-texto-secundario); margin: 0 0 0.5rem; }
 
@@ -505,6 +513,7 @@
       </div>
       <div class="ad-barra-acciones" id="ad-cliente-acciones">
         <button type="button" class="ad-btn ad-btn--secundario" id="ad-btn-ficha" hidden>Ficha</button>
+        <span class="ad-bloqueado-todas" id="ad-ficha-bloqueada" hidden>Elegí una fábrica arriba para cambiarlo</span>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-saldo-inicial" hidden>Saldo inicial</button>
         <button type="button" class="ad-btn ad-btn--suave" id="ad-btn-ajuste" hidden>Ajuste</button>
       </div>
@@ -805,7 +814,7 @@
     import { supabase } from '../js/supabase.js'
     import { mostrarBannerVersion } from '../js/version-banner.js'
     import { MODULOS, moduloVisible, colorDeModulo } from '../js/modulos.js'
-    import { unidadesDeLaBarra, alCambiarUnidad } from '../js/barra-unidad.js'
+    import { unidadesDeLaBarra, alCambiarUnidad, MARCA_FABRICA, nombreCorto } from '../js/barra-unidad.js'
 
     mostrarBannerVersion()
 
@@ -2269,13 +2278,42 @@
       return puedeDarAlta(unidadId)
     }
 
+    // "TODAS LAS FÁBRICAS" NO CAMBIA NADA (30/09/2026, pedido de Facu): el
+    // mismo cliente existe en varias fábricas con cuentas separadas y es fácil
+    // tocar el equivocado. El interruptor se ve apagado, con el motivo al lado;
+    // con una fábrica elegida, todo como siempre.
+    const TEXTO_ELEGI_FABRICA = 'Elegí una fábrica arriba para cambiarlo'
+
     function htmlInterruptor(c) {
       if (!puedePrenderApagar(c.unidad_negocio_id ?? estado.empresaId)) return ''
       const prendido = !c.apagado
+      if (clientesEnTodas()) {
+        return `<div class="ad-interruptor-todas"><button type="button" class="ad-interruptor" role="switch" aria-checked="${prendido ? 'true' : 'false'}" disabled` +
+          ` aria-label="${esc((prendido ? 'Prendido: ' : 'Apagado: ') + (c.nombre ?? 'este cliente') + '. ' + TEXTO_ELEGI_FABRICA)}">` +
+          `<span class="ad-interruptor__pista" aria-hidden="true"></span>${prendido ? 'Prendido' : 'Apagado'}</button>` +
+          `<span class="ad-bloqueado-todas">${esc(TEXTO_ELEGI_FABRICA)}</span></div>`
+      }
       const it = estado.interruptor?.id === c.cliente_id ? estado.interruptor : null
       return `<button type="button" class="ad-interruptor" role="switch" aria-checked="${prendido ? 'true' : 'false'}" data-cliente-activo="${esc(c.cliente_id)}"` +
         ` aria-label="${esc((prendido ? 'Apagar a ' : 'Prender a ') + (c.nombre ?? 'este cliente'))}"${it?.guardando ? ' disabled' : ''}>` +
         `<span class="ad-interruptor__pista" aria-hidden="true"></span>${prendido ? 'Prendido' : 'Apagado'}</button>`
+    }
+
+    // LA ETIQUETA DE LA EMPRESA en cada renglón de una lista que mezcla
+    // fábricas (30/09/2026): el nombre corto (Nuss, Dolce Pasta, Mengui,
+    // Taller) y el color de esa fábrica en la barra de arriba (MARCA_FABRICA,
+    // una constante del código, nunca un dato de la base). Una empresa sin
+    // prefijo conocido va en gris con su nombre.
+    const COLOR_EMPRESA_SIN_MARCA = '#57534E'
+    function colorEmpresa(unidadId) {
+      const e = (estado.empresas ?? []).find(x => x.id === unidadId)
+      return MARCA_FABRICA[e?.prefijo]?.[0] ?? COLOR_EMPRESA_SIN_MARCA
+    }
+    function htmlSelloEmpresa(unidadId, nombre) {
+      const e = (estado.empresas ?? []).find(x => x.id === unidadId)
+      const corto = e ? nombreCorto(e) : (limpio(nombre) || 'Empresa')
+      return `<span class="ad-sello ad-sello--empresa" data-sello-empresa="${esc(unidadId ?? '')}" title="${esc('Empresa: ' + (e?.nombre ?? nombre ?? ''))}">` +
+        `<span class="ad-sello__punto" style="background: ${colorEmpresa(unidadId)}" aria-hidden="true"></span>${esc(corto)}</span>`
     }
 
     function htmlFilaCliente(c) {
@@ -2293,7 +2331,7 @@
         `<span class="ad-fila__linea"><span class="ad-renglon__desc">${esc(c.nombre)}</span>` +
         `<span class="ad-fila__importe${pasa ? ' ad-fila__importe--pendiente' : ''}">${esc(importeHoja(c.saldo))}</span></span>` +
         `<span class="ad-fila__linea"><span class="ad-fila__meta">${esc(meta + limiteTexto)}</span>` +
-        `${c.empresa ? `<span class="ad-sello ad-sello--empresa" title="Empresa">${esc(c.empresa)}</span>` : ''}` +
+        `${c.empresa ? htmlSelloEmpresa(c.unidad_negocio_id, c.empresa) : ''}` +
         `${c.apagado ? '<span class="ad-sello">Apagado</span>' : ''}` +
         `${c.es_tambien_proveedor ? '<span class="ad-sello ad-sello--proveedor">También proveedor</span>' : ''}` +
         `${pasa ? '<span class="ad-sello ad-sello--pendiente">Pasa su límite</span>' : ''}</span>` +
@@ -2532,6 +2570,8 @@
     // guardar_cliente, que pisa todo, y había que leer la fila entera.
     async function cambiarActivoCliente(id) {
       if (estado.interruptor?.guardando) return
+      // En "Todas las fábricas" no se cambia nada (aunque se llame).
+      if (clientesEnTodas()) return
       const fila = clientesDeLaLista().find(c => c.cliente_id === id)
       if (!fila || !puedePrenderApagar(fila.unidad_negocio_id ?? estado.empresaId)) return
       const prender = !!fila.apagado
@@ -2695,7 +2735,13 @@
       document.getElementById('ad-cliente-titulo').textContent = cli?.nombre ?? 'Cliente'
       document.getElementById('ad-cliente-cuerpo').innerHTML = htmlCuenta(c)
       const precios = puedeEn('retiros', 'precios')
-      document.getElementById('ad-btn-ficha').hidden = !precios
+      // Abierto desde "Todas las fábricas": la ficha no se edita (el botón se
+      // ve apagado con el motivo; con una fábrica elegida, como siempre).
+      const fichaBloqueada = precios && clientesEnTodas()
+      const btnFicha = document.getElementById('ad-btn-ficha')
+      btnFicha.hidden = !precios
+      btnFicha.disabled = fichaBloqueada
+      document.getElementById('ad-ficha-bloqueada').hidden = !fichaBloqueada
       document.getElementById('ad-btn-saldo-inicial').hidden = !(precios && c.cuenta && !tieneSaldoInicial(c.cuenta))
       document.getElementById('ad-btn-ajuste').hidden = !precios
       document.getElementById('ad-panel-saldo').hidden = c.panel !== 'saldo'
@@ -2933,7 +2979,7 @@
     }
 
     async function abrirFicha(clienteId) {
-      if (!puedeEn('retiros', 'precios')) return
+      if (!puedeEn('retiros', 'precios') || clientesEnTodas()) return
       estado.ficha = { id: clienteId, original: null, proveedorId: null, busquedaProveedor: '', error: null }
       mostrarVista('ad-vista-ficha')
       document.getElementById('ad-ficha-aviso').innerHTML = '<div class="ad-vacio">Cargando la ficha…</div>'

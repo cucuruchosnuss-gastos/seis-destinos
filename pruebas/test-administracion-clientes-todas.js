@@ -132,7 +132,8 @@ async function pruebas() {
     chk('sin apagados (como la lista de siempre)', llamadas.every(r => r[1].p_incluir_apagados === false))
     const h = html(S, 'ad-clientes-lista')
     chk('se ven los clientes de las dos fábricas', /Anatolia Nuss/.test(h) && /Pastas Dolce Uno/.test(h) && /Heladería Sur/.test(h) && /Sin saldo Dolce/.test(h))
-    chk('cada fila dice su empresa', /ad-sello--empresa" title="Empresa">Cucuruchos Nuss</.test(h) && /ad-sello--empresa" title="Empresa">Dolce Pasta</.test(h))
+    chk('cada fila dice su empresa (el nombre corto, con el nombre entero en el title)',
+      /data-sello-empresa="u-n" title="Empresa: Cucuruchos Nuss">[^]*?<\/span>Nuss</.test(h) && /data-sello-empresa="u-d" title="Empresa: Dolce Pasta">[^]*?<\/span>Dolce Pasta</.test(h))
     const orden = ['Pastas Dolce Uno', 'Anatolia Nuss', 'Heladería Sur', 'Crédito Nuss', 'Sin saldo Dolce'].map(n => h.indexOf(n))
     chk('el que más debe arriba; un saldo a favor después; sin saldo, al final', orden.every((x, i) => x >= 0 && (i === 0 || x > orden[i - 1])), orden.join())
     chk('la cuenta dice clientes y fábricas', S.__els.get('ad-clientes-cuenta').textContent === '5 clientes · 2 fábricas', S.__els.get('ad-clientes-cuenta').textContent)
@@ -147,8 +148,12 @@ async function pruebas() {
     // El alta necesita UNA empresa.
     chk('con "Todas las fábricas" no se ofrece el alta', S.__els.get('ad-btn-cliente-nuevo').hidden === true)
     // El interruptor: la regla de la empresa del cliente (precios solo en Nuss).
-    chk('el interruptor aparece en los de Nuss (retiros:precios ahí)', /data-cliente-activo="n1"/.test(h))
-    chk('y NO en los de Dolce (sin permiso de guardar clientes ahí)', !/data-cliente-activo="d1"/.test(h))
+    // Con "Todas las fábricas" el interruptor se ve APAGADO, con el motivo
+    // (30/09/2026): en los de Nuss (donde podría cambiarlo) y en ningún otro.
+    const hn = h.slice(h.indexOf('data-cliente="n1"'), h.indexOf('data-cliente="n2"'))
+    chk('en Todas, el interruptor de Nuss se ve deshabilitado con "Elegí una fábrica arriba para cambiarlo"',
+      /class="ad-interruptor" role="switch" aria-checked="true" disabled/.test(hn) && /<span class="ad-bloqueado-todas">Elegí una fábrica arriba para cambiarlo<\/span>/.test(hn) && !/data-cliente-activo/.test(h), hn)
+    chk('y NO en los de Dolce (sin permiso de guardar clientes ahí)', !/Elegí una fábrica/.test(h.slice(h.indexOf('data-cliente="d1"'), h.indexOf('data-cliente="n1"'))))
 
     // Volver a una empresa: el segmento.
     S.__llamadas.rpc.length = 0
@@ -195,7 +200,7 @@ async function pruebas() {
     await esperar()
     const h = html(S, 'ad-clientes-lista')
     chk('"Mostrar apagados" trae los apagados de cada empresa', /Kiosco Cerrado Nuss/.test(h) && /Kiosco Cerrado Dolce/.test(h))
-    chk('con su empresa', /Kiosco Cerrado Dolce[\s\S]*?ad-sello--empresa" title="Empresa">Dolce Pasta/.test(h))
+    chk('con su empresa', /Kiosco Cerrado Dolce[\s\S]*?data-sello-empresa="u-d" title="Empresa: Dolce Pasta"/.test(h))
     chk('pedidos con p_incluir_apagados a cada empresa real', llamadasSaldo(S, true).map(r => r[1].p_unidad_negocio_id).sort().join() === 'u-d,u-n')
   }
 
@@ -228,8 +233,37 @@ async function pruebas() {
     await S.mostrarClientes()
     await S.cambiarActivoCliente('d1')
     await esperar()
-    chk('apagar un cliente de otra empresa llama a cambiar_activo_cliente con ese cliente', p && p.p_cliente_id === 'd1' && p.p_activo === false)
-    chk('y vuelve a leer la lista de todas', S.clientesEnTodas() && /Pastas Dolce/.test(html(S, 'ad-clientes-lista')))
+    chk('en "Todas las fábricas" NO se apaga nadie aunque se llame (30/09/2026)', p === null)
+    // Con la fábrica elegida, como siempre.
+    S.elegirEnSegmento('u-d')
+    await esperar()
+    await S.cambiarActivoCliente('d1')
+    await esperar()
+    chk('con Dolce elegida, apagar llama a cambiar_activo_cliente con ese cliente', p && p.p_cliente_id === 'd1' && p.p_activo === false)
+    chk('y con una fábrica elegida el interruptor se toca (sin el aviso)', S.clientesEnTodas() === false && !/Elegí una fábrica/.test(html(S, 'ad-clientes-lista')))
+  }
+  {
+    // La ficha: abierto desde "Todas", el botón se ve apagado con el motivo y no abre.
+    const S = nuevo({ tareas: new Map([['retiros:ver', { todas: true }], ['retiros:precios', { todas: true }]]) })
+    S.estado.clientesTodas = true
+    await S.mostrarClientes()
+    S.__tablas.cliente_movimientos = { data: [], error: null }
+    S.abrirClienteDeLista('d1')
+    await esperar()
+    const btn = S.__els.get('ad-btn-ficha')
+    chk('en la cuenta abierta desde Todas, "Ficha" se ve deshabilitada con el motivo', btn.hidden === false && btn.disabled === true && S.__els.get('ad-ficha-bloqueada').hidden === false)
+    await S.abrirFicha('d1')
+    chk('y abrirFicha no abre nada', S.estado.vista === 'ad-vista-cliente' && !S.estado.ficha)
+    S.estado.clientesTodas = false
+    S.pintarCliente()
+    chk('con una fábrica elegida, la ficha se habilita', btn.disabled === false && S.__els.get('ad-ficha-bloqueada').hidden === true)
+  }
+  {
+    // El color de cada fábrica sale de MARCA_FABRICA; una sin prefijo, gris.
+    const S = nuevo()
+    chk('el punto de Nuss lleva su color de la barra', S.htmlSelloEmpresa('u-n', 'x').includes('background: ' + S.MARCA_FABRICA.N[0]))
+    chk('el de Dolce el suyo', S.htmlSelloEmpresa('u-d', 'x').includes('background: ' + S.MARCA_FABRICA.D[0]))
+    chk('una empresa desconocida va en gris con su nombre (escapado)', S.htmlSelloEmpresa('u-otra', '<b>Otra</b>').includes('background: #57534E') && /&lt;b&gt;Otra&lt;\/b&gt;<\/span>$/.test(S.htmlSelloEmpresa('u-otra', '<b>Otra</b>')) && !/<b>Otra/.test(S.htmlSelloEmpresa('u-otra', '<b>Otra</b>')))
   }
   {
     // Sin permiso en la empresa del cliente, no hace nada aunque se llame.
@@ -240,10 +274,14 @@ async function pruebas() {
       if (n === 'clientes_con_saldo') return { data: copia(SALDOS[x.p_unidad_negocio_id] ?? []), error: null }
       return { data: null, error: null }
     })
+    // Con Dolce elegida (fuera de "Todas", que no cambia nada): la regla es
+    // la de la empresa del cliente, y ahí no tiene retiros:precios.
     S.estado.clientesTodas = true
     await S.mostrarClientes()
+    S.elegirEnSegmento('u-d')
+    await esperar()
     await S.cambiarActivoCliente('d1')
-    chk('sin permiso en la empresa del cliente, no se guarda', llamo === false)
+    chk('sin permiso en la empresa del cliente, no se guarda', llamo === false && S.clientesEnTodas() === false && S.estado.empresaId === 'u-d')
   }
 
   // ── XSS: el nombre de la empresa y del cliente van escapados ───────────────

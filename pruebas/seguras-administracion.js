@@ -4,6 +4,7 @@
 
 const SEGURAS_ADMINISTRACION = [
   ['htmlSelloOrden(o)', 'HTML constante del código: htmlSelloOrden() devuelve uno de tres sellos fijos'],
+  ['colorEmpresa(unidadId)', 'constante del código: un color de MARCA_FABRICA (js/barra-unidad.js) o el gris fijo; nunca un dato de la base'],
   ['plata', 'HTML ya escapado: htmlRenglonOrden() lo arma con esc() del id y de los importes, o vacío'],
   ["datos.join('')", 'HTML armado por htmlDatoAd(), que escapa rótulo y valor'],
   ['anulada', 'HTML ya escapado: htmlDetalleOrden() lo arma con esc() del motivo, o vacío'],
