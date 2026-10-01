@@ -21,6 +21,11 @@ const SEGURAS_ADMINISTRACION = [
   ['htmlValorizar(d)', 'HTML armado por htmlValorizar(), que escapa los errores y el aviso del límite'],
   ['filas', 'HTML ya escapado: htmlCuenta() / htmlHistorial() arman cada fila con esc() del texto y los importes'],
   ["partes.join('')", 'HTML armado por htmlFilaPrecio(), que escapa cada dato, y el separador de cada grupo, escapado'],
+  // La grilla completa: lista_completa (30/09/2026)
+  ['entrada', 'HTML armado en htmlFilaProducto(): el campo y el botón Historial con esc() de la clave y del nombre, o vacío (fila de solo lectura)'],
+  ['celdas', 'HTML armado en htmlConito() con esc() del título (constante de CONITOS) y del precio formateado'],
+  ["avisos.join('')", 'HTML ya escapado: htmlGrilla() arma cada aviso con esc() de su texto'],
+  ['htmlConito(l)', 'HTML armado por htmlConito(), que escapa títulos y precios'],
   ['sello', 'HTML armado en htmlFilaImportar(): el sello con esc() de su etiqueta, o uno constante (Guardada / No se guardó)'],
   ['errores', 'HTML ya escapado: htmlFilaImportar() arma cada error con esc()'],
   ['avisos', 'HTML ya escapado: htmlFilaImportar() arma cada aviso con esc()'],

@@ -53,6 +53,10 @@ const FUNCIONES_BASE = [
   'descartarCambios', 'pedirGuardarPrecios', 'confirmarGuardarPrecios', 'cambiarActivaLista',
   // La lista interna (30/09/2026)
   'textoListaInterna', 'pintarListaInterna',
+  // La grilla completa: lista_completa (30/09/2026)
+  'leerListaCompleta', 'leerListaCompletaSegura', 'completaDelProducto', 'listaDerivada', 'filaEditable', 'numeroONull',
+  'precioUnitarioONada', 'textoPrecioVentaGrilla', 'conConoConPrecioNuevo', 'chocanMismaFecha', 'textoChoqueMismaFecha',
+  'htmlFilaProducto', 'htmlConito', 'plantillaConito', 'textoConConoNuevo', 'pintarConConoNuevo', 'recargoDeLista',
   // Los clientes de una lista (30/09/2026)
   'clientesActivosEmpresa', 'htmlNombresCortos', 'htmlResumenClientesLista', 'htmlClientesLista', 'pintarClientesLista', 'cambiarListaCliente',
   // js/retiros-comun.js
@@ -106,6 +110,8 @@ const CONSTANTES_BASE = [
   'PALETA_MODULO', 'TRAZO_ICONO', 'ICONO_SECCION', 'PESTANAS', 'PESTANA_DE_VISTA',
   // La lista interna (30/09/2026)
   'PUEDE_MARCAR_INTERNA',
+  // La grilla completa (30/09/2026)
+  'CONITOS',
 ]
 
 const PRELUDIO = `

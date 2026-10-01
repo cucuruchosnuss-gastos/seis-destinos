@@ -328,6 +328,18 @@
     .ad-precio { display: grid; gap: 0.25rem 0.75rem; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
       padding: 0.625rem 0.5rem; border-bottom: 1px solid var(--color-borde); min-width: 0; border-radius: 8px; }
     .ad-precio--pendiente { background: var(--naranja-suave); }
+    /* Un PRODUCTO: el nombre y dos columnas (sin cono / con cono), como el
+       Excel de las listas. En el celular, una debajo de la otra. */
+    .ad-precio--producto { grid-template-columns: minmax(0, 1fr); align-items: start; }
+    @media (min-width: 900px) { .ad-precio--producto { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1fr); } }
+    .ad-precio__nombre { min-width: 0; }
+    .ad-precio__col { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+    .ad-precio__col .ad-precio__acciones { justify-content: flex-start; }
+    .ad-precio__rotulo { font-size: 0.75rem; font-weight: 700; color: var(--ad-texto-secundario); overflow-wrap: anywhere; }
+    .ad-precio__valor { font-size: 0.875rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .ad-precio__nuevo { font-size: 0.8125rem; font-weight: 700; color: var(--naranja-oscuro); overflow-wrap: anywhere; }
+    .ad-conito { display: grid; gap: 0.5rem 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); padding: 0.25rem 0.5rem 0.5rem; }
+    .ad-conito__celda { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
     .ad-precio__acciones { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
     .ad-separador-grilla { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ad-texto-secundario); margin: 0.75rem 0 0.25rem; }
     /* En el celular el precio va DEBAJO del renglón: al costado no entra. */
@@ -1225,7 +1237,7 @@
       let presentaciones = []
       if (ids.length) {
         const r = await supabase.from('producto_presentaciones')
-          .select('id, producto_id, nombre, con_cono, unidades_por_caja, activa, orden').in('producto_id', ids).order('orden')
+          .select('id, producto_id, nombre, con_cono, media_caja, unidades_por_caja, activa, orden').in('producto_id', ids).order('orden')
         if (r.error) throw r.error
         presentaciones = r.data ?? []
       }
@@ -3321,9 +3333,119 @@
 
     async function leerPreciosLista(listaId) {
       const { data, error } = await supabase.from('lista_precios_items')
-        .select('presentacion_id, insumo_id, precio_caja, vigente_desde, cargado_en').eq('lista_id', listaId)
+        .select('presentacion_id, insumo_id, precio_caja, precio_unitario, vigente_desde, cargado_en').eq('lista_id', listaId)
       if (error) throw error
       return data ?? []
+    }
+
+    // ── LA LISTA COMPLETA (30/09/2026) ──────────────────────────────────────
+    // lista_completa(p_lista_id, p_fecha) → jsonb (SECURITY DEFINER, pide
+    // retiros:precios en la fábrica de la lista; verificada con
+    // pg_get_functiondef el 30/09/2026):
+    //   { lista, productos: [{producto_id, producto, tipo_masa, reventa,
+    //       sin_cono: precio_venta(...) | null, con_cono: precio_venta(...) | null}],
+    //     conito: {comun_suelto, comun_colocado, ilustracion_suelto, ilustracion_colocado} }
+    // El precio de un producto vive en la presentación SIN cono (no media
+    // caja) de la lista BASE; el CON cono es ese precio por unidad + el
+    // conito colocado (común, sin marca): se CALCULA, no se guarda. Por eso
+    // la columna con cono es de solo lectura, y el conito también: ninguna
+    // RPC guarda precios_conito (hueco de base).
+    async function leerListaCompleta(listaId) {
+      const { data, error } = await supabase.rpc('lista_completa', { p_lista_id: listaId, p_fecha: null })
+      if (error) throw error
+      return data && typeof data === 'object' ? data : null
+    }
+
+    // Nunca tira: { completa } o { error } (sin ella la grilla igual carga
+    // los precios sin cono; lo que falta se dice).
+    async function leerListaCompletaSegura(listaId) {
+      try {
+        return { completa: await leerListaCompleta(listaId) }
+      } catch (err) {
+        console.error('No se pudo leer la lista completa:', err)
+        return { error: limpio(err?.message) || 'No se pudo leer la lista completa.' }
+      }
+    }
+
+    function completaDelProducto(completa, productoId) {
+      return (completa?.productos ?? []).find(p => p?.producto_id === productoId) ?? null
+    }
+
+    // Una lista que SALE DE OTRA (base_id que apunta a otra lista):
+    // precio_venta() lee el precio de coalesce(base_id, id) —o sea de la
+    // base— SIN MIRAR es_base (es_base solo pone el recargo en 0; leído con
+    // pg_get_functiondef el 01/10/2026). Así que el precio sin cono de ESTA
+    // lista no se usa y no se edita acá.
+    function listaDerivada(meta) {
+      return !!meta?.base_id && meta.base_id !== meta.id
+    }
+
+    // El recargo que aplica precio_venta(): 0 si la lista es base.
+    function recargoDeLista(meta) {
+      return meta?.es_base === true ? 0 : (numeroONull(meta?.recargo_pct) ?? 0)
+    }
+
+    // Un precio de la grilla se edita si es de un insumo, o de un producto
+    // con presentación sin cono en una lista que no sale de otra.
+    function filaEditable(f, meta) {
+      if (f?.insumoId) return true
+      return !!f?.presentacionId && !listaDerivada(meta)
+    }
+
+    function numeroONull(v) {
+      if (v === null || v === undefined || v === '') return null
+      const n = Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+
+    // "$ 30,8333" por unidad, o el guion si no hay dato (nunca "$ 0").
+    function precioUnitarioONada(v) {
+      const n = numeroONull(v)
+      return n === null ? '—' : textoPrecioUnitario(n)
+    }
+
+    // Lo que dice precio_venta() de una columna, en palabras.
+    function textoPrecioVentaGrilla(r, moneda) {
+      if (!r) return null
+      if (r.sin_precio === true) return limpio(r.motivo) || 'Sin precio en la lista.'
+      const caja = numeroONull(r.precio_caja)
+      if (caja === null) return 'Sin precio en la lista.'
+      return `${importeHoja(caja, moneda)} la caja · ${precioUnitarioONada(r.precio_unitario)} c/u`
+    }
+
+    // Con un precio SIN cono nuevo (por caja), cuánto queda la caja CON cono:
+    // la misma cuenta de precio_venta() (precio por unidad con el recargo de
+    // la lista, redondeado a 4, más el conito colocado, por las unidades de
+    // la caja con cono, a 2 decimales). null si no se puede saber.
+    function conConoConPrecioNuevo(f, meta, conCono, precioCajaNuevo) {
+      const nuevo = numeroONull(precioCajaNuevo)
+      const upcSin = numeroONull(f?.upcSin)
+      const upcCon = numeroONull(conCono?.unidades_por_caja)
+      const conito = numeroONull(conCono?.conito_unitario)
+      if (nuevo === null || !upcSin || !upcCon || conito === null || conCono?.sin_precio === true) return null
+      const pct = recargoDeLista(meta)
+      const unidad = Math.round(nuevo / upcSin * (1 + pct / 100) * 10000) / 10000
+      return Math.round((unidad + conito) * upcCon * 100) / 100
+    }
+
+    // HUECO DE BASE: guardar_precios con la MISMA fecha de una versión que ya
+    // existe actualiza precio_caja y deja el precio_unitario viejo, y
+    // precio_venta() usa coalesce(precio_unitario, ...): el precio nuevo no se
+    // usaría. Se avisa ANTES de mandar. Devuelve los nombres que chocan.
+    function chocanMismaFecha(precios, items, desde, nombreDe) {
+      const nombres = []
+      for (const it of items ?? []) {
+        if (!it?.presentacion_id) continue
+        const choca = (precios ?? []).some(p => p.presentacion_id === it.presentacion_id && p.vigente_desde === desde && numeroONull(p.precio_unitario) !== null)
+        if (choca) nombres.push(nombreDe(it.presentacion_id))
+      }
+      return nombres
+    }
+
+    function textoChoqueMismaFecha(nombres, desde) {
+      const lista = nombres.slice(0, 4).join(', ') + (nombres.length > 4 ? ` y ${nombres.length - 4} más` : '')
+      return `Ya hay un precio cargado desde el ${fechaCorta(desde)} para ${lista}: la base no lo corrige el mismo día ` +
+        '(guardaría el precio por caja y seguiría usando el precio por unidad de antes). Elegí otra fecha.'
     }
 
     // Las versiones de UNA fila (una presentación o un insumo, por su clave
@@ -3352,20 +3474,31 @@
     const TITULO_OTROS_PRODUCTOS = 'Otros productos'
     const TITULO_INSUMOS = 'Materia prima e insumos'
 
-    // Las filas de la grilla: los productos de la empresa por categoría, con
-    // sus presentaciones activas, y al final los insumos ACTIVOS del catálogo
-    // (el catálogo de insumos es uno para las cuatro empresas: cualquiera se
-    // puede revender). Cada fila tiene su clave: la presentación, o 'ins:' +
-    // el insumo.
+    // Las filas de la grilla: los productos de la empresa por categoría y al
+    // final los insumos ACTIVOS del catálogo (el catálogo de insumos es uno
+    // para las cuatro empresas: cualquiera se puede revender).
+    // UN PRODUCTO ES UNA FILA, con dos columnas como el Excel de Facu: SIN
+    // cono (lo que se guarda: la presentación sin cono que no es media caja,
+    // la misma que mira precio_venta()) y CON cono (calculado: el sin cono por
+    // unidad + el conito). La media caja y la caja con cono no tienen precio
+    // propio: salen del sin cono. Cada fila tiene su clave: la presentación
+    // sin cono, 'prod:' + el producto si no tiene una, o 'ins:' + el insumo.
     function filasGrilla(cat) {
       const filas = []
       const grupos = [...CATEGORIAS_PRODUCTO, { clave: null, titulo: TITULO_OTROS_PRODUCTOS }]
       const categoriaDe = (p) => CATEGORIAS_PRODUCTO.some(c => c.clave === p.categoria) ? p.categoria : null
       for (const g of grupos) {
         for (const p of (cat?.productos ?? []).filter(x => categoriaDe(x) === g.clave)) {
-          for (const pr of (cat?.presentaciones ?? []).filter(x => x.producto_id === p.id && x.activa !== false)) {
-            filas.push({ clave: pr.id, presentacionId: pr.id, insumoId: null, producto: p.nombre, presentacion: pr.nombre, grupo: g.titulo })
-          }
+          const pres = (cat?.presentaciones ?? []).filter(x => x.producto_id === p.id && x.activa !== false)
+          if (!pres.length) continue
+          const sin = pres.find(x => x.con_cono !== true && x.media_caja !== true) ?? null
+          const con = pres.filter(x => x.con_cono === true)
+            .sort((a, b) => (a.media_caja === true) - (b.media_caja === true) || (a.orden ?? 0) - (b.orden ?? 0))[0] ?? null
+          filas.push({
+            clave: sin ? sin.id : 'prod:' + p.id, productoId: p.id, presentacionId: sin?.id ?? null, insumoId: null,
+            producto: p.nombre, presentacion: sin ? sin.nombre : 'Sin presentación sin cono', upcSin: sin?.unidades_por_caja ?? null,
+            conCono: con ? { nombre: con.nombre } : null, grupo: g.titulo,
+          })
         }
       }
       for (const i of (cat?.insumos ?? []).filter(x => x.activo !== false)) {
@@ -3380,8 +3513,12 @@
     // rige hoy. Nada más. Un renglón lleva presentacion_id O insumo_id.
     function preciosAGuardar(l, hoy) {
       const items = []
+      const meta = listaDe(l.id)
       for (const [clave, precio] of l.pendientes) {
         if (precio === null || precio === undefined) continue
+        // Solo lo que se puede guardar: nunca una fila de solo lectura.
+        const f = (l.filas ?? []).find(x => x.clave === clave)
+        if (!f || !filaEditable(f, meta)) continue
         const actual = vigenteYProximo(l.precios, clave, hoy).vigente
         if (actual && Number(actual.precio_caja) === Number(precio)) continue
         items.push(String(clave).startsWith('ins:')
@@ -3393,9 +3530,13 @@
 
     // "Aumentar todo un X%": calcula en PANTALLA, sobre el precio que rige hoy
     // de cada fila, redondeado a centavos. No guarda nada: eso pide confirmar.
+    // Sube el precio SIN cono de cada producto (y de cada insumo): el con cono
+    // se recalcula solo en la grilla, y el conito no se toca (no hay cómo).
     function calcularAumento(l, porcentaje, hoy) {
       const nuevos = new Map(l.pendientes)
+      const meta = listaDe(l.id)
       for (const f of l.filas) {
+        if (!filaEditable(f, meta)) continue
         const v = vigenteYProximo(l.precios, f.clave, hoy).vigente
         if (!v) continue
         nuevos.set(f.clave, Math.round(Number(v.precio_caja) * (1 + porcentaje / 100) * 100) / 100)
@@ -3403,7 +3544,85 @@
       return nuevos
     }
 
+    // Una fila de PRODUCTO: el nombre y las dos columnas (sin cono / con cono).
+    function htmlFilaProducto(f, l, hoy) {
+      const meta = listaDe(l.id)
+      const moneda = meta?.moneda || 'ARS'
+      const editable = filaEditable(f, meta)
+      const comp = completaDelProducto(l.completa, f.productoId)
+      const pendiente = editable && l.pendientes.has(f.clave) && l.pendientes.get(f.clave) !== null
+      // SIN CONO
+      let sin
+      if (!f.presentacionId) sin = 'Sin presentación sin cono: no se le puede poner precio.'
+      else if (listaDerivada(meta)) sin = textoPrecioVentaGrilla(comp?.sin_cono, moneda) ?? (l.completa === undefined ? 'Cargando…' : '—')
+      else {
+        const { vigente, proximo } = vigenteYProximo(l.precios, f.clave, hoy)
+        const unidad = comp?.sin_cono && comp.sin_cono.sin_precio !== true ? ' · ' + precioUnitarioONada(comp.sin_cono.precio_unitario) + ' c/u' : ''
+        sin = (vigente ? importeHoja(vigente.precio_caja, moneda) + ' la caja desde ' + fechaCorta(vigente.vigente_desde) + unidad : 'Sin precio') +
+          (proximo ? ' · próximo ' + importeHoja(proximo.precio_caja, moneda) + ' desde ' + fechaCorta(proximo.vigente_desde) : '')
+      }
+      // CON CONO (solo lectura: se calcula)
+      let con
+      if (!f.conCono) con = 'No se vende con cono.'
+      else if (l.completa === undefined) con = 'Cargando…'
+      else if (!comp?.con_cono) con = '—'
+      else {
+        con = textoPrecioVentaGrilla(comp.con_cono, moneda)
+        if (comp.con_cono.sin_precio !== true) {
+          const conito = numeroONull(comp.con_cono.conito_unitario)
+          con += ' (producto ' + precioUnitarioONada(comp.con_cono.producto_unitario) + ' + ' +
+            (conito ? 'conito ' + precioUnitarioONada(conito) : 'la lista no tiene precio de conito') + ')'
+        }
+      }
+      const conNuevo = textoConConoNuevo(f, l)
+      const entrada = editable
+        ? `<div class="ad-precio__acciones"><input type="text" class="ad-input ad-renglon__precio" data-precio-lista="${esc(f.clave)}" aria-label="${esc('Precio nuevo sin cono, por caja, de ' + f.producto)}" autocomplete="off">` +
+          `<button type="button" class="ad-link" data-historial="${esc(f.clave)}">Historial</button></div>`
+        : ''
+      return `<div class="ad-precio ad-precio--producto${pendiente ? ' ad-precio--pendiente' : ''}" data-fila-precio="${esc(f.clave)}">` +
+        `<div class="ad-precio__nombre"><div class="ad-renglon__desc">${esc(f.producto)}</div>` +
+        `<div class="ad-renglon__lotes">${esc(f.presentacion)}</div></div>` +
+        `<div class="ad-precio__col"><span class="ad-precio__rotulo">Sin cono</span><span class="ad-precio__valor">${esc(sin)}</span>${entrada}</div>` +
+        `<div class="ad-precio__col"><span class="ad-precio__rotulo">${esc(f.conCono ? 'Con cono · ' + f.conCono.nombre : 'Con cono')}</span>` +
+        `<span class="ad-precio__valor">${esc(con)}</span>` +
+        (f.conCono ? `<span class="ad-precio__nuevo" data-con-nuevo="${esc(f.clave)}"${conNuevo ? '' : ' hidden'}>${esc(conNuevo)}</span>` : '') +
+        '</div></div>'
+    }
+
+    // "Con el precio nuevo: $ X la caja", o '' si no hay precio nuevo escrito
+    // o no se puede calcular. Lo usa la fila al dibujarse y pintarLista() para
+    // actualizarlo en su lugar mientras se escribe (sin redibujar la grilla,
+    // que le sacaría el foco al campo).
+    function textoConConoNuevo(f, l) {
+      const meta = listaDe(l.id)
+      if (!f?.conCono || !filaEditable(f, meta)) return ''
+      if (!l.pendientes.has(f.clave) || l.pendientes.get(f.clave) === null) return ''
+      const comp = completaDelProducto(l.completa, f.productoId)
+      if (!comp?.con_cono) return ''
+      const n = conConoConPrecioNuevo(f, meta, comp.con_cono, l.pendientes.get(f.clave))
+      return n === null ? '' : 'Con el precio nuevo: ' + importeHoja(n, meta?.moneda || 'ARS') + ' la caja'
+    }
+
+    // Los cuatro precios del conito (por unidad), al pie de la grilla. Solo
+    // lectura: ninguna RPC guarda precios_conito (hueco de base).
+    const CONITOS = [
+      { clave: 'comun_suelto', titulo: 'Común suelto' },
+      { clave: 'comun_colocado', titulo: 'Común colocado' },
+      { clave: 'ilustracion_suelto', titulo: 'Con ilustración suelto' },
+      { clave: 'ilustracion_colocado', titulo: 'Con ilustración colocado' },
+    ]
+
+    function htmlConito(l) {
+      if (l.completa === undefined) return '<div class="ad-separador-grilla">Conito</div><div class="ad-vacio">Cargando el conito…</div>'
+      if (!l.completa) return ''
+      const celdas = CONITOS.map(c => `<div class="ad-conito__celda"><span class="ad-precio__rotulo">${esc(c.titulo)}</span>` +
+        `<span class="ad-precio__valor">${esc(precioUnitarioONada(l.completa?.conito?.[c.clave]))}</span></div>`).join('')
+      return `<div class="ad-separador-grilla">Conito (por unidad)</div><div class="ad-conito">${celdas}</div>` +
+        '<p class="ad-texto-suave">El precio con cono es el sin cono por unidad más el conito colocado. El conito todavía no se puede cambiar desde acá: la base no tiene cómo guardarlo.</p>'
+    }
+
     function htmlFilaPrecio(f, l, hoy) {
+      if (!f.insumoId) return htmlFilaProducto(f, l, hoy)
       const { vigente, proximo } = vigenteYProximo(l.precios, f.clave, hoy)
       const moneda = listaDe(l.id)?.moneda || 'ARS'
       const pendiente = l.pendientes.has(f.clave) && l.pendientes.get(f.clave) !== null
@@ -3421,13 +3640,25 @@
       if (l.error) return `<div class="ad-aviso ad-aviso--grave">${esc(l.error)}</div>`
       if (!l.precios) return '<div class="ad-vacio">Cargando los precios…</div>'
       if (!l.filas.length) return '<div class="ad-aviso">Esta empresa no tiene productos cargados en Producción.</div>'
+      const meta = listaDe(l.id)
+      const avisos = []
+      if (listaDerivada(meta)) {
+        const base = listaDe(meta.base_id)?.nombre
+        const pct = recargoDeLista(meta)
+        const texto = 'Esta lista sale de ' + (base ? '«' + base + '»' : 'la lista base') + ' con un recargo de ' +
+          formatearNumeroAr(pct, { decimales: 2, minimos: 0 }) + ' %: sus precios sin cono se cambian en esa lista. Acá se ven ya con el recargo.'
+        avisos.push(`<div class="ad-aviso">${esc(texto)}</div>`)
+      }
+      if (l.errorCompleta) {
+        avisos.push(`<div class="ad-aviso ad-aviso--grave">${esc('No se pudo leer la lista completa (los precios con cono y el conito): ' + l.errorCompleta + ' Los precios sin cono se pueden cargar igual.')}</div>`)
+      }
       let grupo = null
       const partes = l.filas.map(f => {
         const sep = f.grupo !== grupo ? `<div class="ad-separador-grilla">${esc(f.grupo)}</div>` : ''
         grupo = f.grupo
         return sep + htmlFilaPrecio(f, l, hoy)
       })
-      return `<div class="ad-tarjeta">${partes.join('')}</div>`
+      return `${avisos.join('')}<div class="ad-tarjeta">${partes.join('')}${htmlConito(l)}</div>`
     }
 
     function htmlHistorial(l, clave, hoy) {
@@ -3468,6 +3699,18 @@
       document.getElementById('ad-lista-interna-nota').textContent = textoListaInterna(meta)
     }
 
+    // Mientras se escribe un precio sin cono, la línea "Con el precio nuevo"
+    // de su fila se actualiza EN SU LUGAR (textContent): redibujar la grilla
+    // le sacaría el foco al campo.
+    function pintarConConoNuevo(grilla, l) {
+      for (const span of grilla?.querySelectorAll?.('[data-con-nuevo]') ?? []) {
+        const f = (l.filas ?? []).find(x => x.clave === span.dataset.conNuevo)
+        const t = f ? textoConConoNuevo(f, l) : ''
+        span.textContent = t
+        span.hidden = !t
+      }
+    }
+
     function textoPendientes(n) {
       return n ? `${n} ${n === 1 ? 'precio nuevo' : 'precios nuevos'} sin guardar.` : 'Sin precios nuevos.'
     }
@@ -3488,6 +3731,7 @@
           ponerNumero(input, l.pendientes.get(input.dataset.precioLista) ?? null)
         }
       }
+      pintarConConoNuevo(grilla, l)
       const n = preciosAGuardar(l, hoy).length
       document.getElementById('ad-lista-pendientes').textContent = textoPendientes(n)
       document.getElementById('ad-lista-guardar').disabled = estado.trabajando
@@ -3601,16 +3845,20 @@
     async function abrirLista(id) {
       if (!puedeEn('retiros', 'precios')) return
       const turno = ++turnoLista
-      estado.lista = { id, precios: null, filas: [], pendientes: new Map(), historial: null, confirmar: null, error: null, errorPorcentaje: null, guardando: null, errores: new Map() }
+      // completa: undefined = todavía no se leyó; null = no se pudo (errorCompleta lo dice).
+      estado.lista = { id, precios: null, filas: [], pendientes: new Map(), historial: null, confirmar: null, error: null, errorPorcentaje: null, guardando: null, errores: new Map(),
+        completa: undefined, errorCompleta: null }
       mostrarVista('ad-vista-lista')
       document.getElementById('ad-lista-desde').value = hoyArgentina()
       ponerNumero(enlazarPorcentaje(), null)
       pintarLista(true)
       try {
         await Promise.all([asegurarDatosEmpresa(), asegurarListas(estado.empresaId)])
-        const precios = await leerPreciosLista(id)
+        const [precios, completa] = await Promise.all([leerPreciosLista(id), leerListaCompletaSegura(id)])
         if (turno !== turnoLista) return
         estado.lista.precios = precios
+        estado.lista.completa = completa.completa ?? null
+        estado.lista.errorCompleta = completa.error ?? null
         estado.lista.filas = filasGrilla(estado.catalogo)
       } catch (err) {
         if (turno !== turnoLista) return
@@ -3665,6 +3913,8 @@
       const items = preciosAGuardar(l, hoyArgentina())
       if (!items.length) { l.errorPorcentaje = 'No hay precios nuevos para guardar.'; pintarLista(false); return }
       if (items.some(x => x.precio_caja < 0)) { l.errorPorcentaje = 'Un precio no puede ser negativo.'; pintarLista(false); return }
+      const chocan = chocanMismaFecha(l.precios, items, desde, (id) => (l.filas.find(f => f.presentacionId === id)?.producto ?? 'un producto'))
+      if (chocan.length) { l.errorPorcentaje = textoChoqueMismaFecha(chocan, desde); pintarLista(false); return }
       l.errorPorcentaje = null
       l.confirmar = { items, desde, error: null }
       pintarLista(false)
@@ -3768,6 +4018,9 @@
       { clave: 'producto', titulo: 'Producto' },
       { clave: 'detalle', titulo: 'Presentación / detalle' },
       { clave: 'actual', titulo: 'Precio actual' },
+      // Informativa (30/09/2026, lista_completa): el con cono se calcula del
+      // sin cono más el conito, así que no se importa.
+      { clave: 'con_cono', titulo: 'Con cono hoy, la caja (no se importa)' },
       { clave: 'precio', titulo: 'Precio nuevo', obligatoria: true },
     ]
     const COLUMNAS_SALDOS = [
@@ -4030,7 +4283,9 @@
       const m = mapearColumnas(hoja.encabezados, COLUMNAS_PRECIOS)
       if (!hoja.filas.length) return { error: 'El archivo no tiene filas con datos.', filas: [] }
       if (m.faltan.length) return { error: `A la planilla le falta la columna «${m.faltan.join('», «')}». Usá la plantilla.`, filas: [] }
-      const porClave = new Map((ctx?.filas ?? []).map(x => [x.clave, x]))
+      // Solo las filas que tienen dónde guardarse: el producto por su
+      // presentación sin cono, o el insumo (el con cono se calcula).
+      const porClave = new Map((ctx?.filas ?? []).filter(x => x.presentacionId || x.insumoId).map(x => [x.clave, x]))
       const filas = hoja.filas.map(({ numero, celdas }) => {
         const v = (clave) => m.indice[clave] === undefined ? undefined : celdas[m.indice[clave]]
         const codigo = textoCelda(v('codigo'))
@@ -4039,6 +4294,7 @@
         const precioTexto = textoCelda(v('precio'))
         if (!codigo) f.errores.push('Falta el código: no toques esa columna de la plantilla.')
         else if (!g) f.errores.push('El código no es de un producto ni de un insumo de esta empresa: bajá la plantilla de nuevo.')
+        else if (ctx?.derivada && g.presentacionId) f.errores.push('Esta lista sale de otra con un recargo: el precio sin cono se carga en la lista base.')
         f.codigo = codigo
         f.conPrecio = !!precioTexto
         if (!precioTexto) { f.ignorada = true; f.avisos.push('Sin precio nuevo: no se toca.') }
@@ -4133,11 +4389,22 @@
       ]
     }
 
-    function plantillaPrecios(filas, precios, hoy) {
-      return [COLUMNAS_PRECIOS.map(c => c.titulo), ...(filas ?? []).map(f => {
+    // Una fila por producto (su precio SIN cono, por caja) y por insumo; el
+    // CON cono, de lista_completa, va de referencia. Un producto sin
+    // presentación sin cono no tiene dónde guardarse: no va.
+    function plantillaPrecios(filas, precios, hoy, completa = null) {
+      return [COLUMNAS_PRECIOS.map(c => c.titulo), ...(filas ?? []).filter(f => f.presentacionId || f.insumoId).map(f => {
         const vig = vigenteYProximo(precios ?? [], f.clave, hoy).vigente
-        return [f.clave, f.insumoId ? 'Insumo' : 'Producto', f.grupo, f.producto, f.presentacion, vig ? Number(vig.precio_caja) : '', '']
+        const con = f.insumoId ? null : completaDelProducto(completa, f.productoId)?.con_cono
+        const conCaja = con && con.sin_precio !== true ? numeroONull(con.precio_caja) : null
+        return [f.clave, f.insumoId ? 'Insumo' : 'Producto', f.grupo, f.producto, f.presentacion, vig ? Number(vig.precio_caja) : '', conCaja ?? '', '']
       })]
+    }
+
+    // La hoja del conito: de referencia, no se importa (no hay cómo guardarlo).
+    function plantillaConito(completa) {
+      return [['Conito, por unidad (no se importa)', 'Precio'],
+        ...CONITOS.map(c => [c.titulo, numeroONull(completa?.conito?.[c.clave]) ?? ''])]
     }
 
     function plantillaSaldos(clientes) {
@@ -4331,7 +4598,8 @@
       const hoy = hoyArgentina()
       if (im.tipo === 'precios') {
         const precios = im.listaId ? await leerPreciosLista(im.listaId) : []
-        return { filas: filasGrilla(estado.catalogo), precios, hoy }
+        im.precios = precios
+        return { filas: filasGrilla(estado.catalogo), precios, hoy, derivada: listaDerivada(listaDe(im.listaId)) }
       }
       if (im.tipo === 'saldos') {
         // Quién ya tiene saldo inicial: cliente_movimientos se lee con
@@ -4405,9 +4673,10 @@
           ])
         } else if (im.tipo === 'precios') {
           if (!im.listaId) { im.error = 'Elegí primero la lista de precios: la plantilla trae el precio que rige hoy en esa lista.'; pintarImportar(); return }
-          const precios = await leerPreciosLista(im.listaId)
+          const [precios, comp] = await Promise.all([leerPreciosLista(im.listaId), leerListaCompletaSegura(im.listaId)])
           await descargarPlanilla(nombreArchivoImportar('precios', listaDe(im.listaId)?.nombre ?? ''), [
-            { nombre: 'Precios', filas: plantillaPrecios(filasGrilla(estado.catalogo), precios, hoyArgentina()) },
+            { nombre: 'Precios', filas: plantillaPrecios(filasGrilla(estado.catalogo), precios, hoyArgentina(), comp.completa ?? null) },
+            { nombre: 'Conito', filas: plantillaConito(comp.completa ?? null) },
           ])
         } else {
           await descargarPlanilla(nombreArchivoImportar('saldos', 'plantilla'), [
@@ -4428,6 +4697,12 @@
       if (!im?.filas || im.guardando || im.terminado) return
       if (!cuentaImportar(im.filas).ok) return
       if (im.tipo === 'precios' && (!im.listaId || !esFechaIso(im.desde))) { im.error = 'Elegí la lista y desde cuándo rigen los precios.'; pintarImportar(); return }
+      if (im.tipo === 'precios') {
+        const filasG = filasGrilla(estado.catalogo)
+        const buenas = im.filas.filter(f => f.estado === 'ok').map(f => f.datos)
+        const chocan = chocanMismaFecha(im.precios, buenas, im.desde, (id) => (filasG.find(f => f.presentacionId === id)?.producto ?? 'un producto'))
+        if (chocan.length) { im.error = textoChoqueMismaFecha(chocan, im.desde); pintarImportar(); return }
+      }
       im.confirmar = true
       pintarImportar()
     }
