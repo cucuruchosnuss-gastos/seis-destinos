@@ -18,7 +18,7 @@ correrMutacionesEnVarios([
       { nombre: 'Sala de masa vuelve a Producción', de: "      return estado.modo === 'masa' ? mostrarSala() : mostrarTablero()", a: "      return mostrarTablero()" },
       { nombre: 'el paso anterior es el mismo', de: "        if (i > 0) return { tipo: 'paso', texto: 'Atrás', paso: pasos[i - 1].clave }", a: "        if (i > 0) return { tipo: 'paso', texto: 'Atrás', paso: pasos[i].clave }" },
       { nombre: 'los pasos no vuelven al anterior', de: "      if (d.tipo === 'paso') { irAPasoAgregar(d.paso); return 'paso' }\n", a: '' },
-      { nombre: 'no pregunta antes de salir', de: "      if (aMedioCargar()) {\n        pedirConfirmacion(", a: "      if (false) {\n        pedirConfirmacion(" },
+      { nombre: 'no pregunta antes de salir', de: "      if (aMedioCargar()) {\n        pedirConfirmacion({ titulo: '¿Salir sin guardar?'", a: "      if (false) {\n        pedirConfirmacion({ titulo: '¿Salir sin guardar?'" },
       { nombre: 'abrir con máquinas no pregunta', de: "        case 'pr-abrir': return (estado.abrir?.filas ?? []).some(f => f.elegida && !f.bloqueada)\n", a: '' },
       { nombre: 'corregir no pregunta', de: '(estado.agregar.productoId || estado.agregar.corrige)', a: '(estado.agregar.productoId)' },
       { nombre: '"No" igual sale', de: '      if (si && c?.accion) return c.accion()', a: '      if (c?.accion) return c.accion()' },

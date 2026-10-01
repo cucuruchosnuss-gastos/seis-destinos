@@ -135,7 +135,7 @@ correrMutacionesProduccion({
     { nombre: 'un cono que ya existía y no está activo se agrega igual', de: "          if (data?.ya_existia) throw new Error(", a: "          if (false) throw new Error(" },
     { nombre: 'el error de proponer_marca se tapa', de: "        err.textContent = e?.message || 'No se pudo agregar el cono.'", a: "        err.textContent = 'No se pudo agregar el cono.'" },
 
-    { nombre: 'los campos se enlazan recién al cerrar', de: '      enlazarCamposPlanilla()\n      estado.planilla = null', a: '      estado.planilla = null' },
+    { nombre: 'los campos se enlazan recién al cerrar', de: '      enlazarCamposPlanilla()\n      const pedidoPlanilla', a: '      const pedidoPlanilla' },
     { nombre: 'las cajas se enlazan con decimales', de: "      enlazarCampoNumero(document.getElementById('pr-agregar-cajas'), { decimales: 0 })", a: "      enlazarCampoNumero(document.getElementById('pr-agregar-cajas'), { decimales: 3 })" },
     { nombre: 'el scrap se enlaza sin decimales', de: "      enlazarCampoNumero(document.getElementById('pr-cierre-scrap'), { decimales: 3 })", a: "      enlazarCampoNumero(document.getElementById('pr-cierre-scrap'), { decimales: 0 })" },
 
